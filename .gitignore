@@ -10,3 +10,12 @@ dist/
 build/
 __pycache__/
 *.pyc
+
+# apm install generated deployment outputs (root consumer mode)
+/.agents/
+/.claude/
+/.codex/
+/.cursor/
+/.github/
+/.vscode/
+/.mcp.json
