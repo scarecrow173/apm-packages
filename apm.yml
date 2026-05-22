@@ -1,0 +1,23 @@
+name: apm-packages
+version: 0.1.0
+description: A collection of APM packages for research, skills, agents, and prompts
+author: Akiyoshi Koyama
+license: MIT
+
+marketplace:
+  owner:
+    name: scarecrow173
+    url: https://github.com/scarecrow173
+  outputs:
+    codex: {}
+    copilot: {}
+  versioning:
+    strategy: lockstep
+  packages:
+    - name: steer-enterprise-web-research
+      source: ./packages/steer-enterprise-web-research-apm
+      version: 0.1.0
+    - name: doublecheck
+      source: github/awesome-copilot
+      subdir: plugins/doublecheck
+      ref: main

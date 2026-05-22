@@ -1,0 +1,12 @@
+packages/**/apm_modules/
+packages/**/apm.lock.yaml
+packages/**/dist/
+packages/**/build/
+packages/**/__pycache__/
+packages/**/*.pyc
+apm_modules/
+apm.lock.yaml
+dist/
+build/
+__pycache__/
+*.pyc
