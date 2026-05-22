@@ -46,6 +46,18 @@ marketplace:
       source: github/awesome-copilot
       subdir: skills/git-commit
       ref: main
+    - name: drawio
+      source: github/awesome-copilot
+      subdir: skills/drawio
+      ref: main
+    - name: editorconfig
+      source: github/awesome-copilot
+      subdir: skills/editorconfig
+      ref: main
+    - name: repo-story-time
+      source: github/awesome-copilot
+      subdir: skills/repo-story-time
+      ref: main
     - name: apm-usage
       source: microsoft/apm
       subdir: packages/apm-guide
