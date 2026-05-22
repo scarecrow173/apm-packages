@@ -4,6 +4,27 @@ description: A collection of APM packages for research, skills, agents, and prom
 author: Akiyoshi Koyama
 license: MIT
 
+targets:
+  - copilot
+  - claude
+  - cursor
+  - codex
+  - agent-skills
+
+dependencies:
+  apm:
+    - github/awesome-copilot/skills/git-commit
+    - microsoft/apm/packages/apm-guide
+  mcp:
+    - name: mise
+      registry: false
+      transport: stdio
+      command: mise
+      args:
+        - mcp
+      env:
+        MISE_EXPERIMENTAL: "1"
+
 marketplace:
   owner:
     name: scarecrow173
@@ -20,4 +41,12 @@ marketplace:
     - name: doublecheck
       source: github/awesome-copilot
       subdir: plugins/doublecheck
+      ref: main
+    - name: git-commit
+      source: github/awesome-copilot
+      subdir: skills/git-commit
+      ref: main
+    - name: apm-usage
+      source: microsoft/apm
+      subdir: packages/apm-guide
       ref: main
