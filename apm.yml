@@ -17,3 +17,7 @@ marketplace:
     - name: steer-enterprise-web-research
       source: ./packages/steer-enterprise-web-research-apm
       version: 0.1.0
+    - name: doublecheck
+      source: github/awesome-copilot
+      subdir: plugins/doublecheck
+      ref: main
