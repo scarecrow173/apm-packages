@@ -1,0 +1,16 @@
+name: steer-enterprise-web-research
+version: 0.1.0
+description: SteER / Enterprise Deep Research style web research workflow for Codex and GitHub Copilot.
+author: Akiyoshi Koyama
+license: MIT
+target:
+  - codex
+  - copilot
+type: hybrid
+includes:
+  - .apm/
+scripts:
+  validate: "apm compile --validate"
+  preview: "apm compile --dry-run"
+  pack: "apm pack --archive -o dist"
+  audit-research: "python scripts/research_audit.py research"
