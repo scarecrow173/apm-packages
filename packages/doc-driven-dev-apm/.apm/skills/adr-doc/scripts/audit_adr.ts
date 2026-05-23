@@ -7,8 +7,8 @@ const {
   adrFiles,
   findAdrDir,
   hasSection,
-  matterData,
   relationLinks,
+  validateFrontMatter,
 } = require("./lib/adr_utils.ts");
 
 const requiredSections = [
@@ -18,7 +18,6 @@ const requiredSections = [
   "Implementation Plan",
   "Verification",
 ];
-const requiredMetadata = ["status", "date", "decision-makers", "consulted", "informed"];
 const recommendedSections = [
   "Decision Drivers",
   "Consequences",
@@ -89,12 +88,9 @@ function stripAnchor(url: string): string {
 async function auditFile(cwd: string, relativeDir: string, file: string): Promise<Finding[]> {
   const filePath = path.join(cwd, relativeDir, file);
   const content = fs.readFileSync(filePath, "utf8");
-  const data = matterData(content);
   const findings: Finding[] = [];
-  for (const field of requiredMetadata) {
-    if (!(field in data)) {
-      findings.push({ severity: "error", file, code: "missing-metadata", message: `Missing metadata: ${field}` });
-    }
+  for (const issue of validateFrontMatter(content)) {
+    findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${issue.path}: ${issue.message}` });
   }
   for (const section of requiredSections) {
     if (!hasSection(content, section)) {
@@ -105,9 +101,6 @@ async function auditFile(cwd: string, relativeDir: string, file: string): Promis
     if (!hasSection(content, section)) {
       findings.push({ severity: "info", file, code: "missing-recommended-section", message: `Missing recommended section: ${section}` });
     }
-  }
-  if (typeof data.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
-    findings.push({ severity: "warning", file, code: "invalid-date", message: "Date metadata should be YYYY-MM-DD" });
   }
   if (/TODO|{{[^}]+}}|<!--\s*(option|driver|justification|Describe)/i.test(content)) {
     findings.push({ severity: "warning", file, code: "unresolved-placeholder", message: "Contains unresolved placeholders" });

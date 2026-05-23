@@ -3,7 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { adrFiles, findAdrDir, hasSection, matterData, relationLinks } = require("./lib/adr_utils.ts");
+const { adrFiles, findAdrDir, hasSection, relationLinks, validateFrontMatter } = require("./lib/adr_utils.ts");
 
 type CliArgs = {
   cwd: string;
@@ -51,7 +51,6 @@ function checklistItems(body: string): string[] {
 function reviewFile(cwd: string, relativeDir: string, file: string): Finding[] {
   const fullPath = path.join(cwd, relativeDir, file);
   const content = fs.readFileSync(fullPath, "utf8");
-  const data = matterData(content);
   const findings: Finding[] = [];
   const required = ["Context and Problem Statement", "Considered Options", "Decision Outcome", "Implementation Plan", "Verification"];
   for (const section of required) {
@@ -71,8 +70,8 @@ function reviewFile(cwd: string, relativeDir: string, file: string): Finding[] {
   if (/<!--|TODO|TBD|\{\{[^}]+\}\}/i.test(content)) {
     findings.push({ severity: "warning", file, code: "unresolved-draft-text", message: "ADR still contains draft placeholders" });
   }
-  if (!("status" in data) || !("date" in data)) {
-    findings.push({ severity: "error", file, code: "missing-core-metadata", message: "ADR should include status and date metadata" });
+  for (const issue of validateFrontMatter(content)) {
+    findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${issue.path}: ${issue.message}` });
   }
   for (const relation of relationLinks(content)) {
     const target = path.resolve(path.dirname(fullPath), relation.target);

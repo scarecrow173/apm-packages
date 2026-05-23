@@ -2,7 +2,9 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const Ajv = require("ajv");
 const matter = require("gray-matter");
+const { z } = require("zod");
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
 const relationFields = ["supersedes", "superseded-by", "related", "refines"] as const;
@@ -18,6 +20,53 @@ type AdrEntry = {
   date: string | null;
   relations: Record<RelationField, string[]>;
 };
+
+type FrontMatterIssue = {
+  message: string;
+  path: string;
+};
+
+const relationSchema = z.object({
+  supersedes: z.array(z.string()).default([]),
+  "superseded-by": z.array(z.string()).default([]),
+  related: z.array(z.string()).default([]),
+  refines: z.array(z.string()).default([]),
+}).default({});
+
+const adrFrontMatterSchema = z.object({
+  status: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  "decision-makers": z.array(z.string()),
+  consulted: z.array(z.string()),
+  informed: z.array(z.string()),
+  relations: relationSchema,
+}).passthrough();
+
+const adrFrontMatterJsonSchema = {
+  type: "object",
+  required: ["status", "date", "decision-makers", "consulted", "informed"],
+  properties: {
+    status: { type: "string", minLength: 1 },
+    date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+    "decision-makers": { type: "array", items: { type: "string" } },
+    consulted: { type: "array", items: { type: "string" } },
+    informed: { type: "array", items: { type: "string" } },
+    relations: {
+      type: "object",
+      properties: {
+        supersedes: { type: "array", items: { type: "string" } },
+        "superseded-by": { type: "array", items: { type: "string" } },
+        related: { type: "array", items: { type: "string" } },
+        refines: { type: "array", items: { type: "string" } },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: true,
+} as const;
+
+const ajv = new Ajv({ allErrors: true });
+const validateFrontMatterAjv = ajv.compile(adrFrontMatterJsonSchema);
 
 function normalizeDir(input: string): string {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
@@ -85,6 +134,40 @@ function matterData(content: string): Record<string, unknown> {
   return matter(content).data || {};
 }
 
+function formatIssuePath(pathParts: Array<string | number>): string {
+  return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
+}
+
+function validateFrontMatterWithZod(data: Record<string, unknown>): FrontMatterIssue[] {
+  const result = adrFrontMatterSchema.safeParse(data);
+  if (result.success) return [];
+  return result.error.issues.map((issue: { message: string; path: Array<string | number> }) => ({
+    message: issue.message,
+    path: formatIssuePath(issue.path),
+  }));
+}
+
+function validateFrontMatterWithAjv(data: Record<string, unknown>): FrontMatterIssue[] {
+  const valid = validateFrontMatterAjv(data);
+  if (valid) return [];
+  return (validateFrontMatterAjv.errors || []).map((error: { instancePath?: string; message?: string; params?: Record<string, unknown> }) => {
+    const missing = typeof error.params?.missingProperty === "string" ? `.${error.params.missingProperty}` : "";
+    return {
+      message: error.message || "Invalid front matter",
+      path: `${error.instancePath || "$"}${missing}`.replace(/^\//, "").replace(/\//g, "."),
+    };
+  });
+}
+
+function validateFrontMatter(content: string): FrontMatterIssue[] {
+  const data = matterData(content);
+  const byPath = new Map<string, FrontMatterIssue>();
+  for (const issue of validateFrontMatterWithZod(data).concat(validateFrontMatterWithAjv(data))) {
+    byPath.set(`${issue.path}:${issue.message}`, issue);
+  }
+  return [...byPath.values()];
+}
+
 function relationMap(content: string): Record<RelationField, string[]> {
   const data = matterData(content);
   const relations = data.relations;
@@ -148,4 +231,7 @@ module.exports = {
   relationMap,
   slugify,
   titleFromAdr,
+  validateFrontMatter,
+  validateFrontMatterWithAjv,
+  validateFrontMatterWithZod,
 };

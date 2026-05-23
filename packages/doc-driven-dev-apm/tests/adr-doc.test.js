@@ -201,6 +201,8 @@ test("package scripts expose tests and markdownlint", () => {
   assert.match(packageJson.scripts.test, /node --test/);
   assert.match(packageJson.scripts["lint:md"], /markdownlint-cli2/);
   assert.equal(Boolean(packageJson.dependencies["gray-matter"]), true);
+  assert.equal(Boolean(packageJson.dependencies.zod), true);
+  assert.equal(Boolean(packageJson.dependencies.ajv), true);
   assert.equal(Boolean(packageJson.dependencies.unified), true);
   assert.equal(Boolean(packageJson.dependencies["remark-parse"]), true);
   assert.equal(Boolean(packageJson.dependencies["unist-util-visit"]), true);
@@ -329,4 +331,48 @@ test("check_code_links reports missing Implementation Plan paths", () => {
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
   assert.equal(report.findings.some((finding) => finding.code === "missing-implementation-path"), true);
+});
+
+test("audit_adr validates front matter with schema validators", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-invalid-front-matter.md"),
+    [
+      "---",
+      "status: 42",
+      'date: "20260523"',
+      "decision-makers: nobody",
+      "consulted: []",
+      "informed: []",
+      "relations:",
+      "  supersedes: []",
+      "  superseded-by: []",
+      "  related: []",
+      "  refines: []",
+      "---",
+      "",
+      "# 1. Invalid Front Matter",
+      "",
+      "## Context and Problem Statement",
+      "",
+      "## Considered Options",
+      "",
+      "## Decision Outcome",
+      "",
+      "## Implementation Plan",
+      "",
+      "## Verification",
+      "",
+      "* [ ] Run tests",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("audit_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding) => finding.code === "invalid-front-matter"), true);
 });
