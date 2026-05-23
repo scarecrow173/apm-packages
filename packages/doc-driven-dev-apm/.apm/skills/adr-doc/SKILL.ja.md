@@ -33,8 +33,11 @@ node scripts/migrate_report.ts --dir docs/adr
 ## 既定値
 
 - 既定テンプレート: `minimal`
-- テンプレート選択、ディレクトリ、ファイル名、メタデータ、status、relation、
-  可変性、索引の既定値は `references/adr-conventions.ja.md` で定義する。
+- ディレクトリ、ファイル名、メタデータ、status、relation、可変性、
+  索引の既定値は `references/adr-conventions.ja.md` で定義する。
+
+## テンプレート選択
+
 - 詳細なテンプレート選択ガイドは `references/template-variants.ja.md` で定義する。
 
 ## 運用ルール

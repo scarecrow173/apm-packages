@@ -32,9 +32,11 @@ node scripts/migrate_report.ts --dir docs/adr
 ## Defaults
 
 - Default template: `minimal`.
-- Template selection, directory, filename, metadata, status, relation,
-  mutability, and indexing defaults are defined in
-  `references/adr-conventions.md`.
+- Directory, filename, metadata, status, relation, mutability, and indexing
+  defaults are defined in `references/adr-conventions.md`.
+
+## Template Selection
+
 - Detailed template selection guidance is defined in
   `references/template-variants.md`.
 
