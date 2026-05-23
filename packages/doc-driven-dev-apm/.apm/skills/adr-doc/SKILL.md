@@ -29,14 +29,19 @@ node scripts/update_index.ts --dir docs/adr --write
 node scripts/migrate_report.ts --dir docs/adr
 ```
 
-## Defaults
+## ADR Conventions
 
-- Default template: `minimal`.
+- Treat `references/adr-conventions.md` as the authoritative ADR convention.
 - Directory, filename, metadata, status, relation, mutability, and indexing
   defaults are defined in `references/adr-conventions.md`.
 
 ## Template Selection
 
+- Default template: `full`.
+- Use `minimal` only when the decision is simple, unlikely to be misread, and
+  has little meaningful trade-off to preserve. When in doubt, choose `full`.
+- Use the `bare` template family when the repository already has strict ADR
+  wording conventions.
 - Detailed template selection guidance is defined in
   `references/template-variants.md`.
 

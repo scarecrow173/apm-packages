@@ -73,21 +73,6 @@ Required fields:
 `consulted` and `informed` follow the RACI communication distinction:
 consulted is two-way input; informed is one-way notification.
 
-## Template Selection
-
-Detailed template selection rules are defined in `template-variants.md`.
-
-Use `minimal` by default only when the decision is simple, unlikely to be
-misread, and has little meaningful trade-off to preserve. When in doubt, choose
-`full`.
-
-| Template | Use when |
-| --- | --- |
-| `minimal` | The decision is simple, low-risk, unlikely to be misunderstood, and has minimal trade-off. |
-| `full` | The decision needs structured reasoning, explicit trade-offs, or durable comparison between options. |
-| `bare-minimal` | The repository already has strict ADR wording, and only the minimal MADR section structure should be inserted. |
-| `bare` | The repository already has strict ADR wording, but the full MADR section structure is still useful. |
-
 ## Status Values
 
 Use these lifecycle statuses:

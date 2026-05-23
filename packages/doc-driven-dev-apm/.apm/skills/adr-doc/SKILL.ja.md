@@ -30,14 +30,17 @@ node scripts/update_index.ts --dir docs/adr --write
 node scripts/migrate_report.ts --dir docs/adr
 ```
 
-## 既定値
+## ADR規約
 
-- 既定テンプレート: `minimal`
+- ADR 規約の正本として `references/adr-conventions.ja.md` を扱う。
 - ディレクトリ、ファイル名、メタデータ、status、relation、可変性、
   索引の既定値は `references/adr-conventions.ja.md` で定義する。
 
 ## テンプレート選択
 
+- 既定テンプレート: `full`
+- 判断が単純で、誤解が起きにくく、保存すべき重要なトレードオフが少ない場合に限って `minimal` を使います。迷う場合は `full` を選びます。
+- リポジトリ側に厳密な ADR 文言規約がある場合は`bare`系統のテンプレートを選択します。
 - 詳細なテンプレート選択ガイドは `references/template-variants.ja.md` で定義する。
 
 ## 運用ルール

@@ -5,11 +5,11 @@ with the `adr-doc` skill.
 
 ## Default
 
-Use `minimal` by default only when the decision is simple, unlikely to be
-misread, and has little meaningful trade-off to preserve.
+Use `full` by default. It preserves structured reasoning, decision drivers, and
+trade-offs unless the author explicitly chooses a lighter template.
 
-When in doubt, choose `full`. Missing reasoning is harder to recover later than
-extra structure is to leave empty during drafting.
+Choose `minimal` only when the decision is simple, unlikely to be misread, and
+has little meaningful trade-off to preserve. When in doubt, choose `full`.
 
 ## Variant Summary
 

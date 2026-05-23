@@ -51,6 +51,8 @@ test("new_adr creates the default MADR ADR and index in docs/adr", () => {
   assert.match(adr, /^  refines: \[\]$/m);
   assert.match(adr, /^# 1\. Adopt MADR/m);
   assert.match(adr, /## Context and Problem Statement/);
+  assert.match(adr, /## Decision Drivers/);
+  assert.match(adr, /## Pros and Cons of the Options/);
   assert.match(adr, /## Decision Outcome/);
 });
 

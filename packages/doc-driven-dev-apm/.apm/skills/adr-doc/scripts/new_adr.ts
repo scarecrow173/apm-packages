@@ -33,7 +33,7 @@ type TemplateValues = {
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { template: "minimal", status: "proposed", cwd: process.cwd() };
+  const args: CliArgs = { template: "full", status: "proposed", cwd: process.cwd() };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
