@@ -35,6 +35,8 @@ node scripts/migrate_report.ts --dir docs/adr
 - Template selection, directory, filename, metadata, status, relation,
   mutability, and indexing defaults are defined in
   `references/adr-conventions.md`.
+- Detailed template selection guidance is defined in
+  `references/template-variants.md`.
 
 ## Operating Rules
 
