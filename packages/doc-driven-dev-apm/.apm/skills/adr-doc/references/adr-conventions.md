@@ -73,6 +73,27 @@ Required fields:
 `consulted` and `informed` follow the RACI communication distinction:
 consulted is two-way input; informed is one-way notification.
 
+## Template Selection
+
+Use `minimal` by default. It captures the core MADR decision record while
+keeping new ADRs concise enough for routine use.
+
+Choose a template based on the amount of decision context that must be captured:
+
+| Template | Use when |
+| --- | --- |
+| `minimal` | The decision is routine or moderate in scope, and context, options, and outcome are enough. |
+| `full` | The decision is high-impact, cross-team, risky, compliance-relevant, or likely to need detailed review later. |
+| `bare-minimal` | The repository already has strict ADR wording, and only the minimal MADR section structure should be inserted. |
+| `bare` | The repository already has strict ADR wording, but the full MADR section structure is still useful. |
+
+Prefer `full` when there is meaningful uncertainty, a controversial trade-off,
+multiple viable options, or expected future audit needs.
+
+Prefer `bare` or `bare-minimal` only when an existing repository convention
+already defines the prose guidance. Do not use bare templates just to make ADRs
+shorter.
+
 ## Status Values
 
 Use these lifecycle statuses:
