@@ -1,0 +1,27 @@
+{
+  "name": "doc-driven-dev-apm",
+  "version": "0.1.0",
+  "description": "Document-driven development APM package, starting with a MADR ADR skill.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "lint:md": "markdownlint-cli2"
+  },
+  "keywords": [
+    "apm",
+    "adr",
+    "madr",
+    "documentation"
+  ],
+  "author": "Akiyoshi Koyama",
+  "license": "MIT",
+  "packageManager": "pnpm@11.2.2",
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.22.1"
+  }
+}
