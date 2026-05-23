@@ -33,6 +33,18 @@ Chosen option: "", because .
 
 ### Confirmation
 
+## Implementation Plan
+
+* Affected paths:
+* Patterns to follow:
+* Patterns to avoid:
+* Dependencies or configuration:
+
+## Verification
+
+* [ ]
+* [ ]
+
 ## Pros and Cons of the Options
 
 ### Option

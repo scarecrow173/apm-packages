@@ -10,6 +10,8 @@ const requiredSections = [
   "Context and Problem Statement",
   "Considered Options",
   "Decision Outcome",
+  "Implementation Plan",
+  "Verification",
 ];
 const requiredMetadata = ["status", "date", "decision-makers", "consulted", "informed"];
 const relationFields = ["supersedes", "superseded-by", "related", "refines"];

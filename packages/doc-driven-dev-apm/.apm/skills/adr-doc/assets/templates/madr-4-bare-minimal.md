@@ -22,3 +22,12 @@ relations:
 ## Decision Outcome
 
 Chosen option: "", because .
+
+## Implementation Plan
+
+* Affected paths:
+* Constraints:
+
+## Verification
+
+* [ ]

@@ -4,7 +4,7 @@ This package provides reusable skills for document-driven development.
 
 The first shipped skill is `adr-doc`, a MADR 4.0.0-oriented workflow for
 creating, auditing, indexing, and migration-planning architecture decision
-records.
+records that coding agents can implement from directly.
 
 Future skills can be added beside it under `.apm/skills/`, for example:
 
@@ -43,6 +43,7 @@ node --test tests/*.test.js
 Use this skill to work with MADR 4.0.0 ADRs:
 
 - create a new ADR from a MADR template
+- write implementation plans and verification criteria for coding agents
 - audit ADR structure and index consistency
 - rebuild the ADR index
 - produce migration reports without changing files

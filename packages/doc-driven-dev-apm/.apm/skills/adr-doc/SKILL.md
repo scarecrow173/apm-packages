@@ -14,6 +14,8 @@ acceptance signals to implement the decision without additional explanation.
 
 ## Responsibilities
 
+- Read relevant existing ADRs, code patterns, and project conventions before
+  drafting a new ADR.
 - Create new ADRs from MADR 4.0.0 templates.
 - Write ADRs as executable decision guidance for coding agents.
 - Detect common ADR directories and naming conventions.
@@ -49,6 +51,13 @@ node scripts/migrate_report.ts --dir docs/adr
   wording conventions.
 - Detailed template selection guidance is defined in
   `references/template-variants.md`.
+
+## Agent Readiness
+
+- Every new ADR should include an implementation plan and verification criteria.
+- Review drafted ADRs with `references/review-checklist.md` before finalizing.
+- If the ADR cannot tell a coding agent what to change, what to preserve, and
+  how to verify completion, ask for more intent before writing or accepting it.
 
 ## Operating Rules
 

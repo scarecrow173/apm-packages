@@ -26,3 +26,12 @@ relations:
 ## Decision Outcome
 
 Chosen option: "<!-- option -->", because <!-- justification -->.
+
+## Implementation Plan
+
+* Affected paths: <!-- files, directories, modules, or interfaces -->
+* Constraints: <!-- what the agent must preserve or avoid -->
+
+## Verification
+
+* [ ] <!-- command, test, review step, or observable behavior -->

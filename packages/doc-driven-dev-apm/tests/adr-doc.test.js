@@ -54,6 +54,8 @@ test("new_adr creates the default MADR ADR and index in docs/adr", () => {
   assert.match(adr, /## Decision Drivers/);
   assert.match(adr, /## Pros and Cons of the Options/);
   assert.match(adr, /## Decision Outcome/);
+  assert.match(adr, /## Implementation Plan/);
+  assert.match(adr, /## Verification/);
 });
 
 test("new_adr honors --dir and all supported templates", () => {
@@ -131,6 +133,10 @@ test("audit_adr validates relation links when relations are present", () => {
       "",
       "## Decision Outcome",
       "",
+      "## Implementation Plan",
+      "",
+      "## Verification",
+      "",
     ].join("\n"),
     "utf8",
   );
@@ -170,6 +176,10 @@ test("audit_adr validates reference-style markdown links", () => {
       "## Considered Options",
       "",
       "## Decision Outcome",
+      "",
+      "## Implementation Plan",
+      "",
+      "## Verification",
       "",
       "[missing]: ./missing.md",
       "",

@@ -41,6 +41,18 @@ Chosen option: "<!-- option -->", because <!-- justification -->.
 
 <!-- Describe how implementation or compliance with this ADR will be confirmed. -->
 
+## Implementation Plan
+
+* Affected paths: <!-- files, directories, modules, or interfaces -->
+* Patterns to follow: <!-- existing code or conventions -->
+* Patterns to avoid: <!-- rejected implementation approaches -->
+* Dependencies or configuration: <!-- packages, env vars, feature flags, migrations -->
+
+## Verification
+
+* [ ] <!-- command, test, review step, or observable behavior -->
+* [ ] <!-- architectural or structural check -->
+
 ## Pros and Cons of the Options
 
 ### Option 1
