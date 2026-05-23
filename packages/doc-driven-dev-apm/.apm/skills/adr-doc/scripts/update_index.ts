@@ -29,7 +29,7 @@ function usage(): string {
   return "Usage: node scripts/update_index.ts [--dir <path>] [--write]";
 }
 
-function main(): void {
+async function main(): Promise<void> {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -42,7 +42,7 @@ function main(): void {
     const adrDir = path.join(cwd, relativeDir);
     if (!fs.existsSync(adrDir)) throw new Error(`ADR directory not found: ${relativeDir}`);
 
-    const output = buildIndex(adrDir, relativeDir);
+    const output = await buildIndex(adrDir, relativeDir);
     const indexPath = path.join(adrDir, "README.md");
     if (args.write) {
       fs.writeFileSync(indexPath, output, "utf8");

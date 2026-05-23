@@ -3,7 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { adrFiles, findAdrDir } = require("./lib/adr_utils.ts");
+const { adrFiles, findAdrDir, referencedPaths, sectionBody } = require("./lib/adr_utils.ts");
 
 type CliArgs = {
   cwd: string;
@@ -36,28 +36,7 @@ function usage(): string {
   return "Usage: node scripts/check_code_links.ts [--dir <path>] [--json]";
 }
 
-function sectionBody(content: string, section: string): string {
-  const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = new RegExp(`^#{2,3}\\s+${escaped}\\s*$([\\s\\S]*?)(?=^#{2,3}\\s+|\\z)`, "mi").exec(content);
-  return match ? match[1].trim() : "";
-}
-
-function referencedPaths(body: string): string[] {
-  const paths = new Set<string>();
-  const patterns = [
-    /`([^`\n]+\.[A-Za-z0-9]+)`/g,
-    /\((\.{1,2}\/[^)#]+|\/[^)#]+)\)/g,
-  ];
-  for (const pattern of patterns) {
-    for (const match of body.matchAll(pattern)) {
-      const value = match[1].trim();
-      if (!/^https?:\/\//i.test(value)) paths.add(value);
-    }
-  }
-  return [...paths];
-}
-
-function main(): void {
+async function main(): Promise<void> {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -70,8 +49,8 @@ function main(): void {
     const findings: Finding[] = [];
     for (const file of adrFiles(adrDir)) {
       const content = fs.readFileSync(path.join(adrDir, file), "utf8");
-      const implementation = sectionBody(content, "Implementation Plan");
-      for (const target of referencedPaths(implementation)) {
+      const implementation = await sectionBody(content, "Implementation Plan");
+      for (const target of await referencedPaths(implementation)) {
         const resolved = path.resolve(path.dirname(path.join(adrDir, file)), target);
         if (!fs.existsSync(resolved)) {
           findings.push({ severity: "warning", file, code: "missing-implementation-path", message: `Implementation Plan references missing path: ${target}` });

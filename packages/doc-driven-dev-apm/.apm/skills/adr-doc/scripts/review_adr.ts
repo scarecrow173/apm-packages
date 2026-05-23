@@ -3,7 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { adrFiles, findAdrDir, hasSection, relationLinks, validateFrontMatter } = require("./lib/adr_utils.ts");
+const { adrFiles, findAdrDir, hasSection, relationLinks, sectionBody, validateFrontMatter } = require("./lib/adr_utils.ts");
 
 type CliArgs = {
   cwd: string;
@@ -38,32 +38,26 @@ function usage(): string {
   return "Usage: node scripts/review_adr.ts [--dir <path>] [--file <adr.md>] [--json]";
 }
 
-function sectionBody(content: string, section: string): string {
-  const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = new RegExp(`^#{2,3}\\s+${escaped}\\s*$([\\s\\S]*?)(?=^#{2,3}\\s+|\\z)`, "mi").exec(content);
-  return match ? match[1].trim() : "";
-}
-
 function checklistItems(body: string): string[] {
   return body.split(/\r?\n/).filter((line) => /^\s*[*-]\s+\[[ xX]\]/.test(line));
 }
 
-function reviewFile(cwd: string, relativeDir: string, file: string): Finding[] {
+async function reviewFile(cwd: string, relativeDir: string, file: string): Promise<Finding[]> {
   const fullPath = path.join(cwd, relativeDir, file);
   const content = fs.readFileSync(fullPath, "utf8");
   const findings: Finding[] = [];
   const required = ["Context and Problem Statement", "Considered Options", "Decision Outcome", "Implementation Plan", "Verification"];
   for (const section of required) {
-    if (!hasSection(content, section)) findings.push({ severity: "error", file, code: "missing-agent-section", message: `Missing section: ${section}` });
+    if (!(await hasSection(content, section))) findings.push({ severity: "error", file, code: "missing-agent-section", message: `Missing section: ${section}` });
   }
-  const implementation = sectionBody(content, "Implementation Plan");
+  const implementation = await sectionBody(content, "Implementation Plan");
   if (!/Affected paths?:/i.test(implementation)) {
     findings.push({ severity: "warning", file, code: "missing-affected-paths", message: "Implementation Plan should name affected paths" });
   }
   if (!/(Patterns to follow|Constraints):/i.test(implementation)) {
     findings.push({ severity: "warning", file, code: "missing-implementation-constraints", message: "Implementation Plan should name constraints or patterns to follow" });
   }
-  const verification = sectionBody(content, "Verification");
+  const verification = await sectionBody(content, "Verification");
   if (checklistItems(verification).length === 0) {
     findings.push({ severity: "error", file, code: "missing-verification-checks", message: "Verification should contain checkboxes" });
   }
@@ -82,7 +76,7 @@ function reviewFile(cwd: string, relativeDir: string, file: string): Finding[] {
   return findings;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -92,7 +86,7 @@ function main(): void {
     const cwd = path.resolve(args.cwd);
     const relativeDir = findAdrDir(cwd, args.dir);
     const files = args.file ? [path.basename(args.file)] : adrFiles(path.join(cwd, relativeDir));
-    const findings = files.flatMap((file) => reviewFile(cwd, relativeDir, file));
+    const findings = (await Promise.all(files.map((file) => reviewFile(cwd, relativeDir, file)))).flat();
     const report = { directory: relativeDir, files: files.length, findings };
     if (args.json) {
       console.log(JSON.stringify(report, null, 2));

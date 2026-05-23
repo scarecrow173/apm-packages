@@ -30,7 +30,7 @@ function usage(): string {
   return "Usage: node scripts/list_adrs.ts [--dir <path>] [--status <status>] [--json]";
 }
 
-function main(): void {
+async function main(): Promise<void> {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -39,7 +39,7 @@ function main(): void {
     }
     const cwd = path.resolve(args.cwd);
     const relativeDir = findAdrDir(cwd, args.dir);
-    const entries = adrEntries(cwd, relativeDir)
+    const entries = (await adrEntries(cwd, relativeDir))
       .filter((entry) => !args.status || entry.status === args.status);
     const report = { directory: relativeDir, count: entries.length, entries };
     if (args.json) {

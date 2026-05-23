@@ -333,6 +333,113 @@ test("check_code_links reports missing Implementation Plan paths", () => {
   assert.equal(report.findings.some((finding) => finding.code === "missing-implementation-path"), true);
 });
 
+test("check_code_links includes nested Implementation Plan subsections", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-nested-implementation.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "---",
+      "",
+      "# 1. Nested Implementation",
+      "",
+      "## Implementation Plan",
+      "",
+      "### Affected paths",
+      "",
+      "- Update `src/nested-missing.ts`.",
+      "",
+      "## Verification",
+      "",
+      "- [ ] Run tests",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("check_code_links.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding) => finding.message.includes("src/nested-missing.ts")), true);
+});
+
+test("review_adr accepts verification checkboxes in nested subsections", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-nested-verification.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "decision-makers: []",
+      "consulted: []",
+      "informed: []",
+      "---",
+      "",
+      "# 1. Nested Verification",
+      "",
+      "## Context and Problem Statement",
+      "",
+      "## Considered Options",
+      "",
+      "## Decision Outcome",
+      "",
+      "## Implementation Plan",
+      "",
+      "Affected paths: `src/app.ts`",
+      "Patterns to follow: existing ADR scripts.",
+      "",
+      "## Verification",
+      "",
+      "### Automated",
+      "",
+      "- [ ] Run `pnpm test`.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("review_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding) => finding.code === "missing-verification-checks"), false);
+});
+
+test("list_adrs extracts plain text from markdown heading titles", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-linked-title.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "decision-makers: []",
+      "consulted: []",
+      "informed: []",
+      "---",
+      "",
+      "# 1. Use [new module](../src/new-module.ts)",
+      "",
+      "## Context and Problem Statement",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("list_adrs.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.entries[0].title, "Use new module");
+});
+
 test("audit_adr validates front matter with zod schema", () => {
   const repo = tempRepo();
   fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });

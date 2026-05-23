@@ -45,9 +45,10 @@ function usage(): string {
   return "Usage: node scripts/migrate_report.ts [--dir <path>] [--json]";
 }
 
-function migrationFor(cwd: string, relativeDir: string, file: string): Migration {
+async function migrationFor(cwd: string, relativeDir: string, file: string): Promise<Migration> {
   const content = fs.readFileSync(path.join(cwd, relativeDir, file), "utf8");
-  const missingSections = targetSections.filter((section) => !hasSection(content, section));
+  const sectionPresence = await Promise.all(targetSections.map(async (section) => ({ section, present: await hasSection(content, section) })));
+  const missingSections = sectionPresence.filter((item) => !item.present).map((item) => item.section);
   const actions: string[] = [];
   for (const field of ["status", "date", "decision-makers", "consulted", "informed"]) {
     if (!new RegExp(`^${field}:\\s+.+$`, "m").test(content)) actions.push(`Add ${field} metadata`);
@@ -59,7 +60,7 @@ function migrationFor(cwd: string, relativeDir: string, file: string): Migration
   return { file, actions };
 }
 
-function main(): void {
+async function main(): Promise<void> {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -70,7 +71,7 @@ function main(): void {
     const cwd = path.resolve(args.cwd);
     const relativeDir = findAdrDir(cwd, args.dir);
     const files = adrFiles(path.join(cwd, relativeDir));
-    const migrations = files.map((file) => migrationFor(cwd, relativeDir, file));
+    const migrations = await Promise.all(files.map((file) => migrationFor(cwd, relativeDir, file)));
     const report = { directory: relativeDir, migrations };
 
     if (args.json) {

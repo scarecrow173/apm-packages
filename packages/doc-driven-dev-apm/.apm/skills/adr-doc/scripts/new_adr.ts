@@ -79,7 +79,7 @@ function renderTemplate(templateName: TemplateName, values: TemplateValues): str
     .replaceAll("{{status}}", values.status);
 }
 
-function main(): void {
+async function main(): Promise<void> {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -104,7 +104,7 @@ function main(): void {
     const date = args.date || new Date().toISOString().slice(0, 10);
     const content = renderTemplate(args.template, { number, title: args.title, date, status: args.status });
     fs.writeFileSync(outputPath, content, "utf8");
-    fs.writeFileSync(path.join(adrDir, "README.md"), buildIndex(adrDir, relativeDir), "utf8");
+    fs.writeFileSync(path.join(adrDir, "README.md"), await buildIndex(adrDir, relativeDir), "utf8");
 
     console.log(`Created ${path.relative(cwd, outputPath).replace(/\\/g, "/")}`);
     console.log(`Updated ${path.relative(cwd, path.join(adrDir, "README.md")).replace(/\\/g, "/")}`);

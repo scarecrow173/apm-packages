@@ -7,6 +7,7 @@ const {
   adrFiles,
   findAdrDir,
   hasSection,
+  markdownLinks,
   relationLinks,
   validateFrontMatter,
 } = require("./lib/adr_utils.ts");
@@ -42,10 +43,6 @@ type Finding = {
   severity: Severity;
 };
 
-type MarkdownLink = {
-  url: string;
-};
-
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = { cwd: process.cwd(), json: false };
   for (let i = 0; i < argv.length; i += 1) {
@@ -63,28 +60,6 @@ function usage(): string {
   return "Usage: node scripts/audit_adr.ts [--dir <path>] [--json]";
 }
 
-async function markdownLinks(content: string): Promise<MarkdownLink[]> {
-  const [{ unified }, remarkParse, visitModule] = await Promise.all([
-    import("unified"),
-    import("remark-parse"),
-    import("unist-util-visit"),
-  ]);
-  const tree = unified().use(remarkParse.default).parse(content);
-  const links: MarkdownLink[] = [];
-  visitModule.visit(tree, ["link", "definition"], (node: { url?: string }) => {
-    if (node.url && isLocalLink(node.url)) links.push({ url: stripAnchor(node.url) });
-  });
-  return links;
-}
-
-function isLocalLink(url: string): boolean {
-  return url.startsWith("./") || url.startsWith("../") || url.startsWith("/");
-}
-
-function stripAnchor(url: string): string {
-  return url.split("#")[0];
-}
-
 async function auditFile(cwd: string, relativeDir: string, file: string): Promise<Finding[]> {
   const filePath = path.join(cwd, relativeDir, file);
   const content = fs.readFileSync(filePath, "utf8");
@@ -93,12 +68,12 @@ async function auditFile(cwd: string, relativeDir: string, file: string): Promis
     findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${issue.path}: ${issue.message}` });
   }
   for (const section of requiredSections) {
-    if (!hasSection(content, section)) {
+    if (!(await hasSection(content, section))) {
       findings.push({ severity: "error", file, code: "missing-section", message: `Missing section: ${section}` });
     }
   }
   for (const section of recommendedSections) {
-    if (!hasSection(content, section)) {
+    if (!(await hasSection(content, section))) {
       findings.push({ severity: "info", file, code: "missing-recommended-section", message: `Missing recommended section: ${section}` });
     }
   }
