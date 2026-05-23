@@ -17,7 +17,7 @@ tool-specific maintenance behavior.
 ## Review Focus
 
 - Missing MADR sections.
-- Missing or malformed metadata, validated with `gray-matter`, `zod`, and `ajv`.
+- Missing or malformed metadata, parsed with `gray-matter` and validated with `zod`.
 - Broken `relations` links between ADR files.
 - Unresolved template placeholders.
 - Local links that no longer resolve.

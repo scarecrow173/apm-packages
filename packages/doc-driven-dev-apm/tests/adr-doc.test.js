@@ -202,7 +202,7 @@ test("package scripts expose tests and markdownlint", () => {
   assert.match(packageJson.scripts["lint:md"], /markdownlint-cli2/);
   assert.equal(Boolean(packageJson.dependencies["gray-matter"]), true);
   assert.equal(Boolean(packageJson.dependencies.zod), true);
-  assert.equal(Boolean(packageJson.dependencies.ajv), true);
+  assert.equal(Boolean(packageJson.dependencies.ajv), false);
   assert.equal(Boolean(packageJson.dependencies.unified), true);
   assert.equal(Boolean(packageJson.dependencies["remark-parse"]), true);
   assert.equal(Boolean(packageJson.dependencies["unist-util-visit"]), true);
@@ -333,7 +333,7 @@ test("check_code_links reports missing Implementation Plan paths", () => {
   assert.equal(report.findings.some((finding) => finding.code === "missing-implementation-path"), true);
 });
 
-test("audit_adr validates front matter with schema validators", () => {
+test("audit_adr validates front matter with zod schema", () => {
   const repo = tempRepo();
   fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
   fs.writeFileSync(

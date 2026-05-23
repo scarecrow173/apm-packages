@@ -2,7 +2,6 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const Ajv = require("ajv");
 const matter = require("gray-matter");
 const { z } = require("zod");
 
@@ -41,32 +40,6 @@ const adrFrontMatterSchema = z.object({
   informed: z.array(z.string()),
   relations: relationSchema,
 }).passthrough();
-
-const adrFrontMatterJsonSchema = {
-  type: "object",
-  required: ["status", "date", "decision-makers", "consulted", "informed"],
-  properties: {
-    status: { type: "string", minLength: 1 },
-    date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
-    "decision-makers": { type: "array", items: { type: "string" } },
-    consulted: { type: "array", items: { type: "string" } },
-    informed: { type: "array", items: { type: "string" } },
-    relations: {
-      type: "object",
-      properties: {
-        supersedes: { type: "array", items: { type: "string" } },
-        "superseded-by": { type: "array", items: { type: "string" } },
-        related: { type: "array", items: { type: "string" } },
-        refines: { type: "array", items: { type: "string" } },
-      },
-      additionalProperties: false,
-    },
-  },
-  additionalProperties: true,
-} as const;
-
-const ajv = new Ajv({ allErrors: true });
-const validateFrontMatterAjv = ajv.compile(adrFrontMatterJsonSchema);
 
 function normalizeDir(input: string): string {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
@@ -147,25 +120,9 @@ function validateFrontMatterWithZod(data: Record<string, unknown>): FrontMatterI
   }));
 }
 
-function validateFrontMatterWithAjv(data: Record<string, unknown>): FrontMatterIssue[] {
-  const valid = validateFrontMatterAjv(data);
-  if (valid) return [];
-  return (validateFrontMatterAjv.errors || []).map((error: { instancePath?: string; message?: string; params?: Record<string, unknown> }) => {
-    const missing = typeof error.params?.missingProperty === "string" ? `.${error.params.missingProperty}` : "";
-    return {
-      message: error.message || "Invalid front matter",
-      path: `${error.instancePath || "$"}${missing}`.replace(/^\//, "").replace(/\//g, "."),
-    };
-  });
-}
-
 function validateFrontMatter(content: string): FrontMatterIssue[] {
   const data = matterData(content);
-  const byPath = new Map<string, FrontMatterIssue>();
-  for (const issue of validateFrontMatterWithZod(data).concat(validateFrontMatterWithAjv(data))) {
-    byPath.set(`${issue.path}:${issue.message}`, issue);
-  }
-  return [...byPath.values()];
+  return validateFrontMatterWithZod(data);
 }
 
 function relationMap(content: string): Record<RelationField, string[]> {
@@ -232,6 +189,5 @@ module.exports = {
   slugify,
   titleFromAdr,
   validateFrontMatter,
-  validateFrontMatterWithAjv,
   validateFrontMatterWithZod,
 };
