@@ -6,6 +6,8 @@ python.uv_venv_auto = "create|source"
 UV_EXCLUDE_NEWER = "1 week"
 
 [tools]
+node = "24.14.0"
+pnpm = "11.2.2"
 python = "3.14.5"
 uv = "0.11.16"
 "pipx:apm-cli" = "latest"
