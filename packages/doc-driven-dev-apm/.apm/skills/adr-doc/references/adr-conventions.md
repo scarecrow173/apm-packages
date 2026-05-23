@@ -4,6 +4,9 @@ These conventions define how the `adr-doc` skill creates, audits, indexes, and
 reports on Architecture Decision Records. They are adapted for this package's
 MADR 4.0.0 templates and `relations` front matter extension.
 
+`adr-doc` ADRs are written for coding agents. A reader should be able to execute
+the decision from the ADR itself, without asking for additional explanation.
+
 ## Directory
 
 If a repository already has an ADR directory, keep it. Do not move existing ADRs
@@ -127,6 +130,13 @@ At minimum, every ADR should clearly answer:
 1. **Context and Problem Statement**: why the decision exists now.
 2. **Considered Options**: which meaningful alternatives were considered.
 3. **Decision Outcome**: what was chosen and why.
+
+For coding agents, every ADR should also make the implementation boundary clear:
+
+- What the agent should change or preserve.
+- Which constraints, interfaces, files, or behaviors are in scope.
+- Which alternatives are explicitly not chosen.
+- How the agent can recognize that the decision has been implemented correctly.
 
 For fuller ADRs, also capture:
 

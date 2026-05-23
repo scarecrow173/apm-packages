@@ -27,6 +27,8 @@ Choose `full` when any of these are true:
 - There are multiple real options and the ADR should preserve structured
   trade-offs.
 - Decision drivers must be explicit, including which criteria mattered.
+- Coding agents need implementation boundaries, constraints, or acceptance
+  signals to execute the decision correctly.
 - The decision is likely to be revisited, and the comparison between options
   needs to survive.
 - Stakeholders need to see the reasoning process, not just the outcome.
@@ -42,6 +44,8 @@ Choose `minimal` only when all of these are true:
 
 - The decision is simple and local.
 - The implementation path is unlikely to be misunderstood.
+- A coding agent can execute the decision without additional constraints or
+  acceptance details.
 - The trade-off is obvious or minimal.
 - Capturing context, considered options, and outcome is enough for future
   readers.

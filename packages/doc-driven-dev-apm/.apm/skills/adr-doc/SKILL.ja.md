@@ -1,16 +1,21 @@
 ---
 name: adr-doc
-description: MADR 4.0.0 を使って Architecture Decision Record を作成、監査、索引化、移行計画するときに使う skill です。判断履歴を保全し、既存の ADR ディレクトリ規約に適応し、明示要求なしの自動書き換えを避けます。
+description: MADR 4.0.0 を使って、コーディングエージェント向けの Architecture Decision Record を作成、監査、索引化、移行計画するときに使う skill です。追加説明なしに実行できる判断を書けるようにします。
 license: MIT
 ---
 
 # ADR Documentation Skill
 
-MADR 4.0.0 ベースの Architecture Decision Record にこの skill を使います。
+MADR 4.0.0 ベースの、コーディングエージェント向け Architecture Decision
+Record にこの skill を使います。
+
+`adr-doc` の ADR は、コーディングエージェントが追加説明なしに判断を実装できる
+だけの文脈、制約、受け入れ基準を含める必要があります。
 
 ## 役割
 
 - MADR 4.0.0 テンプレートから新しい ADR を作成する。
+- コーディングエージェントが実行できる判断ガイドとして ADR を書く。
 - よく使われる ADR ディレクトリと命名規則を検出する。
 - メタデータ不足、MADR セクション不足、未解決プレースホルダー、壊れたローカルリンク、索引ずれを監査する。
 - YAML フロントマターに任意の `relations` リンクがある場合は検査する。

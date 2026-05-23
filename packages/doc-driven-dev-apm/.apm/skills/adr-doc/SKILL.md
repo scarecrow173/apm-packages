@@ -1,16 +1,21 @@
 ---
 name: adr-doc
-description: Use this skill when creating, auditing, indexing, or migration-planning Architecture Decision Records using MADR 4.0.0. It helps preserve decision history, adapt to existing ADR directory conventions, and avoid automatic rewrites unless explicitly requested.
+description: Use this skill when creating, auditing, indexing, or migration-planning Architecture Decision Records for coding agents using MADR 4.0.0. It helps write decisions that agents can execute without extra explanation.
 license: MIT
 ---
 
 # ADR Documentation Skill
 
-Use this skill for MADR 4.0.0-based Architecture Decision Records.
+Use this skill for MADR 4.0.0-based Architecture Decision Records written for
+coding agents.
+
+An `adr-doc` ADR must give a coding agent enough context, constraints, and
+acceptance signals to implement the decision without additional explanation.
 
 ## Responsibilities
 
 - Create new ADRs from MADR 4.0.0 templates.
+- Write ADRs as executable decision guidance for coding agents.
 - Detect common ADR directories and naming conventions.
 - Audit existing ADRs for missing metadata, missing MADR sections, unresolved placeholders, broken local links, and index drift.
 - Validate optional YAML front matter `relations` links when they are present.
