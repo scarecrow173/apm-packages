@@ -75,20 +75,21 @@ consulted is two-way input; informed is one-way notification.
 
 ## Template Selection
 
-Use `minimal` by default. It captures the core MADR decision record while
-keeping new ADRs concise enough for routine use.
+Use `minimal` by default only when the decision is simple, unlikely to be
+misread, and has little meaningful trade-off to preserve.
 
 Choose a template based on the amount of decision context that must be captured:
 
 | Template | Use when |
 | --- | --- |
-| `minimal` | The decision is routine or moderate in scope, and context, options, and outcome are enough. |
-| `full` | The decision is high-impact, cross-team, risky, compliance-relevant, or likely to need detailed review later. |
+| `minimal` | The decision is simple, low-risk, unlikely to be misunderstood, and has minimal trade-off. |
+| `full` | The decision has multiple real options, explicit decision drivers, meaningful trade-offs, high impact, cross-team effects, risk, compliance relevance, or expected future review. |
 | `bare-minimal` | The repository already has strict ADR wording, and only the minimal MADR section structure should be inserted. |
 | `bare` | The repository already has strict ADR wording, but the full MADR section structure is still useful. |
 
-Prefer `full` when there is meaningful uncertainty, a controversial trade-off,
-multiple viable options, or expected future audit needs.
+Prefer `full` when stakeholders need to see the reasoning process, not just the
+outcome. Also prefer it when the decision is likely to be revisited and the
+comparison between options must survive.
 
 Prefer `bare` or `bare-minimal` only when an existing repository convention
 already defines the prose guidance. Do not use bare templates just to make ADRs
