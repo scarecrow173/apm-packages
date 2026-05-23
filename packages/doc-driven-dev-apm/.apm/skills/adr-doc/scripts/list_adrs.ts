@@ -1,24 +1,25 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
 const path = require("node:path");
-const { buildIndex, findAdrDir } = require("./lib/adr_utils.ts");
+const { adrEntries, findAdrDir } = require("./lib/adr_utils.ts");
 
 type CliArgs = {
   cwd: string;
   dir?: string;
   help?: boolean;
-  write: boolean;
+  json: boolean;
+  status?: string;
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { cwd: process.cwd(), write: false };
+  const args: CliArgs = { cwd: process.cwd(), json: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
-    else if (arg === "--write") args.write = true;
+    else if (arg === "--status") args.status = argv[++i];
+    else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -26,7 +27,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/update_index.ts [--dir <path>] [--write]";
+  return "Usage: node scripts/list_adrs.ts [--dir <path>] [--status <status>] [--json]";
 }
 
 function main(): void {
@@ -36,20 +37,20 @@ function main(): void {
       console.log(usage());
       return;
     }
-
     const cwd = path.resolve(args.cwd);
     const relativeDir = findAdrDir(cwd, args.dir);
-    const adrDir = path.join(cwd, relativeDir);
-    if (!fs.existsSync(adrDir)) throw new Error(`ADR directory not found: ${relativeDir}`);
-
-    const output = buildIndex(adrDir, relativeDir);
-    const indexPath = path.join(adrDir, "README.md");
-    if (args.write) {
-      fs.writeFileSync(indexPath, output, "utf8");
-      console.log(`Updated ${path.relative(cwd, indexPath).replace(/\\/g, "/")}`);
-    } else {
-      console.log(`DRY RUN: would write ${path.relative(cwd, indexPath).replace(/\\/g, "/")}`);
-      console.log(output);
+    const entries = adrEntries(cwd, relativeDir)
+      .filter((entry) => !args.status || entry.status === args.status);
+    const report = { directory: relativeDir, count: entries.length, entries };
+    if (args.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(`ADR list: ${relativeDir}`);
+    for (const entry of entries) {
+      const status = entry.status ? ` [${entry.status}]` : "";
+      const date = entry.date ? ` ${entry.date}` : "";
+      console.log(`- ${entry.file}${status}${date}: ${entry.title}`);
     }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));

@@ -44,6 +44,8 @@ Use this skill to work with MADR 4.0.0 ADRs:
 
 - create a new ADR from a MADR template
 - write implementation plans and verification criteria for coding agents
+- list ADRs and review agent-readiness
 - audit ADR structure and index consistency
+- check Implementation Plan code links and manage ADR relations
 - rebuild the ADR index
 - produce migration reports without changing files

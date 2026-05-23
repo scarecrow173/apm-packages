@@ -7,8 +7,12 @@ ADR の方針と規約は `adr-conventions.ja.md` に従います。このファ
 
 - レポートは繰り返し安全に実行できる。
 - `audit_adr.ts` はファイルを書き込まない。
+- `review_adr.ts` はファイルを書き込まない。
+- `list_adrs.ts` はファイルを書き込まない。
+- `check_code_links.ts` はファイルを書き込まない。
 - `migrate_report.ts` はファイルを書き込まない。
 - `update_index.ts` は `--write` が指定された場合だけ書き込む。
+- `relate_adr.ts` は `--write` が指定された場合だけ書き込む。
 
 ## レビュー観点
 
@@ -18,6 +22,8 @@ ADR の方針と規約は `adr-conventions.ja.md` に従います。このファ
 - 未解決のテンプレートプレースホルダー。
 - 解決できなくなったローカルリンク。
 - ADR ファイルと一致しない索引エントリ。
+- Implementation Plan と Verification にあるエージェント対応上の不足。
+- Implementation Plan が参照する存在しない affected paths。
 
 ## 移行レポート
 

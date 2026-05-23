@@ -3,9 +3,14 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const matter = require("gray-matter");
+const {
+  adrFiles,
+  findAdrDir,
+  hasSection,
+  matterData,
+  relationLinks,
+} = require("./lib/adr_utils.ts");
 
-const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
 const requiredSections = [
   "Context and Problem Statement",
   "Considered Options",
@@ -14,7 +19,6 @@ const requiredSections = [
   "Verification",
 ];
 const requiredMetadata = ["status", "date", "decision-makers", "consulted", "informed"];
-const relationFields = ["supersedes", "superseded-by", "related", "refines"];
 const recommendedSections = [
   "Decision Drivers",
   "Consequences",
@@ -60,23 +64,6 @@ function usage(): string {
   return "Usage: node scripts/audit_adr.ts [--dir <path>] [--json]";
 }
 
-function findAdrDir(cwd: string, explicitDir?: string): string {
-  if (explicitDir) return explicitDir.replace(/\\/g, "/");
-  return candidateDirs.find((candidate) => fs.existsSync(path.join(cwd, candidate))) || "docs/adr";
-}
-
-function adrFiles(dir: string): string[] {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file))
-    .sort();
-}
-
-function hasSection(content: string, section: string): boolean {
-  const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^#{2,3}\\s+${escaped}\\s*$`, "mi").test(content);
-}
-
 async function markdownLinks(content: string): Promise<MarkdownLink[]> {
   const [{ unified }, remarkParse, visitModule] = await Promise.all([
     import("unified"),
@@ -97,28 +84,6 @@ function isLocalLink(url: string): boolean {
 
 function stripAnchor(url: string): string {
   return url.split("#")[0];
-}
-
-function matterData(content: string): Record<string, unknown> {
-  return matter(content).data || {};
-}
-
-function relationLinks(content: string): { field: string; target: string }[] {
-  const relations = matterData(content).relations;
-  if (!relations || typeof relations !== "object" || Array.isArray(relations)) return [];
-  const links: { field: string; target: string }[] = [];
-  const relationMap = relations as Record<string, unknown>;
-  for (const field of relationFields) {
-    const value = relationMap[field];
-    if (Array.isArray(value)) {
-      for (const target of value) {
-        if (typeof target === "string" && target.trim()) links.push({ field, target: target.trim() });
-      }
-    } else if (typeof value === "string" && value.trim()) {
-      links.push({ field, target: value.trim() });
-    }
-  }
-  return links;
 }
 
 async function auditFile(cwd: string, relativeDir: string, file: string): Promise<Finding[]> {

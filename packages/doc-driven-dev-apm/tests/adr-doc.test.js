@@ -221,3 +221,112 @@ test("migrate_report is report-only", () => {
   assert.equal(report.migrations.length, 1);
   assert.equal(fs.readFileSync(adrPath, "utf8"), before);
 });
+
+test("list_adrs reports ADR metadata", () => {
+  const repo = tempRepo();
+  const created = runScript("new_adr.ts", ["--title", "List Metadata", "--status", "accepted"], { cwd: repo });
+  assert.equal(created.status, 0, created.stderr);
+
+  const result = runScript("list_adrs.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.count, 1);
+  assert.equal(report.entries[0].status, "accepted");
+  assert.equal(report.entries[0].title, "List Metadata");
+});
+
+test("review_adr checks agent-readiness without writing", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  const adrPath = path.join(repo, "docs/adr/0001-not-ready.md");
+  fs.writeFileSync(
+    adrPath,
+    [
+      "---",
+      'status: "proposed"',
+      'date: "2026-05-23"',
+      "---",
+      "",
+      "# 1. Not Ready",
+      "",
+      "## Context and Problem Statement",
+      "",
+      "## Considered Options",
+      "",
+      "## Decision Outcome",
+      "",
+      "## Implementation Plan",
+      "",
+      "## Verification",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const before = fs.readFileSync(adrPath, "utf8");
+
+  const result = runScript("review_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding) => finding.code === "missing-affected-paths"), true);
+  assert.equal(report.findings.some((finding) => finding.code === "missing-verification-checks"), true);
+  assert.equal(fs.readFileSync(adrPath, "utf8"), before);
+});
+
+test("relate_adr is dry-run by default and writes bidirectional relations", () => {
+  const repo = tempRepo();
+  const first = runScript("new_adr.ts", ["--title", "Old Decision"], { cwd: repo });
+  const second = runScript("new_adr.ts", ["--title", "New Decision"], { cwd: repo });
+  assert.equal(first.status, 0, first.stderr);
+  assert.equal(second.status, 0, second.stderr);
+
+  const dryRun = runScript(
+    "relate_adr.ts",
+    ["--dir", "docs/adr", "--from", "0002-new-decision.md", "--to", "0001-old-decision.md", "--relation", "supersedes"],
+    { cwd: repo },
+  );
+  assert.equal(dryRun.status, 0, dryRun.stderr);
+  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/adr/0002-new-decision.md"), "utf8"), /0001-old-decision\.md/);
+
+  const write = runScript(
+    "relate_adr.ts",
+    ["--dir", "docs/adr", "--from", "0002-new-decision.md", "--to", "0001-old-decision.md", "--relation", "supersedes", "--write"],
+    { cwd: repo },
+  );
+  assert.equal(write.status, 0, write.stderr);
+  assert.match(fs.readFileSync(path.join(repo, "docs/adr/0002-new-decision.md"), "utf8"), /0001-old-decision\.md/);
+  assert.match(fs.readFileSync(path.join(repo, "docs/adr/0001-old-decision.md"), "utf8"), /0002-new-decision\.md/);
+});
+
+test("check_code_links reports missing Implementation Plan paths", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-code-links.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "---",
+      "",
+      "# 1. Code Links",
+      "",
+      "## Implementation Plan",
+      "",
+      "* Affected paths: `src/missing.ts`",
+      "",
+      "## Verification",
+      "",
+      "* [ ] Run tests",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("check_code_links.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding) => finding.code === "missing-implementation-path"), true);
+});

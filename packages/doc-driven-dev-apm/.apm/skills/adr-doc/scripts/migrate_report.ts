@@ -3,8 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-
-const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
+const { adrFiles, findAdrDir, hasSection } = require("./lib/adr_utils.ts");
 const targetSections = [
   "Status",
   "Context and Problem Statement",
@@ -44,23 +43,6 @@ function parseArgs(argv: string[]): CliArgs {
 
 function usage(): string {
   return "Usage: node scripts/migrate_report.ts [--dir <path>] [--json]";
-}
-
-function findAdrDir(cwd: string, explicitDir?: string): string {
-  if (explicitDir) return explicitDir.replace(/\\/g, "/");
-  return candidateDirs.find((candidate) => fs.existsSync(path.join(cwd, candidate))) || "docs/adr";
-}
-
-function hasSection(content: string, section: string): boolean {
-  const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^#{2,3}\\s+${escaped}\\s*$`, "mi").test(content);
-}
-
-function adrFiles(dir: string): string[] {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file))
-    .sort();
 }
 
 function migrationFor(cwd: string, relativeDir: string, file: string): Migration {

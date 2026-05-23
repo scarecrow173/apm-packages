@@ -154,8 +154,12 @@ flow, APIs, infrastructure, dependencies, or cross-cutting conventions.
 Helpful commands:
 
 ```bash
+node scripts/list_adrs.ts --dir docs/adr
 node scripts/audit_adr.ts --dir docs/adr
+node scripts/review_adr.ts --dir docs/adr
+node scripts/check_code_links.ts --dir docs/adr
 node scripts/update_index.ts --dir docs/adr --write
+node scripts/relate_adr.ts --from 0002-new.md --to 0001-old.md --relation supersedes --write
 node scripts/migrate_report.ts --dir docs/adr
 ```
 
