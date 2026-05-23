@@ -38,6 +38,9 @@ marketplace:
     - name: steer-enterprise-web-research
       source: ./packages/steer-enterprise-web-research-apm
       version: 0.1.0
+    - name: doc-driven-dev
+      source: ./packages/doc-driven-dev-apm
+      version: 0.1.0
     - name: doublecheck
       source: github/awesome-copilot
       subdir: plugins/doublecheck

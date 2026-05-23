@@ -1,4 +1,5 @@
 packages/**/apm_modules/
+packages/**/node_modules/
 packages/**/apm.lock.yaml
 packages/**/dist/
 packages/**/build/

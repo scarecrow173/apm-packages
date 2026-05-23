@@ -1,0 +1,15 @@
+name: doc-driven-dev
+version: 0.1.0
+description: Document-driven development skills, starting with MADR 4.0.0 ADR creation and maintenance.
+author: Akiyoshi Koyama
+license: MIT
+targets:
+  - codex
+  - copilot
+includes:
+  - .apm/
+scripts:
+  validate: "apm compile --validate"
+  preview: "apm compile --dry-run"
+  test: "pnpm test"
+  lint-md: "pnpm run lint:md"
