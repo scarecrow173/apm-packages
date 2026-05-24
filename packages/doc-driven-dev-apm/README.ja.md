@@ -34,7 +34,7 @@ apm install scarecrow173/apm-packages#v0.1.0
 ```bash
 apm compile --validate
 apm compile --dry-run
-node --test tests/*.test.js
+tsx --test tests/*.test.ts
 ```
 
 ## 同梱 Skill

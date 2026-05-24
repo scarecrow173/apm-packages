@@ -33,7 +33,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/check_code_links.ts [--dir <path>] [--json]";
+  return "Usage: node scripts/check_code_links.js [--dir <path>] [--json]";
 }
 
 async function main(): Promise<void> {

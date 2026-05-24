@@ -6,13 +6,13 @@ ADR の方針と規約は `adr-conventions.ja.md` に従います。このファ
 ## 安全な既定動作
 
 - レポートは繰り返し安全に実行できる。
-- `audit_adr.ts` はファイルを書き込まない。
-- `review_adr.ts` はファイルを書き込まない。
-- `list_adrs.ts` はファイルを書き込まない。
-- `check_code_links.ts` はファイルを書き込まない。
-- `migrate_report.ts` はファイルを書き込まない。
-- `update_index.ts` は `--write` が指定された場合だけ書き込む。
-- `relate_adr.ts` は `--write` が指定された場合だけ書き込む。
+- `audit_adr.js` はファイルを書き込まない。
+- `review_adr.js` はファイルを書き込まない。
+- `list_adrs.js` はファイルを書き込まない。
+- `check_code_links.js` はファイルを書き込まない。
+- `migrate_report.js` はファイルを書き込まない。
+- `update_index.js` は `--write` が指定された場合だけ書き込む。
+- `relate_adr.js` は `--write` が指定された場合だけ書き込む。
 
 ## レビュー観点
 

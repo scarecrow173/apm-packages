@@ -6,13 +6,13 @@ tool-specific maintenance behavior.
 ## Safe Defaults
 
 - Reports are safe to run repeatedly.
-- `audit_adr.ts` does not write files.
-- `review_adr.ts` does not write files.
-- `list_adrs.ts` does not write files.
-- `check_code_links.ts` does not write files.
-- `migrate_report.ts` does not write files.
-- `update_index.ts` writes only with `--write`.
-- `relate_adr.ts` writes only with `--write`.
+- `audit_adr.js` does not write files.
+- `review_adr.js` does not write files.
+- `list_adrs.js` does not write files.
+- `check_code_links.js` does not write files.
+- `migrate_report.js` does not write files.
+- `update_index.js` writes only with `--write`.
+- `relate_adr.js` writes only with `--write`.
 
 ## Review Focus
 

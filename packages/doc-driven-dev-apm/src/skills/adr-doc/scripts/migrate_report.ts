@@ -42,7 +42,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/migrate_report.ts [--dir <path>] [--json]";
+  return "Usage: node scripts/migrate_report.js [--dir <path>] [--json]";
 }
 
 async function migrationFor(cwd: string, relativeDir: string, file: string): Promise<Migration> {

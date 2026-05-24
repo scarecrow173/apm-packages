@@ -35,7 +35,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/review_adr.ts [--dir <path>] [--file <adr.md>] [--json]";
+  return "Usage: node scripts/review_adr.js [--dir <path>] [--file <adr.md>] [--json]";
 }
 
 function checklistItems(body: string): string[] {

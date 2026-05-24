@@ -26,7 +26,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/update_index.ts [--dir <path>] [--write]";
+  return "Usage: node scripts/update_index.js [--dir <path>] [--write]";
 }
 
 async function main(): Promise<void> {

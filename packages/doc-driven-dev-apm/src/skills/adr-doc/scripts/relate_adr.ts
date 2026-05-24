@@ -40,7 +40,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/relate_adr.ts --from <adr.md> --to <adr.md> --relation supersedes|superseded-by|related|refines [--dir <path>] [--write]";
+  return "Usage: node scripts/relate_adr.js --from <adr.md> --to <adr.md> --relation supersedes|superseded-by|related|refines [--dir <path>] [--write]";
 }
 
 function ensureRelation(content: string, relation: string, target: string): string {

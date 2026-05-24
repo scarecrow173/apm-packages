@@ -4,6 +4,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const matter = require("gray-matter");
 const { z } = require("zod");
+const {
+  detectNaming: sharedDetectNaming,
+  findDocumentDir,
+  listMarkdownFiles,
+  nextNumber: sharedNextNumber,
+  slugify: sharedSlugify,
+} = require("../../../lib/document_utils.ts");
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
 const relationFields = ["supersedes", "superseded-by", "related", "refines"] as const;
@@ -58,56 +65,24 @@ const adrFrontMatterSchema = z.object({
   relations: relationSchema,
 }).passthrough();
 
-function normalizeDir(input: string): string {
-  return input.replace(/\\/g, "/").replace(/\/+$/g, "");
-}
-
 function findAdrDir(cwd: string, explicitDir?: string): string {
-  if (explicitDir) return normalizeDir(explicitDir);
-  const existing = candidateDirs.filter((candidate) => fs.existsSync(path.join(cwd, candidate)));
-  if (existing.length === 0) return "docs/adr";
-  return existing
-    .map((candidate, index) => ({ candidate, index, score: scoreDir(path.join(cwd, candidate)) }))
-    .sort((a, b) => b.score - a.score || a.index - b.index)[0].candidate;
-}
-
-function scoreDir(dir: string): number {
-  const files = fs.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => entry.name);
-  let score = 1;
-  if (files.some((file) => /^\d{4}-.+\.md$/.test(file))) score += 4;
-  if (files.includes("README.md") || files.includes("index.md")) score += 3;
-  return score;
+  return findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
 }
 
 function adrFiles(dir: string): string[] {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file))
-    .sort();
+  return listMarkdownFiles(dir);
 }
 
 function detectNaming(files: string[]): NamingMode {
-  if (files.some((file) => /^\d{4}-.+\.md$/.test(file))) return "numbered";
-  if (files.some((file) => /^[a-z0-9][a-z0-9-]+\.md$/.test(file) && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file))) {
-    return "slug";
-  }
-  return "numbered";
+  return sharedDetectNaming(files);
 }
 
 function nextNumber(files: string[]): number {
-  const numbers = files
-    .map((file) => /^(\d{4})-.+\.md$/.exec(file))
-    .filter((match): match is RegExpExecArray => Boolean(match))
-    .map((match) => Number(match[1]));
-  return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
+  return sharedNextNumber(files);
 }
 
 function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "decision";
+  return sharedSlugify(title, "decision");
 }
 
 let markdownModules: Promise<{ unified: Function; remarkParse: unknown; visit: Function }> | null = null;
