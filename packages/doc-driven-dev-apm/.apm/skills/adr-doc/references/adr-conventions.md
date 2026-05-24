@@ -56,10 +56,21 @@ decision-makers: []
 consulted: []
 informed: []
 relations:
+  source: []
+  implements: []
+  implemented-by: []
+  depends-on: []
+  blocks: []
   supersedes: []
   superseded-by: []
   related: []
   refines: []
+  refined-by: []
+  derives-from: []
+  derived-by: []
+  verifies: []
+  verified-by: []
+  references: []
 ---
 ```
 
@@ -96,19 +107,35 @@ to the replacing ADR.
 `relations` is a package extension, not an upstream MADR 4.0.0 field. It exists
 so tooling can build ADR graphs and validate links.
 
-Relation fields:
+Relation fields are shared with the other document skills. Choose the field by
+the meaning of the link, not by the target document type.
 
 | Field | Meaning |
 | --- | --- |
+| `source` | External primary evidence, requirements, issue links, or source material for the decision. |
+| `references` | Supplementary context that informed the ADR but is not the source of truth. |
+| `implements` | Specs, plans, or other docs this ADR implements, when the ADR operationalizes a prior document. |
+| `implemented-by` | Plans, tasks, or code-focused docs that implement this ADR. |
+| `depends-on` | Documents or decisions that must remain valid for this ADR to hold. |
+| `blocks` | Documents, plans, or tasks blocked until this ADR is accepted. |
 | `supersedes` | Older ADRs replaced by this ADR. |
 | `superseded-by` | Newer ADRs that replace this ADR. |
 | `related` | ADRs with relevant context but no directional dependency. |
 | `refines` | ADRs clarified or narrowed by this ADR. |
+| `refined-by` | ADRs or specs that clarify or narrow this ADR. |
+| `derives-from` | Brainstorming notes, specs, ADRs, or upstream docs that produced this ADR. |
+| `derived-by` | Specs, plans, tasks, or ADRs derived from this ADR. |
+| `verifies` | Documents, checks, or criteria this ADR verifies, when applicable. |
+| `verified-by` | Test plans, review notes, or tasks that verify this ADR. |
 
-Use file-relative links:
+Use file-relative links for internal documents. Use URLs for external sources.
 
 ```yaml
 relations:
+  source:
+    - "https://example.com/source"
+  implemented-by:
+    - "../plans/0002-implement-event-driven-architecture.md"
   supersedes:
     - "0003-use-rest-api.md"
   superseded-by: []
@@ -116,6 +143,8 @@ relations:
     - "0007-adopt-event-driven-architecture.md"
   refines:
     - "0005-service-boundaries.md"
+  references:
+    - "https://example.com/background"
 ```
 
 For replacement decisions, link both ways when possible:

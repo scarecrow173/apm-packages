@@ -6,6 +6,23 @@ const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 
 const skillRoot = path.resolve(__dirname, "../.apm/skills/adr-doc");
+const commonRelationFields = [
+  "source",
+  "implements",
+  "implemented-by",
+  "depends-on",
+  "blocks",
+  "supersedes",
+  "superseded-by",
+  "related",
+  "refines",
+  "refined-by",
+  "derives-from",
+  "derived-by",
+  "verifies",
+  "verified-by",
+  "references",
+];
 
 function tempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "adr-doc-test-"));
@@ -45,10 +62,9 @@ test("new_adr creates the default MADR ADR and index in docs/adr", () => {
   assert.match(adr, /^consulted: \[\]$/m);
   assert.match(adr, /^informed: \[\]$/m);
   assert.match(adr, /^relations:$/m);
-  assert.match(adr, /^  supersedes: \[\]$/m);
-  assert.match(adr, /^  superseded-by: \[\]$/m);
-  assert.match(adr, /^  related: \[\]$/m);
-  assert.match(adr, /^  refines: \[\]$/m);
+  for (const field of commonRelationFields) {
+    assert.match(adr, new RegExp(`^  ${field}: \\[\\]$`, "m"));
+  }
   assert.match(adr, /^# 1\. Adopt MADR/m);
   assert.match(adr, /## Context and Problem Statement/);
   assert.match(adr, /## Decision Drivers/);
@@ -56,6 +72,50 @@ test("new_adr creates the default MADR ADR and index in docs/adr", () => {
   assert.match(adr, /## Decision Outcome/);
   assert.match(adr, /## Implementation Plan/);
   assert.match(adr, /## Verification/);
+});
+
+test("audit_adr accepts source URLs in common relations", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-source-url.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "decision-makers: []",
+      "consulted: []",
+      "informed: []",
+      "relations:",
+      '  source: ["https://example.com/source"]',
+      "  references: []",
+      "  supersedes: []",
+      "  superseded-by: []",
+      "  related: []",
+      "  refines: []",
+      "---",
+      "",
+      "# 1. Source URL",
+      "",
+      "## Context and Problem Statement",
+      "",
+      "## Considered Options",
+      "",
+      "## Decision Outcome",
+      "",
+      "## Implementation Plan",
+      "",
+      "## Verification",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("audit_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding) => finding.message.includes("https://example.com/source")), false);
 });
 
 test("new_adr honors --dir and all supported templates", () => {

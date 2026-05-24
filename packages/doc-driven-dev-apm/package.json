@@ -1,7 +1,7 @@
 {
   "name": "doc-driven-dev-apm",
   "version": "0.1.0",
-  "description": "Document-driven development APM package, starting with a MADR ADR skill.",
+  "description": "Document-driven development APM package with idea refinement, brainstorming, ADR, spec, plan, task, and status skills.",
   "scripts": {
     "build": "pnpm run build:scripts",
     "build:scripts": "tsx scripts/build-skill-scripts.ts",
@@ -12,6 +12,10 @@
     "apm",
     "adr",
     "madr",
+    "idea-refine",
+    "brainstorming",
+    "spec-driven-development",
+    "document-driven-development",
     "documentation"
   ],
   "author": "Akiyoshi Koyama",

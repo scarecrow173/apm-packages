@@ -1,0 +1,184 @@
+# Task Conventions
+
+この規約は、`task-doc` が実装 task を作成、監査、索引化、ルーティングする方法を
+定義します。
+
+task は、plan、spec、ADR、または他の task にリンクされた、小さくレビュー可能な
+実装単位です。1 人の agent がプロジェクト全体の文脈を再発見せずに完了・検証
+できる粒度にします。
+
+## ディレクトリ
+
+リポジトリに既存の task または work-item ディレクトリがある場合はそれを
+維持します。このパッケージの既定値に合わせるためだけに既存 task を移動しないで
+ください。
+
+task ディレクトリがない場合は、既定で `docs/tasks/` を使います。
+
+スクリプトの検出順序:
+
+1. `docs/tasks/`
+2. `docs/work-items/`
+3. `tasks/`
+4. `work-items/`
+
+複数の候補がある場合は、番号付き task ファイルと索引ファイルを持つ
+ディレクトリを優先します。検出リストにない明示的なリポジトリ規約がある場合
+だけ `--dir` を使います。
+
+## ファイル名
+
+既定のファイル名:
+
+```text
+NNNN-title-with-dashes.md
+```
+
+ルール:
+
+- `NNNN` は task ディレクトリ内で連番になるゼロ埋め番号です。
+- title slug は小文字 ASCII にし、単語をダッシュで区切ります。
+- 実装単位を表す命令形の句を優先します。
+- 1 つの挙動、module、migration step、verification path に狭めます。
+- `cleanup.md`, `fix-stuff.md`, `phase-1.md` のような範囲を隠す名前は
+  避けます。
+- 例: `0001-wire-checkout-button.md`,
+  `0002-add-invitation-api-tests.md`。
+
+リポジトリが slug-only のファイル名を既に使っている場合は、番号付けを
+導入せず既存規約に従います。
+
+## 必須フロントマター
+
+task は共通 document front matter を使います。
+
+```yaml
+---
+id: "TASK-0001"
+type: "task"
+status: "todo"
+title: "Wire checkout button"
+created: "YYYY-MM-DD"
+updated: "YYYY-MM-DD"
+owners: []
+relations:
+  source: []
+  implements: []
+  implemented-by: []
+  depends-on: []
+  blocks: []
+  supersedes: []
+  superseded-by: []
+  related: []
+  refines: []
+  refined-by: []
+  derives-from: []
+  derived-by: []
+  verifies: []
+  verified-by: []
+  references: []
+---
+```
+
+必須フィールド:
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `id` | Yes | 安定した文書 ID。通常は `TASK-NNNN`。 |
+| `type` | Yes | `task` 固定。 |
+| `status` | Yes | 現在の実行状態。 |
+| `title` | Yes | 人間向けの task title。 |
+| `created` | Yes | 作成日。`YYYY-MM-DD` 形式。 |
+| `updated` | Yes | 最後に実質更新した日。`YYYY-MM-DD` 形式。 |
+| `owners` | Yes | task に責任を持つ人またはグループ。 |
+| `relations` | Yes | 上流、依存、検証文書への意味付きリンク。 |
+
+## ステータス値
+
+次のライフサイクル状態を使います。
+
+| Status | Meaning |
+| --- | --- |
+| `todo` | 未着手。 |
+| `in-progress` | 実装中。 |
+| `blocked` | 依存関係または決定待ち。 |
+| `done` | 実装・検証済み。 |
+| `wont-do` | 明示的に追わない。 |
+
+`status` は実行状態に集中させます。依存関係は title に埋め込まず、
+`relations.depends-on` と `relations.blocks` で表します。
+
+## Relations
+
+relation は文書種別ではなく意味で選びます。
+
+| Field | Meaning |
+| --- | --- |
+| `implements` | この task が実行する plan、spec、ADR。 |
+| `derives-from` | この task を生んだ上流 plan または discovery note。 |
+| `depends-on` | 先に必要な task、plan、decision、spec。 |
+| `blocks` | この task によってブロックされる task または plan。 |
+| `verifies` | この task が検証する spec、plan、ADR、挙動。 |
+| `verified-by` | この task を検証する test note、review note、follow-up task。 |
+| `source` | task を直接制約する外部出典。 |
+| `references` | 補助的な実装 note や docs。 |
+| `supersedes` | この task が置き換える古い task。 |
+| `superseded-by` | この task を置き換える新しい task。 |
+| `related` | 方向性のない関連文書。 |
+
+内部文書は相対パスを使います。外部出典は URL を使います。
+
+## 必須内容
+
+task は次を含めます。
+
+1. 実行する作業。
+2. 実装する上流文書。
+3. 依存関係と blocker。
+4. 影響する file、module、docs。
+5. 完了条件。
+6. 検証 command、test、manual review。
+7. この task の明示的な範囲外。
+
+完了条件は検証可能である必要があります。検証経路を書けない task は、実装開始前に
+plan または spec に戻します。
+
+## 可変性
+
+task は実行中の作業記録です。
+
+- `todo` の task は自由に編集できます。
+- `in-progress` の task は明確化や日付付き実装 note を追加できますが、
+  既に試した作業を隠してはいけません。
+- `blocked` の task は blocker になっている文書または task を
+  `relations.depends-on` に記録します。
+- `done` の task は完了証拠と検証 note を残します。
+- task の範囲が大きく変わる場合は、黙って広げず、新しい task を作るか古い
+  task を supersede します。
+- status、owner、relation の更新は同一ファイル内で許容します。
+
+## 索引
+
+既定の task 索引は `README.md` です。リポジトリが既に `index.md` を
+使っている場合はそれを維持します。
+
+索引は task をファイル名順で並べ、title、status、上流 plan、blocker、owner を
+すばやく確認できるだけのメタデータを残します。
+
+## カテゴリ
+
+大きなリポジトリでは、task をサブディレクトリに分けても構いません。
+
+```text
+docs/tasks/
+  frontend/
+    0001-wire-checkout-button.md
+  backend/
+    0001-add-checkout-endpoint.md
+  verification/
+    0001-add-checkout-e2e.md
+```
+
+番号はカテゴリごとにローカルです。構造が大きくなる前に、カテゴリ分けの方針を
+索引に記録します。カテゴリは implementation area、release、workstream などで、
+フラットなディレクトリが読みにくくなった場合だけ使います。

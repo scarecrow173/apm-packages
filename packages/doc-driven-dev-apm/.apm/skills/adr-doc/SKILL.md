@@ -211,8 +211,8 @@ Do not proceed to Phase 2 until the human confirms the summary.
    These must be specific enough that an agent can programmatically or manually
    check each item.
 7. Connect related ADRs with front matter.
-   Use `relations.supersedes`, `relations.superseded-by`, `relations.related`,
-   and `relations.refines` as described in `references/adr-conventions.md`.
+   Use the shared meaning-based `relations` fields described in
+   `references/adr-conventions.md`.
 8. Generate the file.
    Preferred: run `scripts/new_adr.js`. It handles directory detection, naming,
    templates, metadata defaults, and index updates. If you cannot run scripts,

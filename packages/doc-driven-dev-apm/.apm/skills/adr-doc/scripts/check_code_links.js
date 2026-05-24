@@ -29628,13 +29628,26 @@ var require_adr_utils = __commonJS({
       slugify: sharedSlugify
     } = require_document_utils();
     var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
-    var relationFields = ["supersedes", "superseded-by", "related", "refines"];
-    var relationSchema = z.object({
-      supersedes: z.array(z.string()).default([]),
-      "superseded-by": z.array(z.string()).default([]),
-      related: z.array(z.string()).default([]),
-      refines: z.array(z.string()).default([])
-    }).default({});
+    var relationFields = [
+      "source",
+      "implements",
+      "implemented-by",
+      "depends-on",
+      "blocks",
+      "supersedes",
+      "superseded-by",
+      "related",
+      "refines",
+      "refined-by",
+      "derives-from",
+      "derived-by",
+      "verifies",
+      "verified-by",
+      "references"
+    ];
+    var relationSchema = z.object(Object.fromEntries(
+      relationFields.map((field) => [field, z.array(z.string()).default([])])
+    )).default({});
     var adrFrontMatterSchema = z.object({
       status: z.string().min(1),
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

@@ -207,9 +207,8 @@ ADR に記録する内容は次の理解です。
 6. Verification をチェックボックスで書く。
    各項目は、エージェントがプログラムまたは手動で確認できる粒度にします。
 7. 関連 ADR をフロントマターで接続する。
-   `references/adr-conventions.ja.md` に従い、`relations.supersedes`、
-   `relations.superseded-by`、`relations.related`、`relations.refines` を
-   使います。
+   `references/adr-conventions.ja.md` に従い、意味で選ぶ共通 `relations`
+   field を使います。
 8. ファイルを生成する。
    推奨は `scripts/new_adr.js` です。ディレクトリ検出、命名、
    テンプレート、メタデータ既定値、索引更新を扱います。スクリプトを実行
