@@ -13,6 +13,7 @@ spec は、何を作るべきか、なぜ必要か、誰のためか、何を範
 ## ワークフロー
 
 1. 既存ドキュメントを確認する。
+   ディレクトリと命名規約は `references/spec-conventions.ja.md` に従います。
    `docs/specs/`, `docs/adr/`, `docs/plans/`, 関連コードを読み、既存の
    判断や仕様と矛盾しないようにします。
 2. 人間と意図を確認する。
@@ -23,6 +24,9 @@ spec は、何を作るべきか、なぜ必要か、誰のためか、何を範
    ```bash
    node scripts/new_spec.js --title "Define checkout flow"
    ```
+
+   作成スクリプトは `assets/templates/spec.md` を使います。スクリプトを
+   実行できない場合は、このテンプレートをコピーして手動で埋めます。
 
 4. YAML フロントマターに意味付き relation を記録する。
    外部出典や一次情報は `relations.source`、補助資料は
@@ -45,8 +49,8 @@ spec は次に答える必要があります。
 - どの出典、ADR、discovery note が根拠になったか。
 
 このパッケージでは、spec がプロダクト意図と実装向け挙動を一つの文書で扱います。
-別個の PRD 文書は作らず、プロダクト、ユーザー、価値、挙動、受け入れ基準に
-関する問いは `spec-doc` にルーティングします。
+プロダクト、ユーザー、価値、挙動、受け入れ基準に関する問いを別の要求文書に
+分けず、`spec-doc` にルーティングします。
 
 ## フロントマター
 
@@ -86,3 +90,7 @@ relations:
 ## リソース
 
 - `scripts/new_spec.js`: spec を作成し、索引を更新します。
+- `references/spec-conventions.ja.md`: spec のディレクトリ、ファイル名、
+  ステータス、relation、必須内容、索引の規約です。
+- `assets/templates/spec.md`: 既定の spec 本文テンプレートです。
+- `assets/templates/spec.ja.md`: 日本語で手動作成するときの spec 本文テンプレートです。

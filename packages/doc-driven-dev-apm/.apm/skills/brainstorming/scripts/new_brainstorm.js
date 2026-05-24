@@ -20442,6 +20442,7 @@ var require_doc_suite_utils = __commonJS({
       idea: {
         defaultStatus: "exploring",
         dir: "docs/ideas",
+        dirs: ["docs/ideas"],
         idPrefix: "IDEA",
         statusValues: ["exploring", "refined", "parked", "rejected", "superseded"],
         type: "idea"
@@ -20449,6 +20450,7 @@ var require_doc_suite_utils = __commonJS({
       brainstorm: {
         defaultStatus: "capturing",
         dir: "docs/discovery",
+        dirs: ["docs/discovery"],
         idPrefix: "BRAINSTORM",
         statusValues: ["capturing", "confirmed", "routed", "superseded"],
         type: "brainstorm"
@@ -20456,6 +20458,7 @@ var require_doc_suite_utils = __commonJS({
       spec: {
         defaultStatus: "draft",
         dir: "docs/specs",
+        dirs: ["docs/specs", "docs/spec", "specs", "spec"],
         idPrefix: "SPEC",
         statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
         type: "spec"
@@ -20463,6 +20466,7 @@ var require_doc_suite_utils = __commonJS({
       plan: {
         defaultStatus: "draft",
         dir: "docs/plans",
+        dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
         idPrefix: "PLAN",
         statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
         type: "plan"
@@ -20470,6 +20474,7 @@ var require_doc_suite_utils = __commonJS({
       task: {
         defaultStatus: "todo",
         dir: "docs/tasks",
+        dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
         idPrefix: "TASK",
         statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
         type: "task"
@@ -20494,7 +20499,7 @@ var require_doc_suite_utils = __commonJS({
     }
     function docDir(cwd, type, explicitDir) {
       const config = configFor(type);
-      return findDocumentDir(cwd, explicitDir, [config.dir], config.dir);
+      return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
     }
     function docFiles(dir) {
       return listMarkdownFiles(dir);
@@ -20562,7 +20567,14 @@ var require_doc_suite_utils = __commonJS({
         "---"
       ].join("\n");
     }
+    function renderBodyTemplate(type, title) {
+      const templatePath = path2.join(__dirname, "../assets/templates", `${type}.md`);
+      if (!fs.existsSync(templatePath)) return null;
+      return fs.readFileSync(templatePath, "utf8").replaceAll("{{title}}", title).trimEnd();
+    }
     function bodyFor(type, title) {
+      const template = renderBodyTemplate(type, title);
+      if (template) return template;
       if (type === "idea") {
         return [
           `# ${title}`,

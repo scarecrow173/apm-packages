@@ -19,6 +19,10 @@ should state concrete completion criteria.
    node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/0001-implement-checkout-flow.md
    ```
 
+   The creation script follows `references/task-conventions.md` and uses
+   `assets/templates/task.md`. If you cannot run the script, copy that template
+   and fill it manually.
+
 3. Use meaningful relations.
    Generated tasks point to the plan with `relations.implements` and
    `relations.depends-on`.
@@ -31,3 +35,6 @@ should state concrete completion criteria.
 ## Resources
 
 - `scripts/new_task.js`: create a task and update its index.
+- `references/task-conventions.md`: directory, filename, status, relations,
+  required content, and index conventions for tasks.
+- `assets/templates/task.md`: default task body template.

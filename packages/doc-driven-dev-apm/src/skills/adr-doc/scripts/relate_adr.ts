@@ -17,10 +17,21 @@ type CliArgs = {
 };
 
 const inverseRelations: Record<string, string | null> = {
+  implements: "implemented-by",
+  "implemented-by": "implements",
+  "depends-on": "blocks",
+  blocks: "depends-on",
   supersedes: "superseded-by",
   "superseded-by": "supersedes",
   related: "related",
-  refines: null,
+  refines: "refined-by",
+  "refined-by": "refines",
+  "derives-from": "derived-by",
+  "derived-by": "derives-from",
+  verifies: "verified-by",
+  "verified-by": "verifies",
+  source: null,
+  references: null,
 };
 
 function parseArgs(argv: string[]): CliArgs {
@@ -40,7 +51,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/relate_adr.js --from <adr.md> --to <adr.md> --relation supersedes|superseded-by|related|refines [--dir <path>] [--write]";
+  return `Usage: node scripts/relate_adr.js --from <adr.md> --to <adr.md> --relation ${relationFields.join("|")} [--dir <path>] [--write]`;
 }
 
 function ensureRelation(content: string, relation: string, target: string): string {

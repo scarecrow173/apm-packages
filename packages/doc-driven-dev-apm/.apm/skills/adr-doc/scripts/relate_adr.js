@@ -29628,13 +29628,26 @@ var require_adr_utils = __commonJS({
       slugify: sharedSlugify
     } = require_document_utils();
     var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
-    var relationFields2 = ["supersedes", "superseded-by", "related", "refines"];
-    var relationSchema = z.object({
-      supersedes: z.array(z.string()).default([]),
-      "superseded-by": z.array(z.string()).default([]),
-      related: z.array(z.string()).default([]),
-      refines: z.array(z.string()).default([])
-    }).default({});
+    var relationFields2 = [
+      "source",
+      "implements",
+      "implemented-by",
+      "depends-on",
+      "blocks",
+      "supersedes",
+      "superseded-by",
+      "related",
+      "refines",
+      "refined-by",
+      "derives-from",
+      "derived-by",
+      "verifies",
+      "verified-by",
+      "references"
+    ];
+    var relationSchema = z.object(Object.fromEntries(
+      relationFields2.map((field) => [field, z.array(z.string()).default([])])
+    )).default({});
     var adrFrontMatterSchema = z.object({
       status: z.string().min(1),
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -29845,10 +29858,21 @@ var path = require("node:path");
 var matter = require_gray_matter();
 var { findAdrDir, relationFields } = require_adr_utils();
 var inverseRelations = {
+  implements: "implemented-by",
+  "implemented-by": "implements",
+  "depends-on": "blocks",
+  blocks: "depends-on",
   supersedes: "superseded-by",
   "superseded-by": "supersedes",
   related: "related",
-  refines: null
+  refines: "refined-by",
+  "refined-by": "refines",
+  "derives-from": "derived-by",
+  "derived-by": "derives-from",
+  verifies: "verified-by",
+  "verified-by": "verifies",
+  source: null,
+  references: null
 };
 function parseArgs(argv) {
   const args = { cwd: process.cwd(), write: false };
@@ -29866,7 +29890,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/relate_adr.js --from <adr.md> --to <adr.md> --relation supersedes|superseded-by|related|refines [--dir <path>] [--write]";
+  return `Usage: node scripts/relate_adr.js --from <adr.md> --to <adr.md> --relation ${relationFields.join("|")} [--dir <path>] [--write]`;
 }
 function ensureRelation(content3, relation, target) {
   const parsed = matter(content3);

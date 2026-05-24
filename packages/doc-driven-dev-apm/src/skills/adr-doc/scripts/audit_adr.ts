@@ -60,6 +60,10 @@ function usage(): string {
   return "Usage: node scripts/audit_adr.js [--dir <path>] [--json]";
 }
 
+function isExternalUrl(target: string): boolean {
+  return /^https?:\/\//i.test(target);
+}
+
 async function auditFile(cwd: string, relativeDir: string, file: string): Promise<Finding[]> {
   const filePath = path.join(cwd, relativeDir, file);
   const content = fs.readFileSync(filePath, "utf8");
@@ -87,6 +91,7 @@ async function auditFile(cwd: string, relativeDir: string, file: string): Promis
     }
   }
   for (const relation of relationLinks(content)) {
+    if (isExternalUrl(relation.target)) continue;
     const resolved = path.resolve(path.dirname(filePath), relation.target);
     if (!fs.existsSync(resolved)) {
       findings.push({

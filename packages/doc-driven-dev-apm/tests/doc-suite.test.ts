@@ -51,6 +51,61 @@ test("new_spec creates front matter spec and index", () => {
   assert.match(spec, /^# Define checkout flow/m);
 });
 
+test("doc skills ship conventions and templates", () => {
+  for (const [skill, convention, template] of [
+    ["spec-doc", "spec-conventions.md", "spec.md"],
+    ["spec-doc", "spec-conventions.ja.md", "spec.ja.md"],
+    ["plan-doc", "plan-conventions.md", "plan.md"],
+    ["plan-doc", "plan-conventions.ja.md", "plan.ja.md"],
+    ["task-doc", "task-conventions.md", "task.md"],
+    ["task-doc", "task-conventions.ja.md", "task.ja.md"],
+  ]) {
+    assert.equal(fs.existsSync(path.join(skillRoot, skill, "references", convention)), true);
+    assert.equal(fs.existsSync(path.join(skillRoot, skill, "assets/templates", template)), true);
+  }
+});
+
+test("doc conventions cover directory order, filenames, mutability, and categories", () => {
+  for (const [skill, convention] of [
+    ["spec-doc", "spec-conventions.md"],
+    ["plan-doc", "plan-conventions.md"],
+    ["task-doc", "task-conventions.md"],
+  ]) {
+    const text = fs.readFileSync(path.join(skillRoot, skill, "references", convention), "utf8");
+    assert.match(text, /Detection order used by scripts:/);
+    assert.match(text, /Rules:/);
+    assert.match(text, /## Mutability/);
+    assert.match(text, /## Categories/);
+  }
+});
+
+test("new_spec uses the packaged spec template", () => {
+  const repo = tempRepo();
+
+  const result = runScript("spec-doc", "new_spec.js", ["--title", "Template driven spec"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const spec = fs.readFileSync(path.join(repo, "docs/specs/0001-template-driven-spec.md"), "utf8");
+  assert.match(spec, /## Why Now/);
+  assert.match(spec, /## Users and Value/);
+  assert.match(spec, /## Acceptance Criteria/);
+});
+
+test("doc creation detects existing alternate directories", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "specs"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "plans"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "tasks"), { recursive: true });
+
+  assert.equal(runScript("spec-doc", "new_spec.js", ["--title", "Alternate spec dir"], { cwd: repo }).status, 0);
+  assert.equal(runScript("plan-doc", "new_plan.js", ["--title", "Alternate plan dir"], { cwd: repo }).status, 0);
+  assert.equal(runScript("task-doc", "new_task.js", ["--title", "Alternate task dir"], { cwd: repo }).status, 0);
+
+  assert.equal(fs.existsSync(path.join(repo, "specs/0001-alternate-spec-dir.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "plans/0001-alternate-plan-dir.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "tasks/0001-alternate-task-dir.md")), true);
+});
+
 test("new_idea creates idea-refine artifact and index", () => {
   const repo = tempRepo();
 

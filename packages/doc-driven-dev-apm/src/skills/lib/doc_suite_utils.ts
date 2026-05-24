@@ -47,6 +47,7 @@ type Finding = {
 type DocConfig = {
   defaultStatus: string;
   dir: string;
+  dirs: string[];
   idPrefix: string;
   statusValues: string[];
   type: DocType;
@@ -74,6 +75,7 @@ const configs: Record<DocType, DocConfig> = {
   idea: {
     defaultStatus: "exploring",
     dir: "docs/ideas",
+    dirs: ["docs/ideas"],
     idPrefix: "IDEA",
     statusValues: ["exploring", "refined", "parked", "rejected", "superseded"],
     type: "idea",
@@ -81,6 +83,7 @@ const configs: Record<DocType, DocConfig> = {
   brainstorm: {
     defaultStatus: "capturing",
     dir: "docs/discovery",
+    dirs: ["docs/discovery"],
     idPrefix: "BRAINSTORM",
     statusValues: ["capturing", "confirmed", "routed", "superseded"],
     type: "brainstorm",
@@ -88,6 +91,7 @@ const configs: Record<DocType, DocConfig> = {
   spec: {
     defaultStatus: "draft",
     dir: "docs/specs",
+    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
     idPrefix: "SPEC",
     statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
     type: "spec",
@@ -95,6 +99,7 @@ const configs: Record<DocType, DocConfig> = {
   plan: {
     defaultStatus: "draft",
     dir: "docs/plans",
+    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
     idPrefix: "PLAN",
     statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
     type: "plan",
@@ -102,6 +107,7 @@ const configs: Record<DocType, DocConfig> = {
   task: {
     defaultStatus: "todo",
     dir: "docs/tasks",
+    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
     idPrefix: "TASK",
     statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
     type: "task",
@@ -130,7 +136,7 @@ function configFor(type: string): DocConfig {
 
 function docDir(cwd: string, type: string, explicitDir?: string): string {
   const config = configFor(type);
-  return findDocumentDir(cwd, explicitDir, [config.dir], config.dir);
+  return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
 }
 
 function docFiles(dir: string): string[] {
@@ -211,7 +217,18 @@ function frontMatter(config: DocConfig, number: number, title: string, status: s
   ].join("\n");
 }
 
+function renderBodyTemplate(type: DocType, title: string): string | null {
+  const templatePath = path.join(__dirname, "../assets/templates", `${type}.md`);
+  if (!fs.existsSync(templatePath)) return null;
+  return fs.readFileSync(templatePath, "utf8")
+    .replaceAll("{{title}}", title)
+    .trimEnd();
+}
+
 function bodyFor(type: DocType, title: string): string {
+  const template = renderBodyTemplate(type, title);
+  if (template) return template;
+
   if (type === "idea") {
     return [
       `# ${title}`,

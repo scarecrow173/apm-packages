@@ -23,6 +23,10 @@ which verification steps prove the implementation follows the source document.
    node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md
    ```
 
+   The creation script follows `references/plan-conventions.md` and uses
+   `assets/templates/plan.md`. If you cannot run the script, copy that template
+   and fill it manually.
+
 4. Record relations.
    The generated plan uses `relations.implements` and `relations.derives-from`
    for the upstream document.
@@ -38,3 +42,6 @@ Plan status values: `draft`, `approved`, `in-progress`, `blocked`,
 ## Resources
 
 - `scripts/new_plan.js`: create a plan and update its index.
+- `references/plan-conventions.md`: directory, filename, status, relations,
+  required content, and index conventions for plans.
+- `assets/templates/plan.md`: default plan body template.

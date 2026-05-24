@@ -19,6 +19,10 @@ task は、それが実装する plan、spec、ADR にリンクし、完了条�
    node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/0001-implement-checkout-flow.md
    ```
 
+   作成スクリプトは `references/task-conventions.ja.md` に従い、
+   `assets/templates/task.md` を使います。スクリプトを実行できない場合は、
+   このテンプレートをコピーして手動で埋めます。
+
 3. 意味付き relation を使う。
    生成された task は plan を `relations.implements` と
    `relations.depends-on` に記録します。
@@ -30,3 +34,7 @@ task は、それが実装する plan、spec、ADR にリンクし、完了条�
 ## リソース
 
 - `scripts/new_task.js`: task を作成し、索引を更新します。
+- `references/task-conventions.ja.md`: task のディレクトリ、ファイル名、
+  ステータス、relation、必須内容、索引の規約です。
+- `assets/templates/task.md`: 既定の task 本文テンプレートです。
+- `assets/templates/task.ja.md`: 日本語で手動作成するときの task 本文テンプレートです。

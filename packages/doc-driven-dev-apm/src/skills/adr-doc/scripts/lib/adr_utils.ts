@@ -13,7 +13,23 @@ const {
 } = require("../../../lib/document_utils.ts");
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
-const relationFields = ["supersedes", "superseded-by", "related", "refines"] as const;
+const relationFields = [
+  "source",
+  "implements",
+  "implemented-by",
+  "depends-on",
+  "blocks",
+  "supersedes",
+  "superseded-by",
+  "related",
+  "refines",
+  "refined-by",
+  "derives-from",
+  "derived-by",
+  "verifies",
+  "verified-by",
+  "references",
+] as const;
 
 type RelationField = typeof relationFields[number];
 type NamingMode = "numbered" | "slug";
@@ -49,12 +65,9 @@ type MarkdownLink = {
   url: string;
 };
 
-const relationSchema = z.object({
-  supersedes: z.array(z.string()).default([]),
-  "superseded-by": z.array(z.string()).default([]),
-  related: z.array(z.string()).default([]),
-  refines: z.array(z.string()).default([]),
-}).default({});
+const relationSchema = z.object(Object.fromEntries(
+  relationFields.map((field) => [field, z.array(z.string()).default([])]),
+)).default({});
 
 const adrFrontMatterSchema = z.object({
   status: z.string().min(1),

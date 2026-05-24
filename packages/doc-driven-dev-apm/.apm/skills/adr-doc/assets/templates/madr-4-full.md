@@ -5,10 +5,21 @@ decision-makers: []
 consulted: []
 informed: []
 relations:
+  source: []
+  implements: []
+  implemented-by: []
+  depends-on: []
+  blocks: []
   supersedes: []
   superseded-by: []
   related: []
   refines: []
+  refined-by: []
+  derives-from: []
+  derived-by: []
+  verifies: []
+  verified-by: []
+  references: []
 ---
 
 # {{number}}. {{title}}

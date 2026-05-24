@@ -14,6 +14,7 @@ verified before code is written.
 ## Workflow
 
 1. Scan existing docs before asking questions.
+   Use the directory and naming rules in `references/spec-conventions.md`.
    Check `docs/specs/`, `docs/adr/`, `docs/plans/`, and related code so the new
    spec does not duplicate or contradict existing decisions.
 2. Capture intent with the human.
@@ -25,6 +26,9 @@ verified before code is written.
    ```bash
    node scripts/new_spec.js --title "Define checkout flow"
    ```
+
+   The creation script uses `assets/templates/spec.md`. If you cannot run the
+   script, copy that template and fill it manually.
 
 4. Record meaningful relations in YAML front matter.
    Use `relations.source` for external evidence and primary sources,
@@ -48,8 +52,8 @@ A spec should answer:
 - Which source evidence, ADRs, or discovery notes informed it?
 
 Specs intentionally cover product intent and implementation-facing behavior in
-one document. Do not create a separate PRD document in this package; route
-product, user, value, behavior, and acceptance questions into `spec-doc`.
+one document. Do not split product, user, value, behavior, and acceptance
+questions into a separate requirements document; route them into `spec-doc`.
 
 ## Front Matter
 
@@ -89,3 +93,6 @@ Status values: `draft`, `proposed`, `approved`, `implemented`, `superseded`,
 ## Resources
 
 - `scripts/new_spec.js`: create a spec and update its index.
+- `references/spec-conventions.md`: directory, filename, status, relations,
+  required content, and index conventions for specs.
+- `assets/templates/spec.md`: default spec body template.

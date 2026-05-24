@@ -58,10 +58,21 @@ decision-makers: []
 consulted: []
 informed: []
 relations:
+  source: []
+  implements: []
+  implemented-by: []
+  depends-on: []
+  blocks: []
   supersedes: []
   superseded-by: []
   related: []
   refines: []
+  refined-by: []
+  derives-from: []
+  derived-by: []
+  verifies: []
+  verified-by: []
+  references: []
 ---
 ```
 
@@ -99,19 +110,35 @@ consulted は双方向の入力、informed は一方向の通知です。
 フィールドではありません。ADR グラフ生成やリンク検証を可能にするための
 構造化フィールドです。
 
-Relation fields:
+relation field は他の document skill と共通です。リンク先の文書種別ではなく、
+リンクの意味で field を選びます。
 
 | Field | Meaning |
 | --- | --- |
+| `source` | 判断の根拠になる外部一次情報、要求、issue、出典資料。 |
+| `references` | ADR の根拠ではない補助的な参考文脈。 |
+| `implements` | この ADR が実装または運用化する spec、plan、その他文書。 |
+| `implemented-by` | この ADR を実装する plan、task、code-focused docs。 |
+| `depends-on` | この ADR が成立するために有効である必要がある文書や判断。 |
+| `blocks` | この ADR が accepted になるまで進められない文書、plan、task。 |
 | `supersedes` | この ADR が置き換える古い ADR。 |
 | `superseded-by` | この ADR を置き換える新しい ADR。 |
 | `related` | 方向付き依存はないが関連する ADR。 |
 | `refines` | この ADR が明確化または範囲縮小する ADR。 |
+| `refined-by` | この ADR を明確化または範囲縮小する ADR または spec。 |
+| `derives-from` | この ADR を生んだ brainstorming note、spec、ADR、上流文書。 |
+| `derived-by` | この ADR から派生した spec、plan、task、ADR。 |
+| `verifies` | 必要に応じて、この ADR が検証する文書、check、criteria。 |
+| `verified-by` | この ADR を検証する test plan、review note、task。 |
 
-ファイル相対リンクを使います。
+内部文書には相対パスを使います。外部出典には URL を使います。
 
 ```yaml
 relations:
+  source:
+    - "https://example.com/source"
+  implemented-by:
+    - "../plans/0002-implement-event-driven-architecture.md"
   supersedes:
     - "0003-use-rest-api.md"
   superseded-by: []
@@ -119,6 +146,8 @@ relations:
     - "0007-adopt-event-driven-architecture.md"
   refines:
     - "0005-service-boundaries.md"
+  references:
+    - "https://example.com/background"
 ```
 
 置き換え関係では、可能であれば双方向にリンクします。

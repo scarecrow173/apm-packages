@@ -23,6 +23,10 @@ plan は、何をどの順序で実装するか、どの文書を実装または
    node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md
    ```
 
+   作成スクリプトは `references/plan-conventions.ja.md` に従い、
+   `assets/templates/plan.md` を使います。スクリプトを実行できない場合は、
+   このテンプレートをコピーして手動で埋めます。
+
 4. relation を記録する。
    生成された plan は上流文書を `relations.implements` と
    `relations.derives-from` に記録します。
@@ -37,3 +41,7 @@ Plan のステータス値: `draft`, `approved`, `in-progress`, `blocked`,
 ## リソース
 
 - `scripts/new_plan.js`: plan を作成し、索引を更新します。
+- `references/plan-conventions.ja.md`: plan のディレクトリ、ファイル名、
+  ステータス、relation、必須内容、索引の規約です。
+- `assets/templates/plan.md`: 既定の plan 本文テンプレートです。
+- `assets/templates/plan.ja.md`: 日本語で手動作成するときの plan 本文テンプレートです。
