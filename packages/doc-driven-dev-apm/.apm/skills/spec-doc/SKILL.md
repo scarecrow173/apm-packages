@@ -90,6 +90,23 @@ relations:
 Status values: `draft`, `proposed`, `approved`, `implemented`, `superseded`,
 `rejected`.
 
+## Review Checklist
+
+Before moving a spec from `draft` to `proposed` or `approved`, verify every item
+below. A spec that fails any gate must be revised before implementation planning.
+
+| # | Gate | Pass criteria |
+|---|------|---------------|
+| 1 | **Problem stated** | The "why" is concrete — not "improve UX" but a measurable gap or pain. |
+| 2 | **Audience identified** | At least one named persona, role, or system consumer. |
+| 3 | **Scope bounded** | Both in-scope and out-of-scope sections are explicit and non-empty. |
+| 4 | **Acceptance criteria testable** | Each criterion can be verified by a human or automated test without subjective judgment. |
+| 5 | **No implementation leakage** | The spec describes *what* and *why*, not *how*. Technology choices belong in ADRs or plans. |
+| 6 | **Relations linked** | Relevant ADRs, upstream specs, and source evidence are recorded in front matter `relations`. |
+| 7 | **No contradictions** | Cross-check against existing specs and ADRs — no silent overrides. |
+| 8 | **Owner assigned** | `owners` field is non-empty; at least one person accountable for approval. |
+| 9 | **Status correct** | Front matter `status` reflects the actual review state. |
+
 ## Resources
 
 - `scripts/new_spec.js`: create a spec and update its index.

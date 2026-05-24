@@ -3,28 +3,27 @@ version: 0.1.0
 description: A collection of APM packages for research, skills, agents, and prompts
 author: Akiyoshi Koyama
 license: MIT
-
 targets:
-  - copilot
-  - claude
-  - cursor
-  - codex
-  - agent-skills
-
+- copilot
+- claude
+- cursor
+- codex
+- agent-skills
 dependencies:
   apm:
-    - github/awesome-copilot/skills/git-commit
-    - microsoft/apm/packages/apm-guide
+  - github/awesome-copilot/skills/git-commit
+  - microsoft/apm/packages/apm-guide
+  - affaan-m/ECC
+  - addyosmani/agent-skills
   mcp:
-    - name: mise
-      registry: false
-      transport: stdio
-      command: mise
-      args:
-        - mcp
-      env:
-        MISE_EXPERIMENTAL: "1"
-
+  - name: mise
+    registry: false
+    transport: stdio
+    command: mise
+    args:
+    - mcp
+    env:
+      MISE_EXPERIMENTAL: '1'
 marketplace:
   owner:
     name: scarecrow173
@@ -35,33 +34,33 @@ marketplace:
   versioning:
     strategy: lockstep
   packages:
-    - name: steer-enterprise-web-research
-      source: ./packages/steer-enterprise-web-research-apm
-      version: 0.1.0
-    - name: doc-driven-dev
-      source: ./packages/doc-driven-dev-apm
-      version: 0.1.0
-    - name: doublecheck
-      source: github/awesome-copilot
-      subdir: plugins/doublecheck
-      ref: main
-    - name: git-commit
-      source: github/awesome-copilot
-      subdir: skills/git-commit
-      ref: main
-    - name: drawio
-      source: github/awesome-copilot
-      subdir: skills/drawio
-      ref: main
-    - name: editorconfig
-      source: github/awesome-copilot
-      subdir: skills/editorconfig
-      ref: main
-    - name: repo-story-time
-      source: github/awesome-copilot
-      subdir: skills/repo-story-time
-      ref: main
-    - name: apm-usage
-      source: microsoft/apm
-      subdir: packages/apm-guide
-      ref: main
+  - name: steer-enterprise-web-research
+    source: ./packages/steer-enterprise-web-research-apm
+    version: 0.1.0
+  - name: doc-driven-dev
+    source: ./packages/doc-driven-dev-apm
+    version: 0.1.0
+  - name: doublecheck
+    source: github/awesome-copilot
+    subdir: plugins/doublecheck
+    ref: main
+  - name: git-commit
+    source: github/awesome-copilot
+    subdir: skills/git-commit
+    ref: main
+  - name: drawio
+    source: github/awesome-copilot
+    subdir: skills/drawio
+    ref: main
+  - name: editorconfig
+    source: github/awesome-copilot
+    subdir: skills/editorconfig
+    ref: main
+  - name: repo-story-time
+    source: github/awesome-copilot
+    subdir: skills/repo-story-time
+    ref: main
+  - name: apm-usage
+    source: microsoft/apm
+    subdir: packages/apm-guide
+    ref: main
