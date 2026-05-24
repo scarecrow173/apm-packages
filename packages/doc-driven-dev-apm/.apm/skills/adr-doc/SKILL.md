@@ -214,16 +214,16 @@ Do not proceed to Phase 2 until the human confirms the summary.
    Use `relations.supersedes`, `relations.superseded-by`, `relations.related`,
    and `relations.refines` as described in `references/adr-conventions.md`.
 8. Generate the file.
-   Preferred: run `scripts/new_adr.ts`. It handles directory detection, naming,
+   Preferred: run `scripts/new_adr.js`. It handles directory detection, naming,
    templates, metadata defaults, and index updates. If you cannot run scripts,
    copy a template from `assets/templates/` and fill it manually.
 
 Preferred script examples:
 
 ```bash
-node scripts/new_adr.ts --title "Adopt ADRs"
-node scripts/new_adr.ts --title "Use PostgreSQL" --template full --dir docs/decisions
-node scripts/new_adr.ts --title "Use local cache" --template minimal
+node scripts/new_adr.js --title "Adopt ADRs"
+node scripts/new_adr.js --title "Use PostgreSQL" --template full --dir docs/decisions
+node scripts/new_adr.js --title "Use local cache" --template minimal
 ```
 
 ### Phase 3: Review Against Checklist
@@ -258,9 +258,9 @@ checklist or the human explicitly accepts the gaps.
 Useful review commands:
 
 ```bash
-node scripts/review_adr.ts --dir docs/adr
-node scripts/audit_adr.ts --dir docs/adr
-node scripts/check_code_links.ts --dir docs/adr
+node scripts/review_adr.js --dir docs/adr
+node scripts/audit_adr.js --dir docs/adr
+node scripts/check_code_links.js --dir docs/adr
 ```
 
 ## Consulting ADRs (Read Workflow)
@@ -281,7 +281,7 @@ operation any agent should do.
 ### How to Consult ADRs
 
 1. Find the ADR directory and index.
-   Use `scripts/list_adrs.ts` or the directory rules in
+   Use `scripts/list_adrs.js` or the directory rules in
    `references/adr-conventions.md`.
 2. Scan titles, statuses, and relations.
    Focus on `accepted` ADRs because these are active decisions. Also note
@@ -305,10 +305,10 @@ operation any agent should do.
 Helpful commands:
 
 ```bash
-node scripts/list_adrs.ts --dir docs/adr
-node scripts/audit_adr.ts --dir docs/adr
-node scripts/review_adr.ts --dir docs/adr
-node scripts/check_code_links.ts --dir docs/adr
+node scripts/list_adrs.js --dir docs/adr
+node scripts/audit_adr.js --dir docs/adr
+node scripts/review_adr.js --dir docs/adr
+node scripts/check_code_links.js --dir docs/adr
 ```
 
 ## Code and ADR Linking
@@ -365,15 +365,15 @@ goal is discoverability for future agents.
 3. Validate after editing:
 
 ```bash
-node scripts/audit_adr.ts --dir docs/adr
-node scripts/review_adr.ts --dir docs/adr
-node scripts/update_index.ts --dir docs/adr --write
+node scripts/audit_adr.js --dir docs/adr
+node scripts/review_adr.js --dir docs/adr
+node scripts/update_index.js --dir docs/adr --write
 ```
 
-Use `scripts/relate_adr.ts` for relation updates:
+Use `scripts/relate_adr.js` for relation updates:
 
 ```bash
-node scripts/relate_adr.ts --from 0002-new.md --to 0001-old.md --relation supersedes --write
+node scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supersedes --write
 ```
 
 ### Post-Acceptance Lifecycle
@@ -399,7 +399,7 @@ If the repo has an ADR index file, often `README.md` or `index.md`, keep it
 updated. Preferred:
 
 ```bash
-node scripts/update_index.ts --dir docs/adr --write
+node scripts/update_index.js --dir docs/adr --write
 ```
 
 Otherwise, add a bullet entry for the new ADR manually and keep ordering
@@ -411,11 +411,11 @@ When introducing ADRs to a repo that has none, create the first ADR explaining
 why the project will use ADRs:
 
 ```bash
-node scripts/new_adr.ts --title "Adopt architecture decision records" --dir docs/adr
+node scripts/new_adr.js --title "Adopt architecture decision records" --dir docs/adr
 ```
 
 Then edit the generated ADR so it contains real context for the repository, not
-generic boilerplate. Use `scripts/update_index.ts --write` if the index needs to
+generic boilerplate. Use `scripts/update_index.js --write` if the index needs to
 be refreshed after manual edits.
 
 ### Categories
@@ -451,16 +451,16 @@ only when a flat directory is becoming hard to scan.
 
 ### scripts
 
-- `scripts/new_adr.ts`: create a new ADR from a MADR template, using repository
+- `scripts/new_adr.js`: create a new ADR from a MADR template, using repository
   conventions.
-- `scripts/list_adrs.ts`: list ADR metadata, statuses, and relations.
-- `scripts/audit_adr.ts`: validate front matter, required sections,
+- `scripts/list_adrs.js`: list ADR metadata, statuses, and relations.
+- `scripts/audit_adr.js`: validate front matter, required sections,
   placeholders, local links, relation links, and index coverage.
-- `scripts/review_adr.ts`: review agent-readiness.
-- `scripts/check_code_links.ts`: check Implementation Plan code references.
-- `scripts/update_index.ts`: update ADR index files; dry-run by default.
-- `scripts/relate_adr.ts`: add bidirectional ADR relations.
-- `scripts/migrate_report.ts`: report migration actions toward MADR 4.0.0
+- `scripts/review_adr.js`: review agent-readiness.
+- `scripts/check_code_links.js`: check Implementation Plan code references.
+- `scripts/update_index.js`: update ADR index files; dry-run by default.
+- `scripts/relate_adr.js`: add bidirectional ADR relations.
+- `scripts/migrate_report.js`: report migration actions toward MADR 4.0.0
   without changing files.
 
 ### references
@@ -491,30 +491,30 @@ From the target repo root:
 
 ```bash
 # Full ADR, default template
-node /path/to/adr-doc/scripts/new_adr.ts --title "Choose database" --status proposed
+node /path/to/adr-doc/scripts/new_adr.js --title "Choose database" --status proposed
 
 # Minimal ADR for a simple local decision
-node /path/to/adr-doc/scripts/new_adr.ts --title "Use local cache" --template minimal
+node /path/to/adr-doc/scripts/new_adr.js --title "Use local cache" --template minimal
 
 # Explicit directory
-node /path/to/adr-doc/scripts/new_adr.ts --title "Choose database" --template full --dir docs/decisions
+node /path/to/adr-doc/scripts/new_adr.js --title "Choose database" --template full --dir docs/decisions
 
 # List and audit
-node /path/to/adr-doc/scripts/list_adrs.ts --dir docs/adr
-node /path/to/adr-doc/scripts/audit_adr.ts --dir docs/adr
+node /path/to/adr-doc/scripts/list_adrs.js --dir docs/adr
+node /path/to/adr-doc/scripts/audit_adr.js --dir docs/adr
 
 # Review agent-readiness and code references
-node /path/to/adr-doc/scripts/review_adr.ts --dir docs/adr
-node /path/to/adr-doc/scripts/check_code_links.ts --dir docs/adr
+node /path/to/adr-doc/scripts/review_adr.js --dir docs/adr
+node /path/to/adr-doc/scripts/check_code_links.js --dir docs/adr
 
 # Update index
-node /path/to/adr-doc/scripts/update_index.ts --dir docs/adr --write
+node /path/to/adr-doc/scripts/update_index.js --dir docs/adr --write
 
 # Relate ADRs
-node /path/to/adr-doc/scripts/relate_adr.ts --from 0002-new.md --to 0001-old.md --relation supersedes --write
+node /path/to/adr-doc/scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supersedes --write
 
 # Migration report only
-node /path/to/adr-doc/scripts/migrate_report.ts --dir docs/adr
+node /path/to/adr-doc/scripts/migrate_report.js --dir docs/adr
 ```
 
 Notes:

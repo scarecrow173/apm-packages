@@ -27,7 +27,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/list_adrs.ts [--dir <path>] [--status <status>] [--json]";
+  return "Usage: node scripts/list_adrs.js [--dir <path>] [--status <status>] [--json]";
 }
 
 async function main(): Promise<void> {

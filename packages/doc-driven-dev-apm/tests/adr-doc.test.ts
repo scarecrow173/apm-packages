@@ -32,7 +32,7 @@ function runScript(name, args, options = {}) {
 test("new_adr creates the default MADR ADR and index in docs/adr", () => {
   const repo = tempRepo();
 
-  const result = runScript("new_adr.ts", ["--title", "Adopt MADR"], { cwd: repo });
+  const result = runScript("new_adr.js", ["--title", "Adopt MADR"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.existsSync(path.join(repo, "docs/adr/0001-adopt-madr.md")), true);
@@ -63,7 +63,7 @@ test("new_adr honors --dir and all supported templates", () => {
     const repo = tempRepo();
 
     const result = runScript(
-      "new_adr.ts",
+      "new_adr.js",
       ["--title", `Template ${template}`, "--dir", "decisions", "--template", template],
       { cwd: repo },
     );
@@ -79,13 +79,13 @@ test("update_index is dry-run by default and writes only with --write", () => {
   fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
   fs.writeFileSync(path.join(repo, "docs/adr/0001-existing.md"), "# 1. Existing\n", "utf8");
 
-  const dryRun = runScript("update_index.ts", ["--dir", "docs/adr"], { cwd: repo });
+  const dryRun = runScript("update_index.js", ["--dir", "docs/adr"], { cwd: repo });
 
   assert.equal(dryRun.status, 0, dryRun.stderr);
   assert.match(dryRun.stdout, /DRY RUN/);
   assert.equal(fs.existsSync(path.join(repo, "docs/adr/README.md")), false);
 
-  const write = runScript("update_index.ts", ["--dir", "docs/adr", "--write"], { cwd: repo });
+  const write = runScript("update_index.js", ["--dir", "docs/adr", "--write"], { cwd: repo });
 
   assert.equal(write.status, 0, write.stderr);
   assert.match(fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8"), /Existing/);
@@ -98,7 +98,7 @@ test("audit_adr reports issues without modifying files", () => {
   fs.writeFileSync(adrPath, "# 1. Incomplete\n\nTODO\n", "utf8");
   const before = fs.readFileSync(adrPath, "utf8");
 
-  const result = runScript("audit_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("audit_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -141,7 +141,7 @@ test("audit_adr validates relation links when relations are present", () => {
     "utf8",
   );
 
-  const result = runScript("audit_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("audit_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -187,7 +187,7 @@ test("audit_adr validates reference-style markdown links", () => {
     "utf8",
   );
 
-  const result = runScript("audit_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("audit_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -198,7 +198,7 @@ test("package scripts expose tests and markdownlint", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8"));
 
   assert.equal(packageJson.packageManager, "pnpm@11.2.2");
-  assert.match(packageJson.scripts.test, /node --test/);
+  assert.match(packageJson.scripts.test, /tsx --test/);
   assert.match(packageJson.scripts["lint:md"], /markdownlint-cli2/);
   assert.equal(Boolean(packageJson.dependencies["gray-matter"]), true);
   assert.equal(Boolean(packageJson.dependencies.zod), true);
@@ -216,7 +216,7 @@ test("migrate_report is report-only", () => {
   fs.writeFileSync(adrPath, "# Old Style\n\nDecision: keep it simple.\n", "utf8");
   const before = fs.readFileSync(adrPath, "utf8");
 
-  const result = runScript("migrate_report.ts", ["--dir", "docs/decisions", "--json"], { cwd: repo });
+  const result = runScript("migrate_report.js", ["--dir", "docs/decisions", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -226,10 +226,10 @@ test("migrate_report is report-only", () => {
 
 test("list_adrs reports ADR metadata", () => {
   const repo = tempRepo();
-  const created = runScript("new_adr.ts", ["--title", "List Metadata", "--status", "accepted"], { cwd: repo });
+  const created = runScript("new_adr.js", ["--title", "List Metadata", "--status", "accepted"], { cwd: repo });
   assert.equal(created.status, 0, created.stderr);
 
-  const result = runScript("list_adrs.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("list_adrs.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -267,7 +267,7 @@ test("review_adr checks agent-readiness without writing", () => {
   );
   const before = fs.readFileSync(adrPath, "utf8");
 
-  const result = runScript("review_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("review_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -278,13 +278,13 @@ test("review_adr checks agent-readiness without writing", () => {
 
 test("relate_adr is dry-run by default and writes bidirectional relations", () => {
   const repo = tempRepo();
-  const first = runScript("new_adr.ts", ["--title", "Old Decision"], { cwd: repo });
-  const second = runScript("new_adr.ts", ["--title", "New Decision"], { cwd: repo });
+  const first = runScript("new_adr.js", ["--title", "Old Decision"], { cwd: repo });
+  const second = runScript("new_adr.js", ["--title", "New Decision"], { cwd: repo });
   assert.equal(first.status, 0, first.stderr);
   assert.equal(second.status, 0, second.stderr);
 
   const dryRun = runScript(
-    "relate_adr.ts",
+    "relate_adr.js",
     ["--dir", "docs/adr", "--from", "0002-new-decision.md", "--to", "0001-old-decision.md", "--relation", "supersedes"],
     { cwd: repo },
   );
@@ -292,7 +292,7 @@ test("relate_adr is dry-run by default and writes bidirectional relations", () =
   assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/adr/0002-new-decision.md"), "utf8"), /0001-old-decision\.md/);
 
   const write = runScript(
-    "relate_adr.ts",
+    "relate_adr.js",
     ["--dir", "docs/adr", "--from", "0002-new-decision.md", "--to", "0001-old-decision.md", "--relation", "supersedes", "--write"],
     { cwd: repo },
   );
@@ -326,7 +326,7 @@ test("check_code_links reports missing Implementation Plan paths", () => {
     "utf8",
   );
 
-  const result = runScript("check_code_links.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("check_code_links.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -360,7 +360,7 @@ test("check_code_links includes nested Implementation Plan subsections", () => {
     "utf8",
   );
 
-  const result = runScript("check_code_links.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("check_code_links.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -404,7 +404,7 @@ test("review_adr accepts verification checkboxes in nested subsections", () => {
     "utf8",
   );
 
-  const result = runScript("review_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("review_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -433,7 +433,7 @@ test("list_adrs extracts plain text from markdown heading titles", () => {
     "utf8",
   );
 
-  const result = runScript("list_adrs.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("list_adrs.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
@@ -477,7 +477,7 @@ test("audit_adr validates front matter with zod schema", () => {
     "utf8",
   );
 
-  const result = runScript("audit_adr.ts", ["--dir", "docs/adr", "--json"], { cwd: repo });
+  const result = runScript("audit_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);

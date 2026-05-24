@@ -211,7 +211,7 @@ ADR に記録する内容は次の理解です。
    `relations.superseded-by`、`relations.related`、`relations.refines` を
    使います。
 8. ファイルを生成する。
-   推奨は `scripts/new_adr.ts` です。ディレクトリ検出、命名、
+   推奨は `scripts/new_adr.js` です。ディレクトリ検出、命名、
    テンプレート、メタデータ既定値、索引更新を扱います。スクリプトを実行
    できない場合は、`assets/templates/` からテンプレートをコピーして手動で
    埋めます。
@@ -219,9 +219,9 @@ ADR に記録する内容は次の理解です。
 推奨スクリプト例:
 
 ```bash
-node scripts/new_adr.ts --title "Adopt ADRs"
-node scripts/new_adr.ts --title "Use PostgreSQL" --template full --dir docs/decisions
-node scripts/new_adr.ts --title "Use local cache" --template minimal
+node scripts/new_adr.js --title "Adopt ADRs"
+node scripts/new_adr.js --title "Use PostgreSQL" --template full --dir docs/decisions
+node scripts/new_adr.js --title "Use local cache" --template minimal
 ```
 
 ### Phase 3: チェックリストでレビューする
@@ -256,9 +256,9 @@ Recommendation:
 便利なレビューコマンド:
 
 ```bash
-node scripts/review_adr.ts --dir docs/adr
-node scripts/audit_adr.ts --dir docs/adr
-node scripts/check_code_links.ts --dir docs/adr
+node scripts/review_adr.js --dir docs/adr
+node scripts/audit_adr.js --dir docs/adr
+node scripts/check_code_links.js --dir docs/adr
 ```
 
 ## 既存 ADR を参照するワークフロー
@@ -279,7 +279,7 @@ node scripts/check_code_links.ts --dir docs/adr
 ### ADR を参照する方法
 
 1. ADR ディレクトリと索引を見つける。
-   `scripts/list_adrs.ts` または `references/adr-conventions.ja.md` の
+   `scripts/list_adrs.js` または `references/adr-conventions.ja.md` の
    ディレクトリ規約を使います。
 2. タイトル、ステータス、relations を見る。
    active な判断である `accepted` ADR を中心に読みます。`superseded`、
@@ -302,10 +302,10 @@ node scripts/check_code_links.ts --dir docs/adr
 便利なコマンド:
 
 ```bash
-node scripts/list_adrs.ts --dir docs/adr
-node scripts/audit_adr.ts --dir docs/adr
-node scripts/review_adr.ts --dir docs/adr
-node scripts/check_code_links.ts --dir docs/adr
+node scripts/list_adrs.js --dir docs/adr
+node scripts/audit_adr.js --dir docs/adr
+node scripts/review_adr.js --dir docs/adr
+node scripts/check_code_links.js --dir docs/adr
 ```
 
 ## コードと ADR のリンク
@@ -363,15 +363,15 @@ import Database from "better-sqlite3";
 3. 編集後に検証する。
 
 ```bash
-node scripts/audit_adr.ts --dir docs/adr
-node scripts/review_adr.ts --dir docs/adr
-node scripts/update_index.ts --dir docs/adr --write
+node scripts/audit_adr.js --dir docs/adr
+node scripts/review_adr.js --dir docs/adr
+node scripts/update_index.js --dir docs/adr --write
 ```
 
-relations 更新には `scripts/relate_adr.ts` を使います。
+relations 更新には `scripts/relate_adr.js` を使います。
 
 ```bash
-node scripts/relate_adr.ts --from 0002-new.md --to 0001-old.md --relation supersedes --write
+node scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supersedes --write
 ```
 
 ### 承認後のライフサイクル
@@ -397,7 +397,7 @@ ADR が accepted になった後:
 `index.md` なので更新します。推奨:
 
 ```bash
-node scripts/update_index.ts --dir docs/adr --write
+node scripts/update_index.js --dir docs/adr --write
 ```
 
 手動で更新する場合は、新しい ADR の bullet entry を追加し、リポジトリ規約に
@@ -409,12 +409,12 @@ ADR がないリポジトリに導入する場合、最初の ADR として、�
 採用する理由を記録します。
 
 ```bash
-node scripts/new_adr.ts --title "Adopt architecture decision records" --dir docs/adr
+node scripts/new_adr.js --title "Adopt architecture decision records" --dir docs/adr
 ```
 
 生成された ADR は、汎用的な boilerplate のままにせず、そのリポジトリ固有の
 実際の文脈で編集します。手動編集後に索引を更新する必要があれば
-`scripts/update_index.ts --write` を使います。
+`scripts/update_index.js --write` を使います。
 
 ### Categories
 
@@ -449,16 +449,16 @@ flat なディレクトリが見通しにくくなってきた場合だけ、ア
 
 ### scripts
 
-- `scripts/new_adr.ts`: リポジトリ規約に従い、MADR テンプレートから新しい
+- `scripts/new_adr.js`: リポジトリ規約に従い、MADR テンプレートから新しい
   ADR を作成する。
-- `scripts/list_adrs.ts`: ADR メタデータ、ステータス、relations を一覧する。
-- `scripts/audit_adr.ts`: フロントマター、必須セクション、プレースホルダー、
+- `scripts/list_adrs.js`: ADR メタデータ、ステータス、relations を一覧する。
+- `scripts/audit_adr.js`: フロントマター、必須セクション、プレースホルダー、
   ローカルリンク、relation リンク、索引を検証する。
-- `scripts/review_adr.ts`: agent-readiness をレビューする。
-- `scripts/check_code_links.ts`: Implementation Plan のコード参照を確認する。
-- `scripts/update_index.ts`: ADR 索引を更新する。既定では dry-run。
-- `scripts/relate_adr.ts`: ADR relations を双方向に追加する。
-- `scripts/migrate_report.ts`: ファイルを書き換えず、MADR 4.0.0 へ寄せる移行
+- `scripts/review_adr.js`: agent-readiness をレビューする。
+- `scripts/check_code_links.js`: Implementation Plan のコード参照を確認する。
+- `scripts/update_index.js`: ADR 索引を更新する。既定では dry-run。
+- `scripts/relate_adr.js`: ADR relations を双方向に追加する。
+- `scripts/migrate_report.js`: ファイルを書き換えず、MADR 4.0.0 へ寄せる移行
   アクションを報告する。
 
 ### references
@@ -489,30 +489,30 @@ flat なディレクトリが見通しにくくなってきた場合だけ、ア
 
 ```bash
 # Full ADR, default template
-node /path/to/adr-doc/scripts/new_adr.ts --title "Choose database" --status proposed
+node /path/to/adr-doc/scripts/new_adr.js --title "Choose database" --status proposed
 
 # Minimal ADR for a simple local decision
-node /path/to/adr-doc/scripts/new_adr.ts --title "Use local cache" --template minimal
+node /path/to/adr-doc/scripts/new_adr.js --title "Use local cache" --template minimal
 
 # Explicit directory
-node /path/to/adr-doc/scripts/new_adr.ts --title "Choose database" --template full --dir docs/decisions
+node /path/to/adr-doc/scripts/new_adr.js --title "Choose database" --template full --dir docs/decisions
 
 # List and audit
-node /path/to/adr-doc/scripts/list_adrs.ts --dir docs/adr
-node /path/to/adr-doc/scripts/audit_adr.ts --dir docs/adr
+node /path/to/adr-doc/scripts/list_adrs.js --dir docs/adr
+node /path/to/adr-doc/scripts/audit_adr.js --dir docs/adr
 
 # Review agent-readiness and code references
-node /path/to/adr-doc/scripts/review_adr.ts --dir docs/adr
-node /path/to/adr-doc/scripts/check_code_links.ts --dir docs/adr
+node /path/to/adr-doc/scripts/review_adr.js --dir docs/adr
+node /path/to/adr-doc/scripts/check_code_links.js --dir docs/adr
 
 # Update index
-node /path/to/adr-doc/scripts/update_index.ts --dir docs/adr --write
+node /path/to/adr-doc/scripts/update_index.js --dir docs/adr --write
 
 # Relate ADRs
-node /path/to/adr-doc/scripts/relate_adr.ts --from 0002-new.md --to 0001-old.md --relation supersedes --write
+node /path/to/adr-doc/scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supersedes --write
 
 # Migration report only
-node /path/to/adr-doc/scripts/migrate_report.ts --dir docs/adr
+node /path/to/adr-doc/scripts/migrate_report.js --dir docs/adr
 ```
 
 Notes:

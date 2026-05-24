@@ -61,7 +61,7 @@ function parseTemplate(value: string): TemplateName {
 
 function usage(): string {
   return [
-    "Usage: node scripts/new_adr.ts --title <title> [--dir <path>] [--template full|minimal|bare|bare-minimal]",
+    "Usage: node scripts/new_adr.js --title <title> [--dir <path>] [--template full|minimal|bare|bare-minimal]",
     "",
     "Creates a new MADR ADR and refreshes the ADR index.",
   ].join("\n");

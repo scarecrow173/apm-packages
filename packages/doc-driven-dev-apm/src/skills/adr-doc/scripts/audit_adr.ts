@@ -57,7 +57,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/audit_adr.ts [--dir <path>] [--json]";
+  return "Usage: node scripts/audit_adr.js [--dir <path>] [--json]";
 }
 
 async function auditFile(cwd: string, relativeDir: string, file: string): Promise<Finding[]> {
