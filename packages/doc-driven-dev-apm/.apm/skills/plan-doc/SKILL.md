@@ -6,18 +6,26 @@ license: MIT
 
 # Plan Documentation Skill
 
-Use this skill after a spec or ADR is clear enough to implement. A plan explains
+Use this skill after a spec is clear enough to implement. A plan explains
 how the work will be built, which documents it implements or derives from, and
 which verification steps prove the implementation follows the source document.
 
+In this package's lifecycle, the typical upstream path is:
+**spec + ADR (parallel) → plan**. Plans derive from both the spec and any
+relevant ADRs created alongside it.
+
 ## Workflow
 
-1. Read the upstream spec or ADR fully.
+1. Read the upstream spec fully.
    Do not plan from title or memory alone.
 2. Confirm the upstream document is ready.
-   Prefer `approved` specs or `accepted` ADRs. If it is still draft/proposed,
-   surface that risk before planning.
-3. Create the plan.
+   Prefer `approved` specs. If it is still draft/proposed, surface that risk
+   before planning.
+3. Check for related ADRs.
+   If ADRs constrain or inform the implementation approach, reference them.
+   A plan does not require an ADR to proceed, but must acknowledge and
+   incorporate relevant ones created in parallel with the spec.
+4. Create the plan.
 
    ```bash
    node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md
@@ -28,8 +36,8 @@ which verification steps prove the implementation follows the source document.
    and fill it manually.
 
 4. Record relations.
-   The generated plan uses `relations.implements` and `relations.derives-from`
-   for the upstream document.
+   The generated plan uses `relations.implements` for the upstream spec and
+   `relations.derives-from` for relevant ADRs.
 5. Keep the plan implementation-ready.
    Include concrete files, behavior, tests, migration steps, and verification
    commands when they are known.

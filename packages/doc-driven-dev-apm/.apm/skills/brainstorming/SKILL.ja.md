@@ -10,7 +10,7 @@ license: MIT
 へ変換します。
 
 この skill は design gate workflow を、このパッケージの `docs/discovery/`
-artifact と ADR/spec routing に対応させます。
+artifact と spec/ADR routing に対応させます。
 
 まず現在のプロジェクト文脈を理解します。その後、一度に一つずつ質問して
 アイデアを磨きます。何を作るのか理解できたら、design を提示し、人間の
@@ -48,8 +48,9 @@ config 変更、document workflow 更新も同じです。単純な作業ほど�
    scope 過多を確認する。
 8. **人間が written discovery artifact を review する** - ADR、spec、
    plan、task、implementation に進む前に確認する。
-9. **downstream documents へ遷移する** - 必要最小限の route: ADR、spec、
-   `plan-doc`、`task-doc`。
+9. **downstream documents へ遷移する** - dual-track モデルに従う:
+   spec-doc + adr-doc（並列）でプロダクト要件と技術判断の両方を
+   記録。その後 `plan-doc`、`task-doc`。
 
 ## Process Flow
 
@@ -65,7 +66,7 @@ digraph brainstorming {
   "Write discovery artifact" [shape=box];
   "Discovery self-review" [shape=box];
   "Human reviews artifact?" [shape=diamond];
-  "Route to ADR / spec / plan-doc / task-doc" [shape=doublecircle];
+  "Route to spec-doc / adr-doc / plan-doc / task-doc" [shape=doublecircle];
 
   "Explore project context" -> "Visual questions ahead?";
   "Visual questions ahead?" -> "Offer visual companion\n(own message)" [label="yes"];
@@ -79,20 +80,25 @@ digraph brainstorming {
   "Write discovery artifact" -> "Discovery self-review";
   "Discovery self-review" -> "Human reviews artifact?";
   "Human reviews artifact?" -> "Write discovery artifact" [label="changes requested"];
-  "Human reviews artifact?" -> "Route to ADR / spec / plan-doc / task-doc" [label="approved"];
+  "Human reviews artifact?" -> "Route to spec-doc / adr-doc / plan-doc / task-doc" [label="approved"];
 }
 ```
 
 terminal state は downstream document への routing です。brainstorming 後に
-コードを書かないでください。次のいずれかに進みます。
+コードを書かないでください。dual-track モデルに従います。
 
-- `adr-doc`: architecture、dependency、戻しにくい判断、cross-cutting
-  convention が重要な場合。
-- `spec-doc`: 何を作るべきか、なぜ必要か、誰のためか、scope、実装向け
-  behavior、API、workflow、acceptance criteria、verification を明確にする
-  必要がある場合。
-- `plan-doc`: 上流 ADR または spec が実装可能なほど明確で承認済みの場合のみ。
+- `spec-doc` + `adr-doc`（並列）: 同じ discovery output から両方を作成します。
+  Spec は what/why/scope を定義。ADR はすべての技術判断を代替案と根拠
+  付きで記録します。brainstorming がプロダクト要件と技術判断の両方を
+  明らかにしたら、並列で書きます。
+- `spec-doc` のみ: 純粋なプロダクト作業で architecture 判断がない場合。
+- `adr-doc` のみ: 横断的な判断で単一 feature spec に紐づかない場合。
+- `plan-doc`: 上流の spec（および該当時 ADR）が承認済みの場合のみ。
+  Plan は両方から派生します。
 - `task-doc`: plan が分解済みで execution tracking が必要な場合のみ。
+
+dual-track: **brainstorming → spec + ADR（並列）→ plan → task**。
+すべての意思決定は ADR として記録します。
 
 ## プロセス
 
@@ -250,6 +256,12 @@ idea artifact や上流文書への link は `relations.derives-from` に記録�
 
 [The agreed intent, scope, non-goals, and success criteria.]
 ```
+
+この discovery artifact が `adr-doc` にルーティングされる場合、ADR Phase 1 の
+上流コンテキストとして機能します。ADR skill はこの artifact から判断に
+関連する情報（トリガー、制約、選択肢、推奨案）を抽出し、人間に同じ
+質問を繰り返しません。ADR 固有の不足分（ガバナンス、エージェント実装
+詳細、検証基準）のみをフォローアップで質問します。
 
 ### Discovery Self-Review
 

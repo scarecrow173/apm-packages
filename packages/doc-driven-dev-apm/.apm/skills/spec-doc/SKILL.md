@@ -107,6 +107,21 @@ below. A spec that fails any gate must be revised before implementation planning
 | 8 | **Owner assigned** | `owners` field is non-empty; at least one person accountable for approval. |
 | 9 | **Status correct** | Front matter `status` reflects the actual review state. |
 
+## Relationship with ADRs
+
+In this package's lifecycle, spec and ADR are created in parallel from the same
+discovery output. All decisions are recorded as ADRs.
+
+- **Spec reveals an architecture decision:** Write the ADR in parallel with
+  the spec. Link with `relations.related` in both directions.
+- **ADR already exists:** If an accepted ADR constrains this spec (e.g., "we
+  use PostgreSQL"), reference it in `relations.derives-from` or
+  `relations.related`.
+- **No architecture decision needed:** Proceed directly from approved spec to
+  `plan-doc`. ADR is not required for purely product-only work.
+
+The dual-track: **spec + ADR (parallel) → plan → task**.
+
 ## Resources
 
 - `scripts/new_spec.js`: create a spec and update its index.

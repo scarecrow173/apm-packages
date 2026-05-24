@@ -5,15 +5,61 @@ development. Documents created by these skills use YAML front matter plus
 Markdown so agents can track lifecycle status, source evidence, and semantic
 relations between ADRs, specs, plans, and tasks.
 
-The package keeps `adr-doc` as the architecture decision workflow and provides
-a document lifecycle that starts with idea refinement and brainstorming:
+The package follows a dual-track model where spec and ADR are created in
+parallel from the same discovery output:
 
 - `idea-refine`: turn rough ideas into options, assumptions, and questions.
-- `brainstorming`: clarify intent and route to ADR, spec, plan, or task.
+- `brainstorming`: clarify intent and route to spec + ADR (parallel).
 - `spec-doc`: define what to build before implementation starts.
-- `plan-doc`: turn an approved spec or ADR into an implementation plan.
+- `adr-doc`: record all technical decisions as Architecture Decision Records.
+- `plan-doc`: turn approved spec + ADR into an implementation plan.
 - `task-doc`: track implementation slices and dependencies.
 - `doc-status`: list and audit document status, indexes, and relations.
+
+## Definitions
+
+### doc-driven-dev mainline
+
+The document flow that every piece of work follows:
+
+```
+idea-refine OR brainstorming
+  → spec-doc + adr-doc   (parallel: created from the same discovery output)
+  → plan-doc             (derives from both spec and ADR)
+  → task-doc
+```
+
+- **Spec** answers WHAT, WHY, and SCOPE.
+- **ADR** answers HOW and records every technical decision with alternatives
+  considered and rationale.
+- **Parallel creation**: when brainstorming produces enough context, both spec
+  and ADR can be written simultaneously since they address different facets of
+  the same work.
+- **Both feed the plan**: `plan-doc` uses spec for requirements and ADR for
+  technical constraints.
+
+Skills on the mainline: `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc`,
+`plan-doc`, `task-doc`.
+
+### doc-driven-dev parallel track
+
+Spec and ADR form a **parallel track** — two documents derived from the same
+upstream discovery artifact, addressing complementary concerns:
+
+| | spec-doc | adr-doc |
+|---|---------|--------|
+| Answers | What / Why / Scope | How / Which / Why-this-over-that |
+| Trigger | Any feature or change | Any technical decision with alternatives |
+| Blocking | plan requires approved spec | plan references accepted ADR |
+| Output | Acceptance criteria | Implementation constraints |
+
+- When brainstorming reveals both product requirements and technical decisions,
+  write spec and ADR in parallel.
+- When the work is purely product (no architecture choice), spec alone suffices.
+- When the decision is purely cross-cutting (no single feature), ADR alone
+  suffices.
+- All decisions — including those that seem obvious — are recorded as ADRs so
+  future agents understand rationale.
 
 ## Install
 
@@ -48,12 +94,14 @@ problem signals, options, assumptions, and next questions before routing.
 ### `brainstorming`
 
 Use this skill to clarify intent through dialogue before downstream documents
-are written. It creates artifacts under `docs/discovery/` and records document
-routing decisions for ADR, spec, plan, or task work.
+are written. It creates artifacts under `docs/discovery/` and routes to
+`spec-doc` + `adr-doc` in parallel.
 
 ### `adr-doc`
 
-Use this skill to work with MADR 4.0.0 ADRs:
+Use this skill to work with MADR 4.0.0 ADRs. All technical decisions are
+recorded as ADRs, created in parallel with specs from the same discovery
+output:
 
 - create a new ADR from a MADR template
 - write implementation plans and verification criteria for coding agents
@@ -72,7 +120,7 @@ before implementation planning starts.
 ### `plan-doc`
 
 Use this skill to create implementation plans under `docs/plans/`. Plans link to
-upstream specs or ADRs with `relations.implements` and
+upstream specs with `relations.implements` and to ADRs with
 `relations.derives-from`.
 
 ### `task-doc`
@@ -117,16 +165,16 @@ internal document links rather than the type of the linked document.
 ## Recommended Lifecycle
 
 ```text
-idea-refine
-  -> brainstorming
-  -> ADR / spec routing
-  -> plan-doc
-  -> task-doc
+idea-refine OR brainstorming
+  -> spec-doc + adr-doc  (parallel: define what + record decisions)
+  -> plan-doc            (derives from both spec and ADR)
+  -> task-doc            (execution slices)
   -> implementation
   -> doc-status
 ```
 
-ADRs are recommended when the work requires a technical decision with
-alternatives or long-lived consequences. Specs are recommended when what should
-be built, why it is needed, who it serves, scope, implementation-facing
-behavior, and acceptance criteria need to be explicit.
+The dual-track model: **spec + ADR (parallel) → plan → task**.
+Specs define what should be built, why, scope, and acceptance criteria.
+ADRs record every technical decision with alternatives and rationale.
+When brainstorming produces enough context for both, they are written in
+parallel. Plans derive from both.

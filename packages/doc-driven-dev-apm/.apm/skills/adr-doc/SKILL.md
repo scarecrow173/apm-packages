@@ -31,6 +31,16 @@ This means:
 
 ## When to Write an ADR
 
+In this package's lifecycle, all decisions are recorded as ADRs. ADR and spec
+are created in parallel from the same discovery output when both product
+requirements and technical decisions are clear.
+
+- During **brainstorming**: cross-cutting conventions, platform choices.
+- During **spec writing** (parallel): a requirement reveals a technology
+  decision — write the ADR alongside the spec.
+- During **planning**: implementation approach requires a recorded choice.
+- During **implementation**: an agent encounters an architectural fork.
+
 Write or propose an ADR when a decision:
 
 - Changes how the system is built, integrated, deployed, operated, or extended.
@@ -108,7 +118,59 @@ Before asking any questions, gather context from the repo:
 Do not draft an ADR from abstract requirements when concrete repository evidence
 is available.
 
-### Phase 1: Capture Intent (Socratic)
+### Phase 1: Capture Intent
+
+Phase 1 has two modes. Choose based on whether upstream context exists.
+
+#### Mode Selection
+
+```
+IF a discovery artifact (docs/discovery/) OR spec (docs/specs/) already
+   captures this decision's context:
+  → Mode A: Extract from upstream
+ELSE (triggered mid-implementation, cross-cutting decision, no prior
+   brainstorming):
+  → Mode B: Full Socratic interview
+```
+
+#### Mode A: Extract from Upstream
+
+Use this mode when a brainstorming discovery artifact or spec already exists for
+the decision being recorded.
+
+1. **Read the upstream artifact fully.**
+   Identify the decision-relevant portions: intent, constraints, options,
+   recommendation, non-goals, and open questions.
+
+2. **Map upstream content to ADR structure:**
+   - Title ← upstream recommendation + decision description
+   - Trigger ← upstream intent / "why now" / problem signals
+   - Constraints ← upstream constraints section
+   - Options ← upstream options section (with trade-offs)
+   - Lean ← upstream recommendation
+   - Non-goals ← upstream scope exclusions or "Not Doing" list
+
+3. **Ask only for gaps** — information the upstream did not capture.
+   Typical gap-fill questions:
+
+   - Who needs to know or approve this decision?
+     (Governance context for MADR/RACI front matter.)
+   - What would an agent need to implement this?
+     (Affected files, directories, interfaces, dependencies, configuration,
+     tests, patterns to follow, patterns to avoid, and verification criteria.)
+   - Are there constraints or trade-offs that surfaced after the brainstorming
+     was written?
+   - What verification would prove the decision was implemented correctly?
+
+   Ask gap-fill questions one at a time. Skip any that are already answered in
+   the upstream or Phase 0.
+
+4. **Proceed to Intent Summary Gate** (below).
+
+#### Mode B: Full Socratic Interview
+
+Use this mode when no upstream brainstorming or spec exists — typically when an
+ADR is triggered mid-implementation or for a standalone cross-cutting decision.
 
 Interview the human to understand the decision space. Ask questions one at a
 time, building on previous answers. Do not dump a list of questions.
@@ -146,7 +208,9 @@ or Phase 0:
    should it avoid? What verification would prove the implementation follows
    the decision?
 
-Adaptive follow-ups: based on answers, probe deeper where the decision is fuzzy.
+#### Adaptive Follow-ups (Both Modes)
+
+Based on answers, probe deeper where the decision is fuzzy.
 Common follow-ups:
 
 - What is the worst-case outcome if this decision is wrong?
@@ -162,8 +226,10 @@ When to stop: you have enough when you can fill every section of the ADR,
 including the Implementation Plan and Verification, without making things up. If
 you are guessing at any section, ask another question.
 
-Intent Summary Gate: before moving to Phase 2, present a structured summary of
-what you captured and ask the human to confirm or correct it:
+#### Intent Summary Gate (Both Modes)
+
+Before moving to Phase 2, present a structured summary of what you captured and
+ask the human to confirm or correct it:
 
 ```markdown
 Here's what I'm capturing for the ADR:
