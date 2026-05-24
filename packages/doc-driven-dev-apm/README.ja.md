@@ -3,18 +3,60 @@
 このパッケージは、spec-driven / document-driven development のための
 再利用可能な skill 群を提供します。生成されるドキュメントは YAML
 フロントマター + Markdown 形式で、ライフサイクルステータス、外部出典、
-ADR / spec / plan / task 間の意味付き relation を管理できます。
+spec / ADR / plan / task 間の意味付き relation を管理できます。
 
-`adr-doc` をアーキテクチャ判断の中核 workflow として維持し、
-idea refinement と brainstorming から始まるドキュメントライフサイクルを
-提供します。
+spec と ADR を同じ discovery output から並列作成する dual-track モデルを
+採用しています。
 
 - `idea-refine`: 粗いアイデアを選択肢、前提、質問に整理します。
-- `brainstorming`: 意図を明確にし、ADR、spec、plan、task にルーティングします。
+- `brainstorming`: 意図を明確にし、spec + ADR（並列）にルーティングします。
 - `spec-doc`: 実装前に何を作るかを定義します。
-- `plan-doc`: 承認済み spec または ADR を実装計画に変換します。
+- `adr-doc`: すべての技術判断を Architecture Decision Records として記録します。
+- `plan-doc`: 承認済み spec + ADR を実装計画に変換します。
 - `task-doc`: 実装単位と依存関係を管理します。
 - `doc-status`: ステータス、索引、relation を一覧・監査します。
+
+## 定義
+
+### doc-driven-dev mainline
+
+すべての作業が従うドキュメントフロー:
+
+```
+idea-refine OR brainstorming
+  → spec-doc + adr-doc   (並列: 同じ discovery output から作成)
+  → plan-doc             (spec と ADR 両方から派生)
+  → task-doc
+```
+
+- **Spec** は WHAT、WHY、SCOPE に答えます。
+- **ADR** は HOW に答え、すべての技術判断を代替案と根拠付きで記録します。
+- **並列作成**: brainstorming が十分なコンテキストを生んだら、spec と ADR
+  は異なる側面を扱うため同時に書けます。
+- **両方が plan に流れる**: `plan-doc` は spec から要件を、ADR から技術
+  制約を受け取ります。
+
+mainline 上の skill: `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc`,
+`plan-doc`, `task-doc`。
+
+### doc-driven-dev parallel track
+
+spec と ADR は**並列トラック**を形成します。同じ上流 discovery artifact
+から派生し、補完的な関心事を扱います。
+
+| | spec-doc | adr-doc |
+|---|---------|--------|
+| 答えるもの | What / Why / Scope | How / Which / Why-this-over-that |
+| トリガー | あらゆる feature や変更 | 代替案のある技術判断 |
+| ブロッキング | plan には approved spec が必要 | plan は accepted ADR を参照 |
+| 出力 | 受け入れ基準 | 実装制約 |
+
+- brainstorming がプロダクト要件と技術判断の両方を明らかにしたら、
+  spec と ADR を並列で書きます。
+- 純粋なプロダクト作業（architecture 判断なし）なら spec のみで十分です。
+- 純粋に横断的な判断（単一 feature に紐づかない）なら ADR のみで十分です。
+- 自明に見える判断も含め、すべての意思決定を ADR に記録し、
+  将来のエージェントが根拠を理解できるようにします。
 
 ## インストール
 
@@ -49,12 +91,13 @@ tsx --test tests/*.test.ts
 ### `brainstorming`
 
 後続文書を書く前に、対話で意図を明確にするために使います。
-`docs/discovery/` に artifact を作成し、ADR、spec、plan、task への
-document routing 判断を記録します。
+`docs/discovery/` に artifact を作成し、`spec-doc` + `adr-doc` へ
+並列でルーティングします。
 
 ### `adr-doc`
 
-MADR 4.0.0 ADR を扱うときにこの skill を使います。
+MADR 4.0.0 ADR を扱うときにこの skill を使います。すべての技術判断は
+ADR として記録され、spec と同じ discovery output から並列で作成されます。
 
 - MADR テンプレートから新しい ADR を作成する
 - コーディングエージェント向けの実装計画と検証基準を書く
@@ -71,8 +114,9 @@ MADR 4.0.0 ADR を扱うときにこの skill を使います。
 
 ### `plan-doc`
 
-`docs/plans/` に実装計画を作成します。上流の spec または ADR を
-`relations.implements` と `relations.derives-from` でリンクします。
+`docs/plans/` に実装計画を作成します。上流の spec を
+`relations.implements` で、ADR を `relations.derives-from` で
+リンクします。
 
 ### `task-doc`
 
@@ -115,15 +159,16 @@ relations:
 ## 推奨ライフサイクル
 
 ```text
-idea-refine
-  -> brainstorming
-  -> ADR / spec routing
-  -> plan-doc
-  -> task-doc
+idea-refine OR brainstorming
+  -> spec-doc + adr-doc  (並列: 何を定義 + 判断を記録)
+  -> plan-doc            (spec と ADR 両方から派生)
+  -> task-doc            (実行単位)
   -> implementation
   -> doc-status
 ```
 
-ADR は、代替案や長期的影響を持つ技術判断が必要なときに推奨します。
-Spec は、何を作るべきか、なぜ必要か、誰のためか、範囲、実装向けの挙動、
-受け入れ基準を明確にする必要があるときに推奨します。
+dual-track モデル: **spec + ADR（並列）→ plan → task**。
+Spec は何を作るべきか、なぜ、範囲、受け入れ基準を定義します。
+ADR はすべての技術判断を代替案と根拠付きで記録します。
+brainstorming が十分なコンテキストを生んだら、両方を並列で書きます。
+Plan は両方から派生します。

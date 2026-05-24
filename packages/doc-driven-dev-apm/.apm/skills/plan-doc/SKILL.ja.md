@@ -6,18 +6,26 @@ license: MIT
 
 # Plan Documentation Skill
 
-この skill は、spec または ADR が実装可能な状態になった後で使います。
+この skill は、spec が実装可能な状態になった後で使います。
 plan は、何をどの順序で実装するか、どの文書を実装または派生元にするか、
 どの検証で実装完了とみなすかを明確にします。
 
+このパッケージのライフサイクルでは、典型的な上流パスは:
+**spec + ADR（並列）→ plan** です。Plan は spec と並列で作成された
+ADR の両方から派生します。
+
 ## ワークフロー
 
-1. 上流の spec または ADR を全文読む。
+1. 上流の spec を全文読む。
    タイトルや記憶だけで plan を作らないでください。
 2. 上流文書が実装可能か確認する。
-   spec は `approved`、ADR は `accepted` を優先します。draft/proposed から
+   spec は `approved` を優先します。draft/proposed から
    作る場合はリスクを明示します。
-3. plan を作成する。
+3. 関連 ADR を確認する。
+   ADR が実装アプローチを制約または情報提供する場合は参照します。
+   plan に ADR は必須ではありませんが、spec と並列で作成された
+   関連 ADR は認識し、取り込む必要があります。
+4. plan を作成する。
 
    ```bash
    node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md
@@ -28,8 +36,8 @@ plan は、何をどの順序で実装するか、どの文書を実装または
    このテンプレートをコピーして手動で埋めます。
 
 4. relation を記録する。
-   生成された plan は上流文書を `relations.implements` と
-   `relations.derives-from` に記録します。
+   生成された plan は上流 spec を `relations.implements` に、
+   関連 ADR を `relations.derives-from` に記録します。
 5. plan を実装可能な粒度にする。
    影響ファイル、挙動、テスト、移行手順、検証コマンドを具体化します。
 

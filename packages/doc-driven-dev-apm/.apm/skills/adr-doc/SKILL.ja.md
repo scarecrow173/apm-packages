@@ -32,6 +32,16 @@ Architecture Decision Record を書くために使います。人間が判断を
 
 ## ADR を書くタイミング
 
+このパッケージのライフサイクルでは、すべての意思決定を ADR として記録します。
+ADR と spec は、プロダクト要件と技術判断の両方が明確になったとき、
+同じ discovery output から並列で作成します。
+
+- **brainstorming 中**: cross-cutting な規約、platform 選択。
+- **spec 作成中**（並列）: 要件が技術判断を明らかにしたら、spec と並列で
+  ADR を書きます。
+- **計画中**: 実装アプローチに記録すべき選択が必要なとき。
+- **実装中**: エージェントが architectural な分岐に遇遇したとき。
+
 次のような判断では、ADR を書く、または提案します。
 
 - システムの構築、連携、デプロイ、運用、拡張方法を変える。
@@ -106,7 +116,56 @@ Architecture Decision Record を書くために使います。人間が判断を
 リポジトリに具体的な証拠がある場合、抽象的な要求だけから ADR を書いては
 いけません。
 
-### Phase 1: 意図を確認する (Socratic)
+### Phase 1: 意図を確認する
+
+Phase 1 には 2 つのモードがあります。上流コンテキストの有無で選択します。
+
+#### モード選択
+
+```
+IF discovery artifact (docs/discovery/) OR spec (docs/specs/) がこの判断の
+   コンテキストを既に含んでいる場合:
+  → Mode A: 上流から抽出する
+ELSE (実装中にトリガーされた場合、横断的判断、事前 brainstorming なし):
+  → Mode B: フルソクラテス問答
+```
+
+#### Mode A: 上流から抽出する
+
+brainstorming の discovery artifact または spec が既に存在する場合に使います。
+
+1. **上流の artifact を全文読む。**
+   判断に関連する部分を特定します: intent、constraints、options、
+   recommendation、non-goals、open questions。
+
+2. **上流の内容を ADR 構造にマッピングする:**
+   - Title ← 上流の recommendation + 判断の説明
+   - Trigger ← 上流の intent / "why now" / problem signals
+   - Constraints ← 上流の constraints セクション
+   - Options ← 上流の options セクション（トレードオフ付き）
+   - Lean ← 上流の recommendation
+   - Non-goals ← 上流のスコープ除外 / "Not Doing" リスト
+
+3. **不足分だけを質問する** — 上流に含まれていない情報。
+   典型的な gap-fill 質問:
+
+   - この判断を知る、または承認する必要があるのは誰ですか。
+     （MADR/RACI フロントマターのためのガバナンス情報。）
+   - エージェントがこれを実装するには何が必要ですか。
+     （影響するファイル、ディレクトリ、インターフェイス、依存関係、設定、
+     テスト、従うパターン、避けるパターン、検証基準。）
+   - brainstorming 作成後に浮上した制約やトレードオフはありますか。
+   - 判断が正しく実装されたとどうやって証明しますか。
+
+   gap-fill 質問は 1 つずつ行います。上流または Phase 0 で既に回答済みの
+   ものは省略します。
+
+4. **Intent Summary Gate へ進む**（下記）。
+
+#### Mode B: フルソクラテス問答
+
+上流の brainstorming や spec が存在しない場合に使います — 通常は実装中に
+トリガーされた ADR、または独立した横断的判断の場合です。
 
 人間にインタビューして判断空間を理解します。質問は一度に 1 つずつ行い、
 前の回答を踏まえて深掘りします。質問リストを一括で投げてはいけません。
@@ -143,7 +202,9 @@ Architecture Decision Record を書くために使います。人間が判断を
    テスト、パターンを確認します。従うべき既存パターン、避けるべきこと、
    判断に従って実装されたと証明する検証方法も確認します。
 
-適応的な追加質問: 回答に応じて曖昧な部分を深掘りします。よく使う質問:
+#### 適応的な追加質問（両モード共通）
+
+回答に応じて曖昧な部分を深掘りします。よく使う質問:
 
 - この判断が間違っていた場合、最悪の結果は何ですか。
 - 6 か月後に何が起きたら再検討しますか。
@@ -158,7 +219,9 @@ Architecture Decision Record を書くために使います。人間が判断を
 推測なしに埋められる状態になったら十分です。どこかで推測しているなら、
 追加質問をします。
 
-Intent Summary Gate: Phase 2 に進む前に、確認した内容を構造化して要約し、
+#### Intent Summary Gate（両モード共通）
+
+Phase 2 に進む前に、確認した内容を構造化して要約し、
 人間に確認または修正してもらいます。
 
 ```markdown

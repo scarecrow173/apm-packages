@@ -1,6 +1,6 @@
 ---
 name: idea-refine
-description: Refines raw ideas into sharp, actionable concepts through structured divergent and convergent thinking. Use when an idea is still vague, when assumptions need stress-testing before ADR/spec work, or when options should be expanded before converging.
+description: Refines raw ideas into sharp, actionable concepts through structured divergent and convergent thinking. Use when an idea is still vague, when assumptions need stress-testing before spec/ADR work, or when options should be expanded before converging.
 license: MIT
 ---
 
@@ -19,7 +19,8 @@ Markdown document model.
 2. **Evaluate & Converge:** Cluster ideas, stress-test them, and surface hidden
    assumptions.
 3. **Sharpen & Ship:** Produce a concrete Markdown one-pager that can route into
-   `brainstorming`, ADR, spec, plan, or task work.
+   `brainstorming` or directly into `spec-doc` + `adr-doc` (parallel) when both
+   product requirements and technical decisions are clear from the idea.
 
 ## Usage
 
@@ -88,7 +89,9 @@ The artifact should contain:
 Use `relations.source` for primary evidence such as customer feedback, issues,
 research, analytics, or external references. Use `relations.references` for
 supplementary material. Use `relations.derived-by` later to point at
-`brainstorming`, ADR, spec, plan, or task documents created from the idea.
+`brainstorming`, spec, plan, or task documents created from the idea.
+ADRs connect via `relations.related` when architecture decisions emerge;
+spec and ADR are created in parallel from the same discovery output.
 
 Status values:
 

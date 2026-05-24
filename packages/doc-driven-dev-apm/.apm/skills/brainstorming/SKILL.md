@@ -10,7 +10,7 @@ Help turn ideas into fully formed designs and downstream documents through
 natural collaborative dialogue.
 
 This skill maps a design-gate workflow to this package's `docs/discovery/`
-artifacts and ADR/spec routing.
+artifacts and spec/ADR routing.
 
 Start by understanding the current project context. Then ask questions one at a
 time to refine the idea. Once you understand what is being built, present the
@@ -49,8 +49,9 @@ Complete these items in order:
    missing routing, and excessive scope.
 8. **Human reviews written discovery artifact** before downstream ADR,
    spec, plan, task, or implementation work.
-9. **Transition to downstream documents** using the minimum necessary route:
-   ADR, spec, `plan-doc`, or `task-doc`.
+9. **Transition to downstream documents** using the dual-track model:
+   spec-doc + adr-doc (parallel) when both product requirements and technical
+   decisions are clear. Then plan-doc, then task-doc.
 
 ## Process Flow
 
@@ -66,7 +67,7 @@ digraph brainstorming {
   "Write discovery artifact" [shape=box];
   "Discovery self-review" [shape=box];
   "Human reviews artifact?" [shape=diamond];
-  "Route to ADR / spec / plan-doc / task-doc" [shape=doublecircle];
+  "Route to spec-doc / adr-doc / plan-doc / task-doc" [shape=doublecircle];
 
   "Explore project context" -> "Visual questions ahead?";
   "Visual questions ahead?" -> "Offer visual companion\n(own message)" [label="yes"];
@@ -80,22 +81,28 @@ digraph brainstorming {
   "Write discovery artifact" -> "Discovery self-review";
   "Discovery self-review" -> "Human reviews artifact?";
   "Human reviews artifact?" -> "Write discovery artifact" [label="changes requested"];
-  "Human reviews artifact?" -> "Route to ADR / spec / plan-doc / task-doc" [label="approved"];
+  "Human reviews artifact?" -> "Route to spec-doc / adr-doc / plan-doc / task-doc" [label="approved"];
 }
 ```
 
 The terminal state is routing into downstream documents. Do not write code after
-brainstorming. The next step is one or more of:
+brainstorming. The next step follows the dual-track model:
 
-- `adr-doc` when the work involves architecture, dependencies, irreversible
-  choices, or cross-cutting conventions.
-- `spec-doc` when what should be built, why it is needed, who it serves, scope,
-  behavior, API, workflow, acceptance criteria, and verification must be
-  precise.
-- `plan-doc` only when an upstream ADR or spec is already clear and
-  approved enough to implement.
-- `task-doc` only when the plan is already decomposed and ready for execution
+- `spec-doc` + `adr-doc` (parallel): create both from the same discovery
+  output. Spec defines what/why/scope. ADR records every technical decision
+  with alternatives and rationale. When brainstorming reveals both product
+  requirements and technical choices, write them in parallel.
+- `spec-doc` alone: when the work is purely product with no architecture
+  decision.
+- `adr-doc` alone: when the decision is cross-cutting and not tied to a single
+  feature spec.
+- `plan-doc`: only when upstream spec (and ADR when applicable) are approved.
+  Plans derive from both.
+- `task-doc`: only when the plan is already decomposed and ready for execution
   tracking.
+
+The dual-track: **brainstorming → spec + ADR (parallel) → plan → task**.
+All decisions are recorded as ADRs.
 
 ## The Process
 
@@ -261,6 +268,12 @@ Status values:
 
 [The agreed intent, scope, non-goals, and success criteria.]
 ```
+
+When this discovery artifact routes to `adr-doc`, it serves as upstream context
+for ADR Phase 1. The ADR skill will extract decision-relevant information
+(trigger, constraints, options, recommendation) from this artifact rather than
+re-asking the human. Only ADR-specific gaps (governance, agent implementation
+details, verification criteria) will be asked as follow-up questions.
 
 ### Discovery Self-Review
 

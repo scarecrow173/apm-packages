@@ -1,6 +1,6 @@
 ---
 name: idea-refine
-description: 粗いアイデアを、発散と収束の構造化プロセスで実行可能なコンセプトに磨きます。アイデアが曖昧なとき、ADR/spec 前に前提を検証したいとき、収束前に選択肢を広げたいときに使います。
+description: 粗いアイデアを、発散と収束の構造化プロセスで実行可能なコンセプトに磨きます。アイデアが曖昧なとき、spec/ADR 前に前提を検証したいとき、収束前に選択肢を広げたいときに使います。
 license: MIT
 ---
 
@@ -18,8 +18,9 @@ Markdown 文書モデルに対応させます。
    バリエーションを生成します。
 2. **評価と収束:** アイデアをクラスタリングし、ストレステストし、隠れた
    前提を表に出します。
-3. **具体化と保存:** `brainstorming`、ADR、spec、plan、task に進める
-   Markdown one-pager を作ります。
+3. **具体化と保存:** `brainstorming` または `spec-doc` + `adr-doc`（並列）に進める
+   Markdown one-pager を作ります。アイデアからプロダクト要件と技術判断の
+   両方が明確になれば、並列で作成します。
 
 ## 使い方
 
@@ -87,8 +88,10 @@ artifact には次を含めます。
 
 顧客フィードバック、issue、調査、分析、外部資料などの一次情報は
 `relations.source` に記録します。補助資料は `relations.references` に
-記録します。後続の `brainstorming`、ADR、spec、plan、task が作られたら
-`relations.derived-by` に接続できます。
+記録します。後続の `brainstorming`、spec、plan、task が作られたら
+`relations.derived-by` に接続できます。ADR は architecture 判断が現れたとき
+`relations.related` で接続します。spec と ADR は同じ discovery output
+から並列で作成します。
 
 ステータス値:
 

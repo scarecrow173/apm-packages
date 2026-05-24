@@ -104,6 +104,21 @@ spec を `draft` から `proposed` または `approved` に進める前に、以
 | 8 | **オーナーが割り当てられている** | `owners` フィールドが非空で、承認責任者が少なくとも 1 名いる。 |
 | 9 | **ステータスが正しい** | フロントマター `status` が実際のレビュー状態を反映している。 |
 
+## ADR との関係
+
+このパッケージのライフサイクルでは、spec と ADR は同じ discovery output から
+並列で作成します。すべての意思決定は ADR として記録します。
+
+- **spec が architecture 判断を明らかにする場合:** spec と並列で ADR を
+  書きます。両方向で `relations.related` をリンクします。
+- **ADR が既に存在する場合:** 承認済み ADR がこの spec を制約するなら
+  （例: 「PostgreSQL を使う」）、`relations.derives-from` または
+  `relations.related` で参照します。
+- **architecture 判断が不要な場合:** 承認済み spec から直接 `plan-doc` に
+  進みます。純粋なプロダクト作業では ADR は不要です。
+
+dual-track: **spec + ADR（並列）→ plan → task**。
+
 ## リソース
 
 - `scripts/new_spec.js`: spec を作成し、索引を更新します。
