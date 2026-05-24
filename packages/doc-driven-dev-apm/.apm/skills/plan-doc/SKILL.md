@@ -34,6 +34,49 @@ which verification steps prove the implementation follows the source document.
    Include concrete files, behavior, tests, migration steps, and verification
    commands when they are known.
 
+## Implementation Readiness Matrix
+
+Every plan must include the following sections before moving to `approved`.
+
+### Dependency Graph
+
+List execution-order dependencies between steps. Use a simple table or Mermaid
+diagram:
+
+| Step | Depends on | Blocks |
+|------|-----------|--------|
+| A    | —         | B, C   |
+| B    | A         | D      |
+
+Identify the critical path and any steps that can run in parallel.
+
+### Risk Register
+
+| # | Risk | Likelihood | Impact | Mitigation |
+|---|------|-----------|--------|------------|
+| 1 | (describe) | low/med/high | low/med/high | (action) |
+
+Include at minimum: data-loss risk, breaking-change risk, and external
+dependency availability risk.
+
+### Rollback Strategy
+
+For each irreversible step (migrations, public API changes, data
+transformations), document:
+
+- **Trigger**: condition that requires rollback.
+- **Procedure**: exact commands or steps to revert.
+- **Verification**: how to confirm the rollback succeeded.
+
+### Verification Matrix
+
+| Step | Verification command or criteria | Pass condition |
+|------|----------------------------------|----------------|
+| A    | `npm test -- --filter=checkout`  | exit 0, no regressions |
+| B    | Manual: confirm UI renders        | screenshot matches spec |
+
+Each step must have at least one verification entry.
+
 ## Status
 
 Plan status values: `draft`, `approved`, `in-progress`, `blocked`,

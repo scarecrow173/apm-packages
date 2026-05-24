@@ -32,6 +32,32 @@ should state concrete completion criteria.
    Split work when one task mixes unrelated files, behaviors, or verification
    paths.
 
+## Done Criteria Requirements
+
+Every task must include a `## Verification` section with at least one
+machine-checkable command. Human-only criteria are acceptable as supplements
+but must not be the sole verification.
+
+**Required format:**
+
+```markdown
+## Verification
+
+- [ ] `npm test -- --filter=checkout-button` exits 0
+- [ ] `grep -r 'CheckoutButton' src/components/` returns matches
+- [ ] Manual: button renders in Storybook (supplement only)
+```
+
+**Rules:**
+
+1. At least one entry must be a runnable command with an expected exit code or
+   output pattern.
+2. Commands must be copy-pasteable without modification (no placeholders).
+3. If no automated check is possible, document why and add a follow-up task to
+   create one.
+
+A task cannot move to `done` until all verification commands pass.
+
 ## Resources
 
 - `scripts/new_task.js`: create a task and update its index.
