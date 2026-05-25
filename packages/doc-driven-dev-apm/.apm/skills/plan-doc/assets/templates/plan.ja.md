@@ -8,6 +8,10 @@
 
 - <!-- spec または ADR のパス -->
 
+## Design Inputs
+
+- <!-- docs/designs/ 配下の承認済み design 文書パス -->
+
 ## 実装順序
 
 - [ ] <!-- 実装ステップ -->

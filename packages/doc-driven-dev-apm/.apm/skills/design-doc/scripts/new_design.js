@@ -20917,15 +20917,15 @@ ${bodyFor(type, options2.title)}
   }
 });
 
-// src/skills/task-doc/scripts/new_task.ts
+// src/skills/design-doc/scripts/new_design.ts
 var path = require("node:path");
 var { createDocument } = require_doc_suite_utils();
 function parseArgs(argv) {
-  const args = { cwd: process.cwd() };
+  const args = { cwd: process.cwd(), derivesFrom: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
-    else if (arg === "--plan") args.plan = argv[++i];
+    else if (arg === "--from") args.derivesFrom.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--date") args.date = argv[++i];
@@ -20937,7 +20937,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--dir <path>] [--status <status>]";
+  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--status <status>]";
 }
 async function main() {
   try {
@@ -20947,14 +20947,12 @@ async function main() {
       return;
     }
     if (!args.title) throw new Error("Missing required --title");
-    const linked = args.plan ? [args.plan] : [];
-    const result = await createDocument("task", {
+    const result = await createDocument("design", {
       cwd: path.resolve(args.cwd),
       date: args.date,
       dir: args.dir,
       relations: {
-        implements: linked,
-        "depends-on": linked
+        "derives-from": args.derivesFrom
       },
       status: args.status,
       title: args.title

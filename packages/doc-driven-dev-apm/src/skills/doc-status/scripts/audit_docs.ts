@@ -27,7 +27,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/audit_docs.js --type spec|plan|task [--dir <path>] [--json]";
+  return "Usage: node scripts/audit_docs.js --type spec|plan|task|design [--dir <path>] [--json]";
 }
 
 async function main(): Promise<void> {

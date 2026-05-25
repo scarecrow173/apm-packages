@@ -6,7 +6,7 @@ license: MIT
 
 # Document Status Skill
 
-この skill は、spec、plan、task のライフサイクル状態と relation の健全性を
+この skill は、spec、design、plan、task のライフサイクル状態と relation の健全性を
 確認するために使います。標準では報告専用であり、作成系または索引更新系の
 コマンドを使わない限りプロジェクトファイルを変更しません。
 
@@ -16,6 +16,7 @@ license: MIT
 
    ```bash
    node scripts/list_docs.js --type spec
+   node scripts/list_docs.js --type design
    node scripts/list_docs.js --type task --status in-progress
    ```
 
@@ -23,6 +24,7 @@ license: MIT
 
    ```bash
    node scripts/audit_docs.js --type spec
+   node scripts/audit_docs.js --type design
    node scripts/audit_docs.js --type plan --json
    ```
 

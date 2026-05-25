@@ -3,6 +3,8 @@
 この規約は、`plan-doc` が実装計画を作成、監査、索引化、ルーティングする方法を
 定義します。
 
+`plan-doc` は作成前に `design-doc` の承認ゲートを必須とします。
+
 plan は、承認済み spec または accepted ADR を、実装順序、リスク、依存関係、
 検証 checkpoint に変換する文書です。上流文書を再解釈しなくても task を作れる
 具体性が必要です。
@@ -140,6 +142,24 @@ plan は次を含めます。
 5. task 分解の指針。
 6. 検証コマンドまたは手動確認。
 7. リスクが高い場合の rollback または follow-up note。
+
+## Design Gate（必須）
+
+plan 作成前に次を満たします。
+
+- `docs/designs/overview.md` が存在する。
+- overview 以外の design ファイルで front matter `status: "approved"`
+  が厳密一致する文書が 1 件以上ある。
+
+ゲートに失敗した場合、`new_plan` は次の固定文言を返します。
+
+`PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
+
+推奨コマンド:
+
+```bash
+node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
+```
 
 分かっている場合は、具体的なファイル、module、command、ownership boundary を
 書きます。不明な詳細は、実装可能なふりをせず gap として明示します。

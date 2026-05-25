@@ -1,206 +1,298 @@
-# Plan: Resolve ADR Phase 1 Socratic vs Brainstorming Overlap
+# Plan: doc-driven-dev に設計フェーズを追加
 
-## Problem Statement
+## Overview
 
-`adr-doc` Phase 1 ("Capture Intent — Socratic") duplicates significant portions
-of `brainstorming`'s questioning flow. When the lifecycle is:
+`doc-driven-dev-apm` の既存 mainline は `brainstorming -> spec + ADR (parallel) -> plan -> task` です。
+この流れに、成果物として追跡可能な設計フェーズ（以下 `design-doc`）を追加します。
 
-```
-brainstorming → adr-doc (parallel with spec)
-```
+狙いは次の 3 点です。
 
-The human answers the same questions twice:
+1. `brainstorming` の対話内 design を、再利用可能な文書成果物に昇格する。
+2. `spec` (what/why) と `ADR` (decision/rationale) を、実装前に設計観点で束ねる。
+3. `plan-doc` が参照する上流根拠を増やし、実装計画の抜け漏れを減らす。
 
-| Topic | Brainstorming asks | ADR Phase 1 asks |
-|-------|-------------------|-----------------|
-| Purpose/trigger | "purpose, constraints, users" | Q1 "What are you deciding?" Q2 "Why now?" |
-| Constraints | "constraints, success criteria" | Q3 "What constraints exist?" |
-| Options | "Propose 2-3 approaches" | Q5 "What options have you considered?" |
-| Success | "success criteria" | Q4 "What does success look like?" |
-| Recommendation | "recommendation and reasoning" | Q6 "What is your current lean?" |
+提案する新しい標準フロー:
 
-The overlap is ~70% of Phase 1's core questions. Only Q7 (who approves) and
-Q8 (what does an agent need to implement) are ADR-specific and not covered by
-brainstorming.
+`idea-refine or brainstorming -> spec + ADR (parallel) -> design-doc -> plan-doc -> task-doc`
 
-## Analysis: Why the Overlap Exists
-
-Both skills evolved from different perspectives:
-- **Brainstorming** = "explore the problem space, find the design"
-- **ADR Phase 1** = "capture the decision context for permanent record"
-
-They converge because both need the same raw information (constraints, options,
-rationale) but for different outputs:
-- Brainstorming → discovery artifact (temporary, routes downstream)
-- ADR Phase 1 → feeds directly into ADR draft (permanent record)
-
-## Key Insight
-
-With the parallel model, there are **two entry paths** to `adr-doc`:
-
-1. **With upstream brainstorming**: Discovery artifact already contains most
-   Phase 1 answers. Re-asking is redundant.
-2. **Cold start (no upstream)**: ADR triggered mid-implementation or for a
-   cross-cutting decision with no prior brainstorming. Full questioning needed.
-
-## Proposed Solution: Dual-Mode Phase 1
-
-Split Phase 1 into two modes based on whether upstream context exists:
-
-### Mode A: "Extract from upstream" (brainstorming/spec exists)
-
-When the ADR follows brainstorming or is created parallel with a spec:
-
-1. **Read the upstream artifact** (discovery doc, spec, or both).
-2. **Extract and map** the decision-relevant information into ADR structure:
-   - Title ← discovery recommendation + routing note
-   - Trigger ← discovery intent / "why now"
-   - Constraints ← discovery constraints section
-   - Options ← discovery options section
-   - Lean ← discovery recommendation
-   - Non-goals ← discovery scope exclusions
-3. **Ask only for gaps** — typically:
-   - Q7: Who approves? (governance, not product)
-   - Q8: What does an agent need to implement? (file-level detail)
-   - Any constraint or option NOT captured upstream
-   - Verification criteria (how to prove implementation is correct)
-4. **Present Intent Summary Gate** as normal.
-
-This mode respects the human's time: they already answered during brainstorming.
-
-### Mode B: "Full Socratic" (cold start)
-
-When the ADR is triggered without upstream brainstorming:
-- During implementation (proactive trigger)
-- Cross-cutting decision not tied to any feature
-- Standalone architecture decision
-
-Keep the current full 8-question Socratic flow unchanged.
-
-### Mode Selection Logic
-
-```
-IF upstream discovery artifact OR spec exists for this decision:
-  → Mode A (extract + gap-fill)
-ELSE:
-  → Mode B (full Socratic)
-```
-
-## What Changes
-
-| File | Current | Proposed |
-|------|---------|----------|
-| `adr-doc/SKILL.md` Phase 1 | Single monolithic Socratic flow | Two modes with selection logic |
-| `adr-doc/SKILL.ja.md` Phase 1 | Same | Same |
-| `brainstorming/SKILL.md` | Discovery template has "Document Routing" | Add explicit note: ADR can extract from this artifact |
-| `brainstorming/SKILL.ja.md` | Same | Same |
-
-## What Does NOT Change
-
-- Phase 0 (Scan Codebase) — unchanged, always needed
-- Phase 2 (Draft ADR) — unchanged
-- Phase 3 (Review) — unchanged
-- Brainstorming's full questioning flow — unchanged
-- The discovery artifact template — unchanged (already captures what ADR needs)
+`design-doc` は必須フェーズとして導入し、`plan-doc` 作成前に常に作成・承認します。
 
 ## Dependency Graph
 
 ```mermaid
 graph TD
-  A[Task 1: Restructure adr-doc Phase 1 EN] --> E[Task 5: Run tests]
-  B[Task 2: Restructure adr-doc Phase 1 JA] --> E
-  C[Task 3: Update brainstorming routing note EN] --> E
-  D[Task 4: Update brainstorming routing note JA] --> E
+  A[Flow Policy] --> B[design-doc Skill Definition]
+  B --> C[design-doc Scripts and Template]
+  C --> D[Cross-skill Routing Update]
+  D --> E[Test and Validation]
+  B --> E
+  C --> E
+  E --> F[Docs and Migration Notes]
 ```
 
-Tasks 1–4 are independent (can be done in parallel).
-Task 5 depends on all.
+依存の要点:
 
-## Risk Register
+- 先にフロー方針を決めないと、`design-doc` の relation と status が定義できない。
+- `design-doc` skill 本体がないと、他 skill の route 追記が片手落ちになる。
+- 最後に test とドキュメントを更新して互換性を担保する。
 
-| # | Risk | Likelihood | Impact | Mitigation |
-|---|------|-----------|--------|------------|
-| 1 | Mode A skips necessary questions | low | medium | Gap-fill step explicitly checks for missing info |
-| 2 | Cold-start mode rarely used (most ADRs follow brainstorming) | medium | low | Acceptable — Mode B is the safety net |
-| 3 | Tests check Phase 1 text literally | low | medium | Run tests after each file edit |
+## Architecture Decisions
 
-## Tasks
+- AD-1: 新規 skill として `design-doc` を追加する。
+  既存の `brainstorming` に埋め込まず、`docs/designs/` の独立成果物として扱う。
+- AD-2: `plan-doc` は `design-doc` を `relations.derives-from` で参照可能にする。
+  既存の `spec/ADR` 参照を壊さずに拡張する。
+- AD-3: `design-doc` を hard-gate とする。
+  `plan-doc` は承認済み `design-doc` が存在する場合のみ作成可能にする。
+- AD-4: 既存互換を維持する。
+  現行の spec/ADR/plan/task の script 引数や既存 test を破壊しない。
 
-### Task 1: Restructure `adr-doc/SKILL.md` Phase 1
+## Hard-Gate Contract (Fixed)
 
-**File:** `.apm/skills/adr-doc/SKILL.md`
+`plan-doc` 作成時の拒否条件と判定ルールを次で固定する。
 
-**Changes:**
-- Replace the current monolithic Phase 1 section with dual-mode structure:
-  - Add mode selection guidance at the top of Phase 1
-  - **Mode A (with upstream):** Extract from discovery/spec → ask only gaps
-    (Q7 governance, Q8 agent needs, verification) → Intent Summary Gate
-  - **Mode B (cold start):** Keep current full Socratic flow verbatim
-- Keep the Intent Summary Gate (shared by both modes)
-- Keep adaptive follow-ups (shared by both modes)
+- エラーメッセージ文言（固定）:
+  `PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
+- approved 判定ルール（固定）:
+  - YAML front matter の `status` が文字列で厳密一致 `approved` のときのみ承認済みとみなす。
+  - 大文字小文字違い（例: `Approved`）、別値（例: `draft`, `proposed`, `in-review`, `superseded`）は非承認扱い。
+  - `overview.md` は必須ファイルだが、これ単体では承認済み design-doc としては数えない。
+  - `plan-doc` 入力で参照する design 文書のうち、少なくとも 1 件が上記判定で承認済みであることを必須とする。
 
-**Acceptance Criteria:**
-- Phase 1 has explicit mode selection logic
-- Mode A references upstream artifacts and lists gap-fill questions
-- Mode B preserves all 8 core questions unchanged
-- Intent Summary Gate remains unchanged
-- No placeholder text
+## Directory Contract
 
-**Verification:**
-- `npx tsx --test tests/*.test.ts` passes
-- `grep -c "Phase 1" .apm/skills/adr-doc/SKILL.md` returns expected count
+design 成果物ディレクトリは `docs/designs/` とし、全体設計を最初に把握できるよう
+`overview.md` を必須ファイルとして配置する。
 
-### Task 2: Restructure `adr-doc/SKILL.ja.md` Phase 1
+- `docs/designs/overview.md`: 全体設計（システム境界、主要コンポーネント、
+  データフロー、非機能制約、詳細設計文書へのリンク）
+- `docs/designs/0001-<slug>.md` 以降: 詳細設計（機能単位・変更単位）
+- `docs/designs/README.md`: 索引（overview と詳細設計を一覧化）
 
-**File:** `.apm/skills/adr-doc/SKILL.ja.md`
+閲覧順序は `overview.md` -> 各詳細設計とする。
 
-**Changes:** Mirror of Task 1 in Japanese.
+## Task List
 
-**Acceptance Criteria:** Same as Task 1, in Japanese.
+### Phase 1: Foundation (方針とスキーマ)
 
-**Verification:** Same commands.
+#### Task 1: 設計フェーズの運用方針とライフサイクルを定義
 
-### Task 3: Add upstream extraction note to `brainstorming/SKILL.md`
+**Description:**
+`design-doc` の目的、必須/任意条件、status 遷移、relation ルールを定義する。
 
-**File:** `.apm/skills/brainstorming/SKILL.md`
-
-**Changes:**
-- In the "After the Design" → discovery artifact section, after the "Document
-  Routing" checklist in the template, add a note explaining that when routing
-  to `adr-doc`, the discovery artifact serves as ADR Phase 1 upstream — the
-  ADR skill will extract context from it rather than re-asking.
-
-**Acceptance Criteria:**
-- Note exists explaining the extraction relationship
-- No change to the brainstorming process itself
+**Acceptance criteria:**
+- [ ] 新フローを `README.md` / `README.ja.md` に明記。
+- [ ] `design-doc` の status 値（例: `draft`, `approved`, `superseded`）が定義される。
+- [ ] `plan-doc` への受け渡し条件（design 承認済みが必須）が記述される。
 
 **Verification:**
-- `npx tsx --test tests/*.test.ts` passes
+- [ ] ドキュメント上で旧フロー表記が新フローに更新されている。
+- [ ] `pnpm run lint:md` が通る。
 
-### Task 4: Add upstream extraction note to `brainstorming/SKILL.ja.md`
+**Dependencies:** None
 
-**File:** `.apm/skills/brainstorming/SKILL.ja.md`
+**Files likely touched:**
+- `README.md`
+- `README.ja.md`
+- `.apm/skills/plan-doc/references/plan-conventions.md`
+- `.apm/skills/plan-doc/references/plan-conventions.ja.md`
 
-**Changes:** Mirror of Task 3 in Japanese.
+**Estimated scope:** Medium
 
-**Acceptance Criteria:** Same as Task 3.
+#### Task 2: `design-doc` スキル骨格を追加（定義・テンプレート・参照）
 
-**Verification:** Same commands.
+**Description:**
+`.apm/skills/design-doc/` を追加し、`SKILL.md`/`SKILL.ja.md`、conventions、template を作る。
 
-### Task 5: Run tests and verify consistency
+**Acceptance criteria:**
+- [ ] `.apm/skills/design-doc/SKILL.md` と `SKILL.ja.md` が存在。
+- [ ] `references/design-conventions(.ja).md` が存在。
+- [ ] `assets/templates/design(.ja).md` が存在。
 
-**Commands:**
-```bash
-npx tsx --test tests/*.test.ts
-```
+**Verification:**
+- [ ] `tests/doc-suite.test.ts` に存在確認ケースを追加して pass。
+- [ ] `pnpm test` が通る。
 
-**Acceptance Criteria:**
-- All tests pass
-- Phase 1 dual-mode is consistent between EN and JA
+**Dependencies:** Task 1
 
-## Checkpoint
+**Files likely touched:**
+- `.apm/skills/design-doc/**`
+- `tests/doc-suite.test.ts`
 
-After all tasks, verify:
-1. Tests pass: `npx tsx --test tests/*.test.ts`
-2. ADR Phase 1 clearly distinguishes Mode A vs Mode B
-3. Brainstorming explicitly notes that its discovery artifact feeds ADR Mode A
+**Estimated scope:** Medium
+
+### Checkpoint: Foundation
+
+- [ ] フロー定義と `design-doc` の静的資材が揃っている。
+- [ ] 既存テストの回帰がない。
+- [ ] 人間レビューで「導入方針」に合意できる。
+
+### Phase 2: Vertical Slices (1 タスク = 1 完結経路)
+
+#### Task 3: Vertical Slice A - `design-doc` 作成から索引更新まで
+
+**Description:**
+`src/skills/design-doc/scripts/new_design.ts` と `update_index.ts` を実装し、
+`docs/designs/` に最小の設計文書を生成できるようにする。
+
+**Acceptance criteria:**
+- [ ] `new_design` 実行で front matter 付き design 文書が生成される。
+- [ ] `docs/designs/overview.md` が存在し、未作成時は初回生成される。
+- [ ] design index (`docs/designs/README.md`) が更新される。
+- [ ] `relations.derives-from` に spec/ADR/discovery を記録できる。
+
+**Verification:**
+- [ ] 新規テストで `new_design.js` の生成と relation を検証。
+- [ ] 新規テストで `overview.md` の存在と最小必須セクションを検証。
+- [ ] `pnpm run build:scripts` 後に `.apm/skills/design-doc/scripts/*.js` が生成される。
+- [ ] `pnpm test` が通る。
+
+**Dependencies:** Task 2
+
+**Files likely touched:**
+- `src/skills/design-doc/scripts/new_design.ts`
+- `src/skills/design-doc/scripts/update_index.ts`
+- `.apm/skills/design-doc/scripts/*.js` (build output)
+- `tests/doc-suite.test.ts`
+
+**Estimated scope:** Medium
+
+#### Task 4: Vertical Slice B - `brainstorming` から `design-doc` へルーティング
+
+**Description:**
+`brainstorming` の downstream routing に `design-doc` を追加し、
+「いつ design を先に作るべきか」の判断基準を明文化する。
+
+**Acceptance criteria:**
+- [ ] `brainstorming` の flow と routing bullet に `design-doc` が追加される。
+- [ ] ルーティング条件（複数 subsystem、複雑 UI、非自明な data flow）が記載される。
+- [ ] discovery から design への relation 方針が記載される。
+
+**Verification:**
+- [ ] `SKILL.md` / `SKILL.ja.md` の整合が取れている。
+- [ ] `pnpm run lint:md` が通る。
+
+**Dependencies:** Task 2
+
+**Files likely touched:**
+- `.apm/skills/brainstorming/SKILL.md`
+- `.apm/skills/brainstorming/SKILL.ja.md`
+
+**Estimated scope:** Small
+
+#### Task 5: Vertical Slice C - `plan-doc` が `design-doc` を利用できる状態にする
+
+**Description:**
+`plan-doc` の規約・テンプレート・作成スクリプトを拡張し、
+`design-doc` を上流として取り込めるようにする。
+
+**Acceptance criteria:**
+- [ ] `new_plan` で design 文書を `relations.derives-from` に追加できる。
+- [ ] `plan` テンプレートに design 参照セクションがある。
+- [ ] design 不在または未承認時は、固定文言 `PLAN-DOC-GATE-001` で plan 作成を拒否する。
+
+**Verification:**
+- [ ] `doc-suite.test.ts` に plan-design 連携テストを追加し pass。
+- [ ] `status: approved` の design を与えた場合のみ plan 作成が成功するテストを追加。
+- [ ] `status: draft/proposed` または `Approved` の design を与えた場合に `PLAN-DOC-GATE-001` で失敗するテストを追加。
+- [ ] 既存 `new_plan` テストが壊れない。
+- [ ] `pnpm test` が通る。
+
+**Dependencies:** Task 3, Task 4
+
+**Files likely touched:**
+- `src/skills/plan-doc/scripts/new_plan.ts`
+- `.apm/skills/plan-doc/assets/templates/plan.md`
+- `.apm/skills/plan-doc/assets/templates/plan.ja.md`
+- `tests/doc-suite.test.ts`
+
+**Estimated scope:** Medium
+
+### Checkpoint: Core Flow
+
+- [ ] `brainstorming -> design-doc -> plan-doc` の最短経路が動作する。
+- [ ] `spec + ADR -> design-doc -> plan-doc` の必須経路が常に適用される。
+- [ ] 人間レビューで hard-gate 方針を再確認する。
+
+### Phase 3: Hardening and Rollout
+
+#### Task 6: `doc-status` と監査観点へ design を統合
+
+**Description:**
+`doc-status` の list/audit 対象に `design` type を追加し、
+ステータス・relation・index の監査ができるようにする。
+
+**Acceptance criteria:**
+- [ ] `--type design` が `list_docs` と `audit_docs` で使える。
+- [ ] design 文書の required front matter が検証される。
+- [ ] `docs/designs/overview.md` の存在チェックとリンク整合チェックを実施できる。
+- [ ] index 欠落や relation 欠落を finding として検出できる。
+
+**Verification:**
+- [ ] `doc-status` 系テストに design ケースを追加。
+- [ ] `pnpm test` が通る。
+
+**Dependencies:** Task 3
+
+**Files likely touched:**
+- `src/skills/doc-status/scripts/list_docs.ts`
+- `src/skills/doc-status/scripts/audit_docs.ts`
+- `tests/doc-suite.test.ts`
+
+**Estimated scope:** Medium
+
+#### Task 7: 導入ガイドと移行メモを整備
+
+**Description:**
+既存利用者向けに「いつ design-doc を作るか」「既存 plan をどう扱うか」を整理し、
+段階導入の運用ガイドを追記する。
+
+**Acceptance criteria:**
+- [ ] README と AGENTS に設計フェーズの導入方針が反映。
+- [ ] 既存プロジェクト向け移行手順（必須ではないが推奨）がある。
+- [ ] コマンド例が英日で更新される。
+
+**Verification:**
+- [ ] `pnpm run lint:md` が通る。
+- [ ] 文書内の flow 表記がすべて一致する。
+
+**Dependencies:** Task 5, Task 6
+
+**Files likely touched:**
+
+- `README.md`
+- `README.ja.md`
+- `AGENTS.md`
+- `AGENTS.ja.md`
+
+**Estimated scope:** Small
+
+### Checkpoint: Release Readiness
+
+- [ ] `pnpm run build:scripts` 実行済み。
+- [ ] `pnpm test` 全 pass。
+- [ ] `pnpm run lint:md` 全 pass。
+- [ ] `apm compile --dry-run` が成功（`--validate` は参考扱い）。
+- [ ] 互換性影響と移行方針を human が承認。
+
+## Risks and Mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| design-doc が spec/ADR と重複して冗長化する | High | `design-doc` の責務を「構成・境界・フロー可視化」に限定し、what/why は spec、意思決定は ADR に寄せる。 |
+| 既存ユーザーが hard-gate により運用変更を迫られる | High | 移行ガイドを提供し、既存案件には `overview.md` + 最小 design テンプレートで段階移行する。 |
+| 文書タイプ追加で監査ロジックが壊れる | Medium | `doc-status` の type 列挙と fixture テストを追加。 |
+| 英日ドキュメントの不整合 | Medium | 同一差分を英日同時更新し、レビュー時に差分チェック。 |
+
+## Open Questions for Human Review
+
+- [ ] `design-doc` の標準保存先を `docs/designs/` に固定してよいか。
+- [ ] 既存 `brainstorming` の「design を提示する」節を軽量化し、成果物作成へ寄せるか。
+
+## Human Review Request
+
+この計画は実装前レビュー用です。特に次を確認してください。
+
+1. 新フロー `spec+ADR -> design -> plan` の妥当性
+2. hard-gate 導入方針の妥当性
+3. Task 3-5 の順序（vertical slice）の妥当性
