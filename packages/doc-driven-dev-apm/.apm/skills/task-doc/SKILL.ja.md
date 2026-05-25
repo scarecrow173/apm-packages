@@ -10,9 +10,29 @@ license: MIT
 task は、それが実装する plan、spec、ADR にリンクし、完了条件を具体的に
 書く必要があります。
 
+## 前提条件
+
+<HARD-GATE>
+task を作成するには、以下のいずれかを満たす必要がある:
+
+1. **通常パス**: 参照する plan の `status` が `approved` 以上であること。
+   `draft` の plan から task を派生させてはならない。
+   plan が未承認の場合は、先に plan のレビューと承認を完了すること。
+2. **緊急修正パス**: plan が存在しない場合、以下をすべて満たすこと:
+   - 緊急性の理由を task 本文に 1 行記載する。
+   - `relations.implements` または `relations.derives-from` で
+     `approved` な spec-doc または adr-doc を参照する。
+   - 参照する spec/ADR も存在しない場合は、先に spec-doc または
+     adr-doc を作成すること（簡潔でも可）。
+
+どちらのパスも満たさない場合、task を作成してはならない。
+</HARD-GATE>
+
 ## ワークフロー
 
-1. 関連する plan または上流文書を読む。
+1. 参照する plan の `status` が `approved` であることを確認する。
+   plan が存在しない緊急修正の場合は、上記前提条件の緊急修正パスを
+   満たしていることを確認する。
 2. ひとまとまりの実装単位として task を作成する。
 
    ```bash

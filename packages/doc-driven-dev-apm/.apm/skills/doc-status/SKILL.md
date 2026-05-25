@@ -7,8 +7,24 @@ license: MIT
 # Document Status Skill
 
 Use this skill to inspect document lifecycle state and relation health across
-specs, designs, plans, and tasks. It is report-only by default and should not
-modify project files unless a separate creation or index command is used.
+specs, designs, plans, and tasks. It is report-and-judge only by default and
+should not modify project files unless a separate creation or index command is
+used.
+
+## Audit Role
+
+This skill acts as the integrity gatekeeper for document-driven development.
+Audit results serve the following verdicts:
+
+- **Completable**: No blocking issues → the document set is consistent and traceable.
+- **Returned**: Blocking issues found → the affected documents need correction.
+
+Examples of blocking issues:
+
+- Missing required front matter fields (id, type, status, relations)
+- Broken internal relations (referenced file does not exist)
+- Documents not registered in the index
+- Status transition contradictions (e.g. plan is `approved` but referenced design is `draft`)
 
 ## Workflow
 

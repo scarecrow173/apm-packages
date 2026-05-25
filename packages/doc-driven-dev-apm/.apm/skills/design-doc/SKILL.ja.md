@@ -25,7 +25,10 @@ license: MIT
    上流 spec/ADR/discovery は `relations.derives-from` に記録します。
 5. 少なくとも 1 つの詳細設計を承認する。
    plan 作成前に、overview 以外の設計文書で front matter
-   `status: "approved"` を満たします。
+   `status: "approved"` を満たします（PLAN-DOC-GATE-001）。
+   この条件を満たさない限り `plan-doc` は作成できません。
+   承認はユーザー（または指定レビュアー）が行います。
+   エージェントが自己承認してはなりません。
 
 ## フロントマター
 

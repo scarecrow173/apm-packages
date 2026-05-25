@@ -66,7 +66,8 @@ Create `spec-doc` and `adr-doc` from briefing output:
 
 ### Briefing Completion Criteria
 
-- `spec-doc` has acceptance criteria.
+- `spec-doc` has acceptance criteria and status is `proposed` or above
+  (`draft` must not advance to the next phase).
 - `adr-doc` has key technical decisions with alternatives.
 - Both documents reference the same issue context.
 - Selected 1-1 route (A/B/C/D) is recorded.

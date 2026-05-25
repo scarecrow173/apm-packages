@@ -34,9 +34,12 @@ verified before code is written.
    Use `relations.source` for external evidence and primary sources,
    `relations.references` for supplementary material, `relations.refines` for
    upstream docs being narrowed, and `relations.related` for contextual docs.
+   If a brainstorming discovery artifact exists in `docs/discovery/`, record it
+   in `relations.derives-from`.
 5. Review the spec before implementation planning.
    A plan should not be created from a draft with unclear requirements or
    unverifiable acceptance criteria.
+   To proceed to plan creation, the spec must have status `proposed` or above.
 
 ## Required Content
 
