@@ -7,8 +7,8 @@ license: MIT
 # Document Status Skill
 
 Use this skill to inspect document lifecycle state and relation health across
-specs, plans, and tasks. It is report-only by default and should not modify
-project files unless a separate creation or index command is used.
+specs, designs, plans, and tasks. It is report-only by default and should not
+modify project files unless a separate creation or index command is used.
 
 ## Workflow
 
@@ -16,6 +16,7 @@ project files unless a separate creation or index command is used.
 
    ```bash
    node scripts/list_docs.js --type spec
+   node scripts/list_docs.js --type design
    node scripts/list_docs.js --type task --status in-progress
    ```
 
@@ -23,6 +24,7 @@ project files unless a separate creation or index command is used.
 
    ```bash
    node scripts/audit_docs.js --type spec
+      node scripts/audit_docs.js --type design
    node scripts/audit_docs.js --type plan --json
    ```
 

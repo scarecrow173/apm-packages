@@ -31,7 +31,7 @@ const relationFields = [
   "references",
 ] as const;
 
-const docTypes = ["idea", "brainstorm", "spec", "plan", "task"] as const;
+const docTypes = ["idea", "brainstorm", "spec", "plan", "task", "design"] as const;
 
 type DocType = typeof docTypes[number];
 type RelationField = typeof relationFields[number];
@@ -111,6 +111,14 @@ const configs: Record<DocType, DocConfig> = {
     idPrefix: "TASK",
     statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
     type: "task",
+  },
+  design: {
+    defaultStatus: "draft",
+    dir: "docs/designs",
+    dirs: ["docs/designs", "docs/design", "designs", "design"],
+    idPrefix: "DESIGN",
+    statusValues: ["draft", "approved", "superseded", "rejected"],
+    type: "design",
   },
 };
 
@@ -328,6 +336,36 @@ function bodyFor(type: DocType, title: string): string {
       "- [ ] <!-- command, test, or review step -->",
     ].join("\n");
   }
+  if (type === "design") {
+    return [
+      `# ${title}`,
+      "",
+      "## Context",
+      "",
+      "<!-- Describe the problem context and boundaries for this design. -->",
+      "",
+      "## Scope",
+      "",
+      "- <!-- in-scope -->",
+      "- <!-- out-of-scope -->",
+      "",
+      "## Components and Boundaries",
+      "",
+      "- <!-- component and responsibility -->",
+      "",
+      "## Data and Control Flow",
+      "",
+      "- <!-- key flow and decision points -->",
+      "",
+      "## Risks and Trade-offs",
+      "",
+      "- <!-- risk and mitigation -->",
+      "",
+      "## References",
+      "",
+      "- <!-- linked spec, ADR, and related docs -->",
+    ].join("\n");
+  }
   return [
     `# ${title}`,
     "",
@@ -339,6 +377,58 @@ function bodyFor(type: DocType, title: string): string {
     "",
     "- [ ] <!-- completion criterion -->",
   ].join("\n");
+}
+
+function isReservedDocFile(type: DocType, file: string): boolean {
+  if (type === "design") {
+    return /^overview\.md$/i.test(file);
+  }
+  return false;
+}
+
+function overviewDocument(date: string): string {
+  return [
+    "---",
+    'id: "DESIGN-OVERVIEW"',
+    'type: "design"',
+    'status: "draft"',
+    'title: "System Design Overview"',
+    `created: "${date}"`,
+    `updated: "${date}"`,
+    "owners: []",
+    "relations:",
+    ...relationFields.map((field) => formatRelationBlock(field, [])),
+    "---",
+    "",
+    "# System Design Overview",
+    "",
+    "## System Boundaries",
+    "",
+    "- <!-- major subsystems and their boundaries -->",
+    "",
+    "## Core Components",
+    "",
+    "- <!-- component and responsibility -->",
+    "",
+    "## Data Flow",
+    "",
+    "- <!-- high-level data and control flow -->",
+    "",
+    "## Non-Functional Constraints",
+    "",
+    "- <!-- reliability, security, performance, operations -->",
+    "",
+    "## Detailed Design Documents",
+    "",
+    "- <!-- link detailed docs under docs/designs/0001-*.md -->",
+    "",
+  ].join("\n");
+}
+
+function ensureDesignOverview(fullDir: string, date: string): void {
+  const overviewPath = path.join(fullDir, "overview.md");
+  if (fs.existsSync(overviewPath)) return;
+  fs.writeFileSync(overviewPath, overviewDocument(date), "utf8");
 }
 
 async function titleFromDocument(content: string, fallback: string): Promise<string> {
@@ -381,7 +471,9 @@ async function createDocument(type: DocType, options: CreateDocumentOptions): Pr
   const fullDir = path.join(cwd, relativeDir);
   fs.mkdirSync(fullDir, { recursive: true });
 
-  const files = fs.readdirSync(fullDir);
+  const files = fs.readdirSync(fullDir)
+    .filter((file) => file.endsWith(".md"))
+    .filter((file) => !isReservedDocFile(type, file));
   const number = nextNumber(files);
   const naming = detectNaming(files);
   const filename = naming === "slug" ? `${slugify(options.title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify(options.title, type)}.md`;
@@ -392,6 +484,7 @@ async function createDocument(type: DocType, options: CreateDocumentOptions): Pr
   const status = options.status || config.defaultStatus;
   const content = `${frontMatter(config, number, options.title, status, date, options.relations)}\n\n${bodyFor(type, options.title)}\n`;
   fs.writeFileSync(outputPath, content, "utf8");
+  if (type === "design") ensureDesignOverview(fullDir, date);
   const index = await buildIndex(cwd, type, relativeDir);
   fs.writeFileSync(path.join(fullDir, "README.md"), index, "utf8");
 
@@ -416,6 +509,18 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
   const dir = path.join(cwd, relativeDir);
   const files = docFiles(dir);
   const findings: Finding[] = [];
+
+  if (type === "design") {
+    const overviewPath = path.join(dir, "overview.md");
+    if (!fs.existsSync(overviewPath)) {
+      findings.push({
+        severity: "error",
+        file: null,
+        code: "missing-overview",
+        message: "Missing required docs/designs/overview.md",
+      });
+    }
+  }
 
   for (const file of files) {
     const fullPath = path.join(dir, file);
@@ -450,6 +555,14 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
     const index = fs.readFileSync(indexPath, "utf8");
     for (const file of files) {
       if (!index.includes(file)) findings.push({ severity: "warning", file, code: "index-missing-entry", message: `Index does not link ${file}` });
+    }
+    if (type === "design" && !index.includes("overview.md")) {
+      findings.push({
+        severity: "warning",
+        file: "overview.md",
+        code: "index-missing-overview",
+        message: "Index does not link overview.md",
+      });
     }
   }
 

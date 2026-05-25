@@ -8,6 +8,10 @@
 
 - <!-- spec or ADR path -->
 
+## Design Inputs
+
+- <!-- approved design doc path under docs/designs/ -->
+
 ## Implementation Sequence
 
 - [ ] <!-- implementation step -->

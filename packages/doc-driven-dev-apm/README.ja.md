@@ -3,7 +3,7 @@
 このパッケージは、spec-driven / document-driven development のための
 再利用可能な skill 群を提供します。生成されるドキュメントは YAML
 フロントマター + Markdown 形式で、ライフサイクルステータス、外部出典、
-spec / ADR / plan / task 間の意味付き relation を管理できます。
+spec / ADR / design / plan / task 間の意味付き relation を管理できます。
 
 spec と ADR を同じ discovery output から並列作成する dual-track モデルを
 採用しています。
@@ -12,7 +12,8 @@ spec と ADR を同じ discovery output から並列作成する dual-track モ�
 - `brainstorming`: 意図を明確にし、spec + ADR（並列）にルーティングします。
 - `spec-doc`: 実装前に何を作るかを定義します。
 - `adr-doc`: すべての技術判断を Architecture Decision Records として記録します。
-- `plan-doc`: 承認済み spec + ADR を実装計画に変換します。
+- `design-doc`: plan 前に overview-first の設計成果物を作成します。
+- `plan-doc`: 承認済み spec + ADR + design を実装計画に変換します。
 - `task-doc`: 実装単位と依存関係を管理します。
 - `doc-status`: ステータス、索引、relation を一覧・監査します。
 
@@ -25,7 +26,8 @@ spec と ADR を同じ discovery output から並列作成する dual-track モ�
 ```
 idea-refine OR brainstorming
   → spec-doc + adr-doc   (並列: 同じ discovery output から作成)
-  → plan-doc             (spec と ADR 両方から派生)
+  → design-doc           (overview + 詳細設計)
+  → plan-doc             (spec / ADR / 承認済み design から派生)
   → task-doc
 ```
 
@@ -33,11 +35,11 @@ idea-refine OR brainstorming
 - **ADR** は HOW に答え、すべての技術判断を代替案と根拠付きで記録します。
 - **並列作成**: brainstorming が十分なコンテキストを生んだら、spec と ADR
   は異なる側面を扱うため同時に書けます。
-- **両方が plan に流れる**: `plan-doc` は spec から要件を、ADR から技術
-  制約を受け取ります。
+- **plan 前に design gate**: `plan-doc` は承認済み `design-doc` を必須とし、
+  spec の要件と ADR の技術制約を取り込みます。
 
 mainline 上の skill: `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc`,
-`plan-doc`, `task-doc`。
+`design-doc`, `plan-doc`, `task-doc`。
 
 ### doc-driven-dev parallel track
 
@@ -112,10 +114,15 @@ ADR として記録され、spec と同じ discovery output から並列で作�
 `docs/specs/` に YAML フロントマター付き spec を作成します。実装計画に
 入る前に、意図、範囲、要件、受け入れ基準、出典を記録します。
 
+### `design-doc`
+
+`docs/designs/` に設計成果物を作成します。必須の `overview.md` と
+詳細設計文書を管理し、`plan-doc` の hard gate として機能します。
+
 ### `plan-doc`
 
 `docs/plans/` に実装計画を作成します。上流の spec を
-`relations.implements` で、ADR を `relations.derives-from` で
+`relations.implements` で、design / ADR を `relations.derives-from` で
 リンクします。
 
 ### `task-doc`
@@ -131,7 +138,7 @@ ADR として記録され、spec と同じ discovery output から並列で作�
 
 ## 共通 Relation
 
-新しく生成される spec、plan、task は意味付き relation を使います。
+新しく生成される spec、design、plan、task は意味付き relation を使います。
 
 ```yaml
 relations:
@@ -161,14 +168,15 @@ relations:
 ```text
 idea-refine OR brainstorming
   -> spec-doc + adr-doc  (並列: 何を定義 + 判断を記録)
-  -> plan-doc            (spec と ADR 両方から派生)
+  -> design-doc          (overview-first の設計ゲート)
+  -> plan-doc            (spec / ADR / 承認済み design から派生)
   -> task-doc            (実行単位)
   -> implementation
   -> doc-status
 ```
 
-dual-track モデル: **spec + ADR（並列）→ plan → task**。
+dual-track モデル: **spec + ADR（並列）→ design → plan → task**。
 Spec は何を作るべきか、なぜ、範囲、受け入れ基準を定義します。
 ADR はすべての技術判断を代替案と根拠付きで記録します。
 brainstorming が十分なコンテキストを生んだら、両方を並列で書きます。
-Plan は両方から派生します。
+Design が plan への橋渡しを行います。

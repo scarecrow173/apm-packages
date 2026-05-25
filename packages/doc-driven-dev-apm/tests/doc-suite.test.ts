@@ -55,6 +55,8 @@ test("doc skills ship conventions and templates", () => {
   for (const [skill, convention, template] of [
     ["spec-doc", "spec-conventions.md", "spec.md"],
     ["spec-doc", "spec-conventions.ja.md", "spec.ja.md"],
+    ["design-doc", "design-conventions.md", "design.md"],
+    ["design-doc", "design-conventions.ja.md", "design.ja.md"],
     ["plan-doc", "plan-conventions.md", "plan.md"],
     ["plan-doc", "plan-conventions.ja.md", "plan.ja.md"],
     ["task-doc", "task-conventions.md", "task.md"],
@@ -68,6 +70,7 @@ test("doc skills ship conventions and templates", () => {
 test("doc conventions cover directory order, filenames, mutability, and categories", () => {
   for (const [skill, convention] of [
     ["spec-doc", "spec-conventions.md"],
+    ["design-doc", "design-conventions.md"],
     ["plan-doc", "plan-conventions.md"],
     ["task-doc", "task-conventions.md"],
   ]) {
@@ -94,14 +97,41 @@ test("new_spec uses the packaged spec template", () => {
 test("doc creation detects existing alternate directories", () => {
   const repo = tempRepo();
   fs.mkdirSync(path.join(repo, "specs"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/designs"), { recursive: true });
   fs.mkdirSync(path.join(repo, "plans"), { recursive: true });
   fs.mkdirSync(path.join(repo, "tasks"), { recursive: true });
 
   assert.equal(runScript("spec-doc", "new_spec.js", ["--title", "Alternate spec dir"], { cwd: repo }).status, 0);
-  assert.equal(runScript("plan-doc", "new_plan.js", ["--title", "Alternate plan dir"], { cwd: repo }).status, 0);
+  assert.equal(
+    runScript(
+      "design-doc",
+      "new_design.js",
+      ["--title", "Alternate design dir", "--status", "approved", "--from", "specs/0001-alternate-spec-dir.md", "--dir", "docs/designs"],
+      { cwd: repo },
+    ).status,
+    0,
+  );
+  assert.equal(
+    runScript(
+      "plan-doc",
+      "new_plan.js",
+      [
+        "--title",
+        "Alternate plan dir",
+        "--implements",
+        "specs/0001-alternate-spec-dir.md",
+        "--design",
+        "docs/designs/0001-alternate-design-dir.md",
+      ],
+      { cwd: repo },
+    ).status,
+    0,
+  );
   assert.equal(runScript("task-doc", "new_task.js", ["--title", "Alternate task dir"], { cwd: repo }).status, 0);
 
   assert.equal(fs.existsSync(path.join(repo, "specs/0001-alternate-spec-dir.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "docs/designs/0001-alternate-design-dir.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "docs/designs/overview.md")), true);
   assert.equal(fs.existsSync(path.join(repo, "plans/0001-alternate-plan-dir.md")), true);
   assert.equal(fs.existsSync(path.join(repo, "tasks/0001-alternate-task-dir.md")), true);
 });
@@ -152,11 +182,25 @@ test("new_plan links to spec with implements and derives-from relations", () => 
   const repo = tempRepo();
   const spec = runScript("spec-doc", "new_spec.js", ["--title", "Define checkout flow"], { cwd: repo });
   assert.equal(spec.status, 0, spec.stderr);
+  const design = runScript(
+    "design-doc",
+    "new_design.js",
+    ["--title", "Design checkout orchestration", "--from", "docs/specs/0001-define-checkout-flow.md", "--status", "approved"],
+    { cwd: repo },
+  );
+  assert.equal(design.status, 0, design.stderr);
 
   const result = runScript(
     "plan-doc",
     "new_plan.js",
-    ["--title", "Implement checkout flow", "--implements", "docs/specs/0001-define-checkout-flow.md"],
+    [
+      "--title",
+      "Implement checkout flow",
+      "--implements",
+      "docs/specs/0001-define-checkout-flow.md",
+      "--design",
+      "docs/designs/0001-design-checkout-orchestration.md",
+    ],
     { cwd: repo },
   );
 
@@ -168,6 +212,84 @@ test("new_plan links to spec with implements and derives-from relations", () => 
   assert.match(plan, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
   assert.match(plan, /^  derives-from:$/m);
   assert.match(plan, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
+  assert.match(plan, /^    - "docs\/designs\/0001-design-checkout-orchestration.md"$/m);
+});
+
+test("new_design creates overview, detailed design, and index", () => {
+  const repo = tempRepo();
+
+  const result = runScript(
+    "design-doc",
+    "new_design.js",
+    ["--title", "Design checkout orchestration", "--from", "docs/specs/0001-define-checkout-flow.md"],
+    { cwd: repo },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const designPath = path.join(repo, "docs/designs/0001-design-checkout-orchestration.md");
+  const overviewPath = path.join(repo, "docs/designs/overview.md");
+  const indexPath = path.join(repo, "docs/designs/README.md");
+  assert.equal(fs.existsSync(designPath), true);
+  assert.equal(fs.existsSync(overviewPath), true);
+  assert.equal(fs.existsSync(indexPath), true);
+
+  const design = fs.readFileSync(designPath, "utf8");
+  const overview = fs.readFileSync(overviewPath, "utf8");
+  assert.match(design, /^id: "DESIGN-0001"$/m);
+  assert.match(design, /^type: "design"$/m);
+  assert.match(design, /^status: "draft"$/m);
+  assert.match(design, /^  derives-from:$/m);
+  assert.match(design, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
+  assert.match(overview, /^# System Design Overview/m);
+});
+
+test("new_plan enforces approved design gate with fixed error code", () => {
+  const repo = tempRepo();
+  const spec = runScript("spec-doc", "new_spec.js", ["--title", "Define checkout flow"], { cwd: repo });
+  assert.equal(spec.status, 0, spec.stderr);
+
+  const missingDesign = runScript(
+    "plan-doc",
+    "new_plan.js",
+    ["--title", "Implement checkout flow", "--implements", "docs/specs/0001-define-checkout-flow.md"],
+    { cwd: repo },
+  );
+  assert.notEqual(missingDesign.status, 0);
+  assert.match(missingDesign.stderr, /PLAN-DOC-GATE-001/);
+
+  const draftDesign = runScript(
+    "design-doc",
+    "new_design.js",
+    ["--title", "Draft checkout design", "--status", "draft"],
+    { cwd: repo },
+  );
+  assert.equal(draftDesign.status, 0, draftDesign.stderr);
+
+  const mixedCaseDesign = runScript(
+    "design-doc",
+    "new_design.js",
+    ["--title", "Case-sensitive design", "--status", "Approved"],
+    { cwd: repo },
+  );
+  assert.equal(mixedCaseDesign.status, 0, mixedCaseDesign.stderr);
+
+  const invalidApproval = runScript(
+    "plan-doc",
+    "new_plan.js",
+    [
+      "--title",
+      "Implement checkout flow",
+      "--implements",
+      "docs/specs/0001-define-checkout-flow.md",
+      "--design",
+      "docs/designs/0001-draft-checkout-design.md",
+      "--design",
+      "docs/designs/0002-case-sensitive-design.md",
+    ],
+    { cwd: repo },
+  );
+  assert.notEqual(invalidApproval.status, 0);
+  assert.match(invalidApproval.stderr, /PLAN-DOC-GATE-001/);
 });
 
 test("new_task links to plan and list_docs filters by status", () => {

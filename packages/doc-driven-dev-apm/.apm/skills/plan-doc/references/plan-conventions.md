@@ -3,6 +3,8 @@
 These conventions define how `plan-doc` creates, audits, indexes, and routes
 implementation plans.
 
+`plan-doc` requires `design-doc` approval gate before creation.
+
 A plan translates an approved spec or accepted ADR into implementation order,
 risks, dependencies, and verification checkpoints. It should be concrete enough
 that tasks can be created without reinterpreting the upstream document.
@@ -140,6 +142,24 @@ Plans should include:
 5. Task breakdown guidance.
 6. Verification commands or manual checks.
 7. Rollback or follow-up notes when the implementation is risky.
+
+## Design Gate (Mandatory)
+
+Before creating a plan:
+
+- `docs/designs/overview.md` must exist.
+- At least one non-overview design file must have front matter
+  `status: "approved"` (exact match).
+
+If the gate fails, `new_plan` must return:
+
+`PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
+
+Recommended creation command:
+
+```bash
+node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
+```
 
 Plans should name concrete files, modules, commands, or ownership boundaries
 when they are known. If a detail is not known, mark the gap explicitly instead

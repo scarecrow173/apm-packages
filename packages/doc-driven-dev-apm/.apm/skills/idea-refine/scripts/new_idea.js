@@ -20437,7 +20437,7 @@ var require_doc_suite_utils = __commonJS({
       "verified-by",
       "references"
     ];
-    var docTypes = ["idea", "brainstorm", "spec", "plan", "task"];
+    var docTypes = ["idea", "brainstorm", "spec", "plan", "task", "design"];
     var configs = {
       idea: {
         defaultStatus: "exploring",
@@ -20478,6 +20478,14 @@ var require_doc_suite_utils = __commonJS({
         idPrefix: "TASK",
         statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
         type: "task"
+      },
+      design: {
+        defaultStatus: "draft",
+        dir: "docs/designs",
+        dirs: ["docs/designs", "docs/design", "designs", "design"],
+        idPrefix: "DESIGN",
+        statusValues: ["draft", "approved", "superseded", "rejected"],
+        type: "design"
       }
     };
     var relationSchema = z.object(Object.fromEntries(
@@ -20674,6 +20682,36 @@ var require_doc_suite_utils = __commonJS({
           "- [ ] <!-- command, test, or review step -->"
         ].join("\n");
       }
+      if (type === "design") {
+        return [
+          `# ${title}`,
+          "",
+          "## Context",
+          "",
+          "<!-- Describe the problem context and boundaries for this design. -->",
+          "",
+          "## Scope",
+          "",
+          "- <!-- in-scope -->",
+          "- <!-- out-of-scope -->",
+          "",
+          "## Components and Boundaries",
+          "",
+          "- <!-- component and responsibility -->",
+          "",
+          "## Data and Control Flow",
+          "",
+          "- <!-- key flow and decision points -->",
+          "",
+          "## Risks and Trade-offs",
+          "",
+          "- <!-- risk and mitigation -->",
+          "",
+          "## References",
+          "",
+          "- <!-- linked spec, ADR, and related docs -->"
+        ].join("\n");
+      }
       return [
         `# ${title}`,
         "",
@@ -20685,6 +20723,55 @@ var require_doc_suite_utils = __commonJS({
         "",
         "- [ ] <!-- completion criterion -->"
       ].join("\n");
+    }
+    function isReservedDocFile(type, file) {
+      if (type === "design") {
+        return /^overview\.md$/i.test(file);
+      }
+      return false;
+    }
+    function overviewDocument(date) {
+      return [
+        "---",
+        'id: "DESIGN-OVERVIEW"',
+        'type: "design"',
+        'status: "draft"',
+        'title: "System Design Overview"',
+        `created: "${date}"`,
+        `updated: "${date}"`,
+        "owners: []",
+        "relations:",
+        ...relationFields.map((field) => formatRelationBlock(field, [])),
+        "---",
+        "",
+        "# System Design Overview",
+        "",
+        "## System Boundaries",
+        "",
+        "- <!-- major subsystems and their boundaries -->",
+        "",
+        "## Core Components",
+        "",
+        "- <!-- component and responsibility -->",
+        "",
+        "## Data Flow",
+        "",
+        "- <!-- high-level data and control flow -->",
+        "",
+        "## Non-Functional Constraints",
+        "",
+        "- <!-- reliability, security, performance, operations -->",
+        "",
+        "## Detailed Design Documents",
+        "",
+        "- <!-- link detailed docs under docs/designs/0001-*.md -->",
+        ""
+      ].join("\n");
+    }
+    function ensureDesignOverview(fullDir, date) {
+      const overviewPath = path2.join(fullDir, "overview.md");
+      if (fs.existsSync(overviewPath)) return;
+      fs.writeFileSync(overviewPath, overviewDocument(date), "utf8");
     }
     async function titleFromDocument(content, fallback) {
       const data = matterData(content);
@@ -20727,7 +20814,7 @@ ${rows.join("\n")}
       const relativeDir = docDir(cwd, type, options2.dir);
       const fullDir = path2.join(cwd, relativeDir);
       fs.mkdirSync(fullDir, { recursive: true });
-      const files = fs.readdirSync(fullDir);
+      const files = fs.readdirSync(fullDir).filter((file) => file.endsWith(".md")).filter((file) => !isReservedDocFile(type, file));
       const number = nextNumber(files);
       const naming = detectNaming(files);
       const filename = naming === "slug" ? `${slugify(options2.title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify(options2.title, type)}.md`;
@@ -20740,6 +20827,7 @@ ${rows.join("\n")}
 ${bodyFor(type, options2.title)}
 `;
       fs.writeFileSync(outputPath, content, "utf8");
+      if (type === "design") ensureDesignOverview(fullDir, date);
       const index = await buildIndex(cwd, type, relativeDir);
       fs.writeFileSync(path2.join(fullDir, "README.md"), index, "utf8");
       return {
@@ -20761,6 +20849,17 @@ ${bodyFor(type, options2.title)}
       const dir = path2.join(cwd, relativeDir);
       const files = docFiles(dir);
       const findings = [];
+      if (type === "design") {
+        const overviewPath = path2.join(dir, "overview.md");
+        if (!fs.existsSync(overviewPath)) {
+          findings.push({
+            severity: "error",
+            file: null,
+            code: "missing-overview",
+            message: "Missing required docs/designs/overview.md"
+          });
+        }
+      }
       for (const file of files) {
         const fullPath = path2.join(dir, file);
         const content = fs.readFileSync(fullPath, "utf8");
@@ -20793,6 +20892,14 @@ ${bodyFor(type, options2.title)}
         const index = fs.readFileSync(indexPath, "utf8");
         for (const file of files) {
           if (!index.includes(file)) findings.push({ severity: "warning", file, code: "index-missing-entry", message: `Index does not link ${file}` });
+        }
+        if (type === "design" && !index.includes("overview.md")) {
+          findings.push({
+            severity: "warning",
+            file: "overview.md",
+            code: "index-missing-overview",
+            message: "Index does not link overview.md"
+          });
         }
       }
       return { directory: relativeDir, files: files.length, findings };

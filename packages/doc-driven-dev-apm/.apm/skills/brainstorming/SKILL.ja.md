@@ -50,7 +50,7 @@ config 変更、document workflow 更新も同じです。単純な作業ほど�
    plan、task、implementation に進む前に確認する。
 9. **downstream documents へ遷移する** - dual-track モデルに従う:
    spec-doc + adr-doc（並列）でプロダクト要件と技術判断の両方を
-   記録。その後 `plan-doc`、`task-doc`。
+  記録。その後 `design-doc`、`plan-doc`、`task-doc`。
 
 ## Process Flow
 
@@ -66,7 +66,7 @@ digraph brainstorming {
   "Write discovery artifact" [shape=box];
   "Discovery self-review" [shape=box];
   "Human reviews artifact?" [shape=diamond];
-  "Route to spec-doc / adr-doc / plan-doc / task-doc" [shape=doublecircle];
+  "Route to spec-doc / adr-doc / design-doc / plan-doc / task-doc" [shape=doublecircle];
 
   "Explore project context" -> "Visual questions ahead?";
   "Visual questions ahead?" -> "Offer visual companion\n(own message)" [label="yes"];
@@ -80,7 +80,7 @@ digraph brainstorming {
   "Write discovery artifact" -> "Discovery self-review";
   "Discovery self-review" -> "Human reviews artifact?";
   "Human reviews artifact?" -> "Write discovery artifact" [label="changes requested"];
-  "Human reviews artifact?" -> "Route to spec-doc / adr-doc / plan-doc / task-doc" [label="approved"];
+  "Human reviews artifact?" -> "Route to spec-doc / adr-doc / design-doc / plan-doc / task-doc" [label="approved"];
 }
 ```
 
@@ -93,11 +93,13 @@ terminal state は downstream document への routing です。brainstorming 後
   明らかにしたら、並列で書きます。
 - `spec-doc` のみ: 純粋なプロダクト作業で architecture 判断がない場合。
 - `adr-doc` のみ: 横断的な判断で単一 feature spec に紐づかない場合。
-- `plan-doc`: 上流の spec（および該当時 ADR）が承認済みの場合のみ。
-  Plan は両方から派生します。
+- `design-doc`: plan 作成前に必須。overview-first の設計成果物を作成し、
+  少なくとも 1 つの詳細設計を承認します。
+- `plan-doc`: 上流 spec/ADR が準備済みで、`design-doc` gate を満たした
+  場合のみ。
 - `task-doc`: plan が分解済みで execution tracking が必要な場合のみ。
 
-dual-track: **brainstorming → spec + ADR（並列）→ plan → task**。
+dual-track: **brainstorming → spec + ADR（並列）→ design → plan → task**。
 すべての意思決定は ADR として記録します。
 
 ## プロセス

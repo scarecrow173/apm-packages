@@ -13,7 +13,6 @@ dependencies:
   apm:
   - github/awesome-copilot/skills/git-commit
   - microsoft/apm/packages/apm-guide
-  - affaan-m/ECC
   - addyosmani/agent-skills
   mcp:
   - name: mise

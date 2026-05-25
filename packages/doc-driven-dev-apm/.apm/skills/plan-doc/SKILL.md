@@ -6,41 +6,50 @@ license: MIT
 
 # Plan Documentation Skill
 
-Use this skill after a spec is clear enough to implement. A plan explains
-how the work will be built, which documents it implements or derives from, and
-which verification steps prove the implementation follows the source document.
+Use this skill after upstream documents are clear enough to implement. A plan
+explains how the work will be built, which documents it implements or derives
+from, and which verification steps prove the implementation follows the source
+document.
 
-In this package's lifecycle, the typical upstream path is:
-**spec + ADR (parallel) → plan**. Plans derive from both the spec and any
-relevant ADRs created alongside it.
+In this package's lifecycle, the upstream path is:
+**spec + ADR (parallel) → design → plan**.
+
+`design-doc` is a hard gate for `plan-doc`.
 
 ## Workflow
 
 1. Read the upstream spec fully.
    Do not plan from title or memory alone.
-2. Confirm the upstream document is ready.
+2. Confirm the upstream documents are ready.
    Prefer `approved` specs. If it is still draft/proposed, surface that risk
    before planning.
-3. Check for related ADRs.
+3. Confirm design gate requirements.
+   `docs/designs/overview.md` must exist and at least one non-overview design
+   document must have front matter `status: "approved"`.
+4. Check for related ADRs.
    If ADRs constrain or inform the implementation approach, reference them.
    A plan does not require an ADR to proceed, but must acknowledge and
    incorporate relevant ones created in parallel with the spec.
-4. Create the plan.
+5. Create the plan.
 
    ```bash
-   node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md
+   node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
    ```
 
    The creation script follows `references/plan-conventions.md` and uses
    `assets/templates/plan.md`. If you cannot run the script, copy that template
    and fill it manually.
 
-4. Record relations.
+6. Record relations.
    The generated plan uses `relations.implements` for the upstream spec and
-   `relations.derives-from` for relevant ADRs.
-5. Keep the plan implementation-ready.
+   `relations.derives-from` for linked design docs and ADRs.
+7. Keep the plan implementation-ready.
    Include concrete files, behavior, tests, migration steps, and verification
    commands when they are known.
+
+If the design gate fails, the script returns:
+
+`PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
 
 ## Implementation Readiness Matrix
 

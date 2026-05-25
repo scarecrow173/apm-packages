@@ -3,7 +3,7 @@
 This package provides reusable skills for spec-driven and document-driven
 development. Documents created by these skills use YAML front matter plus
 Markdown so agents can track lifecycle status, source evidence, and semantic
-relations between ADRs, specs, plans, and tasks.
+relations between ADRs, specs, designs, plans, and tasks.
 
 The package follows a dual-track model where spec and ADR are created in
 parallel from the same discovery output:
@@ -12,7 +12,8 @@ parallel from the same discovery output:
 - `brainstorming`: clarify intent and route to spec + ADR (parallel).
 - `spec-doc`: define what to build before implementation starts.
 - `adr-doc`: record all technical decisions as Architecture Decision Records.
-- `plan-doc`: turn approved spec + ADR into an implementation plan.
+- `design-doc`: capture overview-first design artifacts before planning.
+- `plan-doc`: turn approved spec + ADR + design into an implementation plan.
 - `task-doc`: track implementation slices and dependencies.
 - `doc-status`: list and audit document status, indexes, and relations.
 
@@ -25,7 +26,8 @@ The document flow that every piece of work follows:
 ```
 idea-refine OR brainstorming
   → spec-doc + adr-doc   (parallel: created from the same discovery output)
-  → plan-doc             (derives from both spec and ADR)
+  → design-doc           (overview + detailed design docs)
+  → plan-doc             (derives from spec, ADR, and approved design)
   → task-doc
 ```
 
@@ -35,11 +37,11 @@ idea-refine OR brainstorming
 - **Parallel creation**: when brainstorming produces enough context, both spec
   and ADR can be written simultaneously since they address different facets of
   the same work.
-- **Both feed the plan**: `plan-doc` uses spec for requirements and ADR for
-  technical constraints.
+- **Design gate before planning**: `plan-doc` requires approved `design-doc`
+  input and uses spec for requirements plus ADR for technical constraints.
 
 Skills on the mainline: `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc`,
-`plan-doc`, `task-doc`.
+`design-doc`, `plan-doc`, `task-doc`.
 
 ### doc-driven-dev parallel track
 
@@ -117,10 +119,16 @@ Use this skill to create YAML-front-matter specs under `docs/specs/`. Specs
 capture intent, scope, requirements, acceptance criteria, and source evidence
 before implementation planning starts.
 
+### `design-doc`
+
+Use this skill to create design artifacts under `docs/designs/`. It maintains
+required `overview.md` plus detailed design docs and acts as a hard gate for
+`plan-doc`.
+
 ### `plan-doc`
 
 Use this skill to create implementation plans under `docs/plans/`. Plans link to
-upstream specs with `relations.implements` and to ADRs with
+upstream specs with `relations.implements`, and to design/ADR inputs with
 `relations.derives-from`.
 
 ### `task-doc`
@@ -137,7 +145,7 @@ allowing external source URLs in `relations.source`.
 
 ## Shared Relations
 
-New generated specs, plans, and tasks use semantic relation fields:
+New generated specs, designs, plans, and tasks use semantic relation fields:
 
 ```yaml
 relations:
@@ -167,14 +175,15 @@ internal document links rather than the type of the linked document.
 ```text
 idea-refine OR brainstorming
   -> spec-doc + adr-doc  (parallel: define what + record decisions)
-  -> plan-doc            (derives from both spec and ADR)
+  -> design-doc          (overview-first design gate)
+  -> plan-doc            (derives from spec, ADR, and approved design)
   -> task-doc            (execution slices)
   -> implementation
   -> doc-status
 ```
 
-The dual-track model: **spec + ADR (parallel) → plan → task**.
+The dual-track model: **spec + ADR (parallel) → design → plan → task**.
 Specs define what should be built, why, scope, and acceptance criteria.
 ADRs record every technical decision with alternatives and rationale.
 When brainstorming produces enough context for both, they are written in
-parallel. Plans derive from both.
+parallel. Design docs bridge into planning.
