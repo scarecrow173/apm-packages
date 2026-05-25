@@ -9,12 +9,6 @@ license: MIT
 この skill は、承認済み spec/ADR と実装 plan の間をつなぐ設計成果物を作る
 ために使います。
 
-このパッケージのライフサイクル:
-**spec + ADR（並列）-> design -> plan -> task**。
-
-`design-doc` は `plan-doc` の hard gate です。plan を作成する前に、
-少なくとも 1 つの承認済み詳細設計文書が必要です。
-
 ## ワークフロー
 
 1. 上流文書を確認する。

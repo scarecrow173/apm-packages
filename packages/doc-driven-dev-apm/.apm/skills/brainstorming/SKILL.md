@@ -47,11 +47,9 @@ Complete these items in order:
    Markdown.
 7. **Discovery self-review** for placeholders, contradictions, ambiguity,
    missing routing, and excessive scope.
-8. **Human reviews written discovery artifact** before downstream ADR,
-   spec, plan, task, or implementation work.
-9. **Transition to downstream documents** using the dual-track model:
-   spec-doc + adr-doc (parallel) when both product requirements and technical
-  decisions are clear. Then design-doc, then plan-doc, then task-doc.
+8. **Human reviews written discovery artifact** before downstream work.
+9. **Done** — the confirmed artifact is ready for downstream documentation
+   (specs, ADRs, designs, plans, or tasks as appropriate).
 
 ## Process Flow
 
@@ -67,7 +65,7 @@ digraph brainstorming {
   "Write discovery artifact" [shape=box];
   "Discovery self-review" [shape=box];
   "Human reviews artifact?" [shape=diamond];
-  "Route to spec-doc / adr-doc / design-doc / plan-doc / task-doc" [shape=doublecircle];
+  "Done — artifact confirmed" [shape=doublecircle];
 
   "Explore project context" -> "Visual questions ahead?";
   "Visual questions ahead?" -> "Offer visual companion\n(own message)" [label="yes"];
@@ -81,30 +79,12 @@ digraph brainstorming {
   "Write discovery artifact" -> "Discovery self-review";
   "Discovery self-review" -> "Human reviews artifact?";
   "Human reviews artifact?" -> "Write discovery artifact" [label="changes requested"];
-  "Human reviews artifact?" -> "Route to spec-doc / adr-doc / design-doc / plan-doc / task-doc" [label="approved"];
+  "Human reviews artifact?" -> "Done — artifact confirmed" [label="approved"];
 }
 ```
 
-The terminal state is routing into downstream documents. Do not write code after
-brainstorming. The next step follows the dual-track model:
-
-- `spec-doc` + `adr-doc` (parallel): create both from the same discovery
-  output. Spec defines what/why/scope. ADR records every technical decision
-  with alternatives and rationale. When brainstorming reveals both product
-  requirements and technical choices, write them in parallel.
-- `spec-doc` alone: when the work is purely product with no architecture
-  decision.
-- `adr-doc` alone: when the decision is cross-cutting and not tied to a single
-  feature spec.
-- `design-doc`: required before plan creation. Create overview-first design
-  artifacts and approve at least one detailed design doc.
-- `plan-doc`: only when upstream spec/ADR are ready and `design-doc` gate is
-  satisfied.
-- `task-doc`: only when the plan is already decomposed and ready for execution
-  tracking.
-
-The dual-track: **brainstorming → spec + ADR (parallel) → design → plan → task**.
-All decisions are recorded as ADRs.
+The terminal state is a confirmed discovery artifact. Do not write code after
+brainstorming. The artifact serves as input for downstream documentation work.
 
 ## The Process
 
