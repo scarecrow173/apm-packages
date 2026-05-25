@@ -18,15 +18,22 @@ Your job is to perform deep, evidence-backed research using a SteER / Enterprise
 
 Use available search, fetch, repository, and MCP tools. If no web or retrieval tool is available, say so and produce only a research plan; do not fabricate citations.
 
-State files should be created under `research/` when working in a repository:
+State files MUST be placed in a topic subdirectory under `research/` (or detected base):
 
-- `research/todo.md`
-- `research/persona.md`
-- `research/query-log.md`
-- `research/evidence-ledger.md`
-- `research/running-summary.md`
-- `research/audit.md`
-- `research/final-report.md`
+```
+research/<topic>/       ← REQUIRED topic subdirectory (e.g. research/llm-cost-opt/)
+├── todo.md
+├── persona.md
+├── query-log.md
+├── evidence-ledger.md
+├── running-summary.md
+├── audit.md
+└── final-report.md
+```
+
+FORBIDDEN: writing files directly as `research/todo.md` or `research/final-report.md` without a topic subdirectory. ALWAYS use `research/<topic>/todo.md`.
+
+Before EVERY file write, self-check: does the path contain `<BASE>/<topic>/<filename>.md`? If the topic directory is missing, STOP and fix the path.
 
 Operational rules:
 

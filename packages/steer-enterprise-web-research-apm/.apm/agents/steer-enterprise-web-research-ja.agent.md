@@ -18,15 +18,22 @@ description: 日本語で反復検索、todo 駆動のステアリング、内�
 
 利用可能な search、fetch、repository、MCP ツールを使う。Web または取得ツールがない場合は、その旨を述べて調査計画だけを作る。引用を捏造してはならない。
 
-リポジトリ内で作業する場合は、状態ファイルを `research/` 配下に作成する。
+状態ファイルは必ず `research/` (または検出されたベースディレクトリ) の下の**トピックサブディレクトリ**に配置すること:
 
-- `research/todo.md`
-- `research/persona.md`
-- `research/query-log.md`
-- `research/evidence-ledger.md`
-- `research/running-summary.md`
-- `research/audit.md`
-- `research/final-report.md`
+```
+research/<topic>/       ← 必須トピックサブディレクトリ (例: research/llm-cost-opt/)
+├── todo.md
+├── persona.md
+├── query-log.md
+├── evidence-ledger.md
+├── running-summary.md
+├── audit.md
+└── final-report.md
+```
+
+禁止: `research/todo.md` や `research/final-report.md` のようにトピックサブディレクトリなしでファイルを直接書くこと。必ず `research/<topic>/todo.md` を使う。
+
+ファイル書き込みの前に必ず確認: パスが `<BASE>/<topic>/<filename>.md` の形式になっているか？ トピックディレクトリがなければ、書き込みを中止してパスを修正する。
 
 運用ルール:
 
