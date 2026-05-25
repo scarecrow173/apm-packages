@@ -18,9 +18,7 @@ Markdown 文書モデルに対応させます。
    バリエーションを生成します。
 2. **評価と収束:** アイデアをクラスタリングし、ストレステストし、隠れた
    前提を表に出します。
-3. **具体化と保存:** `brainstorming` または `spec-doc` + `adr-doc`（並列）に進める
-   Markdown one-pager を作ります。アイデアからプロダクト要件と技術判断の
-   両方が明確になれば、並列で作成します。
+3. **具体化と保存:** 人間レビュー用の Markdown one-pager を作ります。
 
 ## 使い方
 
@@ -202,14 +200,7 @@ out.]
 
 ## Open Questions
 
-- [Question that needs answering before ADR, spec, plan, task, or implementation]
-
-## Suggested Document Routing
-
-- [ ] Move to `brainstorming`
-- [ ] ADR likely needed
-- [ ] Spec likely needed
-- [ ] Plan/task likely ready
+- [Question that needs answering before downstream document work]
 ```
 
 "Not Doing" list は特に重要です。focus とは、良い案にも no と言うことです。
@@ -228,7 +219,6 @@ node scripts/new_idea.js --title "[Idea Name]"
 - "誰のためか" を飛ばさない。良いアイデアは人と問題から始まる。
 - 前提を出さずに plan を作らない。未検証の前提が最大の失敗要因。
 - コードベースを無視しない。既存 architecture は制約であり機会でもある。
-- idea の route が決まる前に ADR、spec、plan、task、implementation に飛ばない。
 
 ## 検証
 
@@ -241,4 +231,3 @@ ideation session 完了後に確認します。
 - "Not Doing" list がトレードオフを明確にしている。
 - 出力が会話だけでなく concrete artifact になっている。
 - 後続文書または実装前に、人間が最終方向性を確認している。
-- 次の route が明示されている: `brainstorming`, ADR, spec, plan, task, parked。

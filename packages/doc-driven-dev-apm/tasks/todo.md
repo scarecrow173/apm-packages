@@ -1,45 +1,33 @@
-# TODO: doc-driven-dev 設計フェーズ追加
+# TODO: 既存スキルのオーケストレーション責務削減
 
-## Phase 1: Foundation
+## Phase 1: Parallel Simplification
 
-- [ ] Task 1: 設計フェーズ方針（flow/status/relation）を定義する (M)
-- [ ] Task 2: `design-doc` skill 骨格を追加する (M)
+- [ ] Task 1: brainstorming — ルーティングセクション削除 (S)
+- [ ] Task 2: idea-refine — ルーティング・フェーズ警告削除 (S)
+- [ ] Task 3: design-doc — ライフサイクル文簡素化 (XS)
+- [ ] Task 4: plan-doc — ライフサイクル文簡素化 (XS)
 
-## Checkpoint: Foundation
+## Checkpoint: After Phase 1
 
-- [ ] README/README.ja の新フロー表記が一致している
-- [ ] `pnpm test` が pass
-- [ ] `pnpm run lint:md` が pass
-- [ ] 人間レビューで導入方針が承認された
+- [ ] pnpm test 全 pass
+- [ ] pnpm run lint:md pass
+- [ ] 各スキルが自身のアーティファクト生成に集中している
+- [ ] 人間レビューで削除範囲の妥当性確認
 
-## Phase 2: Core Vertical Slices
+## Phase 2: Verification
 
-- [ ] Task 3: Vertical Slice A - `new_design` + index 更新を実装する (M)
-- [ ] Task 3a: `docs/designs/overview.md` 自動生成と維持ルールを実装する (S)
-- [ ] Task 4: Vertical Slice B - `brainstorming` routing に `design-doc` を追加する (S)
-- [ ] Task 5: Vertical Slice C - `plan-doc` が `design-doc` を参照できるようにする (M)
+- [ ] Task 5: 回帰テストと整合確認 (XS)
 
-## Checkpoint: Core Flow
+## Checkpoint: Complete
 
-- [ ] `brainstorming -> design-doc -> plan-doc` の最短経路が確認できる
-- [ ] `spec + ADR -> design-doc -> plan-doc` の必須経路が適用される
-- [ ] `pnpm test` が pass
-
-## Phase 3: Hardening and Rollout
-
-- [ ] Task 6: `doc-status` に `design` type を統合する (M)
-- [ ] Task 7: 導入ガイドと移行メモを更新する (S)
-
-## Checkpoint: Release Readiness
-
-- [ ] `pnpm run build:scripts` 完了
-- [ ] `pnpm test` pass
-- [ ] `pnpm run lint:md` pass
-- [ ] `apm compile --dry-run` 成功
-- [ ] 互換性影響と移行方針が承認済み
+- [ ] pnpm test pass
+- [ ] pnpm run lint:md pass
+- [ ] apm compile --dry-run pass
 
 ---
 
 ## Review Questions
 
-- [ ] 保存先を `docs/designs/` に固定してよいか
+- [ ] Discovery テンプレート内 "Document Routing" チェックリストも削除するか
+- [ ] spec-doc の軽微なライフサイクル言及も削除するか
+- [ ] 参照文の表現（"see `doc-driven-dev-flow`"）を英日でどう統一するか

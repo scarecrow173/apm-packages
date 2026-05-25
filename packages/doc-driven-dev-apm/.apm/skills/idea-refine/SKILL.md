@@ -18,9 +18,7 @@ Markdown document model.
    questions, and generate variations.
 2. **Evaluate & Converge:** Cluster ideas, stress-test them, and surface hidden
    assumptions.
-3. **Sharpen & Ship:** Produce a concrete Markdown one-pager that can route into
-   `brainstorming` or directly into `spec-doc` + `adr-doc` (parallel) when both
-   product requirements and technical decisions are clear from the idea.
+3. **Sharpen & Ship:** Produce a concrete Markdown one-pager for human review.
 
 ## Usage
 
@@ -233,14 +231,7 @@ out.]
 
 ## Open Questions
 
-- [Question that needs answering before ADR, spec, plan, task, or implementation]
-
-## Suggested Document Routing
-
-- [ ] Move to `brainstorming`
-- [ ] ADR likely needed
-- [ ] Spec likely needed
-- [ ] Plan/task likely ready
+- [Question that needs answering before downstream document work]
 ```
 
 The "Not Doing" list is one of the most valuable parts. Focus is about saying no
@@ -271,8 +262,6 @@ repository.
 - Do not just list ideas. Tell a coherent story about why each variation exists.
 - Do not ignore the codebase. Existing architecture is both a constraint and an
   opportunity.
-- Do not jump directly to ADR, spec, plan, task, or implementation before
-  the idea is refined enough to route.
 
 ## Tone
 
@@ -303,5 +292,3 @@ After completing an ideation session:
 - [ ] The output is a concrete artifact, not just conversation.
 - [ ] The human confirmed the final direction before downstream document or
   implementation work.
-- [ ] The next document route is explicit: `brainstorming`, ADR, spec,
-  plan, task, or parked.

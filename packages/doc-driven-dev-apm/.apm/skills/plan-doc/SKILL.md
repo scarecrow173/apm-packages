@@ -11,11 +11,6 @@ explains how the work will be built, which documents it implements or derives
 from, and which verification steps prove the implementation follows the source
 document.
 
-In this package's lifecycle, the upstream path is:
-**spec + ADR (parallel) → design → plan**.
-
-`design-doc` is a hard gate for `plan-doc`.
-
 ## Workflow
 
 1. Read the upstream spec fully.

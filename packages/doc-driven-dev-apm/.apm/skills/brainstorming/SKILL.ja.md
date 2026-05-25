@@ -46,11 +46,9 @@ config 変更、document workflow 更新も同じです。単純な作業ほど�
    `docs/discovery/` に保存する。
 7. **discovery self-review** - placeholder、矛盾、曖昧さ、routing 欠落、
    scope 過多を確認する。
-8. **人間が written discovery artifact を review する** - ADR、spec、
-   plan、task、implementation に進む前に確認する。
-9. **downstream documents へ遷移する** - dual-track モデルに従う:
-   spec-doc + adr-doc（並列）でプロダクト要件と技術判断の両方を
-  記録。その後 `design-doc`、`plan-doc`、`task-doc`。
+8. **人間が written discovery artifact を review する** - downstream 作業前に確認する。
+9. **完了** — 確認済み artifact が downstream documentation
+   （spec, ADR, design, plan, task）の入力となる。
 
 ## Process Flow
 
@@ -66,7 +64,7 @@ digraph brainstorming {
   "Write discovery artifact" [shape=box];
   "Discovery self-review" [shape=box];
   "Human reviews artifact?" [shape=diamond];
-  "Route to spec-doc / adr-doc / design-doc / plan-doc / task-doc" [shape=doublecircle];
+  "Done — artifact 確認済み" [shape=doublecircle];
 
   "Explore project context" -> "Visual questions ahead?";
   "Visual questions ahead?" -> "Offer visual companion\n(own message)" [label="yes"];
@@ -80,27 +78,12 @@ digraph brainstorming {
   "Write discovery artifact" -> "Discovery self-review";
   "Discovery self-review" -> "Human reviews artifact?";
   "Human reviews artifact?" -> "Write discovery artifact" [label="changes requested"];
-  "Human reviews artifact?" -> "Route to spec-doc / adr-doc / design-doc / plan-doc / task-doc" [label="approved"];
+  "Human reviews artifact?" -> "Done — artifact 確認済み" [label="approved"];
 }
 ```
 
-terminal state は downstream document への routing です。brainstorming 後に
-コードを書かないでください。dual-track モデルに従います。
-
-- `spec-doc` + `adr-doc`（並列）: 同じ discovery output から両方を作成します。
-  Spec は what/why/scope を定義。ADR はすべての技術判断を代替案と根拠
-  付きで記録します。brainstorming がプロダクト要件と技術判断の両方を
-  明らかにしたら、並列で書きます。
-- `spec-doc` のみ: 純粋なプロダクト作業で architecture 判断がない場合。
-- `adr-doc` のみ: 横断的な判断で単一 feature spec に紐づかない場合。
-- `design-doc`: plan 作成前に必須。overview-first の設計成果物を作成し、
-  少なくとも 1 つの詳細設計を承認します。
-- `plan-doc`: 上流 spec/ADR が準備済みで、`design-doc` gate を満たした
-  場合のみ。
-- `task-doc`: plan が分解済みで execution tracking が必要な場合のみ。
-
-dual-track: **brainstorming → spec + ADR（並列）→ design → plan → task**。
-すべての意思決定は ADR として記録します。
+terminal state は確認済み discovery artifact です。brainstorming 後にコードを
+書かないでください。artifact は downstream documentation の入力となります。
 
 ## プロセス
 

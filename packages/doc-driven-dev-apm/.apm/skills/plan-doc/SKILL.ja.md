@@ -10,12 +10,6 @@ license: MIT
 plan は、何をどの順序で実装するか、どの文書を実装または派生元にするか、
 どの検証で実装完了とみなすかを明確にします。
 
-このパッケージのライフサイクルでは、典型的な上流パスは:
-**spec + ADR（並列）→ design → plan** です。Plan は spec と並列で
-作成された ADR、および承認済み design から派生します。
-
-`design-doc` は `plan-doc` の hard gate です。
-
 ## ワークフロー
 
 1. 上流の spec を全文読む。

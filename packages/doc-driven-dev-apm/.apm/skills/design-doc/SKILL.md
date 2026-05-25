@@ -9,12 +9,6 @@ license: MIT
 Use this skill to create design artifacts that bridge approved specs/ADRs and
 implementation plans.
 
-The package lifecycle is:
-**spec + ADR (parallel) -> design -> plan -> task**.
-
-`design-doc` is a hard gate for `plan-doc`: at least one approved detailed
-design document is required before a plan can be created.
-
 ## Workflow
 
 1. Confirm upstream context.
