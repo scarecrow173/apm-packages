@@ -24,15 +24,35 @@ license: MIT
 
 ## コアモデル
 
-ユーザーが別のディレクトリを指定しない限り、次の作業成果物を `research/` 配下で管理する。
+### ベースディレクトリの決定
 
-- `research/todo.md`: タスク計画と状態
-- `research/persona.md`: 推定したユーザー目的、制約、好み、未解決の不確実性
-- `research/query-log.md`: 実行した検索クエリとその理由
-- `research/evidence-ledger.md`: 情報源ごとに抽出した証拠
-- `research/running-summary.md`: 各ループ後の圧縮された統合メモ
-- `research/audit.md`: 網羅性、矛盾、鮮度、引用の監査
-- `research/final-report.md`: 最終回答 / レポート
+ユーザーが別のディレクトリを明示的に指定しない限り、次の優先順位でリポジトリ内の既存ディレクトリを検出し、最初に見つかったものをベースディレクトリとして使う。
+
+1. `docs/research/`
+2. `research/`
+3. `docs/researchs/`
+4. `researchs/`
+
+いずれも存在しない場合は `doc/research/` を新規作成して使う。
+
+以降、検出または作成されたベースディレクトリを `<BASE>` と表記する。
+
+### トピックディレクトリ
+
+`<BASE>` 直下にトピック名（調査テーマを短い英語スラッグにしたもの）のサブディレクトリを作成し、その中に作業成果物を配置する。
+
+```
+<BASE>/<topic>/
+├── todo.md              # タスク計画と状態
+├── persona.md           # 推定したユーザー目的、制約、好み、未解決の不確実性
+├── query-log.md         # 実行した検索クエリとその理由
+├── evidence-ledger.md   # 情報源ごとに抽出した証拠
+├── running-summary.md   # 各ループ後の圧縮された統合メモ
+├── audit.md             # 網羅性、矛盾、鮮度、引用の監査
+└── final-report.md      # 最終回答 / レポート
+```
+
+例: ベースディレクトリが `research/` でトピックが `llm-cost-optimization` の場合、ファイルは `research/llm-cost-optimization/todo.md` のように配置される。
 
 小さなチャットのみのタスクでは、この状態を内部的に保持してよい。ただし、回答内では同じ観点に従う。
 

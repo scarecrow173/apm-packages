@@ -24,15 +24,35 @@ If no search or retrieval tool is available, do not invent findings. Explain tha
 
 ## Core Model
 
-Maintain these working artifacts under `research/` unless the user specifies another directory:
+### Base Directory Detection
 
-- `research/todo.md`: task plan and state
-- `research/persona.md`: inferred user goals, constraints, preferences, and open uncertainties
-- `research/query-log.md`: all search queries and why they were run
-- `research/evidence-ledger.md`: source-by-source extracted evidence
-- `research/running-summary.md`: compressed synthesis after each loop
-- `research/audit.md`: coverage, contradiction, freshness, and citation audit
-- `research/final-report.md`: final answer/report
+Unless the user explicitly specifies another directory, detect an existing directory in the repository using the following priority order and use the first match as the base directory:
+
+1. `docs/research/`
+2. `research/`
+3. `docs/researchs/`
+4. `researchs/`
+
+If none exist, create and use `doc/research/`.
+
+Hereafter, the detected or created base directory is referred to as `<BASE>`.
+
+### Topic Directory
+
+Create a subdirectory named after the topic (a short English slug of the research theme) directly under `<BASE>`, and place all working artifacts within it.
+
+```
+<BASE>/<topic>/
+├── todo.md              # task plan and state
+├── persona.md           # inferred user goals, constraints, preferences, and open uncertainties
+├── query-log.md         # all search queries and why they were run
+├── evidence-ledger.md   # source-by-source extracted evidence
+├── running-summary.md   # compressed synthesis after each loop
+├── audit.md             # coverage, contradiction, freshness, and citation audit
+└── final-report.md      # final answer/report
+```
+
+Example: if the base directory is `research/` and the topic is `llm-cost-optimization`, files are placed as `research/llm-cost-optimization/todo.md`.
 
 For small chat-only tasks, you may keep this state mentally, but still follow the same sections in the answer.
 
