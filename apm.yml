@@ -11,9 +11,11 @@ targets:
 - agent-skills
 dependencies:
   apm:
-  - github/awesome-copilot/skills/git-commit
   - microsoft/apm/packages/apm-guide
+  - github/awesome-copilot/skills/git-commit
+  - github/awesome-copilot/skills/agentic-eval
   - addyosmani/agent-skills
+  - ./packages/steer-enterprise-web-research-apm
   mcp:
   - name: mise
     registry: false
@@ -33,6 +35,10 @@ marketplace:
   versioning:
     strategy: lockstep
   packages:
+  - name: apm-usage
+    source: microsoft/apm
+    subdir: packages/apm-guide
+    ref: main
   - name: steer-enterprise-web-research
     source: ./packages/steer-enterprise-web-research-apm
     version: 0.1.0
@@ -58,8 +64,4 @@ marketplace:
   - name: repo-story-time
     source: github/awesome-copilot
     subdir: skills/repo-story-time
-    ref: main
-  - name: apm-usage
-    source: microsoft/apm
-    subdir: packages/apm-guide
     ref: main

@@ -6,7 +6,7 @@ license: MIT
 target:
   - codex
   - copilot
-type: hybrid
+type: skill
 includes:
   - .apm/
 scripts:
