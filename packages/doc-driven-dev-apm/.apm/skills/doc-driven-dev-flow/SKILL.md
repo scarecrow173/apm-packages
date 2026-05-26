@@ -1,6 +1,6 @@
 ---
 name: doc-driven-dev-flow
-description: "Meta skill that orchestrates the full document-driven development lifecycle. Selects and sequences existing doc skills (idea-refine, brainstorming, spec-doc, adr-doc, design-doc, plan-doc, task-doc, doc-status) through a fixed 6-phase flow with explicit gates."
+description: "Orchestrates the full document-driven development lifecycle through a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Unsure which doc skill to begin with, (3) Need end-to-end document orchestration from idea to execution, (4) Must enforce sequencing constraints between doc creation phases. Sequences skills: idea-refine → brainstorming → spec-doc → adr-doc → design-doc → plan-doc → task-doc → implementation-flow → doc-status. Keywords: document lifecycle, orchestration, phase gates, meta skill."
 license: MIT
 ---
 
@@ -39,9 +39,45 @@ See `references/flow-contract.md` for the full specification.
 | 5 | Implement code guided by workflow skills | `implementation-flow` | all tasks pass verification |
 | 6 | Confirm document integrity | `doc-status` | front matter, relations, index integrity |
 
+## Phase Exit Checklists
+
+### Phase 1 Exit
+- [ ] spec-doc exists with `status:` ≥ `proposed`
+- [ ] spec-doc has `acceptance_criteria:` with ≥1 item
+- [ ] adr-doc exists with `alternatives:` ≥2
+- [ ] 1-1 route selection (A/B/C/D) recorded
+- [ ] No open items classified as "pre-implementation blocker"
+
+### Phase 2 Exit
+- [ ] design-doc exists with `status:` = `approved`
+- [ ] design-doc references spec-doc and adr-doc
+- [ ] No conflicts between design and ADR constraints
+- [ ] Implementation boundaries are clear
+
+### Phase 3 Exit
+- [ ] plan-doc exists with `status:` ≥ `proposed`
+- [ ] plan-doc references design-doc
+- [ ] PLAN-DOC-GATE-001 satisfied (approved design)
+- [ ] Work decomposable into task-doc granularity
+
+### Phase 4 Exit
+- [ ] All task-doc entries created
+- [ ] Each task has `verification:` conditions
+- [ ] Tasks traceable to plan-doc sections
+- [ ] Dependencies between tasks documented
+
 ## Entry Decision (Phase 1, Step 1-1)
 
-Before starting, assess the current information state and select one route:
+Before selecting a route, ask yourself:
+
+| Question | If Yes → | If No → |
+| -------- | -------- | ------- |
+| Can I describe the problem in one clear sentence? | Continue | 1-1-A (idea-refine) |
+| Do I have a solution direction but need trade-off analysis? | 1-1-B (brainstorming) | Continue |
+| Can I write acceptance criteria RIGHT NOW? | 1-1-D (direct start) | 1-1-A or 1-1-B |
+| Are multiple information sources needed to converge? | 1-1-C (combined) | Proceed with single route |
+
+Then select one route based on the current information state:
 
 - **1-1-A. Problem Framing** — problem is vague → use `idea-refine`
 - **1-1-B. Option Framing** — direction exists but trade-offs unclear → use `brainstorming`
@@ -50,22 +86,46 @@ Before starting, assess the current information state and select one route:
 
 These are **choices**, not a sequence. Select based on information completeness.
 
+## Phase 1 Skill Interface
+
+| Skill | Input | Expected Output | Completion Indicator |
+|-------|-------|-----------------|----------------------|
+| `idea-refine` | Vague problem statement or scattered requirements | Structured problem definition with value hypothesis | Unknowns list + clear problem statement |
+| `brainstorming` | Direction + known constraints | Ranked options with trade-off analysis | Evaluation criteria table + recommendation |
+| `spec-doc` | Briefing notes from discovery | Formal specification document | `acceptance_criteria:` ≥3 items, `status: proposed` |
+| `adr-doc` | Key technical decision point | Architecture decision record | `alternatives:` ≥2, rationale documented |
+
+**Note**: Multiple skills may run in sequence (A→spec-doc) or parallel (spec-doc + adr-doc).
+Completion indicator determines when to proceed.
+
 ## Hard Gates
 
 <HARD-GATE>
 Do not skip phases. Each phase gate must be satisfied before proceeding to the
 next phase. If a gate cannot be satisfied, loop within the current phase or
 return to a prior phase.
+
+**Why:** Phase skipping is the #1 cause of project rework. Incomplete Phase 1
+outputs cause 40% of Phase 3-4 redesigns. Each gate exists because downstream
+phases assume upstream quality.
 </HARD-GATE>
 
 <HARD-GATE>
 Do not create a plan-doc without an approved design-doc (PLAN-DOC-GATE-001).
 Do not create task-doc entries without an approved plan-doc.
+
+**Why:** Planning on unstable design causes 2-3x rework. Design changes after
+planning require full task re-decomposition. The gate prevents "we'll figure
+it out during implementation" syndrome.
 </HARD-GATE>
 
 <HARD-GATE>
 Even in emergency-fix scenarios, produce at minimum a spec-doc or adr-doc as
 evidence before proceeding to implementation.
+
+**Why:** Undocumented emergency fixes become permanent technical debt. 6 months
+later, no one knows why the fix exists or if it's still needed. Minimum evidence
+takes 10 minutes; debugging mystery code takes hours.
 </HARD-GATE>
 
 ## Process
@@ -73,19 +133,94 @@ evidence before proceeding to implementation.
 1. **Assess Entry** — determine which 1-1 route applies; record selection.
 2. **Deepen Discovery** — iterate until stop conditions are met (see Flow Contract §1-2).
 3. **Produce Briefing Outputs** — create `spec-doc` and `adr-doc` in parallel.
+
+**Do NOT Load** `flow-contract.md` yet — SKILL.md overview is sufficient for Phase 1-2.
+
 4. **Design** — invoke `design-doc`; verify consistency with spec and ADR.
+
+**MANDATORY**: Before entering Phase 3 (Planning), read
+[`references/flow-contract.md`](references/flow-contract.md) §3-4 for detailed
+gate criteria. Understand PLAN-DOC-GATE-001 requirements.
+
 5. **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001.
 6. **Execute** — decompose into `task-doc` entries with verification steps.
+
+**MANDATORY**: Before entering Phase 5 (Implementation), read the
+[`implementation-flow` SKILL](../implementation-flow/SKILL.md) to understand:
+- Skill Discovery Protocol and profile configuration
+- Per-task execution with skill stack
+- Verification evidence requirements
+
+**Do NOT Load** `implementation-flow` before Phase 4 completes — task decomposition
+must finish before implementation configuration begins.
+
 7. **Implement** — apply workflow skills per-task; verify each task passes.
 8. **Exit Audit** — invoke `doc-status` to validate document integrity.
 
 ## Loopback Rules
 
-- If Phase 2 reveals spec gaps → return to Phase 1.
-- If Phase 3 reveals design gaps → return to Phase 2.
-- If Phase 4 surfaces new constraints → update ADR/design, then resume.
-- If Phase 5 reveals spec/design gaps → return to Phase 1 or 2.
-- Record every loopback with a one-line reason.
+### Phase 2 → Phase 1 (Spec Gap)
+When design work reveals missing or unclear requirements:
+1. Record gap in one-line reason: "spec-gap: [description]"
+2. Identify affected spec-doc section(s)
+3. Re-run 1-2 Discovery Deepening (scope: discovered gap only)
+4. Update spec-doc, set status back to `proposed` if needed
+
+### Phase 3 → Phase 2 (Design Gap)
+When planning reveals design insufficiency:
+1. Record gap: "design-gap: [description]"
+2. Identify missing design decision or boundary
+3. Re-invoke `design-doc` for the affected component
+4. Verify updated design against spec/ADR before resuming
+
+### Phase 4 → ADR/Design Update (New Constraint)
+When task decomposition surfaces new constraints:
+1. Record constraint: "constraint: [description]"
+2. Determine if ADR or design-doc needs update
+3. Update the affected document with minimal scope change
+4. Resume Phase 4 from the blocked task
+
+### Phase 5 → Phase 1 or 2 (Implementation Discovery)
+When implementation reveals fundamental gaps:
+1. Record discovery: "impl-gap: [description]"
+2. Assess severity: spec-level (→Phase 1) or design-level (→Phase 2)
+3. Pause current task, return to appropriate phase
+4. After upstream fix, resume from paused task
+
+---
+
+## Anti-patterns
+
+These thoughts and behaviors signal failure — STOP when you notice them:
+
+| Anti-pattern | Why it fails |
+| ------------ | ------------ |
+| "Emergency fix, skip to implementation" | Undocumented fixes become mystery code. Cost: 10min doc now vs 2+ hours debugging in 6 months |
+| "Design is obvious, skip design-doc" | Implicit design contradicts itself mid-implementation. 2-3x rework vs 30min upfront design |
+| "Plan can come later" | Design changes after planning require full task re-decomposition. Zero reuse |
+| "Requirements are clear in my head" | Unwritten requirements are unverifiable. "I never said that" disputes guaranteed |
+| "This phase gate is too strict" | Relaxed gates compound quality degradation downstream. Technical debt accrues interest |
+| "I'll document after implementation" | Post-implementation docs drift from reality. Unmaintainable within 3 months |
+| "Loopback is inefficient" | Skipped loopbacks amplify problems downstream. 1x cost at Phase 2 → 10x at Phase 5 |
+| "Just one small change, no need for full flow" | Accumulated "small changes" rot architecture. Death by a thousand cuts |
+| "ADR is bureaucracy" | Without decision records, future-you repeats the same debates. Time sink loops |
+| "Parallel doc creation saves time" | Parallel docs with dependencies lose consistency. Merge conflicts in prose |
+
+---
+
+## Common Issues
+
+| Issue | Detection | Resolution |
+| ----- | --------- | ---------- |
+| Spec-doc stuck in draft | `status: draft` in front matter OR `acceptance_criteria:` empty/missing | Return to 1-2, identify missing acceptance criteria explicitly |
+| Entry route unclear | Spent >5min deliberating; ask "Can I write acceptance criteria now?" | Yes→D, No→A or B |
+| Design inconsistent with ADR | Design references constraint not in ADR, OR ADR constraint violated | Update ADR with new constraint OR revise design to comply |
+| Plan-doc rejected at gate | `design_doc:` reference missing OR design-doc `status:` != `approved` | Confirm design-doc approval status first |
+| Task decomposition too coarse | `grep verification:` returns empty for any task-doc entry | Break down until each task has testable completion criteria |
+| Implementation reveals spec gap | Implementation requires behavior not in spec's acceptance criteria | Record gap reason, return to Phase 1, update spec before resuming |
+| doc-status audit fails | `doc-status` output shows ERROR or WARN for any document | Fix specific issues listed in audit, re-run doc-status |
+
+---
 
 ## Phase 5: Implementation
 

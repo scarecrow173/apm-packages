@@ -119,12 +119,12 @@ Briefing 出力を根拠として `spec-doc` と `adr-doc` を作成する:
 
 ## Phase 5: Implementation
 
-目的: `implementation-flow` に委譲してタスク単位でワークフロースキルを
-選択・実行する。
+目的: `implementation-flow` に委譲し、全利用可能スキルを動的に発見して
+`implementation-profile.md` を通じてタスクごとに適切なスキルスタックを構成する。
 
 ### ステップ
 
-- 5-1 `implementation-flow` 呼び出し: タスク単位の実行、スキル選択、検証を委譲する。
+- 5-1 `implementation-flow` 呼び出し: タスク単位の実行、スキル発見、構成、検証を委譲する。
 - 5-2 制約フィードバック: `implementation-flow` が上流の不足を報告した場合、`adr-doc` / `design-doc` を更新しループバックを記録する。
 - 5-3 完了確認: `implementation-flow` の完了条件経由で全タスク検証通過を確認する。
 

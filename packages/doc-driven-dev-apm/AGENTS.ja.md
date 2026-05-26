@@ -85,7 +85,7 @@ apm compile --validate
 
 | スキル | 目的 | 出典 |
 |--------|------|------|
-| implementation-flow | メタスキル: 発見木でタスクをワークフロースキルにルーティング | original |
+| implementation-flow | メタスキル: implementation-profile.md を通じて全利用可能スキルを発見・ルーティングする動的オーケストレーター | original |
 | source-driven-development | 公式ドキュメントに基づく実装 | addyosmani/agent-skills (MIT) |
 | incremental-implementation | 薄い垂直スライスでの漸進的実装 | addyosmani/agent-skills (MIT) |
 | doubt-driven-development | 敵対的フレッシュコンテキストレビュー | addyosmani/agent-skills (MIT) |

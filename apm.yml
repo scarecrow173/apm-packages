@@ -16,6 +16,7 @@ dependencies:
   - github/awesome-copilot/skills/agentic-eval
   - addyosmani/agent-skills
   - ./packages/steer-enterprise-web-research-apm
+  - softaworks/agent-toolkit/skills/skill-judge
   mcp:
   - name: mise
     registry: false
@@ -64,4 +65,12 @@ marketplace:
   - name: repo-story-time
     source: github/awesome-copilot
     subdir: skills/repo-story-time
+    ref: main
+  - name: agentic-eval
+    source: github/awesome-copilot
+    subdir: skills/agentic-eval
+    ref: main
+  - name: skill-judge
+    source: softaworks/agent-toolkit
+    subdir: skills/skill-judge
     ref: main

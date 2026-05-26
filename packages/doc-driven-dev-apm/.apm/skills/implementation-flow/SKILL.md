@@ -1,6 +1,6 @@
 ---
 name: implementation-flow
-description: "Meta skill that orchestrates code implementation by routing tasks to the appropriate workflow skills. Provides skill discovery, priority ordering, core behaviors, and verification loops for the implementation phase."
+description: "Orchestrates code implementation by discovering and routing to available skills. Use when: executing task-doc entries, starting implementation work, coordinating multiple skills. Generates implementation-profile.md. Keywords: implementation, task-doc, skill stack, code changes."
 license: MIT
 ---
 
@@ -11,287 +11,279 @@ If you were dispatched as a subagent to execute a specific task with explicit
 skill instructions, skip this meta skill and follow your dispatch instructions.
 </SUBAGENT-STOP>
 
-Orchestrates code implementation by discovering and routing to the appropriate
-workflow skills per task unit. This is the **implementation phase dispatcher** —
-it determines *which* skill to invoke, in *what order*, and enforces
-verification before progression.
+Orchestrates code implementation by dynamically discovering and routing to
+ALL available skills in the environment. This is the **implementation phase
+orchestrator** — it determines which skills apply, configures the skill stack
+per task, and enforces verification before progression.
 
 This is a **meta skill**: it produces no code directly. Instead it governs
-skill selection, sequencing, and the verification loop that connects
-implementation back to upstream documents.
+skill discovery, configuration, sequencing, and the verification loop that
+connects implementation back to upstream documents.
 
 ## When to Use
 
 - Executing approved `task-doc` entries that require code changes.
-- Implementing a plan where multiple workflow skills must coordinate.
-- As Phase 5 delegate when invoked from `doc-driven-dev-flow`.
+- Implementing a plan where multiple skills must coordinate.
+- As implementation phase delegate when invoked from `doc-driven-dev-flow`.
 - Standalone when documents already exist and implementation guidance is needed.
-- Starting any implementation work — invoke this skill FIRST to route correctly.
+- Starting any implementation work — invoke this skill FIRST to configure.
 
 ## The Rule
 
-**Before writing any code, route through Skill Discovery below.** If a workflow
-skill applies to what you are about to do, you must use it. This is not
-optional. You cannot rationalize your way out of this.
+**Before writing any code, complete the Assess and Configure phases below.**
+If available skills apply to what you are about to do, you must use them.
+This is not optional. You cannot rationalize your way out of this.
 
 ---
 
-## Skill Discovery
-
-When a task arrives for implementation, route through this decision tree:
+## Flow Phases
 
 ```text
-Task arrives for implementation
-    │
-    ├── Bug fix or test failure? ───────────→ systematic-debugging (FIRST)
-    │       then → test-driven-development (guard against regression)
-    │
-    ├── Multiple independent tasks/failures? → dispatching-parallel-agents
-    │       (fan out, then each subtask re-enters this tree)
-    │
-    ├── Delegating to subagents? ───────────→ subagent-driven-development
-    │       (subagents receive explicit skill instructions)
-    │
-    └── Direct code implementation? ────────→ LAYER STACK (apply all that match):
-            │
-            ├─ [ALWAYS] test-driven-development
-            │     RED → GREEN → REFACTOR for every change
-            │
-            ├─ [IF multi-file] incremental-implementation
-            │     thin vertical slices, verify each before expanding
-            │
-            ├─ [IF framework/library] source-driven-development
-            │     verify against official docs before implementing
-            │
-            ├─ [IF non-trivial decision] doubt-driven-development
-            │     adversarial review before committing the approach
-            │
-            └─ [AFTER task complete] requesting-code-review
-                  then receiving-code-review if feedback arrives
+Phase A: Assess  →  Phase B: Configure  →  Phase C: Execute  →  Phase D: Verify  →  Phase E: Review
 ```
 
-**Key principle:** Skills are layered, not exclusive. A single task typically
-activates 2-4 skills simultaneously (e.g., `incremental-implementation` +
-`test-driven-development` + `source-driven-development`).
+| Phase | Purpose | Output |
+| ----- | ------- | ------ |
+| A. Assess | Understand task, check for `implementation-profile.md` | Task characteristics identified |
+| B. Configure | Discover skills, build/load skill stack for this task | Active skill stack declared |
+| C. Execute | Apply skills in priority order | Code changes implemented |
+| D. Verify | Confirm task passes verification conditions | Evidence of correctness |
+| E. Review | Submit for review, address feedback | Review complete |
 
 ---
 
-## Skill Priority
-
-When multiple skills apply, invoke them in this order:
-
-| Priority | Category | Skills | Rationale |
-| -------- | -------- | ------ | --------- |
-| 1 | Process | `systematic-debugging` | Must diagnose before fixing |
-| 2 | Process | `test-driven-development` | Tests define correctness |
-| 3 | Implementation | `incremental-implementation` | Structures the work |
-| 3-alt | Implementation | `subagent-driven-development`, `dispatching-parallel-agents` | Alternative execution modes |
-| 4 | Verification | `source-driven-development` | Validates against authority |
-| 5 | Verification | `doubt-driven-development` | Challenges decisions |
-| 6 | Review | `requesting-code-review` | Post-implementation |
-| 7 | Review | `receiving-code-review` | Response to feedback |
-
-Process skills determine HOW to approach. Implementation skills structure
-execution. Verification skills validate correctness. Review skills close the
-loop.
-
----
-
-## Skill Types
-
-| Skill | Type | Meaning |
-| ----- | ---- | ------- |
-| `test-driven-development` | **Rigid** | Follow exactly. Never skip RED phase. |
-| `systematic-debugging` | **Rigid** | Follow 4-phase process exactly. No guessing. |
-| `incremental-implementation` | **Rigid** | Follow 5 rules exactly. No big-bang changes. |
-| `requesting-code-review` | **Rigid** | Follow checklist exactly before submitting. |
-| `receiving-code-review` | **Rigid** | Follow response pattern exactly. |
-| `source-driven-development` | **Flexible** | Adapt DETECT→FETCH→IMPLEMENT→CITE to context. |
-| `doubt-driven-development` | **Flexible** | Scale depth of doubt cycle to stakes. |
-| `subagent-driven-development` | **Flexible** | Adapt dispatch patterns to task shape. |
-| `dispatching-parallel-agents` | **Flexible** | Adapt parallelism to available resources. |
-
-**Rigid skills:** Follow the process step-by-step. Do not skip steps. Do not
-adapt away discipline. These encode hard-won practices.
-
-**Flexible skills:** Apply the principles and adapt the specific steps to
-context. The spirit matters more than the letter.
-
----
-
-## Core Behaviors
-
-These behaviors apply throughout implementation. They are non-negotiable.
-
-### 1. Verify Against Upstream Documents
-
-Before implementing, confirm the task-doc requirements and ADR constraints
-match your understanding. If they don't, STOP and clarify — don't silently
-reinterpret.
-
-### 2. Surface Assumptions
-
-Before implementing anything non-trivial, explicitly state assumptions:
-
-```text
-ASSUMPTIONS FOR THIS TASK:
-1. [assumption about scope from task-doc]
-2. [assumption about constraints from ADR]
-3. [assumption about interface from design-doc]
-→ Correct me now or I'll proceed with these.
-```
-
-### 3. Respect Task Boundaries
-
-Implement exactly what the task-doc specifies. Do NOT:
-
-- "Clean up" adjacent code as a side effect
-- Add features not in the task scope
-- Refactor beyond what the task requires
-- Delete code that seems unused without explicit approval
-
-Your job is surgical precision within the task boundary.
-
-### 4. Manage Confusion Actively
-
-When code conflicts with spec, design contradicts ADR, or implementation
-reveals gaps:
-
-1. **STOP.** Do not proceed with a guess.
-2. Name the specific conflict.
-3. Feed back to upstream document owner.
-4. Record the loopback with a one-line reason.
-5. Wait for resolution before continuing.
-
-### 5. Enforce Simplicity
-
-Before finishing any implementation:
-
-- Can this be done in fewer lines?
-- Are these abstractions earning their complexity?
-- Does the solution match the design-doc's intent, not exceed it?
-
-If 100 lines would suffice, do not write 1000.
-
-### 6. Verify, Don't Assume
-
-A task is NOT complete until verification passes. "Seems right" is never
-sufficient. Evidence required: passing tests, build output, or runtime data.
-
----
-
-## Process
+## Phase A: Assess
 
 For each task unit:
 
-1. **Select Task** — pick the next ready task from `task-doc` (respect dependency order).
-2. **Route** — walk the Skill Discovery tree; identify all applicable skills.
-3. **Announce** — state which skills you are applying and why.
-4. **Execute** — apply selected skills in priority order; follow each skill's process.
-5. **Verify** — confirm the task passes its defined verification conditions.
-6. **Feed Back** — if new constraints are discovered, update `adr-doc` / `design-doc`.
-7. **Review** — invoke `requesting-code-review`; address feedback via `receiving-code-review`.
-8. **Repeat** — return to step 1 until all tasks are complete.
+1. **Read the task** — understand requirements, constraints, and verification conditions.
+2. **Classify the task** — identify characteristics:
+   - Is this a bug fix or test failure?
+   - Does this involve a framework or library?
+   - Does this touch multiple files or systems?
+   - Are there non-trivial architectural decisions?
+   - Can subtasks run in parallel?
+   - What language/platform is involved?
+
+**Task Characteristics → Skill Activation Mapping:**
+
+| If the task... | Then activate... | Category |
+| -------------- | ---------------- | -------- |
+| Is a bug fix or test failure | Debugging/diagnosis skills | Process |
+| Involves framework/library APIs | Official docs verification skills | Verify |
+| Has multiple alternative approaches | Adversarial review skills | Verify |
+| Touches multiple files | Incremental implementation skills | Build |
+| Can be broken into independent subtasks | Parallel dispatch skills | Build |
+| Involves specific language/platform | Language-specific conventions | Domain |
+| Requires git operations or CI | Tool-specific workflow skills | Tooling |
+| Is ready for completion | Code review skills | Review |
+
+This mapping is a general framework. The Override Rules in `implementation-profile.md` are
+the repository-specific instantiation of this mapping, specifying concrete skill names and conditions.
+
+**Check for Profile:** Check for `implementation-profile.md` at repository root.
+
+> **What is `implementation-profile.md`?**
+> A repository-specific configuration file that lists all available skills,
+> assigns them to categories, defines which are always-on vs conditional,
+> and specifies the default skill stack plus override rules. Generated once
+> by the Skill Discovery Protocol and updated when skills change.
+
+- If it exists and is valid → go to Phase B (Configuration from Profile).
+- If it does not exist → execute the Skill Discovery Protocol below.
+- If it exists but is corrupted (YAML parse error, missing required fields) →
+  delete and regenerate via Skill Discovery Protocol.
 
 ---
 
-## Recommended Combinations
+## Skill Discovery Protocol
 
-| Scenario | Skills | Notes |
-| -------- | ------ | ----- |
-| Standard implementation | `incremental-implementation` + `test-driven-development` + `requesting-code-review` | Default for most tasks |
-| Framework-heavy work | + `source-driven-development` | Add official-docs verification |
-| High-stakes / unfamiliar | + `doubt-driven-development` + `source-driven-development` | Maximum verification |
-| Autonomous multi-task | `subagent-driven-development` | Includes TDD and review internally |
-| Multi-failure debugging | `systematic-debugging` + `dispatching-parallel-agents` | Parallel root-cause tracing |
-| Bug fix | `systematic-debugging` → `test-driven-development` | Diagnose, then guard |
+The protocol runs when `implementation-profile.md` does not exist or is detected as stale.
+It scans skill sources, classifies each skill, and generates a repository-specific profile.
+
+**Overview (7 steps):**
+
+1. **Scan** — Find skills in `.apm/skills/`, `.github/copilot-instructions.md`, etc.
+2. **Classify** — Assign each to a category (Process, Build, Domain, Verify, Tooling, Review).
+3. **Activation** — Mark as `always-on` or `conditional` based on scope.
+4. **Execution mode** — Classify as `rigid` (follow exactly) or `flexible` (adapt to context).
+5. **Default Stack** — Build the minimal always-active set.
+6. **Generate profile** — Write `implementation-profile.md` at repository root.
+7. **Staleness check** — Re-run if skill sources changed since last generation.
+
+See [references/skill-discovery-protocol.md](references/skill-discovery-protocol.md) for the detailed protocol.
+
+The protocol generates a repository-specific `implementation-profile.md` that lists all available skills, their categories, activation modes, and the default skill stack for this repository.
+
+---
+
+## Phase B: Configure
+
+With `implementation-profile.md` available:
+
+1. **Load the Default Stack** — these skills apply to every task.
+2. **Apply Override Rules** — check task characteristics against override conditions.
+3. **Resolve conflicts** — if multiple skills in the same category are activated:
+   - More specific condition wins over general (e.g., "TypeScript file" > "any file").
+   - Explicit profile rule wins over inferred activation.
+   - If still tied, apply both (skills layer, they don't exclude).
+4. **Add Domain/Tooling skills** — based on language, framework, platform detected in task.
+   - **If no Override Rules match:** Proceed with Default Stack only. Announce "Additional skills: none".
+5. **Announce the active skill stack:**
+
+```text
+ACTIVE SKILL STACK FOR THIS TASK:
+1. [Category] skill-name — reason
+2. [Category] skill-name — reason
+3. [Category] skill-name — reason
+→ Proceeding with this configuration.
+```
+
+**Priority order for execution:**
+
+| Priority | Category | Rationale |
+| -------- | -------- | --------- |
+| 1 | Process | Must diagnose/plan before building |
+| 2 | Build | Structures the implementation work |
+| 3 | Domain | Language/framework constraints apply during build |
+| 4 | Verify | Validates against authoritative sources |
+| 5 | Tooling | Tool-specific steps integrate into workflow |
+| 6 | Review | Post-implementation quality gate |
+
+**Category examples:**
+
+- **Process**: `debugging-and-error-recovery`, `planning-and-task-breakdown`
+- **Build**: `incremental-implementation`, `dispatching-parallel-agents`
+- **Domain**: `typescript-conventions`, `react-patterns`
+- **Verify**: `source-driven-development`, `doubt-driven-development`
+- **Tooling**: `git-commit`, `ci-cd-automation`
+- **Review**: `code-review-and-quality`
+
+For detailed category definitions, see [Skill Discovery Protocol Step 2](references/skill-discovery-protocol.md#step-2-classify-discovered-skills).
+
+---
+
+## Phase C: Execute
+
+Apply each skill in the active stack according to its priority:
+
+1. Follow each skill's own process (read the skill's SKILL.md).
+2. Check the skill's **execution mode** from the profile:
+   - **Rigid skills**: Follow exactly; do not skip or reorder steps.
+     Example: `git-commit` (conventional commit format must be followed)
+   - **Flexible skills**: Apply the spirit; adapt to context.
+     Example: `code-review-and-quality` (review dimensions can be prioritized per task)
+
+   See [Skill Discovery Protocol Step 4](references/skill-discovery-protocol.md#step-4-classify-execution-mode-rigid-vs-flexible) for classification criteria.
+3. Skills layer — they are not exclusive. Multiple skills apply simultaneously.
+
+---
+
+## Phase D: Verify
+
+A task is NOT complete until verification passes:
+
+1. Confirm the task passes its defined verification conditions.
+2. Satisfy Hard Gate #1 (EVIDENCE requirement) — record evidence before proceeding.
+3. If verification fails → diagnose using Process-category skills, fix, re-verify.
+
+---
+
+## Phase E: Review
+
+1. Submit implementation for review (using Review-category skills if available).
+2. Address feedback systematically.
+3. Record any new constraints discovered during review.
 
 ---
 
 ## Hard Gates
 
+The following are **invariants active throughout all phases**.
+When a violation is detected, STOP immediately and address it.
+
 <HARD-GATE>
-Every task must pass its verification conditions before marking complete.
-Do not proceed to the next task if the current one has failing tests or
-unresolved verification criteria.
+Verification requires EVIDENCE, not confidence. Acceptable evidence:
+- Test suite passes (show command + output)
+- Build completes (show command + exit code)
+- Runtime behavior verified (show data/screenshot/log)
+"It works" without evidence is NOT verification.
+Do not proceed to the next task until evidence is recorded.
 </HARD-GATE>
 
 <HARD-GATE>
-If implementation reveals that the spec or design is incorrect or incomplete,
-stop implementation and feed back to the appropriate upstream document before
-continuing. Record the loopback with a one-line reason.
+If implementation reveals errors or gaps in spec or design, suspend
+implementation and feed back to the appropriate upstream document.
+Record the loopback with a one-line reason.
 </HARD-GATE>
 
 <HARD-GATE>
-Do not skip Skill Discovery routing. If a skill applies, you must use it.
-"This is simple enough to skip" is the most common failure mode.
+Do not skip profile-based configuration.
+- If profile does not exist → run the Skill Discovery Protocol to generate it.
+- If profile exists → load it and follow its configuration.
+"This is simple enough to skip" and "I know what to do" are the most common
+failure patterns. They defeat systematic skill routing.
+</HARD-GATE>
+
+<HARD-GATE>
+Do not skip using skills that the profile indicates should apply. If the active
+skill stack includes a skill, you must follow that skill's process. Rationalizing
+"this skill doesn't really apply here" when the profile says otherwise is not allowed.
+Override requires explicit user instruction.
 </HARD-GATE>
 
 ---
 
-## Red Flags
+## Anti-patterns
 
-These thoughts mean STOP — you are rationalizing a skill skip:
+These thoughts and behaviors signal failure — STOP when you notice them:
 
-| Thought | Reality |
-| ------- | ------- |
-| "This is a simple change, I don't need TDD" | TDD is non-negotiable. Write the failing test first. |
-| "I'll write tests after the code works" | That's not TDD. RED comes before GREEN. Always. |
-| "I know this library well enough" | Check official docs anyway (`source-driven-development`). |
-| "This decision is obvious" | If alternatives exist, use `doubt-driven-development`. |
-| "I'll clean up adjacent code while I'm here" | Stay within `task-doc` scope. Open a new task for cleanup. |
-| "I'll skip review for this small fix" | All tasks get `requesting-code-review`. No exceptions. |
-| "I can fix all these at once" | One slice at a time (`incremental-implementation`). |
-| "The skill process is overkill for this" | Rigid skills exist because shortcuts cause bugs. Use it. |
-| "I'll just do this one thing first" | Route through Skill Discovery BEFORE doing anything. |
-| "This feels productive" | Undisciplined action without skill routing wastes time. |
-
----
-
-## Failure Modes
-
-Common implementation failures this skill prevents:
-
-1. **Skipping TDD** — writing code without a failing test first, then retrofitting tests.
-2. **Big-bang implementation** — changing 10 files at once instead of incremental slices.
-3. **Assumption-driven coding** — implementing based on memory instead of verifying against docs.
-4. **Scope creep** — "improving" code outside the task boundary during implementation.
-5. **Guess-and-check debugging** — randomly changing code instead of systematic root-cause tracing.
-6. **Skipping review** — marking tasks complete without code review submission.
-7. **Silent reinterpretation** — implementing something different from what task-doc specifies without feeding back.
-8. **Over-engineering** — building abstractions and infrastructure the task doesn't require.
-9. **Ignoring loopback signals** — continuing implementation when spec/design gaps are apparent.
-10. **Confidence without evidence** — "it works" without passing tests or verified output.
+| Anti-pattern | Why it fails |
+| ------------ | ------------ |
+| "Too simple for skill configuration" | Configuration prevents unanticipated mistakes |
+| "I already know how to do this" | The profile ensures nothing is missed |
+| "I'll configure after I start" | Configuration BEFORE execution. Always |
+| "This skill doesn't apply here" | If profile says it applies, follow it. Override requires explicit user instruction |
+| "I'll clean up adjacent code" | Stay within task boundaries. File separate task |
+| "Verification is obvious" | Show evidence: tests, build output, runtime data |
+| "No review needed for small change" | Every task gets Review-category skills. No exceptions |
+| "Let me do it all at once" | Incremental execution. One slice at a time |
+| Big-bang implementation | Change many files at once → unverifiable. Each slice must be independent |
+| Assumption-driven coding | Implement from memory → verify against upstream docs instead |
+| Silent reinterpretation | Implementing differently without feeding back discrepancy |
+| Over-engineering | Building what task doesn't require |
+| Ignoring loopback signals | Continuing when spec/design gaps are apparent |
+| Confidence without evidence | "It works" without passing tests or verified data |
 
 ---
 
-## Entry Condition
+## Entry Conditions
 
-- Task units exist (from `task-doc` or equivalent) with defined verification conditions.
-- When invoked from `doc-driven-dev-flow`, Phase 4 tasks must be approved.
+- Task units with defined verification conditions exist (`task-doc` or equivalent).
+- When invoked from `doc-driven-dev-flow`, Phase 4 tasks are approved.
 
-## Completion Criteria
+## Completion Conditions
 
-- All task units have been implemented.
+- All task units are implemented.
 - Each task passes its defined verification conditions.
 - New constraints discovered during implementation are reflected in upstream documents.
-- Code review is complete (via `requesting-code-review` / `receiving-code-review`).
+- Review-category skills have been applied (code review complete).
 
 ## Loopback Rules
 
-- If a task reveals spec gaps → feed back to spec/design owner; pause that task.
-- If a test failure cannot be resolved within the task scope → invoke `systematic-debugging`.
-- If multiple independent tasks are blocked → consider `dispatching-parallel-agents`.
-- If implementation contradicts ADR constraints → update ADR or change approach.
-- Record every loopback with a one-line reason.
+- Task reveals spec insufficiency → feed back to spec/design owner; suspend that task.
+- Test failure unresolvable within task scope → invoke Process-category skills.
+- Multiple independent tasks are blocked → consider parallel execution skills.
+- Implementation contradicts ADR constraints → update ADR or change approach.
+- Record each loopback with a one-line reason.
 
 ---
 
 ## Instruction Priority
 
 1. **User's explicit instructions** (AGENTS.md, direct requests) — highest priority.
-2. **This skill and invoked workflow skills** — override default behavior.
+2. **This skill and invoked workflow skills** — override default behaviors.
 3. **Default system prompt** — lowest priority.
 
-If the user says "skip TDD for this task," follow the user. The user is in
-control. But if no override exists, skills are mandatory.
+If the user says "skip configuration for this task", follow the user.
+The user has authority. But absent override instructions, the flow is mandatory.

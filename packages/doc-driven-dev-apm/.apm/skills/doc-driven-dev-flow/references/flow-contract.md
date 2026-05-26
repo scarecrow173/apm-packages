@@ -120,11 +120,12 @@ Purpose: Decompose plan into implementation units and connect to execution.
 ## Phase 5: Implementation
 
 Purpose: Execute task units by delegating to `implementation-flow`, which
-selects and sequences workflow skills per task.
+dynamically discovers all available skills and configures the appropriate
+skill stack per task via `implementation-profile.md`.
 
 ### Steps
 
-- 5-1 Invoke `implementation-flow`: delegate per-task execution, skill selection, and verification.
+- 5-1 Invoke `implementation-flow`: delegate per-task execution, skill discovery, configuration, and verification.
 - 5-2 Constraint Feedback: if `implementation-flow` reports upstream gaps, update `adr-doc` / `design-doc` and record loopback.
 - 5-3 Completion Check: confirm all tasks pass verification via `implementation-flow` completion criteria.
 
