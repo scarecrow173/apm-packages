@@ -11,7 +11,8 @@
 | 2 | Design | `design-doc` | spec/ADR と整合した承認済み設計 |
 | 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001（承認済み設計必須） |
 | 4 | Execution Slice | `task-doc` | plan にトレース可能な検証付きタスク |
-| 5 | Exit | `doc-status` | front matter, relations, index の整合 |
+| 5 | Implementation | `implementation-flow` | 全タスクが検証通過 |
+| 6 | Exit | `doc-status` | front matter, relations, index の整合 |
 
 ## Phase 1: Briefing
 
@@ -116,7 +117,24 @@ Briefing 出力を根拠として `spec-doc` と `adr-doc` を作成する:
 - `task-doc` が plan にトレース可能である。
 - 各 task に検証手順がある。
 
-## Phase 5: Exit
+## Phase 5: Implementation
+
+目的: `implementation-flow` に委譲してタスク単位でワークフロースキルを
+選択・実行する。
+
+### ステップ
+
+- 5-1 `implementation-flow` 呼び出し: タスク単位の実行、スキル選択、検証を委譲する。
+- 5-2 制約フィードバック: `implementation-flow` が上流の不足を報告した場合、`adr-doc` / `design-doc` を更新しループバックを記録する。
+- 5-3 完了確認: `implementation-flow` の完了条件経由で全タスク検証通過を確認する。
+
+### Implementation 完了条件
+
+- `implementation-flow` が全タスク実装済み・検証通過を報告している。
+- 新たに発見された制約が上流文書に反映されている。
+- コードレビューが完了している。
+
+## Phase 6: Exit
 
 目的: `doc-status` 監査で文書整合を確認し完了判定する。
 
@@ -127,4 +145,5 @@ Briefing 出力を根拠として `spec-doc` と `adr-doc` を作成する:
 ### Exit 完了条件
 
 - front matter, relations, index が整合している。
+- 実装検証結果が文書化されている。
 - 監査結果として完了可能な状態である。

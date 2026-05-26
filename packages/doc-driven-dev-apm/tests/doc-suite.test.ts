@@ -369,5 +369,5 @@ test("doc-driven-dev-flow meta skill ships SKILL.md and flow-contract references
   assert.match(skill, /^name: doc-driven-dev-flow$/m);
   assert.match(skill, /HARD-GATE/);
   assert.match(skill, /Phase 1.*Briefing/);
-  assert.match(skill, /Phase 5.*Exit/);
+  assert.match(skill, /Phase 6.*Exit/);
 });

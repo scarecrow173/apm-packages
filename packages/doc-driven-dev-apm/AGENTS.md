@@ -72,7 +72,31 @@ Note:
 - Confirmed tests pass with `pnpm test`.
 - Checked Markdown quality with `pnpm run lint:md` when Markdown files changed.
 
-## 7. Non-Goals
+## 7. Workflow Skills (Implementation Phase)
+
+In addition to document-generation skills (which have scripts, templates, and references), this package includes **workflow skills** for the implementation phase. These are pure-markdown guidance skills with no TypeScript source or compiled scripts.
+
+- Workflow skills live only in `.apm/skills/<name>/` (no corresponding `src/skills/<name>/`).
+- They may include `references/` and/or `assets/templates/` subdirectories for supporting docs and prompt templates.
+- They do NOT participate in `pnpm run build:scripts`.
+- When editing workflow skills, update `.apm/skills/<name>/SKILL.md` (and `.ja.md`) directly.
+
+Workflow skills included:
+
+| Skill | Purpose | Origin |
+|-------|---------|--------|
+| implementation-flow | Meta skill: routes tasks to workflow skills via discovery tree | original |
+| source-driven-development | Official-docs-backed implementation | addyosmani/agent-skills (MIT) |
+| incremental-implementation | Thin vertical slices | addyosmani/agent-skills (MIT) |
+| doubt-driven-development | Adversarial fresh-context review | addyosmani/agent-skills (MIT) |
+| test-driven-development | RED-GREEN-REFACTOR cycle | obra/superpowers (MIT) |
+| systematic-debugging | 4-phase root cause process | obra/superpowers (MIT) |
+| subagent-driven-development | Task dispatch with 2-stage review | obra/superpowers (MIT) |
+| dispatching-parallel-agents | Concurrent independent subagents | obra/superpowers (MIT) |
+| requesting-code-review | Pre-review dispatch checklist | obra/superpowers (MIT) |
+| receiving-code-review | Review feedback reception process | obra/superpowers (MIT) |
+
+## 8. Non-Goals
 
 - Unrelated large refactors.
 - Requiring ADR/spec/plan/task authoring and relation tracking for this package's own implementation tasks.

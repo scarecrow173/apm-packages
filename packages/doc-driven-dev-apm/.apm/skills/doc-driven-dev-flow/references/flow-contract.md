@@ -11,7 +11,8 @@ This document defines the fixed sequence and decision rules that
 | 2 | Design | `design-doc` | approved design consistent with spec/ADR |
 | 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001 (approved design required) |
 | 4 | Execution Slice | `task-doc` | tasks traceable to plan with verification |
-| 5 | Exit | `doc-status` | front matter, relations, index integrity |
+| 5 | Implementation | `implementation-flow` | all tasks pass verification |
+| 6 | Exit | `doc-status` | front matter, relations, index integrity |
 
 ## Phase 1: Briefing
 
@@ -116,7 +117,24 @@ Purpose: Decompose plan into implementation units and connect to execution.
 - `task-doc` entries are traceable to plan.
 - Each task has verification steps.
 
-## Phase 5: Exit
+## Phase 5: Implementation
+
+Purpose: Execute task units by delegating to `implementation-flow`, which
+selects and sequences workflow skills per task.
+
+### Steps
+
+- 5-1 Invoke `implementation-flow`: delegate per-task execution, skill selection, and verification.
+- 5-2 Constraint Feedback: if `implementation-flow` reports upstream gaps, update `adr-doc` / `design-doc` and record loopback.
+- 5-3 Completion Check: confirm all tasks pass verification via `implementation-flow` completion criteria.
+
+### Implementation Completion Criteria
+
+- `implementation-flow` reports all tasks implemented and verified.
+- New constraints discovered are reflected in upstream documents.
+- Code review is complete.
+
+## Phase 6: Exit
 
 Purpose: Confirm document integrity via `doc-status` audit after execution.
 
@@ -127,4 +145,5 @@ Purpose: Confirm document integrity via `doc-status` audit after execution.
 ### Exit Completion Criteria
 
 - front matter, relations, index are consistent.
+- Implementation verification results are documented.
 - Audit result confirms completable state.
