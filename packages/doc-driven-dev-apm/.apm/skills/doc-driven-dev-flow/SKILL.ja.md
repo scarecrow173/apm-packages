@@ -32,7 +32,7 @@ Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: E
 
 | Phase | 目的 | 主担当スキル | ゲート |
 | ----- | ---- | ------------ | ------ |
-| 1 | 要望を文書入力に変換する | `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc` | 受け入れ条件付き spec + ADR |
+| 1 | 要望を文書入力に変換する | `briefing-flow` | 受け入れ条件付き spec + ADR |
 | 2 | 設計を実装可能な形へ具体化する | `design-doc` | spec/ADR と整合した承認済み設計 |
 | 3 | 実装計画へ統合する | `plan-doc` | PLAN-DOC-GATE-001（承認済み設計必須） |
 | 4 | plan を実装単位へ分解する | `task-doc` | plan にトレース可能な検証付きタスク |
@@ -42,10 +42,12 @@ Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: E
 ## フェーズ終了チェックリスト
 
 ### Phase 1 終了時
+
+`briefing-flow` に委譲する。完了条件は `briefing-flow` の Phase D ゲートで検証される:
 - [ ] spec-doc が存在し `status:` ≥ `proposed`
 - [ ] spec-doc に `acceptance_criteria:` が 1 件以上ある
 - [ ] adr-doc が存在し `alternatives:` が 2 件以上ある
-- [ ] 1-1 経路選択 (A/B/C/D) が記録されている
+- [ ] Entry Decision の選択が記録されている
 - [ ] 「実装前ブロッカー」に分類された未解決項目がない
 
 ### Phase 2 終了時
@@ -66,37 +68,38 @@ Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: E
 - [ ] タスクが plan-doc セクションにトレース可能
 - [ ] タスク間の依存関係が文書化されている
 
-## Entry Decision（Phase 1, Step 1-1）
+## Entry Decision（Phase 1 → `briefing-flow` に委譲）
 
-経路を選択する前に、自分に問いかける:
+Phase 1 は [`briefing-flow`](../briefing-flow/SKILL.ja.md) メタスキルに委譲する。
+`briefing-flow` は利用可能なスキルを動的に発見・ルーティングし、情報状態に応じて
+適切なスキルスタックを構成して spec-doc + adr-doc の完成まで導く。
 
-| 質問 | Yes なら → | No なら → |
-| ---- | --------- | -------- |
-| 問題を1文で明確に説明できるか？ | 続行 | 1-1-A (idea-refine) |
-| 解決の方向性はあるがトレードオフ分析が必要か？ | 1-1-B (brainstorming) | 続行 |
-| 今すぐ受け入れ条件を書けるか？ | 1-1-D (直接開始) | 1-1-A または 1-1-B |
-| 複数の情報源から収束が必要か？ | 1-1-C (組み合わせ) | 単一経路で進む |
+**MANDATORY**: Phase 1（Briefing）に入る際に
+[`briefing-flow` SKILL](../briefing-flow/SKILL.ja.md) を読み、以下を理解すること:
+- Entry Decision（A-1〜A-5）の経路選択
+- Briefing スキル発見プロトコルとプロファイル設定
+- スキルスタックを使った情報収集の実行
+- Phase D ゲート（spec-doc + adr-doc 完了条件）
 
-その後、現在の情報状態に基づいて経路を選択する:
-
-- **1-1-A. Problem Framing** — 課題が曖昧 → `idea-refine` を使用
-- **1-1-B. Option Framing** — 方向性はあるがトレードオフ不明 → `brainstorming` を使用
-- **1-1-C. Combined Skill Discovery** — 複数スキルが必要 → 対話で組み合わせる
-- **1-1-D. Direct Documentation Start** — 要件が明確 → `spec-doc + adr-doc` へ直接進む
-
-これらは**選択肢**であり順序ではない。情報の充足度に基づいて選択する。
+`briefing-flow` の Phase D ゲートを通過した時点で Phase 1 完了とみなす。
 
 ## Phase 1 スキルインターフェース
 
-| スキル | 入力 | 期待出力 | 完了指標 |
-|--------|------|----------|----------|
-| `idea-refine` | 曖昧な問題文または散在した要件 | 価値仮説付きの構造化された問題定義 | 未知リスト + 明確な問題文 |
-| `brainstorming` | 方向性 + 既知の制約 | トレードオフ分析付きのランク付けオプション | 評価基準テーブル + 推奨 |
-| `spec-doc` | ディスカバリーからのブリーフィングノート | 正式な仕様書 | `acceptance_criteria:` 3 件以上、`status: proposed` |
-| `adr-doc` | 重要な技術的決定ポイント | アーキテクチャ決定記録 | `alternatives:` 2 件以上、理由が文書化 |
+Phase 1 は `briefing-flow` に委譲されるため、スキルの発見・構成・実行は
+`briefing-flow` 内の Briefing スキル発見プロトコルと `briefing-profile.md` で管理される。
 
-**注**: 複数スキルは順次実行 (A→spec-doc) または並行実行 (spec-doc + adr-doc) 可能。
-完了指標で次に進むタイミングを判断する。
+以下は `briefing-flow` が管理する主要スキルの概要:
+
+| スキル | カテゴリ | 期待出力 | 完了指標 |
+|--------|----------|----------|----------|
+| `idea-refine` | Frame | 価値仮説付きの構造化された問題定義 | 未知リスト + 明確な問題文 |
+| `brainstorming` | Frame | トレードオフ分析付きのランク付けオプション | 評価基準テーブル + 推奨 |
+| `steer-web-research` | Discover | 外部情報の調査結果 | エビデンス付きの調査レポート |
+| `spec-doc` | Document | 正式な仕様書 | `acceptance_criteria:` 3 件以上、`status: proposed` |
+| `adr-doc` | Document | アーキテクチャ決定記録 | `alternatives:` 2 件以上、理由が文書化 |
+
+**注**: `briefing-flow` はこれらに限定されず、環境内の全利用可能スキルを動的に発見する。
+詳細は [`briefing-flow` SKILL](../briefing-flow/SKILL.ja.md) を参照。
 
 ## Hard Gates
 
@@ -126,20 +129,25 @@ Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: E
 
 ## プロセス
 
-1. **Entry 評価** — 1-1 のどの経路が適用されるか判定し、選択を記録する。
-2. **Discovery 深掘り** — 停止条件を満たすまで反復する（フロー契約 §1-2 参照）。
-3. **Briefing 出力** — `spec-doc` と `adr-doc` を並行して作成する。
+1. **Briefing** — `briefing-flow` に委譲する。
 
-**Do NOT Load** `flow-contract.ja.md` はまだ読まなくてよい — Phase 1-2 には SKILL.md の概要で十分。
+**MANDATORY**: Phase 1（Briefing）に入る際に
+[`briefing-flow` SKILL](../briefing-flow/SKILL.ja.md) を読み、以下を理解すること:
+- Entry Decision（A-1〜A-5）の経路選択
+- Briefing スキル発見プロトコルとプロファイル設定
+- スキルスタックを使った情報収集の実行
+- Phase E ゲート（spec-doc + adr-doc 完了条件）
 
-4. **Design** — `design-doc` を呼び出し、spec/ADR との整合を検証する。
+**Do NOT Load** `briefing-flow` の references は Phase 1 開始時に `briefing-flow` 自身が管理する。
+
+2. **Design** — `design-doc` を呼び出し、spec/ADR との整合を検証する。
 
 **MANDATORY**: Phase 3（Planning）に入る前に
 [`references/flow-contract.ja.md`](references/flow-contract.ja.md) §3-4 を読み、
 詳細なゲート条件を理解すること。PLAN-DOC-GATE-001 の要件を把握する。
 
-5. **Plan** — `plan-doc` を呼び出し、PLAN-DOC-GATE-001 を尊重する。
-6. **Execute** — `task-doc` エントリに分解し、各タスクに検証手順を付与する。
+3. **Plan** — `plan-doc` を呼び出し、PLAN-DOC-GATE-001 を尊重する。
+4. **Execute** — `task-doc` エントリに分解し、各タスクに検証手順を付与する。
 
 **MANDATORY**: Phase 5（Implementation）に入る前に
 [`implementation-flow` SKILL](../implementation-flow/SKILL.ja.md) を読み、以下を理解すること:
@@ -150,8 +158,8 @@ Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: E
 **Do NOT Load** `implementation-flow` は Phase 4 完了前には読まないこと —
 タスク分解が完了してから実装設定を始める。
 
-7. **Implement** — ワークフロースキルをタスク単位で適用し、検証通過を確認する。
-8. **Exit 監査** — `doc-status` を呼び出し、文書整合を検証する。
+5. **Implement** — ワークフロースキルをタスク単位で適用し、検証通過を確認する。
+6. **Exit 監査** — `doc-status` を呼び出し、文書整合を検証する。
 
 ## ループバックルール
 
@@ -159,7 +167,7 @@ Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: E
 設計作業で要件の不足または不明確さが判明した場合:
 1. ギャップを1行で記録: "spec-gap: [説明]"
 2. 影響を受ける spec-doc セクションを特定
-3. 1-2 Discovery Deepening を再実行（スコープ: 発見されたギャップのみ）
+3. `briefing-flow` を再実行（スコープ: 発見されたギャップのみ）
 4. spec-doc を更新、必要なら status を `proposed` に戻す
 
 ### Phase 3 → Phase 2 (設計ギャップ)

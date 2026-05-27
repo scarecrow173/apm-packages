@@ -32,7 +32,7 @@ See `references/flow-contract.md` for the full specification.
 
 | Phase | Purpose | Primary Skills | Gate |
 | ----- | ------- | -------------- | ---- |
-| 1 | Convert requests into document-ready inputs | `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc` | spec + ADR with acceptance criteria |
+| 1 | Convert requests into document-ready inputs | `briefing-flow` | spec + ADR with acceptance criteria |
 | 2 | Concretize design into implementable form | `design-doc` | approved design consistent with spec/ADR |
 | 3 | Integrate into implementation plan | `plan-doc` | PLAN-DOC-GATE-001 (approved design required) |
 | 4 | Decompose plan into task units | `task-doc` | tasks traceable to plan with verification |
@@ -42,10 +42,12 @@ See `references/flow-contract.md` for the full specification.
 ## Phase Exit Checklists
 
 ### Phase 1 Exit
+
+Delegated to `briefing-flow`. Completion is verified by `briefing-flow` Phase D gate:
 - [ ] spec-doc exists with `status:` ≥ `proposed`
 - [ ] spec-doc has `acceptance_criteria:` with ≥1 item
 - [ ] adr-doc exists with `alternatives:` ≥2
-- [ ] 1-1 route selection (A/B/C/D) recorded
+- [ ] Entry Decision selection recorded
 - [ ] No open items classified as "pre-implementation blocker"
 
 ### Phase 2 Exit
@@ -66,37 +68,40 @@ See `references/flow-contract.md` for the full specification.
 - [ ] Tasks traceable to plan-doc sections
 - [ ] Dependencies between tasks documented
 
-## Entry Decision (Phase 1, Step 1-1)
+## Entry Decision (Phase 1 → Delegated to `briefing-flow`)
 
-Before selecting a route, ask yourself:
+Phase 1 is delegated to the [`briefing-flow`](../briefing-flow/SKILL.md) meta skill.
+`briefing-flow` dynamically discovers and routes available skills, configures
+an appropriate skill stack based on information state, and drives to spec-doc +
+adr-doc completion.
 
-| Question | If Yes → | If No → |
-| -------- | -------- | ------- |
-| Can I describe the problem in one clear sentence? | Continue | 1-1-A (idea-refine) |
-| Do I have a solution direction but need trade-off analysis? | 1-1-B (brainstorming) | Continue |
-| Can I write acceptance criteria RIGHT NOW? | 1-1-D (direct start) | 1-1-A or 1-1-B |
-| Are multiple information sources needed to converge? | 1-1-C (combined) | Proceed with single route |
+**MANDATORY**: When entering Phase 1 (Briefing), read
+[`briefing-flow` SKILL](../briefing-flow/SKILL.md) to understand:
+- Entry Decision (A-1 through A-5) path selection
+- Briefing Skill Discovery Protocol and profile configuration
+- Skill stack-based information gathering execution
+- Phase D gate (spec-doc + adr-doc completion criteria)
 
-Then select one route based on the current information state:
-
-- **1-1-A. Problem Framing** — problem is vague → use `idea-refine`
-- **1-1-B. Option Framing** — direction exists but trade-offs unclear → use `brainstorming`
-- **1-1-C. Combined Skill Discovery** — multiple skills needed → combine through dialogue
-- **1-1-D. Direct Documentation Start** — requirements clear → proceed to `spec-doc + adr-doc`
-
-These are **choices**, not a sequence. Select based on information completeness.
+Phase 1 is considered complete when `briefing-flow` Phase D gate passes.
 
 ## Phase 1 Skill Interface
 
-| Skill | Input | Expected Output | Completion Indicator |
-|-------|-------|-----------------|----------------------|
-| `idea-refine` | Vague problem statement or scattered requirements | Structured problem definition with value hypothesis | Unknowns list + clear problem statement |
-| `brainstorming` | Direction + known constraints | Ranked options with trade-off analysis | Evaluation criteria table + recommendation |
-| `spec-doc` | Briefing notes from discovery | Formal specification document | `acceptance_criteria:` ≥3 items, `status: proposed` |
-| `adr-doc` | Key technical decision point | Architecture decision record | `alternatives:` ≥2, rationale documented |
+Phase 1 is delegated to `briefing-flow`, which manages skill discovery,
+configuration, and execution via the Briefing Skill Discovery Protocol and
+`briefing-profile.md`.
 
-**Note**: Multiple skills may run in sequence (A→spec-doc) or parallel (spec-doc + adr-doc).
-Completion indicator determines when to proceed.
+Key skills managed by `briefing-flow`:
+
+| Skill | Category | Expected Output | Completion Indicator |
+|-------|----------|-----------------|----------------------|
+| `idea-refine` | Frame | Structured problem definition with value hypothesis | Unknowns list + clear problem statement |
+| `brainstorming` | Frame | Ranked options with trade-off analysis | Evaluation criteria table + recommendation |
+| `steer-web-research` | Discover | External information research results | Evidence-backed research report |
+| `spec-doc` | Document | Formal specification document | `acceptance_criteria:` ≥3 items, `status: proposed` |
+| `adr-doc` | Document | Architecture decision record | `alternatives:` ≥2, rationale documented |
+
+**Note**: `briefing-flow` is not limited to these — it dynamically discovers all
+available skills in the environment. See [`briefing-flow` SKILL](../briefing-flow/SKILL.md) for details.
 
 ## Hard Gates
 
@@ -130,20 +135,25 @@ takes 10 minutes; debugging mystery code takes hours.
 
 ## Process
 
-1. **Assess Entry** — determine which 1-1 route applies; record selection.
-2. **Deepen Discovery** — iterate until stop conditions are met (see Flow Contract §1-2).
-3. **Produce Briefing Outputs** — create `spec-doc` and `adr-doc` in parallel.
+1. **Briefing** — delegate to `briefing-flow`.
 
-**Do NOT Load** `flow-contract.md` yet — SKILL.md overview is sufficient for Phase 1-2.
+**MANDATORY**: When entering Phase 1 (Briefing), read
+[`briefing-flow` SKILL](../briefing-flow/SKILL.md) to understand:
+- Entry Decision (A-1 through A-5) path selection
+- Briefing Skill Discovery Protocol and profile configuration
+- Skill stack-based information gathering execution
+- Phase D gate (spec-doc + adr-doc completion criteria)
 
-4. **Design** — invoke `design-doc`; verify consistency with spec and ADR.
+**Do NOT Load** `briefing-flow` references are managed by `briefing-flow` itself at Phase 1 start.
+
+2. **Design** — invoke `design-doc`; verify consistency with spec and ADR.
 
 **MANDATORY**: Before entering Phase 3 (Planning), read
 [`references/flow-contract.md`](references/flow-contract.md) §3-4 for detailed
 gate criteria. Understand PLAN-DOC-GATE-001 requirements.
 
-5. **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001.
-6. **Execute** — decompose into `task-doc` entries with verification steps.
+3. **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001.
+4. **Execute** — decompose into `task-doc` entries with verification steps.
 
 **MANDATORY**: Before entering Phase 5 (Implementation), read the
 [`implementation-flow` SKILL](../implementation-flow/SKILL.md) to understand:
@@ -154,8 +164,8 @@ gate criteria. Understand PLAN-DOC-GATE-001 requirements.
 **Do NOT Load** `implementation-flow` before Phase 4 completes — task decomposition
 must finish before implementation configuration begins.
 
-7. **Implement** — apply workflow skills per-task; verify each task passes.
-8. **Exit Audit** — invoke `doc-status` to validate document integrity.
+5. **Implement** — apply workflow skills per-task; verify each task passes.
+6. **Exit Audit** — invoke `doc-status` to validate document integrity.
 
 ## Loopback Rules
 
@@ -163,7 +173,7 @@ must finish before implementation configuration begins.
 When design work reveals missing or unclear requirements:
 1. Record gap in one-line reason: "spec-gap: [description]"
 2. Identify affected spec-doc section(s)
-3. Re-run 1-2 Discovery Deepening (scope: discovered gap only)
+3. Re-invoke `briefing-flow` (scope: discovered gap only)
 4. Update spec-doc, set status back to `proposed` if needed
 
 ### Phase 3 → Phase 2 (Design Gap)
