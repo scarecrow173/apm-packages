@@ -1,6 +1,6 @@
 ---
 name: briefing-flow
-description: "利用可能スキルを発見・ルーティングして情報収集・整理をオーケストレーション。使用タイミング: 新機能・変更の初期情報整理時、要件が曖昧で何から始めるべきか不明なとき、spec-doc/adr-doc作成の前段階。briefing-profile.mdを生成。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
+description: "利用可能スキルを発見・ルーティングして情報収集・整理をオーケストレーション。doc-driven-dev-flow から委譲されるブリーフィングフェーズの実行者。使用タイミング: 新機能・変更の初期情報整理時、要件が曖昧で何から始めるべきか不明なとき、spec-doc/adr-doc作成の前段階。briefing-profile.mdを生成。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
 license: MIT
 ---
 
@@ -97,6 +97,14 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 `briefing-profile.md` が存在しないか、陳腐化が検出された場合に実行するプロトコル。
 スキルソースをスキャンし、各スキルを Briefing カテゴリに分類し、プロファイルを生成する。
 
+**MANDATORY — プロトコル実行前に全文読込:**
+[`references/briefing-discovery-protocol.ja.md`](references/briefing-discovery-protocol.ja.md) を完全に読むこと。
+プロファイル生成時は追加で [`references/briefing-profile-schema.ja.md`](references/briefing-profile-schema.ja.md) と
+[`assets/templates/briefing-profile-template.ja.md`](assets/templates/briefing-profile-template.ja.md) を読むこと。
+
+**Do NOT Load:** Phase C（収集・生成）開始時にこれらの参照を再読込する必要はない。
+プロファイルが生成済みなら、Phase B ではプロファイル自体のみ読めばよい。
+
 **概要（7ステップ）:**
 
 1. **スキャン** — `.apm/skills/`、`.agents/skills/`、システムスキル等からスキルを検索。
@@ -106,8 +114,6 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 5. **デフォルトスタック** — 常時アクティブな最小セットを構築。
 6. **プロファイル生成** — リポジトリルートに `briefing-profile.md` を書込。
 7. **陳腐化チェック** — 前回生成後にスキルソースが変更されていれば再実行。
-
-詳細は [references/briefing-discovery-protocol.ja.md](references/briefing-discovery-protocol.ja.md) を参照。
 
 ---
 
@@ -146,17 +152,7 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 | 4 | Validate | 収集した情報の正確性・完全性を検証する |
 | 5 | Document | 整理された情報を正式な文書に落とし込む |
 
-**カテゴリ定義:**
-
-| カテゴリ | 割り当てルール | 例 |
-| -------- | ------------ | -- |
-| Frame | スキルが*問題・選択肢を構造化*する | `idea-refine`, `brainstorming`, `interview-me` |
-| Discover | スキルが*情報を探索・発見*する | `steer-web-research`, 外部情報収集系 |
-| Research | スキルが*深掘り調査*を行う | `source-driven-development`, ドキュメント検証 |
-| Validate | スキルが*情報の正確性を検証*する | `doubt-driven-development`, 対抗的分析 |
-| Document | スキルが*文書を生成*する | `spec-doc`, `adr-doc` |
-
-詳細なカテゴリ定義は [Briefing スキル発見プロトコル ステップ 2](references/briefing-discovery-protocol.ja.md#ステップ-2-発見されたスキルを分類) を参照。
+カテゴリの割り当てルールと例は [Briefing スキル発見プロトコル ステップ 2](references/briefing-discovery-protocol.ja.md#ステップ-2-発見されたスキルを分類) を参照。
 
 ---
 

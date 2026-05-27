@@ -1,6 +1,6 @@
 ---
 name: briefing-flow
-description: "Orchestrates information gathering and organization by discovering and routing to available skills. Use when: starting initial information gathering for new features/changes, requirements are ambiguous, preparing to write spec-doc/adr-doc. Generates briefing-profile.md. Keywords: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision."
+description: "Orchestrates information gathering and organization by discovering and routing to available skills. Delegated from doc-driven-dev-flow as the briefing phase executor. Use when: starting initial information gathering for new features/changes, requirements are ambiguous, preparing to write spec-doc/adr-doc. Generates briefing-profile.md. Keywords: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision."
 license: MIT
 ---
 
@@ -100,6 +100,14 @@ The protocol runs when `briefing-profile.md` does not exist or is detected as st
 It scans skill sources, classifies each skill for briefing relevance, and generates
 a repository-specific profile.
 
+**MANDATORY — READ IN FULL BEFORE EXECUTING:**
+Read [`references/briefing-discovery-protocol.md`](references/briefing-discovery-protocol.md) completely.
+When generating a profile, also read [`references/briefing-profile-schema.md`](references/briefing-profile-schema.md)
+and [`assets/templates/briefing-profile-template.md`](assets/templates/briefing-profile-template.md).
+
+**Do NOT Load:** These references are not needed when starting Phase C (Gather & Generate).
+If the profile already exists, Phase B only needs to read the profile itself.
+
 **Overview (7 steps):**
 
 1. **Scan** — Find skills in `.apm/skills/`, `.agents/skills/`, system skills, etc.
@@ -109,8 +117,6 @@ a repository-specific profile.
 5. **Default Stack** — Build the minimal always-active set.
 6. **Generate profile** — Write `briefing-profile.md` at repository root.
 7. **Staleness check** — Re-run if skill sources changed since last generation.
-
-See [references/briefing-discovery-protocol.md](references/briefing-discovery-protocol.md) for the detailed protocol.
 
 ---
 
@@ -149,17 +155,7 @@ ACTIVE SKILL STACK FOR THIS BRIEFING:
 | 4 | Validate | Verify accuracy and completeness of gathered information |
 | 5 | Document | Formalize organized information into official documents |
 
-**Category definitions:**
-
-| Category | Assignment rule | Examples |
-| -------- | -------------- | -------- |
-| Frame | Skill *structures problems or options* | `idea-refine`, `brainstorming`, `interview-me` |
-| Discover | Skill *explores and finds information* | `steer-web-research`, external info gathering |
-| Research | Skill *conducts deep-dive investigation* | `source-driven-development`, doc verification |
-| Validate | Skill *verifies accuracy of information* | `doubt-driven-development`, adversarial analysis |
-| Document | Skill *produces formal documents* | `spec-doc`, `adr-doc` |
-
-For detailed category definitions, see [Briefing Skill Discovery Protocol Step 2](references/briefing-discovery-protocol.md#step-2-classify-discovered-skills).
+For category assignment rules and examples, see [Briefing Skill Discovery Protocol Step 2](references/briefing-discovery-protocol.md#step-2-classify-discovered-skills).
 
 ---
 
