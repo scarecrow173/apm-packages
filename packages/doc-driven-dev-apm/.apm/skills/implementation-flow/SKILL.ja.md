@@ -1,6 +1,6 @@
 ---
 name: implementation-flow
-description: "利用可能スキルを発見・ルーティングしてコード実装をオーケストレーション。使用タイミング: task-docエントリの実行時、実装作業の開始時、複数スキルの連携時。implementation-profile.mdを生成。キーワード: implementation, task-doc, skill stack, code changes。"
+description: "利用可能スキルを発見・ルーティングしてコード実装をオーケストレーション。使用タイミング: task-docエントリの実行時、実装作業の開始時、複数スキルの連携時。implementation-profile.jsonを生成。キーワード: implementation, task-doc, skill stack, code changes。"
 license: MIT
 ---
 
@@ -43,7 +43,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 | フェーズ | 目的 | 出力 |
 | -------- | ---- | ---- |
-| A. 評価 | タスクを理解し、`implementation-profile.md` を確認 | タスク特性の特定 |
+| A. 評価 | タスクを理解し、`implementation-profile.json` を確認 | タスク特性の特定 |
 | B. 構成 | スキルを発見し、タスク用のスキルスタックを構築/読込 | アクティブスキルスタックの宣言 |
 | C. 実行 | 優先度順にスキルを適用 | コード変更の実装 |
 | D. 検証 | タスクが検証条件を通過することを確認 | 正しさのエビデンス |
@@ -77,58 +77,50 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 | git 操作や CI が必要 | ツール固有のワークフロースキル | Tooling |
 | 完了準備が整った | コードレビュースキル | Review |
 
-このマッピングは一般的なフレームワーク。`implementation-profile.md` の Override Rules は
+このマッピングは一般的なフレームワーク。`implementation-profile.json` の invocation resolution は
 このマッピングのリポジトリ固有インスタンス化であり、具体的なスキル名と条件を指定する。
 
-**プロファイル確認:** `implementation-profile.md` をリポジトリ直下で確認する。
+**プロファイル確認:** `implementation-profile.json` をリポジトリ直下で確認する。
 
-> **`implementation-profile.md` とは？**
+> **`implementation-profile.json` とは？**
 > リポジトリ固有の構成ファイル。利用可能な全スキルをリストし、
 > カテゴリに割り当て、always-on か conditional かを定義し、
-> デフォルトスキルスタックとオーバーライドルールを指定する。
-> スキル発見プロトコルで一度生成され、スキル変更時に更新される。
+> フロースタックと invocation resolution を指定する。
+> `sdp generate` コマンドで生成され、スキル変更時に更新される。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → 以下のスキル発見プロトコルを実行する。
-- 存在するが破損（YAMLパースエラー、必須フィールド欠落）の場合 →
-  削除してスキル発見プロトコルで再生成する。
+- 存在しない場合 → `sdp generate --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml` を実行する。
+- 存在するが破損の場合 → 削除して同じコマンドで再生成する。
 
 ---
 
 ## スキル発見プロトコル
 
-`implementation-profile.md` が存在しないか、陳腐化が検出された場合に実行するプロトコル。
-スキルソースをスキャンし、各スキルを分類し、リポジトリ固有のプロファイルを生成する。
+プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
-**概要（7ステップ）:**
+**コマンド:**
+- 生成/更新: `sdp generate --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml`
+- 検証: `sdp validate --profile implementation-profile.json --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml`
+- クエリ: `sdp query --profile implementation-profile.json <subcommand>`
 
-1. **スキャン** — `.apm/skills/`、`.github/copilot-instructions.md` などからスキルを検索。
-2. **分類** — 各スキルをカテゴリ（Process, Build, Domain, Verify, Tooling, Review）に割当。
-3. **活性化** — スコープに基づき `always-on` または `conditional` とマーク。
-4. **実行モード** — `rigid`（正確に従う）または `flexible`（文脈に適応）に分類。
-5. **デフォルトスタック** — 常時アクティブな最小セットを構築。
-6. **プロファイル生成** — リポジトリルートに `implementation-profile.md` を書込。
-7. **陳腐化チェック** — 前回生成後にスキルソースが変更されていれば再実行。
-
-詳細は [references/skill-discovery-protocol.ja.md](references/skill-discovery-protocol.ja.md) を参照。
-
-このプロトコルは、リポジトリ固有の `implementation-profile.md` を生成する。すべての利用可能なスキル、カテゴリ、活性化モード、およびこのリポジトリのデフォルトスキルスタックを一覧にする。
+詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
 
 ---
 
 ## Phase B: 構成
 
-`implementation-profile.md` が利用可能な状態で:
+`implementation-profile.json` が利用可能な状態で:
 
-1. **デフォルトスタックを読込** — 全タスクに適用されるスキル。
-2. **オーバーライドルールを適用** — タスク特性をオーバーライド条件と照合。
-3. **競合を解決** — 同じカテゴリで複数スキルが活性化された場合:
+1. **フロースタックを読込**: `sdp query --profile implementation-profile.json flow-stack`
+2. **解決を確認**: `sdp query --profile implementation-profile.json resolution`
+3. **実行ポリシーを確認**: `sdp query --profile implementation-profile.json execution-policy --skill <name>`
+4. **競合を解決** — 同じカテゴリで複数スキルが活性化された場合:
    - より具体的な条件が優先（例: 「TypeScriptファイル」 > 「任意のファイル」）。
    - 明示的なプロファイルルールが推論された活性化より優先。
    - それでも同等なら両方適用（スキルはレイヤー、排他しない）。
-4. **Domain/Tooling スキルを追加** — タスクで検出された言語、フレームワーク、プラットフォームに基づく。
-   - **Override Rules に一致するものがない場合:** デフォルトスタックのみで進行。「追加スキル: なし」と宣言する。
-5. **アクティブスキルスタックを宣言:**
+5. **Domain/Tooling スキルを追加** — タスクで検出された言語、フレームワーク、プラットフォームに基づく。
+   - **resolution override に一致するものがない場合:** フロースタックのデフォルトのみで進行。「追加スキル: なし」と宣言する。
+6. **アクティブスキルスタックを宣言:**
 
 ```text
 このタスクのアクティブスキルスタック:
@@ -158,7 +150,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 - **Tooling**: `git-commit`, `ci-cd-automation`
 - **Review**: `code-review-and-quality`
 
-詳細なカテゴリ定義は [スキル発見プロトコル ステップ 2](references/skill-discovery-protocol.ja.md#ステップ-2-発見されたスキルを分類) を参照。
+詳細なカテゴリ定義はアダプターの `classification.taxonomy`（`references/implementation-adapter.yaml`）を参照。
 
 ---
 
@@ -173,7 +165,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
    - **Flexible スキル**: 精神を適用; 文脈に合わせる。
      例: `code-review-and-quality`（レビュー観点をタスクごとに優先度調整可）
 
-   分類基準は [スキル発見プロトコル ステップ 4](references/skill-discovery-protocol.ja.md#ステップ-4-実行モードを分類rigid-vs-flexible) を参照。
+   `sdp query --profile implementation-profile.json execution-policy --skill <name>` で確認。
 3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。
 
 ---
@@ -218,7 +210,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 <HARD-GATE>
 プロファイルベースの構成をスキップしてはならない。
-- プロファイルが存在しない場合 → スキル発見プロトコルを実行して生成する。
+- プロファイルが存在しない場合 → `sdp generate` を実行して生成する。
 - プロファイルが存在する場合 → 読み込んでその構成に従う。
 「これは簡単だからスキップしてよい」「やり方はわかっている」が最も多い
 失敗パターン。体系的なスキルルーティングの目的を損なう。
