@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "validated_at": {
+      "type": "string"
+    },
+    "skill_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "capability_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "slot_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slot_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "default_skill": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot_id",
+          "description"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "provides": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "capability": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "capability"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "uses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "capability": {
+                  "type": "string"
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "default_skill": {
+                  "type": "string"
+                },
+                "override_allowed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "capability",
+                "required",
+                "override_allowed"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "execution_policy": {
+            "type": "object",
+            "properties": {
+              "strictness": {
+                "type": "string",
+                "enum": [
+                  "rigid",
+                  "flexible"
+                ]
+              },
+              "sequence_required": {
+                "type": "boolean"
+              },
+              "allow_step_reordering": {
+                "type": "boolean"
+              },
+              "allow_partial_application": {
+                "type": "boolean"
+              },
+              "guidance": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "strictness",
+              "sequence_required",
+              "allow_step_reordering",
+              "allow_partial_application"
+            ],
+            "additionalProperties": false
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "provides",
+          "uses",
+          "execution_policy",
+          "tags"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "generated_at",
+    "validated_at",
+    "skill_count",
+    "capability_count",
+    "slot_count",
+    "slots",
+    "skills"
+  ],
+  "additionalProperties": false
+}
