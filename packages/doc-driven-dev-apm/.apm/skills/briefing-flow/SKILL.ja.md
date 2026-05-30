@@ -1,6 +1,6 @@
 ---
 name: briefing-flow
-description: "利用可能スキルを発見・ルーティングして情報収集・整理をオーケストレーション。doc-driven-dev-flow から委譲されるブリーフィングフェーズの実行者。使用タイミング: 新機能・変更の初期情報整理時、要件が曖昧で何から始めるべきか不明なとき、spec-doc/adr-doc作成の前段階。briefing-profile.mdを生成。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
+description: "利用可能スキルを発見・ルーティングして情報収集・整理をオーケストレーション。doc-driven-dev-flow から委譲されるブリーフィングフェーズの実行者。使用タイミング: 新機能・変更の初期情報整理時、要件が曖昧で何から始めるべきか不明なとき、spec-doc/adr-doc作成の前段階。briefing-profile.jsonを生成。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
 license: MIT
 ---
 
@@ -78,60 +78,45 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 収集・生成  →  Phase
 これらは**選択肢**であり順序ではない。情報の充足度に基づいて選択する。
 A-4 を選んだ場合でも Phase B（構成）は省略しない — Document カテゴリスキルの構成が必要。
 
-**プロファイル確認:** `briefing-profile.md` をリポジトリ直下で確認する。
+**プロファイル確認:** `briefing-profile.json` をリポジトリ直下で確認する。
 
-> **`briefing-profile.md` とは？**
-> リポジトリ固有の構成ファイル。Briefing に利用可能な全スキルをリストし、
-> カテゴリに割り当て、always-on か conditional かを定義し、
-> デフォルトスキルスタックとオーバーライドルールを指定する。
-> スキル発見プロトコルで一度生成され、スキル変更時に更新される。
+> **`briefing-profile.json` とは？**
+> リポジトリ固有の構成ファイル（JSON）。Briefing に利用可能な全スキルをリストし、
+> カテゴリに割り当て、フロースタックスロットと活性化ルールを定義し、
+> 呼び出し解決を指定する。`sdp generate` で生成され、
+> `sdp validate` で検証される。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → 以下のスキル発見プロトコルを実行する。
-- 存在するが破損の場合 → 削除してスキル発見プロトコルで再生成する。
+- 存在しない場合 → 実行: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
+- 存在するが陳腐化/破損の場合 → 実行: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
 
 ---
 
 ## スキル発見プロトコル
 
-`briefing-profile.md` が存在しないか、陳腐化が検出された場合に実行するプロトコル。
-スキルソースをスキャンし、各スキルを Briefing カテゴリに分類し、プロファイルを生成する。
+プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
-**MANDATORY — プロトコル実行前に全文読込:**
-[`references/briefing-discovery-protocol.ja.md`](references/briefing-discovery-protocol.ja.md) を完全に読むこと。
-プロファイル生成時は追加で [`references/briefing-profile-schema.ja.md`](references/briefing-profile-schema.ja.md) と
-[`assets/templates/briefing-profile-template.ja.md`](assets/templates/briefing-profile-template.ja.md) を読むこと。
+**コマンド:**
+- 生成/更新: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
+- 検証: `sdp validate --profile briefing-profile.json --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
+- クエリ: `sdp query --profile briefing-profile.json <サブコマンド>`
 
-**Do NOT Load:** Phase C（収集・生成）開始時にこれらの参照を再読込する必要はない。
-プロファイルが生成済みなら、Phase B ではプロファイル自体のみ読めばよい。
-
-**概要（7ステップ）:**
-
-1. **スキャン** — `.apm/skills/`、`.agents/skills/`、システムスキル等からスキルを検索。
-2. **分類** — 各スキルを Briefing カテゴリ（Discover, Frame, Research, Validate, Document）に割当。
-3. **活性化** — スコープに基づき `always-on` または `conditional` とマーク。
-4. **実行モード** — `rigid`（正確に従う）または `flexible`（文脈に適応）に分類。
-5. **デフォルトスタック** — 常時アクティブな最小セットを構築。
-6. **プロファイル生成** — リポジトリルートに `briefing-profile.md` を書込。
-7. **陳腐化チェック** — 前回生成後にスキルソースが変更されていれば再実行。
+詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
 
 ---
 
 ## Phase B: 構成
 
-`briefing-profile.md` が利用可能な状態で:
+`briefing-profile.json` が利用可能な状態で:
 
-1. **デフォルトスタックを読込** — 全ブリーフィングに適用されるスキル。
-2. **オーバーライドルールを適用** — 情報特性をオーバーライド条件と照合。
-3. **競合を解決** — 同じカテゴリで複数スキルが活性化された場合:
-   - より具体的な条件が優先。
-   - 明示的なプロファイルルールが推論された活性化より優先。
-   - それでも同等なら両方適用（スキルはレイヤー、排他しない）。
-4. **Entry Decision に基づくスキル追加** — Phase A で判定した経路に対応するカテゴリを優先。
-   - A-1/A-2 → Frame カテゴリを最優先に活性化。
-   - A-3 → 全カテゴリから条件に合致するスキルを活性化。
-   - A-5 → Discover/Research カテゴリを最優先に活性化。
-   - **Override Rules に一致するものがない場合:** デフォルトスタックのみで進行。
+1. **フロースタックを読込**: `sdp query --profile briefing-profile.json flow-stack`
+2. **Entry Decision に基づく活性化**: Phase A で判定した経路に対応するカテゴリを優先:
+   - A-1/A-2 → Frame カテゴリスキルを優先
+   - A-3 → 全カテゴリからマッチするスキルを活性化
+   - A-5 → Discover/Research カテゴリスキルを優先
+   - **マッチするスロットがない場合:** デフォルトスタックのみで進行。
+3. **解決状況を確認**: `sdp query --profile briefing-profile.json resolution`
+4. **実行ポリシーを確認**: `sdp query --profile briefing-profile.json execution-policy --skill <名前>`
 5. **アクティブスキルスタックを宣言:**
 
 ```text
@@ -152,7 +137,7 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 | 4 | Validate | 収集した情報の正確性・完全性を検証する |
 | 5 | Document | 整理された情報を正式な文書に落とし込む |
 
-カテゴリの割り当てルールと例は [Briefing スキル発見プロトコル ステップ 2](references/briefing-discovery-protocol.ja.md#ステップ-2-発見されたスキルを分類) を参照。
+カテゴリタクソノミーの詳細は [Briefing スキル発見プロトコルリファレンス](references/briefing-discovery-protocol.ja.md) を参照。
 
 ---
 
@@ -253,7 +238,7 @@ Phase C は以下の停止条件を**全て**満たすまで反復する:
 
 <HARD-GATE>
 プロファイルベースの構成をスキップしてはならない。
-- プロファイルが存在しない場合 → スキル発見プロトコルを実行して生成する。
+- プロファイルが存在しない場合 → `sdp generate` を実行して生成する。
 - プロファイルが存在する場合 → 読み込んでその構成に従う。
 「要件は明確だからスキップしてよい」「このパターンは知っている」が最も多い
 失敗パターン。体系的なスキルルーティングの目的を損なう。
