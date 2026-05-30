@@ -1,0 +1,41 @@
+#!/usr/bin/env node
+"use strict";
+
+// src/skills/skill-discovery-protocol/scripts/sdp.ts
+var { spawnSync } = require("node:child_process");
+var path = require("node:path");
+function usage() {
+  return `Usage: sdp <command> [options]
+
+Commands:
+  generate    Generate skill catalog and flow profile
+  validate    Validate artifacts or adapter
+  query       Query flow profile data
+
+Run 'sdp <command> --help' for command-specific usage.`;
+}
+function main() {
+  const args = process.argv.slice(2);
+  const command = args[0];
+  if (!command || command === "--help" || command === "-h") {
+    console.log(usage());
+    return;
+  }
+  const remaining = args.slice(1);
+  const scriptDir = __dirname;
+  const validCommands = ["generate", "validate", "query"];
+  if (!validCommands.includes(command)) {
+    console.error(`Unknown command: ${command}`);
+    console.error(usage());
+    process.exitCode = 2;
+    return;
+  }
+  const scriptPath = path.join(scriptDir, `${command}.js`);
+  const result = spawnSync(process.execPath, [scriptPath, ...remaining], {
+    cwd: process.cwd(),
+    stdio: "inherit",
+    windowsHide: true
+  });
+  process.exitCode = result.status ?? 1;
+}
+main();

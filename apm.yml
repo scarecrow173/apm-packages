@@ -17,6 +17,7 @@ dependencies:
   - addyosmani/agent-skills
   - ./packages/steer-enterprise-web-research-apm
   - softaworks/agent-toolkit/skills/skill-judge
+  - obra/superpowers
   mcp:
   - name: mise
     registry: false

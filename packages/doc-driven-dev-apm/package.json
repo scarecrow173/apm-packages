@@ -5,7 +5,7 @@
   "scripts": {
     "build": "pnpm run build:scripts",
     "build:scripts": "tsx scripts/build-skill-scripts.ts",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --test tests/*.test.ts tests/**/*.test.ts",
     "lint:md": "markdownlint-cli2"
   },
   "keywords": [
@@ -23,6 +23,7 @@
   "packageManager": "pnpm@11.2.2",
   "dependencies": {
     "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",
