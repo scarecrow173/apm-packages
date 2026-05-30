@@ -1,0 +1,850 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { spawnSync } = require("node:child_process");
+const test = require("node:test");
+
+const skillRoot = path.resolve(__dirname, "../../../.apm/skills");
+const sdpScripts = path.join(skillRoot, "skill-discovery-protocol", "scripts");
+
+function tempDir() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "sdp-integration-"));
+}
+
+function runGenerate(args: string[], cwd: string) {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(sdpScripts, "generate.js"), ...args],
+    { cwd, encoding: "utf8", windowsHide: true },
+  );
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+function runValidate(args: string[], cwd: string) {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(sdpScripts, "validate.js"), ...args],
+    { cwd, encoding: "utf8", windowsHide: true },
+  );
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+function runQuery(args: string[], cwd: string) {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(sdpScripts, "query.js"), ...args],
+    { cwd, encoding: "utf8", windowsHide: true },
+  );
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+// ─── Mock Skills ───
+
+const MOCK_SKILLS = {
+  "mock-debug-skill": `---
+name: mock-debug-skill
+description: "Debugging and diagnosis of test failures"
+version: "1.0.0"
+provides:
+  - capability: debugging
+    description: "Root cause analysis"
+uses:
+  - capability: code_review
+    required: false
+    default_skill: "mock-review-skill"
+    override_allowed: true
+execution_policy:
+  strictness: "rigid"
+  sequence_required: true
+  allow_step_reordering: false
+  allow_partial_application: false
+  guidance: "Follow 5-step diagnosis"
+tags: ["process", "diagnosis"]
+---
+
+# Mock Debug Skill
+
+A mock skill for testing the discovery protocol.
+`,
+  "mock-review-skill": `---
+name: mock-review-skill
+description: "Code review and quality gate"
+version: "1.0.0"
+provides:
+  - capability: code_review
+    description: "Multi-axis code review"
+uses: []
+execution_policy:
+  strictness: "rigid"
+  sequence_required: true
+  allow_step_reordering: false
+  allow_partial_application: false
+  guidance: "Follow review checklist"
+tags: ["review", "quality"]
+---
+
+# Mock Review Skill
+
+A mock skill for code review.
+`,
+  "mock-impl-skill": `---
+name: mock-impl-skill
+description: "Incremental implementation delivery"
+version: "1.0.0"
+provides:
+  - capability: incremental_implementation
+    description: "Step-by-step implementation"
+uses:
+  - capability: debugging
+    required: false
+    default_skill: "mock-debug-skill"
+    override_allowed: true
+execution_policy:
+  strictness: "flexible"
+  sequence_required: false
+  allow_step_reordering: true
+  allow_partial_application: true
+  guidance: "Deliver incrementally"
+tags: ["build", "implementation"]
+---
+
+# Mock Implementation Skill
+
+A mock skill for incremental implementation.
+`,
+  "mock-research-skill": `---
+name: mock-research-skill
+description: "Web research and information gathering"
+version: "1.0.0"
+provides:
+  - capability: web_research
+    description: "External information discovery"
+  - capability: information_gathering
+    description: "Source collection"
+uses:
+  - capability: code_review
+    required: false
+    default_skill: "mock-review-skill"
+    override_allowed: true
+execution_policy:
+  strictness: "flexible"
+  sequence_required: false
+  allow_step_reordering: true
+  allow_partial_application: true
+  guidance: "Search iteratively"
+tags: ["discover", "search", "research"]
+---
+
+# Mock Research Skill
+
+A mock skill for web research.
+`,
+};
+
+// ─── Implementation-flow adapter (self-contained, no extends) ───
+
+const IMPLEMENTATION_ADAPTER = `schema_version: "1.0"
+adapter_id: "impl-flow-test"
+
+protocol:
+  name: "skill-discovery-protocol"
+  min_version: "1.0"
+
+enabled: true
+
+scan:
+  scopes:
+    project:
+      enabled: true
+      roots:
+        - ".apm/skills"
+    user:
+      enabled: false
+      roots: []
+    organization:
+      enabled: false
+      roots: []
+    builtin:
+      enabled: false
+      roots: []
+
+profile:
+  title: "Implementation Profile"
+
+flow_stack:
+  slots:
+    - slot_id: "process_diagnosis"
+      slot_type: "exclusive"
+      activation: "conditional"
+      default:
+        skill: "mock-debug-skill"
+        reason: "Bug fixes need diagnosis first"
+    - slot_id: "build_structure"
+      slot_type: "layerable"
+      activation: "always"
+      default:
+        skill: "mock-impl-skill"
+        reason: "All implementation uses incremental delivery"
+    - slot_id: "review_gate"
+      slot_type: "exclusive"
+      activation: "always"
+      default:
+        skill: "mock-review-skill"
+        reason: "Every task requires review"
+
+classification:
+  unmatched:
+    action: "assign"
+    category: "uncategorized"
+    severity: "warn"
+  taxonomy:
+    - id: "process"
+      label: "Process"
+      description: "Skills that determine how to approach problems"
+      match:
+        capabilities: ["debugging"]
+        tags: ["process", "diagnosis"]
+        description_patterns: ["debug", "diagnos"]
+    - id: "build"
+      label: "Build"
+      description: "Skills that structure execution"
+      match:
+        capabilities: ["incremental_implementation"]
+        tags: ["build", "implementation"]
+        description_patterns: ["implement", "incremental"]
+    - id: "review"
+      label: "Review"
+      description: "Skills that provide post-implementation gates"
+      match:
+        capabilities: ["code_review"]
+        tags: ["review"]
+        description_patterns: ["review"]
+    - id: "uncategorized"
+      label: "Uncategorized"
+      description: "Fallback"
+      match:
+        capabilities: []
+        tags: []
+        description_patterns: []
+
+invocation_resolution:
+  overrides:
+    slots:
+      process_diagnosis:
+        use: "mock-debug-skill"
+        reason: "Primary diagnosis tool"
+    capabilities: {}
+  resolution_order:
+    - "slot_override"
+    - "capability_override"
+    - "default_skill"
+    - "provider_lookup"
+  unresolved:
+    required: "warn"
+    optional: "warn"
+  invalid_override:
+    unknown_skill: "warn"
+    capability_mismatch: "warn"
+    override_not_allowed: "warn"
+
+validation:
+  schema: true
+  staleness:
+    enabled: true
+    basis: "validated_at"
+    max_age_days: 30
+  deterministic:
+    enabled: true
+    compare:
+      - "profile"
+  invocation:
+    enabled: false
+
+render:
+  stable_sort:
+    skills: ["name"]
+    invocations: ["source_skill", "slot", "capability"]
+  normalize_whitespace: true
+  newline: "lf"
+
+artifacts:
+  protocol:
+    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+    flow_profile: "tasks/impl-flow-test-profile.json"
+
+readable_outputs:
+  enabled: false
+  include: []
+`;
+
+// ─── Briefing-flow adapter (self-contained, no extends) ───
+
+const BRIEFING_ADAPTER = `schema_version: "1.0"
+adapter_id: "briefing-flow-test"
+
+protocol:
+  name: "skill-discovery-protocol"
+  min_version: "1.0"
+
+enabled: true
+
+scan:
+  scopes:
+    project:
+      enabled: true
+      roots:
+        - ".apm/skills"
+    user:
+      enabled: false
+      roots: []
+    organization:
+      enabled: false
+      roots: []
+    builtin:
+      enabled: false
+      roots: []
+
+profile:
+  title: "Briefing Profile"
+
+flow_stack:
+  slots:
+    - slot_id: "discover_gather"
+      slot_type: "layerable"
+      activation: "conditional"
+      default:
+        skill: "mock-research-skill"
+        reason: "External research for discovery"
+    - slot_id: "validate_check"
+      slot_type: "layerable"
+      activation: "conditional"
+      default:
+        skill: "mock-review-skill"
+        reason: "Accuracy verification"
+    - slot_id: "document_output"
+      slot_type: "layerable"
+      activation: "always"
+      default:
+        skill: "mock-impl-skill"
+        reason: "All briefings produce output"
+
+classification:
+  unmatched:
+    action: "assign"
+    category: "uncategorized"
+    severity: "warn"
+  taxonomy:
+    - id: "discover"
+      label: "Discover"
+      description: "Skills that explore and find information"
+      match:
+        capabilities: ["web_research", "information_gathering"]
+        tags: ["discover", "search"]
+        description_patterns: ["explore", "search", "find"]
+    - id: "research"
+      label: "Research"
+      description: "Skills that conduct deep investigation"
+      match:
+        capabilities: []
+        tags: ["research", "investigation"]
+        description_patterns: ["investigate", "evidence"]
+    - id: "validate"
+      label: "Validate"
+      description: "Skills that verify accuracy"
+      match:
+        capabilities: ["code_review"]
+        tags: ["review", "quality"]
+        description_patterns: ["review", "quality"]
+    - id: "uncategorized"
+      label: "Uncategorized"
+      description: "Fallback"
+      match:
+        capabilities: []
+        tags: []
+        description_patterns: []
+
+invocation_resolution:
+  overrides:
+    slots: {}
+    capabilities: {}
+  resolution_order:
+    - "slot_override"
+    - "capability_override"
+    - "default_skill"
+    - "provider_lookup"
+  unresolved:
+    required: "warn"
+    optional: "warn"
+  invalid_override:
+    unknown_skill: "warn"
+    capability_mismatch: "warn"
+    override_not_allowed: "warn"
+
+validation:
+  schema: true
+  staleness:
+    enabled: true
+    basis: "validated_at"
+    max_age_days: 30
+  deterministic:
+    enabled: true
+    compare:
+      - "profile"
+  invocation:
+    enabled: false
+
+render:
+  stable_sort:
+    skills: ["name"]
+    invocations: ["source_skill", "slot", "capability"]
+  normalize_whitespace: true
+  newline: "lf"
+
+artifacts:
+  protocol:
+    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+    flow_profile: "tasks/briefing-flow-test-profile.json"
+
+readable_outputs:
+  enabled: false
+  include: []
+`;
+
+// ─── General adapter (self-contained) ───
+
+const GENERAL_ADAPTER = `schema_version: "1.0"
+adapter_id: "general-test"
+
+protocol:
+  name: "skill-discovery-protocol"
+  min_version: "1.0"
+
+enabled: true
+
+scan:
+  scopes:
+    project:
+      enabled: true
+      roots:
+        - ".apm/skills"
+    user:
+      enabled: false
+      roots: []
+    organization:
+      enabled: false
+      roots: []
+    builtin:
+      enabled: false
+      roots: []
+
+profile:
+  title: "General Skill Reference"
+
+flow_stack:
+  slots: []
+
+classification:
+  unmatched:
+    action: "assign"
+    category: "uncategorized"
+    severity: "warn"
+  taxonomy:
+    - id: "process"
+      label: "Process"
+      description: "Process skills"
+      match:
+        capabilities: ["debugging"]
+        tags: ["process", "diagnosis"]
+        description_patterns: ["debug", "diagnos"]
+    - id: "build"
+      label: "Build"
+      description: "Build skills"
+      match:
+        capabilities: ["incremental_implementation"]
+        tags: ["build", "implementation"]
+        description_patterns: ["implement"]
+    - id: "review"
+      label: "Review"
+      description: "Review skills"
+      match:
+        capabilities: ["code_review"]
+        tags: ["review", "quality"]
+        description_patterns: ["review"]
+    - id: "discover"
+      label: "Discover"
+      description: "Discovery skills"
+      match:
+        capabilities: ["web_research", "information_gathering"]
+        tags: ["discover", "search"]
+        description_patterns: ["research", "search"]
+    - id: "uncategorized"
+      label: "Uncategorized"
+      description: "Fallback"
+      match:
+        capabilities: []
+        tags: []
+        description_patterns: []
+
+invocation_resolution:
+  overrides:
+    slots: {}
+    capabilities: {}
+  resolution_order:
+    - "slot_override"
+    - "capability_override"
+    - "default_skill"
+    - "provider_lookup"
+  unresolved:
+    required: "fail"
+    optional: "warn"
+  invalid_override:
+    unknown_skill: "fail"
+    capability_mismatch: "warn"
+    override_not_allowed: "warn"
+
+validation:
+  schema: true
+  staleness:
+    enabled: true
+    basis: "validated_at"
+    max_age_days: 30
+  deterministic:
+    enabled: true
+    compare:
+      - "profile"
+  invocation:
+    enabled: false
+
+render:
+  stable_sort:
+    skills: ["name"]
+    invocations: ["source_skill", "slot", "capability"]
+  normalize_whitespace: true
+  newline: "lf"
+
+artifacts:
+  protocol:
+    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+    flow_profile: "tasks/general-test-profile.json"
+
+readable_outputs:
+  enabled: false
+  include: []
+`;
+
+// ─── Setup helpers ───
+
+function setupSkills(dir: string) {
+  const skillsDir = path.join(dir, ".apm", "skills");
+  for (const [name, content] of Object.entries(MOCK_SKILLS)) {
+    const skillDir = path.join(skillsDir, name);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, "SKILL.md"), content, "utf8");
+  }
+  fs.mkdirSync(path.join(dir, "tasks"), { recursive: true });
+}
+
+function setupImplFlow(dir: string) {
+  setupSkills(dir);
+  fs.writeFileSync(path.join(dir, "impl-adapter.yaml"), IMPLEMENTATION_ADAPTER, "utf8");
+}
+
+function setupBriefingFlow(dir: string) {
+  setupSkills(dir);
+  fs.writeFileSync(path.join(dir, "briefing-adapter.yaml"), BRIEFING_ADAPTER, "utf8");
+}
+
+function setupGeneralAdapter(dir: string) {
+  setupSkills(dir);
+  fs.writeFileSync(path.join(dir, "general-adapter.yaml"), GENERAL_ADAPTER, "utf8");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Integration: implementation-flow adapter
+// ═══════════════════════════════════════════════════════════════════
+
+test("integration: impl-flow adapter generates valid profile", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+
+  const result = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const profilePath = path.join(dir, "tasks", "impl-flow-test-profile.json");
+  assert.ok(fs.existsSync(profilePath), "Profile should exist");
+
+  const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+  assert.equal(profile.schema_version, "1.0");
+  assert.equal(profile.adapter_id, "impl-flow-test");
+  assert.ok(profile.flow_stack.slots.length >= 3);
+  assert.ok(profile.classification.categories.length > 0);
+  assert.ok(profile.resolved_invocations.length > 0);
+});
+
+test("integration: impl-flow profile validates successfully", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+
+  runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+
+  const result = runValidate(
+    ["--profile", "tasks/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Overall:       pass"));
+});
+
+test("integration: impl-flow profile queryable with all subcommands", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+  runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+
+  const profile = "tasks/impl-flow-test-profile.json";
+  const subcommands = [
+    ["categories"],
+    ["flow-stack"],
+    ["resolution"],
+    ["execution-policy"],
+    ["unresolved"],
+    ["runtime-guidance"],
+  ];
+
+  for (const args of subcommands) {
+    const result = runQuery(["--profile", profile, ...args], dir);
+    assert.equal(result.status, 0, `${args[0]} failed: ${result.stderr}`);
+    JSON.parse(result.stdout); // Must be valid JSON
+  }
+});
+
+test("integration: impl-flow re-generation is idempotent", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+
+  runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+
+  const profilePath = path.join(dir, "tasks", "impl-flow-test-profile.json");
+  const catalogPath = path.join(dir, "tasks", "skill-reference-catalog.json");
+  const profile1 = fs.readFileSync(profilePath, "utf8");
+  const catalog1 = fs.readFileSync(catalogPath, "utf8");
+
+  runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+  const profile2 = fs.readFileSync(profilePath, "utf8");
+  const catalog2 = fs.readFileSync(catalogPath, "utf8");
+
+  assert.equal(profile1, profile2, "Profile should be identical on re-run");
+  assert.equal(catalog1, catalog2, "Catalog should be identical on re-run");
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Integration: briefing-flow adapter
+// ═══════════════════════════════════════════════════════════════════
+
+test("integration: briefing-flow adapter generates valid profile", () => {
+  const dir = tempDir();
+  setupBriefingFlow(dir);
+
+  const result = runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const profilePath = path.join(dir, "tasks", "briefing-flow-test-profile.json");
+  assert.ok(fs.existsSync(profilePath), "Profile should exist");
+
+  const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+  assert.equal(profile.schema_version, "1.0");
+  assert.equal(profile.adapter_id, "briefing-flow-test");
+  assert.ok(profile.flow_stack.slots.length >= 3);
+  assert.ok(profile.classification.categories.length > 0);
+});
+
+test("integration: briefing-flow profile validates successfully", () => {
+  const dir = tempDir();
+  setupBriefingFlow(dir);
+
+  runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
+
+  const result = runValidate(
+    ["--profile", "tasks/briefing-flow-test-profile.json", "--adapter", "briefing-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Overall:       pass"));
+});
+
+test("integration: briefing-flow profile queryable with all subcommands", () => {
+  const dir = tempDir();
+  setupBriefingFlow(dir);
+  runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
+
+  const profile = "tasks/briefing-flow-test-profile.json";
+  const subcommands = [
+    ["categories"],
+    ["flow-stack"],
+    ["resolution"],
+    ["execution-policy"],
+    ["unresolved"],
+    ["runtime-guidance"],
+  ];
+
+  for (const args of subcommands) {
+    const result = runQuery(["--profile", profile, ...args], dir);
+    assert.equal(result.status, 0, `${args[0]} failed: ${result.stderr}`);
+    JSON.parse(result.stdout); // Must be valid JSON
+  }
+});
+
+test("integration: briefing-flow re-generation is idempotent", () => {
+  const dir = tempDir();
+  setupBriefingFlow(dir);
+
+  runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
+
+  const profilePath = path.join(dir, "tasks", "briefing-flow-test-profile.json");
+  const catalogPath = path.join(dir, "tasks", "skill-reference-catalog.json");
+  const profile1 = fs.readFileSync(profilePath, "utf8");
+  const catalog1 = fs.readFileSync(catalogPath, "utf8");
+
+  runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
+  const profile2 = fs.readFileSync(profilePath, "utf8");
+  const catalog2 = fs.readFileSync(catalogPath, "utf8");
+
+  assert.equal(profile1, profile2, "Profile should be identical on re-run");
+  assert.equal(catalog1, catalog2, "Catalog should be identical on re-run");
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Integration: catalog consistency across flows
+// ═══════════════════════════════════════════════════════════════════
+
+test("integration: both flows produce same catalog (same skills)", () => {
+  const implDir = tempDir();
+  const briefingDir = tempDir();
+  setupImplFlow(implDir);
+  setupBriefingFlow(briefingDir);
+
+  runGenerate(["--adapter", "impl-adapter.yaml"], implDir);
+  runGenerate(["--adapter", "briefing-adapter.yaml"], briefingDir);
+
+  const implCatalog = JSON.parse(
+    fs.readFileSync(path.join(implDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+  );
+  const briefingCatalog = JSON.parse(
+    fs.readFileSync(path.join(briefingDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+  );
+
+  // Catalogs should have the same skills (scan is identical)
+  assert.equal(implCatalog.skill_count, briefingCatalog.skill_count);
+  assert.deepEqual(
+    implCatalog.skills.map((s: { name: string }) => s.name),
+    briefingCatalog.skills.map((s: { name: string }) => s.name),
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Integration: adapter validation
+// ═══════════════════════════════════════════════════════════════════
+
+test("integration: general adapter validates successfully", () => {
+  const dir = tempDir();
+  setupGeneralAdapter(dir);
+
+  const result = runValidate(["--adapter", "general-adapter.yaml"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes("Adapter validation passed"));
+});
+
+test("integration: impl adapter validates successfully", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+
+  const result = runValidate(["--adapter", "impl-adapter.yaml"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes("Adapter validation passed"));
+});
+
+test("integration: briefing adapter validates successfully", () => {
+  const dir = tempDir();
+  setupBriefingFlow(dir);
+
+  const result = runValidate(["--adapter", "briefing-adapter.yaml"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes("Adapter validation passed"));
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Integration: end-to-end generate → validate → query pipeline
+// ═══════════════════════════════════════════════════════════════════
+
+test("integration: full pipeline generate → validate → query category-skills", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+
+  // Generate
+  const gen = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+  assert.equal(gen.status, 0, `generate stderr: ${gen.stderr}`);
+
+  // Validate
+  const val = runValidate(
+    ["--profile", "tasks/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    dir,
+  );
+  assert.equal(val.status, 0, `validate stderr: ${val.stderr}`);
+
+  // Query: get categories then query each
+  const catResult = runQuery(
+    ["--profile", "tasks/impl-flow-test-profile.json", "categories"],
+    dir,
+  );
+  assert.equal(catResult.status, 0);
+  const categories = JSON.parse(catResult.stdout);
+
+  // Query skills in first non-empty category
+  const nonEmpty = categories.find((c: { skill_count: number }) => c.skill_count > 0);
+  assert.ok(nonEmpty, "Should have at least one non-empty category");
+
+  const skillsResult = runQuery(
+    ["--profile", "tasks/impl-flow-test-profile.json", "category-skills", "--category", nonEmpty.id],
+    dir,
+  );
+  assert.equal(skillsResult.status, 0);
+  const skills = JSON.parse(skillsResult.stdout);
+  assert.ok(skills.length > 0);
+});
+
+test("integration: full pipeline generate → validate → query skill-detail", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+
+  runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+
+  const result = runQuery(
+    ["--profile", "tasks/impl-flow-test-profile.json", "skill-detail", "--skill", "mock-debug-skill"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  const data = JSON.parse(result.stdout);
+  assert.equal(data.name, "mock-debug-skill");
+  assert.ok(data.provides.length > 0);
+  assert.equal(data.execution_policy.strictness, "rigid");
+});
+
+test("integration: full pipeline generate → validate → query validation-status", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+
+  runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+  runValidate(
+    ["--profile", "tasks/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    dir,
+  );
+
+  const result = runQuery(
+    ["--profile", "tasks/impl-flow-test-profile.json", "validation-status"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  const data = JSON.parse(result.stdout);
+  // validation-status returns adapter_id from the report
+  assert.equal(data.adapter_id, "impl-flow-test");
+});
