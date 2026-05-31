@@ -84,7 +84,7 @@ flow_stack:
 
 - `slots` は配列必須
 - 各要素の必須フィールド: `slot_id`, `slot_type`, `activation`
-- `slot_id`: `snake_case` 固定、Skill Reference Catalog の slot 定義と一致
+- `slot_id`: `snake_case` 固定、Flow Profile の `flow_stack.slots[]` にそのまま反映される
 - `slot_type`: `layerable` | `exclusive`
 - `activation`: `always` | `conditional` | `on_demand` | `gate`
 - `default`: 任意。MVP では `default.skill` のみ許可
@@ -158,7 +158,7 @@ invocation_resolution:
 
 **ルール:**
 
-- `overrides.slots` のキーは `snake_case`、Skill Reference Catalog の `slot_id` と一致
+- `overrides.slots` のキーは `snake_case`、adapter の `flow_stack.slots[].slot_id` と一致
 - `overrides.capabilities` のキーは `snake_case`、capability 識別子と一致
 - `resolution_order`: 重複なしで優先順を定義
 - `unresolved.required`: `fail` | `warn`

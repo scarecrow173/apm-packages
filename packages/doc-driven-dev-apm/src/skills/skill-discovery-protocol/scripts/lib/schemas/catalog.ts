@@ -2,14 +2,6 @@
 
 import { z } from "zod";
 
-const snakeCase = z.string().regex(/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/, "must be snake_case");
-
-const CatalogSlotSchema = z.object({
-  slot_id: snakeCase,
-  description: z.string(),
-  default_skill: z.string().optional(),
-});
-
 const CapabilitySchema = z.object({
   capability: z.string(),
   description: z.string().optional(),
@@ -45,7 +37,5 @@ export const SkillReferenceCatalogSchema = z.object({
   validated_at: z.string(),
   skill_count: z.number().int().nonnegative(),
   capability_count: z.number().int().nonnegative(),
-  slot_count: z.number().int().nonnegative(),
-  slots: z.array(CatalogSlotSchema),
   skills: z.array(CatalogSkillSchema),
 });

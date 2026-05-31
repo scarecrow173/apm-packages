@@ -103,12 +103,6 @@ function setupEnv(dir: string) {
     validated_at: "2026-01-01T00:00:00Z",
     skill_count: 3,
     capability_count: 3,
-    slot_count: 3,
-    slots: [
-      { slot_id: "process_diagnosis", description: "Diagnosis slot", default_skill: "debug-skill" },
-      { slot_id: "build_structure", description: "Build slot", default_skill: "impl-skill" },
-      { slot_id: "review_gate", description: "Review slot", default_skill: "review-skill" },
-    ],
     skills: [
       {
         name: "debug-skill",

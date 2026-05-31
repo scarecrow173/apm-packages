@@ -52,7 +52,6 @@ flow 実行時の解決情報を構造化成果物として出力する共通プ
 ┌─────────────────────────────────────────────────┐
 │ Skill Reference Catalog (skill-reference-catalog.json)  │
 │ - スキル一覧と provides/uses                      │
-│ - 能力スロット定義                                 │
 │ - execution_policy                               │
 │ - flow 非依存                                     │
 └─────────────────────────────────────────────────┘

@@ -64,7 +64,7 @@ async function main(): Promise<void> {
   }
 
   // 2. Build Skill Reference Catalog
-  const catalog = stabilizeCatalog(buildCatalog(skills, adapter));
+  const catalog = stabilizeCatalog(buildCatalog(skills));
 
   // 3. Classify skills
   const { categories, unmatched_skills } = classifySkills(skills, adapter);

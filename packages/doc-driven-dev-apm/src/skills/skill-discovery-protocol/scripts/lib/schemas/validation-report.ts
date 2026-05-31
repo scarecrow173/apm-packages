@@ -40,13 +40,13 @@ const CatalogValidationSchema = z.object({
   skill_count: z.number().int().nonnegative(),
   reference_count: z.number().int().nonnegative(),
   capability_count: z.number().int().nonnegative(),
-  slot_count: z.number().int().nonnegative(),
   orphan_skills: z.array(z.string()),
-  unresolved_slots: z.array(z.string()),
 });
 
 const ProfileValidationSchema = z.object({
   flow_count: z.number().int().nonnegative(),
+  flow_stack_slot_count: z.number().int().nonnegative(),
+  unresolved_slots: z.array(z.string()),
   resolved_invocation_count: z.number().int().nonnegative(),
   unused_override_warnings: z.array(z.string()),
 });

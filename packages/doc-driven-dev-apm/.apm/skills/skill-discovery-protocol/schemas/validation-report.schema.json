@@ -199,18 +199,7 @@
           "minimum": 0,
           "maximum": 9007199254740991
         },
-        "slot_count": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
         "orphan_skills": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "unresolved_slots": {
           "type": "array",
           "items": {
             "type": "string"
@@ -221,9 +210,7 @@
         "skill_count",
         "reference_count",
         "capability_count",
-        "slot_count",
-        "orphan_skills",
-        "unresolved_slots"
+        "orphan_skills"
       ],
       "additionalProperties": false
     },
@@ -234,6 +221,17 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 9007199254740991
+        },
+        "flow_stack_slot_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "unresolved_slots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "resolved_invocation_count": {
           "type": "integer",
@@ -249,6 +247,8 @@
       },
       "required": [
         "flow_count",
+        "flow_stack_slot_count",
+        "unresolved_slots",
         "resolved_invocation_count",
         "unused_override_warnings"
       ],

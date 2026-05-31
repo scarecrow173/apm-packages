@@ -91,7 +91,7 @@ function runDeterministicGate(
 
     const adapter = loadAdapter(adapterPath);
     const skills = scanSkills(cwd, adapter);
-    const catalog = stabilizeCatalog(buildCatalog(skills, adapter));
+    const catalog = stabilizeCatalog(buildCatalog(skills));
     const { categories, unmatched_skills } = classifySkills(skills, adapter);
     const resolvedInvocations = resolveInvocations(skills, adapter);
     const profile = stabilizeProfile(

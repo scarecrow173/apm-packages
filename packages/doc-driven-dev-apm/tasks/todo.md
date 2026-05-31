@@ -43,7 +43,7 @@
 ### flow_stack
 
 - [ ] Flow Profile に `flow_stack.slots[]`（slot_id/slot_type/activation/default）を統合する
-- [ ] slot_id は `snake_case` 固定、Skill Reference Catalog の slot 定義と一致
+- [ ] slot_id は `snake_case` 固定、adapter の `flow_stack.slots[]` 定義と一致
 - [ ] slot_type は `layerable|exclusive`
 - [ ] activation は `always|conditional|on_demand|gate`
 - [ ] MVP では `default.skill` のみ許可、`default.capability` は将来拡張
@@ -51,11 +51,11 @@
 ### Skill Reference Catalog
 
 - [ ] 各スキルが提供する capability（provides）を列挙する
-- [ ] 各スキルが利用する capability/slot（uses）を列挙する
+- [ ] 各スキルが利用する capability（uses）を列挙する
 - [ ] `uses[].override_allowed` で override 可否を宣言する
 - [ ] `default_skill` を持てるが flow 固有の `resolved_skill` は持たない
 - [ ] `execution_policy`（strictness/sequence_required/allow_step_reordering/allow_partial_application/guidance）を保持する
-- [ ] 能力スロット定義を同一成果物に統合して列挙する
+- [ ] flow 固有の invocation slot 定義は保持しない
 
 ### invocation_resolution
 

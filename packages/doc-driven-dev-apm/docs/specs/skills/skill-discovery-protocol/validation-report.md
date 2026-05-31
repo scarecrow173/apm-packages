@@ -72,12 +72,12 @@ Validation Report は `sdp validate` の出力として、成果物の品質状�
     "skill_count": 10,
     "reference_count": 25,
     "capability_count": 15,
-    "slot_count": 5,
-    "orphan_skills": [],
-    "unresolved_slots": []
+    "orphan_skills": []
   },
   "profile_validation": {
     "flow_count": 1,
+    "flow_stack_slot_count": 5,
+    "unresolved_slots": [],
     "resolved_invocation_count": 8,
     "unused_override_warnings": []
   },
@@ -164,15 +164,15 @@ overall_result = schema_validation.result == "pass"
 | `skill_count` | number | スキル総数 |
 | `reference_count` | number | 参照総数 |
 | `capability_count` | number | capability 総数 |
-| `slot_count` | number | slot 定義数 |
-| `orphan_skills` | string[] | どの slot/capability にも紐づかないスキル |
-| `unresolved_slots` | string[] | 解決先が見つからない slot |
+| `orphan_skills` | string[] | どの分類・解決結果にも紐づかないスキル |
 
 ### `profile_validation`
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `flow_count` | number | flow 数 |
+| `flow_stack_slot_count` | number | Flow Profile の `flow_stack.slots[]` 定義数 |
+| `unresolved_slots` | string[] | Flow Profile 上で解決先が見つからない slot |
 | `resolved_invocation_count` | number | 解決済み invocation 数 |
 | `unused_override_warnings` | array | 未使用 override の警告 |
 

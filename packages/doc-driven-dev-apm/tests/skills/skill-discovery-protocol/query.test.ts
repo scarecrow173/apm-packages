@@ -103,11 +103,6 @@ function setupQueryEnv(dir: string) {
     validated_at: "2026-01-01T00:00:00Z",
     skill_count: 2,
     capability_count: 2,
-    slot_count: 2,
-    slots: [
-      { slot_id: "adr_authoring", description: "ADR authoring slot", default_skill: "skill-a" },
-      { slot_id: "code_review", description: "Code review slot", default_skill: "skill-b" },
-    ],
     skills: [
       {
         name: "skill-a",

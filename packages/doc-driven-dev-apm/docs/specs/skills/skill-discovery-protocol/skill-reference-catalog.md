@@ -3,7 +3,7 @@
 ## 概要
 
 Skill Reference Catalog は、プロジェクト内のスキルが提供・利用する capability と
-能力スロット定義を一覧化する **flow 非依存**の成果物である。
+実行ポリシーを一覧化する **flow 非依存**の成果物である。
 
 ## ファイル形式
 
@@ -19,14 +19,6 @@ Skill Reference Catalog は、プロジェクト内のスキルが提供・利�
   "validated_at": "2026-05-28T00:00:00Z",
   "skill_count": 10,
   "capability_count": 15,
-  "slot_count": 5,
-  "slots": [
-    {
-      "slot_id": "adr_authoring",
-      "description": "ADR authoring capability slot",
-      "default_skill": "documentation-and-adrs"
-    }
-  ],
   "skills": [
     {
       "name": "documentation-and-adrs",
@@ -66,17 +58,7 @@ Skill Reference Catalog は、プロジェクト内のスキルが提供・利�
 | `validated_at` | ISO 8601 | yes | 最終検証日時 |
 | `skill_count` | number | yes | スキル総数 |
 | `capability_count` | number | yes | capability 総数 |
-| `slot_count` | number | yes | slot 定義数 |
-| `slots` | array | yes | 能力スロット定義一覧 |
 | `skills` | array | yes | スキル一覧 |
-
-### `slots[]`
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `slot_id` | string | yes | `snake_case` 識別子 |
-| `description` | string | yes | スロットの説明 |
-| `default_skill` | string | no | 既定で割り当てられるスキル名 |
 
 ### `skills[]`
 
@@ -85,7 +67,7 @@ Skill Reference Catalog は、プロジェクト内のスキルが提供・利�
 | `name` | string | yes | スキル名 |
 | `description` | string | yes | スキル概要 |
 | `provides` | array | yes | 提供する capability |
-| `uses` | array | yes | 利用する capability/slot |
+| `uses` | array | yes | 利用する capability |
 | `execution_policy` | object | yes | 実行ポリシー |
 | `tags` | string[] | no | 分類用タグ |
 
@@ -117,7 +99,7 @@ Skill Reference Catalog は、プロジェクト内のスキルが提供・利�
 
 ## 命名規約
 
-- すべての `slot_id` と capability 識別子は `snake_case` 固定
+- すべての capability 識別子は `snake_case` 固定
 - `kebab-case` や `camelCase` は schema error
 
 ## ソート規則
@@ -129,5 +111,6 @@ Skill Reference Catalog は、プロジェクト内のスキルが提供・利�
 ## Flow Profile との関係
 
 - Catalog は **flow 非依存**の情報のみ保持する
-- `default_skill` は持てるが、flow 固有の `resolved_skill` は持たない
-- Flow Profile が `resolved_invocations` で flow 固有の解決結果を保持する
+- invocation slot は Catalog ではなく Flow Profile の `flow_stack.slots[]` が保持する
+- `skills[].uses[].default_skill` は capability 依存の既定候補であり、flow 固有の `resolved_skill` は持たない
+- Flow Profile が `flow_stack.slots[]` と `resolved_invocations` で flow 固有のslot宣言・解決結果を保持する

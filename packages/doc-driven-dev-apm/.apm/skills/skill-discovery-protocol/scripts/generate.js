@@ -6608,12 +6608,7 @@ var require_scanner = __commonJS({
 var require_catalog = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/catalog.ts"(exports2, module2) {
     "use strict";
-    function buildCatalog2(skills, adapter) {
-      const slots = adapter.flow_stack.slots.map((s) => ({
-        slot_id: s.slot_id,
-        description: s.default?.reason || `${s.slot_id} capability slot`,
-        default_skill: s.default?.skill
-      }));
+    function buildCatalog2(skills) {
       const capabilitySet = /* @__PURE__ */ new Set();
       for (const skill of skills) {
         for (const p of skill.provides) capabilitySet.add(p.capability);
@@ -6631,8 +6626,6 @@ var require_catalog = __commonJS({
         validated_at: now,
         skill_count: sortedSkills.length,
         capability_count: capabilitySet.size,
-        slot_count: slots.length,
-        slots,
         skills: sortedSkills
       };
     }
@@ -6913,7 +6906,6 @@ var require_renderer = __commonJS({
         skill.provides = [...skill.provides].sort((a, b) => a.capability.localeCompare(b.capability));
         skill.uses = [...skill.uses].sort((a, b) => a.capability.localeCompare(b.capability));
       }
-      result.slots = [...result.slots].sort((a, b) => a.slot_id.localeCompare(b.slot_id));
       return result;
     }
     function stabilizeProfile2(profile) {
@@ -6990,7 +6982,7 @@ async function main() {
   if (skills.length === 0) {
     console.log("No skills found in scan scopes.");
   }
-  const catalog = stabilizeCatalog(buildCatalog(skills, adapter));
+  const catalog = stabilizeCatalog(buildCatalog(skills));
   const { categories, unmatched_skills } = classifySkills(skills, adapter);
   const resolvedInvocations = resolveInvocations(skills, adapter);
   const profile = stabilizeProfile(

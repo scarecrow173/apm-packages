@@ -21815,17 +21815,11 @@ var init_adapter = __esm({
 });
 
 // src/skills/skill-discovery-protocol/scripts/lib/schemas/catalog.ts
-var snakeCase2, CatalogSlotSchema, CapabilitySchema, UsesSchema, ExecutionPolicySchema, CatalogSkillSchema, SkillReferenceCatalogSchema;
+var CapabilitySchema, UsesSchema, ExecutionPolicySchema, CatalogSkillSchema, SkillReferenceCatalogSchema;
 var init_catalog = __esm({
   "src/skills/skill-discovery-protocol/scripts/lib/schemas/catalog.ts"() {
     "use strict";
     init_zod();
-    snakeCase2 = external_exports.string().regex(/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/, "must be snake_case");
-    CatalogSlotSchema = external_exports.object({
-      slot_id: snakeCase2,
-      description: external_exports.string(),
-      default_skill: external_exports.string().optional()
-    });
     CapabilitySchema = external_exports.object({
       capability: external_exports.string(),
       description: external_exports.string().optional()
@@ -21857,22 +21851,20 @@ var init_catalog = __esm({
       validated_at: external_exports.string(),
       skill_count: external_exports.number().int().nonnegative(),
       capability_count: external_exports.number().int().nonnegative(),
-      slot_count: external_exports.number().int().nonnegative(),
-      slots: external_exports.array(CatalogSlotSchema),
       skills: external_exports.array(CatalogSkillSchema)
     });
   }
 });
 
 // src/skills/skill-discovery-protocol/scripts/lib/schemas/profile.ts
-var snakeCase3, FlowStackSlotSchema, CategorySchema, ResolvedInvocationSchema, RuntimeGuidanceSchema, FlowProfileSchema;
+var snakeCase2, FlowStackSlotSchema, CategorySchema, ResolvedInvocationSchema, RuntimeGuidanceSchema, FlowProfileSchema;
 var init_profile = __esm({
   "src/skills/skill-discovery-protocol/scripts/lib/schemas/profile.ts"() {
     "use strict";
     init_zod();
-    snakeCase3 = external_exports.string().regex(/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/, "must be snake_case");
+    snakeCase2 = external_exports.string().regex(/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/, "must be snake_case");
     FlowStackSlotSchema = external_exports.object({
-      slot_id: snakeCase3,
+      slot_id: snakeCase2,
       slot_type: external_exports.enum(["exclusive", "layerable"]),
       activation: external_exports.enum(["always", "conditional", "on_demand", "gate"]),
       default: external_exports.object({
@@ -21881,7 +21873,7 @@ var init_profile = __esm({
       }).optional()
     });
     CategorySchema = external_exports.object({
-      id: snakeCase3,
+      id: snakeCase2,
       label: external_exports.string(),
       skills: external_exports.array(external_exports.string())
     });
@@ -22018,12 +22010,7 @@ var require_staleness_gate = __commonJS({
 var require_catalog = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/catalog.ts"(exports2, module2) {
     "use strict";
-    function buildCatalog(skills, adapter) {
-      const slots = adapter.flow_stack.slots.map((s) => ({
-        slot_id: s.slot_id,
-        description: s.default?.reason || `${s.slot_id} capability slot`,
-        default_skill: s.default?.skill
-      }));
+    function buildCatalog(skills) {
       const capabilitySet = /* @__PURE__ */ new Set();
       for (const skill of skills) {
         for (const p of skill.provides) capabilitySet.add(p.capability);
@@ -22041,8 +22028,6 @@ var require_catalog = __commonJS({
         validated_at: now,
         skill_count: sortedSkills.length,
         capability_count: capabilitySet.size,
-        slot_count: slots.length,
-        slots,
         skills: sortedSkills
       };
     }
@@ -22323,7 +22308,6 @@ var require_renderer = __commonJS({
         skill.provides = [...skill.provides].sort((a, b) => a.capability.localeCompare(b.capability));
         skill.uses = [...skill.uses].sort((a, b) => a.capability.localeCompare(b.capability));
       }
-      result.slots = [...result.slots].sort((a, b) => a.slot_id.localeCompare(b.slot_id));
       return result;
     }
     function stabilizeProfile(profile) {
@@ -22403,7 +22387,7 @@ var require_deterministic_gate = __commonJS({
         const { stabilizeCatalog, stabilizeProfile, renderJson: renderJson2 } = require_renderer();
         const adapter = loadAdapter2(adapterPath);
         const skills = scanSkills2(cwd, adapter);
-        const catalog = stabilizeCatalog(buildCatalog(skills, adapter));
+        const catalog = stabilizeCatalog(buildCatalog(skills));
         const { categories, unmatched_skills } = classifySkills(skills, adapter);
         const resolvedInvocations = resolveInvocations(skills, adapter);
         const profile = stabilizeProfile(
@@ -22625,7 +22609,7 @@ function findCatalogPath(profilePath, profile) {
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
       const data = loadJson(candidate);
-      if (data && data.skills && data.slots) {
+      if (data && data.skills) {
         return candidate;
       }
     }
@@ -22638,9 +22622,7 @@ function buildCatalogValidation(profile, catalog) {
       skill_count: 0,
       reference_count: 0,
       capability_count: 0,
-      slot_count: 0,
-      orphan_skills: [],
-      unresolved_slots: []
+      orphan_skills: []
     };
   }
   const referencedSkills = /* @__PURE__ */ new Set();
@@ -22664,21 +22646,12 @@ function buildCatalogValidation(profile, catalog) {
       orphanSkills.push(skill.name);
     }
   }
-  const resolvedSlots = new Set((profile.resolved_invocations || []).map((inv) => inv.slot));
-  const unresolvedSlots = [];
-  for (const slot of catalog.slots) {
-    if (!resolvedSlots.has(slot.slot_id) && !slot.default_skill) {
-      unresolvedSlots.push(slot.slot_id);
-    }
-  }
   const referenceCount = catalog.skills.reduce((sum, s) => sum + s.provides.length, 0);
   return {
     skill_count: catalog.skill_count,
     reference_count: referenceCount,
     capability_count: catalog.capability_count,
-    slot_count: catalog.slot_count,
-    orphan_skills: orphanSkills.sort(),
-    unresolved_slots: unresolvedSlots.sort()
+    orphan_skills: orphanSkills.sort()
   };
 }
 function buildProfileValidation(profile, adapter) {
@@ -22706,8 +22679,12 @@ function buildProfileValidation(profile, adapter) {
       }
     }
   }
+  const resolvedSlots = new Set((profile.resolved_invocations || []).map((inv) => inv.slot));
+  const unresolvedSlots = (profile.flow_stack?.slots || []).filter((slot) => !resolvedSlots.has(slot.slot_id) && !slot.default).map((slot) => slot.slot_id).sort();
   return {
     flow_count: 1,
+    flow_stack_slot_count: profile.flow_stack?.slots?.length ?? 0,
+    unresolved_slots: unresolvedSlots,
     resolved_invocation_count: profile.resolved_invocations?.length ?? 0,
     unused_override_warnings: unusedOverrideWarnings
   };

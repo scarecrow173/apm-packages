@@ -92,12 +92,6 @@ export type ScannedSkill = {
 
 // ─── Skill Reference Catalog ───
 
-export type CatalogSlot = {
-  slot_id: string;
-  description: string;
-  default_skill?: string;
-};
-
 export type CatalogSkill = ScannedSkill;
 
 export type SkillReferenceCatalog = {
@@ -106,8 +100,6 @@ export type SkillReferenceCatalog = {
   validated_at: string;
   skill_count: number;
   capability_count: number;
-  slot_count: number;
-  slots: CatalogSlot[];
   skills: CatalogSkill[];
 };
 

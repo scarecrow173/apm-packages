@@ -70,7 +70,7 @@ function findCatalogPath(profilePath: string, profile: Record<string, unknown>):
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
       const data = loadJson(candidate);
-      if (data && data.skills && data.slots) {
+      if (data && data.skills) {
         return candidate;
       }
     }
@@ -107,12 +107,12 @@ type ValidationReport = {
     skill_count: number;
     reference_count: number;
     capability_count: number;
-    slot_count: number;
     orphan_skills: string[];
-    unresolved_slots: string[];
   };
   profile_validation: {
     flow_count: number;
+    flow_stack_slot_count: number;
+    unresolved_slots: string[];
     resolved_invocation_count: number;
     unused_override_warnings: string[];
   };
@@ -128,9 +128,7 @@ function buildCatalogValidation(
       skill_count: 0,
       reference_count: 0,
       capability_count: 0,
-      slot_count: 0,
       orphan_skills: [],
-      unresolved_slots: [],
     };
   }
 
@@ -157,23 +155,13 @@ function buildCatalogValidation(
     }
   }
 
-  const resolvedSlots = new Set((profile.resolved_invocations || []).map((inv) => inv.slot));
-  const unresolvedSlots: string[] = [];
-  for (const slot of catalog.slots) {
-    if (!resolvedSlots.has(slot.slot_id) && !slot.default_skill) {
-      unresolvedSlots.push(slot.slot_id);
-    }
-  }
-
   const referenceCount = catalog.skills.reduce((sum, s) => sum + s.provides.length, 0);
 
   return {
     skill_count: catalog.skill_count,
     reference_count: referenceCount,
     capability_count: catalog.capability_count,
-    slot_count: catalog.slot_count,
     orphan_skills: orphanSkills.sort(),
-    unresolved_slots: unresolvedSlots.sort(),
   };
 }
 
@@ -215,8 +203,16 @@ function buildProfileValidation(
     }
   }
 
+  const resolvedSlots = new Set((profile.resolved_invocations || []).map((inv) => inv.slot));
+  const unresolvedSlots = (profile.flow_stack?.slots || [])
+    .filter((slot) => !resolvedSlots.has(slot.slot_id) && !slot.default)
+    .map((slot) => slot.slot_id)
+    .sort();
+
   return {
     flow_count: 1,
+    flow_stack_slot_count: profile.flow_stack?.slots?.length ?? 0,
+    unresolved_slots: unresolvedSlots,
     resolved_invocation_count: profile.resolved_invocations?.length ?? 0,
     unused_override_warnings: unusedOverrideWarnings,
   };

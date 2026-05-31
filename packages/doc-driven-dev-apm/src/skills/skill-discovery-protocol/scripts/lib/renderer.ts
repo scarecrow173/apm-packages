@@ -64,7 +64,6 @@ function stabilizeCatalog(catalog: SkillReferenceCatalog): SkillReferenceCatalog
     skill.provides = [...skill.provides].sort((a, b) => a.capability.localeCompare(b.capability));
     skill.uses = [...skill.uses].sort((a, b) => a.capability.localeCompare(b.capability));
   }
-  result.slots = [...result.slots].sort((a, b) => a.slot_id.localeCompare(b.slot_id));
   return result;
 }
 

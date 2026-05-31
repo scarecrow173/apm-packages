@@ -270,7 +270,8 @@ test("sdp generate catalog has correct structure", () => {
   assert.equal(catalog.skill_count, 2);
   assert.ok(catalog.generated_at);
   assert.ok(catalog.validated_at);
-  assert.ok(Array.isArray(catalog.slots));
+  assert.equal(catalog.slot_count, undefined);
+  assert.equal(catalog.slots, undefined);
   assert.ok(Array.isArray(catalog.skills));
   assert.equal(catalog.skills[0].name, "skill-a"); // sorted alphabetically
   assert.equal(catalog.skills[1].name, "skill-b");

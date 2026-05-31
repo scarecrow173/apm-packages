@@ -612,12 +612,12 @@ test("validation-report.json has correct structure", () => {
   assert.equal(typeof report.catalog_validation.skill_count, "number");
   assert.equal(typeof report.catalog_validation.reference_count, "number");
   assert.equal(typeof report.catalog_validation.capability_count, "number");
-  assert.equal(typeof report.catalog_validation.slot_count, "number");
   assert.ok(Array.isArray(report.catalog_validation.orphan_skills));
-  assert.ok(Array.isArray(report.catalog_validation.unresolved_slots));
 
   // profile_validation
   assert.equal(typeof report.profile_validation.flow_count, "number");
+  assert.equal(typeof report.profile_validation.flow_stack_slot_count, "number");
+  assert.ok(Array.isArray(report.profile_validation.unresolved_slots));
   assert.equal(typeof report.profile_validation.resolved_invocation_count, "number");
   assert.ok(Array.isArray(report.profile_validation.unused_override_warnings));
 });
@@ -637,7 +637,7 @@ test("validate catalog_validation counts are correct", () => {
   );
 
   assert.equal(report.catalog_validation.skill_count, 2);
-  assert.equal(report.catalog_validation.slot_count, 1);
+  assert.equal(report.profile_validation.flow_stack_slot_count, 1);
   // skill-a provides adr_authoring, skill-b provides code_review = 2 capabilities
   assert.equal(report.catalog_validation.capability_count, 2);
 });

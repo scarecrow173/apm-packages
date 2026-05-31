@@ -10,7 +10,7 @@
 | AD-4 | 既存プロトコルの文言・分類をそのまま移植しない。汎用契約を先に定義し、flow 依存は adapter 層に閉じ込める |
 | AD-5 | 検証は `schema gate + staleness gate + deterministic render gate` の 3 層で行う |
 | AD-6 | プロトコル標準成果物は機械可読（JSON）と人間可読（Markdown）の二重出力 |
-| AD-7 | Skill Reference Catalog には、各スキルが呼び出す可能性のあるスキル/能力と能力スロット定義を統合して列挙 |
+| AD-7 | Skill Reference Catalog には、各スキルが提供・利用する capability と実行ポリシーを列挙し、flow 固有の slot 定義は持たせない |
 | AD-8 | adapter 設定形式は YAML に統一 |
 | AD-9 | 旧 protocol 文書は即時 deprecated とし、移行導線のみ残す |
 | AD-10 | override 解決結果は Flow Profile（`*-profile.json`）の `resolved_invocations` に保持 |
@@ -31,7 +31,7 @@
 - 共通成果物は `skill-reference-catalog + *-profile.json + validation-report` を採用
 - 旧 protocol は即時 deprecated
 - adapter YAML は general のみ共通側に置き、flow 固有設定は flow 側 references パス入力で読み込む
-- Skill Reference Catalog は「提供 capability」と「利用 capability/slot + default_skill」を保持し、flow 固有の resolved_skill は持たない
+- Skill Reference Catalog は「提供 capability」と「利用 capability + default_skill」を保持し、flow 固有の slot 定義や resolved_skill は持たない
 - 旧 default stack は `flow_stack.slots[]`（slot_type/activation/default）として Flow Profile に統合。MVP では `default.skill` のみ許可
 - override 解決結果は `*-profile.json` の `resolved_invocations` に統合
 - override 検証は `sdp validate` で実施し、結果は `validation-report` に記録
