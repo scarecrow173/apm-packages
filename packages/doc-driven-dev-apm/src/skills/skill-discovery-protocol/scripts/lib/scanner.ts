@@ -29,6 +29,16 @@ function expandEnvVars(p: string): string {
   });
 }
 
+/**
+ * Resolve a scan root path: expand ${VAR:-default}, ~, then resolve against cwd.
+ */
+function resolveScanRoot(raw: string, cwd: string): string {
+  const expanded = expandHome(expandEnvVars(raw));
+  return path.isAbsolute(expanded)
+    ? path.resolve(expanded)
+    : path.resolve(cwd, expanded);
+}
+
 function isSkillDir(dirPath: string): boolean {
   return fs.existsSync(path.join(dirPath, "SKILL.md"));
 }
@@ -174,10 +184,7 @@ function scanSkills(cwd: string, adapter: AdapterConfig): ScannedSkill[] {
   for (const [scopeName, scope] of Object.entries(scopes)) {
     if (!scope.enabled) continue;
     for (const root of scope.roots) {
-      const expanded = expandHome(expandEnvVars(root));
-      const rootPath = path.isAbsolute(expanded)
-        ? path.resolve(expanded)
-        : path.resolve(cwd, expanded);
+      const rootPath = resolveScanRoot(root, cwd);
 
       // Project scope: enforce project boundary for security
       if (scopeName === "project") {

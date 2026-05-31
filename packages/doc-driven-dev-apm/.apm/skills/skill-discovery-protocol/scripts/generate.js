@@ -6433,6 +6433,10 @@ var require_scanner = __commonJS({
         return process.env[expr] || "";
       });
     }
+    function resolveScanRoot(raw, cwd) {
+      const expanded = expandHome(expandEnvVars(raw));
+      return path2.isAbsolute(expanded) ? path2.resolve(expanded) : path2.resolve(cwd, expanded);
+    }
     function isSkillDir(dirPath) {
       return fs2.existsSync(path2.join(dirPath, "SKILL.md"));
     }
@@ -6548,8 +6552,7 @@ var require_scanner = __commonJS({
       for (const [scopeName, scope] of Object.entries(scopes)) {
         if (!scope.enabled) continue;
         for (const root of scope.roots) {
-          const expanded = expandHome(expandEnvVars(root));
-          const rootPath = path2.isAbsolute(expanded) ? path2.resolve(expanded) : path2.resolve(cwd, expanded);
+          const rootPath = resolveScanRoot(root, cwd);
           if (scopeName === "project") {
             const normalizedRoot = path2.normalize(rootPath);
             const normalizedCwd = path2.normalize(cwd);
