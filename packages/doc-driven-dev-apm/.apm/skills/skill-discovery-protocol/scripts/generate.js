@@ -6407,23 +6407,14 @@ var require_gray_matter = __commonJS({
   }
 });
 
-// src/skills/skill-discovery-protocol/scripts/lib/scanner.ts
-var require_scanner = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/scanner.ts"(exports2, module2) {
+// src/skills/skill-discovery-protocol/scripts/lib/expand.ts
+var require_expand = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/expand.ts"(exports2, module2) {
     "use strict";
-    var fs2 = require("node:fs");
-    var path2 = require("node:path");
-    var matter = require_gray_matter();
     var os = require("node:os");
-    function expandHome(p) {
-      if (p === "~") return os.homedir();
-      if (p.startsWith("~/") || p.startsWith("~\\")) {
-        return path2.join(os.homedir(), p.slice(2));
-      }
-      return p;
-    }
-    function expandEnvVars(p) {
-      return p.replace(/\$\{([^}]+)\}/g, (_match, expr) => {
+    var path2 = require("node:path");
+    function expandEnvVars(s) {
+      return s.replace(/\$\{([^}]+)\}/g, (_match, expr) => {
         const sepIdx = expr.indexOf(":-");
         if (sepIdx !== -1) {
           const varName = expr.slice(0, sepIdx);
@@ -6433,10 +6424,29 @@ var require_scanner = __commonJS({
         return process.env[expr] || "";
       });
     }
-    function resolveScanRoot(raw, cwd) {
+    function expandHome(p) {
+      if (p === "~") return os.homedir();
+      if (p.startsWith("~/") || p.startsWith("~\\")) {
+        return path2.join(os.homedir(), p.slice(2));
+      }
+      return p;
+    }
+    function resolvePath(raw, cwd) {
       const expanded = expandHome(expandEnvVars(raw));
       return path2.isAbsolute(expanded) ? path2.resolve(expanded) : path2.resolve(cwd, expanded);
     }
+    module2.exports = { expandEnvVars, expandHome, resolvePath };
+  }
+});
+
+// src/skills/skill-discovery-protocol/scripts/lib/scanner.ts
+var require_scanner = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/scanner.ts"(exports2, module2) {
+    "use strict";
+    var fs2 = require("node:fs");
+    var path2 = require("node:path");
+    var matter = require_gray_matter();
+    var { resolvePath } = require_expand();
     function isSkillDir(dirPath) {
       return fs2.existsSync(path2.join(dirPath, "SKILL.md"));
     }
@@ -6552,7 +6562,7 @@ var require_scanner = __commonJS({
       for (const [scopeName, scope] of Object.entries(scopes)) {
         if (!scope.enabled) continue;
         for (const root of scope.roots) {
-          const rootPath = resolveScanRoot(root, cwd);
+          const rootPath = resolvePath(root, cwd);
           if (scopeName === "project") {
             const normalizedRoot = path2.normalize(rootPath);
             const normalizedCwd = path2.normalize(cwd);

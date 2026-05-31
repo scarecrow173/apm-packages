@@ -4,40 +4,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const matter = require("gray-matter");
 
-const os = require("node:os");
+const { resolvePath } = require("./expand.ts");
 
 import type { AdapterConfig, ScannedSkill } from "./types";
-
-function expandHome(p: string): string {
-  if (p === "~") return os.homedir();
-  if (p.startsWith("~/") || p.startsWith("~\\")) {
-    return path.join(os.homedir(), p.slice(2));
-  }
-  return p;
-}
-
-function expandEnvVars(p: string): string {
-  return p.replace(/\$\{([^}]+)\}/g, (_match: string, expr: string) => {
-    // Support ${VAR:-default} syntax
-    const sepIdx = expr.indexOf(":-");
-    if (sepIdx !== -1) {
-      const varName = expr.slice(0, sepIdx);
-      const defaultVal = expr.slice(sepIdx + 2);
-      return process.env[varName] || defaultVal;
-    }
-    return process.env[expr] || "";
-  });
-}
-
-/**
- * Resolve a scan root path: expand ${VAR:-default}, ~, then resolve against cwd.
- */
-function resolveScanRoot(raw: string, cwd: string): string {
-  const expanded = expandHome(expandEnvVars(raw));
-  return path.isAbsolute(expanded)
-    ? path.resolve(expanded)
-    : path.resolve(cwd, expanded);
-}
 
 function isSkillDir(dirPath: string): boolean {
   return fs.existsSync(path.join(dirPath, "SKILL.md"));
@@ -184,7 +153,7 @@ function scanSkills(cwd: string, adapter: AdapterConfig): ScannedSkill[] {
   for (const [scopeName, scope] of Object.entries(scopes)) {
     if (!scope.enabled) continue;
     for (const root of scope.roots) {
-      const rootPath = resolveScanRoot(root, cwd);
+      const rootPath = resolvePath(root, cwd);
 
       // Project scope: enforce project boundary for security
       if (scopeName === "project") {
