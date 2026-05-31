@@ -46,13 +46,30 @@ scan:
     user:
       enabled: false
       roots:
-        - "${COPILOT_USER_SKILLS}"
+        # APM user-level skills
+        - "~/.apm/skills"
+        # GitHub Copilot user prompts (VS Code)
+        - "~/.vscode/copilot/skills"
+        # Cursor user rules
+        - "~/.cursor/rules"
+        # Claude Code user commands
+        - "~/.claude/commands"
+        # Gemini CLI user skills
+        - "~/.gemini/skills"
+        # OpenCode user skills
+        - "~/.opencode/skills"
     organization:
       enabled: false
-      roots: []
+      roots:
+        # APM organization-shared skills (monorepo pattern)
+        - ".apm/org-skills"
+        # GitHub org-level agent instructions
+        - ".github/org-skills"
     builtin:
       enabled: false
-      roots: []
+      roots:
+        # APM bundled default skills (relative to install)
+        - "node_modules/@apm/builtin-skills/skills"
 
 profile:
   title: "General Skill Reference"
