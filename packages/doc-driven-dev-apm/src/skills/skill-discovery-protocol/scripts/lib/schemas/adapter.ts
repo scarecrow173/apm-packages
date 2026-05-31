@@ -57,7 +57,7 @@ export const AdapterConfigSchema = z
     }),
     flow_stack: z.object({
       slots: z.array(AdapterSlotSchema),
-    }),
+    }).optional(),
     classification: z.object({
       unmatched: z.object({
         action: z.string(),
@@ -65,7 +65,7 @@ export const AdapterConfigSchema = z
         severity: z.string(),
       }),
       taxonomy: z.array(TaxonomyEntrySchema),
-    }),
+    }).optional(),
     invocation_resolution: z.object({
       overrides: z.object({
         slots: z.record(
@@ -91,7 +91,7 @@ export const AdapterConfigSchema = z
         optional: z.string(),
       }),
       invalid_override: z.record(z.string(), z.string()),
-    }),
+    }).optional(),
     validation: z.object({
       schema: z.boolean(),
       staleness: z

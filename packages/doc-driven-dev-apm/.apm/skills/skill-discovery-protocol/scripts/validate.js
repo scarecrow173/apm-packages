@@ -21710,7 +21710,7 @@ var init_adapter = __esm({
       }),
       flow_stack: external_exports.object({
         slots: external_exports.array(AdapterSlotSchema)
-      }),
+      }).optional(),
       classification: external_exports.object({
         unmatched: external_exports.object({
           action: external_exports.string(),
@@ -21718,7 +21718,7 @@ var init_adapter = __esm({
           severity: external_exports.string()
         }),
         taxonomy: external_exports.array(TaxonomyEntrySchema)
-      }),
+      }).optional(),
       invocation_resolution: external_exports.object({
         overrides: external_exports.object({
           slots: external_exports.record(
@@ -21744,7 +21744,7 @@ var init_adapter = __esm({
           optional: external_exports.string()
         }),
         invalid_override: external_exports.record(external_exports.string(), external_exports.string())
-      }),
+      }).optional(),
       validation: external_exports.object({
         schema: external_exports.boolean(),
         staleness: external_exports.object({

@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../schemas/adapter.schema.json
+# yaml-language-server: $schema=../../schemas/adapter.schema.json
 # General Adapter
 #
 # Base adapter aggregating all known harness roots.
