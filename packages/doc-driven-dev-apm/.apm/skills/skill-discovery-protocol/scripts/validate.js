@@ -2819,7 +2819,7 @@ var require_adapter = __commonJS({
       const content = fs2.readFileSync(filePath, "utf8");
       return yaml2.load(content);
     }
-    function resolveExtends(adapterDir, names, visited) {
+    function resolveExtends(searchDirs, names, visited) {
       const results = [];
       for (const name of names) {
         if (name.includes("/") || name.includes("\\") || name.includes("..")) {
@@ -2829,20 +2829,31 @@ var require_adapter = __commonJS({
           throw new Error(`Circular extends detected: "${name}" already in chain [${[...visited].join(" -> ")}]`);
         }
         visited.add(name);
-        const yamlPath = path2.join(adapterDir, "references", `${name}.yaml`);
-        const ymlPath = path2.join(adapterDir, "references", `${name}.yml`);
-        const yamlExists = fs2.existsSync(yamlPath);
-        const ymlExists = fs2.existsSync(ymlPath);
-        if (yamlExists && ymlExists) {
-          throw new Error(`Both ${name}.yaml and ${name}.yml exist \u2014 ambiguous extends`);
+        let parentPath = null;
+        for (const dir of searchDirs) {
+          const yamlPath = path2.join(dir, `${name}.yaml`);
+          const ymlPath = path2.join(dir, `${name}.yml`);
+          const yamlExists = fs2.existsSync(yamlPath);
+          const ymlExists = fs2.existsSync(ymlPath);
+          if (yamlExists && ymlExists) {
+            throw new Error(`Both ${name}.yaml and ${name}.yml exist in ${dir} \u2014 ambiguous extends`);
+          }
+          if (yamlExists) {
+            parentPath = yamlPath;
+            break;
+          }
+          if (ymlExists) {
+            parentPath = ymlPath;
+            break;
+          }
         }
-        if (!yamlExists && !ymlExists) {
-          throw new Error(`Cannot resolve extends "${name}": neither ${name}.yaml nor ${name}.yml found in references/`);
+        if (!parentPath) {
+          const searched = searchDirs.join(", ");
+          throw new Error(`Cannot resolve extends "${name}": not found in [${searched}]`);
         }
-        const parentPath = yamlExists ? yamlPath : ymlPath;
         const parent = loadYamlFile(parentPath);
         if (parent.extends && Array.isArray(parent.extends)) {
-          const grandparents = resolveExtends(adapterDir, parent.extends, new Set(visited));
+          const grandparents = resolveExtends(searchDirs, parent.extends, new Set(visited));
           results.push(...grandparents);
         }
         results.push(parent);
@@ -2862,6 +2873,24 @@ var require_adapter = __commonJS({
       }
       return result;
     }
+    function findAdapterSearchDirs(adapterDir) {
+      const dirs = [];
+      let current = adapterDir;
+      const root = path2.parse(current).root;
+      for (let i = 0; i < 10; i++) {
+        const candidate = path2.join(current, "assets", "adapters");
+        if (fs2.existsSync(candidate)) {
+          dirs.push(candidate);
+        }
+        const parent = path2.dirname(current);
+        if (parent === current || parent === root) break;
+        current = parent;
+      }
+      if (!dirs.includes(adapterDir)) {
+        dirs.push(adapterDir);
+      }
+      return dirs;
+    }
     function loadAdapter2(adapterPath) {
       const absPath = path2.resolve(adapterPath);
       if (!fs2.existsSync(absPath)) {
@@ -2869,9 +2898,10 @@ var require_adapter = __commonJS({
       }
       const raw = loadYamlFile(absPath);
       const adapterDir = path2.dirname(absPath);
+      const searchDirs = findAdapterSearchDirs(adapterDir);
       let merged = {};
       if (raw.extends && Array.isArray(raw.extends)) {
-        const parents = resolveExtends(adapterDir, raw.extends, /* @__PURE__ */ new Set());
+        const parents = resolveExtends(searchDirs, raw.extends, /* @__PURE__ */ new Set());
         for (const parent of parents) {
           merged = deepMerge(merged, parent);
         }

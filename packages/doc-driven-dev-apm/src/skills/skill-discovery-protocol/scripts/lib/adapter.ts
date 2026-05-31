@@ -11,7 +11,7 @@ function loadYamlFile(filePath: string): unknown {
   return yaml.load(content);
 }
 
-function resolveExtends(adapterDir: string, names: string[], visited: Set<string>): object[] {
+function resolveExtends(searchDirs: string[], names: string[], visited: Set<string>): object[] {
   const results: object[] = [];
   for (const name of names) {
     // Prevent path traversal in extends names
@@ -23,23 +23,29 @@ function resolveExtends(adapterDir: string, names: string[], visited: Set<string
     }
     visited.add(name);
 
-    const yamlPath = path.join(adapterDir, "references", `${name}.yaml`);
-    const ymlPath = path.join(adapterDir, "references", `${name}.yml`);
-    const yamlExists = fs.existsSync(yamlPath);
-    const ymlExists = fs.existsSync(ymlPath);
+    let parentPath: string | null = null;
+    for (const dir of searchDirs) {
+      const yamlPath = path.join(dir, `${name}.yaml`);
+      const ymlPath = path.join(dir, `${name}.yml`);
+      const yamlExists = fs.existsSync(yamlPath);
+      const ymlExists = fs.existsSync(ymlPath);
 
-    if (yamlExists && ymlExists) {
-      throw new Error(`Both ${name}.yaml and ${name}.yml exist — ambiguous extends`);
-    }
-    if (!yamlExists && !ymlExists) {
-      throw new Error(`Cannot resolve extends "${name}": neither ${name}.yaml nor ${name}.yml found in references/`);
+      if (yamlExists && ymlExists) {
+        throw new Error(`Both ${name}.yaml and ${name}.yml exist in ${dir} — ambiguous extends`);
+      }
+      if (yamlExists) { parentPath = yamlPath; break; }
+      if (ymlExists) { parentPath = ymlPath; break; }
     }
 
-    const parentPath = yamlExists ? yamlPath : ymlPath;
+    if (!parentPath) {
+      const searched = searchDirs.join(", ");
+      throw new Error(`Cannot resolve extends "${name}": not found in [${searched}]`);
+    }
+
     const parent = loadYamlFile(parentPath) as Record<string, unknown>;
 
     if (parent.extends && Array.isArray(parent.extends)) {
-      const grandparents = resolveExtends(adapterDir, parent.extends as string[], new Set(visited));
+      const grandparents = resolveExtends(searchDirs, parent.extends as string[], new Set(visited));
       results.push(...grandparents);
     }
 
@@ -65,6 +71,27 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
   return result;
 }
 
+function findAdapterSearchDirs(adapterDir: string): string[] {
+  const dirs: string[] = [];
+  // Walk up from adapterDir looking for assets/adapters/ directories
+  let current = adapterDir;
+  const root = path.parse(current).root;
+  for (let i = 0; i < 10; i++) {
+    const candidate = path.join(current, "assets", "adapters");
+    if (fs.existsSync(candidate)) {
+      dirs.push(candidate);
+    }
+    const parent = path.dirname(current);
+    if (parent === current || parent === root) break;
+    current = parent;
+  }
+  // Also include the adapter's own directory as last resort
+  if (!dirs.includes(adapterDir)) {
+    dirs.push(adapterDir);
+  }
+  return dirs;
+}
+
 function loadAdapter(adapterPath: string): AdapterConfig {
   const absPath = path.resolve(adapterPath);
   if (!fs.existsSync(absPath)) {
@@ -74,10 +101,13 @@ function loadAdapter(adapterPath: string): AdapterConfig {
   const raw = loadYamlFile(absPath) as Record<string, unknown>;
   const adapterDir = path.dirname(absPath);
 
+  // Build search paths for extends resolution by walking up from adapter location
+  const searchDirs = findAdapterSearchDirs(adapterDir);
+
   let merged: Record<string, unknown> = {};
 
   if (raw.extends && Array.isArray(raw.extends)) {
-    const parents = resolveExtends(adapterDir, raw.extends as string[], new Set<string>());
+    const parents = resolveExtends(searchDirs, raw.extends as string[], new Set<string>());
     for (const parent of parents) {
       merged = deepMerge(merged, parent as Record<string, unknown>);
     }

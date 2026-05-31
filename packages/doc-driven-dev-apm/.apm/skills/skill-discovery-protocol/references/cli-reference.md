@@ -124,7 +124,7 @@ The `resolution_order` array defines precedence (first match wins):
 
 ### 4.1 General Adapter Role
 
-The `general-adapter.yaml` aggregates ALL known harness roots:
+The `general.yaml` (in `assets/adapters/`) aggregates ALL known harness roots:
 
 ```yaml
 scan:
@@ -147,11 +147,11 @@ scan:
 
 ### 4.2 Flow Override Pattern
 
-Flow adapters extend `general-adapter` and override only what differs:
+Flow adapters extend `general` and override only what differs:
 
 ```yaml
 extends:
-  - "general-adapter"
+  - "general"
 
 scan:
   scopes:

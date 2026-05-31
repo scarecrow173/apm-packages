@@ -92,10 +92,10 @@ scan.scopes.<scope_id>:
 
 ### 2.4 General Adapter の Root 集約
 
-`general-adapter` はサポートされる全ハーネス形式の roots を集約しなければならない（MUST）:
+`general` adapter（`assets/adapters/general.yaml`）はサポートされる全ハーネス形式の roots を集約しなければならない（MUST）:
 
 ```yaml
-# general-adapter scan.scopes.project.roots
+# general adapter scan.scopes.project.roots
 scan:
   scopes:
     project:
@@ -122,7 +122,7 @@ scan:
         - "."
 ```
 
-Flow 固有 adapter は `general-adapter` を extends し、差分のみ上書きする。
+Flow 固有 adapter は `general` を extends し、差分のみ上書きする。
 
 ### 2.5 Scan 優先度
 
@@ -449,7 +449,7 @@ adapter は `extends` を文字列配列として宣言してもよい（MAY）:
 
 ```yaml
 extends:
-  - "general-adapter"
+  - "general"
 ```
 
 ### 6.2 マージルール

@@ -24,7 +24,7 @@ CLI 使用法、Adapter スキーマ、解決セマンティクスについて�
 
 以下のファイルは**設定**であり、生成出力ではないため手動編集が可能:
 
-- Adapter YAML ファイル（`references/*.yaml`）
+- Adapter YAML ファイル（`assets/adapters/*.yaml`、フロー固有 `references/*.yaml`）
 - `SKILL.md` / `SKILL.ja.md`（スキル定義文書）
 - `protocol-contract.md` 等のリファレンス文書
 - ソーススクリプト（`src/skills/**/scripts/*.ts`）
@@ -132,14 +132,19 @@ pnpm run build:scripts
 解決アルゴリズム:
 
 ```text
+searchDirs = adapter ファイルのディレクトリから上方に走査し、
+             各祖先の "assets/adapters/" が存在すれば収集、
+             最後に adapter 自身のディレクトリをフォールバックとして追加
+
 for name in extends:
-  candidates = [
-    "references/{name}.yaml",
-    "references/{name}.yml"
-  ]
-  if both exist → schema error
-  if neither exists → schema error
-  resolved = the one that exists
+  for dir in searchDirs:
+    candidates = [
+      "{dir}/{name}.yaml",
+      "{dir}/{name}.yml"
+    ]
+    if both exist in same dir → schema error
+    if one exists → resolved, stop searching
+  if not found in any dir → schema error
 ```
 
 ### 5.2 マージセマンティクス

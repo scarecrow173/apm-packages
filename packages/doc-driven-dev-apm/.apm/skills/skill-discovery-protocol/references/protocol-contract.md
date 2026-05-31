@@ -93,10 +93,10 @@ scan.scopes.<scope_id>:
 
 ### 2.4 General Adapter Root Aggregation
 
-The `general-adapter` MUST aggregate roots for all supported harness formats:
+The `general` adapter (in `assets/adapters/general.yaml`) MUST aggregate roots for all supported harness formats:
 
 ```yaml
-# general-adapter scan.scopes.project.roots
+# general adapter scan.scopes.project.roots
 scan:
   scopes:
     project:
@@ -123,7 +123,7 @@ scan:
         - "."
 ```
 
-Flow-specific adapters extend `general-adapter` and override only what differs.
+Flow-specific adapters extend `general` and override only what differs.
 
 ### 2.5 Scan Priority
 
@@ -450,7 +450,7 @@ Adapters MAY declare `extends` as a string array:
 
 ```yaml
 extends:
-  - "general-adapter"
+  - "general"
 ```
 
 ### 6.2 Merge Rules

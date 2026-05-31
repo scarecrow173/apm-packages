@@ -124,7 +124,7 @@ Flow Profile の `resolved_invocations` 配列は以下の手順で生成され�
 
 ### 4.1 General Adapter の役割
 
-`general-adapter.yaml` は既知のすべてのハーネス roots を集約する:
+`general.yaml`（`assets/adapters/` 内）は既知のすべてのハーネス roots を集約する:
 
 ```yaml
 scan:
@@ -147,11 +147,11 @@ scan:
 
 ### 4.2 Flow 差分上書きパターン
 
-Flow adapter は `general-adapter` を extends し、差分のみ上書きする:
+Flow adapter は `general` を extends し、差分のみ上書きする:
 
 ```yaml
 extends:
-  - "general-adapter"
+  - "general"
 
 scan:
   scopes:

@@ -27,7 +27,7 @@ For CLI usage, adapter schema, and resolution semantics, see `cli-reference.md`.
 The following files are **configuration**, not generated output, and MAY
 be edited manually:
 
-- Adapter YAML files (`references/*.yaml`)
+- Adapter YAML files (`assets/adapters/*.yaml`, flow-specific `references/*.yaml`)
 - `SKILL.md` / `SKILL.ja.md` (skill definition documents)
 - `protocol-contract.md` and other reference documentation
 - Source scripts (`src/skills/**/scripts/*.ts`)
@@ -136,14 +136,19 @@ is a **schema error** and causes Gate 1 (Schema Validation) to fail.
 Resolution algorithm:
 
 ```text
+searchDirs = walk up from adapter file directory,
+             collecting each ancestor's "assets/adapters/" if it exists,
+             plus adapter's own directory as fallback
+
 for name in extends:
-  candidates = [
-    "references/{name}.yaml",
-    "references/{name}.yml"
-  ]
-  if both exist → schema error
-  if neither exists → schema error
-  resolved = the one that exists
+  for dir in searchDirs:
+    candidates = [
+      "{dir}/{name}.yaml",
+      "{dir}/{name}.yml"
+    ]
+    if both exist in same dir → schema error
+    if one exists → resolved, stop searching
+  if not found in any dir → schema error
 ```
 
 ### 5.2 Merge Semantics
