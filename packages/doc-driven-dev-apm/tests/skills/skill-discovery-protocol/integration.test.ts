@@ -848,3 +848,154 @@ test("integration: full pipeline generate → validate → query validation-stat
   // validation-status returns adapter_id from the report
   assert.equal(data.adapter_id, "impl-flow-test");
 });
+
+// ─── Scanner: tilde expansion and external scope support ───
+
+test("integration: user scope with ~ path scans skills from home-relative directory", () => {
+  const projectDir = tempDir();
+  // Create a "user skills" directory outside the project (simulating ~/.apm/skills)
+  const userSkillsDir = fs.mkdtempSync(path.join(os.tmpdir(), "sdp-user-skills-"));
+  const skillDir = path.join(userSkillsDir, "user-skill-a");
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(path.join(skillDir, "SKILL.md"), `---
+name: user-skill-a
+description: "A user-level skill"
+provides:
+  - capability: user_help
+tags: [user]
+---
+# User Skill A
+`, "utf8");
+
+  // Write adapter that uses absolute path (simulating resolved ~)
+  // We use the absolute path directly since ~ expansion maps to os.homedir()
+  // and we can't guarantee a skill exists there. Instead test absolute external path.
+  const adapterContent = `schema_version: "1.0"
+adapter_id: "user-scope-test"
+protocol:
+  name: "skill-discovery-protocol"
+  min_version: "1.0"
+scan:
+  scopes:
+    project:
+      enabled: true
+      roots:
+        - ".apm/skills"
+    user:
+      enabled: true
+      roots:
+        - "${userSkillsDir.replace(/\\/g, "/")}"
+profile:
+  title: "User Scope Test"
+flow_stack:
+  slots: []
+classification:
+  unmatched:
+    action: "assign"
+    category: "general"
+    severity: "info"
+  taxonomy:
+    - id: "general"
+      label: "General"
+      description: "General skills"
+      match:
+        capabilities: []
+        tags: []
+        description_patterns: []
+invocation_resolution:
+  overrides:
+    slots: {}
+    capabilities: {}
+  resolution_order: ["default_skill", "provider_lookup"]
+  unresolved:
+    required: "warn"
+    optional: "warn"
+  invalid_override:
+    unknown_skill: "warn"
+    capability_mismatch: "warn"
+    override_not_allowed: "warn"
+validation:
+  schema: true
+render:
+  stable_sort:
+    skills: ["name"]
+    invocations: ["source_skill", "slot", "capability"]
+artifacts:
+  protocol:
+    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+readable_outputs:
+  enabled: false
+`;
+  fs.writeFileSync(path.join(projectDir, "user-adapter.yaml"), adapterContent, "utf8");
+  fs.mkdirSync(path.join(projectDir, ".apm/skills"), { recursive: true });
+
+  const result = runGenerate(["--adapter", "user-adapter.yaml"], projectDir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const catalog = JSON.parse(
+    fs.readFileSync(path.join(projectDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+  );
+  const skillNames = catalog.skills.map((s: { name: string }) => s.name);
+  assert.ok(skillNames.includes("user-skill-a"), `Expected user-skill-a in catalog, got: ${skillNames}`);
+});
+
+test("integration: project scope rejects paths outside project boundary", () => {
+  const projectDir = tempDir();
+  const externalDir = fs.mkdtempSync(path.join(os.tmpdir(), "sdp-external-"));
+
+  const adapterContent = `schema_version: "1.0"
+adapter_id: "boundary-test"
+protocol:
+  name: "skill-discovery-protocol"
+  min_version: "1.0"
+scan:
+  scopes:
+    project:
+      enabled: true
+      roots:
+        - "${externalDir.replace(/\\/g, "/")}"
+profile:
+  title: "Boundary Test"
+flow_stack:
+  slots: []
+classification:
+  unmatched:
+    action: "assign"
+    category: "general"
+    severity: "info"
+  taxonomy:
+    - id: "general"
+      label: "General"
+      description: "General skills"
+      match:
+        capabilities: []
+        tags: []
+        description_patterns: []
+invocation_resolution:
+  overrides:
+    slots: {}
+    capabilities: {}
+  resolution_order: ["default_skill"]
+  unresolved:
+    required: "warn"
+    optional: "warn"
+  invalid_override: {}
+validation:
+  schema: true
+render:
+  stable_sort:
+    skills: ["name"]
+    invocations: ["source_skill", "slot", "capability"]
+artifacts:
+  protocol:
+    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+readable_outputs:
+  enabled: false
+`;
+  fs.writeFileSync(path.join(projectDir, "boundary-adapter.yaml"), adapterContent, "utf8");
+
+  const result = runGenerate(["--adapter", "boundary-adapter.yaml"], projectDir);
+  // Should succeed but warn about boundary violation and produce empty catalog
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("outside project boundary"), `Expected boundary warning, got: ${result.stderr}`);
+});

@@ -6422,6 +6422,14 @@ var require_scanner = __commonJS({
     var fs2 = require("node:fs");
     var path2 = require("node:path");
     var matter = require_gray_matter();
+    var os = require("node:os");
+    function expandHome(p) {
+      if (p === "~") return os.homedir();
+      if (p.startsWith("~/") || p.startsWith("~\\")) {
+        return path2.join(os.homedir(), p.slice(2));
+      }
+      return p;
+    }
     function isSkillDir(dirPath) {
       return fs2.existsSync(path2.join(dirPath, "SKILL.md"));
     }
@@ -6534,15 +6542,18 @@ var require_scanner = __commonJS({
       const allSkills = [];
       const seen = /* @__PURE__ */ new Set();
       const scopes = adapter.scan.scopes;
-      for (const [_scopeName, scope] of Object.entries(scopes)) {
+      for (const [scopeName, scope] of Object.entries(scopes)) {
         if (!scope.enabled) continue;
         for (const root of scope.roots) {
-          const rootPath = path2.resolve(cwd, root);
-          const normalizedRoot = path2.normalize(rootPath);
-          const normalizedCwd = path2.normalize(cwd);
-          if (!normalizedRoot.startsWith(normalizedCwd + path2.sep) && normalizedRoot !== normalizedCwd) {
-            console.error(`Warning: scan root "${root}" resolves outside project boundary, skipping`);
-            continue;
+          const expanded = expandHome(root);
+          const rootPath = path2.isAbsolute(expanded) ? path2.resolve(expanded) : path2.resolve(cwd, expanded);
+          if (scopeName === "project") {
+            const normalizedRoot = path2.normalize(rootPath);
+            const normalizedCwd = path2.normalize(cwd);
+            if (!normalizedRoot.startsWith(normalizedCwd + path2.sep) && normalizedRoot !== normalizedCwd) {
+              console.error(`Warning: scan root "${root}" resolves outside project boundary, skipping`);
+              continue;
+            }
           }
           if (root === "apm_modules") {
             const moduleSkills = scanApmModules(rootPath);
