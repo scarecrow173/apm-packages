@@ -40,7 +40,7 @@ const RuntimeGuidanceSchema = z.object({
 
 export const FlowProfileSchema = z.object({
   schema_version: z.string(),
-  profile_id: z.string(),
+  flow_name: z.string(),
   generated_at: z.string(),
   validated_at: z.string(),
   adapter_id: z.string(),

@@ -6431,12 +6431,22 @@ var require_scanner = __commonJS({
       const skills = [];
       const stat = fs2.statSync(rootPath);
       if (!stat.isDirectory()) return [];
-      const entries = fs2.readdirSync(rootPath);
+      let entries;
+      try {
+        entries = fs2.readdirSync(rootPath);
+      } catch (e) {
+        console.error(`Warning: Cannot read directory "${rootPath}": ${e instanceof Error ? e.message : String(e)}`);
+        return [];
+      }
       for (const entry of entries) {
         const fullPath = path2.join(rootPath, entry);
         const entryStat = fs2.statSync(fullPath);
         if (entryStat.isDirectory() && isSkillDir(fullPath)) {
-          skills.push(parseSkillMd(fullPath));
+          try {
+            skills.push(parseSkillMd(fullPath));
+          } catch (e) {
+            console.error(`Warning: Failed to parse SKILL.md in "${fullPath}": ${e instanceof Error ? e.message : String(e)}`);
+          }
         }
       }
       return skills;
@@ -6444,11 +6454,23 @@ var require_scanner = __commonJS({
     function scanApmModules(rootPath) {
       if (!fs2.existsSync(rootPath)) return [];
       const skills = [];
-      const orgs = fs2.readdirSync(rootPath);
+      let orgs;
+      try {
+        orgs = fs2.readdirSync(rootPath);
+      } catch (e) {
+        console.error(`Warning: Cannot read directory "${rootPath}": ${e instanceof Error ? e.message : String(e)}`);
+        return [];
+      }
       for (const org of orgs) {
         const orgPath = path2.join(rootPath, org);
         if (!fs2.statSync(orgPath).isDirectory()) continue;
-        const packages = fs2.readdirSync(orgPath);
+        let packages;
+        try {
+          packages = fs2.readdirSync(orgPath);
+        } catch (e) {
+          console.error(`Warning: Cannot read directory "${orgPath}": ${e instanceof Error ? e.message : String(e)}`);
+          continue;
+        }
         for (const pkg of packages) {
           const pkgPath = path2.join(orgPath, pkg);
           if (!fs2.statSync(pkgPath).isDirectory()) continue;
@@ -6457,7 +6479,11 @@ var require_scanner = __commonJS({
             skills.push(...scanSkillDirs(skillsDir));
           }
           if (isSkillDir(pkgPath)) {
-            skills.push(parseSkillMd(pkgPath));
+            try {
+              skills.push(parseSkillMd(pkgPath));
+            } catch (e) {
+              console.error(`Warning: Failed to parse SKILL.md in "${pkgPath}": ${e instanceof Error ? e.message : String(e)}`);
+            }
           }
         }
       }
@@ -6474,6 +6500,12 @@ var require_scanner = __commonJS({
         if (!scope.enabled) continue;
         for (const root of scope.roots) {
           const rootPath = path2.resolve(cwd, root);
+          const normalizedRoot = path2.normalize(rootPath);
+          const normalizedCwd = path2.normalize(cwd);
+          if (!normalizedRoot.startsWith(normalizedCwd + path2.sep) && normalizedRoot !== normalizedCwd) {
+            console.error(`Warning: scan root "${root}" resolves outside project boundary, skipping`);
+            continue;
+          }
           if (root === "apm_modules") {
             const moduleSkills = scanApmModules(rootPath);
             for (const s of moduleSkills) {
@@ -6760,7 +6792,7 @@ var require_profile = __commonJS({
       const now = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
       return {
         schema_version: "1.0",
-        profile_id: adapter.adapter_id,
+        flow_name: adapter.adapter_id,
         generated_at: now,
         validated_at: now,
         adapter_id: adapter.adapter_id,
@@ -6884,8 +6916,9 @@ async function main() {
   try {
     adapter = loadAdapter(adapterPath);
   } catch (e) {
-    console.error(`Error loading adapter: ${e instanceof Error ? e.message : String(e)}`);
-    process.exitCode = 1;
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`Error loading adapter: ${msg}`);
+    process.exitCode = msg.includes("Adapter validation failed") ? 2 : 1;
     return;
   }
   const skills = scanSkills(cwd, adapter);

@@ -336,6 +336,7 @@ async function main(): Promise<void> {
     catalogPath,
     adapterAbsPath,
     cwd,
+    adapter?.validation?.deterministic?.compare,
   );
 
   // ─── Gate 4: Blocking Validations ───
@@ -377,6 +378,13 @@ async function main(): Promise<void> {
 
   // ─── Write validation-report.json alongside profile ───
   const reportPath = path.join(path.dirname(profilePath), "validation-report.json");
+  const normalizedReportPath = path.normalize(reportPath);
+  const normalizedCwd = path.normalize(cwd);
+  if (!normalizedReportPath.startsWith(normalizedCwd + path.sep) && !normalizedReportPath.startsWith(normalizedCwd)) {
+    console.error(`Error: Report path "${reportPath}" is outside project boundary`);
+    process.exitCode = 1;
+    return;
+  }
   const reportContent = renderJson(report);
   fs.writeFileSync(reportPath, reportContent, "utf8");
 

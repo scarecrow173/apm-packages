@@ -59,6 +59,7 @@ The CLI is divided into three responsibility domains:
 - Build Flow Profile
 - Render stable-sorted JSON + optional Markdown sidecars
 - Exit `0` on success, `1` on input error, `2` on schema error
+- **Note:** `validate_outputs` (protocol-contract step 8) is NOT auto-executed after generation. Validation is a separate command (`sdp validate`) to allow independent CI/CD orchestration.
 
 ### 2.2 Validate Scripts
 

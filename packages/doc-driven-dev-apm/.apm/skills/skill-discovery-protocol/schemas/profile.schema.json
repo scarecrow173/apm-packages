@@ -5,7 +5,7 @@
     "schema_version": {
       "type": "string"
     },
-    "profile_id": {
+    "flow_name": {
       "type": "string"
     },
     "generated_at": {
@@ -196,7 +196,7 @@
   },
   "required": [
     "schema_version",
-    "profile_id",
+    "flow_name",
     "generated_at",
     "validated_at",
     "adapter_id",

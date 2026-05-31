@@ -35,7 +35,7 @@ function setupQueryEnv(dir: string) {
 
   const profile = {
     schema_version: "1.0",
-    profile_id: "test-profile",
+    flow_name: "test-profile",
     generated_at: "2026-01-01T00:00:00Z",
     validated_at: "2026-01-01T00:00:00Z",
     adapter_id: "test-adapter",

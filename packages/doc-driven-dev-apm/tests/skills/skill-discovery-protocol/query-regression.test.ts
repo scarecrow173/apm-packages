@@ -28,7 +28,7 @@ function setupEnv(dir: string) {
 
   const profile = {
     schema_version: "1.0",
-    profile_id: "regression-test-profile",
+    flow_name: "regression-test-profile",
     generated_at: "2026-01-01T00:00:00Z",
     validated_at: "2026-01-01T00:00:00Z",
     adapter_id: "regression-adapter",

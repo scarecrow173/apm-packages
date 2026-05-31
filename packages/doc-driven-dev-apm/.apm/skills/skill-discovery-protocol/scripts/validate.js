@@ -6439,12 +6439,22 @@ var require_scanner = __commonJS({
       const skills = [];
       const stat = fs2.statSync(rootPath);
       if (!stat.isDirectory()) return [];
-      const entries = fs2.readdirSync(rootPath);
+      let entries;
+      try {
+        entries = fs2.readdirSync(rootPath);
+      } catch (e) {
+        console.error(`Warning: Cannot read directory "${rootPath}": ${e instanceof Error ? e.message : String(e)}`);
+        return [];
+      }
       for (const entry of entries) {
         const fullPath = path2.join(rootPath, entry);
         const entryStat = fs2.statSync(fullPath);
         if (entryStat.isDirectory() && isSkillDir(fullPath)) {
-          skills.push(parseSkillMd(fullPath));
+          try {
+            skills.push(parseSkillMd(fullPath));
+          } catch (e) {
+            console.error(`Warning: Failed to parse SKILL.md in "${fullPath}": ${e instanceof Error ? e.message : String(e)}`);
+          }
         }
       }
       return skills;
@@ -6452,11 +6462,23 @@ var require_scanner = __commonJS({
     function scanApmModules(rootPath) {
       if (!fs2.existsSync(rootPath)) return [];
       const skills = [];
-      const orgs = fs2.readdirSync(rootPath);
+      let orgs;
+      try {
+        orgs = fs2.readdirSync(rootPath);
+      } catch (e) {
+        console.error(`Warning: Cannot read directory "${rootPath}": ${e instanceof Error ? e.message : String(e)}`);
+        return [];
+      }
       for (const org of orgs) {
         const orgPath = path2.join(rootPath, org);
         if (!fs2.statSync(orgPath).isDirectory()) continue;
-        const packages = fs2.readdirSync(orgPath);
+        let packages;
+        try {
+          packages = fs2.readdirSync(orgPath);
+        } catch (e) {
+          console.error(`Warning: Cannot read directory "${orgPath}": ${e instanceof Error ? e.message : String(e)}`);
+          continue;
+        }
         for (const pkg of packages) {
           const pkgPath = path2.join(orgPath, pkg);
           if (!fs2.statSync(pkgPath).isDirectory()) continue;
@@ -6465,7 +6487,11 @@ var require_scanner = __commonJS({
             skills.push(...scanSkillDirs(skillsDir));
           }
           if (isSkillDir(pkgPath)) {
-            skills.push(parseSkillMd(pkgPath));
+            try {
+              skills.push(parseSkillMd(pkgPath));
+            } catch (e) {
+              console.error(`Warning: Failed to parse SKILL.md in "${pkgPath}": ${e instanceof Error ? e.message : String(e)}`);
+            }
           }
         }
       }
@@ -6482,6 +6508,12 @@ var require_scanner = __commonJS({
         if (!scope.enabled) continue;
         for (const root of scope.roots) {
           const rootPath = path2.resolve(cwd, root);
+          const normalizedRoot = path2.normalize(rootPath);
+          const normalizedCwd = path2.normalize(cwd);
+          if (!normalizedRoot.startsWith(normalizedCwd + path2.sep) && normalizedRoot !== normalizedCwd) {
+            console.error(`Warning: scan root "${root}" resolves outside project boundary, skipping`);
+            continue;
+          }
           if (root === "apm_modules") {
             const moduleSkills = scanApmModules(rootPath);
             for (const s of moduleSkills) {
@@ -21804,7 +21836,7 @@ var init_profile = __esm({
     });
     FlowProfileSchema = external_exports.object({
       schema_version: external_exports.string(),
-      profile_id: external_exports.string(),
+      flow_name: external_exports.string(),
       generated_at: external_exports.string(),
       validated_at: external_exports.string(),
       adapter_id: external_exports.string(),
@@ -22170,7 +22202,7 @@ var require_profile = __commonJS({
       const now = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
       return {
         schema_version: "1.0",
-        profile_id: adapter.adapter_id,
+        flow_name: adapter.adapter_id,
         generated_at: now,
         validated_at: now,
         adapter_id: adapter.adapter_id,
@@ -22261,7 +22293,7 @@ var require_deterministic_gate = __commonJS({
     function stripTimestampsForCompare(content) {
       return content.replace(/"generated_at"\s*:\s*"[^"]*"/g, '"generated_at": ""').replace(/"validated_at"\s*:\s*"[^"]*"/g, '"validated_at": ""');
     }
-    function runDeterministicGate2(profilePath, catalogPath, adapterPath, cwd) {
+    function runDeterministicGate2(profilePath, catalogPath, adapterPath, cwd, compare) {
       if (!adapterPath) {
         return {
           result: "skipped",
@@ -22277,7 +22309,7 @@ var require_deterministic_gate = __commonJS({
         };
       }
       const savedArtifacts = [];
-      const targets = [];
+      let targets = [];
       if (profilePath && fs2.existsSync(profilePath)) {
         savedArtifacts.push({ path: profilePath, content: fs2.readFileSync(profilePath, "utf8") });
         targets.push({ path: profilePath, label: "profile" });
@@ -22285,6 +22317,9 @@ var require_deterministic_gate = __commonJS({
       if (catalogPath && fs2.existsSync(catalogPath)) {
         savedArtifacts.push({ path: catalogPath, content: fs2.readFileSync(catalogPath, "utf8") });
         targets.push({ path: catalogPath, label: "catalog" });
+      }
+      if (compare && compare.length > 0) {
+        targets = targets.filter((t) => compare.includes(t.label));
       }
       if (targets.length === 0) {
         return {
@@ -22704,7 +22739,8 @@ async function main() {
     profilePath,
     catalogPath,
     adapterAbsPath,
-    cwd
+    cwd,
+    adapter?.validation?.deterministic?.compare
   );
   let blockingResult;
   const invocationEnabled = adapter?.validation?.invocation?.enabled ?? true;
@@ -22736,6 +22772,13 @@ async function main() {
     overall_result: overallResult
   };
   const reportPath = path.join(path.dirname(profilePath), "validation-report.json");
+  const normalizedReportPath = path.normalize(reportPath);
+  const normalizedCwd = path.normalize(cwd);
+  if (!normalizedReportPath.startsWith(normalizedCwd + path.sep) && !normalizedReportPath.startsWith(normalizedCwd)) {
+    console.error(`Error: Report path "${reportPath}" is outside project boundary`);
+    process.exitCode = 1;
+    return;
+  }
   const reportContent = renderJson(report);
   fs.writeFileSync(reportPath, reportContent, "utf8");
   console.log(`Schema:        ${schemaResult.result}`);

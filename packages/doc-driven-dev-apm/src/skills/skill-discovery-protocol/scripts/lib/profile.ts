@@ -58,7 +58,7 @@ function buildProfile(
 
   return {
     schema_version: "1.0",
-    profile_id: adapter.adapter_id,
+    flow_name: adapter.adapter_id,
     generated_at: now,
     validated_at: now,
     adapter_id: adapter.adapter_id,

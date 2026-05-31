@@ -325,7 +325,7 @@ test("validate schema gate detects missing fields", () => {
   // Write a profile missing required fields
   const badProfile = {
     schema_version: "1.0",
-    profile_id: "test",
+    flow_name: "test",
     // missing adapter_id, flow_stack, classification, resolved_invocations, etc.
   };
   fs.writeFileSync(

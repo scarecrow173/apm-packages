@@ -144,7 +144,7 @@ export type RuntimeGuidance = {
 
 export type FlowProfile = {
   schema_version: string;
-  profile_id: string;
+  flow_name: string;
   generated_at: string;
   validated_at: string;
   adapter_id: string;

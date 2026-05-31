@@ -69,12 +69,23 @@ function scanSkillDirs(rootPath: string): ScannedSkill[] {
   const stat = fs.statSync(rootPath);
   if (!stat.isDirectory()) return [];
 
-  const entries: string[] = fs.readdirSync(rootPath);
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(rootPath);
+  } catch (e: unknown) {
+    console.error(`Warning: Cannot read directory "${rootPath}": ${e instanceof Error ? e.message : String(e)}`);
+    return [];
+  }
+
   for (const entry of entries) {
     const fullPath = path.join(rootPath, entry);
     const entryStat = fs.statSync(fullPath);
     if (entryStat.isDirectory() && isSkillDir(fullPath)) {
-      skills.push(parseSkillMd(fullPath));
+      try {
+        skills.push(parseSkillMd(fullPath));
+      } catch (e: unknown) {
+        console.error(`Warning: Failed to parse SKILL.md in "${fullPath}": ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
   }
 
@@ -84,11 +95,27 @@ function scanSkillDirs(rootPath: string): ScannedSkill[] {
 function scanApmModules(rootPath: string): ScannedSkill[] {
   if (!fs.existsSync(rootPath)) return [];
   const skills: ScannedSkill[] = [];
-  const orgs: string[] = fs.readdirSync(rootPath);
+
+  let orgs: string[];
+  try {
+    orgs = fs.readdirSync(rootPath);
+  } catch (e: unknown) {
+    console.error(`Warning: Cannot read directory "${rootPath}": ${e instanceof Error ? e.message : String(e)}`);
+    return [];
+  }
+
   for (const org of orgs) {
     const orgPath = path.join(rootPath, org);
     if (!fs.statSync(orgPath).isDirectory()) continue;
-    const packages: string[] = fs.readdirSync(orgPath);
+
+    let packages: string[];
+    try {
+      packages = fs.readdirSync(orgPath);
+    } catch (e: unknown) {
+      console.error(`Warning: Cannot read directory "${orgPath}": ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+
     for (const pkg of packages) {
       const pkgPath = path.join(orgPath, pkg);
       if (!fs.statSync(pkgPath).isDirectory()) continue;
@@ -99,7 +126,11 @@ function scanApmModules(rootPath: string): ScannedSkill[] {
       }
       // Also check if the package itself is a skill
       if (isSkillDir(pkgPath)) {
-        skills.push(parseSkillMd(pkgPath));
+        try {
+          skills.push(parseSkillMd(pkgPath));
+        } catch (e: unknown) {
+          console.error(`Warning: Failed to parse SKILL.md in "${pkgPath}": ${e instanceof Error ? e.message : String(e)}`);
+        }
       }
     }
   }
@@ -121,6 +152,14 @@ function scanSkills(cwd: string, adapter: AdapterConfig): ScannedSkill[] {
     if (!scope.enabled) continue;
     for (const root of scope.roots) {
       const rootPath = path.resolve(cwd, root);
+
+      // Prevent scanning outside project boundary
+      const normalizedRoot = path.normalize(rootPath);
+      const normalizedCwd = path.normalize(cwd);
+      if (!normalizedRoot.startsWith(normalizedCwd + path.sep) && normalizedRoot !== normalizedCwd) {
+        console.error(`Warning: scan root "${root}" resolves outside project boundary, skipping`);
+        continue;
+      }
 
       if (root === "apm_modules") {
         const moduleSkills = scanApmModules(rootPath);

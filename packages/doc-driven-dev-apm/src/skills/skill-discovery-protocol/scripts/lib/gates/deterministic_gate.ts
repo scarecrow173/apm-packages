@@ -35,6 +35,7 @@ function runDeterministicGate(
   catalogPath: string | null,
   adapterPath: string | null,
   cwd: string,
+  compare?: string[],
 ): DeterministicResult {
   if (!adapterPath) {
     return {
@@ -54,7 +55,7 @@ function runDeterministicGate(
 
   // Save current artifacts
   const savedArtifacts: { path: string; content: string }[] = [];
-  const targets: { path: string; label: string }[] = [];
+  let targets: { path: string; label: string }[] = [];
 
   if (profilePath && fs.existsSync(profilePath)) {
     savedArtifacts.push({ path: profilePath, content: fs.readFileSync(profilePath, "utf8") });
@@ -63,6 +64,11 @@ function runDeterministicGate(
   if (catalogPath && fs.existsSync(catalogPath)) {
     savedArtifacts.push({ path: catalogPath, content: fs.readFileSync(catalogPath, "utf8") });
     targets.push({ path: catalogPath, label: "catalog" });
+  }
+
+  // If compare config is provided, filter targets
+  if (compare && compare.length > 0) {
+    targets = targets.filter(t => compare.includes(t.label));
   }
 
   if (targets.length === 0) {

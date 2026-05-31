@@ -278,13 +278,75 @@ var JsonRenderer = class {
   }
 };
 var MarkdownRenderer = class {
-  render(_data) {
-    throw new Error("Markdown renderer not yet implemented");
+  render(data) {
+    if (data == null || typeof data !== "object") {
+      return String(data);
+    }
+    if (Array.isArray(data)) {
+      return data.map((item) => {
+        if (item == null || typeof item !== "object") {
+          return `- ${String(item)}`;
+        }
+        const entries2 = Object.entries(item);
+        if (entries2.length === 0) return `- (empty)`;
+        const [firstKey, firstVal] = entries2[0];
+        const heading = `- **${firstKey}:** ${String(firstVal)}`;
+        const rest = entries2.slice(1).map(([k, v]) => `  - ${k}: ${String(v)}`);
+        return [heading, ...rest].join("\n");
+      }).join("\n");
+    }
+    const entries = Object.entries(data);
+    return entries.map(([k, v]) => `- **${k}:** ${String(v)}`).join("\n");
   }
 };
 var TableRenderer = class {
-  render(_data) {
-    throw new Error("Table renderer not yet implemented");
+  render(data) {
+    if (data == null || typeof data !== "object") {
+      return String(data);
+    }
+    if (Array.isArray(data)) {
+      if (data.length === 0) return "";
+      const cols = [
+        ...new Set(
+          data.flatMap(
+            (item) => item != null && typeof item === "object" ? Object.keys(item) : []
+          )
+        )
+      ];
+      if (cols.length === 0) return data.map((item) => String(item)).join("\n");
+      const widths = cols.map(
+        (col) => Math.max(
+          col.length,
+          ...data.map((item) => {
+            const val = item != null && typeof item === "object" ? String(item[col] ?? "") : "";
+            return val.length;
+          })
+        )
+      );
+      const header2 = `| ${cols.map((c, i) => c.padEnd(widths[i])).join(" | ")} |`;
+      const sep2 = `| ${widths.map((w) => "-".repeat(w)).join(" | ")} |`;
+      const rows2 = data.map((item) => {
+        const cells = cols.map((col, i) => {
+          const val = item != null && typeof item === "object" ? String(item[col] ?? "") : "";
+          return val.padEnd(widths[i]);
+        });
+        return `| ${cells.join(" | ")} |`;
+      });
+      return [header2, sep2, ...rows2].join("\n");
+    }
+    const entries = Object.entries(data);
+    if (entries.length === 0) return "";
+    const keyWidth = Math.max(...entries.map(([k]) => k.length));
+    const valWidth = Math.max(
+      ...entries.map(([, v]) => String(v).length),
+      5
+    );
+    const header = `| ${"key".padEnd(keyWidth)} | ${"value".padEnd(valWidth)} |`;
+    const sep = `| ${"-".repeat(keyWidth)} | ${"-".repeat(valWidth)} |`;
+    const rows = entries.map(
+      ([k, v]) => `| ${k.padEnd(keyWidth)} | ${String(v).padEnd(valWidth)} |`
+    );
+    return [header, sep, ...rows].join("\n");
   }
 };
 var renderers = {

@@ -50,8 +50,10 @@ async function main(): Promise<void> {
   try {
     adapter = loadAdapter(adapterPath);
   } catch (e: unknown) {
-    console.error(`Error loading adapter: ${e instanceof Error ? e.message : String(e)}`);
-    process.exitCode = 1;
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`Error loading adapter: ${msg}`);
+    // Schema validation errors from Zod contain field-level details
+    process.exitCode = msg.includes("Adapter validation failed") ? 2 : 1;
     return;
   }
 
