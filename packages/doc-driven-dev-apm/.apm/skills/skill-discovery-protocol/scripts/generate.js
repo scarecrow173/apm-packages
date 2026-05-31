@@ -6423,8 +6423,14 @@ var require_scanner = __commonJS({
       return p;
     }
     function expandEnvVars(p) {
-      return p.replace(/\$\{([^}]+)\}/g, (_match, varName) => {
-        return process.env[varName] || "";
+      return p.replace(/\$\{([^}]+)\}/g, (_match, expr) => {
+        const sepIdx = expr.indexOf(":-");
+        if (sepIdx !== -1) {
+          const varName = expr.slice(0, sepIdx);
+          const defaultVal = expr.slice(sepIdx + 2);
+          return process.env[varName] || defaultVal;
+        }
+        return process.env[expr] || "";
       });
     }
     function isSkillDir(dirPath) {

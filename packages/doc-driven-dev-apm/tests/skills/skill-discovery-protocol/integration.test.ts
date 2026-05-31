@@ -1091,3 +1091,89 @@ readable_outputs:
   const skillNames = catalog.skills.map((s: { name: string }) => s.name);
   assert.ok(skillNames.includes("env-skill-b"), `Expected env-skill-b in catalog, got: ${skillNames}`);
 });
+
+test("integration: \${VAR:-default} syntax uses default when env var is unset", () => {
+  const projectDir = tempDir();
+  // Create skill dir at the "default" location
+  const defaultDir = fs.mkdtempSync(path.join(os.tmpdir(), "sdp-default-skills-"));
+  const skillDir = path.join(defaultDir, "default-skill-c");
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(path.join(skillDir, "SKILL.md"), `---
+name: default-skill-c
+description: "Skill found via default value"
+provides:
+  - capability: default_test
+tags: [default]
+---
+# Default Skill C
+`, "utf8");
+
+  // Ensure the env var is NOT set
+  delete process.env["SDP_TEST_UNSET_VAR"];
+
+  const escapedPath = defaultDir.replace(/\\/g, "/");
+  const adapterContent = `schema_version: "1.0"
+adapter_id: "default-val-test"
+protocol:
+  name: "skill-discovery-protocol"
+  min_version: "1.0"
+scan:
+  scopes:
+    project:
+      enabled: true
+      roots:
+        - ".apm/skills"
+    user:
+      enabled: true
+      roots:
+        - "\${SDP_TEST_UNSET_VAR:-${escapedPath}}"
+profile:
+  title: "Default Value Test"
+flow_stack:
+  slots: []
+classification:
+  unmatched:
+    action: "assign"
+    category: "general"
+    severity: "info"
+  taxonomy:
+    - id: "general"
+      label: "General"
+      description: "General skills"
+      match:
+        capabilities: []
+        tags: []
+        description_patterns: []
+invocation_resolution:
+  overrides:
+    slots: {}
+    capabilities: {}
+  resolution_order: ["default_skill"]
+  unresolved:
+    required: "warn"
+    optional: "warn"
+  invalid_override: {}
+validation:
+  schema: true
+render:
+  stable_sort:
+    skills: ["name"]
+    invocations: ["source_skill", "slot", "capability"]
+artifacts:
+  protocol:
+    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+readable_outputs:
+  enabled: false
+`;
+  fs.writeFileSync(path.join(projectDir, "default-adapter.yaml"), adapterContent, "utf8");
+  fs.mkdirSync(path.join(projectDir, ".apm/skills"), { recursive: true });
+
+  const result = runGenerate(["--adapter", "default-adapter.yaml"], projectDir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const catalog = JSON.parse(
+    fs.readFileSync(path.join(projectDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+  );
+  const skillNames = catalog.skills.map((s: { name: string }) => s.name);
+  assert.ok(skillNames.includes("default-skill-c"), `Expected default-skill-c in catalog, got: ${skillNames}`);
+});

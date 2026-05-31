@@ -17,8 +17,15 @@ function expandHome(p: string): string {
 }
 
 function expandEnvVars(p: string): string {
-  return p.replace(/\$\{([^}]+)\}/g, (_match: string, varName: string) => {
-    return process.env[varName] || "";
+  return p.replace(/\$\{([^}]+)\}/g, (_match: string, expr: string) => {
+    // Support ${VAR:-default} syntax
+    const sepIdx = expr.indexOf(":-");
+    if (sepIdx !== -1) {
+      const varName = expr.slice(0, sepIdx);
+      const defaultVal = expr.slice(sepIdx + 2);
+      return process.env[varName] || defaultVal;
+    }
+    return process.env[expr] || "";
   });
 }
 
