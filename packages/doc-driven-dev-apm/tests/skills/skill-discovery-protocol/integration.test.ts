@@ -999,3 +999,95 @@ readable_outputs:
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   assert.ok(result.stderr.includes("outside project boundary"), `Expected boundary warning, got: ${result.stderr}`);
 });
+
+test("integration: environment variable in scan root is expanded", () => {
+  const projectDir = tempDir();
+  // Create external skill dir and set env var pointing to it
+  const envSkillsDir = fs.mkdtempSync(path.join(os.tmpdir(), "sdp-env-skills-"));
+  const skillDir = path.join(envSkillsDir, "env-skill-b");
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(path.join(skillDir, "SKILL.md"), `---
+name: env-skill-b
+description: "Skill found via env var"
+provides:
+  - capability: env_test
+tags: [env]
+---
+# Env Skill B
+`, "utf8");
+
+  // Set env var for this test
+  process.env["SDP_TEST_SKILL_DIR"] = envSkillsDir;
+
+  const adapterContent = `schema_version: "1.0"
+adapter_id: "env-var-test"
+protocol:
+  name: "skill-discovery-protocol"
+  min_version: "1.0"
+scan:
+  scopes:
+    project:
+      enabled: true
+      roots:
+        - ".apm/skills"
+    user:
+      enabled: true
+      roots:
+        - "\${SDP_TEST_SKILL_DIR}"
+profile:
+  title: "Env Var Test"
+flow_stack:
+  slots: []
+classification:
+  unmatched:
+    action: "assign"
+    category: "general"
+    severity: "info"
+  taxonomy:
+    - id: "general"
+      label: "General"
+      description: "General skills"
+      match:
+        capabilities: []
+        tags: []
+        description_patterns: []
+invocation_resolution:
+  overrides:
+    slots: {}
+    capabilities: {}
+  resolution_order: ["default_skill", "provider_lookup"]
+  unresolved:
+    required: "warn"
+    optional: "warn"
+  invalid_override:
+    unknown_skill: "warn"
+    capability_mismatch: "warn"
+    override_not_allowed: "warn"
+validation:
+  schema: true
+render:
+  stable_sort:
+    skills: ["name"]
+    invocations: ["source_skill", "slot", "capability"]
+artifacts:
+  protocol:
+    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+readable_outputs:
+  enabled: false
+`;
+  fs.writeFileSync(path.join(projectDir, "env-adapter.yaml"), adapterContent, "utf8");
+  fs.mkdirSync(path.join(projectDir, ".apm/skills"), { recursive: true });
+
+  const result = runGenerate(["--adapter", "env-adapter.yaml"], projectDir);
+
+  // Clean up env var
+  delete process.env["SDP_TEST_SKILL_DIR"];
+
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const catalog = JSON.parse(
+    fs.readFileSync(path.join(projectDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+  );
+  const skillNames = catalog.skills.map((s: { name: string }) => s.name);
+  assert.ok(skillNames.includes("env-skill-b"), `Expected env-skill-b in catalog, got: ${skillNames}`);
+});

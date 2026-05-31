@@ -16,6 +16,12 @@ function expandHome(p: string): string {
   return p;
 }
 
+function expandEnvVars(p: string): string {
+  return p.replace(/\$\{([^}]+)\}/g, (_match: string, varName: string) => {
+    return process.env[varName] || "";
+  });
+}
+
 function isSkillDir(dirPath: string): boolean {
   return fs.existsSync(path.join(dirPath, "SKILL.md"));
 }
@@ -161,7 +167,7 @@ function scanSkills(cwd: string, adapter: AdapterConfig): ScannedSkill[] {
   for (const [scopeName, scope] of Object.entries(scopes)) {
     if (!scope.enabled) continue;
     for (const root of scope.roots) {
-      const expanded = expandHome(root);
+      const expanded = expandHome(expandEnvVars(root));
       const rootPath = path.isAbsolute(expanded)
         ? path.resolve(expanded)
         : path.resolve(cwd, expanded);
