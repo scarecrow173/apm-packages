@@ -90,7 +90,7 @@ the repository-specific instantiation of this mapping, specifying concrete skill
 > the `sdp generate` command and updated when skills change.
 
 - If it exists and is valid → go to Phase B (Configuration from Profile).
-- If it does not exist → run `sdp generate --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml`
+- If it does not exist → run `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - If it exists but is corrupted → delete and regenerate with the same command.
 
 ---
@@ -100,8 +100,8 @@ the repository-specific instantiation of this mapping, specifying concrete skill
 Profile generation and validation is handled by the `skill-discovery-protocol` skill.
 
 **Commands:**
-- Generate/update: `sdp generate --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml`
-- Validate: `sdp validate --profile implementation-profile.json --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml`
+- Generate/update: `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- Validate: `sdp validate --profile implementation-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - Query: `sdp query --profile implementation-profile.json <subcommand>`
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.
@@ -151,7 +151,7 @@ ACTIVE SKILL STACK FOR THIS TASK:
 - **Tooling**: `git-commit`, `ci-cd-automation`
 - **Review**: `code-review-and-quality`
 
-For detailed category definitions, see the adapter's `classification.taxonomy` in `references/implementation-adapter.yaml`.
+For detailed category definitions, see the adapter's `classification.taxonomy` in `assets/adapters/implementation-adapter.yaml`.
 
 ---
 

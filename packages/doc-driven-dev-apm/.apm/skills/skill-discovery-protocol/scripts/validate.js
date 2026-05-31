@@ -22836,13 +22836,17 @@ async function main() {
     profile_validation: profileValidation,
     overall_result: overallResult
   };
-  const reportPath = path.join(path.dirname(profilePath), "validation-report.json");
+  const sdpBase = path.resolve(cwd, ".sdp");
+  const reportPath = path.resolve(sdpBase, "validation-report.json");
   const normalizedReportPath = path.normalize(reportPath);
   const normalizedCwd = path.normalize(cwd);
   if (!normalizedReportPath.startsWith(normalizedCwd + path.sep) && !normalizedReportPath.startsWith(normalizedCwd)) {
     console.error(`Error: Report path "${reportPath}" is outside project boundary`);
     process.exitCode = 1;
     return;
+  }
+  if (!fs.existsSync(sdpBase)) {
+    fs.mkdirSync(sdpBase, { recursive: true });
   }
   const reportContent = renderJson(report);
   fs.writeFileSync(reportPath, reportContent, "utf8");

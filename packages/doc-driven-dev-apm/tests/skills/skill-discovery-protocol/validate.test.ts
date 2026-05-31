@@ -221,15 +221,15 @@ render:
 
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
-    flow_profile: "tasks/test-adapter-profile.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "test-adapter-profile.json"
 
 readable_outputs:
   enabled: false
   include: []
 `;
   fs.writeFileSync(path.join(dir, "test-adapter.yaml"), adapterContent, "utf8");
-  fs.mkdirSync(path.join(dir, "tasks"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
 }
 
 /** Generate artifacts so we have valid profile/catalog to validate */
@@ -294,14 +294,14 @@ test("validate --profile with valid artifacts: all gates pass", () => {
   generateArtifacts(dir);
 
   const result = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
   assert.ok(result.stdout.includes("Overall:       pass"));
 
   // Check validation-report.json was created
-  const reportPath = path.join(dir, "tasks", "validation-report.json");
+  const reportPath = path.join(dir, ".sdp", "validation-report.json");
   assert.ok(fs.existsSync(reportPath), "validation-report.json should exist");
 
   const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
@@ -320,7 +320,7 @@ test("validate --profile with valid artifacts: all gates pass", () => {
 test("validate schema gate detects missing fields", () => {
   const dir = tempDir();
   setupTestProject(dir);
-  fs.mkdirSync(path.join(dir, "tasks"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
 
   // Write a profile missing required fields
   const badProfile = {
@@ -329,12 +329,12 @@ test("validate schema gate detects missing fields", () => {
     // missing adapter_id, flow_stack, classification, resolved_invocations, etc.
   };
   fs.writeFileSync(
-    path.join(dir, "tasks", "test-adapter-profile.json"),
+    path.join(dir, ".sdp", "test-adapter-profile.json"),
     JSON.stringify(badProfile, null, 2),
     "utf8",
   );
 
-  const result = runValidate(["--profile", "tasks/test-adapter-profile.json"], dir);
+  const result = runValidate(["--profile", ".sdp/test-adapter-profile.json"], dir);
   assert.equal(result.status, 1);
   assert.ok(result.stdout.includes("Schema:        fail"));
   assert.ok(result.stderr.includes("Missing required field"));
@@ -346,7 +346,7 @@ test("validate schema gate detects non-snake_case slot_id", () => {
   generateArtifacts(dir);
 
   // Modify profile to have non-snake_case slot
-  const profilePath = path.join(dir, "tasks", "test-adapter-profile.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   profile.flow_stack.slots[0].slot_id = "BadSlotName";
   fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
@@ -364,14 +364,14 @@ test("validate staleness gate detects old validated_at", () => {
   generateArtifacts(dir);
 
   // Modify catalog validated_at to 60 days ago
-  const catalogPath = path.join(dir, "tasks", "skill-reference-catalog.json");
+  const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
   const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
   const oldDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
   catalog.validated_at = oldDate;
   fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
 
   const result = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -409,7 +409,7 @@ tags:
   );
 
   const result = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -417,7 +417,7 @@ tags:
 
   // Check report has new_skills
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
   );
   assert.ok(report.staleness_validation.new_skills.includes("skill-c"));
 });
@@ -431,13 +431,13 @@ test("validate staleness gate detects removed skills", () => {
   fs.rmSync(path.join(dir, ".apm", "skills", "skill-b"), { recursive: true });
 
   const result = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
   );
   assert.ok(report.staleness_validation.removed_skills.includes("skill-b"));
 });
@@ -450,7 +450,7 @@ test("validate deterministic gate passes when artifacts are fresh", () => {
   generateArtifacts(dir);
 
   const result = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -463,13 +463,13 @@ test("validate deterministic gate fails on modified profile", () => {
   generateArtifacts(dir);
 
   // Modify profile content (not timestamp)
-  const profilePath = path.join(dir, "tasks", "test-adapter-profile.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   profile.warnings = ["injected warning"];
   fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
 
   const result = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -481,7 +481,7 @@ test("validate deterministic gate skipped without --adapter", () => {
   setupTestProject(dir);
   generateArtifacts(dir);
 
-  const result = runValidate(["--profile", "tasks/test-adapter-profile.json"], dir);
+  const result = runValidate(["--profile", ".sdp/test-adapter-profile.json"], dir);
   assert.ok(result.stdout.includes("Deterministic: skipped"));
 });
 
@@ -520,14 +520,14 @@ tags:
   generateArtifacts(dir);
 
   const result = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
   assert.ok(result.stdout.includes("Blocking:      fail"));
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
   );
   const unresolvedCheck = report.blocking_validations.checks.find(
     (c: { type: string }) => c.type === "unresolved_required",
@@ -554,13 +554,13 @@ test("validate blocking gate detects unknown skill override", () => {
   generateArtifacts(dir);
 
   const result = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
   );
   const unknownCheck = report.blocking_validations.checks.find(
     (c: { type: string }) => c.type === "unknown_skill_override",
@@ -576,12 +576,12 @@ test("validation-report.json has correct structure", () => {
   generateArtifacts(dir);
 
   runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
   );
 
   // Top-level keys
@@ -628,12 +628,12 @@ test("validate catalog_validation counts are correct", () => {
   generateArtifacts(dir);
 
   runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
   );
 
   assert.equal(report.catalog_validation.skill_count, 2);
@@ -648,12 +648,12 @@ test("validate overall_result is fail when any gate fails", () => {
   generateArtifacts(dir);
 
   // Corrupt profile to fail schema
-  const profilePath = path.join(dir, "tasks", "test-adapter-profile.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   delete profile.adapter_id;
   fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
 
-  const result = runValidate(["--profile", "tasks/test-adapter-profile.json"], dir);
+  const result = runValidate(["--profile", ".sdp/test-adapter-profile.json"], dir);
   assert.equal(result.status, 1);
   assert.ok(result.stdout.includes("Overall:       fail"));
 });
@@ -676,12 +676,12 @@ test("validate profile_validation detects unused override warnings", () => {
   generateArtifacts(dir);
 
   runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
   );
   assert.ok(report.profile_validation.unused_override_warnings.length > 0);
   assert.ok(
@@ -696,7 +696,7 @@ test("validate exit code 0 when all pass, 1 when fail, 2 on input error", () => 
 
   // All pass
   const pass = runValidate(
-    ["--profile", "tasks/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(pass.status, 0);

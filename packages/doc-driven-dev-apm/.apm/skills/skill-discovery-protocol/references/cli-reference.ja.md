@@ -20,6 +20,10 @@ sdp generate --adapter <adapter-yaml>
 
 adapter の `artifacts.protocol` セクションで定義された全成果物を生成する。
 
+**出力ディレクトリ:** すべての成果物はプロジェクトルート直下の `.sdp/` ディレクトリに出力される。`artifacts.protocol` のパスは `.sdp/` からの相対パスとして解決される。
+
+例: `skill_reference_catalog: "catalog.json"` → `.sdp/catalog.json`
+
 ### 1.2 `sdp validate`
 
 ```text

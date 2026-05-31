@@ -20,6 +20,12 @@ sdp generate --adapter <adapter-yaml>
 
 Generates all artifacts defined in the adapter's `artifacts.protocol` section.
 
+**Output directory:** All artifacts are written to the `.sdp/` directory
+at the project root. Paths in `artifacts.protocol` are resolved relative
+to `.sdp/`.
+
+Example: `skill_reference_catalog: "catalog.json"` → `.sdp/catalog.json`
+
 ### 1.2 `sdp validate`
 
 ```text

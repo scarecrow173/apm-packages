@@ -37,6 +37,12 @@ load_adapter → scan_skills → build_skill_reference_catalog
 - The failure is recorded in the validation report if reachable
 - Exit code is non-zero on any step failure
 
+### Output Directory
+
+All generated artifacts are written to the `.sdp/` directory at the
+project root. Paths specified in `artifacts.protocol` are resolved
+relative to `.sdp/`. The directory is created automatically.
+
 ---
 
 ## 2. Scan Contract

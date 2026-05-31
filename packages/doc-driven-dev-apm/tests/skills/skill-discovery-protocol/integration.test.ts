@@ -270,8 +270,8 @@ render:
 
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
-    flow_profile: "tasks/impl-flow-test-profile.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "impl-flow-test-profile.json"
 
 readable_outputs:
   enabled: false
@@ -403,8 +403,8 @@ render:
 
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
-    flow_profile: "tasks/briefing-flow-test-profile.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "briefing-flow-test-profile.json"
 
 readable_outputs:
   enabled: false
@@ -525,8 +525,8 @@ render:
 
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
-    flow_profile: "tasks/general-test-profile.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "general-test-profile.json"
 
 readable_outputs:
   enabled: false
@@ -542,7 +542,7 @@ function setupSkills(dir: string) {
     fs.mkdirSync(skillDir, { recursive: true });
     fs.writeFileSync(path.join(skillDir, "SKILL.md"), content, "utf8");
   }
-  fs.mkdirSync(path.join(dir, "tasks"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
 }
 
 function setupImplFlow(dir: string) {
@@ -571,7 +571,7 @@ test("integration: impl-flow adapter generates valid profile", () => {
   const result = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
-  const profilePath = path.join(dir, "tasks", "impl-flow-test-profile.json");
+  const profilePath = path.join(dir, ".sdp", "impl-flow-test-profile.json");
   assert.ok(fs.existsSync(profilePath), "Profile should exist");
 
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
@@ -589,7 +589,7 @@ test("integration: impl-flow profile validates successfully", () => {
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
 
   const result = runValidate(
-    ["--profile", "tasks/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    ["--profile", ".sdp/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
@@ -601,7 +601,7 @@ test("integration: impl-flow profile queryable with all subcommands", () => {
   setupImplFlow(dir);
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
 
-  const profile = "tasks/impl-flow-test-profile.json";
+  const profile = ".sdp/impl-flow-test-profile.json";
   const subcommands = [
     ["categories"],
     ["flow-stack"],
@@ -624,8 +624,8 @@ test("integration: impl-flow re-generation is idempotent", () => {
 
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
 
-  const profilePath = path.join(dir, "tasks", "impl-flow-test-profile.json");
-  const catalogPath = path.join(dir, "tasks", "skill-reference-catalog.json");
+  const profilePath = path.join(dir, ".sdp", "impl-flow-test-profile.json");
+  const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
   const profile1 = fs.readFileSync(profilePath, "utf8");
   const catalog1 = fs.readFileSync(catalogPath, "utf8");
 
@@ -648,7 +648,7 @@ test("integration: briefing-flow adapter generates valid profile", () => {
   const result = runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
-  const profilePath = path.join(dir, "tasks", "briefing-flow-test-profile.json");
+  const profilePath = path.join(dir, ".sdp", "briefing-flow-test-profile.json");
   assert.ok(fs.existsSync(profilePath), "Profile should exist");
 
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
@@ -665,7 +665,7 @@ test("integration: briefing-flow profile validates successfully", () => {
   runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
 
   const result = runValidate(
-    ["--profile", "tasks/briefing-flow-test-profile.json", "--adapter", "briefing-adapter.yaml"],
+    ["--profile", ".sdp/briefing-flow-test-profile.json", "--adapter", "briefing-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
@@ -677,7 +677,7 @@ test("integration: briefing-flow profile queryable with all subcommands", () => 
   setupBriefingFlow(dir);
   runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
 
-  const profile = "tasks/briefing-flow-test-profile.json";
+  const profile = ".sdp/briefing-flow-test-profile.json";
   const subcommands = [
     ["categories"],
     ["flow-stack"],
@@ -700,8 +700,8 @@ test("integration: briefing-flow re-generation is idempotent", () => {
 
   runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
 
-  const profilePath = path.join(dir, "tasks", "briefing-flow-test-profile.json");
-  const catalogPath = path.join(dir, "tasks", "skill-reference-catalog.json");
+  const profilePath = path.join(dir, ".sdp", "briefing-flow-test-profile.json");
+  const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
   const profile1 = fs.readFileSync(profilePath, "utf8");
   const catalog1 = fs.readFileSync(catalogPath, "utf8");
 
@@ -727,10 +727,10 @@ test("integration: both flows produce same catalog (same skills)", () => {
   runGenerate(["--adapter", "briefing-adapter.yaml"], briefingDir);
 
   const implCatalog = JSON.parse(
-    fs.readFileSync(path.join(implDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+    fs.readFileSync(path.join(implDir, ".sdp", "skill-reference-catalog.json"), "utf8"),
   );
   const briefingCatalog = JSON.parse(
-    fs.readFileSync(path.join(briefingDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+    fs.readFileSync(path.join(briefingDir, ".sdp", "skill-reference-catalog.json"), "utf8"),
   );
 
   // Catalogs should have the same skills (scan is identical)
@@ -786,14 +786,14 @@ test("integration: full pipeline generate → validate → query category-skills
 
   // Validate
   const val = runValidate(
-    ["--profile", "tasks/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    ["--profile", ".sdp/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
     dir,
   );
   assert.equal(val.status, 0, `validate stderr: ${val.stderr}`);
 
   // Query: get categories then query each
   const catResult = runQuery(
-    ["--profile", "tasks/impl-flow-test-profile.json", "categories"],
+    ["--profile", ".sdp/impl-flow-test-profile.json", "categories"],
     dir,
   );
   assert.equal(catResult.status, 0);
@@ -804,7 +804,7 @@ test("integration: full pipeline generate → validate → query category-skills
   assert.ok(nonEmpty, "Should have at least one non-empty category");
 
   const skillsResult = runQuery(
-    ["--profile", "tasks/impl-flow-test-profile.json", "category-skills", "--category", nonEmpty.id],
+    ["--profile", ".sdp/impl-flow-test-profile.json", "category-skills", "--category", nonEmpty.id],
     dir,
   );
   assert.equal(skillsResult.status, 0);
@@ -819,7 +819,7 @@ test("integration: full pipeline generate → validate → query skill-detail", 
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", "tasks/impl-flow-test-profile.json", "skill-detail", "--skill", "mock-debug-skill"],
+    ["--profile", ".sdp/impl-flow-test-profile.json", "skill-detail", "--skill", "mock-debug-skill"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -835,12 +835,12 @@ test("integration: full pipeline generate → validate → query validation-stat
 
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
   runValidate(
-    ["--profile", "tasks/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    ["--profile", ".sdp/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
     dir,
   );
 
   const result = runQuery(
-    ["--profile", "tasks/impl-flow-test-profile.json", "validation-status"],
+    ["--profile", ".sdp/impl-flow-test-profile.json", "validation-status"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -922,7 +922,7 @@ render:
     invocations: ["source_skill", "slot", "capability"]
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
 readable_outputs:
   enabled: false
 `;
@@ -933,7 +933,7 @@ readable_outputs:
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
   const catalog = JSON.parse(
-    fs.readFileSync(path.join(projectDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+    fs.readFileSync(path.join(projectDir, ".sdp", "skill-reference-catalog.json"), "utf8"),
   );
   const skillNames = catalog.skills.map((s: { name: string }) => s.name);
   assert.ok(skillNames.includes("user-skill-a"), `Expected user-skill-a in catalog, got: ${skillNames}`);
@@ -988,7 +988,7 @@ render:
     invocations: ["source_skill", "slot", "capability"]
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
 readable_outputs:
   enabled: false
 `;
@@ -1071,7 +1071,7 @@ render:
     invocations: ["source_skill", "slot", "capability"]
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
 readable_outputs:
   enabled: false
 `;
@@ -1086,7 +1086,7 @@ readable_outputs:
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
   const catalog = JSON.parse(
-    fs.readFileSync(path.join(projectDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+    fs.readFileSync(path.join(projectDir, ".sdp", "skill-reference-catalog.json"), "utf8"),
   );
   const skillNames = catalog.skills.map((s: { name: string }) => s.name);
   assert.ok(skillNames.includes("env-skill-b"), `Expected env-skill-b in catalog, got: ${skillNames}`);
@@ -1161,7 +1161,7 @@ render:
     invocations: ["source_skill", "slot", "capability"]
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
 readable_outputs:
   enabled: false
 `;
@@ -1172,7 +1172,7 @@ readable_outputs:
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
   const catalog = JSON.parse(
-    fs.readFileSync(path.join(projectDir, "tasks", "skill-reference-catalog.json"), "utf8"),
+    fs.readFileSync(path.join(projectDir, ".sdp", "skill-reference-catalog.json"), "utf8"),
   );
   const skillNames = catalog.skills.map((s: { name: string }) => s.name);
   assert.ok(skillNames.includes("default-skill-c"), `Expected default-skill-c in catalog, got: ${skillNames}`);

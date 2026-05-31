@@ -87,8 +87,8 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 > `sdp validate` で検証される。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → 実行: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
-- 存在するが陳腐化/破損の場合 → 実行: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
+- 存在しない場合 → 実行: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- 存在するが陳腐化/破損の場合 → 実行: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 
 ---
 
@@ -97,8 +97,8 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
 **コマンド:**
-- 生成/更新: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
-- 検証: `sdp validate --profile briefing-profile.json --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
+- 生成/更新: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- 検証: `sdp validate --profile briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - クエリ: `sdp query --profile briefing-profile.json <サブコマンド>`
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。

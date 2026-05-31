@@ -89,7 +89,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 > `sdp generate` コマンドで生成され、スキル変更時に更新される。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → `sdp generate --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml` を実行する。
+- 存在しない場合 → `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を実行する。
 - 存在するが破損の場合 → 削除して同じコマンドで再生成する。
 
 ---
@@ -99,8 +99,8 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
 **コマンド:**
-- 生成/更新: `sdp generate --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml`
-- 検証: `sdp validate --profile implementation-profile.json --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml`
+- 生成/更新: `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- 検証: `sdp validate --profile implementation-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - クエリ: `sdp query --profile implementation-profile.json <subcommand>`
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
@@ -150,7 +150,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 - **Tooling**: `git-commit`, `ci-cd-automation`
 - **Review**: `code-review-and-quality`
 
-詳細なカテゴリ定義はアダプターの `classification.taxonomy`（`references/implementation-adapter.yaml`）を参照。
+詳細なカテゴリ定義はアダプターの `classification.taxonomy`（`assets/adapters/implementation-adapter.yaml`）を参照。
 
 ---
 

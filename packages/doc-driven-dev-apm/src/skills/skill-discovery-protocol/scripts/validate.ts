@@ -376,14 +376,18 @@ async function main(): Promise<void> {
     overall_result: overallResult,
   };
 
-  // ─── Write validation-report.json alongside profile ───
-  const reportPath = path.join(path.dirname(profilePath), "validation-report.json");
+  // ─── Write validation-report.json to .sdp/ base directory ───
+  const sdpBase = path.resolve(cwd, ".sdp");
+  const reportPath = path.resolve(sdpBase, "validation-report.json");
   const normalizedReportPath = path.normalize(reportPath);
   const normalizedCwd = path.normalize(cwd);
   if (!normalizedReportPath.startsWith(normalizedCwd + path.sep) && !normalizedReportPath.startsWith(normalizedCwd)) {
     console.error(`Error: Report path "${reportPath}" is outside project boundary`);
     process.exitCode = 1;
     return;
+  }
+  if (!fs.existsSync(sdpBase)) {
+    fs.mkdirSync(sdpBase, { recursive: true });
   }
   const reportContent = renderJson(report);
   fs.writeFileSync(reportPath, reportContent, "utf8");

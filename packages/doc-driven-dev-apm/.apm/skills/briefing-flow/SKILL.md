@@ -89,8 +89,8 @@ Even when A-4 is chosen, Phase B (Configure) is NOT skipped — Document-categor
 > by `sdp validate`.
 
 - If it exists and is valid → go to Phase B (Configuration from Profile).
-- If it does not exist → run: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
-- If it exists but is stale/corrupted → run: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
+- If it does not exist → run: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- If it exists but is stale/corrupted → run: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 
 ---
 
@@ -99,8 +99,8 @@ Even when A-4 is chosen, Phase B (Configure) is NOT skipped — Document-categor
 Profile generation and validation is handled by the `skill-discovery-protocol` skill.
 
 **Commands:**
-- Generate/update: `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
-- Validate: `sdp validate --profile briefing-profile.json --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml`
+- Generate/update: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- Validate: `sdp validate --profile briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - Query: `sdp query --profile briefing-profile.json <subcommand>`
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.

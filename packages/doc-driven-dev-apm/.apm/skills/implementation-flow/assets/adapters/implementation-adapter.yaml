@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../skill-discovery-protocol/schemas/adapter.schema.json
+# yaml-language-server: $schema=../../../skill-discovery-protocol/schemas/adapter.schema.json
 schema_version: "1.0"
 adapter_id: "implementation-flow-default"
 extends:
@@ -138,11 +138,11 @@ render:
   newline: "lf"
 artifacts:
   protocol:
-    catalog: "skill-reference-catalog.json"
-    profile: "implementation-profile.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "implementation-flow-profile.json"
     report: "validation-report.json"
 readable_outputs:
   enabled: true
   include:
-    catalog: true
-    profile: true
+    - "skill_reference_catalog"
+    - "flow_profile"

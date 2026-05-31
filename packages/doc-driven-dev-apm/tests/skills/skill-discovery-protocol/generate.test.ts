@@ -192,8 +192,8 @@ render:
 
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
-    flow_profile: "tasks/test-adapter-profile.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "test-adapter-profile.json"
 
 readable_outputs:
   enabled: false
@@ -203,7 +203,7 @@ readable_outputs:
   fs.writeFileSync(path.join(dir, "test-adapter.yaml"), adapterContent, "utf8");
 
   // Create tasks dir
-  fs.mkdirSync(path.join(dir, "tasks"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
 }
 
 function runSdp(args: string[], cwd: string) {
@@ -249,8 +249,8 @@ test("sdp generate creates catalog and profile", () => {
   const result = runSdp(["--adapter", "test-adapter.yaml"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
-  const catalogPath = path.join(dir, "tasks", "skill-reference-catalog.json");
-  const profilePath = path.join(dir, "tasks", "test-adapter-profile.json");
+  const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
 
   assert.ok(fs.existsSync(catalogPath), "Catalog should exist");
   assert.ok(fs.existsSync(profilePath), "Profile should exist");
@@ -263,7 +263,7 @@ test("sdp generate catalog has correct structure", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const catalog = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "skill-reference-catalog.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "skill-reference-catalog.json"), "utf8"),
   );
 
   assert.equal(catalog.schema_version, "1.0");
@@ -283,7 +283,7 @@ test("sdp generate catalog has execution_policy", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const catalog = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "skill-reference-catalog.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "skill-reference-catalog.json"), "utf8"),
   );
 
   const skillA = catalog.skills.find((s: { name: string }) => s.name === "skill-a");
@@ -304,7 +304,7 @@ test("sdp generate profile has flow_stack.slots", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const profile = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "test-adapter-profile.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter-profile.json"), "utf8"),
   );
 
   assert.ok(profile.flow_stack);
@@ -321,7 +321,7 @@ test("sdp generate profile has resolved_invocations", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const profile = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "test-adapter-profile.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter-profile.json"), "utf8"),
   );
 
   assert.ok(Array.isArray(profile.resolved_invocations));
@@ -341,8 +341,8 @@ test("sdp generate is idempotent (no diff on re-run)", () => {
   // First run
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
-  const catalogPath = path.join(dir, "tasks", "skill-reference-catalog.json");
-  const profilePath = path.join(dir, "tasks", "test-adapter-profile.json");
+  const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
 
   const catalog1 = fs.readFileSync(catalogPath, "utf8");
   const profile1 = fs.readFileSync(profilePath, "utf8");
@@ -365,7 +365,7 @@ test("sdp generate sorts skills by name", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const catalog = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "skill-reference-catalog.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "skill-reference-catalog.json"), "utf8"),
   );
 
   const names = catalog.skills.map((s: { name: string }) => s.name);
@@ -380,7 +380,7 @@ test("sdp generate profile classification categories sorted by id", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const profile = JSON.parse(
-    fs.readFileSync(path.join(dir, "tasks", "test-adapter-profile.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter-profile.json"), "utf8"),
   );
 
   const ids = profile.classification.categories.map((c: { id: string }) => c.id);
@@ -396,7 +396,7 @@ test("sdp query categories works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-adapter-profile.json", "categories"],
+    ["--profile", ".sdp/test-adapter-profile.json", "categories"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -413,7 +413,7 @@ test("sdp query category-skills works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-adapter-profile.json", "category-skills", "--category", "architecture"],
+    ["--profile", ".sdp/test-adapter-profile.json", "category-skills", "--category", "architecture"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -428,7 +428,7 @@ test("sdp query resolution works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-adapter-profile.json", "resolution"],
+    ["--profile", ".sdp/test-adapter-profile.json", "resolution"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -442,7 +442,7 @@ test("sdp query flow-stack works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-adapter-profile.json", "flow-stack"],
+    ["--profile", ".sdp/test-adapter-profile.json", "flow-stack"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -457,7 +457,7 @@ test("sdp query execution-policy works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-adapter-profile.json", "execution-policy"],
+    ["--profile", ".sdp/test-adapter-profile.json", "execution-policy"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -491,7 +491,7 @@ test("sdp query with unknown subcommand exits with code 2", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-adapter-profile.json", "unknown-command"],
+    ["--profile", ".sdp/test-adapter-profile.json", "unknown-command"],
     dir,
   );
   assert.equal(result.status, 2);

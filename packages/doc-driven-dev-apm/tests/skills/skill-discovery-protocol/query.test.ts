@@ -31,7 +31,7 @@ function runQuery(args: string[], cwd: string) {
 
 // Create a test environment with profile, catalog, and validation report
 function setupQueryEnv(dir: string) {
-  fs.mkdirSync(path.join(dir, "tasks"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
 
   const profile = {
     schema_version: "1.0",
@@ -153,17 +153,17 @@ function setupQueryEnv(dir: string) {
   };
 
   fs.writeFileSync(
-    path.join(dir, "tasks", "test-profile.json"),
+    path.join(dir, ".sdp", "test-profile.json"),
     JSON.stringify(profile, null, 2),
     "utf8",
   );
   fs.writeFileSync(
-    path.join(dir, "tasks", "skill-reference-catalog.json"),
+    path.join(dir, ".sdp", "skill-reference-catalog.json"),
     JSON.stringify(catalog, null, 2),
     "utf8",
   );
   fs.writeFileSync(
-    path.join(dir, "tasks", "validation-report.json"),
+    path.join(dir, ".sdp", "validation-report.json"),
     JSON.stringify(validationReport, null, 2),
     "utf8",
   );
@@ -176,7 +176,7 @@ test("query: unknown subcommand shows suggestion and exits 2", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "categorie"],
+    ["--profile", ".sdp/test-profile.json", "categorie"],
     dir,
   );
   assert.equal(result.status, 2);
@@ -190,7 +190,7 @@ test("query: unknown subcommand with no close match", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "xyzabc"],
+    ["--profile", ".sdp/test-profile.json", "xyzabc"],
     dir,
   );
   assert.equal(result.status, 2);
@@ -203,7 +203,7 @@ test("query: required arg missing exits 1", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "category-skills"],
+    ["--profile", ".sdp/test-profile.json", "category-skills"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -231,7 +231,7 @@ test("query: categories returns list", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "categories"],
+    ["--profile", ".sdp/test-profile.json", "categories"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -247,7 +247,7 @@ test("query: category-skills returns skills", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "category-skills", "--category", "architecture"],
+    ["--profile", ".sdp/test-profile.json", "category-skills", "--category", "architecture"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -260,7 +260,7 @@ test("query: resolution returns all invocations", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "resolution"],
+    ["--profile", ".sdp/test-profile.json", "resolution"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -274,7 +274,7 @@ test("query: resolution --skill filters", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "resolution", "--skill", "skill-a"],
+    ["--profile", ".sdp/test-profile.json", "resolution", "--skill", "skill-a"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -288,7 +288,7 @@ test("query: flow-stack returns full stack", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "flow-stack"],
+    ["--profile", ".sdp/test-profile.json", "flow-stack"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -302,7 +302,7 @@ test("query: flow-stack --slot filters", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "flow-stack", "--slot", "adr_authoring"],
+    ["--profile", ".sdp/test-profile.json", "flow-stack", "--slot", "adr_authoring"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -318,7 +318,7 @@ test("query: execution-policy returns all policies", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "execution-policy"],
+    ["--profile", ".sdp/test-profile.json", "execution-policy"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -334,7 +334,7 @@ test("query: execution-policy --skill filters", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "execution-policy", "--skill", "skill-b"],
+    ["--profile", ".sdp/test-profile.json", "execution-policy", "--skill", "skill-b"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -350,7 +350,7 @@ test("query: capability-skills returns matching skills", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "capability-skills", "--capability", "code_review"],
+    ["--profile", ".sdp/test-profile.json", "capability-skills", "--capability", "code_review"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -365,7 +365,7 @@ test("query: capability-skills requires --capability", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "capability-skills"],
+    ["--profile", ".sdp/test-profile.json", "capability-skills"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -377,7 +377,7 @@ test("query: skill-detail returns full skill entry", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "skill-detail", "--skill", "skill-a"],
+    ["--profile", ".sdp/test-profile.json", "skill-detail", "--skill", "skill-a"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -394,7 +394,7 @@ test("query: skill-detail not found", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "skill-detail", "--skill", "nonexistent"],
+    ["--profile", ".sdp/test-profile.json", "skill-detail", "--skill", "nonexistent"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -408,7 +408,7 @@ test("query: runtime-guidance returns all guidance", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "runtime-guidance"],
+    ["--profile", ".sdp/test-profile.json", "runtime-guidance"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -422,7 +422,7 @@ test("query: runtime-guidance --skill filters", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "runtime-guidance", "--skill", "skill-b"],
+    ["--profile", ".sdp/test-profile.json", "runtime-guidance", "--skill", "skill-b"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -437,7 +437,7 @@ test("query: unresolved returns unresolved items", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "unresolved"],
+    ["--profile", ".sdp/test-profile.json", "unresolved"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -455,7 +455,7 @@ test("query: validation-status returns report summary", () => {
   setupQueryEnv(dir);
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "validation-status"],
+    ["--profile", ".sdp/test-profile.json", "validation-status"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -473,10 +473,10 @@ test("query: validation-status without report shows error", () => {
   setupQueryEnv(dir);
 
   // Remove validation report
-  fs.unlinkSync(path.join(dir, "tasks", "validation-report.json"));
+  fs.unlinkSync(path.join(dir, ".sdp", "validation-report.json"));
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "validation-status"],
+    ["--profile", ".sdp/test-profile.json", "validation-status"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -490,10 +490,10 @@ test("query: execution-policy without catalog shows error", () => {
   setupQueryEnv(dir);
 
   // Remove catalog
-  fs.unlinkSync(path.join(dir, "tasks", "skill-reference-catalog.json"));
+  fs.unlinkSync(path.join(dir, ".sdp", "skill-reference-catalog.json"));
 
   const result = runQuery(
-    ["--profile", "tasks/test-profile.json", "execution-policy"],
+    ["--profile", ".sdp/test-profile.json", "execution-policy"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);

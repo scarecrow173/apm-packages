@@ -206,11 +206,15 @@ render:
 ```yaml
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
-    flow_profile: "tasks/briefing-profile.json"
-    validation_report: "tasks/validation-report.json"
-    resolved_invocations: "tasks/resolved-invocations.json"  # optional
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "briefing-profile.json"
+    validation_report: "validation-report.json"
+    resolved_invocations: "resolved-invocations.json"  # optional
 ```
+
+**出力ベースディレクトリ:** すべての成果物はプロジェクトルート直下の `.sdp/` ディレクトリに出力される。`artifacts.protocol` のパスは `.sdp/` からの相対パスとして解決される。
+
+例: `skill_reference_catalog: "skill-reference-catalog.json"` → `.sdp/skill-reference-catalog.json`
 
 ## `readable_outputs`
 
@@ -322,9 +326,9 @@ render:
 
 artifacts:
   protocol:
-    skill_reference_catalog: "tasks/skill-reference-catalog.json"
-    flow_profile: "tasks/flow-profile.json"
-    validation_report: "tasks/validation-report.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "flow-profile.json"
+    validation_report: "validation-report.json"
 
 readable_outputs:
   enabled: false

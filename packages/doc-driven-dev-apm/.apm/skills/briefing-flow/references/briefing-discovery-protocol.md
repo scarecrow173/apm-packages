@@ -6,7 +6,7 @@ This flow uses the common `skill-discovery-protocol` for profile management.
 
 | Action | Command |
 |--------|---------|
-| Generate profile | `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml` |
+| Generate profile | `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` |
 | Validate profile | `sdp validate --profile briefing-profile.json` |
 | List categories | `sdp query --profile briefing-profile.json categories` |
 | Check skill stack | `sdp query --profile briefing-profile.json flow-stack` |
@@ -14,7 +14,7 @@ This flow uses the common `skill-discovery-protocol` for profile management.
 
 ## Adapter
 
-The flow-specific adapter is at `references/briefing-adapter.yaml`.
+The flow-specific adapter is at `assets/adapters/briefing-adapter.yaml`.
 It extends the `general` adapter and defines:
 - Briefing-specific taxonomy (Frame/Discover/Research/Validate/Document/Meta)
 - Flow stack slots (frame_structure/discover_gather/validate_check/document_output)

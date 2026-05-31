@@ -36,6 +36,10 @@ load_adapter → scan_skills → build_skill_reference_catalog
 - 到達可能であれば失敗は validation report に記録される
 - いずれかのステップ失敗で終了コードは非 0
 
+### 出力ディレクトリ
+
+生成されるすべての成果物はプロジェクトルート直下の `.sdp/` ディレクトリに書き出される。`artifacts.protocol` で指定されたパスは `.sdp/` からの相対パスとして解決される。ディレクトリは自動作成される。
+
 ---
 
 ## 2. Scan 契約

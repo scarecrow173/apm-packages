@@ -26,8 +26,10 @@ CLI コマンドについては `cli-reference.ja.md` を参照。
 | `invocation_resolution` | object | 解決設定 |
 | `validation` | object | ゲート設定 |
 | `render` | object | 決定論的出力制御 |
-| `artifacts` | object | 出力パス |
+| `artifacts` | object | 出力パス（`.sdp/` からの相対） |
 | `readable_outputs` | object | Markdown サイドカー制御 |
+
+**成果物出力ベースディレクトリ:** `artifacts.protocol` の全パスはプロジェクトルート直下の `.sdp/` ディレクトリからの相対パスとして解決される。`.sdp/` ディレクトリは存在しない場合自動作成される。
 
 ### 1.2 推奨キー
 

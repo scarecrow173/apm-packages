@@ -6,7 +6,7 @@ This flow uses the common `skill-discovery-protocol` for profile management.
 
 | Action | Command |
 |--------|---------|
-| Generate profile | `sdp generate --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml` |
+| Generate profile | `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` |
 | Validate profile | `sdp validate --profile implementation-profile.json` |
 | List categories | `sdp query --profile implementation-profile.json categories` |
 | Check skill stack | `sdp query --profile implementation-profile.json flow-stack` |
@@ -14,7 +14,7 @@ This flow uses the common `skill-discovery-protocol` for profile management.
 
 ## Adapter
 
-The flow-specific adapter is at `references/implementation-adapter.yaml`.
+The flow-specific adapter is at `assets/adapters/implementation-adapter.yaml`.
 It extends the `general` adapter and defines:
 - Implementation-specific taxonomy (Process/Build/Verify/Review/Domain/Tooling/Meta)
 - Flow stack slots

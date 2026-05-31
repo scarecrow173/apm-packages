@@ -77,29 +77,32 @@ async function main(): Promise<void> {
     buildProfile(adapter, catalog, categories, unmatched_skills, resolvedInvocations, skills),
   );
 
-  // 6. Write artifacts
+  // 6. Write artifacts (resolved relative to .sdp/ base directory)
+  const sdpBase = path.resolve(cwd, ".sdp");
   const catalogPath = adapter.artifacts.protocol.skill_reference_catalog;
   const profilePath = adapter.artifacts.protocol.flow_profile;
 
   let filesWritten = 0;
 
   if (catalogPath) {
-    const absPath = path.resolve(cwd, catalogPath);
+    const absPath = path.resolve(sdpBase, catalogPath);
+    const relPath = path.relative(cwd, absPath);
     if (writeArtifact(absPath, catalog as unknown as Record<string, unknown>)) {
-      console.log(`Written: ${catalogPath}`);
+      console.log(`Written: ${relPath}`);
       filesWritten++;
     } else {
-      console.log(`Unchanged: ${catalogPath}`);
+      console.log(`Unchanged: ${relPath}`);
     }
   }
 
   if (profilePath) {
-    const absPath = path.resolve(cwd, profilePath);
+    const absPath = path.resolve(sdpBase, profilePath);
+    const relPath = path.relative(cwd, absPath);
     if (writeArtifact(absPath, profile as unknown as Record<string, unknown>)) {
-      console.log(`Written: ${profilePath}`);
+      console.log(`Written: ${relPath}`);
       filesWritten++;
     } else {
-      console.log(`Unchanged: ${profilePath}`);
+      console.log(`Unchanged: ${relPath}`);
     }
   }
 

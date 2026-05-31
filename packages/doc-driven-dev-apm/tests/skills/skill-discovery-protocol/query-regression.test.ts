@@ -24,7 +24,7 @@ function runQuery(args: string[], cwd: string) {
 // ─── Setup a realistic profile + catalog environment ───
 
 function setupEnv(dir: string) {
-  fs.mkdirSync(path.join(dir, "tasks"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
 
   const profile = {
     schema_version: "1.0",
@@ -175,17 +175,17 @@ function setupEnv(dir: string) {
   };
 
   fs.writeFileSync(
-    path.join(dir, "tasks", "regression-profile.json"),
+    path.join(dir, ".sdp", "regression-profile.json"),
     JSON.stringify(profile, null, 2),
     "utf8",
   );
   fs.writeFileSync(
-    path.join(dir, "tasks", "skill-reference-catalog.json"),
+    path.join(dir, ".sdp", "skill-reference-catalog.json"),
     JSON.stringify(catalog, null, 2),
     "utf8",
   );
   fs.writeFileSync(
-    path.join(dir, "tasks", "validation-report.json"),
+    path.join(dir, ".sdp", "validation-report.json"),
     JSON.stringify(validationReport, null, 2),
     "utf8",
   );
@@ -198,7 +198,7 @@ function setupEnv(dir: string) {
 test("regression: categories returns valid JSON array", () => {
   const dir = tempDir();
   setupEnv(dir);
-  const result = runQuery(["--profile", "tasks/regression-profile.json", "categories"], dir);
+  const result = runQuery(["--profile", ".sdp/regression-profile.json", "categories"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.ok(Array.isArray(data));
@@ -209,7 +209,7 @@ test("regression: category-skills returns valid JSON array", () => {
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "category-skills", "--category", "process"],
+    ["--profile", ".sdp/regression-profile.json", "category-skills", "--category", "process"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -221,7 +221,7 @@ test("regression: category-skills returns valid JSON array", () => {
 test("regression: resolution returns valid JSON array", () => {
   const dir = tempDir();
   setupEnv(dir);
-  const result = runQuery(["--profile", "tasks/regression-profile.json", "resolution"], dir);
+  const result = runQuery(["--profile", ".sdp/regression-profile.json", "resolution"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.ok(Array.isArray(data));
@@ -231,7 +231,7 @@ test("regression: resolution returns valid JSON array", () => {
 test("regression: flow-stack returns valid JSON with slots", () => {
   const dir = tempDir();
   setupEnv(dir);
-  const result = runQuery(["--profile", "tasks/regression-profile.json", "flow-stack"], dir);
+  const result = runQuery(["--profile", ".sdp/regression-profile.json", "flow-stack"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.ok(data.slots);
@@ -241,7 +241,7 @@ test("regression: flow-stack returns valid JSON with slots", () => {
 test("regression: execution-policy returns valid JSON array", () => {
   const dir = tempDir();
   setupEnv(dir);
-  const result = runQuery(["--profile", "tasks/regression-profile.json", "execution-policy"], dir);
+  const result = runQuery(["--profile", ".sdp/regression-profile.json", "execution-policy"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.ok(Array.isArray(data));
@@ -252,7 +252,7 @@ test("regression: capability-skills returns valid JSON array", () => {
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "capability-skills", "--capability", "debugging"],
+    ["--profile", ".sdp/regression-profile.json", "capability-skills", "--capability", "debugging"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -265,7 +265,7 @@ test("regression: skill-detail returns valid JSON object", () => {
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "skill-detail", "--skill", "debug-skill"],
+    ["--profile", ".sdp/regression-profile.json", "skill-detail", "--skill", "debug-skill"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -278,7 +278,7 @@ test("regression: skill-detail returns valid JSON object", () => {
 test("regression: runtime-guidance returns valid JSON array", () => {
   const dir = tempDir();
   setupEnv(dir);
-  const result = runQuery(["--profile", "tasks/regression-profile.json", "runtime-guidance"], dir);
+  const result = runQuery(["--profile", ".sdp/regression-profile.json", "runtime-guidance"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.ok(Array.isArray(data));
@@ -288,7 +288,7 @@ test("regression: runtime-guidance returns valid JSON array", () => {
 test("regression: unresolved returns valid JSON array", () => {
   const dir = tempDir();
   setupEnv(dir);
-  const result = runQuery(["--profile", "tasks/regression-profile.json", "unresolved"], dir);
+  const result = runQuery(["--profile", ".sdp/regression-profile.json", "unresolved"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.ok(Array.isArray(data));
@@ -297,7 +297,7 @@ test("regression: unresolved returns valid JSON array", () => {
 test("regression: validation-status returns valid JSON", () => {
   const dir = tempDir();
   setupEnv(dir);
-  const result = runQuery(["--profile", "tasks/regression-profile.json", "validation-status"], dir);
+  const result = runQuery(["--profile", ".sdp/regression-profile.json", "validation-status"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.equal(data.adapter_id, "regression-adapter");
@@ -312,7 +312,7 @@ test("regression: category-skills without --category exits 1", () => {
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "category-skills"],
+    ["--profile", ".sdp/regression-profile.json", "category-skills"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -323,7 +323,7 @@ test("regression: capability-skills without --capability exits 1", () => {
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "capability-skills"],
+    ["--profile", ".sdp/regression-profile.json", "capability-skills"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -334,7 +334,7 @@ test("regression: skill-detail without --skill exits 1", () => {
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "skill-detail"],
+    ["--profile", ".sdp/regression-profile.json", "skill-detail"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -349,7 +349,7 @@ test("regression: category-skills with non-existent category returns error info"
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "category-skills", "--category", "nonexistent-cat"],
+    ["--profile", ".sdp/regression-profile.json", "category-skills", "--category", "nonexistent-cat"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -366,7 +366,7 @@ test("regression: skill-detail with non-existent skill returns error info", () =
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "skill-detail", "--skill", "nonexistent-skill"],
+    ["--profile", ".sdp/regression-profile.json", "skill-detail", "--skill", "nonexistent-skill"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -379,7 +379,7 @@ test("regression: capability-skills with non-existent capability returns empty",
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "capability-skills", "--capability", "nonexistent_cap"],
+    ["--profile", ".sdp/regression-profile.json", "capability-skills", "--capability", "nonexistent_cap"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -392,7 +392,7 @@ test("regression: flow-stack --slot with non-existent slot returns error info", 
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "flow-stack", "--slot", "nonexistent_slot"],
+    ["--profile", ".sdp/regression-profile.json", "flow-stack", "--slot", "nonexistent_slot"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -405,7 +405,7 @@ test("regression: execution-policy --skill with non-existent skill returns error
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "execution-policy", "--skill", "nonexistent-skill"],
+    ["--profile", ".sdp/regression-profile.json", "execution-policy", "--skill", "nonexistent-skill"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -432,9 +432,9 @@ test("regression: query with non-existent profile exits with error", () => {
 
 test("regression: query with invalid JSON profile exits with error", () => {
   const dir = tempDir();
-  fs.mkdirSync(path.join(dir, "tasks"), { recursive: true });
-  fs.writeFileSync(path.join(dir, "tasks", "bad.json"), "not json{{{", "utf8");
-  const result = runQuery(["--profile", "tasks/bad.json", "categories"], dir);
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".sdp", "bad.json"), "not json{{{", "utf8");
+  const result = runQuery(["--profile", ".sdp/bad.json", "categories"], dir);
   assert.notEqual(result.status, 0);
 });
 
@@ -446,7 +446,7 @@ test("regression: unknown subcommand exits 2 with suggestion", () => {
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "categorie"],
+    ["--profile", ".sdp/regression-profile.json", "categorie"],
     dir,
   );
   assert.equal(result.status, 2);
@@ -457,7 +457,7 @@ test("regression: completely unknown subcommand exits 2", () => {
   const dir = tempDir();
   setupEnv(dir);
   const result = runQuery(
-    ["--profile", "tasks/regression-profile.json", "zzz-nonexistent"],
+    ["--profile", ".sdp/regression-profile.json", "zzz-nonexistent"],
     dir,
   );
   assert.equal(result.status, 2);

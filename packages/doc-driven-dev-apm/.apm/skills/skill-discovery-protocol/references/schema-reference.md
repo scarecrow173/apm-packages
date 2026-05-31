@@ -26,8 +26,12 @@ For operational rules and constraints, see `operation-policy.md`.
 | `invocation_resolution` | object | Resolution settings |
 | `validation` | object | Gate configuration |
 | `render` | object | Deterministic output control |
-| `artifacts` | object | Output paths |
+| `artifacts` | object | Output paths (relative to `.sdp/`) |
 | `readable_outputs` | object | Markdown sidecar control |
+
+**Artifact output base directory:** All artifact paths in `artifacts.protocol`
+are resolved relative to the `.sdp/` directory at the project root.
+The `.sdp/` directory is created automatically if it does not exist.
 
 ### 1.2 Recommended Keys
 

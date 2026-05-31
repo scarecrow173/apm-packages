@@ -20,3 +20,6 @@ __pycache__/
 /.github/
 /.vscode/
 /.mcp.json
+
+
+**/.sdp/**

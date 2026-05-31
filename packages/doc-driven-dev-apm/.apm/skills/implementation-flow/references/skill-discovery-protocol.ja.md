@@ -6,7 +6,7 @@
 
 | アクション | コマンド |
 |-----------|---------|
-| プロファイル生成 | `sdp generate --adapter .apm/skills/implementation-flow/references/implementation-adapter.yaml` |
+| プロファイル生成 | `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` |
 | プロファイル検証 | `sdp validate --profile implementation-profile.json` |
 | カテゴリ一覧 | `sdp query --profile implementation-profile.json categories` |
 | スキルスタック確認 | `sdp query --profile implementation-profile.json flow-stack` |
@@ -14,7 +14,7 @@
 
 ## アダプター
 
-フロー固有のアダプターは `references/implementation-adapter.yaml` にある。
+フロー固有のアダプターは `assets/adapters/implementation-adapter.yaml` にある。
 `general` アダプターを拡張し、以下を定義する:
 - 実装固有のタクソノミー（Process/Build/Verify/Review/Domain/Tooling/Meta）
 - フロースタックスロット

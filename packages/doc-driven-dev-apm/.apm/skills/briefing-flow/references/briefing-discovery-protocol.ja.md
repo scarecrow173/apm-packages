@@ -6,7 +6,7 @@
 
 | アクション | コマンド |
 |-----------|---------|
-| プロファイル生成 | `sdp generate --adapter .apm/skills/briefing-flow/references/briefing-adapter.yaml` |
+| プロファイル生成 | `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` |
 | プロファイル検証 | `sdp validate --profile briefing-profile.json` |
 | カテゴリ一覧 | `sdp query --profile briefing-profile.json categories` |
 | スキルスタック確認 | `sdp query --profile briefing-profile.json flow-stack` |
@@ -14,7 +14,7 @@
 
 ## アダプター
 
-フロー固有のアダプターは `references/briefing-adapter.yaml` にある。
+フロー固有のアダプターは `assets/adapters/briefing-adapter.yaml` にある。
 `general` アダプターを拡張し、以下を定義する:
 - Briefing 固有のタクソノミー（Frame/Discover/Research/Validate/Document/Meta）
 - フロースタックスロット（frame_structure/discover_gather/validate_check/document_output）
