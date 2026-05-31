@@ -54,7 +54,12 @@
       "type": "object",
       "properties": {
         "result": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "skipped"
+          ]
         },
         "basis": {
           "type": "string"
@@ -96,7 +101,12 @@
       "type": "object",
       "properties": {
         "result": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "skipped"
+          ]
         },
         "comparisons": {
           "type": "array",
@@ -142,7 +152,12 @@
                 "type": "string"
               },
               "result": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail",
+                  "skipped"
+                ]
               },
               "details": {
                 "type": "array",

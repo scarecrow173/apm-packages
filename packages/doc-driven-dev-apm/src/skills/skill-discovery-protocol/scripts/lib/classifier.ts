@@ -75,6 +75,9 @@ function matchesCategory(
   if (match.description_patterns.length > 0) {
     for (const pattern of match.description_patterns) {
       try {
+        // Reject patterns longer than 200 chars or with known ReDoS constructs
+        if (pattern.length > 200) continue;
+        if (/([+*])\)\1|\(\?[^)]*[+*]/.test(pattern)) continue;
         if (new RegExp(pattern, "i").test(skill.description)) return true;
       } catch {
         // Invalid regex, skip

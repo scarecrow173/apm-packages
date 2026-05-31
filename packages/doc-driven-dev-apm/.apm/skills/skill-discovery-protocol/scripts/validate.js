@@ -2822,6 +2822,9 @@ var require_adapter = __commonJS({
     function resolveExtends(adapterDir, names, visited) {
       const results = [];
       for (const name of names) {
+        if (name.includes("/") || name.includes("\\") || name.includes("..")) {
+          throw new Error(`Invalid extends name "${name}": must be a simple identifier (no path separators or '..')`);
+        }
         if (visited.has(name)) {
           throw new Error(`Circular extends detected: "${name}" already in chain [${[...visited].join(" -> ")}]`);
         }
@@ -21710,7 +21713,7 @@ var init_adapter = __esm({
         enabled: external_exports.boolean(),
         include: external_exports.array(external_exports.string()).optional()
       })
-    }).passthrough();
+    });
   }
 });
 
@@ -21929,11 +21932,11 @@ var require_catalog = __commonJS({
         for (const p of skill.provides) capabilitySet.add(p.capability);
         for (const u of skill.uses) capabilitySet.add(u.capability);
       }
-      const sortedSkills = [...skills].sort((a, b) => a.name.localeCompare(b.name));
-      for (const skill of sortedSkills) {
-        skill.provides.sort((a, b) => a.capability.localeCompare(b.capability));
-        skill.uses.sort((a, b) => a.capability.localeCompare(b.capability));
-      }
+      const sortedSkills = skills.map((s) => ({
+        ...s,
+        provides: [...s.provides].sort((a, b) => a.capability.localeCompare(b.capability)),
+        uses: [...s.uses].sort((a, b) => a.capability.localeCompare(b.capability))
+      })).sort((a, b) => a.name.localeCompare(b.name));
       const now = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
       return {
         schema_version: "1.0",
@@ -22000,6 +22003,8 @@ var require_classifier = __commonJS({
       if (match.description_patterns.length > 0) {
         for (const pattern of match.description_patterns) {
           try {
+            if (pattern.length > 200) continue;
+            if (/([+*])\)\1|\(\?[^)]*[+*]/.test(pattern)) continue;
             if (new RegExp(pattern, "i").test(skill.description)) return true;
           } catch {
           }
@@ -22702,7 +22707,8 @@ async function main() {
     cwd
   );
   let blockingResult;
-  if (adapter && catalog) {
+  const invocationEnabled = adapter?.validation?.invocation?.enabled ?? true;
+  if (adapter && catalog && invocationEnabled) {
     blockingResult = runBlockingGate(profile, catalog, adapter, currentSkills);
   } else {
     blockingResult = { result: "skipped", checks: [] };

@@ -340,7 +340,8 @@ async function main(): Promise<void> {
 
   // ─── Gate 4: Blocking Validations ───
   let blockingResult;
-  if (adapter && catalog) {
+  const invocationEnabled = adapter?.validation?.invocation?.enabled ?? true;
+  if (adapter && catalog && invocationEnabled) {
     blockingResult = runBlockingGate(profile, catalog, adapter, currentSkills);
   } else {
     blockingResult = { result: "skipped", checks: [] };

@@ -206,7 +206,7 @@ validation:
     compare:
       - "profile"
   invocation:
-    enabled: false
+    enabled: true
 
 render:
   stable_sort:

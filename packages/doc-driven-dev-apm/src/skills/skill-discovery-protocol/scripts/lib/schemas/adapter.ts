@@ -128,5 +128,4 @@ export const AdapterConfigSchema = z
       enabled: z.boolean(),
       include: z.array(z.string()).optional(),
     }),
-  })
-  .passthrough();
+  });

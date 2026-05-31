@@ -493,5 +493,5 @@
     "artifacts",
     "readable_outputs"
   ],
-  "additionalProperties": {}
+  "additionalProperties": false
 }

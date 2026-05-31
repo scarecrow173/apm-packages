@@ -17,14 +17,14 @@ function buildCatalog(skills: ScannedSkill[], adapter: AdapterConfig): SkillRefe
     for (const u of skill.uses) capabilitySet.add(u.capability);
   }
 
-  // Sort skills by name
-  const sortedSkills = [...skills].sort((a, b) => a.name.localeCompare(b.name));
-
-  // Sort provides/uses within each skill
-  for (const skill of sortedSkills) {
-    skill.provides.sort((a, b) => a.capability.localeCompare(b.capability));
-    skill.uses.sort((a, b) => a.capability.localeCompare(b.capability));
-  }
+  // Sort skills by name (deep copy to avoid mutating originals)
+  const sortedSkills = skills
+    .map((s) => ({
+      ...s,
+      provides: [...s.provides].sort((a, b) => a.capability.localeCompare(b.capability)),
+      uses: [...s.uses].sort((a, b) => a.capability.localeCompare(b.capability)),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 

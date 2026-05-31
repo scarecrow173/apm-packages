@@ -7,8 +7,10 @@ const SchemaErrorSchema = z.object({
   message: z.string(),
 });
 
+const gateResult = z.enum(["pass", "fail", "skipped"]);
+
 const StalenessValidationSchema = z.object({
-  result: z.string(),
+  result: gateResult,
   basis: z.string(),
   basis_date: z.string(),
   max_age_days: z.number(),
@@ -18,7 +20,7 @@ const StalenessValidationSchema = z.object({
 });
 
 const DeterministicValidationSchema = z.object({
-  result: z.string(),
+  result: gateResult,
   comparisons: z.array(
     z.object({
       target: z.string(),
@@ -30,7 +32,7 @@ const DeterministicValidationSchema = z.object({
 
 const BlockingCheckSchema = z.object({
   type: z.string(),
-  result: z.string(),
+  result: gateResult,
   details: z.array(z.string()),
 });
 

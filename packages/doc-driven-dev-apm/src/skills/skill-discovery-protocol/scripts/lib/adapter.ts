@@ -14,6 +14,10 @@ function loadYamlFile(filePath: string): unknown {
 function resolveExtends(adapterDir: string, names: string[], visited: Set<string>): object[] {
   const results: object[] = [];
   for (const name of names) {
+    // Prevent path traversal in extends names
+    if (name.includes('/') || name.includes('\\') || name.includes('..')) {
+      throw new Error(`Invalid extends name "${name}": must be a simple identifier (no path separators or '..')`);
+    }
     if (visited.has(name)) {
       throw new Error(`Circular extends detected: "${name}" already in chain [${[...visited].join(" -> ")}]`);
     }
