@@ -26,11 +26,35 @@ Installed skills are external inputs. Their `SKILL.md` files may only contain
 standard metadata such as `name` and `description`. Do not require custom
 front matter such as `provides`, `uses`, `tags`, or `execution_policy`.
 
-The protocol uses three stages:
+The protocol is operated as three explicit write phases plus validation/query:
 
-1. `skill-scan-list.json`: raw scan result with each discovered `SKILL.md` body.
-2. `skill-reference-inferences.json`: agent-authored inferences for capabilities and policy.
-3. `skill-reference-catalog.json`: normalized flow-independent catalog.
+1. `sdp scan`: writes `.sdp/skill-scan-list.json` with raw discovered skills and full `SKILL.md` bodies.
+2. Agent inference: the agent reads the scan list and decides each skill's `provides`, `uses`, `execution_policy`, and `tags`.
+3. `sdp infer`: initializes and applies those agent decisions to `.sdp/skill-reference-inferences.json`.
+4. `sdp profile`: combines scan + inference into `.sdp/skill-reference-catalog.json` and an adapter-scoped flow profile.
+5. `sdp validate` / `sdp query`: validates and reads generated artifacts.
+
+## Agent Inference Responsibilities
+
+After `sdp scan`, inspect `.sdp/skill-scan-list.json`. For each scanned skill:
+
+- infer `provides[]` from the capabilities the skill can perform directly;
+- infer `uses[]` from capabilities the skill depends on or expects another skill to supply;
+- infer `execution_policy` from strict ordering, verification, or tool-use requirements in the skill body;
+- infer `tags[]` only as classification hints, not as flow-specific routing decisions.
+
+Write these decisions through the `sdp infer` command family:
+
+```text
+sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json --if-exists merge
+sdp infer set-skill --name <skill> --spec <skill-inference.json> --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
+sdp infer check --in .sdp/skill-reference-inferences.json
+```
+
+Do not manually edit generated catalog, profile, report, or Markdown sidecar
+artifacts. The inference JSON is the agent-authored input, and it should still
+be modified through `sdp infer` so schema checks and stable sorting are
+preserved.
 
 ## Canonical Steps
 
@@ -91,9 +115,12 @@ The catalog is flow-independent. It must not contain `slots`, `slot_count`,
 
 | Command | Purpose |
 | ------- | ------- |
-| `sdp scan --adapter <yaml>` | Generate the scan list |
-| `sdp infer init --scan <json>` | Generate/edit inference artifacts |
-| `sdp profile --adapter <yaml> [--references <json>]` | Generate/update catalog and profile artifacts |
+| `sdp scan --adapter <yaml>` | Generate the raw scan list |
+| `sdp infer init --scan <json>` | Create the editable inference artifact from scan output |
+| `sdp infer set-skill --name <skill> --spec <json>` | Upsert one agent-authored inference entry |
+| `sdp infer apply --ops <jsonl>` | Apply multiple inference edits atomically |
+| `sdp infer check --in <json>` | Validate inference schema before profiling |
+| `sdp profile --adapter <yaml> [--references <json>]` | Generate catalog and adapter-scoped profile from existing scan + inference artifacts |
 | `sdp validate --profile <json>` | Validate artifacts against gates |
 | `sdp query --profile <json> <sub>` | Extract information from artifacts |
 
