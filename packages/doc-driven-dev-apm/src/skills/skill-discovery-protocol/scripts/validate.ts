@@ -11,6 +11,7 @@ const { runStalenessGate } = require("./lib/gates/staleness_gate.ts");
 const { runDeterministicGate } = require("./lib/gates/deterministic_gate.ts");
 const { runBlockingGate } = require("./lib/gates/blocking_gate.ts");
 const { renderJson } = require("./lib/renderer.ts");
+const { resolveValidationReportPath } = require("./lib/artifact_paths.ts");
 
 import type { AdapterConfig, FlowProfile, SkillReferenceCatalog, ScannedSkill, RawScannedSkill } from "./lib/types";
 
@@ -48,11 +49,36 @@ function loadJson(filePath: string): Record<string, unknown> | null {
   return JSON.parse(content);
 }
 
-function findCatalogPath(profilePath: string, profile: Record<string, unknown>): string | null {
+function isPathWithinProject(rootDir: string, candidatePath: string): boolean {
+  const rel = path.relative(rootDir, candidatePath);
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}
+
+function findSdpRootDir(rootDir: string, profilePath: string): string | null {
+  let current = path.dirname(profilePath);
+
+  while (isPathWithinProject(rootDir, current)) {
+    if (path.basename(current) === ".sdp") {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+
+  return null;
+}
+
+function findCatalogPath(profilePath: string, profile: Record<string, unknown>, cwd: string): string | null {
   const dir = path.dirname(profilePath);
-  const candidates: string[] = [
-    path.join(dir, "skill-reference-catalog.json"),
-  ];
+  const sdpRoot = findSdpRootDir(cwd, profilePath);
+  const candidates: string[] = [path.join(dir, "skill-reference-catalog.json")];
+
+  if (sdpRoot && sdpRoot !== dir) {
+    candidates.push(path.join(sdpRoot, "skill-reference-catalog.json"));
+  }
 
   if (profile.adapter_id) {
     candidates.push(path.join(dir, `${profile.adapter_id}-catalog.json`));
@@ -68,6 +94,9 @@ function findCatalogPath(profilePath: string, profile: Record<string, unknown>):
   }
 
   for (const candidate of candidates) {
+    if (!isPathWithinProject(cwd, candidate)) {
+      continue;
+    }
     if (fs.existsSync(candidate)) {
       const data = loadJson(candidate);
       if (data && data.skills) {
@@ -172,7 +201,7 @@ function buildProfileValidation(
   const unusedOverrideWarnings: string[] = [];
 
   if (adapter) {
-    const overrides = adapter.invocation_resolution.overrides;
+    const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} as Record<string, never> };
 
     const resolvedBySlot = new Set(
       (profile.resolved_invocations || [])
@@ -258,6 +287,11 @@ async function main(): Promise<void> {
 
   // Full validation mode with --profile
   const profilePath = path.resolve(cwd, args.profile!);
+  if (!isPathWithinProject(cwd, profilePath)) {
+    console.error(`Error: Profile path is outside project boundary: ${args.profile}`);
+    process.exitCode = 2;
+    return;
+  }
   if (!fs.existsSync(profilePath)) {
     console.error(`Error: Profile not found: ${args.profile}`);
     process.exitCode = 2;
@@ -276,7 +310,7 @@ async function main(): Promise<void> {
   const profile = profileData as unknown as FlowProfile;
 
   // Load catalog (co-located)
-  const catalogPath = findCatalogPath(profilePath, profileData);
+  const catalogPath = findCatalogPath(profilePath, profileData, cwd);
   let catalogData: Record<string, unknown> | null = null;
   let catalog: SkillReferenceCatalog | null = null;
   if (catalogPath) {
@@ -373,19 +407,14 @@ async function main(): Promise<void> {
     overall_result: overallResult,
   };
 
-  // ─── Write validation-report.json to .sdp/ base directory ───
-  const sdpBase = path.resolve(cwd, ".sdp");
-  const reportPath = path.resolve(sdpBase, "validation-report.json");
-  const normalizedReportPath = path.normalize(reportPath);
-  const normalizedCwd = path.normalize(cwd);
-  if (!normalizedReportPath.startsWith(normalizedCwd + path.sep) && !normalizedReportPath.startsWith(normalizedCwd)) {
+  // ─── Write validation-report.json next to the selected profile ───
+  const reportPath = resolveValidationReportPath(profilePath);
+  if (!isPathWithinProject(cwd, reportPath)) {
     console.error(`Error: Report path "${reportPath}" is outside project boundary`);
     process.exitCode = 1;
     return;
   }
-  if (!fs.existsSync(sdpBase)) {
-    fs.mkdirSync(sdpBase, { recursive: true });
-  }
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   const reportContent = renderJson(report);
   fs.writeFileSync(reportPath, reportContent, "utf8");
 

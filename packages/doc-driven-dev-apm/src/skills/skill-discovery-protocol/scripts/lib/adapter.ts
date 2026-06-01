@@ -116,11 +116,72 @@ function loadAdapter(adapterPath: string): AdapterConfig {
   merged = deepMerge(merged, raw);
   delete merged.extends;
 
+  // Apply compatibility defaults when omitted in leaf adapters.
+  if (!("schema_version" in merged)) {
+    merged.schema_version = "1.0";
+  }
+  if (!("protocol" in merged)) {
+    merged.protocol = {
+      name: "skill-discovery-protocol",
+      min_version: "1.0",
+    };
+  }
+  if (!("validation" in merged)) {
+    merged.validation = {
+      schema: true,
+      staleness: {
+        enabled: true,
+        basis: "validated_at",
+        max_age_days: 30,
+      },
+      deterministic: {
+        enabled: true,
+        compare: ["profile", "profile+catalog-artifacts", "validation-report:exclude-timestamp"],
+      },
+      invocation: {
+        enabled: false,
+      },
+    };
+  }
+  if (typeof merged.validation === "object" && merged.validation !== null) {
+    const v = merged.validation as Record<string, unknown>;
+    if (!("schema" in v)) {
+      v.schema = true;
+    }
+
+    if (typeof v.staleness === "object" && v.staleness !== null) {
+      const s = v.staleness as Record<string, unknown>;
+      if (!("enabled" in s)) s.enabled = true;
+      if (!("basis" in s)) s.basis = "validated_at";
+      if (!("max_age_days" in s)) s.max_age_days = 30;
+    }
+
+    if (typeof v.deterministic === "object" && v.deterministic !== null) {
+      const d = v.deterministic as Record<string, unknown>;
+      if (!("enabled" in d)) d.enabled = true;
+      if (!("compare" in d)) {
+        d.compare = ["profile", "profile+catalog-artifacts", "validation-report:exclude-timestamp"];
+      }
+    }
+
+    if (typeof v.invocation === "object" && v.invocation !== null) {
+      const i = v.invocation as Record<string, unknown>;
+      if (!("enabled" in i)) i.enabled = false;
+    }
+  }
+  if (!("artifacts" in merged)) {
+    merged.artifacts = {
+      protocol: {
+        skill_reference_catalog: "skill-reference-catalog.json",
+      },
+    };
+  }
+
   // Validate required keys
   const requiredKeys = [
-    "schema_version", "adapter_id", "protocol", "scan", "profile",
-    "flow_stack", "classification", "invocation_resolution", "validation",
-    "render", "artifacts", "readable_outputs",
+    "adapter_id", "scan", "profile",
+    "flow_stack", "classification", "invocation_resolution",
+    "render", "readable_outputs",
   ];
   const missing = requiredKeys.filter((k) => !(k in merged));
   if (missing.length > 0) {

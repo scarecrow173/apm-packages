@@ -2,7 +2,6 @@
 "use strict";
 
 const path = require("node:path");
-const fs = require("node:fs");
 
 const { loadAdapter } = require("./lib/adapter.ts");
 const { scanSkills } = require("./lib/scanner.ts");
@@ -18,6 +17,10 @@ const {
   loadInferenceDocument,
   enrichSkills,
 } = require("./lib/inference.ts");
+const {
+  resolveSharedCatalogPath,
+  resolveFlowProfilePath,
+} = require("./lib/artifact_paths.ts");
 
 function parseArgs(argv: string[]): { adapter?: string; cwd?: string; references?: string; help?: boolean } {
   const args: { adapter?: string; cwd?: string; references?: string; help?: boolean } = {};
@@ -116,15 +119,14 @@ async function main(): Promise<void> {
     buildProfile(adapter, catalog, categories, unmatched_skills, resolvedInvocations, skills),
   );
 
-  // 6. Write artifacts (resolved relative to .sdp/ base directory)
-  const sdpBase = path.resolve(cwd, ".sdp");
+  // 6. Write artifacts (shared catalog at .sdp/, flow profile at .sdp/<adapter_id>/)
   const catalogPath = adapter.artifacts.protocol.skill_reference_catalog;
   const profilePath = adapter.artifacts.protocol.flow_profile;
 
   let filesWritten = 0;
 
   if (catalogPath) {
-    const absPath = path.resolve(sdpBase, catalogPath);
+    const absPath = resolveSharedCatalogPath(cwd, catalogPath);
     const relPath = path.relative(cwd, absPath);
     if (writeArtifact(absPath, catalog as unknown as Record<string, unknown>)) {
       console.log(`Written: ${relPath}`);
@@ -135,7 +137,7 @@ async function main(): Promise<void> {
   }
 
   if (profilePath) {
-    const absPath = path.resolve(sdpBase, profilePath);
+    const absPath = resolveFlowProfilePath(cwd, adapter.adapter_id, profilePath);
     const relPath = path.relative(cwd, absPath);
     if (writeArtifact(absPath, profile as unknown as Record<string, unknown>)) {
       console.log(`Written: ${relPath}`);

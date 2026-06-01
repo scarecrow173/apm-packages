@@ -239,9 +239,30 @@ register(handler10);
 // src/skills/skill-discovery-protocol/scripts/lib/query/loader.ts
 var fs = require("node:fs");
 var path = require("node:path");
+function isPathWithinProject(rootDir, candidatePath) {
+  const rel = path.relative(rootDir, candidatePath);
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}
+function findSdpRootDir(rootDir, profilePath) {
+  let current = path.dirname(profilePath);
+  while (isPathWithinProject(rootDir, current)) {
+    if (path.basename(current) === ".sdp") {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+  return null;
+}
 function loadQueryContext(args) {
   const cwd = args.cwd ? path.resolve(args.cwd) : process.cwd();
   const profilePath = path.resolve(cwd, args.profile);
+  if (!isPathWithinProject(cwd, profilePath)) {
+    throw new Error(`Profile path is outside project boundary: ${args.profile}`);
+  }
   if (!fs.existsSync(profilePath)) {
     throw new Error(`Profile not found: ${profilePath}`);
   }
@@ -251,12 +272,17 @@ function loadQueryContext(args) {
     throw new Error("Invalid profile: missing schema_version");
   }
   const profileDir = path.dirname(profilePath);
+  const rootSdpDir = findSdpRootDir(cwd, profilePath);
   const catalog = loadOptionalJson(
     path.join(profileDir, "skill-reference-catalog.json")
-  );
+  ) || (rootSdpDir ? loadOptionalJson(
+    path.join(rootSdpDir, "skill-reference-catalog.json")
+  ) : null);
   const validationReport = loadOptionalJson(
     path.join(profileDir, "validation-report.json")
-  );
+  ) || (rootSdpDir ? loadOptionalJson(
+    path.join(rootSdpDir, "validation-report.json")
+  ) : null);
   return { profile, catalog, validationReport, args };
 }
 function loadOptionalJson(filePath) {

@@ -6,7 +6,7 @@ const snakeCase = z.string().regex(/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/, "must be sna
 const identifier = z.string().regex(/^[a-z][a-z0-9]*([_-][a-z0-9]+)*$/, "must be a valid identifier (lowercase, digits, hyphens, underscores)");
 
 const AdapterScopeSchema = z.object({
-  enabled: z.boolean(),
+  enabled: z.boolean().optional(),
   roots: z.array(z.string()),
 });
 
@@ -35,12 +35,14 @@ const TaxonomyEntrySchema = z.object({
 
 export const AdapterConfigSchema = z
   .object({
-    schema_version: z.string(),
+    schema_version: z.string().optional(),
     adapter_id: identifier,
-    protocol: z.object({
-      name: z.literal("skill-discovery-protocol"),
-      min_version: z.string(),
-    }),
+    protocol: z
+      .object({
+        name: z.literal("skill-discovery-protocol"),
+        min_version: z.string(),
+      })
+      .optional(),
     enabled: z.boolean().optional(),
     extends: z.array(z.string()).optional(),
     metadata: z
@@ -49,12 +51,16 @@ export const AdapterConfigSchema = z
         owner: z.string().optional(),
       })
       .optional(),
-    scan: z.object({
-      scopes: z.record(z.string(), AdapterScopeSchema),
-    }),
-    profile: z.object({
-      title: z.string().optional(),
-    }),
+    scan: z
+      .object({
+        scopes: z.record(z.string(), AdapterScopeSchema),
+      })
+      .optional(),
+    profile: z
+      .object({
+        title: z.string().optional(),
+      })
+      .optional(),
     flow_stack: z.object({
       slots: z.array(AdapterSlotSchema),
     }).optional(),
@@ -68,14 +74,11 @@ export const AdapterConfigSchema = z
     }).optional(),
     invocation_resolution: z.object({
       overrides: z.object({
-        slots: z.record(
-          z.string(),
-          z.object({
+          slots: z.record(z.string(), z.object({
             use: z.string(),
             reason: z.string().optional(),
             fallback: z.string().nullable().optional(),
-          }),
-        ),
+          })).optional(),
         capabilities: z.record(
           z.string(),
           z.object({
@@ -84,7 +87,7 @@ export const AdapterConfigSchema = z
             fallback: z.string().nullable().optional(),
           }),
         ),
-      }),
+      }).optional(),
       resolution_order: z.array(z.string()),
       unresolved: z.object({
         required: z.string(),
@@ -92,40 +95,48 @@ export const AdapterConfigSchema = z
       }),
       invalid_override: z.record(z.string(), z.string()),
     }).optional(),
-    validation: z.object({
-      schema: z.boolean(),
-      staleness: z
-        .object({
-          enabled: z.boolean(),
-          basis: z.string().optional(),
-          max_age_days: z.number().int().positive().optional(),
-        })
-        .optional(),
-      deterministic: z
-        .object({
-          enabled: z.boolean(),
-          compare: z.array(z.string()).optional(),
-        })
-        .optional(),
-      invocation: z
-        .object({
-          enabled: z.boolean(),
-        })
-        .optional(),
-    }),
-    render: z.object({
-      stable_sort: z.object({
-        skills: z.array(z.string()),
-        invocations: z.array(z.string()),
-      }),
-      normalize_whitespace: z.boolean().optional(),
-      newline: z.string().optional(),
-    }),
-    artifacts: z.object({
-      protocol: z.record(z.string(), z.string()),
-    }),
-    readable_outputs: z.object({
-      enabled: z.boolean(),
-      include: z.array(z.string()).optional(),
-    }),
+    validation: z
+      .object({
+        schema: z.boolean().optional(),
+        staleness: z
+          .object({
+            enabled: z.boolean().optional(),
+            basis: z.string().optional(),
+            max_age_days: z.number().int().positive().optional(),
+          })
+          .optional(),
+        deterministic: z
+          .object({
+            enabled: z.boolean().optional(),
+            compare: z.array(z.string()).optional(),
+          })
+          .optional(),
+        invocation: z
+          .object({
+            enabled: z.boolean().optional(),
+          })
+          .optional(),
+      })
+      .optional(),
+    render: z
+      .object({
+        stable_sort: z.object({
+          skills: z.array(z.string()),
+          invocations: z.array(z.string()),
+        }),
+        normalize_whitespace: z.boolean().optional(),
+        newline: z.string().optional(),
+      })
+      .optional(),
+    artifacts: z
+      .object({
+        protocol: z.record(z.string(), z.string()),
+      })
+      .optional(),
+    readable_outputs: z
+      .object({
+        enabled: z.boolean().optional(),
+        include: z.array(z.string()).optional(),
+      })
+      .optional(),
   });

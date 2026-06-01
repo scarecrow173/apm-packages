@@ -294,6 +294,18 @@ test("validate --profile missing file exits 2", () => {
   assert.ok(result.stderr.includes("Profile not found"));
 });
 
+test("validate rejects profile path outside project boundary", () => {
+  const dir = tempDir();
+  const outsideProfilePath = path.join(path.dirname(dir), "outside-profile.json");
+  fs.writeFileSync(outsideProfilePath, JSON.stringify({ schema_version: "1.0" }), "utf8");
+
+  const relativeOutsidePath = path.relative(dir, outsideProfilePath);
+  const result = runValidate(["--profile", relativeOutsidePath], dir);
+
+  assert.equal(result.status, 2);
+  assert.ok(result.stderr.includes("outside project boundary"));
+});
+
 test("validate --profile invalid JSON exits 2", () => {
   const dir = tempDir();
   fs.writeFileSync(path.join(dir, "bad.json"), "not json", "utf8");
@@ -327,14 +339,14 @@ test("validate --profile with valid artifacts: all gates pass", () => {
   generateArtifacts(dir);
 
   const result = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
   assert.ok(result.stdout.includes("Overall:       pass"));
 
   // Check validation-report.json was created
-  const reportPath = path.join(dir, ".sdp", "validation-report.json");
+  const reportPath = path.join(dir, ".sdp", "test-adapter", "validation-report.json");
   assert.ok(fs.existsSync(reportPath), "validation-report.json should exist");
 
   const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
@@ -348,12 +360,31 @@ test("validate --profile with valid artifacts: all gates pass", () => {
   assert.equal(report.adapter_id, "test-adapter");
 });
 
+test("validate writes validation-report.json next to adapter-scoped profile", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+  generateArtifacts(dir);
+
+  const adapterDir = path.join(dir, ".sdp", "test-adapter");
+  const scopedProfilePath = path.join(adapterDir, "test-adapter-profile.json");
+  assert.ok(fs.existsSync(scopedProfilePath), "profile should exist under adapter-scoped path");
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+
+  const scopedReportPath = path.join(adapterDir, "validation-report.json");
+  assert.ok(fs.existsSync(scopedReportPath), "validation-report.json should exist next to profile");
+});
+
 // ─── Validate: Schema gate fails ───
 
 test("validate schema gate detects missing fields", () => {
   const dir = tempDir();
   setupTestProject(dir);
-  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".sdp", "test-adapter"), { recursive: true });
 
   // Write a profile missing required fields
   const badProfile = {
@@ -362,12 +393,12 @@ test("validate schema gate detects missing fields", () => {
     // missing adapter_id, flow_stack, classification, resolved_invocations, etc.
   };
   fs.writeFileSync(
-    path.join(dir, ".sdp", "test-adapter-profile.json"),
+    path.join(dir, ".sdp", "test-adapter", "test-adapter-profile.json"),
     JSON.stringify(badProfile, null, 2),
     "utf8",
   );
 
-  const result = runValidate(["--profile", ".sdp/test-adapter-profile.json"], dir);
+  const result = runValidate(["--profile", ".sdp/test-adapter/test-adapter-profile.json"], dir);
   assert.equal(result.status, 1);
   assert.ok(result.stdout.includes("Schema:        fail"));
   assert.ok(result.stderr.includes("Missing required field"));
@@ -379,7 +410,7 @@ test("validate schema gate detects non-snake_case slot_id", () => {
   generateArtifacts(dir);
 
   // Modify profile to have non-snake_case slot
-  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter", "test-adapter-profile.json");
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   profile.flow_stack.slots[0].slot_id = "BadSlotName";
   fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
@@ -404,7 +435,7 @@ test("validate staleness gate detects old validated_at", () => {
   fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
 
   const result = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -434,7 +465,7 @@ Use this skill for testing.
   );
 
   const result = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -442,7 +473,7 @@ Use this skill for testing.
 
   // Check report has new_skills
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
   );
   assert.ok(report.staleness_validation.new_skills.includes("skill-c"));
 });
@@ -456,13 +487,13 @@ test("validate staleness gate detects removed skills", () => {
   fs.rmSync(path.join(dir, ".apm", "skills", "skill-b"), { recursive: true });
 
   const result = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
   );
   assert.ok(report.staleness_validation.removed_skills.includes("skill-b"));
 });
@@ -475,7 +506,7 @@ test("validate deterministic gate passes when artifacts are fresh", () => {
   generateArtifacts(dir);
 
   const result = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -488,13 +519,13 @@ test("validate deterministic gate fails on modified profile", () => {
   generateArtifacts(dir);
 
   // Modify profile content (not timestamp)
-  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter", "test-adapter-profile.json");
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   profile.warnings = ["injected warning"];
   fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
 
   const result = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
@@ -506,7 +537,7 @@ test("validate deterministic gate skipped without --adapter", () => {
   setupTestProject(dir);
   generateArtifacts(dir);
 
-  const result = runValidate(["--profile", ".sdp/test-adapter-profile.json"], dir);
+  const result = runValidate(["--profile", ".sdp/test-adapter/test-adapter-profile.json"], dir);
   assert.ok(result.stdout.includes("Deterministic: skipped"));
 });
 
@@ -531,14 +562,14 @@ test("validate blocking gate detects unresolved required capability", () => {
   generateArtifacts(dir);
 
   const result = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
   assert.ok(result.stdout.includes("Blocking:      fail"));
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
   );
   const unresolvedCheck = report.blocking_validations.checks.find(
     (c: { type: string }) => c.type === "unresolved_required",
@@ -565,13 +596,13 @@ test("validate blocking gate detects unknown skill override", () => {
   generateArtifacts(dir);
 
   const result = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 1);
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
   );
   const unknownCheck = report.blocking_validations.checks.find(
     (c: { type: string }) => c.type === "unknown_skill_override",
@@ -587,12 +618,12 @@ test("validation-report.json has correct structure", () => {
   generateArtifacts(dir);
 
   runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
   );
 
   // Top-level keys
@@ -639,12 +670,12 @@ test("validate catalog_validation counts are correct", () => {
   generateArtifacts(dir);
 
   runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
   );
 
   assert.equal(report.catalog_validation.skill_count, 2);
@@ -659,12 +690,12 @@ test("validate overall_result is fail when any gate fails", () => {
   generateArtifacts(dir);
 
   // Corrupt profile to fail schema
-  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter", "test-adapter-profile.json");
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   delete profile.adapter_id;
   fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
 
-  const result = runValidate(["--profile", ".sdp/test-adapter-profile.json"], dir);
+  const result = runValidate(["--profile", ".sdp/test-adapter/test-adapter-profile.json"], dir);
   assert.equal(result.status, 1);
   assert.ok(result.stdout.includes("Overall:       fail"));
 });
@@ -687,12 +718,12 @@ test("validate profile_validation detects unused override warnings", () => {
   generateArtifacts(dir);
 
   runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
 
   const report = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "validation-report.json"), "utf8"),
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
   );
   assert.ok(report.profile_validation.unused_override_warnings.length > 0);
   assert.ok(
@@ -707,7 +738,7 @@ test("validate exit code 0 when all pass, 1 when fail, 2 on input error", () => 
 
   // All pass
   const pass = runValidate(
-    ["--profile", ".sdp/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
   assert.equal(pass.status, 0);

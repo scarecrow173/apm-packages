@@ -2908,18 +2908,70 @@ var require_adapter = __commonJS({
       }
       merged = deepMerge(merged, raw);
       delete merged.extends;
+      if (!("schema_version" in merged)) {
+        merged.schema_version = "1.0";
+      }
+      if (!("protocol" in merged)) {
+        merged.protocol = {
+          name: "skill-discovery-protocol",
+          min_version: "1.0"
+        };
+      }
+      if (!("validation" in merged)) {
+        merged.validation = {
+          schema: true,
+          staleness: {
+            enabled: true,
+            basis: "validated_at",
+            max_age_days: 30
+          },
+          deterministic: {
+            enabled: true,
+            compare: ["profile", "profile+catalog-artifacts", "validation-report:exclude-timestamp"]
+          },
+          invocation: {
+            enabled: false
+          }
+        };
+      }
+      if (typeof merged.validation === "object" && merged.validation !== null) {
+        const v = merged.validation;
+        if (!("schema" in v)) {
+          v.schema = true;
+        }
+        if (typeof v.staleness === "object" && v.staleness !== null) {
+          const s = v.staleness;
+          if (!("enabled" in s)) s.enabled = true;
+          if (!("basis" in s)) s.basis = "validated_at";
+          if (!("max_age_days" in s)) s.max_age_days = 30;
+        }
+        if (typeof v.deterministic === "object" && v.deterministic !== null) {
+          const d = v.deterministic;
+          if (!("enabled" in d)) d.enabled = true;
+          if (!("compare" in d)) {
+            d.compare = ["profile", "profile+catalog-artifacts", "validation-report:exclude-timestamp"];
+          }
+        }
+        if (typeof v.invocation === "object" && v.invocation !== null) {
+          const i = v.invocation;
+          if (!("enabled" in i)) i.enabled = false;
+        }
+      }
+      if (!("artifacts" in merged)) {
+        merged.artifacts = {
+          protocol: {
+            skill_reference_catalog: "skill-reference-catalog.json"
+          }
+        };
+      }
       const requiredKeys = [
-        "schema_version",
         "adapter_id",
-        "protocol",
         "scan",
         "profile",
         "flow_stack",
         "classification",
         "invocation_resolution",
-        "validation",
         "render",
-        "artifacts",
         "readable_outputs"
       ];
       const missing = requiredKeys.filter((k) => !(k in merged));
@@ -21677,7 +21729,7 @@ var init_adapter = __esm({
     snakeCase = external_exports.string().regex(/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/, "must be snake_case");
     identifier = external_exports.string().regex(/^[a-z][a-z0-9]*([_-][a-z0-9]+)*$/, "must be a valid identifier (lowercase, digits, hyphens, underscores)");
     AdapterScopeSchema = external_exports.object({
-      enabled: external_exports.boolean(),
+      enabled: external_exports.boolean().optional(),
       roots: external_exports.array(external_exports.string())
     });
     AdapterSlotSchema = external_exports.object({
@@ -21700,12 +21752,12 @@ var init_adapter = __esm({
       })
     });
     AdapterConfigSchema = external_exports.object({
-      schema_version: external_exports.string(),
+      schema_version: external_exports.string().optional(),
       adapter_id: identifier,
       protocol: external_exports.object({
         name: external_exports.literal("skill-discovery-protocol"),
         min_version: external_exports.string()
-      }),
+      }).optional(),
       enabled: external_exports.boolean().optional(),
       extends: external_exports.array(external_exports.string()).optional(),
       metadata: external_exports.object({
@@ -21714,10 +21766,10 @@ var init_adapter = __esm({
       }).optional(),
       scan: external_exports.object({
         scopes: external_exports.record(external_exports.string(), AdapterScopeSchema)
-      }),
+      }).optional(),
       profile: external_exports.object({
         title: external_exports.string().optional()
-      }),
+      }).optional(),
       flow_stack: external_exports.object({
         slots: external_exports.array(AdapterSlotSchema)
       }).optional(),
@@ -21731,14 +21783,11 @@ var init_adapter = __esm({
       }).optional(),
       invocation_resolution: external_exports.object({
         overrides: external_exports.object({
-          slots: external_exports.record(
-            external_exports.string(),
-            external_exports.object({
-              use: external_exports.string(),
-              reason: external_exports.string().optional(),
-              fallback: external_exports.string().nullable().optional()
-            })
-          ),
+          slots: external_exports.record(external_exports.string(), external_exports.object({
+            use: external_exports.string(),
+            reason: external_exports.string().optional(),
+            fallback: external_exports.string().nullable().optional()
+          })).optional(),
           capabilities: external_exports.record(
             external_exports.string(),
             external_exports.object({
@@ -21747,7 +21796,7 @@ var init_adapter = __esm({
               fallback: external_exports.string().nullable().optional()
             })
           )
-        }),
+        }).optional(),
         resolution_order: external_exports.array(external_exports.string()),
         unresolved: external_exports.object({
           required: external_exports.string(),
@@ -21756,20 +21805,20 @@ var init_adapter = __esm({
         invalid_override: external_exports.record(external_exports.string(), external_exports.string())
       }).optional(),
       validation: external_exports.object({
-        schema: external_exports.boolean(),
+        schema: external_exports.boolean().optional(),
         staleness: external_exports.object({
-          enabled: external_exports.boolean(),
+          enabled: external_exports.boolean().optional(),
           basis: external_exports.string().optional(),
           max_age_days: external_exports.number().int().positive().optional()
         }).optional(),
         deterministic: external_exports.object({
-          enabled: external_exports.boolean(),
+          enabled: external_exports.boolean().optional(),
           compare: external_exports.array(external_exports.string()).optional()
         }).optional(),
         invocation: external_exports.object({
-          enabled: external_exports.boolean()
+          enabled: external_exports.boolean().optional()
         }).optional()
-      }),
+      }).optional(),
       render: external_exports.object({
         stable_sort: external_exports.object({
           skills: external_exports.array(external_exports.string()),
@@ -21777,14 +21826,14 @@ var init_adapter = __esm({
         }),
         normalize_whitespace: external_exports.boolean().optional(),
         newline: external_exports.string().optional()
-      }),
+      }).optional(),
       artifacts: external_exports.object({
         protocol: external_exports.record(external_exports.string(), external_exports.string())
-      }),
+      }).optional(),
       readable_outputs: external_exports.object({
-        enabled: external_exports.boolean(),
+        enabled: external_exports.boolean().optional(),
         include: external_exports.array(external_exports.string()).optional()
-      })
+      }).optional()
     });
   }
 });
@@ -22392,6 +22441,18 @@ var require_inference = __commonJS({
       }
       return parsed.data;
     }
+    function readInferenceOrThrow(filePath) {
+      const loaded = loadInferenceDocument(filePath);
+      if (!loaded) {
+        throw new Error(`Inference file not found: ${filePath}`);
+      }
+      return loaded;
+    }
+    function writeInferenceDocument(filePath, doc) {
+      const dir = path2.dirname(filePath);
+      if (!fs2.existsSync(dir)) fs2.mkdirSync(dir, { recursive: true });
+      fs2.writeFileSync(filePath, JSON.stringify(doc, null, 2) + "\n", "utf8");
+    }
     function buildScanList(rawSkills) {
       return {
         schema_version: "1.0",
@@ -22445,6 +22506,8 @@ var require_inference = __commonJS({
       defaultScanListPath,
       defaultInferencePath,
       loadInferenceDocument,
+      readInferenceOrThrow,
+      writeInferenceDocument,
       buildScanList,
       writeScanList,
       loadScanList,
@@ -22565,6 +22628,7 @@ var require_blocking_gate = __commonJS({
     function runBlockingGate2(profile, catalog, adapter, skills) {
       const checks = [];
       const invResolution = adapter.invocation_resolution;
+      const overrides = invResolution.overrides ?? { capabilities: {} };
       const skillNames = new Set(skills.map((s) => s.name));
       const skillProvides = /* @__PURE__ */ new Map();
       for (const skill of skills) {
@@ -22573,11 +22637,11 @@ var require_blocking_gate = __commonJS({
       }
       const unresolvedCheck = checkUnresolvedRequired(profile, skills, invResolution.unresolved.required);
       checks.push(unresolvedCheck);
-      const unknownSkillCheck = checkUnknownSkillOverrides(adapter, skillNames, invResolution.invalid_override.unknown_skill);
+      const unknownSkillCheck = checkUnknownSkillOverrides({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skillNames, invResolution.invalid_override.unknown_skill);
       checks.push(unknownSkillCheck);
-      const capMismatchCheck = checkCapabilityMismatch(adapter, skillProvides, invResolution.invalid_override.capability_mismatch);
+      const capMismatchCheck = checkCapabilityMismatch({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skillProvides, invResolution.invalid_override.capability_mismatch);
       checks.push(capMismatchCheck);
-      const overrideNotAllowedCheck = checkOverrideNotAllowed(adapter, skills, invResolution.invalid_override.override_not_allowed);
+      const overrideNotAllowedCheck = checkOverrideNotAllowed({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skills, invResolution.invalid_override.override_not_allowed);
       checks.push(overrideNotAllowedCheck);
       const unusedSlotsCheck = checkUnusedSlots(profile, catalog);
       checks.push(unusedSlotsCheck);
@@ -22684,6 +22748,68 @@ var require_blocking_gate = __commonJS({
   }
 });
 
+// src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts
+var require_artifact_paths = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts"(exports2, module2) {
+    "use strict";
+    var path2 = require("node:path");
+    function sdpBase(cwd) {
+      return path2.resolve(cwd, ".sdp");
+    }
+    function ensureRelativeArtifactPath(relPath, scopeLabel) {
+      if (typeof relPath !== "string" || relPath.trim() === "") {
+        throw new Error(`Invalid ${scopeLabel}: relPath must be a non-empty string`);
+      }
+      if (path2.isAbsolute(relPath)) {
+        throw new Error(`Invalid ${scopeLabel}: absolute paths are not allowed (${relPath})`);
+      }
+    }
+    function assertPathWithinBase(resolvedPath, basePath, scopeLabel) {
+      const relative = path2.relative(basePath, resolvedPath);
+      if (relative.startsWith("..") || path2.isAbsolute(relative)) {
+        throw new Error(`Invalid ${scopeLabel}: path escapes base directory (${basePath})`);
+      }
+    }
+    function validateAdapterId(adapterId) {
+      if (typeof adapterId !== "string" || adapterId.trim() === "") {
+        throw new Error("Invalid adapterId: must be a non-empty string");
+      }
+      if (adapterId.includes("/") || adapterId.includes("\\") || adapterId.includes("..")) {
+        throw new Error("Invalid adapterId: must not contain path separators or '..'");
+      }
+    }
+    function adapterDir(cwd, adapterId) {
+      validateAdapterId(adapterId);
+      return path2.join(sdpBase(cwd), adapterId);
+    }
+    function resolveSharedCatalogPath(cwd, relPath) {
+      ensureRelativeArtifactPath(relPath, "shared catalog path");
+      const base = sdpBase(cwd);
+      const resolved = path2.resolve(base, relPath);
+      assertPathWithinBase(resolved, base, "shared catalog path");
+      return resolved;
+    }
+    function resolveFlowProfilePath(cwd, adapterId, relPath) {
+      validateAdapterId(adapterId);
+      ensureRelativeArtifactPath(relPath, "flow profile path");
+      const base = adapterDir(cwd, adapterId);
+      const resolved = path2.resolve(base, relPath);
+      assertPathWithinBase(resolved, base, "flow profile path");
+      return resolved;
+    }
+    function resolveValidationReportPath2(profilePath) {
+      return path2.join(path2.dirname(profilePath), "validation-report.json");
+    }
+    module2.exports = {
+      sdpBase,
+      adapterDir,
+      resolveSharedCatalogPath,
+      resolveFlowProfilePath,
+      resolveValidationReportPath: resolveValidationReportPath2
+    };
+  }
+});
+
 // src/skills/skill-discovery-protocol/scripts/validate.ts
 var fs = require("node:fs");
 var path = require("node:path");
@@ -22694,6 +22820,7 @@ var { runStalenessGate } = require_staleness_gate();
 var { runDeterministicGate } = require_deterministic_gate();
 var { runBlockingGate } = require_blocking_gate();
 var { renderJson } = require_renderer();
+var { resolveValidationReportPath } = require_artifact_paths();
 function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i++) {
@@ -22725,11 +22852,31 @@ function loadJson(filePath) {
   const content = fs.readFileSync(filePath, "utf8");
   return JSON.parse(content);
 }
-function findCatalogPath(profilePath, profile) {
+function isPathWithinProject(rootDir, candidatePath) {
+  const rel = path.relative(rootDir, candidatePath);
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}
+function findSdpRootDir(rootDir, profilePath) {
+  let current = path.dirname(profilePath);
+  while (isPathWithinProject(rootDir, current)) {
+    if (path.basename(current) === ".sdp") {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+  return null;
+}
+function findCatalogPath(profilePath, profile, cwd) {
   const dir = path.dirname(profilePath);
-  const candidates = [
-    path.join(dir, "skill-reference-catalog.json")
-  ];
+  const sdpRoot = findSdpRootDir(cwd, profilePath);
+  const candidates = [path.join(dir, "skill-reference-catalog.json")];
+  if (sdpRoot && sdpRoot !== dir) {
+    candidates.push(path.join(sdpRoot, "skill-reference-catalog.json"));
+  }
   if (profile.adapter_id) {
     candidates.push(path.join(dir, `${profile.adapter_id}-catalog.json`));
   }
@@ -22742,6 +22889,9 @@ function findCatalogPath(profilePath, profile) {
     }
   }
   for (const candidate of candidates) {
+    if (!isPathWithinProject(cwd, candidate)) {
+      continue;
+    }
     if (fs.existsSync(candidate)) {
       const data = loadJson(candidate);
       if (data && data.skills) {
@@ -22792,7 +22942,7 @@ function buildCatalogValidation(profile, catalog) {
 function buildProfileValidation(profile, adapter) {
   const unusedOverrideWarnings = [];
   if (adapter) {
-    const overrides = adapter.invocation_resolution.overrides;
+    const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
     const resolvedBySlot = new Set(
       (profile.resolved_invocations || []).filter((inv) => inv.resolution_method === "slot_override").map((inv) => inv.slot)
     );
@@ -22857,6 +23007,11 @@ async function main() {
     return;
   }
   const profilePath = path.resolve(cwd, args.profile);
+  if (!isPathWithinProject(cwd, profilePath)) {
+    console.error(`Error: Profile path is outside project boundary: ${args.profile}`);
+    process.exitCode = 2;
+    return;
+  }
   if (!fs.existsSync(profilePath)) {
     console.error(`Error: Profile not found: ${args.profile}`);
     process.exitCode = 2;
@@ -22871,7 +23026,7 @@ async function main() {
     return;
   }
   const profile = profileData;
-  const catalogPath = findCatalogPath(profilePath, profileData);
+  const catalogPath = findCatalogPath(profilePath, profileData, cwd);
   let catalogData = null;
   let catalog = null;
   if (catalogPath) {
@@ -22949,18 +23104,13 @@ async function main() {
     profile_validation: profileValidation,
     overall_result: overallResult
   };
-  const sdpBase = path.resolve(cwd, ".sdp");
-  const reportPath = path.resolve(sdpBase, "validation-report.json");
-  const normalizedReportPath = path.normalize(reportPath);
-  const normalizedCwd = path.normalize(cwd);
-  if (!normalizedReportPath.startsWith(normalizedCwd + path.sep) && !normalizedReportPath.startsWith(normalizedCwd)) {
+  const reportPath = resolveValidationReportPath(profilePath);
+  if (!isPathWithinProject(cwd, reportPath)) {
     console.error(`Error: Report path "${reportPath}" is outside project boundary`);
     process.exitCode = 1;
     return;
   }
-  if (!fs.existsSync(sdpBase)) {
-    fs.mkdirSync(sdpBase, { recursive: true });
-  }
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   const reportContent = renderJson(report);
   fs.writeFileSync(reportPath, reportContent, "utf8");
   console.log(`Schema:        ${schemaResult.result}`);

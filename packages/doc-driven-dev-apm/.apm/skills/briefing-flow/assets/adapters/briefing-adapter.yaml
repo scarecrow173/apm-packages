@@ -3,9 +3,6 @@ schema_version: "1.0"
 adapter_id: "briefing-flow-default"
 extends:
   - "general"
-protocol:
-  name: "skill-discovery-protocol"
-  min_version: "1.0"
 profile:
   title: "Briefing Profile"
 flow_stack:
@@ -106,32 +103,13 @@ invocation_resolution:
     capability_mismatch: "warn"
     override_not_allowed: "warn"
 validation:
-  schema: true
-  staleness:
-    enabled: true
-    basis: "validated_at"
-    max_age_days: 30
-  deterministic:
-    enabled: true
-    compare:
-      - "profile"
-      - "profile+catalog-artifacts"
-      - "validation-report:exclude-timestamp"
   invocation:
     enabled: true
-render:
-  stable_sort:
-    skills: ["name"]
-    invocations: ["source_skill", "slot", "capability"]
-  normalize_whitespace: true
-  newline: "lf"
 artifacts:
   protocol:
-    catalog: "skill-reference-catalog.json"
-    profile: "briefing-profile.json"
+    flow_profile: "briefing-profile.json"
     report: "validation-report.json"
 readable_outputs:
-  enabled: true
   include:
-    catalog: true
-    profile: true
+    - "skill_reference_catalog"
+    - "flow_profile"

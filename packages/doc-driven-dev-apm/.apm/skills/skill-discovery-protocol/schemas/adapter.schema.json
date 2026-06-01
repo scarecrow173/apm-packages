@@ -69,7 +69,6 @@
               }
             },
             "required": [
-              "enabled",
               "roots"
             ],
             "additionalProperties": false
@@ -298,7 +297,6 @@
             }
           },
           "required": [
-            "slots",
             "capabilities"
           ],
           "additionalProperties": false
@@ -336,7 +334,6 @@
         }
       },
       "required": [
-        "overrides",
         "resolution_order",
         "unresolved",
         "invalid_override"
@@ -364,9 +361,6 @@
               "maximum": 9007199254740991
             }
           },
-          "required": [
-            "enabled"
-          ],
           "additionalProperties": false
         },
         "deterministic": {
@@ -382,9 +376,6 @@
               }
             }
           },
-          "required": [
-            "enabled"
-          ],
           "additionalProperties": false
         },
         "invocation": {
@@ -394,15 +385,9 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "enabled"
-          ],
           "additionalProperties": false
         }
       },
-      "required": [
-        "schema"
-      ],
       "additionalProperties": false
     },
     "render": {
@@ -473,22 +458,11 @@
           }
         }
       },
-      "required": [
-        "enabled"
-      ],
       "additionalProperties": false
     }
   },
   "required": [
-    "schema_version",
-    "adapter_id",
-    "protocol",
-    "scan",
-    "profile",
-    "validation",
-    "render",
-    "artifacts",
-    "readable_outputs"
+    "adapter_id"
   ],
   "additionalProperties": false
 }

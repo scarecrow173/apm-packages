@@ -7,6 +7,7 @@ const test = require("node:test");
 
 const skillRoot = path.resolve(__dirname, "../../../.apm/skills");
 const sdpScripts = path.join(skillRoot, "skill-discovery-protocol", "scripts");
+const ROOT_CATALOG_MARKER = "root-catalog-only-marker";
 
 function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "sdp-query-reg-"));
@@ -106,7 +107,7 @@ function setupEnv(dir: string) {
     skills: [
       {
         name: "debug-skill",
-        description: "Debugging and diagnosis",
+        description: `Debugging and diagnosis (${ROOT_CATALOG_MARKER})`,
         provides: [{ capability: "debugging", description: "Root cause analysis" }],
         uses: [{ capability: "code_review", required: false, default_skill: "review-skill", override_allowed: true }],
         execution_policy: {
@@ -298,6 +299,30 @@ test("regression: validation-status returns valid JSON", () => {
   assert.ok(data.summary);
 });
 
+test("regression: adapter-scoped profile can load root catalog", () => {
+  const dir = tempDir();
+  setupEnv(dir);
+
+  const adapterDir = path.join(dir, ".sdp", "regression-adapter");
+  fs.mkdirSync(adapterDir, { recursive: true });
+  fs.renameSync(
+    path.join(dir, ".sdp", "regression-profile.json"),
+    path.join(adapterDir, "regression-profile.json"),
+  );
+
+  const result = runQuery(
+    ["--profile", ".sdp/regression-adapter/regression-profile.json", "skill-detail", "--skill", "debug-skill"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  const data = JSON.parse(result.stdout);
+  assert.equal(data.name, "debug-skill");
+  assert.ok(
+    typeof data.description === "string" && data.description.includes(ROOT_CATALOG_MARKER),
+    "skill-detail should come from root catalog fallback",
+  );
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // Regression: Missing required args → error exit
 // ═══════════════════════════════════════════════════════════════════
@@ -422,6 +447,18 @@ test("regression: query with non-existent profile exits with error", () => {
   const dir = tempDir();
   const result = runQuery(["--profile", "no-such-file.json", "categories"], dir);
   assert.notEqual(result.status, 0);
+});
+
+test("regression: query rejects profile path outside project boundary", () => {
+  const dir = tempDir();
+  const outsideProfilePath = path.join(path.dirname(dir), "outside-query-profile.json");
+  fs.writeFileSync(outsideProfilePath, JSON.stringify({ schema_version: "1.0" }), "utf8");
+
+  const relativeOutsidePath = path.relative(dir, outsideProfilePath);
+  const result = runQuery(["--profile", relativeOutsidePath, "categories"], dir);
+
+  assert.notEqual(result.status, 0);
+  assert.ok(result.stderr.includes("outside project boundary"));
 });
 
 test("regression: query with invalid JSON profile exits with error", () => {

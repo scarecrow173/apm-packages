@@ -3,7 +3,7 @@
 // ─── Adapter Types ───
 
 export type AdapterScope = {
-  enabled: boolean;
+  enabled?: boolean;
   roots: string[];
 };
 
@@ -45,8 +45,8 @@ export type AdapterConfig = {
     taxonomy: TaxonomyEntry[];
   };
   invocation_resolution: {
-    overrides: {
-      slots: Record<string, { use: string; reason?: string; fallback?: string | null }>;
+    overrides?: {
+      slots?: Record<string, { use: string; reason?: string; fallback?: string | null }>;
       capabilities: Record<string, { prefer: string; reason?: string; fallback?: string | null }>;
     };
     resolution_order: string[];
@@ -54,10 +54,10 @@ export type AdapterConfig = {
     invalid_override: Record<string, string>;
   };
   validation: {
-    schema: boolean;
-    staleness?: { enabled: boolean; basis?: string; max_age_days?: number };
-    deterministic?: { enabled: boolean; compare?: string[] };
-    invocation?: { enabled: boolean };
+    schema?: boolean;
+    staleness?: { enabled?: boolean; basis?: string; max_age_days?: number };
+    deterministic?: { enabled?: boolean; compare?: string[] };
+    invocation?: { enabled?: boolean };
   };
   render: {
     stable_sort: { skills: string[]; invocations: string[] };
@@ -68,7 +68,7 @@ export type AdapterConfig = {
     protocol: Record<string, string>;
   };
   readable_outputs: {
-    enabled: boolean;
+    enabled?: boolean;
     include?: string[];
   };
 };

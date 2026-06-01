@@ -28,6 +28,7 @@ function runBlockingGate(
 ): BlockingResult {
   const checks: BlockingCheck[] = [];
   const invResolution = adapter.invocation_resolution;
+  const overrides = invResolution.overrides ?? { capabilities: {} as Record<string, never> };
 
   // Build helper indices
   const skillNames = new Set(skills.map((s) => s.name));
@@ -42,15 +43,15 @@ function runBlockingGate(
   checks.push(unresolvedCheck);
 
   // Check 2: invalid overrides - unknown_skill
-  const unknownSkillCheck = checkUnknownSkillOverrides(adapter, skillNames, invResolution.invalid_override.unknown_skill);
+  const unknownSkillCheck = checkUnknownSkillOverrides({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skillNames, invResolution.invalid_override.unknown_skill);
   checks.push(unknownSkillCheck);
 
   // Check 3: invalid overrides - capability_mismatch
-  const capMismatchCheck = checkCapabilityMismatch(adapter, skillProvides, invResolution.invalid_override.capability_mismatch);
+  const capMismatchCheck = checkCapabilityMismatch({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skillProvides, invResolution.invalid_override.capability_mismatch);
   checks.push(capMismatchCheck);
 
   // Check 4: invalid overrides - override_not_allowed
-  const overrideNotAllowedCheck = checkOverrideNotAllowed(adapter, skills, invResolution.invalid_override.override_not_allowed);
+  const overrideNotAllowedCheck = checkOverrideNotAllowed({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skills, invResolution.invalid_override.override_not_allowed);
   checks.push(overrideNotAllowedCheck);
 
   // Check 5: unused/unresolved slot warnings

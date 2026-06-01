@@ -3,9 +3,6 @@ schema_version: "1.0"
 adapter_id: "implementation-flow-default"
 extends:
   - "general"
-protocol:
-  name: "skill-discovery-protocol"
-  min_version: "1.0"
 profile:
   title: "Implementation Profile"
 flow_stack:
@@ -14,7 +11,7 @@ flow_stack:
       slot_type: "exclusive"
       activation: "conditional"
       default:
-        skill: "debugging-and-error-recovery"
+        skill: "systematic-debugging"
         reason: "Bug fixes and test failures need diagnosis first"
     - slot_id: "build_structure"
       slot_type: "layerable"
@@ -97,13 +94,6 @@ classification:
         tags: []
         description_patterns: []
 invocation_resolution:
-  overrides:
-    slots:
-      process_diagnosis:
-        use: "debugging-and-error-recovery"
-        reason: "Primary diagnosis tool"
-        fallback: "systematic-debugging"
-    capabilities: {}
   resolution_order:
     - "slot_override"
     - "capability_override"
@@ -117,32 +107,13 @@ invocation_resolution:
     capability_mismatch: "warn"
     override_not_allowed: "warn"
 validation:
-  schema: true
-  staleness:
-    enabled: true
-    basis: "validated_at"
-    max_age_days: 30
-  deterministic:
-    enabled: true
-    compare:
-      - "profile"
-      - "profile+catalog-artifacts"
-      - "validation-report:exclude-timestamp"
   invocation:
     enabled: true
-render:
-  stable_sort:
-    skills: ["name"]
-    invocations: ["source_skill", "slot", "capability"]
-  normalize_whitespace: true
-  newline: "lf"
 artifacts:
   protocol:
-    skill_reference_catalog: "skill-reference-catalog.json"
     flow_profile: "implementation-flow-profile.json"
     report: "validation-report.json"
 readable_outputs:
-  enabled: true
   include:
     - "skill_reference_catalog"
     - "flow_profile"

@@ -4,12 +4,24 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
+const {
+  resolveSharedCatalogPath,
+  resolveFlowProfilePath,
+} = require("../../../src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts");
 
 const skillRoot = path.resolve(__dirname, "../../../.apm/skills");
 const sdpScripts = path.join(skillRoot, "skill-discovery-protocol", "scripts");
 
 function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "sdp-test-"));
+}
+
+function profileRelPath() {
+  return path.join(".sdp", "test-adapter", "test-adapter-profile.json");
+}
+
+function profileAbsPath(dir: string) {
+  return path.join(dir, ".sdp", "test-adapter", "test-adapter-profile.json");
 }
 
 function setupTestProject(dir: string) {
@@ -279,7 +291,7 @@ test("sdp generate creates catalog and profile", () => {
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
   const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
-  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
+  const profilePath = path.join(dir, ".sdp", "test-adapter", "test-adapter-profile.json");
 
   assert.ok(fs.existsSync(catalogPath), "Catalog should exist");
   assert.ok(fs.existsSync(profilePath), "Profile should exist");
@@ -397,7 +409,7 @@ test("sdp generate profile has flow_stack.slots", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const profile = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "test-adapter-profile.json"), "utf8"),
+    fs.readFileSync(profileAbsPath(dir), "utf8"),
   );
 
   assert.ok(profile.flow_stack);
@@ -414,7 +426,7 @@ test("sdp generate profile has resolved_invocations", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const profile = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "test-adapter-profile.json"), "utf8"),
+    fs.readFileSync(profileAbsPath(dir), "utf8"),
   );
 
   assert.ok(Array.isArray(profile.resolved_invocations));
@@ -435,7 +447,7 @@ test("sdp generate is idempotent (no diff on re-run)", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
-  const profilePath = path.join(dir, ".sdp", "test-adapter-profile.json");
+  const profilePath = profileAbsPath(dir);
 
   const catalog1 = fs.readFileSync(catalogPath, "utf8");
   const profile1 = fs.readFileSync(profilePath, "utf8");
@@ -473,7 +485,7 @@ test("sdp generate profile classification categories sorted by id", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const profile = JSON.parse(
-    fs.readFileSync(path.join(dir, ".sdp", "test-adapter-profile.json"), "utf8"),
+    fs.readFileSync(profileAbsPath(dir), "utf8"),
   );
 
   const ids = profile.classification.categories.map((c: { id: string }) => c.id);
@@ -489,7 +501,7 @@ test("sdp query categories works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", ".sdp/test-adapter-profile.json", "categories"],
+    ["--profile", profileRelPath(), "categories"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -506,7 +518,7 @@ test("sdp query category-skills works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", ".sdp/test-adapter-profile.json", "category-skills", "--category", "architecture"],
+    ["--profile", profileRelPath(), "category-skills", "--category", "architecture"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -521,7 +533,7 @@ test("sdp query resolution works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", ".sdp/test-adapter-profile.json", "resolution"],
+    ["--profile", profileRelPath(), "resolution"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -535,7 +547,7 @@ test("sdp query flow-stack works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", ".sdp/test-adapter-profile.json", "flow-stack"],
+    ["--profile", profileRelPath(), "flow-stack"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -550,7 +562,7 @@ test("sdp query execution-policy works", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", ".sdp/test-adapter-profile.json", "execution-policy"],
+    ["--profile", profileRelPath(), "execution-policy"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -584,8 +596,51 @@ test("sdp query with unknown subcommand exits with code 2", () => {
   runSdp(["--adapter", "test-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", ".sdp/test-adapter-profile.json", "unknown-command"],
+    ["--profile", profileRelPath(), "unknown-command"],
     dir,
   );
   assert.equal(result.status, 2);
+});
+
+test("artifact paths allow normal relative paths under .sdp", () => {
+  const dir = tempDir();
+
+  const shared = resolveSharedCatalogPath(dir, "skill-reference-catalog.json");
+  const flow = resolveFlowProfilePath(dir, "test-adapter", "test-adapter-profile.json");
+
+  assert.equal(shared, path.join(dir, ".sdp", "skill-reference-catalog.json"));
+  assert.equal(flow, path.join(dir, ".sdp", "test-adapter", "test-adapter-profile.json"));
+});
+
+test("artifact paths reject parent directory escape", () => {
+  const dir = tempDir();
+
+  assert.throws(
+    () => resolveSharedCatalogPath(dir, "../outside.json"),
+    /Invalid shared catalog path: path escapes base directory/,
+  );
+
+  assert.throws(
+    () => resolveFlowProfilePath(dir, "test-adapter", "../outside.json"),
+    /Invalid flow profile path: path escapes base directory/,
+  );
+});
+
+test("artifact paths reject absolute relPath", () => {
+  const dir = tempDir();
+  const absolutePath = path.resolve(dir, "absolute.json");
+
+  assert.throws(
+    () => resolveSharedCatalogPath(dir, absolutePath),
+    /Invalid shared catalog path: absolute paths are not allowed/,
+  );
+});
+
+test("artifact paths reject invalid adapterId", () => {
+  const dir = tempDir();
+
+  assert.throws(
+    () => resolveFlowProfilePath(dir, "../bad", "profile.json"),
+    /Invalid adapterId: must not contain path separators or '..'/,
+  );
 });

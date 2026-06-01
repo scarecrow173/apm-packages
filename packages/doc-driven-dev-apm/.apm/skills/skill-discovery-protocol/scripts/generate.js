@@ -2812,11 +2812,11 @@ var require_js_yaml = __commonJS({
 var require_adapter = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/adapter.ts"(exports2, module2) {
     "use strict";
-    var fs2 = require("node:fs");
+    var fs = require("node:fs");
     var path2 = require("node:path");
     var yaml2 = require_js_yaml();
     function loadYamlFile(filePath) {
-      const content = fs2.readFileSync(filePath, "utf8");
+      const content = fs.readFileSync(filePath, "utf8");
       return yaml2.load(content);
     }
     function resolveExtends(searchDirs, names, visited) {
@@ -2833,8 +2833,8 @@ var require_adapter = __commonJS({
         for (const dir of searchDirs) {
           const yamlPath = path2.join(dir, `${name}.yaml`);
           const ymlPath = path2.join(dir, `${name}.yml`);
-          const yamlExists = fs2.existsSync(yamlPath);
-          const ymlExists = fs2.existsSync(ymlPath);
+          const yamlExists = fs.existsSync(yamlPath);
+          const ymlExists = fs.existsSync(ymlPath);
           if (yamlExists && ymlExists) {
             throw new Error(`Both ${name}.yaml and ${name}.yml exist in ${dir} \u2014 ambiguous extends`);
           }
@@ -2879,7 +2879,7 @@ var require_adapter = __commonJS({
       const root = path2.parse(current).root;
       for (let i = 0; i < 10; i++) {
         const candidate = path2.join(current, "assets", "adapters");
-        if (fs2.existsSync(candidate)) {
+        if (fs.existsSync(candidate)) {
           dirs.push(candidate);
         }
         const parent = path2.dirname(current);
@@ -2893,7 +2893,7 @@ var require_adapter = __commonJS({
     }
     function loadAdapter2(adapterPath) {
       const absPath = path2.resolve(adapterPath);
-      if (!fs2.existsSync(absPath)) {
+      if (!fs.existsSync(absPath)) {
         throw new Error(`Adapter not found: ${adapterPath}`);
       }
       const raw = loadYamlFile(absPath);
@@ -2908,18 +2908,70 @@ var require_adapter = __commonJS({
       }
       merged = deepMerge(merged, raw);
       delete merged.extends;
+      if (!("schema_version" in merged)) {
+        merged.schema_version = "1.0";
+      }
+      if (!("protocol" in merged)) {
+        merged.protocol = {
+          name: "skill-discovery-protocol",
+          min_version: "1.0"
+        };
+      }
+      if (!("validation" in merged)) {
+        merged.validation = {
+          schema: true,
+          staleness: {
+            enabled: true,
+            basis: "validated_at",
+            max_age_days: 30
+          },
+          deterministic: {
+            enabled: true,
+            compare: ["profile", "profile+catalog-artifacts", "validation-report:exclude-timestamp"]
+          },
+          invocation: {
+            enabled: false
+          }
+        };
+      }
+      if (typeof merged.validation === "object" && merged.validation !== null) {
+        const v = merged.validation;
+        if (!("schema" in v)) {
+          v.schema = true;
+        }
+        if (typeof v.staleness === "object" && v.staleness !== null) {
+          const s = v.staleness;
+          if (!("enabled" in s)) s.enabled = true;
+          if (!("basis" in s)) s.basis = "validated_at";
+          if (!("max_age_days" in s)) s.max_age_days = 30;
+        }
+        if (typeof v.deterministic === "object" && v.deterministic !== null) {
+          const d = v.deterministic;
+          if (!("enabled" in d)) d.enabled = true;
+          if (!("compare" in d)) {
+            d.compare = ["profile", "profile+catalog-artifacts", "validation-report:exclude-timestamp"];
+          }
+        }
+        if (typeof v.invocation === "object" && v.invocation !== null) {
+          const i = v.invocation;
+          if (!("enabled" in i)) i.enabled = false;
+        }
+      }
+      if (!("artifacts" in merged)) {
+        merged.artifacts = {
+          protocol: {
+            skill_reference_catalog: "skill-reference-catalog.json"
+          }
+        };
+      }
       const requiredKeys = [
-        "schema_version",
         "adapter_id",
-        "protocol",
         "scan",
         "profile",
         "flow_stack",
         "classification",
         "invocation_resolution",
-        "validation",
         "render",
-        "artifacts",
         "readable_outputs"
       ];
       const missing = requiredKeys.filter((k) => !(k in merged));
@@ -6303,7 +6355,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs2 = require("fs");
+    var fs = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -6387,7 +6439,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter.read = function(filepath, options2) {
-      const str2 = fs2.readFileSync(filepath, "utf8");
+      const str2 = fs.readFileSync(filepath, "utf8");
       const file2 = matter(str2, options2);
       file2.path = filepath;
       return file2;
@@ -6451,16 +6503,16 @@ var require_expand = __commonJS({
 var require_scanner = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/scanner.ts"(exports2, module2) {
     "use strict";
-    var fs2 = require("node:fs");
+    var fs = require("node:fs");
     var path2 = require("node:path");
     var matter = require_gray_matter();
     var { resolvePath } = require_expand();
     function isSkillDir(dirPath) {
-      return fs2.existsSync(path2.join(dirPath, "SKILL.md"));
+      return fs.existsSync(path2.join(dirPath, "SKILL.md"));
     }
     function parseSkillMd(skillDir, scope = "project") {
       const skillMdPath = path2.join(skillDir, "SKILL.md");
-      const content = fs2.readFileSync(skillMdPath, "utf8");
+      const content = fs.readFileSync(skillMdPath, "utf8");
       const { data, content: body } = matter(content);
       const name = data.name || path2.basename(skillDir);
       const description = data.description || "";
@@ -6473,20 +6525,20 @@ var require_scanner = __commonJS({
       };
     }
     function scanSkillDirs(rootPath, scope = "project") {
-      if (!fs2.existsSync(rootPath)) return [];
+      if (!fs.existsSync(rootPath)) return [];
       const skills = [];
-      const stat = fs2.statSync(rootPath);
+      const stat = fs.statSync(rootPath);
       if (!stat.isDirectory()) return [];
       let entries;
       try {
-        entries = fs2.readdirSync(rootPath);
+        entries = fs.readdirSync(rootPath);
       } catch (e) {
         console.error(`Warning: Cannot read directory "${rootPath}": ${e instanceof Error ? e.message : String(e)}`);
         return [];
       }
       for (const entry of entries) {
         const fullPath = path2.join(rootPath, entry);
-        const entryStat = fs2.statSync(fullPath);
+        const entryStat = fs.statSync(fullPath);
         if (entryStat.isDirectory() && isSkillDir(fullPath)) {
           try {
             skills.push(parseSkillMd(fullPath, scope));
@@ -6498,30 +6550,30 @@ var require_scanner = __commonJS({
       return skills;
     }
     function scanApmModules(rootPath, scope = "project") {
-      if (!fs2.existsSync(rootPath)) return [];
+      if (!fs.existsSync(rootPath)) return [];
       const skills = [];
       let orgs;
       try {
-        orgs = fs2.readdirSync(rootPath);
+        orgs = fs.readdirSync(rootPath);
       } catch (e) {
         console.error(`Warning: Cannot read directory "${rootPath}": ${e instanceof Error ? e.message : String(e)}`);
         return [];
       }
       for (const org of orgs) {
         const orgPath = path2.join(rootPath, org);
-        if (!fs2.statSync(orgPath).isDirectory()) continue;
+        if (!fs.statSync(orgPath).isDirectory()) continue;
         let packages;
         try {
-          packages = fs2.readdirSync(orgPath);
+          packages = fs.readdirSync(orgPath);
         } catch (e) {
           console.error(`Warning: Cannot read directory "${orgPath}": ${e instanceof Error ? e.message : String(e)}`);
           continue;
         }
         for (const pkg of packages) {
           const pkgPath = path2.join(orgPath, pkg);
-          if (!fs2.statSync(pkgPath).isDirectory()) continue;
+          if (!fs.statSync(pkgPath).isDirectory()) continue;
           const skillsDir = path2.join(pkgPath, "skills");
-          if (fs2.existsSync(skillsDir) && fs2.statSync(skillsDir).isDirectory()) {
+          if (fs.existsSync(skillsDir) && fs.statSync(skillsDir).isDirectory()) {
             skills.push(...scanSkillDirs(skillsDir, scope));
           }
           if (isSkillDir(pkgPath)) {
@@ -6855,7 +6907,7 @@ var require_profile = __commonJS({
 var require_renderer = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/renderer.ts"(exports2, module2) {
     "use strict";
-    var fs2 = require("node:fs");
+    var fs = require("node:fs");
     var path2 = require("node:path");
     function renderJson(data) {
       const json2 = JSON.stringify(data, null, 2);
@@ -6864,8 +6916,8 @@ var require_renderer = __commonJS({
     function writeArtifact2(filePath, data) {
       const absPath = path2.resolve(filePath);
       const newContent = renderJson(data);
-      if (fs2.existsSync(absPath)) {
-        const existing = fs2.readFileSync(absPath, "utf8");
+      if (fs.existsSync(absPath)) {
+        const existing = fs.readFileSync(absPath, "utf8");
         const existingNoTs = stripTimestamps(existing);
         const newNoTs = stripTimestamps(newContent);
         if (existingNoTs === newNoTs) {
@@ -6873,10 +6925,10 @@ var require_renderer = __commonJS({
         }
       }
       const dir = path2.dirname(absPath);
-      if (!fs2.existsSync(dir)) {
-        fs2.mkdirSync(dir, { recursive: true });
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
       }
-      fs2.writeFileSync(absPath, newContent, "utf8");
+      fs.writeFileSync(absPath, newContent, "utf8");
       return true;
     }
     function stripTimestamps(content) {
@@ -22061,7 +22113,7 @@ var require_inference = __commonJS({
     "use strict";
     init_scan();
     init_inference();
-    var fs2 = require("node:fs");
+    var fs = require("node:fs");
     var path2 = require("node:path");
     function defaultScanListPath(cwd) {
       return path2.join(cwd, ".sdp", "skill-scan-list.json");
@@ -22070,14 +22122,26 @@ var require_inference = __commonJS({
       return path2.join(cwd, ".sdp", "skill-reference-inferences.json");
     }
     function loadInferenceDocument2(filePath) {
-      if (!fs2.existsSync(filePath)) return null;
-      const data = JSON.parse(fs2.readFileSync(filePath, "utf8"));
+      if (!fs.existsSync(filePath)) return null;
+      const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
       const parsed = SkillReferenceInferenceDocumentSchema.safeParse(data);
       if (!parsed.success) {
         const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
         throw new Error(`Invalid skill reference inference document: ${details}`);
       }
       return parsed.data;
+    }
+    function readInferenceOrThrow(filePath) {
+      const loaded = loadInferenceDocument2(filePath);
+      if (!loaded) {
+        throw new Error(`Inference file not found: ${filePath}`);
+      }
+      return loaded;
+    }
+    function writeInferenceDocument(filePath, doc) {
+      const dir = path2.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(doc, null, 2) + "\n", "utf8");
     }
     function buildScanList(rawSkills) {
       return {
@@ -22089,12 +22153,12 @@ var require_inference = __commonJS({
     function writeScanList2(cwd, rawSkills) {
       const outputPath = defaultScanListPath(cwd);
       const dir = path2.dirname(outputPath);
-      if (!fs2.existsSync(dir)) fs2.mkdirSync(dir, { recursive: true });
-      fs2.writeFileSync(outputPath, JSON.stringify(buildScanList(rawSkills), null, 2) + "\n", "utf8");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(outputPath, JSON.stringify(buildScanList(rawSkills), null, 2) + "\n", "utf8");
       return outputPath;
     }
     function loadScanList2(filePath) {
-      const data = JSON.parse(fs2.readFileSync(filePath, "utf8"));
+      const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
       const parsed = SkillScanListDocumentSchema.safeParse(data);
       if (!parsed.success) {
         const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
@@ -22132,6 +22196,8 @@ var require_inference = __commonJS({
       defaultScanListPath,
       defaultInferencePath: defaultInferencePath2,
       loadInferenceDocument: loadInferenceDocument2,
+      readInferenceOrThrow,
+      writeInferenceDocument,
       buildScanList,
       writeScanList: writeScanList2,
       loadScanList: loadScanList2,
@@ -22140,9 +22206,70 @@ var require_inference = __commonJS({
   }
 });
 
+// src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts
+var require_artifact_paths = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts"(exports2, module2) {
+    "use strict";
+    var path2 = require("node:path");
+    function sdpBase(cwd) {
+      return path2.resolve(cwd, ".sdp");
+    }
+    function ensureRelativeArtifactPath(relPath, scopeLabel) {
+      if (typeof relPath !== "string" || relPath.trim() === "") {
+        throw new Error(`Invalid ${scopeLabel}: relPath must be a non-empty string`);
+      }
+      if (path2.isAbsolute(relPath)) {
+        throw new Error(`Invalid ${scopeLabel}: absolute paths are not allowed (${relPath})`);
+      }
+    }
+    function assertPathWithinBase(resolvedPath, basePath, scopeLabel) {
+      const relative = path2.relative(basePath, resolvedPath);
+      if (relative.startsWith("..") || path2.isAbsolute(relative)) {
+        throw new Error(`Invalid ${scopeLabel}: path escapes base directory (${basePath})`);
+      }
+    }
+    function validateAdapterId(adapterId) {
+      if (typeof adapterId !== "string" || adapterId.trim() === "") {
+        throw new Error("Invalid adapterId: must be a non-empty string");
+      }
+      if (adapterId.includes("/") || adapterId.includes("\\") || adapterId.includes("..")) {
+        throw new Error("Invalid adapterId: must not contain path separators or '..'");
+      }
+    }
+    function adapterDir(cwd, adapterId) {
+      validateAdapterId(adapterId);
+      return path2.join(sdpBase(cwd), adapterId);
+    }
+    function resolveSharedCatalogPath2(cwd, relPath) {
+      ensureRelativeArtifactPath(relPath, "shared catalog path");
+      const base = sdpBase(cwd);
+      const resolved = path2.resolve(base, relPath);
+      assertPathWithinBase(resolved, base, "shared catalog path");
+      return resolved;
+    }
+    function resolveFlowProfilePath2(cwd, adapterId, relPath) {
+      validateAdapterId(adapterId);
+      ensureRelativeArtifactPath(relPath, "flow profile path");
+      const base = adapterDir(cwd, adapterId);
+      const resolved = path2.resolve(base, relPath);
+      assertPathWithinBase(resolved, base, "flow profile path");
+      return resolved;
+    }
+    function resolveValidationReportPath(profilePath) {
+      return path2.join(path2.dirname(profilePath), "validation-report.json");
+    }
+    module2.exports = {
+      sdpBase,
+      adapterDir,
+      resolveSharedCatalogPath: resolveSharedCatalogPath2,
+      resolveFlowProfilePath: resolveFlowProfilePath2,
+      resolveValidationReportPath
+    };
+  }
+});
+
 // src/skills/skill-discovery-protocol/scripts/generate.ts
 var path = require("node:path");
-var fs = require("node:fs");
 var { loadAdapter } = require_adapter();
 var { scanSkills } = require_scanner();
 var { buildCatalog } = require_catalog();
@@ -22157,6 +22284,10 @@ var {
   loadInferenceDocument,
   enrichSkills
 } = require_inference();
+var {
+  resolveSharedCatalogPath,
+  resolveFlowProfilePath
+} = require_artifact_paths();
 function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i++) {
@@ -22233,12 +22364,11 @@ async function main() {
   const profile = stabilizeProfile(
     buildProfile(adapter, catalog, categories, unmatched_skills, resolvedInvocations, skills)
   );
-  const sdpBase = path.resolve(cwd, ".sdp");
   const catalogPath = adapter.artifacts.protocol.skill_reference_catalog;
   const profilePath = adapter.artifacts.protocol.flow_profile;
   let filesWritten = 0;
   if (catalogPath) {
-    const absPath = path.resolve(sdpBase, catalogPath);
+    const absPath = resolveSharedCatalogPath(cwd, catalogPath);
     const relPath = path.relative(cwd, absPath);
     if (writeArtifact(absPath, catalog)) {
       console.log(`Written: ${relPath}`);
@@ -22248,7 +22378,7 @@ async function main() {
     }
   }
   if (profilePath) {
-    const absPath = path.resolve(sdpBase, profilePath);
+    const absPath = resolveFlowProfilePath(cwd, adapter.adapter_id, profilePath);
     const relPath = path.relative(cwd, absPath);
     if (writeArtifact(absPath, profile)) {
       console.log(`Written: ${relPath}`);
