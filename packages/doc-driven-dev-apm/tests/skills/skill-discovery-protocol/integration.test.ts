@@ -39,6 +39,15 @@ function runQuery(args: string[], cwd: string) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
+function runInfer(args: string[], cwd: string) {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(sdpScripts, "infer.js"), ...args],
+    { cwd, encoding: "utf8", windowsHide: true },
+  );
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
 // ─── Mock Skills ───
 
 const MOCK_SKILLS = {
@@ -599,6 +608,22 @@ function setupGeneralAdapter(dir: string) {
   fs.writeFileSync(path.join(dir, "general-adapter.yaml"), GENERAL_ADAPTER, "utf8");
 }
 
+function implProfileRelPath() {
+  return ".sdp/impl-flow-test/impl-flow-test-profile.json";
+}
+
+function implProfileAbsPath(dir: string) {
+  return path.join(dir, ".sdp", "impl-flow-test", "impl-flow-test-profile.json");
+}
+
+function briefingProfileRelPath() {
+  return ".sdp/briefing-flow-test/briefing-flow-test-profile.json";
+}
+
+function briefingProfileAbsPath(dir: string) {
+  return path.join(dir, ".sdp", "briefing-flow-test", "briefing-flow-test-profile.json");
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Integration: implementation-flow adapter
 // ═══════════════════════════════════════════════════════════════════
@@ -610,7 +635,7 @@ test("integration: impl-flow adapter generates valid profile", () => {
   const result = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
-  const profilePath = path.join(dir, ".sdp", "impl-flow-test-profile.json");
+  const profilePath = implProfileAbsPath(dir);
   assert.ok(fs.existsSync(profilePath), "Profile should exist");
 
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
@@ -628,7 +653,7 @@ test("integration: impl-flow profile validates successfully", () => {
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
 
   const result = runValidate(
-    ["--profile", ".sdp/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    ["--profile", implProfileRelPath(), "--adapter", "impl-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
@@ -640,7 +665,7 @@ test("integration: impl-flow profile queryable with all subcommands", () => {
   setupImplFlow(dir);
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
 
-  const profile = ".sdp/impl-flow-test-profile.json";
+  const profile = implProfileRelPath();
   const subcommands = [
     ["categories"],
     ["flow-stack"],
@@ -663,7 +688,7 @@ test("integration: impl-flow re-generation is idempotent", () => {
 
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
 
-  const profilePath = path.join(dir, ".sdp", "impl-flow-test-profile.json");
+  const profilePath = implProfileAbsPath(dir);
   const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
   const profile1 = fs.readFileSync(profilePath, "utf8");
   const catalog1 = fs.readFileSync(catalogPath, "utf8");
@@ -687,7 +712,7 @@ test("integration: briefing-flow adapter generates valid profile", () => {
   const result = runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
-  const profilePath = path.join(dir, ".sdp", "briefing-flow-test-profile.json");
+  const profilePath = briefingProfileAbsPath(dir);
   assert.ok(fs.existsSync(profilePath), "Profile should exist");
 
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
@@ -704,7 +729,7 @@ test("integration: briefing-flow profile validates successfully", () => {
   runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
 
   const result = runValidate(
-    ["--profile", ".sdp/briefing-flow-test-profile.json", "--adapter", "briefing-adapter.yaml"],
+    ["--profile", briefingProfileRelPath(), "--adapter", "briefing-adapter.yaml"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
@@ -716,7 +741,7 @@ test("integration: briefing-flow profile queryable with all subcommands", () => 
   setupBriefingFlow(dir);
   runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
 
-  const profile = ".sdp/briefing-flow-test-profile.json";
+  const profile = briefingProfileRelPath();
   const subcommands = [
     ["categories"],
     ["flow-stack"],
@@ -739,7 +764,7 @@ test("integration: briefing-flow re-generation is idempotent", () => {
 
   runGenerate(["--adapter", "briefing-adapter.yaml"], dir);
 
-  const profilePath = path.join(dir, ".sdp", "briefing-flow-test-profile.json");
+  const profilePath = briefingProfileAbsPath(dir);
   const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
   const profile1 = fs.readFileSync(profilePath, "utf8");
   const catalog1 = fs.readFileSync(catalogPath, "utf8");
@@ -825,14 +850,14 @@ test("integration: full pipeline generate → validate → query category-skills
 
   // Validate
   const val = runValidate(
-    ["--profile", ".sdp/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    ["--profile", implProfileRelPath(), "--adapter", "impl-adapter.yaml"],
     dir,
   );
   assert.equal(val.status, 0, `validate stderr: ${val.stderr}`);
 
   // Query: get categories then query each
   const catResult = runQuery(
-    ["--profile", ".sdp/impl-flow-test-profile.json", "categories"],
+    ["--profile", implProfileRelPath(), "categories"],
     dir,
   );
   assert.equal(catResult.status, 0);
@@ -843,7 +868,7 @@ test("integration: full pipeline generate → validate → query category-skills
   assert.ok(nonEmpty, "Should have at least one non-empty category");
 
   const skillsResult = runQuery(
-    ["--profile", ".sdp/impl-flow-test-profile.json", "category-skills", "--category", nonEmpty.id],
+    ["--profile", implProfileRelPath(), "category-skills", "--category", nonEmpty.id],
     dir,
   );
   assert.equal(skillsResult.status, 0);
@@ -858,7 +883,7 @@ test("integration: full pipeline generate → validate → query skill-detail", 
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
 
   const result = runQuery(
-    ["--profile", ".sdp/impl-flow-test-profile.json", "skill-detail", "--skill", "mock-debug-skill"],
+    ["--profile", implProfileRelPath(), "skill-detail", "--skill", "mock-debug-skill"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -874,18 +899,62 @@ test("integration: full pipeline generate → validate → query validation-stat
 
   runGenerate(["--adapter", "impl-adapter.yaml"], dir);
   runValidate(
-    ["--profile", ".sdp/impl-flow-test-profile.json", "--adapter", "impl-adapter.yaml"],
+    ["--profile", implProfileRelPath(), "--adapter", "impl-adapter.yaml"],
     dir,
   );
 
   const result = runQuery(
-    ["--profile", ".sdp/impl-flow-test-profile.json", "validation-status"],
+    ["--profile", implProfileRelPath(), "validation-status"],
     dir,
   );
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   // validation-status returns adapter_id from the report
   assert.equal(data.adapter_id, "impl-flow-test");
+});
+
+test("integration: infer init/apply editable flow feeds generate", () => {
+  const dir = tempDir();
+  setupImplFlow(dir);
+
+  const inferencePath = path.join(dir, ".sdp", "skill-reference-inferences.json");
+  if (fs.existsSync(inferencePath)) {
+    fs.unlinkSync(inferencePath);
+  }
+
+  const missingInference = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+  assert.equal(missingInference.status, 2, `stderr: ${missingInference.stderr}`);
+  assert.ok(fs.existsSync(path.join(dir, ".sdp", "skill-scan-list.json")), "scan list should be generated");
+
+  const init = runInfer(["init"], dir);
+  assert.equal(init.status, 0, `stderr: ${init.stderr}`);
+
+  const opsPath = path.join(dir, ".sdp", "ops.jsonl");
+  fs.writeFileSync(
+    opsPath,
+    JSON.stringify({
+      op: "add-uses",
+      name: "mock-impl-skill",
+      uses: [{ capability: "code_review", required: true, override_allowed: true }],
+    }) + "\n",
+    "utf8",
+  );
+
+  const apply = runInfer(["apply", "--ops", opsPath], dir);
+  assert.equal(apply.status, 0, `stderr: ${apply.stderr}`);
+
+  const generated = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+  assert.equal(generated.status, 0, `stderr: ${generated.stderr}`);
+
+  const catalog = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "skill-reference-catalog.json"), "utf8"),
+  );
+  const implSkill = catalog.skills.find((skill: { name: string }) => skill.name === "mock-impl-skill");
+  assert.ok(implSkill, "mock-impl-skill should exist in catalog");
+  assert.ok(
+    implSkill.uses.some((use: { capability: string; required: boolean }) => use.capability === "code_review" && use.required),
+    "editable infer apply should persist uses into catalog generation",
+  );
 });
 
 // ─── Scanner: tilde expansion and external scope support ───
