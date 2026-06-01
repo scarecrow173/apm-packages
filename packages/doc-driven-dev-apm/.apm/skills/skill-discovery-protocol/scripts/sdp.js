@@ -4,6 +4,7 @@
 // src/skills/skill-discovery-protocol/scripts/sdp.ts
 var { spawnSync } = require("node:child_process");
 var path = require("node:path");
+var MAX_BUFFER = 10 * 1024 * 1024;
 function usage() {
   return `Usage: sdp <command> [options]
 
@@ -35,10 +36,28 @@ function main() {
   const result = spawnSync(process.execPath, [scriptPath, ...remaining], {
     cwd: process.cwd(),
     encoding: "utf8",
-    windowsHide: true
+    windowsHide: true,
+    maxBuffer: MAX_BUFFER
   });
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
+  if (result.error) {
+    if (result.error.code === "ENOBUFS") {
+      process.stderr.write(`sdp ${command} output exceeded maxBuffer (${MAX_BUFFER} bytes).
+`);
+    } else {
+      process.stderr.write(`Failed to run sdp ${command}: ${result.error.message}
+`);
+    }
+    process.exitCode = 1;
+    return;
+  }
+  if (result.signal) {
+    process.stderr.write(`sdp ${command} terminated by signal ${result.signal}.
+`);
+    process.exitCode = 1;
+    return;
+  }
   process.exitCode = result.status ?? 1;
 }
 main();

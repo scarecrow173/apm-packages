@@ -68,6 +68,15 @@ test("sdp infer generates skill-reference-inferences.json from scan list", () =>
   assert.equal(doc.skills[0].name, "skill-a");
   assert.ok(Array.isArray(doc.skills[0].provides), "provides should be an array");
   assert.ok(Array.isArray(doc.skills[0].uses), "uses should be an array");
+  assert.deepEqual(
+    doc.skills[0].provides.map((entry: { capability: string }) => entry.capability),
+    ["adr_authoring"],
+    "ADR-oriented skills should infer adr_authoring",
+  );
+  assert.ok(
+    doc.skills[0].tags.includes("adr"),
+    "ADR-oriented skills should receive adr tag",
+  );
   assert.equal(
     typeof doc.skills[0].execution_policy,
     "object",
@@ -163,4 +172,44 @@ test("sdp infer exits 2 when --scan value is missing", () => {
   const result = runInfer(["--scan"], dir);
   assert.equal(result.status, 2, `stderr: ${result.stderr}`);
   assert.ok(result.stderr.includes("Option --scan requires a value"));
+});
+
+test("sdp infer derives multiple meaningful capabilities from description and body text", () => {
+  const dir = tempDir();
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-scan-list.json"),
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-06-01T00:00:00Z",
+        skills: [
+          {
+            name: "spec-review-test-skill",
+            description: "Draft specs, review outcomes, and define test strategy",
+            body: "# Skill\nUse when writing specification docs, reviewing designs, and planning tests.",
+            skill_path: "/tmp/spec-review-test-skill/SKILL.md",
+            scope: "project",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const result = runInfer([], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const doc = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "skill-reference-inferences.json"), "utf8"),
+  );
+
+  assert.deepEqual(
+    doc.skills[0].provides.map((entry: { capability: string }) => entry.capability),
+    ["spec_authoring", "code_review", "test_planning"],
+    "keywords should infer stable, meaningful capabilities",
+  );
+  assert.deepEqual(doc.skills[0].tags, ["spec", "review", "test"]);
 });

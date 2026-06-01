@@ -15258,6 +15258,67 @@ var require_inference = __commonJS({
 var require_infer_builder = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/infer_builder.ts"(exports2, module2) {
     "use strict";
+    var CAPABILITY_RULES = [
+      {
+        capability: "adr_authoring",
+        description: "Author architecture decision records and related decision documentation.",
+        tag: "adr",
+        patterns: [
+          /\badr\b/i,
+          /architecture decision/i,
+          /decision record/i
+        ]
+      },
+      {
+        capability: "spec_authoring",
+        description: "Draft or refine specifications and structured requirements.",
+        tag: "spec",
+        patterns: [
+          /\bspecs?\b/i,
+          /specification/i,
+          /requirements?/i
+        ]
+      },
+      {
+        capability: "code_review",
+        description: "Review implementations, designs, or outcomes for quality and correctness.",
+        tag: "review",
+        patterns: [
+          /\breview\b/i,
+          /reviewer/i,
+          /quality gate/i
+        ]
+      },
+      {
+        capability: "test_planning",
+        description: "Define test coverage, validation strategy, or verification steps.",
+        tag: "test",
+        patterns: [
+          /\btests?\b/i,
+          /testing/i,
+          /test strategy/i,
+          /verification/i,
+          /validation/i
+        ]
+      }
+    ];
+    function normalizedSkillText(skill) {
+      return [skill.name, skill.description, skill.body].filter(Boolean).join("\n").toLowerCase();
+    }
+    function inferProvides(text) {
+      const inferred = CAPABILITY_RULES.filter((rule) => rule.patterns.some((pattern) => pattern.test(text))).map((rule) => ({ capability: rule.capability, description: rule.description }));
+      if (inferred.length > 0) return inferred;
+      return [
+        {
+          capability: "general_guidance",
+          description: "General guidance inferred from skill metadata and body text."
+        }
+      ];
+    }
+    function inferTags(text) {
+      const tags = CAPABILITY_RULES.filter((rule) => rule.patterns.some((pattern) => pattern.test(text))).map((rule) => rule.tag);
+      return tags.length > 0 ? tags : ["inferred"];
+    }
     function defaultExecutionPolicy() {
       return {
         strictness: "flexible",
@@ -15267,12 +15328,13 @@ var require_infer_builder = __commonJS({
       };
     }
     function inferSkill(skill) {
+      const text = normalizedSkillText(skill);
       return {
         name: skill.name,
-        provides: [],
+        provides: inferProvides(text),
         uses: [],
         execution_policy: defaultExecutionPolicy(),
-        tags: []
+        tags: inferTags(text)
       };
     }
     function buildInferenceDocument2(skills) {

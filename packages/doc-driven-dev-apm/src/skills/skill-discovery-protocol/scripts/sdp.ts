@@ -4,6 +4,8 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 
+const MAX_BUFFER = 10 * 1024 * 1024;
+
 function usage(): string {
   return `Usage: sdp <command> [options]
 
@@ -41,10 +43,29 @@ function main(): void {
     cwd: process.cwd(),
     encoding: "utf8",
     windowsHide: true,
+    maxBuffer: MAX_BUFFER,
   });
 
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
+
+  if (result.error) {
+    if (result.error.code === "ENOBUFS") {
+      process.stderr.write(`sdp ${command} output exceeded maxBuffer (${MAX_BUFFER} bytes).\n`);
+    }
+    else {
+      process.stderr.write(`Failed to run sdp ${command}: ${result.error.message}\n`);
+    }
+
+    process.exitCode = 1;
+    return;
+  }
+
+  if (result.signal) {
+    process.stderr.write(`sdp ${command} terminated by signal ${result.signal}.\n`);
+    process.exitCode = 1;
+    return;
+  }
 
   process.exitCode = result.status ?? 1;
 }
