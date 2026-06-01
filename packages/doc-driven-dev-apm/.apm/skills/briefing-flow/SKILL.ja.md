@@ -65,7 +65,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 収集・生成  →  Phase
 | 複数の情報源から収束が必要か？ | A-3（Combined Discovery） | 単一経路で進む |
 | 外部情報の調査が必要か？ | A-5（Research Required） | 内部情報で十分 |
 
-3. **Entry Decision を記録する** — 選択した経路と理由を 1 行で記録する。
+1. **Entry Decision を記録する** — 選択した経路と理由を 1 行で記録する。
 
 ### Entry Decision 経路
 
@@ -78,7 +78,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 収集・生成  →  Phase
 これらは**選択肢**であり順序ではない。情報の充足度に基づいて選択する。
 A-4 を選んだ場合でも Phase B（構成）は省略しない — Document カテゴリスキルの構成が必要。
 
-**プロファイル確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/briefing-profile.json` を確認する。
+**プロファイル確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/briefing-flow-default/briefing-profile.json` を確認する。
 
 > **`briefing-profile.json` とは？**
 > リポジトリ固有の構成ファイル（JSON）。Briefing に利用可能な全スキルをリストし、
@@ -97,11 +97,18 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
 **コマンド:**
+
 - スキャン: `sdp scan --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - 推論: `sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
 - プロファイル生成: `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- 検証: `sdp validate --profile .sdp/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- クエリ: `sdp query --profile .sdp/briefing-profile.json <サブコマンド>`
+- 検証: `sdp validate --profile .sdp/briefing-flow-default/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- クエリ: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json <サブコマンド>`
+
+`sdp infer init` の後、scan list と照合して
+`.sdp/skill-reference-inferences.json` を確認する。タスクルーティングに必要な
+`provides` または `uses` が不足している場合は、`sdp infer set-skill` または
+`sdp infer apply` で inference 成果物を更新し、`sdp profile` の前に
+`sdp infer check` を実行する。
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
 
@@ -109,16 +116,16 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 
 ## Phase B: 構成
 
-`.sdp/briefing-profile.json` が利用可能な状態で:
+`.sdp/briefing-flow-default/briefing-profile.json` が利用可能な状態で:
 
-1. **フロースタックを読込**: `sdp query --profile .sdp/briefing-profile.json flow-stack`
+1. **フロースタックを読込**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json flow-stack`
 2. **Entry Decision に基づく活性化**: Phase A で判定した経路に対応するカテゴリを優先:
    - A-1/A-2 → Frame カテゴリスキルを優先
    - A-3 → 全カテゴリからマッチするスキルを活性化
    - A-5 → Discover/Research カテゴリスキルを優先
    - **マッチするスロットがない場合:** デフォルトスタックのみで進行。
-3. **解決状況を確認**: `sdp query --profile .sdp/briefing-profile.json resolution`
-4. **実行ポリシーを確認**: `sdp query --profile .sdp/briefing-profile.json execution-policy --skill <名前>`
+3. **解決状況を確認**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json resolution`
+4. **実行ポリシーを確認**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json execution-policy --skill <名前>`
 5. **アクティブスキルスタックを宣言:**
 
 ```text
@@ -186,6 +193,7 @@ Phase C は以下の停止条件を**全て**満たすまで反復する:
 - `adr-doc` が生成済み（サブエージェントが完了している）。
 
 停止条件を満たさない場合:
+
 1. 不足情報を質問として明文化する。
 2. 適切な Discover/Research/Frame スキルで解消する。
 3. 解消結果を反映し、停止条件を再評価する。
@@ -221,13 +229,17 @@ Phase C は以下の停止条件を**全て**満たすまで反復する:
 ## ループバックルール
 
 ### Phase C → Phase A（情報状態の変化）
+
 実行中に情報状態の根本的な変化が判明した場合:
+
 1. 変化を記録: "info-shift: [説明]"
 2. Entry Decision を再評価する。
 3. 必要であればスキルスタックを再構成する（Phase B へ戻る）。
 
 ### Phase D → Phase C（文書品質不足）
+
 ゲート検証で文書が基準を満たさない場合:
+
 1. 不足を記録: “doc-gap: [説明]”
 2. 情報不足なら情報収集を再実行し、ディスパッチトリガーを再発火する。
 

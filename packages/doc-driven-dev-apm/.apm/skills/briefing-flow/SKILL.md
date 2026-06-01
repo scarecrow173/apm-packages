@@ -67,7 +67,7 @@ Receive a request or problem and determine information state:
 | Do multiple information sources need convergence? | A-3 (Combined Discovery) | Single path |
 | Is external information research needed? | A-5 (Research Required) | Internal info sufficient |
 
-3. **Record Entry Decision** — document the chosen path and reason in one line.
+1. **Record Entry Decision** — document the chosen path and reason in one line.
 
 ### Entry Decision Paths
 
@@ -80,7 +80,7 @@ Receive a request or problem and determine information state:
 These are **choices**, not a sequence. Select based on information sufficiency.
 Even when A-4 is chosen, Phase B (Configure) is NOT skipped — Document-category skill configuration is still needed.
 
-**Check for Profile:** Check for `.sdp/briefing-profile.json` under the repository `.sdp` directory.
+**Check for Profile:** Check for `.sdp/briefing-flow-default/briefing-profile.json` under the repository `.sdp` directory.
 
 > **What is `briefing-profile.json`?**
 > A repository-specific configuration file (JSON) that lists all skills available for
@@ -99,11 +99,17 @@ Even when A-4 is chosen, Phase B (Configure) is NOT skipped — Document-categor
 Profile generation and validation is handled by the `skill-discovery-protocol` skill.
 
 **Commands:**
+
 - Scan: `sdp scan --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - Infer: `sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
 - Profile: `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- Validate: `sdp validate --profile .sdp/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- Query: `sdp query --profile .sdp/briefing-profile.json <subcommand>`
+- Validate: `sdp validate --profile .sdp/briefing-flow-default/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- Query: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json <subcommand>`
+
+After `sdp infer init`, inspect `.sdp/skill-reference-inferences.json` against
+the scan list. If `provides` or `uses` are incomplete for task routing, update
+the inference artifact with `sdp infer set-skill` or `sdp infer apply`, then run
+`sdp infer check` before `sdp profile`.
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.
 
@@ -111,16 +117,16 @@ See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full de
 
 ## Phase B: Configure
 
-With `.sdp/briefing-profile.json` available:
+With `.sdp/briefing-flow-default/briefing-profile.json` available:
 
-1. **Load flow stack**: `sdp query --profile .sdp/briefing-profile.json flow-stack`
+1. **Load flow stack**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json flow-stack`
 2. **Apply Entry Decision activation**: Based on Phase A path, prioritize categories:
    - A-1/A-2 → Prioritize frame-category skills
    - A-3 → Activate matching skills across categories
    - A-5 → Prioritize discover/research-category skills
    - **If no matching slots:** Proceed with default stack only.
-3. **Check resolution**: `sdp query --profile .sdp/briefing-profile.json resolution`
-4. **Check execution policy**: `sdp query --profile .sdp/briefing-profile.json execution-policy --skill <name>`
+3. **Check resolution**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json resolution`
+4. **Check execution policy**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json execution-policy --skill <name>`
 5. **Announce the active skill stack:**
 
 ```text
@@ -189,6 +195,7 @@ Phase C iterates until ALL of the following stop conditions are met:
 - `adr-doc` has been generated (sub-agent has completed).
 
 If stop conditions are not met:
+
 1. Articulate missing information as explicit questions.
 2. Resolve using appropriate Discover/Research/Frame skills.
 3. Reflect results and re-evaluate stop conditions.
@@ -224,13 +231,17 @@ Briefing is NOT complete until ALL of the following conditions are met:
 ## Loopback Rules
 
 ### Phase C → Phase A (Information State Change)
+
 If fundamental change in information state is discovered during execution:
+
 1. Record: "info-shift: [description]"
 2. Re-evaluate Entry Decision.
 3. If needed, reconfigure skill stack (return to Phase B).
 
 ### Phase D → Phase C (Document Quality Gap)
+
 If documents fail to meet gate criteria:
+
 1. Record: "doc-gap: [description]"
 2. If information is insufficient, re-run gathering and re-fire dispatch triggers.
 

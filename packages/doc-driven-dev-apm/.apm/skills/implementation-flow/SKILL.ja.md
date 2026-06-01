@@ -43,7 +43,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 | フェーズ | 目的 | 出力 |
 | -------- | ---- | ---- |
-| A. 評価 | タスクを理解し、`.sdp/implementation-flow-profile.json` を確認 | タスク特性の特定 |
+| A. 評価 | タスクを理解し、`.sdp/implementation-flow-default/implementation-flow-profile.json` を確認 | タスク特性の特定 |
 | B. 構成 | スキルを発見し、タスク用のスキルスタックを構築/読込 | アクティブスキルスタックの宣言 |
 | C. 実行 | 優先度順にスキルを適用 | コード変更の実装 |
 | D. 検証 | タスクが検証条件を通過することを確認 | 正しさのエビデンス |
@@ -77,10 +77,10 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 | git 操作や CI が必要 | ツール固有のワークフロースキル | Tooling |
 | 完了準備が整った | コードレビュースキル | Review |
 
-このマッピングは一般的なフレームワーク。`.sdp/implementation-flow-profile.json` の invocation resolution は
+このマッピングは一般的なフレームワーク。`.sdp/implementation-flow-default/implementation-flow-profile.json` の invocation resolution は
 このマッピングのリポジトリ固有インスタンス化であり、具体的なスキル名と条件を指定する。
 
-**プロファイル確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/implementation-flow-profile.json` を確認する。
+**プロファイル確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/implementation-flow-default/implementation-flow-profile.json` を確認する。
 
 > **`implementation-flow-profile.json` とは？**
 > リポジトリ固有の構成ファイル。利用可能な全スキルをリストし、
@@ -99,11 +99,18 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
 **コマンド:**
+
 - スキャン: `sdp scan --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - 推論: `sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
 - プロファイル生成: `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- 検証: `sdp validate --profile .sdp/implementation-flow-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- クエリ: `sdp query --profile .sdp/implementation-flow-profile.json <subcommand>`
+- 検証: `sdp validate --profile .sdp/implementation-flow-default/implementation-flow-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- クエリ: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json <subcommand>`
+
+`sdp infer init` の後、scan list と照合して
+`.sdp/skill-reference-inferences.json` を確認する。タスクルーティングに必要な
+`provides` または `uses` が不足している場合は、`sdp infer set-skill` または
+`sdp infer apply` で inference 成果物を更新し、`sdp profile` の前に
+`sdp infer check` を実行する。
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
 
@@ -111,11 +118,11 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 ## Phase B: 構成
 
-`.sdp/implementation-flow-profile.json` が利用可能な状態で:
+`.sdp/implementation-flow-default/implementation-flow-profile.json` が利用可能な状態で:
 
-1. **フロースタックを読込**: `sdp query --profile .sdp/implementation-flow-profile.json flow-stack`
-2. **解決を確認**: `sdp query --profile .sdp/implementation-flow-profile.json resolution`
-3. **実行ポリシーを確認**: `sdp query --profile .sdp/implementation-flow-profile.json execution-policy --skill <name>`
+1. **フロースタックを読込**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json flow-stack`
+2. **解決を確認**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json resolution`
+3. **実行ポリシーを確認**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json execution-policy --skill <name>`
 4. **競合を解決** — 同じカテゴリで複数スキルが活性化された場合:
    - より具体的な条件が優先（例: 「TypeScriptファイル」 > 「任意のファイル」）。
    - 明示的なプロファイルルールが推論された活性化より優先。
@@ -167,7 +174,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
    - **Flexible スキル**: 精神を適用; 文脈に合わせる。
      例: `code-review-and-quality`（レビュー観点をタスクごとに優先度調整可）
 
-   `sdp query --profile .sdp/implementation-flow-profile.json execution-policy --skill <name>` で確認。
+   `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json execution-policy --skill <name>` で確認。
 3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。
 
 ---

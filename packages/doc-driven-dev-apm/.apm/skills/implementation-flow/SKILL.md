@@ -44,7 +44,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Execute  →  Phase D: V
 
 | Phase | Purpose | Output |
 | ----- | ------- | ------ |
-| A. Assess | Understand task, check for `.sdp/implementation-flow-profile.json` | Task characteristics identified |
+| A. Assess | Understand task, check for `.sdp/implementation-flow-default/implementation-flow-profile.json` | Task characteristics identified |
 | B. Configure | Discover skills, build/load skill stack for this task | Active skill stack declared |
 | C. Execute | Apply skills in priority order | Code changes implemented |
 | D. Verify | Confirm task passes verification conditions | Evidence of correctness |
@@ -78,10 +78,10 @@ For each task unit:
 | Requires git operations or CI | Tool-specific workflow skills | Tooling |
 | Is ready for completion | Code review skills | Review |
 
-This mapping is a general framework. The invocation resolution in `.sdp/implementation-flow-profile.json` is
+This mapping is a general framework. The invocation resolution in `.sdp/implementation-flow-default/implementation-flow-profile.json` is
 the repository-specific instantiation of this mapping, specifying concrete skill names and conditions.
 
-**Check for Profile:** Check for `.sdp/implementation-flow-profile.json` under the repository `.sdp` directory.
+**Check for Profile:** Check for `.sdp/implementation-flow-default/implementation-flow-profile.json` under the repository `.sdp` directory.
 
 > **What is `implementation-flow-profile.json`?**
 > A repository-specific configuration file that lists all available skills,
@@ -100,11 +100,17 @@ the repository-specific instantiation of this mapping, specifying concrete skill
 Profile generation and validation is handled by the `skill-discovery-protocol` skill.
 
 **Commands:**
+
 - Scan: `sdp scan --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - Infer: `sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
 - Profile: `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- Validate: `sdp validate --profile .sdp/implementation-flow-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- Query: `sdp query --profile .sdp/implementation-flow-profile.json <subcommand>`
+- Validate: `sdp validate --profile .sdp/implementation-flow-default/implementation-flow-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- Query: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json <subcommand>`
+
+After `sdp infer init`, inspect `.sdp/skill-reference-inferences.json` against
+the scan list. If `provides` or `uses` are incomplete for task routing, update
+the inference artifact with `sdp infer set-skill` or `sdp infer apply`, then run
+`sdp infer check` before `sdp profile`.
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.
 
@@ -112,11 +118,11 @@ See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full de
 
 ## Phase B: Configure
 
-With `.sdp/implementation-flow-profile.json` available:
+With `.sdp/implementation-flow-default/implementation-flow-profile.json` available:
 
-1. **Load flow stack**: `sdp query --profile .sdp/implementation-flow-profile.json flow-stack`
-2. **Check resolution**: `sdp query --profile .sdp/implementation-flow-profile.json resolution`
-3. **Check execution policy**: `sdp query --profile .sdp/implementation-flow-profile.json execution-policy --skill <name>`
+1. **Load flow stack**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json flow-stack`
+2. **Check resolution**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json resolution`
+3. **Check execution policy**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json execution-policy --skill <name>`
 4. **Resolve conflicts** — if multiple skills in the same category are activated:
    - More specific condition wins over general (e.g., "TypeScript file" > "any file").
    - Explicit profile rule wins over inferred activation.
@@ -168,7 +174,7 @@ Apply each skill in the active stack according to its priority:
    - **Flexible skills**: Apply the spirit; adapt to context.
      Example: `code-review-and-quality` (review dimensions can be prioritized per task)
 
-   Use `sdp query --profile .sdp/implementation-flow-profile.json execution-policy --skill <name>` to check.
+   Use `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json execution-policy --skill <name>` to check.
 3. Skills layer — they are not exclusive. Multiple skills apply simultaneously.
 
 ---
