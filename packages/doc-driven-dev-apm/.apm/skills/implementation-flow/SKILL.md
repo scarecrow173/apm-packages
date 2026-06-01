@@ -1,6 +1,6 @@
 ---
 name: implementation-flow
-description: "Orchestrates code implementation by discovering and routing to available skills. Use when: executing task-doc entries, starting implementation work, coordinating multiple skills. Generates implementation-profile.json. Keywords: implementation, task-doc, skill stack, code changes."
+description: "Orchestrates code implementation by discovering and routing to available skills. Use when: executing task-doc entries, starting implementation work, coordinating multiple skills. Generates implementation-flow-profile.json. Keywords: implementation, task-doc, skill stack, code changes."
 license: MIT
 ---
 

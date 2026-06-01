@@ -22215,7 +22215,7 @@ async function main() {
     const inferencePathForHint = path.relative(cwd, inferencePath) || path.basename(inferencePath);
     console.error(`Skill reference inference required. Wrote scan list: ${scanListPath}`);
     console.error("Run inference and retry:");
-    console.error(`  sdp infer --scan ${scanPathForHint} --out ${inferencePathForHint}`);
+    console.error(`  sdp infer --scan "${scanPathForHint}" --out "${inferencePathForHint}"`);
     process.exitCode = 2;
     return;
   }

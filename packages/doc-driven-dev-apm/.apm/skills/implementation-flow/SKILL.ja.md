@@ -1,6 +1,6 @@
 ---
 name: implementation-flow
-description: "利用可能スキルを発見・ルーティングしてコード実装をオーケストレーション。使用タイミング: task-docエントリの実行時、実装作業の開始時、複数スキルの連携時。implementation-profile.jsonを生成。キーワード: implementation, task-doc, skill stack, code changes。"
+description: "利用可能スキルを発見・ルーティングしてコード実装をオーケストレーション。使用タイミング: task-docエントリの実行時、実装作業の開始時、複数スキルの連携時。implementation-flow-profile.jsonを生成。キーワード: implementation, task-doc, skill stack, code changes。"
 license: MIT
 ---
 
