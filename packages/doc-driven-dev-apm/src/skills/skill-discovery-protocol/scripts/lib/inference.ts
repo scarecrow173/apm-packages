@@ -34,6 +34,20 @@ function loadInferenceDocument(filePath: string): SkillReferenceInferenceDocumen
   return parsed.data as SkillReferenceInferenceDocument;
 }
 
+function readInferenceOrThrow(filePath: string): SkillReferenceInferenceDocument {
+  const loaded = loadInferenceDocument(filePath);
+  if (!loaded) {
+    throw new Error(`Inference file not found: ${filePath}`);
+  }
+  return loaded;
+}
+
+function writeInferenceDocument(filePath: string, doc: SkillReferenceInferenceDocument): void {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(doc, null, 2) + "\n", "utf8");
+}
+
 function buildScanList(rawSkills: RawScannedSkill[]): SkillScanListDocument {
   return {
     schema_version: "1.0",
@@ -96,6 +110,8 @@ module.exports = {
   defaultScanListPath,
   defaultInferencePath,
   loadInferenceDocument,
+  readInferenceOrThrow,
+  writeInferenceDocument,
   buildScanList,
   writeScanList,
   loadScanList,

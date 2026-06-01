@@ -153,11 +153,66 @@ test("sdp infer exits 2 when scan list is missing", () => {
   assert.ok(result.stderr.includes("Scan list not found"));
 });
 
+test("sdp infer defaults to mode=agent", () => {
+  const dir = tempDir();
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-scan-list.json"),
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-06-01T00:00:00Z",
+        skills: [
+          {
+            name: "skill-a",
+            description: "A skill",
+            body: "# Skill\nUsed in agent inference path",
+            skill_path: "/tmp/skill-a/SKILL.md",
+            scope: "project",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const result = runInfer([], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  const doc = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "skill-reference-inferences.json"), "utf8"),
+  );
+  assert.equal(doc.inference_source, "agent");
+});
+
+test("sdp infer rejects unknown inference mode", () => {
+  const dir = tempDir();
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-scan-list.json"),
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-06-01T00:00:00Z",
+        skills: [],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const result = runInfer(["--mode", "unknown"], dir);
+  assert.equal(result.status, 2, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("Unknown inference mode"));
+});
+
 test("sdp.js infer --help returns 0 and usage mentions sdp infer", () => {
   const dir = tempDir();
   const result = runSdpInfer(["--help"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
-  assert.ok(result.stdout.includes("Usage: sdp infer"));
+  assert.ok(result.stdout.includes("sdp infer run"));
 });
 
 test("sdp.js infer exits 2 when scan list is missing", () => {
@@ -172,6 +227,13 @@ test("sdp infer exits 2 when --scan value is missing", () => {
   const result = runInfer(["--scan"], dir);
   assert.equal(result.status, 2, `stderr: ${result.stderr}`);
   assert.ok(result.stderr.includes("Option --scan requires a value"));
+});
+
+test("sdp infer exits 2 when --mode value is missing", () => {
+  const dir = tempDir();
+  const result = runInfer(["--mode"], dir);
+  assert.equal(result.status, 2, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("Option --mode requires a value"));
 });
 
 test("sdp infer derives multiple meaningful capabilities from description and body text", () => {

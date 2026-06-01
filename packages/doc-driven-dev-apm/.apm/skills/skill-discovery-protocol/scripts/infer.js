@@ -15183,7 +15183,7 @@ var require_inference = __commonJS({
     function defaultInferencePath2(cwd) {
       return path2.join(cwd, ".sdp", "skill-reference-inferences.json");
     }
-    function loadInferenceDocument(filePath) {
+    function loadInferenceDocument2(filePath) {
       if (!fs2.existsSync(filePath)) return null;
       const data = JSON.parse(fs2.readFileSync(filePath, "utf8"));
       const parsed = SkillReferenceInferenceDocumentSchema.safeParse(data);
@@ -15192,6 +15192,18 @@ var require_inference = __commonJS({
         throw new Error(`Invalid skill reference inference document: ${details}`);
       }
       return parsed.data;
+    }
+    function readInferenceOrThrow2(filePath) {
+      const loaded = loadInferenceDocument2(filePath);
+      if (!loaded) {
+        throw new Error(`Inference file not found: ${filePath}`);
+      }
+      return loaded;
+    }
+    function writeInferenceDocument2(filePath, doc) {
+      const dir = path2.dirname(filePath);
+      if (!fs2.existsSync(dir)) fs2.mkdirSync(dir, { recursive: true });
+      fs2.writeFileSync(filePath, JSON.stringify(doc, null, 2) + "\n", "utf8");
     }
     function buildScanList(rawSkills) {
       return {
@@ -15245,7 +15257,9 @@ var require_inference = __commonJS({
     module2.exports = {
       defaultScanListPath: defaultScanListPath2,
       defaultInferencePath: defaultInferencePath2,
-      loadInferenceDocument,
+      loadInferenceDocument: loadInferenceDocument2,
+      readInferenceOrThrow: readInferenceOrThrow2,
+      writeInferenceDocument: writeInferenceDocument2,
       buildScanList,
       writeScanList,
       loadScanList: loadScanList2,
@@ -15254,9 +15268,9 @@ var require_inference = __commonJS({
   }
 });
 
-// src/skills/skill-discovery-protocol/scripts/lib/infer_builder.ts
-var require_infer_builder = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/infer_builder.ts"(exports2, module2) {
+// src/skills/skill-discovery-protocol/scripts/lib/infer_provider_agent.ts
+var require_infer_provider_agent = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/infer_provider_agent.ts"(exports2, module2) {
     "use strict";
     var CAPABILITY_RULES = [
       {
@@ -15337,7 +15351,7 @@ var require_infer_builder = __commonJS({
         tags: inferTags(text)
       };
     }
-    function buildInferenceDocument2(skills) {
+    function buildAgentInferenceDocument(skills) {
       const inferredSkills = [...skills].sort((a, b) => a.name.localeCompare(b.name)).map(inferSkill);
       return {
         schema_version: "1.0",
@@ -15347,7 +15361,215 @@ var require_infer_builder = __commonJS({
       };
     }
     module2.exports = {
-      buildInferenceDocument: buildInferenceDocument2
+      buildAgentInferenceDocument
+    };
+  }
+});
+
+// src/skills/skill-discovery-protocol/scripts/lib/infer_provider.ts
+var require_infer_provider = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/infer_provider.ts"(exports2, module2) {
+    "use strict";
+    var { buildAgentInferenceDocument } = require_infer_provider_agent();
+    var PROVIDERS = {
+      agent: buildAgentInferenceDocument
+    };
+    function inferWithProvider2(provider, skills) {
+      const fn = PROVIDERS[provider];
+      if (!fn) {
+        throw new Error(`Unknown provider: ${provider}`);
+      }
+      return fn(skills);
+    }
+    module2.exports = {
+      inferWithProvider: inferWithProvider2
+    };
+  }
+});
+
+// src/skills/skill-discovery-protocol/scripts/lib/schemas/infer_ops.ts
+var CapabilitySchema2, UsesSchema2, ExecutionPolicySchema2, SkillSchema, InferOpSchema;
+var init_infer_ops = __esm({
+  "src/skills/skill-discovery-protocol/scripts/lib/schemas/infer_ops.ts"() {
+    "use strict";
+    init_zod();
+    CapabilitySchema2 = external_exports.object({
+      capability: external_exports.string(),
+      description: external_exports.string().optional()
+    });
+    UsesSchema2 = external_exports.object({
+      capability: external_exports.string(),
+      required: external_exports.boolean(),
+      default_skill: external_exports.string().optional(),
+      override_allowed: external_exports.boolean()
+    });
+    ExecutionPolicySchema2 = external_exports.object({
+      strictness: external_exports.enum(["rigid", "flexible"]),
+      sequence_required: external_exports.boolean(),
+      allow_step_reordering: external_exports.boolean(),
+      allow_partial_application: external_exports.boolean(),
+      guidance: external_exports.string().optional()
+    });
+    SkillSchema = external_exports.object({
+      provides: external_exports.array(CapabilitySchema2),
+      uses: external_exports.array(UsesSchema2),
+      execution_policy: ExecutionPolicySchema2,
+      tags: external_exports.array(external_exports.string())
+    });
+    InferOpSchema = external_exports.discriminatedUnion("op", [
+      external_exports.object({
+        op: external_exports.literal("upsert-skill"),
+        name: external_exports.string(),
+        skill: SkillSchema
+      }),
+      external_exports.object({
+        op: external_exports.literal("delete-skill"),
+        name: external_exports.string()
+      }),
+      external_exports.object({
+        op: external_exports.literal("add-provides"),
+        name: external_exports.string(),
+        provides: external_exports.array(CapabilitySchema2).min(1)
+      }),
+      external_exports.object({
+        op: external_exports.literal("add-uses"),
+        name: external_exports.string(),
+        uses: external_exports.array(UsesSchema2).min(1)
+      }),
+      external_exports.object({
+        op: external_exports.literal("remove-provides"),
+        name: external_exports.string(),
+        capabilities: external_exports.array(external_exports.string()).min(1)
+      }),
+      external_exports.object({
+        op: external_exports.literal("remove-uses"),
+        name: external_exports.string(),
+        capabilities: external_exports.array(external_exports.string()).min(1)
+      }),
+      external_exports.object({
+        op: external_exports.literal("add-tags"),
+        name: external_exports.string(),
+        tags: external_exports.array(external_exports.string()).min(1)
+      }),
+      external_exports.object({
+        op: external_exports.literal("set-tags"),
+        name: external_exports.string(),
+        tags: external_exports.array(external_exports.string())
+      })
+    ]);
+  }
+});
+
+// src/skills/skill-discovery-protocol/scripts/lib/infer_edit.ts
+var require_infer_edit = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/infer_edit.ts"(exports2, module2) {
+    "use strict";
+    init_infer_ops();
+    function defaultExecutionPolicy() {
+      return {
+        strictness: "flexible",
+        sequence_required: false,
+        allow_step_reordering: true,
+        allow_partial_application: true
+      };
+    }
+    function buildInitDocument2(scanList) {
+      return {
+        schema_version: "1.0",
+        generated_at: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z"),
+        inference_source: "agent",
+        skills: [...scanList.skills].sort((a, b) => a.name.localeCompare(b.name)).map((skill) => ({
+          name: skill.name,
+          provides: [],
+          uses: [],
+          execution_policy: defaultExecutionPolicy(),
+          tags: []
+        }))
+      };
+    }
+    function mergeInitWithExisting2(initDoc, existingDoc) {
+      const existingByName = new Map(existingDoc.skills.map((skill) => [skill.name, skill]));
+      const merged = initDoc.skills.map((skill) => existingByName.get(skill.name) ?? skill);
+      return {
+        ...initDoc,
+        skills: merged
+      };
+    }
+    function parseOpsJsonl2(content) {
+      return content.split(/\r?\n/).map((line, i) => ({ line, lineNo: i + 1 })).filter((x) => x.line.trim().length > 0).map(({ line, lineNo }) => {
+        let parsed;
+        try {
+          parsed = JSON.parse(line);
+        } catch (e) {
+          throw new Error(`Invalid JSONL at line ${lineNo}: ${e.message}`);
+        }
+        const validated = InferOpSchema.safeParse(parsed);
+        if (!validated.success) {
+          const details = validated.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+          throw new Error(`Invalid operation at line ${lineNo}: ${details}`);
+        }
+        return validated.data;
+      });
+    }
+    function upsertSkill2(doc, name, skillSpec) {
+      const next = JSON.parse(JSON.stringify(doc));
+      const index = next.skills.findIndex((skill) => skill.name === name);
+      const normalized = { ...skillSpec, name };
+      if (index >= 0) next.skills[index] = normalized;
+      else next.skills.push(normalized);
+      next.skills.sort((a, b) => a.name.localeCompare(b.name));
+      return next;
+    }
+    function deleteSkill2(doc, name) {
+      const next = JSON.parse(JSON.stringify(doc));
+      const before = next.skills.length;
+      next.skills = next.skills.filter((skill) => skill.name !== name);
+      if (next.skills.length === before) {
+        throw new Error(`Skill not found: ${name}`);
+      }
+      return next;
+    }
+    function applyOps2(baseDoc, ops) {
+      let next = JSON.parse(JSON.stringify(baseDoc));
+      for (const op of ops) {
+        if (op.op === "upsert-skill") {
+          next = upsertSkill2(next, op.name, op.skill);
+          continue;
+        }
+        if (op.op === "delete-skill") {
+          next = deleteSkill2(next, op.name);
+          continue;
+        }
+        const target = next.skills.find((skill) => skill.name === op.name);
+        if (!target) {
+          throw new Error(`Skill not found: ${op.name}`);
+        }
+        if (op.op === "add-provides") {
+          target.provides.push(...op.provides);
+        } else if (op.op === "add-uses") {
+          target.uses.push(...op.uses);
+        } else if (op.op === "remove-provides") {
+          const removeSet = new Set(op.capabilities);
+          target.provides = target.provides.filter((item) => !removeSet.has(item.capability));
+        } else if (op.op === "remove-uses") {
+          const removeSet = new Set(op.capabilities);
+          target.uses = target.uses.filter((item) => !removeSet.has(item.capability));
+        } else if (op.op === "add-tags") {
+          const merged = /* @__PURE__ */ new Set([...target.tags, ...op.tags]);
+          target.tags = [...merged];
+        } else if (op.op === "set-tags") {
+          target.tags = [...op.tags];
+        }
+      }
+      return next;
+    }
+    module2.exports = {
+      buildInitDocument: buildInitDocument2,
+      mergeInitWithExisting: mergeInitWithExisting2,
+      parseOpsJsonl: parseOpsJsonl2,
+      applyOps: applyOps2,
+      upsertSkill: upsertSkill2,
+      deleteSkill: deleteSkill2
     };
   }
 });
@@ -15355,34 +15577,86 @@ var require_infer_builder = __commonJS({
 // src/skills/skill-discovery-protocol/scripts/infer.ts
 var fs = require("node:fs");
 var path = require("node:path");
-var { defaultScanListPath, defaultInferencePath, loadScanList } = require_inference();
-var { buildInferenceDocument } = require_infer_builder();
+var {
+  defaultScanListPath,
+  defaultInferencePath,
+  loadScanList,
+  loadInferenceDocument,
+  readInferenceOrThrow,
+  writeInferenceDocument
+} = require_inference();
+var { inferWithProvider } = require_infer_provider();
 var { SkillReferenceInferenceDocumentSchema: SkillReferenceInferenceDocumentSchema2 } = (init_inference(), __toCommonJS(inference_exports));
+var {
+  buildInitDocument,
+  mergeInitWithExisting,
+  parseOpsJsonl,
+  applyOps,
+  upsertSkill,
+  deleteSkill
+} = require_infer_edit();
+function parseCommand(argv) {
+  const head = argv[0];
+  if (!head || head.startsWith("-")) {
+    return { command: "run", rest: argv };
+  }
+  if (head === "run" || head === "init" || head === "apply" || head === "check" || head === "set-skill" || head === "delete-skill") {
+    return { command: head, rest: argv.slice(1) };
+  }
+  return { command: "run", rest: argv };
+}
 function parseArgs(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--scan" || arg === "--out" || arg === "--cwd") {
-      const next = argv[i + 1];
+  const parsedCommand = parseCommand(argv);
+  const args = { command: parsedCommand.command };
+  const tokens = parsedCommand.rest;
+  for (let i = 0; i < tokens.length; i++) {
+    const arg = tokens[i];
+    if (arg === "--scan" || arg === "--out" || arg === "--in" || arg === "--cwd" || arg === "--mode" || arg === "--ops" || arg === "--name" || arg === "--spec" || arg === "--if-exists") {
+      const next = tokens[i + 1];
       if (!next || next.startsWith("-")) {
         throw new Error(`Option ${arg} requires a value`);
       }
       if (arg === "--scan") args.scan = next;
       else if (arg === "--out") args.out = next;
-      else args.cwd = next;
+      else if (arg === "--in") args.in = next;
+      else if (arg === "--cwd") args.cwd = next;
+      else if (arg === "--mode") args.mode = next;
+      else if (arg === "--ops") args.ops = next;
+      else if (arg === "--name") args.name = next;
+      else if (arg === "--spec") args.spec = next;
+      else if (arg === "--if-exists") {
+        if (next !== "fail" && next !== "overwrite" && next !== "merge") {
+          throw new Error(`Option --if-exists must be one of: fail, overwrite, merge`);
+        }
+        args.ifExists = next;
+      }
       i++;
-    } else if (arg === "--help" || arg === "-h") args.help = true;
+    } else if (arg === "--dry-run") args.dryRun = true;
+    else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
 }
 function usage() {
-  return `Usage: sdp infer [--scan <json>] [--out <json>] [--cwd <dir>]
+  return `Usage:
+  sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>] [--mode <name>]
+  sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
+  sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
+  sdp infer check --in <json> [--cwd <dir>]
+  sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
+  sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 
 Options:
   --scan  Path to skill-scan-list.json (default: .sdp/skill-scan-list.json)
+  --in    Path to existing skill-reference-inferences.json (default: .sdp/skill-reference-inferences.json)
   --out   Path to skill-reference-inferences.json (default: .sdp/skill-reference-inferences.json)
-  --cwd   Working directory (default: process.cwd())`;
+  --cwd   Working directory (default: process.cwd())
+  --mode  Inference mode for run command (default: agent)
+  --ops   Path to JSONL operation file for apply command
+  --name  Skill name for set-skill/delete-skill commands
+  --spec  Path to JSON file used by set-skill command
+  --if-exists  init behavior when output exists: fail|overwrite|merge (default: fail)
+  --dry-run  Validate changes but do not write output`;
 }
 function main() {
   let args;
@@ -15401,6 +15675,160 @@ function main() {
   const cwd = args.cwd ? path.resolve(args.cwd) : process.cwd();
   const scanPath = args.scan ? path.resolve(cwd, args.scan) : defaultScanListPath(cwd);
   const outPath = args.out ? path.resolve(cwd, args.out) : defaultInferencePath(cwd);
+  const inPath = args.in ? path.resolve(cwd, args.in) : defaultInferencePath(cwd);
+  const mode = args.mode ?? "agent";
+  if (args.command === "check") {
+    try {
+      readInferenceOrThrow(inPath);
+      console.log("Inference document is valid");
+      return;
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exitCode = 2;
+      return;
+    }
+  }
+  if (args.command === "init") {
+    if (!fs.existsSync(scanPath)) {
+      console.error(`Scan list not found: ${scanPath}`);
+      process.exitCode = 2;
+      return;
+    }
+    const behavior = args.ifExists ?? "fail";
+    if (fs.existsSync(outPath) && behavior === "fail") {
+      console.error(`Inference file already exists: ${outPath}. Use --if-exists overwrite|merge`);
+      process.exitCode = 2;
+      return;
+    }
+    let scanList2;
+    try {
+      scanList2 = loadScanList(scanPath);
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exitCode = 2;
+      return;
+    }
+    let doc2 = buildInitDocument(scanList2);
+    if (behavior === "merge" && fs.existsSync(outPath)) {
+      try {
+        const existing = readInferenceOrThrow(outPath);
+        doc2 = mergeInitWithExisting(doc2, existing);
+      } catch (e) {
+        console.error(e instanceof Error ? e.message : String(e));
+        process.exitCode = 2;
+        return;
+      }
+    }
+    const parsed2 = SkillReferenceInferenceDocumentSchema2.safeParse(doc2);
+    if (!parsed2.success) {
+      const details = parsed2.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+      console.error(`Generated inference document failed schema validation: ${details}`);
+      process.exitCode = 1;
+      return;
+    }
+    if (!args.dryRun) {
+      writeInferenceDocument(outPath, parsed2.data);
+      console.log(`Written: ${path.relative(cwd, outPath)}`);
+    } else {
+      console.log(`dry-run: would write ${path.relative(cwd, outPath)}`);
+    }
+    return;
+  }
+  if (args.command === "apply") {
+    if (!args.ops) {
+      console.error("Option --ops requires a value");
+      process.exitCode = 2;
+      return;
+    }
+    const opsPath = path.resolve(cwd, args.ops);
+    if (!fs.existsSync(opsPath)) {
+      console.error(`Operation file not found: ${opsPath}`);
+      process.exitCode = 2;
+      return;
+    }
+    try {
+      const base = readInferenceOrThrow(inPath);
+      const ops = parseOpsJsonl(fs.readFileSync(opsPath, "utf8"));
+      const next = applyOps(base, ops);
+      const parsed2 = SkillReferenceInferenceDocumentSchema2.safeParse(next);
+      if (!parsed2.success) {
+        const details = parsed2.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+        throw new Error(`Edited inference failed schema validation: ${details}`);
+      }
+      if (!args.dryRun) {
+        writeInferenceDocument(outPath, parsed2.data);
+        console.log(`Written: ${path.relative(cwd, outPath)}`);
+      } else {
+        console.log(`dry-run: would apply ${ops.length} op(s)`);
+      }
+      return;
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exitCode = 2;
+      return;
+    }
+  }
+  if (args.command === "set-skill") {
+    if (!args.name || !args.spec) {
+      console.error("set-skill requires --name and --spec");
+      process.exitCode = 2;
+      return;
+    }
+    const specPath = path.resolve(cwd, args.spec);
+    if (!fs.existsSync(specPath)) {
+      console.error(`Skill spec not found: ${specPath}`);
+      process.exitCode = 2;
+      return;
+    }
+    try {
+      const base = readInferenceOrThrow(inPath);
+      const skillSpec = JSON.parse(fs.readFileSync(specPath, "utf8"));
+      const next = upsertSkill(base, args.name, skillSpec);
+      const parsed2 = SkillReferenceInferenceDocumentSchema2.safeParse(next);
+      if (!parsed2.success) {
+        const details = parsed2.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+        throw new Error(`Edited inference failed schema validation: ${details}`);
+      }
+      if (!args.dryRun) {
+        writeInferenceDocument(outPath, parsed2.data);
+        console.log(`Written: ${path.relative(cwd, outPath)}`);
+      } else {
+        console.log(`dry-run: would set skill ${args.name}`);
+      }
+      return;
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exitCode = 2;
+      return;
+    }
+  }
+  if (args.command === "delete-skill") {
+    if (!args.name) {
+      console.error("delete-skill requires --name");
+      process.exitCode = 2;
+      return;
+    }
+    try {
+      const base = readInferenceOrThrow(inPath);
+      const next = deleteSkill(base, args.name);
+      const parsed2 = SkillReferenceInferenceDocumentSchema2.safeParse(next);
+      if (!parsed2.success) {
+        const details = parsed2.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+        throw new Error(`Edited inference failed schema validation: ${details}`);
+      }
+      if (!args.dryRun) {
+        writeInferenceDocument(outPath, parsed2.data);
+        console.log(`Written: ${path.relative(cwd, outPath)}`);
+      } else {
+        console.log(`dry-run: would delete skill ${args.name}`);
+      }
+      return;
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exitCode = 2;
+      return;
+    }
+  }
   if (!fs.existsSync(scanPath)) {
     console.error(`Scan list not found: ${scanPath}`);
     process.exitCode = 2;
@@ -15414,7 +15842,15 @@ function main() {
     process.exitCode = 2;
     return;
   }
-  const doc = buildInferenceDocument(scanList.skills);
+  let doc;
+  try {
+    doc = inferWithProvider(mode, scanList.skills);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(message.replace("Unknown provider", "Unknown inference mode"));
+    process.exitCode = 2;
+    return;
+  }
   const parsed = SkillReferenceInferenceDocumentSchema2.safeParse(doc);
   if (!parsed.success) {
     const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
