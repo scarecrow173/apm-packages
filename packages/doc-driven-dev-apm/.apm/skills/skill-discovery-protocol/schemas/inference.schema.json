@@ -3,7 +3,8 @@
   "type": "object",
   "properties": {
     "schema_version": {
-      "type": "string"
+      "type": "string",
+      "const": "1.0"
     },
     "generated_at": {
       "type": "string"
