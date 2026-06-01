@@ -100,7 +100,8 @@ Profile generation and validation is handled by the `skill-discovery-protocol` s
 
 **Commands:**
 - Generate/update: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- Validate: `sdp validate --profile briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- Infer (when generate reports missing inference): `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
+- Validate: `sdp validate --profile .sdp/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - Query: `sdp query --profile briefing-profile.json <subcommand>`
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.

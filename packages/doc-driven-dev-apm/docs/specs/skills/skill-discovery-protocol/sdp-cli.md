@@ -8,6 +8,7 @@
 
 ```text
 sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
+sdp infer [--scan <json>] [--out <json>] [--cwd <dir>]
 sdp validate --profile <flow-profile-json>
 sdp query --profile <flow-profile-json> <subcommand> [options]
 ```
@@ -54,6 +55,39 @@ inference 成果物が存在しない場合、`sdp generate` は scan list を�
 - `0`: 正常完了
 - `1`: 入力エラー
 - `2`: schema 検証エラー、または inference 成果物不足
+
+## `sdp infer`
+
+scan 成果物から inference 成果物を生成する。
+
+```text
+sdp infer [--scan <json>] [--out <json>] [--cwd <dir>]
+```
+
+### 動作
+
+1. `--scan` または既定の scan 成果物を読み込む
+2. inference ドキュメントを構築する
+3. schema 検証を実施する
+4. `--out` または既定の出力先へ書き込む
+
+### 入力
+
+- `--scan <json>`: 任意。scan 成果物のパス。
+	未指定時の既定値は `.sdp/skill-scan-list.json`。
+- `--out <json>`: 任意。inference 成果物の出力パス。
+	未指定時の既定値は `.sdp/skill-reference-inferences.json`。
+- `--cwd <dir>`: 任意。基準ディレクトリ。
+
+### 出力
+
+- `.sdp/skill-reference-inferences.json`（既定）
+
+### 終了コード
+
+- `0`: 正常完了
+- `1`: 生成後の schema 検証失敗
+- `2`: 入力エラー（引数不正、scan 未存在、scan 不正）
 
 ## `sdp validate`
 

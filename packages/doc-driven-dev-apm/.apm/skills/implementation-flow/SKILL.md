@@ -101,7 +101,8 @@ Profile generation and validation is handled by the `skill-discovery-protocol` s
 
 **Commands:**
 - Generate/update: `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- Validate: `sdp validate --profile implementation-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- Infer (when generate reports missing inference): `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
+- Validate: `sdp validate --profile .sdp/implementation-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - Query: `sdp query --profile implementation-profile.json <subcommand>`
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.

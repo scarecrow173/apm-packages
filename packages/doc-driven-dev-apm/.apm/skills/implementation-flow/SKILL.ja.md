@@ -100,7 +100,8 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 **コマンド:**
 - 生成/更新: `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- 検証: `sdp validate --profile implementation-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- 推論（generate で inference 不足が出た場合）: `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
+- 検証: `sdp validate --profile .sdp/implementation-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - クエリ: `sdp query --profile implementation-profile.json <subcommand>`
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。

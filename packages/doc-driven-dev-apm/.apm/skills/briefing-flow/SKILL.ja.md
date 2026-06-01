@@ -98,7 +98,8 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 
 **コマンド:**
 - 生成/更新: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- 検証: `sdp validate --profile briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- 推論（generate で inference 不足が出た場合）: `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
+- 検証: `sdp validate --profile .sdp/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - クエリ: `sdp query --profile briefing-profile.json <サブコマンド>`
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
