@@ -78,7 +78,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 収集・生成  →  Phase
 これらは**選択肢**であり順序ではない。情報の充足度に基づいて選択する。
 A-4 を選んだ場合でも Phase B（構成）は省略しない — Document カテゴリスキルの構成が必要。
 
-**プロファイル確認:** `briefing-profile.json` をリポジトリ直下で確認する。
+**プロファイル確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/briefing-profile.json` を確認する。
 
 > **`briefing-profile.json` とは？**
 > リポジトリ固有の構成ファイル（JSON）。Briefing に利用可能な全スキルをリストし、
@@ -100,7 +100,7 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 - 生成/更新: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - 推論（generate で inference 不足が出た場合）: `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
 - 検証: `sdp validate --profile .sdp/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- クエリ: `sdp query --profile briefing-profile.json <サブコマンド>`
+- クエリ: `sdp query --profile .sdp/briefing-profile.json <サブコマンド>`
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
 
@@ -108,16 +108,16 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 
 ## Phase B: 構成
 
-`briefing-profile.json` が利用可能な状態で:
+`.sdp/briefing-profile.json` が利用可能な状態で:
 
-1. **フロースタックを読込**: `sdp query --profile briefing-profile.json flow-stack`
+1. **フロースタックを読込**: `sdp query --profile .sdp/briefing-profile.json flow-stack`
 2. **Entry Decision に基づく活性化**: Phase A で判定した経路に対応するカテゴリを優先:
    - A-1/A-2 → Frame カテゴリスキルを優先
    - A-3 → 全カテゴリからマッチするスキルを活性化
    - A-5 → Discover/Research カテゴリスキルを優先
    - **マッチするスロットがない場合:** デフォルトスタックのみで進行。
-3. **解決状況を確認**: `sdp query --profile briefing-profile.json resolution`
-4. **実行ポリシーを確認**: `sdp query --profile briefing-profile.json execution-policy --skill <名前>`
+3. **解決状況を確認**: `sdp query --profile .sdp/briefing-profile.json resolution`
+4. **実行ポリシーを確認**: `sdp query --profile .sdp/briefing-profile.json execution-policy --skill <名前>`
 5. **アクティブスキルスタックを宣言:**
 
 ```text

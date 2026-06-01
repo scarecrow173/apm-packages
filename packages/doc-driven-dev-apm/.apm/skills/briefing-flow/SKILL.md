@@ -80,7 +80,7 @@ Receive a request or problem and determine information state:
 These are **choices**, not a sequence. Select based on information sufficiency.
 Even when A-4 is chosen, Phase B (Configure) is NOT skipped — Document-category skill configuration is still needed.
 
-**Check for Profile:** Check for `briefing-profile.json` at repository root.
+**Check for Profile:** Check for `.sdp/briefing-profile.json` under the repository `.sdp` directory.
 
 > **What is `briefing-profile.json`?**
 > A repository-specific configuration file (JSON) that lists all skills available for
@@ -102,7 +102,7 @@ Profile generation and validation is handled by the `skill-discovery-protocol` s
 - Generate/update: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - Infer (when generate reports missing inference): `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
 - Validate: `sdp validate --profile .sdp/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- Query: `sdp query --profile briefing-profile.json <subcommand>`
+- Query: `sdp query --profile .sdp/briefing-profile.json <subcommand>`
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.
 
@@ -110,16 +110,16 @@ See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full de
 
 ## Phase B: Configure
 
-With `briefing-profile.json` available:
+With `.sdp/briefing-profile.json` available:
 
-1. **Load flow stack**: `sdp query --profile briefing-profile.json flow-stack`
+1. **Load flow stack**: `sdp query --profile .sdp/briefing-profile.json flow-stack`
 2. **Apply Entry Decision activation**: Based on Phase A path, prioritize categories:
    - A-1/A-2 → Prioritize frame-category skills
    - A-3 → Activate matching skills across categories
    - A-5 → Prioritize discover/research-category skills
    - **If no matching slots:** Proceed with default stack only.
-3. **Check resolution**: `sdp query --profile briefing-profile.json resolution`
-4. **Check execution policy**: `sdp query --profile briefing-profile.json execution-policy --skill <name>`
+3. **Check resolution**: `sdp query --profile .sdp/briefing-profile.json resolution`
+4. **Check execution policy**: `sdp query --profile .sdp/briefing-profile.json execution-policy --skill <name>`
 5. **Announce the active skill stack:**
 
 ```text
