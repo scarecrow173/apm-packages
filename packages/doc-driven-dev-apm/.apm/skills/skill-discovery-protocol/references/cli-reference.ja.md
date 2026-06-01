@@ -10,6 +10,20 @@ Adapter YAML スキーマ、invocation 解決ルール、検証規約につい�
 
 ---
 
+## Operator Recipe
+
+```text
+sdp scan --adapter <adapter-yaml>
+sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json --if-exists merge
+sdp infer set-skill --name <skill> --spec <skill-inference.json> --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
+sdp infer check --in .sdp/skill-reference-inferences.json
+sdp profile --adapter <adapter-yaml>
+sdp validate --profile .sdp/<adapter_id>/<flow-profile-json> --adapter <adapter-yaml>
+```
+
+`sdp profile` は既存の scan 成果物と inference 成果物を消費する。
+capability を自分では判断しない。
+
 ## 1. CLI コマンドリファレンス
 
 ### 1.1 `sdp scan`
@@ -30,7 +44,9 @@ sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--c
 sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 ```
 
-`skill-reference-inferences.json` の初期化・編集を行う。
+`skill-reference-inferences.json` を初期化・編集・検証する。agent は
+scan output を読んだ後、この command family で推論した `provides`、
+`uses`、`execution_policy`、`tags` を記録する。
 
 ### 1.3 `sdp profile`
 
@@ -64,4 +80,3 @@ sdp query --profile <flow-profile-json> <subcommand> [options]
 サブコマンド: `categories`、`category-skills`、`resolution`、`flow-stack`、
 `execution-policy`、`capability-skills`、`skill-detail`、`runtime-guidance`、
 `unresolved`、`validation-status`
-

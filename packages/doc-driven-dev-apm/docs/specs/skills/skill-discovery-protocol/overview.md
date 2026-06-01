@@ -71,7 +71,12 @@ validation-report.json
   - schema / staleness / deterministic / blocking の検証結果
 ```
 
-## Canonical Steps
+## 公開ワークフローと内部ステップ
+
+公開ワークフローは `sdp scan`、エージェント推論、`sdp infer`、`sdp profile` に分かれる。
+`sdp profile` は scan/inference 成果物を読むが、それらを暗黙生成しない。
+
+内部実装の canonical steps は以下である。
 
 ```text
 load_adapter -> scan_skills -> write_scan_list

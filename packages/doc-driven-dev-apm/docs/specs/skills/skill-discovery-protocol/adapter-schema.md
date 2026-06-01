@@ -212,9 +212,11 @@ artifacts:
     resolved_invocations: "resolved-invocations.json"  # optional
 ```
 
-**出力ベースディレクトリ:** すべての成果物はプロジェクトルート直下の `.sdp/` ディレクトリに出力される。`artifacts.protocol` のパスは `.sdp/` からの相対パスとして解決される。
+**出力ベースディレクトリ:**
 
-例: `skill_reference_catalog: "skill-reference-catalog.json"` → `.sdp/skill-reference-catalog.json`
+- 共有 protocol artifact（`skill_reference_catalog`、scan、inference）は `.sdp/` 直下に配置する。
+- flow 固有 artifact（`flow_profile`、`validation_report`）は `.sdp/<adapter_id>/` に配置する。
+- `artifacts.protocol.flow_profile` と `artifacts.protocol.validation_report` は adapter ディレクトリからの相対ファイル名として解決する。
 
 ## `readable_outputs`
 

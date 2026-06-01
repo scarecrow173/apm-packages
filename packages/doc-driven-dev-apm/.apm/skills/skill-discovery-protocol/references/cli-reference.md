@@ -10,6 +10,20 @@ For operational rules and constraints, see `operation-policy.md`.
 
 ---
 
+## Operator Recipe
+
+```text
+sdp scan --adapter <adapter-yaml>
+sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json --if-exists merge
+sdp infer set-skill --name <skill> --spec <skill-inference.json> --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
+sdp infer check --in .sdp/skill-reference-inferences.json
+sdp profile --adapter <adapter-yaml>
+sdp validate --profile .sdp/<adapter_id>/<flow-profile-json> --adapter <adapter-yaml>
+```
+
+`sdp profile` consumes existing scan and inference artifacts. It does not
+decide capabilities by itself.
+
 ## 1. CLI Command Reference
 
 ### 1.1 `sdp scan`
@@ -30,7 +44,9 @@ sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--c
 sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 ```
 
-Initializes and edits `skill-reference-inferences.json`.
+Initializes, edits, and validates `skill-reference-inferences.json`. Agents
+use this command family after reading scan output to record inferred
+`provides`, `uses`, `execution_policy`, and `tags`.
 
 ### 1.3 `sdp profile`
 
@@ -64,4 +80,3 @@ sdp query --profile <flow-profile-json> <subcommand> [options]
 Subcommands: `categories`, `category-skills`, `resolution`, `flow-stack`,
 `execution-policy`, `capability-skills`, `skill-detail`, `runtime-guidance`,
 `unresolved`, `validation-status`
-

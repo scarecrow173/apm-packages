@@ -9,8 +9,8 @@ Flow Profile（`*-profile.json`）は、特定の flow に紐づく分類結果�
 
 ## ファイル形式
 
-- 正規: `*-profile.json`（例: `briefing-profile.json`, `implementation-profile.json`）
-- 派生: `*-profile.md`（人間レビュー用）
+- 正規: `.sdp/<adapter_id>/*-profile.json`（例: `.sdp/briefing-flow-default/briefing-profile.json`, `.sdp/implementation-flow-default/implementation-flow-profile.json`）
+- 派生: `.sdp/<adapter_id>/*-profile.md`（人間レビュー用）
 
 ## JSON Schema（概要）
 

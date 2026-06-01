@@ -68,14 +68,34 @@ sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [
 4. `set-skill` は1スキル分の定義を upsert する
 5. `delete-skill` は指定スキル定義を削除する
 
+### 推論編集例
+
+1スキル分を更新する場合:
+
+```text
+sdp infer set-skill --name test-driven-development --spec tmp/test-driven-development.inference.json --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
+```
+
+複数編集を JSONL で適用する場合:
+
+```text
+sdp infer apply --ops tmp/sdp-inference-ops.jsonl --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
+```
+
+`sdp profile` の前に必ず検証する:
+
+```text
+sdp infer check --in .sdp/skill-reference-inferences.json
+```
+
 ### 入力
 
 - `--scan <json>`: 任意。scan 成果物のパス。
-	未指定時の既定値は `.sdp/skill-scan-list.json`。
+  未指定時の既定値は `.sdp/skill-scan-list.json`。
 - `--in <json>`: 任意。編集・検証対象の inference 成果物パス。
-	未指定時の既定値は `.sdp/skill-reference-inferences.json`。
+  未指定時の既定値は `.sdp/skill-reference-inferences.json`。
 - `--out <json>`: 任意。inference 成果物の出力パス。
-	未指定時の既定値は `.sdp/skill-reference-inferences.json`。
+  未指定時の既定値は `.sdp/skill-reference-inferences.json`。
 - `--ops <jsonl>`: `apply` で使用する JSONL operations ファイル。
 - `--name <skill>`: `set-skill` / `delete-skill` で対象となるスキル名。
 - `--spec <json>`: `set-skill` で使用する 1 スキル分の JSON 定義。
