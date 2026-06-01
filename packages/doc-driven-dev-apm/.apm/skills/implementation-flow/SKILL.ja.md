@@ -1,6 +1,6 @@
 ---
 name: implementation-flow
-description: "利用可能スキルを発見・ルーティングしてコード実装をオーケストレーション。使用タイミング: task-docエントリの実行時、実装作業の開始時、複数スキルの連携時。implementation-flow-profile.jsonを生成。キーワード: implementation, task-doc, skill stack, code changes。"
+description: "利用可能スキルを発見・ルーティングしてコード実装をオーケストレーション。使用タイミング: task-docエントリの実行時、実装作業の開始時、複数スキルの連携時。.sdp/implementation-flow-default/implementation-flow-profile.jsonを生成。キーワード: implementation, task-doc, skill stack, code changes。"
 license: MIT
 ---
 
@@ -82,7 +82,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 **プロファイル確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/implementation-flow-default/implementation-flow-profile.json` を確認する。
 
-> **`implementation-flow-profile.json` とは？**
+> **`.sdp/implementation-flow-default/implementation-flow-profile.json` とは？**
 > リポジトリ固有の構成ファイル。利用可能な全スキルをリストし、
 > カテゴリに割り当て、always-on か conditional かを定義し、
 > フロースタックと invocation resolution を指定する。

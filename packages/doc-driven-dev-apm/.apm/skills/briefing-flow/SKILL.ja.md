@@ -1,6 +1,6 @@
 ---
 name: briefing-flow
-description: "利用可能スキルを発見・ルーティングして情報収集・整理をオーケストレーション。doc-driven-dev-flow から委譲されるブリーフィングフェーズの実行者。使用タイミング: 新機能・変更の初期情報整理時、要件が曖昧で何から始めるべきか不明なとき、spec-doc/adr-doc作成の前段階。briefing-profile.jsonを生成。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
+description: "利用可能スキルを発見・ルーティングして情報収集・整理をオーケストレーション。doc-driven-dev-flow から委譲されるブリーフィングフェーズの実行者。使用タイミング: 新機能・変更の初期情報整理時、要件が曖昧で何から始めるべきか不明なとき、spec-doc/adr-doc作成の前段階。.sdp/briefing-flow-default/briefing-profile.jsonを生成。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
 license: MIT
 ---
 
@@ -80,7 +80,7 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 
 **プロファイル確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/briefing-flow-default/briefing-profile.json` を確認する。
 
-> **`briefing-profile.json` とは？**
+> **`.sdp/briefing-flow-default/briefing-profile.json` とは？**
 > リポジトリ固有の構成ファイル（JSON）。Briefing に利用可能な全スキルをリストし、
 > カテゴリに割り当て、フロースタックスロットと活性化ルールを定義し、
 > 呼び出し解決を指定する。`sdp scan` + `sdp infer` + `sdp profile` で生成され、
