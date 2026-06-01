@@ -5,7 +5,18 @@ Version: 1.0.0
 この文書は Skill Discovery Protocol の形式的な契約を定義する。
 flow 固有語彙は adapter YAML だけが持ち、protocol 本体は flow 非依存である。
 
-## 1. Canonical Steps
+## 1. Public Command Contract
+
+公開ワークフローは次の順序である。
+
+```text
+sdp scan -> エージェント推論 -> sdp infer -> sdp profile -> sdp validate -> sdp query
+```
+
+以下の canonical steps は内部実装手順であり、`sdp profile` が scan や
+inference を暗黙実行してよいという意味ではない。
+
+## 2. Canonical Steps
 
 ```text
 load_adapter -> scan_skills -> write_scan_list
@@ -27,7 +38,7 @@ load_adapter -> scan_skills -> write_scan_list
 | `render_outputs` | profile と catalog がある | 安定ソート済み JSON と任意 Markdown |
 | `validate_outputs` | 成果物が出力済み | Validation Report JSON |
 
-## 2. Scan Contract
+## 3. Scan Contract
 
 scanner は有効化された `project` / `user` / `organization` / `builtin`
 scope から `SKILL.md` を持つディレクトリを探す。
@@ -39,16 +50,18 @@ scanner は発見した各 skill の `SKILL.md` 全文を読まなければな�
 `skill-scan-list.json` は `schema_version`, `generated_at`, `skills` を持つ。
 各 skill entry は `name`, `description`, `body`, `skill_path`, `scope` を持つ。
 
-## 3. Inference Contract
+## 4. Inference Contract
 
-`skill-reference-inferences.json` は、エージェントが `skill-scan-list.json`
-を読み、各 `SKILL.md` 全文から推論して作る成果物である。
+`skill-reference-inferences.json` は `skill-scan-list.json` から導かれる
+agent-authored data である。agent は scan された `SKILL.md` 本文を読み、
+`provides`、`uses`、`execution_policy`、`tags` を判断し、その結果を
+`sdp infer` subcommands で保存する。
 
 各 inference entry は `name`, `provides`, `uses`, `execution_policy`, `tags`
 を持つ。scan されたすべての skill に対応する inference が必要であり、
 scan されていない skill の inference は stale として扱う。
 
-## 4. Skill Reference Catalog Contract
+## 5. Skill Reference Catalog Contract
 
 **File:** `skill-reference-catalog.json`
 
@@ -69,14 +82,14 @@ Required top-level fields:
 Catalog は `slots` / `slot_count` / `resolved_invocations` を持ってはならない。
 invocation slot は Flow Profile の `flow_stack.slots[]` が保持する。
 
-## 5. Flow Profile Contract
+## 6. Flow Profile Contract
 
 **File:** `<flow-name>-profile.json`
 
 Flow Profile は flow 固有成果物であり、adapter の分類と解決結果を保持する。
 `flow_stack.slots[]`、`resolved_invocations`、`runtime_guidance` はここに保存する。
 
-## 6. Validation Report Contract
+## 7. Validation Report Contract
 
 **File:** `validation-report.json`
 

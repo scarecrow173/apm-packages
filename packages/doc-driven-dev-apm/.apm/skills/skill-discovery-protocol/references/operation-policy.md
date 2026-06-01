@@ -49,7 +49,7 @@ The CLI is divided into three responsibility domains:
 | Command | Responsibility | Verb |
 | ------- | -------------- | ---- |
 | `sdp scan` | Create and update scan artifact | Write |
-| `sdp infer` | Initialize and update inference artifact | Write |
+| `sdp infer` | Initialize, schema-check, and update agent-authored inference artifact | Write |
 | `sdp profile` | Create and update catalog/profile artifacts | Write |
 | `sdp validate` | Verify artifact correctness | Read + Check |
 | `sdp query` | Extract information from artifacts | Read |
@@ -70,6 +70,15 @@ The CLI is divided into three responsibility domains:
 - Pure read-only operation; never modifies files
 - Exit `0` on success (empty result = empty array), `1` on input error,
   `2` on unknown subcommand
+
+### 2.4 Inference Editing Rule
+
+Agents MUST use `sdp infer` subcommands for inference edits. The intended loop is:
+
+1. `sdp infer init` creates or merges baseline entries from scan results.
+2. The agent inspects scanned skill bodies and prepares per-skill inference specs or JSONL operations.
+3. `sdp infer set-skill` or `sdp infer apply` records the decisions.
+4. `sdp infer check` verifies the artifact before `sdp profile`.
 
 ---
 

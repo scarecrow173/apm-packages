@@ -46,7 +46,7 @@ CLI は 3 つの責務ドメインに分離される:
 | コマンド | 責務 | 動詞 |
 | -------- | ---- | ---- |
 | `sdp scan` | scan 成果物の生成・更新 | Write |
-| `sdp infer` | inference 成果物の初期化・更新 | Write |
+| `sdp infer` | agent-authored inference 成果物の初期化・schema check・更新 | Write |
 | `sdp profile` | catalog/profile 成果物の生成・更新 | Write |
 | `sdp validate` | 成果物の正当性検証 | Read + Check |
 | `sdp query` | 成果物からの情報抽出 | Read |
@@ -67,6 +67,16 @@ CLI は 3 つの責務ドメインに分離される:
 - 純粋な読み取り専用操作（ファイルを変更しない）
 - 成功時は終了コード `0`（結果なし = 空配列）、入力エラー時は `1`、
   未知サブコマンド時は `2`
+
+### 2.4 Inference 編集ルール
+
+agent は inference 編集に `sdp infer` subcommands を使わなければならない。
+意図する loop は次のとおり。
+
+1. `sdp infer init` で scan 結果から baseline entries を作成または merge する。
+2. agent が scan された skill body を読み、skill ごとの inference spec または JSONL operations を用意する。
+3. `sdp infer set-skill` または `sdp infer apply` で判断結果を記録する。
+4. `sdp profile` の前に `sdp infer check` で artifact を検証する。
 
 ---
 

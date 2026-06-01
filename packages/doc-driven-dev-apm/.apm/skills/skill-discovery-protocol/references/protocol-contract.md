@@ -6,7 +6,18 @@ This document defines the formal contracts for the Skill Discovery Protocol.
 All terms are flow-neutral; flow-specific vocabulary is defined exclusively in
 adapter YAML files.
 
-## 1. Canonical Steps Contract
+## 1. Public Command Contract
+
+The public workflow is:
+
+```text
+sdp scan -> agent inference -> sdp infer -> sdp profile -> sdp validate -> sdp query
+```
+
+The internal canonical steps below are implementation steps, not a license for
+`sdp profile` to run scan or inference implicitly.
+
+## 2. Canonical Steps Contract
 
 ```text
 load_adapter -> scan_skills -> write_scan_list
@@ -28,7 +39,7 @@ load_adapter -> scan_skills -> write_scan_list
 | `render_outputs` | Profile and catalog generated | Stable-sorted JSON files and optional Markdown sidecars |
 | `validate_outputs` | Artifacts rendered | Validation Report JSON with `overall_result` |
 
-## 2. Scan Contract
+## 3. Scan Contract
 
 The scanner finds directories containing `SKILL.md` across the enabled
 `project`, `user`, `organization`, and `builtin` scopes.
@@ -55,10 +66,12 @@ Each skill entry contains:
 | `skill_path` | string | Absolute or resolved path to the skill directory |
 | `scope` | string | Scan scope that discovered the skill |
 
-## 3. Inference Contract
+## 4. Inference Contract
 
-`skill-reference-inferences.json` is authored by an agent after reading
-`skill-scan-list.json`. It contains inferred capability and policy data.
+`skill-reference-inferences.json` is agent-authored data derived from
+`skill-scan-list.json`. Agents decide `provides`, `uses`, `execution_policy`,
+and `tags` by reading scanned `SKILL.md` bodies, then persist those decisions
+through `sdp infer` subcommands.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
@@ -80,7 +93,7 @@ Each inference entry contains:
 Every scanned skill MUST have exactly one matching inference entry. Every
 inference entry MUST match a scanned skill.
 
-## 4. Skill Reference Catalog Contract
+## 5. Skill Reference Catalog Contract
 
 **File:** `skill-reference-catalog.json`
 
@@ -115,7 +128,7 @@ Constraints:
 - `provides[].capability` values MUST be unique within a skill
 - The catalog MUST NOT contain `slots`, `slot_count`, `resolved_invocations`, or flow-specific classification
 
-## 5. Flow Profile Contract
+## 6. Flow Profile Contract
 
 **File:** `<flow-name>-profile.json`
 
@@ -140,14 +153,14 @@ Constraints:
 - `resolved_invocations` MUST contain only skills present in the catalog
 - `flow_stack.slots[]` is adapter-owned and stored only in the Flow Profile
 
-## 6. Validation Report Contract
+## 7. Validation Report Contract
 
 **File:** `validation-report.json`
 
 The report records schema, staleness, deterministic, and blocking validation
 results. `overall_result` is `"pass"` only when all required gates pass.
 
-## 7. Derived Outputs
+## 8. Derived Outputs
 
 Markdown sidecars are derived outputs and MUST NOT be treated as canonical
 sources. They may be regenerated on every `sdp profile` run.
