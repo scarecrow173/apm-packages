@@ -1,0 +1,67 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { spawnSync } = require("node:child_process");
+const test = require("node:test");
+
+const skillRoot = path.resolve(__dirname, "../../../.apm/skills");
+const sdpScripts = path.join(skillRoot, "skill-discovery-protocol", "scripts");
+
+function tempDir() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "sdp-infer-test-"));
+}
+
+function runInfer(args: string[], cwd: string) {
+  const result = spawnSync(process.execPath, [path.join(sdpScripts, "infer.js"), ...args], {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+test("sdp infer generates skill-reference-inferences.json from scan list", () => {
+  const dir = tempDir();
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-scan-list.json"),
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-06-01T00:00:00Z",
+        skills: [
+          {
+            name: "skill-a",
+            description: "ADR authoring skill",
+            body: "# Skill A\nUse when writing ADR and architecture records.",
+            skill_path: "/tmp/skill-a/SKILL.md",
+            scope: "project",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const result = runInfer([], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const inferPath = path.join(dir, ".sdp", "skill-reference-inferences.json");
+  assert.ok(fs.existsSync(inferPath), "inference file should exist");
+
+  const doc = JSON.parse(fs.readFileSync(inferPath, "utf8"));
+  assert.equal(doc.schema_version, "1.0");
+  assert.equal(doc.inference_source, "agent");
+  assert.equal(doc.skills.length, 1);
+  assert.equal(doc.skills[0].name, "skill-a");
+});
+
+test("sdp infer exits 2 when scan list is missing", () => {
+  const dir = tempDir();
+  const result = runInfer([], dir);
+  assert.equal(result.status, 2, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("Scan list not found"));
+});

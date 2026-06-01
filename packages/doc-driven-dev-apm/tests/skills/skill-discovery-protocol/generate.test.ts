@@ -304,6 +304,17 @@ test("sdp generate writes scan list and exits 2 when references are missing", ()
   assert.ok(scan.skills[0].body.includes("ADR authoring"));
 });
 
+test("sdp generate missing inference prints infer command hint", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+  fs.unlinkSync(path.join(dir, ".sdp", "skill-reference-inferences.json"));
+
+  const result = runSdp(["--adapter", "test-adapter.yaml"], dir);
+  assert.equal(result.status, 2, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("Skill reference inference required"));
+  assert.ok(result.stderr.includes("sdp infer --scan .sdp/skill-scan-list.json"));
+});
+
 test("sdp generate catalog has correct structure", () => {
   const dir = tempDir();
   setupTestProject(dir);
