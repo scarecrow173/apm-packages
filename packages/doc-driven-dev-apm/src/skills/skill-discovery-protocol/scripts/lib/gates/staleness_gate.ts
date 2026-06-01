@@ -1,6 +1,6 @@
 "use strict";
 
-import type { SkillReferenceCatalog, ScannedSkill } from "../types";
+import type { SkillReferenceCatalog, RawScannedSkill } from "../types";
 
 type StalenessResult = {
   result: "pass" | "fail";
@@ -14,7 +14,7 @@ type StalenessResult = {
 
 function runStalenessGate(
   catalog: SkillReferenceCatalog,
-  currentSkills: ScannedSkill[],
+  currentSkills: RawScannedSkill[],
   maxAgeDays: number,
 ): StalenessResult {
   const basisDate = catalog.validated_at || catalog.generated_at;

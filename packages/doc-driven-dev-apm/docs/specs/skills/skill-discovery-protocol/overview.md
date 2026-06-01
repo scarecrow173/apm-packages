@@ -1,8 +1,8 @@
-# Skill Discovery Protocol — 仕様全体像
+# Skill Discovery Protocol - 仕様概要
 
 ## 推奨読書順
 
-1. 本ドキュメント（全体像）
+1. 本ドキュメント
 2. [Adapter YAML Schema](adapter-schema.md)
 3. [Skill Reference Catalog](skill-reference-catalog.md)
 4. [Flow Profile](flow-profile.md)
@@ -12,15 +12,18 @@
 
 ## 目的
 
-`skill-discovery-protocol` は、プロジェクト内のスキルを自動走査・分類し、
-flow 実行時の解決情報を構造化成果物として出力する共通プロトコルである。
+`skill-discovery-protocol` は、外部からインストールされた標準的な `SKILL.md` を対象に、スキルを走査し、エージェント推論で能力情報を補完し、flow 非依存の catalog と flow 固有 profile を生成するプロトコルである。
+
+`SKILL.md` には標準メタデータ以外の `provides` / `uses` / `tags` / `execution_policy` を要求しない。scan は見つかった各スキルの `SKILL.md` 全文を `skill-scan-list.json` に保存し、その全文を読んだエージェントが `skill-reference-inferences.json` を作る。catalog は scan 成果物と inference 成果物を結合して生成する。
 
 ## Scope
 
 ### In Scope
 
-- adapter YAML の読み込みと extends 合成
-- skill scan（project/user/organization/builtin スコープ）
+- adapter YAML の読み込みと `extends` 解決
+- project/user/organization/builtin scope の skill scan
+- scan 結果の `skill-scan-list.json` 生成
+- エージェント推論成果物 `skill-reference-inferences.json` の検証
 - Skill Reference Catalog 生成
 - flow 固有 classification
 - invocation resolution
@@ -28,103 +31,88 @@ flow 実行時の解決情報を構造化成果物として出力する共通プ
 - validation report 生成
 - readable Markdown sidecar 生成
 - `sdp generate` / `sdp validate` / `sdp query` CLI
-- implementation-flow / briefing-flow の置換
 
 ### Out of Scope for MVP
 
 - runtime skill activation の実行
 - remote skill installation
-- LLM API による skill selection
+- LLM API による自動推論の実行そのもの
 - 複数 adapter の priority-based conflict resolution
-- `default.capability`（provider lookup 規約確定後に拡張）
 
 ## 設計原則
 
-- **flow 非依存**: プロトコル本体は特定 flow の語彙や分類を持たない
+- **flow 非依存**: catalog は特定 flow の slot や分類結果を持たない
+- **標準 SKILL.md 前提**: `SKILL.md` に独自フィールドを要求しない
+- **scan と推論の分離**: scan は全文収集、inference は能力推論、catalog は正規化を担当する
 - **adapter 分離**: flow 固有ロジックは adapter YAML に閉じ込める
-- **script-only**: 成果物の生成・更新・検証は必ずスクリプト経由で行う
-- **冪等性保証**: 同一入力に対して同一出力を保証する
+- **script-only**: 成果物の生成・更新・検証は script 経由で行う
 - **機械可読優先**: JSON を正規成果物とし、Markdown は派生物として扱う
 
-## 2 層成果物モデル
+## 成果物モデル
 
-```
-┌─────────────────────────────────────────────────┐
-│ Skill Reference Catalog (skill-reference-catalog.json)  │
-│ - スキル一覧と provides/uses                      │
-│ - execution_policy                               │
-│ - flow 非依存                                     │
-└─────────────────────────────────────────────────┘
-          │ 参照
-          ▼
-┌─────────────────────────────────────────────────┐
-│ Flow Profile (*-profile.json)                     │
-│ - flow 固有 classification                        │
-│ - flow_stack.slots[]                             │
-│ - resolved_invocations                           │
-│ - runtime_guidance                               │
-└─────────────────────────────────────────────────┘
-          │ 検証
-          ▼
-┌─────────────────────────────────────────────────┐
-│ Validation Report (validation-report.json)        │
-│ - schema / staleness / deterministic / blocking   │
-│ - overall_result                                 │
-└─────────────────────────────────────────────────┘
+```text
+skill-scan-list.json
+  - scan で見つかった各 SKILL.md の name / description / body / skill_path / scope
+  - エージェント推論の入力
+
+skill-reference-inferences.json
+  - エージェントが SKILL.md 全文から推論した provides / uses / execution_policy / tags
+  - catalog 化の入力
+
+skill-reference-catalog.json
+  - scan と inference を結合した flow 非依存の能力 catalog
+  - invocation slot や分類結果は持たない
+
+*-profile.json
+  - adapter に基づく flow 固有成果物
+  - flow_stack.slots[] / resolved_invocations / runtime_guidance を持つ
+
+validation-report.json
+  - schema / staleness / deterministic / blocking の検証結果
 ```
 
-## Canonical Steps（処理フロー）
+## Canonical Steps
 
-```
-load_adapter → scan_skills → build_skill_reference_catalog
-→ classify_skills → resolve_invocations → build_flow_profile
-→ render_outputs → validate_outputs
+```text
+load_adapter -> scan_skills -> write_scan_list
+-> read_skill_reference_inferences -> build_skill_reference_catalog
+-> classify_skills -> resolve_invocations -> build_flow_profile
+-> render_outputs -> validate_outputs
 ```
 
 | Step | Input | Output |
 | --- | --- | --- |
-| `load_adapter` | adapter YAML（extends 解決含む） | merged config |
+| `load_adapter` | adapter YAML | merged config |
 | `scan_skills` | scopes + roots | raw skill list |
-| `build_skill_reference_catalog` | raw skill list | Skill Reference Catalog JSON |
+| `write_scan_list` | raw skill list | `skill-scan-list.json` |
+| `read_skill_reference_inferences` | `skill-reference-inferences.json` | inferred skill capabilities |
+| `build_skill_reference_catalog` | scan list + inferences | Skill Reference Catalog JSON |
 | `classify_skills` | catalog + taxonomy | classified skills |
 | `resolve_invocations` | classified + overrides | resolved_invocations |
 | `build_flow_profile` | all above | Flow Profile JSON |
 | `render_outputs` | JSON artifacts | stable-sorted JSON + optional MD |
 | `validate_outputs` | artifacts | Validation Report |
 
-## コマンド体系（sdp CLI）
+## コマンド体系
 
 | Command | 責務 |
 | --- | --- |
-| `sdp generate --adapter <yaml>` | 成果物の生成・更新 |
-| `sdp validate --profile <json>` | 成果物の検証 |
-| `sdp query --profile <json> <subcommand>` | 情報の抽出 |
-
-詳細: [sdp-cli.md](sdp-cli.md)
+| `sdp generate --adapter <yaml>` | scan list を生成し、inference 成果物から catalog/profile/report を生成する |
+| `sdp validate --profile <json>` | 成果物を検証する |
+| `sdp query --profile <json> <subcommand>` | 成果物から情報を抽出する |
 
 ## 成果物一覧
 
 | Artifact | Format | Role |
 | --- | --- | --- |
-| `skill-reference-catalog.json` | JSON | スキル能力カタログ（flow 非依存） |
-| `skill-reference-catalog.md` | Markdown | 上記の人間レビュー用派生物 |
-| `*-profile.json` | JSON | Flow Profile（正規成果物） |
-| `*-profile.md` | Markdown | 上記の人間レビュー用派生物 |
+| `skill-scan-list.json` | JSON | scan で見つかった標準 `SKILL.md` 全文の一覧 |
+| `skill-reference-inferences.json` | JSON | エージェント推論で補完された capability 情報 |
+| `skill-reference-catalog.json` | JSON | flow 非依存のスキル能力 catalog |
+| `skill-reference-catalog.md` | Markdown | catalog の人間レビュー用派生物 |
+| `*-profile.json` | JSON | Flow Profile |
+| `*-profile.md` | Markdown | profile の人間レビュー用派生物 |
 | `validation-report.json` | JSON | 検証レポート |
-| `validation-report.md` | Markdown | 上記の人間レビュー用派生物 |
-
-## 検証ゲート
-
-3 層 + blocking で構成:
-
-1. **Schema gate**: 必須キー・型・制約の検証
-2. **Staleness gate**: `validated_at` 基準での鮮度チェック
-3. **Deterministic gate**: 再実行時の出力一致確認
-4. **Blocking validations**: adapter で `fail` 指定された invocation 検証
-
-`overall_result = schema && staleness && deterministic && blocking_validations`
-
-詳細: [gates.md](gates.md)
+| `validation-report.md` | Markdown | report の人間レビュー用派生物 |
 
 ## 関連仕様
 

@@ -47,6 +47,14 @@ async function ensureDir(dir: string): Promise<void> {
   await fs.mkdir(dir, { recursive: true });
 }
 
+async function trimTrailingWhitespace(filePath: string): Promise<void> {
+  const content = await fs.readFile(filePath, "utf8");
+  const normalized = content.replace(/[ \t]+$/gm, "");
+  if (normalized !== content) {
+    await fs.writeFile(filePath, normalized, "utf8");
+  }
+}
+
 async function cleanupOutputDir(dir: string): Promise<void> {
   await ensureDir(dir);
 
@@ -98,6 +106,9 @@ async function main(): Promise<void> {
       logLevel: "silent"
     });
 
+    if (toPosix(rel).startsWith("skill-discovery-protocol/scripts/")) {
+      await trimTrailingWhitespace(outfile);
+    }
     console.log(`Built ${toPosix(path.relative(ROOT, outfile))}`);
   }
 

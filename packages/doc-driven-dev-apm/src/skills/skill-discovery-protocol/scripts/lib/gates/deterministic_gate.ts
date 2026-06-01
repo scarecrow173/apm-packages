@@ -36,6 +36,7 @@ function runDeterministicGate(
   adapterPath: string | null,
   cwd: string,
   compare?: string[],
+  referencesPath?: string | null,
 ): DeterministicResult {
   if (!adapterPath) {
     return {
@@ -88,9 +89,24 @@ function runDeterministicGate(
     const { resolveInvocations } = require("../resolver.ts");
     const { buildProfile } = require("../profile.ts");
     const { stabilizeCatalog, stabilizeProfile, renderJson } = require("../renderer.ts");
+    const {
+      defaultInferencePath,
+      writeScanList,
+      loadScanList,
+      loadInferenceDocument,
+      enrichSkills,
+    } = require("../inference.ts");
 
     const adapter = loadAdapter(adapterPath);
-    const skills = scanSkills(cwd, adapter);
+    const rawSkills = scanSkills(cwd, adapter);
+    const scanListPath = writeScanList(cwd, rawSkills);
+    const scanList = loadScanList(scanListPath);
+    const inferencePath = referencesPath || defaultInferencePath(cwd);
+    const inferenceDoc = loadInferenceDocument(inferencePath);
+    if (!inferenceDoc) {
+      throw new Error(`Missing skill reference inference document: ${inferencePath}`);
+    }
+    const skills = enrichSkills(scanList.skills, inferenceDoc);
     const catalog = stabilizeCatalog(buildCatalog(skills));
     const { categories, unmatched_skills } = classifySkills(skills, adapter);
     const resolvedInvocations = resolveInvocations(skills, adapter);

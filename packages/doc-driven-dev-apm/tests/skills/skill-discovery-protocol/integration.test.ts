@@ -46,42 +46,16 @@ const MOCK_SKILLS = {
 name: mock-debug-skill
 description: "Debugging and diagnosis of test failures"
 version: "1.0.0"
-provides:
-  - capability: debugging
-    description: "Root cause analysis"
-uses:
-  - capability: code_review
-    required: false
-    default_skill: "mock-review-skill"
-    override_allowed: true
-execution_policy:
-  strictness: "rigid"
-  sequence_required: true
-  allow_step_reordering: false
-  allow_partial_application: false
-  guidance: "Follow 5-step diagnosis"
-tags: ["process", "diagnosis"]
 ---
 
 # Mock Debug Skill
 
-A mock skill for testing the discovery protocol.
+A mock skill for debugging and diagnosis of test failures.
 `,
   "mock-review-skill": `---
 name: mock-review-skill
 description: "Code review and quality gate"
 version: "1.0.0"
-provides:
-  - capability: code_review
-    description: "Multi-axis code review"
-uses: []
-execution_policy:
-  strictness: "rigid"
-  sequence_required: true
-  allow_step_reordering: false
-  allow_partial_application: false
-  guidance: "Follow review checklist"
-tags: ["review", "quality"]
 ---
 
 # Mock Review Skill
@@ -92,21 +66,6 @@ A mock skill for code review.
 name: mock-impl-skill
 description: "Incremental implementation delivery"
 version: "1.0.0"
-provides:
-  - capability: incremental_implementation
-    description: "Step-by-step implementation"
-uses:
-  - capability: debugging
-    required: false
-    default_skill: "mock-debug-skill"
-    override_allowed: true
-execution_policy:
-  strictness: "flexible"
-  sequence_required: false
-  allow_step_reordering: true
-  allow_partial_application: true
-  guidance: "Deliver incrementally"
-tags: ["build", "implementation"]
 ---
 
 # Mock Implementation Skill
@@ -117,23 +76,6 @@ A mock skill for incremental implementation.
 name: mock-research-skill
 description: "Web research and information gathering"
 version: "1.0.0"
-provides:
-  - capability: web_research
-    description: "External information discovery"
-  - capability: information_gathering
-    description: "Source collection"
-uses:
-  - capability: code_review
-    required: false
-    default_skill: "mock-review-skill"
-    override_allowed: true
-execution_policy:
-  strictness: "flexible"
-  sequence_required: false
-  allow_step_reordering: true
-  allow_partial_application: true
-  guidance: "Search iteratively"
-tags: ["discover", "search", "research"]
 ---
 
 # Mock Research Skill
@@ -141,6 +83,85 @@ tags: ["discover", "search", "research"]
 A mock skill for web research.
 `,
 };
+
+const MOCK_INFERENCE_SKILLS = [
+  {
+    name: "mock-debug-skill",
+    provides: [{ capability: "debugging", description: "Root cause analysis" }],
+    uses: [
+      {
+        capability: "code_review",
+        required: false,
+        default_skill: "mock-review-skill",
+        override_allowed: true,
+      },
+    ],
+    execution_policy: {
+      strictness: "rigid",
+      sequence_required: true,
+      allow_step_reordering: false,
+      allow_partial_application: false,
+      guidance: "Follow 5-step diagnosis",
+    },
+    tags: ["process", "diagnosis"],
+  },
+  {
+    name: "mock-review-skill",
+    provides: [{ capability: "code_review", description: "Multi-axis code review" }],
+    uses: [],
+    execution_policy: {
+      strictness: "rigid",
+      sequence_required: true,
+      allow_step_reordering: false,
+      allow_partial_application: false,
+      guidance: "Follow review checklist",
+    },
+    tags: ["review", "quality"],
+  },
+  {
+    name: "mock-impl-skill",
+    provides: [{ capability: "incremental_implementation", description: "Step-by-step implementation" }],
+    uses: [
+      {
+        capability: "debugging",
+        required: false,
+        default_skill: "mock-debug-skill",
+        override_allowed: true,
+      },
+    ],
+    execution_policy: {
+      strictness: "flexible",
+      sequence_required: false,
+      allow_step_reordering: true,
+      allow_partial_application: true,
+      guidance: "Deliver incrementally",
+    },
+    tags: ["build", "implementation"],
+  },
+  {
+    name: "mock-research-skill",
+    provides: [
+      { capability: "web_research", description: "External information discovery" },
+      { capability: "information_gathering", description: "Source collection" },
+    ],
+    uses: [
+      {
+        capability: "code_review",
+        required: false,
+        default_skill: "mock-review-skill",
+        override_allowed: true,
+      },
+    ],
+    execution_policy: {
+      strictness: "flexible",
+      sequence_required: false,
+      allow_step_reordering: true,
+      allow_partial_application: true,
+      guidance: "Search iteratively",
+    },
+    tags: ["discover", "search", "research"],
+  },
+];
 
 // ─── Implementation-flow adapter (self-contained, no extends) ───
 
@@ -542,7 +563,25 @@ function setupSkills(dir: string) {
     fs.mkdirSync(skillDir, { recursive: true });
     fs.writeFileSync(path.join(skillDir, "SKILL.md"), content, "utf8");
   }
+  writeInferenceFile(dir, MOCK_INFERENCE_SKILLS);
+}
+
+function writeInferenceFile(dir: string, skills: Array<Record<string, unknown>>) {
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-reference-inferences.json"),
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-01-01T00:00:00Z",
+        inference_source: "agent",
+        skills,
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
 }
 
 function setupImplFlow(dir: string) {
@@ -860,12 +899,23 @@ test("integration: user scope with ~ path scans skills from home-relative direct
   fs.writeFileSync(path.join(skillDir, "SKILL.md"), `---
 name: user-skill-a
 description: "A user-level skill"
-provides:
-  - capability: user_help
-tags: [user]
 ---
 # User Skill A
 `, "utf8");
+  writeInferenceFile(projectDir, [
+    {
+      name: "user-skill-a",
+      provides: [{ capability: "user_help" }],
+      uses: [],
+      execution_policy: {
+        strictness: "flexible",
+        sequence_required: false,
+        allow_step_reordering: true,
+        allow_partial_application: true,
+      },
+      tags: ["user"],
+    },
+  ]);
 
   // Write adapter that uses absolute path (simulating resolved ~)
   // We use the absolute path directly since ~ expansion maps to os.homedir()
@@ -993,6 +1043,7 @@ readable_outputs:
   enabled: false
 `;
   fs.writeFileSync(path.join(projectDir, "boundary-adapter.yaml"), adapterContent, "utf8");
+  writeInferenceFile(projectDir, []);
 
   const result = runGenerate(["--adapter", "boundary-adapter.yaml"], projectDir);
   // Should succeed but warn about boundary violation and produce empty catalog
@@ -1009,12 +1060,23 @@ test("integration: environment variable in scan root is expanded", () => {
   fs.writeFileSync(path.join(skillDir, "SKILL.md"), `---
 name: env-skill-b
 description: "Skill found via env var"
-provides:
-  - capability: env_test
-tags: [env]
 ---
 # Env Skill B
 `, "utf8");
+  writeInferenceFile(projectDir, [
+    {
+      name: "env-skill-b",
+      provides: [{ capability: "env_test" }],
+      uses: [],
+      execution_policy: {
+        strictness: "flexible",
+        sequence_required: false,
+        allow_step_reordering: true,
+        allow_partial_application: true,
+      },
+      tags: ["env"],
+    },
+  ]);
 
   // Set env var for this test
   process.env["SDP_TEST_SKILL_DIR"] = envSkillsDir;
@@ -1101,12 +1163,23 @@ test("integration: \${VAR:-default} syntax uses default when env var is unset", 
   fs.writeFileSync(path.join(skillDir, "SKILL.md"), `---
 name: default-skill-c
 description: "Skill found via default value"
-provides:
-  - capability: default_test
-tags: [default]
 ---
 # Default Skill C
 `, "utf8");
+  writeInferenceFile(projectDir, [
+    {
+      name: "default-skill-c",
+      provides: [{ capability: "default_test" }],
+      uses: [],
+      execution_policy: {
+        strictness: "flexible",
+        sequence_required: false,
+        allow_step_reordering: true,
+        allow_partial_application: true,
+      },
+      tags: ["default"],
+    },
+  ]);
 
   // Ensure the env var is NOT set
   delete process.env["SDP_TEST_UNSET_VAR"];

@@ -5,13 +5,17 @@ import path from "node:path";
 
 import { AdapterConfigSchema } from "../src/skills/skill-discovery-protocol/scripts/lib/schemas/adapter";
 import { SkillReferenceCatalogSchema } from "../src/skills/skill-discovery-protocol/scripts/lib/schemas/catalog";
+import { SkillReferenceInferenceDocumentSchema } from "../src/skills/skill-discovery-protocol/scripts/lib/schemas/inference";
 import { FlowProfileSchema } from "../src/skills/skill-discovery-protocol/scripts/lib/schemas/profile";
+import { SkillScanListDocumentSchema } from "../src/skills/skill-discovery-protocol/scripts/lib/schemas/scan";
 import { ValidationReportSchema } from "../src/skills/skill-discovery-protocol/scripts/lib/schemas/validation-report";
 
 const OUTPUT_DIR = path.join(process.cwd(), ".apm", "skills", "skill-discovery-protocol", "schemas");
 
 const schemas: { name: string; schema: z.ZodType }[] = [
   { name: "adapter.schema.json", schema: AdapterConfigSchema },
+  { name: "scan.schema.json", schema: SkillScanListDocumentSchema },
+  { name: "inference.schema.json", schema: SkillReferenceInferenceDocumentSchema },
   { name: "catalog.schema.json", schema: SkillReferenceCatalogSchema },
   { name: "profile.schema.json", schema: FlowProfileSchema },
   { name: "validation-report.schema.json", schema: ValidationReportSchema },

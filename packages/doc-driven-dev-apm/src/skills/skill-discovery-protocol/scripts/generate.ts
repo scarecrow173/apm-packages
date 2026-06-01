@@ -11,13 +11,21 @@ const { classifySkills } = require("./lib/classifier.ts");
 const { resolveInvocations } = require("./lib/resolver.ts");
 const { buildProfile } = require("./lib/profile.ts");
 const { stabilizeCatalog, stabilizeProfile, writeArtifact } = require("./lib/renderer.ts");
+const {
+  writeScanList,
+  loadScanList,
+  defaultInferencePath,
+  loadInferenceDocument,
+  enrichSkills,
+} = require("./lib/inference.ts");
 
-function parseArgs(argv: string[]): { adapter?: string; cwd?: string; help?: boolean } {
-  const args: { adapter?: string; cwd?: string; help?: boolean } = {};
+function parseArgs(argv: string[]): { adapter?: string; cwd?: string; references?: string; help?: boolean } {
+  const args: { adapter?: string; cwd?: string; references?: string; help?: boolean } = {};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--adapter") args.adapter = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--references") args.references = argv[++i];
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -25,7 +33,7 @@ function parseArgs(argv: string[]): { adapter?: string; cwd?: string; help?: boo
 }
 
 function usage(): string {
-  return "Usage: sdp generate --adapter <adapter-yaml> [--cwd <dir>]";
+  return "Usage: sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]";
 }
 
 async function main(): Promise<void> {
@@ -57,10 +65,37 @@ async function main(): Promise<void> {
     return;
   }
 
-  // 1. Scan skills
-  const skills = scanSkills(cwd, adapter);
-  if (skills.length === 0) {
+  // 1. Scan skill sources and persist the scan artifact.
+  const rawSkills = scanSkills(cwd, adapter);
+  if (rawSkills.length === 0) {
     console.log("No skills found in scan scopes.");
+  }
+  const scanListPath = writeScanList(cwd, rawSkills);
+  const scanList = loadScanList(scanListPath);
+
+  const inferencePath = args.references ? path.resolve(cwd, args.references) : defaultInferencePath(cwd);
+  let inferenceDoc;
+  try {
+    inferenceDoc = loadInferenceDocument(inferencePath);
+  } catch (e: unknown) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exitCode = 2;
+    return;
+  }
+
+  if (!inferenceDoc) {
+    console.error(`Skill reference inference required. Wrote scan list: ${scanListPath}`);
+    process.exitCode = 2;
+    return;
+  }
+
+  let skills;
+  try {
+    skills = enrichSkills(scanList.skills, inferenceDoc);
+  } catch (e: unknown) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exitCode = 2;
+    return;
   }
 
   // 2. Build Skill Reference Catalog

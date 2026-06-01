@@ -73,7 +73,23 @@ export type AdapterConfig = {
   };
 };
 
-// ─── Scanned Skill ───
+// ─── Raw Scanned Skill ───
+
+export type RawScannedSkill = {
+  name: string;
+  description: string;
+  body: string;
+  skill_path: string;
+  scope: string;
+};
+
+export type SkillScanListDocument = {
+  schema_version: string;
+  generated_at: string;
+  skills: RawScannedSkill[];
+};
+
+// ─── Enriched Skill Reference ───
 
 export type ScannedSkill = {
   name: string;
@@ -88,6 +104,21 @@ export type ScannedSkill = {
     guidance?: string;
   };
   tags: string[];
+};
+
+export type SkillReferenceInference = {
+  name: string;
+  provides: { capability: string; description?: string }[];
+  uses: { capability: string; required: boolean; default_skill?: string; override_allowed: boolean }[];
+  execution_policy: ScannedSkill["execution_policy"];
+  tags: string[];
+};
+
+export type SkillReferenceInferenceDocument = {
+  schema_version: string;
+  generated_at?: string;
+  inference_source: "agent";
+  skills: SkillReferenceInference[];
 };
 
 // ─── Skill Reference Catalog ───

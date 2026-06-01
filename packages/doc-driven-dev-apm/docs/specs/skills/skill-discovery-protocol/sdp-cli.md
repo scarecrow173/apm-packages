@@ -2,13 +2,12 @@
 
 ## 概要
 
-`sdp` は skill-discovery-protocol の成果物を操作するコマンドラインインターフェースである。
-責務ごとに 3 つのサブコマンドに分離される。
+`sdp` は skill-discovery-protocol の成果物を生成・検証・照会する CLI である。
 
 ## コマンド体系
 
-```
-sdp generate --adapter <adapter-yaml>
+```text
+sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
 sdp validate --profile <flow-profile-json>
 sdp query --profile <flow-profile-json> <subcommand> [options]
 ```
@@ -17,38 +16,44 @@ sdp query --profile <flow-profile-json> <subcommand> [options]
 
 成果物の生成・更新を行う。
 
+```text
+sdp generate --adapter <adapter-yaml> [--references <json>]
 ```
-sdp generate --adapter <adapter-yaml>
-```
 
-**動作:**
+### 動作
 
-1. adapter YAML を読み込み（`extends` 解決含む）
-2. `scan.scopes` に基づいてスキルを走査
-3. Skill Reference Catalog を構築
-4. classification を実行
-5. invocation を解決
-6. Flow Profile を生成
-7. validation-report を生成
-8. `readable_outputs.enabled = true` の場合、Markdown を派生生成
+1. adapter YAML を読み込む（`extends` 解決を含む）
+2. `scan.scopes` に基づいてスキルを走査する
+3. 見つかった各スキルの `SKILL.md` 全文を読み、`.sdp/skill-scan-list.json` に保存する
+4. `--references` または `.sdp/skill-reference-inferences.json` から inference 成果物を読む
+5. scan 成果物と inference 成果物を結合して Skill Reference Catalog を構築する
+6. classification を実行する
+7. invocation を解決する
+8. Flow Profile を生成する
+9. validation-report を生成する
+10. `readable_outputs.enabled = true` の場合、Markdown sidecar を生成する
 
-**出力:**
+### 入力
 
-- `artifacts.protocol` で指定されたパスに JSON を出力
-- `readable_outputs` 設定に応じて Markdown を出力
+- `--adapter <adapter-yaml>`: 必須。adapter YAML のパス。
+- `--references <json>`: 任意。agent inference 成果物のパス。未指定時は `.sdp/skill-reference-inferences.json` を読む。
+- `--cwd <dir>`: 任意。基準ディレクトリ。
 
-**冪等性:**
+### 出力
 
-- 同一入力で再実行した場合、ファイル内容に差分が発生しないことを保証
-- 安定ソートと固定レンダリングにより実現
+- `.sdp/skill-scan-list.json`
+- `.sdp/skill-reference-catalog.json`
+- `.sdp/*-profile.json`
+- `.sdp/validation-report.json`
+- 設定に応じた Markdown sidecar
 
-**終了コード:**
+inference 成果物が存在しない場合、`sdp generate` は scan list を保存したうえで終了コード `2` を返す。エージェントは `skill-scan-list.json` の各 `body` を読み、`skill-reference-inferences.json` を作成してから再実行する。
+
+### 終了コード
 
 - `0`: 正常完了
-- `1`: 入力エラー（adapter が見つからない、パースエラー等）
-- `2`: schema 検証エラー（adapter の必須キー欠落等）
-
----
+- `1`: 入力エラー
+- `2`: schema 検証エラー、または inference 成果物不足
 
 ## `sdp validate`
 
@@ -56,63 +61,49 @@ sdp generate --adapter <adapter-yaml>
 
 ### Profile 検証
 
-```
+```text
 sdp validate --profile <flow-profile-json>
 ```
 
-**動作:**
+### 動作
 
-1. Flow Profile JSON を読み込み
-2. Schema gate を実行
-3. Staleness gate を実行
-4. Deterministic gate を実行（再生成して比較）
-5. Blocking validations を実行
-6. Catalog 整合性検証を実行
-7. validation-report.json を出力
+1. Flow Profile JSON を読み込む
+2. Schema gate を実行する
+3. Staleness gate を実行する
+4. Deterministic gate を実行する
+5. Blocking validations を実行する
+6. Catalog 整合性を検証する
+7. validation-report.json を出力する
+
+Deterministic gate は再生成時に scan list と inference 成果物を使う。既定では `.sdp/skill-reference-inferences.json` が必要である。
 
 ### Adapter 単体検証
 
-```
+```text
 sdp validate --adapter <adapter-yaml>
 ```
 
-**動作:**
-
-1. adapter YAML を読み込み（`extends` 解決含む）
-2. 必須キー存在・型・制約を検証
-3. `extends` 循環参照検出
-4. マージ後の `scan.scopes` 整合性検証
-5. `classification` 矛盾検出
-6. `snake_case` 強制検証
-7. 結果を標準出力に表示
-
-**用途:** adapter を本番投入する前に単体で正当性を確認する。
+adapter YAML の構造、`extends`、`scan.scopes`、classification、`snake_case` 制約を検証する。
 
 ### 終了コード
 
-- `0`: `overall_result = pass`（または adapter 検証成功）
-- `1`: `overall_result = fail`（または adapter 検証失敗）
+- `0`: `overall_result = pass`、または adapter 検証成功
+- `1`: `overall_result = fail`、または adapter 検証失敗
 - `2`: 入力エラー
-
----
 
 ## `sdp query`
 
 Flow Profile から情報を抽出する。
 
-```
+```text
 sdp query --profile <flow-profile-json> <subcommand> [options]
 ```
 
-**入力:** 常に `*-profile.json`（Markdown は正規入力として扱わない）
-
-### サブコマンド一覧
-
-以下は現時点の最小提案セット。将来要件で拡張可能。
+### サブコマンド
 
 | Subcommand | Description | Options |
 | --- | --- | --- |
-| `categories` | カテゴリ一覧 | — |
+| `categories` | カテゴリ一覧 | - |
 | `category-skills` | カテゴリ内スキル一覧 | `--category <id>` |
 | `resolution` | 解決関係一覧 | `--skill <name>` (optional) |
 | `flow-stack` | Flow Stack 定義 | `--slot <id>` (optional) |
@@ -120,95 +111,5 @@ sdp query --profile <flow-profile-json> <subcommand> [options]
 | `capability-skills` | capability 逆引き | `--capability <id>` |
 | `skill-detail` | スキル詳細 | `--skill <name>` |
 | `runtime-guidance` | 実行時ガイダンス | `--skill <name>` (optional) |
-| `unresolved` | 未解決一覧 | — |
-| `validation-status` | 検証状態要約 | — |
-
-### サブコマンド詳細
-
-#### `categories`
-
-カテゴリ一覧を出力する。
-
-```
-sdp query --profile tasks/briefing-profile.json categories
-```
-
-出力例:
-
-```json
-[
-  { "id": "architecture", "label": "Architecture", "skill_count": 3 },
-  { "id": "quality", "label": "Quality", "skill_count": 2 }
-]
-```
-
-#### `category-skills --category <id>`
-
-指定カテゴリに属するスキルを出力する。
-
-```
-sdp query --profile tasks/briefing-profile.json category-skills --category architecture
-```
-
-#### `resolution [--skill <name>]`
-
-解決関係を出力する。`--skill` で特定スキルにフィルタ可能。
-
-```
-sdp query --profile tasks/briefing-profile.json resolution --skill documentation-and-adrs
-```
-
-#### `flow-stack [--slot <id>]`
-
-Flow Stack 定義を出力する。`--slot` で特定スロットにフィルタ可能。
-
-```
-sdp query --profile tasks/briefing-profile.json flow-stack --slot adr_authoring
-```
-
-#### `execution-policy [--skill <name>]`
-
-実行ポリシーを出力する。`--skill` で特定スキルにフィルタ可能。
-
-```
-sdp query --profile tasks/briefing-profile.json execution-policy --skill documentation-and-adrs
-```
-
-#### `unresolved`
-
-未解決の slot/capability を一覧する。
-
-#### `validation-status`
-
-schema/staleness/deterministic/overall の検証状態要約を出力する。
-
-### エラーハンドリング
-
-- 未知サブコマンド: 非 0 終了 + 利用可能なサブコマンド一覧を表示
-- `--profile` 未指定: 非 0 終了 + usage を表示
-- profile JSON パースエラー: 非 0 終了 + エラー詳細を表示
-
-### 終了コード
-
-- `0`: 正常（結果あり）
-- `0`: 正常（結果なし — 該当データがない場合は空配列を返す）
-- `1`: 入力エラー
-- `2`: 未知サブコマンド
-
-## 実装アーキテクチャ
-
-サブコマンドはレジストリ駆動で実装する:
-
-```typescript
-// registry pattern
-const handlers: Record<string, QueryHandler> = {
-  "categories": categoriesHandler,
-  "category-skills": categorySkillsHandler,
-  "resolution": resolutionHandler,
-  "flow-stack": flowStackHandler,
-  "execution-policy": executionPolicyHandler,
-  // ...
-};
-```
-
-**拡張規約:** 新規サブコマンド追加は 1 handler ファイル追加 + レジストリ登録のみで完了する。
+| `unresolved` | 未解決一覧 | - |
+| `validation-status` | 検証状態要約 | - |

@@ -2,29 +2,37 @@
 
 ## 概要
 
-Skill Reference Catalog は、プロジェクト内のスキルが提供・利用する capability と
-実行ポリシーを一覧化する **flow 非依存**の成果物である。
+Skill Reference Catalog は、scan で発見されたスキルにエージェント推論成果物を結合し、各スキルが提供・利用する capability と実行ポリシーを一覧化する **flow 非依存** の正規成果物である。
+
+Catalog は `SKILL.md` に独自メタデータがあることを前提にしない。`provides` / `uses` / `execution_policy` / `tags` は、scan で保存された `SKILL.md` 全文をエージェントが読み、`skill-reference-inferences.json` として補完した値を使う。
+
+## 入力成果物
+
+| Artifact | Role |
+| --- | --- |
+| `skill-scan-list.json` | scan で見つかった各 `SKILL.md` の全文と所在 |
+| `skill-reference-inferences.json` | エージェント推論で補完された capability 情報 |
 
 ## ファイル形式
 
 - 正規: `skill-reference-catalog.json`
 - 派生: `skill-reference-catalog.md`（人間レビュー用）
 
-## JSON Schema（概要）
+## JSON 例
 
 ```json
 {
   "schema_version": "1.0",
   "generated_at": "2026-05-28T00:00:00Z",
   "validated_at": "2026-05-28T00:00:00Z",
-  "skill_count": 10,
-  "capability_count": 15,
+  "skill_count": 1,
+  "capability_count": 2,
   "skills": [
     {
       "name": "documentation-and-adrs",
-      "description": "...",
+      "description": "Document architecture decisions",
       "provides": [
-        { "capability": "adr_authoring", "description": "..." }
+        { "capability": "adr_authoring", "description": "Creates ADRs" }
       ],
       "uses": [
         {
@@ -47,70 +55,65 @@ Skill Reference Catalog は、プロジェクト内のスキルが提供・利�
 }
 ```
 
-## フィールド定義
-
-### Top-level
+## Top-level fields
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `schema_version` | string | yes | カタログスキーマバージョン |
+| `schema_version` | string | yes | catalog schema version |
 | `generated_at` | ISO 8601 | yes | 生成日時 |
 | `validated_at` | ISO 8601 | yes | 最終検証日時 |
 | `skill_count` | number | yes | スキル総数 |
 | `capability_count` | number | yes | capability 総数 |
 | `skills` | array | yes | スキル一覧 |
 
-### `skills[]`
+## `skills[]`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `name` | string | yes | スキル名 |
-| `description` | string | yes | スキル概要 |
-| `provides` | array | yes | 提供する capability |
-| `uses` | array | yes | 利用する capability |
-| `execution_policy` | object | yes | 実行ポリシー |
-| `tags` | string[] | no | 分類用タグ |
+| `description` | string | yes | scan で得た標準 description |
+| `provides` | array | yes | 推論された提供 capability |
+| `uses` | array | yes | 推論された利用 capability |
+| `execution_policy` | object | yes | 推論された実行ポリシー |
+| `tags` | string[] | no | 推論された分類補助タグ |
 
-### `skills[].provides[]`
+## `skills[].provides[]`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `capability` | string | yes | `snake_case` capability 識別子 |
 | `description` | string | no | 提供内容の説明 |
 
-### `skills[].uses[]`
+## `skills[].uses[]`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `capability` | string | yes | `snake_case` capability 識別子 |
-| `required` | boolean | yes | 必須かどうか |
-| `default_skill` | string | no | 既定解決先スキル（flow 固有の resolved_skill は持たない） |
-| `override_allowed` | boolean | yes | 親 flow からの override を許可するか。`false` の場合 `override_not_allowed` gate の検証対象になる |
+| `required` | boolean | yes | 必須依存かどうか |
+| `default_skill` | string | no | capability 依存の既定候補 |
+| `override_allowed` | boolean | yes | flow からの override を許可するか |
 
-### `skills[].execution_policy`
+## `skills[].execution_policy`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `strictness` | `"rigid"` \| `"flexible"` | yes | 実行の厳格度 |
-| `sequence_required` | boolean | yes | ステップ順序が必須か |
-| `allow_step_reordering` | boolean | yes | ステップの並び替えを許可するか |
+| `sequence_required` | boolean | yes | 手順順序が必須か |
+| `allow_step_reordering` | boolean | yes | 手順の並び替えを許可するか |
 | `allow_partial_application` | boolean | yes | 部分適用を許可するか |
-| `guidance` | string | no | 実行時のガイダンステキスト |
+| `guidance` | string | no | 実行時ガイダンス |
 
-## 命名規約
+## 制約
 
 - すべての capability 識別子は `snake_case` 固定
-- `kebab-case` や `camelCase` は schema error
-
-## ソート規則
-
-- `skills[]` は `name` の辞書順で安定ソート
-- `provides[]` / `uses[]` は `capability` の辞書順
-- 再実行で順序差分が出ないことを保証
+- `skills[]` は `name` の辞書順で安定ソートする
+- `provides[]` / `uses[]` は `capability` の辞書順で安定ソートする
+- `skill-reference-inferences.json` に scan されていない skill がある場合は stale inference として失敗する
+- scan された skill に対応する inference がない場合は missing inference として失敗する
 
 ## Flow Profile との関係
 
-- Catalog は **flow 非依存**の情報のみ保持する
-- invocation slot は Catalog ではなく Flow Profile の `flow_stack.slots[]` が保持する
-- `skills[].uses[].default_skill` は capability 依存の既定候補であり、flow 固有の `resolved_skill` は持たない
-- Flow Profile が `flow_stack.slots[]` と `resolved_invocations` で flow 固有のslot宣言・解決結果を保持する
+- Catalog は flow 非依存の情報のみ保持する
+- Catalog は `slots` / `slot_count` / `resolved_invocations` / flow 固有 classification を持たない
+- invocation slot は Flow Profile の `flow_stack.slots[]` が保持する
+- `skills[].uses[].default_skill` は capability 依存の既定候補であり、flow 固有の `resolved_skill` ではない

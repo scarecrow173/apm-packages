@@ -24,28 +24,12 @@ function setupTestProject(dir: string) {
     `---
 name: skill-a
 description: "A test skill for ADR authoring"
-provides:
-  - capability: adr_authoring
-    description: "Provides ADR authoring"
-uses:
-  - capability: code_review
-    required: false
-    default_skill: skill-b
-    override_allowed: true
-execution_policy:
-  strictness: flexible
-  sequence_required: false
-  allow_step_reordering: true
-  allow_partial_application: true
-  guidance: "Use for architecture decisions"
-tags:
-  - architecture
-  - documentation
 ---
 
 # Skill A
 
-A test skill.
+Use this skill when the task is about ADR authoring and architecture decisions.
+It often benefits from code review before finalizing architecture documentation.
 `,
     "utf8",
   );
@@ -58,23 +42,11 @@ A test skill.
     `---
 name: skill-b
 description: "A test skill for code review"
-provides:
-  - capability: code_review
-    description: "Provides code review"
-uses: []
-execution_policy:
-  strictness: rigid
-  sequence_required: true
-  allow_step_reordering: false
-  allow_partial_application: false
-  guidance: "Follow strict review process"
-tags:
-  - quality
 ---
 
 # Skill B
 
-Another test skill.
+Use this skill for code review and quality feedback.
 `,
     "utf8",
   );
@@ -204,6 +176,63 @@ readable_outputs:
 
   // Create tasks dir
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  writeInferenceFile(dir);
+}
+
+function writeInferenceFile(dir: string) {
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-reference-inferences.json"),
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-01-01T00:00:00Z",
+        inference_source: "agent",
+        skills: [
+          {
+            name: "skill-a",
+            provides: [
+              { capability: "adr_authoring", description: "Author ADRs and architecture decisions" },
+            ],
+            uses: [
+              {
+                capability: "code_review",
+                required: false,
+                default_skill: "skill-b",
+                override_allowed: true,
+              },
+            ],
+            execution_policy: {
+              strictness: "flexible",
+              sequence_required: false,
+              allow_step_reordering: true,
+              allow_partial_application: true,
+              guidance: "Use for architecture decisions",
+            },
+            tags: ["architecture", "documentation"],
+          },
+          {
+            name: "skill-b",
+            provides: [
+              { capability: "code_review", description: "Review code and quality" },
+            ],
+            uses: [],
+            execution_policy: {
+              strictness: "rigid",
+              sequence_required: true,
+              allow_step_reordering: false,
+              allow_partial_application: false,
+              guidance: "Follow strict review process",
+            },
+            tags: ["quality"],
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
 }
 
 function runSdp(args: string[], cwd: string) {
@@ -256,6 +285,25 @@ test("sdp generate creates catalog and profile", () => {
   assert.ok(fs.existsSync(profilePath), "Profile should exist");
 });
 
+test("sdp generate writes scan list and exits 2 when references are missing", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+  fs.unlinkSync(path.join(dir, ".sdp", "skill-reference-inferences.json"));
+
+  const result = runSdp(["--adapter", "test-adapter.yaml"], dir);
+  assert.equal(result.status, 2, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stderr.includes("Skill reference inference required"));
+
+  const scanPath = path.join(dir, ".sdp", "skill-scan-list.json");
+  assert.ok(fs.existsSync(scanPath), "scan list should be written");
+
+  const scan = JSON.parse(fs.readFileSync(scanPath, "utf8"));
+  assert.equal(scan.schema_version, "1.0");
+  assert.equal(scan.skills.length, 2);
+  assert.equal(scan.skills[0].name, "skill-a");
+  assert.ok(scan.skills[0].body.includes("ADR authoring"));
+});
+
 test("sdp generate catalog has correct structure", () => {
   const dir = tempDir();
   setupTestProject(dir);
@@ -275,6 +323,36 @@ test("sdp generate catalog has correct structure", () => {
   assert.ok(Array.isArray(catalog.skills));
   assert.equal(catalog.skills[0].name, "skill-a"); // sorted alphabetically
   assert.equal(catalog.skills[1].name, "skill-b");
+});
+
+test("sdp generate ignores non-standard SKILL.md capability metadata", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  const skillPath = path.join(dir, ".apm", "skills", "skill-a", "SKILL.md");
+  const original = fs.readFileSync(skillPath, "utf8");
+  const polluted = original.replace(
+    'description: "A test skill for ADR authoring"',
+    `description: "A test skill for ADR authoring"
+provides:
+  - capability: wrong_capability
+uses:
+  - capability: wrong_dependency
+tags:
+  - wrong_tag`,
+  );
+  fs.writeFileSync(skillPath, polluted, "utf8");
+
+  const result = runSdp(["--adapter", "test-adapter.yaml"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const catalog = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "skill-reference-catalog.json"), "utf8"),
+  );
+  const skillA = catalog.skills.find((s: { name: string }) => s.name === "skill-a");
+  assert.deepEqual(skillA.provides.map((p: { capability: string }) => p.capability), ["adr_authoring"]);
+  assert.deepEqual(skillA.uses.map((u: { capability: string }) => u.capability), ["code_review"]);
+  assert.deepEqual(skillA.tags, ["architecture", "documentation"]);
 });
 
 test("sdp generate catalog has execution_policy", () => {

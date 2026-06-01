@@ -57,26 +57,12 @@ function setupTestProject(dir: string) {
     `---
 name: skill-a
 description: "A test skill for ADR authoring"
-provides:
-  - capability: adr_authoring
-    description: "Provides ADR authoring"
-uses:
-  - capability: code_review
-    required: false
-    default_skill: skill-b
-    override_allowed: true
-execution_policy:
-  strictness: flexible
-  sequence_required: false
-  allow_step_reordering: true
-  allow_partial_application: true
-  guidance: "Use for architecture decisions"
-tags:
-  - architecture
-  - documentation
 ---
 
 # Skill A
+
+Use this skill when the task is about ADR authoring and architecture decisions.
+It often benefits from code review before finalizing architecture documentation.
 `,
     "utf8",
   );
@@ -89,21 +75,11 @@ tags:
     `---
 name: skill-b
 description: "A test skill for code review"
-provides:
-  - capability: code_review
-    description: "Provides code review"
-uses: []
-execution_policy:
-  strictness: rigid
-  sequence_required: true
-  allow_step_reordering: false
-  allow_partial_application: false
-  guidance: "Follow strict review process"
-tags:
-  - quality
 ---
 
 # Skill B
+
+Use this skill for code review and quality feedback.
 `,
     "utf8",
   );
@@ -230,6 +206,63 @@ readable_outputs:
 `;
   fs.writeFileSync(path.join(dir, "test-adapter.yaml"), adapterContent, "utf8");
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  writeInferenceFile(dir);
+}
+
+function inferenceDocument(skillAUses = [
+  {
+    capability: "code_review",
+    required: false,
+    default_skill: "skill-b",
+    override_allowed: true,
+  },
+]) {
+  return {
+    schema_version: "1.0",
+    generated_at: "2026-01-01T00:00:00Z",
+    inference_source: "agent",
+    skills: [
+      {
+        name: "skill-a",
+        provides: [
+          { capability: "adr_authoring", description: "Author ADRs and architecture decisions" },
+        ],
+        uses: skillAUses,
+        execution_policy: {
+          strictness: "flexible",
+          sequence_required: false,
+          allow_step_reordering: true,
+          allow_partial_application: true,
+          guidance: "Use for architecture decisions",
+        },
+        tags: ["architecture", "documentation"],
+      },
+      {
+        name: "skill-b",
+        provides: [
+          { capability: "code_review", description: "Review code and quality" },
+        ],
+        uses: [],
+        execution_policy: {
+          strictness: "rigid",
+          sequence_required: true,
+          allow_step_reordering: false,
+          allow_partial_application: false,
+          guidance: "Follow strict review process",
+        },
+        tags: ["quality"],
+      },
+    ],
+  };
+}
+
+function writeInferenceFile(dir: string, document = inferenceDocument()) {
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-reference-inferences.json"),
+    JSON.stringify(document, null, 2),
+    "utf8",
+  );
 }
 
 /** Generate artifacts so we have valid profile/catalog to validate */
@@ -391,19 +424,11 @@ test("validate staleness gate detects new skills", () => {
     `---
 name: skill-c
 description: "A new skill"
-provides:
-  - capability: testing
-uses: []
-execution_policy:
-  strictness: flexible
-  sequence_required: false
-  allow_step_reordering: true
-  allow_partial_application: true
-tags:
-  - testing
 ---
 
 # Skill C
+
+Use this skill for testing.
 `,
     "utf8",
   );
@@ -491,30 +516,16 @@ test("validate blocking gate detects unresolved required capability", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
-  // Modify skill-a to require a capability nobody provides
-  fs.writeFileSync(
-    path.join(dir, ".apm", "skills", "skill-a", "SKILL.md"),
-    `---
-name: skill-a
-description: "A test skill"
-provides:
-  - capability: adr_authoring
-uses:
-  - capability: nonexistent_capability
-    required: true
-    override_allowed: true
-execution_policy:
-  strictness: flexible
-  sequence_required: false
-  allow_step_reordering: true
-  allow_partial_application: true
-tags:
-  - architecture
----
-
-# Skill A
-`,
-    "utf8",
+  // Modify inferred references so skill-a requires a capability nobody provides.
+  writeInferenceFile(
+    dir,
+    inferenceDocument([
+      {
+        capability: "nonexistent_capability",
+        required: true,
+        override_allowed: true,
+      },
+    ]),
   );
 
   generateArtifacts(dir);

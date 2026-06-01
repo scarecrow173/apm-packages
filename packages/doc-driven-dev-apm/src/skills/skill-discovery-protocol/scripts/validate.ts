@@ -12,7 +12,7 @@ const { runDeterministicGate } = require("./lib/gates/deterministic_gate.ts");
 const { runBlockingGate } = require("./lib/gates/blocking_gate.ts");
 const { renderJson } = require("./lib/renderer.ts");
 
-import type { AdapterConfig, FlowProfile, SkillReferenceCatalog, ScannedSkill } from "./lib/types";
+import type { AdapterConfig, FlowProfile, SkillReferenceCatalog, ScannedSkill, RawScannedSkill } from "./lib/types";
 
 function parseArgs(argv: string[]): { profile?: string; adapter?: string; cwd?: string; help?: boolean } {
   const args: { profile?: string; adapter?: string; cwd?: string; help?: boolean } = {};
@@ -297,10 +297,11 @@ async function main(): Promise<void> {
   }
 
   // Scan current skills (needed for staleness + blocking)
-  let currentSkills: ScannedSkill[] = [];
+  let currentRawSkills: RawScannedSkill[] = [];
   if (adapter) {
-    currentSkills = scanSkills(cwd, adapter);
+    currentRawSkills = scanSkills(cwd, adapter);
   }
+  const currentCatalogSkills: ScannedSkill[] = catalog?.skills ?? [];
 
   // ─── Gate 1: Schema Validation ───
   const schemaResult = runSchemaGate(
@@ -313,7 +314,7 @@ async function main(): Promise<void> {
   let stalenessResult;
   if (catalog && adapter) {
     const maxAgeDays = adapter.validation?.staleness?.max_age_days ?? 30;
-    stalenessResult = runStalenessGate(catalog, currentSkills, maxAgeDays);
+    stalenessResult = runStalenessGate(catalog, currentRawSkills, maxAgeDays);
   } else {
     stalenessResult = {
       result: "skipped",
@@ -339,7 +340,7 @@ async function main(): Promise<void> {
   let blockingResult;
   const invocationEnabled = adapter?.validation?.invocation?.enabled ?? true;
   if (adapter && catalog && invocationEnabled) {
-    blockingResult = runBlockingGate(profile, catalog, adapter, currentSkills);
+    blockingResult = runBlockingGate(profile, catalog, adapter, currentCatalogSkills);
   } else {
     blockingResult = { result: "skipped", checks: [] };
   }

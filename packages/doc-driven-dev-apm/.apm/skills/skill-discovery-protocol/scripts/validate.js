@@ -6458,46 +6458,21 @@ var require_scanner = __commonJS({
     function isSkillDir(dirPath) {
       return fs2.existsSync(path2.join(dirPath, "SKILL.md"));
     }
-    function parseSkillMd(skillDir) {
+    function parseSkillMd(skillDir, scope = "project") {
       const skillMdPath = path2.join(skillDir, "SKILL.md");
       const content = fs2.readFileSync(skillMdPath, "utf8");
-      const { data } = matter(content);
+      const { data, content: body } = matter(content);
       const name = data.name || path2.basename(skillDir);
       const description = data.description || "";
-      const provides = Array.isArray(data.provides) ? data.provides.map((p) => {
-        if (typeof p === "string") return { capability: p };
-        if (typeof p === "object" && p !== null) return p;
-        return { capability: String(p) };
-      }) : [];
-      const uses = Array.isArray(data.uses) ? data.uses.map((u) => {
-        if (typeof u === "string") return { capability: u, required: false, override_allowed: true };
-        if (typeof u === "object" && u !== null) {
-          const obj = u;
-          return {
-            capability: String(obj.capability || ""),
-            required: Boolean(obj.required),
-            default_skill: obj.default_skill ? String(obj.default_skill) : void 0,
-            override_allowed: obj.override_allowed !== false
-          };
-        }
-        return { capability: String(u), required: false, override_allowed: true };
-      }) : [];
-      const execution_policy = data.execution_policy ? {
-        strictness: data.execution_policy.strictness || "flexible",
-        sequence_required: Boolean(data.execution_policy.sequence_required),
-        allow_step_reordering: data.execution_policy.allow_step_reordering !== false,
-        allow_partial_application: data.execution_policy.allow_partial_application !== false,
-        guidance: data.execution_policy.guidance || void 0
-      } : {
-        strictness: "flexible",
-        sequence_required: false,
-        allow_step_reordering: true,
-        allow_partial_application: true
+      return {
+        name,
+        description,
+        body: body.trim(),
+        skill_path: skillMdPath,
+        scope
       };
-      const tags = Array.isArray(data.tags) ? data.tags.map(String) : [];
-      return { name, description, provides, uses, execution_policy, tags };
     }
-    function scanSkillDirs(rootPath) {
+    function scanSkillDirs(rootPath, scope = "project") {
       if (!fs2.existsSync(rootPath)) return [];
       const skills = [];
       const stat = fs2.statSync(rootPath);
@@ -6514,7 +6489,7 @@ var require_scanner = __commonJS({
         const entryStat = fs2.statSync(fullPath);
         if (entryStat.isDirectory() && isSkillDir(fullPath)) {
           try {
-            skills.push(parseSkillMd(fullPath));
+            skills.push(parseSkillMd(fullPath, scope));
           } catch (e) {
             console.error(`Warning: Failed to parse SKILL.md in "${fullPath}": ${e instanceof Error ? e.message : String(e)}`);
           }
@@ -6522,7 +6497,7 @@ var require_scanner = __commonJS({
       }
       return skills;
     }
-    function scanApmModules(rootPath) {
+    function scanApmModules(rootPath, scope = "project") {
       if (!fs2.existsSync(rootPath)) return [];
       const skills = [];
       let orgs;
@@ -6547,11 +6522,11 @@ var require_scanner = __commonJS({
           if (!fs2.statSync(pkgPath).isDirectory()) continue;
           const skillsDir = path2.join(pkgPath, "skills");
           if (fs2.existsSync(skillsDir) && fs2.statSync(skillsDir).isDirectory()) {
-            skills.push(...scanSkillDirs(skillsDir));
+            skills.push(...scanSkillDirs(skillsDir, scope));
           }
           if (isSkillDir(pkgPath)) {
             try {
-              skills.push(parseSkillMd(pkgPath));
+              skills.push(parseSkillMd(pkgPath, scope));
             } catch (e) {
               console.error(`Warning: Failed to parse SKILL.md in "${pkgPath}": ${e instanceof Error ? e.message : String(e)}`);
             }
@@ -6580,7 +6555,7 @@ var require_scanner = __commonJS({
             }
           }
           if (root === "apm_modules") {
-            const moduleSkills = scanApmModules(rootPath);
+            const moduleSkills = scanApmModules(rootPath, scopeName);
             for (const s of moduleSkills) {
               if (!seen.has(s.name)) {
                 seen.add(s.name);
@@ -6596,7 +6571,7 @@ var require_scanner = __commonJS({
               }
             }
           } else {
-            const dirSkills = scanSkillDirs(rootPath);
+            const dirSkills = scanSkillDirs(rootPath, scopeName);
             for (const s of dirSkills) {
               if (!seen.has(s.name)) {
                 seen.add(s.name);
@@ -9534,7 +9509,7 @@ var init_schemas = __esm({
             })));
           }
         }
-        
+
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -9542,7 +9517,7 @@ var init_schemas = __esm({
         } else {
           newResult[${k}] = ${id}.value;
         }
-        
+
       `);
           } else if (!isOptionalIn) {
             doc.write(`
@@ -9579,7 +9554,7 @@ var init_schemas = __esm({
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
-        
+
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -9587,7 +9562,7 @@ var init_schemas = __esm({
         } else {
           newResult[${k}] = ${id}.value;
         }
-        
+
       `);
           }
         }
@@ -22333,6 +22308,151 @@ var require_renderer = __commonJS({
   }
 });
 
+// src/skills/skill-discovery-protocol/scripts/lib/schemas/scan.ts
+var RawScannedSkillSchema, SkillScanListDocumentSchema;
+var init_scan = __esm({
+  "src/skills/skill-discovery-protocol/scripts/lib/schemas/scan.ts"() {
+    "use strict";
+    init_zod();
+    RawScannedSkillSchema = external_exports.object({
+      name: external_exports.string(),
+      description: external_exports.string(),
+      body: external_exports.string(),
+      skill_path: external_exports.string(),
+      scope: external_exports.string()
+    });
+    SkillScanListDocumentSchema = external_exports.object({
+      schema_version: external_exports.string(),
+      generated_at: external_exports.string(),
+      skills: external_exports.array(RawScannedSkillSchema)
+    });
+  }
+});
+
+// src/skills/skill-discovery-protocol/scripts/lib/schemas/inference.ts
+var CapabilitySchema2, UsesSchema2, ExecutionPolicySchema2, SkillReferenceInferenceSchema, SkillReferenceInferenceDocumentSchema;
+var init_inference = __esm({
+  "src/skills/skill-discovery-protocol/scripts/lib/schemas/inference.ts"() {
+    "use strict";
+    init_zod();
+    CapabilitySchema2 = external_exports.object({
+      capability: external_exports.string(),
+      description: external_exports.string().optional()
+    });
+    UsesSchema2 = external_exports.object({
+      capability: external_exports.string(),
+      required: external_exports.boolean(),
+      default_skill: external_exports.string().optional(),
+      override_allowed: external_exports.boolean()
+    });
+    ExecutionPolicySchema2 = external_exports.object({
+      strictness: external_exports.enum(["rigid", "flexible"]),
+      sequence_required: external_exports.boolean(),
+      allow_step_reordering: external_exports.boolean(),
+      allow_partial_application: external_exports.boolean(),
+      guidance: external_exports.string().optional()
+    });
+    SkillReferenceInferenceSchema = external_exports.object({
+      name: external_exports.string(),
+      provides: external_exports.array(CapabilitySchema2),
+      uses: external_exports.array(UsesSchema2),
+      execution_policy: ExecutionPolicySchema2,
+      tags: external_exports.array(external_exports.string())
+    });
+    SkillReferenceInferenceDocumentSchema = external_exports.object({
+      schema_version: external_exports.string(),
+      generated_at: external_exports.string().optional(),
+      inference_source: external_exports.literal("agent"),
+      skills: external_exports.array(SkillReferenceInferenceSchema)
+    });
+  }
+});
+
+// src/skills/skill-discovery-protocol/scripts/lib/inference.ts
+var require_inference = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/inference.ts"(exports2, module2) {
+    "use strict";
+    init_scan();
+    init_inference();
+    var fs2 = require("node:fs");
+    var path2 = require("node:path");
+    function defaultScanListPath(cwd) {
+      return path2.join(cwd, ".sdp", "skill-scan-list.json");
+    }
+    function defaultInferencePath(cwd) {
+      return path2.join(cwd, ".sdp", "skill-reference-inferences.json");
+    }
+    function loadInferenceDocument(filePath) {
+      if (!fs2.existsSync(filePath)) return null;
+      const data = JSON.parse(fs2.readFileSync(filePath, "utf8"));
+      const parsed = SkillReferenceInferenceDocumentSchema.safeParse(data);
+      if (!parsed.success) {
+        const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+        throw new Error(`Invalid skill reference inference document: ${details}`);
+      }
+      return parsed.data;
+    }
+    function buildScanList(rawSkills) {
+      return {
+        schema_version: "1.0",
+        generated_at: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z"),
+        skills: rawSkills
+      };
+    }
+    function writeScanList(cwd, rawSkills) {
+      const outputPath = defaultScanListPath(cwd);
+      const dir = path2.dirname(outputPath);
+      if (!fs2.existsSync(dir)) fs2.mkdirSync(dir, { recursive: true });
+      fs2.writeFileSync(outputPath, JSON.stringify(buildScanList(rawSkills), null, 2) + "\n", "utf8");
+      return outputPath;
+    }
+    function loadScanList(filePath) {
+      const data = JSON.parse(fs2.readFileSync(filePath, "utf8"));
+      const parsed = SkillScanListDocumentSchema.safeParse(data);
+      if (!parsed.success) {
+        const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+        throw new Error(`Invalid skill scan list document: ${details}`);
+      }
+      return parsed.data;
+    }
+    function enrichSkills(rawSkills, inferenceDoc) {
+      const byName = /* @__PURE__ */ new Map();
+      for (const inference of inferenceDoc.skills) {
+        byName.set(inference.name, inference);
+      }
+      const missing = rawSkills.filter((skill) => !byName.has(skill.name)).map((skill) => skill.name).sort();
+      if (missing.length > 0) {
+        throw new Error(`Missing inferred skill references for: ${missing.join(", ")}`);
+      }
+      const rawNames = new Set(rawSkills.map((skill) => skill.name));
+      const stale = inferenceDoc.skills.filter((skill) => !rawNames.has(skill.name)).map((skill) => skill.name).sort();
+      if (stale.length > 0) {
+        throw new Error(`Inference document contains skills that were not scanned: ${stale.join(", ")}`);
+      }
+      return rawSkills.map((raw) => {
+        const inferred = byName.get(raw.name);
+        return {
+          name: raw.name,
+          description: raw.description,
+          provides: inferred.provides,
+          uses: inferred.uses,
+          execution_policy: inferred.execution_policy,
+          tags: inferred.tags
+        };
+      });
+    }
+    module2.exports = {
+      defaultScanListPath,
+      defaultInferencePath,
+      loadInferenceDocument,
+      buildScanList,
+      writeScanList,
+      loadScanList,
+      enrichSkills
+    };
+  }
+});
+
 // src/skills/skill-discovery-protocol/scripts/lib/gates/deterministic_gate.ts
 var require_deterministic_gate = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/gates/deterministic_gate.ts"(exports2, module2) {
@@ -22342,7 +22462,7 @@ var require_deterministic_gate = __commonJS({
     function stripTimestampsForCompare(content) {
       return content.replace(/"generated_at"\s*:\s*"[^"]*"/g, '"generated_at": ""').replace(/"validated_at"\s*:\s*"[^"]*"/g, '"validated_at": ""');
     }
-    function runDeterministicGate2(profilePath, catalogPath, adapterPath, cwd, compare) {
+    function runDeterministicGate2(profilePath, catalogPath, adapterPath, cwd, compare, referencesPath) {
       if (!adapterPath) {
         return {
           result: "skipped",
@@ -22385,8 +22505,23 @@ var require_deterministic_gate = __commonJS({
         const { resolveInvocations } = require_resolver();
         const { buildProfile } = require_profile();
         const { stabilizeCatalog, stabilizeProfile, renderJson: renderJson2 } = require_renderer();
+        const {
+          defaultInferencePath,
+          writeScanList,
+          loadScanList,
+          loadInferenceDocument,
+          enrichSkills
+        } = require_inference();
         const adapter = loadAdapter2(adapterPath);
-        const skills = scanSkills2(cwd, adapter);
+        const rawSkills = scanSkills2(cwd, adapter);
+        const scanListPath = writeScanList(cwd, rawSkills);
+        const scanList = loadScanList(scanListPath);
+        const inferencePath = referencesPath || defaultInferencePath(cwd);
+        const inferenceDoc = loadInferenceDocument(inferencePath);
+        if (!inferenceDoc) {
+          throw new Error(`Missing skill reference inference document: ${inferencePath}`);
+        }
+        const skills = enrichSkills(scanList.skills, inferenceDoc);
         const catalog = stabilizeCatalog(buildCatalog(skills));
         const { categories, unmatched_skills } = classifySkills(skills, adapter);
         const resolvedInvocations = resolveInvocations(skills, adapter);
@@ -22753,10 +22888,11 @@ async function main() {
       console.error(`Warning: Could not load adapter: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
-  let currentSkills = [];
+  let currentRawSkills = [];
   if (adapter) {
-    currentSkills = scanSkills(cwd, adapter);
+    currentRawSkills = scanSkills(cwd, adapter);
   }
+  const currentCatalogSkills = catalog?.skills ?? [];
   const schemaResult = runSchemaGate(
     profileData,
     catalogData,
@@ -22765,7 +22901,7 @@ async function main() {
   let stalenessResult;
   if (catalog && adapter) {
     const maxAgeDays = adapter.validation?.staleness?.max_age_days ?? 30;
-    stalenessResult = runStalenessGate(catalog, currentSkills, maxAgeDays);
+    stalenessResult = runStalenessGate(catalog, currentRawSkills, maxAgeDays);
   } else {
     stalenessResult = {
       result: "skipped",
@@ -22787,7 +22923,7 @@ async function main() {
   let blockingResult;
   const invocationEnabled = adapter?.validation?.invocation?.enabled ?? true;
   if (adapter && catalog && invocationEnabled) {
-    blockingResult = runBlockingGate(profile, catalog, adapter, currentSkills);
+    blockingResult = runBlockingGate(profile, catalog, adapter, currentCatalogSkills);
   } else {
     blockingResult = { result: "skipped", checks: [] };
   }
