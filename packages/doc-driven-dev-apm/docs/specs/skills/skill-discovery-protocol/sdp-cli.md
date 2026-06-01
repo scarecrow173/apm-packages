@@ -8,7 +8,7 @@
 
 ```text
 sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
-sdp infer run [--mode <name>] [--scan <json>] [--out <json>] [--cwd <dir>]
+sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>]
 sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
 sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp infer check --in <json> [--cwd <dir>]
@@ -72,7 +72,7 @@ inference 成果物が存在しない場合、`sdp generate` は scan list を�
 scan 成果物から inference 成果物を生成する。
 
 ```text
-sdp infer run [--mode <name>] [--scan <json>] [--out <json>] [--cwd <dir>]
+sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>]
 sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
 sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp infer check --in <json> [--cwd <dir>]
@@ -82,7 +82,7 @@ sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [
 
 ### 動作
 
-1. `run` は `--scan` と `--mode` を使って推論ドキュメントを生成する（既定モードは `agent`）
+1. `run` は `--scan` から推論ドキュメントを生成する（推論方式は `agent` 固定）
 2. `init` は scan 成果物から編集用のベース inference ドキュメントを生成する
 3. `apply` は JSONL operations を既存 inference ドキュメントへ原子的に適用する
 4. `check` は既存 inference ドキュメントを schema 検証する
@@ -91,8 +91,6 @@ sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [
 
 ### 入力
 
-- `--mode <name>`: 任意。inference mode 名。
-	未指定時の既定値は `agent`。
 - `--scan <json>`: 任意。scan 成果物のパス。
 	未指定時の既定値は `.sdp/skill-scan-list.json`。
 - `--in <json>`: 任意。編集・検証対象の inference 成果物パス。

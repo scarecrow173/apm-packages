@@ -68,15 +68,8 @@ test("sdp infer generates skill-reference-inferences.json from scan list", () =>
   assert.equal(doc.skills[0].name, "skill-a");
   assert.ok(Array.isArray(doc.skills[0].provides), "provides should be an array");
   assert.ok(Array.isArray(doc.skills[0].uses), "uses should be an array");
-  assert.deepEqual(
-    doc.skills[0].provides.map((entry: { capability: string }) => entry.capability),
-    ["adr_authoring"],
-    "ADR-oriented skills should infer adr_authoring",
-  );
-  assert.ok(
-    doc.skills[0].tags.includes("adr"),
-    "ADR-oriented skills should receive adr tag",
-  );
+  assert.deepEqual(doc.skills[0].provides, [], "agent mode baseline should not infer provides automatically");
+  assert.deepEqual(doc.skills[0].tags, [], "agent mode baseline should not infer tags automatically");
   assert.equal(
     typeof doc.skills[0].execution_policy,
     "object",
@@ -153,7 +146,7 @@ test("sdp infer exits 2 when scan list is missing", () => {
   assert.ok(result.stderr.includes("Scan list not found"));
 });
 
-test("sdp infer defaults to mode=agent", () => {
+test("sdp infer uses agent inference source", () => {
   const dir = tempDir();
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
   fs.writeFileSync(
@@ -186,28 +179,6 @@ test("sdp infer defaults to mode=agent", () => {
   assert.equal(doc.inference_source, "agent");
 });
 
-test("sdp infer rejects unknown inference mode", () => {
-  const dir = tempDir();
-  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, ".sdp", "skill-scan-list.json"),
-    JSON.stringify(
-      {
-        schema_version: "1.0",
-        generated_at: "2026-06-01T00:00:00Z",
-        skills: [],
-      },
-      null,
-      2,
-    ),
-    "utf8",
-  );
-
-  const result = runInfer(["--mode", "unknown"], dir);
-  assert.equal(result.status, 2, `stderr: ${result.stderr}`);
-  assert.ok(result.stderr.includes("Unknown inference mode"));
-});
-
 test("sdp.js infer --help returns 0 and usage mentions sdp infer", () => {
   const dir = tempDir();
   const result = runSdpInfer(["--help"], dir);
@@ -229,14 +200,7 @@ test("sdp infer exits 2 when --scan value is missing", () => {
   assert.ok(result.stderr.includes("Option --scan requires a value"));
 });
 
-test("sdp infer exits 2 when --mode value is missing", () => {
-  const dir = tempDir();
-  const result = runInfer(["--mode"], dir);
-  assert.equal(result.status, 2, `stderr: ${result.stderr}`);
-  assert.ok(result.stderr.includes("Option --mode requires a value"));
-});
-
-test("sdp infer derives multiple meaningful capabilities from description and body text", () => {
+test("sdp infer agent mode creates editable baseline without rule-based inference", () => {
   const dir = tempDir();
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
   fs.writeFileSync(
@@ -268,10 +232,9 @@ test("sdp infer derives multiple meaningful capabilities from description and bo
     fs.readFileSync(path.join(dir, ".sdp", "skill-reference-inferences.json"), "utf8"),
   );
 
-  assert.deepEqual(
-    doc.skills[0].provides.map((entry: { capability: string }) => entry.capability),
-    ["spec_authoring", "code_review", "test_planning"],
-    "keywords should infer stable, meaningful capabilities",
-  );
-  assert.deepEqual(doc.skills[0].tags, ["spec", "review", "test"]);
+  assert.deepEqual(doc.skills[0].provides, []);
+  assert.deepEqual(doc.skills[0].uses, []);
+  assert.deepEqual(doc.skills[0].tags, []);
+  assert.equal(doc.skills[0].execution_policy.strictness, "flexible");
+  assert.equal(doc.skills[0].execution_policy.sequence_required, false);
 });

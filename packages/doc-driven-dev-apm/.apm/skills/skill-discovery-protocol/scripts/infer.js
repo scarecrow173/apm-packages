@@ -15183,7 +15183,7 @@ var require_inference = __commonJS({
     function defaultInferencePath2(cwd) {
       return path2.join(cwd, ".sdp", "skill-reference-inferences.json");
     }
-    function loadInferenceDocument2(filePath) {
+    function loadInferenceDocument(filePath) {
       if (!fs2.existsSync(filePath)) return null;
       const data = JSON.parse(fs2.readFileSync(filePath, "utf8"));
       const parsed = SkillReferenceInferenceDocumentSchema.safeParse(data);
@@ -15194,7 +15194,7 @@ var require_inference = __commonJS({
       return parsed.data;
     }
     function readInferenceOrThrow2(filePath) {
-      const loaded = loadInferenceDocument2(filePath);
+      const loaded = loadInferenceDocument(filePath);
       if (!loaded) {
         throw new Error(`Inference file not found: ${filePath}`);
       }
@@ -15257,7 +15257,7 @@ var require_inference = __commonJS({
     module2.exports = {
       defaultScanListPath: defaultScanListPath2,
       defaultInferencePath: defaultInferencePath2,
-      loadInferenceDocument: loadInferenceDocument2,
+      loadInferenceDocument,
       readInferenceOrThrow: readInferenceOrThrow2,
       writeInferenceDocument: writeInferenceDocument2,
       buildScanList,
@@ -15268,71 +15268,10 @@ var require_inference = __commonJS({
   }
 });
 
-// src/skills/skill-discovery-protocol/scripts/lib/infer_provider_agent.ts
-var require_infer_provider_agent = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/infer_provider_agent.ts"(exports2, module2) {
+// src/skills/skill-discovery-protocol/scripts/lib/infer_baseline.ts
+var require_infer_baseline = __commonJS({
+  "src/skills/skill-discovery-protocol/scripts/lib/infer_baseline.ts"(exports2, module2) {
     "use strict";
-    var CAPABILITY_RULES = [
-      {
-        capability: "adr_authoring",
-        description: "Author architecture decision records and related decision documentation.",
-        tag: "adr",
-        patterns: [
-          /\badr\b/i,
-          /architecture decision/i,
-          /decision record/i
-        ]
-      },
-      {
-        capability: "spec_authoring",
-        description: "Draft or refine specifications and structured requirements.",
-        tag: "spec",
-        patterns: [
-          /\bspecs?\b/i,
-          /specification/i,
-          /requirements?/i
-        ]
-      },
-      {
-        capability: "code_review",
-        description: "Review implementations, designs, or outcomes for quality and correctness.",
-        tag: "review",
-        patterns: [
-          /\breview\b/i,
-          /reviewer/i,
-          /quality gate/i
-        ]
-      },
-      {
-        capability: "test_planning",
-        description: "Define test coverage, validation strategy, or verification steps.",
-        tag: "test",
-        patterns: [
-          /\btests?\b/i,
-          /testing/i,
-          /test strategy/i,
-          /verification/i,
-          /validation/i
-        ]
-      }
-    ];
-    function normalizedSkillText(skill) {
-      return [skill.name, skill.description, skill.body].filter(Boolean).join("\n").toLowerCase();
-    }
-    function inferProvides(text) {
-      const inferred = CAPABILITY_RULES.filter((rule) => rule.patterns.some((pattern) => pattern.test(text))).map((rule) => ({ capability: rule.capability, description: rule.description }));
-      if (inferred.length > 0) return inferred;
-      return [
-        {
-          capability: "general_guidance",
-          description: "General guidance inferred from skill metadata and body text."
-        }
-      ];
-    }
-    function inferTags(text) {
-      const tags = CAPABILITY_RULES.filter((rule) => rule.patterns.some((pattern) => pattern.test(text))).map((rule) => rule.tag);
-      return tags.length > 0 ? tags : ["inferred"];
-    }
     function defaultExecutionPolicy() {
       return {
         strictness: "flexible",
@@ -15341,18 +15280,14 @@ var require_infer_provider_agent = __commonJS({
         allow_partial_application: true
       };
     }
-    function inferSkill(skill) {
-      const text = normalizedSkillText(skill);
-      return {
+    function buildInferenceBaselineDocument2(skills) {
+      const inferredSkills = [...skills].sort((a, b) => a.name.localeCompare(b.name)).map((skill) => ({
         name: skill.name,
-        provides: inferProvides(text),
+        provides: [],
         uses: [],
         execution_policy: defaultExecutionPolicy(),
-        tags: inferTags(text)
-      };
-    }
-    function buildAgentInferenceDocument(skills) {
-      const inferredSkills = [...skills].sort((a, b) => a.name.localeCompare(b.name)).map(inferSkill);
+        tags: []
+      }));
       return {
         schema_version: "1.0",
         generated_at: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z"),
@@ -15361,28 +15296,7 @@ var require_infer_provider_agent = __commonJS({
       };
     }
     module2.exports = {
-      buildAgentInferenceDocument
-    };
-  }
-});
-
-// src/skills/skill-discovery-protocol/scripts/lib/infer_provider.ts
-var require_infer_provider = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/infer_provider.ts"(exports2, module2) {
-    "use strict";
-    var { buildAgentInferenceDocument } = require_infer_provider_agent();
-    var PROVIDERS = {
-      agent: buildAgentInferenceDocument
-    };
-    function inferWithProvider2(provider, skills) {
-      const fn = PROVIDERS[provider];
-      if (!fn) {
-        throw new Error(`Unknown provider: ${provider}`);
-      }
-      return fn(skills);
-    }
-    module2.exports = {
-      inferWithProvider: inferWithProvider2
+      buildInferenceBaselineDocument: buildInferenceBaselineDocument2
     };
   }
 });
@@ -15581,11 +15495,10 @@ var {
   defaultScanListPath,
   defaultInferencePath,
   loadScanList,
-  loadInferenceDocument,
   readInferenceOrThrow,
   writeInferenceDocument
 } = require_inference();
-var { inferWithProvider } = require_infer_provider();
+var { buildInferenceBaselineDocument } = require_infer_baseline();
 var { SkillReferenceInferenceDocumentSchema: SkillReferenceInferenceDocumentSchema2 } = (init_inference(), __toCommonJS(inference_exports));
 var {
   buildInitDocument,
@@ -15611,7 +15524,7 @@ function parseArgs(argv) {
   const tokens = parsedCommand.rest;
   for (let i = 0; i < tokens.length; i++) {
     const arg = tokens[i];
-    if (arg === "--scan" || arg === "--out" || arg === "--in" || arg === "--cwd" || arg === "--mode" || arg === "--ops" || arg === "--name" || arg === "--spec" || arg === "--if-exists") {
+    if (arg === "--scan" || arg === "--out" || arg === "--in" || arg === "--cwd" || arg === "--ops" || arg === "--name" || arg === "--spec" || arg === "--if-exists") {
       const next = tokens[i + 1];
       if (!next || next.startsWith("-")) {
         throw new Error(`Option ${arg} requires a value`);
@@ -15620,7 +15533,6 @@ function parseArgs(argv) {
       else if (arg === "--out") args.out = next;
       else if (arg === "--in") args.in = next;
       else if (arg === "--cwd") args.cwd = next;
-      else if (arg === "--mode") args.mode = next;
       else if (arg === "--ops") args.ops = next;
       else if (arg === "--name") args.name = next;
       else if (arg === "--spec") args.spec = next;
@@ -15639,7 +15551,7 @@ function parseArgs(argv) {
 }
 function usage() {
   return `Usage:
-  sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>] [--mode <name>]
+  sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>]
   sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
   sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
   sdp infer check --in <json> [--cwd <dir>]
@@ -15651,7 +15563,6 @@ Options:
   --in    Path to existing skill-reference-inferences.json (default: .sdp/skill-reference-inferences.json)
   --out   Path to skill-reference-inferences.json (default: .sdp/skill-reference-inferences.json)
   --cwd   Working directory (default: process.cwd())
-  --mode  Inference mode for run command (default: agent)
   --ops   Path to JSONL operation file for apply command
   --name  Skill name for set-skill/delete-skill commands
   --spec  Path to JSON file used by set-skill command
@@ -15676,7 +15587,6 @@ function main() {
   const scanPath = args.scan ? path.resolve(cwd, args.scan) : defaultScanListPath(cwd);
   const outPath = args.out ? path.resolve(cwd, args.out) : defaultInferencePath(cwd);
   const inPath = args.in ? path.resolve(cwd, args.in) : defaultInferencePath(cwd);
-  const mode = args.mode ?? "agent";
   if (args.command === "check") {
     try {
       readInferenceOrThrow(inPath);
@@ -15842,15 +15752,7 @@ function main() {
     process.exitCode = 2;
     return;
   }
-  let doc;
-  try {
-    doc = inferWithProvider(mode, scanList.skills);
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error(message.replace("Unknown provider", "Unknown inference mode"));
-    process.exitCode = 2;
-    return;
-  }
+  const doc = buildInferenceBaselineDocument(scanList.skills);
   const parsed = SkillReferenceInferenceDocumentSchema2.safeParse(doc);
   if (!parsed.success) {
     const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");

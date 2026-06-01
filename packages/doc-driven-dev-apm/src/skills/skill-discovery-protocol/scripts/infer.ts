@@ -8,11 +8,10 @@ const {
   defaultScanListPath,
   defaultInferencePath,
   loadScanList,
-  loadInferenceDocument,
   readInferenceOrThrow,
   writeInferenceDocument,
 } = require("./lib/inference.ts");
-const { inferWithProvider } = require("./lib/infer_provider.ts");
+const { buildInferenceBaselineDocument } = require("./lib/infer_baseline.ts");
 const { SkillReferenceInferenceDocumentSchema } = require("./lib/schemas/inference.ts");
 const {
   buildInitDocument,
@@ -44,7 +43,6 @@ function parseArgs(argv: string[]): {
   out?: string;
   in?: string;
   cwd?: string;
-  mode?: string;
   ops?: string;
   name?: string;
   spec?: string;
@@ -59,7 +57,6 @@ function parseArgs(argv: string[]): {
     out?: string;
     in?: string;
     cwd?: string;
-    mode?: string;
     ops?: string;
     name?: string;
     spec?: string;
@@ -76,7 +73,6 @@ function parseArgs(argv: string[]): {
       || arg === "--out"
       || arg === "--in"
       || arg === "--cwd"
-      || arg === "--mode"
       || arg === "--ops"
       || arg === "--name"
       || arg === "--spec"
@@ -91,7 +87,6 @@ function parseArgs(argv: string[]): {
       else if (arg === "--out") args.out = next;
       else if (arg === "--in") args.in = next;
       else if (arg === "--cwd") args.cwd = next;
-      else if (arg === "--mode") args.mode = next;
       else if (arg === "--ops") args.ops = next;
       else if (arg === "--name") args.name = next;
       else if (arg === "--spec") args.spec = next;
@@ -113,7 +108,7 @@ function parseArgs(argv: string[]): {
 
 function usage(): string {
   return `Usage:
-  sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>] [--mode <name>]
+  sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>]
   sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
   sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
   sdp infer check --in <json> [--cwd <dir>]
@@ -125,7 +120,6 @@ Options:
   --in    Path to existing skill-reference-inferences.json (default: .sdp/skill-reference-inferences.json)
   --out   Path to skill-reference-inferences.json (default: .sdp/skill-reference-inferences.json)
   --cwd   Working directory (default: process.cwd())
-  --mode  Inference mode for run command (default: agent)
   --ops   Path to JSONL operation file for apply command
   --name  Skill name for set-skill/delete-skill commands
   --spec  Path to JSON file used by set-skill command
@@ -153,7 +147,6 @@ function main(): void {
   const scanPath = args.scan ? path.resolve(cwd, args.scan) : defaultScanListPath(cwd);
   const outPath = args.out ? path.resolve(cwd, args.out) : defaultInferencePath(cwd);
   const inPath = args.in ? path.resolve(cwd, args.in) : defaultInferencePath(cwd);
-  const mode = args.mode ?? "agent";
 
   if (args.command === "check") {
     try {
@@ -349,15 +342,7 @@ function main(): void {
     return;
   }
 
-  let doc;
-  try {
-    doc = inferWithProvider(mode, scanList.skills);
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error(message.replace("Unknown provider", "Unknown inference mode"));
-    process.exitCode = 2;
-    return;
-  }
+  const doc = buildInferenceBaselineDocument(scanList.skills);
 
   const parsed = SkillReferenceInferenceDocumentSchema.safeParse(doc);
   if (!parsed.success) {
