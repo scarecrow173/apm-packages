@@ -57,6 +57,75 @@ test("sdp infer generates skill-reference-inferences.json from scan list", () =>
   assert.equal(doc.inference_source, "agent");
   assert.equal(doc.skills.length, 1);
   assert.equal(doc.skills[0].name, "skill-a");
+  assert.ok(Array.isArray(doc.skills[0].provides), "provides should be an array");
+  assert.ok(Array.isArray(doc.skills[0].uses), "uses should be an array");
+  assert.equal(
+    typeof doc.skills[0].execution_policy,
+    "object",
+    "execution_policy should be an object",
+  );
+  assert.ok(doc.skills[0].execution_policy, "execution_policy should be present");
+});
+
+test("sdp infer overwrites existing inference file with regenerated schema-shaped document", () => {
+  const dir = tempDir();
+  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-scan-list.json"),
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-06-01T00:00:00Z",
+        skills: [
+          {
+            name: "skill-a",
+            description: "ADR authoring skill",
+            body: "# Skill A\nUse when writing ADR and architecture records.",
+            skill_path: "/tmp/skill-a/SKILL.md",
+            scope: "project",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-reference-inferences.json"),
+    JSON.stringify(
+      {
+        schema_version: "0.0",
+        dummy: true,
+        skills: [{ name: "dummy-skill" }],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const result = runInfer([], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const inferPath = path.join(dir, ".sdp", "skill-reference-inferences.json");
+  const doc = JSON.parse(fs.readFileSync(inferPath, "utf8"));
+
+  assert.equal(doc.schema_version, "1.0");
+  assert.equal(doc.inference_source, "agent");
+  assert.ok(Array.isArray(doc.skills), "skills should be an array");
+  assert.equal(doc.skills.length, 1);
+  assert.equal(doc.skills[0].name, "skill-a");
+  assert.ok(Array.isArray(doc.skills[0].provides), "provides should be an array");
+  assert.ok(Array.isArray(doc.skills[0].uses), "uses should be an array");
+  assert.equal(
+    typeof doc.skills[0].execution_policy,
+    "object",
+    "execution_policy should be an object",
+  );
+  assert.ok(doc.skills[0].execution_policy, "execution_policy should be present");
+  assert.equal((doc as { dummy?: boolean }).dummy, undefined);
 });
 
 test("sdp infer exits 2 when scan list is missing", () => {

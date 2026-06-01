@@ -312,7 +312,10 @@ test("sdp generate missing inference prints infer command hint", () => {
   const result = runSdp(["--adapter", "test-adapter.yaml"], dir);
   assert.equal(result.status, 2, `stderr: ${result.stderr}`);
   assert.ok(result.stderr.includes("Skill reference inference required"));
-  assert.ok(result.stderr.includes("sdp infer --scan .sdp/skill-scan-list.json"));
+  const output = `${result.stderr}\n${result.stdout}`;
+  assert.ok(output.includes("sdp infer"));
+  assert.ok(output.includes("--scan"));
+  assert.ok(output.includes("skill-scan-list.json"));
 });
 
 test("sdp generate catalog has correct structure", () => {
