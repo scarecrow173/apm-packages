@@ -9,7 +9,7 @@ owners: []
 relations:
   source:
     - ".apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml"
-    - ".apm/skills/skill-discovery-protocol/scripts/generate.js"
+    - ".apm/skills/skill-discovery-protocol/scripts/profile.js"
     - ".apm/skills/skill-discovery-protocol/scripts/validate.js"
   references:
     - ".sdp/skill-reference-catalog.json"
@@ -18,7 +18,7 @@ relations:
 ---
 
 # 実行コマンド
-- pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/generate.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml（exit 0）
+- pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/profile.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml（exit 0）
 - pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/validate.js --profile .sdp/implementation-flow-default/implementation-flow-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml（exit 0）
 
 # 生成物パス

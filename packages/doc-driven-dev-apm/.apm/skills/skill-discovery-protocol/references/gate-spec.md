@@ -210,7 +210,7 @@ validation:
 ### Procedure
 
 1. Stash current artifact files
-2. Re-run `sdp generate` with the same adapter
+2. Re-run `sdp profile` with the same adapter
 3. Compare each target pair byte-for-byte
 4. Restore original artifacts
 5. If any comparison finds a diff → fail

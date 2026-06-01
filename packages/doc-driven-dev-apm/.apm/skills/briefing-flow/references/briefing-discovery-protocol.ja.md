@@ -6,7 +6,7 @@
 
 | アクション | コマンド |
 |-----------|---------|
-| プロファイル生成 | `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` |
+| プロファイル生成 | `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` |
 | プロファイル検証 | `sdp validate --profile briefing-profile.json` |
 | カテゴリ一覧 | `sdp query --profile briefing-profile.json categories` |
 | スキルスタック確認 | `sdp query --profile briefing-profile.json flow-stack` |

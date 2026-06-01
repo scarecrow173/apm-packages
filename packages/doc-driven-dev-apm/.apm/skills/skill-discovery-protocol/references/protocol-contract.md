@@ -150,4 +150,4 @@ results. `overall_result` is `"pass"` only when all required gates pass.
 ## 7. Derived Outputs
 
 Markdown sidecars are derived outputs and MUST NOT be treated as canonical
-sources. They may be regenerated on every `sdp generate` run.
+sources. They may be regenerated on every `sdp profile` run.

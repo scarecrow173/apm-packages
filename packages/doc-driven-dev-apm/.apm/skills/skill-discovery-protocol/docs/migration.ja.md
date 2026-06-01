@@ -17,13 +17,13 @@ Skill Discovery Protocol (SDP) は、各フロースキルに埋め込まれて�
 
 ### プロファイル形式
 
-- `implementation-profile.md` → `implementation-profile.json` (`sdp generate` 経由)
-- `briefing-profile.md` → `briefing-profile.json` (`sdp generate` 経由)
+- `implementation-profile.md` → `implementation-profile.json` (`sdp scan` / `sdp infer` / `sdp profile` 経由)
+- `briefing-profile.md` → `briefing-profile.json` (`sdp scan` / `sdp infer` / `sdp profile` 経由)
 
 ### ディスカバリー手順
 
 - 各フロー内のインライン 7 ステッププロトコル → `sdp` CLI コマンド
-- 手動プロファイル編集 → `sdp generate` によるスクリプト専用操作
+- 手動プロファイル編集 → `sdp scan` / `sdp infer` / `sdp profile` によるスクリプト専用操作
 
 ### 分類
 
@@ -63,7 +63,9 @@ Skill Discovery Protocol (SDP) は、各フロースキルに埋め込まれて�
 ### ステップ 5: 成果物を生成
 
 ```bash
-sdp generate --adapter <adapter-yaml>
+sdp scan --adapter <adapter-yaml>
+sdp infer init --scan .sdp/skill-scan-list.json
+sdp profile --adapter <adapter-yaml>
 ```
 
 プロファイル、カタログ、バリデーションレポートが生成されます。
@@ -92,7 +94,9 @@ sdp validate --adapter <adapter-yaml>
 
 | コマンド | 目的 |
 | -------- | ---- |
-| `sdp generate --adapter <yaml>` | プロファイル、カタログ、レポートの生成/更新 |
+| `sdp scan --adapter <yaml>` | スキャンリストの生成 |
+| `sdp infer init --scan <json>` | 推論データの作成/更新 |
+| `sdp profile --adapter <yaml>` | プロファイル、カタログ、レポートの生成/更新 |
 | `sdp validate --profile <json>` | 成果物のバリデーション (4 ゲート) |
 | `sdp validate --adapter <yaml>` | アダプター YAML 構造のバリデーション |
 | `sdp query --profile <json> <subcommand>` | プロファイルからの情報抽出 |

@@ -6639,333 +6639,6 @@ var require_scanner = __commonJS({
   }
 });
 
-// src/skills/skill-discovery-protocol/scripts/lib/catalog.ts
-var require_catalog = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/catalog.ts"(exports2, module2) {
-    "use strict";
-    function buildCatalog2(skills) {
-      const capabilitySet = /* @__PURE__ */ new Set();
-      for (const skill of skills) {
-        for (const p of skill.provides) capabilitySet.add(p.capability);
-        for (const u of skill.uses) capabilitySet.add(u.capability);
-      }
-      const sortedSkills = skills.map((s) => ({
-        ...s,
-        provides: [...s.provides].sort((a, b) => a.capability.localeCompare(b.capability)),
-        uses: [...s.uses].sort((a, b) => a.capability.localeCompare(b.capability))
-      })).sort((a, b) => a.name.localeCompare(b.name));
-      const now = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
-      return {
-        schema_version: "1.0",
-        generated_at: now,
-        validated_at: now,
-        skill_count: sortedSkills.length,
-        capability_count: capabilitySet.size,
-        skills: sortedSkills
-      };
-    }
-    module2.exports = { buildCatalog: buildCatalog2 };
-  }
-});
-
-// src/skills/skill-discovery-protocol/scripts/lib/classifier.ts
-var require_classifier = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/classifier.ts"(exports2, module2) {
-    "use strict";
-    function classifySkills2(skills, adapter) {
-      const taxonomy = adapter.classification.taxonomy;
-      const unmatched = adapter.classification.unmatched;
-      const categoryMap = /* @__PURE__ */ new Map();
-      for (const entry of taxonomy) {
-        categoryMap.set(entry.id, /* @__PURE__ */ new Set());
-      }
-      const matchedSkills = /* @__PURE__ */ new Set();
-      for (const skill of skills) {
-        let matched = false;
-        for (const entry of taxonomy) {
-          if (matchesCategory(skill, entry.match)) {
-            categoryMap.get(entry.id).add(skill.name);
-            matchedSkills.add(skill.name);
-            matched = true;
-          }
-        }
-        if (!matched && unmatched.action === "assign" && unmatched.category) {
-          const cat = categoryMap.get(unmatched.category);
-          if (cat) {
-            cat.add(skill.name);
-            matchedSkills.add(skill.name);
-          }
-        }
-      }
-      const categories = taxonomy.map((entry) => ({
-        id: entry.id,
-        label: entry.label,
-        skills: [...categoryMap.get(entry.id) || []].sort()
-      })).filter((c) => c.skills.length > 0);
-      categories.sort((a, b) => a.id.localeCompare(b.id));
-      const unmatchedSkillNames = skills.filter((s) => !matchedSkills.has(s.name)).map((s) => s.name).sort();
-      return { categories, unmatched_skills: unmatchedSkillNames };
-    }
-    function matchesCategory(skill, match) {
-      if (match.capabilities.length > 0) {
-        const skillCaps = new Set(skill.provides.map((p) => p.capability));
-        if (match.capabilities.some((c) => skillCaps.has(c))) return true;
-      }
-      if (match.tags.length > 0) {
-        const skillTags = new Set(skill.tags);
-        if (match.tags.some((t) => skillTags.has(t))) return true;
-      }
-      if (match.description_patterns.length > 0) {
-        for (const pattern of match.description_patterns) {
-          try {
-            if (pattern.length > 200) continue;
-            if (/([+*])\)\1|\(\?[^)]*[+*]/.test(pattern)) continue;
-            if (new RegExp(pattern, "i").test(skill.description)) return true;
-          } catch {
-          }
-        }
-      }
-      return false;
-    }
-    module2.exports = { classifySkills: classifySkills2 };
-  }
-});
-
-// src/skills/skill-discovery-protocol/scripts/lib/resolver.ts
-var require_resolver = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/resolver.ts"(exports2, module2) {
-    "use strict";
-    function resolveInvocations2(skills, adapter) {
-      const resolutionOrder = adapter.invocation_resolution.resolution_order;
-      const slotOverrides = adapter.invocation_resolution.overrides?.slots || {};
-      const capOverrides = adapter.invocation_resolution.overrides?.capabilities || {};
-      const providerIndex = /* @__PURE__ */ new Map();
-      for (const skill of skills) {
-        for (const p of skill.provides) {
-          if (!providerIndex.has(p.capability)) providerIndex.set(p.capability, []);
-          providerIndex.get(p.capability).push(skill.name);
-        }
-      }
-      const slotCapabilities = /* @__PURE__ */ new Map();
-      for (const slot of adapter.flow_stack.slots) {
-        slotCapabilities.set(slot.slot_id, slot.slot_id);
-      }
-      const invocations = [];
-      for (const skill of skills) {
-        for (const use of skill.uses) {
-          const resolution = resolveOne(
-            skill.name,
-            use.capability,
-            use.default_skill,
-            resolutionOrder,
-            slotOverrides,
-            capOverrides,
-            providerIndex,
-            slotCapabilities
-          );
-          if (resolution) {
-            invocations.push(resolution);
-          }
-        }
-      }
-      invocations.sort((a, b) => {
-        const cmp1 = a.source_skill.localeCompare(b.source_skill);
-        if (cmp1 !== 0) return cmp1;
-        const cmp2 = a.slot.localeCompare(b.slot);
-        if (cmp2 !== 0) return cmp2;
-        return a.capability.localeCompare(b.capability);
-      });
-      return invocations;
-    }
-    function resolveOne(sourceSkill, capability, defaultSkill, resolutionOrder, slotOverrides, capOverrides, providerIndex, slotCapabilities) {
-      const slot = slotCapabilities.has(capability) ? capability : capability;
-      for (const method of resolutionOrder) {
-        switch (method) {
-          case "slot_override": {
-            const override = slotOverrides[capability];
-            if (override) {
-              return {
-                source_skill: sourceSkill,
-                slot,
-                capability,
-                resolved_skill: override.use,
-                resolution_method: "slot_override",
-                reason: override.reason || `Slot override for ${capability}`,
-                fallback: override.fallback || null
-              };
-            }
-            break;
-          }
-          case "capability_override": {
-            const override = capOverrides[capability];
-            if (override) {
-              return {
-                source_skill: sourceSkill,
-                slot,
-                capability,
-                resolved_skill: override.prefer,
-                resolution_method: "capability_override",
-                reason: override.reason || `Capability override for ${capability}`,
-                fallback: override.fallback || null
-              };
-            }
-            break;
-          }
-          case "default_skill": {
-            if (defaultSkill) {
-              return {
-                source_skill: sourceSkill,
-                slot,
-                capability,
-                resolved_skill: defaultSkill,
-                resolution_method: "default_skill",
-                reason: `Default skill specified in uses declaration`,
-                fallback: null
-              };
-            }
-            break;
-          }
-          case "provider_lookup": {
-            const providers = providerIndex.get(capability);
-            if (providers && providers.length > 0) {
-              const sorted = [...providers].sort();
-              return {
-                source_skill: sourceSkill,
-                slot,
-                capability,
-                resolved_skill: sorted[0],
-                resolution_method: "provider_lookup",
-                reason: `Found provider via capability lookup`,
-                fallback: null
-              };
-            }
-            break;
-          }
-        }
-      }
-      return null;
-    }
-    module2.exports = { resolveInvocations: resolveInvocations2 };
-  }
-});
-
-// src/skills/skill-discovery-protocol/scripts/lib/profile.ts
-var require_profile = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/profile.ts"(exports2, module2) {
-    "use strict";
-    function buildProfile2(adapter, catalog, categories, unmatchedSkills, resolvedInvocations, skills) {
-      const flowSlots = adapter.flow_stack.slots.map((s) => ({
-        slot_id: s.slot_id,
-        slot_type: s.slot_type,
-        activation: s.activation,
-        ...s.default ? { default: { skill: s.default.skill, reason: s.default.reason } } : {}
-      }));
-      const runtimeGuidance = [];
-      const skillMap = new Map(skills.map((s) => [s.name, s]));
-      for (const inv of resolvedInvocations) {
-        const targetSkill = skillMap.get(inv.resolved_skill);
-        if (targetSkill?.execution_policy?.guidance) {
-          runtimeGuidance.push({
-            skill: inv.resolved_skill,
-            context: inv.capability,
-            guidance: targetSkill.execution_policy.guidance
-          });
-        }
-      }
-      const guidanceKey = (g) => `${g.skill}::${g.context}`;
-      const seenGuidance = /* @__PURE__ */ new Set();
-      const uniqueGuidance = [];
-      for (const g of runtimeGuidance) {
-        const key = guidanceKey(g);
-        if (!seenGuidance.has(key)) {
-          seenGuidance.add(key);
-          uniqueGuidance.push(g);
-        }
-      }
-      const now = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
-      return {
-        schema_version: "1.0",
-        flow_name: adapter.adapter_id,
-        generated_at: now,
-        validated_at: now,
-        adapter_id: adapter.adapter_id,
-        flow_stack: { slots: flowSlots },
-        classification: {
-          categories,
-          unmatched_skills: unmatchedSkills
-        },
-        resolved_invocations: resolvedInvocations,
-        runtime_guidance: uniqueGuidance,
-        warnings: []
-      };
-    }
-    module2.exports = { buildProfile: buildProfile2 };
-  }
-});
-
-// src/skills/skill-discovery-protocol/scripts/lib/renderer.ts
-var require_renderer = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/renderer.ts"(exports2, module2) {
-    "use strict";
-    var fs = require("node:fs");
-    var path2 = require("node:path");
-    function renderJson(data) {
-      const json2 = JSON.stringify(data, null, 2);
-      return json2.replace(/\r\n/g, "\n") + "\n";
-    }
-    function writeArtifact2(filePath, data) {
-      const absPath = path2.resolve(filePath);
-      const newContent = renderJson(data);
-      if (fs.existsSync(absPath)) {
-        const existing = fs.readFileSync(absPath, "utf8");
-        const existingNoTs = stripTimestamps(existing);
-        const newNoTs = stripTimestamps(newContent);
-        if (existingNoTs === newNoTs) {
-          return false;
-        }
-      }
-      const dir = path2.dirname(absPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(absPath, newContent, "utf8");
-      return true;
-    }
-    function stripTimestamps(content) {
-      return content.replace(/"generated_at"\s*:\s*"[^"]*"/g, '"generated_at": ""').replace(/"validated_at"\s*:\s*"[^"]*"/g, '"validated_at": ""');
-    }
-    function stabilizeCatalog2(catalog) {
-      const result = { ...catalog };
-      result.skills = [...result.skills].sort((a, b) => a.name.localeCompare(b.name));
-      for (const skill of result.skills) {
-        skill.provides = [...skill.provides].sort((a, b) => a.capability.localeCompare(b.capability));
-        skill.uses = [...skill.uses].sort((a, b) => a.capability.localeCompare(b.capability));
-      }
-      return result;
-    }
-    function stabilizeProfile2(profile) {
-      const result = { ...profile };
-      result.classification = {
-        ...result.classification,
-        categories: [...result.classification.categories].sort((a, b) => a.id.localeCompare(b.id)),
-        unmatched_skills: [...result.classification.unmatched_skills].sort()
-      };
-      for (const cat of result.classification.categories) {
-        cat.skills = [...cat.skills].sort();
-      }
-      result.resolved_invocations = [...result.resolved_invocations].sort((a, b) => {
-        const cmp1 = a.source_skill.localeCompare(b.source_skill);
-        if (cmp1 !== 0) return cmp1;
-        const cmp2 = a.slot.localeCompare(b.slot);
-        if (cmp2 !== 0) return cmp2;
-        return a.capability.localeCompare(b.capability);
-      });
-      return result;
-    }
-    module2.exports = { renderJson, writeArtifact: writeArtifact2, stripTimestamps, stabilizeCatalog: stabilizeCatalog2, stabilizeProfile: stabilizeProfile2 };
-  }
-});
-
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
 // @__NO_SIDE_EFFECTS__
 function $constructor(name, initializer3, params) {
@@ -22118,10 +21791,10 @@ var require_inference = __commonJS({
     function defaultScanListPath(cwd) {
       return path2.join(cwd, ".sdp", "skill-scan-list.json");
     }
-    function defaultInferencePath2(cwd) {
+    function defaultInferencePath(cwd) {
       return path2.join(cwd, ".sdp", "skill-reference-inferences.json");
     }
-    function loadInferenceDocument2(filePath) {
+    function loadInferenceDocument(filePath) {
       if (!fs.existsSync(filePath)) return null;
       const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
       const parsed = SkillReferenceInferenceDocumentSchema.safeParse(data);
@@ -22132,7 +21805,7 @@ var require_inference = __commonJS({
       return parsed.data;
     }
     function readInferenceOrThrow(filePath) {
-      const loaded = loadInferenceDocument2(filePath);
+      const loaded = loadInferenceDocument(filePath);
       if (!loaded) {
         throw new Error(`Inference file not found: ${filePath}`);
       }
@@ -22157,7 +21830,7 @@ var require_inference = __commonJS({
       fs.writeFileSync(outputPath, JSON.stringify(buildScanList(rawSkills), null, 2) + "\n", "utf8");
       return outputPath;
     }
-    function loadScanList2(filePath) {
+    function loadScanList(filePath) {
       const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
       const parsed = SkillScanListDocumentSchema.safeParse(data);
       if (!parsed.success) {
@@ -22166,7 +21839,7 @@ var require_inference = __commonJS({
       }
       return parsed.data;
     }
-    function enrichSkills2(rawSkills, inferenceDoc) {
+    function enrichSkills(rawSkills, inferenceDoc) {
       const byName = /* @__PURE__ */ new Map();
       for (const inference of inferenceDoc.skills) {
         byName.set(inference.name, inference);
@@ -22194,114 +21867,36 @@ var require_inference = __commonJS({
     }
     module2.exports = {
       defaultScanListPath,
-      defaultInferencePath: defaultInferencePath2,
-      loadInferenceDocument: loadInferenceDocument2,
+      defaultInferencePath,
+      loadInferenceDocument,
       readInferenceOrThrow,
       writeInferenceDocument,
       buildScanList,
       writeScanList: writeScanList2,
-      loadScanList: loadScanList2,
-      enrichSkills: enrichSkills2
+      loadScanList,
+      enrichSkills
     };
   }
 });
 
-// src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts
-var require_artifact_paths = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts"(exports2, module2) {
-    "use strict";
-    var path2 = require("node:path");
-    function sdpBase(cwd) {
-      return path2.resolve(cwd, ".sdp");
-    }
-    function ensureRelativeArtifactPath(relPath, scopeLabel) {
-      if (typeof relPath !== "string" || relPath.trim() === "") {
-        throw new Error(`Invalid ${scopeLabel}: relPath must be a non-empty string`);
-      }
-      if (path2.isAbsolute(relPath)) {
-        throw new Error(`Invalid ${scopeLabel}: absolute paths are not allowed (${relPath})`);
-      }
-    }
-    function assertPathWithinBase(resolvedPath, basePath, scopeLabel) {
-      const relative = path2.relative(basePath, resolvedPath);
-      if (relative.startsWith("..") || path2.isAbsolute(relative)) {
-        throw new Error(`Invalid ${scopeLabel}: path escapes base directory (${basePath})`);
-      }
-    }
-    function validateAdapterId(adapterId) {
-      if (typeof adapterId !== "string" || adapterId.trim() === "") {
-        throw new Error("Invalid adapterId: must be a non-empty string");
-      }
-      if (adapterId.includes("/") || adapterId.includes("\\") || adapterId.includes("..")) {
-        throw new Error("Invalid adapterId: must not contain path separators or '..'");
-      }
-    }
-    function adapterDir(cwd, adapterId) {
-      validateAdapterId(adapterId);
-      return path2.join(sdpBase(cwd), adapterId);
-    }
-    function resolveSharedCatalogPath2(cwd, relPath) {
-      ensureRelativeArtifactPath(relPath, "shared catalog path");
-      const base = sdpBase(cwd);
-      const resolved = path2.resolve(base, relPath);
-      assertPathWithinBase(resolved, base, "shared catalog path");
-      return resolved;
-    }
-    function resolveFlowProfilePath2(cwd, adapterId, relPath) {
-      validateAdapterId(adapterId);
-      ensureRelativeArtifactPath(relPath, "flow profile path");
-      const base = adapterDir(cwd, adapterId);
-      const resolved = path2.resolve(base, relPath);
-      assertPathWithinBase(resolved, base, "flow profile path");
-      return resolved;
-    }
-    function resolveValidationReportPath(profilePath) {
-      return path2.join(path2.dirname(profilePath), "validation-report.json");
-    }
-    module2.exports = {
-      sdpBase,
-      adapterDir,
-      resolveSharedCatalogPath: resolveSharedCatalogPath2,
-      resolveFlowProfilePath: resolveFlowProfilePath2,
-      resolveValidationReportPath
-    };
-  }
-});
-
-// src/skills/skill-discovery-protocol/scripts/generate.ts
+// src/skills/skill-discovery-protocol/scripts/scan.ts
 var path = require("node:path");
 var { loadAdapter } = require_adapter();
 var { scanSkills } = require_scanner();
-var { buildCatalog } = require_catalog();
-var { classifySkills } = require_classifier();
-var { resolveInvocations } = require_resolver();
-var { buildProfile } = require_profile();
-var { stabilizeCatalog, stabilizeProfile, writeArtifact } = require_renderer();
-var {
-  writeScanList,
-  loadScanList,
-  defaultInferencePath,
-  loadInferenceDocument,
-  enrichSkills
-} = require_inference();
-var {
-  resolveSharedCatalogPath,
-  resolveFlowProfilePath
-} = require_artifact_paths();
+var { writeScanList } = require_inference();
 function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--adapter") args.adapter = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
-    else if (arg === "--references") args.references = argv[++i];
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
 }
 function usage() {
-  return "Usage: sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]";
+  return "Usage: sdp scan --adapter <adapter-yaml> [--cwd <dir>]";
 }
 async function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -22331,65 +21926,7 @@ async function main() {
     console.log("No skills found in scan scopes.");
   }
   const scanListPath = writeScanList(cwd, rawSkills);
-  const scanList = loadScanList(scanListPath);
-  const inferencePath = args.references ? path.resolve(cwd, args.references) : defaultInferencePath(cwd);
-  let inferenceDoc;
-  try {
-    inferenceDoc = loadInferenceDocument(inferencePath);
-  } catch (e) {
-    console.error(e instanceof Error ? e.message : String(e));
-    process.exitCode = 2;
-    return;
-  }
-  if (!inferenceDoc) {
-    const scanPathForHint = path.relative(cwd, scanListPath) || path.basename(scanListPath);
-    const inferencePathForHint = path.relative(cwd, inferencePath) || path.basename(inferencePath);
-    console.error(`Skill reference inference required. Wrote scan list: ${scanListPath}`);
-    console.error("Run inference and retry:");
-    console.error(`  sdp infer --scan "${scanPathForHint}" --out "${inferencePathForHint}"`);
-    process.exitCode = 2;
-    return;
-  }
-  let skills;
-  try {
-    skills = enrichSkills(scanList.skills, inferenceDoc);
-  } catch (e) {
-    console.error(e instanceof Error ? e.message : String(e));
-    process.exitCode = 2;
-    return;
-  }
-  const catalog = stabilizeCatalog(buildCatalog(skills));
-  const { categories, unmatched_skills } = classifySkills(skills, adapter);
-  const resolvedInvocations = resolveInvocations(skills, adapter);
-  const profile = stabilizeProfile(
-    buildProfile(adapter, catalog, categories, unmatched_skills, resolvedInvocations, skills)
-  );
-  const catalogPath = adapter.artifacts.protocol.skill_reference_catalog;
-  const profilePath = adapter.artifacts.protocol.flow_profile;
-  let filesWritten = 0;
-  if (catalogPath) {
-    const absPath = resolveSharedCatalogPath(cwd, catalogPath);
-    const relPath = path.relative(cwd, absPath);
-    if (writeArtifact(absPath, catalog)) {
-      console.log(`Written: ${relPath}`);
-      filesWritten++;
-    } else {
-      console.log(`Unchanged: ${relPath}`);
-    }
-  }
-  if (profilePath) {
-    const absPath = resolveFlowProfilePath(cwd, adapter.adapter_id, profilePath);
-    const relPath = path.relative(cwd, absPath);
-    if (writeArtifact(absPath, profile)) {
-      console.log(`Written: ${relPath}`);
-      filesWritten++;
-    } else {
-      console.log(`Unchanged: ${relPath}`);
-    }
-  }
-  if (filesWritten === 0) {
-    console.log("All artifacts up to date.");
-  }
+  console.log(`Written: ${path.relative(cwd, scanListPath)}`);
 }
 main().catch((e) => {
   console.error(e instanceof Error ? e.message : String(e));

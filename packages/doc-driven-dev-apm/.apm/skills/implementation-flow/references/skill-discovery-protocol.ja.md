@@ -6,7 +6,7 @@
 
 | アクション | コマンド |
 |-----------|---------|
-| プロファイル生成 | `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` |
+| プロファイル生成 | `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` |
 | プロファイル検証 | `sdp validate --profile implementation-profile.json` |
 | カテゴリ一覧 | `sdp query --profile implementation-profile.json categories` |
 | スキルスタック確認 | `sdp query --profile implementation-profile.json flow-stack` |

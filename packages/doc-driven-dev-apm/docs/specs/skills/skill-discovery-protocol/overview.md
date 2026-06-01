@@ -30,7 +30,7 @@
 - Flow Profile 生成
 - validation report 生成
 - readable Markdown sidecar 生成
-- `sdp generate` / `sdp validate` / `sdp query` CLI
+- `sdp scan` / `sdp infer` / `sdp profile` / `sdp validate` / `sdp query` CLI
 
 ### Out of Scope for MVP
 
@@ -97,7 +97,9 @@ load_adapter -> scan_skills -> write_scan_list
 
 | Command | 責務 |
 | --- | --- |
-| `sdp generate --adapter <yaml>` | scan list を生成し、inference 成果物から catalog/profile/report を生成する |
+| `sdp scan --adapter <yaml>` | scan list を生成する |
+| `sdp infer init [--scan <json>] [--out <json>]` | inference 成果物を初期化・更新する |
+| `sdp profile --adapter <yaml>` | 既存の scan/inference 成果物から catalog/profile を生成する |
 | `sdp validate --profile <json>` | 成果物を検証する |
 | `sdp query --profile <json> <subcommand>` | 成果物から情報を抽出する |
 

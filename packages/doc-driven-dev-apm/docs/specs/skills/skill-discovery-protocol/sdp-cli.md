@@ -7,23 +7,24 @@
 ## コマンド体系
 
 ```text
-sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
+sdp scan --adapter <adapter-yaml> [--cwd <dir>]
 sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
 sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp infer check --in <json> [--cwd <dir>]
 sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
+sdp profile --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
 sdp validate --profile <flow-profile-json> [--adapter <adapter-yaml>] [--cwd <dir>]
 sdp validate --adapter <adapter-yaml> [--cwd <dir>]
 sdp query --profile <flow-profile-json> <subcommand> [options]
 ```
 
-## `sdp generate`
+## `sdp scan`
 
-成果物の生成・更新を行う。
+scan 成果物の生成・更新を行う。
 
 ```text
-sdp generate --adapter <adapter-yaml> [--references <json>]
+sdp scan --adapter <adapter-yaml> [--cwd <dir>]
 ```
 
 ### 動作
@@ -31,40 +32,21 @@ sdp generate --adapter <adapter-yaml> [--references <json>]
 1. adapter YAML を読み込む（`extends` 解決を含む）
 2. `scan.scopes` に基づいてスキルを走査する
 3. 見つかった各スキルの `SKILL.md` 全文を読み、`.sdp/skill-scan-list.json` に保存する
-4. `--references` または `.sdp/skill-reference-inferences.json` から inference 成果物を読む
-5. scan 成果物と inference 成果物を結合して Skill Reference Catalog を構築する
-6. classification を実行する
-7. invocation を解決する
-8. Flow Profile を生成する
-9. `readable_outputs.enabled = true` の場合、Markdown sidecar を生成する
 
 ### 入力
 
 - `--adapter <adapter-yaml>`: 必須。adapter YAML のパス。
-- `--references <json>`: 任意。agent inference 成果物のパス。未指定時は `.sdp/skill-reference-inferences.json` を読む。
 - `--cwd <dir>`: 任意。基準ディレクトリ。
 
 ### 出力
 
 - `.sdp/skill-scan-list.json`
-- `.sdp/skill-reference-catalog.json`
-- `.sdp/<adapter_id>/*-profile.json`
-- `.sdp/<adapter_id>/validation-report.json`（`sdp validate` 実行時）
-- 設定に応じた Markdown sidecar
-
-成果物配置ルール:
-
-- 共有成果物（scan / inference / catalog）は `.sdp/` 直下に配置する。
-- フロー固有成果物（flow profile / validation report）は `.sdp/<adapter_id>/` に配置する。
-- `sdp query` は profile 同居ディレクトリを優先し、見つからない場合は `.sdp/` 直下をフォールバック参照する。
-
-inference 成果物が存在しない場合、`sdp generate` は scan list を保存したうえで終了コード `2` を返す。エージェントは `skill-scan-list.json` の各 `body` を読み、`skill-reference-inferences.json` を作成してから再実行する。
 
 ### 終了コード
 
 - `0`: 正常完了
 - `1`: 入力エラー
-- `2`: schema 検証エラー、または inference 成果物不足
+- `2`: adapter schema 検証エラー
 
 ## `sdp infer`
 
@@ -110,6 +92,52 @@ sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [
 - `0`: 正常完了
 - `1`: 生成後の schema 検証失敗
 - `2`: 入力エラー（引数不正、scan 未存在、scan 不正）
+
+## `sdp profile`
+
+成果物の生成・更新を行う。
+
+```text
+sdp profile --adapter <adapter-yaml> [--references <json>]
+```
+
+### 動作
+
+1. adapter YAML を読み込む（`extends` 解決を含む）
+2. `.sdp/skill-scan-list.json` を読み込む（`sdp scan` で事前生成）
+3. `--references` または `.sdp/skill-reference-inferences.json` から inference 成果物を読む
+4. scan 成果物と inference 成果物を結合して Skill Reference Catalog を構築する
+5. classification を実行する
+6. invocation を解決する
+7. Flow Profile を生成する
+8. `readable_outputs.enabled = true` の場合、Markdown sidecar を生成する
+
+### 入力
+
+- `--adapter <adapter-yaml>`: 必須。adapter YAML のパス。
+- `--references <json>`: 任意。agent inference 成果物のパス。未指定時は `.sdp/skill-reference-inferences.json` を読む。
+- `--cwd <dir>`: 任意。基準ディレクトリ。
+
+### 出力
+
+- `.sdp/skill-reference-catalog.json`
+- `.sdp/<adapter_id>/*-profile.json`
+- `.sdp/<adapter_id>/validation-report.json`（`sdp validate` 実行時）
+- 設定に応じた Markdown sidecar
+
+成果物配置ルール:
+
+- 共有成果物（scan / inference / catalog）は `.sdp/` 直下に配置する。
+- フロー固有成果物（flow profile / validation report）は `.sdp/<adapter_id>/` に配置する。
+- `sdp query` は profile 同居ディレクトリを優先し、見つからない場合は `.sdp/` 直下をフォールバック参照する。
+
+scan 成果物が存在しない場合、`sdp profile` は終了コード `2` を返し、`sdp scan` の実行を案内する。inference 成果物が存在しない場合も終了コード `2` を返し、`sdp infer init` の実行を案内する。
+
+### 終了コード
+
+- `0`: 正常完了
+- `1`: 入力エラー
+- `2`: schema 検証エラー、または scan / inference 成果物不足
 
 ## `sdp validate`
 

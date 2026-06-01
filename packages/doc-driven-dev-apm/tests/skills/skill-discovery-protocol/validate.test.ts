@@ -30,9 +30,29 @@ function runValidate(args: string[], cwd: string) {
 }
 
 function runGenerate(args: string[], cwd: string) {
+  const adapterIndex = args.findIndex((x) => x === "--adapter");
+  if (adapterIndex >= 0 && args[adapterIndex + 1]) {
+    const scanResult = spawnSync(
+      process.execPath,
+      [path.join(sdpScripts, "scan.js"), "--adapter", args[adapterIndex + 1]],
+      {
+        cwd,
+        encoding: "utf8",
+        windowsHide: true,
+      },
+    );
+    if ((scanResult.status ?? 1) !== 0) {
+      return {
+        status: scanResult.status,
+        stdout: scanResult.stdout,
+        stderr: scanResult.stderr,
+      };
+    }
+  }
+
   const result = spawnSync(
     process.execPath,
-    [path.join(sdpScripts, "generate.js"), ...args],
+    [path.join(sdpScripts, "profile.js"), ...args],
     {
       cwd,
       encoding: "utf8",

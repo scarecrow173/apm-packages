@@ -8,7 +8,7 @@ updated: "2026-06-01"
 owners: []
 relations:
   source:
-    - ".apm/skills/skill-discovery-protocol/scripts/generate.js"
+    - ".apm/skills/skill-discovery-protocol/scripts/profile.js"
     - ".apm/skills/skill-discovery-protocol/scripts/infer.js"
     - ".apm/skills/skill-discovery-protocol/scripts/validate.js"
   references:

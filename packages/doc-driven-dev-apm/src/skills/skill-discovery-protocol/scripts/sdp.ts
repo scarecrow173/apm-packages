@@ -10,8 +10,9 @@ function usage(): string {
   return `Usage: sdp <command> [options]
 
 Commands:
-  generate    Generate skill catalog and flow profile
+  scan        Generate skill scan list
   infer       Generate skill reference inference from scan list
+  profile     Generate skill catalog and flow profile
   validate    Validate artifacts or adapter
   query       Query flow profile data
 
@@ -29,7 +30,7 @@ function main(): void {
 
   const remaining = args.slice(1);
   const scriptDir = __dirname;
-  const validCommands = ["generate", "infer", "validate", "query"];
+  const validCommands = ["scan", "infer", "profile", "validate", "query"];
 
   if (!validCommands.includes(command)) {
     console.error(`Unknown command: ${command}`);

@@ -68,7 +68,7 @@
 
 ### sdp CLI
 
-- [ ] `sdp generate --adapter <adapter-yaml>` を正規入力インターフェースとする
+- [ ] `sdp scan` / `sdp infer` / `sdp profile` を正規入力インターフェースとする
 - [ ] `sdp validate --profile <flow-profile-json>` で成果物を検証する
 - [ ] `sdp validate --adapter <adapter-yaml>` で adapter 単体を検証する
 - [ ] `sdp query --profile <file> <subcommand>` で情報を抽出する
@@ -119,7 +119,7 @@
 - [x] 旧 protocol は即時 deprecated（互換モードは設けない）
 - [x] adapter 設定形式は YAML
 - [x] adapter YAML は general のみ共通側に置き、flow 固有設定は flow 側 references パス入力で読む
-- [x] `sdp generate` の入力は Adapter YAML（`--adapter`）に統一する
+- [x] `sdp scan` / `sdp infer` / `sdp profile` の入力は Adapter YAML（`--adapter`）に統一する
 - [x] `sdp validate --adapter` で adapter 単体検証も可能にする
 - [x] scan のスコープ別 roots は general-adapter に集約し、flow 側は差分のみ上書きする
 - [x] extends は文字列配列で宣言順マージ、`priority` キーは使用禁止

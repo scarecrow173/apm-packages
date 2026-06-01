@@ -10,7 +10,7 @@
 
 - [ ] adapter YAML を入力に共通生成コマンドで Flow Profile を新規生成できる
 - [ ] adapter YAML を入力に既存 Flow Profile の更新コマンドが動作する
-- [ ] `sdp generate --adapter <adapter-yaml>` で profile/catalog/report の生成・更新が実行できる
+- [ ] `sdp scan` / `sdp infer` / `sdp profile` で profile/catalog/report の生成・更新が実行できる
 - [ ] 同一入力で再実行したときファイル差分が発生しない
 - [ ] `skill-reference-catalog.md/.json` がプロトコル成果物として生成される
 - [ ] `*-profile.json`（Flow Profile）が生成され、`resolved_invocations` を保持する

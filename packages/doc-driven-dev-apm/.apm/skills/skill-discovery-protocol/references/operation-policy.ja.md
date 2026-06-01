@@ -17,7 +17,7 @@ CLI 使用法、Adapter スキーマ、解決セマンティクスについて�
 
 - JSON 成果物の手動編集（`*-catalog.json`、`*-profile.json`、
   `validation-report.json`、`resolved-invocations.json`）
-- 派生 Markdown 成果物の手動編集（`sdp generate` で生成される `.md` サイドカー）
+- 派生 Markdown 成果物の手動編集（`sdp profile` で生成される `.md` サイドカー）
 - `sdp` を迂回する外部スクリプトによる成果物内容の変更
 
 ### 1.2 手動編集が許可されるファイル
@@ -45,7 +45,9 @@ CLI は 3 つの責務ドメインに分離される:
 
 | コマンド | 責務 | 動詞 |
 | -------- | ---- | ---- |
-| `sdp generate` | 成果物の生成・更新 | Write |
+| `sdp scan` | scan 成果物の生成・更新 | Write |
+| `sdp infer` | inference 成果物の初期化・更新 | Write |
+| `sdp profile` | catalog/profile 成果物の生成・更新 | Write |
 | `sdp validate` | 成果物の正当性検証 | Read + Check |
 | `sdp query` | 成果物からの情報抽出 | Read |
 

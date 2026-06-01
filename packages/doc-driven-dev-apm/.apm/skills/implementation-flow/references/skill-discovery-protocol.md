@@ -6,7 +6,7 @@ This flow uses the common `skill-discovery-protocol` for profile management.
 
 | Action | Command |
 |--------|---------|
-| Generate profile | `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` |
+| Generate profile | `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` |
 | Validate profile | `sdp validate --profile implementation-profile.json` |
 | List categories | `sdp query --profile implementation-profile.json categories` |
 | Check skill stack | `sdp query --profile implementation-profile.json flow-stack` |

@@ -53,7 +53,7 @@
 - [ ] `extends` はパス直書きを禁止し、参照名解決（`references/{name}.yaml|yml`）で定義される
 - [ ] `scan.scopes` を `general-adapter` 集約 + flow 差分上書きで解決する規約が定義される
 - [ ] `classification.taxonomy` と `classification.unmatched` の検証規約が定義される
-- [ ] script 経由操作の CLI 面を `sdp generate` / `sdp validate` / `sdp query` に分離する規約が定義される
+- [ ] script 経由操作の CLI 面を `sdp scan` / `sdp infer` / `sdp profile` / `sdp validate` / `sdp query` に分離する規約が定義される
 
 **Verification:**
 

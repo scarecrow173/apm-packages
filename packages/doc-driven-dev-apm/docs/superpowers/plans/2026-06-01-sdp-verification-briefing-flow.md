@@ -9,7 +9,7 @@ owners: []
 relations:
   source:
     - ".apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml"
-    - ".apm/skills/skill-discovery-protocol/scripts/generate.js"
+    - ".apm/skills/skill-discovery-protocol/scripts/profile.js"
     - ".apm/skills/skill-discovery-protocol/scripts/validate.js"
   references:
     - ".sdp/skill-reference-catalog.json"
@@ -18,9 +18,9 @@ relations:
 ---
 
 # 実行コマンド
-- `pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/generate.js --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` : exit 1
+- `pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/profile.js --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` : exit 1
 - `pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/validate.js --profile .sdp/briefing-flow-default/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` : exit 1
-- `node .apm/skills/skill-discovery-protocol/scripts/generate.js --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` : exit 0
+- `node .apm/skills/skill-discovery-protocol/scripts/profile.js --adapter .apm/skills/briefing-flow/assets/adapters/briefing-flow/assets/adapters/briefing-adapter.yaml` : exit 0
 - `node .apm/skills/skill-discovery-protocol/scripts/validate.js --profile .sdp/briefing-flow-default/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` : exit 0
 
 # 生成物パス

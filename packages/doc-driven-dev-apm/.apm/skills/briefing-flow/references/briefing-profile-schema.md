@@ -5,7 +5,7 @@
 > This document describes the OLD markdown-based profile format.
 > It is retained for reference only during the transition period.
 >
-> **New approach:** Use `sdp generate --adapter <adapter-yaml>` to produce
+> **New approach:** Use `sdp scan --adapter <adapter-yaml>`, `sdp infer init`, and `sdp profile --adapter <adapter-yaml>` to produce
 > JSON-based profiles. See [migration guide](../../skill-discovery-protocol/docs/migration.md).
 >
 > The old format will be removed in a future version.

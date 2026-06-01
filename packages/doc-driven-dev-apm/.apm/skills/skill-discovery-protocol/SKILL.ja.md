@@ -47,10 +47,12 @@ Catalog は `slots`, `slot_count`, `resolved_invocations`, flow 固有分類を
 
 | Command | Purpose |
 | ------- | ------- |
-| `sdp generate --adapter <yaml> [--references <json>]` | 成果物を生成する |
+| `sdp scan --adapter <yaml>` | scan list を生成する |
+| `sdp infer init --scan <json>` | inference 成果物を生成/編集する |
+| `sdp profile --adapter <yaml> [--references <json>]` | catalog と profile を生成する |
 | `sdp validate --profile <json>` | 成果物を検証する |
 | `sdp query --profile <json> <sub>` | 成果物を照会する |
 
-inference 成果物がない場合、`sdp generate` は `.sdp/skill-scan-list.json`
-を書き出して終了コード `2` で停止する。エージェントは scan list の各
-`body` を読み、`.sdp/skill-reference-inferences.json` を作ってから再実行する。
+scan 成果物がない場合は `sdp scan` を実行する。inference 成果物がない
+場合は `sdp infer init --scan .sdp/skill-scan-list.json` を実行する。
+その後に `sdp profile` を再実行する。

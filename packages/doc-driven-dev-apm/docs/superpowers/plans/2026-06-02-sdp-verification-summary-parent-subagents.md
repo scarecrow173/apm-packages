@@ -13,7 +13,7 @@
 1) クリーンアップ + 初回 generate
 
 ```bash
-pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/generate.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml
+pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/profile.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml
 ```
 
 - 結果: inference 不足のため停止（scan list は生成）
@@ -31,7 +31,7 @@ pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/infer.js run --sc
 3) 再 generate
 
 ```bash
-pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/generate.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml
+pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/profile.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml
 ```
 
 - 結果: 成功

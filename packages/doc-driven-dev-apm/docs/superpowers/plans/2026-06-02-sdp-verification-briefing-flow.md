@@ -9,7 +9,7 @@
 
 ### 1) Generate
 Command:
-pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/generate.js --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml
+pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/profile.js --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml
 
 Exit Code: 0
 

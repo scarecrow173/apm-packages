@@ -4,7 +4,7 @@
 
 **Goal:** skill-discovery-protocol に inference 生成ステップを追加し、implementation-flow と briefing-flow の検証を inference 不足で停止しない形にする。
 
-**Architecture:** 既存の scan 成果物 `.sdp/skill-scan-list.json` から inference 成果物 `.sdp/skill-reference-inferences.json` を生成する専用 CLI `sdp infer` を追加する。`sdp generate` は scan 後に inference 未存在時の停止を維持しつつ、`sdp infer` 実行ガイダンスを必ず出力する。検証コマンドとドキュメントは `.sdp` 配下の profile 実体パスで統一する。
+**Architecture:** 既存の scan 成果物 `.sdp/skill-scan-list.json` から inference 成果物 `.sdp/skill-reference-inferences.json` を生成する専用 CLI `sdp infer` を追加する。`sdp profile` は scan 後に inference 未存在時の停止を維持しつつ、`sdp infer` 実行ガイダンスを必ず出力する。検証コマンドとドキュメントは `.sdp` 配下の profile 実体パスで統一する。
 
 **Tech Stack:** Node.js, TypeScript (tsx), node:test, Zod, pnpm
 
@@ -16,7 +16,7 @@
 
 ## File Structure
 
-- Modify: `src/skills/skill-discovery-protocol/scripts/generate.ts`
+- Modify: `src/skills/skill-discovery-protocol/scripts/profile.ts`
   - inference 不足時エラーメッセージを `sdp infer` 手順付きに改善する。
 - Create: `src/skills/skill-discovery-protocol/scripts/infer.ts`
   - `.sdp/skill-scan-list.json` を入力に `.sdp/skill-reference-inferences.json` を生成する CLI。
@@ -36,7 +36,7 @@
   - 日本語版手順にも infer を追加する。
 - Modify: `.apm/skills/briefing-flow/SKILL.ja.md`
   - 日本語版手順にも infer を追加する。
-- Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/generate.js`
+- Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/profile.js`
 - Create (generated): `.apm/skills/skill-discovery-protocol/scripts/infer.js`
 
 ### Task 1: Infer CLI の失敗先行テストを追加
@@ -129,7 +129,7 @@ Expected: FAIL（`infer.js` が存在しない、またはコマンド未実装�
 ```ts
 // tests/skills/skill-discovery-protocol/generate.test.ts に追加
 
-test("sdp generate missing inference prints infer command hint", () => {
+test("sdp profile missing inference prints infer command hint", () => {
   const dir = tempDir();
   setupTestProject(dir);
   fs.unlinkSync(path.join(dir, ".sdp", "skill-reference-inferences.json"));
@@ -295,7 +295,7 @@ git commit -m "feat(sdp): add infer command to generate inference from scan list
 ### Task 3: generate のヒント出力と検証手順を更新
 
 **Files:**
-- Modify: `src/skills/skill-discovery-protocol/scripts/generate.ts`
+- Modify: `src/skills/skill-discovery-protocol/scripts/profile.ts`
 - Modify: `docs/specs/skills/skill-discovery-protocol/sdp-cli.md`
 - Modify: `.apm/skills/implementation-flow/SKILL.md`
 - Modify: `.apm/skills/briefing-flow/SKILL.md`
@@ -306,7 +306,7 @@ git commit -m "feat(sdp): add infer command to generate inference from scan list
 - [ ] **Step 1: generate の inference 不足メッセージを実装する**
 
 ```ts
-// src/skills/skill-discovery-protocol/scripts/generate.ts の inference 不足分岐を置換
+// src/skills/skill-discovery-protocol/scripts/profile.ts の inference 不足分岐を置換
 if (!inferenceDoc) {
   const relScanPath = path.relative(cwd, scanListPath).replace(/\\/g, "/");
   const relInferencePath = path.relative(cwd, inferencePath).replace(/\\/g, "/");
@@ -328,7 +328,7 @@ Expected: PASS
 ## コマンド体系
 
 ```text
-sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
+sdp profile --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
 sdp infer [--scan <scan-list-json>] [--out <inference-json>] [--cwd <dir>]
 sdp validate --profile <flow-profile-json> [--adapter <adapter-yaml>] [--cwd <dir>]
 sdp query --profile <flow-profile-json> <subcommand> [options]
@@ -350,23 +350,23 @@ sdp infer [--scan <scan-list-json>] [--out <inference-json>]
 
 ```md
 # 例: .apm/skills/implementation-flow/SKILL.md の実行例を置換
-- Generate scan: `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- Generate scan: `sdp scan --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - Infer references (if needed): `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
-- Generate profile: `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- Generate profile: `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - Validate: `sdp validate --profile .sdp/implementation-flow-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/skills/skill-discovery-protocol/scripts/generate.ts docs/specs/skills/skill-discovery-protocol/sdp-cli.md .apm/skills/implementation-flow/SKILL.md .apm/skills/briefing-flow/SKILL.md .apm/skills/implementation-flow/SKILL.ja.md .apm/skills/briefing-flow/SKILL.ja.md
+git add src/skills/skill-discovery-protocol/scripts/profile.ts docs/specs/skills/skill-discovery-protocol/sdp-cli.md .apm/skills/implementation-flow/SKILL.md .apm/skills/briefing-flow/SKILL.md .apm/skills/implementation-flow/SKILL.ja.md .apm/skills/briefing-flow/SKILL.ja.md
 git commit -m "docs(sdp): add infer step and fix validate profile path examples"
 ```
 
 ### Task 4: バンドル再生成と統合検証
 
 **Files:**
-- Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/generate.js`
+- Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/profile.js`
 - Create (generated): `.apm/skills/skill-discovery-protocol/scripts/infer.js`
 - Test: `tests/skills/skill-discovery-protocol/infer.test.ts`
 - Test: `tests/skills/skill-discovery-protocol/integration.test.ts`
@@ -394,7 +394,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .apm/skills/skill-discovery-protocol/scripts/generate.js .apm/skills/skill-discovery-protocol/scripts/infer.js
+git add .apm/skills/skill-discovery-protocol/scripts/profile.js .apm/skills/skill-discovery-protocol/scripts/infer.js
 git add tests/skills/skill-discovery-protocol/infer.test.ts tests/skills/skill-discovery-protocol/generate.test.ts
 git add docs/specs/skills/skill-discovery-protocol/sdp-cli.md
 git commit -m "test(sdp): verify infer-first pipeline for adapter validation"

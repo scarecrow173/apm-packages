@@ -2,7 +2,7 @@
 
 ## 概要
 
-Adapter YAML は `sdp generate` の入力として、プロトコルの動作を flow ごとにカスタマイズする設定ファイルである。
+Adapter YAML は `sdp scan` / `sdp profile` の入力として、プロトコルの動作を flow ごとにカスタマイズする設定ファイルである。
 
 ## 必須キー
 

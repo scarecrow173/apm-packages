@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 "use strict";
 
+const fs = require("node:fs");
 const path = require("node:path");
 
 const { loadAdapter } = require("./lib/adapter.ts");
-const { scanSkills } = require("./lib/scanner.ts");
 const { buildCatalog } = require("./lib/catalog.ts");
 const { classifySkills } = require("./lib/classifier.ts");
 const { resolveInvocations } = require("./lib/resolver.ts");
 const { buildProfile } = require("./lib/profile.ts");
 const { stabilizeCatalog, stabilizeProfile, writeArtifact } = require("./lib/renderer.ts");
 const {
-  writeScanList,
+  defaultScanListPath,
   loadScanList,
   defaultInferencePath,
   loadInferenceDocument,
@@ -36,7 +36,7 @@ function parseArgs(argv: string[]): { adapter?: string; cwd?: string; references
 }
 
 function usage(): string {
-  return "Usage: sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]";
+  return "Usage: sdp profile --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]";
 }
 
 async function main(): Promise<void> {
@@ -63,18 +63,28 @@ async function main(): Promise<void> {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`Error loading adapter: ${msg}`);
-    // Schema validation errors from Zod contain field-level details
     process.exitCode = msg.includes("Adapter validation failed") ? 2 : 1;
     return;
   }
 
-  // 1. Scan skill sources and persist the scan artifact.
-  const rawSkills = scanSkills(cwd, adapter);
-  if (rawSkills.length === 0) {
-    console.log("No skills found in scan scopes.");
+  const scanListPath = defaultScanListPath(cwd);
+  if (!fs.existsSync(scanListPath)) {
+    const adapterHint = path.relative(cwd, adapterPath) || path.basename(adapterPath);
+    console.error(`Skill scan list required. Expected: ${scanListPath}`);
+    console.error("Run scan and retry:");
+    console.error(`  sdp scan --adapter \"${adapterHint}\"`);
+    process.exitCode = 2;
+    return;
   }
-  const scanListPath = writeScanList(cwd, rawSkills);
-  const scanList = loadScanList(scanListPath);
+
+  let scanList;
+  try {
+    scanList = loadScanList(scanListPath);
+  } catch (e: unknown) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exitCode = 2;
+    return;
+  }
 
   const inferencePath = args.references ? path.resolve(cwd, args.references) : defaultInferencePath(cwd);
   let inferenceDoc;
@@ -89,9 +99,9 @@ async function main(): Promise<void> {
   if (!inferenceDoc) {
     const scanPathForHint = path.relative(cwd, scanListPath) || path.basename(scanListPath);
     const inferencePathForHint = path.relative(cwd, inferencePath) || path.basename(inferencePath);
-    console.error(`Skill reference inference required. Wrote scan list: ${scanListPath}`);
+    console.error(`Skill reference inference required. Scan list found: ${scanListPath}`);
     console.error("Run inference and retry:");
-    console.error(`  sdp infer --scan "${scanPathForHint}" --out "${inferencePathForHint}"`);
+    console.error(`  sdp infer init --scan \"${scanPathForHint}\" --out \"${inferencePathForHint}\" --if-exists overwrite`);
     process.exitCode = 2;
     return;
   }
@@ -105,23 +115,15 @@ async function main(): Promise<void> {
     return;
   }
 
-  // 2. Build Skill Reference Catalog
   const catalog = stabilizeCatalog(buildCatalog(skills));
-
-  // 3. Classify skills
   const { categories, unmatched_skills } = classifySkills(skills, adapter);
-
-  // 4. Resolve invocations
   const resolvedInvocations = resolveInvocations(skills, adapter);
-
-  // 5. Build Flow Profile
   const profile = stabilizeProfile(
     buildProfile(adapter, catalog, categories, unmatched_skills, resolvedInvocations, skills),
   );
 
-  // 6. Write artifacts (shared catalog at .sdp/, flow profile at .sdp/<adapter_id>/)
   const catalogPath = adapter.artifacts.protocol.skill_reference_catalog;
-  const profilePath = adapter.artifacts.protocol.flow_profile;
+  const flowProfilePath = adapter.artifacts.protocol.flow_profile;
 
   let filesWritten = 0;
 
@@ -136,8 +138,8 @@ async function main(): Promise<void> {
     }
   }
 
-  if (profilePath) {
-    const absPath = resolveFlowProfilePath(cwd, adapter.adapter_id, profilePath);
+  if (flowProfilePath) {
+    const absPath = resolveFlowProfilePath(cwd, adapter.adapter_id, flowProfilePath);
     const relPath = path.relative(cwd, absPath);
     if (writeArtifact(absPath, profile as unknown as Record<string, unknown>)) {
       console.log(`Written: ${relPath}`);

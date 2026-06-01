@@ -86,11 +86,11 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 > リポジトリ固有の構成ファイル。利用可能な全スキルをリストし、
 > カテゴリに割り当て、always-on か conditional かを定義し、
 > フロースタックと invocation resolution を指定する。
-> `sdp generate` コマンドで生成され、スキル変更時に更新される。
+> `sdp scan` + `sdp infer` + `sdp profile` で生成され、スキル変更時に更新される。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を実行する。
-- 存在するが破損の場合 → 削除して同じコマンドで再生成する。
+- 存在しない場合 → `sdp scan --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` → `sdp infer init --scan .sdp/skill-scan-list.json` → `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を実行する。
+- 存在するが破損の場合 → 同じ `scan` → `infer` → `profile` の手順で再生成する。
 
 ---
 
@@ -99,8 +99,9 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
 **コマンド:**
-- 生成/更新: `sdp generate --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- 推論（generate で inference 不足が出た場合）: `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
+- スキャン: `sdp scan --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- 推論: `sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
+- プロファイル生成: `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - 検証: `sdp validate --profile .sdp/implementation-flow-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 - クエリ: `sdp query --profile .sdp/implementation-flow-profile.json <subcommand>`
 
@@ -211,7 +212,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 <HARD-GATE>
 プロファイルベースの構成をスキップしてはならない。
-- プロファイルが存在しない場合 → `sdp generate` を実行して生成する。
+- プロファイルが存在しない場合 → `scan` → `infer` → `profile` の手順を実行する。
 - プロファイルが存在する場合 → 読み込んでその構成に従う。
 「これは簡単だからスキップしてよい」「やり方はわかっている」が最も多い
 失敗パターン。体系的なスキルルーティングの目的を損なう。

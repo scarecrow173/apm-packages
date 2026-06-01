@@ -6,7 +6,7 @@
 
 ## Command Outcomes
 
-1. `pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/generate.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+1. `pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/profile.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 	- Exit Code: `0`
 	- Output Snippet:
 

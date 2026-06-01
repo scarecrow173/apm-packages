@@ -13,12 +13,33 @@ function tempDir() {
 }
 
 function runGenerate(args: string[], cwd: string) {
+  let scanStdout = "";
+  let scanStderr = "";
+
+  const adapterIndex = args.findIndex((x) => x === "--adapter");
+  if (adapterIndex >= 0 && args[adapterIndex + 1]) {
+    const scanResult = spawnSync(
+      process.execPath,
+      [path.join(sdpScripts, "scan.js"), "--adapter", args[adapterIndex + 1]],
+      { cwd, encoding: "utf8", windowsHide: true },
+    );
+    scanStdout = scanResult.stdout ?? "";
+    scanStderr = scanResult.stderr ?? "";
+    if ((scanResult.status ?? 1) !== 0) {
+      return { status: scanResult.status, stdout: scanResult.stdout, stderr: scanResult.stderr };
+    }
+  }
+
   const result = spawnSync(
     process.execPath,
-    [path.join(sdpScripts, "generate.js"), ...args],
+    [path.join(sdpScripts, "profile.js"), ...args],
     { cwd, encoding: "utf8", windowsHide: true },
   );
-  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  return {
+    status: result.status,
+    stdout: `${scanStdout}${result.stdout ?? ""}`,
+    stderr: `${scanStderr}${result.stderr ?? ""}`,
+  };
 }
 
 function runValidate(args: string[], cwd: string) {
@@ -837,16 +858,16 @@ test("integration: briefing adapter validates successfully", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// Integration: end-to-end generate → validate → query pipeline
+// Integration: end-to-end profile → validate → query pipeline
 // ═══════════════════════════════════════════════════════════════════
 
-test("integration: full pipeline generate → validate → query category-skills", () => {
+test("integration: full pipeline profile → validate → query category-skills", () => {
   const dir = tempDir();
   setupImplFlow(dir);
 
-  // Generate
+  // Profile
   const gen = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
-  assert.equal(gen.status, 0, `generate stderr: ${gen.stderr}`);
+  assert.equal(gen.status, 0, `profile stderr: ${gen.stderr}`);
 
   // Validate
   const val = runValidate(
@@ -876,7 +897,7 @@ test("integration: full pipeline generate → validate → query category-skills
   assert.ok(skills.length > 0);
 });
 
-test("integration: full pipeline generate → validate → query skill-detail", () => {
+test("integration: full pipeline profile → validate → query skill-detail", () => {
   const dir = tempDir();
   setupImplFlow(dir);
 
@@ -893,7 +914,7 @@ test("integration: full pipeline generate → validate → query skill-detail", 
   assert.equal(data.execution_policy.strictness, "rigid");
 });
 
-test("integration: full pipeline generate → validate → query validation-status", () => {
+test("integration: full pipeline profile → validate → query validation-status", () => {
   const dir = tempDir();
   setupImplFlow(dir);
 
@@ -913,7 +934,7 @@ test("integration: full pipeline generate → validate → query validation-stat
   assert.equal(data.adapter_id, "impl-flow-test");
 });
 
-test("integration: infer init/apply editable flow feeds generate", () => {
+test("integration: infer init/apply editable flow feeds profile", () => {
   const dir = tempDir();
   setupImplFlow(dir);
 

@@ -209,7 +209,7 @@ validation:
 ### 手順
 
 1. 現在の成果物ファイルを退避
-2. 同じ adapter で `sdp generate` を再実行
+2. 同じ adapter で `sdp profile` を再実行
 3. 各対象ペアをバイト単位で比較
 4. 元の成果物を復元
 5. いずれかの比較で差分が見つかった場合 → fail

@@ -5,7 +5,7 @@
 > このドキュメントは旧 Markdown ベースのプロファイル形式を記述しています。
 > 移行期間中の参照用としてのみ保持されています。
 >
-> **新しいアプローチ:** `sdp generate --adapter <adapter-yaml>` を使用して
+> **新しいアプローチ:** `sdp scan --adapter <adapter-yaml>`、`sdp infer init`、`sdp profile --adapter <adapter-yaml>` を使用して
 > JSON ベースのプロファイルを生成してください。[移行ガイド](../../skill-discovery-protocol/docs/migration.ja.md)を参照。
 >
 > 旧形式は将来のバージョンで削除されます。

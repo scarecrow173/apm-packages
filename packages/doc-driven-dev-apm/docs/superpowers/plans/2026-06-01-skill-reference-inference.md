@@ -26,7 +26,7 @@ Catalog は flow 非依存のままにし、invocation slot は Flow Profile 側
 3. inference 成果物用の型と schema を追加する。
 4. scanner を `SKILL.md` 全文を保存する raw scan に変更する。
 5. scan list と inference を結合する enrichment 層を追加する。
-6. `sdp generate` を scan、inference、catalog 化の順に変更する。
+6. `sdp scan`、`sdp infer`、`sdp profile` の順に変更する。
 7. validate の staleness と deterministic gate を新フローに合わせる。
 8. integration fixture を標準 `SKILL.md` と inference JSON に更新する。
 9. protocol docs と bundled skill docs を更新する。

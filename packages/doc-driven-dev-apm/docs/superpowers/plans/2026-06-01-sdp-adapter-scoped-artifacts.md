@@ -18,7 +18,7 @@
 
 - Create: `src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts`
   - adapter_id ベースの成果物パス解決を一元化する。
-- Modify: `src/skills/skill-discovery-protocol/scripts/generate.ts`
+- Modify: `src/skills/skill-discovery-protocol/scripts/profile.ts`
   - profile 出力を `.sdp/<adapter_id>/` に変更し、catalog は共有として維持する。
 - Modify: `src/skills/skill-discovery-protocol/scripts/validate.ts`
   - report 出力を profile と同じディレクトリへ変更し、catalog 探索を root + profile dir 両対応にする。
@@ -38,7 +38,7 @@
   - profile が subdir の時でも query が catalog/report を読めることを検証する。
 - Modify: `docs/specs/skills/skill-discovery-protocol/sdp-cli.md`
   - 成果物配置ルールを更新する。
-- Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/generate.js`
+- Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/profile.js`
 - Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/validate.js`
 - Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/query.js`
 
@@ -55,7 +55,7 @@
 ```ts
 // generate.test.ts に追加
 
-test("sdp generate writes flow profile under .sdp/<adapter_id>/", () => {
+test("sdp profile writes flow profile under .sdp/<adapter_id>/", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -181,7 +181,7 @@ git commit -m "feat(sdp): add adapter-scoped artifact path helpers"
 ### Task 3: generate / validate / query を新配置に対応
 
 **Files:**
-- Modify: `src/skills/skill-discovery-protocol/scripts/generate.ts`
+- Modify: `src/skills/skill-discovery-protocol/scripts/profile.ts`
 - Modify: `src/skills/skill-discovery-protocol/scripts/validate.ts`
 - Modify: `src/skills/skill-discovery-protocol/scripts/lib/query/loader.ts`
 - Modify: `src/skills/skill-discovery-protocol/scripts/lib/gates/deterministic_gate.ts`
@@ -190,7 +190,7 @@ git commit -m "feat(sdp): add adapter-scoped artifact path helpers"
 - [ ] **Step 1: generate で profile 出力を adapter_id 配下へ切り替える**
 
 ```ts
-// generate.ts 変更イメージ
+// profile.ts 変更イメージ
 const {
   resolveSharedCatalogPath,
   resolveFlowProfilePath,
@@ -244,7 +244,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/skills/skill-discovery-protocol/scripts/generate.ts src/skills/skill-discovery-protocol/scripts/validate.ts src/skills/skill-discovery-protocol/scripts/lib/query/loader.ts src/skills/skill-discovery-protocol/scripts/lib/gates/deterministic_gate.ts
+git add src/skills/skill-discovery-protocol/scripts/profile.ts src/skills/skill-discovery-protocol/scripts/validate.ts src/skills/skill-discovery-protocol/scripts/lib/query/loader.ts src/skills/skill-discovery-protocol/scripts/lib/gates/deterministic_gate.ts
 git commit -m "feat(sdp): route flow artifacts under adapter scoped directories"
 ```
 
@@ -309,7 +309,7 @@ git commit -m "docs(sdp): document adapter scoped artifact output layout"
 ### Task 5: フル検証と生成スクリプト同期
 
 **Files:**
-- Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/generate.js`
+- Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/profile.js`
 - Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/validate.js`
 - Modify (generated): `.apm/skills/skill-discovery-protocol/scripts/query.js`
 - Modify (generated): `.apm/skills/skill-discovery-protocol/schemas/adapter.schema.json`
@@ -321,7 +321,7 @@ Expected: `Finished: ... script(s) built.` と `Done: 6 JSON Schema files genera
 
 - [ ] **Step 2: implementation-flow の実運用コマンドを確認する**
 
-Run: `pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/generate.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+Run: `pnpm -s exec node .apm/skills/skill-discovery-protocol/scripts/profile.js --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
 Expected: `.sdp/implementation-flow-default/implementation-flow-profile.json` が生成 or 更新される
 
 - [ ] **Step 3: validate を実行して report 同居を確認する**
@@ -337,7 +337,7 @@ Expected: PASS（0 failed）
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .apm/skills/skill-discovery-protocol/scripts/generate.js .apm/skills/skill-discovery-protocol/scripts/validate.js .apm/skills/skill-discovery-protocol/scripts/query.js .apm/skills/skill-discovery-protocol/schemas/adapter.schema.json
+git add .apm/skills/skill-discovery-protocol/scripts/profile.js .apm/skills/skill-discovery-protocol/scripts/validate.js .apm/skills/skill-discovery-protocol/scripts/query.js .apm/skills/skill-discovery-protocol/schemas/adapter.schema.json
 git commit -m "build(sdp): regenerate scripts and schemas for adapter scoped artifacts"
 ```
 

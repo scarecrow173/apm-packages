@@ -19,7 +19,7 @@ For CLI usage, adapter schema, and resolution semantics, see `cli-reference.md`.
 - Hand-editing any JSON artifact (`*-catalog.json`, `*-profile.json`,
   `validation-report.json`, `resolved-invocations.json`)
 - Hand-editing any derived Markdown artifact (`.md` sidecars generated
-  by `sdp generate`)
+  by `sdp profile`)
 - Modifying artifact content via external scripts that bypass `sdp`
 
 ### 1.2 Allowed Manual Edits
@@ -48,7 +48,9 @@ The CLI is divided into three responsibility domains:
 
 | Command | Responsibility | Verb |
 | ------- | -------------- | ---- |
-| `sdp generate` | Create and update artifacts | Write |
+| `sdp scan` | Create and update scan artifact | Write |
+| `sdp infer` | Initialize and update inference artifact | Write |
+| `sdp profile` | Create and update catalog/profile artifacts | Write |
 | `sdp validate` | Verify artifact correctness | Read + Check |
 | `sdp query` | Extract information from artifacts | Read |
 

@@ -83,12 +83,12 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 > **`briefing-profile.json` とは？**
 > リポジトリ固有の構成ファイル（JSON）。Briefing に利用可能な全スキルをリストし、
 > カテゴリに割り当て、フロースタックスロットと活性化ルールを定義し、
-> 呼び出し解決を指定する。`sdp generate` で生成され、
+> 呼び出し解決を指定する。`sdp scan` + `sdp infer` + `sdp profile` で生成され、
 > `sdp validate` で検証される。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → 実行: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- 存在するが陳腐化/破損の場合 → 実行: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- 存在しない場合 → 実行: `sdp scan --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` → `sdp infer init --scan .sdp/skill-scan-list.json` → `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- 存在するが陳腐化/破損の場合 → 同じ `scan` → `infer` → `profile` の手順を実行する
 
 ---
 
@@ -97,8 +97,9 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
 **コマンド:**
-- 生成/更新: `sdp generate --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- 推論（generate で inference 不足が出た場合）: `sdp infer --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
+- スキャン: `sdp scan --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- 推論: `sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
+- プロファイル生成: `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - 検証: `sdp validate --profile .sdp/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - クエリ: `sdp query --profile .sdp/briefing-profile.json <サブコマンド>`
 
@@ -239,7 +240,7 @@ Phase C は以下の停止条件を**全て**満たすまで反復する:
 
 <HARD-GATE>
 プロファイルベースの構成をスキップしてはならない。
-- プロファイルが存在しない場合 → `sdp generate` を実行して生成する。
+- プロファイルが存在しない場合 → `scan` → `infer` → `profile` の手順を実行する。
 - プロファイルが存在する場合 → 読み込んでその構成に従う。
 「要件は明確だからスキップしてよい」「このパターンは知っている」が最も多い
 失敗パターン。体系的なスキルルーティングの目的を損なう。

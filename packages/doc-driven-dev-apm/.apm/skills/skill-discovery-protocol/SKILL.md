@@ -91,13 +91,15 @@ The catalog is flow-independent. It must not contain `slots`, `slot_count`,
 
 | Command | Purpose |
 | ------- | ------- |
-| `sdp generate --adapter <yaml> [--references <json>]` | Generate/update artifacts |
+| `sdp scan --adapter <yaml>` | Generate the scan list |
+| `sdp infer init --scan <json>` | Generate/edit inference artifacts |
+| `sdp profile --adapter <yaml> [--references <json>]` | Generate/update catalog and profile artifacts |
 | `sdp validate --profile <json>` | Validate artifacts against gates |
 | `sdp query --profile <json> <sub>` | Extract information from artifacts |
 
-If inference data is missing, `sdp generate` writes `.sdp/skill-scan-list.json`
-and exits with code `2`. Read the scanned `SKILL.md` bodies, create
-`.sdp/skill-reference-inferences.json`, then rerun generation.
+If scan data is missing, run `sdp scan` first. If inference data is missing,
+run `sdp infer init --scan .sdp/skill-scan-list.json`. Then rerun
+`sdp profile`.
 
 ## Artifacts Summary
 

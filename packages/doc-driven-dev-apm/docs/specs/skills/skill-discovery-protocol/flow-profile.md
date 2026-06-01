@@ -5,7 +5,7 @@
 Flow Profile（`*-profile.json`）は、特定の flow に紐づく分類結果・解決結果・
 実行時ガイダンスを保持する **正規成果物**（canonical artifact）である。
 
-`sdp generate` が生成し、`sdp query` が参照する。
+`sdp profile` が生成し、`sdp query` が参照する。
 
 ## ファイル形式
 

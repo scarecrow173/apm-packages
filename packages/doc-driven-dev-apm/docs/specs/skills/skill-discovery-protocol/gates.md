@@ -81,7 +81,7 @@ adapter の `validation.deterministic.compare` で指定:
 ### 検証手順
 
 1. 現在の成果物を退避
-2. `sdp generate` を再実行
+2. `sdp profile` を再実行
 3. 退避した成果物と新規生成物を比較
 4. 差分があれば fail
 

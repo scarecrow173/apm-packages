@@ -17,13 +17,13 @@ discovery protocols previously embedded in each flow skill.
 
 ### Profile Format
 
-- `implementation-profile.md` → `implementation-profile.json` (via `sdp generate`)
-- `briefing-profile.md` → `briefing-profile.json` (via `sdp generate`)
+- `implementation-profile.md` → `implementation-profile.json` (via `sdp scan` / `sdp infer` / `sdp profile`)
+- `briefing-profile.md` → `briefing-profile.json` (via `sdp scan` / `sdp infer` / `sdp profile`)
 
 ### Discovery Steps
 
 - Inline 7-step protocol in each flow → `sdp` CLI commands
-- Manual profile editing → script-only operations via `sdp generate`
+- Manual profile editing → script-only operations via `sdp scan` / `sdp infer` / `sdp profile`
 
 ### Classification
 
@@ -63,7 +63,9 @@ Each slot specifies `id`, `label`, `required`, and `default_skill`.
 ### Step 5: Generate Artifacts
 
 ```bash
-sdp generate --adapter <adapter-yaml>
+sdp scan --adapter <adapter-yaml>
+sdp infer init --scan .sdp/skill-scan-list.json
+sdp profile --adapter <adapter-yaml>
 ```
 
 This produces the profile, catalog, and validation report.
@@ -92,7 +94,9 @@ Run validation after generation and periodically to detect staleness.
 
 | Command | Purpose |
 | ------- | ------- |
-| `sdp generate --adapter <yaml>` | Generate/update profile, catalog, report |
+| `sdp scan --adapter <yaml>` | Generate scan list |
+| `sdp infer init --scan <json>` | Create or update inference data |
+| `sdp profile --adapter <yaml>` | Generate/update profile, catalog, report |
 | `sdp validate --profile <json>` | Validate artifacts (4 gates) |
 | `sdp validate --adapter <yaml>` | Validate adapter YAML structure |
 | `sdp query --profile <json> <subcommand>` | Extract information from profile |

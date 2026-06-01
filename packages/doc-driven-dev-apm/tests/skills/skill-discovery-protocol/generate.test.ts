@@ -189,6 +189,10 @@ readable_outputs:
   // Create tasks dir
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
   writeInferenceFile(dir);
+  const scanned = runScan(["--adapter", "test-adapter.yaml"], dir);
+  if (scanned.status !== 0) {
+    throw new Error(`scan setup failed: ${scanned.stderr || scanned.stdout}`);
+  }
 }
 
 function writeInferenceFile(dir: string) {
@@ -250,7 +254,24 @@ function writeInferenceFile(dir: string) {
 function runSdp(args: string[], cwd: string) {
   const result = spawnSync(
     process.execPath,
-    [path.join(sdpScripts, "generate.js"), ...args],
+    [path.join(sdpScripts, "profile.js"), ...args],
+    {
+      cwd,
+      encoding: "utf8",
+      windowsHide: true,
+    },
+  );
+  return {
+    status: result.status,
+    stdout: result.stdout,
+    stderr: result.stderr,
+  };
+}
+
+function runScan(args: string[], cwd: string) {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(sdpScripts, "scan.js"), ...args],
     {
       cwd,
       encoding: "utf8",
@@ -281,9 +302,9 @@ function runQuery(args: string[], cwd: string) {
   };
 }
 
-// ─── Generate Tests ───
+// ─── Profile Tests ───
 
-test("sdp generate creates catalog and profile", () => {
+test("sdp profile creates catalog and profile", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -297,7 +318,7 @@ test("sdp generate creates catalog and profile", () => {
   assert.ok(fs.existsSync(profilePath), "Profile should exist");
 });
 
-test("sdp generate writes scan list and exits 2 when references are missing", () => {
+test("sdp profile exits 2 when references are missing", () => {
   const dir = tempDir();
   setupTestProject(dir);
   fs.unlinkSync(path.join(dir, ".sdp", "skill-reference-inferences.json"));
@@ -307,7 +328,7 @@ test("sdp generate writes scan list and exits 2 when references are missing", ()
   assert.ok(result.stderr.includes("Skill reference inference required"));
 
   const scanPath = path.join(dir, ".sdp", "skill-scan-list.json");
-  assert.ok(fs.existsSync(scanPath), "scan list should be written");
+  assert.ok(fs.existsSync(scanPath), "scan list should exist");
 
   const scan = JSON.parse(fs.readFileSync(scanPath, "utf8"));
   assert.equal(scan.schema_version, "1.0");
@@ -316,7 +337,7 @@ test("sdp generate writes scan list and exits 2 when references are missing", ()
   assert.ok(scan.skills[0].body.includes("ADR authoring"));
 });
 
-test("sdp generate missing inference prints infer command hint", () => {
+test("sdp profile missing inference prints infer command hint", () => {
   const dir = tempDir();
   setupTestProject(dir);
   fs.unlinkSync(path.join(dir, ".sdp", "skill-reference-inferences.json"));
@@ -330,7 +351,7 @@ test("sdp generate missing inference prints infer command hint", () => {
   assert.ok(output.includes("skill-scan-list.json"));
 });
 
-test("sdp generate catalog has correct structure", () => {
+test("sdp profile catalog has correct structure", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -351,7 +372,7 @@ test("sdp generate catalog has correct structure", () => {
   assert.equal(catalog.skills[1].name, "skill-b");
 });
 
-test("sdp generate ignores non-standard SKILL.md capability metadata", () => {
+test("sdp profile ignores non-standard SKILL.md capability metadata", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -381,7 +402,7 @@ tags:
   assert.deepEqual(skillA.tags, ["architecture", "documentation"]);
 });
 
-test("sdp generate catalog has execution_policy", () => {
+test("sdp profile catalog has execution_policy", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -402,7 +423,7 @@ test("sdp generate catalog has execution_policy", () => {
   assert.equal(skillB.execution_policy.sequence_required, true);
 });
 
-test("sdp generate profile has flow_stack.slots", () => {
+test("sdp profile has flow_stack.slots", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -419,7 +440,7 @@ test("sdp generate profile has flow_stack.slots", () => {
   assert.equal(profile.flow_stack.slots[0].slot_type, "exclusive");
 });
 
-test("sdp generate profile has resolved_invocations", () => {
+test("sdp profile has resolved_invocations", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -439,7 +460,7 @@ test("sdp generate profile has resolved_invocations", () => {
   assert.equal(inv.resolved_skill, "skill-b");
 });
 
-test("sdp generate is idempotent (no diff on re-run)", () => {
+test("sdp profile is idempotent (no diff on re-run)", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -463,7 +484,7 @@ test("sdp generate is idempotent (no diff on re-run)", () => {
   assert.equal(profile1, profile2, "Profile should be identical on re-run");
 });
 
-test("sdp generate sorts skills by name", () => {
+test("sdp profile sorts skills by name", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -478,7 +499,7 @@ test("sdp generate sorts skills by name", () => {
   assert.deepEqual(names, sorted, "Skills should be sorted by name");
 });
 
-test("sdp generate profile classification categories sorted by id", () => {
+test("sdp profile classification categories sorted by id", () => {
   const dir = tempDir();
   setupTestProject(dir);
 
@@ -572,13 +593,13 @@ test("sdp query execution-policy works", () => {
 
 // ─── Error Handling ───
 
-test("sdp generate without --adapter exits with error", () => {
+test("sdp profile without --adapter exits with error", () => {
   const dir = tempDir();
   const result = runSdp([], dir);
   assert.notEqual(result.status, 0);
 });
 
-test("sdp generate with missing adapter file exits with error", () => {
+test("sdp profile with missing adapter file exits with error", () => {
   const dir = tempDir();
   const result = runSdp(["--adapter", "nonexistent.yaml"], dir);
   assert.notEqual(result.status, 0);
