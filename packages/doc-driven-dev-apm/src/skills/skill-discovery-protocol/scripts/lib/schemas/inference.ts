@@ -31,7 +31,7 @@ const SkillReferenceInferenceSchema = z.object({
 });
 
 export const SkillReferenceInferenceDocumentSchema = z.object({
-  schema_version: z.string(),
+  schema_version: z.literal("1.0"),
   generated_at: z.string().optional(),
   inference_source: z.literal("agent"),
   skills: z.array(SkillReferenceInferenceSchema),

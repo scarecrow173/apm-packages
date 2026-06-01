@@ -15161,7 +15161,7 @@ var init_inference = __esm({
       tags: external_exports.array(external_exports.string())
     });
     SkillReferenceInferenceDocumentSchema = external_exports.object({
-      schema_version: external_exports.string(),
+      schema_version: external_exports.literal("1.0"),
       generated_at: external_exports.string().optional(),
       inference_source: external_exports.literal("agent"),
       skills: external_exports.array(SkillReferenceInferenceSchema)
@@ -15300,10 +15300,16 @@ function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--scan") args.scan = argv[++i];
-    else if (arg === "--out") args.out = argv[++i];
-    else if (arg === "--cwd") args.cwd = argv[++i];
-    else if (arg === "--help" || arg === "-h") args.help = true;
+    if (arg === "--scan" || arg === "--out" || arg === "--cwd") {
+      const next = argv[i + 1];
+      if (!next || next.startsWith("-")) {
+        throw new Error(`Option ${arg} requires a value`);
+      }
+      if (arg === "--scan") args.scan = next;
+      else if (arg === "--out") args.out = next;
+      else args.cwd = next;
+      i++;
+    } else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;

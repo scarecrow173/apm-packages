@@ -39,9 +39,12 @@ function main(): void {
   const scriptPath = path.join(scriptDir, `${command}.js`);
   const result = spawnSync(process.execPath, [scriptPath, ...remaining], {
     cwd: process.cwd(),
-    stdio: "inherit",
+    encoding: "utf8",
     windowsHide: true,
   });
+
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
 
   process.exitCode = result.status ?? 1;
 }

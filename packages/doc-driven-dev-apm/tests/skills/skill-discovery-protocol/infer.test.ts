@@ -21,6 +21,15 @@ function runInfer(args: string[], cwd: string) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
+function runSdpInfer(args: string[], cwd: string) {
+  const result = spawnSync(process.execPath, [path.join(sdpScripts, "sdp.js"), "infer", ...args], {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
 test("sdp infer generates skill-reference-inferences.json from scan list", () => {
   const dir = tempDir();
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
@@ -133,4 +142,25 @@ test("sdp infer exits 2 when scan list is missing", () => {
   const result = runInfer([], dir);
   assert.equal(result.status, 2, `stderr: ${result.stderr}`);
   assert.ok(result.stderr.includes("Scan list not found"));
+});
+
+test("sdp.js infer --help returns 0 and usage mentions sdp infer", () => {
+  const dir = tempDir();
+  const result = runSdpInfer(["--help"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes("Usage: sdp infer"));
+});
+
+test("sdp.js infer exits 2 when scan list is missing", () => {
+  const dir = tempDir();
+  const result = runSdpInfer([], dir);
+  assert.equal(result.status, 2, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("Scan list not found"));
+});
+
+test("sdp infer exits 2 when --scan value is missing", () => {
+  const dir = tempDir();
+  const result = runInfer(["--scan"], dir);
+  assert.equal(result.status, 2, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("Option --scan requires a value"));
 });
