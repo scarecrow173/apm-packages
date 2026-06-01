@@ -11,7 +11,6 @@ const {
   readInferenceOrThrow,
   writeInferenceDocument,
 } = require("./lib/inference.ts");
-const { buildInferenceBaselineDocument } = require("./lib/infer_baseline.ts");
 const { SkillReferenceInferenceDocumentSchema } = require("./lib/schemas/inference.ts");
 const {
   buildInitDocument,
@@ -22,19 +21,19 @@ const {
   deleteSkill,
 } = require("./lib/infer_edit.ts");
 
-type InferCommand = "run" | "init" | "apply" | "check" | "set-skill" | "delete-skill";
+type InferCommand = "init" | "apply" | "check" | "set-skill" | "delete-skill";
 
 function parseCommand(argv: string[]): { command: InferCommand; rest: string[] } {
   const head = argv[0];
   if (!head || head.startsWith("-")) {
-    return { command: "run", rest: argv };
+    return { command: "init", rest: argv };
   }
 
-  if (head === "run" || head === "init" || head === "apply" || head === "check" || head === "set-skill" || head === "delete-skill") {
+  if (head === "init" || head === "apply" || head === "check" || head === "set-skill" || head === "delete-skill") {
     return { command: head, rest: argv.slice(1) };
   }
 
-  return { command: "run", rest: argv };
+  return { command: "init", rest: argv };
 }
 
 function parseArgs(argv: string[]): {
@@ -108,7 +107,6 @@ function parseArgs(argv: string[]): {
 
 function usage(): string {
   return `Usage:
-  sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>]
   sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
   sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
   sdp infer check --in <json> [--cwd <dir>]
@@ -326,41 +324,8 @@ function main(): void {
     }
   }
 
-  // run (default)
-  if (!fs.existsSync(scanPath)) {
-    console.error(`Scan list not found: ${scanPath}`);
-    process.exitCode = 2;
-    return;
-  }
-
-  let scanList;
-  try {
-    scanList = loadScanList(scanPath);
-  } catch (e: unknown) {
-    console.error(e instanceof Error ? e.message : String(e));
-    process.exitCode = 2;
-    return;
-  }
-
-  const doc = buildInferenceBaselineDocument(scanList.skills);
-
-  const parsed = SkillReferenceInferenceDocumentSchema.safeParse(doc);
-  if (!parsed.success) {
-    const details = parsed.error.issues
-      .map((issue: { path: (string | number)[]; message: string }) => `${issue.path.join(".")}: ${issue.message}`)
-      .join("; ");
-    console.error(`Generated inference document failed schema validation: ${details}`);
-    process.exitCode = 1;
-    return;
-  }
-
-  const outDir = path.dirname(outPath);
-  if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true });
-  }
-
-  fs.writeFileSync(outPath, JSON.stringify(parsed.data, null, 2) + "\n", "utf8");
-  console.log(`Written: ${path.relative(cwd, outPath)}`);
+  console.error(`Unknown command: ${args.command}`);
+  process.exitCode = 2;
 }
 
 main();

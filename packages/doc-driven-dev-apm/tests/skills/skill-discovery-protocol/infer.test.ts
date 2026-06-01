@@ -117,7 +117,7 @@ test("sdp infer overwrites existing inference file with regenerated schema-shape
     "utf8",
   );
 
-  const result = runInfer([], dir);
+  const result = runInfer(["init", "--if-exists", "overwrite"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
   const inferPath = path.join(dir, ".sdp", "skill-reference-inferences.json");
@@ -183,7 +183,7 @@ test("sdp.js infer --help returns 0 and usage mentions sdp infer", () => {
   const dir = tempDir();
   const result = runSdpInfer(["--help"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
-  assert.ok(result.stdout.includes("sdp infer run"));
+  assert.ok(result.stdout.includes("sdp infer init"));
 });
 
 test("sdp.js infer exits 2 when scan list is missing", () => {
@@ -200,7 +200,7 @@ test("sdp infer exits 2 when --scan value is missing", () => {
   assert.ok(result.stderr.includes("Option --scan requires a value"));
 });
 
-test("sdp infer agent mode creates editable baseline without rule-based inference", () => {
+test("sdp infer init creates editable baseline without rule-based inference", () => {
   const dir = tempDir();
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
   fs.writeFileSync(
@@ -225,7 +225,7 @@ test("sdp infer agent mode creates editable baseline without rule-based inferenc
     "utf8",
   );
 
-  const result = runInfer([], dir);
+  const result = runInfer(["init"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
   const doc = JSON.parse(

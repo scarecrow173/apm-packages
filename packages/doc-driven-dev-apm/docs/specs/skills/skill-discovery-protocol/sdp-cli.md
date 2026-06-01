@@ -8,7 +8,6 @@
 
 ```text
 sdp generate --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
-sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>]
 sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
 sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp infer check --in <json> [--cwd <dir>]
@@ -72,7 +71,6 @@ inference 成果物が存在しない場合、`sdp generate` は scan list を�
 scan 成果物から inference 成果物を生成する。
 
 ```text
-sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>]
 sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
 sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp infer check --in <json> [--cwd <dir>]
@@ -82,12 +80,11 @@ sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [
 
 ### 動作
 
-1. `run` は `--scan` から推論ドキュメントを生成する（推論方式は `agent` 固定）
-2. `init` は scan 成果物から編集用のベース inference ドキュメントを生成する
-3. `apply` は JSONL operations を既存 inference ドキュメントへ原子的に適用する
-4. `check` は既存 inference ドキュメントを schema 検証する
-5. `set-skill` は1スキル分の定義を upsert する
-6. `delete-skill` は指定スキル定義を削除する
+1. `init` は scan 成果物から編集用のベース inference ドキュメントを生成する（推論方式は `agent` 固定）
+2. `apply` は JSONL operations を既存 inference ドキュメントへ原子的に適用する
+3. `check` は既存 inference ドキュメントを schema 検証する
+4. `set-skill` は1スキル分の定義を upsert する
+5. `delete-skill` は指定スキル定義を削除する
 
 ### 入力
 

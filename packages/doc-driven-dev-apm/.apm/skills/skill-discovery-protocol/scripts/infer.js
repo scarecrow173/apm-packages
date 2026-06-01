@@ -15268,39 +15268,6 @@ var require_inference = __commonJS({
   }
 });
 
-// src/skills/skill-discovery-protocol/scripts/lib/infer_baseline.ts
-var require_infer_baseline = __commonJS({
-  "src/skills/skill-discovery-protocol/scripts/lib/infer_baseline.ts"(exports2, module2) {
-    "use strict";
-    function defaultExecutionPolicy() {
-      return {
-        strictness: "flexible",
-        sequence_required: false,
-        allow_step_reordering: true,
-        allow_partial_application: true
-      };
-    }
-    function buildInferenceBaselineDocument2(skills) {
-      const inferredSkills = [...skills].sort((a, b) => a.name.localeCompare(b.name)).map((skill) => ({
-        name: skill.name,
-        provides: [],
-        uses: [],
-        execution_policy: defaultExecutionPolicy(),
-        tags: []
-      }));
-      return {
-        schema_version: "1.0",
-        generated_at: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z"),
-        inference_source: "agent",
-        skills: inferredSkills
-      };
-    }
-    module2.exports = {
-      buildInferenceBaselineDocument: buildInferenceBaselineDocument2
-    };
-  }
-});
-
 // src/skills/skill-discovery-protocol/scripts/lib/schemas/infer_ops.ts
 var CapabilitySchema2, UsesSchema2, ExecutionPolicySchema2, SkillSchema, InferOpSchema;
 var init_infer_ops = __esm({
@@ -15498,7 +15465,6 @@ var {
   readInferenceOrThrow,
   writeInferenceDocument
 } = require_inference();
-var { buildInferenceBaselineDocument } = require_infer_baseline();
 var { SkillReferenceInferenceDocumentSchema: SkillReferenceInferenceDocumentSchema2 } = (init_inference(), __toCommonJS(inference_exports));
 var {
   buildInitDocument,
@@ -15511,12 +15477,12 @@ var {
 function parseCommand(argv) {
   const head = argv[0];
   if (!head || head.startsWith("-")) {
-    return { command: "run", rest: argv };
+    return { command: "init", rest: argv };
   }
-  if (head === "run" || head === "init" || head === "apply" || head === "check" || head === "set-skill" || head === "delete-skill") {
+  if (head === "init" || head === "apply" || head === "check" || head === "set-skill" || head === "delete-skill") {
     return { command: head, rest: argv.slice(1) };
   }
-  return { command: "run", rest: argv };
+  return { command: "init", rest: argv };
 }
 function parseArgs(argv) {
   const parsedCommand = parseCommand(argv);
@@ -15551,7 +15517,6 @@ function parseArgs(argv) {
 }
 function usage() {
   return `Usage:
-  sdp infer run [--scan <json>] [--out <json>] [--cwd <dir>]
   sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
   sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
   sdp infer check --in <json> [--cwd <dir>]
@@ -15610,34 +15575,34 @@ function main() {
       process.exitCode = 2;
       return;
     }
-    let scanList2;
+    let scanList;
     try {
-      scanList2 = loadScanList(scanPath);
+      scanList = loadScanList(scanPath);
     } catch (e) {
       console.error(e instanceof Error ? e.message : String(e));
       process.exitCode = 2;
       return;
     }
-    let doc2 = buildInitDocument(scanList2);
+    let doc = buildInitDocument(scanList);
     if (behavior === "merge" && fs.existsSync(outPath)) {
       try {
         const existing = readInferenceOrThrow(outPath);
-        doc2 = mergeInitWithExisting(doc2, existing);
+        doc = mergeInitWithExisting(doc, existing);
       } catch (e) {
         console.error(e instanceof Error ? e.message : String(e));
         process.exitCode = 2;
         return;
       }
     }
-    const parsed2 = SkillReferenceInferenceDocumentSchema2.safeParse(doc2);
-    if (!parsed2.success) {
-      const details = parsed2.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+    const parsed = SkillReferenceInferenceDocumentSchema2.safeParse(doc);
+    if (!parsed.success) {
+      const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
       console.error(`Generated inference document failed schema validation: ${details}`);
       process.exitCode = 1;
       return;
     }
     if (!args.dryRun) {
-      writeInferenceDocument(outPath, parsed2.data);
+      writeInferenceDocument(outPath, parsed.data);
       console.log(`Written: ${path.relative(cwd, outPath)}`);
     } else {
       console.log(`dry-run: would write ${path.relative(cwd, outPath)}`);
@@ -15660,13 +15625,13 @@ function main() {
       const base = readInferenceOrThrow(inPath);
       const ops = parseOpsJsonl(fs.readFileSync(opsPath, "utf8"));
       const next = applyOps(base, ops);
-      const parsed2 = SkillReferenceInferenceDocumentSchema2.safeParse(next);
-      if (!parsed2.success) {
-        const details = parsed2.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+      const parsed = SkillReferenceInferenceDocumentSchema2.safeParse(next);
+      if (!parsed.success) {
+        const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
         throw new Error(`Edited inference failed schema validation: ${details}`);
       }
       if (!args.dryRun) {
-        writeInferenceDocument(outPath, parsed2.data);
+        writeInferenceDocument(outPath, parsed.data);
         console.log(`Written: ${path.relative(cwd, outPath)}`);
       } else {
         console.log(`dry-run: would apply ${ops.length} op(s)`);
@@ -15694,13 +15659,13 @@ function main() {
       const base = readInferenceOrThrow(inPath);
       const skillSpec = JSON.parse(fs.readFileSync(specPath, "utf8"));
       const next = upsertSkill(base, args.name, skillSpec);
-      const parsed2 = SkillReferenceInferenceDocumentSchema2.safeParse(next);
-      if (!parsed2.success) {
-        const details = parsed2.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+      const parsed = SkillReferenceInferenceDocumentSchema2.safeParse(next);
+      if (!parsed.success) {
+        const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
         throw new Error(`Edited inference failed schema validation: ${details}`);
       }
       if (!args.dryRun) {
-        writeInferenceDocument(outPath, parsed2.data);
+        writeInferenceDocument(outPath, parsed.data);
         console.log(`Written: ${path.relative(cwd, outPath)}`);
       } else {
         console.log(`dry-run: would set skill ${args.name}`);
@@ -15721,13 +15686,13 @@ function main() {
     try {
       const base = readInferenceOrThrow(inPath);
       const next = deleteSkill(base, args.name);
-      const parsed2 = SkillReferenceInferenceDocumentSchema2.safeParse(next);
-      if (!parsed2.success) {
-        const details = parsed2.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
+      const parsed = SkillReferenceInferenceDocumentSchema2.safeParse(next);
+      if (!parsed.success) {
+        const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
         throw new Error(`Edited inference failed schema validation: ${details}`);
       }
       if (!args.dryRun) {
-        writeInferenceDocument(outPath, parsed2.data);
+        writeInferenceDocument(outPath, parsed.data);
         console.log(`Written: ${path.relative(cwd, outPath)}`);
       } else {
         console.log(`dry-run: would delete skill ${args.name}`);
@@ -15739,32 +15704,7 @@ function main() {
       return;
     }
   }
-  if (!fs.existsSync(scanPath)) {
-    console.error(`Scan list not found: ${scanPath}`);
-    process.exitCode = 2;
-    return;
-  }
-  let scanList;
-  try {
-    scanList = loadScanList(scanPath);
-  } catch (e) {
-    console.error(e instanceof Error ? e.message : String(e));
-    process.exitCode = 2;
-    return;
-  }
-  const doc = buildInferenceBaselineDocument(scanList.skills);
-  const parsed = SkillReferenceInferenceDocumentSchema2.safeParse(doc);
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((issue2) => `${issue2.path.join(".")}: ${issue2.message}`).join("; ");
-    console.error(`Generated inference document failed schema validation: ${details}`);
-    process.exitCode = 1;
-    return;
-  }
-  const outDir = path.dirname(outPath);
-  if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true });
-  }
-  fs.writeFileSync(outPath, JSON.stringify(parsed.data, null, 2) + "\n", "utf8");
-  console.log(`Written: ${path.relative(cwd, outPath)}`);
+  console.error(`Unknown command: ${args.command}`);
+  process.exitCode = 2;
 }
 main();
