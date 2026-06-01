@@ -9,6 +9,7 @@ function usage(): string {
 
 Commands:
   generate    Generate skill catalog and flow profile
+  infer       Generate skill reference inference from scan list
   validate    Validate artifacts or adapter
   query       Query flow profile data
 
@@ -26,7 +27,7 @@ function main(): void {
 
   const remaining = args.slice(1);
   const scriptDir = __dirname;
-  const validCommands = ["generate", "validate", "query"];
+  const validCommands = ["generate", "infer", "validate", "query"];
 
   if (!validCommands.includes(command)) {
     console.error(`Unknown command: ${command}`);
