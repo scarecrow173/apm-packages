@@ -22360,7 +22360,7 @@ var init_inference = __esm({
       tags: external_exports.array(external_exports.string())
     });
     SkillReferenceInferenceDocumentSchema = external_exports.object({
-      schema_version: external_exports.string(),
+      schema_version: external_exports.literal("1.0"),
       generated_at: external_exports.string().optional(),
       inference_source: external_exports.literal("agent"),
       skills: external_exports.array(SkillReferenceInferenceSchema)
