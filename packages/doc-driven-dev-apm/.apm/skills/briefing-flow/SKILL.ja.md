@@ -83,8 +83,8 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 > **`.sdp/briefing-flow-default/briefing-profile.json` とは？**
 > リポジトリ固有の構成ファイル（JSON）。Briefing に利用可能な全スキルをリストし、
 > カテゴリに割り当て、フロースタックスロットと活性化ルールを定義し、
-> 呼び出し解決を指定する。`sdp scan` + `sdp infer` + `sdp profile` で生成され、
-> `sdp validate` で検証される。
+> 呼び出し解決を指定する。`sdp scan`、agent による inference entry の確認・更新、
+> `sdp infer`、`sdp profile` で生成され、`sdp validate` で検証される。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
 - 存在しない場合 → 実行: `sdp scan --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` → `sdp infer init --scan .sdp/skill-scan-list.json` → `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`

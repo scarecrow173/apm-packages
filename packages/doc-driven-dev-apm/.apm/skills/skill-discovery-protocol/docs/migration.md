@@ -17,13 +17,13 @@ discovery protocols previously embedded in each flow skill.
 
 ### Profile Format
 
-- `implementation-profile.md` → `implementation-profile.json` (via `sdp scan` / `sdp infer` / `sdp profile`)
-- `briefing-profile.md` → `briefing-profile.json` (via `sdp scan` / `sdp infer` / `sdp profile`)
+- `implementation-profile.md` → `.sdp/implementation-flow-default/implementation-flow-profile.json`
+- `briefing-profile.md` → `.sdp/briefing-flow-default/briefing-profile.json`
 
 ### Discovery Steps
 
-- Inline 7-step protocol in each flow → `sdp` CLI commands
-- Manual profile editing → script-only operations via `sdp scan` / `sdp infer` / `sdp profile`
+- Inline 7-step protocol in each flow → explicit `sdp scan -> agent inference -> sdp infer -> sdp profile` workflow
+- Manual profile editing → script-only operations via `sdp` CLI
 
 ### Classification
 
@@ -32,10 +32,12 @@ discovery protocols previously embedded in each flow skill.
 
 ### Artifacts
 
-- Single `.md` file → Three co-located JSON artifacts:
-  - `<flow>-profile.json` — Classified skill assignments
-  - `skill-reference-catalog.json` — Full skill catalog
-  - `validation-report.json` — Gate results
+- Single `.md` file → Shared protocol artifacts plus adapter-scoped flow artifacts:
+  - `.sdp/skill-scan-list.json` — Raw scanned `SKILL.md` bodies
+  - `.sdp/skill-reference-inferences.json` — Agent-authored capability decisions
+  - `.sdp/skill-reference-catalog.json` — Full shared skill catalog
+  - `.sdp/<adapter_id>/<flow_profile>.json` — Classified flow profile
+  - `.sdp/<adapter_id>/validation-report.json` — Gate results for that flow profile
 
 ## Adopting the Common Protocol for New Skills
 
@@ -58,7 +60,7 @@ Each entry requires `id`, `label`, `description`, and `match` rules.
 ### Step 4: Define Flow Stack Slots
 
 Configure `flow_stack.slots` for the flow's default skill assignments.
-Each slot specifies `id`, `label`, `required`, and `default_skill`.
+Each slot specifies `slot_id`, `slot_type`, `activation`, and optional `default.skill`.
 
 ### Step 5: Generate Artifacts
 
@@ -68,7 +70,11 @@ sdp infer init --scan .sdp/skill-scan-list.json
 sdp profile --adapter <adapter-yaml>
 ```
 
-This produces the profile, catalog, and validation report.
+This produces the shared catalog and the adapter-scoped flow profile.
+Run `sdp validate --profile <profile-json>` afterwards to create and verify
+the flow-specific validation report.
+Before `sdp profile`, the operator should inspect or update the inference file
+so `provides`, `uses`, `execution_policy`, and `tags` match the scanned skills.
 
 ### Step 6: Reference `sdp query` in SKILL.md
 
@@ -181,14 +187,14 @@ render:
   newline: "lf"
 artifacts:
   protocol:
-    catalog: "skill-reference-catalog.json"
-    profile: "<your-flow>-profile.json"
-    report: "validation-report.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "<your-flow>-profile.json"
+    validation_report: "validation-report.json"
 readable_outputs:
   enabled: true
   include:
-    catalog: true
-    profile: true
+    - "skill_reference_catalog"
+    - "flow_profile"
 ```
 
 ## Extending Query Subcommands

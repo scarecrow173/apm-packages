@@ -17,13 +17,13 @@ Skill Discovery Protocol (SDP) は、各フロースキルに埋め込まれて�
 
 ### プロファイル形式
 
-- `implementation-profile.md` → `implementation-profile.json` (`sdp scan` / `sdp infer` / `sdp profile` 経由)
-- `briefing-profile.md` → `briefing-profile.json` (`sdp scan` / `sdp infer` / `sdp profile` 経由)
+- `implementation-profile.md` → `.sdp/implementation-flow-default/implementation-flow-profile.json`
+- `briefing-profile.md` → `.sdp/briefing-flow-default/briefing-profile.json`
 
 ### ディスカバリー手順
 
-- 各フロー内のインライン 7 ステッププロトコル → `sdp` CLI コマンド
-- 手動プロファイル編集 → `sdp scan` / `sdp infer` / `sdp profile` によるスクリプト専用操作
+- 各フロー内のインライン 7 ステッププロトコル → 明示的な `sdp scan -> agent 推論 -> sdp infer -> sdp profile` ワークフロー
+- 手動プロファイル編集 → `sdp` CLI によるスクリプト専用操作
 
 ### 分類
 
@@ -32,10 +32,12 @@ Skill Discovery Protocol (SDP) は、各フロースキルに埋め込まれて�
 
 ### 成果物
 
-- 単一 `.md` ファイル → 3 つの JSON 成果物:
-  - `<flow>-profile.json` — 分類済みスキル割り当て
-  - `skill-reference-catalog.json` — 完全なスキルカタログ
-  - `validation-report.json` — ゲート結果
+- 単一 `.md` ファイル → 共有 protocol 成果物と adapter 単位成果物:
+  - `.sdp/skill-scan-list.json` — scan された `SKILL.md` 本文
+  - `.sdp/skill-reference-inferences.json` — agent が判断した capability 情報
+  - `.sdp/skill-reference-catalog.json` — 共有スキルカタログ
+  - `.sdp/<adapter_id>/<flow_profile>.json` — flow 固有 profile
+  - `.sdp/<adapter_id>/validation-report.json` — その flow profile のゲート結果
 
 ## 新規スキルでの共通プロトコル採用手順
 
@@ -58,7 +60,7 @@ Skill Discovery Protocol (SDP) は、各フロースキルに埋め込まれて�
 ### ステップ 4: フロースタックスロットを定義
 
 `flow_stack.slots` にフローのデフォルトスキル割り当てを設定します。
-各スロットには `id`, `label`, `required`, `default_skill` を指定します。
+各スロットには `slot_id`, `slot_type`, `activation`、必要に応じて `default.skill` を指定します。
 
 ### ステップ 5: 成果物を生成
 
@@ -68,7 +70,11 @@ sdp infer init --scan .sdp/skill-scan-list.json
 sdp profile --adapter <adapter-yaml>
 ```
 
-プロファイル、カタログ、バリデーションレポートが生成されます。
+共有 catalog と adapter-scoped flow profile が生成されます。
+flow ごとの validation-report は、その後に
+`sdp validate --profile <profile-json>` を実行して生成・検証します。
+`sdp profile` の前に、operator は inference file を確認または更新し、
+`provides`、`uses`、`execution_policy`、`tags` が scan 結果と整合するようにします。
 
 ### ステップ 6: SKILL.md で `sdp query` を参照
 
@@ -181,14 +187,14 @@ render:
   newline: "lf"
 artifacts:
   protocol:
-    catalog: "skill-reference-catalog.json"
-    profile: "<your-flow>-profile.json"
-    report: "validation-report.json"
+    skill_reference_catalog: "skill-reference-catalog.json"
+    flow_profile: "<your-flow>-profile.json"
+    validation_report: "validation-report.json"
 readable_outputs:
   enabled: true
   include:
-    catalog: true
-    profile: true
+    - "skill_reference_catalog"
+    - "flow_profile"
 ```
 
 ## Query サブコマンドの拡張

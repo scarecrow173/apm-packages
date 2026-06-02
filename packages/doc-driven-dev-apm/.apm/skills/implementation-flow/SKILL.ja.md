@@ -86,7 +86,8 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 > リポジトリ固有の構成ファイル。利用可能な全スキルをリストし、
 > カテゴリに割り当て、always-on か conditional かを定義し、
 > フロースタックと invocation resolution を指定する。
-> `sdp scan` + `sdp infer` + `sdp profile` で生成され、スキル変更時に更新される。
+> `sdp scan`、agent による inference entry の確認・更新、`sdp infer`、
+> `sdp profile` で生成され、スキル変更時に更新される。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
 - 存在しない場合 → `sdp scan --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` → `sdp infer init --scan .sdp/skill-scan-list.json` → `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を実行する。
