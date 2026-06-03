@@ -5,6 +5,7 @@ const path = require("node:path");
 
 import { SkillScanListDocumentSchema } from "./schemas/scan";
 import { SkillReferenceInferenceDocumentSchema } from "./schemas/inference";
+const { validateInferenceCompleteness } = require("./inference_validation.ts");
 import type {
   RawScannedSkill,
   ScannedSkill,
@@ -106,6 +107,16 @@ function enrichSkills(rawSkills: RawScannedSkill[], inferenceDoc: SkillReference
   });
 }
 
+function assertInferenceComplete(
+  scanList: SkillScanListDocument,
+  inferenceDoc: SkillReferenceInferenceDocument,
+): void {
+  const result = validateInferenceCompleteness(scanList, inferenceDoc);
+  if (!result.ok) {
+    throw new Error(result.message);
+  }
+}
+
 module.exports = {
   defaultScanListPath,
   defaultInferencePath,
@@ -116,4 +127,5 @@ module.exports = {
   writeScanList,
   loadScanList,
   enrichSkills,
+  assertInferenceComplete,
 };
