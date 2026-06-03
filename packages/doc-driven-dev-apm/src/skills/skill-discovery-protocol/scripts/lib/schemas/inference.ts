@@ -24,6 +24,7 @@ const ExecutionPolicySchema = z.object({
 
 const SkillReferenceInferenceSchema = z.object({
   name: z.string(),
+  review_status: z.enum(["pending", "reviewed"]),
   provides: z.array(CapabilitySchema),
   uses: z.array(UsesSchema),
   execution_policy: ExecutionPolicySchema,

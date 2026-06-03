@@ -21,6 +21,7 @@ function buildInitDocument(scanList: SkillScanListDocument): SkillReferenceInfer
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((skill) => ({
         name: skill.name,
+        review_status: "pending",
         provides: [],
         uses: [],
         execution_policy: defaultExecutionPolicy(),
@@ -70,7 +71,14 @@ function parseOpsJsonl(content: string): InferOp[] {
 function upsertSkill(doc: SkillReferenceInferenceDocument, name: string, skillSpec: any): SkillReferenceInferenceDocument {
   const next = JSON.parse(JSON.stringify(doc)) as SkillReferenceInferenceDocument;
   const index = next.skills.findIndex((skill) => skill.name === name);
-  const normalized = { ...skillSpec, name };
+  const normalized = {
+    review_status: "pending",
+    provides: [],
+    uses: [],
+    tags: [],
+    ...skillSpec,
+    name,
+  };
 
   if (index >= 0) next.skills[index] = normalized;
   else next.skills.push(normalized);

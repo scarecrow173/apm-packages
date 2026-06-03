@@ -29,6 +29,7 @@ function baselineInference() {
     skills: [
       {
         name: "spec-doc",
+        review_status: "reviewed",
         provides: [{ capability: "spec_authoring", description: "Draft specifications" }],
         uses: [],
         execution_policy: {
@@ -156,6 +157,7 @@ test("sdp infer set-skill upserts one skill", () => {
     specPath,
     JSON.stringify(
       {
+        review_status: "reviewed",
         provides: [{ capability: "test_planning", description: "Plan tests" }],
         uses: [{ capability: "spec_authoring", required: true, override_allowed: false }],
         execution_policy: {
@@ -176,7 +178,9 @@ test("sdp infer set-skill upserts one skill", () => {
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 
   const doc = JSON.parse(fs.readFileSync(inferPath, "utf8"));
-  assert.ok(doc.skills.some((s: { name: string }) => s.name === "test-driven-development"));
+  const inserted = doc.skills.find((s: { name: string }) => s.name === "test-driven-development");
+  assert.ok(inserted);
+  assert.equal(inserted.review_status, "reviewed");
 });
 
 test("sdp infer delete-skill removes one skill", () => {
@@ -186,6 +190,7 @@ test("sdp infer delete-skill removes one skill", () => {
   const base = baselineInference();
   base.skills.push({
     name: "task-doc",
+    review_status: "reviewed",
     provides: [{ capability: "task_management" }],
     uses: [],
     execution_policy: {

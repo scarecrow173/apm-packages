@@ -15155,6 +15155,7 @@ var init_inference = __esm({
     });
     SkillReferenceInferenceSchema = external_exports.object({
       name: external_exports.string(),
+      review_status: external_exports.enum(["pending", "reviewed"]),
       provides: external_exports.array(CapabilitySchema),
       uses: external_exports.array(UsesSchema),
       execution_policy: ExecutionPolicySchema,
@@ -15361,6 +15362,7 @@ var require_infer_edit = __commonJS({
         inference_source: "agent",
         skills: [...scanList.skills].sort((a, b) => a.name.localeCompare(b.name)).map((skill) => ({
           name: skill.name,
+          review_status: "pending",
           provides: [],
           uses: [],
           execution_policy: defaultExecutionPolicy(),
@@ -15395,7 +15397,14 @@ var require_infer_edit = __commonJS({
     function upsertSkill2(doc, name, skillSpec) {
       const next = JSON.parse(JSON.stringify(doc));
       const index = next.skills.findIndex((skill) => skill.name === name);
-      const normalized = { ...skillSpec, name };
+      const normalized = {
+        review_status: "pending",
+        provides: [],
+        uses: [],
+        tags: [],
+        ...skillSpec,
+        name
+      };
       if (index >= 0) next.skills[index] = normalized;
       else next.skills.push(normalized);
       next.skills.sort((a, b) => a.name.localeCompare(b.name));

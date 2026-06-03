@@ -66,6 +66,7 @@ test("sdp infer generates skill-reference-inferences.json from scan list", () =>
   assert.equal(doc.inference_source, "agent");
   assert.equal(doc.skills.length, 1);
   assert.equal(doc.skills[0].name, "skill-a");
+  assert.equal(doc.skills[0].review_status, "pending");
   assert.ok(Array.isArray(doc.skills[0].provides), "provides should be an array");
   assert.ok(Array.isArray(doc.skills[0].uses), "uses should be an array");
   assert.deepEqual(doc.skills[0].provides, [], "agent mode baseline should not infer provides automatically");
@@ -128,6 +129,7 @@ test("sdp infer overwrites existing inference file with regenerated schema-shape
   assert.ok(Array.isArray(doc.skills), "skills should be an array");
   assert.equal(doc.skills.length, 1);
   assert.equal(doc.skills[0].name, "skill-a");
+  assert.equal(doc.skills[0].review_status, "pending");
   assert.ok(Array.isArray(doc.skills[0].provides), "provides should be an array");
   assert.ok(Array.isArray(doc.skills[0].uses), "uses should be an array");
   assert.equal(
@@ -235,6 +237,7 @@ test("sdp infer init creates editable baseline without rule-based inference", ()
   assert.deepEqual(doc.skills[0].provides, []);
   assert.deepEqual(doc.skills[0].uses, []);
   assert.deepEqual(doc.skills[0].tags, []);
+  assert.equal(doc.skills[0].review_status, "pending");
   assert.equal(doc.skills[0].execution_policy.strictness, "flexible");
   assert.equal(doc.skills[0].execution_policy.sequence_required, false);
 });

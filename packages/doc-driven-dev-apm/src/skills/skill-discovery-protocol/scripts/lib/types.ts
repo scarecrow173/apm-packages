@@ -108,6 +108,7 @@ export type ScannedSkill = {
 
 export type SkillReferenceInference = {
   name: string;
+  review_status: "pending" | "reviewed";
   provides: { capability: string; description?: string }[];
   uses: { capability: string; required: boolean; default_skill?: string; override_allowed: boolean }[];
   execution_policy: ScannedSkill["execution_policy"];

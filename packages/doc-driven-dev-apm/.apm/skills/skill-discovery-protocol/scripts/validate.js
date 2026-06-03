@@ -22403,6 +22403,7 @@ var init_inference = __esm({
     });
     SkillReferenceInferenceSchema = external_exports.object({
       name: external_exports.string(),
+      review_status: external_exports.enum(["pending", "reviewed"]),
       provides: external_exports.array(CapabilitySchema2),
       uses: external_exports.array(UsesSchema2),
       execution_policy: ExecutionPolicySchema2,
