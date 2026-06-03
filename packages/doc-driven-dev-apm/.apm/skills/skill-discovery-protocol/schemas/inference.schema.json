@@ -21,6 +21,13 @@
           "name": {
             "type": "string"
           },
+          "review_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "reviewed"
+            ]
+          },
           "provides": {
             "type": "array",
             "items": {
@@ -105,6 +112,7 @@
         },
         "required": [
           "name",
+          "review_status",
           "provides",
           "uses",
           "execution_policy",
