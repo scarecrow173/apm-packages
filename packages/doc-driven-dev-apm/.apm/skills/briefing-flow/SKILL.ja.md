@@ -145,7 +145,7 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 | 4 | Validate | 収集した情報の正確性・完全性を検証する |
 | 5 | Document | 整理された情報を正式な文書に落とし込む |
 
-カテゴリタクソノミーの詳細は [Briefing スキル発見プロトコルリファレンス](references/briefing-discovery-protocol.ja.md) を参照。
+詳細なカテゴリ定義はアダプターの `classification.taxonomy`（`assets/adapters/briefing-adapter.yaml`）を参照。
 
 ---
 

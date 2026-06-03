@@ -147,7 +147,7 @@ ACTIVE SKILL STACK FOR THIS BRIEFING:
 | 4 | Validate | Verify accuracy and completeness of gathered information |
 | 5 | Document | Formalize organized information into official documents |
 
-For category taxonomy details, see [Briefing Discovery Protocol Reference](references/briefing-discovery-protocol.md).
+For detailed category definitions, see the adapter's `classification.taxonomy` in `assets/adapters/briefing-adapter.yaml`.
 
 ---
 
