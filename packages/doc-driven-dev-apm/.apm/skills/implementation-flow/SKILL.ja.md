@@ -86,12 +86,12 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 > リポジトリ固有の構成ファイル。利用可能な全スキルをリストし、
 > カテゴリに割り当て、always-on か conditional かを定義し、
 > フロースタックと invocation resolution を指定する。
-> `sdp scan`、agent による inference entry の確認・更新、`sdp infer`、
-> `sdp profile` で生成され、スキル変更時に更新される。
+> このフローの adapter ファイルを使って `skill-discovery-protocol`
+> スキルが生成・更新し、スキル変更時にも同じ経路で再生成する。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → `sdp scan --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` → `sdp infer init --scan .sdp/skill-scan-list.json` → `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を実行する。
-- 存在するが破損の場合 → 同じ `scan` → `infer` → `profile` の手順で再生成する。
+- 存在しない場合 → `skill-discovery-protocol` スキルを呼び出し、adapter path `.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を渡す。
+- 存在するが破損の場合 → 同じ adapter path を渡して `skill-discovery-protocol` を再度呼び出し、再生成する。
 
 ---
 
@@ -99,19 +99,17 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
-**コマンド:**
+このフローから呼び出すときは、次を渡す:
 
-- スキャン: `sdp scan --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- 推論: `sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
-- プロファイル生成: `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- 検証: `sdp validate --profile .sdp/implementation-flow-default/implementation-flow-profile.json --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
-- クエリ: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json <subcommand>`
+- Adapter path: `.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- Expected profile path: `.sdp/implementation-flow-default/implementation-flow-profile.json`
+- Expected inference artifact: `.sdp/skill-reference-inferences.json`
 
-`sdp infer init` の後、scan list と照合して
+スキルが成果物を生成または更新した後、scan list と照合して
 `.sdp/skill-reference-inferences.json` を確認する。タスクルーティングに必要な
-`provides` または `uses` が不足している場合は、`sdp infer set-skill` または
-`sdp infer apply` で inference 成果物を更新し、`sdp profile` の前に
-`sdp infer check` を実行する。
+`provides` または `uses` が不足している場合は、同じ adapter path を渡して
+`skill-discovery-protocol` を再度呼び出し、inference 更新を依頼してから
+プロファイルを使う。
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
 
@@ -121,9 +119,9 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 `.sdp/implementation-flow-default/implementation-flow-profile.json` が利用可能な状態で:
 
-1. **フロースタックを読込**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json flow-stack`
-2. **解決を確認**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json resolution`
-3. **実行ポリシーを確認**: `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json execution-policy --skill <name>`
+1. **フロースタックを読込**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から `flow-stack` を読む
+2. **解決を確認**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から `resolution` を読む
+3. **実行ポリシーを確認**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から各候補スキルの `execution-policy` を読む
 4. **競合を解決** — 同じカテゴリで複数スキルが活性化された場合:
    - より具体的な条件が優先（例: 「TypeScriptファイル」 > 「任意のファイル」）。
    - 明示的なプロファイルルールが推論された活性化より優先。
@@ -175,7 +173,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
    - **Flexible スキル**: 精神を適用; 文脈に合わせる。
      例: `code-review-and-quality`（レビュー観点をタスクごとに優先度調整可）
 
-   `sdp query --profile .sdp/implementation-flow-default/implementation-flow-profile.json execution-policy --skill <name>` で確認。
+   生成済みプロファイルを `skill-discovery-protocol` で参照し、対象スキルの `execution-policy` を確認する。
 3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。
 
 ---
@@ -220,7 +218,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 <HARD-GATE>
 プロファイルベースの構成をスキップしてはならない。
-- プロファイルが存在しない場合 → `scan` → `infer` → `profile` の手順を実行する。
+- プロファイルが存在しない場合 → `.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を渡して `skill-discovery-protocol` を呼び出す。
 - プロファイルが存在する場合 → 読み込んでその構成に従う。
 「これは簡単だからスキップしてよい」「やり方はわかっている」が最も多い
 失敗パターン。体系的なスキルルーティングの目的を損なう。

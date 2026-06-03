@@ -4,13 +4,12 @@ This flow uses the common `skill-discovery-protocol` for profile management.
 
 ## Quick Reference
 
-| Action | Command |
-| ------ | ------- |
-| Generate profile | `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` |
-| Validate profile | `sdp validate --profile .sdp/briefing-flow-default/briefing-profile.json` |
-| List categories | `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json categories` |
-| Check skill stack | `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json flow-stack` |
-| Check resolution | `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json resolution` |
+Invoke `skill-discovery-protocol` instead of calling `sdp` directly from this flow.
+
+- Adapter path: `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- Expected profile path: `.sdp/briefing-flow-default/briefing-profile.json`
+- Expected inference artifact: `.sdp/skill-reference-inferences.json`
+- Ask the skill to generate, validate, or query the profile artifacts as needed.
 
 ## Adapter
 
@@ -31,8 +30,3 @@ Entry Decisions (A-1 through A-5) drive skill activation during Phase B:
 - A-4 (Direct Start) → document-category only
 
 These decisions affect which `flow_stack.slots` are activated, not the profile structure itself.
-
-## Migration from Old Protocol
-
-The old `briefing-profile.md` (markdown format) is deprecated.
-Use `.sdp/briefing-flow-default/briefing-profile.json` instead.

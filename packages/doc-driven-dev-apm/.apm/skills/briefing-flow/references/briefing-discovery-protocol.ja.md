@@ -4,13 +4,12 @@
 
 ## クイックリファレンス
 
-| アクション | コマンド |
-| ---------- | -------- |
-| プロファイル生成 | `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` |
-| プロファイル検証 | `sdp validate --profile .sdp/briefing-flow-default/briefing-profile.json` |
-| カテゴリ一覧 | `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json categories` |
-| スキルスタック確認 | `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json flow-stack` |
-| 解決状況確認 | `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json resolution` |
+このフローからは `sdp` を直接呼ばず、`skill-discovery-protocol` を呼び出す。
+
+- Adapter path: `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- Expected profile path: `.sdp/briefing-flow-default/briefing-profile.json`
+- Expected inference artifact: `.sdp/skill-reference-inferences.json`
+- プロファイルの生成・検証・参照は `skill-discovery-protocol` に依頼する。
 
 ## アダプター
 
@@ -31,8 +30,3 @@ Entry Decision（A-1 〜 A-5）は Phase B でスキルの活性化を駆動す�
 - A-4（Direct Start）→ document カテゴリのみ
 
 これらの決定はどの `flow_stack.slots` が活性化されるかに影響し、プロファイル構造自体には影響しない。
-
-## 旧プロトコルからの移行
-
-旧形式の `briefing-profile.md`（マークダウン形式）は非推奨。
-代わりに `.sdp/briefing-flow-default/briefing-profile.json` を使用すること。

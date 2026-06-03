@@ -1,45 +1,39 @@
 # implementation-profile スキーマ
 
-> **⚠️ 非推奨 (DEPRECATED)**
->
-> このドキュメントは旧 Markdown ベースのプロファイル形式を記述しています。
-> 移行期間中の参照用としてのみ保持されています。
->
-> **新しいアプローチ:** `sdp scan --adapter <adapter-yaml>` を実行し、
-> 推論された `provides` / `uses` を確認または更新してから `sdp infer`、
-> その後 `sdp profile --adapter <adapter-yaml>` を実行して
-> `.sdp/<adapter_id>/<flow_profile>.json` を生成してください。
-> [移行ガイド](../../skill-discovery-protocol/docs/migration.ja.md)を参照。
->
-> 旧形式は将来のバージョンで削除されます。
-
-このドキュメントは、`implementation-flow` によって生成される `implementation-profile.md` ファイルの構造と検証ルールを定義します。
+このドキュメントは、`skill-discovery-protocol` によって `implementation-flow`
+向けに生成される
+`.sdp/implementation-flow-default/implementation-flow-profile.json`
+の構造と検証ルールを定義します。
 
 ## ファイルの場所
 
-- **パス:** リポジトリルート `implementation-profile.md`
-- **生成者:** `implementation-flow` スキル（初回実行時）
-- **更新者:** `implementation-flow`（陳腐化を検出した時）
+- **パス:** `.sdp/implementation-flow-default/implementation-flow-profile.json`
+- **生成者:** adapter path `.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を渡して呼び出された `skill-discovery-protocol`
+- **更新者:** スキル構成または inference data が変わったときに再度呼び出された `skill-discovery-protocol`
 
-## YAML フロントマター（必須）
+## トップレベルフィールド
 
-```yaml
----
-type: implementation-profile
-version: "1.0"
-generated: "YYYY-MM-DD"
-last_validated: "YYYY-MM-DD"
-repository: "<repository-name>"
----
+```json
+{
+  "adapter_id": "implementation-flow-default",
+  "flow_profile": "implementation-flow-profile.json",
+  "generated_at": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "runtime_guidance": {},
+  "flow_stack": {
+    "slots": []
+  },
+  "resolved_invocations": []
+}
 ```
 
 | フィールド | 型 | 必須 | 説明 |
 | ---------- | -- | ---- | ---- |
-| type | 文字列 | はい | `implementation-profile` である必要があります |
-| version | 文字列 | はい | スキーマバージョン（semver） |
-| generated | 文字列 | はい | プロファイルが最初に生成された ISO 日付 |
-| last_validated | 文字列 | はい | プロファイルが利用可能なスキルに対して最後に検証された ISO 日付 |
-| repository | 文字列 | はい | 識別用のリポジトリ名 |
+| adapter_id | 文字列 | はい | 配布されている implementation adapter では `implementation-flow-default` である必要があります |
+| flow_profile | 文字列 | はい | 生成される profile JSON の出力ファイル名 |
+| generated_at | 文字列 | はい | プロファイル生成時の ISO タイムスタンプ |
+| runtime_guidance | オブジェクト | はい | 実行ポリシーや runtime hint など、問い合わせ対象になるガイダンス |
+| flow_stack | オブジェクト | はい | デフォルトの実装スキルスタックを定義する slot 割り当て |
+| resolved_invocations | 配列 | はい | 分類と override から解決された最終的な skill routing 決定 |
 
 ## セクション
 
@@ -105,11 +99,11 @@ repository: "<repository-name>"
 ## 検証ルール
 
 1. 「Available Skills」内のすべてのスキルは、定義されたセットから有効なカテゴリを持つ必要があります。
-2. 「Default Stack」内のすべてのスキルは「Available Skills」に存在する必要があります。
+2. `flow_stack.slots` 内のすべてのスキルは「Available Skills」に存在する必要があります。
 3. `activation` は `always-on`、`conditional`、`excluded` のいずれかである必要があります。
 4. `conditional` スキルは空でない `Condition` フィールドを持つ必要があります。
 5. 「Build」カテゴリに少なくとも 1 つの `always-on` スキルが必要です。
-6. 「Meta」カテゴリは Default Stack に表示されない必要があります（メタスキルはオーケストレーションであり、実行ではありません）。
+6. 「Meta」カテゴリは `flow_stack.slots` に表示されない必要があります（メタスキルはオーケストレーションであり、実行ではありません）。
 
 ## 陳腐化検出
 

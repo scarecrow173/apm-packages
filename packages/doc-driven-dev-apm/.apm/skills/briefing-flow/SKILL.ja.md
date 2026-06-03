@@ -83,12 +83,13 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 > **`.sdp/briefing-flow-default/briefing-profile.json` とは？**
 > リポジトリ固有の構成ファイル（JSON）。Briefing に利用可能な全スキルをリストし、
 > カテゴリに割り当て、フロースタックスロットと活性化ルールを定義し、
-> 呼び出し解決を指定する。`sdp scan`、agent による inference entry の確認・更新、
-> `sdp infer`、`sdp profile` で生成され、`sdp validate` で検証される。
+> 呼び出し解決を指定する。このフローの adapter ファイルを使って
+> `skill-discovery-protocol` スキルが生成・更新し、
+> 同じワークフローの中で検証まで行う。
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → 実行: `sdp scan --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` → `sdp infer init --scan .sdp/skill-scan-list.json` → `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- 存在するが陳腐化/破損の場合 → 同じ `scan` → `infer` → `profile` の手順を実行する
+- 存在しない場合 → `skill-discovery-protocol` スキルを呼び出し、adapter path `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` を渡す
+- 存在するが陳腐化/破損の場合 → 同じ adapter path を渡して `skill-discovery-protocol` を再度呼び出し、再生成する
 
 ---
 
@@ -96,19 +97,17 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 
 プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
 
-**コマンド:**
+このフローから呼び出すときは、次を渡す:
 
-- スキャン: `sdp scan --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- 推論: `sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json`
-- プロファイル生成: `sdp profile --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- 検証: `sdp validate --profile .sdp/briefing-flow-default/briefing-profile.json --adapter .apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
-- クエリ: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json <サブコマンド>`
+- Adapter path: `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- Expected profile path: `.sdp/briefing-flow-default/briefing-profile.json`
+- Expected inference artifact: `.sdp/skill-reference-inferences.json`
 
-`sdp infer init` の後、scan list と照合して
+スキルが成果物を生成または更新した後、scan list と照合して
 `.sdp/skill-reference-inferences.json` を確認する。タスクルーティングに必要な
-`provides` または `uses` が不足している場合は、`sdp infer set-skill` または
-`sdp infer apply` で inference 成果物を更新し、`sdp profile` の前に
-`sdp infer check` を実行する。
+`provides` または `uses` が不足している場合は、同じ adapter path を渡して
+`skill-discovery-protocol` を再度呼び出し、inference 更新を依頼してから
+プロファイルを使う。
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
 
@@ -118,14 +117,14 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 
 `.sdp/briefing-flow-default/briefing-profile.json` が利用可能な状態で:
 
-1. **フロースタックを読込**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json flow-stack`
+1. **フロースタックを読込**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から `flow-stack` を読む
 2. **Entry Decision に基づく活性化**: Phase A で判定した経路に対応するカテゴリを優先:
    - A-1/A-2 → Frame カテゴリスキルを優先
    - A-3 → 全カテゴリからマッチするスキルを活性化
    - A-5 → Discover/Research カテゴリスキルを優先
    - **マッチするスロットがない場合:** デフォルトスタックのみで進行。
-3. **解決状況を確認**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json resolution`
-4. **実行ポリシーを確認**: `sdp query --profile .sdp/briefing-flow-default/briefing-profile.json execution-policy --skill <名前>`
+3. **解決状況を確認**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から `resolution` を読む
+4. **実行ポリシーを確認**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から各候補スキルの `execution-policy` を読む
 5. **アクティブスキルスタックを宣言:**
 
 ```text
@@ -252,7 +251,7 @@ Phase C は以下の停止条件を**全て**満たすまで反復する:
 
 <HARD-GATE>
 プロファイルベースの構成をスキップしてはならない。
-- プロファイルが存在しない場合 → `scan` → `infer` → `profile` の手順を実行する。
+- プロファイルが存在しない場合 → `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` を渡して `skill-discovery-protocol` を呼び出す。
 - プロファイルが存在する場合 → 読み込んでその構成に従う。
 「要件は明確だからスキップしてよい」「このパターンは知っている」が最も多い
 失敗パターン。体系的なスキルルーティングの目的を損なう。

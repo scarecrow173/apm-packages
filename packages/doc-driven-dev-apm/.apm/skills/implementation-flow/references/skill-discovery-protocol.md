@@ -4,13 +4,12 @@ This flow uses the common `skill-discovery-protocol` for profile management.
 
 ## Quick Reference
 
-| Action | Command |
-|--------|---------|
-| Generate profile | `sdp profile --adapter .apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` |
-| Validate profile | `sdp validate --profile implementation-profile.json` |
-| List categories | `sdp query --profile implementation-profile.json categories` |
-| Check skill stack | `sdp query --profile implementation-profile.json flow-stack` |
-| Check resolution | `sdp query --profile implementation-profile.json resolution` |
+Invoke `skill-discovery-protocol` instead of calling `sdp` directly from this flow.
+
+- Adapter path: `.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`
+- Expected profile path: `.sdp/implementation-flow-default/implementation-flow-profile.json`
+- Expected inference artifact: `.sdp/skill-reference-inferences.json`
+- Ask the skill to generate, validate, or query the profile artifacts as needed.
 
 ## Adapter
 
@@ -19,9 +18,3 @@ It extends the `general` adapter and defines:
 - Implementation-specific taxonomy (Process/Build/Verify/Review/Domain/Tooling/Meta)
 - Flow stack slots
 - Invocation resolution overrides
-
-## Migration from Old Protocol
-
-The old `implementation-profile.md` (markdown format) is deprecated.
-Use `implementation-profile.json` instead. The `sdp query` command provides
-equivalent information extraction capabilities.
