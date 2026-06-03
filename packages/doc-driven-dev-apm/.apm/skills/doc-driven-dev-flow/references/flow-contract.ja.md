@@ -7,69 +7,36 @@
 
 | Phase | 名称 | 主担当スキル | ゲート |
 | ----- | ---- | ------------ | ------ |
-| 1 | Briefing | `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc` | 受け入れ条件付き spec + ADR |
+| 1 | Briefing | `briefing-flow` | 受け入れ条件付き spec + ADR |
 | 2 | Design | `design-doc` | spec/ADR と整合した承認済み設計 |
 | 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001（承認済み設計必須） |
 | 4 | Execution Slice | `task-doc` | plan にトレース可能な検証付きタスク |
-| 5 | Exit | `doc-status` | front matter, relations, index の整合 |
+| 5 | Implementation | `implementation-flow` | 全タスクが検証通過 |
+| 6 | Exit | `doc-status` | front matter, relations, index の整合 |
 
 ## Phase 1: Briefing
 
 目的: ユーザー要望・提案・課題を、実装可能な文書入力へ変換する。
 
-### 1-1 Entry Decision（選択判定）
+**委譲先:** [`briefing-flow`](../briefing-flow/SKILL.ja.md)
 
-現在の情報状態に応じて選択する:
+Phase 1 は `briefing-flow` メタスキルに完全に委譲される。
+`briefing-flow` は以下を管理する:
 
-- **1-1-A. Problem Framing**
-  - 適用条件: 課題定義が曖昧、要件が散在、目的が未確定。
-  - 実施内容: `idea-refine` を使い、問題定義・価値仮説・未確定事項を整理する。
-- **1-1-B. Option Framing**
-  - 適用条件: 方向性はあるが、論点やトレードオフ整理が不足。
-  - 実施内容: `brainstorming` を使い、選択肢比較と評価軸を明確化する。
-- **1-1-C. Combined Skill Discovery**
-  - 適用条件: 複数スキルを組み合わせて判断材料を収集する必要がある。
-  - 実施内容: `idea-refine`、`brainstorming`、その他利用可能スキルを対話で組み合わせる。
-- **1-1-D. Direct Documentation Start**
-  - 適用条件: 要件と制約が十分に明確。
-  - 実施内容: `spec-doc + adr-doc` の作成へ直接進む（理由を 1 行残す）。
-
-注記:
-
-- 1-1-A/B/C/D は選択肢であり順序ではない。A/B 間に前後関係はない。
-- 必要な場合は A/B/C を組み合わせてよい。
-- 緊急修正でも、最低限 `spec-doc` または `adr-doc` の根拠を残す。
-
-### 1-2 Discovery Deepening
-
-目的: 実装時の追加質問が最小になる粒度まで情報を反復的に深掘りする。
-
-手順:
-
-1. 要件、制約、前提、非目標、依存先、未決事項を棚卸しする。
-2. 不足情報を質問として明文化し、優先度順に解消する。
-3. 解消結果を Briefing メモへ反映し、必要に応じて 1-1 の経路選択を見直す。
-
-停止条件:
-
-- 主要ユースケースについて、入力・処理・期待結果が説明できる。
-- 重要な制約（技術・運用・期限・品質）が明示されている。
-- 未決事項が実装ブロッカーかどうか分類されている。
-
-### 1-3 Parallel Documentation Output
-
-Briefing 出力を根拠として `spec-doc` と `adr-doc` を作成する:
-
-- `spec-doc`: 目的、範囲、受け入れ条件、対象外を含む。
-- `adr-doc`: 採用案、代替案、採否理由、影響範囲を含む。
-- 両文書は同一課題を参照し、相互に追跡可能な relation を持つ。
+- Entry Decision（A-1〜A-5）の経路選択
+- Briefing スキル発見プロトコルと `briefing-profile.md` の生成
+- スキルスタックを使った情報収集の実行
+- Phase D ゲート（spec-doc + adr-doc 完了条件）
 
 ### Briefing 完了条件
 
-- `spec-doc` が受け入れ条件を持つ。
+`briefing-flow` の Phase D ゲートが通過した時点で完了:
+
+- `spec-doc` が受け入れ条件を持ち、status が `proposed` 以上である
+  （`draft` のまま次フェーズに進んではならない）。
 - `adr-doc` が主要な技術判断と代替案を持つ。
 - 両文書が同一の課題文脈を参照している。
-- 1-1-A/B/C/D のどの経路を選んだかが記録されている。
+- Entry Decision の選択が記録されている。
 - 未決事項が「実装前に解消必須」か「後続で管理可能」か分類されている。
 
 ## Phase 2: Design
@@ -115,7 +82,24 @@ Briefing 出力を根拠として `spec-doc` と `adr-doc` を作成する:
 - `task-doc` が plan にトレース可能である。
 - 各 task に検証手順がある。
 
-## Phase 5: Exit
+## Phase 5: Implementation
+
+目的: `implementation-flow` に委譲し、全利用可能スキルを動的に発見して
+`implementation-profile.md` を通じてタスクごとに適切なスキルスタックを構成する。
+
+### ステップ
+
+- 5-1 `implementation-flow` 呼び出し: タスク単位の実行、スキル発見、構成、検証を委譲する。
+- 5-2 制約フィードバック: `implementation-flow` が上流の不足を報告した場合、`adr-doc` / `design-doc` を更新しループバックを記録する。
+- 5-3 完了確認: `implementation-flow` の完了条件経由で全タスク検証通過を確認する。
+
+### Implementation 完了条件
+
+- `implementation-flow` が全タスク実装済み・検証通過を報告している。
+- 新たに発見された制約が上流文書に反映されている。
+- コードレビューが完了している。
+
+## Phase 6: Exit
 
 目的: `doc-status` 監査で文書整合を確認し完了判定する。
 
@@ -126,4 +110,5 @@ Briefing 出力を根拠として `spec-doc` と `adr-doc` を作成する:
 ### Exit 完了条件
 
 - front matter, relations, index が整合している。
+- 実装検証結果が文書化されている。
 - 監査結果として完了可能な状態である。

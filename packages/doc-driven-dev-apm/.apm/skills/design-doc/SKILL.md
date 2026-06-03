@@ -25,7 +25,10 @@ implementation plans.
    Use `relations.derives-from` for upstream specs/ADRs/discovery docs.
 5. Approve at least one detailed design.
    Set front matter `status: "approved"` on at least one non-overview design
-   file before creating a plan.
+   file before creating a plan (PLAN-DOC-GATE-001).
+   A `plan-doc` cannot be created until this condition is met.
+   Approval is performed by the user (or designated reviewer).
+   Agents must not self-approve.
 
 ## Front Matter
 

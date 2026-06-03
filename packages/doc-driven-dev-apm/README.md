@@ -143,6 +143,31 @@ Use this skill to list and audit generated documents. It validates required
 front matter, status values, local relation targets, and index coverage while
 allowing external source URLs in `relations.source`.
 
+### Workflow Skills (Implementation Phase)
+
+These skills activate during Phase 4b (Implementation) of the doc-driven-dev
+flow. They are optional — use them when the task calls for coding, debugging,
+or code review.
+
+| Skill | Purpose |
+| --- | --- |
+| `implementation-flow` | Meta skill: routes tasks to workflow skills via discovery tree |
+| `source-driven-development` | Ground implementation in official docs; cite sources |
+| `incremental-implementation` | Ship in small, verified increments |
+| `doubt-driven-development` | Adversarial self-review before committing decisions |
+| `test-driven-development` | RED → GREEN → REFACTOR; tests before production code |
+| `systematic-debugging` | Root-cause tracing with binary search and evidence |
+| `subagent-driven-development` | Delegate implementation slices to sub-agents |
+| `dispatching-parallel-agents` | Fan-out independent tasks to parallel agents |
+| `requesting-code-review` | Prepare and submit code for reviewer agents |
+| `receiving-code-review` | Respond to review feedback systematically |
+
+Origin: `source-driven-development`, `incremental-implementation`, and
+`doubt-driven-development` are adapted from
+[addyosmani/agent-skills](https://github.com/nicepkg/agent-skills) (MIT).
+The remaining six are adapted from
+[obra/superpowers](https://github.com/obra/superpowers) (MIT).
+
 ## Shared Relations
 
 New generated specs, designs, plans, and tasks use semantic relation fields:
@@ -178,7 +203,7 @@ idea-refine OR brainstorming
   -> design-doc          (overview-first design gate)
   -> plan-doc            (derives from spec, ADR, and approved design)
   -> task-doc            (execution slices)
-  -> implementation
+  -> implementation-flow (workflow skill orchestration per task)
   -> doc-status
 ```
 

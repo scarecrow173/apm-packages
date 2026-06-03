@@ -10,9 +10,28 @@ Use this skill to track implementation slices that are small enough to execute
 and review. Tasks should link back to the plan, spec, or ADR they implement and
 should state concrete completion criteria.
 
+## Preconditions
+
+<HARD-GATE>
+To create a task, one of the following must be satisfied:
+
+1. **Normal path**: The referenced plan has `status` of `approved` or above.
+   Do not derive tasks from a `draft` plan.
+   If the plan is not yet approved, complete its review and approval first.
+2. **Emergency fix path**: When no plan exists, ALL of the following must hold:
+   - State the reason for urgency in the task body (one line).
+   - Reference an `approved` spec-doc or adr-doc via
+     `relations.implements` or `relations.derives-from`.
+   - If no spec/ADR exists either, create one first (brief content is acceptable).
+
+If neither path is satisfied, do not create the task.
+</HARD-GATE>
+
 ## Workflow
 
-1. Read the related plan or upstream document.
+1. Confirm the referenced plan has `status: "approved"`.
+   For emergency fixes without a plan, verify the emergency fix path
+   preconditions above are met.
 2. Create a task for one coherent implementation slice.
 
    ```bash

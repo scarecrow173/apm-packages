@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "description": "Document-driven development APM package with idea refinement, brainstorming, ADR, spec, plan, task, and status skills.",
   "scripts": {
-    "build": "pnpm run build:scripts",
+    "build": "pnpm run build:scripts && pnpm run build:schemas",
     "build:scripts": "tsx scripts/build-skill-scripts.ts",
-    "test": "tsx --test tests/*.test.ts",
+    "build:schemas": "tsx scripts/generate-json-schemas.ts",
+    "test": "tsx --test tests/*.test.ts tests/**/*.test.ts",
     "lint:md": "markdownlint-cli2"
   },
   "keywords": [
@@ -23,6 +24,7 @@
   "packageManager": "pnpm@11.2.2",
   "dependencies": {
     "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",

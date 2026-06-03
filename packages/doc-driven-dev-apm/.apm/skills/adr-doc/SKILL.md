@@ -62,6 +62,23 @@ Do not create a new ADR for:
 When in doubt: if a future coding agent working in this codebase would benefit
 from knowing why this choice was made before safely changing code, write the ADR.
 
+## Emergency Fix Scenario
+
+Even during emergencies (production incidents, imminent SLA breach), record a
+minimal ADR if the change involves a technical decision.
+
+Conditions for the emergency path:
+- Time pressure can be objectively justified.
+- State the reason for urgency in the ADR body (one line).
+
+Emergency path procedure:
+1. Create a brief ADR with title, decision, rationale, and impact.
+   Set `status: "draft"`.
+2. After incident resolution, complete Phases 0–3 and update `status` to
+   `proposed` or above. Target completion within one week of resolution.
+
+The emergency path is strictly an exception; it does not apply to routine work.
+
 ## Proactive ADR Triggers
 
 If you are an agent coding in a repo and you encounter any of these situations,
@@ -86,7 +103,8 @@ lightweight code comment or PR note when useful and move on.
 
 ## Creating an ADR: Four-Phase Workflow
 
-Every ADR goes through four phases. Do not skip phases.
+Except when the Emergency Fix Scenario (above) applies, every ADR goes through
+four phases. Do not skip phases.
 
 ### Phase 0: Scan the Codebase
 

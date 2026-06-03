@@ -63,7 +63,6 @@ apm install ./dist/steer-enterprise-web-research-0.1.0.tar.gz
   agents/
     steer-enterprise-web-research.agent.md
     steer-enterprise-web-research.agent.ja.md
-    steer-enterprise-web-research-ja.agent.md
 docs/
 research/
 scripts/

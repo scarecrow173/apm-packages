@@ -136,6 +136,30 @@ ADR として記録され、spec と同じ discovery output から並列で作�
 ステータス値、ローカル relation、索引を検証し、`relations.source` の
 外部 URL は出典として許可します。
 
+### ワークフロー Skill（実装フェーズ）
+
+これらの skill は doc-driven-dev-flow の Phase 4b（実装）で使用します。
+任意であり、コーディング・デバッグ・コードレビューが必要な場面で有効化します。
+
+| Skill | 目的 |
+| --- | --- |
+| `implementation-flow` | メタスキル: 発見木でタスクをワークフロースキルにルーティング |
+| `source-driven-development` | 公式ドキュメントに基づく実装; ソース引用 |
+| `incremental-implementation` | 小さく検証済みのインクリメントで出荷 |
+| `doubt-driven-development` | 決定をコミットする前の対立的自己レビュー |
+| `test-driven-development` | RED → GREEN → REFACTOR; テストを先に書く |
+| `systematic-debugging` | 二分探索とエビデンスによる根本原因追跡 |
+| `subagent-driven-development` | 実装スライスをサブエージェントに委譲 |
+| `dispatching-parallel-agents` | 独立タスクを並列エージェントにファンアウト |
+| `requesting-code-review` | レビュアーエージェントへのコードレビュー依頼 |
+| `receiving-code-review` | レビューフィードバックへの体系的対応 |
+
+出典: `source-driven-development`、`incremental-implementation`、
+`doubt-driven-development` は
+[addyosmani/agent-skills](https://github.com/nicepkg/agent-skills)（MIT）から
+適応。残り 6 つは
+[obra/superpowers](https://github.com/obra/superpowers)（MIT）から適応。
+
 ## 共通 Relation
 
 新しく生成される spec、design、plan、task は意味付き relation を使います。
@@ -171,7 +195,7 @@ idea-refine OR brainstorming
   -> design-doc          (overview-first の設計ゲート)
   -> plan-doc            (spec / ADR / 承認済み design から派生)
   -> task-doc            (実行単位)
-  -> implementation
+  -> implementation-flow (タスク単位のワークフロースキルオーケストレーション)
   -> doc-status
 ```
 

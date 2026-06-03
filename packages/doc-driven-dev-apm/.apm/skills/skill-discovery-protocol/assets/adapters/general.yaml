@@ -1,0 +1,106 @@
+# yaml-language-server: $schema=../../schemas/adapter.schema.json
+# General Adapter
+#
+# Base adapter aggregating all known harness roots.
+# Flow-specific adapters extend this and override only what differs.
+#
+# This file is configuration (manually authored) — NOT a generated artifact.
+
+schema_version: "1.0"
+adapter_id: "general"
+
+protocol:
+  name: "skill-discovery-protocol"
+  min_version: "1.0"
+
+enabled: true
+
+metadata:
+  description: "Base adapter aggregating all harness scan roots"
+  owner: "doc-driven-dev-apm"
+
+scan:
+  scopes:
+    project:
+      enabled: true
+      roots:
+        # Primary skill directories
+        - ".apm/skills"
+        - ".agents/skills"
+        # GitHub Copilot
+        - ".github/skills"
+        - ".github/agents"
+        # Cursor
+        - ".cursor/rules"
+        # Claude Code
+        - ".claude/commands"
+        # Gemini CLI
+        - ".gemini/skills"
+        - ".gemini/commands"
+        # OpenCode
+        - ".opencode/skills"
+        # Installed packages
+        - "apm_modules"
+        # Root instruction files
+        - "."
+    user:
+      enabled: false
+      roots:
+        # APM user-level skills
+        - "~/.apm/skills"
+        # GitHub Copilot user prompts (VS Code)
+        - "~/.vscode/copilot/skills"
+        # Cursor user rules
+        - "~/.cursor/rules"
+        # Claude Code user commands
+        - "~/.claude/commands"
+        # Gemini CLI user skills
+        - "~/.gemini/skills"
+        # OpenCode user skills
+        - "~/.opencode/skills"
+    organization:
+      enabled: false
+      roots:
+        # APM organization-shared skills (monorepo pattern)
+        - ".apm/org-skills"
+        # GitHub org-level agent instructions
+        - ".github/org-skills"
+    builtin:
+      enabled: false
+      roots:
+        # APM bundled default skills (relative to install)
+        - "node_modules/@apm/builtin-skills/skills"
+
+profile:
+  title: "General Skill Reference"
+
+validation:
+  schema: true
+  staleness:
+    enabled: true
+    basis: "validated_at"
+    max_age_days: 30
+  deterministic:
+    enabled: true
+    compare:
+      - "profile"
+      - "profile+catalog-artifacts"
+      - "validation-report:exclude-timestamp"
+  invocation:
+    enabled: false
+
+render:
+  stable_sort:
+    skills: ["name"]
+    invocations: ["source_skill", "slot", "capability"]
+  normalize_whitespace: true
+  newline: "lf"
+
+artifacts:
+  protocol:
+    skill_reference_catalog: "skill-reference-catalog.json"
+
+readable_outputs:
+  enabled: true
+  include:
+    - "skill_reference_catalog"

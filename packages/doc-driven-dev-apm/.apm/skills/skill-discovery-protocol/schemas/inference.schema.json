@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "inference_source": {
+      "type": "string",
+      "const": "agent"
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "review_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "reviewed"
+            ]
+          },
+          "provides": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "capability": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "capability"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "uses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "capability": {
+                  "type": "string"
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "default_skill": {
+                  "type": "string"
+                },
+                "override_allowed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "capability",
+                "required",
+                "override_allowed"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "execution_policy": {
+            "type": "object",
+            "properties": {
+              "strictness": {
+                "type": "string",
+                "enum": [
+                  "rigid",
+                  "flexible"
+                ]
+              },
+              "sequence_required": {
+                "type": "boolean"
+              },
+              "allow_step_reordering": {
+                "type": "boolean"
+              },
+              "allow_partial_application": {
+                "type": "boolean"
+              },
+              "guidance": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "strictness",
+              "sequence_required",
+              "allow_step_reordering",
+              "allow_partial_application"
+            ],
+            "additionalProperties": false
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "review_status",
+          "provides",
+          "uses",
+          "execution_policy",
+          "tags"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "inference_source",
+    "skills"
+  ],
+  "additionalProperties": false
+}

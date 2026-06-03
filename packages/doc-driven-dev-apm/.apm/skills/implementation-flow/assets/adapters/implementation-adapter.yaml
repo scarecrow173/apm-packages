@@ -1,0 +1,119 @@
+# yaml-language-server: $schema=../../../skill-discovery-protocol/schemas/adapter.schema.json
+schema_version: "1.0"
+adapter_id: "implementation-flow-default"
+extends:
+  - "general"
+profile:
+  title: "Implementation Profile"
+flow_stack:
+  slots:
+    - slot_id: "process_diagnosis"
+      slot_type: "exclusive"
+      activation: "conditional"
+      default:
+        skill: "systematic-debugging"
+        reason: "Bug fixes and test failures need diagnosis first"
+    - slot_id: "build_structure"
+      slot_type: "layerable"
+      activation: "always"
+      default:
+        skill: "incremental-implementation"
+        reason: "All implementation uses incremental delivery"
+    - slot_id: "verification"
+      slot_type: "layerable"
+      activation: "conditional"
+      default:
+        skill: "source-driven-development"
+        reason: "Framework/library work requires docs verification"
+    - slot_id: "review_gate"
+      slot_type: "exclusive"
+      activation: "always"
+      default:
+        skill: "code-review-and-quality"
+        reason: "Every task requires review"
+classification:
+  unmatched:
+    action: "assign"
+    category: "uncategorized"
+    severity: "warn"
+  taxonomy:
+    - id: "process"
+      label: "Process"
+      description: "Skills that determine how to approach problems"
+      match:
+        capabilities: ["debugging", "planning", "task_breakdown"]
+        tags: ["process", "diagnosis"]
+        description_patterns: ["debug", "diagnos", "plan", "breakdown"]
+    - id: "build"
+      label: "Build"
+      description: "Skills that structure how to execute"
+      match:
+        capabilities: ["incremental_implementation", "parallel_dispatch", "tdd"]
+        tags: ["build", "implementation", "tdd"]
+        description_patterns: ["implement", "incremental", "parallel", "test-driven"]
+    - id: "verify"
+      label: "Verify"
+      description: "Skills that validate correctness"
+      match:
+        capabilities: ["source_verification", "adversarial_review"]
+        tags: ["verify", "validation"]
+        description_patterns: ["verify", "validat", "adversarial", "source-driven"]
+    - id: "review"
+      label: "Review"
+      description: "Skills that provide post-implementation gates"
+      match:
+        capabilities: ["code_review", "security_audit"]
+        tags: ["review", "audit"]
+        description_patterns: ["review", "audit"]
+    - id: "domain"
+      label: "Domain"
+      description: "Language/framework/platform-specific skills"
+      match:
+        capabilities: []
+        tags: ["domain", "language", "framework"]
+        description_patterns: ["typescript", "react", "python", "frontend"]
+    - id: "tooling"
+      label: "Tooling"
+      description: "Tool-specific workflow skills"
+      match:
+        capabilities: ["git_workflow", "ci_cd"]
+        tags: ["tooling", "git", "ci"]
+        description_patterns: ["git", "ci/cd", "browser"]
+    - id: "meta"
+      label: "Meta"
+      description: "Skills that orchestrate other skills"
+      match:
+        capabilities: ["orchestration"]
+        tags: ["meta", "orchestrator"]
+        description_patterns: ["orchestrat", "meta-skill", "discovery"]
+    - id: "uncategorized"
+      label: "Uncategorized"
+      description: "Skills not matching any category"
+      match:
+        capabilities: []
+        tags: []
+        description_patterns: []
+invocation_resolution:
+  resolution_order:
+    - "slot_override"
+    - "capability_override"
+    - "default_skill"
+    - "provider_lookup"
+  unresolved:
+    required: "warn"
+    optional: "warn"
+  invalid_override:
+    unknown_skill: "warn"
+    capability_mismatch: "warn"
+    override_not_allowed: "warn"
+validation:
+  invocation:
+    enabled: true
+artifacts:
+  protocol:
+    flow_profile: "implementation-flow-profile.json"
+    report: "validation-report.json"
+readable_outputs:
+  include:
+    - "skill_reference_catalog"
+    - "flow_profile"

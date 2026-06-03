@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "flow_name": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "validated_at": {
+      "type": "string"
+    },
+    "adapter_id": {
+      "type": "string"
+    },
+    "flow_stack": {
+      "type": "object",
+      "properties": {
+        "slots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "slot_id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+              },
+              "slot_type": {
+                "type": "string",
+                "enum": [
+                  "exclusive",
+                  "layerable"
+                ]
+              },
+              "activation": {
+                "type": "string",
+                "enum": [
+                  "always",
+                  "conditional",
+                  "on_demand",
+                  "gate"
+                ]
+              },
+              "default": {
+                "type": "object",
+                "properties": {
+                  "skill": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "skill"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "slot_id",
+              "slot_type",
+              "activation"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "slots"
+      ],
+      "additionalProperties": false
+    },
+    "classification": {
+      "type": "object",
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+              },
+              "label": {
+                "type": "string"
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "skills"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "unmatched_skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "unmatched_skills"
+      ],
+      "additionalProperties": false
+    },
+    "resolved_invocations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_skill": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string"
+          },
+          "capability": {
+            "type": "string"
+          },
+          "resolved_skill": {
+            "type": "string"
+          },
+          "resolution_method": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "fallback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "source_skill",
+          "slot",
+          "capability",
+          "resolved_skill",
+          "resolution_method",
+          "reason",
+          "fallback"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "runtime_guidance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "skill": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "guidance": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill",
+          "context",
+          "guidance"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "flow_name",
+    "generated_at",
+    "validated_at",
+    "adapter_id",
+    "flow_stack",
+    "classification",
+    "resolved_invocations",
+    "runtime_guidance",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

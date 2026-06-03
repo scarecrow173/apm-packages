@@ -72,7 +72,31 @@ apm compile --validate
 - テスト (`pnpm test`) が通るか。
 - Markdown 変更時は `pnpm run lint:md` を確認したか。
 
-## 7. 非目標
+## 7. ワークフロースキル（実装フェーズ）
+
+文書生成スキル（スクリプト・テンプレート・参照付き）に加え、このパッケージには実装フェーズ向けの**ワークフロースキル**が含まれます。これらは TypeScript ソースやコンパイル済みスクリプトを持たない、純粋な Markdown ガイダンススキルです。
+
+- ワークフロースキルは `.apm/skills/<name>/` にのみ配置（対応する `src/skills/<name>/` は不要）。
+- `references/` や `assets/templates/` サブディレクトリに補助ドキュメントやプロンプトテンプレートを含む場合がある。
+- `pnpm run build:scripts` の対象外。
+- 編集時は `.apm/skills/<name>/SKILL.md`（および `.ja.md`）を直接更新する。
+
+含まれるワークフロースキル:
+
+| スキル | 目的 | 出典 |
+|--------|------|------|
+| implementation-flow | メタスキル: implementation-profile.md を通じて全利用可能スキルを発見・ルーティングする動的オーケストレーター | original |
+| source-driven-development | 公式ドキュメントに基づく実装 | addyosmani/agent-skills (MIT) |
+| incremental-implementation | 薄い垂直スライスでの漸進的実装 | addyosmani/agent-skills (MIT) |
+| doubt-driven-development | 敵対的フレッシュコンテキストレビュー | addyosmani/agent-skills (MIT) |
+| test-driven-development | RED-GREEN-REFACTOR サイクル | obra/superpowers (MIT) |
+| systematic-debugging | 4フェーズ根本原因プロセス | obra/superpowers (MIT) |
+| subagent-driven-development | 2段階レビュー付きタスクディスパッチ | obra/superpowers (MIT) |
+| dispatching-parallel-agents | 独立タスクの並行サブエージェント | obra/superpowers (MIT) |
+| requesting-code-review | レビュー依頼チェックリスト | obra/superpowers (MIT) |
+| receiving-code-review | レビューフィードバック受領プロセス | obra/superpowers (MIT) |
+
+## 8. 非目標
 
 - 無関係な大規模リファクタ。
 - このパッケージ自身の変更作業に対して、ADR/spec/plan/task の作成や relation 管理を必須化すること。

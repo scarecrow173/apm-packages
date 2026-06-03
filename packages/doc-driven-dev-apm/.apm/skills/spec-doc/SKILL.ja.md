@@ -32,8 +32,11 @@ spec は、何を作るべきか、なぜ必要か、誰のためか、何を範
    外部出典や一次情報は `relations.source`、補助資料は
    `relations.references`、上流文書の詳細化は `relations.refines`、
    文脈上の関連は `relations.related` に記録します。
+   brainstorming の discovery artifact (`docs/discovery/`) が存在する場合は
+   `relations.derives-from` に記録します。
 5. 実装計画に進む前に spec をレビューする。
    要件や受け入れ基準が曖昧な `draft` から plan を作らないでください。
+   plan 作成の前提として、spec は `proposed` 以上のステータスが必要です。
 
 ## 必須内容
 
