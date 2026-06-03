@@ -15170,6 +15170,33 @@ var init_inference = __esm({
   }
 });
 
+// src/skills/skill-discovery-protocol/scripts/lib/inference_validation.ts
+var inference_validation_exports = {};
+__export(inference_validation_exports, {
+  validateInferenceCompleteness: () => validateInferenceCompleteness
+});
+function validateInferenceCompleteness(scanList, inferenceDoc) {
+  const scannedNames = new Set(scanList.skills.map((skill) => skill.name));
+  const inferredByName = new Map(inferenceDoc.skills.map((skill) => [skill.name, skill]));
+  const pendingSkills = [...scannedNames].filter((name) => inferredByName.get(name)?.review_status !== "reviewed").sort();
+  if (pendingSkills.length === 0) {
+    return { ok: true };
+  }
+  return {
+    ok: false,
+    pending_skills: pendingSkills,
+    message: `Inference document is incomplete: ${pendingSkills.length} skill(s) still pending review: ${pendingSkills.join(", ")}`
+  };
+}
+var init_inference_validation = __esm({
+  "src/skills/skill-discovery-protocol/scripts/lib/inference_validation.ts"() {
+    "use strict";
+    module.exports = {
+      validateInferenceCompleteness
+    };
+  }
+});
+
 // src/skills/skill-discovery-protocol/scripts/lib/inference.ts
 var require_inference = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/inference.ts"(exports2, module2) {
@@ -15178,6 +15205,7 @@ var require_inference = __commonJS({
     init_inference();
     var fs2 = require("node:fs");
     var path2 = require("node:path");
+    var { validateInferenceCompleteness: validateInferenceCompleteness2 } = (init_inference_validation(), __toCommonJS(inference_validation_exports));
     function defaultScanListPath2(cwd) {
       return path2.join(cwd, ".sdp", "skill-scan-list.json");
     }
@@ -15255,6 +15283,12 @@ var require_inference = __commonJS({
         };
       });
     }
+    function assertInferenceComplete2(scanList, inferenceDoc) {
+      const result = validateInferenceCompleteness2(scanList, inferenceDoc);
+      if (!result.ok) {
+        throw new Error(result.message);
+      }
+    }
     module2.exports = {
       defaultScanListPath: defaultScanListPath2,
       defaultInferencePath: defaultInferencePath2,
@@ -15264,7 +15298,8 @@ var require_inference = __commonJS({
       buildScanList,
       writeScanList,
       loadScanList: loadScanList2,
-      enrichSkills
+      enrichSkills,
+      assertInferenceComplete: assertInferenceComplete2
     };
   }
 });
@@ -15472,6 +15507,7 @@ var {
   defaultInferencePath,
   loadScanList,
   readInferenceOrThrow,
+  assertInferenceComplete,
   writeInferenceDocument
 } = require_inference();
 var { SkillReferenceInferenceDocumentSchema: SkillReferenceInferenceDocumentSchema2 } = (init_inference(), __toCommonJS(inference_exports));
@@ -15528,7 +15564,7 @@ function usage() {
   return `Usage:
   sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
   sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
-  sdp infer check --in <json> [--cwd <dir>]
+  sdp infer check [--scan <json>] --in <json> [--cwd <dir>]
   sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
   sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 
@@ -15563,12 +15599,15 @@ function main() {
   const inPath = args.in ? path.resolve(cwd, args.in) : defaultInferencePath(cwd);
   if (args.command === "check") {
     try {
-      readInferenceOrThrow(inPath);
-      console.log("Inference document is valid");
+      const doc = readInferenceOrThrow(inPath);
+      const scanList = loadScanList(scanPath);
+      assertInferenceComplete(scanList, doc);
+      console.log("Inference document is valid and complete");
       return;
     } catch (e) {
-      console.error(e instanceof Error ? e.message : String(e));
-      process.exitCode = 2;
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(msg);
+      process.exitCode = msg.includes("pending review") ? 3 : 2;
       return;
     }
   }

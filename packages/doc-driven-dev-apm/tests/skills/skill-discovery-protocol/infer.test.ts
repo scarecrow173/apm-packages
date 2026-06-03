@@ -30,8 +30,7 @@ function runSdpInfer(args: string[], cwd: string) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
-test("sdp infer generates skill-reference-inferences.json from scan list", () => {
-  const dir = tempDir();
+function writeScanList(dir: string, skillName = "skill-a") {
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
   fs.writeFileSync(
     path.join(dir, ".sdp", "skill-scan-list.json"),
@@ -41,10 +40,10 @@ test("sdp infer generates skill-reference-inferences.json from scan list", () =>
         generated_at: "2026-06-01T00:00:00Z",
         skills: [
           {
-            name: "skill-a",
-            description: "ADR authoring skill",
-            body: "# Skill A\nUse when writing ADR and architecture records.",
-            skill_path: "/tmp/skill-a/SKILL.md",
+            name: skillName,
+            description: "A skill",
+            body: "# Skill\nUsed in agent inference path",
+            skill_path: `/tmp/${skillName}/SKILL.md`,
             scope: "project",
           },
         ],
@@ -54,6 +53,11 @@ test("sdp infer generates skill-reference-inferences.json from scan list", () =>
     ),
     "utf8",
   );
+}
+
+test("sdp infer generates skill-reference-inferences.json from scan list", () => {
+  const dir = tempDir();
+  writeScanList(dir);
 
   const result = runInfer([], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -81,28 +85,7 @@ test("sdp infer generates skill-reference-inferences.json from scan list", () =>
 
 test("sdp infer overwrites existing inference file with regenerated schema-shaped document", () => {
   const dir = tempDir();
-  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, ".sdp", "skill-scan-list.json"),
-    JSON.stringify(
-      {
-        schema_version: "1.0",
-        generated_at: "2026-06-01T00:00:00Z",
-        skills: [
-          {
-            name: "skill-a",
-            description: "ADR authoring skill",
-            body: "# Skill A\nUse when writing ADR and architecture records.",
-            skill_path: "/tmp/skill-a/SKILL.md",
-            scope: "project",
-          },
-        ],
-      },
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  writeScanList(dir);
 
   fs.writeFileSync(
     path.join(dir, ".sdp", "skill-reference-inferences.json"),
@@ -150,28 +133,7 @@ test("sdp infer exits 2 when scan list is missing", () => {
 
 test("sdp infer uses agent inference source", () => {
   const dir = tempDir();
-  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, ".sdp", "skill-scan-list.json"),
-    JSON.stringify(
-      {
-        schema_version: "1.0",
-        generated_at: "2026-06-01T00:00:00Z",
-        skills: [
-          {
-            name: "skill-a",
-            description: "A skill",
-            body: "# Skill\nUsed in agent inference path",
-            skill_path: "/tmp/skill-a/SKILL.md",
-            scope: "project",
-          },
-        ],
-      },
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  writeScanList(dir);
 
   const result = runInfer([], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -204,28 +166,7 @@ test("sdp infer exits 2 when --scan value is missing", () => {
 
 test("sdp infer init creates editable baseline without rule-based inference", () => {
   const dir = tempDir();
-  fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, ".sdp", "skill-scan-list.json"),
-    JSON.stringify(
-      {
-        schema_version: "1.0",
-        generated_at: "2026-06-01T00:00:00Z",
-        skills: [
-          {
-            name: "spec-review-test-skill",
-            description: "Draft specs, review outcomes, and define test strategy",
-            body: "# Skill\nUse when writing specification docs, reviewing designs, and planning tests.",
-            skill_path: "/tmp/spec-review-test-skill/SKILL.md",
-            scope: "project",
-          },
-        ],
-      },
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  writeScanList(dir, "spec-review-test-skill");
 
   const result = runInfer(["init"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -241,3 +182,74 @@ test("sdp infer init creates editable baseline without rule-based inference", ()
   assert.equal(doc.skills[0].execution_policy.strictness, "flexible");
   assert.equal(doc.skills[0].execution_policy.sequence_required, false);
 });
+
+test("sdp infer check exits 3 when pending skills remain", () => {
+  const dir = tempDir();
+  writeScanList(dir);
+  const inferPath = path.join(dir, ".sdp", "skill-reference-inferences.json");
+  fs.writeFileSync(
+    inferPath,
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-06-03T00:00:00Z",
+        inference_source: "agent",
+        skills: [
+          {
+            name: "skill-a",
+            review_status: "pending",
+            provides: [],
+            uses: [],
+            execution_policy: {
+              strictness: "flexible",
+              sequence_required: false,
+              allow_step_reordering: true,
+              allow_partial_application: true,
+            },
+            tags: [],
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const result = runInfer(["check", "--in", inferPath, "--scan", ".sdp/skill-scan-list.json"], dir);
+  assert.equal(result.status, 3, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("pending review"));
+});
+
+test("sdp infer check validates existing reviewed inference file", () => {
+  const dir = tempDir();
+  writeScanList(dir, "spec-doc");
+  const inferPath = path.join(dir, ".sdp", "skill-reference-inferences.json");
+  fs.writeFileSync(inferPath, JSON.stringify(baselineInferenceForCheck(), null, 2), "utf8");
+
+  const result = runInfer(["check", "--in", inferPath, "--scan", ".sdp/skill-scan-list.json"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+});
+
+function baselineInferenceForCheck() {
+  return {
+    schema_version: "1.0",
+    generated_at: "2026-06-03T00:00:00Z",
+    inference_source: "agent",
+    skills: [
+      {
+        name: "spec-doc",
+        review_status: "reviewed",
+        provides: [{ capability: "spec_authoring", description: "Draft specifications" }],
+        uses: [],
+        execution_policy: {
+          strictness: "flexible",
+          sequence_required: false,
+          allow_step_reordering: true,
+          allow_partial_application: true,
+        },
+        tags: ["spec"],
+      },
+    ],
+  };
+}

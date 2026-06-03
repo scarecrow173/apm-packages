@@ -15,6 +15,7 @@ const {
   loadScanList,
   defaultInferencePath,
   loadInferenceDocument,
+  assertInferenceComplete,
   enrichSkills,
 } = require("./lib/inference.ts");
 const {
@@ -103,6 +104,18 @@ async function main(): Promise<void> {
     console.error("Run inference and retry:");
     console.error(`  sdp infer init --scan \"${scanPathForHint}\" --out \"${inferencePathForHint}\" --if-exists overwrite`);
     process.exitCode = 2;
+    return;
+  }
+
+  try {
+    assertInferenceComplete(scanList, inferenceDoc);
+  } catch (e: unknown) {
+    const scanPathForHint = path.relative(cwd, scanListPath) || path.basename(scanListPath);
+    const inferencePathForHint = path.relative(cwd, inferencePath) || path.basename(inferencePath);
+    console.error(e instanceof Error ? e.message : String(e));
+    console.error("Run inference review and retry:");
+    console.error(`  sdp infer check --in \"${inferencePathForHint}\" --scan \"${scanPathForHint}\"`);
+    process.exitCode = 3;
     return;
   }
 

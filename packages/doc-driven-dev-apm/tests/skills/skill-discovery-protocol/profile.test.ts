@@ -39,6 +39,15 @@ function runProfile(args: string[], cwd: string) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
+function markAllInferenceReviewed(dir: string) {
+  const inferencePath = path.join(dir, ".sdp", "skill-reference-inferences.json");
+  const doc = JSON.parse(fs.readFileSync(inferencePath, "utf8"));
+  for (const skill of doc.skills) {
+    skill.review_status = "reviewed";
+  }
+  fs.writeFileSync(inferencePath, JSON.stringify(doc, null, 2), "utf8");
+}
+
 function setupProject(dir: string) {
   const skillsDir = path.join(dir, ".apm", "skills");
   fs.mkdirSync(skillsDir, { recursive: true });
@@ -152,6 +161,7 @@ test("sdp profile creates catalog and profile after scan and infer", () => {
 
   const infer = runInfer(["init", "--scan", ".sdp/skill-scan-list.json"], dir);
   assert.equal(infer.status, 0, `infer stderr: ${infer.stderr}`);
+  markAllInferenceReviewed(dir);
 
   const result = runProfile(["--adapter", "profile-test-adapter.yaml"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
@@ -179,4 +189,18 @@ test("sdp profile exits 2 when inference is missing", () => {
   const result = runProfile(["--adapter", "profile-test-adapter.yaml"], dir);
   assert.equal(result.status, 2, `stderr: ${result.stderr}`);
   assert.ok(result.stderr.includes("sdp infer init"));
+});
+
+test("sdp profile exits 3 when inference is incomplete", () => {
+  const dir = tempDir();
+  setupProject(dir);
+  const scan = runScan(["--adapter", "profile-test-adapter.yaml"], dir);
+  assert.equal(scan.status, 0, `scan stderr: ${scan.stderr}`);
+  const infer = runInfer(["init", "--scan", ".sdp/skill-scan-list.json"], dir);
+  assert.equal(infer.status, 0, `infer stderr: ${infer.stderr}`);
+
+  const result = runProfile(["--adapter", "profile-test-adapter.yaml"], dir);
+  assert.equal(result.status, 3, `stderr: ${result.stderr}`);
+  assert.ok(result.stderr.includes("pending review"));
+  assert.ok(result.stderr.includes("sdp infer check"));
 });

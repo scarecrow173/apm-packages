@@ -9,6 +9,7 @@ const {
   defaultInferencePath,
   loadScanList,
   readInferenceOrThrow,
+  assertInferenceComplete,
   writeInferenceDocument,
 } = require("./lib/inference.ts");
 const { SkillReferenceInferenceDocumentSchema } = require("./lib/schemas/inference.ts");
@@ -109,7 +110,7 @@ function usage(): string {
   return `Usage:
   sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
   sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
-  sdp infer check --in <json> [--cwd <dir>]
+  sdp infer check [--scan <json>] --in <json> [--cwd <dir>]
   sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
   sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 
@@ -148,12 +149,15 @@ function main(): void {
 
   if (args.command === "check") {
     try {
-      readInferenceOrThrow(inPath);
-      console.log("Inference document is valid");
+      const doc = readInferenceOrThrow(inPath);
+      const scanList = loadScanList(scanPath);
+      assertInferenceComplete(scanList, doc);
+      console.log("Inference document is valid and complete");
       return;
     } catch (e: unknown) {
-      console.error(e instanceof Error ? e.message : String(e));
-      process.exitCode = 2;
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(msg);
+      process.exitCode = msg.includes("pending review") ? 3 : 2;
       return;
     }
   }

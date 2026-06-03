@@ -9,7 +9,7 @@ export type InferenceCompletenessResult =
   | { ok: true }
   | { ok: false; pending_skills: string[]; message: string };
 
-function validateInferenceCompleteness(
+export function validateInferenceCompleteness(
   scanList: SkillScanListDocument,
   inferenceDoc: SkillReferenceInferenceDocument,
 ): InferenceCompletenessResult {

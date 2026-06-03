@@ -117,6 +117,7 @@ A mock skill for web research.
 const MOCK_INFERENCE_SKILLS = [
   {
     name: "mock-debug-skill",
+    review_status: "reviewed",
     provides: [{ capability: "debugging", description: "Root cause analysis" }],
     uses: [
       {
@@ -137,6 +138,7 @@ const MOCK_INFERENCE_SKILLS = [
   },
   {
     name: "mock-review-skill",
+    review_status: "reviewed",
     provides: [{ capability: "code_review", description: "Multi-axis code review" }],
     uses: [],
     execution_policy: {
@@ -150,6 +152,7 @@ const MOCK_INFERENCE_SKILLS = [
   },
   {
     name: "mock-impl-skill",
+    review_status: "reviewed",
     provides: [{ capability: "incremental_implementation", description: "Step-by-step implementation" }],
     uses: [
       {
@@ -170,6 +173,7 @@ const MOCK_INFERENCE_SKILLS = [
   },
   {
     name: "mock-research-skill",
+    review_status: "reviewed",
     provides: [
       { capability: "web_research", description: "External information discovery" },
       { capability: "information_gathering", description: "Source collection" },
@@ -605,7 +609,10 @@ function writeInferenceFile(dir: string, skills: Array<Record<string, unknown>>)
         schema_version: "1.0",
         generated_at: "2026-01-01T00:00:00Z",
         inference_source: "agent",
-        skills,
+        skills: skills.map((skill) => ({
+          review_status: "reviewed",
+          ...skill,
+        })),
       },
       null,
       2,
@@ -963,6 +970,15 @@ test("integration: infer init/apply editable flow feeds profile", () => {
 
   const apply = runInfer(["apply", "--ops", opsPath], dir);
   assert.equal(apply.status, 0, `stderr: ${apply.stderr}`);
+
+  const incomplete = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
+  assert.equal(incomplete.status, 3, `stderr: ${incomplete.stderr}`);
+
+  const inferenceDoc = JSON.parse(fs.readFileSync(inferencePath, "utf8"));
+  for (const skill of inferenceDoc.skills) {
+    skill.review_status = "reviewed";
+  }
+  fs.writeFileSync(inferencePath, JSON.stringify(inferenceDoc, null, 2), "utf8");
 
   const generated = runGenerate(["--adapter", "impl-adapter.yaml"], dir);
   assert.equal(generated.status, 0, `stderr: ${generated.stderr}`);

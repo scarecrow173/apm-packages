@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
@@ -12,6 +14,15 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // node_modules/.pnpm/js-yaml@4.1.1/node_modules/js-yaml/lib/common.js
 var require_common = __commonJS({
@@ -18453,6 +18464,33 @@ var init_inference = __esm({
   }
 });
 
+// src/skills/skill-discovery-protocol/scripts/lib/inference_validation.ts
+var inference_validation_exports = {};
+__export(inference_validation_exports, {
+  validateInferenceCompleteness: () => validateInferenceCompleteness
+});
+function validateInferenceCompleteness(scanList, inferenceDoc) {
+  const scannedNames = new Set(scanList.skills.map((skill) => skill.name));
+  const inferredByName = new Map(inferenceDoc.skills.map((skill) => [skill.name, skill]));
+  const pendingSkills = [...scannedNames].filter((name) => inferredByName.get(name)?.review_status !== "reviewed").sort();
+  if (pendingSkills.length === 0) {
+    return { ok: true };
+  }
+  return {
+    ok: false,
+    pending_skills: pendingSkills,
+    message: `Inference document is incomplete: ${pendingSkills.length} skill(s) still pending review: ${pendingSkills.join(", ")}`
+  };
+}
+var init_inference_validation = __esm({
+  "src/skills/skill-discovery-protocol/scripts/lib/inference_validation.ts"() {
+    "use strict";
+    module.exports = {
+      validateInferenceCompleteness
+    };
+  }
+});
+
 // src/skills/skill-discovery-protocol/scripts/lib/inference.ts
 var require_inference = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/inference.ts"(exports2, module2) {
@@ -18461,6 +18499,7 @@ var require_inference = __commonJS({
     init_inference();
     var fs2 = require("node:fs");
     var path2 = require("node:path");
+    var { validateInferenceCompleteness: validateInferenceCompleteness2 } = (init_inference_validation(), __toCommonJS(inference_validation_exports));
     function defaultScanListPath2(cwd) {
       return path2.join(cwd, ".sdp", "skill-scan-list.json");
     }
@@ -18538,6 +18577,12 @@ var require_inference = __commonJS({
         };
       });
     }
+    function assertInferenceComplete2(scanList, inferenceDoc) {
+      const result = validateInferenceCompleteness2(scanList, inferenceDoc);
+      if (!result.ok) {
+        throw new Error(result.message);
+      }
+    }
     module2.exports = {
       defaultScanListPath: defaultScanListPath2,
       defaultInferencePath: defaultInferencePath2,
@@ -18547,7 +18592,8 @@ var require_inference = __commonJS({
       buildScanList,
       writeScanList,
       loadScanList: loadScanList2,
-      enrichSkills: enrichSkills2
+      enrichSkills: enrichSkills2,
+      assertInferenceComplete: assertInferenceComplete2
     };
   }
 });
@@ -18628,6 +18674,7 @@ var {
   loadScanList,
   defaultInferencePath,
   loadInferenceDocument,
+  assertInferenceComplete,
   enrichSkills
 } = require_inference();
 var {
@@ -18705,6 +18752,17 @@ async function main() {
     console.error("Run inference and retry:");
     console.error(`  sdp infer init --scan "${scanPathForHint}" --out "${inferencePathForHint}" --if-exists overwrite`);
     process.exitCode = 2;
+    return;
+  }
+  try {
+    assertInferenceComplete(scanList, inferenceDoc);
+  } catch (e) {
+    const scanPathForHint = path.relative(cwd, scanListPath) || path.basename(scanListPath);
+    const inferencePathForHint = path.relative(cwd, inferencePath) || path.basename(inferencePath);
+    console.error(e instanceof Error ? e.message : String(e));
+    console.error("Run inference review and retry:");
+    console.error(`  sdp infer check --in "${inferencePathForHint}" --scan "${scanPathForHint}"`);
+    process.exitCode = 3;
     return;
   }
   let skills;

@@ -139,10 +139,31 @@ test("sdp infer apply rolls back when one op is invalid", () => {
 test("sdp infer check validates existing inference file", () => {
   const dir = tempDir();
   fs.mkdirSync(path.join(dir, ".sdp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "skill-scan-list.json"),
+    JSON.stringify(
+      {
+        schema_version: "1.0",
+        generated_at: "2026-06-01T00:00:00Z",
+        skills: [
+          {
+            name: "spec-doc",
+            description: "Draft specs",
+            body: "# Spec Doc",
+            skill_path: "/tmp/spec-doc/SKILL.md",
+            scope: "project",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
   const inferPath = path.join(dir, ".sdp", "skill-reference-inferences.json");
   fs.writeFileSync(inferPath, JSON.stringify(baselineInference(), null, 2), "utf8");
 
-  const result = runInfer(["check", "--in", inferPath], dir);
+  const result = runInfer(["check", "--in", inferPath, "--scan", ".sdp/skill-scan-list.json"], dir);
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
 });
 
