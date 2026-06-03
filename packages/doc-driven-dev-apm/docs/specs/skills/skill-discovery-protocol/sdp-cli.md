@@ -10,7 +10,7 @@
 sdp scan --adapter <adapter-yaml> [--cwd <dir>]
 sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
 sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
-sdp infer check --in <json> [--cwd <dir>]
+sdp infer check [--scan <json>] --in <json> [--cwd <dir>]
 sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp profile --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
@@ -64,7 +64,7 @@ sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [
 
 1. `init` は scan 成果物から編集用のベース inference ドキュメントを生成する（推論方式は `agent` 固定）
 2. `apply` は JSONL operations を既存 inference ドキュメントへ原子的に適用する
-3. `check` は既存 inference ドキュメントを schema 検証する
+3. `check` は既存 inference ドキュメントを schema 検証し、scan list に対する completeness も検証する
 4. `set-skill` は1スキル分の定義を upsert する
 5. `delete-skill` は指定スキル定義を削除する
 
@@ -85,7 +85,7 @@ sdp infer apply --ops tmp/sdp-inference-ops.jsonl --in .sdp/skill-reference-infe
 `sdp profile` の前に必ず検証する:
 
 ```text
-sdp infer check --in .sdp/skill-reference-inferences.json
+sdp infer check --scan .sdp/skill-scan-list.json --in .sdp/skill-reference-inferences.json
 ```
 
 ### 入力
@@ -112,6 +112,7 @@ sdp infer check --in .sdp/skill-reference-inferences.json
 - `0`: 正常完了
 - `1`: 生成後の schema 検証失敗
 - `2`: 入力エラー（引数不正、scan 未存在、scan 不正）
+- `3`: inference incomplete（scan された skill に `review_status != reviewed` が残っている）
 
 ## `sdp profile`
 
@@ -152,12 +153,15 @@ sdp profile --adapter <adapter-yaml> [--references <json>]
 - `sdp query` は profile 同居ディレクトリを優先し、見つからない場合は `.sdp/` 直下をフォールバック参照する。
 
 scan 成果物が存在しない場合、`sdp profile` は終了コード `2` を返し、`sdp scan` の実行を案内する。inference 成果物が存在しない場合も終了コード `2` を返し、`sdp infer init` の実行を案内する。
+inference 成果物が存在しても `review_status != reviewed` の skill が残っている場合、
+`sdp profile` は終了コード `3` を返し、`sdp infer check` の実行を案内する。
 
 ### 終了コード
 
 - `0`: 正常完了
 - `1`: 入力エラー
 - `2`: schema 検証エラー、または scan / inference 成果物不足
+- `3`: inference incomplete
 
 ## `sdp validate`
 

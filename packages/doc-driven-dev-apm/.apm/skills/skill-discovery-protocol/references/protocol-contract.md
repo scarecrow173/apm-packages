@@ -85,13 +85,16 @@ Each inference entry contains:
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `name` | string | Must match a scanned skill |
+| `review_status` | string | `pending` or `reviewed` |
 | `provides` | array | Capabilities offered |
 | `uses` | array | Capabilities consumed |
 | `execution_policy` | object | Execution constraints |
 | `tags` | string[] | Classification hints |
 
 Every scanned skill MUST have exactly one matching inference entry. Every
-inference entry MUST match a scanned skill.
+inference entry MUST match a scanned skill. `sdp infer check` MUST fail if any
+scanned skill remains `pending`, and `sdp profile` MUST refuse to generate
+catalog/profile artifacts from incomplete inference data.
 
 ## 5. Skill Reference Catalog Contract
 

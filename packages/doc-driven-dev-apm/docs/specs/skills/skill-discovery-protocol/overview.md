@@ -56,7 +56,7 @@ skill-scan-list.json
   - エージェント推論の入力
 
 skill-reference-inferences.json
-  - エージェントが SKILL.md 全文から推論した provides / uses / execution_policy / tags
+  - エージェントが SKILL.md 全文から推論した review_status / provides / uses / execution_policy / tags
   - catalog 化の入力
 
 skill-reference-catalog.json
@@ -104,6 +104,7 @@ load_adapter -> scan_skills -> write_scan_list
 | --- | --- |
 | `sdp scan --adapter <yaml>` | scan list を生成する |
 | `sdp infer init [--scan <json>] [--out <json>]` | inference 成果物を初期化・更新する |
+| `sdp infer check [--scan <json>] --in <json>` | inference の schema/completeness を検証する |
 | `sdp profile --adapter <yaml>` | 既存の scan/inference 成果物から catalog/profile を生成する |
 | `sdp validate --profile <json>` | 成果物を検証する |
 | `sdp query --profile <json> <subcommand>` | 成果物から情報を抽出する |
@@ -113,7 +114,7 @@ load_adapter -> scan_skills -> write_scan_list
 | Artifact | Format | Role |
 | --- | --- | --- |
 | `skill-scan-list.json` | JSON | scan で見つかった標準 `SKILL.md` 全文の一覧 |
-| `skill-reference-inferences.json` | JSON | エージェント推論で補完された capability 情報 |
+| `skill-reference-inferences.json` | JSON | エージェント推論で補完された review lifecycle + capability 情報 |
 | `skill-reference-catalog.json` | JSON | flow 非依存のスキル能力 catalog |
 | `skill-reference-catalog.md` | Markdown | catalog の人間レビュー用派生物 |
 | `*-profile.json` | JSON | Flow Profile |

@@ -16,7 +16,7 @@ Adapter YAML スキーマ、invocation 解決ルール、検証規約につい�
 sdp scan --adapter <adapter-yaml>
 sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json --if-exists merge
 sdp infer set-skill --name <skill> --spec <skill-inference.json> --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
-sdp infer check --in .sdp/skill-reference-inferences.json
+sdp infer check --scan .sdp/skill-scan-list.json --in .sdp/skill-reference-inferences.json
 sdp profile --adapter <adapter-yaml>
 sdp validate --profile .sdp/<adapter_id>/<flow-profile-json> --adapter <adapter-yaml>
 ```
@@ -39,14 +39,14 @@ adapter の `scan.scopes` に従ってスキルを走査し、`.sdp/skill-scan-l
 ```text
 sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
 sdp infer apply --ops <jsonl> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
-sdp infer check --in <json> [--cwd <dir>]
+sdp infer check [--scan <json>] --in <json> [--cwd <dir>]
 sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 ```
 
 `skill-reference-inferences.json` を初期化・編集・検証する。agent は
 scan output を読んだ後、この command family で推論した `provides`、
-`uses`、`execution_policy`、`tags` を記録する。
+`uses`、`execution_policy`、`tags` に加えて `review_status` を記録する。
 
 ### 1.3 `sdp profile`
 
@@ -59,7 +59,8 @@ sdp profile --adapter <adapter-yaml> [--references <json>] [--cwd <dir>]
 - 共有 catalog: `.sdp/skill-reference-catalog.json`
 - flow profile: `.sdp/<adapter_id>/<flow_profile>`
 
-`sdp profile` は scan / infer を実行しない。事前に `sdp scan` → `sdp infer init` を実行する。
+`sdp profile` は scan / infer を実行しない。事前に `sdp scan` を実行し、
+inference を review したうえで `sdp infer check` を通してから profile 化する。
 
 ### 1.4 `sdp validate`
 

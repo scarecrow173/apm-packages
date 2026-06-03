@@ -4,14 +4,14 @@
 
 Skill Reference Catalog は、scan で発見されたスキルにエージェント推論成果物を結合し、各スキルが提供・利用する capability と実行ポリシーを一覧化する **flow 非依存** の正規成果物である。
 
-Catalog は `SKILL.md` に独自メタデータがあることを前提にしない。`provides` / `uses` / `execution_policy` / `tags` は、scan で保存された `SKILL.md` 全文をエージェントが読み、`skill-reference-inferences.json` として補完した値を使う。
+Catalog は `SKILL.md` に独自メタデータがあることを前提にしない。`provides` / `uses` / `execution_policy` / `tags` は、scan で保存された `SKILL.md` 全文をエージェントが読み、`skill-reference-inferences.json` として補完した値を使う。Catalog 化の前提として、各 inference entry は `review_status = "reviewed"` でなければならない。
 
 ## 入力成果物
 
 | Artifact | Role |
 | --- | --- |
 | `skill-scan-list.json` | scan で見つかった各 `SKILL.md` の全文と所在 |
-| `skill-reference-inferences.json` | エージェント推論で補完された capability 情報 |
+| `skill-reference-inferences.json` | エージェント推論で補完された reviewed inference 情報 |
 
 ## ファイル形式
 
@@ -110,6 +110,7 @@ Catalog は `SKILL.md` に独自メタデータがあることを前提にしな
 - `provides[]` / `uses[]` は `capability` の辞書順で安定ソートする
 - `skill-reference-inferences.json` に scan されていない skill がある場合は stale inference として失敗する
 - scan された skill に対応する inference がない場合は missing inference として失敗する
+- scan された skill に `review_status != reviewed` の inference がある場合は incomplete inference として失敗する
 
 ## Flow Profile との関係
 

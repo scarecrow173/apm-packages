@@ -244,6 +244,7 @@ function inferenceDocument(skillAUses = [
     skills: [
       {
         name: "skill-a",
+        review_status: "reviewed",
         provides: [
           { capability: "adr_authoring", description: "Author ADRs and architecture decisions" },
         ],
@@ -259,6 +260,7 @@ function inferenceDocument(skillAUses = [
       },
       {
         name: "skill-b",
+        review_status: "reviewed",
         provides: [
           { capability: "code_review", description: "Review code and quality" },
         ],

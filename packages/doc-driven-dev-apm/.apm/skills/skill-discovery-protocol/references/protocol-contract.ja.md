@@ -57,9 +57,12 @@ agent-authored data である。agent は scan された `SKILL.md` 本文を読
 `provides`、`uses`、`execution_policy`、`tags` を判断し、その結果を
 `sdp infer` subcommands で保存する。
 
-各 inference entry は `name`, `provides`, `uses`, `execution_policy`, `tags`
-を持つ。scan されたすべての skill に対応する inference が必要であり、
-scan されていない skill の inference は stale として扱う。
+各 inference entry は `name`, `review_status`, `provides`, `uses`,
+`execution_policy`, `tags` を持つ。scan されたすべての skill に対応する
+inference が必要であり、scan されていない skill の inference は stale として扱う。
+`sdp infer check` は `review_status != reviewed` の skill が 1 件でもあれば
+失敗し、`sdp profile` は incomplete な inference から catalog/profile を
+生成してはならない。
 
 ## 5. Skill Reference Catalog Contract
 
