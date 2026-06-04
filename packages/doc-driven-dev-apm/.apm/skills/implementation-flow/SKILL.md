@@ -92,7 +92,7 @@ the repository-specific instantiation of this mapping, specifying concrete skill
 
 - If it exists and is valid → go to Phase B (Configuration from Profile).
 - If it does not exist → invoke `skill-discovery-protocol` and pass the adapter path `.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`.
-- If it exists but is corrupted → invoke `skill-discovery-protocol` again with the same adapter path to regenerate it.
+- If it exists but is corrupted, stale, or missing required inference fields → invoke `skill-discovery-protocol` again with the same adapter path to regenerate it.
 
 ---
 
@@ -113,6 +113,10 @@ with the same adapter path and request an inference update before using the
 profile.
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.
+
+If you need to refresh or compare the repository-specific profile skeleton, load
+[`assets/templates/implementation-profile-template.md`](assets/templates/implementation-profile-template.md)
+before editing template-driven sections. Do not load it for normal execution.
 
 ---
 
