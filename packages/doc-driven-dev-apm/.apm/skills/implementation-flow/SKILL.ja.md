@@ -91,7 +91,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 - 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
 - 存在しない場合 → `skill-discovery-protocol` スキルを呼び出し、adapter path `.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml` を渡す。
-- 存在するが破損の場合 → 同じ adapter path を渡して `skill-discovery-protocol` を再度呼び出し、再生成する。
+- 存在するが破損、古くなっている、または必要な inference フィールドが欠けている場合 → 同じ adapter path を渡して `skill-discovery-protocol` を再度呼び出し、再生成する。
 
 ---
 
@@ -112,6 +112,10 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 プロファイルを使う。
 
 詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
+
+リポジトリ固有の profile skeleton を更新・比較したいときは、
+[`assets/templates/implementation-profile-template.ja.md`](assets/templates/implementation-profile-template.ja.md)
+を読みます。通常の実行では読みません。
 
 ---
 
