@@ -1,6 +1,6 @@
 ---
 name: briefing-flow
-description: "利用可能なスキルを発見してルーティングし、情報収集と整理をオーケストレーションする。doc-driven-dev-flow から委譲される briefing フェーズの実行役。新機能や変更の初期情報整理、要件が曖昧で開始点が不明なとき、spec-doc/adr-doc を書く前に使う。.sdp/briefing-flow-default/briefing-profile.json を生成する。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
+description: "新しい機能や変更の初期情報収集を始めるとき、要件が曖昧なとき、または spec-doc / adr-doc を書く前にどのスキルを使うか決めたいときに使う。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
 license: MIT
 ---
 

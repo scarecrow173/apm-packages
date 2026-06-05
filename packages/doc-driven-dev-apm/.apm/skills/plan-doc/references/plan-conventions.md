@@ -3,11 +3,17 @@
 These conventions define how `plan-doc` creates, audits, indexes, and routes
 implementation plans.
 
-`plan-doc` requires `design-doc` approval gate before creation.
+`plan-doc` requires a `design-doc` approval gate before creation.
 
 A plan translates an approved spec or accepted ADR into implementation order,
-risks, dependencies, and verification checkpoints. It should be concrete enough
-that tasks can be created without reinterpreting the upstream document.
+risks, dependencies, verification checkpoints, and a task breakdown that is
+small enough to execute without reinterpreting the upstream document.
+
+## Planning Scope
+
+If a change spans multiple independent subsystems, split it into separate plans
+unless the work shares the same critical path and release intent. A single plan
+should read like one implementation stream, not a bundle of unrelated projects.
 
 ## Directory
 
@@ -136,12 +142,30 @@ Internal documents use relative paths. External sources use URLs.
 Plans should include:
 
 1. Goal and non-goals.
-2. Upstream specs or ADRs being implemented.
-3. Implementation sequence with ordered phases.
-4. Dependencies, blockers, risks, and mitigations.
-5. Task breakdown guidance.
-6. Verification commands or manual checks.
-7. Rollback or follow-up notes when the implementation is risky.
+2. Scope boundaries and whether the work should be split into multiple plans.
+3. Files, modules, or ownership boundaries the plan will touch.
+4. Upstream specs or ADRs being implemented.
+5. Implementation sequence with ordered phases.
+6. Tasks sized as single actions, not bundled narratives.
+7. Dependencies, blockers, risks, and mitigations.
+8. Verification commands or manual checks.
+9. Rollback or follow-up notes when the implementation is risky.
+10. A self-review pass that checks spec coverage, placeholder cleanup, and
+    terminology consistency.
+
+## Task Granularity
+
+Write tasks so each one is a discrete action.
+
+- Good: write the failing test.
+- Good: run the targeted test and confirm it fails.
+- Good: implement the minimal code change.
+- Good: re-run the targeted test and confirm it passes.
+- Good: commit the change.
+- Bad: implement the feature and make sure it works.
+- Bad: handle validation and edge cases.
+
+If a task has multiple separable actions, split it.
 
 ## Design Gate (Mandatory)
 
@@ -164,6 +188,20 @@ node scripts/new_plan.js --title "Implement checkout flow" --implements docs/spe
 Plans should name concrete files, modules, commands, or ownership boundaries
 when they are known. If a detail is not known, mark the gap explicitly instead
 of pretending the plan is implementation-ready.
+
+## No Placeholders
+
+Plans are failures if they rely on placeholder language instead of concrete
+content.
+
+- Do not use `TBD`, `TODO`, `implement later`, or similar filler.
+- Do not say "add validation" or "handle edge cases" without specifying what
+  the validation or edge case is.
+- Do not say "write tests for the above" without naming the tests or behavior.
+- Do not reference a function, file, or module that has not already been
+  introduced in the plan.
+
+If a detail is unknown, record it as an explicit gap.
 
 ## Mutability
 
@@ -204,3 +242,12 @@ Numbers are local to each category. Document the categorization scheme in the
 index before the structure grows. Use categories by execution area, team,
 release, or migration stream only when a flat directory is becoming hard to
 scan.
+
+## Review Handoff
+
+When the plan is complete, include enough context for a reviewer to focus on
+substantive gaps rather than wording preferences.
+
+- List any explicit assumptions.
+- List any unresolved dependencies or missing information.
+- Point to the upstream spec, design docs, and ADRs that matter most.
