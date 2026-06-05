@@ -31,6 +31,12 @@ flow_stack:
       default:
         skill: "spec-doc"
         reason: "All briefings produce spec-doc output"
+    - slot_id: "adr_output"
+      slot_type: "layerable"
+      activation: "always"
+      default:
+        skill: "adr-doc"
+        reason: "All briefings produce adr-doc output"
 classification:
   unmatched:
     action: "assign"

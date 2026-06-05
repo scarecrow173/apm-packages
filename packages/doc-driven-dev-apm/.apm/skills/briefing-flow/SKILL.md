@@ -1,6 +1,6 @@
 ---
 name: briefing-flow
-description: "Orchestrates information gathering and organization by discovering and routing to available skills. Delegated from doc-driven-dev-flow as the briefing phase executor. Use when: starting initial information gathering for new features/changes, requirements are ambiguous, preparing to write spec-doc/adr-doc. Generates .sdp/briefing-flow-default/briefing-profile.json. Keywords: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision."
+description: "Use when starting initial information gathering for new features or changes, when requirements are ambiguous, or when you need to decide which skills to activate before writing spec-doc/adr-doc. Keywords: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision."
 license: MIT
 ---
 
