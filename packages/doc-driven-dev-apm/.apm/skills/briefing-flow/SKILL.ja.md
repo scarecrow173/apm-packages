@@ -1,115 +1,103 @@
 ---
 name: briefing-flow
-description: "利用可能スキルを発見・ルーティングして情報収集・整理をオーケストレーション。doc-driven-dev-flow から委譲されるブリーフィングフェーズの実行者。使用タイミング: 新機能・変更の初期情報整理時、要件が曖昧で何から始めるべきか不明なとき、spec-doc/adr-doc作成の前段階。.sdp/briefing-flow-default/briefing-profile.jsonを生成。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
+description: "利用可能なスキルを発見してルーティングし、情報収集と整理をオーケストレーションする。doc-driven-dev-flow から委譲される briefing フェーズの実行役。新機能や変更の初期情報整理、要件が曖昧で開始点が不明なとき、spec-doc/adr-doc を書く前に使う。.sdp/briefing-flow-default/briefing-profile.json を生成する。キーワード: briefing, discovery, spec-doc, adr-doc, skill stack, entry decision。"
 license: MIT
 ---
 
-# Briefing Flow
+# ブリーフィングフロー
 
 <SUBAGENT-STOP>
-特定のタスクを実行するためにサブエージェントとしてディスパッチされた場合、
-このメタスキルをスキップし、ディスパッチ指示に従うこと。
+明示的なスキル指示付きで特定のタスクを実行するサブエージェントとして呼び出された場合は、このメタスキルを飛ばし、dispatch 指示に従ってください。
 </SUBAGENT-STOP>
 
-環境内の**全ての利用可能スキル**を動的に発見・ルーティングして情報収集・整理を
-オーケストレーションする。これは**ブリーフィングフェーズのオーケストレーター**であり、
-どのスキルが適用されるかを判断し、情報状態に応じてスキルスタックを構成し、
-spec-doc と adr-doc の完了を経てから次に進む。
+利用可能なすべてのスキルを動的に発見してルーティングし、情報収集と整理を行う。このスキルは briefing フェーズのオーケストレータであり、どのスキルが適用されるかを判断し、情報状態に応じて skill stack を構成し、spec-doc と adr-doc が完了するまで次段階への進行を制御する。
 
-これは**メタスキル**であり、文書を直接生成しない。代わりにスキルの発見、
-構成、順序付け、そして情報収集を下流文書作成に接続するゲートループを管理する。
+これはメタスキルである。直接ドキュメントは生成しない。代わりに、スキル発見、構成、順序付け、そして情報収集から下流の文書作成へ接続するゲートループを管理する。
 
 ## 利用タイミング
 
-- 新機能・プロジェクト・大規模変更の初期情報整理を行うとき。
+- 新しい機能、プロジェクト、大きな変更の初期情報収集を始めるとき。
 - 要件が曖昧で、どのスキルから始めるべきか不明なとき。
-- `doc-driven-dev-flow` から Briefing フェーズの委譲先として呼び出されるとき。
-- 情報を揃えてから spec-doc / adr-doc を書きたいとき（スタンドアロン利用）。
-- 情報収集作業を開始するとき — 構成のためにまずこのスキルを呼ぶ。
+- `doc-driven-dev-flow` から briefing フェーズの委譲先として呼び出されたとき。
+- spec-doc / adr-doc を書く前に情報を整理したいとき。
+- 何らかの情報収集作業を始めるとき。まずこのスキルを呼び出して構成を行う。
 
 ## ルール
 
-**spec-doc / adr-doc を書く前に、下記の評価フェーズと構成フェーズを完了すること。**
-利用可能なスキルが適用される場合、必ず使うこと。これは任意ではない。
-合理化してスキップすることは許されない。
+**spec-doc / adr-doc を書く前に、下の Assess と Configure フェーズを完了すること。**
+利用可能なスキルが今やろうとしている作業に当てはまるなら、必ず使う。
+これは任意ではない。自分の判断で省略してはいけない。
 
 ---
 
 ## フローフェーズ
 
 ```text
-Phase A: 評価  →  Phase B: 構成  →  Phase C: 収集・生成  →  Phase D: ゲート検証
+Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  Phase D: Gate
 ```
 
-| フェーズ | 目的 | 出力 |
-| -------- | ---- | ---- |
-| A. 評価 | 要望を理解し、情報状態を判定する | Entry Decision 記録 + 情報特性の特定 |
-| B. 構成 | スキルを発見し、briefing 用のスキルスタックを構築/読込 | アクティブスキルスタックの宣言 |
-| C. 収集・生成 | 情報収集と文書作成を並行実行する | spec-doc + adr-doc 生成済み |
-| D. ゲート検証 | 完了条件を検証し次フェーズへの準備を確認する | ゲート通過判定 |
+| Phase | Purpose | Output |
+| ----- | ------- | ------ |
+| A. Assess | 要求を理解し、情報状態を判定する | Entry Decision を記録 + 特性を特定 |
+| B. Configure | スキルを発見し、briefing 用の skill stack を構成する | 有効な skill stack を宣言 |
+| C. Gather & Generate | 情報を集め、文書を並列生成する | spec-doc + adr-doc を生成 |
+| D. Gate | 完了条件を検証し、次段階への準備完了を確認する | Gate の合否判定 |
 
 ---
 
 ## Phase A: 評価
 
-要望・課題を受け取り、情報状態を判定する:
+要求や問題を受け取り、情報状態を判定する:
 
-1. **要望を理解する** — 目的、背景、制約、利害関係者を把握する。
-2. **情報状態を分類する** — Entry Decision テーブルで経路を判定する:
+1. **要求を理解する** — 目的、背景、制約、関係者を特定する。
+2. **情報状態を分類する** — Entry Decision テーブルで経路を決める:
 
-| 質問 | Yes なら → | No なら → |
-| ---- | --------- | -------- |
-| 問題を1文で明確に説明できるか？ | 続行 | A-1（Problem Framing） |
-| 解決の方向性はあるがトレードオフ分析が必要か？ | A-2（Option Framing） | 続行 |
-| 今すぐ受け入れ条件を書けるか？ | A-4（Direct Start） | A-1 または A-2 |
-| 複数の情報源から収束が必要か？ | A-3（Combined Discovery） | 単一経路で進む |
-| 外部情報の調査が必要か？ | A-5（Research Required） | 内部情報で十分 |
+| Question | If Yes → | If No → |
+| -------- | -------- | ------- |
+| 問題を 1 文で明確に説明できるか? | Continue | A-1 (Problem Framing) |
+| 方向性はあるがトレードオフ分析が必要か? | A-2 (Option Framing) | Continue |
+| 今すぐ acceptance criteria を書けるか? | A-4 (Direct Start) | A-1 or A-2 |
+| 複数の情報源を収束させる必要があるか? | A-3 (Combined Discovery) | Single path |
+| 外部情報の調査が必要か? | A-5 (Research Required) | Internal info sufficient |
 
-1. **Entry Decision を記録する** — 選択した経路と理由を 1 行で記録する。
+1. **Entry Decision を記録する** — 選んだ経路と理由を 1 行で残す。
 
-### Entry Decision 経路
+### Entry Decision の分岐
 
-- **A-1. Problem Framing** — 課題が曖昧 → Frame カテゴリスキルで問題定義を構造化する。
-- **A-2. Option Framing** — 方向性はあるがトレードオフ不明 → Frame カテゴリスキルで選択肢を整理する。
-- **A-3. Combined Discovery** — 複数スキルが必要 → briefing-profile のスキルスタックから動的に選択する。
-- **A-4. Direct Documentation Start** — 要件が明確 → Phase C のディスパッチトリガーを即発火する（理由を 1 行残す）。
-- **A-5. Research Required** — 外部調査が必要 → Discover/Research カテゴリスキルを優先活性化する。
+- **A-1. Problem Framing** — 問題が曖昧 → Frame カテゴリのスキルで問題定義を構造化する。
+- **A-2. Option Framing** — 方向性はあるがトレードオフが不明 → Frame カテゴリのスキルで代替案を整理する。
+- **A-3. Combined Discovery** — 複数スキルが必要 → briefing-profile の skill stack から動的に選ぶ。
+- **A-4. Direct Documentation Start** — 要件が明確 → Phase C の dispatch trigger をすぐ発火する（理由は 1 行で記録）。
+- **A-5. Research Required** — 外部調査が必要 → Discover / Research カテゴリのスキルを優先する。
 
-これらは**選択肢**であり順序ではない。情報の充足度に基づいて選択する。
-A-4 を選んだ場合でも Phase B（構成）は省略しない — Document カテゴリスキルの構成が必要。
+これらは**順番**ではなく**選択肢**である。情報の十分性に基づいて選ぶ。
+A-4 を選んでも Phase B (Configure) は省略しない。Document カテゴリのスキル構成は依然必要である。
 
-**プロファイル確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/briefing-flow-default/briefing-profile.json` を確認する。
+**Profile の確認:** リポジトリの `.sdp` ディレクトリ配下にある `.sdp/briefing-flow-default/briefing-profile.json` を確認する。
 
-> **`.sdp/briefing-flow-default/briefing-profile.json` とは？**
-> リポジトリ固有の構成ファイル（JSON）。Briefing に利用可能な全スキルをリストし、
-> カテゴリに割り当て、フロースタックスロットと活性化ルールを定義し、
-> 呼び出し解決を指定する。このフローの adapter ファイルを使って
-> `skill-discovery-protocol` スキルが生成・更新し、
-> 同じワークフローの中で検証まで行う。
+> **`.sdp/briefing-flow-default/briefing-profile.json` とは?**
+> リポジトリ固有の JSON 設定ファイルで、briefing に利用可能なすべてのスキルを列挙し、カテゴリに割り当て、flow stack の slot と activation rule を定義し、invocation resolution を指定する。
+> この flow の adapter file を使って `skill-discovery-protocol` スキルが生成・更新し、そのワークフローの一部として検証される。
 
-- 存在し有効な場合 → Phase B（プロファイルからの構成）へ。
-- 存在しない場合 → `skill-discovery-protocol` スキルを呼び出し、adapter path `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` を渡す
-- 存在するが陳腐化/破損の場合 → 同じ adapter path を渡して `skill-discovery-protocol` を再度呼び出し、再生成する
+- 存在して有効な場合 → Phase B (Configuration from Profile) に進む。
+- 存在しない場合 → `skill-discovery-protocol` を呼び出し、adapter path `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` を渡す。
+- 存在するが stale / corrupted の場合 → 同じ adapter path を渡して `skill-discovery-protocol` を再度呼び出し、再生成する。
 
 ---
 
 ## スキル発見プロトコル
 
-プロファイルの生成と検証は `skill-discovery-protocol` スキルが担当する。
+Profile の生成と検証は `skill-discovery-protocol` スキルが担当する。
 
-このフローから呼び出すときは、次を渡す:
+この flow から呼び出すときは、次を渡す:
 
 - Adapter path: `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
 - Expected profile path: `.sdp/briefing-flow-default/briefing-profile.json`
 - Expected inference artifact: `.sdp/skill-reference-inferences.json`
 
-スキルが成果物を生成または更新した後、scan list と照合して
-`.sdp/skill-reference-inferences.json` を確認する。タスクルーティングに必要な
-`provides` または `uses` が不足している場合は、同じ adapter path を渡して
-`skill-discovery-protocol` を再度呼び出し、inference 更新を依頼してから
-プロファイルを使う。
+スキルが artifact を作成または更新した後、`.sdp/skill-reference-inferences.json` を scan list と照合する。task routing に対して `provides` または `uses` が不完全なら、同じ adapter path で `skill-discovery-protocol` を再実行し、profile を使う前に inference 更新を依頼する。
 
-詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.ja.md) を参照。
+詳細は [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) を参照。
 
 ---
 
@@ -117,111 +105,110 @@ A-4 を選んだ場合でも Phase B（構成）は省略しない — Document 
 
 `.sdp/briefing-flow-default/briefing-profile.json` が利用可能な状態で:
 
-1. **フロースタックを読込**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から `flow-stack` を読む
-2. **Entry Decision に基づく活性化**: Phase A で判定した経路に対応するカテゴリを優先:
-   - A-1/A-2 → Frame カテゴリスキルを優先
-   - A-3 → 全カテゴリからマッチするスキルを活性化
-   - A-5 → Discover/Research カテゴリスキルを優先
-   - **マッチするスロットがない場合:** デフォルトスタックのみで進行。
-3. **解決状況を確認**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から `resolution` を読む
-4. **実行ポリシーを確認**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から各候補スキルの `execution-policy` を読む
-5. **アクティブスキルスタックを宣言:**
+1. **Flow stack を読み込む**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から `flow-stack` を読む
+2. **Entry Decision に基づいて activation を適用する**: Phase A の経路に応じて優先カテゴリを決める
+   - A-1 / A-2 → Frame カテゴリのスキルを優先
+   - A-3 → 複数カテゴリにまたがる一致スキルを有効化
+   - A-5 → Discover / Research カテゴリのスキルを優先
+   - **一致する slot がない場合**: デフォルト stack のみで進める
+3. **Resolution を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から `resolution` を読む
+4. **Execution policy を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から各候補スキルの `execution-policy` を読む
+5. **有効な skill stack を宣言する:**
 
 ```text
-このブリーフィングのアクティブスキルスタック:
-1. [カテゴリ] スキル名 — 理由
-2. [カテゴリ] スキル名 — 理由
-3. [カテゴリ] スキル名 — 理由
+この briefing の ACTIVE SKILL STACK:
+1. [Category] skill-name — reason
+2. [Category] skill-name — reason
+3. [Category] skill-name — reason
 → この構成で進めます。
 ```
 
-**実行の優先順位:**
+**実行優先順:**
 
-| 優先度 | カテゴリ | 理由 |
-| ------ | -------- | ---- |
-| 1 | Frame | 情報を収集する前に問題/選択肢を構造化する |
-| 2 | Discover | 外部情報の探索・発見を行う |
-| 3 | Research | 深掘り調査を実施する |
-| 4 | Validate | 収集した情報の正確性・完全性を検証する |
-| 5 | Document | 整理された情報を正式な文書に落とし込む |
+| Priority | Category | Rationale |
+| -------- | -------- | --------- |
+| 1 | Frame | 情報収集の前に問題や選択肢を構造化する |
+| 2 | Discover | 外部情報を探索・発見する |
+| 3 | Research | 深い調査を行う |
+| 4 | Validate | 収集した情報の正確性と完全性を検証する |
+| 5 | Document | 整理された情報を正式文書にする |
 
-詳細なカテゴリ定義はアダプターの `classification.taxonomy`（`assets/adapters/briefing-adapter.yaml`）を参照。
+詳細なカテゴリ定義は、`assets/adapters/briefing-adapter.yaml` の `classification.taxonomy` を参照する。
 
 ---
 
 ## Phase C: 収集・生成
 
-情報収集と文書作成を並行して実行する。情報が揃った時点で即座にサブエージェントへ
-ディスパッチし、コンテキストの鮮度（詳細度）の劣化を防ぐ。
+情報を集め、文書を並列に生成する。十分な情報が揃ったらすぐにサブエージェントへディスパッチし、コンテキストの鮮度低下を防ぐ。
 
 ### 情報収集
 
-アクティブスタック内の各スキルを優先度に従って適用する:
+有効な stack の各スキルを優先順位に従って適用する:
 
-1. 各スキル固有のプロセスに従う（そのスキルの SKILL.md を読む）。
-2. プロファイルからスキルの**実行モード**を確認する:
-   - **Rigid スキル**: 正確に従う; ステップを飛ばしたり順序を変えない。
-   - **Flexible スキル**: 精神を適用; 文脈に合わせる。
-3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。
+1. 各スキル固有のプロセスに従う（そのスキルの `SKILL.md` を読む）。
+2. profile からそのスキルの **execution mode** を確認する:
+   - **Rigid skills**: 厳密に従う。手順を飛ばしたり並べ替えたりしない。
+   - **Flexible skills**: 意図を保ちつつ、状況に合わせて調整する。
+3. スキルはレイヤーであり、排他的ではない。複数のスキルが同時に適用される。
 
 ### ディスパッチトリガー
 
-情報収集と並行して、以下の条件が満たされた時点でサブエージェントへディスパッチする:
+情報収集と並行して、条件が満たされたらサブエージェントをディスパッチする:
 
-| トリガー | 発火条件 | アクション |
-| -------- | -------- | ---------- |
-| spec-doc | 目的、範囲、受け入れ条件、対象外の情報が揃った | サブエージェントを起動し `spec-doc` スキルを委譲 |
-| adr-doc | 採用案、代替案、採否理由、影響範囲の情報が揃った | サブエージェントを起動し `adr-doc` スキルを委譲 |
+| Trigger | Fire Condition | Action |
+| ------- | -------------- | ------ |
+| spec-doc | 目的、範囲、acceptance criteria、除外事項が揃った | サブエージェントを起動し `spec-doc` スキルを委譲 |
+| adr-doc | 採用方針、代替案、理由、影響が揃った | サブエージェントを起動し `adr-doc` スキルを委譲 |
 
-**ディスパッチの原則:**
+**ディスパッチ原則:**
 
-- **両方を同時に待たない。** 片方の情報が先に揃ったらその時点で発火する。
-- ディスパッチ後も情報収集は継続する（ブロックしない）。
-- 両スキルは独立してディスパッチ可能 — 同時並行でよい。
-- ディスパッチ時に渡す情報は**その時点の生の収集結果**を含めること。要約で劣化させない。
-- サブエージェントは各スキルのワークフローに従い文書を生成する。
+- **両方を待たない。** 先に準備できたトリガーをすぐに発火する。
+- 情報収集はディスパッチ後も続ける（非ブロッキング）。
+- 両方のスキルは独立にディスパッチできる。並列実行でよい。
+- ディスパッチ時に渡す情報は、その時点の**生の収集結果**を含める。要約して劣化させない。
+- サブエージェントは各スキルのワークフローに従って文書を生成する。
 
 ### 停止条件
 
-Phase C は以下の停止条件を**全て**満たすまで反復する:
+Phase C は、次のすべてが満たされるまで反復する:
 
-- 主要ユースケースについて、入力・処理・期待結果が説明できる。
-- 重要な制約（技術・運用・期限・品質）が明示されている。
-- 未決事項が「実装前ブロッカー」か「後続で管理可能」か分類されている。
-- `spec-doc` が生成済み（サブエージェントが完了している）。
-- `adr-doc` が生成済み（サブエージェントが完了している）。
+- 主要なユースケースについて、入力 / 処理 / 期待結果を説明できる。
+- 重要な制約（技術、運用、期限、品質）が明示されている。
+- 未解決の項目が "pre-implementation blocker" か "manageable downstream" に分類されている。
+- `spec-doc` が生成済み（サブエージェント完了）。
+- `adr-doc` が生成済み（サブエージェント完了）。
 
-停止条件を満たさない場合:
+Stop conditions が満たされない場合:
 
-1. 不足情報を質問として明文化する。
-2. 適切な Discover/Research/Frame スキルで解消する。
-3. 解消結果を反映し、停止条件を再評価する。
+1. 足りない情報を明示的な質問として書き出す。
+2. 適切な Discover / Research / Frame スキルで解決する。
+3. 結果を反映し、stop conditions を再評価する。
 
 ### 後発情報の反映
 
-ディスパッチ後に追加情報が得られた場合は、Phase D（ゲート検証）前に文書の補完として反映する。
+ディスパッチ後に追加情報を得た場合は、Phase D (Gate) の前に document supplement として反映する。
 
 ---
 
 ## Phase D: ゲート検証
 
-ブリーフィングは以下の**全条件**を満たすまで完了ではない:
+ブリーフィングは、次の**すべて**が満たされるまで完了ではない:
 
 ### 完了条件チェックリスト
 
-- [ ] `spec-doc` が存在し `status:` ≥ `proposed`（`draft` のまま通過禁止）
-- [ ] `spec-doc` に `acceptance_criteria:` が 1 件以上ある
-- [ ] `adr-doc` が存在し `alternatives:` が 2 件以上ある
-- [ ] Entry Decision（A-1/A-2/A-3/A-4/A-5）の選択が記録されている
-- [ ] 「実装前ブロッカー」に分類された未解決項目がない
-- [ ] 両文書が同一の課題文脈を参照している
+- [ ] `spec-doc` が存在し、`status:` が `proposed` 以上である（`draft` は通過不可）
+- [ ] `spec-doc` に少なくとも 1 つの `acceptance_criteria:` がある
+- [ ] `adr-doc` に少なくとも 2 つの `alternatives:` がある
+- [ ] Entry Decision (A-1/A-2/A-3/A-4/A-5) の選択が記録されている
+- [ ] "pre-implementation blocker" に分類された未解決項目が残っていない
+- [ ] 両方の文書が同じ問題文脈を参照している
 
 ### ゲート不通過時のアクション
 
-- spec-doc が不完全 → Phase C に戻りディスパッチトリガーを再発火する。
-- 情報不足で spec が書けない → Phase C に戻り追加情報を収集する。
-- adr-doc の代替案が不足 → Phase C の Frame/Discover スキルで選択肢を拡大する。
-- ゲート通過 → ブリーフィング完了を宣言し、次フェーズ（Design）への準備完了を通知する。
+- spec-doc が不完全 → Phase C に戻って dispatch trigger を再度発火する。
+- spec を書くには情報が不足している → Phase C に戻って追加収集を行う。
+- adr-doc の alternatives が不足している → Frame / Discover スキルで選択肢を広げるため Phase C に戻る。
+- Gate が通った → briefing 完了を宣言し、次段階（Design）への準備完了を通知する。
 
 ---
 
@@ -231,67 +218,62 @@ Phase C は以下の停止条件を**全て**満たすまで反復する:
 
 実行中に情報状態の根本的な変化が判明した場合:
 
-1. 変化を記録: "info-shift: [説明]"
+1. 記録する: `"info-shift: [description]"`
 2. Entry Decision を再評価する。
-3. 必要であればスキルスタックを再構成する（Phase B へ戻る）。
+3. 必要なら skill stack を再構成する（Phase B に戻る）。
 
 ### Phase D → Phase C（文書品質不足）
 
-ゲート検証で文書が基準を満たさない場合:
+文書が gate 条件を満たさない場合:
 
-1. 不足を記録: “doc-gap: [説明]”
-2. 情報不足なら情報収集を再実行し、ディスパッチトリガーを再発火する。
+1. 記録する: `"doc-gap: [description]"`
+2. 情報が不足しているなら、収集を再実行し、dispatch trigger を再発火する。
 
 ---
 
-## Hard Gates
+## ハードゲート
 
-以下は**全フェーズを通じて常時有効な不変条件**である。
-違反を検出した時点で即座に STOP し、対処すること。
+次の項目は、すべてのフェーズで常に有効な**不変条件**である。
+違反を検知したら、ただちに STOP して対処する。
 
 <HARD-GATE>
-プロファイルベースの構成をスキップしてはならない。
-- プロファイルが存在しない場合 → `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` を渡して `skill-discovery-protocol` を呼び出す。
-- プロファイルが存在する場合 → 読み込んでその構成に従う。
-「要件は明確だからスキップしてよい」「このパターンは知っている」が最も多い
-失敗パターン。体系的なスキルルーティングの目的を損なう。
+Profile ベースの構成を省略しないこと。
+- Profile が存在しない場合 → `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml` を渡して `skill-discovery-protocol` を呼び出す。
+- Profile が存在する場合 → 読み込み、その構成に従う。
+"十分明確だから省略できる" や "このパターンはもう知っている" は、最も多い失敗パターンである。これらは体系的なスキルルーティングを壊す。
 </HARD-GATE>
 
 <HARD-GATE>
-spec-doc の `status` が `proposed` 以上になるまで、ブリーフィング完了を
-宣言してはならない。`draft` のまま次フェーズに進むことは許されない。
-受け入れ条件が欠落した spec は計画の基盤にならない。
+spec-doc の `status` が `proposed` 以上になるまで、briefing 完了を宣言しないこと。
+`draft` のまま通過するのは禁止である。acceptance criteria のない spec は、計画の土台にならない。
 
-**Why:** Phase 1 の出力不完全が Phase 3-4 の再設計の 40% を引き起こす。
+**Why:** 不完全な Phase 1 の出力は、Phase 3-4 の再設計の 40% を引き起こす。
 </HARD-GATE>
 
 <HARD-GATE>
-緊急修正シナリオでも、最低限 spec-doc または adr-doc を根拠として残してから
-次フェーズに進むこと。
+緊急修正のシナリオでも、次のフェーズへ進む前に、最低でも spec-doc または adr-doc を証拠として残すこと。
 
-**Why:** 証跡なしの緊急修正は永久に技術的負債となる。最低限の証跡は 10 分、
-謎コードのデバッグは数時間。
+**Why:** 証拠のない緊急修正は、恒久的な技術的負債になる。最低限の証拠は 10 分で作れるが、謎コードのデバッグには何時間もかかる。
 </HARD-GATE>
 
 <HARD-GATE>
-プロファイルが適用を示すスキルの使用をスキップしてはならない。アクティブ
-スキルスタックにスキルが含まれている場合、そのスキルのプロセスに従うこと。
-オーバーライドにはユーザーの明示的な指示が必要。
+Profile が示しているスキルをスキップしないこと。active skill stack にスキルが含まれているなら、そのスキルのプロセスに従う。
+上書きできるのは、ユーザーからの明示的な指示がある場合だけ。
 </HARD-GATE>
 
 ---
 
 ## アンチパターン
 
-これらの思考や行動は失敗を示す — 気づいたら STOP:
+次の思考や行動は失敗の兆候である。気づいたら STOP する:
 
-| アンチパターン | なぜ失敗するか |
-| ---------------- | -------------- |
-| 「要件は明確、情報整理は不要」 | 暗黙の前提は後で矛盾として顕在化する |
-| 「やり方は既に知っている」 | プロファイルは見落としている情報源を発見させる |
-| 「調査は後でいい、まず書こう」 | 情報不足の spec は実装中に手戻りを引き起こす |
-| 「このスキルは今回は当てはまらない」 | プロファイルが適用と言うなら従う |
-| 「受け入れ条件は後で書ける」 | 受け入れ条件のない spec は検証不能な計画を生む |
-| 「代替案は自明」 | 1 案しかない ADR は意思決定の根拠にならない |
-| 「ブリーフィングに時間をかけすぎ」 | 停止条件を満たしたら終わる。満たさないなら続ける |
-| 「緊急だから spec は省略」 | 最低限の証跡は 10 分。省略の代償は数時間〜数日 |
+| Anti-pattern | Why it fails |
+| ------------ | ------------ |
+| "Requirements are clear, no need to organize" | 暗黙の前提は後で矛盾として表面化する |
+| "I already know how to do this" | profile は見落としていた情報源を明らかにする |
+| "Research later, write first" | 情報不足の spec は実装時の手戻りを生む |
+| "This skill doesn't apply here" | profile が適用対象だと言っているなら従う |
+| "Acceptance criteria can be added later" | criteria のない spec は検証不能な計画になる |
+| "Alternatives are obvious" | 1 案しかない ADR には意思決定の理由がない |
+| "Spending too much time on briefing" | stop conditions が満たされたら止める。満たされるまで続ける |
+| "It's urgent, skip the spec" | 最低限の証拠は 10 分。省略すると何時間から何日も失う |
