@@ -1,8 +1,13 @@
-# {{title}}
+# {{title}} Implementation Plan
 
 ## Goal
 
-<!-- Describe the implementation goal and upstream spec or ADR. -->
+<!-- One sentence describing what this plan builds. -->
+
+## Scope
+
+<!-- State whether this is one implementation stream or should be split into
+separate plans. Call out the boundary explicitly. -->
 
 ## Upstream Documents
 
@@ -12,9 +17,15 @@
 
 - <!-- approved design doc path under docs/designs/ -->
 
+## File Map
+
+- `path/to/file.ts` - <!-- responsibility -->
+- `path/to/test.ts` - <!-- responsibility -->
+
 ## Implementation Sequence
 
-- [ ] <!-- implementation step -->
+- [ ] <!-- one action only -->
+- [ ] <!-- one action only -->
 
 ## Dependencies and Risks
 
@@ -27,3 +38,17 @@
 ## Verification
 
 - [ ] <!-- command, test, review step, or observable behavior -->
+
+## Open Questions / Gaps
+
+- <!-- explicitly note what is unknown -->
+
+## Self-Review
+
+- [ ] Every spec requirement maps to a task.
+- [ ] No placeholders remain.
+- [ ] File paths, relations, status values, and terminology are consistent.
+
+## Review Handoff
+
+- <!-- assumptions, missing dependencies, or reviewer focus -->

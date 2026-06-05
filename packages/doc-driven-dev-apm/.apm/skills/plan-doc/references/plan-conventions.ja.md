@@ -1,35 +1,41 @@
 # Plan Conventions
 
-この規約は、`plan-doc` が実装計画を作成、監査、索引化、ルーティングする方法を
-定義します。
+この規約は、`plan-doc` が実装 plan を作成・監査・索引化・ルーティングするときの
+基準を定めます。
 
-`plan-doc` は作成前に `design-doc` の承認ゲートを必須とします。
+`plan-doc` は作成前に `design-doc` の承認ゲートを要求します。
 
-plan は、承認済み spec または accepted ADR を、実装順序、リスク、依存関係、
-検証 checkpoint に変換する文書です。上流文書を再解釈しなくても task を作れる
-具体性が必要です。
+plan は、承認済みの spec または受け入れ済み ADR を、実装順序、リスク、
+依存関係、検証 checkpoint、そして上流文書を再解釈しなくても実行できる
+小さな task 分解へ変換します。
+
+## 計画スコープ
+
+変更が複数の独立したサブシステムにまたがる場合は、同じクリティカルパスと
+リリース意図を共有していない限り、plan を分割します。1 つの plan は、
+複数の無関係な案件の束ではなく、1 つの実装ストリームとして読めるべきです。
 
 ## ディレクトリ
 
-リポジトリに既存の plan ディレクトリがある場合はそれを維持します。この
-パッケージの既定値に合わせるためだけに既存 plan を移動しないでください。
+リポジトリに既存の plan ディレクトリがある場合は、それを維持します。
+パッケージ既定に合わせるためだけに既存 plan を移動しないでください。
 
 plan ディレクトリがない場合は、既定で `docs/plans/` を使います。
 
-スクリプトの検出順序:
+スクリプトの検出順:
 
 1. `docs/plans/`
 2. `docs/implementation-plans/`
 3. `plans/`
 4. `implementation-plans/`
 
-複数の候補がある場合は、番号付き plan ファイルと索引ファイルを持つ
-ディレクトリを優先します。検出リストにない明示的なリポジトリ規約がある場合
-だけ `--dir` を使います。
+複数候補がある場合は、番号付き plan ファイルと index ファイルを持つ
+ディレクトリを優先します。`--dir` は、検出リストにない明示的な規約が
+リポジトリにある場合だけ使います。
 
 ## ファイル名
 
-既定のファイル名:
+既定のファイル名パターン:
 
 ```text
 NNNN-title-with-dashes.md
@@ -38,19 +44,18 @@ NNNN-title-with-dashes.md
 ルール:
 
 - `NNNN` は plan ディレクトリ内で連番になるゼロ埋め番号です。
-- title slug は小文字 ASCII にし、単語をダッシュで区切ります。
-- `implement-checkout-flow` や `migrate-session-storage` のような、命令形
-  または実装指向の句を優先します。
-- 上流 spec のタイトルそのものではなく、実装作業の順序が分かる名前にします。
-- 例: `0001-implement-checkout-flow.md`,
-  `0002-migrate-session-storage.md`。
+- title slug は小文字 ASCII で、単語をダッシュで区切ります。
+- `implement-checkout-flow` や `migrate-session-storage` のような、
+  命令形または実装志向の表現を優先します。
+- plan 名は spec のタイトルそのものではなく、作業順序に合わせて付けます。
+- 例: `0001-implement-checkout-flow.md`、`0002-migrate-session-storage.md`
 
-リポジトリが slug-only のファイル名を既に使っている場合は、番号付けを
-導入せず既存規約に従います。
+リポジトリが slug-only の命名規約を既に使っている場合は、連番を新設せず
+その規約に従います。
 
-## 必須フロントマター
+## 必須 front matter
 
-plan は共通 document front matter を使います。
+plan は共通の document front matter を使います。
 
 ```yaml
 ---
@@ -80,114 +85,143 @@ relations:
 ---
 ```
 
-必須フィールド:
+必須 field:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | 安定した文書 ID。通常は `PLAN-NNNN`。 |
-| `type` | Yes | `plan` 固定。 |
-| `status` | Yes | 現在のライフサイクル状態。 |
-| `title` | Yes | 人間向けの実装計画タイトル。 |
+| `id` | Yes | 安定した document identifier。通常は `PLAN-NNNN`。 |
+| `type` | Yes | `plan` であること。 |
+| `status` | Yes | 現在の lifecycle state。 |
+| `title` | Yes | 人が読める実装 plan の題名。 |
 | `created` | Yes | 作成日。`YYYY-MM-DD` 形式。 |
-| `updated` | Yes | 最後に実質更新した日。`YYYY-MM-DD` 形式。 |
-| `owners` | Yes | 実行に責任を持つ人またはグループ。 |
-| `relations` | Yes | 上流・下流文書への意味付きリンク。 |
+| `updated` | Yes | 最終更新日。`YYYY-MM-DD` 形式。 |
+| `owners` | Yes | 実行責任を持つ人または group。 |
+| `relations` | Yes | upstream / downstream 文書への意味のある link。 |
 
-## ステータス値
+## Status Values
 
-次のライフサイクル状態を使います。
+使用する lifecycle status:
 
 | Status | Meaning |
 | --- | --- |
 | `draft` | 作成中。 |
 | `approved` | 実装可能。 |
-| `in-progress` | 実装開始済み。 |
-| `blocked` | 依存関係が解決するまで進められない。 |
-| `completed` | 実装・検証済み。 |
-| `superseded` | 新しい plan に置き換え済み。 |
+| `in-progress` | 実装中。 |
+| `blocked` | 依存関係の解消待ち。 |
+| `completed` | 実装済みで検証済み。 |
+| `superseded` | 新しい plan に置き換えられた。 |
 
-`status` は実行状態に集中させます。前提条件は `relations.depends-on`、
-置き換え先は `relations.superseded-by` で表します。
+`status` は実行状態だけに使います。blocking prerequisite には
+`relations.depends-on` を、置き換えには `relations.superseded-by` を使います。
 
 ## Relations
 
-relation は文書種別ではなく意味で選びます。
+relation field は document type ではなく意味のために使います。
 
 | Field | Meaning |
 | --- | --- |
 | `implements` | この plan が実装する spec または ADR。 |
 | `implemented-by` | この plan を実行する task。 |
-| `derives-from` | plan を生んだ上流 spec、ADR、idea、brainstorm。 |
+| `derives-from` | この plan を生んだ上流 spec / ADR / idea / brainstorm。 |
 | `derived-by` | この plan から派生した task または follow-up plan。 |
-| `depends-on` | 先に解決すべき plan、task、spec、ADR。 |
-| `blocks` | この plan によってブロックされる plan または task。 |
-| `source` | 実装方針に直接影響する外部出典。 |
-| `references` | 補助的な実装 note や docs。 |
-| `supersedes` | この plan が置き換える古い plan。 |
+| `depends-on` | 先に解決されるべき plan / task / spec / ADR。 |
+| `blocks` | この plan によって blocked される plan / task。 |
+| `source` | 実装アプローチに実質的な影響を与える外部 source。 |
+| `references` | 補足の実装メモや doc。 |
+| `supersedes` | この plan に置き換えられる古い plan。 |
 | `superseded-by` | この plan を置き換える新しい plan。 |
 | `related` | 方向性のない関連文書。 |
-| `verifies` | この plan が検証する spec、ADR、受け入れ基準。 |
-| `verified-by` | この plan を検証する test plan、task doc、review note。 |
+| `verifies` | この plan が検証する spec / ADR / acceptance criteria。 |
+| `verified-by` | この plan を検証する test plan / task doc / review note。 |
 
-内部文書は相対パスを使います。外部出典は URL を使います。
+内部 document には相対 path を使います。外部 source には URL を使います。
 
 ## 必須内容
 
-plan は次を含めます。
+plan には次を含めます。
 
-1. 目標と非目標。
-2. 実装する上流 spec または ADR。
-3. 順序付きの実装フェーズ。
-4. 依存関係、blocker、リスク、mitigation。
-5. task 分解の指針。
-6. 検証コマンドまたは手動確認。
-7. リスクが高い場合の rollback または follow-up note。
+1. Goal と non-goals。
+2. スコープ境界と、複数 plan に分割すべきかどうか。
+3. plan が触る file、module、ownership boundary。
+4. 実装対象の upstream spec または ADR。
+5. 順序付き phase を含む implementation sequence。
+6. 1 action ずつに分解された task。
+7. dependency、blocker、risk、mitigation。
+8. 検証 command または manual check。
+9. リスクが高い場合の rollback または follow-up note。
+10. spec coverage、placeholder cleanup、用語整合を確認する self-review。
 
-## Design Gate（必須）
+## タスク粒度
+
+task は 1 つの action になるように書きます。
+
+- 良い: 失敗する test を書く。
+- 良い: 対象 test を実行して失敗を確認する。
+- 良い: 最小限の code change を入れる。
+- 良い: 対象 test を再実行して成功を確認する。
+- 良い: change を commit する。
+- 悪い: 機能を実装して動作確認する。
+- 悪い: validation と edge case を対応する。
+
+複数の分離可能な action があるなら分割します。
+
+## Design Gate (Mandatory)
 
 plan 作成前に次を満たします。
 
-- `docs/designs/overview.md` が存在する。
-- overview 以外の design ファイルで front matter `status: "approved"`
-  が厳密一致する文書が 1 件以上ある。
+- `docs/designs/overview.md` が存在すること。
+- overview 以外の design file が少なくとも 1 つ存在し、front matter
+  `status: "approved"` が exact match であること。
 
-ゲートに失敗した場合、`new_plan` は次の固定文言を返します。
+gate に失敗した場合、`new_plan` は次を返します。
 
 `PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
 
-推奨コマンド:
+推奨作成コマンド:
 
 ```bash
 node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
 ```
 
-分かっている場合は、具体的なファイル、module、command、ownership boundary を
-書きます。不明な詳細は、実装可能なふりをせず gap として明示します。
+plan は、既知なら具体的な file、module、command、ownership boundary を書きます。
+不明な detail は、実装可能であるふりをせず gap として明記します。
+
+## プレースホルダ禁止
+
+plan は、具体的な内容の代わりにプレースホルダ language に依存すると失敗です。
+
+- `TBD`、`TODO`、`implement later`、または類似の filler は使わない。
+- 何を validation するのか、どの edge case なのかを示さずに
+  "add validation" や "handle edge cases" と書かない。
+- test 名や behavior を書かずに "write tests for the above" と書かない。
+- plan でまだ導入していない function / file / module を参照しない。
+
+不明点は明示的な gap として記録します。
 
 ## 可変性
 
-plan は実行 artifact であり、作業中に変化しても構いません。
+plan は実行 artifact であり、作業中は変化してかまいません。
 
-- `draft` の plan は自由に編集できます。
-- `approved` の plan は作業開始前の明確化であれば更新できます。
-- `in-progress` の plan は実装実態を反映する日付付き update を追加できますが、
-  元の順序を説明なしに消してはいけません。
-- `completed` の plan は実際に行った作業と検証内容を残します。
-- 古い plan が作業を説明しなくなった場合は、実質的な再計画として superseding
-  plan を作ります。
-- status、owner、relation の更新は同一ファイル内で許容します。
+- `draft` plan は自由に編集できます。
+- `approved` plan は作業開始前なら説明を補足できます。
+- `in-progress` plan は実装 reality を反映する dated update を受け入れますが、
+  元の順序は説明なく消さないでください。
+- `completed` plan は実際に行ったことと検証結果を残すべきです。
+- 大きな再計画は、元の plan が作業を表さなくなったら superseding plan を
+  作ってください。
+- status / owner / relation の更新は in-place で問題ありません。
 
-## 索引
+## インデックス
 
-既定の plan 索引は `README.md` です。リポジトリが既に `index.md` を
-使っている場合はそれを維持します。
+既定の plan index は `README.md` です。リポジトリがすでに `index.md` を
+使っている場合は、それを維持します。
 
-索引は plan をファイル名順で並べ、title、status、上流文書、owner をすばやく
-確認できるだけのメタデータを残します。
+index には filename 順で plan を並べ、title、status、upstream document、owner を
+素早く読めるだけの metadata を含めます。
 
 ## カテゴリ
 
-大きなリポジトリでは、plan をサブディレクトリに分けても構いません。
+大きなリポジトリでは、plan を subdirectory に分けてもかまいません。例:
 
 ```text
 docs/plans/
@@ -199,6 +233,15 @@ docs/plans/
     0001-migrate-session-storage.md
 ```
 
-番号はカテゴリごとにローカルです。構造が大きくなる前に、カテゴリ分けの方針を
-索引に記録します。カテゴリは execution area、team、release、migration stream
-などで、フラットなディレクトリが読みにくくなった場合だけ使います。
+番号は category ごとに local です。分類スキームは index に先に書きます。
+execution area、team、release、migration stream などで分けるのは、
+flat directory が見づらくなった場合だけにします。
+
+## レビュー用ハンドオフ
+
+plan が完成したら、レビュー担当が stylistic changes ではなく本質的な gap に
+集中できるだけの情報を残します。
+
+- 明示した assumption を列挙する。
+- 未解決の dependency や不足情報を列挙する。
+- 重要な upstream spec、design docs、ADR を示す。
