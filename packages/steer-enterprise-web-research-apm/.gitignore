@@ -1,5 +1,4 @@
 apm_modules/
-apm.lock.yaml
 dist/
 build/
 __pycache__/
