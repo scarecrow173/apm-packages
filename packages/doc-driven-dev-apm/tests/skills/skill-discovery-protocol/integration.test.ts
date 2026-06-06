@@ -672,6 +672,8 @@ test("integration: impl-flow adapter generates valid profile", () => {
   assert.ok(profile.flow_stack.slots.length >= 3);
   assert.ok(profile.classification.categories.length > 0);
   assert.ok(profile.resolved_invocations.length > 0);
+  assert.ok(Array.isArray(profile.runtime_guidance));
+  assert.ok(profile.runtime_guidance.length > 0);
 });
 
 test("integration: impl-flow profile validates successfully", () => {

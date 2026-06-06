@@ -1,12 +1,10 @@
 packages/**/apm_modules/
 packages/**/node_modules/
-packages/**/apm.lock.yaml
 packages/**/dist/
 packages/**/build/
 packages/**/__pycache__/
 packages/**/*.pyc
 apm_modules/
-apm.lock.yaml
 dist/
 build/
 __pycache__/
@@ -21,5 +19,6 @@ __pycache__/
 /.vscode/
 /.mcp.json
 
+.pnpm-store/
 
 **/.sdp/**

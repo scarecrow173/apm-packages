@@ -88,12 +88,14 @@ function setupQueryEnv(dir: string) {
         context: "During code review",
         guidance: "Check for OWASP Top 10",
         priority_delta: 1,
+        requires_sequence: true,
       },
       {
         skill: "skill-a",
         context: "When authoring ADRs",
         guidance: "Follow the ADR template",
         priority_delta: 5,
+        prefer_when: ["architecture"],
       },
     ],
     warnings: ["Unresolved capability: testing for skill-c"],
@@ -426,6 +428,8 @@ test("query: runtime-guidance ranks guidance entries", () => {
   const data = JSON.parse(result.stdout);
   assert.equal(data[0].skill, "skill-a");
   assert.equal(data[1].skill, "skill-b");
+  assert.equal(data[0].priority_delta, 5);
+  assert.deepEqual(data[0].prefer_when, ["architecture"]);
 });
 
 test("query: runtime-guidance --skill filters", () => {

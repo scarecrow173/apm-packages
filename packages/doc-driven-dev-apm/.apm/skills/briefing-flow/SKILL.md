@@ -127,7 +127,8 @@ With `.sdp/briefing-flow-default/briefing-profile.json` available:
    - **If no matching slots:** Proceed with default stack only.
 3. **Check resolution**: use `skill-discovery-protocol` to read `resolution` from `.sdp/briefing-flow-default/briefing-profile.json`
 4. **Check execution policy**: use `skill-discovery-protocol` to read `execution-policy` for each candidate skill from `.sdp/briefing-flow-default/briefing-profile.json`
-5. **Announce the active skill stack:**
+5. **Read runtime guidance**: use `skill-discovery-protocol` to read structured `runtime_guidance` after policy checks; treat it as a soft ranking signal, not a hard gate
+6. **Announce the active skill stack:**
 
 ```text
 ACTIVE SKILL STACK FOR THIS BRIEFING:

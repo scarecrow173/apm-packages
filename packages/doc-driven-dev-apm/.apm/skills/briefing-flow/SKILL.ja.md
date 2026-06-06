@@ -113,7 +113,8 @@ Profile の生成と検証は `skill-discovery-protocol` スキルが担当す�
    - **一致する slot がない場合**: デフォルト stack のみで進める
 3. **Resolution を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から `resolution` を読む
 4. **Execution policy を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から各候補スキルの `execution-policy` を読む
-5. **有効な skill stack を宣言する:**
+5. **Runtime guidance を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から各候補スキルの `runtime_guidance` を読む
+6. **有効な skill stack を宣言する:**
 
 ```text
 この briefing の ACTIVE SKILL STACK:
