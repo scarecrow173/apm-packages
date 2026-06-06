@@ -226,6 +226,16 @@ function writeInferenceFile(dir: string) {
               allow_partial_application: true,
               guidance: "Use for architecture decisions",
             },
+            runtime_guidance: [
+              {
+                skill: "skill-a",
+                context: "When authoring ADRs",
+                guidance: "Follow the ADR template",
+                priority_delta: 5,
+                prefer_when: ["architecture"],
+                requires_partial_application: false,
+              },
+            ],
             tags: ["architecture", "documentation"],
           },
           {
@@ -242,6 +252,17 @@ function writeInferenceFile(dir: string) {
               allow_partial_application: false,
               guidance: "Follow strict review process",
             },
+            runtime_guidance: [
+              {
+                skill: "skill-b",
+                context: "During code review",
+                guidance: "Check for OWASP Top 10",
+                priority_delta: 1,
+                requires_sequence: true,
+                requires_step_reordering: false,
+                requires_partial_application: false,
+              },
+            ],
             tags: ["quality"],
           },
         ],
@@ -460,6 +481,24 @@ test("sdp profile has resolved_invocations", () => {
   );
   assert.ok(inv, "Should have resolution for skill-a -> code_review");
   assert.equal(inv.resolved_skill, "skill-b");
+});
+
+test("sdp profile has ranked runtime_guidance", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  runSdp(["--adapter", "test-adapter.yaml"], dir);
+
+  const profile = JSON.parse(
+    fs.readFileSync(profileAbsPath(dir), "utf8"),
+  );
+
+  assert.ok(Array.isArray(profile.runtime_guidance));
+  assert.equal(profile.runtime_guidance.length, 2);
+  assert.equal(profile.runtime_guidance[0].skill, "skill-a");
+  assert.equal(profile.runtime_guidance[0].context, "When authoring ADRs");
+  assert.equal(profile.runtime_guidance[0].guidance, "Follow the ADR template");
+  assert.equal(profile.runtime_guidance[1].skill, "skill-b");
 });
 
 test("sdp profile is idempotent (no diff on re-run)", () => {

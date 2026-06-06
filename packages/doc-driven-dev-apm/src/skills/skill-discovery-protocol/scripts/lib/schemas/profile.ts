@@ -22,6 +22,18 @@ const CategorySchema = z.object({
   skills: z.array(z.string()),
 });
 
+const RuntimeGuidanceSchema = z.object({
+  skill: z.string(),
+  context: z.string(),
+  guidance: z.string(),
+  priority_delta: z.number().optional(),
+  prefer_when: z.array(z.string()).optional(),
+  avoid_when: z.array(z.string()).optional(),
+  requires_sequence: z.boolean().optional(),
+  requires_step_reordering: z.boolean().optional(),
+  requires_partial_application: z.boolean().optional(),
+});
+
 const ResolvedInvocationSchema = z.object({
   source_skill: z.string(),
   slot: z.string(),
@@ -30,12 +42,6 @@ const ResolvedInvocationSchema = z.object({
   resolution_method: z.string(),
   reason: z.string(),
   fallback: z.string().nullable(),
-});
-
-const RuntimeGuidanceSchema = z.object({
-  skill: z.string(),
-  context: z.string(),
-  guidance: z.string(),
 });
 
 export const FlowProfileSchema = z.object({

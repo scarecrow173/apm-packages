@@ -102,6 +102,7 @@ function enrichSkills(rawSkills: RawScannedSkill[], inferenceDoc: SkillReference
       provides: inferred.provides,
       uses: inferred.uses,
       execution_policy: inferred.execution_policy,
+      runtime_guidance: inferred.runtime_guidance,
       tags: inferred.tags,
     };
   });

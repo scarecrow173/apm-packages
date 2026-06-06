@@ -3205,10 +3205,96 @@ var require_resolver = __commonJS({
   }
 });
 
+// src/skills/skill-discovery-protocol/scripts/lib/runtime_guidance_ranker.ts
+function normalizeTerms(terms = []) {
+  return terms.map((term) => term.trim().toLowerCase()).filter((term) => term.length > 0);
+}
+function entryText(entry) {
+  return `${entry.skill} ${entry.context} ${entry.guidance}`.toLowerCase();
+}
+function matchesAny(text, terms) {
+  return terms.some((term) => text.includes(term) || term.includes(text));
+}
+function isCompatibleWithPolicy(entry, policy) {
+  if (entry.requires_sequence && !policy.sequence_required) {
+    return false;
+  }
+  if (entry.requires_step_reordering && !policy.allow_step_reordering) {
+    return false;
+  }
+  if (entry.requires_partial_application && !policy.allow_partial_application) {
+    return false;
+  }
+  return true;
+}
+function scoreGuidance(entry, selectionContext) {
+  let score = entry.priority_delta ?? 0;
+  const selectionTerms = normalizeTerms(selectionContext.terms);
+  if (selectionTerms.length === 0) {
+    return score;
+  }
+  const preferTerms = normalizeTerms(entry.prefer_when);
+  const avoidTerms = normalizeTerms(entry.avoid_when);
+  const haystack = entryText(entry);
+  for (const term of selectionTerms) {
+    if (haystack.includes(term) || term.includes(haystack)) {
+      score += 1;
+    }
+    if (matchesAny(term, preferTerms)) {
+      score += 3;
+    }
+    if (matchesAny(term, avoidTerms)) {
+      score -= 3;
+    }
+  }
+  return score;
+}
+function rankRuntimeGuidance(entries, skills = [], selectionContext = {}) {
+  const policyBySkill = new Map(skills.map((skill) => [skill.name, skill.execution_policy]));
+  const seen = /* @__PURE__ */ new Set();
+  const scored = [];
+  for (const entry of entries) {
+    const policy = policyBySkill.get(entry.skill);
+    if (policy && !isCompatibleWithPolicy(entry, policy)) {
+      continue;
+    }
+    const dedupeKey = `${entry.skill}::${entry.context}::${entry.guidance}`;
+    if (seen.has(dedupeKey)) {
+      continue;
+    }
+    seen.add(dedupeKey);
+    scored.push({
+      guidance: entry,
+      score: scoreGuidance(entry, selectionContext)
+    });
+  }
+  scored.sort((left, right) => {
+    if (right.score !== left.score) {
+      return right.score - left.score;
+    }
+    const skillCompare = left.guidance.skill.localeCompare(right.guidance.skill);
+    if (skillCompare !== 0) {
+      return skillCompare;
+    }
+    const contextCompare = left.guidance.context.localeCompare(right.guidance.context);
+    if (contextCompare !== 0) {
+      return contextCompare;
+    }
+    return left.guidance.guidance.localeCompare(right.guidance.guidance);
+  });
+  return scored.map((item) => item.guidance);
+}
+var init_runtime_guidance_ranker = __esm({
+  "src/skills/skill-discovery-protocol/scripts/lib/runtime_guidance_ranker.ts"() {
+    "use strict";
+  }
+});
+
 // src/skills/skill-discovery-protocol/scripts/lib/profile.ts
 var require_profile = __commonJS({
   "src/skills/skill-discovery-protocol/scripts/lib/profile.ts"(exports2, module2) {
     "use strict";
+    init_runtime_guidance_ranker();
     function buildProfile2(adapter, catalog, categories, unmatchedSkills, resolvedInvocations, skills) {
       const flowSlots = adapter.flow_stack.slots.map((s) => ({
         slot_id: s.slot_id,
@@ -3217,27 +3303,20 @@ var require_profile = __commonJS({
         ...s.default ? { default: { skill: s.default.skill, reason: s.default.reason } } : {}
       }));
       const runtimeGuidance = [];
-      const skillMap = new Map(skills.map((s) => [s.name, s]));
-      for (const inv of resolvedInvocations) {
-        const targetSkill = skillMap.get(inv.resolved_skill);
-        if (targetSkill?.execution_policy?.guidance) {
+      for (const skill of skills) {
+        if (skill.runtime_guidance && skill.runtime_guidance.length > 0) {
+          runtimeGuidance.push(...skill.runtime_guidance);
+          continue;
+        }
+        if (skill.execution_policy?.guidance) {
           runtimeGuidance.push({
-            skill: inv.resolved_skill,
-            context: inv.capability,
-            guidance: targetSkill.execution_policy.guidance
+            skill: skill.name,
+            context: "execution_policy",
+            guidance: skill.execution_policy.guidance
           });
         }
       }
-      const guidanceKey = (g) => `${g.skill}::${g.context}`;
-      const seenGuidance = /* @__PURE__ */ new Set();
-      const uniqueGuidance = [];
-      for (const g of runtimeGuidance) {
-        const key = guidanceKey(g);
-        if (!seenGuidance.has(key)) {
-          seenGuidance.add(key);
-          uniqueGuidance.push(g);
-        }
-      }
+      const rankedGuidance = rankRuntimeGuidance(runtimeGuidance, skills);
       const now = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
       return {
         schema_version: "1.0",
@@ -3251,7 +3330,7 @@ var require_profile = __commonJS({
           unmatched_skills: unmatchedSkills
         },
         resolved_invocations: resolvedInvocations,
-        runtime_guidance: uniqueGuidance,
+        runtime_guidance: rankedGuidance,
         warnings: []
       };
     }
@@ -18425,7 +18504,7 @@ var init_scan = __esm({
 });
 
 // src/skills/skill-discovery-protocol/scripts/lib/schemas/inference.ts
-var CapabilitySchema, UsesSchema, ExecutionPolicySchema, SkillReferenceInferenceSchema, SkillReferenceInferenceDocumentSchema;
+var CapabilitySchema, UsesSchema, ExecutionPolicySchema, RuntimeGuidanceSchema, SkillReferenceInferenceSchema, SkillReferenceInferenceDocumentSchema;
 var init_inference = __esm({
   "src/skills/skill-discovery-protocol/scripts/lib/schemas/inference.ts"() {
     "use strict";
@@ -18447,12 +18526,24 @@ var init_inference = __esm({
       allow_partial_application: external_exports.boolean(),
       guidance: external_exports.string().optional()
     });
+    RuntimeGuidanceSchema = external_exports.object({
+      skill: external_exports.string(),
+      context: external_exports.string(),
+      guidance: external_exports.string(),
+      priority_delta: external_exports.number().optional(),
+      prefer_when: external_exports.array(external_exports.string()).optional(),
+      avoid_when: external_exports.array(external_exports.string()).optional(),
+      requires_sequence: external_exports.boolean().optional(),
+      requires_step_reordering: external_exports.boolean().optional(),
+      requires_partial_application: external_exports.boolean().optional()
+    });
     SkillReferenceInferenceSchema = external_exports.object({
       name: external_exports.string(),
       review_status: external_exports.enum(["pending", "reviewed"]),
       provides: external_exports.array(CapabilitySchema),
       uses: external_exports.array(UsesSchema),
       execution_policy: ExecutionPolicySchema,
+      runtime_guidance: external_exports.array(RuntimeGuidanceSchema).optional(),
       tags: external_exports.array(external_exports.string())
     });
     SkillReferenceInferenceDocumentSchema = external_exports.object({
@@ -18573,6 +18664,7 @@ var require_inference = __commonJS({
           provides: inferred.provides,
           uses: inferred.uses,
           execution_policy: inferred.execution_policy,
+          runtime_guidance: inferred.runtime_guidance,
           tags: inferred.tags
         };
       });

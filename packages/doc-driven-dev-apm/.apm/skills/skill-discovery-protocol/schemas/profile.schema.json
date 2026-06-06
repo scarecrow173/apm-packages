@@ -177,6 +177,30 @@
           },
           "guidance": {
             "type": "string"
+          },
+          "priority_delta": {
+            "type": "number"
+          },
+          "prefer_when": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "avoid_when": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requires_sequence": {
+            "type": "boolean"
+          },
+          "requires_step_reordering": {
+            "type": "boolean"
+          },
+          "requires_partial_application": {
+            "type": "boolean"
           }
         },
         "required": [

@@ -107,6 +107,53 @@
             ],
             "additionalProperties": false
           },
+          "runtime_guidance": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "skill": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "string"
+                },
+                "guidance": {
+                  "type": "string"
+                },
+                "priority_delta": {
+                  "type": "number"
+                },
+                "prefer_when": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "avoid_when": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "requires_sequence": {
+                  "type": "boolean"
+                },
+                "requires_step_reordering": {
+                  "type": "boolean"
+                },
+                "requires_partial_application": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "skill",
+                "context",
+                "guidance"
+              ],
+              "additionalProperties": false
+            }
+          },
           "tags": {
             "type": "array",
             "items": {
