@@ -218,11 +218,18 @@ function scoreGuidance(entry, selectionContext) {
   }
   return score;
 }
-function rankRuntimeGuidance(entries, skills = [], selectionContext = {}) {
-  const policyBySkill = new Map(skills.map((skill) => [skill.name, skill.execution_policy]));
+function enrichCandidate(candidate, guidanceEntries) {
+  const match = guidanceEntries.find(
+    (entry) => entry.skill === candidate.skill && entry.context === candidate.context && entry.guidance === candidate.guidance
+  );
+  return match ? { ...match, ...candidate } : candidate;
+}
+function rankCandidates(candidates, guidanceEntries = [], executionPolicies = [], selectionContext = {}) {
+  const policyBySkill = new Map(executionPolicies.map((skill) => [skill.name, skill.execution_policy]));
   const seen = /* @__PURE__ */ new Set();
   const scored = [];
-  for (const entry of entries) {
+  for (const rawCandidate of candidates) {
+    const entry = enrichCandidate(rawCandidate, guidanceEntries);
     const policy = policyBySkill.get(entry.skill);
     if (policy && !isCompatibleWithPolicy(entry, policy)) {
       continue;
@@ -252,6 +259,9 @@ function rankRuntimeGuidance(entries, skills = [], selectionContext = {}) {
     return left.guidance.guidance.localeCompare(right.guidance.guidance);
   });
   return scored.map((item) => item.guidance);
+}
+function rankRuntimeGuidance(entries, skills = [], selectionContext = {}) {
+  return rankCandidates(entries, entries, skills, selectionContext);
 }
 
 // src/skills/skill-discovery-protocol/scripts/lib/query/runtime_guidance.ts

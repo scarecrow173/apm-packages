@@ -49,6 +49,16 @@ Catalog は `SKILL.md` に独自メタデータがあることを前提にしな
         "allow_partial_application": true,
         "guidance": "Steps can be applied in any order based on context"
       },
+      "runtime_guidance": [
+        {
+          "skill": "documentation-and-adrs",
+          "context": "adr_authoring",
+          "guidance": "Use when creating or updating architecture decision records",
+          "priority_delta": 20,
+          "prefer_when": ["adr_authoring", "design_decision"],
+          "avoid_when": ["pure_copy_edit"]
+        }
+      ],
       "tags": ["architecture", "documentation"]
     }
   ]

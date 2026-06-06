@@ -70,8 +70,8 @@ Each skill entry contains:
 
 `skill-reference-inferences.json` is agent-authored data derived from
 `skill-scan-list.json`. Agents decide `provides`, `uses`, `execution_policy`,
-and `tags` by reading scanned `SKILL.md` bodies, then persist those decisions
-through `sdp infer` subcommands.
+`runtime_guidance`, and `tags` by reading scanned `SKILL.md` bodies, then
+persist those decisions through `sdp infer` subcommands.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
@@ -89,6 +89,7 @@ Each inference entry contains:
 | `provides` | array | Capabilities offered |
 | `uses` | array | Capabilities consumed |
 | `execution_policy` | object | Execution constraints |
+| `runtime_guidance` | array | Optional structured guidance entries used by flow ranking |
 | `tags` | string[] | Classification hints |
 
 Every scanned skill MUST have exactly one matching inference entry. Every
@@ -148,13 +149,15 @@ Required top-level fields:
 | `classification` | object | Skills classified per adapter taxonomy |
 | `flow_stack` | object | Slot assignments for this flow |
 | `resolved_invocations` | array | Fully resolved skill routing |
-| `runtime_guidance` | object | Execution-time hints |
+| `runtime_guidance` | array | Execution-time hints |
 
 Constraints:
 
 - The profile MUST reference only skills that exist in the Skill Reference Catalog
 - `resolved_invocations` MUST contain only skills present in the catalog
 - `flow_stack.slots[]` is adapter-owned and stored only in the Flow Profile
+- `execution_policy` is the hard constraint layer; `runtime_guidance` is the
+  soft ranking signal and is read after policy checks
 
 ## 7. Validation Report Contract
 

@@ -204,3 +204,22 @@ sdp query --profile <json> execution-policy --skill <name>
 ```
 
 カタログから指定スキルの `execution_policy` を返す。
+
+### 5.4 `runtime_guidance`
+
+`runtime_guidance` は Flow Profile にのみ現れる補助メタデータであり、
+`resolved_invocations` とは別に保存される。`execution_policy` による
+制約判定の後に参照し、候補スキルの順位付けや実行時の補助判断に使う。
+
+代表的なフィールド:
+
+| フィールド | 型 | 説明 |
+| ---------- | -- | ---- |
+| `priority_delta` | number | 候補の優先度を上下する相対値 |
+| `prefer_when` | string[] | 優先したい条件 |
+| `avoid_when` | string[] | 避けたい条件 |
+| `requires_sequence` | boolean | 順序依存があることを示す |
+| `requires_step_reordering` | boolean | ステップ並べ替えが必要であることを示す |
+| `requires_partial_application` | boolean | 部分適用が必要であることを示す |
+
+`runtime_guidance` は hard constraint ではなく soft ranking signal として扱う。

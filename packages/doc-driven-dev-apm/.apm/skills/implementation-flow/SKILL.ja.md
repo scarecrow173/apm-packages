@@ -126,13 +126,14 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 1. **フロースタックを読込**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から `flow-stack` を読む
 2. **解決を確認**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から `resolution` を読む
 3. **実行ポリシーを確認**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から各候補スキルの `execution-policy` を読む
-4. **競合を解決** — 同じカテゴリで複数スキルが活性化された場合:
+4. **Runtime guidance を確認**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から各候補スキルの `runtime_guidance` を読む
+5. **競合を解決** — 同じカテゴリで複数スキルが活性化された場合:
    - より具体的な条件が優先（例: 「TypeScriptファイル」 > 「任意のファイル」）。
    - 明示的なプロファイルルールが推論された活性化より優先。
    - それでも同等なら両方適用（スキルはレイヤー、排他しない）。
-5. **Domain/Tooling スキルを追加** — タスクで検出された言語、フレームワーク、プラットフォームに基づく。
+6. **Domain/Tooling スキルを追加** — タスクで検出された言語、フレームワーク、プラットフォームに基づく。
    - **resolution override に一致するものがない場合:** フロースタックのデフォルトのみで進行。「追加スキル: なし」と宣言する。
-6. **アクティブスキルスタックを宣言:**
+7. **アクティブスキルスタックを宣言:**
 
 ```text
 このタスクのアクティブスキルスタック:
@@ -177,7 +178,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
    - **Flexible スキル**: 精神を適用; 文脈に合わせる。
      例: `code-review-and-quality`（レビュー観点をタスクごとに優先度調整可）
 
-   生成済みプロファイルを `skill-discovery-protocol` で参照し、対象スキルの `execution-policy` を確認する。
+   生成済みプロファイルを `skill-discovery-protocol` で参照し、対象スキルの `execution-policy` と `runtime_guidance` を確認する。
 3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。
 
 ---

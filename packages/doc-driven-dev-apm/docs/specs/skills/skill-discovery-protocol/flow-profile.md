@@ -59,7 +59,10 @@ Flow Profile（`*-profile.json`）は、特定の flow に紐づく分類結果�
     {
       "skill": "documentation-and-adrs",
       "context": "adr_authoring",
-      "guidance": "Use when creating or updating architecture decision records"
+      "guidance": "Use when creating or updating architecture decision records",
+      "priority_delta": 20,
+      "prefer_when": ["adr_authoring", "design_decision"],
+      "avoid_when": ["pure_copy_edit"]
     }
   ],
   "warnings": []
@@ -121,6 +124,16 @@ Flow Profile（`*-profile.json`）は、特定の flow に紐づく分類結果�
 | `skill` | string | yes | 対象スキル名 |
 | `context` | string | yes | 適用コンテキスト |
 | `guidance` | string | yes | ガイダンステキスト |
+| `priority_delta` | number | no | 明示的な優先度補正 |
+| `prefer_when` | string[] | no | 優先したい文脈キーワード |
+| `avoid_when` | string[] | no | 避けたい文脈キーワード |
+| `requires_sequence` | boolean | no | その guidance が順序制約を要するか |
+| `requires_step_reordering` | boolean | no | step 再配置を要するか |
+| `requires_partial_application` | boolean | no | 部分適用を要するか |
+
+`runtime_guidance` は structured metadata であり、flow はこれを `execution_policy`
+確認の後に参照する。`runtime_guidance` が空の場合は、profile は
+`resolved_invocations` と `execution_policy` だけで決定論的に動作する。
 
 ## ソート規則
 

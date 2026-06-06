@@ -10,6 +10,8 @@ repository: "<repository-name>"
 
 このファイルは、このリポジトリの briefing スキル構成を定義する。`briefing-flow` が skill discovery protocol を通じて生成する。
 
+`runtime_guidance` は、`execution_policy` の確認後に参照する soft ranking metadata として扱う。
+
 ## Available Skills
 
 | Name | Category | Source | Activation | Execution | Condition |

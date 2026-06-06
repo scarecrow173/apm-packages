@@ -70,6 +70,8 @@ metadata を推論してください。
   ものを表します。
 - `execution_policy` は、順序、検証、ツール使用に関する強い制約がある
   場合だけ使います。
+- `runtime_guidance` は、`execution_policy` の後に参照する soft ranking
+  signal です。候補の順位付けや実行時の補助判断に使います。
 - `tags[]` は分類の補助に限定します。flow routing には使いません。
 
 これらの決定は `sdp infer` で保存します。
@@ -122,6 +124,7 @@ scan data がないときは `sdp scan` を先に実行してください。infe
 - `provides[]`: スキルが提供する capability
 - `uses[]`: スキルが消費する capability
 - `execution_policy`: スキルの実行方法
+- `runtime_guidance`: 実行時の補助情報
 - `tags[]`: 分類用の hint
 
 この catalog は flow-independent です。`slots`, `slot_count`,

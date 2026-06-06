@@ -15,6 +15,7 @@
 `skill-discovery-protocol` は、外部からインストールされた標準的な `SKILL.md` を対象に、スキルを走査し、エージェント推論で能力情報を補完し、flow 非依存の catalog と flow 固有 profile を生成するプロトコルである。
 
 `SKILL.md` には標準メタデータ以外の `provides` / `uses` / `tags` / `execution_policy` を要求しない。scan は見つかった各スキルの `SKILL.md` 全文を `skill-scan-list.json` に保存し、その全文を読んだエージェントが `skill-reference-inferences.json` を作る。catalog は scan 成果物と inference 成果物を結合して生成する。
+`runtime_guidance` は flow が候補を選ぶときの soft ranking signal であり、`execution_policy` とは分離して扱う。
 
 ## Scope
 
@@ -56,7 +57,7 @@ skill-scan-list.json
   - エージェント推論の入力
 
 skill-reference-inferences.json
-  - エージェントが SKILL.md 全文から推論した review_status / provides / uses / execution_policy / tags
+  - エージェントが SKILL.md 全文から推論した review_status / provides / uses / execution_policy / runtime_guidance / tags
   - catalog 化の入力
 
 skill-reference-catalog.json

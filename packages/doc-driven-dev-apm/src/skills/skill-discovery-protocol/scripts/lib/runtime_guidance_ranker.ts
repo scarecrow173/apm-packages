@@ -11,6 +11,8 @@ type ScoredGuidance = {
   score: number;
 };
 
+type CandidateLike = RuntimeGuidance;
+
 function normalizeTerms(terms: string[] = []): string[] {
   return terms
     .map((term) => term.trim().toLowerCase())
@@ -70,16 +72,28 @@ function scoreGuidance(entry: RuntimeGuidance, selectionContext: SelectionContex
   return score;
 }
 
-export function rankRuntimeGuidance(
-  entries: RuntimeGuidance[],
-  skills: ScannedSkill[] = [],
+function enrichCandidate(candidate: CandidateLike, guidanceEntries: RuntimeGuidance[]): CandidateLike {
+  const match = guidanceEntries.find(
+    (entry) =>
+      entry.skill === candidate.skill &&
+      entry.context === candidate.context &&
+      entry.guidance === candidate.guidance,
+  );
+  return match ? { ...match, ...candidate } : candidate;
+}
+
+export function rankCandidates(
+  candidates: CandidateLike[],
+  guidanceEntries: RuntimeGuidance[] = [],
+  executionPolicies: ScannedSkill[] = [],
   selectionContext: SelectionContext = {},
-): RuntimeGuidance[] {
-  const policyBySkill = new Map(skills.map((skill) => [skill.name, skill.execution_policy]));
+): CandidateLike[] {
+  const policyBySkill = new Map(executionPolicies.map((skill) => [skill.name, skill.execution_policy]));
   const seen = new Set<string>();
   const scored: ScoredGuidance[] = [];
 
-  for (const entry of entries) {
+  for (const rawCandidate of candidates) {
+    const entry = enrichCandidate(rawCandidate, guidanceEntries);
     const policy = policyBySkill.get(entry.skill);
     if (policy && !isCompatibleWithPolicy(entry, policy)) {
       continue;
@@ -116,4 +130,12 @@ export function rankRuntimeGuidance(
   });
 
   return scored.map((item) => item.guidance);
+}
+
+export function rankRuntimeGuidance(
+  entries: RuntimeGuidance[],
+  skills: ScannedSkill[] = [],
+  selectionContext: SelectionContext = {},
+): RuntimeGuidance[] {
+  return rankCandidates(entries, entries, skills, selectionContext);
 }

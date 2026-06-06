@@ -88,11 +88,13 @@ function setupEnv(dir: string) {
         skill: "debug-skill",
         context: "When diagnosing failures",
         guidance: "Use 5-step diagnosis",
+        priority_delta: 3,
       },
       {
         skill: "review-skill",
         context: "During code review",
         guidance: "Follow multi-axis checklist",
+        priority_delta: 1,
       },
     ],
     warnings: [],
@@ -278,6 +280,8 @@ test("regression: runtime-guidance returns valid JSON array", () => {
   const data = JSON.parse(result.stdout);
   assert.ok(Array.isArray(data));
   assert.equal(data.length, 2);
+  assert.equal(data[0].skill, "debug-skill");
+  assert.equal(data[0].priority_delta, 3);
 });
 
 test("regression: unresolved returns valid JSON array", () => {

@@ -91,6 +91,7 @@ invocation slot は Flow Profile の `flow_stack.slots[]` が保持する。
 
 Flow Profile は flow 固有成果物であり、adapter の分類と解決結果を保持する。
 `flow_stack.slots[]`、`resolved_invocations`、`runtime_guidance` はここに保存する。
+`execution-policy` は hard constraint、`runtime_guidance` は soft ranking signal として扱う。
 
 ## 7. Validation Report Contract
 
@@ -98,3 +99,8 @@ Flow Profile は flow 固有成果物であり、adapter の分類と解決結�
 
 schema、staleness、deterministic、blocking validation の結果を記録する。
 すべての必須 gate が pass の場合だけ `overall_result` は `"pass"` になる。
+
+## 8. Derived Outputs
+
+Markdown sidecar は派生成果物であり、canonical source として扱ってはならない。
+`sdp profile` の実行ごとに再生成してもよい。
