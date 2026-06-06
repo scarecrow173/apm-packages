@@ -15131,7 +15131,7 @@ var inference_exports = {};
 __export(inference_exports, {
   SkillReferenceInferenceDocumentSchema: () => SkillReferenceInferenceDocumentSchema
 });
-var CapabilitySchema, UsesSchema, ExecutionPolicySchema, SkillReferenceInferenceSchema, SkillReferenceInferenceDocumentSchema;
+var CapabilitySchema, UsesSchema, ExecutionPolicySchema, RuntimeGuidanceSchema, SkillReferenceInferenceSchema, SkillReferenceInferenceDocumentSchema;
 var init_inference = __esm({
   "src/skills/skill-discovery-protocol/scripts/lib/schemas/inference.ts"() {
     "use strict";
@@ -15153,12 +15153,24 @@ var init_inference = __esm({
       allow_partial_application: external_exports.boolean(),
       guidance: external_exports.string().optional()
     });
+    RuntimeGuidanceSchema = external_exports.object({
+      skill: external_exports.string(),
+      context: external_exports.string(),
+      guidance: external_exports.string(),
+      priority_delta: external_exports.number().optional(),
+      prefer_when: external_exports.array(external_exports.string()).optional(),
+      avoid_when: external_exports.array(external_exports.string()).optional(),
+      requires_sequence: external_exports.boolean().optional(),
+      requires_step_reordering: external_exports.boolean().optional(),
+      requires_partial_application: external_exports.boolean().optional()
+    });
     SkillReferenceInferenceSchema = external_exports.object({
       name: external_exports.string(),
       review_status: external_exports.enum(["pending", "reviewed"]),
       provides: external_exports.array(CapabilitySchema),
       uses: external_exports.array(UsesSchema),
       execution_policy: ExecutionPolicySchema,
+      runtime_guidance: external_exports.array(RuntimeGuidanceSchema).optional(),
       tags: external_exports.array(external_exports.string())
     });
     SkillReferenceInferenceDocumentSchema = external_exports.object({
@@ -15279,6 +15291,7 @@ var require_inference = __commonJS({
           provides: inferred.provides,
           uses: inferred.uses,
           execution_policy: inferred.execution_policy,
+          runtime_guidance: inferred.runtime_guidance,
           tags: inferred.tags
         };
       });

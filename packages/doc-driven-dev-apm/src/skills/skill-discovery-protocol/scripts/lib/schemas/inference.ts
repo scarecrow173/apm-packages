@@ -22,12 +22,25 @@ const ExecutionPolicySchema = z.object({
   guidance: z.string().optional(),
 });
 
+const RuntimeGuidanceSchema = z.object({
+  skill: z.string(),
+  context: z.string(),
+  guidance: z.string(),
+  priority_delta: z.number().optional(),
+  prefer_when: z.array(z.string()).optional(),
+  avoid_when: z.array(z.string()).optional(),
+  requires_sequence: z.boolean().optional(),
+  requires_step_reordering: z.boolean().optional(),
+  requires_partial_application: z.boolean().optional(),
+});
+
 const SkillReferenceInferenceSchema = z.object({
   name: z.string(),
   review_status: z.enum(["pending", "reviewed"]),
   provides: z.array(CapabilitySchema),
   uses: z.array(UsesSchema),
   execution_policy: ExecutionPolicySchema,
+  runtime_guidance: z.array(RuntimeGuidanceSchema).optional(),
   tags: z.array(z.string()),
 });
 

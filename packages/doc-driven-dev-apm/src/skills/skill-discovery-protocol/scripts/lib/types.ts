@@ -103,6 +103,17 @@ export type ScannedSkill = {
     allow_partial_application: boolean;
     guidance?: string;
   };
+  runtime_guidance?: {
+    skill: string;
+    context: string;
+    guidance: string;
+    priority_delta?: number;
+    prefer_when?: string[];
+    avoid_when?: string[];
+    requires_sequence?: boolean;
+    requires_step_reordering?: boolean;
+    requires_partial_application?: boolean;
+  }[];
   tags: string[];
 };
 
@@ -112,6 +123,7 @@ export type SkillReferenceInference = {
   provides: { capability: string; description?: string }[];
   uses: { capability: string; required: boolean; default_skill?: string; override_allowed: boolean }[];
   execution_policy: ScannedSkill["execution_policy"];
+  runtime_guidance?: NonNullable<ScannedSkill["runtime_guidance"]>;
   tags: string[];
 };
 
@@ -164,6 +176,12 @@ export type RuntimeGuidance = {
   skill: string;
   context: string;
   guidance: string;
+  priority_delta?: number;
+  prefer_when?: string[];
+  avoid_when?: string[];
+  requires_sequence?: boolean;
+  requires_step_reordering?: boolean;
+  requires_partial_application?: boolean;
 };
 
 export type FlowProfile = {

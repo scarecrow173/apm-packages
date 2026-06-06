@@ -174,12 +174,95 @@ var handler7 = {
 };
 register(handler7);
 
+// src/skills/skill-discovery-protocol/scripts/lib/runtime_guidance_ranker.ts
+function normalizeTerms(terms = []) {
+  return terms.map((term) => term.trim().toLowerCase()).filter((term) => term.length > 0);
+}
+function entryText(entry) {
+  return `${entry.skill} ${entry.context} ${entry.guidance}`.toLowerCase();
+}
+function matchesAny(text, terms) {
+  return terms.some((term) => text.includes(term) || term.includes(text));
+}
+function isCompatibleWithPolicy(entry, policy) {
+  if (entry.requires_sequence && !policy.sequence_required) {
+    return false;
+  }
+  if (entry.requires_step_reordering && !policy.allow_step_reordering) {
+    return false;
+  }
+  if (entry.requires_partial_application && !policy.allow_partial_application) {
+    return false;
+  }
+  return true;
+}
+function scoreGuidance(entry, selectionContext) {
+  let score = entry.priority_delta ?? 0;
+  const selectionTerms = normalizeTerms(selectionContext.terms);
+  if (selectionTerms.length === 0) {
+    return score;
+  }
+  const preferTerms = normalizeTerms(entry.prefer_when);
+  const avoidTerms = normalizeTerms(entry.avoid_when);
+  const haystack = entryText(entry);
+  for (const term of selectionTerms) {
+    if (haystack.includes(term) || term.includes(haystack)) {
+      score += 1;
+    }
+    if (matchesAny(term, preferTerms)) {
+      score += 3;
+    }
+    if (matchesAny(term, avoidTerms)) {
+      score -= 3;
+    }
+  }
+  return score;
+}
+function rankRuntimeGuidance(entries, skills = [], selectionContext = {}) {
+  const policyBySkill = new Map(skills.map((skill) => [skill.name, skill.execution_policy]));
+  const seen = /* @__PURE__ */ new Set();
+  const scored = [];
+  for (const entry of entries) {
+    const policy = policyBySkill.get(entry.skill);
+    if (policy && !isCompatibleWithPolicy(entry, policy)) {
+      continue;
+    }
+    const dedupeKey = `${entry.skill}::${entry.context}::${entry.guidance}`;
+    if (seen.has(dedupeKey)) {
+      continue;
+    }
+    seen.add(dedupeKey);
+    scored.push({
+      guidance: entry,
+      score: scoreGuidance(entry, selectionContext)
+    });
+  }
+  scored.sort((left, right) => {
+    if (right.score !== left.score) {
+      return right.score - left.score;
+    }
+    const skillCompare = left.guidance.skill.localeCompare(right.guidance.skill);
+    if (skillCompare !== 0) {
+      return skillCompare;
+    }
+    const contextCompare = left.guidance.context.localeCompare(right.guidance.context);
+    if (contextCompare !== 0) {
+      return contextCompare;
+    }
+    return left.guidance.guidance.localeCompare(right.guidance.guidance);
+  });
+  return scored.map((item) => item.guidance);
+}
+
 // src/skills/skill-discovery-protocol/scripts/lib/query/runtime_guidance.ts
 var handler8 = {
   name: "runtime-guidance",
-  description: "\u5B9F\u884C\u6642\u30AC\u30A4\u30C0\u30F3\u30B9",
+  description: "\u87B3\u6EAF\uFF61\u68A7\u51FE\u7E67\uFF6C\u7E67\uFF64\u7E5D\x80\u7E5D\uFF73\u7E67\uFF79",
   execute(ctx) {
-    const guidance = ctx.profile.runtime_guidance;
+    const guidance = rankRuntimeGuidance(
+      ctx.profile.runtime_guidance,
+      ctx.catalog?.skills ?? []
+    );
     if (ctx.args.skill) {
       return guidance.filter((g) => g.skill === ctx.args.skill);
     }

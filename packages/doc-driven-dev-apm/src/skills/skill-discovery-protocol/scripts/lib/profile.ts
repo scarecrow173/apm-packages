@@ -10,6 +10,7 @@ import type {
   ResolvedInvocation,
   RuntimeGuidance,
 } from "./types";
+import { rankRuntimeGuidance } from "./runtime_guidance_ranker";
 
 function buildProfile(
   adapter: AdapterConfig,
@@ -27,32 +28,25 @@ function buildProfile(
     ...(s.default ? { default: { skill: s.default.skill!, reason: s.default.reason } } : {}),
   }));
 
-  // Build runtime_guidance from resolved invocations
+  // Build runtime_guidance from skill-level inference metadata.
+  // Explicit runtime_guidance wins; execution_policy.guidance is a fallback hint.
   const runtimeGuidance: RuntimeGuidance[] = [];
-  const skillMap = new Map(skills.map((s) => [s.name, s]));
+  for (const skill of skills) {
+    if (skill.runtime_guidance && skill.runtime_guidance.length > 0) {
+      runtimeGuidance.push(...skill.runtime_guidance);
+      continue;
+    }
 
-  for (const inv of resolvedInvocations) {
-    const targetSkill = skillMap.get(inv.resolved_skill);
-    if (targetSkill?.execution_policy?.guidance) {
+    if (skill.execution_policy?.guidance) {
       runtimeGuidance.push({
-        skill: inv.resolved_skill,
-        context: inv.capability,
-        guidance: targetSkill.execution_policy.guidance,
+        skill: skill.name,
+        context: "execution_policy",
+        guidance: skill.execution_policy.guidance,
       });
     }
   }
 
-  // Deduplicate runtime guidance (same skill+context)
-  const guidanceKey = (g: RuntimeGuidance) => `${g.skill}::${g.context}`;
-  const seenGuidance = new Set<string>();
-  const uniqueGuidance: RuntimeGuidance[] = [];
-  for (const g of runtimeGuidance) {
-    const key = guidanceKey(g);
-    if (!seenGuidance.has(key)) {
-      seenGuidance.add(key);
-      uniqueGuidance.push(g);
-    }
-  }
+  const rankedGuidance = rankRuntimeGuidance(runtimeGuidance, skills);
 
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
@@ -68,7 +62,7 @@ function buildProfile(
       unmatched_skills: unmatchedSkills,
     },
     resolved_invocations: resolvedInvocations,
-    runtime_guidance: uniqueGuidance,
+    runtime_guidance: rankedGuidance,
     warnings: [],
   };
 }

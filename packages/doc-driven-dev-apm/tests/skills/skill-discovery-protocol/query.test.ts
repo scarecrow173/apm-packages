@@ -84,14 +84,16 @@ function setupQueryEnv(dir: string) {
     ],
     runtime_guidance: [
       {
-        skill: "skill-a",
-        context: "When authoring ADRs",
-        guidance: "Follow the ADR template",
-      },
-      {
         skill: "skill-b",
         context: "During code review",
         guidance: "Check for OWASP Top 10",
+        priority_delta: 1,
+      },
+      {
+        skill: "skill-a",
+        context: "When authoring ADRs",
+        guidance: "Follow the ADR template",
+        priority_delta: 5,
       },
     ],
     warnings: ["Unresolved capability: testing for skill-c"],
@@ -410,6 +412,20 @@ test("query: runtime-guidance returns all guidance", () => {
   const data = JSON.parse(result.stdout);
   assert.ok(Array.isArray(data));
   assert.equal(data.length, 2);
+});
+
+test("query: runtime-guidance ranks guidance entries", () => {
+  const dir = tempDir();
+  setupQueryEnv(dir);
+
+  const result = runQuery(
+    ["--profile", ".sdp/test-profile.json", "runtime-guidance"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+  const data = JSON.parse(result.stdout);
+  assert.equal(data[0].skill, "skill-a");
+  assert.equal(data[1].skill, "skill-b");
 });
 
 test("query: runtime-guidance --skill filters", () => {
