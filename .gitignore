@@ -21,5 +21,6 @@ __pycache__/
 /.vscode/
 /.mcp.json
 
+.pnpm-store/
 
 **/.sdp/**
