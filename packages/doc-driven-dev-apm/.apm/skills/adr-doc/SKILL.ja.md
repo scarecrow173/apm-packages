@@ -1,6 +1,6 @@
 ---
 name: adr-doc
-description: MADR 4.0.0 を使い、コーディングエージェント向けの Architecture Decision Record を提案、作成、参照、監査、索引更新、移行計画、承認、却下、非推奨化、置き換え、規約適用するときに使う。
+description: MADR 4.0.0 を使い、コーディングエージェント向けの Architecture Decision Record を提案、作成、参照、監査、索引更新、移行計画、承認、却下、非推奨化、置き換え、規約適用するときに使います。判断がまだ曖昧なら、先に `deep-dive` を使います。
 license: MIT
 ---
 
@@ -10,6 +10,9 @@ license: MIT
 Architecture Decision Record を書くために使います。人間が判断を承認し、
 エージェントが実装します。ADR には、エージェントが追加質問なしに正しく
 コードを書けるだけの情報が含まれている必要があります。
+
+この skill の中で行うのは、ADR を成立させるための狭い gap-fill 確認までです。
+広い意図探索やソクラテス問答は `deep-dive` に切り出します。
 
 ## 基本思想
 
@@ -40,7 +43,7 @@ ADR と spec は、プロダクト要件と技術判断の両方が明確にな�
 - **spec 作成中**（並列）: 要件が技術判断を明らかにしたら、spec と並列で
   ADR を書きます。
 - **計画中**: 実装アプローチに記録すべき選択が必要なとき。
-- **実装中**: エージェントが architectural な分岐に遇遇したとき。
+- **実装中**: エージェントが architectural な分岐に遭遇したとき。
 
 次のような判断では、ADR を書く、または提案します。
 
@@ -75,7 +78,7 @@ ADR と spec は、プロダクト要件と技術判断の両方が明確にな�
 緊急パスの手順:
 1. タイトル、判断、理由、影響の 4 項目を含む簡潔な ADR を `status: "draft"` で
    作成する。
-2. incident 解決後、Phase 0–3 を完了して `status` を `proposed` 以上に
+2. incident 解決後、Phase 0-3 を完了して `status` を `proposed` 以上に
    更新する。補完期限は incident 解決から 1 週間以内を目安とする。
 
 緊急パスはあくまで例外であり、通常の作業には適用しない。
@@ -140,12 +143,13 @@ Phase 1 には 2 つのモードがあります。上流コンテキストの有
 
 #### モード選択
 
-```
+```text
 IF discovery artifact (docs/discovery/) OR spec (docs/specs/) がこの判断の
    コンテキストを既に含んでいる場合:
-  → Mode A: 上流から抽出する
-ELSE (実装中にトリガーされた場合、横断的判断、事前 brainstorming なし):
-  → Mode B: フルソクラテス問答
+  -> Mode A: 上流から抽出する
+ELSE (実装中にトリガーされた場合、横断的判断、または安全に文章化するには
+   判断がまだ曖昧すぎる場合):
+  -> Mode B: deep-dive または不足入力をリクエストする
 ```
 
 #### Mode A: 上流から抽出する
@@ -157,14 +161,14 @@ brainstorming の discovery artifact または spec が既に存在する場合�
    recommendation、non-goals、open questions。
 
 2. **上流の内容を ADR 構造にマッピングする:**
-   - Title ← 上流の recommendation + 判断の説明
-   - Trigger ← 上流の intent / "why now" / problem signals
-   - Constraints ← 上流の constraints セクション
-   - Options ← 上流の options セクション（トレードオフ付き）
-   - Lean ← 上流の recommendation
-   - Non-goals ← 上流のスコープ除外 / "Not Doing" リスト
+   - Title <- 上流の recommendation + 判断の説明
+   - Trigger <- 上流の intent / "why now" / problem signals
+   - Constraints <- 上流の constraints セクション
+   - Options <- 上流の options セクション（トレードオフ付き）
+   - Lean <- 上流の recommendation
+   - Non-goals <- 上流のスコープ除外 / "Not Doing" リスト
 
-3. **不足分だけを質問する** — 上流に含まれていない情報。
+3. **不足分だけを質問する**。上流に含まれていない情報だけを埋めます。
    典型的な gap-fill 質問:
 
    - この判断を知る、または承認する必要があるのは誰ですか。
@@ -180,49 +184,37 @@ brainstorming の discovery artifact または spec が既に存在する場合�
 
 4. **Intent Summary Gate へ進む**（下記）。
 
-#### Mode B: フルソクラテス問答
+#### Mode B: deep-dive または不足入力をリクエストする
 
-上流の brainstorming や spec が存在しない場合に使います — 通常は実装中に
-トリガーされた ADR、または独立した横断的判断の場合です。
+上流の brainstorming や spec が存在しない場合、または Phase 0 の証拠を
+見ても判断がまだ曖昧で安全に ADR を書けない場合に使います。
 
-人間にインタビューして判断空間を理解します。質問は一度に 1 つずつ行い、
-前の回答を踏まえて深掘りします。質問リストを一括で投げてはいけません。
+`adr-doc` の中で広いソクラテス問答は行いません。代わりに、足りない判断材料を
+要求するか、コードベースを踏まえた対話で判断自体を固める必要があるなら
+`deep-dive` へ委譲します。
 
-基本質問はおおむね次の順序です。文脈や Phase 0 ですでに明らかなものは
-省略します。
+返す request の形式:
 
-1. 何を決めていますか。
-   短く具体的なタイトルを得ます。「X を選ぶ」「Y を採用する」「Z を W に
-   置き換える」のような動詞句を促します。
-2. なぜ今ですか。
-   何が壊れたのか、何が変わったのか、何もしないと何が壊れるのかを確認
-   します。これが判断のトリガーです。
-3. どの制約がありますか。
-   技術スタック、期限、予算、チーム規模、既存コード、運用、コンプライ
-   アンス、移植性、保守性などを具体的に確認します。Phase 0 で見つけた
-   ことを参照し、「このリポジトリではすでに X を使っていますが、これは
-   制約になりますか」のように質問します。
-4. 成功はどのように見えますか。
-   測定可能な結果を確認します。「動く」を超えて、レイテンシ、スループット、
-   開発者体験、保守負荷、運用安全性、移行完了条件などを具体化します。
-5. どの選択肢を検討しましたか。
-   可能な限り、少なくとも 2 つの現実的な選択肢を確認します。各選択肢の
-   主要なトレードオフを記録します。選択肢が 1 つしかない場合は、なぜ他の
-   代替案が却下されたのかを言語化します。
-6. 現時点ではどれに傾いていますか。
-   推奨案と理由を確認します。ここで暗黙の優先順位が明らかになることが
-   よくあります。
-7. 誰が知る、または承認する必要がありますか。
-   MADR/RACI フロントマターのために、decision-makers、consulted、
-   informed を確認します。
-8. エージェントがこれを実装するには何が必要ですか。
-   影響するファイル、ディレクトリ、インターフェイス、依存関係、設定、
-   テスト、パターンを確認します。従うべき既存パターン、避けるべきこと、
-   判断に従って実装されたと証明する検証方法も確認します。
+```markdown
+ADR Missing Inputs
 
-#### 適応的な追加質問（両モード共通）
+- Missing: <item>
+  Why needed: <reason>
+  Request from: <user | another agent | repository evidence>
 
-回答に応じて曖昧な部分を深掘りします。よく使う質問:
+Recommendation:
+- Run `deep-dive`
+- Ask the user directly
+- Gather repository evidence from <path or area>
+```
+
+不足入力または `deep-dive` の要約が戻ったら、`adr-doc` に戻って通常の
+ワークフローを再開します。
+
+#### 適応的な追加質問（Mode A または deep-dive 後）
+
+回答に応じて、ADR 本文としてまだ曖昧な部分だけを深掘りします。
+よく使う質問:
 
 - この判断が間違っていた場合、最悪の結果は何ですか。
 - 6 か月後に何が起きたら再検討しますか。
@@ -234,10 +226,10 @@ brainstorming の discovery artifact または spec が既に存在する場合�
   証明できますか。
 
 止めどき: Implementation Plan と Verification を含む ADR の全セクションを
-推測なしに埋められる状態になったら十分です。どこかで推測しているなら、
-追加質問をします。
+推測なしに埋められる状態になったら十分です。まだ推測が残るなら、本文を
+捏造せず不足入力を要求します。
 
-#### Intent Summary Gate（両モード共通）
+#### Intent Summary Gate
 
 Phase 2 に進む前に、確認した内容を構造化して要約し、
 人間に確認または修正してもらいます。

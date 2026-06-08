@@ -9,9 +9,10 @@ The package follows a dual-track model where spec and ADR are created in
 parallel from the same discovery output:
 
 - `idea-refine`: turn rough ideas into options, assumptions, and questions.
+- `deep-dive`: interrogate intent, constraints, and decision axes through codebase-aware, one-question-at-a-time dialogue.
 - `brainstorming`: clarify intent and route to spec + ADR (parallel).
 - `spec-doc`: define what to build before implementation starts.
-- `adr-doc`: record all technical decisions as Architecture Decision Records.
+- `adr-doc`: propose, draft, and maintain Architecture Decision Records.
 - `design-doc`: capture overview-first design artifacts before planning.
 - `plan-doc`: turn approved spec + ADR + design into an implementation plan.
 - `task-doc`: track implementation slices and dependencies.
@@ -25,7 +26,7 @@ parallel from the same discovery output:
 The document flow that every piece of work follows:
 
 ```text
-idea-refine OR brainstorming
+idea-refine OR deep-dive OR brainstorming
   → spec-doc + adr-doc   (parallel: created from the same discovery output)
   → design-doc           (overview + detailed design docs)
   → plan-doc             (derives from spec, ADR, and approved design)
@@ -41,7 +42,7 @@ idea-refine OR brainstorming
 - **Design gate before planning**: `plan-doc` requires approved `design-doc`
   input and uses spec for requirements plus ADR for technical constraints.
 
-Skills on the mainline: `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc`,
+Skills on the mainline: `idea-refine`, `deep-dive`, `brainstorming`, `spec-doc`, `adr-doc`,
 `design-doc`, `plan-doc`, `task-doc`.
 
 ### doc-driven-dev parallel track
@@ -96,13 +97,24 @@ Use this skill to clarify intent through dialogue before downstream documents
 are written. It creates artifacts under `docs/discovery/` and routes to
 `spec-doc` + `adr-doc` in parallel.
 
+### `deep-dive`
+
+Use this skill when the request needs deeper interrogation before downstream
+documents are trustworthy. It clarifies the real outcome, the binding
+constraints, and the decision axes through codebase-aware dialogue. The output
+is a confirmed intent summary; it does not create a discovery artifact by
+itself.
+
 ### `adr-doc`
 
-Use this skill to work with MADR 4.0.0 ADRs. All technical decisions are
-recorded as ADRs, created in parallel with specs from the same discovery
-output:
+Use this skill to propose, draft, and maintain MADR 4.0.0 ADRs. It keeps the
+full ADR workflow, including repository scan, drafting, review, and maintenance
+operations. When the decision itself still needs deeper interrogation, hand off
+that clarification work to `deep-dive` and return once the intent is concrete.
 
 - create a new ADR from a MADR template
+- ask only ADR-specific gap-fill questions or emit missing-input requests when
+  deeper clarification is still needed
 - write implementation plans and verification criteria for coding agents
 - list ADRs and review agent-readiness
 - audit ADR structure and index consistency
@@ -209,7 +221,7 @@ internal document links rather than the type of the linked document.
 ## Recommended Lifecycle
 
 ```text
-idea-refine OR brainstorming
+idea-refine OR deep-dive OR brainstorming
   -> spec-doc + adr-doc  (parallel: define what + record decisions)
   -> design-doc          (overview-first design gate)
   -> plan-doc            (derives from spec, ADR, and approved design)
@@ -222,5 +234,5 @@ idea-refine OR brainstorming
 The dual-track model: **spec + ADR (parallel) → design → plan → task**.
 Specs define what should be built, why, scope, and acceptance criteria.
 ADRs record every technical decision with alternatives and rationale.
-When brainstorming produces enough context for both, they are written in
+When brainstorming or deep-dive produces enough context for both, they are written in
 parallel. Design docs bridge into planning.

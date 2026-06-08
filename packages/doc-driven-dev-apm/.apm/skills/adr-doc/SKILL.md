@@ -1,6 +1,6 @@
 ---
 name: adr-doc
-description: Use when proposing, writing, consulting, auditing, indexing, migration-planning, accepting, rejecting, deprecating, superseding, or enforcing Architecture Decision Records for coding agents using MADR 4.0.0.
+description: Use when proposing, writing, consulting, auditing, indexing, migration-planning, accepting, rejecting, deprecating, superseding, or enforcing Architecture Decision Records for coding agents using MADR 4.0.0. Use `deep-dive` first when the decision still needs deeper interrogation.
 license: MIT
 ---
 
@@ -10,6 +10,9 @@ Use this skill for Architecture Decision Records written as executable
 specifications for coding agents. A human approves the decision; an agent
 implements it. The ADR must contain everything the agent needs to write correct
 code without asking follow-up questions.
+
+This skill may ask narrow ADR-specific gap-fill questions. Broad intent
+discovery and Socratic interrogation belong in `deep-dive`.
 
 ## Philosophy
 
@@ -37,7 +40,7 @@ requirements and technical decisions are clear.
 
 - During **brainstorming**: cross-cutting conventions, platform choices.
 - During **spec writing** (parallel): a requirement reveals a technology
-  decision — write the ADR alongside the spec.
+  decision, write the ADR alongside the spec.
 - During **planning**: implementation approach requires a recorded choice.
 - During **implementation**: an agent encounters an architectural fork.
 
@@ -74,7 +77,7 @@ Conditions for the emergency path:
 Emergency path procedure:
 1. Create a brief ADR with title, decision, rationale, and impact.
    Set `status: "draft"`.
-2. After incident resolution, complete Phases 0–3 and update `status` to
+2. After incident resolution, complete Phases 0-3 and update `status` to
    `proposed` or above. Target completion within one week of resolution.
 
 The emergency path is strictly an exception; it does not apply to routine work.
@@ -142,13 +145,13 @@ Phase 1 has two modes. Choose based on whether upstream context exists.
 
 #### Mode Selection
 
-```
+```text
 IF a discovery artifact (docs/discovery/) OR spec (docs/specs/) already
    captures this decision's context:
-  → Mode A: Extract from upstream
-ELSE (triggered mid-implementation, cross-cutting decision, no prior
-   brainstorming):
-  → Mode B: Full Socratic interview
+  -> Mode A: Extract from upstream
+ELSE (triggered mid-implementation, cross-cutting decision, or the decision is
+   still too fuzzy to draft safely):
+  -> Mode B: Request deep-dive or missing inputs
 ```
 
 #### Mode A: Extract from Upstream
@@ -161,14 +164,14 @@ the decision being recorded.
    recommendation, non-goals, and open questions.
 
 2. **Map upstream content to ADR structure:**
-   - Title ← upstream recommendation + decision description
-   - Trigger ← upstream intent / "why now" / problem signals
-   - Constraints ← upstream constraints section
-   - Options ← upstream options section (with trade-offs)
-   - Lean ← upstream recommendation
-   - Non-goals ← upstream scope exclusions or "Not Doing" list
+   - Title <- upstream recommendation + decision description
+   - Trigger <- upstream intent / "why now" / problem signals
+   - Constraints <- upstream constraints section
+   - Options <- upstream options section (with trade-offs)
+   - Lean <- upstream recommendation
+   - Non-goals <- upstream scope exclusions or "Not Doing" list
 
-3. **Ask only for gaps** — information the upstream did not capture.
+3. **Ask only for gaps**: information the upstream did not capture.
    Typical gap-fill questions:
 
    - Who needs to know or approve this decision?
@@ -185,50 +188,36 @@ the decision being recorded.
 
 4. **Proceed to Intent Summary Gate** (below).
 
-#### Mode B: Full Socratic Interview
+#### Mode B: Request Deep-Dive or Missing Inputs
 
-Use this mode when no upstream brainstorming or spec exists — typically when an
-ADR is triggered mid-implementation or for a standalone cross-cutting decision.
+Use this mode when no upstream brainstorming or spec exists, or when Phase 0
+still leaves the decision too underdefined to draft safely.
 
-Interview the human to understand the decision space. Ask questions one at a
-time, building on previous answers. Do not dump a list of questions.
+Do not run a broad Socratic interview inside `adr-doc`. Instead, request the
+missing decision material, or hand off to `deep-dive` when the decision itself
+needs to be clarified through codebase-aware dialogue.
 
-Core questions, in roughly this order. Skip what is already clear from context
-or Phase 0:
+Return a concise request like this:
 
-1. What are you deciding?
-   Get a short, specific title. Push for a verb phrase, such as "Choose X",
-   "Adopt Y", or "Replace Z with W".
-2. Why now?
-   What broke, what is changing, or what will break if nothing changes? This is
-   the trigger.
-3. What constraints exist?
-   Tech stack, timeline, budget, team size, existing code, operations,
-   compliance, portability, and maintainability all count. Be concrete.
-   Reference what you found in Phase 0, such as "I see the repo already uses X;
-   does that constrain this decision?"
-4. What does success look like?
-   Capture measurable outcomes. Push past "it works" to specifics such as
-   latency, throughput, developer experience, maintenance burden, operational
-   safety, or migration completion.
-5. What options have you considered?
-   Capture at least two realistic options when possible. For each option, record
-   the core trade-off. If there is only one plausible option, help articulate
-   why alternatives were rejected.
-6. What is your current lean?
-   Capture the preferred option and why. This often reveals unstated priorities.
-7. Who needs to know or approve?
-   Capture decision-makers, consulted experts, and informed stakeholders for
-   the MADR/RACI front matter.
-8. What would an agent need to implement this?
-   Which files, directories, interfaces, dependencies, configuration, tests, and
-   patterns are affected? What existing patterns should the agent follow? What
-   should it avoid? What verification would prove the implementation follows
-   the decision?
+```markdown
+ADR Missing Inputs
 
-#### Adaptive Follow-ups (Both Modes)
+- Missing: <item>
+  Why needed: <reason>
+  Request from: <user | another agent | repository evidence>
 
-Based on answers, probe deeper where the decision is fuzzy.
+Recommendation:
+- Run `deep-dive`
+- Ask the user directly
+- Gather repository evidence from <path or area>
+```
+
+Once the missing inputs or `deep-dive` summary come back, resume `adr-doc` and
+continue through the normal workflow.
+
+#### Adaptive Follow-ups (Mode A or after deep-dive)
+
+Based on answers, probe deeper where the ADR content is still fuzzy.
 Common follow-ups:
 
 - What is the worst-case outcome if this decision is wrong?
@@ -242,9 +231,10 @@ Common follow-ups:
 
 When to stop: you have enough when you can fill every section of the ADR,
 including the Implementation Plan and Verification, without making things up. If
-you are guessing at any section, ask another question.
+you are still guessing at a section, request that missing input instead of
+inventing it.
 
-#### Intent Summary Gate (Both Modes)
+#### Intent Summary Gate
 
 Before moving to Phase 2, present a structured summary of what you captured and
 ask the human to confirm or correct it:

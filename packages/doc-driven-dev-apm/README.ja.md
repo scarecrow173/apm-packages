@@ -9,9 +9,10 @@ spec と ADR を同じ discovery output から並列作成する dual-track モ�
 採用しています。
 
 - `idea-refine`: 粗いアイデアを選択肢、前提、質問に整理します。
+- `deep-dive`: コードベースを踏まえて意図、制約、判断軸を一問ずつ深掘りします。
 - `brainstorming`: 意図を明確にし、spec + ADR（並列）にルーティングします。
 - `spec-doc`: 実装前に何を作るかを定義します。
-- `adr-doc`: すべての技術判断を Architecture Decision Records として記録します。
+- `adr-doc`: Architecture Decision Record を提案、文章化、保守します。
 - `design-doc`: plan 前に overview-first の設計成果物を作成します。
 - `plan-doc`: 承認済み spec + ADR + design を実装計画に変換します。
 - `task-doc`: 実装単位と依存関係を管理します。
@@ -25,7 +26,7 @@ spec と ADR を同じ discovery output から並列作成する dual-track モ�
 すべての作業が従うドキュメントフロー:
 
 ```text
-idea-refine OR brainstorming
+idea-refine OR deep-dive OR brainstorming
   → spec-doc + adr-doc   (並列: 同じ discovery output から作成)
   → design-doc           (overview + 詳細設計)
   → plan-doc             (spec / ADR / 承認済み design から派生)
@@ -39,7 +40,7 @@ idea-refine OR brainstorming
 - **plan 前に design gate**: `plan-doc` は承認済み `design-doc` を必須とし、
   spec の要件と ADR の技術制約を取り込みます。
 
-mainline 上の skill: `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc`,
+mainline 上の skill: `idea-refine`, `deep-dive`, `brainstorming`, `spec-doc`, `adr-doc`,
 `design-doc`, `plan-doc`, `task-doc`。
 
 ### doc-driven-dev parallel track
@@ -97,12 +98,21 @@ tsx --test tests/*.test.ts
 `docs/discovery/` に artifact を作成し、`spec-doc` + `adr-doc` へ
 並列でルーティングします。
 
+### `deep-dive`
+
+後続文書に進む前に、リクエストの本当の outcome、支配的制約、判断軸を
+深掘りしたいときに使います。コードベースを先に調べ、一問ずつ質問し、
+確認済みの intent 要約を出力します。discovery artifact は直接作りません。
+
 ### `adr-doc`
 
-MADR 4.0.0 ADR を扱うときにこの skill を使います。すべての技術判断は
-ADR として記録され、spec と同じ discovery output から並列で作成されます。
+MADR 4.0.0 ADR を提案、文章化、保守するときにこの skill を使います。
+リポジトリ調査、ADR 草案化、レビュー、保守操作まで含む本来の ADR
+ワークフローを維持します。判断自体を深く固める必要がある場合だけ、
+その確認を `deep-dive` に委譲してから戻ります。
 
 - MADR テンプレートから新しい ADR を作成する
+- ADR に必要な不足分だけを narrow に確認し、必要なら request を返す
 - コーディングエージェント向けの実装計画と検証基準を書く
 - ADR 一覧を出し、エージェント対応状況をレビューする
 - ADR の構造と索引整合性を監査する
@@ -204,7 +214,7 @@ relations:
 ## 推奨ライフサイクル
 
 ```text
-idea-refine OR brainstorming
+idea-refine OR deep-dive OR brainstorming
   -> spec-doc + adr-doc  (並列: 何を定義 + 判断を記録)
   -> design-doc          (overview-first の設計ゲート)
   -> plan-doc            (spec / ADR / 承認済み design から派生)
@@ -217,5 +227,5 @@ idea-refine OR brainstorming
 dual-track モデル: **spec + ADR（並列）→ design → plan → task**。
 Spec は何を作るべきか、なぜ、範囲、受け入れ基準を定義します。
 ADR はすべての技術判断を代替案と根拠付きで記録します。
-brainstorming が十分なコンテキストを生んだら、両方を並列で書きます。
+brainstorming または deep-dive が十分なコンテキストを生んだら、両方を並列で書きます。
 Design が plan への橋渡しを行います。

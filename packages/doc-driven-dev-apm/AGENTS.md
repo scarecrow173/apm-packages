@@ -86,6 +86,7 @@ Workflow skills included:
 | Skill | Purpose | Origin |
 |-------|---------|--------|
 | implementation-flow | Meta skill: dynamic orchestrator that discovers and routes to all available skills via implementation-profile.md | original |
+| deep-dive | Codebase-aware interrogation of user intent, constraints, and decision axes | original |
 | source-driven-development | Official-docs-backed implementation | addyosmani/agent-skills (MIT) |
 | incremental-implementation | Thin vertical slices | addyosmani/agent-skills (MIT) |
 | doubt-driven-development | Adversarial fresh-context review | addyosmani/agent-skills (MIT) |
