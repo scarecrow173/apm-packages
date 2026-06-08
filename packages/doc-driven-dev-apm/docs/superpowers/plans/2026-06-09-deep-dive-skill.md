@@ -10,9 +10,12 @@
 
 ---
 
+## Tasks
+
 ### Task 1: `deep-dive` の導線と責務を定義する
 
 **Files:**
+
 - Modify: `packages/doc-driven-dev-apm/README.md`
 - Modify: `packages/doc-driven-dev-apm/README.ja.md`
 - Modify: `packages/doc-driven-dev-apm/AGENTS.md`
@@ -62,6 +65,7 @@ workflow skill 一覧へ追加し、コード生成ではなく対話主導の d
 ### Task 2: `deep-dive` スキル本体を英日で追加する
 
 **Files:**
+
 - Create: `packages/doc-driven-dev-apm/.apm/skills/deep-dive/SKILL.md`
 - Create: `packages/doc-driven-dev-apm/.apm/skills/deep-dive/SKILL.ja.md`
 
@@ -137,6 +141,7 @@ out of scope -> スコープ外
 ### Task 3: `adr-doc` を ADR 文章化専用スキルに縮退させる
 
 **Files:**
+
 - Modify: `packages/doc-driven-dev-apm/.apm/skills/adr-doc/SKILL.md`
 - Modify: `packages/doc-driven-dev-apm/.apm/skills/adr-doc/SKILL.ja.md`
 
@@ -198,6 +203,7 @@ Output mode B: Emit a missing-input request instead of drafting incomplete ADR t
 ### Task 4: 回帰テストで責務分離を固定する
 
 **Files:**
+
 - Create: `packages/doc-driven-dev-apm/tests/deep-dive.test.ts`
 - Modify: `packages/doc-driven-dev-apm/package.json`
 
@@ -260,6 +266,7 @@ All selected tests pass with exit code 0.
 ### Task 5: 最終同期と検証を完了する
 
 **Files:**
+
 - Modify: `packages/doc-driven-dev-apm/README.md`
 - Modify: `packages/doc-driven-dev-apm/README.ja.md`
 - Modify: `packages/doc-driven-dev-apm/.apm/skills/deep-dive/SKILL.md`
