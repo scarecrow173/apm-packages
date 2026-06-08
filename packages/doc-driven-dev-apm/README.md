@@ -15,6 +15,7 @@ parallel from the same discovery output:
 - `design-doc`: capture overview-first design artifacts before planning.
 - `plan-doc`: turn approved spec + ADR + design into an implementation plan.
 - `task-doc`: track implementation slices and dependencies.
+- `impl-doc`: record implemented outcomes and machine-readable implementation experiments.
 - `doc-status`: list and audit document status, indexes, and relations.
 
 ## Definitions
@@ -23,7 +24,7 @@ parallel from the same discovery output:
 
 The document flow that every piece of work follows:
 
-```
+```text
 idea-refine OR brainstorming
   → spec-doc + adr-doc   (parallel: created from the same discovery output)
   → design-doc           (overview + detailed design docs)
@@ -48,12 +49,8 @@ Skills on the mainline: `idea-refine`, `brainstorming`, `spec-doc`, `adr-doc`,
 Spec and ADR form a **parallel track** — two documents derived from the same
 upstream discovery artifact, addressing complementary concerns:
 
-| | spec-doc | adr-doc |
-|---|---------|--------|
-| Answers | What / Why / Scope | How / Which / Why-this-over-that |
-| Trigger | Any feature or change | Any technical decision with alternatives |
-| Blocking | plan requires approved spec | plan references accepted ADR |
-| Output | Acceptance criteria | Implementation constraints |
+- `spec-doc`: answers What / Why / Scope, triggers on any feature or change, blocks planning until the spec is approved, and produces acceptance criteria.
+- `adr-doc`: answers How / Which / Why-this-over-that, triggers on technical decisions with alternatives, constrains planning through accepted ADRs, and produces implementation constraints.
 
 - When brainstorming reveals both product requirements and technical decisions,
   write spec and ADR in parallel.
@@ -137,6 +134,13 @@ Use this skill to create implementation tasks under `docs/tasks/`. Tasks link to
 their plan with `relations.implements` and `relations.depends-on`, and use
 task-specific lifecycle statuses.
 
+### `impl-doc`
+
+Use this skill to create implementation records under `docs/impl/ir/` and
+experiment logs under `docs/impl/exp/`. It provides CLI-based creation and
+auditing for Implementation Records, plus CLI-based creation, append, edit, and
+audit flows for Experiment Logs.
+
 ### `doc-status`
 
 Use this skill to list and audit generated documents. It validates required
@@ -175,6 +179,13 @@ New generated specs, designs, plans, and tasks use semantic relation fields:
 ```yaml
 relations:
   source: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
   implements: []
   implemented-by: []
   depends-on: []
@@ -203,6 +214,7 @@ idea-refine OR brainstorming
   -> design-doc          (overview-first design gate)
   -> plan-doc            (derives from spec, ADR, and approved design)
   -> task-doc            (execution slices)
+  -> impl-doc            (implementation records and experiment logs)
   -> implementation-flow (workflow skill orchestration per task)
   -> doc-status
 ```

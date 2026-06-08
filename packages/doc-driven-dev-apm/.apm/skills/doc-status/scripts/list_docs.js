@@ -20437,6 +20437,14 @@ var require_doc_suite_utils = __commonJS({
       "verified-by",
       "references"
     ];
+    var changeFields = [
+      "added",
+      "modified",
+      "deleted",
+      "renamed",
+      "moved",
+      "generated"
+    ];
     var docTypes = ["idea", "brainstorm", "spec", "plan", "task", "design"];
     var configs = {
       idea: {
@@ -20488,9 +20496,16 @@ var require_doc_suite_utils = __commonJS({
         type: "design"
       }
     };
-    var relationSchema = z.object(Object.fromEntries(
-      relationFields.map((field) => [field, z.array(z.string()).default([])])
+    var changeEntrySchema = z.object({
+      type: z.string().min(1)
+    }).passthrough();
+    var changesSchema = z.object(Object.fromEntries(
+      changeFields.map((field) => [field, z.array(changeEntrySchema).default([])])
     )).default({});
+    var relationSchema = z.object({
+      ...Object.fromEntries(relationFields.map((field) => [field, z.array(z.string()).default([])])),
+      changes: changesSchema
+    }).default({});
     var frontMatterSchema = z.object({
       id: z.string().min(1),
       type: z.enum(docTypes),
@@ -20542,6 +20557,9 @@ var require_doc_suite_utils = __commonJS({
       }
       return result;
     }
+    function completeChanges(input) {
+      return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []]));
+    }
     function relationLinks(content) {
       const relations = relationMap(content);
       return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
@@ -20556,11 +20574,58 @@ var require_doc_suite_utils = __commonJS({
       if (values.length === 0) return formatRelation(field, "[]");
       return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)].join("\n");
     }
+    function formatChangeScalar(key, value) {
+      return `${key}: ${quote(value)}`;
+    }
+    function formatChangeValue(key, value) {
+      if (Array.isArray(value)) {
+        if (value.length === 0) return [`${key}: []`];
+        return [
+          `${key}:`,
+          ...value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => `  - ${quote(item.trim())}`)
+        ];
+      }
+      if (typeof value === "string") return [formatChangeScalar(key, value)];
+      if (typeof value === "number" || typeof value === "boolean") return [`${key}: ${String(value)}`];
+      return [`${key}: ${quote(JSON.stringify(value))}`];
+    }
+    function formatChangeEntry(entry) {
+      const ordered = [
+        "type",
+        "path",
+        "from",
+        "to",
+        "source",
+        ...Object.keys(entry).filter((key) => !["type", "path", "from", "to", "source"].includes(key)).sort()
+      ].filter((key, index, array) => key in entry && array.indexOf(key) === index);
+      const lines = [];
+      for (const key of ordered) {
+        lines.push(...formatChangeValue(key, entry[key]));
+      }
+      return lines;
+    }
+    function formatChangesBlock(changes) {
+      return [
+        "  changes:",
+        ...changeFields.flatMap((field) => {
+          const entries = changes[field];
+          if (entries.length === 0) return [`    ${field}: []`];
+          return [
+            `    ${field}:`,
+            ...entries.flatMap((entry) => [
+              "      - " + formatChangeEntry(entry)[0],
+              ...formatChangeEntry(entry).slice(1).map((line) => `        ${line}`)
+            ])
+          ];
+        })
+      ];
+    }
     function completeRelations(input) {
       return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []]));
     }
     function frontMatter(config, number, title, status, date, relations) {
       const complete = completeRelations(relations);
+      const changes = completeChanges(relations?.changes);
       return [
         "---",
         `id: "${config.idPrefix}-${String(number).padStart(4, "0")}"`,
@@ -20571,7 +20636,9 @@ var require_doc_suite_utils = __commonJS({
         `updated: "${date}"`,
         "owners: []",
         "relations:",
-        ...relationFields.map((field) => formatRelationBlock(field, complete[field])),
+        formatRelationBlock("source", complete.source),
+        ...formatChangesBlock(changes),
+        ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
         "---"
       ].join("\n");
     }
@@ -20912,7 +20979,12 @@ ${bodyFor(type, options2.title)}
       docEntries: docEntries2,
       docFiles,
       docTypes,
-      relationFields
+      relationFields,
+      changeFields,
+      changesSchema,
+      frontMatterSchema,
+      relationSchema,
+      validateFrontMatter
     };
   }
 });

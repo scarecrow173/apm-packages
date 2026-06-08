@@ -31,10 +31,20 @@ const relationFields = [
   "references",
 ] as const;
 
+const changeFields = [
+  "added",
+  "modified",
+  "deleted",
+  "renamed",
+  "moved",
+  "generated",
+] as const;
+
 const docTypes = ["idea", "brainstorm", "spec", "plan", "task", "design"] as const;
 
 type DocType = typeof docTypes[number];
 type RelationField = typeof relationFields[number];
+type ChangeField = typeof changeFields[number];
 type Severity = "error" | "warning" | "info";
 
 type Finding = {
@@ -53,11 +63,22 @@ type DocConfig = {
   type: DocType;
 };
 
+type ChangeEntry = {
+  type: string;
+  [key: string]: unknown;
+};
+
+type ChangeSet = Record<ChangeField, ChangeEntry[]>;
+
+type RelationInput = Partial<Record<RelationField, string[]>> & {
+  changes?: Partial<ChangeSet>;
+};
+
 type CreateDocumentOptions = {
   cwd: string;
   date?: string;
   dir?: string;
-  relations?: Partial<Record<RelationField, string[]>>;
+  relations?: RelationInput;
   status?: string;
   title: string;
 };
@@ -122,9 +143,18 @@ const configs: Record<DocType, DocConfig> = {
   },
 };
 
-const relationSchema = z.object(Object.fromEntries(
-  relationFields.map((field) => [field, z.array(z.string()).default([])]),
+const changeEntrySchema = z.object({
+  type: z.string().min(1),
+}).passthrough();
+
+const changesSchema = z.object(Object.fromEntries(
+  changeFields.map((field) => [field, z.array(changeEntrySchema).default([])]),
 )).default({});
+
+const relationSchema = z.object({
+  ...Object.fromEntries(relationFields.map((field) => [field, z.array(z.string()).default([])])),
+  changes: changesSchema,
+}).default({});
 
 const frontMatterSchema = z.object({
   id: z.string().min(1),
@@ -186,6 +216,10 @@ function relationMap(content: string): Record<RelationField, string[]> {
   return result;
 }
 
+function completeChanges(input?: Partial<ChangeSet>): ChangeSet {
+  return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []])) as ChangeSet;
+}
+
 function relationLinks(content: string): { field: RelationField; target: string }[] {
   const relations = relationMap(content);
   return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
@@ -204,12 +238,65 @@ function formatRelationBlock(field: RelationField, values: string[]): string {
   return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)].join("\n");
 }
 
-function completeRelations(input?: Partial<Record<RelationField, string[]>>): Record<RelationField, string[]> {
+function formatChangeScalar(key: string, value: string): string {
+  return `${key}: ${quote(value)}`;
+}
+
+function formatChangeValue(key: string, value: unknown): string[] {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${key}: []`];
+    return [
+      `${key}:`,
+      ...value
+        .filter((item): item is string => typeof item === "string" && Boolean(item.trim()))
+        .map((item) => `  - ${quote(item.trim())}`),
+    ];
+  }
+  if (typeof value === "string") return [formatChangeScalar(key, value)];
+  if (typeof value === "number" || typeof value === "boolean") return [`${key}: ${String(value)}`];
+  return [`${key}: ${quote(JSON.stringify(value))}`];
+}
+
+function formatChangeEntry(entry: ChangeEntry): string[] {
+  const ordered = [
+    "type",
+    "path",
+    "from",
+    "to",
+    "source",
+    ...Object.keys(entry).filter((key) => !["type", "path", "from", "to", "source"].includes(key)).sort(),
+  ].filter((key, index, array) => key in entry && array.indexOf(key) === index);
+  const lines: string[] = [];
+  for (const key of ordered) {
+    lines.push(...formatChangeValue(key, entry[key]));
+  }
+  return lines;
+}
+
+function formatChangesBlock(changes: ChangeSet): string[] {
+  return [
+    "  changes:",
+    ...changeFields.flatMap((field) => {
+      const entries = changes[field];
+      if (entries.length === 0) return [`    ${field}: []`];
+      return [
+        `    ${field}:`,
+        ...entries.flatMap((entry) => [
+          "      - " + formatChangeEntry(entry)[0],
+          ...formatChangeEntry(entry).slice(1).map((line) => `        ${line}`),
+        ]),
+      ];
+    }),
+  ];
+}
+
+function completeRelations(input?: RelationInput): Record<RelationField, string[]> {
   return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []])) as Record<RelationField, string[]>;
 }
 
-function frontMatter(config: DocConfig, number: number, title: string, status: string, date: string, relations?: Partial<Record<RelationField, string[]>>): string {
+function frontMatter(config: DocConfig, number: number, title: string, status: string, date: string, relations?: RelationInput): string {
   const complete = completeRelations(relations);
+  const changes = completeChanges(relations?.changes);
   return [
     "---",
     `id: "${config.idPrefix}-${String(number).padStart(4, "0")}"`,
@@ -220,7 +307,9 @@ function frontMatter(config: DocConfig, number: number, title: string, status: s
     `updated: "${date}"`,
     "owners: []",
     "relations:",
-    ...relationFields.map((field) => formatRelationBlock(field, complete[field])),
+    formatRelationBlock("source", complete.source),
+    ...formatChangesBlock(changes),
+    ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
     "---",
   ].join("\n");
 }
@@ -578,4 +667,9 @@ module.exports = {
   docFiles,
   docTypes,
   relationFields,
+  changeFields,
+  changesSchema,
+  frontMatterSchema,
+  relationSchema,
+  validateFrontMatter,
 };
