@@ -46,6 +46,13 @@ test("new_spec creates front matter spec and index", () => {
   assert.match(spec, /^title: "Define checkout flow"$/m);
   assert.match(spec, /^relations:$/m);
   assert.match(spec, /^  source: \[\]$/m);
+  assert.match(spec, /^  changes:$/m);
+  assert.match(spec, /^    added: \[\]$/m);
+  assert.match(spec, /^    modified: \[\]$/m);
+  assert.match(spec, /^    deleted: \[\]$/m);
+  assert.match(spec, /^    renamed: \[\]$/m);
+  assert.match(spec, /^    moved: \[\]$/m);
+  assert.match(spec, /^    generated: \[\]$/m);
   assert.match(spec, /^  implements: \[\]$/m);
   assert.match(spec, /^  references: \[\]$/m);
   assert.match(spec, /^# Define checkout flow/m);
@@ -174,6 +181,8 @@ test("new_brainstorm creates discovery artifact linked to refined idea", () => {
   assert.match(brainstorm, /^status: "capturing"$/m);
   assert.match(brainstorm, /^  derives-from:$/m);
   assert.match(brainstorm, /^    - "docs\/ideas\/0001-improve-onboarding.md"$/m);
+  assert.match(brainstorm, /^  changes:$/m);
+  assert.match(brainstorm, /^    added: \[\]$/m);
   assert.match(brainstorm, /## Intent/);
   assert.match(brainstorm, /## Document Routing/);
 });
@@ -210,6 +219,8 @@ test("new_plan links to spec with implements and derives-from relations", () => 
   assert.match(plan, /^type: "plan"$/m);
   assert.match(plan, /^  implements:$/m);
   assert.match(plan, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
+  assert.match(plan, /^  changes:$/m);
+  assert.match(plan, /^    added: \[\]$/m);
   assert.match(plan, /^  derives-from:$/m);
   assert.match(plan, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
   assert.match(plan, /^    - "docs\/designs\/0001-design-checkout-orchestration.md"$/m);
@@ -238,6 +249,8 @@ test("new_design creates overview, detailed design, and index", () => {
   assert.match(design, /^id: "DESIGN-0001"$/m);
   assert.match(design, /^type: "design"$/m);
   assert.match(design, /^status: "draft"$/m);
+  assert.match(design, /^  changes:$/m);
+  assert.match(design, /^    added: \[\]$/m);
   assert.match(design, /^  derives-from:$/m);
   assert.match(design, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
   assert.match(overview, /^# System Design Overview/m);
@@ -311,6 +324,8 @@ test("new_task links to plan and list_docs filters by status", () => {
   assert.match(task, /^status: "in-progress"$/m);
   assert.match(task, /^  implements:$/m);
   assert.match(task, /^    - "docs\/plans\/0001-plan.md"$/m);
+  assert.match(task, /^  changes:$/m);
+  assert.match(task, /^    added: \[\]$/m);
 
   const listed = runScript("doc-status", "list_docs.js", ["--type", "task", "--status", "in-progress", "--json"], { cwd: repo });
   assert.equal(listed.status, 0, listed.stderr);

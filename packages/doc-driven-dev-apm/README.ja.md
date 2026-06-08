@@ -15,6 +15,7 @@ spec と ADR を同じ discovery output から並列作成する dual-track モ�
 - `design-doc`: plan 前に overview-first の設計成果物を作成します。
 - `plan-doc`: 承認済み spec + ADR + design を実装計画に変換します。
 - `task-doc`: 実装単位と依存関係を管理します。
+- `impl-doc`: 実装結果と機械可読な実装試行ログを記録します。
 - `doc-status`: ステータス、索引、relation を一覧・監査します。
 
 ## 定義
@@ -23,7 +24,7 @@ spec と ADR を同じ discovery output から並列作成する dual-track モ�
 
 すべての作業が従うドキュメントフロー:
 
-```
+```text
 idea-refine OR brainstorming
   → spec-doc + adr-doc   (並列: 同じ discovery output から作成)
   → design-doc           (overview + 詳細設計)
@@ -47,7 +48,7 @@ spec と ADR は**並列トラック**を形成します。同じ上流 discover
 から派生し、補完的な関心事を扱います。
 
 | | spec-doc | adr-doc |
-|---|---------|--------|
+| --- | --- | --- |
 | 答えるもの | What / Why / Scope | How / Which / Why-this-over-that |
 | トリガー | あらゆる feature や変更 | 代替案のある技術判断 |
 | ブロッキング | plan には approved spec が必要 | plan は accepted ADR を参照 |
@@ -130,6 +131,12 @@ ADR として記録され、spec と同じ discovery output から並列で作�
 `docs/tasks/` に実装 task を作成します。plan を `relations.implements` と
 `relations.depends-on` でリンクし、task 用のステータスで進捗を管理します。
 
+### `impl-doc`
+
+`docs/impl/ir/` に Implementation Record を、`docs/impl/exp/` に
+Experiment Log を作成します。Implementation Record は CLI で作成・監査し、
+Experiment Log は CLI で作成・追記・編集・監査します。
+
 ### `doc-status`
 
 生成されたドキュメントを一覧・監査します。必須フロントマター、
@@ -167,6 +174,13 @@ ADR として記録され、spec と同じ discovery output から並列で作�
 ```yaml
 relations:
   source: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
   implements: []
   implemented-by: []
   depends-on: []
@@ -195,6 +209,7 @@ idea-refine OR brainstorming
   -> design-doc          (overview-first の設計ゲート)
   -> plan-doc            (spec / ADR / 承認済み design から派生)
   -> task-doc            (実行単位)
+  -> impl-doc            (実装記録と試行ログ)
   -> implementation-flow (タスク単位のワークフロースキルオーケストレーション)
   -> doc-status
 ```

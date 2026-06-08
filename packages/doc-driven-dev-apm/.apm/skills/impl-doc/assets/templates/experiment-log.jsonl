@@ -1,0 +1,1 @@
+{"schema":"experiment_event.v1","experiment":"{{experiment_path}}","seq":{{seq}},"type":"{{event_type}}","ts":"{{timestamp}}","summary":"{{summary}}"}

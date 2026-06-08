@@ -3376,7 +3376,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs = require("fs");
+    var fs2 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3460,7 +3460,7 @@ var require_gray_matter = __commonJS({
       return stringify(file, data, options2);
     };
     matter.read = function(filepath, options2) {
-      const str2 = fs.readFileSync(filepath, "utf8");
+      const str2 = fs2.readFileSync(filepath, "utf8");
       const file = matter(str2, options2);
       file.path = filepath;
       return file;
@@ -20367,14 +20367,14 @@ var require_zod = __commonJS({
 var require_document_utils = __commonJS({
   "src/skills/lib/document_utils.ts"(exports2, module2) {
     "use strict";
-    var fs = require("node:fs");
+    var fs2 = require("node:fs");
     var path2 = require("node:path");
     function normalizeDir(input) {
       return input.replace(/\\/g, "/").replace(/\/+$/g, "");
     }
     function listMarkdownFiles(dir) {
-      if (!fs.existsSync(dir)) return [];
-      return fs.readdirSync(dir).filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file)).sort();
+      if (!fs2.existsSync(dir)) return [];
+      return fs2.readdirSync(dir).filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file)).sort();
     }
     function detectNaming(files) {
       if (files.some((file) => /^\d{4}-.+\.md$/.test(file))) return "numbered";
@@ -20390,7 +20390,7 @@ var require_document_utils = __commonJS({
     }
     function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
       if (explicitDir) return normalizeDir(explicitDir);
-      const existing = candidateDirs.filter((candidate) => fs.existsSync(path2.join(cwd, candidate)));
+      const existing = candidateDirs.filter((candidate) => fs2.existsSync(path2.join(cwd, candidate)));
       return existing.length === 0 ? defaultDir : existing[0];
     }
     module2.exports = {
@@ -20408,7 +20408,7 @@ var require_document_utils = __commonJS({
 var require_doc_suite_utils = __commonJS({
   "src/skills/lib/doc_suite_utils.ts"(exports2, module2) {
     "use strict";
-    var fs = require("node:fs");
+    var fs2 = require("node:fs");
     var path2 = require("node:path");
     var matter = require_gray_matter();
     var { z } = require_zod();
@@ -20644,8 +20644,8 @@ var require_doc_suite_utils = __commonJS({
     }
     function renderBodyTemplate(type, title) {
       const templatePath = path2.join(__dirname, "../assets/templates", `${type}.md`);
-      if (!fs.existsSync(templatePath)) return null;
-      return fs.readFileSync(templatePath, "utf8").replaceAll("{{title}}", title).trimEnd();
+      if (!fs2.existsSync(templatePath)) return null;
+      return fs2.readFileSync(templatePath, "utf8").replaceAll("{{title}}", title).trimEnd();
     }
     function bodyFor(type, title) {
       const template = renderBodyTemplate(type, title);
@@ -20837,8 +20837,8 @@ var require_doc_suite_utils = __commonJS({
     }
     function ensureDesignOverview(fullDir, date) {
       const overviewPath = path2.join(fullDir, "overview.md");
-      if (fs.existsSync(overviewPath)) return;
-      fs.writeFileSync(overviewPath, overviewDocument(date), "utf8");
+      if (fs2.existsSync(overviewPath)) return;
+      fs2.writeFileSync(overviewPath, overviewDocument(date), "utf8");
     }
     async function titleFromDocument(content, fallback) {
       const data = matterData(content);
@@ -20851,7 +20851,7 @@ var require_doc_suite_utils = __commonJS({
       const dir = path2.join(cwd, relativeDir);
       return Promise.all(docFiles(dir).map(async (file) => {
         const fullPath = path2.join(dir, file);
-        const content = fs.readFileSync(fullPath, "utf8");
+        const content = fs2.readFileSync(fullPath, "utf8");
         const data = matterData(content);
         return {
           file,
@@ -20875,28 +20875,28 @@ Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 ${rows.join("\n")}
 `;
     }
-    async function createDocument2(type, options2) {
+    async function createDocument(type, options2) {
       const config = configFor(type);
       const cwd = path2.resolve(options2.cwd);
       const relativeDir = docDir(cwd, type, options2.dir);
       const fullDir = path2.join(cwd, relativeDir);
-      fs.mkdirSync(fullDir, { recursive: true });
-      const files = fs.readdirSync(fullDir).filter((file) => file.endsWith(".md")).filter((file) => !isReservedDocFile(type, file));
+      fs2.mkdirSync(fullDir, { recursive: true });
+      const files = fs2.readdirSync(fullDir).filter((file) => file.endsWith(".md")).filter((file) => !isReservedDocFile(type, file));
       const number = nextNumber(files);
       const naming = detectNaming(files);
       const filename = naming === "slug" ? `${slugify(options2.title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify(options2.title, type)}.md`;
       const outputPath = path2.join(fullDir, filename);
-      if (fs.existsSync(outputPath)) throw new Error(`Document already exists: ${path2.relative(cwd, outputPath)}`);
+      if (fs2.existsSync(outputPath)) throw new Error(`Document already exists: ${path2.relative(cwd, outputPath)}`);
       const date = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       const status = options2.status || config.defaultStatus;
       const content = `${frontMatter(config, number, options2.title, status, date, options2.relations)}
 
 ${bodyFor(type, options2.title)}
 `;
-      fs.writeFileSync(outputPath, content, "utf8");
+      fs2.writeFileSync(outputPath, content, "utf8");
       if (type === "design") ensureDesignOverview(fullDir, date);
       const index = await buildIndex(cwd, type, relativeDir);
-      fs.writeFileSync(path2.join(fullDir, "README.md"), index, "utf8");
+      fs2.writeFileSync(path2.join(fullDir, "README.md"), index, "utf8");
       return {
         file: path2.relative(cwd, outputPath).replace(/\\/g, "/"),
         index: path2.relative(cwd, path2.join(fullDir, "README.md")).replace(/\\/g, "/"),
@@ -20908,7 +20908,7 @@ ${bodyFor(type, options2.title)}
         path2.resolve(cwd, target),
         path2.resolve(path2.dirname(fromFile), target)
       ];
-      return candidates.some((candidate) => fs.existsSync(candidate));
+      return candidates.some((candidate) => fs2.existsSync(candidate));
     }
     async function auditDocuments(cwd, type, explicitDir) {
       const config = configFor(type);
@@ -20918,7 +20918,7 @@ ${bodyFor(type, options2.title)}
       const findings = [];
       if (type === "design") {
         const overviewPath = path2.join(dir, "overview.md");
-        if (!fs.existsSync(overviewPath)) {
+        if (!fs2.existsSync(overviewPath)) {
           findings.push({
             severity: "error",
             file: null,
@@ -20929,7 +20929,7 @@ ${bodyFor(type, options2.title)}
       }
       for (const file of files) {
         const fullPath = path2.join(dir, file);
-        const content = fs.readFileSync(fullPath, "utf8");
+        const content = fs2.readFileSync(fullPath, "utf8");
         const data = matterData(content);
         for (const issue of validateFrontMatter(content)) {
           findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${issue.path}: ${issue.message}` });
@@ -20952,11 +20952,11 @@ ${bodyFor(type, options2.title)}
           }
         }
       }
-      const indexPath = ["README.md", "index.md"].map((name) => path2.join(dir, name)).find((candidate) => fs.existsSync(candidate));
+      const indexPath = ["README.md", "index.md"].map((name) => path2.join(dir, name)).find((candidate) => fs2.existsSync(candidate));
       if (!indexPath) {
         findings.push({ severity: "warning", file: null, code: "missing-index", message: `Missing ${type} index README.md or index.md` });
       } else {
-        const index = fs.readFileSync(indexPath, "utf8");
+        const index = fs2.readFileSync(indexPath, "utf8");
         for (const file of files) {
           if (!index.includes(file)) findings.push({ severity: "warning", file, code: "index-missing-entry", message: `Index does not link ${file}` });
         }
@@ -20975,7 +20975,7 @@ ${bodyFor(type, options2.title)}
       auditDocuments,
       buildIndex,
       configFor,
-      createDocument: createDocument2,
+      createDocument,
       docEntries,
       docFiles,
       docTypes,
@@ -20989,18 +20989,508 @@ ${bodyFor(type, options2.title)}
   }
 });
 
-// src/skills/brainstorming/scripts/new_brainstorm.ts
+// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
+var require_impl_doc_utils = __commonJS({
+  "src/skills/impl-doc/scripts/lib/impl_doc_utils.ts"(exports2, module2) {
+    "use strict";
+    var fs2 = require("node:fs");
+    var path2 = require("node:path");
+    var matter = require_gray_matter();
+    var { z } = require_zod();
+    var { changeFields, relationFields } = require_doc_suite_utils();
+    var { detectNaming, normalizeDir, slugify } = require_document_utils();
+    var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
+    var experimentEventTypes2 = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
+    var implementationRecordSections = [
+      "## Summary",
+      "## Context",
+      "## Implementation",
+      "## Related Experiments",
+      "## Validation",
+      "## Risks",
+      "## Follow-ups"
+    ];
+    var changeEntrySchema = z.object({
+      type: z.string().min(1)
+    }).passthrough();
+    var changesSchema = z.object(Object.fromEntries(
+      changeFields.map((field) => [field, z.array(changeEntrySchema).default([])])
+    )).default({});
+    var relationsSchema = z.object({
+      ...Object.fromEntries(relationFields.map((field) => [field, z.array(z.string()).default([])])),
+      changes: changesSchema
+    }).default({});
+    var implementationRecordSchema = z.object({
+      id: z.string().min(1),
+      type: z.literal("impl"),
+      status: z.enum(implStatuses),
+      title: z.string().min(1),
+      created: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      updated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      owners: z.array(z.string()),
+      relations: relationsSchema,
+      metadata: z.object({
+        experiments: z.object({
+          adopted: z.array(z.string()).default([]),
+          rejected: z.array(z.string()).default([])
+        })
+      })
+    }).passthrough();
+    var experimentEventBaseSchema = z.object({
+      schema: z.string().min(1),
+      experiment: z.string().min(1),
+      seq: z.number().int().positive(),
+      type: z.string().min(1),
+      ts: z.string().min(1)
+    }).passthrough();
+    function posixRelative2(from, to) {
+      return path2.relative(from, to).replace(/\\/g, "/");
+    }
+    function ensureDir(dir) {
+      fs2.mkdirSync(dir, { recursive: true });
+    }
+    function quote(value) {
+      return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    }
+    function normalizeFilePath(input) {
+      return input.replace(/\\/g, "/");
+    }
+    function isExternalLink(value) {
+      return /^(https?:|mailto:)/i.test(value);
+    }
+    function defaultImplDir(kind) {
+      return kind === "ir" ? "docs/impl/ir" : "docs/impl/exp";
+    }
+    function implDir(cwd, kind, explicitDir) {
+      if (explicitDir) return normalizeDir(explicitDir);
+      const defaultDir = defaultImplDir(kind);
+      return fs2.existsSync(path2.join(cwd, defaultDir)) ? defaultDir : defaultDir;
+    }
+    function listFiles(dir, ext) {
+      if (!fs2.existsSync(dir)) return [];
+      return fs2.readdirSync(dir).filter((file) => file.endsWith(ext)).filter((file) => ext !== ".md" || !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file)).sort();
+    }
+    function detectNamingForFiles(files, ext) {
+      const numbered = new RegExp(`^\\d{4}-.+\\${ext}$`);
+      const slugOnly = new RegExp(`^[a-z0-9][a-z0-9-]+\\${ext}$`);
+      if (files.some((file) => numbered.test(file))) return "numbered";
+      if (files.some((file) => slugOnly.test(file))) return "slug";
+      return detectNaming(files.filter((file) => ext === ".md" || file.endsWith(ext))) === "slug" ? "slug" : "numbered";
+    }
+    function nextNumberForFiles(files, ext) {
+      const pattern = new RegExp(`^(\\d{4})-.+\\${ext}$`);
+      const numbers = files.map((file) => pattern.exec(file)).filter((match) => Boolean(match)).map((match) => Number(match[1]));
+      if (numbers.length > 0) return Math.max(...numbers) + 1;
+      return files.length + 1;
+    }
+    function renderTemplate(name, replacements) {
+      const templatePath = path2.join(__dirname, "../assets/templates", name);
+      let content = fs2.readFileSync(templatePath, "utf8").trimEnd();
+      for (const [key, value] of Object.entries(replacements)) {
+        content = content.replaceAll(`{{${key}}}`, value);
+      }
+      return content;
+    }
+    function renderExperimentTemplate2(replacements) {
+      const content = renderTemplate("experiment-log.jsonl", replacements);
+      return JSON.parse(content);
+    }
+    function emptyChanges() {
+      return Object.fromEntries(changeFields.map((field) => [field, []]));
+    }
+    function emptyRelations() {
+      return Object.fromEntries(relationFields.map((field) => [field, []]));
+    }
+    function completeRelations(input) {
+      const relations = emptyRelations();
+      for (const field of relationFields) {
+        relations[field] = input?.[field] || [];
+      }
+      return relations;
+    }
+    function completeChanges(input) {
+      const changes = emptyChanges();
+      for (const field of changeFields) {
+        changes[field] = input?.[field] || [];
+      }
+      return changes;
+    }
+    function formatScalar(key, value) {
+      if (typeof value === "string") return `${key}: ${quote(value)}`;
+      return `${key}: ${String(value)}`;
+    }
+    function formatValue(key, value) {
+      if (Array.isArray(value)) {
+        if (value.length === 0) return [`${key}: []`];
+        return [`${key}:`, ...value.map((item) => `  - ${typeof item === "string" ? quote(item) : JSON.stringify(item)}`)];
+      }
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        return [formatScalar(key, value)];
+      }
+      return [`${key}: ${quote(JSON.stringify(value))}`];
+    }
+    function formatChangeEntry(entry) {
+      const preferred = ["type", "path", "from", "to", "source"];
+      const keys = [
+        ...preferred.filter((key) => key in entry),
+        ...Object.keys(entry).filter((key) => !preferred.includes(key)).sort()
+      ];
+      return keys.flatMap((key) => formatValue(key, entry[key]));
+    }
+    function formatChanges(changes) {
+      return [
+        "  changes:",
+        ...changeFields.flatMap((field) => {
+          const entries = changes[field];
+          if (entries.length === 0) return [`    ${field}: []`];
+          return [
+            `    ${field}:`,
+            ...entries.flatMap((entry) => {
+              const lines = formatChangeEntry(entry);
+              return [
+                `      - ${lines[0]}`,
+                ...lines.slice(1).map((line) => `        ${line}`)
+              ];
+            })
+          ];
+        })
+      ];
+    }
+    function formatRelationBlock(field, values) {
+      if (values.length === 0) return [`  ${field}: []`];
+      return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)];
+    }
+    function implementationRecordFrontMatter(options2) {
+      const relations = completeRelations(options2.relations);
+      const changes = completeChanges(options2.changes);
+      return [
+        "---",
+        `id: "IMPL-${String(options2.number).padStart(4, "0")}"`,
+        'type: "impl"',
+        `status: "${options2.status}"`,
+        `title: ${quote(options2.title)}`,
+        `created: "${options2.date}"`,
+        `updated: "${options2.date}"`,
+        "owners: []",
+        "relations:",
+        ...formatRelationBlock("source", relations.source),
+        ...formatChanges(changes),
+        ...relationFields.filter((field) => field !== "source").flatMap((field) => formatRelationBlock(field, relations[field])),
+        "metadata:",
+        "  experiments:",
+        ...options2.adopted && options2.adopted.length > 0 ? ["    adopted:", ...options2.adopted.map((item) => `      - ${quote(item)}`)] : ["    adopted: []"],
+        ...options2.rejected && options2.rejected.length > 0 ? ["    rejected:", ...options2.rejected.map((item) => `      - ${quote(item)}`)] : ["    rejected: []"],
+        "---"
+      ].join("\n");
+    }
+    function buildImplementationRecordContent(options2) {
+      return `${implementationRecordFrontMatter(options2)}
+
+${renderTemplate("implementation-record.md", { title: options2.title })}
+`;
+    }
+    function parseEventValue(raw) {
+      const trimmed = raw.trim();
+      if (/^(true|false|null|-?\d+(\.\d+)?)$/.test(trimmed) || /^[\[{"]/.test(trimmed)) {
+        try {
+          return JSON.parse(trimmed);
+        } catch {
+          return raw;
+        }
+      }
+      return raw;
+    }
+    function parseSetArguments(items) {
+      const result = {};
+      for (const item of items) {
+        const pivot = item.indexOf("=");
+        if (pivot <= 0) throw new Error(`Invalid --set value: ${item}`);
+        const key = item.slice(0, pivot);
+        const value = item.slice(pivot + 1);
+        result[key] = parseEventValue(value);
+      }
+      return result;
+    }
+    function normalizeExperimentPath(cwd, filePath) {
+      return normalizeFilePath(posixRelative2(cwd, path2.resolve(filePath)));
+    }
+    function readExperimentEvents(filePath) {
+      if (!fs2.existsSync(filePath)) throw new Error(`Experiment Log not found: ${filePath}`);
+      const content = fs2.readFileSync(filePath, "utf8");
+      if (!content.trim()) return [];
+      return content.split(/\r?\n/).filter((line) => line.trim()).map((line) => ({ raw: line, value: JSON.parse(line) }));
+    }
+    function nextExperimentSeq(events) {
+      const seqs = events.map((event) => event.value.seq).filter((value) => typeof value === "number" && Number.isInteger(value) && value > 0);
+      return seqs.length === 0 ? 1 : Math.max(...seqs) + 1;
+    }
+    function writeExperimentEvents2(filePath, events) {
+      const content = events.length === 0 ? "" : `${events.map((event) => JSON.stringify(event)).join("\n")}
+`;
+      fs2.writeFileSync(filePath, content, "utf8");
+    }
+    function buildExperimentEvent2(options2) {
+      return {
+        schema: "experiment_event.v1",
+        experiment: normalizeExperimentPath(options2.cwd, options2.filePath),
+        seq: options2.seq,
+        type: options2.type,
+        ts: options2.ts || (/* @__PURE__ */ new Date()).toISOString(),
+        ...options2.summary ? { summary: options2.summary } : {},
+        ...options2.extra || {}
+      };
+    }
+    function updateIndexForMarkdownDir(cwd, relativeDir) {
+      const dir = path2.join(cwd, relativeDir);
+      const files = listFiles(dir, ".md");
+      const rows = files.map((file) => {
+        const fullPath = path2.join(dir, file);
+        const parsed = matter(fs2.readFileSync(fullPath, "utf8"));
+        const title = typeof parsed.data.title === "string" ? parsed.data.title : /^#\s+(.+)$/m.exec(parsed.content)?.[1] || path2.basename(file, ".md");
+        const status = typeof parsed.data.status === "string" ? ` [${parsed.data.status}]` : "";
+        const id = typeof parsed.data.id === "string" ? `${parsed.data.id}: ` : "";
+        return `- [${id}${title}](./${file})${status}`;
+      });
+      fs2.writeFileSync(
+        path2.join(dir, "README.md"),
+        `# Implementation Records
+
+Directory: \`${relativeDir}\`
+
+${rows.join("\n")}
+`,
+        "utf8"
+      );
+    }
+    function updateIndexForExperimentDir2(cwd, relativeDir) {
+      const dir = path2.join(cwd, relativeDir);
+      const files = listFiles(dir, ".jsonl");
+      const rows = files.map((file) => `- \`${file}\``);
+      fs2.writeFileSync(
+        path2.join(dir, "README.md"),
+        `# Experiment Logs
+
+Directory: \`${relativeDir}\`
+
+${rows.join("\n")}
+`,
+        "utf8"
+      );
+    }
+    function buildNewFilePath2(options2) {
+      const relativeDir = implDir(options2.cwd, options2.kind, options2.explicitDir);
+      const fullDir = path2.join(options2.cwd, relativeDir);
+      ensureDir(fullDir);
+      const ext = options2.kind === "ir" ? ".md" : ".jsonl";
+      const files = listFiles(fullDir, ext);
+      const number = nextNumberForFiles(files, ext);
+      const naming = detectNamingForFiles(files, ext);
+      const filename = naming === "slug" ? `${slugify(options2.title, options2.kind)}${ext}` : `${String(number).padStart(4, "0")}-${slugify(options2.title, options2.kind)}${ext}`;
+      return {
+        number,
+        outputPath: path2.join(fullDir, filename),
+        relativeDir
+      };
+    }
+    function resolvesLocalTarget(cwd, fromFile, target) {
+      const candidates = [
+        path2.resolve(cwd, target),
+        path2.resolve(path2.dirname(fromFile), target)
+      ];
+      return candidates.some((candidate) => fs2.existsSync(candidate));
+    }
+    function relationLinks(relations) {
+      return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
+    }
+    function auditImplementationRecords(cwd, relativeDir) {
+      const dir = path2.join(cwd, relativeDir);
+      const files = listFiles(dir, ".md");
+      const findings = [];
+      for (const file of files) {
+        const fullPath = path2.join(dir, file);
+        const content = fs2.readFileSync(fullPath, "utf8");
+        const parsed = matter(content);
+        const schemaResult = implementationRecordSchema.safeParse(parsed.data);
+        if (!schemaResult.success) {
+          for (const issue of schemaResult.error.issues) {
+            findings.push({
+              code: "invalid-front-matter",
+              file,
+              message: `Invalid front matter ${issue.path.join(".") || "$"}: ${issue.message}`,
+              severity: "error"
+            });
+          }
+          continue;
+        }
+        const data = schemaResult.data;
+        for (const relation of relationLinks(data.relations)) {
+          if (isExternalLink(relation.target)) continue;
+          if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
+            findings.push({
+              code: "broken-relation-link",
+              file,
+              message: `Relation ${relation.field} points to missing target: ${relation.target}`,
+              severity: "warning"
+            });
+          }
+        }
+        for (const experimentPath of [...data.metadata.experiments.adopted, ...data.metadata.experiments.rejected]) {
+          if (!resolvesLocalTarget(cwd, fullPath, experimentPath)) {
+            findings.push({
+              code: "missing-experiment-link",
+              file,
+              message: `Experiment reference points to missing target: ${experimentPath}`,
+              severity: "warning"
+            });
+          }
+        }
+        for (const section of implementationRecordSections) {
+          if (!parsed.content.includes(section)) {
+            findings.push({
+              code: "missing-section",
+              file,
+              message: `Missing required section: ${section.replace(/^##\s+/, "")}`,
+              severity: "error"
+            });
+          }
+        }
+      }
+      const indexPath = path2.join(dir, "README.md");
+      if (!fs2.existsSync(indexPath)) {
+        findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+      }
+      return { directory: relativeDir, files: files.length, findings };
+    }
+    function auditExperimentLogs(cwd, relativeDir) {
+      const dir = path2.join(cwd, relativeDir);
+      const files = listFiles(dir, ".jsonl");
+      const findings = [];
+      for (const file of files) {
+        const fullPath = path2.join(dir, file);
+        const content = fs2.readFileSync(fullPath, "utf8");
+        const lines = content.split(/\r?\n/).filter((line) => line.trim());
+        let previousSeq = 0;
+        const seen = /* @__PURE__ */ new Set();
+        for (let index = 0; index < lines.length; index += 1) {
+          const line = lines[index];
+          let parsed;
+          try {
+            parsed = JSON.parse(line);
+          } catch {
+            findings.push({
+              code: "invalid-json",
+              file,
+              line: index + 1,
+              message: "Line is not valid JSON",
+              severity: "error"
+            });
+            continue;
+          }
+          const baseResult = experimentEventBaseSchema.safeParse(parsed);
+          if (!baseResult.success) {
+            findings.push({
+              code: "invalid-event-shape",
+              file,
+              line: index + 1,
+              message: `Invalid event shape: ${baseResult.error.issues.map((issue) => issue.message).join(", ")}`,
+              severity: "error"
+            });
+            continue;
+          }
+          if (parsed.schema !== "experiment_event.v1") {
+            findings.push({
+              code: "invalid-event-schema",
+              file,
+              line: index + 1,
+              message: `Unexpected schema: ${String(parsed.schema)}`,
+              severity: "error"
+            });
+          }
+          if (!experimentEventTypes2.includes(parsed.type)) {
+            findings.push({
+              code: "invalid-event-type",
+              file,
+              line: index + 1,
+              message: `Invalid event type: ${String(parsed.type)}`,
+              severity: "error"
+            });
+          }
+          const expectedPath = normalizeExperimentPath(cwd, fullPath);
+          if (parsed.experiment !== expectedPath) {
+            findings.push({
+              code: "experiment-path-mismatch",
+              file,
+              line: index + 1,
+              message: `Experiment path mismatch: expected ${expectedPath}`,
+              severity: "error"
+            });
+          }
+          const seq = parsed.seq;
+          if (seen.has(seq) || seq <= previousSeq) {
+            findings.push({
+              code: "non-monotonic-seq",
+              file,
+              line: index + 1,
+              message: `Sequence must be unique and strictly increasing: ${seq}`,
+              severity: "error"
+            });
+          }
+          seen.add(seq);
+          previousSeq = seq;
+        }
+      }
+      const indexPath = path2.join(dir, "README.md");
+      if (!fs2.existsSync(indexPath)) {
+        findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+      }
+      return { directory: relativeDir, files: files.length, findings };
+    }
+    module2.exports = {
+      auditExperimentLogs,
+      auditImplementationRecords,
+      buildExperimentEvent: buildExperimentEvent2,
+      buildImplementationRecordContent,
+      buildNewFilePath: buildNewFilePath2,
+      emptyChanges,
+      experimentEventTypes: experimentEventTypes2,
+      implementationRecordSections,
+      implDir,
+      implStatuses,
+      normalizeExperimentPath,
+      parseSetArguments,
+      posixRelative: posixRelative2,
+      readExperimentEvents,
+      renderExperimentTemplate: renderExperimentTemplate2,
+      updateIndexForExperimentDir: updateIndexForExperimentDir2,
+      updateIndexForMarkdownDir,
+      writeExperimentEvents: writeExperimentEvents2,
+      nextExperimentSeq
+    };
+  }
+});
+
+// src/skills/impl-doc/scripts/new_experiment_log.ts
+var fs = require("node:fs");
 var path = require("node:path");
-var { createDocument } = require_doc_suite_utils();
+var {
+  buildExperimentEvent,
+  buildNewFilePath,
+  experimentEventTypes,
+  posixRelative,
+  renderExperimentTemplate,
+  updateIndexForExperimentDir,
+  writeExperimentEvents
+} = require_impl_doc_utils();
 function parseArgs(argv) {
   const args = { cwd: process.cwd() };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
-    else if (arg === "--from") args.from = argv[++i];
+    else if (arg === "--task") args.task = argv[++i];
+    else if (arg === "--type") args.type = argv[++i];
+    else if (arg === "--summary") args.summary = argv[++i];
+    else if (arg === "--ts") args.ts = argv[++i];
     else if (arg === "--dir") args.dir = argv[++i];
-    else if (arg === "--status") args.status = argv[++i];
-    else if (arg === "--date") args.date = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (!args.title) args.title = arg;
@@ -21009,7 +21499,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_brainstorm.js --title <title> [--from <idea-or-source-doc>] [--dir <path>] [--status <status>]";
+  return "Usage: node scripts/new_experiment_log.js --title <title> [--task <task>] [--type <event-type>] [--summary <text>] [--dir <path>]";
 }
 async function main() {
   try {
@@ -21019,20 +21509,39 @@ async function main() {
       return;
     }
     if (!args.title) throw new Error("Missing required --title");
-    const upstream = args.from ? [args.from] : [];
-    const result = await createDocument("brainstorm", {
-      cwd: path.resolve(args.cwd),
-      date: args.date,
-      dir: args.dir,
-      relations: {
-        "derives-from": upstream,
-        refines: upstream
-      },
-      status: args.status,
-      title: args.title
+    if (args.type && !experimentEventTypes.includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
+    const cwd = path.resolve(args.cwd);
+    const { outputPath, relativeDir } = buildNewFilePath({
+      cwd,
+      kind: "exp",
+      title: args.title,
+      explicitDir: args.dir
     });
-    console.log(`Created ${result.file}`);
-    console.log(`Updated ${result.index}`);
+    if (fs.existsSync(outputPath)) throw new Error(`Experiment Log already exists: ${posixRelative(cwd, outputPath)}`);
+    fs.writeFileSync(outputPath, "", "utf8");
+    if (args.type) {
+      const baseEvent = buildExperimentEvent({
+        cwd,
+        filePath: outputPath,
+        seq: 1,
+        type: args.type,
+        ts: args.ts,
+        summary: args.summary,
+        extra: args.task ? { task: args.task } : void 0
+      });
+      const event = renderExperimentTemplate({
+        experiment_path: baseEvent.experiment,
+        seq: String(baseEvent.seq),
+        event_type: String(baseEvent.type),
+        timestamp: String(baseEvent.ts),
+        summary: String(baseEvent.summary || "")
+      });
+      if (args.task) event.task = args.task;
+      writeExperimentEvents(outputPath, [event]);
+    }
+    updateIndexForExperimentDir(cwd, relativeDir);
+    console.log(`Created ${posixRelative(cwd, outputPath)}`);
+    console.log(`Updated ${relativeDir}/README.md`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());
