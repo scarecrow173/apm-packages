@@ -27,7 +27,7 @@ For CLI usage, adapter schema, and resolution semantics, see `cli-reference.md`.
 The following files are **configuration**, not generated output, and MAY
 be edited manually:
 
-- Adapter YAML files (`assets/adapters/*.yaml`, flow-specific `references/*.yaml`)
+- Adapter YAML files (`skill-discovery-protocol/assets/adapters/*.yaml`, flow-specific `references/*.yaml`)
 - `SKILL.md` / `SKILL.ja.md` (skill definition documents)
 - `protocol-contract.md` and other reference documentation
 - Source scripts (`src/skills/**/scripts/*.ts`)
@@ -147,9 +147,9 @@ is a **schema error** and causes Gate 1 (Schema Validation) to fail.
 Resolution algorithm:
 
 ```text
-searchDirs = walk up from adapter file directory,
+searchDirs = walk up from adapter file directory within the current skill tree,
              collecting each ancestor's "assets/adapters/" if it exists,
-             plus adapter's own directory as fallback
+             then append the bundled "skill-discovery-protocol/assets/adapters/"
 
 for name in extends:
   for dir in searchDirs:
@@ -161,6 +161,8 @@ for name in extends:
     if one exists → resolved, stop searching
   if not found in any dir → schema error
 ```
+
+The legacy `.apm/assets/adapters/` copy is not part of `extends` resolution.
 
 ### 5.2 Merge Semantics
 

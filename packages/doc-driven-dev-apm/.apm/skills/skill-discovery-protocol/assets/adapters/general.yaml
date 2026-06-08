@@ -1,10 +1,10 @@
-# yaml-language-server: $schema=../../schemas/adapter.schema.json
+# yaml-language-server: $schema=../../../schemas/adapter.schema.json
 # General Adapter
 #
-# Base adapter aggregating all known harness roots.
+# Canonical base adapter bundled with skill-discovery-protocol.
 # Flow-specific adapters extend this and override only what differs.
 #
-# This file is configuration (manually authored) — NOT a generated artifact.
+# This file is configuration (manually authored) - NOT a generated artifact.
 
 schema_version: "1.0"
 adapter_id: "general"
