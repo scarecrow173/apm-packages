@@ -2887,18 +2887,19 @@ var require_adapter = __commonJS({
     function findAdapterSearchDirs(adapterDir) {
       const dirs = [];
       let current = adapterDir;
-      const root = path2.parse(current).root;
-      for (let i = 0; i < 10; i++) {
+      const skillTreeRoot = path2.resolve(adapterDir, "..", "..", "..");
+      for (; ; ) {
         const candidate = path2.join(current, "assets", "adapters");
         if (fs.existsSync(candidate)) {
           dirs.push(candidate);
         }
         const parent = path2.dirname(current);
-        if (parent === current || parent === root) break;
+        if (current === skillTreeRoot || parent === current) break;
         current = parent;
       }
-      if (!dirs.includes(adapterDir)) {
-        dirs.push(adapterDir);
+      const bundledAdaptersDir = path2.resolve(__dirname, "..", "..", "assets", "adapters");
+      if (fs.existsSync(bundledAdaptersDir) && !dirs.includes(bundledAdaptersDir)) {
+        dirs.push(bundledAdaptersDir);
       }
       return dirs;
     }

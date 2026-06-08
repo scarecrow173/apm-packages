@@ -101,7 +101,7 @@ The `resolution_order` array defines precedence (first match wins):
 
 ### 3.1 General Adapter Role
 
-The `general.yaml` (in `assets/adapters/`) aggregates ALL known harness roots:
+The canonical `general.yaml` lives at `skill-discovery-protocol/assets/adapters/general.yaml` and aggregates ALL known harness roots:
 
 ```yaml
 scan:
@@ -124,7 +124,7 @@ scan:
 
 ### 3.2 Flow Override Pattern
 
-Flow adapters extend `general` and override only what differs:
+Flow adapters extend `general` and resolve it from the current adapter tree first, then the bundled `skill-discovery-protocol/assets/adapters/` fallback. They override only what differs:
 
 ```yaml
 extends:

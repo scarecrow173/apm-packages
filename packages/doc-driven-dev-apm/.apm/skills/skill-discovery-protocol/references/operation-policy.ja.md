@@ -1,82 +1,82 @@
-# Skill Discovery Protocol — 運用規約
+# Skill Discovery Protocol - 運用ポリシー
 
 Version: 1.0.0
 
-本文書は SDP 成果物の作成・更新・検証に関するルールと制約を定義する。
-生成された成果物への手動編集は禁止される。
+この文書は SDP アーティファクトの作成・更新・検証に関するルールと制約を定義する。
+生成済みアーティファクトの手編集は禁止される。
 
-CLI 使用法、Adapter スキーマ、解決セマンティクスについては `cli-reference.ja.md` を参照。
+CLI 利用、adapter スキーマ、解決セマンティクスについては `cli-reference.ja.md` を参照。
 
 ---
 
-## 1. スクリプト駆動操作ルール
+## 1. スクリプト専用運用ルール
 
-**すべての成果物操作は `sdp` CLI を経由しなければならない。**
+**すべてのアーティファクト操作は `sdp` CLI を通さなければならない。**
 
-### 1.1 禁止操作
+### 1.1 禁止事項
 
-- JSON 成果物の手動編集（`*-catalog.json`、`*-profile.json`、
-  `validation-report.json`、`resolved-invocations.json`）
-- 派生 Markdown 成果物の手動編集（`sdp profile` で生成される `.md` サイドカー）
-- `sdp` を迂回する外部スクリプトによる成果物内容の変更
+- JSON アーティファクト（`*-catalog.json`, `*-profile.json`, `validation-report.json`, `resolved-invocations.json`）の手編集
+- 生成された Markdown アーティファクト（`sdp profile` が生成する `.md` sidecar）の手編集
+- `sdp` を経由しない外部スクリプトによるアーティファクト内容の変更
 
-### 1.2 手動編集が許可されるファイル
+### 1.2 手動編集が許されるファイル
 
-以下のファイルは**設定**であり、生成出力ではないため手動編集が可能:
+以下は **configuration** であり、生成物ではないため手動編集できる:
 
-- Adapter YAML ファイル（`assets/adapters/*.yaml`、フロー固有 `references/*.yaml`）
-- `SKILL.md` / `SKILL.ja.md`（スキル定義文書）
-- `protocol-contract.md` 等のリファレンス文書
+- Adapter YAML ファイル（`skill-discovery-protocol/assets/adapters/*.yaml`、フロー固有 `references/*.yaml`）
+- `SKILL.md` / `SKILL.ja.md`（skill 定義文書）
+- `protocol-contract.md` やその他の参照ドキュメント
 - ソーススクリプト（`src/skills/**/scripts/*.ts`）
 
 ### 1.3 例外条件
 
-手動での成果物編集は以下の場合のみ許可される:
+手動の artifact 編集が許されるのは次の場合だけ:
 
-1. `sdp` CLI が壊れており出力を生成できない場合（緊急復旧）
-2. 編集直後に `sdp validate` を実行し適合性を確認する場合
-3. コミットメッセージに `# MANUAL_EDIT: <理由>` を記載する場合
+1. `sdp` CLI が壊れていて生成できないとき（緊急復旧）
+2. 編集直後に `sdp validate` を実行して適合性を確認すること
+3. commit message に `# MANUAL_EDIT: <reason>` を付けること
 
 ---
 
-## 2. スクリプト責務分離
+## 2. スクリプト責務の分離
 
-CLI は 3 つの責務ドメインに分離される:
+CLI は 3 つの責務ドメインに分かれる:
 
-| コマンド | 責務 | 動詞 |
-| -------- | ---- | ---- |
-| `sdp scan` | scan 成果物の生成・更新 | Write |
-| `sdp infer` | agent-authored inference 成果物の初期化・schema check・更新 | Write |
-| `sdp profile` | catalog/profile 成果物の生成・更新 | Write |
-| `sdp validate` | 成果物の正当性検証 | Read + Check |
-| `sdp query` | 成果物からの情報抽出 | Read |
+| Command | Responsibility | Verb |
+| ------- | -------------- | ---- |
+| `sdp scan` | scan artifact を作成・更新する | Write |
+| `sdp infer` | agent-authored inference artifact を初期化・スキーマチェック・更新する | Write |
+| `sdp profile` | catalog/profile artifact を作成・更新する | Write |
+| `sdp validate` | artifact の正しさを検証する | Read + Check |
+| `sdp query` | artifact から情報を取り出す | Read |
 
-### 2.1 Generate スクリプト
+### 2.1 Generate Scripts
 
-- 成功時は終了コード `0`、入力エラー時は `1`、スキーマエラー時は `2`
-- **注:** `validate_outputs`（protocol-contract ステップ 8）は生成後に自動実行されない。
-  バリデーションは独立した別コマンド（`sdp validate`）として実行し、
-  CI/CD パイプラインで個別にオーケストレーションする設計。
+- 成功時は `0`、入力エラー時は `1`、スキーマエラー時は `2` を返す
+- `validate_outputs`（protocol-contract step 8）は生成後に自動実行されない。
+  これを別コマンド `sdp validate` に分離することで、CI/CD のオーケストレーションを独立させる。
 
-### 2.2 Validate スクリプト
+### 2.2 Validate Scripts
 
-- 全ゲート通過時は終了コード `0`、いずれか失敗時は `1`、入力エラー時は `2`
+- すべての gate が通れば `0`
+- いずれかの gate が失敗すれば `1`
+- 入力エラーは `2`
 
-### 2.3 Query スクリプト
+### 2.3 Query Scripts
 
-- 純粋な読み取り専用操作（ファイルを変更しない）
-- 成功時は終了コード `0`（結果なし = 空配列）、入力エラー時は `1`、
-  未知サブコマンド時は `2`
+- 読み取り専用。決してファイルを変更しない
+- 成功時は `0`（空結果は空配列）
+- 入力エラーは `1`
+- 未知の subcommand は `2`
 
 ### 2.4 Inference 編集ルール
 
-agent は inference 編集に `sdp infer` subcommands を使わなければならない。
-意図する loop は次のとおり。
+agent は inference 編集に `sdp infer` subcommand を使わなければならない。意図した loop は次の通り:
 
-1. `sdp infer init` で scan 結果から baseline entries を作成または merge する。
-2. agent が scan された skill body を読み、skill ごとの inference spec または JSONL operations を用意する。
-3. `sdp infer set-skill` または `sdp infer apply` で判断結果を記録する。
-4. `sdp profile` の前に `sdp infer check` で artifact を検証する。
+1. `sdp infer init` が scan 結果から baseline entry を作成または統合する
+2. agent が scanned skill body を確認し、skill ごとの inference spec または JSONL 操作を作る
+3. `sdp infer set-skill` または `sdp infer apply` が決定を記録する
+4. `sdp profile` の前に `sdp infer check` で artifact を確認する
 
 ---
 
@@ -96,16 +96,16 @@ src/skills/skill-discovery-protocol/scripts/*.ts
 pnpm run build:scripts
 ```
 
-これは `tsx scripts/build-skill-scripts.ts` を呼び出し、esbuild を使って
-`src/skills/**/scripts/` 配下の全 TypeScript ソースを対応する
-`.apm/skills/**/scripts/` 出力先にコンパイルする。
+これは `tsx scripts/build-skill-scripts.ts` を呼び出し、`src/skills/**/scripts/`
+配下のすべての TypeScript ソースを対応する `.apm/skills/**/scripts/` 出力先へ
+esbuild でコンパイルする。
 
 ### 3.3 不変条件
 
-- 出力 `.js` ファイルはリポジトリにコミットされる（エージェントが消費する配布形式）
-- ソース `.ts` ファイルが唯一の信頼できるソース
-- `.ts` への変更後は必ず `pnpm run build:scripts` を実行する
-- ビルドは決定論的でなければならない（同一ソース → 同一出力バイト列）
+- 出力 `.js` ファイルは repository にコミットされる（agent が使う配布形態だから）
+- `.ts` ソースが single source of truth である
+- `.ts` を変更したら必ず `pnpm run build:scripts` を実行する
+- ビルドは deterministic でなければならない（同じソース → 同じバイト列）
 
 ---
 
@@ -113,40 +113,40 @@ pnpm run build:scripts
 
 ### 4.1 `snake_case` 要件
 
-以下の識別子は `snake_case` を使用しなければならない:
+以下の識別子は `snake_case` を使わなければならない:
 
 - `flow_stack.slots[]` の `slot_id`
-- `provides[]` および `uses[]` の `capability` 値
-- `invocation_resolution.overrides.slots` のオーバーライドキー
-- `invocation_resolution.overrides.capabilities` のオーバーライドキー
+- `provides[]` と `uses[]` の `capability` 値
+- `invocation_resolution.overrides.slots` の override key
+- `invocation_resolution.overrides.capabilities` の override key
 - `classification` の `taxonomy[].id`
 - `taxonomy[].match.capabilities[]` の値
 
-### 4.2 強制方法
+### 4.2 強制
 
-パターン `^[a-z][a-z0-9]*(_[a-z0-9]+)*$` に一致しない識別子は
-**スキーマエラー**であり、Gate 1（Schema Validation）を失敗させる。
+`^[a-z][a-z0-9]*(_[a-z0-9]+)*$` に一致しない識別子は **schema error** であり、
+Gate 1 (Schema Validation) を失敗させる。
 
-### 4.3 根拠
+### 4.3 理由
 
-- すべての adapter と成果物間の一貫性
-- 曖昧さなく機械読取可能（大文字小文字の折りたたみ問題なし）
-- YAML キーおよび JSON フィールド名との互換性
+- すべての adapter と artifact にわたる一貫性
+- 曖昧さのない machine-readable 形式
+- YAML key と JSON field 名に適合する
 
 ---
 
 ## 5. `extends` 解決ルール
 
-### 5.1 参照名解決
+### 5.1 参照名の解決
 
-`extends` の値は参照名であり、ファイルパスではない。
+`extends` の値は参照名であり、file path ではない。
 
 解決アルゴリズム:
 
 ```text
-searchDirs = adapter ファイルのディレクトリから上方に走査し、
-             各祖先の "assets/adapters/" が存在すれば収集、
-             最後に adapter 自身のディレクトリをフォールバックとして追加
+searchDirs = adapter file directory から現在の skill tree 内を上に走査し、
+             各祖先の "assets/adapters/" が存在すれば収集し、
+             その後に bundled な "skill-discovery-protocol/assets/adapters/" を追加する
 
 for name in extends:
   for dir in searchDirs:
@@ -159,18 +159,20 @@ for name in extends:
   if not found in any dir → schema error
 ```
 
-### 5.2 マージセマンティクス
+legacy の `.apm/assets/adapters/` copy は `extends` 解決の対象ではない。
 
-- 宣言順: `extends: [a, b]` → まず `a` を解決、次に `b`
-- マージ方向: 最上位の親 → ... → 直接の親 → 子 adapter
-- オブジェクトフィールド: 再帰マージ（子が勝つ）
-- スカラーフィールド: 後勝ち上書き
-- 配列フィールド: 子が完全に置換（追記なし）
+### 5.2 Merge セマンティクス
+
+- 宣言順: `extends: [a, b]` は `a` を先に解決し、その後 `b`
+- マージ方向: 最上位の親 → ... → 直下の親 → child adapter
+- object field: 再帰的にマージ（衝突時は child 優先）
+- scalar field: last writer wins
+- array field: child が完全に置き換える（append しない）
 
 ### 5.3 制約
 
-- パス直書きは禁止（例: `extends: ["./my-adapter.yaml"]`）
-- `priority` キーはどこでも禁止（存在すればスキーマエラー）
-- 循環参照はスキーマエラー
-- ネストされた extends は許可（ルートまで再帰解決）
-- スキーマ検証は最終マージ結果に対して実行
+- 直接 path を書くことは禁止（例: `extends: ["./my-adapter.yaml"]`）
+- `priority` key はどこでも禁止（存在したら schema error）
+- circular reference は schema error
+- nested extends は許可（root まで再帰的に解決）
+- schema validation は最終的な merged result に対して行う

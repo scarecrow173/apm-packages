@@ -73,21 +73,23 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
 
 function findAdapterSearchDirs(adapterDir: string): string[] {
   const dirs: string[] = [];
-  // Walk up from adapterDir looking for assets/adapters/ directories
+  // Search only within the current skill tree first so legacy root copies
+  // outside .apm/skills are never considered.
   let current = adapterDir;
-  const root = path.parse(current).root;
-  for (let i = 0; i < 10; i++) {
+  const skillTreeRoot = path.resolve(adapterDir, "..", "..", "..");
+  for (;;) {
     const candidate = path.join(current, "assets", "adapters");
     if (fs.existsSync(candidate)) {
       dirs.push(candidate);
     }
     const parent = path.dirname(current);
-    if (parent === current || parent === root) break;
+    if (current === skillTreeRoot || parent === current) break;
     current = parent;
   }
-  // Also include the adapter's own directory as last resort
-  if (!dirs.includes(adapterDir)) {
-    dirs.push(adapterDir);
+
+  const bundledAdaptersDir = path.resolve(__dirname, "..", "..", "assets", "adapters");
+  if (fs.existsSync(bundledAdaptersDir) && !dirs.includes(bundledAdaptersDir)) {
+    dirs.push(bundledAdaptersDir);
   }
   return dirs;
 }
