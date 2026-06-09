@@ -371,13 +371,7 @@ flow_stack:
       default:
         skill: "mock-research-skill"
         reason: "External research for discovery"
-    - slot_id: "validate_check"
-      slot_type: "layerable"
-      activation: "conditional"
-      default:
-        skill: "mock-review-skill"
-        reason: "Accuracy verification"
-    - slot_id: "document_output"
+    - slot_id: "spec_output"
       slot_type: "layerable"
       activation: "always"
       default:
@@ -404,13 +398,6 @@ classification:
         capabilities: []
         tags: ["research", "investigation"]
         description_patterns: ["investigate", "evidence"]
-    - id: "validate"
-      label: "Validate"
-      description: "Skills that verify accuracy"
-      match:
-        capabilities: ["code_review"]
-        tags: ["review", "quality"]
-        description_patterns: ["review", "quality"]
     - id: "uncategorized"
       label: "Uncategorized"
       description: "Fallback"
@@ -748,7 +735,7 @@ test("integration: briefing-flow adapter generates valid profile", () => {
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   assert.equal(profile.schema_version, "1.0");
   assert.equal(profile.adapter_id, "briefing-flow-test");
-  assert.ok(profile.flow_stack.slots.length >= 3);
+  assert.ok(profile.flow_stack.slots.length >= 2);
   assert.ok(profile.classification.categories.length > 0);
 });
 

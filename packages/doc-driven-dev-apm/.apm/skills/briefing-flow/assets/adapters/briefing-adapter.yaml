@@ -11,21 +11,15 @@ flow_stack:
       slot_type: "layerable"
       activation: "conditional"
       default:
-        skill: "idea-refine"
-        reason: "Problem/option framing for A-1/A-2 paths"
+        skill: "deep-dive"
+        reason: "Codebase-aware interrogation for ambiguous requests"
     - slot_id: "discover_gather"
       slot_type: "layerable"
       activation: "conditional"
       default:
         skill: "steer-web-research"
         reason: "External research for A-5 paths"
-    - slot_id: "validate_check"
-      slot_type: "layerable"
-      activation: "conditional"
-      default:
-        skill: "doubt-driven-development"
-        reason: "Accuracy verification for gathered information"
-    - slot_id: "document_output"
+    - slot_id: "spec_output"
       slot_type: "layerable"
       activation: "always"
       default:
@@ -59,18 +53,11 @@ classification:
         description_patterns: ["explore", "search", "find", "gather", "web research"]
     - id: "research"
       label: "Research"
-      description: "Skills that conduct deep-dive investigation"
+      description: "Skills that conduct external web research"
       match:
-        capabilities: ["source_verification", "deep_research"]
-        tags: ["research", "investigation"]
-        description_patterns: ["investigate", "reference", "evidence", "primary source"]
-    - id: "validate"
-      label: "Validate"
-      description: "Skills that verify accuracy and completeness"
-      match:
-        capabilities: ["adversarial_review", "assumption_checking"]
-        tags: ["validate", "verify", "adversarial"]
-        description_patterns: ["verify", "validat", "adversarial", "assumption"]
+        capabilities: ["web_research", "information_gathering"]
+        tags: ["research", "search", "explore", "web"]
+        description_patterns: ["explore", "search", "find", "gather", "web research"]
     - id: "document"
       label: "Document"
       description: "Skills that produce formal documents"
