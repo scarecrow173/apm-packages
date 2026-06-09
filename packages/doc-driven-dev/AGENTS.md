@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file is a practical guide for AI agents modifying `packages/doc-driven-dev-apm`.
+This file is a practical guide for AI agents modifying `packages/doc-driven-dev`.
 
 ## 1. Purpose and Scope
 

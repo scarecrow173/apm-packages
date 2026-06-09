@@ -16,7 +16,7 @@ Validation Report は `sdp validate` の出力として、成果物の品質状�
 {
   "schema_version": "1.0",
   "generated_at": "2026-05-28T00:00:00Z",
-  "repository": "doc-driven-dev-apm",
+  "repository": "doc-driven-dev",
   "adapter_id": "briefing-flow-default",
   "schema_validation": {
     "result": "pass",
@@ -181,3 +181,4 @@ overall_result = schema_validation.result == "pass"
 - **未使用 slot/override**: 警告記録のみ（`profile_validation.unused_override_warnings`）
 - **blocking_validations の fail**: `overall_result` を fail にする
 - 非 blocking な問題は警告として記録するが、`overall_result` には影響しない
+

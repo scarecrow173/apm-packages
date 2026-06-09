@@ -11,11 +11,12 @@ targets:
 - agent-skills
 dependencies:
   apm:
+  - ./packages/steer-enterprise-web-research
+  - ./packages/doc-driven-dev
   - microsoft/apm/packages/apm-guide
   - github/awesome-copilot/skills/git-commit
   - github/awesome-copilot/skills/agentic-eval
   - addyosmani/agent-skills
-  - ./packages/steer-enterprise-web-research-apm
   - softaworks/agent-toolkit/skills/skill-judge
   - obra/superpowers
   mcp:
@@ -42,10 +43,10 @@ marketplace:
     subdir: packages/apm-guide
     ref: main
   - name: steer-enterprise-web-research
-    source: ./packages/steer-enterprise-web-research-apm
+    source: ./packages/steer-enterprise-web-research
     version: 0.1.0
   - name: doc-driven-dev
-    source: ./packages/doc-driven-dev-apm
+    source: ./packages/doc-driven-dev
     version: 0.1.0
   - name: doublecheck
     source: github/awesome-copilot

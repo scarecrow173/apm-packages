@@ -67,7 +67,7 @@ spec と ADR は**並列トラック**を形成します。同じ上流 discover
 この monorepo から:
 
 ```bash
-apm install ./packages/doc-driven-dev-apm --target codex
+apm install ./packages/doc-driven-dev --target codex
 ```
 
 公開後に利用側リポジトリから:

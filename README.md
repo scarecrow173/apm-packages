@@ -26,14 +26,14 @@ This is a **monorepo-hybrid** layout:
 ```text
 apm.yml                                  # marketplace index
 packages/
-  doc-driven-dev-apm/
+  doc-driven-dev/
     apm.yml                              # package manifest
     .apm/
       skills/
         adr-doc/
     README.md
     README.ja.md
-  steer-enterprise-web-research-apm/
+  steer-enterprise-web-research/
     apm.yml                              # package manifest
     .apm/
       agents/

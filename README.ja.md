@@ -26,7 +26,7 @@ apm install ./apm-packages
 ```text
 apm.yml                                  # marketplace index
 packages/
-  steer-enterprise-web-research-apm/
+  steer-enterprise-web-research/
     apm.yml                              # package manifest
     .apm/
       agents/

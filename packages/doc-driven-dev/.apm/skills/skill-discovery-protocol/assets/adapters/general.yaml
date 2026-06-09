@@ -17,7 +17,7 @@ enabled: true
 
 metadata:
   description: "Base adapter aggregating all harness scan roots"
-  owner: "doc-driven-dev-apm"
+  owner: "doc-driven-dev"
 
 scan:
   scopes:
@@ -104,3 +104,4 @@ readable_outputs:
   enabled: true
   include:
     - "skill_reference_catalog"
+
