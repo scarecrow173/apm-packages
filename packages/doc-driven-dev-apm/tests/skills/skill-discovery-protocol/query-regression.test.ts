@@ -45,7 +45,10 @@ function setupEnv(dir: string) {
           slot_id: "build_structure",
           slot_type: "layerable",
           activation: "always",
-          default: { skill: "impl-skill", reason: "Incremental delivery" },
+          default: [
+            { skill: "impl-skill", reason: "Incremental delivery" },
+            { skill: "review-skill", reason: "Post-implementation review" },
+          ],
         },
         {
           slot_id: "review_gate",

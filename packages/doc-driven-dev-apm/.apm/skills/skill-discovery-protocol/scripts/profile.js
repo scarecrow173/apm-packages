@@ -3311,7 +3311,7 @@ var require_profile = __commonJS({
         slot_id: s.slot_id,
         slot_type: s.slot_type,
         activation: s.activation,
-        ...s.default ? { default: { skill: s.default.skill, reason: s.default.reason } } : {}
+        ...s.default ? { default: s.default } : {}
       }));
       const runtimeGuidance = [];
       for (const skill of skills) {

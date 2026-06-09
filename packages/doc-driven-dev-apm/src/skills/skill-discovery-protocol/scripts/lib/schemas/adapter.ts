@@ -10,17 +10,26 @@ const AdapterScopeSchema = z.object({
   roots: z.array(z.string()),
 });
 
-const AdapterSlotSchema = z.object({
-  slot_id: snakeCase,
-  slot_type: z.enum(["exclusive", "layerable"]),
-  activation: z.enum(["always", "conditional", "on_demand", "gate"]),
-  default: z
-    .object({
-      skill: z.string().optional(),
-      reason: z.string().optional(),
-    })
-    .optional(),
+const DefaultEntrySchema = z.object({
+  skill: z.string(),
+  reason: z.string().optional(),
 });
+
+const ExclusiveAdapterSlotSchema = z.object({
+  slot_id: snakeCase,
+  slot_type: z.literal("exclusive"),
+  activation: z.enum(["always", "conditional", "on_demand", "gate"]),
+  default: DefaultEntrySchema.optional(),
+});
+
+const LayerableAdapterSlotSchema = z.object({
+  slot_id: snakeCase,
+  slot_type: z.literal("layerable"),
+  activation: z.enum(["always", "conditional", "on_demand", "gate"]),
+  default: z.array(DefaultEntrySchema).min(1).optional(),
+});
+
+const AdapterSlotSchema = z.discriminatedUnion("slot_type", [ExclusiveAdapterSlotSchema, LayerableAdapterSlotSchema]);
 
 const TaxonomyEntrySchema = z.object({
   id: snakeCase,

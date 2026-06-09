@@ -21733,7 +21733,7 @@ var init_zod = __esm({
 });
 
 // src/skills/skill-discovery-protocol/scripts/lib/schemas/adapter.ts
-var snakeCase, identifier, AdapterScopeSchema, AdapterSlotSchema, TaxonomyEntrySchema, AdapterConfigSchema;
+var snakeCase, identifier, AdapterScopeSchema, DefaultEntrySchema, ExclusiveAdapterSlotSchema, LayerableAdapterSlotSchema, AdapterSlotSchema, TaxonomyEntrySchema, AdapterConfigSchema;
 var init_adapter = __esm({
   "src/skills/skill-discovery-protocol/scripts/lib/schemas/adapter.ts"() {
     "use strict";
@@ -21744,15 +21744,23 @@ var init_adapter = __esm({
       enabled: external_exports.boolean().optional(),
       roots: external_exports.array(external_exports.string())
     });
-    AdapterSlotSchema = external_exports.object({
-      slot_id: snakeCase,
-      slot_type: external_exports.enum(["exclusive", "layerable"]),
-      activation: external_exports.enum(["always", "conditional", "on_demand", "gate"]),
-      default: external_exports.object({
-        skill: external_exports.string().optional(),
-        reason: external_exports.string().optional()
-      }).optional()
+    DefaultEntrySchema = external_exports.object({
+      skill: external_exports.string(),
+      reason: external_exports.string().optional()
     });
+    ExclusiveAdapterSlotSchema = external_exports.object({
+      slot_id: snakeCase,
+      slot_type: external_exports.literal("exclusive"),
+      activation: external_exports.enum(["always", "conditional", "on_demand", "gate"]),
+      default: DefaultEntrySchema.optional()
+    });
+    LayerableAdapterSlotSchema = external_exports.object({
+      slot_id: snakeCase,
+      slot_type: external_exports.literal("layerable"),
+      activation: external_exports.enum(["always", "conditional", "on_demand", "gate"]),
+      default: external_exports.array(DefaultEntrySchema).min(1).optional()
+    });
+    AdapterSlotSchema = external_exports.discriminatedUnion("slot_type", [ExclusiveAdapterSlotSchema, LayerableAdapterSlotSchema]);
     TaxonomyEntrySchema = external_exports.object({
       id: snakeCase,
       label: external_exports.string(),
@@ -21905,21 +21913,32 @@ var init_catalog = __esm({
 });
 
 // src/skills/skill-discovery-protocol/scripts/lib/schemas/profile.ts
-var snakeCase2, FlowStackSlotSchema, CategorySchema, RuntimeGuidanceSchema2, ResolvedInvocationSchema, FlowProfileSchema;
+var snakeCase2, DefaultEntrySchema2, ExclusiveFlowStackSlotSchema, LayerableFlowStackSlotSchema, FlowStackSlotSchema, CategorySchema, RuntimeGuidanceSchema2, ResolvedInvocationSchema, FlowProfileSchema;
 var init_profile = __esm({
   "src/skills/skill-discovery-protocol/scripts/lib/schemas/profile.ts"() {
     "use strict";
     init_zod();
     snakeCase2 = external_exports.string().regex(/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/, "must be snake_case");
-    FlowStackSlotSchema = external_exports.object({
-      slot_id: snakeCase2,
-      slot_type: external_exports.enum(["exclusive", "layerable"]),
-      activation: external_exports.enum(["always", "conditional", "on_demand", "gate"]),
-      default: external_exports.object({
-        skill: external_exports.string(),
-        reason: external_exports.string().optional()
-      }).optional()
+    DefaultEntrySchema2 = external_exports.object({
+      skill: external_exports.string(),
+      reason: external_exports.string().optional()
     });
+    ExclusiveFlowStackSlotSchema = external_exports.object({
+      slot_id: snakeCase2,
+      slot_type: external_exports.literal("exclusive"),
+      activation: external_exports.enum(["always", "conditional", "on_demand", "gate"]),
+      default: DefaultEntrySchema2.optional()
+    });
+    LayerableFlowStackSlotSchema = external_exports.object({
+      slot_id: snakeCase2,
+      slot_type: external_exports.literal("layerable"),
+      activation: external_exports.enum(["always", "conditional", "on_demand", "gate"]),
+      default: external_exports.array(DefaultEntrySchema2).min(1).optional()
+    });
+    FlowStackSlotSchema = external_exports.discriminatedUnion("slot_type", [
+      ExclusiveFlowStackSlotSchema,
+      LayerableFlowStackSlotSchema
+    ]);
     CategorySchema = external_exports.object({
       id: snakeCase2,
       label: external_exports.string(),
@@ -22375,7 +22394,7 @@ var require_profile = __commonJS({
         slot_id: s.slot_id,
         slot_type: s.slot_type,
         activation: s.activation,
-        ...s.default ? { default: { skill: s.default.skill, reason: s.default.reason } } : {}
+        ...s.default ? { default: s.default } : {}
       }));
       const runtimeGuidance = [];
       for (const skill of skills) {

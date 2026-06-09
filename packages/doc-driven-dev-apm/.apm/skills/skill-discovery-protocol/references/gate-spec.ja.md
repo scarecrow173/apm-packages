@@ -93,7 +93,7 @@ overall_result = schema ∧ staleness ∧ deterministic ∧ blocking
 | スコープ整合性 | `scan.scopes` | `enabled: true` のスコープは `roots` が非空（マージ後） |
 | Readable outputs 整合性 | `readable_outputs.include` | すべてのエントリが `artifacts.protocol` に存在する |
 | Unmatched ポリシー妥当性 | `classification.unmatched` | 矛盾する組み合わせなし |
-| Default 排他性 | `flow_stack.slots[].default` | `skill` と `capability` の同時指定なし |
+| Default 排他性 | `flow_stack.slots[].default` | `skill` と `capability` の同時指定なし。`layerable` は順序付きの default entry 配列を使う |
 
 ### `snake_case` 強制の詳細
 

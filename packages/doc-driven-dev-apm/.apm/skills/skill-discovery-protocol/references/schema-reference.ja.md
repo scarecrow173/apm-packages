@@ -81,7 +81,7 @@ Flow Profile の `resolved_invocations` 配列は次の手順で生成される:
 
 1. `slot_override` - adapter 内の明示的 slot override
 2. `capability_override` - adapter 内の明示的 capability override
-3. `default_skill` - `flow_stack.slots[].default` からのデフォルト
+3. `default_skill` - `flow_stack.slots[].default` からのデフォルト（`exclusive` は単一 entry、`layerable` は順序付き配列）
 4. `provider_lookup` - 必要な capability を `provides` する skill
 
 ### 2.3 Override 検証

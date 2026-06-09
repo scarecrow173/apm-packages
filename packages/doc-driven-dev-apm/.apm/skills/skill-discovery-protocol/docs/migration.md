@@ -60,7 +60,8 @@ Each entry requires `id`, `label`, `description`, and `match` rules.
 ### Step 4: Define Flow Stack Slots
 
 Configure `flow_stack.slots` for the flow's default skill assignments.
-Each slot specifies `slot_id`, `slot_type`, `activation`, and optional `default.skill`.
+Each slot specifies `slot_id`, `slot_type`, `activation`, and an optional `default` shape.
+`exclusive` slots use a single `{ skill, reason? }` entry, while `layerable` slots use an ordered array of `{ skill, reason? }` entries.
 
 ### Step 5: Generate Artifacts
 

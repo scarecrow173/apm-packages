@@ -94,7 +94,7 @@ Validates structural correctness of artifacts and adapter configuration.
 | Scope integrity | `scan.scopes` | `enabled: true` scopes have non-empty `roots` (post-merge) |
 | Readable outputs integrity | `readable_outputs.include` | All entries exist in `artifacts.protocol` |
 | Unmatched policy validity | `classification.unmatched` | No contradictory combinations |
-| Default exclusivity | `flow_stack.slots[].default` | `skill` and `capability` not both set |
+| Default exclusivity | `flow_stack.slots[].default` | `skill` and `capability` not both set; `layerable` uses an ordered array of default entries |
 
 ### `snake_case` Enforcement Detail
 

@@ -11,26 +11,26 @@ flow_stack:
       slot_type: "layerable"
       activation: "conditional"
       default:
-        skill: "deep-dive"
-        reason: "Codebase-aware interrogation for ambiguous requests"
+        - skill: "deep-dive"
+          reason: "Codebase-aware interrogation for ambiguous requests"
     - slot_id: "discover_gather"
       slot_type: "layerable"
       activation: "conditional"
       default:
-        skill: "steer-web-research"
-        reason: "External research for A-5 paths"
+        - skill: "steer-web-research"
+          reason: "External research for A-5 paths"
     - slot_id: "spec_output"
       slot_type: "layerable"
       activation: "always"
       default:
-        skill: "spec-doc"
-        reason: "All briefings produce spec-doc output"
+        - skill: "spec-doc"
+          reason: "All briefings produce spec-doc output"
     - slot_id: "adr_output"
       slot_type: "layerable"
       activation: "always"
       default:
-        skill: "adr-doc"
-        reason: "All briefings produce adr-doc output"
+        - skill: "adr-doc"
+          reason: "All briefings produce adr-doc output"
 classification:
   unmatched:
     action: "assign"
