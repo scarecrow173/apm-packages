@@ -1,6 +1,6 @@
 # AGENTS.ja.md
 
-このファイルは、`packages/doc-driven-dev-apm` を変更する AI エージェント向けの実務ガイドです。
+このファイルは、`packages/doc-driven-dev` を変更する AI エージェント向けの実務ガイドです。
 
 ## 1. 目的と前提
 

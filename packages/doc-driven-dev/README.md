@@ -66,7 +66,7 @@ upstream discovery artifact, addressing complementary concerns:
 From this monorepo:
 
 ```bash
-apm install ./packages/doc-driven-dev-apm --target codex
+apm install ./packages/doc-driven-dev --target codex
 ```
 
 From a consumer repository after publication:

@@ -1,5 +1,5 @@
 {
-  "name": "doc-driven-dev-apm",
+  "name": "doc-driven-dev",
   "version": "0.1.0",
   "description": "Document-driven development APM package with idea refinement, brainstorming, ADR, spec, design, plan, task, implementation record, and status skills.",
   "scripts": {
