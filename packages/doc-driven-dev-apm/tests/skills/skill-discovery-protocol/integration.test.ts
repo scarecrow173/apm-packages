@@ -239,8 +239,10 @@ flow_stack:
       slot_type: "layerable"
       activation: "always"
       default:
-        skill: "mock-impl-skill"
-        reason: "All implementation uses incremental delivery"
+        - skill: "mock-impl-skill"
+          reason: "All implementation uses incremental delivery"
+        - skill: "mock-review-skill"
+          reason: "Implementation should remain reviewable"
     - slot_id: "review_gate"
       slot_type: "exclusive"
       activation: "always"
@@ -369,20 +371,14 @@ flow_stack:
       slot_type: "layerable"
       activation: "conditional"
       default:
-        skill: "mock-research-skill"
-        reason: "External research for discovery"
-    - slot_id: "validate_check"
-      slot_type: "layerable"
-      activation: "conditional"
-      default:
-        skill: "mock-review-skill"
-        reason: "Accuracy verification"
-    - slot_id: "document_output"
+        - skill: "mock-research-skill"
+          reason: "External research for discovery"
+    - slot_id: "spec_output"
       slot_type: "layerable"
       activation: "always"
       default:
-        skill: "mock-impl-skill"
-        reason: "All briefings produce output"
+        - skill: "mock-impl-skill"
+          reason: "All briefings produce output"
 
 classification:
   unmatched:
@@ -404,13 +400,6 @@ classification:
         capabilities: []
         tags: ["research", "investigation"]
         description_patterns: ["investigate", "evidence"]
-    - id: "validate"
-      label: "Validate"
-      description: "Skills that verify accuracy"
-      match:
-        capabilities: ["code_review"]
-        tags: ["review", "quality"]
-        description_patterns: ["review", "quality"]
     - id: "uncategorized"
       label: "Uncategorized"
       description: "Fallback"
@@ -670,6 +659,10 @@ test("integration: impl-flow adapter generates valid profile", () => {
   assert.equal(profile.schema_version, "1.0");
   assert.equal(profile.adapter_id, "impl-flow-test");
   assert.ok(profile.flow_stack.slots.length >= 3);
+  assert.deepEqual(profile.flow_stack.slots[1].default, [
+    { skill: "mock-impl-skill", reason: "All implementation uses incremental delivery" },
+    { skill: "mock-review-skill", reason: "Implementation should remain reviewable" },
+  ]);
   assert.ok(profile.classification.categories.length > 0);
   assert.ok(profile.resolved_invocations.length > 0);
   assert.ok(Array.isArray(profile.runtime_guidance));
@@ -748,7 +741,10 @@ test("integration: briefing-flow adapter generates valid profile", () => {
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   assert.equal(profile.schema_version, "1.0");
   assert.equal(profile.adapter_id, "briefing-flow-test");
-  assert.ok(profile.flow_stack.slots.length >= 3);
+  assert.ok(profile.flow_stack.slots.length >= 2);
+  assert.deepEqual(profile.flow_stack.slots[0].default, [
+    { skill: "mock-research-skill", reason: "External research for discovery" },
+  ]);
   assert.ok(profile.classification.categories.length > 0);
 });
 

@@ -51,7 +51,10 @@ function setupQueryEnv(dir: string) {
           slot_id: "code_review",
           slot_type: "layerable",
           activation: "always",
-          default: { skill: "skill-b", reason: "Default reviewer" },
+          default: [
+            { skill: "skill-b", reason: "Default reviewer" },
+            { skill: "skill-c", reason: "Secondary reviewer" },
+          ],
         },
       ],
     },

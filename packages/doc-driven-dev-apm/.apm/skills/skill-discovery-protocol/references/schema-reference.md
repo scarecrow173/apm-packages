@@ -82,7 +82,7 @@ The `resolution_order` array defines precedence (first match wins):
 
 1. `slot_override` — Explicit slot override in adapter
 2. `capability_override` — Explicit capability override in adapter
-3. `default_skill` — Default from `flow_stack.slots[].default`
+3. `default_skill` — Default from `flow_stack.slots[].default` (single entry for `exclusive`, ordered array for `layerable`)
 4. `provider_lookup` — Skill that `provides` the required capability
 
 ### 2.3 Override Validation

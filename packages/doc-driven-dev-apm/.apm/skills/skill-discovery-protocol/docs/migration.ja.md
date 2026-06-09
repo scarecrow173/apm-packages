@@ -60,7 +60,8 @@ Skill Discovery Protocol (SDP) は、各フロースキルに埋め込まれて�
 ### ステップ 4: フロースタックスロットを定義
 
 `flow_stack.slots` にフローのデフォルトスキル割り当てを設定します。
-各スロットには `slot_id`, `slot_type`, `activation`、必要に応じて `default.skill` を指定します。
+各スロットには `slot_id`, `slot_type`, `activation`、必要に応じて `default` を指定します。
+`exclusive` は `{ skill, reason? }` の単一 entry、`layerable` は `{ skill, reason? }` の順序付き配列を使います。
 
 ### ステップ 5: 成果物を生成
 

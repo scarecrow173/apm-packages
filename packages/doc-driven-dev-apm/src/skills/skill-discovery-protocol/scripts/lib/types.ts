@@ -7,14 +7,26 @@ export type AdapterScope = {
   roots: string[];
 };
 
-export type AdapterSlot = {
+export type SlotDefaultEntry = {
+  skill: string;
+  reason?: string;
+};
+
+export type ExclusiveAdapterSlot = {
   slot_id: string;
-  slot_type: "exclusive" | "layerable";
+  slot_type: "exclusive";
   activation: "always" | "conditional" | "on_demand" | "gate";
-  default?: {
-    skill?: string;
-    reason?: string;
-  };
+  default?: SlotDefaultEntry;
+};
+
+export type LayerableAdapterSlot = {
+  slot_id: string;
+  slot_type: "layerable";
+  activation: "always" | "conditional" | "on_demand" | "gate";
+  default?: SlotDefaultEntry[];
+};
+
+export type AdapterSlot = ExclusiveAdapterSlot | LayerableAdapterSlot;
 };
 
 export type TaxonomyEntry = {
@@ -153,7 +165,7 @@ export type FlowStackSlot = {
   slot_id: string;
   slot_type: "exclusive" | "layerable";
   activation: "always" | "conditional" | "on_demand" | "gate";
-  default?: { skill: string; reason?: string };
+  default?: SlotDefaultEntry | SlotDefaultEntry[];
 };
 
 export type Category = {

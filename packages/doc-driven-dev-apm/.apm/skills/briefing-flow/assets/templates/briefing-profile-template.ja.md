@@ -19,9 +19,8 @@ repository: "<repository-name>"
 | spec-doc | Document | .apm/skills/ | always-on | rigid | — |
 | adr-doc | Document | .apm/skills/ | always-on | rigid | — |
 | idea-refine | Frame | .apm/skills/ | conditional | flexible | Entry Decision = A-1 |
+| deep-dive | Frame | .apm/skills/ | conditional | flexible | 曖昧な要求を深掘りする必要がある |
 | brainstorming | Frame | .apm/skills/ | conditional | flexible | Entry Decision = A-1 or A-2 |
-| doubt-driven-development | Validate | .apm/skills/ | conditional | flexible | 非自明な代替案を伴う重要な判断 |
-| source-driven-development | Research | .apm/skills/ | conditional | flexible | フレームワーク / ライブラリの利用 |
 | <!-- Add discovered skills below --> | | | | | |
 
 ## Category Assignments
@@ -31,6 +30,7 @@ repository: "<repository-name>"
 問題や選択肢を構造化するスキル。
 
 - idea-refine — 問題を diverge / converge して構造化する
+- deep-dive — 意図、制約、判断軸を深掘りする
 - brainstorming — インタラクティブに選択肢を整理する
 - <!-- 例: interview-me — 質問を通じて意図を引き出す -->
 
@@ -45,15 +45,8 @@ repository: "<repository-name>"
 
 深掘り調査を行うスキル。
 
-- source-driven-development — 公式ドキュメントに対する検証
+- <!-- 例: steer-web-research — 体系的な外部調査 -->
 - <!-- 例: ドメイン固有の調査スキル -->
-
-### Validate
-
-情報の正確性と完全性を検証するスキル。
-
-- doubt-driven-development — 前提を検証するための adversarial 分析
-- <!-- 例: セキュリティ検証スキル -->
 
 ### Document
 
@@ -82,13 +75,13 @@ repository: "<repository-name>"
 
 | Condition | Action | Reason |
 | --------- | ------ | ------ |
-| Entry Decision = A-1 (Problem Framing) | Add: idea-refine | 問題定義が曖昧で、構造化が必要 |
+| Entry Decision = A-1 (Problem Framing) | Add: deep-dive | 問題定義が曖昧で、深掘りが必要 |
 | Entry Decision = A-2 (Option Framing) | Add: brainstorming | トレードオフ分析が必要 |
 | Entry Decision = A-3 (Combined Discovery) | Add: evaluate all conditional skills | 複数ソースからの収束が必要 |
 | Entry Decision = A-5 (Research Required) | Add: Discover + Research categories | 外部調査が必要 |
-| External API/library involved | Add: source-driven-development | 公式ドキュメントに照らして検証する |
-| Multiple implementation approaches exist | Add: brainstorming + doubt-driven-development | 選択肢の整理と検証が必要 |
-| Unprecedented architectural decision | Add: Research + Validate categories | 証拠収集と前提検証が必要 |
+| External API/library involved | Add: Research category | 公式ドキュメントに照らして検証する |
+| Multiple implementation approaches exist | Add: brainstorming | 選択肢の整理が必要 |
+| Unprecedented architectural decision | Add: Research category | 証拠収集と前提検証が必要 |
 | <!-- Add repository-specific overrides --> | | |
 
 ## Information State Indicators

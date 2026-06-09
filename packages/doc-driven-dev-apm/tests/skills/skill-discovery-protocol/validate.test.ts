@@ -141,6 +141,14 @@ flow_stack:
       default:
         skill: "skill-a"
         reason: "Primary ADR skill"
+    - slot_id: "build_structure"
+      slot_type: "layerable"
+      activation: "always"
+      default:
+        - skill: "skill-b"
+          reason: "Default reviewer"
+        - skill: "skill-a"
+          reason: "Fallback author"
 
 classification:
   unmatched:
@@ -701,7 +709,7 @@ test("validate catalog_validation counts are correct", () => {
   );
 
   assert.equal(report.catalog_validation.skill_count, 2);
-  assert.equal(report.profile_validation.flow_stack_slot_count, 1);
+  assert.equal(report.profile_validation.flow_stack_slot_count, 2);
   // skill-a provides adr_authoring, skill-b provides code_review = 2 capabilities
   assert.equal(report.catalog_validation.capability_count, 2);
 });

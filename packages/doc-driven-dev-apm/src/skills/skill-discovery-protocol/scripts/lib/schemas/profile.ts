@@ -4,17 +4,29 @@ import { z } from "zod";
 
 const snakeCase = z.string().regex(/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/, "must be snake_case");
 
-const FlowStackSlotSchema = z.object({
-  slot_id: snakeCase,
-  slot_type: z.enum(["exclusive", "layerable"]),
-  activation: z.enum(["always", "conditional", "on_demand", "gate"]),
-  default: z
-    .object({
-      skill: z.string(),
-      reason: z.string().optional(),
-    })
-    .optional(),
+const DefaultEntrySchema = z.object({
+  skill: z.string(),
+  reason: z.string().optional(),
 });
+
+const ExclusiveFlowStackSlotSchema = z.object({
+  slot_id: snakeCase,
+  slot_type: z.literal("exclusive"),
+  activation: z.enum(["always", "conditional", "on_demand", "gate"]),
+  default: DefaultEntrySchema.optional(),
+});
+
+const LayerableFlowStackSlotSchema = z.object({
+  slot_id: snakeCase,
+  slot_type: z.literal("layerable"),
+  activation: z.enum(["always", "conditional", "on_demand", "gate"]),
+  default: z.array(DefaultEntrySchema).min(1).optional(),
+});
+
+const FlowStackSlotSchema = z.discriminatedUnion("slot_type", [
+  ExclusiveFlowStackSlotSchema,
+  LayerableFlowStackSlotSchema,
+]);
 
 const CategorySchema = z.object({
   id: snakeCase,

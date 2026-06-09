@@ -23,50 +23,98 @@
         "slots": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "slot_id": {
-                "type": "string",
-                "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
-              },
-              "slot_type": {
-                "type": "string",
-                "enum": [
-                  "exclusive",
-                  "layerable"
-                ]
-              },
-              "activation": {
-                "type": "string",
-                "enum": [
-                  "always",
-                  "conditional",
-                  "on_demand",
-                  "gate"
-                ]
-              },
-              "default": {
+            "oneOf": [
+              {
                 "type": "object",
                 "properties": {
-                  "skill": {
-                    "type": "string"
+                  "slot_id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
                   },
-                  "reason": {
-                    "type": "string"
+                  "slot_type": {
+                    "type": "string",
+                    "const": "exclusive"
+                  },
+                  "activation": {
+                    "type": "string",
+                    "enum": [
+                      "always",
+                      "conditional",
+                      "on_demand",
+                      "gate"
+                    ]
+                  },
+                  "default": {
+                    "type": "object",
+                    "properties": {
+                      "skill": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "skill"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
-                  "skill"
+                  "slot_id",
+                  "slot_type",
+                  "activation"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "slot_id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+                  },
+                  "slot_type": {
+                    "type": "string",
+                    "const": "layerable"
+                  },
+                  "activation": {
+                    "type": "string",
+                    "enum": [
+                      "always",
+                      "conditional",
+                      "on_demand",
+                      "gate"
+                    ]
+                  },
+                  "default": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "skill": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "skill"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "slot_id",
+                  "slot_type",
+                  "activation"
                 ],
                 "additionalProperties": false
               }
-            },
-            "required": [
-              "slot_id",
-              "slot_type",
-              "activation"
-            ],
-            "additionalProperties": false
+            ]
           }
         }
       },

@@ -162,7 +162,7 @@ ACTIVE SKILL STACK FOR THIS TASK:
 - **Domain**: `typescript-conventions`, `react-patterns`
 - **Verify**: `source-driven-development`, `doubt-driven-development`
 - **Tooling**: `git-commit`, `ci-cd-automation`
-- **Review**: `code-review-and-quality`
+- **Review**: `requesting-code-review`, `receiving-code-review`
 
 For detailed category definitions, see the adapter's `classification.taxonomy` in `assets/adapters/implementation-adapter.yaml`.
 
@@ -177,7 +177,7 @@ Apply each skill in the active stack according to its priority:
    - **Rigid skills**: Follow exactly; do not skip or reorder steps.
      Example: `git-commit` (conventional commit format must be followed)
    - **Flexible skills**: Apply the spirit; adapt to context.
-     Example: `code-review-and-quality` (review dimensions can be prioritized per task)
+   Example: `requesting-code-review` (review checklist can be prioritized per task)
 
    Use `skill-discovery-protocol` to inspect `execution-policy` for the skill in the generated profile.
 3. Skills layer — they are not exclusive. Multiple skills apply simultaneously.

@@ -21,9 +21,8 @@ soft ranking metadata that is read after `execution_policy` checks.
 | spec-doc | Document | .apm/skills/ | always-on | rigid | — |
 | adr-doc | Document | .apm/skills/ | always-on | rigid | — |
 | idea-refine | Frame | .apm/skills/ | conditional | flexible | Entry Decision = A-1 |
+| deep-dive | Frame | .apm/skills/ | conditional | flexible | Underspecified request requiring deeper interrogation |
 | brainstorming | Frame | .apm/skills/ | conditional | flexible | Entry Decision = A-1 or A-2 |
-| doubt-driven-development | Validate | .apm/skills/ | conditional | flexible | Non-trivial decision with alternatives |
-| source-driven-development | Research | .apm/skills/ | conditional | flexible | Framework/library usage |
 | <!-- Add discovered skills below --> | | | | | |
 
 ## Category Assignments
@@ -33,6 +32,7 @@ soft ranking metadata that is read after `execution_policy` checks.
 Skills that structure problems and options.
 
 - idea-refine — Diverge→converge to structure problems
+- deep-dive — Interrogate intent, constraints, and decision axes
 - brainstorming — Interactive option organization
 - <!-- e.g., interview-me — Elicit intent through questions -->
 
@@ -47,15 +47,8 @@ Skills that explore and find information.
 
 Skills that conduct deep-dive investigation.
 
-- source-driven-development — Verification against official documentation
+- <!-- e.g., steer-web-research — Systematic external research -->
 - <!-- e.g., domain-specific research skills -->
-
-### Validate
-
-Skills that verify accuracy and completeness of information.
-
-- doubt-driven-development — Adversarial analysis to verify assumptions
-- <!-- e.g., security-focused verification skills -->
 
 ### Document
 
@@ -84,13 +77,13 @@ The base skill combination for standard briefings.
 
 | Condition | Action | Reason |
 | --------- | ------ | ------ |
-| Entry Decision = A-1 (Problem Framing) | Add: idea-refine | Problem definition is ambiguous, structuring needed |
+| Entry Decision = A-1 (Problem Framing) | Add: deep-dive | Problem definition is ambiguous, interrogation needed |
 | Entry Decision = A-2 (Option Framing) | Add: brainstorming | Trade-off analysis needed |
 | Entry Decision = A-3 (Combined Discovery) | Add: evaluate all conditional skills | Convergence from multiple sources needed |
 | Entry Decision = A-5 (Research Required) | Add: Discover + Research categories | External research needed |
-| External API/library involved | Add: source-driven-development | Verify against official documentation |
-| Multiple implementation approaches exist | Add: brainstorming + doubt-driven-development | Option structuring and verification needed |
-| Unprecedented architectural decision | Add: Research + Validate categories | Evidence gathering and assumption verification needed |
+| External API/library involved | Add: Research category | Verify against official documentation |
+| Multiple implementation approaches exist | Add: brainstorming | Option structuring needed |
+| Unprecedented architectural decision | Add: Research category | Evidence gathering and assumption verification needed |
 | <!-- Add repository-specific overrides --> | | |
 
 ## Information State Indicators

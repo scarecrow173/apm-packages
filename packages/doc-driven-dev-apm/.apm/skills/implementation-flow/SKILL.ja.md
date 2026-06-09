@@ -161,7 +161,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 - **Domain**: `typescript-conventions`, `react-patterns`
 - **Verify**: `source-driven-development`, `doubt-driven-development`
 - **Tooling**: `git-commit`, `ci-cd-automation`
-- **Review**: `code-review-and-quality`
+- **Review**: `requesting-code-review`, `receiving-code-review`
 
 詳細なカテゴリ定義はアダプターの `classification.taxonomy`（`assets/adapters/implementation-adapter.yaml`）を参照。
 
@@ -176,7 +176,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
    - **Rigid スキル**: 正確に従う; ステップを飛ばしたり順序を変えない。
      例: `git-commit`（Conventional Commit 形式は必ず守る）
    - **Flexible スキル**: 精神を適用; 文脈に合わせる。
-     例: `code-review-and-quality`（レビュー観点をタスクごとに優先度調整可）
+   例: `requesting-code-review`（レビュー観点をタスクごとに優先度調整可）
 
    生成済みプロファイルを `skill-discovery-protocol` で参照し、対象スキルの `execution-policy` と `runtime_guidance` を確認する。
 3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。

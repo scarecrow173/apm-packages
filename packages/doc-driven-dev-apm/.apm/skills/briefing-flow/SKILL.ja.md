@@ -131,8 +131,7 @@ Profile の生成と検証は `skill-discovery-protocol` スキルが担当す�
 | 1 | Frame | 情報収集の前に問題や選択肢を構造化する |
 | 2 | Discover | 外部情報を探索・発見する |
 | 3 | Research | 深い調査を行う |
-| 4 | Validate | 収集した情報の正確性と完全性を検証する |
-| 5 | Document | 整理された情報を正式文書にする |
+| 4 | Document | 整理された情報を正式文書にする |
 
 詳細なカテゴリ定義は、`assets/adapters/briefing-adapter.yaml` の `classification.taxonomy` を参照する。
 

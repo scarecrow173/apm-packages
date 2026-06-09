@@ -17,19 +17,21 @@ flow_stack:
       slot_type: "layerable"
       activation: "always"
       default:
-        skill: "incremental-implementation"
-        reason: "All implementation uses incremental delivery"
+        - skill: "incremental-implementation"
+          reason: "All implementation uses incremental delivery"
+        - skill: "test-driven-development"
+          reason: "Keep implementation test-led"
     - slot_id: "verification"
       slot_type: "layerable"
       activation: "conditional"
       default:
-        skill: "source-driven-development"
-        reason: "Framework/library work requires docs verification"
+        - skill: "source-driven-development"
+          reason: "Framework/library work requires docs verification"
     - slot_id: "review_gate"
       slot_type: "exclusive"
       activation: "always"
       default:
-        skill: "code-review-and-quality"
+        skill: "requesting-code-review"
         reason: "Every task requires review"
 classification:
   unmatched:
