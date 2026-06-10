@@ -21,3 +21,7 @@ packages/**/build/
 .pnpm-store/
 
 **/.sdp/
+
+
+# APM dependencies
+apm_modules/

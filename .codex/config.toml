@@ -1,17 +1,18 @@
 sandbox_mode = "workspace-write"
-[mcp_servers.mise]
-args = ["mcp"]
-command = "mise"
+
+[mcp_servers]
 
 [features]
 hooks = true
 
+[hooks]
 [[hooks.SessionStart]]
 matcher = "^startup$"
-
 [[hooks.SessionStart.hooks]]
 type = "command"
-command = 'bash "$(git rev-parse --show-toplevel)/.codex/codex-setup.sh"'
-command_windows = 'powershell -NoProfile -ExecutionPolicy Bypass -File "$((git rev-parse --show-toplevel))\.codex\codex-setup-windows.ps1"'
+command = "bash \"$(git rev-parse --show-toplevel)/.codex/codex-setup.sh\""
+command_windows = "powershell -NoProfile -ExecutionPolicy Bypass -File \"$((git rev-parse --show-toplevel))\\.codex\\codex-setup-windows.ps1\""
 timeout = 600
 statusMessage = "Setting up project environment"
+
+
