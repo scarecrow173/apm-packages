@@ -66,8 +66,13 @@ upstream discovery artifact, addressing complementary concerns:
 From this monorepo:
 
 ```bash
+pnpm clean
 apm install ./packages/doc-driven-dev --target codex
 ```
+
+`pnpm clean` removes local `node_modules` before installation. This prevents
+security scans in `apm install` from being blocked by transitive dependency test
+fixtures that are not part of the distributed APM package contents.
 
 From a consumer repository after publication:
 

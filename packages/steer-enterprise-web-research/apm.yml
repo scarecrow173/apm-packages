@@ -13,4 +13,4 @@ scripts:
   validate: "apm compile --validate"
   preview: "apm compile --dry-run"
   pack: "apm pack --archive -o dist"
-  audit-research: "python scripts/research_audit.py research"
+  audit-research: "node scripts/research_audit.js research"

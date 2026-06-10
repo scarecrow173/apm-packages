@@ -13,8 +13,13 @@ dependencies:
 またはローカル開発時：
 
 ```bash
-apm install ./apm-packages
+pnpm clean
+apm install .
 ```
+
+ローカルで `apm install` する前に `pnpm clean` を推奨します。
+依存パッケージのテストファイルに含まれる不可視 Unicode 文字による
+一時的なブロックを回避しやすくなります。
 
 ## リポジトリ構成
 
@@ -26,6 +31,12 @@ apm install ./apm-packages
 ```text
 apm.yml                                  # marketplace index
 packages/
+  doc-driven-dev/
+    apm.yml                              # package manifest
+    .apm/
+      skills/
+    README.md
+    README.ja.md
   steer-enterprise-web-research/
     apm.yml                              # package manifest
     .apm/

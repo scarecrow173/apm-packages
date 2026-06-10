@@ -267,7 +267,7 @@ function rankRuntimeGuidance(entries, skills = [], selectionContext = {}) {
 // src/skills/skill-discovery-protocol/scripts/lib/query/runtime_guidance.ts
 var handler8 = {
   name: "runtime-guidance",
-  description: "\u87B3\u6EAF\uFF61\u68A7\u51FE\u7E67\uFF6C\u7E67\uFF64\u7E5D\x80\u7E5D\uFF73\u7E67\uFF79",
+  description: "\u5B9F\u884C\u6642\u30AC\u30A4\u30C0\u30F3\u30B9",
   execute(ctx) {
     const guidance = rankRuntimeGuidance(
       ctx.profile.runtime_guidance,

@@ -89,6 +89,23 @@ Run iterative search, maintain an evidence ledger, audit the findings, and produ
 /steer-deep-research-ja
 ```
 
+## 監査スクリプト開発
+
+監査スクリプトのソースは以下に配置します。
+
+- `scripts/steer-enterprise-web-research/src/research_audit.ts`
+
+生成された build 成果物は以下に配置されます。
+
+- `packages/steer-enterprise-web-research/scripts/research_audit.js`
+
+隔離された scripts ワークスペースから build と test を実行します。
+
+```bash
+pnpm --dir scripts/steer-enterprise-web-research test
+pnpm --dir scripts/steer-enterprise-web-research build
+```
+
 ## 注意
 
 このパッケージ自体は検索 API を実装しません。Codex、GitHub Copilot、または MCP 対応エージェントが利用できる search、fetch、GitHub、academic、file、enterprise retrieval などのツールを使うよう指示するものです。

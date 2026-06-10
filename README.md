@@ -13,8 +13,13 @@ dependencies:
 Or from local development:
 
 ```bash
-apm install ./apm-packages
+pnpm clean
+apm install .
 ```
+
+`pnpm clean` is recommended before local `apm install` to remove transient
+`node_modules` trees that may contain hidden Unicode fixtures in third-party
+test files.
 
 ## Repository structure
 
@@ -30,7 +35,6 @@ packages/
     apm.yml                              # package manifest
     .apm/
       skills/
-        adr-doc/
     README.md
     README.ja.md
   steer-enterprise-web-research/

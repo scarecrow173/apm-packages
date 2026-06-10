@@ -1,0 +1,23 @@
+"use strict";
+
+import type { QueryContext, QueryHandler } from "./registry";
+import { register } from "./registry";
+import { rankRuntimeGuidance } from "../runtime_guidance_ranker";
+
+const handler: QueryHandler = {
+  name: "runtime-guidance",
+  description: "実行時ガイダンス",
+  execute(ctx: QueryContext): unknown {
+    const guidance = rankRuntimeGuidance(
+      ctx.profile.runtime_guidance,
+      ctx.catalog?.skills ?? [],
+    );
+    if (ctx.args.skill) {
+      return guidance.filter((g) => g.skill === ctx.args.skill);
+    }
+    return guidance;
+  },
+};
+
+register(handler);
+export default handler;
