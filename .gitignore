@@ -1,14 +1,13 @@
-packages/**/apm_modules/
-packages/**/node_modules/
-packages/**/dist/
+# shared ignore rules for package and script workspaces
+**/apm_modules/
+**/node_modules/
+**/dist/
+**/__pycache__/
+**/*.pyc
+
+# keep build ignores split because scripts/**/build is tracked source
 packages/**/build/
-packages/**/__pycache__/
-packages/**/*.pyc
-apm_modules/
-dist/
-build/
-__pycache__/
-*.pyc
+/build/
 
 # apm install generated deployment outputs (root consumer mode)
 /.agents/
@@ -21,4 +20,4 @@ __pycache__/
 
 .pnpm-store/
 
-**/.sdp/**
+**/.sdp/
