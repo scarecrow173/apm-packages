@@ -39,7 +39,7 @@ Commits between {BASE_SHA} and {HEAD_SHA}.
 
 **Assessment:** One of:
 - ✅ Approved — Ready to proceed
-- ⚠️ Approved with notes — Minor issues, can proceed
+- ⚠ Approved with notes — Minor issues, can proceed
 - ❌ Needs changes — Critical or important issues must be fixed first
 ```
 

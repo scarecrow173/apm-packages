@@ -9,13 +9,16 @@ targets:
 - cursor
 - codex
 - agent-skills
-dependencies:
+devDependencies:
   apm:
   - ./packages/steer-enterprise-web-research
   - ./packages/doc-driven-dev
   - microsoft/apm/packages/apm-guide
   - github/awesome-copilot/skills/git-commit
+  - github/awesome-copilot/skills/commit-message-storyteller
+  - github/awesome-copilot/skills/conventional-branch
   - github/awesome-copilot/skills/agentic-eval
+  - github/awesome-copilot/skills/github-actions-efficiency
   - addyosmani/agent-skills
   - softaworks/agent-toolkit/skills/skill-judge
   - obra/superpowers
@@ -56,9 +59,21 @@ marketplace:
     source: github/awesome-copilot
     subdir: skills/git-commit
     ref: main
+  - name: commit-message-storyteller
+    source: github/awesome-copilot
+    subdir: skills/commit-message-storyteller
+    ref: main
+  - name: conventional-branch
+    source: github/awesome-copilot
+    subdir: skills/conventional-branch
+    ref: main
   - name: drawio
     source: github/awesome-copilot
     subdir: skills/drawio
+    ref: main
+  - name: draw-io-diagram-generator
+    source: github/awesome-copilot
+    subdir: skills/draw-io-diagram-generator
     ref: main
   - name: editorconfig
     source: github/awesome-copilot
@@ -71,6 +86,13 @@ marketplace:
   - name: agentic-eval
     source: github/awesome-copilot
     subdir: skills/agentic-eval
+    ref: main
+  - name: dependabot
+    source: github/awesome-copilot
+    subdir: skills/dependabot
+  - name: copilot-usage-metrics
+    source: github/awesome-copilot
+    subdir: skills/copilot-usage-metrics
     ref: main
   - name: skill-judge
     source: softaworks/agent-toolkit

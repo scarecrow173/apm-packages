@@ -67,8 +67,14 @@ spec と ADR は**並列トラック**を形成します。同じ上流 discover
 この monorepo から:
 
 ```bash
+pnpm clean
 apm install ./packages/doc-driven-dev --target codex
 ```
+
+`pnpm clean` を先に実行すると、ローカルの `node_modules` を削除してから
+インストールできます。これにより、配布対象ではない依存パッケージ内テスト
+fixture に含まれる不可視文字で `apm install` のセキュリティ検査が
+ブロックされる事象を回避できます。
 
 公開後に利用側リポジトリから:
 

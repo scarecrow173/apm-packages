@@ -1,7 +1,56 @@
 lockfile_version: '1'
-generated_at: '2026-06-09T08:23:07.607808+00:00'
-apm_version: 0.14.2
+generated_at: '2026-06-10T06:13:44.677908+00:00'
+apm_version: 0.16.1
 dependencies:
+- repo_url: _local/doc-driven-dev
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/brainstorming
+  - .agents/skills/briefing-flow
+  - .agents/skills/deep-dive
+  - .agents/skills/design-doc
+  - .agents/skills/dispatching-parallel-agents
+  - .agents/skills/doc-driven-dev-flow
+  - .agents/skills/doc-status
+  - .agents/skills/doubt-driven-development
+  - .agents/skills/idea-refine
+  - .agents/skills/impl-doc
+  - .agents/skills/implementation-flow
+  - .agents/skills/incremental-implementation
+  - .agents/skills/plan-doc
+  - .agents/skills/receiving-code-review
+  - .agents/skills/requesting-code-review
+  - .agents/skills/source-driven-development
+  - .agents/skills/spec-doc
+  - .agents/skills/subagent-driven-development
+  - .agents/skills/systematic-debugging
+  - .agents/skills/task-doc
+  - .agents/skills/test-driven-development
+  - .claude/skills/adr-doc
+  - .claude/skills/brainstorming
+  - .claude/skills/briefing-flow
+  - .claude/skills/deep-dive
+  - .claude/skills/design-doc
+  - .claude/skills/dispatching-parallel-agents
+  - .claude/skills/doc-driven-dev-flow
+  - .claude/skills/doc-status
+  - .claude/skills/doubt-driven-development
+  - .claude/skills/idea-refine
+  - .claude/skills/impl-doc
+  - .claude/skills/implementation-flow
+  - .claude/skills/incremental-implementation
+  - .claude/skills/plan-doc
+  - .claude/skills/receiving-code-review
+  - .claude/skills/requesting-code-review
+  - .claude/skills/skill-discovery-protocol
+  - .claude/skills/source-driven-development
+  - .claude/skills/spec-doc
+  - .claude/skills/subagent-driven-development
+  - .claude/skills/systematic-debugging
+  - .claude/skills/task-doc
+  - .claude/skills/test-driven-development
+  source: local
+  local_path: ./packages/doc-driven-dev
 - repo_url: _local/steer-enterprise-web-research
   package_type: apm_package
   deployed_files:
@@ -48,7 +97,6 @@ dependencies:
   - .claude/commands/spec.md
   - .claude/commands/test.md
   - .claude/hooks/agent-skills/hooks/session-start.sh
-  - .claude/hooks/agent-skills/hooks/session-start.sh
   - .claude/skills/api-and-interface-design
   - .claude/skills/browser-testing-with-devtools
   - .claude/skills/ci-cd-and-automation
@@ -76,7 +124,6 @@ dependencies:
   - .codex/agents/security-auditor.toml
   - .codex/agents/test-engineer.toml
   - .codex/hooks/agent-skills/hooks/session-start.sh
-  - .codex/hooks/agent-skills/hooks/session-start.sh
   - .cursor/agents/code-reviewer.md
   - .cursor/agents/security-auditor.md
   - .cursor/agents/test-engineer.md
@@ -88,13 +135,10 @@ dependencies:
   - .cursor/commands/spec.md
   - .cursor/commands/test.md
   - .cursor/hooks/agent-skills/hooks/session-start.sh
-  - .cursor/hooks/agent-skills/hooks/session-start.sh
   - .github/agents/code-reviewer.agent.md
   - .github/agents/security-auditor.agent.md
   - .github/agents/test-engineer.agent.md
   - .github/hooks/agent-skills-hooks.json
-  - .github/hooks/agent-skills-hooks.json
-  - .github/hooks/scripts/agent-skills/hooks/session-start.sh
   - .github/hooks/scripts/agent-skills/hooks/session-start.sh
   - .github/prompts/build.prompt.md
   - .github/prompts/code-simplify.prompt.md
@@ -155,6 +199,26 @@ dependencies:
   content_hash: sha256:40771d7d389c1542e6cb995d75e516893466f01c3b66bc040b158ceb793d4bed
 - repo_url: github/awesome-copilot
   host: github.com
+  resolved_commit: 8b1792d493d9f8f0a88d594eb23bb9196639ec3d
+  virtual_path: skills/commit-message-storyteller
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/commit-message-storyteller
+  - .claude/skills/commit-message-storyteller
+  content_hash: sha256:12d806f64f59f5df9301f6a283f034be58d883c20bf0954d6a2ab4e81512c5d8
+- repo_url: github/awesome-copilot
+  host: github.com
+  resolved_commit: 8b1792d493d9f8f0a88d594eb23bb9196639ec3d
+  virtual_path: skills/conventional-branch
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/conventional-branch
+  - .claude/skills/conventional-branch
+  content_hash: sha256:62d556675f48fd45ebe77b13ce7cac1e37a4982e648f389b4db237864f6702c4
+- repo_url: github/awesome-copilot
+  host: github.com
   resolved_commit: a360749d762d7a86fd49d536651ebe0ca54b608a
   virtual_path: skills/git-commit
   is_virtual: true
@@ -163,6 +227,16 @@ dependencies:
   - .agents/skills/git-commit
   - .claude/skills/git-commit
   content_hash: sha256:2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21
+- repo_url: github/awesome-copilot
+  host: github.com
+  resolved_commit: 8b1792d493d9f8f0a88d594eb23bb9196639ec3d
+  virtual_path: skills/github-actions-efficiency
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/github-actions-efficiency
+  - .claude/skills/github-actions-efficiency
+  content_hash: sha256:cb1a6b7a2d06465b26f1245a0f617317032d40f0e63f3237ac67f996ad5eeea3
 - repo_url: microsoft/apm
   host: github.com
   resolved_commit: 50f25db56cca17c03532408aefec6fa57d4125fd
@@ -202,7 +276,6 @@ dependencies:
   - .agents/skills/writing-plans
   - .agents/skills/writing-skills
   - .claude/hooks/superpowers/hooks/run-hook.cmd
-  - .claude/hooks/superpowers/hooks/run-hook.cmd
   - .claude/skills/brainstorming
   - .claude/skills/dispatching-parallel-agents
   - .claude/skills/executing-plans
@@ -218,8 +291,6 @@ dependencies:
   - .claude/skills/writing-plans
   - .claude/skills/writing-skills
   - .codex/hooks/superpowers/hooks/run-hook.cmd
-  - .codex/hooks/superpowers/hooks/run-hook.cmd
-  - .cursor/hooks/superpowers/hooks/run-hook.cmd
   - .cursor/hooks/superpowers/hooks/run-hook.cmd
   - .github/hooks/scripts/superpowers/hooks/run-hook.cmd
   - .github/hooks/superpowers-hooks-cursor.json
