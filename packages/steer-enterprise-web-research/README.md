@@ -89,6 +89,23 @@ Japanese users can use:
 /steer-deep-research-ja
 ```
 
+## Audit Script Development
+
+The source of the audit script now lives in:
+
+- `scripts/steer-enterprise-web-research/src/research_audit.ts`
+
+The generated build artifact is placed in:
+
+- `packages/steer-enterprise-web-research/scripts/research_audit.js`
+
+Run the build and test workflow from the isolated scripts workspace:
+
+```bash
+pnpm --dir scripts/steer-enterprise-web-research test
+pnpm --dir scripts/steer-enterprise-web-research build
+```
+
 ## Notes
 
 This package does not implement a search API. It instructs Codex, GitHub Copilot, or an MCP-enabled agent to use whatever search, fetch, GitHub, academic, file, or enterprise retrieval tools are available.
