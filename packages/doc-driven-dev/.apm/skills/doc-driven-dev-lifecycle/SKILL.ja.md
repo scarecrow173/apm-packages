@@ -1,10 +1,10 @@
 ---
-name: doc-driven-dev-flow
+name: doc-driven-dev-lifecycle
 description: "文書駆動開発の全ライフサイクルを 6 フェーズのフローでオーケストレーションする。**利用タイミング**: (1) 新機能・新プロジェクト・大規模な変更をゼロから始めるとき、(2) どの doc スキルから始めるべきか不明なとき、(3) briefing から実行まで end-to-end の文書オーケストレーションが必要なとき、(4) 文書作成フェーズ間の順序制約を強制する必要があるとき。スキル順序: briefing-flow → design-doc → plan-doc → task-doc → implementation-flow → doc-status。キーワード: 文書ライフサイクル、オーケストレーション、フェーズゲート、メタスキル。"
 license: MIT
 ---
 
-# Doc-Driven Dev Flow
+# Doc-Driven Dev Lifecycle
 
 既存の doc スキルを 6 フェーズのフローで選択・順序付けし、明示的なゲートで
 制御することで文書駆動開発の全ライフサイクルをオーケストレーションする。

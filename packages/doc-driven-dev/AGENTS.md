@@ -89,8 +89,8 @@ Workflow and meta skills included here:
 
 | Skill | Purpose | Origin |
 |-------|---------|--------|
+| doc-driven-dev-lifecycle | Meta skill: six-phase document lifecycle orchestrator | original |
 | briefing-flow | Meta skill: dynamic orchestrator for briefing and spec/ADR preparation | original |
-| doc-driven-dev-flow | Meta skill: six-phase document lifecycle orchestrator | original |
 | implementation-flow | Meta skill: dynamic orchestrator that discovers and routes to all available implementation skills via implementation profiles | original |
 | skill-discovery-protocol | Flow-neutral skill catalog / profile generation and validation | original |
 

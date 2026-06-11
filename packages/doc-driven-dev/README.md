@@ -6,7 +6,7 @@ Markdown so agents can track lifecycle status, source evidence, and semantic
 relations between ADRs, specs, designs, plans, tasks, and implementation
 records.
 
-The package centers the lifecycle in `doc-driven-dev-flow`, which orchestrates
+The package centers the lifecycle in `doc-driven-dev-lifecycle`, which orchestrates
 briefing, document creation, implementation preparation, and exit:
 
 - `deep-dive`: interrogate intent, constraints, and decision axes through codebase-aware, one-question-at-a-time dialogue.
@@ -17,7 +17,7 @@ briefing, document creation, implementation preparation, and exit:
 - `plan-doc`: turn approved spec + ADR + design into an implementation plan.
 - `task-doc`: track implementation slices and dependencies.
 - `impl-doc`: record implemented outcomes and machine-readable implementation experiments.
-- `doc-driven-dev-flow`: orchestrate the full document lifecycle from briefing through exit.
+- `doc-driven-dev-lifecycle`: orchestrate the full document lifecycle from briefing through exit.
 - `implementation-flow`: orchestrate implementation-phase skill selection per task.
 - `skill-discovery-protocol`: generate and validate repository-specific skill discovery artifacts.
 - `doc-status`: list and audit document status, indexes, and relations.
@@ -26,11 +26,11 @@ briefing, document creation, implementation preparation, and exit:
 
 ### doc-driven-dev lifecycle
 
-The lifecycle skill is `doc-driven-dev-flow`. It orchestrates the mainline
+The lifecycle skill is `doc-driven-dev-lifecycle`. It orchestrates the mainline
 document flow and invokes the phase-specific skills below as needed:
 
 ```text
-doc-driven-dev-flow
+doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
   -> Phase 2: spec-doc + adr-doc   (parallel when both product and technical context are ready)
   -> Phase 3: design-doc           (overview + detailed design docs)
@@ -180,7 +180,7 @@ Use this skill to list and audit generated documents. It validates required
 front matter, status values, local relation targets, and index coverage while
 allowing external source URLs in `relations.source`.
 
-### `doc-driven-dev-flow`
+### `doc-driven-dev-lifecycle`
 
 Use this meta skill when you need the full end-to-end document lifecycle
 orchestrated with phase gates from briefing through implementation and exit.
@@ -205,8 +205,8 @@ available in the current environment.
 
 | Skill | Purpose |
 | --- | --- |
+| `doc-driven-dev-lifecycle` | Meta skill: orchestrates the full six-phase document lifecycle |
 | `briefing-flow` | Meta skill: routes briefing work to the available discovery/document skills |
-| `doc-driven-dev-flow` | Meta skill: orchestrates the full six-phase document lifecycle |
 | `implementation-flow` | Meta skill: routes tasks to workflow skills via discovery tree |
 | `skill-discovery-protocol` | Meta skill: builds and validates skill discovery artifacts |
 
@@ -244,10 +244,10 @@ Use `source` for external evidence and primary sources. Use `references` for
 supplementary material. Use the remaining fields to describe the meaning of
 internal document links rather than the type of the linked document.
 
-## Lifecycle via `doc-driven-dev-flow`
+## Lifecycle via `doc-driven-dev-lifecycle`
 
 ```text
-doc-driven-dev-flow
+doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
   -> Phase 2: spec-doc + adr-doc  (parallel: define what + record decisions)
   -> Phase 3: design-doc          (overview-first design gate)
@@ -256,7 +256,7 @@ doc-driven-dev-flow
   -> Phase 5/6: doc-status -> exit
 ```
 
-`doc-driven-dev-flow` is the lifecycle entrypoint. `briefing-flow` and
+`doc-driven-dev-lifecycle` is the lifecycle entrypoint. `briefing-flow` and
 `implementation-flow` remain phase-level orchestration skills inside that
 lifecycle, not separate top-level lifecycles. These meta skills select from the
 skills available in the current environment rather than hardcoding a fixed

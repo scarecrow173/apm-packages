@@ -88,8 +88,8 @@ apm compile --validate
 
 | スキル | 目的 | 出典 |
 |--------|------|------|
+| doc-driven-dev-lifecycle | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
 | briefing-flow | メタスキル: briefing と spec/ADR 準備を動的にオーケストレーションする | original |
-| doc-driven-dev-flow | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
 | implementation-flow | メタスキル: implementation profile を通じて全利用可能な実装スキルを発見・ルーティングする | original |
 | skill-discovery-protocol | flow-neutral な skill catalog / profile を生成・検証する | original |
 

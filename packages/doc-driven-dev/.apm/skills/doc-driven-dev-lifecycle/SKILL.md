@@ -1,10 +1,10 @@
 ---
-name: doc-driven-dev-flow
+name: doc-driven-dev-lifecycle
 description: "Orchestrates the full document-driven development lifecycle through a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Unsure which doc skill to begin with, (3) Need end-to-end document orchestration from briefing to execution, (4) Must enforce sequencing constraints between doc creation phases. Sequences skills: briefing-flow → design-doc → plan-doc → task-doc → implementation-flow → doc-status. Keywords: document lifecycle, orchestration, phase gates, meta skill."
 license: MIT
 ---
 
-# Doc-Driven Dev Flow
+# Doc-Driven Dev Lifecycle
 
 Orchestrates the full document-driven development lifecycle by selecting and
 sequencing existing doc skills through a 6-phase flow with explicit gates.

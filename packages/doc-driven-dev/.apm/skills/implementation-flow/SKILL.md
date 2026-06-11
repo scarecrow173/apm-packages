@@ -24,7 +24,7 @@ connects implementation back to upstream documents.
 
 - Executing approved `task-doc` entries that require code changes.
 - Implementing a plan where multiple skills must coordinate.
-- As implementation phase delegate when invoked from `doc-driven-dev-flow`.
+- As implementation phase delegate when invoked from `doc-driven-dev-lifecycle`.
 - Standalone when documents already exist and implementation guidance is needed.
 - Starting any implementation work — invoke this skill FIRST to configure.
 
@@ -265,7 +265,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 ## Entry Conditions
 
 - Task units with defined verification conditions exist (`task-doc` or equivalent).
-- When invoked from `doc-driven-dev-flow`, Phase 4 tasks are approved.
+- When invoked from `doc-driven-dev-lifecycle`, Phase 4 tasks are approved.
 
 ## Completion Conditions
 

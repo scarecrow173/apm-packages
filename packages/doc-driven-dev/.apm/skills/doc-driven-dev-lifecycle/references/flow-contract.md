@@ -1,7 +1,7 @@
-# doc-driven-dev-flow: Flow Contract
+# doc-driven-dev-lifecycle: Flow Contract
 
 This document defines the fixed sequence and decision rules that
-`doc-driven-dev-flow` uses to orchestrate existing skills.
+`doc-driven-dev-lifecycle` uses to orchestrate existing skills.
 
 ## Phases Overview
 

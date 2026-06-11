@@ -5,7 +5,7 @@ skill を提供します。これらの skill が生成する文書は YAML fron
 Markdown を使い、ADR、spec、design、plan、task、implementation record 間の
 ライフサイクル状態、根拠、意味付き relation をエージェントが追跡できるようにします。
 
-このパッケージでは `doc-driven-dev-flow` をライフサイクルの中核とし、
+このパッケージでは `doc-driven-dev-lifecycle` をライフサイクルの中核とし、
 briefing、文書作成、実装準備、exit までをオーケストレーションします。
 
 - `deep-dive`: コードベースを踏まえた一問一答で、意図、制約、判断軸を深掘りします。
@@ -16,7 +16,7 @@ briefing、文書作成、実装準備、exit までをオーケストレーシ�
 - `plan-doc`: 承認済みの spec + ADR + design を実装計画へ落とし込みます。
 - `task-doc`: 実装の作業単位と依存関係を管理します。
 - `impl-doc`: 実装結果と機械可読な experiment log を記録します。
-- `doc-driven-dev-flow`: briefing から exit までの文書ライフサイクル全体をオーケストレーションします。
+- `doc-driven-dev-lifecycle`: briefing から exit までの文書ライフサイクル全体をオーケストレーションします。
 - `implementation-flow`: task ごとの実装スキル選択をオーケストレーションします。
 - `skill-discovery-protocol`: リポジトリ固有の skill discovery 成果物を生成・検証します。
 - `doc-status`: 文書の状態、index、relation を列挙・監査します。
@@ -25,11 +25,11 @@ briefing、文書作成、実装準備、exit までをオーケストレーシ�
 
 ### doc-driven-dev のライフサイクル
 
-ライフサイクル本体の skill は `doc-driven-dev-flow` です。必要に応じて以下の
+ライフサイクル本体の skill は `doc-driven-dev-lifecycle` です。必要に応じて以下の
 フェーズ別 skill を呼び出しながら、mainline の文書フローを進めます。
 
 ```text
-doc-driven-dev-flow
+doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
   -> Phase 2: spec-doc + adr-doc   (プロダクト文脈と技術文脈が揃えば並列)
   -> Phase 3: design-doc           (overview + detailed design docs)
@@ -165,7 +165,7 @@ Experiment Log を扱います。Implementation Record については CLI ベ�
 生成済み文書の列挙と監査に使います。必須 front matter、status 値、ローカル relation
 target、index coverage を検証しつつ、`relations.source` では外部 URL を許可します。
 
-### `doc-driven-dev-flow`
+### `doc-driven-dev-lifecycle`
 
 briefing から implementation / exit まで、フェーズゲート付きで end-to-end の
 文書ライフサイクル全体を進めたいときに使うメタスキルです。
@@ -190,8 +190,8 @@ flow-neutral な catalog と flow-specific な profile を構築し、
 
 | Skill | 役割 |
 | --- | --- |
+| `doc-driven-dev-lifecycle` | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーション |
 | `briefing-flow` | メタスキル: briefing 作業を利用可能な discovery/document skill にルーティング |
-| `doc-driven-dev-flow` | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーション |
 | `implementation-flow` | メタスキル: task を workflow skill にルーティング |
 | `skill-discovery-protocol` | メタスキル: skill discovery 成果物を生成・検証 |
 
@@ -228,10 +228,10 @@ relations:
 `source` は外部根拠と primary source に使います。`references` は補助資料に使います。
 それ以外の field は、リンク先文書の種類ではなく、内部文書リンクの意味を表すために使います。
 
-## `doc-driven-dev-flow` によるライフサイクル
+## `doc-driven-dev-lifecycle` によるライフサイクル
 
 ```text
-doc-driven-dev-flow
+doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
   -> Phase 2: spec-doc + adr-doc  (parallel: define what + record decisions)
   -> Phase 3: design-doc          (overview-first design gate)
@@ -240,7 +240,7 @@ doc-driven-dev-flow
   -> Phase 5/6: doc-status -> exit
 ```
 
-`doc-driven-dev-flow` がライフサイクルの entrypoint です。`briefing-flow` と
+`doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`briefing-flow` と
 `implementation-flow` は、このライフサイクル内部のフェーズ別オーケストレーション
 skill であり、別個のトップレベルライフサイクルではありません。これらのメタスキルは、
 固定の補助 skill stack を前提にせず、その場で利用可能な skill から選択して進みます。

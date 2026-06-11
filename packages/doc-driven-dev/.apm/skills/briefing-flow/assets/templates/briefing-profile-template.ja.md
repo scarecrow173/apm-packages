@@ -57,7 +57,7 @@ repository: "<repository-name>"
 他のスキルをオーケストレーションするスキル（Default Stack には含めない）。
 
 - briefing-flow — この profile の管理者
-- doc-driven-dev-flow — 6 フェーズ全体のオーケストレータ
+- doc-driven-dev-lifecycle — 6 フェーズ全体のオーケストレータ
 
 ## Default Stack
 
