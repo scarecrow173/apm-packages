@@ -1,6 +1,6 @@
 name: doc-driven-dev
 version: 0.1.0
-description: Document-driven development skills for idea refinement, brainstorming, ADRs, specs, plans, tasks, and document status auditing.
+description: Document-driven development skills for discovery orchestration, ADRs, specs, designs, plans, tasks, implementation records, and document status auditing.
 author: Akiyoshi Koyama
 license: MIT
 targets:

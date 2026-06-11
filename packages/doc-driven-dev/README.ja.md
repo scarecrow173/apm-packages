@@ -1,82 +1,86 @@
 # Doc-Driven Dev APM Package
 
-このパッケージは、spec-driven / document-driven development のための
-再利用可能な skill 群を提供します。生成されるドキュメントは YAML
-フロントマター + Markdown 形式で、ライフサイクルステータス、外部出典、
-spec / ADR / design / plan / task 間の意味付き relation を管理できます。
+このパッケージは、spec-driven / document-driven development のための再利用可能な
+skill を提供します。これらの skill が生成する文書は YAML front matter と
+Markdown を使い、ADR、spec、design、plan、task、implementation record 間の
+ライフサイクル状態、根拠、意味付き relation をエージェントが追跡できるようにします。
 
-spec と ADR を同じ discovery output から並列作成する dual-track モデルを
-採用しています。
+このパッケージでは `doc-driven-dev-lifecycle` をライフサイクルの中核とし、
+briefing、文書作成、実装準備、exit までをオーケストレーションします。
 
-- `idea-refine`: 粗いアイデアを選択肢、前提、質問に整理します。
-- `deep-dive`: コードベースを踏まえて意図、制約、判断軸を一問ずつ深掘りします。
-- `brainstorming`: 意図を明確にし、spec + ADR（並列）にルーティングします。
+- `deep-dive`: コードベースを踏まえた一問一答で、意図、制約、判断軸を深掘りします。
+- `briefing-flow`: 情報収集をオーケストレーションし、spec + ADR 作成へルーティングします。
 - `spec-doc`: 実装前に何を作るかを定義します。
-- `adr-doc`: Architecture Decision Record を提案、文章化、保守します。
-- `design-doc`: plan 前に overview-first の設計成果物を作成します。
-- `plan-doc`: 承認済み spec + ADR + design を実装計画に変換します。
-- `task-doc`: 実装単位と依存関係を管理します。
-- `impl-doc`: 実装結果と機械可読な実装試行ログを記録します。
-- `doc-status`: ステータス、索引、relation を一覧・監査します。
+- `adr-doc`: Architecture Decision Record を提案、作成、保守します。
+- `design-doc`: planning 前の overview-first な設計成果物を作成します。
+- `plan-doc`: 承認済みの spec + ADR + design を実装計画へ落とし込みます。
+- `task-doc`: 実装の作業単位と依存関係を管理します。
+- `impl-doc`: 実装結果と機械可読な experiment log を記録します。
+- `doc-driven-dev-lifecycle`: briefing から exit までの文書ライフサイクル全体をオーケストレーションします。
+- `implementation-flow`: task ごとの実装スキル選択をオーケストレーションします。
+- `skill-discovery-protocol`: リポジトリ固有の skill discovery 成果物を生成・検証します。
+- `doc-status`: 文書の状態、index、relation を列挙・監査します。
 
 ## 定義
 
-### doc-driven-dev mainline
+### doc-driven-dev のライフサイクル
 
-すべての作業が従うドキュメントフロー:
+ライフサイクル本体の skill は `doc-driven-dev-lifecycle` です。必要に応じて以下の
+フェーズ別 skill を呼び出しながら、mainline の文書フローを進めます。
 
 ```text
-idea-refine OR deep-dive OR brainstorming
-  → spec-doc + adr-doc   (並列: 同じ discovery output から作成)
-  → design-doc           (overview + 詳細設計)
-  → plan-doc             (spec / ADR / 承認済み design から派生)
-  → task-doc
+doc-driven-dev-lifecycle
+  -> Phase 1: briefing-flow
+  -> Phase 2: spec-doc + adr-doc   (プロダクト文脈と技術文脈が揃えば並列)
+  -> Phase 3: design-doc           (overview + detailed design docs)
+  -> Phase 4a: plan-doc -> task-doc
+  -> Phase 4b: implementation-flow -> impl-doc
+  -> Phase 5/6: doc-status -> exit
 ```
 
-- **Spec** は WHAT、WHY、SCOPE に答えます。
-- **ADR** は HOW に答え、すべての技術判断を代替案と根拠付きで記録します。
-- **並列作成**: brainstorming が十分なコンテキストを生んだら、spec と ADR
-  は異なる側面を扱うため同時に書けます。
-- **plan 前に design gate**: `plan-doc` は承認済み `design-doc` を必須とし、
-  spec の要件と ADR の技術制約を取り込みます。
+- **Spec** は WHAT、WHY、SCOPE を定義します。
+- **ADR** は HOW を定義し、代替案比較と採用理由を記録します。
+- **並列作成**: Phase 1 で十分なコンテキストが揃ったら、spec と ADR は
+  同じ briefing/discovery 出力から並列に作成できます。
+- **design gate**: `plan-doc` は承認済みの `design-doc` を前提にし、
+  spec の要求と ADR の技術制約を取り込みます。
 
-mainline 上の skill: `idea-refine`, `deep-dive`, `brainstorming`, `spec-doc`, `adr-doc`,
-`design-doc`, `plan-doc`, `task-doc`。
+ライフサイクルを構成するフェーズ skill は `deep-dive`, `briefing-flow`,
+`spec-doc`, `adr-doc`, `design-doc`, `plan-doc`, `task-doc`,
+`implementation-flow`, `impl-doc`, `doc-status` です。
 
-### doc-driven-dev parallel track
+### doc-driven-dev の並列トラック
 
-spec と ADR は**並列トラック**を形成します。同じ上流 discovery artifact
-から派生し、補完的な関心事を扱います。
+spec と ADR は**並列トラック**です。同じ upstream discovery artifact から派生し、
+補完関係にある異なる関心事を担当します。
 
 | | spec-doc | adr-doc |
 | --- | --- | --- |
-| 答えるもの | What / Why / Scope | How / Which / Why-this-over-that |
-| トリガー | あらゆる feature や変更 | 代替案のある技術判断 |
-| ブロッキング | plan には approved spec が必要 | plan は accepted ADR を参照 |
-| 出力 | 受け入れ基準 | 実装制約 |
+| 答えること | What / Why / Scope | How / Which / Why-this-over-that |
+| トリガー | あらゆる feature / change | 代替案を伴う技術判断 |
+| plan への影響 | approved spec が必要 | accepted ADR が制約になる |
+| 成果物 | 受け入れ条件 | 実装制約 |
 
-- brainstorming がプロダクト要件と技術判断の両方を明らかにしたら、
-  spec と ADR を並列で書きます。
-- 純粋なプロダクト作業（architecture 判断なし）なら spec のみで十分です。
-- 純粋に横断的な判断（単一 feature に紐づかない）なら ADR のみで十分です。
-- 自明に見える判断も含め、すべての意思決定を ADR に記録し、
-  将来のエージェントが根拠を理解できるようにします。
+- Phase 1 でプロダクト要件と技術判断の両方が明らかになったら、spec と ADR を
+  並列で作成します。
+- 作業が純粋にプロダクト要件だけなら spec のみで十分です。
+- 作業が純粋に横断的な技術判断だけなら ADR のみで十分です。
+- 自明に見える判断も含め、将来のエージェントが理由を追えるように ADR へ残します。
 
 ## インストール
 
-この monorepo から:
+この monorepo からインストールする場合:
 
 ```bash
 pnpm clean
 apm install ./packages/doc-driven-dev --target codex
 ```
 
-`pnpm clean` を先に実行すると、ローカルの `node_modules` を削除してから
-インストールできます。これにより、配布対象ではない依存パッケージ内テスト
-fixture に含まれる不可視文字で `apm install` のセキュリティ検査が
-ブロックされる事象を回避できます。
+`pnpm clean` はローカルの `node_modules` を削除してからインストールします。
+これにより、配布 APM パッケージには含まれない依存関係の test fixture が
+`apm install` 中のセキュリティスキャンを妨げるのを防ぎます。
 
-公開後に利用側リポジトリから:
+公開後に利用側リポジトリからインストールする場合:
 
 ```bash
 apm install scarecrow173/apm-packages#v0.1.0
@@ -84,108 +88,116 @@ apm install scarecrow173/apm-packages#v0.1.0
 
 ## 検証
 
+リポジトリルートで実行するコマンド:
+
+```bash
+pnpm --dir scripts/doc-driven-dev test
+pnpm --dir scripts/doc-driven-dev run lint:md
+```
+
+`packages/doc-driven-dev/` で実行するコマンド:
+
 ```bash
 apm compile --validate
 apm compile --dry-run
-tsx --test tests/*.test.ts
 ```
 
 ## 同梱 Skill
 
-### `idea-refine`
-
-作業が粗い構想、機会、困りごと、解決案から始まるときに使います。
-`docs/ideas/` に artifact を作成し、生のアイデア、問題の兆候、選択肢、
-前提、次の質問を記録します。
-
-### `brainstorming`
-
-後続文書を書く前に、対話で意図を明確にするために使います。
-`docs/discovery/` に artifact を作成し、`spec-doc` + `adr-doc` へ
-並列でルーティングします。
-
 ### `deep-dive`
 
-後続文書に進む前に、リクエストの本当の outcome、支配的制約、判断軸を
-深掘りしたいときに使います。コードベースを先に調べ、一問ずつ質問し、
-確認済みの intent 要約を出力します。discovery artifact は直接作りません。
+下流文書の信頼性を担保する前に、依頼内容をさらに掘り下げる必要があるときに使います。
+実際の成果、拘束条件、判断軸をコードベース前提の対話で明確化します。出力は確認済みの
+intent summary であり、それ自体では discovery artifact を生成しません。
+
+### `briefing-flow`
+
+要件が曖昧なとき、複数の情報源を統合したいとき、または `spec-doc` / `adr-doc`
+を書く前に動的な skill 選択が必要なときに使うメタスキルです。
+`skill-discovery-protocol` を通してリポジトリ固有の discovery artifact を生成し、
+その場で利用可能な skill から選択しながら、Phase 1 の briefing 完了までを
+駆動します。
 
 ### `adr-doc`
 
-MADR 4.0.0 ADR を提案、文章化、保守するときにこの skill を使います。
-リポジトリ調査、ADR 草案化、レビュー、保守操作まで含む本来の ADR
-ワークフローを維持します。判断自体を深く固める必要がある場合だけ、
-その確認を `deep-dive` に委譲してから戻ります。
+MADR 4.0.0 形式の ADR を提案、作成、保守する skill です。リポジトリ走査、
+ドラフト作成、レビュー、保守まで ADR の全ワークフローを扱います。判断そのものの
+深掘りが必要なら `deep-dive` へ委譲し、意図が具体化してから戻ります。
 
 - MADR テンプレートから新しい ADR を作成する
-- ADR に必要な不足分だけを narrow に確認し、必要なら request を返す
-- コーディングエージェント向けの実装計画と検証基準を書く
-- ADR 一覧を出し、エージェント対応状況をレビューする
-- ADR の構造と索引整合性を監査する
-- Implementation Plan のコードリンクと ADR relation を確認・管理する
-- ADR 索引を再生成する
-- ファイルを変更せずに移行レポートを作成する
+- ADR 固有の不足情報だけを質問し、深掘りが必要なら missing-input request を出す
+- コーディングエージェント向けの実装計画と検証条件を書く
+- ADR 一覧と agent-readiness を確認する
+- ADR 構造と index 整合性を監査する
+- Implementation Plan のコードリンクと ADR relation を管理する
+- ADR index を再生成する
+- ファイル変更なしで migration report を生成する
 
 ### `spec-doc`
 
-`docs/specs/` に YAML フロントマター付き spec を作成します。実装計画に
-入る前に、意図、範囲、要件、受け入れ基準、出典を記録します。
+`docs/specs/` 配下に YAML front matter 付き spec を作成します。spec は
+実装計画の前に、意図、範囲、要求、受け入れ条件、根拠を記録します。
 
 ### `design-doc`
 
-`docs/designs/` に設計成果物を作成します。必須の `overview.md` と
-詳細設計文書を管理し、`plan-doc` の hard gate として機能します。
+`docs/designs/` 配下に設計成果物を作成します。必須の `overview.md` と
+詳細設計文書を管理し、`plan-doc` に対する hard gate として機能します。
 
 ### `plan-doc`
 
-`docs/plans/` に実装計画を作成します。上流の spec を
-`relations.implements` で、design / ADR を `relations.derives-from` で
-リンクします。
+`docs/plans/` 配下に実装計画を作成します。plan は upstream spec と
+`relations.implements` で、design / ADR 入力と `relations.derives-from` で結びます。
 
 ### `task-doc`
 
-`docs/tasks/` に実装 task を作成します。plan を `relations.implements` と
-`relations.depends-on` でリンクし、task 用のステータスで進捗を管理します。
+`docs/tasks/` 配下に実装 task を作成します。task は plan と
+`relations.implements`、依存関係と `relations.depends-on` で結び、
+task 専用の lifecycle status を使います。
 
 ### `impl-doc`
 
-`docs/impl/ir/` に Implementation Record を、`docs/impl/exp/` に
-Experiment Log を作成します。Implementation Record は CLI で作成・監査し、
-Experiment Log は CLI で作成・追記・編集・監査します。
+`docs/impl/ir/` 配下の Implementation Record と `docs/impl/exp/` 配下の
+Experiment Log を扱います。Implementation Record については CLI ベースの
+作成・監査、Experiment Log については CLI ベースの作成・追記・編集・監査を提供します。
 
 ### `doc-status`
 
-生成されたドキュメントを一覧・監査します。必須フロントマター、
-ステータス値、ローカル relation、索引を検証し、`relations.source` の
-外部 URL は出典として許可します。
+生成済み文書の列挙と監査に使います。必須 front matter、status 値、ローカル relation
+target、index coverage を検証しつつ、`relations.source` では外部 URL を許可します。
 
-### ワークフロー Skill（実装フェーズ）
+### `doc-driven-dev-lifecycle`
 
-これらの skill は doc-driven-dev-flow の Phase 4b（実装）で使用します。
-任意であり、コーディング・デバッグ・コードレビューが必要な場面で有効化します。
+briefing から implementation / exit まで、フェーズゲート付きで end-to-end の
+文書ライフサイクル全体を進めたいときに使うメタスキルです。
 
-| Skill | 目的 |
+### `implementation-flow`
+
+`task-doc` による分解後、現在の環境で利用可能な実装 skill を task 単位で発見し、
+順序付けるメタスキルです。
+
+### `skill-discovery-protocol`
+
+インストール済み skill を走査し、推論した capability metadata を作り、
+flow-neutral な catalog と flow-specific な profile を構築し、
+生成された `.sdp` 成果物を検証するメタスキルです。
+
+### オーケストレーション Skill
+
+これらのオーケストレーション skill は Phase 1 (Briefing)、Phase 4b
+(Implementation)、およびリポジトリ固有の skill discovery の周辺で動作します。
+固定の workflow-skill stack を同梱するのではなく、その場の環境で利用可能な skill を
+発見してルーティングします。
+
+| Skill | 役割 |
 | --- | --- |
-| `implementation-flow` | メタスキル: 発見木でタスクをワークフロースキルにルーティング |
-| `source-driven-development` | 公式ドキュメントに基づく実装; ソース引用 |
-| `incremental-implementation` | 小さく検証済みのインクリメントで出荷 |
-| `doubt-driven-development` | 決定をコミットする前の対立的自己レビュー |
-| `test-driven-development` | RED → GREEN → REFACTOR; テストを先に書く |
-| `systematic-debugging` | 二分探索とエビデンスによる根本原因追跡 |
-| `subagent-driven-development` | 実装スライスをサブエージェントに委譲 |
-| `dispatching-parallel-agents` | 独立タスクを並列エージェントにファンアウト |
-| `requesting-code-review` | レビュアーエージェントへのコードレビュー依頼 |
-| `receiving-code-review` | レビューフィードバックへの体系的対応 |
-
-出典: `source-driven-development`、`incremental-implementation`、
-`doubt-driven-development` は
-[addyosmani/agent-skills](https://github.com/nicepkg/agent-skills)（MIT）から
-適応。残り 6 つは
-[obra/superpowers](https://github.com/obra/superpowers)（MIT）から適応。
+| `doc-driven-dev-lifecycle` | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーション |
+| `briefing-flow` | メタスキル: briefing 作業を利用可能な discovery/document skill にルーティング |
+| `implementation-flow` | メタスキル: task を workflow skill にルーティング |
+| `skill-discovery-protocol` | メタスキル: skill discovery 成果物を生成・検証 |
 
 ## 共通 Relation
 
-新しく生成される spec、design、plan、task は意味付き relation を使います。
+新しく生成される spec、design、plan、task は次の semantic relation fields を使います。
 
 ```yaml
 relations:
@@ -213,25 +225,25 @@ relations:
   references: []
 ```
 
-`source` は外部出典や一次情報に使います。`references` は補助資料に使います。
-その他のフィールドは、リンク先ドキュメントの種別ではなく、内部文書間の
-関係の意味を表します。
+`source` は外部根拠と primary source に使います。`references` は補助資料に使います。
+それ以外の field は、リンク先文書の種類ではなく、内部文書リンクの意味を表すために使います。
 
-## 推奨ライフサイクル
+## `doc-driven-dev-lifecycle` によるライフサイクル
 
 ```text
-idea-refine OR deep-dive OR brainstorming
-  -> spec-doc + adr-doc  (並列: 何を定義 + 判断を記録)
-  -> design-doc          (overview-first の設計ゲート)
-  -> plan-doc            (spec / ADR / 承認済み design から派生)
-  -> task-doc            (実行単位)
-  -> impl-doc            (実装記録と試行ログ)
-  -> implementation-flow (タスク単位のワークフロースキルオーケストレーション)
-  -> doc-status
+doc-driven-dev-lifecycle
+  -> Phase 1: briefing-flow
+  -> Phase 2: spec-doc + adr-doc  (parallel: define what + record decisions)
+  -> Phase 3: design-doc          (overview-first design gate)
+  -> Phase 4a: plan-doc -> task-doc
+  -> Phase 4b: implementation-flow -> impl-doc
+  -> Phase 5/6: doc-status -> exit
 ```
 
-dual-track モデル: **spec + ADR（並列）→ design → plan → task**。
-Spec は何を作るべきか、なぜ、範囲、受け入れ基準を定義します。
-ADR はすべての技術判断を代替案と根拠付きで記録します。
-brainstorming または deep-dive が十分なコンテキストを生んだら、両方を並列で書きます。
-Design が plan への橋渡しを行います。
+`doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`briefing-flow` と
+`implementation-flow` は、このライフサイクル内部のフェーズ別オーケストレーション
+skill であり、別個のトップレベルライフサイクルではありません。これらのメタスキルは、
+固定の補助 skill stack を前提にせず、その場で利用可能な skill から選択して進みます。
+並列トラックは `spec-doc` + `adr-doc` のままで、spec は何を作るか、なぜ必要か、
+範囲、受け入れ条件を定義し、ADR は技術判断、代替案、採用理由を記録します。
+Phase 1 で両方に十分な文脈が揃ったら並列に作成し、その後 design と planning へ進みます。

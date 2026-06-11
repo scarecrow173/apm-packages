@@ -73,7 +73,7 @@ sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [
 1スキル分を更新する場合:
 
 ```text
-sdp infer set-skill --name test-driven-development --spec tmp/test-driven-development.inference.json --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
+sdp infer set-skill --name deep-dive --spec tmp/deep-dive.inference.json --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
 ```
 
 複数編集を JSONL で適用する場合:

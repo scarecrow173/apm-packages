@@ -41,9 +41,9 @@ classification:
       label: "Frame"
       description: "Skills that structure problems or options"
       match:
-        capabilities: ["problem_framing", "option_analysis", "brainstorming"]
+        capabilities: ["problem_framing", "option_analysis", "requirements_interrogation"]
         tags: ["frame", "structure", "organize"]
-        description_patterns: ["structure", "organize", "define", "refine", "brainstorm"]
+        description_patterns: ["structure", "organize", "define", "interrogate", "clarify"]
     - id: "discover"
       label: "Discover"
       description: "Skills that explore and find information"

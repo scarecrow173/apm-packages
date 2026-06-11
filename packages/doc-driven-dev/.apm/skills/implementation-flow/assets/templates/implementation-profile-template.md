@@ -21,15 +21,10 @@ soft ranking metadata that is read after `execution_policy` checks.
 
 | Name | Category | Source | Activation | Execution | Condition |
 | ---- | -------- | ------ | ---------- | --------- | --------- |
-| test-driven-development | Build | .apm/skills/ | always-on | rigid | — |
-| incremental-implementation | Build | .apm/skills/ | always-on | rigid | — |
-| systematic-debugging | Process | .apm/skills/ | conditional | rigid | Bug fix or test failure |
-| source-driven-development | Verify | .apm/skills/ | conditional | flexible | Framework/library usage |
-| doubt-driven-development | Verify | .apm/skills/ | conditional | flexible | Non-trivial decision with alternatives |
-| requesting-code-review | Review | .apm/skills/ | always-on | flexible | — |
-| receiving-code-review | Review | .apm/skills/ | conditional | flexible | Review feedback received |
-| subagent-driven-development | Build | .apm/skills/ | conditional | rigid | Task suitable for delegation |
-| dispatching-parallel-agents | Build | .apm/skills/ | conditional | rigid | Multiple independent tasks |
+| <!-- e.g., test-driven-development --> | Build | .apm/skills/ | conditional | rigid | Repository or environment provides test-led workflow |
+| <!-- e.g., systematic-debugging --> | Process | .apm/skills/ | conditional | rigid | Bug fix or test failure |
+| <!-- e.g., source-driven-development --> | Verify | .apm/skills/ | conditional | flexible | Framework/library usage |
+| <!-- e.g., requesting-code-review --> | Review | .apm/skills/ | conditional | flexible | Review gate available |
 | <!-- Add discovered skills below --> | | | | | |
 
 ## Category Assignments
@@ -38,30 +33,30 @@ soft ranking metadata that is read after `execution_policy` checks.
 
 Skills that determine how to approach the task.
 
-- systematic-debugging — Root cause diagnosis before fixing
+- <!-- e.g., systematic-debugging — Root cause diagnosis before fixing -->
 
 ### Build
 
 Skills that structure and execute implementation.
 
-- test-driven-development — RED-GREEN-REFACTOR cycle
-- incremental-implementation — Thin vertical slices
-- subagent-driven-development — Task dispatch with review
-- dispatching-parallel-agents — Concurrent independent execution
+- <!-- e.g., test-driven-development — RED-GREEN-REFACTOR cycle -->
+- <!-- e.g., incremental-implementation — Thin vertical slices -->
+- <!-- e.g., subagent-driven-development — Task dispatch with review -->
+- <!-- e.g., dispatching-parallel-agents — Concurrent independent execution -->
 
 ### Verify
 
 Skills that validate correctness against authoritative sources.
 
-- source-driven-development — Official docs verification
-- doubt-driven-development — Adversarial review of decisions
+- <!-- e.g., source-driven-development — Official docs verification -->
+- <!-- e.g., doubt-driven-development — Adversarial review of decisions -->
 
 ### Review
 
 Skills that provide post-implementation quality gates.
 
-- requesting-code-review — Pre-review checklist
-- receiving-code-review — Review feedback processing
+- <!-- e.g., requesting-code-review — Pre-review checklist -->
+- <!-- e.g., receiving-code-review — Review feedback processing -->
 
 ### Domain
 
@@ -81,20 +76,22 @@ Tool-specific workflows.
 
 ## Default Stack
 
-The base skill combination for standard implementation tasks.
+The base skill combination for standard implementation tasks. If the repository
+does not define default assignments for a slot, the generated profile may leave
+that slot empty until provider lookup or overrides resolve a skill.
 
 | Priority | Category | Skill | Rationale |
 | -------- | -------- | ----- | --------- |
-| 1 | Build | test-driven-development | Tests define correctness for every change |
-| 2 | Build | incremental-implementation | Prevents big-bang changes |
-| 3 | Review | requesting-code-review | Every task gets reviewed |
+| 1 | Build | <!-- repository default --> | Defines the default build structure when available |
+| 2 | Verify | <!-- repository default --> | Adds correctness validation when available |
+| 3 | Review | <!-- repository default --> | Applies a completion gate when available |
 
 ## Override Rules
 
 | Condition | Action | Reason |
 | --------- | ------ | ------ |
-| Bug fix or test failure | Prepend: systematic-debugging | Must diagnose before fixing |
-| Framework/library usage detected | Add: source-driven-development | Verify against official docs |
-| Non-trivial architectural decision | Add: doubt-driven-development | Challenge approach before commit |
-| Multiple independent subtasks | Replace Build with: dispatching-parallel-agents | Fan out for efficiency |
+| Bug fix or test failure | Prepend: matching Process skills | Must diagnose before fixing |
+| Framework/library usage detected | Add: matching Verify skills | Verify against official docs |
+| Non-trivial architectural decision | Add: matching Verify skills | Challenge approach before commit |
+| Multiple independent subtasks | Replace Build with: matching parallel-capable Build skills | Fan out for efficiency |
 | <!-- Add repository-specific overrides --> | | |

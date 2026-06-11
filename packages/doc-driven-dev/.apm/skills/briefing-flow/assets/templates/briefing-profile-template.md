@@ -20,20 +20,17 @@ soft ranking metadata that is read after `execution_policy` checks.
 | ---- | -------- | ------ | ---------- | --------- | --------- |
 | spec-doc | Document | .apm/skills/ | always-on | rigid | — |
 | adr-doc | Document | .apm/skills/ | always-on | rigid | — |
-| idea-refine | Frame | .apm/skills/ | conditional | flexible | Entry Decision = A-1 |
 | deep-dive | Frame | .apm/skills/ | conditional | flexible | Underspecified request requiring deeper interrogation |
-| brainstorming | Frame | .apm/skills/ | conditional | flexible | Entry Decision = A-1 or A-2 |
 | <!-- Add discovered skills below --> | | | | | |
 
 ## Category Assignments
 
 ### Frame
 
-Skills that structure problems and options.
+Skills that structure problems and clarify options.
 
-- idea-refine — Diverge→converge to structure problems
 - deep-dive — Interrogate intent, constraints, and decision axes
-- brainstorming — Interactive option organization
+- <!-- e.g., option-analysis skill — Compare approaches and trade-offs -->
 - <!-- e.g., interview-me — Elicit intent through questions -->
 
 ### Discover
@@ -62,7 +59,7 @@ Skills that produce formal documents.
 Skills that orchestrate other skills (NOT included in Default Stack).
 
 - briefing-flow — Manager of this profile
-- doc-driven-dev-flow — Full 6-phase orchestrator
+- doc-driven-dev-lifecycle — Full 6-phase orchestrator
 
 ## Default Stack
 
@@ -78,11 +75,11 @@ The base skill combination for standard briefings.
 | Condition | Action | Reason |
 | --------- | ------ | ------ |
 | Entry Decision = A-1 (Problem Framing) | Add: deep-dive | Problem definition is ambiguous, interrogation needed |
-| Entry Decision = A-2 (Option Framing) | Add: brainstorming | Trade-off analysis needed |
+| Entry Decision = A-2 (Option Framing) | Add: matching Frame skills | Trade-off analysis needed |
 | Entry Decision = A-3 (Combined Discovery) | Add: evaluate all conditional skills | Convergence from multiple sources needed |
 | Entry Decision = A-5 (Research Required) | Add: Discover + Research categories | External research needed |
 | External API/library involved | Add: Research category | Verify against official documentation |
-| Multiple implementation approaches exist | Add: brainstorming | Option structuring needed |
+| Multiple implementation approaches exist | Add: matching Frame skills | Option structuring needed |
 | Unprecedented architectural decision | Add: Research category | Evidence gathering and assumption verification needed |
 | <!-- Add repository-specific overrides --> | | |
 

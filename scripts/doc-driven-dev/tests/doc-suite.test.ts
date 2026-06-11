@@ -373,15 +373,15 @@ test("doc-status audits required front matter, status, indexes, relations, and s
   assert.equal(report.findings.some((finding) => finding.message.includes("https://example.com/source")), false);
 });
 
-test("doc-driven-dev-flow meta skill ships SKILL.md and flow-contract references", () => {
-  const flowSkill = path.join(skillRoot, "doc-driven-dev-flow");
+test("doc-driven-dev-lifecycle meta skill ships SKILL.md and flow-contract references", () => {
+  const flowSkill = path.join(skillRoot, "doc-driven-dev-lifecycle");
   assert.equal(fs.existsSync(path.join(flowSkill, "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(flowSkill, "SKILL.ja.md")), true);
   assert.equal(fs.existsSync(path.join(flowSkill, "references", "flow-contract.md")), true);
   assert.equal(fs.existsSync(path.join(flowSkill, "references", "flow-contract.ja.md")), true);
 
   const skill = fs.readFileSync(path.join(flowSkill, "SKILL.md"), "utf8");
-  assert.match(skill, /^name: doc-driven-dev-flow$/m);
+  assert.match(skill, /^name: doc-driven-dev-lifecycle$/m);
   assert.match(skill, /HARD-GATE/);
   assert.match(skill, /Phase 1.*Briefing/);
   assert.match(skill, /Phase 6.*Exit/);

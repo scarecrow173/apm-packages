@@ -5,49 +5,51 @@
 ## 1. 目的と前提
 
 - このパッケージは document-driven development を支える Skill 集です。
-- 主な対象は `idea -> brainstorming -> ADR/spec -> plan -> task -> 実装 -> 監査` の流れです。
+- 主な対象は `briefing -> ADR/spec -> design -> plan -> task -> 実装 -> 監査` の流れです。
 - 生成ドキュメントは YAML front matter + Markdown を前提にします。
 - このガイドはパッケージ開発ルールを定義するものであり、パッケージ自身に doc-driven-dev 運用を必須化するものではありません。
 
 ## 2. リポジトリ内の責務分離
 
-- 実装ロジックの編集先:
-  - `src/skills/**/scripts/*.ts`
-  - `src/skills/**/scripts/lib/*.ts`
-  - `src/skills/lib/*.ts`
+この文書中のパスは、明記しない限りリポジトリルート基準です。
+
+- 実装ロジックの編集先（隔離された build workspace）:
+  - `scripts/doc-driven-dev/src/skills/**/scripts/*.ts`
+  - `scripts/doc-driven-dev/src/skills/**/scripts/lib/*.ts`
+  - `scripts/doc-driven-dev/src/skills/lib/*.ts`
 - 配布用 Skill 定義・テンプレート・参照資料の編集先:
-  - `.apm/skills/**/SKILL.md`
-  - `.apm/skills/**/references/**`
-  - `.apm/skills/**/assets/templates/**`
+  - `packages/doc-driven-dev/.apm/skills/**/SKILL.md`
+  - `packages/doc-driven-dev/.apm/skills/**/references/**`
+  - `packages/doc-driven-dev/.apm/skills/**/assets/templates/**`
 - ビルド成果物（JS）:
-  - `.apm/skills/**/scripts/*.js`
-  - これは `pnpm run build:scripts` で `src` から生成される。
+  - `packages/doc-driven-dev/.apm/skills/**/scripts/*.js`
+  - これは `pnpm --dir scripts/doc-driven-dev run build:scripts` で `scripts/doc-driven-dev/src` から生成される。
 
 重要:
 
-- スクリプト挙動を変えるときは `src` を編集する。
-- `build:scripts` は `.apm/skills/**/scripts` 配下の既存 `.js` を掃除して再生成する。
-- `SKILL.md` や `references`、`assets/templates` は現在 `src` から自動生成されないため、必要箇所を直接更新する。
+- スクリプト挙動を変えるときは `scripts/doc-driven-dev/src` を編集する。
+- `build:scripts` は `packages/doc-driven-dev/.apm/skills/**/scripts` 配下の既存 `.js` を掃除して再生成する。
+- `SKILL.md` や `references`、`assets/templates` は現在 scripts workspace から自動生成されないため、必要箇所を直接更新する。
 
 ## 3. 作業フロー（パッケージ開発）
 
 1. 既存文書と実装を先に読む。
-2. 変更対象がスクリプト挙動なら `src` を編集し、必要に応じて `.apm` 配下の参照資料やテンプレートも更新する。
-3. `src` を変更した場合は `pnpm run build:scripts` を実行して配布用 `.js` を再生成する。
-4. 変更後は `pnpm test` と `pnpm run lint:md` を実行し、結果を報告する。
+2. 変更対象がスクリプト挙動なら `scripts/doc-driven-dev/src` を編集し、必要に応じて `packages/doc-driven-dev/.apm` 配下の参照資料やテンプレートも更新する。
+3. `scripts/doc-driven-dev/src` を変更した場合は `pnpm --dir scripts/doc-driven-dev run build:scripts` を実行して `packages/doc-driven-dev/.apm/skills/**/scripts/*.js` を再生成する。
+4. 変更後は `pnpm --dir scripts/doc-driven-dev test` と `pnpm --dir scripts/doc-driven-dev run lint:md` を実行し、結果を報告する。
 5. 仕様互換性に影響する変更では、想定影響と移行方針を明記する。
 
 ## 4. 代表コマンド
 
-パッケージルートで実行:
+リポジトリルートから scripts workspace を対象に実行:
 
 ```bash
-pnpm run build:scripts
-pnpm test
-pnpm run lint:md
+pnpm --dir scripts/doc-driven-dev run build:scripts
+pnpm --dir scripts/doc-driven-dev test
+pnpm --dir scripts/doc-driven-dev run lint:md
 ```
 
-必要に応じて:
+必要に応じて、次は `packages/doc-driven-dev/` で実行:
 
 ```bash
 apm compile --dry-run
@@ -57,7 +59,7 @@ apm compile --validate
 補足:
 
 - このパッケージでは環境により `apm compile --validate` が `.apm` 構成検出で失敗することがある。
-- そのため回帰確認の主軸は `pnpm test` を優先する。
+- そのため回帰確認の主軸は `pnpm --dir scripts/doc-driven-dev test` を優先する。
 
 ## 5. スクリプト利用の注意
 
@@ -68,33 +70,28 @@ apm compile --validate
 ## 6. 変更時チェックリスト
 
 - 変更意図に対応する Skill ドキュメントを更新したか。
-- `src` を変えた場合、`.apm/skills/**/scripts/*.js` を再生成したか。
-- テスト (`pnpm test`) が通るか。
-- Markdown 変更時は `pnpm run lint:md` を確認したか。
+- `scripts/doc-driven-dev/src` を変えた場合、`packages/doc-driven-dev/.apm/skills/**/scripts/*.js` を再生成したか。
+- テスト (`pnpm --dir scripts/doc-driven-dev test`) が通るか。
+- Markdown 変更時は `pnpm --dir scripts/doc-driven-dev run lint:md` を確認したか。
 
 ## 7. ワークフロースキル（実装フェーズ）
 
 文書生成スキル（スクリプト・テンプレート・参照付き）に加え、このパッケージには実装フェーズ向けの**ワークフロースキル**が含まれます。これらは TypeScript ソースやコンパイル済みスクリプトを持たない、純粋な Markdown ガイダンススキルです。
 
-- ワークフロースキルは `.apm/skills/<name>/` にのみ配置（対応する `src/skills/<name>/` は不要）。
+- ワークフロースキルは `packages/doc-driven-dev/.apm/skills/<name>/` にのみ配置（対応する `scripts/doc-driven-dev/src/skills/<name>/` は不要）。
+  - 将来コードを持つ場合でも、実装は `packages/doc-driven-dev/` 直下ではなく `scripts/doc-driven-dev/src` 側に置く。
 - `references/` や `assets/templates/` サブディレクトリに補助ドキュメントやプロンプトテンプレートを含む場合がある。
-- `pnpm run build:scripts` の対象外。
-- 編集時は `.apm/skills/<name>/SKILL.md`（および `.ja.md`）を直接更新する。
+- `pnpm --dir scripts/doc-driven-dev run build:scripts` の対象外。
+- 編集時は `packages/doc-driven-dev/.apm/skills/<name>/SKILL.md`（および `.ja.md`）を直接更新する。
 
-含まれるワークフロースキル:
+ここに含まれる workflow / meta skill:
 
 | スキル | 目的 | 出典 |
 |--------|------|------|
-| implementation-flow | メタスキル: implementation-profile.md を通じて全利用可能スキルを発見・ルーティングする動的オーケストレーター | original |
-| source-driven-development | 公式ドキュメントに基づく実装 | addyosmani/agent-skills (MIT) |
-| incremental-implementation | 薄い垂直スライスでの漸進的実装 | addyosmani/agent-skills (MIT) |
-| doubt-driven-development | 敵対的フレッシュコンテキストレビュー | addyosmani/agent-skills (MIT) |
-| test-driven-development | RED-GREEN-REFACTOR サイクル | obra/superpowers (MIT) |
-| systematic-debugging | 4フェーズ根本原因プロセス | obra/superpowers (MIT) |
-| subagent-driven-development | 2段階レビュー付きタスクディスパッチ | obra/superpowers (MIT) |
-| dispatching-parallel-agents | 独立タスクの並行サブエージェント | obra/superpowers (MIT) |
-| requesting-code-review | レビュー依頼チェックリスト | obra/superpowers (MIT) |
-| receiving-code-review | レビューフィードバック受領プロセス | obra/superpowers (MIT) |
+| doc-driven-dev-lifecycle | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
+| briefing-flow | メタスキル: briefing と spec/ADR 準備を動的にオーケストレーションする | original |
+| implementation-flow | メタスキル: implementation profile を通じて全利用可能な実装スキルを発見・ルーティングする | original |
+| skill-discovery-protocol | flow-neutral な skill catalog / profile を生成・検証する | original |
 
 ## 8. 非目標
 

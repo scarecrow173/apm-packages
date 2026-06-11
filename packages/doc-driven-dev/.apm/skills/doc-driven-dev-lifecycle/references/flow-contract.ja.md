@@ -1,6 +1,6 @@
-# doc-driven-dev-flow: フロー契約
+# doc-driven-dev-lifecycle: フロー契約
 
-本文書は `doc-driven-dev-flow` が既存スキルをオーケストレーションする際の
+本文書は `doc-driven-dev-lifecycle` が既存スキルをオーケストレーションする際の
 固定シーケンスと判定ルールを定義する。
 
 ## フェーズ概要

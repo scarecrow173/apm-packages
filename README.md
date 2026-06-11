@@ -26,7 +26,8 @@ test files.
 This is a **monorepo-hybrid** layout:
 
 - Root `apm.yml` defines the marketplace index and lists all local packages.
-- Each package under `packages/` has its own `apm.yml` and is self-contained.
+- Each package under `packages/` has its own `apm.yml` and distributed `.apm/` assets.
+- Build workspaces, TypeScript sources, and tests may live under `scripts/<package-name>/`.
 
 ```text
 apm.yml                                  # marketplace index
@@ -49,7 +50,13 @@ packages/
     docs/
     examples/
     research/
-    scripts/
+scripts/
+  doc-driven-dev/                        # build workspace, TS sources, tests
+  steer-enterprise-web-research/         # build workspace, TS sources, tests
+
+For path references in this repository, prefer repo-root-relative paths such as
+`packages/doc-driven-dev/.apm/...` and `scripts/doc-driven-dev/...` so the
+manifest/distribution tree and the build/test tree stay distinct.
 ```
 
 ## Adding more packages

@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-06-10T16:15:44.676479+00:00'
+generated_at: '2026-06-11T09:37:45.797208+00:00'
 apm_version: 0.16.1
 dependencies:
 - repo_url: _local/doc-driven-dev
@@ -11,7 +11,7 @@ dependencies:
   - .agents/skills/deep-dive
   - .agents/skills/design-doc
   - .agents/skills/dispatching-parallel-agents
-  - .agents/skills/doc-driven-dev-flow
+  - .agents/skills/doc-driven-dev-lifecycle
   - .agents/skills/doc-status
   - .agents/skills/doubt-driven-development
   - .agents/skills/idea-refine
@@ -34,7 +34,7 @@ dependencies:
   - .claude/skills/deep-dive
   - .claude/skills/design-doc
   - .claude/skills/dispatching-parallel-agents
-  - .claude/skills/doc-driven-dev-flow
+  - .claude/skills/doc-driven-dev-lifecycle
   - .claude/skills/doc-status
   - .claude/skills/doubt-driven-development
   - .claude/skills/idea-refine
@@ -64,7 +64,7 @@ dependencies:
   is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
-  resolved_commit: 2a62238edd41ccd9a5a4d16269a4d87808e3e9c1
+  resolved_commit: d187883b7d761265309cdcc0f202cc76b4b3fb06
   package_type: marketplace_plugin
   deployed_files:
   - .agents/skills/api-and-interface-design
@@ -82,6 +82,7 @@ dependencies:
   - .agents/skills/idea-refine
   - .agents/skills/incremental-implementation
   - .agents/skills/interview-me
+  - .agents/skills/observability-and-instrumentation
   - .agents/skills/performance-optimization
   - .agents/skills/planning-and-task-breakdown
   - .agents/skills/security-and-hardening
@@ -90,16 +91,11 @@ dependencies:
   - .agents/skills/spec-driven-development
   - .agents/skills/test-driven-development
   - .agents/skills/using-agent-skills
+  - .claude/agents/README.md
   - .claude/agents/code-reviewer.md
   - .claude/agents/security-auditor.md
   - .claude/agents/test-engineer.md
-  - .claude/commands/build.md
-  - .claude/commands/code-simplify.md
-  - .claude/commands/plan.md
-  - .claude/commands/review.md
-  - .claude/commands/ship.md
-  - .claude/commands/spec.md
-  - .claude/commands/test.md
+  - .claude/agents/web-performance-auditor.md
   - .claude/hooks/agent-skills/hooks/session-start.sh
   - .claude/skills/api-and-interface-design
   - .claude/skills/browser-testing-with-devtools
@@ -116,6 +112,7 @@ dependencies:
   - .claude/skills/idea-refine
   - .claude/skills/incremental-implementation
   - .claude/skills/interview-me
+  - .claude/skills/observability-and-instrumentation
   - .claude/skills/performance-optimization
   - .claude/skills/planning-and-task-breakdown
   - .claude/skills/security-and-hardening
@@ -124,73 +121,52 @@ dependencies:
   - .claude/skills/spec-driven-development
   - .claude/skills/test-driven-development
   - .claude/skills/using-agent-skills
+  - .codex/agents/README.toml
   - .codex/agents/code-reviewer.toml
   - .codex/agents/security-auditor.toml
   - .codex/agents/test-engineer.toml
+  - .codex/agents/web-performance-auditor.toml
   - .codex/hooks/agent-skills/hooks/session-start.sh
+  - .cursor/agents/README.md
   - .cursor/agents/code-reviewer.md
   - .cursor/agents/security-auditor.md
   - .cursor/agents/test-engineer.md
-  - .cursor/commands/build.md
-  - .cursor/commands/code-simplify.md
-  - .cursor/commands/plan.md
-  - .cursor/commands/review.md
-  - .cursor/commands/ship.md
-  - .cursor/commands/spec.md
-  - .cursor/commands/test.md
+  - .cursor/agents/web-performance-auditor.md
   - .cursor/hooks/agent-skills/hooks/session-start.sh
+  - .github/agents/README.agent.md
   - .github/agents/code-reviewer.agent.md
   - .github/agents/security-auditor.agent.md
   - .github/agents/test-engineer.agent.md
+  - .github/agents/web-performance-auditor.agent.md
   - .github/hooks/agent-skills-hooks.json
   - .github/hooks/scripts/agent-skills/hooks/session-start.sh
-  - .github/prompts/build.prompt.md
-  - .github/prompts/code-simplify.prompt.md
-  - .github/prompts/plan.prompt.md
-  - .github/prompts/review.prompt.md
-  - .github/prompts/ship.prompt.md
-  - .github/prompts/spec.prompt.md
-  - .github/prompts/test.prompt.md
   deployed_file_hashes:
-    .claude/agents/code-reviewer.md: sha256:23b8da087132f01accbf64522d652fa6146881c61b609d5cdb00adfa2880952d
-    .claude/agents/security-auditor.md: sha256:cfce362c05161cd1bdcc0a1b1e0b3a7e111efaf11abb8de8ed43c78c9d3a39e4
-    .claude/agents/test-engineer.md: sha256:e7a950b19e8204074db467f8a335a16db9289caca97d04f89693a9a21a947b65
-    .claude/commands/build.md: sha256:12a9ab1e907717ba972d8a235cf221f0f245f7c73d41704f6c729a37bfa07c26
-    .claude/commands/code-simplify.md: sha256:6cfe2a5005fec704417a1896932eb660bf35df9c4471ee996cab92c52f152f61
-    .claude/commands/plan.md: sha256:58c07fb3313665ae8863e2c340d5e25f0789a1fd3bcf2a4f77f456a704e12513
-    .claude/commands/review.md: sha256:b8ca8e63cc771b2a62a42506f763bca834a50419bbed90cfabee2b38f3beb049
-    .claude/commands/ship.md: sha256:7b7de41da663a547e3b848b71c03b39856f98fbc93f9ac25646f06655d8c97b4
-    .claude/commands/spec.md: sha256:06c7ffed6179dd2a1ed3741d6ce517e249e888df8e8879eba04c59557883962e
-    .claude/commands/test.md: sha256:a70001074ec4f6b7da89f8a5af3c6406b3374222ef8031d7e3f4e25e2da90334
+    .claude/agents/README.md: sha256:bdc25c96540bdf8f13634c10633de2dbaa4587beb3cd6b849478781650b0d891
+    .claude/agents/code-reviewer.md: sha256:efe31152ec35a9743484a5f29be606d616e855a1b519d0ad8778929f134a618d
+    .claude/agents/security-auditor.md: sha256:3167c9daf12306b99ae86a978a78c92fe71e1b216409dbd957c7e3be5bb7c932
+    .claude/agents/test-engineer.md: sha256:72e5977b74120c81e0e0f8e5ff2fa42aac60d2681b81a582a33ec209680efaa1
+    .claude/agents/web-performance-auditor.md: sha256:143dffd480add5c66a3a1a0cc4c0b77d3c31eb074a2ae096e7d5c6dd6d37195b
     .claude/hooks/agent-skills/hooks/session-start.sh: sha256:9f3ab636c164463b26bc93af82626d42b184ce323a6b64c9a9aec873dd2c7cb7
+    .codex/agents/README.toml: sha256:d60fa182965db7d43a59c939ea855b7e13888812ddb51b66dc8b3bffff816a19
     .codex/agents/code-reviewer.toml: sha256:86e816b59800892a788d1a13228c9dbd57ccedb19ad55b2ef5126b3ec92be8d5
-    .codex/agents/security-auditor.toml: sha256:16f782e62cdf2c024e2043335fa9d62364a1620c547aea7a2b8fd7abbde3cb2b
+    .codex/agents/security-auditor.toml: sha256:91a2a25705f4dddb98d47c832b7a16146165155c245d8f7b248a4b3173d3613d
     .codex/agents/test-engineer.toml: sha256:6aaa58394dd45e5e5c9bb1da6b1bb5aff0dfb671df0f7f06077bf71848a2fce6
+    .codex/agents/web-performance-auditor.toml: sha256:179bc4de7f4f3dbbee6d0fe2900693777995d7c0b4bf7d969b311ecb9f98efa1
     .codex/hooks/agent-skills/hooks/session-start.sh: sha256:9f3ab636c164463b26bc93af82626d42b184ce323a6b64c9a9aec873dd2c7cb7
-    .cursor/agents/code-reviewer.md: sha256:23b8da087132f01accbf64522d652fa6146881c61b609d5cdb00adfa2880952d
-    .cursor/agents/security-auditor.md: sha256:cfce362c05161cd1bdcc0a1b1e0b3a7e111efaf11abb8de8ed43c78c9d3a39e4
-    .cursor/agents/test-engineer.md: sha256:e7a950b19e8204074db467f8a335a16db9289caca97d04f89693a9a21a947b65
-    .cursor/commands/build.md: sha256:12a9ab1e907717ba972d8a235cf221f0f245f7c73d41704f6c729a37bfa07c26
-    .cursor/commands/code-simplify.md: sha256:6cfe2a5005fec704417a1896932eb660bf35df9c4471ee996cab92c52f152f61
-    .cursor/commands/plan.md: sha256:58c07fb3313665ae8863e2c340d5e25f0789a1fd3bcf2a4f77f456a704e12513
-    .cursor/commands/review.md: sha256:b8ca8e63cc771b2a62a42506f763bca834a50419bbed90cfabee2b38f3beb049
-    .cursor/commands/ship.md: sha256:7b7de41da663a547e3b848b71c03b39856f98fbc93f9ac25646f06655d8c97b4
-    .cursor/commands/spec.md: sha256:06c7ffed6179dd2a1ed3741d6ce517e249e888df8e8879eba04c59557883962e
-    .cursor/commands/test.md: sha256:a70001074ec4f6b7da89f8a5af3c6406b3374222ef8031d7e3f4e25e2da90334
+    .cursor/agents/README.md: sha256:bdc25c96540bdf8f13634c10633de2dbaa4587beb3cd6b849478781650b0d891
+    .cursor/agents/code-reviewer.md: sha256:efe31152ec35a9743484a5f29be606d616e855a1b519d0ad8778929f134a618d
+    .cursor/agents/security-auditor.md: sha256:3167c9daf12306b99ae86a978a78c92fe71e1b216409dbd957c7e3be5bb7c932
+    .cursor/agents/test-engineer.md: sha256:72e5977b74120c81e0e0f8e5ff2fa42aac60d2681b81a582a33ec209680efaa1
+    .cursor/agents/web-performance-auditor.md: sha256:143dffd480add5c66a3a1a0cc4c0b77d3c31eb074a2ae096e7d5c6dd6d37195b
     .cursor/hooks/agent-skills/hooks/session-start.sh: sha256:9f3ab636c164463b26bc93af82626d42b184ce323a6b64c9a9aec873dd2c7cb7
-    .github/agents/code-reviewer.agent.md: sha256:23b8da087132f01accbf64522d652fa6146881c61b609d5cdb00adfa2880952d
-    .github/agents/security-auditor.agent.md: sha256:cfce362c05161cd1bdcc0a1b1e0b3a7e111efaf11abb8de8ed43c78c9d3a39e4
-    .github/agents/test-engineer.agent.md: sha256:e7a950b19e8204074db467f8a335a16db9289caca97d04f89693a9a21a947b65
+    .github/agents/README.agent.md: sha256:bdc25c96540bdf8f13634c10633de2dbaa4587beb3cd6b849478781650b0d891
+    .github/agents/code-reviewer.agent.md: sha256:efe31152ec35a9743484a5f29be606d616e855a1b519d0ad8778929f134a618d
+    .github/agents/security-auditor.agent.md: sha256:3167c9daf12306b99ae86a978a78c92fe71e1b216409dbd957c7e3be5bb7c932
+    .github/agents/test-engineer.agent.md: sha256:72e5977b74120c81e0e0f8e5ff2fa42aac60d2681b81a582a33ec209680efaa1
+    .github/agents/web-performance-auditor.agent.md: sha256:143dffd480add5c66a3a1a0cc4c0b77d3c31eb074a2ae096e7d5c6dd6d37195b
     .github/hooks/agent-skills-hooks.json: sha256:6e9f28cd955c3ec2a82cb5920593d440e24d4aac49700eb90b3f7de63c664896
     .github/hooks/scripts/agent-skills/hooks/session-start.sh: sha256:9f3ab636c164463b26bc93af82626d42b184ce323a6b64c9a9aec873dd2c7cb7
-    .github/prompts/build.prompt.md: sha256:4e2df3d4ed93adffa03c66004e09e58ea9e7505fe02dc9e25e9e30daa77346f5
-    .github/prompts/code-simplify.prompt.md: sha256:108efe728fe4fe60264353bf5890822147aba87d2c5f8570bfdbce98139309f1
-    .github/prompts/plan.prompt.md: sha256:4b7f63bee84b3b99474746dee6fb447ed81d3c824eeedb62d90ec04e010967be
-    .github/prompts/review.prompt.md: sha256:8b438e341142787b9f7ecb6276103bab59b01c0d7d10c6ad26f50607a3dfa214
-    .github/prompts/ship.prompt.md: sha256:8e7198233105890cdb26dc8dacbd9008e1f52c076c327a0e3c3ca89df9320c27
-    .github/prompts/spec.prompt.md: sha256:a755af54310a3eccc51680f3c01944060a1864450020aabb3be3eef4b40e153e
-    .github/prompts/test.prompt.md: sha256:e80b6c801a2507e8f6eb7a53c62f78a0dd5e8e2a18d8482c470b5381f91e0874
-  content_hash: sha256:f7669030dcf7773446a37a2b1872a811250129e52000c3edf4ae55e7b863cf43
+  content_hash: sha256:a3768ca53f3d9545b2ce454a54da25a6349af1717e4ad4efc451365a70c5acb8
   is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
@@ -249,7 +225,7 @@ dependencies:
   is_dev: true
 - repo_url: microsoft/apm
   host: github.com
-  resolved_commit: 50f25db56cca17c03532408aefec6fa57d4125fd
+  resolved_commit: 1f6d52258b1527c55c81868c390f739324499822
   virtual_path: packages/apm-guide
   is_virtual: true
   package_type: apm_package
@@ -265,7 +241,7 @@ dependencies:
     .codex/agents/apm-expert.toml: sha256:581dc7085e4879f84a228f2919ef2e5190f5410a63cd39cd06754da8455d8daf
     .cursor/agents/apm-expert.md: sha256:d9660199e6eec99c8cd9ee40f02b30aeb3862652a44a7ec5291fec7312040f65
     .github/agents/apm-expert.agent.md: sha256:d9660199e6eec99c8cd9ee40f02b30aeb3862652a44a7ec5291fec7312040f65
-  content_hash: sha256:9a581a92c4a94f85255cd74224b25c24e9cee583b1bf8fb54128c7d8b7c69472
+  content_hash: sha256:8b97220db10ac6af418e0a9118048652b3817b8819b53725f20d590129903166
   is_dev: true
 - repo_url: obra/superpowers
   host: github.com

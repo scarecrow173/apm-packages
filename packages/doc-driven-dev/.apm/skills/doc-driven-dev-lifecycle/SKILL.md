@@ -1,10 +1,10 @@
 ---
-name: doc-driven-dev-flow
-description: "Orchestrates the full document-driven development lifecycle through a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Unsure which doc skill to begin with, (3) Need end-to-end document orchestration from idea to execution, (4) Must enforce sequencing constraints between doc creation phases. Sequences skills: idea-refine → brainstorming → spec-doc → adr-doc → design-doc → plan-doc → task-doc → implementation-flow → doc-status. Keywords: document lifecycle, orchestration, phase gates, meta skill."
+name: doc-driven-dev-lifecycle
+description: "Orchestrates the full document-driven development lifecycle through a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Unsure which doc skill to begin with, (3) Need end-to-end document orchestration from briefing to execution, (4) Must enforce sequencing constraints between doc creation phases. Sequences skills: briefing-flow → design-doc → plan-doc → task-doc → implementation-flow → doc-status. Keywords: document lifecycle, orchestration, phase gates, meta skill."
 license: MIT
 ---
 
-# Doc-Driven Dev Flow
+# Doc-Driven Dev Lifecycle
 
 Orchestrates the full document-driven development lifecycle by selecting and
 sequencing existing doc skills through a 6-phase flow with explicit gates.
@@ -94,8 +94,7 @@ Key skills managed by `briefing-flow`:
 
 | Skill | Category | Expected Output | Completion Indicator |
 |-------|----------|-----------------|----------------------|
-| `idea-refine` | Frame | Structured problem definition with value hypothesis | Unknowns list + clear problem statement |
-| `brainstorming` | Frame | Ranked options with trade-off analysis | Evaluation criteria table + recommendation |
+| `deep-dive` | Frame | Confirmed intent summary with constraints and decision axes | Clear outcome, constraints, and open questions |
 | `steer-web-research` | Discover | External information research results | Evidence-backed research report |
 | `spec-doc` | Document | Formal specification document | `acceptance_criteria:` ≥3 items, `status: proposed` |
 | `adr-doc` | Document | Architecture decision record | `alternatives:` ≥2, rationale documented |
