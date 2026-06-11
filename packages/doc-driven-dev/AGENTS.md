@@ -5,7 +5,7 @@ This file is a practical guide for AI agents modifying `packages/doc-driven-dev`
 ## 1. Purpose and Scope
 
 - This package provides skills for document-driven development.
-- The primary flow is `briefing/deep-dive -> ADR/spec -> design -> plan -> task -> implementation -> audit`.
+- The primary flow is `briefing -> ADR/spec -> design -> plan -> task -> implementation -> audit`.
 - Generated artifacts use YAML front matter plus Markdown.
 - This guide defines package development rules; it does not require doc-driven-dev process artifacts for changes to this package itself.
 
@@ -85,14 +85,13 @@ In addition to document-generation skills (which have scripts, templates, and re
 - They do NOT participate in `pnpm --dir scripts/doc-driven-dev run build:scripts`.
 - When editing workflow skills, update `packages/doc-driven-dev/.apm/skills/<name>/SKILL.md` (and `.ja.md`) directly.
 
-Workflow and meta skills included:
+Workflow and meta skills included here:
 
 | Skill | Purpose | Origin |
 |-------|---------|--------|
 | briefing-flow | Meta skill: dynamic orchestrator for briefing and spec/ADR preparation | original |
 | doc-driven-dev-flow | Meta skill: six-phase document lifecycle orchestrator | original |
 | implementation-flow | Meta skill: dynamic orchestrator that discovers and routes to all available implementation skills via implementation profiles | original |
-| deep-dive | Codebase-aware interrogation of user intent, constraints, and decision axes | original |
 | skill-discovery-protocol | Flow-neutral skill catalog / profile generation and validation | original |
 
 ## 8. Non-Goals

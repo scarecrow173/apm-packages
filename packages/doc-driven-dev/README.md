@@ -31,7 +31,7 @@ document flow and invokes the phase-specific skills below as needed:
 
 ```text
 doc-driven-dev-flow
-  -> Phase 1: deep-dive OR briefing-flow
+  -> Phase 1: briefing-flow
   -> Phase 2: spec-doc + adr-doc   (parallel when both product and technical context are ready)
   -> Phase 3: design-doc           (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
@@ -64,8 +64,8 @@ upstream discovery artifact, addressing complementary concerns:
 | Blocking effect | planning requires an approved spec | planning is constrained by accepted ADRs |
 | Output | acceptance criteria | implementation constraints |
 
-- When `briefing-flow` or `deep-dive` reveals both product requirements and
-  technical decisions, write spec and ADR in parallel.
+- When Phase 1 reveals both product requirements and technical decisions, write
+  spec and ADR in parallel.
 - When the work is purely product (no architecture choice), spec alone
   suffices.
 - When the decision is purely cross-cutting (no single feature), ADR alone
@@ -123,7 +123,8 @@ itself.
 Use this meta skill when requirements are ambiguous, multiple information
 sources must converge, or you need dynamic skill selection before writing
 `spec-doc` / `adr-doc`. It generates repository-specific discovery artifacts
-through `skill-discovery-protocol` and drives Phase 1 briefing completion.
+through `skill-discovery-protocol` and drives Phase 1 briefing completion by
+selecting from the skills available in the current environment.
 
 ### `adr-doc`
 
@@ -247,7 +248,7 @@ internal document links rather than the type of the linked document.
 
 ```text
 doc-driven-dev-flow
-  -> Phase 1: deep-dive OR briefing-flow
+  -> Phase 1: briefing-flow
   -> Phase 2: spec-doc + adr-doc  (parallel: define what + record decisions)
   -> Phase 3: design-doc          (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
@@ -257,8 +258,10 @@ doc-driven-dev-flow
 
 `doc-driven-dev-flow` is the lifecycle entrypoint. `briefing-flow` and
 `implementation-flow` remain phase-level orchestration skills inside that
-lifecycle, not separate top-level lifecycles. The dual-track model remains
-`spec-doc` + `adr-doc`: specs define what should be built, why, scope, and
-acceptance criteria, while ADRs record technical decisions, alternatives, and
-rationale. When Phase 1 produces enough context for both, they are written in
-parallel before design and planning continue.
+lifecycle, not separate top-level lifecycles. These meta skills select from the
+skills available in the current environment rather than hardcoding a fixed
+supporting-skill stack. The dual-track model remains `spec-doc` + `adr-doc`:
+specs define what should be built, why, scope, and acceptance criteria, while
+ADRs record technical decisions, alternatives, and rationale. When Phase 1
+produces enough context for both, they are written in parallel before design
+and planning continue.

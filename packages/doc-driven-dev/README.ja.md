@@ -30,7 +30,7 @@ briefing、文書作成、実装準備、exit までをオーケストレーシ�
 
 ```text
 doc-driven-dev-flow
-  -> Phase 1: deep-dive OR briefing-flow
+  -> Phase 1: briefing-flow
   -> Phase 2: spec-doc + adr-doc   (プロダクト文脈と技術文脈が揃えば並列)
   -> Phase 3: design-doc           (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
@@ -61,8 +61,8 @@ spec と ADR は**並列トラック**です。同じ upstream discovery artifac
 | plan への影響 | approved spec が必要 | accepted ADR が制約になる |
 | 成果物 | 受け入れ条件 | 実装制約 |
 
-- `briefing-flow` または `deep-dive` がプロダクト要件と技術判断の両方を
-  明らかにしたら、spec と ADR を並列で作成します。
+- Phase 1 でプロダクト要件と技術判断の両方が明らかになったら、spec と ADR を
+  並列で作成します。
 - 作業が純粋にプロダクト要件だけなら spec のみで十分です。
 - 作業が純粋に横断的な技術判断だけなら ADR のみで十分です。
 - 自明に見える判断も含め、将来のエージェントが理由を追えるように ADR へ残します。
@@ -115,7 +115,8 @@ intent summary であり、それ自体では discovery artifact を生成しま
 要件が曖昧なとき、複数の情報源を統合したいとき、または `spec-doc` / `adr-doc`
 を書く前に動的な skill 選択が必要なときに使うメタスキルです。
 `skill-discovery-protocol` を通してリポジトリ固有の discovery artifact を生成し、
-Phase 1 の briefing 完了までを駆動します。
+その場で利用可能な skill から選択しながら、Phase 1 の briefing 完了までを
+駆動します。
 
 ### `adr-doc`
 
@@ -231,7 +232,7 @@ relations:
 
 ```text
 doc-driven-dev-flow
-  -> Phase 1: deep-dive OR briefing-flow
+  -> Phase 1: briefing-flow
   -> Phase 2: spec-doc + adr-doc  (parallel: define what + record decisions)
   -> Phase 3: design-doc          (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
@@ -241,7 +242,8 @@ doc-driven-dev-flow
 
 `doc-driven-dev-flow` がライフサイクルの entrypoint です。`briefing-flow` と
 `implementation-flow` は、このライフサイクル内部のフェーズ別オーケストレーション
-skill であり、別個のトップレベルライフサイクルではありません。並列トラックは
-`spec-doc` + `adr-doc` のままで、spec は何を作るか、なぜ必要か、範囲、
-受け入れ条件を定義し、ADR は技術判断、代替案、採用理由を記録します。
+skill であり、別個のトップレベルライフサイクルではありません。これらのメタスキルは、
+固定の補助 skill stack を前提にせず、その場で利用可能な skill から選択して進みます。
+並列トラックは `spec-doc` + `adr-doc` のままで、spec は何を作るか、なぜ必要か、
+範囲、受け入れ条件を定義し、ADR は技術判断、代替案、採用理由を記録します。
 Phase 1 で両方に十分な文脈が揃ったら並列に作成し、その後 design と planning へ進みます。

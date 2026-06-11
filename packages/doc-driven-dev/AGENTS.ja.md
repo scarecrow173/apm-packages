@@ -5,7 +5,7 @@
 ## 1. 目的と前提
 
 - このパッケージは document-driven development を支える Skill 集です。
-- 主な対象は `briefing/deep-dive -> ADR/spec -> design -> plan -> task -> 実装 -> 監査` の流れです。
+- 主な対象は `briefing -> ADR/spec -> design -> plan -> task -> 実装 -> 監査` の流れです。
 - 生成ドキュメントは YAML front matter + Markdown を前提にします。
 - このガイドはパッケージ開発ルールを定義するものであり、パッケージ自身に doc-driven-dev 運用を必須化するものではありません。
 
@@ -84,14 +84,13 @@ apm compile --validate
 - `pnpm --dir scripts/doc-driven-dev run build:scripts` の対象外。
 - 編集時は `packages/doc-driven-dev/.apm/skills/<name>/SKILL.md`（および `.ja.md`）を直接更新する。
 
-含まれる workflow / meta skill:
+ここに含まれる workflow / meta skill:
 
 | スキル | 目的 | 出典 |
 |--------|------|------|
 | briefing-flow | メタスキル: briefing と spec/ADR 準備を動的にオーケストレーションする | original |
 | doc-driven-dev-flow | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
 | implementation-flow | メタスキル: implementation profile を通じて全利用可能な実装スキルを発見・ルーティングする | original |
-| deep-dive | コードベースを踏まえて意図・制約・判断軸を深掘りする | original |
 | skill-discovery-protocol | flow-neutral な skill catalog / profile を生成・検証する | original |
 
 ## 8. 非目標
