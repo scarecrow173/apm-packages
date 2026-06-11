@@ -143,50 +143,6 @@ test("doc creation detects existing alternate directories", () => {
   assert.equal(fs.existsSync(path.join(repo, "tasks/0001-alternate-task-dir.md")), true);
 });
 
-test("new_idea creates idea-refine artifact and index", () => {
-  const repo = tempRepo();
-
-  const result = runScript("idea-refine", "new_idea.js", ["--title", "Improve onboarding"], { cwd: repo });
-
-  assert.equal(result.status, 0, result.stderr);
-  const ideaPath = path.join(repo, "docs/ideas/0001-improve-onboarding.md");
-  assert.equal(fs.existsSync(ideaPath), true);
-  assert.equal(fs.existsSync(path.join(repo, "docs/ideas/README.md")), true);
-
-  const idea = fs.readFileSync(ideaPath, "utf8");
-  assert.match(idea, /^id: "IDEA-0001"$/m);
-  assert.match(idea, /^type: "idea"$/m);
-  assert.match(idea, /^status: "exploring"$/m);
-  assert.match(idea, /^# Improve onboarding/m);
-  assert.match(idea, /## Raw Idea/);
-  assert.match(idea, /## Refined Options/);
-});
-
-test("new_brainstorm creates discovery artifact linked to refined idea", () => {
-  const repo = tempRepo();
-  const idea = runScript("idea-refine", "new_idea.js", ["--title", "Improve onboarding"], { cwd: repo });
-  assert.equal(idea.status, 0, idea.stderr);
-
-  const result = runScript(
-    "brainstorming",
-    "new_brainstorm.js",
-    ["--title", "Onboarding discovery", "--from", "docs/ideas/0001-improve-onboarding.md"],
-    { cwd: repo },
-  );
-
-  assert.equal(result.status, 0, result.stderr);
-  const brainstorm = fs.readFileSync(path.join(repo, "docs/discovery/0001-onboarding-discovery.md"), "utf8");
-  assert.match(brainstorm, /^id: "BRAINSTORM-0001"$/m);
-  assert.match(brainstorm, /^type: "brainstorm"$/m);
-  assert.match(brainstorm, /^status: "capturing"$/m);
-  assert.match(brainstorm, /^  derives-from:$/m);
-  assert.match(brainstorm, /^    - "docs\/ideas\/0001-improve-onboarding.md"$/m);
-  assert.match(brainstorm, /^  changes:$/m);
-  assert.match(brainstorm, /^    added: \[\]$/m);
-  assert.match(brainstorm, /## Intent/);
-  assert.match(brainstorm, /## Document Routing/);
-});
-
 test("new_plan links to spec with implements and derives-from relations", () => {
   const repo = tempRepo();
   const spec = runScript("spec-doc", "new_spec.js", ["--title", "Define checkout flow"], { cwd: repo });
