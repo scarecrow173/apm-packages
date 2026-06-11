@@ -10,29 +10,15 @@ flow_stack:
     - slot_id: "process_diagnosis"
       slot_type: "exclusive"
       activation: "conditional"
-      default:
-        skill: "systematic-debugging"
-        reason: "Bug fixes and test failures need diagnosis first"
     - slot_id: "build_structure"
       slot_type: "layerable"
       activation: "always"
-      default:
-        - skill: "incremental-implementation"
-          reason: "All implementation uses incremental delivery"
-        - skill: "test-driven-development"
-          reason: "Keep implementation test-led"
     - slot_id: "verification"
       slot_type: "layerable"
       activation: "conditional"
-      default:
-        - skill: "source-driven-development"
-          reason: "Framework/library work requires docs verification"
     - slot_id: "review_gate"
       slot_type: "exclusive"
       activation: "always"
-      default:
-        skill: "requesting-code-review"
-        reason: "Every task requires review"
 classification:
   unmatched:
     action: "assign"
@@ -50,7 +36,7 @@ classification:
       label: "Build"
       description: "Skills that structure how to execute"
       match:
-        capabilities: ["incremental_implementation", "parallel_dispatch", "tdd"]
+        capabilities: ["incremental_implementation", "parallel_dispatch", "test_led_development"]
         tags: ["build", "implementation", "tdd"]
         description_patterns: ["implement", "incremental", "parallel", "test-driven"]
     - id: "verify"

@@ -1,6 +1,6 @@
 ---
 name: doc-driven-dev-flow
-description: "文書駆動開発の全ライフサイクルを 6 フェーズのフローでオーケストレーションする。**利用タイミング**: (1) 新機能・新プロジェクト・大規模な変更をゼロから始めるとき、(2) どの doc スキルから始めるべきか不明なとき、(3) アイデアから実行まで end-to-end の文書オーケストレーションが必要なとき、(4) 文書作成フェーズ間の順序制約を強制する必要があるとき。スキル順序: idea-refine → brainstorming → spec-doc → adr-doc → design-doc → plan-doc → task-doc → implementation-flow → doc-status。キーワード: 文書ライフサイクル、オーケストレーション、フェーズゲート、メタスキル。"
+description: "文書駆動開発の全ライフサイクルを 6 フェーズのフローでオーケストレーションする。**利用タイミング**: (1) 新機能・新プロジェクト・大規模な変更をゼロから始めるとき、(2) どの doc スキルから始めるべきか不明なとき、(3) briefing から実行まで end-to-end の文書オーケストレーションが必要なとき、(4) 文書作成フェーズ間の順序制約を強制する必要があるとき。スキル順序: briefing-flow → design-doc → plan-doc → task-doc → implementation-flow → doc-status。キーワード: 文書ライフサイクル、オーケストレーション、フェーズゲート、メタスキル。"
 license: MIT
 ---
 
@@ -92,8 +92,7 @@ Phase 1 は `briefing-flow` に委譲されるため、スキルの発見・構�
 
 | スキル | カテゴリ | 期待出力 | 完了指標 |
 |--------|----------|----------|----------|
-| `idea-refine` | Frame | 価値仮説付きの構造化された問題定義 | 未知リスト + 明確な問題文 |
-| `brainstorming` | Frame | トレードオフ分析付きのランク付けオプション | 評価基準テーブル + 推奨 |
+| `deep-dive` | Frame | 制約と判断軸を含む確認済み intent 要約 | 明確な outcome、制約、未解決項目 |
 | `steer-web-research` | Discover | 外部情報の調査結果 | エビデンス付きの調査レポート |
 | `spec-doc` | Document | 正式な仕様書 | `acceptance_criteria:` 3 件以上、`status: proposed` |
 | `adr-doc` | Document | アーキテクチャ決定記録 | `alternatives:` 2 件以上、理由が文書化 |

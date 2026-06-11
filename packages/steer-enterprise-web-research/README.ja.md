@@ -13,6 +13,8 @@
 
 Codex と GitHub Copilot で使うことを主目的にしつつ、ソースは APM の標準的な `.apm/` レイアウトに寄せています。
 
+この文書中のパスは、コマンドブロックで別記しない限りリポジトリルート基準です。
+
 ## Git リポジトリからインストールする
 
 このディレクトリを Git リポジトリとして公開した後、利用側リポジトリで次のようにインストールします。
@@ -27,14 +29,14 @@ apm install <owner>/<repo>#v0.1.0
 apm install .
 ```
 
-リリース前に検証・プレビューします。
+リリース前の検証・プレビューは `packages/steer-enterprise-web-research/` で実行します。
 
 ```bash
 apm compile --validate
 apm compile --dry-run
 ```
 
-オフライン配布用 bundle を作る場合は、次を実行します。
+オフライン配布用 bundle を作る場合は、`packages/steer-enterprise-web-research/` で次を実行します。
 
 ```bash
 apm pack --archive -o dist
@@ -49,23 +51,27 @@ apm install ./dist/steer-enterprise-web-research-0.1.0.tar.gz
 ## 内容
 
 ```text
-.apm/
-  instructions/
-    steer-web-research.instructions.md
-  skills/
-    steer-web-research/
-      SKILL.md
-      SKILL.ja.md
-  prompts/
-    steer-deep-research.prompt.md
-    steer-deep-research.prompt.ja.md
-    steer-deep-research-ja.prompt.md
-  agents/
-    steer-enterprise-web-research.agent.md
-    steer-enterprise-web-research.agent.ja.md
-docs/
-research/
-scripts/
+packages/steer-enterprise-web-research/
+  .apm/
+    instructions/
+      steer-web-research.instructions.md
+    skills/
+      steer-web-research/
+        SKILL.md
+        SKILL.ja.md
+    prompts/
+      steer-deep-research.prompt.md
+      steer-deep-research.prompt.ja.md
+      steer-deep-research-ja.prompt.md
+    agents/
+      steer-enterprise-web-research.agent.md
+      steer-enterprise-web-research.agent.ja.md
+  docs/
+  research/
+scripts/steer-enterprise-web-research/
+  src/
+  tests/
+  build/
 ```
 
 ## 使い方
@@ -99,7 +105,7 @@ Run iterative search, maintain an evidence ledger, audit the findings, and produ
 
 - `packages/steer-enterprise-web-research/scripts/research_audit.js`
 
-隔離された scripts ワークスペースから build と test を実行します。
+リポジトリルートから隔離された scripts workspace を対象に build と test を実行します。
 
 ```bash
 pnpm --dir scripts/steer-enterprise-web-research test

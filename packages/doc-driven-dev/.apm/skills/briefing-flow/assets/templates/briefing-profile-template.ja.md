@@ -18,9 +18,7 @@ repository: "<repository-name>"
 | ---- | -------- | ------ | ---------- | --------- | --------- |
 | spec-doc | Document | .apm/skills/ | always-on | rigid | — |
 | adr-doc | Document | .apm/skills/ | always-on | rigid | — |
-| idea-refine | Frame | .apm/skills/ | conditional | flexible | Entry Decision = A-1 |
 | deep-dive | Frame | .apm/skills/ | conditional | flexible | 曖昧な要求を深掘りする必要がある |
-| brainstorming | Frame | .apm/skills/ | conditional | flexible | Entry Decision = A-1 or A-2 |
 | <!-- Add discovered skills below --> | | | | | |
 
 ## Category Assignments
@@ -29,9 +27,8 @@ repository: "<repository-name>"
 
 問題や選択肢を構造化するスキル。
 
-- idea-refine — 問題を diverge / converge して構造化する
 - deep-dive — 意図、制約、判断軸を深掘りする
-- brainstorming — インタラクティブに選択肢を整理する
+- <!-- 例: option-analysis skill — アプローチとトレードオフを比較する -->
 - <!-- 例: interview-me — 質問を通じて意図を引き出す -->
 
 ### Discover
@@ -76,11 +73,11 @@ repository: "<repository-name>"
 | Condition | Action | Reason |
 | --------- | ------ | ------ |
 | Entry Decision = A-1 (Problem Framing) | Add: deep-dive | 問題定義が曖昧で、深掘りが必要 |
-| Entry Decision = A-2 (Option Framing) | Add: brainstorming | トレードオフ分析が必要 |
+| Entry Decision = A-2 (Option Framing) | Add: 条件に合う Frame スキル | トレードオフ分析が必要 |
 | Entry Decision = A-3 (Combined Discovery) | Add: evaluate all conditional skills | 複数ソースからの収束が必要 |
 | Entry Decision = A-5 (Research Required) | Add: Discover + Research categories | 外部調査が必要 |
 | External API/library involved | Add: Research category | 公式ドキュメントに照らして検証する |
-| Multiple implementation approaches exist | Add: brainstorming | 選択肢の整理が必要 |
+| Multiple implementation approaches exist | Add: 条件に合う Frame スキル | 選択肢の整理が必要 |
 | Unprecedented architectural decision | Add: Research category | 証拠収集と前提検証が必要 |
 | <!-- Add repository-specific overrides --> | | |
 

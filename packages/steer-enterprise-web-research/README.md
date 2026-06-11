@@ -13,6 +13,9 @@ It packages:
 
 The package is designed for Codex and GitHub Copilot, while keeping the source in APM's canonical `.apm/` package layout.
 
+Paths in this document are repository-root-relative unless a command block says
+otherwise.
+
 ## Install from a Git repository
 
 After publishing this directory as a Git repository, install it from a consumer repository:
@@ -27,14 +30,14 @@ For local testing from this package directory:
 apm install .
 ```
 
-Validate and preview the package before release:
+Validate and preview the package before release from `packages/steer-enterprise-web-research/`:
 
 ```bash
 apm compile --validate
 apm compile --dry-run
 ```
 
-Create an offline bundle:
+Create an offline bundle from `packages/steer-enterprise-web-research/`:
 
 ```bash
 apm pack --archive -o dist
@@ -49,23 +52,27 @@ apm install ./dist/steer-enterprise-web-research-0.1.0.tar.gz
 ## Contents
 
 ```text
-.apm/
-  instructions/
-    steer-web-research.instructions.md
-  skills/
-    steer-web-research/
-      SKILL.md
-      SKILL.ja.md
-  prompts/
-    steer-deep-research.prompt.md
-    steer-deep-research.prompt.ja.md
-    steer-deep-research-ja.prompt.md
-  agents/
-    steer-enterprise-web-research.agent.md
-    steer-enterprise-web-research.agent.ja.md
-docs/
-research/
-scripts/
+packages/steer-enterprise-web-research/
+  .apm/
+    instructions/
+      steer-web-research.instructions.md
+    skills/
+      steer-web-research/
+        SKILL.md
+        SKILL.ja.md
+    prompts/
+      steer-deep-research.prompt.md
+      steer-deep-research.prompt.ja.md
+      steer-deep-research-ja.prompt.md
+    agents/
+      steer-enterprise-web-research.agent.md
+      steer-enterprise-web-research.agent.ja.md
+  docs/
+  research/
+scripts/steer-enterprise-web-research/
+  src/
+  tests/
+  build/
 ```
 
 ## Usage
@@ -99,7 +106,7 @@ The generated build artifact is placed in:
 
 - `packages/steer-enterprise-web-research/scripts/research_audit.js`
 
-Run the build and test workflow from the isolated scripts workspace:
+Run the build and test workflow from the repository root against the isolated scripts workspace:
 
 ```bash
 pnpm --dir scripts/steer-enterprise-web-research test

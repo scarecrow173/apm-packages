@@ -6,8 +6,10 @@ for files under that subtree.
 
 ## 1. Scope
 
+- Paths in this file are repository-root-relative unless a command block says otherwise.
 - This repository is a monorepo-style index for multiple APM packages.
-- Most package-specific changes live under `packages/<name>/`.
+- Package manifests and distributed assets live under `packages/<name>/`.
+- Build workspaces, source code, and tests may live under `scripts/<name>/`.
 - Root-level files such as `apm.yml`, `README.md`, `README.ja.md`, and shared
   repo configuration apply to the whole repository.
 
@@ -30,8 +32,8 @@ for files under that subtree.
 
 - Read existing docs and package guidance before editing.
 - Prefer the smallest change that keeps behavior and documentation aligned.
-- When editing package code, also update the distributed docs under
-  `packages/**/.apm/skills/**` when the user-facing behavior changes.
+- When editing package code in `scripts/<name>/`, also update the distributed
+  docs under `packages/<name>/.apm/**` when the user-facing behavior changes.
 - Run the relevant validation or tests before claiming completion.
 
 ## 4. Ignore / Housekeeping
@@ -39,4 +41,3 @@ for files under that subtree.
 - Keep generated caches and local working directories out of version control.
 - Add new transient artifacts to `.gitignore` when they appear repeatedly.
 - Avoid committing workspace-only cache directories such as `.pnpm-store/`.
-

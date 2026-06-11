@@ -158,11 +158,11 @@ ACTIVE SKILL STACK FOR THIS TASK:
 **Category examples:**
 
 - **Process**: `debugging-and-error-recovery`, `planning-and-task-breakdown`
-- **Build**: `incremental-implementation`, `dispatching-parallel-agents`
+- **Build**: `test-driven-development`, `incremental-implementation`
 - **Domain**: `typescript-conventions`, `react-patterns`
-- **Verify**: `source-driven-development`, `doubt-driven-development`
+- **Verify**: `source-driven-development`, `api-and-interface-design`
 - **Tooling**: `git-commit`, `ci-cd-automation`
-- **Review**: `requesting-code-review`, `receiving-code-review`
+- **Review**: `requesting-code-review`, `code-review-and-quality`
 
 For detailed category definitions, see the adapter's `classification.taxonomy` in `assets/adapters/implementation-adapter.yaml`.
 
@@ -177,7 +177,7 @@ Apply each skill in the active stack according to its priority:
    - **Rigid skills**: Follow exactly; do not skip or reorder steps.
      Example: `git-commit` (conventional commit format must be followed)
    - **Flexible skills**: Apply the spirit; adapt to context.
-   Example: `requesting-code-review` (review checklist can be prioritized per task)
+   Example: `code-review-and-quality` (review depth can be prioritized per task)
 
    Use `skill-discovery-protocol` to inspect `execution-policy` for the skill in the generated profile.
 3. Skills layer — they are not exclusive. Multiple skills apply simultaneously.

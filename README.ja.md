@@ -26,7 +26,8 @@ apm install .
 **monorepo-hybrid** レイアウトです：
 
 - Root `apm.yml` はマーケットプレイスインデックスであり、全ローカルパッケージを列挙します。
-- `packages/` 配下の各パッケージは自己完結した `apm.yml` を持ちます。
+- `packages/` 配下の各パッケージは `apm.yml` と配布用 `.apm/` 資産を持ちます。
+- build workspace、TypeScript ソース、テストは `scripts/<package-name>/` 配下にある場合があります。
 
 ```text
 apm.yml                                  # marketplace index
@@ -49,8 +50,14 @@ packages/
     docs/
     examples/
     research/
-    scripts/
+scripts/
+  doc-driven-dev/                        # build workspace, TS source, tests
+  steer-enterprise-web-research/         # build workspace, TS source, tests
 ```
+
+このリポジトリ内のパス参照は、`packages/doc-driven-dev/.apm/...` と
+`scripts/doc-driven-dev/...` のようなリポジトリルート基準を優先すると、
+manifest / 配布ツリーと build / test ツリーを混同しにくくなります。
 
 ## パッケージの追加方法
 
