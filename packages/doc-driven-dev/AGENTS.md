@@ -105,7 +105,53 @@ Workflow and meta skills included here:
 | implementation-flow | Meta skill: dynamic orchestrator that discovers and routes to all available implementation skills via implementation profiles | original |
 | skill-discovery-protocol | Flow-neutral skill catalog / profile generation and validation | original |
 
-## 8. Non-Goals
+## 8. Meta-Skill Activation Boundaries
+
+This package contains three meta-skills that orchestrate different phases of document-driven development. To prevent undefined behavior, exactly one meta-skill must be active per user request.
+
+### Activation Matrix
+
+| Meta-Skill | Entry Condition | Responsibility | Mutual Exclusions |
+|------------|-----------------|-----------------|-------------------|
+| `doc-driven-dev-lifecycle` | User invokes with 6-phase scope explicitly OR no other entry point matches | Phase 1–6 orchestration; delegates Phase 1 to briefing-flow, Phases 5+ to implementation-flow | Must not activate if `briefing-flow` already active OR if request explicitly targets Phase 5+ (→ implementation-flow only) |
+| `briefing-flow` | User invokes briefing/discovery/spec/ADR creation task explicitly OR lifecycle delegates Phase 1 | Phase A–D discovery; concurrent spec + ADR dispatch; skill stack assembly | Must not activate if `doc-driven-dev-lifecycle` is already driving Phase 2–6 OR if request explicitly targets code implementation (→ implementation-flow only) |
+| `implementation-flow` | User invokes task execution / code implementation explicitly OR lifecycle delegates Phase 5 | Phase A–E task execution with review gates; discovers and routes available implementation skills | Must not activate if request targets document creation (→ lifecycle or briefing-flow) OR if user is in mid-briefing or design review |
+
+### Dispatch Decision Tree
+
+```
+Entry Request
+├─ Contains "lifecycle" or "6-phase" or "end-to-end" keyword?
+│  └─ YES → doc-driven-dev-lifecycle
+│
+├─ Contains "briefing" or "discovery" or "spec" or "adr" keyword?
+│  └─ YES → briefing-flow
+│
+├─ Contains "implement" or "code" or "execute" or "task" keyword?
+│  └─ YES → implementation-flow
+│
+└─ No clear meta-skill signal → Consult request context
+   ├─ If in middle of spec/ADR creation → briefing-flow
+   ├─ If design already approved, in planning/task phase → lifecycle or implementation-flow per context
+   └─ If uncertain → Escalate to user for clarification
+```
+
+### Guarantees
+
+1. **Single Active Meta-Skill**: Only one meta-skill is active per user-facing request. Delegation between meta-skills is controlled via explicit phase gates, not concurrent activation.
+2. **No Cross-Activation Loops**: If `lifecycle` delegates to `briefing-flow` (Phase 1), then `briefing-flow` does NOT simultaneously activate `lifecycle` or `implementation-flow` unless the user makes a new, explicit request.
+3. **Phase Boundary Enforcement**: Once a phase gate is satisfied, the next meta-skill in sequence activates only on explicit user request or documented delegation, never unilaterally.
+
+### Testing
+
+Integration tests verify:
+- Activation conflicts are detected (two meta-skills competing for same request).
+- Review gate names remain canonical (`requesting-code-review` for Phase E).
+- Delegation boundaries are honored (Phase 1 completes before Phase 2 activation).
+
+See `scripts/doc-driven-dev/tests/integration/activation-conflict-detector.test.ts` and `review-gate-contract.test.ts`.
+
+## 9. Non-Goals
 
 - Unrelated large refactors.
 - Requiring ADR/spec/plan/task authoring and relation tracking for this package's own implementation tasks.

@@ -105,7 +105,53 @@ apm compile --validate
 | implementation-flow | メタスキル: implementation profile を通じて全利用可能な実装スキルを発見・ルーティングする | original |
 | skill-discovery-protocol | flow-neutral な skill catalog / profile を生成・検証する | original |
 
-## 8. 非目標
+## 8. メタスキル活性化ルール
+
+このパッケージは、document-driven development の異なるフェーズをオーケストレーションする 3 つのメタスキルを含みます。未定義な動作を避けるため、ユーザーリクエストごとに正確に **1 つ** のメタスキルが活動状態にある必要があります。
+
+### 活性化マトリックス
+
+| メタスキル | 入力トリガー条件 | 責務 | 相互排斥 |
+|------------|-----------------|------|----------|
+| `doc-driven-dev-lifecycle` | ユーザーが 6 フェーズ全体を明示的に呼び出した OR 他のエントリポイントが合致しない | Phase 1-6 統括・委譲（Phase 1 は briefing-flow へ、Phase 5+ は implementation-flow へ） | `briefing-flow` が既に活動中の場合は活性化しない OR Phase 5+ が明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
+| `briefing-flow` | ユーザーが briefing/discovery/spec/ADR 作成を明示的に呼び出した OR lifecycle が Phase 1 を委譲 | Phase A-D の discovery・spec + ADR 並行配信・skill stack 組み立て | `doc-driven-dev-lifecycle` が既に Phase 2-6 を駆動中の場合は活性化しない OR コード実装を明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
+| `implementation-flow` | ユーザーがタスク実行/コード実装を明示的に呼び出した OR lifecycle が Phase 5 を委譲 | Phase A-E のタスク実行・review gate 強制・利用可能な実装スキルの発見・ルーティング | 文書作成がターゲットの場合は活性化しない（→ lifecycle または briefing-flow） OR briefing/design 進行中の場合は活性化しない |
+
+### 配信判定ツリー
+
+```
+エントリリクエスト
+├─ "lifecycle" または "6-phase" または "end-to-end" キーワードを含む？
+│  └─ YES → doc-driven-dev-lifecycle
+│
+├─ "briefing" または "discovery" または "spec" または "adr" キーワードを含む？
+│  └─ YES → briefing-flow
+│
+├─ "implement" または "code" または "execute" または "task" キーワードを含む？
+│  └─ YES → implementation-flow
+│
+└─ 明確なメタスキルシグナルなし → リクエストコンテキストを相談
+   ├─ spec/ADR 作成中 → briefing-flow
+   ├─ 設計が承認済み、planning/task フェーズ中 → lifecycle または implementation-flow（コンテキスト依存）
+   └─ 不明 → ユーザーに説明請求
+```
+
+### 保証
+
+1. **単一活動メタスキル**: ユーザー向けリクエストごとに、アクティブなメタスキルは最大 1 つ。メタスキル間の委譲は明示的フェーズゲートで制御され、並行活性化は起きない。
+2. **クロス活性化ループなし**: `lifecycle` が `briefing-flow`（Phase 1）に委譲する場合、`briefing-flow` はユーザーが新たに明示的に呼び出さない限り、`lifecycle` や `implementation-flow` を同時に活性化しない。
+3. **フェーズ境界強制**: フェーズゲートが満たされたら、次のメタスキルは明示的ユーザー要求または文書化された委譲でのみ活性化。単独で起動してはいけない。
+
+### テスト
+
+統合テストは以下を検証:
+- 活性化競合の検出（2 つのメタスキルが同じリクエストで競争）
+- Review gate 名の正規化（Phase E の `requesting-code-review` 名は canonical）
+- 委譲境界の遵守（Phase 1 完了前 Phase 2 活性化禁止）
+
+参照: `scripts/doc-driven-dev/tests/integration/activation-conflict-detector.test.ts` および `review-gate-contract.test.ts`
+
+## 9. 非目標
 
 - 無関係な大規模リファクタ。
 - このパッケージ自身の変更作業に対して、ADR/spec/plan/task の作成や relation 管理を必須化すること。

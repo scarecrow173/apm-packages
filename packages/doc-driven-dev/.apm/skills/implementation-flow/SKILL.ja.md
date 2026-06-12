@@ -197,7 +197,9 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 ## Phase E: レビュー
 
-1. 実装をレビューに提出する（Review カテゴリスキルが利用可能な場合）。
+**レビューゲート契約**: canonical review skill 拘束について [references/review-gate-contract.md](references/review-gate-contract.md) 参照。
+
+1. Canonical review skill `requesting-code-review` を用いて実装をレビューに提出する(契約参照)。
 2. フィードバックに体系的に対応する。
 3. レビュー中に発見された新制約を記録する。
 

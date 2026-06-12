@@ -39,6 +39,8 @@ See `references/flow-contract.md` for the full specification.
 | 5 | Implement code guided by workflow skills | `implementation-flow` | all tasks pass verification |
 | 6 | Confirm document integrity | `doc-status` | front matter, relations, index integrity |
 
+**Key constraint resolution**: Phase 1 (Briefing) explicitly permits spec + ADR parallel creation when derived from the same discovery context, as managed by `briefing-flow`. Later phases enforce sequential gates (Phase 2 requires Phase 1 complete, Phase 3 requires Phase 2 approved design, etc.).
+
 ## Phase Exit Checklists
 
 ### Phase 1 Exit
@@ -215,7 +217,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 | "Loopback is inefficient" | Skipped loopbacks amplify problems downstream. 1x cost at Phase 2 → 10x at Phase 5 |
 | "Just one small change, no need for full flow" | Accumulated "small changes" rot architecture. Death by a thousand cuts |
 | "ADR is bureaucracy" | Without decision records, future-you repeats the same debates. Time sink loops |
-| "Parallel doc creation saves time" | Parallel docs with dependencies lose consistency. Merge conflicts in prose |
+| "Parallel doc creation saves time" | **Allowed when independent**: spec + ADR created in parallel from same discovery (Phase 1: briefing-flow). **Prohibited when dependent**: creating task-doc before plan-doc approval, or design without spec consensus. Rule: parallel when docs address different questions from same data; sequential when later depends on earlier decision. |
 
 ---
 

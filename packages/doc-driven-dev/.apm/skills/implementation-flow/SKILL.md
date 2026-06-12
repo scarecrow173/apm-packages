@@ -199,7 +199,9 @@ A task is NOT complete until verification passes:
 
 ## Phase E: Review
 
-1. Submit implementation for review (using Review-category skills if available).
+**Review Gate Contract**: See [references/review-gate-contract.md](references/review-gate-contract.md) for canonical review skill binding.
+
+1. Submit implementation for review using the canonical review skill: `requesting-code-review` (see contract).
 2. Address feedback systematically.
 3. Record any new constraints discovered during review.
 
