@@ -1,87 +1,55 @@
 # apm-package-judge
 
-`apm-package-judge` は、APM パッケージ全体を意味論的に評価するためのモジュール式 skill suite である。
+`apm-package-judge` は、APM package を component ごとの専門 judge と dependency graph aware synthesis で評価する semantic review package です。
 
-この suite は機械的監査を行わない。`apm audit --ci`、lockfile integrity、hash drift、hidden Unicode scan、install replay は対象外である。目的は、APM パッケージを「agent capability bundle」として読み、構成物が正しく、安全に、無駄なく、有用に合成されているかを評価することにある。
+この package は mechanical audit を実行しません。`apm audit --ci`、lockfile correctness、content hash、drift check などは対象外です。評価対象は、agent が package を読んだときに正しく、安全に、有用に、過剰な context cost なしで振る舞えるかです。
 
-## Architecture
+## Entry point（エントリーポイント）
+
+標準の entrypoint skill は次です。
+
+```text
+.apm/skills/apm-semantic-package-judge/SKILL.md
+```
+
+日本語版 `SKILL.ja.md` は参照用 localization です。runtime entrypoint は、harness が明示的に localization を選択しない限り標準の `SKILL.md` です。
+
+## Architecture（構成）
 
 ```text
 apm-semantic-package-judge
-  ├─ inventory package components
-  ├─ build dependency/provenance/interaction/capability graph
-  │   └─ dependency graph reviewer → apm-dependency-graph-builder + apm-dependency-graph-judge
-  ├─ dispatch each component type to a specialist reviewer subagent
-  │   ├─ skill reviewer       → apm-skill-component-judge
-  │   ├─ agent reviewer       → apm-agent-component-judge
-  │   ├─ prompt reviewer      → apm-prompt-component-judge
-  │   ├─ instruction reviewer → apm-instruction-component-judge
-  │   ├─ MCP reviewer         → apm-mcp-component-judge
-  │   └─ hook/command reviewer→ apm-hook-command-component-judge
-  └─ synthesize component reports and graph findings with apm-package-synthesis-judge
+  -> apm-dependency-graph-reviewer
+      -> apm-dependency-graph-builder
+      -> apm-dependency-graph-judge
+  -> component reviewer agents
+      -> apm-skill-component-judge
+      -> apm-agent-component-judge
+      -> apm-prompt-component-judge
+      -> apm-instruction-component-judge
+      -> apm-mcp-component-judge
+      -> apm-hook-command-component-judge
+  -> apm-package-synthesizer
+      -> apm-package-synthesis-judge
 ```
 
-## Contents
+## Component judges（component judge）
+
+各 component judge は 120 点満点です。Package synthesis は 160 点満点です。最終 score は component score の単純平均ではなく、graph findings、cap rules、cross-component conflicts、semantic safety、context efficiency を使って決めます。
+
+## Calibration guide（キャリブレーションガイド）
+
+`references/judge-calibration-guide.md` と `references/judge-calibration-guide.ja.md` が、component judges 全体の採点粒度を揃えます。各 component judge は採点前にこの guide を読み、package synthesis judge は final score の前に読みます。
+
+## Source layout（source layout）
+
+APM source primitives は `.apm/` 配下に置きます。
 
 ```text
-.apm/skills/
-  apm-semantic-package-judge/
-  apm-dependency-graph-builder/
-  apm-dependency-graph-judge/
-  apm-skill-component-judge/
-  apm-agent-component-judge/
-  apm-prompt-component-judge/
-  apm-instruction-component-judge/
-  apm-mcp-component-judge/
-  apm-hook-command-component-judge/
-  apm-package-synthesis-judge/
-.apm/agents/
-  apm-dependency-graph-reviewer.agent.md
-  apm-skill-reviewer.agent.md
-  apm-agent-reviewer.agent.md
-  apm-prompt-reviewer.agent.md
-  apm-instruction-reviewer.agent.md
-  apm-mcp-reviewer.agent.md
-  apm-hook-command-reviewer.agent.md
-  apm-package-synthesizer.agent.md
-references/
-  component-report.schema.json
-  dependency-graph.schema.json
-  graph-report.schema.json
-  graph-aware-synthesis.md
-  package-report.schema.json
-  dispatch-matrix.md
-examples/
-  modular-review-flow.md
+.apm/skills/<name>/SKILL.md
+.apm/agents/*.agent.md
+.apm/prompts/*.prompt.md
+.apm/instructions/*.instructions.md
+.apm/hooks/*.json
 ```
 
-## Typical use
-
-```text
-Evaluate this APM package semantically using the modular APM package judge. Build a dependency graph, spawn specialist reviewers for each component type, collect reports, then synthesize an overall package-quality report.
-```
-
-## Graph views
-
-dependency graph reviewer は4つの semantic graph view を構築する。
-
-1. Package dependency graph: root、direct dependencies、transitive dependencies、local dependencies、MCP declarations。
-2. Component provenance graph: 各 skill、prompt、instruction、agent、MCP、hook、command、generated output をどの package が提供しているか。
-3. Semantic interaction graph: activation overlaps、instruction conflicts、delegation paths、bypasses、constraints、role duplication。
-4. Capability exposure graph: MCP/tools、hooks、commands、scripts、agent tool permissions、filesystem/network/git/secret/state-changing capabilities。
-
-## What this does not evaluate
-
-- lockfile integrity
-- hash drift
-- hidden Unicode scans
-- install replay
-- package authenticity
-- dependency vulnerability databases
-- CI policy pass/fail
-
-これらには別の機械的監査・セキュリティツールを使う。この suite は semantic package quality と graph-aware composition risk だけに集中する。
-
-## 日本語版について
-
-各 Markdown ファイルには `.ja.md` の日本語ローカライズ版を用意している。`.apm/agents/*.ja.md` は、重複した agent id を避けるため、frontmatter の `name` に `-ja` サフィックスを付けている。
+日本語参照版は `.ja.md` として提供します。runtime entrypoint は、harness が明示的に localized files を選択しない限り、標準の非 localized filenames です。

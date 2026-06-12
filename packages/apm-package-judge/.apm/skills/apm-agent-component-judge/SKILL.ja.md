@@ -1,54 +1,114 @@
 ---
 name: apm-agent-component-judge
-description: カスタムエージェントまたはサブエージェント構成物を、役割境界、委譲条件、ツール範囲、権限前提、スキル preload 方針、出力契約、分離性、保守性の観点で評価する。モジュール式 APM パッケージ評価の専門 reviewer として使用する。
+description: 個別の custom agent または subagent component を、delegation trigger quality、persona
+  boundary、tool permissions、preloaded skills、output contract、isolation value、safety
+  limits、skills や instructions との overlap の観点で評価する。`.apm/agents/*.agent.md`、Claude
+  Code subagents、Copilot/Cursor/Codex agent files、APM semantic review 内の package agent
+  personas をレビューするときだけ使う。
 license: MIT
-metadata:
-  version: 0.2.0
-  category: apm-semantic-review
-  locale: ja
-  localized_from: SKILL.md
+
 ---
 
-# APM エージェント構成物 Judge
+# APM Agent Component Judge 日本語版
 
-カスタムエージェントおよびサブエージェントを、専門作業者として評価する。
+個別の custom agent/subagent component を評価する。package-level quality の統合評価は行わない。
 
-## スコープ
+Agent は、model に well-bounded role、clear delegation trigger、appropriate tools、return contract を与えるとき価値がある。曖昧な persona に過ぎない場合や skill を重複するだけの場合は弱い。
 
-以下をレビューする。
+## Trigger contract（発火契約）
+
+この judge を使う対象:
 
 - `.apm/agents/*.agent.md`
-- `.apm/agents/*.agent.md`
-- エージェントの frontmatter
-- エージェント本文のプロンプト
-- ツール宣言
-- スキル preload 宣言
-- エージェントに紐づく MCP 宣言
+- Claude Code custom subagents
+- plugins 由来の agent personas
+- Copilot、Cursor、Codex、OpenCode などの harness 向けに変換された agent definitions
+- judge skills を preload する reviewer subagents
 
-## ルーブリック: 100点
+使わない対象:
 
-| 評価軸 | 最大 | 意味 |
+- skill または prompt にすべき reusable task instructions には使わない。
+
+## Calibration reference（キャリブレーション参照）
+
+採点前に `../../../references/judge-calibration-guide.ja.md` を読む。trigger-quality expectations、evidence classification、score percentages、cap-rule severity、expert value / activation reminders / redundant content の区別を正規化するために使う。
+
+## Rubric: 120 points（120点ルーブリック）
+
+| Dimension | Max | Evaluation focus |
 |---|---:|---|
-| A1 役割境界 | 15 | エージェントが明確に1つの責務を持っている。 |
-| A2 委譲条件 | 15 | いつ呼び出すべきか、いつ呼び出すべきでないかが明確である。 |
-| A3 ツールと権限の範囲 | 15 | ツールが最小限で、目的に対して正当化されている。 |
-| A4 スキル preload 方針 | 10 | preload されるスキルが必要最小限で、肥大化していない。 |
-| A5 出力契約 | 15 | 親エージェントに返す形式が簡潔で有用である。 |
-| A6 分離性とコンテキスト衛生 | 10 | 生の検索結果やログで親コンテキストを汚染しない。 |
-| A7 安全境界 | 10 | 破壊的操作、ネットワーク、秘密情報、書き込み操作を安全に扱う。 |
-| A8 保守性 | 10 | 変更、テスト、推論が容易である。 |
+| A1 Delegation Trigger | 20 | description がいつ delegate するかを正確に示し、task/domain keywords を含む。 |
+| A2 Role Boundary & Expertise | 15 | persona が狭く、expert で、非汎用的。責務が明示されている。 |
+| A3 Tool & Permission Calibration | 20 | tools が least-privilege で task に合っている。dangerous capabilities が正当化されている。 |
+| A4 Skill Preload & Knowledge Fit | 10 | preloaded skills が必要で過剰ではなく、agent role と整合している。 |
+| A5 Workflow & Decision Protocol | 15 | 曖昧な behavior ではなく、具体的な review/decision workflow がある。 |
+| A6 Output Contract | 10 | return format が明確で簡潔、parent conversation に有用。 |
+| A7 Isolation & Context Economy | 10 | separate context の理由があり、main-context flooding を防ぐ。 |
+| A8 Safety Boundaries & Non-Goals | 20 | 何をしてはいけないか、いつ escalate するか、不確実性をどう扱うかを示す。 |
 
-## 検出すべき所見
+## Cap rules（上限ルール）
 
-- 他のエージェントまたはスキルとの役割重複
-- 明示的な委譲トリガーがない
-- 目的に対して過剰なツール権限
-- 権限バイパスを前提にした記述
-- 不必要に多くのスキルを読み込む
-- 結論ではなく冗長な生データを返す
-- 拒否・不確実性ルールがない
-- 親コンテキストに隠れた依存を持つ
+- description 欠落または delegation trigger 不明瞭: max C、A1 <= 10。
+- justification なしの broad tool access: max C。tools が files/network/state を mutate できる場合は D。
+- distinct isolation または tool-boundary 理由なしに既存 skill を duplicate する agent: max C。
+- useful summary ではなく raw dumps を返す agent: A6 <= 5、A7 <= 6。
+- user/system/package rules を override する authority-expanding language がある: max F。
 
-## 出力
+## Shared evaluation protocol（共通評価プロトコル）
 
-標準の component report format を使い、Type は `custom-agent` とする。
+1. 採点前に component 全体を読む。近傍 resources が参照されている場合は、activation、output contract、safety boundaries、workflow viability の判断に必要な resources だけを確認する。
+2. evidence を次のいずれかに分類する。
+   - Expert: 非自明な知識、判断基準、trade-off、edge case、制約、anti-pattern。
+   - Activation: 正しい workflow 選択を助ける短い reminder。
+   - Redundant: base model がほぼ確実に知っている汎用助言。
+3. 各 dimension は evidence に基づいて採点する。整った見た目だけで点を与えない。
+4. raw score を合計した後で cap rules を適用する。
+5. activation、expert knowledge density、safety boundaries、runtime usability を改善する具体的な修正を返す。
+
+## Grade scale（グレード基準）
+
+| Grade | Percentage | Meaning |
+|---|---:|---|
+| A | 90-100% | この component type として優秀で、本番利用可能。 |
+| B | 80-89% | 良好。小さな targeted fix が必要。 |
+| C | 70-79% | 利用可能だが、意味のある改善が必要。 |
+| D | 60-69% | 品質または安全性に重大な問題がある。 |
+| F | <60% | 根本的に弱い、危険、または有用でない。 |
+
+## Report requirements（レポート要件）
+
+すべての finding は、可能な限り path と短い excerpt、または観察可能な property を示す。evidence が不足している場合は推測せず、confidence を下げる。
+
+
+## Output（出力）
+
+```markdown
+## Component Semantic Review: <path>
+- Type: custom-agent
+- Score: <0-120> (<percent>%)
+- Grade: <A-F>
+- Verdict: <one sentence>
+- Confidence: <high|medium|low>
+
+### Scores
+| Dimension | Score | Max | Evidence |
+|---|---:|---:|---|
+
+### Trigger Assessment
+- Delegate when:
+- Do not delegate when:
+- Potential collisions:
+
+### Tool Boundary Assessment
+- Allowed tools:
+- Excessive or missing tools:
+- Recommended change:
+
+### Findings
+- ...
+
+### Top Fixes
+1. ...
+2. ...
+3. ...
+```

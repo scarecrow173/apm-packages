@@ -1,70 +1,124 @@
 ---
 name: apm-package-synthesis-judge
-description: Synthesize specialist component-review reports plus dependency/provenance/semantic-interaction/capability-graph findings into an overall semantic quality evaluation of an APM package. Use after component reviewers and dependency graph reviewer have produced reports.
+description: Synthesize component judge reports and dependency graph reports into a package-level semantic quality verdict for APM packages. Evaluate package intent, activation architecture, cross-component coherence, semantic safety, context efficiency, portability, and runtime usefulness. Use only after component reviewers and dependency graph reviewers have produced reports, or when synthesizing supplied reports.
 license: MIT
-metadata:
-  version: 0.3.0
-  category: apm-semantic-review
+
 ---
 
 # APM Package Synthesis Judge
 
-Synthesize component reports and graph findings into package-level semantic quality. This skill is not a component reviewer and does not perform mechanical audit.
+Synthesize package-level semantic quality from component reports and dependency graph reports.
 
-## Inputs
+Do not re-run component scoring unless reports are missing or obviously inconsistent. Do not perform mechanical audit checks.
 
-- component inventory
-- specialist reviewer reports
-- dependency graph JSON or graph review report
-- package docs and manifest excerpts, if available
-- known target harnesses
+## Trigger contract
 
-## Package rubric: 160 points
+Use this judge when the input includes:
 
-| Dimension | Max | Meaning |
+- component semantic review reports
+- dependency graph semantic review report
+- package inventory plus component findings
+- a request for final package-level verdict after modular review
+
+Do not use as the entrypoint when no component/graph review has been performed; start with `apm-semantic-package-judge` instead.
+
+
+## Calibration references
+
+Before assigning any package-level score, read `../../../references/judge-calibration-guide.md` and `../../../references/graph-aware-synthesis.md`. Use the calibration guide for score normalization, evidence classification, score percentages, and cap-rule severity. Use the graph-aware guide for dependency, provenance, semantic interaction, and capability exposure findings.
+
+## Rubric: 160 points
+
+| Dimension | Max | Evaluation focus |
 |---|---:|---|
-| P1 Package Intent & Value Delta | 20 | The whole package has clear, non-generic value. |
-| P2 Component Coverage & Role Separation | 20 | Components cover necessary roles without duplication. |
-| P3 Activation Architecture | 20 | Users and agents can predict which component activates. |
-| P4 Cross-Component Coherence | 20 | Components compose without contradictions. |
-| P5 Semantic Safety & Trust Boundaries | 20 | The package avoids unsafe emergent behavior and surprise capabilities. |
-| P6 Context Efficiency | 20 | Context cost and dependency-induced bloat are justified and minimized. |
-| P7 Runtime Usefulness | 20 | The package improves realistic tasks. |
-| P8 Maintainability & Evolvability | 20 | Structure, provenance, graph clarity, tests, ownership, and docs support updates. |
+| P1 Package Intent & Value Delta | 20 | Package has a coherent purpose and adds capability beyond generic context. |
+| P2 Semantic Scope & Manifest Clarity | 20 | Package scope, primitives, dependencies, and target assumptions are understandable. |
+| P3 Activation Architecture | 20 | Entrypoint skill, reviewer agents, component triggers, prompts, and instructions activate predictably. |
+| P4 Cross-Component Coherence | 25 | Components reinforce each other; no harmful duplication, shadowing, or contradictions. |
+| P5 Semantic Safety & Trust Boundaries | 25 | MCP/tools/hooks/scripts/agents disclose capabilities and respect boundaries. |
+| P6 Context Efficiency & Progressive Disclosure | 20 | Package avoids always-on bloat and routes to resources/reviewers only when needed. |
+| P7 Portability & Target Fit | 15 | APM primitives are placed correctly and target differences are acknowledged. |
+| P8 Runtime Usefulness & Eval Readiness | 15 | Package can be validated by realistic tasks with clear success/failure signals. |
 
-## Synthesis rules
+## Synthesis method
 
-Do not compute the score as a raw average.
+1. Normalize every component score to a percentage.
+2. Group component findings by type and severity.
+3. Read the graph report before making package-level conclusions.
+4. Identify whether failures are isolated component issues or package-architecture issues.
+5. Apply cap rules.
+6. Produce final score, grade, verdict, and fixes.
 
-Use graph findings to adjust component findings. A weak graph can reveal package-level issues even when each component looks acceptable in isolation.
+Component scores are evidence, not a simple average. A package with mostly good components can still fail if graph synthesis shows hidden capability surprise, activation conflicts, or contradictory rules.
 
-Cap rules:
+## Cap rules
 
-- Any critical semantic safety blocker: max grade D.
-- Undisclosed state-changing MCP/hook/command/script: P5 <= 8 and max grade D.
-- Undisclosed transitive MCP/tool/capability: P5 <= 10.
-- Multiple activation collisions affecting normal use: P3 <= 10 and max grade C.
-- Contradictory instructions in overlapping scopes: P4 <= 10 and max grade C.
-- Prompt or command bypasses intended skill/agent safety path: P4 <= 12 and P5 <= 12.
-- Dependency graph shows transitive component dominance without documentation: P1 <= 12 and P8 <= 14.
-- Dependency graph is unavailable or too incomplete for a dependency-using package: confidence cannot be high.
-- Package lacks a clear purpose: P1 <= 8 and max grade C.
-- Most components are generic: P1 <= 10 and P6 <= 10.
-- No runtime eval tasks possible: P7 <= 10.
-- Component coverage incomplete due to missing files: confidence cannot be high.
-
-## Required synthesis sections
-
-- graph summary
-- component coverage matrix
-- cross-component conflict matrix
-- dependency/provenance findings
-- capability exposure findings
-- emergent safety risks
-- context efficiency assessment
-- top package-level fixes
-- final recommendation
+- No clear entrypoint skill or package-level activation route: max C and P3 <= 10.
+- Undisclosed transitive MCP/tool capability: P5 <= 10; max C, or D if write/destructive/network-sensitive.
+- State-changing hook/command surprise: P5 <= 8 and max D.
+- Activation collision affecting primary user tasks: P3 <= 10 and max C.
+- Contradictory instruction overlap affecting package behavior: P4 <= 10 and max C.
+- Package mostly contains generic advice: P1 <= 8 and max D.
+- Always-on context grows substantially through dependencies without value: P6 <= 12.
+- Core behavior has unknown provenance: confidence cannot be high.
+- Component reviewers did not inspect required primitive types: confidence cannot be high.
 
 ## Output
 
-Use the package report template from `references/package-report.schema.json` when structured output is requested.
+```markdown
+# APM Semantic Package Evaluation Report: <package>
+
+## Summary
+- Score: <0-160> (<percent>%)
+- Grade: <A-F>
+- Verdict: <one sentence>
+- Recommended action: <approve|approve with fixes|hold|block|redesign>
+- Confidence: <high|medium|low>
+
+## Entrypoint and Trigger Architecture
+- Entrypoint skill:
+- Expected user trigger phrases:
+- Reviewer dispatch path:
+- Synthesis path:
+
+## Evidence Reviewed
+- Component reports:
+- Graph report:
+- Inventory coverage:
+- Unknowns:
+
+## Dimension Scores
+| Dimension | Score | Max | Key evidence |
+|---|---:|---:|---|
+
+## Component Score Summary
+| Type | Count | Median/Range | Main issue |
+|---|---:|---|---|
+
+## Graph-Derived Constraints
+- ...
+
+## Blockers
+- ...
+
+## High-Risk Findings
+- ...
+
+## Cross-Component Conflicts
+- ...
+
+## Context and Trigger Efficiency
+- ...
+
+## Top Improvements
+1. ...
+2. ...
+3. ...
+
+## Suggested Runtime Eval Tasks
+| Task | Expected activation | Expected output | Failure signal |
+|---|---|---|---|
+
+## Final Recommendation
+<clear conclusion>
+```

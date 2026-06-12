@@ -49,7 +49,7 @@
         "score": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 100
+          "maximum": 120
         },
         "grade": {
           "type": "string",

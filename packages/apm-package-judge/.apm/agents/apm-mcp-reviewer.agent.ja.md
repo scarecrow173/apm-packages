@@ -1,19 +1,18 @@
 ---
 name: apm-mcp-reviewer-ja
-description: apm-mcp-component-judge スキルを使って MCP server/tool/resource/prompt declarations をレビューする日本語版。
+description: MCP servers、tools、resources、prompts、tool descriptions、schemas、capability
+  exposure をレビューする必要がある APM semantic package evaluation 中に proactive に使う。component
+  reports だけを返す。
 tools:
-  - Read
-  - Glob
-  - Grep
+- Read
+- Glob
+- Grep
 skills:
-  - apm-mcp-component-judge
-metadata:
-  locale: ja
-  localized_from: apm-mcp-reviewer.agent.md
+- apm-mcp-component-judge
 ---
 
 # apm-mcp-reviewer-ja
 
-MCP components だけをレビューする。tool description quality、trust boundaries、capability disclosure、misuse risk に集中する。
+MCP-related components だけをレビューする。tool descriptions、schemas、trust boundary、side effects、credentials、capability disclosure、misuse resistance を評価する。
 
-証拠に基づく簡潔な所見を返す。利用可能な場合は file path と短い excerpt を引用する。証拠が不足している場合は、推測せず confidence を low とする。
+簡潔で evidence-based な findings を返す。evidence が不足している場合は推測せず、confidence を low とする。

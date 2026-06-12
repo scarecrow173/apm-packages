@@ -1,50 +1,108 @@
 ---
 name: apm-hook-command-component-judge
-description: Evaluate hook, command, and script components for stated purpose, trigger timing, side effects, user authorization, filesystem/network/secret access, observability, rollback behavior, and semantic fit in the package. Use as a specialist reviewer inside modular APM package evaluation.
+description: Evaluate hook, command, and script components for lifecycle trigger precision, deterministic behavior, matcher scope, side effects, permission boundaries, idempotency, failure handling, and semantic fit. Use only when reviewing .apm/hooks/*.json, hook declarations, scripts, command-like automation, or lifecycle handlers inside an APM semantic package review.
 license: MIT
-metadata:
-  version: 0.2.0
-  category: apm-semantic-review
+
 ---
 
 # APM Hook/Command Component Judge
 
-Evaluate hooks, commands, and scripts as operational behavior.
+Evaluate hooks, command automation, and scripts. Do not synthesize package-level quality.
 
-## Scope
+Hooks are high-risk because they run at lifecycle points rather than waiting for the model to choose them. Good hooks are narrow, deterministic, idempotent, observable, and explicit about side effects.
 
-Review:
+## Trigger contract
 
-- hooks
-- slash commands that execute or imply execution
-- scripts referenced by package docs or manifests
-- shell snippets embedded in prompts/instructions
-- generated command wrappers
+Use this judge for:
 
-## Rubric: 100 points
+- `.apm/hooks/*.json`
+- hook declarations embedded in agents, skills, settings, or plugin metadata
+- scripts invoked by hooks or package workflows
+- lifecycle commands and deterministic automation
+- command-like files that mutate state or run tools
 
-| Dimension | Max | Meaning |
+Do not use this judge for natural-language prompt workflows unless they run as lifecycle automation.
+
+
+## Calibration reference
+
+Before assigning any score, read `../../../references/judge-calibration-guide.md`. Use it to normalize trigger-quality expectations, evidence classification, score percentages, cap-rule severity, and the distinction between expert value, activation reminders, and redundant content.
+
+## Rubric: 120 points
+
+| Dimension | Max | Evaluation focus |
 |---|---:|---|
-| H1 Trigger Clarity | 15 | When it runs is explicit. |
-| H2 Purpose/Behavior Match | 15 | Actual behavior matches stated purpose. |
-| H3 Side-Effect Disclosure | 15 | Writes, deletes, network calls, git changes, installs are disclosed. |
-| H4 Authorization Boundary | 15 | Destructive or external actions require clear user intent. |
-| H5 Minimality | 10 | Does only what the package needs. |
-| H6 Observability | 10 | Logs or reports enough for users to understand outcomes. |
-| H7 Failure/Rollback | 10 | Failure behavior is safe and recoverable. |
-| H8 Package Fit | 10 | Belongs in this package and does not surprise users. |
+| H1 Lifecycle Trigger & Matcher Precision | 20 | Event, matcher, conditions, and scope are narrow and intentional. |
+| H2 Determinism & Idempotency | 15 | Behavior is predictable, repeatable, and safe if run multiple times. |
+| H3 Side-Effect Disclosure | 20 | File writes, command execution, network calls, approvals, and mutations are explicit. |
+| H4 Permission & Safety Boundary | 20 | Least privilege, protected-file handling, confirmation/escalation, and secret safety. |
+| H5 Failure Handling & Observability | 15 | Timeouts, nonzero exits, logs, and user-facing errors are clear. |
+| H6 Semantic Fit | 10 | Hook solves a deterministic enforcement/automation problem, not an LLM judgment problem. |
+| H7 Cross-Harness Portability | 10 | Shell/platform/target assumptions are explicit. |
+| H8 Package Composition Risk | 10 | Does not surprise users via dependencies or conflict with prompts/agents/instructions. |
 
-## Findings to detect
+## Cap rules
 
-- hidden mutation
-- network call without disclosure
-- secret reads
-- install-time side effects
-- git state changes
-- missing dry-run or confirmation
-- broad command wrappers
-- mismatch between docs and behavior
+- Broad matcher such as `.*` for permission or tool approval without strong justification: max D.
+- Silent state mutation: max D and H3 <= 8.
+- Reads or exposes secrets without explicit purpose and safeguards: max F.
+- Multiple hooks modify the same input/order-sensitive data without determinism: max C.
+- Long-running or network hook without timeout/error contract: max C.
+- Lifecycle automation used for model judgment when a prompt/agent hook would be safer: H6 <= 5.
+
+
+## Shared evaluation protocol
+
+1. Read the component completely before scoring. If the file references nearby resources, inspect only resources needed to judge activation, output contract, safety boundaries, or workflow viability.
+2. Mark evidence as one of:
+   - Expert: non-obvious knowledge, decision criteria, trade-offs, edge cases, constraints, or anti-patterns.
+   - Activation: short reminders that help the agent select the right workflow.
+   - Redundant: generic advice the base model almost certainly already knows.
+3. Score each dimension from evidence. Do not award points for professional formatting alone.
+4. Apply cap rules after adding the raw score.
+5. Return concrete fixes that improve activation, expert knowledge density, safety boundaries, or runtime usability.
+
+## Grade scale
+
+| Grade | Percentage | Meaning |
+|---|---:|---|
+| A | 90-100% | Excellent, production-ready for this component type. |
+| B | 80-89% | Good, minor targeted fixes. |
+| C | 70-79% | Usable but needs meaningful improvement. |
+| D | 60-69% | Significant quality or safety problems. |
+| F | <60% | Fundamentally weak, unsafe, or not useful. |
+
+## Report requirements
+
+Every finding must name a path and cite a short excerpt or observable property when available. If evidence is missing, lower confidence rather than guessing.
 
 ## Output
 
-Use the standard component report format with Type `hook-command`.
+```markdown
+## Component Semantic Review: <path>
+- Type: hook-command
+- Score: <0-120> (<percent>%)
+- Grade: <A-F>
+- Lifecycle/event: <event|unknown>
+- Capability class: <read|write|execute|network|approval|unknown>
+- Verdict: <one sentence>
+- Confidence: <high|medium|low>
+
+### Scores
+| Dimension | Score | Max | Evidence |
+|---|---:|---:|---|
+
+### Trigger and Side-Effect Assessment
+- Event/matcher:
+- Side effects:
+- Failure behavior:
+- Recommended scope change:
+
+### Findings
+- ...
+
+### Top Fixes
+1. ...
+2. ...
+3. ...
+```

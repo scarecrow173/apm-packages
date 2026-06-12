@@ -1,52 +1,112 @@
 ---
 name: apm-hook-command-component-judge
-description: hook、command、script 構成物を、目的、trigger timing、副作用、ユーザー承認、filesystem/network/secret access、observability、rollback behavior、package 内での意味的適合性の観点で評価する。モジュール式 APM パッケージ評価の専門 reviewer として使用する。
+description: hook、command、script component を、lifecycle trigger precision、deterministic
+  behavior、matcher scope、side effects、permission boundaries、idempotency、failure handling、semantic
+  fit の観点で評価する。`.apm/hooks/*.json`、hook declarations、scripts、command-like automation、APM
+  semantic package review 内の lifecycle handlers をレビューするときだけ使う。
 license: MIT
-metadata:
-  version: 0.2.0
-  category: apm-semantic-review
-  locale: ja
-  localized_from: SKILL.md
+
 ---
 
-# APM Hook/Command 構成物 Judge
+# APM Hook/Command Component Judge 日本語版
 
-hooks、commands、scripts を operational behavior として評価する。
+hook/command/script component だけを評価する。package-level quality の統合評価は行わない。
 
-## スコープ
+Hooks と commands は deterministic automation として有用だが、matcher が広すぎる、silent mutation を行う、secret や network に触れる場合は、自然言語 component よりも強い safety boundary が必要である。
 
-以下をレビューする。
+## Trigger contract（発火契約）
 
-- hooks
-- 実行する、または実行を示唆する slash commands
-- package docs または manifests から参照される scripts
-- prompts/instructions に埋め込まれた shell snippets
-- generated command wrappers
+この judge を使う対象:
 
-## ルーブリック: 100点
+- `.apm/hooks/*.json`
+- agents、skills、settings、plugin metadata に埋め込まれた hook declarations
+- hooks または package workflows から呼ばれる scripts
+- lifecycle commands と deterministic automation
+- state を mutate する、または tools を実行する command-like files
 
-| 評価軸 | 最大 | 意味 |
+使わない対象:
+
+- lifecycle automation として実行されない natural-language prompt workflows には使わない。
+
+## Calibration reference（キャリブレーション参照）
+
+採点前に `../../../references/judge-calibration-guide.ja.md` を読む。trigger-quality expectations、evidence classification、score percentages、cap-rule severity、expert value / activation reminders / redundant content の区別を正規化するために使う。
+
+## Rubric: 120 points（120点ルーブリック）
+
+| Dimension | Max | Evaluation focus |
 |---|---:|---|
-| H1 Trigger Clarity | 15 | いつ実行されるかが明示されている。 |
-| H2 Purpose/Behavior Match | 15 | 実際の振る舞いが stated purpose と一致する。 |
-| H3 Side-Effect Disclosure | 15 | writes、deletes、network calls、git changes、installs が開示されている。 |
-| H4 Authorization Boundary | 15 | 破壊的または外部向け操作には明確な user intent が必要である。 |
-| H5 Minimality | 10 | package に必要なことだけを行う。 |
-| H6 Observability | 10 | user が結果を理解できるだけの log/report を出す。 |
-| H7 Failure/Rollback | 10 | failure behavior が安全で復旧可能である。 |
-| H8 Package Fit | 10 | この package に属する妥当性があり、user を驚かせない。 |
+| H1 Lifecycle Trigger & Matcher Precision | 20 | event、matcher、conditions、scope が narrow で intentional。 |
+| H2 Determinism & Idempotency | 15 | behavior が predictable、repeatable で、複数回実行しても安全。 |
+| H3 Side-Effect Disclosure | 20 | file writes、command execution、network calls、approvals、mutations が explicit。 |
+| H4 Permission & Safety Boundary | 20 | least privilege、protected-file handling、confirmation/escalation、secret safety がある。 |
+| H5 Failure Handling & Observability | 15 | timeouts、nonzero exits、logs、user-facing errors が明確。 |
+| H6 Semantic Fit | 10 | LLM judgment ではなく deterministic enforcement/automation problem を解く。 |
+| H7 Cross-Harness Portability | 10 | shell/platform/target assumptions が explicit。 |
+| H8 Package Composition Risk | 10 | dependencies 経由で users を surprise せず、prompts/agents/instructions と conflict しない。 |
 
-## 検出すべき所見
+## Cap rules（上限ルール）
 
-- 隠れた mutation
-- 開示されていない network call
-- secret reads
-- install-time side effects
-- git state changes
-- dry-run または confirmation の欠如
-- broad command wrappers
-- docs と behavior の不一致
+- permission または tool approval に `.*` のような broad matcher を使い、強い justification がない: max D。
+- silent state mutation: max D、H3 <= 8。
+- 明示的 purpose と safeguards なしに secrets を読む、または露出する: max F。
+- 複数 hooks が同じ input/order-sensitive data を determinism なしに modify する: max C。
+- timeout/error contract のない long-running または network hook: max C。
+- prompt/agent hook の方が安全な model judgment に lifecycle automation を使う: H6 <= 5。
 
-## 出力
+## Shared evaluation protocol（共通評価プロトコル）
 
-標準の component report format を使い、Type は `hook-command` とする。
+1. 採点前に component 全体を読む。近傍 resources が参照されている場合は、activation、output contract、safety boundaries、workflow viability の判断に必要な resources だけを確認する。
+2. evidence を次のいずれかに分類する。
+   - Expert: 非自明な知識、判断基準、trade-off、edge case、制約、anti-pattern。
+   - Activation: 正しい workflow 選択を助ける短い reminder。
+   - Redundant: base model がほぼ確実に知っている汎用助言。
+3. 各 dimension は evidence に基づいて採点する。整った見た目だけで点を与えない。
+4. raw score を合計した後で cap rules を適用する。
+5. activation、expert knowledge density、safety boundaries、runtime usability を改善する具体的な修正を返す。
+
+## Grade scale（グレード基準）
+
+| Grade | Percentage | Meaning |
+|---|---:|---|
+| A | 90-100% | この component type として優秀で、本番利用可能。 |
+| B | 80-89% | 良好。小さな targeted fix が必要。 |
+| C | 70-79% | 利用可能だが、意味のある改善が必要。 |
+| D | 60-69% | 品質または安全性に重大な問題がある。 |
+| F | <60% | 根本的に弱い、危険、または有用でない。 |
+
+## Report requirements（レポート要件）
+
+すべての finding は、可能な限り path と短い excerpt、または観察可能な property を示す。evidence が不足している場合は推測せず、confidence を下げる。
+
+
+## Output（出力）
+
+```markdown
+## Component Semantic Review: <path>
+- Type: hook-command
+- Score: <0-120> (<percent>%)
+- Grade: <A-F>
+- Lifecycle/event: <event|unknown>
+- Capability class: <read|write|execute|network|approval|unknown>
+- Verdict: <one sentence>
+- Confidence: <high|medium|low>
+
+### Scores
+| Dimension | Score | Max | Evidence |
+|---|---:|---:|---|
+
+### Trigger and Side-Effect Assessment
+- Event/matcher:
+- Side effects:
+- Failure behavior:
+- Recommended scope change:
+
+### Findings
+- ...
+
+### Top Fixes
+1. ...
+2. ...
+3. ...
+```

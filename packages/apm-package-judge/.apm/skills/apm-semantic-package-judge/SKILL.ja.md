@@ -1,42 +1,60 @@
 ---
 name: apm-semantic-package-judge
-description: component inventory を作成し、dependency/provenance/interaction/capability graph を構築し、component type ごとに専門 reviewer subagents へ委譲し、component reports と graph reports を収集し、最終的な package-quality verdict を統合することで、APM パッケージを意味論的に評価する。apm audit や機械的整合性チェックなしで package-level semantic quality evaluation を行うときに使う。
+description: APM package または Claude-plugin-like bundle 全体の semantic quality evaluation
+  の entry-point orchestrator。package components を inventory し、dependency/provenance/interaction/capability
+  graphs を構築し、skills、agents、prompts、instructions、MCP、hooks を specialist reviewer subagents
+  へ dispatch し、reports を収集して overall verdict を synthesis する。APM package の evaluate、judge、review、semantic
+  audit、improve、certify、compare、approve を求められたときに使う。apm.yml、.apm package、agent package、package-level
+  quality、component judge、dependency graph、semantic package review に反応する。apm audit
+  や mechanical integrity checks は実行しない。
 license: MIT
-metadata:
-  version: 0.3.0
-  category: apm-semantic-review
-  locale: ja
-  localized_from: SKILL.md
+
 ---
 
-# APM Semantic Package Judge
+# APM Semantic Package Judge 日本語版
 
-component specialist reviews と dependency-graph-aware package synthesis を組み合わせ、APM パッケージを composed agent capability bundle として評価する。
+APM package 全体を評価する entrypoint skill。component specialist reviews と dependency-graph-aware package synthesis を組み合わせる。
 
-機械的監査チェックは行わない。`apm audit --ci` を要求したり、それに依存したりしない。このスキルは semantic quality だけを評価する。
+Mechanical audit checks は行わない。`apm audit --ci` に依存しない。この skill が評価するのは semantic quality、つまりこの package を読んだ agent が正しく、安全に、有用に、不要 context cost なしで振る舞えるかである。
 
-## 入力
+## Trigger contract（発火契約）
 
-以下のいずれかを受け付ける。
+次の場合にこの entrypoint を使う:
+
+- APM package を評価する。
+- package-level semantic quality をレビューする。
+- agent package を採用してよいか判断する。
+- skills、agents、prompts、instructions、MCP、hooks、commands、plugins を含む package を改善する。
+- APM package の 2 version を意味論的に比較する。
+- modular judge workflow を実行する。
+- component reviewers から package-level report を作る。
+
+単一 isolated `SKILL.md` のレビューには使わない。package-level review を明示された場合を除き、specialist component judge を使う。
+
+## Calibration reference（キャリブレーション参照）
+
+dispatch の前に `../../../references/judge-calibration-guide.ja.md` と `../../../references/dispatch-matrix.ja.md` を読む。calibration guide は component reports の粒度を揃えるため、dispatch matrix は正しい reviewer を選ぶために使う。
+
+## Inputs（入力）
+
+受け取れる evidence:
 
 - package root
 - `apm.yml` excerpt
-- `apm.lock.yaml` excerpt。利用可能な場合のみ、dependency/provenance/depth の証拠として使う
+- `apm.lock.yaml` excerpt。ただし dependency/provenance/depth evidence としてだけ扱う
 - directory tree
 - package files
 - `.apm/skills`、`.apm/prompts`、`.apm/instructions`、`.apm/agents`、hooks、commands、MCP declarations
 - `apm_modules/` excerpts または dependency package trees
 - Claude-plugin-like bundle
-- 既存の component reports
-- 既存の dependency graph report
+- prior component reports
+- prior dependency graph report
 
-ファイルが利用できない場合は、提供された証拠だけを評価し、unknowns を明示する。
+files がない場合は、提供された evidence のみで評価し、unknowns を明記する。
 
-## Orchestration model
+## Orchestration model（オーケストレーションモデル）
 
-環境が subagents をサポートする場合は specialist reviewers を使う。main agent は dispatch と final synthesis に責任を持つ。
-
-Specialist mapping:
+subagents が使える環境では specialist reviewers を使う。main agent は dispatch と final synthesis に責任を持つ。
 
 | Artifact | Reviewer subagent | Required skill |
 |---|---|---|
@@ -45,17 +63,15 @@ Specialist mapping:
 | Custom agent / subagent | `apm-agent-reviewer` | `apm-agent-component-judge` |
 | Prompt / slash command prompt | `apm-prompt-reviewer` | `apm-prompt-component-judge` |
 | Instruction / rules file | `apm-instruction-reviewer` | `apm-instruction-component-judge` |
-| MCP server/tool/resource/prompt declaration | `apm-mcp-reviewer` | `apm-mcp-component-judge` |
+| MCP / tool / resource / prompt declaration | `apm-mcp-reviewer` | `apm-mcp-component-judge` |
 | Hook / command / script | `apm-hook-command-reviewer` | `apm-hook-command-component-judge` |
-| Package synthesis | `apm-package-synthesizer` | `apm-package-synthesis-judge` |
+| Final synthesis | `apm-package-synthesizer` | `apm-package-synthesis-judge` |
 
-subagents が利用できない場合は、main conversation で同じ specialist skills を順番に実行し、各 report に review type を明示する。
+## Workflow（ワークフロー）
 
-## Workflow
+### 1. Inventory（棚卸し）
 
-### 1. Inventory
-
-package tree から component inventory を作成する。各 item を分類する。
+すべての package evidence を列挙し、次の type に分類する:
 
 - package
 - skill
@@ -69,7 +85,7 @@ package tree から component inventory を作成する。各 item を分類す�
 - dependency-package
 - unknown
 
-各 component record には以下を含める。
+各 item について可能な限り以下を記録する:
 
 - path
 - type
@@ -78,162 +94,68 @@ package tree から component inventory を作成する。各 item を分類す�
 - intended user task
 - target harnesses
 - safety-sensitive capabilities
-- review すべきかどうか
+- review 対象にすべきか
 
-### 2. Build semantic dependency graph
+### 2. Build dependency and semantic graph first（先に依存・意味グラフを構築する）
 
-component dispatch の前に graph report を作成する。可能なら `apm-dependency-graph-reviewer` を使う。
+component synthesis の前に `apm-dependency-graph-reviewer` を使う。Graph は以下を含む必要がある:
 
-graph は package edges だけに限定してはならない。証拠が許す場合は4つの view を作る。
+- package dependency graph
+- component provenance graph
+- semantic interaction graph
+- capability exposure graph
 
-1. Package dependency graph: root package、direct dependencies、transitive dependencies、local dependencies、declared MCP dependencies。
-2. Component provenance graph: 各 skill、agent、prompt、instruction、hook、command、MCP declaration、generated output をどの package/dependency が提供しているか。
-3. Semantic interaction graph: activation overlaps、instruction-scope overlaps、agent-skill handoffs、prompt bypasses、component conflicts。
-4. Capability exposure graph: tools、MCP servers、hooks、scripts、commands、network access、file writes、その他 safety-sensitive capabilities。
+Graph が partial なら、partial であることと unknowns を明記する。
 
-`apm.lock.yaml` が利用できる場合は、dependency depth と resolved package provenance の証拠として使う。lock correctness や drift は評価しない。
+### 3. Dispatch component reviews（component review の dispatch）
 
-graph reviewer には以下を出力させる。
+`references/dispatch-matrix.ja.md` に従って、各 artifact を専門 reviewer に送る。
 
-- `references/dependency-graph.schema.json` に従う JSON graph
-- 有用な場合の Mermaid overview
-- `references/graph-report.schema.json` に従う `Dependency Graph Semantic Review Report`
-- package synthesis が消費できる findings
+subagents が使えない場合は、main conversation 内で同じ judge skills を sequential に実行し、section label に reviewer role を明記する。実行していない subagent execution を主張してはいけない。
 
-### 3. Dispatch component reviews
+### 4. Collect and normalize reports（report の収集と正規化）
 
-component type ごとに files をグループ化し、対応する reviewer subagent へ委譲する。
+各 component report から次を抽出する:
 
-dependency graph が利用できる場合は、各 reviewer prompt に関連 graph context を含める。
-
-- component provenance
-- direct/transitive dependency source
-- overlapping components
-- capability exposure
-- known interaction/conflict edges
-
-Delegation prompt template:
-
-```text
-Review these <component-type> components for semantic quality only.
-Use <required-skill-name>.
-Use the dependency graph context only for provenance, overlap, and capability context.
-Return one component report per component plus an aggregate type summary.
-Do not evaluate lockfiles, hashes, hidden Unicode, install drift, or package authenticity.
-Evidence must cite paths and excerpts when available.
-```
-
-structured output が求められた場合、各 reviewer には `references/component-report.schema.json` を使った `Component Semantic Review Report` を出力させる。
-
-### 4. Collect reports
-
-各 component report を以下に正規化する。
-
-- component id/path
-- component type
+- component path/id
+- type
 - package/provenance
-- source depth。分かる場合
-- score out of 100
+- source depth if known
+- score and percentage
 - grade
 - verdict
-- activation quality
+- trigger/activation quality
 - output-contract quality
-- safety-boundary quality
-- context efficiency
-- conflicts
-- graph-related findings
+- safety findings
+- context-efficiency findings
+- conflicts or overlap
 - top fixes
 - confidence
 
-graph report を以下に正規化する。
+### 5. Synthesize final package verdict（最終 package verdict の統合）
 
-- graph coverage
-- node counts by type
-- edge counts by type
-- dependency depth summary
-- capability exposure summary
-- cross-component conflict findings
-- surprise capability findings
-- graph confidence
+`apm-package-synthesizer` と `apm-package-synthesis-judge` を使う。component score を単純平均して final score にしてはいけない。graph findings、cap rules、cross-component conflicts、semantic safety、context efficiency を使って package-level quality を評価する。
 
-### 5. Synthesize
+## Required final output（必須最終出力）
 
-`apm-package-synthesis-judge` を使って package-level findings を生成する。
+最終 response は以下を含む:
 
-synthesis は component scores を単純平均してはならない。reports と graph analysis から発見された system-level issues を penalize する。
+- package score and grade
+- recommended action
+- evidence coverage and unknowns
+- component score summary
+- dependency / interaction graph findings
+- cross-component conflicts
+- semantic safety findings
+- context efficiency findings
+- top fixes
+- suggested runtime eval tasks
+- final recommendation
 
-- conflicting activation domains
-- contradictory instructions
-- duplicated responsibilities
-- agents と skills の間の handoff 欠落
-- prompts bypassing skills or agents
-- semantic disclosure なしに導入された MCP/tools
-- hooks/commands changing behavior invisibly
-- transitive capability surprise
-- package behavior を支配する深い、または説明不足の dependency chains
-- 多数の always-on instructions による context bloat
-- 無関係な components に分断された package purpose
+## Never do（禁止事項）
 
-### 6. Final report
-
-以下を出力する。
-
-```markdown
-# APM Semantic Package Evaluation Report: <package>
-
-## Summary
-- Score: <0-160>
-- Grade: <A-F>
-- Recommendation: <approve | approve with fixes | hold | block | redesign>
-- Confidence: <high | medium | low>
-- Evaluation mode: specialist subagents | sequential specialist review | partial evidence
-
-## Graph Summary
-- Graph built: <yes | partial | no>
-- Package nodes:
-- Component nodes:
-- Capability nodes:
-- Highest dependency depth:
-- Most important graph finding:
-
-## Component Review Coverage
-| Type | Count | Reviewer | Avg Score | Worst Finding |
-|---|---:|---|---:|---|
-
-## Component Findings
-各 specialist report を要約する。
-
-## Dependency / Interaction Graph Findings
-依存深度、provenance、interaction、capability-exposure findings を列挙する。
-
-## Cross-Component Findings
-package-level conflicts、gaps、emergent behavior を列挙する。
-
-## Package Scores
-| Dimension | Score | Max | Evidence |
-|---|---:|---:|---|
-| P1 Package Intent & Value Delta | | 20 | |
-| P2 Component Coverage & Role Separation | | 20 | |
-| P3 Activation Architecture | | 20 | |
-| P4 Cross-Component Coherence | | 20 | |
-| P5 Semantic Safety & Trust Boundaries | | 20 | |
-| P6 Context Efficiency | | 20 | |
-| P7 Runtime Usefulness | | 20 | |
-| P8 Maintainability & Evolvability | | 20 | |
-
-## Blockers
-
-## Top Fixes
-
-## Final Recommendation
-```
-
-## Rules
-
-- 強い個別 component によって package-level incoherence を隠してはならない。
-- package-level intent によって unsafe または unclear components を補償してはならない。
-- subagent または同等の specialist pass を実行していない限り、subagent review が行われたと主張してはならない。
-- graph evidence が実際に収集または提供されていない限り、graph を構築したと主張してはならない。
-- mechanical integrity を評価してはならない。
-- ファイル読取に明示的に必要で、user が許可した場合を除き、code execution を行ってはならない。
-- inference より explicit evidence を優先する。
+- `apm audit --ci` の実行や結果を前提にしない。
+- component score を単純平均して final score にしない。
+- subagents を実行していないのに実行したと書かない。
+- graph を作らずに transitive capability や provenance を断定しない。
+- `.ja.md` は参照用 localization として扱い、runtime entrypoint は標準の `SKILL.md` とする。

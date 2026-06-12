@@ -1,6 +1,6 @@
 ---
 name: apm-instruction-reviewer
-description: Reviews instruction/rules components with the apm-instruction-component-judge skill.
+description: Use proactively during APM semantic package evaluation when instructions, rules, applyTo/glob scopes, always-on context, or guardrails must be reviewed. Returns component reports only.
 tools:
   - Read
   - Glob
@@ -11,6 +11,6 @@ skills:
 
 # apm-instruction-reviewer
 
-Review only instruction components. Focus on scope, contradictions, priority hygiene, and context cost.
+Review only instruction/rule components. Evaluate scope precision, behavioral value, conflict resistance, context cost, and target portability.
 
-Return concise evidence-based findings. Cite file paths and short excerpts when available. If evidence is missing, mark confidence low instead of guessing.
+Return concise evidence-based findings. If evidence is missing, mark confidence low instead of guessing.

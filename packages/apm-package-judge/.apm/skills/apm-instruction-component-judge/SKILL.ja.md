@@ -1,51 +1,108 @@
 ---
 name: apm-instruction-component-judge
-description: instruction/rules 構成物を、scope precision、conflict potential、behavioral clarity、priority hygiene、context cost、agent harness 間の portability の観点で評価する。モジュール式 APM パッケージ評価の専門 reviewer として使用する。
+description: 個別 instruction または rules component を、scope precision、applyTo/glob trigger、behavioral
+  value delta、normative clarity、conflict resistance、freedom calibration、always-on
+  context cost、target portability の観点で評価する。`.apm/instructions/*.instructions.md`、rules、glob-scoped
+  instructions、package guardrails、target-native instruction files をレビューするときだけ使う。
 license: MIT
-metadata:
-  version: 0.2.0
-  category: apm-semantic-review
-  locale: ja
-  localized_from: SKILL.md
+
 ---
 
-# APM Instruction 構成物 Judge
+# APM Instruction Component Judge 日本語版
 
-always-on または scoped instruction files を評価する。
+個別の instruction/rule component を評価する。package-level quality の統合評価は行わない。
 
-## スコープ
+Instruction は常時または広い scope で効きやすいため、短く、scope が精密で、generic advice を避け、重なった場合に矛盾しにくい必要がある。
 
-以下をレビューする。
+## Trigger contract（発火契約）
 
-- `.instructions.md`
-- `CLAUDE.md` のようなファイル
-- project rules
-- agent context に注入される coding standards
-- path/glob-scoped instructions
+この judge を使う対象:
 
-## ルーブリック: 100点
+- `.apm/instructions/*.instructions.md`
+- rules、guardrails、context files
+- glob-scoped instructions または applyTo-scoped instructions
+- target-native instruction files
 
-| 評価軸 | 最大 | 意味 |
+使わない対象:
+
+- one-shot workflow には使わない。それは prompt である。deep domain procedure には通常 skill を使う。custom role delegation には agent を使う。
+
+## Calibration reference（キャリブレーション参照）
+
+採点前に `../../../references/judge-calibration-guide.ja.md` を読む。trigger-quality expectations、evidence classification、score percentages、cap-rule severity、expert value / activation reminders / redundant content の区別を正規化するために使う。
+
+## Rubric: 120 points（120点ルーブリック）
+
+| Dimension | Max | Evaluation focus |
 |---|---:|---|
-| I1 Scope Precision | 15 | 必要な場所にだけ適用される。 |
-| I2 Behavioral Clarity | 15 | 曖昧な好みではなく、具体的な制約を与える。 |
-| I3 Non-Contradiction | 15 | 重なり得る scope の他ルールと衝突しない。 |
-| I4 Priority Hygiene | 10 | higher-priority instructions を上書きしようとしない。 |
-| I5 Context Cost | 15 | always-on use に十分短く、generic bloat がない。 |
-| I6 Portability | 10 | 利用できない harness behavior を前提にしない。 |
-| I7 Testability | 10 | 出力または diff から compliance を確認できる。 |
-| I8 Failure Handling | 10 | 例外と edge cases を扱う。 |
+| I1 Scope & Trigger Precision | 20 | `description` と `applyTo`/glob scope が specific で justified。 |
+| I2 Behavioral Value Delta | 20 | rules が project/domain-specific で、generic best practices ではない。 |
+| I3 Normative Clarity | 15 | 必要な箇所で明確な MUST/SHOULD/NEVER language を使う。 |
+| I4 Conflict Resistance | 15 | contradictions を避け、overlap が起きそうな場合は precedence/escalation を定義する。 |
+| I5 Freedom Calibration | 10 | constraint strength が mistake の consequence と合っている。 |
+| I6 Context Efficiency | 15 | always-on use に十分短く、boilerplate と tutorials を除いている。 |
+| I7 Cross-Harness Portability | 10 | 他 target へ compile したとき壊れる assumptions を避ける。 |
+| I8 Examples & Edge Cases | 15 | 非自明な rules に minimal examples、exceptions、failure cases がある。 |
 
-## 検出すべき所見
+## Cap rules（上限ルール）
 
-- scoped にすべき global rules
-- generic coding advice
-- contradictory rules
-- instruction injection patterns
-- always-on context として長すぎる prose
-- 不明確な precedence
-- 文書化されていない target-specific assumptions
+- always-on instructions の scope が欠落または過剰に広い: max C、I1 <= 10。
+- 「clean code を書く」などの generic rules が支配的: max D、I2 <= 8。
+- same package/dependency graph 内の別 instruction と contradiction: max C。safety-relevant なら max D。
+- instructions 内の長い tutorial content: I6 <= 6。
+- user/system/developer constraints を override すると主張する instructions: max F。
 
-## 出力
+## Shared evaluation protocol（共通評価プロトコル）
 
-標準の component report format を使い、Type は `instruction` とする。
+1. 採点前に component 全体を読む。近傍 resources が参照されている場合は、activation、output contract、safety boundaries、workflow viability の判断に必要な resources だけを確認する。
+2. evidence を次のいずれかに分類する。
+   - Expert: 非自明な知識、判断基準、trade-off、edge case、制約、anti-pattern。
+   - Activation: 正しい workflow 選択を助ける短い reminder。
+   - Redundant: base model がほぼ確実に知っている汎用助言。
+3. 各 dimension は evidence に基づいて採点する。整った見た目だけで点を与えない。
+4. raw score を合計した後で cap rules を適用する。
+5. activation、expert knowledge density、safety boundaries、runtime usability を改善する具体的な修正を返す。
+
+## Grade scale（グレード基準）
+
+| Grade | Percentage | Meaning |
+|---|---:|---|
+| A | 90-100% | この component type として優秀で、本番利用可能。 |
+| B | 80-89% | 良好。小さな targeted fix が必要。 |
+| C | 70-79% | 利用可能だが、意味のある改善が必要。 |
+| D | 60-69% | 品質または安全性に重大な問題がある。 |
+| F | <60% | 根本的に弱い、危険、または有用でない。 |
+
+## Report requirements（レポート要件）
+
+すべての finding は、可能な限り path と短い excerpt、または観察可能な property を示す。evidence が不足している場合は推測せず、confidence を下げる。
+
+
+## Output（出力）
+
+```markdown
+## Component Semantic Review: <path>
+- Type: instruction
+- Score: <0-120> (<percent>%)
+- Grade: <A-F>
+- Scope: <glob/applyTo/unknown>
+- Verdict: <one sentence>
+- Confidence: <high|medium|low>
+
+### Scores
+| Dimension | Score | Max | Evidence |
+|---|---:|---:|---|
+
+### Scope Assessment
+- Applies to:
+- Should not apply to:
+- Likely overlaps:
+
+### Findings
+- ...
+
+### Top Fixes
+1. ...
+2. ...
+3. ...
+```

@@ -3,7 +3,7 @@
 User request:
 
 ```text
-Evaluate this APM package semantically. Use specialist component reviewers, build the dependency graph, then synthesize the whole-package score.
+この APM package を意味論的に評価してください。specialist component reviewers を使い、dependency graph を構築してから package 全体の score を synthesis してください。
 ```
 
 Expected orchestration:
@@ -26,7 +26,7 @@ Expected orchestration:
 
 Important rule:
 
-最終 package score は component scores の平均ではない。graph-derived findings は emergent behavior を明らかにするため、package dimensions を cap できる。対象には transitive capability surprise、activation collisions、instruction conflicts、dependency-induced context bloat が含まれる。
+Final package score は component scores の平均ではない。Graph-derived findings は、transitive capability surprise、activation collisions、instruction conflicts、dependency-induced context bloat など、composition によって現れる emergent behavior を示すため、package dimensions を cap できる。
 
 Example final report additions:
 

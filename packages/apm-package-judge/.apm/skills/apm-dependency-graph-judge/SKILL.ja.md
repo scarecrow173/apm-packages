@@ -1,137 +1,112 @@
 ---
 name: apm-dependency-graph-judge
-description: APM パッケージの dependency / provenance / interaction / capability graph を評価し、transitive capability surprise、instruction conflict、activation collision、context bloat、dependency-depth risk、provenance ambiguity、安全でない tool/hook/MCP exposure などの意味論的品質リスクを判定する。apm-dependency-graph-builder の後に使う。
+description: APM semantic dependency graph を、capability surprise、provenance ambiguity、activation
+  collisions、instruction overlap、transitive MCP または hook exposure、context bloat、cohesion
+  risk、synthesis-impacting graph findings の観点で評価する。`apm-dependency-graph-builder`
+  が graph evidence を生成した後に使う。
 license: MIT
-metadata:
-  version: 0.3.0
-  category: apm-semantic-review
-  locale: ja
-  localized_from: SKILL.md
+
 ---
 
-# APM 依存グラフ Judge
+# APM Dependency Graph Judge 日本語版
 
-graph 由来の意味論的リスクを評価する。このスキルは、graph を package-level semantic quality の証拠として判定するものであり、機械的な install integrity は評価しない。
+dependency/provenance/interaction/capability graph 由来の semantic risk を評価する。個別 component content の詳細評価や package synthesis は行わない。
 
-## スコープ
+Graph finding は、単体 component だけでは見えない emergent behavior を示す。transitive capability surprise、activation collision、instruction conflict、context bloat、core behavior の provenance ambiguity を package-level synthesis に渡す。
 
-`apm-dependency-graph-builder` が生成した graph data をレビューする。
+## Trigger contract（発火契約）
+
+この judge を使う対象:
 
 - package dependency graph
 - component provenance graph
 - semantic interaction graph
 - capability exposure graph
-- Mermaid または表形式の graph summaries
-- component inventory。提供されている場合
 
-## ルーブリック: 100点
+使わない対象:
 
-| 評価軸 | 最大 | 意味 |
+- graph evidence なしに package quality を採点しない。個別 component の本文評価は specialist component judges に任せる。
+
+## Calibration reference（キャリブレーション参照）
+
+採点前に `../../../references/judge-calibration-guide.ja.md` を読む。trigger-quality expectations、evidence classification、score percentages、cap-rule severity、expert value / activation reminders / redundant content の区別を正規化するために使う。
+
+## Rubric: 120 points（120点ルーブリック）
+
+| Dimension | Max | Evaluation focus |
 |---|---:|---|
-| G1 Graph Coverage & Evidence Quality | 10 | node、edge、evidence、confidence notes が十分に含まれている。 |
-| G2 Dependency Clarity | 15 | direct、transitive、local、plugin-like、MCP dependencies が理解できる。 |
-| G3 Provenance Attribution | 15 | components を root または dependency package source へ追跡できる。 |
-| G4 Semantic Interaction Accuracy | 15 | overlap、conflict、constraint、delegation、bypass edges が有用で証拠に基づいている。 |
-| G5 Capability Exposure Clarity | 15 | tool、MCP、hook、command、script、permission exposure が見える。 |
-| G6 Risk Detection | 15 | surprise capabilities、activation collisions、instruction conflicts、unsafe paths を graph が明らかにしている。 |
-| G7 Synthesis Utility | 10 | package-level scoring と修正に使える所見になっている。 |
-| G8 Visualization & Communication | 5 | graph summary が reviewer に読める程度に明確である。 |
+| G1 Graph Coverage & Evidence Quality | 15 | conclusions を支える十分な nodes/edges/provenance が graph にある。 |
+| G2 Dependency Depth & Cohesion | 15 | dependency depth と package relationships が package purpose と整合する。 |
+| G3 Provenance Clarity | 15 | core behavior を local/direct/transitive sources まで trace できる。 |
+| G4 Activation Collision Risk | 15 | skills、agents、prompts、instructions が同じ trigger domain を奪い合わない。 |
+| G5 Instruction/Rule Overlap Risk | 15 | applyTo/glob overlaps が intentional で non-contradictory。 |
+| G6 Capability Surprise | 20 | MCP/tools/hooks/scripts/commands が disclosed され、unexpected に introduced されない。 |
+| G7 Context Bloat & Always-On Load | 10 | dependency composition が excessive always-on context を追加しない。 |
+| G8 Synthesis Usefulness | 15 | findings が package-level scoring を constrain できるほど concrete。 |
 
-## 検出すべき所見
+## Cap rules（上限ルール）
 
-### Transitive capability surprise
+- undisclosed transitive MCP/tool exposure: max C。write/destructive/network-sensitive なら max D。
+- top-level disclosure なしに dependency 由来の state-changing hook/command がある: max D。
+- same scope の conflicting instructions: max C。safety-relevant conflict なら max D。
+- core package behavior の provenance が unknown: confidence cannot be high。
+- usable graph evidence がない: max D、G1 <= 5。
 
-dependency が、root package に開示されていない MCP、hook、command、script、tool permission behavior を導入している。
+## Shared evaluation protocol（共通評価プロトコル）
 
-影響:
+1. 採点前に component 全体を読む。近傍 resources が参照されている場合は、activation、output contract、safety boundaries、workflow viability の判断に必要な resources だけを確認する。
+2. evidence を次のいずれかに分類する。
+   - Expert: 非自明な知識、判断基準、trade-off、edge case、制約、anti-pattern。
+   - Activation: 正しい workflow 選択を助ける短い reminder。
+   - Redundant: base model がほぼ確実に知っている汎用助言。
+3. 各 dimension は evidence に基づいて採点する。整った見た目だけで点を与えない。
+4. raw score を合計した後で cap rules を適用する。
+5. activation、expert knowledge density、safety boundaries、runtime usability を改善する具体的な修正を返す。
 
-- P5 Semantic Safety は 10 以下に cap するべきである。
-- state-changing behavior が未開示なら、最終 grade は D に cap するべきである。
+## Grade scale（グレード基準）
 
-### Activation collision
+| Grade | Percentage | Meaning |
+|---|---:|---|
+| A | 90-100% | この component type として優秀で、本番利用可能。 |
+| B | 80-89% | 良好。小さな targeted fix が必要。 |
+| C | 70-79% | 利用可能だが、意味のある改善が必要。 |
+| D | 60-69% | 品質または安全性に重大な問題がある。 |
+| F | <60% | 根本的に弱い、危険、または有用でない。 |
 
-2つ以上の skills、prompts、agents が、precedence や delegation なしに同じ user intent を取り合っている。
+## Report requirements（レポート要件）
 
-影響:
+すべての finding は、可能な限り path と短い excerpt、または観察可能な property を示す。evidence が不足している場合は推測せず、confidence を下げる。
 
-- 通常利用に影響する場合、P3 Activation Architecture は 10 以下に cap するべきである。
 
-### Instruction conflict
-
-重複する instruction scope に、矛盾または混乱を招く requirement が含まれている。
-
-影響:
-
-- P4 Cross-Component Coherence は 10 以下に cap するべきである。
-
-### Context bloat path
-
-dependency graph が、package value が明確でない always-on または broad-scope instructions を追加している。
-
-影響:
-
-- P6 Context Efficiency は 12 以下に cap するべきである。
-
-### Provenance ambiguity
-
-behavior-relevant component を root、direct dependency、transitive dependency のどれにも追跡できない。
-
-影響:
-
-- Confidence は high にできない。
-- P8 Maintainability を下げるべきである。
-
-### Deep dependency dominance
-
-root package ではなく transitive dependency が package の中核動作を提供している。
-
-影響:
-
-- root package が composition role を明確に説明していない限り、P1 Package Intent と P2 Role Separation を下げるべきである。
-
-### hooks/commands/scripts を通る safety path
-
-prompt、agent、skill が、明確な user-facing trust boundary なしに、file、git state、network、secret を変更する hook、command、script へ至る。
-
-影響:
-
-- P5 は 8 以下に cap するべきである。
-- recommendation は hold または block にするべきである。
-
-## 出力
-
-`Dependency Graph Semantic Review Report` を出力する。
+## Output（出力）
 
 ```markdown
-# Dependency Graph Semantic Review Report
-
-## Summary
-- Score: <0-100>
+## Dependency Graph Semantic Review Report
+- Score: <0-120> (<percent>%)
 - Grade: <A-F>
+- Graph coverage: <high|medium|low>
 - Verdict: <one sentence>
 - Confidence: <high|medium|low>
 
-## Graph Coverage
-| View | Status | Evidence | Unknowns |
-|---|---|---|---|
-
-## Graph Metrics
+### Graph Summary
 - Package nodes:
-- Component nodes:
+- Component nodes by type:
 - Capability nodes:
-- Edge count:
-- Highest dependency depth:
-- Highest-risk edge:
+- Max dependency depth:
+- Unknown provenance:
 
-## Findings
-| Severity | Finding | Evidence | Package synthesis impact | Fix |
-|---|---|---|---|---|
+### Scores
+| Dimension | Score | Max | Evidence |
+|---|---:|---:|---|
 
-## Cap Recommendations
-synthesizer が適用すべき package-level score caps を列挙する。
+### Synthesis Constraints
+- ...
 
-## Mermaid Overview
-任意の compact graph。
+### Graph Findings
+- ...
+
+### Top Fixes
+1. ...
+2. ...
+3. ...
 ```
-
-structured output が求められた場合は `references/graph-report.schema.json` を使う。

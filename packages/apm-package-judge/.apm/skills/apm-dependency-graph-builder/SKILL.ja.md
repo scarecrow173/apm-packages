@@ -1,198 +1,93 @@
 ---
 name: apm-dependency-graph-builder
-description: 機械的監査を行わずに、APM パッケージの dependency / provenance / semantic interaction / capability exposure graph を構築する。component review と package synthesis の前に使い、依存深度、transitive component、activation overlap、instruction scope overlap、MCP/tool/hook exposure、provenance path を特定する。
+description: APM package の `apm.yml`、利用可能な `apm.lock.yaml`、`.apm` primitives、`apm_modules`、plugin
+  metadata、MCP declarations、agents、skills、prompts、instructions、hooks から、semantic dependency、provenance、interaction、capability-exposure
+  graphs を構築する。modular APM semantic evaluation で package synthesis または graph review
+  の前に使う。
 license: MIT
-metadata:
-  version: 0.3.0
-  category: apm-semantic-review
-  locale: ja
-  localized_from: SKILL.md
+
 ---
 
-# APM 依存グラフ Builder
+# APM Dependency Graph Builder 日本語版
 
-意味論的なパッケージレビューのための graph evidence を構築する。このスキルは graph view を作るだけであり、機械的な整合性、hash の正しさ、hidden Unicode、install drift は判定しない。
+APM package から、dependency / provenance / semantic interaction / capability exposure の graph evidence を構築する。package quality の採点はしない。
 
-## 入力
+この builder は、後続の graph judge と package synthesis judge が emergent behavior を評価できるように、component と package の関係を明示する。
 
-利用可能な証拠を使う。
+## Trigger contract（発火契約）
 
-- `apm.yml`
-- `apm.lock.yaml`。ただし、resolved dependency depth と provenance evidence のためだけに使う
-- パッケージツリー
-- `.apm/` の内容
-- `apm_modules/` の内容
-- `.apm/agents/` やその他 harness 固有の生成ファイル
-- MCP 宣言
-- hooks、commands、scripts
-- 既存の inventory
+次の evidence が必要なときに使う:
 
-証拠が部分的な場合は、partial graph を作り、unknown を明示する。
+- direct and transitive APM dependencies
+- どの package がどの component を提供したか
+- activation overlaps または instruction overlaps
+- MCP/tool/hook capability exposure
+- local と dependency の provenance
+- package-level findings の背後にある graph paths
 
-## Graph view
+## Calibration reference（キャリブレーション参照）
 
-4種類の graph view を作成する。
+Graph を構築する前に `../../../references/judge-calibration-guide.ja.md` を読む。Graph finding が後続の synthesis で使える粒度になるよう、evidence classification、confidence、未知情報の扱いを揃える。
 
-### 1. Package dependency graph
+## Graph views to build（構築する graph views）
 
-ノード:
+1. Package dependency graph: package 間の direct / transitive dependency を示す。
+2. Component provenance graph: 各 skill、agent、prompt、instruction、MCP、hook、command、script がどの package 由来かを示す。
+3. Semantic interaction graph: activation overlap、instruction overlap、delegation、preload、bypass、shadowing などの意味的関係を示す。
+4. Capability exposure graph: MCP tools、hooks、commands、scripts、network、write、execute、auth、destructive operations を示す。
 
-- root package
-- direct APM dependencies
-- transitive APM dependencies
-- local dependencies
-- plugin-like dependencies
-- declared MCP dependencies
+## Node schema（ノードスキーマ）
 
-エッジ:
+各 node は可能な限り次を持つ:
+
+- `id`: `pkg:root`、`skill:root/review`、`agent:root/security-reviewer` などの stable graph id
+- `type`: package、skill、prompt、instruction、agent、hook、command、script、mcp、tool、resource、generated-output、doc、unknown
+- `path`: 利用可能なら file path
+- `package`: owning package id
+- `source`: local、direct-dependency、transitive-dependency、generated、external、unknown
+- `depth`: 分かる場合の dependency depth
+- `target_harnesses`: known または inferred target harnesses
+- `capabilities`: read、write、execute、network、auth、destructive、approval、unknown
+- `confidence`: high、medium、low
+
+## Edge schema（エッジスキーマ）
+
+使用できる edge type:
 
 - `depends_on`
-- `declares_mcp`
-- `resolved_from`
-- `local_path_depends_on`
-- `virtual_subdir_depends_on`
-
-### 2. Component provenance graph
-
-ノード:
-
-- package nodes
-- skill nodes
-- agent nodes
-- prompt nodes
-- instruction nodes
-- MCP nodes
-- hook/command/script nodes
-- generated-output nodes
-- documentation nodes
-
-エッジ:
-
 - `contains`
-- `generated_from`
-- `contributed_by`
-- `overrides`
+- `declares_mcp`
+- `exposes_tool`
+- `invokes`
+- `preloads_skill`
+- `delegates_to`
+- `compiled_to`
+- `overlaps_with`
+- `conflicts_with`
+- `constrains`
+- `bypasses`
 - `shadows`
+- `references`
+- `unknown_relation`
 
-### 3. Semantic interaction graph
+## Graph construction rules（グラフ構築ルール）
 
-ノード:
+- 推測よりも manifest / lockfile / dependency evidence を優先する。
+- `apm.lock.yaml` は provenance / depth evidence としてだけ使う。lock correctness は評価しない。
+- descriptions、applyTo/glob overlap、agent descriptions、prompt workflows、skill descriptions、MCP capabilities、hook events から semantic edges を推定する。
+- 推定した edges には `confidence: medium` または `low` と reason を付ける。
+- unknowns を隠さない。unknown provenance は synthesis にとって重要な evidence である。
 
-- runtime behavior に影響し得る構成物
+## Required outputs（必須出力）
 
-エッジ:
+1. Dependency graph JSON。
+2. Optional Mermaid graph。小さな package では useful。
+3. Short graph construction notes。
+4. Unknowns / low-confidence edges。
 
-- `overlaps_with`: 同じ trigger、domain、applyTo scope、responsibility を持つ
-- `conflicts_with`: 矛盾する、または相互に危険な指示を持つ
-- `constrains`: instruction が skill/agent/prompt の振る舞いを制約する
-- `delegates_to`: prompt/skill/agent が別 component へ委譲する
-- `bypasses`: prompt/command が期待される skill/agent/safety path を迂回する
-- `uses`: component が tool、MCP server、hook、command を期待している
+## Do not do（禁止事項）
 
-### 4. Capability exposure graph
-
-ノード:
-
-- MCP servers
-- MCP tools/resources/prompts
-- hooks
-- commands
-- scripts
-- tool permission を持つ agents
-- sensitive capabilities: filesystem write、delete、network、git mutation、secret access、shell execution、external service access
-
-エッジ:
-
-- `exposes_capability`
-- `may_call`
-- `requires_secret`
-- `writes_to`
-- `reads_from`
-- `calls_network`
-- `mutates_state`
-
-## Node schema
-
-安定した id を使う。
-
-- `pkg:<name>`
-- `skill:<package>/<name>`
-- `agent:<package>/<name>`
-- `prompt:<package>/<name>`
-- `instruction:<package>/<name>`
-- `mcp:<package>/<name>`
-- `hook:<package>/<name>`
-- `command:<package>/<name>`
-- `capability:<name>`
-
-各ノードは以下を含める。
-
-- `id`
-- `type`
-- `name`
-- `path`。分かる場合
-- `package`。分かる場合
-- `source`: local、direct-dependency、transitive-dependency、generated、unknown
-- `depth`。分かる場合
-- `confidence`: high、medium、low
-
-## Edge schema
-
-各エッジは以下を含める。
-
-- `from`
-- `to`
-- `type`
-- `reason`
-- `evidence`
-- `severity`: info、low、medium、high、critical
-- `confidence`: high、medium、low
-
-## 検出ヒューリスティック
-
-### Dependency depth
-
-lockfile depth が利用できる場合はそれを使う。利用できない場合は、directory layout と dependency declaration から推定する。推定した depth は confidence を medium または low として扱う。
-
-### Activation overlap
-
-以下から overlap を検出する。
-
-- skill descriptions
-- agent descriptions
-- prompt names/descriptions
-- command names
-- 繰り返される task nouns
-- 同じ target file patterns
-- 同じ tool/MCP expectations
-
-### Instruction overlap
-
-以下から overlap を検出する。
-
-- 同一の `applyTo` または glob scope
-- `**/*` のような broad scope
-- 同じ language/framework names
-- 重複する rule headings
-
-### Capability exposure
-
-以下から検出する。
-
-- MCP tools または server declarations
-- agent `tools` frontmatter
-- hook names と triggers
-- shell snippets
-- command files
-- write/delete/install/network/git/secret behavior を含む descriptions
-
-## 出力
-
-以下を出力する。
-
-1. compact summary
-2. structured output が求められた場合は `references/dependency-graph.schema.json` に従った JSON graph
-3. 有用な場合は Mermaid overview
-4. unknowns と confidence notes
-
-このスキルでは graph を採点しない。graph scoring には `apm-dependency-graph-judge` を使う。
+- package quality を採点しない。
+- `apm audit` を呼ばない。
+- evidence なしに dependency depth を断定しない。
+- evidence がないことを safety と扱わない。
