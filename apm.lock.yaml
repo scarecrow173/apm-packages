@@ -1,56 +1,189 @@
 lockfile_version: '1'
-generated_at: '2026-06-11T09:37:45.797208+00:00'
-apm_version: 0.16.1
+generated_at: '2026-06-12T10:14:08.087932+00:00'
+apm_version: 0.18.0
 dependencies:
+- repo_url: _local/apm-package-judge
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/apm-agent-component-judge
+  - .agents/skills/apm-dependency-graph-builder
+  - .agents/skills/apm-dependency-graph-judge
+  - .agents/skills/apm-hook-command-component-judge
+  - .agents/skills/apm-instruction-component-judge
+  - .agents/skills/apm-mcp-component-judge
+  - .agents/skills/apm-package-synthesis-judge
+  - .agents/skills/apm-prompt-component-judge
+  - .agents/skills/apm-semantic-package-judge
+  - .agents/skills/apm-skill-component-judge
+  - .claude/agents/apm-agent-reviewer.agent.ja.md
+  - .claude/agents/apm-agent-reviewer.md
+  - .claude/agents/apm-dependency-graph-reviewer.agent.ja.md
+  - .claude/agents/apm-dependency-graph-reviewer.md
+  - .claude/agents/apm-hook-command-reviewer.agent.ja.md
+  - .claude/agents/apm-hook-command-reviewer.md
+  - .claude/agents/apm-instruction-reviewer.agent.ja.md
+  - .claude/agents/apm-instruction-reviewer.md
+  - .claude/agents/apm-mcp-reviewer.agent.ja.md
+  - .claude/agents/apm-mcp-reviewer.md
+  - .claude/agents/apm-package-synthesizer.agent.ja.md
+  - .claude/agents/apm-package-synthesizer.md
+  - .claude/agents/apm-prompt-reviewer.agent.ja.md
+  - .claude/agents/apm-prompt-reviewer.md
+  - .claude/agents/apm-skill-reviewer.agent.ja.md
+  - .claude/agents/apm-skill-reviewer.md
+  - .claude/skills/apm-agent-component-judge
+  - .claude/skills/apm-dependency-graph-builder
+  - .claude/skills/apm-dependency-graph-judge
+  - .claude/skills/apm-hook-command-component-judge
+  - .claude/skills/apm-instruction-component-judge
+  - .claude/skills/apm-mcp-component-judge
+  - .claude/skills/apm-package-synthesis-judge
+  - .claude/skills/apm-prompt-component-judge
+  - .claude/skills/apm-semantic-package-judge
+  - .claude/skills/apm-skill-component-judge
+  - .codex/agents/apm-agent-reviewer.agent.ja.toml
+  - .codex/agents/apm-agent-reviewer.toml
+  - .codex/agents/apm-dependency-graph-reviewer.agent.ja.toml
+  - .codex/agents/apm-dependency-graph-reviewer.toml
+  - .codex/agents/apm-hook-command-reviewer.agent.ja.toml
+  - .codex/agents/apm-hook-command-reviewer.toml
+  - .codex/agents/apm-instruction-reviewer.agent.ja.toml
+  - .codex/agents/apm-instruction-reviewer.toml
+  - .codex/agents/apm-mcp-reviewer.agent.ja.toml
+  - .codex/agents/apm-mcp-reviewer.toml
+  - .codex/agents/apm-package-synthesizer.agent.ja.toml
+  - .codex/agents/apm-package-synthesizer.toml
+  - .codex/agents/apm-prompt-reviewer.agent.ja.toml
+  - .codex/agents/apm-prompt-reviewer.toml
+  - .codex/agents/apm-skill-reviewer.agent.ja.toml
+  - .codex/agents/apm-skill-reviewer.toml
+  - .cursor/agents/apm-agent-reviewer.agent.ja.md
+  - .cursor/agents/apm-agent-reviewer.md
+  - .cursor/agents/apm-dependency-graph-reviewer.agent.ja.md
+  - .cursor/agents/apm-dependency-graph-reviewer.md
+  - .cursor/agents/apm-hook-command-reviewer.agent.ja.md
+  - .cursor/agents/apm-hook-command-reviewer.md
+  - .cursor/agents/apm-instruction-reviewer.agent.ja.md
+  - .cursor/agents/apm-instruction-reviewer.md
+  - .cursor/agents/apm-mcp-reviewer.agent.ja.md
+  - .cursor/agents/apm-mcp-reviewer.md
+  - .cursor/agents/apm-package-synthesizer.agent.ja.md
+  - .cursor/agents/apm-package-synthesizer.md
+  - .cursor/agents/apm-prompt-reviewer.agent.ja.md
+  - .cursor/agents/apm-prompt-reviewer.md
+  - .cursor/agents/apm-skill-reviewer.agent.ja.md
+  - .cursor/agents/apm-skill-reviewer.md
+  - .github/agents/apm-agent-reviewer.agent.ja.agent.md
+  - .github/agents/apm-agent-reviewer.agent.md
+  - .github/agents/apm-dependency-graph-reviewer.agent.ja.agent.md
+  - .github/agents/apm-dependency-graph-reviewer.agent.md
+  - .github/agents/apm-hook-command-reviewer.agent.ja.agent.md
+  - .github/agents/apm-hook-command-reviewer.agent.md
+  - .github/agents/apm-instruction-reviewer.agent.ja.agent.md
+  - .github/agents/apm-instruction-reviewer.agent.md
+  - .github/agents/apm-mcp-reviewer.agent.ja.agent.md
+  - .github/agents/apm-mcp-reviewer.agent.md
+  - .github/agents/apm-package-synthesizer.agent.ja.agent.md
+  - .github/agents/apm-package-synthesizer.agent.md
+  - .github/agents/apm-prompt-reviewer.agent.ja.agent.md
+  - .github/agents/apm-prompt-reviewer.agent.md
+  - .github/agents/apm-skill-reviewer.agent.ja.agent.md
+  - .github/agents/apm-skill-reviewer.agent.md
+  deployed_file_hashes:
+    .claude/agents/apm-agent-reviewer.agent.ja.md: sha256:3505874009a68626c88cb7567983d0b1890e7bf6efb5a76dcf2dfee52f05e614
+    .claude/agents/apm-agent-reviewer.md: sha256:1ff08164e29ac68d06dbda41bf924ea56ff101162ebd889c745254419a7297a8
+    .claude/agents/apm-dependency-graph-reviewer.agent.ja.md: sha256:dce43b6989cf18077b2eaa172ddfc8fdda4f12031c7965d2afa2a65ef7e72cd6
+    .claude/agents/apm-dependency-graph-reviewer.md: sha256:ed1208a3b99bb92a5a9248cae8d3d060671e8cb599577e7b741c859bea01f91a
+    .claude/agents/apm-hook-command-reviewer.agent.ja.md: sha256:90ef13a49f61c442c7ff7b433d140b2c5d2a4646c0cda5fd60e11175c47419d7
+    .claude/agents/apm-hook-command-reviewer.md: sha256:ebddfa302deabb7d47d16ffd52c83e4d7184032723e72e6626a5fc5eea09334a
+    .claude/agents/apm-instruction-reviewer.agent.ja.md: sha256:7adca36e3db651ad562141a7fb67d23de7744c9a9f6fa3fcdde44368d751ec60
+    .claude/agents/apm-instruction-reviewer.md: sha256:b22c020e8d8d579b0555b75c569842b1925318742c971d00b459790c94d90faa
+    .claude/agents/apm-mcp-reviewer.agent.ja.md: sha256:cabc8dac7e714b9cff2bb5266ae4c31a8c4cd9b2b6a44efde49b03948d120339
+    .claude/agents/apm-mcp-reviewer.md: sha256:c69648b725d193fc1da5c1caae8122b095d47752fd3b5fab63180405df3be359
+    .claude/agents/apm-package-synthesizer.agent.ja.md: sha256:8bfae393c9e1f1087f1cc45ada5b6d42328821a728433f9b9282c7baa3535b7e
+    .claude/agents/apm-package-synthesizer.md: sha256:16b6029a28de8144b3b343bd5cfcb3fce65b4ef3da0ee78531773455981bab4c
+    .claude/agents/apm-prompt-reviewer.agent.ja.md: sha256:54b51088975c6b4a2becdee2978bc46a57ae39a5ab4ecd7ece4ae2fcd1a8b730
+    .claude/agents/apm-prompt-reviewer.md: sha256:75ecccff72cee1b07a17be14daedbfc83e5ebecf03ea333dd7c69b3e084a8f19
+    .claude/agents/apm-skill-reviewer.agent.ja.md: sha256:947fb0e35e13a87bf13d56fe98deafdab7448c8b5bac4a7f643638c9e92db41f
+    .claude/agents/apm-skill-reviewer.md: sha256:b95be7a5cd216440b246c83649c314ee6ccd0df1db7d9c573b46ee58909e9f82
+    .codex/agents/apm-agent-reviewer.agent.ja.toml: sha256:c2207e4e107ae536f93c1a2f5ebf9cb6b421f4842f51cfc40d88b2ca1728c0f9
+    .codex/agents/apm-agent-reviewer.toml: sha256:e2279c10e86d29aa3791301d837a2bef7ce06185759ced3899979287ea73ae49
+    .codex/agents/apm-dependency-graph-reviewer.agent.ja.toml: sha256:4421d97285bf1ec5e5d74e836a2468ead55ce5e1f78c7d59afc7d3ccc06b8cee
+    .codex/agents/apm-dependency-graph-reviewer.toml: sha256:f4185de30dc8cca386fbb495b571ab51727cc727699dd1b36927aadcfc7887f0
+    .codex/agents/apm-hook-command-reviewer.agent.ja.toml: sha256:4817615b6f95f98fc3fcf7b8d8487a5575993b97c77fc50bf58b3fecfaa262f4
+    .codex/agents/apm-hook-command-reviewer.toml: sha256:58cf9f7fa14f2dd5f409aec01f83149997a8ee1b633a82e8fc84d71216de40a5
+    .codex/agents/apm-instruction-reviewer.agent.ja.toml: sha256:e2a71e6ee78eb136c5ba68c64937d0cf5cbebf654d6ed61772326f3afa2062fa
+    .codex/agents/apm-instruction-reviewer.toml: sha256:8a0a0686db4fa5f5059b2dfb097cb634ccf674b0ea77d6a3b250020cedc3945e
+    .codex/agents/apm-mcp-reviewer.agent.ja.toml: sha256:a72bc6c45e2afbed5de4367aae3db579aaa0d20bb05ade28abd52117dcaeed87
+    .codex/agents/apm-mcp-reviewer.toml: sha256:830704f0173555c0993b5a523b4aad46b331f7da1458b16b99921ecbd71429c7
+    .codex/agents/apm-package-synthesizer.agent.ja.toml: sha256:c840ef3cbe62709dd3cff1f2f8d9d7b1cdaed4bc7b7010358fe07ed8102fc8e2
+    .codex/agents/apm-package-synthesizer.toml: sha256:09aef37ce432536a9b2deadda9945b478a7f001b8bef72a0ab735aac13f99c11
+    .codex/agents/apm-prompt-reviewer.agent.ja.toml: sha256:bd0a13d1c02725266110994cb9b7a0a66fc359a5abda908d6b4c17b6a68d10c8
+    .codex/agents/apm-prompt-reviewer.toml: sha256:9da5ef5fe82ebbdc4ddb0bd936d3bd780eb4e59d7d87fb6db31cba5ece2c893c
+    .codex/agents/apm-skill-reviewer.agent.ja.toml: sha256:6d0bef5ff77ea3074598f13d03c8bbc2f2588a60fbe3886b4dc89dcb63546443
+    .codex/agents/apm-skill-reviewer.toml: sha256:372674f0165cc0932860995dbb441ca3ea15e37f82556aa9aff53abbfa9e7a16
+    .cursor/agents/apm-agent-reviewer.agent.ja.md: sha256:3505874009a68626c88cb7567983d0b1890e7bf6efb5a76dcf2dfee52f05e614
+    .cursor/agents/apm-agent-reviewer.md: sha256:1ff08164e29ac68d06dbda41bf924ea56ff101162ebd889c745254419a7297a8
+    .cursor/agents/apm-dependency-graph-reviewer.agent.ja.md: sha256:dce43b6989cf18077b2eaa172ddfc8fdda4f12031c7965d2afa2a65ef7e72cd6
+    .cursor/agents/apm-dependency-graph-reviewer.md: sha256:ed1208a3b99bb92a5a9248cae8d3d060671e8cb599577e7b741c859bea01f91a
+    .cursor/agents/apm-hook-command-reviewer.agent.ja.md: sha256:90ef13a49f61c442c7ff7b433d140b2c5d2a4646c0cda5fd60e11175c47419d7
+    .cursor/agents/apm-hook-command-reviewer.md: sha256:ebddfa302deabb7d47d16ffd52c83e4d7184032723e72e6626a5fc5eea09334a
+    .cursor/agents/apm-instruction-reviewer.agent.ja.md: sha256:7adca36e3db651ad562141a7fb67d23de7744c9a9f6fa3fcdde44368d751ec60
+    .cursor/agents/apm-instruction-reviewer.md: sha256:b22c020e8d8d579b0555b75c569842b1925318742c971d00b459790c94d90faa
+    .cursor/agents/apm-mcp-reviewer.agent.ja.md: sha256:cabc8dac7e714b9cff2bb5266ae4c31a8c4cd9b2b6a44efde49b03948d120339
+    .cursor/agents/apm-mcp-reviewer.md: sha256:c69648b725d193fc1da5c1caae8122b095d47752fd3b5fab63180405df3be359
+    .cursor/agents/apm-package-synthesizer.agent.ja.md: sha256:8bfae393c9e1f1087f1cc45ada5b6d42328821a728433f9b9282c7baa3535b7e
+    .cursor/agents/apm-package-synthesizer.md: sha256:16b6029a28de8144b3b343bd5cfcb3fce65b4ef3da0ee78531773455981bab4c
+    .cursor/agents/apm-prompt-reviewer.agent.ja.md: sha256:54b51088975c6b4a2becdee2978bc46a57ae39a5ab4ecd7ece4ae2fcd1a8b730
+    .cursor/agents/apm-prompt-reviewer.md: sha256:75ecccff72cee1b07a17be14daedbfc83e5ebecf03ea333dd7c69b3e084a8f19
+    .cursor/agents/apm-skill-reviewer.agent.ja.md: sha256:947fb0e35e13a87bf13d56fe98deafdab7448c8b5bac4a7f643638c9e92db41f
+    .cursor/agents/apm-skill-reviewer.md: sha256:b95be7a5cd216440b246c83649c314ee6ccd0df1db7d9c573b46ee58909e9f82
+    .github/agents/apm-agent-reviewer.agent.ja.agent.md: sha256:3505874009a68626c88cb7567983d0b1890e7bf6efb5a76dcf2dfee52f05e614
+    .github/agents/apm-agent-reviewer.agent.md: sha256:1ff08164e29ac68d06dbda41bf924ea56ff101162ebd889c745254419a7297a8
+    .github/agents/apm-dependency-graph-reviewer.agent.ja.agent.md: sha256:dce43b6989cf18077b2eaa172ddfc8fdda4f12031c7965d2afa2a65ef7e72cd6
+    .github/agents/apm-dependency-graph-reviewer.agent.md: sha256:ed1208a3b99bb92a5a9248cae8d3d060671e8cb599577e7b741c859bea01f91a
+    .github/agents/apm-hook-command-reviewer.agent.ja.agent.md: sha256:90ef13a49f61c442c7ff7b433d140b2c5d2a4646c0cda5fd60e11175c47419d7
+    .github/agents/apm-hook-command-reviewer.agent.md: sha256:ebddfa302deabb7d47d16ffd52c83e4d7184032723e72e6626a5fc5eea09334a
+    .github/agents/apm-instruction-reviewer.agent.ja.agent.md: sha256:7adca36e3db651ad562141a7fb67d23de7744c9a9f6fa3fcdde44368d751ec60
+    .github/agents/apm-instruction-reviewer.agent.md: sha256:b22c020e8d8d579b0555b75c569842b1925318742c971d00b459790c94d90faa
+    .github/agents/apm-mcp-reviewer.agent.ja.agent.md: sha256:cabc8dac7e714b9cff2bb5266ae4c31a8c4cd9b2b6a44efde49b03948d120339
+    .github/agents/apm-mcp-reviewer.agent.md: sha256:c69648b725d193fc1da5c1caae8122b095d47752fd3b5fab63180405df3be359
+    .github/agents/apm-package-synthesizer.agent.ja.agent.md: sha256:8bfae393c9e1f1087f1cc45ada5b6d42328821a728433f9b9282c7baa3535b7e
+    .github/agents/apm-package-synthesizer.agent.md: sha256:16b6029a28de8144b3b343bd5cfcb3fce65b4ef3da0ee78531773455981bab4c
+    .github/agents/apm-prompt-reviewer.agent.ja.agent.md: sha256:54b51088975c6b4a2becdee2978bc46a57ae39a5ab4ecd7ece4ae2fcd1a8b730
+    .github/agents/apm-prompt-reviewer.agent.md: sha256:75ecccff72cee1b07a17be14daedbfc83e5ebecf03ea333dd7c69b3e084a8f19
+    .github/agents/apm-skill-reviewer.agent.ja.agent.md: sha256:947fb0e35e13a87bf13d56fe98deafdab7448c8b5bac4a7f643638c9e92db41f
+    .github/agents/apm-skill-reviewer.agent.md: sha256:b95be7a5cd216440b246c83649c314ee6ccd0df1db7d9c573b46ee58909e9f82
+  source: local
+  local_path: ./packages/apm-package-judge
+  is_dev: true
 - repo_url: _local/doc-driven-dev
   package_type: apm_package
   deployed_files:
   - .agents/skills/adr-doc
-  - .agents/skills/brainstorming
   - .agents/skills/briefing-flow
   - .agents/skills/deep-dive
   - .agents/skills/design-doc
-  - .agents/skills/dispatching-parallel-agents
   - .agents/skills/doc-driven-dev-lifecycle
   - .agents/skills/doc-status
-  - .agents/skills/doubt-driven-development
-  - .agents/skills/idea-refine
   - .agents/skills/impl-doc
   - .agents/skills/implementation-flow
-  - .agents/skills/incremental-implementation
   - .agents/skills/plan-doc
-  - .agents/skills/receiving-code-review
-  - .agents/skills/requesting-code-review
   - .agents/skills/skill-discovery-protocol
-  - .agents/skills/source-driven-development
   - .agents/skills/spec-doc
-  - .agents/skills/subagent-driven-development
-  - .agents/skills/systematic-debugging
   - .agents/skills/task-doc
-  - .agents/skills/test-driven-development
   - .claude/skills/adr-doc
-  - .claude/skills/brainstorming
   - .claude/skills/briefing-flow
   - .claude/skills/deep-dive
   - .claude/skills/design-doc
-  - .claude/skills/dispatching-parallel-agents
   - .claude/skills/doc-driven-dev-lifecycle
   - .claude/skills/doc-status
-  - .claude/skills/doubt-driven-development
-  - .claude/skills/idea-refine
   - .claude/skills/impl-doc
   - .claude/skills/implementation-flow
-  - .claude/skills/incremental-implementation
   - .claude/skills/plan-doc
-  - .claude/skills/receiving-code-review
-  - .claude/skills/requesting-code-review
   - .claude/skills/skill-discovery-protocol
-  - .claude/skills/source-driven-development
   - .claude/skills/spec-doc
-  - .claude/skills/subagent-driven-development
-  - .claude/skills/systematic-debugging
   - .claude/skills/task-doc
-  - .claude/skills/test-driven-development
   source: local
   local_path: ./packages/doc-driven-dev
   is_dev: true
@@ -225,7 +358,7 @@ dependencies:
   is_dev: true
 - repo_url: microsoft/apm
   host: github.com
-  resolved_commit: 1f6d52258b1527c55c81868c390f739324499822
+  resolved_commit: 43a00c21e413342d5dd56c358a63aa64e12af131
   virtual_path: packages/apm-guide
   is_virtual: true
   package_type: apm_package
@@ -241,7 +374,7 @@ dependencies:
     .codex/agents/apm-expert.toml: sha256:581dc7085e4879f84a228f2919ef2e5190f5410a63cd39cd06754da8455d8daf
     .cursor/agents/apm-expert.md: sha256:d9660199e6eec99c8cd9ee40f02b30aeb3862652a44a7ec5291fec7312040f65
     .github/agents/apm-expert.agent.md: sha256:d9660199e6eec99c8cd9ee40f02b30aeb3862652a44a7ec5291fec7312040f65
-  content_hash: sha256:8b97220db10ac6af418e0a9118048652b3817b8819b53725f20d590129903166
+  content_hash: sha256:591ad3e822caaee7f8baa54d2c42b6948b237daca27c44ea31e3ebd05f0ee0b5
   is_dev: true
 - repo_url: obra/superpowers
   host: github.com

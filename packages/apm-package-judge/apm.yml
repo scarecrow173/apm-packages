@@ -1,0 +1,3 @@
+name: apm-package-judge
+version: 0.3.0
+description: Modular semantic judge suite for APM packages with component specialist reviews, dependency graph analysis, and package-level synthesis.
