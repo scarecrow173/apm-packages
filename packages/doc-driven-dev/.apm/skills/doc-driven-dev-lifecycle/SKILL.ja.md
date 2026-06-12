@@ -32,7 +32,7 @@ Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: E
 
 | Phase | 目的 | 主担当スキル | ゲート |
 | ----- | ---- | ------------ | ------ |
-| 1 | 要望を文書入力に変換する | `briefing-flow` | 受け入れ条件付き spec + ADR |
+| 1 | 要望を文書入力に変換する | `briefing-flow` | briefing 完了出力: 受け入れ条件付き spec + ADR |
 | 2 | 設計を実装可能な形へ具体化する | `design-doc` | spec/ADR と整合した承認済み設計 |
 | 3 | 実装計画へ統合する | `plan-doc` | PLAN-DOC-GATE-001（承認済み設計必須） |
 | 4 | plan を実装単位へ分解する | `task-doc` | plan にトレース可能な検証付きタスク |
@@ -82,6 +82,8 @@ Phase 1 は [`briefing-flow`](../briefing-flow/SKILL.ja.md) メタスキルに�
 - Phase D ゲート（spec-doc + adr-doc 完了条件）
 
 `briefing-flow` の Phase D ゲートを通過した時点で Phase 1 完了とみなす。
+この時点で得られる `spec-doc` と `adr-doc` が、Phase 2 (`design-doc`) に入るための
+完了成果物になる。
 
 ## Phase 1 スキルインターフェース
 

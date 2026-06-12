@@ -69,6 +69,9 @@ skill.
 - `metadata.validation` is not used in v1.
 - Experiment Log `start` events are optional at creation time.
 - The normal path is CLI-based creation and updates, not free-form manual edits.
+- Trust boundary: `new_*`, `append_*`, and `edit_*` commands are state-changing
+  and write immediately to the paths selected by `--task`, `--file`, or
+  default output conventions.
 
 ## Resources
 

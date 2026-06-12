@@ -31,6 +31,11 @@ Important:
 - When changing script behavior, edit `scripts/doc-driven-dev/src` first.
 - `build:scripts` cleans existing `.js` files under `packages/doc-driven-dev/.apm/skills/**/scripts` and regenerates them.
 - `SKILL.md`, `references`, and `assets/templates` are not auto-generated from the scripts workspace today, so update them directly when needed.
+- `skill-discovery-protocol` scans local skill roots such as `.agents/skills`
+  and `apm_modules` when generating `.sdp` artifacts.
+- Environment-provided skills can affect routing without becoming bundled
+  package content, so docs must disclose optional external routing when an
+  adapter refers to non-bundled skills such as `steer-web-research`.
 
 ## 3. Package Development Workflow
 
@@ -67,6 +72,12 @@ Note:
 - `doc-status` scripts (`list_docs`, `audit_docs`) are primarily report-only.
 - In `adr-doc`, `update_index` and `relate_adr` default to dry-run; `--write` is required for file updates.
 - Avoid destructive changes; verify with dry-run or JSON output first.
+- Document creation commands write files immediately unless the command
+  explicitly says it is dry-run or report-only.
+- Path flags such as `--dir`, `--file`, and `--out` change where generated or
+  updated artifacts are written.
+- `pnpm --dir scripts/doc-driven-dev run build:scripts` replaces distributed
+  JavaScript outputs under `packages/doc-driven-dev/.apm/skills/**/scripts/*.js`.
 
 ## 6. Change Checklist
 

@@ -12,10 +12,10 @@ skill instructions, skip this meta skill and follow your dispatch instructions.
 </SUBAGENT-STOP>
 
 Orchestrates information gathering and organization by dynamically discovering
-and routing to ALL available skills in the environment. This is the **briefing
-phase orchestrator** — it determines which skills apply, configures the skill
-stack based on information state, and enforces spec-doc and adr-doc completion
-before progression.
+and routing to the skills that the active profile marks as applicable in the
+current environment. This is the **briefing phase orchestrator** — it
+determines which skills apply, configures the skill stack based on information
+state, and enforces spec-doc and adr-doc completion before progression.
 
 This is a **meta skill**: it produces no documents directly. Instead it governs
 skill discovery, configuration, sequencing, and the gate loop that connects
@@ -27,13 +27,16 @@ information gathering to downstream document creation.
 - Requirements are ambiguous and it's unclear which skill to start with.
 - As briefing phase delegate when invoked from `doc-driven-dev-lifecycle`.
 - Standalone when you want to organize information before writing spec-doc / adr-doc.
-- Starting any information gathering work — invoke this skill FIRST to configure.
+- Starting information gathering work that needs profile-based routing or
+  multiple skills before writing spec-doc / adr-doc.
 
 ## The Rule
 
 **Before writing spec-doc / adr-doc, complete the Assess and Configure phases below.**
-If available skills apply to what you are about to do, you must use them.
-This is not optional. You cannot rationalize your way out of this.
+Use the skills that the generated profile marks as applicable by default,
+unless the user explicitly overrides the routing decision. If a dispatch-
+specific override or emergency override is used, record a one-line reason
+before proceeding.
 
 ---
 
@@ -253,7 +256,8 @@ The following are **invariants active throughout all phases**.
 When a violation is detected, STOP immediately and address it.
 
 <HARD-GATE>
-Do not skip profile-based configuration.
+Do not skip profile-based configuration when briefing work depends on skill
+routing.
 - If profile does not exist → invoke `skill-discovery-protocol` with `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`.
 - If profile exists → load it and follow its configuration.
 "Requirements are clear enough to skip" and "I know this pattern" are the most
@@ -277,9 +281,10 @@ Minimum evidence takes 10 minutes; debugging mystery code takes hours.
 </HARD-GATE>
 
 <HARD-GATE>
-Do not skip using skills that the profile indicates should apply. If the active
-skill stack includes a skill, you must follow that skill's process.
-Override requires explicit user instruction.
+Treat profile-selected skills as the default routing policy. If the active
+skill stack includes a skill, follow that skill's process unless the user
+explicitly overrides the routing decision. Dispatch-specific overrides and
+emergency overrides require a one-line recorded reason.
 </HARD-GATE>
 
 ---
@@ -293,7 +298,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 | "Requirements are clear, no need to organize" | Implicit assumptions surface later as contradictions |
 | "I already know how to do this" | The profile reveals overlooked information sources |
 | "Research later, write first" | Spec from insufficient info causes rework during implementation |
-| "This skill doesn't apply here" | If profile says it applies, follow it |
+| "This skill doesn't apply here" | If profile says it applies, treat it as the default unless an override is recorded |
 | "Acceptance criteria can be added later" | Spec without criteria produces unverifiable plans |
 | "Alternatives are obvious" | ADR with only one option has no decision rationale |
 | "Spending too much time on briefing" | Stop when stop conditions are met. Continue until they are |

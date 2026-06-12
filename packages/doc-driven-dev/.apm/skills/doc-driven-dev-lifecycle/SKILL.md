@@ -32,7 +32,7 @@ See `references/flow-contract.md` for the full specification.
 
 | Phase | Purpose | Primary Skills | Gate |
 | ----- | ------- | -------------- | ---- |
-| 1 | Convert requests into document-ready inputs | `briefing-flow` | spec + ADR with acceptance criteria |
+| 1 | Convert requests into document-ready inputs | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Concretize design into implementable form | `design-doc` | approved design consistent with spec/ADR |
 | 3 | Integrate into implementation plan | `plan-doc` | PLAN-DOC-GATE-001 (approved design required) |
 | 4 | Decompose plan into task units | `task-doc` | tasks traceable to plan with verification |
@@ -83,6 +83,8 @@ adr-doc completion.
 - Phase D gate (spec-doc + adr-doc completion criteria)
 
 Phase 1 is considered complete when `briefing-flow` Phase D gate passes.
+The resulting `spec-doc` and `adr-doc` are the completion artifacts required
+to enter Phase 2 (`design-doc`).
 
 ## Phase 1 Skill Interface
 

@@ -30,6 +30,11 @@
 - スクリプト挙動を変えるときは `scripts/doc-driven-dev/src` を編集する。
 - `build:scripts` は `packages/doc-driven-dev/.apm/skills/**/scripts` 配下の既存 `.js` を掃除して再生成する。
 - `SKILL.md` や `references`、`assets/templates` は現在 scripts workspace から自動生成されないため、必要箇所を直接更新する。
+- `skill-discovery-protocol` は `.sdp` 成果物の生成時に `.agents/skills`
+  や `apm_modules` のような local skill root を走査する。
+- environment-provided skill は bundle 済み package content ではなくても
+  routing に影響し得るため、adapter が `steer-web-research` のような
+  non-bundled skill を参照する場合は optional external routing を文書化する。
 
 ## 3. 作業フロー（パッケージ開発）
 
@@ -66,6 +71,13 @@ apm compile --validate
 - `doc-status` 系 (`list_docs`, `audit_docs`) は基本 report-only。
 - `adr-doc` の `update_index` と `relate_adr` は既定 dry-run。実書き込みには `--write` が必要。
 - 破壊的変更を避け、まず dry-run / JSON 出力で確認してから反映する。
+- document 作成コマンドは、明示的に dry-run または report-only と書かれて
+  いない限り即時にファイルを書き込む。
+- `--dir`、`--file`、`--out` のような path flag は、生成物や更新対象の
+  書き込み先を変える。
+- `pnpm --dir scripts/doc-driven-dev run build:scripts` は
+  `packages/doc-driven-dev/.apm/skills/**/scripts/*.js` 配下の配布用
+  JavaScript 出力を置き換える。
 
 ## 6. 変更時チェックリスト
 

@@ -15,8 +15,8 @@ license: MIT
 この skill は文書駆動開発の整合性ゲートキーパーとして機能する。
 監査結果は次の判定に使われる:
 
-- **完了可能**: ブロッキング指摘なし → 文書セット全体が整合・追跡可能。
-- **差し戻し**: ブロッキング指摘あり → 該当文書の修正が必要。
+- **Completable**: ブロッキング指摘なし → 文書セット全体が整合・追跡可能。
+- **Returned**: ブロッキング指摘あり → 該当文書の修正が必要。
 
 ブロッキング指摘の例:
 
@@ -24,6 +24,17 @@ license: MIT
 - 壊れた内部 relation（参照先ファイルが存在しない）
 - 索引に未登録の文書
 - ステータス遷移の矛盾（例: plan が `approved` だが参照 design が `draft`）
+
+## Output Contract
+
+監査結果は次の構造で返す:
+
+- `Verdict`: `Completable` または `Returned`
+- `Blocking findings`: 進行を止める問題
+- `Warnings`: ブロッキングではないが修正したい問題
+- `Relation errors`: 壊れた内部リンクまたは不整合な relation
+- `Index gaps`: 足りない registry / index coverage
+- `Next actions`: ゲート通過に必要な最小フォローアップ
 
 ## ワークフロー
 

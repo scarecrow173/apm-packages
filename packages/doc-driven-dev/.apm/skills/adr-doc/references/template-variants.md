@@ -20,6 +20,9 @@ has little meaningful trade-off to preserve. When in doubt, choose `full`.
 | `bare-minimal` | Existing repository conventions already define ADR wording, and only the minimal MADR section structure should be inserted. |
 | `bare` | Existing repository conventions already define ADR wording, but the full MADR section structure is useful. |
 
+Use this reference from the lean `adr-doc` entry skill when template choice
+needs more than the default `full` assumption.
+
 ## Choose `full`
 
 Choose `full` when any of these are true:

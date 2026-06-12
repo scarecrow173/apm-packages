@@ -32,8 +32,8 @@ document flow and invokes the phase-specific skills below as needed:
 ```text
 doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
-  -> Phase 2: spec-doc + adr-doc   (parallel when both product and technical context are ready)
-  -> Phase 3: design-doc           (overview + detailed design docs)
+  -> Phase 1 outputs: spec-doc + adr-doc   (parallel when both product and technical context are ready)
+  -> Phase 2: design-doc                   (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
   -> Phase 5/6: doc-status -> exit
@@ -43,8 +43,8 @@ doc-driven-dev-lifecycle
 - **ADR** answers HOW and records every technical decision with alternatives
   considered and rationale.
 - **Parallel creation**: when Phase 1 produces enough context, both spec and
-  ADR can be written simultaneously since they address different facets of the
-  same work.
+  ADR can be written simultaneously as the completion artifacts of briefing,
+  since they address different facets of the same work.
 - **Design gate before planning**: `plan-doc` requires approved `design-doc`
   input and uses spec for requirements plus ADR for technical constraints.
 
@@ -249,8 +249,8 @@ internal document links rather than the type of the linked document.
 ```text
 doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
-  -> Phase 2: spec-doc + adr-doc  (parallel: define what + record decisions)
-  -> Phase 3: design-doc          (overview-first design gate)
+  -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
+  -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
   -> Phase 5/6: doc-status -> exit
@@ -263,5 +263,10 @@ skills available in the current environment rather than hardcoding a fixed
 supporting-skill stack. The dual-track model remains `spec-doc` + `adr-doc`:
 specs define what should be built, why, scope, and acceptance criteria, while
 ADRs record technical decisions, alternatives, and rationale. When Phase 1
-produces enough context for both, they are written in parallel before design
-and planning continue.
+produces enough context for both, they are written in parallel as briefing
+completion artifacts before design and planning continue.
+
+Routing note: `briefing-flow` and `implementation-flow` can route to skills
+discovered in the current environment. Optional skills such as
+`steer-web-research` are not bundled in this package and are used only when
+they appear in the generated `.sdp` profile for the consumer environment.

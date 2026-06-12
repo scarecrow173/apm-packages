@@ -42,3 +42,19 @@ ADR を確定する前にこのチェックリストを使います。
 | 選択肢が 1 つだけ | 実質的な代替案、または代替案を退けた理由を記録する。 |
 | 背景が暗黙知に依存している | システム、きっかけ、制約、リンクを明示する。 |
 | 影響が良い点だけ | リスク、コスト、移行作業、フォローアップタスクを追加する。 |
+
+## Review Summary Format
+
+レビューを返すときは、生チェックリストではなく要約で示す。
+
+- `Passes`: ADR が実装可能であることを支える主な強み
+- `Gaps found`: 修正すべき具体的な不足
+- `Recommendation`: 確定する、不足を先に直す、または意図確認に戻る
+
+便利なレビューコマンド:
+
+```bash
+node scripts/review_adr.js --dir docs/adr
+node scripts/audit_adr.js --dir docs/adr
+node scripts/check_code_links.js --dir docs/adr
+```

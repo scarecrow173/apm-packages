@@ -7,7 +7,7 @@ This document defines the fixed sequence and decision rules that
 
 | Phase | Name | Primary Skills | Gate |
 | ----- | ---- | -------------- | ---- |
-| 1 | Briefing | `briefing-flow` | spec + ADR with acceptance criteria |
+| 1 | Briefing | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Design | `design-doc` | approved design consistent with spec/ADR |
 | 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001 (approved design required) |
 | 4 | Execution Slice | `task-doc` | tasks traceable to plan with verification |
@@ -38,6 +38,9 @@ Complete when `briefing-flow` Phase D gate passes:
 - Both documents reference the same issue context.
 - Entry Decision selection is recorded.
 - Open items classified as "pre-implementation blocker" or "manageable later".
+
+The `spec-doc` and `adr-doc` produced here are the briefing outputs required to
+enter Phase 2 (`design-doc`).
 
 ## Phase 2: Design
 

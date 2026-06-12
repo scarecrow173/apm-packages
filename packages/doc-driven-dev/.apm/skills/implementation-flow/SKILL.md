@@ -11,10 +11,11 @@ If you were dispatched as a subagent to execute a specific task with explicit
 skill instructions, skip this meta skill and follow your dispatch instructions.
 </SUBAGENT-STOP>
 
-Orchestrates code implementation by dynamically discovering and routing to
-ALL available skills in the environment. This is the **implementation phase
-orchestrator** — it determines which skills apply, configures the skill stack
-per task, and enforces verification before progression.
+Orchestrates code implementation by dynamically discovering and routing to the
+skills that the active profile marks as applicable in the current environment.
+This is the **implementation phase orchestrator** — it determines which skills
+apply, configures the skill stack per task, and enforces verification before
+progression.
 
 This is a **meta skill**: it produces no code directly. Instead it governs
 skill discovery, configuration, sequencing, and the verification loop that
@@ -26,13 +27,15 @@ connects implementation back to upstream documents.
 - Implementing a plan where multiple skills must coordinate.
 - As implementation phase delegate when invoked from `doc-driven-dev-lifecycle`.
 - Standalone when documents already exist and implementation guidance is needed.
-- Starting any implementation work — invoke this skill FIRST to configure.
+- Starting implementation work that needs profile-based routing or multiple
+  skills.
 
 ## The Rule
 
 **Before writing any code, complete the Assess and Configure phases below.**
-If available skills apply to what you are about to do, you must use them.
-This is not optional. You cannot rationalize your way out of this.
+Complete the profile-based assessment and configuration first. Treat
+profile-selected skills as the default routing policy, allow explicit user
+overrides, and record a one-line reason for any non-default routing decision.
 
 ---
 
@@ -223,7 +226,8 @@ Record the loopback with a one-line reason.
 </HARD-GATE>
 
 <HARD-GATE>
-Do not skip profile-based configuration.
+Do not skip profile-based configuration when implementation work depends on
+skill routing.
 - If profile does not exist → invoke `skill-discovery-protocol` with `.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml`.
 - If profile exists → load it and follow its configuration.
 "This is simple enough to skip" and "I know what to do" are the most common
@@ -231,10 +235,10 @@ failure patterns. They defeat systematic skill routing.
 </HARD-GATE>
 
 <HARD-GATE>
-Do not skip using skills that the profile indicates should apply. If the active
-skill stack includes a skill, you must follow that skill's process. Rationalizing
-"this skill doesn't really apply here" when the profile says otherwise is not allowed.
-Override requires explicit user instruction.
+Treat profile-selected skills as the default routing policy. If the active
+skill stack includes a skill, follow that skill's process unless the user
+explicitly overrides the routing decision. Record a one-line reason for any
+dispatch-specific override, emergency override, or other non-default routing.
 </HARD-GATE>
 
 ---
@@ -248,7 +252,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 | "Too simple for skill configuration" | Configuration prevents unanticipated mistakes |
 | "I already know how to do this" | The profile ensures nothing is missed |
 | "I'll configure after I start" | Configuration BEFORE execution. Always |
-| "This skill doesn't apply here" | If profile says it applies, follow it. Override requires explicit user instruction |
+| "This skill doesn't apply here" | If profile says it applies, treat it as the default unless an override is recorded |
 | "I'll clean up adjacent code" | Stay within task boundaries. File separate task |
 | "Verification is obvious" | Show evidence: tests, build output, runtime data |
 | "No review needed for small change" | Every task gets Review-category skills. No exceptions |
@@ -290,5 +294,6 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 2. **This skill and invoked workflow skills** — override default behaviors.
 3. **Default system prompt** — lowest priority.
 
-If the user says "skip configuration for this task", follow the user.
-The user has authority. But absent override instructions, the flow is mandatory.
+If the user says "skip configuration for this task", follow the user and
+record that override. The user has authority. Without an override, use the
+profile-selected routing as the default.
