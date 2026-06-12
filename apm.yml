@@ -13,6 +13,7 @@ devDependencies:
   apm:
   - ./packages/steer-enterprise-web-research
   - ./packages/doc-driven-dev
+  - ./packages/apm-package-judge
   - microsoft/apm/packages/apm-guide
   - github/awesome-copilot/skills/git-commit
   - github/awesome-copilot/skills/commit-message-storyteller
@@ -50,6 +51,9 @@ marketplace:
     version: 0.1.0
   - name: doc-driven-dev
     source: ./packages/doc-driven-dev
+    version: 0.1.0
+  - name: apm-package-judge
+    source: ./packages/apm-package-judge
     version: 0.1.0
   - name: doublecheck
     source: github/awesome-copilot
