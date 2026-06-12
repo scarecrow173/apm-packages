@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Activation Conflict Detector Schema",
+  "description": "Detects when multiple meta-skills attempt to activate on the same request, preventing undefined behavior.",
+  "type": "object",
+  "required": [
+    "version",
+    "detection_rules",
+    "activation_matrix",
+    "guaranteed_invariants"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version for this conflict detector",
+      "const": "1.0.0"
+    },
+    "detection_rules": {
+      "type": "array",
+      "description": "Rules that detect activation conflicts",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "condition", "severity"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^CONFLICT_[A-Z0-9_]+$",
+            "description": "Unique identifier for this conflict detection rule"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of what conflict this detects"
+          },
+          "condition": {
+            "type": "string",
+            "description": "Logical condition that triggers this conflict (pseudo-code)"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["CRITICAL", "HIGH", "MEDIUM"],
+            "description": "How severe this conflict is if detected"
+          },
+          "affected_skills": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Meta-skills that could be in conflict"
+          },
+          "remediation": {
+            "type": "string",
+            "description": "How to resolve this conflict if detected"
+          }
+        }
+      }
+    },
+    "activation_matrix": {
+      "type": "object",
+      "description": "Matrix of meta-skill activation states and valid combinations",
+      "properties": {
+        "doc-driven-dev-lifecycle": {
+          "$ref": "#/definitions/skill_state"
+        },
+        "briefing-flow": {
+          "$ref": "#/definitions/skill_state"
+        },
+        "implementation-flow": {
+          "$ref": "#/definitions/skill_state"
+        }
+      }
+    },
+    "guaranteed_invariants": {
+      "type": "array",
+      "description": "Invariants that MUST hold for valid execution",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "test"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^INV_[A-Z0-9_]+$",
+            "description": "Unique invariant identifier"
+          },
+          "statement": {
+            "type": "string",
+            "description": "The invariant as a logical statement"
+          },
+          "test": {
+            "type": "string",
+            "description": "How to test/verify this invariant holds"
+          },
+          "enforcement": {
+            "type": "string",
+            "enum": ["MUST_NOT_VIOLATE", "SHOULD_NOT_VIOLATE"],
+            "description": "Whether violation is an error or warning"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "skill_state": {
+      "type": "object",
+      "required": ["name", "entry_conditions", "mutual_exclusions"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Skill identifier"
+        },
+        "entry_conditions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Conditions that trigger this skill's activation"
+        },
+        "mutual_exclusions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Other skills that must NOT be active when this activates"
+        },
+        "can_delegate_to": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Skills this skill can delegate to"
+        },
+        "cannot_overlap_with": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Skills that cannot be active concurrently"
+        }
+      }
+    }
+  }
+}
