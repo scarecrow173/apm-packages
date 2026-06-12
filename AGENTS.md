@@ -17,6 +17,14 @@ for files under that subtree.
 
 - When a document has a localized sibling, keep the two versions synchronized
   in meaning and structure.
+- When reading Japanese-localized docs in terminals or scripts, do not treat
+  mojibake-looking console output alone as evidence that the file is broken.
+  First verify the file contents with explicit UTF-8 decoding, for example via
+  `Get-Content -Encoding utf8`, Node/Python UTF-8 reads, or an editor known to
+  preserve UTF-8 correctly.
+- Before reporting a Japanese document as mojibake or corrupted, distinguish
+  between file-content corruption and display-path issues such as shell
+  encoding, code page, font, or hex-view rendering.
 - This applies to pairs such as:
   - `*.md` and `*.ja.md`
   - English and Japanese package READMEs
