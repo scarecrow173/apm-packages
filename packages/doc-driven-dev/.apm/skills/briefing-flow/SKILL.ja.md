@@ -10,7 +10,10 @@ license: MIT
 明示的なスキル指示付きで特定のタスクを実行するサブエージェントとして呼び出された場合は、このメタスキルを飛ばし、dispatch 指示に従ってください。
 </SUBAGENT-STOP>
 
-利用可能なすべてのスキルを動的に発見してルーティングし、情報収集と整理を行う。このスキルは briefing フェーズのオーケストレータであり、どのスキルが適用されるかを判断し、情報状態に応じて skill stack を構成し、spec-doc と adr-doc が完了するまで次段階への進行を制御する。
+active profile が現在の環境で applicable と示したスキルを動的に発見して
+ルーティングし、情報収集と整理を行う。このスキルは briefing フェーズの
+オーケストレータであり、どのスキルが適用されるかを判断し、情報状態に応じて
+skill stack を構成し、spec-doc と adr-doc が完了するまで次段階への進行を制御する。
 
 これはメタスキルである。直接ドキュメントは生成しない。代わりに、スキル発見、構成、順序付け、そして情報収集から下流の文書作成へ接続するゲートループを管理する。
 
@@ -20,13 +23,16 @@ license: MIT
 - 要件が曖昧で、どのスキルから始めるべきか不明なとき。
 - `doc-driven-dev-lifecycle` から briefing フェーズの委譲先として呼び出されたとき。
 - spec-doc / adr-doc を書く前に情報を整理したいとき。
-- 何らかの情報収集作業を始めるとき。まずこのスキルを呼び出して構成を行う。
+- profile-based routing や複数 skill の組み合わせが必要な情報収集を、
+  spec-doc / adr-doc 作成前に始めるとき。
 
 ## ルール
 
 **spec-doc / adr-doc を書く前に、下の Assess と Configure フェーズを完了すること。**
-利用可能なスキルが今やろうとしている作業に当てはまるなら、必ず使う。
-これは任意ではない。自分の判断で省略してはいけない。
+生成された profile が現在の作業に applicable と示したスキルを default として使う。
+ただし user が routing decision を明示的に override した場合はそれを優先する。
+dispatch-specific override または emergency override を使う場合は、進行前に
+1 行で理由を記録する。
 
 ---
 

@@ -67,6 +67,9 @@ license: MIT
 - v1 では `metadata.validation` を使いません。
 - Experiment Log の `start` イベントは作成時必須ではありません。
 - 正規経路は CLI による作成・更新であり、自由な手編集を前提にしません。
+- Trust boundary: `new_*`、`append_*`、`edit_*` コマンドは state-changing
+  operation であり、`--task`、`--file`、または既定の出力規約で決まる
+  path に即時書き込みます。
 
 ## リソース
 

@@ -31,8 +31,8 @@ briefing、文書作成、実装準備、exit までをオーケストレーシ�
 ```text
 doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
-  -> Phase 2: spec-doc + adr-doc   (プロダクト文脈と技術文脈が揃えば並列)
-  -> Phase 3: design-doc           (overview + detailed design docs)
+  -> Phase 1 outputs: spec-doc + adr-doc   (プロダクト文脈と技術文脈が揃えば並列)
+  -> Phase 2: design-doc                   (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
   -> Phase 5/6: doc-status -> exit
@@ -41,7 +41,7 @@ doc-driven-dev-lifecycle
 - **Spec** は WHAT、WHY、SCOPE を定義します。
 - **ADR** は HOW を定義し、代替案比較と採用理由を記録します。
 - **並列作成**: Phase 1 で十分なコンテキストが揃ったら、spec と ADR は
-  同じ briefing/discovery 出力から並列に作成できます。
+  briefing の完了成果物として、同じ briefing/discovery 出力から並列に作成できます。
 - **design gate**: `plan-doc` は承認済みの `design-doc` を前提にし、
   spec の要求と ADR の技術制約を取り込みます。
 
@@ -233,8 +233,8 @@ relations:
 ```text
 doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
-  -> Phase 2: spec-doc + adr-doc  (parallel: define what + record decisions)
-  -> Phase 3: design-doc          (overview-first design gate)
+  -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
+  -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
   -> Phase 5/6: doc-status -> exit
@@ -246,4 +246,10 @@ skill であり、別個のトップレベルライフサイクルではあり�
 固定の補助 skill stack を前提にせず、その場で利用可能な skill から選択して進みます。
 並列トラックは `spec-doc` + `adr-doc` のままで、spec は何を作るか、なぜ必要か、
 範囲、受け入れ条件を定義し、ADR は技術判断、代替案、採用理由を記録します。
-Phase 1 で両方に十分な文脈が揃ったら並列に作成し、その後 design と planning へ進みます。
+Phase 1 で両方に十分な文脈が揃ったら briefing の完了成果物として並列に作成し、
+その後 design と planning へ進みます。
+
+Routing note: `briefing-flow` と `implementation-flow` は、現在の環境で発見された
+skill にルーティングできます。`steer-web-research` のような optional skill は
+この package に bundle されておらず、consumer environment で生成された `.sdp`
+profile に存在する場合だけ使われます。

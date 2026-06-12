@@ -38,6 +38,14 @@ discovery artifacts の検証、skill capability の問い合わせ時に使用�
 - `sdp profile` が scan と inference を catalog と profile にまとめます。
 - `sdp validate` と `sdp query` が生成済み artifacts を読み、検証します。
 
+Trust boundary:
+
+- `sdp scan`、`sdp infer`、`sdp profile` は `.sdp` artifact を生成または更新する。
+- `--out` は編集可能な inference output の書き込み先を変える。
+- adapter が選ぶ profile path が、catalog / profile 出力の生成先を決める。
+- `sdp validate` と `sdp query` は read / verify operation であり、それ自体では
+  新しい profile content を生成しない。
+
 ## ワークフロー
 
 ```text

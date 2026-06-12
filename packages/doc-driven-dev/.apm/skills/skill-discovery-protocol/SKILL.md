@@ -37,6 +37,15 @@ The protocol is flow-neutral:
 - `sdp profile` combines scan and inference into catalog and profile outputs.
 - `sdp validate` and `sdp query` read and verify generated artifacts.
 
+Trust boundary:
+
+- `sdp scan`, `sdp infer`, and `sdp profile` create or update `.sdp` artifacts.
+- `--out` changes where editable inference output is written.
+- Adapter-selected profile paths determine where generated catalog/profile
+  outputs are written.
+- `sdp validate` and `sdp query` are read/verify operations and do not create
+  new profile content by themselves.
+
 ## Workflow
 
 ```text

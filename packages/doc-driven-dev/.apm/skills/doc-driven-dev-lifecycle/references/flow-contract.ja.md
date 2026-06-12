@@ -7,7 +7,7 @@
 
 | Phase | 名称 | 主担当スキル | ゲート |
 | ----- | ---- | ------------ | ------ |
-| 1 | Briefing | `briefing-flow` | 受け入れ条件付き spec + ADR |
+| 1 | Briefing | `briefing-flow` | briefing 完了出力: 受け入れ条件付き spec + ADR |
 | 2 | Design | `design-doc` | spec/ADR と整合した承認済み設計 |
 | 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001（承認済み設計必須） |
 | 4 | Execution Slice | `task-doc` | plan にトレース可能な検証付きタスク |
@@ -38,6 +38,9 @@ Phase 1 は `briefing-flow` メタスキルに完全に委譲される。
 - 両文書が同一の課題文脈を参照している。
 - Entry Decision の選択が記録されている。
 - 未決事項が「実装前に解消必須」か「後続で管理可能」か分類されている。
+
+ここで生成される `spec-doc` と `adr-doc` が、Phase 2 (`design-doc`) に進むための
+briefing 完了成果物になる。
 
 ## Phase 2: Design
 

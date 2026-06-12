@@ -26,6 +26,17 @@ Examples of blocking issues:
 - Documents not registered in the index
 - Status transition contradictions (e.g. plan is `approved` but referenced design is `draft`)
 
+## Output Contract
+
+Return audit results using this structure:
+
+- `Verdict`: `Completable` or `Returned`
+- `Blocking findings`: issues that stop progression
+- `Warnings`: non-blocking issues worth fixing
+- `Relation errors`: broken internal links or inconsistent relations
+- `Index gaps`: missing registry or index coverage
+- `Next actions`: the minimum follow-up needed to pass the gate
+
 ## Workflow
 
 1. List documents by type or status.
