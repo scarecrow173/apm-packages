@@ -2,6 +2,11 @@
 
 このリポジトリは、skill、agent、prompt、instruction など複数の APM パッケージを一元管理するマーケットプレイスインデックスです。
 
+また、次の 2 つの aggregator package も公開します:
+
+- `basic-dev-foundation`: 基礎的な APM と workflow helper をまとめた bundle
+- `recommended-dev-suite`: このリポジトリの上位 workflow package を追加した広めの bundle
+
 利用者側は `apm.yml` でこのコレクション全体を依存先として登録できます：
 
 ```yaml
@@ -32,6 +37,22 @@ apm install .
 ```text
 apm.yml                                  # marketplace index
 packages/
+  basic-dev-foundation/
+    apm.yml                              # package manifest
+    .apm/
+      instructions/
+    README.md
+    README.ja.md
+    AGENTS.md
+    AGENTS.ja.md
+  recommended-dev-suite/
+    apm.yml                              # package manifest
+    .apm/
+      instructions/
+    README.md
+    README.ja.md
+    AGENTS.md
+    AGENTS.ja.md
   doc-driven-dev/
     apm.yml                              # package manifest
     .apm/

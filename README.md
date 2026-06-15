@@ -2,6 +2,11 @@
 
 This repository is a marketplace index that organizes multiple APM packages for skills, agents, prompts, and instructions.
 
+It also publishes two aggregator packages:
+
+- `basic-dev-foundation`: a foundational bundle of core APM and workflow helpers
+- `recommended-dev-suite`: a broader bundle that adds the repo's higher-level workflow packages
+
 Consumers can install this entire package collection by adding it to their `apm.yml`:
 
 ```yaml
@@ -32,6 +37,22 @@ This is a **monorepo-hybrid** layout:
 ```text
 apm.yml                                  # marketplace index
 packages/
+  basic-dev-foundation/
+    apm.yml                              # package manifest
+    .apm/
+      instructions/
+    README.md
+    README.ja.md
+    AGENTS.md
+    AGENTS.ja.md
+  recommended-dev-suite/
+    apm.yml                              # package manifest
+    .apm/
+      instructions/
+    README.md
+    README.ja.md
+    AGENTS.md
+    AGENTS.ja.md
   doc-driven-dev/
     apm.yml                              # package manifest
     .apm/
