@@ -20893,7 +20893,7 @@ ${rows.join("\n")}
 Directory: \`${dir}\`
 `;
     }
-    async function scaffoldDocsTree(cwd) {
+    async function scaffoldDocsTree2(cwd) {
       const resolvedCwd = path2.resolve(cwd);
       const created = [];
       const updated = [];
@@ -20908,7 +20908,7 @@ Directory: \`${dir}\`
       }
       return { created, updated };
     }
-    async function createDocument2(type, options2) {
+    async function createDocument(type, options2) {
       const config = configFor(type);
       const cwd = path2.resolve(options2.cwd);
       const relativeDir = docDir(cwd, type, options2.dir);
@@ -21009,7 +21009,7 @@ ${bodyFor(type, options2.title)}
       buildIndex,
       buildGenericIndex,
       configFor,
-      createDocument: createDocument2,
+      createDocument,
       docEntries,
       docFiles,
       docTypes,
@@ -21018,32 +21018,27 @@ ${bodyFor(type, options2.title)}
       changesSchema,
       frontMatterSchema,
       relationSchema,
-      scaffoldDocsTree,
+      scaffoldDocsTree: scaffoldDocsTree2,
       validateFrontMatter
     };
   }
 });
 
-// src/skills/spec-doc/scripts/new_spec.ts
+// src/skills/doc-driven-dev-lifecycle/scripts/scaffold_docs.ts
 var path = require("node:path");
-var { createDocument } = require_doc_suite_utils();
+var { scaffoldDocsTree } = require_doc_suite_utils();
 function parseArgs(argv) {
   const args = { cwd: process.cwd() };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--title") args.title = argv[++i];
-    else if (arg === "--dir") args.dir = argv[++i];
-    else if (arg === "--status") args.status = argv[++i];
-    else if (arg === "--date") args.date = argv[++i];
-    else if (arg === "--cwd") args.cwd = argv[++i];
+    if (arg === "--cwd") args.cwd = argv[++i];
     else if (arg === "--help" || arg === "-h") args.help = true;
-    else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_spec.js --title <title> [--dir <path>] [--status <status>]";
+  return "Usage: node scripts/scaffold_docs.js [--cwd <path>]";
 }
 async function main() {
   try {
@@ -21052,16 +21047,11 @@ async function main() {
       console.log(usage());
       return;
     }
-    if (!args.title) throw new Error("Missing required --title");
-    const result = await createDocument("spec", {
-      cwd: path.resolve(args.cwd),
-      date: args.date,
-      dir: args.dir,
-      status: args.status,
-      title: args.title
-    });
-    console.log(`Created ${result.file}`);
-    console.log(`Updated ${result.index}`);
+    const result = await scaffoldDocsTree(path.resolve(args.cwd));
+    console.log(`Created docs tree scaffold in ${path.resolve(args.cwd)}`);
+    for (const file of result.created) {
+      console.log(`Created ${file}`);
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

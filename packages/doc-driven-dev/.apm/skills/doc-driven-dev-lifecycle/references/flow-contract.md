@@ -7,12 +7,32 @@ This document defines the fixed sequence and decision rules that
 
 | Phase | Name | Primary Skills | Gate |
 | ----- | ---- | -------------- | ---- |
+| 0 | Bootstrap | `scaffold_docs` | canonical `docs/` tree exists; existing files are preserved; `docs/designs/overview.md` is left to `design-doc` |
 | 1 | Briefing | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Design | `design-doc` | approved design consistent with spec/ADR |
 | 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001 (approved design required) |
 | 4 | Execution Slice | `task-doc` | tasks traceable to plan with verification |
 | 5 | Implementation | `implementation-flow` | all tasks pass verification |
 | 6 | Exit | `doc-status` | front matter, relations, index integrity |
+
+## Phase 0: Bootstrap
+
+Purpose: Create the canonical docs tree before Briefing begins.
+
+**Bootstrap command:** `scaffold_docs`
+
+Phase 0 creates the repository’s baseline docs tree and preserves existing
+files. It creates the canonical directories and index README files, but it does
+**not** create `docs/designs/overview.md`; that file remains the responsibility
+of `design-doc`.
+
+### Bootstrap Completion Criteria
+
+- `docs/ideas`, `docs/discovery`, `docs/specs`, `docs/designs`, `docs/plans`,
+  `docs/tasks`, `docs/adr`, `docs/impl/ir`, and `docs/impl/exp` exist.
+- Each canonical directory has a `README.md`.
+- Existing files in the target repo are not overwritten.
+- `docs/designs/overview.md` is not created by the bootstrap step.
 
 ## Phase 1: Briefing
 

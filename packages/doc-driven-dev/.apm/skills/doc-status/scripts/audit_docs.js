@@ -20496,6 +20496,17 @@ var require_doc_suite_utils = __commonJS({
         type: "design"
       }
     };
+    var scaffoldTargets = [
+      { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
+      { dir: "docs/discovery", title: "BRAINSTORM Documents", type: "brainstorm" },
+      { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
+      { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
+      { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
+      { dir: "docs/tasks", title: "TASK Documents", type: "task" },
+      { dir: "docs/adr", title: "ADR Documents" },
+      { dir: "docs/impl/ir", title: "Implementation Record Documents" },
+      { dir: "docs/impl/exp", title: "Experiment Log Documents" }
+    ];
     var changeEntrySchema = z.object({
       type: z.string().min(1)
     }).passthrough();
@@ -20875,6 +20886,28 @@ Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 ${rows.join("\n")}
 `;
     }
+    function buildGenericIndex(relativeDir, title) {
+      const dir = relativeDir.replace(/\\/g, "/");
+      return `# ${title}
+
+Directory: \`${dir}\`
+`;
+    }
+    async function scaffoldDocsTree(cwd) {
+      const resolvedCwd = path2.resolve(cwd);
+      const created = [];
+      const updated = [];
+      for (const target of scaffoldTargets) {
+        const fullDir = path2.join(resolvedCwd, target.dir);
+        fs.mkdirSync(fullDir, { recursive: true });
+        const readmePath = path2.join(fullDir, "README.md");
+        if (fs.existsSync(readmePath)) continue;
+        const content = target.type ? await buildIndex(resolvedCwd, target.type, target.dir) : buildGenericIndex(target.dir, target.title);
+        fs.writeFileSync(readmePath, content, "utf8");
+        created.push(path2.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
+      }
+      return { created, updated };
+    }
     async function createDocument(type, options2) {
       const config = configFor(type);
       const cwd = path2.resolve(options2.cwd);
@@ -20974,6 +21007,7 @@ ${bodyFor(type, options2.title)}
     module2.exports = {
       auditDocuments: auditDocuments2,
       buildIndex,
+      buildGenericIndex,
       configFor,
       createDocument,
       docEntries,
@@ -20984,6 +21018,7 @@ ${bodyFor(type, options2.title)}
       changesSchema,
       frontMatterSchema,
       relationSchema,
+      scaffoldDocsTree,
       validateFrontMatter
     };
   }

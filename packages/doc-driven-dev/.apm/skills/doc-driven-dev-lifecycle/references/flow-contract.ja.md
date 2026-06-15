@@ -7,12 +7,31 @@
 
 | Phase | 名称 | 主担当スキル | ゲート |
 | ----- | ---- | ------------ | ------ |
+| 0 | Bootstrap | `scaffold_docs` | canonical `docs/` tree が存在し、既存ファイルが保持され、`docs/designs/overview.md` は `design-doc` に委ねられる |
 | 1 | Briefing | `briefing-flow` | briefing 完了出力: 受け入れ条件付き spec + ADR |
 | 2 | Design | `design-doc` | spec/ADR と整合した承認済み設計 |
 | 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001（承認済み設計必須） |
 | 4 | Execution Slice | `task-doc` | plan にトレース可能な検証付きタスク |
 | 5 | Implementation | `implementation-flow` | 全タスクが検証通過 |
 | 6 | Exit | `doc-status` | front matter, relations, index の整合 |
+
+## Phase 0: Bootstrap
+
+目的: Briefing 開始前に canonical な docs tree を作成する。
+
+**Bootstrap command:** `scaffold_docs`
+
+Phase 0 はリポジトリの baseline docs tree を作成し、既存ファイルを保持する。
+canonical ディレクトリと index README を作成するが、`docs/designs/overview.md`
+は**作成しない**。このファイルは `design-doc` の責務である。
+
+### Bootstrap 完了条件
+
+- `docs/ideas`, `docs/discovery`, `docs/specs`, `docs/designs`, `docs/plans`,
+  `docs/tasks`, `docs/adr`, `docs/impl/ir`, `docs/impl/exp` が存在する。
+- 各 canonical ディレクトリに `README.md` がある。
+- 対象リポジトリ内の既存ファイルが上書きされていない。
+- `docs/designs/overview.md` は bootstrap step では作成されていない。
 
 ## Phase 1: Briefing
 

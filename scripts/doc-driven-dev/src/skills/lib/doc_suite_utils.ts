@@ -92,6 +92,12 @@ type DocEntry = {
   type: string | null;
 };
 
+type ScaffoldTarget = {
+  dir: string;
+  title: string;
+  type?: DocType;
+};
+
 const configs: Record<DocType, DocConfig> = {
   idea: {
     defaultStatus: "exploring",
@@ -142,6 +148,18 @@ const configs: Record<DocType, DocConfig> = {
     type: "design",
   },
 };
+
+const scaffoldTargets: ScaffoldTarget[] = [
+  { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
+  { dir: "docs/discovery", title: "BRAINSTORM Documents", type: "brainstorm" },
+  { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
+  { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
+  { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
+  { dir: "docs/tasks", title: "TASK Documents", type: "task" },
+  { dir: "docs/adr", title: "ADR Documents" },
+  { dir: "docs/impl/ir", title: "Implementation Record Documents" },
+  { dir: "docs/impl/exp", title: "Experiment Log Documents" },
+];
 
 const changeEntrySchema = z.object({
   type: z.string().min(1),
@@ -553,6 +571,33 @@ async function buildIndex(cwd: string, type: string, explicitDir?: string): Prom
   return `# ${title}\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${rows.join("\n")}\n`;
 }
 
+function buildGenericIndex(relativeDir: string, title: string): string {
+  const dir = relativeDir.replace(/\\/g, "/");
+  return `# ${title}\n\nDirectory: \`${dir}\`\n`;
+}
+
+async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updated: string[] }> {
+  const resolvedCwd = path.resolve(cwd);
+  const created: string[] = [];
+  const updated: string[] = [];
+
+  for (const target of scaffoldTargets) {
+    const fullDir = path.join(resolvedCwd, target.dir);
+    fs.mkdirSync(fullDir, { recursive: true });
+
+    const readmePath = path.join(fullDir, "README.md");
+    if (fs.existsSync(readmePath)) continue;
+
+    const content = target.type
+      ? await buildIndex(resolvedCwd, target.type, target.dir)
+      : buildGenericIndex(target.dir, target.title);
+    fs.writeFileSync(readmePath, content, "utf8");
+    created.push(path.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
+  }
+
+  return { created, updated };
+}
+
 async function createDocument(type: DocType, options: CreateDocumentOptions): Promise<{ file: string; index: string; relativeDir: string }> {
   const config = configFor(type);
   const cwd = path.resolve(options.cwd);
@@ -661,6 +706,7 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
 module.exports = {
   auditDocuments,
   buildIndex,
+  buildGenericIndex,
   configFor,
   createDocument,
   docEntries,
@@ -671,5 +717,6 @@ module.exports = {
   changesSchema,
   frontMatterSchema,
   relationSchema,
+  scaffoldDocsTree,
   validateFrontMatter,
 };

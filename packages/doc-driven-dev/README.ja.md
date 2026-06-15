@@ -6,8 +6,10 @@ Markdown を使い、ADR、spec、design、plan、task、implementation record �
 ライフサイクル状態、根拠、意味付き relation をエージェントが追跡できるようにします。
 
 このパッケージでは `doc-driven-dev-lifecycle` をライフサイクルの中核とし、
-briefing、文書作成、実装準備、exit までをオーケストレーションします。
+docs tree の bootstrap、briefing、文書作成、実装準備、exit までを
+オーケストレーションします。
 
+- `scaffold_docs`: briefing 開始前に canonical な `docs/` tree を bootstrap します。
 - `deep-dive`: コードベースを踏まえた一問一答で、意図、制約、判断軸を深掘りします。
 - `briefing-flow`: 情報収集をオーケストレーションし、spec + ADR 作成へルーティングします。
 - `spec-doc`: 実装前に何を作るかを定義します。
@@ -30,6 +32,7 @@ briefing、文書作成、実装準備、exit までをオーケストレーシ�
 
 ```text
 doc-driven-dev-lifecycle
+  -> Phase 0: scaffold docs tree          (canonical docs tree; design overview は design-doc 所有)
   -> Phase 1: briefing-flow
   -> Phase 1 outputs: spec-doc + adr-doc   (プロダクト文脈と技術文脈が揃えば並列)
   -> Phase 2: design-doc                   (overview + detailed design docs)
@@ -44,10 +47,13 @@ doc-driven-dev-lifecycle
   briefing の完了成果物として、同じ briefing/discovery 出力から並列に作成できます。
 - **design gate**: `plan-doc` は承認済みの `design-doc` を前提にし、
   spec の要求と ADR の技術制約を取り込みます。
+- **bootstrap 境界**: `scaffold_docs` は canonical な `docs/` tree を作成しますが、
+  `docs/designs/overview.md` は作成せず `design-doc` に任せます。
 
 ライフサイクルを構成するフェーズ skill は `deep-dive`, `briefing-flow`,
 `spec-doc`, `adr-doc`, `design-doc`, `plan-doc`, `task-doc`,
-`implementation-flow`, `impl-doc`, `doc-status` です。
+`implementation-flow`, `impl-doc`, `doc-status` に加え、
+bootstrap command の `scaffold_docs` です。
 
 ### doc-driven-dev の並列トラック
 
@@ -232,6 +238,7 @@ relations:
 
 ```text
 doc-driven-dev-lifecycle
+  -> Phase 0: scaffold docs tree          (canonical docs tree; design overview は design-doc 所有)
   -> Phase 1: briefing-flow
   -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
   -> Phase 2: design-doc                  (overview-first design gate)
@@ -240,7 +247,8 @@ doc-driven-dev-lifecycle
   -> Phase 5/6: doc-status -> exit
 ```
 
-`doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`briefing-flow` と
+`doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`scaffold_docs` が
+Phase 1 前に canonical な `docs/` tree を bootstrap し、`briefing-flow` と
 `implementation-flow` は、このライフサイクル内部のフェーズ別オーケストレーション
 skill であり、別個のトップレベルライフサイクルではありません。これらのメタスキルは、
 固定の補助 skill stack を前提にせず、その場で利用可能な skill から選択して進みます。
