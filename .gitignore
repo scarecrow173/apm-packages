@@ -10,11 +10,14 @@ packages/**/build/
 /build/
 
 # apm install generated deployment outputs (root consumer mode)
-/.agents/
+/.agents/*
+!/.agents/plugins/
 /.claude/
 /.codex/
 /.cursor/
-/.github/
+/.github/agents/
+/.github/instructions/
+/.github/skills/
 /.vscode/
 /.mcp.json
 

@@ -1,32 +1,76 @@
 lockfile_version: '1'
-generated_at: '2026-06-15T07:51:57.204454+00:00'
+generated_at: '2026-06-15T11:49:04.495515+00:00'
 apm_version: 0.18.0
 dependencies:
 - repo_url: _local/apm-package-judge
   package_type: apm_package
+  deployed_files:
+  - .agents/skills/apm-agent-component-judge
+  - .agents/skills/apm-dependency-graph-builder
+  - .agents/skills/apm-dependency-graph-judge
+  - .agents/skills/apm-hook-command-component-judge
+  - .agents/skills/apm-instruction-component-judge
+  - .agents/skills/apm-mcp-component-judge
+  - .agents/skills/apm-package-synthesis-judge
+  - .agents/skills/apm-prompt-component-judge
+  - .agents/skills/apm-semantic-package-judge
+  - .agents/skills/apm-skill-component-judge
+  - .claude/skills/apm-agent-component-judge
+  - .claude/skills/apm-dependency-graph-builder
+  - .claude/skills/apm-dependency-graph-judge
+  - .claude/skills/apm-hook-command-component-judge
+  - .claude/skills/apm-instruction-component-judge
+  - .claude/skills/apm-mcp-component-judge
+  - .claude/skills/apm-package-synthesis-judge
+  - .claude/skills/apm-prompt-component-judge
+  - .claude/skills/apm-semantic-package-judge
+  - .claude/skills/apm-skill-component-judge
   source: local
   local_path: ./packages/apm-package-judge
-  is_dev: true
 - repo_url: _local/basic-dev-foundation
   package_type: apm_package
   source: local
   local_path: ./packages/basic-dev-foundation
-  is_dev: true
 - repo_url: _local/doc-driven-dev
   package_type: apm_package
+  deployed_files:
+  - .agents/skills/adr-doc
+  - .agents/skills/briefing-flow
+  - .agents/skills/deep-dive
+  - .agents/skills/design-doc
+  - .agents/skills/doc-driven-dev-lifecycle
+  - .agents/skills/doc-status
+  - .agents/skills/impl-doc
+  - .agents/skills/implementation-flow
+  - .agents/skills/plan-doc
+  - .agents/skills/skill-discovery-protocol
+  - .agents/skills/spec-doc
+  - .agents/skills/task-doc
+  - .claude/skills/adr-doc
+  - .claude/skills/briefing-flow
+  - .claude/skills/deep-dive
+  - .claude/skills/design-doc
+  - .claude/skills/doc-driven-dev-lifecycle
+  - .claude/skills/doc-status
+  - .claude/skills/impl-doc
+  - .claude/skills/implementation-flow
+  - .claude/skills/plan-doc
+  - .claude/skills/skill-discovery-protocol
+  - .claude/skills/spec-doc
+  - .claude/skills/task-doc
   source: local
   local_path: ./packages/doc-driven-dev
-  is_dev: true
 - repo_url: _local/recommended-dev-suite
   package_type: apm_package
   source: local
   local_path: ./packages/recommended-dev-suite
-  is_dev: true
 - repo_url: _local/steer-enterprise-web-research
   package_type: apm_package
+  deployed_files:
+  - .agents/skills/steer-web-research
+  - .claude/skills/steer-web-research
   source: local
   local_path: ./packages/steer-enterprise-web-research
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -35,8 +79,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/ci-cd-and-automation
+  - .claude/skills/ci-cd-and-automation
   content_hash: sha256:578b098a7d2352ccdac8b8abdc40eb6803538e81cf8382f138da6188a655087c
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -45,8 +91,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/code-simplification
+  - .claude/skills/code-simplification
   content_hash: sha256:7973e746e8e2ea5004d520da970c15a106824b8d6be1bcff48908aec021f3677
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -55,8 +103,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/context-engineering
+  - .claude/skills/context-engineering
   content_hash: sha256:bb8864454c5a24636cab86c4b3c4b29e7e7431c80485bfd7c9c0a19a01936510
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -65,8 +115,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/doubt-driven-development
+  - .claude/skills/doubt-driven-development
   content_hash: sha256:f6094460ebc9512285c85790e49f612081b9dd6a2b77d874fe2d960ef50a9ef1
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -75,8 +127,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/idea-refine
+  - .claude/skills/idea-refine
   content_hash: sha256:fdf9f19ba732e9c1a01641c4797baf53b5f3cf78b02896c7b3d829a2139f8840
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -85,8 +139,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/incremental-implementation
+  - .claude/skills/incremental-implementation
   content_hash: sha256:c9c35951841b2fb34cd7b64e1d318643ac6eebf74c419978280acc1bf690dd91
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -95,8 +151,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/interview-me
+  - .claude/skills/interview-me
   content_hash: sha256:efded91ac7f7626239b338ce8622afeb557151b86532b632f3c9eb5b2ff9048f
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -105,8 +163,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/source-driven-development
+  - .claude/skills/source-driven-development
   content_hash: sha256:235fb43569e9b21ec5d209818ff1ad3da9682be33c4e464ffa89ed348e7094a0
-  is_dev: true
 - repo_url: addyosmani/agent-skills
   host: github.com
   resolved_commit: 3a6fc6392823e31e2362091bd4e3cddf5b77af14
@@ -115,8 +175,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/test-driven-development
+  - .claude/skills/test-driven-development
   content_hash: sha256:2a541c517efcf3ebc1c0fb8cb644bab1690724fb9d2f67bb6d075d6a73876ba8
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -125,8 +187,14 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: marketplace_plugin
+  deployed_files:
+  - .agents/skills/acreadiness-assess
+  - .agents/skills/acreadiness-generate-instructions
+  - .agents/skills/acreadiness-policy
+  - .claude/skills/acreadiness-assess
+  - .claude/skills/acreadiness-generate-instructions
+  - .claude/skills/acreadiness-policy
   content_hash: sha256:155c04432450e41af0a7671716782a4835fa7e0b3c1ff83356247312e9e5093f
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -135,8 +203,14 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: marketplace_plugin
+  deployed_files:
+  - .agents/skills/context-map
+  - .agents/skills/refactor-plan
+  - .agents/skills/what-context-needed
+  - .claude/skills/context-map
+  - .claude/skills/refactor-plan
+  - .claude/skills/what-context-needed
   content_hash: sha256:8c4f6fb390c55b7fdf376929fcc720f957f7cdc90afd41abcb4a803f24e258ee
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -145,8 +219,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: marketplace_plugin
+  deployed_files:
+  - .agents/skills/doublecheck
+  - .claude/skills/doublecheck
   content_hash: sha256:3bdf4770d48d9a2236cb8e70579b8e443640aa11d4a139f94f7fe7ffc0f2fa63
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -155,8 +231,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: marketplace_plugin
+  deployed_files:
+  - .agents/skills/ai-prompt-engineering-safety-review
+  - .claude/skills/ai-prompt-engineering-safety-review
   content_hash: sha256:5ccdefa2e0f92ed05ef7180df7b29a3213683e77006d08f4f781d7552cde722e
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -165,8 +243,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/agent-governance
+  - .claude/skills/agent-governance
   content_hash: sha256:a91eb8ef638422fa4ec457d81e270f79fe5040b41d7f137dba35016bc20529f5
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -175,8 +255,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/agent-supply-chain
+  - .claude/skills/agent-supply-chain
   content_hash: sha256:af309696b57bb67cffc07d23fc44f052ca2f9d7fdea8af2e30e06f3ad5dc2c6f
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -185,8 +267,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/agentic-eval
+  - .claude/skills/agentic-eval
   content_hash: sha256:40771d7d389c1542e6cb995d75e516893466f01c3b66bc040b158ceb793d4bed
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -195,8 +279,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/audit-integrity
+  - .claude/skills/audit-integrity
   content_hash: sha256:f2d6d6d4056ccf27ca7d6e1fe2a37fb84f62e5c3ead86ac0138105af008c419d
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -205,8 +291,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/autoresearch
+  - .claude/skills/autoresearch
   content_hash: sha256:8bfae087ef27eb37092d94caf1da3406b500aa908756772bb1349a1ac70823dd
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -215,8 +303,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/commit-message-storyteller
+  - .claude/skills/commit-message-storyteller
   content_hash: sha256:12d806f64f59f5df9301f6a283f034be58d883c20bf0954d6a2ab4e81512c5d8
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -225,8 +315,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/conventional-branch
+  - .claude/skills/conventional-branch
   content_hash: sha256:62d556675f48fd45ebe77b13ce7cac1e37a4982e648f389b4db237864f6702c4
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -235,8 +327,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/copilot-usage-metrics
+  - .claude/skills/copilot-usage-metrics
   content_hash: sha256:eef941d09ce84ae1f8c7203c865c406b0cf3cf058d4229dbdfcf730f226eb084
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -245,8 +339,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/dependabot
+  - .claude/skills/dependabot
   content_hash: sha256:fae18b0bdde8dfbb5d18c4e2945d899ea2d1445a3c4ad507abd363b7e22306fa
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -255,8 +351,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/draw-io-diagram-generator
+  - .claude/skills/draw-io-diagram-generator
   content_hash: sha256:1da717c88f800bb96d895290a71741110a039285604329e67d544cb6685ef2a8
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -265,8 +363,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/drawio
+  - .claude/skills/drawio
   content_hash: sha256:4c77e3941e561b9740f20150bee250a2236ab9da207f1e46f4501a5492ba6013
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -275,8 +375,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/editorconfig
+  - .claude/skills/editorconfig
   content_hash: sha256:19ce7c1a970666aadccbcbdcf9a37b4675cb7da24f3a5b603ec06ed6d04a0124
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -285,8 +387,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/git-commit
+  - .claude/skills/git-commit
   content_hash: sha256:2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -295,8 +399,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/github-actions-efficiency
+  - .claude/skills/github-actions-efficiency
   content_hash: sha256:cb1a6b7a2d06465b26f1245a0f617317032d40f0e63f3237ac67f996ad5eeea3
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -305,8 +411,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/plantuml-ascii
+  - .claude/skills/plantuml-ascii
   content_hash: sha256:2fb2b41487ea6559f4ccf877fe397c87214b35049528685ff1c02bb792b027d1
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -315,8 +423,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/pr-dashboard
+  - .claude/skills/pr-dashboard
   content_hash: sha256:fedb7559c93ed6a4f562379f0635d0fb30f89f73b7f64b4331949c1167addaa4
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -325,8 +435,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/repo-story-time
+  - .claude/skills/repo-story-time
   content_hash: sha256:8f85047285d0e911bafb2ced184c0034784598f1035df96247a1b5bcd570abbf
-  is_dev: true
 - repo_url: github/awesome-copilot
   host: github.com
   resolved_commit: b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b
@@ -335,8 +447,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/security-review
+  - .claude/skills/security-review
   content_hash: sha256:a0fc25587c016178c9cf6238ac8702695fa761694965192472487f92093db571
-  is_dev: true
 - repo_url: microsoft/apm
   host: github.com
   resolved_commit: 43a00c21e413342d5dd56c358a63aa64e12af131
@@ -345,8 +459,10 @@ dependencies:
   depth: 2
   resolved_by: _local/basic-dev-foundation
   package_type: apm_package
+  deployed_files:
+  - .agents/skills/apm-usage
+  - .claude/skills/apm-usage
   content_hash: sha256:591ad3e822caaee7f8baa54d2c42b6948b237daca27c44ea31e3ebd05f0ee0b5
-  is_dev: true
 - repo_url: obra/superpowers
   host: github.com
   resolved_commit: 6fd4507659784c351abbd2bc264c7162cfd386dc
@@ -355,8 +471,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/brainstorming
+  - .claude/skills/brainstorming
   content_hash: sha256:1518efecf35139a9a5b9e60906b71de874af08322200fab18a54848cea8c15fe
-  is_dev: true
 - repo_url: obra/superpowers
   host: github.com
   resolved_commit: 6fd4507659784c351abbd2bc264c7162cfd386dc
@@ -365,8 +483,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/dispatching-parallel-agents
+  - .claude/skills/dispatching-parallel-agents
   content_hash: sha256:e21044ae7496fc285f1df9ff3fb518a3a20bea6f5216c1f59f4987e12c769a0a
-  is_dev: true
 - repo_url: obra/superpowers
   host: github.com
   resolved_commit: 6fd4507659784c351abbd2bc264c7162cfd386dc
@@ -375,8 +495,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/receiving-code-review
+  - .claude/skills/receiving-code-review
   content_hash: sha256:2760c85d4f4117b0006e7ba755f4bbd61f8f4c185f347999763c97f507274e30
-  is_dev: true
 - repo_url: obra/superpowers
   host: github.com
   resolved_commit: 6fd4507659784c351abbd2bc264c7162cfd386dc
@@ -385,8 +507,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/requesting-code-review
+  - .claude/skills/requesting-code-review
   content_hash: sha256:5a53d1f7f4cee4dee017a50d735335c7aae1874b2746207e076b5d9035315599
-  is_dev: true
 - repo_url: obra/superpowers
   host: github.com
   resolved_commit: 6fd4507659784c351abbd2bc264c7162cfd386dc
@@ -395,8 +519,10 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/subagent-driven-development
+  - .claude/skills/subagent-driven-development
   content_hash: sha256:22847d331db0aaedde0738d794896658020d25b703136d64f6690ee944688b7c
-  is_dev: true
 - repo_url: obra/superpowers
   host: github.com
   resolved_commit: 6fd4507659784c351abbd2bc264c7162cfd386dc
@@ -405,5 +531,19 @@ dependencies:
   depth: 2
   resolved_by: _local/recommended-dev-suite
   package_type: claude_skill
+  deployed_files:
+  - .agents/skills/systematic-debugging
+  - .claude/skills/systematic-debugging
   content_hash: sha256:ebdc9e15e5745a87d6342b6ebbc90d1ac2766b95f2334a9450fc696842815e4d
-  is_dev: true
+mcp_servers:
+- mise
+mcp_configs:
+  mise:
+    name: mise
+    transport: stdio
+    env:
+      MISE_EXPERIMENTAL: '1'
+    args:
+    - mcp
+    registry: false
+    command: mise
