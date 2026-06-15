@@ -1,12 +1,12 @@
 ---
 name: doc-driven-dev-lifecycle
-description: "文書駆動開発の全ライフサイクルを、bootstrap フェーズ + 6 フェーズのフローでオーケストレーションする。**利用タイミング**: (1) 新機能・新プロジェクト・大規模な変更をゼロから始めるとき、(2) briefing の前に canonical な docs tree を bootstrap する必要があるとき、(3) どの doc スキルから始めるべきか不明なとき、(4) briefing から実行まで end-to-end の文書オーケストレーションが必要なとき、(5) 文書作成フェーズ間の順序制約を強制する必要があるとき。フロー順序: scaffold_docs → briefing-flow → design-doc → plan-doc → task-doc → implementation-flow → doc-status。キーワード: 文書ライフサイクル、オーケストレーション、フェーズゲート、メタスキル。"
+description: "文書駆動開発の全ライフサイクルを、任意の migration、bootstrap フェーズ、6 フェーズのフローでオーケストレーションする。**利用タイミング**: (1) 新機能・新プロジェクト・大規模な変更をゼロから始めるとき、(2) 既存 docs を canonical な doc-driven-dev tree へ移行する必要があるとき、(3) briefing の前に canonical な docs tree を bootstrap する必要があるとき、(4) どの doc スキルから始めるべきか不明なとき、(5) briefing から実行まで end-to-end の文書オーケストレーションが必要なとき、(6) 文書作成フェーズ間の順序制約を強制する必要があるとき。フロー順序: migrate_docs（任意） -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status。キーワード: 文書ライフサイクル、オーケストレーション、migration、フェーズゲート、メタスキル。"
 license: MIT
 ---
 
 # Doc-Driven Dev Lifecycle
 
-既存の doc スキルを bootstrap フェーズ + 6 フェーズのフローで選択・順序付けし、
+既存の doc スキルを任意の migration、bootstrap フェーズ、6 フェーズのフローで選択・順序付けし、
 明示的なゲートで制御することで文書駆動開発の全ライフサイクルを
 オーケストレーションする。
 
@@ -17,6 +17,7 @@ license: MIT
 ## 利用タイミング
 
 - 新機能・新プロジェクト・大規模な変更をゼロから始めるとき。
+- 既存 Markdown docs を canonical な doc-driven-dev tree へ移行する必要があるとき。
 - briefing 前に canonical な docs tree を bootstrap する必要があるとき。
 - どの doc スキルから始めるべきか不明なとき。
 - アイデアから実行まで end-to-end の文書オーケストレーションが必要なとき。
@@ -24,7 +25,7 @@ license: MIT
 ## フロー概要
 
 ```text
-Phase 0: Bootstrap  →  Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: Execution Slice  →  Phase 5: Implementation  →  Phase 6: Exit
+Phase -1: Migration（任意）  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  ->  Phase 2: Design  ->  Phase 3: Planning  ->  Phase 4: Execution Slice  ->  Phase 5: Implementation  ->  Phase 6: Exit
 ```
 
 各フェーズにはゲートがあり、通過しなければ次へ進めない。
@@ -34,6 +35,7 @@ Phase 0: Bootstrap  →  Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: 
 
 | Phase | 目的 | 主担当スキル | ゲート |
 | ----- | ---- | ------------ | ------ |
+| -1 | 既存 docs を canonical structure に移行する | `migrate_docs` | dry-run を確認済み; apply は original を削除せず canonical docs を作成する |
 | 0 | briefing 前に canonical な docs tree を作成する | `scaffold_docs` | canonical `docs/` tree が存在し、既存ファイルが保持され、`docs/designs/overview.md` は `design-doc` に委ねられている |
 | 1 | 要望を文書入力に変換する | `briefing-flow` | briefing 完了出力: 受け入れ条件付き spec + ADR |
 | 2 | 設計を実装可能な形へ具体化する | `design-doc` | spec/ADR と整合した承認済み設計 |
@@ -42,9 +44,17 @@ Phase 0: Bootstrap  →  Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: 
 | 5 | ワークフロースキルでコード実装 | `implementation-flow` | 全タスクが検証通過 |
 | 6 | 文書整合を確認する | `doc-status` | front matter, relations, index の整合 |
 
-**重要な制約解決**: Phase 0 は canonical な docs tree を作成しますが、`docs/designs/overview.md` は作成せず `design-doc` に委ねます。Phase 1（Briefing）では、`briefing-flow` が管理する同じ discovery コンテキストから導出された場合、spec + ADR の並行作成が明示的に許可されます。後続フェーズではシーケンシャルゲートが適用されます（Phase 2 は Phase 1 完了が必須、Phase 3 は Phase 2 の承認済み設計が必須など）。
+**重要な制約解決**: 任意の Phase -1 は既存 Markdown docs を移行しますが、original は削除しません。Phase 0 は canonical な docs tree を作成しますが、`docs/designs/overview.md` は作成せず `design-doc` に委ねます。Phase 1（Briefing）では、`briefing-flow` が管理する同じ discovery コンテキストから導出された場合、spec + ADR の並行作成が明示的に許可されます。後続フェーズではシーケンシャルゲートが適用されます（Phase 2 は Phase 1 完了が必須、Phase 3 は Phase 2 の承認済み設計が必須など）。
 
 ## フェーズ終了チェックリスト
+
+### Phase -1 終了時
+
+移行対象の既存 docs があるリポジトリでのみ必要。完了条件は migration contract で検証する:
+- [ ] `migrate_docs` dry-run report を確認済み
+- [ ] source-to-target mapping を受け入れている
+- [ ] `--apply` run が original を削除せず canonical docs を作成している
+- [ ] 既存の canonical target file が上書きされていない
 
 ### Phase 1 終了時
 
@@ -142,6 +152,14 @@ Phase 1 は `briefing-flow` に委譲されるため、スキルの発見・構�
 </HARD-GATE>
 
 ## プロセス
+
+既存ドキュメントを持つ repository では、Phase 0 の前に任意の Phase -1 として
+`migrate_docs` を実行します。まず dry-run で source-to-target mapping を確認し、
+mapping が妥当な場合だけ `--apply` で再実行します。
+
+**Migration contract**: `migrate_docs` は original を保持しながら既存 Markdown
+docs を canonical な doc-driven-dev tree へ変換します。詳細は
+`references/migration-contract.ja.md` を参照。
 
 0. **Bootstrap** — `scaffold_docs` を実行して canonical な docs tree を作成する。
 

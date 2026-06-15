@@ -1,14 +1,14 @@
 ---
 name: doc-driven-dev-lifecycle
-description: "Orchestrates the full document-driven development lifecycle through a bootstrap phase plus a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Need to bootstrap the canonical docs tree before briefing, (3) Unsure which doc skill to begin with, (4) Need end-to-end document orchestration from briefing to execution, (5) Must enforce sequencing constraints between doc creation phases. Sequences flow: scaffold_docs → briefing-flow → design-doc → plan-doc → task-doc → implementation-flow → doc-status. Keywords: document lifecycle, orchestration, phase gates, meta skill."
+description: "Orchestrates the full document-driven development lifecycle through optional migration, a bootstrap phase, and a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Need to migrate existing docs into the canonical doc-driven-dev tree, (3) Need to bootstrap the canonical docs tree before briefing, (4) Unsure which doc skill to begin with, (5) Need end-to-end document orchestration from briefing to execution, (6) Must enforce sequencing constraints between doc creation phases. Sequences flow: migrate_docs (optional) -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status. Keywords: document lifecycle, orchestration, migration, phase gates, meta skill."
 license: MIT
 ---
 
 # Doc-Driven Dev Lifecycle
 
 Orchestrates the full document-driven development lifecycle by selecting and
-sequencing existing doc skills through a bootstrap phase plus a 6-phase flow
-with explicit gates.
+sequencing existing doc skills through optional migration, a bootstrap phase,
+and a 6-phase flow with explicit gates.
 
 This is a **meta skill**: it contains no scripts and produces no artifacts
 directly. Instead it decides *which* skill to invoke and *when*, enforcing
@@ -17,6 +17,7 @@ sequencing constraints and completion criteria defined in the Flow Contract.
 ## When to Use
 
 - Starting a new feature, project, or significant change from scratch.
+- Need to migrate existing Markdown docs into the canonical doc-driven-dev tree.
 - Need to bootstrap the canonical docs tree before briefing.
 - Unsure which doc skill to begin with.
 - Need end-to-end document orchestration from idea to execution.
@@ -24,7 +25,7 @@ sequencing constraints and completion criteria defined in the Flow Contract.
 ## Flow Overview
 
 ```text
-Phase 0: Bootstrap  →  Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: Execution Slice  →  Phase 5: Implementation  →  Phase 6: Exit
+Phase -1: Migration (optional)  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  ->  Phase 2: Design  ->  Phase 3: Planning  ->  Phase 4: Execution Slice  ->  Phase 5: Implementation  ->  Phase 6: Exit
 ```
 
 Each phase has a gate that must be satisfied before proceeding.
@@ -34,6 +35,7 @@ See `references/flow-contract.md` for the full specification.
 
 | Phase | Purpose | Primary Skills | Gate |
 | ----- | ------- | -------------- | ---- |
+| -1 | Migrate existing docs into canonical structure | `migrate_docs` | dry-run reviewed; apply creates canonical docs without deleting originals |
 | 0 | Create the canonical docs tree before briefing | `scaffold_docs` | canonical `docs/` tree exists; existing files are preserved; `docs/designs/overview.md` is left to `design-doc` |
 | 1 | Convert requests into document-ready inputs | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Concretize design into implementable form | `design-doc` | approved design consistent with spec/ADR |
@@ -42,9 +44,18 @@ See `references/flow-contract.md` for the full specification.
 | 5 | Implement code guided by workflow skills | `implementation-flow` | all tasks pass verification |
 | 6 | Confirm document integrity | `doc-status` | front matter, relations, index integrity |
 
-**Key constraint resolution**: Phase 0 creates the canonical docs tree but does not create `docs/designs/overview.md`; `design-doc` owns that file. Phase 1 (Briefing) explicitly permits spec + ADR parallel creation when derived from the same discovery context, as managed by `briefing-flow`. Later phases enforce sequential gates (Phase 2 requires Phase 1 complete, Phase 3 requires Phase 2 approved design, etc.).
+**Key constraint resolution**: Optional Phase -1 migrates existing Markdown docs without deleting originals. Phase 0 creates the canonical docs tree but does not create `docs/designs/overview.md`; `design-doc` owns that file. Phase 1 (Briefing) explicitly permits spec + ADR parallel creation when derived from the same discovery context, as managed by `briefing-flow`. Later phases enforce sequential gates (Phase 2 requires Phase 1 complete, Phase 3 requires Phase 2 approved design, etc.).
 
 ## Phase Exit Checklists
+
+### Phase -1 Exit
+
+Only required for repositories with existing docs to migrate. Completion is
+verified by the migration contract:
+- [ ] `migrate_docs` dry-run report reviewed
+- [ ] source-to-target mappings accepted
+- [ ] `--apply` run creates canonical docs without deleting originals
+- [ ] existing canonical target files are not overwritten
 
 ### Phase 1 Exit
 
@@ -148,6 +159,14 @@ takes 10 minutes; debugging mystery code takes hours.
 </HARD-GATE>
 
 ## Process
+
+For existing repositories, run `migrate_docs` as an optional Phase -1 before
+Phase 0. Use dry-run first, review the planned source-to-target mappings, then
+rerun with `--apply` only when the mapping is acceptable.
+
+**Migration contract**: `migrate_docs` converts existing Markdown docs into the
+canonical doc-driven-dev tree while preserving originals. See
+`references/migration-contract.md`.
 
 0. **Bootstrap** — run `scaffold_docs` to create the canonical docs tree.
 

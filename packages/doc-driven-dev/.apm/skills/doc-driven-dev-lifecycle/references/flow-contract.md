@@ -7,6 +7,7 @@ This document defines the fixed sequence and decision rules that
 
 | Phase | Name | Primary Skills | Gate |
 | ----- | ---- | -------------- | ---- |
+| -1 | Migration | `migrate_docs` | dry-run reviewed; apply creates canonical docs without deleting originals |
 | 0 | Bootstrap | `scaffold_docs` | canonical `docs/` tree exists; existing files are preserved; `docs/designs/overview.md` is left to `design-doc` |
 | 1 | Briefing | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Design | `design-doc` | approved design consistent with spec/ADR |
@@ -14,6 +15,26 @@ This document defines the fixed sequence and decision rules that
 | 4 | Execution Slice | `task-doc` | tasks traceable to plan with verification |
 | 5 | Implementation | `implementation-flow` | all tasks pass verification |
 | 6 | Exit | `doc-status` | front matter, relations, index integrity |
+
+## Phase -1: Migration (Optional)
+
+Purpose: Bring existing Markdown documentation into the canonical
+doc-driven-dev tree before Bootstrap.
+
+**Migration command:** `migrate_docs`
+
+Phase -1 is only required for repositories that already have documentation.
+Run dry-run first, review source-to-target mappings, then rerun with `--apply`
+only when the mapping is acceptable. Original files are preserved and existing
+canonical targets are not overwritten.
+
+### Migration Completion Criteria
+
+- `migrate_docs` dry-run report has been reviewed.
+- Source-to-target mappings are accepted.
+- `--apply` creates canonical docs without deleting originals.
+- Existing canonical target files are not overwritten.
+- `docs/designs/overview.md` remains owned by `design-doc`.
 
 ## Phase 0: Bootstrap
 
