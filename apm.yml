@@ -9,7 +9,7 @@ targets:
 - cursor
 - codex
 - agent-skills
-devDependencies:
+dependencies:
   apm:
   - ./packages/basic-dev-foundation
   - ./packages/recommended-dev-suite
@@ -31,29 +31,31 @@ marketplace:
     url: https://github.com/scarecrow173
   outputs:
     codex: {}
-    copilot: {}
-    cursor: {}
     claude: {}
-    agent-skills: {}
+  claude:
+    output: .claude-plugin/marketplace.json
+  codex:
+    output: .agents/plugins/marketplace.json
   versioning:
     strategy: lockstep
   packages:
   - name: basic-dev-foundation
-    source: ./packages/basic-dev-foundation
-    version: 0.1.0
+    category: foundation
+    source: scarecrow173/apm-packages
+    subdir: packages/basic-dev-foundation
   - name: recommended-dev-suite
-    source: ./packages/recommended-dev-suite
-    version: 0.1.0
+    category: workflow
+    source: scarecrow173/apm-packages
+    subdir: packages/recommended-dev-suite
   - name: steer-enterprise-web-research
-    source: ./packages/steer-enterprise-web-research
-    version: 0.1.0
+    category: research
+    source: scarecrow173/apm-packages
+    subdir: packages/steer-enterprise-web-research
   - name: doc-driven-dev
-    source: ./packages/doc-driven-dev
-    version: 0.1.0
+    category: documentation
+    source: scarecrow173/apm-packages
+    subdir: packages/doc-driven-dev
   - name: apm-package-judge
-    source: ./packages/apm-package-judge
-    version: 0.1.0
-  - name: skill-judge
-    source: softaworks/agent-toolkit
-    subdir: skills/skill-judge
-    ref: main
+    category: evaluation
+    source: scarecrow173/apm-packages
+    subdir: packages/apm-package-judge
