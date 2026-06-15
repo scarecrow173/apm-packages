@@ -11,18 +11,11 @@ targets:
 - agent-skills
 devDependencies:
   apm:
+  - ./packages/basic-dev-foundation
+  - ./packages/recommended-dev-suite
   - ./packages/steer-enterprise-web-research
   - ./packages/doc-driven-dev
   - ./packages/apm-package-judge
-  - microsoft/apm/packages/apm-guide
-  - github/awesome-copilot/skills/git-commit
-  - github/awesome-copilot/skills/commit-message-storyteller
-  - github/awesome-copilot/skills/conventional-branch
-  - github/awesome-copilot/skills/agentic-eval
-  - github/awesome-copilot/skills/github-actions-efficiency
-  - addyosmani/agent-skills
-  - softaworks/agent-toolkit/skills/skill-judge
-  - obra/superpowers
   mcp:
   - name: mise
     registry: false
@@ -39,13 +32,18 @@ marketplace:
   outputs:
     codex: {}
     copilot: {}
+    cursor: {}
+    claude: {}
+    agent-skills: {}
   versioning:
     strategy: lockstep
   packages:
-  - name: apm-usage
-    source: microsoft/apm
-    subdir: packages/apm-guide
-    ref: main
+  - name: basic-dev-foundation
+    source: ./packages/basic-dev-foundation
+    version: 0.1.0
+  - name: recommended-dev-suite
+    source: ./packages/recommended-dev-suite
+    version: 0.1.0
   - name: steer-enterprise-web-research
     source: ./packages/steer-enterprise-web-research
     version: 0.1.0
@@ -55,49 +53,6 @@ marketplace:
   - name: apm-package-judge
     source: ./packages/apm-package-judge
     version: 0.1.0
-  - name: doublecheck
-    source: github/awesome-copilot
-    subdir: plugins/doublecheck
-    ref: main
-  - name: git-commit
-    source: github/awesome-copilot
-    subdir: skills/git-commit
-    ref: main
-  - name: commit-message-storyteller
-    source: github/awesome-copilot
-    subdir: skills/commit-message-storyteller
-    ref: main
-  - name: conventional-branch
-    source: github/awesome-copilot
-    subdir: skills/conventional-branch
-    ref: main
-  - name: drawio
-    source: github/awesome-copilot
-    subdir: skills/drawio
-    ref: main
-  - name: draw-io-diagram-generator
-    source: github/awesome-copilot
-    subdir: skills/draw-io-diagram-generator
-    ref: main
-  - name: editorconfig
-    source: github/awesome-copilot
-    subdir: skills/editorconfig
-    ref: main
-  - name: repo-story-time
-    source: github/awesome-copilot
-    subdir: skills/repo-story-time
-    ref: main
-  - name: agentic-eval
-    source: github/awesome-copilot
-    subdir: skills/agentic-eval
-    ref: main
-  - name: dependabot
-    source: github/awesome-copilot
-    subdir: skills/dependabot
-  - name: copilot-usage-metrics
-    source: github/awesome-copilot
-    subdir: skills/copilot-usage-metrics
-    ref: main
   - name: skill-judge
     source: softaworks/agent-toolkit
     subdir: skills/skill-judge
