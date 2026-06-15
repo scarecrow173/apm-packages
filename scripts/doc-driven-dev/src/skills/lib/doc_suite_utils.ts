@@ -98,6 +98,50 @@ type ScaffoldTarget = {
   type?: DocType;
 };
 
+type MigrationDocType = DocType | null;
+
+type MigrationInput = {
+  body: string;
+  source: string;
+  title: string;
+};
+
+type MigrationPlan = {
+  content: string;
+  source: string;
+  target: string;
+  targetDir: string;
+  title: string;
+  type: MigrationDocType;
+};
+
+type MigrationOptions = {
+  apply?: boolean;
+  cwd: string;
+  from?: string[];
+  includeCanonical?: boolean;
+  splitH1?: boolean;
+};
+
+type MigrationResult = {
+  applied: boolean;
+  created: string[];
+  migrations: MigrationPlan[];
+  skipped: { file: string; reason: string }[];
+};
+
+type MigrationRoute = {
+  patterns: RegExp[];
+  targetDir: string;
+  type: MigrationDocType;
+};
+
+type TargetAllocation = {
+  existing: Set<string>;
+  naming: "numbered" | "slug";
+  next: number;
+};
+
 const configs: Record<DocType, DocConfig> = {
   idea: {
     defaultStatus: "exploring",
@@ -159,6 +203,20 @@ const scaffoldTargets: ScaffoldTarget[] = [
   { dir: "docs/adr", title: "ADR Documents" },
   { dir: "docs/impl/ir", title: "Implementation Record Documents" },
   { dir: "docs/impl/exp", title: "Experiment Log Documents" },
+];
+
+const canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+
+const migrationRoutes: MigrationRoute[] = [
+  { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
+  { targetDir: "docs/discovery", type: "brainstorm", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
+  { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
+  { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
+  { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
+  { targetDir: "docs/tasks", type: "task", patterns: [/task/i, /todo/i, /work item/i] },
+  { targetDir: "docs/adr", type: null, patterns: [/adr/i, /decision/i, /architecture decision/i] },
+  { targetDir: "docs/impl/ir", type: null, patterns: [/implementation record/i, /impl record/i, /\bir\b/i] },
+  { targetDir: "docs/impl/exp", type: null, patterns: [/experiment/i, /\bexp\b/i, /spike/i] },
 ];
 
 const changeEntrySchema = z.object({
@@ -576,6 +634,193 @@ function buildGenericIndex(relativeDir: string, title: string): string {
   return `# ${title}\n\nDirectory: \`${dir}\`\n`;
 }
 
+function isMarkdownSource(file: string): boolean {
+  return file.endsWith(".md") && !/^readme\.md$/i.test(path.basename(file)) && !/^index\.md$/i.test(path.basename(file));
+}
+
+function isUnderCanonicalDir(relativeFile: string): boolean {
+  const normalized = normalizeDir(relativeFile);
+  return canonicalDocDirs.some((dir) => normalized === dir || normalized.startsWith(`${dir}/`));
+}
+
+function walkMarkdownFiles(baseDir: string): string[] {
+  if (!fs.existsSync(baseDir)) return [];
+  const entries = fs.readdirSync(baseDir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const fullPath = path.join(baseDir, entry.name);
+    if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
+    return isMarkdownSource(fullPath) ? [fullPath] : [];
+  }).sort();
+}
+
+function defaultMigrationSources(cwd: string): string[] {
+  return ["docs", "doc", "architecture", "design", "specs", "plans", "tasks"]
+    .filter((dir) => fs.existsSync(path.join(cwd, dir)));
+}
+
+function headingTitle(content: string, fallback: string): string {
+  const parsed = matter(content);
+  const data = parsed.data || {};
+  if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
+  const match = /^#\s+(.+)$/m.exec(parsed.content);
+  return match?.[1]?.trim() || fallback;
+}
+
+function splitByH1(source: string, content: string): MigrationInput[] {
+  const parsed = matter(content);
+  const body = parsed.content.trim();
+  const matches = [...body.matchAll(/^#\s+(.+)$/gm)];
+  if (matches.length <= 1) {
+    return [{
+      source,
+      title: headingTitle(content, path.basename(source, ".md")),
+      body,
+    }];
+  }
+
+  return matches.map((match, index) => {
+    const start = match.index || 0;
+    const end = index + 1 < matches.length ? matches[index + 1].index || body.length : body.length;
+    const chunk = body.slice(start, end).trim();
+    return {
+      source,
+      title: match[1].trim(),
+      body: chunk,
+    };
+  });
+}
+
+function routeFor(input: MigrationInput, sourceData: Record<string, unknown>): MigrationRoute {
+  if (typeof sourceData.type === "string" && docTypes.includes(sourceData.type as DocType)) {
+    const config = configFor(sourceData.type);
+    return { targetDir: config.dir, type: config.type, patterns: [] };
+  }
+
+  const haystack = `${input.source}\n${input.title}\n${input.body.slice(0, 2000)}`;
+  return migrationRoutes.find((route) => route.patterns.some((pattern) => pattern.test(haystack)))
+    || { targetDir: "docs/discovery", type: "brainstorm", patterns: [] };
+}
+
+function targetAllocation(cwd: string, targetDir: string): TargetAllocation {
+  const fullTargetDir = path.join(cwd, targetDir);
+  const existingFiles = fs.existsSync(fullTargetDir)
+    ? fs.readdirSync(fullTargetDir).filter((file) => file.endsWith(".md"))
+    : [];
+  return {
+    existing: new Set(existingFiles),
+    naming: detectNaming(existingFiles),
+    next: nextNumber(existingFiles),
+  };
+}
+
+function allocateTargetPath(cwd: string, targetDir: string, title: string, fallback: string, allocations: Map<string, TargetAllocation>): { number: number; target: string } {
+  if (!allocations.has(targetDir)) allocations.set(targetDir, targetAllocation(cwd, targetDir));
+  const allocation = allocations.get(targetDir) as TargetAllocation;
+  const number = allocation.next;
+  let baseName = allocation.naming === "slug"
+    ? `${slugify(title, fallback)}.md`
+    : `${String(number).padStart(4, "0")}-${slugify(title, fallback)}.md`;
+  const ext = path.extname(baseName);
+  const stem = path.basename(baseName, ext);
+  let suffix = 2;
+  while (allocation.existing.has(baseName)) {
+    baseName = `${stem}-${suffix}${ext}`;
+    suffix += 1;
+  }
+  allocation.existing.add(baseName);
+  if (allocation.naming === "numbered") allocation.next += 1;
+  return {
+    number,
+    target: path.join(targetDir, baseName).replace(/\\/g, "/"),
+  };
+}
+
+function migratedFrontMatter(type: DocType, number: number, title: string, date: string, source: string): string {
+  const config = configFor(type);
+  return frontMatter(config, number, title, config.defaultStatus, date, {
+    source: [source],
+    changes: {
+      generated: [{ type: "migration", source }],
+    },
+  });
+}
+
+function migratedContent(input: MigrationInput, route: MigrationRoute, sourceContent: string, source: string, number: number, date: string): string {
+  if (route.type) {
+    return `${migratedFrontMatter(route.type, number, input.title, date, source)}\n\n${input.body.trim()}\n`;
+  }
+
+  const parsed = matter(sourceContent);
+  const data = parsed.data || {};
+  if (Object.keys(data).length > 0) return `${matter.stringify(input.body.trim(), data).trimEnd()}\n`;
+  return `---\ntitle: ${quote(input.title)}\nsource: ${quote(source)}\n---\n\n${input.body.trim()}\n`;
+}
+
+function plannedMigration(cwd: string, source: string, input: MigrationInput, sourceContent: string, date: string, allocations: Map<string, TargetAllocation>): MigrationPlan {
+  const sourceData = matterData(sourceContent);
+  const route = routeFor(input, sourceData);
+  const targetDir = route.targetDir;
+  const { number, target } = allocateTargetPath(cwd, targetDir, input.title, route.type || "doc", allocations);
+  return {
+    content: migratedContent(input, route, sourceContent, source, number, date),
+    source,
+    target,
+    targetDir,
+    title: input.title,
+    type: route.type,
+  };
+}
+
+async function migrateDocs(options: MigrationOptions): Promise<MigrationResult> {
+  const cwd = path.resolve(options.cwd);
+  const fromDirs = (options.from && options.from.length > 0) ? options.from : defaultMigrationSources(cwd);
+  const skipped: MigrationResult["skipped"] = [];
+  const migrations: MigrationPlan[] = [];
+  const allocations = new Map<string, TargetAllocation>();
+  const date = new Date().toISOString().slice(0, 10);
+
+  for (const fromDir of fromDirs) {
+    const fullFrom = path.resolve(cwd, fromDir);
+    const files = walkMarkdownFiles(fullFrom);
+    for (const fullFile of files) {
+      const relativeFile = path.relative(cwd, fullFile).replace(/\\/g, "/");
+      if (!options.includeCanonical && isUnderCanonicalDir(relativeFile)) {
+        skipped.push({ file: relativeFile, reason: "canonical-doc" });
+        continue;
+      }
+
+      const sourceContent = fs.readFileSync(fullFile, "utf8");
+      const inputs = options.splitH1
+        ? splitByH1(relativeFile, sourceContent)
+        : [{
+          source: relativeFile,
+          title: headingTitle(sourceContent, path.basename(relativeFile, ".md")),
+          body: matter(sourceContent).content.trim(),
+        }];
+      for (const input of inputs) {
+        migrations.push(plannedMigration(cwd, relativeFile, input, sourceContent, date, allocations));
+      }
+    }
+  }
+
+  const created: string[] = [];
+  if (options.apply) {
+    await scaffoldDocsTree(cwd);
+    for (const migration of migrations) {
+      const targetPath = path.join(cwd, migration.target);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.writeFileSync(targetPath, migration.content, "utf8");
+      created.push(migration.target);
+    }
+    for (const target of scaffoldTargets.filter((item) => item.type)) {
+      const index = await buildIndex(cwd, target.type, target.dir);
+      fs.writeFileSync(path.join(cwd, target.dir, "README.md"), index, "utf8");
+    }
+  }
+
+  return { applied: Boolean(options.apply), created, migrations, skipped };
+}
+
 async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updated: string[] }> {
   const resolvedCwd = path.resolve(cwd);
   const created: string[] = [];
@@ -712,6 +957,7 @@ module.exports = {
   docEntries,
   docFiles,
   docTypes,
+  migrateDocs,
   relationFields,
   changeFields,
   changesSchema,

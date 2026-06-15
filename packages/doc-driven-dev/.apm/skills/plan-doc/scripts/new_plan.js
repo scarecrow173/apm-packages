@@ -20507,6 +20507,18 @@ var require_doc_suite_utils = __commonJS({
       { dir: "docs/impl/ir", title: "Implementation Record Documents" },
       { dir: "docs/impl/exp", title: "Experiment Log Documents" }
     ];
+    var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+    var migrationRoutes = [
+      { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
+      { targetDir: "docs/discovery", type: "brainstorm", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
+      { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
+      { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
+      { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
+      { targetDir: "docs/tasks", type: "task", patterns: [/task/i, /todo/i, /work item/i] },
+      { targetDir: "docs/adr", type: null, patterns: [/adr/i, /decision/i, /architecture decision/i] },
+      { targetDir: "docs/impl/ir", type: null, patterns: [/implementation record/i, /impl record/i, /\bir\b/i] },
+      { targetDir: "docs/impl/exp", type: null, patterns: [/experiment/i, /\bexp\b/i, /spike/i] }
+    ];
     var changeEntrySchema = z.object({
       type: z.string().min(1)
     }).passthrough();
@@ -20893,6 +20905,177 @@ ${rows.join("\n")}
 Directory: \`${dir}\`
 `;
     }
+    function isMarkdownSource(file) {
+      return file.endsWith(".md") && !/^readme\.md$/i.test(path2.basename(file)) && !/^index\.md$/i.test(path2.basename(file));
+    }
+    function isUnderCanonicalDir(relativeFile) {
+      const normalized = normalizeDir(relativeFile);
+      return canonicalDocDirs.some((dir) => normalized === dir || normalized.startsWith(`${dir}/`));
+    }
+    function walkMarkdownFiles(baseDir) {
+      if (!fs2.existsSync(baseDir)) return [];
+      const entries = fs2.readdirSync(baseDir, { withFileTypes: true });
+      return entries.flatMap((entry) => {
+        const fullPath = path2.join(baseDir, entry.name);
+        if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
+        return isMarkdownSource(fullPath) ? [fullPath] : [];
+      }).sort();
+    }
+    function defaultMigrationSources(cwd) {
+      return ["docs", "doc", "architecture", "design", "specs", "plans", "tasks"].filter((dir) => fs2.existsSync(path2.join(cwd, dir)));
+    }
+    function headingTitle(content, fallback) {
+      const parsed = matter2(content);
+      const data = parsed.data || {};
+      if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
+      const match = /^#\s+(.+)$/m.exec(parsed.content);
+      return match?.[1]?.trim() || fallback;
+    }
+    function splitByH1(source, content) {
+      const parsed = matter2(content);
+      const body = parsed.content.trim();
+      const matches = [...body.matchAll(/^#\s+(.+)$/gm)];
+      if (matches.length <= 1) {
+        return [{
+          source,
+          title: headingTitle(content, path2.basename(source, ".md")),
+          body
+        }];
+      }
+      return matches.map((match, index) => {
+        const start = match.index || 0;
+        const end = index + 1 < matches.length ? matches[index + 1].index || body.length : body.length;
+        const chunk = body.slice(start, end).trim();
+        return {
+          source,
+          title: match[1].trim(),
+          body: chunk
+        };
+      });
+    }
+    function routeFor(input, sourceData) {
+      if (typeof sourceData.type === "string" && docTypes.includes(sourceData.type)) {
+        const config = configFor(sourceData.type);
+        return { targetDir: config.dir, type: config.type, patterns: [] };
+      }
+      const haystack = `${input.source}
+${input.title}
+${input.body.slice(0, 2e3)}`;
+      return migrationRoutes.find((route) => route.patterns.some((pattern) => pattern.test(haystack))) || { targetDir: "docs/discovery", type: "brainstorm", patterns: [] };
+    }
+    function targetAllocation(cwd, targetDir) {
+      const fullTargetDir = path2.join(cwd, targetDir);
+      const existingFiles = fs2.existsSync(fullTargetDir) ? fs2.readdirSync(fullTargetDir).filter((file) => file.endsWith(".md")) : [];
+      return {
+        existing: new Set(existingFiles),
+        naming: detectNaming(existingFiles),
+        next: nextNumber(existingFiles)
+      };
+    }
+    function allocateTargetPath(cwd, targetDir, title, fallback, allocations) {
+      if (!allocations.has(targetDir)) allocations.set(targetDir, targetAllocation(cwd, targetDir));
+      const allocation = allocations.get(targetDir);
+      const number = allocation.next;
+      let baseName = allocation.naming === "slug" ? `${slugify(title, fallback)}.md` : `${String(number).padStart(4, "0")}-${slugify(title, fallback)}.md`;
+      const ext = path2.extname(baseName);
+      const stem = path2.basename(baseName, ext);
+      let suffix = 2;
+      while (allocation.existing.has(baseName)) {
+        baseName = `${stem}-${suffix}${ext}`;
+        suffix += 1;
+      }
+      allocation.existing.add(baseName);
+      if (allocation.naming === "numbered") allocation.next += 1;
+      return {
+        number,
+        target: path2.join(targetDir, baseName).replace(/\\/g, "/")
+      };
+    }
+    function migratedFrontMatter(type, number, title, date, source) {
+      const config = configFor(type);
+      return frontMatter(config, number, title, config.defaultStatus, date, {
+        source: [source],
+        changes: {
+          generated: [{ type: "migration", source }]
+        }
+      });
+    }
+    function migratedContent(input, route, sourceContent, source, number, date) {
+      if (route.type) {
+        return `${migratedFrontMatter(route.type, number, input.title, date, source)}
+
+${input.body.trim()}
+`;
+      }
+      const parsed = matter2(sourceContent);
+      const data = parsed.data || {};
+      if (Object.keys(data).length > 0) return `${matter2.stringify(input.body.trim(), data).trimEnd()}
+`;
+      return `---
+title: ${quote(input.title)}
+source: ${quote(source)}
+---
+
+${input.body.trim()}
+`;
+    }
+    function plannedMigration(cwd, source, input, sourceContent, date, allocations) {
+      const sourceData = matterData(sourceContent);
+      const route = routeFor(input, sourceData);
+      const targetDir = route.targetDir;
+      const { number, target } = allocateTargetPath(cwd, targetDir, input.title, route.type || "doc", allocations);
+      return {
+        content: migratedContent(input, route, sourceContent, source, number, date),
+        source,
+        target,
+        targetDir,
+        title: input.title,
+        type: route.type
+      };
+    }
+    async function migrateDocs(options2) {
+      const cwd = path2.resolve(options2.cwd);
+      const fromDirs = options2.from && options2.from.length > 0 ? options2.from : defaultMigrationSources(cwd);
+      const skipped = [];
+      const migrations = [];
+      const allocations = /* @__PURE__ */ new Map();
+      const date = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      for (const fromDir of fromDirs) {
+        const fullFrom = path2.resolve(cwd, fromDir);
+        const files = walkMarkdownFiles(fullFrom);
+        for (const fullFile of files) {
+          const relativeFile = path2.relative(cwd, fullFile).replace(/\\/g, "/");
+          if (!options2.includeCanonical && isUnderCanonicalDir(relativeFile)) {
+            skipped.push({ file: relativeFile, reason: "canonical-doc" });
+            continue;
+          }
+          const sourceContent = fs2.readFileSync(fullFile, "utf8");
+          const inputs = options2.splitH1 ? splitByH1(relativeFile, sourceContent) : [{
+            source: relativeFile,
+            title: headingTitle(sourceContent, path2.basename(relativeFile, ".md")),
+            body: matter2(sourceContent).content.trim()
+          }];
+          for (const input of inputs) {
+            migrations.push(plannedMigration(cwd, relativeFile, input, sourceContent, date, allocations));
+          }
+        }
+      }
+      const created = [];
+      if (options2.apply) {
+        await scaffoldDocsTree(cwd);
+        for (const migration of migrations) {
+          const targetPath = path2.join(cwd, migration.target);
+          fs2.mkdirSync(path2.dirname(targetPath), { recursive: true });
+          fs2.writeFileSync(targetPath, migration.content, "utf8");
+          created.push(migration.target);
+        }
+        for (const target of scaffoldTargets.filter((item) => item.type)) {
+          const index = await buildIndex(cwd, target.type, target.dir);
+          fs2.writeFileSync(path2.join(cwd, target.dir, "README.md"), index, "utf8");
+        }
+      }
+      return { applied: Boolean(options2.apply), created, migrations, skipped };
+    }
     async function scaffoldDocsTree(cwd) {
       const resolvedCwd = path2.resolve(cwd);
       const created = [];
@@ -21013,6 +21196,7 @@ ${bodyFor(type, options2.title)}
       docEntries,
       docFiles,
       docTypes,
+      migrateDocs,
       relationFields,
       changeFields,
       changesSchema,
