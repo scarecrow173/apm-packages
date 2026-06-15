@@ -52,6 +52,7 @@ See `references/flow-contract.md` for the full specification.
 
 Only required for repositories with existing docs to migrate. Completion is
 verified by the migration contract:
+
 - [ ] `migrate_docs` dry-run report reviewed
 - [ ] source-to-target mappings accepted
 - [ ] `--apply` run creates canonical docs without deleting originals
@@ -60,6 +61,7 @@ verified by the migration contract:
 ### Phase 1 Exit
 
 Delegated to `briefing-flow`. Completion is verified by `briefing-flow` Phase D gate:
+
 - [ ] spec-doc exists with `status:` ≥ `proposed`
 - [ ] spec-doc has `acceptance_criteria:` with ≥1 item
 - [ ] adr-doc exists with `alternatives:` ≥2
@@ -69,24 +71,28 @@ Delegated to `briefing-flow`. Completion is verified by `briefing-flow` Phase D 
 ### Phase 0 Exit
 
 Completion is verified by the bootstrap contract:
+
 - [ ] canonical `docs/ideas`, `docs/discovery`, `docs/specs`, `docs/designs`, `docs/plans`, `docs/tasks`, `docs/adr`, `docs/impl/ir`, and `docs/impl/exp` directories exist
 - [ ] each canonical directory has a `README.md`
 - [ ] existing files in the target repo remain untouched
 - [ ] `docs/designs/overview.md` is not created by the bootstrap step
 
 ### Phase 2 Exit
+
 - [ ] design-doc exists with `status:` = `approved`
 - [ ] design-doc references spec-doc and adr-doc
 - [ ] No conflicts between design and ADR constraints
 - [ ] Implementation boundaries are clear
 
 ### Phase 3 Exit
+
 - [ ] plan-doc exists with `status:` ≥ `proposed`
 - [ ] plan-doc references design-doc
 - [ ] PLAN-DOC-GATE-001 satisfied (approved design)
 - [ ] Work decomposable into task-doc granularity
 
 ### Phase 4 Exit
+
 - [ ] All task-doc entries created
 - [ ] Each task has `verification:` conditions
 - [ ] Tasks traceable to plan-doc sections
@@ -101,6 +107,7 @@ adr-doc completion.
 
 **MANDATORY**: When entering Phase 1 (Briefing), read
 [`briefing-flow` SKILL](../briefing-flow/SKILL.md) to understand:
+
 - Entry Decision (A-1 through A-5) path selection
 - Briefing Skill Discovery Protocol and profile configuration
 - Skill stack-based information gathering execution
@@ -119,7 +126,7 @@ configuration, and execution via the Briefing Skill Discovery Protocol and
 Key skills managed by `briefing-flow`:
 
 | Skill | Category | Expected Output | Completion Indicator |
-|-------|----------|-----------------|----------------------|
+| ------ | -------- | --------------- | -------------------- |
 | `deep-dive` | Frame | Confirmed intent summary with constraints and decision axes | Clear outcome, constraints, and open questions |
 | `steer-web-research` | Discover | External information research results | Evidence-backed research report |
 | `spec-doc` | Document | Formal specification document | `acceptance_criteria:` ≥3 items, `status: proposed` |
@@ -168,16 +175,17 @@ rerun with `--apply` only when the mapping is acceptable.
 canonical doc-driven-dev tree while preserving originals. See
 `references/migration-contract.md`.
 
-0. **Bootstrap** — run `scaffold_docs` to create the canonical docs tree.
+- **Bootstrap** — run `scaffold_docs` to create the canonical docs tree.
 
 **Bootstrap contract**: `scaffold_docs` creates the canonical `docs/` tree before
 briefing begins. It preserves existing files and does not create
 `docs/designs/overview.md`; `design-doc` owns that file.
 
-1. **Briefing** — delegate to `briefing-flow`.
+- **Briefing** — delegate to `briefing-flow`.
 
 **MANDATORY**: When entering Phase 1 (Briefing), read
 [`briefing-flow` SKILL](../briefing-flow/SKILL.md) to understand:
+
 - Entry Decision (A-1 through A-5) path selection
 - Briefing Skill Discovery Protocol and profile configuration
 - Skill stack-based information gathering execution
@@ -185,17 +193,18 @@ briefing begins. It preserves existing files and does not create
 
 **Do NOT Load** `briefing-flow` references are managed by `briefing-flow` itself at Phase 1 start.
 
-2. **Design** — invoke `design-doc`; verify consistency with spec and ADR.
+- **Design** — invoke `design-doc`; verify consistency with spec and ADR.
 
 **MANDATORY**: Before entering Phase 3 (Planning), read
 [`references/flow-contract.md`](references/flow-contract.md) §3-4 for detailed
 gate criteria. Understand PLAN-DOC-GATE-001 requirements.
 
-3. **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001.
-4. **Execute** — decompose into `task-doc` entries with verification steps.
+- **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001.
+- **Execute** — decompose into `task-doc` entries with verification steps.
 
 **MANDATORY**: Before entering Phase 5 (Implementation), read the
 [`implementation-flow` SKILL](../implementation-flow/SKILL.md) to understand:
+
 - Skill Discovery Protocol and profile configuration
 - Per-task execution with skill stack
 - Verification evidence requirements
@@ -203,34 +212,42 @@ gate criteria. Understand PLAN-DOC-GATE-001 requirements.
 **Do NOT Load** `implementation-flow` before Phase 4 completes — task decomposition
 must finish before implementation configuration begins.
 
-5. **Implement** — apply workflow skills per-task; verify each task passes.
-6. **Exit Audit** — invoke `doc-status` to validate document integrity.
+- **Implement** — apply workflow skills per-task; verify each task passes.
+- **Exit Audit** — invoke `doc-status` to validate document integrity.
 
 ## Loopback Rules
 
 ### Phase 2 → Phase 1 (Spec Gap)
+
 When design work reveals missing or unclear requirements:
+
 1. Record gap in one-line reason: "spec-gap: [description]"
 2. Identify affected spec-doc section(s)
 3. Re-invoke `briefing-flow` (scope: discovered gap only)
 4. Update spec-doc, set status back to `proposed` if needed
 
 ### Phase 3 → Phase 2 (Design Gap)
+
 When planning reveals design insufficiency:
+
 1. Record gap: "design-gap: [description]"
 2. Identify missing design decision or boundary
 3. Re-invoke `design-doc` for the affected component
 4. Verify updated design against spec/ADR before resuming
 
 ### Phase 4 → ADR/Design Update (New Constraint)
+
 When task decomposition surfaces new constraints:
+
 1. Record constraint: "constraint: [description]"
 2. Determine if ADR or design-doc needs update
 3. Update the affected document with minimal scope change
 4. Resume Phase 4 from the blocked task
 
 ### Phase 5 → Phase 1 or 2 (Implementation Discovery)
+
 When implementation reveals fundamental gaps:
+
 1. Record discovery: "impl-gap: [description]"
 2. Assess severity: spec-level (→Phase 1) or design-level (→Phase 2)
 3. Pause current task, return to appropriate phase

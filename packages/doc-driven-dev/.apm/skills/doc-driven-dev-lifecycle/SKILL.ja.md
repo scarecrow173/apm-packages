@@ -51,6 +51,7 @@ Phase -1: Migration（任意）  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  
 ### Phase -1 終了時
 
 移行対象の既存 docs があるリポジトリでのみ必要。完了条件は migration contract で検証する:
+
 - [ ] `migrate_docs` dry-run report を確認済み
 - [ ] source-to-target mapping を受け入れている
 - [ ] `--apply` run が original を削除せず canonical docs を作成している
@@ -59,6 +60,7 @@ Phase -1: Migration（任意）  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  
 ### Phase 1 終了時
 
 `briefing-flow` に委譲する。完了条件は `briefing-flow` の Phase D ゲートで検証される:
+
 - [ ] spec-doc が存在し `status:` ≥ `proposed`
 - [ ] spec-doc に `acceptance_criteria:` が 1 件以上ある
 - [ ] adr-doc が存在し `alternatives:` が 2 件以上ある
@@ -68,24 +70,28 @@ Phase -1: Migration（任意）  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  
 ### Phase 0 終了時
 
 bootstrap contract によって完了を検証する:
+
 - [ ] canonical な `docs/ideas`, `docs/discovery`, `docs/specs`, `docs/designs`, `docs/plans`, `docs/tasks`, `docs/adr`, `docs/impl/ir`, `docs/impl/exp` ディレクトリが存在する
 - [ ] 各 canonical ディレクトリに `README.md` がある
 - [ ] 対象リポジトリ内の既存ファイルが変更されていない
 - [ ] `docs/designs/overview.md` は bootstrap step では作成されていない
 
 ### Phase 2 終了時
+
 - [ ] design-doc が存在し `status:` = `approved`
 - [ ] design-doc が spec-doc と adr-doc を参照している
 - [ ] 設計と ADR 制約の間に矛盾がない
 - [ ] 実装境界が明確
 
 ### Phase 3 終了時
+
 - [ ] plan-doc が存在し `status:` ≥ `proposed`
 - [ ] plan-doc が design-doc を参照している
 - [ ] PLAN-DOC-GATE-001 を満たしている（承認済み設計）
 - [ ] task-doc 粒度に分解可能
 
 ### Phase 4 終了時
+
 - [ ] 全ての task-doc エントリが作成済み
 - [ ] 各タスクに `verification:` 条件がある
 - [ ] タスクが plan-doc セクションにトレース可能
@@ -99,6 +105,7 @@ Phase 1 は [`briefing-flow`](../briefing-flow/SKILL.ja.md) メタスキルに�
 
 **MANDATORY**: Phase 1（Briefing）に入る際に
 [`briefing-flow` SKILL](../briefing-flow/SKILL.ja.md) を読み、以下を理解すること:
+
 - Entry Decision（A-1〜A-5）の経路選択
 - Briefing スキル発見プロトコルとプロファイル設定
 - スキルスタックを使った情報収集の実行
@@ -116,7 +123,7 @@ Phase 1 は `briefing-flow` に委譲されるため、スキルの発見・構�
 以下は `briefing-flow` が管理する主要スキルの概要:
 
 | スキル | カテゴリ | 期待出力 | 完了指標 |
-|--------|----------|----------|----------|
+| ------ | -------- | -------- | -------- |
 | `deep-dive` | Frame | 制約と判断軸を含む確認済み intent 要約 | 明確な outcome、制約、未解決項目 |
 | `steer-web-research` | Discover | 外部情報の調査結果 | エビデンス付きの調査レポート |
 | `spec-doc` | Document | 正式な仕様書 | `acceptance_criteria:` 3 件以上、`status: proposed` |
@@ -161,16 +168,17 @@ mapping が妥当な場合だけ `--apply` で再実行します。
 docs を canonical な doc-driven-dev tree へ変換します。詳細は
 `references/migration-contract.ja.md` を参照。
 
-0. **Bootstrap** — `scaffold_docs` を実行して canonical な docs tree を作成する。
+- **Bootstrap** — `scaffold_docs` を実行して canonical な docs tree を作成する。
 
 **Bootstrap contract**: `scaffold_docs` は briefing の前に canonical な `docs/`
 tree を作成する。既存ファイルを保持し、`docs/designs/overview.md` は
 作成しない。`docs/designs/overview.md` は `design-doc` が所有する。
 
-1. **Briefing** — `briefing-flow` に委譲する。
+- **Briefing** — `briefing-flow` に委譲する。
 
 **MANDATORY**: Phase 1（Briefing）に入る際に
 [`briefing-flow` SKILL](../briefing-flow/SKILL.ja.md) を読み、以下を理解すること:
+
 - Entry Decision（A-1〜A-5）の経路選択
 - Briefing スキル発見プロトコルとプロファイル設定
 - スキルスタックを使った情報収集の実行
@@ -178,17 +186,18 @@ tree を作成する。既存ファイルを保持し、`docs/designs/overview.m
 
 **Do NOT Load** `briefing-flow` の references は Phase 1 開始時に `briefing-flow` 自身が管理する。
 
-2. **Design** — `design-doc` を呼び出し、spec/ADR との整合を検証する。
+- **Design** — `design-doc` を呼び出し、spec/ADR との整合を検証する。
 
 **MANDATORY**: Phase 3（Planning）に入る前に
 [`references/flow-contract.ja.md`](references/flow-contract.ja.md) §3-4 を読み、
 詳細なゲート条件を理解すること。PLAN-DOC-GATE-001 の要件を把握する。
 
-3. **Plan** — `plan-doc` を呼び出し、PLAN-DOC-GATE-001 を尊重する。
-4. **Execute** — `task-doc` エントリに分解し、各タスクに検証手順を付与する。
+- **Plan** — `plan-doc` を呼び出し、PLAN-DOC-GATE-001 を尊重する。
+- **Execute** — `task-doc` エントリに分解し、各タスクに検証手順を付与する。
 
 **MANDATORY**: Phase 5（Implementation）に入る前に
 [`implementation-flow` SKILL](../implementation-flow/SKILL.ja.md) を読み、以下を理解すること:
+
 - Skill Discovery Protocol とプロファイル設定
 - スキルスタックを使ったタスク単位の実行
 - 検証証拠の要件
@@ -196,34 +205,42 @@ tree を作成する。既存ファイルを保持し、`docs/designs/overview.m
 **Do NOT Load** `implementation-flow` は Phase 4 完了前には読まないこと —
 タスク分解が完了してから実装設定を始める。
 
-5. **Implement** — ワークフロースキルをタスク単位で適用し、検証通過を確認する。
-6. **Exit 監査** — `doc-status` を呼び出し、文書整合を検証する。
+- **Implement** — ワークフロースキルをタスク単位で適用し、検証通過を確認する。
+- **Exit 監査** — `doc-status` を呼び出し、文書整合を検証する。
 
 ## ループバックルール
 
 ### Phase 2 → Phase 1 (Spec ギャップ)
+
 設計作業で要件の不足または不明確さが判明した場合:
+
 1. ギャップを1行で記録: "spec-gap: [説明]"
 2. 影響を受ける spec-doc セクションを特定
 3. `briefing-flow` を再実行（スコープ: 発見されたギャップのみ）
 4. spec-doc を更新、必要なら status を `proposed` に戻す
 
 ### Phase 3 → Phase 2 (設計ギャップ)
+
 計画立案で設計の不十分さが判明した場合:
+
 1. ギャップを記録: "design-gap: [説明]"
 2. 不足している設計決定または境界を特定
 3. 影響を受けるコンポーネントに対して `design-doc` を再実行
 4. 再開前に更新された設計が spec/ADR と整合することを確認
 
 ### Phase 4 → ADR/Design 更新 (新制約)
+
 タスク分解で新たな制約が発見された場合:
+
 1. 制約を記録: "constraint: [説明]"
 2. ADR または design-doc のどちらを更新すべきか判断
 3. 影響を受けるドキュメントを最小スコープで更新
 4. ブロックされたタスクから Phase 4 を再開
 
 ### Phase 5 → Phase 1 または 2 (実装での発見)
+
 実装で根本的なギャップが判明した場合:
+
 1. 発見を記録: "impl-gap: [説明]"
 2. 重大度を評価: spec レベル (→Phase 1) または設計レベル (→Phase 2)
 3. 現在のタスクを一時停止し、適切なフェーズに戻る
