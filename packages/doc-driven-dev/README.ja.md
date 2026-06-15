@@ -6,8 +6,11 @@ Markdown を使い、ADR、spec、design、plan、task、implementation record �
 ライフサイクル状態、根拠、意味付き relation をエージェントが追跡できるようにします。
 
 このパッケージでは `doc-driven-dev-lifecycle` をライフサイクルの中核とし、
-briefing、文書作成、実装準備、exit までをオーケストレーションします。
+docs tree の bootstrap、briefing、文書作成、実装準備、exit までを
+オーケストレーションします。
 
+- `migrate_docs`: 既存 Markdown docs を canonical な doc-driven-dev tree へ移行するための dry-run / apply command。
+- `scaffold_docs`: briefing 開始前に canonical な `docs/` tree を bootstrap します。
 - `deep-dive`: コードベースを踏まえた一問一答で、意図、制約、判断軸を深掘りします。
 - `briefing-flow`: 情報収集をオーケストレーションし、spec + ADR 作成へルーティングします。
 - `spec-doc`: 実装前に何を作るかを定義します。
@@ -30,6 +33,8 @@ briefing、文書作成、実装準備、exit までをオーケストレーシ�
 
 ```text
 doc-driven-dev-lifecycle
+  -> Phase -1: migrate existing docs      (任意; apply 前に dry-run)
+  -> Phase 0: scaffold docs tree          (canonical docs tree; design overview は design-doc 所有)
   -> Phase 1: briefing-flow
   -> Phase 1 outputs: spec-doc + adr-doc   (プロダクト文脈と技術文脈が揃えば並列)
   -> Phase 2: design-doc                   (overview + detailed design docs)
@@ -44,10 +49,15 @@ doc-driven-dev-lifecycle
   briefing の完了成果物として、同じ briefing/discovery 出力から並列に作成できます。
 - **design gate**: `plan-doc` は承認済みの `design-doc` を前提にし、
   spec の要求と ADR の技術制約を取り込みます。
+- **migration 境界**: `migrate_docs` は source file を保持し、`--apply` 指定時だけ
+  変換済みの canonical docs を作成します。
+- **bootstrap 境界**: `scaffold_docs` は canonical な `docs/` tree を作成しますが、
+  `docs/designs/overview.md` は作成せず `design-doc` に任せます。
 
 ライフサイクルを構成するフェーズ skill は `deep-dive`, `briefing-flow`,
 `spec-doc`, `adr-doc`, `design-doc`, `plan-doc`, `task-doc`,
-`implementation-flow`, `impl-doc`, `doc-status` です。
+`implementation-flow`, `impl-doc`, `doc-status` に加え、
+`migrate_docs` migration command と `scaffold_docs` bootstrap command です。
 
 ### doc-driven-dev の並列トラック
 
@@ -232,6 +242,8 @@ relations:
 
 ```text
 doc-driven-dev-lifecycle
+  -> Phase -1: migrate existing docs      (任意; apply 前に dry-run)
+  -> Phase 0: scaffold docs tree          (canonical docs tree; design overview は design-doc 所有)
   -> Phase 1: briefing-flow
   -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
   -> Phase 2: design-doc                  (overview-first design gate)
@@ -240,7 +252,9 @@ doc-driven-dev-lifecycle
   -> Phase 5/6: doc-status -> exit
 ```
 
-`doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`briefing-flow` と
+`doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`migrate_docs` は
+bootstrap 前に既存 Markdown docs を移行できます。`scaffold_docs` が Phase 1 前に
+canonical な `docs/` tree を bootstrap し、`briefing-flow` と
 `implementation-flow` は、このライフサイクル内部のフェーズ別オーケストレーション
 skill であり、別個のトップレベルライフサイクルではありません。これらのメタスキルは、
 固定の補助 skill stack を前提にせず、その場で利用可能な skill から選択して進みます。
@@ -248,6 +262,22 @@ skill であり、別個のトップレベルライフサイクルではあり�
 範囲、受け入れ条件を定義し、ADR は技術判断、代替案、採用理由を記録します。
 Phase 1 で両方に十分な文脈が揃ったら briefing の完了成果物として並列に作成し、
 その後 design と planning へ進みます。
+
+### 既存 Docs の Migration
+
+まず dry-run します:
+
+```bash
+node .apm/skills/doc-driven-dev-lifecycle/scripts/migrate_docs.js --from docs --json
+```
+
+Mapping を確認してから apply します:
+
+```bash
+node .apm/skills/doc-driven-dev-lifecycle/scripts/migrate_docs.js --from docs --split-h1 --apply
+```
+
+この command は source file を保持し、既存の canonical target を上書きしません。
 
 Routing note: `briefing-flow` と `implementation-flow` は、現在の環境で発見された
 skill にルーティングできます。`steer-web-research` のような optional skill は

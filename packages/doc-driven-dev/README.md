@@ -7,8 +7,11 @@ relations between ADRs, specs, designs, plans, tasks, and implementation
 records.
 
 The package centers the lifecycle in `doc-driven-dev-lifecycle`, which orchestrates
-briefing, document creation, implementation preparation, and exit:
+docs tree bootstrap, briefing, document creation, implementation preparation,
+and exit:
 
+- `migrate_docs`: dry-run or apply migration of existing Markdown docs into the canonical doc-driven-dev tree.
+- `scaffold_docs`: bootstrap the canonical `docs/` tree before briefing starts.
 - `deep-dive`: interrogate intent, constraints, and decision axes through codebase-aware, one-question-at-a-time dialogue.
 - `briefing-flow`: orchestrate information gathering and route to spec + ADR creation.
 - `spec-doc`: define what to build before implementation starts.
@@ -31,6 +34,8 @@ document flow and invokes the phase-specific skills below as needed:
 
 ```text
 doc-driven-dev-lifecycle
+  -> Phase -1: migrate existing docs      (optional; dry-run before apply)
+  -> Phase 0: scaffold docs tree          (canonical docs tree; design overview remains design-doc-owned)
   -> Phase 1: briefing-flow
   -> Phase 1 outputs: spec-doc + adr-doc   (parallel when both product and technical context are ready)
   -> Phase 2: design-doc                   (overview + detailed design docs)
@@ -47,10 +52,15 @@ doc-driven-dev-lifecycle
   since they address different facets of the same work.
 - **Design gate before planning**: `plan-doc` requires approved `design-doc`
   input and uses spec for requirements plus ADR for technical constraints.
+- **Migration boundary**: `migrate_docs` preserves source files and creates
+  converted canonical docs only when run with `--apply`.
+- **Bootstrap boundary**: `scaffold_docs` creates the canonical `docs/` tree
+  without `docs/designs/overview.md`; `design-doc` owns that file.
 
 Lifecycle phase skills: `deep-dive`, `briefing-flow`, `spec-doc`, `adr-doc`,
 `design-doc`, `plan-doc`, `task-doc`, `implementation-flow`, `impl-doc`,
-`doc-status`.
+`doc-status`, plus the `migrate_docs` migration command and `scaffold_docs`
+bootstrap command.
 
 ### doc-driven-dev parallel track
 
@@ -248,6 +258,8 @@ internal document links rather than the type of the linked document.
 
 ```text
 doc-driven-dev-lifecycle
+  -> Phase -1: migrate existing docs      (optional; dry-run before apply)
+  -> Phase 0: scaffold docs tree          (canonical docs tree; design overview remains design-doc-owned)
   -> Phase 1: briefing-flow
   -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
   -> Phase 2: design-doc                  (overview-first design gate)
@@ -256,7 +268,9 @@ doc-driven-dev-lifecycle
   -> Phase 5/6: doc-status -> exit
 ```
 
-`doc-driven-dev-lifecycle` is the lifecycle entrypoint. `briefing-flow` and
+`doc-driven-dev-lifecycle` is the lifecycle entrypoint. `migrate_docs` can
+migrate existing Markdown docs before bootstrap; `scaffold_docs` bootstraps the
+canonical `docs/` tree before Phase 1; `briefing-flow` and
 `implementation-flow` remain phase-level orchestration skills inside that
 lifecycle, not separate top-level lifecycles. These meta skills select from the
 skills available in the current environment rather than hardcoding a fixed
@@ -265,6 +279,22 @@ specs define what should be built, why, scope, and acceptance criteria, while
 ADRs record technical decisions, alternatives, and rationale. When Phase 1
 produces enough context for both, they are written in parallel as briefing
 completion artifacts before design and planning continue.
+
+### Migrating Existing Docs
+
+Run dry-run first:
+
+```bash
+node .apm/skills/doc-driven-dev-lifecycle/scripts/migrate_docs.js --from docs --json
+```
+
+Apply only after reviewing the mapping:
+
+```bash
+node .apm/skills/doc-driven-dev-lifecycle/scripts/migrate_docs.js --from docs --split-h1 --apply
+```
+
+The command preserves source files and never overwrites existing canonical targets.
 
 Routing note: `briefing-flow` and `implementation-flow` can route to skills
 discovered in the current environment. Optional skills such as

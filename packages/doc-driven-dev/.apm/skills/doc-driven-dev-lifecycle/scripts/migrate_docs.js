@@ -21033,7 +21033,7 @@ ${input.body.trim()}
         type: route.type
       };
     }
-    async function migrateDocs(options2) {
+    async function migrateDocs2(options2) {
       const cwd = path2.resolve(options2.cwd);
       const fromDirs = options2.from && options2.from.length > 0 ? options2.from : defaultMigrationSources(cwd);
       const skipped = [];
@@ -21091,7 +21091,7 @@ ${input.body.trim()}
       }
       return { created, updated };
     }
-    async function createDocument2(type, options2) {
+    async function createDocument(type, options2) {
       const config = configFor(type);
       const cwd = path2.resolve(options2.cwd);
       const relativeDir = docDir(cwd, type, options2.dir);
@@ -21192,11 +21192,11 @@ ${bodyFor(type, options2.title)}
       buildIndex,
       buildGenericIndex,
       configFor,
-      createDocument: createDocument2,
+      createDocument,
       docEntries,
       docFiles,
       docTypes,
-      migrateDocs,
+      migrateDocs: migrateDocs2,
       relationFields,
       changeFields,
       changesSchema,
@@ -21208,26 +21208,46 @@ ${bodyFor(type, options2.title)}
   }
 });
 
-// src/skills/spec-doc/scripts/new_spec.ts
+// src/skills/doc-driven-dev-lifecycle/scripts/migrate_docs.ts
 var path = require("node:path");
-var { createDocument } = require_doc_suite_utils();
+var { migrateDocs } = require_doc_suite_utils();
 function parseArgs(argv) {
-  const args = { cwd: process.cwd() };
+  const args = {
+    apply: false,
+    cwd: process.cwd(),
+    from: [],
+    includeCanonical: false,
+    json: false,
+    splitH1: false
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--title") args.title = argv[++i];
-    else if (arg === "--dir") args.dir = argv[++i];
-    else if (arg === "--status") args.status = argv[++i];
-    else if (arg === "--date") args.date = argv[++i];
-    else if (arg === "--cwd") args.cwd = argv[++i];
+    if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--from") args.from.push(argv[++i]);
+    else if (arg === "--apply") args.apply = true;
+    else if (arg === "--include-canonical") args.includeCanonical = true;
+    else if (arg === "--json") args.json = true;
+    else if (arg === "--split-h1") args.splitH1 = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
-    else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_spec.js --title <title> [--dir <path>] [--status <status>]";
+  return "Usage: node scripts/migrate_docs.js [--cwd <path>] [--from <dir>] [--split-h1] [--include-canonical] [--apply] [--json]";
+}
+function printHuman(report) {
+  console.log(`${report.applied ? "Applied" : "Planned"} docs migration`);
+  if (report.migrations.length === 0) console.log("No source documents selected.");
+  for (const migration of report.migrations) {
+    console.log(`${migration.source} -> ${migration.target}${migration.type ? ` [${migration.type}]` : ""}`);
+  }
+  for (const created of report.created) {
+    console.log(`Created ${created}`);
+  }
+  for (const skipped of report.skipped) {
+    console.log(`Skipped ${skipped.file}: ${skipped.reason}`);
+  }
 }
 async function main() {
   try {
@@ -21236,16 +21256,18 @@ async function main() {
       console.log(usage());
       return;
     }
-    if (!args.title) throw new Error("Missing required --title");
-    const result = await createDocument("spec", {
+    const report = await migrateDocs({
+      apply: args.apply,
       cwd: path.resolve(args.cwd),
-      date: args.date,
-      dir: args.dir,
-      status: args.status,
-      title: args.title
+      from: args.from,
+      includeCanonical: args.includeCanonical,
+      splitH1: args.splitH1
     });
-    console.log(`Created ${result.file}`);
-    console.log(`Updated ${result.index}`);
+    if (args.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    printHuman(report);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

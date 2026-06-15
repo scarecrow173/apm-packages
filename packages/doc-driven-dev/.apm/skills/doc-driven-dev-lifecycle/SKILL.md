@@ -1,13 +1,14 @@
 ---
 name: doc-driven-dev-lifecycle
-description: "Orchestrates the full document-driven development lifecycle through a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Unsure which doc skill to begin with, (3) Need end-to-end document orchestration from briefing to execution, (4) Must enforce sequencing constraints between doc creation phases. Sequences skills: briefing-flow → design-doc → plan-doc → task-doc → implementation-flow → doc-status. Keywords: document lifecycle, orchestration, phase gates, meta skill."
+description: "Orchestrates the full document-driven development lifecycle through optional migration, a bootstrap phase, and a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Need to migrate existing docs into the canonical doc-driven-dev tree, (3) Need to bootstrap the canonical docs tree before briefing, (4) Unsure which doc skill to begin with, (5) Need end-to-end document orchestration from briefing to execution, (6) Must enforce sequencing constraints between doc creation phases. Sequences flow: migrate_docs (optional) -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status. Keywords: document lifecycle, orchestration, migration, phase gates, meta skill."
 license: MIT
 ---
 
 # Doc-Driven Dev Lifecycle
 
 Orchestrates the full document-driven development lifecycle by selecting and
-sequencing existing doc skills through a 6-phase flow with explicit gates.
+sequencing existing doc skills through optional migration, a bootstrap phase,
+and a 6-phase flow with explicit gates.
 
 This is a **meta skill**: it contains no scripts and produces no artifacts
 directly. Instead it decides *which* skill to invoke and *when*, enforcing
@@ -16,13 +17,15 @@ sequencing constraints and completion criteria defined in the Flow Contract.
 ## When to Use
 
 - Starting a new feature, project, or significant change from scratch.
+- Need to migrate existing Markdown docs into the canonical doc-driven-dev tree.
+- Need to bootstrap the canonical docs tree before briefing.
 - Unsure which doc skill to begin with.
 - Need end-to-end document orchestration from idea to execution.
 
 ## Flow Overview
 
 ```text
-Phase 1: Briefing  →  Phase 2: Design  →  Phase 3: Planning  →  Phase 4: Execution Slice  →  Phase 5: Implementation  →  Phase 6: Exit
+Phase -1: Migration (optional)  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  ->  Phase 2: Design  ->  Phase 3: Planning  ->  Phase 4: Execution Slice  ->  Phase 5: Implementation  ->  Phase 6: Exit
 ```
 
 Each phase has a gate that must be satisfied before proceeding.
@@ -32,6 +35,8 @@ See `references/flow-contract.md` for the full specification.
 
 | Phase | Purpose | Primary Skills | Gate |
 | ----- | ------- | -------------- | ---- |
+| -1 | Migrate existing docs into canonical structure | `migrate_docs` | dry-run reviewed; apply creates canonical docs without deleting originals |
+| 0 | Create the canonical docs tree before briefing | `scaffold_docs` | canonical `docs/` tree exists; existing files are preserved; `docs/designs/overview.md` is left to `design-doc` |
 | 1 | Convert requests into document-ready inputs | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Concretize design into implementable form | `design-doc` | approved design consistent with spec/ADR |
 | 3 | Integrate into implementation plan | `plan-doc` | PLAN-DOC-GATE-001 (approved design required) |
@@ -39,32 +44,55 @@ See `references/flow-contract.md` for the full specification.
 | 5 | Implement code guided by workflow skills | `implementation-flow` | all tasks pass verification |
 | 6 | Confirm document integrity | `doc-status` | front matter, relations, index integrity |
 
-**Key constraint resolution**: Phase 1 (Briefing) explicitly permits spec + ADR parallel creation when derived from the same discovery context, as managed by `briefing-flow`. Later phases enforce sequential gates (Phase 2 requires Phase 1 complete, Phase 3 requires Phase 2 approved design, etc.).
+**Key constraint resolution**: Optional Phase -1 migrates existing Markdown docs without deleting originals. Phase 0 creates the canonical docs tree but does not create `docs/designs/overview.md`; `design-doc` owns that file. Phase 1 (Briefing) explicitly permits spec + ADR parallel creation when derived from the same discovery context, as managed by `briefing-flow`. Later phases enforce sequential gates (Phase 2 requires Phase 1 complete, Phase 3 requires Phase 2 approved design, etc.).
 
 ## Phase Exit Checklists
+
+### Phase -1 Exit
+
+Only required for repositories with existing docs to migrate. Completion is
+verified by the migration contract:
+
+- [ ] `migrate_docs` dry-run report reviewed
+- [ ] source-to-target mappings accepted
+- [ ] `--apply` run creates canonical docs without deleting originals
+- [ ] existing canonical target files are not overwritten
 
 ### Phase 1 Exit
 
 Delegated to `briefing-flow`. Completion is verified by `briefing-flow` Phase D gate:
+
 - [ ] spec-doc exists with `status:` ≥ `proposed`
 - [ ] spec-doc has `acceptance_criteria:` with ≥1 item
 - [ ] adr-doc exists with `alternatives:` ≥2
 - [ ] Entry Decision selection recorded
 - [ ] No open items classified as "pre-implementation blocker"
 
+### Phase 0 Exit
+
+Completion is verified by the bootstrap contract:
+
+- [ ] canonical `docs/ideas`, `docs/discovery`, `docs/specs`, `docs/designs`, `docs/plans`, `docs/tasks`, `docs/adr`, `docs/impl/ir`, and `docs/impl/exp` directories exist
+- [ ] each canonical directory has a `README.md`
+- [ ] existing files in the target repo remain untouched
+- [ ] `docs/designs/overview.md` is not created by the bootstrap step
+
 ### Phase 2 Exit
+
 - [ ] design-doc exists with `status:` = `approved`
 - [ ] design-doc references spec-doc and adr-doc
 - [ ] No conflicts between design and ADR constraints
 - [ ] Implementation boundaries are clear
 
 ### Phase 3 Exit
+
 - [ ] plan-doc exists with `status:` ≥ `proposed`
 - [ ] plan-doc references design-doc
 - [ ] PLAN-DOC-GATE-001 satisfied (approved design)
 - [ ] Work decomposable into task-doc granularity
 
 ### Phase 4 Exit
+
 - [ ] All task-doc entries created
 - [ ] Each task has `verification:` conditions
 - [ ] Tasks traceable to plan-doc sections
@@ -79,6 +107,7 @@ adr-doc completion.
 
 **MANDATORY**: When entering Phase 1 (Briefing), read
 [`briefing-flow` SKILL](../briefing-flow/SKILL.md) to understand:
+
 - Entry Decision (A-1 through A-5) path selection
 - Briefing Skill Discovery Protocol and profile configuration
 - Skill stack-based information gathering execution
@@ -97,7 +126,7 @@ configuration, and execution via the Briefing Skill Discovery Protocol and
 Key skills managed by `briefing-flow`:
 
 | Skill | Category | Expected Output | Completion Indicator |
-|-------|----------|-----------------|----------------------|
+| ------ | -------- | --------------- | -------------------- |
 | `deep-dive` | Frame | Confirmed intent summary with constraints and decision axes | Clear outcome, constraints, and open questions |
 | `steer-web-research` | Discover | External information research results | Evidence-backed research report |
 | `spec-doc` | Document | Formal specification document | `acceptance_criteria:` ≥3 items, `status: proposed` |
@@ -138,10 +167,25 @@ takes 10 minutes; debugging mystery code takes hours.
 
 ## Process
 
-1. **Briefing** — delegate to `briefing-flow`.
+For existing repositories, run `migrate_docs` as an optional Phase -1 before
+Phase 0. Use dry-run first, review the planned source-to-target mappings, then
+rerun with `--apply` only when the mapping is acceptable.
+
+**Migration contract**: `migrate_docs` converts existing Markdown docs into the
+canonical doc-driven-dev tree while preserving originals. See
+`references/migration-contract.md`.
+
+- **Bootstrap** — run `scaffold_docs` to create the canonical docs tree.
+
+**Bootstrap contract**: `scaffold_docs` creates the canonical `docs/` tree before
+briefing begins. It preserves existing files and does not create
+`docs/designs/overview.md`; `design-doc` owns that file.
+
+- **Briefing** — delegate to `briefing-flow`.
 
 **MANDATORY**: When entering Phase 1 (Briefing), read
 [`briefing-flow` SKILL](../briefing-flow/SKILL.md) to understand:
+
 - Entry Decision (A-1 through A-5) path selection
 - Briefing Skill Discovery Protocol and profile configuration
 - Skill stack-based information gathering execution
@@ -149,17 +193,18 @@ takes 10 minutes; debugging mystery code takes hours.
 
 **Do NOT Load** `briefing-flow` references are managed by `briefing-flow` itself at Phase 1 start.
 
-2. **Design** — invoke `design-doc`; verify consistency with spec and ADR.
+- **Design** — invoke `design-doc`; verify consistency with spec and ADR.
 
 **MANDATORY**: Before entering Phase 3 (Planning), read
 [`references/flow-contract.md`](references/flow-contract.md) §3-4 for detailed
 gate criteria. Understand PLAN-DOC-GATE-001 requirements.
 
-3. **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001.
-4. **Execute** — decompose into `task-doc` entries with verification steps.
+- **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001.
+- **Execute** — decompose into `task-doc` entries with verification steps.
 
 **MANDATORY**: Before entering Phase 5 (Implementation), read the
 [`implementation-flow` SKILL](../implementation-flow/SKILL.md) to understand:
+
 - Skill Discovery Protocol and profile configuration
 - Per-task execution with skill stack
 - Verification evidence requirements
@@ -167,34 +212,42 @@ gate criteria. Understand PLAN-DOC-GATE-001 requirements.
 **Do NOT Load** `implementation-flow` before Phase 4 completes — task decomposition
 must finish before implementation configuration begins.
 
-5. **Implement** — apply workflow skills per-task; verify each task passes.
-6. **Exit Audit** — invoke `doc-status` to validate document integrity.
+- **Implement** — apply workflow skills per-task; verify each task passes.
+- **Exit Audit** — invoke `doc-status` to validate document integrity.
 
 ## Loopback Rules
 
 ### Phase 2 → Phase 1 (Spec Gap)
+
 When design work reveals missing or unclear requirements:
+
 1. Record gap in one-line reason: "spec-gap: [description]"
 2. Identify affected spec-doc section(s)
 3. Re-invoke `briefing-flow` (scope: discovered gap only)
 4. Update spec-doc, set status back to `proposed` if needed
 
 ### Phase 3 → Phase 2 (Design Gap)
+
 When planning reveals design insufficiency:
+
 1. Record gap: "design-gap: [description]"
 2. Identify missing design decision or boundary
 3. Re-invoke `design-doc` for the affected component
 4. Verify updated design against spec/ADR before resuming
 
 ### Phase 4 → ADR/Design Update (New Constraint)
+
 When task decomposition surfaces new constraints:
+
 1. Record constraint: "constraint: [description]"
 2. Determine if ADR or design-doc needs update
 3. Update the affected document with minimal scope change
 4. Resume Phase 4 from the blocked task
 
 ### Phase 5 → Phase 1 or 2 (Implementation Discovery)
+
 When implementation reveals fundamental gaps:
+
 1. Record discovery: "impl-gap: [description]"
 2. Assess severity: spec-level (→Phase 1) or design-level (→Phase 2)
 3. Pause current task, return to appropriate phase
