@@ -20550,7 +20550,7 @@ var require_doc_suite_utils = __commonJS({
       return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
     }
     function docFiles(dir) {
-      return listMarkdownFiles(dir);
+      return walkMarkdownFiles(dir).map((f) => path2.relative(dir, f).replace(/\\/g, "/"));
     }
     function isExternalLink(value) {
       return /^(https?:|mailto:)/i.test(value);

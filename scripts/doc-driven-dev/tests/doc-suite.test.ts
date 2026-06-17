@@ -337,6 +337,39 @@ test("doc-status audits required front matter, status, indexes, relations, and s
   assert.equal(report.findings.some((finding) => finding.message.includes("https://example.com/source")), false);
 });
 
+test("doc-status audits specs inside subdirectories", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/specs/checkout"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/specs/checkout/0001-define-checkout-flow.md"),
+    [
+      "---",
+      'id: "SPEC-0001"',
+      'type: "spec"',
+      'status: "bad-status"',
+      'title: "Define checkout flow"',
+      'created: "2026-06-17"',
+      'updated: "2026-06-17"',
+      "owners: []",
+      "relations:",
+      '  references: ["docs/missing-in-subdir.md"]',
+      "---",
+      "",
+      "# Define checkout flow",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("doc-status", "audit_docs.js", ["--type", "spec", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.files, 1, "subdirectory file should be counted");
+  assert.equal(report.findings.some((f) => f.code === "invalid-status"), true, "invalid-status from subdir file");
+  assert.equal(report.findings.some((f) => f.message.includes("docs/missing-in-subdir.md")), true, "broken link in subdir file");
+});
+
 test("doc-driven-dev-lifecycle meta skill ships SKILL.md and flow-contract references", () => {
   const flowSkill = path.join(skillRoot, "doc-driven-dev-lifecycle");
   assert.equal(fs.existsSync(path.join(flowSkill, "SKILL.md")), true);
