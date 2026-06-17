@@ -77,6 +77,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -123,6 +125,8 @@ Use relation fields for meaning, not document type.
 | `verified-by` | Test notes, review notes, or follow-up tasks that verify this task. |
 | `source` | External source that directly constrains the task. |
 | `references` | Supplementary implementation notes or docs. |
+| `defers` | Future work intentionally deferred from this document, pointing to a draft spec/design. |
+| `deferred-by` | Documents that deferred this draft future work to a later phase. |
 | `supersedes` | Older tasks replaced by this task. |
 | `superseded-by` | Newer tasks that replace this task. |
 | `related` | Contextual docs without directional dependency. |
@@ -166,9 +170,12 @@ Use `README.md` as the default task index. If a repository already uses
 The index should list tasks in filename order and include enough metadata for a
 reader to scan title, status, upstream plan, blockers, and owner quickly.
 
-## Categories
+## Subdirectory Grouping
 
-For large repositories, tasks may be split into subdirectories, for example:
+### Category subdirectories
+
+For large repositories, tasks may be split into subdirectories by implementation
+area, release, or workstream:
 
 ```text
 docs/tasks/
@@ -181,5 +188,21 @@ docs/tasks/
 ```
 
 Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows. Use categories by implementation area, release,
-or workstream only when a flat directory is becoming hard to scan.
+index before the structure grows. Use area grouping only when a flat directory
+is becoming hard to scan.
+
+### Feature subdirectories
+
+Subdirectories also work for feature-level grouping, when all tasks for a
+single feature are best tracked together:
+
+```text
+docs/tasks/
+  checkout/
+    0001-wire-checkout-button.md
+    0002-add-checkout-api-endpoint.md
+    0003-add-checkout-e2e-tests.md
+```
+
+Use this pattern when the tasks belong to the same feature and share a common
+upstream plan. Keep numbering local to the feature directory.

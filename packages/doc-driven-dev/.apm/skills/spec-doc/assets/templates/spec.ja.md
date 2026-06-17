@@ -30,6 +30,12 @@
 
 - [ ] <!-- 観測可能な挙動または検証 -->
 
+## Deferred Design Concerns
+
+<!-- 今は実装しないが将来扱う設計項目。据え置く draft 文書は relations.defers で指す。 -->
+
+- <!-- 据え置く項目 | 理由 | 再着手トリガ | 無視した場合のリスク -->
+
 ## 出典と Relations
 
 <!-- 出典、関連 ADR、上流 discovery artifact を要約する。 -->

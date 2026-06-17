@@ -76,6 +76,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -117,6 +119,8 @@ relation は文書種別ではなく意味で選びます。
 | --- | --- |
 | `source` | 外部の一次情報、要求、issue、ユーザー提供資料。 |
 | `references` | spec の根拠ではない補助的な参考文脈。 |
+| `defers` | この文書から意図的に据え置いた将来作業（draft の spec/design を指す）。 |
+| `deferred-by` | この draft 将来作業を後続フェーズへ据え置いた文書。 |
 | `derives-from` | spec を生んだ brainstorming、idea-refine note、ADR、上流文書。 |
 | `derived-by` | この spec から派生した plan、task、より狭い spec。 |
 | `refines` | この spec が狭める、または詳細化する広い spec や ADR。 |
@@ -172,9 +176,12 @@ spec は計画入力であり、ADR のような不変の決定記録ではあ�
 索引は spec をファイル名順で並べ、title、status、owner をすばやく確認できる
 だけのメタデータを残します。
 
-## カテゴリ
+## サブディレクトリ管理
 
-大きなリポジトリでは、spec をサブディレクトリに分けても構いません。
+### カテゴリ別サブディレクトリ
+
+大きなリポジトリでは、product area、platform area、documentation area、team
+などで spec をサブディレクトリに分けても構いません。
 
 ```text
 docs/specs/
@@ -187,5 +194,20 @@ docs/specs/
 ```
 
 番号はカテゴリごとにローカルです。構造が大きくなる前に、カテゴリ分けの方針を
-索引に記録します。カテゴリは product area、platform area、documentation
-area、team などで、フラットなディレクトリが読みにくくなった場合だけ使います。
+索引に記録します。フラットなディレクトリが読みにくくなった場合だけ使います。
+
+### 機能別サブディレクトリ
+
+1つの機能に関連 spec が複数必要になる場合は、機能単位でサブディレクトリを
+切っても構いません。
+
+```text
+docs/specs/
+  checkout/
+    0001-define-checkout-flow.md
+    0002-checkout-api-contract.md
+    0003-checkout-edge-cases.md
+```
+
+まとめて読むべき spec 群がある場合に使います。番号は機能ディレクトリ内で
+ローカルに管理します。

@@ -337,6 +337,20 @@ node scripts/audit_adr.js --dir docs/adr
 node scripts/check_code_links.js --dir docs/adr
 ```
 
+## Post-Acceptance Lifecycle
+
+After an ADR is accepted:
+
+1. Turn Implementation Plan items and follow-up consequences into trackable
+   tasks.
+2. Reference the ADR in PRs, for example `Implements ADR-0004`.
+3. Add sparse code references at the main implementation entry points.
+4. Check Verification items after implementation.
+5. Revisit the ADR when its stated revisit conditions fire.
+
+For index maintenance, bootstrap patterns, and category layout, see
+`references/adr-maintenance.md`.
+
 ## Operational References
 
 Keep this entry skill focused on deciding whether an ADR is needed and creating

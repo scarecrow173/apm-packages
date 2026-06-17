@@ -24,7 +24,6 @@ Examples of blocking issues:
 - Missing required front matter fields (id, type, status, relations)
 - Broken internal relations (referenced file does not exist)
 - Documents not registered in the index
-- Status transition contradictions (e.g. plan is `approved` but referenced design is `draft`)
 
 ## Output Contract
 

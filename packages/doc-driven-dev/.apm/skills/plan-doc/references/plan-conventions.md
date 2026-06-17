@@ -83,6 +83,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -129,6 +131,8 @@ Use relation fields for meaning, not document type.
 | `blocks` | Plans or tasks blocked by this plan. |
 | `source` | External sources that materially affect the implementation approach. |
 | `references` | Supplementary implementation notes or docs. |
+| `defers` | Future work intentionally deferred from this document, pointing to a draft spec/design. |
+| `deferred-by` | Documents that deferred this draft future work to a later phase. |
 | `supersedes` | Older plans replaced by this plan. |
 | `superseded-by` | Newer plans that replace this plan. |
 | `related` | Contextual docs without directional dependency. |
@@ -224,9 +228,12 @@ Use `README.md` as the default plan index. If a repository already uses
 The index should list plans in filename order and include enough metadata for a
 reader to scan title, status, upstream document, and owner quickly.
 
-## Categories
+## Subdirectory Grouping
 
-For large repositories, plans may be split into subdirectories, for example:
+### Category subdirectories
+
+For large repositories, plans may be split into subdirectories by execution
+area, team, release, or migration stream:
 
 ```text
 docs/plans/
@@ -239,9 +246,23 @@ docs/plans/
 ```
 
 Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows. Use categories by execution area, team,
-release, or migration stream only when a flat directory is becoming hard to
-scan.
+index before the structure grows. Use area grouping only when a flat directory
+is becoming hard to scan.
+
+### Feature subdirectories
+
+Subdirectories also work for feature-level grouping, when implementing a single
+feature requires multiple related plans:
+
+```text
+docs/plans/
+  checkout/
+    0001-implement-checkout-flow.md
+    0002-checkout-api-integration.md
+```
+
+Use this pattern when the plans belong to the same feature and are best
+reviewed together. Keep numbering local to the feature directory.
 
 ## Review Handoff
 

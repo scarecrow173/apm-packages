@@ -59,6 +59,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 

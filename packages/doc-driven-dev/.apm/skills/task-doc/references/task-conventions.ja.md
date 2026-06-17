@@ -77,6 +77,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -122,6 +124,8 @@ relation は文書種別ではなく意味で選びます。
 | `verified-by` | この task を検証する test note、review note、follow-up task。 |
 | `source` | task を直接制約する外部出典。 |
 | `references` | 補助的な実装 note や docs。 |
+| `defers` | この文書から意図的に据え置いた将来作業（draft の spec/design を指す）。 |
+| `deferred-by` | この draft 将来作業を後続フェーズへ据え置いた文書。 |
 | `supersedes` | この task が置き換える古い task。 |
 | `superseded-by` | この task を置き換える新しい task。 |
 | `related` | 方向性のない関連文書。 |
@@ -165,9 +169,12 @@ task は実行中の作業記録です。
 索引は task をファイル名順で並べ、title、status、上流 plan、blocker、owner を
 すばやく確認できるだけのメタデータを残します。
 
-## カテゴリ
+## サブディレクトリ管理
 
-大きなリポジトリでは、task をサブディレクトリに分けても構いません。
+### カテゴリ別サブディレクトリ
+
+大きなリポジトリでは、implementation area、release、workstream などで
+task をサブディレクトリに分けても構いません。
 
 ```text
 docs/tasks/
@@ -180,5 +187,20 @@ docs/tasks/
 ```
 
 番号はカテゴリごとにローカルです。構造が大きくなる前に、カテゴリ分けの方針を
-索引に記録します。カテゴリは implementation area、release、workstream などで、
-フラットなディレクトリが読みにくくなった場合だけ使います。
+索引に記録します。フラットなディレクトリが読みにくくなった場合だけ使います。
+
+### 機能別サブディレクトリ
+
+1つの機能のすべての task をまとめて追跡したい場合は、機能単位でサブディレクトリを
+切っても構いません。
+
+```text
+docs/tasks/
+  checkout/
+    0001-wire-checkout-button.md
+    0002-add-checkout-api-endpoint.md
+    0003-add-checkout-e2e-tests.md
+```
+
+同じ機能に属する task で共通の上流 plan を持つ場合に使います。番号は機能
+ディレクトリ内でローカルに管理します。

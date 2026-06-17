@@ -39,7 +39,9 @@ NNNN-title-with-dashes.md
 - `approved` の design 文書は、意図を残しつつ差分理由を明示して更新します。
 - 大きな再設計は履歴を消すのではなく superseding design 文書で表現します。
 
-## カテゴリ
+## サブディレクトリ管理
+
+### カテゴリ別サブディレクトリ
 
 大規模リポジトリでは設計文書を領域別に分割できます。
 
@@ -52,6 +54,21 @@ docs/designs/
 ```
 
 分割時の番号はカテゴリ内ローカルで管理します。
+
+### 機能別サブディレクトリ
+
+1つの機能に関連設計文書が複数必要になる場合は、機能単位でサブディレクトリを
+切っても構いません。
+
+```text
+docs/designs/
+  checkout/
+    0001-design-checkout-flow.md
+    0002-design-checkout-api.md
+```
+
+まとめて読むべき design 群がある場合に使います。番号は機能ディレクトリ内で
+ローカルに管理します。
 
 ## 必須フロントマター
 
@@ -83,6 +100,7 @@ docs/designs/
 - 上流 spec/ADR/discovery は `relations.derives-from` を使う。
 - 設計同士の関連は `relations.related` を使う。
 - 補助資料は `relations.references` を使う。
+- この設計から意図的に据え置いた将来作業（draft の spec/design）は `relations.defers` で指す。据え置かれた側は `relations.deferred-by` で指し返す。
 
 ## 索引
 

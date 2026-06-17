@@ -40,7 +40,9 @@ Rules:
 - Large redesigns should create a superseding design doc instead of silently
   rewriting history.
 
-## Categories
+## Subdirectory Grouping
+
+### Category subdirectories
 
 For large repositories, design docs may be grouped by area:
 
@@ -53,6 +55,21 @@ docs/designs/
 ```
 
 Keep numbering local to each category when splitting directories.
+
+### Feature subdirectories
+
+Subdirectories also work for feature-level grouping, when a single feature
+requires multiple related design docs:
+
+```text
+docs/designs/
+  checkout/
+    0001-design-checkout-flow.md
+    0002-design-checkout-api.md
+```
+
+Use this pattern when the designs are best read together as a set. Keep
+numbering local to the feature directory.
 
 ## Required Front Matter
 
@@ -84,6 +101,7 @@ If either condition fails, `plan-doc` must fail with:
 - Use `relations.derives-from` for upstream spec/ADR/discovery docs.
 - Use `relations.related` for sibling designs.
 - Use `relations.references` for supplementary materials.
+- Use `relations.defers` for future work intentionally deferred from this design (a draft spec/design); the deferred doc points back with `relations.deferred-by`.
 
 ## Index
 

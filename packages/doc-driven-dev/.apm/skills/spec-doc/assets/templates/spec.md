@@ -30,6 +30,12 @@
 
 - [ ] <!-- observable behavior or verification -->
 
+## Deferred Design Concerns
+
+<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->
+
+- <!-- concern | reason | re-engagement trigger | risk if ignored -->
+
 ## Sources and Relations
 
 <!-- Summarize source evidence, related ADRs, and upstream discovery artifacts. -->

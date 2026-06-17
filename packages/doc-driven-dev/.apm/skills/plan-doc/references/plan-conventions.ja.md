@@ -82,6 +82,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -128,6 +130,8 @@ relation field は document type ではなく意味のために使います。
 | `blocks` | この plan によって blocked される plan / task。 |
 | `source` | 実装アプローチに実質的な影響を与える外部 source。 |
 | `references` | 補足の実装メモや doc。 |
+| `defers` | この文書から意図的に据え置いた将来作業（draft の spec/design を指す）。 |
+| `deferred-by` | この draft 将来作業を後続フェーズへ据え置いた文書。 |
 | `supersedes` | この plan に置き換えられる古い plan。 |
 | `superseded-by` | この plan を置き換える新しい plan。 |
 | `related` | 方向性のない関連文書。 |
@@ -219,9 +223,12 @@ plan は実行 artifact であり、作業中は変化してかまいません�
 index には filename 順で plan を並べ、title、status、upstream document、owner を
 素早く読めるだけの metadata を含めます。
 
-## カテゴリ
+## サブディレクトリ管理
 
-大きなリポジトリでは、plan を subdirectory に分けてもかまいません。例:
+### カテゴリ別サブディレクトリ
+
+大きなリポジトリでは、execution area、team、release、migration stream などで
+plan をサブディレクトリに分けてもかまいません。
 
 ```text
 docs/plans/
@@ -233,9 +240,23 @@ docs/plans/
     0001-migrate-session-storage.md
 ```
 
-番号は category ごとに local です。分類スキームは index に先に書きます。
-execution area、team、release、migration stream などで分けるのは、
-flat directory が見づらくなった場合だけにします。
+番号はカテゴリごとにローカルです。分類スキームは索引に先に書きます。
+フラットなディレクトリが見づらくなった場合だけ使います。
+
+### 機能別サブディレクトリ
+
+1つの機能の実装に複数の plan が必要になる場合は、機能単位でサブディレクトリを
+切っても構いません。
+
+```text
+docs/plans/
+  checkout/
+    0001-implement-checkout-flow.md
+    0002-checkout-api-integration.md
+```
+
+同じ機能に属する plan をまとめてレビューすべき場合に使います。番号は機能
+ディレクトリ内でローカルに管理します。
 
 ## レビュー用ハンドオフ
 
