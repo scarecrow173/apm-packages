@@ -18,6 +18,8 @@ packages/**/build/
 /.github/agents/
 /.github/instructions/
 /.github/skills/
+/.github/hooks/
+/.github/prompts/
 /.vscode/
 /.mcp.json
 
