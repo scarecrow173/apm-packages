@@ -256,7 +256,7 @@ function docDir(cwd: string, type: string, explicitDir?: string): string {
 }
 
 function docFiles(dir: string): string[] {
-  return listMarkdownFiles(dir);
+  return walkMarkdownFiles(dir).map((f) => path.relative(dir, f).replace(/\\/g, "/"));
 }
 
 function isExternalLink(value: string): boolean {
