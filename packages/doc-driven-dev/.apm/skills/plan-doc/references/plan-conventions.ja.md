@@ -225,7 +225,10 @@ index には filename 順で plan を並べ、title、status、upstream document
 
 ## カテゴリ
 
-大きなリポジトリでは、plan を subdirectory に分けてもかまいません。例:
+### 領域別
+
+大きなリポジトリでは、execution area、team、release、migration stream などで
+plan をサブディレクトリに分けてもかまいません。
 
 ```text
 docs/plans/
@@ -237,9 +240,23 @@ docs/plans/
     0001-migrate-session-storage.md
 ```
 
-番号は category ごとに local です。分類スキームは index に先に書きます。
-execution area、team、release、migration stream などで分けるのは、
-flat directory が見づらくなった場合だけにします。
+番号はカテゴリごとにローカルです。分類スキームは索引に先に書きます。
+フラットなディレクトリが見づらくなった場合だけ使います。
+
+### 機能別
+
+1つの機能の実装に複数の plan が必要になる場合は、機能単位でサブディレクトリを
+切っても構いません。
+
+```text
+docs/plans/
+  checkout/
+    0001-implement-checkout-flow.md
+    0002-checkout-api-integration.md
+```
+
+同じ機能に属する plan をまとめてレビューすべき場合に使います。番号は機能
+ディレクトリ内でローカルに管理します。
 
 ## レビュー用ハンドオフ
 

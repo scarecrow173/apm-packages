@@ -230,7 +230,10 @@ reader to scan title, status, upstream document, and owner quickly.
 
 ## Categories
 
-For large repositories, plans may be split into subdirectories, for example:
+### Area grouping
+
+For large repositories, plans may be split into subdirectories by execution
+area, team, release, or migration stream:
 
 ```text
 docs/plans/
@@ -243,9 +246,23 @@ docs/plans/
 ```
 
 Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows. Use categories by execution area, team,
-release, or migration stream only when a flat directory is becoming hard to
-scan.
+index before the structure grows. Use area grouping only when a flat directory
+is becoming hard to scan.
+
+### Feature grouping
+
+Subdirectories also work for feature-level grouping, when implementing a single
+feature requires multiple related plans:
+
+```text
+docs/plans/
+  checkout/
+    0001-implement-checkout-flow.md
+    0002-checkout-api-integration.md
+```
+
+Use this pattern when the plans belong to the same feature and are best
+reviewed together. Keep numbering local to the feature directory.
 
 ## Review Handoff
 

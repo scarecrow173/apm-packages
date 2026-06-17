@@ -42,6 +42,8 @@ Rules:
 
 ## Categories
 
+### Area grouping
+
 For large repositories, design docs may be grouped by area:
 
 ```text
@@ -53,6 +55,8 @@ docs/designs/
 ```
 
 Keep numbering local to each category when splitting directories.
+
+### Feature grouping
 
 Subdirectories also work for feature-level grouping, when a single feature
 requires multiple related design docs:

@@ -171,7 +171,10 @@ task は実行中の作業記録です。
 
 ## カテゴリ
 
-大きなリポジトリでは、task をサブディレクトリに分けても構いません。
+### 領域別
+
+大きなリポジトリでは、implementation area、release、workstream などで
+task をサブディレクトリに分けても構いません。
 
 ```text
 docs/tasks/
@@ -184,5 +187,20 @@ docs/tasks/
 ```
 
 番号はカテゴリごとにローカルです。構造が大きくなる前に、カテゴリ分けの方針を
-索引に記録します。カテゴリは implementation area、release、workstream などで、
-フラットなディレクトリが読みにくくなった場合だけ使います。
+索引に記録します。フラットなディレクトリが読みにくくなった場合だけ使います。
+
+### 機能別
+
+1つの機能のすべての task をまとめて追跡したい場合は、機能単位でサブディレクトリを
+切っても構いません。
+
+```text
+docs/tasks/
+  checkout/
+    0001-wire-checkout-button.md
+    0002-add-checkout-api-endpoint.md
+    0003-add-checkout-e2e-tests.md
+```
+
+同じ機能に属する task で共通の上流 plan を持つ場合に使います。番号は機能
+ディレクトリ内でローカルに管理します。

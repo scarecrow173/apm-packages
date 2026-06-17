@@ -172,7 +172,10 @@ reader to scan title, status, upstream plan, blockers, and owner quickly.
 
 ## Categories
 
-For large repositories, tasks may be split into subdirectories, for example:
+### Area grouping
+
+For large repositories, tasks may be split into subdirectories by implementation
+area, release, or workstream:
 
 ```text
 docs/tasks/
@@ -185,5 +188,21 @@ docs/tasks/
 ```
 
 Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows. Use categories by implementation area, release,
-or workstream only when a flat directory is becoming hard to scan.
+index before the structure grows. Use area grouping only when a flat directory
+is becoming hard to scan.
+
+### Feature grouping
+
+Subdirectories also work for feature-level grouping, when all tasks for a
+single feature are best tracked together:
+
+```text
+docs/tasks/
+  checkout/
+    0001-wire-checkout-button.md
+    0002-add-checkout-api-endpoint.md
+    0003-add-checkout-e2e-tests.md
+```
+
+Use this pattern when the tasks belong to the same feature and share a common
+upstream plan. Keep numbering local to the feature directory.

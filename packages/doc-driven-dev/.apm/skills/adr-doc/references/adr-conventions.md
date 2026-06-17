@@ -196,7 +196,10 @@ for readers to scan decisions quickly.
 
 ## Categories
 
-For large repositories, ADRs may be split into subdirectories, for example:
+### Area grouping
+
+For large repositories, ADRs may be split into subdirectories by technical
+area or team:
 
 ```text
 docs/adr/
@@ -210,3 +213,18 @@ docs/adr/
 
 Numbers are local to each category. Document the categorization scheme in the
 index before the structure grows.
+
+### Feature grouping
+
+Subdirectories also work for feature-level grouping, when a feature produces
+multiple related architectural decisions:
+
+```text
+docs/adr/
+  checkout/
+    0001-payment-provider-selection.md
+    0002-checkout-session-storage.md
+```
+
+Use this pattern when the decisions are tightly scoped to one feature and are
+best reviewed together. Keep numbering local to the feature directory.

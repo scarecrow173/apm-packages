@@ -180,7 +180,10 @@ reader to scan title, status, and owner quickly.
 
 ## Categories
 
-For large repositories, specs may be split into subdirectories, for example:
+### Area grouping
+
+For large repositories, specs may be split into subdirectories by product area,
+platform area, documentation area, or team:
 
 ```text
 docs/specs/
@@ -193,9 +196,10 @@ docs/specs/
 ```
 
 Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows. Use categories by product area, platform
-area, documentation area, or team only when a flat directory is becoming hard to
-scan.
+index before the structure grows. Use area grouping only when a flat directory
+is becoming hard to scan.
+
+### Feature grouping
 
 Subdirectories also work for feature-level grouping, when a single feature
 requires multiple related specs:
