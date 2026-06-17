@@ -77,6 +77,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -123,6 +125,8 @@ Use relation fields for meaning, not document type.
 | `verified-by` | Test notes, review notes, or follow-up tasks that verify this task. |
 | `source` | External source that directly constrains the task. |
 | `references` | Supplementary implementation notes or docs. |
+| `defers` | Future work intentionally deferred from this document, pointing to a draft spec/design. |
+| `deferred-by` | Documents that deferred this draft future work to a later phase. |
 | `supersedes` | Older tasks replaced by this task. |
 | `superseded-by` | Newer tasks that replace this task. |
 | `related` | Contextual docs without directional dependency. |

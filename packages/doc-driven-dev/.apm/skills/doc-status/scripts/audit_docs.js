@@ -20435,7 +20435,9 @@ var require_doc_suite_utils = __commonJS({
       "derived-by",
       "verifies",
       "verified-by",
-      "references"
+      "references",
+      "defers",
+      "deferred-by"
     ];
     var changeFields = [
       "added",
@@ -20752,7 +20754,13 @@ var require_doc_suite_utils = __commonJS({
           "",
           "## Acceptance Criteria",
           "",
-          "- [ ] <!-- observable behavior or verification -->"
+          "- [ ] <!-- observable behavior or verification -->",
+          "",
+          "## Deferred Design Concerns",
+          "",
+          "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+          "",
+          "- <!-- concern | reason | re-engagement trigger | risk if ignored -->"
         ].join("\n");
       }
       if (type === "plan") {
@@ -20796,6 +20804,12 @@ var require_doc_suite_utils = __commonJS({
           "## Risks and Trade-offs",
           "",
           "- <!-- risk and mitigation -->",
+          "",
+          "## Deferred Design Concerns",
+          "",
+          "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+          "",
+          "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
           "",
           "## References",
           "",

@@ -248,6 +248,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ```
 
 Use `source` for external evidence and primary sources. Use `references` for

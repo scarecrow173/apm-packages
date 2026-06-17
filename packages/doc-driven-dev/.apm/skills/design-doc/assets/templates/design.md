@@ -30,6 +30,12 @@
 
 - <!-- risk and mitigation -->
 
+## Deferred Design Concerns
+
+<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->
+
+- <!-- concern | reason | re-engagement trigger | risk if ignored -->
+
 ## Verification Notes
 
 - [ ] <!-- what validates this design before planning -->

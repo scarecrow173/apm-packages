@@ -76,6 +76,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -117,6 +119,8 @@ relation は文書種別ではなく意味で選びます。
 | --- | --- |
 | `source` | 外部の一次情報、要求、issue、ユーザー提供資料。 |
 | `references` | spec の根拠ではない補助的な参考文脈。 |
+| `defers` | この文書から意図的に据え置いた将来作業（draft の spec/design を指す）。 |
+| `deferred-by` | この draft 将来作業を後続フェーズへ据え置いた文書。 |
 | `derives-from` | spec を生んだ brainstorming、idea-refine note、ADR、上流文書。 |
 | `derived-by` | この spec から派生した plan、task、より狭い spec。 |
 | `refines` | この spec が狭める、または詳細化する広い spec や ADR。 |

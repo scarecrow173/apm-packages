@@ -30,6 +30,12 @@
 
 - <!-- リスクと緩和策 -->
 
+## Deferred Design Concerns
+
+<!-- 今は実装しないが将来扱う設計項目。据え置く draft 文書は relations.defers で指す。 -->
+
+- <!-- 据え置く項目 | 理由 | 再着手トリガ | 無視した場合のリスク -->
+
 ## Verification Notes
 
 - [ ] <!-- plan 前にこの設計をどう検証するか -->

@@ -77,6 +77,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -122,6 +124,8 @@ relation は文書種別ではなく意味で選びます。
 | `verified-by` | この task を検証する test note、review note、follow-up task。 |
 | `source` | task を直接制約する外部出典。 |
 | `references` | 補助的な実装 note や docs。 |
+| `defers` | この文書から意図的に据え置いた将来作業（draft の spec/design を指す）。 |
+| `deferred-by` | この draft 将来作業を後続フェーズへ据え置いた文書。 |
 | `supersedes` | この task が置き換える古い task。 |
 | `superseded-by` | この task を置き換える新しい task。 |
 | `related` | 方向性のない関連文書。 |

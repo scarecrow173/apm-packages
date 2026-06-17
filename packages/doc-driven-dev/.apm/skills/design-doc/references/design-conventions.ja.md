@@ -83,6 +83,7 @@ docs/designs/
 - 上流 spec/ADR/discovery は `relations.derives-from` を使う。
 - 設計同士の関連は `relations.related` を使う。
 - 補助資料は `relations.references` を使う。
+- この設計から意図的に据え置いた将来作業（draft の spec/design）は `relations.defers` で指す。据え置かれた側は `relations.deferred-by` で指し返す。
 
 ## 索引
 

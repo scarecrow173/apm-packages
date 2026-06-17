@@ -23,7 +23,6 @@ license: MIT
 - 必須フロントマターフィールドの欠落（id, type, status, relations）
 - 壊れた内部 relation（参照先ファイルが存在しない）
 - 索引に未登録の文書
-- ステータス遷移の矛盾（例: plan が `approved` だが参照 design が `draft`）
 
 ## Output Contract
 

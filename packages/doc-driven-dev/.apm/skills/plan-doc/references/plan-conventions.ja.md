@@ -82,6 +82,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -128,6 +130,8 @@ relation field は document type ではなく意味のために使います。
 | `blocks` | この plan によって blocked される plan / task。 |
 | `source` | 実装アプローチに実質的な影響を与える外部 source。 |
 | `references` | 補足の実装メモや doc。 |
+| `defers` | この文書から意図的に据え置いた将来作業（draft の spec/design を指す）。 |
+| `deferred-by` | この draft 将来作業を後続フェーズへ据え置いた文書。 |
 | `supersedes` | この plan に置き換えられる古い plan。 |
 | `superseded-by` | この plan を置き換える新しい plan。 |
 | `related` | 方向性のない関連文書。 |

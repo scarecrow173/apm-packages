@@ -84,6 +84,7 @@ If either condition fails, `plan-doc` must fail with:
 - Use `relations.derives-from` for upstream spec/ADR/discovery docs.
 - Use `relations.related` for sibling designs.
 - Use `relations.references` for supplementary materials.
+- Use `relations.defers` for future work intentionally deferred from this design (a draft spec/design); the deferred doc points back with `relations.deferred-by`.
 
 ## Index
 

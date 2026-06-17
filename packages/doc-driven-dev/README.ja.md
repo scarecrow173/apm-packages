@@ -233,6 +233,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ```
 
 `source` は外部根拠と primary source に使います。`references` は補助資料に使います。

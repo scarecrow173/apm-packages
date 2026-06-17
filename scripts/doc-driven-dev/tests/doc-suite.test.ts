@@ -55,7 +55,10 @@ test("new_spec creates front matter spec and index", () => {
   assert.match(spec, /^    generated: \[\]$/m);
   assert.match(spec, /^  implements: \[\]$/m);
   assert.match(spec, /^  references: \[\]$/m);
+  assert.match(spec, /^  defers: \[\]$/m);
+  assert.match(spec, /^  deferred-by: \[\]$/m);
   assert.match(spec, /^# Define checkout flow/m);
+  assert.match(spec, /## Deferred Design Concerns/);
 });
 
 test("doc skills ship conventions and templates", () => {
@@ -209,6 +212,9 @@ test("new_design creates overview, detailed design, and index", () => {
   assert.match(design, /^    added: \[\]$/m);
   assert.match(design, /^  derives-from:$/m);
   assert.match(design, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
+  assert.match(design, /^  defers: \[\]$/m);
+  assert.match(design, /^  deferred-by: \[\]$/m);
+  assert.match(design, /## Deferred Design Concerns/);
   assert.match(overview, /^# System Design Overview/m);
 });
 
@@ -308,6 +314,7 @@ test("doc-status audits required front matter, status, indexes, relations, and s
       '  source: ["https://example.com/source"]',
       '  references: ["docs/missing-reference.md"]',
       '  implements: ["docs/missing-implementation.md"]',
+      '  defers: ["docs/missing-deferred.md"]',
       "---",
       "",
       "# Invalid",
@@ -326,6 +333,7 @@ test("doc-status audits required front matter, status, indexes, relations, and s
   assert.equal(report.findings.some((finding) => finding.code === "missing-index"), true);
   assert.equal(report.findings.some((finding) => finding.message.includes("docs/missing-implementation.md")), true);
   assert.equal(report.findings.some((finding) => finding.message.includes("docs/missing-reference.md")), true);
+  assert.equal(report.findings.some((finding) => finding.message.includes("docs/missing-deferred.md")), true);
   assert.equal(report.findings.some((finding) => finding.message.includes("https://example.com/source")), false);
 });
 

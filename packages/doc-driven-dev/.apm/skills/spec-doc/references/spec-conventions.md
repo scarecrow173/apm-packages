@@ -77,6 +77,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -118,6 +120,8 @@ Use relation fields for meaning, not document type.
 | --- | --- |
 | `source` | External primary evidence, requirements, issue links, or user-provided source material. |
 | `references` | Supplementary context that informed the spec but is not a source of truth. |
+| `defers` | Future work intentionally deferred from this document, pointing to a draft spec/design. |
+| `deferred-by` | Documents that deferred this draft future work to a later phase. |
 | `derives-from` | Brainstorming, idea-refine notes, ADRs, or upstream docs that produced the spec. |
 | `derived-by` | Plans, tasks, or narrower specs derived from this spec. |
 | `refines` | Broader specs or ADRs narrowed by this spec. |

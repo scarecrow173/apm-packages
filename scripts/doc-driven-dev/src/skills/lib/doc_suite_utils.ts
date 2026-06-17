@@ -29,6 +29,8 @@ const relationFields = [
   "verifies",
   "verified-by",
   "references",
+  "defers",
+  "deferred-by",
 ] as const;
 
 const changeFields = [
@@ -482,6 +484,12 @@ function bodyFor(type: DocType, title: string): string {
       "## Acceptance Criteria",
       "",
       "- [ ] <!-- observable behavior or verification -->",
+      "",
+      "## Deferred Design Concerns",
+      "",
+      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+      "",
+      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
     ].join("\n");
   }
   if (type === "plan") {
@@ -525,6 +533,12 @@ function bodyFor(type: DocType, title: string): string {
       "## Risks and Trade-offs",
       "",
       "- <!-- risk and mitigation -->",
+      "",
+      "## Deferred Design Concerns",
+      "",
+      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+      "",
+      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
       "",
       "## References",
       "",

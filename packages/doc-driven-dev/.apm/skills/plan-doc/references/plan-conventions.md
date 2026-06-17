@@ -83,6 +83,8 @@ relations:
   verifies: []
   verified-by: []
   references: []
+  defers: []
+  deferred-by: []
 ---
 ```
 
@@ -129,6 +131,8 @@ Use relation fields for meaning, not document type.
 | `blocks` | Plans or tasks blocked by this plan. |
 | `source` | External sources that materially affect the implementation approach. |
 | `references` | Supplementary implementation notes or docs. |
+| `defers` | Future work intentionally deferred from this document, pointing to a draft spec/design. |
+| `deferred-by` | Documents that deferred this draft future work to a later phase. |
 | `supersedes` | Older plans replaced by this plan. |
 | `superseded-by` | Newer plans that replace this plan. |
 | `related` | Contextual docs without directional dependency. |
