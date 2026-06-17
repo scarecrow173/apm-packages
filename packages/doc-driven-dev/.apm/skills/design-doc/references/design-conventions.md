@@ -40,7 +40,7 @@ Rules:
 - Large redesigns should create a superseding design doc instead of silently
   rewriting history.
 
-## Categories
+## Subdirectory Grouping
 
 ### Category grouping
 

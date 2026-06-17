@@ -178,7 +178,7 @@ Use `README.md` as the default spec index. If a repository already uses
 The index should list specs in filename order and include enough metadata for a
 reader to scan title, status, and owner quickly.
 
-## Categories
+## Subdirectory Grouping
 
 ### Category grouping
 

@@ -228,7 +228,7 @@ Use `README.md` as the default plan index. If a repository already uses
 The index should list plans in filename order and include enough metadata for a
 reader to scan title, status, upstream document, and owner quickly.
 
-## Categories
+## Subdirectory Grouping
 
 ### Category grouping
 

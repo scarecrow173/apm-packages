@@ -194,7 +194,7 @@ Use `README.md` as the default ADR index. If a repository already uses
 The index should list ADRs in filename order and should preserve enough context
 for readers to scan decisions quickly.
 
-## Categories
+## Subdirectory Grouping
 
 ### Category grouping
 

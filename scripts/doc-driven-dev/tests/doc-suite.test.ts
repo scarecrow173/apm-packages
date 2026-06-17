@@ -77,7 +77,7 @@ test("doc skills ship conventions and templates", () => {
   }
 });
 
-test("doc conventions cover directory order, filenames, mutability, and categories", () => {
+test("doc conventions cover directory order, filenames, mutability, and subdirectory grouping", () => {
   for (const [skill, convention] of [
     ["spec-doc", "spec-conventions.md"],
     ["design-doc", "design-conventions.md"],
@@ -88,7 +88,7 @@ test("doc conventions cover directory order, filenames, mutability, and categori
     assert.match(text, /Detection order used by scripts:/);
     assert.match(text, /Rules:/);
     assert.match(text, /## Mutability/);
-    assert.match(text, /## Categories/);
+    assert.match(text, /## Subdirectory Grouping/);
   }
 });
 

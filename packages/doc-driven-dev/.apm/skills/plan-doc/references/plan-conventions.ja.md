@@ -223,9 +223,9 @@ plan は実行 artifact であり、作業中は変化してかまいません�
 index には filename 順で plan を並べ、title、status、upstream document、owner を
 素早く読めるだけの metadata を含めます。
 
-## カテゴリ
+## サブディレクトリ管理
 
-### カテゴリ別
+### サブディレクトリ管理別
 
 大きなリポジトリでは、execution area、team、release、migration stream などで
 plan をサブディレクトリに分けてもかまいません。

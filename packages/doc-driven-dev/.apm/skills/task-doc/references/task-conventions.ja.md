@@ -169,9 +169,9 @@ task は実行中の作業記録です。
 索引は task をファイル名順で並べ、title、status、上流 plan、blocker、owner を
 すばやく確認できるだけのメタデータを残します。
 
-## カテゴリ
+## サブディレクトリ管理
 
-### カテゴリ別
+### サブディレクトリ管理別
 
 大きなリポジトリでは、implementation area、release、workstream などで
 task をサブディレクトリに分けても構いません。

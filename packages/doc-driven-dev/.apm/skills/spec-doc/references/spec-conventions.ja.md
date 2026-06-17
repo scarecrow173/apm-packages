@@ -176,9 +176,9 @@ spec は計画入力であり、ADR のような不変の決定記録ではあ�
 索引は spec をファイル名順で並べ、title、status、owner をすばやく確認できる
 だけのメタデータを残します。
 
-## カテゴリ
+## サブディレクトリ管理
 
-### カテゴリ別
+### サブディレクトリ管理別
 
 大きなリポジトリでは、product area、platform area、documentation area、team
 などで spec をサブディレクトリに分けても構いません。

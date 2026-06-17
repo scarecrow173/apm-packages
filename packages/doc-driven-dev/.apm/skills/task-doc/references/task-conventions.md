@@ -170,7 +170,7 @@ Use `README.md` as the default task index. If a repository already uses
 The index should list tasks in filename order and include enough metadata for a
 reader to scan title, status, upstream plan, blockers, and owner quickly.
 
-## Categories
+## Subdirectory Grouping
 
 ### Category grouping
 
