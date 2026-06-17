@@ -196,7 +196,7 @@ for readers to scan decisions quickly.
 
 ## Categories
 
-### Area grouping
+### Category grouping
 
 For large repositories, ADRs may be split into subdirectories by technical
 area or team:

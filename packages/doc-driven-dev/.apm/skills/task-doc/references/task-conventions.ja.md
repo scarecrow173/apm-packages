@@ -171,7 +171,7 @@ task は実行中の作業記録です。
 
 ## カテゴリ
 
-### 領域別
+### カテゴリ別
 
 大きなリポジトリでは、implementation area、release、workstream などで
 task をサブディレクトリに分けても構いません。

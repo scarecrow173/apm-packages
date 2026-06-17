@@ -42,7 +42,7 @@ Rules:
 
 ## Categories
 
-### Area grouping
+### Category grouping
 
 For large repositories, design docs may be grouped by area:
 

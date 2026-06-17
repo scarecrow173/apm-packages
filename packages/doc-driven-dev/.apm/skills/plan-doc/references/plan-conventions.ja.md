@@ -225,7 +225,7 @@ index には filename 順で plan を並べ、title、status、upstream document
 
 ## カテゴリ
 
-### 領域別
+### カテゴリ別
 
 大きなリポジトリでは、execution area、team、release、migration stream などで
 plan をサブディレクトリに分けてもかまいません。

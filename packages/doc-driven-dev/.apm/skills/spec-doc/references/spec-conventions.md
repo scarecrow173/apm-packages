@@ -180,7 +180,7 @@ reader to scan title, status, and owner quickly.
 
 ## Categories
 
-### Area grouping
+### Category grouping
 
 For large repositories, specs may be split into subdirectories by product area,
 platform area, documentation area, or team:

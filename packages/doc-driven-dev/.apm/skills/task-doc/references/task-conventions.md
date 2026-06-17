@@ -172,7 +172,7 @@ reader to scan title, status, upstream plan, blockers, and owner quickly.
 
 ## Categories
 
-### Area grouping
+### Category grouping
 
 For large repositories, tasks may be split into subdirectories by implementation
 area, release, or workstream:

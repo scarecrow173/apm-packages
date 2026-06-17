@@ -178,7 +178,7 @@ spec は計画入力であり、ADR のような不変の決定記録ではあ�
 
 ## カテゴリ
 
-### 領域別
+### カテゴリ別
 
 大きなリポジトリでは、product area、platform area、documentation area、team
 などで spec をサブディレクトリに分けても構いません。

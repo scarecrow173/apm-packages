@@ -230,7 +230,7 @@ reader to scan title, status, upstream document, and owner quickly.
 
 ## Categories
 
-### Area grouping
+### Category grouping
 
 For large repositories, plans may be split into subdirectories by execution
 area, team, release, or migration stream:
