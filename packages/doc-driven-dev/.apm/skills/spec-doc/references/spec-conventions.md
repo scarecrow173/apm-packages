@@ -196,3 +196,17 @@ Numbers are local to each category. Document the categorization scheme in the
 index before the structure grows. Use categories by product area, platform
 area, documentation area, or team only when a flat directory is becoming hard to
 scan.
+
+Subdirectories also work for feature-level grouping, when a single feature
+requires multiple related specs:
+
+```text
+docs/specs/
+  checkout/
+    0001-define-checkout-flow.md
+    0002-checkout-api-contract.md
+    0003-checkout-edge-cases.md
+```
+
+Use this pattern when the specs are best read together as a set. Keep numbering
+local to the feature directory.

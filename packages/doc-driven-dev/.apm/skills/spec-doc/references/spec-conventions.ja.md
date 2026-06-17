@@ -193,3 +193,17 @@ docs/specs/
 番号はカテゴリごとにローカルです。構造が大きくなる前に、カテゴリ分けの方針を
 索引に記録します。カテゴリは product area、platform area、documentation
 area、team などで、フラットなディレクトリが読みにくくなった場合だけ使います。
+
+1つの機能に関連 spec が複数必要になる場合は、機能単位でサブディレクトリを
+切っても構いません。
+
+```text
+docs/specs/
+  checkout/
+    0001-define-checkout-flow.md
+    0002-checkout-api-contract.md
+    0003-checkout-edge-cases.md
+```
+
+まとめて読むべき spec 群がある場合に使います。番号は機能ディレクトリ内で
+ローカルに管理します。

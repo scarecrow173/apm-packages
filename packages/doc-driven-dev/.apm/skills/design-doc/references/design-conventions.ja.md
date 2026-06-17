@@ -53,6 +53,19 @@ docs/designs/
 
 分割時の番号はカテゴリ内ローカルで管理します。
 
+1つの機能に関連設計文書が複数必要になる場合は、機能単位でサブディレクトリを
+切っても構いません。
+
+```text
+docs/designs/
+  checkout/
+    0001-design-checkout-flow.md
+    0002-design-checkout-api.md
+```
+
+まとめて読むべき design 群がある場合に使います。番号は機能ディレクトリ内で
+ローカルに管理します。
+
 ## 必須フロントマター
 
 詳細設計文書は共通 YAML front matter を使い、`type: "design"` とします。

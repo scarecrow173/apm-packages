@@ -54,6 +54,19 @@ docs/designs/
 
 Keep numbering local to each category when splitting directories.
 
+Subdirectories also work for feature-level grouping, when a single feature
+requires multiple related design docs:
+
+```text
+docs/designs/
+  checkout/
+    0001-design-checkout-flow.md
+    0002-design-checkout-api.md
+```
+
+Use this pattern when the designs are best read together as a set. Keep
+numbering local to the feature directory.
+
 ## Required Front Matter
 
 Detailed design docs use shared YAML front matter with `type: "design"`.
