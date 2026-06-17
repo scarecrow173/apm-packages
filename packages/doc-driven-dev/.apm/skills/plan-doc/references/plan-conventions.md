@@ -230,7 +230,7 @@ reader to scan title, status, upstream document, and owner quickly.
 
 ## Subdirectory Grouping
 
-### Category grouping
+### Category subdirectories
 
 For large repositories, plans may be split into subdirectories by execution
 area, team, release, or migration stream:
@@ -249,7 +249,7 @@ Numbers are local to each category. Document the categorization scheme in the
 index before the structure grows. Use area grouping only when a flat directory
 is becoming hard to scan.
 
-### Feature grouping
+### Feature subdirectories
 
 Subdirectories also work for feature-level grouping, when implementing a single
 feature requires multiple related plans:

@@ -172,7 +172,7 @@ reader to scan title, status, upstream plan, blockers, and owner quickly.
 
 ## Subdirectory Grouping
 
-### Category grouping
+### Category subdirectories
 
 For large repositories, tasks may be split into subdirectories by implementation
 area, release, or workstream:
@@ -191,7 +191,7 @@ Numbers are local to each category. Document the categorization scheme in the
 index before the structure grows. Use area grouping only when a flat directory
 is becoming hard to scan.
 
-### Feature grouping
+### Feature subdirectories
 
 Subdirectories also work for feature-level grouping, when all tasks for a
 single feature are best tracked together:
