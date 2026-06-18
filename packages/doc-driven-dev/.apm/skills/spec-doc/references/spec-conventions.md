@@ -175,8 +175,22 @@ Specs are planning inputs, not immutable decision records.
 Use `README.md` as the default spec index. If a repository already uses
 `index.md`, keep it.
 
-The index should list specs in filename order and include enough metadata for a
-reader to scan title, status, and owner quickly.
+List specs as a Markdown table, in filename order, with these four columns:
+
+| ID | Title | Status | File |
+| --- | --- | --- | --- |
+| SPEC-0001 | Define checkout flow | approved | [0001-define-checkout-flow.md](0001-define-checkout-flow.md) |
+
+Index rules:
+
+- Use exactly these four columns: `ID`, `Title`, `Status`, `File`. Take `ID`,
+  `Title`, and `Status` from the document front matter; the `File` column is a
+  relative link within the index directory. Write `—` when a value is missing.
+- Sort rows by filename in ascending order.
+- Whenever a new target file is added, update the index in the same change.
+- As entries grow, split the index into multiple headings, one table per
+  heading, for readability. Align the split with the subdirectory grouping
+  (category or feature) so each heading maps to one group.
 
 ## Subdirectory Grouping
 

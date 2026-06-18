@@ -220,8 +220,23 @@ plan は実行 artifact であり、作業中は変化してかまいません�
 既定の plan index は `README.md` です。リポジトリがすでに `index.md` を
 使っている場合は、それを維持します。
 
-index には filename 順で plan を並べ、title、status、upstream document、owner を
-素早く読めるだけの metadata を含めます。
+索引は plan をファイル名順に並べ、次の 4 列の Markdown テーブルで掲載します。
+
+| ID | タイトル | Status | ファイル |
+| --- | --- | --- | --- |
+| PLAN-0001 | Implement checkout flow | in-progress | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+
+索引ルール:
+
+- 列は `ID` / `タイトル` / `Status` / `ファイル` の 4 列に固定します。`ID`・
+  `タイトル`・`Status` は front matter から取り、`ファイル` 列は索引と同じ
+  ディレクトリへの相対リンクにします。値が無い場合は `—` を入れます。
+- 行はファイル名の昇順で並べます。
+- 新規の対象ファイルが追加されたら、同じ変更の中で必ず索引を更新します。
+- 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに
+  1 つのテーブルを配置することを推奨します。見出しの分割はサブディレクトリの
+  グルーピング（カテゴリ別／機能別）と整合させ、各見出しが 1 グループに
+  対応するようにします。
 
 ## サブディレクトリ管理
 

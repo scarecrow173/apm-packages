@@ -111,3 +111,27 @@ Experiment Log の監査項目:
 - 許可されたイベント種別
 - `seq` が一意かつ昇順
 - `experiment` パスが実ファイルと一致
+
+## 索引
+
+`docs/impl/ir/` の Implementation Record 索引は `README.md` を使います。記録は
+ファイル名順に並べた次の 4 列の Markdown テーブルで掲載します。
+
+| ID | タイトル | Status | ファイル |
+| --- | --- | --- | --- |
+| IMPL-0001 | Implement checkout flow | completed | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+
+`docs/impl/exp/` の Experiment Log には索引も `README.md` も不要です。各ログは
+Implementation Record 側から（`metadata.experiments` と relations で）既にリンク
+されており、Implementation Record が唯一の入口になります。
+
+索引ルール:
+
+- 列は `ID` / `タイトル` / `Status` / `ファイル` の 4 列に固定し、front matter
+  から取ります。`ファイル` 列は索引と同じディレクトリへの相対リンクにします。
+  値が無い場合は `—` を入れます。
+- 行はファイル名の昇順で並べます。
+- 新規の Implementation Record が追加されたら、同じ変更の中で必ず索引を更新
+  します。
+- 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに
+  1 つのテーブルを配置することを推奨します。

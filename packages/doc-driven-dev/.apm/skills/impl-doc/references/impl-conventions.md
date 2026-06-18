@@ -112,3 +112,27 @@ Experiment Log audit checks:
 - allowed event type
 - unique, strictly increasing `seq`
 - `experiment` path matches the file path
+
+## Index
+
+Use `README.md` as the Implementation Record index under `docs/impl/ir/`. List
+records as a Markdown table, in filename order, with these four columns:
+
+| ID | Title | Status | File |
+| --- | --- | --- | --- |
+| IMPL-0001 | Implement checkout flow | completed | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+
+Experiment Logs under `docs/impl/exp/` need no index and no `README.md`. Each log
+is already linked from its Implementation Record (via `metadata.experiments` and
+relations), so the Implementation Record is the single entry point.
+
+Index rules:
+
+- Use exactly these four columns: `ID`, `Title`, `Status`, `File`, sourced from
+  the front matter; the `File` column is a relative link within the index
+  directory. Write `—` when a value is missing.
+- Sort rows by filename in ascending order.
+- Whenever a new Implementation Record is added, update the index in the same
+  change.
+- As entries grow, split the index into multiple headings, one table per
+  heading, for readability.

@@ -191,8 +191,24 @@ ADR files are decision history.
 Use `README.md` as the default ADR index. If a repository already uses
 `index.md`, keep it.
 
-The index should list ADRs in filename order and should preserve enough context
-for readers to scan decisions quickly.
+List ADRs as a Markdown table, in filename order, with these four columns:
+
+| ID | Title | Status | File |
+| --- | --- | --- | --- |
+| ADR-0001 | Adopt ADRs | accepted | [0001-adopt-adrs.md](0001-adopt-adrs.md) |
+
+Index rules:
+
+- Use exactly these four columns: `ID`, `Title`, `Status`, `File`. MADR ADRs
+  have no `id` or `title` front matter, so derive `ID` from the filename number
+  (`ADR-NNNN`) and take `Title` from the H1 heading. Take `Status` from the
+  front matter. The `File` column is a relative link within the index directory.
+  Write `—` when a value is missing.
+- Sort rows by filename in ascending order.
+- Whenever a new target file is added, update the index in the same change.
+- As entries grow, split the index into multiple headings, one table per
+  heading, for readability. Align the split with the subdirectory grouping
+  (category or feature) so each heading maps to one group.
 
 ## Subdirectory Grouping
 

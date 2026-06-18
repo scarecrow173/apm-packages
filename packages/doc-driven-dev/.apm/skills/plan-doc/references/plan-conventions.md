@@ -225,8 +225,22 @@ Plans are execution artifacts and may evolve while work is active.
 Use `README.md` as the default plan index. If a repository already uses
 `index.md`, keep it.
 
-The index should list plans in filename order and include enough metadata for a
-reader to scan title, status, upstream document, and owner quickly.
+List plans as a Markdown table, in filename order, with these four columns:
+
+| ID | Title | Status | File |
+| --- | --- | --- | --- |
+| PLAN-0001 | Implement checkout flow | in-progress | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+
+Index rules:
+
+- Use exactly these four columns: `ID`, `Title`, `Status`, `File`. Take `ID`,
+  `Title`, and `Status` from the document front matter; the `File` column is a
+  relative link within the index directory. Write `—` when a value is missing.
+- Sort rows by filename in ascending order.
+- Whenever a new target file is added, update the index in the same change.
+- As entries grow, split the index into multiple headings, one table per
+  heading, for readability. Align the split with the subdirectory grouping
+  (category or feature) so each heading maps to one group.
 
 ## Subdirectory Grouping
 
