@@ -131,13 +131,13 @@ With `.sdp/implementation-flow-default/implementation-flow-profile.json` availab
 2. **Check resolution**: use `skill-discovery-protocol` to read `resolution` from `.sdp/implementation-flow-default/implementation-flow-profile.json`
 3. **Check execution policy**: use `skill-discovery-protocol` to read `execution-policy` for each candidate skill from `.sdp/implementation-flow-default/implementation-flow-profile.json`
 4. **Read runtime guidance**: use `skill-discovery-protocol` to read structured `runtime_guidance` after policy checks; treat it as a soft ranking signal, not a hard gate
-4. **Resolve conflicts** — if multiple skills in the same category are activated:
+5. **Resolve conflicts** — if multiple skills in the same category are activated:
    - More specific condition wins over general (e.g., "TypeScript file" > "any file").
    - Explicit profile rule wins over inferred activation.
    - If still tied, apply both (skills layer, they don't exclude).
-5. **Add Domain/Tooling skills** — based on language, framework, platform detected in task.
+6. **Add Domain/Tooling skills** — based on language, framework, platform detected in task.
    - **If no resolution overrides match:** Proceed with flow stack defaults only. Announce "Additional skills: none".
-6. **Announce the active skill stack:**
+7. **Announce the active skill stack:**
 
 ```text
 ACTIVE SKILL STACK FOR THIS TASK:

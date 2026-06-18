@@ -11,8 +11,10 @@ docs tree の bootstrap、briefing、文書作成、実装準備、exit まで�
 
 - `migrate_docs`: 既存 Markdown docs を canonical な doc-driven-dev tree へ移行するための dry-run / apply command。
 - `scaffold_docs`: briefing 開始前に canonical な `docs/` tree を bootstrap します。
+- `idea-doc`: discovery や spec 化の準備が整う前の、未仕様の着想・候補テーマ・保留論点を記録します。
 - `deep-dive`: コードベースを踏まえた一問一答で、意図、制約、判断軸を深掘りします。
 - `briefing-flow`: 情報収集をオーケストレーションし、spec + ADR 作成へルーティングします。
+- `discovery-doc`: briefing 中の探索結果・代替案比較・ギャップ分析を構造化された正本文書として記録します。
 - `spec-doc`: 実装前に何を作るかを定義します。
 - `adr-doc`: Architecture Decision Record を提案、作成、保守します。
 - `design-doc`: planning 前の overview-first な設計成果物を作成します。
@@ -36,7 +38,7 @@ doc-driven-dev-lifecycle
   -> Phase -1: migrate existing docs      (任意; apply 前に dry-run)
   -> Phase 0: scaffold docs tree          (canonical docs tree; design overview は design-doc 所有)
   -> Phase 1: briefing-flow
-  -> Phase 1 outputs: spec-doc + adr-doc   (プロダクト文脈と技術文脈が揃えば並列)
+  -> Phase 1 outputs: discovery-doc（任意）+ spec-doc + adr-doc   (discovery で探索を永続化；spec + adr は並列)
   -> Phase 2: design-doc                   (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
@@ -54,10 +56,11 @@ doc-driven-dev-lifecycle
 - **bootstrap 境界**: `scaffold_docs` は canonical な `docs/` tree を作成しますが、
   `docs/designs/overview.md` は作成せず `design-doc` に任せます。
 
-ライフサイクルを構成するフェーズ skill は `deep-dive`, `briefing-flow`,
-`spec-doc`, `adr-doc`, `design-doc`, `plan-doc`, `task-doc`,
-`implementation-flow`, `impl-doc`, `doc-status` に加え、
-`migrate_docs` migration command と `scaffold_docs` bootstrap command です。
+ライフサイクルを構成するフェーズ skill は `idea-doc`, `deep-dive`,
+`briefing-flow`, `discovery-doc`, `spec-doc`, `adr-doc`, `design-doc`,
+`plan-doc`, `task-doc`, `implementation-flow`, `impl-doc`, `doc-status` に
+加え、`migrate_docs` migration command と `scaffold_docs` bootstrap command
+です。
 
 ### doc-driven-dev の並列トラック
 
@@ -127,6 +130,21 @@ intent summary であり、それ自体では discovery artifact を生成しま
 `skill-discovery-protocol` を通してリポジトリ固有の discovery artifact を生成し、
 その場で利用可能な skill から選択しながら、Phase 1 の briefing 完了までを
 駆動します。
+
+### `idea-doc`
+
+discovery や spec 化の準備が整う前の、未仕様の着想を `docs/ideas/` 配下に
+記録します。候補テーマ、問題の兆候、保留論点を軽量な正本形式で捉えます。
+ライフサイクルの中で最も軽量な文書型です。1ファイル1アイデアを原則とし、
+即座の次のアクション（discovery-doc または spec-doc へ昇華、保留、廃棄）を
+決めるまでが記録の単位です。
+
+### `discovery-doc`
+
+`docs/discovery/` 配下に構造化された discovery 文書を作成します。探索目的・論点・
+代替案比較・暫定結論・未解決事項を briefing の正本 artifact として記録します。
+問題空間が曖昧なとき、代替案が存在するとき、または重大な調査を行ったときに使います。
+spec-doc と adr-doc の派生元となる上流起点文書です。
 
 ### `adr-doc`
 

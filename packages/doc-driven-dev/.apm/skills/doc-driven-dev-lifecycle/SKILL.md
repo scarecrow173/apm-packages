@@ -127,8 +127,10 @@ Key skills managed by `briefing-flow`:
 
 | Skill | Category | Expected Output | Completion Indicator |
 | ------ | -------- | --------------- | -------------------- |
+| `idea-doc` | Document | Lightweight idea record in `docs/ideas/` | Idea captured with next action decided; `status: promoted` when downstream doc is created |
 | `deep-dive` | Frame | Confirmed intent summary with constraints and decision axes | Clear outcome, constraints, and open questions |
 | `steer-web-research` | Discover | External information research results | Evidence-backed research report |
+| `discovery-doc` | Document | Structured exploration artifact in `docs/discovery/` | `status: resolved`, promotion candidates addressed, downstream docs linked in `relations.derived-by` |
 | `spec-doc` | Document | Formal specification document | `acceptance_criteria:` ≥3 items, `status: proposed` |
 | `adr-doc` | Document | Architecture decision record | `alternatives:` ≥2, rationale documented |
 

@@ -12,8 +12,10 @@ and exit:
 
 - `migrate_docs`: dry-run or apply migration of existing Markdown docs into the canonical doc-driven-dev tree.
 - `scaffold_docs`: bootstrap the canonical `docs/` tree before briefing starts.
+- `idea-doc`: capture raw, unformalized ideas before they are ready for discovery or specification.
 - `deep-dive`: interrogate intent, constraints, and decision axes through codebase-aware, one-question-at-a-time dialogue.
 - `briefing-flow`: orchestrate information gathering and route to spec + ADR creation.
+- `discovery-doc`: record briefing exploration results, alternative comparisons, and gap analysis as a structured canonical document.
 - `spec-doc`: define what to build before implementation starts.
 - `adr-doc`: propose, draft, and maintain Architecture Decision Records.
 - `design-doc`: capture overview-first design artifacts before planning.
@@ -37,7 +39,7 @@ doc-driven-dev-lifecycle
   -> Phase -1: migrate existing docs      (optional; dry-run before apply)
   -> Phase 0: scaffold docs tree          (canonical docs tree; design overview remains design-doc-owned)
   -> Phase 1: briefing-flow
-  -> Phase 1 outputs: spec-doc + adr-doc   (parallel when both product and technical context are ready)
+  -> Phase 1 outputs: discovery-doc (optional) + spec-doc + adr-doc   (discovery persists exploration; spec + adr are parallel when context is ready)
   -> Phase 2: design-doc                   (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
@@ -57,10 +59,10 @@ doc-driven-dev-lifecycle
 - **Bootstrap boundary**: `scaffold_docs` creates the canonical `docs/` tree
   without `docs/designs/overview.md`; `design-doc` owns that file.
 
-Lifecycle phase skills: `deep-dive`, `briefing-flow`, `spec-doc`, `adr-doc`,
-`design-doc`, `plan-doc`, `task-doc`, `implementation-flow`, `impl-doc`,
-`doc-status`, plus the `migrate_docs` migration command and `scaffold_docs`
-bootstrap command.
+Lifecycle phase skills: `idea-doc`, `deep-dive`, `briefing-flow`,
+`discovery-doc`, `spec-doc`, `adr-doc`, `design-doc`, `plan-doc`, `task-doc`,
+`implementation-flow`, `impl-doc`, `doc-status`, plus the `migrate_docs`
+migration command and `scaffold_docs` bootstrap command.
 
 ### doc-driven-dev parallel track
 
@@ -152,6 +154,24 @@ that clarification work to `deep-dive` and return once the intent is concrete.
 - check Implementation Plan code links and manage ADR relations
 - rebuild the ADR index
 - produce migration reports without changing files
+
+### `idea-doc`
+
+Use this skill to capture raw, unformalized ideas under `docs/ideas/` before
+they are ready for deeper exploration or specification. An idea document records
+a candidate topic, a problem signal, or a deferred point in a lightweight
+canonical form. It is the lightest document type in the lifecycle. Write one
+idea per file and record the immediate next action: promote to `discovery-doc`
+or `spec-doc`, park, or discard.
+
+### `discovery-doc`
+
+Use this skill to create structured discovery documents under `docs/discovery/`.
+Discovery documents capture exploration goals, key issues, alternative
+comparisons, tentative conclusions, and open questions from briefing as a
+formal canonical artifact. Use them when the problem space is ambiguous,
+alternatives exist, or significant research was done. They are the upstream
+source that spec-doc and adr-doc derive from.
 
 ### `spec-doc`
 
@@ -263,7 +283,7 @@ doc-driven-dev-lifecycle
   -> Phase -1: migrate existing docs      (optional; dry-run before apply)
   -> Phase 0: scaffold docs tree          (canonical docs tree; design overview remains design-doc-owned)
   -> Phase 1: briefing-flow
-  -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
+  -> Phase 1 outputs: discovery-doc (optional) + spec-doc + adr-doc  (discovery persists exploration; spec + adr parallel)
   -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc

@@ -20447,14 +20447,14 @@ var require_doc_suite_utils = __commonJS({
       "moved",
       "generated"
     ];
-    var docTypes = ["idea", "brainstorm", "spec", "plan", "task", "design"];
+    var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design"];
     var configs = {
       idea: {
-        defaultStatus: "exploring",
+        defaultStatus: "draft",
         dir: "docs/ideas",
         dirs: ["docs/ideas"],
         idPrefix: "IDEA",
-        statusValues: ["exploring", "refined", "parked", "rejected", "superseded"],
+        statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
         type: "idea"
       },
       brainstorm: {
@@ -20464,6 +20464,14 @@ var require_doc_suite_utils = __commonJS({
         idPrefix: "BRAINSTORM",
         statusValues: ["capturing", "confirmed", "routed", "superseded"],
         type: "brainstorm"
+      },
+      discovery: {
+        defaultStatus: "draft",
+        dir: "docs/discovery",
+        dirs: ["docs/discovery"],
+        idPrefix: "DISC",
+        statusValues: ["draft", "active", "resolved", "archived", "superseded"],
+        type: "discovery"
       },
       spec: {
         defaultStatus: "draft",
@@ -20500,7 +20508,7 @@ var require_doc_suite_utils = __commonJS({
     };
     var scaffoldTargets = [
       { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
-      { dir: "docs/discovery", title: "BRAINSTORM Documents", type: "brainstorm" },
+      { dir: "docs/discovery", title: "DISCOVERY Documents", type: "discovery" },
       { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
       { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
       { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
@@ -20512,7 +20520,7 @@ var require_doc_suite_utils = __commonJS({
     var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
     var migrationRoutes = [
       { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
-      { targetDir: "docs/discovery", type: "brainstorm", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
+      { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
       { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
       { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
       { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
@@ -20679,25 +20687,28 @@ var require_doc_suite_utils = __commonJS({
         return [
           `# ${title}`,
           "",
-          "## Raw Idea",
+          "## Summary",
           "",
-          "<!-- Capture the initial idea without over-polishing it. -->",
+          "<!-- One or two sentences capturing the core idea. -->",
           "",
-          "## Problem Signals",
+          "## Problem and Motivation",
           "",
           "- <!-- observed pain, opportunity, or trigger -->",
           "",
-          "## Refined Options",
+          "## Expected Value",
           "",
-          "- <!-- option and trade-off -->",
+          "- <!-- who benefits and how -->",
           "",
-          "## Assumptions",
+          "## Open Questions",
           "",
-          "- <!-- assumption to validate -->",
+          "- <!-- question that must be answered before this can be formalized -->",
           "",
-          "## Next Questions",
+          "## Next Action",
           "",
-          "- <!-- question for brainstorming, ADR, spec, or planning route -->"
+          "- [ ] Promote to discovery-doc for deeper exploration",
+          "- [ ] Promote directly to spec-doc if requirements are clear",
+          "- [ ] Park for later reconsideration",
+          "- [ ] Discard \u2014 reason: <!-- why -->"
         ].join("\n");
       }
       if (type === "brainstorm") {
@@ -20728,6 +20739,38 @@ var require_doc_suite_utils = __commonJS({
           "## Confirmed Summary",
           "",
           "<!-- Write the agreed intent before creating downstream documents. -->"
+        ].join("\n");
+      }
+      if (type === "discovery") {
+        return [
+          `# ${title}`,
+          "",
+          "## Exploration Goal",
+          "",
+          "<!-- What question does this discovery attempt to answer? State the trigger and desired outcome. -->",
+          "",
+          "## Key Issues and Assumptions",
+          "",
+          "- <!-- issue or assumption that must be validated before committing to a direction -->",
+          "",
+          "## Alternatives and Comparison",
+          "",
+          "| Option | Pros | Cons | Lean |",
+          "| --- | --- | --- | --- |",
+          "| <!-- option --> | <!-- pro --> | <!-- con --> | <!-- yes/no/maybe --> |",
+          "",
+          "## Tentative Conclusions and Hypotheses",
+          "",
+          "<!-- Current best guess before committing to a spec or ADR. Mark each as hypothesis or confirmed. -->",
+          "",
+          "## Open Questions",
+          "",
+          "- <!-- question blocking resolution -->",
+          "",
+          "## Promotion Candidates",
+          "",
+          "- [ ] spec-doc needed",
+          "- [ ] adr-doc needed"
         ].join("\n");
       }
       if (type === "spec") {
@@ -20985,7 +21028,7 @@ Directory: \`${dir}\`
       const haystack = `${input.source}
 ${input.title}
 ${input.body.slice(0, 2e3)}`;
-      return migrationRoutes.find((route) => route.patterns.some((pattern) => pattern.test(haystack))) || { targetDir: "docs/discovery", type: "brainstorm", patterns: [] };
+      return migrationRoutes.find((route) => route.patterns.some((pattern) => pattern.test(haystack))) || { targetDir: "docs/discovery", type: "discovery", patterns: [] };
     }
     function targetAllocation(cwd, targetDir) {
       const fullTargetDir = path2.join(cwd, targetDir);
