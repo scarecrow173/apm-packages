@@ -1,20 +1,20 @@
 # AGENTS.ja.md
 
-このファイルは、`packages/basic-dev-foundation` 配下で作業する agent 向けのガイドです。
+このファイルは、`packages/security-governance` 配下で作業する agent 向けのガイドです。
 
 ## Package Role
 
-`basic-dev-foundation` は、Git workflow 支援をまとめる dependency-only aggregator です。[apm.yml](./apm.yml) を正本として扱ってください。
+`security-governance` は、security review とガバナンスツールをまとめる dependency-only aggregator です。[apm.yml](./apm.yml) を正本として扱ってください。
 
-対象は、Git workflow の基本に絞ります。conventional commit、branch naming、commit messaging、repository history understanding が主な範囲です。
+対象は、security とガバナンス能力に絞ります。security review、audit integrity、agent compliance、supply chain security が主な範囲です。
 
 ## 関連 Package
 
 この package は、専門化された aggregator family の一部です。
 
+- `basic-dev-foundation` — Git workflow 管理
 - `github-automation` — CI/CD と PR 運用
 - `visualization` — 図解とドキュメント視覚化ツール
-- `security-governance` — セキュリティレビューとガバナンス
 - `agent-intelligence` — AI 能力と評価
 
 ## Editing Rules
@@ -23,7 +23,6 @@
 - `AGENTS.md` と `AGENTS.ja.md` の意味と構造を同期する。
 - この directory に実体がない local skill、agent、prompt、instruction、MCP server は説明しない。
 - `apm.yml` の dependencies を変更した場合は、同じ変更で両方の README も更新する。
-- この package は Git workflow に絞って保つ。
 
 ## Validation
 

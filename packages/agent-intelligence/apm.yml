@@ -1,0 +1,17 @@
+name: agent-intelligence
+version: 0.1.0
+description: AI and agent capabilities for evaluation, research, and contextual understanding.
+author: Akiyoshi Koyama
+license: MIT
+targets:
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - agent-skills
+dependencies:
+  apm:
+    - github/awesome-copilot/skills/agentic-eval
+    - github/awesome-copilot/skills/autoresearch
+    - github/awesome-copilot/skills/copilot-usage-metrics
+    - github/awesome-copilot/plugins/context-engineering

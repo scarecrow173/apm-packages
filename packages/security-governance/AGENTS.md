@@ -1,19 +1,19 @@
 # AGENTS.md
 
-This file guides agents working under `packages/basic-dev-foundation`.
+This file guides agents working under `packages/security-governance`.
 
 ## Package Role
 
-`basic-dev-foundation` is a dependency-only aggregator for Git workflow support. Treat [apm.yml](./apm.yml) as the source of truth.
+`security-governance` is a dependency-only aggregator for security review and governance tools. Treat [apm.yml](./apm.yml) as the source of truth.
 
-It should stay focused on Git essentials: conventional commits, branch naming, commit messaging, and repository history understanding.
+It should stay focused on security and governance capabilities: security review, audit integrity, agent compliance, and supply chain security.
 
 ## Related Packages
 
-This package is part of a family of specialized aggregators split from the original monolithic basic-dev-foundation:
+This package is part of a family of specialized aggregators:
+- `basic-dev-foundation` — Git workflow management
 - `github-automation` — CI/CD and PR operations
 - `visualization` — Diagram and documentation tools
-- `security-governance` — Security review and governance
 - `agent-intelligence` — AI capabilities and evaluation
 
 ## Editing Rules
@@ -22,7 +22,6 @@ This package is part of a family of specialized aggregators split from the origi
 - Keep `AGENTS.md` and `AGENTS.ja.md` synchronized in meaning and structure.
 - Do not describe local skills, agents, prompts, instructions, or MCP servers unless they actually exist in this directory.
 - When changing dependencies in `apm.yml`, update both READMEs in the same change.
-- Keep this package focused on Git workflows.
 
 ## Validation
 
