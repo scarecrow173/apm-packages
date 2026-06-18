@@ -19,6 +19,12 @@ flow_stack:
       default:
         - skill: "steer-web-research"
           reason: "External research for A-5 paths"
+    - slot_id: "discovery_output"
+      slot_type: "layerable"
+      activation: "conditional"
+      default:
+        - skill: "discovery-doc"
+          reason: "Persist exploration results as a canonical discovery artifact when the problem space is ambiguous or alternatives exist"
     - slot_id: "spec_output"
       slot_type: "layerable"
       activation: "always"
@@ -62,9 +68,9 @@ classification:
       label: "Document"
       description: "Skills that produce formal documents"
       match:
-        capabilities: ["spec_authoring", "adr_authoring"]
-        tags: ["document", "spec", "adr"]
-        description_patterns: ["spec", "adr", "document", "record"]
+        capabilities: ["spec_authoring", "adr_authoring", "discovery_authoring", "idea_authoring"]
+        tags: ["document", "spec", "adr", "discovery", "idea"]
+        description_patterns: ["spec", "adr", "document", "record", "discovery", "idea"]
     - id: "meta"
       label: "Meta"
       description: "Skills that orchestrate other skills"

@@ -20926,7 +20926,7 @@ var require_doc_suite_utils = __commonJS({
       const match = /^#\s+(.+)$/m.exec(matter(content).content);
       return match?.[1]?.trim() || fallback;
     }
-    async function docEntries2(cwd, type, explicitDir) {
+    async function docEntries(cwd, type, explicitDir) {
       const relativeDir = docDir(cwd, type, explicitDir);
       const dir = path2.join(cwd, relativeDir);
       return Promise.all(docFiles(dir).map(async (file) => {
@@ -20945,7 +20945,7 @@ var require_doc_suite_utils = __commonJS({
     }
     async function buildIndex(cwd, type, explicitDir) {
       const relativeDir = docDir(cwd, type, explicitDir);
-      const entries = await docEntries2(cwd, type, explicitDir);
+      const entries = await docEntries(cwd, type, explicitDir);
       const title = `${configFor(type).idPrefix} Documents`;
       const sorted = type === "design" ? [...entries].sort((a, b) => {
         if (a.file === "overview.md") return -1;
@@ -21158,7 +21158,7 @@ ${input.body.trim()}
       }
       return { created, updated };
     }
-    async function createDocument(type, options2) {
+    async function createDocument2(type, options2) {
       const config = configFor(type);
       const cwd = path2.resolve(options2.cwd);
       const relativeDir = docDir(cwd, type, options2.dir);
@@ -21259,8 +21259,8 @@ ${bodyFor(type, options2.title)}
       buildIndex,
       buildGenericIndex,
       configFor,
-      createDocument,
-      docEntries: docEntries2,
+      createDocument: createDocument2,
+      docEntries,
       docFiles,
       docTypes,
       migrateDocs,
@@ -21275,25 +21275,27 @@ ${bodyFor(type, options2.title)}
   }
 });
 
-// src/skills/doc-status/scripts/list_docs.ts
+// src/skills/discovery-doc/scripts/new_discovery.ts
 var path = require("node:path");
-var { docEntries } = require_doc_suite_utils();
+var { createDocument } = require_doc_suite_utils();
 function parseArgs(argv) {
-  const args = { cwd: process.cwd(), json: false };
+  const args = { cwd: process.cwd(), derivesFrom: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--type") args.type = argv[++i];
-    else if (arg === "--status") args.status = argv[++i];
+    if (arg === "--title") args.title = argv[++i];
+    else if (arg === "--from") args.derivesFrom.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
+    else if (arg === "--status") args.status = argv[++i];
+    else if (arg === "--date") args.date = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
-    else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
+    else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
 }
 function usage() {
-  return "Usage: node scripts/list_docs.js --type spec|plan|task|design [--status <status>] [--dir <path>] [--json]";
+  return "Usage: node scripts/new_discovery.js --title <title> [--from <doc>] [--dir <path>] [--status <status>]";
 }
 async function main() {
   try {
@@ -21302,17 +21304,19 @@ async function main() {
       console.log(usage());
       return;
     }
-    if (!args.type) throw new Error("Missing required --type");
-    const entries = (await docEntries(path.resolve(args.cwd), args.type, args.dir)).filter((entry) => !args.status || entry.status === args.status);
-    if (args.json) {
-      console.log(JSON.stringify({ type: args.type, entries }, null, 2));
-      return;
-    }
-    console.log(`${args.type} documents:`);
-    for (const entry of entries) {
-      const status = entry.status ? ` [${entry.status}]` : "";
-      console.log(`- ${entry.path}${status}: ${entry.title}`);
-    }
+    if (!args.title) throw new Error("Missing required --title");
+    const result = await createDocument("discovery", {
+      cwd: path.resolve(args.cwd),
+      date: args.date,
+      dir: args.dir,
+      relations: {
+        "source": args.derivesFrom
+      },
+      status: args.status,
+      title: args.title
+    });
+    console.log(`Created ${result.file}`);
+    console.log(`Updated ${result.index}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

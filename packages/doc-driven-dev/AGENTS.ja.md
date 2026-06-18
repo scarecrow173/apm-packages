@@ -5,7 +5,7 @@
 ## 1. 目的と前提
 
 - このパッケージは document-driven development を支える Skill 集です。
-- 主な対象は `briefing -> ADR/spec -> design -> plan -> task -> 実装 -> 監査` の流れです。
+- 主な対象は `idea-doc（任意）-> briefing -> discovery-doc（任意）-> ADR/spec -> design -> plan -> task -> 実装 -> 監査` の流れです。
 - 生成ドキュメントは YAML front matter + Markdown を前提にします。
 - このガイドはパッケージ開発ルールを定義するものであり、パッケージ自身に doc-driven-dev 運用を必須化するものではありません。
 
@@ -99,7 +99,7 @@ apm compile --validate
 ここに含まれる workflow / meta skill:
 
 | スキル | 目的 | 出典 |
-|--------|------|------|
+| --- | --- | --- |
 | doc-driven-dev-lifecycle | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
 | briefing-flow | メタスキル: briefing と spec/ADR 準備を動的にオーケストレーションする | original |
 | implementation-flow | メタスキル: implementation profile を通じて全利用可能な実装スキルを発見・ルーティングする | original |
@@ -112,14 +112,14 @@ apm compile --validate
 ### 活性化マトリックス
 
 | メタスキル | 入力トリガー条件 | 責務 | 相互排斥 |
-|------------|-----------------|------|----------|
+| --- | --- | --- | --- |
 | `doc-driven-dev-lifecycle` | ユーザーが 6 フェーズ全体を明示的に呼び出した OR 他のエントリポイントが合致しない | Phase 1-6 統括・委譲（Phase 1 は briefing-flow へ、Phase 5+ は implementation-flow へ） | `briefing-flow` が既に活動中の場合は活性化しない OR Phase 5+ が明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
 | `briefing-flow` | ユーザーが briefing/discovery/spec/ADR 作成を明示的に呼び出した OR lifecycle が Phase 1 を委譲 | Phase A-D の discovery・spec + ADR 並行配信・skill stack 組み立て | `doc-driven-dev-lifecycle` が既に Phase 2-6 を駆動中の場合は活性化しない OR コード実装を明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
 | `implementation-flow` | ユーザーがタスク実行/コード実装を明示的に呼び出した OR lifecycle が Phase 5 を委譲 | Phase A-E のタスク実行・review gate 強制・利用可能な実装スキルの発見・ルーティング | 文書作成がターゲットの場合は活性化しない（→ lifecycle または briefing-flow） OR briefing/design 進行中の場合は活性化しない |
 
 ### 配信判定ツリー
 
-```
+```text
 エントリリクエスト
 ├─ "lifecycle" または "6-phase" または "end-to-end" キーワードを含む？
 │  └─ YES → doc-driven-dev-lifecycle
@@ -145,6 +145,7 @@ apm compile --validate
 ### テスト
 
 統合テストは以下を検証:
+
 - 活性化競合の検出（2 つのメタスキルが同じリクエストで競争）
 - Review gate 名の正規化（Phase E の `requesting-code-review` 名は canonical）
 - 委譲境界の遵守（Phase 1 完了前 Phase 2 活性化禁止）

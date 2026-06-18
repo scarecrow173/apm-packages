@@ -50,7 +50,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 | ----- | ------- | ------ |
 | A. Assess | Understand the request, determine information state | Entry Decision recorded + characteristics identified |
 | B. Configure | Discover skills, build/load skill stack for briefing | Active skill stack declared |
-| C. Gather & Generate | Gather information and produce documents in parallel | spec-doc + adr-doc generated |
+| C. Gather & Generate | Gather information and produce documents in parallel | discovery-doc (optional) + spec-doc + adr-doc generated |
 | D. Gate | Verify completion conditions, confirm readiness for next phase | Gate pass/fail decision |
 
 ---
@@ -176,6 +176,7 @@ In parallel with information gathering, dispatch to sub-agents when conditions a
 
 | Trigger | Fire Condition | Action |
 | ------- | -------------- | ------ |
+| discovery-doc | Problem space is ambiguous, alternatives exist, or significant research was done — persist exploration output as a canonical artifact | Spawn sub-agent and delegate `discovery-doc` skill (optional; fire before spec/adr when applicable) |
 | spec-doc | Purpose, scope, acceptance criteria, and exclusions are available | Spawn sub-agent and delegate `spec-doc` skill |
 | adr-doc | Chosen approach, alternatives, rationale, and impact are available | Spawn sub-agent and delegate `adr-doc` skill |
 
