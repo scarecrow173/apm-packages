@@ -105,4 +105,23 @@ If either condition fails, `plan-doc` must fail with:
 
 ## Index
 
-`README.md` should list both `overview.md` and detailed design documents.
+Use `README.md` as the default design index. List both `overview.md` and the
+detailed design documents as a Markdown table, in filename order, with these
+four columns:
+
+| ID | Title | Status | File |
+| --- | --- | --- | --- |
+| DESIGN-OVERVIEW | System Design Overview | draft | [overview.md](overview.md) |
+| DESIGN-0001 | Design checkout orchestration | approved | [0001-design-checkout-orchestration.md](0001-design-checkout-orchestration.md) |
+
+Index rules:
+
+- Use exactly these four columns: `ID`, `Title`, `Status`, `File`. Take `ID`,
+  `Title`, and `Status` from the document front matter; the `File` column is a
+  relative link within the index directory. Write `—` when a value is missing.
+- List `overview.md` first, then detailed design docs sorted by filename in
+  ascending order.
+- Whenever a new target file is added, update the index in the same change.
+- As entries grow, split the index into multiple headings, one table per
+  heading, for readability. Align the split with the subdirectory grouping
+  (category or feature) so each heading maps to one group.

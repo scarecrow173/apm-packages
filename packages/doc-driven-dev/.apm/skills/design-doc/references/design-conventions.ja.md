@@ -104,4 +104,22 @@ docs/designs/
 
 ## 索引
 
-`README.md` には `overview.md` と詳細設計の両方を掲載します。
+既定の design 索引は `README.md` です。`overview.md` と詳細設計の両方を、
+ファイル名順に並べた次の 4 列の Markdown テーブルで掲載します。
+
+| ID | タイトル | Status | ファイル |
+| --- | --- | --- | --- |
+| DESIGN-OVERVIEW | System Design Overview | draft | [overview.md](overview.md) |
+| DESIGN-0001 | Design checkout orchestration | approved | [0001-design-checkout-orchestration.md](0001-design-checkout-orchestration.md) |
+
+索引ルール:
+
+- 列は `ID` / `タイトル` / `Status` / `ファイル` の 4 列に固定します。`ID`・
+  `タイトル`・`Status` は front matter から取り、`ファイル` 列は索引と同じ
+  ディレクトリへの相対リンクにします。値が無い場合は `—` を入れます。
+- `overview.md` を先頭に置き、続けて詳細設計をファイル名の昇順で並べます。
+- 新規の対象ファイルが追加されたら、同じ変更の中で必ず索引を更新します。
+- 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに
+  1 つのテーブルを配置することを推奨します。見出しの分割はサブディレクトリの
+  グルーピング（カテゴリ別／機能別）と整合させ、各見出しが 1 グループに
+  対応するようにします。

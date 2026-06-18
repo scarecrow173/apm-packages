@@ -112,3 +112,42 @@ Experiment Log audit checks:
 - allowed event type
 - unique, strictly increasing `seq`
 - `experiment` path matches the file path
+
+## Index
+
+Each directory uses `README.md` as its index.
+
+### Implementation Records
+
+Use `README.md` as the index under `docs/impl/ir/`. List records as a Markdown
+table, in filename order, with these four columns:
+
+| ID | Title | Status | File |
+| --- | --- | --- | --- |
+| IMPL-0001 | Implement checkout flow | completed | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+
+Index rules:
+
+- Use exactly these four columns: `ID`, `Title`, `Status`, `File`, sourced from
+  the front matter; the `File` column is a relative link within the index
+  directory. Write `—` when a value is missing.
+- Sort rows by filename in ascending order.
+- Whenever a new Implementation Record is added, update the index in the same
+  change.
+- As entries grow, split the index into multiple headings, one table per
+  heading, for readability.
+
+### Experiment Logs
+
+Use `README.md` as the index under `docs/impl/exp/`. Experiment Logs are JSONL
+files with no front matter, so the index uses a single-column table of file
+links, in filename order:
+
+| File |
+| --- |
+| [0001-checkout-retry.jsonl](0001-checkout-retry.jsonl) |
+
+The matching Implementation Record links to each log via `metadata.experiments`
+and relations; the README provides a directory-level overview only.
+
+Whenever a new Experiment Log is added, update the index in the same change.

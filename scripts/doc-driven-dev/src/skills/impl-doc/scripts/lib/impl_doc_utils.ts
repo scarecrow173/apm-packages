@@ -344,19 +344,21 @@ function buildExperimentEvent(options: {
 function updateIndexForMarkdownDir(cwd: string, relativeDir: string): void {
   const dir = path.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
   const rows = files.map((file) => {
     const fullPath = path.join(dir, file);
     const parsed = matter(fs.readFileSync(fullPath, "utf8"));
     const title = typeof parsed.data.title === "string"
       ? parsed.data.title
       : ((/^#\s+(.+)$/m.exec(parsed.content)?.[1]) || path.basename(file, ".md"));
-    const status = typeof parsed.data.status === "string" ? ` [${parsed.data.status}]` : "";
-    const id = typeof parsed.data.id === "string" ? `${parsed.data.id}: ` : "";
-    return `- [${id}${title}](./${file})${status}`;
+    const id = typeof parsed.data.id === "string" ? parsed.data.id : "—";
+    const status = typeof parsed.data.status === "string" ? parsed.data.status : "—";
+    return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
   });
+  const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
   fs.writeFileSync(
     path.join(dir, "README.md"),
-    `# Implementation Records\n\nDirectory: \`${relativeDir}\`\n\n${rows.join("\n")}\n`,
+    `# Implementation Records\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,
     "utf8",
   );
 }
@@ -364,10 +366,12 @@ function updateIndexForMarkdownDir(cwd: string, relativeDir: string): void {
 function updateIndexForExperimentDir(cwd: string, relativeDir: string): void {
   const dir = path.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");
-  const rows = files.map((file) => `- \`${file}\``);
+  const header = "| File |\n| --- |";
+  const rows = files.map((file) => `| [${file}](./${file}) |`);
+  const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
   fs.writeFileSync(
     path.join(dir, "README.md"),
-    `# Experiment Logs\n\nDirectory: \`${relativeDir}\`\n\n${rows.join("\n")}\n`,
+    `# Experiment Logs\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,
     "utf8",
   );
 }
