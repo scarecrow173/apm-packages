@@ -1,0 +1,17 @@
+name: visualization
+version: 0.1.0
+description: Diagram and documentation visualization tools for design and architecture communication.
+author: Akiyoshi Koyama
+license: MIT
+targets:
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - agent-skills
+dependencies:
+  apm:
+    - github/awesome-copilot/skills/drawio
+    - github/awesome-copilot/skills/draw-io-diagram-generator
+    - github/awesome-copilot/skills/plantuml-ascii
+    - github/awesome-copilot/skills/editorconfig

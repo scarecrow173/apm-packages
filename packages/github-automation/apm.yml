@@ -1,0 +1,16 @@
+name: github-automation
+version: 0.1.0
+description: GitHub operations and CI/CD automation skills for workflow efficiency.
+author: Akiyoshi Koyama
+license: MIT
+targets:
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - agent-skills
+dependencies:
+  apm:
+    - github/awesome-copilot/skills/github-actions-efficiency
+    - github/awesome-copilot/skills/pr-dashboard
+    - github/awesome-copilot/skills/dependabot

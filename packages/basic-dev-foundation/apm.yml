@@ -1,6 +1,6 @@
 name: basic-dev-foundation
 version: 0.1.0
-description: Basic APM aggregator package for foundational skills and workflow helpers.
+description: Git workflow management and foundational APM package.
 author: Akiyoshi Koyama
 license: MIT
 targets:
@@ -12,25 +12,7 @@ targets:
 dependencies:
   apm:
     - microsoft/apm/packages/apm-guide
-    - github/awesome-copilot/skills/agentic-eval
     - github/awesome-copilot/skills/git-commit
     - github/awesome-copilot/skills/conventional-branch
     - github/awesome-copilot/skills/commit-message-storyteller
     - github/awesome-copilot/skills/repo-story-time
-    - github/awesome-copilot/skills/github-actions-efficiency
-    - github/awesome-copilot/skills/pr-dashboard
-    - github/awesome-copilot/skills/dependabot
-    - github/awesome-copilot/skills/drawio
-    - github/awesome-copilot/skills/draw-io-diagram-generator
-    - github/awesome-copilot/skills/plantuml-ascii
-    - github/awesome-copilot/skills/editorconfig
-    - github/awesome-copilot/skills/copilot-usage-metrics
-    - github/awesome-copilot/skills/autoresearch
-    - github/awesome-copilot/skills/agent-governance
-    - github/awesome-copilot/skills/security-review
-    - github/awesome-copilot/skills/audit-integrity
-    - github/awesome-copilot/skills/agent-supply-chain
-    - github/awesome-copilot/plugins/acreadiness-cockpit
-    - github/awesome-copilot/plugins/context-engineering
-    - github/awesome-copilot/plugins/doublecheck
-    - github/awesome-copilot/plugins/security-best-practices

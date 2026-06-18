@@ -1,0 +1,18 @@
+name: security-governance
+version: 0.1.0
+description: Security review and governance tools for supply chain integrity and agent compliance.
+author: Akiyoshi Koyama
+license: MIT
+targets:
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - agent-skills
+dependencies:
+  apm:
+    - github/awesome-copilot/skills/security-review
+    - github/awesome-copilot/skills/audit-integrity
+    - github/awesome-copilot/skills/agent-governance
+    - github/awesome-copilot/skills/agent-supply-chain
+    - github/awesome-copilot/plugins/security-best-practices
