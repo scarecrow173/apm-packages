@@ -29813,15 +29813,23 @@ var require_adr_utils = __commonJS({
       }));
     }
     async function buildIndex(dir, relativeDir) {
-      const entries = await Promise.all(adrFiles(dir).map(async (file) => {
-        const title = await titleFromAdr(fs2.readFileSync(path2.join(dir, file), "utf8"), path2.basename(file, ".md"));
-        return `- [${title}](./${file})`;
+      const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+      const rows = await Promise.all(adrFiles(dir).map(async (file) => {
+        const content3 = fs2.readFileSync(path2.join(dir, file), "utf8");
+        const data = matterData(content3);
+        const title = await titleFromAdr(content3, path2.basename(file, ".md"));
+        const status = typeof data.status === "string" ? data.status : "\u2014";
+        const numberMatch = /^(\d+)-/.exec(file);
+        const id = numberMatch ? `ADR-${numberMatch[1]}` : "\u2014";
+        return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
       }));
+      const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
       return `# Architecture Decision Records
 
 Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 
-${entries.join("\n")}
+${body}
 `;
     }
     function parseCsv(value) {

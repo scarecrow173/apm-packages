@@ -639,8 +639,19 @@ async function buildIndex(cwd: string, type: string, explicitDir?: string): Prom
   const relativeDir = docDir(cwd, type, explicitDir);
   const entries = await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const rows = entries.map((entry) => `- [${entry.id || entry.file}: ${entry.title}](./${entry.file})${entry.status ? ` [${entry.status}]` : ""}`);
-  return `# ${title}\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${rows.join("\n")}\n`;
+  const sorted = type === "design"
+    ? [...entries].sort((a, b) => {
+        if (a.file === "overview.md") return -1;
+        if (b.file === "overview.md") return 1;
+        return a.file.localeCompare(b.file);
+      })
+    : entries;
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const rows = sorted.map((entry) =>
+    `| ${entry.id || "—"} | ${entry.title} | ${entry.status || "—"} | [${entry.file}](./${entry.file}) |`,
+  );
+  const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
+  return `# ${title}\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${body}\n`;
 }
 
 function buildGenericIndex(relativeDir: string, title: string): string {

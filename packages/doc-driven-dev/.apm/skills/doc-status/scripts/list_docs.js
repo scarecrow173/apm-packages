@@ -20904,12 +20904,22 @@ var require_doc_suite_utils = __commonJS({
       const relativeDir = docDir(cwd, type, explicitDir);
       const entries = await docEntries2(cwd, type, explicitDir);
       const title = `${configFor(type).idPrefix} Documents`;
-      const rows = entries.map((entry) => `- [${entry.id || entry.file}: ${entry.title}](./${entry.file})${entry.status ? ` [${entry.status}]` : ""}`);
+      const sorted = type === "design" ? [...entries].sort((a, b) => {
+        if (a.file === "overview.md") return -1;
+        if (b.file === "overview.md") return 1;
+        return a.file.localeCompare(b.file);
+      }) : entries;
+      const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+      const rows = sorted.map(
+        (entry) => `| ${entry.id || "\u2014"} | ${entry.title} | ${entry.status || "\u2014"} | [${entry.file}](./${entry.file}) |`
+      );
+      const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
       return `# ${title}
 
 Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 
-${rows.join("\n")}
+${body}
 `;
     }
     function buildGenericIndex(relativeDir, title) {

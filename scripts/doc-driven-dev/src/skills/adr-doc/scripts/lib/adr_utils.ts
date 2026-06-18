@@ -265,11 +265,18 @@ async function adrEntries(cwd: string, relativeDir: string): Promise<AdrEntry[]>
 }
 
 async function buildIndex(dir: string, relativeDir: string): Promise<string> {
-  const entries = await Promise.all(adrFiles(dir).map(async (file) => {
-    const title = await titleFromAdr(fs.readFileSync(path.join(dir, file), "utf8"), path.basename(file, ".md"));
-    return `- [${title}](./${file})`;
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const rows = await Promise.all(adrFiles(dir).map(async (file) => {
+    const content = fs.readFileSync(path.join(dir, file), "utf8");
+    const data = matterData(content);
+    const title = await titleFromAdr(content, path.basename(file, ".md"));
+    const status = typeof data.status === "string" ? data.status : "—";
+    const numberMatch = /^(\d+)-/.exec(file);
+    const id = numberMatch ? `ADR-${numberMatch[1]}` : "—";
+    return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
   }));
-  return `# Architecture Decision Records\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${entries.join("\n")}\n`;
+  const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
+  return `# Architecture Decision Records\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${body}\n`;
 }
 
 function parseCsv(value: string): string[] {

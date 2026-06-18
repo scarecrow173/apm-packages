@@ -20904,12 +20904,22 @@ var require_doc_suite_utils = __commonJS({
       const relativeDir = docDir(cwd, type, explicitDir);
       const entries = await docEntries(cwd, type, explicitDir);
       const title = `${configFor(type).idPrefix} Documents`;
-      const rows = entries.map((entry) => `- [${entry.id || entry.file}: ${entry.title}](./${entry.file})${entry.status ? ` [${entry.status}]` : ""}`);
+      const sorted = type === "design" ? [...entries].sort((a, b) => {
+        if (a.file === "overview.md") return -1;
+        if (b.file === "overview.md") return 1;
+        return a.file.localeCompare(b.file);
+      }) : entries;
+      const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+      const rows = sorted.map(
+        (entry) => `| ${entry.id || "\u2014"} | ${entry.title} | ${entry.status || "\u2014"} | [${entry.file}](./${entry.file}) |`
+      );
+      const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
       return `# ${title}
 
 Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 
-${rows.join("\n")}
+${body}
 `;
     }
     function buildGenericIndex(relativeDir, title) {
@@ -21476,21 +21486,24 @@ ${renderTemplate("implementation-record.md", { title: options2.title })}
     function updateIndexForMarkdownDir(cwd, relativeDir) {
       const dir = path2.join(cwd, relativeDir);
       const files = listFiles(dir, ".md");
+      const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
       const rows = files.map((file) => {
         const fullPath = path2.join(dir, file);
         const parsed = matter(fs.readFileSync(fullPath, "utf8"));
         const title = typeof parsed.data.title === "string" ? parsed.data.title : /^#\s+(.+)$/m.exec(parsed.content)?.[1] || path2.basename(file, ".md");
-        const status = typeof parsed.data.status === "string" ? ` [${parsed.data.status}]` : "";
-        const id = typeof parsed.data.id === "string" ? `${parsed.data.id}: ` : "";
-        return `- [${id}${title}](./${file})${status}`;
+        const id = typeof parsed.data.id === "string" ? parsed.data.id : "\u2014";
+        const status = typeof parsed.data.status === "string" ? parsed.data.status : "\u2014";
+        return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
       });
+      const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
       fs.writeFileSync(
         path2.join(dir, "README.md"),
         `# Implementation Records
 
 Directory: \`${relativeDir}\`
 
-${rows.join("\n")}
+${body}
 `,
         "utf8"
       );
@@ -21498,14 +21511,17 @@ ${rows.join("\n")}
     function updateIndexForExperimentDir(cwd, relativeDir) {
       const dir = path2.join(cwd, relativeDir);
       const files = listFiles(dir, ".jsonl");
-      const rows = files.map((file) => `- \`${file}\``);
+      const header = "| File |\n| --- |";
+      const rows = files.map((file) => `| [${file}](./${file}) |`);
+      const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
       fs.writeFileSync(
         path2.join(dir, "README.md"),
         `# Experiment Logs
 
 Directory: \`${relativeDir}\`
 
-${rows.join("\n")}
+${body}
 `,
         "utf8"
       );
