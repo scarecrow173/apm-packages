@@ -9,9 +9,9 @@ license: MIT
 Use this skill to record what was actually implemented and what was tried during
 implementation.
 
-`impl-doc` is a document-generation sibling of `adr-doc`, `spec-doc`,
-`design-doc`, `plan-doc`, and `task-doc`. It is not an implementation workflow
-skill.
+`impl-doc` is a document-generation sibling of `idea-doc`, `discovery-doc`,
+`adr-doc`, `spec-doc`, `design-doc`, `plan-doc`, and `task-doc`. It is not an
+implementation workflow skill.
 
 ## Responsibilities
 

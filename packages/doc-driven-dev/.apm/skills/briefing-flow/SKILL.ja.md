@@ -46,7 +46,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 | ----- | ------- | ------ |
 | A. Assess | 要求を理解し、情報状態を判定する | Entry Decision を記録 + 特性を特定 |
 | B. Configure | スキルを発見し、briefing 用の skill stack を構成する | 有効な skill stack を宣言 |
-| C. Gather & Generate | 情報を集め、文書を並列生成する | spec-doc + adr-doc を生成 |
+| C. Gather & Generate | 情報を集め、文書を並列生成する | discovery-doc（任意）+ spec-doc + adr-doc を生成 |
 | D. Gate | 完了条件を検証し、次段階への準備完了を確認する | Gate の合否判定 |
 
 ---
@@ -119,7 +119,7 @@ Profile の生成と検証は `skill-discovery-protocol` スキルが担当す�
    - **一致する slot がない場合**: デフォルト stack のみで進める
 3. **Resolution を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から `resolution` を読む
 4. **Execution policy を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から各候補スキルの `execution-policy` を読む
-5. **Runtime guidance を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から各候補スキルの `runtime_guidance` を読む
+5. **Runtime guidance を確認する**: `skill-discovery-protocol` を使って `.sdp/briefing-flow-default/briefing-profile.json` から policy チェック後の構造化 `runtime_guidance` を読む。ソフトなランキング信号として扱い、ハードゲートではない
 6. **有効な skill stack を宣言する:**
 
 ```text
@@ -163,6 +163,7 @@ Profile の生成と検証は `skill-discovery-protocol` スキルが担当す�
 
 | Trigger | Fire Condition | Action |
 | ------- | -------------- | ------ |
+| discovery-doc | 問題空間が曖昧、代替案が存在する、または重大な調査を実施した — 探索結果を正本 artifact として永続化する | サブエージェントを起動し `discovery-doc` スキルを委譲（任意；該当時は spec/adr より前に発火） |
 | spec-doc | 目的、範囲、acceptance criteria、除外事項が揃った | サブエージェントを起動し `spec-doc` スキルを委譲 |
 | adr-doc | 採用方針、代替案、理由、影響が揃った | サブエージェントを起動し `adr-doc` スキルを委譲 |
 
@@ -263,8 +264,7 @@ spec-doc の `status` が `proposed` 以上になるまで、briefing 完了を�
 </HARD-GATE>
 
 <HARD-GATE>
-Profile が示しているスキルをスキップしないこと。active skill stack にスキルが含まれているなら、そのスキルのプロセスに従う。
-上書きできるのは、ユーザーからの明示的な指示がある場合だけ。
+Profile が選択したスキルをデフォルトのルーティングポリシーとして扱うこと。active skill stack にスキルが含まれているなら、ユーザーが明示的にルーティング決定を上書きしない限り、そのスキルのプロセスに従う。Dispatch-specific override と emergency override は、実行前に理由を 1 行で記録することが必須。
 </HARD-GATE>
 
 ---
