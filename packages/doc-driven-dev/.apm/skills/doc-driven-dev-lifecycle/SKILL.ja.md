@@ -124,8 +124,10 @@ Phase 1 は `briefing-flow` に委譲されるため、スキルの発見・構�
 
 | スキル | カテゴリ | 期待出力 | 完了指標 |
 | ------ | -------- | -------- | -------- |
+| `idea-doc` | Document | `docs/ideas/` 配下の軽量 idea 記録 | 次のアクションが決まり捕捉済み；下流文書作成後に `status: promoted` |
 | `deep-dive` | Frame | 制約と判断軸を含む確認済み intent 要約 | 明確な outcome、制約、未解決項目 |
 | `steer-web-research` | Discover | 外部情報の調査結果 | エビデンス付きの調査レポート |
+| `discovery-doc` | Document | `docs/discovery/` 配下の構造化探索成果物 | `status: resolved`、昇華候補に対処済み、`relations.derived-by` に下流文書リンク済み |
 | `spec-doc` | Document | 正式な仕様書 | `acceptance_criteria:` 3 件以上、`status: proposed` |
 | `adr-doc` | Document | アーキテクチャ決定記録 | `alternatives:` 2 件以上、理由が文書化 |
 

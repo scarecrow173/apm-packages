@@ -8,8 +8,9 @@ license: MIT
 
 このスキルは、実際に何を実装したか、実装中に何を試したかを記録するために使います。
 
-`impl-doc` は `adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc` と
-同列の文書生成スキルです。実装フェーズのワークフロースキルではありません。
+`impl-doc` は `idea-doc`、`discovery-doc`、`adr-doc`、`spec-doc`、
+`design-doc`、`plan-doc`、`task-doc` と同列の文書生成スキルです。
+実装フェーズのワークフロースキルではありません。
 
 ## 責務
 
