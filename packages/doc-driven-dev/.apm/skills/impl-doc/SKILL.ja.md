@@ -1,18 +1,8 @@
 ---
 name: impl-doc
-description: |
-  `docs/impl/` 配下に Implementation Record（ir）と Experiment Log（exp）を
-  作成・管理し、実際に実装したことと試したことを追跡可能にします。
-
-  使うとき:
-  (1) アプローチが不確実なタスク開始時 — 仮説・観察を記録する Experiment Log を
-      解決策を決める前に作成する
-  (2) タスク完了時 — 実装内容・意思決定・採用／却下した実験を記録する
-      Implementation Record を作成する
-  (3) タスクや PR をクローズする前に impl ドキュメントを監査する
-
-  キーワード: implementation record, experiment log, ir, exp, タスク文書,
-  実装追跡, 仮説, 観察, impl 監査, docs/impl
+description: "実際に実装したこと（ir）と実装中に試したこと（exp）を docs/impl/ 配下に記録します。
+  タスクの Implementation Record または Experiment Log を作成・監査するときに使います。
+  キーワード: implementation record, experiment log, ir, exp, impl 監査, docs/impl"
 license: MIT
 ---
 

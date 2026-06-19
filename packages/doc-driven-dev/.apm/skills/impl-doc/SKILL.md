@@ -1,18 +1,9 @@
 ---
 name: impl-doc
-description: |
-  Create and maintain Implementation Records (ir) and Experiment Logs (exp)
-  under docs/impl/ to trace what was actually built and what was tried.
-
-  Use when:
-  (1) Starting a task with uncertain approach — create an Experiment Log to
-      capture hypotheses and observations before committing to a solution
-  (2) Completing a task — create an Implementation Record to document what was
-      implemented, decisions made, and which experiments were adopted or rejected
-  (3) Auditing impl docs before closing a task or PR
-
-  Keywords: implementation record, experiment log, ir, exp, task documentation,
-  implementation trace, hypothesis, observation, impl audit, docs/impl
+description: "Record what was actually implemented (ir) and what was tried during
+  implementation (exp) under docs/impl/. Use when creating or auditing Implementation
+  Records or Experiment Logs for any task. Keywords: implementation record, experiment
+  log, ir, exp, impl audit, docs/impl"
 license: MIT
 ---
 
