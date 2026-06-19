@@ -1,21 +1,6 @@
 ---
 name: plan-doc
-description: |
-  承認済みの spec または ADR を、リポジトリの plan ディレクトリ配下の実装可能な
-  plan に落とし込みます: スコープ分割、ファイル表、依存グラフ、リスク登録簿、
-  ロールバック戦略、検証マトリクス。
-
-  使うとき:
-  (1) spec または ADR が承認され、実装計画を立てる準備ができたとき
-  (2) 作業を複数の plan に分割すべきか判断する必要があるとき
-  (3) ファイル分解、順序付きタスク分解、検証ステップが必要なとき
-  (4) 上流／下流文書への意味のある YAML front matter relation が必要なとき
-
-  design gate を要求します: docs/designs/overview.md が存在し、overview 以外の
-  design doc が少なくとも 1 件 front matter status: "approved" を持つこと。
-
-  キーワード: implementation plan, plan-doc, スコープ分割, ファイル表, 依存グラフ,
-  リスク登録簿, ロールバック, 検証マトリクス, タスク分解, design gate
+description: "承認済みの spec または ADR を、スコープ分割・ファイル表・依存グラフ・リスク登録簿・ロールバック戦略・検証マトリクスを備えた実装可能な plan に落とし込みます。spec または ADR が承認され実装計画を立てるとき、作業を複数の plan に分割すべきか判断するとき、ファイル分解・順序付きタスク分解・検証ステップ・上流／下流文書への意味のある YAML front matter relation が必要なときに使います。design gate を要求します: docs/designs/overview.md が存在し、overview 以外の design doc が少なくとも 1 件 front matter status approved を持つこと。キーワード: implementation plan, plan-doc, スコープ分割, ファイル表, 依存グラフ, リスク登録簿, ロールバック, 検証マトリクス, タスク分解, design gate"
 license: MIT
 ---
 

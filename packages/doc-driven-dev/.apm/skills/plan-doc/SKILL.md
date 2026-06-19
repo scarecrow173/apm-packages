@@ -1,21 +1,6 @@
 ---
 name: plan-doc
-description: |
-  Turn an approved spec or ADR into an implementation-ready plan under the
-  repository's plan directory: scope split, file map, dependency graph, risk
-  register, rollback strategy, and a verification matrix.
-
-  Use when:
-  (1) A spec or ADR is approved and you are ready to plan implementation
-  (2) You must decide whether the work splits into multiple plans
-  (3) You need file decomposition, ordered task breakdown, or verification steps
-  (4) You need meaningful YAML front matter relations to upstream/downstream docs
-
-  Requires the design gate: docs/designs/overview.md must exist and at least one
-  non-overview design doc must have front matter status: "approved".
-
-  Keywords: implementation plan, plan-doc, scope split, file map, dependency
-  graph, risk register, rollback, verification matrix, task breakdown, design gate
+description: "Turn an approved spec or ADR into an implementation-ready plan with scope split, file map, dependency graph, risk register, rollback strategy, and verification matrix. Use when a spec or ADR is approved and you are planning implementation, deciding whether work splits into multiple plans, or you need file decomposition, ordered task breakdown, verification steps, or meaningful YAML front matter relations to upstream/downstream docs. Requires the design gate: docs/designs/overview.md must exist and at least one non-overview design doc must have front matter status approved. Keywords: implementation plan, plan-doc, scope split, file map, dependency graph, risk register, rollback, verification matrix, task breakdown, design gate"
 license: MIT
 ---
 
