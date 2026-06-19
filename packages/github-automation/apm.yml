@@ -14,3 +14,4 @@ dependencies:
     - github/awesome-copilot/skills/github-actions-efficiency
     - github/awesome-copilot/skills/pr-dashboard
     - github/awesome-copilot/skills/dependabot
+    - addyosmani/agent-skills/skills/ci-cd-and-automation

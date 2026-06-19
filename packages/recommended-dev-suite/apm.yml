@@ -17,12 +17,12 @@ dependencies:
     - obra/superpowers/skills/requesting-code-review
     - obra/superpowers/skills/receiving-code-review
     - obra/superpowers/skills/systematic-debugging
+    - obra/superpowers/skills/finishing-a-development-branch
+    - obra/superpowers/skills/writing-plans
     - addyosmani/agent-skills/skills/idea-refine
     - addyosmani/agent-skills/skills/interview-me
     - addyosmani/agent-skills/skills/doubt-driven-development
     - addyosmani/agent-skills/skills/test-driven-development
     - addyosmani/agent-skills/skills/source-driven-development
     - addyosmani/agent-skills/skills/incremental-implementation
-    - addyosmani/agent-skills/skills/ci-cd-and-automation
     - addyosmani/agent-skills/skills/code-simplification
-    - addyosmani/agent-skills/skills/context-engineering
