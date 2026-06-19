@@ -50,7 +50,8 @@ idea 文書は意図的に最小限の構成です。1ファイル1アイデア�
    node scripts/new_idea.js --title "Support offline mode for mobile"
    ```
 
-   スクリプトを実行できない場合は、`assets/templates/idea.ja.md` をコピーして手動で埋めます。
+   スクリプトを実行できない場合は、`assets/templates/idea.ja.md`（日本語版テンプレート）を
+   コピーして手動で埋めます。英語版は `assets/templates/idea.md` です。
 
 3. 出典を記録する（あれば）。
    着想のきっかけになったリンク・issue・会話を `relations.source` に記録します。
