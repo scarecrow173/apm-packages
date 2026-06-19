@@ -87,7 +87,7 @@ function findAdapterSearchDirs(adapterDir: string): string[] {
     current = parent;
   }
 
-  const bundledAdaptersDir = path.resolve(__dirname, "..", "..", "assets", "adapters");
+  const bundledAdaptersDir = path.resolve(__dirname, "..", "assets", "adapters");
   if (fs.existsSync(bundledAdaptersDir) && !dirs.includes(bundledAdaptersDir)) {
     dirs.push(bundledAdaptersDir);
   }
