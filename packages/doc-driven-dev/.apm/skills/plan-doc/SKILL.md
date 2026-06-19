@@ -1,6 +1,6 @@
 ---
 name: plan-doc
-description: Use when turning an approved spec or ADR into an implementation plan, especially when you need scope checks, file decomposition, small task breakdowns, verification, or meaningful YAML front matter relations.
+description: "Turn an approved spec or ADR into an implementation-ready plan with scope split, file map, dependency graph, risk register, rollback strategy, and verification matrix. Use when a spec or ADR is approved and you are planning implementation, deciding whether work splits into multiple plans, or you need file decomposition, ordered task breakdown, verification steps, or meaningful YAML front matter relations to upstream/downstream docs. Requires the design gate: docs/designs/overview.md must exist and at least one non-overview design doc must have front matter status approved. Keywords: implementation plan, plan-doc, scope split, file map, dependency graph, risk register, rollback, verification matrix, task breakdown, design gate"
 license: MIT
 ---
 
@@ -10,6 +10,22 @@ Use this skill after upstream documents are clear enough to implement. A plan
 explains how the work will be built, which documents it implements or derives
 from, and which verification steps prove the implementation follows the source
 document.
+
+## Thinking Framework
+
+Before creating a plan, answer these questions. They shape every later decision.
+
+- **Who executes this?** Assume a future implementer with no memory of this
+  session and no context for the spec. Every ambiguity you leave becomes a
+  judgment call they make alone — and they will guess wrong.
+- **One stream or many?** If two subsystems can ship and be verified
+  independently, they are separate plans. A shared critical path and a single
+  release intent are the only valid reasons to keep them in one plan.
+- **What does "done" look like?** A plan without concrete, runnable verification
+  criteria is a wish list, not a plan. Define the pass condition before the task.
+- **What is irreversible here?** Migrations, public API changes, and data
+  transformations cannot be undone with `git revert`. These need a rollback
+  strategy before they enter the plan, not after they break.
 
 ## Scope Check
 
@@ -40,13 +56,21 @@ share the same critical path and the same release intent.
    incorporate relevant ones created in parallel with the spec.
 7. Create the plan.
 
+   **MANDATORY before writing**: Read
+   [`references/plan-conventions.md`](references/plan-conventions.md) in full to
+   confirm directory detection, filename pattern, front matter schema, status
+   values, relation semantics, and the design gate. The plan body depends on
+   these conventions being correct.
+
+   **Do NOT load** `assets/templates/plan.md` manually — `new_plan.js` loads it
+   for you. Only open it directly when the script cannot run.
+
    ```bash
    node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
    ```
 
-   The creation script follows `references/plan-conventions.md` and uses
-   `assets/templates/plan.md`. If you cannot run the script, copy that template
-   and fill it manually.
+   If you cannot run the script, copy `assets/templates/plan.md` and fill it
+   manually using the conventions you just read.
 
 8. Record relations.
    The generated plan uses `relations.implements` for the upstream spec and
@@ -159,18 +183,37 @@ Plan status values: `draft`, `approved`, `in-progress`, `blocked`,
 
 - Never force unrelated subsystems into a single plan without calling out the
   split.
+  → WHY: A bundled plan hides the real dependency boundaries, so a reviewer
+  cannot tell which parts can ship independently and execution stalls on the
+  slowest subsystem.
 - Never leave file responsibilities implicit when they can be named.
+  → WHY: The implementer re-derives the decomposition from the spec and reaches
+  a different split than you intended, producing files that overlap or contradict.
 - Never use placeholder language such as `TBD`, `TODO`, or `implement later`.
+  → WHY: Placeholders pass a skim review but block execution — the implementer
+  hits the gap mid-task with no context to fill it and guesses or stops.
 - Never merge test creation, test execution, implementation, and verification
   into one task when they are separable.
+  → WHY: An implementer skips the failing-first check when "write and run the
+  test" is one step. The red run is the only proof the test exercises the right
+  behavior; without it a passing test may be testing nothing.
 - Never hide unknowns; record gaps explicitly instead of inventing details.
+  → WHY: An invented detail looks authoritative, so the implementer trusts it
+  and builds on a false premise, whereas an explicit gap routes the question to
+  whoever can answer it.
 - Never omit a verification entry for a step.
+  → WHY: A step with no pass condition is "done" whenever the implementer
+  decides it is, so regressions and partial work slip through unnoticed.
 - Never rely on one repo's directory guess without checking the repo's actual
   plan directory convention.
+  → WHY: Writing to `docs/plans/` when the repo uses `implementation-plans/`
+  creates an orphan plan that the index and downstream tooling never find.
 
 ## Resources
 
 - `scripts/new_plan.js`: create a plan and update its index.
 - `references/plan-conventions.md`: directory, filename, status, relations,
-  required content, and index conventions for plans.
-- `assets/templates/plan.md`: default plan body template.
+  required content, and index conventions for plans
+  — load MANDATORY before creating or filling a plan.
+- `assets/templates/plan.md`: default plan body template
+  — loaded automatically by `new_plan.js`, do not load manually.
