@@ -26,20 +26,35 @@ Use `idea-doc` when you have a spark but not yet a question to investigate.
 Move to `discovery-doc` when the idea needs deeper exploration. Move directly
 to `spec-doc` when requirements are already clear.
 
+## When to Use Which Skill
+
+| If you… | Then use |
+| --- | --- |
+| Have a signal but no question yet | `idea-doc` |
+| Know question, need to compare alternatives | `discovery-doc` |
+| Requirements clear, ready to build | `spec-doc` |
+| Updating or replacing an idea | Supersede existing |
+| Writing trade-off analysis inside an idea | Move to `discovery-doc` |
+
 ## Workflow
 
 1. Capture the idea promptly.
    Do not wait for the idea to be fully formed. An incomplete record is better
    than no record. Check `docs/ideas/` to avoid duplicates.
 2. Create the idea document.
+
+   **MANDATORY**: Load `references/idea-conventions.md` before this step —
+   it defines required front matter fields, filename conventions, and valid
+   status values.
+   **Do NOT load** `assets/templates/idea.md` — loaded automatically by `new_idea.js`.
+
    Preferred creation command:
 
    ```bash
    node scripts/new_idea.js --title "Support offline mode for mobile"
    ```
 
-   The creation script uses `assets/templates/idea.md`. If you cannot run the
-   script, copy that template and fill it manually.
+   If you cannot run the script, copy `assets/templates/idea.md` and fill it manually.
 
 3. Record sources if available.
    Use `relations.source` for the link, issue, or conversation that prompted
@@ -108,7 +123,7 @@ Status values: `draft`, `exploring`, `promoted`, `parked`, `archived`,
 | --- | --- |
 | `draft` | Just captured; next action not yet decided. |
 | `exploring` | Actively thinking about it; may gather initial evidence. |
-| `promoted` | Handed off to discovery-doc or spec-doc; no further action here. |
+| `promoted` | Handed off downstream; no further action here. |
 | `parked` | Deferred for later; preserved but not active. |
 | `archived` | Evaluated and not pursued; kept for reference. |
 | `superseded` | Replaced by a newer idea document. |
@@ -116,9 +131,28 @@ Status values: `draft`, `exploring`, `promoted`, `parked`, `archived`,
 Set `promoted` only after creating the downstream document and linking it in
 `relations.derived-by`.
 
+## NEVER
+
+- NEVER write an idea document after analysis has begun — once you compare
+  alternatives or evaluate trade-offs, use `discovery-doc` instead; idea-doc
+  records the signal, not the analysis
+- NEVER merge multiple ideas into one file — one idea per file is the
+  traceability unit; merging makes lifecycle management ambiguous
+- NEVER set status to `promoted` before creating and linking the downstream
+  document — `promoted` signals that `relations.derived-by` is populated;
+  setting it before that link exists creates a broken reference
+- NEVER include architecture or implementation decisions in an idea — if you
+  find yourself writing "we should use X because Y trade-off," that content
+  belongs in `discovery-doc`
+- NEVER skip idea-doc and go straight to discovery-doc for a new signal —
+  idea-doc is the upstream record; without it, parked or abandoned ideas have
+  no home and no traceability
+
 ## Resources
 
 - `scripts/new_idea.js`: create an idea document and update its index.
 - `references/idea-conventions.md`: directory, filename, status, relations,
-  required content, and index conventions for idea documents.
-- `assets/templates/idea.md`: default idea document body template.
+  required content, and index conventions
+  — **load MANDATORY before any create operation**
+- `assets/templates/idea.md`: default idea document body template
+  — loaded automatically by `new_idea.js`, **do not load manually**

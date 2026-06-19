@@ -1,6 +1,8 @@
 ---
 name: impl-doc
-description: `docs/impl/` 配下に実装結果と機械可読な実装試行ログを記録するときに使います。
+description: "実際に実装したこと（ir）と実装中に試したこと（exp）を docs/impl/ 配下に記録します。
+  タスクの Implementation Record または Experiment Log を作成・監査するときに使います。
+  キーワード: implementation record, experiment log, ir, exp, impl 監査, docs/impl"
 license: MIT
 ---
 
@@ -8,9 +10,28 @@ license: MIT
 
 このスキルは、実際に何を実装したか、実装中に何を試したかを記録するために使います。
 
-`impl-doc` は `idea-doc`、`discovery-doc`、`adr-doc`、`spec-doc`、
-`design-doc`、`plan-doc`、`task-doc` と同列の文書生成スキルです。
-実装フェーズのワークフロースキルではありません。
+`impl-doc` は `adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc` と
+同列の文書生成スキルです。実装フェーズのワークフロースキルではありません。
+
+## いつ何を作るか
+
+コマンドを実行する前に、必要なアーティファクトを決定してください:
+
+| 状況 | 作成するもの | タイミング |
+|------|------------|-----------|
+| アプローチが不確実 — 選択肢の調査や仮説の検証が必要 | Experiment Log | 実装開始前または開始時 |
+| アプローチが明確 — 既知の計画を実行するだけ | exp なし、ir のみ | タスク完了時 |
+| タスクが完了してクローズ準備ができた | Implementation Record | タスクをクローズする前 |
+| 複数のアプローチを試した | アプローチごとに Experiment Log 1件 | 調査中 |
+
+### 粒度ルール
+
+- **task-doc 1件 → ir 1件**: タスクごとに Implementation Record を1件作成する。
+  サブタスクは `relations.changes` でリンクする。
+- **exp は任意**: 本当に探索している場合のみ Experiment Log を作成する。
+  解決策が既知の機械的なタスクには不要。
+- **exp と ir が両方ある場合のリンクは必須**: exp を作成した場合、生成される ir は
+  `metadata.experiments.adopted` または `.rejected` でそれを参照しなければならない。
 
 ## 責務
 
@@ -23,42 +44,63 @@ license: MIT
 
 ## ワークフロー
 
-1. Implementation Record を作成する:
+### Implementation Record の作成
 
-   ```bash
-   node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/0003-implement-foo-service.md
-   ```
+**必須**: このステップの前に `references/impl-conventions.md` を読み込むこと —
+必須 front matter フィールドと監査ルールが定義されています。
+**読み込まないもの**: `assets/templates/experiment-log.jsonl`。
 
-2. Experiment Log を作成する:
+```bash
+node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/0003-implement-foo-service.md
+```
 
-   ```bash
-   node scripts/new_experiment_log.js --title "Try foo service extraction" --task docs/tasks/0003-implement-foo-service.md
-   ```
+### Experiment Log の作成
 
-3. 通常のイベント追加は CLI 経由で行う:
+**必須**: このステップの前に `references/impl-conventions.md` を読み込むこと —
+許可されたイベント種別と JSONL 整合性ルールが定義されています。
+**読み込まないもの**: `assets/templates/implementation-record.md`。
 
-   ```bash
-   node scripts/append_experiment_event.js \
-     --file docs/impl/exp/0001-try-foo-service-extraction.jsonl \
-     --type hypothesis \
-     --summary "FooService に分離すると BarService の責務を単純化できる可能性がある"
-   ```
+```bash
+node scripts/new_experiment_log.js --title "Try foo service extraction" --task docs/tasks/0003-implement-foo-service.md
+```
 
-4. 既存イベントの修正が必要な場合のみ編集 CLI を使う:
+### イベントの追記
 
-   ```bash
-   node scripts/edit_experiment_log.js \
-     --file docs/impl/exp/0001-try-foo-service-extraction.jsonl \
-     --seq 4 \
-     --set implementation=docs/impl/ir/0001-extract-foo-service.md
-   ```
+```bash
+node scripts/append_experiment_event.js \
+  --file docs/impl/exp/0001-try-foo-service-extraction.jsonl \
+  --type hypothesis \
+  --summary "FooService に分離すると BarService の責務を単純化できる可能性がある"
+```
 
-5. 完了報告前に両方を監査する:
+### 既存イベントの編集（例外時のみ）
 
-   ```bash
-   node scripts/audit_impl_record.js --json
-   node scripts/audit_experiment_log.js --json
-   ```
+```bash
+node scripts/edit_experiment_log.js \
+  --file docs/impl/exp/0001-try-foo-service-extraction.jsonl \
+  --seq 4 \
+  --set implementation=docs/impl/ir/0001-extract-foo-service.md
+```
+
+### 完了前の監査
+
+```bash
+node scripts/audit_impl_record.js --json
+node scripts/audit_experiment_log.js --json
+```
+
+## NEVER
+
+- NEVER ir を記憶を頼りに事後に書く — ir は実装中に下された判断を記録するものであり、
+  事後の叙述ではない
+- NEVER JSONL ファイルを手動で編集する — `append_experiment_event` または
+  `edit_experiment_log` を使うこと。直接編集すると `seq` の連続性が壊れる
+- NEVER 複数タスクを1つの ir にまとめる — タスク 1件 = ir 1件。
+  追跡可能性はこの 1:1 対応に依存している
+- NEVER 完了報告前に監査ステップを省略する — front matter エラーが検出されないと、
+  `relations.changes` を参照する下流ツールが壊れる
+- NEVER タスク完了後に exp を作成する — exp はリアルタイムの観察を記録するものであり、
+  事後メモではない
 
 ## 規約
 
@@ -75,5 +117,8 @@ license: MIT
 ## リソース
 
 - `references/impl-conventions.md`: ディレクトリ、ファイル名、status、監査ルール
+  — 作成・監査操作の前に必ず読み込むこと
 - `assets/templates/implementation-record.md`: 既定の本文テンプレート
+  — `new_impl_record.js` が自動的に使用する。手動で読み込まないこと
 - `assets/templates/experiment-log.jsonl`: 既定の JSONL イベントテンプレート
+  — `new_experiment_log.js` が自動的に使用する。手動で読み込まないこと

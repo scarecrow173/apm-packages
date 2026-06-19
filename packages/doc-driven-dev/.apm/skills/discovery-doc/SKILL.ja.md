@@ -27,12 +27,17 @@ license: MIT
    きっかけ、答えようとしている問い、検討した代替案、調査証拠を確認します。
 3. discovery 文書を作成する。
 
+   **必須**: このステップの前に `references/discovery-conventions.ja.md` を読み込むこと —
+   必須フロントマターフィールド、ファイル名規約、有効なステータス値が定義されています。
+
+   **読み込まないもの**: `assets/templates/discovery.md` — `new_discovery.js` が自動的に使用します。
+
    ```bash
    node scripts/new_discovery.js --title "Explore auth strategy options"
    ```
 
-   作成スクリプトは `assets/templates/discovery.md` を使います。スクリプトを
-   実行できない場合は、このテンプレートをコピーして手動で埋めます。
+   スクリプトを実行できない場合は、`assets/templates/discovery.ja.md`（日本語版テンプレート）を
+   コピーして手動で埋めます。英語版は `assets/templates/discovery.md` です。
 
 4. YAML フロントマターに意味付き relation を記録する。
    外部証拠・調査レポート・探索のきっかけとなった issue リンクは `relations.source`
@@ -144,10 +149,29 @@ discovery 文書を `draft` から `active` または `resolved` に進める前
 上流方向のリンク: spec と ADR は `relations.derives-from` で、自身を生成した
 discovery 文書へ逆向きに参照します。
 
+## NEVER
+
+- NEVER discovery 文書に最終判断を含める — アーキテクチャ判断は `adr-doc` に、
+  要件は `spec-doc` に属する。discovery は推論プロセスを記録するものであり、結論ではない。
+  「X を使う」という断言はレビューチェックリストのゲート違反
+- NEVER `relations.derived-by` を設定する前に status を `resolved` にする —
+  `resolved` は下流文書が存在しリンク済みであることを示すシグナル。リンク前に設定すると
+  spec-doc と adr-doc が依存する追跡可能性の連鎖が壊れる
+- NEVER `briefing-flow` を実行せずに discovery 文書を作成する — `briefing-flow` は
+  探索を構造化するオーケストレーター。discovery-doc はその出力を永続化する担当。
+  直接作成すると構造化された調査フェーズをスキップすることになる
+- NEVER 要件が明確な問題に discovery 文書を書く — 何を作るか既にわかっているなら
+  discovery を省略して spec-doc へ直接進む。discovery は曖昧な問題空間のためのもの
+- NEVER 出典証拠を省略する — `relations.source` 参照のない discovery 文書は評価・
+  再現・反論できない。すべての主張に追跡可能な出所が必要
+
 ## リソース
 
 - `scripts/new_discovery.js`: discovery 文書を作成し、索引を更新します。
 - `references/discovery-conventions.ja.md`: discovery 文書のディレクトリ、ファイル名、
-  ステータス、relation、必須内容、索引の規約です。
+  ステータス、relation、必須内容、索引の規約
+  — **作成操作の前に必ず読み込むこと**
 - `assets/templates/discovery.md`: 既定の discovery 本文テンプレートです。
+  — `new_discovery.js` が自動的に使用します。**手動で読み込まないこと**
 - `assets/templates/discovery.ja.md`: 日本語で手動作成するときの discovery 本文テンプレートです。
+  — スクリプトが使えない場合のみ使用します

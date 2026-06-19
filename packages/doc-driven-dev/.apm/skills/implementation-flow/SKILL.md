@@ -67,6 +67,7 @@ For each task unit:
    - Are there non-trivial architectural decisions?
    - Can subtasks run in parallel?
    - What language/platform is involved?
+   - Is the approach uncertain or exploratory — multiple viable solutions to compare?
 
 **Task Characteristics → Skill Activation Mapping:**
 
@@ -184,6 +185,9 @@ Apply each skill in the active stack according to its priority:
 
    Use `skill-discovery-protocol` to inspect `execution-policy` for the skill in the generated profile.
 3. Skills layer — they are not exclusive. Multiple skills apply simultaneously.
+4. **If the approach is exploratory**, capture hypotheses, observations, and
+   rejected attempts in an Experiment Log *as they happen* via `impl-doc` (see the
+   **Implementation Documentation** section).
 
 ---
 
@@ -204,6 +208,27 @@ A task is NOT complete until verification passes:
 1. Submit implementation for review using the canonical review skill: `requesting-code-review` (see contract).
 2. Address feedback systematically.
 3. Record any new constraints discovered during review.
+
+---
+
+## Implementation Documentation
+
+The implementation phase produces two downstream documents through the `impl-doc`
+skill. Recording them is part of the flow, not an optional add-on. When this flow
+runs under `doc-driven-dev-lifecycle`, `docs/impl/ir/` and `docs/impl/exp/` already
+exist (bootstrap contract); securing these records is a completion duty.
+
+- **Experiment Log (`docs/impl/exp/`)** — create when Phase A flagged the approach
+  as uncertain or exploratory. Capture hypotheses, observations, and rejected
+  attempts *as they happen* during Phase C. Skip it for mechanical tasks with a
+  known solution.
+- **Implementation Record (`docs/impl/ir/`)** — create one per task unit at
+  completion (Phase D/E). Record what was implemented, decisions made during
+  implementation, and which experiments were adopted or rejected. When an
+  Experiment Log exists, the record MUST reference it.
+
+See the [`impl-doc` SKILL](../impl-doc/SKILL.md) for creation commands, conventions,
+and the audit steps to run before reporting completion.
 
 ---
 
@@ -279,6 +304,8 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 - Each task passes its defined verification conditions.
 - New constraints discovered during implementation are reflected in upstream documents.
 - Review-category skills have been applied (code review complete).
+- An Implementation Record (`impl-doc` ir) exists for each task unit, referencing
+  and auditing any Experiment Logs (exp) created during implementation.
 
 ## Loopback Rules
 
