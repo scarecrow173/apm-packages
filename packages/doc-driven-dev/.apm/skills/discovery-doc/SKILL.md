@@ -28,14 +28,22 @@ to persist exploration outputs as a canonical artifact.
    Confirm the trigger, the open question being answered, what alternatives
    were considered, and what research evidence exists.
 3. Create the discovery document.
+
+   **MANDATORY**: Load `references/discovery-conventions.md` before this step —
+   it defines required front matter fields, filename conventions, and valid
+   status values.
+
+   **Do NOT load** `assets/templates/discovery.md` — loaded automatically by
+   `new_discovery.js`.
+
    Preferred creation command:
 
    ```bash
    node scripts/new_discovery.js --title "Explore auth strategy options"
    ```
 
-   The creation script uses `assets/templates/discovery.md`. If you cannot run
-   the script, copy that template and fill it manually.
+   If you cannot run the script, copy `assets/templates/discovery.md` and fill
+   it manually.
 
 4. Record meaningful relations in YAML front matter.
    Use `relations.source` for external evidence, research reports, and issue
@@ -150,9 +158,31 @@ is ambiguous, alternatives exist, or significant research was done.
 The upstream link: spec and ADR use `relations.derives-from` to point back to
 the discovery document that produced them.
 
+## NEVER
+
+- NEVER include final decisions in a discovery document — architecture decisions
+  belong in `adr-doc`; requirements belong in `spec-doc`; discovery records the
+  reasoning path, not the resolution; a "we will use X" statement here is a
+  Review Checklist gate violation
+- NEVER set status to `resolved` before populating `relations.derived-by` —
+  `resolved` signals that downstream documents exist and are linked; setting it
+  first breaks the traceability chain that spec-doc and adr-doc depend on
+- NEVER create a discovery document without running `briefing-flow` first —
+  briefing-flow is the orchestrator that structures the exploration; discovery-doc
+  persists its output; creating discovery-doc directly skips the structured
+  inquiry phase
+- NEVER write a discovery document for a problem with clear requirements — skip
+  discovery when you already know what to build; discovery is for ambiguous problem
+  spaces, not for documenting foregone conclusions
+- NEVER omit source evidence — discovery documents without `relations.source`
+  references cannot be evaluated, reproduced, or challenged; every claim needs a
+  traceable origin
+
 ## Resources
 
 - `scripts/new_discovery.js`: create a discovery document and update its index.
 - `references/discovery-conventions.md`: directory, filename, status, relations,
-  required content, and index conventions for discovery documents.
-- `assets/templates/discovery.md`: default discovery document body template.
+  required content, and index conventions
+  — **load MANDATORY before any create operation**
+- `assets/templates/discovery.md`: default discovery document body template
+  — loaded automatically by `new_discovery.js`, **do not load manually**
