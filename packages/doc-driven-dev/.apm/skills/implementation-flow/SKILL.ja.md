@@ -65,6 +65,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
    - 非自明なアーキテクチャ判断があるか？
    - サブタスクを並列実行可能か？
    - どの言語/プラットフォームが関係するか？
+   - アプローチが不確実または探索的か — 比較すべき複数の有効な解があるか？
 
 **タスク特性 → スキル活性化マッピング:**
 
@@ -182,6 +183,8 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
    生成済みプロファイルを `skill-discovery-protocol` で参照し、対象スキルの `execution-policy` と `runtime_guidance` を確認する。
 3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。
+4. **アプローチが探索的な場合**、仮説・観察・却下した試行を、発生したその場で
+   `impl-doc` 経由で Experiment Log に記録する（後述の **実装ドキュメント** セクションを参照）。
 
 ---
 
@@ -202,6 +205,27 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 1. Canonical review skill `requesting-code-review` を用いて実装をレビューに提出する(契約参照)。
 2. フィードバックに体系的に対応する。
 3. レビュー中に発見された新制約を記録する。
+
+---
+
+## 実装ドキュメント
+
+実装フェーズは `impl-doc` スキルを通じて 2 つのダウンストリーム文書を生成する。
+これらの記録はフローの一部であり、任意の追加作業ではない。このフローが
+`doc-driven-dev-lifecycle` の下で実行される場合、`docs/impl/ir/` と
+`docs/impl/exp/` は既に存在する（bootstrap contract）。これらの記録を確保する
+ことは完了義務である。
+
+- **Experiment Log（`docs/impl/exp/`）** — Phase A でアプローチが不確実または
+  探索的と判定された場合に作成する。仮説・観察・却下した試行を、Phase C で
+  発生したその場で記録する。解決策が既知の機械的なタスクでは作成しない。
+- **Implementation Record（`docs/impl/ir/`）** — タスク単位ごとに完了時
+  （Phase D/E）に 1 件作成する。実装内容、実装中の意思決定、採用／却下した
+  実験を記録する。Experiment Log が存在する場合、記録はそれを参照しなければ
+  ならない。
+
+作成コマンド、規約、完了報告前に実行する監査手順は
+[`impl-doc` SKILL](../impl-doc/SKILL.ja.md) を参照。
 
 ---
 
@@ -277,6 +301,8 @@ dispatch-specific override・emergency override・その他の non-default routi
 - 各タスクが定義された検証条件を通過している。
 - 実装中に発見された新制約が上流文書に反映されている。
 - Review カテゴリスキルが適用されている（コードレビュー完了）。
+- 各タスク単位に Implementation Record（`impl-doc` の ir）が存在し、実装中に
+  作成した Experiment Log（exp）を参照・監査している。
 
 ## ループバックルール
 
