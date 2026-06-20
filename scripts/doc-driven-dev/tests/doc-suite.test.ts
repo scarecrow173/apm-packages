@@ -29,6 +29,14 @@ function runScript(skill, name, args, options = {}) {
   };
 }
 
+function assertConcepts(text, concepts, label) {
+  const normalized = text.replace(/\s+/g, " ");
+
+  for (const concept of concepts) {
+    assert.match(normalized, concept, label);
+  }
+}
+
 test("new_spec creates front matter spec and index", () => {
   const repo = tempRepo();
 
@@ -90,6 +98,64 @@ test("doc conventions cover directory order, filenames, mutability, and subdirec
     assert.match(text, /## Mutability/);
     assert.match(text, /## Subdirectory Grouping/);
   }
+});
+
+test("plan-doc recommends abstract delegated implementation handoff", () => {
+  const planDocRoot = path.join(skillRoot, "plan-doc");
+  const files = [
+    "SKILL.md",
+    "SKILL.ja.md",
+    "references/plan-conventions.md",
+    "references/plan-conventions.ja.md",
+    "assets/templates/plan.md",
+    "assets/templates/plan.ja.md",
+  ];
+  const disallowed = /REQUIRED SUB-SKILL|superpowers:|writing-plans|subagent-driven-development|executing-plans/i;
+
+  for (const relative of files) {
+    const text = fs.readFileSync(path.join(planDocRoot, relative), "utf8");
+    assert.doesNotMatch(text, disallowed, `${relative} should not hardcode environment-specific skill IDs`);
+  }
+
+  const englishSkill = fs.readFileSync(path.join(planDocRoot, "SKILL.md"), "utf8");
+  assertConcepts(
+    englishSkill,
+    [/delegated/i, /subagent-capable/i, /implementation/i],
+    "SKILL.md should recommend delegated or subagent-capable implementation",
+  );
+  assertConcepts(
+    englishSkill,
+    [/approval/i, /before dispatch/i],
+    "SKILL.md should require user approval before dispatch",
+  );
+  assertConcepts(
+    englishSkill,
+    [/discover/i, /implementation/i, /delegation capabilities/i, /current environment/i],
+    "SKILL.md should discover current environment implementation and delegation capabilities",
+  );
+
+  const englishTemplate = fs.readFileSync(path.join(planDocRoot, "assets/templates/plan.md"), "utf8");
+  assert.match(englishTemplate, /## Implementation Handoff/);
+  assertConcepts(
+    englishTemplate,
+    [/approval/i, /discover/i, /delegated|subagent-capable/i],
+    "plan.md should cover approval, discovery, and delegated or subagent-capable implementation",
+  );
+
+  const japaneseSkill = fs.readFileSync(path.join(planDocRoot, "SKILL.ja.md"), "utf8");
+  assertConcepts(
+    japaneseSkill,
+    [/実装ハンドオフ/, /ユーザー承認/, /現在の環境/, /実装・委譲能力/, /委譲型/, /サブエージェント対応/],
+    "SKILL.ja.md should cover Japanese implementation handoff concepts",
+  );
+
+  const japaneseTemplate = fs.readFileSync(path.join(planDocRoot, "assets/templates/plan.ja.md"), "utf8");
+  assert.match(japaneseTemplate, /## 実装ハンドオフ/);
+  assertConcepts(
+    japaneseTemplate,
+    [/ユーザー承認/, /現在の環境/, /実装・委譲能力/, /委譲型/, /サブエージェント対応/],
+    "plan.ja.md should cover Japanese approval, discovery, and delegated implementation concepts",
+  );
 });
 
 test("new_spec uses the packaged spec template", () => {
