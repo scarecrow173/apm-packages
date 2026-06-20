@@ -80,6 +80,21 @@ share the same critical path and the same release intent.
    commands when they are known.
    Use bite-sized task steps: one action per step.
    Avoid placeholders and vague instructions.
+10. Prepare implementation handoff.
+    When the dependency graph contains independent work streams, recommend
+    delegated or subagent-capable implementation as the default execution mode.
+    Ask the user for approval before dispatching additional agents, remote
+    automation, or separate execution contexts.
+
+    If the user approves, discover the implementation and delegation capabilities
+    available in the current environment, choose the capability that can execute
+    plan tasks with review checkpoints, and proceed task-by-task. If no suitable
+    capability is available, state that gap and continue inline with the same
+    verification matrix.
+
+    Do not hardcode environment-specific skill IDs in the plan. Describe the
+    required capability instead: delegated implementation, independent task
+    execution, review checkpoints, and verification before completion.
 
 If the design gate fails, the script returns:
 

@@ -49,6 +49,14 @@ separate plans. Call out the boundary explicitly. -->
 - [ ] No placeholders remain.
 - [ ] File paths, relations, status values, and terminology are consistent.
 
+## Implementation Handoff
+
+- Recommended mode: <!-- inline execution or delegated or subagent-capable implementation -->
+- Independent work streams: <!-- list task IDs or state none -->
+- User approval required before dispatch: yes
+- If approved: discover available implementation and delegation capabilities in the current environment, then execute task-by-task with review checkpoints.
+- If declined or unavailable: execute inline using the same dependency graph and verification matrix.
+
 ## Review Handoff
 
 - <!-- assumptions, missing dependencies, or reviewer focus -->

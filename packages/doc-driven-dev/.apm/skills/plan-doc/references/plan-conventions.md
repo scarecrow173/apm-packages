@@ -156,6 +156,10 @@ Plans should include:
 9. Rollback or follow-up notes when the implementation is risky.
 10. A self-review pass that checks spec coverage, placeholder cleanup, and
     terminology consistency.
+11. An implementation handoff section that recommends delegated or
+    subagent-capable implementation when tasks can run independently, asks for
+    user approval before dispatch, and routes execution through capabilities
+    discovered in the current environment instead of hardcoded skill IDs.
 
 ## Task Granularity
 
@@ -277,6 +281,26 @@ docs/plans/
 
 Use this pattern when the plans belong to the same feature and are best
 reviewed together. Keep numbering local to the feature directory.
+
+## Implementation Handoff
+
+Before implementation starts, plans should recommend delegated or
+subagent-capable implementation when the dependency graph identifies independent
+work streams. The recommendation is advisory until the user approves it.
+
+Use this handoff sequence:
+
+1. Identify independent tasks and review checkpoints from the dependency graph.
+2. Ask the user whether delegated or subagent-capable implementation may be used.
+3. If approved, discover the implementation and delegation capabilities
+   available in the current environment.
+4. Select the capability that can execute tasks independently, preserve review
+   checkpoints, and run the verification matrix.
+5. If no suitable capability exists or the user declines, execute inline with
+   the same task order and verification requirements.
+
+Do not name environment-specific skill IDs in reusable plans. Name the required
+capabilities instead.
 
 ## Review Handoff
 
