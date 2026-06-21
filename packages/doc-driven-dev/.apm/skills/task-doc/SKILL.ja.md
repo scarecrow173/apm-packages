@@ -25,6 +25,15 @@ task を作成するには、以下のいずれかを満たす必要がある:
    - 参照する spec/ADR も存在しない場合は、先に spec-doc または
      adr-doc を作成すること（簡潔でも可）。
 
+3. **実装後フォローアップ path**: lifecycle の Phase 5 終了ゲートから
+   task を作成する場合、次のすべてを満たすこと:
+   - フォローアップ分類が記録されている。
+   - `bug-fix` と `doc-only` は現在の承認済み plan、検証済み task、
+     または影響を受ける上流文書を参照する。
+   - `decision-required` と `new-feature` は、上流の spec、ADR、design、
+     plan のルートが完了するまで実装 task にしない。
+   - `relations.depends-on` と `relations.blocks` で依存関係を明示する。
+
 どちらのパスも満たさない場合、task を作成してはならない。
 </HARD-GATE>
 

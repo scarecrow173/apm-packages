@@ -132,6 +132,20 @@ relation は文書種別ではなく意味で選びます。
 
 内部文書は相対パスを使います。外部出典は URL を使います。
 
+## フォローアップ分類
+
+lifecycle の Phase 5 終了ゲートから作成される task は
+`## 分類` セクションを含めます。値は次のうち 1 つだけを使います:
+`normal-plan-task`, `bug-fix`, `doc-only`, `defer`, `wont-do`。
+`decision-required` または `new-feature` に分類される項目は、
+実装 task になる前に上流へ戻します。
+
+- `relations.implements` は、その task が実行する承認済み plan、spec、ADR に使います。
+- `relations.derives-from` は、フォローアップを発見した review note、implementation record、task に使います。
+- `relations.depends-on` は、前提となる decision、上流文書、blocking task に使います。
+- `relations.blocks` は、このフォローアップが解決するまで進められない task に使います。
+- 分類が `defer` の場合は `relations.defers` を使います。
+
 ## 必須内容
 
 task は次を含めます。
