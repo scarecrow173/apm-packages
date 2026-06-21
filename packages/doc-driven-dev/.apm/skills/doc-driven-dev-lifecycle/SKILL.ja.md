@@ -25,11 +25,16 @@ license: MIT
 ## フロー概要
 
 ```text
-Phase -1: Migration（任意）  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  ->  Phase 2: Design  ->  Phase 3: Planning  ->  Phase 4: Execution Slice  ->  Phase 5: Implementation  ->  Phase 6: Exit
+Phase -1: Migration（任意）  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  ->  Phase 2: Design  ->  Phase 3: Planning  ->  Phase 4: Execution Slice  ->  Phase 5: Implementation  ->  Phase 5 終了ゲート: 実装後レビュー / フォローアップ分類  ->  Phase 6: Exit
 ```
 
 各フェーズにはゲートがあり、通過しなければ次へ進めない。
 詳細は `references/flow-contract.ja.md` を参照。
+
+Phase 6 に進む前に、実装結果を承認済み spec、ADR、design、plan、
+task の検証証跡と照合する。すべてのフォローアップを `bug-fix`,
+`decision-required`, `new-feature`, `doc-only`, `defer`, `wont-do` の
+いずれかに分類する。未分類フォローアップが残っている間は Phase 6 に進まない。
 
 ## フェーズ一覧
 
@@ -304,7 +309,14 @@ Phase 5 は Phase 4 のタスクが承認され実行準備が整った時に開
 
 ### Phase 6 への移行
 
-実装完了後、Phase 6（`doc-status`）に進み最終的な文書整合検証を行う。
+実装完了後、Phase 5 終了ゲート: 実装後レビュー / フォローアップ分類を通過する。
+Phase 6 に進む前に、実装結果を承認済み spec、ADR、design、plan、task の
+検証証跡と照合する。すべてのフォローアップを `bug-fix`, `decision-required`,
+`new-feature`, `doc-only`, `defer`, `wont-do` のいずれかに分類する。
+未分類フォローアップが残っている間は Phase 6 に進まない。
+
+Phase 5 終了ゲートを通過した後、Phase 6（`doc-status`）に進み
+最終的な文書整合検証を行う。
 
 ## Phase 6: Exit
 
