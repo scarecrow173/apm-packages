@@ -269,7 +269,7 @@ doc-driven-dev-lifecycle
   -> Phase -1: migrate existing docs      (任意; apply 前に dry-run)
   -> Phase 0: scaffold docs tree          (canonical docs tree; design overview は design-doc 所有)
   -> Phase 1: briefing-flow
-  -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
+  -> Phase 1 outputs: discovery-doc（任意）+ spec-doc + adr-doc  (discovery で探索を永続化；spec + adr は並列)
   -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 5: implementation-flow -> impl-doc
