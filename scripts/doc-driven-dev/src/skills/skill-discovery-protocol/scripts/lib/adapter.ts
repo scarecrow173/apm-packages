@@ -87,9 +87,16 @@ function findAdapterSearchDirs(adapterDir: string): string[] {
     current = parent;
   }
 
-  const bundledAdaptersDir = path.resolve(__dirname, "..", "assets", "adapters");
-  if (fs.existsSync(bundledAdaptersDir) && !dirs.includes(bundledAdaptersDir)) {
-    dirs.push(bundledAdaptersDir);
+  // Support both direct source execution (lib -> ../.. -> assets) and bundled
+  // entrypoint execution (__dirname at scripts/ -> .. -> assets).
+  const bundledAdapterCandidates = [
+    path.resolve(__dirname, "..", "assets", "adapters"),
+    path.resolve(__dirname, "..", "..", "assets", "adapters"),
+  ];
+  for (const bundledAdaptersDir of bundledAdapterCandidates) {
+    if (fs.existsSync(bundledAdaptersDir) && !dirs.includes(bundledAdaptersDir)) {
+      dirs.push(bundledAdaptersDir);
+    }
   }
   return dirs;
 }
