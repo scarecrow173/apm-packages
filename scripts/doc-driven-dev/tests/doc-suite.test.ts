@@ -460,16 +460,22 @@ test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", 
   assert.match(skill, /Phase 5 Exit Gate/);
   assert.match(skill, /Post-Implementation Review/);
   assert.match(contract, /Follow-up Triage/);
-  assert.match(contract, /bug-fix/);
-  assert.match(contract, /decision-required/);
-  assert.match(contract, /new-feature/);
-  assert.match(contract, /doc-only/);
-  assert.match(contract, /defer/);
-  assert.match(contract, /wont-do/);
+  assert.match(contract, /`bug-fix`/);
+  assert.match(contract, /`decision-required`/);
+  assert.match(contract, /`new-feature`/);
+  assert.match(contract, /`doc-only`/);
+  assert.match(contract, /`defer`/);
+  assert.match(contract, /`wont-do`/);
 
   assert.match(skillJa, /Phase 5 終了ゲート/);
   assert.match(skillJa, /実装後レビュー/);
   assert.match(contractJa, /フォローアップ分類/);
+  assert.match(contractJa, /`bug-fix`/);
+  assert.match(contractJa, /`decision-required`/);
+  assert.match(contractJa, /`new-feature`/);
+  assert.match(contractJa, /`doc-only`/);
+  assert.match(contractJa, /`defer`/);
+  assert.match(contractJa, /`wont-do`/);
 });
 
 test("task-doc documents follow-up task routing and dependency rules", () => {
@@ -488,8 +494,11 @@ test("task-doc documents follow-up task routing and dependency rules", () => {
   assert.match(conventions, /relations\.blocks/);
   assert.match(template, /## Classification/);
 
-  assert.match(skillJa, /フォローアップ task/);
+  assert.match(skillJa, /承認済み plan/);
   assert.match(conventionsJa, /フォローアップ分類/);
+  assert.match(conventionsJa, /relations\.depends-on/);
+  assert.match(conventionsJa, /relations\.blocks/);
+  assert.match(conventionsJa, /承認済み plan/);
   assert.match(templateJa, /## 分類/);
 });
 
