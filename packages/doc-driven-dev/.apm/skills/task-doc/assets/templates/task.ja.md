@@ -4,6 +4,10 @@
 
 <!-- 実装単位を書く。 -->
 
+## 分類
+
+- `normal-plan-task`
+
 ## 上流文書
 
 - <!-- plan、spec、ADR、task のパス -->

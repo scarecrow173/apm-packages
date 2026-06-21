@@ -141,6 +141,20 @@ briefing 完了成果物になる。
 - 新たに発見された制約が上流文書に反映されている。
 - コードレビューが完了している。
 
+## Phase 5 終了ゲート: 実装後レビュー / フォローアップ分類
+
+目的: 文書セットを Exit へ進める前に、実装済みの挙動が承認済み上流文書と
+整合していることを確認する。
+
+| Classification | Required route |
+| --- | --- |
+| `bug-fix` | 現在の承認済み plan 配下に task を作成または更新し、`relations.depends-on` / `relations.blocks` で関連付ける。 |
+| `decision-required` | implementation task を作成する前に Phase 1、Phase 2、または ADR 更新へ戻る。 |
+| `new-feature` | 現在の plan には紐付けず、idea/discovery/spec flow へ昇格する。 |
+| `doc-only` | Phase 6 の前に、影響を受ける文書または implementation record を更新する。 |
+| `defer` | `relations.defers` または明示的な deferred task として延期を記録する。 |
+| `wont-do` | 理由を記録する。task として表す場合は `status: wont-do` にする。 |
+
 ## Phase 6: Exit
 
 目的: `doc-status` 監査で文書整合を確認し完了判定する。

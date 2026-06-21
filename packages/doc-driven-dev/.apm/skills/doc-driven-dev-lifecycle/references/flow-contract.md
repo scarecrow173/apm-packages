@@ -144,6 +144,20 @@ skill stack per task via `implementation-profile.md`.
 - New constraints discovered are reflected in upstream documents.
 - Code review is complete.
 
+## Phase 5 Exit Gate: Post-Implementation Review / Follow-up Triage
+
+Purpose: verify implemented behavior against approved upstream documents before
+the document set is allowed to exit.
+
+| Classification | Required route |
+| --- | --- |
+| `bug-fix` | Create or update a task under the current approved plan; link it with `relations.depends-on` / `relations.blocks`. |
+| `decision-required` | Return to Phase 1, Phase 2, or ADR update before creating implementation tasks. |
+| `new-feature` | Do not attach to the current plan; promote to idea/discovery/spec flow. |
+| `doc-only` | Update the affected document or implementation record before Phase 6. |
+| `defer` | Record the deferral with `relations.defers` or an explicit deferred task. |
+| `wont-do` | Record the reason; if represented as a task, set `status: wont-do`. |
+
 ## Phase 6: Exit
 
 Purpose: Confirm document integrity via `doc-status` audit after execution.

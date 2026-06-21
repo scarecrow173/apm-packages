@@ -33,16 +33,57 @@ docs tree の bootstrap、briefing、文書作成、実装準備、exit まで�
 ライフサイクル本体の skill は `doc-driven-dev-lifecycle` です。必要に応じて以下の
 フェーズ別 skill を呼び出しながら、mainline の文書フローを進めます。
 
-```text
-doc-driven-dev-lifecycle
-  -> Phase -1: migrate existing docs      (任意; apply 前に dry-run)
-  -> Phase 0: scaffold docs tree          (canonical docs tree; design overview は design-doc 所有)
-  -> Phase 1: briefing-flow
-  -> Phase 1 outputs: discovery-doc（任意）+ spec-doc + adr-doc   (discovery で探索を永続化；spec + adr は並列)
-  -> Phase 2: design-doc                   (overview + detailed design docs)
-  -> Phase 4a: plan-doc -> task-doc
-  -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5/6: doc-status -> exit
+```mermaid
+flowchart TD
+    L["doc-driven-dev-lifecycle"] --> Pm1["Phase -1: migrate existing docs（任意）"]
+    Pm1 --> Gm1{"Migration Gate"}
+    Gm1 -->|pass| P0["Phase 0: scaffold docs tree"]
+    Gm1 -->|"loopback: mapping または apply の問題"| Pm1
+
+    P0 --> G0{"Bootstrap Gate"}
+    G0 -->|pass| P1["Phase 1: briefing-flow"]
+    G0 -->|"loopback: tree 不備または ownership 不整合"| P0
+
+    P1 --> O1["Phase 1 outputs:\ndiscovery-doc（任意）+ spec-doc + adr-doc"]
+    O1 --> G1{"Briefing Gate"}
+    G1 -->|pass| P2["Phase 2: design-doc"]
+    G1 -->|"loopback: briefing 未完了"| P1
+
+    P2 --> G2{"Design Gate"}
+    G2 -->|pass| P3["Phase 3: plan-doc"]
+    G2 -->|"loopback: design 未承認または不整合"| P1
+    G2 -->|"loopback: design の再整理が必要"| P2
+
+    P3 --> G3{"Planning Gate"}
+    G3 -->|pass| P4["Phase 4: task-doc"]
+    G3 -->|"loopback: 承認済み design 不足"| P2
+    G3 -->|"loopback: plan 分解の問題"| P3
+
+    P4 --> G4{"Task Gate"}
+    G4 -->|pass| P5["Phase 5: implementation-flow -> impl-doc"]
+    G4 -->|"loopback: task のトレーサビリティまたは依存不足"| P3
+    G4 -->|"loopback: task 定義が未完了"| P4
+
+    P5 --> G5{"Implementation Gate"}
+    G5 -->|pass| GX{"Phase 5 終了ゲート:\n実装後レビュー +\nフォローアップ分類"}
+    G5 -->|"loopback: verification 未完了"| P4
+    G5 -->|"loopback: 実装のやり直しが必要"| P5
+
+    P5 -->|"loopback: upstream gap を発見"| P1
+    P5 -->|"loopback: constraint/design gap を発見"| P2
+
+    GX -->|フォローアップなし| P6["Phase 6: doc-status"]
+    GX -->|bug-fix| P4
+    GX -->|decision-required| P1
+    GX -->|decision-required| P2
+    GX -->|new-feature| P1
+    GX -->|doc-only| P4
+    GX -->|終了証跡のみの doc-only| P6
+    GX -->|defer または wont-do| P6
+
+    P6 --> G6{"Exit Gate"}
+    G6 -->|pass| E["exit"]
+    G6 -->|"loopback: front matter, relation, index の問題"| P6
 ```
 
 - **Spec** は WHAT、WHY、SCOPE を定義します。
@@ -55,6 +96,11 @@ doc-driven-dev-lifecycle
   変換済みの canonical docs を作成します。
 - **bootstrap 境界**: `scaffold_docs` は canonical な `docs/` tree を作成しますが、
   `docs/designs/overview.md` は作成せず `design-doc` に任せます。
+- **Phase 5 終了ゲート**: 実装後、lifecycle 利用者は完了した作業を承認済み
+  spec、ADR、design、plan、task の検証証跡と照合します。フォローアップは Exit
+  前に分類し、バグ修正、意思決定、新機能、文書更新、延期が孤立 task にならないようにします。
+- **loopback ルール**: loopback はゲート不通過だけではありません。実装や
+  レビューの途中で upstream gap が見つかった場合にも、解消のために前段へ戻ります。
 
 ライフサイクルを構成するフェーズ skill は `idea-doc`, `deep-dive`,
 `briefing-flow`, `discovery-doc`, `spec-doc`, `adr-doc`, `design-doc`,
@@ -211,7 +257,7 @@ flow-neutral な catalog と flow-specific な profile を構築し、
 
 ### オーケストレーション Skill
 
-これらのオーケストレーション skill は Phase 1 (Briefing)、Phase 4b
+これらのオーケストレーション skill は Phase 1 (Briefing)、Phase 5
 (Implementation)、およびリポジトリ固有の skill discovery の周辺で動作します。
 固定の workflow-skill stack を同梱するのではなく、その場の環境で利用可能な skill を
 発見してルーティングします。
@@ -265,11 +311,12 @@ doc-driven-dev-lifecycle
   -> Phase -1: migrate existing docs      (任意; apply 前に dry-run)
   -> Phase 0: scaffold docs tree          (canonical docs tree; design overview は design-doc 所有)
   -> Phase 1: briefing-flow
-  -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
+  -> Phase 1 outputs: discovery-doc（任意）+ spec-doc + adr-doc  (discovery で探索を永続化；spec + adr は並列)
   -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
-  -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5/6: doc-status -> exit
+  -> Phase 5: implementation-flow -> impl-doc
+  -> Phase 5 終了ゲート: 実装後レビュー + フォローアップ分類
+  -> Phase 6: doc-status -> exit
 ```
 
 `doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`migrate_docs` は

@@ -24,12 +24,21 @@ sequencing constraints and completion criteria defined in the Flow Contract.
 
 ## Flow Overview
 
-```text
-Phase -1: Migration (optional)  ->  Phase 0: Bootstrap  ->  Phase 1: Briefing  ->  Phase 2: Design  ->  Phase 3: Planning  ->  Phase 4: Execution Slice  ->  Phase 5: Implementation  ->  Phase 6: Exit
-```
+The lifecycle proceeds through:
+`Phase -1 Migration (optional) -> Phase 0 Bootstrap -> Phase 1 Briefing ->
+Phase 2 Design -> Phase 3 Planning -> Phase 4 Execution Slice -> Phase 5
+Implementation -> Phase 6 Exit`.
 
-Each phase has a gate that must be satisfied before proceeding.
+Each phase has a gate that must be satisfied before proceeding. Each phase also
+has loopback rules: gate failures can keep work in the current phase or return
+it to an earlier phase, and later-phase discoveries can also force an upstream
+loopback before the lifecycle can continue.
 See `references/flow-contract.md` for the full specification.
+
+Before Phase 6, compare the implemented work against the approved spec, ADR,
+design, plan, and task verification evidence. Classify every follow-up as
+`bug-fix`, `decision-required`, `new-feature`, `doc-only`, `defer`, or
+`wont-do`. Do not enter Phase 6 while unclassified follow-ups remain.
 
 ## Phase Summary
 
@@ -311,8 +320,15 @@ Phase 5 begins when Phase 4 tasks are approved and ready for execution.
 
 ### Exit to Phase 6
 
-After implementation completes, proceed to Phase 6 (`doc-status`) for final
-document integrity verification.
+After implementation completes, pass the Phase 5 Exit Gate:
+Post-Implementation Review / Follow-up Triage. Compare the implemented work
+against the approved spec, ADR, design, plan, and task verification evidence.
+Classify every follow-up as `bug-fix`, `decision-required`, `new-feature`,
+`doc-only`, `defer`, or `wont-do`. Do not enter Phase 6 while unclassified
+follow-ups remain.
+
+After the Phase 5 Exit Gate passes, proceed to Phase 6 (`doc-status`) for
+final document integrity verification.
 
 ## Phase 6: Exit
 

@@ -133,6 +133,20 @@ Use relation fields for meaning, not document type.
 
 Internal documents use relative paths. External sources use URLs.
 
+## Follow-up Classification
+
+Tasks created from the lifecycle Phase 5 Exit Gate must include a
+`## Classification` section. Use exactly one value:
+`normal-plan-task`, `bug-fix`, `doc-only`, `defer`, or `wont-do`.
+Items classified as `decision-required` or `new-feature` must return upstream
+before they become implementation tasks.
+
+- Use `relations.implements` for the approved plan, spec, or ADR the task executes.
+- Use `relations.derives-from` for the review note, implementation record, or task that surfaced the follow-up.
+- Use `relations.depends-on` for prerequisite decisions, upstream documents, or blocking tasks.
+- Use `relations.blocks` for tasks that cannot proceed until this follow-up is resolved.
+- Use `relations.defers` when the classification is `defer`.
+
 ## Required Content
 
 Tasks should include:

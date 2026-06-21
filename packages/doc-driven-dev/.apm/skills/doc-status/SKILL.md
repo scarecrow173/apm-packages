@@ -24,6 +24,8 @@ Examples of blocking issues:
 - Missing required front matter fields (id, type, status, relations)
 - Broken internal relations (referenced file does not exist)
 - Documents not registered in the index
+- Unclassified follow-up items remaining from the Phase 5 Exit Gate
+- Follow-up tasks missing required upstream relations or dependency links
 
 ## Output Contract
 
@@ -34,7 +36,9 @@ Return audit results using this structure:
 - `Warnings`: non-blocking issues worth fixing
 - `Relation errors`: broken internal links or inconsistent relations
 - `Index gaps`: missing registry or index coverage
-- `Next actions`: the minimum follow-up needed to pass the gate
+- `Next actions`: the minimum follow-up needed to pass the gate; when
+  unclassified follow-up remains, name the smallest return point that can
+  classify or repair it
 
 ## Workflow
 

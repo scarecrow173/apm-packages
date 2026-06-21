@@ -34,16 +34,57 @@ and exit:
 The lifecycle skill is `doc-driven-dev-lifecycle`. It orchestrates the mainline
 document flow and invokes the phase-specific skills below as needed:
 
-```text
-doc-driven-dev-lifecycle
-  -> Phase -1: migrate existing docs      (optional; dry-run before apply)
-  -> Phase 0: scaffold docs tree          (canonical docs tree; design overview remains design-doc-owned)
-  -> Phase 1: briefing-flow
-  -> Phase 1 outputs: discovery-doc (optional) + spec-doc + adr-doc   (discovery persists exploration; spec + adr are parallel when context is ready)
-  -> Phase 2: design-doc                   (overview + detailed design docs)
-  -> Phase 4a: plan-doc -> task-doc
-  -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5/6: doc-status -> exit
+```mermaid
+flowchart TD
+    L["doc-driven-dev-lifecycle"] --> Pm1["Phase -1: migrate existing docs (optional)"]
+    Pm1 --> Gm1{"Migration Gate"}
+    Gm1 -->|pass| P0["Phase 0: scaffold docs tree"]
+    Gm1 -->|"loopback: mapping or apply issue"| Pm1
+
+    P0 --> G0{"Bootstrap Gate"}
+    G0 -->|pass| P1["Phase 1: briefing-flow"]
+    G0 -->|"loopback: tree incomplete or ownership mismatch"| P0
+
+    P1 --> O1["Phase 1 outputs:\ndiscovery-doc (optional) + spec-doc + adr-doc"]
+    O1 --> G1{"Briefing Gate"}
+    G1 -->|pass| P2["Phase 2: design-doc"]
+    G1 -->|"loopback: briefing incomplete"| P1
+
+    P2 --> G2{"Design Gate"}
+    G2 -->|pass| P3["Phase 3: plan-doc"}
+    G2 -->|"loopback: design not approved or inconsistent"| P1
+    G2 -->|"loopback: design needs refinement"| P2
+
+    P3 --> G3{"Planning Gate"}
+    G3 -->|pass| P4["Phase 4: task-doc"]
+    G3 -->|"loopback: approved design missing"| P2
+    G3 -->|"loopback: plan decomposition issue"| P3
+
+    P4 --> G4{"Task Gate"}
+    G4 -->|pass| P5["Phase 5: implementation-flow -> impl-doc"]
+    G4 -->|"loopback: task traceability or dependency gap"| P3
+    G4 -->|"loopback: task definition incomplete"| P4
+
+    P5 --> G5{"Implementation Gate"}
+    G5 -->|pass| GX{"Phase 5 Exit Gate:\npost-implementation review +\nfollow-up triage"}
+    G5 -->|"loopback: verification incomplete"| P4
+    G5 -->|"loopback: implementation rework needed"| P5
+
+    P5 -->|"loopback: upstream gap discovered"| P1
+    P5 -->|"loopback: constraint/design gap discovered"| P2
+
+    GX -->|no follow-up| P6["Phase 6: doc-status"]
+    GX -->|bug-fix| P4
+    GX -->|decision-required| P1
+    GX -->|decision-required| P2
+    GX -->|new-feature| P1
+    GX -->|doc-only| P4
+    GX -->|doc-only exit evidence only| P6
+    GX -->|defer or wont-do| P6
+
+    P6 --> G6{"Exit Gate"}
+    G6 -->|pass| E["exit"]
+    G6 -->|"loopback: front matter, relation, or index issue"| P6
 ```
 
 - **Spec** answers WHAT, WHY, and SCOPE.
@@ -58,6 +99,14 @@ doc-driven-dev-lifecycle
   converted canonical docs only when run with `--apply`.
 - **Bootstrap boundary**: `scaffold_docs` creates the canonical `docs/` tree
   without `docs/designs/overview.md`; `design-doc` owns that file.
+- **Phase 5 Exit Gate**: after implementation, lifecycle users must compare
+  completed work against the approved spec, ADR, design, plan, and task
+  verification evidence. Follow-ups are classified before exit so bug fixes,
+  decisions, new features, documentation updates, and deferrals do not become
+  orphan tasks.
+- **Loopback rules**: loopbacks are not limited to gate failures. They also
+  apply when implementation or review uncovers an upstream gap that must be
+  resolved before the lifecycle can continue.
 
 Lifecycle phase skills: `idea-doc`, `deep-dive`, `briefing-flow`,
 `discovery-doc`, `spec-doc`, `adr-doc`, `design-doc`, `plan-doc`, `task-doc`,
@@ -228,7 +277,7 @@ artifacts.
 
 ### Orchestration Skills
 
-These orchestration skills activate around Phase 1 (Briefing), Phase 4b
+These orchestration skills activate around Phase 1 (Briefing), Phase 5
 (Implementation), and repository-specific skill discovery. They do not bundle a
 fixed workflow-skill stack; instead they discover and route whatever skills are
 available in the current environment.
@@ -286,8 +335,9 @@ doc-driven-dev-lifecycle
   -> Phase 1 outputs: discovery-doc (optional) + spec-doc + adr-doc  (discovery persists exploration; spec + adr parallel)
   -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
-  -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5/6: doc-status -> exit
+  -> Phase 5: implementation-flow -> impl-doc
+  -> Phase 5 Exit Gate: post-implementation review + follow-up triage
+  -> Phase 6: doc-status -> exit
 ```
 
 `doc-driven-dev-lifecycle` is the lifecycle entrypoint. `migrate_docs` can

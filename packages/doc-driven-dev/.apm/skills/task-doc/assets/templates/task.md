@@ -4,6 +4,10 @@
 
 <!-- Describe the implementation slice. -->
 
+## Classification
+
+- `normal-plan-task`
+
 ## Upstream Documents
 
 - <!-- plan, spec, ADR, or task path -->

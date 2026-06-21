@@ -23,6 +23,8 @@ license: MIT
 - 必須フロントマターフィールドの欠落（id, type, status, relations）
 - 壊れた内部 relation（参照先ファイルが存在しない）
 - 索引に未登録の文書
+- Phase 5 終了ゲートから残った未分類フォローアップ
+- 必須の上流 relation または依存リンクを欠くフォローアップ task
 
 ## Output Contract
 
@@ -33,7 +35,8 @@ license: MIT
 - `Warnings`: ブロッキングではないが修正したい問題
 - `Relation errors`: 壊れた内部リンクまたは不整合な relation
 - `Index gaps`: 足りない registry / index coverage
-- `Next actions`: ゲート通過に必要な最小フォローアップ
+- `Next actions`: ゲート通過に必要な最小フォローアップ。未分類フォローアップが
+  残っている場合は、分類または修復できる最小の戻り先を示す
 
 ## ワークフロー
 

@@ -23,15 +23,24 @@ To create a task, one of the following must be satisfied:
    - Reference an `approved` spec-doc or adr-doc via
      `relations.implements` or `relations.derives-from`.
    - If no spec/ADR exists either, create one first (brief content is acceptable).
+3. **Post-implementation follow-up path**: When the task comes from the
+   lifecycle Phase 5 Exit Gate, ALL of the following must hold:
+   - The follow-up has a recorded classification.
+   - `bug-fix` and `doc-only` tasks reference the current approved plan, the
+     verified task, or the affected upstream document.
+   - `decision-required` and `new-feature` items are not implementation tasks
+     until their upstream spec, ADR, design, or plan route is completed.
+   - Dependencies are explicit through `relations.depends-on` and
+     `relations.blocks`.
 
-If neither path is satisfied, do not create the task.
+If none of these paths is satisfied, do not create the task.
 </HARD-GATE>
 
 ## Workflow
 
-1. Confirm the referenced plan has `status: "approved"`.
-   For emergency fixes without a plan, verify the emergency fix path
-   preconditions above are met.
+1. Confirm that the normal path, emergency fix path, or
+   post-implementation follow-up path preconditions above are met before
+   creating the task.
 2. Create a task for one coherent implementation slice.
 
    ```bash
