@@ -42,8 +42,7 @@ doc-driven-dev-lifecycle
   -> Phase 1 outputs: discovery-doc (optional) + spec-doc + adr-doc   (discovery persists exploration; spec + adr are parallel when context is ready)
   -> Phase 2: design-doc                   (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
-  -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5: implementation-flow
+  -> Phase 5: implementation-flow -> impl-doc
   -> Phase 5 Exit Gate: post-implementation review + follow-up triage
   -> Phase 6: doc-status -> exit
 ```
@@ -235,7 +234,7 @@ artifacts.
 
 ### Orchestration Skills
 
-These orchestration skills activate around Phase 1 (Briefing), Phase 4b
+These orchestration skills activate around Phase 1 (Briefing), Phase 5
 (Implementation), and repository-specific skill discovery. They do not bundle a
 fixed workflow-skill stack; instead they discover and route whatever skills are
 available in the current environment.
@@ -293,8 +292,7 @@ doc-driven-dev-lifecycle
   -> Phase 1 outputs: discovery-doc (optional) + spec-doc + adr-doc  (discovery persists exploration; spec + adr parallel)
   -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
-  -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5: implementation-flow
+  -> Phase 5: implementation-flow -> impl-doc
   -> Phase 5 Exit Gate: post-implementation review + follow-up triage
   -> Phase 6: doc-status -> exit
 ```

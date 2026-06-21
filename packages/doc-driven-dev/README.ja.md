@@ -41,8 +41,7 @@ doc-driven-dev-lifecycle
   -> Phase 1 outputs: discovery-doc（任意）+ spec-doc + adr-doc   (discovery で探索を永続化；spec + adr は並列)
   -> Phase 2: design-doc                   (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
-  -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5: implementation-flow
+  -> Phase 5: implementation-flow -> impl-doc
   -> Phase 5 終了ゲート: 実装後レビュー + フォローアップ分類
   -> Phase 6: doc-status -> exit
 ```
@@ -216,7 +215,7 @@ flow-neutral な catalog と flow-specific な profile を構築し、
 
 ### オーケストレーション Skill
 
-これらのオーケストレーション skill は Phase 1 (Briefing)、Phase 4b
+これらのオーケストレーション skill は Phase 1 (Briefing)、Phase 5
 (Implementation)、およびリポジトリ固有の skill discovery の周辺で動作します。
 固定の workflow-skill stack を同梱するのではなく、その場の環境で利用可能な skill を
 発見してルーティングします。
@@ -273,8 +272,7 @@ doc-driven-dev-lifecycle
   -> Phase 1 outputs: spec-doc + adr-doc  (parallel: define what + record decisions)
   -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
-  -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5: implementation-flow
+  -> Phase 5: implementation-flow -> impl-doc
   -> Phase 5 終了ゲート: 実装後レビュー + フォローアップ分類
   -> Phase 6: doc-status -> exit
 ```
