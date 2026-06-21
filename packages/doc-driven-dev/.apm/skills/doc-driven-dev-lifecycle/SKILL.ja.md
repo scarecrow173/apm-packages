@@ -214,6 +214,11 @@ tree を作成する。既存ファイルを保持し、`docs/designs/overview.m
 - スキルスタックを使ったタスク単位の実行
 - 検証証拠の要件
 
+Phase 5 の各 task で最初のコード変更前に
+[`impl-doc` SKILL](../impl-doc/SKILL.ja.md) と
+[`impl-doc` 規約](../impl-doc/references/impl-conventions.ja.md) を読むこと。
+task に `in-progress` の Implementation Record がない状態では、Phase 5 の task 実行を開始しない。
+
 **Do NOT Load** `implementation-flow` は Phase 4 完了前には読まないこと —
 タスク分解が完了してから実装設定を始める。
 
@@ -305,12 +310,20 @@ tree を作成する。既存ファイルを保持し、`docs/designs/overview.m
 ### エントリ条件
 
 Phase 5 は Phase 4 のタスクが承認され実行準備が整った時に開始する。
+Phase 5 の各 task で最初のコード変更前に `impl-doc` SKILL と規約を読み、
+task に `in-progress` の Implementation Record がない状態では、Phase 5 の task 実行を開始しない。
 
 ### Phase 5 完了条件
 
 - 全 `task-doc` エントリが実装済みかつ検証通過している。
 - 実装中に発見された新制約が ADR/design に反映されている。
 - コードレビューが完了している。
+- すべての task はコード変更前に `in-progress` の Implementation Record を開き、
+  その状態で実装を開始している。
+- すべての Implementation Record は実装中に最新状態へ保たれている。
+- すべての Implementation Record は task クローズ前に完了・監査されている。
+- Experiment Log を使った task は、対応する Implementation Record から参照され、
+  Phase 6 の前に監査されている。
 
 ### Phase 6 への移行
 

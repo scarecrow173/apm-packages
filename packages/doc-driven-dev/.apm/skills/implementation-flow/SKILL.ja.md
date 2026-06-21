@@ -40,13 +40,14 @@ routing decision には 1 行の理由を記録する。
 ## フローフェーズ
 
 ```text
-Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検証  →  Phase E: レビュー
+Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentation を開く  →  Phase C: 実行  →  Phase D: 検証  →  Phase E: レビュー
 ```
 
 | フェーズ | 目的 | 出力 |
 | -------- | ---- | ---- |
 | A. 評価 | タスクを理解し、`.sdp/implementation-flow-default/implementation-flow-profile.json` を確認 | タスク特性の特定 |
 | B. 構成 | スキルを発見し、タスク用のスキルスタックを構築/読込 | アクティブスキルスタックの宣言 |
+| C0. Implementation Documentation を開く | コード変更前に Implementation Record を開く | `in-progress` の実装ドキュメント |
 | C. 実行 | 優先度順にスキルを適用 | コード変更の実装 |
 | D. 検証 | タスクが検証条件を通過することを確認 | 正しさのエビデンス |
 | E. レビュー | レビューに提出し、フィードバックに対応 | レビュー完了 |
@@ -170,6 +171,27 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 ---
 
+## Phase C0: Implementation Documentation を開く
+
+各 task の最初のコード変更前に、`impl-doc` を通じて実装記録を開く。
+
+1. タスク単位ごとに `in-progress` の Implementation Record を作成または再利用する。
+2. `impl-doc` の規約に従い、task との対応関係と追跡可能性を維持する。
+3. Phase A で探索的と判定された場合は、該当する試行を始める前に
+   Experiment Log も開く。
+4. Implementation Record のパスを、コード編集に入る前の進捗メモや
+   ステータス更新に残す。
+
+例:
+
+```bash
+node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/0001-wire-checkout-button.md --status "in-progress"
+```
+
+明確な既知解の task でも `in-progress` の Implementation Record は必須であり、任意なのは Experiment Log だけである。
+
+---
+
 ## Phase C: 実行
 
 アクティブスタック内の各スキルを優先度に従って適用する:
@@ -183,7 +205,10 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
    生成済みプロファイルを `skill-discovery-protocol` で参照し、対象スキルの `execution-policy` と `runtime_guidance` を確認する。
 3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。
-4. **アプローチが探索的な場合**、仮説・観察・却下した試行を、発生したその場で
+4. 実装中は `in-progress` の Implementation Record を最新に保つ。主要な判断、
+   スコープ調整、Experiment Log への参照、検証メモを後追いではなく進行中に
+   反映する。
+5. **アプローチが探索的な場合**、仮説・観察・却下した試行を、発生したその場で
    `impl-doc` 経由で Experiment Log に記録する（後述の **実装ドキュメント** セクションを参照）。
 
 ---
@@ -194,7 +219,8 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 
 1. タスクが定義された検証条件を通過することを確認する。
 2. Hard Gate #1（EVIDENCE要件）を満たすエビデンスを記録してから次へ進む。
-3. 検証失敗 → Process カテゴリスキルで診断し、修正し、再検証する。
+3. タスクを閉じる前に、検証エビデンスと最終状態を Implementation Record に追記する。
+4. 検証失敗 → Process カテゴリスキルで診断し、修正し、再検証する。
 
 ---
 
@@ -219,10 +245,11 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 - **Experiment Log（`docs/impl/exp/`）** — Phase A でアプローチが不確実または
   探索的と判定された場合に作成する。仮説・観察・却下した試行を、Phase C で
   発生したその場で記録する。解決策が既知の機械的なタスクでは作成しない。
-- **Implementation Record（`docs/impl/ir/`）** — タスク単位ごとに完了時
-  （Phase D/E）に 1 件作成する。実装内容、実装中の意思決定、採用／却下した
-  実験を記録する。Experiment Log が存在する場合、記録はそれを参照しなければ
-  ならない。
+- **Implementation Record（`docs/impl/ir/`）** — 各 task の最初のコード変更前に、
+  Phase C0 で 1 件作成または再利用する。Phase C では `in-progress` として更新を
+  続け、Phase D/E で完了・監査する。実装内容、実装中の意思決定、検証エビデンス、
+  採用／却下した実験を記録する。Experiment Log が存在する場合、記録はそれを
+  参照しなければならない。
 
 作成コマンド、規約、完了報告前に実行する監査手順は
 [`impl-doc` SKILL](../impl-doc/SKILL.ja.md) を参照。
@@ -255,6 +282,14 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C: 実行  →  Phase D: 検�
 - プロファイルが存在する場合 → 読み込んでその構成に従う。
 「これは簡単だからスキップしてよい」「やり方はわかっている」が最も多い
 失敗パターン。体系的なスキルルーティングの目的を損なう。
+</HARD-GATE>
+
+<HARD-GATE>
+Phase C0 で実装ドキュメントを開くまで、コード変更を開始してはならない。
+- `impl-doc` で Implementation Record を作成または再利用する。
+- 実装中は `--status "in-progress"` のまま維持する。
+- タスクを閉じる前に完了・監査する。
+明確な既知解の task でも `in-progress` の Implementation Record は必須であり、任意なのは Experiment Log だけである。
 </HARD-GATE>
 
 <HARD-GATE>
@@ -301,8 +336,10 @@ dispatch-specific override・emergency override・その他の non-default routi
 - 各タスクが定義された検証条件を通過している。
 - 実装中に発見された新制約が上流文書に反映されている。
 - Review カテゴリスキルが適用されている（コードレビュー完了）。
-- 各タスク単位に Implementation Record（`impl-doc` の ir）が存在し、実装中に
-  作成した Experiment Log（exp）を参照・監査している。
+- 各 task 単位で、Implementation Record（`impl-doc` の ir）がコード変更開始前に
+  開かれている。
+- 各 Implementation Record がタスク終了前に完了・監査され、実装中に作成した
+  Experiment Log（exp）を参照・監査している。
 
 ## ループバックルール
 

@@ -42,13 +42,14 @@ overrides, and record a one-line reason for any non-default routing decision.
 ## Flow Phases
 
 ```text
-Phase A: Assess  →  Phase B: Configure  →  Phase C: Execute  →  Phase D: Verify  →  Phase E: Review
+Phase A: Assess  →  Phase B: Configure  →  Phase C0: Open Implementation Documentation  →  Phase C: Execute  →  Phase D: Verify  →  Phase E: Review
 ```
 
 | Phase | Purpose | Output |
 | ----- | ------- | ------ |
 | A. Assess | Understand task, check for `.sdp/implementation-flow-default/implementation-flow-profile.json` | Task characteristics identified |
 | B. Configure | Discover skills, build/load skill stack for this task | Active skill stack declared |
+| C0. Open Implementation Documentation | Open the Implementation Record before code changes begin | In-progress implementation documentation |
 | C. Execute | Apply skills in priority order | Code changes implemented |
 | D. Verify | Confirm task passes verification conditions | Evidence of correctness |
 | E. Review | Submit for review, address feedback | Review complete |
@@ -172,6 +173,31 @@ For detailed category definitions, see the adapter's `classification.taxonomy` i
 
 ---
 
+## Phase C0: Open Implementation Documentation
+
+Before the first code change for each task, open implementation documentation
+through `impl-doc`.
+
+1. Create or reuse an in-progress Implementation Record for the task unit.
+2. Use `impl-doc` conventions and title/task linkage so downstream audits can
+   trace the work.
+3. If Phase A marked the approach as exploratory, also create an Experiment Log
+   before the relevant experiment starts.
+4. Record the Implementation Record path in your working notes or status stream
+   before editing code.
+
+Example command:
+
+```bash
+node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/0001-wire-checkout-button.md --status "in-progress"
+```
+
+Known-solution work does not skip this phase. The Implementation Record is
+opened before code changes begin; only the Experiment Log remains optional when
+the task is mechanical.
+
+---
+
 ## Phase C: Execute
 
 Apply each skill in the active stack according to its priority:
@@ -185,7 +211,11 @@ Apply each skill in the active stack according to its priority:
 
    Use `skill-discovery-protocol` to inspect `execution-policy` for the skill in the generated profile.
 3. Skills layer — they are not exclusive. Multiple skills apply simultaneously.
-4. **If the approach is exploratory**, capture hypotheses, observations, and
+4. Keep the in-progress Implementation Record current while implementation is
+   underway. Capture key decisions, scope adjustments, and links to any
+   experiment evidence as the task evolves instead of reconstructing them after
+   the fact.
+5. **If the approach is exploratory**, capture hypotheses, observations, and
    rejected attempts in an Experiment Log *as they happen* via `impl-doc` (see the
    **Implementation Documentation** section).
 
@@ -197,7 +227,9 @@ A task is NOT complete until verification passes:
 
 1. Confirm the task passes its defined verification conditions.
 2. Satisfy Hard Gate #1 (EVIDENCE requirement) — record evidence before proceeding.
-3. If verification fails → diagnose using Process-category skills, fix, re-verify.
+3. Add verification evidence and final status notes to the Implementation
+   Record before closing the task.
+4. If verification fails → diagnose using Process-category skills, fix, re-verify.
 
 ---
 
@@ -222,10 +254,12 @@ exist (bootstrap contract); securing these records is a completion duty.
   as uncertain or exploratory. Capture hypotheses, observations, and rejected
   attempts *as they happen* during Phase C. Skip it for mechanical tasks with a
   known solution.
-- **Implementation Record (`docs/impl/ir/`)** — create one per task unit at
-  completion (Phase D/E). Record what was implemented, decisions made during
-  implementation, and which experiments were adopted or rejected. When an
-  Experiment Log exists, the record MUST reference it.
+- **Implementation Record (`docs/impl/ir/`)** — create or reuse one per task
+  unit in Phase C0 before the first code change. Keep it in `in-progress`
+  status during Phase C, then complete and audit it during Phase D/E. Record
+  what was implemented, decisions made during implementation, verification
+  evidence, and which experiments were adopted or rejected. When an Experiment
+  Log exists, the record MUST reference it.
 
 See the [`impl-doc` SKILL](../impl-doc/SKILL.md) for creation commands, conventions,
 and the audit steps to run before reporting completion.
@@ -259,6 +293,16 @@ skill routing.
 - If profile exists → load it and follow its configuration.
 "This is simple enough to skip" and "I know what to do" are the most common
 failure patterns. They defeat systematic skill routing.
+</HARD-GATE>
+
+<HARD-GATE>
+Code changes cannot start until Phase C0 opens implementation documentation.
+Implementation Record is opened before code changes begin.
+- Create or reuse the Implementation Record through `impl-doc`.
+- Keep it `in-progress` while implementing.
+- Complete and audit it before task closure.
+Even when the solution is already known, the Implementation Record is required;
+only the Experiment Log may be skipped.
 </HARD-GATE>
 
 <HARD-GATE>
@@ -304,8 +348,11 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 - Each task passes its defined verification conditions.
 - New constraints discovered during implementation are reflected in upstream documents.
 - Review-category skills have been applied (code review complete).
-- An Implementation Record (`impl-doc` ir) exists for each task unit, referencing
-  and auditing any Experiment Logs (exp) created during implementation.
+- An Implementation Record (`impl-doc` ir) is opened before code changes begin
+  for each task unit.
+- Each Implementation Record is completed and audited before task closure,
+  referencing and auditing any Experiment Logs (exp) created during
+  implementation.
 
 ## Loopback Rules
 

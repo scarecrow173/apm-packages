@@ -450,6 +450,48 @@ test("doc-driven-dev-lifecycle meta skill ships SKILL.md and flow-contract refer
   assert.match(skill, /Phase 6.*Exit/);
 });
 
+test("implementation-flow opens impl-doc before task execution", () => {
+  const implementationRoot = path.join(skillRoot, "implementation-flow");
+  const lifecycleRoot = path.join(skillRoot, "doc-driven-dev-lifecycle");
+  const implDocRoot = path.join(skillRoot, "impl-doc");
+
+  const flow = fs.readFileSync(path.join(implementationRoot, "SKILL.md"), "utf8");
+  const flowJa = fs.readFileSync(path.join(implementationRoot, "SKILL.ja.md"), "utf8");
+  const adapter = fs.readFileSync(
+    path.join(implementationRoot, "assets", "adapters", "implementation-adapter.yaml"),
+    "utf8",
+  );
+  const lifecycle = fs.readFileSync(path.join(lifecycleRoot, "SKILL.md"), "utf8");
+  const lifecycleJa = fs.readFileSync(path.join(lifecycleRoot, "SKILL.ja.md"), "utf8");
+  const contract = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.md"), "utf8");
+  const implDoc = fs.readFileSync(path.join(implDocRoot, "SKILL.md"), "utf8");
+
+  assert.match(flow, /Phase C0: Open Implementation Documentation/);
+  assert.match(flow, /new_impl_record\.js --title/);
+  assert.match(flow, /--status "in-progress"/);
+  assert.match(flow, /Implementation Record is opened before code changes begin/);
+  assert.match(flowJa, /実装フェーズ/);
+  assert.match(flowJa, /`impl-doc`/);
+  assert.match(flowJa, /Experiment Log/);
+  assert.match(flowJa, /--status "in-progress"/);
+
+  assert.match(adapter, /slot_id: "implementation_documentation"/);
+  assert.match(adapter, /skill: "impl-doc"/);
+  assert.match(adapter, /description_patterns:/);
+  assert.match(adapter, /impl-doc/);
+  assert.match(adapter, /implementation record/);
+  assert.match(adapter, /experiment log/);
+  assert.match(adapter, /docs\/impl/);
+
+  assert.match(lifecycle, /Before the first code change for each task/);
+  assert.match(lifecycle, /in-progress Implementation Record/);
+  assert.match(lifecycleJa, /Phase 5（Implementation）に入る前に/);
+  assert.match(contract, /5-1 Open implementation documentation/);
+
+  assert.match(implDoc, /Task implementation is starting/);
+  assert.match(implDoc, /Create or reuse an in-progress Implementation Record/);
+});
+
 test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", () => {
   const lifecycleRoot = path.join(skillRoot, "doc-driven-dev-lifecycle");
   const skill = fs.readFileSync(path.join(lifecycleRoot, "SKILL.md"), "utf8");
