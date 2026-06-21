@@ -1,6 +1,5 @@
 [settings]
 minimum_release_age = "7d"
-python.uv_venv_auto = "create|source"
 
 [env]
 UV_EXCLUDE_NEWER = "1 week"

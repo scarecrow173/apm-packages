@@ -4,6 +4,20 @@
 より深いディレクトリに別の `AGENTS.md` がある場合は、その配下のファイルには
 そちらの指示が優先されます。
 
+## 0. 環境アクティベート（作業開始前に必須）
+
+mise の shims は uv との無限ループ回避のため PATH から除外されています。
+**セッション開始時に必ず `mise activate` を実行してから作業してください。**
+
+| プラットフォーム | コマンド |
+|---|---|
+| Windows (PowerShell) | `mise activate pwsh \| Out-String \| Invoke-Expression` |
+| macOS / Linux (bash) | `eval "$(mise activate bash)"` |
+| macOS / Linux (zsh) | `eval "$(mise activate zsh)"` |
+
+アクティベートしないと `uv`, `python`, `node` などのバージョン管理が効かず、
+コマンドが見つからないか誤ったバージョンで実行されます。
+
 ## 1. Scope
 
 - このファイル中のパスは、コマンドブロックで明示しない限りリポジトリルート基準です。
