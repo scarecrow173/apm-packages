@@ -22,6 +22,7 @@ repository: "<repository-name>"
 | Name | Category | Source | Activation | Execution | Condition |
 | ---- | -------- | ------ | ---------- | --------- | --------- |
 | <!-- 例: test-driven-development --> | Build | .apm/skills/ | conditional | rigid | リポジトリまたは環境が test-led workflow を提供する場合 |
+| <!-- 例: impl-doc --> | Documentation | .apm/skills/ | always | rigid | コード変更前に実装ドキュメントを開く |
 | <!-- 例: systematic-debugging --> | Process | .apm/skills/ | conditional | rigid | バグ修正またはテスト失敗 |
 | <!-- 例: source-driven-development --> | Verify | .apm/skills/ | conditional | flexible | フレームワーク / ライブラリの利用 |
 | <!-- 例: requesting-code-review --> | Review | .apm/skills/ | conditional | flexible | レビューゲートが利用可能 |
@@ -43,6 +44,12 @@ repository: "<repository-name>"
 - <!-- 例: incremental-implementation — 細い縦スライスで進める -->
 - <!-- 例: subagent-driven-development — レビュー付きでタスクを委譲する -->
 - <!-- 例: dispatching-parallel-agents — 独立した作業を並列実行する -->
+
+### Documentation
+
+実装中に Implementation Record と関連エビデンスを開き、維持するスキル。
+
+- <!-- 例: impl-doc — 各 task の最初のコード変更前に `impl-doc` で `in-progress` の Implementation Record を開き、検証完了まで更新を続ける -->
 
 ### Verify
 
@@ -83,8 +90,9 @@ override で解決されるまでその slot を空のままにできる。
 | Priority | Category | Skill | Rationale |
 | -------- | -------- | ----- | --------- |
 | 1 | Build | <!-- repository default --> | 利用可能なら既定の Build 構成を定義する |
-| 2 | Verify | <!-- repository default --> | 利用可能なら正しさ検証を追加する |
-| 3 | Review | <!-- repository default --> | 利用可能なら完了ゲートを適用する |
+| 2 | Documentation | <!-- repository default --> | 各 task の最初のコード変更前に実装ドキュメントを開く |
+| 3 | Verify | <!-- repository default --> | 利用可能なら正しさ検証を追加する |
+| 4 | Review | <!-- repository default --> | 利用可能なら完了ゲートを適用する |
 
 ## Override Rules
 

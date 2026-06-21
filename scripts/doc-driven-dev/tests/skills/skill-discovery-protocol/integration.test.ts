@@ -102,6 +102,16 @@ version: "1.0.0"
 
 A mock skill for incremental implementation.
 `,
+  "mock-impl-doc": `---
+name: mock-impl-doc
+description: "Implementation record and experiment log documentation"
+version: "1.0.0"
+---
+
+# Mock Impl Doc
+
+A mock skill for implementation records and experiment logs.
+`,
   "mock-research-skill": `---
 name: mock-research-skill
 description: "Web research and information gathering"
@@ -170,6 +180,25 @@ const MOCK_INFERENCE_SKILLS = [
       guidance: "Deliver incrementally",
     },
     tags: ["build", "implementation"],
+  },
+  {
+    name: "mock-impl-doc",
+    review_status: "reviewed",
+    provides: [
+      {
+        capability: "implementation_documentation",
+        description: "Create and maintain Implementation Records and Experiment Logs",
+      },
+    ],
+    uses: [],
+    execution_policy: {
+      strictness: "rigid",
+      sequence_required: true,
+      allow_step_reordering: false,
+      allow_partial_application: false,
+      guidance: "Open implementation documentation before code changes",
+    },
+    tags: ["documentation", "impl-doc"],
   },
   {
     name: "mock-research-skill",
@@ -243,6 +272,12 @@ flow_stack:
           reason: "All implementation uses incremental delivery"
         - skill: "mock-review-skill"
           reason: "Implementation should remain reviewable"
+    - slot_id: "implementation_documentation"
+      slot_type: "layerable"
+      activation: "always"
+      default:
+        - skill: "mock-impl-doc"
+          reason: "Implementation documentation must be opened before task execution"
     - slot_id: "review_gate"
       slot_type: "exclusive"
       activation: "always"
@@ -270,6 +305,13 @@ classification:
         capabilities: ["incremental_implementation"]
         tags: ["build", "implementation"]
         description_patterns: ["implement", "incremental"]
+    - id: "documentation"
+      label: "Documentation"
+      description: "Skills that record implementation progress and evidence"
+      match:
+        capabilities: ["implementation_documentation"]
+        tags: ["documentation", "impl-doc"]
+        description_patterns: ["implementation record", "experiment log", "docs/impl"]
     - id: "review"
       label: "Review"
       description: "Skills that provide post-implementation gates"
@@ -658,8 +700,22 @@ test("integration: impl-flow adapter generates valid profile", () => {
   const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
   assert.equal(profile.schema_version, "1.0");
   assert.equal(profile.adapter_id, "impl-flow-test");
-  assert.ok(profile.flow_stack.slots.length >= 3);
-  assert.deepEqual(profile.flow_stack.slots[1].default, [
+  assert.ok(profile.flow_stack.slots.length >= 4);
+  const documentationSlot = profile.flow_stack.slots.find(
+    (slot: { slot_id: string }) => slot.slot_id === "implementation_documentation",
+  );
+  assert.ok(documentationSlot, "implementation documentation slot should exist");
+  assert.deepEqual(documentationSlot.default, [
+    {
+      skill: "mock-impl-doc",
+      reason: "Implementation documentation must be opened before task execution",
+    },
+  ]);
+  const buildSlot = profile.flow_stack.slots.find(
+    (slot: { slot_id: string }) => slot.slot_id === "build_structure",
+  );
+  assert.ok(buildSlot, "build structure slot should exist");
+  assert.deepEqual(buildSlot.default, [
     { skill: "mock-impl-skill", reason: "All implementation uses incremental delivery" },
     { skill: "mock-review-skill", reason: "Implementation should remain reviewable" },
   ]);

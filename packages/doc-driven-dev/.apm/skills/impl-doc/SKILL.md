@@ -21,46 +21,55 @@ skill.
 Before running any commands, decide which artifact you need:
 
 | Situation | Create | Timing |
-|-----------|--------|--------|
-| Task approach is uncertain — exploring options or testing hypotheses | Experiment Log | Before or at the start of implementation |
-| Task approach is clear — executing a known plan | Skip exp, ir only | When task completes |
-| Task is complete and ready to close | Implementation Record | Before closing the task |
+| --- | --- | --- |
+| Task implementation is starting | Create or reuse an in-progress Implementation Record | At task start, before the first code change, with `--status "in-progress"` |
+| Task approach is uncertain - exploring options or testing hypotheses | Experiment Log | Optional before or at the start of exploratory implementation |
+| Task approach is clear - executing a known plan | Skip exp, ir only | Still create the Implementation Record at task start |
 | Multiple approaches were tested | One Experiment Log per approach | During investigation |
 
 ### Granularity Rules
 
-- **1 task-doc → 1 ir**: One Implementation Record per task. Subtasks link via
+- **1 task-doc -> 1 ir**: One Implementation Record per task. Subtasks link via
   `relations.changes`.
+- **ir starts the task**: Create or reuse the task's in-progress Implementation
+  Record before implementation starts. Keep the body current as the work
+  proceeds instead of writing it after the fact.
 - **exp is optional**: Create an Experiment Log only when genuinely exploring.
-  Mechanical tasks with a known solution do not need one.
-- **exp → ir link is required when both exist**: When an exp was created, the
+  Mechanical tasks with a known solution still require an Implementation
+  Record, but they do not need an Experiment Log.
+- **exp -> ir link is required when both exist**: When an exp was created, the
   resulting ir MUST reference it in `metadata.experiments.adopted` or `.rejected`.
 
 ## Responsibilities
 
 1. Create an Implementation Record under `docs/impl/ir/`
-2. Audit Implementation Records for front matter, relation, and section shape
-3. Create an Experiment Log under `docs/impl/exp/`
-4. Append experiment events through CLI as the normal operating path
-5. Edit existing experiment events through CLI for exceptional fixes
-6. Audit Experiment Logs for minimum JSONL integrity
+2. Reuse and update the in-progress Implementation Record body during Phase 5
+3. Audit Implementation Records for front matter, relation, and section shape
+4. Create an Experiment Log under `docs/impl/exp/`
+5. Append experiment events through CLI as the normal operating path
+6. Edit existing experiment events through CLI for exceptional fixes
+7. Audit Experiment Logs for minimum JSONL integrity
 
 ## Workflow
 
 ### Creating an Implementation Record
 
-**MANDATORY**: Load `references/impl-conventions.md` before this step —
-it defines required front matter fields and audit rules.
+**MANDATORY**: Load `references/impl-conventions.md` before this step - it
+defines required front matter fields and audit rules.
 **Do NOT load** `assets/templates/experiment-log.jsonl` for this task.
 
+Phase 5 creates or reuses an in-progress Implementation Record at task start,
+before the first code change. Update the record body as implementation
+proceeds. Experiment Log JSONL remains CLI-updated only.
+
 ```bash
-node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/0003-implement-foo-service.md
+node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/0003-implement-foo-service.md --status "in-progress"
 ```
 
 ### Creating an Experiment Log
 
-**MANDATORY**: Load `references/impl-conventions.md` before this step —
-it defines allowed event types and JSONL integrity rules.
+**MANDATORY**: Load `references/impl-conventions.md` before this step - it
+defines allowed event types and JSONL integrity rules.
 **Do NOT load** `assets/templates/implementation-record.md` for this task.
 
 ```bash
@@ -94,15 +103,19 @@ node scripts/audit_experiment_log.js --json
 
 ## NEVER
 
-- NEVER write an ir after the fact from memory — ir must reflect decisions made
+- NEVER start task implementation without first creating or reusing an
+  in-progress ir for that task
+- NEVER treat known-solution or mechanical tasks as an excuse to skip the ir;
+  they still require an in-progress Implementation Record from task start
+- NEVER write an ir after the fact from memory - ir must reflect decisions made
   during implementation, not a post-hoc narrative
-- NEVER manually edit JSONL files — use `append_experiment_event` or
+- NEVER manually edit JSONL files - use `append_experiment_event` or
   `edit_experiment_log`; direct edits break sequential `seq` integrity
-- NEVER merge multiple tasks into one ir — one task = one ir; traceability
+- NEVER merge multiple tasks into one ir - one task = one ir; traceability
   depends on this 1:1 mapping
-- NEVER skip the audit step before reporting completion — undetected front matter
+- NEVER skip the audit step before reporting completion - undetected front matter
   errors break downstream tools that query `relations.changes`
-- NEVER create an exp after the task is done — it records real-time observations,
+- NEVER create an exp after the task is done - it records real-time observations,
   not retrospective notes
 
 ## Conventions
@@ -111,6 +124,10 @@ node scripts/audit_experiment_log.js --json
 - `relations.changes` is part of the shared relation contract.
 - `metadata.record-type` is not used in v1.
 - `metadata.validation` is not used in v1.
+- Phase 5 opens or reuses the Implementation Record at task start and keeps it
+  current during implementation.
+- Experiment Log JSONL remains CLI-updated only through
+  `append_experiment_event` or `edit_experiment_log`.
 - Experiment Log `start` events are optional at creation time.
 - The normal path is CLI-based creation and updates, not free-form manual edits.
 - Trust boundary: `new_*`, `append_*`, and `edit_*` commands are state-changing
@@ -120,8 +137,8 @@ node scripts/audit_experiment_log.js --json
 ## Resources
 
 - `references/impl-conventions.md`: directory, filename, status, and audit rules
-  — load MANDATORY before any create or audit operation
+  - load MANDATORY before any create or audit operation
 - `assets/templates/implementation-record.md`: default body template
-  — loaded automatically by `new_impl_record.js`, do not load manually
+  - loaded automatically by `new_impl_record.js`, do not load manually
 - `assets/templates/experiment-log.jsonl`: default JSONL event template
-  — loaded automatically by `new_experiment_log.js`, do not load manually
+  - loaded automatically by `new_experiment_log.js`, do not load manually

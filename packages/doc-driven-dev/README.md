@@ -99,6 +99,10 @@ flowchart TD
   converted canonical docs only when run with `--apply`.
 - **Bootstrap boundary**: `scaffold_docs` creates the canonical `docs/` tree
   without `docs/designs/overview.md`; `design-doc` owns that file.
+- **Phase 5 implementation documentation**: `implementation-flow` and
+  `impl-doc` run together. Each task opens an `in-progress` Implementation
+  Record before code changes, appends Experiment Log events when exploration is
+  needed, and completes and audits the record before task closure.
 - **Phase 5 Exit Gate**: after implementation, lifecycle users must compare
   completed work against the approved spec, ADR, design, plan, and task
   verification evidence. Follow-ups are classified before exit so bug fixes,
@@ -252,6 +256,9 @@ Use this skill to create implementation records under `docs/impl/ir/` and
 experiment logs under `docs/impl/exp/`. It provides CLI-based creation and
 auditing for Implementation Records, plus CLI-based creation, append, edit, and
 audit flows for Experiment Logs.
+During `doc-driven-dev-lifecycle` Phase 5, `impl-doc` is used at task start,
+not only after implementation. A known-solution task still creates an
+`in-progress` Implementation Record; only the Experiment Log is optional.
 
 ### `doc-status`
 
@@ -350,7 +357,11 @@ supporting-skill stack. The dual-track model remains `spec-doc` + `adr-doc`:
 specs define what should be built, why, scope, and acceptance criteria, while
 ADRs record technical decisions, alternatives, and rationale. When Phase 1
 produces enough context for both, they are written in parallel as briefing
-completion artifacts before design and planning continue.
+completion artifacts before design and planning continue. In Phase 5,
+`implementation-flow` and `impl-doc` run together so each task starts by
+opening or reusing an `in-progress` Implementation Record, adds Experiment Log
+events when exploratory work is needed, and completes and audits the record
+before the task closes.
 
 ### Migrating Existing Docs
 

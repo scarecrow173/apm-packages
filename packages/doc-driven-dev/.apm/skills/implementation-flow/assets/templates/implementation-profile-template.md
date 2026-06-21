@@ -22,6 +22,7 @@ soft ranking metadata that is read after `execution_policy` checks.
 | Name | Category | Source | Activation | Execution | Condition |
 | ---- | -------- | ------ | ---------- | --------- | --------- |
 | <!-- e.g., test-driven-development --> | Build | .apm/skills/ | conditional | rigid | Repository or environment provides test-led workflow |
+| <!-- e.g., impl-doc --> | Documentation | .apm/skills/ | always | rigid | Open implementation documentation before code changes |
 | <!-- e.g., systematic-debugging --> | Process | .apm/skills/ | conditional | rigid | Bug fix or test failure |
 | <!-- e.g., source-driven-development --> | Verify | .apm/skills/ | conditional | flexible | Framework/library usage |
 | <!-- e.g., requesting-code-review --> | Review | .apm/skills/ | conditional | flexible | Review gate available |
@@ -43,6 +44,12 @@ Skills that structure and execute implementation.
 - <!-- e.g., incremental-implementation — Thin vertical slices -->
 - <!-- e.g., subagent-driven-development — Task dispatch with review -->
 - <!-- e.g., dispatching-parallel-agents — Concurrent independent execution -->
+
+### Documentation
+
+Skills that open and maintain implementation documentation during execution.
+
+- <!-- e.g., impl-doc - Open the Implementation Record before code changes and keep it current -->
 
 ### Verify
 
@@ -83,8 +90,9 @@ that slot empty until provider lookup or overrides resolve a skill.
 | Priority | Category | Skill | Rationale |
 | -------- | -------- | ----- | --------- |
 | 1 | Build | <!-- repository default --> | Defines the default build structure when available |
-| 2 | Verify | <!-- repository default --> | Adds correctness validation when available |
-| 3 | Review | <!-- repository default --> | Applies a completion gate when available |
+| 2 | Documentation | <!-- repository default --> | Opens implementation documentation before code changes |
+| 3 | Verify | <!-- repository default --> | Adds correctness validation when available |
+| 4 | Review | <!-- repository default --> | Applies a completion gate when available |
 
 ## Override Rules
 

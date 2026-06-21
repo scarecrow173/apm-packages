@@ -96,6 +96,10 @@ flowchart TD
   変換済みの canonical docs を作成します。
 - **bootstrap 境界**: `scaffold_docs` は canonical な `docs/` tree を作成しますが、
   `docs/designs/overview.md` は作成せず `design-doc` に任せます。
+- **Phase 5 の実装記録**: `implementation-flow` と `impl-doc` は並行して動く。
+  各 task はコード変更前に `in-progress` の Implementation Record を開き、
+  探索が必要な場合は Experiment Log にイベントを追記し、task クローズ前に
+  record を完了・監査する。
 - **Phase 5 終了ゲート**: 実装後、lifecycle 利用者は完了した作業を承認済み
   spec、ADR、design、plan、task の検証証跡と照合します。フォローアップは Exit
   前に分類し、バグ修正、意思決定、新機能、文書更新、延期が孤立 task にならないようにします。
@@ -233,6 +237,9 @@ task 専用の lifecycle status を使います。
 `docs/impl/ir/` 配下の Implementation Record と `docs/impl/exp/` 配下の
 Experiment Log を扱います。Implementation Record については CLI ベースの
 作成・監査、Experiment Log については CLI ベースの作成・追記・編集・監査を提供します。
+`doc-driven-dev-lifecycle` の Phase 5 では、`impl-doc` は実装後だけでなく
+task 開始時に使う。既知解の task でも `in-progress` の Implementation Record は
+作成し、任意なのは Experiment Log だけである。
 
 ### `doc-status`
 
@@ -328,7 +335,10 @@ skill であり、別個のトップレベルライフサイクルではあり�
 並列トラックは `spec-doc` + `adr-doc` のままで、spec は何を作るか、なぜ必要か、
 範囲、受け入れ条件を定義し、ADR は技術判断、代替案、採用理由を記録します。
 Phase 1 で両方に十分な文脈が揃ったら briefing の完了成果物として並列に作成し、
-その後 design と planning へ進みます。
+その後 design と planning へ進みます。Phase 5 では `implementation-flow` と
+`impl-doc` が並行して動き、各 task は `in-progress` の Implementation Record を
+開くか再利用してから着手し、探索が必要な場合は Experiment Log にイベントを追記し、
+task クローズ前に record を完了し、監査します。
 
 ### 既存 Docs の Migration
 

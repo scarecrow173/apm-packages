@@ -66,6 +66,28 @@ Implementation Record で許可する status:
 - `abandoned`
 - `superseded`
 
+## Implementation Record の運用
+
+Implementation Record は Markdown 文書であり、CLI は初期作成と監査を担当する。
+
+- Phase 5 では task 開始時、最初のコード変更前 に Implementation Record を
+  作成または再利用する。
+- 実装が進む間は front matter と本文を継続的に更新する。
+- 完了後に思い出して書くのではなく、進行中の実装記録として扱う。
+
+実装中に最新化しておく本文セクション:
+
+- Summary
+- Changes Made
+- Validation and Evidence
+- Risks or Follow-ups
+
+status の使い分け:
+
+- 実装中は `status: "in-progress"` を使う。
+- 検証とレビュー証跡がそろった後に `completed` へ更新する。
+- ループバックや明示的な中断で作業を止める場合は `blocked` にする。
+
 ## Experiment Log イベント
 
 Experiment Log は JSONL です。
@@ -74,6 +96,7 @@ Experiment Log は JSONL です。
 - `start` は作成時必須ではない
 - 通常の更新は `append_experiment_event`
 - 例外修正は `edit_experiment_log`
+- Experiment Log の JSONL は `append_experiment_event` または `edit_experiment_log` だけで更新する。
 
 許可するイベント種別:
 
@@ -129,7 +152,7 @@ Experiment Log の監査項目:
 
 - 列は `ID` / `タイトル` / `Status` / `ファイル` の 4 列に固定し、front matter
   から取ります。`ファイル` 列は索引と同じディレクトリへの相対リンクにします。
-  値が無い場合は `—` を入れます。
+  値が無い場合は `-` を入れます。
 - 行はファイル名の昇順で並べます。
 - 新規の Implementation Record が追加されたら、同じ変更の中で必ず索引を更新
   します。

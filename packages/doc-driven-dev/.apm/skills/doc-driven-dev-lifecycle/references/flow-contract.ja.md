@@ -131,15 +131,23 @@ briefing 完了成果物になる。
 
 ### ステップ
 
-- 5-1 `implementation-flow` 呼び出し: タスク単位の実行、スキル発見、構成、検証を委譲する。
-- 5-2 制約フィードバック: `implementation-flow` が上流の不足を報告した場合、`adr-doc` / `design-doc` を更新しループバックを記録する。
-- 5-3 完了確認: `implementation-flow` の完了条件経由で全タスク検証通過を確認する。
+- 5-1 implementation documentation を開く: コード変更前に task ごとの
+  `impl-doc` SKILL と `impl-doc` 規約を読み、`in-progress` の
+  Implementation Record を開く。
+- 5-2 `implementation-flow` 呼び出し: タスク単位の実行、スキル発見、構成、
+  検証、および進行中ドキュメント更新を委譲する。
+- 5-3 制約フィードバック: `implementation-flow` が上流の不足を報告した場合、
+  `adr-doc` / `design-doc` を更新しループバックを記録する。
+- 5-4 完了確認: 全タスクの検証通過に加え、Implementation Record が task
+  クローズ前に完了・監査されていることを確認する。
 
 ### Implementation 完了条件
 
 - `implementation-flow` が全タスク実装済み・検証通過を報告している。
 - 新たに発見された制約が上流文書に反映されている。
 - コードレビューが完了している。
+- 各 task はコード変更前に `in-progress` の Implementation Record を開いている。
+- 各 Implementation Record は task クローズ前に完了・監査されている。
 
 ## Phase 5 終了ゲート: 実装後レビュー / フォローアップ分類
 

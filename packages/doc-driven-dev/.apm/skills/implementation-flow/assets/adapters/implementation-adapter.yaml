@@ -13,6 +13,12 @@ flow_stack:
     - slot_id: "build_structure"
       slot_type: "layerable"
       activation: "always"
+    - slot_id: "implementation_documentation"
+      slot_type: "layerable"
+      activation: "always"
+      default:
+        - skill: "impl-doc"
+          reason: "Open implementation documentation before code changes begin"
     - slot_id: "verification"
       slot_type: "layerable"
       activation: "conditional"
@@ -39,6 +45,13 @@ classification:
         capabilities: ["incremental_implementation", "parallel_dispatch", "test_led_development"]
         tags: ["build", "implementation", "tdd"]
         description_patterns: ["implement", "incremental", "parallel", "test-driven"]
+    - id: "documentation"
+      label: "Documentation"
+      description: "Skills that record implementation progress and evidence"
+      match:
+        capabilities: ["implementation_documentation"]
+        tags: ["documentation", "impl-doc"]
+        description_patterns: ["impl-doc", "implementation record", "experiment log", "docs/impl"]
     - id: "verify"
       label: "Verify"
       description: "Skills that validate correctness"

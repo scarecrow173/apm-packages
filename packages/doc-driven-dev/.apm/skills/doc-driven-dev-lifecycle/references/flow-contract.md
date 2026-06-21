@@ -134,15 +134,23 @@ skill stack per task via `implementation-profile.md`.
 
 ### Steps
 
-- 5-1 Invoke `implementation-flow`: delegate per-task execution, skill discovery, configuration, and verification.
-- 5-2 Constraint Feedback: if `implementation-flow` reports upstream gaps, update `adr-doc` / `design-doc` and record loopback.
-- 5-3 Completion Check: confirm all tasks pass verification via `implementation-flow` completion criteria.
+- 5-1 Open implementation documentation: before code changes for each task, read
+  `impl-doc` SKILL and `impl-doc` conventions, and open an `in-progress`
+  Implementation Record.
+- 5-2 Invoke `implementation-flow`: delegate per-task execution, skill
+  discovery, configuration, verification, and in-flight documentation upkeep.
+- 5-3 Constraint Feedback: if `implementation-flow` reports upstream gaps,
+  update `adr-doc` / `design-doc` and record loopback.
+- 5-4 Completion Check: confirm all tasks pass verification and their
+  Implementation Records are completed and audited before closure.
 
 ### Implementation Completion Criteria
 
 - `implementation-flow` reports all tasks implemented and verified.
 - New constraints discovered are reflected in upstream documents.
 - Code review is complete.
+- Each task opened an in-progress Implementation Record before code changes.
+- Each Implementation Record was completed and audited before task closure.
 
 ## Phase 5 Exit Gate: Post-Implementation Review / Follow-up Triage
 

@@ -220,6 +220,12 @@ gate criteria. Understand PLAN-DOC-GATE-001 requirements.
 - Per-task execution with skill stack
 - Verification evidence requirements
 
+Before the first code change for each task, also read the
+[`impl-doc` SKILL](../impl-doc/SKILL.md) and
+[`impl-doc` conventions](../impl-doc/references/impl-conventions.md). Task
+execution cannot start unless that task already has an in-progress
+Implementation Record.
+
 **Do NOT Load** `implementation-flow` before Phase 4 completes — task decomposition
 must finish before implementation configuration begins.
 
@@ -310,13 +316,21 @@ recommended combinations, and per-task execution process.
 
 ### Entry Condition
 
-Phase 5 begins when Phase 4 tasks are approved and ready for execution.
+Phase 5 begins when Phase 4 tasks are approved and ready for execution. Before
+the first code change for each task, read `impl-doc` SKILL and conventions, and
+do not start task execution unless that task already has an in-progress
+Implementation Record.
 
 ### Phase 5 Completion Criteria
 
 - All `task-doc` entries have been implemented and verified.
 - New constraints discovered during implementation are reflected in ADR/design.
 - Code review is complete.
+- Every task opened an in-progress Implementation Record before code changes.
+- Every Implementation Record was kept current during implementation.
+- Every Implementation Record was completed and audited before task closure.
+- Any Experiment Logs were referenced from the matching Implementation Record
+  and audited before Phase 6.
 
 ### Exit to Phase 6
 

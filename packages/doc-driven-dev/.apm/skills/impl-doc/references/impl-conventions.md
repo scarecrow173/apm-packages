@@ -67,6 +67,30 @@ Allowed Implementation Record statuses:
 - `abandoned`
 - `superseded`
 
+## Implementation Record Lifecycle
+
+Implementation Records are Markdown documents updated during Phase 5.
+
+- Create or reuse the Implementation Record at task start, before the first
+  code change.
+- Keep the front matter and body current as implementation proceeds.
+- Treat the record as the task's running implementation narrative, not a
+  retrospective summary written at the end.
+
+Sections to keep current during implementation:
+
+- Summary
+- Changes Made
+- Validation and Evidence
+- Risks or Follow-ups
+
+Status guidance:
+
+- Use `status: "in-progress"` while implementation is underway.
+- Change to `completed` only after verification and review evidence is present.
+- Change to `blocked` when work is paused for loopback or other explicit
+  interruption.
+
 ## Experiment Log Events
 
 Experiment Log files are JSONL.
@@ -130,7 +154,7 @@ Index rules:
 
 - Use exactly these four columns: `ID`, `Title`, `Status`, `File`, sourced from
   the front matter; the `File` column is a relative link within the index
-  directory. Write `—` when a value is missing.
+  directory. Write `-` when a value is missing.
 - Sort rows by filename in ascending order.
 - Whenever a new Implementation Record is added, update the index in the same
   change.
