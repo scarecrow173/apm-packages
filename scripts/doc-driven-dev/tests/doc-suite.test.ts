@@ -449,3 +449,57 @@ test("doc-driven-dev-lifecycle meta skill ships SKILL.md and flow-contract refer
   assert.match(skill, /Phase 1.*Briefing/);
   assert.match(skill, /Phase 6.*Exit/);
 });
+
+test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", () => {
+  const lifecycleRoot = path.join(skillRoot, "doc-driven-dev-lifecycle");
+  const skill = fs.readFileSync(path.join(lifecycleRoot, "SKILL.md"), "utf8");
+  const skillJa = fs.readFileSync(path.join(lifecycleRoot, "SKILL.ja.md"), "utf8");
+  const contract = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.md"), "utf8");
+  const contractJa = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.ja.md"), "utf8");
+
+  assert.match(skill, /Phase 5 Exit Gate/);
+  assert.match(skill, /Post-Implementation Review/);
+  assert.match(contract, /Follow-up Triage/);
+  assert.match(contract, /bug-fix/);
+  assert.match(contract, /decision-required/);
+  assert.match(contract, /new-feature/);
+  assert.match(contract, /doc-only/);
+  assert.match(contract, /defer/);
+  assert.match(contract, /wont-do/);
+
+  assert.match(skillJa, /Phase 5 終了ゲート/);
+  assert.match(skillJa, /実装後レビュー/);
+  assert.match(contractJa, /フォローアップ分類/);
+});
+
+test("task-doc documents follow-up task routing and dependency rules", () => {
+  const taskRoot = path.join(skillRoot, "task-doc");
+  const skill = fs.readFileSync(path.join(taskRoot, "SKILL.md"), "utf8");
+  const skillJa = fs.readFileSync(path.join(taskRoot, "SKILL.ja.md"), "utf8");
+  const conventions = fs.readFileSync(path.join(taskRoot, "references", "task-conventions.md"), "utf8");
+  const conventionsJa = fs.readFileSync(path.join(taskRoot, "references", "task-conventions.ja.md"), "utf8");
+  const template = fs.readFileSync(path.join(taskRoot, "assets", "templates", "task.md"), "utf8");
+  const templateJa = fs.readFileSync(path.join(taskRoot, "assets", "templates", "task.ja.md"), "utf8");
+
+  assert.match(skill, /follow-up task/i);
+  assert.match(skill, /approved plan/i);
+  assert.match(conventions, /Follow-up Classification/);
+  assert.match(conventions, /relations\.depends-on/);
+  assert.match(conventions, /relations\.blocks/);
+  assert.match(template, /## Classification/);
+
+  assert.match(skillJa, /フォローアップ task/);
+  assert.match(conventionsJa, /フォローアップ分類/);
+  assert.match(templateJa, /## 分類/);
+});
+
+test("doc-status documents unclassified follow-up review before exit", () => {
+  const statusRoot = path.join(skillRoot, "doc-status");
+  const skill = fs.readFileSync(path.join(statusRoot, "SKILL.md"), "utf8");
+  const skillJa = fs.readFileSync(path.join(statusRoot, "SKILL.ja.md"), "utf8");
+
+  assert.match(skill, /unclassified follow-up/i);
+  assert.match(skill, /Phase 5 Exit Gate/);
+  assert.match(skillJa, /未分類フォローアップ/);
+  assert.match(skillJa, /Phase 5 終了ゲート/);
+});
