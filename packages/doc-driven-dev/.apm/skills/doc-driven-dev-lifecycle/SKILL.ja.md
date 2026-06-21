@@ -24,60 +24,16 @@ license: MIT
 
 ## フロー概要
 
-```mermaid
-flowchart TD
-    Pm1["Phase -1: Migration（任意）"] --> Gm1{"Migration Gate"}
-    Gm1 -->|pass| P0["Phase 0: Bootstrap"]
-    Gm1 -->|"loopback: mapping または apply の問題"| Pm1
+ライフサイクルは
+`Phase -1 Migration（任意） -> Phase 0 Bootstrap -> Phase 1 Briefing ->
+Phase 2 Design -> Phase 3 Planning -> Phase 4 Execution Slice -> Phase 5
+Implementation -> Phase 6 Exit`
+の順で進む。
 
-    P0 --> G0{"Bootstrap Gate"}
-    G0 -->|pass| P1["Phase 1: Briefing"]
-    G0 -->|"loopback: tree 不備または ownership 不整合"| P0
-
-    P1 --> G1{"Briefing Gate"}
-    G1 -->|pass| P2["Phase 2: Design"]
-    G1 -->|"loopback: briefing 未完了"| P1
-
-    P2 --> G2{"Design Gate"}
-    G2 -->|pass| P3["Phase 3: Planning"]
-    G2 -->|"loopback: design 未承認または不整合"| P1
-    G2 -->|"loopback: design の再整理が必要"| P2
-
-    P3 --> G3{"Planning Gate"}
-    G3 -->|pass| P4["Phase 4: Execution Slice"]
-    G3 -->|"loopback: 承認済み design 不足"| P2
-    G3 -->|"loopback: plan 分解の問題"| P3
-
-    P4 --> G4{"Task Gate"}
-    G4 -->|pass| P5["Phase 5: Implementation"]
-    G4 -->|"loopback: task のトレーサビリティまたは依存不足"| P3
-    G4 -->|"loopback: task 定義が未完了"| P4
-
-    P5 --> G5{"Implementation Gate"}
-    G5 -->|pass| GX{"Phase 5 終了ゲート:\n実装後レビュー /\nフォローアップ分類"}
-    G5 -->|"loopback: verification 未完了"| P4
-    G5 -->|"loopback: 実装のやり直しが必要"| P5
-
-    P5 -->|"loopback: upstream gap を発見"| P1
-    P5 -->|"loopback: constraint/design gap を発見"| P2
-
-    GX -->|フォローアップなし| P6["Phase 6: Exit / doc-status"]
-    GX -->|bug-fix| P4
-    GX -->|decision-required| P1
-    GX -->|decision-required| P2
-    GX -->|new-feature| P1
-    GX -->|doc-only| P4
-    GX -->|終了証跡のみの doc-only| P6
-    GX -->|defer または wont-do| P6
-
-    P6 --> G6{"Exit Gate"}
-    G6 -->|pass| Done["Lifecycle Complete"]
-    G6 -->|"loopback: 文書整合性の問題"| P6
-```
-
-各フェーズにはゲートがあり、通過しなければ次へ進めない。loopback は
-ゲート不通過だけでなく、後続フェーズで upstream gap が見つかった場合にも
-発生する。
+各フェーズにはゲートがあり、通過しなければ次へ進めない。各フェーズには
+loopback ルールもあり、ゲート不通過によって同一フェーズまたは前段フェーズへ
+戻る場合と、後続フェーズで見つかった upstream gap によって前段へ戻る場合が
+ある。
 詳細は `references/flow-contract.ja.md` を参照。
 
 Phase 6 に進む前に、実装結果を承認済み spec、ADR、design、plan、

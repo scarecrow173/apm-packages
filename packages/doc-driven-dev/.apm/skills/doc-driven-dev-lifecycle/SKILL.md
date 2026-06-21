@@ -24,60 +24,15 @@ sequencing constraints and completion criteria defined in the Flow Contract.
 
 ## Flow Overview
 
-```mermaid
-flowchart TD
-    Pm1["Phase -1: Migration (optional)"] --> Gm1{"Migration Gate"}
-    Gm1 -->|pass| P0["Phase 0: Bootstrap"]
-    Gm1 -->|"loopback: mapping or apply issue"| Pm1
+The lifecycle proceeds through:
+`Phase -1 Migration (optional) -> Phase 0 Bootstrap -> Phase 1 Briefing ->
+Phase 2 Design -> Phase 3 Planning -> Phase 4 Execution Slice -> Phase 5
+Implementation -> Phase 6 Exit`.
 
-    P0 --> G0{"Bootstrap Gate"}
-    G0 -->|pass| P1["Phase 1: Briefing"]
-    G0 -->|"loopback: tree incomplete or ownership mismatch"| P0
-
-    P1 --> G1{"Briefing Gate"}
-    G1 -->|pass| P2["Phase 2: Design"]
-    G1 -->|"loopback: briefing incomplete"| P1
-
-    P2 --> G2{"Design Gate"}
-    G2 -->|pass| P3["Phase 3: Planning"]
-    G2 -->|"loopback: design not approved or inconsistent"| P1
-    G2 -->|"loopback: design needs refinement"| P2
-
-    P3 --> G3{"Planning Gate"}
-    G3 -->|pass| P4["Phase 4: Execution Slice"]
-    G3 -->|"loopback: approved design missing"| P2
-    G3 -->|"loopback: plan decomposition issue"| P3
-
-    P4 --> G4{"Task Gate"}
-    G4 -->|pass| P5["Phase 5: Implementation"]
-    G4 -->|"loopback: task traceability or dependency gap"| P3
-    G4 -->|"loopback: task definition incomplete"| P4
-
-    P5 --> G5{"Implementation Gate"}
-    G5 -->|pass| GX{"Phase 5 Exit Gate:\nPost-Implementation Review /\nFollow-up Triage"}
-    G5 -->|"loopback: verification incomplete"| P4
-    G5 -->|"loopback: implementation rework needed"| P5
-
-    P5 -->|"loopback: upstream gap discovered"| P1
-    P5 -->|"loopback: constraint/design gap discovered"| P2
-
-    GX -->|no follow-up| P6["Phase 6: Exit / doc-status"]
-    GX -->|bug-fix| P4
-    GX -->|decision-required| P1
-    GX -->|decision-required| P2
-    GX -->|new-feature| P1
-    GX -->|doc-only| P4
-    GX -->|doc-only exit evidence only| P6
-    GX -->|defer or wont-do| P6
-
-    P6 --> G6{"Exit Gate"}
-    G6 -->|pass| Done["Lifecycle Complete"]
-    G6 -->|"loopback: document integrity issue"| P6
-```
-
-Each phase has a gate that must be satisfied before proceeding. Loopbacks are
-not limited to gate failures: they also occur when later-phase work reveals an
-upstream gap that must be resolved before the lifecycle can continue.
+Each phase has a gate that must be satisfied before proceeding. Each phase also
+has loopback rules: gate failures can keep work in the current phase or return
+it to an earlier phase, and later-phase discoveries can also force an upstream
+loopback before the lifecycle can continue.
 See `references/flow-contract.md` for the full specification.
 
 Before Phase 6, compare the implemented work against the approved spec, ADR,
