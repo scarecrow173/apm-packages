@@ -43,7 +43,9 @@ doc-driven-dev-lifecycle
   -> Phase 2: design-doc                   (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5/6: doc-status -> exit
+  -> Phase 5: implementation-flow
+  -> Phase 5 Exit Gate: post-implementation review + follow-up triage
+  -> Phase 6: doc-status -> exit
 ```
 
 - **Spec** answers WHAT, WHY, and SCOPE.
@@ -58,6 +60,11 @@ doc-driven-dev-lifecycle
   converted canonical docs only when run with `--apply`.
 - **Bootstrap boundary**: `scaffold_docs` creates the canonical `docs/` tree
   without `docs/designs/overview.md`; `design-doc` owns that file.
+- **Phase 5 Exit Gate**: after implementation, lifecycle users must compare
+  completed work against the approved spec, ADR, design, plan, and task
+  verification evidence. Follow-ups are classified before exit so bug fixes,
+  decisions, new features, documentation updates, and deferrals do not become
+  orphan tasks.
 
 Lifecycle phase skills: `idea-doc`, `deep-dive`, `briefing-flow`,
 `discovery-doc`, `spec-doc`, `adr-doc`, `design-doc`, `plan-doc`, `task-doc`,
@@ -287,7 +294,9 @@ doc-driven-dev-lifecycle
   -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5/6: doc-status -> exit
+  -> Phase 5: implementation-flow
+  -> Phase 5 Exit Gate: post-implementation review + follow-up triage
+  -> Phase 6: doc-status -> exit
 ```
 
 `doc-driven-dev-lifecycle` is the lifecycle entrypoint. `migrate_docs` can

@@ -42,7 +42,9 @@ doc-driven-dev-lifecycle
   -> Phase 2: design-doc                   (overview + detailed design docs)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5/6: doc-status -> exit
+  -> Phase 5: implementation-flow
+  -> Phase 5 終了ゲート: 実装後レビュー + フォローアップ分類
+  -> Phase 6: doc-status -> exit
 ```
 
 - **Spec** は WHAT、WHY、SCOPE を定義します。
@@ -55,6 +57,9 @@ doc-driven-dev-lifecycle
   変換済みの canonical docs を作成します。
 - **bootstrap 境界**: `scaffold_docs` は canonical な `docs/` tree を作成しますが、
   `docs/designs/overview.md` は作成せず `design-doc` に任せます。
+- **Phase 5 終了ゲート**: 実装後、lifecycle 利用者は完了した作業を承認済み
+  spec、ADR、design、plan、task の検証証跡と照合します。フォローアップは Exit
+  前に分類し、バグ修正、意思決定、新機能、文書更新、延期が孤立 task にならないようにします。
 
 ライフサイクルを構成するフェーズ skill は `idea-doc`, `deep-dive`,
 `briefing-flow`, `discovery-doc`, `spec-doc`, `adr-doc`, `design-doc`,
@@ -269,7 +274,9 @@ doc-driven-dev-lifecycle
   -> Phase 2: design-doc                  (overview-first design gate)
   -> Phase 4a: plan-doc -> task-doc
   -> Phase 4b: implementation-flow -> impl-doc
-  -> Phase 5/6: doc-status -> exit
+  -> Phase 5: implementation-flow
+  -> Phase 5 終了ゲート: 実装後レビュー + フォローアップ分類
+  -> Phase 6: doc-status -> exit
 ```
 
 `doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`migrate_docs` は
