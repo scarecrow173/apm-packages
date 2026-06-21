@@ -7,6 +7,22 @@ It also publishes two aggregator packages:
 - `basic-dev-foundation`: a foundational bundle of core APM and workflow helpers
 - `recommended-dev-suite`: a broader bundle that adds the repo's higher-level workflow packages
 
+## Environment Activation (Required Before Work)
+
+The `mise` shims are excluded from PATH to prevent infinite loops with `uv`.
+**You must run `mise activate` at the start of each session** before working.
+
+| Platform | Command |
+|---|---|
+| Windows (PowerShell) | `mise activate pwsh \| Out-String \| Invoke-Expression` |
+| macOS / Linux (bash) | `eval "$(mise activate bash)"` |
+| macOS / Linux (zsh) | `eval "$(mise activate zsh)"` |
+
+Without activation, version management for `uv`, `python`, `node`, and other tools will not work.
+Commands may not be found, or incorrect versions will be executed.
+
+## Installation
+
 Consumers can install this entire package collection by adding it to their `apm.yml`:
 
 ```yaml

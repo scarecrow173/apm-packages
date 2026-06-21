@@ -7,6 +7,22 @@
 - `basic-dev-foundation`: 基礎的な APM と workflow helper をまとめた bundle
 - `recommended-dev-suite`: このリポジトリの上位 workflow package を追加した広めの bundle
 
+## 環境アクティベート（作業開始前に必須）
+
+mise の shims は uv との無限ループ回避のため PATH から除外されています。
+**セッション開始時に必ず `mise activate` を実行してから作業してください。**
+
+| プラットフォーム | コマンド |
+|---|---|
+| Windows (PowerShell) | `mise activate pwsh \| Out-String \| Invoke-Expression` |
+| macOS / Linux (bash) | `eval "$(mise activate bash)"` |
+| macOS / Linux (zsh) | `eval "$(mise activate zsh)"` |
+
+アクティベートしないと `uv`, `python`, `node` などのバージョン管理が効かず、
+コマンドが見つからないか誤ったバージョンで実行されます。
+
+## インストール
+
 利用者側は `apm.yml` でこのコレクション全体を依存先として登録できます：
 
 ```yaml
