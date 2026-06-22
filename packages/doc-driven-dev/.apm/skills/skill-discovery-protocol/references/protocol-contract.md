@@ -92,6 +92,22 @@ Each inference entry contains:
 | `runtime_guidance` | array | Optional structured guidance entries used by flow ranking |
 | `tags` | string[] | Classification hints |
 
+### `provides[]` Element Schema
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `capability` | string | Yes | `snake_case` capability identifier |
+| `description` | string | No | Human-readable explanation of the capability |
+
+### `uses[]` Element Schema
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `capability` | string | Yes | `snake_case` capability identifier consumed by this skill |
+| `required` | boolean | Yes | Whether this capability must be satisfied for the skill to execute |
+| `override_allowed` | boolean | Yes | Whether the invoker may substitute a different skill for this capability |
+| `default_skill` | string | No | Preferred skill to satisfy this capability, if known |
+
 Every scanned skill MUST have exactly one matching inference entry. Every
 inference entry MUST match a scanned skill. `sdp infer check` MUST fail if any
 scanned skill remains `pending`, and `sdp profile` MUST refuse to generate
@@ -131,6 +147,7 @@ Constraints:
 - `capability` identifiers MUST be `snake_case`
 - `provides[].capability` values MUST be unique within a skill
 - The catalog MUST NOT contain `slots`, `slot_count`, `resolved_invocations`, or flow-specific classification
+- For `provides[]` and `uses[]` element schemas, see §4 Inference Contract above.
 
 ## 6. Flow Profile Contract
 

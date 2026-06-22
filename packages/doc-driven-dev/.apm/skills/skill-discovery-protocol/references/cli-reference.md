@@ -12,6 +12,16 @@ For operational rules and constraints, see `operation-policy.md`.
 
 ## Operator Recipe
 
+> **Note:** `sdp` is not a globally installed binary. Invoke it via your runtime manager:
+>
+> ```powershell
+> # Example: mise (recommended)
+> mise exec -- node <skill-root>/skill-discovery-protocol/scripts/sdp.js <subcommand>
+> ```
+>
+> Where `<skill-root>` is the directory containing your installed skills (e.g., `.agents/skills/`, `.apm/skills/`, or `.claude/skills/`).
+> In examples below, `sdp` is used as shorthand for the full invocation above.
+
 ```text
 sdp scan --adapter <adapter-yaml>
 sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json --if-exists merge
@@ -65,12 +75,14 @@ review, then `sdp infer check` before profiling.
 ### 1.4 `sdp validate`
 
 ```text
+sdp validate --profile <flow-profile-json> --adapter <adapter-yaml>
 sdp validate --profile <flow-profile-json>
 sdp validate --adapter <adapter-yaml>
 ```
 
-- `--profile`: Full 4-gate validation of generated artifacts
-- `--adapter`: Schema-only validation of adapter YAML configuration
+- `--profile --adapter` (both): Full 4-gate validation (Schema, Staleness, Deterministic, Blocking)
+- `--profile` only: Schema and Staleness gates run; Deterministic and Blocking gates are **skipped**
+- `--adapter` only: Schema-only validation of adapter YAML configuration
 
 ### 1.5 `sdp query`
 
@@ -81,3 +93,40 @@ sdp query --profile <flow-profile-json> <subcommand> [options]
 Subcommands: `categories`, `category-skills`, `resolution`, `flow-stack`,
 `execution-policy`, `capability-skills`, `skill-detail`, `runtime-guidance`,
 `unresolved`, `validation-status`
+
+---
+
+## Windows PowerShell Notes
+
+When generating JSON for `sdp infer set-skill` from PowerShell, two pitfalls apply.
+
+### BOM-encoded UTF-8
+
+PowerShell `Out-File -Encoding utf8` writes UTF-8 with BOM. Node.js `JSON.parse` cannot read BOM-prefixed JSON and throws:
+
+```
+Unexpected token '﻿', "﻿{..." is not valid JSON
+```
+
+Use `System.Text.UTF8Encoding($false)` to write without BOM:
+
+```powershell
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($tempFile, $json, $utf8NoBom)
+```
+
+### Single-element array serialized as object
+
+`ConvertTo-Json` flattens a single-element array to a bare object:
+
+```powershell
+# Produces: {"capability":"problem_framing"}  ← NOT an array
+@(@{capability="problem_framing"}) | ConvertTo-Json
+```
+
+Build the JSON as a literal string instead:
+
+```powershell
+$prov = '[{"capability":"problem_framing"}]'
+$json = "{`"review_status`":`"reviewed`",`"provides`":$prov,...}"
+```

@@ -184,24 +184,24 @@ Each skill entry in the catalog MUST include an `execution_policy` object:
 ```json
 {
   "execution_policy": {
-    "requires_human_review": false,
-    "max_parallel": 1,
-    "timeout_seconds": null,
-    "retry_on_failure": false,
-    "idempotent": true
+    "strictness": "flexible",
+    "sequence_required": false,
+    "allow_step_reordering": true,
+    "allow_partial_application": true,
+    "guidance": "optional explanation text"
   }
 }
 ```
 
 ### 5.2 Fields
 
-| Field | Type | Default | Description |
-| ----- | ---- | ------- | ----------- |
-| `requires_human_review` | boolean | `false` | Skill output needs human approval |
-| `max_parallel` | number | `1` | Max concurrent executions |
-| `timeout_seconds` | number or null | `null` | Execution timeout (null = no limit) |
-| `retry_on_failure` | boolean | `false` | Auto-retry on transient failure |
-| `idempotent` | boolean | `true` | Safe to re-execute with same input |
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `strictness` | `"rigid"` \| `"flexible"` | Execution mode — `rigid`: follow exactly, no reordering; `flexible`: apply spirit, adapt to context |
+| `sequence_required` | boolean | Steps must be executed in declared sequence |
+| `allow_step_reordering` | boolean | Steps may be reordered to fit context |
+| `allow_partial_application` | boolean | Skill may be applied partially without covering all steps |
+| `guidance` | string (optional) | Free-text note for execution-time context |
 
 ### 5.3 Query Access
 
@@ -218,7 +218,15 @@ Flow Profile, not in the catalog. The flow reads it after `execution_policy`
 checks have ruled out incompatible candidates, and uses it for ranking and
 execution-time guidance.
 
-Common fields:
+Required fields per entry:
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `skill` | string | Skill name this guidance applies to |
+| `context` | string | Scenario or condition under which this guidance applies |
+| `guidance` | string | Instruction or recommendation for the executor |
+
+Optional fields:
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
