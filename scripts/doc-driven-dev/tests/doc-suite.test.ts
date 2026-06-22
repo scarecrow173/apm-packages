@@ -641,3 +641,35 @@ test("new_design honors --dir and --name for subdirectory placement with global 
   assert.match(index, /<!-- doc-suite:generated-index -->/);
   assert.match(index, /graph-visualization\/design\.md/);
 });
+
+test("new_spec --no-index skips writing the README index", () => {
+  const repo = tempRepo();
+  const result = runScript("spec-doc", "new_spec.js",
+    ["--title", "No index spec", "--no-index"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.existsSync(path.join(repo, "docs/specs/0001-no-index-spec.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "docs/specs/README.md")), false,
+    "index must not be created when --no-index is passed");
+  assert.match(result.stdout, /Skipped index update \(--no-index\)/);
+});
+
+test("new_spec --force-index overwrites a hand-curated index", () => {
+  const repo = tempRepo();
+  const specs = path.join(repo, "docs/specs");
+  fs.mkdirSync(specs, { recursive: true });
+  const handCurated = "# Curated Spec Index\n\n- keep me\n";
+  fs.writeFileSync(path.join(specs, "README.md"), handCurated, "utf8");
+
+  const skipped = runScript("spec-doc", "new_spec.js", ["--title", "First spec"], { cwd: repo });
+  assert.equal(skipped.status, 0, skipped.stderr);
+  assert.equal(fs.readFileSync(path.join(specs, "README.md"), "utf8"), handCurated,
+    "hand-curated index preserved by default");
+  assert.match(skipped.stderr, /appears hand-curated/);
+
+  const forced = runScript("spec-doc", "new_spec.js",
+    ["--title", "Second spec", "--force-index"], { cwd: repo });
+  assert.equal(forced.status, 0, forced.stderr);
+  const index = fs.readFileSync(path.join(specs, "README.md"), "utf8");
+  assert.match(index, /<!-- doc-suite:generated-index -->/, "index regenerated under --force-index");
+});

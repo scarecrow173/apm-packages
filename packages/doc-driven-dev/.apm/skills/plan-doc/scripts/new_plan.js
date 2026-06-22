@@ -21335,6 +21335,8 @@ function parseArgs(argv) {
     else if (arg === "--design") args.designTargets.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
+    else if (arg === "--no-index") args.noIndex = true;
+    else if (arg === "--force-index") args.forceIndex = true;
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--date") args.date = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
@@ -21345,7 +21347,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--dir <path>] [--name <filename>] [--status <status>]";
+  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
 }
 function resolveFromCwd(cwd, target) {
   return path.resolve(cwd, target);
@@ -21390,6 +21392,8 @@ async function main() {
       date: args.date,
       dir: args.dir,
       name: args.name,
+      forceIndex: args.forceIndex,
+      noIndex: args.noIndex,
       relations: {
         implements: linked,
         "derives-from": [...linked, ...designTargets]
@@ -21398,7 +21402,13 @@ async function main() {
       title: args.title
     });
     console.log(`Created ${result.file}`);
-    console.log(`Updated ${result.index}`);
+    if (result.indexWritten) {
+      console.log(`Updated ${result.index}`);
+    } else if (result.indexSkippedReason === "hand-curated") {
+      console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+    } else if (result.indexSkippedReason === "disabled") {
+      console.log(`Skipped index update (--no-index): ${result.index}`);
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());
