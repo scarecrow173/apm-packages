@@ -187,24 +187,24 @@ Catalog 中の各 skill entry は `execution_policy` object を含まなけれ�
 ```json
 {
   "execution_policy": {
-    "requires_human_review": false,
-    "max_parallel": 1,
-    "timeout_seconds": null,
-    "retry_on_failure": false,
-    "idempotent": true
+    "strictness": "flexible",
+    "sequence_required": false,
+    "allow_step_reordering": true,
+    "allow_partial_application": true,
+    "guidance": "optional explanation text"
   }
 }
 ```
 
 ### 5.2 フィールド
 
-| フィールド | 型 | デフォルト | 説明 |
-| ----- | ---- | ------- | ----------- |
-| `requires_human_review` | boolean | `false` | 出力に人間の承認が必要 |
-| `max_parallel` | number | `1` | 最大同時実行数 |
-| `timeout_seconds` | number or null | `null` | 実行タイムアウト（null = 無制限） |
-| `retry_on_failure` | boolean | `false` | 一時的失敗時に自動再試行する |
-| `idempotent` | boolean | `true` | 同じ入力で安全に再実行できる |
+| フィールド | 型 | 説明 |
+| ----- | ---- | ----------- |
+| `strictness` | `"rigid"` \| `"flexible"` | 実行モード — `rigid`: 正確に従う、並び替え不可; `flexible`: 精神を適用、文脈に適応 |
+| `sequence_required` | boolean | ステップを宣言済みシーケンスで実行する必要がある |
+| `allow_step_reordering` | boolean | ステップを文脈に合わせて並び替え可能 |
+| `allow_partial_application` | boolean | すべてのステップをカバーせずにスキルを部分適用可能 |
+| `guidance` | string (optional) | 実行時コンテキスト用のフリーテキスト注記 |
 
 ### 5.3 Query からの参照
 
@@ -220,7 +220,15 @@ sdp query --profile <json> execution-policy --skill <name>
 catalog ではない。`execution_policy` によって互換性のない候補を除外した後に flow が参照し、
 ranking と実行時のガイダンスに使う。
 
-主なフィールド:
+必須フィールド（entry ごと）:
+
+| フィールド | 型 | 説明 |
+| ----- | ---- | ----------- |
+| `skill` | string | このガイダンスが適用されるスキル名 |
+| `context` | string | このガイダンスが適用されるシナリオまたは条件 |
+| `guidance` | string | executor への指示または推奨事項 |
+
+オプショナルフィールド:
 
 | フィールド | 型 | 説明 |
 | ----- | ---- | ----------- |
