@@ -33,6 +33,30 @@ Rules:
 - Slug uses lowercase ASCII and dashes.
 - `overview.md` is reserved and never treated as a detailed design file.
 
+### Numbering source
+
+- In **numbered** directories (`NNNN-<slug>.md` files present), `NNNN` is taken
+  from the highest filename prefix in that directory and incremented locally.
+- In **slug-only** directories (no `NNNN-` prefixes), scripts derive the next
+  sequential `DESIGN-NNNN` id by scanning the front matter `id:` of every design
+  doc under `docs/designs/` recursively (including subdirectories), so the global
+  id sequence continues even when files use slug names and subdirectory layout.
+- `overview.md` (`DESIGN-OVERVIEW`) is excluded from both naming detection and
+  numbering.
+
+### Explicit filenames and subdirectory placement
+
+To place a design under a feature subdirectory with a fixed filename, pass
+`--dir` and `--name`:
+
+```text
+node scripts/new_design.js --title "Graph Visualization" \
+  --dir docs/designs/graph-visualization --name design.md
+```
+
+`overview.md` and the `README.md` index always stay at the canonical
+`docs/designs/` root, even for subdirectory writes.
+
 ## Mutability
 
 - `draft` design docs may be refined freely.
@@ -125,3 +149,9 @@ Index rules:
 - As entries grow, split the index into multiple headings, one table per
   heading, for readability. Align the split with the subdirectory grouping
   (category or feature) so each heading maps to one group.
+- Generated indexes embed an `<!-- doc-suite:generated-index -->` marker.
+  Scripts only overwrite a `README.md` that contains this marker (or one that
+  does not yet exist). A hand-curated index (no marker) is preserved and the
+  script warns instead of clobbering it. Use `--force-index` to overwrite a
+  hand-curated index, or `--no-index` to skip index regeneration entirely.
+  `--no-index` and `--force-index` cannot be used together.
