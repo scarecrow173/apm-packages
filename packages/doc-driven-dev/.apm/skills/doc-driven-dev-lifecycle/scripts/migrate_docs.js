@@ -21231,6 +21231,15 @@ ${bodyFor(type, options2.title)}
         relativeDir
       };
     }
+    function logIndexResult(result) {
+      if (result.indexWritten) {
+        console.log(`Updated ${result.index}`);
+      } else if (result.indexSkippedReason === "hand-curated") {
+        console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+      } else if (result.indexSkippedReason === "disabled") {
+        console.log(`Skipped index update (--no-index): ${result.index}`);
+      }
+    }
     function resolvesLocalTarget(cwd, fromFile, target) {
       const candidates = [
         path2.resolve(cwd, target),
@@ -21308,6 +21317,7 @@ ${bodyFor(type, options2.title)}
       docEntries,
       docFiles,
       docTypes,
+      logIndexResult,
       migrateDocs: migrateDocs2,
       relationFields,
       changeFields,

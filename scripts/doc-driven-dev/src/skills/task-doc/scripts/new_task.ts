@@ -2,7 +2,7 @@
 "use strict";
 
 const path = require("node:path");
-const { createDocument } = require("../../lib/doc_suite_utils.ts");
+const { createDocument, logIndexResult } = require("../../lib/doc_suite_utils.ts");
 
 type CliArgs = {
   cwd: string;
@@ -34,6 +34,7 @@ function parseArgs(argv: string[]): CliArgs {
     else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
+  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 
@@ -65,13 +66,7 @@ async function main(): Promise<void> {
       title: args.title,
     });
     console.log(`Created ${result.file}`);
-    if (result.indexWritten) {
-      console.log(`Updated ${result.index}`);
-    } else if (result.indexSkippedReason === "hand-curated") {
-      console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
-    } else if (result.indexSkippedReason === "disabled") {
-      console.log(`Skipped index update (--no-index): ${result.index}`);
-    }
+    logIndexResult(result);
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());
