@@ -14,10 +14,4 @@ timeout = 600
 statusMessage = "Setting up project environment"
 
 
-[mcp_servers.mise]
-command = "mise"
-args = [ "mcp",]
-id = ""
-
-[mcp_servers.mise.env]
-MISE_EXPERIMENTAL = "1"
+[mcp_servers]

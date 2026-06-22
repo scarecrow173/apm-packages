@@ -2,7 +2,11 @@
 "use strict";
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 
 // node_modules/.pnpm/kind-of@6.0.3/node_modules/kind-of/index.js
@@ -3551,7 +3555,7 @@ var require_core2 = __commonJS({
       Object.defineProperty(_, "name", { value: name });
       return _;
     }
-    exports2.$brand = Symbol("zod_brand");
+    exports2.$brand = /* @__PURE__ */ Symbol("zod_brand");
     var $ZodAsyncError = class extends Error {
       constructor() {
         super(`Encountered Promise during synchronous parse. Use .parseAsync() instead.`);
@@ -15464,8 +15468,8 @@ var require_registries = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.globalRegistry = exports2.$ZodRegistry = exports2.$input = exports2.$output = void 0;
     exports2.registry = registry;
-    exports2.$output = Symbol("ZodOutput");
-    exports2.$input = Symbol("ZodInput");
+    exports2.$output = /* @__PURE__ */ Symbol("ZodOutput");
+    exports2.$input = /* @__PURE__ */ Symbol("ZodInput");
     var $ZodRegistry = class {
       constructor() {
         this._map = /* @__PURE__ */ new WeakMap();

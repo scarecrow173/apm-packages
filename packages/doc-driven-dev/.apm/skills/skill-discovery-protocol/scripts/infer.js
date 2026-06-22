@@ -4,11 +4,20 @@ var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+var __esm = (fn, res, err) => function __init() {
+  if (err) throw err[0];
+  try {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  } catch (e) {
+    throw err = [e], e;
+  }
 };
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 var __export = (target, all) => {
   for (var name in all)
@@ -88,7 +97,7 @@ var init_core = __esm({
     NEVER = /* @__PURE__ */ Object.freeze({
       status: "aborted"
     });
-    $brand = Symbol("zod_brand");
+    $brand = /* @__PURE__ */ Symbol("zod_brand");
     $ZodAsyncError = class extends Error {
       constructor() {
         super(`Encountered Promise during synchronous parse. Use .parseAsync() instead.`);
@@ -10257,8 +10266,8 @@ function registry() {
 var _a2, $output, $input, $ZodRegistry, globalRegistry;
 var init_registries = __esm({
   "node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js"() {
-    $output = Symbol("ZodOutput");
-    $input = Symbol("ZodInput");
+    $output = /* @__PURE__ */ Symbol("ZodOutput");
+    $input = /* @__PURE__ */ Symbol("ZodInput");
     $ZodRegistry = class {
       constructor() {
         this._map = /* @__PURE__ */ new WeakMap();
@@ -15344,7 +15353,8 @@ var init_infer_ops = __esm({
       provides: external_exports.array(CapabilitySchema2),
       uses: external_exports.array(UsesSchema2),
       execution_policy: ExecutionPolicySchema2,
-      tags: external_exports.array(external_exports.string())
+      tags: external_exports.array(external_exports.string()),
+      review_status: external_exports.enum(["pending", "reviewed"]).optional()
     });
     InferOpSchema = external_exports.discriminatedUnion("op", [
       external_exports.object({
@@ -15446,7 +15456,7 @@ var require_infer_edit = __commonJS({
       const next = JSON.parse(JSON.stringify(doc));
       const index = next.skills.findIndex((skill) => skill.name === name);
       const normalized = {
-        review_status: "pending",
+        review_status: skillSpec.review_status ?? "pending",
         provides: [],
         uses: [],
         tags: [],
