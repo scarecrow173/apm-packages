@@ -72,8 +72,8 @@ task の検証証跡と照合する。すべてのフォローアップを `bug-
 `briefing-flow` に委譲する。完了条件は `briefing-flow` の Phase D ゲートで検証される:
 
 - [ ] spec-doc が存在し `status:` ≥ `proposed`
-- [ ] spec-doc に `acceptance_criteria:` が 1 件以上ある
-- [ ] adr-doc が存在し `alternatives:` が 2 件以上ある
+- [ ] spec-doc に `## Acceptance Criteria` に 1 件以上のエントリがある
+- [ ] adr-doc が存在し `## Considered Options` に 2 件以上のエントリがある
 - [ ] Entry Decision の選択が記録されている
 - [ ] 「実装前ブロッカー」に分類された未解決項目がない
 
@@ -138,8 +138,8 @@ Phase 1 は `briefing-flow` に委譲されるため、スキルの発見・構�
 | `deep-dive` | Frame | 制約と判断軸を含む確認済み intent 要約 | 明確な outcome、制約、未解決項目 |
 | `steer-web-research` | Discover | 外部情報の調査結果 | エビデンス付きの調査レポート |
 | `discovery-doc` | Document | `docs/discovery/` 配下の構造化探索成果物 | `status: resolved`、昇華候補に対処済み、`relations.derived-by` に下流文書リンク済み |
-| `spec-doc` | Document | 正式な仕様書 | `acceptance_criteria:` 3 件以上、`status: proposed` |
-| `adr-doc` | Document | アーキテクチャ決定記録 | `alternatives:` 2 件以上、理由が文書化 |
+| `spec-doc` | Document | 正式な仕様書 | `## Acceptance Criteria` に 3 件以上のエントリ、`status: proposed` |
+| `adr-doc` | Document | アーキテクチャ決定記録 | `## Considered Options` に 2 件以上のエントリ、理由が文書化 |
 
 **注**: `briefing-flow` はこれらに限定されず、環境内の全利用可能スキルを動的に発見する。
 詳細は [`briefing-flow` SKILL](../briefing-flow/SKILL.ja.md) を参照。
