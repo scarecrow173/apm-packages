@@ -54,7 +54,13 @@ async function main(): Promise<void> {
       title: args.title,
     });
     console.log(`Created ${result.file}`);
-    console.log(`Updated ${result.index}`);
+    if (result.indexWritten) {
+      console.log(`Updated ${result.index}`);
+    } else if (result.indexSkippedReason === "hand-curated") {
+      console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+    } else if (result.indexSkippedReason === "disabled") {
+      console.log(`Skipped index update (--no-index): ${result.index}`);
+    }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

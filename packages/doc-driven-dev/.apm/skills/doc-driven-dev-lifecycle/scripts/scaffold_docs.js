@@ -20553,6 +20553,30 @@ var require_doc_suite_utils = __commonJS({
       if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
       return configs[type];
     }
+    var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+    function canonicalRootDir(cwd, type) {
+      const config = configFor(type);
+      return findDocumentDir(cwd, void 0, config.dirs, config.dir);
+    }
+    function isUnderDir(child, parent) {
+      const c = normalizeDir(child);
+      const p = normalizeDir(parent);
+      return c === p || c.startsWith(`${p}/`);
+    }
+    function recursiveBasenames(cwd, relativeDir, type) {
+      const fullDir = path2.join(cwd, relativeDir);
+      return walkMarkdownFiles(fullDir).map((fullPath) => path2.basename(fullPath)).filter((file) => !isReservedDocFile(type, file));
+    }
+    function nextNumberFromFrontMatter(cwd, relativeDir, idPrefix) {
+      const fullDir = path2.join(cwd, relativeDir);
+      const pattern = new RegExp(`^${idPrefix}-(\\d{4})$`);
+      const numbers = walkMarkdownFiles(fullDir).map((fullPath) => matterData(fs.readFileSync(fullPath, "utf8")).id).filter((id) => typeof id === "string").map((id) => pattern.exec(id.trim())).filter((match) => Boolean(match)).map((match) => Number(match[1]));
+      return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
+    }
+    function sanitizeFileName(name) {
+      const base = path2.basename(name.trim());
+      return base.toLowerCase().endsWith(".md") ? base : `${base}.md`;
+    }
     function docDir(cwd, type, explicitDir) {
       const config = configFor(type);
       return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
@@ -20960,6 +20984,8 @@ var require_doc_suite_utils = __commonJS({
 ${rows.join("\n")}` : header;
       return `# ${title}
 
+${GENERATED_INDEX_MARKER}
+
 Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 
 ${body}
@@ -21158,16 +21184,32 @@ ${input.body.trim()}
       }
       return { created, updated };
     }
+    async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
+      const indexPath = path2.join(cwd, relativeDir, "README.md");
+      const relIndex = path2.relative(cwd, indexPath).replace(/\\/g, "/");
+      if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
+      const content = await buildIndex(cwd, type, relativeDir);
+      const existing = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
+      const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
+      if (!isGenerated && !options2.forceIndex) {
+        return { path: relIndex, written: false, reason: "hand-curated" };
+      }
+      fs.writeFileSync(indexPath, content, "utf8");
+      return { path: relIndex, written: true, reason: null };
+    }
     async function createDocument(type, options2) {
       const config = configFor(type);
       const cwd = path2.resolve(options2.cwd);
       const relativeDir = docDir(cwd, type, options2.dir);
       const fullDir = path2.join(cwd, relativeDir);
       fs.mkdirSync(fullDir, { recursive: true });
-      const files = fs.readdirSync(fullDir).filter((file) => file.endsWith(".md")).filter((file) => !isReservedDocFile(type, file));
-      const number = nextNumber(files);
-      const naming = detectNaming(files);
-      const filename = naming === "slug" ? `${slugify(options2.title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify(options2.title, type)}.md`;
+      const rootDir = canonicalRootDir(cwd, type);
+      const underRoot = isUnderDir(relativeDir, rootDir);
+      const scopeDir = underRoot ? rootDir : relativeDir;
+      const naming = detectNaming(recursiveBasenames(cwd, scopeDir, type));
+      const localFiles = fs.readdirSync(fullDir).filter((file) => file.endsWith(".md")).filter((file) => !isReservedDocFile(type, file));
+      const number = naming === "slug" ? nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix) : nextNumber(localFiles);
+      const filename = options2.name ? sanitizeFileName(options2.name) : naming === "slug" ? `${slugify(options2.title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify(options2.title, type)}.md`;
       const outputPath = path2.join(fullDir, filename);
       if (fs.existsSync(outputPath)) throw new Error(`Document already exists: ${path2.relative(cwd, outputPath)}`);
       const date = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -21177,12 +21219,14 @@ ${input.body.trim()}
 ${bodyFor(type, options2.title)}
 `;
       fs.writeFileSync(outputPath, content, "utf8");
-      if (type === "design") ensureDesignOverview(fullDir, date);
-      const index = await buildIndex(cwd, type, relativeDir);
-      fs.writeFileSync(path2.join(fullDir, "README.md"), index, "utf8");
+      if (type === "design") ensureDesignOverview(path2.join(cwd, rootDir), date);
+      const indexRelativeDir = underRoot ? rootDir : relativeDir;
+      const indexResult = await writeGeneratedIndex(cwd, type, indexRelativeDir, options2);
       return {
         file: path2.relative(cwd, outputPath).replace(/\\/g, "/"),
-        index: path2.relative(cwd, path2.join(fullDir, "README.md")).replace(/\\/g, "/"),
+        index: indexResult.path,
+        indexWritten: indexResult.written,
+        indexSkippedReason: indexResult.reason,
         relativeDir
       };
     }

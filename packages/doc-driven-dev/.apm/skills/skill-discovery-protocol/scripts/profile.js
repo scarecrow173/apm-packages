@@ -3140,9 +3140,14 @@ var require_adapter = __commonJS({
         if (current === skillTreeRoot || parent === current) break;
         current = parent;
       }
-      const bundledAdaptersDir = path2.resolve(__dirname, "..", "assets", "adapters");
-      if (fs2.existsSync(bundledAdaptersDir) && !dirs.includes(bundledAdaptersDir)) {
-        dirs.push(bundledAdaptersDir);
+      const bundledAdapterCandidates = [
+        path2.resolve(__dirname, "..", "assets", "adapters"),
+        path2.resolve(__dirname, "..", "..", "assets", "adapters")
+      ];
+      for (const bundledAdaptersDir of bundledAdapterCandidates) {
+        if (fs2.existsSync(bundledAdaptersDir) && !dirs.includes(bundledAdaptersDir)) {
+          dirs.push(bundledAdaptersDir);
+        }
       }
       return dirs;
     }
