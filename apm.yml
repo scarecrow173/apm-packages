@@ -9,7 +9,7 @@ targets:
 - cursor
 - codex
 - agent-skills
-dependencies:
+devDependencies:
   apm:
   - ./packages/basic-dev-foundation
   - ./packages/recommended-dev-suite

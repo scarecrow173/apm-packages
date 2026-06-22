@@ -11,7 +11,7 @@ targets:
   - agent-skills
 dependencies:
   apm:
-    - github/awesome-copilot/skills/drawio
-    - github/awesome-copilot/skills/draw-io-diagram-generator
-    - github/awesome-copilot/skills/plantuml-ascii
-    - github/awesome-copilot/skills/editorconfig
+    - github/awesome-copilot/skills/drawio#main
+    - github/awesome-copilot/skills/draw-io-diagram-generator#main
+    - github/awesome-copilot/skills/plantuml-ascii#main
+    - github/awesome-copilot/skills/editorconfig#main

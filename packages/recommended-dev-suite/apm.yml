@@ -11,18 +11,18 @@ targets:
   - agent-skills
 dependencies:
   apm:
-    - obra/superpowers/skills/brainstorming
-    - obra/superpowers/skills/dispatching-parallel-agents
-    - obra/superpowers/skills/subagent-driven-development
-    - obra/superpowers/skills/requesting-code-review
-    - obra/superpowers/skills/receiving-code-review
-    - obra/superpowers/skills/systematic-debugging
-    - obra/superpowers/skills/finishing-a-development-branch
-    - obra/superpowers/skills/writing-plans
-    - addyosmani/agent-skills/skills/idea-refine
-    - addyosmani/agent-skills/skills/interview-me
-    - addyosmani/agent-skills/skills/doubt-driven-development
-    - addyosmani/agent-skills/skills/test-driven-development
-    - addyosmani/agent-skills/skills/source-driven-development
-    - addyosmani/agent-skills/skills/incremental-implementation
-    - addyosmani/agent-skills/skills/code-simplification
+    - obra/superpowers/skills/brainstorming#main
+    - obra/superpowers/skills/dispatching-parallel-agents#main
+    - obra/superpowers/skills/subagent-driven-development#main
+    - obra/superpowers/skills/requesting-code-review#main
+    - obra/superpowers/skills/receiving-code-review#main
+    - obra/superpowers/skills/systematic-debugging#main
+    - obra/superpowers/skills/finishing-a-development-branch#main
+    - obra/superpowers/skills/writing-plans#main
+    - addyosmani/agent-skills/skills/idea-refine#main
+    - addyosmani/agent-skills/skills/interview-me#main
+    - addyosmani/agent-skills/skills/doubt-driven-development#main
+    - addyosmani/agent-skills/skills/test-driven-development#main
+    - addyosmani/agent-skills/skills/source-driven-development#main
+    - addyosmani/agent-skills/skills/incremental-implementation#main
+    - addyosmani/agent-skills/skills/code-simplification#main

@@ -11,8 +11,9 @@ targets:
   - agent-skills
 dependencies:
   apm:
-    - microsoft/apm/packages/apm-guide
-    - github/awesome-copilot/skills/git-commit
-    - github/awesome-copilot/skills/conventional-branch
-    - github/awesome-copilot/skills/commit-message-storyteller
-    - github/awesome-copilot/skills/repo-story-time
+    - microsoft/apm/packages/apm-guide#main
+    - github/awesome-copilot/skills/git-commit#main
+    - github/awesome-copilot/skills/conventional-branch#main
+    - github/awesome-copilot/skills/commit-message-storyteller#main
+    - github/awesome-copilot/skills/repo-story-time#main
+    - github/awesome-copilot/skills/editorconfig#main
