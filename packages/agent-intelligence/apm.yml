@@ -11,10 +11,10 @@ targets:
   - agent-skills
 dependencies:
   apm:
-    - github/awesome-copilot/skills/agentic-eval
-    - github/awesome-copilot/skills/autoresearch
-    - github/awesome-copilot/skills/copilot-usage-metrics
-    - github/awesome-copilot/plugins/context-engineering
-    - obra/superpowers/writing-skills
-    - softaworks/agent-toolkit/skills/skill-judge
+    - github/awesome-copilot/skills/agentic-eval#main
+    - github/awesome-copilot/skills/autoresearch#main
+    - github/awesome-copilot/skills/copilot-usage-metrics#main
+    - github/awesome-copilot/plugins/context-engineering#main
+    - obra/superpowers/writing-skills#main
+    - softaworks/agent-toolkit/skills/skill-judge#main
     

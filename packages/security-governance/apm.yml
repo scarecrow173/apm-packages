@@ -11,8 +11,8 @@ targets:
   - agent-skills
 dependencies:
   apm:
-    - github/awesome-copilot/skills/security-review
-    - github/awesome-copilot/skills/audit-integrity
-    - github/awesome-copilot/skills/agent-governance
-    - github/awesome-copilot/skills/agent-supply-chain
-    - github/awesome-copilot/plugins/security-best-practices
+    - github/awesome-copilot/skills/security-review#main
+    - github/awesome-copilot/skills/audit-integrity#main
+    - github/awesome-copilot/skills/agent-governance#main
+    - github/awesome-copilot/skills/agent-supply-chain#main
+    - github/awesome-copilot/plugins/security-best-practices#main

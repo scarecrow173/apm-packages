@@ -9,7 +9,7 @@ targets:
 - cursor
 - codex
 - agent-skills
-dependencies:
+devDependencies:
   apm:
   - ./packages/basic-dev-foundation
   - ./packages/recommended-dev-suite
@@ -47,19 +47,44 @@ marketplace:
     category: foundation
     source: scarecrow173/apm-packages
     subdir: packages/basic-dev-foundation
+
   - name: recommended-dev-suite
     category: workflow
     source: scarecrow173/apm-packages
     subdir: packages/recommended-dev-suite
+
   - name: steer-enterprise-web-research
     category: research
     source: scarecrow173/apm-packages
     subdir: packages/steer-enterprise-web-research
+
   - name: doc-driven-dev
     category: documentation
     source: scarecrow173/apm-packages
     subdir: packages/doc-driven-dev
+
   - name: apm-package-judge
     category: evaluation
     source: scarecrow173/apm-packages
     subdir: packages/apm-package-judge
+
+  - name: github-automation
+    category: automation
+    source: scarecrow173/apm-packages
+    subdir: packages/github-automation
+
+  - name: security-governance
+    category: security
+    source: scarecrow173/apm-packages
+    subdir: packages/security-governance
+
+  - name: visualization
+    category: design
+    source: scarecrow173/apm-packages
+    subdir: packages/visualization
+
+  - name: token-compression
+    category: optimization
+    source: scarecrow173/apm-packages
+    subdir: packages/token-compression
+
