@@ -27,6 +27,7 @@ const SkillSchema = z.object({
   uses: z.array(UsesSchema),
   execution_policy: ExecutionPolicySchema,
   tags: z.array(z.string()),
+  review_status: z.enum(["pending", "reviewed"]).optional(),
 });
 
 export const InferOpSchema = z.discriminatedUnion("op", [

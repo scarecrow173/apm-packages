@@ -15,15 +15,29 @@ function isSkillDir(dirPath: string): boolean {
 function parseSkillMd(skillDir: string, scope = "project"): RawScannedSkill {
   const skillMdPath = path.join(skillDir, "SKILL.md");
   const content = fs.readFileSync(skillMdPath, "utf8");
-  const { data, content: body } = matter(content);
 
-  const name: string = data.name || path.basename(skillDir);
-  const description: string = data.description || "";
+  let name: string;
+  let description: string;
+  let body: string;
+
+  try {
+    const { data, content: parsedBody } = matter(content);
+    name = data.name || path.basename(skillDir);
+    description = data.description || "";
+    body = parsedBody.trim();
+  } catch (e: unknown) {
+    console.error(
+      `Warning: YAML parse error in SKILL.md at "${skillMdPath}", using directory name as fallback: ${e instanceof Error ? e.message : String(e)}`,
+    );
+    name = path.basename(skillDir);
+    description = "";
+    body = "";
+  }
 
   return {
     name,
     description,
-    body: body.trim(),
+    body,
     skill_path: skillMdPath,
     scope,
   };
