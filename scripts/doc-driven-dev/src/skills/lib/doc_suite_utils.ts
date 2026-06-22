@@ -296,7 +296,9 @@ function nextNumberFromFrontMatter(cwd: string, relativeDir: string, idPrefix: s
 
 function sanitizeFileName(name: string): string {
   const base = path.basename(name.trim());
-  return base.toLowerCase().endsWith(".md") ? base : `${base}.md`;
+  const stem = base.replace(/\.md$/i, "");
+  if (!stem) throw new Error("Invalid filename: empty after removing .md extension");
+  return `${stem}.md`;
 }
 
 function docDir(cwd: string, type: string, explicitDir?: string): string {
@@ -922,8 +924,7 @@ async function migrateDocs(options: MigrationOptions): Promise<MigrationResult> 
       created.push(migration.target);
     }
     for (const target of scaffoldTargets.filter((item) => item.type)) {
-      const index = await buildIndex(cwd, target.type, target.dir);
-      fs.writeFileSync(path.join(cwd, target.dir, "README.md"), index, "utf8");
+      await writeGeneratedIndex(cwd, target.type as DocType, target.dir, {});
     }
   }
 
@@ -959,13 +960,13 @@ async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: stri
   const relIndex = path.relative(cwd, indexPath).replace(/\\/g, "/");
   if (options.noIndex) return { path: relIndex, written: false, reason: "disabled" };
 
-  const content = await buildIndex(cwd, type, relativeDir);
   const existing = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
   const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
   if (!isGenerated && !options.forceIndex) {
     return { path: relIndex, written: false, reason: "hand-curated" };
   }
 
+  const content = await buildIndex(cwd, type, relativeDir);
   fs.writeFileSync(indexPath, content, "utf8");
   return { path: relIndex, written: true, reason: null };
 }
@@ -987,13 +988,14 @@ async function createDocument(type: DocType, options: CreateDocumentOptions): Pr
     .filter((file) => !isReservedDocFile(type, file));
   const number = naming === "slug"
     ? nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix)
-    : nextNumber(localFiles);
+    : nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix);
 
   const filename = options.name
     ? sanitizeFileName(options.name)
     : naming === "slug"
       ? `${slugify(options.title, type)}.md`
       : `${String(number).padStart(4, "0")}-${slugify(options.title, type)}.md`;
+  if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
   const outputPath = path.join(fullDir, filename);
   if (fs.existsSync(outputPath)) throw new Error(`Document already exists: ${path.relative(cwd, outputPath)}`);
 
