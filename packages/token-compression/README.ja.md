@@ -12,10 +12,10 @@
 
 信頼できる情報源は [apm.yml](./apm.yml) です。現在の依存関係：
 
-- `obra/superpowers/skills/context-engineering`
-- `softaworks/agent-toolkit/skills/token-optimization`
-- `github/awesome-copilot/skills/prompt-compression`
-- `addyosmani/agent-skills/skills/incremental-implementation`
+- `InterfaceX-co-jp/genshijin/skills/genshijin`
+- `InterfaceX-co-jp/genshijin/skills/genshijin-compress`
+- `InterfaceX-co-jp/genshijin/skills/genshijin-crew`
+- `InterfaceX-co-jp/genshijin/skills/genshijin-review`
 
 ## 関連パッケージ
 

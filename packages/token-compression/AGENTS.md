@@ -2,28 +2,28 @@
 
 ## Agent Overview
 
-The `token-compression` package works with agents and subagents that specialize in token optimization and efficient prompt engineering:
+The `token-compression` package pulls in the [genshijin](https://github.com/InterfaceX-co-jp/genshijin) suite, which provides token compression and multi-agent crew capabilities:
 
-### Token Optimization Agent
-- **Purpose:** Analyzes and optimizes token usage patterns
-- **Skills:** Token counting, budget allocation, compression strategies
-- **Use Cases:** Reducing context overhead, managing token budgets
+### genshijin
+- **Purpose:** Core token compression engine
+- **Use Cases:** Reducing prompt length while preserving intent
 
-### Context Engineering Agent
-- **Purpose:** Structures and compresses context efficiently
-- **Skills:** Context selection, information density optimization
-- **Use Cases:** Preparing focused prompts, minimizing redundancy
+### genshijin-compress
+- **Purpose:** Compression-focused skill for condensing context and instructions
+- **Use Cases:** Shrinking large context windows, minimizing redundant tokens
 
-### Prompt Compression Agent
-- **Purpose:** Compresses prompts while preserving semantic meaning
-- **Skills:** Prompt shortening, lossless compression techniques
-- **Use Cases:** Reducing input token count without quality loss
+### genshijin-crew
+- **Purpose:** Multi-agent crew orchestration optimized for compressed workflows
+- **Use Cases:** Running parallel agents with lean, compressed prompts
+
+### genshijin-review
+- **Purpose:** Reviews and audits compression quality
+- **Use Cases:** Verifying that compressed output retains semantic fidelity
 
 ## Integration Points
 
-These agents can be combined with:
-- `agentic-eval` — For measuring compression effectiveness
-- `incremental-implementation` — For gradual token optimization improvements
-- `brainstorming` — For exploring compression strategies
+These skills can be combined with other packages in this repo:
+- `agent-intelligence` — For evaluating compression effectiveness
+- `recommended-dev-suite` — For incorporating compression into standard dev workflows
 
 See [apm.yml](./apm.yml) for the definitive dependency list.

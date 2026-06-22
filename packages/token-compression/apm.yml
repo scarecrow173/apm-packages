@@ -11,7 +11,7 @@ targets:
   - agent-skills
 dependencies:
   apm:
-    - obra/superpowers/skills/context-engineering
-    - softaworks/agent-toolkit/skills/token-optimization
-    - github/awesome-copilot/skills/prompt-compression
-    - addyosmani/agent-skills/skills/incremental-implementation
+    - InterfaceX-co-jp/genshijin/skills/genshijin#main
+    - InterfaceX-co-jp/genshijin/skills/genshijin-compress#main
+    - InterfaceX-co-jp/genshijin/skills/genshijin-crew#main
+    - InterfaceX-co-jp/genshijin/skills/genshijin-review#main

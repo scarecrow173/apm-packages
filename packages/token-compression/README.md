@@ -12,10 +12,10 @@ This package covers prompt compression, context engineering, token budget manage
 
 The source of truth is [apm.yml](./apm.yml). Current dependencies:
 
-- `obra/superpowers/skills/context-engineering`
-- `softaworks/agent-toolkit/skills/token-optimization`
-- `github/awesome-copilot/skills/prompt-compression`
-- `addyosmani/agent-skills/skills/incremental-implementation`
+- `InterfaceX-co-jp/genshijin/skills/genshijin`
+- `InterfaceX-co-jp/genshijin/skills/genshijin-compress`
+- `InterfaceX-co-jp/genshijin/skills/genshijin-crew`
+- `InterfaceX-co-jp/genshijin/skills/genshijin-review`
 
 ## Related Packages
 
