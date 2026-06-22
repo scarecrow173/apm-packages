@@ -204,8 +204,8 @@ Stop conditions が満たされない場合:
 ### 完了条件チェックリスト
 
 - [ ] `spec-doc` が存在し、`status:` が `proposed` 以上である（`draft` は通過不可）
-- [ ] `spec-doc` に少なくとも 1 つの `acceptance_criteria:` がある
-- [ ] `adr-doc` に少なくとも 2 つの `alternatives:` がある
+- [ ] `spec-doc` に少なくとも 1 つのエントリが `## Acceptance Criteria` にある
+- [ ] `adr-doc` に少なくとも 2 つのエントリが `## Considered Options` にある
 - [ ] Entry Decision (A-1/A-2/A-3/A-4/A-5) の選択が記録されている
 - [ ] "pre-implementation blocker" に分類された未解決項目が残っていない
 - [ ] 両方の文書が同じ問題文脈を参照している

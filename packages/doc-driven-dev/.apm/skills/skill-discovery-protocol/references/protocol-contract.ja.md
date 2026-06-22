@@ -64,6 +64,22 @@ inference が必要であり、scan されていない skill の inference は s
 失敗し、`sdp profile` は incomplete な inference から catalog/profile を
 生成してはならない。
 
+### `provides[]` Element Schema
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `capability` | string | Yes | `snake_case` capability identifier |
+| `description` | string | No | capability の説明テキスト |
+
+### `uses[]` Element Schema
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `capability` | string | Yes | このスキルが消費する capability の `snake_case` identifier |
+| `required` | boolean | Yes | スキル実行のために満たす必要があるかどうか |
+| `override_allowed` | boolean | Yes | invoker が代替スキルを代用可能かどうか |
+| `default_skill` | string | No | この capability を満たすための推奨スキル（判明している場合） |
+
 ## 5. Skill Reference Catalog Contract
 
 **File:** `skill-reference-catalog.json`
@@ -84,6 +100,7 @@ Required top-level fields:
 
 Catalog は `slots` / `slot_count` / `resolved_invocations` を持ってはならない。
 invocation slot は Flow Profile の `flow_stack.slots[]` が保持する。
+- `provides[]` と `uses[]` の要素型スキーマについては、上記 §4 Inference Contract を参照.
 
 ## 6. Flow Profile Contract
 

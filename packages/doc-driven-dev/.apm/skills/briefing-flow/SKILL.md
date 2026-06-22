@@ -93,7 +93,8 @@ Even when A-4 is chosen, Phase B (Configure) is NOT skipped — Document-categor
 > validated as part of that workflow.
 
 - If it exists and is valid → go to Phase B (Configuration from Profile).
-- If it does not exist → invoke `skill-discovery-protocol` and pass the adapter path `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- If it does not exist → invoke `skill-discovery-protocol` and pass the adapter path `<skill-root>/briefing-flow/assets/adapters/briefing-adapter.yaml`  
+  (`<skill-root>` is one of `.agents/skills/`, `.apm/skills/`, or `.claude/skills/` depending on your APM installation)
 - If it exists but is stale/corrupted → invoke `skill-discovery-protocol` again with the same adapter path to regenerate it
 
 ---
@@ -104,7 +105,8 @@ Profile generation and validation is handled by the `skill-discovery-protocol` s
 
 When invoking it from this flow, provide:
 
-- Adapter path: `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`
+- Adapter path: `<skill-root>/briefing-flow/assets/adapters/briefing-adapter.yaml`  
+  (where `<skill-root>` is `.agents/skills/`, `.apm/skills/`, or `.claude/skills/`)
 - Expected profile path: `.sdp/briefing-flow-default/briefing-profile.json`
 - Expected inference artifact: `.sdp/skill-reference-inferences.json`
 
@@ -217,8 +219,8 @@ Briefing is NOT complete until ALL of the following conditions are met:
 ### Completion Checklist
 
 - [ ] `spec-doc` exists with `status:` ≥ `proposed` (`draft` cannot pass)
-- [ ] `spec-doc` has at least 1 `acceptance_criteria:` entry
-- [ ] `adr-doc` exists with at least 2 `alternatives:`
+- [ ] `spec-doc` has at least 1 entry in `## Acceptance Criteria`
+- [ ] `adr-doc` exists with at least 2 entries under `## Considered Options`
 - [ ] Entry Decision (A-1/A-2/A-3/A-4/A-5) selection is recorded
 - [ ] No open items classified as "pre-implementation blocker" remain unresolved
 - [ ] Both documents reference the same problem context
@@ -259,7 +261,8 @@ When a violation is detected, STOP immediately and address it.
 <HARD-GATE>
 Do not skip profile-based configuration when briefing work depends on skill
 routing.
-- If profile does not exist → invoke `skill-discovery-protocol` with `.apm/skills/briefing-flow/assets/adapters/briefing-adapter.yaml`.
+- If profile does not exist → invoke `skill-discovery-protocol` with `<skill-root>/briefing-flow/assets/adapters/briefing-adapter.yaml`  
+  (`<skill-root>` is `.agents/skills/`, `.apm/skills/`, or `.claude/skills/`).
 - If profile exists → load it and follow its configuration.
 "Requirements are clear enough to skip" and "I know this pattern" are the most
 common failure patterns. They defeat systematic skill routing.

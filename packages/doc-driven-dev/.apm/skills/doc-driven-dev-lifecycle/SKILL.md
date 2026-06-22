@@ -72,8 +72,8 @@ verified by the migration contract:
 Delegated to `briefing-flow`. Completion is verified by `briefing-flow` Phase D gate:
 
 - [ ] spec-doc exists with `status:` ≥ `proposed`
-- [ ] spec-doc has `acceptance_criteria:` with ≥1 item
-- [ ] adr-doc exists with `alternatives:` ≥2
+- [ ] spec-doc has ≥1 entry in `## Acceptance Criteria`
+- [ ] adr-doc exists with ≥2 entries in `## Considered Options`
 - [ ] Entry Decision selection recorded
 - [ ] No open items classified as "pre-implementation blocker"
 
@@ -140,8 +140,8 @@ Key skills managed by `briefing-flow`:
 | `deep-dive` | Frame | Confirmed intent summary with constraints and decision axes | Clear outcome, constraints, and open questions |
 | `steer-web-research` | Discover | External information research results | Evidence-backed research report |
 | `discovery-doc` | Document | Structured exploration artifact in `docs/discovery/` | `status: resolved`, promotion candidates addressed, downstream docs linked in `relations.derived-by` |
-| `spec-doc` | Document | Formal specification document | `acceptance_criteria:` ≥3 items, `status: proposed` |
-| `adr-doc` | Document | Architecture decision record | `alternatives:` ≥2, rationale documented |
+| `spec-doc` | Document | Formal specification document | ≥3 entries in `## Acceptance Criteria`, `status: proposed` |
+| `adr-doc` | Document | Architecture decision record | ≥2 entries in `## Considered Options`, rationale documented |
 
 **Note**: `briefing-flow` is not limited to these — it dynamically discovers all
 available skills in the environment. See [`briefing-flow` SKILL](../briefing-flow/SKILL.md) for details.

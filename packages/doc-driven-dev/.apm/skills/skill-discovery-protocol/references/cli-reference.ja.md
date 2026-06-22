@@ -12,6 +12,17 @@ Adapter YAML スキーマ、invocation 解決ルール、検証規約につい�
 
 ## Operator Recipe
 
+> **注記:** `sdp` はグローバルにインストールされたバイナリではない。runtime manager 経由で呼び出す:
+>
+> ```powershell
+> # 例: mise (推奨)
+> mise exec -- node <skill-root>/skill-discovery-protocol/scripts/sdp.js <subcommand>
+> ```
+>
+> `<skill-root>` は インストール済みスキルを含むディレクトリ
+> （例: `.agents/skills/`、`.apm/skills/`、`.claude/skills/` など）。
+> 以下の例では `sdp` は上記の完全な呼び出しの省略形として使われている。
+
 ```text
 sdp scan --adapter <adapter-yaml>
 sdp infer init --scan .sdp/skill-scan-list.json --out .sdp/skill-reference-inferences.json --if-exists merge
@@ -65,12 +76,14 @@ inference を review したうえで `sdp infer check` を通してから profil
 ### 1.4 `sdp validate`
 
 ```text
+sdp validate --profile <flow-profile-json> --adapter <adapter-yaml>
 sdp validate --profile <flow-profile-json>
 sdp validate --adapter <adapter-yaml>
 ```
 
-- `--profile`: 生成済み成果物の完全 4 ゲート検証
-- `--adapter`: Adapter YAML 設定のスキーマのみ検証
+- `--profile --adapter` (両方): 完全 4 ゲート検証（Schema、Staleness、Deterministic、Blocking）
+- `--profile` のみ: Schema と Staleness ゲートが実行；Deterministic と Blocking ゲートは **スキップ**
+- `--adapter` のみ: Adapter YAML 設定のスキーマのみ検証
 
 ### 1.5 `sdp query`
 
@@ -81,3 +94,40 @@ sdp query --profile <flow-profile-json> <subcommand> [options]
 サブコマンド: `categories`、`category-skills`、`resolution`、`flow-stack`、
 `execution-policy`、`capability-skills`、`skill-detail`、`runtime-guidance`、
 `unresolved`、`validation-status`
+
+---
+
+## Windows PowerShell 注記
+
+PowerShell から `sdp infer set-skill` 用の JSON を生成する際、2つの落とし穴がある。
+
+### BOM 付き UTF-8
+
+PowerShell の `Out-File -Encoding utf8` は UTF-8 with BOM を出力する。Node.js の `JSON.parse` は BOM 付き JSON を読めず、以下をスローする:
+
+```
+Unexpected token '﻿', "﻿{..." is not valid JSON
+```
+
+BOM なしで書き込むには `System.Text.UTF8Encoding($false)` を使う:
+
+```powershell
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($tempFile, $json, $utf8NoBom)
+```
+
+### 単一要素配列の object へのシリアライズ
+
+`ConvertTo-Json` は単一要素配列を bare object に展開することがある:
+
+```powershell
+# 出力: {"capability":"problem_framing"}  ← 配列ではない
+@(@{capability="problem_framing"}) | ConvertTo-Json
+```
+
+JSON を文字列として直接組み立てる:
+
+```powershell
+$prov = '[{"capability":"problem_framing"}]'
+$json = "{`"review_status`":`"reviewed`",`"provides`":$prov,...}"
+```
