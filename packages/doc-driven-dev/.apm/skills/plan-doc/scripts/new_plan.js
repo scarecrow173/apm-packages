@@ -20569,7 +20569,8 @@ var require_doc_suite_utils = __commonJS({
     }
     function nextNumberFromFrontMatter(cwd, relativeDir, idPrefix) {
       const fullDir = path2.join(cwd, relativeDir);
-      const pattern = new RegExp(`^${idPrefix}-(\\d{4})$`);
+      const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
       const numbers = walkMarkdownFiles(fullDir).map((fullPath) => matterData(fs2.readFileSync(fullPath, "utf8")).id).filter((id) => typeof id === "string").map((id) => pattern.exec(id.trim())).filter((match) => Boolean(match)).map((match) => Number(match[1]));
       return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
     }
@@ -21333,6 +21334,7 @@ function parseArgs(argv) {
     else if (arg === "--implements") args.implementsTarget = argv[++i];
     else if (arg === "--design") args.designTargets.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
+    else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--date") args.date = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
@@ -21343,7 +21345,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--dir <path>] [--status <status>]";
+  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--dir <path>] [--name <filename>] [--status <status>]";
 }
 function resolveFromCwd(cwd, target) {
   return path.resolve(cwd, target);
@@ -21387,6 +21389,7 @@ async function main() {
       cwd: resolvedCwd,
       date: args.date,
       dir: args.dir,
+      name: args.name,
       relations: {
         implements: linked,
         "derives-from": [...linked, ...designTargets]

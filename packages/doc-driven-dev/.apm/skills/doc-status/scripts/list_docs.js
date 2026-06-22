@@ -20569,7 +20569,8 @@ var require_doc_suite_utils = __commonJS({
     }
     function nextNumberFromFrontMatter(cwd, relativeDir, idPrefix) {
       const fullDir = path2.join(cwd, relativeDir);
-      const pattern = new RegExp(`^${idPrefix}-(\\d{4})$`);
+      const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
       const numbers = walkMarkdownFiles(fullDir).map((fullPath) => matterData(fs.readFileSync(fullPath, "utf8")).id).filter((id) => typeof id === "string").map((id) => pattern.exec(id.trim())).filter((match) => Boolean(match)).map((match) => Number(match[1]));
       return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
     }

@@ -13,6 +13,7 @@ type CliArgs = {
   date?: string;
   designTargets: string[];
   dir?: string;
+  name?: string;
   help?: boolean;
   implementsTarget?: string;
   status?: string;
@@ -27,6 +28,7 @@ function parseArgs(argv: string[]): CliArgs {
     else if (arg === "--implements") args.implementsTarget = argv[++i];
     else if (arg === "--design") args.designTargets.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
+    else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--date") args.date = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
@@ -38,7 +40,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--dir <path>] [--status <status>]";
+  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--dir <path>] [--name <filename>] [--status <status>]";
 }
 
 function resolveFromCwd(cwd: string, target: string): string {
@@ -93,6 +95,7 @@ async function main(): Promise<void> {
       cwd: resolvedCwd,
       date: args.date,
       dir: args.dir,
+      name: args.name,
       relations: {
         implements: linked,
         "derives-from": [...linked, ...designTargets],
