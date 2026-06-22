@@ -554,3 +554,49 @@ test("doc-status documents unclassified follow-up review before exit", () => {
   assert.match(skillJa, /未分類フォローアップ/);
   assert.match(skillJa, /Phase 5 終了ゲート/);
 });
+
+test("new_design continues front-matter id numbering and preserves slug naming in slug repos", () => {
+  const repo = tempRepo();
+  const designs = path.join(repo, "docs/designs");
+  fs.mkdirSync(path.join(designs, "storage-port"), { recursive: true });
+
+  // 予約ファイル（採番・命名から除外されること）
+  fs.writeFileSync(path.join(designs, "overview.md"), [
+    "---", 'id: "DESIGN-OVERVIEW"', 'type: "design"', 'status: "draft"',
+    'title: "System Design Overview"', 'created: "2026-06-01"', 'updated: "2026-06-01"',
+    "owners: []", "relations:", "  source: []", "---", "", "# System Design Overview", "",
+  ].join("\n"), "utf8");
+
+  // slug 命名のトップレベル設計（id DESIGN-0005）
+  fs.writeFileSync(path.join(designs, "analysis-pipeline.md"), [
+    "---", 'id: "DESIGN-0005"', 'type: "design"', 'status: "approved"',
+    'title: "Analysis Pipeline"', 'created: "2026-06-02"', 'updated: "2026-06-02"',
+    "owners: []", "relations:", "  source: []", "---", "", "# Analysis Pipeline", "",
+  ].join("\n"), "utf8");
+
+  // サブディレクトリの設計（id DESIGN-0025、非再帰では不可視）
+  fs.writeFileSync(path.join(designs, "storage-port", "design.md"), [
+    "---", 'id: "DESIGN-0025"', 'type: "design"', 'status: "approved"',
+    'title: "Storage Port"', 'created: "2026-06-03"', 'updated: "2026-06-03"',
+    "owners: []", "relations:", "  source: []", "---", "", "# Storage Port", "",
+  ].join("\n"), "utf8");
+
+  // 手キュレーション索引（生成マーカー無し）
+  const handCurated = "# Curated Design Index\n\n## Approved\n\n- analysis-pipeline\n- storage-port\n";
+  fs.writeFileSync(path.join(designs, "README.md"), handCurated, "utf8");
+
+  const result = runScript("design-doc", "new_design.js",
+    ["--title", "Graph Visualization", "--status", "approved"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+
+  // slug 命名で生成され、front matter id はグローバル連番 DESIGN-0026（max(5,25)+1）
+  const created = path.join(designs, "graph-visualization.md");
+  assert.equal(fs.existsSync(created), true, "slug-named file expected");
+  const body = fs.readFileSync(created, "utf8");
+  assert.match(body, /^id: "DESIGN-0026"$/m);
+
+  // 手キュレーション README は保持される（クロバーしない）
+  assert.equal(fs.readFileSync(path.join(designs, "README.md"), "utf8"), handCurated,
+    "hand-curated README must be preserved");
+});
