@@ -72,7 +72,7 @@ function upsertSkill(doc: SkillReferenceInferenceDocument, name: string, skillSp
   const next = JSON.parse(JSON.stringify(doc)) as SkillReferenceInferenceDocument;
   const index = next.skills.findIndex((skill) => skill.name === name);
   const normalized = {
-    review_status: "pending",
+    review_status: skillSpec.review_status ?? "pending",
     provides: [],
     uses: [],
     tags: [],

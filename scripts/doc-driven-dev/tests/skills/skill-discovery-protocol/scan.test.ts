@@ -189,5 +189,5 @@ description: A skill that uses: colon space in description
   assert.equal(fallback.description, "", "description should be empty string on parse failure");
 
   // 警告が stderr に出力されている
-  assert.ok(result.stderr.includes("bad-yaml-skill") || result.stderr.includes("YAML"), `expected YAML warning in stderr, got: ${result.stderr}`);
+  assert.ok(result.stderr.includes("bad-yaml-skill") && result.stderr.includes("YAML"), `expected YAML warning including skill name and "YAML" in stderr, got: ${result.stderr}`);
 });
