@@ -21231,6 +21231,15 @@ ${bodyFor(type, options2.title)}
         relativeDir
       };
     }
+    function logIndexResult2(result) {
+      if (result.indexWritten) {
+        console.log(`Updated ${result.index}`);
+      } else if (result.indexSkippedReason === "hand-curated") {
+        console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+      } else if (result.indexSkippedReason === "disabled") {
+        console.log(`Skipped index update (--no-index): ${result.index}`);
+      }
+    }
     function resolvesLocalTarget(cwd, fromFile, target) {
       const candidates = [
         path2.resolve(cwd, target),
@@ -21308,6 +21317,7 @@ ${bodyFor(type, options2.title)}
       docEntries,
       docFiles,
       docTypes,
+      logIndexResult: logIndexResult2,
       migrateDocs,
       relationFields,
       changeFields,
@@ -21322,7 +21332,7 @@ ${bodyFor(type, options2.title)}
 
 // src/skills/idea-doc/scripts/new_idea.ts
 var path = require("node:path");
-var { createDocument } = require_doc_suite_utils();
+var { createDocument, logIndexResult } = require_doc_suite_utils();
 function parseArgs(argv) {
   const args = { cwd: process.cwd(), source: [] };
   for (let i = 0; i < argv.length; i += 1) {
@@ -21340,6 +21350,7 @@ function parseArgs(argv) {
     else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
+  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function usage() {
@@ -21367,13 +21378,7 @@ async function main() {
       title: args.title
     });
     console.log(`Created ${result.file}`);
-    if (result.indexWritten) {
-      console.log(`Updated ${result.index}`);
-    } else if (result.indexSkippedReason === "hand-curated") {
-      console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
-    } else if (result.indexSkippedReason === "disabled") {
-      console.log(`Skipped index update (--no-index): ${result.index}`);
-    }
+    logIndexResult(result);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

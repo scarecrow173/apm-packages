@@ -21231,6 +21231,15 @@ ${bodyFor(type, options2.title)}
         relativeDir
       };
     }
+    function logIndexResult2(result) {
+      if (result.indexWritten) {
+        console.log(`Updated ${result.index}`);
+      } else if (result.indexSkippedReason === "hand-curated") {
+        console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+      } else if (result.indexSkippedReason === "disabled") {
+        console.log(`Skipped index update (--no-index): ${result.index}`);
+      }
+    }
     function resolvesLocalTarget(cwd, fromFile, target) {
       const candidates = [
         path2.resolve(cwd, target),
@@ -21308,6 +21317,7 @@ ${bodyFor(type, options2.title)}
       docEntries,
       docFiles,
       docTypes,
+      logIndexResult: logIndexResult2,
       migrateDocs,
       relationFields,
       changeFields,
@@ -21324,7 +21334,7 @@ ${bodyFor(type, options2.title)}
 var fs = require("node:fs");
 var path = require("node:path");
 var matter = require_gray_matter();
-var { createDocument } = require_doc_suite_utils();
+var { createDocument, logIndexResult } = require_doc_suite_utils();
 var PLAN_DOC_GATE_ERROR = 'PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".';
 function parseArgs(argv) {
   const args = { cwd: process.cwd(), designTargets: [] };
@@ -21344,6 +21354,7 @@ function parseArgs(argv) {
     else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
+  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function usage() {
@@ -21402,13 +21413,7 @@ async function main() {
       title: args.title
     });
     console.log(`Created ${result.file}`);
-    if (result.indexWritten) {
-      console.log(`Updated ${result.index}`);
-    } else if (result.indexSkippedReason === "hand-curated") {
-      console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
-    } else if (result.indexSkippedReason === "disabled") {
-      console.log(`Skipped index update (--no-index): ${result.index}`);
-    }
+    logIndexResult(result);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

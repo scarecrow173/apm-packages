@@ -952,7 +952,7 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
   return { created, updated };
 }
 
-type IndexWriteResult = { path: string; written: boolean; reason: string | null };
+type IndexWriteResult = { path: string; written: boolean; reason: "hand-curated" | "disabled" | null };
 
 async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: string, options: CreateDocumentOptions): Promise<IndexWriteResult> {
   const indexPath = path.join(cwd, relativeDir, "README.md");
@@ -970,7 +970,7 @@ async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: stri
   return { path: relIndex, written: true, reason: null };
 }
 
-async function createDocument(type: DocType, options: CreateDocumentOptions): Promise<{ file: string; index: string; indexWritten: boolean; indexSkippedReason: string | null; relativeDir: string }> {
+async function createDocument(type: DocType, options: CreateDocumentOptions): Promise<{ file: string; index: string; indexWritten: boolean; indexSkippedReason: "hand-curated" | "disabled" | null; relativeDir: string }> {
   const config = configFor(type);
   const cwd = path.resolve(options.cwd);
   const relativeDir = docDir(cwd, type, options.dir);
@@ -1014,6 +1014,16 @@ async function createDocument(type: DocType, options: CreateDocumentOptions): Pr
     indexSkippedReason: indexResult.reason,
     relativeDir,
   };
+}
+
+function logIndexResult(result: { index: string; indexWritten: boolean; indexSkippedReason: "hand-curated" | "disabled" | null }): void {
+  if (result.indexWritten) {
+    console.log(`Updated ${result.index}`);
+  } else if (result.indexSkippedReason === "hand-curated") {
+    console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+  } else if (result.indexSkippedReason === "disabled") {
+    console.log(`Skipped index update (--no-index): ${result.index}`);
+  }
 }
 
 function resolvesLocalTarget(cwd: string, fromFile: string, target: string): boolean {
@@ -1099,6 +1109,7 @@ module.exports = {
   docEntries,
   docFiles,
   docTypes,
+  logIndexResult,
   migrateDocs,
   relationFields,
   changeFields,
