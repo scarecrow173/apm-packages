@@ -283,7 +283,8 @@ function recursiveBasenames(cwd: string, relativeDir: string, type: DocType): st
 
 function nextNumberFromFrontMatter(cwd: string, relativeDir: string, idPrefix: string): number {
   const fullDir = path.join(cwd, relativeDir);
-  const pattern = new RegExp(`^${idPrefix}-(\\d{4})$`);
+  const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
   const numbers = walkMarkdownFiles(fullDir)
     .map((fullPath) => matterData(fs.readFileSync(fullPath, "utf8")).id)
     .filter((id): id is string => typeof id === "string")
