@@ -9,6 +9,8 @@ type CliArgs = {
   date?: string;
   dir?: string;
   derivesFrom: string[];
+  forceIndex?: boolean;
+  noIndex?: boolean;
   help?: boolean;
   status?: string;
   title?: string;
@@ -23,6 +25,8 @@ function parseArgs(argv: string[]): CliArgs {
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--date") args.date = argv[++i];
+    else if (arg === "--no-index") args.noIndex = true;
+    else if (arg === "--force-index") args.forceIndex = true;
     else if (arg === "--cwd") args.cwd = argv[++i];
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (!args.title) args.title = arg;
@@ -32,7 +36,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--status <status>]";
+  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--status <status>] [--no-index] [--force-index]";
 }
 
 async function main(): Promise<void> {
@@ -47,6 +51,8 @@ async function main(): Promise<void> {
       cwd: path.resolve(args.cwd),
       date: args.date,
       dir: args.dir,
+      forceIndex: args.forceIndex,
+      noIndex: args.noIndex,
       relations: {
         "derives-from": args.derivesFrom,
       },
