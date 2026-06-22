@@ -20569,7 +20569,8 @@ var require_doc_suite_utils = __commonJS({
     }
     function nextNumberFromFrontMatter(cwd, relativeDir, idPrefix) {
       const fullDir = path2.join(cwd, relativeDir);
-      const pattern = new RegExp(`^${idPrefix}-(\\d{4})$`);
+      const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
       const numbers = walkMarkdownFiles(fullDir).map((fullPath) => matterData(fs.readFileSync(fullPath, "utf8")).id).filter((id) => typeof id === "string").map((id) => pattern.exec(id.trim())).filter((match) => Boolean(match)).map((match) => Number(match[1]));
       return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
     }
@@ -21329,6 +21330,7 @@ function parseArgs(argv) {
     if (arg === "--title") args.title = argv[++i];
     else if (arg === "--from") args.source.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
+    else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--date") args.date = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
@@ -21339,7 +21341,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_idea.js --title <title> [--from <source>] [--dir <path>] [--status <status>]";
+  return "Usage: node scripts/new_idea.js --title <title> [--from <source>] [--dir <path>] [--name <filename>] [--status <status>]";
 }
 async function main() {
   try {
@@ -21353,6 +21355,7 @@ async function main() {
       cwd: path.resolve(args.cwd),
       date: args.date,
       dir: args.dir,
+      name: args.name,
       relations: {
         source: args.source
       },

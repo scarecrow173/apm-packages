@@ -21330,6 +21330,7 @@ function parseArgs(argv) {
     if (arg === "--title") args.title = argv[++i];
     else if (arg === "--from") args.derivesFrom.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
+    else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--date") args.date = argv[++i];
     else if (arg === "--no-index") args.noIndex = true;
@@ -21342,7 +21343,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
 }
 async function main() {
   try {
@@ -21356,6 +21357,7 @@ async function main() {
       cwd: path.resolve(args.cwd),
       date: args.date,
       dir: args.dir,
+      name: args.name,
       forceIndex: args.forceIndex,
       noIndex: args.noIndex,
       relations: {

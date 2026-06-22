@@ -600,3 +600,44 @@ test("new_design continues front-matter id numbering and preserves slug naming i
   assert.equal(fs.readFileSync(path.join(designs, "README.md"), "utf8"), handCurated,
     "hand-curated README must be preserved");
 });
+
+test("new_design honors --dir and --name for subdirectory placement with global numbering", () => {
+  const repo = tempRepo();
+  const designs = path.join(repo, "docs/designs");
+  fs.mkdirSync(designs, { recursive: true });
+
+  fs.writeFileSync(path.join(designs, "overview.md"), [
+    "---", 'id: "DESIGN-OVERVIEW"', 'type: "design"', 'status: "draft"',
+    'title: "System Design Overview"', 'created: "2026-06-01"', 'updated: "2026-06-01"',
+    "owners: []", "relations:", "  source: []", "---", "", "# System Design Overview", "",
+  ].join("\n"), "utf8");
+
+  fs.writeFileSync(path.join(designs, "analysis-pipeline.md"), [
+    "---", 'id: "DESIGN-0007"', 'type: "design"', 'status: "approved"',
+    'title: "Analysis Pipeline"', 'created: "2026-06-02"', 'updated: "2026-06-02"',
+    "owners: []", "relations:", "  source: []", "---", "", "# Analysis Pipeline", "",
+  ].join("\n"), "utf8");
+
+  const result = runScript("design-doc", "new_design.js", [
+    "--title", "Graph Visualization",
+    "--dir", "docs/designs/graph-visualization",
+    "--name", "design.md",
+    "--status", "approved",
+  ], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+
+  const created = path.join(designs, "graph-visualization", "design.md");
+  assert.equal(fs.existsSync(created), true, "<feature>/design.md expected");
+  assert.match(fs.readFileSync(created, "utf8"), /^id: "DESIGN-0008"$/m);
+
+  // overview と index はサブディレクトリではなくルートに置かれる
+  assert.equal(fs.existsSync(path.join(designs, "overview.md")), true);
+  assert.equal(fs.existsSync(path.join(designs, "graph-visualization", "overview.md")), false);
+  assert.equal(fs.existsSync(path.join(designs, "graph-visualization", "README.md")), false);
+
+  // ルート README は新規生成（マーカー付き）され、サブディレクトリの設計を含む
+  const index = fs.readFileSync(path.join(designs, "README.md"), "utf8");
+  assert.match(index, /<!-- doc-suite:generated-index -->/);
+  assert.match(index, /graph-visualization\/design\.md/);
+});
