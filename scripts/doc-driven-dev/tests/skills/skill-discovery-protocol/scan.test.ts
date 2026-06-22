@@ -154,3 +154,40 @@ test("sdp.js scan --help returns 0", () => {
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   assert.ok(result.stdout.includes("Usage: sdp scan --adapter <adapter-yaml>"));
 });
+
+test("sdp scan includes skill with unquoted colon-space in description as name-only fallback", () => {
+  const dir = tempDir();
+  setupProject(dir); // scan-skill-a を含む通常プロジェクトをセットアップ
+
+  // YAML パースが壊れる description を持つスキルを追加
+  const badSkillDir = path.join(dir, ".apm", "skills", "bad-yaml-skill");
+  fs.mkdirSync(badSkillDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(badSkillDir, "SKILL.md"),
+    `---
+name: bad-yaml-skill
+description: A skill that uses: colon space in description
+---
+
+# Bad Yaml Skill
+`,
+    "utf8",
+  );
+
+  const result = runScan(["--adapter", "scan-test-adapter.yaml"], dir);
+  assert.equal(result.status, 0, `stderr: ${result.stderr}`);
+
+  const scanPath = path.join(dir, ".sdp", "skill-scan-list.json");
+  const doc = JSON.parse(fs.readFileSync(scanPath, "utf8"));
+
+  // 正常スキルは含まれる
+  assert.ok(doc.skills.some((s: { name: string }) => s.name === "scan-skill-a"), "scan-skill-a should be included");
+
+  // YAML パースエラーのスキルもフォールバックとして含まれる（スキップされない）
+  const fallback = doc.skills.find((s: { name: string }) => s.name === "bad-yaml-skill");
+  assert.ok(fallback, "bad-yaml-skill should be included as fallback, not skipped");
+  assert.equal(fallback.description, "", "description should be empty string on parse failure");
+
+  // 警告が stderr に出力されている
+  assert.ok(result.stderr.includes("bad-yaml-skill") || result.stderr.includes("YAML"), `expected YAML warning in stderr, got: ${result.stderr}`);
+});
