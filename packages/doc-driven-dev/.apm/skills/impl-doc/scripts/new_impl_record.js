@@ -20576,7 +20576,9 @@ var require_doc_suite_utils = __commonJS({
     }
     function sanitizeFileName(name) {
       const base = path2.basename(name.trim());
-      return base.toLowerCase().endsWith(".md") ? base : `${base}.md`;
+      const stem = base.replace(/\.md$/i, "");
+      if (!stem) throw new Error("Invalid filename: empty after removing .md extension");
+      return `${stem}.md`;
     }
     function docDir(cwd, type, explicitDir) {
       const config = configFor(type);
@@ -21164,8 +21166,7 @@ ${input.body.trim()}
           created.push(migration.target);
         }
         for (const target of scaffoldTargets.filter((item) => item.type)) {
-          const index = await buildIndex(cwd, target.type, target.dir);
-          fs2.writeFileSync(path2.join(cwd, target.dir, "README.md"), index, "utf8");
+          await writeGeneratedIndex(cwd, target.type, target.dir, {});
         }
       }
       return { applied: Boolean(options2.apply), created, migrations, skipped };
@@ -21189,12 +21190,12 @@ ${input.body.trim()}
       const indexPath = path2.join(cwd, relativeDir, "README.md");
       const relIndex = path2.relative(cwd, indexPath).replace(/\\/g, "/");
       if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
-      const content = await buildIndex(cwd, type, relativeDir);
       const existing = fs2.existsSync(indexPath) ? fs2.readFileSync(indexPath, "utf8") : null;
       const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
       if (!isGenerated && !options2.forceIndex) {
         return { path: relIndex, written: false, reason: "hand-curated" };
       }
+      const content = await buildIndex(cwd, type, relativeDir);
       fs2.writeFileSync(indexPath, content, "utf8");
       return { path: relIndex, written: true, reason: null };
     }
@@ -21209,8 +21210,9 @@ ${input.body.trim()}
       const scopeDir = underRoot ? rootDir : relativeDir;
       const naming = detectNaming(recursiveBasenames(cwd, scopeDir, type));
       const localFiles = fs2.readdirSync(fullDir).filter((file) => file.endsWith(".md")).filter((file) => !isReservedDocFile(type, file));
-      const number = naming === "slug" ? nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix) : nextNumber(localFiles);
+      const number = naming === "slug" ? nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix) : nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix);
       const filename = options2.name ? sanitizeFileName(options2.name) : naming === "slug" ? `${slugify(options2.title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify(options2.title, type)}.md`;
+      if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
       const outputPath = path2.join(fullDir, filename);
       if (fs2.existsSync(outputPath)) throw new Error(`Document already exists: ${path2.relative(cwd, outputPath)}`);
       const date = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
