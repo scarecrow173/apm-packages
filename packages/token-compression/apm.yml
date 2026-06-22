@@ -1,0 +1,17 @@
+name: token-compression
+version: 0.1.0
+description: Token compression and optimization strategies for efficient language model usage.
+author: Akiyoshi Koyama
+license: MIT
+targets:
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - agent-skills
+dependencies:
+  apm:
+    - InterfaceX-co-jp/genshijin/skills/genshijin#main
+    - InterfaceX-co-jp/genshijin/skills/genshijin-compress#main
+    - InterfaceX-co-jp/genshijin/skills/genshijin-crew#main
+    - InterfaceX-co-jp/genshijin/skills/genshijin-review#main
