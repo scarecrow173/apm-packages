@@ -1,70 +1,31 @@
 ---
 name: cheap-action
-description: Route simple, mechanically verifiable actions to the lowest-cost selectable model when the current harness supports model selection.
+description: Use when a request is a simple, mechanical, verifiable action such as running a command, grep search, scoped rename, trivial config edit, syntax fix, file move, or routine Git operation; route it to the lowest-cost capable model or delegation path when the harness supports that.
 ---
 
 # Cheap Action
 
-Use this skill when a user asks for a simple, bounded operation that can be completed and verified mechanically with little or no semantic reasoning.
+Use this skill only for bounded work that needs little reasoning and has an obvious mechanical verification step.
 
-## Purpose
+## Cheap-Eligible
 
-Reduce model cost for low-risk work. If the current harness exposes a lower-cost model or low-cost delegation path that can still use the required tools, switch to that option for the bounded action. If the harness does not expose model selection, continue on the current model and keep the work mechanical.
+- Run a named command or script and report the result.
+- Do grep-style search, file listing, diff summary, or routine Git status/stage/commit checks.
+- Make a scoped mechanical edit: rename, import/include fix, simple type annotation, comment update, structured config edit, syntax-level fix, or file move with import updates.
 
-This skill is advisory and cross-harness. Do not claim that a model switch happened unless the harness actually provides and confirms that switch.
+## Do Not Use
 
-## Cheap-Eligible Work
+Stay on the current reasoning model for planning, design, code review, debugging, architecture, security, policy judgment, destructive actions, broad code comprehension, ambiguous intent, publishing, deployment, permission changes, or secret handling.
 
-Use the cheapest available capable model for:
+## Protocol
 
-- Running a named command or script and reporting the result.
-- Mechanical variable, function, file, import, or include renames where matches are scoped and detectable.
-- Simple import or include resolution by matching existing local patterns.
-- Simple type annotations inferred from immediate usage.
-- Comment updates derived from function signatures or nearby behavior.
-- Minor structured configuration edits in YAML, JSON, TOML, INI, or similar files.
-- Routine Git operations such as status checks, diff summaries, staging, commits, and branch checks.
-- Grep-style search and file listing.
-- Straight syntax-level fixes with clear parser, compiler, or linter errors.
-- File move or copy operations with mechanical import updates.
+1. Name the bounded action and verification step.
+2. If the harness offers a lower-cost model or delegation path that can use the required tools, use it.
+3. If not, continue on the current model without claiming a switch happened.
+4. Execute only the bounded action.
+5. Verify mechanically.
+6. Escalate back to the current/default reasoning model if scope expands, verification fails, or ambiguity appears.
 
-## Do Not Use Cheap Routing
+## Output
 
-Stay on the current/default reasoning model when the task needs:
-
-- Architecture, product, security, legal, medical, financial, or policy judgment.
-- Ambiguous intent inference across many files or natural-language requirements.
-- Broad code comprehension before the action can be scoped.
-- Destructive operations, permission changes, secret handling, publication, deployment, or external side effects.
-- A plan, design, code review, threat model, or root-cause analysis.
-- Any action where you cannot name a deterministic verification step before acting.
-
-## Routing Procedure
-
-Before acting, run this short check:
-
-1. Name the bounded action.
-2. Name the mechanical verification step.
-3. Decide whether the action is cheap-eligible.
-4. If cheap-eligible and the harness exposes a lower-cost capable model, switch or delegate to it.
-5. If no lower-cost capable model is available, continue on the current model without pretending a switch happened.
-6. Execute only the bounded action.
-7. Verify the result mechanically.
-8. Escalate back to the current/default reasoning model if verification fails, scope expands, or ambiguity appears.
-
-## Communication
-
-Keep user-facing text short. For routine actions, one sentence is enough:
-
-`Cheap action: running the existing script and reporting the result.`
-
-Do not explain model economics unless the user asks. Do not mention an unavailable model switch.
-
-## Output Expectations
-
-Report:
-
-- What bounded action ran.
-- Whether verification passed.
-- Any exact output or file path the user needs.
-- Any reason the task had to escalate out of cheap routing.
+Report the action, verification result, relevant output or file paths, and any reason cheap routing was not used.
