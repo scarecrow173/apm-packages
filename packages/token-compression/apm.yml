@@ -9,6 +9,8 @@ targets:
   - cursor
   - claude
   - agent-skills
+includes:
+  - .apm/
 dependencies:
   apm:
     - InterfaceX-co-jp/genshijin/skills/genshijin#main
