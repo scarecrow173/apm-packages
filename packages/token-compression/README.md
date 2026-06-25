@@ -2,30 +2,41 @@
 
 `token-compression` provides strategies and tools for optimizing token usage in language model interactions.
 
-This package is intentionally dependency-first. It does not add local skills, agents, prompts, or MCP servers of its own; it groups packages focused on token optimization and compression techniques.
+This package combines external compression-focused dependencies with one local advisory skill. The external `genshijin` suite covers prompt and context compression. The local `cheap-action` skill helps agents route simple, mechanically verifiable work to the lowest-cost capable model when the current harness supports model selection.
 
 ## What It Covers
 
 This package covers prompt compression, context engineering, token budget management, and efficient message structuring for AI-assisted development.
 
-## Dependencies
+## Local Skills
 
-The source of truth is [apm.yml](./apm.yml). Current dependencies:
+- `cheap-action` — routes simple, mechanically verifiable work to the lowest-cost selectable model when the current harness supports model selection. If no model switch is available, it keeps the action bounded and verifies it mechanically in the current harness.
+
+## Dependencies source truth
+
+[apm.yml](./apm.yml) is the source of truth for external dependencies and local package assets.
+
+External dependencies:
 
 - `InterfaceX-co-jp/genshijin/skills/genshijin`
 - `InterfaceX-co-jp/genshijin/skills/genshijin-compress`
 - `InterfaceX-co-jp/genshijin/skills/genshijin-crew`
 - `InterfaceX-co-jp/genshijin/skills/genshijin-review`
 
+Local assets:
+
+- `.apm/skills/cheap-action`
+
 ## Related Packages
 
 For other development needs, see:
-- `agent-intelligence` — AI and agent capabilities
+
+- `agent-intelligence` — AI agent capabilities
 - `recommended-dev-suite` — Comprehensive development workflow
 - `basic-dev-foundation` — Git workflow management
-- `github-automation` — CI/CD and PR operations
-- `security-governance` — Security review and governance
+- `github-automation` — CI/CD PR operations
+- `security-governance` — Security review governance
 
 ## Maintenance
 
-Keep this package focused on token optimization and efficiency. Move broader development methodologies to `recommended-dev-suite`.
+Keep package focused on token optimization efficiency. Move broader development methodologies to `recommended-dev-suite`.
