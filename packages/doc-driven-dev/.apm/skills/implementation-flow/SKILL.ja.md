@@ -65,6 +65,8 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentati
    - 複数ファイルやシステムにまたがるか？
    - 非自明なアーキテクチャ判断があるか？
    - サブタスクを並列実行可能か？
+   - サブタスクを、独立したコンテキストを持つ新規サブエージェントへ委譲できるか？
+   - タスクが単純・機械的・低リスクで、現在のハーネスが提供する低コスト実行経路に載せても必要ツールを使えるか？
    - どの言語/プラットフォームが関係するか？
    - アプローチが不確実または探索的か — 比較すべき複数の有効な解があるか？
 
@@ -77,6 +79,8 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentati
 | 複数の代替アプローチがある | 対抗的レビュースキル | Verify |
 | 複数ファイルにまたがる | インクリメンタル実装スキル | Build |
 | 独立したサブタスクに分割可能 | 並列ディスパッチスキル | Build |
+| 隔離コンテキストへ委譲可能 | サブエージェント dispatch スキル | Build |
+| 単純・機械的・低リスクの作業 | コスト最適化 guidance スキル | Tooling |
 | 特定の言語/プラットフォームを含む | 言語固有の規約 | Domain |
 | git 操作や CI が必要 | ツール固有のワークフロースキル | Tooling |
 | 完了準備が整った | コードレビュースキル | Review |
@@ -131,13 +135,17 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentati
 2. **解決を確認**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から `resolution` を読む
 3. **実行ポリシーを確認**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から各候補スキルの `execution-policy` を読む
 4. **Runtime guidance を確認**: `skill-discovery-protocol` を使って `.sdp/implementation-flow-default/implementation-flow-profile.json` から各候補スキルの `runtime_guidance` を読む
-5. **競合を解決** — 同じカテゴリで複数スキルが活性化された場合:
+5. **能力スロットを評価**:
+   - `subagent_utilization`: 独立したサブタスクを、明確な受け入れ条件付きで隔離コンテキストへ委譲できる場合に活性化する。
+   - `cost_optimization`: タスクが単純・機械的・低リスクで、低コストモデルまたは低コスト委譲経路でも必要ツールを使える場合に活性化する。
+   - どちらも routing guidance として扱う。ユーザー指示、hard gate、必須ツール、検証エビデンスを上書きしない。
+6. **競合を解決** 同じカテゴリで複数スキルが活性化された場合:
    - より具体的な条件が優先（例: 「TypeScriptファイル」 > 「任意のファイル」）。
    - 明示的なプロファイルルールが推論された活性化より優先。
    - それでも同等なら両方適用（スキルはレイヤー、排他しない）。
-6. **Domain/Tooling スキルを追加** — タスクで検出された言語、フレームワーク、プラットフォームに基づく。
+7. **Domain/Tooling スキルを追加** — タスクで検出された言語、フレームワーク、プラットフォームに基づく。
    - **resolution override に一致するものがない場合:** フロースタックのデフォルトのみで進行。「追加スキル: なし」と宣言する。
-7. **アクティブスキルスタックを宣言:**
+8. **アクティブスキルスタックを宣言:**
 
 ```text
 このタスクのアクティブスキルスタック:

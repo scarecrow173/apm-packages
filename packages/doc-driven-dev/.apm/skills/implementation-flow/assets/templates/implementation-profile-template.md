@@ -22,6 +22,8 @@ soft ranking metadata that is read after `execution_policy` checks.
 | Name | Category | Source | Activation | Execution | Condition |
 | ---- | -------- | ------ | ---------- | --------- | --------- |
 | <!-- e.g., test-driven-development --> | Build | .apm/skills/ | conditional | rigid | Repository or environment provides test-led workflow |
+| <!-- e.g., subagent-driven-development --> | Build | .apm/skills/ | conditional | flexible | Independent subtasks can be delegated to isolated subagents |
+| <!-- e.g., cheap-action --> | Tooling | .apm/skills/ | conditional | flexible | Simple low-risk work can use a lower-cost execution path with required tools preserved |
 | <!-- e.g., impl-doc --> | Documentation | .apm/skills/ | always | rigid | Open implementation documentation before code changes |
 | <!-- e.g., systematic-debugging --> | Process | .apm/skills/ | conditional | rigid | Bug fix or test failure |
 | <!-- e.g., source-driven-development --> | Verify | .apm/skills/ | conditional | flexible | Framework/library usage |
@@ -91,8 +93,10 @@ that slot empty until provider lookup or overrides resolve a skill.
 | -------- | -------- | ----- | --------- |
 | 1 | Build | <!-- repository default --> | Defines the default build structure when available |
 | 2 | Documentation | <!-- repository default --> | Opens implementation documentation before code changes |
-| 3 | Verify | <!-- repository default --> | Adds correctness validation when available |
-| 4 | Review | <!-- repository default --> | Applies a completion gate when available |
+| 3 | Build | <!-- repository default --> | Fans out independent subtasks when acceptance checks are clear |
+| 4 | Verify | <!-- repository default --> | Adds correctness validation when available |
+| 5 | Tooling | <!-- repository default --> | Routes low-risk mechanical work to lower-cost execution when supported |
+| 6 | Review | <!-- repository default --> | Applies a completion gate when available |
 
 ## Override Rules
 
@@ -102,4 +106,6 @@ that slot empty until provider lookup or overrides resolve a skill.
 | Framework/library usage detected | Add: matching Verify skills | Verify against official docs |
 | Non-trivial architectural decision | Add: matching Verify skills | Challenge approach before commit |
 | Multiple independent subtasks | Replace Build with: matching parallel-capable Build skills | Fan out for efficiency |
+| Independent subtasks with isolated acceptance checks | Add: matching subagent-capable Build skills | Use fresh context for parallel work |
+| Simple mechanical low-risk task | Add: matching cost-optimization Tooling skills | Reduce cost without weakening required tools or verification |
 | <!-- Add repository-specific overrides --> | | |

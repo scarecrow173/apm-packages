@@ -13,6 +13,12 @@ flow_stack:
     - slot_id: "build_structure"
       slot_type: "layerable"
       activation: "always"
+    - slot_id: "subagent_utilization"
+      slot_type: "layerable"
+      activation: "conditional"
+    - slot_id: "cost_optimization"
+      slot_type: "layerable"
+      activation: "conditional"
     - slot_id: "implementation_documentation"
       slot_type: "layerable"
       activation: "always"
@@ -42,9 +48,9 @@ classification:
       label: "Build"
       description: "Skills that structure how to execute"
       match:
-        capabilities: ["incremental_implementation", "parallel_dispatch", "test_led_development"]
-        tags: ["build", "implementation", "tdd"]
-        description_patterns: ["implement", "incremental", "parallel", "test-driven"]
+        capabilities: ["incremental_implementation", "parallel_dispatch", "subagent_dispatch", "test_led_development"]
+        tags: ["build", "implementation", "tdd", "parallel", "subagent"]
+        description_patterns: ["implement", "incremental", "parallel", "subagent", "delegat", "test-driven"]
     - id: "documentation"
       label: "Documentation"
       description: "Skills that record implementation progress and evidence"
@@ -77,9 +83,9 @@ classification:
       label: "Tooling"
       description: "Tool-specific workflow skills"
       match:
-        capabilities: ["git_workflow", "ci_cd"]
-        tags: ["tooling", "git", "ci"]
-        description_patterns: ["git", "ci/cd", "browser"]
+        capabilities: ["git_workflow", "ci_cd", "cost_optimization", "model_cost_control"]
+        tags: ["tooling", "git", "ci", "cost", "model-selection"]
+        description_patterns: ["git", "ci/cd", "browser", "cost", "cheap", "low-cost", "model"]
     - id: "meta"
       label: "Meta"
       description: "Skills that orchestrate other skills"
