@@ -22,6 +22,8 @@ repository: "<repository-name>"
 | Name | Category | Source | Activation | Execution | Condition |
 | ---- | -------- | ------ | ---------- | --------- | --------- |
 | <!-- 例: test-driven-development --> | Build | .apm/skills/ | conditional | rigid | リポジトリまたは環境が test-led workflow を提供する場合 |
+| <!-- 例: subagent-driven-development --> | Build | .apm/skills/ | conditional | flexible | 独立サブタスクを隔離コンテキストのサブエージェントへ委譲できる場合 |
+| <!-- 例: cheap-action --> | Tooling | .apm/skills/ | conditional | flexible | 単純で低リスクの作業を、必要ツールを維持したまま低コスト実行経路に載せられる場合 |
 | <!-- 例: impl-doc --> | Documentation | .apm/skills/ | always | rigid | コード変更前に実装ドキュメントを開く |
 | <!-- 例: systematic-debugging --> | Process | .apm/skills/ | conditional | rigid | バグ修正またはテスト失敗 |
 | <!-- 例: source-driven-development --> | Verify | .apm/skills/ | conditional | flexible | フレームワーク / ライブラリの利用 |
@@ -91,8 +93,10 @@ override で解決されるまでその slot を空のままにできる。
 | -------- | -------- | ----- | --------- |
 | 1 | Build | <!-- repository default --> | 利用可能なら既定の Build 構成を定義する |
 | 2 | Documentation | <!-- repository default --> | 各 task の最初のコード変更前に実装ドキュメントを開く |
-| 3 | Verify | <!-- repository default --> | 利用可能なら正しさ検証を追加する |
-| 4 | Review | <!-- repository default --> | 利用可能なら完了ゲートを適用する |
+| 3 | Build | <!-- repository default --> | 受け入れ条件が明確な独立サブタスクを分散する |
+| 4 | Verify | <!-- repository default --> | 利用可能なら正しさ検証を追加する |
+| 5 | Tooling | <!-- repository default --> | 対応環境では低リスクな機械的作業を低コスト実行に寄せる |
+| 6 | Review | <!-- repository default --> | 利用可能なら完了ゲートを適用する |
 
 ## Override Rules
 
@@ -102,4 +106,6 @@ override で解決されるまでその slot を空のままにできる。
 | フレームワーク / ライブラリの利用が検出された | Add: 条件に合う Verify スキル | 公式ドキュメントで検証する |
 | 非自明なアーキテクチャ判断 | Add: 条件に合う Verify スキル | コミット前にアプローチを検討する |
 | 複数の独立したサブタスク | Replace Build with: 並列実行に適した Build スキル | 効率のために分散する |
+| 隔離された受け入れ条件を持つ独立サブタスク | Add: 条件に合うサブエージェント対応 Build スキル | fresh context で並列作業する |
+| 単純・機械的・低リスクの task | Add: 条件に合うコスト最適化 Tooling スキル | 必須ツールと検証を弱めずにコストを削減する |
 | <!-- Add repository-specific overrides --> | | |

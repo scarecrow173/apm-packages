@@ -20,6 +20,7 @@ devDependencies:
   - ./packages/security-governance
   - ./packages/visualization
   - ./packages/token-compression
+  - ./packages/agent-intelligence
   mcp:
   - name: mise
     registry: false

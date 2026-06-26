@@ -67,6 +67,8 @@ For each task unit:
    - Does this touch multiple files or systems?
    - Are there non-trivial architectural decisions?
    - Can subtasks run in parallel?
+   - Can subtasks be delegated to fresh subagents with isolated context?
+   - Is any task simple, mechanical, low-risk, and suitable for a lower-cost execution path when the current harness exposes one?
    - What language/platform is involved?
    - Is the approach uncertain or exploratory — multiple viable solutions to compare?
 
@@ -79,6 +81,8 @@ For each task unit:
 | Has multiple alternative approaches | Adversarial review skills | Verify |
 | Touches multiple files | Incremental implementation skills | Build |
 | Can be broken into independent subtasks | Parallel dispatch skills | Build |
+| Can be delegated to isolated subagents | Subagent dispatch skills | Build |
+| Is simple, mechanical, low-risk work | Cost-optimization guidance skills | Tooling |
 | Involves specific language/platform | Language-specific conventions | Domain |
 | Requires git operations or CI | Tool-specific workflow skills | Tooling |
 | Is ready for completion | Code review skills | Review |
@@ -133,19 +137,24 @@ With `.sdp/implementation-flow-default/implementation-flow-profile.json` availab
 2. **Check resolution**: use `skill-discovery-protocol` to read `resolution` from `.sdp/implementation-flow-default/implementation-flow-profile.json`
 3. **Check execution policy**: use `skill-discovery-protocol` to read `execution-policy` for each candidate skill from `.sdp/implementation-flow-default/implementation-flow-profile.json`
 4. **Read runtime guidance**: use `skill-discovery-protocol` to read structured `runtime_guidance` after policy checks; treat it as a soft ranking signal, not a hard gate
-5. **Resolve conflicts** — if multiple skills in the same category are activated:
+5. **Evaluate capability slots**:
+   - `subagent_utilization`: activate when independent subtasks can run with isolated context and clear acceptance checks.
+   - `cost_optimization`: activate when the task is simple, mechanical, low-risk, and a lower-cost model or delegation path can still use the required tools.
+   - Treat both as routing guidance. They do not override user instructions, hard gates, required tools, or verification evidence.
+6. **Resolve conflicts** — multiple skills in same category activated:
    - More specific condition wins over general (e.g., "TypeScript file" > "any file").
    - Explicit profile rule wins over inferred activation.
    - If still tied, apply both (skills layer, they don't exclude).
-6. **Add Domain/Tooling skills** — based on language, framework, platform detected in task.
+7. **Add Domain/Tooling skills** — based on language, framework, platform detected in task.
    - **If no resolution overrides match:** Proceed with flow stack defaults only. Announce "Additional skills: none".
-7. **Announce the active skill stack:**
+8. **Announce the active skill stack:**
 
 ```text
 ACTIVE SKILL STACK FOR THIS TASK:
 1. [Category] skill-name — reason
-2. [Category] skill-name — reason
-3. [Category] skill-name — reason
+2. [Capability Slot] subagent_utilization — reason or "not active"
+3. [Capability Slot] cost_optimization — reason or "not active"
+4. [Category] skill-name — reason
 → Proceeding with this configuration.
 ```
 

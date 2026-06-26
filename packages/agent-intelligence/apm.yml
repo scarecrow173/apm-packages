@@ -15,6 +15,6 @@ dependencies:
     - github/awesome-copilot/skills/autoresearch#main
     - github/awesome-copilot/skills/copilot-usage-metrics#main
     - github/awesome-copilot/plugins/context-engineering#main
-    - obra/superpowers/writing-skills#main
+    - obra/superpowers/skills/writing-skills#main
     - softaworks/agent-toolkit/skills/skill-judge#main
     
