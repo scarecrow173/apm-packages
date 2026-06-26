@@ -50,11 +50,13 @@ Every new ADR created by this package includes YAML front matter:
 
 ```yaml
 ---
+id: "ADR-NNNN"
+type: "adr"
 status: "proposed"
-date: "YYYY-MM-DD"
-decision-makers: []
-consulted: []
-informed: []
+title: "Decision title"
+created: "YYYY-MM-DD"
+updated: "YYYY-MM-DD"
+owners: []
 relations:
   source: []
   implements: []
@@ -71,6 +73,11 @@ relations:
   verifies: []
   verified-by: []
   references: []
+metadata:
+  adr:
+    decision-makers: []
+    consulted: []
+    informed: []
 ---
 ```
 
@@ -78,14 +85,22 @@ Required fields:
 
 | Field | Required | Description |
 | --- | --- | --- |
+| `id` | Yes | Stable document identifier, usually `ADR-NNNN`. |
+| `type` | Yes | Shared document type. Use `adr` for ADRs. |
 | `status` | Yes | Current lifecycle state. |
-| `date` | Yes | Date of the current status in `YYYY-MM-DD` format. |
-| `decision-makers` | Yes | People or groups that own the decision. |
-| `consulted` | Yes | Subject-matter experts consulted before or during the decision. |
-| `informed` | Yes | Stakeholders informed about the decision. |
+| `title` | Yes | Human-readable ADR title matching the decision. |
+| `created` | Yes | Creation date in `YYYY-MM-DD` format. |
+| `updated` | Yes | Last substantive update date in `YYYY-MM-DD` format. |
+| `owners` | Yes | People or groups accountable for maintaining the document. |
+| `relations` | Yes | Shared meaning-based document graph links. |
+| `metadata.adr.decision-makers` | ADR governance | People or groups that own the decision. |
+| `metadata.adr.consulted` | ADR governance | Subject-matter experts consulted before or during the decision. |
+| `metadata.adr.informed` | ADR governance | Stakeholders informed about the decision. |
 
-`consulted` and `informed` follow the RACI communication distinction:
-consulted is two-way input; informed is one-way notification.
+ADR-specific governance belongs under `metadata.adr`, not top-level
+`decision-makers`, `consulted`, or `informed`. `consulted` and `informed`
+follow the RACI communication distinction: consulted is two-way input; informed
+is one-way notification.
 
 ## Status Values
 
@@ -199,11 +214,11 @@ List ADRs as a Markdown table, in filename order, with these four columns:
 
 Index rules:
 
-- Use exactly these four columns: `ID`, `Title`, `Status`, `File`. MADR ADRs
-  have no `id` or `title` front matter, so derive `ID` from the filename number
-  (`ADR-NNNN`) and take `Title` from the H1 heading. Take `Status` from the
-  front matter. The `File` column is a relative link within the index directory.
-  Write `—` when a value is missing.
+- Use exactly these four columns: `ID`, `Title`, `Status`, `File`. Take `ID`,
+  `Title`, and `Status` from front matter when present. If older ADRs lack
+  `id` or `title`, derive `ID` from the filename number (`ADR-NNNN`) and
+  `Title` from the H1 heading. The `File` column is a relative link within the
+  index directory. Write `—` when a value is missing.
 - Sort rows by filename in ascending order.
 - Whenever a new target file is added, update the index in the same change.
 - As entries grow, split the index into multiple headings, one table per

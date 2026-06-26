@@ -42,7 +42,7 @@ const changeFields = [
   "generated",
 ] as const;
 
-const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design"] as const;
+const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr"] as const;
 
 type DocType = typeof docTypes[number];
 type RelationField = typeof relationFields[number];
@@ -75,6 +75,8 @@ type ChangeSet = Record<ChangeField, ChangeEntry[]>;
 type RelationInput = Partial<Record<RelationField, string[]>> & {
   changes?: Partial<ChangeSet>;
 };
+
+type MetadataInput = Record<string, unknown>;
 
 type CreateDocumentOptions = {
   cwd: string;
@@ -203,6 +205,14 @@ const configs: Record<DocType, DocConfig> = {
     idPrefix: "DESIGN",
     statusValues: ["draft", "approved", "superseded", "rejected"],
     type: "design",
+  },
+  adr: {
+    defaultStatus: "proposed",
+    dir: "docs/adr",
+    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+    idPrefix: "ADR",
+    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+    type: "adr",
   },
 };
 
@@ -419,11 +429,51 @@ function formatChangesBlock(changes: ChangeSet): string[] {
   ];
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function formatMetadataScalar(value: string | number | boolean): string {
+  return typeof value === "string" ? quote(value) : String(value);
+}
+
+function formatMetadataNode(key: string, value: unknown, indent: number): string[] {
+  if (value === null || value === undefined) return [];
+  const prefix = " ".repeat(indent);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${prefix}${key}: []`];
+    const items = value.flatMap((item) => {
+      if (item === null || item === undefined) return [];
+      if (isPlainObject(item)) {
+        return [`${prefix} -`, ...Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3))];
+      }
+      if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
+      if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
+      return [`${prefix} - ${quote(JSON.stringify(item))}`];
+    });
+    return items.length > 0 ? [`${prefix}${key}:`, ...items] : [`${prefix}${key}: []`];
+  }
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value).flatMap(([childKey, childValue]) => formatMetadataNode(childKey, childValue, indent + 2));
+    return entries.length > 0 ? [`${prefix}${key}:`, ...entries] : [`${prefix}${key}: {}`];
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return [`${prefix}${key}: ${formatMetadataScalar(value)}`];
+  }
+  return [`${prefix}${key}: ${quote(JSON.stringify(value))}`];
+}
+
+function formatMetadataBlock(metadata?: MetadataInput): string[] {
+  if (!metadata) return [];
+  const entries = Object.entries(metadata).flatMap(([key, value]) => formatMetadataNode(key, value, 2));
+  return entries.length > 0 ? ["metadata:", ...entries] : ["metadata: {}"];
+}
+
 function completeRelations(input?: RelationInput): Record<RelationField, string[]> {
   return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []])) as Record<RelationField, string[]>;
 }
 
-function frontMatter(config: DocConfig, number: number, title: string, status: string, date: string, relations?: RelationInput): string {
+function frontMatter(config: DocConfig, number: number, title: string, status: string, date: string, relations?: RelationInput, metadata?: MetadataInput): string {
   const complete = completeRelations(relations);
   const changes = completeChanges(relations?.changes);
   return [
@@ -439,6 +489,7 @@ function frontMatter(config: DocConfig, number: number, title: string, status: s
     formatRelationBlock("source", complete.source),
     ...formatChangesBlock(changes),
     ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
+    ...formatMetadataBlock(metadata),
     "---",
   ].join("\n");
 }
@@ -1117,6 +1168,7 @@ module.exports = {
   changeFields,
   changesSchema,
   frontMatterSchema,
+  frontMatter,
   relationSchema,
   scaffoldDocsTree,
   validateFrontMatter,

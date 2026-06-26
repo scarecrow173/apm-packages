@@ -10,6 +10,7 @@ const {
   nextNumber,
   slugify,
 } = require("./lib/adr_utils.ts");
+const { configFor, frontMatter } = require("../../lib/doc_suite_utils.ts");
 
 const templates = {
   full: "madr-4-full.md",
@@ -31,9 +32,7 @@ type CliArgs = {
 };
 
 type TemplateValues = {
-  date: string;
   number: number;
-  status: string;
   title: string;
 };
 
@@ -74,9 +73,7 @@ function renderTemplate(templateName: TemplateName, values: TemplateValues): str
   }
   return fs.readFileSync(templatePath, "utf8")
     .replaceAll("{{number}}", String(values.number))
-    .replaceAll("{{title}}", values.title)
-    .replaceAll("{{date}}", values.date)
-    .replaceAll("{{status}}", values.status);
+    .replaceAll("{{title}}", values.title);
 }
 
 async function main(): Promise<void> {
@@ -102,7 +99,18 @@ async function main(): Promise<void> {
     if (fs.existsSync(outputPath)) throw new Error(`ADR already exists: ${path.relative(cwd, outputPath)}`);
 
     const date = args.date || new Date().toISOString().slice(0, 10);
-    const content = renderTemplate(args.template, { number, title: args.title, date, status: args.status });
+    const status = args.status;
+    const adrConfig = configFor("adr");
+    const metadata = {
+      adr: {
+        "decision-makers": [],
+        consulted: [],
+        informed: [],
+      },
+    };
+    const header = frontMatter(adrConfig, number, args.title, status, date, undefined, metadata);
+    const body = renderTemplate(args.template, { number, title: args.title }).trimStart();
+    const content = `${header}\n\n${body}\n`;
     fs.writeFileSync(outputPath, content, "utf8");
     fs.writeFileSync(path.join(adrDir, "README.md"), await buildIndex(adrDir, relativeDir), "utf8");
 

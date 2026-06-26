@@ -3,7 +3,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const matter = require("gray-matter");
-const { z } = require("zod");
 const {
   detectNaming: sharedDetectNaming,
   findDocumentDir,
@@ -11,6 +10,9 @@ const {
   nextNumber: sharedNextNumber,
   slugify: sharedSlugify,
 } = require("../../../lib/document_utils.ts");
+const {
+  validateFrontMatter: validateDocSuiteFrontMatter,
+} = require("../../../lib/doc_suite_utils.ts");
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
 const relationFields = [
@@ -35,6 +37,7 @@ type RelationField = typeof relationFields[number];
 type NamingMode = "numbered" | "slug";
 
 type AdrEntry = {
+  id: string | null;
   file: string;
   path: string;
   title: string;
@@ -64,19 +67,6 @@ type MarkdownNode = {
 type MarkdownLink = {
   url: string;
 };
-
-const relationSchema = z.object(Object.fromEntries(
-  relationFields.map((field) => [field, z.array(z.string()).default([])]),
-)).default({});
-
-const adrFrontMatterSchema = z.object({
-  status: z.string().min(1),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  "decision-makers": z.array(z.string()),
-  consulted: z.array(z.string()),
-  informed: z.array(z.string()),
-  relations: relationSchema,
-}).passthrough();
 
 function findAdrDir(cwd: string, explicitDir?: string): string {
   return findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
@@ -211,22 +201,13 @@ function matterData(content: string): Record<string, unknown> {
   return matter(content).data || {};
 }
 
-function formatIssuePath(pathParts: Array<string | number>): string {
-  return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
-}
-
-function validateFrontMatterWithZod(data: Record<string, unknown>): FrontMatterIssue[] {
-  const result = adrFrontMatterSchema.safeParse(data);
-  if (result.success) return [];
-  return result.error.issues.map((issue: { message: string; path: Array<string | number> }) => ({
-    message: issue.message,
-    path: formatIssuePath(issue.path),
-  }));
-}
-
 function validateFrontMatter(content: string): FrontMatterIssue[] {
+  const issues = validateDocSuiteFrontMatter(content);
   const data = matterData(content);
-  return validateFrontMatterWithZod(data);
+  if (data.type !== "adr") {
+    issues.push({ message: 'Expected type "adr"', path: "type" });
+  }
+  return issues;
 }
 
 function relationMap(content: string): Record<RelationField, string[]> {
@@ -254,11 +235,12 @@ async function adrEntries(cwd: string, relativeDir: string): Promise<AdrEntry[]>
     const content = fs.readFileSync(fullPath, "utf8");
     const data = matterData(content);
     return {
+      id: typeof data.id === "string" ? data.id : null,
       file,
       path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
-      title: await titleFromAdr(content, path.basename(file, ".md")),
+      title: typeof data.title === "string" ? data.title : await titleFromAdr(content, path.basename(file, ".md")),
       status: typeof data.status === "string" ? data.status : null,
-      date: typeof data.date === "string" ? data.date : null,
+      date: typeof data.created === "string" ? data.created : null,
       relations: relationMap(content),
     };
   }));
@@ -269,10 +251,13 @@ async function buildIndex(dir: string, relativeDir: string): Promise<string> {
   const rows = await Promise.all(adrFiles(dir).map(async (file) => {
     const content = fs.readFileSync(path.join(dir, file), "utf8");
     const data = matterData(content);
-    const title = await titleFromAdr(content, path.basename(file, ".md"));
+    const title = typeof data.title === "string" && data.title.trim()
+      ? data.title.trim()
+      : await titleFromAdr(content, path.basename(file, ".md"));
     const status = typeof data.status === "string" ? data.status : "—";
     const numberMatch = /^(\d+)-/.exec(file);
-    const id = numberMatch ? `ADR-${numberMatch[1]}` : "—";
+    const fallbackId = numberMatch ? `ADR-${numberMatch[1]}` : "—";
+    const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : fallbackId;
     return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
   }));
   const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
@@ -303,5 +288,4 @@ module.exports = {
   slugify,
   titleFromAdr,
   validateFrontMatter,
-  validateFrontMatterWithZod,
 };

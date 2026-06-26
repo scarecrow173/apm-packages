@@ -22,6 +22,8 @@ const commonRelationFields = [
   "verifies",
   "verified-by",
   "references",
+  "defers",
+  "deferred-by",
 ];
 
 function tempRepo() {
@@ -56,15 +58,32 @@ test("new_adr creates the default MADR ADR and index in docs/adr", () => {
   assert.equal(fs.existsSync(path.join(repo, "docs/adr/README.md")), true);
 
   const adr = fs.readFileSync(path.join(repo, "docs/adr/0001-adopt-madr.md"), "utf8");
+  assert.match(adr, /^id: "ADR-0001"$/m);
+  assert.match(adr, /^type: "adr"$/m);
   assert.match(adr, /^status: "proposed"$/m);
-  assert.match(adr, /^date: "\d{4}-\d{2}-\d{2}"$/m);
-  assert.match(adr, /^decision-makers: \[\]$/m);
-  assert.match(adr, /^consulted: \[\]$/m);
-  assert.match(adr, /^informed: \[\]$/m);
+  assert.match(adr, /^title: "Adopt MADR"$/m);
+  assert.match(adr, /^created: "\d{4}-\d{2}-\d{2}"$/m);
+  assert.match(adr, /^updated: "\d{4}-\d{2}-\d{2}"$/m);
+  assert.match(adr, /^owners: \[\]$/m);
+  assert.match(adr, /^metadata:$/m);
+  assert.match(adr, /^  adr:$/m);
+  assert.match(adr, /^    decision-makers: \[\]$/m);
+  assert.match(adr, /^    consulted: \[\]$/m);
+  assert.match(adr, /^    informed: \[\]$/m);
+  assert.doesNotMatch(adr, /^date: /m);
+  assert.doesNotMatch(adr, /^decision-makers: /m);
+  assert.doesNotMatch(adr, /^consulted: /m);
+  assert.doesNotMatch(adr, /^informed: /m);
   assert.match(adr, /^relations:$/m);
   for (const field of commonRelationFields) {
     assert.match(adr, new RegExp(`^  ${field}: \\[\\]$`, "m"));
   }
+  assert.match(adr, /^  changes:$/m);
+  for (const field of ["added", "modified", "deleted", "renamed", "moved", "generated"]) {
+    assert.match(adr, new RegExp(`^    ${field}: \\[\\]$`, "m"));
+  }
+  const index = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
+  assert.match(index, /\| ADR-0001 \| Adopt MADR \| proposed \| \[0001-adopt-madr\.md\]\(\.\/0001-adopt-madr\.md\) \|/);
   assert.match(adr, /^# 1\. Adopt MADR/m);
   assert.match(adr, /## Context and Problem Statement/);
   assert.match(adr, /## Decision Drivers/);
@@ -542,4 +561,125 @@ test("audit_adr validates front matter with zod schema", () => {
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
   assert.equal(report.findings.some((finding) => finding.code === "invalid-front-matter"), true);
+});
+
+test("audit_adr rejects non-ADR document type", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-wrong-type.md"),
+    [
+      "---",
+      'id: "ADR-0001"',
+      'type: "spec"',
+      'status: "accepted"',
+      'title: "Wrong Type"',
+      'created: "2026-05-23"',
+      'updated: "2026-05-23"',
+      "owners: []",
+      "relations:",
+      "  source: []",
+      "  implements: []",
+      "  implemented-by: []",
+      "  depends-on: []",
+      "  blocks: []",
+      "  supersedes: []",
+      "  superseded-by: []",
+      "  related: []",
+      "  refines: []",
+      "  refined-by: []",
+      "  derives-from: []",
+      "  derived-by: []",
+      "  verifies: []",
+      "  verified-by: []",
+      "  references: []",
+      "  defers: []",
+      "  deferred-by: []",
+      "metadata:",
+      "  adr:",
+      "    decision-makers: []",
+      "    consulted: []",
+      "    informed: []",
+      "---",
+      "",
+      "# 1. Wrong Type",
+      "",
+      "## Context and Problem Statement",
+      "",
+      "## Considered Options",
+      "",
+      "## Decision Outcome",
+      "",
+      "## Implementation Plan",
+      "",
+      "## Verification",
+      "",
+      "* [ ] Run tests",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("audit_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(
+    report.findings.some(
+      (finding) =>
+        finding.code === "invalid-front-matter" && finding.message.includes('Expected type "adr"'),
+    ),
+    true,
+  );
+});
+
+test("audit_adr rejects legacy top-level ADR front matter fields", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-legacy-front-matter.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "decision-makers: []",
+      "consulted: []",
+      "informed: []",
+      "relations:",
+      "  supersedes: []",
+      "  superseded-by: []",
+      "  related: []",
+      "  refines: []",
+      "---",
+      "",
+      "# 1. Legacy Front Matter",
+      "",
+      "## Context and Problem Statement",
+      "",
+      "## Considered Options",
+      "",
+      "## Decision Outcome",
+      "",
+      "## Implementation Plan",
+      "",
+      "## Verification",
+      "",
+      "* [ ] Run tests",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("audit_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(
+    report.findings.some(
+      (finding) =>
+        finding.code === "invalid-front-matter" &&
+        finding.message.includes("id"),
+    ),
+    true,
+  );
 });

@@ -50,10 +50,19 @@ async function migrationFor(cwd: string, relativeDir: string, file: string): Pro
   const sectionPresence = await Promise.all(targetSections.map(async (section) => ({ section, present: await hasSection(content, section) })));
   const missingSections = sectionPresence.filter((item) => !item.present).map((item) => item.section);
   const actions: string[] = [];
-  for (const field of ["status", "date", "decision-makers", "consulted", "informed"]) {
-    if (!new RegExp(`^${field}:\\s+.+$`, "m").test(content)) actions.push(`Add ${field} metadata`);
+  for (const field of ["id", "type", "status", "title", "created", "updated", "owners", "relations"]) {
+    if (!new RegExp(`^${field}:\\s*(?:.+)?$`, "m").test(content)) actions.push(`Add ${field} metadata`);
   }
-  if (!/^date:\s+"?\d{4}-\d{2}-\d{2}"?$/m.test(content)) actions.push("Review date metadata format");
+  for (const field of ["decision-makers", "consulted", "informed"]) {
+    if (new RegExp(`^${field}:\\s*(?:.+)?$`, "m").test(content)) {
+      actions.push(`Move ${field} under metadata.adr`);
+    }
+  }
+  for (const field of ["created", "updated"]) {
+    if (!new RegExp(`^${field}:\\s+"?\\d{4}-\\d{2}-\\d{2}"?$`, "m").test(content)) {
+      actions.push(`Review ${field} metadata format`);
+    }
+  }
   if (missingSections.length > 0) actions.push(`Add or map sections: ${missingSections.join(", ")}`);
   if (!/^#\s+\d+\.\s+.+$/m.test(content)) actions.push("Review title format for MADR numbering");
   if (actions.length === 0) actions.push("No structural migration needed");
