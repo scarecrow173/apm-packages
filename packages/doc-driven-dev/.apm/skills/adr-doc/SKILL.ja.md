@@ -172,7 +172,7 @@ brainstorming の discovery artifact または spec が既に存在する場合�
    典型的な gap-fill 質問:
 
    - この判断を知る、または承認する必要があるのは誰ですか。
-     （MADR/RACI フロントマターのためのガバナンス情報。）
+     （トップレベルのフロントマターではなく、`metadata.adr` に入れる ADR ガバナンス情報。）
    - エージェントがこれを実装するには何が必要ですか。
      （影響するファイル、ディレクトリ、インターフェイス、依存関係、設定、
      テスト、従うパターン、避けるパターン、検証基準。）
@@ -279,10 +279,15 @@ ADR に記録する内容は次の理解です。
    期待されるテストを書きます。
 6. Verification をチェックボックスで書く。
    各項目は、エージェントがプログラムまたは手動で確認できる粒度にします。
-7. 関連 ADR をフロントマターで接続する。
-   `references/adr-conventions.ja.md` に従い、意味で選ぶ共通 `relations`
-   field を使います。
-8. ファイルを生成する。
+7. `references/adr-conventions.ja.md` に従い、共有 doc-suite 契約で
+   フロントマターを埋めます。`id`、`type`、`status`、`title`、
+   `created`、`updated`、`owners`、`relations` などの必須ライフサイクル
+   フィールドはトップレベルに置きます。ADR 固有のガバナンス情報は
+   `metadata.adr` 配下に置き、トップレベルの `decision-makers`、
+   `consulted`、`informed` にはしません。
+8. `references/adr-conventions.ja.md` に従い、意味で選ぶ共通 `relations`
+   field で関連 ADR を接続します。
+9. ファイルを生成する。
    推奨は `scripts/new_adr.js` です。ディレクトリ検出、命名、
    テンプレート、メタデータ既定値、索引更新を扱います。スクリプトを実行
    できない場合は、`assets/templates/` からテンプレートをコピーして手動で

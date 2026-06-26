@@ -52,11 +52,13 @@ NNNN-title-with-dashes.md
 
 ```yaml
 ---
+id: "ADR-NNNN"
+type: "adr"
 status: "proposed"
-date: "YYYY-MM-DD"
-decision-makers: []
-consulted: []
-informed: []
+title: "判断タイトル"
+created: "YYYY-MM-DD"
+updated: "YYYY-MM-DD"
+owners: []
 relations:
   source: []
   implements: []
@@ -73,6 +75,11 @@ relations:
   verifies: []
   verified-by: []
   references: []
+metadata:
+  adr:
+    decision-makers: []
+    consulted: []
+    informed: []
 ---
 ```
 
@@ -80,12 +87,20 @@ relations:
 
 | Field | Required | Description |
 | --- | --- | --- |
+| `id` | Yes | 安定した文書識別子。通常は `ADR-NNNN`。 |
+| `type` | Yes | 共有文書種別。ADR では `adr` を使います。 |
 | `status` | Yes | 現在のライフサイクル状態。 |
-| `date` | Yes | 現在の status の日付。形式は `YYYY-MM-DD`。 |
-| `decision-makers` | Yes | 判断を所有する人またはグループ。 |
-| `consulted` | Yes | 判断前または判断中に相談した専門家。 |
-| `informed` | Yes | 判断を共有されたステークホルダー。 |
+| `title` | Yes | 判断に対応する人間向け ADR タイトル。 |
+| `created` | Yes | 作成日。形式は `YYYY-MM-DD`。 |
+| `updated` | Yes | 最後の実質更新日。形式は `YYYY-MM-DD`。 |
+| `owners` | Yes | 文書の保守責任を持つ人またはグループ。 |
+| `relations` | Yes | 意味で選ぶ共有文書グラフリンク。 |
+| `metadata.adr.decision-makers` | ADR governance | 判断を所有する人またはグループ。 |
+| `metadata.adr.consulted` | ADR governance | 判断前または判断中に相談した専門家。 |
+| `metadata.adr.informed` | ADR governance | 判断を共有されたステークホルダー。 |
 
+ADR 固有のガバナンス情報は `metadata.adr` 配下に置き、トップレベルの
+`decision-makers`、`consulted`、`informed` には置きません。
 `consulted` と `informed` は RACI のコミュニケーション上の区別に従います。
 consulted は双方向の入力、informed は一方向の通知です。
 
@@ -201,11 +216,11 @@ ADR 索引の既定ファイルは `README.md` とします。リポジトリが
 
 索引ルール:
 
-- 列は `ID` / `タイトル` / `Status` / `ファイル` の 4 列に固定します。MADR の
-  ADR には `id`／`title` の front matter が無いため、`ID` はファイル名の連番
-  から導出し（`ADR-NNNN`）、`タイトル` は H1 見出しを使います。`Status` は
-  front matter から取り、`ファイル` 列は索引と同じディレクトリへの相対リンクに
-  します。値が無い場合は `—` を入れます。
+- 列は `ID` / `タイトル` / `Status` / `ファイル` の 4 列に固定します。
+  `ID`、`タイトル`、`Status` は、存在する場合はフロントマターから取ります。
+  古い ADR に `id` または `title` が無い場合は、`ID` はファイル名の連番から
+  導出し（`ADR-NNNN`）、`タイトル` は H1 見出しを使います。`ファイル` 列は
+  索引と同じディレクトリへの相対リンクにします。値が無い場合は `—` を入れます。
 - 行はファイル名の昇順で並べます。
 - 新規の対象ファイルが追加されたら、同じ変更の中で必ず索引を更新します。
 - 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに

@@ -3525,6 +3525,47 @@ var require_gray_matter = __commonJS({
   }
 });
 
+// src/skills/lib/document_utils.ts
+var require_document_utils = __commonJS({
+  "src/skills/lib/document_utils.ts"(exports2, module2) {
+    "use strict";
+    var fs2 = require("node:fs");
+    var path2 = require("node:path");
+    function normalizeDir(input) {
+      return input.replace(/\\/g, "/").replace(/\/+$/g, "");
+    }
+    function listMarkdownFiles(dir) {
+      if (!fs2.existsSync(dir)) return [];
+      return fs2.readdirSync(dir).filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file)).sort();
+    }
+    function detectNaming(files) {
+      if (files.some((file) => /^\d{4}-.+\.md$/.test(file))) return "numbered";
+      if (files.some((file) => /^[a-z0-9][a-z0-9-]+\.md$/.test(file))) return "slug";
+      return "numbered";
+    }
+    function nextNumber(files) {
+      const numbers = files.map((file) => /^(\d{4})-.+\.md$/.exec(file)).filter((match) => Boolean(match)).map((match) => Number(match[1]));
+      return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
+    }
+    function slugify(title, fallback) {
+      return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
+    }
+    function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
+      if (explicitDir) return normalizeDir(explicitDir);
+      const existing = candidateDirs.filter((candidate) => fs2.existsSync(path2.join(cwd, candidate)));
+      return existing.length === 0 ? defaultDir : existing[0];
+    }
+    module2.exports = {
+      detectNaming,
+      findDocumentDir,
+      listMarkdownFiles,
+      nextNumber,
+      normalizeDir,
+      slugify
+    };
+  }
+});
+
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.cjs
 var require_core2 = __commonJS({
   "node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.cjs"(exports2) {
@@ -20400,43 +20441,976 @@ var require_zod = __commonJS({
   }
 });
 
-// src/skills/lib/document_utils.ts
-var require_document_utils = __commonJS({
-  "src/skills/lib/document_utils.ts"(exports2, module2) {
+// src/skills/lib/doc_suite_utils.ts
+var require_doc_suite_utils = __commonJS({
+  "src/skills/lib/doc_suite_utils.ts"(exports2, module2) {
     "use strict";
     var fs2 = require("node:fs");
     var path2 = require("node:path");
-    function normalizeDir(input) {
-      return input.replace(/\\/g, "/").replace(/\/+$/g, "");
-    }
-    function listMarkdownFiles(dir) {
-      if (!fs2.existsSync(dir)) return [];
-      return fs2.readdirSync(dir).filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file)).sort();
-    }
-    function detectNaming(files) {
-      if (files.some((file) => /^\d{4}-.+\.md$/.test(file))) return "numbered";
-      if (files.some((file) => /^[a-z0-9][a-z0-9-]+\.md$/.test(file))) return "slug";
-      return "numbered";
-    }
-    function nextNumber(files) {
-      const numbers = files.map((file) => /^(\d{4})-.+\.md$/.exec(file)).filter((match) => Boolean(match)).map((match) => Number(match[1]));
-      return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
-    }
-    function slugify(title, fallback) {
-      return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
-    }
-    function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
-      if (explicitDir) return normalizeDir(explicitDir);
-      const existing = candidateDirs.filter((candidate) => fs2.existsSync(path2.join(cwd, candidate)));
-      return existing.length === 0 ? defaultDir : existing[0];
-    }
-    module2.exports = {
+    var matter = require_gray_matter();
+    var { z } = require_zod();
+    var {
       detectNaming,
       findDocumentDir,
       listMarkdownFiles,
       nextNumber,
       normalizeDir,
       slugify
+    } = require_document_utils();
+    var relationFields = [
+      "source",
+      "implements",
+      "implemented-by",
+      "depends-on",
+      "blocks",
+      "supersedes",
+      "superseded-by",
+      "related",
+      "refines",
+      "refined-by",
+      "derives-from",
+      "derived-by",
+      "verifies",
+      "verified-by",
+      "references",
+      "defers",
+      "deferred-by"
+    ];
+    var changeFields = [
+      "added",
+      "modified",
+      "deleted",
+      "renamed",
+      "moved",
+      "generated"
+    ];
+    var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr"];
+    var configs = {
+      idea: {
+        defaultStatus: "draft",
+        dir: "docs/ideas",
+        dirs: ["docs/ideas"],
+        idPrefix: "IDEA",
+        statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
+        type: "idea"
+      },
+      brainstorm: {
+        defaultStatus: "capturing",
+        dir: "docs/discovery",
+        dirs: ["docs/discovery"],
+        idPrefix: "BRAINSTORM",
+        statusValues: ["capturing", "confirmed", "routed", "superseded"],
+        type: "brainstorm"
+      },
+      discovery: {
+        defaultStatus: "draft",
+        dir: "docs/discovery",
+        dirs: ["docs/discovery"],
+        idPrefix: "DISC",
+        statusValues: ["draft", "active", "resolved", "archived", "superseded"],
+        type: "discovery"
+      },
+      spec: {
+        defaultStatus: "draft",
+        dir: "docs/specs",
+        dirs: ["docs/specs", "docs/spec", "specs", "spec"],
+        idPrefix: "SPEC",
+        statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
+        type: "spec"
+      },
+      plan: {
+        defaultStatus: "draft",
+        dir: "docs/plans",
+        dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
+        idPrefix: "PLAN",
+        statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
+        type: "plan"
+      },
+      task: {
+        defaultStatus: "todo",
+        dir: "docs/tasks",
+        dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
+        idPrefix: "TASK",
+        statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
+        type: "task"
+      },
+      design: {
+        defaultStatus: "draft",
+        dir: "docs/designs",
+        dirs: ["docs/designs", "docs/design", "designs", "design"],
+        idPrefix: "DESIGN",
+        statusValues: ["draft", "approved", "superseded", "rejected"],
+        type: "design"
+      },
+      adr: {
+        defaultStatus: "proposed",
+        dir: "docs/adr",
+        dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+        idPrefix: "ADR",
+        statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+        type: "adr"
+      }
+    };
+    var scaffoldTargets = [
+      { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
+      { dir: "docs/discovery", title: "DISCOVERY Documents", type: "discovery" },
+      { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
+      { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
+      { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
+      { dir: "docs/tasks", title: "TASK Documents", type: "task" },
+      { dir: "docs/adr", title: "ADR Documents" },
+      { dir: "docs/impl/ir", title: "Implementation Record Documents" },
+      { dir: "docs/impl/exp", title: "Experiment Log Documents" }
+    ];
+    var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+    var migrationRoutes = [
+      { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
+      { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
+      { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
+      { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
+      { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
+      { targetDir: "docs/tasks", type: "task", patterns: [/task/i, /todo/i, /work item/i] },
+      { targetDir: "docs/adr", type: null, patterns: [/adr/i, /decision/i, /architecture decision/i] },
+      { targetDir: "docs/impl/ir", type: null, patterns: [/implementation record/i, /impl record/i, /\bir\b/i] },
+      { targetDir: "docs/impl/exp", type: null, patterns: [/experiment/i, /\bexp\b/i, /spike/i] }
+    ];
+    var changeEntrySchema = z.object({
+      type: z.string().min(1)
+    }).passthrough();
+    var changesSchema = z.object(Object.fromEntries(
+      changeFields.map((field) => [field, z.array(changeEntrySchema).default([])])
+    )).default({});
+    var relationSchema = z.object({
+      ...Object.fromEntries(relationFields.map((field) => [field, z.array(z.string()).default([])])),
+      changes: changesSchema
+    }).default({});
+    var frontMatterSchema = z.object({
+      id: z.string().min(1),
+      type: z.enum(docTypes),
+      status: z.string().min(1),
+      title: z.string().min(1),
+      created: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      updated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      owners: z.array(z.string()),
+      relations: relationSchema
+    }).passthrough();
+    function configFor(type) {
+      if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
+      return configs[type];
+    }
+    var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+    function canonicalRootDir(cwd, type) {
+      const config = configFor(type);
+      return findDocumentDir(cwd, void 0, config.dirs, config.dir);
+    }
+    function isUnderDir(child, parent) {
+      const c = normalizeDir(child);
+      const p = normalizeDir(parent);
+      return c === p || c.startsWith(`${p}/`);
+    }
+    function recursiveBasenames(cwd, relativeDir, type) {
+      const fullDir = path2.join(cwd, relativeDir);
+      return walkMarkdownFiles(fullDir).map((fullPath) => path2.basename(fullPath)).filter((file) => !isReservedDocFile(type, file));
+    }
+    function nextNumberFromFrontMatter(cwd, relativeDir, idPrefix) {
+      const fullDir = path2.join(cwd, relativeDir);
+      const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
+      const numbers = walkMarkdownFiles(fullDir).map((fullPath) => matterData(fs2.readFileSync(fullPath, "utf8")).id).filter((id) => typeof id === "string").map((id) => pattern.exec(id.trim())).filter((match) => Boolean(match)).map((match) => Number(match[1]));
+      return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
+    }
+    function sanitizeFileName(name) {
+      const base = path2.basename(name.trim());
+      const stem = base.replace(/\.md$/i, "");
+      if (!stem) throw new Error("Invalid filename: empty after removing .md extension");
+      return `${stem}.md`;
+    }
+    function docDir(cwd, type, explicitDir) {
+      const config = configFor(type);
+      return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
+    }
+    function docFiles(dir) {
+      return walkMarkdownFiles(dir).map((f) => path2.relative(dir, f).replace(/\\/g, "/"));
+    }
+    function isExternalLink(value) {
+      return /^(https?:|mailto:)/i.test(value);
+    }
+    function matterData(content3) {
+      return matter(content3).data || {};
+    }
+    function formatIssuePath(pathParts) {
+      return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
+    }
+    function validateFrontMatter2(content3) {
+      const result = frontMatterSchema.safeParse(matterData(content3));
+      if (result.success) return [];
+      return result.error.issues.map((issue) => ({
+        message: issue.message,
+        path: formatIssuePath(issue.path)
+      }));
+    }
+    function relationMap(content3) {
+      const data = matterData(content3);
+      const rawRelations = data.relations;
+      const result = Object.fromEntries(relationFields.map((field) => [field, []]));
+      if (!rawRelations || typeof rawRelations !== "object" || Array.isArray(rawRelations)) return result;
+      const raw = rawRelations;
+      for (const field of relationFields) {
+        const value = raw[field];
+        if (Array.isArray(value)) result[field] = value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
+        else if (typeof value === "string" && value.trim()) result[field] = [value.trim()];
+      }
+      return result;
+    }
+    function completeChanges(input) {
+      return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []]));
+    }
+    function relationLinks2(content3) {
+      const relations = relationMap(content3);
+      return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
+    }
+    function quote(value) {
+      return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    }
+    function formatRelation(field, values) {
+      return `  ${field}: ${values}`;
+    }
+    function formatRelationBlock(field, values) {
+      if (values.length === 0) return formatRelation(field, "[]");
+      return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)].join("\n");
+    }
+    function formatChangeScalar(key, value) {
+      return `${key}: ${quote(value)}`;
+    }
+    function formatChangeValue(key, value) {
+      if (Array.isArray(value)) {
+        if (value.length === 0) return [`${key}: []`];
+        return [
+          `${key}:`,
+          ...value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => `  - ${quote(item.trim())}`)
+        ];
+      }
+      if (typeof value === "string") return [formatChangeScalar(key, value)];
+      if (typeof value === "number" || typeof value === "boolean") return [`${key}: ${String(value)}`];
+      return [`${key}: ${quote(JSON.stringify(value))}`];
+    }
+    function formatChangeEntry(entry) {
+      const ordered = [
+        "type",
+        "path",
+        "from",
+        "to",
+        "source",
+        ...Object.keys(entry).filter((key) => !["type", "path", "from", "to", "source"].includes(key)).sort()
+      ].filter((key, index2, array) => key in entry && array.indexOf(key) === index2);
+      const lines = [];
+      for (const key of ordered) {
+        lines.push(...formatChangeValue(key, entry[key]));
+      }
+      return lines;
+    }
+    function formatChangesBlock(changes) {
+      return [
+        "  changes:",
+        ...changeFields.flatMap((field) => {
+          const entries = changes[field];
+          if (entries.length === 0) return [`    ${field}: []`];
+          return [
+            `    ${field}:`,
+            ...entries.flatMap((entry) => [
+              "      - " + formatChangeEntry(entry)[0],
+              ...formatChangeEntry(entry).slice(1).map((line) => `        ${line}`)
+            ])
+          ];
+        })
+      ];
+    }
+    function isPlainObject2(value) {
+      return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+    }
+    function formatMetadataScalar(value) {
+      return typeof value === "string" ? quote(value) : String(value);
+    }
+    function formatMetadataNode(key, value, indent) {
+      if (value === null || value === void 0) return [];
+      const prefix = " ".repeat(indent);
+      if (Array.isArray(value)) {
+        if (value.length === 0) return [`${prefix}${key}: []`];
+        const items = value.flatMap((item) => {
+          if (item === null || item === void 0) return [];
+          if (isPlainObject2(item)) {
+            return [`${prefix} -`, ...Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3))];
+          }
+          if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
+          if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
+          return [`${prefix} - ${quote(JSON.stringify(item))}`];
+        });
+        return items.length > 0 ? [`${prefix}${key}:`, ...items] : [`${prefix}${key}: []`];
+      }
+      if (isPlainObject2(value)) {
+        const entries = Object.entries(value).flatMap(([childKey, childValue]) => formatMetadataNode(childKey, childValue, indent + 2));
+        return entries.length > 0 ? [`${prefix}${key}:`, ...entries] : [`${prefix}${key}: {}`];
+      }
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        return [`${prefix}${key}: ${formatMetadataScalar(value)}`];
+      }
+      return [`${prefix}${key}: ${quote(JSON.stringify(value))}`];
+    }
+    function formatMetadataBlock(metadata) {
+      if (!metadata) return [];
+      const entries = Object.entries(metadata).flatMap(([key, value]) => formatMetadataNode(key, value, 2));
+      return entries.length > 0 ? ["metadata:", ...entries] : ["metadata: {}"];
+    }
+    function completeRelations(input) {
+      return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []]));
+    }
+    function frontMatter(config, number, title, status, date, relations, metadata) {
+      const complete = completeRelations(relations);
+      const changes = completeChanges(relations?.changes);
+      return [
+        "---",
+        `id: "${config.idPrefix}-${String(number).padStart(4, "0")}"`,
+        `type: "${config.type}"`,
+        `status: "${status}"`,
+        `title: ${quote(title)}`,
+        `created: "${date}"`,
+        `updated: "${date}"`,
+        "owners: []",
+        "relations:",
+        formatRelationBlock("source", complete.source),
+        ...formatChangesBlock(changes),
+        ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
+        ...formatMetadataBlock(metadata),
+        "---"
+      ].join("\n");
+    }
+    function renderBodyTemplate(type, title) {
+      const templatePath = path2.join(__dirname, "../assets/templates", `${type}.md`);
+      if (!fs2.existsSync(templatePath)) return null;
+      return fs2.readFileSync(templatePath, "utf8").replaceAll("{{title}}", title).trimEnd();
+    }
+    function bodyFor(type, title) {
+      const template = renderBodyTemplate(type, title);
+      if (template) return template;
+      if (type === "idea") {
+        return [
+          `# ${title}`,
+          "",
+          "## Summary",
+          "",
+          "<!-- One or two sentences capturing the core idea. -->",
+          "",
+          "## Problem and Motivation",
+          "",
+          "- <!-- observed pain, opportunity, or trigger -->",
+          "",
+          "## Expected Value",
+          "",
+          "- <!-- who benefits and how -->",
+          "",
+          "## Open Questions",
+          "",
+          "- <!-- question that must be answered before this can be formalized -->",
+          "",
+          "## Next Action",
+          "",
+          "- [ ] Promote to discovery-doc for deeper exploration",
+          "- [ ] Promote directly to spec-doc if requirements are clear",
+          "- [ ] Park for later reconsideration",
+          "- [ ] Discard \u2014 reason: <!-- why -->"
+        ].join("\n");
+      }
+      if (type === "brainstorm") {
+        return [
+          `# ${title}`,
+          "",
+          "## Intent",
+          "",
+          "<!-- Confirm the goal, audience, and reason this matters now. -->",
+          "",
+          "## Constraints",
+          "",
+          "- <!-- technical, product, operational, timeline, or policy constraint -->",
+          "",
+          "## Options",
+          "",
+          "- <!-- option, trade-off, and current lean -->",
+          "",
+          "## Open Questions",
+          "",
+          "- <!-- question that must be resolved before routing -->",
+          "",
+          "## Document Routing",
+          "",
+          "- [ ] ADR needed",
+          "- [ ] Spec needed",
+          "",
+          "## Confirmed Summary",
+          "",
+          "<!-- Write the agreed intent before creating downstream documents. -->"
+        ].join("\n");
+      }
+      if (type === "discovery") {
+        return [
+          `# ${title}`,
+          "",
+          "## Exploration Goal",
+          "",
+          "<!-- What question does this discovery attempt to answer? State the trigger and desired outcome. -->",
+          "",
+          "## Key Issues and Assumptions",
+          "",
+          "- <!-- issue or assumption that must be validated before committing to a direction -->",
+          "",
+          "## Alternatives and Comparison",
+          "",
+          "| Option | Pros | Cons | Lean |",
+          "| --- | --- | --- | --- |",
+          "| <!-- option --> | <!-- pro --> | <!-- con --> | <!-- yes/no/maybe --> |",
+          "",
+          "## Tentative Conclusions and Hypotheses",
+          "",
+          "<!-- Current best guess before committing to a spec or ADR. Mark each as hypothesis or confirmed. -->",
+          "",
+          "## Open Questions",
+          "",
+          "- <!-- question blocking resolution -->",
+          "",
+          "## Promotion Candidates",
+          "",
+          "- [ ] spec-doc needed",
+          "- [ ] adr-doc needed"
+        ].join("\n");
+      }
+      if (type === "spec") {
+        return [
+          `# ${title}`,
+          "",
+          "## Intent",
+          "",
+          "<!-- Describe the user need, problem, and desired outcome. -->",
+          "",
+          "## Scope",
+          "",
+          "### In Scope",
+          "",
+          "- <!-- behavior, workflow, or interface -->",
+          "",
+          "### Out of Scope",
+          "",
+          "- <!-- explicit non-goal -->",
+          "",
+          "## Requirements",
+          "",
+          "- <!-- requirement -->",
+          "",
+          "## Acceptance Criteria",
+          "",
+          "- [ ] <!-- observable behavior or verification -->",
+          "",
+          "## Deferred Design Concerns",
+          "",
+          "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+          "",
+          "- <!-- concern | reason | re-engagement trigger | risk if ignored -->"
+        ].join("\n");
+      }
+      if (type === "plan") {
+        return [
+          `# ${title}`,
+          "",
+          "## Goal",
+          "",
+          "<!-- Describe the implementation goal. -->",
+          "",
+          "## Tasks",
+          "",
+          "- [ ] <!-- implementation slice -->",
+          "",
+          "## Verification",
+          "",
+          "- [ ] <!-- command, test, or review step -->"
+        ].join("\n");
+      }
+      if (type === "design") {
+        return [
+          `# ${title}`,
+          "",
+          "## Context",
+          "",
+          "<!-- Describe the problem context and boundaries for this design. -->",
+          "",
+          "## Scope",
+          "",
+          "- <!-- in-scope -->",
+          "- <!-- out-of-scope -->",
+          "",
+          "## Components and Boundaries",
+          "",
+          "- <!-- component and responsibility -->",
+          "",
+          "## Data and Control Flow",
+          "",
+          "- <!-- key flow and decision points -->",
+          "",
+          "## Risks and Trade-offs",
+          "",
+          "- <!-- risk and mitigation -->",
+          "",
+          "## Deferred Design Concerns",
+          "",
+          "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+          "",
+          "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
+          "",
+          "## References",
+          "",
+          "- <!-- linked spec, ADR, and related docs -->"
+        ].join("\n");
+      }
+      return [
+        `# ${title}`,
+        "",
+        "## Work",
+        "",
+        "<!-- Describe the implementation slice. -->",
+        "",
+        "## Done When",
+        "",
+        "- [ ] <!-- completion criterion -->"
+      ].join("\n");
+    }
+    function isReservedDocFile(type, file) {
+      if (type === "design") {
+        return /^overview\.md$/i.test(file);
+      }
+      return false;
+    }
+    function overviewDocument(date) {
+      return [
+        "---",
+        'id: "DESIGN-OVERVIEW"',
+        'type: "design"',
+        'status: "draft"',
+        'title: "System Design Overview"',
+        `created: "${date}"`,
+        `updated: "${date}"`,
+        "owners: []",
+        "relations:",
+        ...relationFields.map((field) => formatRelationBlock(field, [])),
+        "---",
+        "",
+        "# System Design Overview",
+        "",
+        "## System Boundaries",
+        "",
+        "- <!-- major subsystems and their boundaries -->",
+        "",
+        "## Core Components",
+        "",
+        "- <!-- component and responsibility -->",
+        "",
+        "## Data Flow",
+        "",
+        "- <!-- high-level data and control flow -->",
+        "",
+        "## Non-Functional Constraints",
+        "",
+        "- <!-- reliability, security, performance, operations -->",
+        "",
+        "## Detailed Design Documents",
+        "",
+        "- <!-- link detailed docs under docs/designs/0001-*.md -->",
+        ""
+      ].join("\n");
+    }
+    function ensureDesignOverview(fullDir, date) {
+      const overviewPath = path2.join(fullDir, "overview.md");
+      if (fs2.existsSync(overviewPath)) return;
+      fs2.writeFileSync(overviewPath, overviewDocument(date), "utf8");
+    }
+    async function titleFromDocument(content3, fallback) {
+      const data = matterData(content3);
+      if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
+      const match = /^#\s+(.+)$/m.exec(matter(content3).content);
+      return match?.[1]?.trim() || fallback;
+    }
+    async function docEntries(cwd, type, explicitDir) {
+      const relativeDir = docDir(cwd, type, explicitDir);
+      const dir = path2.join(cwd, relativeDir);
+      return Promise.all(docFiles(dir).map(async (file) => {
+        const fullPath = path2.join(dir, file);
+        const content3 = fs2.readFileSync(fullPath, "utf8");
+        const data = matterData(content3);
+        return {
+          file,
+          id: typeof data.id === "string" ? data.id : null,
+          path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
+          status: typeof data.status === "string" ? data.status : null,
+          title: await titleFromDocument(content3, path2.basename(file, ".md")),
+          type: typeof data.type === "string" ? data.type : null
+        };
+      }));
+    }
+    async function buildIndex(cwd, type, explicitDir) {
+      const relativeDir = docDir(cwd, type, explicitDir);
+      const entries = await docEntries(cwd, type, explicitDir);
+      const title = `${configFor(type).idPrefix} Documents`;
+      const sorted = type === "design" ? [...entries].sort((a, b) => {
+        if (a.file === "overview.md") return -1;
+        if (b.file === "overview.md") return 1;
+        return a.file.localeCompare(b.file);
+      }) : entries;
+      const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+      const rows = sorted.map(
+        (entry) => `| ${entry.id || "\u2014"} | ${entry.title} | ${entry.status || "\u2014"} | [${entry.file}](./${entry.file}) |`
+      );
+      const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
+      return `# ${title}
+
+${GENERATED_INDEX_MARKER}
+
+Directory: \`${relativeDir.replace(/\\/g, "/")}\`
+
+${body}
+`;
+    }
+    function buildGenericIndex(relativeDir, title) {
+      const dir = relativeDir.replace(/\\/g, "/");
+      return `# ${title}
+
+Directory: \`${dir}\`
+`;
+    }
+    function isMarkdownSource(file) {
+      return file.endsWith(".md") && !/^readme\.md$/i.test(path2.basename(file)) && !/^index\.md$/i.test(path2.basename(file));
+    }
+    function isUnderCanonicalDir(relativeFile) {
+      const normalized = normalizeDir(relativeFile);
+      return canonicalDocDirs.some((dir) => normalized === dir || normalized.startsWith(`${dir}/`));
+    }
+    function walkMarkdownFiles(baseDir) {
+      if (!fs2.existsSync(baseDir)) return [];
+      const entries = fs2.readdirSync(baseDir, { withFileTypes: true });
+      return entries.flatMap((entry) => {
+        const fullPath = path2.join(baseDir, entry.name);
+        if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
+        return isMarkdownSource(fullPath) ? [fullPath] : [];
+      }).sort();
+    }
+    function defaultMigrationSources(cwd) {
+      return ["docs", "doc", "architecture", "design", "specs", "plans", "tasks"].filter((dir) => fs2.existsSync(path2.join(cwd, dir)));
+    }
+    function headingTitle(content3, fallback) {
+      const parsed = matter(content3);
+      const data = parsed.data || {};
+      if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
+      const match = /^#\s+(.+)$/m.exec(parsed.content);
+      return match?.[1]?.trim() || fallback;
+    }
+    function splitByH1(source, content3) {
+      const parsed = matter(content3);
+      const body = parsed.content.trim();
+      const matches = [...body.matchAll(/^#\s+(.+)$/gm)];
+      if (matches.length <= 1) {
+        return [{
+          source,
+          title: headingTitle(content3, path2.basename(source, ".md")),
+          body
+        }];
+      }
+      return matches.map((match, index2) => {
+        const start = match.index || 0;
+        const end = index2 + 1 < matches.length ? matches[index2 + 1].index || body.length : body.length;
+        const chunk = body.slice(start, end).trim();
+        return {
+          source,
+          title: match[1].trim(),
+          body: chunk
+        };
+      });
+    }
+    function routeFor(input, sourceData) {
+      if (typeof sourceData.type === "string" && docTypes.includes(sourceData.type)) {
+        const config = configFor(sourceData.type);
+        return { targetDir: config.dir, type: config.type, patterns: [] };
+      }
+      const haystack = `${input.source}
+${input.title}
+${input.body.slice(0, 2e3)}`;
+      return migrationRoutes.find((route) => route.patterns.some((pattern) => pattern.test(haystack))) || { targetDir: "docs/discovery", type: "discovery", patterns: [] };
+    }
+    function targetAllocation(cwd, targetDir) {
+      const fullTargetDir = path2.join(cwd, targetDir);
+      const existingFiles = fs2.existsSync(fullTargetDir) ? fs2.readdirSync(fullTargetDir).filter((file) => file.endsWith(".md")) : [];
+      return {
+        existing: new Set(existingFiles),
+        naming: detectNaming(existingFiles),
+        next: nextNumber(existingFiles)
+      };
+    }
+    function allocateTargetPath(cwd, targetDir, title, fallback, allocations) {
+      if (!allocations.has(targetDir)) allocations.set(targetDir, targetAllocation(cwd, targetDir));
+      const allocation = allocations.get(targetDir);
+      const number = allocation.next;
+      let baseName = allocation.naming === "slug" ? `${slugify(title, fallback)}.md` : `${String(number).padStart(4, "0")}-${slugify(title, fallback)}.md`;
+      const ext = path2.extname(baseName);
+      const stem = path2.basename(baseName, ext);
+      let suffix = 2;
+      while (allocation.existing.has(baseName)) {
+        baseName = `${stem}-${suffix}${ext}`;
+        suffix += 1;
+      }
+      allocation.existing.add(baseName);
+      if (allocation.naming === "numbered") allocation.next += 1;
+      return {
+        number,
+        target: path2.join(targetDir, baseName).replace(/\\/g, "/")
+      };
+    }
+    function migratedFrontMatter(type, number, title, date, source) {
+      const config = configFor(type);
+      return frontMatter(config, number, title, config.defaultStatus, date, {
+        source: [source],
+        changes: {
+          generated: [{ type: "migration", source }]
+        }
+      });
+    }
+    function migratedContent(input, route, sourceContent, source, number, date) {
+      if (route.type) {
+        return `${migratedFrontMatter(route.type, number, input.title, date, source)}
+
+${input.body.trim()}
+`;
+      }
+      const parsed = matter(sourceContent);
+      const data = parsed.data || {};
+      if (Object.keys(data).length > 0) return `${matter.stringify(input.body.trim(), data).trimEnd()}
+`;
+      return `---
+title: ${quote(input.title)}
+source: ${quote(source)}
+---
+
+${input.body.trim()}
+`;
+    }
+    function plannedMigration(cwd, source, input, sourceContent, date, allocations) {
+      const sourceData = matterData(sourceContent);
+      const route = routeFor(input, sourceData);
+      const targetDir = route.targetDir;
+      const { number, target } = allocateTargetPath(cwd, targetDir, input.title, route.type || "doc", allocations);
+      return {
+        content: migratedContent(input, route, sourceContent, source, number, date),
+        source,
+        target,
+        targetDir,
+        title: input.title,
+        type: route.type
+      };
+    }
+    async function migrateDocs(options2) {
+      const cwd = path2.resolve(options2.cwd);
+      const fromDirs = options2.from && options2.from.length > 0 ? options2.from : defaultMigrationSources(cwd);
+      const skipped = [];
+      const migrations = [];
+      const allocations = /* @__PURE__ */ new Map();
+      const date = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      for (const fromDir of fromDirs) {
+        const fullFrom = path2.resolve(cwd, fromDir);
+        const files = walkMarkdownFiles(fullFrom);
+        for (const fullFile of files) {
+          const relativeFile = path2.relative(cwd, fullFile).replace(/\\/g, "/");
+          if (!options2.includeCanonical && isUnderCanonicalDir(relativeFile)) {
+            skipped.push({ file: relativeFile, reason: "canonical-doc" });
+            continue;
+          }
+          const sourceContent = fs2.readFileSync(fullFile, "utf8");
+          const inputs = options2.splitH1 ? splitByH1(relativeFile, sourceContent) : [{
+            source: relativeFile,
+            title: headingTitle(sourceContent, path2.basename(relativeFile, ".md")),
+            body: matter(sourceContent).content.trim()
+          }];
+          for (const input of inputs) {
+            migrations.push(plannedMigration(cwd, relativeFile, input, sourceContent, date, allocations));
+          }
+        }
+      }
+      const created = [];
+      if (options2.apply) {
+        await scaffoldDocsTree(cwd);
+        for (const migration of migrations) {
+          const targetPath = path2.join(cwd, migration.target);
+          fs2.mkdirSync(path2.dirname(targetPath), { recursive: true });
+          fs2.writeFileSync(targetPath, migration.content, "utf8");
+          created.push(migration.target);
+        }
+        for (const target of scaffoldTargets.filter((item) => item.type)) {
+          await writeGeneratedIndex(cwd, target.type, target.dir, {});
+        }
+      }
+      return { applied: Boolean(options2.apply), created, migrations, skipped };
+    }
+    async function scaffoldDocsTree(cwd) {
+      const resolvedCwd = path2.resolve(cwd);
+      const created = [];
+      const updated = [];
+      for (const target of scaffoldTargets) {
+        const fullDir = path2.join(resolvedCwd, target.dir);
+        fs2.mkdirSync(fullDir, { recursive: true });
+        const readmePath = path2.join(fullDir, "README.md");
+        if (fs2.existsSync(readmePath)) continue;
+        const content3 = target.type ? await buildIndex(resolvedCwd, target.type, target.dir) : buildGenericIndex(target.dir, target.title);
+        fs2.writeFileSync(readmePath, content3, "utf8");
+        created.push(path2.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
+      }
+      return { created, updated };
+    }
+    async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
+      const indexPath = path2.join(cwd, relativeDir, "README.md");
+      const relIndex = path2.relative(cwd, indexPath).replace(/\\/g, "/");
+      if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
+      const existing = fs2.existsSync(indexPath) ? fs2.readFileSync(indexPath, "utf8") : null;
+      const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
+      if (!isGenerated && !options2.forceIndex) {
+        return { path: relIndex, written: false, reason: "hand-curated" };
+      }
+      const content3 = await buildIndex(cwd, type, relativeDir);
+      fs2.writeFileSync(indexPath, content3, "utf8");
+      return { path: relIndex, written: true, reason: null };
+    }
+    async function createDocument(type, options2) {
+      const config = configFor(type);
+      const cwd = path2.resolve(options2.cwd);
+      const relativeDir = docDir(cwd, type, options2.dir);
+      const fullDir = path2.join(cwd, relativeDir);
+      fs2.mkdirSync(fullDir, { recursive: true });
+      const rootDir = canonicalRootDir(cwd, type);
+      const underRoot = isUnderDir(relativeDir, rootDir);
+      const scopeDir = underRoot ? rootDir : relativeDir;
+      const naming = detectNaming(recursiveBasenames(cwd, scopeDir, type));
+      const localFiles = fs2.readdirSync(fullDir).filter((file) => file.endsWith(".md")).filter((file) => !isReservedDocFile(type, file));
+      const number = naming === "slug" ? nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix) : nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix);
+      const filename = options2.name ? sanitizeFileName(options2.name) : naming === "slug" ? `${slugify(options2.title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify(options2.title, type)}.md`;
+      if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
+      const outputPath = path2.join(fullDir, filename);
+      if (fs2.existsSync(outputPath)) throw new Error(`Document already exists: ${path2.relative(cwd, outputPath)}`);
+      const date = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const status = options2.status || config.defaultStatus;
+      const content3 = `${frontMatter(config, number, options2.title, status, date, options2.relations)}
+
+${bodyFor(type, options2.title)}
+`;
+      fs2.writeFileSync(outputPath, content3, "utf8");
+      if (type === "design") ensureDesignOverview(path2.join(cwd, rootDir), date);
+      const indexRelativeDir = underRoot ? rootDir : relativeDir;
+      const indexResult = await writeGeneratedIndex(cwd, type, indexRelativeDir, options2);
+      return {
+        file: path2.relative(cwd, outputPath).replace(/\\/g, "/"),
+        index: indexResult.path,
+        indexWritten: indexResult.written,
+        indexSkippedReason: indexResult.reason,
+        relativeDir
+      };
+    }
+    function logIndexResult(result) {
+      if (result.indexWritten) {
+        console.log(`Updated ${result.index}`);
+      } else if (result.indexSkippedReason === "hand-curated") {
+        console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+      } else if (result.indexSkippedReason === "disabled") {
+        console.log(`Skipped index update (--no-index): ${result.index}`);
+      }
+    }
+    function resolvesLocalTarget(cwd, fromFile, target) {
+      const candidates = [
+        path2.resolve(cwd, target),
+        path2.resolve(path2.dirname(fromFile), target)
+      ];
+      return candidates.some((candidate) => fs2.existsSync(candidate));
+    }
+    async function auditDocuments(cwd, type, explicitDir) {
+      const config = configFor(type);
+      const relativeDir = docDir(cwd, type, explicitDir);
+      const dir = path2.join(cwd, relativeDir);
+      const files = docFiles(dir);
+      const findings = [];
+      if (type === "design") {
+        const overviewPath = path2.join(dir, "overview.md");
+        if (!fs2.existsSync(overviewPath)) {
+          findings.push({
+            severity: "error",
+            file: null,
+            code: "missing-overview",
+            message: "Missing required docs/designs/overview.md"
+          });
+        }
+      }
+      for (const file of files) {
+        const fullPath = path2.join(dir, file);
+        const content3 = fs2.readFileSync(fullPath, "utf8");
+        const data = matterData(content3);
+        for (const issue of validateFrontMatter2(content3)) {
+          findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${issue.path}: ${issue.message}` });
+        }
+        if (data.type !== type) {
+          findings.push({ severity: "error", file, code: "invalid-type", message: `Expected type ${type}` });
+        }
+        if (typeof data.status === "string" && !config.statusValues.includes(data.status)) {
+          findings.push({ severity: "error", file, code: "invalid-status", message: `Invalid ${type} status: ${data.status}` });
+        }
+        for (const relation of relationLinks2(content3)) {
+          if (isExternalLink(relation.target)) continue;
+          if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
+            findings.push({
+              severity: "warning",
+              file,
+              code: "broken-relation-link",
+              message: `Relation ${relation.field} points to missing target: ${relation.target}`
+            });
+          }
+        }
+      }
+      const indexPath = ["README.md", "index.md"].map((name) => path2.join(dir, name)).find((candidate) => fs2.existsSync(candidate));
+      if (!indexPath) {
+        findings.push({ severity: "warning", file: null, code: "missing-index", message: `Missing ${type} index README.md or index.md` });
+      } else {
+        const index2 = fs2.readFileSync(indexPath, "utf8");
+        for (const file of files) {
+          if (!index2.includes(file)) findings.push({ severity: "warning", file, code: "index-missing-entry", message: `Index does not link ${file}` });
+        }
+        if (type === "design" && !index2.includes("overview.md")) {
+          findings.push({
+            severity: "warning",
+            file: "overview.md",
+            code: "index-missing-overview",
+            message: "Index does not link overview.md"
+          });
+        }
+      }
+      return { directory: relativeDir, files: files.length, findings };
+    }
+    module2.exports = {
+      auditDocuments,
+      buildIndex,
+      buildGenericIndex,
+      configFor,
+      createDocument,
+      docEntries,
+      docFiles,
+      docTypes,
+      logIndexResult,
+      migrateDocs,
+      relationFields,
+      changeFields,
+      changesSchema,
+      frontMatterSchema,
+      frontMatter,
+      relationSchema,
+      scaffoldDocsTree,
+      validateFrontMatter: validateFrontMatter2
     };
   }
 });
@@ -29628,7 +30602,6 @@ var require_adr_utils = __commonJS({
     var fs2 = require("node:fs");
     var path2 = require("node:path");
     var matter = require_gray_matter();
-    var { z } = require_zod();
     var {
       detectNaming: sharedDetectNaming,
       findDocumentDir,
@@ -29636,6 +30609,9 @@ var require_adr_utils = __commonJS({
       nextNumber: sharedNextNumber,
       slugify: sharedSlugify
     } = require_document_utils();
+    var {
+      validateFrontMatter: validateDocSuiteFrontMatter
+    } = require_doc_suite_utils();
     var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
     var relationFields = [
       "source",
@@ -29654,17 +30630,6 @@ var require_adr_utils = __commonJS({
       "verified-by",
       "references"
     ];
-    var relationSchema = z.object(Object.fromEntries(
-      relationFields.map((field) => [field, z.array(z.string()).default([])])
-    )).default({});
-    var adrFrontMatterSchema = z.object({
-      status: z.string().min(1),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      "decision-makers": z.array(z.string()),
-      consulted: z.array(z.string()),
-      informed: z.array(z.string()),
-      relations: relationSchema
-    }).passthrough();
     function findAdrDir2(cwd, explicitDir) {
       return findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
     }
@@ -29774,20 +30739,13 @@ var require_adr_utils = __commonJS({
     function matterData(content3) {
       return matter(content3).data || {};
     }
-    function formatIssuePath(pathParts) {
-      return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
-    }
-    function validateFrontMatterWithZod(data) {
-      const result = adrFrontMatterSchema.safeParse(data);
-      if (result.success) return [];
-      return result.error.issues.map((issue) => ({
-        message: issue.message,
-        path: formatIssuePath(issue.path)
-      }));
-    }
     function validateFrontMatter2(content3) {
+      const issues = validateDocSuiteFrontMatter(content3);
       const data = matterData(content3);
-      return validateFrontMatterWithZod(data);
+      if (data.type !== "adr") {
+        issues.push({ message: 'Expected type "adr"', path: "type" });
+      }
+      return issues;
     }
     function relationMap(content3) {
       const data = matterData(content3);
@@ -29812,11 +30770,12 @@ var require_adr_utils = __commonJS({
         const content3 = fs2.readFileSync(fullPath, "utf8");
         const data = matterData(content3);
         return {
+          id: typeof data.id === "string" ? data.id : null,
           file,
           path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
-          title: await titleFromAdr(content3, path2.basename(file, ".md")),
+          title: typeof data.title === "string" ? data.title : await titleFromAdr(content3, path2.basename(file, ".md")),
           status: typeof data.status === "string" ? data.status : null,
-          date: typeof data.date === "string" ? data.date : null,
+          date: typeof data.created === "string" ? data.created : null,
           relations: relationMap(content3)
         };
       }));
@@ -29826,10 +30785,11 @@ var require_adr_utils = __commonJS({
       const rows = await Promise.all(adrFiles2(dir).map(async (file) => {
         const content3 = fs2.readFileSync(path2.join(dir, file), "utf8");
         const data = matterData(content3);
-        const title = await titleFromAdr(content3, path2.basename(file, ".md"));
+        const title = typeof data.title === "string" && data.title.trim() ? data.title.trim() : await titleFromAdr(content3, path2.basename(file, ".md"));
         const status = typeof data.status === "string" ? data.status : "\u2014";
         const numberMatch = /^(\d+)-/.exec(file);
-        const id = numberMatch ? `ADR-${numberMatch[1]}` : "\u2014";
+        const fallbackId = numberMatch ? `ADR-${numberMatch[1]}` : "\u2014";
+        const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : fallbackId;
         return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
       }));
       const body = rows.length > 0 ? `${header}
@@ -29863,8 +30823,7 @@ ${body}
       sectionBody,
       slugify,
       titleFromAdr,
-      validateFrontMatter: validateFrontMatter2,
-      validateFrontMatterWithZod
+      validateFrontMatter: validateFrontMatter2
     };
   }
 });

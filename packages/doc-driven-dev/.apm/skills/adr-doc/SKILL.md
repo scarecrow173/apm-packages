@@ -175,7 +175,7 @@ the decision being recorded.
    Typical gap-fill questions:
 
    - Who needs to know or approve this decision?
-     (Governance context for MADR/RACI front matter.)
+     (ADR governance context for `metadata.adr`, not top-level front matter.)
    - What would an agent need to implement this?
      (Affected files, directories, interfaces, dependencies, configuration,
      tests, patterns to follow, patterns to avoid, and verification criteria.)
@@ -284,10 +284,14 @@ Do not proceed to Phase 2 until the human confirms the summary.
 6. Write Verification criteria as checkboxes.
    These must be specific enough that an agent can programmatically or manually
    check each item.
-7. Connect related ADRs with front matter.
-   Use the shared meaning-based `relations` fields described in
-   `references/adr-conventions.md`.
-8. Generate the file.
+7. Fill front matter using the shared doc-suite contract described in
+   `references/adr-conventions.md`. Required lifecycle fields such as `id`,
+   `type`, `status`, `title`, `created`, `updated`, `owners`, and `relations`
+   belong at the top level. ADR-specific governance belongs under
+   `metadata.adr`, not top-level `decision-makers`, `consulted`, or `informed`.
+8. Connect related ADRs with the shared meaning-based `relations` fields
+   described in `references/adr-conventions.md`.
+9. Generate the file.
    Preferred: run `scripts/new_adr.js`. It handles directory detection, naming,
    templates, metadata defaults, and index updates. If you cannot run scripts,
    copy a template from `assets/templates/` and fill it manually.

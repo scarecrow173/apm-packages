@@ -20451,7 +20451,7 @@ var require_doc_suite_utils = __commonJS({
       "moved",
       "generated"
     ];
-    var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design"];
+    var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr"];
     var configs = {
       idea: {
         defaultStatus: "draft",
@@ -20508,6 +20508,14 @@ var require_doc_suite_utils = __commonJS({
         idPrefix: "DESIGN",
         statusValues: ["draft", "approved", "superseded", "rejected"],
         type: "design"
+      },
+      adr: {
+        defaultStatus: "proposed",
+        dir: "docs/adr",
+        dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+        idPrefix: "ADR",
+        statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+        type: "adr"
       }
     };
     var scaffoldTargets = [
@@ -20684,10 +20692,46 @@ var require_doc_suite_utils = __commonJS({
         })
       ];
     }
+    function isPlainObject(value) {
+      return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+    }
+    function formatMetadataScalar(value) {
+      return typeof value === "string" ? quote(value) : String(value);
+    }
+    function formatMetadataNode(key, value, indent) {
+      if (value === null || value === void 0) return [];
+      const prefix = " ".repeat(indent);
+      if (Array.isArray(value)) {
+        if (value.length === 0) return [`${prefix}${key}: []`];
+        const items = value.flatMap((item) => {
+          if (item === null || item === void 0) return [];
+          if (isPlainObject(item)) {
+            return [`${prefix} -`, ...Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3))];
+          }
+          if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
+          if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
+          return [`${prefix} - ${quote(JSON.stringify(item))}`];
+        });
+        return items.length > 0 ? [`${prefix}${key}:`, ...items] : [`${prefix}${key}: []`];
+      }
+      if (isPlainObject(value)) {
+        const entries = Object.entries(value).flatMap(([childKey, childValue]) => formatMetadataNode(childKey, childValue, indent + 2));
+        return entries.length > 0 ? [`${prefix}${key}:`, ...entries] : [`${prefix}${key}: {}`];
+      }
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        return [`${prefix}${key}: ${formatMetadataScalar(value)}`];
+      }
+      return [`${prefix}${key}: ${quote(JSON.stringify(value))}`];
+    }
+    function formatMetadataBlock(metadata) {
+      if (!metadata) return [];
+      const entries = Object.entries(metadata).flatMap(([key, value]) => formatMetadataNode(key, value, 2));
+      return entries.length > 0 ? ["metadata:", ...entries] : ["metadata: {}"];
+    }
     function completeRelations(input) {
       return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []]));
     }
-    function frontMatter(config, number, title, status, date, relations) {
+    function frontMatter(config, number, title, status, date, relations, metadata) {
       const complete = completeRelations(relations);
       const changes = completeChanges(relations?.changes);
       return [
@@ -20703,6 +20747,7 @@ var require_doc_suite_utils = __commonJS({
         formatRelationBlock("source", complete.source),
         ...formatChangesBlock(changes),
         ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
+        ...formatMetadataBlock(metadata),
         "---"
       ].join("\n");
     }
@@ -21329,6 +21374,7 @@ ${bodyFor(type, options2.title)}
       changeFields,
       changesSchema,
       frontMatterSchema,
+      frontMatter,
       relationSchema,
       scaffoldDocsTree,
       validateFrontMatter
