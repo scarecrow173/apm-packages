@@ -6,6 +6,9 @@ license: MIT
 targets:
   - codex
   - copilot
+  - cursor
+  - claude
+  - agent-skills
 includes:
   - .apm/
 scripts:

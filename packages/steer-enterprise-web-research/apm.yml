@@ -3,9 +3,12 @@ version: 0.1.0
 description: SteER / Enterprise Deep Research style web research workflow for Codex and GitHub Copilot.
 author: Akiyoshi Koyama
 license: MIT
-target:
+targets:
   - codex
   - copilot
+  - cursor
+  - claude
+  - agent-skills
 type: skill
 includes:
   - .apm/

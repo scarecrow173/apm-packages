@@ -4,18 +4,17 @@ description: A collection of APM packages for research, skills, agents, and prom
 author: Akiyoshi Koyama
 license: MIT
 targets:
-- copilot
-- claude
-- cursor
-- codex
-- agent-skills
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - agent-skills
 devDependencies:
   apm:
   - ./packages/basic-dev-foundation
   - ./packages/recommended-dev-suite
   - ./packages/steer-enterprise-web-research
   - ./packages/doc-driven-dev
-  - ./packages/apm-package-judge
   - ./packages/github-automation
   - ./packages/security-governance
   - ./packages/visualization
@@ -63,11 +62,6 @@ marketplace:
     category: documentation
     source: scarecrow173/apm-packages
     subdir: packages/doc-driven-dev
-
-  - name: apm-package-judge
-    category: evaluation
-    source: scarecrow173/apm-packages
-    subdir: packages/apm-package-judge
 
   - name: github-automation
     category: automation

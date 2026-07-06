@@ -9,7 +9,7 @@ import {
 } from "../src/research_audit";
 
 test("resolveOutputPath points to package artifact location", () => {
-  const out = resolveOutputPath("D:/repo/apm-packages/scripts/steer-enterprise-web-research");
+  const out = resolveOutputPath(path.join("workspace", "scripts", "steer-enterprise-web-research"));
   assert.equal(
     out.replaceAll("\\", "/").endsWith("/packages/steer-enterprise-web-research/scripts/research_audit.js"),
     true,
