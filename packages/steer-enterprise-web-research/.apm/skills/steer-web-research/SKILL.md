@@ -1,6 +1,6 @@
 ---
 name: steer-web-research
-description: Use this skill for web research, deep research, current-information investigation, source comparison, tool/paper discovery, technology landscape research, evidence-backed reports, or any task that asks for iterative search, audit, reflection, or re-search. It implements a SteER/Enterprise-Deep-Research style loop: task decomposition, diversity-aware search planning, adaptive pause decisions, evidence ledger, reflection, and sufficiency-based termination.
+description: "Use skill web research, deep research, current-information investigation, source comparison, tool/paper discovery, technology landscape research, evidence-backed reports, or any task asks iterative search, audit, reflection, or re-search. implements SteER/Enterprise-Deep-Research style loop: task decomposition, diversity-aware search planning, adaptive pause decisions, evidence ledger, reflection, sufficiency-based termination."
 license: MIT
 ---
 
