@@ -11,10 +11,9 @@ This document defines the fixed sequence and decision rules that
 | 0 | Bootstrap | `scaffold_docs` | canonical `docs/` tree exists; existing files are preserved; `docs/designs/overview.md` is left to `design-doc` |
 | 1 | Briefing | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Design | `design-doc` | approved design consistent with spec/ADR |
-| 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001 (approved design required) |
-| 4 | Execution Slice | `task-doc` | tasks traceable to plan with verification |
-| 5 | Implementation | `implementation-flow` | all tasks pass verification |
-| 6 | Exit | `doc-status` | front matter, relations, index integrity |
+| 3 | Planning & Tasking | `plan-doc` + `task-doc` | approved plan; traceable tasks with verification |
+| 4 | Implementation | `implementation-flow` | all tasks pass verification |
+| 5 | Exit | `doc-status` | front matter, relations, index integrity |
 
 ## Phase -1: Migration (Optional)
 
@@ -98,7 +97,7 @@ Purpose: Concretize design into implementable form, filling gaps from Briefing.
 - `design-doc` derives from `spec-doc` and `adr-doc`.
 - Design information required for `plan-doc` input is complete.
 
-## Phase 3: Planning
+## Phase 3: Planning & Tasking
 
 Purpose: Integrate spec, ADR, and design into an implementation plan.
 
@@ -106,27 +105,16 @@ Purpose: Integrate spec, ADR, and design into an implementation plan.
 
 - 3-1 Plan Authoring: define dependency order, vertical slices, verification steps, checkpoints in `plan-doc`.
 - 3-2 Planning Gate: respect existing gate (PLAN-DOC-GATE-001); refuse plan creation without approved design.
-- 3-3 Execution Readiness: define implementation work at a granularity decomposable into `task-doc`.
+- 3-3 Plan Approval: review the plan and set `status: approved` before task creation.
+- 3-4 Task Decomposition: create `task-doc` entries from the approved plan with explicit dependencies and verification conditions.
 
-### Planning Completion Criteria
+### Planning & Tasking Completion Criteria
 
-- `plan-doc` references `spec-doc` / `adr-doc` / `design-doc`.
-- Implementation order and verification conditions directly feed into `task-doc`.
+- `plan-doc` references `spec-doc` / `adr-doc` / `design-doc` and has `status: approved`.
+- All `task-doc` entries are traceable to plan sections.
+- Each task has verification steps and documented dependencies.
 
-## Phase 4: Execution Slice
-
-Purpose: Decompose plan into implementation units and connect to execution.
-
-- Create `task-doc` entries from plan, with explicit dependencies.
-- Each task has: implementation steps + verification conditions + completion criteria.
-- If new constraints surface during implementation, update `adr-doc` / `design-doc` as needed.
-
-### Execution Slice Completion Criteria
-
-- `task-doc` entries are traceable to plan.
-- Each task has verification steps.
-
-## Phase 5: Implementation
+## Phase 4: Implementation
 
 Purpose: Execute task units by delegating to `implementation-flow`, which
 dynamically discovers all available skills and configures the appropriate
@@ -134,14 +122,14 @@ skill stack per task via `implementation-profile.md`.
 
 ### Steps
 
-- 5-1 Open implementation documentation: before code changes for each task, read
+- 4-1 Open implementation documentation: before code changes for each task, read
   `impl-doc` SKILL and `impl-doc` conventions, and open an `in-progress`
   Implementation Record.
-- 5-2 Invoke `implementation-flow`: delegate per-task execution, skill
+- 4-2 Invoke `implementation-flow`: delegate per-task execution, skill
   discovery, configuration, verification, and in-flight documentation upkeep.
-- 5-3 Constraint Feedback: if `implementation-flow` reports upstream gaps,
+- 4-3 Constraint Feedback: if `implementation-flow` reports upstream gaps,
   update `adr-doc` / `design-doc` and record loopback.
-- 5-4 Completion Check: confirm all tasks pass verification and their
+- 4-4 Completion Check: confirm all tasks pass verification and their
   Implementation Records are completed and audited before closure.
 
 ### Implementation Completion Criteria
@@ -152,7 +140,7 @@ skill stack per task via `implementation-profile.md`.
 - Each task opened an in-progress Implementation Record before code changes.
 - Each Implementation Record was completed and audited before task closure.
 
-## Phase 5 Exit Gate: Post-Implementation Review / Follow-up Triage
+## Phase 4 Exit Gate: Post-Implementation Review / Follow-up Triage
 
 Purpose: verify implemented behavior against approved upstream documents before
 the document set is allowed to exit.
@@ -162,11 +150,11 @@ the document set is allowed to exit.
 | `bug-fix` | Create or update a task under the current approved plan; link it with `relations.depends-on` / `relations.blocks`. |
 | `decision-required` | Return to Phase 1, Phase 2, or ADR update before creating implementation tasks. |
 | `new-feature` | Do not attach to the current plan; promote to idea/discovery/spec flow. |
-| `doc-only` | Update the affected document or implementation record before Phase 6. |
+| `doc-only` | Update the affected document or implementation record before Phase 5. |
 | `defer` | Record the deferral with `relations.defers` or an explicit deferred task. |
 | `wont-do` | Record the reason; if represented as a task, set `status: wont-do`. |
 
-## Phase 6: Exit
+## Phase 5: Exit
 
 Purpose: Confirm document integrity via `doc-status` audit after execution.
 

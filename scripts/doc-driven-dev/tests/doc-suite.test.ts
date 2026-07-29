@@ -333,11 +333,15 @@ test("new_plan enforces approved design gate with fixed error code", () => {
   assert.match(invalidApproval.stderr, /PLAN-DOC-GATE-001/);
 });
 
-test("new_task links to plan and list_docs filters by status", () => {
+test("new_task requires an approved or active plan and links it", () => {
   const repo = tempRepo();
   const planDir = path.join(repo, "docs/plans");
   fs.mkdirSync(planDir, { recursive: true });
-  fs.writeFileSync(path.join(planDir, "0001-plan.md"), "# Plan\n", "utf8");
+  fs.writeFileSync(
+    path.join(planDir, "0001-plan.md"),
+    ["---", 'id: "PLAN-0001"', 'type: "plan"', 'status: "approved"', 'title: "Plan"', 'created: "2026-07-30"', 'updated: "2026-07-30"', "owners: []", "relations:", "  implements: []", "---", "# Plan", ""].join("\n"),
+    "utf8",
+  );
 
   const created = runScript(
     "task-doc",
@@ -360,6 +364,22 @@ test("new_task links to plan and list_docs filters by status", () => {
   const report = JSON.parse(listed.stdout);
   assert.equal(report.entries.length, 1);
   assert.equal(report.entries[0].status, "in-progress");
+});
+
+test("new_task rejects a draft or superseded plan", () => {
+  const repo = tempRepo();
+  const planDir = path.join(repo, "docs/plans");
+  fs.mkdirSync(planDir, { recursive: true });
+  for (const [name, status] of [["draft", "draft"], ["superseded", "superseded"]]) {
+    fs.writeFileSync(
+      path.join(planDir, `0001-${name}.md`),
+      ["---", `id: "PLAN-${name === "draft" ? "0001" : "0002"}"`, 'type: "plan"', `status: "${status}"`, `title: "${name}"`, 'created: "2026-07-30"', 'updated: "2026-07-30"', "owners: []", "relations:", "  implements: []", "---", "# Plan", ""].join("\n"),
+      "utf8",
+    );
+    const result = runScript("task-doc", "new_task.js", ["--title", `Task for ${name}`, "--plan", `docs/plans/0001-${name}.md`], { cwd: repo });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /TASK-DOC-GATE-001/);
+  }
 });
 
 test("doc-status audits required front matter, status, indexes, relations, and sources", () => {
@@ -447,7 +467,8 @@ test("doc-driven-dev-lifecycle meta skill ships SKILL.md and flow-contract refer
   assert.match(skill, /^name: doc-driven-dev-lifecycle$/m);
   assert.match(skill, /HARD-GATE/);
   assert.match(skill, /Phase 1.*Briefing/);
-  assert.match(skill, /Phase 6.*Exit/);
+  assert.match(skill, /Phase 3 Planning & Tasking/);
+  assert.match(skill, /Phase 5 Exit/);
 });
 
 test("implementation-flow opens impl-doc before task execution", () => {
@@ -485,8 +506,8 @@ test("implementation-flow opens impl-doc before task execution", () => {
 
   assert.match(lifecycle, /Before the first code change for each task/);
   assert.match(lifecycle, /in-progress Implementation Record/);
-  assert.match(lifecycleJa, /Phase 5（Implementation）に入る前に/);
-  assert.match(contract, /5-1 Open implementation documentation/);
+  assert.match(lifecycleJa, /Phase 4（Implementation）に入る前に/);
+  assert.match(contract, /4-1 Open implementation documentation/);
 
   assert.match(implDoc, /Task implementation is starting/);
   assert.match(implDoc, /Create or reuse an in-progress Implementation Record/);
@@ -499,7 +520,7 @@ test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", 
   const contract = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.md"), "utf8");
   const contractJa = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.ja.md"), "utf8");
 
-  assert.match(skill, /Phase 5 Exit Gate/);
+  assert.match(skill, /Phase 4 Exit Gate/);
   assert.match(skill, /Post-Implementation Review/);
   assert.match(contract, /Follow-up Triage/);
   assert.match(contract, /`bug-fix`/);
@@ -509,7 +530,7 @@ test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", 
   assert.match(contract, /`defer`/);
   assert.match(contract, /`wont-do`/);
 
-  assert.match(skillJa, /Phase 5 終了ゲート/);
+  assert.match(skillJa, /Phase 4 終了ゲート/);
   assert.match(skillJa, /実装後レビュー/);
   assert.match(contractJa, /フォローアップ分類/);
   assert.match(contractJa, /`bug-fix`/);
@@ -531,12 +552,14 @@ test("task-doc documents follow-up task routing and dependency rules", () => {
 
   assert.match(skill, /follow-up task/i);
   assert.match(skill, /approved plan/i);
+  assert.match(skill, /TASK-DOC-GATE-001/);
   assert.match(conventions, /Follow-up Classification/);
   assert.match(conventions, /relations\.depends-on/);
   assert.match(conventions, /relations\.blocks/);
   assert.match(template, /## Classification/);
 
   assert.match(skillJa, /承認済み plan/);
+  assert.match(skillJa, /TASK-DOC-GATE-001/);
   assert.match(conventionsJa, /フォローアップ分類/);
   assert.match(conventionsJa, /relations\.depends-on/);
   assert.match(conventionsJa, /relations\.blocks/);
@@ -550,9 +573,9 @@ test("doc-status documents unclassified follow-up review before exit", () => {
   const skillJa = fs.readFileSync(path.join(statusRoot, "SKILL.ja.md"), "utf8");
 
   assert.match(skill, /unclassified follow-up/i);
-  assert.match(skill, /Phase 5 Exit Gate/);
+  assert.match(skill, /Phase 4 Exit Gate/);
   assert.match(skillJa, /未分類フォローアップ/);
-  assert.match(skillJa, /Phase 5 終了ゲート/);
+  assert.match(skillJa, /Phase 4 終了ゲート/);
 });
 
 test("new_design continues front-matter id numbering and preserves slug naming in slug repos", () => {

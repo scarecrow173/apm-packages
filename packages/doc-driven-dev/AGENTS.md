@@ -100,7 +100,7 @@ Workflow and meta skills included here:
 
 | Skill | Purpose | Origin |
 | --- | --- | --- |
-| doc-driven-dev-lifecycle | Meta skill: six-phase document lifecycle orchestrator | original |
+| doc-driven-dev-lifecycle | Meta skill: five-phase document lifecycle orchestrator | original |
 | briefing-flow | Meta skill: dynamic orchestrator for briefing and spec/ADR preparation | original |
 | implementation-flow | Meta skill: dynamic orchestrator that discovers and routes to all available implementation skills via implementation profiles | original |
 | skill-discovery-protocol | Flow-neutral skill catalog / profile generation and validation | original |
@@ -113,15 +113,15 @@ This package contains three meta-skills that orchestrate different phases of doc
 
 | Meta-Skill | Entry Condition | Responsibility | Mutual Exclusions |
 | --- | --- | --- | --- |
-| `doc-driven-dev-lifecycle` | User invokes with 6-phase scope explicitly OR no other entry point matches | Phase 1–6 orchestration; delegates Phase 1 to briefing-flow, Phases 5+ to implementation-flow | Must not activate if `briefing-flow` already active OR if request explicitly targets Phase 5+ (→ implementation-flow only) |
-| `briefing-flow` | User invokes briefing/discovery/spec/ADR creation task explicitly OR lifecycle delegates Phase 1 | Phase A–D discovery; concurrent spec + ADR dispatch; skill stack assembly | Must not activate if `doc-driven-dev-lifecycle` is already driving Phase 2–6 OR if request explicitly targets code implementation (→ implementation-flow only) |
-| `implementation-flow` | User invokes task execution / code implementation explicitly OR lifecycle delegates Phase 5 | Phase A–E task execution with review gates; discovers and routes available implementation skills | Must not activate if request targets document creation (→ lifecycle or briefing-flow) OR if user is in mid-briefing or design review |
+| `doc-driven-dev-lifecycle` | User invokes with 5-phase scope explicitly OR no other entry point matches | Phase 1–5 orchestration; delegates Phase 1 to briefing-flow, Phase 4 to implementation-flow | Must not activate if `briefing-flow` already active OR if request explicitly targets Phase 4 implementation (→ implementation-flow only) |
+| `briefing-flow` | User invokes briefing/discovery/spec/ADR creation task explicitly OR lifecycle delegates Phase 1 | Phase A–D discovery; concurrent spec + ADR dispatch; skill stack assembly | Must not activate if `doc-driven-dev-lifecycle` is already driving Phase 2–5 OR if request explicitly targets code implementation (→ implementation-flow only) |
+| `implementation-flow` | User invokes task execution / code implementation explicitly OR lifecycle delegates Phase 4 | Phase A–E task execution with review gates; discovers and routes available implementation skills | Must not activate if request targets document creation (→ lifecycle or briefing-flow) OR if user is in mid-briefing or design review |
 
 ### Dispatch Decision Tree
 
 ```text
 Entry Request
-├─ Contains "lifecycle" or "6-phase" or "end-to-end" keyword?
+├─ Contains "lifecycle" or "5-phase" or "end-to-end" keyword?
 │  └─ YES → doc-driven-dev-lifecycle
 │
 ├─ Contains "briefing" or "discovery" or "spec" or "adr" keyword?
@@ -132,7 +132,7 @@ Entry Request
 │
 └─ No clear meta-skill signal → Consult request context
    ├─ If in middle of spec/ADR creation → briefing-flow
-   ├─ If design already approved, in planning/task phase → lifecycle or implementation-flow per context
+   ├─ If design and plan are approved, in task phase → lifecycle or implementation-flow per context
    └─ If uncertain → Escalate to user for clarification
 ```
 

@@ -349,7 +349,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 ## Entry Conditions
 
 - Task units with defined verification conditions exist (`task-doc` or equivalent).
-- When invoked from `doc-driven-dev-lifecycle`, Phase 4 tasks are approved.
+- When invoked from `doc-driven-dev-lifecycle`, Phase 3 Planning & Tasking is complete and its tasks are approved.
 
 ## Completion Conditions
 

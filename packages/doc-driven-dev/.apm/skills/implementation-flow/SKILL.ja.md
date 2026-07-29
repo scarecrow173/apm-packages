@@ -336,7 +336,7 @@ dispatch-specific override・emergency override・その他の non-default routi
 ## エントリ条件
 
 - 検証条件が定義されたタスク単位（`task-doc` または同等）が存在すること。
-- `doc-driven-dev-lifecycle` から呼び出される場合、Phase 4 タスクが承認済みであること。
+- `doc-driven-dev-lifecycle` から呼び出される場合、Phase 3 Planning & Tasking が完了し、タスクが承認済みであること。
 
 ## 完了条件
 

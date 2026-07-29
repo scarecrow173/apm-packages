@@ -135,7 +135,7 @@ Internal documents use relative paths. External sources use URLs.
 
 ## Follow-up Classification
 
-Tasks created from the lifecycle Phase 5 Exit Gate must include a
+Tasks created from the lifecycle Phase 4 Exit Gate must include a
 `## Classification` section. Use exactly one value:
 `normal-plan-task`, `bug-fix`, `doc-only`, `defer`, or `wont-do`.
 Items classified as `decision-required` or `new-feature` must return upstream

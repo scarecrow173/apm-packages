@@ -50,40 +50,36 @@ flowchart TD
     G1 -->|"loopback: briefing 未完了"| P1
 
     P2 --> G2{"Design Gate"}
-    G2 -->|pass| P3["Phase 3: plan-doc"]
+    G2 -->|pass| P3["Phase 3: plan-doc -> task-doc"]
     G2 -->|"loopback: design 未承認または不整合"| P1
     G2 -->|"loopback: design の再整理が必要"| P2
 
-    P3 --> G3{"Planning Gate"}
-    G3 -->|pass| P4["Phase 4: task-doc"]
+    P3 --> G3{"Planning & Tasking Gate"}
+    G3 -->|pass| P4["Phase 4: implementation-flow -> impl-doc"]
     G3 -->|"loopback: 承認済み design 不足"| P2
-    G3 -->|"loopback: plan 分解の問題"| P3
+    G3 -->|"loopback: plan approval 不足"| P3
+    G3 -->|"loopback: task のトレーサビリティ、依存、検証不足"| P3
 
-    P4 --> G4{"Task Gate"}
-    G4 -->|pass| P5["Phase 5: implementation-flow -> impl-doc"]
-    G4 -->|"loopback: task のトレーサビリティまたは依存不足"| P3
-    G4 -->|"loopback: task 定義が未完了"| P4
+    P4 --> G4{"Implementation Gate"}
+    G4 -->|pass| GX{"Phase 4 終了ゲート:\n実装後レビュー +\nフォローアップ分類"}
+    G4 -->|"loopback: verification 未完了"| P3
+    G4 -->|"loopback: 実装のやり直しが必要"| P4
 
-    P5 --> G5{"Implementation Gate"}
-    G5 -->|pass| GX{"Phase 5 終了ゲート:\n実装後レビュー +\nフォローアップ分類"}
-    G5 -->|"loopback: verification 未完了"| P4
-    G5 -->|"loopback: 実装のやり直しが必要"| P5
+    P4 -->|"loopback: upstream gap を発見"| P1
+    P4 -->|"loopback: constraint/design gap を発見"| P2
 
-    P5 -->|"loopback: upstream gap を発見"| P1
-    P5 -->|"loopback: constraint/design gap を発見"| P2
-
-    GX -->|フォローアップなし| P6["Phase 6: doc-status"]
-    GX -->|bug-fix| P4
+    GX -->|フォローアップなし| P5["Phase 5: doc-status"]
+    GX -->|bug-fix| P3
     GX -->|decision-required| P1
     GX -->|decision-required| P2
     GX -->|new-feature| P1
-    GX -->|doc-only| P4
-    GX -->|終了証跡のみの doc-only| P6
-    GX -->|defer または wont-do| P6
+    GX -->|doc-only| P3
+    GX -->|終了証跡のみの doc-only| P5
+    GX -->|defer または wont-do| P5
 
-    P6 --> G6{"Exit Gate"}
-    G6 -->|pass| E["exit"]
-    G6 -->|"loopback: front matter, relation, index の問題"| P6
+    P5 --> G5{"Exit Gate"}
+    G5 -->|pass| E["exit"]
+    G5 -->|"loopback: front matter, relation, index の問題"| P5
 ```
 
 - **Spec** は WHAT、WHY、SCOPE を定義します。
@@ -96,11 +92,11 @@ flowchart TD
   変換済みの canonical docs を作成します。
 - **bootstrap 境界**: `scaffold_docs` は canonical な `docs/` tree を作成しますが、
   `docs/designs/overview.md` は作成せず `design-doc` に任せます。
-- **Phase 5 の実装記録**: `implementation-flow` と `impl-doc` は並行して動く。
+- **Phase 4 の実装記録**: `implementation-flow` と `impl-doc` は並行して動く。
   各 task はコード変更前に `in-progress` の Implementation Record を開き、
   探索が必要な場合は Experiment Log にイベントを追記し、task クローズ前に
   record を完了・監査する。
-- **Phase 5 終了ゲート**: 実装後、lifecycle 利用者は完了した作業を承認済み
+- **Phase 4 終了ゲート**: 実装後、lifecycle 利用者は完了した作業を承認済み
   spec、ADR、design、plan、task の検証証跡と照合します。フォローアップは Exit
   前に分類し、バグ修正、意思決定、新機能、文書更新、延期が孤立 task にならないようにします。
 - **loopback ルール**: loopback はゲート不通過だけではありません。実装や
@@ -237,7 +233,7 @@ task 専用の lifecycle status を使います。
 `docs/impl/ir/` 配下の Implementation Record と `docs/impl/exp/` 配下の
 Experiment Log を扱います。Implementation Record については CLI ベースの
 作成・監査、Experiment Log については CLI ベースの作成・追記・編集・監査を提供します。
-`doc-driven-dev-lifecycle` の Phase 5 では、`impl-doc` は実装後だけでなく
+`doc-driven-dev-lifecycle` の Phase 4 では、`impl-doc` は実装後だけでなく
 task 開始時に使う。既知解の task でも `in-progress` の Implementation Record は
 作成し、任意なのは Experiment Log だけである。
 
@@ -264,14 +260,14 @@ flow-neutral な catalog と flow-specific な profile を構築し、
 
 ### オーケストレーション Skill
 
-これらのオーケストレーション skill は Phase 1 (Briefing)、Phase 5
+これらのオーケストレーション skill は Phase 1 (Briefing)、Phase 4
 (Implementation)、およびリポジトリ固有の skill discovery の周辺で動作します。
 固定の workflow-skill stack を同梱するのではなく、その場の環境で利用可能な skill を
 発見してルーティングします。
 
 | Skill | 役割 |
 | --- | --- |
-| `doc-driven-dev-lifecycle` | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーション |
+| `doc-driven-dev-lifecycle` | メタスキル: 5 フェーズの文書ライフサイクル全体をオーケストレーション |
 | `briefing-flow` | メタスキル: briefing 作業を利用可能な discovery/document skill にルーティング |
 | `implementation-flow` | メタスキル: task を workflow skill にルーティング |
 | `skill-discovery-protocol` | メタスキル: skill discovery 成果物を生成・検証 |
@@ -320,10 +316,10 @@ doc-driven-dev-lifecycle
   -> Phase 1: briefing-flow
   -> Phase 1 outputs: discovery-doc（任意）+ spec-doc + adr-doc  (discovery で探索を永続化；spec + adr は並列)
   -> Phase 2: design-doc                  (overview-first design gate)
-  -> Phase 4a: plan-doc -> task-doc
-  -> Phase 5: implementation-flow -> impl-doc
-  -> Phase 5 終了ゲート: 実装後レビュー + フォローアップ分類
-  -> Phase 6: doc-status -> exit
+  -> Phase 3: plan-doc -> task-doc（task 作成前に plan 承認）
+  -> Phase 4: implementation-flow -> impl-doc
+  -> Phase 4 終了ゲート: 実装後レビュー + フォローアップ分類
+  -> Phase 5: doc-status -> exit
 ```
 
 `doc-driven-dev-lifecycle` がライフサイクルの entrypoint です。`migrate_docs` は
@@ -335,7 +331,7 @@ skill であり、別個のトップレベルライフサイクルではあり�
 並列トラックは `spec-doc` + `adr-doc` のままで、spec は何を作るか、なぜ必要か、
 範囲、受け入れ条件を定義し、ADR は技術判断、代替案、採用理由を記録します。
 Phase 1 で両方に十分な文脈が揃ったら briefing の完了成果物として並列に作成し、
-その後 design と planning へ進みます。Phase 5 では `implementation-flow` と
+その後 design と planning へ進みます。Phase 4 では `implementation-flow` と
 `impl-doc` が並行して動き、各 task は `in-progress` の Implementation Record を
 開くか再利用してから着手し、探索が必要な場合は Experiment Log にイベントを追記し、
 task クローズ前に record を完了し、監査します。

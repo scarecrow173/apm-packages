@@ -2,7 +2,12 @@
 "use strict";
 
 const path = require("node:path");
+const fs = require("node:fs");
+const matter = require("gray-matter");
 const { createDocument, logIndexResult } = require("../../lib/doc_suite_utils.ts");
+
+const TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
+const TASKABLE_PLAN_STATUSES = new Set(["approved", "in-progress", "completed"]);
 
 type CliArgs = {
   cwd: string;
@@ -42,6 +47,21 @@ function usage(): string {
   return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
 }
 
+function validatePlanGate(cwd: string, planTarget?: string): void {
+  if (!planTarget) return;
+  const planPath = path.resolve(cwd, planTarget);
+  if (!fs.existsSync(planPath) || !fs.statSync(planPath).isFile()) throw new Error(TASK_DOC_GATE_ERROR);
+  let status: unknown;
+  try {
+    status = matter(fs.readFileSync(planPath, "utf8")).data.status;
+  } catch {
+    throw new Error(TASK_DOC_GATE_ERROR);
+  }
+  if (typeof status !== "string" || !TASKABLE_PLAN_STATUSES.has(status)) {
+    throw new Error(TASK_DOC_GATE_ERROR);
+  }
+}
+
 async function main(): Promise<void> {
   try {
     const args = parseArgs(process.argv.slice(2));
@@ -50,9 +70,11 @@ async function main(): Promise<void> {
       return;
     }
     if (!args.title) throw new Error("Missing required --title");
+    const resolvedCwd = path.resolve(args.cwd);
+    validatePlanGate(resolvedCwd, args.plan);
     const linked = args.plan ? [args.plan] : [];
     const result = await createDocument("task", {
-      cwd: path.resolve(args.cwd),
+      cwd: resolvedCwd,
       date: args.date,
       dir: args.dir,
       name: args.name,

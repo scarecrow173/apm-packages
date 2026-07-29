@@ -11,10 +11,9 @@
 | 0 | Bootstrap | `scaffold_docs` | canonical `docs/` tree が存在し、既存ファイルが保持され、`docs/designs/overview.md` は `design-doc` に委ねられる |
 | 1 | Briefing | `briefing-flow` | briefing 完了出力: 受け入れ条件付き spec + ADR |
 | 2 | Design | `design-doc` | spec/ADR と整合した承認済み設計 |
-| 3 | Planning | `plan-doc` | PLAN-DOC-GATE-001（承認済み設計必須） |
-| 4 | Execution Slice | `task-doc` | plan にトレース可能な検証付きタスク |
-| 5 | Implementation | `implementation-flow` | 全タスクが検証通過 |
-| 6 | Exit | `doc-status` | front matter, relations, index の整合 |
+| 3 | Planning & Tasking | `plan-doc` + `task-doc` | 承認済み plan と検証付き task |
+| 4 | Implementation | `implementation-flow` | 全タスクが検証通過 |
+| 5 | Exit | `doc-status` | front matter, relations, index の整合 |
 
 ## Phase -1: Migration（任意）
 
@@ -96,7 +95,7 @@ briefing 完了成果物になる。
 - `design-doc` が `spec-doc` と `adr-doc` を根拠に持つ。
 - `plan-doc` 入力に必要な設計情報が揃っている。
 
-## Phase 3: Planning
+## Phase 3: Planning & Tasking
 
 目的: `spec-doc`、`adr-doc`、`design-doc` を統合し、実装計画へ落とし込む。
 
@@ -104,41 +103,30 @@ briefing 完了成果物になる。
 
 - 3-1 Plan Authoring: `plan-doc` で依存順序、縦スライス、検証手順、チェックポイントを定義する。
 - 3-2 Planning Gate: 既存 gate を尊重し、承認済み設計がない場合は作成しない。
-- 3-3 Execution Readiness: `task-doc` に分解可能な粒度で実装作業を定義する。
+- 3-3 Plan Approval: plan をレビューし、task 作成前に `status: approved` にする。
+- 3-4 Task Decomposition: 承認済み plan から明示的な依存関係と検証条件付きの `task-doc` を作成する。
 
-### Planning 完了条件
+### Planning & Tasking 完了条件
 
-- `plan-doc` が `spec-doc` / `adr-doc` / `design-doc` を参照する。
-- `task-doc` へ直結できる実装順序と検証条件がある。
+- `plan-doc` が `spec-doc` / `adr-doc` / `design-doc` を参照し、`status: approved` である。
+- 全 `task-doc` が plan セクションにトレース可能である。
+- 各 task に検証手順と依存関係がある。
 
-## Phase 4: Execution Slice
-
-目的: plan を実装単位へ分解し実行可能状態へ接続する。
-
-- `task-doc` を plan 起点で分割し、依存関係を明確にする。
-- 各 task は「実装手順 + 検証条件 + 完了条件」を持つ。
-- 実装中に新たな制約が判明した場合は `adr-doc` / `design-doc` を更新する。
-
-### Execution Slice 完了条件
-
-- `task-doc` が plan にトレース可能である。
-- 各 task に検証手順がある。
-
-## Phase 5: Implementation
+## Phase 4: Implementation
 
 目的: `implementation-flow` に委譲し、全利用可能スキルを動的に発見して
 `implementation-profile.md` を通じてタスクごとに適切なスキルスタックを構成する。
 
 ### ステップ
 
-- 5-1 implementation documentation を開く: コード変更前に task ごとの
+- 4-1 implementation documentation を開く: コード変更前に task ごとの
   `impl-doc` SKILL と `impl-doc` 規約を読み、`in-progress` の
   Implementation Record を開く。
-- 5-2 `implementation-flow` 呼び出し: タスク単位の実行、スキル発見、構成、
+- 4-2 `implementation-flow` 呼び出し: タスク単位の実行、スキル発見、構成、
   検証、および進行中ドキュメント更新を委譲する。
-- 5-3 制約フィードバック: `implementation-flow` が上流の不足を報告した場合、
+- 4-3 制約フィードバック: `implementation-flow` が上流の不足を報告した場合、
   `adr-doc` / `design-doc` を更新しループバックを記録する。
-- 5-4 完了確認: 全タスクの検証通過に加え、Implementation Record が task
+- 4-4 完了確認: 全タスクの検証通過に加え、Implementation Record が task
   クローズ前に完了・監査されていることを確認する。
 
 ### Implementation 完了条件
@@ -149,7 +137,7 @@ briefing 完了成果物になる。
 - 各 task はコード変更前に `in-progress` の Implementation Record を開いている。
 - 各 Implementation Record は task クローズ前に完了・監査されている。
 
-## Phase 5 終了ゲート: 実装後レビュー / フォローアップ分類
+## Phase 4 終了ゲート: 実装後レビュー / フォローアップ分類
 
 目的: 文書セットを Exit へ進める前に、実装済みの挙動が承認済み上流文書と
 整合していることを確認する。
@@ -159,11 +147,11 @@ briefing 完了成果物になる。
 | `bug-fix` | 現在の承認済み plan 配下に task を作成または更新し、`relations.depends-on` / `relations.blocks` で関連付ける。 |
 | `decision-required` | implementation task を作成する前に Phase 1、Phase 2、または ADR 更新へ戻る。 |
 | `new-feature` | 現在の plan には紐付けず、idea/discovery/spec flow へ昇格する。 |
-| `doc-only` | Phase 6 の前に、影響を受ける文書または implementation record を更新する。 |
+| `doc-only` | Phase 5 の前に、影響を受ける文書または implementation record を更新する。 |
 | `defer` | `relations.defers` または明示的な deferred task として延期を記録する。 |
 | `wont-do` | 理由を記録する。task として表す場合は `status: wont-do` にする。 |
 
-## Phase 6: Exit
+## Phase 5: Exit
 
 目的: `doc-status` 監査で文書整合を確認し完了判定する。
 

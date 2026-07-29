@@ -23,7 +23,7 @@ license: MIT
 - 必須フロントマターフィールドの欠落（id, type, status, relations）
 - 壊れた内部 relation（参照先ファイルが存在しない）
 - 索引に未登録の文書
-- Phase 5 終了ゲートから残った未分類フォローアップ
+- Phase 4 終了ゲートから残った未分類フォローアップ
 - 必須の上流 relation または依存リンクを欠くフォローアップ task
 
 ## Output Contract
