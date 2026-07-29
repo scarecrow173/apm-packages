@@ -21,7 +21,7 @@ task を作成するには、以下のいずれかを満たす必要がある:
 2. **緊急修正パス**: plan が存在しない場合、以下をすべて満たすこと:
    - 緊急性の理由を task 本文に 1 行記載する。
    - `relations.implements` または `relations.derives-from` で
-     `approved` な spec-doc または adr-doc を参照する。
+     `approved` な spec-doc または `accepted` な adr-doc を参照する。
    - 参照する spec/ADR も存在しない場合は、先に spec-doc または
      adr-doc を作成すること（簡潔でも可）。
 

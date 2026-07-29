@@ -2,27 +2,7 @@
 
 ## エージェント概要
 
-`token-compression` パッケージは [genshijin](https://github.com/InterfaceX-co-jp/genshijin) スイートを取り込み、トークン圧縮とマルチエージェントクルー機能を提供します：
-
-### genshijin
-
-- **目的:** コアとなるトークン圧縮エンジン
-- **用途:** 意図を保ちながらプロンプト長を削減する
-
-### genshijin-compress
-
-- **目的:** コンテキストや指示を凝縮する圧縮特化スキル
-- **用途:** 大きなコンテキストウィンドウの縮小、冗長トークンの最小化
-
-### genshijin-crew
-
-- **目的:** 圧縮ワークフローに最適化されたマルチエージェントクルーのオーケストレーション
-- **用途:** 軽量で圧縮されたプロンプトで並列エージェントを実行する
-
-### genshijin-review
-
-- **目的:** 圧縮品質のレビューと監査
-- **用途:** 圧縮後の出力がセマンティックな忠実性を保っているかを検証する
+`token-compression` パッケージは、単純で機械的に検証できる作業向けのローカル `cheap-action` advisory skill を提供します。
 
 ### cheap-action
 
@@ -32,10 +12,10 @@
 
 ## 統合ポイント
 
-これらのスキルはリポジトリ内の他パッケージと組み合わせることができます：
+このスキルはリポジトリ内の他パッケージと組み合わせることができます：
 
 - `agent-intelligence` — 圧縮効果の評価
-- `recommended-dev-suite` — 標準開発ワークフローへの圧縮の組み込み
+- `recommended-dev-suite` — 限定された作業を標準開発ワークフローへ組み込む
 - `basic-dev-foundation` — routine な Git と repository 操作に cheap routing を適用する
 
-信頼できる依存関係とローカル資産のリストについては [apm.yml](./apm.yml) を参照してください。
+信頼できるローカル資産のリストについては [apm.yml](./apm.yml) を参照してください。
