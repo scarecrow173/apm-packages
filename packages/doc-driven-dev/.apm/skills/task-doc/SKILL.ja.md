@@ -25,7 +25,7 @@ task を作成するには、以下のいずれかを満たす必要がある:
    - 参照する spec/ADR も存在しない場合は、先に spec-doc または
      adr-doc を作成すること（簡潔でも可）。
 
-3. **実装後フォローアップ path**: lifecycle の Phase 5 終了ゲートから
+3. **実装後フォローアップ path**: lifecycle の Phase 4 終了ゲートから
    task を作成する場合、次のすべてを満たすこと:
    - フォローアップ分類が記録されている。
    - `bug-fix` と `doc-only` は現在の承認済み plan、検証済み task、
@@ -36,6 +36,10 @@ task を作成するには、以下のいずれかを満たす必要がある:
 
 いずれのパスも満たさない場合、task を作成してはならない。
 </HARD-GATE>
+
+`--plan` が指定された場合、task 作成側は TASK-DOC-GATE-001 を適用する。
+参照先 plan が存在し、status が `approved`、`in-progress`、または
+`completed` でなければならない。
 
 ## ワークフロー
 

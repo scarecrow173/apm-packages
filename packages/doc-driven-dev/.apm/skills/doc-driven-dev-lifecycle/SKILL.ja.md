@@ -1,12 +1,12 @@
 ---
 name: doc-driven-dev-lifecycle
-description: "文書駆動開発の全ライフサイクルを、任意の migration、bootstrap フェーズ、6 フェーズのフローでオーケストレーションする。**利用タイミング**: (1) 新機能・新プロジェクト・大規模な変更をゼロから始めるとき、(2) 既存 docs を canonical な doc-driven-dev tree へ移行する必要があるとき、(3) briefing の前に canonical な docs tree を bootstrap する必要があるとき、(4) どの doc スキルから始めるべきか不明なとき、(5) briefing から実行まで end-to-end の文書オーケストレーションが必要なとき、(6) 文書作成フェーズ間の順序制約を強制する必要があるとき。フロー順序: migrate_docs（任意） -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status。キーワード: 文書ライフサイクル、オーケストレーション、migration、フェーズゲート、メタスキル。"
+description: "文書駆動開発の全ライフサイクルを、任意の migration、bootstrap フェーズ、5 フェーズのフローでオーケストレーションする。**利用タイミング**: (1) 新機能・新プロジェクト・大規模な変更をゼロから始めるとき、(2) 既存 docs を canonical な doc-driven-dev tree へ移行する必要があるとき、(3) briefing の前に canonical な docs tree を bootstrap する必要があるとき、(4) どの doc スキルから始めるべきか不明なとき、(5) briefing から実行まで end-to-end の文書オーケストレーションが必要なとき、(6) 文書作成フェーズ間の順序制約を強制する必要があるとき。フロー順序: migrate_docs（任意） -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status。キーワード: 文書ライフサイクル、オーケストレーション、migration、フェーズゲート、メタスキル。"
 license: MIT
 ---
 
 # Doc-Driven Dev Lifecycle
 
-既存の doc スキルを任意の migration、bootstrap フェーズ、6 フェーズのフローで選択・順序付けし、
+既存の doc スキルを任意の migration、bootstrap フェーズ、5 フェーズのフローで選択・順序付けし、
 明示的なゲートで制御することで文書駆動開発の全ライフサイクルを
 オーケストレーションする。
 
@@ -26,8 +26,8 @@ license: MIT
 
 ライフサイクルは
 `Phase -1 Migration（任意） -> Phase 0 Bootstrap -> Phase 1 Briefing ->
-Phase 2 Design -> Phase 3 Planning -> Phase 4 Execution Slice -> Phase 5
-Implementation -> Phase 6 Exit`
+Phase 2 Design -> Phase 3 Planning & Tasking -> Phase 4 Implementation ->
+Phase 5 Exit`
 の順で進む。
 
 各フェーズにはゲートがあり、通過しなければ次へ進めない。各フェーズには
@@ -36,10 +36,10 @@ loopback ルールもあり、ゲート不通過によって同一フェーズ�
 ある。
 詳細は `references/flow-contract.ja.md` を参照。
 
-Phase 6 に進む前に、実装結果を承認済み spec、ADR、design、plan、
+Phase 5 に進む前に、実装結果を承認済み spec、ADR、design、plan、
 task の検証証跡と照合する。すべてのフォローアップを `bug-fix`,
 `decision-required`, `new-feature`, `doc-only`, `defer`, `wont-do` の
-いずれかに分類する。未分類フォローアップが残っている間は Phase 6 に進まない。
+いずれかに分類する。未分類フォローアップが残っている間は Phase 5 に進まない。
 
 ## フェーズ一覧
 
@@ -49,12 +49,11 @@ task の検証証跡と照合する。すべてのフォローアップを `bug-
 | 0 | briefing 前に canonical な docs tree を作成する | `scaffold_docs` | canonical `docs/` tree が存在し、既存ファイルが保持され、`docs/designs/overview.md` は `design-doc` に委ねられている |
 | 1 | 要望を文書入力に変換する | `briefing-flow` | briefing 完了出力: 受け入れ条件付き spec + ADR |
 | 2 | 設計を実装可能な形へ具体化する | `design-doc` | spec/ADR と整合した承認済み設計 |
-| 3 | 実装計画へ統合する | `plan-doc` | PLAN-DOC-GATE-001（承認済み設計必須） |
-| 4 | plan を実装単位へ分解する | `task-doc` | plan にトレース可能な検証付きタスク |
-| 5 | ワークフロースキルでコード実装 | `implementation-flow` | 全タスクが検証通過 |
-| 6 | 文書整合を確認する | `doc-status` | front matter, relations, index の整合 |
+| 3 | plan 統合と task 分解 | `plan-doc` + `task-doc` | 承認済み plan と検証付き task |
+| 4 | ワークフロースキルでコード実装 | `implementation-flow` | 全タスクが検証通過 |
+| 5 | 文書整合を確認する | `doc-status` | front matter, relations, index の整合 |
 
-**重要な制約解決**: 任意の Phase -1 は既存 Markdown docs を移行しますが、original は削除しません。Phase 0 は canonical な docs tree を作成しますが、`docs/designs/overview.md` は作成せず `design-doc` に委ねます。Phase 1（Briefing）では、`briefing-flow` が管理する同じ discovery コンテキストから導出された場合、spec + ADR の並行作成が明示的に許可されます。後続フェーズではシーケンシャルゲートが適用されます（Phase 2 は Phase 1 完了が必須、Phase 3 は Phase 2 の承認済み設計が必須など）。
+**重要な制約解決**: 任意の Phase -1 は既存 Markdown docs を移行しますが、original は削除しません。Phase 0 は canonical な docs tree を作成しますが、`docs/designs/overview.md` は作成せず `design-doc` に委ねます。Phase 1（Briefing）では、`briefing-flow` が管理する同じ discovery コンテキストから導出された場合、spec + ADR の並行作成が明示的に許可されます。後続フェーズではシーケンシャルゲートが適用されます（Phase 2 は Phase 1 完了が必須、Phase 3 は Phase 2 の承認済み設計と plan 承認後の task 作成が必須など）。
 
 ## フェーズ終了チェックリスト
 
@@ -93,15 +92,11 @@ bootstrap contract によって完了を検証する:
 - [ ] 設計と ADR 制約の間に矛盾がない
 - [ ] 実装境界が明確
 
-### Phase 3 終了時
+### Phase 3 終了時（Planning & Tasking）
 
-- [ ] plan-doc が存在し `status:` ≥ `proposed`
+- [ ] plan-doc が存在し `status:` = `approved`
 - [ ] plan-doc が design-doc を参照している
 - [ ] PLAN-DOC-GATE-001 を満たしている（承認済み設計）
-- [ ] task-doc 粒度に分解可能
-
-### Phase 4 終了時
-
 - [ ] 全ての task-doc エントリが作成済み
 - [ ] 各タスクに `verification:` 条件がある
 - [ ] タスクが plan-doc セクションにトレース可能
@@ -150,7 +145,7 @@ Phase 1 は `briefing-flow` に委譲されるため、スキルの発見・構�
 フェーズを飛ばしてはならない。各フェーズのゲートを満たしてから次へ進むこと。
 ゲートを満たせない場合は、当フェーズ内でループするか前フェーズへ戻る。
 
-**Why:** フェーズスキップは手戻りの最大原因。Phase 1 の出力不完全が Phase 3-4
+**Why:** フェーズスキップは手戻りの最大原因。Phase 1 の出力不完全が Phase 3
 の再設計の 40% を引き起こす。各ゲートは下流フェーズが上流品質を前提としているため存在する。
 </HARD-GATE>
 
@@ -200,27 +195,29 @@ tree を作成する。既存ファイルを保持し、`docs/designs/overview.m
 
 - **Design** — `design-doc` を呼び出し、spec/ADR との整合を検証する。
 
-**MANDATORY**: Phase 3（Planning）に入る前に
-[`references/flow-contract.ja.md`](references/flow-contract.ja.md) §3-4 を読み、
-詳細なゲート条件を理解すること。PLAN-DOC-GATE-001 の要件を把握する。
+**MANDATORY**: Phase 3（Planning & Tasking）に入る前に
+[`references/flow-contract.ja.md`](references/flow-contract.ja.md) §3 を読み、
+詳細なゲート条件を理解すること。PLAN-DOC-GATE-001 と TASK-DOC-GATE-001 の要件を把握する。
 
-- **Plan** — `plan-doc` を呼び出し、PLAN-DOC-GATE-001 を尊重する。
-- **Execute** — `task-doc` エントリに分解し、各タスクに検証手順を付与する。
+- **Plan** — `plan-doc` を呼び出し、PLAN-DOC-GATE-001 を尊重して plan をレビューし、
+  task 作成前に `status: approved` を取得する。
+- **Task** — `task-doc` を呼び出し、承認済み plan を検証手順付きエントリへ分解する。
+  TASK-DOC-GATE-001 を尊重する。
 
-**MANDATORY**: Phase 5（Implementation）に入る前に
+**MANDATORY**: Phase 4（Implementation）に入る前に
 [`implementation-flow` SKILL](../implementation-flow/SKILL.ja.md) を読み、以下を理解すること:
 
 - Skill Discovery Protocol とプロファイル設定
 - スキルスタックを使ったタスク単位の実行
 - 検証証拠の要件
 
-Phase 5 の各 task で最初のコード変更前に
+Phase 4 の各 task で最初のコード変更前に
 [`impl-doc` SKILL](../impl-doc/SKILL.ja.md) と
 [`impl-doc` 規約](../impl-doc/references/impl-conventions.ja.md) を読むこと。
-task に `in-progress` の Implementation Record がない状態では、Phase 5 の task 実行を開始しない。
+task に `in-progress` の Implementation Record がない状態では、Phase 4 の task 実行を開始しない。
 
-**Do NOT Load** `implementation-flow` は Phase 4 完了前には読まないこと —
-タスク分解が完了してから実装設定を始める。
+**Do NOT Load** `implementation-flow` は Phase 3 完了前には読まないこと —
+plan 承認とタスク分解が完了してから実装設定を始める。
 
 - **Implement** — ワークフロースキルをタスク単位で適用し、検証通過を確認する。
 - **Exit 監査** — `doc-status` を呼び出し、文書整合を検証する。
@@ -245,16 +242,16 @@ task に `in-progress` の Implementation Record がない状態では、Phase 5
 3. 影響を受けるコンポーネントに対して `design-doc` を再実行
 4. 再開前に更新された設計が spec/ADR と整合することを確認
 
-### Phase 4 → ADR/Design 更新 (新制約)
+### Phase 3 → ADR/Design 更新 (新制約)
 
 タスク分解で新たな制約が発見された場合:
 
 1. 制約を記録: "constraint: [説明]"
 2. ADR または design-doc のどちらを更新すべきか判断
 3. 影響を受けるドキュメントを最小スコープで更新
-4. ブロックされたタスクから Phase 4 を再開
+4. ブロックされたタスクから Phase 3 を再開
 
-### Phase 5 → Phase 1 または 2 (実装での発見)
+### Phase 4 → Phase 1 または 2 (実装での発見)
 
 実装で根本的なギャップが判明した場合:
 
@@ -280,7 +277,7 @@ task に `in-progress` の Implementation Record がない状態では、Phase 5
 | 「ループバックは非効率」 | ループバックなしで進むと問題が下流で拡大 |
 | 「小さな変更だから全フロー不要」 | 「小さい変更」の積み重ねが設計を腐敗させる |
 | 「ADR は官僚主義」 | 決定根拠なしは将来の自分が同じ議論を繰り返す |
-| 「並行でドキュメントを作れば時短」 | **許可される場合**: 独立したドキュメント（spec + ADR を同じ discovery から平行作成）。**禁止される場合**: 依存関係のあるドキュメント（plan-doc 承認前に task-doc 作成、設計合意前に spec なし）。ルール: 同じデータから異なる質問に対応するドキュメントは並行作成可、後続が先行に依存する場合はシーケンシャル。 |
+| 「並行でドキュメントを作れば時短」 | **許可される場合**: 独立したドキュメント（spec + ADR を同じ discovery から平行作成）。**禁止される場合**: 依存関係のあるドキュメント（plan-doc 承認前に task-doc 作成、設計合意前に spec なし）。Plan 作成と task 分解は Phase 3 内で連続して実行するが、承認ゲートを跨いで並列化しない。 |
 
 ---
 
@@ -298,9 +295,9 @@ task に `in-progress` の Implementation Record がない状態では、Phase 5
 
 ---
 
-## Phase 5: Implementation
+## Phase 4: Implementation
 
-タスク分解（Phase 4）後、`implementation-flow` を呼び出してコード実行を
+plan 承認とタスク分解（Phase 3）後、`implementation-flow` を呼び出してコード実行を
 オーケストレーションする。タスク単位で適切なワークフロースキルを
 選択・順序付けし、検証ループを管理し、発見された制約をフィードバックする。
 
@@ -309,11 +306,11 @@ task に `in-progress` の Implementation Record がない状態では、Phase 5
 
 ### エントリ条件
 
-Phase 5 は Phase 4 のタスクが承認され実行準備が整った時に開始する。
-Phase 5 の各 task で最初のコード変更前に `impl-doc` SKILL と規約を読み、
-task に `in-progress` の Implementation Record がない状態では、Phase 5 の task 実行を開始しない。
+Phase 4 は Phase 3 のタスクが承認され実行準備が整った時に開始する。
+Phase 4 の各 task で最初のコード変更前に `impl-doc` SKILL と規約を読み、
+task に `in-progress` の Implementation Record がない状態では、Phase 4 の task 実行を開始しない。
 
-### Phase 5 完了条件
+### Phase 4 完了条件
 
 - 全 `task-doc` エントリが実装済みかつ検証通過している。
 - 実装中に発見された新制約が ADR/design に反映されている。
@@ -323,22 +320,22 @@ task に `in-progress` の Implementation Record がない状態では、Phase 5
 - すべての Implementation Record は実装中に最新状態へ保たれている。
 - すべての Implementation Record は task クローズ前に完了・監査されている。
 - Experiment Log を使った task は、対応する Implementation Record から参照され、
-  Phase 6 の前に監査されている。
+  Phase 5 の前に監査されている。
 
-### Phase 6 への移行
+### Phase 5 への移行
 
-実装完了後、Phase 5 終了ゲート: 実装後レビュー / フォローアップ分類を通過する。
-Phase 6 に進む前に、実装結果を承認済み spec、ADR、design、plan、task の
+実装完了後、Phase 4 終了ゲート: 実装後レビュー / フォローアップ分類を通過する。
+Phase 5 に進む前に、実装結果を承認済み spec、ADR、design、plan、task の
 検証証跡と照合する。すべてのフォローアップを `bug-fix`, `decision-required`,
 `new-feature`, `doc-only`, `defer`, `wont-do` のいずれかに分類する。
-未分類フォローアップが残っている間は Phase 6 に進まない。
+未分類フォローアップが残っている間は Phase 5 に進まない。
 
-Phase 5 終了ゲートを通過した後、Phase 6（`doc-status`）に進み
+Phase 4 終了ゲートを通過した後、Phase 5（`doc-status`）に進み
 最終的な文書整合検証を行う。
 
-## Phase 6: Exit
+## Phase 5: Exit
 
-Phase 6 の `doc-status` 監査がブロッキング指摘なしで通過したとき、
+Phase 5 の `doc-status` 監査がブロッキング指摘なしで通過したとき、
 全文書が整合・追跡可能であることが確認され、フローは完了となる。
 
 ## 参照

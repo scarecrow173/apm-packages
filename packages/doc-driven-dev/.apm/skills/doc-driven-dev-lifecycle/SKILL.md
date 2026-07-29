@@ -1,6 +1,6 @@
 ---
 name: doc-driven-dev-lifecycle
-description: "Orchestrates the full document-driven development lifecycle through optional migration, a bootstrap phase, and a 6-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Need to migrate existing docs into the canonical doc-driven-dev tree, (3) Need to bootstrap the canonical docs tree before briefing, (4) Unsure which doc skill to begin with, (5) Need end-to-end document orchestration from briefing to execution, (6) Must enforce sequencing constraints between doc creation phases. Sequences flow: migrate_docs (optional) -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status. Keywords: document lifecycle, orchestration, migration, phase gates, meta skill."
+description: "Orchestrates the full document-driven development lifecycle through optional migration, a bootstrap phase, and a 5-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Need to migrate existing docs into the canonical doc-driven-dev tree, (3) Need to bootstrap the canonical docs tree before briefing, (4) Unsure which doc skill to begin with, (5) Need end-to-end document orchestration from briefing to execution, (6) Must enforce sequencing constraints between doc creation phases. Sequences flow: migrate_docs (optional) -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status. Keywords: document lifecycle, orchestration, migration, phase gates, meta skill."
 license: MIT
 ---
 
@@ -8,7 +8,7 @@ license: MIT
 
 Orchestrates the full document-driven development lifecycle by selecting and
 sequencing existing doc skills through optional migration, a bootstrap phase,
-and a 6-phase flow with explicit gates.
+and a 5-phase flow with explicit gates.
 
 This is a **meta skill**: it contains no scripts and produces no artifacts
 directly. Instead it decides *which* skill to invoke and *when*, enforcing
@@ -26,8 +26,8 @@ sequencing constraints and completion criteria defined in the Flow Contract.
 
 The lifecycle proceeds through:
 `Phase -1 Migration (optional) -> Phase 0 Bootstrap -> Phase 1 Briefing ->
-Phase 2 Design -> Phase 3 Planning -> Phase 4 Execution Slice -> Phase 5
-Implementation -> Phase 6 Exit`.
+Phase 2 Design -> Phase 3 Planning & Tasking -> Phase 4 Implementation ->
+Phase 5 Exit`.
 
 Each phase has a gate that must be satisfied before proceeding. Each phase also
 has loopback rules: gate failures can keep work in the current phase or return
@@ -35,10 +35,10 @@ it to an earlier phase, and later-phase discoveries can also force an upstream
 loopback before the lifecycle can continue.
 See `references/flow-contract.md` for the full specification.
 
-Before Phase 6, compare the implemented work against the approved spec, ADR,
+Before Phase 5, compare the implemented work against the approved spec, ADR,
 design, plan, and task verification evidence. Classify every follow-up as
 `bug-fix`, `decision-required`, `new-feature`, `doc-only`, `defer`, or
-`wont-do`. Do not enter Phase 6 while unclassified follow-ups remain.
+`wont-do`. Do not enter Phase 5 while unclassified follow-ups remain.
 
 ## Phase Summary
 
@@ -48,12 +48,11 @@ design, plan, and task verification evidence. Classify every follow-up as
 | 0 | Create the canonical docs tree before briefing | `scaffold_docs` | canonical `docs/` tree exists; existing files are preserved; `docs/designs/overview.md` is left to `design-doc` |
 | 1 | Convert requests into document-ready inputs | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Concretize design into implementable form | `design-doc` | approved design consistent with spec/ADR |
-| 3 | Integrate into implementation plan | `plan-doc` | PLAN-DOC-GATE-001 (approved design required) |
-| 4 | Decompose plan into task units | `task-doc` | tasks traceable to plan with verification |
-| 5 | Implement code guided by workflow skills | `implementation-flow` | all tasks pass verification |
-| 6 | Confirm document integrity | `doc-status` | front matter, relations, index integrity |
+| 3 | Integrate plan and decompose task units | `plan-doc` + `task-doc` | approved plan; traceable tasks with verification |
+| 4 | Implement code guided by workflow skills | `implementation-flow` | all tasks pass verification |
+| 5 | Confirm document integrity | `doc-status` | front matter, relations, index integrity |
 
-**Key constraint resolution**: Optional Phase -1 migrates existing Markdown docs without deleting originals. Phase 0 creates the canonical docs tree but does not create `docs/designs/overview.md`; `design-doc` owns that file. Phase 1 (Briefing) explicitly permits spec + ADR parallel creation when derived from the same discovery context, as managed by `briefing-flow`. Later phases enforce sequential gates (Phase 2 requires Phase 1 complete, Phase 3 requires Phase 2 approved design, etc.).
+**Key constraint resolution**: Optional Phase -1 migrates existing Markdown docs without deleting originals. Phase 0 creates the canonical docs tree but does not create `docs/designs/overview.md`; `design-doc` owns that file. Phase 1 (Briefing) explicitly permits spec + ADR parallel creation when derived from the same discovery context, as managed by `briefing-flow`. Later phases enforce sequential gates (Phase 2 requires Phase 1 complete, Phase 3 requires Phase 2 approved design and contains the plan approval gate before task creation, etc.).
 
 ## Phase Exit Checklists
 
@@ -93,15 +92,11 @@ Completion is verified by the bootstrap contract:
 - [ ] No conflicts between design and ADR constraints
 - [ ] Implementation boundaries are clear
 
-### Phase 3 Exit
+### Phase 3 Exit (Planning & Tasking)
 
-- [ ] plan-doc exists with `status:` ≥ `proposed`
+- [ ] plan-doc exists with `status:` = `approved`
 - [ ] plan-doc references design-doc
 - [ ] PLAN-DOC-GATE-001 satisfied (approved design)
-- [ ] Work decomposable into task-doc granularity
-
-### Phase 4 Exit
-
 - [ ] All task-doc entries created
 - [ ] Each task has `verification:` conditions
 - [ ] Tasks traceable to plan-doc sections
@@ -154,7 +149,7 @@ next phase. If a gate cannot be satisfied, loop within the current phase or
 return to a prior phase.
 
 **Why:** Phase skipping is the #1 cause of project rework. Incomplete Phase 1
-outputs cause 40% of Phase 3-4 redesigns. Each gate exists because downstream
+outputs cause 40% of Phase 3 redesigns. Each gate exists because downstream
 phases assume upstream quality.
 </HARD-GATE>
 
@@ -206,14 +201,16 @@ briefing begins. It preserves existing files and does not create
 
 - **Design** — invoke `design-doc`; verify consistency with spec and ADR.
 
-**MANDATORY**: Before entering Phase 3 (Planning), read
-[`references/flow-contract.md`](references/flow-contract.md) §3-4 for detailed
-gate criteria. Understand PLAN-DOC-GATE-001 requirements.
+**MANDATORY**: Before entering Phase 3 (Planning & Tasking), read
+[`references/flow-contract.md`](references/flow-contract.md) §3 for detailed
+gate criteria. Understand PLAN-DOC-GATE-001 and TASK-DOC-GATE-001 requirements.
 
-- **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001.
-- **Execute** — decompose into `task-doc` entries with verification steps.
+- **Plan** — invoke `plan-doc`; respect PLAN-DOC-GATE-001, review the plan, and
+  obtain `status: approved` before creating tasks.
+- **Task** — invoke `task-doc` to decompose the approved plan into entries with
+  verification steps; respect TASK-DOC-GATE-001.
 
-**MANDATORY**: Before entering Phase 5 (Implementation), read the
+**MANDATORY**: Before entering Phase 4 (Implementation), read the
 [`implementation-flow` SKILL](../implementation-flow/SKILL.md) to understand:
 
 - Skill Discovery Protocol and profile configuration
@@ -226,8 +223,8 @@ Before the first code change for each task, also read the
 execution cannot start unless that task already has an in-progress
 Implementation Record.
 
-**Do NOT Load** `implementation-flow` before Phase 4 completes — task decomposition
-must finish before implementation configuration begins.
+**Do NOT Load** `implementation-flow` before Phase 3 completes — plan approval and
+task decomposition must finish before implementation configuration begins.
 
 - **Implement** — apply workflow skills per-task; verify each task passes.
 - **Exit Audit** — invoke `doc-status` to validate document integrity.
@@ -252,16 +249,16 @@ When planning reveals design insufficiency:
 3. Re-invoke `design-doc` for the affected component
 4. Verify updated design against spec/ADR before resuming
 
-### Phase 4 → ADR/Design Update (New Constraint)
+### Phase 3 → ADR/Design Update (New Constraint)
 
 When task decomposition surfaces new constraints:
 
 1. Record constraint: "constraint: [description]"
 2. Determine if ADR or design-doc needs update
 3. Update the affected document with minimal scope change
-4. Resume Phase 4 from the blocked task
+4. Resume Phase 3 from the blocked task
 
-### Phase 5 → Phase 1 or 2 (Implementation Discovery)
+### Phase 4 → Phase 1 or 2 (Implementation Discovery)
 
 When implementation reveals fundamental gaps:
 
@@ -284,10 +281,10 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 | "Requirements are clear in my head" | Unwritten requirements are unverifiable. "I never said that" disputes guaranteed |
 | "This phase gate is too strict" | Relaxed gates compound quality degradation downstream. Technical debt accrues interest |
 | "I'll document after implementation" | Post-implementation docs drift from reality. Unmaintainable within 3 months |
-| "Loopback is inefficient" | Skipped loopbacks amplify problems downstream. 1x cost at Phase 2 → 10x at Phase 5 |
+| "Loopback is inefficient" | Skipped loopbacks amplify problems downstream. 1x cost at Phase 2 → 10x at Phase 4 |
 | "Just one small change, no need for full flow" | Accumulated "small changes" rot architecture. Death by a thousand cuts |
 | "ADR is bureaucracy" | Without decision records, future-you repeats the same debates. Time sink loops |
-| "Parallel doc creation saves time" | **Allowed when independent**: spec + ADR created in parallel from same discovery (Phase 1: briefing-flow). **Prohibited when dependent**: creating task-doc before plan-doc approval, or design without spec consensus. Rule: parallel when docs address different questions from same data; sequential when later depends on earlier decision. |
+| "Parallel doc creation saves time" | **Allowed when independent**: spec + ADR created in parallel from same discovery (Phase 1: briefing-flow). **Prohibited when dependent**: creating task-doc before plan-doc approval, or design without spec consensus. Plan authoring and task decomposition share Phase 3 but remain sequential at the approval gate. |
 
 ---
 
@@ -305,9 +302,9 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 
 ---
 
-## Phase 5: Implementation
+## Phase 4: Implementation
 
-After task decomposition (Phase 4), invoke `implementation-flow` to orchestrate
+After plan approval and task decomposition (Phase 3), invoke `implementation-flow` to orchestrate
 code execution. It selects and sequences the appropriate workflow skills
 per task unit, manages verification loops, and feeds back discovered constraints.
 
@@ -316,12 +313,12 @@ recommended combinations, and per-task execution process.
 
 ### Entry Condition
 
-Phase 5 begins when Phase 4 tasks are approved and ready for execution. Before
+Phase 4 begins when Phase 3 tasks are approved and ready for execution. Before
 the first code change for each task, read `impl-doc` SKILL and conventions, and
 do not start task execution unless that task already has an in-progress
 Implementation Record.
 
-### Phase 5 Completion Criteria
+### Phase 4 Completion Criteria
 
 - All `task-doc` entries have been implemented and verified.
 - New constraints discovered during implementation are reflected in ADR/design.
@@ -330,23 +327,23 @@ Implementation Record.
 - Every Implementation Record was kept current during implementation.
 - Every Implementation Record was completed and audited before task closure.
 - Any Experiment Logs were referenced from the matching Implementation Record
-  and audited before Phase 6.
+  and audited before Phase 5.
 
-### Exit to Phase 6
+### Exit to Phase 5
 
-After implementation completes, pass the Phase 5 Exit Gate:
+After implementation completes, pass the Phase 4 Exit Gate:
 Post-Implementation Review / Follow-up Triage. Compare the implemented work
 against the approved spec, ADR, design, plan, and task verification evidence.
 Classify every follow-up as `bug-fix`, `decision-required`, `new-feature`,
-`doc-only`, `defer`, or `wont-do`. Do not enter Phase 6 while unclassified
+`doc-only`, `defer`, or `wont-do`. Do not enter Phase 5 while unclassified
 follow-ups remain.
 
-After the Phase 5 Exit Gate passes, proceed to Phase 6 (`doc-status`) for
+After the Phase 4 Exit Gate passes, proceed to Phase 5 (`doc-status`) for
 final document integrity verification.
 
-## Phase 6: Exit
+## Phase 5: Exit
 
-The flow is complete when Phase 6 `doc-status` audit passes with no blocking
+The flow is complete when Phase 5 `doc-status` audit passes with no blocking
 findings, confirming that all documents are consistent and traceable.
 
 ## Reference

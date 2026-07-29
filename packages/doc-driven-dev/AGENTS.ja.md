@@ -100,7 +100,7 @@ apm compile --validate
 
 | スキル | 目的 | 出典 |
 | --- | --- | --- |
-| doc-driven-dev-lifecycle | メタスキル: 6 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
+| doc-driven-dev-lifecycle | メタスキル: 5 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
 | briefing-flow | メタスキル: briefing と spec/ADR 準備を動的にオーケストレーションする | original |
 | implementation-flow | メタスキル: implementation profile を通じて全利用可能な実装スキルを発見・ルーティングする | original |
 | skill-discovery-protocol | flow-neutral な skill catalog / profile を生成・検証する | original |
@@ -113,15 +113,15 @@ apm compile --validate
 
 | メタスキル | 入力トリガー条件 | 責務 | 相互排斥 |
 | --- | --- | --- | --- |
-| `doc-driven-dev-lifecycle` | ユーザーが 6 フェーズ全体を明示的に呼び出した OR 他のエントリポイントが合致しない | Phase 1-6 統括・委譲（Phase 1 は briefing-flow へ、Phase 5+ は implementation-flow へ） | `briefing-flow` が既に活動中の場合は活性化しない OR Phase 5+ が明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
-| `briefing-flow` | ユーザーが briefing/discovery/spec/ADR 作成を明示的に呼び出した OR lifecycle が Phase 1 を委譲 | Phase A-D の discovery・spec + ADR 並行配信・skill stack 組み立て | `doc-driven-dev-lifecycle` が既に Phase 2-6 を駆動中の場合は活性化しない OR コード実装を明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
-| `implementation-flow` | ユーザーがタスク実行/コード実装を明示的に呼び出した OR lifecycle が Phase 5 を委譲 | Phase A-E のタスク実行・review gate 強制・利用可能な実装スキルの発見・ルーティング | 文書作成がターゲットの場合は活性化しない（→ lifecycle または briefing-flow） OR briefing/design 進行中の場合は活性化しない |
+| `doc-driven-dev-lifecycle` | ユーザーが 5 フェーズ全体を明示的に呼び出した OR 他のエントリポイントが合致しない | Phase 1-5 統括・委譲（Phase 1 は briefing-flow へ、Phase 4 は implementation-flow へ） | `briefing-flow` が既に活動中の場合は活性化しない OR Phase 4 の実装が明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
+| `briefing-flow` | ユーザーが briefing/discovery/spec/ADR 作成を明示的に呼び出した OR lifecycle が Phase 1 を委譲 | Phase A-D の discovery・spec + ADR 並行配信・skill stack 組み立て | `doc-driven-dev-lifecycle` が既に Phase 2-5 を駆動中の場合は活性化しない OR コード実装を明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
+| `implementation-flow` | ユーザーがタスク実行/コード実装を明示的に呼び出した OR lifecycle が Phase 4 を委譲 | Phase A-E のタスク実行・review gate 強制・利用可能な実装スキルの発見・ルーティング | 文書作成がターゲットの場合は活性化しない（→ lifecycle または briefing-flow） OR briefing/design 進行中の場合は活性化しない |
 
 ### 配信判定ツリー
 
 ```text
 エントリリクエスト
-├─ "lifecycle" または "6-phase" または "end-to-end" キーワードを含む？
+├─ "lifecycle" または "5-phase" または "end-to-end" キーワードを含む？
 │  └─ YES → doc-driven-dev-lifecycle
 │
 ├─ "briefing" または "discovery" または "spec" または "adr" キーワードを含む？
@@ -132,7 +132,7 @@ apm compile --validate
 │
 └─ 明確なメタスキルシグナルなし → リクエストコンテキストを相談
    ├─ spec/ADR 作成中 → briefing-flow
-   ├─ 設計が承認済み、planning/task フェーズ中 → lifecycle または implementation-flow（コンテキスト依存）
+   ├─ 設計と plan が承認済み、task フェーズ中 → lifecycle または implementation-flow（コンテキスト依存）
    └─ 不明 → ユーザーに説明請求
 ```
 

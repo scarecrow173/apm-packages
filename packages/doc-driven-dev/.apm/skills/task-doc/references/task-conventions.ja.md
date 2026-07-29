@@ -134,7 +134,7 @@ relation は文書種別ではなく意味で選びます。
 
 ## フォローアップ分類
 
-lifecycle の Phase 5 終了ゲートから作成される task は
+lifecycle の Phase 4 終了ゲートから作成される task は
 `## 分類` セクションを含めます。値は次のうち 1 つだけを使います:
 `normal-plan-task`, `bug-fix`, `doc-only`, `defer`, `wont-do`。
 `decision-required` または `new-feature` に分類される項目は、
