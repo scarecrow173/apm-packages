@@ -20,7 +20,7 @@ To create a task, one of the following must be satisfied:
    If the plan is not yet approved, complete its review and approval first.
 2. **Emergency fix path**: When no plan exists, ALL of the following must hold:
    - State the reason for urgency in the task body (one line).
-   - Reference an `approved` spec-doc or adr-doc via
+   - Reference an `approved` spec-doc or `accepted` adr-doc via
      `relations.implements` or `relations.derives-from`.
    - If no spec/ADR exists either, create one first (brief content is acceptable).
 3. **Post-implementation follow-up path**: When the task comes from the
