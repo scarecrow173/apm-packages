@@ -2,7 +2,7 @@
 
 `token-compression` は、言語モデルとのやり取りにおけるトークン使用量を最適化するための戦略とツールを提供します。
 
-このパッケージは、外部の圧縮特化依存関係とローカルの advisory skill を組み合わせます。外部の `genshijin` スイートはプロンプトとコンテキスト圧縮を扱います。ローカルの `cheap-action` は、現在のハーネスがモデル選択をサポートする場合に、単純で機械的に検証できる作業を最も低コストな対応モデルへルーティングするためのスキルです。
+このパッケージは、限定された機械的検証可能な作業向けのローカル advisory skill を提供します。
 
 ## カバー範囲
 
@@ -15,13 +15,6 @@
 ## 依存関係
 
 外部依存関係とローカルパッケージ資産の信頼できる情報源は [apm.yml](./apm.yml) です。
-
-外部依存関係：
-
-- `InterfaceX-co-jp/genshijin/skills/genshijin`
-- `InterfaceX-co-jp/genshijin/skills/genshijin-compress`
-- `InterfaceX-co-jp/genshijin/skills/genshijin-crew`
-- `InterfaceX-co-jp/genshijin/skills/genshijin-review`
 
 ローカル資産：
 

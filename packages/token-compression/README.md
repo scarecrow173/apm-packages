@@ -2,7 +2,7 @@
 
 `token-compression` provides strategies and tools for optimizing token usage in language model interactions.
 
-This package combines external compression-focused dependencies with one local advisory skill. The external `genshijin` suite covers prompt and context compression. The local `cheap-action` skill helps agents route simple, mechanically verifiable work to the lowest-cost capable model when the current harness supports model selection.
+This package provides one local advisory skill for bounded, mechanically verifiable work.
 
 ## What It Covers
 
@@ -15,13 +15,6 @@ This package covers prompt compression, context engineering, token budget manage
 ## Dependencies source truth
 
 [apm.yml](./apm.yml) is the source of truth for external dependencies and local package assets.
-
-External dependencies:
-
-- `InterfaceX-co-jp/genshijin/skills/genshijin`
-- `InterfaceX-co-jp/genshijin/skills/genshijin-compress`
-- `InterfaceX-co-jp/genshijin/skills/genshijin-crew`
-- `InterfaceX-co-jp/genshijin/skills/genshijin-review`
 
 Local assets:
 

@@ -11,9 +11,3 @@ targets:
   - agent-skills
 includes:
   - .apm/
-dependencies:
-  apm:
-    - InterfaceX-co-jp/genshijin/skills/genshijin#main
-    - InterfaceX-co-jp/genshijin/skills/genshijin-compress#main
-    - InterfaceX-co-jp/genshijin/skills/genshijin-crew#main
-    - InterfaceX-co-jp/genshijin/skills/genshijin-review#main
