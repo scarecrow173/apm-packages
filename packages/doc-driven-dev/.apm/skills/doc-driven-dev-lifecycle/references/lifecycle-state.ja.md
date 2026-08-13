@@ -52,7 +52,10 @@ document から導出する gate は既存 lifecycle 証跡を確認する。
 | briefing | focus された spec に受け入れ条件と適切な status があり、ADR に considered options と適切な status がある。 |
 | design | approved design が focus された spec と ADR に relation する。 |
 | planning | approved plan が design に relation し、選択 task が有効な Task DAG を形成する。 |
-| implementation | 選択 task が `done` で、caller が `implementation-verified` を指定する。 |
+| implementation | status が `done` または `wont-do` の選択 task は resolved となり、caller は `implementation-verified` を指定する。 |
+
+- Lifecycle implementation resolution: status が `done` または `wont-do` の選択 task は resolved となり、`implementation-verified` が必要である。
+- Task-DAG predecessor satisfaction: dependency を満たすのは `done` のみであり、`wont-do` は blocked のまま dependent を unlock しない。
 
 Follow-up triage は証跡に基づく型付き gate である。6つの route signal
 （`followup-bug-fix`、`followup-decision-briefing`、`followup-decision-design`、

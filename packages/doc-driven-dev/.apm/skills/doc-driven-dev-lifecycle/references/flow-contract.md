@@ -169,12 +169,14 @@ name that selected route in the user-visible follow-up report:
 | `decision-required` (design) | `followup-decision-design` | Return to Phase 2 (`design-doc`) before creating implementation tasks. |
 | `new-feature` | `followup-new-feature` | Return to Phase 1 (`briefing-flow`) for a new briefing; never attach it to the current approved plan. |
 | `doc-only` | `followup-doc-only` | Record the document or implementation-record update, then take the terminal `exit-audit` route. |
-| `defer` or `wont-do` | `followup-terminal` | Record the deferral or reason (`status: wont-do` when represented as a task), then take the terminal `exit-audit` route. |
+| `defer` or `wont-do` | `followup-terminal` | Record the deferral or reason (`status: wont-do` when represented as a task), then take the terminal `exit-audit` route. A `wont-do` task is terminal lifecycle evidence only after its deferral/reason has been recorded; it never satisfies another task's dependency. |
 
 The six typed routes are mutually exclusive. An unclassified or conflicting
 follow-up keeps `followup-triage` blocked and uses its declared
 `followups-unclassified` retry edge. `doc-only`, `defer`, and `wont-do` must be
-recorded before their terminal `exit-audit` route is eligible.
+recorded before their terminal `exit-audit` route is eligible. A `wont-do` task
+is terminal lifecycle evidence only after its deferral/reason has been recorded;
+it never satisfies another task's dependency.
 
 ## Phase 5: Exit
 

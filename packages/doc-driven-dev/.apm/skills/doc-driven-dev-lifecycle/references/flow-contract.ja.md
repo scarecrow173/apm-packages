@@ -166,12 +166,14 @@ signal を出し、ユーザー向けフォローアップ報告に選択した 
 | `decision-required`（design） | `followup-decision-design` | implementation task 作成前に Phase 2（`design-doc`）へ戻る。 |
 | `new-feature` | `followup-new-feature` | 新しい briefing のため Phase 1（`briefing-flow`）へ戻る。現在の承認済み plan には決して紐付けない。 |
 | `doc-only` | `followup-doc-only` | 文書または implementation record の更新を記録してから、terminal の `exit-audit` route を取る。 |
-| `defer` または `wont-do` | `followup-terminal` | 延期または理由を記録する（task として表す `wont-do` は `status: wont-do`）。その後 terminal の `exit-audit` route を取る。 |
+| `defer` または `wont-do` | `followup-terminal` | 延期または理由を記録する（task として表す `wont-do` は `status: wont-do`）。その後 terminal の `exit-audit` route を取る。`wont-do` task は延期または理由を記録した後に限り terminal lifecycle evidence となり、他 task の dependency を決して満たさない。 |
 
 6 つの型付き route は相互排他的である。未分類または競合するフォローアップが
 ある間、`followup-triage` は blocked のままで、宣言済みの
 `followups-unclassified` retry edge を使う。`doc-only`、`defer`、`wont-do` は
-terminal の `exit-audit` route を選べる前に必ず記録する。
+terminal の `exit-audit` route を選べる前に必ず記録する。`wont-do` task は
+延期または理由を記録した後に限り terminal lifecycle evidence となり、他 task の
+dependency を決して満たさない。
 
 ## Phase 5: Exit
 

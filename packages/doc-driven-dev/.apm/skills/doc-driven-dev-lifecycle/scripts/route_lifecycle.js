@@ -20343,11 +20343,17 @@ function validateGraph(value) {
     }
   }
   const edgeIds = /* @__PURE__ */ new Set();
+  const routeSelectors = /* @__PURE__ */ new Set();
   for (const edge of value.edges) {
     if (edgeIds.has(edge.id)) {
       throw invalidGraph(`duplicate edge id: ${edge.id}`);
     }
     edgeIds.add(edge.id);
+    const selector = `${edge.from}\0${edge.when}`;
+    if (routeSelectors.has(selector)) {
+      throw invalidGraph(`duplicate route selector: ${edge.from} + ${edge.when}`);
+    }
+    routeSelectors.add(selector);
     if (!hasNode(value.nodes, edge.from)) {
       throw invalidGraph(`edge ${edge.id} references unknown from node: ${edge.from}`);
     }
@@ -21080,6 +21086,9 @@ function taskGraphFor(context, plan) {
   if (!plan) return void 0;
   return buildTaskGraph({ cwd: context.cwd, plan: plan.path, taskDir: context.taskDir });
 }
+function isLifecycleResolvedTaskStatus(status) {
+  return status === "done" || status === "wont-do";
+}
 function evaluateLifecycleGates(state, taskDir = "docs/tasks") {
   const cwd = import_node_path3.default.resolve(state.cwd);
   const scanned = readArtifacts(cwd, taskDir);
@@ -21133,7 +21142,7 @@ function evaluateLifecycleGates(state, taskDir = "docs/tasks") {
     );
     const implementationReasons = [];
     if (!graph || graph.nodes.length === 0) implementationReasons.push("no-selected-tasks");
-    if (graph && graph.nodes.some((node) => node.status !== "done")) implementationReasons.push("tasks-incomplete");
+    if (graph && graph.nodes.some((node) => !isLifecycleResolvedTaskStatus(node.status))) implementationReasons.push("tasks-incomplete");
     if (!state.signals.includes("implementation-verified")) implementationReasons.push("implementation-verified");
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
@@ -21473,7 +21482,7 @@ function routeLifecycle(input) {
     }
     node = edge.to;
   }
-  if (node === "complete") {
+  if (input.graph.nodes[node]?.kind === "terminal") {
     return routeResult(input, taskGraph, node, "lifecycle-complete", null);
   }
   const retry = retryEdge(input.graph, node);

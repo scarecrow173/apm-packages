@@ -54,7 +54,10 @@ Document-derived gates check the existing lifecycle evidence:
 | briefing | Focused spec has required acceptance criteria and acceptable status; focused ADR has considered options and acceptable status. |
 | design | Approved design relates to the focused spec and ADR. |
 | planning | Approved plan relates to design; selected tasks form a valid Task DAG. |
-| implementation | Selected tasks are `done` and caller supplies `implementation-verified`. |
+| implementation | Selected tasks with status `done` or `wont-do` are resolved, and caller supplies `implementation-verified`. |
+
+- Lifecycle implementation resolution: selected tasks with status `done` or `wont-do` are resolved, and `implementation-verified` is required.
+- Task-DAG predecessor satisfaction: only `done` satisfies a dependency; `wont-do` stays blocked and cannot unlock dependents.
 
 Follow-up triage is an evidence-backed typed gate. It passes only when exactly
 one of the six typed route signals is present — `followup-bug-fix`,

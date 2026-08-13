@@ -28,10 +28,14 @@ Graph は `schemaVersion: 1`、`entry: probe` で始まる。
 `subgraph`、`implementation` は `implementation-flow` に委譲する
 `subgraph` のままであり、`planning` は文書化された composite step である。
 
+Terminal の idempotence は `complete` という ID 名ではなく、`kind: terminal`
+によって決まる。
+
 各 edge は一意な `id`、既知の `from`/`to` node、型付き `when` reason code
-を持つ。retry と loopback edge は明示する。terminal node `complete` に
-outgoing edge はない。無効な YAML、重複 edge ID、未知 endpoint、terminal
-からの outgoing edge は routing 前に拒否される。
+を持つ。retry と loopback edge は明示する。すべての `(from, when)` selector は
+一意であり、parser は YAML 順を選択せず duplicate を拒否する。terminal node
+`complete` に outgoing edge はない。無効な YAML、重複 edge ID、未知 endpoint、
+terminal からの outgoing edge は routing 前に拒否される。
 
 ## Thin-router CLI
 

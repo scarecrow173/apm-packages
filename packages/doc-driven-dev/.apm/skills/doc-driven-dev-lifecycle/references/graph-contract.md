@@ -30,10 +30,14 @@ The required nodes are `probe`, `migration`, `bootstrap`, `briefing`,
 `briefing-flow`; `implementation` remains a `subgraph` delegated to
 `implementation-flow`; `planning` is the documented composite planning step.
 
+Terminal idempotence is determined by `kind: terminal`, not by an ID named
+`complete`.
+
 Each edge has a unique `id`, a known `from` and `to` node, and a typed `when`
-reason code. Retry and loopback edges are explicit. The `complete` terminal
-node has no outgoing edge. Invalid YAML, duplicate edge IDs, unknown endpoints,
-or terminal outgoing edges are rejected before routing.
+reason code. Retry and loopback edges are explicit. Every `(from, when)` selector
+is unique, and the parser rejects duplicates rather than selecting YAML order.
+The `complete` terminal node has no outgoing edge. Invalid YAML, duplicate edge
+IDs, unknown endpoints, or terminal outgoing edges are rejected before routing.
 
 ## Thin-router CLI
 
