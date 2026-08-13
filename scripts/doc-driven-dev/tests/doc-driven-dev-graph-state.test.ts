@@ -89,3 +89,48 @@ test("duplicate IDs and ambiguous focus fail closed", () => {
   assert.equal(state.blockers.includes("focus-required"), true);
   assert.equal(state.taskGraph, null);
 });
+
+test("custom task directories remain authoritative during gate evaluation", () => {
+  const repo = fixtureRepo();
+  fs.rmSync(path.join(repo, "docs/tasks/0001-route.md"));
+  fs.rmSync(path.join(repo, "docs/tasks/0002-prepare.md"));
+  writeArtifact(repo, "docs/work-items/0001-route.md", {
+    id: "TASK-CUSTOM", type: "task", status: "todo", title: "Custom Route",
+    relations: { implements: ["docs/plans/0001-graph.md"] },
+  }, "# Custom Route\n");
+  const state = projectGraphState({
+    cwd: repo,
+    taskDir: "docs/work-items",
+    focus: ["PLAN-0001"],
+  });
+  assert.equal(state.taskDir, "docs/work-items");
+  assert.equal(state.taskGraph?.nodes.map((node: { id: string }) => node.id).join(","), "TASK-CUSTOM");
+  assert.equal(state.gates.planning.status, "pass");
+});
+
+test("malformed relation shapes fail closed as graph issues", () => {
+  const repo = fixtureRepo();
+  writeArtifact(repo, "docs/designs/0002-malformed.md", {
+    id: "DESIGN-0002", type: "design", status: "approved", title: "Malformed",
+    relations: 42,
+  }, "# Malformed\n");
+  writeArtifact(repo, "docs/designs/0003-malformed-field.md", {
+    id: "DESIGN-0003", type: "design", status: "approved", title: "Malformed Field",
+    relations: { "derives-from": [42] },
+  }, "# Malformed Field\n");
+  const state = projectGraphState({ cwd: repo, focus: ["DESIGN-0002"] });
+  assert.ok(state.artifactGraph.issues.some((issue) => issue.message.includes("invalid-relations:docs/designs/0002-malformed.md")));
+  assert.ok(state.artifactGraph.issues.some((issue) => issue.message.includes("invalid-relation:docs/designs/0003-malformed-field.md:derives-from")));
+  assert.ok(state.blockers.some((blocker: string) => blocker.startsWith("broken-relation:")));
+});
+
+test("multiple valid chains fail closed even when only one has a plan", () => {
+  const repo = fixtureRepo();
+  writeArtifact(repo, "docs/designs/0002-no-plan.md", {
+    id: "DESIGN-0002", type: "design", status: "approved", title: "No Plan Design",
+    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+  }, "# No Plan Design\n");
+  const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001"] });
+  assert.ok(state.blockers.includes("focus-required"));
+  assert.equal(state.taskGraph, null);
+});

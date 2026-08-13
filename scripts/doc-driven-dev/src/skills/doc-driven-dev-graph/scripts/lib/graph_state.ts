@@ -2,11 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  lineageComponent,
+  artifactHasRelation,
   projectArtifactGraph,
-  resolveArtifactRelation,
+  resolveArtifactFocus,
   scanArtifactGraph,
-  selectPlanPath,
+  selectArtifactChain,
   type ArtifactGraph,
   type ArtifactRecord,
 } from "./artifact_graph";
@@ -21,6 +21,7 @@ export type GraphState = {
   schemaVersion: 2;
   graphId: string;
   cwd: string;
+  taskDir: string;
   focus: string[];
   artifactGraph: ArtifactGraph;
   gates: GraphGateResults;
@@ -32,9 +33,9 @@ export type GraphState = {
 export type ProjectGraphStateOptions = {
   cwd: string;
   graphId?: string;
+  taskDir?: string;
   focus?: string[];
   signals?: string[];
-  taskDir?: string;
 };
 
 const CANONICAL_TARGETS = [
@@ -48,10 +49,6 @@ const CANONICAL_TARGETS = [
   "docs/impl/ir",
   "docs/impl/exp",
 ] as const;
-const ACTIVE_STATUSES = new Set([
-  "draft", "proposed", "approved", "in-progress", "todo", "blocked", "capturing",
-  "confirmed", "routed", "active",
-]);
 const FOLLOWUP_SIGNALS = new Set([
   "followup-bug-fix",
   "followup-decision-briefing",
@@ -105,88 +102,7 @@ function findRecord(records: ArtifactRecord[], pathValue: string | undefined): A
   return pathValue ? records.find((record) => record.path === pathValue) : undefined;
 }
 
-function relationTarget(
-  cwd: string,
-  source: ArtifactRecord | undefined,
-  value: string,
-  records: ArtifactRecord[],
-): ArtifactRecord | undefined {
-  return source ? resolveArtifactRelation(cwd, source, value, records) : undefined;
-}
-
-function hasRelation(
-  cwd: string,
-  source: ArtifactRecord | undefined,
-  names: string[],
-  target: ArtifactRecord | undefined,
-  records: ArtifactRecord[],
-): boolean {
-  if (!source || !target) return false;
-  return names.some((name) => (source.relations[name] ?? []).some((value) => relationTarget(cwd, source, value, records)?.path === target.path));
-}
-
-function resolveFocus(
-  cwd: string,
-  values: string[],
-  records: ArtifactRecord[],
-  graph: ArtifactGraph,
-): { focus: string[]; focused: ArtifactRecord | undefined; blockers: string[] } {
-  if (values.length === 0) {
-    const active = records.filter((record) => record.status && ACTIVE_STATUSES.has(record.status));
-    return { focus: [], focused: undefined, blockers: active.length > 0 ? ["focus-required"] : [] };
-  }
-  let duplicateId = false;
-  const normalized = values.map((value) => {
-    const byId = records.filter((record) => record.id === value);
-    if (byId.length > 1) {
-      duplicateId = true;
-      return value;
-    }
-    if (byId.length === 1) return byId[0].path;
-    const absolute = path.resolve(cwd, value);
-    return path.relative(cwd, absolute).split(path.sep).join("/");
-  });
-  const focus = sortedUnique(normalized);
-  if (duplicateId) return { focus, focused: undefined, blockers: ["focus-required"] };
-  const focused = focus.map((entry) => records.find((record) => record.path === entry));
-  if (focused.some((record) => !record)) return { focus, focused: undefined, blockers: ["focus-invalid"] };
-  const component = lineageComponent(graph, focus);
-  const plans = records.filter((record) => component.includes(record.path) && record.type === "plan");
-  const hasPlanFocus = focused.some((record) => record?.type === "plan");
-  if (!hasPlanFocus && plans.length > 1) return { focus, focused: undefined, blockers: ["focus-required"] };
-  if (focus.length > 1 && focus.some((entry) => !component.includes(entry))) {
-    return { focus, focused: undefined, blockers: ["focus-required"] };
-  }
-  const rank: Record<string, number> = { plan: 0, design: 1, spec: 2, adr: 3, task: 4 };
-  return {
-    focus,
-    focused: [...focused].sort((left, right) => (rank[left?.type ?? ""] ?? 9) - (rank[right?.type ?? ""] ?? 9) || compareStrings(left?.path ?? "", right?.path ?? ""))[0],
-    blockers: [],
-  };
-}
-
-function focusedChain(
-  cwd: string,
-  focus: string[],
-  records: ArtifactRecord[],
-  graph: ArtifactGraph,
-): { spec?: ArtifactRecord; adr?: ArtifactRecord; design?: ArtifactRecord; plan?: ArtifactRecord } {
-  const component = new Set(lineageComponent(graph, focus));
-  const planPath = selectPlanPath(graph, focus);
-  const plan = findRecord(records, planPath);
-  const focused = records.filter((record) => component.has(record.path));
-  const design = focused.find((record) => record.type === "design" && (!plan || hasRelation(cwd, plan, ["derives-from", "design"], record, records)))
-    ?? focused.find((record) => record.type === "design");
-  const spec = focused.find((record) => record.type === "spec" && (!design || hasRelation(cwd, design, ["derives-from", "implements", "spec"], record, records)));
-  const adr = focused.find((record) => record.type === "adr" && (!design || hasRelation(cwd, design, ["derives-from", "adr", "decision"], record, records)));
-  return { spec, adr, design, plan };
-}
-
-function graphTask(
-  cwd: string,
-  plan: ArtifactRecord | undefined,
-  taskDir: string,
-): TaskGraphResult | null {
+function graphTask(cwd: string, plan: ArtifactRecord | undefined, taskDir: string): TaskGraphResult | null {
   return plan ? buildTaskGraph({ cwd, plan: plan.path, taskDir }) : null;
 }
 
@@ -201,21 +117,25 @@ function deriveSignals(input: string[], blockers: string[], gates: GraphGateResu
   return sortedUnique(signals);
 }
 
+function fallbackRecords(cwd: string, graph: ArtifactGraph): ArtifactRecord[] {
+  return graph.nodes.map((node) => ({
+    ...node,
+    absolutePath: path.join(cwd, node.path),
+    body: "",
+    status: null,
+    relations: {},
+    relationIssues: [],
+  }));
+}
+
 /** Evaluate generic gate facts from a projected Graph State. */
 export function evaluateGraphGates(state: GraphState): GraphGateResults {
   const cwd = path.resolve(state.cwd);
-  const projection = scanArtifactGraph({ cwd });
-  const records = projection.records.length > 0
-    ? projection.records
-    : state.artifactGraph.nodes.map((node) => ({
-      ...node,
-      absolutePath: path.join(cwd, node.path),
-      body: "",
-      status: null,
-      relations: {},
-    }));
-  const focused = resolveFocus(cwd, state.focus, records, state.artifactGraph).focused;
-  const chain = focused ? focusedChain(cwd, state.focus, records, state.artifactGraph) : {};
+  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir });
+  const records = projection.records.length > 0 ? projection.records : fallbackRecords(cwd, state.artifactGraph);
+  const resolution = resolveArtifactFocus(cwd, state.artifactGraph, records, state.focus);
+  const focused = findRecord(records, resolution.focusedPath);
+  const chain = focused ? selectArtifactChain(state.artifactGraph, records, state.focus) : undefined;
   const taskGraph = state.taskGraph;
   const bootstrap = bootstrapReasons(cwd);
   const gates: GraphGateResults = {
@@ -227,22 +147,27 @@ export function evaluateGraphGates(state: GraphState): GraphGateResults {
     gates.planning = gate("blocked", ["focus-required"]);
     gates.implementation = gate("blocked", ["focus-required"]);
   } else {
+    const spec = findRecord(records, chain?.spec);
+    const adr = findRecord(records, chain?.adr);
+    const design = findRecord(records, chain?.design);
+    const plan = findRecord(records, chain?.plan);
+
     const briefingReasons: string[] = [];
-    if (!chain.spec || !["proposed", "approved", "implemented"].includes(chain.spec.status ?? "")) briefingReasons.push("spec-status");
-    if (!chain.spec || !sectionBody(chain.spec.body, "Acceptance Criteria")) briefingReasons.push("acceptance-criteria");
-    if (!chain.adr || !["proposed", "accepted"].includes(chain.adr.status ?? "")) briefingReasons.push("adr-status");
-    if (!chain.adr || consideredOptionCount(chain.adr.body) < 2) briefingReasons.push("considered-options");
+    if (!spec || !["proposed", "approved", "implemented"].includes(spec.status ?? "")) briefingReasons.push("spec-status");
+    if (!spec || !sectionBody(spec.body, "Acceptance Criteria")) briefingReasons.push("acceptance-criteria");
+    if (!adr || !["proposed", "accepted"].includes(adr.status ?? "")) briefingReasons.push("adr-status");
+    if (!adr || consideredOptionCount(adr.body) < 2) briefingReasons.push("considered-options");
     gates.briefing = gate(briefingReasons.length === 0 ? "pass" : "fail", briefingReasons);
 
     const designReasons: string[] = [];
-    if (!chain.design || chain.design.status !== "approved") designReasons.push("design-status");
-    if (!chain.design || !hasRelation(cwd, chain.design, ["derives-from", "implements", "spec"], chain.spec, records)) designReasons.push("design-spec-relation");
-    if (!chain.design || !hasRelation(cwd, chain.design, ["derives-from", "adr", "decision"], chain.adr, records)) designReasons.push("design-adr-relation");
+    if (!design || design.status !== "approved") designReasons.push("design-status");
+    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from", "implements", "spec"], spec?.path)) designReasons.push("design-spec-relation");
+    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from", "adr", "decision"], adr?.path)) designReasons.push("design-adr-relation");
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
 
     const planningReasons: string[] = [];
-    if (!chain.plan || !["approved", "in-progress", "completed"].includes(chain.plan.status ?? "")) planningReasons.push("plan-status");
-    if (!chain.plan || !hasRelation(cwd, chain.plan, ["derives-from", "design"], chain.design, records)) planningReasons.push("plan-design-relation");
+    if (!plan || !["approved", "in-progress", "completed"].includes(plan.status ?? "")) planningReasons.push("plan-status");
+    if (!plan || !artifactHasRelation(state.artifactGraph, plan.path, ["derives-from", "design"], design?.path)) planningReasons.push("plan-design-relation");
     if (!taskGraph || taskGraph.nodes.length === 0) planningReasons.push("no-selected-tasks");
     if (taskGraph && taskGraph.issues.length > 0) planningReasons.push(...taskGraph.issues.map((issue) => `task-graph:${issue.code}`));
     gates.planning = gate(
@@ -269,24 +194,25 @@ export function projectGraphState(options: ProjectGraphStateOptions): GraphState
   const cwd = path.resolve(options.cwd);
   const taskDir = options.taskDir ?? "docs/tasks";
   const projection = scanArtifactGraph({ cwd, taskDir });
-  const resolution = resolveFocus(cwd, options.focus ?? [], projection.records, projection.graph);
+  const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options.focus ?? []);
   const blockers = sortedUnique([
     ...resolution.blockers,
     ...projection.graph.issues.map((issue) => issue.code === "duplicate-id" ? "duplicate-id" : `broken-relation:${issue.message}`),
     ...(projection.graph.issues.some((issue) => issue.code === "duplicate-id") ? ["focus-required"] : []),
     ...(bootstrapReasons(cwd).length > 0 ? ["bootstrap-incomplete"] : []),
   ]);
-  const planPath = resolution.focused && resolution.blockers.length === 0
+  const chain = resolution.blockers.length === 0
     && !projection.graph.issues.some((issue) => issue.code === "duplicate-id")
-    ? selectPlanPath(projection.graph, resolution.focus)
+    ? selectArtifactChain(projection.graph, projection.records, resolution.focus)
     : undefined;
-  const plan = findRecord(projection.records, planPath);
+  const plan = findRecord(projection.records, chain?.plan);
   const taskGraph = graphTask(cwd, plan, taskDir);
   if (taskGraph?.issues.length) blockers.push("task-graph-invalid");
-  const partial: GraphState = {
+  const state: GraphState = {
     schemaVersion: 2,
     graphId: options.graphId ?? "doc-driven-dev",
     cwd,
+    taskDir,
     focus: resolution.focus,
     artifactGraph: projection.graph,
     gates: {},
@@ -294,18 +220,14 @@ export function projectGraphState(options: ProjectGraphStateOptions): GraphState
     blockers: sortedUnique(blockers),
     taskGraph,
   };
-  partial.signals = deriveSignals(partial.signals, partial.blockers, partial.gates, taskGraph);
-  partial.gates = evaluateGraphGates(partial);
-  if (partial.gates.planning?.reasons.some((reason) => reason.startsWith("task-graph:"))) {
-    partial.blockers = sortedUnique([...partial.blockers, "task-graph-invalid"]);
-    partial.gates = evaluateGraphGates(partial);
+  state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
+  state.gates = evaluateGraphGates(state);
+  if (state.gates.planning?.reasons.some((reason) => reason.startsWith("task-graph:"))) {
+    state.blockers = sortedUnique([...state.blockers, "task-graph-invalid"]);
+    state.gates = evaluateGraphGates(state);
   }
-  partial.signals = deriveSignals(partial.signals, partial.blockers, partial.gates, taskGraph);
-  return partial;
+  state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
+  return state;
 }
 
-export {
-  lineageComponent,
-  projectArtifactGraph,
-  selectPlanPath,
-};
+export { projectArtifactGraph };
