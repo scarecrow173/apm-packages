@@ -187,8 +187,8 @@ function parseRelations(
 function readArtifacts(cwd: string, taskDir = "docs/tasks"): DocumentArtifact[] {
   const result: DocumentArtifact[] = [];
   const directories = sortedUnique([...CANONICAL_TARGETS, normalizeRepoPath(cwd, taskDir)]);
-  for (const directory of directories) {
-    for (const absolutePath of markdownFiles(path.join(cwd, directory))) {
+  const artifactPaths = sortedUnique(directories.flatMap((directory) => markdownFiles(path.join(cwd, directory))));
+  for (const absolutePath of artifactPaths) {
       try {
         const source = fs.readFileSync(absolutePath, "utf8");
         const parsed = matter(source);
@@ -208,7 +208,6 @@ function readArtifacts(cwd: string, taskDir = "docs/tasks"): DocumentArtifact[] 
       } catch {
         // Invalid markdown is not an artifact. A focused path to it is rejected below.
       }
-    }
   }
   return result.sort((left, right) => compareStrings(left.path, right.path));
 }

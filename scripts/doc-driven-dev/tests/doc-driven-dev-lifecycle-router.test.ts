@@ -312,6 +312,24 @@ test("custom task directory is used by the planning gate", () => {
   assert.ok(state.artifacts.some((artifact: { path: string }) => artifact.path === "docs/work-items/0001-route.md"));
 });
 
+test("nested custom task directory does not duplicate canonical artifacts", () => {
+  const repo = repoWithApprovedArtifactChain();
+  writeArtifact(repo, "docs/tasks/custom/0002-route.md", {
+    id: "TASK-CUSTOM", type: "task", status: "todo", title: "Nested Custom Task",
+    relations: { implements: ["docs/plans/0001-graph-lifecycle.md"] },
+  }, "# Nested Custom Task\n\n## Verification\n\n- [ ] node --test\n");
+  const state = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    taskDir: "docs/tasks/custom",
+    signals: [],
+  });
+  assert.equal(state.gates.planning.status, "pass");
+  assert.equal(state.blockers.includes("duplicate-id"), false);
+  assert.equal(state.blockers.includes("focus-required"), false);
+  assert.equal(state.artifacts.filter((artifact: { path: string }) => artifact.path === "docs/tasks/custom/0002-route.md").length, 1);
+});
+
 test("router sends independent root tasks to implementation-flow", () => {
   const route = routeFixture({ current: "task-graph", taskStatuses: ["todo", "todo"] });
   assert.equal(route.next, "implementation");
