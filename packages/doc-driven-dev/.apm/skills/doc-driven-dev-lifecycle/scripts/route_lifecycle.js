@@ -21266,7 +21266,7 @@ var FOLLOWUP_CLASSIFICATIONS = [
 ];
 function gateIsNotPassing(state, name) {
   const gate2 = state.gates[name];
-  return Boolean(gate2 && gate2.status !== "pass");
+  return gate2?.status !== "pass";
 }
 function lifecycleComplete(state) {
   const gates = ["bootstrap", "briefing", "design", "planning", "implementation", "followup-triage", "exit-audit"];

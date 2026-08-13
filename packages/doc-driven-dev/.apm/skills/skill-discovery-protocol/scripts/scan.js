@@ -33,9 +33,9 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/.pnpm/js-yaml@5.0.0/node_modules/js-yaml/dist/js-yaml.cjs.js
+// node_modules/.pnpm/js-yaml@5.2.2/node_modules/js-yaml/dist/js-yaml.cjs.js
 var require_js_yaml_cjs = __commonJS({
-  "node_modules/.pnpm/js-yaml@5.0.0/node_modules/js-yaml/dist/js-yaml.cjs.js"(exports2) {
+  "node_modules/.pnpm/js-yaml@5.2.2/node_modules/js-yaml/dist/js-yaml.cjs.js"(exports2) {
     Object.defineProperty(exports2, Symbol.toStringTag, { value: "Module" });
     var NOT_RESOLVED = /* @__PURE__ */ Symbol("NOT_RESOLVED");
     var MERGE_KEY = /* @__PURE__ */ Symbol("MERGE_KEY");
@@ -54,7 +54,8 @@ var require_js_yaml_cjs = __commonJS({
       };
     }
     function defineSequenceTag(tagName, options2) {
-      var _options$matchByTagPr2, _options$identify2, _options$represent2, _options$representTag2;
+      var _options$matchByTagPr2, _options$finalize, _options$identify2, _options$represent2, _options$representTag2;
+      const carrierIsResult = options2.finalize === void 0;
       return {
         tagName,
         nodeKind: "sequence",
@@ -62,13 +63,16 @@ var require_js_yaml_cjs = __commonJS({
         matchByTagPrefix: (_options$matchByTagPr2 = options2.matchByTagPrefix) !== null && _options$matchByTagPr2 !== void 0 ? _options$matchByTagPr2 : false,
         create: options2.create,
         addItem: options2.addItem,
+        finalize: (_options$finalize = options2.finalize) !== null && _options$finalize !== void 0 ? _options$finalize : ((carrier) => carrier),
+        carrierIsResult,
         identify: (_options$identify2 = options2.identify) !== null && _options$identify2 !== void 0 ? _options$identify2 : null,
         represent: (_options$represent2 = options2.represent) !== null && _options$represent2 !== void 0 ? _options$represent2 : ((data) => data),
         representTagName: (_options$representTag2 = options2.representTagName) !== null && _options$representTag2 !== void 0 ? _options$representTag2 : null
       };
     }
     function defineMappingTag(tagName, options2) {
-      var _options$matchByTagPr3, _options$identify3, _options$represent3, _options$representTag3;
+      var _options$matchByTagPr3, _options$finalize2, _options$identify3, _options$represent3, _options$representTag3;
+      const carrierIsResult = options2.finalize === void 0;
       return {
         tagName,
         nodeKind: "mapping",
@@ -79,6 +83,8 @@ var require_js_yaml_cjs = __commonJS({
         has: options2.has,
         keys: options2.keys,
         get: options2.get,
+        finalize: (_options$finalize2 = options2.finalize) !== null && _options$finalize2 !== void 0 ? _options$finalize2 : ((carrier) => carrier),
+        carrierIsResult,
         identify: (_options$identify3 = options2.identify) !== null && _options$identify3 !== void 0 ? _options$identify3 : null,
         represent: (_options$represent3 = options2.represent) !== null && _options$represent3 !== void 0 ? _options$represent3 : ((data) => data),
         representTagName: (_options$representTag3 = options2.representTagName) !== null && _options$representTag3 !== void 0 ? _options$representTag3 : null
@@ -258,7 +264,7 @@ var require_js_yaml_cjs = __commonJS({
         ..."0123456789"
       ],
       resolve: resolveYamlInteger$2,
-      identify: (object2) => Object.prototype.toString.call(object2) === "[object Number]" && object2 % 1 === 0 && !Object.is(object2, -0),
+      identify: (object2) => Number.isInteger(object2) && !Object.is(object2, -0) && object2.toString(10).indexOf("e") < 0,
       represent: (object2) => object2.toString(10)
     });
     var YAML_INTEGER_IMPLICIT_PATTERN = /* @__PURE__ */ new RegExp("^-?(?:0|[1-9][0-9]*)$");
@@ -286,7 +292,7 @@ var require_js_yaml_cjs = __commonJS({
       implicit: true,
       implicitFirstChars: ["-", ..."0123456789"],
       resolve: resolveYamlInteger$1,
-      identify: (object2) => Object.prototype.toString.call(object2) === "[object Number]" && object2 % 1 === 0 && !Object.is(object2, -0),
+      identify: (object2) => Number.isInteger(object2) && !Object.is(object2, -0) && object2.toString(10).indexOf("e") < 0,
       represent: (object2) => object2.toString(10)
     });
     var YAML_INTEGER_PATTERN = /* @__PURE__ */ new RegExp("^(?:[-+]?0b[0-1_]+|[-+]?0[0-7_]+|[-+]?0x[0-9a-fA-F_]+|[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+|[-+]?(?:0|[1-9][0-9_]*))$");
@@ -320,7 +326,7 @@ var require_js_yaml_cjs = __commonJS({
         ..."0123456789"
       ],
       resolve: resolveYamlInteger,
-      identify: (object2) => Object.prototype.toString.call(object2) === "[object Number]" && object2 % 1 === 0 && !Object.is(object2, -0),
+      identify: (object2) => Number.isInteger(object2) && !Object.is(object2, -0) && object2.toString(10).indexOf("e") < 0,
       represent: (object2) => object2.toString(10)
     });
     var YAML_FLOAT_PATTERN$1 = /* @__PURE__ */ new RegExp("^(?:[-+]?[0-9]+(?:\\.[0-9]*)?(?:[eE][-+]?[0-9]+)?|[-+]?\\.[0-9]+(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$");
@@ -353,7 +359,7 @@ var require_js_yaml_cjs = __commonJS({
         ..."0123456789"
       ],
       resolve: resolveYamlFloat$2,
-      identify: (object2) => Object.prototype.toString.call(object2) === "[object Number]" && (object2 % 1 !== 0 || Object.is(object2, -0)),
+      identify: (object2) => typeof object2 === "number" && (!Number.isInteger(object2) || Object.is(object2, -0) || object2.toString(10).indexOf("e") >= 0),
       represent: representYamlFloat$2
     });
     var YAML_FLOAT_IMPLICIT_PATTERN = /* @__PURE__ */ new RegExp("^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]*)?(?:[eE][-+]?[0-9]+)?$");
@@ -386,7 +392,7 @@ var require_js_yaml_cjs = __commonJS({
       implicit: true,
       implicitFirstChars: ["-", ..."0123456789"],
       resolve: resolveYamlFloat$1,
-      identify: (object2) => Object.prototype.toString.call(object2) === "[object Number]" && (object2 % 1 !== 0 || Object.is(object2, -0)),
+      identify: (object2) => typeof object2 === "number" && (!Number.isInteger(object2) || Object.is(object2, -0) || object2.toString(10).indexOf("e") >= 0),
       represent: representYamlFloat$1
     });
     var YAML_FLOAT_PATTERN = /* @__PURE__ */ new RegExp("^(?:[-+]?(?:(?:[0-9][0-9_]*)?\\.[0-9_]*)(?:[eE][-+][0-9]+)?|[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$");
@@ -423,7 +429,7 @@ var require_js_yaml_cjs = __commonJS({
         ..."0123456789"
       ],
       resolve: resolveYamlFloat,
-      identify: (object2) => Object.prototype.toString.call(object2) === "[object Number]" && (object2 % 1 !== 0 || Object.is(object2, -0)),
+      identify: (object2) => typeof object2 === "number" && (!Number.isInteger(object2) || Object.is(object2, -0) || object2.toString(10).indexOf("e") >= 0),
       represent: representYamlFloat
     });
     var mergeTag = defineScalarTag("tag:yaml.org,2002:merge", {
@@ -502,17 +508,37 @@ var require_js_yaml_cjs = __commonJS({
       },
       identify: Array.isArray
     });
+    function isPlainObject2(data) {
+      if (data === null || typeof data !== "object" || Array.isArray(data)) return false;
+      const prototype = Object.getPrototypeOf(data);
+      return prototype === null || prototype === Object.prototype;
+    }
+    function pick2(object2, keys) {
+      const result = {};
+      for (const key of keys) if (object2[key] !== void 0) result[key] = object2[key];
+      return result;
+    }
     var omapTag = defineSequenceTag("tag:yaml.org,2002:omap", {
-      create: () => [],
-      addItem: (container, item) => {
-        if (Object.prototype.toString.call(item) !== "[object Object]") return "cannot resolve an ordered map item";
-        const object2 = item;
-        const itemKeys = Object.keys(object2);
-        if (itemKeys.length !== 1) return "cannot resolve an ordered map item";
-        for (const existing of container) if (Object.prototype.hasOwnProperty.call(existing, itemKeys[0])) return "cannot resolve an ordered map item";
-        container.push(object2);
+      create: () => ({
+        list: [],
+        seen: /* @__PURE__ */ new Set()
+      }),
+      addItem: (carrier, item) => {
+        let key;
+        if (item instanceof Map) {
+          if (item.size !== 1) return "cannot resolve an ordered map item";
+          key = item.keys().next().value;
+        } else if (isPlainObject2(item)) {
+          const itemKeys = Object.keys(item);
+          if (itemKeys.length !== 1) return "cannot resolve an ordered map item";
+          key = itemKeys[0];
+        } else return "cannot resolve an ordered map item";
+        if (carrier.seen.has(key)) return "duplicate key in ordered map";
+        carrier.seen.add(key);
+        carrier.list.push(item);
         return "";
-      }
+      },
+      finalize: (carrier) => carrier.list
     });
     var pairsTag = defineSequenceTag("tag:yaml.org,2002:pairs", {
       create: () => [],
@@ -530,16 +556,6 @@ var require_js_yaml_cjs = __commonJS({
         return "";
       }
     });
-    function isPlainObject2(data) {
-      if (data === null || typeof data !== "object" || Array.isArray(data)) return false;
-      const prototype = Object.getPrototypeOf(data);
-      return prototype === null || prototype === Object.prototype;
-    }
-    function pick2(object2, keys) {
-      const result = {};
-      for (const key of keys) if (object2[key] !== void 0) result[key] = object2[key];
-      return result;
-    }
     var mapTag = defineMappingTag("tag:yaml.org,2002:map", {
       create: () => ({}),
       identify: isPlainObject2,
@@ -1187,7 +1203,8 @@ ${exception.mark.snippet}`;
       filename: "",
       schema: CORE_SCHEMA,
       json: false,
-      maxMergeSeqLength: 20
+      maxTotalMergeKeys: 1e4,
+      maxAliases: -1
     };
     function eventPosition$1(event) {
       if ("tagStart" in event && event.tagStart !== NO_RANGE$2) return event.tagStart;
@@ -1198,6 +1215,14 @@ ${exception.mark.snippet}`;
     }
     function throwError$1(state, message) {
       throwErrorAt(state.source, state.position, message, state.filename);
+    }
+    function finalizeCollection(state, position, tag, carrier) {
+      try {
+        return tag.finalize(carrier);
+      } catch (error51) {
+        if (error51 instanceof YAMLException) throw error51;
+        throwErrorAt(state.source, position, error51 instanceof Error ? error51.message : String(error51), state.filename);
+      }
     }
     function lookupTag(exact, prefix, tagName) {
       const exactTag = exact[tagName];
@@ -1232,8 +1257,9 @@ ${exception.mark.snippet}`;
         const collectionTagDef = (_lookupTag = lookupTag(state.schema.exact.mapping, state.schema.prefix.mapping, tagName)) !== null && _lookupTag !== void 0 ? _lookupTag : lookupTag(state.schema.exact.sequence, state.schema.prefix.sequence, tagName);
         if (collectionTagDef) {
           if (source !== "") throwError$1(state, `cannot resolve a node with !<${tagName}> explicit tag`);
+          const carrier = collectionTagDef.create(tagName);
           return {
-            value: collectionTagDef.create(tagName),
+            value: collectionTagDef.carrierIsResult ? carrier : finalizeCollection(state, state.position, collectionTagDef, carrier),
             tag: collectionTagDef
           };
         }
@@ -1269,6 +1295,7 @@ ${exception.mark.snippet}`;
     function mergeKeys(state, frame, source, sourceTag) {
       for (const sourceKey of sourceTag.keys(source)) {
         var _frame$overridable;
+        if (state.maxTotalMergeKeys !== -1 && ++state.totalMergeKeys > state.maxTotalMergeKeys) throwError$1(state, `merge keys exceeded maxTotalMergeKeys (${state.maxTotalMergeKeys})`);
         if (frame.tag.has(frame.value, sourceKey)) continue;
         const err = frame.tag.addPair(frame.value, sourceKey, sourceTag.get(source, sourceKey));
         if (err) throwError$1(state, err);
@@ -1278,14 +1305,8 @@ ${exception.mark.snippet}`;
     function mergeSource(state, frame, source, sourceTag) {
       state.position = frame.keyPosition;
       if (isMappingTag(sourceTag)) mergeKeys(state, frame, source, sourceTag);
-      else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) {
-        const seen = /* @__PURE__ */ new Set();
-        for (const element of source) {
-          if (seen.has(element)) continue;
-          seen.add(element);
-          mergeKeys(state, frame, element, frame.tag);
-        }
-      } else throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
+      else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) for (const element of source) mergeKeys(state, frame, element, frame.tag);
+      else throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
     }
     function addMappingValue(state, frame, key, value, tag) {
       var _frame$overridable2, _frame$overridable3;
@@ -1307,7 +1328,6 @@ ${exception.mark.snippet}`;
       } else if (frame.kind === "sequence") {
         if (frame.merge) {
           if (!isMappingTag(tag)) throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
-          if (frame.index >= state.maxMergeSeqLength) throwError$1(state, `merge sequence length exceeded maxMergeSeqLength (${state.maxMergeSeqLength})`);
         }
         const err = frame.tag.addItem(frame.value, value, frame.index++);
         if (err) throwError$1(state, err);
@@ -1322,11 +1342,17 @@ ${exception.mark.snippet}`;
         frame.hasKey = true;
       }
     }
-    function storeAnchor(state, event, value, tag) {
-      if (event.anchorStart !== NO_RANGE$2) state.anchors.set(state.source.slice(event.anchorStart, event.anchorEnd), {
-        value,
-        tag
-      });
+    function storeAnchor(state, event, value, tag, isValueFinal) {
+      if (event.anchorStart !== NO_RANGE$2) {
+        const anchor = {
+          value,
+          tag,
+          isValueFinal
+        };
+        state.anchors.set(state.source.slice(event.anchorStart, event.anchorEnd), anchor);
+        return anchor;
+      }
+      return null;
     }
     function constructFromEvents(events, options2) {
       const state = _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_CONSTRUCTOR_OPTIONS), options2), {}, {
@@ -1336,7 +1362,9 @@ ${exception.mark.snippet}`;
         position: 0,
         frames: [],
         anchors: /* @__PURE__ */ new Map(),
-        tagHandlers: /* @__PURE__ */ Object.create(null)
+        tagHandlers: /* @__PURE__ */ Object.create(null),
+        totalMergeKeys: 0,
+        aliasCount: 0
       });
       while (state.eventIndex < state.events.length) {
         const event = state.events[state.eventIndex++];
@@ -1344,6 +1372,7 @@ ${exception.mark.snippet}`;
         switch (event.type) {
           case 1:
             state.anchors = /* @__PURE__ */ new Map();
+            state.aliasCount = 0;
             state.tagHandlers = /* @__PURE__ */ Object.create(null);
             for (const directive of event.directives) if (directive.kind === "tag") state.tagHandlers[directive.handle] = directive.prefix;
             state.frames.push({
@@ -1355,14 +1384,14 @@ ${exception.mark.snippet}`;
             break;
           case 4: {
             const { value, tag } = constructScalar(state, event);
-            storeAnchor(state, event, value, tag);
+            storeAnchor(state, event, value, tag, true);
             addValue(state, value, tag);
             break;
           }
           case 2: {
             const definition = collectionTag(state, event, state.schema.exact.sequence, state.schema.prefix.sequence, "tag:yaml.org,2002:seq", "sequence");
             const value = definition.tag.create(definition.tagName);
-            storeAnchor(state, event, value, definition.tag);
+            const anchor = storeAnchor(state, event, value, definition.tag, definition.tag.carrierIsResult);
             const parent = state.frames[state.frames.length - 1];
             const merge2 = parent !== void 0 && parent.kind === "mapping" && parent.hasKey && parent.key === MERGE_KEY;
             state.frames.push({
@@ -1370,6 +1399,7 @@ ${exception.mark.snippet}`;
               position: state.position,
               value,
               tag: definition.tag,
+              anchor,
               index: 0,
               merge: merge2
             });
@@ -1378,12 +1408,13 @@ ${exception.mark.snippet}`;
           case 3: {
             const definition = collectionTag(state, event, state.schema.exact.mapping, state.schema.prefix.mapping, "tag:yaml.org,2002:map", "mapping");
             const value = definition.tag.create(definition.tagName);
-            storeAnchor(state, event, value, definition.tag);
+            const anchor = storeAnchor(state, event, value, definition.tag, definition.tag.carrierIsResult);
             state.frames.push({
               kind: "mapping",
               position: state.position,
               value,
               tag: definition.tag,
+              anchor,
               key: void 0,
               keyPosition: state.position,
               hasKey: false,
@@ -1392,16 +1423,25 @@ ${exception.mark.snippet}`;
             break;
           }
           case 5: {
+            if (state.maxAliases !== -1 && ++state.aliasCount > state.maxAliases) throwError$1(state, `aliases exceeded maxAliases (${state.maxAliases})`);
             const name = state.source.slice(event.anchorStart, event.anchorEnd);
             const anchor = state.anchors.get(name);
             if (!anchor) throwError$1(state, `unidentified alias "${name}"`);
+            if (!anchor.isValueFinal) throwError$1(state, `recursive alias "${name}" is not supported for tag ${anchor.tag.tagName} because it uses finalize()`);
             addValue(state, anchor.value, anchor.tag);
             break;
           }
           case 6: {
             const frame = state.frames.pop();
             if (frame.kind === "document") state.documents.push(frame.value);
-            else addValue(state, frame.value, frame.tag);
+            else {
+              const value = frame.tag.carrierIsResult ? frame.value : finalizeCollection(state, frame.position, frame.tag, frame.value);
+              if (frame.anchor) {
+                frame.anchor.value = value;
+                frame.anchor.isValueFinal = true;
+              }
+              addValue(state, value, frame.tag);
+            }
             break;
           }
         }
@@ -1454,6 +1494,17 @@ ${exception.mark.snippet}`;
         tagStart,
         tagEnd,
         style
+      });
+    }
+    function insertFlowPairMappingEvent(state, snapshot) {
+      state.events.splice(snapshot.eventsLength, 0, {
+        type: 3,
+        start: snapshot.position,
+        anchorStart: NO_RANGE$1,
+        anchorEnd: NO_RANGE$1,
+        tagStart: NO_RANGE$1,
+        tagEnd: NO_RANGE$1,
+        style: 2
       });
     }
     function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tagStart, tagEnd, style, chomping = 1, indent = -1, fast = false) {
@@ -1899,12 +1950,8 @@ ${exception.mark.snippet}`;
           state.position++;
           skipFlowSeparationSpace(state, nodeIndent);
           if (!isMapping) {
-            restoreState(state, entryStart);
-            addMappingEvent(state, entryStart.position, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, 2);
-            if (!parseNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true)) addEmptyScalarEvent(state);
-            skipFlowSeparationSpace(state, nodeIndent);
-            state.position++;
-            skipFlowSeparationSpace(state, nodeIndent);
+            insertFlowPairMappingEvent(state, entryStart);
+            if (!keyWasRead) addEmptyScalarEvent(state);
           } else if (!keyWasRead) addEmptyScalarEvent(state);
           if (!parseNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true)) addEmptyScalarEvent(state);
           skipFlowSeparationSpace(state, nodeIndent);
@@ -1914,9 +1961,8 @@ ${exception.mark.snippet}`;
           addEmptyScalarEvent(state);
         } else if (isMapping) addEmptyScalarEvent(state);
         else if (isPair) {
-          restoreState(state, entryStart);
-          addMappingEvent(state, entryStart.position, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, 2);
-          parseNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true);
+          insertFlowPairMappingEvent(state, entryStart);
+          if (!keyWasRead) addEmptyScalarEvent(state);
           addEmptyScalarEvent(state);
           addPopEvent(state);
         }
@@ -2473,7 +2519,8 @@ ${exception.mark.snippet}`;
       flowSkipCommaSpace: false,
       flowSkipColonSpace: false,
       quoteFlowKeys: false,
-      quoteStyle: "auto",
+      quoteStyle: "single",
+      forceQuotes: false,
       tagBeforeAnchor: false
     };
     function nodeTagShort(node) {
@@ -2550,7 +2597,7 @@ ${" ".repeat(state.indent * level)}`;
     function isPlainSafe(c, prev, inblock) {
       const cIsNsCharOrWhitespace = isNsCharOrWhitespace(c);
       const cIsNsChar = cIsNsCharOrWhitespace && !isWhitespace(c);
-      return (inblock ? cIsNsCharOrWhitespace : cIsNsCharOrWhitespace && c !== CHAR_COMMA && c !== CHAR_LEFT_SQUARE_BRACKET && c !== CHAR_RIGHT_SQUARE_BRACKET && c !== CHAR_LEFT_CURLY_BRACKET && c !== CHAR_RIGHT_CURLY_BRACKET) && c !== CHAR_SHARP && !(prev === CHAR_COLON && !cIsNsChar) || isNsCharOrWhitespace(prev) && !isWhitespace(prev) && c === CHAR_SHARP || prev === CHAR_COLON && cIsNsChar;
+      return (inblock ? cIsNsCharOrWhitespace : cIsNsCharOrWhitespace && c !== CHAR_COMMA && c !== CHAR_LEFT_SQUARE_BRACKET && c !== CHAR_RIGHT_SQUARE_BRACKET && c !== CHAR_LEFT_CURLY_BRACKET && c !== CHAR_RIGHT_CURLY_BRACKET) && c !== CHAR_SHARP && !(prev === CHAR_COLON && !cIsNsChar) || isNsCharOrWhitespace(prev) && !isWhitespace(prev) && c === CHAR_SHARP || prev === CHAR_COLON && cIsNsChar && (inblock || c !== CHAR_COMMA && c !== CHAR_LEFT_SQUARE_BRACKET && c !== CHAR_RIGHT_SQUARE_BRACKET && c !== CHAR_LEFT_CURLY_BRACKET && c !== CHAR_RIGHT_CURLY_BRACKET);
     }
     function isPlainSafeFirst(c) {
       return isPrintable(c) && c !== CHAR_BOM && !isWhitespace(c) && c !== CHAR_MINUS && c !== CHAR_QUESTION && c !== CHAR_COLON && c !== CHAR_COMMA && c !== CHAR_LEFT_SQUARE_BRACKET && c !== CHAR_RIGHT_SQUARE_BRACKET && c !== CHAR_LEFT_CURLY_BRACKET && c !== CHAR_RIGHT_CURLY_BRACKET && c !== CHAR_SHARP && c !== CHAR_AMPERSAND && c !== CHAR_ASTERISK && c !== CHAR_EXCLAMATION && c !== CHAR_VERTICAL_LINE && c !== CHAR_EQUALS && c !== CHAR_GREATER_THAN && c !== CHAR_SINGLE_QUOTE && c !== CHAR_DOUBLE_QUOTE && c !== CHAR_PERCENT && c !== CHAR_COMMERCIAL_AT && c !== CHAR_GRAVE_ACCENT;
@@ -2584,9 +2631,8 @@ ${" ".repeat(state.indent * level)}`;
     var STYLE_LITERAL = 3;
     var STYLE_FOLDED = 4;
     var STYLE_DOUBLE = 5;
-    function chooseScalarStyle(state, string4, layout, singleLineOnly, inblock) {
+    function chooseScalarStyle(state, string4, layout, singleLineOnly, forceQuote, inblock) {
       const { blockIndent, lineWidth } = layout;
-      const forceQuote = state.quoteStyle !== "auto";
       let i;
       let char = 0;
       let prevChar = -1;
@@ -2648,11 +2694,11 @@ ${" ".repeat(state.indent * level)}`;
       }
       const string4 = node.value;
       if (string4.length === 0) {
-        if (state.quoteStyle === "auto" && (node.style.tagged || resolveImplicitTag(state, string4) === node.tag)) return STYLE_PLAIN;
+        if (node.style.tagged || resolveImplicitTag(state, string4) === node.tag) return STYLE_PLAIN;
         return state.quoteStyle === "double" ? STYLE_DOUBLE : STYLE_SINGLE;
       }
-      const style = chooseScalarStyle(state, string4, layout, singleLineOnly, inblock);
-      if (style === STYLE_PLAIN && !node.style.tagged && resolveImplicitTag(state, string4) !== node.tag) return STYLE_SINGLE;
+      const style = chooseScalarStyle(state, string4, layout, singleLineOnly, state.forceQuotes && !iskey, inblock);
+      if (style === STYLE_PLAIN && !node.style.tagged && resolveImplicitTag(state, string4) !== node.tag) return state.quoteStyle === "double" ? STYLE_DOUBLE : STYLE_SINGLE;
       return style;
     }
     function blockHeader(string4, indentPerLevel) {
@@ -2772,7 +2818,7 @@ ${line.slice(curr + 1)}`;
       for (const { key, value } of items) {
         let pairBuffer = "";
         if (result !== "") pairBuffer += `,${!state.flowSkipCommaSpace ? " " : ""}`;
-        const keyText = writeNode(state, level, key, {});
+        const keyText = writeNode(state, level, key, { iskey: true });
         const explicitPair = keyText.length > 1024;
         if (explicitPair) pairBuffer += "? ";
         else if (state.quoteFlowKeys) pairBuffer += '"';
@@ -3641,9 +3687,9 @@ var require_section_matter = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/common.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/common.js
 var require_common = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/common.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/common.js"(exports2, module2) {
     "use strict";
     function isNothing(subject) {
       return typeof subject === "undefined" || subject === null;
@@ -3686,9 +3732,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/exception.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/exception.js
 var require_exception = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/exception.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/exception.js"(exports2, module2) {
     "use strict";
     function YAMLException(reason, mark) {
       Error.call(this);
@@ -3716,9 +3762,9 @@ var require_exception = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/mark.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/mark.js
 var require_mark = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/mark.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/mark.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     function Mark(name, buffer, position, line, column) {
@@ -3774,9 +3820,9 @@ var require_mark = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type.js
 var require_type = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type.js"(exports2, module2) {
     "use strict";
     var YAMLException = require_exception();
     var TYPE_CONSTRUCTOR_OPTIONS = [
@@ -3833,9 +3879,9 @@ var require_type = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema.js
 var require_schema = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var YAMLException = require_exception();
@@ -3921,9 +3967,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/str.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/str.js
 var require_str = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/str.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/str.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     module2.exports = new Type("tag:yaml.org,2002:str", {
@@ -3935,9 +3981,9 @@ var require_str = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/seq.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/seq.js
 var require_seq = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/seq.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/seq.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     module2.exports = new Type("tag:yaml.org,2002:seq", {
@@ -3949,9 +3995,9 @@ var require_seq = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/map.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/map.js
 var require_map = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/map.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/map.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     module2.exports = new Type("tag:yaml.org,2002:map", {
@@ -3963,9 +4009,9 @@ var require_map = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/failsafe.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/failsafe.js
 var require_failsafe = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/failsafe.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/failsafe.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = new Schema({
@@ -3978,9 +4024,9 @@ var require_failsafe = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/null.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/null.js
 var require_null = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/null.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/null.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveYamlNull(data) {
@@ -4018,9 +4064,9 @@ var require_null = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/bool.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/bool.js
 var require_bool = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/bool.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/bool.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveYamlBoolean(data) {
@@ -4055,9 +4101,9 @@ var require_bool = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/int.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/int.js
 var require_int = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/int.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/int.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var Type = require_type();
@@ -4188,9 +4234,9 @@ var require_int = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/float.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/float.js
 var require_float = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/float.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/float.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var Type = require_type();
@@ -4283,9 +4329,9 @@ var require_float = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/json.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/json.js
 var require_json = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/json.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/json.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = new Schema({
@@ -4302,9 +4348,9 @@ var require_json = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/core.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/core.js
 var require_core = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/core.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/core.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = new Schema({
@@ -4315,9 +4361,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/timestamp.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/timestamp.js
 var require_timestamp = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/timestamp.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/timestamp.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     var YAML_DATE_REGEXP = new RegExp(
@@ -4376,9 +4422,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/merge.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/merge.js
 var require_merge = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/merge.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/merge.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveYamlMerge(data) {
@@ -4391,9 +4437,9 @@ var require_merge = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/binary.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/binary.js
 var require_binary = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/binary.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/binary.js"(exports2, module2) {
     "use strict";
     var NodeBuffer;
     try {
@@ -4484,9 +4530,9 @@ var require_binary = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/omap.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/omap.js
 var require_omap = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/omap.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/omap.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     var _hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -4521,9 +4567,9 @@ var require_omap = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/pairs.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/pairs.js
 var require_pairs = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/pairs.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/pairs.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     var _toString = Object.prototype.toString;
@@ -4559,9 +4605,9 @@ var require_pairs = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/set.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/set.js
 var require_set = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/set.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/set.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     var _hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -4586,9 +4632,9 @@ var require_set = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/default_safe.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/default_safe.js
 var require_default_safe = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/default_safe.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/default_safe.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = new Schema({
@@ -4609,9 +4655,9 @@ var require_default_safe = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/undefined.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/undefined.js
 var require_undefined = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/undefined.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/undefined.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveJavascriptUndefined() {
@@ -4636,9 +4682,9 @@ var require_undefined = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/regexp.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/regexp.js
 var require_regexp = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/regexp.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/regexp.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveJavascriptRegExp(data) {
@@ -4680,9 +4726,9 @@ var require_regexp = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/function.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/function.js
 var require_function = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/function.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/function.js"(exports2, module2) {
     "use strict";
     var esprima;
     try {
@@ -4735,9 +4781,9 @@ var require_function = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/default_full.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/default_full.js
 var require_default_full = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/default_full.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/default_full.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = Schema.DEFAULT = new Schema({
@@ -4753,9 +4799,9 @@ var require_default_full = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/loader.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/loader.js
 var require_loader = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/loader.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/loader.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var YAMLException = require_exception();
@@ -4858,6 +4904,7 @@ var require_loader = __commonJS({
       this.legacy = options2["legacy"] || false;
       this.json = options2["json"] || false;
       this.listener = options2["listener"] || null;
+      this.maxTotalMergeKeys = typeof options2["maxTotalMergeKeys"] === "number" ? options2["maxTotalMergeKeys"] : 1e4;
       this.implicitTypes = this.schema.compiledImplicit;
       this.typeMap = this.schema.compiledTypeMap;
       this.length = input.length;
@@ -4865,6 +4912,7 @@ var require_loader = __commonJS({
       this.line = 0;
       this.lineStart = 0;
       this.lineIndent = 0;
+      this.totalMergeKeys = 0;
       this.documents = [];
     }
     function generateError(state, message) {
@@ -4949,6 +4997,9 @@ var require_loader = __commonJS({
       sourceKeys = Object.keys(source);
       for (index = 0, quantity = sourceKeys.length; index < quantity; index += 1) {
         key = sourceKeys[index];
+        if (state.maxTotalMergeKeys !== -1 && ++state.totalMergeKeys > state.maxTotalMergeKeys) {
+          throwError(state, "merge keys exceeded maxTotalMergeKeys (" + state.maxTotalMergeKeys + ")");
+        }
         if (!_hasOwnProperty.call(destination, key)) {
           setProperty(destination, key, source[key]);
           overridableKeys[key] = true;
@@ -5872,9 +5923,9 @@ var require_loader = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/dumper.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/dumper.js
 var require_dumper = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/dumper.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/dumper.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var YAMLException = require_exception();
@@ -6420,9 +6471,9 @@ var require_dumper = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml.js
 var require_js_yaml = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml.js"(exports2, module2) {
     "use strict";
     var loader = require_loader();
     var dumper = require_dumper();
@@ -6455,9 +6506,9 @@ var require_js_yaml = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/index.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/index.js
 var require_js_yaml2 = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/index.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/index.js"(exports2, module2) {
     "use strict";
     var yaml2 = require_js_yaml();
     module2.exports = yaml2;
@@ -22385,7 +22436,7 @@ main().catch((e) => {
 /*! Bundled license information:
 
 js-yaml/dist/js-yaml.cjs.js:
-  (*! js-yaml 5.0.0 https://github.com/nodeca/js-yaml @license MIT *)
+  (*! js-yaml 5.2.2 https://github.com/nodeca/js-yaml @license MIT *)
 
 is-extendable/index.js:
   (*!
