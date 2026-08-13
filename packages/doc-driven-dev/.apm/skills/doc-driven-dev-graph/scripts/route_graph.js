@@ -21188,6 +21188,7 @@ function graphTask(cwd, plan, taskDir) {
 function deriveSignals(input, blockers, gates, taskGraph) {
   const signals = new Set(input);
   if (blockers.includes("focus-required")) signals.add("focus-required");
+  if (blockers.includes("bootstrap-incomplete")) signals.add("bootstrap-incomplete");
   const followups = [...signals].filter((signal) => FOLLOWUP_SIGNALS.has(signal));
   if (followups.length === 0) signals.add("followups-unclassified");
   if (followups.length > 1) signals.add("followups-conflicting");

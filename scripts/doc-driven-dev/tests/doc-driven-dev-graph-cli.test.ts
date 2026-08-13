@@ -4,6 +4,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
+const matter = require("gray-matter");
 
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
 const generatedCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/route_graph.js");
@@ -39,6 +40,72 @@ edges:
 `, "utf8");
   return file;
 }
+
+const CANONICAL_TARGETS = [
+  "docs/ideas", "docs/discovery", "docs/specs", "docs/designs", "docs/plans",
+  "docs/tasks", "docs/adr", "docs/impl/ir", "docs/impl/exp",
+];
+
+function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): void {
+  const file = path.join(repo, relativePath);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, matter.stringify(body, {
+    created: "2026-08-13",
+    updated: "2026-08-13",
+    owners: [],
+    relations: {},
+    ...data,
+  }), "utf8");
+}
+
+function completeRepo(taskStatuses: Array<"todo" | "in-progress" | "blocked" | "done" | "wont-do"> = ["done"], dependsOn: string[][] = []): string {
+  const repo = tempRepo();
+  for (const directory of CANONICAL_TARGETS) {
+    fs.mkdirSync(path.join(repo, directory), { recursive: true });
+    fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
+  }
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "approved", title: "Graph",
+  }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
+  writeArtifact(repo, "docs/adr/0001-graph.md", {
+    id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+  }, "# Graph\n\n## Considered Options\n\n### A\n\n### B\n");
+  writeArtifact(repo, "docs/designs/0001-graph.md", {
+    id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
+    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+  }, "# Graph\n");
+  writeArtifact(repo, "docs/plans/0001-graph.md", {
+    id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
+    relations: { "derives-from": ["DESIGN-0001"] },
+  }, "# Graph\n");
+  taskStatuses.forEach((status, index) => {
+    const id = `TASK-${String(index + 1).padStart(4, "0")}`;
+    writeArtifact(repo, `docs/tasks/${String(index + 1).padStart(4, "0")}-task.md`, {
+      id, type: "task", status, title: id,
+      relations: {
+        implements: ["docs/plans/0001-graph.md"],
+        ...(dependsOn[index]?.length ? { "depends-on": dependsOn[index] } : {}),
+      },
+    }, "# Task\n\n## Verification\n\n- [ ] node --test\n");
+  });
+  return repo;
+}
+
+function canonicalGraphPath(): string {
+  return path.resolve(
+    __dirname,
+    "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml",
+  );
+}
+
+type Scenario = {
+  name: string;
+  setup: () => { repo: string; args?: string[]; graph?: string };
+  edgeId: string | null;
+  next: string;
+  status?: "edge" | "terminal" | "blocked";
+  assertRoute?: (route: Record<string, unknown>) => void;
+};
 
 function runCli(cli: string, cwd: string, args: string[]) {
   const result = spawnSync(process.execPath, [cli, ...args], {
@@ -114,4 +181,147 @@ test("generated CLI smoke matches source CLI terminology", { skip: !fs.existsSyn
   assert.equal(route.graphId, "cli-fixture");
   assert.equal(route.next, "next");
   assert.equal(route.edgeId, "start-to-next");
+});
+
+test("table-driven CLI routes exercise every migration scenario with one edge", () => {
+  const scenarios: Scenario[] = [
+    {
+      name: "bootstrap required",
+      setup: () => ({ repo: tempRepo() }),
+      edgeId: "probe-to-bootstrap",
+      next: "bootstrap",
+    },
+    {
+      name: "happy path",
+      setup: () => ({ repo: completeRepo(), args: ["--focus", "PLAN-0001", "--signal", "bootstrap-complete"] }),
+      edgeId: "probe-to-briefing",
+      next: "briefing",
+    },
+    {
+      name: "spec gap",
+      setup: () => ({ repo: completeRepo(), args: ["--focus", "PLAN-0001", "--current", "design", "--signal", "spec-gap"] }),
+      edgeId: "design-to-briefing",
+      next: "briefing",
+    },
+    {
+      name: "design gap",
+      setup: () => ({ repo: completeRepo(), args: ["--focus", "PLAN-0001", "--current", "planning", "--signal", "design-gap"] }),
+      edgeId: "planning-to-design",
+      next: "design",
+    },
+    {
+      name: "invalid task graph",
+      setup: () => ({
+        repo: completeRepo(["todo"], [["TASK-9999"]]),
+        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+      }),
+      edgeId: "task-graph-to-planning",
+      next: "planning",
+    },
+    {
+      name: "runnable task graph",
+      setup: () => ({
+        repo: completeRepo(["todo"]),
+        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+      }),
+      edgeId: "task-graph-to-implementation",
+      next: "implementation",
+      assertRoute: (route) => assert.deepEqual((route.taskGraph as { runnable: string[] }).runnable, ["TASK-0001"]),
+    },
+    {
+      name: "parallel runnable tasks",
+      setup: () => ({
+        repo: completeRepo(["todo", "todo"]),
+        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+      }),
+      edgeId: "task-graph-to-implementation",
+      next: "implementation",
+      assertRoute: (route) => assert.deepEqual((route.taskGraph as { runnable: string[] }).runnable, ["TASK-0001", "TASK-0002"]),
+    },
+    {
+      name: "implementation retry",
+      setup: () => ({
+        repo: completeRepo(),
+        args: ["--focus", "PLAN-0001", "--current", "implementation", "--signal", "implementation-incomplete"],
+      }),
+      edgeId: "implementation-retry",
+      next: "implementation",
+    },
+    ...([
+      ["followup-bug-fix", "followup-triage-to-planning", "planning"],
+      ["followup-decision-briefing", "followup-triage-to-briefing", "briefing"],
+      ["followup-decision-design", "followup-triage-to-design", "design"],
+      ["followup-new-feature", "followup-triage-new-feature", "briefing"],
+      ["followup-doc-only", "followup-triage-doc-only", "exit-audit"],
+      ["followup-terminal", "followup-triage-terminal", "exit-audit"],
+    ] as const).map(([signal, edgeId, next]) => ({
+      name: signal,
+      setup: () => ({
+        repo: completeRepo(),
+        args: ["--focus", "PLAN-0001", "--current", "followup-triage", "--signal", "implementation-verified", "--signal", signal],
+      }),
+      edgeId,
+      next,
+    })),
+    {
+      name: "wont-do task remains non-runnable",
+      setup: () => ({
+        repo: completeRepo(["wont-do"]),
+        args: ["--focus", "PLAN-0001", "--current", "task-graph", "--signal", "implementation-verified"],
+      }),
+      edgeId: null,
+      next: "task-graph",
+      status: "blocked",
+      assertRoute: (route) => assert.deepEqual((route.taskGraph as { blocked: Array<{ id: string; reasons: string[] }> }).blocked, [
+        { id: "TASK-0001", reasons: ["status:wont-do"] },
+      ]),
+    },
+    {
+      name: "upstream regression returns to briefing",
+      setup: () => ({
+        repo: completeRepo(),
+        args: ["--focus", "PLAN-0001", "--current", "implementation", "--signal", "spec-gap"],
+      }),
+      edgeId: "implementation-to-briefing",
+      next: "briefing",
+    },
+    {
+      name: "exit audit retry",
+      setup: () => ({
+        repo: completeRepo(),
+        args: ["--focus", "PLAN-0001", "--current", "exit-audit", "--signal", "followup-terminal", "--signal", "exit-audit-required"],
+      }),
+      edgeId: "exit-audit-retry",
+      next: "exit-audit",
+    },
+    {
+      name: "terminal re-entry",
+      setup: () => ({ repo: completeRepo(), args: ["--focus", "PLAN-0001", "--current", "complete"] }),
+      edgeId: null,
+      next: "complete",
+      status: "terminal",
+    },
+    {
+      name: "custom graph",
+      setup: () => {
+        const repo = tempRepo();
+        const graph = graphFile(repo).replace("cli-fixture", "custom-fixture");
+        return { repo, graph, args: ["--current", "start", "--signal", "advance"] };
+      },
+      edgeId: "start-to-next",
+      next: "next",
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const fixture = scenario.setup();
+    const graphArgs = fixture.graph ? ["--graph", fixture.graph] : [];
+    const result = runSource(fixture.repo, [...graphArgs, ...(fixture.args ?? []), "--json"]);
+    assert.equal(result.status, 0, `${scenario.name}: ${result.stderr}`);
+    const route = JSON.parse(result.stdout) as Record<string, unknown>;
+    assert.equal(route.edgeId, scenario.edgeId, scenario.name);
+    assert.equal(route.next, scenario.next, scenario.name);
+    assert.equal(route.status, scenario.status ?? "edge", scenario.name);
+    scenario.assertRoute?.(route);
+  }
 });

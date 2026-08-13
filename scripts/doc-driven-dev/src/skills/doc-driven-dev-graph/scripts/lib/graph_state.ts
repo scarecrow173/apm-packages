@@ -110,6 +110,7 @@ function graphTask(cwd: string, plan: ArtifactRecord | undefined, taskDir: strin
 function deriveSignals(input: GraphSignal[], blockers: string[], gates: GraphGateResults, taskGraph: TaskGraphResult | null): GraphSignal[] {
   const signals = new Set(input);
   if (blockers.includes("focus-required")) signals.add("focus-required");
+  if (blockers.includes("bootstrap-incomplete")) signals.add("bootstrap-incomplete");
   const followups = [...signals].filter((signal) => FOLLOWUP_SIGNALS.has(signal));
   if (followups.length === 0) signals.add("followups-unclassified");
   if (followups.length > 1) signals.add("followups-conflicting");
