@@ -132,8 +132,13 @@ spec と ADR は**並列トラック**です。同じ upstream discovery artifac
 
 - Phase 1 でプロダクト要件と技術判断の両方が明らかになったら、spec と ADR を
   並列で作成します。
-- 作業が純粋にプロダクト要件だけなら spec のみで十分です。
-- 作業が純粋に横断的な技術判断だけなら ADR のみで十分です。
+- 直接 skill を使って単独 artifact を作成することはできます。プロダクト要件
+  だけなら `spec-doc` 単独、横断的な技術判断なら `adr-doc` 単独を呼び出せます。
+  ただし、これは lifecycle router の適格性を満たしません。
+- focused lifecycle graph を Design / Planning gate へ進めるには、Phase 1 の
+  chain に focused な `spec-doc` と `adr-doc` の両 briefing artifact と、必要な
+  source/evidence および approval relation が揃っていなければなりません。片方の
+  artifact または必要な証跡が欠けている場合は briefing へ loopback します。
 - 自明に見える判断も含め、将来のエージェントが理由を追えるように ADR へ残します。
 
 ## インストール

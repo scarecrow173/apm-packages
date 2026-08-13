@@ -138,10 +138,13 @@ upstream discovery artifact, addressing complementary concerns:
 
 - When Phase 1 reveals both product requirements and technical decisions, write
   spec and ADR in parallel.
-- When the work is purely product (no architecture choice), spec alone
-  suffices.
-- When the decision is purely cross-cutting (no single feature), ADR alone
-  suffices.
+- Direct skill use is still allowed for a standalone artifact: a product-only
+  request may invoke `spec-doc` alone, and a cross-cutting decision may invoke
+  `adr-doc` alone. This standalone result is not lifecycle-router eligibility.
+- To advance the focused lifecycle graph through the Design or Planning gates,
+  the Phase 1 chain must contain both the focused `spec-doc` and `adr-doc`
+  briefing artifacts, together with their required source/evidence and approval
+  relations. A missing counterpart or required evidence loops back to briefing.
 - All decisions, including those that seem obvious, are recorded as ADRs so
   future agents understand rationale.
 
