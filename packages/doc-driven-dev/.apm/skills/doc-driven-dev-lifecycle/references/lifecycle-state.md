@@ -56,8 +56,15 @@ Document-derived gates check the existing lifecycle evidence:
 | planning | Approved plan relates to design; selected tasks form a valid Task DAG. |
 | implementation | Selected tasks are `done` and caller supplies `implementation-verified`. |
 
-Follow-up triage and exit audit are evidence-backed typed gates. They pass only
-with `followups-classified` and `exit-audit-pass`, respectively. Signals such as
+Follow-up triage is an evidence-backed typed gate. It passes only when exactly
+one of the six typed route signals is present — `followup-bug-fix`,
+`followup-decision-briefing`, `followup-decision-design`, `followup-new-feature`,
+`followup-doc-only`, or `followup-terminal` — and `followups-unclassified` is
+absent. Zero typed follow-up signals blocks the gate with reason
+`followups-unclassified`; multiple typed signals, or a typed signal combined
+with `followups-unclassified`, blocks it with reason `followups-conflicting`.
+The obsolete `followups-classified` signal is not accepted as CLI input. Exit
+audit remains evidence-backed and requires `exit-audit-pass`. Signals such as
 `spec-gap`, `design-gap`, `constraint-gap`, `task-graph-retry`, and
 `implementation-incomplete` are loopback observations; they do not mutate
 documents or silently advance a phase.

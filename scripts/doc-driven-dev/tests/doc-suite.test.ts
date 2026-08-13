@@ -574,6 +574,8 @@ test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", 
   const skillJa = fs.readFileSync(path.join(lifecycleRoot, "SKILL.ja.md"), "utf8");
   const contract = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.md"), "utf8");
   const contractJa = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.ja.md"), "utf8");
+  const stateContract = fs.readFileSync(path.join(lifecycleRoot, "references", "lifecycle-state.md"), "utf8");
+  const stateContractJa = fs.readFileSync(path.join(lifecycleRoot, "references", "lifecycle-state.ja.md"), "utf8");
   const graph = fs.readFileSync(path.join(lifecycleRoot, "graphs", "lifecycle.yaml"), "utf8");
 
   assert.match(skill, /Phase 4 Exit Gate/);
@@ -595,6 +597,26 @@ test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", 
   assert.match(contractJa, /`doc-only`/);
   assert.match(contractJa, /`defer`/);
   assert.match(contractJa, /`wont-do`/);
+
+  const stateText = stateContract.replace(/\s+/g, " ");
+  const stateTextJa = stateContractJa.replace(/\s+/g, " ");
+  for (const signal of [
+    "followup-bug-fix", "followup-decision-briefing", "followup-decision-design",
+    "followup-new-feature", "followup-doc-only", "followup-terminal",
+  ]) {
+    assert.match(stateContract, new RegExp("`" + signal + "`"));
+    assert.match(stateContractJa, new RegExp("`" + signal + "`"));
+  }
+  assert.match(stateText, /exactly one of the six typed route signals/);
+  assert.match(stateText, /Zero typed follow-up signals.*followups-unclassified/);
+  assert.match(stateText, /multiple typed signals.*followups-conflicting/);
+  assert.match(stateText, /obsolete `followups-classified` signal is not accepted as CLI input/);
+  assert.doesNotMatch(stateText, /pass only with `followups-classified`/);
+  assert.match(stateTextJa, /6つの route signal/);
+  assert.match(stateTextJa, /型付き signal が0個.*followups-unclassified/);
+  assert.match(stateTextJa, /型付き signal が複数.*followups-conflicting/);
+  assert.match(stateTextJa, /旧 `followups-classified` signal は CLI input として受け付けない/);
+  assert.doesNotMatch(stateTextJa, /それぞれ `followups-classified` と `exit-audit-pass`/);
 
   for (const [signal, destination] of [
     ["followup-bug-fix", "planning"],

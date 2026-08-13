@@ -54,11 +54,17 @@ document から導出する gate は既存 lifecycle 証跡を確認する。
 | planning | approved plan が design に relation し、選択 task が有効な Task DAG を形成する。 |
 | implementation | 選択 task が `done` で、caller が `implementation-verified` を指定する。 |
 
-Follow-up triage と exit audit は証跡に基づく型付き gate である。それぞれ
-`followups-classified` と `exit-audit-pass` があって初めて pass する。
-`spec-gap`、`design-gap`、`constraint-gap`、`task-graph-retry`、
-`implementation-incomplete` などの signal は loopback 観測であり、文書を
-変更したり phase を黙って進めたりしない。
+Follow-up triage は証跡に基づく型付き gate である。6つの route signal
+（`followup-bug-fix`、`followup-decision-briefing`、`followup-decision-design`、
+`followup-new-feature`、`followup-doc-only`、`followup-terminal`）のうち1つだけが
+存在し、`followups-unclassified` がない場合にのみ pass する。型付き signal が0個の
+場合は reason `followups-unclassified` で blocked になり、型付き signal が複数、または
+型付き signal と `followups-unclassified` が併存する場合は reason
+`followups-conflicting` で blocked になる。旧 `followups-classified` signal は CLI
+input として受け付けない。Exit audit は引き続き証跡に基づき、`exit-audit-pass` を
+必要とする。`spec-gap`、`design-gap`、`constraint-gap`、`task-graph-retry`、
+`implementation-incomplete` などの signal は loopback 観測であり、文書を変更したり
+phase を黙って進めたりしない。
 
 Lifecycle 完了には全 gate の pass が必要である: `bootstrap`、`briefing`、
 `design`、`planning`、`implementation`、`followup-triage`、`exit-audit`。
