@@ -1,7 +1,7 @@
 import type {
   TaskGraphResult,
   TaskStatus,
-} from "../src/skills/doc-driven-dev-lifecycle/scripts/lib/task_graph";
+} from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -12,7 +12,9 @@ const test = require("node:test");
 const matter = require("gray-matter");
 const {
   buildTaskGraph,
-} = require("../src/skills/doc-driven-dev-lifecycle/scripts/lib/task_graph.ts");
+} = require("../src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts");
+const taskGraphCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/build_task_graph.ts");
+const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 
 function writeTask(
   repo: string,
@@ -177,13 +179,12 @@ test("build_task_graph CLI returns JSON and exit 1 for invalid graphs", () => {
   fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
   fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
   writeTask(repo, "TASK-0001", { status: "todo", dependsOn: [] });
-  const cli = path.resolve(process.cwd(), "../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/scripts/build_task_graph.js");
-  const valid = spawnSync(process.execPath, [cli, "--cwd", repo, "--plan", "docs/plans/0001-plan.md", "--json"], { encoding: "utf8" });
+  const valid = spawnSync(process.execPath, [tsxCli, taskGraphCli, "--cwd", repo, "--plan", "docs/plans/0001-plan.md", "--json"], { encoding: "utf8" });
   assert.equal(valid.status, 0, valid.stderr);
   assert.deepEqual(JSON.parse(valid.stdout).runnable, ["TASK-0001"]);
 
   writeTask(repo, "TASK-0002", { status: "todo", dependsOn: ["TASK-9999"] });
-  const invalid = spawnSync(process.execPath, [cli, "--cwd", repo, "--plan", "docs/plans/0001-plan.md", "--json"], { encoding: "utf8" });
+  const invalid = spawnSync(process.execPath, [tsxCli, taskGraphCli, "--cwd", repo, "--plan", "docs/plans/0001-plan.md", "--json"], { encoding: "utf8" });
   assert.equal(invalid.status, 1);
   assert.equal(JSON.parse(invalid.stdout).issues[0].code, "missing-task-reference");
 });

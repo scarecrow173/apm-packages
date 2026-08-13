@@ -5,7 +5,7 @@ import type {
 } from "./graph_definition";
 import { evaluateCondition } from "./graph_conditions";
 import type { GraphState } from "./graph_state";
-import type { TaskGraphResult } from "../../../doc-driven-dev-lifecycle/scripts/lib/task_graph";
+import type { TaskGraphResult } from "./task_graph";
 
 export type GraphRoute = {
   schemaVersion: 2;

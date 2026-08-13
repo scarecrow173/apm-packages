@@ -13,10 +13,11 @@ import {
 import {
   buildTaskGraph,
   type TaskGraphResult,
-} from "../../../doc-driven-dev-lifecycle/scripts/lib/task_graph";
+} from "./task_graph";
 
 export type GraphGateResult = { status: "pass" | "fail" | "blocked"; reasons: string[] };
 export type GraphGateResults = Record<string, GraphGateResult>;
+export type GraphSignal = string;
 export type GraphState = {
   schemaVersion: 2;
   graphId: string;
@@ -25,7 +26,7 @@ export type GraphState = {
   focus: string[];
   artifactGraph: ArtifactGraph;
   gates: GraphGateResults;
-  signals: string[];
+  signals: GraphSignal[];
   blockers: string[];
   taskGraph: TaskGraphResult | null;
 };
@@ -35,7 +36,7 @@ export type ProjectGraphStateOptions = {
   graphId?: string;
   taskDir?: string;
   focus?: string[];
-  signals?: string[];
+  signals?: GraphSignal[];
 };
 
 const CANONICAL_TARGETS = [
@@ -106,7 +107,7 @@ function graphTask(cwd: string, plan: ArtifactRecord | undefined, taskDir: strin
   return plan ? buildTaskGraph({ cwd, plan: plan.path, taskDir }) : null;
 }
 
-function deriveSignals(input: string[], blockers: string[], gates: GraphGateResults, taskGraph: TaskGraphResult | null): string[] {
+function deriveSignals(input: GraphSignal[], blockers: string[], gates: GraphGateResults, taskGraph: TaskGraphResult | null): GraphSignal[] {
   const signals = new Set(input);
   if (blockers.includes("focus-required")) signals.add("focus-required");
   const followups = [...signals].filter((signal) => FOLLOWUP_SIGNALS.has(signal));

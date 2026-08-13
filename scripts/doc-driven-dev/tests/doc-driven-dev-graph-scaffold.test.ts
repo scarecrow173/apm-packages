@@ -5,16 +5,17 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 
-const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle");
+const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/scaffold_docs.ts");
+const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 
 function tempRepo() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-lifecycle-scaffold-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-graph-scaffold-"));
 }
 
 function runScaffold(cwd) {
   const result = spawnSync(
     process.execPath,
-    [path.join(skillRoot, "scripts", "scaffold_docs.js")],
+    [tsxCli, sourceCli],
     {
       cwd,
       encoding: "utf8",
