@@ -364,9 +364,9 @@ export function routeLifecycle(input: {
     node = edge.to;
   }
 
-  // A complete node is terminal and has no outgoing graph edge. Other nodes
-  // always use a declared retry edge rather than inventing a transition.
-  if (node === "complete") {
+  // Terminal nodes have no outgoing graph edge. Other nodes always use a
+  // declared retry edge rather than inventing a transition.
+  if (input.graph.nodes[node]?.kind === "terminal") {
     return routeResult(input, taskGraph, node, "lifecycle-complete", null);
   }
   const retry = retryEdge(input.graph, node);

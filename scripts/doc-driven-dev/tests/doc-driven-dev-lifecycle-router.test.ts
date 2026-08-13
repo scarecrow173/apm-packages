@@ -547,6 +547,34 @@ test("router never invents an edge for the terminal node", () => {
   assert.equal(route.edgeId, null);
 });
 
+test("custom terminal nodes are idempotently complete", () => {
+  const graph = parseLifecycleGraph(`
+schemaVersion: 1
+entry: custom-start
+nodes:
+  custom-start: { kind: action, delegate: custom-handler, audits: [], requiresGates: [] }
+  custom-end: { kind: terminal, delegate: null, audits: [], requiresGates: [] }
+edges:
+  - { id: custom-to-end, from: custom-start, to: custom-end, when: migration-requested }
+`);
+  const state = stateWithDoneTasks([]);
+  for (const gate of Object.values(state.gates)) gate.status = "pass";
+
+  const entered = routeLifecycle({
+    current: "custom-start",
+    graph,
+    state: { ...state, signals: ["migration-requested"] },
+  });
+  assert.equal(entered.next, "custom-end");
+  assert.equal(entered.edgeId, "custom-to-end");
+
+  const route = routeLifecycle({ current: "custom-end", graph, state });
+  assert.equal(route.current, "custom-end");
+  assert.equal(route.next, "custom-end");
+  assert.equal(route.edgeId, null);
+  assert.equal(route.reasonCode, "lifecycle-complete");
+});
+
 test("focus-required routes never authorize delegation", () => {
   const repo = repoWithTwoPlans();
   const state = probeLifecycleState({ cwd: repo, focus: [], signals: [] });
