@@ -3518,7 +3518,7 @@ var require_gray_matter = __commonJS({
   }
 });
 
-// src/skills/doc-driven-dev-lifecycle/scripts/lib/task_graph.ts
+// src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
 var import_gray_matter = __toESM(require_gray_matter());
@@ -3868,7 +3868,7 @@ function buildTaskGraph(options2) {
   return summarizeTaskGraph(plan, parsed, resolved.edges, issues);
 }
 
-// src/skills/doc-driven-dev-lifecycle/scripts/build_task_graph.ts
+// src/skills/doc-driven-dev-graph/scripts/build_task_graph.ts
 function usage() {
   return "Usage: node scripts/build_task_graph.js --plan <path> [--task-dir <path>] [--cwd <path>] [--json]";
 }

@@ -21183,7 +21183,7 @@ ${input.body.trim()}
         type: route.type
       };
     }
-    async function migrateDocs2(options2) {
+    async function migrateDocs(options2) {
       const cwd = path2.resolve(options2.cwd);
       const fromDirs = options2.from && options2.from.length > 0 ? options2.from : defaultMigrationSources(cwd);
       const skipped = [];
@@ -21212,7 +21212,7 @@ ${input.body.trim()}
       }
       const created = [];
       if (options2.apply) {
-        await scaffoldDocsTree(cwd);
+        await scaffoldDocsTree2(cwd);
         for (const migration of migrations) {
           const targetPath = path2.join(cwd, migration.target);
           fs.mkdirSync(path2.dirname(targetPath), { recursive: true });
@@ -21225,7 +21225,7 @@ ${input.body.trim()}
       }
       return { applied: Boolean(options2.apply), created, migrations, skipped };
     }
-    async function scaffoldDocsTree(cwd) {
+    async function scaffoldDocsTree2(cwd) {
       const resolvedCwd = path2.resolve(cwd);
       const created = [];
       const updated = [];
@@ -21374,59 +21374,34 @@ ${bodyFor(type, options2.title)}
       docFiles,
       docTypes,
       logIndexResult,
-      migrateDocs: migrateDocs2,
+      migrateDocs,
       relationFields,
       changeFields,
       changesSchema,
       frontMatterSchema,
       frontMatter,
       relationSchema,
-      scaffoldDocsTree,
+      scaffoldDocsTree: scaffoldDocsTree2,
       validateFrontMatter
     };
   }
 });
 
-// src/skills/doc-driven-dev-lifecycle/scripts/migrate_docs.ts
+// src/skills/doc-driven-dev-graph/scripts/scaffold_docs.ts
 var path = require("node:path");
-var { migrateDocs } = require_doc_suite_utils();
+var { scaffoldDocsTree } = require_doc_suite_utils();
 function parseArgs(argv) {
-  const args = {
-    apply: false,
-    cwd: process.cwd(),
-    from: [],
-    includeCanonical: false,
-    json: false,
-    splitH1: false
-  };
+  const args = { cwd: process.cwd() };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--cwd") args.cwd = argv[++i];
-    else if (arg === "--from") args.from.push(argv[++i]);
-    else if (arg === "--apply") args.apply = true;
-    else if (arg === "--include-canonical") args.includeCanonical = true;
-    else if (arg === "--json") args.json = true;
-    else if (arg === "--split-h1") args.splitH1 = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
 }
 function usage() {
-  return "Usage: node scripts/migrate_docs.js [--cwd <path>] [--from <dir>] [--split-h1] [--include-canonical] [--apply] [--json]";
-}
-function printHuman(report) {
-  console.log(`${report.applied ? "Applied" : "Planned"} docs migration`);
-  if (report.migrations.length === 0) console.log("No source documents selected.");
-  for (const migration of report.migrations) {
-    console.log(`${migration.source} -> ${migration.target}${migration.type ? ` [${migration.type}]` : ""}`);
-  }
-  for (const created of report.created) {
-    console.log(`Created ${created}`);
-  }
-  for (const skipped of report.skipped) {
-    console.log(`Skipped ${skipped.file}: ${skipped.reason}`);
-  }
+  return "Usage: node scripts/scaffold_docs.js [--cwd <path>]";
 }
 async function main() {
   try {
@@ -21435,18 +21410,11 @@ async function main() {
       console.log(usage());
       return;
     }
-    const report = await migrateDocs({
-      apply: args.apply,
-      cwd: path.resolve(args.cwd),
-      from: args.from,
-      includeCanonical: args.includeCanonical,
-      splitH1: args.splitH1
-    });
-    if (args.json) {
-      console.log(JSON.stringify(report, null, 2));
-      return;
+    const result = await scaffoldDocsTree(path.resolve(args.cwd));
+    console.log(`Created docs tree scaffold in ${path.resolve(args.cwd)}`);
+    for (const file of result.created) {
+      console.log(`Created ${file}`);
     }
-    printHuman(report);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());
