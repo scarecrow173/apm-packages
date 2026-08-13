@@ -1,6 +1,6 @@
 ---
 name: doc-driven-dev-lifecycle
-description: "Orchestrates the full document-driven development lifecycle through optional migration, a bootstrap phase, and a 5-phase flow with explicit gates. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Need to migrate existing docs into the canonical doc-driven-dev tree, (3) Need to bootstrap the canonical docs tree before briefing, (4) Unsure which doc skill to begin with, (5) Need end-to-end document orchestration from briefing to execution, (6) Must enforce sequencing constraints between doc creation phases. Sequences flow: migrate_docs (optional) -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status. Keywords: document lifecycle, orchestration, migration, phase gates, meta skill."
+description: "Graph-backed thin router for the full document-driven development lifecycle. Probes canonical artifacts and typed signals with route_lifecycle.js, dispatches declared delegates and the build_task_graph.js planning composite, and enforces explicit phase gates, audits, focus selection, and fail-closed loopbacks. **Use when**: (1) Starting a new feature, project, or significant change from scratch, (2) Need to migrate or bootstrap canonical docs, (3) Need end-to-end orchestration from briefing to exit, (4) Must enforce graph topology and sequencing constraints. Keywords: lifecycle graph, thin router, Task DAG, focus, phase gates, meta skill."
 license: MIT
 ---
 

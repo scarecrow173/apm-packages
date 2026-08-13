@@ -1,6 +1,6 @@
 ---
 name: doc-driven-dev-lifecycle
-description: "文書駆動開発の全ライフサイクルを、任意の migration、bootstrap フェーズ、5 フェーズのフローでオーケストレーションする。**利用タイミング**: (1) 新機能・新プロジェクト・大規模な変更をゼロから始めるとき、(2) 既存 docs を canonical な doc-driven-dev tree へ移行する必要があるとき、(3) briefing の前に canonical な docs tree を bootstrap する必要があるとき、(4) どの doc スキルから始めるべきか不明なとき、(5) briefing から実行まで end-to-end の文書オーケストレーションが必要なとき、(6) 文書作成フェーズ間の順序制約を強制する必要があるとき。フロー順序: migrate_docs（任意） -> scaffold_docs -> briefing-flow -> design-doc -> plan-doc -> task-doc -> implementation-flow -> doc-status。キーワード: 文書ライフサイクル、オーケストレーション、migration、フェーズゲート、メタスキル。"
+description: "文書駆動開発ライフサイクル全体の graph-backed thin router。route_lifecycle.js で canonical artifact と型付き signal を probe し、宣言済み delegate と planning の build_task_graph.js composite を dispatch し、明示的な Phase gate、audit、focus 選択、fail-closed loopback を強制する。**利用タイミング**: (1) 新機能・新プロジェクト・大規模変更を開始するとき、(2) canonical docs を migration または bootstrap するとき、(3) briefing から exit まで end-to-end orchestration が必要なとき、(4) graph topology と順序制約を強制するとき。キーワード: lifecycle graph、thin router、Task DAG、focus、フェーズゲート、メタスキル。"
 license: MIT
 ---
 

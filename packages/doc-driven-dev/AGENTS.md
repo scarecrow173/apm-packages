@@ -93,13 +93,10 @@ Note:
 
 ## 7. Workflow Skills (Implementation Phase)
 
-In addition to document-generation skills (which have scripts, templates, and references), this package includes **workflow skills** for the implementation phase. These are pure-markdown guidance skills with no TypeScript source or compiled scripts.
+In addition to document-generation skills (which have scripts, templates, and references), this package includes workflow and meta skills for implementation and lifecycle orchestration. Most remain pure-Markdown guidance skills, but `doc-driven-dev-lifecycle` is an explicit exception: its TypeScript source lives under `scripts/doc-driven-dev/src/skills/doc-driven-dev-lifecycle/`, its generated distributed scripts include `build_task_graph.js` and `route_lifecycle.js`, and its package graph/reference assets live under `packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/`.
 
-- Workflow skills live only in `packages/doc-driven-dev/.apm/skills/<name>/` (no corresponding `scripts/doc-driven-dev/src/skills/<name>/`).
-  - If a workflow skill later gains code, that code belongs under `scripts/doc-driven-dev/src`, not under `packages/doc-driven-dev/`.
-- They may include `references/` and/or `assets/templates/` subdirectories for supporting docs and prompt templates.
-- They do NOT participate in `pnpm --dir scripts/doc-driven-dev run build:scripts`.
-- When editing workflow skills, update `packages/doc-driven-dev/.apm/skills/<name>/SKILL.md` (and `.ja.md`) directly.
+- `doc-driven-dev-lifecycle` participates in `pnpm --dir scripts/doc-driven-dev run build:scripts`; edit its TypeScript source first when changing runtime behavior, then regenerate the distributed scripts. Update its `SKILL.md`, graph, and references directly when changing the distributed contract.
+- The other workflow/meta skills listed below remain pure-Markdown unless they gain code. They live only in `packages/doc-driven-dev/.apm/skills/<name>/` (no corresponding `scripts/doc-driven-dev/src/skills/<name>/`), may include `references/` and/or `assets/templates/`, do not participate in `build:scripts`, and are edited directly in their distributed `SKILL.md`/`.ja.md` files.
 
 Workflow and meta skills included here:
 

@@ -93,13 +93,10 @@ apm compile --validate
 
 ## 7. ワークフロースキル（実装フェーズ）
 
-文書生成スキル（スクリプト・テンプレート・参照付き）に加え、このパッケージには実装フェーズ向けの**ワークフロースキル**が含まれます。これらは TypeScript ソースやコンパイル済みスクリプトを持たない、純粋な Markdown ガイダンススキルです。
+文書生成スキル（スクリプト・テンプレート・参照付き）に加え、このパッケージには実装と lifecycle orchestration 向けの workflow / meta skill が含まれます。多くは純粋な Markdown ガイダンスですが、`doc-driven-dev-lifecycle` は明示的な例外です。TypeScript source は `scripts/doc-driven-dev/src/skills/doc-driven-dev-lifecycle/` にあり、配布用生成 script として `build_task_graph.js` と `route_lifecycle.js` を持ち、graph/reference asset は `packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/` にあります。
 
-- ワークフロースキルは `packages/doc-driven-dev/.apm/skills/<name>/` にのみ配置（対応する `scripts/doc-driven-dev/src/skills/<name>/` は不要）。
-  - 将来コードを持つ場合でも、実装は `packages/doc-driven-dev/` 直下ではなく `scripts/doc-driven-dev/src` 側に置く。
-- `references/` や `assets/templates/` サブディレクトリに補助ドキュメントやプロンプトテンプレートを含む場合がある。
-- `pnpm --dir scripts/doc-driven-dev run build:scripts` の対象外。
-- 編集時は `packages/doc-driven-dev/.apm/skills/<name>/SKILL.md`（および `.ja.md`）を直接更新する。
+- `doc-driven-dev-lifecycle` は `pnpm --dir scripts/doc-driven-dev run build:scripts` の対象です。runtime 挙動を変える場合は TypeScript source を先に編集して配布 script を再生成し、distributed contract を変える場合は `SKILL.md`、graph、reference を直接更新します。
+- 以下に列挙する他の workflow/meta skill はコードを持つまで純粋な Markdown のままです。`packages/doc-driven-dev/.apm/skills/<name>/` にのみ配置され、`references/` や `assets/templates/` を持てますが `build:scripts` の対象外であり、配布用 `SKILL.md`/`.ja.md` を直接編集します。
 
 ここに含まれる workflow / meta skill:
 
