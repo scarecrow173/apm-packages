@@ -46,17 +46,18 @@ returns `status: blocked` and does not guess a destination.
 
 ## Declared delegates
 
-The graph definition binds lifecycle work to existing skills and composites:
+The Graph Definition declares the following delegate fields for lifecycle work:
 
 - Optional migration uses `migrate_docs`; bootstrap uses `scaffold_docs`.
 - Briefing delegates to `briefing-flow` and design work to `design-doc`.
-- Planning combines `plan-doc`, `task-doc`, and `build_task_graph.js`.
-- Implementation delegates to `implementation-flow`.
-- Exit verification delegates to `doc-status`.
+- The planning Task Graph composite delegates to `build_task_graph.js`.
+- Implementation delegates to `implementation-flow`; exit verification delegates
+  to `doc-status`.
 
-These names are bindings in the Graph Definition, not an additional sequence
-implemented by this skill. A `focus-required` blocker is a hard stop until the
-caller supplies explicit focus.
+The planning node's runtime composition runs `plan-doc` and `task-doc` before
+the Task Graph composite; those two skills are not additional `delegate:`
+fields in the Graph Definition. A `focus-required` blocker is a hard stop until
+the caller supplies explicit focus.
 
 ## Runtime loop
 

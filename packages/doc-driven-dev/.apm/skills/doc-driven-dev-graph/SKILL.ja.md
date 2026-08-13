@@ -47,17 +47,17 @@ idempotent な terminal 結果（`edgeId: null`）を返します。満たされ
 
 ## Declared delegates
 
-Graph Definition は lifecycle の作業を既存 skill と composite に binding します:
+Graph Definition は lifecycle 作業について次の delegate field を宣言します:
 
 - 任意の migration は `migrate_docs`、bootstrap は `scaffold_docs` を使う。
 - Briefing は `briefing-flow`、design 作業は `design-doc` に委譲する。
-- Planning は `plan-doc`、`task-doc`、`build_task_graph.js` を組み合わせる。
-- Implementation は `implementation-flow` に委譲する。
-- Exit 検証は `doc-status` に委譲する。
+- Planning の Task Graph composite は `build_task_graph.js` に委譲する。
+- Implementation は `implementation-flow`、Exit 検証は `doc-status` に委譲する。
 
-これらの名前は Graph Definition の binding であり、この skill が別の sequence
-を実装するという意味ではありません。`focus-required` blocker は、caller が
-明示的 focus を渡すまで hard stop です。
+Planning node の runtime composition は Task Graph composite の前に `plan-doc` と
+`task-doc` を実行します。この 2 つは Graph Definition の追加の `delegate:`
+field ではありません。`focus-required` blocker は、caller が明示的 focus を
+渡すまで hard stop です。
 
 ## Runtime loop
 
