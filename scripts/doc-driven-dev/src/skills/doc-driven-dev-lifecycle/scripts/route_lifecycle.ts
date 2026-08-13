@@ -86,12 +86,12 @@ function main(): void {
       return;
     }
     if (!args.current) throw new Error("Missing required --current");
-    for (const signal of args.signals) {
-      if (!isSignal(signal)) throw new Error(`Unknown lifecycle signal: ${signal}`);
-    }
     const graph = parseLifecycleGraph(fs.readFileSync(graphFile(args.graph), "utf8"));
     if (!Object.prototype.hasOwnProperty.call(graph.nodes, args.current)) {
       throw new Error(`Unknown lifecycle node: ${args.current} (not declared in lifecycle graph)`);
+    }
+    for (const signal of args.signals) {
+      if (!isSignal(signal)) throw new Error(`Unknown lifecycle signal: ${signal}`);
     }
     const state = probeLifecycleState({
       cwd: args.cwd,
