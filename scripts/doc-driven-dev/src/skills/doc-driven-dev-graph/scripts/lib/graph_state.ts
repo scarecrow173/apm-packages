@@ -112,7 +112,7 @@ function deriveSignals(input: string[], blockers: string[], gates: GraphGateResu
   const followups = [...signals].filter((signal) => FOLLOWUP_SIGNALS.has(signal));
   if (followups.length === 0) signals.add("followups-unclassified");
   if (followups.length > 1) signals.add("followups-conflicting");
-  if (Object.values(gates).length > 0 && Object.values(gates).every((result) => result.status === "pass")
+  if (blockers.length === 0 && Object.values(gates).length > 0 && Object.values(gates).every((result) => result.status === "pass")
     && (!taskGraph || taskGraph.issues.length === 0)) signals.add("graph-complete");
   return sortedUnique(signals);
 }
@@ -141,6 +141,13 @@ export function evaluateGraphGates(state: GraphState): GraphGateResults {
   const gates: GraphGateResults = {
     bootstrap: gate(bootstrap.length === 0 ? "pass" : "fail", bootstrap),
   };
+  const graphIssues = [...new Map([
+    ...state.artifactGraph.issues,
+    ...projection.graph.issues,
+  ].map((issue) => [`${issue.code}\u0000${issue.message}`, issue])).values()];
+  if (graphIssues.length > 0) {
+    gates["artifact-graph"] = gate("blocked", graphIssues.map((issue) => `artifact-graph:${issue.code}`));
+  }
   if (!focused) {
     gates.briefing = gate(state.blockers.includes("focus-required") ? "blocked" : "fail", [state.blockers.includes("focus-required") ? "focus-required" : "focus-missing"]);
     gates.design = gate("blocked", ["focus-required"]);

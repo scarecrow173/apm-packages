@@ -140,6 +140,30 @@ test("malformed relation shapes fail closed as graph issues", () => {
   assert.ok(state.blockers.some((blocker: string) => blocker.startsWith("broken-relation:")));
 });
 
+test("malformed relations block graph completion even with an otherwise valid chain", () => {
+  const repo = fixtureRepo();
+  writeArtifact(repo, "docs/tasks/0001-route.md", {
+    id: "TASK-0001", type: "task", status: "done", title: "Route",
+    relations: { implements: ["docs/plans/0001-graph.md"] },
+  }, "# Route\n");
+  writeArtifact(repo, "docs/tasks/0002-prepare.md", {
+    id: "TASK-0002", type: "task", status: "done", title: "Prepare",
+    relations: { implements: ["docs/plans/0001-graph.md"] },
+  }, "# Prepare\n");
+  writeArtifact(repo, "docs/ideas/0001-malformed.md", {
+    id: "IDEA-0001", type: "idea", status: "draft", title: "Malformed",
+    relations: 42,
+  }, "# Malformed\n");
+  const state = projectGraphState({
+    cwd: repo,
+    focus: ["PLAN-0001"],
+    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+  });
+  assert.equal(state.gates["artifact-graph"].status, "blocked");
+  assert.equal(state.signals.includes("graph-complete"), false);
+  assert.ok(Object.values(state.gates).some((result) => result.status !== "pass"));
+});
+
 test("multiple valid chains fail closed even when only one has a plan", () => {
   const repo = fixtureRepo();
   writeArtifact(repo, "docs/designs/0002-no-plan.md", {
