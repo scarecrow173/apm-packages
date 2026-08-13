@@ -71,6 +71,7 @@ type DocumentArtifact = LifecycleState["artifacts"][number] & {
 
 type StateContext = {
   cwd: string;
+  focusPaths: string[];
   artifacts: DocumentArtifact[];
   focused: DocumentArtifact | undefined;
   component: DocumentArtifact[];
@@ -224,8 +225,9 @@ function relationTarget(
   artifacts: DocumentArtifact[],
 ): DocumentArtifact | undefined {
   if (EXTERNAL_REFERENCE.test(value)) return undefined;
-  const byId = artifacts.find((artifact) => artifact.id === value);
-  if (byId) return byId;
+  const byId = artifacts.filter((artifact) => artifact.id === value);
+  if (byId.length === 1) return byId[0];
+  if (byId.length > 1) return undefined;
   const normalized = normalizeLocalTarget(cwd, source.absolutePath, value).value;
   return artifacts.find((artifact) => artifact.path === normalized);
 }
@@ -258,15 +260,25 @@ function resolveFocus(cwd: string, focusValues: string[], artifacts: DocumentArt
     const active = artifacts.filter((artifact) => ACTIVE_STATUSES.has(artifact.status));
     return { focus: [], focused: undefined, blockers: active.length > 0 ? ["focus-required"] : [] };
   }
+  let duplicateFocusId = false;
   const normalized = focusValues.map((value) => {
-    const byId = artifacts.find((artifact) => artifact.id === value);
-    if (byId) return byId.path;
+    const byId = artifacts.filter((artifact) => artifact.id === value);
+    if (byId.length > 1) {
+      duplicateFocusId = true;
+      return value;
+    }
+    if (byId.length === 1) return byId[0].path;
     return normalizeRepoPath(cwd, value);
   });
   const unique = sortedUnique(normalized);
-  if (unique.length !== 1) return { focus: unique, focused: undefined, blockers: ["focus-ambiguous"] };
-  const focused = artifacts.find((artifact) => artifact.path === unique[0]);
-  if (!focused) return { focus: unique, focused: undefined, blockers: ["focus-invalid"] };
+  if (duplicateFocusId) return { focus: unique, focused: undefined, blockers: ["focus-required"] };
+  const focusedArtifacts = unique.map((focusPath) => artifacts.find((artifact) => artifact.path === focusPath));
+  if (focusedArtifacts.some((artifact) => !artifact)) return { focus: unique, focused: undefined, blockers: ["focus-invalid"] };
+  if (focusIsAmbiguous(cwd, unique, artifacts)) return { focus: unique, focused: undefined, blockers: ["focus-required"] };
+  if (unique.length > 1 && !selectedArtifactChain(cwd, unique, artifacts)) {
+    return { focus: unique, focused: undefined, blockers: ["focus-required"] };
+  }
+  const focused = focusAnchor(cwd, unique, artifacts);
   return { focus: unique, focused, blockers: [] };
 }
 
@@ -300,6 +312,137 @@ function relationHasTarget(
     relationTarget(cwd, source, value, artifacts)?.path === target.path));
 }
 
+function relationTargets(
+  cwd: string,
+  source: DocumentArtifact,
+  relationNames: string[],
+  artifacts: DocumentArtifact[],
+): DocumentArtifact[] {
+  const targets = new Map<string, DocumentArtifact>();
+  for (const name of relationNames) {
+    for (const value of source.relations[name] ?? []) {
+      const target = relationTarget(cwd, source, value, artifacts);
+      if (target) targets.set(target.path, target);
+    }
+  }
+  return [...targets.values()].sort((left, right) => compareStrings(left.path, right.path));
+}
+
+const CHAIN_STATUSES: Record<string, Set<string>> = {
+  spec: new Set(["proposed", "approved", "implemented"]),
+  adr: new Set(["proposed", "accepted"]),
+  design: new Set(["approved"]),
+  plan: new Set(["approved", "in-progress", "completed"]),
+};
+
+function isValidChainArtifact(artifact: DocumentArtifact): boolean {
+  return CHAIN_STATUSES[artifact.type]?.has(artifact.status) ?? false;
+}
+
+type ArtifactChain = {
+  spec?: DocumentArtifact;
+  adr?: DocumentArtifact;
+  design?: DocumentArtifact;
+  plan?: DocumentArtifact;
+  tasks: DocumentArtifact[];
+};
+
+function chainKey(chain: ArtifactChain): string {
+  return [chain.spec, chain.adr, chain.design, chain.plan].map((artifact) => artifact?.path ?? "").join("\u0000");
+}
+
+function chainMembers(chain: ArtifactChain): Set<string> {
+  return new Set([
+    chain.spec?.path,
+    chain.adr?.path,
+    chain.design?.path,
+    chain.plan?.path,
+    ...chain.tasks.map((task) => task.path),
+  ].filter((value): value is string => Boolean(value)));
+}
+
+/**
+ * Build lifecycle chains from typed front-matter relations in stable path order.
+ * A plan focus narrows a shared design/spec component to that plan; a spec or
+ * ADR focus must disambiguate every valid downstream design/plan chain.
+ */
+function enumerateArtifactChains(cwd: string, artifacts: DocumentArtifact[]): ArtifactChain[] {
+  const specs = artifacts.filter((artifact) => artifact.type === "spec" && isValidChainArtifact(artifact));
+  const adrs = artifacts.filter((artifact) => artifact.type === "adr" && isValidChainArtifact(artifact));
+  const designs = artifacts.filter((artifact) => artifact.type === "design" && isValidChainArtifact(artifact));
+  const plans = artifacts.filter((artifact) => artifact.type === "plan" && isValidChainArtifact(artifact));
+  const tasks = artifacts.filter((artifact) => artifact.type === "task");
+  const chains = new Map<string, ArtifactChain>();
+  const add = (chain: ArtifactChain): void => chains.set(chainKey(chain), chain);
+  const cartesian = <T>(values: T[], fallback: Array<T | undefined>): Array<T | undefined> => values.length > 0 ? values : fallback;
+
+  for (const design of designs) {
+    const relatedSpecs = relationTargets(cwd, design, ["derives-from", "implements", "spec", "relates-to"], specs);
+    const relatedAdrs = relationTargets(cwd, design, ["derives-from", "adr", "decision", "relates-to"], adrs);
+    const relatedPlans = plans.filter((plan) => relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, artifacts));
+    const relatedTasks = tasks.filter((task) => relatedPlans.some((plan) => relationHasTarget(cwd, task, ["implements"], plan, artifacts)));
+    for (const spec of cartesian(relatedSpecs, [undefined])) {
+      for (const adr of cartesian(relatedAdrs, [undefined])) {
+        for (const plan of cartesian(relatedPlans, [undefined])) {
+          add({ spec, adr, design, plan, tasks: plan ? relatedTasks.filter((task) => relationHasTarget(cwd, task, ["implements"], plan, artifacts)) : [] });
+        }
+      }
+    }
+  }
+  for (const plan of plans) {
+    if (designs.some((design) => relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, artifacts))) continue;
+    const relatedTasks = tasks.filter((task) => relationHasTarget(cwd, task, ["implements"], plan, artifacts));
+    add({ plan, tasks: relatedTasks });
+  }
+  for (const artifact of [...specs, ...adrs]) {
+    if (!designs.some((design) => relationHasTarget(cwd, design, ["derives-from", "implements", "spec", "adr", "decision", "relates-to"], artifact, artifacts))) {
+      add(artifact.type === "spec" ? { spec: artifact, tasks: [] } : { adr: artifact, tasks: [] });
+    }
+  }
+  return [...chains.values()].sort((left, right) => compareStrings(chainKey(left), chainKey(right)));
+}
+
+function selectedArtifactChain(
+  cwd: string,
+  focusPaths: string[],
+  artifacts: DocumentArtifact[],
+): ArtifactChain | undefined {
+  const candidates = enumerateArtifactChains(cwd, artifacts)
+    .filter((chain) => {
+      const members = chainMembers(chain);
+      return focusPaths.every((focusPath) => members.has(focusPath));
+    });
+  const unique = [...new Map(candidates.map((candidate) => [chainKey(candidate), candidate])).values()];
+  return unique.length === 1 ? unique[0] : undefined;
+}
+
+function focusAnchor(
+  cwd: string,
+  focusPaths: string[],
+  artifacts: DocumentArtifact[],
+): DocumentArtifact | undefined {
+  const selected = selectedArtifactChain(cwd, focusPaths, artifacts);
+  const focusArtifacts = focusPaths
+    .map((focusPath) => artifacts.find((artifact) => artifact.path === focusPath))
+    .filter((artifact): artifact is DocumentArtifact => Boolean(artifact));
+  if (!selected && focusPaths.length > 1) return undefined;
+  const rank: Record<string, number> = { plan: 0, design: 1, spec: 2, adr: 3, task: 4 };
+  return [...focusArtifacts]
+    .sort((left, right) => (rank[left.type] ?? 9) - (rank[right.type] ?? 9) || compareStrings(left.path, right.path))[0];
+}
+
+function focusIsAmbiguous(cwd: string, focusPaths: string[], artifacts: DocumentArtifact[]): boolean {
+  if (focusPaths.length === 0) return false;
+  const relevant = focusPaths.some((focusPath) => artifacts.find((artifact) => artifact.path === focusPath)?.type &&
+    ["spec", "adr", "design", "plan", "task"].includes(artifacts.find((artifact) => artifact.path === focusPath)?.type ?? ""));
+  if (!relevant) return false;
+  const candidates = enumerateArtifactChains(cwd, artifacts).filter((chain) => {
+    const members = chainMembers(chain);
+    return focusPaths.every((focusPath) => members.has(focusPath));
+  });
+  return candidates.length > 1;
+}
+
 function focusedArtifacts(context: StateContext): {
   spec?: DocumentArtifact;
   adr?: DocumentArtifact;
@@ -308,30 +451,16 @@ function focusedArtifacts(context: StateContext): {
 } {
   const { focused, component, cwd } = context;
   if (!focused) return {};
-  const byType = (type: string): DocumentArtifact[] => component.filter((artifact) => artifact.type === type);
-  const design = focused.type === "design"
-    ? focused
-    : byType("design").find((candidate) => {
-        if (focused.type === "spec" || focused.type === "adr") {
-          return relationHasTarget(cwd, candidate, ["derives-from", "implements", "spec", "adr", "decision", "relates-to"], focused, component);
-        }
-        return false;
-      });
-  const plan = focused.type === "plan"
-    ? focused
-    : byType("plan").find((candidate) => {
-        if (design && relationHasTarget(cwd, candidate, ["derives-from", "design", "relates-to"], design, component)) return true;
-        return relationHasTarget(cwd, focused, ["implements", "derives-from", "relates-to"], candidate, component);
-      });
-  const resolvedDesign = design ?? byType("design").find((candidate) =>
-    plan ? relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], candidate, component) : false);
-  const spec = focused.type === "spec"
-    ? focused
-    : byType("spec").find((candidate) => resolvedDesign ? relationHasTarget(cwd, resolvedDesign, ["derives-from", "implements", "spec", "relates-to"], candidate, component) : false);
-  const adr = focused.type === "adr"
-    ? focused
-    : byType("adr").find((candidate) => resolvedDesign ? relationHasTarget(cwd, resolvedDesign, ["derives-from", "adr", "decision", "relates-to"], candidate, component) : false);
-  return { spec, adr, design: resolvedDesign, plan };
+  const selected = selectedArtifactChain(cwd, context.focusPaths, context.artifacts);
+  if (selected) return selected;
+  // If a focused artifact is not a valid chain member, retain only that
+  // explicit artifact. Never infer a neighboring chain with an arbitrary
+  // `.find()`; ambiguous valid chains were rejected during focus resolution.
+  if (focused.type === "spec") return { spec: focused };
+  if (focused.type === "adr") return { adr: focused };
+  if (focused.type === "design") return { design: focused };
+  if (focused.type === "plan") return { plan: focused };
+  return {};
 }
 
 function gate(status: GateResult["status"], reasons: string[] = []): GateResult {
@@ -363,9 +492,10 @@ export function evaluateLifecycleGates(state: LifecycleState): GateResults {
     absolutePath: path.join(cwd, artifact.path),
     relationIssues: [],
   }));
-  const focused = state.focus.length === 1 ? artifacts.find((artifact) => artifact.path === state.focus[0]) : undefined;
+  const focused = focusAnchor(cwd, state.focus, artifacts);
   const context: StateContext = {
     cwd,
+    focusPaths: state.focus,
     artifacts,
     focused,
     component: focused ? componentForFocus(cwd, focused, artifacts) : [],
@@ -402,7 +532,11 @@ export function evaluateLifecycleGates(state: LifecycleState): GateResults {
     if (!plan || !relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, context.component)) planningReasons.push("plan-design-relation");
     if (!graph || graph.nodes.length === 0) planningReasons.push("no-selected-tasks");
     if (graph && graph.issues.length > 0) planningReasons.push(...graph.issues.map((issue) => `task-graph:${issue.code}`));
-    gates.planning = gate(planningReasons.length === 0 ? "pass" : "fail", planningReasons);
+    const hasTaskGraphIssue = Boolean(graph && graph.issues.length > 0);
+    gates.planning = gate(
+      planningReasons.length === 0 ? "pass" : hasTaskGraphIssue ? "blocked" : "fail",
+      planningReasons,
+    );
 
     const implementationReasons: string[] = [];
     if (!graph || graph.nodes.length === 0) implementationReasons.push("no-selected-tasks");
@@ -449,5 +583,9 @@ export function probeLifecycleState(options: ProbeLifecycleStateOptions): Lifecy
     blockers: sortedUnique([...resolution.blockers, ...relationBlockers, ...(bootstrap.length > 0 ? ["bootstrap-incomplete"] : [])]),
   };
   stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers });
+  if (stateWithoutGates.gates.planning.reasons.some((reason) => reason.startsWith("task-graph:"))) {
+    stateWithoutGates.blockers = sortedUnique([...stateWithoutGates.blockers, "task-graph-invalid"]);
+    stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers });
+  }
   return stateWithoutGates;
 }

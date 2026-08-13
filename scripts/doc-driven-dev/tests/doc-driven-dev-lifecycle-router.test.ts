@@ -107,3 +107,105 @@ test("implementation evidence remains a signal-backed gate", () => {
   assert.equal(withoutEvidence.gates.implementation.status, "blocked");
   assert.equal(withEvidence.gates.implementation.status, "pass");
 });
+
+test("missing bootstrap index blocks bootstrap", () => {
+  const repo = repoWithApprovedArtifactChain();
+  fs.rmSync(path.join(repo, "docs/plans/README.md"));
+  const state = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    signals: [],
+  });
+  assert.equal(state.gates.bootstrap.status, "fail");
+  assert.ok(state.blockers.includes("bootstrap-incomplete"));
+});
+
+test("empty repositories leave briefing applicable without a focus blocker", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "lifecycle-empty-"));
+  const state = probeLifecycleState({ cwd: repo, focus: [], signals: [] });
+  assert.deepEqual(state.blockers, ["bootstrap-incomplete"]);
+  assert.notEqual(state.gates.briefing.status, "blocked");
+});
+
+test("broken local relations block while external references remain evidence", () => {
+  const repo = repoWithApprovedArtifactChain();
+  writeArtifact(repo, "docs/designs/0001-graph.md", {
+    id: "DESIGN-0001", type: "design", status: "approved", title: "Graph Design",
+    relations: {
+      "derives-from": [
+        "docs/specs/0001-graph.md",
+        "docs/adr/0001-graph.md",
+        "docs/adr/missing.md",
+        "https://example.test/evidence",
+      ],
+    },
+  }, "# Graph Design\n");
+  const state = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    signals: [],
+  });
+  assert.ok(state.blockers.some((blocker: string) => blocker.startsWith("broken-relation:")));
+  assert.equal(state.blockers.some((blocker: string) => blocker.includes("https://example.test")), false);
+});
+
+test("task graph issues block planning and surface a routing blocker", () => {
+  const repo = repoWithApprovedArtifactChain();
+  writeArtifact(repo, "docs/tasks/0001-route.md", {
+    id: "TASK-0001", type: "task", status: "todo", title: "Route",
+    relations: {
+      implements: ["docs/plans/0001-graph-lifecycle.md"],
+      "depends-on": ["TASK-9999"],
+    },
+  }, "# Route\n\n## Verification\n\n- [ ] node --test\n");
+  const state = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    signals: [],
+  });
+  assert.equal(state.gates.planning.status, "blocked");
+  assert.ok(state.gates.planning.reasons.includes("task-graph:missing-task-reference"));
+  assert.ok(state.blockers.includes("task-graph-invalid"));
+});
+
+test("ambiguous focused relation chains require explicit focus", () => {
+  const repo = repoWithApprovedArtifactChain();
+  writeArtifact(repo, "docs/designs/0002-other.md", {
+    id: "DESIGN-0002", type: "design", status: "approved", title: "Other Design",
+    relations: {
+      "derives-from": ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"],
+    },
+  }, "# Other Design\n");
+  writeArtifact(repo, "docs/plans/0002-other.md", {
+    id: "PLAN-0002", type: "plan", status: "approved", title: "Other Plan",
+    relations: { "derives-from": ["docs/designs/0002-other.md"] },
+  }, "# Other Plan\n");
+  writeArtifact(repo, "docs/tasks/0002-other.md", {
+    id: "TASK-0002", type: "task", status: "todo", title: "Other Task",
+    relations: { implements: ["docs/plans/0002-other.md"] },
+  }, "# Other Task\n\n## Verification\n\n- [ ] node --test\n");
+  const state = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/specs/0001-graph.md"],
+    signals: [],
+  });
+  assert.ok(state.blockers.includes("focus-required"));
+});
+
+test("follow-up and exit gates require their typed signals", () => {
+  const repo = repoWithApprovedArtifactChain();
+  const withoutSignals = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    signals: [],
+  });
+  const withSignals = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    signals: ["followups-classified", "exit-audit-pass"],
+  });
+  assert.equal(withoutSignals.gates["followup-triage"].status, "blocked");
+  assert.equal(withoutSignals.gates["exit-audit"].status, "blocked");
+  assert.equal(withSignals.gates["followup-triage"].status, "pass");
+  assert.equal(withSignals.gates["exit-audit"].status, "pass");
+});
