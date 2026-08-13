@@ -351,6 +351,16 @@ test("follow-up classifications route through their declared graph destinations"
   }
 });
 
+test("typed follow-up routing repairs a failing upstream gate before exit audit", () => {
+  const state = stateWithDoneTasks(["implementation-verified", "followup-doc-only"]);
+  state.gates.planning = { status: "fail", reasons: ["planning-incomplete"] };
+  const route = routeLifecycle({ current: "followup-triage", graph: loadDistributedGraph(), state });
+  assert.equal(route.next, "planning");
+  assert.equal(route.reasonCode, "planning-incomplete");
+  assert.equal(route.edgeId, "followup-triage-to-planning-repair");
+  assert.notEqual(route.next, "exit-audit");
+});
+
 test("follow-up triage retries when classification is omitted or conflicting", () => {
   const omitted = routeFixture({
     current: "followup-triage",

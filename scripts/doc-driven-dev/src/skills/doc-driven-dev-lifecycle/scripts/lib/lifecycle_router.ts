@@ -225,6 +225,21 @@ function typedFollowupEdge(graph: LifecycleGraph, state: LifecycleState): Return
   return findEdge(graph, "followup-triage", classifications[0]);
 }
 
+const FOLLOWUP_UPSTREAM_REPAIRS = [
+  ["bootstrap", "bootstrap-incomplete"],
+  ["briefing", "briefing-incomplete"],
+  ["design", "design-incomplete"],
+  ["planning", "planning-incomplete"],
+  ["implementation", "implementation-incomplete"],
+] as const satisfies readonly [string, LifecycleReasonCode][];
+
+function followupUpstreamRecoveryEdge(graph: LifecycleGraph, state: LifecycleState): ReturnType<typeof findEdge> {
+  for (const [gate, reason] of FOLLOWUP_UPSTREAM_REPAIRS) {
+    if (gateIsNotPassing(state, gate)) return findEdge(graph, "followup-triage", reason);
+  }
+  return undefined;
+}
+
 function retryEdge(graph: LifecycleGraph, node: LifecycleNodeId): ReturnType<typeof findEdge> {
   const reason = RETRY_REASONS[node];
   return reason ? findEdge(graph, node, reason) : undefined;
@@ -267,9 +282,13 @@ export function routeLifecycle(input: {
   }
   const taskGraph = taskGraphForState(input.state, input.taskDir);
 
-  if (input.current === "followup-triage" && input.state.gates["followup-triage"]?.status === "pass") {
-    const edge = typedFollowupEdge(input.graph, input.state);
-    if (edge) return routeResult(input, taskGraph, edge.to, edge.when, edge.id);
+  if (input.current === "followup-triage") {
+    const upstreamEdge = followupUpstreamRecoveryEdge(input.graph, input.state);
+    if (upstreamEdge) return routeResult(input, taskGraph, upstreamEdge.to, upstreamEdge.when, upstreamEdge.id);
+    if (input.state.gates["followup-triage"]?.status === "pass") {
+      const edge = typedFollowupEdge(input.graph, input.state);
+      if (edge) return routeResult(input, taskGraph, edge.to, edge.when, edge.id);
+    }
   }
 
   let node = input.current;
