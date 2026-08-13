@@ -21183,11 +21183,38 @@ function lifecycleComplete(state) {
   const gates = ["bootstrap", "briefing", "design", "planning", "implementation", "followup-triage", "exit-audit"];
   return gates.every((name) => state.gates[name]?.status === "pass");
 }
+var LIFECYCLE_LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
+  "implements",
+  "implemented-by",
+  "derives-from",
+  "derived-by",
+  "refines",
+  "refined-by"
+]);
+function lineageValues(artifact) {
+  return [...LIFECYCLE_LINEAGE_RELATIONS].flatMap((relation) => artifact.relations[relation] ?? []);
+}
 function selectedPlan(state) {
-  const focused = new Set(state.focus);
-  const plan = state.artifacts.find((artifact) => artifact.type === "plan" && focused.has(artifact.path));
-  if (plan) return plan.path;
-  return state.artifacts.find((artifact) => artifact.type === "plan")?.path;
+  const byPath = new Map(state.artifacts.map((artifact) => [artifact.path, artifact]));
+  const byId = new Map(state.artifacts.map((artifact) => [artifact.id, artifact]));
+  const queue = state.focus.map((focus) => byPath.get(focus) ?? byId.get(focus)).filter((artifact) => Boolean(artifact));
+  const visited = /* @__PURE__ */ new Set();
+  const plans = [];
+  while (queue.length > 0) {
+    const artifact = queue.shift();
+    if (!artifact || visited.has(artifact.path)) continue;
+    visited.add(artifact.path);
+    if (artifact.type === "plan") plans.push(artifact.path);
+    for (const value of lineageValues(artifact)) {
+      const target = byPath.get(value) ?? byId.get(value);
+      if (target && !visited.has(target.path)) queue.push(target);
+    }
+    for (const candidate of state.artifacts) {
+      const pointsTo = lineageValues(candidate).some((value) => value === artifact.path || value === artifact.id);
+      if (pointsTo && !visited.has(candidate.path)) queue.push(candidate);
+    }
+  }
+  return plans.sort(compareStrings3)[0];
 }
 function taskGraphForState(state, taskDir) {
   const plan = selectedPlan(state);

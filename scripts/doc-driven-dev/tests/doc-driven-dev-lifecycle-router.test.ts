@@ -355,6 +355,53 @@ test("focus-required routes never authorize delegation", () => {
   }
 });
 
+test("focus lineage ignores contextual links to an unrelated plan", () => {
+  const repo = repoWithApprovedArtifactChain();
+  writeArtifact(repo, "docs/plans/0002-other.md", {
+    id: "PLAN-0002", type: "plan", status: "approved", title: "Other Plan",
+  }, "# Other Plan\n");
+  const state: LifecycleState = {
+    schemaVersion: 1,
+    cwd: repo,
+    focus: ["docs/designs/0001-graph.md"],
+    artifacts: [
+      {
+        id: "DESIGN-0001",
+        path: "docs/designs/0001-graph.md",
+        type: "design",
+        status: "approved",
+        relations: {
+          related: ["docs/plans/0002-other.md"],
+          references: ["docs/plans/0002-other.md"],
+          source: ["docs/plans/0002-other.md"],
+        },
+      },
+      {
+        id: "PLAN-0002",
+        path: "docs/plans/0002-other.md",
+        type: "plan",
+        status: "approved",
+        relations: {},
+      },
+    ],
+    gates: {
+      bootstrap: { status: "pass", reasons: [] },
+      briefing: { status: "pass", reasons: [] },
+      design: { status: "pass", reasons: [] },
+      planning: { status: "pass", reasons: [] },
+      implementation: { status: "pass", reasons: [] },
+      "followup-triage": { status: "pass", reasons: [] },
+      "exit-audit": { status: "pass", reasons: [] },
+    },
+    signals: [],
+    blockers: [],
+  };
+  const route = routeLifecycle({ current: "task-graph", graph: loadDistributedGraph(), state });
+  assert.equal(route.taskGraph, null);
+  assert.equal(route.reasonCode, "task-graph-retry");
+  assert.equal(route.edgeId, "task-graph-retry");
+});
+
 test("blocked task-graph state falls back to its declared retry edge", () => {
   const route = routeFixture({ current: "task-graph", taskStatuses: ["done"] });
   assert.equal(route.next, "task-graph");

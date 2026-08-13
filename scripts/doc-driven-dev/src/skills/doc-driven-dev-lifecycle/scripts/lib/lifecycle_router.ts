@@ -92,6 +92,22 @@ function lifecycleComplete(state: LifecycleState): boolean {
   return gates.every((name) => state.gates[name]?.status === "pass");
 }
 
+// Only these typed relations establish artifact lineage for focus resolution.
+// Contextual, evidence, and task-dependency fields (for example `related`,
+// `references`, `source`, `depends-on`, and `blocks`) must not select a plan.
+const LIFECYCLE_LINEAGE_RELATIONS = new Set([
+  "implements",
+  "implemented-by",
+  "derives-from",
+  "derived-by",
+  "refines",
+  "refined-by",
+]);
+
+function lineageValues(artifact: LifecycleState["artifacts"][number]): string[] {
+  return [...LIFECYCLE_LINEAGE_RELATIONS].flatMap((relation) => artifact.relations[relation] ?? []);
+}
+
 function selectedPlan(state: LifecycleState): string | undefined {
   const byPath = new Map(state.artifacts.map((artifact) => [artifact.path, artifact]));
   const byId = new Map(state.artifacts.map((artifact) => [artifact.id, artifact]));
@@ -105,12 +121,12 @@ function selectedPlan(state: LifecycleState): string | undefined {
     if (!artifact || visited.has(artifact.path)) continue;
     visited.add(artifact.path);
     if (artifact.type === "plan") plans.push(artifact.path);
-    for (const value of Object.values(artifact.relations).flat()) {
+    for (const value of lineageValues(artifact)) {
       const target = byPath.get(value) ?? byId.get(value);
       if (target && !visited.has(target.path)) queue.push(target);
     }
     for (const candidate of state.artifacts) {
-      const pointsTo = Object.values(candidate.relations).flat().some((value) => value === artifact.path || value === artifact.id);
+      const pointsTo = lineageValues(candidate).some((value) => value === artifact.path || value === artifact.id);
       if (pointsTo && !visited.has(candidate.path)) queue.push(candidate);
     }
   }
