@@ -25,9 +25,10 @@ package は 4 layer で構成します。
 汎用 condition DSL は `signal`、`gate`（`pass` / `not-pass`）、`task-graph`
 （`runnable` / `invalid`）predicate をサポートします。未知の signal や壊れた
 definition は fail closed です。eligible な outgoing edge は昇順の `priority`、
-次に安定した edge ID で並べ、turn ごとに 1 edge だけ返します。caller は返された
-audit をすべて実行し、delegate だけを dispatch して Markdown 証跡を記録し、
-`next` から再入力します。
+次に安定した edge ID で並べます。各 invocation は、宣言済み edge の遷移、edge
+なしの同一 node blocked 結果、または edge なしの terminal 結果のいずれか 1 つを
+返します。caller は返された audit をすべて実行し、delegate だけを dispatch して
+Markdown 証跡を記録し、`next` から再入力します。
 
 `focus-required` は明示的 focus が渡されるまで dispatch を停止します。terminal
 route は idempotent です。blocked route は file 名、path の近さ、隣接 node から

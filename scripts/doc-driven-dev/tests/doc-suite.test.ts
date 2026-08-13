@@ -63,15 +63,27 @@ function assertConcepts(text, concepts, label) {
   }
 }
 
-function filesUnder(directory) {
-  const files = [];
+function entriesUnder(directory) {
+  const entries = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     if (["node_modules", ".git"].includes(entry.name)) continue;
     const absolute = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...filesUnder(absolute));
-    else files.push(absolute);
+    entries.push(absolute);
+    if (entry.isDirectory()) entries.push(...entriesUnder(absolute));
   }
-  return files;
+  return entries;
+}
+
+function markdownSection(text, heading) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.indexOf(heading);
+  assert.notEqual(start, -1, `missing Markdown section: ${heading}`);
+  const end = lines.findIndex((line, index) => index > start && /^## /.test(line));
+  return lines.slice(start + 1, end === -1 ? lines.length : end).join("\n");
+}
+
+function numberedSteps(section) {
+  return [...section.matchAll(/^(\d+)\.\s/gm)].map((match) => Number(match[1]));
 }
 
 test("public docs expose doc-driven-dev-graph and contain no retired lifecycle residue", () => {
@@ -90,10 +102,15 @@ test("public docs expose doc-driven-dev-graph and contain no retired lifecycle r
     ["lifecycle", "graph"].join("_"),
   ];
   const residue = [];
-  for (const file of [...filesUnder(packageRoot), ...filesUnder(scriptRoot)]) {
-    const text = fs.readFileSync(file, "utf8");
+  for (const entry of [...entriesUnder(packageRoot), ...entriesUnder(scriptRoot)]) {
+    const normalizedPath = entry.replace(/\\/g, "/");
     for (const term of oldTerms) {
-      if (text.includes(term)) residue.push(`${path.relative(process.cwd(), file)}: ${term}`);
+      if (normalizedPath.includes(term)) residue.push(`${path.relative(process.cwd(), entry)} (path): ${term}`);
+    }
+    if (!fs.statSync(entry).isFile()) continue;
+    const text = fs.readFileSync(entry, "utf8");
+    for (const term of oldTerms) {
+      if (text.includes(term)) residue.push(`${path.relative(process.cwd(), entry)} (content): ${term}`);
     }
   }
   assert.deepEqual(residue, [], "retired public names may only appear in docs/migrations/doc-driven-dev-graph.md");
@@ -553,18 +570,31 @@ test("doc-driven-dev-graph meta skill ships Graph Definition and runtime referen
   assert.equal(fs.existsSync(path.join(graphSkill, "references", "execution-contract.md")), true);
 
   const skill = fs.readFileSync(path.join(graphSkill, "SKILL.md"), "utf8");
+  const skillJa = fs.readFileSync(path.join(graphSkill, "SKILL.ja.md"), "utf8");
   assert.match(skill, /^name: doc-driven-dev-graph$/m);
+  assert.match(skill, /^description: .*at most one declared edge.*terminal\/blocked result/m);
+  assert.match(skillJa, /^description: .*最大 1 つ.*terminal\/blocked.*$/m);
   assert.match(skill, /Graph Definition/);
   assert.match(skill, /Runtime loop/);
   assert.match(skill, /one declared edge/);
-  assert.match(skill, /does not define phases as the execution authority|phases are conceptual/i);
-  assert.ok((skill.match(/^\d+\./gm) || []).length >= 10, "SKILL.md should document ten runtime steps");
+  assert.match(skill, /successful transition selects exactly one declared edge/i);
+  assert.match(skill, /same-node blocked/i);
+  assert.match(skill, /result with no edge/i);
+  assert.match(skillJa, /成功する遷移は宣言済み edge を 1 つだけ選択します/);
+  assert.match(skillJa, /同一 node blocked 結果/);
+  assert.match(skill, /phase labels are conceptual and non-normative.*execution authority/is);
+  const runtime = markdownSection(skill, "## Runtime loop");
+  const runtimeJa = markdownSection(skillJa, "## Graph runtime の 10 ステップ");
+  assert.deepEqual(numberedSteps(runtime), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.deepEqual(numberedSteps(runtimeJa), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.match(skillJa, /phase label は概念上かつ非規範的.*実行\s*authority/s);
 });
 
 test("graph docs bind delegates, audits, and condition-driven subgraphs", () => {
   const root = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
   const skill = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.md"), "utf8");
   const skillJa = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.ja.md"), "utf8");
+  const graphDefinition = fs.readFileSync(path.join(root, "doc-driven-dev-graph/graphs/doc-driven-dev.yaml"), "utf8");
   for (const text of [skill, skillJa]) {
     assert.match(text, /route_graph\.js/);
     assert.match(text, /build_task_graph\.js/);
@@ -575,6 +605,9 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
     assert.match(text, /wont-do/);
     assert.match(text, /database|DB|データベース/i);
   }
+  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph \}$/m);
+  assert.match(skill, /binding `build_task_graph` is executed by\s+`build_task_graph\.js`/);
+  assert.match(skillJa, /binding `build_task_graph` は `build_task_graph\.js` が実行/);
 });
 
 test("implementation-flow opens impl-doc before task execution", () => {
@@ -673,9 +706,9 @@ test("doc-status documents unclassified follow-up review before exit", () => {
   const graph = fs.readFileSync(path.join(skillRoot, "doc-driven-dev-graph", "graphs", "doc-driven-dev.yaml"), "utf8");
 
   assert.match(skill, /unclassified follow-up/i);
-  assert.match(skill, /Phase 4 Exit Gate/);
+  assert.match(skill, /`followup-triage` node.*`exit-audit` node/is);
   assert.match(skillJa, /未分類フォローアップ/);
-  assert.match(skillJa, /Phase 4 終了ゲート/);
+  assert.match(skillJa, /`followup-triage` node.*`exit-audit` node/s);
   for (const signal of [
     "followup-bug-fix", "followup-decision-briefing", "followup-decision-design",
     "followup-new-feature", "followup-doc-only", "followup-terminal",

@@ -1,6 +1,6 @@
 ---
 name: doc-driven-dev-graph
-description: "ドキュメント駆動開発のグラフ優先ルーター。正規 Markdown artifact を Graph State に投影し、宣言済み Graph Definition を評価して delegate または audit への次のエッジを 1 つだけ返す。"
+description: "ドキュメント駆動開発のグラフ優先ルーター。正規 Markdown artifact を Graph State に投影し、宣言済み Graph Definition を評価して、宣言済み edge を最大 1 つ、または明示的な terminal/blocked 結果を返す。"
 license: MIT
 ---
 
@@ -9,6 +9,9 @@ license: MIT
 `doc-driven-dev-graph` は公開された graph-first entrypoint です。実行の
 authority は Graph Definition であり、人間向けの phase label は概念上の
 分類にすぎず、node・edge・condition・delegate の宣言を置き換えません。
+
+人間向けの phase label は概念上かつ非規範的であり、Graph Definition が実行
+authority です。
 
 ## 4 つの layer
 
@@ -33,8 +36,10 @@ JSON 結果は `GraphRoute` contract です。`current`、1 つの `next`、`edg
 `taskGraph` を含みます。terminal と blocked は明示的な結果であり、遷移先を
 推測しません。
 
-terminal 以外の route は宣言済み edge を 1 つだけ含み、caller が暗黙の edge や
-隣接 node を追加することはありません。
+成功する遷移は宣言済み edge を 1 つだけ選択します。condition を満たす edge が
+ない場合、router は edge を持たない fail-closed の同一 node blocked 結果を返し、
+terminal 結果も edge を持ちません。caller が暗黙の edge や隣接 node を追加する
+ことはありません。
 
 ## Condition DSL と priority
 

@@ -26,9 +26,10 @@ The package has four layers:
 The generic condition DSL supports `signal`, `gate` (`pass` / `not-pass`), and
 `task-graph` (`runnable` / `invalid`) predicates. Unknown signals and malformed
 definitions fail closed. Eligible outgoing edges are ordered by ascending
-`priority`, then stable edge ID; one edge is returned per turn. The caller runs
-all returned audits, dispatches only the returned delegate, records Markdown
-evidence, and re-enters at `next`.
+`priority`, then stable edge ID. Each invocation returns exactly one of a
+declared edge transition, a same-node blocked result with no edge, or a terminal
+result with no edge. The caller runs all returned audits, dispatches only the
+returned delegate, records Markdown evidence, and re-enters at `next`.
 
 `focus-required` blocks dispatch until explicit focus is supplied. A terminal
 route is idempotent. A blocked route never guesses from filenames, path

@@ -2,8 +2,8 @@
 
 `doc-driven-dev-graph` is the public entrypoint for document-driven
 development. It projects canonical Markdown artifacts into Graph State,
-evaluates the selected Graph Definition, and returns one declared edge for a
-delegate or audit. Human phase labels are useful vocabulary, but the Graph
+evaluates the selected Graph Definition, and returns at most one declared edge
+or an explicit terminal/blocked result for a delegate or audit. Human phase labels are useful vocabulary, but the Graph
 Definition is the execution authority.
 
 ## What is included

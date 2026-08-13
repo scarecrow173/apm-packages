@@ -1,6 +1,6 @@
 ---
 name: doc-driven-dev-graph
-description: "Graph-first router for document-driven development. Projects canonical Markdown artifacts into Graph State, evaluates a declared Graph Definition, and returns exactly one next edge for a delegate or audit."
+description: "Graph-first router for document-driven development. Projects canonical Markdown artifacts into Graph State, evaluates a declared Graph Definition, and returns at most one declared edge or an explicit terminal/blocked result."
 license: MIT
 ---
 
@@ -11,7 +11,8 @@ Definition is the execution authority; human phase labels are conceptual
 groupings only and never replace declared nodes, edges, conditions, or
 delegates.
 
-Phases are conceptual labels, not the execution authority.
+Human phase labels are conceptual and non-normative; Graph Definition remains
+the execution authority.
 
 ## Four layers
 
@@ -37,8 +38,10 @@ The JSON result is the `GraphRoute` contract: `current`, one `next`, `edgeId`,
 selected `taskGraph`. Terminal and blocked results are explicit and do not
 guess a destination.
 
-Every non-terminal route contains one declared edge; no implicit or neighboring
-edge is added by the caller.
+A successful transition selects exactly one declared edge. When no edge
+condition is satisfied, the router returns a fail-closed same-node blocked
+result with no edge; terminal results are also edge-less. No implicit or
+neighboring edge is added by the caller.
 
 ## Condition DSL and priority
 
@@ -63,7 +66,7 @@ Delegates own their briefing and implementation subgraphs. The caller runs
 returned audits before dispatching exactly the returned delegate. `focus-required`
 is a hard stop until explicit focus is supplied.
 
-## Runtime loop (ten Graph steps)
+## Runtime loop
 
 1. Select the Graph Definition and current node.
 2. Inspect canonical Markdown artifacts and their semantic relations.

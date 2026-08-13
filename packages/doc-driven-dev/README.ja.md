@@ -2,7 +2,8 @@
 
 `doc-driven-dev-graph` はドキュメント駆動開発の公開 entrypoint です。正規
 Markdown artifact を Graph State に投影し、選択した Graph Definition を評価して、
-delegate または audit への宣言済みエッジを 1 つ返します。人間向けの phase label
+delegate または audit への宣言済みエッジを最大 1 つ、または明示的な terminal/blocked
+結果を返します。人間向けの phase label
 は語彙として利用できますが、実行の authority は Graph Definition です。
 
 ## 同梱内容
