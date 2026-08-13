@@ -50,7 +50,7 @@ const graphConditionSchema = z.discriminatedUnion("kind", [
 const graphNodeSchema = z.object({
   kind: z.enum(["action", "delegate", "audit", "terminal"]),
   delegate: z.string().min(1).optional(),
-  requiresGates: z.array(z.string().min(1)).default([]),
+  requiresGates: z.array(z.string().min(1)).optional(),
 }).strict();
 
 const graphEdgeSchema = z.object({
@@ -95,11 +95,12 @@ function validateGraphDefinition(value: z.infer<typeof graphDefinitionSchema>): 
       .map((condition) => condition.gate),
   );
   for (const [nodeId, node] of Object.entries(value.nodes)) {
-    const unknownGates = node.requiresGates.filter((gate) => !declaredGates.has(gate));
+    const requiresGates = node.requiresGates ?? [];
+    const unknownGates = requiresGates.filter((gate) => !declaredGates.has(gate));
     if (unknownGates.length > 0) {
       throw invalidGraph(`unknown prerequisite gate: ${unknownGates.join(", ")}`);
     }
-    if (new Set(node.requiresGates).size !== node.requiresGates.length) {
+    if (new Set(requiresGates).size !== requiresGates.length) {
       throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
     }
   }
