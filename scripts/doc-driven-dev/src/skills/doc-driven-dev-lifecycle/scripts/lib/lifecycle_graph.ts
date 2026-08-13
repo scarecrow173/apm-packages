@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import { z } from "zod";
 
 /** The nodes that make up the lifecycle execution topology. */
