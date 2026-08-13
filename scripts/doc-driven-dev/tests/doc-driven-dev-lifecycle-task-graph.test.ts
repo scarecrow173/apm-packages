@@ -107,6 +107,44 @@ test("buildTaskGraph ignores typed artifact relations but rejects unresolved tas
   assert.deepEqual(Object.keys(result.issues[0]).sort(), ["code", "message", "tasks"]);
 });
 
+test("buildTaskGraph ignores typed artifact ID relations", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-artifact-ids-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), matter.stringify("# Plan\n", {
+    id: "PLAN-0001", type: "plan", status: "approved", title: "Plan", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }), "utf8");
+  fs.writeFileSync(path.join(repo, "docs/specs/0001-spec.md"), matter.stringify("# Spec\n", {
+    id: "SPEC-0001", type: "spec", status: "approved", title: "Spec", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }), "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: ["PLAN-0001", "SPEC-0001"] });
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+  assert.deepEqual(result.edges, []);
+  assert.deepEqual(result.issues, []);
+});
+
+test("buildTaskGraph fails closed with clear malformed-document diagnostics", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-malformed-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", { status: "invalid-status" as TaskStatus, dependsOn: [] });
+  fs.writeFileSync(path.join(repo, "docs/tasks/0002-malformed.md"), matter.stringify("# Task\n", {
+    id: "TASK-0002", type: "task", status: "todo", title: "Malformed", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: { implements: ["docs/plans/0001-plan.md"], "depends-on": 3 },
+  }), "utf8");
+  fs.writeFileSync(path.join(repo, "docs/tasks/0003-missing-id.md"), matter.stringify("# Task\n", {
+    type: "task", status: "todo", title: "Missing ID", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: { implements: ["docs/plans/0001-plan.md"] },
+  }), "utf8");
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+  assert.equal(result.runnable.length, 0);
+  assert.equal(result.issues.length, 3);
+  for (const issue of result.issues) {
+    assert.equal(Object.keys(issue).sort().join(","), "code,message,tasks");
+    assert.ok(issue.tasks.length > 0);
+    assert.match(issue.message, /Malformed task document/);
+    assert.doesNotMatch(issue.message, /references unresolved task/);
+  }
+});
+
 test("buildTaskGraph reports duplicate IDs and filters tasks by plan", () => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-filter-"));
   fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });

@@ -3557,7 +3557,7 @@ function relationValues(raw, key, issues, taskId, file) {
     if (raw !== void 0 && raw !== null) {
       issues.push({
         code: "invalid-task-document",
-        tasks: taskId ? [taskId] : [],
+        tasks: [taskId || file],
         task: taskId || void 0,
         file,
         message: `Task relations must be an object (${key})`
@@ -3575,7 +3575,7 @@ function relationValues(raw, key, issues, taskId, file) {
       else if (item !== null && item !== void 0) {
         issues.push({
           code: "invalid-task-document",
-          tasks: taskId ? [taskId] : [],
+          tasks: [taskId || file],
           task: taskId || void 0,
           file,
           message: `Task relation ${key} must contain only strings`
@@ -3586,7 +3586,7 @@ function relationValues(raw, key, issues, taskId, file) {
   }
   issues.push({
     code: "invalid-task-document",
-    tasks: taskId ? [taskId] : [],
+    tasks: [taskId || file],
     task: taskId || void 0,
     file,
     message: `Task relation ${key} must be an array of strings`
@@ -3611,7 +3611,7 @@ function readTaskDocuments(cwd, taskDir) {
         blocks: [],
         parseIssues: [{
           code: "invalid-task-document",
-          tasks: [],
+          tasks: [relativeFile],
           file: relativeFile,
           message: `Unable to parse task front matter: ${error instanceof Error ? error.message : String(error)}`
         }]
@@ -3624,7 +3624,7 @@ function readTaskDocuments(cwd, taskDir) {
     if (!id) {
       parseIssues.push({
         code: "invalid-task-document",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         file: relativeFile,
         message: "Task front matter requires a non-empty id"
       });
@@ -3634,7 +3634,7 @@ function readTaskDocuments(cwd, taskDir) {
     if (!TASK_STATUSES.has(statusValue)) {
       parseIssues.push({
         code: "invalid-task-status",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         task: id || void 0,
         file: relativeFile,
         message: `Unknown task status: ${statusValue || "<missing>"}`
@@ -3645,7 +3645,7 @@ function readTaskDocuments(cwd, taskDir) {
     if (rawRelations !== void 0 && (typeof rawRelations !== "object" || Array.isArray(rawRelations))) {
       parseIssues.push({
         code: "invalid-task-document",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         task: id || void 0,
         file: relativeFile,
         message: "Task relations must be an object"
@@ -3710,13 +3710,30 @@ function isExistingArtifactReference(cwd, taskDir, reference) {
     return false;
   }
 }
+function readArtifactIds(cwd, taskDir) {
+  const taskRoot = import_node_path.default.resolve(cwd, taskDir);
+  const ids = /* @__PURE__ */ new Set();
+  for (const file of markdownFiles(cwd)) {
+    const absolute = import_node_path.default.resolve(file);
+    if (absolute === taskRoot || absolute.startsWith(`${taskRoot}${import_node_path.default.sep}`)) continue;
+    try {
+      const data = (0, import_gray_matter.default)(import_node_fs.default.readFileSync(file, "utf8")).data;
+      if (["plan", "spec", "adr", "design"].includes(data.type) && typeof data.id === "string" && data.id.trim()) {
+        ids.add(data.id.trim());
+      }
+    } catch {
+    }
+  }
+  return ids;
+}
 function resolveTaskEdges(cwd, taskDir, index) {
   const edges = /* @__PURE__ */ new Map();
   const issues = [];
+  const artifactIds = readArtifactIds(cwd, taskDir);
   const addReference = (task, reference, direction) => {
     const target = resolveReference(cwd, reference, index);
     if (!target || !target.id) {
-      if (isExistingArtifactReference(cwd, taskDir, reference)) return;
+      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, reference)) return;
       issues.push({
         code: "missing-task-reference",
         tasks: task.id ? [task.id] : [],
@@ -3794,9 +3811,10 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
       "plan-has-no-tasks"
     ]);
     const code = allowed.has(issue.code) ? issue.code : "missing-task-reference";
+    const isMalformed = !allowed.has(issue.code);
     return {
       code,
-      message: issue.message,
+      message: isMalformed ? `Malformed task document: ${issue.message}` : issue.message,
       tasks: sortedUnique(issue.tasks || (issue.task ? [issue.task] : []))
     };
   });

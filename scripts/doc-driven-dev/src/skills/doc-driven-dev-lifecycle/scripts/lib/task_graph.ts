@@ -125,7 +125,7 @@ function relationValues(raw: unknown, key: string, issues: InternalIssue[], task
     if (raw !== undefined && raw !== null) {
       issues.push({
         code: "invalid-task-document",
-        tasks: taskId ? [taskId] : [],
+        tasks: [taskId || file],
         task: taskId || undefined,
         file,
         message: `Task relations must be an object (${key})`,
@@ -143,7 +143,7 @@ function relationValues(raw: unknown, key: string, issues: InternalIssue[], task
       else if (item !== null && item !== undefined) {
         issues.push({
           code: "invalid-task-document",
-          tasks: taskId ? [taskId] : [],
+          tasks: [taskId || file],
           task: taskId || undefined,
           file,
           message: `Task relation ${key} must contain only strings`,
@@ -154,7 +154,7 @@ function relationValues(raw: unknown, key: string, issues: InternalIssue[], task
   }
   issues.push({
     code: "invalid-task-document",
-    tasks: taskId ? [taskId] : [],
+    tasks: [taskId || file],
     task: taskId || undefined,
     file,
     message: `Task relation ${key} must be an array of strings`,
@@ -181,7 +181,7 @@ export function readTaskDocuments(cwd: string, taskDir: string): ParsedTask[] {
         blocks: [],
         parseIssues: [{
           code: "invalid-task-document",
-          tasks: [],
+          tasks: [relativeFile],
           file: relativeFile,
           message: `Unable to parse task front matter: ${error instanceof Error ? error.message : String(error)}`,
         }],
@@ -198,7 +198,7 @@ export function readTaskDocuments(cwd: string, taskDir: string): ParsedTask[] {
     if (!id) {
       parseIssues.push({
         code: "invalid-task-document",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         file: relativeFile,
         message: "Task front matter requires a non-empty id",
       });
@@ -208,7 +208,7 @@ export function readTaskDocuments(cwd: string, taskDir: string): ParsedTask[] {
     if (!TASK_STATUSES.has(statusValue as TaskStatus)) {
       parseIssues.push({
         code: "invalid-task-status",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         task: id || undefined,
         file: relativeFile,
         message: `Unknown task status: ${statusValue || "<missing>"}`,
@@ -221,7 +221,7 @@ export function readTaskDocuments(cwd: string, taskDir: string): ParsedTask[] {
     if (rawRelations !== undefined && (typeof rawRelations !== "object" || Array.isArray(rawRelations))) {
       parseIssues.push({
         code: "invalid-task-document",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         task: id || undefined,
         file: relativeFile,
         message: "Task relations must be an object",
@@ -291,15 +291,34 @@ function isExistingArtifactReference(cwd: string, taskDir: string, reference: st
   }
 }
 
+function readArtifactIds(cwd: string, taskDir: string): Set<string> {
+  const taskRoot = path.resolve(cwd, taskDir);
+  const ids = new Set<string>();
+  for (const file of markdownFiles(cwd)) {
+    const absolute = path.resolve(file);
+    if (absolute === taskRoot || absolute.startsWith(`${taskRoot}${path.sep}`)) continue;
+    try {
+      const data = matter(fs.readFileSync(file, "utf8")).data as Record<string, unknown>;
+      if (["plan", "spec", "adr", "design"].includes(data.type as string) && typeof data.id === "string" && data.id.trim()) {
+        ids.add(data.id.trim());
+      }
+    } catch {
+      // A malformed unrelated document cannot establish an artifact reference.
+    }
+  }
+  return ids;
+}
+
 export function resolveTaskEdges(cwd: string, taskDir: string, index: IndexedTasks): ResolvedEdges {
   const edges = new Map<string, TaskGraphEdge>();
   const issues: InternalIssue[] = [];
+  const artifactIds = readArtifactIds(cwd, taskDir);
   const addReference = (task: ParsedTask, reference: string, direction: "depends-on" | "blocks"): void => {
     const target = resolveReference(cwd, reference, index);
     if (!target || !target.id) {
       // Relations to an existing plan/spec/ADR are upstream artifact links,
       // not task-DAG edges. Keep unresolved task-looking references fail-closed.
-      if (isExistingArtifactReference(cwd, taskDir, reference)) return;
+      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, reference)) return;
       issues.push({
         code: "missing-task-reference",
         tasks: task.id ? [task.id] : [],
@@ -397,9 +416,10 @@ export function summarizeTaskGraph(
     const code = allowed.has(issue.code as TaskGraphIssueCode)
       ? issue.code as TaskGraphIssueCode
       : "missing-task-reference";
+    const isMalformed = !allowed.has(issue.code as TaskGraphIssueCode);
     return {
       code,
-      message: issue.message,
+      message: isMalformed ? `Malformed task document: ${issue.message}` : issue.message,
       tasks: sortedUnique(issue.tasks || (issue.task ? [issue.task] : [])),
     };
   });
