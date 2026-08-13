@@ -50,57 +50,46 @@ const duplicateEdgeIdFixture = `${requiredNodesFixture}edges:
   - { id: duplicate, from: migration, to: complete, when: migration-complete }
 `;
 
-const terminalOutgoingEdgeFixture = `${requiredNodesFixture}edges:
-  - { id: terminal-outgoing, from: complete, to: probe, when: exit-audit-pass }
+const terminalOutgoingEdgeFixture = `
+schemaVersion: 1
+entry: start
+nodes:
+  start: { kind: action, delegate: start, audits: [] }
+  complete: { kind: terminal, delegate: null, audits: [] }
+edges:
+  - { id: start-to-complete, from: start, to: complete, when: lifecycle-complete }
+  - { id: terminal-outgoing, from: complete, to: start, when: exit-audit-pass }
 `;
 
-const completeEdgesFixture = `${requiredNodesFixture}edges:
-  - { id: probe-to-migration, from: probe, to: migration, when: migration-requested }
-  - { id: probe-to-bootstrap, from: probe, to: bootstrap, when: bootstrap-incomplete }
-  - { id: probe-to-briefing, from: probe, to: briefing, when: bootstrap-complete }
-  - { id: migration-retry, from: migration, to: migration, when: migration-incomplete }
-  - { id: migration-to-bootstrap, from: migration, to: bootstrap, when: migration-complete }
-  - { id: bootstrap-retry, from: bootstrap, to: bootstrap, when: bootstrap-incomplete }
-  - { id: bootstrap-to-briefing, from: bootstrap, to: briefing, when: bootstrap-complete }
-  - { id: briefing-retry, from: briefing, to: briefing, when: briefing-incomplete }
-  - { id: briefing-to-design, from: briefing, to: design, when: briefing-complete }
-  - { id: design-retry, from: design, to: design, when: design-incomplete }
-  - { id: design-to-planning, from: design, to: planning, when: design-complete }
-  - { id: design-to-briefing, from: design, to: briefing, when: spec-gap }
-  - { id: planning-retry, from: planning, to: planning, when: planning-incomplete }
-  - { id: planning-to-task-graph, from: planning, to: task-graph, when: planning-complete }
-  - { id: planning-to-design, from: planning, to: design, when: design-gap }
-  - { id: task-graph-to-planning, from: task-graph, to: planning, when: task-graph-invalid }
-  - { id: task-graph-retry, from: task-graph, to: task-graph, when: task-graph-retry }
-  - { id: task-graph-to-implementation, from: task-graph, to: implementation, when: tasks-runnable }
-  - { id: implementation-retry, from: implementation, to: implementation, when: implementation-incomplete }
-  - { id: implementation-to-followup-triage, from: implementation, to: followup-triage, when: implementation-verified }
-  - { id: implementation-to-briefing, from: implementation, to: briefing, when: spec-gap }
-  - { id: implementation-to-design, from: implementation, to: design, when: design-gap }
-  - { id: implementation-constraint-to-design, from: implementation, to: design, when: constraint-gap }
-  - { id: followup-triage-retry, from: followup-triage, to: followup-triage, when: followups-unclassified }
-  - { id: followup-triage-to-bootstrap-repair, from: followup-triage, to: bootstrap, when: bootstrap-incomplete }
-  - { id: followup-triage-to-briefing-repair, from: followup-triage, to: briefing, when: briefing-incomplete }
-  - { id: followup-triage-to-design-repair, from: followup-triage, to: design, when: design-incomplete }
-  - { id: followup-triage-to-planning-repair, from: followup-triage, to: planning, when: planning-incomplete }
-  - { id: followup-triage-to-implementation-repair, from: followup-triage, to: implementation, when: implementation-incomplete }
-  - { id: followup-triage-to-planning, from: followup-triage, to: planning, when: followup-bug-fix }
-  - { id: followup-triage-to-briefing, from: followup-triage, to: briefing, when: followup-decision-briefing }
-  - { id: followup-triage-to-design, from: followup-triage, to: design, when: followup-decision-design }
-  - { id: followup-triage-new-feature, from: followup-triage, to: briefing, when: followup-new-feature }
-  - { id: followup-triage-doc-only, from: followup-triage, to: exit-audit, when: followup-doc-only }
-  - { id: followup-triage-terminal, from: followup-triage, to: exit-audit, when: followup-terminal }
-  - { id: exit-audit-retry, from: exit-audit, to: exit-audit, when: exit-audit-required }
-  - { id: exit-audit-to-complete, from: exit-audit, to: complete, when: exit-audit-pass }
+const missingEntryFixture = `${requiredNodesFixture.replace("entry: probe", "entry: missing")}edges: []\n`;
+
+const nonTerminalWithoutOutgoingFixture = `
+schemaVersion: 1
+entry: custom-start
+nodes:
+  custom-start: { kind: action, delegate: custom, audits: [] }
+  custom-end: { kind: terminal, delegate: null, audits: [] }
+edges: []
 `;
 
-function fixtureWithoutEdge(edgeId: string): string {
-  const line = completeEdgesFixture
-    .split("\n")
-    .find((candidate: string) => candidate.includes(`id: ${edgeId},`));
-  assert.ok(line, `fixture should contain edge ${edgeId}`);
-  return completeEdgesFixture.replace(`${line}\n`, "");
-}
+const customNodeFixture = `
+schemaVersion: 1
+entry: custom-start
+nodes:
+  custom-start: { kind: action, delegate: custom, audits: [] }
+  custom-end: { kind: terminal, delegate: null, audits: [] }
+edges:
+  - { id: custom-complete, from: custom-start, to: custom-end, when: lifecycle-complete }
+`;
+
+const duplicateNodeIdFixture = `
+schemaVersion: 1
+entry: custom-start
+nodes:
+  custom-start: { kind: action, delegate: custom, audits: [] }
+  custom-start: { kind: terminal, delegate: null, audits: [] }
+edges: []
+`;
 
 const invalidFixture = `
 schemaVersion: 1
@@ -135,6 +124,9 @@ test("lifecycle graph declares required upstream loopbacks", () => {
     "implementation",
     "followup-triage",
   ]);
+  assert.ok(findEdge(graph, "followup-triage", "followup-bug-fix"));
+  assert.ok(findEdge(graph, "followup-triage", "followup-decision-briefing"));
+  assert.ok(findEdge(graph, "exit-audit", "planning-incomplete"));
   const exitAuditRepairs = [
     ["bootstrap-incomplete", "bootstrap", "exit-audit-to-bootstrap-repair"],
     ["briefing-incomplete", "briefing", "exit-audit-to-briefing-repair"],
@@ -162,29 +154,32 @@ test("lifecycle graph rejects duplicate edge IDs independently", () => {
   assert.throws(() => parseLifecycleGraph(duplicateEdgeIdFixture), /duplicate edge id: duplicate/);
 });
 
+test("lifecycle graph rejects duplicate node IDs", () => {
+  assert.throws(() => parseLifecycleGraph(duplicateNodeIdFixture), /duplicated mapping key|duplicate node/i);
+});
+
 test("lifecycle graph rejects outgoing edges from complete", () => {
-  assert.throws(() => parseLifecycleGraph(terminalOutgoingEdgeFixture), /complete node must not have outgoing edges/);
-});
-
-test("lifecycle graph rejects missing normal progression edges with valid endpoints", () => {
   assert.throws(
-    () => parseLifecycleGraph(fixtureWithoutEdge("probe-to-bootstrap")),
-    /missing required lifecycle edge: probe-to-bootstrap/,
+    () => parseLifecycleGraph(terminalOutgoingEdgeFixture),
+    /terminal node must not have outgoing edges: complete/,
   );
 });
 
-test("lifecycle graph rejects missing same-node retry edges with valid endpoints", () => {
+test("lifecycle graph rejects an entry endpoint that is not declared", () => {
+  assert.throws(() => parseLifecycleGraph(missingEntryFixture), /entry node does not exist: missing/);
+});
+
+test("lifecycle graph rejects a non-terminal without outgoing edges", () => {
   assert.throws(
-    () => parseLifecycleGraph(fixtureWithoutEdge("migration-retry")),
-    /missing required lifecycle edge: migration-retry/,
+    () => parseLifecycleGraph(nonTerminalWithoutOutgoingFixture),
+    /non-terminal node must have an outgoing edge: custom-start/,
   );
 });
 
-test("lifecycle graph rejects missing loopback edges with valid endpoints", () => {
-  assert.throws(
-    () => parseLifecycleGraph(fixtureWithoutEdge("implementation-to-design")),
-    /missing required lifecycle edge: implementation-to-design/,
-  );
+test("lifecycle graph accepts YAML-declared string node IDs", () => {
+  const graph = parseLifecycleGraph(customNodeFixture);
+  assert.equal(graph.entry, "custom-start");
+  assert.ok(findEdge(graph, "custom-start", "lifecycle-complete"));
 });
 
 test("lifecycle graph rejects malformed fixtures", () => {

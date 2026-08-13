@@ -3,19 +3,8 @@ import fs from "node:fs";
 import * as yaml from "js-yaml";
 import { z } from "zod";
 
-/** The nodes that make up the lifecycle execution topology. */
-export type LifecycleNodeId =
-  | "probe"
-  | "migration"
-  | "bootstrap"
-  | "briefing"
-  | "design"
-  | "planning"
-  | "task-graph"
-  | "implementation"
-  | "followup-triage"
-  | "exit-audit"
-  | "complete";
+/** A node ID declared by the lifecycle graph document. */
+export type LifecycleNodeId = string;
 
 export type LifecycleNodeKind = "probe" | "action" | "subgraph" | "gate" | "audit" | "terminal";
 
@@ -72,53 +61,6 @@ export type LifecycleGraph = {
   nodes: Record<LifecycleNodeId, LifecycleNode>;
   edges: LifecycleEdge[];
 };
-
-/** Normative lifecycle topology; every declared edge must remain present and typed. */
-const REQUIRED_LIFECYCLE_EDGES: readonly LifecycleEdge[] = [
-  { id: "probe-to-migration", from: "probe", to: "migration", when: "migration-requested" },
-  { id: "probe-to-bootstrap", from: "probe", to: "bootstrap", when: "bootstrap-incomplete" },
-  { id: "probe-to-briefing", from: "probe", to: "briefing", when: "bootstrap-complete" },
-  { id: "migration-retry", from: "migration", to: "migration", when: "migration-incomplete" },
-  { id: "migration-to-bootstrap", from: "migration", to: "bootstrap", when: "migration-complete" },
-  { id: "bootstrap-retry", from: "bootstrap", to: "bootstrap", when: "bootstrap-incomplete" },
-  { id: "bootstrap-to-briefing", from: "bootstrap", to: "briefing", when: "bootstrap-complete" },
-  { id: "briefing-retry", from: "briefing", to: "briefing", when: "briefing-incomplete" },
-  { id: "briefing-to-design", from: "briefing", to: "design", when: "briefing-complete" },
-  { id: "design-retry", from: "design", to: "design", when: "design-incomplete" },
-  { id: "design-to-planning", from: "design", to: "planning", when: "design-complete" },
-  { id: "design-to-briefing", from: "design", to: "briefing", when: "spec-gap" },
-  { id: "planning-retry", from: "planning", to: "planning", when: "planning-incomplete" },
-  { id: "planning-to-task-graph", from: "planning", to: "task-graph", when: "planning-complete" },
-  { id: "planning-to-design", from: "planning", to: "design", when: "design-gap" },
-  { id: "task-graph-to-planning", from: "task-graph", to: "planning", when: "task-graph-invalid" },
-  { id: "task-graph-retry", from: "task-graph", to: "task-graph", when: "task-graph-retry" },
-  { id: "task-graph-to-implementation", from: "task-graph", to: "implementation", when: "tasks-runnable" },
-  { id: "implementation-retry", from: "implementation", to: "implementation", when: "implementation-incomplete" },
-  { id: "implementation-to-followup-triage", from: "implementation", to: "followup-triage", when: "implementation-verified" },
-  { id: "implementation-to-briefing", from: "implementation", to: "briefing", when: "spec-gap" },
-  { id: "implementation-to-design", from: "implementation", to: "design", when: "design-gap" },
-  { id: "implementation-constraint-to-design", from: "implementation", to: "design", when: "constraint-gap" },
-  { id: "followup-triage-retry", from: "followup-triage", to: "followup-triage", when: "followups-unclassified" },
-  { id: "followup-triage-to-bootstrap-repair", from: "followup-triage", to: "bootstrap", when: "bootstrap-incomplete" },
-  { id: "followup-triage-to-briefing-repair", from: "followup-triage", to: "briefing", when: "briefing-incomplete" },
-  { id: "followup-triage-to-design-repair", from: "followup-triage", to: "design", when: "design-incomplete" },
-  { id: "followup-triage-to-planning-repair", from: "followup-triage", to: "planning", when: "planning-incomplete" },
-  { id: "followup-triage-to-implementation-repair", from: "followup-triage", to: "implementation", when: "implementation-incomplete" },
-  { id: "followup-triage-to-planning", from: "followup-triage", to: "planning", when: "followup-bug-fix" },
-  { id: "followup-triage-to-briefing", from: "followup-triage", to: "briefing", when: "followup-decision-briefing" },
-  { id: "followup-triage-to-design", from: "followup-triage", to: "design", when: "followup-decision-design" },
-  { id: "followup-triage-new-feature", from: "followup-triage", to: "briefing", when: "followup-new-feature" },
-  { id: "followup-triage-doc-only", from: "followup-triage", to: "exit-audit", when: "followup-doc-only" },
-  { id: "followup-triage-terminal", from: "followup-triage", to: "exit-audit", when: "followup-terminal" },
-  { id: "exit-audit-to-bootstrap-repair", from: "exit-audit", to: "bootstrap", when: "bootstrap-incomplete" },
-  { id: "exit-audit-to-briefing-repair", from: "exit-audit", to: "briefing", when: "briefing-incomplete" },
-  { id: "exit-audit-to-design-repair", from: "exit-audit", to: "design", when: "design-incomplete" },
-  { id: "exit-audit-to-planning-repair", from: "exit-audit", to: "planning", when: "planning-incomplete" },
-  { id: "exit-audit-to-implementation-repair", from: "exit-audit", to: "implementation", when: "implementation-incomplete" },
-  { id: "exit-audit-to-followup-triage-repair", from: "exit-audit", to: "followup-triage", when: "followups-unclassified" },
-  { id: "exit-audit-retry", from: "exit-audit", to: "exit-audit", when: "exit-audit-required" },
-  { id: "exit-audit-to-complete", from: "exit-audit", to: "complete", when: "exit-audit-pass" },
-];
 
 const lifecycleNodeId = z.string().min(1);
 const lifecycleNodeSchema = z.object({
@@ -190,23 +132,8 @@ function hasNode(nodes: Record<string, unknown>, id: string): boolean {
 }
 
 function validateGraph(value: z.infer<typeof lifecycleGraphSchema>): LifecycleGraph {
-  const requiredNodes: LifecycleNodeId[] = [
-    "probe", "migration", "bootstrap", "briefing", "design", "planning",
-    "task-graph", "implementation", "followup-triage", "exit-audit", "complete",
-  ];
-  const unknownNodes = Object.keys(value.nodes).filter((id) => !requiredNodes.includes(id as LifecycleNodeId));
-  if (unknownNodes.length > 0) {
-    throw invalidGraph(`unknown node(s): ${unknownNodes.join(", ")}`);
-  }
-  const missingNodes = requiredNodes.filter((id) => !hasNode(value.nodes, id));
-  if (missingNodes.length > 0) {
-    throw invalidGraph(`missing required node(s): ${missingNodes.join(", ")}`);
-  }
   if (!hasNode(value.nodes, value.entry)) {
     throw invalidGraph(`entry node does not exist: ${value.entry}`);
-  }
-  if (!hasNode(value.nodes, "complete")) {
-    throw invalidGraph("required terminal node does not exist: complete");
   }
 
   for (const [nodeId, node] of Object.entries(value.nodes)) {
@@ -233,23 +160,18 @@ function validateGraph(value: z.infer<typeof lifecycleGraphSchema>): LifecycleGr
     }
   }
 
-  if (value.edges.some((edge) => edge.from === "complete")) {
-    throw invalidGraph("complete node must not have outgoing edges");
+  const outgoingByNode = new Map<string, number>();
+  for (const edge of value.edges) {
+    outgoingByNode.set(edge.from, (outgoingByNode.get(edge.from) ?? 0) + 1);
   }
-
-  const edgesById = new Map(value.edges.map((edge) => [edge.id, edge]));
-  for (const expected of REQUIRED_LIFECYCLE_EDGES) {
-    const actual = edgesById.get(expected.id);
-    if (!actual) {
-      throw invalidGraph(
-        `missing required lifecycle edge: ${expected.id} (${expected.from} -> ${expected.to} when ${expected.when})`,
-      );
-    }
-    if (actual.from !== expected.from || actual.to !== expected.to || actual.when !== expected.when) {
-      throw invalidGraph(
-        `lifecycle edge ${expected.id} has unexpected tuple: expected ${expected.from} -> ${expected.to} when ${expected.when}; `
-        + `received ${actual.from} -> ${actual.to} when ${actual.when}`,
-      );
+  for (const [nodeId, node] of Object.entries(value.nodes)) {
+    const outgoing = outgoingByNode.get(nodeId) ?? 0;
+    if (node.kind === "terminal") {
+      if (outgoing > 0) {
+        throw invalidGraph(`terminal node must not have outgoing edges: ${nodeId}`);
+      }
+    } else if (outgoing === 0) {
+      throw invalidGraph(`non-terminal node must have an outgoing edge: ${nodeId}`);
     }
   }
 
