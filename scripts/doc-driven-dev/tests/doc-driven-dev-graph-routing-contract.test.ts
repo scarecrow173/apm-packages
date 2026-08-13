@@ -143,3 +143,13 @@ test("exit-audit cannot complete when a required upstream gate regresses", () =>
   assert.ok(route.blockers.includes("required-gate:design:design-status"));
   assert.notEqual(route.next, "complete");
 });
+
+test("exit-audit reaches complete when all declared prerequisites pass", () => {
+  const definition = graphDefinition();
+  const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  const route = routeGraph({ current: "exit-audit", definition, state });
+  assert.equal(route.status, "edge");
+  assert.equal(route.edgeId, "exit-audit-to-complete");
+  assert.equal(route.next, "complete");
+  assert.deepEqual(route.blockers, []);
+});

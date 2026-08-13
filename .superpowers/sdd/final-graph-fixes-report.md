@@ -35,7 +35,7 @@ Result: zero matches outside the explicit exclusions, including tracked
 
 ## Verification
 
-- Focused graph-router and routing-contract tests: 14 passed.
+- Focused graph-router and routing-contract tests: 15 passed.
 - Graph CLI regression suite: 6 passed.
 - Full `pnpm --dir scripts/doc-driven-dev test`: 1 pre-existing docs-suite
   failure (`scripts/doc-driven-dev/src/skills/skill-discovery-protocol/assets/adapters`
