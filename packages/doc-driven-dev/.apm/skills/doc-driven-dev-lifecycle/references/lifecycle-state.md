@@ -54,10 +54,11 @@ Document-derived gates check the existing lifecycle evidence:
 | briefing | Focused spec has required acceptance criteria and acceptable status; focused ADR has considered options and acceptable status. |
 | design | Approved design relates to the focused spec and ADR. |
 | planning | Approved plan relates to design; selected tasks form a valid Task DAG. |
-| implementation | Selected tasks with status `done` or `wont-do` are resolved, and caller supplies `implementation-verified`. |
+| implementation | In this version, selected tasks with status `done` or `wont-do` are lifecycle-resolved unconditionally; caller must supply `implementation-verified`. |
 
-- Lifecycle implementation resolution: selected tasks with status `done` or `wont-do` are resolved, and `implementation-verified` is required.
+- Lifecycle implementation resolution: in this version, selected tasks with status `done` or `wont-do` are resolved unconditionally; `implementation-verified` remains a separate required signal.
 - Task-DAG predecessor satisfaction: only `done` satisfies a dependency; `wont-do` stays blocked and cannot unlock dependents.
+- Operators must record a reason when choosing `wont-do`. The current Lifecycle state projection and Router do not mechanically validate whether that reason is present or valid.
 
 Follow-up triage is an evidence-backed typed gate. It passes only when exactly
 one of the six typed route signals is present — `followup-bug-fix`,
@@ -85,5 +86,7 @@ runnable task. This is deliberate fail-closed behavior.
 Probe state, run every required audit, dispatch the route's delegate, record
 evidence in Markdown, then rerun the probe with the returned node and typed
 signal. Preserve the route's blockers and reasons in the handoff. Stop only at
-`complete` or a blocker that requires user authority; do not invent state,
-signals, edges, or task readiness.
+a graph node whose `kind` is `terminal`, or at a blocker that requires user
+authority; do not invent state, signals, edges, or task readiness. A terminal
+node is idempotent and returns `reasonCode: lifecycle-complete` with
+`edgeId: null`.

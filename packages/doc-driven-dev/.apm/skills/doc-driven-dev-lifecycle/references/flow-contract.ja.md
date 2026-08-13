@@ -26,7 +26,7 @@ fail-closed 規則は `references/graph-contract.ja.md` に定義する。
 | 1 | Briefing | `briefing-flow` | briefing 完了出力: 受け入れ条件付き spec + ADR |
 | 2 | Design | `design-doc` | spec/ADR と整合した承認済み設計 |
 | 3 | Planning & Tasking | `plan-doc` + `task-doc` | 承認済み plan と検証付き task |
-| 4 | Implementation | `implementation-flow` | 全タスクが検証通過 |
+| 4 | Implementation | `implementation-flow` | 選択 task がすべて lifecycle-resolved（`done` または `wont-do`）で、caller が `implementation-verified` を指定する |
 | 5 | Exit | `doc-status` | front matter, relations, index の整合 |
 
 ## Phase -1: Migration（任意）
@@ -140,12 +140,13 @@ briefing 完了成果物になる。
   検証、および進行中ドキュメント更新を委譲する。
 - 4-3 制約フィードバック: `implementation-flow` が上流の不足を報告した場合、
   `adr-doc` / `design-doc` を更新しループバックを記録する。
-- 4-4 完了確認: 全タスクの検証通過に加え、Implementation Record が task
-  クローズ前に完了・監査されていることを確認する。
+- 4-4 完了確認: 選択 task がすべて lifecycle-resolved（`done` または
+  `wont-do`）で、caller が `implementation-verified` を指定し、Implementation
+  Record が task クローズ前に完了・監査されていることを確認する。
 
 ### Implementation 完了条件
 
-- `implementation-flow` が全タスク実装済み・検証通過を報告している。
+- `implementation-flow` が選択 task を実装済み（`done`）または意図的に未実施（`wont-do`）として報告し、caller が `implementation-verified` を指定している。
 - 新たに発見された制約が上流文書に反映されている。
 - コードレビューが完了している。
 - 各 task はコード変更前に `in-progress` の Implementation Record を開いている。
@@ -165,15 +166,16 @@ signal を出し、ユーザー向けフォローアップ報告に選択した 
 | `decision-required`（briefing） | `followup-decision-briefing` | implementation task 作成前に Phase 1（`briefing-flow`）へ戻る。 |
 | `decision-required`（design） | `followup-decision-design` | implementation task 作成前に Phase 2（`design-doc`）へ戻る。 |
 | `new-feature` | `followup-new-feature` | 新しい briefing のため Phase 1（`briefing-flow`）へ戻る。現在の承認済み plan には決して紐付けない。 |
-| `doc-only` | `followup-doc-only` | 文書または implementation record の更新を記録してから、terminal の `exit-audit` route を取る。 |
-| `defer` または `wont-do` | `followup-terminal` | 延期または理由を記録する（task として表す `wont-do` は `status: wont-do`）。その後 terminal の `exit-audit` route を取る。`wont-do` task は延期または理由を記録した後に限り terminal lifecycle evidence となり、他 task の dependency を決して満たさない。 |
+| `doc-only` | `followup-doc-only` | operator は文書または implementation record の更新を記録する。この route は terminal の `exit-audit` node で終わる。 |
+| `defer` または `wont-do` | `followup-terminal` | operator は延期または理由を記録する（task として表す `wont-do` は `status: wont-do`）。この version では `wont-do` は無条件に lifecycle-resolved であり、Lifecycle state projection / Router は理由の有無や妥当性を機械的に検証しない。他 task の dependency は決して満たさない。 |
 
 6 つの型付き route は相互排他的である。未分類または競合するフォローアップが
 ある間、`followup-triage` は blocked のままで、宣言済みの
-`followups-unclassified` retry edge を使う。`doc-only`、`defer`、`wont-do` は
-terminal の `exit-audit` route を選べる前に必ず記録する。`wont-do` task は
-延期または理由を記録した後に限り terminal lifecycle evidence となり、他 task の
-dependency を決して満たさない。
+`followups-unclassified` retry edge を使う。`doc-only`、`defer`、`wont-do` では
+対応する follow-up 証跡を operator が記録する。これは人間向けの証跡要件で
+あり、Router の条件ではない。route 選択は検証済みまたは記録済み証跡を条件と
+しない。この version では `wont-do` は無条件に lifecycle-resolved であり、他
+task の dependency を決して満たさない。
 
 ## Phase 5: Exit
 

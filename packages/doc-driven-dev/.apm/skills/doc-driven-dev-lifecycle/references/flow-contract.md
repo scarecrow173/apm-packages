@@ -26,7 +26,7 @@ This document defines the fixed sequence and decision rules that
 | 1 | Briefing | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Design | `design-doc` | approved design consistent with spec/ADR |
 | 3 | Planning & Tasking | `plan-doc` + `task-doc` | approved plan; traceable tasks with verification |
-| 4 | Implementation | `implementation-flow` | all tasks pass verification |
+| 4 | Implementation | `implementation-flow` | all selected tasks are lifecycle-resolved (`done` or `wont-do`); caller supplies `implementation-verified` |
 | 5 | Exit | `doc-status` | front matter, relations, index integrity |
 
 ## Phase -1: Migration (Optional)
@@ -143,12 +143,13 @@ skill stack per task via `implementation-profile.md`.
   discovery, configuration, verification, and in-flight documentation upkeep.
 - 4-3 Constraint Feedback: if `implementation-flow` reports upstream gaps,
   update `adr-doc` / `design-doc` and record loopback.
-- 4-4 Completion Check: confirm all tasks pass verification and their
-  Implementation Records are completed and audited before closure.
+- 4-4 Completion Check: confirm all selected tasks are lifecycle-resolved
+  (`done` or `wont-do`), the caller supplies `implementation-verified`, and
+  their Implementation Records are completed and audited before closure.
 
 ### Implementation Completion Criteria
 
-- `implementation-flow` reports all tasks implemented and verified.
+- `implementation-flow` reports selected tasks as implemented (`done`) or intentionally not done (`wont-do`), and the caller supplies `implementation-verified`.
 - New constraints discovered are reflected in upstream documents.
 - Code review is complete.
 - Each task opened an in-progress Implementation Record before code changes.
@@ -168,15 +169,17 @@ name that selected route in the user-visible follow-up report:
 | `decision-required` (briefing) | `followup-decision-briefing` | Return to Phase 1 (`briefing-flow`) before creating implementation tasks. |
 | `decision-required` (design) | `followup-decision-design` | Return to Phase 2 (`design-doc`) before creating implementation tasks. |
 | `new-feature` | `followup-new-feature` | Return to Phase 1 (`briefing-flow`) for a new briefing; never attach it to the current approved plan. |
-| `doc-only` | `followup-doc-only` | Record the document or implementation-record update, then take the terminal `exit-audit` route. |
-| `defer` or `wont-do` | `followup-terminal` | Record the deferral or reason (`status: wont-do` when represented as a task), then take the terminal `exit-audit` route. A `wont-do` task is terminal lifecycle evidence only after its deferral/reason has been recorded; it never satisfies another task's dependency. |
+| `doc-only` | `followup-doc-only` | Operators record the document or implementation-record update; this route ends at the terminal `exit-audit` node. |
+| `defer` or `wont-do` | `followup-terminal` | Operators must record the deferral or reason (`status: wont-do` when represented as a task). In this version, `wont-do` is lifecycle-resolved unconditionally; the Lifecycle state projection and Router do not mechanically validate whether a reason is present or valid. It never satisfies another task's dependency. |
 
 The six typed routes are mutually exclusive. An unclassified or conflicting
 follow-up keeps `followup-triage` blocked and uses its declared
-`followups-unclassified` retry edge. `doc-only`, `defer`, and `wont-do` must be
-recorded before their terminal `exit-audit` route is eligible. A `wont-do` task
-is terminal lifecycle evidence only after its deferral/reason has been recorded;
-it never satisfies another task's dependency.
+`followups-unclassified` retry edge. Operators must record the corresponding
+follow-up evidence for `doc-only`, `defer`, and `wont-do`; this is a human
+evidence requirement, not a Router condition. Route selection is not conditional
+on verified or recorded evidence. In this version, `wont-do` is
+lifecycle-resolved unconditionally and never satisfies another task's
+dependency.
 
 ## Phase 5: Exit
 

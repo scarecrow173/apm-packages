@@ -47,8 +47,11 @@ route signals and name the selected route in the user-visible follow-up report:
 `followup-bug-fix`, `followup-decision-briefing`, `followup-decision-design`,
 `followup-new-feature`, `followup-doc-only`, or `followup-terminal`. The
 `followup-new-feature` route returns to Phase 1 through `briefing-flow` and never
-attaches the new feature to the current approved plan. `doc-only`, `defer`, and
-`wont-do` evidence must be recorded before the terminal `exit-audit` route.
+attaches the new feature to the current approved plan. Operators must record the
+corresponding follow-up evidence for `doc-only` and `defer`, and a reason when
+choosing `wont-do`. This is a human evidence requirement, not a Router
+condition; in this version, `wont-do` is lifecycle-resolved unconditionally and
+never satisfies another task's dependency.
 An unclassified or conflicting signal keeps `followup-triage` blocked and uses
 the declared `followups-unclassified` retry edge.
 
@@ -64,11 +67,13 @@ below as context, while taking dispatch decisions from the JSON route:
 5. Dispatch only the returned delegate or the documented composite planning step.
 6. Record completion evidence in the canonical documents.
 7. Rerun the router from the returned node with any typed signal.
-8. Stop only at `complete` or at a reported blocker requiring user authority.
+8. Stop only at a graph node whose `kind` is `terminal`, or at a reported
+   blocker requiring user authority. A terminal node is idempotent and returns
+   `reasonCode: lifecycle-complete` with `edgeId: null`.
 
 The planning gate may invoke `build_task_graph.js` as the documented composite
 step. A task graph can fan out to independent root tasks and fan in to a
-dependent task only after every predecessor is complete. A task-cycle,
+dependent task only after every predecessor is `done`. A task-cycle,
 unresolved task reference, or other graph issue fails closed with no runnable
 task.
 
@@ -88,7 +93,7 @@ task.
 | 1 | Convert requests into document-ready inputs | `briefing-flow` | briefing outputs ready: spec + ADR with acceptance criteria |
 | 2 | Concretize design into implementable form | `design-doc` | approved design consistent with spec/ADR |
 | 3 | Integrate plan and decompose task units | `plan-doc` + `task-doc` | approved plan; traceable tasks with verification |
-| 4 | Implement code guided by workflow skills | `implementation-flow` | all tasks pass verification |
+| 4 | Implement code guided by workflow skills | `implementation-flow` | all selected tasks are lifecycle-resolved (`done` or `wont-do`); caller supplies `implementation-verified` |
 | 5 | Confirm document integrity | `doc-status` | front matter, relations, index integrity |
 
 **Key constraint resolution**: Optional Phase -1 migrates existing Markdown docs without deleting originals. Phase 0 creates the canonical docs tree but does not create `docs/designs/overview.md`; `design-doc` owns that file. Phase 1 (Briefing) explicitly permits spec + ADR parallel creation when derived from the same discovery context, as managed by `briefing-flow`. Later phases enforce sequential gates (Phase 2 requires Phase 1 complete, Phase 3 requires Phase 2 approved design and contains the plan approval gate before task creation, etc.).
@@ -265,7 +270,8 @@ Implementation Record.
 **Do NOT Load** `implementation-flow` before Phase 3 completes — plan approval and
 task decomposition must finish before implementation configuration begins.
 
-- **Implement** — apply workflow skills per-task; verify each task passes.
+- **Implement** — apply workflow skills per-task; verify implemented (`done`)
+  tasks, while treating `wont-do` as lifecycle-resolved.
 - **Exit Audit** — invoke `doc-status` to validate document integrity.
 
 ## Loopback Rules
@@ -359,7 +365,8 @@ Implementation Record.
 
 ### Phase 4 Completion Criteria
 
-- All `task-doc` entries have been implemented and verified.
+- All selected `task-doc` entries are lifecycle-resolved (`done` or `wont-do`),
+  and the caller supplies `implementation-verified`.
 - New constraints discovered during implementation are reflected in ADR/design.
 - Code review is complete.
 - Every task opened an in-progress Implementation Record before code changes.

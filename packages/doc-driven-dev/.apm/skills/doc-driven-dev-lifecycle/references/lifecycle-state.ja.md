@@ -52,10 +52,11 @@ document から導出する gate は既存 lifecycle 証跡を確認する。
 | briefing | focus された spec に受け入れ条件と適切な status があり、ADR に considered options と適切な status がある。 |
 | design | approved design が focus された spec と ADR に relation する。 |
 | planning | approved plan が design に relation し、選択 task が有効な Task DAG を形成する。 |
-| implementation | status が `done` または `wont-do` の選択 task は resolved となり、caller は `implementation-verified` を指定する。 |
+| implementation | この version では status が `done` または `wont-do` の選択 task は無条件に lifecycle-resolved となり、caller は `implementation-verified` を指定する。 |
 
-- Lifecycle implementation resolution: status が `done` または `wont-do` の選択 task は resolved となり、`implementation-verified` が必要である。
+- Lifecycle implementation resolution: この version では status が `done` または `wont-do` の選択 task は無条件に resolved となり、`implementation-verified` は別途必要な signal である。
 - Task-DAG predecessor satisfaction: dependency を満たすのは `done` のみであり、`wont-do` は blocked のまま dependent を unlock しない。
+- operator が `wont-do` を選ぶときは理由を記録する。現在の Lifecycle state projection / Router は、その理由の有無や妥当性を機械的に検証しない。
 
 Follow-up triage は証跡に基づく型付き gate である。6つの route signal
 （`followup-bug-fix`、`followup-decision-briefing`、`followup-decision-design`、
@@ -81,5 +82,7 @@ task なし）は planning を `blocked` にし、`task-graph-invalid` を追加
 
 state を probe し、required audit を実行し、route の delegate を dispatch し、
 Markdown に証跡を記録してから、返された node と型付き signal で probe を再実行する。
-handoff では route の blocker と reason を保持する。`complete` またはユーザー権限を
-要する blocker だけで停止し、state、signal、edge、task readiness を推測しない。
+handoff では route の blocker と reason を保持する。`kind` が `terminal` の graph
+node、またはユーザー権限を要する blocker だけで停止し、state、signal、edge、task
+readiness を推測しない。terminal node は idempotent で、
+`reasonCode: lifecycle-complete` と `edgeId: null` を返す。

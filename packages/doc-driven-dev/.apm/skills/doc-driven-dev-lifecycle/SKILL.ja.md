@@ -49,7 +49,9 @@ signal のうち必ず 1 つを出し、ユーザー向けフォローアップ�
 `followup-decision-design`、`followup-new-feature`、`followup-doc-only`、
 `followup-terminal`。`followup-new-feature` は Phase 1 の `briefing-flow` に
 戻り、新機能を現在の承認済み plan に紐付けない。`doc-only`、`defer`、
-`wont-do` の証跡は terminal の `exit-audit` route 前に記録する。未分類または
+`wont-do` を選ぶときは operator が理由を記録する。この要件は人間向けの証跡であり
+Router の条件ではない。この version では `wont-do` は無条件に lifecycle-resolved で、
+他 task の dependency を決して満たさない。未分類または
 競合 signal がある間は `followup-triage` を blocked のままにし、宣言済みの
 `followups-unclassified` retry edge を使う。
 
@@ -65,11 +67,13 @@ signal のうち必ず 1 つを出し、ユーザー向けフォローアップ�
 5. 返された delegate、または文書化された planning の composite step だけを dispatch する。
 6. 完了証跡を canonical document に記録する。
 7. 返された node から、型付き signal を付けて router を再実行する。
-8. `complete`、またはユーザー権限を要する blocker が報告された場合だけ停止する。
+8. `kind` が `terminal` の graph node、またはユーザー権限を要する blocker が
+   報告された場合だけ停止する。terminal node は idempotent で、
+   `reasonCode: lifecycle-complete` と `edgeId: null` を返す。
 
 Planning gate では、文書化された composite step として
 `build_task_graph.js` を実行できる。Task graph は独立した root task を fan-out
-し、すべての predecessor 完了後に dependent task へ fan-in する。cycle、未解決
+し、すべての predecessor が `done` の後に dependent task へ fan-in する。cycle、未解決
 task reference、その他の graph issue があれば fail-closed とし、runnable task を返さない。
 
 ### Ownership と Source of Truth
@@ -88,7 +92,7 @@ task reference、その他の graph issue があれば fail-closed とし、runn
 | 1 | 要望を文書入力に変換する | `briefing-flow` | briefing 完了出力: 受け入れ条件付き spec + ADR |
 | 2 | 設計を実装可能な形へ具体化する | `design-doc` | spec/ADR と整合した承認済み設計 |
 | 3 | plan 統合と task 分解 | `plan-doc` + `task-doc` | 承認済み plan と検証付き task |
-| 4 | ワークフロースキルでコード実装 | `implementation-flow` | 全タスクが検証通過 |
+| 4 | ワークフロースキルでコード実装 | `implementation-flow` | 選択 task がすべて lifecycle-resolved（`done` または `wont-do`）で、caller が `implementation-verified` を指定する |
 | 5 | 文書整合を確認する | `doc-status` | front matter, relations, index の整合 |
 
 **重要な制約解決**: 任意の Phase -1 は既存 Markdown docs を移行しますが、original は削除しません。Phase 0 は canonical な docs tree を作成しますが、`docs/designs/overview.md` は作成せず `design-doc` に委ねます。Phase 1（Briefing）では、`briefing-flow` が管理する同じ discovery コンテキストから導出された場合、spec + ADR の並行作成が明示的に許可されます。後続フェーズではシーケンシャルゲートが適用されます（Phase 2 は Phase 1 完了が必須、Phase 3 は Phase 2 の承認済み設計と plan 承認後の task 作成が必須など）。
@@ -257,7 +261,8 @@ task に `in-progress` の Implementation Record がない状態では、Phase 4
 **Do NOT Load** `implementation-flow` は Phase 3 完了前には読まないこと —
 plan 承認とタスク分解が完了してから実装設定を始める。
 
-- **Implement** — ワークフロースキルをタスク単位で適用し、検証通過を確認する。
+- **Implement** — ワークフロースキルを task 単位で適用し、実装済み（`done`）task の
+  検証通過を確認する。`wont-do` は lifecycle-resolved として扱う。
 - **Exit 監査** — `doc-status` を呼び出し、文書整合を検証する。
 
 ## ループバックルール
@@ -350,7 +355,8 @@ task に `in-progress` の Implementation Record がない状態では、Phase 4
 
 ### Phase 4 完了条件
 
-- 全 `task-doc` エントリが実装済みかつ検証通過している。
+- 選択した `task-doc` エントリがすべて lifecycle-resolved（`done` または `wont-do`）で、
+  caller が `implementation-verified` を指定している。
 - 実装中に発見された新制約が ADR/design に反映されている。
 - コードレビューが完了している。
 - すべての task はコード変更前に `in-progress` の Implementation Record を開き、

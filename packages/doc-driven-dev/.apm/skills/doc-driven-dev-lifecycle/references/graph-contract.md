@@ -36,8 +36,9 @@ Terminal idempotence is determined by `kind: terminal`, not by an ID named
 Each edge has a unique `id`, a known `from` and `to` node, and a typed `when`
 reason code. Retry and loopback edges are explicit. Every `(from, when)` selector
 is unique, and the parser rejects duplicates rather than selecting YAML order.
-The `complete` terminal node has no outgoing edge. Invalid YAML, duplicate edge
-IDs, unknown endpoints, or terminal outgoing edges are rejected before routing.
+Every terminal node has no outgoing edge (including the required `complete`
+node). Invalid YAML, duplicate edge IDs, unknown endpoints, or terminal outgoing
+edges are rejected before routing.
 
 ## Thin-router CLI
 
@@ -57,12 +58,13 @@ it authorizes no delegate until the caller supplies explicit focus.
 
 The router evaluates reasons in precedence order so typed upstream gaps win
 over forward gates. It returns only a declared edge and uses a declared retry
-edge when a gate is incomplete. `complete` is terminal and returns
-`reasonCode: lifecycle-complete` with `edgeId: null`. That completion route is
-eligible only when every lifecycle gate (`bootstrap`, `briefing`, `design`,
-`planning`, `implementation`, `followup-triage`, and `exit-audit`) passes;
-`exit-audit-pass` is only the evidence for the final gate and is not sufficient
-on its own.
+edge when a gate is incomplete. Once any graph node whose `kind` is `terminal`
+is current, rerouting is idempotent and returns `reasonCode: lifecycle-complete`
+with `edgeId: null`, regardless of that node's ID. The successful route from
+`exit-audit` into the required terminal is eligible only when every lifecycle
+gate (`bootstrap`, `briefing`, `design`, `planning`, `implementation`,
+`followup-triage`, and `exit-audit`) passes; `exit-audit-pass` is only the
+evidence for the final gate and is not sufficient on its own.
 
 ## Task DAG composite
 

@@ -33,9 +33,9 @@ Terminal の idempotence は `complete` という ID 名ではなく、`kind: te
 
 各 edge は一意な `id`、既知の `from`/`to` node、型付き `when` reason code
 を持つ。retry と loopback edge は明示する。すべての `(from, when)` selector は
-一意であり、parser は YAML 順を選択せず duplicate を拒否する。terminal node
-`complete` に outgoing edge はない。無効な YAML、重複 edge ID、未知 endpoint、
-terminal からの outgoing edge は routing 前に拒否される。
+一意であり、parser は YAML 順を選択せず duplicate を拒否する。すべての terminal
+node（必須の `complete` を含む）に outgoing edge はない。無効な YAML、重複 edge ID、
+未知 endpoint、terminal からの outgoing edge は routing 前に拒否される。
 
 ## Thin-router CLI
 
@@ -55,11 +55,13 @@ error となる。安定した route object は `schemaVersion`、`current`、`n
 
 router は reason の precedence に従って評価し、型付き upstream gap を
 forward gate より優先する。返すのは宣言済み edge のみであり、gate が未完了
-なら宣言済み retry edge を使う。`complete` は terminal で、
-`reasonCode: lifecycle-complete`、`edgeId: null` を返す。この完了 route は
-すべての lifecycle gate（`bootstrap`、`briefing`、`design`、`planning`、
-`implementation`、`followup-triage`、`exit-audit`）が pass の場合だけ有効である。
-`exit-audit-pass` は最後の gate の証跡に過ぎず、それだけでは完了にならない。
+なら宣言済み retry edge を使う。`kind` が `terminal` の graph node が current
+になった後の再 routing は idempotent で、ID 名にかかわらず
+`reasonCode: lifecycle-complete`、`edgeId: null` を返す。`exit-audit` から必須の
+terminal へ進む成功 route は、すべての lifecycle gate（`bootstrap`、`briefing`、
+`design`、`planning`、`implementation`、`followup-triage`、`exit-audit`）が pass の
+場合だけ有効である。`exit-audit-pass` は最後の gate の証跡に過ぎず、それだけでは
+完了にならない。
 
 ## Task DAG composite
 
