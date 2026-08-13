@@ -160,6 +160,20 @@ function routeSourceCli(args: string[], cwd: string) {
   ], { cwd, encoding: "utf8", windowsHide: true });
 }
 
+function writeCustomLifecycleGraph(repo: string): string {
+  const graph = path.join(repo, "custom-lifecycle.yaml");
+  fs.writeFileSync(graph, `
+schemaVersion: 1
+entry: custom-node
+nodes:
+  custom-node: { kind: action, delegate: custom-handler, audits: [], requiresGates: [] }
+  complete: { kind: terminal, delegate: null, audits: [], requiresGates: [] }
+edges:
+  - { id: custom-to-complete, from: custom-node, to: complete, when: migration-requested }
+`, "utf8");
+  return graph;
+}
+
 test("probe requires focus when multiple active artifact chains exist", () => {
   const repo = repoWithTwoPlans();
   const state = probeLifecycleState({ cwd: repo, focus: [], signals: [] });
@@ -589,4 +603,31 @@ test("source CLI locates the package graph without an explicit graph path", () =
   ], repo);
   assert.equal(route.status, 0);
   assert.equal(JSON.parse(route.stdout).next, "implementation");
+});
+
+test("source CLI validates current against the selected YAML graph", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "lifecycle-cli-"));
+  const graph = writeCustomLifecycleGraph(repo);
+  const route = routeSourceCli([
+    "--graph", graph,
+    "--current", "custom-node",
+    "--signal", "migration-requested",
+    "--json",
+  ], repo);
+  assert.equal(route.status, 0, route.stderr);
+  const result = JSON.parse(route.stdout) as { next: string; edgeId: string; reasonCode: string };
+  assert.equal(result.next, "complete");
+  assert.equal(result.edgeId, "custom-to-complete");
+  assert.equal(result.reasonCode, "migration-requested");
+});
+
+test("source CLI rejects a current node absent from the selected YAML graph", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "lifecycle-cli-"));
+  const graph = writeCustomLifecycleGraph(repo);
+  const route = routeSourceCli([
+    "--graph", graph,
+    "--current", "not-declared",
+  ], repo);
+  assert.equal(route.status, 1);
+  assert.match(route.stderr, /Unknown lifecycle node: not-declared \(not declared in lifecycle graph\)/);
 });

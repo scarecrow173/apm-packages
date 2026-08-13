@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { parseLifecycleGraph, type LifecycleNodeId } from "./lib/lifecycle_graph";
+import { parseLifecycleGraph } from "./lib/lifecycle_graph";
 import {
   probeLifecycleState,
   type LifecycleSignal,
@@ -13,17 +13,13 @@ import { routeLifecycle } from "./lib/lifecycle_router";
 type CliArgs = {
   cwd: string;
   current?: string;
+  graph?: string;
   focus: string[];
   signals: string[];
   taskDir?: string;
   json: boolean;
   help: boolean;
 };
-
-const NODE_IDS: readonly LifecycleNodeId[] = [
-  "probe", "migration", "bootstrap", "briefing", "design", "planning",
-  "task-graph", "implementation", "followup-triage", "exit-audit", "complete",
-];
 
 const SIGNALS: readonly LifecycleSignal[] = [
   "focus-required", "migration-requested", "migration-incomplete", "migration-complete",
@@ -37,7 +33,7 @@ const SIGNALS: readonly LifecycleSignal[] = [
 ];
 
 function usage(): string {
-  return "Usage: node route_lifecycle.js --current <node> [--focus <path>] [--signal <signal>] [--task-dir <path>] [--cwd <path>] [--json]";
+  return "Usage: node route_lifecycle.js --current <node> [--graph <path>] [--focus <path>] [--signal <signal>] [--task-dir <path>] [--cwd <path>] [--json]";
 }
 
 function requireValue(argv: string[], index: number, option: string): string {
@@ -51,6 +47,7 @@ function parseArgs(argv: string[]): CliArgs {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--current") args.current = requireValue(argv, index++, arg);
+    else if (arg === "--graph") args.graph = requireValue(argv, index++, arg);
     else if (arg === "--focus") args.focus.push(requireValue(argv, index++, arg));
     else if (arg === "--signal") args.signals.push(requireValue(argv, index++, arg));
     else if (arg === "--task-dir") args.taskDir = requireValue(argv, index++, arg);
@@ -62,15 +59,16 @@ function parseArgs(argv: string[]): CliArgs {
   return args;
 }
 
-function isNodeId(value: string): value is LifecycleNodeId {
-  return NODE_IDS.includes(value as LifecycleNodeId);
-}
-
 function isSignal(value: string): value is LifecycleSignal {
   return SIGNALS.includes(value as LifecycleSignal);
 }
 
-function graphFile(): string {
+function graphFile(selected?: string): string {
+  if (selected) {
+    const resolved = path.resolve(selected);
+    if (!fs.existsSync(resolved)) throw new Error(`Unable to locate lifecycle graph: ${resolved}`);
+    return resolved;
+  }
   const candidates = [
     path.resolve(__dirname, "..", "graphs", "lifecycle.yaml"),
     path.resolve(__dirname, "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/graphs/lifecycle.yaml"),
@@ -88,11 +86,13 @@ function main(): void {
       return;
     }
     if (!args.current) throw new Error("Missing required --current");
-    if (!isNodeId(args.current)) throw new Error(`Unknown lifecycle node: ${args.current}`);
     for (const signal of args.signals) {
       if (!isSignal(signal)) throw new Error(`Unknown lifecycle signal: ${signal}`);
     }
-    const graph = parseLifecycleGraph(fs.readFileSync(graphFile(), "utf8"));
+    const graph = parseLifecycleGraph(fs.readFileSync(graphFile(args.graph), "utf8"));
+    if (!Object.prototype.hasOwnProperty.call(graph.nodes, args.current)) {
+      throw new Error(`Unknown lifecycle node: ${args.current} (not declared in lifecycle graph)`);
+    }
     const state = probeLifecycleState({
       cwd: args.cwd,
       focus: args.focus,
