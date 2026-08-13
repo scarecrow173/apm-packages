@@ -19,6 +19,36 @@ function loadDistributedGraph(): LifecycleGraph {
   return parseLifecycleGraph(fs.readFileSync(file, "utf8"));
 }
 
+const requiredNodesFixture = `
+schemaVersion: 1
+entry: probe
+nodes:
+  probe: { kind: probe, delegate: null, audits: [] }
+  migration: { kind: action, delegate: migrate_docs, audits: [] }
+  bootstrap: { kind: action, delegate: scaffold_docs, audits: [] }
+  briefing: { kind: subgraph, delegate: briefing-flow, audits: [spec, adr] }
+  design: { kind: action, delegate: design-doc, audits: [design] }
+  planning: { kind: subgraph, delegate: null, audits: [plan, task] }
+  task-graph: { kind: gate, delegate: build_task_graph, audits: [task] }
+  implementation: { kind: subgraph, delegate: implementation-flow, audits: [impl-record] }
+  followup-triage: { kind: gate, delegate: null, audits: [task, impl-record] }
+  exit-audit: { kind: audit, delegate: doc-status, audits: [all] }
+  complete: { kind: terminal, delegate: null, audits: [] }
+`;
+
+const unknownEndpointFixture = `${requiredNodesFixture}edges:
+  - { id: unknown-endpoint, from: probe, to: missing, when: migration-requested }
+`;
+
+const duplicateEdgeIdFixture = `${requiredNodesFixture}edges:
+  - { id: duplicate, from: probe, to: complete, when: migration-requested }
+  - { id: duplicate, from: migration, to: complete, when: migration-complete }
+`;
+
+const terminalOutgoingEdgeFixture = `${requiredNodesFixture}edges:
+  - { id: terminal-outgoing, from: complete, to: probe, when: exit-audit-pass }
+`;
+
 const invalidFixture = `
 schemaVersion: 1
 entry: probe
@@ -26,8 +56,8 @@ nodes:
   probe: { kind: probe, delegate: null, audits: [] }
   complete: { kind: terminal, delegate: null, audits: [] }
 edges:
-  - { id: duplicate, from: probe, to: missing, when: invalid }
-  - { id: duplicate, from: probe, to: complete, when: valid }
+  - { id: duplicate, from: probe, to: missing, when: migration-requested }
+  - { id: duplicate, from: probe, to: complete, when: migration-complete }
 `;
 
 test("lifecycle graph preserves existing meta-skill boundaries", () => {
@@ -46,6 +76,18 @@ test("lifecycle graph declares required upstream loopbacks", () => {
   assert.ok(findEdge(graph, "task-graph", "task-graph-invalid"));
 });
 
-test("lifecycle graph rejects unknown nodes and duplicate edge ids", () => {
+test("lifecycle graph rejects an unknown edge endpoint independently", () => {
+  assert.throws(() => parseLifecycleGraph(unknownEndpointFixture), /unknown to node: missing/);
+});
+
+test("lifecycle graph rejects duplicate edge IDs independently", () => {
+  assert.throws(() => parseLifecycleGraph(duplicateEdgeIdFixture), /duplicate edge id: duplicate/);
+});
+
+test("lifecycle graph rejects outgoing edges from complete", () => {
+  assert.throws(() => parseLifecycleGraph(terminalOutgoingEdgeFixture), /complete node must not have outgoing edges/);
+});
+
+test("lifecycle graph rejects malformed fixtures", () => {
   assert.throws(() => parseLifecycleGraph(invalidFixture), /Invalid lifecycle graph/);
 });
