@@ -5,7 +5,7 @@
 ## 1. 目的と前提
 
 - このパッケージは document-driven development を支える Skill 集です。
-- 主な対象は `idea-doc（任意）-> briefing -> discovery-doc（任意）-> ADR/spec -> design -> plan -> task -> 実装 -> 監査` の流れです。
+- 主な対象は `idea-doc（任意）-> briefing -> discovery-doc（任意）-> ADR/spec -> design -> plan -> task -> 実装 -> 監査` の流れです。graph-backed `doc-driven-dev-lifecycle` thin router が調整します。
 - 生成ドキュメントは YAML front matter + Markdown を前提にします。
 - このガイドはパッケージ開発ルールを定義するものであり、パッケージ自身に doc-driven-dev 運用を必須化するものではありません。
 
@@ -37,6 +37,11 @@
   non-bundled skill を参照する場合は optional external routing を文書化する。
 
 ## 3. 作業フロー（パッケージ開発）
+
+`doc-driven-dev-lifecycle` は純粋な Markdown の Phase checklist ではありません。
+`graphs/lifecycle.yaml` は topology/delegate、`references/flow-contract.ja.md` は
+人間の承認・証跡基準、`references/lifecycle-state.ja.md` は derived state、focus、
+signal、fail-closed 動作の規範です。Markdown artifact は project history の規範として残します。
 
 1. 既存文書と実装を先に読む。
 2. 変更対象がスクリプト挙動なら `scripts/doc-driven-dev/src` を編集し、必要に応じて `packages/doc-driven-dev/.apm` 配下の参照資料やテンプレートも更新する。
@@ -100,7 +105,7 @@ apm compile --validate
 
 | スキル | 目的 | 出典 |
 | --- | --- | --- |
-| doc-driven-dev-lifecycle | メタスキル: 5 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
+| doc-driven-dev-lifecycle | 5 フェーズ文書ライフサイクルの graph-backed thin router | original |
 | briefing-flow | メタスキル: briefing と spec/ADR 準備を動的にオーケストレーションする | original |
 | implementation-flow | メタスキル: implementation profile を通じて全利用可能な実装スキルを発見・ルーティングする | original |
 | skill-discovery-protocol | flow-neutral な skill catalog / profile を生成・検証する | original |

@@ -1,5 +1,19 @@
 # doc-driven-dev-lifecycle: Flow Contract
 
+This document remains the normative human approval and evidence contract. The
+runtime route is declared by [`graphs/lifecycle.yaml`](../graphs/lifecycle.yaml),
+derived state by [`lifecycle-state.md`](lifecycle-state.md), and dispatch by
+`route_lifecycle.js`; prose phase labels are compatibility context, not an
+alternative router.
+
+## Router handoff
+
+At each phase boundary, probe the focused artifact chain, run the audits named by
+the route, and record evidence before rerouting. `focus-required` is a hard
+stop: obtain explicit focus instead of selecting a chain heuristically. The
+planning/tasking phase uses `build_task_graph.js` as its composite step; its
+fan-out/fan-in and fail-closed rules are defined in `references/graph-contract.md`.
+
 This document defines the fixed sequence and decision rules that
 `doc-driven-dev-lifecycle` uses to orchestrate existing skills.
 

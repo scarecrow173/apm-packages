@@ -7,7 +7,10 @@ Markdown を使い、ADR、spec、design、plan、task、implementation record �
 
 このパッケージでは `doc-driven-dev-lifecycle` をライフサイクルの中核とし、
 docs tree の bootstrap、briefing、文書作成、実装準備、exit までを
-オーケストレーションします。
+オーケストレーションします。これは hierarchical graph の thin router であり、
+`graphs/lifecycle.yaml` が topology/delegate、`references/flow-contract.ja.md` が
+人間の承認・証跡基準、`references/lifecycle-state.ja.md` が focus、signal、
+fail-closed 動作を規定します。Markdown artifact は project history の正本です。
 
 - `migrate_docs`: 既存 Markdown docs を canonical な doc-driven-dev tree へ移行するための dry-run / apply command。
 - `scaffold_docs`: briefing 開始前に canonical な `docs/` tree を bootstrap します。
@@ -81,6 +84,11 @@ flowchart TD
     G5 -->|pass| E["exit"]
     G5 -->|"loopback: front matter, relation, index の問題"| P5
 ```
+
+図は人間向けの Phase model を保持する。runtime dispatch は
+`route_lifecycle.js` を使い、planning では `build_task_graph.js` を Task DAG
+composite として呼び出す。独立 root task は fan-out し、dependent task は全 predecessor
+完了後に fan-in する。各 node を継続監査し、Phase 5 は最終 `doc-status` audit である。
 
 - **Spec** は WHAT、WHY、SCOPE を定義します。
 - **ADR** は HOW を定義し、代替案比較と採用理由を記録します。
@@ -267,7 +275,7 @@ flow-neutral な catalog と flow-specific な profile を構築し、
 
 | Skill | 役割 |
 | --- | --- |
-| `doc-driven-dev-lifecycle` | メタスキル: 5 フェーズの文書ライフサイクル全体をオーケストレーション |
+| `doc-driven-dev-lifecycle` | 5 フェーズ文書ライフサイクルの graph-backed thin router |
 | `briefing-flow` | メタスキル: briefing 作業を利用可能な discovery/document skill にルーティング |
 | `implementation-flow` | メタスキル: task を workflow skill にルーティング |
 | `skill-discovery-protocol` | メタスキル: skill discovery 成果物を生成・検証 |

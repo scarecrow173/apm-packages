@@ -8,11 +8,13 @@ license: MIT
 
 Orchestrates the full document-driven development lifecycle by selecting and
 sequencing existing doc skills through optional migration, a bootstrap phase,
-and a 5-phase flow with explicit gates.
+and a 5-phase flow with explicit gates. The lifecycle is a thin router over the
+normative graph and state contracts; it does not flatten delegated subgraphs.
 
-This is a **meta skill**: it contains no scripts and produces no artifacts
-directly. Instead it decides *which* skill to invoke and *when*, enforcing
-sequencing constraints and completion criteria defined in the Flow Contract.
+This is a **graph-backed meta skill**: `route_lifecycle.js` probes the canonical
+documents and typed signals, then follows only declared graph edges. It emits a
+stable route for the next delegate, required audits, blockers, and (when a plan
+is focused) the Task DAG returned by `build_task_graph.js`.
 
 ## When to Use
 
@@ -39,6 +41,33 @@ Before Phase 5, compare the implemented work against the approved spec, ADR,
 design, plan, and task verification evidence. Classify every follow-up as
 `bug-fix`, `decision-required`, `new-feature`, `doc-only`, `defer`, or
 `wont-do`. Do not enter Phase 5 while unclassified follow-ups remain.
+
+## Router Loop
+
+Use the graph router for every lifecycle turn. Preserve the human phase labels
+below as context, while taking dispatch decisions from the JSON route:
+
+1. Select the active artifact chain with one or more `--focus` paths.
+2. Run `route_lifecycle.js` with the current node and observed signals.
+3. If `reasonCode` is `focus-required`, stop and obtain an explicit focus; do not guess.
+4. Run every required audit reported by the route.
+5. Dispatch only the returned delegate or the documented composite planning step.
+6. Record completion evidence in the canonical documents.
+7. Rerun the router from the returned node with any typed signal.
+8. Stop only at `complete` or at a reported blocker requiring user authority.
+
+The planning gate may invoke `build_task_graph.js` as the documented composite
+step. A task graph can fan out to independent root tasks and fan in to a
+dependent task only after every predecessor is complete. A task-cycle,
+unresolved task reference, or other graph issue fails closed with no runnable
+task.
+
+### Ownership and Sources of Truth
+
+- `graphs/lifecycle.yaml` is normative for node and edge topology and delegate bindings.
+- `references/flow-contract.md` is normative for human approval criteria, evidence, and follow-up classification.
+- `references/lifecycle-state.md` is normative for derived state, focus, signals, and fail-closed behavior.
+- Markdown artifacts remain normative for project history and status; the router derives state from them and never replaces them.
 
 ## Phase Summary
 

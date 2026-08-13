@@ -8,11 +8,13 @@ license: MIT
 
 既存の doc スキルを任意の migration、bootstrap フェーズ、5 フェーズのフローで選択・順序付けし、
 明示的なゲートで制御することで文書駆動開発の全ライフサイクルを
-オーケストレーションする。
+オーケストレーションする。ライフサイクルは規範となる graph と state 契約の薄い
+router であり、委譲された subgraph を平坦化しない。
 
-これは**メタスキル**であり、スクリプトを持たず直接的な成果物を生成しない。
-代わりに「どのスキルを」「いつ」呼び出すかを判定し、フロー契約で定義された
-順序制約と完了条件を強制する。
+これは**graph-backed メタスキル**である。`route_lifecycle.js` が canonical
+document と型付き signal を probe し、宣言された graph edge だけをたどる。
+次の delegate、必須 audit、blocker、および plan に focus がある場合は
+`build_task_graph.js` が返す Task DAG を安定した route として出力する。
 
 ## 利用タイミング
 
@@ -40,6 +42,32 @@ Phase 5 に進む前に、実装結果を承認済み spec、ADR、design、plan
 task の検証証跡と照合する。すべてのフォローアップを `bug-fix`,
 `decision-required`, `new-feature`, `doc-only`, `defer`, `wont-do` の
 いずれかに分類する。未分類フォローアップが残っている間は Phase 5 に進まない。
+
+## Router Loop
+
+すべてのライフサイクル turn で graph router を使う。以下の人間向け Phase
+ラベルは文脈として残すが、dispatch の判断は JSON route を使う。
+
+1. 1 つ以上の `--focus` path で active artifact chain を選ぶ。
+2. 現在の node と観測した signal を指定して `route_lifecycle.js` を実行する。
+3. `reasonCode` が `focus-required` なら停止し、明示的な focus を得る。推測してはならない。
+4. route が報告した required audit をすべて実行する。
+5. 返された delegate、または文書化された planning の composite step だけを dispatch する。
+6. 完了証跡を canonical document に記録する。
+7. 返された node から、型付き signal を付けて router を再実行する。
+8. `complete`、またはユーザー権限を要する blocker が報告された場合だけ停止する。
+
+Planning gate では、文書化された composite step として
+`build_task_graph.js` を実行できる。Task graph は独立した root task を fan-out
+し、すべての predecessor 完了後に dependent task へ fan-in する。cycle、未解決
+task reference、その他の graph issue があれば fail-closed とし、runnable task を返さない。
+
+### Ownership と Source of Truth
+
+- `graphs/lifecycle.yaml` は node/edge topology と delegate binding の規範である。
+- `references/flow-contract.ja.md` は人間の承認基準、証跡、フォローアップ分類の規範である。
+- `references/lifecycle-state.ja.md` は derived state、focus、signal、fail-closed 動作の規範である。
+- Markdown artifact は project history と status の規範であり、router はそこから state を導出するだけで置き換えない。
 
 ## フェーズ一覧
 

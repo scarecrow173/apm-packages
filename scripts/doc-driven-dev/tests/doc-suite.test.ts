@@ -513,6 +513,19 @@ test("doc-driven-dev-lifecycle meta skill ships SKILL.md and flow-contract refer
   assert.match(skill, /Phase 5 Exit/);
 });
 
+test("lifecycle docs bind the graph runtime without flattening subgraphs", () => {
+  const root = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
+  const skill = fs.readFileSync(path.join(root, "doc-driven-dev-lifecycle/SKILL.md"), "utf8");
+  const skillJa = fs.readFileSync(path.join(root, "doc-driven-dev-lifecycle/SKILL.ja.md"), "utf8");
+  for (const text of [skill, skillJa]) {
+    assert.match(text, /route_lifecycle\.js/);
+    assert.match(text, /build_task_graph\.js/);
+    assert.match(text, /briefing-flow/);
+    assert.match(text, /implementation-flow/);
+    assert.match(text, /focus-required/);
+  }
+});
+
 test("implementation-flow opens impl-doc before task execution", () => {
   const implementationRoot = path.join(skillRoot, "implementation-flow");
   const lifecycleRoot = path.join(skillRoot, "doc-driven-dev-lifecycle");

@@ -8,7 +8,11 @@ records.
 
 The package centers the lifecycle in `doc-driven-dev-lifecycle`, which orchestrates
 docs tree bootstrap, briefing, document creation, implementation preparation,
-and exit:
+and exit. It is a thin router over the hierarchical graph and derived-state
+contracts: `graphs/lifecycle.yaml` owns topology/delegates,
+`references/flow-contract.md` owns human approval/evidence criteria, and
+`references/lifecycle-state.md` owns focus, signals, and fail-closed behavior.
+Markdown artifacts remain normative project history:
 
 - `migrate_docs`: dry-run or apply migration of existing Markdown docs into the canonical doc-driven-dev tree.
 - `scaffold_docs`: bootstrap the canonical `docs/` tree before briefing starts.
@@ -82,6 +86,11 @@ flowchart TD
     G5 -->|pass| E["exit"]
     G5 -->|"loopback: front matter, relation, or index issue"| P5
 ```
+
+The diagram preserves the human phase model. Runtime dispatch instead uses
+`route_lifecycle.js`; planning invokes `build_task_graph.js` as a Task DAG
+composite, with independent root-task fan-out and dependent-task fan-in.
+Each node is audited continuously, and Phase 5 is the final `doc-status` audit.
 
 - **Spec** answers WHAT, WHY, and SCOPE.
 - **ADR** answers HOW and records every technical decision with alternatives
@@ -287,7 +296,7 @@ available in the current environment.
 
 | Skill | Purpose |
 | --- | --- |
-| `doc-driven-dev-lifecycle` | Meta skill: orchestrates the full five-phase document lifecycle |
+| `doc-driven-dev-lifecycle` | Graph-backed thin router for the full five-phase document lifecycle |
 | `briefing-flow` | Meta skill: routes briefing work to the available discovery/document skills |
 | `implementation-flow` | Meta skill: routes tasks to workflow skills via discovery tree |
 | `skill-discovery-protocol` | Meta skill: builds and validates skill discovery artifacts |

@@ -5,7 +5,7 @@ This file is a practical guide for AI agents modifying `packages/doc-driven-dev`
 ## 1. Purpose and Scope
 
 - This package provides skills for document-driven development.
-- The primary flow is `idea-doc (optional) -> briefing -> discovery-doc (optional) -> ADR/spec -> design -> plan -> task -> implementation -> audit`.
+- The primary flow is `idea-doc (optional) -> briefing -> discovery-doc (optional) -> ADR/spec -> design -> plan -> task -> implementation -> audit`, coordinated by the graph-backed `doc-driven-dev-lifecycle` thin router.
 - Generated artifacts use YAML front matter plus Markdown.
 - This guide defines package development rules; it does not require doc-driven-dev process artifacts for changes to this package itself.
 
@@ -36,6 +36,11 @@ Important:
 - Environment-provided skills can affect routing without becoming bundled
   package content, so docs must disclose optional external routing when an
   adapter refers to non-bundled skills such as `steer-web-research`.
+- `doc-driven-dev-lifecycle` is no longer a pure-Markdown phase checklist:
+  `graphs/lifecycle.yaml` is normative for topology and delegates,
+  `references/flow-contract.md` for human approval/evidence criteria, and
+  `references/lifecycle-state.md` for derived state, focus, signals, and
+  fail-closed behavior. Markdown artifacts remain the normative project history.
 
 ## 3. Package Development Workflow
 
@@ -100,7 +105,7 @@ Workflow and meta skills included here:
 
 | Skill | Purpose | Origin |
 | --- | --- | --- |
-| doc-driven-dev-lifecycle | Meta skill: five-phase document lifecycle orchestrator | original |
+| doc-driven-dev-lifecycle | Graph-backed thin router for the five-phase document lifecycle | original |
 | briefing-flow | Meta skill: dynamic orchestrator for briefing and spec/ADR preparation | original |
 | implementation-flow | Meta skill: dynamic orchestrator that discovers and routes to all available implementation skills via implementation profiles | original |
 | skill-discovery-protocol | Flow-neutral skill catalog / profile generation and validation | original |

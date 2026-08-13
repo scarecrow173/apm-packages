@@ -1,5 +1,19 @@
 # doc-driven-dev-lifecycle: フロー契約
 
+この文書は人間が承認し、証跡を確認するための規範契約である。runtime route
+は [`graphs/lifecycle.yaml`](../graphs/lifecycle.yaml)、derived state は
+[`lifecycle-state.ja.md`](lifecycle-state.ja.md)、dispatch は
+`route_lifecycle.js` が定義する。prose の Phase label は互換性のための文脈であり、
+別の router ではない。
+
+## Router handoff
+
+各 Phase 境界で focus された artifact chain を probe し、route が指定した audit を
+実行し、reroute 前に証跡を記録する。`focus-required` は hard stop であり、推測で
+chain を選ばず明示的 focus を得る。Planning/Tasking では
+`build_task_graph.js` を composite step として使う。その fan-out/fan-in と
+fail-closed 規則は `references/graph-contract.ja.md` に定義する。
+
 本文書は `doc-driven-dev-lifecycle` が既存スキルをオーケストレーションする際の
 固定シーケンスと判定ルールを定義する。
 
