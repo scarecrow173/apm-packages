@@ -273,6 +273,45 @@ test("follow-up and exit gates require their typed signals", () => {
   assert.equal(withSignals.gates["exit-audit"].status, "pass");
 });
 
+test("duplicate artifact IDs fail closed even when focus uses a path", () => {
+  const repo = repoWithApprovedArtifactChain();
+  writeArtifact(repo, "docs/plans/0002-duplicate.md", {
+    id: "PLAN-0001", type: "plan", status: "approved", title: "Duplicate Plan",
+    relations: { "derives-from": ["docs/designs/0001-graph.md"] },
+  }, "# Duplicate Plan\n");
+  const state = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    signals: [],
+  });
+  assert.ok(state.blockers.includes("duplicate-id"));
+  assert.ok(state.blockers.includes("focus-required"));
+});
+
+test("custom task directory is used by the planning gate", () => {
+  const repo = repoWithApprovedArtifactChain();
+  writeArtifact(repo, "docs/tasks/0001-route.md", {
+    id: "TASK-DEFAULT", type: "task", status: "todo", title: "Default Task",
+    relations: {
+      implements: ["docs/plans/0001-graph-lifecycle.md"],
+      "depends-on": ["TASK-9999"],
+    },
+  }, "# Default Task\n\n## Verification\n\n- [ ] node --test\n");
+  writeArtifact(repo, "docs/work-items/0001-route.md", {
+    id: "TASK-0001", type: "task", status: "todo", title: "Custom Task",
+    relations: { implements: ["docs/plans/0001-graph-lifecycle.md"] },
+  }, "# Custom Task\n\n## Verification\n\n- [ ] node --test\n");
+  const state = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    taskDir: "docs/work-items",
+    signals: [],
+  });
+  assert.equal(state.gates.planning.status, "pass");
+  assert.equal(state.blockers.includes("task-graph-invalid"), false);
+  assert.ok(state.artifacts.some((artifact: { path: string }) => artifact.path === "docs/work-items/0001-route.md"));
+});
+
 test("router sends independent root tasks to implementation-flow", () => {
   const route = routeFixture({ current: "task-graph", taskStatuses: ["todo", "todo"] });
   assert.equal(route.next, "implementation");

@@ -184,9 +184,10 @@ function parseRelations(
   return { relations, issues };
 }
 
-function readArtifacts(cwd: string): DocumentArtifact[] {
+function readArtifacts(cwd: string, taskDir = "docs/tasks"): DocumentArtifact[] {
   const result: DocumentArtifact[] = [];
-  for (const directory of CANONICAL_TARGETS) {
+  const directories = sortedUnique([...CANONICAL_TARGETS, normalizeRepoPath(cwd, taskDir)]);
+  for (const directory of directories) {
     for (const absolutePath of markdownFiles(path.join(cwd, directory))) {
       try {
         const source = fs.readFileSync(absolutePath, "utf8");
@@ -483,9 +484,9 @@ function taskGraphFor(context: StateContext, plan: DocumentArtifact | undefined)
 }
 
 /** Evaluate all lifecycle gates from the source documents represented by state. */
-export function evaluateLifecycleGates(state: LifecycleState): GateResults {
+export function evaluateLifecycleGates(state: LifecycleState, taskDir = "docs/tasks"): GateResults {
   const cwd = path.resolve(state.cwd);
-  const scanned = readArtifacts(cwd);
+  const scanned = readArtifacts(cwd, taskDir);
   const artifacts = scanned.length > 0 ? scanned : state.artifacts.map((artifact) => ({
     ...artifact,
     body: "",
@@ -499,7 +500,7 @@ export function evaluateLifecycleGates(state: LifecycleState): GateResults {
     artifacts,
     focused,
     component: focused ? componentForFocus(cwd, focused, artifacts) : [],
-    taskDir: "docs/tasks",
+    taskDir,
   };
   const { spec, adr, design, plan } = focusedArtifacts(context);
   const graph = taskGraphFor(context, plan);
@@ -556,7 +557,8 @@ export function evaluateLifecycleGates(state: LifecycleState): GateResults {
 /** Project canonical documents, explicit focus, and runtime signals into shared lifecycle state. */
 export function probeLifecycleState(options: ProbeLifecycleStateOptions): LifecycleState {
   const cwd = path.resolve(options.cwd);
-  const scanned = readArtifacts(cwd);
+  const taskDir = options.taskDir ?? "docs/tasks";
+  const scanned = readArtifacts(cwd, taskDir);
   const resolution = resolveFocus(cwd, options.focus ?? [], scanned);
   const focused = resolution.focused;
   const component = focused ? componentForFocus(cwd, focused, scanned) : [];
@@ -573,6 +575,9 @@ export function probeLifecycleState(options: ProbeLifecycleStateOptions): Lifecy
     return issues;
   });
   const bootstrap = bootstrapReasons(cwd);
+  const duplicateIds = [...new Set(scanned
+    .map((artifact) => artifact.id)
+    .filter((id, index, ids) => ids.indexOf(id) !== index))];
   const stateWithoutGates: LifecycleState = {
     schemaVersion: 1,
     cwd,
@@ -580,12 +585,17 @@ export function probeLifecycleState(options: ProbeLifecycleStateOptions): Lifecy
     artifacts: scanned.map(({ body: _body, absolutePath: _absolutePath, relationIssues: _relationIssues, ...artifact }) => artifact),
     gates: {},
     signals: sortedUnique(options.signals ?? []) as LifecycleSignal[],
-    blockers: sortedUnique([...resolution.blockers, ...relationBlockers, ...(bootstrap.length > 0 ? ["bootstrap-incomplete"] : [])]),
+    blockers: sortedUnique([
+      ...resolution.blockers,
+      ...relationBlockers,
+      ...(bootstrap.length > 0 ? ["bootstrap-incomplete"] : []),
+      ...(duplicateIds.length > 0 ? ["duplicate-id", "focus-required"] : []),
+    ]),
   };
-  stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers });
+  stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers }, taskDir);
   if (stateWithoutGates.gates.planning.reasons.some((reason) => reason.startsWith("task-graph:"))) {
     stateWithoutGates.blockers = sortedUnique([...stateWithoutGates.blockers, "task-graph-invalid"]);
-    stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers });
+    stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers }, taskDir);
   }
   return stateWithoutGates;
 }
