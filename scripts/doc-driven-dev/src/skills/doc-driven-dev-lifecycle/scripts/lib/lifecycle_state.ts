@@ -147,6 +147,9 @@ function parseRelations(
   }
   for (const key of Object.keys(raw as Record<string, unknown>).sort(compareStrings)) {
     const value = (raw as Record<string, unknown>)[key];
+    // `changes` is a structured audit-history object in the shared document
+    // schema, not a graph relation and must not be traversed here.
+    if (key === "changes" && value && typeof value === "object" && !Array.isArray(value)) continue;
     const values = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
     if (typeof value !== "string" && !Array.isArray(value)) {
       issues.push(`invalid-relation:${normalizeRepoPath(cwd, absolutePath)}:${key}`);
