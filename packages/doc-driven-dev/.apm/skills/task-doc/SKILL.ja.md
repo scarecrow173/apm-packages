@@ -49,7 +49,9 @@ task を作成するには、以下のいずれかを満たす必要がある:
 2. ひとまとまりの実装単位として task を作成する。
 
    ```bash
-   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/0001-implement-checkout-flow.md
+   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/0001-implement-checkout-flow.md \
+     --depends-on docs/tasks/0001-schema.md --depends-on TASK-0002 \
+     --blocks docs/tasks/0004-ui.md
    ```
 
    作成スクリプトは `references/task-conventions.ja.md` に従い、
@@ -58,7 +60,13 @@ task を作成するには、以下のいずれかを満たす必要がある:
 
 3. 意味付き relation を使う。
    生成された task は plan を `relations.implements` と
-   `relations.depends-on` に記録します。
+   `relations.depends-on` に記録します。`--depends-on` と `--blocks` は
+   繰り返し指定でき、入力順を保ったまま重複を除去して記録します。Task DAG
+   では、別の選択 task に解決される `depends-on` は
+   `dependency -> この task`、`blocks` は `この task -> ブロックされる task`
+   の辺を作ります。plan、spec、ADR、design への参照は上流 artifact relation
+   であり、Task DAG の辺ではありません。task 作成は参照を記録するだけで
+   DAG 全体を検証しません。解決と検証は `build_task_graph.js` を使います。
 4. ステータスを更新する。
    `todo`, `in-progress`, `blocked`, `done`, `wont-do` を使います。
 5. task は小さく保つ。

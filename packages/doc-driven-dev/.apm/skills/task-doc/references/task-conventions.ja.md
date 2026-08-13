@@ -132,6 +132,13 @@ relation は文書種別ではなく意味で選びます。
 
 内部文書は相対パスを使います。外部出典は URL を使います。
 
+Task の辺の向きは次のとおり固定します。別の選択 task に解決される
+`relations.depends-on` は `dependency -> この task` の辺を作り、
+`relations.blocks` は `この task -> ブロックされる task` の辺を作ります。
+plan、spec、ADR、design に解決される参照は上流 artifact relation であり、
+Task DAG の辺ではありません。task 作成スクリプトは参照を記録しますが、DAG
+全体は検証しません。解決と graph 検証は `build_task_graph.js` が行います。
+
 ## フォローアップ分類
 
 lifecycle の Phase 4 終了ゲートから作成される task は

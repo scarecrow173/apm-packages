@@ -48,7 +48,9 @@ TASK-DOC-GATE-001: the referenced plan must exist and have status
 2. Create a task for one coherent implementation slice.
 
    ```bash
-   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/0001-implement-checkout-flow.md
+   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/0001-implement-checkout-flow.md \
+     --depends-on docs/tasks/0001-schema.md --depends-on TASK-0002 \
+     --blocks docs/tasks/0004-ui.md
    ```
 
    The creation script follows `references/task-conventions.md` and uses
@@ -57,7 +59,13 @@ TASK-DOC-GATE-001: the referenced plan must exist and have status
 
 3. Use meaningful relations.
    Generated tasks point to the plan with `relations.implements` and
-   `relations.depends-on`.
+   `relations.depends-on`. `--depends-on` and `--blocks` may be repeated; values are recorded in input
+   order with duplicates removed. In the Task DAG, a `depends-on` reference
+   resolving to another selected task creates `dependency -> this task`, while a
+   `blocks` reference creates `this task -> blocked task`. References to a plan,
+   spec, ADR, or design remain upstream artifact relations rather than Task DAG
+   edges. Task creation records references but does not validate the whole DAG;
+   use `build_task_graph.js` for resolution and validation.
 4. Keep status current.
    Use `todo`, `in-progress`, `blocked`, `done`, or `wont-do`.
 5. Prefer short tasks.

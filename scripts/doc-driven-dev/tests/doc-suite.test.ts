@@ -3,12 +3,38 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const matter = require("gray-matter");
 const test = require("node:test");
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
 function tempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "doc-suite-test-"));
+}
+
+function repoWithApprovedPlanAndTasks() {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/tasks"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/plans/0001-plan.md"),
+    matter.stringify("# Plan\n", {
+      id: "PLAN-0001", type: "plan", status: "approved", title: "Plan",
+      created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+    }),
+    "utf8",
+  );
+  for (const [number, title] of [["0001", "schema"], ["0002", "types"], ["0004", "ui"]]) {
+    fs.writeFileSync(
+      path.join(repo, "docs/tasks", `${number}-${title}.md`),
+      matter.stringify(`# ${title}\n`, {
+        id: `TASK-${number}`, type: "task", status: "todo", title,
+        created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+      }),
+      "utf8",
+    );
+  }
+  return repo;
 }
 
 function runScript(skill, name, args, options = {}) {
@@ -364,6 +390,22 @@ test("new_task requires an approved or active plan and links it", () => {
   const report = JSON.parse(listed.stdout);
   assert.equal(report.entries.length, 1);
   assert.equal(report.entries[0].status, "in-progress");
+});
+
+test("new_task records repeatable task dependencies and blocks relations", () => {
+  const repo = repoWithApprovedPlanAndTasks();
+  const created = runScript("task-doc", "new_task.js", [
+    "--title", "Implement API",
+    "--plan", "docs/plans/0001-plan.md",
+    "--depends-on", "docs/tasks/0001-schema.md",
+    "--depends-on", "TASK-0002",
+    "--blocks", "docs/tasks/0004-ui.md",
+  ], { cwd: repo });
+  assert.equal(created.status, 0, created.stderr);
+  const task = fs.readFileSync(path.join(repo, "docs/tasks/0005-implement-api.md"), "utf8");
+  assert.match(task, /^    - "docs\/tasks\/0001-schema.md"$/m);
+  assert.match(task, /^    - "TASK-0002"$/m);
+  assert.match(task, /^  blocks:\n    - "docs\/tasks\/0004-ui.md"$/m);
 });
 
 test("new_task rejects a draft or superseded plan", () => {

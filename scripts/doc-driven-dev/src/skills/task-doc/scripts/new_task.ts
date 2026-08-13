@@ -10,8 +10,10 @@ const TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-
 const TASKABLE_PLAN_STATUSES = new Set(["approved", "in-progress", "completed"]);
 
 type CliArgs = {
+  blocks: string[];
   cwd: string;
   date?: string;
+  dependsOn: string[];
   dir?: string;
   name?: string;
   forceIndex?: boolean;
@@ -23,11 +25,13 @@ type CliArgs = {
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { cwd: process.cwd() };
+  const args: CliArgs = { blocks: [], cwd: process.cwd(), dependsOn: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
     else if (arg === "--plan") args.plan = argv[++i];
+    else if (arg === "--depends-on") args.dependsOn.push(argv[++i]);
+    else if (arg === "--blocks") args.blocks.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--no-index") args.noIndex = true;
@@ -44,7 +48,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--depends-on <task>] [--blocks <task>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
 }
 
 function validatePlanGate(cwd: string, planTarget?: string): void {
@@ -82,7 +86,8 @@ async function main(): Promise<void> {
       noIndex: args.noIndex,
       relations: {
         implements: linked,
-        "depends-on": linked,
+        "depends-on": [...new Set([...linked, ...args.dependsOn])],
+        blocks: [...new Set(args.blocks)],
       },
       status: args.status,
       title: args.title,

@@ -133,6 +133,14 @@ Use relation fields for meaning, not document type.
 
 Internal documents use relative paths. External sources use URLs.
 
+Task edge direction is exact: a `relations.depends-on` value that resolves to
+another selected task creates `dependency -> this task`; a
+`relations.blocks` value creates `this task -> blocked task`. References that
+resolve to a plan, spec, ADR, or design are upstream artifact relations, not
+Task DAG edges. The task authoring script records references but does not
+validate the whole DAG; `build_task_graph.js` performs resolution and graph
+validation.
+
 ## Follow-up Classification
 
 Tasks created from the lifecycle Phase 4 Exit Gate must include a
