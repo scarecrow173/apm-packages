@@ -21390,6 +21390,9 @@ function followupUpstreamRecoveryEdge(graph, state) {
   }
   return void 0;
 }
+function hasFailedFollowupUpstreamGate(state) {
+  return FOLLOWUP_UPSTREAM_REPAIRS.some(([gate2]) => gateIsNotPassing(state, gate2));
+}
 function prerequisiteRecoveryEdge(graph, node, state) {
   const requiresGates = graph.nodes[node]?.requiresGates ?? [];
   for (const gate2 of requiresGates) {
@@ -21435,6 +21438,11 @@ function routeLifecycle(input) {
   if (input.current === "followup-triage") {
     const upstreamEdge = followupUpstreamRecoveryEdge(input.graph, input.state);
     if (upstreamEdge) return routeResult(input, taskGraph, upstreamEdge.to, upstreamEdge.when, upstreamEdge.id);
+    if (hasFailedFollowupUpstreamGate(input.state)) {
+      const retry2 = retryEdge(input.graph, "followup-triage");
+      if (retry2) return routeResult(input, taskGraph, retry2.to, retry2.when, retry2.id);
+      throw new Error("Lifecycle graph has no route for followup-triage after upstream gate failure");
+    }
     if (input.state.gates["followup-triage"]?.status === "pass") {
       const edge = typedFollowupEdge(input.graph, input.state);
       if (edge) return routeResult(input, taskGraph, edge.to, edge.when, edge.id);
