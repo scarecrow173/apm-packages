@@ -362,7 +362,12 @@ test("typed follow-up routing repairs a failing upstream gate before exit audit"
 });
 
 test("exit audit repairs a regressed upstream gate before completion", () => {
-  const state = stateWithDoneTasks(["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  const state = stateWithDoneTasks([
+    "implementation-verified",
+    "followup-terminal",
+    "exit-audit-pass",
+    "lifecycle-complete",
+  ]);
   state.gates.planning = { status: "fail", reasons: ["planning-incomplete"] };
   const route = routeLifecycle({ current: "exit-audit", graph: loadDistributedGraph(), state });
   assert.equal(route.next, "planning");

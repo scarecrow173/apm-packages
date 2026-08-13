@@ -113,7 +113,6 @@ function gateIsNotPassing(state: LifecycleState, name: string): boolean {
 }
 
 function lifecycleComplete(state: LifecycleState): boolean {
-  if (hasSignal(state, "lifecycle-complete")) return true;
   const gates = ["bootstrap", "briefing", "design", "planning", "implementation", "followup-triage", "exit-audit"];
   return gates.every((name) => state.gates[name]?.status === "pass");
 }
