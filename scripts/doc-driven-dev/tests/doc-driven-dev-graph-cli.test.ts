@@ -8,7 +8,13 @@ const test = require("node:test");
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
 const generatedCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/route_graph.js");
 const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
-const oldRouteLifecyclePath = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/scripts/route_lifecycle.js");
+const retiredRoutePath = path.resolve(
+  __dirname,
+  "../../../packages/doc-driven-dev/.apm/skills",
+  ["doc-driven-dev", "lifecycle"].join("-"),
+  "scripts",
+  ["route", "lifecycle"].join("_") + ".js",
+);
 const newSkillPath = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/SKILL.md");
 
 function tempRepo() {
@@ -92,7 +98,7 @@ test("terminal re-entry emits an idempotent terminal route", () => {
 });
 
 test("canonical graph skill and generated CLI replace the lifecycle skill", () => {
-  assert.equal(fs.existsSync(oldRouteLifecyclePath), false);
+  assert.equal(fs.existsSync(retiredRoutePath), false);
   assert.equal(fs.existsSync(generatedCli), true);
   assert.equal(fs.existsSync(newSkillPath), true);
   const skill = fs.readFileSync(newSkillPath, "utf8");

@@ -1,60 +1,34 @@
 # doc-driven-dev Graph Migration
 
-This document is the historical record for the doc-driven-dev lifecycle graph
-rename. Old public names are intentionally retained here so that migration
-work can refer to them without reintroducing them into current package APIs.
+This is the historical migration record for the public graph rename. The old
+names below are intentionally retained only in this file.
 
-## Before migration
+## Final mapping
 
-### Branch and ancestry baseline
-
-- Implementation branch: `codex/doc-driven-dev-graph`
-- Source branch: `codex/doc-driven-dev-lifecycle-graph`
-- Starting HEAD: `ce3e2cf80d20ed9767e3292a7d30e9d2db49aad9`
-- `main` merge-base: `a75c1a0038a6b9f513fca1c5cea419de2fe4a202`
-- Branch decision: the source branch was unmerged (10 commits ahead of the
-  merge-base), so this branch was created from its HEAD rather than from
-  `main`. The branch was created from local refs; no network fetch was assumed.
-
-### Source and package locations
-
-- TypeScript source directory:
-  `scripts/doc-driven-dev/src/skills/doc-driven-dev-lifecycle/`
-- Distributed package skill directory:
-  `packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/`
-
-### Historical public entrypoints
-
-- Distributed CLI scripts: `build_task_graph.js`, `migrate_docs.js`,
-  `route_lifecycle.js`, and `scaffold_docs.js` under the package skill
-  directory; their TypeScript sources are the matching `*.ts` files under the
-  source directory.
-- Graph module (`scripts/lib/lifecycle_graph.ts`):
-  `LifecycleNodeId`, `LifecycleNodeKind`, `LifecycleReasonCode`,
-  `LifecycleNode`, `LifecycleEdge`, `LifecycleGraph`, `parseLifecycleGraph`,
-  `loadLifecycleGraph`, and `findEdge`.
-- State module (`scripts/lib/lifecycle_state.ts`): `LifecycleSignal`,
-  `GateResult`, `GateResults`, `LifecycleState`,
-  `ProbeLifecycleStateOptions`, `evaluateLifecycleGates`, and
-  `probeLifecycleState`.
-- Router module (`scripts/lib/lifecycle_router.ts`): `LifecycleRoute`,
-  `routeLifecycle`, and `routingPrecedence`.
-- The lifecycle skill name and references were `doc-driven-dev-lifecycle`,
-  including `route_lifecycle.js` as the agent-facing routing command.
-
-### Inventory command
-
-The pre-migration inventory was captured with:
-
-```powershell
-rg -n "doc-driven-dev-lifecycle|lifecycle_graph|lifecycle_state|lifecycle_router|route_lifecycle|LifecycleGraph|LifecycleState|LifecycleRoute|LifecycleSignal|LifecycleReasonCode|probeLifecycleState|evaluateLifecycleGates|parseLifecycleGraph|loadLifecycleGraph|routeLifecycle" packages/doc-driven-dev scripts/doc-driven-dev
+```text
+old: doc-driven-dev-lifecycle / route_lifecycle.js
+new: doc-driven-dev-graph / route_graph.js
 ```
 
-### Baseline suite
+The distributed skill directory, Graph Definition, references, CLI, tests, and
+public package documents now use the new names. Generated JavaScript is rebuilt
+from the TypeScript source by the package build; no compatibility alias is
+published.
 
-Baseline checks ran on 2026-08-13 at the starting HEAD above:
+## What changed
 
-- `pnpm --dir scripts/doc-driven-dev test` — **PASS**: 265 tests, 265 passed,
-  0 failed, 0 skipped, 0 todo.
-- `pnpm --dir scripts/doc-driven-dev run lint:md` — **PASS**: 14 Markdown
-  files linted, 0 errors.
+- Routing topology moved to `graphs/doc-driven-dev.yaml`.
+- Graph State is projected from canonical Markdown on every turn.
+- The caller performs one route, required audits, delegate dispatch, evidence
+  recording, and re-projection.
+- The generic condition DSL supports signals, gates, and Task Graph predicates.
+- Priority is deterministic: ascending priority, then edge ID.
+- Delegated briefing and implementation work remains in its own subgraph.
+- A Task Graph `wont-do` status never satisfies a dependency.
+- Markdown remains the durable history; the runtime has no parallel database.
+
+## Verification
+
+The migration was checked with the public documentation contract test, the
+package test suite, Markdown lint, residue search, and `git diff --check`.
+Historical references to the old names must stay confined to this document.

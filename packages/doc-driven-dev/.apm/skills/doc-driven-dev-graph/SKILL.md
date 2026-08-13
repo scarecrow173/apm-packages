@@ -1,27 +1,30 @@
 ---
 name: doc-driven-dev-graph
-description: "Graph-first router for document-driven development. Projects canonical Markdown artifacts into Graph State, evaluates the selected Graph Definition, and returns exactly one next edge for a delegate or audit. Use when a repository needs deterministic lifecycle routing, explicit focus, typed signals, or fail-closed task planning."
+description: "Graph-first router for document-driven development. Projects canonical Markdown artifacts into Graph State, evaluates a declared Graph Definition, and returns exactly one next edge for a delegate or audit."
 license: MIT
 ---
 
 # Doc-Driven Development Graph
 
-`doc-driven-dev-graph` is the public graph-first entrypoint for the
-document-driven development workflow. It treats the Markdown artifact graph as
-the source of project state and treats the selected Graph Definition as the
-source of routing topology. The CLI projects state once and routes one edge;
-the caller performs the runtime loop.
+`doc-driven-dev-graph` is the public graph-first entrypoint. The Graph
+Definition is the execution authority; human phase labels are conceptual
+groupings only and never replace declared nodes, edges, conditions, or
+delegates.
 
-## When to use
+Phases are conceptual labels, not the execution authority.
 
-- Start or resume a document-driven development workflow.
-- Select an artifact chain explicitly when more than one chain is present.
-- Dispatch a declared delegate or audit from a validated graph definition.
-- Inspect blockers, gate results, and the selected Task Graph as JSON.
+## Four layers
+
+- **Execution Graph**: the declared nodes, one-edge routes, conditions,
+  priorities, delegates, and audits in `graphs/doc-driven-dev.yaml`.
+- **Artifact Graph**: canonical Markdown documents and their IDs, types,
+  statuses, and relations.
+- **Graph State**: a fresh projection of the Artifact Graph with focus, gates,
+  signals, blockers, and evidence for the selected route.
+- **Dynamic Task Graph**: a deterministic projection of a focused plan and its
+  task dependencies; it is used by planning and implementation delegates.
 
 ## Canonical command
-
-Run from a consumer repository:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
@@ -29,62 +32,75 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--focus <artifact>] [--task-dir <path>] [--cwd <path>] --json
 ```
 
-`--current` defaults to `entry` from the selected Graph Definition. Repeat
-`--signal` and `--focus` when needed. A supplied current node must exist in the
-selected definition. A supplied signal must be a signal value referenced by a
-`kind: signal` condition in that definition. Unknown values fail closed.
+The JSON result is the `GraphRoute` contract: `current`, one `next`, `edgeId`,
+`condition`, `status`, `delegate`, `requiredAudits`, `blockers`, and the
+selected `taskGraph`. Terminal and blocked results are explicit and do not
+guess a destination.
 
-The JSON result is the public `GraphRoute` contract:
+Every non-terminal route contains one declared edge; no implicit or neighboring
+edge is added by the caller.
 
-- `schemaVersion`, `graphId`, `current`, `next`
-- `edgeId`, `condition`, `status`, `delegate`
-- `requiredAudits`, `blockers`, `taskGraph`
+## Condition DSL and priority
 
-The route contains only one declared edge. A terminal current node returns an
-idempotent terminal result (`edgeId: null`); a node with no satisfied edge
-returns `status: blocked` and does not guess a destination.
+Edges name a condition key. The generic condition DSL supports `signal`,
+`gate` (`pass` or `not-pass`), and `task-graph` (`runnable` or `invalid`)
+predicates. Only declared signals are accepted. For the current node, eligible
+edges are ordered by ascending `priority`, then stable edge ID; the first match
+is the only route returned. The CLI never follows a second edge recursively.
 
-## Declared delegates
+## Delegates and subgraphs
 
-The Graph Definition declares the following delegate fields for lifecycle work:
+Graph Definition bindings are explicit:
 
-- Optional migration uses `migrate_docs`; bootstrap uses `scaffold_docs`.
-- Briefing delegates to `briefing-flow` and design work to `design-doc`.
-- The planning Task Graph composite delegates to `build_task_graph.js`.
-- Implementation delegates to `implementation-flow`; exit verification delegates
-  to `doc-status`.
+- migration uses `migrate_docs`; bootstrap uses `scaffold_docs`;
+- briefing delegates to `briefing-flow`; design delegates to `design-doc`;
+- the planning binding `build_task_graph` is executed by
+  `build_task_graph.js`;
+- implementation delegates to `implementation-flow`; exit verification audits
+  with `doc-status`.
 
-The planning node's runtime composition runs `plan-doc` and `task-doc` before
-the Task Graph composite; those two skills are not additional `delegate:`
-fields in the Graph Definition. A `focus-required` blocker is a hard stop until
-the caller supplies explicit focus.
+Delegates own their briefing and implementation subgraphs. The caller runs
+returned audits before dispatching exactly the returned delegate. `focus-required`
+is a hard stop until explicit focus is supplied.
 
-## Runtime loop
+## Runtime loop (ten Graph steps)
 
-1. Choose a focus path when the projection reports `focus-required`.
-2. Run `route_graph.js` and inspect the returned route and blockers.
-3. Run every returned audit, then dispatch only the returned delegate.
-4. Record Markdown evidence in the canonical document tree.
-5. Re-project and re-run the CLI from the returned `next` node.
-6. Stop at a terminal node or when a blocker requires user authority.
+1. Select the Graph Definition and current node.
+2. Inspect canonical Markdown artifacts and their semantic relations.
+3. Project the Artifact Graph into fresh Graph State.
+4. Resolve an explicit focus when multiple chains are present.
+5. Evaluate gate results, caller signals, and deterministic blockers.
+6. Evaluate each outgoing edge with the generic condition DSL.
+7. Apply priority order (then edge ID) to choose at most one edge.
+8. Preserve the complete route and run every returned audit.
+9. Dispatch only the declared delegate, including its briefing or
+   implementation subgraph.
+10. Record Markdown evidence, re-project, and re-enter at the returned `next`
+    node.
 
-The CLI never recursively advances through multiple nodes. Delegated skills own
-their work and evidence; graph routing remains a deterministic, one-edge
-decision at each turn.
+The loop stops at a terminal node or a fail-closed blocker requiring user
+authority. A task marked `wont-do` never satisfies a dependency; unresolved
+tasks remain blocked in the Dynamic Task Graph.
 
-## Sources of truth
+After implementation, the `follow-up triage` node requires
+`implementation-verified` and one typed signal before routing to repair,
+planning, a new briefing, or exit audit.
 
-- `graphs/doc-driven-dev.yaml` declares node, edge, condition, and delegate
-  topology.
-- [`references/graph-contract.md`](references/graph-contract.md) defines the
-  Graph Definition and GraphRoute schema.
-- [`references/graph-state.md`](references/graph-state.md) defines projection,
+## Persistence boundary
+
+Markdown artifacts are durable history and status authority. Graph State and
+the Dynamic Task Graph are projections for the current turn. The runtime does
+not create or require a parallel database.
+
+## References
+
+- [`graphs/doc-driven-dev.yaml`](graphs/doc-driven-dev.yaml) — concrete
+  topology and delegate bindings.
+- [`references/graph-contract.md`](references/graph-contract.md) — Graph
+  Definition and GraphRoute schema.
+- [`references/graph-state.md`](references/graph-state.md) — projection,
   focus, gates, signals, and blockers.
-- [`references/execution-contract.md`](references/execution-contract.md)
-  defines the evidence-backed runtime loop.
-- [`references/task-graph-contract.md`](references/task-graph-contract.md)
-  defines Task Graph composition and fail-closed dependency behavior.
-
-Markdown artifacts remain the project history and status authority. The graph
-runtime derives state from them and does not persist a parallel lifecycle
-database.
+- [`references/execution-contract.md`](references/execution-contract.md) —
+  evidence-backed caller loop.
+- [`references/task-graph-contract.md`](references/task-graph-contract.md) —
+  Task Graph composition and fail-closed dependency rules.

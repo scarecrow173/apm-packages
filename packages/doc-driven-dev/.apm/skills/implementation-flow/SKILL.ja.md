@@ -23,7 +23,7 @@ active profile が現在の環境で applicable と示したスキルを動的�
 
 - 承認済み `task-doc` エントリのコード変更を実行するとき。
 - 複数のスキルを協調させて計画を実装するとき。
-- `doc-driven-dev-lifecycle` から実装フェーズの委譲先として呼び出されるとき。
+- `doc-driven-dev-graph` から implementation delegate として呼び出されるとき。
 - ドキュメントが既に存在し、実装ガイダンスだけが必要なとき（スタンドアロン利用）。
 - profile-based routing や複数 skill の連携が必要な実装作業を始めるとき。
 
@@ -246,7 +246,7 @@ node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks
 
 実装フェーズは `impl-doc` スキルを通じて 2 つのダウンストリーム文書を生成する。
 これらの記録はフローの一部であり、任意の追加作業ではない。このフローが
-`doc-driven-dev-lifecycle` の下で実行される場合、`docs/impl/ir/` と
+`doc-driven-dev-graph` の下で実行される場合、`docs/impl/ir/` と
 `docs/impl/exp/` は既に存在する（bootstrap contract）。これらの記録を確保する
 ことは完了義務である。
 
@@ -336,7 +336,7 @@ dispatch-specific override・emergency override・その他の non-default routi
 ## エントリ条件
 
 - 検証条件が定義されたタスク単位（`task-doc` または同等）が存在すること。
-- `doc-driven-dev-lifecycle` から呼び出される場合、Phase 3 Planning & Tasking が完了し、タスクが承認済みであること。
+- `doc-driven-dev-graph` から呼び出される場合、planning node が完了し、タスクが承認済みであること。
 
 ## 完了条件
 

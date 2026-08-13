@@ -56,7 +56,7 @@
       "type": "object",
       "description": "Matrix of meta-skill activation states and valid combinations",
       "properties": {
-        "doc-driven-dev-lifecycle": {
+        "doc-driven-dev-graph": {
           "$ref": "#/definitions/skill_state"
         },
         "briefing-flow": {

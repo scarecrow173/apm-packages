@@ -25,7 +25,7 @@ information gathering to downstream document creation.
 
 - Starting initial information gathering for new features, projects, or major changes.
 - Requirements are ambiguous and it's unclear which skill to start with.
-- As briefing phase delegate when invoked from `doc-driven-dev-lifecycle`.
+- As briefing delegate when invoked from `doc-driven-dev-graph`.
 - Standalone when you want to organize information before writing spec-doc / adr-doc.
 - Starting information gathering work that needs profile-based routing or
   multiple skills before writing spec-doc / adr-doc.

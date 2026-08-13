@@ -1,27 +1,26 @@
 ---
 name: doc-driven-dev-graph
-description: "ドキュメント駆動開発のグラフ優先ルーター。正規 Markdown artifact を Graph State に投影し、選択した Graph Definition を評価して、delegate または audit へ進む次のエッジを 1 つだけ返す。決定的な lifecycle routing、明示的 focus、型付き signal、fail-closed な task planning が必要なときに使用する。"
+description: "ドキュメント駆動開発のグラフ優先ルーター。正規 Markdown artifact を Graph State に投影し、宣言済み Graph Definition を評価して delegate または audit への次のエッジを 1 つだけ返す。"
 license: MIT
 ---
 
 # Doc-Driven Development Graph
 
-`doc-driven-dev-graph` は、ドキュメント駆動開発ワークフローの公開グラフ
-優先エントリーポイントです。Markdown artifact graph を project state の
-source of truth とし、選択した Graph Definition を routing topology の
-source of truth とします。CLI は state を 1 回投影してエッジを 1 つだけ
-route し、runtime loop は呼び出し側が担当します。
+`doc-driven-dev-graph` は公開された graph-first entrypoint です。実行の
+authority は Graph Definition であり、人間向けの phase label は概念上の
+分類にすぎず、node・edge・condition・delegate の宣言を置き換えません。
 
-## 使用するとき
+## 4 つの layer
 
-- ドキュメント駆動開発ワークフローを開始または再開するとき。
-- 複数の artifact chain があるとき、chain を明示的に選択するとき。
-- 検証済み Graph Definition から delegate または audit を dispatch するとき。
-- blocker、gate 結果、選択された Task Graph を JSON で確認するとき。
+- **Execution Graph**: `graphs/doc-driven-dev.yaml` にある node、1 エッジ
+  route、condition、priority、delegate、audit の宣言。
+- **Artifact Graph**: 正規 Markdown 文書と、その ID、type、status、relation。
+- **Graph State**: Artifact Graph を毎回投影した focus、gate、signal、blocker、
+  route evidence を含む状態。
+- **Dynamic Task Graph**: focus された plan と task dependency の決定的な
+  投影。planning と implementation delegate が利用します。
 
 ## Canonical command
-
-consumer repository から実行します:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
@@ -29,60 +28,72 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--focus <artifact>] [--task-dir <path>] [--cwd <path>] --json
 ```
 
-`--current` の既定値は、選択した Graph Definition の `entry` です。
-必要に応じて `--signal` と `--focus` は複数回指定できます。指定した current
-node は definition の `nodes` に存在しなければなりません。指定した signal は
-その definition の `kind: signal` condition が参照する値でなければなりません。
-未知の値は fail closed になります。
+JSON 結果は `GraphRoute` contract です。`current`、1 つの `next`、`edgeId`、
+`condition`、`status`、`delegate`、`requiredAudits`、`blockers`、選択した
+`taskGraph` を含みます。terminal と blocked は明示的な結果であり、遷移先を
+推測しません。
 
-JSON 結果は公開 `GraphRoute` contract です:
+terminal 以外の route は宣言済み edge を 1 つだけ含み、caller が暗黙の edge や
+隣接 node を追加することはありません。
 
-- `schemaVersion`, `graphId`, `current`, `next`
-- `edgeId`, `condition`, `status`, `delegate`
-- `requiredAudits`, `blockers`, `taskGraph`
+## Condition DSL と priority
 
-結果には宣言されたエッジを 1 つだけ含めます。current node が terminal なら
-idempotent な terminal 結果（`edgeId: null`）を返します。満たされたエッジが
-ない node は `status: blocked` となり、遷移先を推測しません。
+edge は condition key を参照します。汎用 condition DSL は `signal`、`gate`
+（`pass` / `not-pass`）、`task-graph`（`runnable` / `invalid`）predicate を
+サポートします。宣言されていない signal は受け付けません。current node の
+eligible edge は昇順の `priority`、次に安定した edge ID で並べ、最初の 1 つ
+だけを返します。CLI は 2 つ目の edge を再帰的に辿りません。
 
-## Declared delegates
+## Delegate と subgraph
 
-Graph Definition は lifecycle 作業について次の delegate field を宣言します:
+Graph Definition の binding は明示的です。
 
-- 任意の migration は `migrate_docs`、bootstrap は `scaffold_docs` を使う。
-- Briefing は `briefing-flow`、design 作業は `design-doc` に委譲する。
-- Planning の Task Graph composite は `build_task_graph.js` に委譲する。
-- Implementation は `implementation-flow`、Exit 検証は `doc-status` に委譲する。
+- migration は `migrate_docs`、bootstrap は `scaffold_docs`。
+- briefing は `briefing-flow`、design は `design-doc` に委譲。
+- planning の binding `build_task_graph` は `build_task_graph.js` が実行。
+- implementation は `implementation-flow`、exit 検証は `doc-status` audit。
 
-Planning node の runtime composition は Task Graph composite の前に `plan-doc` と
-`task-doc` を実行します。この 2 つは Graph Definition の追加の `delegate:`
-field ではありません。`focus-required` blocker は、caller が明示的 focus を
-渡すまで hard stop です。
+delegate は briefing / implementation subgraph と証跡を担当します。caller は
+返された audit を先に実行し、返された delegate だけを dispatch します。
+`focus-required` blocker は明示的 focus が渡されるまで hard stop です。
 
-## Runtime loop
+## Graph runtime の 10 ステップ
 
-1. projection が `focus-required` を返したら focus path を選ぶ。
-2. `route_graph.js` を実行し、route と blocker を確認する。
-3. 返された audit をすべて実行し、返された delegate だけを dispatch する。
-4. canonical document tree に Markdown の証跡を記録する。
-5. state を再投影し、返された `next` node から CLI を再実行する。
-6. terminal node、またはユーザー権限が必要な blocker で停止する。
+1. Graph Definition と current node を選択する。
+2. 正規 Markdown artifact と semantic relation を確認する。
+3. Artifact Graph を新しい Graph State に投影する。
+4. 複数 chain があれば明示的 focus を解決する。
+5. gate、caller signal、決定的 blocker を評価する。
+6. 汎用 condition DSL で outgoing edge を評価する。
+7. priority（次に edge ID）の順で最大 1 エッジを選択する。
+8. route 全体を保持し、返された audit をすべて実行する。
+9. 宣言された delegate と、その briefing / implementation subgraph だけを
+   dispatch する。
+10. Markdown 証跡を記録し、再投影して返された `next` node から再入力する。
 
-CLI は複数 node を再帰的に進めません。delegate skill が作業と証跡を担当し、
-graph routing は各 turn で決定的な 1 エッジの判断を保ちます。
+terminal node、またはユーザー権限が必要な fail-closed blocker で停止します。
+`wont-do` task は dependency を満たさず、未解決 task は Dynamic Task Graph
+で blocked のままです。
 
-## Sources of truth
+implementation 後の `フォローアップ分類` node は、
+`implementation-verified` と型付き signal 1 つを要求してから repair、planning、
+briefing、exit audit のいずれかへ進みます。
 
-- `graphs/doc-driven-dev.yaml` が node、edge、condition、delegate の topology
-  を宣言する。
-- [`references/graph-contract.ja.md`](references/graph-contract.ja.md) が Graph
-  Definition と GraphRoute schema を定義する。
-- [`references/graph-state.ja.md`](references/graph-state.ja.md) が projection、
-  focus、gate、signal、blocker を定義する。
-- [`references/execution-contract.ja.md`](references/execution-contract.ja.md) が
-  証跡に基づく runtime loop を定義する。
-- [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) が
-  Task Graph の合成と fail-closed な依存関係の動作を定義する。
+## Persistence boundary
 
-Markdown artifact は project history と status の authority です。graph
-runtime はそこから state を導出し、別の lifecycle database を永続化しません。
+Markdown artifact が durable history と status の authority です。Graph State
+と Dynamic Task Graph は turn ごとの projection であり、runtime は並行する
+database を作成・要求しません。
+
+## References
+
+- [`graphs/doc-driven-dev.yaml`](graphs/doc-driven-dev.yaml) — topology と
+  delegate binding。
+- [`references/graph-contract.ja.md`](references/graph-contract.ja.md) — Graph
+  Definition と GraphRoute schema。
+- [`references/graph-state.ja.md`](references/graph-state.ja.md) — projection、
+  focus、gate、signal、blocker。
+- [`references/execution-contract.ja.md`](references/execution-contract.ja.md) —
+  evidence に基づく caller loop。
+- [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) —
+  Task Graph 合成と fail-closed dependency 規則。
