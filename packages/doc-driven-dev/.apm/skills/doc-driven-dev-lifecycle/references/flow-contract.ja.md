@@ -166,7 +166,7 @@ signal を出し、ユーザー向けフォローアップ報告に選択した 
 | `decision-required`（briefing） | `followup-decision-briefing` | implementation task 作成前に Phase 1（`briefing-flow`）へ戻る。 |
 | `decision-required`（design） | `followup-decision-design` | implementation task 作成前に Phase 2（`design-doc`）へ戻る。 |
 | `new-feature` | `followup-new-feature` | 新しい briefing のため Phase 1（`briefing-flow`）へ戻る。現在の承認済み plan には決して紐付けない。 |
-| `doc-only` | `followup-doc-only` | operator は文書または implementation record の更新を記録する。この route は terminal の `exit-audit` node で終わる。 |
+| `doc-only` | `followup-doc-only` | operator は文書または implementation record の更新を記録する。この route は `exit-audit` に進み、その宣言済み audit route を通る。 |
 | `defer` または `wont-do` | `followup-terminal` | operator は延期または理由を記録する（task として表す `wont-do` は `status: wont-do`）。この version では `wont-do` は無条件に lifecycle-resolved であり、Lifecycle state projection / Router は理由の有無や妥当性を機械的に検証しない。他 task の dependency は決して満たさない。 |
 
 6 つの型付き route は相互排他的である。未分類または競合するフォローアップが

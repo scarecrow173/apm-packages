@@ -169,7 +169,7 @@ name that selected route in the user-visible follow-up report:
 | `decision-required` (briefing) | `followup-decision-briefing` | Return to Phase 1 (`briefing-flow`) before creating implementation tasks. |
 | `decision-required` (design) | `followup-decision-design` | Return to Phase 2 (`design-doc`) before creating implementation tasks. |
 | `new-feature` | `followup-new-feature` | Return to Phase 1 (`briefing-flow`) for a new briefing; never attach it to the current approved plan. |
-| `doc-only` | `followup-doc-only` | Operators record the document or implementation-record update; this route ends at the terminal `exit-audit` node. |
+| `doc-only` | `followup-doc-only` | Operators record the document or implementation-record update; this route proceeds to `exit-audit` and then follows its declared audit route. |
 | `defer` or `wont-do` | `followup-terminal` | Operators must record the deferral or reason (`status: wont-do` when represented as a task). In this version, `wont-do` is lifecycle-resolved unconditionally; the Lifecycle state projection and Router do not mechanically validate whether a reason is present or valid. It never satisfies another task's dependency. |
 
 The six typed routes are mutually exclusive. An unclassified or conflicting
