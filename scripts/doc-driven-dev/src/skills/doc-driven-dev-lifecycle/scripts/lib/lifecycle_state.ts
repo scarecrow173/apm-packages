@@ -7,17 +7,31 @@ import { buildTaskGraph, normalizeRepoPath, type TaskGraphResult } from "./task_
 
 /** Runtime evidence that is supplied by lifecycle callers, rather than read from documents. */
 export type LifecycleSignal =
+  | "focus-required"
+  | "migration-requested"
+  | "migration-incomplete"
+  | "migration-complete"
+  | "bootstrap-incomplete"
+  | "bootstrap-complete"
+  | "briefing-incomplete"
+  | "briefing-complete"
   | "implementation-verified"
+  | "design-incomplete"
+  | "design-complete"
+  | "design-gap"
+  | "planning-incomplete"
+  | "planning-complete"
+  | "task-graph-invalid"
   | "followups-classified"
   | "exit-audit-pass"
   | "spec-gap"
-  | "design-gap"
   | "constraint-gap"
   | "task-graph-retry"
   | "tasks-runnable"
   | "implementation-incomplete"
   | "followups-unclassified"
-  | "exit-audit-required";
+  | "exit-audit-required"
+  | "lifecycle-complete";
 
 export type GateResult = {
   status: "pass" | "fail" | "blocked";
