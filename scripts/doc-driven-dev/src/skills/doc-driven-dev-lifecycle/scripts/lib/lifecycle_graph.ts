@@ -21,6 +21,7 @@ export type LifecycleNodeKind = "probe" | "action" | "subgraph" | "gate" | "audi
 
 /** Signals and gate outcomes that can select a lifecycle edge. */
 export type LifecycleReasonCode =
+  | "focus-required"
   | "migration-requested"
   | "migration-incomplete"
   | "migration-complete"
@@ -43,7 +44,8 @@ export type LifecycleReasonCode =
   | "followups-unclassified"
   | "followups-classified"
   | "exit-audit-required"
-  | "exit-audit-pass";
+  | "exit-audit-pass"
+  | "lifecycle-complete";
 
 export type LifecycleNode = {
   kind: LifecycleNodeKind;
@@ -73,6 +75,7 @@ const lifecycleNodeSchema = z.object({
 }).strict();
 
 const lifecycleReasonCode = z.enum([
+  "focus-required",
   "migration-requested",
   "migration-incomplete",
   "migration-complete",
@@ -96,6 +99,7 @@ const lifecycleReasonCode = z.enum([
   "followups-classified",
   "exit-audit-required",
   "exit-audit-pass",
+  "lifecycle-complete",
 ]);
 
 const lifecycleEdgeSchema = z.object({
