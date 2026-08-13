@@ -45,6 +45,20 @@ JSON 結果は公開 `GraphRoute` contract です:
 idempotent な terminal 結果（`edgeId: null`）を返します。満たされたエッジが
 ない node は `status: blocked` となり、遷移先を推測しません。
 
+## Declared delegates
+
+Graph Definition は lifecycle の作業を既存 skill と composite に binding します:
+
+- 任意の migration は `migrate_docs`、bootstrap は `scaffold_docs` を使う。
+- Briefing は `briefing-flow`、design 作業は `design-doc` に委譲する。
+- Planning は `plan-doc`、`task-doc`、`build_task_graph.js` を組み合わせる。
+- Implementation は `implementation-flow` に委譲する。
+- Exit 検証は `doc-status` に委譲する。
+
+これらの名前は Graph Definition の binding であり、この skill が別の sequence
+を実装するという意味ではありません。`focus-required` blocker は、caller が
+明示的 focus を渡すまで hard stop です。
+
 ## Runtime loop
 
 1. projection が `focus-required` を返したら focus path を選ぶ。

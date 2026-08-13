@@ -44,6 +44,20 @@ The route contains only one declared edge. A terminal current node returns an
 idempotent terminal result (`edgeId: null`); a node with no satisfied edge
 returns `status: blocked` and does not guess a destination.
 
+## Declared delegates
+
+The graph definition binds lifecycle work to existing skills and composites:
+
+- Optional migration uses `migrate_docs`; bootstrap uses `scaffold_docs`.
+- Briefing delegates to `briefing-flow` and design work to `design-doc`.
+- Planning combines `plan-doc`, `task-doc`, and `build_task_graph.js`.
+- Implementation delegates to `implementation-flow`.
+- Exit verification delegates to `doc-status`.
+
+These names are bindings in the Graph Definition, not an additional sequence
+implemented by this skill. A `focus-required` blocker is a hard stop until the
+caller supplies explicit focus.
+
 ## Runtime loop
 
 1. Choose a focus path when the projection reports `focus-required`.
