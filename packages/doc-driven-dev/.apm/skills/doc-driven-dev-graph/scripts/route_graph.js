@@ -21320,7 +21320,7 @@ function sortedOutgoing(definition, current) {
 function sortedUnique4(values) {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
-function routeResult(input, result) {
+function routeResult(input, result, additionalBlockers = []) {
   return {
     schemaVersion: 2,
     graphId: input.definition.id,
@@ -21331,9 +21331,27 @@ function routeResult(input, result) {
     status: result.status,
     delegate: result.delegate,
     requiredAudits: [],
-    blockers: sortedUnique4(input.state.blockers),
+    blockers: sortedUnique4([...input.state.blockers, ...additionalBlockers]),
     taskGraph: input.state.taskGraph
   };
+}
+function prerequisiteBlockers(node, state) {
+  const blockers = [];
+  for (const gate2 of node.requiresGates ?? []) {
+    const result = state.gates[gate2];
+    if (!result) {
+      blockers.push(`required-gate:${gate2}`, `required-gate:${gate2}:missing`);
+      continue;
+    }
+    if (result.status === "pass") continue;
+    blockers.push(`required-gate:${gate2}`);
+    if (result.reasons.length === 0) {
+      blockers.push(`required-gate:${gate2}:status-${result.status}`);
+    } else {
+      blockers.push(...result.reasons.map((reason) => `required-gate:${gate2}:${reason}`));
+    }
+  }
+  return blockers;
 }
 function routeGraph(input) {
   if (!Object.prototype.hasOwnProperty.call(input.definition.nodes, input.current)) {
@@ -21348,6 +21366,16 @@ function routeGraph(input) {
       status: "terminal",
       delegate: node.delegate ?? null
     });
+  }
+  const prerequisiteFailures = prerequisiteBlockers(node, input.state);
+  if (prerequisiteFailures.length > 0) {
+    return routeResult(input, {
+      next: input.current,
+      edgeId: null,
+      condition: "blocked",
+      status: "blocked",
+      delegate: null
+    }, prerequisiteFailures);
   }
   for (const edge of sortedOutgoing(input.definition, input.current)) {
     const condition = input.definition.conditions[edge.when];

@@ -289,7 +289,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "exit audit retry",
       setup: () => ({
         repo: completeRepo(),
-        args: ["--focus", "PLAN-0001", "--current", "exit-audit", "--signal", "followup-terminal", "--signal", "exit-audit-required"],
+        args: ["--focus", "PLAN-0001", "--current", "exit-audit", "--signal", "implementation-verified", "--signal", "followup-terminal", "--signal", "exit-audit-required"],
       }),
       edgeId: "exit-audit-retry",
       next: "exit-audit",

@@ -34,6 +34,7 @@ function sortedUnique(values: Iterable<string>): string[] {
 function routeResult(
   input: { current: GraphNodeId; definition: GraphDefinition; state: GraphState },
   result: Pick<GraphRoute, "next" | "edgeId" | "condition" | "status" | "delegate">,
+  additionalBlockers: Iterable<string> = [],
 ): GraphRoute {
   return {
     schemaVersion: 2,
@@ -45,9 +46,28 @@ function routeResult(
     status: result.status,
     delegate: result.delegate,
     requiredAudits: [],
-    blockers: sortedUnique(input.state.blockers),
+    blockers: sortedUnique([...input.state.blockers, ...additionalBlockers]),
     taskGraph: input.state.taskGraph,
   };
+}
+
+function prerequisiteBlockers(node: GraphDefinition["nodes"][GraphNodeId], state: GraphState): string[] {
+  const blockers: string[] = [];
+  for (const gate of node.requiresGates ?? []) {
+    const result = state.gates[gate];
+    if (!result) {
+      blockers.push(`required-gate:${gate}`, `required-gate:${gate}:missing`);
+      continue;
+    }
+    if (result.status === "pass") continue;
+    blockers.push(`required-gate:${gate}`);
+    if (result.reasons.length === 0) {
+      blockers.push(`required-gate:${gate}:status-${result.status}`);
+    } else {
+      blockers.push(...result.reasons.map((reason) => `required-gate:${gate}:${reason}`));
+    }
+  }
+  return blockers;
 }
 
 /** Route one step through the declared graph edges. */
@@ -69,6 +89,17 @@ export function routeGraph(input: {
       status: "terminal",
       delegate: node.delegate ?? null,
     });
+  }
+
+  const prerequisiteFailures = prerequisiteBlockers(node, input.state);
+  if (prerequisiteFailures.length > 0) {
+    return routeResult(input, {
+      next: input.current,
+      edgeId: null,
+      condition: "blocked",
+      status: "blocked",
+      delegate: null,
+    }, prerequisiteFailures);
   }
 
   for (const edge of sortedOutgoing(input.definition, input.current)) {

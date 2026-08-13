@@ -117,6 +117,46 @@ test("returns a blocked result when no declared condition is satisfied", () => {
   assert.equal(route.delegate, null);
 });
 
+test("fails closed when a node prerequisite gate is absent or not passing", () => {
+  const definition = definitionWith({
+    conditions: {
+      first: { kind: "signal", signal: "first" },
+      second: { kind: "signal", signal: "second" },
+      prerequisite: { kind: "gate", gate: "prerequisite", status: "pass" },
+    },
+    nodes: {
+      alpha: { kind: "action", requiresGates: ["prerequisite"] },
+      repair: { kind: "delegate", delegate: "repair-handler" },
+      finished: { kind: "terminal" },
+    },
+  });
+  const route = routeGraph({
+    current: "alpha",
+    definition,
+    state: stateWith({
+      signals: ["first", "second"],
+      gates: { prerequisite: { status: "fail", reasons: ["evidence-missing"] } },
+    }),
+  });
+  assert.equal(route.next, "alpha");
+  assert.equal(route.edgeId, null);
+  assert.equal(route.condition, "blocked");
+  assert.equal(route.status, "blocked");
+  assert.deepEqual(route.blockers, [
+    "required-gate:prerequisite",
+    "required-gate:prerequisite:evidence-missing",
+  ]);
+
+  const missing = routeGraph({
+    current: "alpha",
+    definition,
+    state: stateWith({ signals: ["first", "second"] }),
+  });
+  assert.deepEqual(missing.blockers, ["required-gate:prerequisite", "required-gate:prerequisite:missing"]);
+  assert.equal(missing.next, "alpha");
+  assert.equal(missing.edgeId, null);
+});
+
 test("rejects an unknown current node", () => {
   assert.throws(
     () => routeGraph({ current: "missing", definition: definitionWith({}), state: stateWith() }),

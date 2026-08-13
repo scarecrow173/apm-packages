@@ -129,3 +129,17 @@ test("keeps dependents blocked by wont-do predecessors while resolving completio
   assert.equal(route.status, "blocked");
   assert.equal(route.next, "task-graph");
 });
+
+test("exit-audit cannot complete when a required upstream gate regresses", () => {
+  const definition = graphDefinition();
+  const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  state.gates.design = { status: "fail", reasons: ["design-status"] };
+  const route = routeGraph({ current: "exit-audit", definition, state });
+  assert.equal(route.status, "blocked");
+  assert.equal(route.next, "exit-audit");
+  assert.equal(route.edgeId, null);
+  assert.equal(route.condition, "blocked");
+  assert.ok(route.blockers.includes("required-gate:design"));
+  assert.ok(route.blockers.includes("required-gate:design:design-status"));
+  assert.notEqual(route.next, "complete");
+});

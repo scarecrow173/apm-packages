@@ -11,12 +11,26 @@ therefore cannot dispatch `followup-doc-only` (or another typed outcome) to
 
 ## Regression coverage
 
-Added a custom-graph regression that removes
+Added a custom-graph regression in the graph-router test suite that removes
 `followup-triage-to-planning-repair`, marks planning failed, supplies the typed
 doc-only signal, and asserts the route stays at `followup-triage` with reason
 `followups-unclassified` and edge `followup-triage-retry`.
 
 ## Verification
 
-- `pnpm --dir scripts/doc-driven-dev exec tsx --test tests/doc-driven-dev-lifecycle-router.test.ts` — 32 passed.
+- `pnpm --dir scripts/doc-driven-dev exec tsx --test tests/doc-driven-dev-graph-router.test.ts` — graph-router regressions passed.
 - No generated JavaScript, YAML, or unrelated dirty files were changed.
+
+The migration residue check includes tracked dot-paths rather than relying on a
+hidden-file-skipping glob. Its only exclusions are the migration document and
+the user-owned plan directory:
+
+```powershell
+$legacy = ("doc-driven-dev", "lifecycle", "router.test.ts" -join "-")
+git ls-files -co --exclude-standard |
+  Where-Object { $_ -ne "docs/migrations/doc-driven-dev-graph.md" -and $_ -notlike "docs/superpowers/plans/*" } |
+  ForEach-Object { Select-String -LiteralPath $_ -Pattern $legacy -SimpleMatch }
+```
+
+Result: zero matches outside the explicit exclusions, including tracked
+`.superpowers/**` reports.

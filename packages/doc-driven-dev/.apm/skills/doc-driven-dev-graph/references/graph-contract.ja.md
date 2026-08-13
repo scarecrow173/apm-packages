@@ -46,5 +46,5 @@ vocabulary に対する routing を防ぎます。
 | `status` | `edge`、`terminal`、または `blocked`。 |
 | `delegate` | destination/terminal delegate、なければ `null`。 |
 | `requiredAudits` | route が要求する audit（なければ空）。 |
-| `blockers` | sort 済み fail-closed state blocker。 |
+| `blockers` | sort 済み fail-closed state blocker。node の `requiresGates` が未達の場合は、安定した `required-gate:<gate>` blocker と各 gate の失敗理由も含め、前提 evidence を可視化する。 |
 | `taskGraph` | 選択 Task Graph projection。なければ `null`。 |
