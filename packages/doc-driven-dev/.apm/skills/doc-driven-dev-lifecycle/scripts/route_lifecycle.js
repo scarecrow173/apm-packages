@@ -28,7 +28,7 @@ var __copyProps = (to, from, except, desc) => {
 var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
   // If the importer is in node compatibility mode or this is not an ESM
   // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
+  // compatible transform (i.e. "__esModule" has not been set), then se
   // "default" to the CommonJS "module.exports" for node compatibility.
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
@@ -1243,7 +1243,7 @@ var require_set = __commonJS({
     module2.exports = new Type("tag:yaml.org,2002:set", {
       kind: "mapping",
       resolve: resolveYamlSet,
-      construct: constructYamlSet
+      construct: constructYamlSe
     });
   }
 });
@@ -3917,7 +3917,7 @@ var floatYaml11Tag = defineScalarTag("tag:yaml.org,2002:float", {
   ],
   resolve: resolveYamlFloat,
   identify: (object2) => typeof object2 === "number" && (!Number.isInteger(object2) || Object.is(object2, -0) || object2.toString(10).indexOf("e") >= 0),
-  represent: representYamlFloat
+  represent: representYamlFloa
 });
 var mergeTag = defineScalarTag("tag:yaml.org,2002:merge", {
   implicit: true,
@@ -4025,7 +4025,7 @@ var omapTag = defineSequenceTag("tag:yaml.org,2002:omap", {
     carrier.list.push(item);
     return "";
   },
-  finalize: (carrier) => carrier.list
+  finalize: (carrier) => carrier.lis
 });
 var pairsTag = defineSequenceTag("tag:yaml.org,2002:pairs", {
   create: () => [],
@@ -4372,7 +4372,7 @@ function throwErrorAt(source, position, message, filename = "") {
     buffer: source,
     position,
     line,
-    column: position - lineStart
+    column: position - lineStar
   };
   mark.snippet = makeSnippet(mark);
   throw new YAMLException(message, mark);
@@ -4927,7 +4927,7 @@ function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tag
     style,
     chomping,
     indent,
-    fast
+    fas
   });
 }
 function addAliasEvent(state, anchorStart, anchorEnd) {
@@ -6997,7 +6997,7 @@ function issue(...args) {
       message: iss,
       code: "custom",
       input,
-      inst
+      ins
     };
   }
   return { ...iss };
@@ -7471,7 +7471,7 @@ var $ZodCheckLessThan = /* @__PURE__ */ $constructor("$ZodCheckLessThan", (inst,
       input: payload.value,
       inclusive: def.inclusive,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7499,7 +7499,7 @@ var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", 
       input: payload.value,
       inclusive: def.inclusive,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7521,7 +7521,7 @@ var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (i
       divisor: def.value,
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7549,7 +7549,7 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
           code: "invalid_type",
           continue: false,
           input,
-          inst
+          ins
         });
         return;
       }
@@ -7563,7 +7563,7 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
             inst,
             origin,
             inclusive: true,
-            continue: !def.abort
+            continue: !def.abor
           });
         } else {
           payload.issues.push({
@@ -7574,7 +7574,7 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
             inst,
             origin,
             inclusive: true,
-            continue: !def.abort
+            continue: !def.abor
           });
         }
         return;
@@ -7588,7 +7588,7 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
         minimum,
         inclusive: true,
         inst,
-        continue: !def.abort
+        continue: !def.abor
       });
     }
     if (input > maximum) {
@@ -7599,7 +7599,7 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
         maximum,
         inclusive: true,
         inst,
-        continue: !def.abort
+        continue: !def.abor
       });
     }
   };
@@ -7623,7 +7623,7 @@ var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat"
         minimum,
         inclusive: true,
         inst,
-        continue: !def.abort
+        continue: !def.abor
       });
     }
     if (input > maximum) {
@@ -7634,7 +7634,7 @@ var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat"
         maximum,
         inclusive: true,
         inst,
-        continue: !def.abort
+        continue: !def.abor
       });
     }
   };
@@ -7663,7 +7663,7 @@ var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, d
       inclusive: true,
       input,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7691,7 +7691,7 @@ var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, d
       inclusive: true,
       input,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7721,7 +7721,7 @@ var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (i
       exact: true,
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7750,7 +7750,7 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
       inclusive: true,
       input,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7779,7 +7779,7 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
       inclusive: true,
       input,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7810,7 +7810,7 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
       exact: true,
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7837,7 +7837,7 @@ var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat"
         input: payload.value,
         ...def.pattern ? { pattern: def.pattern.toString() } : {},
         inst,
-        continue: !def.abort
+        continue: !def.abor
       });
     });
   else
@@ -7857,7 +7857,7 @@ var $ZodCheckRegex = /* @__PURE__ */ $constructor("$ZodCheckRegex", (inst, def) 
       input: payload.value,
       pattern: def.pattern.toString(),
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7889,7 +7889,7 @@ var $ZodCheckIncludes = /* @__PURE__ */ $constructor("$ZodCheckIncludes", (inst,
       includes: def.includes,
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7912,7 +7912,7 @@ var $ZodCheckStartsWith = /* @__PURE__ */ $constructor("$ZodCheckStartsWith", (i
       prefix: def.prefix,
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7935,7 +7935,7 @@ var $ZodCheckEndsWith = /* @__PURE__ */ $constructor("$ZodCheckEndsWith", (inst,
       suffix: def.suffix,
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -7972,7 +7972,7 @@ var $ZodCheckMimeType = /* @__PURE__ */ $constructor("$ZodCheckMimeType", (inst,
       values: def.mime,
       input: payload.value.type,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -8153,7 +8153,7 @@ var $ZodString = /* @__PURE__ */ $constructor("$ZodString", (inst, def) => {
       expected: "string",
       code: "invalid_type",
       input: payload.value,
-      inst
+      ins
     });
     return payload;
   };
@@ -8203,7 +8203,7 @@ var $ZodURL = /* @__PURE__ */ $constructor("$ZodURL", (inst, def) => {
             note: "Invalid URL format",
             input: payload.value,
             inst,
-            continue: !def.abort
+            continue: !def.abor
           });
           return;
         }
@@ -8219,7 +8219,7 @@ var $ZodURL = /* @__PURE__ */ $constructor("$ZodURL", (inst, def) => {
             pattern: def.hostname.source,
             input: payload.value,
             inst,
-            continue: !def.abort
+            continue: !def.abor
           });
         }
       }
@@ -8233,7 +8233,7 @@ var $ZodURL = /* @__PURE__ */ $constructor("$ZodURL", (inst, def) => {
             pattern: def.protocol.source,
             input: payload.value,
             inst,
-            continue: !def.abort
+            continue: !def.abor
           });
         }
       }
@@ -8249,7 +8249,7 @@ var $ZodURL = /* @__PURE__ */ $constructor("$ZodURL", (inst, def) => {
         format: "url",
         input: payload.value,
         inst,
-        continue: !def.abort
+        continue: !def.abor
       });
     }
   };
@@ -8316,7 +8316,7 @@ var $ZodIPv6 = /* @__PURE__ */ $constructor("$ZodIPv6", (inst, def) => {
         format: "ipv6",
         input: payload.value,
         inst,
-        continue: !def.abort
+        continue: !def.abor
       });
     }
   };
@@ -8353,7 +8353,7 @@ var $ZodCIDRv6 = /* @__PURE__ */ $constructor("$ZodCIDRv6", (inst, def) => {
         format: "cidrv6",
         input: payload.value,
         inst,
-        continue: !def.abort
+        continue: !def.abor
       });
     }
   };
@@ -8384,7 +8384,7 @@ var $ZodBase64 = /* @__PURE__ */ $constructor("$ZodBase64", (inst, def) => {
       format: "base64",
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -8407,7 +8407,7 @@ var $ZodBase64URL = /* @__PURE__ */ $constructor("$ZodBase64URL", (inst, def) =>
       format: "base64url",
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -8445,7 +8445,7 @@ var $ZodJWT = /* @__PURE__ */ $constructor("$ZodJWT", (inst, def) => {
       format: "jwt",
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -8459,7 +8459,7 @@ var $ZodCustomStringFormat = /* @__PURE__ */ $constructor("$ZodCustomStringForma
       format: def.format,
       input: payload.value,
       inst,
-      continue: !def.abort
+      continue: !def.abor
     });
   };
 });
@@ -8507,7 +8507,7 @@ var $ZodBoolean = /* @__PURE__ */ $constructor("$ZodBoolean", (inst, def) => {
       expected: "boolean",
       code: "invalid_type",
       input,
-      inst
+      ins
     });
     return payload;
   };
@@ -8527,7 +8527,7 @@ var $ZodBigInt = /* @__PURE__ */ $constructor("$ZodBigInt", (inst, def) => {
       expected: "bigint",
       code: "invalid_type",
       input: payload.value,
-      inst
+      ins
     });
     return payload;
   };
@@ -8546,7 +8546,7 @@ var $ZodSymbol = /* @__PURE__ */ $constructor("$ZodSymbol", (inst, def) => {
       expected: "symbol",
       code: "invalid_type",
       input,
-      inst
+      ins
     });
     return payload;
   };
@@ -8563,7 +8563,7 @@ var $ZodUndefined = /* @__PURE__ */ $constructor("$ZodUndefined", (inst, def) =>
       expected: "undefined",
       code: "invalid_type",
       input,
-      inst
+      ins
     });
     return payload;
   };
@@ -8580,7 +8580,7 @@ var $ZodNull = /* @__PURE__ */ $constructor("$ZodNull", (inst, def) => {
       expected: "null",
       code: "invalid_type",
       input,
-      inst
+      ins
     });
     return payload;
   };
@@ -8600,7 +8600,7 @@ var $ZodNever = /* @__PURE__ */ $constructor("$ZodNever", (inst, def) => {
       expected: "never",
       code: "invalid_type",
       input: payload.value,
-      inst
+      ins
     });
     return payload;
   };
@@ -8615,7 +8615,7 @@ var $ZodVoid = /* @__PURE__ */ $constructor("$ZodVoid", (inst, def) => {
       expected: "void",
       code: "invalid_type",
       input,
-      inst
+      ins
     });
     return payload;
   };
@@ -8639,7 +8639,7 @@ var $ZodDate = /* @__PURE__ */ $constructor("$ZodDate", (inst, def) => {
       code: "invalid_type",
       input,
       ...isDate ? { received: "Invalid Date" } : {},
-      inst
+      ins
     });
     return payload;
   };
@@ -8659,7 +8659,7 @@ var $ZodArray = /* @__PURE__ */ $constructor("$ZodArray", (inst, def) => {
         expected: "array",
         code: "invalid_type",
         input,
-        inst
+        ins
       });
       return payload;
     }
@@ -8754,7 +8754,7 @@ function handleCatchall(proms, input, payload, ctx, def, inst) {
       code: "unrecognized_keys",
       keys: unrecognized,
       input,
-      inst
+      ins
     });
   }
   if (!proms.length)
@@ -8803,7 +8803,7 @@ var $ZodObject = /* @__PURE__ */ $constructor("$ZodObject", (inst, def) => {
         expected: "object",
         code: "invalid_type",
         input,
-        inst
+        ins
       });
       return payload;
     }
@@ -8939,7 +8939,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         expected: "object",
         code: "invalid_type",
         input,
-        inst
+        ins
       });
       return payload;
     }
@@ -9115,7 +9115,7 @@ var $ZodDiscriminatedUnion = /* @__PURE__ */ $constructor("$ZodDiscriminatedUnio
         code: "invalid_type",
         expected: "object",
         input,
-        inst
+        ins
       });
       return payload;
     }
@@ -9134,7 +9134,7 @@ var $ZodDiscriminatedUnion = /* @__PURE__ */ $constructor("$ZodDiscriminatedUnio
       options: Array.from(disc.value.keys()),
       input,
       path: [def.discriminator],
-      inst
+      ins
     });
     return payload;
   };
@@ -9352,7 +9352,7 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
         expected: "record",
         code: "invalid_type",
         input,
-        inst
+        ins
       });
       return payload;
     }
@@ -9375,7 +9375,7 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
               issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
               input: key,
               path: [key],
-              inst
+              ins
             });
             continue;
           }
@@ -9442,7 +9442,7 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
               issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
               input: key,
               path: [key],
-              inst
+              ins
             });
           }
           continue;
@@ -9478,7 +9478,7 @@ var $ZodMap = /* @__PURE__ */ $constructor("$ZodMap", (inst, def) => {
         expected: "map",
         code: "invalid_type",
         input,
-        inst
+        ins
       });
       return payload;
     }
@@ -9578,7 +9578,7 @@ var $ZodEnum = /* @__PURE__ */ $constructor("$ZodEnum", (inst, def) => {
       code: "invalid_value",
       values,
       input,
-      inst
+      ins
     });
     return payload;
   };
@@ -9600,7 +9600,7 @@ var $ZodLiteral = /* @__PURE__ */ $constructor("$ZodLiteral", (inst, def) => {
       code: "invalid_value",
       values: def.values,
       input,
-      inst
+      ins
     });
     return payload;
   };
@@ -9615,7 +9615,7 @@ var $ZodFile = /* @__PURE__ */ $constructor("$ZodFile", (inst, def) => {
       expected: "file",
       code: "invalid_type",
       input,
-      inst
+      ins
     });
     return payload;
   };
@@ -9759,7 +9759,7 @@ function handleNonOptionalResult(payload, inst) {
       code: "invalid_type",
       expected: "nonoptional",
       input: payload.value,
-      inst
+      ins
     });
   }
   return payload;
@@ -10021,7 +10021,7 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
         code: "invalid_type",
         expected: "function",
         input: payload.value,
-        inst
+        ins
       });
       return payload;
     }
@@ -10043,13 +10043,13 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
           items: args[0],
           rest: args[1]
         }),
-        output: inst._def.output
+        output: inst._def.outpu
       });
     }
     return new F({
       type: "function",
       input: args[0],
-      output: inst._def.output
+      output: inst._def.outpu
     });
   };
   inst.output = (output) => {
@@ -10057,7 +10057,7 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
     return new F({
       type: "function",
       input: inst._def.input,
-      output
+      outpu
     });
   };
   return inst;
@@ -10110,7 +10110,7 @@ function handleRefineResult(result, payload, input, inst) {
       // incorporates params.error into issue reporting
       path: [...inst._zod.def.path ?? []],
       // incorporates params.error into issue reporting
-      continue: !inst._zod.def.abort
+      continue: !inst._zod.def.abor
       // params: inst._zod.def.params,
     };
     if (inst._zod.def.params)
@@ -10173,7 +10173,7 @@ __export(locales_exports, {
   vi: () => vi_default,
   yo: () => yo_default,
   zhCN: () => zh_CN_default,
-  zhTW: () => zh_TW_default
+  zhTW: () => zh_TW_defaul
 });
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ar.js
@@ -12069,7 +12069,7 @@ var error17 = () => {
     array: { unit: "\u05E4\u05E8\u05D9\u05D8\u05D9\u05DD", shortLabel: "\u05E7\u05D8\u05DF", longLabel: "\u05D2\u05D3\u05D5\u05DC" },
     set: { unit: "\u05E4\u05E8\u05D9\u05D8\u05D9\u05DD", shortLabel: "\u05E7\u05D8\u05DF", longLabel: "\u05D2\u05D3\u05D5\u05DC" },
     number: { unit: "", shortLabel: "\u05E7\u05D8\u05DF", longLabel: "\u05D2\u05D3\u05D5\u05DC" }
-    // no unit
+    // no uni
   };
   const typeEntry = (t) => t ? TypeNames[t] : void 0;
   const typeLabel = (t) => {
@@ -16852,7 +16852,7 @@ function _intersection(Class2, left, right) {
   return new Class2({
     type: "intersection",
     left,
-    right
+    righ
   });
 }
 // @__NO_SIDE_EFFECTS__
@@ -16984,7 +16984,7 @@ function _pipe(Class2, in_, out) {
   return new Class2({
     type: "pipe",
     in: in_,
-    out
+    ou
   });
 }
 // @__NO_SIDE_EFFECTS__
@@ -17529,7 +17529,7 @@ var formatMap = {
   datetime: "date-time",
   json_string: "json-string",
   regex: ""
-  // do not set
+  // do not se
 };
 var stringProcessor = (schema, ctx, _json, _params) => {
   const json2 = _json;
@@ -19225,7 +19225,7 @@ function intersection(left, right) {
   return new ZodIntersection({
     type: "intersection",
     left,
-    right
+    righ
   });
 }
 var ZodTuple = /* @__PURE__ */ $constructor("ZodTuple", (inst, def) => {
@@ -19234,7 +19234,7 @@ var ZodTuple = /* @__PURE__ */ $constructor("ZodTuple", (inst, def) => {
   inst._zod.processJSONSchema = (ctx, json2, params) => tupleProcessor(inst, ctx, json2, params);
   inst.rest = (rest) => inst.clone({
     ...inst._zod.def,
-    rest
+    res
   });
 });
 function tuple(items, _paramsOrRest, _params) {
@@ -19578,7 +19578,7 @@ function pipe(in_, out) {
   return new ZodPipe({
     type: "pipe",
     in: in_,
-    out
+    ou
     // ...util.normalizeParams(params),
   });
 }
@@ -19789,7 +19789,7 @@ var RECOGNIZED_KEYS = /* @__PURE__ */ new Set([
   "oneOf",
   "allOf",
   "not",
-  // Object
+  // Objec
   "properties",
   "required",
   "additionalProperties",
@@ -19821,7 +19821,7 @@ var RECOGNIZED_KEYS = /* @__PURE__ */ new Set([
   // Already handled metadata
   "description",
   "default",
-  // Content
+  // Conten
   "contentEncoding",
   "contentMediaType",
   "contentSchema",
@@ -20269,6 +20269,35 @@ function date4(params) {
 config(en_default());
 
 // src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_graph.ts
+var REQUIRED_LIFECYCLE_EDGES = [
+  { id: "probe-to-migration", from: "probe", to: "migration", when: "migration-requested" },
+  { id: "probe-to-bootstrap", from: "probe", to: "bootstrap", when: "bootstrap-incomplete" },
+  { id: "probe-to-briefing", from: "probe", to: "briefing", when: "bootstrap-complete" },
+  { id: "migration-retry", from: "migration", to: "migration", when: "migration-incomplete" },
+  { id: "migration-to-bootstrap", from: "migration", to: "bootstrap", when: "migration-complete" },
+  { id: "bootstrap-retry", from: "bootstrap", to: "bootstrap", when: "bootstrap-incomplete" },
+  { id: "bootstrap-to-briefing", from: "bootstrap", to: "briefing", when: "bootstrap-complete" },
+  { id: "briefing-retry", from: "briefing", to: "briefing", when: "briefing-incomplete" },
+  { id: "briefing-to-design", from: "briefing", to: "design", when: "briefing-complete" },
+  { id: "design-retry", from: "design", to: "design", when: "design-incomplete" },
+  { id: "design-to-planning", from: "design", to: "planning", when: "design-complete" },
+  { id: "design-to-briefing", from: "design", to: "briefing", when: "spec-gap" },
+  { id: "planning-retry", from: "planning", to: "planning", when: "planning-incomplete" },
+  { id: "planning-to-task-graph", from: "planning", to: "task-graph", when: "planning-complete" },
+  { id: "planning-to-design", from: "planning", to: "design", when: "design-gap" },
+  { id: "task-graph-to-planning", from: "task-graph", to: "planning", when: "task-graph-invalid" },
+  { id: "task-graph-retry", from: "task-graph", to: "task-graph", when: "task-graph-retry" },
+  { id: "task-graph-to-implementation", from: "task-graph", to: "implementation", when: "tasks-runnable" },
+  { id: "implementation-retry", from: "implementation", to: "implementation", when: "implementation-incomplete" },
+  { id: "implementation-to-followup-triage", from: "implementation", to: "followup-triage", when: "implementation-verified" },
+  { id: "implementation-to-briefing", from: "implementation", to: "briefing", when: "spec-gap" },
+  { id: "implementation-to-design", from: "implementation", to: "design", when: "design-gap" },
+  { id: "implementation-constraint-to-design", from: "implementation", to: "design", when: "constraint-gap" },
+  { id: "followup-triage-retry", from: "followup-triage", to: "followup-triage", when: "followups-unclassified" },
+  { id: "followup-triage-to-exit-audit", from: "followup-triage", to: "exit-audit", when: "followups-classified" },
+  { id: "exit-audit-retry", from: "exit-audit", to: "exit-audit", when: "exit-audit-required" },
+  { id: "exit-audit-to-complete", from: "exit-audit", to: "complete", when: "exit-audit-pass" }
+];
 var lifecycleNodeId = external_exports.string().min(1);
 var lifecycleNodeSchema = external_exports.object({
   kind: external_exports.enum(["probe", "action", "subgraph", "gate", "audit", "terminal"]),
@@ -20367,6 +20396,20 @@ function validateGraph(value) {
   if (value.edges.some((edge) => edge.from === "complete")) {
     throw invalidGraph("complete node must not have outgoing edges");
   }
+  const edgesById = new Map(value.edges.map((edge) => [edge.id, edge]));
+  for (const expected of REQUIRED_LIFECYCLE_EDGES) {
+    const actual = edgesById.get(expected.id);
+    if (!actual) {
+      throw invalidGraph(
+        `missing required lifecycle edge: ${expected.id} (${expected.from} -> ${expected.to} when ${expected.when})`
+      );
+    }
+    if (actual.from !== expected.from || actual.to !== expected.to || actual.when !== expected.when) {
+      throw invalidGraph(
+        `lifecycle edge ${expected.id} has unexpected tuple: expected ${expected.from} -> ${expected.to} when ${expected.when}; received ${actual.from} -> ${actual.to} when ${actual.when}`
+      );
+    }
+  }
   return value;
 }
 function parseLifecycleGraph(source) {
@@ -20430,7 +20473,7 @@ function relationValues(raw, key, issues, taskId, file2) {
     if (raw !== void 0 && raw !== null) {
       issues.push({
         code: "invalid-task-document",
-        tasks: taskId ? [taskId] : [],
+        tasks: [taskId || file2],
         task: taskId || void 0,
         file: file2,
         message: `Task relations must be an object (${key})`
@@ -20448,7 +20491,7 @@ function relationValues(raw, key, issues, taskId, file2) {
       else if (item !== null && item !== void 0) {
         issues.push({
           code: "invalid-task-document",
-          tasks: taskId ? [taskId] : [],
+          tasks: [taskId || file2],
           task: taskId || void 0,
           file: file2,
           message: `Task relation ${key} must contain only strings`
@@ -20459,7 +20502,7 @@ function relationValues(raw, key, issues, taskId, file2) {
   }
   issues.push({
     code: "invalid-task-document",
-    tasks: taskId ? [taskId] : [],
+    tasks: [taskId || file2],
     task: taskId || void 0,
     file: file2,
     message: `Task relation ${key} must be an array of strings`
@@ -20484,7 +20527,7 @@ function readTaskDocuments(cwd, taskDir) {
         blocks: [],
         parseIssues: [{
           code: "invalid-task-document",
-          tasks: [],
+          tasks: [relativeFile],
           file: relativeFile,
           message: `Unable to parse task front matter: ${error51 instanceof Error ? error51.message : String(error51)}`
         }]
@@ -20497,7 +20540,7 @@ function readTaskDocuments(cwd, taskDir) {
     if (!id) {
       parseIssues.push({
         code: "invalid-task-document",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         file: relativeFile,
         message: "Task front matter requires a non-empty id"
       });
@@ -20507,7 +20550,7 @@ function readTaskDocuments(cwd, taskDir) {
     if (!TASK_STATUSES.has(statusValue)) {
       parseIssues.push({
         code: "invalid-task-status",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         task: id || void 0,
         file: relativeFile,
         message: `Unknown task status: ${statusValue || "<missing>"}`
@@ -20518,7 +20561,7 @@ function readTaskDocuments(cwd, taskDir) {
     if (rawRelations !== void 0 && (typeof rawRelations !== "object" || Array.isArray(rawRelations))) {
       parseIssues.push({
         code: "invalid-task-document",
-        tasks: id ? [id] : [],
+        tasks: [id || relativeFile],
         task: id || void 0,
         file: relativeFile,
         message: "Task relations must be an object"
@@ -20583,13 +20626,30 @@ function isExistingArtifactReference(cwd, taskDir, reference) {
     return false;
   }
 }
+function readArtifactIds(cwd, taskDir) {
+  const taskRoot = import_node_path.default.resolve(cwd, taskDir);
+  const ids = /* @__PURE__ */ new Set();
+  for (const file2 of markdownFiles(cwd)) {
+    const absolute = import_node_path.default.resolve(file2);
+    if (absolute === taskRoot || absolute.startsWith(`${taskRoot}${import_node_path.default.sep}`)) continue;
+    try {
+      const data = (0, import_gray_matter.default)(import_node_fs.default.readFileSync(file2, "utf8")).data;
+      if (["plan", "spec", "adr", "design"].includes(data.type) && typeof data.id === "string" && data.id.trim()) {
+        ids.add(data.id.trim());
+      }
+    } catch {
+    }
+  }
+  return ids;
+}
 function resolveTaskEdges(cwd, taskDir, index) {
   const edges = /* @__PURE__ */ new Map();
   const issues = [];
+  const artifactIds = readArtifactIds(cwd, taskDir);
   const addReference = (task, reference, direction) => {
     const target = resolveReference(cwd, reference, index);
     if (!target || !target.id) {
-      if (isExistingArtifactReference(cwd, taskDir, reference)) return;
+      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, reference)) return;
       issues.push({
         code: "missing-task-reference",
         tasks: task.id ? [task.id] : [],
@@ -20667,9 +20727,10 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
       "plan-has-no-tasks"
     ]);
     const code = allowed.has(issue2.code) ? issue2.code : "missing-task-reference";
+    const isMalformed = !allowed.has(issue2.code);
     return {
       code,
-      message: issue2.message,
+      message: isMalformed ? `Malformed task document: ${issue2.message}` : issue2.message,
       tasks: sortedUnique(issue2.tasks || (issue2.task ? [issue2.task] : []))
     };
   });
@@ -20816,28 +20877,28 @@ function parseRelations(cwd, absolutePath, raw) {
   }
   return { relations, issues };
 }
-function readArtifacts(cwd) {
+function readArtifacts(cwd, taskDir = "docs/tasks") {
   const result = [];
-  for (const directory of CANONICAL_TARGETS) {
-    for (const absolutePath of markdownFiles2(import_node_path2.default.join(cwd, directory))) {
-      try {
-        const source = import_node_fs2.default.readFileSync(absolutePath, "utf8");
-        const parsed = (0, import_gray_matter2.default)(source);
-        const data = parsed.data;
-        if (typeof data.id !== "string" || typeof data.type !== "string" || typeof data.status !== "string") continue;
-        const relationResult = parseRelations(cwd, absolutePath, data.relations);
-        result.push({
-          id: data.id.trim(),
-          path: normalizeRepoPath(cwd, absolutePath),
-          type: data.type.trim(),
-          status: data.status.trim(),
-          relations: relationResult.relations,
-          body: parsed.content,
-          absolutePath,
-          relationIssues: relationResult.issues
-        });
-      } catch {
-      }
+  const directories = sortedUnique2([...CANONICAL_TARGETS, normalizeRepoPath(cwd, taskDir)]);
+  const artifactPaths = sortedUnique2(directories.flatMap((directory) => markdownFiles2(import_node_path2.default.join(cwd, directory))));
+  for (const absolutePath of artifactPaths) {
+    try {
+      const source = import_node_fs2.default.readFileSync(absolutePath, "utf8");
+      const parsed = (0, import_gray_matter2.default)(source);
+      const data = parsed.data;
+      if (typeof data.id !== "string" || typeof data.type !== "string" || typeof data.status !== "string") continue;
+      const relationResult = parseRelations(cwd, absolutePath, data.relations);
+      result.push({
+        id: data.id.trim(),
+        path: normalizeRepoPath(cwd, absolutePath),
+        type: data.type.trim(),
+        status: data.status.trim(),
+        relations: relationResult.relations,
+        body: parsed.content,
+        absolutePath,
+        relationIssues: relationResult.issues
+      });
+    } catch {
     }
   }
   return result.sort((left, right) => compareStrings2(left.path, right.path));
@@ -21029,9 +21090,9 @@ function taskGraphFor(context, plan) {
   if (!plan) return void 0;
   return buildTaskGraph({ cwd: context.cwd, plan: plan.path, taskDir: context.taskDir });
 }
-function evaluateLifecycleGates(state) {
+function evaluateLifecycleGates(state, taskDir = "docs/tasks") {
   const cwd = import_node_path2.default.resolve(state.cwd);
-  const scanned = readArtifacts(cwd);
+  const scanned = readArtifacts(cwd, taskDir);
   const artifacts = scanned.length > 0 ? scanned : state.artifacts.map((artifact) => ({
     ...artifact,
     body: "",
@@ -21045,7 +21106,7 @@ function evaluateLifecycleGates(state) {
     artifacts,
     focused,
     component: focused ? componentForFocus(cwd, focused, artifacts) : [],
-    taskDir: "docs/tasks"
+    taskDir
   };
   const { spec, adr, design, plan } = focusedArtifacts(context);
   const graph = taskGraphFor(context, plan);
@@ -21092,7 +21153,8 @@ function evaluateLifecycleGates(state) {
 }
 function probeLifecycleState(options2) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
-  const scanned = readArtifacts(cwd);
+  const taskDir = options2.taskDir ?? "docs/tasks";
+  const scanned = readArtifacts(cwd, taskDir);
   const resolution = resolveFocus(cwd, options2.focus ?? [], scanned);
   const focused = resolution.focused;
   const component = focused ? componentForFocus(cwd, focused, scanned) : [];
@@ -21109,6 +21171,7 @@ function probeLifecycleState(options2) {
     return issues;
   });
   const bootstrap = bootstrapReasons(cwd);
+  const duplicateIds = [...new Set(scanned.map((artifact) => artifact.id).filter((id, index, ids) => ids.indexOf(id) !== index))];
   const stateWithoutGates = {
     schemaVersion: 1,
     cwd,
@@ -21116,12 +21179,17 @@ function probeLifecycleState(options2) {
     artifacts: scanned.map(({ body: _body, absolutePath: _absolutePath, relationIssues: _relationIssues, ...artifact }) => artifact),
     gates: {},
     signals: sortedUnique2(options2.signals ?? []),
-    blockers: sortedUnique2([...resolution.blockers, ...relationBlockers, ...bootstrap.length > 0 ? ["bootstrap-incomplete"] : []])
+    blockers: sortedUnique2([
+      ...resolution.blockers,
+      ...relationBlockers,
+      ...bootstrap.length > 0 ? ["bootstrap-incomplete"] : [],
+      ...duplicateIds.length > 0 ? ["duplicate-id", "focus-required"] : []
+    ])
   };
-  stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers });
+  stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers }, taskDir);
   if (stateWithoutGates.gates.planning.reasons.some((reason) => reason.startsWith("task-graph:"))) {
     stateWithoutGates.blockers = sortedUnique2([...stateWithoutGates.blockers, "task-graph-invalid"]);
-    stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers });
+    stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers }, taskDir);
   }
   return stateWithoutGates;
 }
@@ -21301,10 +21369,10 @@ function routeLifecycle(input) {
   if (!input.graph.nodes[input.current]) {
     throw new Error(`Unknown lifecycle node: ${input.current}`);
   }
-  const taskGraph = taskGraphForState(input.state, input.taskDir);
-  if (reasonApplies("focus-required", input.state, taskGraph)) {
-    return routeResult(input, taskGraph, input.current, "focus-required", null);
+  if (reasonApplies("focus-required", input.state, null)) {
+    return routeResult(input, null, input.current, "focus-required", null);
   }
+  const taskGraph = taskGraphForState(input.state, input.taskDir);
   let node = input.current;
   const visited = /* @__PURE__ */ new Set();
   while (!visited.has(node)) {
