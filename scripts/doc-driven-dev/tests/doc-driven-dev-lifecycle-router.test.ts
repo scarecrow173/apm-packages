@@ -3,10 +3,18 @@ import type {
   LifecycleState,
 } from "../src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_state";
 import type {
+  LifecycleNodeId,
+  LifecycleRoute,
+} from "../src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_router";
+import type {
+  LifecycleGraph,
+} from "../src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_graph";
+import type {
   TaskStatus,
 } from "../src/skills/doc-driven-dev-lifecycle/scripts/lib/task_graph";
 
 const assert = require("node:assert/strict");
+const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -15,6 +23,20 @@ const matter = require("gray-matter");
 const {
   probeLifecycleState,
 } = require("../src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_state.ts");
+const {
+  parseLifecycleGraph,
+} = require("../src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_graph.ts");
+const {
+  routeLifecycle,
+} = require("../src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_router.ts");
+
+function loadDistributedGraph(): LifecycleGraph {
+  const file = path.resolve(
+    __dirname,
+    "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/graphs/lifecycle.yaml",
+  );
+  return parseLifecycleGraph(fs.readFileSync(file, "utf8"));
+}
 
 function writeArtifact(
   repo: string,
@@ -80,6 +102,38 @@ function stateWithDoneTasks(signals: LifecycleSignal[]): LifecycleState {
     focus: ["docs/plans/0001-graph-lifecycle.md"],
     signals,
   });
+}
+
+function routeFixture(input: {
+  current: LifecycleNodeId;
+  taskStatuses?: TaskStatus[];
+  signals?: LifecycleSignal[];
+}): LifecycleRoute {
+  const statuses = input.taskStatuses ?? ["done"];
+  const repo = repoWithApprovedArtifactChain(statuses[0]);
+  for (let index = 1; index < statuses.length; index += 1) {
+    writeArtifact(repo, `docs/tasks/${String(index + 1).padStart(4, "0")}-route.md`, {
+      id: `TASK-${String(index + 1).padStart(4, "0")}`,
+      type: "task",
+      status: statuses[index],
+      title: `Route ${index + 1}`,
+      relations: { implements: ["docs/plans/0001-graph-lifecycle.md"] },
+    }, `# Route ${index + 1}\n\n## Verification\n\n- [ ] node --test\n`);
+  }
+  const state = probeLifecycleState({
+    cwd: repo,
+    focus: ["docs/plans/0001-graph-lifecycle.md"],
+    signals: input.signals ?? [],
+  });
+  return routeLifecycle({ current: input.current, graph: loadDistributedGraph(), state });
+}
+
+function routeCompiledCli(args: string[], cwd: string) {
+  return spawnSync(process.execPath, [
+    path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/scripts/route_lifecycle.js"),
+    "--cwd", cwd,
+    ...args,
+  ], { cwd, encoding: "utf8", windowsHide: true });
 }
 
 test("probe requires focus when multiple active artifact chains exist", () => {
@@ -208,4 +262,36 @@ test("follow-up and exit gates require their typed signals", () => {
   assert.equal(withoutSignals.gates["exit-audit"].status, "blocked");
   assert.equal(withSignals.gates["followup-triage"].status, "pass");
   assert.equal(withSignals.gates["exit-audit"].status, "pass");
+});
+
+test("router sends independent root tasks to implementation-flow", () => {
+  const route = routeFixture({ current: "task-graph", taskStatuses: ["todo", "todo"] });
+  assert.equal(route.next, "implementation");
+  assert.equal(route.delegate, "implementation-flow");
+  assert.deepEqual(route.taskGraph?.runnable, ["TASK-0001", "TASK-0002"]);
+});
+
+test("router retries an incomplete implementation gate", () => {
+  const route = routeFixture({ current: "implementation", taskStatuses: ["in-progress"] });
+  assert.equal(route.next, "implementation");
+  assert.equal(route.reasonCode, "implementation-incomplete");
+  assert.equal(route.edgeId, "implementation-retry");
+});
+
+test("router uses typed upstream loopbacks before forward gates", () => {
+  const specGap = routeFixture({ current: "implementation", signals: ["spec-gap"] });
+  const designGap = routeFixture({ current: "implementation", signals: ["design-gap"] });
+  assert.equal(specGap.next, "briefing");
+  assert.equal(designGap.next, "design");
+});
+
+test("router resumes from documents without persisted runtime state", () => {
+  const repo = repoWithApprovedArtifactChain();
+  const route = routeCompiledCli([
+    "--current", "probe",
+    "--focus", "docs/plans/0001-graph-lifecycle.md",
+    "--json",
+  ], repo);
+  assert.equal(route.status, 0);
+  assert.equal(JSON.parse(route.stdout).next, "implementation");
 });
