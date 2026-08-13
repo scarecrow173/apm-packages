@@ -40,7 +40,8 @@ document flow and invokes the phase-specific skills below as needed:
 
 ```mermaid
 flowchart TD
-    L["doc-driven-dev-lifecycle"] --> Pm1["Phase -1: migrate existing docs (optional)"]
+    L["doc-driven-dev-lifecycle"] --> R["route_lifecycle.js\nGraph Router"]
+    R --> Pm1["Phase -1: migrate existing docs (optional)"]
     Pm1 --> Gm1{"Migration Gate"}
     Gm1 -->|pass| P0["Phase 0: scaffold docs tree"]
     Gm1 -->|"loopback: mapping or apply issue"| Pm1
@@ -59,7 +60,8 @@ flowchart TD
     G2 -->|"loopback: design not approved or inconsistent"| P1
     G2 -->|"loopback: design needs refinement"| P2
 
-    P3 --> G3{"Planning & Tasking Gate"}
+    P3 --> TG["build_task_graph.js\nTask DAG: fan-out / fan-in"]
+    TG --> G3{"Planning & Tasking Gate\ncontinuous node audit"}
     G3 -->|pass| P4["Phase 4: implementation-flow -> impl-doc"]
     G3 -->|"loopback: approved design missing"| P2
     G3 -->|"loopback: plan approval missing"| P3
@@ -82,7 +84,7 @@ flowchart TD
     GX -->|doc-only exit evidence only| P5
     GX -->|defer or wont-do| P5
 
-    P5 --> G5{"Exit Gate"}
+    P5 --> G5{"Phase 5 final\ndoc-status audit"}
     G5 -->|pass| E["exit"]
     G5 -->|"loopback: front matter, relation, or index issue"| P5
 ```

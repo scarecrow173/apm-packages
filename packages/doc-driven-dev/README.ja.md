@@ -38,7 +38,8 @@ fail-closed 動作を規定します。Markdown artifact は project history の
 
 ```mermaid
 flowchart TD
-    L["doc-driven-dev-lifecycle"] --> Pm1["Phase -1: migrate existing docs（任意）"]
+    L["doc-driven-dev-lifecycle"] --> R["route_lifecycle.js\nGraph Router"]
+    R --> Pm1["Phase -1: migrate existing docs（任意）"]
     Pm1 --> Gm1{"Migration Gate"}
     Gm1 -->|pass| P0["Phase 0: scaffold docs tree"]
     Gm1 -->|"loopback: mapping または apply の問題"| Pm1
@@ -57,7 +58,8 @@ flowchart TD
     G2 -->|"loopback: design 未承認または不整合"| P1
     G2 -->|"loopback: design の再整理が必要"| P2
 
-    P3 --> G3{"Planning & Tasking Gate"}
+    P3 --> TG["build_task_graph.js\nTask DAG: fan-out / fan-in"]
+    TG --> G3{"Planning & Tasking Gate\n各 node を継続監査"}
     G3 -->|pass| P4["Phase 4: implementation-flow -> impl-doc"]
     G3 -->|"loopback: 承認済み design 不足"| P2
     G3 -->|"loopback: plan approval 不足"| P3
@@ -80,7 +82,7 @@ flowchart TD
     GX -->|終了証跡のみの doc-only| P5
     GX -->|defer または wont-do| P5
 
-    P5 --> G5{"Exit Gate"}
+    P5 --> G5{"Phase 5 最終\ndoc-status audit"}
     G5 -->|pass| E["exit"]
     G5 -->|"loopback: front matter, relation, index の問題"| P5
 ```
