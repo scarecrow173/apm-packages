@@ -278,6 +278,30 @@ test("router retries an incomplete implementation gate", () => {
   assert.equal(route.edgeId, "implementation-retry");
 });
 
+test("router preserves typed migration and task-graph retries", () => {
+  const migration = routeFixture({ current: "migration", signals: ["migration-incomplete"] });
+  assert.equal(migration.next, "migration");
+  assert.equal(migration.reasonCode, "migration-incomplete");
+  const taskGraph = routeFixture({ current: "task-graph", taskStatuses: ["done"], signals: ["task-graph-retry"] });
+  assert.equal(taskGraph.next, "task-graph");
+  assert.equal(taskGraph.reasonCode, "task-graph-retry");
+  assert.equal(taskGraph.edgeId, "task-graph-retry");
+});
+
+test("router never invents an edge for the terminal node", () => {
+  const route = routeFixture({ current: "complete", taskStatuses: ["done"] });
+  assert.equal(route.next, "complete");
+  assert.equal(route.reasonCode, "lifecycle-complete");
+  assert.equal(route.edgeId, null);
+});
+
+test("blocked task-graph state falls back to its declared retry edge", () => {
+  const route = routeFixture({ current: "task-graph", taskStatuses: ["done"] });
+  assert.equal(route.next, "task-graph");
+  assert.equal(route.reasonCode, "task-graph-retry");
+  assert.equal(route.edgeId, "task-graph-retry");
+});
+
 test("router uses typed upstream loopbacks before forward gates", () => {
   const specGap = routeFixture({ current: "implementation", signals: ["spec-gap"] });
   const designGap = routeFixture({ current: "implementation", signals: ["design-gap"] });

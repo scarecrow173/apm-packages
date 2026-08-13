@@ -21154,6 +21154,17 @@ var SUCCESS_EDGES = {
   "followup-triage": "followups-classified",
   "exit-audit": "exit-audit-pass"
 };
+var RETRY_REASONS = {
+  migration: "migration-incomplete",
+  bootstrap: "bootstrap-incomplete",
+  briefing: "briefing-incomplete",
+  design: "design-incomplete",
+  planning: "planning-incomplete",
+  "task-graph": "task-graph-retry",
+  implementation: "implementation-incomplete",
+  "followup-triage": "followups-unclassified",
+  "exit-audit": "exit-audit-required"
+};
 function compareStrings3(left, right) {
   return left.localeCompare(right);
 }
@@ -21222,9 +21233,16 @@ function successEdge(graph, node, state) {
     if (state.gates.bootstrap?.status === "pass") return findEdge(graph, node, "bootstrap-complete");
     return void 0;
   }
+  if (node === "migration") {
+    if (hasSignal(state, "migration-incomplete")) return findEdge(graph, node, "migration-incomplete");
+    if (hasSignal(state, "migration-complete")) return findEdge(graph, node, "migration-complete");
+    return void 0;
+  }
+  if (node === "task-graph" && hasSignal(state, "task-graph-retry")) {
+    return findEdge(graph, node, "task-graph-retry");
+  }
   const reason = SUCCESS_EDGES[node];
   if (!reason) return void 0;
-  if (node === "migration" && hasSignal(state, "migration-incomplete")) return void 0;
   if (node === "bootstrap" && reasonApplies("bootstrap-incomplete", state, null)) return void 0;
   if (node === "briefing" && gateIsNotPassing(state, "briefing")) return void 0;
   if (node === "design" && gateIsNotPassing(state, "design")) return void 0;
@@ -21233,6 +21251,10 @@ function successEdge(graph, node, state) {
   if (node === "followup-triage" && gateIsNotPassing(state, "followup-triage")) return void 0;
   if (node === "exit-audit" && gateIsNotPassing(state, "exit-audit")) return void 0;
   return findEdge(graph, node, reason);
+}
+function retryEdge(graph, node) {
+  const reason = RETRY_REASONS[node];
+  return reason ? findEdge(graph, node, reason) : void 0;
 }
 function routeResult(input, taskGraph, next, reasonCode, edgeId) {
   const node = input.graph.nodes[next] ?? input.graph.nodes[input.current];
@@ -21271,12 +21293,17 @@ function routeLifecycle(input) {
     }
     const edge = successEdge(input.graph, node, input.state);
     if (!edge) break;
+    if (edge.to === node) {
+      return routeResult(input, taskGraph, edge.to, edge.when, edge.id);
+    }
     node = edge.to;
   }
   if (node === "complete") {
-    return routeResult(input, taskGraph, node, "lifecycle-complete", "lifecycle-complete");
+    return routeResult(input, taskGraph, node, "lifecycle-complete", null);
   }
-  return routeResult(input, taskGraph, node, "lifecycle-complete", null);
+  const retry = retryEdge(input.graph, node);
+  if (retry) return routeResult(input, taskGraph, retry.to, retry.when, retry.id);
+  throw new Error(`Lifecycle graph has no route for node: ${node}`);
 }
 
 // src/skills/doc-driven-dev-lifecycle/scripts/route_lifecycle.ts

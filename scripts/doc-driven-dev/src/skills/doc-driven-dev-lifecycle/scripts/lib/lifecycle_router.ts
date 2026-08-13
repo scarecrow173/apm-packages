@@ -57,6 +57,18 @@ const SUCCESS_EDGES: Partial<Record<LifecycleNodeId, LifecycleReasonCode>> = {
   "exit-audit": "exit-audit-pass",
 };
 
+const RETRY_REASONS: Partial<Record<LifecycleNodeId, LifecycleReasonCode>> = {
+  migration: "migration-incomplete",
+  bootstrap: "bootstrap-incomplete",
+  briefing: "briefing-incomplete",
+  design: "design-incomplete",
+  planning: "planning-incomplete",
+  "task-graph": "task-graph-retry",
+  implementation: "implementation-incomplete",
+  "followup-triage": "followups-unclassified",
+  "exit-audit": "exit-audit-required",
+};
+
 function compareStrings(left: string, right: string): number {
   return left.localeCompare(right);
 }
@@ -133,9 +145,16 @@ function successEdge(graph: LifecycleGraph, node: LifecycleNodeId, state: Lifecy
     if (state.gates.bootstrap?.status === "pass") return findEdge(graph, node, "bootstrap-complete");
     return undefined;
   }
+  if (node === "migration") {
+    if (hasSignal(state, "migration-incomplete")) return findEdge(graph, node, "migration-incomplete");
+    if (hasSignal(state, "migration-complete")) return findEdge(graph, node, "migration-complete");
+    return undefined;
+  }
+  if (node === "task-graph" && hasSignal(state, "task-graph-retry")) {
+    return findEdge(graph, node, "task-graph-retry");
+  }
   const reason = SUCCESS_EDGES[node];
   if (!reason) return undefined;
-  if (node === "migration" && hasSignal(state, "migration-incomplete")) return undefined;
   if (node === "bootstrap" && reasonApplies("bootstrap-incomplete", state, null)) return undefined;
   if (node === "briefing" && gateIsNotPassing(state, "briefing")) return undefined;
   if (node === "design" && gateIsNotPassing(state, "design")) return undefined;
@@ -144,6 +163,11 @@ function successEdge(graph: LifecycleGraph, node: LifecycleNodeId, state: Lifecy
   if (node === "followup-triage" && gateIsNotPassing(state, "followup-triage")) return undefined;
   if (node === "exit-audit" && gateIsNotPassing(state, "exit-audit")) return undefined;
   return findEdge(graph, node, reason);
+}
+
+function retryEdge(graph: LifecycleGraph, node: LifecycleNodeId): ReturnType<typeof findEdge> {
+  const reason = RETRY_REASONS[node];
+  return reason ? findEdge(graph, node, reason) : undefined;
 }
 
 function routeResult(
@@ -203,15 +227,20 @@ export function routeLifecycle(input: {
 
     const edge = successEdge(input.graph, node, input.state);
     if (!edge) break;
+    if (edge.to === node) {
+      return routeResult(input, taskGraph, edge.to, edge.when, edge.id);
+    }
     node = edge.to;
   }
 
-  // A complete node is terminal. Keep the output total and deterministic even
-  // for synthetic graphs without a matching lifecycle-complete edge.
+  // A complete node is terminal and has no outgoing graph edge. Other nodes
+  // always use a declared retry edge rather than inventing a transition.
   if (node === "complete") {
-    return routeResult(input, taskGraph, node, "lifecycle-complete", "lifecycle-complete");
+    return routeResult(input, taskGraph, node, "lifecycle-complete", null);
   }
-  return routeResult(input, taskGraph, node, "lifecycle-complete", null);
+  const retry = retryEdge(input.graph, node);
+  if (retry) return routeResult(input, taskGraph, retry.to, retry.when, retry.id);
+  throw new Error(`Lifecycle graph has no route for node: ${node}`);
 }
 
 export { routingPrecedence };
