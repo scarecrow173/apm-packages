@@ -87,6 +87,21 @@ function repoWithApprovedArtifactChain(taskStatus: TaskStatus = "todo"): string 
   return repo;
 }
 
+function repoWithIdRelationArtifactChain(taskStatus: TaskStatus = "todo"): string {
+  const repo = repoWithApprovedArtifactChain(taskStatus);
+  writeArtifact(repo, "docs/designs/0001-graph.md", {
+    id: "DESIGN-0001", type: "design", status: "approved", title: "Graph Design",
+    relations: {
+      "derives-from": ["SPEC-0001", "ADR-0001"],
+    },
+  }, "# Graph Design\n");
+  writeArtifact(repo, "docs/plans/0001-graph-lifecycle.md", {
+    id: "PLAN-0001", type: "plan", status: "approved", title: "Graph Plan",
+    relations: { "derives-from": ["DESIGN-0001"] },
+  }, "# Graph Plan\n");
+  return repo;
+}
+
 function repoWithTwoPlans(): string {
   const repo = repoWithApprovedArtifactChain();
   writeArtifact(repo, "docs/plans/0002-other.md", {
@@ -162,6 +177,48 @@ test("approved focused plan with valid tasks reaches task graph gate", () => {
   assert.equal(state.gates.design.status, "pass");
   assert.equal(state.gates.planning.status, "pass");
   assert.deepEqual(state.blockers, []);
+});
+
+test("raw ID relations resolve the focused plan through design and planning", () => {
+  const repo = repoWithIdRelationArtifactChain("done");
+  const state = probeLifecycleState({ cwd: repo, focus: ["PLAN-0001"], signals: [] });
+  const design = state.artifacts.find((artifact) => artifact.id === "DESIGN-0001");
+  const plan = state.artifacts.find((artifact) => artifact.id === "PLAN-0001");
+  assert.ok(design?.relations["derives-from"]?.includes("SPEC-0001"));
+  assert.ok(design?.relations["derives-from"]?.includes("ADR-0001"));
+  assert.ok(plan?.relations["derives-from"]?.includes("DESIGN-0001"));
+  assert.equal(state.gates.design.status, "pass");
+  assert.equal(state.gates.planning.status, "pass");
+
+  const route = routeLifecycle({ current: "planning", graph: loadDistributedGraph(), state });
+  assert.equal(route.next, "task-graph");
+  assert.equal(route.taskGraph?.plan, "docs/plans/0001-graph-lifecycle.md");
+});
+
+test("relates-to cannot select an unrelated plan for a focused design", () => {
+  const repo = repoWithApprovedArtifactChain();
+  fs.rmSync(path.join(repo, "docs/plans/0001-graph-lifecycle.md"));
+  fs.rmSync(path.join(repo, "docs/tasks/0001-route.md"));
+  writeArtifact(repo, "docs/designs/0001-graph.md", {
+    id: "DESIGN-0001", type: "design", status: "approved", title: "Graph Design",
+    relations: {
+      "derives-from": ["SPEC-0001", "ADR-0001"],
+      "relates-to": ["UNRELATED-PLAN"],
+    },
+  }, "# Graph Design\n");
+  writeArtifact(repo, "docs/plans/0002-unrelated.md", {
+    id: "UNRELATED-PLAN", type: "plan", status: "approved", title: "Unrelated Plan",
+    relations: { "relates-to": ["DESIGN-0001"] },
+  }, "# Unrelated Plan\n");
+  writeArtifact(repo, "docs/tasks/0002-unrelated.md", {
+    id: "TASK-0002", type: "task", status: "todo", title: "Unrelated Task",
+    relations: { implements: ["docs/plans/0002-unrelated.md"] },
+  }, "# Unrelated Task\n\n## Verification\n\n- [ ] node --test\n");
+
+  const state = probeLifecycleState({ cwd: repo, focus: ["DESIGN-0001"], signals: [] });
+  assert.notEqual(state.gates.planning.status, "pass");
+  const route = routeLifecycle({ current: "planning", graph: loadDistributedGraph(), state });
+  assert.equal(route.taskGraph, null);
 });
 
 test("implementation evidence remains a signal-backed gate", () => {

@@ -1,9 +1,16 @@
+import path from "node:path";
+
 import {
   findEdge,
   type LifecycleGraph,
   type LifecycleNodeId,
   type LifecycleReasonCode,
 } from "./lifecycle_graph";
+import {
+  LIFECYCLE_LINEAGE_RELATIONS,
+  resolveLifecycleRelationTarget,
+  type LifecycleArtifact,
+} from "./lifecycle_relations";
 import {
   type LifecycleSignal,
   type LifecycleState,
@@ -95,25 +102,23 @@ function lifecycleComplete(state: LifecycleState): boolean {
 // Only these typed relations establish artifact lineage for focus resolution.
 // Contextual, evidence, and task-dependency fields (for example `related`,
 // `references`, `source`, `depends-on`, and `blocks`) must not select a plan.
-const LIFECYCLE_LINEAGE_RELATIONS = new Set([
-  "implements",
-  "implemented-by",
-  "derives-from",
-  "derived-by",
-  "refines",
-  "refined-by",
-]);
-
-function lineageValues(artifact: LifecycleState["artifacts"][number]): string[] {
+function lineageValues(artifact: LifecycleArtifact & LifecycleState["artifacts"][number]): string[] {
   return [...LIFECYCLE_LINEAGE_RELATIONS].flatMap((relation) => artifact.relations[relation] ?? []);
 }
 
 function selectedPlan(state: LifecycleState): string | undefined {
-  const byPath = new Map(state.artifacts.map((artifact) => [artifact.path, artifact]));
-  const byId = new Map(state.artifacts.map((artifact) => [artifact.id, artifact]));
+  const artifacts = state.artifacts.map((artifact) => ({
+    ...artifact,
+    absolutePath: path.resolve(state.cwd, artifact.path),
+  }));
   const queue = state.focus
-    .map((focus) => byPath.get(focus) ?? byId.get(focus))
-    .filter((artifact): artifact is (typeof state.artifacts)[number] => Boolean(artifact));
+    .map((focus) => {
+      const byPath = artifacts.find((artifact) => artifact.path === focus);
+      if (byPath) return byPath;
+      const byId = artifacts.filter((artifact) => artifact.id === focus);
+      return byId.length === 1 ? byId[0] : undefined;
+    })
+    .filter((artifact): artifact is (typeof artifacts)[number] => Boolean(artifact));
   const visited = new Set<string>();
   const plans: string[] = [];
   while (queue.length > 0) {
@@ -122,12 +127,15 @@ function selectedPlan(state: LifecycleState): string | undefined {
     visited.add(artifact.path);
     if (artifact.type === "plan") plans.push(artifact.path);
     for (const value of lineageValues(artifact)) {
-      const target = byPath.get(value) ?? byId.get(value);
+      const target = resolveLifecycleRelationTarget(state.cwd, artifact, value, artifacts);
       if (target && !visited.has(target.path)) queue.push(target);
     }
     for (const candidate of state.artifacts) {
-      const pointsTo = lineageValues(candidate).some((value) => value === artifact.path || value === artifact.id);
-      if (pointsTo && !visited.has(candidate.path)) queue.push(candidate);
+      const candidateWithPath = artifacts.find((entry) => entry.path === candidate.path);
+      if (!candidateWithPath) continue;
+      const pointsTo = lineageValues(candidateWithPath).some((value) =>
+        resolveLifecycleRelationTarget(state.cwd, candidateWithPath, value, artifacts)?.path === artifact.path);
+      if (pointsTo && !visited.has(candidateWithPath.path)) queue.push(candidateWithPath);
     }
   }
   return plans.sort(compareStrings)[0];

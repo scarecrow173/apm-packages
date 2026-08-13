@@ -3,6 +3,13 @@ import path from "node:path";
 
 import matter from "gray-matter";
 
+import {
+  isExternalReference,
+  LIFECYCLE_LINEAGE_RELATIONS,
+  normalizeLifecycleLocalTarget,
+  parseLifecycleRelations,
+  resolveLifecycleRelationTarget,
+} from "./lifecycle_relations";
 import { buildTaskGraph, normalizeRepoPath, type TaskGraphResult } from "./task_graph";
 
 /** Runtime evidence that is supplied by lifecycle callers, rather than read from documents. */
@@ -95,8 +102,6 @@ const ACTIVE_STATUSES = new Set([
   "confirmed", "routed", "active",
 ]);
 
-const EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
-
 function compareStrings(left: string, right: string): number {
   return left.localeCompare(right);
 }
@@ -121,69 +126,6 @@ function markdownFiles(dir: string): string[] {
   return files.sort(compareStrings);
 }
 
-function isInside(cwd: string, candidate: string): boolean {
-  const root = path.resolve(cwd);
-  const resolved = path.resolve(candidate);
-  return resolved === root || resolved.startsWith(`${root}${path.sep}`);
-}
-
-function normalizeLocalTarget(
-  cwd: string,
-  owner: string,
-  target: string,
-): { value: string; exists: boolean; external: boolean } {
-  const trimmed = target.trim();
-  if (EXTERNAL_REFERENCE.test(trimmed)) return { value: trimmed, exists: true, external: true };
-
-  const ownerDir = path.dirname(owner);
-  const rootCandidate = path.resolve(cwd, trimmed);
-  const documentCandidate = path.resolve(ownerDir, trimmed);
-  const documentRelative = trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed === "." || trimmed === "..";
-  const preferred = documentRelative ? documentCandidate : rootCandidate;
-  const fallback = documentRelative ? rootCandidate : documentCandidate;
-  const chosen = isInside(cwd, preferred) && fs.existsSync(preferred) ? preferred : fallback;
-  const exists = isInside(cwd, chosen) && fs.existsSync(chosen) && fs.statSync(chosen).isFile();
-  const value = isInside(cwd, chosen)
-    ? normalizeRepoPath(cwd, chosen)
-    : normalizeRepoPath(cwd, preferred);
-  return { value, exists, external: false };
-}
-
-function parseRelations(
-  cwd: string,
-  absolutePath: string,
-  raw: unknown,
-): { relations: Record<string, string[]>; issues: string[] } {
-  const relations: Record<string, string[]> = {};
-  const issues: string[] = [];
-  if (raw === undefined || raw === null) return { relations, issues };
-  if (typeof raw !== "object" || Array.isArray(raw)) {
-    return { relations, issues: [`invalid-relations:${normalizeRepoPath(cwd, absolutePath)}`] };
-  }
-  for (const key of Object.keys(raw as Record<string, unknown>).sort(compareStrings)) {
-    const value = (raw as Record<string, unknown>)[key];
-    // `changes` is a structured audit-history object in the shared document
-    // schema, not a graph relation and must not be traversed here.
-    if (key === "changes" && value && typeof value === "object" && !Array.isArray(value)) continue;
-    const values = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
-    if (typeof value !== "string" && !Array.isArray(value)) {
-      issues.push(`invalid-relation:${normalizeRepoPath(cwd, absolutePath)}:${key}`);
-      relations[key] = [];
-      continue;
-    }
-    const normalized: string[] = [];
-    for (const item of values) {
-      if (typeof item !== "string" || !item.trim()) {
-        issues.push(`invalid-relation:${normalizeRepoPath(cwd, absolutePath)}:${key}`);
-        continue;
-      }
-      normalized.push(normalizeLocalTarget(cwd, absolutePath, item).value);
-    }
-    relations[key] = sortedUnique(normalized);
-  }
-  return { relations, issues };
-}
-
 function readArtifacts(cwd: string, taskDir = "docs/tasks"): DocumentArtifact[] {
   const result: DocumentArtifact[] = [];
   const directories = sortedUnique([...CANONICAL_TARGETS, normalizeRepoPath(cwd, taskDir)]);
@@ -194,7 +136,7 @@ function readArtifacts(cwd: string, taskDir = "docs/tasks"): DocumentArtifact[] 
         const parsed = matter(source);
         const data = parsed.data as Record<string, unknown>;
         if (typeof data.id !== "string" || typeof data.type !== "string" || typeof data.status !== "string") continue;
-        const relationResult = parseRelations(cwd, absolutePath, data.relations);
+        const relationResult = parseLifecycleRelations(cwd, absolutePath, data.relations);
         result.push({
           id: data.id.trim(),
           path: normalizeRepoPath(cwd, absolutePath),
@@ -212,24 +154,17 @@ function readArtifacts(cwd: string, taskDir = "docs/tasks"): DocumentArtifact[] 
   return result.sort((left, right) => compareStrings(left.path, right.path));
 }
 
-function artifactTarget(cwd: string, artifact: DocumentArtifact, value: string): DocumentArtifact | undefined {
-  if (EXTERNAL_REFERENCE.test(value)) return undefined;
-  const normalized = normalizeLocalTarget(cwd, artifact.absolutePath, value).value;
-  return undefined;
-}
-
 function relationTarget(
   cwd: string,
   source: DocumentArtifact,
   value: string,
   artifacts: DocumentArtifact[],
 ): DocumentArtifact | undefined {
-  if (EXTERNAL_REFERENCE.test(value)) return undefined;
-  const byId = artifacts.filter((artifact) => artifact.id === value);
-  if (byId.length === 1) return byId[0];
-  if (byId.length > 1) return undefined;
-  const normalized = normalizeLocalTarget(cwd, source.absolutePath, value).value;
-  return artifacts.find((artifact) => artifact.path === normalized);
+  return resolveLifecycleRelationTarget(cwd, source, value, artifacts);
+}
+
+function lineageValues(artifact: DocumentArtifact): string[] {
+  return [...LIFECYCLE_LINEAGE_RELATIONS].flatMap((relation) => artifact.relations[relation] ?? []);
 }
 
 function componentForFocus(cwd: string, focus: DocumentArtifact, artifacts: DocumentArtifact[]): DocumentArtifact[] {
@@ -238,10 +173,10 @@ function componentForFocus(cwd: string, focus: DocumentArtifact, artifacts: Docu
   while (queue.length > 0) {
     const current = queue.shift() as DocumentArtifact;
     for (const artifact of artifacts) {
-      const pointsToCurrent = Object.values(artifact.relations).some((values) =>
-        values.some((value) => relationTarget(cwd, artifact, value, artifacts)?.path === current.path));
-      const currentPointsTo = Object.values(current.relations).some((values) =>
-        values.some((value) => relationTarget(cwd, current, value, artifacts)?.path === artifact.path));
+      const pointsToCurrent = lineageValues(artifact).some((value) =>
+        relationTarget(cwd, artifact, value, artifacts)?.path === current.path);
+      const currentPointsTo = lineageValues(current).some((value) =>
+        relationTarget(cwd, current, value, artifacts)?.path === artifact.path);
       if ((pointsToCurrent || currentPointsTo) && !visited.has(artifact.path)) {
         visited.add(artifact.path);
         queue.push(artifact);
@@ -377,9 +312,9 @@ function enumerateArtifactChains(cwd: string, artifacts: DocumentArtifact[]): Ar
   const cartesian = <T>(values: T[], fallback: Array<T | undefined>): Array<T | undefined> => values.length > 0 ? values : fallback;
 
   for (const design of designs) {
-    const relatedSpecs = relationTargets(cwd, design, ["derives-from", "implements", "spec", "relates-to"], specs);
-    const relatedAdrs = relationTargets(cwd, design, ["derives-from", "adr", "decision", "relates-to"], adrs);
-    const relatedPlans = plans.filter((plan) => relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, artifacts));
+    const relatedSpecs = relationTargets(cwd, design, ["derives-from", "implements", "spec"], specs);
+    const relatedAdrs = relationTargets(cwd, design, ["derives-from", "adr", "decision"], adrs);
+    const relatedPlans = plans.filter((plan) => relationHasTarget(cwd, plan, ["derives-from", "design"], design, artifacts));
     const relatedTasks = tasks.filter((task) => relatedPlans.some((plan) => relationHasTarget(cwd, task, ["implements"], plan, artifacts)));
     for (const spec of cartesian(relatedSpecs, [undefined])) {
       for (const adr of cartesian(relatedAdrs, [undefined])) {
@@ -390,12 +325,12 @@ function enumerateArtifactChains(cwd: string, artifacts: DocumentArtifact[]): Ar
     }
   }
   for (const plan of plans) {
-    if (designs.some((design) => relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, artifacts))) continue;
+    if (designs.some((design) => relationHasTarget(cwd, plan, ["derives-from", "design"], design, artifacts))) continue;
     const relatedTasks = tasks.filter((task) => relationHasTarget(cwd, task, ["implements"], plan, artifacts));
     add({ plan, tasks: relatedTasks });
   }
   for (const artifact of [...specs, ...adrs]) {
-    if (!designs.some((design) => relationHasTarget(cwd, design, ["derives-from", "implements", "spec", "adr", "decision", "relates-to"], artifact, artifacts))) {
+    if (!designs.some((design) => relationHasTarget(cwd, design, ["derives-from", "implements", "spec", "adr", "decision"], artifact, artifacts))) {
       add(artifact.type === "spec" ? { spec: artifact, tasks: [] } : { adr: artifact, tasks: [] });
     }
   }
@@ -523,13 +458,13 @@ export function evaluateLifecycleGates(state: LifecycleState, taskDir = "docs/ta
 
     const designReasons: string[] = [];
     if (!design || design.status !== "approved") designReasons.push("design-status");
-    if (!design || !relationHasTarget(cwd, design, ["derives-from", "implements", "spec", "relates-to"], spec, context.component)) designReasons.push("design-spec-relation");
-    if (!design || !relationHasTarget(cwd, design, ["derives-from", "adr", "decision", "relates-to"], adr, context.component)) designReasons.push("design-adr-relation");
+    if (!design || !relationHasTarget(cwd, design, ["derives-from", "implements", "spec"], spec, context.component)) designReasons.push("design-spec-relation");
+    if (!design || !relationHasTarget(cwd, design, ["derives-from", "adr", "decision"], adr, context.component)) designReasons.push("design-adr-relation");
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
 
     const planningReasons: string[] = [];
     if (!plan || !["approved", "in-progress", "completed"].includes(plan.status)) planningReasons.push("plan-status");
-    if (!plan || !relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, context.component)) planningReasons.push("plan-design-relation");
+    if (!plan || !relationHasTarget(cwd, plan, ["derives-from", "design"], design, context.component)) planningReasons.push("plan-design-relation");
     if (!graph || graph.nodes.length === 0) planningReasons.push("no-selected-tasks");
     if (graph && graph.issues.length > 0) planningReasons.push(...graph.issues.map((issue) => `task-graph:${issue.code}`));
     const hasTaskGraphIssue = Boolean(graph && graph.issues.length > 0);
@@ -565,9 +500,9 @@ export function probeLifecycleState(options: ProbeLifecycleStateOptions): Lifecy
     const issues = [...artifact.relationIssues];
     for (const [key, values] of Object.entries(artifact.relations)) {
       for (const value of values) {
-        if (EXTERNAL_REFERENCE.test(value)) continue;
+        if (isExternalReference(value)) continue;
         const target = relationTarget(cwd, artifact, value, scanned);
-        const normalized = normalizeLocalTarget(cwd, artifact.absolutePath, value);
+        const normalized = normalizeLifecycleLocalTarget(cwd, artifact.absolutePath, value);
         if (!target && !normalized.exists) issues.push(`broken-relation:${artifact.path}:${key}:${value}`);
       }
     }
