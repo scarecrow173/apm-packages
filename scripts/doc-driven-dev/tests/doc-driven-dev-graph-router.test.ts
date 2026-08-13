@@ -68,8 +68,30 @@ test("routes the first satisfied outgoing edge by ascending priority", () => {
   assert.equal(route.delegate, "repair-handler");
 });
 
+test("returns only one edge even when the destination has a satisfied edge", () => {
+  const definition = definitionWith({
+    edges: [
+      { id: "alpha-to-repair", from: "alpha", to: "repair", when: "first", priority: 10 },
+      { id: "repair-to-finished", from: "repair", to: "finished", when: "second", priority: 10 },
+    ],
+  });
+  const route = routeGraph({ current: "alpha", definition, state: stateWith({ signals: ["first", "second"] }) });
+  assert.equal(route.edgeId, "alpha-to-repair");
+  assert.equal(route.current, "alpha");
+  assert.equal(route.next, "repair");
+  assert.notEqual(route.next, "finished");
+  assert.equal(route.status, "edge");
+});
+
 test("returns terminal status when re-entering a terminal node", () => {
-  const definition = definitionWith({ nodes: { finished: { kind: "terminal", delegate: "final-handler" } } });
+  const definition: GraphDefinition = {
+    schemaVersion: 2,
+    id: "arbitrary-graph",
+    entry: "finished",
+    conditions: {},
+    nodes: { finished: { kind: "terminal", delegate: "final-handler" } },
+    edges: [],
+  };
   const route = routeGraph({ current: "finished", definition, state: stateWith() });
   assert.deepEqual(route, {
     schemaVersion: 2,
@@ -99,6 +121,10 @@ test("rejects an unknown current node", () => {
   assert.throws(
     () => routeGraph({ current: "missing", definition: definitionWith({}), state: stateWith() }),
     /Unknown graph node: missing/,
+  );
+  assert.throws(
+    () => routeGraph({ current: "toString", definition: definitionWith({}), state: stateWith() }),
+    /Unknown graph node: toString/,
   );
 });
 

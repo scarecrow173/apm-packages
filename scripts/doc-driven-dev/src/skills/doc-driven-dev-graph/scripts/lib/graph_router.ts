@@ -56,8 +56,10 @@ export function routeGraph(input: {
   definition: GraphDefinition;
   state: GraphState;
 }): GraphRoute {
+  if (!Object.prototype.hasOwnProperty.call(input.definition.nodes, input.current)) {
+    throw new Error(`Unknown graph node: ${input.current}`);
+  }
   const node = input.definition.nodes[input.current];
-  if (!node) throw new Error(`Unknown graph node: ${input.current}`);
 
   if (node.kind === "terminal") {
     return routeResult(input, {
