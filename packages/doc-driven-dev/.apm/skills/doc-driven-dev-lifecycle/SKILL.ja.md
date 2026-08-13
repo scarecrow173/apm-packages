@@ -217,7 +217,7 @@ tree を作成する。既存ファイルを保持し、`docs/designs/overview.m
 - Entry Decision（A-1〜A-5）の経路選択
 - Briefing スキル発見プロトコルとプロファイル設定
 - スキルスタックを使った情報収集の実行
-- Phase E ゲート（spec-doc + adr-doc 完了条件）
+- Phase D ゲート（spec-doc + adr-doc 完了条件）
 
 **Do NOT Load** `briefing-flow` の references は Phase 1 開始時に `briefing-flow` 自身が管理する。
 
