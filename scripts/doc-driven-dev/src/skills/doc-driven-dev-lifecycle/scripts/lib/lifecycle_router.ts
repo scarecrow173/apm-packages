@@ -75,6 +75,17 @@ const RETRY_REASONS: Partial<Record<LifecycleNodeId, LifecycleReasonCode>> = {
   "exit-audit": "exit-audit-required",
 };
 
+const REQUIRED_GATE_REASONS: Partial<Record<LifecycleNodeId, LifecycleReasonCode>> = {
+  migration: "migration-incomplete",
+  bootstrap: "bootstrap-incomplete",
+  briefing: "briefing-incomplete",
+  design: "design-incomplete",
+  planning: "planning-incomplete",
+  "task-graph": "task-graph-retry",
+  implementation: "implementation-incomplete",
+  "followup-triage": "followups-unclassified",
+};
+
 function compareStrings(left: string, right: string): number {
   return left.localeCompare(right);
 }
@@ -240,6 +251,28 @@ function followupUpstreamRecoveryEdge(graph: LifecycleGraph, state: LifecycleSta
   return undefined;
 }
 
+function prerequisiteRecoveryEdge(
+  graph: LifecycleGraph,
+  node: LifecycleNodeId,
+  state: LifecycleState,
+): ReturnType<typeof findEdge> {
+  const requiresGates = graph.nodes[node]?.requiresGates ?? [];
+  for (const gate of requiresGates) {
+    if (state.gates[gate]?.status === "pass") continue;
+    const reason = REQUIRED_GATE_REASONS[gate as LifecycleNodeId];
+    if (reason) {
+      const edge = findEdge(graph, node, reason);
+      if (edge) return edge;
+    }
+    return retryEdge(graph, node);
+  }
+  return undefined;
+}
+
+function hasFailedPrerequisite(graph: LifecycleGraph, node: LifecycleNodeId, state: LifecycleState): boolean {
+  return (graph.nodes[node]?.requiresGates ?? []).some((gate) => state.gates[gate]?.status !== "pass");
+}
+
 function retryEdge(graph: LifecycleGraph, node: LifecycleNodeId): ReturnType<typeof findEdge> {
   const reason = RETRY_REASONS[node];
   return reason ? findEdge(graph, node, reason) : undefined;
@@ -295,6 +328,12 @@ export function routeLifecycle(input: {
   const visited = new Set<LifecycleNodeId>();
   while (!visited.has(node)) {
     visited.add(node);
+
+    if (hasFailedPrerequisite(input.graph, node, input.state)) {
+      const recovery = prerequisiteRecoveryEdge(input.graph, node, input.state);
+      if (recovery) return routeResult(input, taskGraph, recovery.to, recovery.when, recovery.id);
+      break;
+    }
 
     for (const reason of routingPrecedence) {
       if (!reasonApplies(reason, input.state, taskGraph)) continue;

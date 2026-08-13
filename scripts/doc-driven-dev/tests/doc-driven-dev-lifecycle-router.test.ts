@@ -361,6 +361,28 @@ test("typed follow-up routing repairs a failing upstream gate before exit audit"
   assert.notEqual(route.next, "exit-audit");
 });
 
+test("exit audit repairs a regressed upstream gate before completion", () => {
+  const state = stateWithDoneTasks(["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  state.gates.planning = { status: "fail", reasons: ["planning-incomplete"] };
+  const route = routeLifecycle({ current: "exit-audit", graph: loadDistributedGraph(), state });
+  assert.equal(route.next, "planning");
+  assert.equal(route.reasonCode, "planning-incomplete");
+  assert.equal(route.edgeId, "exit-audit-to-planning-repair");
+  assert.notEqual(route.next, "complete");
+});
+
+test("exit audit retries when a prerequisite recovery edge is unavailable", () => {
+  const state = stateWithDoneTasks(["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  state.gates.planning = { status: "fail", reasons: ["planning-incomplete"] };
+  const graph = loadDistributedGraph();
+  graph.edges = graph.edges.filter((edge) => edge.id !== "exit-audit-to-planning-repair");
+  const route = routeLifecycle({ current: "exit-audit", graph, state });
+  assert.equal(route.next, "exit-audit");
+  assert.equal(route.reasonCode, "exit-audit-required");
+  assert.equal(route.edgeId, "exit-audit-retry");
+  assert.notEqual(route.next, "complete");
+});
+
 test("follow-up triage retries when classification is omitted or conflicting", () => {
   const omitted = routeFixture({
     current: "followup-triage",

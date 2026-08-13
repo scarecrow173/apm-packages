@@ -40,6 +40,11 @@ const unknownEndpointFixture = `${requiredNodesFixture}edges:
   - { id: unknown-endpoint, from: probe, to: missing, when: migration-requested }
 `;
 
+const unknownPrerequisiteFixture = `${requiredNodesFixture.replace(
+  "exit-audit: { kind: audit, delegate: doc-status, audits: [all] }",
+  "exit-audit: { kind: audit, delegate: doc-status, audits: [all], requiresGates: [missing] }",
+)}edges: []\n`;
+
 const duplicateEdgeIdFixture = `${requiredNodesFixture}edges:
   - { id: duplicate, from: probe, to: complete, when: migration-requested }
   - { id: duplicate, from: migration, to: complete, when: migration-complete }
@@ -122,10 +127,35 @@ test("lifecycle graph declares required upstream loopbacks", () => {
   assert.ok(findEdge(graph, "implementation", "spec-gap"));
   assert.ok(findEdge(graph, "implementation", "design-gap"));
   assert.ok(findEdge(graph, "task-graph", "task-graph-invalid"));
+  assert.deepEqual(graph.nodes["exit-audit"].requiresGates, [
+    "bootstrap",
+    "briefing",
+    "design",
+    "planning",
+    "implementation",
+    "followup-triage",
+  ]);
+  const exitAuditRepairs = [
+    ["bootstrap-incomplete", "bootstrap", "exit-audit-to-bootstrap-repair"],
+    ["briefing-incomplete", "briefing", "exit-audit-to-briefing-repair"],
+    ["design-incomplete", "design", "exit-audit-to-design-repair"],
+    ["planning-incomplete", "planning", "exit-audit-to-planning-repair"],
+    ["implementation-incomplete", "implementation", "exit-audit-to-implementation-repair"],
+    ["followups-unclassified", "followup-triage", "exit-audit-to-followup-triage-repair"],
+  ] as const;
+  for (const [reason, destination, edgeId] of exitAuditRepairs) {
+    const edge = findEdge(graph, "exit-audit", reason);
+    assert.equal(edge?.to, destination, reason);
+    assert.equal(edge?.id, edgeId, reason);
+  }
 });
 
 test("lifecycle graph rejects an unknown edge endpoint independently", () => {
   assert.throws(() => parseLifecycleGraph(unknownEndpointFixture), /unknown to node: missing/);
+});
+
+test("lifecycle graph rejects an unknown prerequisite gate", () => {
+  assert.throws(() => parseLifecycleGraph(unknownPrerequisiteFixture), /unknown prerequisite gate: missing/);
 });
 
 test("lifecycle graph rejects duplicate edge IDs independently", () => {

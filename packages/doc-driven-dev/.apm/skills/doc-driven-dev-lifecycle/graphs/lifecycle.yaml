@@ -1,17 +1,17 @@
 schemaVersion: 1
 entry: probe
 nodes:
-  probe: { kind: probe, delegate: null, audits: [] }
-  migration: { kind: action, delegate: migrate_docs, audits: [] }
-  bootstrap: { kind: action, delegate: scaffold_docs, audits: [] }
-  briefing: { kind: subgraph, delegate: briefing-flow, audits: [spec, adr] }
-  design: { kind: action, delegate: design-doc, audits: [design] }
-  planning: { kind: subgraph, delegate: null, audits: [plan, task] }
-  task-graph: { kind: gate, delegate: build_task_graph, audits: [task] }
-  implementation: { kind: subgraph, delegate: implementation-flow, audits: [impl-record] }
-  followup-triage: { kind: gate, delegate: null, audits: [task, impl-record] }
-  exit-audit: { kind: audit, delegate: doc-status, audits: [all] }
-  complete: { kind: terminal, delegate: null, audits: [] }
+  probe: { kind: probe, delegate: null, audits: [], requiresGates: [] }
+  migration: { kind: action, delegate: migrate_docs, audits: [], requiresGates: [] }
+  bootstrap: { kind: action, delegate: scaffold_docs, audits: [], requiresGates: [] }
+  briefing: { kind: subgraph, delegate: briefing-flow, audits: [spec, adr], requiresGates: [] }
+  design: { kind: action, delegate: design-doc, audits: [design], requiresGates: [] }
+  planning: { kind: subgraph, delegate: null, audits: [plan, task], requiresGates: [] }
+  task-graph: { kind: gate, delegate: build_task_graph, audits: [task], requiresGates: [] }
+  implementation: { kind: subgraph, delegate: implementation-flow, audits: [impl-record], requiresGates: [] }
+  followup-triage: { kind: gate, delegate: null, audits: [task, impl-record], requiresGates: [] }
+  exit-audit: { kind: audit, delegate: doc-status, audits: [all], requiresGates: [bootstrap, briefing, design, planning, implementation, followup-triage] }
+  complete: { kind: terminal, delegate: null, audits: [], requiresGates: [] }
 edges:
   - { id: probe-to-migration, from: probe, to: migration, when: migration-requested }
   - { id: probe-to-bootstrap, from: probe, to: bootstrap, when: bootstrap-incomplete }
@@ -48,5 +48,11 @@ edges:
   - { id: followup-triage-new-feature, from: followup-triage, to: briefing, when: followup-new-feature }
   - { id: followup-triage-doc-only, from: followup-triage, to: exit-audit, when: followup-doc-only }
   - { id: followup-triage-terminal, from: followup-triage, to: exit-audit, when: followup-terminal }
+  - { id: exit-audit-to-bootstrap-repair, from: exit-audit, to: bootstrap, when: bootstrap-incomplete }
+  - { id: exit-audit-to-briefing-repair, from: exit-audit, to: briefing, when: briefing-incomplete }
+  - { id: exit-audit-to-design-repair, from: exit-audit, to: design, when: design-incomplete }
+  - { id: exit-audit-to-planning-repair, from: exit-audit, to: planning, when: planning-incomplete }
+  - { id: exit-audit-to-implementation-repair, from: exit-audit, to: implementation, when: implementation-incomplete }
+  - { id: exit-audit-to-followup-triage-repair, from: exit-audit, to: followup-triage, when: followups-unclassified }
   - { id: exit-audit-retry, from: exit-audit, to: exit-audit, when: exit-audit-required }
   - { id: exit-audit-to-complete, from: exit-audit, to: complete, when: exit-audit-pass }

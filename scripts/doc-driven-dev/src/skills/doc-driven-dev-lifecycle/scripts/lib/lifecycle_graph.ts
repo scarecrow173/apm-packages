@@ -56,6 +56,7 @@ export type LifecycleNode = {
   kind: LifecycleNodeKind;
   delegate: string | null;
   audits: string[];
+  requiresGates: string[];
 };
 
 export type LifecycleEdge = {
@@ -109,6 +110,12 @@ const REQUIRED_LIFECYCLE_EDGES: readonly LifecycleEdge[] = [
   { id: "followup-triage-new-feature", from: "followup-triage", to: "briefing", when: "followup-new-feature" },
   { id: "followup-triage-doc-only", from: "followup-triage", to: "exit-audit", when: "followup-doc-only" },
   { id: "followup-triage-terminal", from: "followup-triage", to: "exit-audit", when: "followup-terminal" },
+  { id: "exit-audit-to-bootstrap-repair", from: "exit-audit", to: "bootstrap", when: "bootstrap-incomplete" },
+  { id: "exit-audit-to-briefing-repair", from: "exit-audit", to: "briefing", when: "briefing-incomplete" },
+  { id: "exit-audit-to-design-repair", from: "exit-audit", to: "design", when: "design-incomplete" },
+  { id: "exit-audit-to-planning-repair", from: "exit-audit", to: "planning", when: "planning-incomplete" },
+  { id: "exit-audit-to-implementation-repair", from: "exit-audit", to: "implementation", when: "implementation-incomplete" },
+  { id: "exit-audit-to-followup-triage-repair", from: "exit-audit", to: "followup-triage", when: "followups-unclassified" },
   { id: "exit-audit-retry", from: "exit-audit", to: "exit-audit", when: "exit-audit-required" },
   { id: "exit-audit-to-complete", from: "exit-audit", to: "complete", when: "exit-audit-pass" },
 ];
@@ -118,6 +125,7 @@ const lifecycleNodeSchema = z.object({
   kind: z.enum(["probe", "action", "subgraph", "gate", "audit", "terminal"]),
   delegate: z.string().min(1).nullable(),
   audits: z.array(z.string().min(1)),
+  requiresGates: z.array(z.string().min(1)).default([]),
 }).strict();
 
 const lifecycleReasonCode = z.enum([
@@ -199,6 +207,16 @@ function validateGraph(value: z.infer<typeof lifecycleGraphSchema>): LifecycleGr
   }
   if (!hasNode(value.nodes, "complete")) {
     throw invalidGraph("required terminal node does not exist: complete");
+  }
+
+  for (const [nodeId, node] of Object.entries(value.nodes)) {
+    const unknownGates = node.requiresGates.filter((gate) => !hasNode(value.nodes, gate));
+    if (unknownGates.length > 0) {
+      throw invalidGraph(`unknown prerequisite gate: ${unknownGates.join(", ")}`);
+    }
+    if (new Set(node.requiresGates).size !== node.requiresGates.length) {
+      throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
+    }
   }
 
   const edgeIds = new Set<string>();
