@@ -29,7 +29,9 @@ const SIGNALS: readonly LifecycleSignal[] = [
   "focus-required", "migration-requested", "migration-incomplete", "migration-complete",
   "bootstrap-incomplete", "bootstrap-complete", "briefing-incomplete", "briefing-complete",
   "implementation-verified", "design-incomplete", "design-complete", "design-gap",
-  "planning-incomplete", "planning-complete", "task-graph-invalid", "followups-classified",
+  "planning-incomplete", "planning-complete", "task-graph-invalid",
+  "followup-bug-fix", "followup-decision-briefing", "followup-decision-design",
+  "followup-new-feature", "followup-doc-only", "followup-terminal",
   "exit-audit-pass", "spec-gap", "constraint-gap", "task-graph-retry", "tasks-runnable",
   "implementation-incomplete", "followups-unclassified", "exit-audit-required", "lifecycle-complete",
 ];

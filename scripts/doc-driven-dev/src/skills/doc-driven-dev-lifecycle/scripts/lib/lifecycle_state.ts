@@ -29,7 +29,12 @@ export type LifecycleSignal =
   | "planning-incomplete"
   | "planning-complete"
   | "task-graph-invalid"
-  | "followups-classified"
+  | "followup-bug-fix"
+  | "followup-decision-briefing"
+  | "followup-decision-design"
+  | "followup-new-feature"
+  | "followup-doc-only"
+  | "followup-terminal"
   | "exit-audit-pass"
   | "spec-gap"
   | "constraint-gap"
@@ -479,9 +484,21 @@ export function evaluateLifecycleGates(state: LifecycleState, taskDir = "docs/ta
     if (!state.signals.includes("implementation-verified")) implementationReasons.push("implementation-verified");
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
-  gates["followup-triage"] = state.signals.includes("followups-classified")
-    ? gate("pass")
-    : gate("blocked", ["followups-classified"]);
+  const followupClassifications = state.signals.filter((signal) => [
+    "followup-bug-fix",
+    "followup-decision-briefing",
+    "followup-decision-design",
+    "followup-new-feature",
+    "followup-doc-only",
+    "followup-terminal",
+  ].includes(signal as LifecycleSignal));
+  if (followupClassifications.length === 1 && !state.signals.includes("followups-unclassified")) {
+    gates["followup-triage"] = gate("pass");
+  } else if (followupClassifications.length === 0) {
+    gates["followup-triage"] = gate("blocked", ["followups-unclassified"]);
+  } else {
+    gates["followup-triage"] = gate("blocked", ["followups-conflicting"]);
+  }
   gates["exit-audit"] = state.signals.includes("exit-audit-pass")
     ? gate("pass")
     : gate("blocked", ["exit-audit-pass"]);

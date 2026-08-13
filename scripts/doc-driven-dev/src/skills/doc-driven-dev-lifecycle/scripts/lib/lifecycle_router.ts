@@ -60,7 +60,6 @@ const SUCCESS_EDGES: Partial<Record<LifecycleNodeId, LifecycleReasonCode>> = {
   design: "design-complete",
   planning: "planning-complete",
   implementation: "implementation-verified",
-  "followup-triage": "followups-classified",
   "exit-audit": "exit-audit-pass",
 };
 
@@ -87,6 +86,15 @@ function sortedUnique(values: Iterable<string>): string[] {
 function hasSignal(state: LifecycleState, signal: LifecycleSignal): boolean {
   return state.signals.includes(signal);
 }
+
+const FOLLOWUP_CLASSIFICATIONS = [
+  "followup-bug-fix",
+  "followup-decision-briefing",
+  "followup-decision-design",
+  "followup-new-feature",
+  "followup-doc-only",
+  "followup-terminal",
+] as const satisfies readonly LifecycleReasonCode[];
 
 function gateIsNotPassing(state: LifecycleState, name: string): boolean {
   const gate = state.gates[name];
@@ -195,6 +203,9 @@ function successEdge(graph: LifecycleGraph, node: LifecycleNodeId, state: Lifecy
   if (node === "task-graph" && hasSignal(state, "task-graph-retry")) {
     return findEdge(graph, node, "task-graph-retry");
   }
+  if (node === "followup-triage") {
+    return typedFollowupEdge(graph, state);
+  }
   const reason = SUCCESS_EDGES[node];
   if (!reason) return undefined;
   if (node === "bootstrap" && reasonApplies("bootstrap-incomplete", state, null)) return undefined;
@@ -205,6 +216,13 @@ function successEdge(graph: LifecycleGraph, node: LifecycleNodeId, state: Lifecy
   if (node === "followup-triage" && gateIsNotPassing(state, "followup-triage")) return undefined;
   if (node === "exit-audit" && gateIsNotPassing(state, "exit-audit")) return undefined;
   return findEdge(graph, node, reason);
+}
+
+function typedFollowupEdge(graph: LifecycleGraph, state: LifecycleState): ReturnType<typeof findEdge> {
+  const classifications = state.signals.filter((signal): signal is (typeof FOLLOWUP_CLASSIFICATIONS)[number] =>
+    FOLLOWUP_CLASSIFICATIONS.includes(signal as (typeof FOLLOWUP_CLASSIFICATIONS)[number]));
+  if (classifications.length !== 1 || hasSignal(state, "followups-unclassified")) return undefined;
+  return findEdge(graph, "followup-triage", classifications[0]);
 }
 
 function retryEdge(graph: LifecycleGraph, node: LifecycleNodeId): ReturnType<typeof findEdge> {
@@ -248,6 +266,11 @@ export function routeLifecycle(input: {
     return routeResult(input, null, input.current, "focus-required", null);
   }
   const taskGraph = taskGraphForState(input.state, input.taskDir);
+
+  if (input.current === "followup-triage" && input.state.gates["followup-triage"]?.status === "pass") {
+    const edge = typedFollowupEdge(input.graph, input.state);
+    if (edge) return routeResult(input, taskGraph, edge.to, edge.when, edge.id);
+  }
 
   let node = input.current;
   const visited = new Set<LifecycleNodeId>();

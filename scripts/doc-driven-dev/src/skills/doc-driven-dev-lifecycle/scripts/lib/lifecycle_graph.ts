@@ -42,7 +42,12 @@ export type LifecycleReasonCode =
   | "implementation-incomplete"
   | "implementation-verified"
   | "followups-unclassified"
-  | "followups-classified"
+  | "followup-bug-fix"
+  | "followup-decision-briefing"
+  | "followup-decision-design"
+  | "followup-new-feature"
+  | "followup-doc-only"
+  | "followup-terminal"
   | "exit-audit-required"
   | "exit-audit-pass"
   | "lifecycle-complete";
@@ -93,7 +98,12 @@ const REQUIRED_LIFECYCLE_EDGES: readonly LifecycleEdge[] = [
   { id: "implementation-to-design", from: "implementation", to: "design", when: "design-gap" },
   { id: "implementation-constraint-to-design", from: "implementation", to: "design", when: "constraint-gap" },
   { id: "followup-triage-retry", from: "followup-triage", to: "followup-triage", when: "followups-unclassified" },
-  { id: "followup-triage-to-exit-audit", from: "followup-triage", to: "exit-audit", when: "followups-classified" },
+  { id: "followup-triage-to-planning", from: "followup-triage", to: "planning", when: "followup-bug-fix" },
+  { id: "followup-triage-to-briefing", from: "followup-triage", to: "briefing", when: "followup-decision-briefing" },
+  { id: "followup-triage-to-design", from: "followup-triage", to: "design", when: "followup-decision-design" },
+  { id: "followup-triage-new-feature", from: "followup-triage", to: "briefing", when: "followup-new-feature" },
+  { id: "followup-triage-doc-only", from: "followup-triage", to: "exit-audit", when: "followup-doc-only" },
+  { id: "followup-triage-terminal", from: "followup-triage", to: "exit-audit", when: "followup-terminal" },
   { id: "exit-audit-retry", from: "exit-audit", to: "exit-audit", when: "exit-audit-required" },
   { id: "exit-audit-to-complete", from: "exit-audit", to: "complete", when: "exit-audit-pass" },
 ];
@@ -127,7 +137,12 @@ const lifecycleReasonCode = z.enum([
   "implementation-incomplete",
   "implementation-verified",
   "followups-unclassified",
-  "followups-classified",
+  "followup-bug-fix",
+  "followup-decision-briefing",
+  "followup-decision-design",
+  "followup-new-feature",
+  "followup-doc-only",
+  "followup-terminal",
   "exit-audit-required",
   "exit-audit-pass",
   "lifecycle-complete",

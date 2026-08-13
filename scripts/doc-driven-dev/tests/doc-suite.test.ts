@@ -574,6 +574,7 @@ test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", 
   const skillJa = fs.readFileSync(path.join(lifecycleRoot, "SKILL.ja.md"), "utf8");
   const contract = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.md"), "utf8");
   const contractJa = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.ja.md"), "utf8");
+  const graph = fs.readFileSync(path.join(lifecycleRoot, "graphs", "lifecycle.yaml"), "utf8");
 
   assert.match(skill, /Phase 4 Exit Gate/);
   assert.match(skill, /Post-Implementation Review/);
@@ -594,6 +595,18 @@ test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", 
   assert.match(contractJa, /`doc-only`/);
   assert.match(contractJa, /`defer`/);
   assert.match(contractJa, /`wont-do`/);
+
+  for (const [signal, destination] of [
+    ["followup-bug-fix", "planning"],
+    ["followup-decision-briefing", "briefing"],
+    ["followup-decision-design", "design"],
+    ["followup-new-feature", "briefing"],
+    ["followup-doc-only", "exit-audit"],
+    ["followup-terminal", "exit-audit"],
+  ]) {
+    assert.match(graph, new RegExp(`from: followup-triage, to: ${destination}, when: ${signal}`));
+  }
+  assert.match(graph, /from: followup-triage, to: followup-triage, when: followups-unclassified/);
 });
 
 test("task-doc documents follow-up task routing and dependency rules", () => {
@@ -626,11 +639,19 @@ test("doc-status documents unclassified follow-up review before exit", () => {
   const statusRoot = path.join(skillRoot, "doc-status");
   const skill = fs.readFileSync(path.join(statusRoot, "SKILL.md"), "utf8");
   const skillJa = fs.readFileSync(path.join(statusRoot, "SKILL.ja.md"), "utf8");
+  const graph = fs.readFileSync(path.join(skillRoot, "doc-driven-dev-lifecycle", "graphs", "lifecycle.yaml"), "utf8");
 
   assert.match(skill, /unclassified follow-up/i);
   assert.match(skill, /Phase 4 Exit Gate/);
   assert.match(skillJa, /未分類フォローアップ/);
   assert.match(skillJa, /Phase 4 終了ゲート/);
+  for (const signal of [
+    "followup-bug-fix", "followup-decision-briefing", "followup-decision-design",
+    "followup-new-feature", "followup-doc-only", "followup-terminal",
+  ]) {
+    assert.match(graph, new RegExp(`when: ${signal}`));
+  }
+  assert.match(graph, /when: followups-unclassified/);
 });
 
 test("new_design continues front-matter id numbering and preserves slug naming in slug repos", () => {

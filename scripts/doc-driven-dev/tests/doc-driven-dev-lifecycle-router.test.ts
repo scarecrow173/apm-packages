@@ -312,7 +312,7 @@ test("ambiguous focused relation chains require explicit focus", () => {
   assert.ok(state.blockers.includes("focus-required"));
 });
 
-test("follow-up and exit gates require their typed signals", () => {
+test("follow-up and exit gates require one typed classification", () => {
   const repo = repoWithApprovedArtifactChain();
   const withoutSignals = probeLifecycleState({
     cwd: repo,
@@ -322,12 +322,53 @@ test("follow-up and exit gates require their typed signals", () => {
   const withSignals = probeLifecycleState({
     cwd: repo,
     focus: ["docs/plans/0001-graph-lifecycle.md"],
-    signals: ["followups-classified", "exit-audit-pass"],
+    signals: ["followup-bug-fix", "exit-audit-pass"],
   });
   assert.equal(withoutSignals.gates["followup-triage"].status, "blocked");
+  assert.deepEqual(withoutSignals.gates["followup-triage"].reasons, ["followups-unclassified"]);
   assert.equal(withoutSignals.gates["exit-audit"].status, "blocked");
   assert.equal(withSignals.gates["followup-triage"].status, "pass");
   assert.equal(withSignals.gates["exit-audit"].status, "pass");
+});
+
+test("follow-up classifications route through their declared graph destinations", () => {
+  const routes = [
+    ["followup-bug-fix", "planning", "followup-triage-to-planning"],
+    ["followup-decision-briefing", "briefing", "followup-triage-to-briefing"],
+    ["followup-decision-design", "design", "followup-triage-to-design"],
+    ["followup-new-feature", "briefing", "followup-triage-new-feature"],
+    ["followup-doc-only", "exit-audit", "followup-triage-doc-only"],
+    ["followup-terminal", "exit-audit", "followup-triage-terminal"],
+  ] as const;
+  for (const [signal, destination, edgeId] of routes) {
+    const route = routeFixture({
+      current: "followup-triage",
+      signals: ["implementation-verified", signal],
+    });
+    assert.equal(route.next, destination, signal);
+    assert.equal(route.reasonCode, signal, signal);
+    assert.equal(route.edgeId, edgeId, signal);
+  }
+});
+
+test("follow-up triage retries when classification is omitted or conflicting", () => {
+  const omitted = routeFixture({
+    current: "followup-triage",
+    signals: ["implementation-verified"],
+  });
+  assert.equal(omitted.next, "followup-triage");
+  assert.equal(omitted.reasonCode, "followups-unclassified");
+
+  const conflictState = stateWithDoneTasks([
+    "implementation-verified",
+    "followup-bug-fix",
+    "followup-terminal",
+  ]);
+  assert.equal(conflictState.gates["followup-triage"].status, "blocked");
+  assert.deepEqual(conflictState.gates["followup-triage"].reasons, ["followups-conflicting"]);
+  const conflict = routeLifecycle({ current: "followup-triage", graph: loadDistributedGraph(), state: conflictState });
+  assert.equal(conflict.next, "followup-triage");
+  assert.notEqual(conflict.next, "exit-audit");
 });
 
 test("duplicate artifact IDs fail closed even when focus uses a path", () => {
