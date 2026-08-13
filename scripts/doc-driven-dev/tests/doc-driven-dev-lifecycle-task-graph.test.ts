@@ -71,6 +71,18 @@ test("buildTaskGraph unlocks a dependent task only after every predecessor is do
   assert.deepEqual(result.runnable, ["TASK-0003"]);
 });
 
+test("buildTaskGraph keeps dependents blocked when a predecessor is wont-do", () => {
+  const result = buildFixtureGraph({
+    "TASK-0001": { status: "wont-do", dependsOn: [] },
+    "TASK-0002": { status: "todo", dependsOn: ["TASK-0001"] },
+  });
+  assert.deepEqual(result.runnable, []);
+  assert.deepEqual(result.blocked, [
+    { id: "TASK-0001", reasons: ["status:wont-do"] },
+    { id: "TASK-0002", reasons: ["depends-on:TASK-0001"] },
+  ]);
+});
+
 test("buildTaskGraph fails closed on cycle and unresolved task reference", () => {
   const result = buildFixtureGraph({
     "TASK-0001": { status: "todo", dependsOn: ["TASK-0002"] },

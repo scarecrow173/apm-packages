@@ -365,6 +365,17 @@ test("follow-up classifications route through their declared graph destinations"
   }
 });
 
+test("follow-up terminal routing treats wont-do tasks as lifecycle-resolved", () => {
+  const route = routeFixture({
+    current: "followup-triage",
+    taskStatuses: ["done", "wont-do"],
+    signals: ["implementation-verified", "followup-terminal"],
+  });
+  assert.equal(route.next, "exit-audit");
+  assert.equal(route.reasonCode, "followup-terminal");
+  assert.equal(route.edgeId, "followup-triage-terminal");
+});
+
 test("typed follow-up routing repairs a failing upstream gate before exit audit", () => {
   const state = stateWithDoneTasks(["implementation-verified", "followup-doc-only"]);
   state.gates.planning = { status: "fail", reasons: ["planning-incomplete"] };

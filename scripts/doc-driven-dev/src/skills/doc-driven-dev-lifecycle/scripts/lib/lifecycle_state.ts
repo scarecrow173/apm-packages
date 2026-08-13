@@ -422,6 +422,10 @@ function taskGraphFor(context: StateContext, plan: DocumentArtifact | undefined)
   return buildTaskGraph({ cwd: context.cwd, plan: plan.path, taskDir: context.taskDir });
 }
 
+function isLifecycleResolvedTaskStatus(status: TaskGraphResult["nodes"][number]["status"]): boolean {
+  return status === "done" || status === "wont-do";
+}
+
 /** Evaluate all lifecycle gates from the source documents represented by state. */
 export function evaluateLifecycleGates(state: LifecycleState, taskDir = "docs/tasks"): GateResults {
   const cwd = path.resolve(state.cwd);
@@ -480,7 +484,7 @@ export function evaluateLifecycleGates(state: LifecycleState, taskDir = "docs/ta
 
     const implementationReasons: string[] = [];
     if (!graph || graph.nodes.length === 0) implementationReasons.push("no-selected-tasks");
-    if (graph && graph.nodes.some((node) => node.status !== "done")) implementationReasons.push("tasks-incomplete");
+    if (graph && graph.nodes.some((node) => !isLifecycleResolvedTaskStatus(node.status))) implementationReasons.push("tasks-incomplete");
     if (!state.signals.includes("implementation-verified")) implementationReasons.push("implementation-verified");
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
