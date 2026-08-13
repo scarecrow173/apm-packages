@@ -161,8 +161,8 @@ export function evaluateGraphGates(state: GraphState): GraphGateResults {
 
     const designReasons: string[] = [];
     if (!design || design.status !== "approved") designReasons.push("design-status");
-    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from", "implements", "spec"], spec?.path)) designReasons.push("design-spec-relation");
-    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from", "adr", "decision"], adr?.path)) designReasons.push("design-adr-relation");
+    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from", "implements"], spec?.path)) designReasons.push("design-spec-relation");
+    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from"], adr?.path)) designReasons.push("design-adr-relation");
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
 
     const planningReasons: string[] = [];

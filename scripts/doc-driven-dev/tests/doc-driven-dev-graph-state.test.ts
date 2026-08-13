@@ -78,6 +78,22 @@ test("projects an explicit artifact graph and selects plans only through lineage
   assert.equal(state.signals.includes("followups-unclassified"), true);
 });
 
+test("contextual lineage-looking aliases cannot supply a plan or chain", () => {
+  const repo = fixtureRepo();
+  writeArtifact(repo, "docs/designs/0001-graph.md", {
+    id: "DESIGN-0001", type: "design", status: "approved", title: "Graph Design",
+    relations: { spec: ["SPEC-0001"], adr: ["ADR-0001"] },
+  }, "# Graph Design\n");
+  writeArtifact(repo, "docs/plans/0001-graph.md", {
+    id: "PLAN-0001", type: "plan", status: "approved", title: "Graph Plan",
+    relations: { spec: ["DESIGN-0001"] },
+  }, "# Graph Plan\n");
+  const state = projectGraphState({ cwd: repo, focus: ["DESIGN-0001"] });
+  assert.ok(state.artifactGraph.edges.some((edge) => edge.relation === "spec" && edge.kind === "contextual"));
+  assert.equal(state.taskGraph, null);
+  assert.notEqual(state.gates.planning.status, "pass");
+});
+
 test("duplicate IDs and ambiguous focus fail closed", () => {
   const repo = fixtureRepo();
   writeArtifact(repo, "docs/plans/0002-other.md", {

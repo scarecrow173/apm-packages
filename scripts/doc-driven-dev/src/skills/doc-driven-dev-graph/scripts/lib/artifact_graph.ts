@@ -329,7 +329,7 @@ export function artifactRelationTargets(
 ): string[] {
   const names = new Set(relationNames);
   return graph.edges
-    .filter((edge) => edge.from === sourcePath && edge.to !== null && names.has(edge.relation))
+    .filter((edge) => edge.kind === "lineage" && edge.from === sourcePath && edge.to !== null && names.has(edge.relation))
     .map((edge) => edge.to as string)
     .sort(compareStrings);
 }
@@ -382,8 +382,8 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
   const cartesian = <T>(values: T[], fallback: Array<T | undefined>): Array<T | undefined> => values.length > 0 ? values : fallback;
 
   for (const design of designs) {
-    const relatedSpecs = specs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements", "spec"], candidate.path));
-    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "adr", "decision"], candidate.path));
+    const relatedSpecs = specs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
+    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from"], candidate.path));
     const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
     for (const spec of cartesian(relatedSpecs, [undefined])) {
       for (const adr of cartesian(relatedAdrs, [undefined])) {
@@ -406,7 +406,7 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
     add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
   }
   for (const artifact of [...specs, ...adrs]) {
-    if (!designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements", "spec", "adr", "decision"], artifact.path))) {
+    if (!designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], artifact.path))) {
       add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
     }
   }
