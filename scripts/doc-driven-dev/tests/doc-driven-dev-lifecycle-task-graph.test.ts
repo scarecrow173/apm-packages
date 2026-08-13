@@ -7,6 +7,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 const matter = require("gray-matter");
 const {
@@ -16,7 +17,7 @@ const {
 function writeTask(
   repo: string,
   id: string,
-  input: { status: TaskStatus; dependsOn: string[] },
+  input: { status: TaskStatus; dependsOn: string[]; blocks?: string[]; implements?: string[] },
 ): void {
   const number = id.slice("TASK-".length);
   const file = path.join(repo, "docs/tasks", `${number}-task.md`);
@@ -30,15 +31,15 @@ function writeTask(
     updated: "2026-08-13",
     owners: [],
     relations: {
-      implements: ["docs/plans/0001-plan.md"],
+      implements: input.implements ?? ["docs/plans/0001-plan.md"],
       "depends-on": input.dependsOn,
-      blocks: [],
+      blocks: input.blocks ?? [],
     },
   }), "utf8");
 }
 
 function buildFixtureGraph(
-  tasks: Record<string, { status: TaskStatus; dependsOn: string[] }>,
+  tasks: Record<string, { status: TaskStatus; dependsOn: string[]; blocks?: string[]; implements?: string[] }>,
 ): TaskGraphResult {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-"));
   fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
@@ -80,4 +81,59 @@ test("buildTaskGraph fails closed on cycle and unresolved task reference", () =>
     "missing-task-reference",
     "task-cycle",
   ]);
+});
+
+test("buildTaskGraph resolves blocks in task-to-blocked direction and deduplicates edges", () => {
+  const result = buildFixtureGraph({
+    "TASK-0001": { status: "todo", dependsOn: [], blocks: ["TASK-0002"] },
+    "TASK-0002": { status: "todo", dependsOn: ["TASK-0001"] },
+  });
+  assert.deepEqual(result.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
+});
+
+test("buildTaskGraph ignores typed artifact relations but rejects unresolved task-directory paths", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-artifacts-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/specs/0001-spec.md"), matter.stringify("# Spec\n", {
+    id: "SPEC-0001", type: "spec", status: "approved", title: "Spec", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }), "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: ["docs/specs/0001-spec.md", "docs/tasks/README.md"] });
+  fs.writeFileSync(path.join(repo, "docs/tasks/README.md"), "# Task index\n", "utf8");
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+  assert.deepEqual(result.edges, []);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
+  assert.deepEqual(Object.keys(result.issues[0]).sort(), ["code", "message", "tasks"]);
+});
+
+test("buildTaskGraph reports duplicate IDs and filters tasks by plan", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-filter-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/plans/0002-plan.md"), "# Other\n", "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: [] });
+  writeTask(repo, "TASK-0002", { status: "todo", dependsOn: [], implements: ["docs/plans/0002-plan.md"] });
+  const duplicate = path.join(repo, "docs/tasks/0001-duplicate.md");
+  fs.copyFileSync(path.join(repo, "docs/tasks/0001-task.md"), duplicate);
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+  assert.deepEqual(result.nodes.map((node) => node.id), ["TASK-0001", "TASK-0001"]);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["duplicate-task-id"]);
+  assert.deepEqual(result.runnable, []);
+});
+
+test("build_task_graph CLI returns JSON and exit 1 for invalid graphs", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-cli-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: [] });
+  const cli = path.resolve(process.cwd(), "../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/scripts/build_task_graph.js");
+  const valid = spawnSync(process.execPath, [cli, "--cwd", repo, "--plan", "docs/plans/0001-plan.md", "--json"], { encoding: "utf8" });
+  assert.equal(valid.status, 0, valid.stderr);
+  assert.deepEqual(JSON.parse(valid.stdout).runnable, ["TASK-0001"]);
+
+  writeTask(repo, "TASK-0002", { status: "todo", dependsOn: ["TASK-9999"] });
+  const invalid = spawnSync(process.execPath, [cli, "--cwd", repo, "--plan", "docs/plans/0001-plan.md", "--json"], { encoding: "utf8" });
+  assert.equal(invalid.status, 1);
+  assert.equal(JSON.parse(invalid.stdout).issues[0].code, "missing-task-reference");
 });

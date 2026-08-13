@@ -19,9 +19,7 @@ export type TaskGraphEdge = {
 };
 
 export type TaskGraphIssueCode =
-  | "invalid-task-document"
   | "duplicate-task-id"
-  | "invalid-task-status"
   | "missing-task-reference"
   | "task-cycle"
   | "plan-has-no-tasks";
@@ -30,6 +28,12 @@ export type TaskGraphIssue = {
   code: TaskGraphIssueCode;
   message: string;
   tasks: string[];
+};
+
+type InternalIssue = {
+  code: string;
+  message: string;
+  tasks?: string[];
   task?: string;
   reference?: string;
   file?: string;
@@ -65,19 +69,19 @@ export type TaskGraphResult = {
 };
 
 type ParsedTask = TaskNode & {
-  parseIssues: TaskGraphIssue[];
+  parseIssues: InternalIssue[];
 };
 
 type IndexedTasks = {
   tasks: ParsedTask[];
   byId: Map<string, ParsedTask>;
   byPath: Map<string, ParsedTask>;
-  issues: TaskGraphIssue[];
+  issues: InternalIssue[];
 };
 
 type ResolvedEdges = {
   edges: TaskGraphEdge[];
-  issues: TaskGraphIssue[];
+  issues: InternalIssue[];
 };
 
 const TASK_STATUSES = new Set<TaskStatus>([
@@ -116,7 +120,7 @@ function markdownFiles(dir: string): string[] {
   return result.sort(compareStrings);
 }
 
-function relationValues(raw: unknown, key: string, issues: TaskGraphIssue[], taskId: string, file: string): string[] {
+function relationValues(raw: unknown, key: string, issues: InternalIssue[], taskId: string, file: string): string[] {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     if (raw !== undefined && raw !== null) {
       issues.push({
@@ -189,7 +193,7 @@ export function readTaskDocuments(cwd: string, taskDir: string): ParsedTask[] {
     // documents participate in the graph.
     if (data.type !== "task") continue;
 
-    const parseIssues: TaskGraphIssue[] = [];
+    const parseIssues: InternalIssue[] = [];
     const id = typeof data.id === "string" ? data.id.trim() : "";
     if (!id) {
       parseIssues.push({
@@ -244,7 +248,7 @@ export function indexTasks(tasks: ParsedTask[]): IndexedTasks {
   const sortedTasks = [...tasks].sort((left, right) => compareStrings(left.id || left.file, right.id || right.file));
   const byId = new Map<string, ParsedTask>();
   const byPath = new Map<string, ParsedTask>();
-  const issues: TaskGraphIssue[] = [];
+  const issues: InternalIssue[] = [];
   for (const task of sortedTasks) {
     issues.push(...task.parseIssues);
     if (!task.id) continue;
@@ -269,26 +273,33 @@ function resolveReference(cwd: string, reference: string, index: IndexedTasks): 
   const byId = index.byId.get(reference);
   if (byId) return byId;
   const normalized = normalizeRepoPath(cwd, reference);
-  const byPath = index.byPath.get(normalized);
-  if (byPath) return byPath;
-  const basename = path.basename(normalized);
-  return [...index.byPath.entries()].find(([file]) => path.basename(file) === basename)?.[1];
+  return index.byPath.get(normalized);
 }
 
-function isExistingArtifactReference(cwd: string, reference: string): boolean {
+function isExistingArtifactReference(cwd: string, taskDir: string, reference: string): boolean {
   const candidate = path.resolve(cwd, reference);
-  return fs.existsSync(candidate) && fs.statSync(candidate).isFile();
+  if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) return false;
+  const taskRoot = path.resolve(cwd, taskDir);
+  const candidatePath = path.resolve(candidate);
+  const insideTaskDir = candidatePath === taskRoot || candidatePath.startsWith(`${taskRoot}${path.sep}`);
+  if (insideTaskDir) return false;
+  try {
+    const type = matter(fs.readFileSync(candidate, "utf8")).data?.type;
+    return ["plan", "spec", "adr", "design"].includes(type);
+  } catch {
+    return false;
+  }
 }
 
-export function resolveTaskEdges(cwd: string, _taskDir: string, index: IndexedTasks): ResolvedEdges {
+export function resolveTaskEdges(cwd: string, taskDir: string, index: IndexedTasks): ResolvedEdges {
   const edges = new Map<string, TaskGraphEdge>();
-  const issues: TaskGraphIssue[] = [];
+  const issues: InternalIssue[] = [];
   const addReference = (task: ParsedTask, reference: string, direction: "depends-on" | "blocks"): void => {
     const target = resolveReference(cwd, reference, index);
     if (!target || !target.id) {
       // Relations to an existing plan/spec/ADR are upstream artifact links,
       // not task-DAG edges. Keep unresolved task-looking references fail-closed.
-      if (isExistingArtifactReference(cwd, reference)) return;
+      if (isExistingArtifactReference(cwd, taskDir, reference)) return;
       issues.push({
         code: "missing-task-reference",
         tasks: task.id ? [task.id] : [],
@@ -315,8 +326,9 @@ export function resolveTaskEdges(cwd: string, _taskDir: string, index: IndexedTa
   };
 }
 
-function issueCompare(left: TaskGraphIssue, right: TaskGraphIssue): number {
+function issueCompare(left: InternalIssue, right: InternalIssue): number {
   return compareStrings(left.code, right.code)
+    || compareStrings((left.tasks || []).join(","), (right.tasks || []).join(","))
     || compareStrings(left.task || "", right.task || "")
     || compareStrings(left.reference || "", right.reference || "")
     || compareStrings(left.file || "", right.file || "")
@@ -363,7 +375,7 @@ export function summarizeTaskGraph(
   plan: string,
   tasks: ParsedTask[],
   edges: TaskGraphEdge[],
-  issues: TaskGraphIssue[],
+  issues: InternalIssue[],
 ): TaskGraphResult {
   const sortedTasks = tasks
     .filter((task) => Boolean(task.id))
@@ -375,8 +387,24 @@ export function summarizeTaskGraph(
     }))
     .sort((left, right) => compareStrings(left.id, right.id));
   const sortedEdges = [...edges].sort((left, right) => compareStrings(left.from, right.from) || compareStrings(left.to, right.to));
-  const uniqueIssues = [...new Map(issues.map((issue) => [
-    `${issue.code}\u0000${issue.task || ""}\u0000${issue.reference || ""}\u0000${issue.file || ""}\u0000${issue.message}`,
+  const normalizedIssues = issues.map((issue): TaskGraphIssue => {
+    const allowed = new Set<TaskGraphIssueCode>([
+      "duplicate-task-id",
+      "missing-task-reference",
+      "task-cycle",
+      "plan-has-no-tasks",
+    ]);
+    const code = allowed.has(issue.code as TaskGraphIssueCode)
+      ? issue.code as TaskGraphIssueCode
+      : "missing-task-reference";
+    return {
+      code,
+      message: issue.message,
+      tasks: sortedUnique(issue.tasks || (issue.task ? [issue.task] : [])),
+    };
+  });
+  const uniqueIssues = [...new Map(normalizedIssues.map((issue) => [
+    `${issue.code}\u0000${issue.tasks.join(",")}\u0000${issue.message}`,
     issue,
   ])).values()].sort(issueCompare);
   const runnable = uniqueIssues.length > 0

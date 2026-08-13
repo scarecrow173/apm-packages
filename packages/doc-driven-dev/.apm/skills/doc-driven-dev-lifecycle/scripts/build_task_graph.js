@@ -3694,22 +3694,29 @@ function resolveReference(cwd, reference, index) {
   const byId = index.byId.get(reference);
   if (byId) return byId;
   const normalized = normalizeRepoPath(cwd, reference);
-  const byPath = index.byPath.get(normalized);
-  if (byPath) return byPath;
-  const basename = import_node_path.default.basename(normalized);
-  return [...index.byPath.entries()].find(([file]) => import_node_path.default.basename(file) === basename)?.[1];
+  return index.byPath.get(normalized);
 }
-function isExistingArtifactReference(cwd, reference) {
+function isExistingArtifactReference(cwd, taskDir, reference) {
   const candidate = import_node_path.default.resolve(cwd, reference);
-  return import_node_fs.default.existsSync(candidate) && import_node_fs.default.statSync(candidate).isFile();
+  if (!import_node_fs.default.existsSync(candidate) || !import_node_fs.default.statSync(candidate).isFile()) return false;
+  const taskRoot = import_node_path.default.resolve(cwd, taskDir);
+  const candidatePath = import_node_path.default.resolve(candidate);
+  const insideTaskDir = candidatePath === taskRoot || candidatePath.startsWith(`${taskRoot}${import_node_path.default.sep}`);
+  if (insideTaskDir) return false;
+  try {
+    const type = (0, import_gray_matter.default)(import_node_fs.default.readFileSync(candidate, "utf8")).data?.type;
+    return ["plan", "spec", "adr", "design"].includes(type);
+  } catch {
+    return false;
+  }
 }
-function resolveTaskEdges(cwd, _taskDir, index) {
+function resolveTaskEdges(cwd, taskDir, index) {
   const edges = /* @__PURE__ */ new Map();
   const issues = [];
   const addReference = (task, reference, direction) => {
     const target = resolveReference(cwd, reference, index);
     if (!target || !target.id) {
-      if (isExistingArtifactReference(cwd, reference)) return;
+      if (isExistingArtifactReference(cwd, taskDir, reference)) return;
       issues.push({
         code: "missing-task-reference",
         tasks: task.id ? [task.id] : [],
@@ -3734,7 +3741,7 @@ function resolveTaskEdges(cwd, _taskDir, index) {
   };
 }
 function issueCompare(left, right) {
-  return compareStrings(left.code, right.code) || compareStrings(left.task || "", right.task || "") || compareStrings(left.reference || "", right.reference || "") || compareStrings(left.file || "", right.file || "") || compareStrings(left.message, right.message);
+  return compareStrings(left.code, right.code) || compareStrings((left.tasks || []).join(","), (right.tasks || []).join(",")) || compareStrings(left.task || "", right.task || "") || compareStrings(left.reference || "", right.reference || "") || compareStrings(left.file || "", right.file || "") || compareStrings(left.message, right.message);
 }
 function findCycles(tasks, edges) {
   const ids = sortedUnique(tasks.map((task) => task.id).filter(Boolean));
@@ -3779,8 +3786,22 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
     blocks: [...task.blocks].sort(compareStrings)
   })).sort((left, right) => compareStrings(left.id, right.id));
   const sortedEdges = [...edges].sort((left, right) => compareStrings(left.from, right.from) || compareStrings(left.to, right.to));
-  const uniqueIssues = [...new Map(issues.map((issue) => [
-    `${issue.code}\0${issue.task || ""}\0${issue.reference || ""}\0${issue.file || ""}\0${issue.message}`,
+  const normalizedIssues = issues.map((issue) => {
+    const allowed = /* @__PURE__ */ new Set([
+      "duplicate-task-id",
+      "missing-task-reference",
+      "task-cycle",
+      "plan-has-no-tasks"
+    ]);
+    const code = allowed.has(issue.code) ? issue.code : "missing-task-reference";
+    return {
+      code,
+      message: issue.message,
+      tasks: sortedUnique(issue.tasks || (issue.task ? [issue.task] : []))
+    };
+  });
+  const uniqueIssues = [...new Map(normalizedIssues.map((issue) => [
+    `${issue.code}\0${issue.tasks.join(",")}\0${issue.message}`,
     issue
   ])).values()].sort(issueCompare);
   const runnable = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "todo").filter((task) => sortedEdges.filter((edge) => edge.to === task.id).every((edge) => {
