@@ -292,19 +292,29 @@ function focusedArtifacts(context: StateContext): {
   const { focused, component, cwd } = context;
   if (!focused) return {};
   const byType = (type: string): DocumentArtifact[] => component.filter((artifact) => artifact.type === type);
-  const plan = focused.type === "plan"
-    ? focused
-    : byType("plan").find((candidate) => relationHasTarget(cwd, candidate, ["derives-from", "implements", "relates-to"], focused, component));
   const design = focused.type === "design"
     ? focused
-    : byType("design").find((candidate) => plan ? relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], candidate, component) : true);
+    : byType("design").find((candidate) => {
+        if (focused.type === "spec" || focused.type === "adr") {
+          return relationHasTarget(cwd, candidate, ["derives-from", "implements", "spec", "adr", "decision", "relates-to"], focused, component);
+        }
+        return false;
+      });
+  const plan = focused.type === "plan"
+    ? focused
+    : byType("plan").find((candidate) => {
+        if (design && relationHasTarget(cwd, candidate, ["derives-from", "design", "relates-to"], design, component)) return true;
+        return relationHasTarget(cwd, focused, ["implements", "derives-from", "relates-to"], candidate, component);
+      });
+  const resolvedDesign = design ?? byType("design").find((candidate) =>
+    plan ? relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], candidate, component) : false);
   const spec = focused.type === "spec"
     ? focused
-    : byType("spec").find((candidate) => design ? relationHasTarget(cwd, design, ["derives-from", "implements", "spec", "relates-to"], candidate, component) : true);
+    : byType("spec").find((candidate) => resolvedDesign ? relationHasTarget(cwd, resolvedDesign, ["derives-from", "implements", "spec", "relates-to"], candidate, component) : false);
   const adr = focused.type === "adr"
     ? focused
-    : byType("adr").find((candidate) => design ? relationHasTarget(cwd, design, ["derives-from", "adr", "decision", "relates-to"], candidate, component) : true);
-  return { spec, adr, design, plan };
+    : byType("adr").find((candidate) => resolvedDesign ? relationHasTarget(cwd, resolvedDesign, ["derives-from", "adr", "decision", "relates-to"], candidate, component) : false);
+  return { spec, adr, design: resolvedDesign, plan };
 }
 
 function gate(status: GateResult["status"], reasons: string[] = []): GateResult {
