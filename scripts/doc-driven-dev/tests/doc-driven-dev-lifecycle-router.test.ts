@@ -375,6 +375,18 @@ test("typed follow-up routing repairs a failing upstream gate before exit audit"
   assert.notEqual(route.next, "exit-audit");
 });
 
+test("follow-up triage retries when an upstream recovery edge is unavailable", () => {
+  const state = stateWithDoneTasks(["implementation-verified", "followup-doc-only"]);
+  state.gates.planning = { status: "fail", reasons: ["planning-incomplete"] };
+  const graph = loadDistributedGraph();
+  graph.edges = graph.edges.filter((edge) => edge.id !== "followup-triage-to-planning-repair");
+  const route = routeLifecycle({ current: "followup-triage", graph, state });
+  assert.equal(route.next, "followup-triage");
+  assert.equal(route.reasonCode, "followups-unclassified");
+  assert.equal(route.edgeId, "followup-triage-retry");
+  assert.notEqual(route.next, "exit-audit");
+});
+
 test("exit audit repairs a regressed upstream gate before completion", () => {
   const state = stateWithDoneTasks([
     "implementation-verified",
