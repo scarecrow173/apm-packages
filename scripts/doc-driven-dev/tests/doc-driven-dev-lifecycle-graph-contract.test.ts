@@ -50,6 +50,30 @@ const duplicateEdgeIdFixture = `${requiredNodesFixture}edges:
   - { id: duplicate, from: migration, to: complete, when: migration-complete }
 `;
 
+const duplicateRouteSelectorFixture = `
+schemaVersion: 1
+entry: implementation
+nodes:
+  implementation: { kind: action, delegate: implementation, audits: [] }
+  briefing: { kind: terminal, delegate: null, audits: [] }
+  design: { kind: terminal, delegate: null, audits: [] }
+edges:
+  - { id: implementation-to-briefing, from: implementation, to: briefing, when: spec-gap }
+  - { id: implementation-to-design, from: implementation, to: design, when: spec-gap }
+`;
+
+const distinctRouteSelectorFixture = `
+schemaVersion: 1
+entry: implementation
+nodes:
+  implementation: { kind: action, delegate: implementation, audits: [] }
+  briefing: { kind: terminal, delegate: null, audits: [] }
+  design: { kind: terminal, delegate: null, audits: [] }
+edges:
+  - { id: implementation-to-briefing, from: implementation, to: briefing, when: spec-gap }
+  - { id: implementation-to-design, from: implementation, to: design, when: design-gap }
+`;
+
 const terminalOutgoingEdgeFixture = `
 schemaVersion: 1
 entry: start
@@ -152,6 +176,19 @@ test("lifecycle graph rejects an unknown prerequisite gate", () => {
 
 test("lifecycle graph rejects duplicate edge IDs independently", () => {
   assert.throws(() => parseLifecycleGraph(duplicateEdgeIdFixture), /duplicate edge id: duplicate/);
+});
+
+test("lifecycle graph rejects duplicate route selectors", () => {
+  assert.throws(
+    () => parseLifecycleGraph(duplicateRouteSelectorFixture),
+    /duplicate route selector: implementation \+ spec-gap/,
+  );
+});
+
+test("lifecycle graph accepts distinct reasons from the same source", () => {
+  const graph = parseLifecycleGraph(distinctRouteSelectorFixture);
+  assert.equal(findEdge(graph, "implementation", "spec-gap")?.to, "briefing");
+  assert.equal(findEdge(graph, "implementation", "design-gap")?.to, "design");
 });
 
 test("lifecycle graph rejects duplicate node IDs", () => {

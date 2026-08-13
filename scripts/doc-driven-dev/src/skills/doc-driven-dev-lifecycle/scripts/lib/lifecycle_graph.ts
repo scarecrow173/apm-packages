@@ -147,11 +147,17 @@ function validateGraph(value: z.infer<typeof lifecycleGraphSchema>): LifecycleGr
   }
 
   const edgeIds = new Set<string>();
+  const routeSelectors = new Set<string>();
   for (const edge of value.edges) {
     if (edgeIds.has(edge.id)) {
       throw invalidGraph(`duplicate edge id: ${edge.id}`);
     }
     edgeIds.add(edge.id);
+    const selector = `${edge.from}\u0000${edge.when}`;
+    if (routeSelectors.has(selector)) {
+      throw invalidGraph(`duplicate route selector: ${edge.from} + ${edge.when}`);
+    }
+    routeSelectors.add(selector);
     if (!hasNode(value.nodes, edge.from)) {
       throw invalidGraph(`edge ${edge.id} references unknown from node: ${edge.from}`);
     }
