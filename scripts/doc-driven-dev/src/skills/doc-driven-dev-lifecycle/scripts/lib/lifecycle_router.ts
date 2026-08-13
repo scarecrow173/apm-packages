@@ -109,7 +109,7 @@ const FOLLOWUP_CLASSIFICATIONS = [
 
 function gateIsNotPassing(state: LifecycleState, name: string): boolean {
   const gate = state.gates[name];
-  return Boolean(gate && gate.status !== "pass");
+  return gate?.status !== "pass";
 }
 
 function lifecycleComplete(state: LifecycleState): boolean {
