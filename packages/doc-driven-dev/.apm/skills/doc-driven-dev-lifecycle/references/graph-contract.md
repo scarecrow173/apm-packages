@@ -6,6 +6,12 @@ This contract defines the runtime topology consumed by
 topology and for delegate bindings. The router follows declared edges; prose
 must not invent a transition or flatten a delegated subgraph.
 
+YAML owns the concrete node and edge declarations, including every
+`requiresGates` list. TypeScript parses that YAML and validates its schema and
+generic graph invariants (unique IDs, known endpoints, terminal behavior, and
+known prerequisite gates); it must not duplicate topology tuples or infer
+missing edges.
+
 ## Graph schema
 
 The graph uses `schemaVersion: 1` and starts at `entry: probe`.
@@ -48,7 +54,11 @@ it authorizes no delegate until the caller supplies explicit focus.
 The router evaluates reasons in precedence order so typed upstream gaps win
 over forward gates. It returns only a declared edge and uses a declared retry
 edge when a gate is incomplete. `complete` is terminal and returns
-`reasonCode: lifecycle-complete` with `edgeId: null`.
+`reasonCode: lifecycle-complete` with `edgeId: null`. That completion route is
+eligible only when every lifecycle gate (`bootstrap`, `briefing`, `design`,
+`planning`, `implementation`, `followup-triage`, and `exit-audit`) passes;
+`exit-audit-pass` is only the evidence for the final gate and is not sufficient
+on its own.
 
 ## Task DAG composite
 

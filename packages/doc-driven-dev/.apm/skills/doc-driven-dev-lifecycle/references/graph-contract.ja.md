@@ -5,6 +5,11 @@
 delegate binding に関する唯一の規範である。router は宣言済み edge だけを
 たどり、prose から遷移を発明したり委譲 subgraph を平坦化したりしない。
 
+具体的な node/edge 宣言とすべての `requiresGates` リストは YAML が所有する。
+TypeScript はその YAML を parse し、schema と汎用 graph 不変条件（ID の一意性、
+endpoint の存在、terminal の動作、前提 gate の存在）だけを検証する。
+topology の tuple を重複定義したり、不足 edge を推測したりしてはならない。
+
 ## Graph schema
 
 Graph は `schemaVersion: 1`、`entry: probe` で始まる。
@@ -47,7 +52,10 @@ error となる。安定した route object は `schemaVersion`、`current`、`n
 router は reason の precedence に従って評価し、型付き upstream gap を
 forward gate より優先する。返すのは宣言済み edge のみであり、gate が未完了
 なら宣言済み retry edge を使う。`complete` は terminal で、
-`reasonCode: lifecycle-complete`、`edgeId: null` を返す。
+`reasonCode: lifecycle-complete`、`edgeId: null` を返す。この完了 route は
+すべての lifecycle gate（`bootstrap`、`briefing`、`design`、`planning`、
+`implementation`、`followup-triage`、`exit-audit`）が pass の場合だけ有効である。
+`exit-audit-pass` は最後の gate の証跡に過ぎず、それだけでは完了にならない。
 
 ## Task DAG composite
 

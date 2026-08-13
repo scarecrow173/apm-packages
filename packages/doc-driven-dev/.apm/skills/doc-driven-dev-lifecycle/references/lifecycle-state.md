@@ -20,10 +20,13 @@ The JSON state uses `schemaVersion: 1` and includes:
 - `blockers`: sorted, deduplicated fail-closed blockers.
 
 Canonical directories and Markdown front matter are read on every probe.
-Relations are resolved by typed artifact ID or repository-relative path;
-external references remain evidence and are not traversed. Broken local
-relations, invalid relation shapes, duplicate IDs, and malformed focus values
-become blockers rather than inferred links.
+Relations retain raw front-matter values; resolution is unique exact artifact ID first, then owner-relative/repository-relative path; external URLs are not broken local relations. The shared lineage relation set includes
+`implements`, `implemented-by`, `derives-from`, `derived-by`, `refines`, and
+`refined-by`. Contextual, evidence, and task-dependency fields are excluded from
+lineage selection, including `relates-to`, `related`, `references`, `source`,
+`depends-on`, and `blocks`. Broken local relations, invalid relation shapes,
+duplicate IDs, and malformed focus values become blockers rather than inferred
+links.
 
 ## Focus contract
 
@@ -58,6 +61,10 @@ with `followups-classified` and `exit-audit-pass`, respectively. Signals such as
 `spec-gap`, `design-gap`, `constraint-gap`, `task-graph-retry`, and
 `implementation-incomplete` are loopback observations; they do not mutate
 documents or silently advance a phase.
+
+Lifecycle completion requires every gate to pass: `bootstrap`, `briefing`,
+`design`, `planning`, `implementation`, `followup-triage`, and `exit-audit`.
+Passing only the exit-audit gate never authorizes completion.
 
 Planning Task DAG issues (`missing-task-reference`, `task-cycle`, duplicate IDs,
 or no tasks) make planning `blocked`, add `task-graph-invalid`, and produce no

@@ -156,14 +156,22 @@ briefing 完了成果物になる。
 目的: 文書セットを Exit へ進める前に、実装済みの挙動が承認済み上流文書と
 整合していることを確認する。
 
-| Classification | Required route |
-| --- | --- |
-| `bug-fix` | 現在の承認済み plan 配下に task を作成または更新し、`relations.depends-on` / `relations.blocks` で関連付ける。 |
-| `decision-required` | implementation task を作成する前に Phase 1、Phase 2、または ADR 更新へ戻る。 |
-| `new-feature` | 現在の plan には紐付けず、idea/discovery/spec flow へ昇格する。 |
-| `doc-only` | Phase 5 の前に、影響を受ける文書または implementation record を更新する。 |
-| `defer` | `relations.defers` または明示的な deferred task として延期を記録する。 |
-| `wont-do` | 理由を記録する。task として表す場合は `status: wont-do` にする。 |
+フォローアップ完了は boolean ではなく型付きで判定する。必ず 1 つの route
+signal を出し、ユーザー向けフォローアップ報告に選択した route を明記する。
+
+| Classification | Typed route | 必須 route と証跡 |
+| --- | --- | --- |
+| `bug-fix` | `followup-bug-fix` | 現在の承認済み plan 配下に task を作成または更新し、`relations.depends-on` / `relations.blocks` で関連付ける。 |
+| `decision-required`（briefing） | `followup-decision-briefing` | implementation task 作成前に Phase 1（`briefing-flow`）へ戻る。 |
+| `decision-required`（design） | `followup-decision-design` | implementation task 作成前に Phase 2（`design-doc`）へ戻る。 |
+| `new-feature` | `followup-new-feature` | 新しい briefing のため Phase 1（`briefing-flow`）へ戻る。現在の承認済み plan には決して紐付けない。 |
+| `doc-only` | `followup-doc-only` | 文書または implementation record の更新を記録してから、terminal の `exit-audit` route を取る。 |
+| `defer` または `wont-do` | `followup-terminal` | 延期または理由を記録する（task として表す `wont-do` は `status: wont-do`）。その後 terminal の `exit-audit` route を取る。 |
+
+6 つの型付き route は相互排他的である。未分類または競合するフォローアップが
+ある間、`followup-triage` は blocked のままで、宣言済みの
+`followups-unclassified` retry edge を使う。`doc-only`、`defer`、`wont-do` は
+terminal の `exit-audit` route を選べる前に必ず記録する。
 
 ## Phase 5: Exit
 

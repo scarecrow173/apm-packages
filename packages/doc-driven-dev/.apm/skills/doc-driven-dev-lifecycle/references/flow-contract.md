@@ -159,14 +159,22 @@ skill stack per task via `implementation-profile.md`.
 Purpose: verify implemented behavior against approved upstream documents before
 the document set is allowed to exit.
 
-| Classification | Required route |
-| --- | --- |
-| `bug-fix` | Create or update a task under the current approved plan; link it with `relations.depends-on` / `relations.blocks`. |
-| `decision-required` | Return to Phase 1, Phase 2, or ADR update before creating implementation tasks. |
-| `new-feature` | Do not attach to the current plan; promote to idea/discovery/spec flow. |
-| `doc-only` | Update the affected document or implementation record before Phase 5. |
-| `defer` | Record the deferral with `relations.defers` or an explicit deferred task. |
-| `wont-do` | Record the reason; if represented as a task, set `status: wont-do`. |
+Follow-up completion is typed, not a boolean. Emit exactly one route signal and
+name that selected route in the user-visible follow-up report:
+
+| Classification | Typed route | Required route and evidence |
+| --- | --- | --- |
+| `bug-fix` | `followup-bug-fix` | Create or update a task under the current approved plan; link it with `relations.depends-on` / `relations.blocks`. |
+| `decision-required` (briefing) | `followup-decision-briefing` | Return to Phase 1 (`briefing-flow`) before creating implementation tasks. |
+| `decision-required` (design) | `followup-decision-design` | Return to Phase 2 (`design-doc`) before creating implementation tasks. |
+| `new-feature` | `followup-new-feature` | Return to Phase 1 (`briefing-flow`) for a new briefing; never attach it to the current approved plan. |
+| `doc-only` | `followup-doc-only` | Record the document or implementation-record update, then take the terminal `exit-audit` route. |
+| `defer` or `wont-do` | `followup-terminal` | Record the deferral or reason (`status: wont-do` when represented as a task), then take the terminal `exit-audit` route. |
+
+The six typed routes are mutually exclusive. An unclassified or conflicting
+follow-up keeps `followup-triage` blocked and uses its declared
+`followups-unclassified` retry edge. `doc-only`, `defer`, and `wont-do` must be
+recorded before their terminal `exit-audit` route is eligible.
 
 ## Phase 5: Exit
 

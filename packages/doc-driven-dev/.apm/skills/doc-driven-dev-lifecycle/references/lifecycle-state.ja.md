@@ -18,8 +18,13 @@ JSON state は `schemaVersion: 1` と次を含む。
 - `blockers`: ソート・重複排除された fail-closed blocker
 
 canonical directory と Markdown front matter は probe ごとに読み取る。
-relation は typed artifact ID または repository-relative path で解決する。
-外部 reference は証跡として残すが traverse しない。壊れた local relation、
+Relations retain raw front-matter values; resolution is unique exact artifact ID first, then owner-relative/repository-relative path; external URLs are not broken local relations. つまり relation は front matter の raw 値を保持し、
+一意な完全一致 artifact ID を最初に解決し、次に owner-relative/repository-relative
+path へフォールバックする。外部 URL は壊れた local relation ではない。
+共有 lineage relation は `implements`、`implemented-by`、`derives-from`、
+`derived-by`、`refines`、`refined-by` である。`relates-to`、`related`、
+`references`、`source`、`depends-on`、`blocks` など、contextual/evidence/task
+dependency 用の field は lineage 選択から除外する。壊れた local relation、
 不正な relation 形、重複 ID、壊れた focus は推測せず blocker にする。
 
 ## Focus 契約
@@ -54,6 +59,10 @@ Follow-up triage と exit audit は証跡に基づく型付き gate である。
 `spec-gap`、`design-gap`、`constraint-gap`、`task-graph-retry`、
 `implementation-incomplete` などの signal は loopback 観測であり、文書を
 変更したり phase を黙って進めたりしない。
+
+Lifecycle 完了には全 gate の pass が必要である: `bootstrap`、`briefing`、
+`design`、`planning`、`implementation`、`followup-triage`、`exit-audit`。
+exit-audit gate だけの pass では完了を許可しない。
 
 Planning Task DAG の issue（`missing-task-reference`、`task-cycle`、重複 ID、
 task なし）は planning を `blocked` にし、`task-graph-invalid` を追加し、

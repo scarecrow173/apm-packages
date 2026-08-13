@@ -42,6 +42,16 @@ design, plan, and task verification evidence. Classify every follow-up as
 `bug-fix`, `decision-required`, `new-feature`, `doc-only`, `defer`, or
 `wont-do`. Do not enter Phase 5 while unclassified follow-ups remain.
 
+Follow-up completion is typed, not a boolean. Emit exactly one of these six
+route signals and name the selected route in the user-visible follow-up report:
+`followup-bug-fix`, `followup-decision-briefing`, `followup-decision-design`,
+`followup-new-feature`, `followup-doc-only`, or `followup-terminal`. The
+`followup-new-feature` route returns to Phase 1 through `briefing-flow` and never
+attaches the new feature to the current approved plan. `doc-only`, `defer`, and
+`wont-do` evidence must be recorded before the terminal `exit-audit` route.
+An unclassified or conflicting signal keeps `followup-triage` blocked and uses
+the declared `followups-unclassified` retry edge.
+
 ## Router Loop
 
 Use the graph router for every lifecycle turn. Preserve the human phase labels

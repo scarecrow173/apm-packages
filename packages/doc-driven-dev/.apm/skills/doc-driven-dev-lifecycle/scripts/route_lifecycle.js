@@ -3410,7 +3410,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs4 = require("fs");
+    var fs5 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3494,7 +3494,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter3.read = function(filepath, options2) {
-      const str2 = fs4.readFileSync(filepath, "utf8");
+      const str2 = fs5.readFileSync(filepath, "utf8");
       const file2 = matter3(str2, options2);
       file2.path = filepath;
       return file2;
@@ -3523,8 +3523,8 @@ var require_gray_matter = __commonJS({
 });
 
 // src/skills/doc-driven-dev-lifecycle/scripts/route_lifecycle.ts
-var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path5 = __toESM(require("node:path"));
 
 // node_modules/.pnpm/js-yaml@5.2.2/node_modules/js-yaml/dist/js-yaml.mjs
 var NOT_RESOLVED = /* @__PURE__ */ Symbol("NOT_RESOLVED");
@@ -6520,10 +6520,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path6) {
+  if (!path6)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path6.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -6932,11 +6932,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path6, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path6);
     return iss;
   });
 }
@@ -7083,16 +7083,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError2(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path6 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -7119,17 +7119,17 @@ function formatError2(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path6 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -7161,8 +7161,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path4) {
+  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path6) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -19854,13 +19854,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path4 = ref.slice(1).split("/").filter(Boolean);
-  if (path4.length === 0) {
+  const path6 = ref.slice(1).split("/").filter(Boolean);
+  if (path6.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path4[0] === defsKey) {
-    const key = path4[1];
+  if (path6[0] === defsKey) {
+    const key = path6[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -20269,40 +20269,12 @@ function date4(params) {
 config(en_default());
 
 // src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_graph.ts
-var REQUIRED_LIFECYCLE_EDGES = [
-  { id: "probe-to-migration", from: "probe", to: "migration", when: "migration-requested" },
-  { id: "probe-to-bootstrap", from: "probe", to: "bootstrap", when: "bootstrap-incomplete" },
-  { id: "probe-to-briefing", from: "probe", to: "briefing", when: "bootstrap-complete" },
-  { id: "migration-retry", from: "migration", to: "migration", when: "migration-incomplete" },
-  { id: "migration-to-bootstrap", from: "migration", to: "bootstrap", when: "migration-complete" },
-  { id: "bootstrap-retry", from: "bootstrap", to: "bootstrap", when: "bootstrap-incomplete" },
-  { id: "bootstrap-to-briefing", from: "bootstrap", to: "briefing", when: "bootstrap-complete" },
-  { id: "briefing-retry", from: "briefing", to: "briefing", when: "briefing-incomplete" },
-  { id: "briefing-to-design", from: "briefing", to: "design", when: "briefing-complete" },
-  { id: "design-retry", from: "design", to: "design", when: "design-incomplete" },
-  { id: "design-to-planning", from: "design", to: "planning", when: "design-complete" },
-  { id: "design-to-briefing", from: "design", to: "briefing", when: "spec-gap" },
-  { id: "planning-retry", from: "planning", to: "planning", when: "planning-incomplete" },
-  { id: "planning-to-task-graph", from: "planning", to: "task-graph", when: "planning-complete" },
-  { id: "planning-to-design", from: "planning", to: "design", when: "design-gap" },
-  { id: "task-graph-to-planning", from: "task-graph", to: "planning", when: "task-graph-invalid" },
-  { id: "task-graph-retry", from: "task-graph", to: "task-graph", when: "task-graph-retry" },
-  { id: "task-graph-to-implementation", from: "task-graph", to: "implementation", when: "tasks-runnable" },
-  { id: "implementation-retry", from: "implementation", to: "implementation", when: "implementation-incomplete" },
-  { id: "implementation-to-followup-triage", from: "implementation", to: "followup-triage", when: "implementation-verified" },
-  { id: "implementation-to-briefing", from: "implementation", to: "briefing", when: "spec-gap" },
-  { id: "implementation-to-design", from: "implementation", to: "design", when: "design-gap" },
-  { id: "implementation-constraint-to-design", from: "implementation", to: "design", when: "constraint-gap" },
-  { id: "followup-triage-retry", from: "followup-triage", to: "followup-triage", when: "followups-unclassified" },
-  { id: "followup-triage-to-exit-audit", from: "followup-triage", to: "exit-audit", when: "followups-classified" },
-  { id: "exit-audit-retry", from: "exit-audit", to: "exit-audit", when: "exit-audit-required" },
-  { id: "exit-audit-to-complete", from: "exit-audit", to: "complete", when: "exit-audit-pass" }
-];
 var lifecycleNodeId = external_exports.string().min(1);
 var lifecycleNodeSchema = external_exports.object({
   kind: external_exports.enum(["probe", "action", "subgraph", "gate", "audit", "terminal"]),
   delegate: external_exports.string().min(1).nullable(),
-  audits: external_exports.array(external_exports.string().min(1))
+  audits: external_exports.array(external_exports.string().min(1)),
+  requiresGates: external_exports.array(external_exports.string().min(1)).default([])
 }).strict();
 var lifecycleReasonCode = external_exports.enum([
   "focus-required",
@@ -20326,7 +20298,12 @@ var lifecycleReasonCode = external_exports.enum([
   "implementation-incomplete",
   "implementation-verified",
   "followups-unclassified",
-  "followups-classified",
+  "followup-bug-fix",
+  "followup-decision-briefing",
+  "followup-decision-design",
+  "followup-new-feature",
+  "followup-doc-only",
+  "followup-terminal",
   "exit-audit-required",
   "exit-audit-pass",
   "lifecycle-complete"
@@ -20353,32 +20330,17 @@ function hasNode(nodes, id) {
   return Object.prototype.hasOwnProperty.call(nodes, id);
 }
 function validateGraph(value) {
-  const requiredNodes = [
-    "probe",
-    "migration",
-    "bootstrap",
-    "briefing",
-    "design",
-    "planning",
-    "task-graph",
-    "implementation",
-    "followup-triage",
-    "exit-audit",
-    "complete"
-  ];
-  const unknownNodes = Object.keys(value.nodes).filter((id) => !requiredNodes.includes(id));
-  if (unknownNodes.length > 0) {
-    throw invalidGraph(`unknown node(s): ${unknownNodes.join(", ")}`);
-  }
-  const missingNodes = requiredNodes.filter((id) => !hasNode(value.nodes, id));
-  if (missingNodes.length > 0) {
-    throw invalidGraph(`missing required node(s): ${missingNodes.join(", ")}`);
-  }
   if (!hasNode(value.nodes, value.entry)) {
     throw invalidGraph(`entry node does not exist: ${value.entry}`);
   }
-  if (!hasNode(value.nodes, "complete")) {
-    throw invalidGraph("required terminal node does not exist: complete");
+  for (const [nodeId, node] of Object.entries(value.nodes)) {
+    const unknownGates = node.requiresGates.filter((gate2) => !hasNode(value.nodes, gate2));
+    if (unknownGates.length > 0) {
+      throw invalidGraph(`unknown prerequisite gate: ${unknownGates.join(", ")}`);
+    }
+    if (new Set(node.requiresGates).size !== node.requiresGates.length) {
+      throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
+    }
   }
   const edgeIds = /* @__PURE__ */ new Set();
   for (const edge of value.edges) {
@@ -20393,21 +20355,18 @@ function validateGraph(value) {
       throw invalidGraph(`edge ${edge.id} references unknown to node: ${edge.to}`);
     }
   }
-  if (value.edges.some((edge) => edge.from === "complete")) {
-    throw invalidGraph("complete node must not have outgoing edges");
+  const outgoingByNode = /* @__PURE__ */ new Map();
+  for (const edge of value.edges) {
+    outgoingByNode.set(edge.from, (outgoingByNode.get(edge.from) ?? 0) + 1);
   }
-  const edgesById = new Map(value.edges.map((edge) => [edge.id, edge]));
-  for (const expected of REQUIRED_LIFECYCLE_EDGES) {
-    const actual = edgesById.get(expected.id);
-    if (!actual) {
-      throw invalidGraph(
-        `missing required lifecycle edge: ${expected.id} (${expected.from} -> ${expected.to} when ${expected.when})`
-      );
-    }
-    if (actual.from !== expected.from || actual.to !== expected.to || actual.when !== expected.when) {
-      throw invalidGraph(
-        `lifecycle edge ${expected.id} has unexpected tuple: expected ${expected.from} -> ${expected.to} when ${expected.when}; received ${actual.from} -> ${actual.to} when ${actual.when}`
-      );
+  for (const [nodeId, node] of Object.entries(value.nodes)) {
+    const outgoing = outgoingByNode.get(nodeId) ?? 0;
+    if (node.kind === "terminal") {
+      if (outgoing > 0) {
+        throw invalidGraph(`terminal node must not have outgoing edges: ${nodeId}`);
+      }
+    } else if (outgoing === 0) {
+      throw invalidGraph(`non-terminal node must have an outgoing edge: ${nodeId}`);
     }
   }
   return value;
@@ -20430,9 +20389,13 @@ function findEdge(graph, current, reasonCode) {
 }
 
 // src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_state.ts
+var import_node_fs3 = __toESM(require("node:fs"));
+var import_node_path3 = __toESM(require("node:path"));
+var import_gray_matter2 = __toESM(require_gray_matter());
+
+// src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_relations.ts
 var import_node_fs2 = __toESM(require("node:fs"));
 var import_node_path2 = __toESM(require("node:path"));
-var import_gray_matter2 = __toESM(require_gray_matter());
 
 // src/skills/doc-driven-dev-lifecycle/scripts/lib/task_graph.ts
 var import_node_fs = __toESM(require("node:fs"));
@@ -20784,6 +20747,83 @@ function buildTaskGraph(options2) {
   return summarizeTaskGraph(plan, parsed, resolved.edges, issues);
 }
 
+// src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_relations.ts
+var LIFECYCLE_LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
+  "implements",
+  "implemented-by",
+  "derives-from",
+  "derived-by",
+  "refines",
+  "refined-by"
+]);
+var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
+function compareStrings2(left, right) {
+  return left.localeCompare(right);
+}
+function sortedUnique2(values) {
+  return [...new Set(values)].sort(compareStrings2);
+}
+function isExternalReference(value) {
+  return EXTERNAL_REFERENCE.test(value.trim());
+}
+function isInside(cwd, candidate) {
+  const root = import_node_path2.default.resolve(cwd);
+  const resolved = import_node_path2.default.resolve(candidate);
+  return resolved === root || resolved.startsWith(`${root}${import_node_path2.default.sep}`);
+}
+function normalizeLifecycleLocalTarget(cwd, owner, target) {
+  const trimmed = target.trim();
+  if (isExternalReference(trimmed)) return { value: trimmed, exists: true, external: true };
+  const ownerDir = import_node_path2.default.dirname(owner);
+  const rootCandidate = import_node_path2.default.resolve(cwd, trimmed);
+  const documentCandidate = import_node_path2.default.resolve(ownerDir, trimmed);
+  const documentRelative = trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed === "." || trimmed === "..";
+  const preferred = documentRelative ? documentCandidate : rootCandidate;
+  const fallback = documentRelative ? rootCandidate : documentCandidate;
+  const chosen = isInside(cwd, preferred) && import_node_fs2.default.existsSync(preferred) ? preferred : fallback;
+  const exists = isInside(cwd, chosen) && import_node_fs2.default.existsSync(chosen) && import_node_fs2.default.statSync(chosen).isFile();
+  const value = isInside(cwd, chosen) ? normalizeRepoPath(cwd, chosen) : normalizeRepoPath(cwd, preferred);
+  return { value, exists, external: false };
+}
+function parseLifecycleRelations(cwd, absolutePath, raw) {
+  const relations = {};
+  const issues = [];
+  if (raw === void 0 || raw === null) return { relations, issues };
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    return { relations, issues: [`invalid-relations:${normalizeRepoPath(cwd, absolutePath)}`] };
+  }
+  for (const key of Object.keys(raw).sort(compareStrings2)) {
+    const value = raw[key];
+    if (key === "changes" && value && typeof value === "object" && !Array.isArray(value)) continue;
+    const values = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
+    if (typeof value !== "string" && !Array.isArray(value)) {
+      issues.push(`invalid-relation:${normalizeRepoPath(cwd, absolutePath)}:${key}`);
+      relations[key] = [];
+      continue;
+    }
+    const parsed = [];
+    for (const item of values) {
+      if (typeof item !== "string" || !item.trim()) {
+        issues.push(`invalid-relation:${normalizeRepoPath(cwd, absolutePath)}:${key}`);
+        continue;
+      }
+      parsed.push(item.trim());
+    }
+    relations[key] = sortedUnique2(parsed);
+  }
+  return { relations, issues };
+}
+function resolveLifecycleRelationTarget(cwd, source, rawValue, artifacts) {
+  const trimmed = rawValue.trim();
+  if (isExternalReference(trimmed)) return void 0;
+  const byId = artifacts.filter((artifact) => artifact.id === trimmed);
+  if (byId.length === 1) return byId[0];
+  if (byId.length > 1) return void 0;
+  const owner = source.absolutePath ?? import_node_path2.default.resolve(cwd, source.path);
+  const pathValue = normalizeLifecycleLocalTarget(cwd, owner, trimmed).value;
+  return artifacts.find((artifact) => artifact.path === pathValue);
+}
+
 // src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_state.ts
 var CANONICAL_TARGETS = [
   "docs/ideas",
@@ -20808,19 +20848,18 @@ var ACTIVE_STATUSES = /* @__PURE__ */ new Set([
   "routed",
   "active"
 ]);
-var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
-function compareStrings2(left, right) {
+function compareStrings3(left, right) {
   return left.localeCompare(right);
 }
-function sortedUnique2(values) {
-  return [...new Set(values)].sort(compareStrings2);
+function sortedUnique3(values) {
+  return [...new Set(values)].sort(compareStrings3);
 }
 function markdownFiles2(dir) {
-  if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) return [];
+  if (!import_node_fs3.default.existsSync(dir) || !import_node_fs3.default.statSync(dir).isDirectory()) return [];
   const files = [];
   const visit = (current) => {
-    for (const entry of import_node_fs2.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings2(a.name, b.name))) {
-      const full = import_node_path2.default.join(current, entry.name);
+    for (const entry of import_node_fs3.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings3(a.name, b.name))) {
+      const full = import_node_path3.default.join(current, entry.name);
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md") && !/^(?:readme|index)\.md$/i.test(entry.name)) {
         files.push(full);
@@ -20828,66 +20867,19 @@ function markdownFiles2(dir) {
     }
   };
   visit(dir);
-  return files.sort(compareStrings2);
-}
-function isInside(cwd, candidate) {
-  const root = import_node_path2.default.resolve(cwd);
-  const resolved = import_node_path2.default.resolve(candidate);
-  return resolved === root || resolved.startsWith(`${root}${import_node_path2.default.sep}`);
-}
-function normalizeLocalTarget(cwd, owner, target) {
-  const trimmed = target.trim();
-  if (EXTERNAL_REFERENCE.test(trimmed)) return { value: trimmed, exists: true, external: true };
-  const ownerDir = import_node_path2.default.dirname(owner);
-  const rootCandidate = import_node_path2.default.resolve(cwd, trimmed);
-  const documentCandidate = import_node_path2.default.resolve(ownerDir, trimmed);
-  const documentRelative = trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed === "." || trimmed === "..";
-  const preferred = documentRelative ? documentCandidate : rootCandidate;
-  const fallback = documentRelative ? rootCandidate : documentCandidate;
-  const chosen = isInside(cwd, preferred) && import_node_fs2.default.existsSync(preferred) ? preferred : fallback;
-  const exists = isInside(cwd, chosen) && import_node_fs2.default.existsSync(chosen) && import_node_fs2.default.statSync(chosen).isFile();
-  const value = isInside(cwd, chosen) ? normalizeRepoPath(cwd, chosen) : normalizeRepoPath(cwd, preferred);
-  return { value, exists, external: false };
-}
-function parseRelations(cwd, absolutePath, raw) {
-  const relations = {};
-  const issues = [];
-  if (raw === void 0 || raw === null) return { relations, issues };
-  if (typeof raw !== "object" || Array.isArray(raw)) {
-    return { relations, issues: [`invalid-relations:${normalizeRepoPath(cwd, absolutePath)}`] };
-  }
-  for (const key of Object.keys(raw).sort(compareStrings2)) {
-    const value = raw[key];
-    if (key === "changes" && value && typeof value === "object" && !Array.isArray(value)) continue;
-    const values = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
-    if (typeof value !== "string" && !Array.isArray(value)) {
-      issues.push(`invalid-relation:${normalizeRepoPath(cwd, absolutePath)}:${key}`);
-      relations[key] = [];
-      continue;
-    }
-    const normalized = [];
-    for (const item of values) {
-      if (typeof item !== "string" || !item.trim()) {
-        issues.push(`invalid-relation:${normalizeRepoPath(cwd, absolutePath)}:${key}`);
-        continue;
-      }
-      normalized.push(normalizeLocalTarget(cwd, absolutePath, item).value);
-    }
-    relations[key] = sortedUnique2(normalized);
-  }
-  return { relations, issues };
+  return files.sort(compareStrings3);
 }
 function readArtifacts(cwd, taskDir = "docs/tasks") {
   const result = [];
-  const directories = sortedUnique2([...CANONICAL_TARGETS, normalizeRepoPath(cwd, taskDir)]);
-  const artifactPaths = sortedUnique2(directories.flatMap((directory) => markdownFiles2(import_node_path2.default.join(cwd, directory))));
+  const directories = sortedUnique3([...CANONICAL_TARGETS, normalizeRepoPath(cwd, taskDir)]);
+  const artifactPaths = sortedUnique3(directories.flatMap((directory) => markdownFiles2(import_node_path3.default.join(cwd, directory))));
   for (const absolutePath of artifactPaths) {
     try {
-      const source = import_node_fs2.default.readFileSync(absolutePath, "utf8");
+      const source = import_node_fs3.default.readFileSync(absolutePath, "utf8");
       const parsed = (0, import_gray_matter2.default)(source);
       const data = parsed.data;
       if (typeof data.id !== "string" || typeof data.type !== "string" || typeof data.status !== "string") continue;
-      const relationResult = parseRelations(cwd, absolutePath, data.relations);
+      const relationResult = parseLifecycleRelations(cwd, absolutePath, data.relations);
       result.push({
         id: data.id.trim(),
         path: normalizeRepoPath(cwd, absolutePath),
@@ -20901,15 +20893,13 @@ function readArtifacts(cwd, taskDir = "docs/tasks") {
     } catch {
     }
   }
-  return result.sort((left, right) => compareStrings2(left.path, right.path));
+  return result.sort((left, right) => compareStrings3(left.path, right.path));
 }
 function relationTarget(cwd, source, value, artifacts) {
-  if (EXTERNAL_REFERENCE.test(value)) return void 0;
-  const byId = artifacts.filter((artifact) => artifact.id === value);
-  if (byId.length === 1) return byId[0];
-  if (byId.length > 1) return void 0;
-  const normalized = normalizeLocalTarget(cwd, source.absolutePath, value).value;
-  return artifacts.find((artifact) => artifact.path === normalized);
+  return resolveLifecycleRelationTarget(cwd, source, value, artifacts);
+}
+function lineageValues(artifact) {
+  return [...LIFECYCLE_LINEAGE_RELATIONS].flatMap((relation) => artifact.relations[relation] ?? []);
 }
 function componentForFocus(cwd, focus, artifacts) {
   const visited = /* @__PURE__ */ new Set([focus.path]);
@@ -20917,8 +20907,8 @@ function componentForFocus(cwd, focus, artifacts) {
   while (queue.length > 0) {
     const current = queue.shift();
     for (const artifact of artifacts) {
-      const pointsToCurrent = Object.values(artifact.relations).some((values) => values.some((value) => relationTarget(cwd, artifact, value, artifacts)?.path === current.path));
-      const currentPointsTo = Object.values(current.relations).some((values) => values.some((value) => relationTarget(cwd, current, value, artifacts)?.path === artifact.path));
+      const pointsToCurrent = lineageValues(artifact).some((value) => relationTarget(cwd, artifact, value, artifacts)?.path === current.path);
+      const currentPointsTo = lineageValues(current).some((value) => relationTarget(cwd, current, value, artifacts)?.path === artifact.path);
       if ((pointsToCurrent || currentPointsTo) && !visited.has(artifact.path)) {
         visited.add(artifact.path);
         queue.push(artifact);
@@ -20942,7 +20932,7 @@ function resolveFocus(cwd, focusValues, artifacts) {
     if (byId.length === 1) return byId[0].path;
     return normalizeRepoPath(cwd, value);
   });
-  const unique = sortedUnique2(normalized);
+  const unique = sortedUnique3(normalized);
   if (duplicateFocusId) return { focus: unique, focused: void 0, blockers: ["focus-required"] };
   const focusedArtifacts2 = unique.map((focusPath) => artifacts.find((artifact) => artifact.path === focusPath));
   if (focusedArtifacts2.some((artifact) => !artifact)) return { focus: unique, focused: void 0, blockers: ["focus-invalid"] };
@@ -20981,7 +20971,7 @@ function relationTargets(cwd, source, relationNames, artifacts) {
       if (target) targets.set(target.path, target);
     }
   }
-  return [...targets.values()].sort((left, right) => compareStrings2(left.path, right.path));
+  return [...targets.values()].sort((left, right) => compareStrings3(left.path, right.path));
 }
 var CHAIN_STATUSES = {
   spec: /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]),
@@ -21014,9 +21004,9 @@ function enumerateArtifactChains(cwd, artifacts) {
   const add = (chain) => chains.set(chainKey(chain), chain);
   const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
   for (const design of designs) {
-    const relatedSpecs = relationTargets(cwd, design, ["derives-from", "implements", "spec", "relates-to"], specs);
-    const relatedAdrs = relationTargets(cwd, design, ["derives-from", "adr", "decision", "relates-to"], adrs);
-    const relatedPlans = plans.filter((plan) => relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, artifacts));
+    const relatedSpecs = relationTargets(cwd, design, ["derives-from", "implements", "spec"], specs);
+    const relatedAdrs = relationTargets(cwd, design, ["derives-from", "adr", "decision"], adrs);
+    const relatedPlans = plans.filter((plan) => relationHasTarget(cwd, plan, ["derives-from", "design"], design, artifacts));
     const relatedTasks = tasks.filter((task) => relatedPlans.some((plan) => relationHasTarget(cwd, task, ["implements"], plan, artifacts)));
     for (const spec of cartesian(relatedSpecs, [void 0])) {
       for (const adr of cartesian(relatedAdrs, [void 0])) {
@@ -21027,16 +21017,16 @@ function enumerateArtifactChains(cwd, artifacts) {
     }
   }
   for (const plan of plans) {
-    if (designs.some((design) => relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, artifacts))) continue;
+    if (designs.some((design) => relationHasTarget(cwd, plan, ["derives-from", "design"], design, artifacts))) continue;
     const relatedTasks = tasks.filter((task) => relationHasTarget(cwd, task, ["implements"], plan, artifacts));
     add({ plan, tasks: relatedTasks });
   }
   for (const artifact of [...specs, ...adrs]) {
-    if (!designs.some((design) => relationHasTarget(cwd, design, ["derives-from", "implements", "spec", "adr", "decision", "relates-to"], artifact, artifacts))) {
+    if (!designs.some((design) => relationHasTarget(cwd, design, ["derives-from", "implements", "spec", "adr", "decision"], artifact, artifacts))) {
       add(artifact.type === "spec" ? { spec: artifact, tasks: [] } : { adr: artifact, tasks: [] });
     }
   }
-  return [...chains.values()].sort((left, right) => compareStrings2(chainKey(left), chainKey(right)));
+  return [...chains.values()].sort((left, right) => compareStrings3(chainKey(left), chainKey(right)));
 }
 function selectedArtifactChain(cwd, focusPaths, artifacts) {
   const candidates = enumerateArtifactChains(cwd, artifacts).filter((chain) => {
@@ -21051,7 +21041,7 @@ function focusAnchor(cwd, focusPaths, artifacts) {
   const focusArtifacts = focusPaths.map((focusPath) => artifacts.find((artifact) => artifact.path === focusPath)).filter((artifact) => Boolean(artifact));
   if (!selected && focusPaths.length > 1) return void 0;
   const rank = { plan: 0, design: 1, spec: 2, adr: 3, task: 4 };
-  return [...focusArtifacts].sort((left, right) => (rank[left.type] ?? 9) - (rank[right.type] ?? 9) || compareStrings2(left.path, right.path))[0];
+  return [...focusArtifacts].sort((left, right) => (rank[left.type] ?? 9) - (rank[right.type] ?? 9) || compareStrings3(left.path, right.path))[0];
 }
 function focusIsAmbiguous(cwd, focusPaths, artifacts) {
   if (focusPaths.length === 0) return false;
@@ -21075,14 +21065,14 @@ function focusedArtifacts(context) {
   return {};
 }
 function gate(status, reasons = []) {
-  return { status, reasons: sortedUnique2(reasons) };
+  return { status, reasons: sortedUnique3(reasons) };
 }
 function bootstrapReasons(cwd) {
   const reasons = [];
   for (const directory of CANONICAL_TARGETS) {
-    const fullDir = import_node_path2.default.join(cwd, directory);
-    if (!import_node_fs2.default.existsSync(fullDir) || !import_node_fs2.default.statSync(fullDir).isDirectory()) reasons.push(`missing-directory:${directory}`);
-    if (!import_node_fs2.default.existsSync(import_node_path2.default.join(fullDir, "README.md"))) reasons.push(`missing-index:${directory}/README.md`);
+    const fullDir = import_node_path3.default.join(cwd, directory);
+    if (!import_node_fs3.default.existsSync(fullDir) || !import_node_fs3.default.statSync(fullDir).isDirectory()) reasons.push(`missing-directory:${directory}`);
+    if (!import_node_fs3.default.existsSync(import_node_path3.default.join(fullDir, "README.md"))) reasons.push(`missing-index:${directory}/README.md`);
   }
   return reasons;
 }
@@ -21091,12 +21081,12 @@ function taskGraphFor(context, plan) {
   return buildTaskGraph({ cwd: context.cwd, plan: plan.path, taskDir: context.taskDir });
 }
 function evaluateLifecycleGates(state, taskDir = "docs/tasks") {
-  const cwd = import_node_path2.default.resolve(state.cwd);
+  const cwd = import_node_path3.default.resolve(state.cwd);
   const scanned = readArtifacts(cwd, taskDir);
   const artifacts = scanned.length > 0 ? scanned : state.artifacts.map((artifact) => ({
     ...artifact,
     body: "",
-    absolutePath: import_node_path2.default.join(cwd, artifact.path),
+    absolutePath: import_node_path3.default.join(cwd, artifact.path),
     relationIssues: []
   }));
   const focused = focusAnchor(cwd, state.focus, artifacts);
@@ -21128,12 +21118,12 @@ function evaluateLifecycleGates(state, taskDir = "docs/tasks") {
     gates.briefing = gate(briefingReasons.length === 0 ? "pass" : "fail", briefingReasons);
     const designReasons = [];
     if (!design || design.status !== "approved") designReasons.push("design-status");
-    if (!design || !relationHasTarget(cwd, design, ["derives-from", "implements", "spec", "relates-to"], spec, context.component)) designReasons.push("design-spec-relation");
-    if (!design || !relationHasTarget(cwd, design, ["derives-from", "adr", "decision", "relates-to"], adr, context.component)) designReasons.push("design-adr-relation");
+    if (!design || !relationHasTarget(cwd, design, ["derives-from", "implements", "spec"], spec, context.component)) designReasons.push("design-spec-relation");
+    if (!design || !relationHasTarget(cwd, design, ["derives-from", "adr", "decision"], adr, context.component)) designReasons.push("design-adr-relation");
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
     const planningReasons = [];
     if (!plan || !["approved", "in-progress", "completed"].includes(plan.status)) planningReasons.push("plan-status");
-    if (!plan || !relationHasTarget(cwd, plan, ["derives-from", "design", "relates-to"], design, context.component)) planningReasons.push("plan-design-relation");
+    if (!plan || !relationHasTarget(cwd, plan, ["derives-from", "design"], design, context.component)) planningReasons.push("plan-design-relation");
     if (!graph || graph.nodes.length === 0) planningReasons.push("no-selected-tasks");
     if (graph && graph.issues.length > 0) planningReasons.push(...graph.issues.map((issue2) => `task-graph:${issue2.code}`));
     const hasTaskGraphIssue = Boolean(graph && graph.issues.length > 0);
@@ -21147,12 +21137,26 @@ function evaluateLifecycleGates(state, taskDir = "docs/tasks") {
     if (!state.signals.includes("implementation-verified")) implementationReasons.push("implementation-verified");
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
-  gates["followup-triage"] = state.signals.includes("followups-classified") ? gate("pass") : gate("blocked", ["followups-classified"]);
+  const followupClassifications = state.signals.filter((signal) => [
+    "followup-bug-fix",
+    "followup-decision-briefing",
+    "followup-decision-design",
+    "followup-new-feature",
+    "followup-doc-only",
+    "followup-terminal"
+  ].includes(signal));
+  if (followupClassifications.length === 1 && !state.signals.includes("followups-unclassified")) {
+    gates["followup-triage"] = gate("pass");
+  } else if (followupClassifications.length === 0) {
+    gates["followup-triage"] = gate("blocked", ["followups-unclassified"]);
+  } else {
+    gates["followup-triage"] = gate("blocked", ["followups-conflicting"]);
+  }
   gates["exit-audit"] = state.signals.includes("exit-audit-pass") ? gate("pass") : gate("blocked", ["exit-audit-pass"]);
   return gates;
 }
 function probeLifecycleState(options2) {
-  const cwd = import_node_path2.default.resolve(options2.cwd);
+  const cwd = import_node_path3.default.resolve(options2.cwd);
   const taskDir = options2.taskDir ?? "docs/tasks";
   const scanned = readArtifacts(cwd, taskDir);
   const resolution = resolveFocus(cwd, options2.focus ?? [], scanned);
@@ -21162,9 +21166,9 @@ function probeLifecycleState(options2) {
     const issues = [...artifact.relationIssues];
     for (const [key, values] of Object.entries(artifact.relations)) {
       for (const value of values) {
-        if (EXTERNAL_REFERENCE.test(value)) continue;
+        if (isExternalReference(value)) continue;
         const target = relationTarget(cwd, artifact, value, scanned);
-        const normalized = normalizeLocalTarget(cwd, artifact.absolutePath, value);
+        const normalized = normalizeLifecycleLocalTarget(cwd, artifact.absolutePath, value);
         if (!target && !normalized.exists) issues.push(`broken-relation:${artifact.path}:${key}:${value}`);
       }
     }
@@ -21178,8 +21182,8 @@ function probeLifecycleState(options2) {
     focus: resolution.focus,
     artifacts: scanned.map(({ body: _body, absolutePath: _absolutePath, relationIssues: _relationIssues, ...artifact }) => artifact),
     gates: {},
-    signals: sortedUnique2(options2.signals ?? []),
-    blockers: sortedUnique2([
+    signals: sortedUnique3(options2.signals ?? []),
+    blockers: sortedUnique3([
       ...resolution.blockers,
       ...relationBlockers,
       ...bootstrap.length > 0 ? ["bootstrap-incomplete"] : [],
@@ -21188,13 +21192,14 @@ function probeLifecycleState(options2) {
   };
   stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers }, taskDir);
   if (stateWithoutGates.gates.planning.reasons.some((reason) => reason.startsWith("task-graph:"))) {
-    stateWithoutGates.blockers = sortedUnique2([...stateWithoutGates.blockers, "task-graph-invalid"]);
+    stateWithoutGates.blockers = sortedUnique3([...stateWithoutGates.blockers, "task-graph-invalid"]);
     stateWithoutGates.gates = evaluateLifecycleGates({ ...stateWithoutGates, blockers: stateWithoutGates.blockers }, taskDir);
   }
   return stateWithoutGates;
 }
 
 // src/skills/doc-driven-dev-lifecycle/scripts/lib/lifecycle_router.ts
+var import_node_path4 = __toESM(require("node:path"));
 var routingPrecedence = [
   "focus-required",
   "migration-requested",
@@ -21219,7 +21224,6 @@ var SUCCESS_EDGES = {
   design: "design-complete",
   planning: "planning-complete",
   implementation: "implementation-verified",
-  "followup-triage": "followups-classified",
   "exit-audit": "exit-audit-pass"
 };
 var RETRY_REASONS = {
@@ -21233,39 +21237,55 @@ var RETRY_REASONS = {
   "followup-triage": "followups-unclassified",
   "exit-audit": "exit-audit-required"
 };
-function compareStrings3(left, right) {
+var REQUIRED_GATE_REASONS = {
+  migration: "migration-incomplete",
+  bootstrap: "bootstrap-incomplete",
+  briefing: "briefing-incomplete",
+  design: "design-incomplete",
+  planning: "planning-incomplete",
+  "task-graph": "task-graph-retry",
+  implementation: "implementation-incomplete",
+  "followup-triage": "followups-unclassified"
+};
+function compareStrings4(left, right) {
   return left.localeCompare(right);
 }
-function sortedUnique3(values) {
-  return [...new Set(values)].sort(compareStrings3);
+function sortedUnique4(values) {
+  return [...new Set(values)].sort(compareStrings4);
 }
 function hasSignal(state, signal) {
   return state.signals.includes(signal);
 }
+var FOLLOWUP_CLASSIFICATIONS = [
+  "followup-bug-fix",
+  "followup-decision-briefing",
+  "followup-decision-design",
+  "followup-new-feature",
+  "followup-doc-only",
+  "followup-terminal"
+];
 function gateIsNotPassing(state, name) {
   const gate2 = state.gates[name];
   return Boolean(gate2 && gate2.status !== "pass");
 }
 function lifecycleComplete(state) {
-  if (hasSignal(state, "lifecycle-complete")) return true;
   const gates = ["bootstrap", "briefing", "design", "planning", "implementation", "followup-triage", "exit-audit"];
   return gates.every((name) => state.gates[name]?.status === "pass");
 }
-var LIFECYCLE_LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
-  "implements",
-  "implemented-by",
-  "derives-from",
-  "derived-by",
-  "refines",
-  "refined-by"
-]);
-function lineageValues(artifact) {
+function lineageValues2(artifact) {
   return [...LIFECYCLE_LINEAGE_RELATIONS].flatMap((relation) => artifact.relations[relation] ?? []);
 }
 function selectedPlan(state) {
-  const byPath = new Map(state.artifacts.map((artifact) => [artifact.path, artifact]));
-  const byId = new Map(state.artifacts.map((artifact) => [artifact.id, artifact]));
-  const queue = state.focus.map((focus) => byPath.get(focus) ?? byId.get(focus)).filter((artifact) => Boolean(artifact));
+  const artifacts = state.artifacts.map((artifact) => ({
+    ...artifact,
+    absolutePath: import_node_path4.default.resolve(state.cwd, artifact.path)
+  }));
+  const queue = state.focus.map((focus) => {
+    const byPath = artifacts.find((artifact) => artifact.path === focus);
+    if (byPath) return byPath;
+    const byId = artifacts.filter((artifact) => artifact.id === focus);
+    return byId.length === 1 ? byId[0] : void 0;
+  }).filter((artifact) => Boolean(artifact));
   const visited = /* @__PURE__ */ new Set();
   const plans = [];
   while (queue.length > 0) {
@@ -21273,16 +21293,18 @@ function selectedPlan(state) {
     if (!artifact || visited.has(artifact.path)) continue;
     visited.add(artifact.path);
     if (artifact.type === "plan") plans.push(artifact.path);
-    for (const value of lineageValues(artifact)) {
-      const target = byPath.get(value) ?? byId.get(value);
+    for (const value of lineageValues2(artifact)) {
+      const target = resolveLifecycleRelationTarget(state.cwd, artifact, value, artifacts);
       if (target && !visited.has(target.path)) queue.push(target);
     }
     for (const candidate of state.artifacts) {
-      const pointsTo = lineageValues(candidate).some((value) => value === artifact.path || value === artifact.id);
-      if (pointsTo && !visited.has(candidate.path)) queue.push(candidate);
+      const candidateWithPath = artifacts.find((entry) => entry.path === candidate.path);
+      if (!candidateWithPath) continue;
+      const pointsTo = lineageValues2(candidateWithPath).some((value) => resolveLifecycleRelationTarget(state.cwd, candidateWithPath, value, artifacts)?.path === artifact.path);
+      if (pointsTo && !visited.has(candidateWithPath.path)) queue.push(candidateWithPath);
     }
   }
-  return plans.sort(compareStrings3)[0];
+  return plans.sort(compareStrings4)[0];
 }
 function taskGraphForState(state, taskDir) {
   const plan = selectedPlan(state);
@@ -21336,6 +21358,9 @@ function successEdge(graph, node, state) {
   if (node === "task-graph" && hasSignal(state, "task-graph-retry")) {
     return findEdge(graph, node, "task-graph-retry");
   }
+  if (node === "followup-triage") {
+    return typedFollowupEdge(graph, state);
+  }
   const reason = SUCCESS_EDGES[node];
   if (!reason) return void 0;
   if (node === "bootstrap" && reasonApplies("bootstrap-incomplete", state, null)) return void 0;
@@ -21346,6 +21371,40 @@ function successEdge(graph, node, state) {
   if (node === "followup-triage" && gateIsNotPassing(state, "followup-triage")) return void 0;
   if (node === "exit-audit" && gateIsNotPassing(state, "exit-audit")) return void 0;
   return findEdge(graph, node, reason);
+}
+function typedFollowupEdge(graph, state) {
+  const classifications = state.signals.filter((signal) => FOLLOWUP_CLASSIFICATIONS.includes(signal));
+  if (classifications.length !== 1 || hasSignal(state, "followups-unclassified")) return void 0;
+  return findEdge(graph, "followup-triage", classifications[0]);
+}
+var FOLLOWUP_UPSTREAM_REPAIRS = [
+  ["bootstrap", "bootstrap-incomplete"],
+  ["briefing", "briefing-incomplete"],
+  ["design", "design-incomplete"],
+  ["planning", "planning-incomplete"],
+  ["implementation", "implementation-incomplete"]
+];
+function followupUpstreamRecoveryEdge(graph, state) {
+  for (const [gate2, reason] of FOLLOWUP_UPSTREAM_REPAIRS) {
+    if (gateIsNotPassing(state, gate2)) return findEdge(graph, "followup-triage", reason);
+  }
+  return void 0;
+}
+function prerequisiteRecoveryEdge(graph, node, state) {
+  const requiresGates = graph.nodes[node]?.requiresGates ?? [];
+  for (const gate2 of requiresGates) {
+    if (state.gates[gate2]?.status === "pass") continue;
+    const reason = REQUIRED_GATE_REASONS[gate2];
+    if (reason) {
+      const edge = findEdge(graph, node, reason);
+      if (edge) return edge;
+    }
+    return retryEdge(graph, node);
+  }
+  return void 0;
+}
+function hasFailedPrerequisite(graph, node, state) {
+  return (graph.nodes[node]?.requiresGates ?? []).some((gate2) => state.gates[gate2]?.status !== "pass");
 }
 function retryEdge(graph, node) {
   const reason = RETRY_REASONS[node];
@@ -21360,8 +21419,8 @@ function routeResult(input, taskGraph, next, reasonCode, edgeId) {
     edgeId,
     reasonCode,
     delegate: reasonCode === "focus-required" ? null : node.delegate,
-    requiredAudits: [...node.audits].sort(compareStrings3),
-    blockers: sortedUnique3(input.state.blockers),
+    requiredAudits: [...node.audits].sort(compareStrings4),
+    blockers: sortedUnique4(input.state.blockers),
     taskGraph
   };
 }
@@ -21373,10 +21432,23 @@ function routeLifecycle(input) {
     return routeResult(input, null, input.current, "focus-required", null);
   }
   const taskGraph = taskGraphForState(input.state, input.taskDir);
+  if (input.current === "followup-triage") {
+    const upstreamEdge = followupUpstreamRecoveryEdge(input.graph, input.state);
+    if (upstreamEdge) return routeResult(input, taskGraph, upstreamEdge.to, upstreamEdge.when, upstreamEdge.id);
+    if (input.state.gates["followup-triage"]?.status === "pass") {
+      const edge = typedFollowupEdge(input.graph, input.state);
+      if (edge) return routeResult(input, taskGraph, edge.to, edge.when, edge.id);
+    }
+  }
   let node = input.current;
   const visited = /* @__PURE__ */ new Set();
   while (!visited.has(node)) {
     visited.add(node);
+    if (hasFailedPrerequisite(input.graph, node, input.state)) {
+      const recovery = prerequisiteRecoveryEdge(input.graph, node, input.state);
+      if (recovery) return routeResult(input, taskGraph, recovery.to, recovery.when, recovery.id);
+      break;
+    }
     for (const reason of routingPrecedence) {
       if (!reasonApplies(reason, input.state, taskGraph)) continue;
       const edge2 = findEdge(input.graph, node, reason);
@@ -21402,19 +21474,6 @@ function routeLifecycle(input) {
 }
 
 // src/skills/doc-driven-dev-lifecycle/scripts/route_lifecycle.ts
-var NODE_IDS = [
-  "probe",
-  "migration",
-  "bootstrap",
-  "briefing",
-  "design",
-  "planning",
-  "task-graph",
-  "implementation",
-  "followup-triage",
-  "exit-audit",
-  "complete"
-];
 var SIGNALS = [
   "focus-required",
   "migration-requested",
@@ -21431,7 +21490,12 @@ var SIGNALS = [
   "planning-incomplete",
   "planning-complete",
   "task-graph-invalid",
-  "followups-classified",
+  "followup-bug-fix",
+  "followup-decision-briefing",
+  "followup-decision-design",
+  "followup-new-feature",
+  "followup-doc-only",
+  "followup-terminal",
   "exit-audit-pass",
   "spec-gap",
   "constraint-gap",
@@ -21443,7 +21507,7 @@ var SIGNALS = [
   "lifecycle-complete"
 ];
 function usage() {
-  return "Usage: node route_lifecycle.js --current <node> [--focus <path>] [--signal <signal>] [--task-dir <path>] [--cwd <path>] [--json]";
+  return "Usage: node route_lifecycle.js --current <node> [--graph <path>] [--focus <path>] [--signal <signal>] [--task-dir <path>] [--cwd <path>] [--json]";
 }
 function requireValue(argv, index, option) {
   const value = argv[index + 1];
@@ -21455,6 +21519,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--current") args.current = requireValue(argv, index++, arg);
+    else if (arg === "--graph") args.graph = requireValue(argv, index++, arg);
     else if (arg === "--focus") args.focus.push(requireValue(argv, index++, arg));
     else if (arg === "--signal") args.signals.push(requireValue(argv, index++, arg));
     else if (arg === "--task-dir") args.taskDir = requireValue(argv, index++, arg);
@@ -21465,18 +21530,20 @@ function parseArgs(argv) {
   }
   return args;
 }
-function isNodeId(value) {
-  return NODE_IDS.includes(value);
-}
 function isSignal(value) {
   return SIGNALS.includes(value);
 }
-function graphFile() {
+function graphFile(selected) {
+  if (selected) {
+    const resolved = import_node_path5.default.resolve(selected);
+    if (!import_node_fs4.default.existsSync(resolved)) throw new Error(`Unable to locate lifecycle graph: ${resolved}`);
+    return resolved;
+  }
   const candidates = [
-    import_node_path3.default.resolve(__dirname, "..", "graphs", "lifecycle.yaml"),
-    import_node_path3.default.resolve(__dirname, "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/graphs/lifecycle.yaml")
+    import_node_path5.default.resolve(__dirname, "..", "graphs", "lifecycle.yaml"),
+    import_node_path5.default.resolve(__dirname, "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/graphs/lifecycle.yaml")
   ];
-  const found = candidates.find((candidate) => import_node_fs3.default.existsSync(candidate));
+  const found = candidates.find((candidate) => import_node_fs4.default.existsSync(candidate));
   if (!found) throw new Error("Unable to locate lifecycle graph");
   return found;
 }
@@ -21488,11 +21555,13 @@ function main() {
       return;
     }
     if (!args.current) throw new Error("Missing required --current");
-    if (!isNodeId(args.current)) throw new Error(`Unknown lifecycle node: ${args.current}`);
+    const graph = parseLifecycleGraph(import_node_fs4.default.readFileSync(graphFile(args.graph), "utf8"));
+    if (!Object.prototype.hasOwnProperty.call(graph.nodes, args.current)) {
+      throw new Error(`Unknown lifecycle node: ${args.current} (not declared in lifecycle graph)`);
+    }
     for (const signal of args.signals) {
       if (!isSignal(signal)) throw new Error(`Unknown lifecycle signal: ${signal}`);
     }
-    const graph = parseLifecycleGraph(import_node_fs3.default.readFileSync(graphFile(), "utf8"));
     const state = probeLifecycleState({
       cwd: args.cwd,
       focus: args.focus,

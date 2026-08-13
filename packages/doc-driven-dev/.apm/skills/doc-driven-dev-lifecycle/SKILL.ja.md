@@ -43,6 +43,16 @@ task の検証証跡と照合する。すべてのフォローアップを `bug-
 `decision-required`, `new-feature`, `doc-only`, `defer`, `wont-do` の
 いずれかに分類する。未分類フォローアップが残っている間は Phase 5 に進まない。
 
+フォローアップ完了は boolean ではなく型付きで判定する。次の 6 つの route
+signal のうち必ず 1 つを出し、ユーザー向けフォローアップ報告に選択した route
+を明記する: `followup-bug-fix`、`followup-decision-briefing`、
+`followup-decision-design`、`followup-new-feature`、`followup-doc-only`、
+`followup-terminal`。`followup-new-feature` は Phase 1 の `briefing-flow` に
+戻り、新機能を現在の承認済み plan に紐付けない。`doc-only`、`defer`、
+`wont-do` の証跡は terminal の `exit-audit` route 前に記録する。未分類または
+競合 signal がある間は `followup-triage` を blocked のままにし、宣言済みの
+`followups-unclassified` retry edge を使う。
+
 ## Router Loop
 
 すべてのライフサイクル turn で graph router を使う。以下の人間向け Phase
