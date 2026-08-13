@@ -304,6 +304,18 @@ test("router never invents an edge for the terminal node", () => {
   assert.equal(route.edgeId, null);
 });
 
+test("focus-required routes never authorize delegation", () => {
+  const repo = repoWithTwoPlans();
+  const state = probeLifecycleState({ cwd: repo, focus: [], signals: [] });
+  for (const current of ["briefing", "implementation"] as const) {
+    const route = routeLifecycle({ current, graph: loadDistributedGraph(), state });
+    assert.equal(route.reasonCode, "focus-required");
+    assert.equal(route.edgeId, null);
+    assert.equal(route.delegate, null);
+    assert.equal(route.taskGraph, null);
+  }
+});
+
 test("blocked task-graph state falls back to its declared retry edge", () => {
   const route = routeFixture({ current: "task-graph", taskStatuses: ["done"] });
   assert.equal(route.next, "task-graph");

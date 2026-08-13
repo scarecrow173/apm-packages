@@ -93,10 +93,28 @@ function lifecycleComplete(state: LifecycleState): boolean {
 }
 
 function selectedPlan(state: LifecycleState): string | undefined {
-  const focused = new Set(state.focus);
-  const plan = state.artifacts.find((artifact) => artifact.type === "plan" && focused.has(artifact.path));
-  if (plan) return plan.path;
-  return state.artifacts.find((artifact) => artifact.type === "plan")?.path;
+  const byPath = new Map(state.artifacts.map((artifact) => [artifact.path, artifact]));
+  const byId = new Map(state.artifacts.map((artifact) => [artifact.id, artifact]));
+  const queue = state.focus
+    .map((focus) => byPath.get(focus) ?? byId.get(focus))
+    .filter((artifact): artifact is (typeof state.artifacts)[number] => Boolean(artifact));
+  const visited = new Set<string>();
+  const plans: string[] = [];
+  while (queue.length > 0) {
+    const artifact = queue.shift();
+    if (!artifact || visited.has(artifact.path)) continue;
+    visited.add(artifact.path);
+    if (artifact.type === "plan") plans.push(artifact.path);
+    for (const value of Object.values(artifact.relations).flat()) {
+      const target = byPath.get(value) ?? byId.get(value);
+      if (target && !visited.has(target.path)) queue.push(target);
+    }
+    for (const candidate of state.artifacts) {
+      const pointsTo = Object.values(candidate.relations).flat().some((value) => value === artifact.path || value === artifact.id);
+      if (pointsTo && !visited.has(candidate.path)) queue.push(candidate);
+    }
+  }
+  return plans.sort(compareStrings)[0];
 }
 
 function taskGraphForState(state: LifecycleState, taskDir?: string): TaskGraphResult | null {
@@ -184,7 +202,7 @@ function routeResult(
     next,
     edgeId,
     reasonCode,
-    delegate: node.delegate,
+    delegate: reasonCode === "focus-required" ? null : node.delegate,
     requiredAudits: [...node.audits].sort(compareStrings),
     blockers: sortedUnique(input.state.blockers),
     taskGraph,
@@ -202,10 +220,10 @@ export function routeLifecycle(input: {
     throw new Error(`Unknown lifecycle node: ${input.current}`);
   }
 
-  const taskGraph = taskGraphForState(input.state, input.taskDir);
-  if (reasonApplies("focus-required", input.state, taskGraph)) {
-    return routeResult(input, taskGraph, input.current, "focus-required", null);
+  if (reasonApplies("focus-required", input.state, null)) {
+    return routeResult(input, null, input.current, "focus-required", null);
   }
+  const taskGraph = taskGraphForState(input.state, input.taskDir);
 
   let node = input.current;
   const visited = new Set<LifecycleNodeId>();

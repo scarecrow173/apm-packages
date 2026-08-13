@@ -21264,7 +21264,7 @@ function routeResult(input, taskGraph, next, reasonCode, edgeId) {
     next,
     edgeId,
     reasonCode,
-    delegate: node.delegate,
+    delegate: reasonCode === "focus-required" ? null : node.delegate,
     requiredAudits: [...node.audits].sort(compareStrings3),
     blockers: sortedUnique3(input.state.blockers),
     taskGraph
