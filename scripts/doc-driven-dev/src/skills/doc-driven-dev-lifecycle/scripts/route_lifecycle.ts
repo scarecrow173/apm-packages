@@ -71,7 +71,7 @@ function isSignal(value: string): value is LifecycleSignal {
 function graphFile(): string {
   const candidates = [
     path.resolve(__dirname, "..", "graphs", "lifecycle.yaml"),
-    path.resolve(__dirname, "../../../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/graphs/lifecycle.yaml"),
+    path.resolve(__dirname, "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle/graphs/lifecycle.yaml"),
   ];
   const found = candidates.find((candidate) => fs.existsSync(candidate));
   if (!found) throw new Error("Unable to locate lifecycle graph");

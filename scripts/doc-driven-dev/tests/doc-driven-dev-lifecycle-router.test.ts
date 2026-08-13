@@ -136,6 +136,15 @@ function routeCompiledCli(args: string[], cwd: string) {
   ], { cwd, encoding: "utf8", windowsHide: true });
 }
 
+function routeSourceCli(args: string[], cwd: string) {
+  return spawnSync(process.execPath, [
+    path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs"),
+    path.resolve(__dirname, "../src/skills/doc-driven-dev-lifecycle/scripts/route_lifecycle.ts"),
+    "--cwd", cwd,
+    ...args,
+  ], { cwd, encoding: "utf8", windowsHide: true });
+}
+
 test("probe requires focus when multiple active artifact chains exist", () => {
   const repo = repoWithTwoPlans();
   const state = probeLifecycleState({ cwd: repo, focus: [], signals: [] });
@@ -312,6 +321,17 @@ test("router uses typed upstream loopbacks before forward gates", () => {
 test("router resumes from documents without persisted runtime state", () => {
   const repo = repoWithApprovedArtifactChain();
   const route = routeCompiledCli([
+    "--current", "probe",
+    "--focus", "docs/plans/0001-graph-lifecycle.md",
+    "--json",
+  ], repo);
+  assert.equal(route.status, 0);
+  assert.equal(JSON.parse(route.stdout).next, "implementation");
+});
+
+test("source CLI locates the package graph without an explicit graph path", () => {
+  const repo = repoWithApprovedArtifactChain();
+  const route = routeSourceCli([
     "--current", "probe",
     "--focus", "docs/plans/0001-graph-lifecycle.md",
     "--json",
