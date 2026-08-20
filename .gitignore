@@ -30,3 +30,4 @@ packages/**/build/
 
 # APM dependencies
 apm_modules/
+/.worktrees/
