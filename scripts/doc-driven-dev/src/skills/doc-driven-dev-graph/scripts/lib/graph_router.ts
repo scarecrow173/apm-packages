@@ -33,7 +33,7 @@ function sortedUnique(values: Iterable<string>): string[] {
 
 function routeResult(
   input: { current: GraphNodeId; definition: GraphDefinition; state: GraphState },
-  result: Pick<GraphRoute, "next" | "edgeId" | "condition" | "status" | "delegate">,
+  result: Pick<GraphRoute, "next" | "edgeId" | "condition" | "status" | "delegate" | "requiredAudits">,
   additionalBlockers: Iterable<string> = [],
 ): GraphRoute {
   return {
@@ -45,7 +45,7 @@ function routeResult(
     condition: result.condition,
     status: result.status,
     delegate: result.delegate,
-    requiredAudits: [],
+    requiredAudits: sortedUnique(result.requiredAudits),
     blockers: sortedUnique([...input.state.blockers, ...additionalBlockers]),
     taskGraph: input.state.taskGraph,
   };
@@ -70,6 +70,17 @@ function prerequisiteBlockers(node: GraphDefinition["nodes"][GraphNodeId], state
   return blockers;
 }
 
+function isPrerequisiteRepairEdge(
+  edge: GraphDefinition["edges"][number],
+  node: GraphDefinition["nodes"][GraphNodeId],
+  definition: GraphDefinition,
+): boolean {
+  const condition = definition.conditions[edge.when];
+  return condition?.kind === "gate"
+    && condition.status === "not-pass"
+    && (node.requiresGates ?? []).includes(condition.gate);
+}
+
 /** Route one step through the declared graph edges. */
 export function routeGraph(input: {
   current: GraphNodeId;
@@ -88,7 +99,35 @@ export function routeGraph(input: {
       condition: "terminal",
       status: "terminal",
       delegate: node.delegate ?? null,
+      requiredAudits: node.audits ?? [],
     });
+  }
+
+  if (input.state.hardBlockers.length > 0) {
+    return routeResult(input, {
+      next: input.current,
+      edgeId: null,
+      condition: "blocked",
+      status: "blocked",
+      delegate: null,
+      requiredAudits: [],
+    }, input.state.hardBlockers);
+  }
+
+  const outgoing = sortedOutgoing(input.definition, input.current);
+  for (const edge of outgoing.filter((edge) => isPrerequisiteRepairEdge(edge, node, input.definition))) {
+    const condition = input.definition.conditions[edge.when];
+    if (condition && evaluateCondition(condition, input.state)) {
+      const destination = input.definition.nodes[edge.to];
+      return routeResult(input, {
+        next: edge.to,
+        edgeId: edge.id,
+        condition: edge.when,
+        status: "edge",
+        delegate: destination?.delegate ?? null,
+        requiredAudits: destination?.audits ?? [],
+      });
+    }
   }
 
   const prerequisiteFailures = prerequisiteBlockers(node, input.state);
@@ -99,10 +138,11 @@ export function routeGraph(input: {
       condition: "blocked",
       status: "blocked",
       delegate: null,
+      requiredAudits: [],
     }, prerequisiteFailures);
   }
 
-  for (const edge of sortedOutgoing(input.definition, input.current)) {
+  for (const edge of outgoing) {
     const condition = input.definition.conditions[edge.when];
     if (condition && evaluateCondition(condition, input.state)) {
       const destination = input.definition.nodes[edge.to];
@@ -112,6 +152,7 @@ export function routeGraph(input: {
         condition: edge.when,
         status: "edge",
         delegate: destination?.delegate ?? null,
+        requiredAudits: destination?.audits ?? [],
       });
     }
   }
@@ -122,5 +163,6 @@ export function routeGraph(input: {
     condition: "blocked",
     status: "blocked",
     delegate: null,
+    requiredAudits: [],
   });
 }

@@ -605,7 +605,8 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
     assert.match(text, /wont-do/);
     assert.match(text, /database|DB|データベース/i);
   }
-  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph \}$/m);
+  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[task\] \}$/m);
+  assert.match(graphDefinition, /^  exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all\], requiresGates: \[/m);
   assert.match(skill, /binding `build_task_graph` is executed by\s+`build_task_graph\.js`/);
   assert.match(skillJa, /binding `build_task_graph` は `build_task_graph\.js` が実行/);
 });

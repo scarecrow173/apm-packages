@@ -13,6 +13,7 @@ export type GraphConditionKey = string;
 export type GraphNode = {
   kind: "action" | "delegate" | "audit" | "terminal";
   delegate?: string;
+  audits?: string[];
   requiresGates?: string[];
 };
 export type GraphEdge = {
@@ -50,6 +51,7 @@ const graphConditionSchema = z.discriminatedUnion("kind", [
 const graphNodeSchema = z.object({
   kind: z.enum(["action", "delegate", "audit", "terminal"]),
   delegate: z.string().min(1).optional(),
+  audits: z.array(z.string().min(1)).optional(),
   requiresGates: z.array(z.string().min(1)).optional(),
 }).strict();
 
@@ -102,6 +104,10 @@ function validateGraphDefinition(value: z.infer<typeof graphDefinitionSchema>): 
     }
     if (new Set(requiresGates).size !== requiresGates.length) {
       throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
+    }
+    const audits = node.audits ?? [];
+    if (new Set(audits).size !== audits.length) {
+      throw invalidGraph(`duplicate audit on node ${nodeId}`);
     }
   }
 

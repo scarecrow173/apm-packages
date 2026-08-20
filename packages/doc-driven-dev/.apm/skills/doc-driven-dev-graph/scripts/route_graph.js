@@ -20288,6 +20288,7 @@ var graphConditionSchema = external_exports.discriminatedUnion("kind", [
 var graphNodeSchema = external_exports.object({
   kind: external_exports.enum(["action", "delegate", "audit", "terminal"]),
   delegate: external_exports.string().min(1).optional(),
+  audits: external_exports.array(external_exports.string().min(1)).optional(),
   requiresGates: external_exports.array(external_exports.string().min(1)).optional()
 }).strict();
 var graphEdgeSchema = external_exports.object({
@@ -20329,6 +20330,10 @@ function validateGraphDefinition(value) {
     }
     if (new Set(requiresGates).size !== requiresGates.length) {
       throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
+    }
+    const audits = node.audits ?? [];
+    if (new Set(audits).size !== audits.length) {
+      throw invalidGraph(`duplicate audit on node ${nodeId}`);
     }
   }
   const edgeIds = /* @__PURE__ */ new Set();
@@ -21195,6 +21200,13 @@ function deriveSignals(input, blockers, gates, taskGraph) {
   if (blockers.length === 0 && Object.values(gates).length > 0 && Object.values(gates).every((result) => result.status === "pass") && (!taskGraph || taskGraph.issues.length === 0)) signals.add("graph-complete");
   return sortedUnique3(signals);
 }
+function deriveHardBlockers(blockers, signals, gates) {
+  return sortedUnique3([
+    ...blockers.filter((blocker) => blocker === "focus-required" || blocker === "focus-invalid" || blocker === "duplicate-id" || blocker.startsWith("broken-relation:")),
+    ...signals.includes("followups-conflicting") ? ["followups-conflicting"] : [],
+    ...gates["artifact-graph"]?.status !== "pass" && gates["artifact-graph"] ? ["artifact-graph"] : []
+  ]);
+}
 function fallbackRecords(cwd, graph) {
   return graph.nodes.map((node) => ({
     ...node,
@@ -21290,6 +21302,7 @@ function projectGraphState(options2) {
     gates: {},
     signals: sortedUnique3(options2.signals ?? []),
     blockers: sortedUnique3(blockers),
+    hardBlockers: [],
     taskGraph
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
@@ -21299,6 +21312,7 @@ function projectGraphState(options2) {
     state.gates = evaluateGraphGates(state);
   }
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
+  state.hardBlockers = deriveHardBlockers(state.blockers, state.signals, state.gates);
   return state;
 }
 
@@ -21330,7 +21344,7 @@ function routeResult(input, result, additionalBlockers = []) {
     condition: result.condition,
     status: result.status,
     delegate: result.delegate,
-    requiredAudits: [],
+    requiredAudits: sortedUnique4(result.requiredAudits),
     blockers: sortedUnique4([...input.state.blockers, ...additionalBlockers]),
     taskGraph: input.state.taskGraph
   };
@@ -21353,6 +21367,10 @@ function prerequisiteBlockers(node, state) {
   }
   return blockers;
 }
+function isPrerequisiteRepairEdge(edge, node, definition) {
+  const condition = definition.conditions[edge.when];
+  return condition?.kind === "gate" && condition.status === "not-pass" && (node.requiresGates ?? []).includes(condition.gate);
+}
 function routeGraph(input) {
   if (!Object.prototype.hasOwnProperty.call(input.definition.nodes, input.current)) {
     throw new Error(`Unknown graph node: ${input.current}`);
@@ -21364,20 +21382,22 @@ function routeGraph(input) {
       edgeId: null,
       condition: "terminal",
       status: "terminal",
-      delegate: node.delegate ?? null
+      delegate: node.delegate ?? null,
+      requiredAudits: node.audits ?? []
     });
   }
-  const prerequisiteFailures = prerequisiteBlockers(node, input.state);
-  if (prerequisiteFailures.length > 0) {
+  if (input.state.hardBlockers.length > 0) {
     return routeResult(input, {
       next: input.current,
       edgeId: null,
       condition: "blocked",
       status: "blocked",
-      delegate: null
-    }, prerequisiteFailures);
+      delegate: null,
+      requiredAudits: []
+    }, input.state.hardBlockers);
   }
-  for (const edge of sortedOutgoing(input.definition, input.current)) {
+  const outgoing = sortedOutgoing(input.definition, input.current);
+  for (const edge of outgoing.filter((edge2) => isPrerequisiteRepairEdge(edge2, node, input.definition))) {
     const condition = input.definition.conditions[edge.when];
     if (condition && evaluateCondition(condition, input.state)) {
       const destination = input.definition.nodes[edge.to];
@@ -21386,7 +21406,33 @@ function routeGraph(input) {
         edgeId: edge.id,
         condition: edge.when,
         status: "edge",
-        delegate: destination?.delegate ?? null
+        delegate: destination?.delegate ?? null,
+        requiredAudits: destination?.audits ?? []
+      });
+    }
+  }
+  const prerequisiteFailures = prerequisiteBlockers(node, input.state);
+  if (prerequisiteFailures.length > 0) {
+    return routeResult(input, {
+      next: input.current,
+      edgeId: null,
+      condition: "blocked",
+      status: "blocked",
+      delegate: null,
+      requiredAudits: []
+    }, prerequisiteFailures);
+  }
+  for (const edge of outgoing) {
+    const condition = input.definition.conditions[edge.when];
+    if (condition && evaluateCondition(condition, input.state)) {
+      const destination = input.definition.nodes[edge.to];
+      return routeResult(input, {
+        next: edge.to,
+        edgeId: edge.id,
+        condition: edge.when,
+        status: "edge",
+        delegate: destination?.delegate ?? null,
+        requiredAudits: destination?.audits ?? []
       });
     }
   }
@@ -21395,7 +21441,8 @@ function routeGraph(input) {
     edgeId: null,
     condition: "blocked",
     status: "blocked",
-    delegate: null
+    delegate: null,
+    requiredAudits: []
   });
 }
 

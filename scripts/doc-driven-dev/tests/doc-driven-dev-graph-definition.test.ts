@@ -48,6 +48,10 @@ const invalidRequiresGatesFixture = validFixture.replace(
   "probe: { kind: action }",
   "probe: { kind: action, requiresGates: [missing] }",
 );
+const duplicateAuditsFixture = validFixture.replace(
+  "probe: { kind: action }",
+  "probe: { kind: action, audits: [spec, spec] }",
+);
 const terminalOutgoingFixture = validFixture.replace(
   "  - { id: probe-to-done, from: probe, to: done, when: focus-required, priority: 10 }",
   [
@@ -104,6 +108,10 @@ test("rejects unknown edge endpoints", () => {
 
 test("rejects invalid prerequisite gates", () => {
   assert.throws(() => parseGraphDefinition(invalidRequiresGatesFixture), /unknown prerequisite gate: missing/);
+});
+
+test("rejects duplicate node audit declarations", () => {
+  assert.throws(() => parseGraphDefinition(duplicateAuditsFixture), /duplicate audit on node probe/);
 });
 
 test("rejects outgoing edges from terminal nodes", () => {

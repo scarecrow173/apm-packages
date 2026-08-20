@@ -11,7 +11,9 @@ For each turn:
 1. Select the Graph Definition and an explicit focus when required.
 2. Run `route_graph.js` once with the current node and observed signals.
 3. Preserve the complete GraphRoute JSON in the handoff.
-4. Run every `requiredAudits` entry before dispatching.
+4. Run every `requiredAudits` entry before dispatching. These are the sorted
+   `audits` declared by the selected destination node; blocked routes return
+   none.
 5. Dispatch only `delegate` from the returned edge; do not dispatch a guessed
    or neighboring skill.
 6. Record completion, gate, and follow-up evidence in canonical Markdown.

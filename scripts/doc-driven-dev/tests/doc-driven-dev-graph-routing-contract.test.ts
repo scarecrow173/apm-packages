@@ -94,13 +94,14 @@ test("projects the selected plan and its task graph", () => {
   assert.equal(state.gates.planning.status, "pass");
 });
 
-test("routes declared graph edges by satisfied conditions", () => {
+test("uses the planning gate rather than a caller completion signal", () => {
   const definition = graphDefinition();
   const state = stateFor(fixtureRepo(), ["planning-complete"]);
+  state.gates.planning = { status: "fail", reasons: ["plan-status"] };
   const route = routeGraph({ current: "planning", definition, state });
-  assert.equal(route.next, "task-graph");
-  assert.equal(route.edgeId, "planning-to-task-graph");
-  assert.equal(route.condition, "planning-complete");
+  assert.notEqual(route.next, "task-graph");
+  assert.equal(route.edgeId, "planning-retry");
+  assert.equal(route.condition, "planning-not-pass");
 });
 
 test("routes runnable tasks to the implementation delegate", () => {
@@ -130,18 +131,61 @@ test("keeps dependents blocked by wont-do predecessors while resolving completio
   assert.equal(route.next, "task-graph");
 });
 
+test("does not let implementation verification bypass an incomplete implementation gate", () => {
+  const definition = graphDefinition();
+  const state = stateFor(fixtureRepo(["todo"]), ["implementation-verified"]);
+  const route = routeGraph({ current: "implementation", definition, state });
+  assert.equal(state.gates.implementation.status, "blocked");
+  assert.equal(route.edgeId, "implementation-retry");
+  assert.equal(route.next, "implementation");
+  assert.equal(route.condition, "implementation-not-pass");
+});
+
 test("exit-audit cannot complete when a required upstream gate regresses", () => {
   const definition = graphDefinition();
+  const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  state.gates.design = { status: "fail", reasons: ["design-status"] };
+  const route = routeGraph({ current: "exit-audit", definition, state });
+  assert.equal(route.status, "edge");
+  assert.equal(route.next, "design");
+  assert.equal(route.edgeId, "exit-audit-to-design-repair");
+  assert.equal(route.condition, "design-not-pass");
+});
+
+test("fails closed at exit-audit when no declared prerequisite repair edge matches", () => {
+  const definition = graphDefinition();
+  definition.edges = definition.edges.filter((edge) => edge.id !== "exit-audit-to-design-repair");
   const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
   state.gates.design = { status: "fail", reasons: ["design-status"] };
   const route = routeGraph({ current: "exit-audit", definition, state });
   assert.equal(route.status, "blocked");
   assert.equal(route.next, "exit-audit");
   assert.equal(route.edgeId, null);
-  assert.equal(route.condition, "blocked");
   assert.ok(route.blockers.includes("required-gate:design"));
-  assert.ok(route.blockers.includes("required-gate:design:design-status"));
-  assert.notEqual(route.next, "complete");
+});
+
+test("blocks conflicting typed follow-ups instead of choosing a priority edge", () => {
+  const definition = graphDefinition();
+  const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-bug-fix", "followup-terminal"]);
+  const route = routeGraph({ current: "followup-triage", definition, state });
+  assert.equal(route.status, "blocked");
+  assert.equal(route.next, "followup-triage");
+  assert.equal(route.edgeId, null);
+  assert.ok(route.blockers.includes("followups-conflicting"));
+});
+
+test("does not let exit-audit pass bypass a fatal artifact graph blocker", () => {
+  const definition = graphDefinition();
+  const repo = fixtureRepo(["done"]);
+  writeArtifact(repo, "docs/ideas/0001-broken.md", {
+    id: "IDEA-0001", type: "idea", status: "draft", title: "Broken", relations: 42,
+  }, "# Broken\n");
+  const state = stateFor(repo, ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  const route = routeGraph({ current: "exit-audit", definition, state });
+  assert.ok(state.hardBlockers.includes("artifact-graph"));
+  assert.equal(route.status, "blocked");
+  assert.equal(route.edgeId, null);
+  assert.equal(route.next, "exit-audit");
 });
 
 test("exit-audit reaches complete when all declared prerequisites pass", () => {

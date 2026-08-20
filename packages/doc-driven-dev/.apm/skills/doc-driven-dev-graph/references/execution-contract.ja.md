@@ -11,7 +11,8 @@ graph topology とは分離され、delegate と audit が証跡を記録した�
 1. Graph Definition を選び、必要なら明示的 focus を指定する。
 2. current node と観測 signal を付けて `route_graph.js` を 1 回実行する。
 3. 完全な GraphRoute JSON を handoff に保持する。
-4. dispatch 前に `requiredAudits` をすべて実行する。
+4. dispatch 前に `requiredAudits` をすべて実行する。これは選択先 node の
+   `audits` 宣言を sort して投影した値であり、blocked route は空を返す。
 5. 返された edge の `delegate` だけを dispatch し、推測した skill や隣接 skill
    は dispatch しない。
 6. canonical Markdown に完了、gate、follow-up の証跡を記録する。

@@ -45,6 +45,6 @@ vocabulary に対する routing を防ぎます。
 | `condition` | 選択 condition key、`terminal`、または `blocked`。 |
 | `status` | `edge`、`terminal`、または `blocked`。 |
 | `delegate` | destination/terminal delegate、なければ `null`。 |
-| `requiredAudits` | route が要求する audit（なければ空）。 |
+| `requiredAudits` | 選択先 node の `audits` 宣言を sort して投影した audit。blocked route または選択先に宣言がない場合は空。 |
 | `blockers` | sort 済み fail-closed state blocker。node の `requiresGates` が未達の場合は、安定した `required-gate:<gate>` blocker と各 gate の失敗理由も含め、前提 evidence を可視化する。 |
 | `taskGraph` | 選択 Task Graph projection。なければ `null`。 |

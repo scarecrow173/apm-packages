@@ -28,7 +28,8 @@ Caller-provided signals are merged with only derived signals that the state
 projector can establish from facts. The CLI accepts a signal only when its
 value is declared by the selected Graph Definition.
 
-Implementation completion requires selected tasks to be lifecycle-resolved and
+Implementation completion requires selected tasks to be graph-resolved (`done`
+or `wont-do`) and
 the caller to provide `implementation-verified`. Follow-up triage requires
 exactly one typed follow-up signal. Exit audit requires `exit-audit-pass`.
 Missing or conflicting evidence blocks routing rather than advancing silently.

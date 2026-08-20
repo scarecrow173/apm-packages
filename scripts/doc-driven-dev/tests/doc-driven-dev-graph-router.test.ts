@@ -26,6 +26,7 @@ function stateWith(input: Partial<Pick<GraphState, "gates" | "signals" | "blocke
     gates: {},
     signals: [],
     blockers: [],
+    hardBlockers: [],
     taskGraph: null,
     ...input,
   };
@@ -66,6 +67,18 @@ test("routes the first satisfied outgoing edge by ascending priority", () => {
   assert.equal(route.status, "edge");
   assert.equal(route.condition, "first");
   assert.equal(route.delegate, "repair-handler");
+});
+
+test("projects destination audit requirements on a selected edge", () => {
+  const definition = definitionWith({
+    nodes: {
+      alpha: { kind: "action" },
+      repair: { kind: "delegate", delegate: "repair-handler", audits: ["spec", "adr"] },
+      finished: { kind: "terminal" },
+    } as GraphDefinition["nodes"],
+  });
+  const route = routeGraph({ current: "alpha", definition, state: stateWith({ signals: ["first"] }) });
+  assert.deepEqual(route.requiredAudits, ["adr", "spec"]);
 });
 
 test("returns only one edge even when the destination has a satisfied edge", () => {
@@ -134,7 +147,7 @@ test("fails closed when a node prerequisite gate is absent or not passing", () =
     current: "alpha",
     definition,
     state: stateWith({
-      signals: ["first", "second"],
+      signals: [],
       gates: { prerequisite: { status: "fail", reasons: ["evidence-missing"] } },
     }),
   });
@@ -155,6 +168,18 @@ test("fails closed when a node prerequisite gate is absent or not passing", () =
   assert.deepEqual(missing.blockers, ["required-gate:prerequisite", "required-gate:prerequisite:missing"]);
   assert.equal(missing.next, "alpha");
   assert.equal(missing.edgeId, null);
+});
+
+test("stops before a normal edge when Graph State marks a hard blocker", () => {
+  const route = routeGraph({
+    current: "alpha",
+    definition: definitionWith({}),
+    state: stateWith({ signals: ["first"], hardBlockers: ["focus-invalid"] } as GraphState),
+  });
+  assert.equal(route.status, "blocked");
+  assert.equal(route.edgeId, null);
+  assert.equal(route.next, "alpha");
+  assert.ok(route.blockers.includes("focus-invalid"));
 });
 
 test("rejects an unknown current node", () => {

@@ -28,6 +28,7 @@ export type GraphState = {
   gates: GraphGateResults;
   signals: GraphSignal[];
   blockers: string[];
+  hardBlockers: string[];
   taskGraph: TaskGraphResult | null;
 };
 
@@ -117,6 +118,17 @@ function deriveSignals(input: GraphSignal[], blockers: string[], gates: GraphGat
   if (blockers.length === 0 && Object.values(gates).length > 0 && Object.values(gates).every((result) => result.status === "pass")
     && (!taskGraph || taskGraph.issues.length === 0)) signals.add("graph-complete");
   return sortedUnique(signals);
+}
+
+function deriveHardBlockers(blockers: string[], signals: GraphSignal[], gates: GraphGateResults): string[] {
+  return sortedUnique([
+    ...blockers.filter((blocker) => blocker === "focus-required"
+      || blocker === "focus-invalid"
+      || blocker === "duplicate-id"
+      || blocker.startsWith("broken-relation:")),
+    ...(signals.includes("followups-conflicting") ? ["followups-conflicting"] : []),
+    ...(gates["artifact-graph"]?.status !== "pass" && gates["artifact-graph"] ? ["artifact-graph"] : []),
+  ]);
 }
 
 function fallbackRecords(cwd: string, graph: ArtifactGraph): ArtifactRecord[] {
@@ -227,6 +239,7 @@ export function projectGraphState(options: ProjectGraphStateOptions): GraphState
     gates: {},
     signals: sortedUnique(options.signals ?? []),
     blockers: sortedUnique(blockers),
+    hardBlockers: [],
     taskGraph,
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
@@ -236,6 +249,7 @@ export function projectGraphState(options: ProjectGraphStateOptions): GraphState
     state.gates = evaluateGraphGates(state);
   }
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
+  state.hardBlockers = deriveHardBlockers(state.blockers, state.signals, state.gates);
   return state;
 }
 

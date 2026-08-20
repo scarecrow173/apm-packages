@@ -26,7 +26,7 @@ fact は deterministic な sort 済み blocker として残ります。caller si
 state projector が fact から確認できる derived signal と統合します。CLI が
 受け付ける signal は、選択した Graph Definition が宣言した値だけです。
 
-implementation 完了には、選択 task の lifecycle-resolved と caller による
+implementation 完了には、選択 task の graph-resolved（`done` または `wont-do`）と caller による
 `implementation-verified` が必要です。follow-up triage は型付き signal が正確に
 1 つ必要です。exit audit は `exit-audit-pass` を必要とします。証跡が欠落または
 矛盾する場合は、黙って進めず routing を block します。

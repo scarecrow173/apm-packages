@@ -46,6 +46,6 @@ The stable JSON object contains exactly:
 | `condition` | Selected condition key, `terminal`, or `blocked`. |
 | `status` | `edge`, `terminal`, or `blocked`. |
 | `delegate` | Destination delegate, terminal delegate, or `null`. |
-| `requiredAudits` | Audits required by the route (empty when none). |
+| `requiredAudits` | Sorted `audits` declared on the selected destination node (empty for blocked routes or when the destination declares none). |
 | `blockers` | Sorted fail-closed state blockers. When a node's declared `requiresGates` is unmet, this also includes a stable `required-gate:<gate>` blocker and each failed gate reason so prerequisite evidence remains visible. |
 | `taskGraph` | Selected Task Graph projection, or `null`. |

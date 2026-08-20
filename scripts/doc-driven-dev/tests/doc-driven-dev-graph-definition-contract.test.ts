@@ -39,9 +39,13 @@ test("loads the distributed graph definition with declared delegates", () => {
   assert.equal(graph.schemaVersion, 2);
   assert.equal(graph.id, "doc-driven-dev");
   assert.equal(graph.nodes.briefing.delegate, "briefing-flow");
+  assert.deepEqual(graph.nodes.briefing.audits, ["spec", "adr"]);
   assert.equal(graph.nodes.implementation.delegate, "implementation-flow");
+  assert.deepEqual(graph.nodes["exit-audit"].audits, ["all"]);
   assert.ok(findEdge(graph, "design", "spec-gap"));
-  assert.ok(findEdge(graph, "planning", "planning-complete"));
+  assert.ok(findEdge(graph, "planning", "planning-not-pass"));
+  assert.ok(findEdge(graph, "planning", "planning"));
+  assert.ok(findEdge(graph, "exit-audit", "design-not-pass"));
   assert.ok(findEdge(graph, "task-graph", "task-graph-invalid"));
 });
 
