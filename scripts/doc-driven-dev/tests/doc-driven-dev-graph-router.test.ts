@@ -131,12 +131,44 @@ test("returns terminal status when re-entering a terminal node", () => {
     evaluateRouteDecision({ current: "finished", definition, state: stateWith() }).route,
   );
 
-  const hardBlockedInput = { current: "finished", definition, state: stateWith({ hardBlockers: ["artifact-graph"] }) };
+  const hardBlockedDefinition: GraphDefinition = {
+    ...definition,
+    nodes: { finished: { kind: "terminal", delegate: "final-handler", audits: ["z-audit", "a-audit"] } },
+  };
+  const taskGraph = {
+    schemaVersion: 1 as const,
+    plan: "docs/plans/example.md",
+    nodes: [],
+    edges: [],
+    runnable: [],
+    active: [],
+    completed: [],
+    blocked: [],
+    issues: [],
+  };
+  const hardBlockedInput = {
+    current: "finished",
+    definition: hardBlockedDefinition,
+    state: stateWith({
+      blockers: ["z-blocker", "a-blocker"],
+      hardBlockers: ["artifact-graph"],
+      taskGraph,
+    }),
+  };
   const hardBlockedRoute = routeGraph(hardBlockedInput);
-  assert.equal(hardBlockedRoute.status, "terminal");
-  assert.equal(hardBlockedRoute.condition, "terminal");
-  assert.equal(hardBlockedRoute.next, "finished");
-  assert.equal(hardBlockedRoute.edgeId, null);
+  assert.deepEqual(hardBlockedRoute, {
+    schemaVersion: 2,
+    graphId: "arbitrary-graph",
+    current: "finished",
+    next: "finished",
+    edgeId: null,
+    condition: "terminal",
+    status: "terminal",
+    delegate: "final-handler",
+    requiredAudits: ["a-audit", "z-audit"],
+    blockers: ["a-blocker", "z-blocker"],
+    taskGraph,
+  });
   assert.deepEqual(hardBlockedRoute, evaluateRouteDecision(hardBlockedInput).route);
 });
 
