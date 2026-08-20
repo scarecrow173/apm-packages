@@ -7,6 +7,7 @@ const test = require("node:test");
 const matter = require("gray-matter");
 
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
+const inspectCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts");
 const generatedCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/route_graph.js");
 const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 const retiredRoutePath = path.resolve(
@@ -118,6 +119,10 @@ function runCli(cli: string, cwd: string, args: string[]) {
 
 function runSource(cwd: string, args: string[]) {
   return runCli(tsxCli, cwd, [sourceCli, ...args]);
+}
+
+function runInspect(cwd: string, args: string[]) {
+  return runCli(tsxCli, cwd, [inspectCli, ...args]);
 }
 
 test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
@@ -324,4 +329,80 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
     assert.equal(route.status, scenario.status ?? "edge", scenario.name);
     scenario.assertRoute?.(route);
   }
+});
+
+test("explain mode preserves the ordinary route under a separate envelope", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const ordinaryResult = runSource(repo, ["--graph", graph, "--signal", "advance", "--json"]);
+  const explainedResult = runSource(repo, ["--graph", graph, "--signal", "advance", "--explain", "--json"]);
+  assert.equal(ordinaryResult.status, 0, ordinaryResult.stderr);
+  assert.equal(explainedResult.status, 0, explainedResult.stderr);
+  const ordinary = JSON.parse(ordinaryResult.stdout);
+  const explained = JSON.parse(explainedResult.stdout);
+  assert.deepEqual(explained.route, ordinary);
+  assert.deepEqual(Object.keys(explained).sort(), ["explanation", "route"]);
+  assert.equal(explained.explanation.selectedEdgeId, "start-to-next");
+});
+
+test("inspection CLI emits runtime state only for an explicit selector", () => {
+  const repo = completeRepo();
+  const graph = path.join(repo, "graph.yaml");
+  fs.writeFileSync(graph, `schemaVersion: 2\nid: cli-fixture\nentry: start\nconditions: {}\nnodes: { start: { kind: terminal } }\nedges: []\n`, "utf8");
+
+  const definitionOnly = runInspect(repo, ["--graph", graph, "--format", "json"]);
+  assert.equal(definitionOnly.status, 0, definitionOnly.stderr);
+  const inspected = JSON.parse(definitionOnly.stdout);
+  assert.deepEqual(Object.keys(inspected), ["definition"]);
+
+  const withState = runInspect(repo, [
+    "--graph", graph, "--format", "json", "--cwd", repo, "--focus", "PLAN-0001",
+  ]);
+  assert.equal(withState.status, 0, withState.stderr);
+  const selected = JSON.parse(withState.stdout);
+  assert.ok(selected.definition);
+  assert.ok(selected.state);
+  assert.ok(selected.artifactGraph);
+  assert.ok(selected.taskGraph);
+  assert.deepEqual(Object.keys(selected.state), [
+    "schemaVersion", "graphId", "cwd", "taskDir", "focus", "gates", "signals", "blockers", "hardBlockers",
+  ]);
+});
+
+test("inspection Mermaid output is deterministic and pure text", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const first = runInspect(repo, ["--graph", graph, "--format", "mermaid"]);
+  const second = runInspect(repo, ["--graph", graph, "--format", "mermaid"]);
+  assert.equal(first.status, 0, first.stderr);
+  assert.equal(second.status, 0, second.stderr);
+  assert.equal(first.stdout, second.stdout);
+  assert.match(first.stdout, /^flowchart TD\n/);
+});
+
+test("CLI rejects unknown options, missing values, bad graphs, and invalid focus", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  for (const args of [
+    ["--graph", graph, "--signal", "missing", "--json"],
+    ["--graph", graph, "--current", "missing", "--json"],
+    ["--graph", graph, "--format", "yaml"],
+    ["--graph"],
+    ["--graph", path.join(repo, "missing.yaml"), "--json"],
+  ]) {
+    const result = args.includes("--format") ? runInspect(repo, args) : runSource(repo, args);
+    assert.notEqual(result.status, 0, args.join(" "));
+    assert.ok(result.stderr.trim(), args.join(" "));
+  }
+  const invalidFocus = runInspect(repo, ["--graph", graph, "--format", "json", "--cwd", repo, "--focus", "MISSING"]);
+  assert.notEqual(invalidFocus.status, 0);
+  assert.match(invalidFocus.stderr, /focus|invalid|unknown/i);
+});
+
+test("explain mode requires JSON output", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const result = runSource(repo, ["--graph", graph, "--explain"]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /explain.*json|json.*explain/i);
 });
