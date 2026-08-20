@@ -116,9 +116,9 @@ The Mermaid format is definition-only even when runtime selectors are supplied.
 ## Mermaid output
 
 `--format mermaid` returns deterministic text beginning with `flowchart TD`.
-Node lines are sorted by node ID. A Mermaid-safe node ID is retained when
-possible; otherwise a deterministic `node_N` alias is used, while the original
-ID remains in the label. A node label contains its ID and `kind`, then optional
+Node lines are sorted by original node ID. Every node uses a deterministic `nN`
+alias in Mermaid syntax, assigned by that sorted order; the original ID remains
+in the escaped label. A node label contains its ID and `kind`, then optional
 `delegate`, `terminal`, and `audits` labels. Edge lines are sorted by `from`,
 priority, and edge ID; each label contains the condition key and priority
 (`<condition> · p<priority>`). Mermaid labels escape `&` and `"`.

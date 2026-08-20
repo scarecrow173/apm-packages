@@ -20443,31 +20443,10 @@ function issueSort(left, right) {
 function escapeMermaidLabel(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
-function isMermaidSafeNodeId(value) {
-  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(value);
-}
 function mermaidNodeAliases(nodes) {
-  const sortedNodes = [...nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId));
-  const used = new Set(
-    sortedNodes.filter((node) => isMermaidSafeNodeId(node.nodeId)).map((node) => node.nodeId)
+  return new Map(
+    [...nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId)).map((node, index) => [node.nodeId, `n${index}`])
   );
-  const aliases = /* @__PURE__ */ new Map();
-  let nextAlias = 0;
-  for (const node of sortedNodes) {
-    if (isMermaidSafeNodeId(node.nodeId)) {
-      aliases.set(node.nodeId, node.nodeId);
-      continue;
-    }
-    let alias = `node_${nextAlias}`;
-    while (used.has(alias)) {
-      nextAlias += 1;
-      alias = `node_${nextAlias}`;
-    }
-    aliases.set(node.nodeId, alias);
-    used.add(alias);
-    nextAlias += 1;
-  }
-  return aliases;
 }
 function renderNode(node, terminalNodes, aliases) {
   const labels = [node.nodeId, `kind: ${node.kind}`];

@@ -71,15 +71,19 @@ edges:
 
 const customIdFixture = `
 schemaVersion: 2
-id: custom-mermaid-ids
-entry: "Entry Node"
+id: reserved-mermaid-ids
+entry: end
 conditions:
   ready: { kind: signal, signal: ready }
 nodes:
-  "Entry Node": { kind: action }
-  "Finish Node": { kind: terminal }
+  end: { kind: action }
+  subgraph: { kind: action }
+  style: { kind: action }
+  classDef: { kind: terminal }
 edges:
-  - { id: entry-to-finish, from: "Entry Node", to: "Finish Node", when: ready, priority: 10 }
+  - { id: end-to-subgraph, from: end, to: subgraph, when: ready, priority: 10 }
+  - { id: subgraph-to-style, from: subgraph, to: style, when: ready, priority: 20 }
+  - { id: style-to-classDef, from: style, to: classDef, when: ready, priority: 30 }
 `;
 
 function canonicalGraph() {
@@ -173,13 +177,18 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
   assert.match(first, /\|exit-audit · p80\|/);
 });
 
-test("renders arbitrary node IDs through deterministic Mermaid-safe aliases", () => {
+test("aliases reserved node IDs while retaining original labels", () => {
   const inspection = inspectGraphDefinition(parseGraphDefinition(customIdFixture));
   const first = renderGraphMermaid(inspection);
 
-  assert.match(first, /node_0\["Entry Node<br\/>kind: action"\]/);
-  assert.match(first, /node_1\["Finish Node<br\/>kind: terminal<br\/>terminal"\]/);
-  assert.match(first, /node_0 -->\|ready · p10\| node_1/);
+  assert.match(first, /n0\["classDef<br\/>kind: terminal<br\/>terminal"\]/);
+  assert.match(first, /n1\["end<br\/>kind: action"\]/);
+  assert.match(first, /n2\["style<br\/>kind: action"\]/);
+  assert.match(first, /n3\["subgraph<br\/>kind: action"\]/);
+  assert.match(first, /n1 -->\|ready · p10\| n3/);
+  assert.match(first, /n3 -->\|ready · p20\| n2/);
+  assert.match(first, /n2 -->\|ready · p30\| n0/);
+  assert.doesNotMatch(first, /^\s*(?:end|subgraph|style|classDef)(?:\[|\s+-->|$)/m);
   assert.equal(renderGraphMermaid(inspection), first);
 });
 

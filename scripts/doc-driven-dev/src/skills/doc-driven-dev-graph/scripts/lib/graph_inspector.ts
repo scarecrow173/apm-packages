@@ -66,33 +66,12 @@ function escapeMermaidLabel(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
-function isMermaidSafeNodeId(value: string): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(value);
-}
-
 function mermaidNodeAliases(nodes: readonly InspectedNode[]): Map<string, string> {
-  const sortedNodes = [...nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId));
-  const used = new Set(
-    sortedNodes.filter((node) => isMermaidSafeNodeId(node.nodeId)).map((node) => node.nodeId),
+  return new Map(
+    [...nodes]
+      .sort((left, right) => compareStrings(left.nodeId, right.nodeId))
+      .map((node, index) => [node.nodeId, `n${index}`]),
   );
-  const aliases = new Map<string, string>();
-  let nextAlias = 0;
-
-  for (const node of sortedNodes) {
-    if (isMermaidSafeNodeId(node.nodeId)) {
-      aliases.set(node.nodeId, node.nodeId);
-      continue;
-    }
-    let alias = `node_${nextAlias}`;
-    while (used.has(alias)) {
-      nextAlias += 1;
-      alias = `node_${nextAlias}`;
-    }
-    aliases.set(node.nodeId, alias);
-    used.add(alias);
-    nextAlias += 1;
-  }
-  return aliases;
 }
 
 function renderNode(
