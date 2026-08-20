@@ -1,6 +1,7 @@
 import type { GraphInspection } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_inspector";
 
 const assert = require("node:assert/strict");
+const { spawnSync } = require("node:child_process");
 const nodePath = require("node:path");
 const test = require("node:test");
 const {
@@ -60,7 +61,7 @@ id: unused-condition
 entry: start
 conditions:
   ready: { kind: signal, signal: ready }
-  never-used: { kind: signal, signal: never-used }
+  never-used: { kind: gate, gate: never-used, status: pass }
 nodes:
   start: { kind: action }
   done: { kind: terminal }
@@ -117,10 +118,22 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
 
   assert.deepEqual(canonicalInspection.unreachableNodes, []);
   assert.deepEqual(canonicalInspection.reachableTerminalNodes, ["complete"]);
-  assert.deepEqual(canonicalInspection.issues, [
-    { severity: "warning", code: "unused-condition", condition: "exit-audit-pass" },
-    { severity: "warning", code: "unused-condition", condition: "implementation-verified" },
-  ]);
+  assert.deepEqual(canonicalInspection.issues, []);
+  assert.equal(canonicalInspection.nodes.length, canonicalInspection.nodeCount);
+  assert.equal(canonicalInspection.edges.length, canonicalInspection.edgeCount);
+  assert.deepEqual(canonicalInspection.nodes[0], {
+    nodeId: "bootstrap",
+    kind: "action",
+    delegate: "scaffold_docs",
+    audits: [],
+  });
+  assert.deepEqual(canonicalInspection.edges[0], {
+    id: "bootstrap-retry",
+    from: "bootstrap",
+    to: "bootstrap",
+    when: "bootstrap-not-pass",
+    priority: 10,
+  });
   assert.deepEqual(
     canonicalInspection.delegates,
     [
@@ -145,4 +158,29 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
   assert.match(first, /\|bootstrap · p20\|/);
   assert.match(first, /\|design · p30\|/);
   assert.match(first, /\|exit-audit · p80\|/);
+});
+
+test("accepts focus-required as a declared public signal", () => {
+  const sourceCli = nodePath.resolve(
+    __dirname,
+    "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts",
+  );
+  const tsxCli = nodePath.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
+  const result = spawnSync(process.execPath, [
+    tsxCli,
+    sourceCli,
+    "--signal",
+    "focus-required",
+    "--json",
+    "--cwd",
+    nodePath.resolve(__dirname, "../../.."),
+  ], {
+    cwd: nodePath.resolve(__dirname, "../.."),
+    encoding: "utf8",
+    windowsHide: true,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stderr, /Unknown signal not declared/);
+  assert.ok(["blocked", "edge", "terminal"].includes(JSON.parse(result.stdout).status));
 });
