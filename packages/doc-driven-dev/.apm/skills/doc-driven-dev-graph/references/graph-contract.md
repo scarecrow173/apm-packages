@@ -24,9 +24,12 @@ routing.
 ## One-edge routing
 
 `route_graph.js` loads the selected definition, projects Graph State, and calls
-`routeGraph()` exactly once. Outgoing edges are considered by ascending
-priority, then ID. The result is one declared edge, a terminal result, or a
-blocked result; the CLI never follows the destination recursively.
+`evaluateRouteDecision()` exactly once. The CLI projects the decision's stable
+`GraphRoute` (`decision.route`) for normal JSON output, or keeps that same route
+under the `route` key beside `explanation` when `--explain` is requested.
+Outgoing edges are considered by ascending priority, then ID. The result is one
+declared edge, a terminal result, or a blocked result; the CLI never follows the
+destination recursively.
 
 `--current` defaults to `definition.entry` and must name a node in the selected
 definition. Each `--signal` must be referenced by a `kind: signal` condition in

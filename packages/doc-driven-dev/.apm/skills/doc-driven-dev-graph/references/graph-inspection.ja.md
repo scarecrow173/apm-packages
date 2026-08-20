@@ -115,10 +115,12 @@ runtime selector を渡しても Mermaid format は definition-only です。
 ## Mermaid output
 
 `--format mermaid` は `flowchart TD` で始まる決定的な text を返します。node 行は node
-ID で sort されます。node label には ID と `kind`、宣言されていれば `delegate`、
-`terminal`、`audits` label が含まれます。edge 行は `from`、priority、edge ID の順で sort
-され、label には condition key と priority（`<condition> · p<priority>`）が含まれます。
-Mermaid label の `&` と `"` は escape されます。
+ID で sort されます。Mermaid-safe な node ID は可能な限りそのまま使い、それ以外は
+決定的な `node_N` alias に置き換えますが、元の ID は label に残します。node label
+には ID と `kind`、宣言されていれば `delegate`、`terminal`、`audits` label が含まれます。
+edge 行は `from`、priority、edge ID の順で sort され、label には condition key と
+priority（`<condition> · p<priority>`）が含まれます。Mermaid label の `&` と `"` は
+escape されます。
 
 Mermaid rendering は text-only で、routing、delegate dispatch、Markdown、persistence への
 副作用はありません。

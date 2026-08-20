@@ -23,9 +23,12 @@ parser は routing 前に未知の endpoint/condition、重複 ID/route selector
 ## One-edge routing
 
 `route_graph.js` は選択した definition を load し、Graph State を投影し、
-`routeGraph()` を正確に 1 回呼びます。outgoing edge は priority の昇順、次に
-ID の順で評価します。結果は宣言済み edge 1 つ、terminal 結果、または blocked
-結果であり、CLI は destination を再帰的に辿りません。
+`evaluateRouteDecision()` を正確に 1 回呼びます。CLI は decision の安定した
+`GraphRoute`（`decision.route`）を通常の JSON output に投影します。`--explain`
+を指定した場合も同じ route を `route` key に保持し、`explanation` を併記します。
+outgoing edge は priority の昇順、次に ID の順で評価します。結果は宣言済み edge
+1 つ、terminal 結果、または blocked 結果であり、CLI は destination を再帰的に
+辿りません。
 
 `--current` の既定値は `definition.entry` で、選択した definition の node で
 なければなりません。各 `--signal` は同 definition の `kind: signal`

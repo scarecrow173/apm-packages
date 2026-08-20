@@ -20443,12 +20443,38 @@ function issueSort(left, right) {
 function escapeMermaidLabel(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
-function renderNode(node, terminalNodes) {
+function isMermaidSafeNodeId(value) {
+  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(value);
+}
+function mermaidNodeAliases(nodes) {
+  const sortedNodes = [...nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId));
+  const used = new Set(
+    sortedNodes.filter((node) => isMermaidSafeNodeId(node.nodeId)).map((node) => node.nodeId)
+  );
+  const aliases = /* @__PURE__ */ new Map();
+  let nextAlias = 0;
+  for (const node of sortedNodes) {
+    if (isMermaidSafeNodeId(node.nodeId)) {
+      aliases.set(node.nodeId, node.nodeId);
+      continue;
+    }
+    let alias = `node_${nextAlias}`;
+    while (used.has(alias)) {
+      nextAlias += 1;
+      alias = `node_${nextAlias}`;
+    }
+    aliases.set(node.nodeId, alias);
+    used.add(alias);
+    nextAlias += 1;
+  }
+  return aliases;
+}
+function renderNode(node, terminalNodes, aliases) {
   const labels = [node.nodeId, `kind: ${node.kind}`];
   if (node.delegate !== void 0) labels.push(`delegate: ${node.delegate}`);
   if (terminalNodes.has(node.nodeId)) labels.push("terminal");
   if (node.audits.length > 0) labels.push(`audits: ${node.audits.join(", ")}`);
-  return `  ${node.nodeId}["${escapeMermaidLabel(labels.join("<br/>"))}"]`;
+  return `  ${aliases.get(node.nodeId) ?? node.nodeId}["${escapeMermaidLabel(labels.join("<br/>"))}"]`;
 }
 function inspectGraphDefinition(definition) {
   const nodeIds = sortedStrings(Object.keys(definition.nodes));
@@ -20536,11 +20562,12 @@ function inspectGraphDefinition(definition) {
 function renderGraphMermaid(inspection) {
   const terminalNodes = new Set(inspection.terminalNodes);
   const nodes = [...inspection.nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId));
+  const aliases = mermaidNodeAliases(nodes);
   const edges = [...inspection.edges].sort((left, right) => compareStrings(left.from, right.from) || left.priority - right.priority || compareStrings(left.id, right.id));
   return [
     "flowchart TD",
-    ...nodes.map((node) => renderNode(node, terminalNodes)),
-    ...edges.map((edge) => `  ${edge.from} -->|${escapeMermaidLabel(`${edge.when} \xB7 p${edge.priority}`)}| ${edge.to}`)
+    ...nodes.map((node) => renderNode(node, terminalNodes, aliases)),
+    ...edges.map((edge) => `  ${aliases.get(edge.from) ?? edge.from} -->|${escapeMermaidLabel(`${edge.when} \xB7 p${edge.priority}`)}| ${aliases.get(edge.to) ?? edge.to}`)
   ].join("\n");
 }
 

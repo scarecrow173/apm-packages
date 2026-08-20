@@ -69,6 +69,19 @@ edges:
   - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
 `;
 
+const customIdFixture = `
+schemaVersion: 2
+id: custom-mermaid-ids
+entry: "Entry Node"
+conditions:
+  ready: { kind: signal, signal: ready }
+nodes:
+  "Entry Node": { kind: action }
+  "Finish Node": { kind: terminal }
+edges:
+  - { id: entry-to-finish, from: "Entry Node", to: "Finish Node", when: ready, priority: 10 }
+`;
+
 function canonicalGraph() {
   const file = nodePath.resolve(
     __dirname,
@@ -158,6 +171,16 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
   assert.match(first, /\|bootstrap · p20\|/);
   assert.match(first, /\|design · p30\|/);
   assert.match(first, /\|exit-audit · p80\|/);
+});
+
+test("renders arbitrary node IDs through deterministic Mermaid-safe aliases", () => {
+  const inspection = inspectGraphDefinition(parseGraphDefinition(customIdFixture));
+  const first = renderGraphMermaid(inspection);
+
+  assert.match(first, /node_0\["Entry Node<br\/>kind: action"\]/);
+  assert.match(first, /node_1\["Finish Node<br\/>kind: terminal<br\/>terminal"\]/);
+  assert.match(first, /node_0 -->\|ready · p10\| node_1/);
+  assert.equal(renderGraphMermaid(inspection), first);
 });
 
 test("accepts focus-required as a declared public signal", () => {

@@ -486,7 +486,10 @@ test("source and generated graph CLIs have identical explain and inspection outp
 });
 
 test("canonical generated graph scripts contain no trailing whitespace", () => {
-  for (const cli of [generatedCli, generatedInspectCli]) {
+  const generatedGraphScripts = fs.readdirSync(path.dirname(generatedCli))
+    .filter((name) => name.endsWith(".js"))
+    .map((name) => path.join(path.dirname(generatedCli), name));
+  for (const cli of generatedGraphScripts) {
     const lines = fs.readFileSync(cli, "utf8").split(/\r?\n/);
     const trailingLine = lines.findIndex((line) => /[ \t]+$/.test(line));
     assert.equal(trailingLine, -1, `${path.basename(cli)} line ${trailingLine + 1} has trailing whitespace`);

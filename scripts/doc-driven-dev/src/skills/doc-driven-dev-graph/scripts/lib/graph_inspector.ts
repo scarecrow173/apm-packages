@@ -66,12 +66,45 @@ function escapeMermaidLabel(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
-function renderNode(node: InspectedNode, terminalNodes: ReadonlySet<string>): string {
+function isMermaidSafeNodeId(value: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(value);
+}
+
+function mermaidNodeAliases(nodes: readonly InspectedNode[]): Map<string, string> {
+  const sortedNodes = [...nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId));
+  const used = new Set(
+    sortedNodes.filter((node) => isMermaidSafeNodeId(node.nodeId)).map((node) => node.nodeId),
+  );
+  const aliases = new Map<string, string>();
+  let nextAlias = 0;
+
+  for (const node of sortedNodes) {
+    if (isMermaidSafeNodeId(node.nodeId)) {
+      aliases.set(node.nodeId, node.nodeId);
+      continue;
+    }
+    let alias = `node_${nextAlias}`;
+    while (used.has(alias)) {
+      nextAlias += 1;
+      alias = `node_${nextAlias}`;
+    }
+    aliases.set(node.nodeId, alias);
+    used.add(alias);
+    nextAlias += 1;
+  }
+  return aliases;
+}
+
+function renderNode(
+  node: InspectedNode,
+  terminalNodes: ReadonlySet<string>,
+  aliases: ReadonlyMap<string, string>,
+): string {
   const labels = [node.nodeId, `kind: ${node.kind}`];
   if (node.delegate !== undefined) labels.push(`delegate: ${node.delegate}`);
   if (terminalNodes.has(node.nodeId)) labels.push("terminal");
   if (node.audits.length > 0) labels.push(`audits: ${node.audits.join(", ")}`);
-  return `  ${node.nodeId}["${escapeMermaidLabel(labels.join("<br/>"))}"]`;
+  return `  ${aliases.get(node.nodeId) ?? node.nodeId}["${escapeMermaidLabel(labels.join("<br/>"))}"]`;
 }
 
 /** Inspect graph topology without evaluating any edge conditions. */
@@ -177,6 +210,7 @@ export function inspectGraphDefinition(definition: GraphDefinition): GraphInspec
 export function renderGraphMermaid(inspection: GraphInspection): string {
   const terminalNodes = new Set(inspection.terminalNodes);
   const nodes = [...inspection.nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId));
+  const aliases = mermaidNodeAliases(nodes);
   const edges = [...inspection.edges].sort((left, right) => (
     compareStrings(left.from, right.from)
     || left.priority - right.priority
@@ -184,7 +218,9 @@ export function renderGraphMermaid(inspection: GraphInspection): string {
   ));
   return [
     "flowchart TD",
-    ...nodes.map((node) => renderNode(node, terminalNodes)),
-    ...edges.map((edge) => `  ${edge.from} -->|${escapeMermaidLabel(`${edge.when} · p${edge.priority}`)}| ${edge.to}`),
+    ...nodes.map((node) => renderNode(node, terminalNodes, aliases)),
+    ...edges.map((edge) => (
+      `  ${aliases.get(edge.from) ?? edge.from} -->|${escapeMermaidLabel(`${edge.when} · p${edge.priority}`)}| ${aliases.get(edge.to) ?? edge.to}`
+    )),
   ].join("\n");
 }

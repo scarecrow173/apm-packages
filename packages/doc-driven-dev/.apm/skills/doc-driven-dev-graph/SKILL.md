@@ -156,10 +156,11 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
   --format mermaid
 ```
 
-Nodes and edges are sorted stably. Node labels include node ID and kind, with
-delegate, terminal, and audit labels when declared; edge labels include the
-condition key and priority. Mermaid rendering is text-only and has no routing or
-persistence side effect.
+Nodes and edges are sorted stably. Mermaid-safe node IDs are retained; other
+IDs use deterministic `node_N` aliases while the original ID remains in the
+label. Node labels include node ID and kind, with delegate, terminal, and audit
+labels when declared; edge labels include the condition key and priority.
+Mermaid rendering is text-only and has no routing or persistence side effect.
 
 ## References
 

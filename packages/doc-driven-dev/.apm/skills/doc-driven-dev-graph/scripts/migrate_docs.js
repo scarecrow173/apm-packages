@@ -6263,7 +6263,7 @@ var require_schemas = __commonJS({
             })));
           }
         }
-        
+
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -6271,7 +6271,7 @@ var require_schemas = __commonJS({
         } else {
           newResult[${k}] = ${id}.value;
         }
-        
+
       `);
           } else if (!isOptionalIn) {
             doc.write(`
@@ -6308,7 +6308,7 @@ var require_schemas = __commonJS({
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
-        
+
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -6316,7 +6316,7 @@ var require_schemas = __commonJS({
         } else {
           newResult[${k}] = ${id}.value;
         }
-        
+
       `);
           }
         }

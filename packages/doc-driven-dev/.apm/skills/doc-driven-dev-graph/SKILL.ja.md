@@ -151,10 +151,11 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
   --format mermaid
 ```
 
-node と edge は安定した順序で sort されます。node label には node ID と kind、
-宣言されている場合は delegate、terminal、audit label が含まれ、edge label
-には condition key と priority が含まれます。Mermaid rendering は text-only で、
-routing や persistence への副作用はありません。
+node と edge は安定した順序で sort されます。Mermaid-safe な node ID はそのまま使い、
+それ以外は決定的な `node_N` alias に置き換えますが、元の ID は label に残ります。node
+label には node ID と kind、宣言されている場合は delegate、terminal、audit label が
+含まれ、edge label には condition key と priority が含まれます。Mermaid rendering は
+text-only で、routing や persistence への副作用はありません。
 
 ## References
 
