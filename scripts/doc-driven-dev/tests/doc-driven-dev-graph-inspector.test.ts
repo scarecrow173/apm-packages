@@ -69,6 +69,35 @@ edges:
   - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
 `;
 
+const gateOnlyFixture = `
+schemaVersion: 2
+id: gate-only-condition
+entry: start
+conditions:
+  ready: { kind: signal, signal: ready }
+  quality-pass: { kind: gate, gate: quality, status: pass }
+nodes:
+  start: { kind: action, requiresGates: [quality] }
+  done: { kind: terminal }
+edges:
+  - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
+`;
+
+const gateEdgeFixture = `
+schemaVersion: 2
+id: gate-edge-condition
+entry: start
+conditions:
+  ready: { kind: signal, signal: ready }
+  quality-pass: { kind: gate, gate: quality, status: pass }
+nodes:
+  start: { kind: action, requiresGates: [quality] }
+  done: { kind: terminal }
+edges:
+  - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
+  - { id: start-to-done-quality, from: start, to: done, when: quality-pass, priority: 20 }
+`;
+
 const customIdFixture = `
 schemaVersion: 2
 id: reserved-mermaid-ids
@@ -129,12 +158,22 @@ test("reports conditions declared but never referenced by an edge", () => {
   )));
 });
 
+test("counts prerequisite gate conditions only when selected by an edge", () => {
+  const inspection = inspectGraphDefinition(parseGraphDefinition(gateOnlyFixture));
+  assert.deepEqual(inspection.referencedConditions, ["ready"]);
+  assert.ok(inspection.unusedConditions.includes("quality-pass"));
+
+  const used = inspectGraphDefinition(parseGraphDefinition(gateEdgeFixture));
+  assert.equal(used.unusedConditions.includes("quality-pass"), false);
+});
+
 test("renders a stable Mermaid graph with sorted labels and edge priorities", () => {
   const canonicalInspection: GraphInspection = inspectGraphDefinition(canonicalGraph());
   const first = renderGraphMermaid(canonicalInspection);
 
   assert.deepEqual(canonicalInspection.unreachableNodes, []);
   assert.deepEqual(canonicalInspection.reachableTerminalNodes, ["complete"]);
+  assert.deepEqual(canonicalInspection.unusedConditions, []);
   assert.deepEqual(canonicalInspection.issues, []);
   assert.equal(canonicalInspection.nodes.length, canonicalInspection.nodeCount);
   assert.equal(canonicalInspection.edges.length, canonicalInspection.edgeCount);

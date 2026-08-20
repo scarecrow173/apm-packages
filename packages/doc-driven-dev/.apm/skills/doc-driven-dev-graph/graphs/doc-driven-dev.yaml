@@ -2,7 +2,6 @@ schemaVersion: 2
 id: doc-driven-dev
 entry: probe
 conditions:
-  focus-required: { kind: signal, signal: focus-required }
   migration-requested: { kind: signal, signal: migration-requested }
   migration-incomplete: { kind: signal, signal: migration-incomplete }
   migration-complete: { kind: signal, signal: migration-complete }
@@ -29,12 +28,9 @@ conditions:
   planning-not-pass: { kind: gate, gate: planning, status: not-pass }
   implementation: { kind: gate, gate: implementation, status: pass }
   implementation-not-pass: { kind: gate, gate: implementation, status: not-pass }
-  implementation-verified: { kind: signal, signal: implementation-verified }
-  followup-triage: { kind: gate, gate: followup-triage, status: pass }
   followup-triage-not-pass: { kind: gate, gate: followup-triage, status: not-pass }
   exit-audit: { kind: gate, gate: exit-audit, status: pass }
   exit-audit-not-pass: { kind: gate, gate: exit-audit, status: not-pass }
-  exit-audit-pass: { kind: signal, signal: exit-audit-pass }
 nodes:
   probe: { kind: action }
   migration: { kind: action, delegate: migrate_docs }

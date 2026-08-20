@@ -114,19 +114,7 @@ export function inspectGraphDefinition(definition: GraphDefinition): GraphInspec
   const reachableNodes = sortedStrings(reachable);
   const unreachableNodes = nodeIds.filter((nodeId) => !reachable.has(nodeId));
   const reachableTerminalNodes = terminalNodes.filter((nodeId) => reachable.has(nodeId));
-  const prerequisiteGateNames = Object.values(definition.nodes)
-    .flatMap((node) => node.requiresGates ?? []);
-  const prerequisiteGateConditions = Object.entries(definition.conditions)
-    .filter(([, condition]) => condition.kind === "gate" && prerequisiteGateNames.includes(condition.gate))
-    .map(([conditionKey]) => conditionKey);
-  const signalConditions = Object.entries(definition.conditions)
-    .filter(([, condition]) => condition.kind === "signal")
-    .map(([conditionKey]) => conditionKey);
-  const referencedConditions = sortedStrings(new Set([
-    ...definition.edges.map((edge) => edge.when),
-    ...prerequisiteGateConditions,
-    ...signalConditions,
-  ]));
+  const referencedConditions = sortedStrings(new Set(definition.edges.map((edge) => edge.when)));
   const referencedConditionSet = new Set(referencedConditions);
   const unusedConditions = sortedStrings(
     Object.keys(definition.conditions).filter((condition) => !referencedConditionSet.has(condition)),
