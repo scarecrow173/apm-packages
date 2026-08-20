@@ -20325,6 +20325,7 @@ var graphDefinitionSchema = external_exports.object({
   schemaVersion: external_exports.literal(2),
   id: external_exports.string().min(1),
   entry: graphNodeId,
+  runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
   conditions: external_exports.record(graphNodeId, graphConditionSchema),
   nodes: external_exports.record(graphNodeId, graphNodeSchema),
   edges: external_exports.array(graphEdgeSchema)
@@ -20341,6 +20342,10 @@ function hasNode(nodes, id) {
 function validateGraphDefinition(value) {
   if (!hasNode(value.nodes, value.entry)) {
     throw invalidGraph(`entry node does not exist: ${value.entry}`);
+  }
+  const duplicateRuntimeSignal = value.runtimeSignals.find((signal, index) => value.runtimeSignals.indexOf(signal) !== index);
+  if (duplicateRuntimeSignal !== void 0) {
+    throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
   }
   const declaredGates = new Set(
     Object.values(value.conditions).filter((condition) => condition.kind === "gate").map((condition) => condition.gate)
@@ -20480,14 +20485,7 @@ function inspectGraphDefinition(definition) {
   const reachableNodes = sortedStrings(reachable);
   const unreachableNodes = nodeIds.filter((nodeId) => !reachable.has(nodeId));
   const reachableTerminalNodes = terminalNodes.filter((nodeId) => reachable.has(nodeId));
-  const prerequisiteGateNames = Object.values(definition.nodes).flatMap((node) => node.requiresGates ?? []);
-  const prerequisiteGateConditions = Object.entries(definition.conditions).filter(([, condition]) => condition.kind === "gate" && prerequisiteGateNames.includes(condition.gate)).map(([conditionKey]) => conditionKey);
-  const signalConditions = Object.entries(definition.conditions).filter(([, condition]) => condition.kind === "signal").map(([conditionKey]) => conditionKey);
-  const referencedConditions = sortedStrings(/* @__PURE__ */ new Set([
-    ...definition.edges.map((edge) => edge.when),
-    ...prerequisiteGateConditions,
-    ...signalConditions
-  ]));
+  const referencedConditions = sortedStrings(new Set(definition.edges.map((edge) => edge.when)));
   const referencedConditionSet = new Set(referencedConditions);
   const unusedConditions = sortedStrings(
     Object.keys(definition.conditions).filter((condition) => !referencedConditionSet.has(condition))

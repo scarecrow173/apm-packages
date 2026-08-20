@@ -20301,6 +20301,7 @@ var graphDefinitionSchema = external_exports.object({
   schemaVersion: external_exports.literal(2),
   id: external_exports.string().min(1),
   entry: graphNodeId,
+  runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
   conditions: external_exports.record(graphNodeId, graphConditionSchema),
   nodes: external_exports.record(graphNodeId, graphNodeSchema),
   edges: external_exports.array(graphEdgeSchema)
@@ -20317,6 +20318,10 @@ function hasNode(nodes, id) {
 function validateGraphDefinition(value) {
   if (!hasNode(value.nodes, value.entry)) {
     throw invalidGraph(`entry node does not exist: ${value.entry}`);
+  }
+  const duplicateRuntimeSignal = value.runtimeSignals.find((signal, index) => value.runtimeSignals.indexOf(signal) !== index);
+  if (duplicateRuntimeSignal !== void 0) {
+    throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
   }
   const declaredGates = new Set(
     Object.values(value.conditions).filter((condition) => condition.kind === "gate").map((condition) => condition.gate)
@@ -21617,8 +21622,11 @@ function parseArgs(argv) {
   return args;
 }
 function validateSignals(definition, signals) {
-  const declared = new Set(
-    Object.values(definition.conditions).filter((condition) => condition.kind === "signal").map((condition) => condition.signal)
+  const declared = /* @__PURE__ */ new Set(
+    [
+      ...Object.values(definition.conditions).filter((condition) => condition.kind === "signal").map((condition) => condition.signal),
+      ...definition.runtimeSignals ?? []
+    ]
   );
   const unknown2 = [...new Set(signals.filter((signal) => !declared.has(signal)))];
   if (unknown2.length > 0) {

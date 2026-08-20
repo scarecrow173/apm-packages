@@ -8,8 +8,10 @@ transition or flatten a delegated subgraph.
 ## Graph Definition v2
 
 The definition has `schemaVersion: 2`, a stable `id`, an `entry` node ID,
-named `conditions`, `nodes`, and `edges`:
+optional `runtimeSignals`, and named `conditions`, `nodes`, and `edges`:
 
+- `runtimeSignals` lists caller-provided signal values accepted by the CLI;
+  it defaults to an empty list.
 - Conditions are `signal`, `gate`, or `task-graph` predicates.
 - Nodes are `action`, `delegate`, `audit`, or `terminal`.
 - Edges have unique IDs, known endpoints, a declared condition key, and a
@@ -32,9 +34,9 @@ declared edge, a terminal result, or a blocked result; the CLI never follows the
 destination recursively.
 
 `--current` defaults to `definition.entry` and must name a node in the selected
-definition. Each `--signal` must be referenced by a `kind: signal` condition in
-that definition. These validations prevent a caller from routing against a
-different graph vocabulary.
+definition. Each `--signal` must be listed in `runtimeSignals` or referenced by
+a `kind: signal` condition in that definition. These validations prevent a
+caller from routing against a different graph vocabulary.
 
 ## GraphRoute JSON
 

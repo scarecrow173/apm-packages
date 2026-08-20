@@ -7,9 +7,11 @@ flatten したりしてはなりません。
 
 ## Graph Definition v2
 
-definition は `schemaVersion: 2`、安定した `id`、`entry` node ID、名前付きの
-`conditions`、`nodes`、`edges` を持ちます:
+definition は `schemaVersion: 2`、安定した `id`、`entry` node ID、任意の
+`runtimeSignals`、名前付きの `conditions`、`nodes`、`edges` を持ちます:
 
+- `runtimeSignals` は CLI が受け付ける caller-provided signal value を列挙します。
+  省略時は空配列です。
 - condition は `signal`、`gate`、`task-graph` predicate のいずれかです。
 - node は `action`、`delegate`、`audit`、`terminal` のいずれかです。
 - edge は一意な ID、既知の endpoint、宣言された condition key、source node
@@ -31,9 +33,9 @@ outgoing edge は priority の昇順、次に ID の順で評価します。結�
 辿りません。
 
 `--current` の既定値は `definition.entry` で、選択した definition の node で
-なければなりません。各 `--signal` は同 definition の `kind: signal`
-condition が参照する値でなければなりません。この検証により別の graph
-vocabulary に対する routing を防ぎます。
+なければなりません。各 `--signal` は `runtimeSignals` に列挙されるか、同
+definition の `kind: signal` condition が参照する値でなければなりません。
+この検証により別の graph vocabulary に対する routing を防ぎます。
 
 ## GraphRoute JSON
 

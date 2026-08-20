@@ -162,6 +162,25 @@ test("selected graph validates current node and declared signal", () => {
   assert.match(unknownSignal.stderr, /signal|declared|condition/i);
 });
 
+test("accepts runtime signals declared separately from edge conditions", () => {
+  const repo = tempRepo();
+  const runners = [
+    ["source", (args: string[]) => runSource(repo, args)],
+    ["generated", (args: string[]) => runCli(generatedCli, repo, args)],
+  ] as const;
+  for (const [name, run] of runners) {
+    for (const signal of ["focus-required", "implementation-verified", "exit-audit-pass"]) {
+      const result = run(["--graph", canonicalGraphPath(), "--signal", signal, "--json"]);
+      assert.equal(result.status, 0, `${name}/${signal}: ${result.stderr}`);
+    }
+    const unknownSignal = run([
+      "--graph", canonicalGraphPath(), "--signal", "not-declared", "--json",
+    ]);
+    assert.notEqual(unknownSignal.status, 0, name);
+    assert.match(unknownSignal.stderr, /signal|declared|condition/i, name);
+  }
+});
+
 test("relative explicit graph paths remain process-cwd-relative when --cwd selects runtime state", () => {
   const processRepo = tempRepo();
   const runtimeRepo = tempRepo();

@@ -76,9 +76,12 @@ function parseArgs(argv: string[]): CliArgs {
 
 function validateSignals(definition: GraphDefinition, signals: string[]): void {
   const declared = new Set(
-    Object.values(definition.conditions)
-      .filter((condition) => condition.kind === "signal")
-      .map((condition) => condition.signal),
+    [
+      ...Object.values(definition.conditions)
+        .filter((condition) => condition.kind === "signal")
+        .map((condition) => condition.signal),
+      ...(definition.runtimeSignals ?? []),
+    ],
   );
   const unknown = [...new Set(signals.filter((signal) => !declared.has(signal)))];
   if (unknown.length > 0) {
