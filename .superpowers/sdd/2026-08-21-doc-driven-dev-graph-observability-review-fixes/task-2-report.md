@@ -14,3 +14,8 @@ Verification:
 - RED confirmed before implementation: the special-character test failed because node IDs, delegates, audit pipes, and edge-condition pipes were not safely represented.
 - `pnpm --dir scripts/doc-driven-dev exec tsx --test tests/doc-driven-dev-graph-inspector.test.ts tests/doc-driven-dev-graph-cli.test.ts` — 24 passed, 0 failed.
 - `git diff --check` passes.
+
+## Review round 1/5
+
+- Added an explicit special-character assertion requiring literal renderer-owned `<br/>` markup between escaped node label segments.
+- Re-ran the focused inspector and CLI suites: 24 passed, 0 failed.

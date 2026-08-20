@@ -256,6 +256,7 @@ test("escapes every user-defined Mermaid label segment", () => {
   assert.equal(renderGraphMermaid(inspection), first);
   assert.match(first, /n0|n1/);
   assert.match(first, /A&lt;&amp;&quot;node/);
+  assert.match(first, /A&lt;&amp;&quot;node<br\/>kind: action<br\/>delegate: delegate&lt;one&gt;&amp;&quot;<br\/>audits:/);
   assert.match(first, /delegate&lt;one&gt;&amp;&quot;/);
   assert.match(first, /audit&#124;one/);
   assert.match(first, /line &#91;&#93;&#123;&#125;&#92;/);
