@@ -115,6 +115,24 @@ edges:
   - { id: style-to-classDef, from: style, to: classDef, when: ready, priority: 30 }
 `;
 
+const specialLabelFixture = `
+schemaVersion: 2
+id: special-mermaid-labels
+entry: 'A<&"node'
+conditions:
+  'ready|fallback': { kind: signal, signal: 'ready|fallback' }
+nodes:
+  'A<&"node':
+    kind: action
+    delegate: 'delegate<one>&"'
+    audits:
+      - 'audit|one'
+      - "line\\r\\n[]{}\\\\"
+  done: { kind: terminal }
+edges:
+  - { id: special-to-done, from: 'A<&"node', to: done, when: 'ready|fallback', priority: 10 }
+`;
+
 function canonicalGraph() {
   const file = nodePath.resolve(
     __dirname,
@@ -229,6 +247,20 @@ test("aliases reserved node IDs while retaining original labels", () => {
   assert.match(first, /n2 -->\|ready · p30\| n0/);
   assert.doesNotMatch(first, /^\s*(?:end|subgraph|style|classDef)(?:\[|\s+-->|$)/m);
   assert.equal(renderGraphMermaid(inspection), first);
+});
+
+test("escapes every user-defined Mermaid label segment", () => {
+  const inspection = inspectGraphDefinition(parseGraphDefinition(specialLabelFixture));
+  const first = renderGraphMermaid(inspection);
+
+  assert.equal(renderGraphMermaid(inspection), first);
+  assert.match(first, /n0|n1/);
+  assert.match(first, /A&lt;&amp;&quot;node/);
+  assert.match(first, /delegate&lt;one&gt;&amp;&quot;/);
+  assert.match(first, /audit&#124;one/);
+  assert.match(first, /line &#91;&#93;&#123;&#125;&#92;/);
+  assert.match(first, /ready&#124;fallback · p10/);
+  assert.doesNotMatch(first, /-->\|ready\|fallback · p10\|/);
 });
 
 test("accepts focus-required as a declared public signal", () => {

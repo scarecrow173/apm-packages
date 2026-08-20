@@ -62,8 +62,19 @@ function issueSort(left: GraphInspectionIssue, right: GraphInspectionIssue): num
     || compareStrings(left.condition ?? "", right.condition ?? "");
 }
 
-function escapeMermaidLabel(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+function escapeMermaidText(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/\|/g, "&#124;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\\/g, "&#92;")
+    .replace(/\[/g, "&#91;")
+    .replace(/\]/g, "&#93;")
+    .replace(/\{/g, "&#123;")
+    .replace(/\}/g, "&#125;");
 }
 
 function mermaidNodeAliases(nodes: readonly InspectedNode[]): Map<string, string> {
@@ -79,11 +90,13 @@ function renderNode(
   terminalNodes: ReadonlySet<string>,
   aliases: ReadonlyMap<string, string>,
 ): string {
-  const labels = [node.nodeId, `kind: ${node.kind}`];
-  if (node.delegate !== undefined) labels.push(`delegate: ${node.delegate}`);
+  const labels = [escapeMermaidText(node.nodeId), `kind: ${escapeMermaidText(node.kind)}`];
+  if (node.delegate !== undefined) labels.push(`delegate: ${escapeMermaidText(node.delegate)}`);
   if (terminalNodes.has(node.nodeId)) labels.push("terminal");
-  if (node.audits.length > 0) labels.push(`audits: ${node.audits.join(", ")}`);
-  return `  ${aliases.get(node.nodeId) ?? node.nodeId}["${escapeMermaidLabel(labels.join("<br/>"))}"]`;
+  if (node.audits.length > 0) {
+    labels.push(`audits: ${node.audits.map(escapeMermaidText).join(", ")}`);
+  }
+  return `  ${aliases.get(node.nodeId) ?? node.nodeId}["${labels.join("<br/>")}"]`;
 }
 
 /** Inspect graph topology without evaluating any edge conditions. */
@@ -187,7 +200,7 @@ export function renderGraphMermaid(inspection: GraphInspection): string {
     "flowchart TD",
     ...nodes.map((node) => renderNode(node, terminalNodes, aliases)),
     ...edges.map((edge) => (
-      `  ${aliases.get(edge.from) ?? edge.from} -->|${escapeMermaidLabel(`${edge.when} · p${edge.priority}`)}| ${aliases.get(edge.to) ?? edge.to}`
+      `  ${aliases.get(edge.from) ?? edge.from} -->|${escapeMermaidText(edge.when)} · p${edge.priority}| ${aliases.get(edge.to) ?? edge.to}`
     )),
   ].join("\n");
 }
