@@ -24,7 +24,8 @@ Examples of blocking issues:
 - Missing required front matter fields (id, type, status, relations)
 - Broken internal relations (referenced file does not exist)
 - Documents not registered in the index
-- Unclassified follow-up items remaining from the Phase 4 Exit Gate
+- Unclassified follow-up items remaining at the `followup-triage` node before
+  the `exit-audit` node
 - Follow-up tasks missing required upstream relations or dependency links
 
 ## Output Contract

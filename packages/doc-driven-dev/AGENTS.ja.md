@@ -1,159 +1,96 @@
-# AGENTS.ja.md
+# Package Agent Guide
 
-このファイルは、`packages/doc-driven-dev` を変更する AI エージェント向けの実務ガイドです。
+この directory は配布用 `doc-driven-dev` APM package です。英語版と日本語版の
+document は構造と意味を同期させてください。
 
-## 1. 目的と前提
+## 公開 entrypoint
 
-- このパッケージは document-driven development を支える Skill 集です。
-- 主な対象は `idea-doc（任意）-> briefing -> discovery-doc（任意）-> ADR/spec -> design -> plan -> task -> 実装 -> 監査` の流れです。
-- 生成ドキュメントは YAML front matter + Markdown を前提にします。
-- このガイドはパッケージ開発ルールを定義するものであり、パッケージ自身に doc-driven-dev 運用を必須化するものではありません。
+graph routing には `doc-driven-dev-graph` を使います。Graph Definition が
+normative な実行 authority であり、phase label は概念上の mapping に限ります。
+runtime contract は次の通りです。
 
-## 2. リポジトリ内の責務分離
+`Graph Definition -> Graph State -> 宣言済み route 1つ -> delegate/audit ->
+Markdown 証跡 -> 再投影`
 
-この文書中のパスは、明記しない限りリポジトリルート基準です。
+package は 4 layer で構成します。
 
-- 実装ロジックの編集先（隔離された build workspace）:
-  - `scripts/doc-driven-dev/src/skills/**/scripts/*.ts`
-  - `scripts/doc-driven-dev/src/skills/**/scripts/lib/*.ts`
-  - `scripts/doc-driven-dev/src/skills/lib/*.ts`
-- 配布用 Skill 定義・テンプレート・参照資料の編集先:
-  - `packages/doc-driven-dev/.apm/skills/**/SKILL.md`
-  - `packages/doc-driven-dev/.apm/skills/**/references/**`
-  - `packages/doc-driven-dev/.apm/skills/**/assets/templates/**`
-- ビルド成果物（JS）:
-  - `packages/doc-driven-dev/.apm/skills/**/scripts/*.js`
-  - これは `pnpm --dir scripts/doc-driven-dev run build:scripts` で `scripts/doc-driven-dev/src` から生成される。
+- **Execution Graph** — `.apm/skills/doc-driven-dev-graph/graphs/` の node、edge、
+  condition、priority、delegate/audit binding。
+- **Artifact Graph** — canonical Markdown の ID、type、status、relation。
+- **Graph State** — focus、gate、signal、blocker、選択証跡を含む毎回の projection。
+- **Dynamic Task Graph** — focus された task relation の決定的 projection。
 
-重要:
+## Condition と route 規則
 
-- スクリプト挙動を変えるときは `scripts/doc-driven-dev/src` を編集する。
-- `build:scripts` は `packages/doc-driven-dev/.apm/skills/**/scripts` 配下の既存 `.js` を掃除して再生成する。
-- `SKILL.md` や `references`、`assets/templates` は現在 scripts workspace から自動生成されないため、必要箇所を直接更新する。
-- `skill-discovery-protocol` は `.sdp` 成果物の生成時に `.agents/skills`
-  や `apm_modules` のような local skill root を走査する。
-- environment-provided skill は bundle 済み package content ではなくても
-  routing に影響し得るため、adapter が `steer-web-research` のような
-  non-bundled skill を参照する場合は optional external routing を文書化する。
+汎用 condition DSL は `signal`、`gate`（`pass` / `not-pass`）、`task-graph`
+（`runnable` / `invalid`）predicate をサポートします。未知の signal や壊れた
+definition は fail closed です。eligible な outgoing edge は昇順の `priority`、
+次に安定した edge ID で並べます。各 invocation は、宣言済み edge の遷移、edge
+なしの同一 node blocked 結果、または edge なしの terminal 結果のいずれか 1 つを
+返します。caller は返された audit をすべて実行し、delegate だけを dispatch して
+Markdown 証跡を記録し、`next` から再入力します。
 
-## 3. 作業フロー（パッケージ開発）
+`focus-required` は明示的 focus が渡されるまで dispatch を停止します。terminal
+route は idempotent です。blocked route は file 名、path の近さ、隣接 node から
+推測しません。
 
-1. 既存文書と実装を先に読む。
-2. 変更対象がスクリプト挙動なら `scripts/doc-driven-dev/src` を編集し、必要に応じて `packages/doc-driven-dev/.apm` 配下の参照資料やテンプレートも更新する。
-3. `scripts/doc-driven-dev/src` を変更した場合は `pnpm --dir scripts/doc-driven-dev run build:scripts` を実行して `packages/doc-driven-dev/.apm/skills/**/scripts/*.js` を再生成する。
-4. 変更後は `pnpm --dir scripts/doc-driven-dev test` と `pnpm --dir scripts/doc-driven-dev run lint:md` を実行し、結果を報告する。
-5. 仕様互換性に影響する変更では、想定影響と移行方針を明記する。
+## Delegate binding
 
-## 4. 代表コマンド
+Graph Definition は次の binding を宣言します。
 
-リポジトリルートから scripts workspace を対象に実行:
+- 任意の migration / bootstrap: `migrate_docs` / `scaffold_docs`。
+- discovery / design: `briefing-flow` / `design-doc`。
+- planning: `build_task_graph`（`build_task_graph.js` が実行）。
+- implementation: `implementation-flow`。
+- exit audit: `doc-status`。
+
+delegate は自分の briefing / implementation subgraph を担当します。router で
+delegate の処理を重複させたり、未宣言の遷移を追加したりしないでください。
+
+## Task Graph invariant
+
+Task document と canonical relation が authority です。全 predecessor が `done`
+のときだけ runnable であり、`wont-do` は dependency を満たしません。重複 ID、
+未解決参照、cycle、壊れた relation、空の選択は blocker と空の runnable task
+になります。
+
+## Persistence boundary
+
+Markdown が durable な project history と status の authority です。Graph State と
+Dynamic Task Graph は turn ごとの projection です。並行する runtime database や
+mutable lifecycle store を追加しないでください。
+
+## Skill と ownership
+
+document 生成 skill（`idea-doc`、`deep-dive`、`briefing-flow`、`discovery-doc`、
+`adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc`、`impl-doc`、
+`doc-status`）が各 document contract を担当します。orchestration skill は
+`doc-driven-dev-graph`、`implementation-flow`、`skill-discovery-protocol` です。
+
+1 つの user request で active orchestration skill は 1 つだけにします。明示的な
+implementation は `implementation-flow`、discovery / decision capture は
+`briefing-flow`、graph-wide routing は `doc-driven-dev-graph` を使います。委譲は
+明示的に行い、activation loop を作らないでください。
+
+## Source と配布 asset
+
+runtime TypeScript source は `scripts/doc-driven-dev/src/skills/` にあります。
+配布 Markdown、graph YAML、reference、generated script は `.apm/skills/` に
+あります。runtime 挙動を変更するときは source を先に編集し、package build で
+JavaScript を再生成します。公開 contract を変更するときは distributed の
+`SKILL.md`、reference、graph asset を直接更新します。
+
+生成 JavaScript の整形だけを手編集しないでください。意図した runtime 変更では
+source と配布 output を同期させます。
+
+## 検証
+
+repository root から実行します。
 
 ```bash
-pnpm --dir scripts/doc-driven-dev run build:scripts
 pnpm --dir scripts/doc-driven-dev test
 pnpm --dir scripts/doc-driven-dev run lint:md
 ```
 
-必要に応じて、次は `packages/doc-driven-dev/` で実行:
-
-```bash
-apm compile --dry-run
-apm compile --validate
-```
-
-補足:
-
-- このパッケージでは環境により `apm compile --validate` が `.apm` 構成検出で失敗することがある。
-- そのため回帰確認の主軸は `pnpm --dir scripts/doc-driven-dev test` を優先する。
-
-## 5. スクリプト利用の注意
-
-- `doc-status` 系 (`list_docs`, `audit_docs`) は基本 report-only。
-- `adr-doc` の `update_index` と `relate_adr` は既定 dry-run。実書き込みには `--write` が必要。
-- 破壊的変更を避け、まず dry-run / JSON 出力で確認してから反映する。
-- document 作成コマンドは、明示的に dry-run または report-only と書かれて
-  いない限り即時にファイルを書き込む。
-- `--dir`、`--file`、`--out` のような path flag は、生成物や更新対象の
-  書き込み先を変える。
-- `pnpm --dir scripts/doc-driven-dev run build:scripts` は
-  `packages/doc-driven-dev/.apm/skills/**/scripts/*.js` 配下の配布用
-  JavaScript 出力を置き換える。
-
-## 6. 変更時チェックリスト
-
-- 変更意図に対応する Skill ドキュメントを更新したか。
-- `scripts/doc-driven-dev/src` を変えた場合、`packages/doc-driven-dev/.apm/skills/**/scripts/*.js` を再生成したか。
-- テスト (`pnpm --dir scripts/doc-driven-dev test`) が通るか。
-- Markdown 変更時は `pnpm --dir scripts/doc-driven-dev run lint:md` を確認したか。
-
-## 7. ワークフロースキル（実装フェーズ）
-
-文書生成スキル（スクリプト・テンプレート・参照付き）に加え、このパッケージには実装フェーズ向けの**ワークフロースキル**が含まれます。これらは TypeScript ソースやコンパイル済みスクリプトを持たない、純粋な Markdown ガイダンススキルです。
-
-- ワークフロースキルは `packages/doc-driven-dev/.apm/skills/<name>/` にのみ配置（対応する `scripts/doc-driven-dev/src/skills/<name>/` は不要）。
-  - 将来コードを持つ場合でも、実装は `packages/doc-driven-dev/` 直下ではなく `scripts/doc-driven-dev/src` 側に置く。
-- `references/` や `assets/templates/` サブディレクトリに補助ドキュメントやプロンプトテンプレートを含む場合がある。
-- `pnpm --dir scripts/doc-driven-dev run build:scripts` の対象外。
-- 編集時は `packages/doc-driven-dev/.apm/skills/<name>/SKILL.md`（および `.ja.md`）を直接更新する。
-
-ここに含まれる workflow / meta skill:
-
-| スキル | 目的 | 出典 |
-| --- | --- | --- |
-| doc-driven-dev-lifecycle | メタスキル: 5 フェーズの文書ライフサイクル全体をオーケストレーションする | original |
-| briefing-flow | メタスキル: briefing と spec/ADR 準備を動的にオーケストレーションする | original |
-| implementation-flow | メタスキル: implementation profile を通じて全利用可能な実装スキルを発見・ルーティングする | original |
-| skill-discovery-protocol | flow-neutral な skill catalog / profile を生成・検証する | original |
-
-## 8. メタスキル活性化ルール
-
-このパッケージは、document-driven development の異なるフェーズをオーケストレーションする 3 つのメタスキルを含みます。未定義な動作を避けるため、ユーザーリクエストごとに正確に **1 つ** のメタスキルが活動状態にある必要があります。
-
-### 活性化マトリックス
-
-| メタスキル | 入力トリガー条件 | 責務 | 相互排斥 |
-| --- | --- | --- | --- |
-| `doc-driven-dev-lifecycle` | ユーザーが 5 フェーズ全体を明示的に呼び出した OR 他のエントリポイントが合致しない | Phase 1-5 統括・委譲（Phase 1 は briefing-flow へ、Phase 4 は implementation-flow へ） | `briefing-flow` が既に活動中の場合は活性化しない OR Phase 4 の実装が明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
-| `briefing-flow` | ユーザーが briefing/discovery/spec/ADR 作成を明示的に呼び出した OR lifecycle が Phase 1 を委譲 | Phase A-D の discovery・spec + ADR 並行配信・skill stack 組み立て | `doc-driven-dev-lifecycle` が既に Phase 2-5 を駆動中の場合は活性化しない OR コード実装を明示的ターゲットの場合は活性化しない（→ implementation-flow のみ） |
-| `implementation-flow` | ユーザーがタスク実行/コード実装を明示的に呼び出した OR lifecycle が Phase 4 を委譲 | Phase A-E のタスク実行・review gate 強制・利用可能な実装スキルの発見・ルーティング | 文書作成がターゲットの場合は活性化しない（→ lifecycle または briefing-flow） OR briefing/design 進行中の場合は活性化しない |
-
-### 配信判定ツリー
-
-```text
-エントリリクエスト
-├─ "lifecycle" または "5-phase" または "end-to-end" キーワードを含む？
-│  └─ YES → doc-driven-dev-lifecycle
-│
-├─ "briefing" または "discovery" または "spec" または "adr" キーワードを含む？
-│  └─ YES → briefing-flow
-│
-├─ "implement" または "code" または "execute" または "task" キーワードを含む？
-│  └─ YES → implementation-flow
-│
-└─ 明確なメタスキルシグナルなし → リクエストコンテキストを相談
-   ├─ spec/ADR 作成中 → briefing-flow
-   ├─ 設計と plan が承認済み、task フェーズ中 → lifecycle または implementation-flow（コンテキスト依存）
-   └─ 不明 → ユーザーに説明請求
-```
-
-### 保証
-
-1. **単一活動メタスキル**: ユーザー向けリクエストごとに、アクティブなメタスキルは最大 1 つ。メタスキル間の委譲は明示的フェーズゲートで制御され、並行活性化は起きない。
-2. **クロス活性化ループなし**: `lifecycle` が `briefing-flow`（Phase 1）に委譲する場合、`briefing-flow` はユーザーが新たに明示的に呼び出さない限り、`lifecycle` や `implementation-flow` を同時に活性化しない。
-3. **フェーズ境界強制**: フェーズゲートが満たされたら、次のメタスキルは明示的ユーザー要求または文書化された委譲でのみ活性化。単独で起動してはいけない。
-
-### テスト
-
-統合テストは以下を検証:
-
-- 活性化競合の検出（2 つのメタスキルが同じリクエストで競争）
-- Review gate 名の正規化（Phase E の `requesting-code-review` 名は canonical）
-- 委譲境界の遵守（Phase 1 完了前 Phase 2 活性化禁止）
-
-参照: `scripts/doc-driven-dev/tests/integration/activation-conflict-detector.test.ts` および `review-gate-contract.test.ts`
-
-## 9. 非目標
-
-- 無関係な大規模リファクタ。
-- このパッケージ自身の変更作業に対して、ADR/spec/plan/task の作成や relation 管理を必須化すること。
-- 既存 index や relation の整合性を壊す変更。
+document 変更を提出する前に `scripts/doc-driven-dev/tests/doc-suite.test.ts` の
+public residue / contract test を実行し、`git diff --check` も確認してください。

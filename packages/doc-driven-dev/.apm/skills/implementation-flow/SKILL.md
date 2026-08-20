@@ -25,7 +25,7 @@ connects implementation back to upstream documents.
 
 - Executing approved `task-doc` entries that require code changes.
 - Implementing a plan where multiple skills must coordinate.
-- As implementation phase delegate when invoked from `doc-driven-dev-lifecycle`.
+- As implementation delegate when invoked from `doc-driven-dev-graph`.
 - Standalone when documents already exist and implementation guidance is needed.
 - Starting implementation work that needs profile-based routing or multiple
   skills.
@@ -256,7 +256,7 @@ A task is NOT complete until verification passes:
 
 The implementation phase produces two downstream documents through the `impl-doc`
 skill. Recording them is part of the flow, not an optional add-on. When this flow
-runs under `doc-driven-dev-lifecycle`, `docs/impl/ir/` and `docs/impl/exp/` already
+runs under `doc-driven-dev-graph`, `docs/impl/ir/` and `docs/impl/exp/` already
 exist (bootstrap contract); securing these records is a completion duty.
 
 - **Experiment Log (`docs/impl/exp/`)** — create when Phase A flagged the approach
@@ -349,7 +349,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 ## Entry Conditions
 
 - Task units with defined verification conditions exist (`task-doc` or equivalent).
-- When invoked from `doc-driven-dev-lifecycle`, Phase 3 Planning & Tasking is complete and its tasks are approved.
+- When invoked from `doc-driven-dev-graph`, the planning node is complete and its tasks are approved.
 
 ## Completion Conditions
 

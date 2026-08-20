@@ -21,7 +21,7 @@ skill stack を構成し、spec-doc と adr-doc が完了するまで次段階�
 
 - 新しい機能、プロジェクト、大きな変更の初期情報収集を始めるとき。
 - 要件が曖昧で、どのスキルから始めるべきか不明なとき。
-- `doc-driven-dev-lifecycle` から briefing フェーズの委譲先として呼び出されたとき。
+- `doc-driven-dev-graph` から briefing delegate として呼び出されたとき。
 - spec-doc / adr-doc を書く前に情報を整理したいとき。
 - profile-based routing や複数 skill の組み合わせが必要な情報収集を、
   spec-doc / adr-doc 作成前に始めるとき。

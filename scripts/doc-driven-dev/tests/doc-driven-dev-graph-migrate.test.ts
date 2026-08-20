@@ -5,16 +5,17 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 
-const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-lifecycle");
+const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/migrate_docs.ts");
+const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 
 function tempRepo() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-lifecycle-migrate-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-graph-migrate-"));
 }
 
 function runMigrate(cwd, args = []) {
   const result = spawnSync(
     process.execPath,
-    [path.join(skillRoot, "scripts", "migrate_docs.js"), ...args],
+    [tsxCli, sourceCli, ...args],
     {
       cwd,
       encoding: "utf8",

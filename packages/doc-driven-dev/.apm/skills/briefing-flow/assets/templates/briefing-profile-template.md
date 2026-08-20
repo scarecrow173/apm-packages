@@ -59,7 +59,7 @@ Skills that produce formal documents.
 Skills that orchestrate other skills (NOT included in Default Stack).
 
 - briefing-flow — Manager of this profile
-- doc-driven-dev-lifecycle — Full 6-phase orchestrator
+- doc-driven-dev-graph — Graph Definition router and delegate coordinator
 
 ## Default Stack
 

@@ -278,9 +278,9 @@ var require_section_matter = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/common.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/common.js
 var require_common = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/common.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/common.js"(exports2, module2) {
     "use strict";
     function isNothing(subject) {
       return typeof subject === "undefined" || subject === null;
@@ -323,9 +323,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/exception.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/exception.js
 var require_exception = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/exception.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/exception.js"(exports2, module2) {
     "use strict";
     function YAMLException(reason, mark) {
       Error.call(this);
@@ -353,9 +353,9 @@ var require_exception = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/mark.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/mark.js
 var require_mark = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/mark.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/mark.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     function Mark(name, buffer, position, line, column) {
@@ -411,9 +411,9 @@ var require_mark = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type.js
 var require_type = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type.js"(exports2, module2) {
     "use strict";
     var YAMLException = require_exception();
     var TYPE_CONSTRUCTOR_OPTIONS = [
@@ -470,9 +470,9 @@ var require_type = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema.js
 var require_schema = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var YAMLException = require_exception();
@@ -558,9 +558,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/str.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/str.js
 var require_str = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/str.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/str.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     module2.exports = new Type("tag:yaml.org,2002:str", {
@@ -572,9 +572,9 @@ var require_str = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/seq.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/seq.js
 var require_seq = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/seq.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/seq.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     module2.exports = new Type("tag:yaml.org,2002:seq", {
@@ -586,9 +586,9 @@ var require_seq = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/map.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/map.js
 var require_map = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/map.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/map.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     module2.exports = new Type("tag:yaml.org,2002:map", {
@@ -600,9 +600,9 @@ var require_map = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/failsafe.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/failsafe.js
 var require_failsafe = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/failsafe.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/failsafe.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = new Schema({
@@ -615,9 +615,9 @@ var require_failsafe = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/null.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/null.js
 var require_null = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/null.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/null.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveYamlNull(data) {
@@ -655,9 +655,9 @@ var require_null = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/bool.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/bool.js
 var require_bool = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/bool.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/bool.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveYamlBoolean(data) {
@@ -692,9 +692,9 @@ var require_bool = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/int.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/int.js
 var require_int = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/int.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/int.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var Type = require_type();
@@ -825,9 +825,9 @@ var require_int = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/float.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/float.js
 var require_float = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/float.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/float.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var Type = require_type();
@@ -920,9 +920,9 @@ var require_float = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/json.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/json.js
 var require_json = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/json.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/json.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = new Schema({
@@ -939,9 +939,9 @@ var require_json = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/core.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/core.js
 var require_core = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/core.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/core.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = new Schema({
@@ -952,9 +952,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/timestamp.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/timestamp.js
 var require_timestamp = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/timestamp.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/timestamp.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     var YAML_DATE_REGEXP = new RegExp(
@@ -1013,9 +1013,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/merge.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/merge.js
 var require_merge = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/merge.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/merge.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveYamlMerge(data) {
@@ -1028,9 +1028,9 @@ var require_merge = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/binary.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/binary.js
 var require_binary = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/binary.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/binary.js"(exports2, module2) {
     "use strict";
     var NodeBuffer;
     try {
@@ -1121,9 +1121,9 @@ var require_binary = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/omap.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/omap.js
 var require_omap = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/omap.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/omap.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     var _hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -1158,9 +1158,9 @@ var require_omap = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/pairs.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/pairs.js
 var require_pairs = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/pairs.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/pairs.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     var _toString = Object.prototype.toString;
@@ -1196,9 +1196,9 @@ var require_pairs = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/set.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/set.js
 var require_set = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/set.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/set.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     var _hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -1223,9 +1223,9 @@ var require_set = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/default_safe.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/default_safe.js
 var require_default_safe = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/default_safe.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/default_safe.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = new Schema({
@@ -1246,9 +1246,9 @@ var require_default_safe = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/undefined.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/undefined.js
 var require_undefined = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/undefined.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/undefined.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveJavascriptUndefined() {
@@ -1273,9 +1273,9 @@ var require_undefined = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/regexp.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/regexp.js
 var require_regexp = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/regexp.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/regexp.js"(exports2, module2) {
     "use strict";
     var Type = require_type();
     function resolveJavascriptRegExp(data) {
@@ -1317,9 +1317,9 @@ var require_regexp = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/function.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/function.js
 var require_function = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/type/js/function.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/type/js/function.js"(exports2, module2) {
     "use strict";
     var esprima;
     try {
@@ -1372,9 +1372,9 @@ var require_function = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/default_full.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/default_full.js
 var require_default_full = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/schema/default_full.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/schema/default_full.js"(exports2, module2) {
     "use strict";
     var Schema = require_schema();
     module2.exports = Schema.DEFAULT = new Schema({
@@ -1390,9 +1390,9 @@ var require_default_full = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/loader.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/loader.js
 var require_loader = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/loader.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/loader.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var YAMLException = require_exception();
@@ -1495,6 +1495,7 @@ var require_loader = __commonJS({
       this.legacy = options2["legacy"] || false;
       this.json = options2["json"] || false;
       this.listener = options2["listener"] || null;
+      this.maxTotalMergeKeys = typeof options2["maxTotalMergeKeys"] === "number" ? options2["maxTotalMergeKeys"] : 1e4;
       this.implicitTypes = this.schema.compiledImplicit;
       this.typeMap = this.schema.compiledTypeMap;
       this.length = input.length;
@@ -1502,6 +1503,7 @@ var require_loader = __commonJS({
       this.line = 0;
       this.lineStart = 0;
       this.lineIndent = 0;
+      this.totalMergeKeys = 0;
       this.documents = [];
     }
     function generateError(state, message) {
@@ -1586,6 +1588,9 @@ var require_loader = __commonJS({
       sourceKeys = Object.keys(source);
       for (index = 0, quantity = sourceKeys.length; index < quantity; index += 1) {
         key = sourceKeys[index];
+        if (state.maxTotalMergeKeys !== -1 && ++state.totalMergeKeys > state.maxTotalMergeKeys) {
+          throwError(state, "merge keys exceeded maxTotalMergeKeys (" + state.maxTotalMergeKeys + ")");
+        }
         if (!_hasOwnProperty.call(destination, key)) {
           setProperty(destination, key, source[key]);
           overridableKeys[key] = true;
@@ -2509,9 +2514,9 @@ var require_loader = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/dumper.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/dumper.js
 var require_dumper = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml/dumper.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml/dumper.js"(exports2, module2) {
     "use strict";
     var common = require_common();
     var YAMLException = require_exception();
@@ -3057,9 +3062,9 @@ var require_dumper = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml.js
 var require_js_yaml = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/lib/js-yaml.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/lib/js-yaml.js"(exports2, module2) {
     "use strict";
     var loader = require_loader();
     var dumper = require_dumper();
@@ -3092,9 +3097,9 @@ var require_js_yaml = __commonJS({
   }
 });
 
-// node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/index.js
+// node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/index.js
 var require_js_yaml2 = __commonJS({
-  "node_modules/.pnpm/js-yaml@3.14.2/node_modules/js-yaml/index.js"(exports2, module2) {
+  "node_modules/.pnpm/js-yaml@3.15.0/node_modules/js-yaml/index.js"(exports2, module2) {
     "use strict";
     var yaml2 = require_js_yaml();
     module2.exports = yaml2;
@@ -21178,7 +21183,7 @@ ${input.body.trim()}
         type: route.type
       };
     }
-    async function migrateDocs(options2) {
+    async function migrateDocs2(options2) {
       const cwd = path2.resolve(options2.cwd);
       const fromDirs = options2.from && options2.from.length > 0 ? options2.from : defaultMigrationSources(cwd);
       const skipped = [];
@@ -21207,7 +21212,7 @@ ${input.body.trim()}
       }
       const created = [];
       if (options2.apply) {
-        await scaffoldDocsTree2(cwd);
+        await scaffoldDocsTree(cwd);
         for (const migration of migrations) {
           const targetPath = path2.join(cwd, migration.target);
           fs.mkdirSync(path2.dirname(targetPath), { recursive: true });
@@ -21220,7 +21225,7 @@ ${input.body.trim()}
       }
       return { applied: Boolean(options2.apply), created, migrations, skipped };
     }
-    async function scaffoldDocsTree2(cwd) {
+    async function scaffoldDocsTree(cwd) {
       const resolvedCwd = path2.resolve(cwd);
       const created = [];
       const updated = [];
@@ -21369,34 +21374,59 @@ ${bodyFor(type, options2.title)}
       docFiles,
       docTypes,
       logIndexResult,
-      migrateDocs,
+      migrateDocs: migrateDocs2,
       relationFields,
       changeFields,
       changesSchema,
       frontMatterSchema,
       frontMatter,
       relationSchema,
-      scaffoldDocsTree: scaffoldDocsTree2,
+      scaffoldDocsTree,
       validateFrontMatter
     };
   }
 });
 
-// src/skills/doc-driven-dev-lifecycle/scripts/scaffold_docs.ts
+// src/skills/doc-driven-dev-graph/scripts/migrate_docs.ts
 var path = require("node:path");
-var { scaffoldDocsTree } = require_doc_suite_utils();
+var { migrateDocs } = require_doc_suite_utils();
 function parseArgs(argv) {
-  const args = { cwd: process.cwd() };
+  const args = {
+    apply: false,
+    cwd: process.cwd(),
+    from: [],
+    includeCanonical: false,
+    json: false,
+    splitH1: false
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--from") args.from.push(argv[++i]);
+    else if (arg === "--apply") args.apply = true;
+    else if (arg === "--include-canonical") args.includeCanonical = true;
+    else if (arg === "--json") args.json = true;
+    else if (arg === "--split-h1") args.splitH1 = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
 }
 function usage() {
-  return "Usage: node scripts/scaffold_docs.js [--cwd <path>]";
+  return "Usage: node scripts/migrate_docs.js [--cwd <path>] [--from <dir>] [--split-h1] [--include-canonical] [--apply] [--json]";
+}
+function printHuman(report) {
+  console.log(`${report.applied ? "Applied" : "Planned"} docs migration`);
+  if (report.migrations.length === 0) console.log("No source documents selected.");
+  for (const migration of report.migrations) {
+    console.log(`${migration.source} -> ${migration.target}${migration.type ? ` [${migration.type}]` : ""}`);
+  }
+  for (const created of report.created) {
+    console.log(`Created ${created}`);
+  }
+  for (const skipped of report.skipped) {
+    console.log(`Skipped ${skipped.file}: ${skipped.reason}`);
+  }
 }
 async function main() {
   try {
@@ -21405,11 +21435,18 @@ async function main() {
       console.log(usage());
       return;
     }
-    const result = await scaffoldDocsTree(path.resolve(args.cwd));
-    console.log(`Created docs tree scaffold in ${path.resolve(args.cwd)}`);
-    for (const file of result.created) {
-      console.log(`Created ${file}`);
+    const report = await migrateDocs({
+      apply: args.apply,
+      cwd: path.resolve(args.cwd),
+      from: args.from,
+      includeCanonical: args.includeCanonical,
+      splitH1: args.splitH1
+    });
+    if (args.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
     }
+    printHuman(report);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

@@ -3,12 +3,38 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const matter = require("gray-matter");
 const test = require("node:test");
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
 function tempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "doc-suite-test-"));
+}
+
+function repoWithApprovedPlanAndTasks() {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/tasks"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/plans/0001-plan.md"),
+    matter.stringify("# Plan\n", {
+      id: "PLAN-0001", type: "plan", status: "approved", title: "Plan",
+      created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+    }),
+    "utf8",
+  );
+  for (const [number, title] of [["0001", "schema"], ["0002", "types"], ["0004", "ui"]]) {
+    fs.writeFileSync(
+      path.join(repo, "docs/tasks", `${number}-${title}.md`),
+      matter.stringify(`# ${title}\n`, {
+        id: `TASK-${number}`, type: "task", status: "todo", title,
+        created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+      }),
+      "utf8",
+    );
+  }
+  return repo;
 }
 
 function runScript(skill, name, args, options = {}) {
@@ -36,6 +62,70 @@ function assertConcepts(text, concepts, label) {
     assert.match(normalized, concept, label);
   }
 }
+
+function entriesUnder(directory) {
+  const entries = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (["node_modules", ".git"].includes(entry.name)) continue;
+    const absolute = path.join(directory, entry.name);
+    entries.push(absolute);
+    if (entry.isDirectory()) entries.push(...entriesUnder(absolute));
+  }
+  return entries;
+}
+
+function markdownSection(text, heading) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.indexOf(heading);
+  assert.notEqual(start, -1, `missing Markdown section: ${heading}`);
+  const end = lines.findIndex((line, index) => index > start && /^## /.test(line));
+  return lines.slice(start + 1, end === -1 ? lines.length : end).join("\n");
+}
+
+function numberedSteps(section) {
+  return [...section.matchAll(/^(\d+)\.\s/gm)].map((match) => Number(match[1]));
+}
+
+test("public docs expose doc-driven-dev-graph and contain no retired lifecycle residue", () => {
+  const packageRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev");
+  const scriptRoot = path.resolve(__dirname, "..");
+  const oldTerms = [
+    ["doc-driven-dev", "lifecycle"].join("-"),
+    ["Lifecycle", "Graph"].join(""),
+    ["Lifecycle", "State"].join(""),
+    ["Lifecycle", "Route"].join(""),
+    ["Lifecycle", "Signal"].join(""),
+    ["Lifecycle", "ReasonCode"].join(""),
+    ["route", "lifecycle"].join("_"),
+    ["lifecycle", "router"].join("_"),
+    ["lifecycle", "state"].join("_"),
+    ["lifecycle", "graph"].join("_"),
+  ];
+  const residue = [];
+  for (const entry of [...entriesUnder(packageRoot), ...entriesUnder(scriptRoot)]) {
+    const normalizedPath = entry.replace(/\\/g, "/");
+    for (const term of oldTerms) {
+      if (normalizedPath.includes(term)) residue.push(`${path.relative(process.cwd(), entry)} (path): ${term}`);
+    }
+    if (!fs.statSync(entry).isFile()) continue;
+    const text = fs.readFileSync(entry, "utf8");
+    for (const term of oldTerms) {
+      if (text.includes(term)) residue.push(`${path.relative(process.cwd(), entry)} (content): ${term}`);
+    }
+  }
+  assert.deepEqual(residue, [], "retired public names may only appear in docs/migrations/doc-driven-dev-graph.md");
+
+  for (const file of [
+    path.join(packageRoot, "README.md"),
+    path.join(packageRoot, "README.ja.md"),
+    path.join(packageRoot, "AGENTS.md"),
+    path.join(packageRoot, "AGENTS.ja.md"),
+    path.join(packageRoot, ".apm", "skills", "doc-driven-dev-graph", "SKILL.md"),
+    path.join(packageRoot, ".apm", "skills", "doc-driven-dev-graph", "SKILL.ja.md"),
+  ]) {
+    assert.match(fs.readFileSync(file, "utf8"), /doc-driven-dev-graph/);
+  }
+});
 
 test("new_spec creates front matter spec and index", () => {
   const repo = tempRepo();
@@ -366,6 +456,22 @@ test("new_task requires an approved or active plan and links it", () => {
   assert.equal(report.entries[0].status, "in-progress");
 });
 
+test("new_task records repeatable task dependencies and blocks relations", () => {
+  const repo = repoWithApprovedPlanAndTasks();
+  const created = runScript("task-doc", "new_task.js", [
+    "--title", "Implement API",
+    "--plan", "docs/plans/0001-plan.md",
+    "--depends-on", "docs/tasks/0001-schema.md",
+    "--depends-on", "TASK-0002",
+    "--blocks", "docs/tasks/0004-ui.md",
+  ], { cwd: repo });
+  assert.equal(created.status, 0, created.stderr);
+  const task = fs.readFileSync(path.join(repo, "docs/tasks/0005-implement-api.md"), "utf8");
+  assert.match(task, /^    - "docs\/tasks\/0001-schema.md"$/m);
+  assert.match(task, /^    - "TASK-0002"$/m);
+  assert.match(task, /^  blocks:\n    - "docs\/tasks\/0004-ui.md"$/m);
+});
+
 test("new_task rejects a draft or superseded plan", () => {
   const repo = tempRepo();
   const planDir = path.join(repo, "docs/plans");
@@ -456,24 +562,58 @@ test("doc-status audits specs inside subdirectories", () => {
   assert.equal(report.findings.some((f) => f.message.includes("docs/missing-in-subdir.md")), true, "broken link in subdir file");
 });
 
-test("doc-driven-dev-lifecycle meta skill ships SKILL.md and flow-contract references", () => {
-  const flowSkill = path.join(skillRoot, "doc-driven-dev-lifecycle");
-  assert.equal(fs.existsSync(path.join(flowSkill, "SKILL.md")), true);
-  assert.equal(fs.existsSync(path.join(flowSkill, "SKILL.ja.md")), true);
-  assert.equal(fs.existsSync(path.join(flowSkill, "references", "flow-contract.md")), true);
-  assert.equal(fs.existsSync(path.join(flowSkill, "references", "flow-contract.ja.md")), true);
+test("doc-driven-dev-graph meta skill ships Graph Definition and runtime references", () => {
+  const graphSkill = path.join(skillRoot, "doc-driven-dev-graph");
+  assert.equal(fs.existsSync(path.join(graphSkill, "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(graphSkill, "SKILL.ja.md")), true);
+  assert.equal(fs.existsSync(path.join(graphSkill, "references", "graph-contract.md")), true);
+  assert.equal(fs.existsSync(path.join(graphSkill, "references", "execution-contract.md")), true);
 
-  const skill = fs.readFileSync(path.join(flowSkill, "SKILL.md"), "utf8");
-  assert.match(skill, /^name: doc-driven-dev-lifecycle$/m);
-  assert.match(skill, /HARD-GATE/);
-  assert.match(skill, /Phase 1.*Briefing/);
-  assert.match(skill, /Phase 3 Planning & Tasking/);
-  assert.match(skill, /Phase 5 Exit/);
+  const skill = fs.readFileSync(path.join(graphSkill, "SKILL.md"), "utf8");
+  const skillJa = fs.readFileSync(path.join(graphSkill, "SKILL.ja.md"), "utf8");
+  assert.match(skill, /^name: doc-driven-dev-graph$/m);
+  assert.match(skill, /^description: .*at most one declared edge.*terminal\/blocked result/m);
+  assert.match(skillJa, /^description: .*最大 1 つ.*terminal\/blocked.*$/m);
+  assert.match(skill, /Graph Definition/);
+  assert.match(skill, /Runtime loop/);
+  assert.match(skill, /one declared edge/);
+  assert.match(skill, /successful transition selects exactly one declared edge/i);
+  assert.match(skill, /same-node blocked/i);
+  assert.match(skill, /result with no edge/i);
+  assert.match(skillJa, /成功する遷移は宣言済み edge を 1 つだけ選択します/);
+  assert.match(skillJa, /同一 node blocked 結果/);
+  assert.match(skill, /phase labels are conceptual and non-normative.*execution authority/is);
+  const runtime = markdownSection(skill, "## Runtime loop");
+  const runtimeJa = markdownSection(skillJa, "## Graph runtime の 10 ステップ");
+  assert.deepEqual(numberedSteps(runtime), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.deepEqual(numberedSteps(runtimeJa), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.match(skillJa, /phase label は概念上かつ非規範的.*実行\s*authority/s);
+});
+
+test("graph docs bind delegates, audits, and condition-driven subgraphs", () => {
+  const root = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
+  const skill = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.md"), "utf8");
+  const skillJa = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.ja.md"), "utf8");
+  const graphDefinition = fs.readFileSync(path.join(root, "doc-driven-dev-graph/graphs/doc-driven-dev.yaml"), "utf8");
+  for (const text of [skill, skillJa]) {
+    assert.match(text, /route_graph\.js/);
+    assert.match(text, /build_task_graph\.js/);
+    assert.match(text, /briefing-flow/);
+    assert.match(text, /implementation-flow/);
+    assert.match(text, /focus-required/);
+    assert.match(text, /priority|優先/);
+    assert.match(text, /wont-do/);
+    assert.match(text, /database|DB|データベース/i);
+  }
+  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[task\] \}$/m);
+  assert.match(graphDefinition, /^  exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all\], requiresGates: \[/m);
+  assert.match(skill, /binding `build_task_graph` is executed by\s+`build_task_graph\.js`/);
+  assert.match(skillJa, /binding `build_task_graph` は `build_task_graph\.js` が実行/);
 });
 
 test("implementation-flow opens impl-doc before task execution", () => {
   const implementationRoot = path.join(skillRoot, "implementation-flow");
-  const lifecycleRoot = path.join(skillRoot, "doc-driven-dev-lifecycle");
+  const graphRoot = path.join(skillRoot, "doc-driven-dev-graph");
   const implDocRoot = path.join(skillRoot, "impl-doc");
 
   const flow = fs.readFileSync(path.join(implementationRoot, "SKILL.md"), "utf8");
@@ -482,9 +622,9 @@ test("implementation-flow opens impl-doc before task execution", () => {
     path.join(implementationRoot, "assets", "adapters", "implementation-adapter.yaml"),
     "utf8",
   );
-  const lifecycle = fs.readFileSync(path.join(lifecycleRoot, "SKILL.md"), "utf8");
-  const lifecycleJa = fs.readFileSync(path.join(lifecycleRoot, "SKILL.ja.md"), "utf8");
-  const contract = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.md"), "utf8");
+  const graphSkill = fs.readFileSync(path.join(graphRoot, "SKILL.md"), "utf8");
+  const graphSkillJa = fs.readFileSync(path.join(graphRoot, "SKILL.ja.md"), "utf8");
+  const contract = fs.readFileSync(path.join(graphRoot, "references", "execution-contract.md"), "utf8");
   const implDoc = fs.readFileSync(path.join(implDocRoot, "SKILL.md"), "utf8");
 
   assert.match(flow, /Phase C0: Open Implementation Documentation/);
@@ -504,41 +644,34 @@ test("implementation-flow opens impl-doc before task execution", () => {
   assert.match(adapter, /experiment log/);
   assert.match(adapter, /docs\/impl/);
 
-  assert.match(lifecycle, /Before the first code change for each task/);
-  assert.match(lifecycle, /in-progress Implementation Record/);
-  assert.match(lifecycleJa, /Phase 4（Implementation）に入る前に/);
-  assert.match(contract, /4-1 Open implementation documentation/);
+  assert.match(graphSkill, /implementation delegates to `implementation-flow`/i);
+  assert.match(graphSkill, /Markdown evidence/);
+  assert.match(graphSkillJa, /implementation-flow/);
+  assert.match(contract, /Record completion, gate, and follow-up evidence/);
 
   assert.match(implDoc, /Task implementation is starting/);
   assert.match(implDoc, /Create or reuse an in-progress Implementation Record/);
 });
 
-test("doc-driven-dev-lifecycle documents post-implementation follow-up triage", () => {
-  const lifecycleRoot = path.join(skillRoot, "doc-driven-dev-lifecycle");
-  const skill = fs.readFileSync(path.join(lifecycleRoot, "SKILL.md"), "utf8");
-  const skillJa = fs.readFileSync(path.join(lifecycleRoot, "SKILL.ja.md"), "utf8");
-  const contract = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.md"), "utf8");
-  const contractJa = fs.readFileSync(path.join(lifecycleRoot, "references", "flow-contract.ja.md"), "utf8");
+test("doc-driven-dev-graph documents post-implementation follow-up triage", () => {
+  const graphRoot = path.join(skillRoot, "doc-driven-dev-graph");
+  const skill = fs.readFileSync(path.join(graphRoot, "SKILL.md"), "utf8");
+  const skillJa = fs.readFileSync(path.join(graphRoot, "SKILL.ja.md"), "utf8");
+  const stateContract = fs.readFileSync(path.join(graphRoot, "references", "graph-state.md"), "utf8");
+  const stateContractJa = fs.readFileSync(path.join(graphRoot, "references", "graph-state.ja.md"), "utf8");
+  const graph = fs.readFileSync(path.join(graphRoot, "graphs", "doc-driven-dev.yaml"), "utf8");
 
-  assert.match(skill, /Phase 4 Exit Gate/);
-  assert.match(skill, /Post-Implementation Review/);
-  assert.match(contract, /Follow-up Triage/);
-  assert.match(contract, /`bug-fix`/);
-  assert.match(contract, /`decision-required`/);
-  assert.match(contract, /`new-feature`/);
-  assert.match(contract, /`doc-only`/);
-  assert.match(contract, /`defer`/);
-  assert.match(contract, /`wont-do`/);
-
-  assert.match(skillJa, /Phase 4 終了ゲート/);
-  assert.match(skillJa, /実装後レビュー/);
-  assert.match(contractJa, /フォローアップ分類/);
-  assert.match(contractJa, /`bug-fix`/);
-  assert.match(contractJa, /`decision-required`/);
-  assert.match(contractJa, /`new-feature`/);
-  assert.match(contractJa, /`doc-only`/);
-  assert.match(contractJa, /`defer`/);
-  assert.match(contractJa, /`wont-do`/);
+  assert.match(skill, /follow-up triage/i);
+  assert.match(skill, /implementation-verified/);
+  assert.match(skill, /wont-do/);
+  assert.match(skillJa, /follow-up|フォローアップ/);
+  assert.match(skillJa, /implementation-verified/);
+  assert.match(stateContract, /exactly one typed follow-up signal/);
+  assert.match(stateContract, /follow-up triage/);
+  assert.match(stateContractJa, /型付き|follow-up/);
+  assert.match(graph, /from: followup-triage, to: followup-triage, when: followups-unclassified/);
+  assert.match(graph, /from: followup-triage, to: planning, when: followup-bug-fix/);
+  assert.match(graph, /from: followup-triage, to: exit-audit, when: followup-terminal/);
 });
 
 test("task-doc documents follow-up task routing and dependency rules", () => {
@@ -571,11 +704,19 @@ test("doc-status documents unclassified follow-up review before exit", () => {
   const statusRoot = path.join(skillRoot, "doc-status");
   const skill = fs.readFileSync(path.join(statusRoot, "SKILL.md"), "utf8");
   const skillJa = fs.readFileSync(path.join(statusRoot, "SKILL.ja.md"), "utf8");
+  const graph = fs.readFileSync(path.join(skillRoot, "doc-driven-dev-graph", "graphs", "doc-driven-dev.yaml"), "utf8");
 
   assert.match(skill, /unclassified follow-up/i);
-  assert.match(skill, /Phase 4 Exit Gate/);
+  assert.match(skill, /`followup-triage` node.*`exit-audit` node/is);
   assert.match(skillJa, /未分類フォローアップ/);
-  assert.match(skillJa, /Phase 4 終了ゲート/);
+  assert.match(skillJa, /`followup-triage` node.*`exit-audit` node/s);
+  for (const signal of [
+    "followup-bug-fix", "followup-decision-briefing", "followup-decision-design",
+    "followup-new-feature", "followup-doc-only", "followup-terminal",
+  ]) {
+    assert.match(graph, new RegExp(`when: ${signal}`));
+  }
+  assert.match(graph, /when: followups-unclassified/);
 });
 
 test("new_design continues front-matter id numbering and preserves slug naming in slug repos", () => {
