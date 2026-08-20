@@ -3,7 +3,9 @@ import path from "node:path";
 
 /** Resolve an explicitly selected graph or one of the supported default locations. */
 export function resolveGraphPath(explicitGraph?: string, cwd = process.cwd()): string {
-  if (explicitGraph) return path.resolve(cwd, explicitGraph);
+  // Preserve the route CLI contract: an explicit relative graph is resolved
+  // from the process working directory; cwd only selects runtime projection.
+  if (explicitGraph) return path.resolve(explicitGraph);
 
   // Keep resolution relative to the CLI directory. In source this module
   // lives in scripts/lib; esbuild bundles it into the scripts entrypoint.

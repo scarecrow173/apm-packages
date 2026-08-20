@@ -5,6 +5,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 const matter = require("gray-matter");
+const { resolveGraphPath } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts");
 
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
 const inspectCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts");
@@ -154,6 +155,36 @@ test("selected graph validates current node and declared signal", () => {
   const unknownSignal = runSource(repo, ["--graph", graph, "--signal", "not-declared", "--json"]);
   assert.notEqual(unknownSignal.status, 0);
   assert.match(unknownSignal.stderr, /signal|declared|condition/i);
+});
+
+test("relative explicit graph paths remain process-cwd-relative when --cwd selects runtime state", () => {
+  const processRepo = tempRepo();
+  const runtimeRepo = tempRepo();
+  graphFile(processRepo);
+  const result = runSource(processRepo, [
+    "--graph", "graph.yaml", "--cwd", runtimeRepo, "--signal", "advance", "--json",
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  const route = JSON.parse(result.stdout);
+  assert.equal(route.graphId, "cli-fixture");
+  assert.equal(route.edgeId, "start-to-next");
+});
+
+test("default graph resolution supplies JSON inspection and fails closed when candidates are absent", () => {
+  const repo = tempRepo();
+  const result = runInspect(repo, []);
+  assert.equal(result.status, 0, result.stderr);
+  const inspected = JSON.parse(result.stdout);
+  assert.deepEqual(Object.keys(inspected), ["definition"]);
+  assert.equal(inspected.definition.graphId, "doc-driven-dev");
+
+  const originalExistsSync = fs.existsSync;
+  fs.existsSync = (() => false) as typeof fs.existsSync;
+  try {
+    assert.throws(() => resolveGraphPath(undefined, repo), /Unable to locate.*Graph Definition/);
+  } finally {
+    fs.existsSync = originalExistsSync;
+  }
 });
 
 test("terminal re-entry emits an idempotent terminal route", () => {
@@ -367,6 +398,18 @@ test("inspection CLI emits runtime state only for an explicit selector", () => {
   assert.deepEqual(Object.keys(selected.state), [
     "schemaVersion", "graphId", "cwd", "taskDir", "focus", "gates", "signals", "blockers", "hardBlockers",
   ]);
+  assert.equal(selected.artifactGraph.nodes.some((node: { id: string }) => node.id === "PLAN-0001"), true);
+  assert.equal(selected.artifactGraph.edges.some((edge: { relation: string; kind: string }) => (
+    edge.relation === "derives-from" && edge.kind === "lineage"
+  )), true);
+  assert.deepEqual(selected.taskGraph.nodes[0], {
+    id: "TASK-0001",
+    path: "docs/tasks/0001-task.md",
+    status: "done",
+    dependsOn: [],
+    blocks: [],
+  });
+  assert.deepEqual(selected.taskGraph.completed, ["TASK-0001"]);
 });
 
 test("inspection Mermaid output is deterministic and pure text", () => {
