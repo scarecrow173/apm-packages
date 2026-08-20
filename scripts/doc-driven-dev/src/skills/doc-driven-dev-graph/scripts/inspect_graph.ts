@@ -73,6 +73,9 @@ function run(args: CliArgs): void {
   const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
   const inspection = inspectGraphDefinition(definition);
   if (args.format === "mermaid") {
+    if (args.cwdExplicit || args.focus.length > 0 || args.taskDir !== undefined) {
+      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --task-dir");
+    }
     console.log(renderGraphMermaid(inspection));
     return;
   }

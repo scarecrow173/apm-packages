@@ -38,8 +38,8 @@ schema is version `1`, independent of the Graph Definition schema version.
 | `reachableNodes` | Sorted nodes reachable from `entry` by declared edges. |
 | `unreachableNodes` | Sorted node IDs not reachable from `entry`. |
 | `reachableTerminalNodes` | Sorted terminal nodes reachable from `entry`. |
-| `unusedConditions` | Declared condition keys not included in `referencedConditions`. |
-| `referencedConditions` | Sorted edge `when` keys, prerequisite-gate condition keys, and declared signal condition keys. |
+| `unusedConditions` | Declared condition keys absent from the unique edge `when` keys. |
+| `referencedConditions` | Unique edge `when` keys, sorted deterministically. |
 | `delegates` | `{ nodeId, delegate }` entries for nodes with a delegate. |
 | `audits` | `{ nodeId, audits }` entries for nodes with declared audits. |
 | `issues` | Sorted inspection findings; see the issue table below. |
@@ -111,7 +111,8 @@ read-only; it does not route, dispatch a delegate, or create a parallel state
 store. An explicit focus that resolves to an invalid or required focus fails
 closed instead of guessing.
 
-The Mermaid format is definition-only even when runtime selectors are supplied.
+Mermaid is definition-only and rejects `--cwd`, `--focus`, and `--task-dir`.
+JSON accepts these selectors for runtime projection.
 
 ## Mermaid output
 
@@ -121,7 +122,8 @@ alias in Mermaid syntax, assigned by that sorted order; the original ID remains
 in the escaped label. A node label contains its ID and `kind`, then optional
 `delegate`, `terminal`, and `audits` labels. Edge lines are sorted by `from`,
 priority, and edge ID; each label contains the condition key and priority
-(`<condition> · p<priority>`). Mermaid labels escape `&` and `"`.
+(`<condition> · p<priority>`). Original node, delegate, audit, and condition
+text is escaped; `|` cannot terminate an edge label.
 
 Mermaid rendering is text-only and has no routing, delegate-dispatch, Markdown,
 or persistence side effect.

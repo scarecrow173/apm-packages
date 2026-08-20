@@ -38,8 +38,8 @@ schema は現在 `1` であり、Graph Definition schema version とは独立し
 | `reachableNodes` | 宣言 edge を辿って `entry` から到達できる node。 |
 | `unreachableNodes` | `entry` から到達できない node ID。 |
 | `reachableTerminalNodes` | `entry` から到達できる terminal node。 |
-| `unusedConditions` | `referencedConditions` に含まれない宣言済み condition key。 |
-| `referencedConditions` | edge の `when` key、prerequisite-gate condition key、宣言済み signal condition key。 |
+| `unusedConditions` | unique な edge の `when` key にない宣言済み condition key。 |
+| `referencedConditions` | unique な edge の `when` key を決定的に sort したもの。 |
 | `delegates` | delegate を持つ node の `{ nodeId, delegate }` entry。 |
 | `audits` | audit 宣言を持つ node の `{ nodeId, audits }` entry。 |
 | `issues` | sort 済み inspection finding。下の issue table を参照。 |
@@ -110,7 +110,8 @@ JSON inspection は既定では `definition` だけを含みます。runtime sel
 dispatch、並行 state store の作成を行いません。明示的 focus が invalid または required
 に解決される場合は推測せず fail-closed になります。
 
-runtime selector を渡しても Mermaid format は definition-only です。
+Mermaid format は definition-only であり、`--cwd`、`--focus`、`--task-dir` を拒否します。
+JSON はこれらの selector を runtime projection 用に受け付けます。
 
 ## Mermaid output
 
@@ -119,8 +120,8 @@ ID で sort されます。すべての node は Mermaid syntax では決定的�
 元の node ID の sort 順に割り当てます。元の ID は escape 済み label に残ります。node
 label には ID と `kind`、宣言されていれば `delegate`、`terminal`、`audits` label が
 含まれます。edge 行は `from`、priority、edge ID の順で sort され、label には condition
-key と priority（`<condition> · p<priority>`）が含まれます。Mermaid label の `&` と `"`
-は escape されます。
+key と priority（`<condition> · p<priority>`）が含まれます。元の node、delegate、audit、
+condition text は escape され、`|` が edge label を終了させることはありません。
 
 Mermaid rendering は text-only で、routing、delegate dispatch、Markdown、persistence への
 副作用はありません。

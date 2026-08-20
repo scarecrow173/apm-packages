@@ -447,6 +447,22 @@ test("inspection Mermaid output is deterministic and pure text", () => {
   assert.match(first.stdout, /^flowchart TD\n/);
 });
 
+test("inspection Mermaid rejects runtime projection selectors", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const selectors = [
+    [["--cwd", repo], /mermaid.*cwd|cwd.*mermaid/i],
+    [["--focus", "MISSING"], /mermaid.*focus|focus.*mermaid/i],
+    [["--task-dir", "docs/tasks"], /mermaid.*task-dir|task-dir.*mermaid/i],
+  ] as const;
+
+  for (const [selector, message] of selectors) {
+    const result = runInspect(repo, ["--graph", graph, "--format", "mermaid", ...selector]);
+    assert.notEqual(result.status, 0, selector.join(" "));
+    assert.match(result.stderr, message, selector.join(" "));
+  }
+});
+
 test("CLI rejects unknown options, missing values, bad graphs, and invalid focus", () => {
   const repo = tempRepo();
   const graph = graphFile(repo);

@@ -146,6 +146,9 @@ delegates, audits, and deterministic issues. `state`, `artifactGraph`, and
 `taskGraph` are included only when an explicit `--cwd`, `--focus`, or
 `--task-dir` selector requests runtime projection. Inspection never routes,
 dispatches delegates, or writes Markdown/persistence state.
+`referencedConditions` contains the unique edge `when` keys; `unusedConditions`
+contains declared condition keys absent from those edge `when` keys. JSON accepts
+these selectors for runtime projection.
 
 ### 4. Inspect Mermaid
 
@@ -161,7 +164,9 @@ in Mermaid syntax, assigned by sorted original node ID; the original ID remains
 in the escaped label. Node labels include node ID and kind, with delegate,
 terminal, and audit labels when declared; edge labels include the condition key
 and priority. Mermaid rendering is text-only and has no routing or persistence
-side effect.
+side effect. Mermaid is definition-only and rejects `--cwd`, `--focus`, and
+`--task-dir`. Original node, delegate, audit, and condition text is escaped;
+`|` cannot terminate an edge label.
 
 ## References
 

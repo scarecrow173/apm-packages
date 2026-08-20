@@ -20445,8 +20445,8 @@ function sortedEdges(edges) {
 function issueSort(left, right) {
   return compareStrings(left.code, right.code) || compareStrings(left.nodeId ?? "", right.nodeId ?? "") || compareStrings(left.condition ?? "", right.condition ?? "");
 }
-function escapeMermaidLabel(value) {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+function escapeMermaidText(value) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/\|/g, "&#124;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/[\r\n]+/g, " ").replace(/\\/g, "&#92;").replace(/\[/g, "&#91;").replace(/\]/g, "&#93;").replace(/\{/g, "&#123;").replace(/\}/g, "&#125;");
 }
 function mermaidNodeAliases(nodes) {
   return new Map(
@@ -20454,11 +20454,13 @@ function mermaidNodeAliases(nodes) {
   );
 }
 function renderNode(node, terminalNodes, aliases) {
-  const labels = [node.nodeId, `kind: ${node.kind}`];
-  if (node.delegate !== void 0) labels.push(`delegate: ${node.delegate}`);
+  const labels = [escapeMermaidText(node.nodeId), `kind: ${escapeMermaidText(node.kind)}`];
+  if (node.delegate !== void 0) labels.push(`delegate: ${escapeMermaidText(node.delegate)}`);
   if (terminalNodes.has(node.nodeId)) labels.push("terminal");
-  if (node.audits.length > 0) labels.push(`audits: ${node.audits.join(", ")}`);
-  return `  ${aliases.get(node.nodeId) ?? node.nodeId}["${escapeMermaidLabel(labels.join("<br/>"))}"]`;
+  if (node.audits.length > 0) {
+    labels.push(`audits: ${node.audits.map(escapeMermaidText).join(", ")}`);
+  }
+  return `  ${aliases.get(node.nodeId) ?? node.nodeId}["${labels.join("<br/>")}"]`;
 }
 function inspectGraphDefinition(definition) {
   const nodeIds = sortedStrings(Object.keys(definition.nodes));
@@ -20544,7 +20546,7 @@ function renderGraphMermaid(inspection) {
   return [
     "flowchart TD",
     ...nodes.map((node) => renderNode(node, terminalNodes, aliases)),
-    ...edges.map((edge) => `  ${aliases.get(edge.from) ?? edge.from} -->|${escapeMermaidLabel(`${edge.when} \xB7 p${edge.priority}`)}| ${aliases.get(edge.to) ?? edge.to}`)
+    ...edges.map((edge) => `  ${aliases.get(edge.from) ?? edge.from} -->|${escapeMermaidText(edge.when)} \xB7 p${edge.priority}| ${aliases.get(edge.to) ?? edge.to}`)
   ].join("\n");
 }
 
@@ -21511,6 +21513,9 @@ function run(args) {
   const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
   const inspection = inspectGraphDefinition(definition);
   if (args.format === "mermaid") {
+    if (args.cwdExplicit || args.focus.length > 0 || args.taskDir !== void 0) {
+      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --task-dir");
+    }
     console.log(renderGraphMermaid(inspection));
     return;
   }

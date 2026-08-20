@@ -141,6 +141,9 @@ JSON は counts、topology reachability、delegate、audit、決定的な issue 
 `--cwd`、`--focus`、または `--task-dir` selector が runtime projection を要求
 した場合だけ含まれます。Inspection は route、delegate dispatch、Markdown/
 persistence state の書き込みを行いません。
+`referencedConditions` は edge の `when` key の重複を除いた集合であり、
+`unusedConditions` はその edge の `when` key にない宣言済み condition key です。
+JSON はこれらの selector を runtime projection 用に受け付けます。
 
 ### 4. Mermaid を inspect
 
@@ -156,6 +159,9 @@ node と edge は安定した順序で sort されます。すべての node は
 済み label に残ります。node label には node ID と kind、宣言されている場合は delegate、
 terminal、audit label が含まれ、edge label には condition key と priority が含まれます。
 Mermaid rendering は text-only で、routing や persistence への副作用はありません。
+Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir` を拒否します。
+元の node、delegate、audit、condition text は escape され、`|` が edge label を終了
+させることはありません。
 
 ## References
 
