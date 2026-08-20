@@ -12,6 +12,7 @@ const {
   evaluateCondition,
 } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions.ts");
 const {
+  evaluateRouteDecision,
   routeGraph,
 } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts");
 
@@ -69,6 +70,12 @@ test("routes the first satisfied outgoing edge by ascending priority", () => {
   assert.equal(route.delegate, "repair-handler");
 });
 
+test("keeps routeGraph compatible with the shared decision on an edge path", () => {
+  const definition = definitionWith({});
+  const input = { current: "alpha", definition, state: stateWith({ signals: ["first"] }) };
+  assert.deepEqual(routeGraph(input), evaluateRouteDecision(input).route);
+});
+
 test("projects destination audit requirements on a selected edge", () => {
   const definition = definitionWith({
     nodes: {
@@ -119,15 +126,21 @@ test("returns terminal status when re-entering a terminal node", () => {
     blockers: [],
     taskGraph: null,
   });
+  assert.deepEqual(
+    route,
+    evaluateRouteDecision({ current: "finished", definition, state: stateWith() }).route,
+  );
 });
 
 test("returns a blocked result when no declared condition is satisfied", () => {
-  const route = routeGraph({ current: "alpha", definition: definitionWith({}), state: stateWith() });
+  const input = { current: "alpha", definition: definitionWith({}), state: stateWith() };
+  const route = routeGraph(input);
   assert.equal(route.next, "alpha");
   assert.equal(route.edgeId, null);
   assert.equal(route.condition, "blocked");
   assert.equal(route.status, "blocked");
   assert.equal(route.delegate, null);
+  assert.deepEqual(route, evaluateRouteDecision(input).route);
 });
 
 test("fails closed when a node prerequisite gate is absent or not passing", () => {
