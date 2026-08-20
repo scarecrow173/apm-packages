@@ -108,7 +108,7 @@ explicit terminal/blocked result:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current planning --signal design-ready --json
+  --current followup-triage --signal followup-terminal --json
 ```
 
 The command evaluates the selected node and returns one `GraphRoute`. It does
@@ -121,7 +121,7 @@ the evidence used to choose it:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current planning --signal design-ready --explain --json
+  --current followup-triage --signal followup-terminal --explain --json
 ```
 
 The result is `{ "route": GraphRoute, "explanation": ... }`. The explanation

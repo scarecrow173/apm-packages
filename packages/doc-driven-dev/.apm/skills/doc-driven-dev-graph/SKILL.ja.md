@@ -103,7 +103,7 @@ canonical router を実行します:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current planning --signal design-ready --json
+  --current followup-triage --signal followup-terminal --json
 ```
 
 この command は選択した node を評価して 1 つの `GraphRoute` を返します。
@@ -116,7 +116,7 @@ JSON route command に `--explain` を加えると、通常の route と選択�
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current planning --signal design-ready --explain --json
+  --current followup-triage --signal followup-terminal --explain --json
 ```
 
 結果は `{ "route": GraphRoute, "explanation": ... }` です。explanation には

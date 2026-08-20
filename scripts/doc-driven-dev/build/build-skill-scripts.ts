@@ -106,9 +106,7 @@ async function main(): Promise<void> {
       logLevel: "silent"
     });
 
-    if (toPosix(rel).startsWith("skill-discovery-protocol/scripts/")) {
-      await trimTrailingWhitespace(outfile);
-    }
+    await trimTrailingWhitespace(outfile);
     console.log(`Built ${toPosix(path.relative(ROOT, outfile))}`);
   }
 

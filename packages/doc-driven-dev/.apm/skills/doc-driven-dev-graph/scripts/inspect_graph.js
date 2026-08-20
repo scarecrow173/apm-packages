@@ -397,7 +397,7 @@ var require_mark = __commonJS({
       maxLength = maxLength || 75;
       head = "";
       start = this.position;
-      while (start > 0 && "\0\\r\n\x85\u2028\u2029".indexOf(this.buffer.charAt(start - 1)) === -1) {
+      while (start > 0 && "\0\r\n\x85\u2028\u2029".indexOf(this.buffer.charAt(start - 1)) === -1) {
         start -= 1;
         if (this.position - start > maxLength / 2 - 1) {
           head = " ... ";
@@ -407,7 +407,7 @@ var require_mark = __commonJS({
       }
       tail = "";
       end = this.position;
-      while (end < this.buffer.length && "\0\\r\n\x85\u2028\u2029".indexOf(this.buffer.charAt(end)) === -1) {
+      while (end < this.buffer.length && "\0\r\n\x85\u2028\u2029".indexOf(this.buffer.charAt(end)) === -1) {
         end += 1;
         if (end - this.position > maxLength / 2 - 1) {
           tail = " ... ";
@@ -1078,7 +1078,7 @@ var require_binary = __commonJS({
       return bitlen % 8 === 0;
     }
     function constructYamlBinary(data) {
-      var idx, tailbits, input = data.replace(/[\\r\n=]/g, ""), max = input.length, map2 = BASE64_MAP, bits = 0, result = [];
+      var idx, tailbits, input = data.replace(/[\r\n=]/g, ""), max = input.length, map2 = BASE64_MAP, bits = 0, result = [];
       for (idx = 0; idx < max; idx++) {
         if (idx % 4 === 0 && idx) {
           result.push(bits >> 16 & 255);
@@ -4571,7 +4571,7 @@ function getDoubleQuotedValue(input, start, end) {
 }
 function getBlockValue(input, start, end, indent, chomping, folded) {
   const textIndent = indent < 0 ? 0 : indent;
-  const region = input.slice(start, end).replace(/\\r\n?/g, "\n");
+  const region = input.slice(start, end).replace(/\r\n?/g, "\n");
   const lines = region === "" ? [] : (region.endsWith("\n") ? region.slice(0, -1) : region).split("\n");
   let result = "";
   let didReadContent = false;
