@@ -90,6 +90,72 @@ Markdown artifact が durable history と status の authority です。Graph St
 と Dynamic Task Graph は turn ごとの projection であり、runtime は並行する
 database を作成・要求しません。
 
+## 公開 command
+
+次の 4 つの command は目的が異なります。`route_graph.js` は 1 回の route
+判断を行い、`inspect_graph.js` は選択した definition と、明示的に要求した
+場合だけ runtime projection を説明します。
+
+### 1. 通常 route
+
+次に進む宣言済み edge、または明示的な terminal/blocked 結果が必要な場合は
+canonical router を実行します:
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
+  --current planning --signal design-ready --json
+```
+
+この command は選択した node を評価して 1 つの `GraphRoute` を返します。
+同じ invocation の中で返された destination をさらに辿ることはありません。
+
+### 2. route を説明
+
+JSON route command に `--explain` を加えると、通常の route と選択根拠を同じ
+結果に保持できます:
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
+  --current planning --signal design-ready --explain --json
+```
+
+結果は `{ "route": GraphRoute, "explanation": ... }` です。explanation には
+hard blocker、prerequisite gate、順序付き repair/normal edge 評価、選択 edge、
+destination audit、blocked reason が記録されます。Explain mode には `--json`
+が必要で、routing や persistence の挙動は変わりません。評価順序と field
+contract は [`references/graph-inspection.ja.md`](references/graph-inspection.ja.md)
+を参照してください。
+
+### 3. JSON を inspect
+
+`inspect_graph.js` は route condition を評価せず、topology と宣言を inspect
+します:
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
+  --format json
+```
+
+JSON は counts、topology reachability、delegate、audit、決定的な issue を含む
+`definition` を常に返します。`state`、`artifactGraph`、`taskGraph` は明示的な
+`--cwd`、`--focus`、または `--task-dir` selector が runtime projection を要求
+した場合だけ含まれます。Inspection は route、delegate dispatch、Markdown/
+persistence state の書き込みを行いません。
+
+### 4. Mermaid を inspect
+
+同じ topology を review や diagram 用の決定的 Mermaid text として出力します:
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
+  --format mermaid
+```
+
+node と edge は安定した順序で sort されます。node label には node ID と kind、
+宣言されている場合は delegate、terminal、audit label が含まれ、edge label
+には condition key と priority が含まれます。Mermaid rendering は text-only で、
+routing や persistence への副作用はありません。
+
 ## References
 
 - [`graphs/doc-driven-dev.yaml`](graphs/doc-driven-dev.yaml) — topology と
@@ -102,3 +168,5 @@ database を作成・要求しません。
   evidence に基づく caller loop。
 - [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) —
   Task Graph 合成と fail-closed dependency 規則。
+- [`references/graph-inspection.ja.md`](references/graph-inspection.ja.md) — inspection
+  field、topology reachability、route explanation、Mermaid の決定性。

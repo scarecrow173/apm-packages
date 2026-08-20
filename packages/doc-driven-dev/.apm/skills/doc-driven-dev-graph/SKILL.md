@@ -95,6 +95,72 @@ Markdown artifacts are durable history and status authority. Graph State and
 the Dynamic Task Graph are projections for the current turn. The runtime does
 not create or require a parallel database.
 
+## Public commands
+
+Use the four commands below for distinct purposes. `route_graph.js` makes one
+route decision; `inspect_graph.js` only describes the selected definition and,
+when explicitly requested, its runtime projections.
+
+### 1. Normal routing
+
+Run the canonical router when the caller needs the next declared edge or an
+explicit terminal/blocked result:
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
+  --current planning --signal design-ready --json
+```
+
+The command evaluates the selected node and returns one `GraphRoute`. It does
+not follow the returned destination in the same invocation.
+
+### 2. Explain a route
+
+Add `--explain` to the JSON route command to retain the ordinary route beside
+the evidence used to choose it:
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
+  --current planning --signal design-ready --explain --json
+```
+
+The result is `{ "route": GraphRoute, "explanation": ... }`. The explanation
+records hard blockers, prerequisite gates, evaluated repair/normal edges in
+order, the selected edge, destination audits, and blocked reasons. Explain mode
+requires `--json` and does not change routing or persistence behavior. See
+[`references/graph-inspection.md`](references/graph-inspection.md) for the
+evaluation order and field contract.
+
+### 3. Inspect JSON
+
+Use `inspect_graph.js` to inspect topology and declarations without evaluating
+route conditions:
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
+  --format json
+```
+
+The JSON always contains `definition`, including counts, topology reachability,
+delegates, audits, and deterministic issues. `state`, `artifactGraph`, and
+`taskGraph` are included only when an explicit `--cwd`, `--focus`, or
+`--task-dir` selector requests runtime projection. Inspection never routes,
+dispatches delegates, or writes Markdown/persistence state.
+
+### 4. Inspect Mermaid
+
+Render the same topology as deterministic Mermaid text for review or diagrams:
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
+  --format mermaid
+```
+
+Nodes and edges are sorted stably. Node labels include node ID and kind, with
+delegate, terminal, and audit labels when declared; edge labels include the
+condition key and priority. Mermaid rendering is text-only and has no routing or
+persistence side effect.
+
 ## References
 
 - [`graphs/doc-driven-dev.yaml`](graphs/doc-driven-dev.yaml) — concrete
@@ -107,3 +173,5 @@ not create or require a parallel database.
   evidence-backed caller loop.
 - [`references/task-graph-contract.md`](references/task-graph-contract.md) —
   Task Graph composition and fail-closed dependency rules.
+- [`references/graph-inspection.md`](references/graph-inspection.md) — inspection
+  fields, topology reachability, route explanations, and Mermaid determinism.

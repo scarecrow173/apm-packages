@@ -10,6 +10,7 @@ const { resolveGraphPath } = require("../src/skills/doc-driven-dev-graph/scripts
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
 const inspectCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts");
 const generatedCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/route_graph.js");
+const generatedInspectCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js");
 const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 const retiredRoutePath = path.resolve(
   __dirname,
@@ -124,6 +125,10 @@ function runSource(cwd: string, args: string[]) {
 
 function runInspect(cwd: string, args: string[]) {
   return runCli(tsxCli, cwd, [inspectCli, ...args]);
+}
+
+function runGeneratedInspect(cwd: string, args: string[]) {
+  return runCli(generatedInspectCli, cwd, args);
 }
 
 test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
@@ -448,4 +453,34 @@ test("explain mode requires JSON output", () => {
   const result = runSource(repo, ["--graph", graph, "--explain"]);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /explain.*json|json.*explain/i);
+});
+
+test("source and generated graph CLIs have identical explain and inspection output", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const routeArgs = ["--graph", graph, "--signal", "advance", "--explain", "--json"];
+  const inspectArgs = ["--graph", graph, "--format", "json"];
+  const mermaidArgs = ["--graph", graph, "--format", "mermaid"];
+
+  const sourceRoute = runSource(repo, routeArgs);
+  const generatedRoute = runCli(generatedCli, repo, routeArgs);
+  const sourceInspect = runInspect(repo, inspectArgs);
+  const generatedInspect = runGeneratedInspect(repo, inspectArgs);
+  const sourceMermaid = runInspect(repo, mermaidArgs);
+  const generatedMermaid = runGeneratedInspect(repo, mermaidArgs);
+
+  for (const [label, result] of [
+    ["source route", sourceRoute],
+    ["generated route", generatedRoute],
+    ["source inspection", sourceInspect],
+    ["generated inspection", generatedInspect],
+    ["source Mermaid", sourceMermaid],
+    ["generated Mermaid", generatedMermaid],
+  ] as const) {
+    assert.equal(result.status, 0, `${label}: ${result.stderr}`);
+  }
+
+  assert.deepEqual(JSON.parse(generatedRoute.stdout), JSON.parse(sourceRoute.stdout));
+  assert.deepEqual(JSON.parse(generatedInspect.stdout), JSON.parse(sourceInspect.stdout));
+  assert.equal(generatedMermaid.stdout, sourceMermaid.stdout);
 });

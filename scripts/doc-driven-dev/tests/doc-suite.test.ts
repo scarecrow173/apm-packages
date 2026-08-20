@@ -568,6 +568,9 @@ test("doc-driven-dev-graph meta skill ships Graph Definition and runtime referen
   assert.equal(fs.existsSync(path.join(graphSkill, "SKILL.ja.md")), true);
   assert.equal(fs.existsSync(path.join(graphSkill, "references", "graph-contract.md")), true);
   assert.equal(fs.existsSync(path.join(graphSkill, "references", "execution-contract.md")), true);
+  assert.equal(fs.existsSync(path.join(graphSkill, "references", "graph-inspection.md")), true);
+  assert.equal(fs.existsSync(path.join(graphSkill, "references", "graph-inspection.ja.md")), true);
+  assert.equal(fs.existsSync(path.join(graphSkill, "scripts", "inspect_graph.js")), true);
 
   const skill = fs.readFileSync(path.join(graphSkill, "SKILL.md"), "utf8");
   const skillJa = fs.readFileSync(path.join(graphSkill, "SKILL.ja.md"), "utf8");
