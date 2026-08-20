@@ -2,7 +2,6 @@ schemaVersion: 2
 id: doc-driven-dev
 entry: probe
 conditions:
-  focus-required: { kind: signal, signal: focus-required }
   migration-requested: { kind: signal, signal: migration-requested }
   migration-incomplete: { kind: signal, signal: migration-incomplete }
   migration-complete: { kind: signal, signal: migration-complete }
