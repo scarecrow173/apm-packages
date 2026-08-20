@@ -183,7 +183,7 @@ test("stops with no evaluated edges on a hard blocker", () => {
   assert.equal(explanation.selectedEdgeId, null);
 });
 
-test("does not route a terminal node when a hard blocker is present", () => {
+test("retains terminal routing when a hard blocker is present", () => {
   const definition = definitionWith({
     entry: "finished",
     conditions: {},
@@ -196,10 +196,13 @@ test("does not route a terminal node when a hard blocker is present", () => {
     state: stateWith({ hardBlockers: ["artifact-graph"] }),
   });
 
-  assert.equal(decision.route.status, "blocked");
+  assert.equal(decision.route.status, "terminal");
+  assert.equal(decision.route.condition, "terminal");
   assert.equal(decision.route.next, "finished");
+  assert.equal(decision.route.edgeId, null);
   assert.deepEqual(decision.explanation.evaluatedEdges, []);
-  assert.deepEqual(decision.explanation.blockedReasons, ["artifact-graph"]);
+  assert.deepEqual(decision.explanation.hardBlockers, ["artifact-graph"]);
+  assert.deepEqual(decision.explanation.blockedReasons, []);
 });
 
 test("reports missing prerequisite gates and blocks when their repair edge is absent", () => {

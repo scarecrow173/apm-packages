@@ -130,6 +130,14 @@ test("returns terminal status when re-entering a terminal node", () => {
     route,
     evaluateRouteDecision({ current: "finished", definition, state: stateWith() }).route,
   );
+
+  const hardBlockedInput = { current: "finished", definition, state: stateWith({ hardBlockers: ["artifact-graph"] }) };
+  const hardBlockedRoute = routeGraph(hardBlockedInput);
+  assert.equal(hardBlockedRoute.status, "terminal");
+  assert.equal(hardBlockedRoute.condition, "terminal");
+  assert.equal(hardBlockedRoute.next, "finished");
+  assert.equal(hardBlockedRoute.edgeId, null);
+  assert.deepEqual(hardBlockedRoute, evaluateRouteDecision(hardBlockedInput).route);
 });
 
 test("returns a blocked result when no declared condition is satisfied", () => {

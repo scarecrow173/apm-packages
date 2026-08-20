@@ -175,29 +175,6 @@ export function evaluateRouteDecision(input: RouteInput): RouteDecision {
   const evaluatedEdges: EvaluatedEdge[] = [];
   const hardBlockers = sortedUnique(input.state.hardBlockers);
 
-  if (hardBlockers.length > 0) {
-    const route = routeResult(input, {
-      next: input.current,
-      edgeId: null,
-      condition: "blocked",
-      status: "blocked",
-      delegate: null,
-      requiredAudits: [],
-    }, hardBlockers);
-    return {
-      route,
-      explanation: {
-        currentNode: input.current,
-        hardBlockers,
-        prerequisiteGates,
-        evaluatedEdges,
-        selectedEdgeId: null,
-        selectedDestinationAudits: [],
-        blockedReasons: hardBlockers,
-      },
-    };
-  }
-
   if (node.kind === "terminal") {
     const route = routeResult(input, {
       next: input.current,
@@ -217,6 +194,29 @@ export function evaluateRouteDecision(input: RouteInput): RouteDecision {
         selectedEdgeId: null,
         selectedDestinationAudits: [],
         blockedReasons: [],
+      },
+    };
+  }
+
+  if (hardBlockers.length > 0) {
+    const route = routeResult(input, {
+      next: input.current,
+      edgeId: null,
+      condition: "blocked",
+      status: "blocked",
+      delegate: null,
+      requiredAudits: [],
+    }, hardBlockers);
+    return {
+      route,
+      explanation: {
+        currentNode: input.current,
+        hardBlockers,
+        prerequisiteGates,
+        evaluatedEdges,
+        selectedEdgeId: null,
+        selectedDestinationAudits: [],
+        blockedReasons: hardBlockers,
       },
     };
   }
