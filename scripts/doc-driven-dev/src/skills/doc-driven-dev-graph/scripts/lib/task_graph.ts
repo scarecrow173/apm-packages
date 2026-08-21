@@ -106,6 +106,20 @@ export function normalizeRepoPath(cwd: string, target: string): string {
   return path.relative(cwd, absolute).split(path.sep).join("/");
 }
 
+function normalizeOwnedRepoPath(cwd: string, ownerFile: string, reference: string): string {
+  const ownerCandidate = path.resolve(cwd, path.dirname(ownerFile), reference);
+  const rootCandidate = path.resolve(cwd, reference);
+  const documentRelative = reference.startsWith("./")
+    || reference.startsWith("../")
+    || reference === "."
+    || reference === ".."
+    || (!reference.includes("/") && !reference.includes("\\"));
+  const preferred = documentRelative ? ownerCandidate : rootCandidate;
+  const fallback = documentRelative ? rootCandidate : ownerCandidate;
+  const chosen = fs.existsSync(preferred) ? preferred : fallback;
+  return normalizeRepoPath(cwd, chosen);
+}
+
 function markdownFiles(dir: string): string[] {
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return [];
   const result: string[] = [];
@@ -228,7 +242,7 @@ export function readTaskDocuments(cwd: string, taskDir: string): ParsedTask[] {
       });
     }
     const implementsValues = relationValues(relationObject, "implements", parseIssues, id, relativeFile)
-      .map((target) => normalizeRepoPath(cwd, target));
+      .map((target) => normalizeOwnedRepoPath(cwd, relativeFile, target));
     const dependsOn = relationValues(relationObject, "depends-on", parseIssues, id, relativeFile);
     const blocks = relationValues(relationObject, "blocks", parseIssues, id, relativeFile);
     tasks.push({
@@ -269,15 +283,25 @@ export function indexTasks(tasks: ParsedTask[]): IndexedTasks {
   return { tasks: sortedTasks, byId, byPath, issues };
 }
 
-function resolveReference(cwd: string, reference: string, index: IndexedTasks): ParsedTask | undefined {
+function resolveReference(
+  cwd: string,
+  owner: ParsedTask,
+  reference: string,
+  index: IndexedTasks,
+): ParsedTask | undefined {
   const byId = index.byId.get(reference);
   if (byId) return byId;
-  const normalized = normalizeRepoPath(cwd, reference);
+  const normalized = normalizeOwnedRepoPath(cwd, owner.file, reference);
   return index.byPath.get(normalized);
 }
 
-function isExistingArtifactReference(cwd: string, taskDir: string, reference: string): boolean {
-  const candidate = path.resolve(cwd, reference);
+function isExistingArtifactReference(
+  cwd: string,
+  taskDir: string,
+  owner: ParsedTask,
+  reference: string,
+): boolean {
+  const candidate = path.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
   if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) return false;
   const taskRoot = path.resolve(cwd, taskDir);
   const candidatePath = path.resolve(candidate);
@@ -314,11 +338,11 @@ export function resolveTaskEdges(cwd: string, taskDir: string, index: IndexedTas
   const issues: InternalIssue[] = [];
   const artifactIds = readArtifactIds(cwd, taskDir);
   const addReference = (task: ParsedTask, reference: string, direction: "depends-on" | "blocks"): void => {
-    const target = resolveReference(cwd, reference, index);
+    const target = resolveReference(cwd, task, reference, index);
     if (!target || !target.id) {
       // Relations to an existing plan/spec/ADR are upstream artifact links,
       // not task-DAG edges. Keep unresolved task-looking references fail-closed.
-      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, reference)) return;
+      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, task, reference)) return;
       issues.push({
         code: "missing-task-reference",
         tasks: task.id ? [task.id] : [],

@@ -188,3 +188,48 @@ test("build_task_graph CLI returns JSON and exit 1 for invalid graphs", () => {
   assert.equal(invalid.status, 1);
   assert.equal(JSON.parse(invalid.stdout).issues[0].code, "missing-task-reference");
 });
+
+test("buildTaskGraph resolves document-relative implements and depends-on paths", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-relative-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", {
+    status: "done",
+    dependsOn: [],
+    implements: ["../plans/0001-plan.md"],
+  });
+  writeTask(repo, "TASK-0002", {
+    status: "todo",
+    dependsOn: ["0001-task.md"],
+    implements: ["../plans/0001-plan.md"],
+  });
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.nodes.map((node) => node.id), ["TASK-0001", "TASK-0002"]);
+  assert.deepEqual(result.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
+  assert.deepEqual(result.runnable, ["TASK-0002"]);
+  assert.deepEqual(result.issues, []);
+});
+
+test("buildTaskGraph resolves document-relative blocks paths", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-relative-blocks-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", {
+    status: "todo",
+    dependsOn: [],
+    blocks: ["0002-task.md"],
+    implements: ["../plans/0001-plan.md"],
+  });
+  writeTask(repo, "TASK-0002", {
+    status: "todo",
+    dependsOn: [],
+    implements: ["../plans/0001-plan.md"],
+  });
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
+  assert.deepEqual(result.issues, []);
+});
