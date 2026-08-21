@@ -21,6 +21,42 @@ export type GraphRoute = {
   taskGraph: TaskGraphResult | null;
 };
 
+export type EvaluatedEdge = {
+  edgeId: string;
+  priority: number;
+  condition: string;
+  conditionKind: "signal" | "gate" | "task-graph";
+  matched: boolean;
+  evaluationPhase: "repair" | "normal";
+};
+
+export type PrerequisiteGateExplanation = {
+  gate: string;
+  status: "pass" | "fail" | "blocked" | "missing";
+  reasons: string[];
+};
+
+export type RouteExplanation = {
+  currentNode: string;
+  hardBlockers: string[];
+  prerequisiteGates: PrerequisiteGateExplanation[];
+  evaluatedEdges: EvaluatedEdge[];
+  selectedEdgeId: string | null;
+  selectedDestinationAudits: string[];
+  blockedReasons: string[];
+};
+
+export type RouteDecision = {
+  route: GraphRoute;
+  explanation: RouteExplanation;
+};
+
+type RouteInput = {
+  current: GraphNodeId;
+  definition: GraphDefinition;
+  state: GraphState;
+};
+
 function sortedOutgoing(definition: GraphDefinition, current: GraphNodeId) {
   return definition.edges
     .filter((edge) => edge.from === current)
@@ -81,19 +117,66 @@ function isPrerequisiteRepairEdge(
     && (node.requiresGates ?? []).includes(condition.gate);
 }
 
-/** Route one step through the declared graph edges. */
-export function routeGraph(input: {
-  current: GraphNodeId;
-  definition: GraphDefinition;
-  state: GraphState;
-}): GraphRoute {
+function prerequisiteGateExplanations(
+  node: GraphDefinition["nodes"][GraphNodeId],
+  state: GraphState,
+): PrerequisiteGateExplanation[] {
+  return (node.requiresGates ?? []).map((gate): PrerequisiteGateExplanation => {
+    const result = state.gates[gate];
+    if (!result) return { gate, status: "missing", reasons: ["missing"] };
+    return { gate, status: result.status, reasons: sortedUnique(result.reasons) };
+  });
+}
+
+function evaluateEdge(
+  edge: GraphDefinition["edges"][number],
+  definition: GraphDefinition,
+  state: GraphState,
+  evaluationPhase: EvaluatedEdge["evaluationPhase"],
+): { evaluated: EvaluatedEdge; matched: boolean } | null {
+  const condition = definition.conditions[edge.when];
+  if (!condition) return null;
+  const matched = evaluateCondition(condition, state);
+  return {
+    matched,
+    evaluated: {
+      edgeId: edge.id,
+      priority: edge.priority,
+      condition: edge.when,
+      conditionKind: condition.kind,
+      matched,
+      evaluationPhase,
+    },
+  };
+}
+
+function selectedRoute(
+  input: RouteInput,
+  edge: GraphDefinition["edges"][number],
+): GraphRoute {
+  const destination = input.definition.nodes[edge.to];
+  return routeResult(input, {
+    next: edge.to,
+    edgeId: edge.id,
+    condition: edge.when,
+    status: "edge",
+    delegate: destination?.delegate ?? null,
+    requiredAudits: destination?.audits ?? [],
+  });
+}
+
+/** Evaluate one route decision and retain the evidence used to make it. */
+export function evaluateRouteDecision(input: RouteInput): RouteDecision {
   if (!Object.prototype.hasOwnProperty.call(input.definition.nodes, input.current)) {
     throw new Error(`Unknown graph node: ${input.current}`);
   }
   const node = input.definition.nodes[input.current];
+  const prerequisiteGates = prerequisiteGateExplanations(node, input.state);
+  const evaluatedEdges: EvaluatedEdge[] = [];
+  const hardBlockers = sortedUnique(input.state.hardBlockers);
 
   if (node.kind === "terminal") {
-    return routeResult(input, {
+    const route = routeResult(input, {
       next: input.current,
       edgeId: null,
       condition: "terminal",
@@ -101,38 +184,69 @@ export function routeGraph(input: {
       delegate: node.delegate ?? null,
       requiredAudits: node.audits ?? [],
     });
+    return {
+      route,
+      explanation: {
+        currentNode: input.current,
+        hardBlockers,
+        prerequisiteGates,
+        evaluatedEdges,
+        selectedEdgeId: null,
+        selectedDestinationAudits: [],
+        blockedReasons: [],
+      },
+    };
   }
 
-  if (input.state.hardBlockers.length > 0) {
-    return routeResult(input, {
+  if (hardBlockers.length > 0) {
+    const route = routeResult(input, {
       next: input.current,
       edgeId: null,
       condition: "blocked",
       status: "blocked",
       delegate: null,
       requiredAudits: [],
-    }, input.state.hardBlockers);
+    }, hardBlockers);
+    return {
+      route,
+      explanation: {
+        currentNode: input.current,
+        hardBlockers,
+        prerequisiteGates,
+        evaluatedEdges,
+        selectedEdgeId: null,
+        selectedDestinationAudits: [],
+        blockedReasons: hardBlockers,
+      },
+    };
   }
 
   const outgoing = sortedOutgoing(input.definition, input.current);
-  for (const edge of outgoing.filter((edge) => isPrerequisiteRepairEdge(edge, node, input.definition))) {
-    const condition = input.definition.conditions[edge.when];
-    if (condition && evaluateCondition(condition, input.state)) {
-      const destination = input.definition.nodes[edge.to];
-      return routeResult(input, {
-        next: edge.to,
-        edgeId: edge.id,
-        condition: edge.when,
-        status: "edge",
-        delegate: destination?.delegate ?? null,
-        requiredAudits: destination?.audits ?? [],
-      });
+  const repairEdges = outgoing.filter((edge) => isPrerequisiteRepairEdge(edge, node, input.definition));
+  const repairEdgeIds = new Set(repairEdges.map((edge) => edge.id));
+  for (const edge of repairEdges) {
+    const result = evaluateEdge(edge, input.definition, input.state, "repair");
+    if (!result) continue;
+    evaluatedEdges.push(result.evaluated);
+    if (result.matched) {
+      return {
+        route: selectedRoute(input, edge),
+        explanation: {
+          currentNode: input.current,
+          hardBlockers,
+          prerequisiteGates,
+          evaluatedEdges,
+          selectedEdgeId: edge.id,
+          selectedDestinationAudits: sortedUnique(input.definition.nodes[edge.to]?.audits ?? []),
+          blockedReasons: [],
+        },
+      };
     }
   }
 
   const prerequisiteFailures = prerequisiteBlockers(node, input.state);
   if (prerequisiteFailures.length > 0) {
-    return routeResult(input, {
+    const route = routeResult(input, {
       next: input.current,
       edgeId: null,
       condition: "blocked",
@@ -140,24 +254,41 @@ export function routeGraph(input: {
       delegate: null,
       requiredAudits: [],
     }, prerequisiteFailures);
+    return {
+      route,
+      explanation: {
+        currentNode: input.current,
+        hardBlockers,
+        prerequisiteGates,
+        evaluatedEdges,
+        selectedEdgeId: null,
+        selectedDestinationAudits: [],
+        blockedReasons: sortedUnique(prerequisiteFailures),
+      },
+    };
   }
 
-  for (const edge of outgoing) {
-    const condition = input.definition.conditions[edge.when];
-    if (condition && evaluateCondition(condition, input.state)) {
-      const destination = input.definition.nodes[edge.to];
-      return routeResult(input, {
-        next: edge.to,
-        edgeId: edge.id,
-        condition: edge.when,
-        status: "edge",
-        delegate: destination?.delegate ?? null,
-        requiredAudits: destination?.audits ?? [],
-      });
+  for (const edge of outgoing.filter((candidate) => !repairEdgeIds.has(candidate.id))) {
+    const result = evaluateEdge(edge, input.definition, input.state, "normal");
+    if (!result) continue;
+    evaluatedEdges.push(result.evaluated);
+    if (result.matched) {
+      return {
+        route: selectedRoute(input, edge),
+        explanation: {
+          currentNode: input.current,
+          hardBlockers,
+          prerequisiteGates,
+          evaluatedEdges,
+          selectedEdgeId: edge.id,
+          selectedDestinationAudits: sortedUnique(input.definition.nodes[edge.to]?.audits ?? []),
+          blockedReasons: [],
+        },
+      };
     }
   }
 
-  return routeResult(input, {
+  const route = routeResult(input, {
     next: input.current,
     edgeId: null,
     condition: "blocked",
@@ -165,4 +296,26 @@ export function routeGraph(input: {
     delegate: null,
     requiredAudits: [],
   });
+  return {
+    route,
+    explanation: {
+      currentNode: input.current,
+      hardBlockers,
+      prerequisiteGates,
+      evaluatedEdges,
+      selectedEdgeId: null,
+      selectedDestinationAudits: [],
+      blockedReasons: ["no-matching-edge"],
+    },
+  };
+}
+
+/** Route one step through the declared graph edges. */
+export function routeGraph(input: RouteInput): GraphRoute {
+  return evaluateRouteDecision(input).route;
+}
+
+/** Explain the route decision without exposing the public route wrapper. */
+export function explainRoute(input: RouteInput): RouteExplanation {
+  return evaluateRouteDecision(input).explanation;
 }

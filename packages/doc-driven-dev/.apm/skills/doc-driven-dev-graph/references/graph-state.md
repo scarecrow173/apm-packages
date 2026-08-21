@@ -26,7 +26,8 @@ implementation, follow-up triage, and exit-audit evidence. Gate failures and
 broken graph/relation facts remain visible in deterministic sorted blockers.
 Caller-provided signals are merged with only derived signals that the state
 projector can establish from facts. The CLI accepts a signal only when its
-value is declared by the selected Graph Definition.
+value is listed in `runtimeSignals` or declared by a `kind: signal` condition
+in the selected Graph Definition.
 
 Implementation completion requires selected tasks to be graph-resolved (`done`
 or `wont-do`) and

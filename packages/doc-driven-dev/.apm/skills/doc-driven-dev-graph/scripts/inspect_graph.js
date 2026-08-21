@@ -3522,11 +3522,35 @@ var require_gray_matter = __commonJS({
   }
 });
 
-// src/skills/doc-driven-dev-graph/scripts/route_graph.ts
+// src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts
 var import_node_path5 = __toESM(require("node:path"));
 
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts
 var import_node_fs = __toESM(require("node:fs"));
+var import_node_path = __toESM(require("node:path"));
+function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
+  if (explicitGraph) return import_node_path.default.resolve(explicitGraph);
+  const cliDir = import_node_path.default.basename(__dirname) === "lib" ? import_node_path.default.resolve(__dirname, "..") : __dirname;
+  const candidates = [
+    // Distributed skill layout: scripts/route_graph.js next to ../graphs.
+    import_node_path.default.resolve(cliDir, "../graphs/doc-driven-dev.yaml"),
+    // Source layout when the CLI is run from the monorepo checkout.
+    import_node_path.default.resolve(
+      cliDir,
+      "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
+    ),
+    import_node_path.default.resolve(
+      cwd,
+      "packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
+    )
+  ];
+  const found = candidates.find((candidate) => import_node_fs.default.existsSync(candidate));
+  if (!found) throw new Error(`Unable to locate the default Graph Definition (tried: ${candidates.join(", ")})`);
+  return found;
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
+var import_node_fs2 = __toESM(require("node:fs"));
 
 // node_modules/.pnpm/js-yaml@5.2.2/node_modules/js-yaml/dist/js-yaml.mjs
 var NOT_RESOLVED = /* @__PURE__ */ Symbol("NOT_RESOLVED");
@@ -20399,7 +20423,7 @@ function parseGraphDefinition(source) {
 }
 function loadGraphDefinition(file2) {
   try {
-    return parseGraphDefinition(import_node_fs.default.readFileSync(file2, "utf8"));
+    return parseGraphDefinition(import_node_fs2.default.readFileSync(file2, "utf8"));
   } catch (error51) {
     if (error51 instanceof Error && error51.message.startsWith("Invalid graph definition:")) {
       throw error51;
@@ -20408,28 +20432,122 @@ function loadGraphDefinition(file2) {
   }
 }
 
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts
-var import_node_fs2 = __toESM(require("node:fs"));
-var import_node_path = __toESM(require("node:path"));
-function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
-  if (explicitGraph) return import_node_path.default.resolve(explicitGraph);
-  const cliDir = import_node_path.default.basename(__dirname) === "lib" ? import_node_path.default.resolve(__dirname, "..") : __dirname;
-  const candidates = [
-    // Distributed skill layout: scripts/route_graph.js next to ../graphs.
-    import_node_path.default.resolve(cliDir, "../graphs/doc-driven-dev.yaml"),
-    // Source layout when the CLI is run from the monorepo checkout.
-    import_node_path.default.resolve(
-      cliDir,
-      "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
-    ),
-    import_node_path.default.resolve(
-      cwd,
-      "packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
-    )
-  ];
-  const found = candidates.find((candidate) => import_node_fs2.default.existsSync(candidate));
-  if (!found) throw new Error(`Unable to locate the default Graph Definition (tried: ${candidates.join(", ")})`);
-  return found;
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_inspector.ts
+function compareStrings(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+function sortedStrings(values) {
+  return [...values].sort(compareStrings);
+}
+function sortedEdges(edges) {
+  return [...edges].sort((left, right) => compareStrings(left.from, right.from) || left.priority - right.priority || compareStrings(left.id, right.id)).map(({ id, from, to, when, priority }) => ({ id, from, to, when, priority }));
+}
+function issueSort(left, right) {
+  return compareStrings(left.code, right.code) || compareStrings(left.nodeId ?? "", right.nodeId ?? "") || compareStrings(left.condition ?? "", right.condition ?? "");
+}
+function escapeMermaidText(value) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/\|/g, "&#124;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/[\r\n]+/g, " ").replace(/\\/g, "&#92;").replace(/\[/g, "&#91;").replace(/\]/g, "&#93;").replace(/\{/g, "&#123;").replace(/\}/g, "&#125;");
+}
+function mermaidNodeAliases(nodes) {
+  return new Map(
+    [...nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId)).map((node, index) => [node.nodeId, `n${index}`])
+  );
+}
+function renderNode(node, terminalNodes, aliases) {
+  const labels = [escapeMermaidText(node.nodeId), `kind: ${escapeMermaidText(node.kind)}`];
+  if (node.delegate !== void 0) labels.push(`delegate: ${escapeMermaidText(node.delegate)}`);
+  if (terminalNodes.has(node.nodeId)) labels.push("terminal");
+  if (node.audits.length > 0) {
+    labels.push(`audits: ${node.audits.map(escapeMermaidText).join(", ")}`);
+  }
+  return `  ${aliases.get(node.nodeId) ?? node.nodeId}["${labels.join("<br/>")}"]`;
+}
+function inspectGraphDefinition(definition) {
+  const nodeIds = sortedStrings(Object.keys(definition.nodes));
+  const terminalNodes = sortedStrings(
+    nodeIds.filter((nodeId) => definition.nodes[nodeId].kind === "terminal")
+  );
+  const outgoing = /* @__PURE__ */ new Map();
+  for (const edge of definition.edges) {
+    const destinations = outgoing.get(edge.from) ?? [];
+    destinations.push(edge.to);
+    outgoing.set(edge.from, destinations);
+  }
+  const reachable = /* @__PURE__ */ new Set([definition.entry]);
+  const pending = [definition.entry];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    for (const destination of outgoing.get(current) ?? []) {
+      if (!reachable.has(destination)) {
+        reachable.add(destination);
+        pending.push(destination);
+      }
+    }
+  }
+  const reachableNodes = sortedStrings(reachable);
+  const unreachableNodes = nodeIds.filter((nodeId) => !reachable.has(nodeId));
+  const reachableTerminalNodes = terminalNodes.filter((nodeId) => reachable.has(nodeId));
+  const referencedConditions = sortedStrings(new Set(definition.edges.map((edge) => edge.when)));
+  const referencedConditionSet = new Set(referencedConditions);
+  const unusedConditions = sortedStrings(
+    Object.keys(definition.conditions).filter((condition) => !referencedConditionSet.has(condition))
+  );
+  const nodes = nodeIds.map((nodeId) => {
+    const node = definition.nodes[nodeId];
+    return {
+      nodeId,
+      kind: node.kind,
+      ...node.delegate === void 0 ? {} : { delegate: node.delegate },
+      audits: sortedStrings(node.audits ?? [])
+    };
+  });
+  const delegates = nodes.filter((node) => node.delegate !== void 0).map(({ nodeId, delegate }) => ({ nodeId, delegate }));
+  const audits = nodes.filter((node) => node.audits.length > 0).map(({ nodeId, audits: nodeAudits }) => ({ nodeId, audits: nodeAudits }));
+  const edges = sortedEdges(definition.edges);
+  const issues = [];
+  for (const nodeId of unreachableNodes) {
+    if (terminalNodes.includes(nodeId)) {
+      issues.push({ severity: "warning", code: "unreachable-terminal", nodeId });
+    } else {
+      issues.push({ severity: "error", code: "unreachable-node", nodeId });
+    }
+  }
+  if (reachableTerminalNodes.length === 0) {
+    issues.push({ severity: "error", code: "no-reachable-terminal" });
+  }
+  for (const condition of unusedConditions) {
+    issues.push({ severity: "warning", code: "unused-condition", condition });
+  }
+  return {
+    schemaVersion: 1,
+    graphId: definition.id,
+    entry: definition.entry,
+    nodeCount: nodeIds.length,
+    edgeCount: definition.edges.length,
+    conditionCount: Object.keys(definition.conditions).length,
+    terminalNodes,
+    reachableNodes,
+    unreachableNodes,
+    reachableTerminalNodes,
+    unusedConditions,
+    referencedConditions,
+    delegates,
+    audits,
+    issues: issues.sort(issueSort),
+    nodes,
+    edges
+  };
+}
+function renderGraphMermaid(inspection) {
+  const terminalNodes = new Set(inspection.terminalNodes);
+  const nodes = [...inspection.nodes].sort((left, right) => compareStrings(left.nodeId, right.nodeId));
+  const aliases = mermaidNodeAliases(nodes);
+  const edges = [...inspection.edges].sort((left, right) => compareStrings(left.from, right.from) || left.priority - right.priority || compareStrings(left.id, right.id));
+  return [
+    "flowchart TD",
+    ...nodes.map((node) => renderNode(node, terminalNodes, aliases)),
+    ...edges.map((edge) => `  ${aliases.get(edge.from) ?? edge.from} -->|${escapeMermaidText(edge.when)} \xB7 p${edge.priority}| ${aliases.get(edge.to) ?? edge.to}`)
+  ].join("\n");
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
@@ -20469,11 +20587,11 @@ var CANONICAL_TARGETS = [
   "docs/impl/exp"
 ];
 var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
-function compareStrings(left, right) {
+function compareStrings2(left, right) {
   return left.localeCompare(right);
 }
 function sortedUnique(values) {
-  return [...new Set(values)].sort(compareStrings);
+  return [...new Set(values)].sort(compareStrings2);
 }
 function normalizeArtifactPath(cwd, target) {
   return import_node_path2.default.relative(import_node_path2.default.resolve(cwd), import_node_path2.default.resolve(cwd, target)).split(import_node_path2.default.sep).join("/");
@@ -20490,14 +20608,14 @@ function markdownFiles(dir) {
   if (!import_node_fs3.default.existsSync(dir) || !import_node_fs3.default.statSync(dir).isDirectory()) return [];
   const files = [];
   const visit = (current) => {
-    for (const entry of import_node_fs3.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
+    for (const entry of import_node_fs3.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings2(a.name, b.name))) {
       const full = import_node_path2.default.join(current, entry.name);
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md") && !/^(?:readme|index)\.md$/i.test(entry.name)) files.push(full);
     }
   };
   visit(dir);
-  return files.sort(compareStrings);
+  return files.sort(compareStrings2);
 }
 function relationValues(raw, ownerPath) {
   if (raw === void 0 || raw === null) return { relations: {}, issues: [] };
@@ -20506,7 +20624,7 @@ function relationValues(raw, ownerPath) {
   }
   const result = {};
   const issues = [];
-  for (const key of Object.keys(raw).sort(compareStrings)) {
+  for (const key of Object.keys(raw).sort(compareStrings2)) {
     const value = raw[key];
     if (key === "changes" && value && typeof value === "object" && !Array.isArray(value)) continue;
     if (typeof value !== "string" && !Array.isArray(value)) {
@@ -20565,7 +20683,7 @@ function readRecords(options2) {
       });
     }
   }
-  return records.sort((left, right) => compareStrings(left.path, right.path));
+  return records.sort((left, right) => compareStrings2(left.path, right.path));
 }
 function classifyArtifactRelation(relation) {
   if (LINEAGE_RELATIONS.has(relation)) return "lineage";
@@ -20597,7 +20715,7 @@ function resolveArtifactRelation(cwd, source, rawValue, records) {
   return records.find((record2) => record2.path === target.path);
 }
 function issueCompare(left, right) {
-  return compareStrings(left.code, right.code) || compareStrings(left.message, right.message);
+  return compareStrings2(left.code, right.code) || compareStrings2(left.message, right.message);
 }
 function edgeCompare(left, right) {
   const kindOrder = {
@@ -20606,7 +20724,7 @@ function edgeCompare(left, right) {
     contextual: 2,
     evidence: 3
   };
-  return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings(left.from, right.from) || compareStrings(left.relation, right.relation) || compareStrings(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
+  return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings2(left.from, right.from) || compareStrings2(left.relation, right.relation) || compareStrings2(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
 }
 function scanArtifactGraph(options2) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
@@ -20633,7 +20751,7 @@ function scanArtifactGraph(options2) {
     if (values.length > 1) {
       issues.push({
         code: "duplicate-id",
-        message: `Duplicate artifact ID ${id}: ${values.map((record2) => record2.path).sort(compareStrings).join(", ")}`
+        message: `Duplicate artifact ID ${id}: ${values.map((record2) => record2.path).sort(compareStrings2).join(", ")}`
       });
     }
   }
@@ -20660,7 +20778,7 @@ function scanArtifactGraph(options2) {
   return {
     records,
     graph: {
-      nodes: [...nodes].sort((left, right) => compareStrings(left.path, right.path)),
+      nodes: [...nodes].sort((left, right) => compareStrings2(left.path, right.path)),
       edges: edges.sort(edgeCompare),
       issues: [...new Map(issues.map((issue2) => [`${issue2.code}\0${issue2.message}`, issue2])).values()].sort(issueCompare)
     }
@@ -20671,7 +20789,7 @@ function lineageEdges(graph, pathValue) {
 }
 function lineageComponent(graph, starts) {
   const visited = /* @__PURE__ */ new Set();
-  const queue = [...starts].sort(compareStrings);
+  const queue = [...starts].sort(compareStrings2);
   while (queue.length > 0) {
     const current = queue.shift();
     if (visited.has(current)) continue;
@@ -20680,13 +20798,13 @@ function lineageComponent(graph, starts) {
       const next = edge.from === current ? edge.to : edge.from;
       if (next && !visited.has(next)) queue.push(next);
     }
-    queue.sort(compareStrings);
+    queue.sort(compareStrings2);
   }
-  return [...visited].sort(compareStrings);
+  return [...visited].sort(compareStrings2);
 }
 function artifactRelationTargets(graph, sourcePath, relationNames) {
   const names = new Set(relationNames);
-  return graph.edges.filter((edge) => edge.kind === "lineage" && edge.from === sourcePath && edge.to !== null && names.has(edge.relation)).map((edge) => edge.to).sort(compareStrings);
+  return graph.edges.filter((edge) => edge.kind === "lineage" && edge.from === sourcePath && edge.to !== null && names.has(edge.relation)).map((edge) => edge.to).sort(compareStrings2);
 }
 function artifactHasRelation(graph, sourcePath, relationNames, targetPath) {
   return Boolean(sourcePath && targetPath && artifactRelationTargets(graph, sourcePath, relationNames).includes(targetPath));
@@ -20742,7 +20860,7 @@ function artifactChainCandidates(graph, records) {
       add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
     }
   }
-  return [...chains.values()].sort((left, right) => compareStrings(chainKey(left), chainKey(right)));
+  return [...chains.values()].sort((left, right) => compareStrings2(chainKey(left), chainKey(right)));
 }
 function selectArtifactChain(graph, records, focusPaths) {
   const focus = [...focusPaths];
@@ -20791,7 +20909,7 @@ function resolveArtifactFocus(cwd, graph, records, values) {
   const plans = records.filter((record2) => component.includes(record2.path) && record2.type === "plan");
   if (focus.length > 1 && !selectArtifactChain(graph, records, focus)) return { focus, blockers: ["focus-required"] };
   const rank = { plan: 0, design: 1, spec: 2, adr: 3, task: 4 };
-  const focused = records.filter((record2) => focus.includes(record2.path)).sort((left, right) => (rank[left.type ?? ""] ?? 9) - (rank[right.type ?? ""] ?? 9) || compareStrings(left.path, right.path))[0];
+  const focused = records.filter((record2) => focus.includes(record2.path)).sort((left, right) => (rank[left.type ?? ""] ?? 9) - (rank[right.type ?? ""] ?? 9) || compareStrings2(left.path, right.path))[0];
   if (plans.length > 1 && focused?.type !== "plan") return { focus, blockers: ["focus-required"] };
   return { focus, focusedPath: focused?.path, blockers: [] };
 }
@@ -20819,11 +20937,11 @@ var TASK_STATUSES = /* @__PURE__ */ new Set([
   "done",
   "wont-do"
 ]);
-function compareStrings2(left, right) {
+function compareStrings3(left, right) {
   return left.localeCompare(right);
 }
 function sortedUnique2(values) {
-  return [...new Set(values)].sort(compareStrings2);
+  return [...new Set(values)].sort(compareStrings3);
 }
 function normalizeRepoPath(cwd, target) {
   const absolute = import_node_path3.default.resolve(cwd, target);
@@ -20833,14 +20951,14 @@ function markdownFiles2(dir) {
   if (!import_node_fs4.default.existsSync(dir) || !import_node_fs4.default.statSync(dir).isDirectory()) return [];
   const result = [];
   const visit = (current) => {
-    for (const entry of import_node_fs4.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings2(a.name, b.name))) {
+    for (const entry of import_node_fs4.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings3(a.name, b.name))) {
       const full = import_node_path3.default.join(current, entry.name);
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) result.push(full);
     }
   };
   visit(dir);
-  return result.sort(compareStrings2);
+  return result.sort(compareStrings3);
 }
 function relationValues2(raw, key, issues, taskId, file2) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -20954,10 +21072,10 @@ function readTaskDocuments(cwd, taskDir) {
       parseIssues
     });
   }
-  return tasks.sort((left, right) => compareStrings2(left.id || left.file, right.id || right.file));
+  return tasks.sort((left, right) => compareStrings3(left.id || left.file, right.id || right.file));
 }
 function indexTasks(tasks) {
-  const sortedTasks = [...tasks].sort((left, right) => compareStrings2(left.id || left.file, right.id || right.file));
+  const sortedTasks = [...tasks].sort((left, right) => compareStrings3(left.id || left.file, right.id || right.file));
   const byId = /* @__PURE__ */ new Map();
   const byPath = /* @__PURE__ */ new Map();
   const issues = [];
@@ -21043,12 +21161,12 @@ function resolveTaskEdges(cwd, taskDir, index) {
     for (const reference of task.blocks) addReference(task, reference, "blocks");
   }
   return {
-    edges: [...edges.values()].sort((left, right) => compareStrings2(left.from, right.from) || compareStrings2(left.to, right.to)),
+    edges: [...edges.values()].sort((left, right) => compareStrings3(left.from, right.from) || compareStrings3(left.to, right.to)),
     issues: issues.sort(issueCompare2)
   };
 }
 function issueCompare2(left, right) {
-  return compareStrings2(left.code, right.code) || compareStrings2((left.tasks || []).join(","), (right.tasks || []).join(",")) || compareStrings2(left.task || "", right.task || "") || compareStrings2(left.reference || "", right.reference || "") || compareStrings2(left.file || "", right.file || "") || compareStrings2(left.message, right.message);
+  return compareStrings3(left.code, right.code) || compareStrings3((left.tasks || []).join(","), (right.tasks || []).join(",")) || compareStrings3(left.task || "", right.task || "") || compareStrings3(left.reference || "", right.reference || "") || compareStrings3(left.file || "", right.file || "") || compareStrings3(left.message, right.message);
 }
 function findCycles(tasks, edges) {
   const ids = sortedUnique2(tasks.map((task) => task.id).filter(Boolean));
@@ -21058,7 +21176,7 @@ function findCycles(tasks, edges) {
     const successors = adjacency.get(edge.from);
     if (successors) successors.push(edge.to);
   }
-  for (const successors of adjacency.values()) successors.sort(compareStrings2);
+  for (const successors of adjacency.values()) successors.sort(compareStrings3);
   const visiting = /* @__PURE__ */ new Set();
   const visited = /* @__PURE__ */ new Set();
   const cycles = /* @__PURE__ */ new Set();
@@ -21068,7 +21186,7 @@ function findCycles(tasks, edges) {
     for (const next of adjacency.get(id) || []) {
       if (visiting.has(next)) {
         const start = stack.indexOf(next);
-        const cycle = stack.slice(start).sort(compareStrings2);
+        const cycle = stack.slice(start).sort(compareStrings3);
         cycles.add(cycle.join(" -> "));
       } else if (!visited.has(next)) {
         walk(next, stack);
@@ -21079,7 +21197,7 @@ function findCycles(tasks, edges) {
     visited.add(id);
   };
   for (const id of ids) if (!visited.has(id)) walk(id, []);
-  return [...cycles].sort(compareStrings2).map((cycle) => ({
+  return [...cycles].sort(compareStrings3).map((cycle) => ({
     code: "task-cycle",
     tasks: cycle.split(" -> "),
     message: `Task dependency cycle detected: ${cycle}`
@@ -21088,11 +21206,11 @@ function findCycles(tasks, edges) {
 function summarizeTaskGraph(plan, tasks, edges, issues) {
   const sortedTasks = tasks.filter((task) => Boolean(task.id)).map(({ parseIssues: _parseIssues, ...task }) => ({
     ...task,
-    implements: [...task.implements].sort(compareStrings2),
-    dependsOn: [...task.dependsOn].sort(compareStrings2),
-    blocks: [...task.blocks].sort(compareStrings2)
-  })).sort((left, right) => compareStrings2(left.id, right.id));
-  const sortedEdges = [...edges].sort((left, right) => compareStrings2(left.from, right.from) || compareStrings2(left.to, right.to));
+    implements: [...task.implements].sort(compareStrings3),
+    dependsOn: [...task.dependsOn].sort(compareStrings3),
+    blocks: [...task.blocks].sort(compareStrings3)
+  })).sort((left, right) => compareStrings3(left.id, right.id));
+  const sortedEdges2 = [...edges].sort((left, right) => compareStrings3(left.from, right.from) || compareStrings3(left.to, right.to));
   const normalizedIssues = issues.map((issue2) => {
     const allowed = /* @__PURE__ */ new Set([
       "duplicate-task-id",
@@ -21112,7 +21230,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
     `${issue2.code}\0${issue2.tasks.join(",")}\0${issue2.message}`,
     issue2
   ])).values()].sort(issueCompare2);
-  const runnable = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "todo").filter((task) => sortedEdges.filter((edge) => edge.to === task.id).every((edge) => {
+  const runnable = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "todo").filter((task) => sortedEdges2.filter((edge) => edge.to === task.id).every((edge) => {
     const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
     return predecessor?.status === "done";
   })).map((task) => task.id);
@@ -21120,7 +21238,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
   const completed = sortedTasks.filter((task) => task.status === "done").map((task) => task.id);
   const blocked = sortedTasks.filter((task) => task.status === "blocked" || task.status === "wont-do" || task.status === "todo" && !runnable.includes(task.id)).map((task) => ({
     id: task.id,
-    reasons: task.status === "blocked" ? ["status:blocked"] : task.status === "wont-do" ? ["status:wont-do"] : sortedEdges.filter((edge) => edge.to === task.id).filter((edge) => sortedTasks.find((candidate) => candidate.id === edge.from)?.status !== "done").map((edge) => `depends-on:${edge.from}`)
+    reasons: task.status === "blocked" ? ["status:blocked"] : task.status === "wont-do" ? ["status:wont-do"] : sortedEdges2.filter((edge) => edge.to === task.id).filter((edge) => sortedTasks.find((candidate) => candidate.id === edge.from)?.status !== "done").map((edge) => `depends-on:${edge.from}`)
   })).filter((entry) => entry.reasons.length > 0);
   return {
     schemaVersion: 1,
@@ -21132,10 +21250,10 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
       dependsOn: task.dependsOn,
       blocks: task.blocks
     })),
-    edges: sortedEdges,
-    runnable: runnable.sort(compareStrings2),
-    active: active.sort(compareStrings2),
-    completed: completed.sort(compareStrings2),
+    edges: sortedEdges2,
+    runnable: runnable.sort(compareStrings3),
+    active: active.sort(compareStrings3),
+    completed: completed.sort(compareStrings3),
     blocked,
     issues: uniqueIssues
   };
@@ -21178,11 +21296,11 @@ var FOLLOWUP_SIGNALS = /* @__PURE__ */ new Set([
   "followup-doc-only",
   "followup-terminal"
 ]);
-function compareStrings3(left, right) {
+function compareStrings4(left, right) {
   return left.localeCompare(right);
 }
 function sortedUnique3(values) {
-  return [...new Set(values)].sort(compareStrings3);
+  return [...new Set(values)].sort(compareStrings4);
 }
 function gate(status, reasons = []) {
   return { status, reasons: sortedUnique3(reasons) };
@@ -21344,249 +21462,25 @@ function projectGraphState(options2) {
   return state;
 }
 
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions.ts
-function evaluateCondition(condition, state) {
-  if (condition.kind === "signal") return state.signals.includes(condition.signal);
-  if (condition.kind === "gate") {
-    return condition.status === "pass" ? state.gates[condition.gate]?.status === "pass" : state.gates[condition.gate]?.status !== "pass";
-  }
-  if (condition.state === "runnable") return (state.taskGraph?.runnable.length ?? 0) > 0;
-  if (condition.state === "invalid") return (state.taskGraph?.issues.length ?? 0) > 0;
-  return state.taskGraph !== null && state.taskGraph.runnable.length === 0 && state.taskGraph.issues.length === 0;
-}
-
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts
-function sortedOutgoing(definition, current) {
-  return definition.edges.filter((edge) => edge.from === current).sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
-}
-function sortedUnique4(values) {
-  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
-}
-function routeResult(input, result, additionalBlockers = []) {
-  return {
-    schemaVersion: 2,
-    graphId: input.definition.id,
-    current: input.current,
-    next: result.next,
-    edgeId: result.edgeId,
-    condition: result.condition,
-    status: result.status,
-    delegate: result.delegate,
-    requiredAudits: sortedUnique4(result.requiredAudits),
-    blockers: sortedUnique4([...input.state.blockers, ...additionalBlockers]),
-    taskGraph: input.state.taskGraph
-  };
-}
-function prerequisiteBlockers(node, state) {
-  const blockers = [];
-  for (const gate2 of node.requiresGates ?? []) {
-    const result = state.gates[gate2];
-    if (!result) {
-      blockers.push(`required-gate:${gate2}`, `required-gate:${gate2}:missing`);
-      continue;
-    }
-    if (result.status === "pass") continue;
-    blockers.push(`required-gate:${gate2}`);
-    if (result.reasons.length === 0) {
-      blockers.push(`required-gate:${gate2}:status-${result.status}`);
-    } else {
-      blockers.push(...result.reasons.map((reason) => `required-gate:${gate2}:${reason}`));
-    }
-  }
-  return blockers;
-}
-function isPrerequisiteRepairEdge(edge, node, definition) {
-  const condition = definition.conditions[edge.when];
-  return condition?.kind === "gate" && condition.status === "not-pass" && (node.requiresGates ?? []).includes(condition.gate);
-}
-function prerequisiteGateExplanations(node, state) {
-  return (node.requiresGates ?? []).map((gate2) => {
-    const result = state.gates[gate2];
-    if (!result) return { gate: gate2, status: "missing", reasons: ["missing"] };
-    return { gate: gate2, status: result.status, reasons: sortedUnique4(result.reasons) };
-  });
-}
-function evaluateEdge(edge, definition, state, evaluationPhase) {
-  const condition = definition.conditions[edge.when];
-  if (!condition) return null;
-  const matched = evaluateCondition(condition, state);
-  return {
-    matched,
-    evaluated: {
-      edgeId: edge.id,
-      priority: edge.priority,
-      condition: edge.when,
-      conditionKind: condition.kind,
-      matched,
-      evaluationPhase
-    }
-  };
-}
-function selectedRoute(input, edge) {
-  const destination = input.definition.nodes[edge.to];
-  return routeResult(input, {
-    next: edge.to,
-    edgeId: edge.id,
-    condition: edge.when,
-    status: "edge",
-    delegate: destination?.delegate ?? null,
-    requiredAudits: destination?.audits ?? []
-  });
-}
-function evaluateRouteDecision(input) {
-  if (!Object.prototype.hasOwnProperty.call(input.definition.nodes, input.current)) {
-    throw new Error(`Unknown graph node: ${input.current}`);
-  }
-  const node = input.definition.nodes[input.current];
-  const prerequisiteGates = prerequisiteGateExplanations(node, input.state);
-  const evaluatedEdges = [];
-  const hardBlockers = sortedUnique4(input.state.hardBlockers);
-  if (node.kind === "terminal") {
-    const route2 = routeResult(input, {
-      next: input.current,
-      edgeId: null,
-      condition: "terminal",
-      status: "terminal",
-      delegate: node.delegate ?? null,
-      requiredAudits: node.audits ?? []
-    });
-    return {
-      route: route2,
-      explanation: {
-        currentNode: input.current,
-        hardBlockers,
-        prerequisiteGates,
-        evaluatedEdges,
-        selectedEdgeId: null,
-        selectedDestinationAudits: [],
-        blockedReasons: []
-      }
-    };
-  }
-  if (hardBlockers.length > 0) {
-    const route2 = routeResult(input, {
-      next: input.current,
-      edgeId: null,
-      condition: "blocked",
-      status: "blocked",
-      delegate: null,
-      requiredAudits: []
-    }, hardBlockers);
-    return {
-      route: route2,
-      explanation: {
-        currentNode: input.current,
-        hardBlockers,
-        prerequisiteGates,
-        evaluatedEdges,
-        selectedEdgeId: null,
-        selectedDestinationAudits: [],
-        blockedReasons: hardBlockers
-      }
-    };
-  }
-  const outgoing = sortedOutgoing(input.definition, input.current);
-  const repairEdges = outgoing.filter((edge) => isPrerequisiteRepairEdge(edge, node, input.definition));
-  const repairEdgeIds = new Set(repairEdges.map((edge) => edge.id));
-  for (const edge of repairEdges) {
-    const result = evaluateEdge(edge, input.definition, input.state, "repair");
-    if (!result) continue;
-    evaluatedEdges.push(result.evaluated);
-    if (result.matched) {
-      return {
-        route: selectedRoute(input, edge),
-        explanation: {
-          currentNode: input.current,
-          hardBlockers,
-          prerequisiteGates,
-          evaluatedEdges,
-          selectedEdgeId: edge.id,
-          selectedDestinationAudits: sortedUnique4(input.definition.nodes[edge.to]?.audits ?? []),
-          blockedReasons: []
-        }
-      };
-    }
-  }
-  const prerequisiteFailures = prerequisiteBlockers(node, input.state);
-  if (prerequisiteFailures.length > 0) {
-    const route2 = routeResult(input, {
-      next: input.current,
-      edgeId: null,
-      condition: "blocked",
-      status: "blocked",
-      delegate: null,
-      requiredAudits: []
-    }, prerequisiteFailures);
-    return {
-      route: route2,
-      explanation: {
-        currentNode: input.current,
-        hardBlockers,
-        prerequisiteGates,
-        evaluatedEdges,
-        selectedEdgeId: null,
-        selectedDestinationAudits: [],
-        blockedReasons: sortedUnique4(prerequisiteFailures)
-      }
-    };
-  }
-  for (const edge of outgoing.filter((candidate) => !repairEdgeIds.has(candidate.id))) {
-    const result = evaluateEdge(edge, input.definition, input.state, "normal");
-    if (!result) continue;
-    evaluatedEdges.push(result.evaluated);
-    if (result.matched) {
-      return {
-        route: selectedRoute(input, edge),
-        explanation: {
-          currentNode: input.current,
-          hardBlockers,
-          prerequisiteGates,
-          evaluatedEdges,
-          selectedEdgeId: edge.id,
-          selectedDestinationAudits: sortedUnique4(input.definition.nodes[edge.to]?.audits ?? []),
-          blockedReasons: []
-        }
-      };
-    }
-  }
-  const route = routeResult(input, {
-    next: input.current,
-    edgeId: null,
-    condition: "blocked",
-    status: "blocked",
-    delegate: null,
-    requiredAudits: []
-  });
-  return {
-    route,
-    explanation: {
-      currentNode: input.current,
-      hardBlockers,
-      prerequisiteGates,
-      evaluatedEdges,
-      selectedEdgeId: null,
-      selectedDestinationAudits: [],
-      blockedReasons: ["no-matching-edge"]
-    }
-  };
-}
-
-// src/skills/doc-driven-dev-graph/scripts/route_graph.ts
+// src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts
 function usage() {
-  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--cwd <path>] [--explain] --json";
+  return "Usage: node inspect_graph.js [--graph <path>] [--format json|mermaid] [--cwd <path>] [--focus <artifact>] [--task-dir <path>]";
 }
 function requiredValue(argv, index, option) {
   const value = argv[index + 1];
   if (!value || value.startsWith("--")) throw new Error(`Missing value for ${option}`);
   return value;
 }
+function parseFormat(value) {
+  if (value === "json" || value === "mermaid") return value;
+  throw new Error(`Unknown format: ${value} (expected json or mermaid)`);
+}
 function parseArgs(argv) {
   const args = {
+    format: "json",
     cwd: process.cwd(),
-    signals: [],
+    cwdExplicit: false,
     focus: [],
-    json: false,
-    explain: false,
     help: false
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -21594,11 +21488,12 @@ function parseArgs(argv) {
     if (arg === "--graph") {
       args.graph = requiredValue(argv, index, arg);
       index += 1;
-    } else if (arg === "--current") {
-      args.current = requiredValue(argv, index, arg);
+    } else if (arg === "--format") {
+      args.format = parseFormat(requiredValue(argv, index, arg));
       index += 1;
-    } else if (arg === "--signal") {
-      args.signals.push(requiredValue(argv, index, arg));
+    } else if (arg === "--cwd") {
+      args.cwd = import_node_path5.default.resolve(requiredValue(argv, index, arg));
+      args.cwdExplicit = true;
       index += 1;
     } else if (arg === "--focus") {
       args.focus.push(requiredValue(argv, index, arg));
@@ -21606,13 +21501,6 @@ function parseArgs(argv) {
     } else if (arg === "--task-dir") {
       args.taskDir = requiredValue(argv, index, arg);
       index += 1;
-    } else if (arg === "--cwd") {
-      args.cwd = import_node_path5.default.resolve(requiredValue(argv, index, arg));
-      index += 1;
-    } else if (arg === "--json") {
-      args.json = true;
-    } else if (arg === "--explain") {
-      args.explain = true;
     } else if (arg === "--help" || arg === "-h") {
       args.help = true;
     } else {
@@ -21621,35 +21509,43 @@ function parseArgs(argv) {
   }
   return args;
 }
-function validateSignals(definition, signals) {
-  const declared = /* @__PURE__ */ new Set(
-    [
-      ...Object.values(definition.conditions).filter((condition) => condition.kind === "signal").map((condition) => condition.signal),
-      ...definition.runtimeSignals ?? []
-    ]
-  );
-  const unknown2 = [...new Set(signals.filter((signal) => !declared.has(signal)))];
-  if (unknown2.length > 0) {
-    throw new Error(`Unknown signal not declared by graph definition: ${unknown2.join(", ")}`);
-  }
-}
 function run(args) {
-  if (args.explain && !args.json) throw new Error("--explain requires --json");
   const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
-  validateSignals(definition, args.signals);
-  const current = args.current ?? definition.entry;
-  if (!Object.prototype.hasOwnProperty.call(definition.nodes, current)) {
-    throw new Error(`Unknown graph node: ${current}`);
+  const inspection = inspectGraphDefinition(definition);
+  if (args.format === "mermaid") {
+    if (args.cwdExplicit || args.focus.length > 0 || args.taskDir !== void 0) {
+      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --task-dir");
+    }
+    console.log(renderGraphMermaid(inspection));
+    return;
   }
-  const state = projectGraphState({
-    cwd: args.cwd,
-    graphId: definition.id,
-    taskDir: args.taskDir,
-    focus: args.focus,
-    signals: args.signals
-  });
-  const decision = evaluateRouteDecision({ current, definition, state });
-  console.log(JSON.stringify(args.explain ? { route: decision.route, explanation: decision.explanation } : decision.route, null, 2));
+  const output = { definition: inspection };
+  const hasRuntimeSelector = args.cwdExplicit || args.focus.length > 0 || args.taskDir !== void 0;
+  if (hasRuntimeSelector) {
+    const state = projectGraphState({
+      cwd: args.cwd,
+      graphId: definition.id,
+      taskDir: args.taskDir,
+      focus: args.focus
+    });
+    if (args.focus.length > 0 && state.blockers.some((blocker) => blocker === "focus-invalid" || blocker === "focus-required")) {
+      throw new Error(`Invalid focus: ${args.focus.join(", ")}`);
+    }
+    output.state = {
+      schemaVersion: state.schemaVersion,
+      graphId: state.graphId,
+      cwd: state.cwd,
+      taskDir: state.taskDir,
+      focus: state.focus,
+      gates: state.gates,
+      signals: state.signals,
+      blockers: state.blockers,
+      hardBlockers: state.hardBlockers
+    };
+    output.artifactGraph = state.artifactGraph;
+    output.taskGraph = state.taskGraph;
+  }
+  console.log(JSON.stringify(output, null, 2));
 }
 function main() {
   try {

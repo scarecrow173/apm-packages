@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
-import fs from "node:fs";
 import path from "node:path";
 
 import {
   loadGraphDefinition,
   type GraphDefinition,
 } from "./lib/graph_definition";
+import { resolveGraphPath } from "./lib/graph_cli";
 import { projectGraphState } from "./lib/graph_state";
-import { routeGraph } from "./lib/graph_router";
+import { evaluateRouteDecision } from "./lib/graph_router";
 
 type CliArgs = {
   graph?: string;
@@ -18,11 +18,12 @@ type CliArgs = {
   taskDir?: string;
   cwd: string;
   json: boolean;
+  explain: boolean;
   help: boolean;
 };
 
 function usage(): string {
-  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--cwd <path>] --json";
+  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--cwd <path>] [--explain] --json";
 }
 
 function requiredValue(argv: string[], index: number, option: string): string {
@@ -37,6 +38,7 @@ function parseArgs(argv: string[]): CliArgs {
     signals: [],
     focus: [],
     json: false,
+    explain: false,
     help: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -61,6 +63,8 @@ function parseArgs(argv: string[]): CliArgs {
       index += 1;
     } else if (arg === "--json") {
       args.json = true;
+    } else if (arg === "--explain") {
+      args.explain = true;
     } else if (arg === "--help" || arg === "-h") {
       args.help = true;
     } else {
@@ -70,30 +74,14 @@ function parseArgs(argv: string[]): CliArgs {
   return args;
 }
 
-function defaultGraphPath(): string {
-  const candidates = [
-    // Distributed skill layout: scripts/route_graph.js next to ../graphs.
-    path.resolve(__dirname, "../graphs/doc-driven-dev.yaml"),
-    // Source layout when the CLI is run from the monorepo checkout.
-    path.resolve(
-      __dirname,
-      "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml",
-    ),
-    path.resolve(
-      process.cwd(),
-      "packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml",
-    ),
-  ];
-  const found = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!found) throw new Error(`Unable to locate the default Graph Definition (tried: ${candidates.join(", ")})`);
-  return found;
-}
-
 function validateSignals(definition: GraphDefinition, signals: string[]): void {
   const declared = new Set(
-    Object.values(definition.conditions)
-      .filter((condition) => condition.kind === "signal")
-      .map((condition) => condition.signal),
+    [
+      ...Object.values(definition.conditions)
+        .filter((condition) => condition.kind === "signal")
+        .map((condition) => condition.signal),
+      ...(definition.runtimeSignals ?? []),
+    ],
   );
   const unknown = [...new Set(signals.filter((signal) => !declared.has(signal)))];
   if (unknown.length > 0) {
@@ -102,7 +90,8 @@ function validateSignals(definition: GraphDefinition, signals: string[]): void {
 }
 
 function run(args: CliArgs): void {
-  const definition = loadGraphDefinition(args.graph ? path.resolve(args.graph) : defaultGraphPath());
+  if (args.explain && !args.json) throw new Error("--explain requires --json");
+  const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
   validateSignals(definition, args.signals);
   const current = args.current ?? definition.entry;
   if (!Object.prototype.hasOwnProperty.call(definition.nodes, current)) {
@@ -118,8 +107,8 @@ function run(args: CliArgs): void {
     focus: args.focus,
     signals: args.signals,
   });
-  const route = routeGraph({ current, definition, state });
-  console.log(JSON.stringify(route, null, 2));
+  const decision = evaluateRouteDecision({ current, definition, state });
+  console.log(JSON.stringify(args.explain ? { route: decision.route, explanation: decision.explanation } : decision.route, null, 2));
 }
 
 function main(): void {

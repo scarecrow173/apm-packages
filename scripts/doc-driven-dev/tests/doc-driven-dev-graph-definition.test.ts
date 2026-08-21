@@ -63,14 +63,37 @@ const nonTerminalWithoutOutgoingFixture = validFixture.replace(
   "  probe: { kind: action }",
   "  probe: { kind: action }\n  idle: { kind: action }",
 );
+const runtimeSignalsFixture = validFixture.replace(
+  "entry: probe\n",
+  "entry: probe\nruntimeSignals: [implementation-verified, exit-audit-pass]\n",
+);
+const duplicateRuntimeSignalsFixture = runtimeSignalsFixture.replace(
+  "runtimeSignals: [implementation-verified, exit-audit-pass]",
+  "runtimeSignals: [implementation-verified, implementation-verified]",
+);
+const emptyRuntimeSignalFixture = runtimeSignalsFixture.replace(
+  "runtimeSignals: [implementation-verified, exit-audit-pass]",
+  "runtimeSignals: [\"\", exit-audit-pass]",
+);
 
 test("parses a schema-v2 graph definition with declared conditions", () => {
   const definition = parseGraphDefinition(validFixture);
   assert.equal(definition.schemaVersion, 2);
   assert.equal(definition.id, "doc-driven-dev");
   assert.equal(definition.entry, "probe");
+  assert.deepEqual(definition.runtimeSignals, []);
   assert.equal(definition.conditions["focus-required"].kind, "signal");
   assert.equal(definition.edges[0].priority, 10);
+});
+
+test("parses and validates Graph Definition-owned runtime signal vocabulary", () => {
+  const definition = parseGraphDefinition(runtimeSignalsFixture);
+  assert.deepEqual(definition.runtimeSignals, ["implementation-verified", "exit-audit-pass"]);
+  assert.throws(
+    () => parseGraphDefinition(duplicateRuntimeSignalsFixture),
+    /duplicate runtime signal: implementation-verified/,
+  );
+  assert.throws(() => parseGraphDefinition(emptyRuntimeSignalFixture), /runtimeSignals\.0/);
 });
 
 test("loads and validates the distributed doc-driven-dev graph definition", () => {

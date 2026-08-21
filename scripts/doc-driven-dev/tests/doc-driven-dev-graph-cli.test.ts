@@ -5,9 +5,12 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 const matter = require("gray-matter");
+const { resolveGraphPath } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts");
 
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
+const inspectCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts");
 const generatedCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/route_graph.js");
+const generatedInspectCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js");
 const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 const retiredRoutePath = path.resolve(
   __dirname,
@@ -120,6 +123,14 @@ function runSource(cwd: string, args: string[]) {
   return runCli(tsxCli, cwd, [sourceCli, ...args]);
 }
 
+function runInspect(cwd: string, args: string[]) {
+  return runCli(tsxCli, cwd, [inspectCli, ...args]);
+}
+
+function runGeneratedInspect(cwd: string, args: string[]) {
+  return runCli(generatedInspectCli, cwd, args);
+}
+
 test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
   const repo = tempRepo();
   const graph = graphFile(repo);
@@ -149,6 +160,55 @@ test("selected graph validates current node and declared signal", () => {
   const unknownSignal = runSource(repo, ["--graph", graph, "--signal", "not-declared", "--json"]);
   assert.notEqual(unknownSignal.status, 0);
   assert.match(unknownSignal.stderr, /signal|declared|condition/i);
+});
+
+test("accepts runtime signals declared separately from edge conditions", () => {
+  const repo = tempRepo();
+  const runners = [
+    ["source", (args: string[]) => runSource(repo, args)],
+    ["generated", (args: string[]) => runCli(generatedCli, repo, args)],
+  ] as const;
+  for (const [name, run] of runners) {
+    for (const signal of ["focus-required", "implementation-verified", "exit-audit-pass"]) {
+      const result = run(["--graph", canonicalGraphPath(), "--signal", signal, "--json"]);
+      assert.equal(result.status, 0, `${name}/${signal}: ${result.stderr}`);
+    }
+    const unknownSignal = run([
+      "--graph", canonicalGraphPath(), "--signal", "not-declared", "--json",
+    ]);
+    assert.notEqual(unknownSignal.status, 0, name);
+    assert.match(unknownSignal.stderr, /signal|declared|condition/i, name);
+  }
+});
+
+test("relative explicit graph paths remain process-cwd-relative when --cwd selects runtime state", () => {
+  const processRepo = tempRepo();
+  const runtimeRepo = tempRepo();
+  graphFile(processRepo);
+  const result = runSource(processRepo, [
+    "--graph", "graph.yaml", "--cwd", runtimeRepo, "--signal", "advance", "--json",
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  const route = JSON.parse(result.stdout);
+  assert.equal(route.graphId, "cli-fixture");
+  assert.equal(route.edgeId, "start-to-next");
+});
+
+test("default graph resolution supplies JSON inspection and fails closed when candidates are absent", () => {
+  const repo = tempRepo();
+  const result = runInspect(repo, []);
+  assert.equal(result.status, 0, result.stderr);
+  const inspected = JSON.parse(result.stdout);
+  assert.deepEqual(Object.keys(inspected), ["definition"]);
+  assert.equal(inspected.definition.graphId, "doc-driven-dev");
+
+  const originalExistsSync = fs.existsSync;
+  fs.existsSync = (() => false) as typeof fs.existsSync;
+  try {
+    assert.throws(() => resolveGraphPath(undefined, repo), /Unable to locate.*Graph Definition/);
+  } finally {
+    fs.existsSync = originalExistsSync;
+  }
 });
 
 test("terminal re-entry emits an idempotent terminal route", () => {
@@ -323,5 +383,150 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
     assert.equal(route.next, scenario.next, scenario.name);
     assert.equal(route.status, scenario.status ?? "edge", scenario.name);
     scenario.assertRoute?.(route);
+  }
+});
+
+test("explain mode preserves the ordinary route under a separate envelope", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const ordinaryResult = runSource(repo, ["--graph", graph, "--signal", "advance", "--json"]);
+  const explainedResult = runSource(repo, ["--graph", graph, "--signal", "advance", "--explain", "--json"]);
+  assert.equal(ordinaryResult.status, 0, ordinaryResult.stderr);
+  assert.equal(explainedResult.status, 0, explainedResult.stderr);
+  const ordinary = JSON.parse(ordinaryResult.stdout);
+  const explained = JSON.parse(explainedResult.stdout);
+  assert.deepEqual(explained.route, ordinary);
+  assert.deepEqual(Object.keys(explained).sort(), ["explanation", "route"]);
+  assert.equal(explained.explanation.selectedEdgeId, "start-to-next");
+});
+
+test("inspection CLI emits runtime state only for an explicit selector", () => {
+  const repo = completeRepo();
+  const graph = path.join(repo, "graph.yaml");
+  fs.writeFileSync(graph, `schemaVersion: 2\nid: cli-fixture\nentry: start\nconditions: {}\nnodes: { start: { kind: terminal } }\nedges: []\n`, "utf8");
+
+  const definitionOnly = runInspect(repo, ["--graph", graph, "--format", "json"]);
+  assert.equal(definitionOnly.status, 0, definitionOnly.stderr);
+  const inspected = JSON.parse(definitionOnly.stdout);
+  assert.deepEqual(Object.keys(inspected), ["definition"]);
+
+  const withState = runInspect(repo, [
+    "--graph", graph, "--format", "json", "--cwd", repo, "--focus", "PLAN-0001",
+  ]);
+  assert.equal(withState.status, 0, withState.stderr);
+  const selected = JSON.parse(withState.stdout);
+  assert.ok(selected.definition);
+  assert.ok(selected.state);
+  assert.ok(selected.artifactGraph);
+  assert.ok(selected.taskGraph);
+  assert.deepEqual(Object.keys(selected.state), [
+    "schemaVersion", "graphId", "cwd", "taskDir", "focus", "gates", "signals", "blockers", "hardBlockers",
+  ]);
+  assert.equal(selected.artifactGraph.nodes.some((node: { id: string }) => node.id === "PLAN-0001"), true);
+  assert.equal(selected.artifactGraph.edges.some((edge: { relation: string; kind: string }) => (
+    edge.relation === "derives-from" && edge.kind === "lineage"
+  )), true);
+  assert.deepEqual(selected.taskGraph.nodes[0], {
+    id: "TASK-0001",
+    path: "docs/tasks/0001-task.md",
+    status: "done",
+    dependsOn: [],
+    blocks: [],
+  });
+  assert.deepEqual(selected.taskGraph.completed, ["TASK-0001"]);
+});
+
+test("inspection Mermaid output is deterministic and pure text", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const first = runInspect(repo, ["--graph", graph, "--format", "mermaid"]);
+  const second = runInspect(repo, ["--graph", graph, "--format", "mermaid"]);
+  assert.equal(first.status, 0, first.stderr);
+  assert.equal(second.status, 0, second.stderr);
+  assert.equal(first.stdout, second.stdout);
+  assert.match(first.stdout, /^flowchart TD\n/);
+});
+
+test("inspection Mermaid rejects runtime projection selectors", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const selectors = [
+    [["--cwd", repo], /mermaid.*cwd|cwd.*mermaid/i],
+    [["--focus", "MISSING"], /mermaid.*focus|focus.*mermaid/i],
+    [["--task-dir", "docs/tasks"], /mermaid.*task-dir|task-dir.*mermaid/i],
+  ] as const;
+
+  for (const [selector, message] of selectors) {
+    const result = runInspect(repo, ["--graph", graph, "--format", "mermaid", ...selector]);
+    assert.notEqual(result.status, 0, selector.join(" "));
+    assert.match(result.stderr, message, selector.join(" "));
+  }
+});
+
+test("CLI rejects unknown options, missing values, bad graphs, and invalid focus", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  for (const args of [
+    ["--graph", graph, "--signal", "missing", "--json"],
+    ["--graph", graph, "--current", "missing", "--json"],
+    ["--graph", graph, "--format", "yaml"],
+    ["--graph"],
+    ["--graph", path.join(repo, "missing.yaml"), "--json"],
+  ]) {
+    const result = args.includes("--format") ? runInspect(repo, args) : runSource(repo, args);
+    assert.notEqual(result.status, 0, args.join(" "));
+    assert.ok(result.stderr.trim(), args.join(" "));
+  }
+  const invalidFocus = runInspect(repo, ["--graph", graph, "--format", "json", "--cwd", repo, "--focus", "MISSING"]);
+  assert.notEqual(invalidFocus.status, 0);
+  assert.match(invalidFocus.stderr, /focus|invalid|unknown/i);
+});
+
+test("explain mode requires JSON output", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const result = runSource(repo, ["--graph", graph, "--explain"]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /explain.*json|json.*explain/i);
+});
+
+test("source and generated graph CLIs have identical explain and inspection output", () => {
+  const repo = tempRepo();
+  const graph = graphFile(repo);
+  const routeArgs = ["--graph", graph, "--signal", "advance", "--explain", "--json"];
+  const inspectArgs = ["--graph", graph, "--format", "json"];
+  const mermaidArgs = ["--graph", graph, "--format", "mermaid"];
+
+  const sourceRoute = runSource(repo, routeArgs);
+  const generatedRoute = runCli(generatedCli, repo, routeArgs);
+  const sourceInspect = runInspect(repo, inspectArgs);
+  const generatedInspect = runGeneratedInspect(repo, inspectArgs);
+  const sourceMermaid = runInspect(repo, mermaidArgs);
+  const generatedMermaid = runGeneratedInspect(repo, mermaidArgs);
+
+  for (const [label, result] of [
+    ["source route", sourceRoute],
+    ["generated route", generatedRoute],
+    ["source inspection", sourceInspect],
+    ["generated inspection", generatedInspect],
+    ["source Mermaid", sourceMermaid],
+    ["generated Mermaid", generatedMermaid],
+  ] as const) {
+    assert.equal(result.status, 0, `${label}: ${result.stderr}`);
+  }
+
+  assert.deepEqual(JSON.parse(generatedRoute.stdout), JSON.parse(sourceRoute.stdout));
+  assert.deepEqual(JSON.parse(generatedInspect.stdout), JSON.parse(sourceInspect.stdout));
+  assert.equal(generatedMermaid.stdout, sourceMermaid.stdout);
+});
+
+test("canonical generated graph scripts contain no trailing whitespace", () => {
+  const generatedGraphScripts = fs.readdirSync(path.dirname(generatedCli))
+    .filter((name) => name.endsWith(".js"))
+    .map((name) => path.join(path.dirname(generatedCli), name));
+  for (const cli of generatedGraphScripts) {
+    const lines = fs.readFileSync(cli, "utf8").split(/\r?\n/);
+    const trailingLine = lines.findIndex((line) => /[ \t]+$/.test(line));
+    assert.equal(trailingLine, -1, `${path.basename(cli)} line ${trailingLine + 1} has trailing whitespace`);
   }
 });

@@ -24,7 +24,8 @@ projection は bootstrap、briefing、design、planning、implementation、follo
 triage、exit-audit の証跡を評価します。gate failure と壊れた graph/relation
 fact は deterministic な sort 済み blocker として残ります。caller signal は、
 state projector が fact から確認できる derived signal と統合します。CLI が
-受け付ける signal は、選択した Graph Definition が宣言した値だけです。
+受け付ける signal は、`runtimeSignals` に列挙されるか、選択した Graph
+Definition の `kind: signal` condition が宣言した値だけです。
 
 implementation 完了には、選択 task の graph-resolved（`done` または `wont-do`）と caller による
 `implementation-verified` が必要です。follow-up triage は型付き signal が正確に

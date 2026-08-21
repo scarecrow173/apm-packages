@@ -106,7 +106,11 @@ async function main(): Promise<void> {
       logLevel: "silent"
     });
 
-    if (toPosix(rel).startsWith("skill-discovery-protocol/scripts/")) {
+    const posixRel = toPosix(rel);
+    if (
+      posixRel.startsWith("doc-driven-dev-graph/scripts/")
+      || posixRel.startsWith("skill-discovery-protocol/scripts/")
+    ) {
       await trimTrailingWhitespace(outfile);
     }
     console.log(`Built ${toPosix(path.relative(ROOT, outfile))}`);

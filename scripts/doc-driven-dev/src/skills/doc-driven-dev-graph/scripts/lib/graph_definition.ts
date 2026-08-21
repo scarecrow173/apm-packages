@@ -28,6 +28,7 @@ export type GraphDefinition = {
   schemaVersion: 2;
   id: string;
   entry: GraphNodeId;
+  runtimeSignals?: string[];
   conditions: Record<GraphConditionKey, GraphCondition>;
   nodes: Record<GraphNodeId, GraphNode>;
   edges: GraphEdge[];
@@ -67,6 +68,7 @@ const graphDefinitionSchema = z.object({
   schemaVersion: z.literal(2),
   id: z.string().min(1),
   entry: graphNodeId,
+  runtimeSignals: z.array(z.string().min(1)).default([]),
   conditions: z.record(graphNodeId, graphConditionSchema),
   nodes: z.record(graphNodeId, graphNodeSchema),
   edges: z.array(graphEdgeSchema),
@@ -89,6 +91,12 @@ function hasNode(nodes: Record<string, unknown>, id: string): boolean {
 function validateGraphDefinition(value: z.infer<typeof graphDefinitionSchema>): GraphDefinition {
   if (!hasNode(value.nodes, value.entry)) {
     throw invalidGraph(`entry node does not exist: ${value.entry}`);
+  }
+  const duplicateRuntimeSignal = value.runtimeSignals.find((signal, index) => (
+    value.runtimeSignals.indexOf(signal) !== index
+  ));
+  if (duplicateRuntimeSignal !== undefined) {
+    throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
   }
 
   const declaredGates = new Set(
