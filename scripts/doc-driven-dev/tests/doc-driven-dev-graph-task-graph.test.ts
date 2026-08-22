@@ -248,3 +248,20 @@ test("buildTaskGraph does not fall back from an explicit owner-relative dependen
   assert.deepEqual(result.edges, []);
   assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
 });
+
+test("buildTaskGraph does not fall back from canonical dependency paths to nested owner paths", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-canonical-missing-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: ["docs/tasks/0002-task.md"] });
+  const nestedTask = path.join(repo, "docs/tasks/docs/tasks/0002-task.md");
+  fs.mkdirSync(path.dirname(nestedTask), { recursive: true });
+  fs.writeFileSync(nestedTask, matter.stringify("# Task\n", {
+    id: "TASK-0002", type: "task", status: "done", title: "Nested task", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: { implements: ["docs/plans/0001-plan.md"], "depends-on": [], blocks: [] },
+  }), "utf8");
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.edges, []);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
+});

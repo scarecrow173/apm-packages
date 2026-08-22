@@ -123,13 +123,12 @@ function normalizeOwnedRepoPath(cwd: string, ownerFile: string, reference: strin
     || reference === "."
     || reference === ".."
     || (!reference.includes("/") && !reference.includes("\\"));
-  if (documentRelative) return normalizeRepoPath(cwd, ownerCandidate);
-  const chosen = fs.existsSync(rootCandidate) ? rootCandidate : ownerCandidate;
+  const chosen = documentRelative ? ownerCandidate : rootCandidate;
   return normalizeRepoPath(cwd, chosen);
 }
 ```
 
-Explicit relative paths and bare filenames such as `0001-task.md` resolve only from their owner document. A missing owner-relative target remains unresolved even if a same-named root artifact exists; canonical repository paths such as `docs/plans/0001-plan.md` remain root-relative.
+Explicit relative paths and bare filenames such as `0001-task.md` resolve only from their owner document, while canonical repository paths such as `docs/plans/0001-plan.md` resolve only from the repository root. Missing declared targets remain unresolved and never fall back to the opposite base.
 
 - [ ] **Step 4: Use the owner-aware helper for `implements`**
 
