@@ -233,3 +233,18 @@ test("buildTaskGraph resolves document-relative blocks paths", () => {
   assert.deepEqual(result.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
   assert.deepEqual(result.issues, []);
 });
+
+test("buildTaskGraph does not fall back from an explicit owner-relative dependency to a root artifact", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-owner-relative-missing-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  fs.writeFileSync(path.join(repo, "missing-task.md"), matter.stringify("# Plan\n", {
+    id: "PLAN-9999", type: "plan", status: "approved", title: "Root plan", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }), "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: ["./missing-task.md"] });
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.edges, []);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
+});

@@ -114,9 +114,8 @@ function normalizeOwnedRepoPath(cwd: string, ownerFile: string, reference: strin
     || reference === "."
     || reference === ".."
     || (!reference.includes("/") && !reference.includes("\\"));
-  const preferred = documentRelative ? ownerCandidate : rootCandidate;
-  const fallback = documentRelative ? rootCandidate : ownerCandidate;
-  const chosen = fs.existsSync(preferred) ? preferred : fallback;
+  if (documentRelative) return normalizeRepoPath(cwd, ownerCandidate);
+  const chosen = fs.existsSync(rootCandidate) ? rootCandidate : ownerCandidate;
   return normalizeRepoPath(cwd, chosen);
 }
 
