@@ -278,11 +278,13 @@ export function scanArtifactGraph(options: ArtifactGraphOptions): ArtifactGraphP
         const target = resolveArtifactRelation(cwd, source, value, records);
         edges.push({ from: source.path, to: target?.path ?? null, relation, kind, external: false });
         if (!target) {
-          const targetPath = localTarget(cwd, source, value).path;
-          issues.push({
-            code: "broken-relation",
-            message: `Broken ${relation} relation from ${source.path} to ${value}${targetPath ? ` (${targetPath})` : ""}`,
-          });
+          const local = localTarget(cwd, source, value);
+          if (!local.exists) {
+            issues.push({
+              code: "broken-relation",
+              message: `Broken ${relation} relation from ${source.path} to ${value}${local.path ? ` (${local.path})` : ""}`,
+            });
+          }
         }
       }
     }
