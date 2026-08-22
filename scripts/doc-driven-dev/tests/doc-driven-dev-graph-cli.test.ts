@@ -10,6 +10,10 @@ const { resolveGraphPath } = require("../src/skills/doc-driven-dev-graph/scripts
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
 const inspectCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts");
 const generatedCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/route_graph.js");
+const generatedTaskGraphCli = path.resolve(
+  __dirname,
+  "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/build_task_graph.js",
+);
 const generatedInspectCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js");
 const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 const retiredRoutePath = path.resolve(
@@ -529,4 +533,49 @@ test("canonical generated graph scripts contain no trailing whitespace", () => {
     const trailingLine = lines.findIndex((line) => /[ \t]+$/.test(line));
     assert.equal(trailingLine, -1, `${path.basename(cli)} line ${trailingLine + 1} has trailing whitespace`);
   }
+});
+test("generated graph CLIs resolve owner-relative tasks and existing local files", () => {
+  const repo = completeRepo(["done", "todo"]);
+  writeArtifact(repo, "docs/tasks/0001-task.md", {
+    id: "TASK-0001", type: "task", status: "done", title: "TASK-0001",
+    relations: { implements: ["../plans/0001-graph.md"] },
+  }, "# Task\n\n## Verification\n\n- [x] complete\n");
+  writeArtifact(repo, "docs/tasks/0002-task.md", {
+    id: "TASK-0002", type: "task", status: "todo", title: "TASK-0002",
+    relations: {
+      implements: ["../plans/0001-graph.md"],
+      "depends-on": ["0001-task.md"],
+    },
+  }, "# Task\n\n## Verification\n\n- [ ] pending\n");
+  fs.mkdirSync(path.join(repo, "src"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "src/example.py"), "VALUE = 1\n", "utf8");
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "approved", title: "Graph",
+    relations: { source: ["../../src/example.py"] },
+  }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
+
+  const taskResult = runCli(generatedTaskGraphCli, repo, [
+    "--plan", "docs/plans/0001-graph.md", "--cwd", repo, "--json",
+  ]);
+  assert.equal(taskResult.status, 0, taskResult.stderr);
+  const taskGraph = JSON.parse(taskResult.stdout);
+  assert.deepEqual(taskGraph.nodes.map((node: { id: string }) => node.id), ["TASK-0001", "TASK-0002"]);
+  assert.deepEqual(taskGraph.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
+  assert.deepEqual(taskGraph.runnable, ["TASK-0002"]);
+  assert.deepEqual(taskGraph.issues, []);
+
+  const routeResult = runCli(generatedCli, repo, [
+    "--graph", canonicalGraphPath(),
+    "--current", "task-graph",
+    "--focus", "PLAN-0001",
+    "--cwd", repo,
+    "--json",
+  ]);
+  assert.equal(routeResult.status, 0, routeResult.stderr);
+  const route = JSON.parse(routeResult.stdout);
+  assert.equal(route.status, "edge");
+  assert.equal(route.next, "implementation");
+  assert.equal(route.blockers.some((blocker: string) => blocker.startsWith("broken-relation:")), false);
+  assert.deepEqual(route.taskGraph.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
+  assert.deepEqual(route.taskGraph.runnable, ["TASK-0002"]);
 });

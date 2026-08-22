@@ -3539,6 +3539,13 @@ function normalizeRepoPath(cwd, target) {
   const absolute = import_node_path.default.resolve(cwd, target);
   return import_node_path.default.relative(cwd, absolute).split(import_node_path.default.sep).join("/");
 }
+function normalizeOwnedRepoPath(cwd, ownerFile, reference) {
+  const ownerCandidate = import_node_path.default.resolve(cwd, import_node_path.default.dirname(ownerFile), reference);
+  const rootCandidate = import_node_path.default.resolve(cwd, reference);
+  const documentRelative = reference.startsWith("./") || reference.startsWith("../") || reference === "." || reference === ".." || !reference.includes("/") && !reference.includes("\\");
+  const chosen = documentRelative ? ownerCandidate : rootCandidate;
+  return normalizeRepoPath(cwd, chosen);
+}
 function markdownFiles(dir) {
   if (!import_node_fs.default.existsSync(dir) || !import_node_fs.default.statSync(dir).isDirectory()) return [];
   const result = [];
@@ -3651,7 +3658,7 @@ function readTaskDocuments(cwd, taskDir) {
         message: "Task relations must be an object"
       });
     }
-    const implementsValues = relationValues(relationObject, "implements", parseIssues, id, relativeFile).map((target) => normalizeRepoPath(cwd, target));
+    const implementsValues = relationValues(relationObject, "implements", parseIssues, id, relativeFile).map((target) => normalizeOwnedRepoPath(cwd, relativeFile, target));
     const dependsOn = relationValues(relationObject, "depends-on", parseIssues, id, relativeFile);
     const blocks = relationValues(relationObject, "blocks", parseIssues, id, relativeFile);
     tasks.push({
@@ -3690,14 +3697,14 @@ function indexTasks(tasks) {
   }
   return { tasks: sortedTasks, byId, byPath, issues };
 }
-function resolveReference(cwd, reference, index) {
+function resolveReference(cwd, owner, reference, index) {
   const byId = index.byId.get(reference);
   if (byId) return byId;
-  const normalized = normalizeRepoPath(cwd, reference);
+  const normalized = normalizeOwnedRepoPath(cwd, owner.file, reference);
   return index.byPath.get(normalized);
 }
-function isExistingArtifactReference(cwd, taskDir, reference) {
-  const candidate = import_node_path.default.resolve(cwd, reference);
+function isExistingArtifactReference(cwd, taskDir, owner, reference) {
+  const candidate = import_node_path.default.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
   if (!import_node_fs.default.existsSync(candidate) || !import_node_fs.default.statSync(candidate).isFile()) return false;
   const taskRoot = import_node_path.default.resolve(cwd, taskDir);
   const candidatePath = import_node_path.default.resolve(candidate);
@@ -3731,9 +3738,9 @@ function resolveTaskEdges(cwd, taskDir, index) {
   const issues = [];
   const artifactIds = readArtifactIds(cwd, taskDir);
   const addReference = (task, reference, direction) => {
-    const target = resolveReference(cwd, reference, index);
+    const target = resolveReference(cwd, task, reference, index);
     if (!target || !target.id) {
-      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, reference)) return;
+      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, task, reference)) return;
       issues.push({
         code: "missing-task-reference",
         tasks: task.id ? [task.id] : [],

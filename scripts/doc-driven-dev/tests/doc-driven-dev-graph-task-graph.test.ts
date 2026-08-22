@@ -188,3 +188,80 @@ test("build_task_graph CLI returns JSON and exit 1 for invalid graphs", () => {
   assert.equal(invalid.status, 1);
   assert.equal(JSON.parse(invalid.stdout).issues[0].code, "missing-task-reference");
 });
+
+test("buildTaskGraph resolves document-relative implements and depends-on paths", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-relative-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", {
+    status: "done",
+    dependsOn: [],
+    implements: ["../plans/0001-plan.md"],
+  });
+  writeTask(repo, "TASK-0002", {
+    status: "todo",
+    dependsOn: ["0001-task.md"],
+    implements: ["../plans/0001-plan.md"],
+  });
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.nodes.map((node) => node.id), ["TASK-0001", "TASK-0002"]);
+  assert.deepEqual(result.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
+  assert.deepEqual(result.runnable, ["TASK-0002"]);
+  assert.deepEqual(result.issues, []);
+});
+
+test("buildTaskGraph resolves document-relative blocks paths", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-relative-blocks-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", {
+    status: "todo",
+    dependsOn: [],
+    blocks: ["0002-task.md"],
+    implements: ["../plans/0001-plan.md"],
+  });
+  writeTask(repo, "TASK-0002", {
+    status: "todo",
+    dependsOn: [],
+    implements: ["../plans/0001-plan.md"],
+  });
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
+  assert.deepEqual(result.issues, []);
+});
+
+test("buildTaskGraph does not fall back from an explicit owner-relative dependency to a root artifact", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-owner-relative-missing-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  fs.writeFileSync(path.join(repo, "missing-task.md"), matter.stringify("# Plan\n", {
+    id: "PLAN-9999", type: "plan", status: "approved", title: "Root plan", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }), "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: ["./missing-task.md"] });
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.edges, []);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
+});
+
+test("buildTaskGraph does not fall back from canonical dependency paths to nested owner paths", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-canonical-missing-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: ["docs/tasks/0002-task.md"] });
+  const nestedTask = path.join(repo, "docs/tasks/docs/tasks/0002-task.md");
+  fs.mkdirSync(path.dirname(nestedTask), { recursive: true });
+  fs.writeFileSync(nestedTask, matter.stringify("# Task\n", {
+    id: "TASK-0002", type: "task", status: "done", title: "Nested task", created: "2026-08-13", updated: "2026-08-13", owners: [], relations: { implements: ["docs/plans/0001-plan.md"], "depends-on": [], blocks: [] },
+  }), "utf8");
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.edges, []);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
+});
