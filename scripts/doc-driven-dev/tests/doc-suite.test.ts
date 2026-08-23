@@ -574,6 +574,8 @@ test("doc-driven-dev-graph meta skill ships Graph Definition and runtime referen
 
   const skill = fs.readFileSync(path.join(graphSkill, "SKILL.md"), "utf8");
   const skillJa = fs.readFileSync(path.join(graphSkill, "SKILL.ja.md"), "utf8");
+  const contract = fs.readFileSync(path.join(graphSkill, "references", "execution-contract.md"), "utf8");
+  const contractJa = fs.readFileSync(path.join(graphSkill, "references", "execution-contract.ja.md"), "utf8");
   assert.match(skill, /^name: doc-driven-dev-graph$/m);
   assert.match(skill, /^description: .*at most one declared edge.*terminal\/blocked result/m);
   assert.match(skillJa, /^description: .*最大 1 つ.*terminal\/blocked.*$/m);
@@ -583,6 +585,8 @@ test("doc-driven-dev-graph meta skill ships Graph Definition and runtime referen
   assert.match(skill, /successful transition selects exactly one declared edge/i);
   assert.match(skill, /same-node blocked/i);
   assert.match(skill, /result with no edge/i);
+  assert.match(skill, /route_graph\.js.*itself never recursively follows a\s+second edge/i);
+  assert.match(skillJa, /route_graph\.js.*2 つ目の edge.*再帰的/s);
   assert.match(skillJa, /成功する遷移は宣言済み edge を 1 つだけ選択します/);
   assert.match(skillJa, /同一 node blocked 結果/);
   assert.match(skill, /phase labels are conceptual and non-normative.*execution authority/is);
@@ -591,6 +595,14 @@ test("doc-driven-dev-graph meta skill ships Graph Definition and runtime referen
   assert.deepEqual(numberedSteps(runtime), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   assert.deepEqual(numberedSteps(runtimeJa), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   assert.match(skillJa, /phase label は概念上かつ非規範的.*実行\s*authority/s);
+  assert.match(contract, /checkpoint != yield/);
+  assert.match(contract, /single-step/);
+  assert.match(contract, /run-until-yield/);
+  assert.match(contract, /maxHops.*10/);
+  assert.match(contract, /route.*audit.*delegate.*evidence.*re-project/is);
+  assert.doesNotMatch(contract, /same turn must not.*multiple\s+edges/is);
+  assert.match(contractJa, /checkpoint.*yield/);
+  assert.match(contractJa, /同じ run.*複数 edge/);
 });
 
 test("graph docs bind delegates, audits, and condition-driven subgraphs", () => {

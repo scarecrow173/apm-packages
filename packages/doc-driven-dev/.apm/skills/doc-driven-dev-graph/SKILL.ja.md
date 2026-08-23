@@ -47,7 +47,8 @@ edge は condition key を参照します。汎用 condition DSL は `signal`、
 （`pass` / `not-pass`）、`task-graph`（`active`、`runnable`、`invalid`、
 `idle`）predicate をサポートします。宣言されていない signal は受け付けません。
 current node の eligible edge は昇順の `priority`、次に安定した edge ID で並べ、
-最初の 1 つだけを返します。CLI は 2 つ目の edge を再帰的に辿りません。
+最初の 1 つだけを返します。`route_graph.js` 自体は 2 つ目の edge を再帰的に
+追跡せず、継続は caller が所有します。
 
 `tasks-active` は、Task Graph に構造上の issue がなく、全 predecessor が
 `done` の `in-progress` task を ID 順に並べた `resumableActive` が 1 件以上
@@ -72,17 +73,28 @@ delegate は briefing / implementation subgraph と証跡を担当します。ca
 
 ## Graph runtime の 10 ステップ
 
-1. Graph Definition と current node を選択する。
+`run-until-yield` が通常の caller mode です。user が debugging、inspection、
+deterministic testing、または 1 checkpoint の実行を求めた場合は `single-step`
+を使います。どちらの mode でも `route_graph.js` は invocation ごとに route を
+1 つ返し、継続は caller が所有します。順序付き protocol、yield table、budget、
+trace summary、resume rule の詳細は
+[`references/execution-contract.ja.md`](references/execution-contract.ja.md) にあります。
+
+1. Graph Definition、current node、caller mode を選択する。
 2. 正規 Markdown artifact と semantic relation を確認する。
 3. Artifact Graph を新しい Graph State に投影する。
 4. 複数 chain があれば明示的 focus を解決する。
 5. gate、caller signal、決定的 blocker を評価する。
 6. 汎用 condition DSL で outgoing edge を評価する。
-7. priority（次に edge ID）の順で最大 1 エッジを選択する。
-8. route 全体を保持し、返された audit をすべて実行する。
+7. priority（次に edge ID）の順で最大 1 エッジを選択する。router 自体は 2 つ目の
+   edge を再帰的に追跡しない。
+8. route 全体を保持し、bounded counter と fingerprint を確認して、返された
+   audit を安定した順序ですべて実行する。
 9. 宣言された delegate と、その briefing / implementation subgraph だけを
-   dispatch する。
-10. Markdown 証跡を記録し、再投影して返された `next` node から再入力する。
+   dispatch する。input、approval、authority が明示的に必要なら yield する。
+10. Markdown 証跡 checkpoint と ordered trace を記録し、再投影して返された `next`
+    node から再入力する。`single-step` では yield し、`run-until-yield` では
+    繰り返す。
 
 terminal node、またはユーザー権限が必要な fail-closed blocker で停止します。
 `wont-do` task は dependency を満たさず、未解決 task は Dynamic Task Graph

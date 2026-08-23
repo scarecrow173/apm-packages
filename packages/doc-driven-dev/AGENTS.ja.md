@@ -9,8 +9,12 @@ graph routing には `doc-driven-dev-graph` を使います。Graph Definition �
 normative な実行 authority であり、phase label は概念上の mapping に限ります。
 runtime contract は次の通りです。
 
-`Graph Definition -> Graph State -> 宣言済み route 1つ -> delegate/audit ->
-Markdown 証跡 -> 再投影`
+`Graph Definition -> fresh Graph State -> 宣言済み route 1つ -> audit/delegate ->
+canonical Markdown checkpoint -> 再投影 -> caller が yield を評価 -> repeat または yield`
+
+`run-until-yield` が通常の caller mode です。debugging、inspection、deterministic
+testing、または 1 checkpoint の実行には `single-step` を利用できます。router は
+invocation ごとに 1 route を返し、継続は caller が所有します。
 
 package は 4 layer で構成します。
 

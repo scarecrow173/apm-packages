@@ -1,34 +1,105 @@
 # Graph Execution Contract
 
-This contract defines the caller-owned runtime loop around the one-edge CLI.
-It is separate from graph topology: delegates and audits record evidence, then
-the caller asks the graph for a fresh decision.
+This contract defines the bounded caller-owned Run-to-Yield protocol around the
+one-edge CLI. A completed edge checkpoint is not a yield (`checkpoint != yield`).
+The router still returns one complete `GraphRoute` per CLI invocation; the
+caller owns whether to stop after that checkpoint or ask for another decision.
 
-## Turn protocol
+## Caller modes
 
-For each turn:
+- `run-until-yield` is the normal runtime mode. It repeats the selected-edge
+  protocol after each fresh state projection until a yield reason applies.
+- `single-step` is available for debugging, inspection, deterministic testing,
+  or one-checkpoint execution. It yields after the selected edge checkpoint.
 
-1. Select the Graph Definition and an explicit focus when required.
-2. Run `route_graph.js` once with the current node and observed signals.
-3. Preserve the complete GraphRoute JSON in the handoff.
-4. Run every `requiredAudits` entry before dispatching. These are the sorted
-   `audits` declared by the selected destination node; blocked routes return
-   none.
-5. Dispatch only `delegate` from the returned edge; do not dispatch a guessed
-   or neighboring skill.
-6. Record completion, gate, and follow-up evidence in canonical Markdown.
-7. Re-project state and rerun from `next`.
+`route_graph.js` itself never recursively follows a second edge. Its examples
+remain one-edge commands; the caller, not the router, owns continuation.
 
-The same turn must not call the CLI recursively or advance through multiple
-edges. A terminal route is idempotent. A blocked route is a fail-closed stop
-until its blockers are resolved or the user grants the required authority.
+## Selected-edge protocol
 
-## Evidence and loopbacks
+For each selected edge:
+
+1. Invoke `route_graph.js` exactly once for `current`.
+2. Preserve the complete `GraphRoute`.
+3. If terminal or blocked, evaluate the yield table and stop.
+4. Check `maxHops`, the per-self-loop budget, and the full-`GraphRoute`
+   fingerprint.
+5. Run every required audit in stable order.
+6. Dispatch only the returned delegate.
+7. If an audit or delegate explicitly requires input, approval, or authority,
+   yield without claiming the edge checkpoint complete.
+8. Persist completion, gate, and follow-up evidence in canonical Markdown.
+9. Mark the edge checkpoint complete and append it to the ordered trace.
+10. Re-enter from `next` with a fresh state projection.
+11. In `single-step` mode yield; in `run-until-yield` mode repeat.
+
+Record completion, gate, and follow-up evidence by persisting those values in
+canonical Markdown.
+
+The checkpoint is complete only after its audits, delegate, and evidence are
+recorded. A run trace summary records the mode, bounded counters, completed
+edge IDs in order, route fingerprints, and the final yield reason.
+
+## Phase 1 yield table
+
+| Observation | Yield reason | Continue automatically |
+| --- | --- | --- |
+| `GraphRoute.status == terminal` | `terminal` | Never |
+| explicit approval request from a skill or user-owned gate | `approval-required` | Never |
+| explicit missing focus/requirement/value only the user can choose | `input-required` | Never |
+| missing permission or irreversible external action outside granted scope | `authority-required` | Never |
+| blocked route with no declared executable repair edge | `unrecoverable-blocker` | Never |
+| hop/retry/repetition budget reached | `budget-exhausted` | Never |
+| selected edge completed and fresh state exposes another declared edge | none | Yes in `run-until-yield` |
+| audit/delegate/evidence success | none | Yes in `run-until-yield` |
+
+## Bounded autonomy
+
+The caller uses fixed run counters; this protocol adds no policy DSL:
+
+```text
+maxHops default = 10
+  Rationale: current Graph Definition has 10 non-terminal nodes and the normal path is 8 edges.
+
+self-loop budget = 1 completed traversal per edge ID per run
+  A second traversal of the same from == to edge yields budget-exhausted.
+
+route fingerprint = stable JSON serialization of the complete GraphRoute
+  If the same fingerprint is observed again in the same run, yield budget-exhausted.
+
+multi-node repair loop = bounded by both repeated fingerprint detection and maxHops
+```
+
+The fingerprint is computed before effects. Append it to
+`seenRouteFingerprints` only after the edge checkpoint completes; this allows
+resume of an interrupted, uncompleted edge without falsely classifying it as a
+completed loop.
+
+## Checkpoint, resume, and duplicate effects
+
+- A completed checkpoint records route, completed audits, completed delegate,
+  and `evidenceRecorded=true` in the caller handoff.
+- Resume always re-projects canonical Markdown before routing again.
+- Resume starts at the last completed `route.next`; an incomplete edge resumes
+  only its uncompleted audit/delegate/evidence stages.
+- A stage is skipped only when canonical evidence or the side-effect provider's
+  idempotency key proves completion.
+- If neither proof exists, yield `authority-required` rather than replaying a
+  potentially irreversible effect.
+- Run counters and trace may be retained in task/thread handoff metadata; they
+  are not Graph State or project authority.
+
+This provides same-task crash recovery. Cross-host recovery when both the
+caller handoff and task/thread history are lost remains outside Phase 1;
+canonical Markdown alone currently does not encode the last runtime node or
+every external side-effect receipt.
+
+## Evidence and persistence
 
 Delegates own their domain work and evidence format. The graph owns only
 declared topology and generic state predicates. Upstream gaps, invalid Task
 Graphs, missing focus, conflicting signals, and failed audits remain explicit
 blockers or loopback signals; the caller must not reinterpret them as success.
 
-Markdown remains the durable history. Do not create a parallel mutable state
-store to make a route appear complete.
+Markdown remains the durable history and status authority. Do not create a
+parallel mutable state store to make a route appear complete.
