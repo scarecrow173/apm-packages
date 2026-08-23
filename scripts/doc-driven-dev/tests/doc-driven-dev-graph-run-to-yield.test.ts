@@ -59,6 +59,7 @@ type ScenarioHandoff = {
   current: string;
   mode: ScenarioMode;
   maxHops: number;
+  yieldReason: YieldReason | null;
   focus: string[];
   signals: string[];
   graphPath: string;
@@ -350,13 +351,14 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     if (resumingPending) {
       const claimedAudits = new Set(resumingPending.completedAudits);
       const unverifiedAudit = [...claimedAudits].some((audit) => (
-        !route.requiredAudits.includes(audit) || !hasRouteProof(options.repo, route, `audit:${audit}`)
+        !route.requiredAudits.includes(audit)
+        || !hasRouteProof(options.repo, resumingPending.route, `audit:${audit}`)
       ));
       const unverifiedDelegate = resumingPending.delegateComplete && (
-        !route.delegate || !hasRouteProof(options.repo, route, "delegate")
+        !route.delegate || !hasRouteProof(options.repo, resumingPending.route, "delegate")
       );
       const unverifiedEvidence = resumingPending.evidenceRecorded
-        && !hasRouteProof(options.repo, route, "evidence");
+        && !hasRouteProof(options.repo, resumingPending.route, "evidence");
       if (unverifiedAudit || unverifiedDelegate || unverifiedEvidence) {
         yieldReason = "authority-required";
         expectYield(step, yieldReason);
@@ -454,6 +456,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     current,
     mode,
     maxHops,
+    yieldReason,
     focus: [...focus],
     signals: [...signals].sort(),
     graphPath,
@@ -526,10 +529,10 @@ test("runs the fully automatic canonical path with fresh projection between chec
     current: "probe",
     mode: "run-until-yield",
     steps: [
-      { expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") },
-      { expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") },
-      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning") },
-      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
+      { expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing", (fixture) => addTask(fixture, 2)) },
+      { expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design", (fixture) => addTask(fixture, 3)) },
+      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning", (fixture) => addTask(fixture, 4)) },
+      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph", (fixture) => addTask(fixture, 5)) },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -541,6 +544,9 @@ test("runs the fully automatic canonical path with fresh projection between chec
   assert.equal(result.checkpoints.length, 4);
   assert.equal(result.projectCalls, 4);
   assert.equal(result.yieldReason, null);
+  for (let index = 1; index < result.routes.length; index += 1) {
+    assert.notDeepEqual(result.routes[index].taskGraph, result.routes[index - 1].taskGraph);
+  }
 });
 
 test("yields approval exactly once before design evidence is written", () => {
@@ -650,6 +656,33 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
   assert.equal(resumed.checkpoints.length, 1);
 });
 
+test("resume accepts pending audit and delegate receipts after route-relevant state changes", () => {
+  const repo = fixtureRepo();
+  const interrupted = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    steps: [{ expectEdge: "briefing-to-design", yield: "authority-required" }],
+  });
+  assert.deepEqual(interrupted.handoff.pending?.completedAudits, ["design"]);
+  assert.equal(interrupted.handoff.pending?.delegateComplete, true);
+
+  addTask(repo, 2);
+  const resumed = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    resume: interrupted.handoff,
+    steps: [{ expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") }],
+  });
+  assert.notDeepEqual(resumed.routes[0].taskGraph, interrupted.handoff.pending?.route.taskGraph);
+  assert.notEqual(JSON.stringify(resumed.routes[0]), JSON.stringify(interrupted.handoff.pending?.route));
+  assert.equal(resumed.yieldReason, null);
+  assert.equal(resumed.auditCounts.design, 1);
+  assert.equal(resumed.delegateCounts["design-doc"], 1);
+  assert.equal(resumed.checkpoints.length, 1);
+});
+
 test("continues implementation retry only after re-projection", () => {
   const repo = fixtureRepo();
   const result = runScenario({
@@ -750,7 +783,7 @@ test("allows one completed self-loop then yields budget-exhausted", () => {
   assert.equal(result.yieldReason, "budget-exhausted");
 });
 
-test("bounds a changing multi-node repair cycle at maxHops", () => {
+test("bounds a changing multi-node repair cycle at the default maxHops", () => {
   const repo = fixtureRepo();
   const steps: ScenarioStep[] = Array.from({ length: 12 }, (_, index) => ({
     expectEdge: index % 2 === 0 ? "design-to-briefing" : "briefing-to-design",
@@ -761,11 +794,11 @@ test("bounds a changing multi-node repair cycle at maxHops", () => {
     current: "design",
     mode: "run-until-yield",
     signals: ["spec-gap"],
-    maxHops: 10,
     steps,
   });
   assert.equal(result.yieldReason, "budget-exhausted");
   assert.equal(result.checkpoints.length, 10);
+  assert.equal(result.handoff.maxHops, 10);
   assert.equal(result.handoff.hops, 10);
 });
 
@@ -941,6 +974,76 @@ test("does not trust an unverified delegate-complete resume claim", () => {
   assert.equal(resumed.checkpoints.length, 0);
 });
 
+test("does not trust an audit claim proved only for another run state", () => {
+  const repo = fixtureRepo();
+  const interrupted = runScenario({
+    repo,
+    current: "probe",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "probe-to-briefing",
+      yield: "authority-required",
+      audit: () => "authority-required",
+    }],
+  });
+  addTask(repo, 2);
+  const otherRun = runScenario({
+    repo,
+    current: "probe",
+    mode: "run-until-yield",
+    steps: [{ expectEdge: "probe-to-briefing", observeOnly: true }],
+  });
+  persistProof(repo, "probe-to-briefing", routeProofStage("audit:adr", otherRun.routes[0]));
+  const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
+  forged.pending!.completedAudits = ["adr"];
+
+  const resumed = runScenario({
+    repo,
+    current: "probe",
+    mode: "run-until-yield",
+    resume: forged,
+    steps: [{
+      expectEdge: "probe-to-briefing",
+      yield: "authority-required",
+      applyEvidence: evidence("probe-to-briefing"),
+    }],
+  });
+  assert.equal(resumed.yieldReason, "authority-required");
+  assert.equal(resumed.checkpoints.length, 0);
+});
+
+test("does not trust an evidence claim proved only for another run state", () => {
+  const repo = fixtureRepo();
+  const interrupted = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    steps: [{ expectEdge: "briefing-to-design", yield: "authority-required" }],
+  });
+  addTask(repo, 2);
+  const otherRun = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    steps: [{ expectEdge: "briefing-to-design", observeOnly: true }],
+  });
+  persistProof(repo, "briefing-to-design", routeProofStage("audit:design", otherRun.routes[0]));
+  persistProof(repo, "briefing-to-design", routeProofStage("delegate", otherRun.routes[0]));
+  persistProof(repo, "briefing-to-design", routeProofStage("evidence", otherRun.routes[0]));
+  const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
+  forged.pending!.evidenceRecorded = true;
+
+  const resumed = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    resume: forged,
+    steps: [{ expectEdge: "briefing-to-design", yield: "authority-required" }],
+  });
+  assert.equal(resumed.yieldReason, "authority-required");
+  assert.equal(resumed.checkpoints.length, 0);
+});
+
 test("does not complete an edge when its evidence callback leaves no canonical proof", () => {
   const repo = fixtureRepo();
   const result = runScenario({
@@ -1003,6 +1106,7 @@ test("handoff records caller mode, hop bound, and per-edge completion trace", ()
   });
   assert.equal(result.handoff.mode, "single-step");
   assert.equal(result.handoff.maxHops, 4);
+  assert.equal(result.handoff.yieldReason, "single-step-complete");
   assert.equal(result.handoff.edgeTrace.length, 1);
   assert.deepEqual(result.handoff.edgeTrace[0].completedAudits, ["adr", "spec"]);
   assert.equal(result.handoff.edgeTrace[0].delegate, "briefing-flow");
