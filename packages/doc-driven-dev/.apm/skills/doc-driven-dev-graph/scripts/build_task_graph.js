@@ -3834,6 +3834,10 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
     return predecessor?.status === "done";
   })).map((task) => task.id);
   const active = sortedTasks.filter((task) => task.status === "in-progress").map((task) => task.id);
+  const resumableActive = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "in-progress").filter((task) => sortedEdges.filter((edge) => edge.to === task.id).every((edge) => {
+    const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
+    return predecessor?.status === "done";
+  })).map((task) => task.id);
   const completed = sortedTasks.filter((task) => task.status === "done").map((task) => task.id);
   const blocked = sortedTasks.filter((task) => task.status === "blocked" || task.status === "wont-do" || task.status === "todo" && !runnable.includes(task.id)).map((task) => ({
     id: task.id,
@@ -3852,6 +3856,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
     edges: sortedEdges,
     runnable: runnable.sort(compareStrings),
     active: active.sort(compareStrings),
+    resumableActive: resumableActive.sort(compareStrings),
     completed: completed.sort(compareStrings),
     blocked,
     issues: uniqueIssues

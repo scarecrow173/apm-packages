@@ -46,10 +46,19 @@ neighboring edge is added by the caller.
 ## Condition DSL and priority
 
 Edges name a condition key. The generic condition DSL supports `signal`,
-`gate` (`pass` or `not-pass`), and `task-graph` (`runnable` or `invalid`)
+`gate` (`pass` or `not-pass`), and `task-graph` (`active`, `runnable`,
+`invalid`, or `idle`)
 predicates. Only declared signals are accepted. For the current node, eligible
 edges are ordered by ascending `priority`, then stable edge ID; the first match
 is the only route returned. The CLI never follows a second edge recursively.
+
+`tasks-active` means that the Task Graph has no structural issues and its
+sorted `resumableActive` list contains at least one `in-progress` task whose
+predecessors are all `done`. The active edge precedes the runnable edge, so an
+existing task is resumed before new work starts. The route still selects one
+edge and carries the complete Task Graph to `implementation-flow`; that
+delegate uses stable task IDs and dependency edges to sequence dependent active
+tasks and parallelize only independent work.
 
 ## Delegates and subgraphs
 

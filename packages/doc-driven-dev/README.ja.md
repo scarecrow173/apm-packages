@@ -55,11 +55,12 @@ label から追加してはいけません。
 
 - `signal`: caller または projection が宣言した signal を確認。
 - `gate`: `pass` または `not-pass` の named gate を確認。
-- `task-graph`: task projection の `runnable` または `invalid` を確認。
+- `task-graph`: task projection の `active`、`runnable`、`invalid`、`idle` を確認。
 
 current node の eligible edge は昇順の `priority`、次に安定した edge ID で並べ、
 最初の 1 つだけ返します。terminal は idempotent な結果、blocked は fail-closed な
-結果であり、遷移先を推測しません。
+結果であり、遷移先を推測しません。`tasks-active` は `tasks-runnable` より優先され、
+新規作業を始める前に eligible な active work を再開します。
 
 ### Delegate と subgraph
 

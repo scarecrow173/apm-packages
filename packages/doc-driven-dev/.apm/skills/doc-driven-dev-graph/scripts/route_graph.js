@@ -20281,7 +20281,7 @@ var graphConditionSchema = external_exports.discriminatedUnion("kind", [
   }).strict(),
   external_exports.object({
     kind: external_exports.literal("task-graph"),
-    state: external_exports.enum(["runnable", "invalid", "idle"])
+    state: external_exports.enum(["runnable", "active", "invalid", "idle"])
   }).strict()
 ]);
 var graphNodeSchema = external_exports.object({
@@ -21126,6 +21126,10 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
     return predecessor?.status === "done";
   })).map((task) => task.id);
   const active = sortedTasks.filter((task) => task.status === "in-progress").map((task) => task.id);
+  const resumableActive = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "in-progress").filter((task) => sortedEdges.filter((edge) => edge.to === task.id).every((edge) => {
+    const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
+    return predecessor?.status === "done";
+  })).map((task) => task.id);
   const completed = sortedTasks.filter((task) => task.status === "done").map((task) => task.id);
   const blocked = sortedTasks.filter((task) => task.status === "blocked" || task.status === "wont-do" || task.status === "todo" && !runnable.includes(task.id)).map((task) => ({
     id: task.id,
@@ -21144,6 +21148,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
     edges: sortedEdges,
     runnable: runnable.sort(compareStrings2),
     active: active.sort(compareStrings2),
+    resumableActive: resumableActive.sort(compareStrings2),
     completed: completed.sort(compareStrings2),
     blocked,
     issues: uniqueIssues
@@ -21360,8 +21365,11 @@ function evaluateCondition(condition, state) {
     return condition.status === "pass" ? state.gates[condition.gate]?.status === "pass" : state.gates[condition.gate]?.status !== "pass";
   }
   if (condition.state === "runnable") return (state.taskGraph?.runnable.length ?? 0) > 0;
+  if (condition.state === "active") {
+    return (state.taskGraph?.issues.length ?? 0) === 0 && (state.taskGraph?.resumableActive.length ?? 0) > 0;
+  }
   if (condition.state === "invalid") return (state.taskGraph?.issues.length ?? 0) > 0;
-  return state.taskGraph !== null && state.taskGraph.runnable.length === 0 && state.taskGraph.issues.length === 0;
+  return state.taskGraph !== null && state.taskGraph.runnable.length === 0 && state.taskGraph.active.length === 0 && state.taskGraph.issues.length === 0;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts

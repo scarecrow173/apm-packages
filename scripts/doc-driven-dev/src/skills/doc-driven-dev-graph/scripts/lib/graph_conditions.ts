@@ -10,8 +10,13 @@ export function evaluateCondition(condition: GraphCondition, state: GraphState):
       : state.gates[condition.gate]?.status !== "pass";
   }
   if (condition.state === "runnable") return (state.taskGraph?.runnable.length ?? 0) > 0;
+  if (condition.state === "active") {
+    return (state.taskGraph?.issues.length ?? 0) === 0
+      && (state.taskGraph?.resumableActive.length ?? 0) > 0;
+  }
   if (condition.state === "invalid") return (state.taskGraph?.issues.length ?? 0) > 0;
   return state.taskGraph !== null
     && state.taskGraph.runnable.length === 0
+    && state.taskGraph.active.length === 0
     && state.taskGraph.issues.length === 0;
 }

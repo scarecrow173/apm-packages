@@ -47,6 +47,12 @@ test("loads the distributed graph definition with declared delegates", () => {
   assert.ok(findEdge(graph, "planning", "planning"));
   assert.ok(findEdge(graph, "exit-audit", "design-not-pass"));
   assert.ok(findEdge(graph, "task-graph", "task-graph-invalid"));
+  const activeEdge = findEdge(graph, "task-graph", "tasks-active");
+  const runnableEdge = findEdge(graph, "task-graph", "tasks-runnable");
+  assert.deepEqual(graph.conditions["tasks-active"], { kind: "task-graph", state: "active" });
+  assert.equal(activeEdge?.id, "task-graph-to-active-implementation");
+  assert.equal(activeEdge?.to, "implementation");
+  assert.ok(activeEdge && runnableEdge && activeEdge.priority < runnableEdge.priority);
 });
 
 test("parses a schema-v2 definition and preserves edge priority", () => {

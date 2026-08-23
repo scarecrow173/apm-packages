@@ -6,7 +6,7 @@ import { z } from "zod";
 export type GraphCondition =
   | { kind: "signal"; signal: string }
   | { kind: "gate"; gate: string; status: "pass" | "not-pass" }
-  | { kind: "task-graph"; state: "runnable" | "invalid" | "idle" };
+  | { kind: "task-graph"; state: "runnable" | "active" | "invalid" | "idle" };
 
 export type GraphNodeId = string;
 export type GraphConditionKey = string;
@@ -45,7 +45,7 @@ const graphConditionSchema = z.discriminatedUnion("kind", [
   }).strict(),
   z.object({
     kind: z.literal("task-graph"),
-    state: z.enum(["runnable", "invalid", "idle"]),
+    state: z.enum(["runnable", "active", "invalid", "idle"]),
   }).strict(),
 ]);
 

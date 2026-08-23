@@ -55,11 +55,14 @@ The condition DSL is generic across graphs:
 
 - `signal` checks a declared caller or derived signal.
 - `gate` checks a named gate with `pass` or `not-pass` status.
-- `task-graph` checks `runnable` or `invalid` task projection state.
+- `task-graph` checks `active`, `runnable`, `invalid`, or `idle` task
+  projection state.
 
 For one current node, eligible edges are sorted by ascending `priority`, then
 stable edge ID. The router returns the first match only. A terminal result is
 idempotent; a blocked result is fail-closed and never guesses a destination.
+`tasks-active` has priority over `tasks-runnable`, resuming eligible active
+work before starting new work.
 
 ### Delegates and subgraphs
 

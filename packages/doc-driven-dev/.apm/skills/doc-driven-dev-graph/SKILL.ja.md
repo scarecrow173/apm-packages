@@ -44,10 +44,18 @@ terminal 結果も edge を持ちません。caller が暗黙の edge や隣接 
 ## Condition DSL と priority
 
 edge は condition key を参照します。汎用 condition DSL は `signal`、`gate`
-（`pass` / `not-pass`）、`task-graph`（`runnable` / `invalid`）predicate を
-サポートします。宣言されていない signal は受け付けません。current node の
-eligible edge は昇順の `priority`、次に安定した edge ID で並べ、最初の 1 つ
-だけを返します。CLI は 2 つ目の edge を再帰的に辿りません。
+（`pass` / `not-pass`）、`task-graph`（`active`、`runnable`、`invalid`、
+`idle`）predicate をサポートします。宣言されていない signal は受け付けません。
+current node の eligible edge は昇順の `priority`、次に安定した edge ID で並べ、
+最初の 1 つだけを返します。CLI は 2 つ目の edge を再帰的に辿りません。
+
+`tasks-active` は、Task Graph に構造上の issue がなく、全 predecessor が
+`done` の `in-progress` task を ID 順に並べた `resumableActive` が 1 件以上
+あることを意味します。active edge は runnable edge より先に評価されるため、
+新規作業を開始する前に既存 task を再開します。route が選ぶ edge は引き続き
+1 件だけで、完全な Task Graph を `implementation-flow` に渡します。delegate は
+安定した task ID と dependency edge に基づき、依存する active task を順序付け、
+独立した作業だけを並列化します。
 
 ## Delegate と subgraph
 

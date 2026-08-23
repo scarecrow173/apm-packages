@@ -209,6 +209,23 @@ the task is mechanical.
 
 ## Phase C: Execute
 
+### Graph handoff contract
+
+When `doc-driven-dev-graph` delegates a Task Graph, treat that projection as
+the authoritative handoff:
+
+- Always fail closed without dispatch when `taskGraph.issues` is non-empty.
+- When `GraphRoute.condition` is `tasks-active`, consume exactly
+  `taskGraph.resumableActive`; fail closed if it is empty, and never start or
+  resume an `active` task absent from that list.
+- When `GraphRoute.condition` is `tasks-runnable`, consume `taskGraph.runnable`
+  even if unresolved active work exists, without changing that active task's ID
+  or status.
+- Preserve stable task IDs and statuses; do not rewrite either to manufacture
+  eligibility.
+- Use `taskGraph.edges` to order dependent work, and parallelize only work that
+  those dependency edges show is independent.
+
 Apply each skill in the active stack according to its priority:
 
 1. Follow each skill's own process (read the skill's SKILL.md).

@@ -20305,7 +20305,7 @@ var graphConditionSchema = external_exports.discriminatedUnion("kind", [
   }).strict(),
   external_exports.object({
     kind: external_exports.literal("task-graph"),
-    state: external_exports.enum(["runnable", "invalid", "idle"])
+    state: external_exports.enum(["runnable", "active", "invalid", "idle"])
   }).strict()
 ]);
 var graphNodeSchema = external_exports.object({
@@ -21244,6 +21244,10 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
     return predecessor?.status === "done";
   })).map((task) => task.id);
   const active = sortedTasks.filter((task) => task.status === "in-progress").map((task) => task.id);
+  const resumableActive = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "in-progress").filter((task) => sortedEdges2.filter((edge) => edge.to === task.id).every((edge) => {
+    const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
+    return predecessor?.status === "done";
+  })).map((task) => task.id);
   const completed = sortedTasks.filter((task) => task.status === "done").map((task) => task.id);
   const blocked = sortedTasks.filter((task) => task.status === "blocked" || task.status === "wont-do" || task.status === "todo" && !runnable.includes(task.id)).map((task) => ({
     id: task.id,
@@ -21262,6 +21266,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
     edges: sortedEdges2,
     runnable: runnable.sort(compareStrings3),
     active: active.sort(compareStrings3),
+    resumableActive: resumableActive.sort(compareStrings3),
     completed: completed.sort(compareStrings3),
     blocked,
     issues: uniqueIssues
