@@ -73,6 +73,48 @@ test("buildTaskGraph unlocks a dependent task only after every predecessor is do
   assert.deepEqual(result.runnable, ["TASK-0003"]);
 });
 
+test("buildTaskGraph projects dependency-ready active tasks without treating downstream waits as blockers", () => {
+  const result = buildFixtureGraph({
+    "TASK-0001": { status: "done", dependsOn: [] },
+    "TASK-0002": { status: "in-progress", dependsOn: ["TASK-0001"] },
+    "TASK-0003": { status: "todo", dependsOn: ["TASK-0002"] },
+    "TASK-0004": { status: "blocked", dependsOn: [] },
+  });
+
+  assert.deepEqual(result.active, ["TASK-0002"]);
+  assert.deepEqual(result.resumableActive, ["TASK-0002"]);
+  assert.deepEqual(result.blocked, [
+    { id: "TASK-0003", reasons: ["depends-on:TASK-0002"] },
+    { id: "TASK-0004", reasons: ["status:blocked"] },
+  ]);
+});
+
+test("buildTaskGraph keeps unresolved active tasks active but not resumable", () => {
+  const result = buildFixtureGraph({
+    "TASK-0001": { status: "todo", dependsOn: [] },
+    "TASK-0002": { status: "in-progress", dependsOn: ["TASK-0001"] },
+  });
+
+  assert.deepEqual(result.active, ["TASK-0002"]);
+  assert.deepEqual(result.resumableActive, []);
+});
+
+test("buildTaskGraph sorts multiple resumable active tasks and suppresses them on structural issues", () => {
+  const valid = buildFixtureGraph({
+    "TASK-0003": { status: "in-progress", dependsOn: [] },
+    "TASK-0001": { status: "in-progress", dependsOn: [] },
+    "TASK-0002": { status: "done", dependsOn: [] },
+  });
+  assert.deepEqual(valid.resumableActive, ["TASK-0001", "TASK-0003"]);
+
+  const invalid = buildFixtureGraph({
+    "TASK-0001": { status: "in-progress", dependsOn: ["TASK-9999"] },
+  });
+  assert.deepEqual(invalid.active, ["TASK-0001"]);
+  assert.deepEqual(invalid.resumableActive, []);
+  assert.deepEqual(invalid.issues.map((issue) => issue.code), ["missing-task-reference"]);
+});
+
 test("buildTaskGraph keeps dependents blocked when a predecessor is wont-do", () => {
   const result = buildFixtureGraph({
     "TASK-0001": { status: "wont-do", dependsOn: [] },
