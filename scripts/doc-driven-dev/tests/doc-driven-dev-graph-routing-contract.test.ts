@@ -145,6 +145,32 @@ test("prioritizes resumable active tasks over runnable tasks with one route edge
   assert.equal(decision.explanation.evaluatedEdges.filter((edge) => edge.matched).length, 1);
 });
 
+test("does not resume an active task when the task graph is invalid", () => {
+  const definition = graphDefinition();
+  const state = stateFor(fixtureRepo(
+    ["in-progress", "in-progress"],
+    [["TASK-0002"], ["TASK-0001"]],
+  ));
+  const route = routeGraph({ current: "task-graph", definition, state });
+
+  assert.ok((state.taskGraph?.issues.length ?? 0) > 0);
+  assert.deepEqual(route.taskGraph?.resumableActive, []);
+  assert.equal(route.edgeId, "task-graph-to-planning");
+  assert.notEqual(route.edgeId, "task-graph-to-active-implementation");
+});
+
+test("resumes an active task alongside an unrelated blocked task", () => {
+  const definition = graphDefinition();
+  const state = stateFor(fixtureRepo(["in-progress", "blocked"], [[], []]));
+  const route = routeGraph({ current: "task-graph", definition, state });
+
+  assert.equal(route.edgeId, "task-graph-to-active-implementation");
+  assert.deepEqual(route.taskGraph?.resumableActive, ["TASK-0001"]);
+  assert.deepEqual(route.taskGraph?.blocked, [
+    { id: "TASK-0002", reasons: ["status:blocked"] },
+  ]);
+});
+
 test("passes sorted active tasks and dependency edges while only ready active tasks are resumable", () => {
   const definition = graphDefinition();
   const state = stateFor(fixtureRepo(
