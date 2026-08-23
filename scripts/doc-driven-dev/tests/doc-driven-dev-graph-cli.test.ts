@@ -283,6 +283,35 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       next: "planning",
     },
     {
+      name: "resumable active task graph",
+      setup: () => ({
+        repo: completeRepo(["done", "in-progress"], [[], ["TASK-0001"]]),
+        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+      }),
+      edgeId: "task-graph-to-active-implementation",
+      next: "implementation",
+      assertRoute: (route) => {
+        const taskGraph = route.taskGraph as { active: string[]; resumableActive: string[] };
+        assert.deepEqual(taskGraph.active, ["TASK-0002"]);
+        assert.deepEqual(taskGraph.resumableActive, ["TASK-0002"]);
+      },
+    },
+    {
+      name: "active task takes priority over runnable task",
+      setup: () => ({
+        repo: completeRepo(["in-progress", "todo"]),
+        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+      }),
+      edgeId: "task-graph-to-active-implementation",
+      next: "implementation",
+      assertRoute: (route) => {
+        const taskGraph = route.taskGraph as { active: string[]; resumableActive: string[]; runnable: string[] };
+        assert.deepEqual(taskGraph.active, ["TASK-0001"]);
+        assert.deepEqual(taskGraph.resumableActive, ["TASK-0001"]);
+        assert.deepEqual(taskGraph.runnable, ["TASK-0002"]);
+      },
+    },
+    {
       name: "runnable task graph",
       setup: () => ({
         repo: completeRepo(["todo"]),

@@ -11,6 +11,7 @@ conditions:
   constraint-gap: { kind: signal, signal: constraint-gap }
   task-graph-invalid: { kind: task-graph, state: invalid }
   task-graph-retry: { kind: signal, signal: task-graph-retry }
+  tasks-active: { kind: task-graph, state: active }
   tasks-runnable: { kind: task-graph, state: runnable }
   followups-unclassified: { kind: signal, signal: followups-unclassified }
   followup-bug-fix: { kind: signal, signal: followup-bug-fix }
@@ -62,7 +63,8 @@ edges:
   - { id: planning-to-task-graph, from: planning, to: task-graph, when: planning, priority: 30 }
   - { id: task-graph-to-planning, from: task-graph, to: planning, when: task-graph-invalid, priority: 10 }
   - { id: task-graph-retry, from: task-graph, to: task-graph, when: task-graph-retry, priority: 20 }
-  - { id: task-graph-to-implementation, from: task-graph, to: implementation, when: tasks-runnable, priority: 30 }
+  - { id: task-graph-to-active-implementation, from: task-graph, to: implementation, when: tasks-active, priority: 30 }
+  - { id: task-graph-to-implementation, from: task-graph, to: implementation, when: tasks-runnable, priority: 40 }
   - { id: implementation-retry, from: implementation, to: implementation, when: implementation-not-pass, priority: 10 }
   - { id: implementation-to-briefing, from: implementation, to: briefing, when: spec-gap, priority: 20 }
   - { id: implementation-to-design, from: implementation, to: design, when: design-gap, priority: 30 }
