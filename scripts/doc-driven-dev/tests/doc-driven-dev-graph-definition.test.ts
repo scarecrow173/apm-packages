@@ -13,6 +13,7 @@ entry: probe
 conditions:
   focus-required: { kind: signal, signal: focus-required }
   bootstrap-pass: { kind: gate, gate: bootstrap, status: pass }
+  tasks-active: { kind: task-graph, state: active }
   tasks-runnable: { kind: task-graph, state: runnable }
 nodes:
   probe: { kind: action }
@@ -83,6 +84,7 @@ test("parses a schema-v2 graph definition with declared conditions", () => {
   assert.equal(definition.entry, "probe");
   assert.deepEqual(definition.runtimeSignals, []);
   assert.equal(definition.conditions["focus-required"].kind, "signal");
+  assert.deepEqual(definition.conditions["tasks-active"], { kind: "task-graph", state: "active" });
   assert.equal(definition.edges[0].priority, 10);
 });
 

@@ -142,6 +142,7 @@ test("returns terminal status when re-entering a terminal node", () => {
     edges: [],
     runnable: [],
     active: [],
+    resumableActive: [],
     completed: [],
     blocked: [],
     issues: [],
@@ -259,8 +260,9 @@ test("evaluates signal and gate conditions, including gate not-pass", () => {
   assert.equal(evaluateCondition(pass, stateWith({ gates: { briefing: { status: "blocked", reasons: ["pending"] } } })), false);
 });
 
-test("evaluates runnable, invalid, and idle task-graph conditions", () => {
+test("evaluates runnable, active, invalid, and idle task-graph conditions", () => {
   const runnable: GraphCondition = { kind: "task-graph", state: "runnable" };
+  const active: GraphCondition = { kind: "task-graph", state: "active" };
   const invalid: GraphCondition = { kind: "task-graph", state: "invalid" };
   const idle: GraphCondition = { kind: "task-graph", state: "idle" };
   const taskGraph = (overrides: Record<string, unknown> = {}): NonNullable<GraphState["taskGraph"]> => ({
@@ -270,6 +272,7 @@ test("evaluates runnable, invalid, and idle task-graph conditions", () => {
     edges: [],
     runnable: [],
     active: [],
+    resumableActive: [],
     completed: [],
     blocked: [],
     issues: [],
@@ -278,10 +281,16 @@ test("evaluates runnable, invalid, and idle task-graph conditions", () => {
 
   assert.equal(evaluateCondition(runnable, stateWith({ taskGraph: taskGraph({ runnable: ["TASK-1"] }) })), true);
   assert.equal(evaluateCondition(runnable, stateWith({ taskGraph: null })), false);
+  assert.equal(evaluateCondition(active, stateWith({ taskGraph: taskGraph({ resumableActive: ["TASK-1"] }) })), true);
+  assert.equal(evaluateCondition(active, stateWith({ taskGraph: taskGraph({ active: ["TASK-1"] }) })), false);
+  assert.equal(evaluateCondition(active, stateWith({ taskGraph: taskGraph({ resumableActive: ["TASK-1"], issues: [{ code: "task-cycle" }] }) })), false);
   assert.equal(evaluateCondition(invalid, stateWith({ taskGraph: taskGraph({ issues: [{ code: "task-cycle" }] }) })), true);
   assert.equal(evaluateCondition(invalid, stateWith({ taskGraph: taskGraph() })), false);
   assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph() })), true);
+  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ active: ["TASK-1"] }) })), false);
   assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ runnable: ["TASK-1"] }) })), false);
+  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ issues: [{ code: "task-cycle" }] }) })), false);
+  assert.equal(evaluateCondition(active, stateWith({ taskGraph: null })), false);
   assert.equal(evaluateCondition(idle, stateWith({ taskGraph: null })), false);
 });
 
