@@ -28,9 +28,12 @@ type YieldReason =
   | "terminal"
   | "single-step-complete";
 
+type ScenarioMode = "single-step" | "run-until-yield";
+
 type ScenarioStep = {
   expectEdge: string | null;
   applyEvidence?: (repo: string, signals: Set<string>) => void;
+  audit?: (repo: string, signals: Set<string>, route: GraphRoute, audit: string) => YieldReason | void;
   delegate?: (repo: string, signals: Set<string>, route: GraphRoute) => YieldReason | void;
   yield?: YieldReason;
   observeOnly?: boolean;
@@ -43,8 +46,19 @@ type PendingEdge = {
   evidenceRecorded: boolean;
 };
 
+type EdgeTrace = {
+  route: GraphRoute;
+  completedAudits: string[];
+  delegate: string | null;
+  delegateComplete: boolean;
+  evidenceRecorded: boolean;
+  checkpointComplete: boolean;
+};
+
 type ScenarioHandoff = {
   current: string;
+  mode: ScenarioMode;
+  maxHops: number;
   focus: string[];
   signals: string[];
   graphPath: string;
@@ -54,6 +68,7 @@ type ScenarioHandoff = {
   auditCounts: Record<string, number>;
   delegateCounts: Record<string, number>;
   checkpoints: GraphRoute[];
+  edgeTrace: EdgeTrace[];
   pending: PendingEdge | null;
   hops: number;
 };
@@ -61,7 +76,7 @@ type ScenarioHandoff = {
 type ScenarioOptions = {
   repo: string;
   current: string;
-  mode: "single-step" | "run-until-yield";
+  mode: ScenarioMode;
   steps: ScenarioStep[];
   maxHops?: number;
   focus?: string[];
@@ -116,6 +131,55 @@ function updateArtifact(repo: string, relativePath: string, data: Record<string,
   fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, ...data }), "utf8");
 }
 
+type ProofStage = string;
+
+function proofFile(repo: string): string {
+  return path.join(repo, "docs/tasks/0001-task.md");
+}
+
+function proofMap(repo: string): Record<string, Record<string, boolean | number>> {
+  const parsed = matter(fs.readFileSync(proofFile(repo), "utf8"));
+  return (parsed.data.callerProofs && typeof parsed.data.callerProofs === "object")
+    ? parsed.data.callerProofs as Record<string, Record<string, boolean | number>>
+    : {};
+}
+
+function hasProof(repo: string, edgeId: string, stage: ProofStage): boolean {
+  return proofMap(repo)[edgeId]?.[stage] === true;
+}
+
+function proofRevision(repo: string, edgeId: string): number {
+  const value = proofMap(repo)[edgeId]?.revision;
+  return typeof value === "number" ? value : 0;
+}
+
+function routeProofStage(stage: ProofStage, route: GraphRoute): ProofStage {
+  return `${stage}:${JSON.stringify(route)}`;
+}
+
+function hasRouteProof(repo: string, route: GraphRoute, stage: ProofStage): boolean {
+  return hasProof(repo, route.edgeId as string, routeProofStage(stage, route));
+}
+
+function persistProof(repo: string, edgeId: string, stage: ProofStage): void {
+  const file = proofFile(repo);
+  const parsed = matter(fs.readFileSync(file, "utf8"));
+  const callerProofs = proofMap(repo);
+  callerProofs[edgeId] = { ...(callerProofs[edgeId] ?? {}), [stage]: true };
+  callerProofs[edgeId].revision = proofRevision(repo, edgeId) + 1;
+  fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, callerProofs }), "utf8");
+}
+
+function evidence(
+  edgeId: string,
+  mutate?: (repo: string, signals: Set<string>) => void,
+): (repo: string, signals: Set<string>) => void {
+  return (repo, signals) => {
+    mutate?.(repo, signals);
+    persistProof(repo, edgeId, "evidence");
+  };
+}
+
 function fixtureRepo(options: {
   taskStatuses?: TaskStatus[];
   dependsOn?: string[][];
@@ -167,8 +231,19 @@ function addTask(repo: string, index: number, status: TaskStatus = "todo"): void
   }, "# Task\n\n## Verification\n\n- [ ] node --test\n");
 }
 
+function traceKey(route: GraphRoute): string {
+  return `${route.current}\u0000${route.edgeId ?? route.condition}`;
+}
+
+function upsertTrace(traces: EdgeTrace[], trace: EdgeTrace): void {
+  const index = traces.findIndex((candidate) => traceKey(candidate.route) === traceKey(trace));
+  if (index < 0) traces.push(trace);
+  else traces[index] = trace;
+}
+
 function runScenario(options: ScenarioOptions): ScenarioResult {
-  const maxHops = options.maxHops ?? 10;
+  const mode = options.resume?.mode ?? options.mode;
+  const maxHops = options.resume?.maxHops ?? options.maxHops ?? 10;
   const graphPath = options.graphPath ?? options.resume?.graphPath ?? canonicalGraphPath;
   const definition = loadGraphDefinition(graphPath);
   const focus = options.focus ?? options.resume?.focus ?? ["PLAN-0001"];
@@ -178,6 +253,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
   const routes: GraphRoute[] = [];
   const checkpoints = [...(options.resume?.checkpoints ?? [])];
   const completedEdges = [...(options.resume?.completedEdges ?? [])];
+  const edgeTrace = [...(options.resume?.edgeTrace ?? [])];
   const seenRouteFingerprints = new Set(options.resume?.seenRouteFingerprints ?? []);
   const selfLoopCounts = { ...(options.resume?.selfLoopCounts ?? {}) };
   const auditCounts = { ...(options.resume?.auditCounts ?? {}) };
@@ -200,6 +276,30 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       signals: [...signals],
     });
   };
+  const expectYield = (step: ScenarioStep, reason: YieldReason) => {
+    if (step.yield) assert.equal(step.yield, reason);
+  };
+  const savePending = (
+    route: GraphRoute,
+    completedAudits: Set<string>,
+    delegateComplete: boolean,
+    evidenceRecorded: boolean,
+  ) => {
+    pending = {
+      route,
+      completedAudits: [...completedAudits].sort(),
+      delegateComplete,
+      evidenceRecorded,
+    };
+    upsertTrace(edgeTrace, {
+      route,
+      completedAudits: [...completedAudits].sort(),
+      delegate: route.delegate,
+      delegateComplete,
+      evidenceRecorded,
+      checkpointComplete: false,
+    });
+  };
 
   let state = project();
   let yieldReason: YieldReason | null = null;
@@ -217,45 +317,72 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
 
     if (route.status === "terminal") {
       yieldReason = "terminal";
-      if (step.yield) assert.equal(step.yield, yieldReason);
+      expectYield(step, yieldReason);
       break;
     }
     if (route.status === "blocked") {
       yieldReason = route.blockers.includes("focus-required") || route.blockers.includes("focus-invalid")
         ? "input-required"
         : "unrecoverable-blocker";
-      if (step.yield) assert.equal(step.yield, yieldReason);
+      expectYield(step, yieldReason);
       break;
     }
 
     const fingerprint = JSON.stringify(route);
     if (route.edgeId && route.current === route.next && (selfLoopCounts[route.edgeId] ?? 0) >= 1) {
       yieldReason = "budget-exhausted";
+      expectYield(step, yieldReason);
       break;
     }
     if (seenRouteFingerprints.has(fingerprint)) {
       yieldReason = "budget-exhausted";
+      expectYield(step, yieldReason);
       break;
     }
     if (step.observeOnly) {
-      pending = {
-        route,
-        completedAudits: [],
-        delegateComplete: false,
-        evidenceRecorded: false,
-      };
+      savePending(route, new Set(), false, false);
       break;
     }
 
     const resumingPending = pending?.route.edgeId === route.edgeId && pending.route.current === route.current
       ? pending
       : null;
+    if (resumingPending) {
+      const claimedAudits = new Set(resumingPending.completedAudits);
+      const unverifiedAudit = [...claimedAudits].some((audit) => (
+        !route.requiredAudits.includes(audit) || !hasRouteProof(options.repo, route, `audit:${audit}`)
+      ));
+      const unverifiedDelegate = resumingPending.delegateComplete && (
+        !route.delegate || !hasRouteProof(options.repo, route, "delegate")
+      );
+      const unverifiedEvidence = resumingPending.evidenceRecorded
+        && !hasRouteProof(options.repo, route, "evidence");
+      if (unverifiedAudit || unverifiedDelegate || unverifiedEvidence) {
+        yieldReason = "authority-required";
+        expectYield(step, yieldReason);
+        break;
+      }
+    }
+
     const completedAudits = new Set(resumingPending?.completedAudits ?? []);
+    let stageYield: YieldReason | undefined;
     for (const audit of route.requiredAudits) {
       if (completedAudits.has(audit)) continue;
       events.push(`audit:${audit}`);
+      const effectYield = step.audit?.(options.repo, signals, route, audit);
+      if (effectYield) {
+        stageYield = effectYield;
+        break;
+      }
+      persistProof(options.repo, route.edgeId as string, routeProofStage(`audit:${audit}`, route));
       completedAudits.add(audit);
       auditCounts[audit] = (auditCounts[audit] ?? 0) + 1;
+    }
+    if (stageYield) {
+      yieldReason = stageYield;
+      savePending(route, completedAudits, false, false);
+      expectYield(step, yieldReason);
+      break;
     }
 
     let delegateComplete = resumingPending?.delegateComplete ?? false;
@@ -264,20 +391,35 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       const effectYield = step.delegate?.(options.repo, signals, route);
       if (effectYield) {
         yieldReason = effectYield;
-        pending = {
-          route,
-          completedAudits: [...completedAudits],
-          delegateComplete: false,
-          evidenceRecorded: false,
-        };
-        assert.equal(step.yield, effectYield);
+        savePending(route, completedAudits, false, false);
+        expectYield(step, yieldReason);
         break;
       }
+      persistProof(options.repo, route.edgeId as string, routeProofStage("delegate", route));
       delegateCounts[route.delegate] = (delegateCounts[route.delegate] ?? 0) + 1;
       delegateComplete = true;
     }
 
-    step.applyEvidence?.(options.repo, signals);
+    let evidenceRecorded = resumingPending?.evidenceRecorded ?? false;
+    if (!evidenceRecorded) {
+      if (!step.applyEvidence) {
+        yieldReason = "authority-required";
+        savePending(route, completedAudits, delegateComplete, false);
+        expectYield(step, yieldReason);
+        break;
+      }
+      const revisionBeforeEvidence = proofRevision(options.repo, route.edgeId as string);
+      step.applyEvidence(options.repo, signals);
+      evidenceRecorded = hasProof(options.repo, route.edgeId as string, "evidence")
+        && proofRevision(options.repo, route.edgeId as string) > revisionBeforeEvidence;
+      if (!evidenceRecorded) {
+        yieldReason = "authority-required";
+        savePending(route, completedAudits, delegateComplete, false);
+        expectYield(step, yieldReason);
+        break;
+      }
+      persistProof(options.repo, route.edgeId as string, routeProofStage("evidence", route));
+    }
     events.push(`evidence:${route.edgeId}`);
     pending = null;
     checkpoints.push(route);
@@ -286,12 +428,20 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     if (route.current === route.next) {
       selfLoopCounts[route.edgeId as string] = (selfLoopCounts[route.edgeId as string] ?? 0) + 1;
     }
+    upsertTrace(edgeTrace, {
+      route,
+      completedAudits: [...completedAudits].sort(),
+      delegate: route.delegate,
+      delegateComplete,
+      evidenceRecorded: true,
+      checkpointComplete: true,
+    });
     hops += 1;
     current = route.next;
 
-    if (options.mode === "single-step") {
+    if (mode === "single-step") {
       yieldReason = "single-step-complete";
-      if (step.yield) assert.equal(step.yield, yieldReason);
+      expectYield(step, yieldReason);
       break;
     }
     if (index + 1 < options.steps.length) {
@@ -302,6 +452,8 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
 
   const handoff: ScenarioHandoff = {
     current,
+    mode,
+    maxHops,
     focus: [...focus],
     signals: [...signals].sort(),
     graphPath,
@@ -311,6 +463,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     auditCounts,
     delegateCounts,
     checkpoints,
+    edgeTrace,
     pending,
     hops,
   };
@@ -373,10 +526,10 @@ test("runs the fully automatic canonical path with fresh projection between chec
     current: "probe",
     mode: "run-until-yield",
     steps: [
-      { expectEdge: "probe-to-briefing" },
-      { expectEdge: "briefing-to-design" },
-      { expectEdge: "design-to-planning" },
-      { expectEdge: "planning-to-task-graph" },
+      { expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") },
+      { expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") },
+      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning") },
+      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -418,7 +571,7 @@ test("yields approval exactly once before design evidence is written", () => {
     resume: blocked.handoff,
     steps: [{
       expectEdge: "briefing-to-design",
-      applyEvidence: () => { evidenceCalls += 1; },
+      applyEvidence: evidence("briefing-to-design", () => { evidenceCalls += 1; }),
     }],
   });
   assert.equal(resumed.yieldReason, null);
@@ -426,7 +579,7 @@ test("yields approval exactly once before design evidence is written", () => {
   assert.equal(resumed.current, "design");
   assert.equal(blocked.auditCounts.design, 1);
   assert.equal(resumed.auditCounts.design, 1);
-  assert.equal(resumed.delegateCounts["design-doc"], 1);
+  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, proofs: proofMap(repo) }));
 });
 
 test("focus input yield leaves the next route and effects untouched", () => {
@@ -455,19 +608,19 @@ test("resume after a completed edge starts at its recorded next node", () => {
     repo,
     current: "probe",
     mode: "run-until-yield",
-    steps: [{ expectEdge: "probe-to-briefing" }],
+    steps: [{ expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") }],
   });
   const resumed = runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
     resume: first.handoff,
-    steps: [{ expectEdge: "briefing-to-design" }],
+    steps: [{ expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") }],
   });
   assert.equal(first.current, "briefing");
   assert.equal(resumed.routes[0].current, "briefing");
   assert.equal(resumed.routes[0].edgeId, "briefing-to-design");
-  assert.equal(resumed.delegateCounts["briefing-flow"], 1);
+  assert.equal(resumed.delegateCounts["design-doc"], 1);
 });
 
 test("resume after audit-complete delegate-pending does not repeat the audit", () => {
@@ -489,10 +642,11 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
     current: "briefing",
     mode: "run-until-yield",
     resume: first.handoff,
-    steps: [{ expectEdge: "briefing-to-design" }],
+    steps: [{ expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") }],
   });
+  assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.auditCounts.design, 1);
-  assert.equal(resumed.delegateCounts["design-doc"], 1);
+  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, proofs: proofMap(repo) }));
   assert.equal(resumed.checkpoints.length, 1);
 });
 
@@ -505,13 +659,13 @@ test("continues implementation retry only after re-projection", () => {
     steps: [
       {
         expectEdge: "implementation-retry",
-        applyEvidence: (fixture, signals) => {
+        applyEvidence: evidence("implementation-retry", (fixture, signals) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
           signals.add("implementation-verified");
           signals.add("followup-terminal");
-        },
+        }),
       },
-      { expectEdge: "implementation-to-followup-triage" },
+      { expectEdge: "implementation-to-followup-triage", applyEvidence: evidence("implementation-to-followup-triage") },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -529,8 +683,8 @@ test("continues implementation-to-design and then design-to-planning", () => {
     mode: "run-until-yield",
     signals: ["implementation-verified", "design-gap"],
     steps: [
-      { expectEdge: "implementation-to-design", applyEvidence: (_repo, signals) => signals.delete("design-gap") },
-      { expectEdge: "design-to-planning" },
+      { expectEdge: "implementation-to-design", applyEvidence: evidence("implementation-to-design", (_repo, signals) => signals.delete("design-gap")) },
+      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning") },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -552,12 +706,12 @@ test("repairs an invalid task graph before returning to task-graph", () => {
     steps: [
       {
         expectEdge: "task-graph-to-planning",
-        applyEvidence: (fixture) => updateArtifact(fixture, "docs/tasks/0002-task.md", {
+        applyEvidence: evidence("task-graph-to-planning", (fixture) => updateArtifact(fixture, "docs/tasks/0002-task.md", {
           status: "todo",
           relations: { implements: ["docs/plans/0001-graph.md"] },
-        }),
+        })),
       },
-      { expectEdge: "planning-to-task-graph" },
+      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -574,7 +728,7 @@ test("routes completed implementation work to follow-up triage", () => {
     current: "implementation",
     mode: "run-until-yield",
     signals: ["implementation-verified", "followup-terminal"],
-    steps: [{ expectEdge: "implementation-to-followup-triage" }],
+    steps: [{ expectEdge: "implementation-to-followup-triage", applyEvidence: evidence("implementation-to-followup-triage") }],
   });
   assert.equal(result.routes[0].edgeId, "implementation-to-followup-triage");
   assert.equal(result.checkpoints.length, 1);
@@ -587,7 +741,7 @@ test("allows one completed self-loop then yields budget-exhausted", () => {
     current: "implementation",
     mode: "run-until-yield",
     steps: [
-      { expectEdge: "implementation-retry" },
+      { expectEdge: "implementation-retry", applyEvidence: evidence("implementation-retry") },
       { expectEdge: "implementation-retry", yield: "budget-exhausted" },
     ],
   });
@@ -600,7 +754,7 @@ test("bounds a changing multi-node repair cycle at maxHops", () => {
   const repo = fixtureRepo();
   const steps: ScenarioStep[] = Array.from({ length: 12 }, (_, index) => ({
     expectEdge: index % 2 === 0 ? "design-to-briefing" : "briefing-to-design",
-    applyEvidence: (fixture) => addTask(fixture, index + 2),
+    applyEvidence: evidence(index % 2 === 0 ? "design-to-briefing" : "briefing-to-design", (fixture) => addTask(fixture, index + 2)),
   }));
   const result = runScenario({
     repo,
@@ -625,8 +779,8 @@ test("stops on a repeated complete GraphRoute fingerprint", () => {
     mode: "run-until-yield",
     signals: ["advance"],
     steps: [
-      { expectEdge: "cycle-a" },
-      { expectEdge: "cycle-b" },
+      { expectEdge: "cycle-a", applyEvidence: evidence("cycle-a") },
+      { expectEdge: "cycle-b", applyEvidence: evidence("cycle-b") },
       { expectEdge: "cycle-a", yield: "budget-exhausted" },
     ],
   });
@@ -718,7 +872,7 @@ test("single-step completes exactly one checkpoint", () => {
     current: "probe",
     mode: "single-step",
     steps: [
-      { expectEdge: "probe-to-briefing" },
+      { expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") },
       { expectEdge: "briefing-to-design" },
     ],
   });
@@ -737,7 +891,7 @@ test("preserves deterministic evidence ordering and full-route fingerprints", ()
     mode: "run-until-yield",
     signals: ["advance"],
     steps: [
-      { expectEdge: "edge-a" },
+      { expectEdge: "edge-a", applyEvidence: evidence("edge-a") },
       { expectEdge: "edge-b", observeOnly: true },
     ],
   });
@@ -755,9 +909,104 @@ test("preserves deterministic evidence ordering and full-route fingerprints", ()
     mode: "run-until-yield",
     signals: ["advance"],
     steps: [
-      { expectEdge: "edge-a" },
+      { expectEdge: "edge-a", applyEvidence: evidence("edge-a") },
       { expectEdge: "edge-b", observeOnly: true },
     ],
   });
   assert.deepEqual(second.routes, first.routes);
+});
+
+test("does not trust an unverified delegate-complete resume claim", () => {
+  const repo = fixtureRepo();
+  const interrupted = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "briefing-to-design",
+      yield: "authority-required",
+      delegate: () => "authority-required",
+    }],
+  });
+  const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
+  forged.pending!.delegateComplete = true;
+  const resumed = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    resume: forged,
+    steps: [{ expectEdge: "briefing-to-design", yield: "authority-required" }],
+  });
+  assert.equal(resumed.yieldReason, "authority-required");
+  assert.equal(resumed.checkpoints.length, 0);
+});
+
+test("does not complete an edge when its evidence callback leaves no canonical proof", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "probe",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "probe-to-briefing",
+      yield: "authority-required",
+      applyEvidence: (fixture) => updateArtifact(fixture, "docs/tasks/0001-task.md", { title: "changed-without-proof" }),
+    }],
+  });
+  assert.equal(result.yieldReason, "authority-required");
+  assert.equal(result.checkpoints.length, 0);
+  assert.equal(result.handoff.pending?.evidenceRecorded, false);
+});
+
+test("audit effects can yield and resume without repeating completed audits", () => {
+  const repo = fixtureRepo();
+  let auditCalls = 0;
+  const interrupted = runScenario({
+    repo,
+    current: "probe",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "probe-to-briefing",
+      yield: "approval-required",
+      audit: () => {
+        auditCalls += 1;
+        return auditCalls === 2 ? "approval-required" : undefined;
+      },
+    }],
+  });
+  assert.equal(interrupted.yieldReason, "approval-required");
+  assert.equal(interrupted.auditCounts.adr, 1);
+  assert.equal(interrupted.auditCounts.spec, undefined);
+  assert.deepEqual(interrupted.handoff.pending?.completedAudits, ["adr"]);
+
+  const resumed = runScenario({
+    repo,
+    current: "probe",
+    mode: "run-until-yield",
+    resume: interrupted.handoff,
+    steps: [{ expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") }],
+  });
+  assert.equal(resumed.yieldReason, null);
+  assert.equal(resumed.auditCounts.adr, 1);
+  assert.equal(resumed.auditCounts.spec, 1);
+  assert.equal(resumed.checkpoints.length, 1);
+});
+
+test("handoff records caller mode, hop bound, and per-edge completion trace", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "probe",
+    mode: "single-step",
+    maxHops: 4,
+    steps: [{ expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") }],
+  });
+  assert.equal(result.handoff.mode, "single-step");
+  assert.equal(result.handoff.maxHops, 4);
+  assert.equal(result.handoff.edgeTrace.length, 1);
+  assert.deepEqual(result.handoff.edgeTrace[0].completedAudits, ["adr", "spec"]);
+  assert.equal(result.handoff.edgeTrace[0].delegate, "briefing-flow");
+  assert.equal(result.handoff.edgeTrace[0].delegateComplete, true);
+  assert.equal(result.handoff.edgeTrace[0].evidenceRecorded, true);
+  assert.equal(result.handoff.edgeTrace[0].checkpointComplete, true);
 });
