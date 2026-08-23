@@ -218,18 +218,8 @@ function authoritativeInputs(repo: string, route: GraphRoute): CanonicalReferenc
   return [...new Set(paths)].sort().map((relativePath) => canonicalReference(repo, relativePath));
 }
 
-function evidenceReference(
-  repo: string,
-  route: GraphRoute,
-  stage: EffectOutcome["stage"],
-  effect: EffectIdentity,
-): CanonicalReference {
-  const input = authoritativeInputs(repo, route);
-  return {
-    path: proofRelativePath,
-    id: `OUTCOME:${route.edgeId}:${stage}:${effect.id}`,
-    fingerprint: fingerprint(JSON.stringify({ edgeId: route.edgeId, stage, effect, input })),
-  };
+function evidenceReference(repo: string): CanonicalReference {
+  return canonicalReference(repo, proofRelativePath);
 }
 
 function completedOutcome(
@@ -239,7 +229,7 @@ function completedOutcome(
   effect: EffectIdentity,
   providerIdempotency?: { provider: string; key: string },
 ): CompletedEffectOutcome {
-  const evidence = evidenceReference(repo, route, stage, effect);
+  const evidence = evidenceReference(repo);
   return {
     status: "completed",
     edgeId: route.edgeId as string,
@@ -264,7 +254,7 @@ function yieldOutcome(
     stage,
     effect,
     authoritativeInputs: authoritativeInputs(repo, route),
-    evidence: [evidenceReference(repo, route, stage, effect)],
+    evidence: [evidenceReference(repo)],
     reason,
   };
 }
@@ -282,7 +272,7 @@ function retryOutcome(
     stage,
     effect,
     authoritativeInputs: authoritativeInputs(repo, route),
-    evidence: [evidenceReference(repo, route, stage, effect)],
+    evidence: [evidenceReference(repo)],
     retry: { changedEvidence },
   };
 }
@@ -347,6 +337,19 @@ function hasStoredOutcome(repo: string, outcome: EffectOutcome): boolean {
   return storedOutcomes(repo).some((stored) => JSON.stringify(stored) === JSON.stringify(outcome));
 }
 
+function canonicalEvidenceMatches(repo: string, evidence: CanonicalReference): boolean {
+  if (path.isAbsolute(evidence.path)) return false;
+  const resolved = path.resolve(repo, evidence.path);
+  const relative = path.relative(repo, resolved);
+  if (relative.startsWith("..") || path.isAbsolute(relative) || !fs.existsSync(resolved)) return false;
+  try {
+    const current = canonicalReference(repo, evidence.path);
+    return current.id === evidence.id && current.fingerprint === evidence.fingerprint;
+  } catch {
+    return false;
+  }
+}
+
 type EvidenceReceipt = { edgeId: string; evidence: CanonicalReference };
 
 function evidenceReceipts(repo: string): EvidenceReceipt[] {
@@ -379,7 +382,11 @@ function isReusableCompletedOutcome(repo: string, route: GraphRoute, outcome: Ef
   } catch {
     return false;
   }
-  return hasStoredOutcome(repo, outcome);
+  if (!hasStoredOutcome(repo, outcome)) return false;
+  const proof = outcome.proof;
+  return proof?.providerIdempotency !== undefined
+    || (isCanonicalReference(proof?.canonicalEvidence)
+      && canonicalEvidenceMatches(repo, proof.canonicalEvidence));
 }
 
 function evaluateEffectOutcome(outcome: EffectOutcome): EffectYieldReason | "retry" | null {
@@ -1346,6 +1353,47 @@ test("does not trust an audit receipt absent from canonical evidence", () => {
       expectEdge: "probe-to-briefing",
       yield: "authority-required",
       applyEvidence: evidence("probe-to-briefing"),
+    }],
+  });
+  assert.equal(resumed.yieldReason, "authority-required");
+  assert.equal(resumed.checkpoints.length, 0);
+});
+
+test("does not reuse persisted canonical evidence after its content changes", () => {
+  const repo = fixtureRepo();
+  const interrupted = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "briefing-to-design",
+      yield: "authority-required",
+      delegate: (fixture, _signals, route) => {
+        const canonicalEvidence = canonicalReference(fixture, "docs/designs/0001-graph.md");
+        return {
+          ...completedOutcome(
+            fixture,
+            route,
+            "delegate",
+            { kind: "delegate", id: route.delegate as string },
+          ),
+          evidence: [canonicalEvidence],
+          proof: { canonicalEvidence },
+        };
+      },
+    }],
+  });
+  updateArtifact(repo, "docs/designs/0001-graph.md", { title: "Changed Graph" });
+
+  const resumed = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    resume: interrupted.handoff,
+    steps: [{
+      expectEdge: "briefing-to-design",
+      yield: "authority-required",
+      applyEvidence: evidence("briefing-to-design"),
     }],
   });
   assert.equal(resumed.yieldReason, "authority-required");
