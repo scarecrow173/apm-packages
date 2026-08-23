@@ -1,7 +1,7 @@
 ---
 id: "IMPL-0001"
 type: "impl"
-status: "in-progress"
+status: "completed"
 title: "Project resumable active tasks"
 created: "2026-08-23"
 updated: "2026-08-23"
@@ -10,7 +10,9 @@ relations:
   source: []
   changes:
     added: []
-    modified: []
+    modified:
+      - "scripts/doc-driven-dev/src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts"
+      - "scripts/doc-driven-dev/tests/doc-driven-dev-graph-task-graph.test.ts"
     deleted: []
     renamed: []
     moved: []
@@ -74,11 +76,16 @@ None.
 - GREEN: rtk pnpm exec tsx --test tests/doc-driven-dev-graph-task-graph.test.ts — 17 passed, 0 failed.
 - Full suite: rtk pnpm exec tsx --test tests/*.test.ts — 155 passed, 0 failed.
 - Mise activation emitted only the known PowerShell 5.1 chpwd compatibility warning.
+- Full suite: rtk pnpm test — 155 passed, 0 failed.
+- Task review: spec compliant, no findings, approved.
 
 ## Risks
 
-The source projection is implemented and tested, but distributed/generated package assets are intentionally outside this slice ownership and may need synchronization in a later integration slice. Status remains in-progress pending controller review.
+The source projection is implemented and tested. Distributed/generated package assets remain outside this slice ownership.
 
 ## Follow-ups
 
-Controller review; then consume resumableActive in the graph DSL/routing slices and update any generated/distributed artifacts those slices own.
+Tasks 2–4 own the DSL, edge, bundles, and docs follow-ups.
+## Risks or Follow-ups
+
+Tasks 2–4 own the DSL, edge, bundles, and docs follow-ups.
