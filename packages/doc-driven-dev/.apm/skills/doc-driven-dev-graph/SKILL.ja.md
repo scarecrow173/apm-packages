@@ -96,9 +96,12 @@ trace summary、resume rule の詳細は
     node から再入力する。`single-step` では yield し、`run-until-yield` では
     繰り返す。
 
-terminal node、またはユーザー権限が必要な fail-closed blocker で停止します。
-`wont-do` task は dependency を満たさず、未解決 task は Dynamic Task Graph
-で blocked のままです。
+caller は [`references/execution-contract.ja.md`](references/execution-contract.ja.md)
+の完全な Phase 1 yield table を適用します。`terminal`、
+`approval-required`、`input-required`、`authority-required`、
+`unrecoverable-blocker`、または `budget-exhausted` では yield し、table が
+automatic continuation を許す場合だけ繰り返します。`wont-do` task は
+dependency を満たさず、未解決 task は Dynamic Task Graph で blocked のままです。
 
 implementation 後の `フォローアップ分類` node は、
 `implementation-verified` と型付き signal 1 つを要求してから repair、planning、

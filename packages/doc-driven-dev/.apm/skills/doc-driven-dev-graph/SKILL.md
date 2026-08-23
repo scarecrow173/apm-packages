@@ -102,9 +102,13 @@ budgets, trace summary, and resume rules are in
     at the returned `next` node; yield in `single-step` mode or repeat in
     `run-until-yield` mode.
 
-The loop stops at a terminal node or a fail-closed blocker requiring user
-authority. A task marked `wont-do` never satisfies a dependency; unresolved
-tasks remain blocked in the Dynamic Task Graph.
+The caller applies the complete Phase 1 yield table in
+[`references/execution-contract.md`](references/execution-contract.md): it
+yields for `terminal`, `approval-required`, `input-required`,
+`authority-required`, `unrecoverable-blocker`, or `budget-exhausted`, and
+repeats only when the table permits automatic continuation. A task marked
+`wont-do` never satisfies a dependency; unresolved tasks remain blocked in the
+Dynamic Task Graph.
 
 After implementation, the `follow-up triage` node requires
 `implementation-verified` and one typed signal before routing to repair,
