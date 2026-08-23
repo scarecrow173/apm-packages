@@ -605,6 +605,35 @@ test("doc-driven-dev-graph meta skill ships Graph Definition and runtime referen
   assert.match(contractJa, /同じ run.*複数 edge/);
 });
 
+test("graph-invoked effects publish scoped typed outcomes", () => {
+  const graphRoot = path.join(skillRoot, "doc-driven-dev-graph");
+  const outcomeContract = fs.readFileSync(path.join(graphRoot, "references", "execution-outcome-contract.md"), "utf8");
+  const outcomeContractJa = fs.readFileSync(path.join(graphRoot, "references", "execution-outcome-contract.ja.md"), "utf8");
+  const executionContract = fs.readFileSync(path.join(graphRoot, "references", "execution-contract.md"), "utf8");
+  const effectSkills = ["briefing-flow", "design-doc", "implementation-flow", "doc-status"];
+  const effects = effectSkills.map((skill) => fs.readFileSync(path.join(skillRoot, skill, "SKILL.md"), "utf8"));
+  const effectsJa = effectSkills.map((skill) => fs.readFileSync(path.join(skillRoot, skill, "SKILL.ja.md"), "utf8"));
+
+  for (const text of [...effects, ...effectsJa]) {
+    assert.match(text, /status: completed \| retry \| yield/);
+    assert.match(text, /evidence/i);
+  }
+  assert.match(effects[0], /`completed`.*briefing gate.*`retry`.*document gap.*`input-required`/s);
+  assert.match(effects[1], /`completed`.*approved design.*`approval-required`.*`input-required`/s);
+  assert.match(effects[2], /`completed`.*verified task slice.*`retry`.*`authority-required`.*`unrecoverable-blocker`/s);
+  assert.match(effects[3], /`completed`.*Completable.*`retry`.*`unrecoverable-blocker`/s);
+  assert.match(outcomeContract, /edgeId/);
+  assert.match(outcomeContract, /stage/);
+  assert.match(outcomeContract, /effect/);
+  assert.match(outcomeContract, /authoritativeInputs/);
+  assert.match(outcomeContract, /canonicalEvidence|providerIdempotency/);
+  assert.match(outcomeContract, /blocked.*GraphRoute|GraphRoute.*blocked/s);
+  assert.doesNotMatch(outcomeContract, /status: blocked/);
+  assert.match(outcomeContract, /never requires byte-equivalent\s+complete `GraphRoute`/s);
+  assert.match(outcomeContractJa, /edgeId/);
+  assert.match(executionContract, /exact.*EffectOutcome.*match/i);
+});
+
 test("graph docs bind delegates, audits, and condition-driven subgraphs", () => {
   const root = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
   const skill = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.md"), "utf8");

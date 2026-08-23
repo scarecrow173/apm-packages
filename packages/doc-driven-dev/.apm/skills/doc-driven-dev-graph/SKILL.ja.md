@@ -196,6 +196,8 @@ Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir` を�
   focus、gate、signal、blocker。
 - [`references/execution-contract.ja.md`](references/execution-contract.ja.md) —
   evidence に基づく caller loop。
+- [`references/execution-outcome-contract.ja.md`](references/execution-outcome-contract.ja.md) —
+  typed audit/delegate outcome と scope-valid な resume proof。
 - [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) —
   Task Graph 合成と fail-closed dependency 規則。
 - [`references/graph-inspection.ja.md`](references/graph-inspection.ja.md) — inspection

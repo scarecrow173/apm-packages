@@ -79,3 +79,19 @@ Read order is always `overview.md` first, then detailed design documents.
 - `scripts/new_design.js`: create a detailed design document and update index.
 - `references/design-conventions.md`: naming, statuses, relations, and index rules.
 - `assets/templates/design.md`: default detailed design template.
+
+## Graph Effect Outcome
+
+When `doc-driven-dev-graph` invokes this skill, return this footer after each
+audit or delegate effect; use canonical evidence, not prose completion claims.
+
+```yaml
+status: completed | retry | yield
+evidence: <canonical Markdown path or ID>
+```
+
+Use `completed` for an approved design, `yield` with `approval-required` while
+waiting for the designated reviewer, and `yield` with `input-required` for a
+missing upstream user decision. The required `edgeId`, stage, effect identity,
+authoritative input scope, and proof fields are defined in
+[`execution-outcome-contract.md`](../doc-driven-dev-graph/references/execution-outcome-contract.md).

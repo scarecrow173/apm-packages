@@ -399,3 +399,21 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 If the user says "skip configuration for this task", follow the user and
 record that override. The user has authority. Without an override, use the
 profile-selected routing as the default.
+
+## Graph Effect Outcome
+
+When `doc-driven-dev-graph` invokes this skill, return this footer after each
+audit or delegate effect; use canonical evidence, not prose completion claims.
+
+```yaml
+status: completed | retry | yield
+evidence: <canonical Markdown path or ID>
+```
+
+Use `completed` for a verified task slice with its Implementation Record,
+`retry` for declared spec/design/constraint repair, `yield` with
+`authority-required` for an irreversible effect without permission, and
+`yield` with `unrecoverable-blocker` when no declared safe repair exists. The
+required `edgeId`, stage, effect identity, authoritative input scope, and proof
+fields are defined in
+[`execution-outcome-contract.md`](../doc-driven-dev-graph/references/execution-outcome-contract.md).

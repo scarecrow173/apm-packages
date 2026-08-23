@@ -40,6 +40,18 @@ The checkpoint is complete only after its audits, delegate, and evidence are
 recorded. A run trace summary records the mode, bounded counters, completed
 edge IDs in order, route fingerprints, and the final yield reason.
 
+## Effect outcome evaluation
+
+Every graph-invoked audit and delegate returns the exact `EffectOutcome` footer
+defined in [execution-outcome-contract.md](execution-outcome-contract.md). The
+caller performs an exact `EffectOutcome.status` and `reason` match, never a
+free-form semantic inference. It evaluates terminal or blocked `GraphRoute`
+results and hop/retry/repetition budgets separately before effect outcomes.
+At yield, it records one `GraphRunResult` handoff with the complete route and
+ordered outcomes. A completed effect is reusable only when the receipt scope
+and canonical-evidence or provider-idempotency proof validate against the
+fresh projection.
+
 ## Phase 1 yield table
 
 | Observation | Yield reason | Continue automatically |

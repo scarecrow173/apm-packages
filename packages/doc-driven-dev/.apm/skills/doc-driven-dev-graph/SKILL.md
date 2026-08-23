@@ -203,6 +203,8 @@ side effect. Mermaid is definition-only and rejects `--cwd`, `--focus`, and
   focus, gates, signals, and blockers.
 - [`references/execution-contract.md`](references/execution-contract.md) —
   evidence-backed caller loop.
+- [`references/execution-outcome-contract.md`](references/execution-outcome-contract.md) —
+  typed audit/delegate outcomes and scope-valid resume proof.
 - [`references/task-graph-contract.md`](references/task-graph-contract.md) —
   Task Graph composition and fail-closed dependency rules.
 - [`references/graph-inspection.md`](references/graph-inspection.md) — inspection

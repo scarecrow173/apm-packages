@@ -383,3 +383,21 @@ dispatch-specific override・emergency override・その他の non-default routi
 
 ユーザーが「このタスクは構成をスキップ」と言えば、ユーザーに従い、その override を記録する。
 ユーザーが主導権を持つ。ただし上書き指示がない場合、profile-selected routing を default として使う。
+
+## Graph Effect Outcome
+
+`doc-driven-dev-graph` からこの skill が呼び出された場合、audit または delegate effect
+ごとに次の footer を返します。prose による完了主張ではなく canonical evidence を使います。
+
+```yaml
+status: completed | retry | yield
+evidence: <canonical Markdown path or ID>
+```
+
+verified task slice と Implementation Record には `completed`、declared
+spec/design/constraint repair には `retry`、permission のない irreversible effect には
+`authority-required` を理由とする `yield`、declared safe repair がない場合は
+`unrecoverable-blocker` を理由とする `yield` を使います。必須の `edgeId`、stage、effect
+identity、authoritative input scope、proof field は
+[`execution-outcome-contract.ja.md`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
+で定義します。

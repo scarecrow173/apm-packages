@@ -42,6 +42,17 @@ checkpoint は audit、delegate、evidence が記録された後にだけ完了�
 trace summary には mode、bounded counter、順序付き completed edge ID、route
 fingerprint、最終 yield reason を記録します。
 
+## EffectOutcome の評価
+
+graph から呼び出された audit と delegate はすべて
+[execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) で定義する
+正確な `EffectOutcome` footer を返します。caller は free-form semantic inference では
+なく、`EffectOutcome.status` と `reason` を exact match します。terminal または blocked
+`GraphRoute` と hop/retry/repetition budget は effect outcome より先に別途評価します。
+yield 時には complete route と順序付き outcome を持つ 1 つの `GraphRunResult` handoff を
+記録します。completed effect を再利用できるのは、receipt scope と canonical-evidence
+または provider-idempotency proof が fresh projection に対して validate した場合だけです。
+
 ## Phase 1 yield table
 
 | Observation | Yield reason | Continue automatically |
