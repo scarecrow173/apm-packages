@@ -52,6 +52,14 @@ ordered outcomes. A completed effect is reusable only when the receipt scope
 and canonical-evidence or provider-idempotency proof validate against the
 fresh projection.
 
+The caller adapter normalizes the declared script delegates (`migrate_docs`,
+`scaffold_docs`, and `build_task_graph`) and named audits (`spec`, `adr`,
+`design`, `plan`, `task`, `impl-record`, and `all`) into `EffectOutcome`.
+Skills that can emit the footer return it directly. Missing or malformed adapter
+evidence yields `authority-required`; it never advances a checkpoint. The
+effect-specific canonical input/evidence mapping is defined in
+[execution-outcome-contract.md](execution-outcome-contract.md).
+
 ## Phase 1 yield table
 
 | Observation | Yield reason | Continue automatically |

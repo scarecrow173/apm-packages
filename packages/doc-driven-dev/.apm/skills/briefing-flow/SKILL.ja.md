@@ -269,17 +269,6 @@ Profile が選択したスキルをデフォルトのルーティングポリシ
 
 ---
 
-## Graph Effect Outcome
-
-`doc-driven-dev-graph` からこの skill が呼び出された場合、audit または delegate effect
-ごとに正確な [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
-を返します。local partial variant を作成しません。
-
-briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の
-user-only requirement には `input-required` を理由とする `yield` を使います。必須の
-`edgeId`、stage、effect identity、authoritative input scope、proof field はその footer が
-定義します。
-
 ## アンチパターン
 
 次の思考や行動は失敗の兆候である。気づいたら STOP する:
@@ -294,3 +283,14 @@ user-only requirement には `input-required` を理由とする `yield` を使�
 | "Alternatives are obvious" | 1 案しかない ADR には意思決定の理由がない |
 | "Spending too much time on briefing" | stop conditions が満たされたら止める。満たされるまで続ける |
 | "It's urgent, skip the spec" | 最低限の証拠は 10 分。省略すると何時間から何日も失う |
+
+## Graph Effect Outcome
+
+`doc-driven-dev-graph` からこの skill が呼び出された場合、audit または delegate effect
+ごとに正確な [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
+を返します。local partial variant を作成しません。
+
+briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の
+user-only requirement には `input-required` を理由とする `yield` を使います。必須の
+`edgeId`、stage、effect identity、authoritative input scope、proof field はその footer が
+定義します。

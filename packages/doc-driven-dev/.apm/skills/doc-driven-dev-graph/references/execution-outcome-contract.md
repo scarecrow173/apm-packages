@@ -62,6 +62,105 @@ outcome additionally proves this particular effect: either canonical evidence
 proves it or the external provider idempotency key proves it. Do not use a
 route fingerprint as the proof.
 
+## GraphRunResult at yield
+
+`GraphRunResult` is a caller/documentation shape, not a public TypeScript
+export. The caller returns it only when it yields. Its `route` is the complete
+final `GraphRoute`, including terminal and blocked results, rather than a
+receipt-derived subset.
+
+```ts
+type GraphRunResult = {
+  status: "yielded";
+  reason:
+    | "approval-required"
+    | "input-required"
+    | "authority-required"
+    | "unrecoverable-blocker"
+    | "budget-exhausted"
+    | "terminal"
+    | "single-step-complete";
+  route: GraphRoute;
+  outcomes: EffectOutcome[];
+  trace: GraphRunTrace[];
+  handoff: GraphRunHandoff;
+}
+
+type GraphRunTrace = {
+  route: GraphRoute;
+  outcomes: EffectOutcome[];
+  completedAudits: string[];
+  delegate: string | null;
+  delegateComplete: boolean;
+  evidenceRecorded: boolean;
+  checkpointComplete: boolean;
+}
+
+type GraphRunHandoff = {
+  current: string;
+  mode: "single-step" | "run-until-yield";
+  maxHops: number;
+  yieldReason: GraphRunResult["reason"] | null;
+  focus: string[];
+  signals: string[];
+  graphPath: string;
+  completedEdges: string[];
+  seenRouteFingerprints: string[];
+  selfLoopCounts: Record<string, number>;
+  auditCounts: Record<string, number>;
+  delegateCounts: Record<string, number>;
+  checkpoints: GraphRoute[];
+  edgeTrace: GraphRunTrace[];
+  outcomes: EffectOutcome[];
+  pending: {
+    route: GraphRoute;
+    outcomes: EffectOutcome[];
+    completedAudits: string[];
+    delegateComplete: boolean;
+    evidenceRecorded: boolean;
+  } | null;
+  hops: number;
+}
+```
+
+`outcomes` and `trace` preserve caller order. `GraphRunTrace` holds each
+complete route, its ordered outcomes, completed audits, delegate state, and
+evidence/checkpoint flags. `GraphRunHandoff` retains the resume fields:
+`current`, mode, `maxHops`, focus, signals, graph path, completed edge IDs,
+seen route fingerprints, self-loop/audit/delegate counters, completed routes,
+trace, outcomes, pending edge, and hop count.
+
+## Caller-normalized effects
+
+Skills that can emit the footer return it directly. The caller adapter
+normalizes these declared effects into the same `EffectOutcome` shape without
+changing Graph Definition YAML, scripts, or generated JavaScript:
+
+| Declared effects | Footer owner |
+| --- | --- |
+| `migrate_docs`, `scaffold_docs`, `build_task_graph` | caller adapter for script delegates |
+| `spec`, `adr`, `design`, `plan`, `task`, `impl-record`, `all` | caller adapter for named audits |
+| `briefing-flow`, `design-doc`, `implementation-flow`, `doc-status` | invoked skill |
+
+The adapter records effect-specific canonical inputs and evidence before it
+returns `completed` or `retry`. Missing or malformed adapter evidence fails
+closed with `authority-required`; it never creates a checkpoint or completion
+receipt.
+
+## Effect-specific canonical inputs
+
+The receipt scope uses the effect, not a generic Task Graph fallback. In the
+standard document graph, `spec`, `adr`, `design`, and `plan` audits read their
+matching canonical document; `task` reads selected Task Graph task documents;
+`impl-record` reads its Implementation Record; and `all` reads the declared
+canonical document set. `briefing-flow` reads the spec and ADR, `design-doc`
+reads the spec and ADR and records design evidence, `implementation-flow`
+reads selected tasks plus design/plan and records its Implementation Record,
+and `doc-status` reads the declared document set. Script-adapter inputs are
+`migrate_docs` (declared document set), `scaffold_docs` (spec and ADR), and
+`build_task_graph` (selected task documents). Every referenced path/ID and
+fingerprint must resolve against current canonical content before use.
+
 ## Existing delegate meanings
 
 This contract renders existing semantics; it does not add workflow states.

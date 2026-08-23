@@ -61,6 +61,100 @@ status variant ごとの required / forbidden field は次のとおりです。
 outcome は加えて、この effect 自体を証明します。canonical evidence または external
 provider の idempotency key のどちらかで証明し、route fingerprint を proof に使いません。
 
+## yield 時の GraphRunResult
+
+`GraphRunResult` は caller/documentation の shape であり、public TypeScript export
+ではありません。caller が返すのは yield 時だけです。`route` は receipt から導出した
+subset ではなく、terminal と blocked result を含む complete な最終 `GraphRoute` です。
+
+```ts
+type GraphRunResult = {
+  status: "yielded";
+  reason:
+    | "approval-required"
+    | "input-required"
+    | "authority-required"
+    | "unrecoverable-blocker"
+    | "budget-exhausted"
+    | "terminal"
+    | "single-step-complete";
+  route: GraphRoute;
+  outcomes: EffectOutcome[];
+  trace: GraphRunTrace[];
+  handoff: GraphRunHandoff;
+}
+
+type GraphRunTrace = {
+  route: GraphRoute;
+  outcomes: EffectOutcome[];
+  completedAudits: string[];
+  delegate: string | null;
+  delegateComplete: boolean;
+  evidenceRecorded: boolean;
+  checkpointComplete: boolean;
+}
+
+type GraphRunHandoff = {
+  current: string;
+  mode: "single-step" | "run-until-yield";
+  maxHops: number;
+  yieldReason: GraphRunResult["reason"] | null;
+  focus: string[];
+  signals: string[];
+  graphPath: string;
+  completedEdges: string[];
+  seenRouteFingerprints: string[];
+  selfLoopCounts: Record<string, number>;
+  auditCounts: Record<string, number>;
+  delegateCounts: Record<string, number>;
+  checkpoints: GraphRoute[];
+  edgeTrace: GraphRunTrace[];
+  outcomes: EffectOutcome[];
+  pending: {
+    route: GraphRoute;
+    outcomes: EffectOutcome[];
+    completedAudits: string[];
+    delegateComplete: boolean;
+    evidenceRecorded: boolean;
+  } | null;
+  hops: number;
+}
+```
+
+`outcomes` と `trace` は caller の順序を保持します。`GraphRunTrace` は各 complete route、
+順序付き outcomes、completed audits、delegate state、evidence/checkpoint flag を持ちます。
+`GraphRunHandoff` は resume field を保持します。すなわち `current`、mode、`maxHops`、focus、
+signals、graph path、completed edge ID、seen route fingerprint、self-loop/audit/delegate
+counter、completed route、trace、outcome、pending edge、hop count です。
+
+## caller が正規化する effect
+
+footer を emit できる skill は直接返します。caller adapter は Graph Definition YAML、script、
+generated JavaScript を変更せず、次の declared effect を同じ `EffectOutcome` shape に
+正規化します。
+
+| Declared effects | Footer owner |
+| --- | --- |
+| `migrate_docs`, `scaffold_docs`, `build_task_graph` | script delegate 用の caller adapter |
+| `spec`, `adr`, `design`, `plan`, `task`, `impl-record`, `all` | named audit 用の caller adapter |
+| `briefing-flow`, `design-doc`, `implementation-flow`, `doc-status` | 呼び出された skill |
+
+adapter は `completed` または `retry` を返す前に effect 固有の canonical input と evidence を
+記録します。adapter evidence が missing または malformed なら
+`authority-required` で fail closed し、checkpoint や completion receipt を作成しません。
+
+## effect 固有の canonical input
+
+receipt scope は generic な Task Graph fallback ではなく effect を使います。standard document
+graph では、`spec`、`adr`、`design`、`plan` audit は対応する canonical document を読み、`task`
+は選択された Task Graph task document、`impl-record` はその Implementation Record、`all` は
+declared canonical document set を読みます。`briefing-flow` は spec と ADR を読み、`design-doc`
+は spec と ADR を読み design evidence を記録し、`implementation-flow` は選択 task と
+design/plan を読み Implementation Record を記録し、`doc-status` は declared document set を
+読みます。script-adapter input は `migrate_docs`（declared document set）、`scaffold_docs`
+（spec と ADR）、`build_task_graph`（選択 task document）です。すべての referenced path/ID と
+fingerprint は使用前に current canonical content と照合して resolve しなければなりません。
+
 ## 既存 delegate の意味
 
 この contract は既存の semantics を表現するだけで、workflow state を追加しません。

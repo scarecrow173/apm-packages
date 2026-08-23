@@ -53,6 +53,13 @@ yield 時には complete route と順序付き outcome を持つ 1 つの `Graph
 記録します。completed effect を再利用できるのは、receipt scope と canonical-evidence
 または provider-idempotency proof が fresh projection に対して validate した場合だけです。
 
+caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
+`build_task_graph`）と named audit（`spec`、`adr`、`design`、`plan`、`task`、`impl-record`、
+`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
+adapter evidence が missing または malformed なら `authority-required` を yield し、checkpoint
+を進めません。effect 固有の canonical input/evidence mapping は
+[execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) に定義します。
+
 ## Phase 1 yield table
 
 | Observation | Yield reason | Continue automatically |
