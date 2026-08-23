@@ -61,7 +61,10 @@ caller は固定された run counter を使い、この protocol に policy DSL
 
 ```text
 maxHops default = 10
-  Rationale: current Graph Definition has 10 non-terminal nodes and the normal path is 8 edges.
+  理由: 現在の Graph Definition には 10 個の non-terminal node がある。normal path は
+  8 edge、migration を含む path は 10 edge である。
+  terminal と blocked route はこの budget より先に評価するため、10 hop 目で
+  complete に到達した場合は budget-exhausted ではなく terminal を yield する。
 
 self-loop budget = 1 completed traversal per edge ID per run
   A second traversal of the same from == to edge yields budget-exhausted.

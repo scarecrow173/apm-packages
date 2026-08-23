@@ -306,11 +306,6 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
   let yieldReason: YieldReason | null = null;
   for (let index = 0; index < options.steps.length; index += 1) {
     const step = options.steps[index];
-    if (hops >= maxHops) {
-      yieldReason = "budget-exhausted";
-      break;
-    }
-
     const route = routeGraph({ current, definition, state });
     routes.push(route);
     events.push(`route:${route.edgeId ?? route.status}`);
@@ -326,6 +321,10 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
         ? "input-required"
         : "unrecoverable-blocker";
       expectYield(step, yieldReason);
+      break;
+    }
+    if (hops >= maxHops) {
+      yieldReason = "budget-exhausted";
       break;
     }
 
@@ -522,7 +521,7 @@ edges:
 `);
 }
 
-test("runs the fully automatic canonical path with fresh projection between checkpoints", () => {
+test("runs a bounded partial canonical path with fresh projection between checkpoints", () => {
   const repo = fixtureRepo();
   const result = runScenario({
     repo,
@@ -543,10 +542,53 @@ test("runs the fully automatic canonical path with fresh projection between chec
   ]);
   assert.equal(result.checkpoints.length, 4);
   assert.equal(result.projectCalls, 4);
-  assert.equal(result.yieldReason, null);
+  assert.equal(result.yieldReason, null); // Fixture steps exhausted; this is not a production yield.
   for (let index = 1; index < result.routes.length; index += 1) {
     assert.notDeepEqual(result.routes[index].taskGraph, result.routes[index - 1].taskGraph);
   }
+});
+
+test("observes terminal after the 10-edge migration path reaches the hop budget", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "probe",
+    mode: "run-until-yield",
+    signals: ["migration-requested", "migration-complete"],
+    steps: [
+      { expectEdge: "probe-to-migration", applyEvidence: evidence("probe-to-migration") },
+      { expectEdge: "migration-to-bootstrap", applyEvidence: evidence("migration-to-bootstrap") },
+      { expectEdge: "bootstrap-to-briefing", applyEvidence: evidence("bootstrap-to-briefing") },
+      { expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") },
+      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning") },
+      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
+      {
+        expectEdge: "task-graph-to-implementation",
+        applyEvidence: evidence("task-graph-to-implementation", (fixture, signals) => {
+          updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+          signals.add("implementation-verified");
+        }),
+      },
+      {
+        expectEdge: "implementation-to-followup-triage",
+        applyEvidence: evidence("implementation-to-followup-triage", (_fixture, signals) => {
+          signals.add("followup-terminal");
+        }),
+      },
+      {
+        expectEdge: "followup-triage-terminal",
+        applyEvidence: evidence("followup-triage-terminal", (_fixture, signals) => {
+          signals.add("exit-audit-pass");
+        }),
+      },
+      { expectEdge: "exit-audit-to-complete", applyEvidence: evidence("exit-audit-to-complete") },
+      { expectEdge: null, yield: "terminal" },
+    ],
+  });
+  assert.equal(result.checkpoints.length, 10);
+  assert.equal(result.handoff.hops, 10);
+  assert.equal(result.current, "complete");
+  assert.equal(result.yieldReason, "terminal");
 });
 
 test("yields approval exactly once before design evidence is written", () => {

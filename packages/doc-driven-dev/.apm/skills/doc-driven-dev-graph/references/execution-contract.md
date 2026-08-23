@@ -59,7 +59,10 @@ The caller uses fixed run counters; this protocol adds no policy DSL:
 
 ```text
 maxHops default = 10
-  Rationale: current Graph Definition has 10 non-terminal nodes and the normal path is 8 edges.
+  Rationale: current Graph Definition has 10 non-terminal nodes. The normal path is 8 edges;
+  the migration-inclusive path is 10 edges.
+  Terminal and blocked routes are evaluated before this budget, so reaching complete on hop 10
+  yields terminal rather than budget-exhausted.
 
 self-loop budget = 1 completed traversal per edge ID per run
   A second traversal of the same from == to edge yields budget-exhausted.

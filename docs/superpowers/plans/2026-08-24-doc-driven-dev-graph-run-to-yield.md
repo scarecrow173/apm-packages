@@ -51,9 +51,10 @@
 
 - The live definition has 10 non-terminal nodes and one terminal node.
 - Its normal no-migration path can reach `complete` in eight edges: `probe → briefing → design → planning → task-graph → implementation → followup-triage → exit-audit → complete`.
+- Its migration-inclusive path reaches `complete` in 10 edges: `probe → migration → bootstrap → briefing → design → planning → task-graph → implementation → followup-triage → exit-audit → complete`.
 - Nine non-terminal nodes have a declared self-loop retry/repair edge; `probe` is the only non-terminal without one.
 - Multi-node repair cycles also exist, including implementation back to briefing/design and exit/follow-up repair back to upstream nodes.
-- Therefore Phase 1 uses `maxHops = 10` by default: it is the current non-terminal-node count, exceeds the eight-edge happy path, and bounds a run once it begins revisiting topology. A caller may explicitly lower it; raising it requires an explicit user/runtime configuration and remains bounded.
+- Therefore Phase 1 uses `maxHops = 10` by default: it is the current non-terminal-node count, covers the 10-edge migration path, and bounds a run once it begins revisiting topology. Terminal and blocked routes are evaluated before this budget. A caller may explicitly lower it; raising it requires an explicit user/runtime configuration and remains bounded.
 - Phase 1 uses one completed traversal per self-loop edge per run. A second traversal of the same self-loop yields `budget-exhausted`; this is conservative until Phase 2 outcomes can distinguish a productive retry from an unchanged retry.
 
 ## 2. Current execution flow
@@ -482,9 +483,9 @@ Expected: PASS; English/Japanese sections have matching order and meaning.
 
 - [ ] **Step 4: Record disposable test-driver smoke evidence**
 
-Run: `pnpm --dir scripts/doc-driven-dev exec tsx --test --test-name-pattern="runs the fully automatic|single-step completes" tests/doc-driven-dev-graph-run-to-yield.test.ts`
+Run: `pnpm --dir scripts/doc-driven-dev exec tsx --test --test-name-pattern="bounded partial canonical|observes terminal after|single-step completes" tests/doc-driven-dev-graph-run-to-yield.test.ts`
 
-Expected: PASS; the test-local driver uses the real definition, projector, and router to prove one `single-step` checkpoint and a multi-edge `run-until-yield` sequence against disposable fixtures. Phase 1 exposes no host caller-mode command, so there is no standalone host manual-smoke command to run.
+Expected: PASS; the test-local driver uses the real definition, projector, and router to prove one `single-step` checkpoint, a deliberately partial multi-edge fixture, and a 10-edge `run-until-yield` sequence ending at terminal. Exhausting fixture steps with no yield is test-driver partial execution, not normal production completion. Phase 1 exposes no host caller-mode command, so there is no standalone host manual-smoke command to run.
 
 - [ ] **Step 5: Commit any verification-only contract correction**
 
@@ -492,7 +493,7 @@ Commit only if Step 3 or Step 4 required a scoped document/test correction; othe
 
 ## 7. Phase 2 detailed implementation plan
 
-Phase 2 starts only after Phase 1 scenarios show that free-form delegate/audit results cause ambiguous yield or resume behavior. It adds two small concepts and deliberately does not change GraphRoute:
+Phase 2 starts because Phase 1 scenarios consume already-normalized yield reasons and therefore do not prove that production free-form delegate/audit results map unambiguously to yield and resume behavior. It adds two small concepts and deliberately does not change GraphRoute:
 
 ```ts
 type EffectOutcome =
@@ -513,6 +514,8 @@ type GraphRunResult = {
 ```
 
 `blocked` is intentionally absent from `EffectOutcome`: it remains a GraphRoute/Graph State fact. `terminal` and budget reasons are runtime results, not delegate outcomes.
+
+A completion receipt is valid only for the effect invocation it proves. Its scope binds the edge and stage, audit or delegate identity, authoritative input consumed by that effect, and canonical evidence or provider idempotency proof. Do not bind receipts to the byte-equivalent complete `GraphRoute`: unrelated route changes must not invalidate otherwise valid work.
 
 ### Task 5: Standardize minimal audit/delegate outcomes at the skill boundary
 
@@ -535,6 +538,8 @@ type GraphRunResult = {
 - Produces: one `EffectOutcome` footer from every graph-invoked audit/delegate and one `GraphRunResult` at yield.
 
 - [ ] **Step 1: Write failing contract tests for exact statuses and reasons**
+
+Require the receipt scope fields above for every completed effect outcome.
 
 ```ts
 for (const text of [briefing, design, implementation, docStatus]) {
@@ -562,7 +567,7 @@ Replace free-form semantic detection in the skill protocol with exact `EffectOut
 
 - [ ] **Step 5: Add resume and duplicate-side-effect scenarios**
 
-Test a saved `completed` outcome, a pending approval outcome, a retry with changed evidence, and an irreversible effect without an idempotency key. Assert only the first two safe completed stages are skipped; the last yields `authority-required`.
+Test a saved `completed` outcome, a pending approval outcome, a retry with changed evidence, and an irreversible effect without an idempotency key. Also test an `implementation-flow` receipt produced from Task Graph A, followed by a canonical Markdown change that projects Task Graph B: the old receipt must not skip the delegate unless its authoritative-input scope still matches. Assert only safe, scope-valid completed stages are skipped; missing proof yields `authority-required`.
 
 - [ ] **Step 6: Run Phase 2 verification and commit in two reviewable units**
 
