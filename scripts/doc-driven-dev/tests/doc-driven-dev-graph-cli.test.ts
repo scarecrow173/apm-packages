@@ -138,20 +138,30 @@ function runGeneratedInspect(cwd: string, args: string[]) {
 test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
   const repo = tempRepo();
   const graph = graphFile(repo);
-  const result = runSource(repo, ["--graph", graph, "--signal", "advance", "--json"]);
-  assert.equal(result.status, 0, result.stderr);
-  const route = JSON.parse(result.stdout);
+  const args = ["--graph", graph, "--signal", "advance", "--signal", "finish", "--json"];
+  const source = runSource(repo, args);
+  const generated = runCli(generatedCli, repo, args);
+  assert.equal(source.status, 0, source.stderr);
+  assert.equal(generated.status, 0, generated.stderr);
+  const route = JSON.parse(source.stdout);
+  assert.deepEqual(JSON.parse(generated.stdout), route);
   assert.deepEqual(Object.keys(route).sort(), [
     "blockers", "condition", "current", "delegate", "edgeId", "graphId", "next",
     "requiredAudits", "schemaVersion", "status", "taskGraph",
   ]);
-  assert.equal(route.graphId, "cli-fixture");
-  assert.equal(route.current, "start");
-  assert.equal(route.next, "next");
-  assert.equal(route.edgeId, "start-to-next");
-  assert.equal(route.condition, "advance");
-  assert.equal(route.status, "edge");
-  assert.equal(route.delegate, "next-handler");
+  assert.deepEqual(route, {
+    schemaVersion: 2,
+    graphId: "cli-fixture",
+    current: "start",
+    next: "next",
+    edgeId: "start-to-next",
+    condition: "advance",
+    status: "edge",
+    delegate: "next-handler",
+    requiredAudits: [],
+    blockers: ["bootstrap-incomplete"],
+    taskGraph: null,
+  });
 });
 
 test("selected graph validates current node and declared signal", () => {
