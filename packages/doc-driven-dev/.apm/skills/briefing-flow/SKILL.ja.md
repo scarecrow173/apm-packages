@@ -272,18 +272,13 @@ Profile が選択したスキルをデフォルトのルーティングポリシ
 ## Graph Effect Outcome
 
 `doc-driven-dev-graph` からこの skill が呼び出された場合、audit または delegate effect
-ごとに次の footer を返します。prose による完了主張ではなく canonical evidence を使います。
-
-```yaml
-status: completed | retry | yield
-evidence: <canonical Markdown path or ID>
-```
+ごとに正確な [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
+を返します。local partial variant を作成しません。
 
 briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の
 user-only requirement には `input-required` を理由とする `yield` を使います。必須の
-`edgeId`、stage、effect identity、authoritative input scope、proof field は
-[`execution-outcome-contract.ja.md`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
-で定義します。
+`edgeId`、stage、effect identity、authoritative input scope、proof field はその footer が
+定義します。
 
 ## アンチパターン
 

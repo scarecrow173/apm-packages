@@ -3,6 +3,7 @@ import type { GraphRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/
 import type { TaskStatus } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -30,17 +31,73 @@ type YieldReason =
 
 type ScenarioMode = "single-step" | "run-until-yield";
 
+type EffectYieldReason = Extract<YieldReason,
+  "approval-required" | "input-required" | "authority-required" | "unrecoverable-blocker">;
+
+type CanonicalReference = {
+  path: string;
+  id: string;
+  fingerprint: string;
+};
+
+type EffectIdentity = {
+  kind: "audit" | "delegate";
+  id: string;
+};
+
+type CompletedEffectOutcome = {
+  status: "completed";
+  edgeId: string;
+  stage: "audit" | "delegate";
+  effect: EffectIdentity;
+  authoritativeInputs: CanonicalReference[];
+  evidence: CanonicalReference[];
+  proof: {
+    canonicalEvidence?: CanonicalReference;
+    providerIdempotency?: { provider: string; key: string };
+  };
+  reason?: never;
+  retry?: never;
+};
+
+type RetryEffectOutcome = {
+  status: "retry";
+  edgeId: string;
+  stage: "audit" | "delegate";
+  effect: EffectIdentity;
+  authoritativeInputs: CanonicalReference[];
+  evidence: CanonicalReference[];
+  retry: { changedEvidence: CanonicalReference[] };
+  proof?: never;
+  reason?: never;
+};
+
+type YieldEffectOutcome = {
+  status: "yield";
+  edgeId: string;
+  stage: "audit" | "delegate";
+  effect: EffectIdentity;
+  authoritativeInputs: CanonicalReference[];
+  evidence: CanonicalReference[];
+  reason: EffectYieldReason;
+  proof?: never;
+  retry?: never;
+};
+
+type EffectOutcome = CompletedEffectOutcome | RetryEffectOutcome | YieldEffectOutcome;
+
 type ScenarioStep = {
   expectEdge: string | null;
   applyEvidence?: (repo: string, signals: Set<string>) => void;
-  audit?: (repo: string, signals: Set<string>, route: GraphRoute, audit: string) => YieldReason | void;
-  delegate?: (repo: string, signals: Set<string>, route: GraphRoute) => YieldReason | void;
+  audit?: (repo: string, signals: Set<string>, route: GraphRoute, audit: string) => EffectOutcome;
+  delegate?: (repo: string, signals: Set<string>, route: GraphRoute) => EffectOutcome;
   yield?: YieldReason;
   observeOnly?: boolean;
 };
 
 type PendingEdge = {
   route: GraphRoute;
+  outcomes: EffectOutcome[];
   completedAudits: string[];
   delegateComplete: boolean;
   evidenceRecorded: boolean;
@@ -48,6 +105,7 @@ type PendingEdge = {
 
 type EdgeTrace = {
   route: GraphRoute;
+  outcomes: EffectOutcome[];
   completedAudits: string[];
   delegate: string | null;
   delegateComplete: boolean;
@@ -70,6 +128,7 @@ type ScenarioHandoff = {
   delegateCounts: Record<string, number>;
   checkpoints: GraphRoute[];
   edgeTrace: EdgeTrace[];
+  outcomes: EffectOutcome[];
   pending: PendingEdge | null;
   hops: number;
 };
@@ -95,6 +154,7 @@ type ScenarioResult = {
   events: string[];
   auditCounts: Record<string, number>;
   delegateCounts: Record<string, number>;
+  outcomes: EffectOutcome[];
   handoff: ScenarioHandoff;
 };
 
@@ -132,51 +192,200 @@ function updateArtifact(repo: string, relativePath: string, data: Record<string,
   fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, ...data }), "utf8");
 }
 
-type ProofStage = string;
+const proofRelativePath = "docs/tasks/0001-task.md";
 
 function proofFile(repo: string): string {
-  return path.join(repo, "docs/tasks/0001-task.md");
+  return path.join(repo, proofRelativePath);
 }
 
-function proofMap(repo: string): Record<string, Record<string, boolean | number>> {
+function fingerprint(value: string): string {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function canonicalReference(repo: string, relativePath: string): CanonicalReference {
+  const file = path.join(repo, relativePath);
+  const parsed = matter(fs.readFileSync(file, "utf8"));
+  const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
+  return {
+    path: relativePath,
+    id: data.id as string,
+    fingerprint: fingerprint(matter.stringify(parsed.content, data)),
+  };
+}
+
+function authoritativeInputs(repo: string, route: GraphRoute): CanonicalReference[] {
+  const paths = route.taskGraph?.nodes.map((node) => node.path) ?? [proofRelativePath];
+  return [...new Set(paths)].sort().map((relativePath) => canonicalReference(repo, relativePath));
+}
+
+function evidenceReference(
+  repo: string,
+  route: GraphRoute,
+  stage: EffectOutcome["stage"],
+  effect: EffectIdentity,
+): CanonicalReference {
+  const input = authoritativeInputs(repo, route);
+  return {
+    path: proofRelativePath,
+    id: `OUTCOME:${route.edgeId}:${stage}:${effect.id}`,
+    fingerprint: fingerprint(JSON.stringify({ edgeId: route.edgeId, stage, effect, input })),
+  };
+}
+
+function completedOutcome(
+  repo: string,
+  route: GraphRoute,
+  stage: EffectOutcome["stage"],
+  effect: EffectIdentity,
+  providerIdempotency?: { provider: string; key: string },
+): CompletedEffectOutcome {
+  const evidence = evidenceReference(repo, route, stage, effect);
+  return {
+    status: "completed",
+    edgeId: route.edgeId as string,
+    stage,
+    effect,
+    authoritativeInputs: authoritativeInputs(repo, route),
+    evidence: [evidence],
+    proof: providerIdempotency ? { providerIdempotency } : { canonicalEvidence: evidence },
+  };
+}
+
+function yieldOutcome(
+  repo: string,
+  route: GraphRoute,
+  stage: EffectOutcome["stage"],
+  effect: EffectIdentity,
+  reason: EffectYieldReason,
+): YieldEffectOutcome {
+  return {
+    status: "yield",
+    edgeId: route.edgeId as string,
+    stage,
+    effect,
+    authoritativeInputs: authoritativeInputs(repo, route),
+    evidence: [evidenceReference(repo, route, stage, effect)],
+    reason,
+  };
+}
+
+function retryOutcome(
+  repo: string,
+  route: GraphRoute,
+  stage: EffectOutcome["stage"],
+  effect: EffectIdentity,
+  changedEvidence: CanonicalReference[],
+): RetryEffectOutcome {
+  return {
+    status: "retry",
+    edgeId: route.edgeId as string,
+    stage,
+    effect,
+    authoritativeInputs: authoritativeInputs(repo, route),
+    evidence: [evidenceReference(repo, route, stage, effect)],
+    retry: { changedEvidence },
+  };
+}
+
+function isCanonicalReference(value: unknown): value is CanonicalReference {
+  return Boolean(value)
+    && typeof value === "object"
+    && typeof (value as CanonicalReference).path === "string"
+    && typeof (value as CanonicalReference).id === "string"
+    && typeof (value as CanonicalReference).fingerprint === "string";
+}
+
+function validateEffectOutcome(
+  repo: string,
+  route: GraphRoute,
+  outcome: EffectOutcome,
+  stage: EffectOutcome["stage"],
+  effect: EffectIdentity,
+): void {
+  assert.ok(["completed", "retry", "yield"].includes(outcome.status), "unknown EffectOutcome status");
+  assert.equal(outcome.edgeId, route.edgeId);
+  assert.equal(outcome.stage, stage);
+  assert.deepEqual(outcome.effect, effect);
+  assert.ok(outcome.authoritativeInputs.length > 0 && outcome.authoritativeInputs.every(isCanonicalReference));
+  assert.deepEqual(outcome.authoritativeInputs, authoritativeInputs(repo, route));
+  assert.ok(outcome.evidence.length > 0 && outcome.evidence.every(isCanonicalReference));
+  if (outcome.status === "completed") {
+    assert.equal("reason" in outcome, false, "completed outcome must not include reason");
+    assert.equal("retry" in outcome, false, "completed outcome must not include retry");
+    const proof = outcome.proof ?? {};
+    const hasCanonicalEvidence = isCanonicalReference(proof.canonicalEvidence);
+    const hasProviderIdempotency = typeof proof.providerIdempotency?.provider === "string"
+      && proof.providerIdempotency.provider.length > 0
+      && typeof proof.providerIdempotency.key === "string"
+      && proof.providerIdempotency.key.length > 0;
+    assert.equal(hasCanonicalEvidence !== hasProviderIdempotency, true);
+  } else if (outcome.status === "retry") {
+    assert.equal("proof" in outcome, false, "retry outcome must not include proof");
+    assert.equal("reason" in outcome, false, "retry outcome must not include reason");
+    assert.ok(outcome.retry.changedEvidence.length > 0 && outcome.retry.changedEvidence.every(isCanonicalReference));
+  } else {
+    assert.equal("proof" in outcome, false, "yield outcome must not include proof");
+    assert.equal("retry" in outcome, false, "yield outcome must not include retry");
+    assert.ok(["approval-required", "input-required", "authority-required", "unrecoverable-blocker"].includes(outcome.reason));
+  }
+}
+
+function storedOutcomes(repo: string): EffectOutcome[] {
   const parsed = matter(fs.readFileSync(proofFile(repo), "utf8"));
-  return (parsed.data.callerProofs && typeof parsed.data.callerProofs === "object")
-    ? parsed.data.callerProofs as Record<string, Record<string, boolean | number>>
-    : {};
+  return Array.isArray(parsed.data.effectOutcomes) ? parsed.data.effectOutcomes as EffectOutcome[] : [];
 }
 
-function hasProof(repo: string, edgeId: string, stage: ProofStage): boolean {
-  return proofMap(repo)[edgeId]?.[stage] === true;
-}
-
-function proofRevision(repo: string, edgeId: string): number {
-  const value = proofMap(repo)[edgeId]?.revision;
-  return typeof value === "number" ? value : 0;
-}
-
-function receiptScope(route: GraphRoute): string {
-  return JSON.stringify({
-    edgeId: route.edgeId,
-    effect: route.delegate,
-    taskGraph: route.taskGraph,
-  });
-}
-
-function routeProofStage(stage: ProofStage, route: GraphRoute): ProofStage {
-  return `${stage}:${receiptScope(route)}`;
-}
-
-function hasRouteProof(repo: string, route: GraphRoute, stage: ProofStage): boolean {
-  return hasProof(repo, route.edgeId as string, routeProofStage(stage, route));
-}
-
-function persistProof(repo: string, edgeId: string, stage: ProofStage): void {
+function persistOutcome(repo: string, outcome: EffectOutcome): void {
   const file = proofFile(repo);
   const parsed = matter(fs.readFileSync(file, "utf8"));
-  const callerProofs = proofMap(repo);
-  callerProofs[edgeId] = { ...(callerProofs[edgeId] ?? {}), [stage]: true };
-  callerProofs[edgeId].revision = proofRevision(repo, edgeId) + 1;
-  fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, callerProofs }), "utf8");
+  const outcomes = storedOutcomes(repo);
+  if (!outcomes.some((stored) => JSON.stringify(stored) === JSON.stringify(outcome))) outcomes.push(outcome);
+  fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, effectOutcomes: outcomes }), "utf8");
+}
+
+function hasStoredOutcome(repo: string, outcome: EffectOutcome): boolean {
+  return storedOutcomes(repo).some((stored) => JSON.stringify(stored) === JSON.stringify(outcome));
+}
+
+type EvidenceReceipt = { edgeId: string; evidence: CanonicalReference };
+
+function evidenceReceipts(repo: string): EvidenceReceipt[] {
+  const parsed = matter(fs.readFileSync(proofFile(repo), "utf8"));
+  return Array.isArray(parsed.data.checkpointEvidence)
+    ? parsed.data.checkpointEvidence as EvidenceReceipt[]
+    : [];
+}
+
+function persistEvidence(repo: string, edgeId: string): void {
+  const file = proofFile(repo);
+  const parsed = matter(fs.readFileSync(file, "utf8"));
+  const receipts = evidenceReceipts(repo);
+  receipts.push({ edgeId, evidence: canonicalReference(repo, proofRelativePath) });
+  fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, checkpointEvidence: receipts }), "utf8");
+}
+
+function hasEvidence(repo: string, edgeId: string): boolean {
+  return evidenceReceipts(repo).some((receipt) => receipt.edgeId === edgeId && isCanonicalReference(receipt.evidence));
+}
+
+function isReusableCompletedOutcome(repo: string, route: GraphRoute, outcome: EffectOutcome): boolean {
+  if (outcome.status !== "completed") return false;
+  const validEffect = outcome.stage === "audit"
+    ? outcome.effect.kind === "audit" && route.requiredAudits.includes(outcome.effect.id)
+    : outcome.effect.kind === "delegate" && outcome.effect.id === route.delegate;
+  if (!validEffect) return false;
+  try {
+    validateEffectOutcome(repo, route, outcome, outcome.stage, outcome.effect);
+  } catch {
+    return false;
+  }
+  return hasStoredOutcome(repo, outcome);
+}
+
+function evaluateEffectOutcome(outcome: EffectOutcome): EffectYieldReason | "retry" | null {
+  if (outcome.status === "yield") return outcome.reason;
+  if (outcome.status === "retry") return "retry";
+  return null;
 }
 
 function evidence(
@@ -185,7 +394,7 @@ function evidence(
 ): (repo: string, signals: Set<string>) => void {
   return (repo, signals) => {
     mutate?.(repo, signals);
-    persistProof(repo, edgeId, "evidence");
+    persistEvidence(repo, edgeId);
   };
 }
 
@@ -267,9 +476,11 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
   const selfLoopCounts = { ...(options.resume?.selfLoopCounts ?? {}) };
   const auditCounts = { ...(options.resume?.auditCounts ?? {}) };
   const delegateCounts = { ...(options.resume?.delegateCounts ?? {}) };
+  const outcomes = [...(options.resume?.outcomes ?? [])];
   const events: string[] = [];
   let pending = options.resume?.pending ? {
     route: options.resume.pending.route,
+    outcomes: [...options.resume.pending.outcomes],
     completedAudits: [...options.resume.pending.completedAudits],
     delegateComplete: options.resume.pending.delegateComplete,
     evidenceRecorded: options.resume.pending.evidenceRecorded,
@@ -290,19 +501,27 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
   };
   const savePending = (
     route: GraphRoute,
-    completedAudits: Set<string>,
-    delegateComplete: boolean,
+    edgeOutcomes: EffectOutcome[],
     evidenceRecorded: boolean,
   ) => {
+    const completedAudits = edgeOutcomes
+      .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed" && outcome.stage === "audit")
+      .map((outcome) => outcome.effect.id)
+      .sort();
+    const delegateComplete = edgeOutcomes.some((outcome) => (
+      outcome.status === "completed" && outcome.stage === "delegate" && outcome.effect.id === route.delegate
+    ));
     pending = {
       route,
-      completedAudits: [...completedAudits].sort(),
+      outcomes: [...edgeOutcomes],
+      completedAudits,
       delegateComplete,
       evidenceRecorded,
     };
     upsertTrace(edgeTrace, {
       route,
-      completedAudits: [...completedAudits].sort(),
+      outcomes: [...edgeOutcomes],
+      completedAudits,
       delegate: route.delegate,
       delegateComplete,
       evidenceRecorded,
@@ -312,7 +531,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
 
   let state = project();
   let yieldReason: YieldReason | null = null;
-  for (let index = 0; index < options.steps.length; index += 1) {
+  stepLoop: for (let index = 0; index < options.steps.length; index += 1) {
     const step = options.steps[index];
     const route = routeGraph({ current, definition, state });
     routes.push(route);
@@ -348,7 +567,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       break;
     }
     if (step.observeOnly) {
-      savePending(route, new Set(), false, false);
+      savePending(route, [], false);
       break;
     }
 
@@ -356,79 +575,101 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       ? pending
       : null;
     if (resumingPending) {
-      const scopeChanged = receiptScope(resumingPending.route) !== receiptScope(route);
-      const claimedAudits = new Set(resumingPending.completedAudits);
-      const unverifiedAudit = [...claimedAudits].some((audit) => (
-        !route.requiredAudits.includes(audit)
-        || !hasRouteProof(options.repo, resumingPending.route, `audit:${audit}`)
-      ));
-      const unverifiedDelegate = resumingPending.delegateComplete && (
-        !route.delegate || !hasRouteProof(options.repo, resumingPending.route, "delegate")
-      );
-      const unverifiedEvidence = resumingPending.evidenceRecorded
-        && !hasRouteProof(options.repo, resumingPending.route, "evidence");
-      if (scopeChanged || unverifiedAudit || unverifiedDelegate || unverifiedEvidence) {
+      const invalidReceipt = resumingPending.outcomes
+        .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
+        .some((outcome) => !isReusableCompletedOutcome(options.repo, route, outcome));
+      const unverifiedEvidence = resumingPending.evidenceRecorded && !hasEvidence(options.repo, route.edgeId as string);
+      if (invalidReceipt || unverifiedEvidence) {
         yieldReason = "authority-required";
         expectYield(step, yieldReason);
         break;
       }
     }
 
-    const completedAudits = new Set(resumingPending?.completedAudits ?? []);
-    let stageYield: YieldReason | undefined;
+    const edgeOutcomes = [...(resumingPending?.outcomes ?? [])];
+    const completedAudits = new Set(edgeOutcomes
+      .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed" && outcome.stage === "audit")
+      .map((outcome) => outcome.effect.id));
     for (const audit of route.requiredAudits) {
       if (completedAudits.has(audit)) continue;
       events.push(`audit:${audit}`);
-      const effectYield = step.audit?.(options.repo, signals, route, audit);
-      if (effectYield) {
-        stageYield = effectYield;
-        break;
+      const effect: EffectIdentity = { kind: "audit", id: audit };
+      const outcome = step.audit?.(options.repo, signals, route, audit)
+        ?? completedOutcome(options.repo, route, "audit", effect);
+      validateEffectOutcome(options.repo, route, outcome, "audit", effect);
+      edgeOutcomes.push(outcome);
+      outcomes.push(outcome);
+      persistOutcome(options.repo, outcome);
+      const evaluation = evaluateEffectOutcome(outcome);
+      if (evaluation === "retry") {
+        savePending(route, edgeOutcomes, false);
+        if (index + 1 < options.steps.length) {
+          events.push("project");
+          state = project();
+          continue stepLoop;
+        }
+        break stepLoop;
       }
-      persistProof(options.repo, route.edgeId as string, routeProofStage(`audit:${audit}`, route));
+      if (evaluation) {
+        yieldReason = evaluation;
+        savePending(route, edgeOutcomes, false);
+        expectYield(step, yieldReason);
+        break stepLoop;
+      }
       completedAudits.add(audit);
       auditCounts[audit] = (auditCounts[audit] ?? 0) + 1;
     }
-    if (stageYield) {
-      yieldReason = stageYield;
-      savePending(route, completedAudits, false, false);
-      expectYield(step, yieldReason);
-      break;
-    }
 
-    let delegateComplete = resumingPending?.delegateComplete ?? false;
+    let delegateComplete = edgeOutcomes.some((outcome) => (
+      outcome.status === "completed" && outcome.stage === "delegate" && outcome.effect.id === route.delegate
+    ));
     if (route.delegate && !delegateComplete) {
       events.push(`delegate:${route.delegate}`);
-      const effectYield = step.delegate?.(options.repo, signals, route);
-      if (effectYield) {
-        yieldReason = effectYield;
-        savePending(route, completedAudits, false, false);
-        expectYield(step, yieldReason);
-        break;
+      const effect: EffectIdentity = { kind: "delegate", id: route.delegate };
+      const outcome = step.delegate?.(options.repo, signals, route)
+        ?? completedOutcome(options.repo, route, "delegate", effect);
+      validateEffectOutcome(options.repo, route, outcome, "delegate", effect);
+      edgeOutcomes.push(outcome);
+      outcomes.push(outcome);
+      persistOutcome(options.repo, outcome);
+      const evaluation = evaluateEffectOutcome(outcome);
+      if (evaluation === "retry") {
+        savePending(route, edgeOutcomes, false);
+        if (index + 1 < options.steps.length) {
+          events.push("project");
+          state = project();
+          continue stepLoop;
+        }
+        break stepLoop;
       }
-      persistProof(options.repo, route.edgeId as string, routeProofStage("delegate", route));
+      if (evaluation) {
+        yieldReason = evaluation;
+        savePending(route, edgeOutcomes, false);
+        expectYield(step, yieldReason);
+        break stepLoop;
+      }
       delegateCounts[route.delegate] = (delegateCounts[route.delegate] ?? 0) + 1;
       delegateComplete = true;
     }
 
-    let evidenceRecorded = resumingPending?.evidenceRecorded ?? false;
+    let evidenceRecorded = resumingPending?.evidenceRecorded === true && hasEvidence(options.repo, route.edgeId as string);
     if (!evidenceRecorded) {
       if (!step.applyEvidence) {
         yieldReason = "authority-required";
-        savePending(route, completedAudits, delegateComplete, false);
+        savePending(route, edgeOutcomes, false);
         expectYield(step, yieldReason);
         break;
       }
-      const revisionBeforeEvidence = proofRevision(options.repo, route.edgeId as string);
+      const evidenceBefore = evidenceReceipts(options.repo).filter((receipt) => receipt.edgeId === route.edgeId).length;
       step.applyEvidence(options.repo, signals);
-      evidenceRecorded = hasProof(options.repo, route.edgeId as string, "evidence")
-        && proofRevision(options.repo, route.edgeId as string) > revisionBeforeEvidence;
+      evidenceRecorded = hasEvidence(options.repo, route.edgeId as string)
+        && evidenceReceipts(options.repo).filter((receipt) => receipt.edgeId === route.edgeId).length > evidenceBefore;
       if (!evidenceRecorded) {
         yieldReason = "authority-required";
-        savePending(route, completedAudits, delegateComplete, false);
+        savePending(route, edgeOutcomes, false);
         expectYield(step, yieldReason);
         break;
       }
-      persistProof(options.repo, route.edgeId as string, routeProofStage("evidence", route));
     }
     events.push(`evidence:${route.edgeId}`);
     pending = null;
@@ -440,6 +681,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     }
     upsertTrace(edgeTrace, {
       route,
+      outcomes: [...edgeOutcomes],
       completedAudits: [...completedAudits].sort(),
       delegate: route.delegate,
       delegateComplete,
@@ -475,6 +717,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     delegateCounts,
     checkpoints,
     edgeTrace,
+    outcomes,
     pending,
     hops,
   };
@@ -487,6 +730,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     events,
     auditCounts,
     delegateCounts,
+    outcomes,
     handoff: JSON.parse(JSON.stringify(handoff)),
   };
 }
@@ -610,7 +854,13 @@ test("yields approval exactly once before design evidence is written", () => {
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "approval-required",
-      delegate: () => "approval-required",
+      delegate: (fixture, _signals, route) => yieldOutcome(
+        fixture,
+        route,
+        "delegate",
+        { kind: "delegate", id: route.delegate as string },
+        "approval-required",
+      ),
       applyEvidence: () => { evidenceCalls += 1; },
     }],
   });
@@ -636,7 +886,7 @@ test("yields approval exactly once before design evidence is written", () => {
   assert.equal(resumed.current, "design");
   assert.equal(blocked.auditCounts.design, 1);
   assert.equal(resumed.auditCounts.design, 1);
-  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, proofs: proofMap(repo) }));
+  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, outcomes: storedOutcomes(repo) }));
 });
 
 test("focus input yield leaves the next route and effects untouched", () => {
@@ -689,7 +939,13 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "authority-required",
-      delegate: () => "authority-required",
+      delegate: (fixture, _signals, route) => yieldOutcome(
+        fixture,
+        route,
+        "delegate",
+        { kind: "delegate", id: route.delegate as string },
+        "authority-required",
+      ),
     }],
   });
   assert.equal(first.auditCounts.design, 1);
@@ -703,7 +959,7 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
   });
   assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.auditCounts.design, 1);
-  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, proofs: proofMap(repo) }));
+  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, outcomes: storedOutcomes(repo) }));
   assert.equal(resumed.checkpoints.length, 1);
 });
 
@@ -1033,7 +1289,13 @@ test("does not trust an unverified delegate-complete resume claim", () => {
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "authority-required",
-      delegate: () => "authority-required",
+      delegate: (fixture, _signals, route) => yieldOutcome(
+        fixture,
+        route,
+        "delegate",
+        { kind: "delegate", id: route.delegate as string },
+        "authority-required",
+      ),
     }],
   });
   const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
@@ -1049,7 +1311,7 @@ test("does not trust an unverified delegate-complete resume claim", () => {
   assert.equal(resumed.checkpoints.length, 0);
 });
 
-test("does not trust an audit claim proved only for another run state", () => {
+test("does not trust an audit receipt absent from canonical evidence", () => {
   const repo = fixtureRepo();
   const interrupted = runScenario({
     repo,
@@ -1058,19 +1320,22 @@ test("does not trust an audit claim proved only for another run state", () => {
     steps: [{
       expectEdge: "probe-to-briefing",
       yield: "authority-required",
-      audit: () => "authority-required",
+      audit: (fixture, _signals, route, audit) => yieldOutcome(
+        fixture,
+        route,
+        "audit",
+        { kind: "audit", id: audit },
+        "authority-required",
+      ),
     }],
   });
-  addTask(repo, 2);
-  const otherRun = runScenario({
-    repo,
-    current: "probe",
-    mode: "run-until-yield",
-    steps: [{ expectEdge: "probe-to-briefing", observeOnly: true }],
-  });
-  persistProof(repo, "probe-to-briefing", routeProofStage("audit:adr", otherRun.routes[0]));
   const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
-  forged.pending!.completedAudits = ["adr"];
+  forged.pending!.outcomes = [completedOutcome(
+    repo,
+    interrupted.handoff.pending!.route,
+    "audit",
+    { kind: "audit", id: "adr" },
+  )];
 
   const resumed = runScenario({
     repo,
@@ -1095,16 +1360,6 @@ test("does not trust an evidence claim proved only for another run state", () =>
     mode: "run-until-yield",
     steps: [{ expectEdge: "briefing-to-design", yield: "authority-required" }],
   });
-  addTask(repo, 2);
-  const otherRun = runScenario({
-    repo,
-    current: "briefing",
-    mode: "run-until-yield",
-    steps: [{ expectEdge: "briefing-to-design", observeOnly: true }],
-  });
-  persistProof(repo, "briefing-to-design", routeProofStage("audit:design", otherRun.routes[0]));
-  persistProof(repo, "briefing-to-design", routeProofStage("delegate", otherRun.routes[0]));
-  persistProof(repo, "briefing-to-design", routeProofStage("evidence", otherRun.routes[0]));
   const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
   forged.pending!.evidenceRecorded = true;
 
@@ -1146,9 +1401,11 @@ test("audit effects can yield and resume without repeating completed audits", ()
     steps: [{
       expectEdge: "probe-to-briefing",
       yield: "approval-required",
-      audit: () => {
+      audit: (fixture, _signals, route, audit) => {
         auditCalls += 1;
-        return auditCalls === 2 ? "approval-required" : undefined;
+        return auditCalls === 2
+          ? yieldOutcome(fixture, route, "audit", { kind: "audit", id: audit }, "approval-required")
+          : completedOutcome(fixture, route, "audit", { kind: "audit", id: audit });
       },
     }],
   });
@@ -1188,4 +1445,118 @@ test("handoff records caller mode, hop bound, and per-edge completion trace", ()
   assert.equal(result.handoff.edgeTrace[0].delegateComplete, true);
   assert.equal(result.handoff.edgeTrace[0].evidenceRecorded, true);
   assert.equal(result.handoff.edgeTrace[0].checkpointComplete, true);
+});
+
+test("records ordered typed outcomes and yields an irreversible effect without proof", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "implementation-retry",
+      yield: "authority-required",
+      delegate: (fixture, _signals, route) => yieldOutcome(
+        fixture,
+        route,
+        "delegate",
+        { kind: "delegate", id: route.delegate as string },
+        "authority-required",
+      ),
+    }],
+  });
+  assert.equal(result.yieldReason, "authority-required");
+  const outcomes = (result.handoff as unknown as { outcomes: Array<Record<string, unknown>> }).outcomes;
+  assert.deepEqual(outcomes.map((outcome) => outcome.status), ["completed", "yield"]);
+  assert.equal("proof" in outcomes[1], false);
+  assert.deepEqual(result.handoff.pending?.outcomes.map((outcome) => outcome.status), ["completed", "yield"]);
+});
+
+test("resumes a completed irreversible effect only with a provider idempotency receipt", () => {
+  const repo = fixtureRepo();
+  const first = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "implementation-retry",
+      yield: "authority-required",
+      delegate: (fixture, _signals, route) => completedOutcome(
+        fixture,
+        route,
+        "delegate",
+        { kind: "delegate", id: route.delegate as string },
+        { provider: "deploy", key: "run-1" },
+      ),
+    }],
+  });
+  assert.equal(first.yieldReason, "authority-required");
+  const delegateOutcome = (first.handoff as unknown as { outcomes: Array<Record<string, unknown>> }).outcomes
+    .find((outcome) => outcome.stage === "delegate");
+  assert.deepEqual(delegateOutcome.proof, { providerIdempotency: { provider: "deploy", key: "run-1" } });
+
+  const resumed = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    resume: first.handoff,
+    steps: [{ expectEdge: "implementation-retry", applyEvidence: evidence("implementation-retry") }],
+  });
+  assert.equal(resumed.yieldReason, null);
+  assert.equal(resumed.delegateCounts["implementation-flow"], 1);
+});
+
+test("continues a typed retry only after its canonical evidence changes", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    steps: [
+      {
+        expectEdge: "implementation-retry",
+        delegate: (fixture, signals, route) => {
+          updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+          signals.add("implementation-verified");
+          signals.add("followup-terminal");
+          return retryOutcome(
+            fixture,
+            route,
+            "delegate",
+            { kind: "delegate", id: route.delegate as string },
+            [canonicalReference(fixture, "docs/tasks/0001-task.md")],
+          );
+        },
+      },
+      {
+        expectEdge: "implementation-to-followup-triage",
+        applyEvidence: evidence("implementation-to-followup-triage"),
+      },
+    ],
+  });
+  assert.equal(result.routes.length, 2);
+  assert.equal(result.projectCalls, 2);
+  const outcomes = (result.handoff as unknown as { outcomes: Array<Record<string, unknown>> }).outcomes;
+  assert.equal(outcomes.some((outcome) => outcome.status === "retry"), true);
+});
+
+test("rejects a completed outcome with a forbidden yield reason", () => {
+  const repo = fixtureRepo();
+  assert.throws(() => runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "implementation-retry",
+      delegate: (fixture, _signals, route) => ({
+        ...completedOutcome(
+          fixture,
+          route,
+          "delegate",
+          { kind: "delegate", id: route.delegate as string },
+        ),
+        reason: "authority-required",
+      } as unknown as EffectOutcome),
+    }],
+  }), /completed outcome must not include reason/);
 });

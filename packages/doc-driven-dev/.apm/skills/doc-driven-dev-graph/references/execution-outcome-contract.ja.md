@@ -11,20 +11,42 @@ effect はそれぞれ 1 つの `EffectOutcome` footer を返し、caller は yi
 fingerprint を記録します。
 
 ```yaml
-status: completed | retry | yield
-edgeId: <declared GraphRoute.edgeId>
-stage: audit | delegate
-effect:
-  kind: audit | delegate
-  id: <required audit ID or declared delegate ID>
+status: completed
+edgeId: implementation-retry
+stage: delegate
+effect: { kind: delegate, id: implementation-flow }
 authoritativeInputs:
-  - path: <canonical Markdown path>
-    id: <canonical artifact ID when present>
-    fingerprint: <canonical input fingerprint>
+  - { path: docs/tasks/0001-task.md, id: TASK-0001, fingerprint: sha256:input }
 evidence:
-  - path: <canonical Markdown path>
-    id: <canonical evidence ID when present>
-    fingerprint: <canonical evidence fingerprint>
+  - { path: docs/impl/ir/0001-task.md, id: IMPL-0001, fingerprint: sha256:evidence }
+proof:
+  canonicalEvidence: { path: docs/impl/ir/0001-task.md, id: IMPL-0001, fingerprint: sha256:evidence }
+```
+
+```yaml
+status: retry
+edgeId: implementation-to-design
+stage: delegate
+effect: { kind: delegate, id: implementation-flow }
+authoritativeInputs:
+  - { path: docs/tasks/0001-task.md, id: TASK-0001, fingerprint: sha256:before }
+evidence:
+  - { path: docs/designs/0001-graph.md, id: DESIGN-0001, fingerprint: sha256:changed }
+retry:
+  changedEvidence:
+    - { path: docs/designs/0001-graph.md, id: DESIGN-0001, fingerprint: sha256:changed }
+```
+
+```yaml
+status: yield
+edgeId: implementation-retry
+stage: delegate
+effect: { kind: delegate, id: implementation-flow }
+authoritativeInputs:
+  - { path: docs/tasks/0001-task.md, id: TASK-0001, fingerprint: sha256:input }
+evidence:
+  - { path: docs/impl/ir/0001-task.md, id: IMPL-0001, fingerprint: sha256:checkpoint }
+reason: authority-required
 ```
 
 status variant ごとの required / forbidden field は次のとおりです。

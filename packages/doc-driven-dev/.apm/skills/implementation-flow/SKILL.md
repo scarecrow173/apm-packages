@@ -402,18 +402,13 @@ profile-selected routing as the default.
 
 ## Graph Effect Outcome
 
-When `doc-driven-dev-graph` invokes this skill, return this footer after each
-audit or delegate effect; use canonical evidence, not prose completion claims.
-
-```yaml
-status: completed | retry | yield
-evidence: <canonical Markdown path or ID>
-```
+When `doc-driven-dev-graph` invokes this skill, return exactly the
+[`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.md)
+after each audit or delegate effect; do not create a local partial variant.
 
 Use `completed` for a verified task slice with its Implementation Record,
 `retry` for declared spec/design/constraint repair, `yield` with
 `authority-required` for an irreversible effect without permission, and
 `yield` with `unrecoverable-blocker` when no declared safe repair exists. The
 required `edgeId`, stage, effect identity, authoritative input scope, and proof
-fields are defined in
-[`execution-outcome-contract.md`](../doc-driven-dev-graph/references/execution-outcome-contract.md).
+fields are defined by that footer.

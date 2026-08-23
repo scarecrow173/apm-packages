@@ -310,16 +310,11 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 
 ## Graph Effect Outcome
 
-When `doc-driven-dev-graph` invokes this skill, return this footer after each
-audit or delegate effect; use canonical evidence, not prose completion claims.
-
-```yaml
-status: completed | retry | yield
-evidence: <canonical Markdown path or ID>
-```
+When `doc-driven-dev-graph` invokes this skill, return exactly the
+[`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.md)
+after each audit or delegate effect; do not create a local partial variant.
 
 Use `completed` after the briefing gate passes, `retry` for a recoverable
 document gap, and `yield` with `input-required` for an unresolved user-only
 requirement. The required `edgeId`, stage, effect identity, authoritative input
-scope, and proof fields are defined in
-[`execution-outcome-contract.md`](../doc-driven-dev-graph/references/execution-outcome-contract.md).
+scope, and proof fields are defined by that footer.

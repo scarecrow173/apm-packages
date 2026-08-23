@@ -83,16 +83,10 @@ relations:
 ## Graph Effect Outcome
 
 `doc-driven-dev-graph` からこの skill が呼び出された場合、audit または delegate effect
-ごとに次の footer を返します。prose による完了主張ではなく canonical evidence を使います。
-
-```yaml
-status: completed | retry | yield
-evidence: <canonical Markdown path or ID>
-```
+ごとに正確な [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
+を返します。local partial variant を作成しません。
 
 approved design には `completed`、designated reviewer を待つ場合は `approval-required`
 を理由とする `yield`、upstream user decision がない場合は `input-required` を理由とする
 `yield` を使います。必須の `edgeId`、stage、effect identity、authoritative input scope、
-proof field は
-[`execution-outcome-contract.ja.md`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
-で定義します。
+proof field はその footer が定義します。
