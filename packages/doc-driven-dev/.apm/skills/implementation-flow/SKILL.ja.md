@@ -207,13 +207,16 @@ node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks
 `doc-driven-dev-graph` から Task Graph が委譲された場合、受け取った projection を
 権威ある handoff として扱う:
 
-- eligible な active task の開始集合は厳密に `taskGraph.resumableActive` とし、
-  このリストにない `active` task を開始または再開しない。
+- `taskGraph.issues` が空でない場合は、常に dispatch せず fail closed にする。
+- `GraphRoute.condition` が `tasks-active` の場合は、厳密に
+  `taskGraph.resumableActive` だけを使用する。空なら fail closed にし、この
+  リストにない `active` task を開始または再開しない。
+- `GraphRoute.condition` が `tasks-runnable` の場合は、未解決の active task が
+  存在しても `taskGraph.runnable` を使用し、その active task の ID と status を
+  変更しない。
 - task の安定した ID と status を維持し、eligible にするために書き換えない。
 - `taskGraph.edges` の dependency edge を使って依存する作業の順序を決め、その
   edge 上で独立している作業だけを並列化する。
-- `taskGraph.issues` が空でない場合、または `taskGraph.active` が空でないのに
-  `taskGraph.resumableActive` が空の場合は、dispatch せず fail closed にする。
 
 アクティブスタック内の各スキルを優先度に従って適用する:
 

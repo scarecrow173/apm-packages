@@ -214,14 +214,17 @@ the task is mechanical.
 When `doc-driven-dev-graph` delegates a Task Graph, treat that projection as
 the authoritative handoff:
 
-- The eligible active-task start set is exactly `taskGraph.resumableActive`;
-  never start or resume an `active` task absent from that list.
+- Always fail closed without dispatch when `taskGraph.issues` is non-empty.
+- When `GraphRoute.condition` is `tasks-active`, consume exactly
+  `taskGraph.resumableActive`; fail closed if it is empty, and never start or
+  resume an `active` task absent from that list.
+- When `GraphRoute.condition` is `tasks-runnable`, consume `taskGraph.runnable`
+  even if unresolved active work exists, without changing that active task's ID
+  or status.
 - Preserve stable task IDs and statuses; do not rewrite either to manufacture
   eligibility.
 - Use `taskGraph.edges` to order dependent work, and parallelize only work that
   those dependency edges show is independent.
-- Fail closed without dispatch when `taskGraph.issues` is non-empty, or when
-  `taskGraph.active` is non-empty but `taskGraph.resumableActive` is empty.
 
 Apply each skill in the active stack according to its priority:
 
