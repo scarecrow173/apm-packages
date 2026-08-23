@@ -154,8 +154,16 @@ function proofRevision(repo: string, edgeId: string): number {
   return typeof value === "number" ? value : 0;
 }
 
+function receiptScope(route: GraphRoute): string {
+  return JSON.stringify({
+    edgeId: route.edgeId,
+    effect: route.delegate,
+    taskGraph: route.taskGraph,
+  });
+}
+
 function routeProofStage(stage: ProofStage, route: GraphRoute): ProofStage {
-  return `${stage}:${JSON.stringify(route)}`;
+  return `${stage}:${receiptScope(route)}`;
 }
 
 function hasRouteProof(repo: string, route: GraphRoute, stage: ProofStage): boolean {
@@ -348,6 +356,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       ? pending
       : null;
     if (resumingPending) {
+      const scopeChanged = receiptScope(resumingPending.route) !== receiptScope(route);
       const claimedAudits = new Set(resumingPending.completedAudits);
       const unverifiedAudit = [...claimedAudits].some((audit) => (
         !route.requiredAudits.includes(audit)
@@ -358,7 +367,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       );
       const unverifiedEvidence = resumingPending.evidenceRecorded
         && !hasRouteProof(options.repo, resumingPending.route, "evidence");
-      if (unverifiedAudit || unverifiedDelegate || unverifiedEvidence) {
+      if (scopeChanged || unverifiedAudit || unverifiedDelegate || unverifiedEvidence) {
         yieldReason = "authority-required";
         expectYield(step, yieldReason);
         break;
@@ -698,7 +707,7 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
   assert.equal(resumed.checkpoints.length, 1);
 });
 
-test("resume accepts pending audit and delegate receipts after route-relevant state changes", () => {
+test("resume skips scope-valid pending audit and delegate receipts", () => {
   const repo = fixtureRepo();
   const interrupted = runScenario({
     repo,
@@ -709,7 +718,6 @@ test("resume accepts pending audit and delegate receipts after route-relevant st
   assert.deepEqual(interrupted.handoff.pending?.completedAudits, ["design"]);
   assert.equal(interrupted.handoff.pending?.delegateComplete, true);
 
-  addTask(repo, 2);
   const resumed = runScenario({
     repo,
     current: "briefing",
@@ -717,12 +725,37 @@ test("resume accepts pending audit and delegate receipts after route-relevant st
     resume: interrupted.handoff,
     steps: [{ expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") }],
   });
-  assert.notDeepEqual(resumed.routes[0].taskGraph, interrupted.handoff.pending?.route.taskGraph);
-  assert.notEqual(JSON.stringify(resumed.routes[0]), JSON.stringify(interrupted.handoff.pending?.route));
+  assert.deepEqual(resumed.routes[0].taskGraph, interrupted.handoff.pending?.route.taskGraph);
   assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.auditCounts.design, 1);
   assert.equal(resumed.delegateCounts["design-doc"], 1);
   assert.equal(resumed.checkpoints.length, 1);
+});
+
+test("does not skip an implementation receipt after its authoritative Task Graph changes", () => {
+  const repo = fixtureRepo();
+  const interrupted = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    steps: [{ expectEdge: "implementation-retry", yield: "authority-required" }],
+  });
+  assert.equal(interrupted.handoff.pending?.delegateComplete, true);
+
+  addTask(repo, 2);
+  const resumed = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    resume: interrupted.handoff,
+    steps: [{
+      expectEdge: "implementation-retry",
+      applyEvidence: evidence("implementation-retry"),
+    }],
+  });
+  assert.notDeepEqual(resumed.routes[0].taskGraph, interrupted.handoff.pending?.route.taskGraph);
+  assert.equal(resumed.yieldReason, "authority-required");
+  assert.equal(resumed.delegateCounts["implementation-flow"], 1);
 });
 
 test("continues implementation retry only after re-projection", () => {
