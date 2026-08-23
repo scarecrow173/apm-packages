@@ -50,7 +50,8 @@ Edges name a condition key. The generic condition DSL supports `signal`,
 `invalid`, or `idle`)
 predicates. Only declared signals are accepted. For the current node, eligible
 edges are ordered by ascending `priority`, then stable edge ID; the first match
-is the only route returned. The CLI never follows a second edge recursively.
+is the only route returned. `route_graph.js` itself never recursively follows a
+second edge; continuation belongs to the caller.
 
 `tasks-active` means that the Task Graph has no structural issues and its
 sorted `resumableActive` list contains at least one `in-progress` task whose
@@ -77,22 +78,37 @@ is a hard stop until explicit focus is supplied.
 
 ## Runtime loop
 
-1. Select the Graph Definition and current node.
+`run-until-yield` is the normal caller mode. Use `single-step` when the user
+requests debugging, inspection, deterministic testing, or one-checkpoint
+execution. In either mode, `route_graph.js` returns one route per invocation;
+the caller owns continuation. The detailed ordered protocol, yield table,
+budgets, trace summary, and resume rules are in
+[`references/execution-contract.md`](references/execution-contract.md).
+
+1. Select the Graph Definition, current node, and caller mode.
 2. Inspect canonical Markdown artifacts and their semantic relations.
 3. Project the Artifact Graph into fresh Graph State.
 4. Resolve an explicit focus when multiple chains are present.
 5. Evaluate gate results, caller signals, and deterministic blockers.
 6. Evaluate each outgoing edge with the generic condition DSL.
-7. Apply priority order (then edge ID) to choose at most one edge.
-8. Preserve the complete route and run every returned audit.
+7. Apply priority order (then edge ID) to choose at most one edge; the router
+   never recursively follows a second edge.
+8. Preserve the complete route, check bounded counters and its fingerprint, and
+   run every returned audit in stable order.
 9. Dispatch only the declared delegate, including its briefing or
-   implementation subgraph.
-10. Record Markdown evidence, re-project, and re-enter at the returned `next`
-    node.
+   implementation subgraph; yield when input, approval, or authority is
+   explicitly required.
+10. Record the Markdown evidence checkpoint and ordered trace, re-project, and re-enter
+    at the returned `next` node; yield in `single-step` mode or repeat in
+    `run-until-yield` mode.
 
-The loop stops at a terminal node or a fail-closed blocker requiring user
-authority. A task marked `wont-do` never satisfies a dependency; unresolved
-tasks remain blocked in the Dynamic Task Graph.
+The caller applies the complete Phase 1 yield table in
+[`references/execution-contract.md`](references/execution-contract.md): it
+yields for `terminal`, `approval-required`, `input-required`,
+`authority-required`, `unrecoverable-blocker`, or `budget-exhausted`, and
+repeats only when the table permits automatic continuation. A task marked
+`wont-do` never satisfies a dependency; unresolved tasks remain blocked in the
+Dynamic Task Graph.
 
 After implementation, the `follow-up triage` node requires
 `implementation-verified` and one typed signal before routing to repair,

@@ -88,19 +88,31 @@ test("projects destination audit requirements on a selected edge", () => {
   assert.deepEqual(route.requiredAudits, ["adr", "spec"]);
 });
 
-test("returns only one edge even when the destination has a satisfied edge", () => {
+test("one route invocation never follows the selected destination", () => {
   const definition = definitionWith({
+    nodes: {
+      alpha: { kind: "action" },
+      beta: { kind: "delegate", delegate: "beta-handler" },
+      finished: { kind: "terminal" },
+    },
     edges: [
-      { id: "alpha-to-repair", from: "alpha", to: "repair", when: "first", priority: 10 },
-      { id: "repair-to-finished", from: "repair", to: "finished", when: "second", priority: 10 },
+      { id: "alpha-to-beta", from: "alpha", to: "beta", when: "first", priority: 10 },
+      { id: "beta-to-finished", from: "beta", to: "finished", when: "second", priority: 10 },
     ],
   });
-  const route = routeGraph({ current: "alpha", definition, state: stateWith({ signals: ["first", "second"] }) });
-  assert.equal(route.edgeId, "alpha-to-repair");
+  const state = stateWith({ signals: ["first", "second"] });
+  const route = routeGraph({ current: "alpha", definition, state });
+  assert.equal(route.schemaVersion, 2);
+  assert.equal(route.graphId, "arbitrary-graph");
   assert.equal(route.current, "alpha");
-  assert.equal(route.next, "repair");
-  assert.notEqual(route.next, "finished");
+  assert.equal(route.next, "beta");
+  assert.equal(route.edgeId, "alpha-to-beta");
+  assert.equal(route.condition, "first");
   assert.equal(route.status, "edge");
+  assert.equal(route.delegate, "beta-handler");
+  assert.deepEqual(route.requiredAudits, []);
+  assert.deepEqual(route.blockers, []);
+  assert.equal(route.taskGraph, null);
 });
 
 test("returns terminal status when re-entering a terminal node", () => {

@@ -9,8 +9,12 @@ Use `doc-driven-dev-graph` for graph routing. Its Graph Definition is the
 normative execution authority; phase labels are conceptual mapping only.
 The runtime contract is:
 
-`Graph Definition -> Graph State -> one declared route -> delegate/audit ->
-Markdown evidence -> re-project`.
+`Graph Definition -> fresh Graph State -> one declared route -> audit/delegate ->
+canonical Markdown checkpoint -> re-project -> caller evaluates yield -> repeat or yield`.
+
+`run-until-yield` is the normal caller mode; `single-step` remains available for
+debugging, inspection, deterministic testing, or one-checkpoint execution. The
+router still returns one route per invocation; the caller owns continuation.
 
 The package has four layers:
 
