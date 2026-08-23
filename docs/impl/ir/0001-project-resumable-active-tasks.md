@@ -4,15 +4,17 @@ type: "impl"
 status: "completed"
 title: "Project resumable active tasks"
 created: "2026-08-23"
-updated: "2026-08-23"
+updated: "2026-08-24"
 owners: []
 relations:
   source: []
   changes:
     added: []
     modified:
-      - "scripts/doc-driven-dev/src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts"
-      - "scripts/doc-driven-dev/tests/doc-driven-dev-graph-task-graph.test.ts"
+      - type: "file"
+        path: "scripts/doc-driven-dev/src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts"
+      - type: "file"
+        path: "scripts/doc-driven-dev/tests/doc-driven-dev-graph-task-graph.test.ts"
     deleted: []
     renamed: []
     moved: []
@@ -72,20 +74,23 @@ None.
 
 ## Validation
 
-- RED: rtk pnpm exec tsx --test tests/doc-driven-dev-graph-task-graph.test.ts from scripts/doc-driven-dev — 17 tests, 14 passed, 3 failed (the new assertions reported missing resumableActive).
-- GREEN: rtk pnpm exec tsx --test tests/doc-driven-dev-graph-task-graph.test.ts — 17 passed, 0 failed.
-- Full suite: rtk pnpm exec tsx --test tests/*.test.ts — 155 passed, 0 failed.
-- Mise activation emitted only the known PowerShell 5.1 chpwd compatibility warning.
-- Full suite: rtk pnpm test — 155 passed, 0 failed.
+- Historical Task 1 evidence at commit `06cd7df` (not fresh final-HEAD evidence):
+  - RED: `rtk pnpm exec tsx --test tests/doc-driven-dev-graph-task-graph.test.ts`
+    from `scripts/doc-driven-dev` — 17 tests, 14 passed, 3 failed because the
+    new assertions reported the missing `resumableActive`.
+  - GREEN: the same focused command passed 17/17.
+  - Package-wide `rtk pnpm test` passed 155/155.
+- Mise activation emitted only the known PowerShell 5.1 `chpwd` compatibility
+  warning.
 - Task review: spec compliant, no findings, approved.
+- Final-review HEAD package-wide `pnpm test` remains deferred; final verification
+  uses the focused definition, routing, and CLI suites.
 
 ## Risks
 
-The source projection is implemented and tested. Distributed/generated package assets remain outside this slice ownership.
+The source projection is implemented and tested.
 
 ## Follow-ups
 
-Tasks 2–4 own the DSL, edge, bundles, and docs follow-ups.
-## Risks or Follow-ups
-
-Tasks 2–4 own the DSL, edge, bundles, and docs follow-ups.
+Tasks 2–4 own the DSL, edge, bundles, and documentation follow-ups. Final-HEAD
+package-wide verification is deferred as recorded above.

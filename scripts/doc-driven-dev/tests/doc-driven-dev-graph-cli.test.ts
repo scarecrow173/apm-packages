@@ -247,6 +247,52 @@ test("generated CLI smoke matches source CLI terminology", { skip: !fs.existsSyn
   assert.equal(route.edgeId, "start-to-next");
 });
 
+test("resumable active task graph runs through source and generated CLIs", () => {
+  const repo = completeRepo(
+    ["done", "in-progress", "in-progress", "in-progress"],
+    [[], ["TASK-0001"], ["TASK-0001"], ["TASK-0002"]],
+  );
+  const args = ["--focus", "PLAN-0001", "--current", "task-graph", "--explain", "--json"];
+
+  for (const [name, result] of [
+    ["source", runSource(repo, args)],
+    ["generated", runCli(generatedCli, repo, args)],
+  ] as const) {
+    assert.equal(result.status, 0, `${name}: ${result.stderr}`);
+    const explained = JSON.parse(result.stdout);
+    const route = explained.route;
+    assert.equal(route.edgeId, "task-graph-to-active-implementation", name);
+    assert.equal(route.next, "implementation", name);
+    assert.equal(route.delegate, "implementation-flow", name);
+    assert.equal(route.status, "edge", name);
+    assert.deepEqual(route.taskGraph.active, ["TASK-0002", "TASK-0003", "TASK-0004"], name);
+    assert.deepEqual(route.taskGraph.resumableActive, ["TASK-0002", "TASK-0003"], name);
+    assert.deepEqual(explained.explanation.blockedReasons, [], name);
+  }
+});
+
+test("active task takes priority over runnable task in source and generated CLIs", () => {
+  const repo = completeRepo(["in-progress", "todo"]);
+  const args = ["--focus", "PLAN-0001", "--current", "task-graph", "--explain", "--json"];
+
+  for (const [name, result] of [
+    ["source", runSource(repo, args)],
+    ["generated", runCli(generatedCli, repo, args)],
+  ] as const) {
+    assert.equal(result.status, 0, `${name}: ${result.stderr}`);
+    const explained = JSON.parse(result.stdout);
+    const route = explained.route;
+    assert.equal(route.edgeId, "task-graph-to-active-implementation", name);
+    assert.equal(route.next, "implementation", name);
+    assert.equal(route.delegate, "implementation-flow", name);
+    assert.equal(route.status, "edge", name);
+    assert.deepEqual(route.taskGraph.active, ["TASK-0001"], name);
+    assert.deepEqual(route.taskGraph.resumableActive, ["TASK-0001"], name);
+    assert.deepEqual(route.taskGraph.runnable, ["TASK-0002"], name);
+    assert.deepEqual(explained.explanation.blockedReasons, [], name);
+  }
+});
+
 test("table-driven CLI routes exercise every migration scenario with one edge", () => {
   const scenarios: Scenario[] = [
     {
@@ -281,35 +327,6 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       }),
       edgeId: "task-graph-to-planning",
       next: "planning",
-    },
-    {
-      name: "resumable active task graph",
-      setup: () => ({
-        repo: completeRepo(["done", "in-progress"], [[], ["TASK-0001"]]),
-        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
-      }),
-      edgeId: "task-graph-to-active-implementation",
-      next: "implementation",
-      assertRoute: (route) => {
-        const taskGraph = route.taskGraph as { active: string[]; resumableActive: string[] };
-        assert.deepEqual(taskGraph.active, ["TASK-0002"]);
-        assert.deepEqual(taskGraph.resumableActive, ["TASK-0002"]);
-      },
-    },
-    {
-      name: "active task takes priority over runnable task",
-      setup: () => ({
-        repo: completeRepo(["in-progress", "todo"]),
-        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
-      }),
-      edgeId: "task-graph-to-active-implementation",
-      next: "implementation",
-      assertRoute: (route) => {
-        const taskGraph = route.taskGraph as { active: string[]; resumableActive: string[]; runnable: string[] };
-        assert.deepEqual(taskGraph.active, ["TASK-0001"]);
-        assert.deepEqual(taskGraph.resumableActive, ["TASK-0001"]);
-        assert.deepEqual(taskGraph.runnable, ["TASK-0002"]);
-      },
     },
     {
       name: "runnable task graph",

@@ -202,6 +202,19 @@ node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks
 
 ## Phase C: 実行
 
+### Graph handoff contract
+
+`doc-driven-dev-graph` から Task Graph が委譲された場合、受け取った projection を
+権威ある handoff として扱う:
+
+- eligible な active task の開始集合は厳密に `taskGraph.resumableActive` とし、
+  このリストにない `active` task を開始または再開しない。
+- task の安定した ID と status を維持し、eligible にするために書き換えない。
+- `taskGraph.edges` の dependency edge を使って依存する作業の順序を決め、その
+  edge 上で独立している作業だけを並列化する。
+- `taskGraph.issues` が空でない場合、または `taskGraph.active` が空でないのに
+  `taskGraph.resumableActive` が空の場合は、dispatch せず fail closed にする。
+
 アクティブスタック内の各スキルを優先度に従って適用する:
 
 1. 各スキル固有のプロセスに従う（そのスキルの SKILL.md を読む）。
