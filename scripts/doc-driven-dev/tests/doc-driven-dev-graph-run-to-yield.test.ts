@@ -223,11 +223,23 @@ function fingerprint(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+function filesystemEntryKind(target: string): string {
+  if (!fs.existsSync(target)) return "missing";
+  const entry = fs.statSync(target);
+  if (entry.isDirectory()) return "directory";
+  if (entry.isFile()) return "file";
+  return "other";
+}
+
 function canonicalReference(repo: string, relativePath: string): CanonicalReference {
   if (relativePath === ".") {
-    const entries = fs.readdirSync(repo, { withFileTypes: true })
-      .map((entry) => `${entry.name}:${entry.isDirectory() ? "directory" : "file"}`)
-      .sort();
+    const entries = canonicalTargets.flatMap((directory) => {
+      const target = path.join(repo, directory);
+      return [
+        `${directory}:${filesystemEntryKind(target)}`,
+        `${directory}/README.md:${filesystemEntryKind(path.join(target, "README.md"))}`,
+      ];
+    });
     return {
       path: relativePath,
       id: "WORKSPACE_ROOT",
@@ -252,6 +264,14 @@ function taskGraphPaths(route: GraphRoute): string[] {
   return route.taskGraph?.nodes.map((node) => node.path) ?? [proofRelativePath];
 }
 
+function selectedTaskGraphPlanPath(route: GraphRoute): string {
+  const plan = route.taskGraph?.plan;
+  if (typeof plan !== "string" || plan.length === 0) {
+    throw new Error("Missing selected Task Graph plan for build_task_graph");
+  }
+  return plan;
+}
+
 function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
   if (effect.kind === "audit") {
     switch (effect.id) {
@@ -267,7 +287,7 @@ function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
   switch (effect.id) {
     case "migrate_docs": return canonicalDocumentPaths;
     case "scaffold_docs": return ["."];
-    case "build_task_graph": return ["docs/plans/0001-graph.md", ...taskGraphPaths(route)];
+    case "build_task_graph": return [selectedTaskGraphPlanPath(route), ...taskGraphPaths(route)];
     case "briefing-flow": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "implementation-flow": return [...taskGraphPaths(route), "docs/designs/0001-graph.md", "docs/plans/0001-graph.md"];
@@ -1891,7 +1911,7 @@ edges:
     steps: [{ expectEdge: "start-to-bootstrap", yield: "authority-required" }],
   });
   assert.deepEqual(effectInputPaths(interrupted.routes[0], { kind: "delegate", id: "scaffold_docs" }), ["."]);
-  fs.writeFileSync(path.join(repo, "bootstrap-input.txt"), "changed\n", "utf8");
+  fs.unlinkSync(path.join(repo, "docs/specs/README.md"));
   const resumed = runScenario({
     repo,
     graphPath,
@@ -1907,14 +1927,27 @@ edges:
   });
   assert.equal(resumed.yieldReason, "authority-required");
 
+  const focusedRepo = fixtureRepo({ secondPlan: true });
+  writeArtifact(focusedRepo, "docs/tasks/0002-focused.md", {
+    id: "TASK-0002", type: "task", status: "todo", title: "Focused",
+    relations: { implements: ["docs/plans/0002-other.md"] },
+  }, "# Focused task\n");
   const taskGraph = runScenario({
-    repo: fixtureRepo(),
+    repo: focusedRepo,
     current: "planning",
     mode: "run-until-yield",
+    focus: ["docs/plans/0002-other.md"],
     steps: [{ expectEdge: "planning-to-task-graph", yield: "authority-required" }],
   });
   assert.deepEqual(effectInputPaths(taskGraph.routes[0], { kind: "delegate", id: "build_task_graph" }), [
-    "docs/plans/0001-graph.md",
-    proofRelativePath,
+    "docs/plans/0002-other.md",
+    "docs/tasks/0002-focused.md",
   ]);
+});
+
+test("fails closed when build_task_graph has no selected Task Graph plan", () => {
+  assert.throws(
+    () => effectInputPaths({ taskGraph: null } as unknown as GraphRoute, { kind: "delegate", id: "build_task_graph" }),
+    /Missing selected Task Graph plan/,
+  );
 });
