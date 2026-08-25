@@ -157,8 +157,8 @@ canonical document set. `briefing-flow` reads the spec and ADR, `design-doc`
 reads the spec and ADR and records design evidence, `implementation-flow`
 reads selected tasks plus design/plan and records its Implementation Record,
 and `doc-status` reads the declared document set. Script-adapter inputs are
-`migrate_docs` (declared document set), `scaffold_docs` (spec and ADR), and
-`build_task_graph` (selected task documents). Every referenced path/ID and
+`migrate_docs` (declared document set), `scaffold_docs` (workspace-root bootstrap input), and
+`build_task_graph` (focused plan plus selected task documents). Every referenced path/ID and
 fingerprint must resolve against current canonical content before use.
 
 ## Existing delegate meanings

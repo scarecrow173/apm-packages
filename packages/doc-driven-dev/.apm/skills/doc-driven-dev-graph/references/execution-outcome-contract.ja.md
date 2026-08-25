@@ -152,7 +152,7 @@ declared canonical document set を読みます。`briefing-flow` は spec と A
 は spec と ADR を読み design evidence を記録し、`implementation-flow` は選択 task と
 design/plan を読み Implementation Record を記録し、`doc-status` は declared document set を
 読みます。script-adapter input は `migrate_docs`（declared document set）、`scaffold_docs`
-（spec と ADR）、`build_task_graph`（選択 task document）です。すべての referenced path/ID と
+（workspace-root bootstrap input）、`build_task_graph`（focused plan と選択 task document）です。すべての referenced path/ID と
 fingerprint は使用前に current canonical content と照合して resolve しなければなりません。
 
 ## 既存 delegate の意味

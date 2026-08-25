@@ -662,6 +662,10 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(graphRunContract(outcomeContract) as string, /type GraphRunHandoff = \{[\s\S]*current: string[\s\S]*edgeTrace: GraphRunTrace\[\][\s\S]*pending:[\s\S]*hops: number/);
   assert.match(outcomeContract, /Caller-normalized effects/);
   assert.match(outcomeContract, /migrate_docs.*scaffold_docs.*build_task_graph/s);
+  assert.match(outcomeContract, /`scaffold_docs` \(workspace-root bootstrap input\)/);
+  assert.match(outcomeContract, /`build_task_graph` \(focused plan plus selected task documents\)/);
+  assert.match(outcomeContractJa, /`scaffold_docs`\s*（workspace-root bootstrap input）/);
+  assert.match(outcomeContractJa, /`build_task_graph`（focused plan と選択 task document）/);
   assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*all/s);
   assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
   assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));

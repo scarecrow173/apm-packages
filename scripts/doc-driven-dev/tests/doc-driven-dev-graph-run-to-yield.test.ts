@@ -224,6 +224,16 @@ function fingerprint(value: string): string {
 }
 
 function canonicalReference(repo: string, relativePath: string): CanonicalReference {
+  if (relativePath === ".") {
+    const entries = fs.readdirSync(repo, { withFileTypes: true })
+      .map((entry) => `${entry.name}:${entry.isDirectory() ? "directory" : "file"}`)
+      .sort();
+    return {
+      path: relativePath,
+      id: "WORKSPACE_ROOT",
+      fingerprint: fingerprint(entries.join("\n")),
+    };
+  }
   const file = path.join(repo, relativePath);
   const parsed = matter(fs.readFileSync(file, "utf8"));
   const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
@@ -256,8 +266,8 @@ function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
   }
   switch (effect.id) {
     case "migrate_docs": return canonicalDocumentPaths;
-    case "scaffold_docs": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
-    case "build_task_graph": return taskGraphPaths(route);
+    case "scaffold_docs": return ["."];
+    case "build_task_graph": return ["docs/plans/0001-graph.md", ...taskGraphPaths(route)];
     case "briefing-flow": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "implementation-flow": return [...taskGraphPaths(route), "docs/designs/0001-graph.md", "docs/plans/0001-graph.md"];
@@ -554,8 +564,10 @@ function traceKey(route: GraphRoute): string {
   return `${route.current}\u0000${route.edgeId ?? route.condition}`;
 }
 
-function upsertTrace(traces: EdgeTrace[], trace: EdgeTrace): void {
-  const index = traces.findIndex((candidate) => traceKey(candidate.route) === traceKey(trace));
+function recordTrace(traces: EdgeTrace[], trace: EdgeTrace): void {
+  const index = traces.findLastIndex((candidate) =>
+    traceKey(candidate.route) === traceKey(trace.route) && !candidate.checkpointComplete,
+  );
   if (index < 0) traces.push(trace);
   else traces[index] = trace;
 }
@@ -619,7 +631,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       delegateComplete,
       evidenceRecorded,
     };
-    upsertTrace(edgeTrace, {
+    recordTrace(edgeTrace, {
       route,
       outcomes: [...edgeOutcomes],
       completedAudits,
@@ -780,7 +792,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     if (route.current === route.next) {
       selfLoopCounts[route.edgeId as string] = (selfLoopCounts[route.edgeId as string] ?? 0) + 1;
     }
-    upsertTrace(edgeTrace, {
+    recordTrace(edgeTrace, {
       route,
       outcomes: [...edgeOutcomes],
       completedAudits: [...completedAudits].sort(),
@@ -1244,6 +1256,8 @@ test("bounds a changing multi-node repair cycle at the default maxHops", () => {
   assert.equal(result.checkpoints.length, 10);
   assert.equal(result.handoff.maxHops, 10);
   assert.equal(result.handoff.hops, 10);
+  assert.equal(graphRun(result).trace.length, 10);
+  assert.deepEqual(graphRun(result).trace.map((entry) => entry.route.edgeId), steps.slice(0, 10).map((step) => step.expectEdge));
 });
 
 test("stops on a repeated complete GraphRoute fingerprint", () => {
@@ -1850,4 +1864,57 @@ test("does not reuse a non-implementation audit after its authoritative input ch
   });
   assert.equal(resumed.yieldReason, "authority-required");
   assert.equal(resumed.checkpoints.length, 0);
+});
+
+test("binds script delegates to their workspace-root and plan/task inputs", () => {
+  const repo = fixtureRepo();
+  const graphPath = customGraph(repo, `schemaVersion: 2
+id: scaffold-input-fixture
+entry: start
+runtimeSignals: [bootstrap]
+conditions:
+  bootstrap: { kind: signal, signal: bootstrap }
+nodes:
+  start: { kind: action }
+  bootstrap: { kind: action, delegate: scaffold_docs }
+  complete: { kind: terminal }
+edges:
+  - { id: start-to-bootstrap, from: start, to: bootstrap, when: bootstrap, priority: 10 }
+  - { id: bootstrap-to-complete, from: bootstrap, to: complete, when: bootstrap, priority: 10 }
+`);
+  const interrupted = runScenario({
+    repo,
+    graphPath,
+    current: "start",
+    mode: "run-until-yield",
+    signals: ["bootstrap"],
+    steps: [{ expectEdge: "start-to-bootstrap", yield: "authority-required" }],
+  });
+  assert.deepEqual(effectInputPaths(interrupted.routes[0], { kind: "delegate", id: "scaffold_docs" }), ["."]);
+  fs.writeFileSync(path.join(repo, "bootstrap-input.txt"), "changed\n", "utf8");
+  const resumed = runScenario({
+    repo,
+    graphPath,
+    current: "start",
+    mode: "run-until-yield",
+    signals: ["bootstrap"],
+    resume: interrupted.handoff,
+    steps: [{
+      expectEdge: "start-to-bootstrap",
+      yield: "authority-required",
+      applyEvidence: evidence("start-to-bootstrap"),
+    }],
+  });
+  assert.equal(resumed.yieldReason, "authority-required");
+
+  const taskGraph = runScenario({
+    repo: fixtureRepo(),
+    current: "planning",
+    mode: "run-until-yield",
+    steps: [{ expectEdge: "planning-to-task-graph", yield: "authority-required" }],
+  });
+  assert.deepEqual(effectInputPaths(taskGraph.routes[0], { kind: "delegate", id: "build_task_graph" }), [
+    "docs/plans/0001-graph.md",
+    proofRelativePath,
+  ]);
 });
