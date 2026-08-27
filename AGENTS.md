@@ -4,19 +4,18 @@ This file gives practical guidance for agents working in the repository root.
 If a deeper directory contains its own `AGENTS.md`, that file takes precedence
 for files under that subtree.
 
-## 0. Environment Activation (Required Before Work)
+## 0. Environment Execution (Required During Work)
 
 The `mise` shims are excluded from PATH to prevent infinite loops with `uv`.
-**You must run `mise activate` at the start of each session** before working.
+**Run commands that require repository-managed tools through `mise exec --`**.
 
-| Platform | Command |
-|---|---|
-| Windows (PowerShell) | `mise activate pwsh \| Out-String \| Invoke-Expression` |
-| macOS / Linux (bash) | `eval "$(mise activate bash)"` |
-| macOS / Linux (zsh) | `eval "$(mise activate zsh)"` |
+```text
+mise exec -- <command> [args...]
+```
 
-Without activation, version management for `uv`, `python`, `node`, and other tools will not work.
-Commands may not be found, or incorrect versions will be executed.
+Without `mise exec --`, version management for `uv`, `python`, `node`, and other
+tools may not work; commands may not be found, or incorrect versions may be
+executed.
 
 ## 1. Scope
 
