@@ -42,6 +42,24 @@ checkpoint は audit、delegate、evidence が記録された後にだけ完了�
 trace summary には mode、bounded counter、順序付き completed edge ID、route
 fingerprint、最終 yield reason を記録します。
 
+## EffectOutcome の評価
+
+graph から呼び出された audit と delegate はすべて
+[execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) で定義する
+正確な `EffectOutcome` footer を返します。caller は free-form semantic inference では
+なく、`EffectOutcome.status` と `reason` を exact match します。terminal または blocked
+`GraphRoute` と hop/retry/repetition budget は effect outcome より先に別途評価します。
+yield 時には complete route と順序付き outcome を持つ 1 つの `GraphRunResult` handoff を
+記録します。completed effect を再利用できるのは、receipt scope と canonical-evidence
+または provider-idempotency proof が fresh projection に対して validate した場合だけです。
+
+caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
+`build_task_graph`）と named audit（`spec`、`adr`、`design`、`plan`、`task`、`impl-record`、
+`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
+adapter evidence が missing または malformed なら `authority-required` を yield し、checkpoint
+を進めません。effect 固有の canonical input/evidence mapping は
+[execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) に定義します。
+
 ## Phase 1 yield table
 
 | Observation | Yield reason | Continue automatically |
@@ -61,7 +79,10 @@ caller は固定された run counter を使い、この protocol に policy DSL
 
 ```text
 maxHops default = 10
-  Rationale: current Graph Definition has 10 non-terminal nodes and the normal path is 8 edges.
+  理由: 現在の Graph Definition には 10 個の non-terminal node がある。normal path は
+  8 edge、migration を含む path は 10 edge である。
+  terminal と blocked route はこの budget より先に評価するため、10 hop 目で
+  complete に到達した場合は budget-exhausted ではなく terminal を yield する。
 
 self-loop budget = 1 completed traversal per edge ID per run
   A second traversal of the same from == to edge yields budget-exhausted.

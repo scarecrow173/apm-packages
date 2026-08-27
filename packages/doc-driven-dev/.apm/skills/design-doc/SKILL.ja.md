@@ -79,3 +79,14 @@ relations:
 - `scripts/new_design.js`: 詳細設計文書を作成し索引を更新します。
 - `references/design-conventions.ja.md`: 命名、ステータス、relation、索引の規約。
 - `assets/templates/design.ja.md`: 詳細設計の既定テンプレート。
+
+## Graph Effect Outcome
+
+`doc-driven-dev-graph` からこの skill が呼び出された場合、audit または delegate effect
+ごとに正確な [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
+を返します。local partial variant を作成しません。
+
+approved design には `completed`、designated reviewer を待つ場合は `approval-required`
+を理由とする `yield`、upstream user decision がない場合は `input-required` を理由とする
+`yield` を使います。必須の `edgeId`、stage、effect identity、authoritative input scope、
+proof field はその footer が定義します。

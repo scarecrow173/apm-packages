@@ -40,6 +40,26 @@ The checkpoint is complete only after its audits, delegate, and evidence are
 recorded. A run trace summary records the mode, bounded counters, completed
 edge IDs in order, route fingerprints, and the final yield reason.
 
+## Effect outcome evaluation
+
+Every graph-invoked audit and delegate returns the exact `EffectOutcome` footer
+defined in [execution-outcome-contract.md](execution-outcome-contract.md). The
+caller performs an exact `EffectOutcome.status` and `reason` match, never a
+free-form semantic inference. It evaluates terminal or blocked `GraphRoute`
+results and hop/retry/repetition budgets separately before effect outcomes.
+At yield, it records one `GraphRunResult` handoff with the complete route and
+ordered outcomes. A completed effect is reusable only when the receipt scope
+and canonical-evidence or provider-idempotency proof validate against the
+fresh projection.
+
+The caller adapter normalizes the declared script delegates (`migrate_docs`,
+`scaffold_docs`, and `build_task_graph`) and named audits (`spec`, `adr`,
+`design`, `plan`, `task`, `impl-record`, and `all`) into `EffectOutcome`.
+Skills that can emit the footer return it directly. Missing or malformed adapter
+evidence yields `authority-required`; it never advances a checkpoint. The
+effect-specific canonical input/evidence mapping is defined in
+[execution-outcome-contract.md](execution-outcome-contract.md).
+
 ## Phase 1 yield table
 
 | Observation | Yield reason | Continue automatically |
@@ -59,7 +79,10 @@ The caller uses fixed run counters; this protocol adds no policy DSL:
 
 ```text
 maxHops default = 10
-  Rationale: current Graph Definition has 10 non-terminal nodes and the normal path is 8 edges.
+  Rationale: current Graph Definition has 10 non-terminal nodes. The normal path is 8 edges;
+  the migration-inclusive path is 10 edges.
+  Terminal and blocked routes are evaluated before this budget, so reaching complete on hop 10
+  yields terminal rather than budget-exhausted.
 
 self-loop budget = 1 completed traversal per edge ID per run
   A second traversal of the same from == to edge yields budget-exhausted.

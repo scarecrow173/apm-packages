@@ -72,3 +72,14 @@ Return audit results using this structure:
 - `scripts/list_docs.js`: list document metadata by type and status.
 - `scripts/audit_docs.js`: validate front matter, statuses, relations, and
   index coverage.
+
+## Graph Effect Outcome
+
+When `doc-driven-dev-graph` invokes this skill, return exactly the
+[`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.md)
+after each audit or delegate effect; do not create a local partial variant.
+
+Use `completed` for a Completable result, `retry` for Returned with declared
+repair evidence, and `yield` with `unrecoverable-blocker` for Returned without
+a safe repair. The required `edgeId`, stage, effect identity, authoritative
+input scope, and proof fields are defined by that footer.

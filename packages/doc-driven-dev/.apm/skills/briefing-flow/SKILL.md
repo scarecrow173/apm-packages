@@ -307,3 +307,14 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 | "Alternatives are obvious" | ADR with only one option has no decision rationale |
 | "Spending too much time on briefing" | Stop when stop conditions are met. Continue until they are |
 | "It's urgent, skip the spec" | Minimum evidence is 10 minutes. Skipping costs hours to days |
+
+## Graph Effect Outcome
+
+When `doc-driven-dev-graph` invokes this skill, return exactly the
+[`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.md)
+after each audit or delegate effect; do not create a local partial variant.
+
+Use `completed` after the briefing gate passes, `retry` for a recoverable
+document gap, and `yield` with `input-required` for an unresolved user-only
+requirement. The required `edgeId`, stage, effect identity, authoritative input
+scope, and proof fields are defined by that footer.

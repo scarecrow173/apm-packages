@@ -605,6 +605,78 @@ test("doc-driven-dev-graph meta skill ships Graph Definition and runtime referen
   assert.match(contractJa, /同じ run.*複数 edge/);
 });
 
+test("graph-invoked effects publish scoped typed outcomes", () => {
+  const graphRoot = path.join(skillRoot, "doc-driven-dev-graph");
+  const outcomeContract = fs.readFileSync(path.join(graphRoot, "references", "execution-outcome-contract.md"), "utf8");
+  const outcomeContractJa = fs.readFileSync(path.join(graphRoot, "references", "execution-outcome-contract.ja.md"), "utf8");
+  const executionContract = fs.readFileSync(path.join(graphRoot, "references", "execution-contract.md"), "utf8");
+  const effectSkills = ["briefing-flow", "design-doc", "implementation-flow", "doc-status"];
+  const effects = effectSkills.map((skill) => fs.readFileSync(path.join(skillRoot, skill, "SKILL.md"), "utf8"));
+  const effectsJa = effectSkills.map((skill) => fs.readFileSync(path.join(skillRoot, skill, "SKILL.ja.md"), "utf8"));
+
+  for (const text of [...effects, ...effectsJa]) {
+    assert.match(text, /return exactly the\s+\[`EffectOutcome footer`\]|正確な \[`EffectOutcome footer`\]/);
+    assert.doesNotMatch(text, /```yaml\nstatus:/);
+  }
+  assert.match(effects[0], /Use `completed` after the briefing gate passes, `retry` for a recoverable\n?document gap, and `yield` with `input-required` for an unresolved user-only\n?requirement\./);
+  assert.match(effects[1], /Use `completed` for an approved design, `yield` with `approval-required` while\n?waiting for the designated reviewer, and `yield` with `input-required` for a\n?missing upstream user decision\./);
+  assert.match(effects[2], /Use `completed` for a verified task slice with its Implementation Record,\n?`retry` for declared spec\/design\/constraint repair, `yield` with\n?`authority-required` for an irreversible effect without permission, and\n?`yield` with `unrecoverable-blocker` when no declared safe repair exists\./);
+  assert.match(effects[3], /Use `completed` for a Completable result, `retry` for Returned with declared\n?repair evidence, and `yield` with `unrecoverable-blocker` for Returned without\n?a safe repair\./);
+  assert.match(effectsJa[0], /briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の\n?user-only requirement には `input-required` を理由とする `yield` を使います。/);
+  assert.match(effectsJa[1], /approved design には `completed`、designated reviewer を待つ場合は `approval-required`\n?を理由とする `yield`、upstream user decision がない場合は `input-required` を理由とする\n?`yield` を使います。/);
+  assert.match(effectsJa[2], /verified task slice と Implementation Record には `completed`、declared\n?spec\/design\/constraint repair には `retry`、permission のない irreversible effect には\n?`authority-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
+  assert.match(effectsJa[3], /Completable result には `completed`、declared repair evidence を伴う Returned には\n?`retry`、safe repair のない Returned には `unrecoverable-blocker` を理由とする `yield`\n?を使います。/);
+  const footerBlocks = [...outcomeContract.matchAll(/```yaml\n([\s\S]*?)```/g)].map((match) => match[1]);
+  assert.equal(footerBlocks.length, 3);
+  const footerVariants = footerBlocks.map((block) => require("js-yaml").load(block));
+  const footerVariantsJa = [...outcomeContractJa.matchAll(/```yaml\n([\s\S]*?)```/g)]
+    .map((match) => require("js-yaml").load(match[1]));
+  assert.deepEqual(footerVariants.map((outcome) => outcome.status), ["completed", "retry", "yield"]);
+  assert.deepEqual(footerVariantsJa, footerVariants);
+  for (const outcome of footerVariants) {
+    assert.equal(typeof outcome.edgeId, "string");
+    assert.ok(["audit", "delegate"].includes(outcome.stage));
+    assert.ok(["audit", "delegate"].includes(outcome.effect.kind));
+    assert.equal(typeof outcome.effect.id, "string");
+    assert.ok(Array.isArray(outcome.authoritativeInputs));
+    assert.ok(Array.isArray(outcome.evidence));
+  }
+  assert.ok(footerVariants[0].proof.canonicalEvidence || footerVariants[0].proof.providerIdempotency);
+  assert.match(outcomeContract, /proof\.providerIdempotency/);
+  assert.equal("reason" in footerVariants[0], false);
+  assert.ok(Array.isArray(footerVariants[1].retry.changedEvidence));
+  assert.equal("proof" in footerVariants[1], false);
+  assert.equal(footerVariants[2].reason, "authority-required");
+  assert.equal("proof" in footerVariants[2], false);
+  const graphRunContract = (text: string) => text.match(/## [^\n]*GraphRunResult[^\n]*[\s\S]*?```ts\n([\s\S]*?)```/)?.[1];
+  assert.ok(graphRunContract(outcomeContract));
+  assert.deepEqual(graphRunContract(outcomeContractJa), graphRunContract(outcomeContract));
+  assert.match(graphRunContract(outcomeContract) as string, /status: "yielded"/);
+  assert.match(graphRunContract(outcomeContract) as string, /reason:.*"terminal"/s);
+  assert.match(graphRunContract(outcomeContract) as string, /reason:.*"budget-exhausted"/s);
+  assert.match(graphRunContract(outcomeContract) as string, /route: GraphRoute/);
+  assert.match(graphRunContract(outcomeContract) as string, /outcomes: EffectOutcome\[\]/);
+  assert.match(graphRunContract(outcomeContract) as string, /trace: GraphRunTrace\[\]/);
+  assert.match(graphRunContract(outcomeContract) as string, /handoff: GraphRunHandoff/);
+  assert.match(graphRunContract(outcomeContract) as string, /type GraphRunTrace = \{[\s\S]*route: GraphRoute[\s\S]*outcomes: EffectOutcome\[\]/);
+  assert.match(graphRunContract(outcomeContract) as string, /type GraphRunHandoff = \{[\s\S]*current: string[\s\S]*edgeTrace: GraphRunTrace\[\][\s\S]*pending:[\s\S]*hops: number/);
+  assert.match(outcomeContract, /Caller-normalized effects/);
+  assert.match(outcomeContract, /migrate_docs.*scaffold_docs.*build_task_graph/s);
+  assert.match(outcomeContract, /`scaffold_docs` \(workspace-root bootstrap input\)/);
+  assert.match(outcomeContract, /`build_task_graph` \(focused plan plus selected task documents\)/);
+  assert.match(outcomeContractJa, /`scaffold_docs`\s*（workspace-root bootstrap input）/);
+  assert.match(outcomeContractJa, /`build_task_graph`（focused plan と選択 task document）/);
+  assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*all/s);
+  assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
+  assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));
+  assert.ok(effectsJa[0].indexOf("## アンチパターン") < effectsJa[0].indexOf("## Graph Effect Outcome"));
+  assert.match(outcomeContract, /blocked.*GraphRoute|GraphRoute.*blocked/s);
+  assert.doesNotMatch(outcomeContract, /status: blocked/);
+  assert.match(outcomeContract, /never requires byte-equivalent\s+complete `GraphRoute`/s);
+  assert.match(outcomeContractJa, /edgeId/);
+  assert.match(executionContract, /exact.*EffectOutcome.*match/i);
+});
+
 test("graph docs bind delegates, audits, and condition-driven subgraphs", () => {
   const root = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
   const skill = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.md"), "utf8");

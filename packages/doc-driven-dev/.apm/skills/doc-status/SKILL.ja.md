@@ -69,3 +69,14 @@ license: MIT
 - `scripts/list_docs.js`: 種別とステータスで文書メタデータを一覧します。
 - `scripts/audit_docs.js`: フロントマター、ステータス、relation、索引を
   検証します。
+
+## Graph Effect Outcome
+
+`doc-driven-dev-graph` からこの skill が呼び出された場合、audit または delegate effect
+ごとに正確な [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
+を返します。local partial variant を作成しません。
+
+Completable result には `completed`、declared repair evidence を伴う Returned には
+`retry`、safe repair のない Returned には `unrecoverable-blocker` を理由とする `yield`
+を使います。必須の `edgeId`、stage、effect identity、authoritative input scope、proof
+field はその footer が定義します。
