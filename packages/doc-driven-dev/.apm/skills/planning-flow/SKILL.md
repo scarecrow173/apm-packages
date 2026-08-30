@@ -31,3 +31,8 @@ When `doc-driven-dev-graph` invokes this skill, return exactly the
 [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.md).
 The footer defines the required `edgeId`, stage, effect identity, authoritative
 input scope, evidence, proof, and yield fields.
+
+Use `completed` for an approved or active plan with linked task evidence, `retry` for
+changed canonical plan/task repair evidence, `yield` with `approval-required` while plan
+review is pending, `yield` with `input-required` when a user-owned planning choice is
+missing, and `yield` with `unrecoverable-blocker` when no declared safe repair exists.

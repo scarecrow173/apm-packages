@@ -27,3 +27,9 @@ composition boundary です。ユーザーからの直接要求には引き続�
 [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
 を返します。必須の `edgeId`、stage、effect identity、authoritative input scope、evidence、
 proof、yield field はこの footer が定義します。
+
+approved または active plan と linked task evidence には `completed`、changed canonical
+plan/task repair evidence には `retry`、plan review が pending の場合は
+`approval-required` を理由とする `yield`、user-owned planning choice が missing の場合は
+`input-required` を理由とする `yield`、declared safe repair がない場合は
+`unrecoverable-blocker` を理由とする `yield` を使います。

@@ -623,11 +623,13 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(effects[2], /Use `completed` for a verified task slice with its Implementation Record,\n?`retry` for declared spec\/design\/constraint repair, `yield` with\n?`authority-required` for an irreversible effect without permission, and\n?`yield` with `unrecoverable-blocker` when no declared safe repair exists\./);
   assert.match(effects[3], /Use `completed` for a Completable result, `retry` for Returned with declared\n?repair evidence, and `yield` with `unrecoverable-blocker` for Returned without\n?a safe repair\./);
   assert.match(effects[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.md\)/);
+  assert.match(effects[4], /Use `completed` for an approved or active plan with linked task evidence, `retry` for\n?changed canonical plan\/task repair evidence, `yield` with `approval-required` while plan\n?review is pending, `yield` with `input-required` when a user-owned planning choice is\n?missing, and `yield` with `unrecoverable-blocker` when no declared safe repair exists\./);
   assert.match(effectsJa[0], /briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の\n?user-only requirement には `input-required` を理由とする `yield` を使います。/);
   assert.match(effectsJa[1], /approved design には `completed`、designated reviewer を待つ場合は `approval-required`\n?を理由とする `yield`、upstream user decision がない場合は `input-required` を理由とする\n?`yield` を使います。/);
   assert.match(effectsJa[2], /verified task slice と Implementation Record には `completed`、declared\n?spec\/design\/constraint repair には `retry`、permission のない irreversible effect には\n?`authority-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
   assert.match(effectsJa[3], /Completable result には `completed`、declared repair evidence を伴う Returned には\n?`retry`、safe repair のない Returned には `unrecoverable-blocker` を理由とする `yield`\n?を使います。/);
   assert.match(effectsJa[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.ja\.md\)/);
+  assert.match(effectsJa[4], /approved または active plan と linked task evidence には `completed`、changed canonical\n?plan\/task repair evidence には `retry`、plan review が pending の場合は\n?`approval-required` を理由とする `yield`、user-owned planning choice が missing の場合は\n?`input-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
   const footerBlocks = [...outcomeContract.matchAll(/```yaml\n([\s\S]*?)```/g)].map((match) => match[1]);
   assert.equal(footerBlocks.length, 3);
   const footerVariants = footerBlocks.map((block) => require("js-yaml").load(block));
