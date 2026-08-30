@@ -331,13 +331,16 @@ function completedOutcome(
   providerIdempotency?: { provider: string; key: string },
 ): CompletedEffectOutcome {
   const evidence = evidenceReference(repo, route, effect);
+  const evidenceReferences = effect.id === "planning-flow"
+    ? [evidence, ...taskGraphPaths(route).map((relativePath) => canonicalReference(repo, relativePath))]
+    : [evidence];
   return {
     status: "completed",
     edgeId: route.edgeId as string,
     stage,
     effect,
     authoritativeInputs: authoritativeInputs(repo, route, effect),
-    evidence: [evidence],
+    evidence: evidenceReferences,
     proof: providerIdempotency ? { providerIdempotency } : { canonicalEvidence: evidence },
   };
 }
@@ -1212,8 +1215,9 @@ test("continues implementation-to-design and then design-to-planning", () => {
 });
 
 test("runs planning-flow before downstream plan and task audits", () => {
+  const repo = fixtureRepo({ taskStatuses: ["todo", "todo"] });
   const result = runScenario({
-    repo: fixtureRepo(),
+    repo,
     current: "design",
     mode: "run-until-yield",
     steps: [
@@ -1240,6 +1244,17 @@ test("runs planning-flow before downstream plan and task audits", () => {
     "design-to-planning",
     "planning-to-task-graph",
   ]);
+  const planningOutcome = result.outcomes.find((outcome) => (
+    outcome.stage === "delegate" && outcome.effect.id === "planning-flow"
+  ));
+  assert.deepEqual(planningOutcome?.evidence, [
+    canonicalReference(repo, "docs/plans/0001-graph.md"),
+    canonicalReference(repo, "docs/tasks/0001-task.md"),
+    canonicalReference(repo, "docs/tasks/0002-task.md"),
+  ]);
+  assert.deepEqual(planningOutcome?.proof, {
+    canonicalEvidence: canonicalReference(repo, "docs/plans/0001-graph.md"),
+  });
 });
 
 test("repairs an invalid task graph before returning to task-graph", () => {
