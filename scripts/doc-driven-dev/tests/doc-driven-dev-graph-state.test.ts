@@ -6,7 +6,9 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const matter = require("gray-matter");
+const { loadGraphDefinition } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts");
 const { projectGraphState } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts");
+const { routeGraph } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts");
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): void {
   const file = path.join(repo, relativePath);
@@ -59,7 +61,124 @@ function fixtureRepo(): string {
   return repo;
 }
 
-test("projects an explicit artifact graph and selects plans only through lineage", () => {
+function preDesignRepo(): string {
+  const repo = fixtureRepo();
+  for (const relativePath of [
+    "docs/designs/0001-graph.md",
+    "docs/plans/0001-graph.md",
+    "docs/tasks/0001-route.md",
+    "docs/tasks/0002-prepare.md",
+  ]) fs.rmSync(path.join(repo, relativePath));
+  writeArtifact(repo, "docs/discovery/0001-graph.md", {
+    id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
+    relations: { "derived-by": ["SPEC-0001", "ADR-0001"] },
+  }, "# Graph Discovery\n");
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Graph",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph state\n");
+  writeArtifact(repo, "docs/adr/0001-graph.md", {
+    id: "ADR-0001", type: "adr", status: "proposed", title: "Graph ADR",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Graph ADR\n\n## Considered Options\n\n### A\n\n### B\n");
+  return repo;
+}
+
+function removeArtifacts(repo: string, relativePaths: string[]): void {
+  for (const relativePath of relativePaths) fs.rmSync(path.join(repo, relativePath));
+}
+
+test("selects a pre-design SPEC and ADR through their shared discovery", () => {
+  const repo = preDesignRepo();
+  for (const focus of [["SPEC-0001", "ADR-0001"], ["DISC-0001"]]) {
+    const state = projectGraphState({ cwd: repo, focus });
+    assert.equal(state.blockers.includes("focus-required"), false, focus.join(","));
+    assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] }, focus.join(","));
+    const route = routeGraph({
+      current: "briefing",
+      definition: loadGraphDefinition(path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml")),
+      state,
+    });
+    assert.deepEqual({ edgeId: route.edgeId, next: route.next, status: route.status }, {
+      edgeId: "briefing-to-design", next: "design", status: "edge",
+    }, focus.join(","));
+  }
+});
+
+test("selects a pre-design SPEC and ADR through a direct typed relation", () => {
+  const repo = fixtureRepo();
+  removeArtifacts(repo, [
+    "docs/designs/0001-graph.md",
+    "docs/plans/0001-graph.md",
+    "docs/tasks/0001-route.md",
+    "docs/tasks/0002-prepare.md",
+  ]);
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Graph",
+    relations: { "derived-by": ["ADR-0001"] },
+  }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph state\n");
+  const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001", "ADR-0001"] });
+  assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] });
+});
+
+test("does not pair SPEC and ADR that only refine the same discovery", () => {
+  const repo = preDesignRepo();
+  writeArtifact(repo, "docs/discovery/0001-graph.md", {
+    id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
+  }, "# Graph Discovery\n");
+  for (const [relativePath, id, type, body] of [
+    ["docs/specs/0001-graph.md", "SPEC-0001", "spec", "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph state\n"],
+    ["docs/adr/0001-graph.md", "ADR-0001", "adr", "# Graph ADR\n\n## Considered Options\n\n### A\n\n### B\n"],
+  ]) writeArtifact(repo, relativePath, {
+    id, type, status: "proposed", title: id, relations: { refines: ["DISC-0001"] },
+  }, body);
+  const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001", "ADR-0001"] });
+  assert.ok(state.blockers.includes("focus-required"));
+  assert.equal(state.gates.briefing.status, "blocked");
+});
+
+test("keeps a pre-design SPEC-only chain incomplete", () => {
+  const repo = fixtureRepo();
+  removeArtifacts(repo, [
+    "docs/adr/0001-graph.md",
+    "docs/designs/0001-graph.md",
+    "docs/plans/0001-graph.md",
+    "docs/tasks/0001-route.md",
+    "docs/tasks/0002-prepare.md",
+  ]);
+  const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001"] });
+  assert.deepEqual(state.gates.briefing, { status: "fail", reasons: ["adr-status", "considered-options"] });
+});
+
+test("keeps a pre-design ADR-only chain incomplete", () => {
+  const repo = fixtureRepo();
+  removeArtifacts(repo, [
+    "docs/specs/0001-graph.md",
+    "docs/designs/0001-graph.md",
+    "docs/plans/0001-graph.md",
+    "docs/tasks/0001-route.md",
+    "docs/tasks/0002-prepare.md",
+  ]);
+  const state = projectGraphState({ cwd: repo, focus: ["ADR-0001"] });
+  assert.deepEqual(state.gates.briefing, { status: "fail", reasons: ["acceptance-criteria", "spec-status"] });
+});
+
+test("fails closed when a discovery has multiple pre-design briefing chains", () => {
+  const repo = preDesignRepo();
+  writeArtifact(repo, "docs/specs/0002-other.md", {
+    id: "SPEC-0002", type: "spec", status: "proposed", title: "Other",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Other\n\n## Acceptance Criteria\n\n- [ ] other\n");
+  writeArtifact(repo, "docs/discovery/0001-graph.md", {
+    id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
+    relations: { "derived-by": ["SPEC-0001", "SPEC-0002", "ADR-0001"] },
+  }, "# Graph Discovery\n");
+  const state = projectGraphState({ cwd: repo, focus: ["DISC-0001"] });
+  assert.ok(state.blockers.includes("focus-required"));
+  assert.equal(state.gates.briefing.status, "blocked");
+});
+
+test("keeps an existing focused design chain and selects its plan only through lineage", () => {
   const repo = fixtureRepo();
   const state: GraphState = projectGraphState({
     cwd: repo,

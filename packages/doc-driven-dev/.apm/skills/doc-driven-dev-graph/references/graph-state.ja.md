@@ -18,6 +18,12 @@ repository に複数の active chain がある場合、`--focus` path または 
 の近さ、隣接ファイルから推測しません。`focus-required` blocker がある間は、
 明示的な authority を得て route を再実行するまで delegate を許可しません。
 
+design 作成前は、正確な typed lineage が SPEC と ADR を直接結ぶか、両方が同じ
+直近の discovery から派生する場合に限り、有効な SPEC と ADR を 1 つの briefing
+chain として扱います。その discovery も chain の有効な focus です。該当する pair
+が複数なら曖昧なまま `focus-required` となり、basename、path の近さ、より広い
+lineage component の所属から artifact を結合しません。
+
 ## Gate と signal
 
 projection は bootstrap、briefing、design、planning、implementation、follow-up

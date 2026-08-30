@@ -351,6 +351,7 @@ export type ArtifactChain = {
   design?: string;
   plan?: string;
   tasks: string[];
+  anchors?: string[];
 };
 
 const CHAIN_STATUSES: Record<string, ReadonlySet<string>> = {
@@ -369,7 +370,18 @@ function chainKey(chain: ArtifactChain): string {
 }
 
 function chainMembers(chain: ArtifactChain): Set<string> {
-  return new Set([chain.spec, chain.adr, chain.design, chain.plan, ...chain.tasks].filter((value): value is string => Boolean(value)));
+  return new Set([chain.spec, chain.adr, chain.design, chain.plan, ...chain.tasks, ...(chain.anchors ?? [])]
+    .filter((value): value is string => Boolean(value)));
+}
+
+function preDesignAnchors(graph: ArtifactGraph, records: ArtifactRecord[], spec: ArtifactRecord, adr: ArtifactRecord): string[] | undefined {
+  const direct = graph.edges.some((edge) => edge.kind === "lineage"
+    && ["derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation)
+    && ((edge.from === spec.path && edge.to === adr.path) || (edge.from === adr.path && edge.to === spec.path)));
+  const discoveries = records.filter((record) => record.type === "discovery" && [spec, adr].every((artifact) => graph.edges.some((edge) =>
+    (edge.from === artifact.path && edge.to === record.path && edge.relation === "derives-from")
+    || (edge.from === record.path && edge.to === artifact.path && edge.relation === "derived-by"))));
+  return direct || discoveries.length > 0 ? discoveries.map((record) => record.path) : undefined;
 }
 
 /** Enumerate valid spec/ADR/design/plan/task chains from typed lineage edges. */
@@ -407,8 +419,21 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
     if (designs.some((design) => artifactHasRelation(graph, plan.path, ["derives-from", "design"], design.path))) continue;
     add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
   }
+  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], spec.path)));
+  const unassignedAdrs = adrs.filter((adr) => !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], adr.path)));
+  const paired = new Set<string>();
+  for (const spec of unassignedSpecs) {
+    for (const adr of unassignedAdrs) {
+      const anchors = preDesignAnchors(graph, records, spec, adr);
+      if (!anchors) continue;
+      add({ spec: spec.path, adr: adr.path, tasks: [], anchors });
+      paired.add(spec.path);
+      paired.add(adr.path);
+    }
+  }
   for (const artifact of [...specs, ...adrs]) {
-    if (!designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], artifact.path))) {
+    if (!paired.has(artifact.path)
+      && !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], artifact.path))) {
       add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
     }
   }
@@ -436,7 +461,7 @@ export function isArtifactFocusAmbiguous(
   const focus = [...focusPaths];
   const relevant = focus.some((focusPath) => {
     const type = records.find((record) => record.path === focusPath)?.type;
-    return ["spec", "adr", "design", "plan", "task"].includes(type ?? "");
+    return ["discovery", "spec", "adr", "design", "plan", "task"].includes(type ?? "");
   });
   if (!relevant) return false;
   const candidates = artifactChainCandidates(graph, records).filter((chain) => {

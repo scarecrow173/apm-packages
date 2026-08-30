@@ -98,6 +98,29 @@ function completeRepo(taskStatuses: Array<"todo" | "in-progress" | "blocked" | "
   return repo;
 }
 
+function preDesignRepo(): string {
+  const repo = completeRepo();
+  for (const relativePath of ["docs/designs/0001-graph.md", "docs/plans/0001-graph.md", "docs/tasks/0001-task.md"]) {
+    fs.rmSync(path.join(repo, relativePath));
+  }
+  writeArtifact(repo, "docs/discovery/0001-graph.md", {
+    id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
+    relations: { "derived-by": ["SPEC-0001", "ADR-0001"] },
+  }, "# Graph Discovery\n");
+  for (const [relativePath, id, type] of [
+    ["docs/specs/0001-graph.md", "SPEC-0001", "spec"],
+    ["docs/adr/0001-graph.md", "ADR-0001", "adr"],
+  ]) {
+    const body = type === "spec"
+      ? "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n"
+      : "# Graph\n\n## Considered Options\n\n### A\n\n### B\n";
+    writeArtifact(repo, relativePath, {
+      id, type, status: "proposed", title: "Graph", relations: { "derives-from": ["DISC-0001"] },
+    }, body);
+  }
+  return repo;
+}
+
 function canonicalGraphPath(): string {
   return path.resolve(
     __dirname,
@@ -160,6 +183,32 @@ test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
     delegate: "next-handler",
     requiredAudits: [],
     blockers: ["bootstrap-incomplete"],
+    taskGraph: null,
+  });
+});
+
+test("source and generated CLIs route a pre-design briefing chain identically", () => {
+  const repo = preDesignRepo();
+  const args = [
+    "--graph", canonicalGraphPath(), "--current", "briefing",
+    "--focus", "SPEC-0001", "--focus", "ADR-0001", "--cwd", repo, "--json",
+  ];
+  const source = runSource(repo, args);
+  const generated = runCli(generatedCli, repo, args);
+  assert.equal(source.status, 0, source.stderr);
+  assert.equal(generated.status, 0, generated.stderr);
+  assert.deepEqual(JSON.parse(generated.stdout), JSON.parse(source.stdout));
+  assert.deepEqual(JSON.parse(source.stdout), {
+    schemaVersion: 2,
+    graphId: "doc-driven-dev",
+    current: "briefing",
+    next: "design",
+    edgeId: "briefing-to-design",
+    condition: "briefing",
+    status: "edge",
+    delegate: "design-doc",
+    requiredAudits: ["design"],
+    blockers: [],
     taskGraph: null,
   });
 });
