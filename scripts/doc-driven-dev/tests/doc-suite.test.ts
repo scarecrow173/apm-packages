@@ -610,11 +610,11 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   const outcomeContract = fs.readFileSync(path.join(graphRoot, "references", "execution-outcome-contract.md"), "utf8");
   const outcomeContractJa = fs.readFileSync(path.join(graphRoot, "references", "execution-outcome-contract.ja.md"), "utf8");
   const executionContract = fs.readFileSync(path.join(graphRoot, "references", "execution-contract.md"), "utf8");
-  const effectSkills = ["briefing-flow", "design-doc", "implementation-flow", "doc-status"];
+  const effectSkills = ["briefing-flow", "design-doc", "implementation-flow", "doc-status", "planning-flow"];
   const effects = effectSkills.map((skill) => fs.readFileSync(path.join(skillRoot, skill, "SKILL.md"), "utf8"));
   const effectsJa = effectSkills.map((skill) => fs.readFileSync(path.join(skillRoot, skill, "SKILL.ja.md"), "utf8"));
 
-  for (const text of [...effects, ...effectsJa]) {
+  for (const text of [...effects.slice(0, 4), ...effectsJa.slice(0, 4)]) {
     assert.match(text, /return exactly the\s+\[`EffectOutcome footer`\]|正確な \[`EffectOutcome footer`\]/);
     assert.doesNotMatch(text, /```yaml\nstatus:/);
   }
@@ -622,10 +622,12 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(effects[1], /Use `completed` for an approved design, `yield` with `approval-required` while\n?waiting for the designated reviewer, and `yield` with `input-required` for a\n?missing upstream user decision\./);
   assert.match(effects[2], /Use `completed` for a verified task slice with its Implementation Record,\n?`retry` for declared spec\/design\/constraint repair, `yield` with\n?`authority-required` for an irreversible effect without permission, and\n?`yield` with `unrecoverable-blocker` when no declared safe repair exists\./);
   assert.match(effects[3], /Use `completed` for a Completable result, `retry` for Returned with declared\n?repair evidence, and `yield` with `unrecoverable-blocker` for Returned without\n?a safe repair\./);
+  assert.match(effects[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.md\)/);
   assert.match(effectsJa[0], /briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の\n?user-only requirement には `input-required` を理由とする `yield` を使います。/);
   assert.match(effectsJa[1], /approved design には `completed`、designated reviewer を待つ場合は `approval-required`\n?を理由とする `yield`、upstream user decision がない場合は `input-required` を理由とする\n?`yield` を使います。/);
   assert.match(effectsJa[2], /verified task slice と Implementation Record には `completed`、declared\n?spec\/design\/constraint repair には `retry`、permission のない irreversible effect には\n?`authority-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
   assert.match(effectsJa[3], /Completable result には `completed`、declared repair evidence を伴う Returned には\n?`retry`、safe repair のない Returned には `unrecoverable-blocker` を理由とする `yield`\n?を使います。/);
+  assert.match(effectsJa[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.ja\.md\)/);
   const footerBlocks = [...outcomeContract.matchAll(/```yaml\n([\s\S]*?)```/g)].map((match) => match[1]);
   assert.equal(footerBlocks.length, 3);
   const footerVariants = footerBlocks.map((block) => require("js-yaml").load(block));
@@ -661,11 +663,17 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(graphRunContract(outcomeContract) as string, /type GraphRunTrace = \{[\s\S]*route: GraphRoute[\s\S]*outcomes: EffectOutcome\[\]/);
   assert.match(graphRunContract(outcomeContract) as string, /type GraphRunHandoff = \{[\s\S]*current: string[\s\S]*edgeTrace: GraphRunTrace\[\][\s\S]*pending:[\s\S]*hops: number/);
   assert.match(outcomeContract, /Caller-normalized effects/);
-  assert.match(outcomeContract, /migrate_docs.*scaffold_docs.*build_task_graph/s);
+  assert.match(outcomeContract, /migrate_docs.*scaffold_docs.*planning-flow.*build_task_graph/s);
   assert.match(outcomeContract, /`scaffold_docs` \(workspace-root bootstrap input\)/);
   assert.match(outcomeContract, /`build_task_graph` \(focused plan plus selected task documents\)/);
+  assert.match(outcomeContract, /`planning-flow` reads the\n?selected approved design/);
+  assert.match(outcomeContract, /records the selected plan and all produced\n?plan-linked task documents/);
   assert.match(outcomeContractJa, /`scaffold_docs`\s*（workspace-root bootstrap input）/);
   assert.match(outcomeContractJa, /`build_task_graph`（focused plan と選択 task document）/);
+  assert.match(outcomeContractJa, /`planning-flow` は selected approved design を/);
+  assert.match(outcomeContractJa, /selected plan とすべての produced plan-linked task document を記録/);
+  assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked task evidence \| changed canonical plan\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
+  assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked task evidence \| changed canonical plan\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
   assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*all/s);
   assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
   assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));
@@ -682,6 +690,11 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
   const skill = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.md"), "utf8");
   const skillJa = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.ja.md"), "utf8");
   const graphDefinition = fs.readFileSync(path.join(root, "doc-driven-dev-graph/graphs/doc-driven-dev.yaml"), "utf8");
+  const readme = fs.readFileSync(path.resolve(__dirname, "../../../packages/doc-driven-dev/README.md"), "utf8");
+  const readmeJa = fs.readFileSync(path.resolve(__dirname, "../../../packages/doc-driven-dev/README.ja.md"), "utf8");
+  const agents = fs.readFileSync(path.resolve(__dirname, "../../../packages/doc-driven-dev/AGENTS.md"), "utf8");
+  const agentsJa = fs.readFileSync(path.resolve(__dirname, "../../../packages/doc-driven-dev/AGENTS.ja.md"), "utf8");
+  const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8"));
   for (const text of [skill, skillJa]) {
     assert.match(text, /route_graph\.js/);
     assert.match(text, /build_task_graph\.js/);
@@ -692,10 +705,17 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
     assert.match(text, /wont-do/);
     assert.match(text, /database|DB|データベース/i);
   }
-  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[task\] \}$/m);
+  assert.match(graphDefinition, /^  planning: \{ kind: delegate, delegate: planning-flow, audits: \[design\] \}$/m);
+  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[plan, task\] \}$/m);
   assert.match(graphDefinition, /^  exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all\], requiresGates: \[/m);
-  assert.match(skill, /binding `build_task_graph` is executed by\s+`build_task_graph\.js`/);
-  assert.match(skillJa, /binding `build_task_graph` は `build_task_graph\.js` が実行/);
+  for (const text of [readme, readmeJa, agents, agentsJa]) {
+    assert.match(text, /planning-flow/);
+    assert.match(text, /build_task_graph/);
+  }
+  assert.match(packageJson.scripts["lint:md"], /planning-flow\/SKILL\.md/);
+  assert.match(packageJson.scripts["lint:md"], /planning-flow\/SKILL\.ja\.md/);
+  assert.match(skill, /task-graph node audits `plan` and `task` and dispatches\s+`build_task_graph`, executed by `build_task_graph\.js`/);
+  assert.match(skillJa, /task-graph node は `plan` と `task` を audit して `build_task_graph` を dispatch し、\s+`build_task_graph\.js` が実行/);
 });
 
 test("implementation-flow opens impl-doc before task execution", () => {

@@ -16,6 +16,8 @@ The package provides focused document skills and graph delegates:
 - `impl-doc` records implementation and experiment evidence.
 - `doc-status` audits document contracts and links.
 - `implementation-flow` delegates implementation work and review gates.
+- `planning-flow` sequences plan approval and task documents for Graph
+  delegation.
 - `skill-discovery-protocol` discovers compatible skills and adapters.
 - `doc-driven-dev-graph` selects one graph edge and composes the Task Graph.
 
@@ -70,11 +72,15 @@ Bindings are declared in the Graph Definition:
 
 - migration: `migrate_docs`; bootstrap: `scaffold_docs`;
 - briefing: `briefing-flow`; design: `design-doc`;
-- planning binding `build_task_graph`, executed by `build_task_graph.js`;
+- planning: `planning-flow`, which sequences `plan-doc` approval before
+  `task-doc`;
+- task projection: `build_task_graph`, executed by `build_task_graph.js` after
+  `plan`/`task` audits;
 - implementation: `implementation-flow`; exit audit: `doc-status`.
 
-Delegated skills own their briefing or implementation subgraphs. The caller
-runs every returned audit before dispatching exactly the returned delegate.
+Delegated skills own their briefing, planning, or implementation subgraphs.
+The caller runs every returned audit before dispatching exactly the returned
+delegate.
 `focus-required` is a hard stop until a caller supplies explicit focus.
 
 ### Task Graph invariant

@@ -140,7 +140,7 @@ changing Graph Definition YAML, scripts, or generated JavaScript:
 | --- | --- |
 | `migrate_docs`, `scaffold_docs`, `build_task_graph` | caller adapter for script delegates |
 | `spec`, `adr`, `design`, `plan`, `task`, `impl-record`, `all` | caller adapter for named audits |
-| `briefing-flow`, `design-doc`, `implementation-flow`, `doc-status` | invoked skill |
+| `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `doc-status` | invoked skill |
 
 The adapter records effect-specific canonical inputs and evidence before it
 returns `completed` or `retry`. Missing or malformed adapter evidence fails
@@ -154,9 +154,11 @@ standard document graph, `spec`, `adr`, `design`, and `plan` audits read their
 matching canonical document; `task` reads selected Task Graph task documents;
 `impl-record` reads its Implementation Record; and `all` reads the declared
 canonical document set. `briefing-flow` reads the spec and ADR, `design-doc`
-reads the spec and ADR and records design evidence, `implementation-flow`
-reads selected tasks plus design/plan and records its Implementation Record,
-and `doc-status` reads the declared document set. Script-adapter inputs are
+reads the spec and ADR and records design evidence, `planning-flow` reads the
+selected approved design and records the selected plan and all produced
+plan-linked task documents, `implementation-flow` reads selected tasks plus
+design/plan and records its Implementation Record, and `doc-status` reads the
+declared document set. Script-adapter inputs are
 `migrate_docs` (declared document set), `scaffold_docs` (workspace-root bootstrap input), and
 `build_task_graph` (focused plan plus selected task documents). Every referenced path/ID and
 fingerprint must resolve against current canonical content before use.
@@ -169,6 +171,7 @@ This contract renders existing semantics; it does not add workflow states.
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate passes | recoverable document gap | `input-required` for an unresolved user-only requirement |
 | `design-doc` | design is approved | — | `approval-required` for its designated reviewer; `input-required` for an upstream user decision |
+| `planning-flow` | approved/active plan plus linked task evidence | changed canonical plan/task repair evidence | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
 | `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
 | `doc-status` | documents are Completable | Returned with declared repair evidence | `unrecoverable-blocker` when Returned has no safe repair |
 

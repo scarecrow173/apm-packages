@@ -46,12 +46,15 @@ Graph Definition は次の binding を宣言します。
 
 - 任意の migration / bootstrap: `migrate_docs` / `scaffold_docs`。
 - discovery / design: `briefing-flow` / `design-doc`。
-- planning: `build_task_graph`（`build_task_graph.js` が実行）。
+- planning: graph-delegated subgraph の `planning-flow`。`plan-doc` の approval 後に
+  `task-doc` を順序付けます。
+- task projection: `build_task_graph`。`plan`/`task` audit 後に
+  `build_task_graph.js` が実行します。
 - implementation: `implementation-flow`。
 - exit audit: `doc-status`。
 
-delegate は自分の briefing / implementation subgraph を担当します。router で
-delegate の処理を重複させたり、未宣言の遷移を追加したりしないでください。
+delegate は自分の briefing / planning / implementation subgraph を担当します。
+router で delegate の処理を重複させたり、未宣言の遷移を追加したりしないでください。
 
 ## Task Graph invariant
 
@@ -73,10 +76,12 @@ document 生成 skill（`idea-doc`、`deep-dive`、`briefing-flow`、`discovery-
 `doc-status`）が各 document contract を担当します。orchestration skill は
 `doc-driven-dev-graph`、`implementation-flow`、`skill-discovery-protocol` です。
 
-1 つの user request で active orchestration skill は 1 つだけにします。明示的な
-implementation は `implementation-flow`、discovery / decision capture は
-`briefing-flow`、graph-wide routing は `doc-driven-dev-graph` を使います。委譲は
-明示的に行い、activation loop を作らないでください。
+`planning-flow` は graph-delegated subgraph であり、concurrently active な top-level
+orchestration skill ではありません。1 つの user request で active orchestration skill は
+1 つだけにします。明示的な implementation は `implementation-flow`、discovery /
+decision capture は `briefing-flow`、graph-wide routing は request で唯一 active な
+graph-wide orchestrator の `doc-driven-dev-graph` を使います。委譲は明示的に行い、
+activation loop を作らないでください。
 
 ## Source と配布 asset
 

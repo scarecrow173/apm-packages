@@ -47,12 +47,15 @@ The Graph Definition declares these bindings:
 
 - `migrate_docs` and `scaffold_docs` for optional migration/bootstrap;
 - `briefing-flow` and `design-doc` for discovery and design;
-- `build_task_graph`, executed by `build_task_graph.js`, for planning;
+- `planning-flow`, a graph-delegated subgraph that sequences `plan-doc`
+  approval before `task-doc`, for planning;
+- `build_task_graph`, executed by `build_task_graph.js` after `plan`/`task`
+  audits, for task projection;
 - `implementation-flow` for implementation;
 - `doc-status` for exit audit.
 
-Delegates own their briefing or implementation subgraphs. Do not duplicate a
-delegate's work in the router or invent an unlisted transition.
+Delegates own their briefing, planning, or implementation subgraphs. Do not
+duplicate a delegate's work in the router or invent an unlisted transition.
 
 ## Task Graph invariant
 
@@ -75,11 +78,12 @@ Document-generation skills (`idea-doc`, `deep-dive`, `briefing-flow`,
 skills are `doc-driven-dev-graph`, `implementation-flow`, and
 `skill-discovery-protocol`.
 
-Only one orchestration skill should be active for a user request. Explicit
-implementation requests use `implementation-flow`; explicit discovery and
-decision capture use `briefing-flow`; graph-wide routing uses
-`doc-driven-dev-graph`. Delegation is explicit and must not create activation
-loops.
+`planning-flow` is a graph-delegated subgraph, not a concurrently active
+top-level orchestration skill. Only one orchestration skill should be active
+for a user request. Explicit implementation requests use `implementation-flow`;
+explicit discovery and decision capture use `briefing-flow`; graph-wide routing
+uses `doc-driven-dev-graph`, the only active graph-wide orchestrator for the
+request. Delegation is explicit and must not create activation loops.
 
 ## Source and distributed assets
 
