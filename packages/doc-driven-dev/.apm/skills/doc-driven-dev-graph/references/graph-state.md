@@ -19,6 +19,12 @@ the projection never guesses from basenames, path proximity, or neighboring
 files. A `focus-required` blocker authorizes no delegate until the caller gets
 explicit authority and reruns the route.
 
+Before a design exists, a valid SPEC and ADR form one briefing chain only when
+exact typed lineage relates them directly or both derive from the same immediate
+discovery. The discovery is also a valid focus for that chain. Multiple matching
+pairs remain ambiguous and produce `focus-required`; basenames, path proximity,
+and broader lineage-component membership never pair artifacts.
+
 ## Gates and signals
 
 The projection evaluates bootstrap, briefing, design, planning,
