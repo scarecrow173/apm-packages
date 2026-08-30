@@ -26,7 +26,8 @@ one-edge command のままであり、継続を所有するのは router では�
 1. `current` に対して `route_graph.js` を正確に 1 回 invoke する。
 2. 完全な `GraphRoute` を保持する。
 3. terminal または blocked なら yield table を評価して停止する。
-4. `maxHops`、per-self-loop budget、完全な `GraphRoute` fingerprint を確認する。
+4. 最初の implementation-flow route を選択するときに task-aware default `maxHops` を
+   freeze し、その後 `maxHops` と完全な `GraphRoute` の stable fingerprint を確認する。
 5. すべての required audit を安定した順序で実行する。
 6. 返された delegate だけを dispatch する。
 7. audit または delegate が input、approval、authority を明示的に要求するなら、
@@ -109,19 +110,32 @@ adapter evidence が missing または malformed なら `authority-required` を
 caller は固定された run counter を使い、この protocol に policy DSL を追加しません。
 
 ```text
-maxHops default = 10
-  理由: 現在の Graph Definition には 10 個の non-terminal node がある。normal path は
-  8 edge、migration を含む path は 10 edge である。
-  terminal と blocked route はこの budget より先に評価するため、10 hop 目で
-  complete に到達した場合は budget-exhausted ではなく terminal を yield する。
+topologyBaseHops = 10
+  現在の最長の simple entry-to-terminal path であり、最初の implementation-flow dispatch を
+  すでに含む。
 
-self-loop budget = 1 completed traversal per edge ID per run
-  A second traversal of the same from == to edge yields budget-exhausted.
+taskBudgetCount = 最初の implementation-flow dispatch の直前に freeze する未完了 Task Graph node 数
+  focused Task Graph の todo、in-progress、blocked node だけを数え、done と wont-do は除外する。
+  freeze した値を persist する。handoff にすでに値があれば再計算しない。後から追加された task は
+  current run ではなく次回 run の budget にだけ寄与する。
+
+repairAllowance = 0
+  positive repair policy はこの defect fix の対象ではない。
+
+maxHops default = topologyBaseHops
+  + Math.max(0, taskBudgetCount - 1)
+  + repairAllowance
+  caller-supplied explicit maxHops は authoritative のままとし、
+  taskBudgetCount: null を記録する。
 
 route fingerprint = stable JSON serialization of the complete GraphRoute
-  If the same fingerprint is observed again in the same run, yield budget-exhausted.
+  complete route は fresh Task Graph projection を含む。次の runnable task を公開する completed task は
+  task status と runnable/active/resumableActive/completed を変更するため、次の declared edge は継続できる。
+  同じ fingerprint を同じ run で再び観測したら budget-exhausted を yield する。
 
-multi-node repair loop = bounded by both repeated fingerprint detection and maxHops
+changing repair loop = frozen maxHops で境界付ける
+  この limit に到達する task retry または repair は budget-exhausted を yield し、
+  新しい run に control を渡す。budget exhaustion は execution error でも successful checkpoint でもない。
 ```
 
 fingerprint は effects の前に計算します。`seenRouteFingerprints` への追加は edge
