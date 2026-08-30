@@ -104,7 +104,7 @@ type GraphRunHandoff = {
   graphPath: string;
   completedEdges: string[];
   seenRouteFingerprints: string[];
-  selfLoopCounts: Record<string, number>;
+  taskBudgetCount: number | null;
   auditCounts: Record<string, number>;
   delegateCounts: Record<string, number>;
   checkpoints: GraphRoute[];
@@ -124,8 +124,10 @@ type GraphRunHandoff = {
 `outcomes` と `trace` は caller の順序を保持します。`GraphRunTrace` は各 complete route、
 順序付き outcomes、completed audits、delegate state、evidence/checkpoint flag を持ちます。
 `GraphRunHandoff` は resume field を保持します。すなわち `current`、mode、`maxHops`、focus、
-signals、graph path、completed edge ID、seen route fingerprint、self-loop/audit/delegate
-counter、completed route、trace、outcome、pending edge、hop count です。
+signals、graph path、completed edge ID、seen route fingerprint、freeze した task-budget basis、
+audit/delegate counter、completed route、trace、outcome、pending edge、hop count です。`null` は
+caller が explicit `maxHops` を supplied したことを表し、non-negative number は immutable な
+dynamic-default basis です。
 
 ## caller が正規化する effect
 

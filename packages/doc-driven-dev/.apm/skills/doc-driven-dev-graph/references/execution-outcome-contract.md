@@ -106,7 +106,7 @@ type GraphRunHandoff = {
   graphPath: string;
   completedEdges: string[];
   seenRouteFingerprints: string[];
-  selfLoopCounts: Record<string, number>;
+  taskBudgetCount: number | null;
   auditCounts: Record<string, number>;
   delegateCounts: Record<string, number>;
   checkpoints: GraphRoute[];
@@ -127,8 +127,10 @@ type GraphRunHandoff = {
 complete route, its ordered outcomes, completed audits, delegate state, and
 evidence/checkpoint flags. `GraphRunHandoff` retains the resume fields:
 `current`, mode, `maxHops`, focus, signals, graph path, completed edge IDs,
-seen route fingerprints, self-loop/audit/delegate counters, completed routes,
-trace, outcomes, pending edge, and hop count.
+seen route fingerprints, the frozen task-budget basis, audit/delegate counters,
+completed routes, trace, outcomes, pending edge, and hop count. `null` means
+the caller supplied an explicit `maxHops`; a non-negative number is the
+immutable dynamic-default basis.
 
 ## Caller-normalized effects
 

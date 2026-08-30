@@ -562,7 +562,7 @@ test("doc-status audits specs inside subdirectories", () => {
   assert.equal(report.findings.some((f) => f.message.includes("docs/missing-in-subdir.md")), true, "broken link in subdir file");
 });
 
-test("doc-driven-dev-graph meta skill ships Graph Definition and runtime references", () => {
+test("graph entrypoint publishes one-edge runtime contract", () => {
   const graphSkill = path.join(skillRoot, "doc-driven-dev-graph");
   assert.equal(fs.existsSync(path.join(graphSkill, "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(graphSkill, "SKILL.ja.md")), true);
@@ -598,11 +598,25 @@ test("doc-driven-dev-graph meta skill ships Graph Definition and runtime referen
   assert.match(contract, /checkpoint != yield/);
   assert.match(contract, /single-step/);
   assert.match(contract, /run-until-yield/);
-  assert.match(contract, /maxHops.*10/);
+  assert.match(contract, /topologyBaseHops = 10/);
   assert.match(contract, /route.*audit.*delegate.*evidence.*re-project/is);
   assert.doesNotMatch(contract, /same turn must not.*multiple\s+edges/is);
   assert.match(contractJa, /checkpoint.*yield/);
   assert.match(contractJa, /同じ run.*複数 edge/);
+  for (const text of [contract, contractJa]) {
+    assert.doesNotMatch(text, /per-self-loop|self-loop budget|per edge ID per run/i);
+    assert.match(text, /complete `GraphRoute`|完全な `GraphRoute`/);
+    assert.match(text, /Task Graph|taskGraph/);
+    assert.match(text, /topologyBaseHops/);
+    assert.match(text, /taskBudgetCount/);
+    assert.match(text, /Math\.max\(0, taskBudgetCount - 1\)/);
+    assert.match(text, /todo.*in-progress.*blocked/s);
+    assert.match(text, /done.*wont-do/s);
+    assert.match(text, /handoff.*do not recalculate|handoff.*再計算しない/s);
+    assert.match(text, /next run|次回 run/);
+    assert.match(text, /budget-exhausted.*new run|budget-exhausted.*次回 run/s);
+    assert.match(text, /fingerprint/);
+  }
 });
 
 test("graph-invoked effects publish scoped typed outcomes", () => {
@@ -613,6 +627,11 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   const effectSkills = ["briefing-flow", "design-doc", "implementation-flow", "doc-status", "planning-flow"];
   const effects = effectSkills.map((skill) => fs.readFileSync(path.join(skillRoot, skill, "SKILL.md"), "utf8"));
   const effectsJa = effectSkills.map((skill) => fs.readFileSync(path.join(skillRoot, skill, "SKILL.ja.md"), "utf8"));
+
+  for (const text of [outcomeContract, outcomeContractJa]) {
+    assert.doesNotMatch(text, /selfLoopCounts/);
+    assert.match(text, /taskBudgetCount: number \| null/);
+  }
 
   for (const text of [...effects.slice(0, 4), ...effectsJa.slice(0, 4)]) {
     assert.match(text, /return exactly the\s+\[`EffectOutcome footer`\]|正確な \[`EffectOutcome footer`\]/);

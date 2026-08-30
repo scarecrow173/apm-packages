@@ -22,8 +22,9 @@ For each selected edge:
 1. Invoke `route_graph.js` exactly once for `current`.
 2. Preserve the complete `GraphRoute`.
 3. If terminal or blocked, evaluate the yield table and stop.
-4. Check `maxHops`, the per-self-loop budget, and the full-`GraphRoute`
-   fingerprint.
+4. Freeze the task-aware default `maxHops` when the first implementation-flow route
+   is selected, then check `maxHops` and the stable fingerprint of the complete
+   `GraphRoute`.
 5. Run every required audit in stable order.
 6. Dispatch only the returned delegate.
 7. If an audit or delegate explicitly requires input, approval, or authority,
@@ -114,19 +115,36 @@ effect-specific canonical input/evidence mapping is defined in
 The caller uses fixed run counters; this protocol adds no policy DSL:
 
 ```text
-maxHops default = 10
-  Rationale: current Graph Definition has 10 non-terminal nodes. The normal path is 8 edges;
-  the migration-inclusive path is 10 edges.
-  Terminal and blocked routes are evaluated before this budget, so reaching complete on hop 10
-  yields terminal rather than budget-exhausted.
+topologyBaseHops = 10
+  This is the current longest simple entry-to-terminal path and already includes
+  the first implementation-flow dispatch.
 
-self-loop budget = 1 completed traversal per edge ID per run
-  A second traversal of the same from == to edge yields budget-exhausted.
+taskBudgetCount = unfinished Task Graph node count frozen immediately before the
+  first implementation-flow dispatch
+  Count exactly todo, in-progress, and blocked nodes in the focused Task Graph;
+  exclude done and wont-do. Persist the frozen value. If the handoff already
+  contains a value, do not recalculate it. Tasks added later contribute to the
+  next run's budget, never the current run's budget.
+
+repairAllowance = 0
+  A positive repair policy is not part of this defect fix.
+
+maxHops default = topologyBaseHops
+  + Math.max(0, taskBudgetCount - 1)
+  + repairAllowance
+  A caller-supplied explicit maxHops remains authoritative and records
+  taskBudgetCount: null.
 
 route fingerprint = stable JSON serialization of the complete GraphRoute
-  If the same fingerprint is observed again in the same run, yield budget-exhausted.
+  The complete route includes the fresh Task Graph projection. A completed task that exposes
+  the next runnable task changes task statuses plus runnable/active/resumableActive/completed,
+  so the next declared edge may continue. If the same fingerprint is observed again in the
+  same run, yield budget-exhausted.
 
-multi-node repair loop = bounded by both repeated fingerprint detection and maxHops
+changing repair loop = bounded by the frozen maxHops
+  A task retry or repair that reaches this limit yields budget-exhausted and
+  hands control to a new run. Budget exhaustion is neither an execution error
+  nor a successful checkpoint.
 ```
 
 The fingerprint is computed before effects. Append it to
