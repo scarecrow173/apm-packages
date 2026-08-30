@@ -110,6 +110,15 @@ implementation 後の `フォローアップ分類` node は、
 `implementation-verified` と型付き signal 1 つを要求してから repair、planning、
 briefing、exit audit のいずれかへ進みます。
 
+## Git commit boundary
+
+全 phase を通じて、Git commit boundary は review 可能な logical change であり、
+Graph node、edge、phase、checkpoint、artifact type、Task Graph projection では
+ありません。task は implementation の scope boundary であり、1 つ以上の commit を
+含められます。canonical な boundary policy は
+[`references/execution-contract.ja.md`](references/execution-contract.ja.md) に置き、
+commit message convention は既存の Git tooling と repository rule に委譲します。
+
 ## Persistence boundary
 
 Markdown artifact が durable history と status の authority です。Graph State
