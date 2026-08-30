@@ -116,6 +116,15 @@ After implementation, the `follow-up triage` node requires
 `implementation-verified` and one typed signal before routing to repair,
 planning, a new briefing, or exit audit.
 
+## Git commit boundary
+
+Across every phase, the Git commit boundary is a reviewable logical change,
+not a Graph node, edge, phase, checkpoint, artifact type, or Task Graph
+projection. A task is an implementation scope boundary and may contain one or
+more commits. The canonical boundary policy is in
+[`references/execution-contract.md`](references/execution-contract.md); commit
+message conventions remain owned by existing Git tooling and repository rules.
+
 ## Persistence boundary
 
 Markdown artifacts are durable history and status authority. Graph State and

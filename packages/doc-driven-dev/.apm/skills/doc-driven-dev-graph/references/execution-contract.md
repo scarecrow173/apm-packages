@@ -40,6 +40,42 @@ The checkpoint is complete only after its audits, delegate, and evidence are
 recorded. A run trace summary records the mode, bounded counters, completed
 edge IDs in order, route fingerprints, and the final yield reason.
 
+## Git commit boundary
+
+Across briefing, spec, ADR, design, plan, task, implementation, follow-up, and
+audit work, make each reviewable logical change one commit. A logical change
+should be explainable and reviewable on its own, have a clear verification
+method where practical, have a clear meaning if reverted, and contain no
+unrelated changes. Minimizing or maximizing the number of commits is not a
+goal.
+
+Graph runtime structure does not define Git commit boundaries. In particular,
+a Graph node, edge, phase, or checkpoint is not a commit boundary. Neither an
+artifact type nor the Dynamic Task Graph (`task-graph`), which is a projection
+generated from task documents, is a commit boundary. Do not use `1 phase = 1
+commit`, `1 graph node = 1 commit`, `1 graph edge = 1 commit`, or `1 artifact =
+1 commit` as execution rules.
+
+A task is an implementation scope boundary, not necessarily a commit boundary:
+`1 task = 1..N commits` is valid. Split independent logical changes within one
+task into separate commits. Avoid mixing unrelated tasks in one commit; when
+changes from multiple tasks are semantically or technically inseparable, they
+may share a commit only when the reason they cannot be separated is
+explainable. If a task contains many independent logical changes, consider
+splitting the task instead of creating one large commit.
+
+Group changes by logical intent rather than file or artifact type. Related
+code, tests, task status, Implementation Records, verification evidence, and
+upstream artifacts may share a commit when they form one logical change.
+Conversely, split independently reviewable logical changes even when they edit
+the same artifact. Do not mechanically separate code, tests, and documentation
+solely because their file types differ.
+
+This skill defines only when changes form one commit. Commit message syntax,
+type, scope, subject or description, body, footer, task or issue reference
+format, and conventions such as Conventional Commits remain the responsibility
+of existing Git commit tooling and repository conventions.
+
 ## Effect outcome evaluation
 
 Every graph-invoked audit and delegate returns the exact `EffectOutcome` footer
