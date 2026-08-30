@@ -217,6 +217,7 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
       { nodeId: "exit-audit", delegate: "doc-status" },
       { nodeId: "implementation", delegate: "implementation-flow" },
       { nodeId: "migration", delegate: "migrate_docs" },
+      { nodeId: "planning", delegate: "planning-flow" },
       { nodeId: "task-graph", delegate: "build_task_graph" },
     ].sort((left, right) => left.nodeId.localeCompare(right.nodeId)),
   );
@@ -224,8 +225,11 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
   assert.match(first, /^flowchart TD\n/);
   assert.match(first, /briefing-flow/);
   assert.match(first, /implementation-flow/);
+  assert.match(first, /planning-flow/);
   assert.match(first, /doc-status/);
   assert.match(first, /audits: adr, spec/);
+  assert.match(first, /planning.*audits: design/);
+  assert.match(first, /task-graph.*audits: plan, task/);
   assert.match(first, /exit-audit.*audits: all/);
   assert.match(first, /complete.*terminal/);
   assert.match(first, /briefing.*delegate/);

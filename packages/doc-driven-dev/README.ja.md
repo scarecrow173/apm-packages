@@ -16,6 +16,7 @@ delegate または audit への宣言済みエッジを最大 1 つ、または�
 - `impl-doc`: 実装と実験の証跡。
 - `doc-status`: document contract とリンクの audit。
 - `implementation-flow`: 実装作業と review gate の委譲。
+- `planning-flow`: Graph 委譲のための plan approval と task document の順序付け。
 - `skill-discovery-protocol`: 利用可能な skill と adapter の発見。
 - `doc-driven-dev-graph`: 1 エッジの routing と Task Graph の合成。
 
@@ -68,11 +69,14 @@ binding は Graph Definition に宣言されています。
 
 - migration: `migrate_docs`; bootstrap: `scaffold_docs`。
 - briefing: `briefing-flow`; design: `design-doc`。
-- planning の binding `build_task_graph` は `build_task_graph.js` が実行。
+- planning: `planning-flow`。`plan-doc` の approval 後に `task-doc` を順序付けます。
+- task projection: `build_task_graph`。`plan`/`task` audit 後に
+  `build_task_graph.js` が実行します。
 - implementation: `implementation-flow`; exit audit: `doc-status`。
 
-委譲された skill が briefing / implementation subgraph を担当します。caller は
-返された audit をすべて実行してから、返された delegate だけを dispatch します。
+委譲された skill が briefing / planning / implementation subgraph を担当します。
+caller は返された audit をすべて実行してから、返された delegate だけを dispatch
+します。
 `focus-required` は明示的 focus が渡されるまで hard stop です。
 
 ### Task Graph invariant

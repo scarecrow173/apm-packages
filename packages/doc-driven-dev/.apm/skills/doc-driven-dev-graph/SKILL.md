@@ -67,14 +67,16 @@ Graph Definition bindings are explicit:
 
 - migration uses `migrate_docs`; bootstrap uses `scaffold_docs`;
 - briefing delegates to `briefing-flow`; design delegates to `design-doc`;
-- the planning binding `build_task_graph` is executed by
-  `build_task_graph.js`;
+- the planning node audits the approved design and dispatches `planning-flow`,
+  which sequences `plan-doc` -> approval yield -> `task-doc`;
+- the task-graph node audits `plan` and `task` and dispatches
+  `build_task_graph`, executed by `build_task_graph.js`;
 - implementation delegates to `implementation-flow`; exit verification audits
   with `doc-status`.
 
-Delegates own their briefing and implementation subgraphs. The caller runs
-returned audits before dispatching exactly the returned delegate. `focus-required`
-is a hard stop until explicit focus is supplied.
+Delegates own their briefing, planning, and implementation subgraphs. The
+caller runs returned audits before dispatching exactly the returned delegate.
+`focus-required` is a hard stop until explicit focus is supplied.
 
 ## Runtime loop
 
@@ -95,7 +97,7 @@ budgets, trace summary, and resume rules are in
    never recursively follows a second edge.
 8. Preserve the complete route, check bounded counters and its fingerprint, and
    run every returned audit in stable order.
-9. Dispatch only the declared delegate, including its briefing or
+9. Dispatch only the declared delegate, including its briefing, planning, or
    implementation subgraph; yield when input, approval, or authority is
    explicitly required.
 10. Record the Markdown evidence checkpoint and ordered trace, re-project, and re-enter

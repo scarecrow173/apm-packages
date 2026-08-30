@@ -211,7 +211,13 @@ const canonicalDocumentPaths = [
   proofRelativePath,
   "docs/impl/ir/0001-task.md",
 ];
-const footerDelegates = new Set(["briefing-flow", "design-doc", "implementation-flow", "doc-status"]);
+const footerDelegates = new Set([
+  "briefing-flow",
+  "design-doc",
+  "planning-flow",
+  "implementation-flow",
+  "doc-status",
+]);
 const callerNormalizedDelegates = new Set(["migrate_docs", "scaffold_docs", "build_task_graph"]);
 const callerNormalizedAudits = new Set(["spec", "adr", "design", "plan", "task", "impl-record", "all"]);
 
@@ -290,6 +296,7 @@ function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
     case "build_task_graph": return [selectedTaskGraphPlanPath(route), ...taskGraphPaths(route)];
     case "briefing-flow": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
+    case "planning-flow": return ["docs/designs/0001-graph.md"];
     case "implementation-flow": return [...taskGraphPaths(route), "docs/designs/0001-graph.md", "docs/plans/0001-graph.md"];
     case "doc-status": return canonicalDocumentPaths;
     default: throw new Error(`No authoritative-input mapping for ${effect.kind}:${effect.id}`);
@@ -300,6 +307,7 @@ function effectEvidencePath(route: GraphRoute, effect: EffectIdentity): string {
   if (effect.kind === "audit") return effectInputPaths(route, effect)[0];
   switch (effect.id) {
     case "design-doc": return "docs/designs/0001-graph.md";
+    case "planning-flow": return "docs/plans/0001-graph.md";
     case "implementation-flow": return "docs/impl/ir/0001-task.md";
     case "doc-status": return "docs/impl/ir/0001-task.md";
     default: return effectInputPaths(route, effect)[0];
@@ -323,13 +331,16 @@ function completedOutcome(
   providerIdempotency?: { provider: string; key: string },
 ): CompletedEffectOutcome {
   const evidence = evidenceReference(repo, route, effect);
+  const evidenceReferences = effect.id === "planning-flow"
+    ? [evidence, ...taskGraphPaths(route).map((relativePath) => canonicalReference(repo, relativePath))]
+    : [evidence];
   return {
     status: "completed",
     edgeId: route.edgeId as string,
     stage,
     effect,
     authoritativeInputs: authoritativeInputs(repo, route, effect),
-    evidence: [evidence],
+    evidence: evidenceReferences,
     proof: providerIdempotency ? { providerIdempotency } : { canonicalEvidence: evidence },
   };
 }
@@ -1201,6 +1212,49 @@ test("continues implementation-to-design and then design-to-planning", () => {
     "design-to-planning",
   ]);
   assert.equal(result.projectCalls, 2);
+});
+
+test("runs planning-flow before downstream plan and task audits", () => {
+  const repo = fixtureRepo({ taskStatuses: ["todo", "todo"] });
+  const result = runScenario({
+    repo,
+    current: "design",
+    mode: "run-until-yield",
+    steps: [
+      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning") },
+      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
+    ],
+  });
+
+  assert.deepEqual(result.events, [
+    "route:design-to-planning",
+    "audit:design",
+    "delegate:planning-flow",
+    "evidence:design-to-planning",
+    "project",
+    "route:planning-to-task-graph",
+    "audit:plan",
+    "audit:task",
+    "delegate:build_task_graph",
+    "evidence:planning-to-task-graph",
+  ]);
+  assert.equal(result.delegateCounts["planning-flow"], 1);
+  assert.equal(result.delegateCounts.build_task_graph, 1);
+  assert.deepEqual(result.routes.map((route) => route.edgeId), [
+    "design-to-planning",
+    "planning-to-task-graph",
+  ]);
+  const planningOutcome = result.outcomes.find((outcome) => (
+    outcome.stage === "delegate" && outcome.effect.id === "planning-flow"
+  ));
+  assert.deepEqual(planningOutcome?.evidence, [
+    canonicalReference(repo, "docs/plans/0001-graph.md"),
+    canonicalReference(repo, "docs/tasks/0001-task.md"),
+    canonicalReference(repo, "docs/tasks/0002-task.md"),
+  ]);
+  assert.deepEqual(planningOutcome?.proof, {
+    canonicalEvidence: canonicalReference(repo, "docs/plans/0001-graph.md"),
+  });
 });
 
 test("repairs an invalid task graph before returning to task-graph", () => {

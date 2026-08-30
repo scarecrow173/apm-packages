@@ -137,7 +137,7 @@ generated JavaScript を変更せず、次の declared effect を同じ `EffectO
 | --- | --- |
 | `migrate_docs`, `scaffold_docs`, `build_task_graph` | script delegate 用の caller adapter |
 | `spec`, `adr`, `design`, `plan`, `task`, `impl-record`, `all` | named audit 用の caller adapter |
-| `briefing-flow`, `design-doc`, `implementation-flow`, `doc-status` | 呼び出された skill |
+| `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `doc-status` | 呼び出された skill |
 
 adapter は `completed` または `retry` を返す前に effect 固有の canonical input と evidence を
 記録します。adapter evidence が missing または malformed なら
@@ -149,9 +149,11 @@ receipt scope は generic な Task Graph fallback ではなく effect を使い�
 graph では、`spec`、`adr`、`design`、`plan` audit は対応する canonical document を読み、`task`
 は選択された Task Graph task document、`impl-record` はその Implementation Record、`all` は
 declared canonical document set を読みます。`briefing-flow` は spec と ADR を読み、`design-doc`
-は spec と ADR を読み design evidence を記録し、`implementation-flow` は選択 task と
-design/plan を読み Implementation Record を記録し、`doc-status` は declared document set を
-読みます。script-adapter input は `migrate_docs`（declared document set）、`scaffold_docs`
+は spec と ADR を読み design evidence を記録し、`planning-flow` は selected approved design を
+読み、selected plan とすべての produced plan-linked task document を記録します。
+`implementation-flow` は選択 task と design/plan を読み Implementation Record を記録し、
+`doc-status` は declared document set を読みます。script-adapter input は
+`migrate_docs`（declared document set）、`scaffold_docs`
 （workspace-root bootstrap input）、`build_task_graph`（focused plan と選択 task document）です。すべての referenced path/ID と
 fingerprint は使用前に current canonical content と照合して resolve しなければなりません。
 
@@ -163,6 +165,7 @@ fingerprint は使用前に current canonical content と照合して resolve �
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate が通過する | recoverable document gap | unresolved user-only requirement の `input-required` |
 | `design-doc` | design が approved になる | — | designated reviewer を待つ `approval-required`、upstream user decision がない `input-required` |
+| `planning-flow` | approved/active plan と linked task evidence | changed canonical plan/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `doc-status` | documents が Completable になる | declared repair evidence を伴う Returned | safe repair のない Returned の `unrecoverable-blocker` |
 

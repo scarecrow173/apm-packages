@@ -64,11 +64,14 @@ Graph Definition の binding は明示的です。
 
 - migration は `migrate_docs`、bootstrap は `scaffold_docs`。
 - briefing は `briefing-flow`、design は `design-doc` に委譲。
-- planning の binding `build_task_graph` は `build_task_graph.js` が実行。
+- planning node は approved design を audit して `planning-flow` を dispatch し、
+  `plan-doc` -> approval yield -> `task-doc` の順に実行。
+- task-graph node は `plan` と `task` を audit して `build_task_graph` を dispatch し、
+  `build_task_graph.js` が実行。
 - implementation は `implementation-flow`、exit 検証は `doc-status` audit。
 
-delegate は briefing / implementation subgraph と証跡を担当します。caller は
-返された audit を先に実行し、返された delegate だけを dispatch します。
+delegate は briefing / planning / implementation subgraph と証跡を担当します。
+caller は返された audit を先に実行し、返された delegate だけを dispatch します。
 `focus-required` blocker は明示的 focus が渡されるまで hard stop です。
 
 ## Graph runtime の 10 ステップ
@@ -90,7 +93,7 @@ trace summary、resume rule の詳細は
    edge を再帰的に追跡しない。
 8. route 全体を保持し、bounded counter と fingerprint を確認して、返された
    audit を安定した順序ですべて実行する。
-9. 宣言された delegate と、その briefing / implementation subgraph だけを
+9. 宣言された delegate と、その briefing / planning / implementation subgraph だけを
    dispatch する。input、approval、authority が明示的に必要なら yield する。
 10. Markdown 証跡 checkpoint と ordered trace を記録し、再投影して返された `next`
     node から再入力する。`single-step` では yield し、`run-until-yield` では

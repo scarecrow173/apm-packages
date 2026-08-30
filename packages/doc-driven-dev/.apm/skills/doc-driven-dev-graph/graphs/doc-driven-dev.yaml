@@ -39,8 +39,8 @@ nodes:
   bootstrap: { kind: action, delegate: scaffold_docs }
   briefing: { kind: delegate, delegate: briefing-flow, audits: [spec, adr] }
   design: { kind: action, delegate: design-doc, audits: [design] }
-  planning: { kind: action, audits: [plan, task] }
-  task-graph: { kind: action, delegate: build_task_graph, audits: [task] }
+  planning: { kind: delegate, delegate: planning-flow, audits: [design] }
+  task-graph: { kind: action, delegate: build_task_graph, audits: [plan, task] }
   implementation: { kind: delegate, delegate: implementation-flow, audits: [impl-record] }
   followup-triage: { kind: action, audits: [task, impl-record] }
   exit-audit: { kind: audit, delegate: doc-status, audits: [all], requiresGates: [bootstrap, briefing, design, planning, implementation, followup-triage] }

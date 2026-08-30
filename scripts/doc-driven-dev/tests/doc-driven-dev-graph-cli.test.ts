@@ -121,6 +121,14 @@ function preDesignRepo(): string {
   return repo;
 }
 
+function approvedDesignRepo(): string {
+  const repo = completeRepo(["todo"]);
+  for (const relativePath of ["docs/plans/0001-graph.md", "docs/tasks/0001-task.md"]) {
+    fs.rmSync(path.join(repo, relativePath));
+  }
+  return repo;
+}
+
 function canonicalGraphPath(): string {
   return path.resolve(
     __dirname,
@@ -211,6 +219,51 @@ test("source and generated CLIs route a pre-design briefing chain identically", 
     blockers: [],
     taskGraph: null,
   });
+});
+
+test("source and generated CLIs route an approved design through planning-flow identically", () => {
+  const repo = approvedDesignRepo();
+  const expected = {
+    design: {
+      schemaVersion: 2,
+      graphId: "doc-driven-dev",
+      current: "design",
+      next: "planning",
+      edgeId: "design-to-planning",
+      condition: "design",
+      status: "edge",
+      delegate: "planning-flow",
+      requiredAudits: ["design"],
+      blockers: [],
+      taskGraph: null,
+    },
+    planning: {
+      schemaVersion: 2,
+      graphId: "doc-driven-dev",
+      current: "planning",
+      next: "planning",
+      edgeId: "planning-retry",
+      condition: "planning-not-pass",
+      status: "edge",
+      delegate: "planning-flow",
+      requiredAudits: ["design"],
+      blockers: [],
+      taskGraph: null,
+    },
+  };
+
+  for (const current of ["design", "planning"] as const) {
+    const args = [
+      "--graph", canonicalGraphPath(), "--current", current,
+      "--focus", "DESIGN-0001", "--cwd", repo, "--json",
+    ];
+    const source = runSource(repo, args);
+    const generated = runCli(generatedCli, repo, args);
+    assert.equal(source.status, 0, source.stderr);
+    assert.equal(generated.status, 0, generated.stderr);
+    assert.deepEqual(JSON.parse(source.stdout), JSON.parse(generated.stdout));
+    assert.deepEqual(JSON.parse(source.stdout), expected[current]);
+  }
 });
 
 test("selected graph validates current node and declared signal", () => {
