@@ -117,13 +117,13 @@ type ScenarioHandoff = {
   current: string;
   mode: ScenarioMode;
   maxHops: number;
+  taskBudgetCount: number | null;
   yieldReason: YieldReason | null;
   focus: string[];
   signals: string[];
   graphPath: string;
   completedEdges: string[];
   seenRouteFingerprints: string[];
-  selfLoopCounts: Record<string, number>;
   auditCounts: Record<string, number>;
   delegateCounts: Record<string, number>;
   checkpoints: GraphRoute[];
@@ -605,7 +605,13 @@ function recordTrace(traces: EdgeTrace[], trace: EdgeTrace): void {
 
 function runScenario(options: ScenarioOptions): ScenarioResult {
   const mode = options.resume?.mode ?? options.mode;
-  const maxHops = options.resume?.maxHops ?? options.maxHops ?? 10;
+  const topologyBaseHops = 10;
+  let taskBudgetCount = options.resume
+    ? options.resume.taskBudgetCount
+    : options.maxHops === undefined ? 0 : null;
+  let maxHops = options.resume?.maxHops
+    ?? options.maxHops
+    ?? topologyBaseHops;
   const graphPath = options.graphPath ?? options.resume?.graphPath ?? canonicalGraphPath;
   const definition = loadGraphDefinition(graphPath);
   const focus = options.focus ?? options.resume?.focus ?? ["PLAN-0001"];
@@ -617,7 +623,6 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
   const completedEdges = [...(options.resume?.completedEdges ?? [])];
   const edgeTrace = [...(options.resume?.edgeTrace ?? [])];
   const seenRouteFingerprints = new Set(options.resume?.seenRouteFingerprints ?? []);
-  const selfLoopCounts = { ...(options.resume?.selfLoopCounts ?? {}) };
   const auditCounts = { ...(options.resume?.auditCounts ?? {}) };
   const delegateCounts = { ...(options.resume?.delegateCounts ?? {}) };
   const outcomes = [...(options.resume?.outcomes ?? [])];
@@ -682,6 +687,14 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     events.push(`route:${route.edgeId ?? route.status}`);
     assert.equal(route.edgeId, step.expectEdge);
 
+    if (taskBudgetCount === 0 && route.delegate === "implementation-flow") {
+      assert.ok(route.taskGraph && route.taskGraph.issues.length === 0);
+      taskBudgetCount = route.taskGraph.nodes
+        .filter((task) => ["todo", "in-progress", "blocked"].includes(task.status))
+        .length;
+      maxHops = topologyBaseHops + Math.max(0, taskBudgetCount - 1);
+    }
+
     if (route.status === "terminal") {
       yieldReason = "terminal";
       expectYield(step, yieldReason);
@@ -700,11 +713,6 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     }
 
     const fingerprint = JSON.stringify(route);
-    if (route.edgeId && route.current === route.next && (selfLoopCounts[route.edgeId] ?? 0) >= 1) {
-      yieldReason = "budget-exhausted";
-      expectYield(step, yieldReason);
-      break;
-    }
     if (seenRouteFingerprints.has(fingerprint)) {
       yieldReason = "budget-exhausted";
       expectYield(step, yieldReason);
@@ -819,10 +827,6 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     pending = null;
     checkpoints.push(route);
     completedEdges.push(route.edgeId as string);
-    seenRouteFingerprints.add(fingerprint);
-    if (route.current === route.next) {
-      selfLoopCounts[route.edgeId as string] = (selfLoopCounts[route.edgeId as string] ?? 0) + 1;
-    }
     recordTrace(edgeTrace, {
       route,
       outcomes: [...edgeOutcomes],
@@ -832,6 +836,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       evidenceRecorded: true,
       checkpointComplete: true,
     });
+    seenRouteFingerprints.add(fingerprint);
     hops += 1;
     current = route.next;
 
@@ -856,7 +861,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     graphPath,
     completedEdges,
     seenRouteFingerprints: [...seenRouteFingerprints],
-    selfLoopCounts,
+    taskBudgetCount,
     auditCounts,
     delegateCounts,
     checkpoints,
@@ -957,8 +962,11 @@ test("runs a bounded partial canonical path with fresh projection between checkp
   }
 });
 
-test("observes terminal after the 10-edge migration path reaches the hop budget", () => {
-  const repo = fixtureRepo();
+test("observes terminal after the migration path reaches the derived task budget", () => {
+  const repo = fixtureRepo({
+    taskStatuses: ["todo", "todo"],
+    dependsOn: [[], ["TASK-0001"]],
+  });
   const result = runScenario({
     repo,
     current: "probe",
@@ -973,8 +981,14 @@ test("observes terminal after the 10-edge migration path reaches the hop budget"
       { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
       {
         expectEdge: "task-graph-to-implementation",
-        applyEvidence: evidence("task-graph-to-implementation", (fixture, signals) => {
+        applyEvidence: evidence("task-graph-to-implementation", (fixture) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+        }),
+      },
+      {
+        expectEdge: "implementation-retry",
+        applyEvidence: evidence("implementation-retry", (fixture, signals) => {
+          updateArtifact(fixture, "docs/tasks/0002-task.md", { status: "done" });
           signals.add("implementation-verified");
         }),
       },
@@ -994,8 +1008,10 @@ test("observes terminal after the 10-edge migration path reaches the hop budget"
       { expectEdge: null, yield: "terminal" },
     ],
   });
-  assert.equal(result.checkpoints.length, 10);
-  assert.equal(result.handoff.hops, 10);
+  assert.equal(result.checkpoints.length, 11);
+  assert.equal(result.handoff.taskBudgetCount, 2);
+  assert.equal(result.handoff.maxHops, 11);
+  assert.equal(result.handoff.hops, 11);
   assert.equal(result.current, "complete");
   assert.equal(result.yieldReason, "terminal");
 });
@@ -1170,6 +1186,49 @@ test("does not skip an implementation receipt after its authoritative Task Graph
   assert.equal(resumed.delegateCounts["implementation-flow"], 1);
 });
 
+test("freezes focused task budget across resume and refreshes it only for a new run", () => {
+  const repo = fixtureRepo({
+    taskStatuses: ["todo", "in-progress", "blocked", "done", "wont-do"],
+  });
+  const first = runScenario({
+    repo,
+    current: "task-graph",
+    mode: "single-step",
+    steps: [{
+      expectEdge: "task-graph-to-active-implementation",
+      applyEvidence: evidence("task-graph-to-active-implementation"),
+    }],
+  });
+  assert.equal(first.handoff.taskBudgetCount, 3);
+  assert.equal(first.handoff.maxHops, 12);
+
+  addTask(repo, 6);
+  const resumed = runScenario({
+    repo,
+    current: "implementation",
+    mode: "single-step",
+    resume: first.handoff,
+    steps: [{
+      expectEdge: "implementation-retry",
+      applyEvidence: evidence("implementation-retry"),
+    }],
+  });
+  assert.equal(resumed.handoff.taskBudgetCount, 3);
+  assert.equal(resumed.handoff.maxHops, 12);
+
+  const nextRun = runScenario({
+    repo,
+    current: "implementation",
+    mode: "single-step",
+    steps: [{
+      expectEdge: "implementation-retry",
+      applyEvidence: evidence("implementation-retry"),
+    }],
+  });
+  assert.equal(nextRun.handoff.taskBudgetCount, 4);
+  assert.equal(nextRun.handoff.maxHops, 13);
+});
+
 test("continues implementation retry only after re-projection", () => {
   const repo = fixtureRepo();
   const result = runScenario({
@@ -1193,6 +1252,52 @@ test("continues implementation retry only after re-projection", () => {
     "implementation-to-followup-triage",
   ]);
   assert.equal(result.projectCalls, 2);
+});
+
+test("continues implementation retry when the Task Graph advances to the next runnable task", () => {
+  const repo = fixtureRepo({
+    taskStatuses: ["in-progress", "todo"],
+    dependsOn: [[], ["TASK-0001"]],
+  });
+  const result = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    steps: [
+      {
+        expectEdge: "implementation-retry",
+        applyEvidence: evidence("implementation-retry", (fixture) => {
+          updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+        }),
+      },
+      {
+        expectEdge: "implementation-retry",
+        applyEvidence: evidence("implementation-retry", (fixture, signals) => {
+          updateArtifact(fixture, "docs/tasks/0002-task.md", { status: "done" });
+          signals.add("implementation-verified");
+          signals.add("followup-terminal");
+        }),
+      },
+      {
+        expectEdge: "implementation-to-followup-triage",
+        applyEvidence: evidence("implementation-to-followup-triage"),
+      },
+    ],
+  });
+
+  assert.deepEqual(result.routes.map((route) => route.edgeId), [
+    "implementation-retry",
+    "implementation-retry",
+    "implementation-to-followup-triage",
+  ]);
+  assert.deepEqual(result.routes[0].taskGraph?.resumableActive, ["TASK-0001"]);
+  assert.deepEqual(result.routes[0].taskGraph?.runnable, []);
+  assert.deepEqual(result.routes[0].taskGraph?.completed, []);
+  assert.deepEqual(result.routes[1].taskGraph?.resumableActive, []);
+  assert.deepEqual(result.routes[1].taskGraph?.runnable, ["TASK-0002"]);
+  assert.deepEqual(result.routes[1].taskGraph?.completed, ["TASK-0001"]);
+  assert.notEqual(JSON.stringify(result.routes[0]), JSON.stringify(result.routes[1]));
+  assert.equal(result.yieldReason, null);
 });
 
 test("continues implementation-to-design and then design-to-planning", () => {
@@ -1300,7 +1405,7 @@ test("routes completed implementation work to follow-up triage", () => {
   assert.equal(result.checkpoints.length, 1);
 });
 
-test("allows one completed self-loop then yields budget-exhausted", () => {
+test("stops an unchanged self-loop on its repeated complete-route fingerprint", () => {
   const repo = fixtureRepo();
   const result = runScenario({
     repo,
@@ -1312,7 +1417,8 @@ test("allows one completed self-loop then yields budget-exhausted", () => {
     ],
   });
   assert.equal(result.checkpoints.length, 1);
-  assert.equal(result.handoff.selfLoopCounts["implementation-retry"], 1);
+  assert.equal(result.handoff.seenRouteFingerprints.length, 1);
+  assert.equal(JSON.stringify(result.routes[1]), result.handoff.seenRouteFingerprints[0]);
   assert.equal(result.yieldReason, "budget-exhausted");
 });
 
@@ -1335,6 +1441,20 @@ test("bounds a changing multi-node repair cycle at the default maxHops", () => {
   assert.equal(result.handoff.hops, 10);
   assert.equal(graphRun(result).trace.length, 10);
   assert.deepEqual(graphRun(result).trace.map((entry) => entry.route.edgeId), steps.slice(0, 10).map((step) => step.expectEdge));
+  assert.equal(graphRun(result).reason, "budget-exhausted");
+
+  const nextRun = runScenario({
+    repo,
+    current: result.current,
+    mode: "run-until-yield",
+    signals: ["spec-gap"],
+    steps: [{
+      expectEdge: "design-to-briefing",
+      applyEvidence: evidence("design-to-briefing", (fixture) => addTask(fixture, 20)),
+    }],
+  });
+  assert.equal(nextRun.handoff.hops, 1);
+  assert.equal(nextRun.yieldReason, null);
 });
 
 test("stops on a repeated complete GraphRoute fingerprint", () => {
