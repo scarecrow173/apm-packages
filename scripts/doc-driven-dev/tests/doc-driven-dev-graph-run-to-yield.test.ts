@@ -609,6 +609,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
   let taskBudgetCount = options.resume
     ? options.resume.taskBudgetCount
     : options.maxHops === undefined ? 0 : null;
+  let taskBudgetFrozen = options.resume !== undefined || options.maxHops !== undefined;
   let maxHops = options.resume?.maxHops
     ?? options.maxHops
     ?? topologyBaseHops;
@@ -687,12 +688,13 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     events.push(`route:${route.edgeId ?? route.status}`);
     assert.equal(route.edgeId, step.expectEdge);
 
-    if (taskBudgetCount === 0 && route.delegate === "implementation-flow") {
+    if (!taskBudgetFrozen && route.delegate === "implementation-flow") {
       assert.ok(route.taskGraph && route.taskGraph.issues.length === 0);
       taskBudgetCount = route.taskGraph.nodes
         .filter((task) => ["todo", "in-progress", "blocked"].includes(task.status))
         .length;
       maxHops = topologyBaseHops + Math.max(0, taskBudgetCount - 1);
+      taskBudgetFrozen = true;
     }
 
     if (route.status === "terminal") {
@@ -1227,6 +1229,38 @@ test("freezes focused task budget across resume and refreshes it only for a new 
   });
   assert.equal(nextRun.handoff.taskBudgetCount, 4);
   assert.equal(nextRun.handoff.maxHops, 13);
+});
+
+test("preserves a frozen zero task budget across same-run additions and resume", () => {
+  const repo = fixtureRepo({ taskStatuses: ["done"] });
+  const result = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    steps: [
+      {
+        expectEdge: "implementation-retry",
+        applyEvidence: evidence("implementation-retry", (fixture) => {
+          addTask(fixture, 2);
+          addTask(fixture, 3);
+        }),
+      },
+      { expectEdge: "implementation-retry", applyEvidence: evidence("implementation-retry") },
+    ],
+  });
+  assert.equal(result.handoff.taskBudgetCount, 0);
+  assert.equal(result.handoff.maxHops, 10);
+
+  addTask(repo, 4);
+  const resumed = runScenario({
+    repo,
+    current: "implementation",
+    mode: "run-until-yield",
+    resume: result.handoff,
+    steps: [{ expectEdge: "implementation-retry", applyEvidence: evidence("implementation-retry") }],
+  });
+  assert.equal(resumed.handoff.taskBudgetCount, 0);
+  assert.equal(resumed.handoff.maxHops, 10);
 });
 
 test("continues implementation retry only after re-projection", () => {
@@ -1803,6 +1837,7 @@ test("handoff records caller mode, hop bound, and per-edge completion trace", ()
   });
   assert.equal(result.handoff.mode, "single-step");
   assert.equal(result.handoff.maxHops, 4);
+  assert.equal(result.handoff.taskBudgetCount, null);
   assert.equal(result.handoff.yieldReason, "single-step-complete");
   assert.equal(result.handoff.edgeTrace.length, 1);
   assert.deepEqual(result.handoff.edgeTrace[0].completedAudits, ["adr", "spec"]);
