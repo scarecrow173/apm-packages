@@ -111,6 +111,7 @@ test("routes runnable tasks to the implementation delegate", () => {
   const route = routeGraph({ current: "task-graph", definition, state });
   assert.equal(route.next, "implementation");
   assert.equal(route.delegate, "implementation-flow");
+  assert.deepEqual(route.requiredAudits, []);
   assert.deepEqual(route.taskGraph?.runnable, ["TASK-0001"]);
 });
 

@@ -41,7 +41,7 @@ nodes:
   design: { kind: action, delegate: design-doc, audits: [design] }
   planning: { kind: delegate, delegate: planning-flow, audits: [design] }
   task-graph: { kind: action, delegate: build_task_graph, audits: [plan, task] }
-  implementation: { kind: delegate, delegate: implementation-flow, audits: [impl-record] }
+  implementation: { kind: delegate, delegate: implementation-flow }
   followup-triage: { kind: action, audits: [task, impl-record] }
   exit-audit: { kind: audit, delegate: doc-status, audits: [all], requiresGates: [bootstrap, briefing, design, planning, implementation, followup-triage] }
   complete: { kind: terminal }

@@ -1294,6 +1294,9 @@ test("routes completed implementation work to follow-up triage", () => {
     steps: [{ expectEdge: "implementation-to-followup-triage", applyEvidence: evidence("implementation-to-followup-triage") }],
   });
   assert.equal(result.routes[0].edgeId, "implementation-to-followup-triage");
+  assert.deepEqual(result.routes[0].requiredAudits, ["impl-record", "task"]);
+  assert.equal(result.auditCounts["impl-record"], 1);
+  assert.equal(result.auditCounts.task, 1);
   assert.equal(result.checkpoints.length, 1);
 });
 
@@ -1693,10 +1696,10 @@ test("records ordered typed outcomes and yields an irreversible effect without p
   const repo = fixtureRepo();
   const result = runScenario({
     repo,
-    current: "implementation",
+    current: "design",
     mode: "run-until-yield",
     steps: [{
-      expectEdge: "implementation-retry",
+      expectEdge: "design-to-planning",
       yield: "authority-required",
       delegate: (fixture, _signals, route) => yieldOutcome(
         fixture,
