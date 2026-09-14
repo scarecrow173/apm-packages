@@ -1,10 +1,11 @@
-# sdp CLI 仕様
+# sdp CLI Specification
 
-## 概要
+## Overview
 
-`sdp` は skill-discovery-protocol の成果物を生成・検証・照会する CLI である。
+`sdp` is the CLI that generates, validates, and queries
+skill-discovery-protocol artifacts.
 
-## コマンド体系
+## Command Surface
 
 ```text
 sdp scan --adapter <adapter-yaml> [--cwd <dir>]
@@ -21,36 +22,37 @@ sdp query --profile <flow-profile-json> <subcommand> [options]
 
 ## `sdp scan`
 
-scan 成果物の生成・更新を行う。
+Generates or updates the scan artifact.
 
 ```text
 sdp scan --adapter <adapter-yaml> [--cwd <dir>]
 ```
 
-### 動作
+### Behavior
 
-1. adapter YAML を読み込む（`extends` 解決を含む）
-2. `scan.scopes` に基づいてスキルを走査する
-3. 見つかった各スキルの `SKILL.md` 全文を読み、`.sdp/skill-scan-list.json` に保存する
+1. Load the adapter YAML (including `extends` resolution)
+2. Scan skills according to `scan.scopes`
+3. Read the full text of each discovered `SKILL.md` and store it in
+   `.sdp/skill-scan-list.json`
 
-### 入力
+### Inputs
 
-- `--adapter <adapter-yaml>`: 必須。adapter YAML のパス。
-- `--cwd <dir>`: 任意。基準ディレクトリ。
+- `--adapter <adapter-yaml>`: Required. Path to the adapter YAML.
+- `--cwd <dir>`: Optional. Base directory.
 
-### 出力
+### Output
 
 - `.sdp/skill-scan-list.json`
 
-### 終了コード
+### Exit Codes
 
-- `0`: 正常完了
-- `1`: 入力エラー
-- `2`: adapter schema 検証エラー
+- `0`: Success
+- `1`: Input error
+- `2`: Adapter schema validation error
 
 ## `sdp infer`
 
-scan 成果物から inference 成果物を生成する。
+Generates the inference artifact from the scan artifact.
 
 ```text
 sdp infer init [--scan <json>] [--out <json>] [--cwd <dir>] [--if-exists <fail|overwrite|merge>]
@@ -60,166 +62,182 @@ sdp infer set-skill --name <skill> --spec <json> --in <json> [--out <json>] [--c
 sdp infer delete-skill --name <skill> --in <json> [--out <json>] [--cwd <dir>] [--dry-run]
 ```
 
-### 動作
+### Behavior
 
-1. `init` は scan 成果物から編集用のベース inference ドキュメントを生成する（推論方式は `agent` 固定）
-2. `apply` は JSONL operations を既存 inference ドキュメントへ原子的に適用する
-3. `check` は既存 inference ドキュメントを schema 検証し、scan list に対する completeness も検証する
-4. `set-skill` は1スキル分の定義を upsert する
-5. `delete-skill` は指定スキル定義を削除する
+1. `init` generates an editable baseline inference document from the scan
+   artifact (inference method is fixed to `agent`)
+2. `apply` atomically applies JSONL operations to an existing inference
+   document
+3. `check` schema-validates an existing inference document and also validates
+   completeness against the scan list
+4. `set-skill` upserts a single skill definition
+5. `delete-skill` deletes the specified skill definition
 
-### 推論編集例
+### Inference Edit Examples
 
-1スキル分を更新する場合:
+Updating a single skill:
 
 ```text
 sdp infer set-skill --name deep-dive --spec tmp/deep-dive.inference.json --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
 ```
 
-複数編集を JSONL で適用する場合:
+Applying multiple edits via JSONL:
 
 ```text
 sdp infer apply --ops tmp/sdp-inference-ops.jsonl --in .sdp/skill-reference-inferences.json --out .sdp/skill-reference-inferences.json
 ```
 
-`sdp profile` の前に必ず検証する:
+Always validate before `sdp profile`:
 
 ```text
 sdp infer check --scan .sdp/skill-scan-list.json --in .sdp/skill-reference-inferences.json
 ```
 
-### 入力
+### Inputs
 
-- `--scan <json>`: 任意。scan 成果物のパス。
-  未指定時の既定値は `.sdp/skill-scan-list.json`。
-- `--in <json>`: 任意。編集・検証対象の inference 成果物パス。
-  未指定時の既定値は `.sdp/skill-reference-inferences.json`。
-- `--out <json>`: 任意。inference 成果物の出力パス。
-  未指定時の既定値は `.sdp/skill-reference-inferences.json`。
-- `--ops <jsonl>`: `apply` で使用する JSONL operations ファイル。
-- `--name <skill>`: `set-skill` / `delete-skill` で対象となるスキル名。
-- `--spec <json>`: `set-skill` で使用する 1 スキル分の JSON 定義。
-- `--if-exists <fail|overwrite|merge>`: `init` 実行時に出力先が存在した場合の挙動。既定値は `fail`。
-- `--dry-run`: `apply` / `set-skill` / `delete-skill` / `init` で、書き込みせず検証のみ実行する。
-- `--cwd <dir>`: 任意。基準ディレクトリ。
+- `--scan <json>`: Optional. Path to the scan artifact.
+  Defaults to `.sdp/skill-scan-list.json` when omitted.
+- `--in <json>`: Optional. Path to the inference artifact to edit/validate.
+  Defaults to `.sdp/skill-reference-inferences.json` when omitted.
+- `--out <json>`: Optional. Output path for the inference artifact.
+  Defaults to `.sdp/skill-reference-inferences.json` when omitted.
+- `--ops <jsonl>`: JSONL operations file used by `apply`.
+- `--name <skill>`: Target skill name for `set-skill` / `delete-skill`.
+- `--spec <json>`: Single-skill JSON definition used by `set-skill`.
+- `--if-exists <fail|overwrite|merge>`: Behavior when the output already exists
+  during `init`. Defaults to `fail`.
+- `--dry-run`: For `apply` / `set-skill` / `delete-skill` / `init`; validates
+  without writing.
+- `--cwd <dir>`: Optional. Base directory.
 
-### 出力
+### Output
 
-- `.sdp/skill-reference-inferences.json`（既定）
+- `.sdp/skill-reference-inferences.json` (default)
 
-### 終了コード
+### Exit Codes
 
-- `0`: 正常完了
-- `1`: 生成後の schema 検証失敗
-- `2`: 入力エラー（引数不正、scan 未存在、scan 不正）
-- `3`: inference incomplete（scan された skill に `review_status != reviewed` が残っている）
+- `0`: Success
+- `1`: Post-generation schema validation failure
+- `2`: Input error (bad arguments, missing scan, invalid scan)
+- `3`: Inference incomplete (scanned skills still have
+  `review_status != reviewed`)
 
 ## `sdp profile`
 
-成果物の生成・更新を行う。
+Generates or updates artifacts.
 
 ```text
 sdp profile --adapter <adapter-yaml> [--references <json>]
 ```
 
-### 動作
+### Behavior
 
-1. adapter YAML を読み込む（`extends` 解決を含む）
-2. `.sdp/skill-scan-list.json` を読み込む（`sdp scan` で事前生成）
-3. `--references` または `.sdp/skill-reference-inferences.json` から inference 成果物を読む
-4. scan 成果物と inference 成果物を結合して Skill Reference Catalog を構築する
-5. classification を実行する
-6. invocation を解決する
-7. Flow Profile を生成する
-8. `readable_outputs.enabled = true` の場合、Markdown sidecar を生成する
+1. Load the adapter YAML (including `extends` resolution)
+2. Read `.sdp/skill-scan-list.json` (pre-generated by `sdp scan`)
+3. Read the inference artifact from `--references` or
+   `.sdp/skill-reference-inferences.json`
+4. Join the scan and inference artifacts to build the Skill Reference Catalog
+5. Run classification
+6. Resolve invocations
+7. Generate the Flow Profile
+8. When `readable_outputs.enabled = true`, generate Markdown sidecars
 
-### 入力
+### Inputs
 
-- `--adapter <adapter-yaml>`: 必須。adapter YAML のパス。
-- `--references <json>`: 任意。agent inference 成果物のパス。未指定時は `.sdp/skill-reference-inferences.json` を読む。
-- `--cwd <dir>`: 任意。基準ディレクトリ。
+- `--adapter <adapter-yaml>`: Required. Path to the adapter YAML.
+- `--references <json>`: Optional. Path to the agent inference artifact. When
+  omitted, `.sdp/skill-reference-inferences.json` is read.
+- `--cwd <dir>`: Optional. Base directory.
 
-### 出力
+### Outputs
 
 - `.sdp/skill-reference-catalog.json`
 - `.sdp/<adapter_id>/*-profile.json`
-- `.sdp/<adapter_id>/validation-report.json`（`sdp validate` 実行時）
-- 設定に応じた Markdown sidecar
+- `.sdp/<adapter_id>/validation-report.json` (when `sdp validate` runs)
+- Markdown sidecars per configuration
 
-成果物配置ルール:
+Artifact placement rules:
 
-- 共有成果物（scan / inference / catalog）は `.sdp/` 直下に配置する。
-- フロー固有成果物（flow profile / validation report）は `.sdp/<adapter_id>/` に配置する。
-- `sdp query` は profile 同居ディレクトリを優先し、見つからない場合は `.sdp/` 直下をフォールバック参照する。
+- Shared artifacts (scan / inference / catalog) go directly under `.sdp/`.
+- Flow-specific artifacts (flow profile / validation report) go under
+  `.sdp/<adapter_id>/`.
+- `sdp query` prefers the directory containing the profile and falls back to
+  `.sdp/` when not found.
 
-scan 成果物が存在しない場合、`sdp profile` は終了コード `2` を返し、`sdp scan` の実行を案内する。inference 成果物が存在しない場合も終了コード `2` を返し、`sdp infer init` の実行を案内する。
-inference 成果物が存在しても `review_status != reviewed` の skill が残っている場合、
-`sdp profile` は終了コード `3` を返し、`sdp infer check` の実行を案内する。
+When the scan artifact does not exist, `sdp profile` returns exit code `2` and
+guides the user to run `sdp scan`. When the inference artifact does not exist,
+it also returns exit code `2` and guides the user to run `sdp infer init`.
+When the inference artifact exists but skills with `review_status != reviewed`
+remain, `sdp profile` returns exit code `3` and guides the user to run
+`sdp infer check`.
 
-### 終了コード
+### Exit Codes
 
-- `0`: 正常完了
-- `1`: 入力エラー
-- `2`: schema 検証エラー、または scan / inference 成果物不足
-- `3`: inference incomplete
+- `0`: Success
+- `1`: Input error
+- `2`: Schema validation error, or missing scan / inference artifacts
+- `3`: Inference incomplete
 
 ## `sdp validate`
 
-成果物または adapter YAML の検証を行う。
+Validates artifacts or an adapter YAML.
 
-### Profile 検証
+### Profile Validation
 
 ```text
 sdp validate --profile <flow-profile-json>
 ```
 
-### 動作
+### Behavior
 
-1. Flow Profile JSON を読み込む
-2. Schema gate を実行する
-3. Staleness gate を実行する
-4. Deterministic gate を実行する
-5. Blocking validations を実行する
-6. Catalog 整合性を検証する
-7. validation-report.json を出力する
+1. Read the Flow Profile JSON
+2. Run the Schema gate
+3. Run the Staleness gate
+4. Run the Deterministic gate
+5. Run Blocking validations
+6. Validate catalog consistency
+7. Write validation-report.json
 
-出力先は `--profile` で指定した profile と同じディレクトリ（通常は `.sdp/<adapter_id>/validation-report.json`）。
+The output goes to the same directory as the profile given by `--profile`
+(typically `.sdp/<adapter_id>/validation-report.json`).
 
-Deterministic gate は再生成時に scan list と inference 成果物を使う。既定では `.sdp/skill-reference-inferences.json` が必要である。
+The Deterministic gate uses the scan list and inference artifact when
+regenerating. By default `.sdp/skill-reference-inferences.json` is required.
 
-### Adapter 単体検証
+### Adapter-Only Validation
 
 ```text
 sdp validate --adapter <adapter-yaml>
 ```
 
-adapter YAML の構造、`extends`、`scan.scopes`、classification、`snake_case` 制約を検証する。
+Validates adapter YAML structure, `extends`, `scan.scopes`, classification,
+and `snake_case` constraints.
 
-### 終了コード
+### Exit Codes
 
-- `0`: `overall_result = pass`、または adapter 検証成功
-- `1`: `overall_result = fail`、または adapter 検証失敗
-- `2`: 入力エラー
+- `0`: `overall_result = pass`, or adapter validation succeeded
+- `1`: `overall_result = fail`, or adapter validation failed
+- `2`: Input error
 
 ## `sdp query`
 
-Flow Profile から情報を抽出する。
+Extracts information from a Flow Profile.
 
 ```text
 sdp query --profile <flow-profile-json> <subcommand> [options]
 ```
 
-### サブコマンド
+### Subcommands
 
 | Subcommand | Description | Options |
 | --- | --- | --- |
-| `categories` | カテゴリ一覧 | - |
-| `category-skills` | カテゴリ内スキル一覧 | `--category <id>` |
-| `resolution` | 解決関係一覧 | `--skill <name>` (optional) |
-| `flow-stack` | Flow Stack 定義 | `--slot <id>` (optional) |
-| `execution-policy` | 実行ポリシー | `--skill <name>` (optional) |
-| `capability-skills` | capability 逆引き | `--capability <id>` |
-| `skill-detail` | スキル詳細 | `--skill <name>` |
-| `runtime-guidance` | 実行時ガイダンス | `--skill <name>` (optional) |
-| `unresolved` | 未解決一覧 | - |
-| `validation-status` | 検証状態要約 | - |
+| `categories` | List categories | - |
+| `category-skills` | List skills in a category | `--category <id>` |
+| `resolution` | List resolutions | `--skill <name>` (optional) |
+| `flow-stack` | Flow Stack definition | `--slot <id>` (optional) |
+| `execution-policy` | Execution policies | `--skill <name>` (optional) |
+| `capability-skills` | Reverse lookup by capability | `--capability <id>` |
+| `skill-detail` | Skill details | `--skill <name>` |
+| `runtime-guidance` | Runtime guidance | `--skill <name>` (optional) |
+| `unresolved` | List unresolved items | - |
+| `validation-status` | Validation status summary | - |
