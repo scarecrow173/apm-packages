@@ -8,6 +8,7 @@ targets:
   - copilot
   - cursor
   - claude
+  - windsurf
   - agent-skills
 includes:
   - .apm/
