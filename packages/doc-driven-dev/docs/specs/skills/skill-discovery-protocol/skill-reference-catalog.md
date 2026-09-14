@@ -1,24 +1,31 @@
-# Skill Reference Catalog 仕様
+# Skill Reference Catalog Specification
 
-## 概要
+## Overview
 
-Skill Reference Catalog は、scan で発見されたスキルにエージェント推論成果物を結合し、各スキルが提供・利用する capability と実行ポリシーを一覧化する **flow 非依存** の正規成果物である。
+The Skill Reference Catalog is the **flow-neutral** canonical artifact that
+joins the skills discovered by scan with agent-inference artifacts, listing
+the capabilities each skill provides and uses together with its execution
+policy.
 
-Catalog は `SKILL.md` に独自メタデータがあることを前提にしない。`provides` / `uses` / `execution_policy` / `tags` は、scan で保存された `SKILL.md` 全文をエージェントが読み、`skill-reference-inferences.json` として補完した値を使う。Catalog 化の前提として、各 inference entry は `review_status = "reviewed"` でなければならない。
+The Catalog does not assume custom metadata in `SKILL.md`. `provides` /
+`uses` / `execution_policy` / `tags` are values supplemented by the agent
+reading the full `SKILL.md` text stored by scan and writing
+`skill-reference-inferences.json`. As a prerequisite for catalog construction,
+every inference entry must have `review_status = "reviewed"`.
 
-## 入力成果物
+## Input Artifacts
 
 | Artifact | Role |
 | --- | --- |
-| `skill-scan-list.json` | scan で見つかった各 `SKILL.md` の全文と所在 |
-| `skill-reference-inferences.json` | エージェント推論で補完された reviewed inference 情報 |
+| `skill-scan-list.json` | Full text and location of each `SKILL.md` found by scan |
+| `skill-reference-inferences.json` | Reviewed inference information supplemented by agent inference |
 
-## ファイル形式
+## File Formats
 
-- 正規: `skill-reference-catalog.json`
-- 派生: `skill-reference-catalog.md`（人間レビュー用）
+- Canonical: `skill-reference-catalog.json`
+- Derivative: `skill-reference-catalog.md` (for human review)
 
-## JSON 例
+## JSON Example
 
 ```json
 {
@@ -70,61 +77,65 @@ Catalog は `SKILL.md` に独自メタデータがあることを前提にしな
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `schema_version` | string | yes | catalog schema version |
-| `generated_at` | ISO 8601 | yes | 生成日時 |
-| `validated_at` | ISO 8601 | yes | 最終検証日時 |
-| `skill_count` | number | yes | スキル総数 |
-| `capability_count` | number | yes | capability 総数 |
-| `skills` | array | yes | スキル一覧 |
+| `generated_at` | ISO 8601 | yes | Generation timestamp |
+| `validated_at` | ISO 8601 | yes | Last validation timestamp |
+| `skill_count` | number | yes | Total skill count |
+| `capability_count` | number | yes | Total capability count |
+| `skills` | array | yes | Skill list |
 
 ## `skills[]`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `name` | string | yes | スキル名 |
-| `description` | string | yes | scan で得た標準 description |
-| `provides` | array | yes | 推論された提供 capability |
-| `uses` | array | yes | 推論された利用 capability |
-| `execution_policy` | object | yes | 推論された実行ポリシー |
-| `tags` | string[] | no | 推論された分類補助タグ |
+| `name` | string | yes | Skill name |
+| `description` | string | yes | Standard description obtained by scan |
+| `provides` | array | yes | Inferred provided capabilities |
+| `uses` | array | yes | Inferred used capabilities |
+| `execution_policy` | object | yes | Inferred execution policy |
+| `tags` | string[] | no | Inferred classification-assist tags |
 
 ## `skills[].provides[]`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `capability` | string | yes | `snake_case` capability 識別子 |
-| `description` | string | no | 提供内容の説明 |
+| `capability` | string | yes | `snake_case` capability identifier |
+| `description` | string | no | Description of what is provided |
 
 ## `skills[].uses[]`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `capability` | string | yes | `snake_case` capability 識別子 |
-| `required` | boolean | yes | 必須依存かどうか |
-| `default_skill` | string | no | capability 依存の既定候補 |
-| `override_allowed` | boolean | yes | flow からの override を許可するか |
+| `capability` | string | yes | `snake_case` capability identifier |
+| `required` | boolean | yes | Whether the dependency is required |
+| `default_skill` | string | no | Default candidate for the capability dependency |
+| `override_allowed` | boolean | yes | Whether a flow may override it |
 
 ## `skills[].execution_policy`
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `strictness` | `"rigid"` \| `"flexible"` | yes | 実行の厳格度 |
-| `sequence_required` | boolean | yes | 手順順序が必須か |
-| `allow_step_reordering` | boolean | yes | 手順の並び替えを許可するか |
-| `allow_partial_application` | boolean | yes | 部分適用を許可するか |
-| `guidance` | string | no | 実行時ガイダンス |
+| `strictness` | `"rigid"` \| `"flexible"` | yes | Execution strictness |
+| `sequence_required` | boolean | yes | Whether step order is required |
+| `allow_step_reordering` | boolean | yes | Whether step reordering is allowed |
+| `allow_partial_application` | boolean | yes | Whether partial application is allowed |
+| `guidance` | string | no | Runtime guidance |
 
-## 制約
+## Constraints
 
-- すべての capability 識別子は `snake_case` 固定
-- `skills[]` は `name` の辞書順で安定ソートする
-- `provides[]` / `uses[]` は `capability` の辞書順で安定ソートする
-- `skill-reference-inferences.json` に scan されていない skill がある場合は stale inference として失敗する
-- scan された skill に対応する inference がない場合は missing inference として失敗する
-- scan された skill に `review_status != reviewed` の inference がある場合は incomplete inference として失敗する
+- All capability identifiers are fixed `snake_case`
+- `skills[]` is stable-sorted lexicographically by `name`
+- `provides[]` / `uses[]` are stable-sorted lexicographically by `capability`
+- A skill present in `skill-reference-inferences.json` that was not scanned
+  fails as a stale inference
+- A scanned skill with no corresponding inference fails as a missing inference
+- A scanned skill with `review_status != reviewed` inference fails as an
+  incomplete inference
 
-## Flow Profile との関係
+## Relationship to the Flow Profile
 
-- Catalog は flow 非依存の情報のみ保持する
-- Catalog は `slots` / `slot_count` / `resolved_invocations` / flow 固有 classification を持たない
-- invocation slot は Flow Profile の `flow_stack.slots[]` が保持する
-- `skills[].uses[].default_skill` は capability 依存の既定候補であり、flow 固有の `resolved_skill` ではない
+- The Catalog holds only flow-neutral information
+- The Catalog has no `slots` / `slot_count` / `resolved_invocations` /
+  flow-specific classification
+- Invocation slots are held by the Flow Profile's `flow_stack.slots[]`
+- `skills[].uses[].default_skill` is the default candidate for a capability
+  dependency, not the flow-specific `resolved_skill`
