@@ -250,7 +250,7 @@ node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks
 
 ## Phase E: レビュー
 
-**レビューゲート契約**: canonical review skill 拘束について [references/review-gate-contract.md](references/review-gate-contract.md) 参照。
+**レビューゲート契約**: canonical review skill 拘束について [references/review-gate-contract.ja.md](references/review-gate-contract.ja.md) 参照。
 
 1. Canonical review skill `requesting-code-review` を用いて実装をレビューに提出する(契約参照)。
 2. フィードバックに体系的に対応する。
