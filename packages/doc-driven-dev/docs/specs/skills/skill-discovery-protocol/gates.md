@@ -1,8 +1,9 @@
-# Gates 仕様
+# Gates Specification
 
-## 概要
+## Overview
 
-Skill Discovery Protocol は 3 層 + blocking の検証ゲートで成果物品質を保証する。
+Skill Discovery Protocol guarantees artifact quality through a 3-layer +
+blocking validation gate design.
 
 ```
 overall_result = schema && staleness && deterministic && blocking_validations
@@ -10,135 +11,136 @@ overall_result = schema && staleness && deterministic && blocking_validations
 
 ## Gate 1: Schema Validation
 
-成果物の構造的正しさを検証する。
+Validates the structural correctness of artifacts.
 
-### 検証対象
+### Targets
 
-- Flow Profile JSON の必須キー・型
-- Skill Reference Catalog JSON の必須キー・型
-- Adapter YAML の必須キー・制約
+- Required keys and types of the Flow Profile JSON
+- Required keys and types of the Skill Reference Catalog JSON
+- Required keys and constraints of the Adapter YAML
 
-### 検証項目
+### Checks
 
 | Check | Condition |
 | --- | --- |
-| 必須キー存在 | すべての required field が存在する |
-| 型一致 | 各 field が期待される型を持つ |
-| enum 値 | `slot_type`, `activation` 等が許可値の範囲内 |
-| `snake_case` 強制 | slot_id, capability 識別子, override キー |
-| `classification` 整合 | unmatched.category が taxonomy に存在する |
-| `extends` 禁止キー | `priority` キーが存在しない |
-| `scan.scopes` 整合 | `enabled=true` のスコープに `roots` が非空（マージ後） |
-| `readable_outputs` 整合 | `include` のキーが `artifacts.protocol` に存在する |
+| Required keys present | All required fields exist |
+| Type match | Each field has the expected type |
+| Enum values | `slot_type`, `activation`, etc. within allowed values |
+| `snake_case` enforced | slot_id, capability identifiers, override keys |
+| `classification` consistent | unmatched.category exists in the taxonomy |
+| `extends` forbidden keys | No `priority` key present |
+| `scan.scopes` consistent | Scopes with `enabled=true` have non-empty `roots` (post-merge) |
+| `readable_outputs` consistent | `include` keys exist in `artifacts.protocol` |
 
-### 失敗時
+### On Failure
 
 - `schema_validation.result = "fail"`
-- `schema_validation.errors[]` に詳細を記録
-- 終了コード: 非 0
+- Details recorded in `schema_validation.errors[]`
+- Exit code: non-zero
 
 ---
 
 ## Gate 2: Staleness Validation
 
-成果物の鮮度を検証する。
+Validates artifact freshness.
 
-### 検証基準
+### Criteria
 
-- 基準日: `validated_at`
-- 許容日数: adapter の `validation.staleness.max_age_days`（既定: 30）
+- Basis date: `validated_at`
+- Allowed age: adapter `validation.staleness.max_age_days` (default: 30)
 
-### 検証項目
+### Checks
 
 | Check | Condition |
 | --- | --- |
-| 経過日数 | `now - validated_at <= max_age_days` |
-| スキル追加 | 前回検証後に新規スキルが追加されていない |
-| スキル削除 | 前回検証後にスキルが削除されていない |
+| Elapsed days | `now - validated_at <= max_age_days` |
+| Skills added | No new skills added since last validation |
+| Skills removed | No skills removed since last validation |
 
-### 失敗時
+### On Failure
 
 - `staleness_validation.result = "fail"`
-- `new_skills[]` / `removed_skills[]` に差分を記録
-- 終了コード: 非 0
+- Diffs recorded in `new_skills[]` / `removed_skills[]`
+- Exit code: non-zero
 
 ---
 
 ## Gate 3: Deterministic Validation
 
-同一入力での再実行結果が一致することを検証する。
+Validates that re-running with the same input produces identical output.
 
-### 比較対象
+### Comparison Targets
 
-adapter の `validation.deterministic.compare` で指定:
+Specified by the adapter's `validation.deterministic.compare`:
 
 | Target | Description |
 | --- | --- |
-| `profile` | Flow Profile JSON の全体比較 |
-| `profile+catalog-artifacts` | Flow Profile + Skill Reference Catalog の比較 |
-| `validation-report:exclude-timestamp` | validation-report のタイムスタンプ除外比較 |
+| `profile` | Full comparison of the Flow Profile JSON |
+| `profile+catalog-artifacts` | Comparison of Flow Profile + Skill Reference Catalog |
+| `validation-report:exclude-timestamp` | validation-report comparison excluding timestamps |
 
-### 検証手順
+### Procedure
 
-1. 現在の成果物を退避
-2. `sdp profile` を再実行
-3. 退避した成果物と新規生成物を比較
-4. 差分があれば fail
+1. Stash the current artifacts
+2. Re-run `sdp profile`
+3. Compare stashed artifacts with newly generated ones
+4. Any diff → fail
 
-### 安定性の保証手段
+### Stability Mechanisms
 
-- 安定ソート（`render.stable_sort` で定義）
-- 正規化（`render.normalize_whitespace`, `render.newline`）
-- 決定論的レンダリング（同一入力 → 同一バイト列）
+- Stable sort (defined by `render.stable_sort`)
+- Normalization (`render.normalize_whitespace`, `render.newline`)
+- Deterministic rendering (same input → same byte sequence)
 
-### 失敗時
+### On Failure
 
 - `deterministic_validation.result = "fail"`
-- `comparisons[].diff_found = true` の対象を記録
-- 終了コード: 非 0
+- Records targets where `comparisons[].diff_found = true`
+- Exit code: non-zero
 
 ---
 
 ## Gate 4: Blocking Validations
 
-adapter で `fail` 指定された invocation 検証を実行する。
+Runs the invocation validations configured as `fail` in the adapter.
 
-### blocking に含まれるチェック
+### Checks Included in Blocking
 
 | Source Setting | Check Type |
 | --- | --- |
-| `invocation_resolution.unresolved.required = "fail"` | required capability の未解決 |
-| `invocation_resolution.invalid_override.unknown_skill = "fail"` | 存在しないスキルへの override |
-| `invocation_resolution.invalid_override.capability_mismatch = "fail"` | capability 不一致の override |
-| `invocation_resolution.invalid_override.override_not_allowed = "fail"` | 許可されない override |
+| `invocation_resolution.unresolved.required = "fail"` | Unresolved required capability |
+| `invocation_resolution.invalid_override.unknown_skill = "fail"` | Override to a non-existent skill |
+| `invocation_resolution.invalid_override.capability_mismatch = "fail"` | Override with a capability mismatch |
+| `invocation_resolution.invalid_override.override_not_allowed = "fail"` | Disallowed override |
 
-### 非 blocking（警告のみ）
+### Non-blocking (Warning Only)
 
 | Setting Value | Behavior |
 | --- | --- |
-| `unresolved.required = "warn"` | 警告記録、overall に影響しない |
-| `unresolved.optional = "warn"` | 警告記録、overall に影響しない |
-| `invalid_override.* = "warn"` | 警告記録、overall に影響しない |
-| 未使用 slot/override | 常に警告のみ |
+| `unresolved.required = "warn"` | Recorded as warning; does not affect overall |
+| `unresolved.optional = "warn"` | Recorded as warning; does not affect overall |
+| `invalid_override.* = "warn"` | Recorded as warning; does not affect overall |
+| Unused slot/override | Always warning only |
 
-### 失敗時
+### On Failure
 
 - `blocking_validations.result = "fail"`
-- `checks[].result = "fail"` の詳細を記録
-- 終了コード: 非 0
+- Details recorded for each `checks[].result = "fail"`
+- Exit code: non-zero
 
 ---
 
-## 終了コード規約
+## Exit Code Conventions
 
 | Code | Meaning |
 | --- | --- |
-| `0` | すべてのゲート pass |
-| `1` | 1 つ以上のゲート fail |
-| `2` | 入力エラー（ファイルが見つからない等） |
+| `0` | All gates pass |
+| `1` | One or more gates fail |
+| `2` | Input error (file not found, etc.) |
 
-## ゲートの実行順序
+## Gate Execution Order
 
 1. Schema → 2. Staleness → 3. Deterministic → 4. Blocking
 
-Schema が fail の場合でも他のゲートは実行し、すべての問題を一度に報告する。
+Even when Schema fails, the other gates still run so all problems are reported
+at once.
