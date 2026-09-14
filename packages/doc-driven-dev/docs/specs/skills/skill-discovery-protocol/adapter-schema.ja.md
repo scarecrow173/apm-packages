@@ -1,33 +1,32 @@
-# Adapter YAML Schema Specification
+# Adapter YAML Schema 仕様
 
-## Overview
+## 概要
 
-Adapter YAML is a configuration file supplied as input to `sdp scan` /
-`sdp profile` that customizes protocol behavior per flow.
+Adapter YAML は `sdp scan` / `sdp profile` の入力として、プロトコルの動作を flow ごとにカスタマイズする設定ファイルである。
 
-## Required Keys
-
-| Key | Type | Description |
-| --- | --- | --- |
-| `schema_version` | string | Schema version (e.g., `"1.0"`) |
-| `adapter_id` | string | Adapter identifier |
-| `protocol` | object | Target protocol compatibility info |
-| `scan` | object | Enabled scope definitions |
-| `profile` | object | Profile artifact output settings |
-| `flow_stack` | object | Slot definitions for the stack the flow uses |
-| `classification` | object | Flow-specific classification taxonomy |
-| `invocation_resolution` | object | Resolution settings |
-| `validation` | object | Gate settings |
-| `render` | object | Reproducible output control |
-| `artifacts` | object | Artifact output destinations |
-| `readable_outputs` | object | Markdown derivative output control |
-
-## Recommended Keys
+## 必須キー
 
 | Key | Type | Description |
 | --- | --- | --- |
-| `extends` | string[] | Reference names of parent adapters (no extension) |
-| `enabled` | boolean | Enable/disable the adapter |
+| `schema_version` | string | スキーマバージョン（例: `"1.0"`） |
+| `adapter_id` | string | adapter 識別子 |
+| `protocol` | object | 対象 protocol 互換性情報 |
+| `scan` | object | 有効スコープ定義 |
+| `profile` | object | profile artifact 出力設定 |
+| `flow_stack` | object | flow が使うスタックのスロット定義 |
+| `classification` | object | flow 固有分類 taxonomy 定義 |
+| `invocation_resolution` | object | 解決設定 |
+| `validation` | object | gate 設定 |
+| `render` | object | 再現性出力制御 |
+| `artifacts` | object | 成果物の出力先 |
+| `readable_outputs` | object | Markdown 派生出力の制御 |
+
+## 推奨キー
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `extends` | string[] | 継承元 adapter の参照名（拡張子なし） |
+| `enabled` | boolean | adapter の有効/無効切替 |
 | `metadata` | object | owner / last_validated_at / description |
 
 ## `protocol`
@@ -40,7 +39,7 @@ protocol:
 
 ## `scan`
 
-Four scope kinds: `project` / `user` / `organization` / `builtin`.
+スコープは `project` / `user` / `organization` / `builtin` の 4 種。
 
 ```yaml
 scan:
@@ -62,12 +61,11 @@ scan:
       roots: []
 ```
 
-**Rules:**
+**ルール:**
 
-- A scope with `enabled: true` requires non-empty `roots` (validated after merge)
-- Defaults: `project.enabled = true`, all others `false`
-- `general-adapter` aggregates roots for all major harnesses; flow adapters
-  override the deltas
+- `enabled: true` のスコープは `roots` 非空が必須（マージ後に検証）
+- 既定値: `project.enabled = true`、その他 `false`
+- `general-adapter` に全主要ハーネスの roots を集約し、flow adapter は差分上書き
 
 ## `flow_stack`
 
@@ -82,18 +80,16 @@ flow_stack:
         reason: "ADR authoring tasks need architecture-focused output"
 ```
 
-**Rules:**
+**ルール:**
 
-- `slots` is a required array
-- Required fields per element: `slot_id`, `slot_type`, `activation`
-- `slot_id`: fixed `snake_case`; carried verbatim into the Flow Profile's
-  `flow_stack.slots[]`
+- `slots` は配列必須
+- 各要素の必須フィールド: `slot_id`, `slot_type`, `activation`
+- `slot_id`: `snake_case` 固定、Flow Profile の `flow_stack.slots[]` にそのまま反映される
 - `slot_type`: `layerable` | `exclusive`
 - `activation`: `always` | `conditional` | `on_demand` | `gate`
-- `default`: optional. MVP allows only `default.skill`
-- Specifying both `default.skill` and `default.capability` is forbidden
-- When `default.skill` is set, validate that the skill exists and provides the
-  corresponding slot/capability
+- `default`: 任意。MVP では `default.skill` のみ許可
+- `default.skill` と `default.capability` の同時指定は禁止
+- `default.skill` 指定時、該当 skill が存在し対応 slot/capability を provides していることを検証
 
 ## `classification`
 
@@ -113,23 +109,23 @@ classification:
         description_patterns: []
 ```
 
-**Rules:**
+**ルール:**
 
-- `taxonomy` is the canonical form (`vocab` is not used)
-- Each element requires `id`, `label`, `description`, `match`
-- `match` requires `capabilities[]`, `tags[]`, `description_patterns[]`
-- Values in `capabilities[]` are fixed `snake_case`
-- `unmatched` is required and carries `action`, `severity`
+- `taxonomy` を正規形式とする（`vocab` は使わない）
+- 各要素: `id`, `label`, `description`, `match` を必須
+- `match`: `capabilities[]`, `tags[]`, `description_patterns[]` を必須
+- `capabilities[]` の値は `snake_case` 固定
+- `unmatched` 必須: `action`, `severity` を持つ
 - `action`: `assign` | `warn` | `fail` | `ignore`
 - `severity`: `info` | `warn` | `error`
-- `category`: required when `action = assign`; must match a taxonomy `id`
+- `category`: `action = assign` の場合に必須、taxonomy の `id` と一致
 
-**Contradictory combinations (schema error):**
+**矛盾する組み合わせ（schema error）:**
 
-- `action = assign` with no `category`
-- `action = fail` with `severity = info`
-- `action = ignore` with `severity = error`
-- `category` not present in the taxonomy
+- `action = assign` かつ `category` 未指定
+- `action = fail` かつ `severity = info`
+- `action = ignore` かつ `severity = error`
+- `category` が taxonomy に存在しない
 
 ## `invocation_resolution`
 
@@ -160,12 +156,11 @@ invocation_resolution:
     override_not_allowed: "warn"
 ```
 
-**Rules:**
+**ルール:**
 
-- `overrides.slots` keys are `snake_case` and must match the adapter's
-  `flow_stack.slots[].slot_id`
-- `overrides.capabilities` keys are `snake_case` capability identifiers
-- `resolution_order`: defines priority with no duplicates
+- `overrides.slots` のキーは `snake_case`、adapter の `flow_stack.slots[].slot_id` と一致
+- `overrides.capabilities` のキーは `snake_case`、capability 識別子と一致
+- `resolution_order`: 重複なしで優先順を定義
 - `unresolved.required`: `fail` | `warn`
 - `unresolved.optional`: `warn` | `ignore`
 - `invalid_override.*`: `fail` | `warn`
@@ -189,12 +184,11 @@ validation:
     enabled: true
 ```
 
-**`validation.invocation` rules:**
+**`validation.invocation` ルール:**
 
-- `enabled: true` — run the invocation gate (blocking_validations)
-- `enabled: false` — disable the invocation gate entirely (used during early
-  development or experimental configuration)
-- Even when disabled, `validation-report` records `invocation.enabled = false`
+- `enabled: true` — invocation gate（blocking_validations）を実行する
+- `enabled: false` — invocation gate を一括無効化する（開発初期や実験的設定時に使用）
+- 無効時も `validation-report` に `invocation.enabled = false` を記録する
 
 ## `render`
 
@@ -218,14 +212,11 @@ artifacts:
     resolved_invocations: "resolved-invocations.json"  # optional
 ```
 
-**Output base directories:**
+**出力ベースディレクトリ:**
 
-- Shared protocol artifacts (`skill_reference_catalog`, scan, inference) are
-  placed directly under `.sdp/`.
-- Flow-specific artifacts (`flow_profile`, `validation_report`) are placed in
-  `.sdp/<adapter_id>/`.
-- `artifacts.protocol.flow_profile` and `artifacts.protocol.validation_report`
-  are resolved as filenames relative to the adapter directory.
+- 共有 protocol artifact（`skill_reference_catalog`、scan、inference）は `.sdp/` 直下に配置する。
+- flow 固有 artifact（`flow_profile`、`validation_report`）は `.sdp/<adapter_id>/` に配置する。
+- `artifacts.protocol.flow_profile` と `artifacts.protocol.validation_report` は adapter ディレクトリからの相対ファイル名として解決する。
 
 ## `readable_outputs`
 
@@ -238,32 +229,29 @@ readable_outputs:
     - "validation_report"
 ```
 
-**Rules:**
+**ルール:**
 
-- `enabled: true` → auto-generate `.md` for artifacts in `include`
-- `enabled: false` → generate no Markdown at all
-- A key in `include` that does not exist in `artifacts.protocol` is a schema
-  error
-- `sdp query` always takes JSON as input and never treats Markdown as canonical
-  input
+- `enabled: true` → `include` の artifact に対して `.md` を自動生成
+- `enabled: false` → Markdown 一切生成しない
+- `include` に `artifacts.protocol` に存在しないキーが含まれる場合は schema error
+- `sdp query` は常に JSON を入力とし、Markdown を正規入力として扱わない
 
-## `extends` Resolution Rules
+## `extends` 解決ルール
 
-- No path strings (reference names only)
-- Resolution target: `skill-discovery-protocol/references/{name}.yaml` or
-  `.yml`
-- Both exist → schema error
-- Parent adapters merge in declaration order; the child adapter applies last
-- Recursive resolution allowed (parents may have their own `extends`)
-- Circular references → schema error
-- Merge rules:
-  - Objects: recursive merge (last wins)
-  - Scalars: last-wins override
-  - Arrays: replaced by the child side
-- The `priority` key is forbidden (presence → schema error)
-- Schema validation runs on the final result after all `extends` merges
+- パス文字列は書かない（参照名のみ）
+- 解決先: `skill-discovery-protocol/references/{name}.yaml` or `.yml`
+- 両方存在 → schema error
+- 宣言順に親 adapter をマージし、最後に子 adapter を適用
+- 再帰的解決を許可（親もさらに extends を持てる）
+- 循環参照 → schema error
+- マージ規則:
+  - オブジェクト: 再帰マージ（後勝ち）
+  - スカラー: 後勝ち上書き
+  - 配列: 子側で置換
+- `priority` キーは使用禁止（存在 → schema error）
+- schema 検証は全 `extends` マージ後の最終結果に対して実行
 
-## Minimal Example
+## 最小例
 
 ```yaml
 schema_version: "1.0"

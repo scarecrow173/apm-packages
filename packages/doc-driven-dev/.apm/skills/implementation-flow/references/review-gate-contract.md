@@ -34,7 +34,7 @@ Regression tests ensure:
 - Phase E can locate the skill without ambiguity.
 - Integration failures are traceable to skill availability, not naming confusion.
 
-See: `scripts/doc-driven-dev/tests/integration/review-gate-contract.test.ts`
+See: `scripts/doc-driven-dev/tests/review-gate-contract.test.ts`
 
 ## Amendments
 

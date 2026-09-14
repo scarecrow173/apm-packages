@@ -338,6 +338,20 @@ node scripts/audit_adr.js --dir docs/adr
 node scripts/check_code_links.js --dir docs/adr
 ```
 
+## Post-Acceptance Lifecycle
+
+ADR が accepted になった後:
+
+1. Implementation Plan の項目とフォローアップの影響を追跡可能なタスクに
+   変換します。
+2. PR で ADR を参照します（例: `Implements ADR-0004`）。
+3. 主要な実装エントリポイントに、疎なコード参照を追加します。
+4. 実装後に Verification の項目を確認します。
+5. ADR に記載された revisit 条件が発火したら見直します。
+
+index 保守、bootstrap パターン、カテゴリ構成については
+`references/adr-maintenance.ja.md` を参照してください。
+
 ## Operational References
 
 この entry skill は、ADR が必要かどうかを判断し、Phase 0-3 で作成または
