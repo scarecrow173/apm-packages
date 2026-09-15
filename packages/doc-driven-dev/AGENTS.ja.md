@@ -47,8 +47,8 @@ Graph Definition は次の binding を宣言します。
 - 任意の migration / bootstrap: `migrate_docs` / `scaffold_docs`。
 - discovery / design: `briefing-flow` / `design-doc`。
 - planning: graph-delegated subgraph の `planning-flow`。`plan-doc` の approval 後に
-  `task-doc` を順序付けます。
-- task projection: `build_task_graph`。`plan`/`task` audit 後に
+  `test-spec-doc`、続いて `task-doc` を順序付けます。
+- task projection: `build_task_graph`。`plan`/`task`/`test-spec` audit 後に
   `build_task_graph.js` が実行します。
 - implementation: `implementation-flow`。
 - exit audit: `doc-status`。
@@ -72,8 +72,8 @@ mutable lifecycle store を追加しないでください。
 ## Skill と ownership
 
 document 生成 skill（`idea-doc`、`deep-dive`、`briefing-flow`、`discovery-doc`、
-`adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc`、`impl-doc`、
-`doc-status`）が各 document contract を担当します。orchestration skill は
+`adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc`、`test-spec-doc`、
+`impl-doc`、`doc-status`）が各 document contract を担当します。orchestration skill は
 `doc-driven-dev-graph`、`implementation-flow`、`skill-discovery-protocol` です。
 
 `planning-flow` は graph-delegated subgraph であり、concurrently active な top-level

@@ -68,8 +68,8 @@ Graph Definition bindings are explicit:
 - migration uses `migrate_docs`; bootstrap uses `scaffold_docs`;
 - briefing delegates to `briefing-flow`; design delegates to `design-doc`;
 - the planning node audits the approved design and dispatches `planning-flow`,
-  which sequences `plan-doc` -> approval yield -> `task-doc`;
-- the task-graph node audits `plan` and `task` and dispatches
+  which sequences `plan-doc` -> approval yield -> `test-spec-doc` -> `task-doc`;
+- the task-graph node audits `plan`, `task`, and `test-spec` and dispatches
   `build_task_graph`, executed by `build_task_graph.js`;
 - implementation delegates to `implementation-flow`; exit verification audits
   with `doc-status`.

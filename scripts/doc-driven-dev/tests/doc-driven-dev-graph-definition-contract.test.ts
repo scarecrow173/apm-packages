@@ -41,7 +41,7 @@ test("loads the distributed graph definition with declared delegates", () => {
   assert.equal(graph.nodes.planning.delegate, "planning-flow");
   assert.deepEqual(graph.nodes.planning.audits, ["design"]);
   assert.equal(graph.nodes["task-graph"].delegate, "build_task_graph");
-  assert.deepEqual(graph.nodes["task-graph"].audits, ["plan", "task"]);
+  assert.deepEqual(graph.nodes["task-graph"].audits, ["plan", "task", "test-spec"]);
   assert.equal(graph.nodes.implementation.delegate, "implementation-flow");
   assert.equal(graph.nodes.implementation.audits, undefined);
   assert.deepEqual(graph.nodes["followup-triage"].audits, ["task", "impl-record"]);
