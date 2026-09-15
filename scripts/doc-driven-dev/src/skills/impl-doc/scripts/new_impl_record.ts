@@ -1,15 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const {
-  buildImplementationRecordContent,
-  buildNewFilePath,
-  implStatuses,
-  posixRelative,
-  updateIndexForMarkdownDir,
-} = require("./lib/impl_doc_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { buildImplementationRecordContent, buildNewFilePath, implStatuses, posixRelative, updateIndexForMarkdownDir } from "./lib/impl_doc_utils";
 
 type CliArgs = {
   cwd: string;
@@ -51,7 +45,7 @@ async function main(): Promise<void> {
     }
     if (!args.title) throw new Error("Missing required --title");
     const status = args.status || "draft";
-    if (!implStatuses.includes(status)) throw new Error(`Invalid impl status: ${status}`);
+    if (!(implStatuses as readonly string[]).includes(status)) throw new Error(`Invalid impl status: ${status}`);
     const cwd = path.resolve(args.cwd);
     const { number, outputPath, relativeDir } = buildNewFilePath({
       cwd,
@@ -64,16 +58,20 @@ async function main(): Promise<void> {
     const content = buildImplementationRecordContent({
       number,
       title: args.title,
-      status,
+      status: status as (typeof implStatuses)[number],
       date,
       relations: {
         implements: args.task ? [args.task] : [],
       },
     });
     fs.writeFileSync(outputPath, content, "utf8");
-    updateIndexForMarkdownDir(cwd, relativeDir);
+    const indexResult = updateIndexForMarkdownDir(cwd, relativeDir);
     console.log(`Created ${posixRelative(cwd, outputPath)}`);
-    console.log(`Updated ${relativeDir}/README.md`);
+    if (indexResult.written) {
+      console.log(`Updated ${relativeDir}/README.md`);
+    } else {
+      console.warn(`Skipped index update: ${relativeDir}/README.md appears hand-curated (no generated marker). Update it manually.`);
+    }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

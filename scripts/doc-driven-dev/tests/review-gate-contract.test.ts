@@ -1,7 +1,7 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const implFlowRoot = path.join(

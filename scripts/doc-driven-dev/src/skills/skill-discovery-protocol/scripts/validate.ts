@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
 
-const { loadAdapter } = require("./lib/adapter.ts");
-const { scanSkills } = require("./lib/scanner.ts");
-const { runSchemaGate } = require("./lib/gates/schema_gate.ts");
-const { runStalenessGate } = require("./lib/gates/staleness_gate.ts");
-const { runDeterministicGate } = require("./lib/gates/deterministic_gate.ts");
-const { runBlockingGate } = require("./lib/gates/blocking_gate.ts");
-const { renderJson } = require("./lib/renderer.ts");
-const { resolveValidationReportPath } = require("./lib/artifact_paths.ts");
+import { loadAdapter } from "./lib/adapter";
+import { scanSkills } from "./lib/scanner";
+import { runSchemaGate } from "./lib/gates/schema_gate";
+import { runStalenessGate } from "./lib/gates/staleness_gate";
+import { runDeterministicGate } from "./lib/gates/deterministic_gate";
+import { runBlockingGate } from "./lib/gates/blocking_gate";
+import { renderJson } from "./lib/renderer";
+import { resolveValidationReportPath } from "./lib/artifact_paths";
 
 import type { AdapterConfig, FlowProfile, SkillReferenceCatalog, ScannedSkill, RawScannedSkill } from "./lib/types";
 

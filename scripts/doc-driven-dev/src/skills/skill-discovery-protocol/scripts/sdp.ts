@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const { spawnSync } = require("node:child_process");
-const path = require("node:path");
+import { spawnSync } from "node:child_process";
+import path from "node:path";
 
 const MAX_BUFFER = 10 * 1024 * 1024;
 
@@ -51,7 +51,7 @@ function main(): void {
   if (result.stderr) process.stderr.write(result.stderr);
 
   if (result.error) {
-    if (result.error.code === "ENOBUFS") {
+    if ((result.error as NodeJS.ErrnoException).code === "ENOBUFS") {
       process.stderr.write(`sdp ${command} output exceeded maxBuffer (${MAX_BUFFER} bytes).\n`);
     }
     else {

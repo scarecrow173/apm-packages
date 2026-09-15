@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const { adrFiles, findAdrDir, hasSection, relationLinks, sectionBody, validateFrontMatter } = require("./lib/adr_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { adrFiles, findAdrDir, hasSection, relationLinks, sectionBody, validateFrontMatter } from "./lib/adr_utils";
+import { parseDoc } from "../../lib/doc_suite_utils";
 
 type CliArgs = {
   cwd: string;
@@ -45,6 +46,10 @@ function checklistItems(body: string): string[] {
 async function reviewFile(cwd: string, relativeDir: string, file: string): Promise<Finding[]> {
   const fullPath = path.join(cwd, relativeDir, file);
   const content = fs.readFileSync(fullPath, "utf8");
+  const parseResult = parseDoc(content);
+  if (parseResult.error) {
+    return [{ severity: "error", file, code: "unparseable-front-matter", message: `Front matter is not valid YAML: ${parseResult.error}` }];
+  }
   const findings: Finding[] = [];
   const required = ["Context and Problem Statement", "Considered Options", "Decision Outcome", "Implementation Plan", "Verification"];
   for (const section of required) {

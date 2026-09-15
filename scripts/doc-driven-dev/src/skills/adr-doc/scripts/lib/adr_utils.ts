@@ -1,18 +1,10 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const matter = require("gray-matter");
-const {
-  detectNaming: sharedDetectNaming,
-  findDocumentDir,
-  listMarkdownFiles,
-  nextNumber: sharedNextNumber,
-  slugify: sharedSlugify,
-} = require("../../../lib/document_utils.ts");
-const {
-  validateFrontMatter: validateDocSuiteFrontMatter,
-} = require("../../../lib/doc_suite_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
+import { detectNaming as sharedDetectNaming, findDocumentDir, listMarkdownFiles, nextNumber as sharedNextNumber, slugify as sharedSlugify } from "../../../lib/document_utils";
+import { GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
 const relationFields = [
@@ -198,22 +190,45 @@ async function referencedPaths(content: string): Promise<string[]> {
 }
 
 function matterData(content: string): Record<string, unknown> {
-  return matter(content).data || {};
+  return parseDoc(content).data;
 }
 
 function validateFrontMatter(content: string): FrontMatterIssue[] {
   const issues = validateDocSuiteFrontMatter(content);
-  const data = matterData(content);
-  if (data.type !== "adr") {
+  const parsed = parseDoc(content);
+  if (parsed.error) return issues;
+  if (parsed.data.type !== "adr") {
     issues.push({ message: 'Expected type "adr"', path: "type" });
   }
   return issues;
 }
 
+function nextIdNumber(dir: string, files: string[]): number {
+  const numbers: number[] = [];
+  for (const file of files) {
+    const nameMatch = /^(\d{4})-/.exec(file);
+    if (nameMatch) numbers.push(Number(nameMatch[1]));
+    const data = parseDoc(fs.readFileSync(path.join(dir, file), "utf8")).data;
+    const idMatch = typeof data.id === "string" ? /^ADR-(\d{4})$/.exec(data.id.trim()) : null;
+    if (idMatch) numbers.push(Number(idMatch[1]));
+  }
+  return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
+}
+
+function writeIndexFile(adrDir: string, content: string, force = false): { written: boolean; reason: "hand-curated" | null } {
+  const indexPath = path.join(adrDir, "README.md");
+  const existing = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
+  if (!force && existing !== null && !isGeneratedIndex(existing, "Architecture Decision Records")) {
+    return { written: false, reason: "hand-curated" };
+  }
+  fs.writeFileSync(indexPath, content, "utf8");
+  return { written: true, reason: null };
+}
+
 function relationMap(content: string): Record<RelationField, string[]> {
   const data = matterData(content);
   const relations = data.relations;
-  const result = Object.fromEntries(relationFields.map((field) => [field, []])) as Record<RelationField, string[]>;
+  const result = Object.fromEntries(relationFields.map((field) => [field, [] as string[]])) as Record<RelationField, string[]>;
   if (!relations || typeof relations !== "object" || Array.isArray(relations)) return result;
   const raw = relations as Record<string, unknown>;
   for (const field of relationFields) {
@@ -230,45 +245,61 @@ function relationLinks(content: string): { field: RelationField; target: string 
 
 async function adrEntries(cwd: string, relativeDir: string): Promise<AdrEntry[]> {
   const dir = path.join(cwd, relativeDir);
-  return Promise.all(adrFiles(dir).map(async (file) => {
+  const entries = await Promise.all(adrFiles(dir).map(async (file): Promise<AdrEntry | null> => {
     const fullPath = path.join(dir, file);
     const content = fs.readFileSync(fullPath, "utf8");
     const data = matterData(content);
+    if (isForeignDocType(data.type, "adr", relativeDir)) return null;
+    let title = typeof data.title === "string" ? data.title : "";
+    if (!title) {
+      try {
+        title = await titleFromAdr(content, path.basename(file, ".md"));
+      } catch {
+        title = path.basename(file, ".md");
+      }
+    }
     return {
       id: typeof data.id === "string" ? data.id : null,
       file,
       path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
-      title: typeof data.title === "string" ? data.title : await titleFromAdr(content, path.basename(file, ".md")),
+      title,
       status: typeof data.status === "string" ? data.status : null,
       date: typeof data.created === "string" ? data.created : null,
       relations: relationMap(content),
     };
   }));
+  return entries.filter((entry): entry is AdrEntry => entry !== null);
 }
 
 async function buildIndex(dir: string, relativeDir: string): Promise<string> {
   const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = await Promise.all(adrFiles(dir).map(async (file) => {
+  const rows = (await Promise.all(adrFiles(dir).map(async (file) => {
     const content = fs.readFileSync(path.join(dir, file), "utf8");
     const data = matterData(content);
-    const title = typeof data.title === "string" && data.title.trim()
-      ? data.title.trim()
-      : await titleFromAdr(content, path.basename(file, ".md"));
+    if (isForeignDocType(data.type, "adr", relativeDir)) return null;
+    let title = typeof data.title === "string" && data.title.trim() ? data.title.trim() : "";
+    if (!title) {
+      try {
+        title = await titleFromAdr(content, path.basename(file, ".md"));
+      } catch {
+        title = path.basename(file, ".md");
+      }
+    }
     const status = typeof data.status === "string" ? data.status : "—";
     const numberMatch = /^(\d+)-/.exec(file);
     const fallbackId = numberMatch ? `ADR-${numberMatch[1]}` : "—";
     const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : fallbackId;
-    return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
-  }));
+    return `| ${indexCell(id)} | ${indexCell(title)} | ${indexCell(status)} | [${indexCell(file)}](./${indexCell(file)}) |`;
+  }))).filter((row): row is string => row !== null);
   const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
-  return `# Architecture Decision Records\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${body}\n`;
+  return `# Architecture Decision Records\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${body}\n`;
 }
 
 function parseCsv(value: string): string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
-module.exports = {
+export {
   adrEntries,
   adrFiles,
   buildIndex,
@@ -278,6 +309,7 @@ module.exports = {
   hasSection,
   markdownLinks,
   matterData,
+  nextIdNumber,
   nextNumber,
   parseCsv,
   referencedPaths,
@@ -288,4 +320,5 @@ module.exports = {
   slugify,
   titleFromAdr,
   validateFrontMatter,
+  writeIndexFile,
 };

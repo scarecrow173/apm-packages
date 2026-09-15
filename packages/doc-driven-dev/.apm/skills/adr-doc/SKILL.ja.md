@@ -379,13 +379,15 @@ index 保守、bootstrap パターン、カテゴリ構成については
 ### scripts
 
 - `scripts/new_adr.js`: リポジトリ規約に従い、MADR テンプレートから新しい
-  ADR を作成する。
+  ADR を作成する。生成索引を更新する（`--no-index` で省略。手書き索引は
+  `--force-index` を付けない限り保持される）。
 - `scripts/list_adrs.js`: ADR メタデータ、ステータス、relations を一覧する。
 - `scripts/audit_adr.js`: フロントマター、必須セクション、プレースホルダー、
   ローカルリンク、relation リンク、索引を検証する。
 - `scripts/review_adr.js`: agent-readiness をレビューする。
 - `scripts/check_code_links.js`: Implementation Plan のコード参照を確認する。
 - `scripts/update_index.js`: ADR 索引を更新する。既定では dry-run。
+  手書き索引は `--force` を付けない限り上書きしない。
 - `scripts/relate_adr.js`: ADR relations を双方向に追加する。
 - `scripts/migrate_report.js`: ファイルを書き換えず、MADR 4.0.0 へ寄せる移行
   アクションを報告する。

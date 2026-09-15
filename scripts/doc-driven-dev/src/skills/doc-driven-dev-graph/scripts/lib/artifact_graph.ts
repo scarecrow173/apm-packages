@@ -392,7 +392,7 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
   const plans = records.filter((record) => record.type === "plan" && isValidChainRecord(record));
   const tasks = records.filter((record) => record.type === "task");
   const chains = new Map<string, ArtifactChain>();
-  const add = (chain: ArtifactChain): void => chains.set(chainKey(chain), chain);
+  const add = (chain: ArtifactChain): void => { chains.set(chainKey(chain), chain); };
   const cartesian = <T>(values: T[], fallback: Array<T | undefined>): Array<T | undefined> => values.length > 0 ? values : fallback;
 
   for (const design of designs) {

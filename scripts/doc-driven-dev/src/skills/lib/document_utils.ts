@@ -1,7 +1,7 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
 
 type NamingMode = "numbered" | "slug";
 
@@ -9,10 +9,14 @@ function normalizeDir(input: string): string {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
 }
 
+function isIndexFileName(file: string): boolean {
+  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file);
+}
+
 function listMarkdownFiles(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir)
-    .filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file))
+    .filter((file) => file.endsWith(".md") && !isIndexFileName(file))
     .sort();
 }
 
@@ -44,9 +48,10 @@ function findDocumentDir(cwd: string, explicitDir: string | undefined, candidate
   return existing.length === 0 ? defaultDir : existing[0];
 }
 
-module.exports = {
+export {
   detectNaming,
   findDocumentDir,
+  isIndexFileName,
   listMarkdownFiles,
   nextNumber,
   normalizeDir,

@@ -5,12 +5,9 @@ import type {
   GraphState,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
 
-const assert = require("node:assert/strict");
-const test = require("node:test");
-const {
-  evaluateRouteDecision,
-  explainRoute,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts");
+import assert from "node:assert/strict";
+import test from "node:test";
+import { evaluateRouteDecision, explainRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 
 function stateWith(input: Partial<Pick<GraphState, "gates" | "signals" | "blockers" | "hardBlockers" | "taskGraph">> = {}): GraphState {
   return {

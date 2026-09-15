@@ -1,11 +1,13 @@
-const assert = require("node:assert/strict");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import test from "node:test";
 
-const {
-  validateInferenceCompleteness,
-} = require("../../../src/skills/skill-discovery-protocol/scripts/lib/inference_validation.ts");
+import { validateInferenceCompleteness } from "../../../src/skills/skill-discovery-protocol/scripts/lib/inference_validation";
+import type {
+  SkillReferenceInferenceDocument,
+  SkillScanListDocument,
+} from "../../../src/skills/skill-discovery-protocol/scripts/lib/types";
 
-function buildScanList() {
+function buildScanList(): SkillScanListDocument {
   return {
     schema_version: "1.0",
     generated_at: "2026-06-03T00:00:00Z",
@@ -28,7 +30,7 @@ function buildScanList() {
   };
 }
 
-function buildInferenceDoc(reviewStatuses: Record<string, "pending" | "reviewed">) {
+function buildInferenceDoc(reviewStatuses: Record<string, "pending" | "reviewed">): SkillReferenceInferenceDocument {
   return {
     schema_version: "1.0",
     generated_at: "2026-06-03T00:00:00Z",

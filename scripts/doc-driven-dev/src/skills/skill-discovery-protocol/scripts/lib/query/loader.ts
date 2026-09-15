@@ -1,7 +1,7 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
 
 import type { FlowProfile, SkillReferenceCatalog } from "../types";
 import type { QueryArgs, QueryContext, ValidationReport } from "./registry";
