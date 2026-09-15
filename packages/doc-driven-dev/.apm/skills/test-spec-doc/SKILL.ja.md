@@ -61,6 +61,9 @@ test spec を作成するには、少なくとも 1 つの upstream document を
 `planning-flow` の中で、test spec は plan 承認後・task 分解前に作成します。
 task 分割ではなく approved spec と design から派生させます。task 境界は
 変わり得ますが、保証すべき内容は維持されなければならないからです。
+plan に検証可能な振る舞いが無い場合は作成を skip し、plan の front matter に
+`test-spec-skip: "<理由>"` を記録します。これにより audit が意図的な skip と
+単純な欠落を区別できます。
 
 ## 必須コンテンツ
 
