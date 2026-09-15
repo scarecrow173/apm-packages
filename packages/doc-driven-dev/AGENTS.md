@@ -41,6 +41,10 @@ Markdown evidence, and re-enters at `next`.
 route is idempotent. A blocked route never guesses from filenames, path
 proximity, or an adjacent node.
 
+`commitGate` nodes require the caller-side commit check before their edge
+checkpoint completes; `commit-required` is an explicit yield reason and
+`commit-waived` is the declared bypass signal.
+
 ## Delegate bindings
 
 The Graph Definition declares these bindings:

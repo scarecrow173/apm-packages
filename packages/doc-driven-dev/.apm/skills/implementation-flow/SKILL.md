@@ -147,6 +147,9 @@ With `.sdp/implementation-flow-default/implementation-flow-profile.json` availab
    - If still tied, apply both (skills layer, they don't exclude).
 7. **Add Domain/Tooling skills** — based on language, framework, platform detected in task.
    - **If no resolution overrides match:** Proceed with flow stack defaults only. Announce "Additional skills: none".
+   - **If `GraphRoute.commitGate` is true:** a commit-capable Tooling skill
+     (for example `git-commit`) is mandatory in the active stack; record the
+     selection in the announced stack.
 8. **Announce the active skill stack:**
 
 ```text
@@ -338,6 +341,14 @@ explicitly overrides the routing decision. Record a one-line reason for any
 dispatch-specific override, emergency override, or other non-default routing.
 </HARD-GATE>
 
+<HARD-GATE>
+When the dispatching `GraphRoute` declares `commitGate`, a task slice is not
+`completed` while its logical changes remain uncommitted. Commit through the
+resolved commit tooling (`git-commit` when selected by the profile, otherwise
+the repository's commit conventions); if committing is outside granted
+authority, return `yield`/`commit-required` instead of `completed`.
+</HARD-GATE>
+
 ---
 
 ## Anti-patterns
@@ -406,9 +417,11 @@ When `doc-driven-dev-graph` invokes this skill, return exactly the
 [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.md)
 after each audit or delegate effect; do not create a local partial variant.
 
-Use `completed` for a verified task slice with its Implementation Record,
-`retry` for declared spec/design/constraint repair, `yield` with
-`authority-required` for an irreversible effect without permission, and
+Use `completed` only for a verified task slice whose logical changes are
+committed and whose Implementation Record is complete, `retry` for declared
+spec/design/constraint repair, `yield` with `commit-required` when the slice
+produced changes that cannot be committed within granted authority, `yield`
+with `authority-required` for an irreversible effect without permission, and
 `yield` with `unrecoverable-blocker` when no declared safe repair exists. The
 required `edgeId`, stage, effect identity, authoritative input scope, and proof
 fields are defined by that footer.

@@ -232,6 +232,16 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
   assert.match(first, /\|exit-audit · p80\|/);
 });
 
+test("reports commitGate nodes in JSON inspection and Mermaid labels", () => {
+  const definition = canonicalGraph();
+  const inspection = inspectGraphDefinition(definition);
+  assert.deepEqual(inspection.commitGateNodes, ["implementation"]);
+  const implementation = inspection.nodes.find((node) => node.nodeId === "implementation");
+  assert.equal(implementation?.commitGate, true);
+  const mermaid = renderGraphMermaid(inspection);
+  assert.match(mermaid, /implementation<br\/>kind: delegate<br\/>delegate: implementation-flow<br\/>commitGate/);
+});
+
 test("aliases reserved node IDs while retaining original labels", () => {
   const inspection = inspectGraphDefinition(parseGraphDefinition(customIdFixture));
   const first = renderGraphMermaid(inspection);

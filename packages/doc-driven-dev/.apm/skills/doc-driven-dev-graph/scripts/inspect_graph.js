@@ -20320,7 +20320,8 @@ var graphNodeSchema = external_exports.object({
   kind: external_exports.enum(["action", "delegate", "audit", "terminal"]),
   delegate: external_exports.string().min(1).optional(),
   audits: external_exports.array(external_exports.string().min(1)).optional(),
-  requiresGates: external_exports.array(external_exports.string().min(1)).optional()
+  requiresGates: external_exports.array(external_exports.string().min(1)).optional(),
+  commitGate: external_exports.boolean().optional()
 }).strict();
 var graphEdgeSchema = external_exports.object({
   id: external_exports.string().min(1),
@@ -20464,6 +20465,7 @@ function mermaidNodeAliases(nodes) {
 function renderNode(node, terminalNodes, aliases) {
   const labels = [escapeMermaidText(node.nodeId), `kind: ${escapeMermaidText(node.kind)}`];
   if (node.delegate !== void 0) labels.push(`delegate: ${escapeMermaidText(node.delegate)}`);
+  if (node.commitGate === true) labels.push("commitGate");
   if (terminalNodes.has(node.nodeId)) labels.push("terminal");
   if (node.audits.length > 0) {
     labels.push(`audits: ${node.audits.map(escapeMermaidText).join(", ")}`);
@@ -20506,11 +20508,13 @@ function inspectGraphDefinition(definition) {
       nodeId,
       kind: node.kind,
       ...node.delegate === void 0 ? {} : { delegate: node.delegate },
-      audits: sortedStrings(node.audits ?? [])
+      audits: sortedStrings(node.audits ?? []),
+      ...node.commitGate === true ? { commitGate: true } : {}
     };
   });
   const delegates = nodes.filter((node) => node.delegate !== void 0).map(({ nodeId, delegate }) => ({ nodeId, delegate }));
   const audits = nodes.filter((node) => node.audits.length > 0).map(({ nodeId, audits: nodeAudits }) => ({ nodeId, audits: nodeAudits }));
+  const commitGateNodes = nodes.filter((node) => node.commitGate === true).map((node) => node.nodeId);
   const edges = sortedEdges(definition.edges);
   const issues = [];
   for (const nodeId of unreachableNodes) {
@@ -20541,6 +20545,7 @@ function inspectGraphDefinition(definition) {
     referencedConditions,
     delegates,
     audits,
+    commitGateNodes,
     issues: issues.sort(issueSort),
     nodes,
     edges

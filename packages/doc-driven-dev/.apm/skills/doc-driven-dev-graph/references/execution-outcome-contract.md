@@ -55,7 +55,7 @@ The status variant adds these required and forbidden fields:
 | --- | --- | --- |
 | `completed` | exactly one `proof.canonicalEvidence` (`path`, `id` when present, `fingerprint`) or `proof.providerIdempotency` (`provider`, `key`) | `reason`, `retry` |
 | `retry` | `retry.changedEvidence` with the changed canonical path/ID/fingerprint | `proof`, `reason` |
-| `yield` | `reason`: `approval-required`, `input-required`, `authority-required`, or `unrecoverable-blocker` | `proof`, `retry` |
+| `yield` | `reason`: `approval-required`, `input-required`, `authority-required`, `unrecoverable-blocker`, or `commit-required` | `proof`, `retry` |
 
 `evidence` records the canonical checkpoint for every outcome. A `completed`
 outcome additionally proves this particular effect: either canonical evidence
@@ -77,6 +77,7 @@ type GraphRunResult = {
     | "input-required"
     | "authority-required"
     | "unrecoverable-blocker"
+    | "commit-required"
     | "budget-exhausted"
     | "terminal"
     | "single-step-complete";
@@ -94,6 +95,7 @@ type GraphRunTrace = {
   delegateComplete: boolean;
   evidenceRecorded: boolean;
   checkpointComplete: boolean;
+  commitWaived: boolean;
 }
 
 type GraphRunHandoff = {
@@ -118,6 +120,7 @@ type GraphRunHandoff = {
     completedAudits: string[];
     delegateComplete: boolean;
     evidenceRecorded: boolean;
+    commitBaseline: { head: string | null; dirty: string[] } | null;
   } | null;
   hops: number;
 }
@@ -125,7 +128,11 @@ type GraphRunHandoff = {
 
 `outcomes` and `trace` preserve caller order. `GraphRunTrace` holds each
 complete route, its ordered outcomes, completed audits, delegate state, and
-evidence/checkpoint flags. `GraphRunHandoff` retains the resume fields:
+evidence/checkpoint flags. `commitWaived` is `true` when the edge's
+destination declares `commitGate` and the caller applied the declared
+`commit-waived` signal for that edge, and `false` otherwise; this is how a
+waived gate is recorded in the run trace. `GraphRunHandoff` retains the
+resume fields:
 `current`, mode, `maxHops`, focus, signals, graph path, completed edge IDs,
 seen route fingerprints, the frozen task-budget basis, audit/delegate counters,
 completed routes, trace, outcomes, pending edge, and hop count. `null` means
@@ -175,7 +182,7 @@ This contract renders existing semantics; it does not add workflow states.
 | `briefing-flow` | briefing gate passes | recoverable document gap | `input-required` for an unresolved user-only requirement |
 | `design-doc` | design is approved | — | `approval-required` for its designated reviewer; `input-required` for an upstream user decision |
 | `planning-flow` | approved/active plan plus linked test-spec/task evidence (or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior) | changed canonical plan/test-spec/task repair evidence | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
-| `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
+| `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `commit-required` when its slice produced changes it cannot commit within granted authority; `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
 | `doc-status` | documents are Completable | Returned with declared repair evidence | `unrecoverable-blocker` when Returned has no safe repair |
 
 ## Exact caller evaluation

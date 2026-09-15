@@ -19,6 +19,7 @@ export type GraphRoute = {
   requiredAudits: string[];
   blockers: string[];
   taskGraph: TaskGraphResult | null;
+  commitGate: boolean;
 };
 
 export type EvaluatedEdge = {
@@ -69,7 +70,7 @@ function sortedUnique(values: Iterable<string>): string[] {
 
 function routeResult(
   input: { current: GraphNodeId; definition: GraphDefinition; state: GraphState },
-  result: Pick<GraphRoute, "next" | "edgeId" | "condition" | "status" | "delegate" | "requiredAudits">,
+  result: Pick<GraphRoute, "next" | "edgeId" | "condition" | "status" | "delegate" | "requiredAudits" | "commitGate">,
   additionalBlockers: Iterable<string> = [],
 ): GraphRoute {
   return {
@@ -84,6 +85,7 @@ function routeResult(
     requiredAudits: sortedUnique(result.requiredAudits),
     blockers: sortedUnique([...input.state.blockers, ...additionalBlockers]),
     taskGraph: input.state.taskGraph,
+    commitGate: result.commitGate,
   };
 }
 
@@ -162,6 +164,7 @@ function selectedRoute(
     status: "edge",
     delegate: destination?.delegate ?? null,
     requiredAudits: destination?.audits ?? [],
+    commitGate: destination?.commitGate === true,
   });
 }
 
@@ -183,6 +186,7 @@ export function evaluateRouteDecision(input: RouteInput): RouteDecision {
       status: "terminal",
       delegate: node.delegate ?? null,
       requiredAudits: node.audits ?? [],
+      commitGate: false,
     });
     return {
       route,
@@ -206,6 +210,7 @@ export function evaluateRouteDecision(input: RouteInput): RouteDecision {
       status: "blocked",
       delegate: null,
       requiredAudits: [],
+      commitGate: false,
     }, hardBlockers);
     return {
       route,
@@ -253,6 +258,7 @@ export function evaluateRouteDecision(input: RouteInput): RouteDecision {
       status: "blocked",
       delegate: null,
       requiredAudits: [],
+      commitGate: false,
     }, prerequisiteFailures);
     return {
       route,
@@ -295,6 +301,7 @@ export function evaluateRouteDecision(input: RouteInput): RouteDecision {
     status: "blocked",
     delegate: null,
     requiredAudits: [],
+    commitGate: false,
   });
   return {
     route,

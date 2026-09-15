@@ -32,9 +32,9 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
 ```
 
 JSON 結果は `GraphRoute` contract です。`current`、1 つの `next`、`edgeId`、
-`condition`、`status`、`delegate`、`requiredAudits`、`blockers`、選択した
-`taskGraph` を含みます。terminal と blocked は明示的な結果であり、遷移先を
-推測しません。
+`condition`、`status`、`delegate`、`requiredAudits`、`commitGate`、`blockers`、
+選択した `taskGraph` を含みます。terminal と blocked は明示的な結果であり、
+遷移先を推測しません。
 
 成功する遷移は宣言済み edge を 1 つだけ選択します。condition を満たす edge が
 ない場合、router は edge を持たない fail-closed の同一 node blocked 結果を返し、
@@ -102,8 +102,8 @@ trace summary、resume rule の詳細は
 caller は [`references/execution-contract.ja.md`](references/execution-contract.ja.md)
 の完全な Phase 1 yield table を適用します。`terminal`、
 `approval-required`、`input-required`、`authority-required`、
-`unrecoverable-blocker`、または `budget-exhausted` では yield し、table が
-automatic continuation を許す場合だけ繰り返します。`wont-do` task は
+`unrecoverable-blocker`、`budget-exhausted`、または `commit-required` では
+yield し、table が automatic continuation を許す場合だけ繰り返します。`wont-do` task は
 dependency を満たさず、未解決 task は Dynamic Task Graph で blocked のままです。
 
 implementation 後の `フォローアップ分類` node は、
@@ -118,6 +118,13 @@ Graph node、edge、phase、checkpoint、artifact type、Task Graph projection �
 含められます。canonical な boundary policy は
 [`references/execution-contract.ja.md`](references/execution-contract.ja.md) に置き、
 commit message convention は既存の Git tooling と repository rule に委譲します。
+
+enforcement は advisory ではなく宣言です。node は `commitGate: true` を宣言
+できます。`GraphRoute.commitGate` は宣言を caller に伝え、caller は edge 開始時に
+worktree baseline を取得し、gated checkpoint が未 commit の新規変更を残して
+完了しようとしたとき `commit-required` を yield します。canonical graph は
+`implementation` にこの gate を宣言しています。宣言済み `commit-waived`
+runtime signal が唯一の bypass であり、run trace に記録されます。
 
 ## Persistence boundary
 
@@ -192,7 +199,8 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 node と edge は安定した順序で sort されます。すべての node は Mermaid syntax では
 決定的な `nN` alias を使い、元の node ID の sort 順に割り当てます。元の ID は escape
 済み label に残ります。node label には node ID と kind、宣言されている場合は delegate、
-terminal、audit label が含まれ、edge label には condition key と priority が含まれます。
+commitGate、terminal、audit label が含まれ、edge label には
+condition key と priority が含まれます。
 Mermaid rendering は text-only で、routing や persistence への副作用はありません。
 Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir` を拒否します。
 元の node、delegate、audit、condition text は escape され、`|` が edge label を終了
