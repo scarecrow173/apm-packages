@@ -15,11 +15,16 @@ composition boundary です。ユーザーからの直接要求には引き続�
 1. 返された `GraphRoute.delegate` が `planning-flow` の場合にだけ invocation を受け付けます。
 2. 選択された approved design と、その正確な focused lineage を読みます。
 3. `plan-doc` を呼び出し、実装可能な plan を 1 つ作成または修復します。
-4. plan が review 待ちなら、`EffectOutcome` の `yield` と `approval-required` を返し、task は作成しません。
-5. plan status が `approved`、`in-progress`、または `completed` になった後、concrete plan slice
-   ごとに `task-doc` を 1 回呼び出し、宣言された dependency を保持します。
-6. 現在の design input と plan/task evidence を含む、`planning-flow` 用の正確な `EffectOutcome` を 1 つ返します。
-7. graph に再 projection を任せます。`planning-flow` 内で `build_task_graph` を呼び出したり、次の edge を選んだりしません。
+4. plan が review 待ちなら、`EffectOutcome` の `yield` と `approval-required` を返し、test spec と task は作成しません。
+5. plan status が `approved`、`in-progress`、または `completed` になった後、task 分解に先立って、
+   approved spec/design が宣言する検証可能な振る舞いごとに `test-spec-doc` を 1 回呼び出し、
+   各 test spec を plan の `relations.verified-by` からリンクします。
+   plan が検証可能な振る舞いの変更を含まない場合に限りこの step を skip し、その理由を
+   plan の front matter に `test-spec-skip` として記録します。
+6. concrete plan slice ごとに `task-doc` を 1 回呼び出し、宣言された dependency を保持し、
+   各 task が満たす test spec を `relations.verified-by` でリンクします。
+7. 現在の design input と plan/test-spec/task evidence を含む、`planning-flow` 用の正確な `EffectOutcome` を 1 つ返します。
+8. graph に再 projection を任せます。`planning-flow` 内で `build_task_graph` を呼び出したり、次の edge を選んだりしません。
 
 ## Graph Effect Outcome
 
@@ -28,8 +33,8 @@ composition boundary です。ユーザーからの直接要求には引き続�
 を返します。必須の `edgeId`、stage、effect identity、authoritative input scope、evidence、
 proof、yield field はこの footer が定義します。
 
-approved または active plan と linked task evidence には `completed`、changed canonical
-plan/task repair evidence には `retry`、plan review が pending の場合は
+approved または active plan と linked test-spec/task evidence には `completed`、changed
+canonical plan/test-spec/task repair evidence には `retry`、plan review が pending の場合は
 `approval-required` を理由とする `yield`、user-owned planning choice が missing の場合は
 `input-required` を理由とする `yield`、declared safe repair がない場合は
 `unrecoverable-blocker` を理由とする `yield` を使います。

@@ -48,9 +48,9 @@ The Graph Definition declares these bindings:
 - `migrate_docs` and `scaffold_docs` for optional migration/bootstrap;
 - `briefing-flow` and `design-doc` for discovery and design;
 - `planning-flow`, a graph-delegated subgraph that sequences `plan-doc`
-  approval before `task-doc`, for planning;
-- `build_task_graph`, executed by `build_task_graph.js` after `plan`/`task`
-  audits, for task projection;
+  approval, then `test-spec-doc`, before `task-doc`, for planning;
+- `build_task_graph`, executed by `build_task_graph.js` after
+  `plan`/`task`/`test-spec` audits, for task projection;
 - `implementation-flow` for implementation;
 - `doc-status` for exit audit.
 
@@ -74,7 +74,7 @@ database or mutable lifecycle store.
 
 Document-generation skills (`idea-doc`, `deep-dive`, `briefing-flow`,
 `discovery-doc`, `adr-doc`, `spec-doc`, `design-doc`, `plan-doc`, `task-doc`,
-`impl-doc`, and `doc-status`) own their document contracts. The orchestration
+`test-spec-doc`, `impl-doc`, and `doc-status`) own their document contracts. The orchestration
 skills are `doc-driven-dev-graph`, `implementation-flow`, and
 `skill-discovery-protocol`.
 

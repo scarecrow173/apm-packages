@@ -133,7 +133,7 @@ Use relation fields for meaning, not document type.
 | `related` | Contextual docs without directional dependency. |
 | `implemented-by` | Plans or tasks that implement this spec. |
 | `verifies` | Documents or checks this spec verifies, when applicable. |
-| `verified-by` | Test plans, review notes, or tasks that verify this spec. |
+| `verified-by` | Test specs, review notes, or tasks that verify this spec. |
 
 Internal documents use relative paths. External sources use URLs. For
 replacement decisions, link both ways when possible:
@@ -155,6 +155,12 @@ Every spec should answer:
 
 Acceptance criteria must be checkable. Avoid criteria such as "works well" or
 "is intuitive" unless they are backed by observable behavior.
+
+Keep criteria in the spec. When a criterion's intent must survive later
+redesigns, elaborate it into Feature/Rule/Example guarantees in a `test-spec`
+document (`docs/test-specs/`): link `relations.verified-by` on the spec and
+`relations.verifies` on the test spec. Do not duplicate criteria verbatim
+across both.
 
 ## Mutability
 

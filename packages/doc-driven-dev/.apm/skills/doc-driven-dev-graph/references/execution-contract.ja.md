@@ -45,7 +45,8 @@ fingerprint、最終 yield reason を記録します。
 
 ## Git commit boundary
 
-briefing、spec、ADR、design、plan、task、implementation、follow-up、audit の全作業で、
+briefing、spec、ADR、design、plan、test-spec、task、implementation、follow-up、
+audit の全作業で、
 review 可能な logical change ごとに 1 commit とします。logical change は単独で意図を
 説明・review でき、可能な限り検証方法が明確で、revert した場合の意味が明確であり、
 unrelated change を含まないものとします。commit 数の最小化・最大化は目的にしません。
@@ -86,8 +87,8 @@ yield 時には complete route と順序付き outcome を持つ 1 つの `Graph
 または provider-idempotency proof が fresh projection に対して validate した場合だけです。
 
 caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
-`build_task_graph`）と named audit（`spec`、`adr`、`design`、`plan`、`task`、`impl-record`、
-`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
+`build_task_graph`）と named audit（`spec`、`adr`、`design`、`plan`、`task`、
+`test-spec`、`impl-record`、`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
 adapter evidence が missing または malformed なら `authority-required` を yield し、checkpoint
 を進めません。effect 固有の canonical input/evidence mapping は
 [execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) に定義します。

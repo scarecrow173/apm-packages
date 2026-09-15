@@ -495,6 +495,152 @@ test("new_task rejects a draft or superseded plan", () => {
   }
 });
 
+test("new_test_spec requires verifies targets and records relations", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/specs/0001-checkout.md"),
+    matter.stringify("# Spec\n", {
+      id: "SPEC-0001", type: "spec", status: "approved", title: "Checkout",
+      created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+    }),
+    "utf8",
+  );
+
+  const missing = runScript("test-spec-doc", "new_test_spec.js", ["--title", "Checkout total"], { cwd: repo });
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /TEST-SPEC-DOC-GATE-001/);
+
+  const broken = runScript("test-spec-doc", "new_test_spec.js", [
+    "--title", "Checkout total",
+    "--verifies", "docs/specs/missing.md",
+  ], { cwd: repo });
+  assert.notEqual(broken.status, 0);
+  assert.match(broken.stderr, /TEST-SPEC-DOC-GATE-001/);
+
+  const created = runScript("test-spec-doc", "new_test_spec.js", [
+    "--title", "Checkout total calculation",
+    "--verifies", "docs/specs/0001-checkout.md",
+    "--derives-from", "docs/specs/0001-checkout.md",
+  ], { cwd: repo });
+  assert.equal(created.status, 0, created.stderr);
+
+  const specPath = path.join(repo, "docs/test-specs/0001-checkout-total-calculation.md");
+  assert.equal(fs.existsSync(specPath), true);
+  const doc = fs.readFileSync(specPath, "utf8");
+  assert.match(doc, /^id: "TSPEC-0001"$/m);
+  assert.match(doc, /^type: "test-spec"$/m);
+  assert.match(doc, /^status: "draft"$/m);
+  assert.match(doc, /^  verifies:\n    - "docs\/specs\/0001-checkout\.md"$/m);
+  assert.match(doc, /^  derives-from:\n    - "docs\/specs\/0001-checkout\.md"$/m);
+  assert.match(doc, /## Purpose/);
+  assert.match(doc, /## Guarantees/);
+  assert.match(doc, /## Non-goals/);
+  assert.match(doc, /## Risk/);
+
+  const audited = runScript("doc-status", "audit_docs.js", ["--type", "test-spec", "--json"], { cwd: repo });
+  assert.equal(audited.status, 0, audited.stderr);
+  const report = JSON.parse(audited.stdout);
+  assert.equal(report.files, 1);
+});
+
+test("doc-status flags test-specs without verifies and plans without test-spec evidence", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/test-specs"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/tasks"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/test-specs/README.md"), "# test-specs\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/plans/README.md"), "# plans\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/specs/README.md"), "# specs\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/tasks/README.md"), "# tasks\n", "utf8");
+
+  const writeDoc = (relativePath: string, data: Record<string, unknown>) => {
+    fs.writeFileSync(path.join(repo, relativePath), matter.stringify("# Doc\n", data), "utf8");
+  };
+  const baseDoc = {
+    created: "2026-09-15", updated: "2026-09-15", owners: [],
+  };
+
+  writeDoc("docs/specs/0001-checkout.md", {
+    ...baseDoc, id: "SPEC-0001", type: "spec", status: "approved", title: "Checkout", relations: {},
+  });
+  writeDoc("docs/tasks/0001-implement.md", {
+    ...baseDoc, id: "TASK-0001", type: "task", status: "proposed", title: "Implement", relations: {},
+  });
+  writeDoc("docs/test-specs/0001-empty.md", {
+    ...baseDoc, id: "TSPEC-0001", type: "test-spec", status: "approved", title: "Empty", relations: {},
+  });
+  writeDoc("docs/test-specs/0002-scalar-verifies.md", {
+    ...baseDoc, id: "TSPEC-0002", type: "test-spec", status: "approved", title: "Scalar",
+    relations: { verifies: "docs/specs/0001-checkout.md" },
+  });
+  writeDoc("docs/test-specs/0003-id-verifies.md", {
+    ...baseDoc, id: "TSPEC-0003", type: "test-spec", status: "approved", title: "IdRef",
+    relations: { verifies: ["SPEC-0001"] },
+  });
+  writeDoc("docs/test-specs/0004-task-verifies.md", {
+    ...baseDoc, id: "TSPEC-0004", type: "test-spec", status: "approved", title: "TaskTarget",
+    relations: { verifies: ["docs/tasks/0001-implement.md"] },
+  });
+  writeDoc("docs/plans/0001-bare.md", {
+    ...baseDoc, id: "PLAN-0001", type: "plan", status: "approved", title: "Bare", relations: {},
+  });
+  writeDoc("docs/plans/0002-skipped.md", {
+    ...baseDoc, id: "PLAN-0002", type: "plan", status: "approved", title: "Skipped", relations: {},
+    "test-spec-skip": "no verifiable behavior in this plan",
+  });
+  writeDoc("docs/plans/0003-linked.md", {
+    ...baseDoc, id: "PLAN-0003", type: "plan", status: "approved", title: "Linked",
+    relations: { "verified-by": ["docs/test-specs/0001-empty.md"] },
+  });
+  writeDoc("docs/plans/0004-draft.md", {
+    ...baseDoc, id: "PLAN-0004", type: "plan", status: "draft", title: "Draft", relations: {},
+  });
+  writeDoc("docs/plans/0005-linked-id.md", {
+    ...baseDoc, id: "PLAN-0005", type: "plan", status: "approved", title: "LinkedId",
+    relations: { "verified-by": ["TSPEC-0001"] },
+  });
+  writeDoc("docs/plans/0006-linked-scalar.md", {
+    ...baseDoc, id: "PLAN-0006", type: "plan", status: "approved", title: "LinkedScalar",
+    relations: { "verified-by": "docs/test-specs/0001-empty.md" },
+  });
+  writeDoc("docs/plans/0007-linked-spec.md", {
+    ...baseDoc, id: "PLAN-0007", type: "plan", status: "approved", title: "LinkedSpec",
+    relations: { "verified-by": ["docs/specs/0001-checkout.md"] },
+  });
+
+  const specAudit = runScript("doc-status", "audit_docs.js", ["--type", "test-spec", "--json"], { cwd: repo });
+  assert.equal(specAudit.status, 0, specAudit.stderr);
+  const specReport = JSON.parse(specAudit.stdout);
+  assert.equal(
+    specReport.findings.some((finding: any) => finding.code === "test-spec-missing-verifies" && finding.file === "0001-empty.md"),
+    true,
+  );
+  const invalidTargets = specReport.findings
+    .filter((finding: any) => finding.code === "test-spec-invalid-verifies-target")
+    .map((finding: any) => finding.file);
+  assert.deepEqual(invalidTargets, ["0004-task-verifies.md"]);
+
+  const planAudit = runScript("doc-status", "audit_docs.js", ["--type", "plan", "--json"], { cwd: repo });
+  assert.equal(planAudit.status, 0, planAudit.stderr);
+  const planReport = JSON.parse(planAudit.stdout);
+  const flagged = planReport.findings
+    .filter((finding: any) => finding.code === "plan-missing-test-spec-evidence")
+    .map((finding: any) => finding.file);
+  assert.deepEqual(flagged, ["0001-bare.md", "0007-linked-spec.md"]);
+
+  const allAudit = runScript("doc-status", "audit_docs.js", ["--type", "all", "--json"], { cwd: repo });
+  assert.equal(allAudit.status, 0, allAudit.stderr);
+  const allReport = JSON.parse(allAudit.stdout);
+  assert.equal(
+    allReport.findings.some(
+      (finding: any) => finding.code === "test-spec-missing-verifies" && finding.file === "docs/test-specs/0001-empty.md",
+    ),
+    true,
+  );
+});
+
 test("doc-status audits required front matter, status, indexes, relations, and sources", () => {
   const repo = tempRepo();
   fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
@@ -649,13 +795,13 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(effects[2], /Use `completed` for a verified task slice with its Implementation Record,\n?`retry` for declared spec\/design\/constraint repair, `yield` with\n?`authority-required` for an irreversible effect without permission, and\n?`yield` with `unrecoverable-blocker` when no declared safe repair exists\./);
   assert.match(effects[3], /Use `completed` for a Completable result, `retry` for Returned with declared\n?repair evidence, and `yield` with `unrecoverable-blocker` for Returned without\n?a safe repair\./);
   assert.match(effects[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.md\)/);
-  assert.match(effects[4], /Use `completed` for an approved or active plan with linked task evidence, `retry` for\n?changed canonical plan\/task repair evidence, `yield` with `approval-required` while plan\n?review is pending, `yield` with `input-required` when a user-owned planning choice is\n?missing, and `yield` with `unrecoverable-blocker` when no declared safe repair exists\./);
+  assert.match(effects[4], /Use `completed` for an approved or active plan with linked test-spec\/task evidence,\n?`retry` for changed canonical plan\/test-spec\/task repair evidence, `yield` with\n?`approval-required` while plan review is pending, `yield` with `input-required` when a\n?user-owned planning choice is missing, and `yield` with `unrecoverable-blocker` when no\n?declared safe repair exists\./);
   assert.match(effectsJa[0], /briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の\n?user-only requirement には `input-required` を理由とする `yield` を使います。/);
   assert.match(effectsJa[1], /approved design には `completed`、designated reviewer を待つ場合は `approval-required`\n?を理由とする `yield`、upstream user decision がない場合は `input-required` を理由とする\n?`yield` を使います。/);
   assert.match(effectsJa[2], /verified task slice と Implementation Record には `completed`、declared\n?spec\/design\/constraint repair には `retry`、permission のない irreversible effect には\n?`authority-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
   assert.match(effectsJa[3], /Completable result には `completed`、declared repair evidence を伴う Returned には\n?`retry`、safe repair のない Returned には `unrecoverable-blocker` を理由とする `yield`\n?を使います。/);
   assert.match(effectsJa[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.ja\.md\)/);
-  assert.match(effectsJa[4], /approved または active plan と linked task evidence には `completed`、changed canonical\n?plan\/task repair evidence には `retry`、plan review が pending の場合は\n?`approval-required` を理由とする `yield`、user-owned planning choice が missing の場合は\n?`input-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
+  assert.match(effectsJa[4], /approved または active plan と linked test-spec\/task evidence には `completed`、changed\n?canonical plan\/test-spec\/task repair evidence には `retry`、plan review が pending の場合は\n?`approval-required` を理由とする `yield`、user-owned planning choice が missing の場合は\n?`input-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
   const footerBlocks = [...outcomeContract.matchAll(/```yaml\n([\s\S]*?)```/g)].map((match) => match[1]);
   assert.equal(footerBlocks.length, 3);
   const footerVariants = footerBlocks.map((block) => require("js-yaml").load(block));
@@ -695,13 +841,13 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(outcomeContract, /`scaffold_docs` \(workspace-root bootstrap input\)/);
   assert.match(outcomeContract, /`build_task_graph` \(focused plan plus selected task documents\)/);
   assert.match(outcomeContract, /`planning-flow` reads the\n?selected approved design/);
-  assert.match(outcomeContract, /records the selected plan and all produced\n?plan-linked task documents/);
+  assert.match(outcomeContract, /records the selected plan and all produced\n?plan-linked test spec and task documents/);
   assert.match(outcomeContractJa, /`scaffold_docs`\s*（workspace-root bootstrap input）/);
   assert.match(outcomeContractJa, /`build_task_graph`（focused plan と選択 task document）/);
   assert.match(outcomeContractJa, /`planning-flow` は selected approved design を/);
-  assert.match(outcomeContractJa, /selected plan とすべての produced plan-linked task document を記録/);
-  assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked task evidence \| changed canonical plan\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
-  assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked task evidence \| changed canonical plan\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
+  assert.match(outcomeContractJa, /selected plan とすべての produced plan-linked test spec および task document を記録/);
+  assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked test-spec\/task evidence \(or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior\) \| changed canonical plan\/test-spec\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
+  assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked test-spec\/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） \| changed canonical plan\/test-spec\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
   assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*all/s);
   assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
   assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));
@@ -734,7 +880,7 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
     assert.match(text, /database|DB|データベース/i);
   }
   assert.match(graphDefinition, /^  planning: \{ kind: delegate, delegate: planning-flow, audits: \[design\] \}$/m);
-  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[plan, task\] \}$/m);
+  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[plan, task, test-spec\] \}$/m);
   assert.match(graphDefinition, /^  exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all\], requiresGates: \[/m);
   for (const text of [readme, readmeJa, agents, agentsJa]) {
     assert.match(text, /planning-flow/);
@@ -742,8 +888,8 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
   }
   assert.match(packageJson.scripts["lint:md"], /planning-flow\/SKILL\.md/);
   assert.match(packageJson.scripts["lint:md"], /planning-flow\/SKILL\.ja\.md/);
-  assert.match(skill, /task-graph node audits `plan` and `task` and dispatches\s+`build_task_graph`, executed by `build_task_graph\.js`/);
-  assert.match(skillJa, /task-graph node は `plan` と `task` を audit して `build_task_graph` を dispatch し、\s+`build_task_graph\.js` が実行/);
+  assert.match(skill, /task-graph node audits `plan`, `task`, and `test-spec` and dispatches\s+`build_task_graph`, executed by `build_task_graph\.js`/);
+  assert.match(skillJa, /task-graph node は `plan`、`task`、`test-spec` を audit して `build_task_graph` を dispatch し、\s+`build_task_graph\.js` が実行/);
 });
 
 test("implementation-flow opens impl-doc before task execution", () => {

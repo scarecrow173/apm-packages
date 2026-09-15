@@ -88,6 +88,11 @@ status の使い分け:
 - 検証とレビュー証跡がそろった後に `completed` へ更新する。
 - ループバックや明示的な中断で作業を止める場合は `blocked` にする。
 
+Implementation Record と Experiment Log は「何を試し、結果がどうだったか」を
+記録します。保証の背後にある永続的な意図——テストがなぜ存在し、いつ廃止
+できるか——は `impl-doc` ではなく `test-spec` 文書（`docs/test-specs/`）に
+置きます。
+
 ## Experiment Log イベント
 
 Experiment Log は JSONL です。

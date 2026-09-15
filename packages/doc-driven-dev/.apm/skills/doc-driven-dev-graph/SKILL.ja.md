@@ -65,8 +65,8 @@ Graph Definition の binding は明示的です。
 - migration は `migrate_docs`、bootstrap は `scaffold_docs`。
 - briefing は `briefing-flow`、design は `design-doc` に委譲。
 - planning node は approved design を audit して `planning-flow` を dispatch し、
-  `plan-doc` -> approval yield -> `task-doc` の順に実行。
-- task-graph node は `plan` と `task` を audit して `build_task_graph` を dispatch し、
+  `plan-doc` -> approval yield -> `test-spec-doc` -> `task-doc` の順に実行。
+- task-graph node は `plan`、`task`、`test-spec` を audit して `build_task_graph` を dispatch し、
   `build_task_graph.js` が実行。
 - implementation は `implementation-flow`、exit 検証は `doc-status` audit。
 

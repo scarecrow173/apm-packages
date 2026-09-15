@@ -4,9 +4,10 @@
 import path from "node:path";
 import fs from "node:fs";
 import matter from "gray-matter";
-import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
+import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
 
 const TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
+const TASK_DOC_VERIFIED_BY_ERROR = "TASK-DOC-GATE-002: each --verified-by target must resolve to an existing document.";
 const TASKABLE_PLAN_STATUSES = new Set(["approved", "in-progress", "completed"]);
 
 type CliArgs = {
@@ -22,16 +23,18 @@ type CliArgs = {
   plan?: string;
   status?: string;
   title?: string;
+  verifiedBy: string[];
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { blocks: [], cwd: process.cwd(), dependsOn: [] };
+  const args: CliArgs = { blocks: [], cwd: process.cwd(), dependsOn: [], verifiedBy: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
     else if (arg === "--plan") args.plan = argv[++i];
     else if (arg === "--depends-on") args.dependsOn.push(argv[++i]);
     else if (arg === "--blocks") args.blocks.push(argv[++i]);
+    else if (arg === "--verified-by") args.verifiedBy.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--no-index") args.noIndex = true;
@@ -48,7 +51,15 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--depends-on <task>] [--blocks <task>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--depends-on <task>] [--blocks <task>] [--verified-by <test-spec>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+}
+
+function validateVerifiedBy(cwd: string, targets: string[]): void {
+  for (const target of targets) {
+    if (!resolveDocumentReference(cwd, target)) {
+      throw new Error(TASK_DOC_VERIFIED_BY_ERROR);
+    }
+  }
 }
 
 function validatePlanGate(cwd: string, planTarget?: string): void {
@@ -76,6 +87,7 @@ async function main(): Promise<void> {
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = path.resolve(args.cwd);
     validatePlanGate(resolvedCwd, args.plan);
+    validateVerifiedBy(resolvedCwd, args.verifiedBy);
     const linked = args.plan ? [args.plan] : [];
     const result = await createDocument("task", {
       cwd: resolvedCwd,
@@ -88,6 +100,7 @@ async function main(): Promise<void> {
         implements: linked,
         "depends-on": [...new Set([...linked, ...args.dependsOn])],
         blocks: [...new Set(args.blocks)],
+        "verified-by": [...new Set(args.verifiedBy)],
       },
       status: args.status,
       title: args.title,

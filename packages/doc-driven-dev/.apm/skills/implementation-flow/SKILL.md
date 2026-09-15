@@ -60,7 +60,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C0: Open Implementation Doc
 
 For each task unit:
 
-1. **Read the task** — understand requirements, constraints, and verification conditions.
+1. **Read the task** — understand requirements, constraints, and verification conditions. When the task links test specs via `relations.verified-by`, read them: they record the guarantees the implementation must preserve.
 2. **Classify the task** — identify characteristics:
    - Is this a bug fix or test failure?
    - Does this involve a framework or library?

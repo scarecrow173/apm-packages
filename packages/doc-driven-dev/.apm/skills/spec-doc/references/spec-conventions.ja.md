@@ -132,7 +132,7 @@ relation は文書種別ではなく意味で選びます。
 | `related` | 方向性のない関連文書。 |
 | `implemented-by` | この spec を実装する plan や task。 |
 | `verifies` | 必要に応じて、この spec が検証する文書や check。 |
-| `verified-by` | この spec を検証する test plan、review note、task。 |
+| `verified-by` | この spec を検証する test spec、review note、task。 |
 
 内部文書は相対パスを使います。外部出典は URL を使います。置き換えでは可能な
 限り双方向にリンクします。
@@ -154,6 +154,11 @@ spec は次に答えます。
 
 受け入れ基準は検証可能である必要があります。`うまく動く` や `直感的である`
 のような基準は、観測可能な挙動で裏付けられない限り避けます。
+
+基準は spec に保持します。基準の意図が後続の redesign を生き残る必要がある
+場合は、`test-spec` 文書（`docs/test-specs/`）で Feature/Rule/Example の保証へ
+詳細化します。spec 側は `relations.verified-by`、test spec 側は
+`relations.verifies` でリンクします。両方へ基準をそのまま複写しません。
 
 ## 可変性
 

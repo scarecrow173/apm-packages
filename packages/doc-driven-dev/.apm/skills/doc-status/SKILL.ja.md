@@ -6,9 +6,10 @@ license: MIT
 
 # Document Status Skill
 
-この skill は、spec、design、plan、task のライフサイクル状態と relation の健全性を
-確認するために使います。標準では報告・判定専用であり、作成系または索引更新系の
-コマンドを使わない限りプロジェクトファイルを変更しません。
+この skill は、spec、design、plan、task、test spec、その他の canonical document
+type のライフサイクル状態と relation の健全性を確認するために使います。標準では
+報告・判定専用であり、作成系または索引更新系のコマンドを使わない限り
+プロジェクトファイルを変更しません。
 
 ## 監査の役割
 
@@ -55,6 +56,12 @@ license: MIT
    node scripts/audit_docs.js --type design
    node scripts/audit_docs.js --type plan --json
    ```
+
+   `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
+   文書型（`spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `idea`,
+   `brainstorm`, `discovery`）は `audit_docs.js --type <name>`、
+   `all` は全 canonical 文書型を対象とする `audit_docs.js --type all`、
+   `impl-record` は `impl-doc/scripts/audit_impl_record.js` です。
 
 3. `relations.source` は外部出典として扱う。
    HTTP、HTTPS、mail link は許可し、存在しないローカルファイルとして

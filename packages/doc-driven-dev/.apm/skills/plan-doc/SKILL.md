@@ -74,7 +74,10 @@ share the same critical path and the same release intent.
 
 8. Record relations.
    The generated plan uses `relations.implements` for the upstream spec and
-   `relations.derives-from` for linked design docs and ADRs.
+   `relations.derives-from` for linked design docs and ADRs. When test specs
+   already exist (for example during re-planning), link them with
+   `--verified-by`; each target must resolve to an existing document by path
+   or ID (PLAN-DOC-GATE-002).
 9. Keep the plan implementation-ready.
    Include concrete files, behavior, tests, migration steps, and verification
    commands when they are known.

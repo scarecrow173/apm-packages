@@ -66,6 +66,9 @@ TASK-DOC-GATE-001: the referenced plan must exist and have status
    spec, ADR, or design remain upstream artifact relations rather than Task DAG
    edges. Task creation records references but does not validate the whole DAG;
    use `build_task_graph.js` for resolution and validation.
+   `--verified-by` may be repeated to link the test specs this task satisfies;
+   each target must resolve to an existing document by path or ID
+   (TASK-DOC-GATE-002).
 4. Keep status current.
    Use `todo`, `in-progress`, `blocked`, `done`, or `wont-do`.
 5. Prefer short tasks.
