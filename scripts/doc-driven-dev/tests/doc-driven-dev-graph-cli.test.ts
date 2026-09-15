@@ -290,7 +290,7 @@ test("accepts runtime signals declared separately from edge conditions", () => {
     ["generated", (args: string[]) => runCli(generatedCli, repo, args)],
   ] as const;
   for (const [name, run] of runners) {
-    for (const signal of ["focus-required", "implementation-verified", "exit-audit-pass"]) {
+    for (const signal of ["focus-required", "implementation-verified", "exit-audit-pass", "commit-waived"]) {
       const result = run(["--graph", canonicalGraphPath(), "--signal", signal, "--json"]);
       assert.equal(result.status, 0, `${name}/${signal}: ${result.stderr}`);
     }
@@ -382,6 +382,7 @@ test("resumable active task graph runs through source and generated CLIs", () =>
     assert.equal(route.next, "implementation", name);
     assert.equal(route.delegate, "implementation-flow", name);
     assert.equal(route.status, "edge", name);
+    assert.equal(route.commitGate, true, name);
     assert.deepEqual(route.taskGraph.active, ["TASK-0002", "TASK-0003", "TASK-0004"], name);
     assert.deepEqual(route.taskGraph.resumableActive, ["TASK-0002", "TASK-0003"], name);
     assert.deepEqual(explained.explanation.blockedReasons, [], name);
@@ -403,6 +404,7 @@ test("active task takes priority over runnable task in source and generated CLIs
     assert.equal(route.next, "implementation", name);
     assert.equal(route.delegate, "implementation-flow", name);
     assert.equal(route.status, "edge", name);
+    assert.equal(route.commitGate, true, name);
     assert.deepEqual(route.taskGraph.active, ["TASK-0001"], name);
     assert.deepEqual(route.taskGraph.resumableActive, ["TASK-0001"], name);
     assert.deepEqual(route.taskGraph.runnable, ["TASK-0002"], name);
@@ -425,6 +427,7 @@ test("runnable prerequisite progresses while dependent active task remains unres
     assert.equal(route.next, "implementation", name);
     assert.equal(route.delegate, "implementation-flow", name);
     assert.equal(route.status, "edge", name);
+    assert.equal(route.commitGate, true, name);
     assert.deepEqual(route.taskGraph.runnable, ["TASK-0001"], name);
     assert.deepEqual(route.taskGraph.active, ["TASK-0002"], name);
     assert.deepEqual(route.taskGraph.resumableActive, [], name);
@@ -475,7 +478,10 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       }),
       edgeId: "task-graph-to-implementation",
       next: "implementation",
-      assertRoute: (route) => assert.deepEqual((route.taskGraph as { runnable: string[] }).runnable, ["TASK-0001"]),
+      assertRoute: (route) => {
+        assert.deepEqual((route.taskGraph as { runnable: string[] }).runnable, ["TASK-0001"]);
+        assert.equal(route.commitGate, true);
+      },
     },
     {
       name: "parallel runnable tasks",
@@ -485,7 +491,10 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       }),
       edgeId: "task-graph-to-implementation",
       next: "implementation",
-      assertRoute: (route) => assert.deepEqual((route.taskGraph as { runnable: string[] }).runnable, ["TASK-0001", "TASK-0002"]),
+      assertRoute: (route) => {
+        assert.deepEqual((route.taskGraph as { runnable: string[] }).runnable, ["TASK-0001", "TASK-0002"]);
+        assert.equal(route.commitGate, true);
+      },
     },
     {
       name: "implementation retry",
@@ -495,6 +504,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       }),
       edgeId: "implementation-retry",
       next: "implementation",
+      assertRoute: (route) => assert.equal(route.commitGate, true),
     },
     ...([
       ["followup-bug-fix", "followup-triage-to-planning", "planning"],
@@ -533,6 +543,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       }),
       edgeId: "implementation-to-briefing",
       next: "briefing",
+      assertRoute: (route) => assert.equal(route.commitGate, false),
     },
     {
       name: "exit audit retry",
@@ -760,6 +771,7 @@ test("generated graph CLIs resolve owner-relative tasks and existing local files
   const route = JSON.parse(routeResult.stdout);
   assert.equal(route.status, "edge");
   assert.equal(route.next, "implementation");
+  assert.equal(route.commitGate, true);
   assert.equal(route.blockers.some((blocker: string) => blocker.startsWith("broken-relation:")), false);
   assert.deepEqual(route.taskGraph.edges, [{ from: "TASK-0001", to: "TASK-0002" }]);
   assert.deepEqual(route.taskGraph.runnable, ["TASK-0002"]);
