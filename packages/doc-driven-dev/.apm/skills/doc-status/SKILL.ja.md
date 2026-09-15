@@ -6,9 +6,10 @@ license: MIT
 
 # Document Status Skill
 
-この skill は、spec、design、plan、task のライフサイクル状態と relation の健全性を
-確認するために使います。標準では報告・判定専用であり、作成系または索引更新系の
-コマンドを使わない限りプロジェクトファイルを変更しません。
+この skill は、spec、design、plan、task、test spec、その他の canonical document
+type のライフサイクル状態と relation の健全性を確認するために使います。標準では
+報告・判定専用であり、作成系または索引更新系のコマンドを使わない限り
+プロジェクトファイルを変更しません。
 
 ## 監査の役割
 

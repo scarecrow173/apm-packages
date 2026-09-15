@@ -7,7 +7,8 @@ license: MIT
 # Document Status Skill
 
 Use this skill to inspect document lifecycle state and relation health across
-specs, designs, plans, and tasks. It is report-and-judge only by default and
+specs, designs, plans, tasks, test specs, and the other canonical document
+types. It is report-and-judge only by default and
 should not modify project files unless a separate creation or index command is
 used.
 

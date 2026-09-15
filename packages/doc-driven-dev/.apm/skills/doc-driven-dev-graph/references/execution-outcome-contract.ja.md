@@ -154,7 +154,7 @@ graph では、`spec`、`adr`、`design`、`plan` audit は対応する canonica
 declared canonical document set を読みます。`briefing-flow` は spec と ADR を読み、`design-doc`
 は spec と ADR を読み design evidence を記録し、`planning-flow` は selected approved design を
 読み、selected plan とすべての produced plan-linked test spec および task document を記録します。
-`implementation-flow` は選択 task と design/plan を読み Implementation Record を記録し、
+`implementation-flow` は選択 task と design/plan と linked test spec を読み Implementation Record を記録し、
 `doc-status` は declared document set を読みます。script-adapter input は
 `migrate_docs`（declared document set）、`scaffold_docs`
 （workspace-root bootstrap input）、`build_task_graph`（focused plan と選択 task document）です。すべての referenced path/ID と
@@ -168,7 +168,7 @@ fingerprint は使用前に current canonical content と照合して resolve �
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate が通過する | recoverable document gap | unresolved user-only requirement の `input-required` |
 | `design-doc` | design が approved になる | — | designated reviewer を待つ `approval-required`、upstream user decision がない `input-required` |
-| `planning-flow` | approved/active plan と linked test-spec/task evidence | changed canonical plan/test-spec/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
+| `planning-flow` | approved/active plan と linked test-spec/task evidence（plan が検証可能な振る舞いを宣言しない場合は記録済みの skip 理由） | changed canonical plan/test-spec/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `doc-status` | documents が Completable になる | declared repair evidence を伴う Returned | safe repair のない Returned の `unrecoverable-blocker` |
 

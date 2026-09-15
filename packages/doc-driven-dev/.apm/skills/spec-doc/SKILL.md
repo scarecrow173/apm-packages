@@ -125,7 +125,7 @@ discovery output. All decisions are recorded as ADRs.
 - **No architecture decision needed:** Proceed directly from approved spec to
   `plan-doc`. ADR is not required for purely product-only work.
 
-The dual-track: **spec + ADR (parallel) → plan → task**.
+The dual-track: **spec + ADR (parallel) → plan → test-spec → task**.
 
 ## Resources
 
