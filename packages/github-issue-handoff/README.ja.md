@@ -13,18 +13,19 @@ Responder は repository を閲覧し GitHub Issue にコメントできる任�
 
 ## インストール
 
-APM でインストールします:
+このリポジトリを marketplace として登録し、名前でインストールします:
 
 ```bash
-apm install github-issue-handoff
+apm marketplace add scarecrow173/apm-packages
+apm install github-issue-handoff@apm-packages
 ```
 
-またはこのリポジトリを直接参照します:
+または monorepo のサブディレクトリを version selector 付きで直接参照します:
 
 ```yaml
 dependencies:
   apm:
-    - scarecrow173/apm-packages/packages/github-issue-handoff
+    - scarecrow173/apm-packages/packages/github-issue-handoff#v0.1.0
 ```
 
 配布される skill は `.apm/skills/github-issue-handoff/` 配下にあります。
@@ -128,13 +129,13 @@ secret を Issue、PR、commit message、Responder prompt に書かないでく�
 リポジトリルートから:
 
 ```bash
-pnpm --dir scripts/github-issue-handoff test
-pnpm --dir scripts/github-issue-handoff run lint:md
+mise exec -- pnpm --dir scripts/github-issue-handoff test
+mise exec -- pnpm --dir scripts/github-issue-handoff run lint:md
 ```
 
 このパッケージのディレクトリから:
 
 ```bash
-apm compile --dry-run
-apm compile --validate
+mise exec -- apm compile --dry-run
+mise exec -- apm compile --validate
 ```

@@ -46,15 +46,15 @@ When editing skill content, preserve:
 From the repository root:
 
 ```bash
-pnpm --dir scripts/github-issue-handoff test
-pnpm --dir scripts/github-issue-handoff run lint:md
+mise exec -- pnpm --dir scripts/github-issue-handoff test
+mise exec -- pnpm --dir scripts/github-issue-handoff run lint:md
 ```
 
 From this package directory:
 
 ```bash
-apm compile --dry-run
-apm compile --validate
+mise exec -- apm compile --dry-run
+mise exec -- apm compile --validate
 ```
 
 Then inspect `git diff --check`.

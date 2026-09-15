@@ -46,15 +46,15 @@ skill の内容を編集するときは以下を維持してください:
 リポジトリルートから:
 
 ```bash
-pnpm --dir scripts/github-issue-handoff test
-pnpm --dir scripts/github-issue-handoff run lint:md
+mise exec -- pnpm --dir scripts/github-issue-handoff test
+mise exec -- pnpm --dir scripts/github-issue-handoff run lint:md
 ```
 
 このパッケージのディレクトリから:
 
 ```bash
-apm compile --dry-run
-apm compile --validate
+mise exec -- apm compile --dry-run
+mise exec -- apm compile --validate
 ```
 
 その後 `git diff --check` を確認してください。

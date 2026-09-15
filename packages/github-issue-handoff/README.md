@@ -12,18 +12,19 @@ automation. The protocol never depends on a specific product or service.
 
 ## Install
 
-Install the package with APM:
+Register this repository as a marketplace, then install the package by name:
 
 ```bash
-apm install github-issue-handoff
+apm marketplace add scarecrow173/apm-packages
+apm install github-issue-handoff@apm-packages
 ```
 
-Or reference this repository directly:
+Or reference the monorepo subdirectory directly with a version selector:
 
 ```yaml
 dependencies:
   apm:
-    - scarecrow173/apm-packages/packages/github-issue-handoff
+    - scarecrow173/apm-packages/packages/github-issue-handoff#v0.1.0
 ```
 
 The distributed skill lives under `.apm/skills/github-issue-handoff/`.
@@ -129,13 +130,13 @@ prompts. A private repository does not change this.
 From the repository root:
 
 ```bash
-pnpm --dir scripts/github-issue-handoff test
-pnpm --dir scripts/github-issue-handoff run lint:md
+mise exec -- pnpm --dir scripts/github-issue-handoff test
+mise exec -- pnpm --dir scripts/github-issue-handoff run lint:md
 ```
 
 From this package directory:
 
 ```bash
-apm compile --dry-run
-apm compile --validate
+mise exec -- apm compile --dry-run
+mise exec -- apm compile --validate
 ```
