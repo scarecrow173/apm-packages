@@ -1,17 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const {
-  buildExperimentEvent,
-  buildNewFilePath,
-  experimentEventTypes,
-  posixRelative,
-  renderExperimentTemplate,
-  updateIndexForExperimentDir,
-  writeExperimentEvents,
-} = require("./lib/impl_doc_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { buildExperimentEvent, buildNewFilePath, experimentEventTypes, posixRelative, renderExperimentTemplate, updateIndexForExperimentDir, writeExperimentEvents } from "./lib/impl_doc_utils";
 
 type CliArgs = {
   cwd: string;
@@ -54,7 +46,7 @@ async function main(): Promise<void> {
       return;
     }
     if (!args.title) throw new Error("Missing required --title");
-    if (args.type && !experimentEventTypes.includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
+    if (args.type && !(experimentEventTypes as readonly string[]).includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
     const cwd = path.resolve(args.cwd);
     const { outputPath, relativeDir } = buildNewFilePath({
       cwd,
@@ -69,7 +61,7 @@ async function main(): Promise<void> {
         cwd,
         filePath: outputPath,
         seq: 1,
-        type: args.type,
+        type: args.type as (typeof experimentEventTypes)[number],
         ts: args.ts,
         summary: args.summary,
         extra: args.task ? { task: args.task } : undefined,

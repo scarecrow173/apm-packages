@@ -1,7 +1,7 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
 
 import type { SkillReferenceCatalog, FlowProfile } from "./types";
 
@@ -100,4 +100,4 @@ function stabilizeProfile(profile: FlowProfile): FlowProfile {
   return result;
 }
 
-module.exports = { renderJson, writeArtifact, stripTimestamps, stabilizeCatalog, stabilizeProfile };
+export { renderJson, writeArtifact, stripTimestamps, stabilizeCatalog, stabilizeProfile };

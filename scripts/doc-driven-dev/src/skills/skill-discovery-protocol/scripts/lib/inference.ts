@@ -1,11 +1,11 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
 
 import { SkillScanListDocumentSchema } from "./schemas/scan";
 import { SkillReferenceInferenceDocumentSchema } from "./schemas/inference";
-const { validateInferenceCompleteness } = require("./inference_validation.ts");
+import { validateInferenceCompleteness } from "./inference_validation";
 import type {
   RawScannedSkill,
   ScannedSkill,
@@ -118,7 +118,7 @@ function assertInferenceComplete(
   }
 }
 
-module.exports = {
+export {
   defaultScanListPath,
   defaultInferencePath,
   loadInferenceDocument,

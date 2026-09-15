@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const { buildIndex, findAdrDir, writeIndexFile } = require("./lib/adr_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { buildIndex, findAdrDir, writeIndexFile } from "./lib/adr_utils";
 
 type CliArgs = {
   cwd: string;

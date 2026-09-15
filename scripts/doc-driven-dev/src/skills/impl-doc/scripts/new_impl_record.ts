@@ -1,15 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const {
-  buildImplementationRecordContent,
-  buildNewFilePath,
-  implStatuses,
-  posixRelative,
-  updateIndexForMarkdownDir,
-} = require("./lib/impl_doc_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { buildImplementationRecordContent, buildNewFilePath, implStatuses, posixRelative, updateIndexForMarkdownDir } from "./lib/impl_doc_utils";
 
 type CliArgs = {
   cwd: string;
@@ -51,7 +45,7 @@ async function main(): Promise<void> {
     }
     if (!args.title) throw new Error("Missing required --title");
     const status = args.status || "draft";
-    if (!implStatuses.includes(status)) throw new Error(`Invalid impl status: ${status}`);
+    if (!(implStatuses as readonly string[]).includes(status)) throw new Error(`Invalid impl status: ${status}`);
     const cwd = path.resolve(args.cwd);
     const { number, outputPath, relativeDir } = buildNewFilePath({
       cwd,
@@ -64,7 +58,7 @@ async function main(): Promise<void> {
     const content = buildImplementationRecordContent({
       number,
       title: args.title,
-      status,
+      status: status as (typeof implStatuses)[number],
       date,
       relations: {
         implements: args.task ? [args.task] : [],

@@ -22,6 +22,7 @@ function buildInferenceBaselineDocument(skills: RawScannedSkill[]): SkillReferen
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((skill) => ({
       name: skill.name,
+      review_status: "pending" as const,
       provides: [],
       uses: [],
       execution_policy: defaultExecutionPolicy(),
@@ -36,6 +37,6 @@ function buildInferenceBaselineDocument(skills: RawScannedSkill[]): SkillReferen
   };
 }
 
-module.exports = {
+export {
   buildInferenceBaselineDocument,
 };

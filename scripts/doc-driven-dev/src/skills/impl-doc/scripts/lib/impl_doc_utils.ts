@@ -1,19 +1,10 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const { z } = require("zod");
-const {
-  changeFields,
-  GENERATED_INDEX_MARKER,
-  indexCell,
-  isForeignDocType,
-  isGeneratedIndex,
-  parseDoc,
-  relationFields,
-  sanitizeTitle,
-} = require("../../../lib/doc_suite_utils.ts");
-const { detectNaming, normalizeDir, slugify } = require("../../../lib/document_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { z } from "zod";
+import { changeFields, GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, sanitizeTitle } from "../../../lib/doc_suite_utils";
+import { detectNaming, normalizeDir, slugify } from "../../../lib/document_utils";
 
 const implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"] as const;
 const experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"] as const;
@@ -60,7 +51,7 @@ const changesSchema = z.object(Object.fromEntries(
 const relationsSchema = z.object({
   ...Object.fromEntries(relationFields.map((field) => [field, z.array(z.string()).default([])])),
   changes: changesSchema,
-}).default({});
+}).prefault({});
 
 const implementationRecordSchema = z.object({
   id: z.string().min(1),
@@ -161,11 +152,11 @@ function renderExperimentTemplate(replacements: Record<string, string>): Record<
 }
 
 function emptyChanges(): ChangeMap {
-  return Object.fromEntries(changeFields.map((field) => [field, []])) as ChangeMap;
+  return Object.fromEntries(changeFields.map((field) => [field, [] as ChangeEntry[]])) as ChangeMap;
 }
 
 function emptyRelations(): RelationMap {
-  return Object.fromEntries(relationFields.map((field) => [field, []])) as RelationMap;
+  return Object.fromEntries(relationFields.map((field) => [field, [] as string[]])) as RelationMap;
 }
 
 function completeRelations(input?: Partial<RelationMap>): RelationMap {
@@ -449,8 +440,11 @@ function resolvesLocalTarget(cwd: string, fromFile: string, target: string): boo
   return candidates.some((candidate) => fs.existsSync(candidate));
 }
 
-function relationLinks(relations: RelationMap): Array<{ field: RelationField; target: string }> {
-  return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
+function relationLinks(relations: Record<string, unknown>): Array<{ field: RelationField; target: string }> {
+  return relationFields.flatMap((field) => {
+    const targets = relations[field];
+    return Array.isArray(targets) ? targets.map((target) => ({ field, target: String(target) })) : [];
+  });
 }
 
 function auditImplementationRecords(cwd: string, relativeDir: string): { directory: string; files: number; findings: Finding[] } {
@@ -608,7 +602,7 @@ function auditExperimentLogs(cwd: string, relativeDir: string): { directory: str
   return { directory: relativeDir, files: files.length, findings };
 }
 
-module.exports = {
+export {
   appendExperimentEvent,
   auditExperimentLogs,
   auditImplementationRecords,

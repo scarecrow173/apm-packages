@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const matter = require("gray-matter");
-const { findAdrDir, relationFields } = require("./lib/adr_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
+import { findAdrDir, relationFields } from "./lib/adr_utils";
 
 type CliArgs = {
   cwd: string;
