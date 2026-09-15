@@ -15,5 +15,3 @@ includes:
 scripts:
   validate: "apm compile --validate"
   preview: "apm compile --dry-run"
-  test: "pnpm test"
-  lint-md: "pnpm run lint:md"
