@@ -3418,7 +3418,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs2 = require("fs");
+    var fs4 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3502,7 +3502,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs2.readFileSync(filepath, "utf8");
+      const str2 = fs4.readFileSync(filepath, "utf8");
       const file2 = matter2(str2, options2);
       file2.path = filepath;
       return file2;
@@ -3530,12 +3530,14 @@ var require_gray_matter = __commonJS({
   }
 });
 
-// src/skills/impl-doc/scripts/audit_experiment_log.ts
-var import_node_path2 = __toESM(require("node:path"));
+// src/skills/test-spec-doc/scripts/new_test_spec.ts
+var import_node_path3 = __toESM(require("node:path"));
+var import_node_fs3 = __toESM(require("node:fs"));
 
-// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
-var import_node_fs = __toESM(require("node:fs"));
-var import_node_path = __toESM(require("node:path"));
+// src/skills/lib/doc_suite_utils.ts
+var import_node_fs2 = __toESM(require("node:fs"));
+var import_node_path2 = __toESM(require("node:path"));
+var import_gray_matter = __toESM(require_gray_matter());
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -4303,10 +4305,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path4) {
+  if (!path4)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path4.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -4715,11 +4717,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path4, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path4);
     return iss;
   });
 }
@@ -4866,16 +4868,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path3 = []) => {
+  const processError = (error52, path4 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -4902,17 +4904,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path3 = []) => {
+  const processError = (error52, path4 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -4944,8 +4946,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path3) {
+  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path4) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -17637,13 +17639,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path3 = ref.slice(1).split("/").filter(Boolean);
-  if (path3.length === 0) {
+  const path4 = ref.slice(1).split("/").filter(Boolean);
+  if (path4.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path3[0] === defsKey) {
-    const key = path3[1];
+  if (path4[0] === defsKey) {
+    const key = path4[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -18051,12 +18053,31 @@ function date4(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// src/skills/lib/doc_suite_utils.ts
-var import_gray_matter = __toESM(require_gray_matter());
-
 // src/skills/lib/document_utils.ts
+var import_node_fs = __toESM(require("node:fs"));
+var import_node_path = __toESM(require("node:path"));
 function normalizeDir(input) {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
+function isIndexFileName(file2) {
+  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
+}
+function detectNaming(files) {
+  if (files.some((file2) => /^\d{4}-.+\.md$/.test(file2))) return "numbered";
+  if (files.some((file2) => /^[a-z0-9][a-z0-9-]+\.md$/.test(file2))) return "slug";
+  return "numbered";
+}
+function nextNumber(files) {
+  const numbers = files.map((file2) => /^(\d{4})-.+\.md$/.exec(file2)).filter((match) => Boolean(match)).map((match) => Number(match[1]));
+  return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
+}
+function slugify2(title, fallback) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
+}
+function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
+  if (explicitDir) return normalizeDir(explicitDir);
+  const existing = candidateDirs.filter((candidate) => import_node_fs.default.existsSync(import_node_path.default.join(cwd, candidate)));
+  return existing.length === 0 ? defaultDir : existing[0];
 }
 
 // src/skills/lib/doc_suite_utils.ts
@@ -18088,6 +18109,80 @@ var changeFields = [
   "generated"
 ];
 var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
+var configs = {
+  idea: {
+    defaultStatus: "draft",
+    dir: "docs/ideas",
+    dirs: ["docs/ideas"],
+    idPrefix: "IDEA",
+    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
+    type: "idea"
+  },
+  brainstorm: {
+    defaultStatus: "capturing",
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    idPrefix: "BRAINSTORM",
+    statusValues: ["capturing", "confirmed", "routed", "superseded"],
+    type: "brainstorm"
+  },
+  discovery: {
+    defaultStatus: "draft",
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    idPrefix: "DISC",
+    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
+    type: "discovery"
+  },
+  spec: {
+    defaultStatus: "draft",
+    dir: "docs/specs",
+    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
+    idPrefix: "SPEC",
+    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
+    type: "spec"
+  },
+  plan: {
+    defaultStatus: "draft",
+    dir: "docs/plans",
+    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
+    idPrefix: "PLAN",
+    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
+    type: "plan"
+  },
+  task: {
+    defaultStatus: "todo",
+    dir: "docs/tasks",
+    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
+    idPrefix: "TASK",
+    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
+    type: "task"
+  },
+  "test-spec": {
+    defaultStatus: "draft",
+    dir: "docs/test-specs",
+    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    idPrefix: "TSPEC",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    type: "test-spec"
+  },
+  design: {
+    defaultStatus: "draft",
+    dir: "docs/designs",
+    dirs: ["docs/designs", "docs/design", "designs", "design"],
+    idPrefix: "DESIGN",
+    statusValues: ["draft", "approved", "superseded", "rejected"],
+    type: "design"
+  },
+  adr: {
+    defaultStatus: "proposed",
+    dir: "docs/adr",
+    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+    idPrefix: "ADR",
+    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+    type: "adr"
+  }
+};
 var scaffoldTargets = [
   { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
   { dir: "docs/discovery", title: "DISCOVERY Documents", type: "discovery" },
@@ -18121,164 +18216,592 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
-
-// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
-var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
-var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
-var changeEntrySchema2 = external_exports.object({
-  type: external_exports.string().min(1)
-}).passthrough();
-var changesSchema2 = external_exports.object(Object.fromEntries(
-  changeFields.map((field) => [field, external_exports.array(changeEntrySchema2).default([])])
-)).default({});
-var relationsSchema = external_exports.object({
-  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
-  changes: changesSchema2
-}).prefault({});
-var implementationRecordSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  type: external_exports.literal("impl"),
-  status: external_exports.enum(implStatuses),
-  title: external_exports.string().min(1),
-  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  owners: external_exports.array(external_exports.string()),
-  relations: relationsSchema,
-  metadata: external_exports.object({
-    experiments: external_exports.object({
-      adopted: external_exports.array(external_exports.string()).default([]),
-      rejected: external_exports.array(external_exports.string()).default([])
+function configFor(type) {
+  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
+  return configs[type];
+}
+var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+function canonicalRootDir(cwd, type) {
+  const config2 = configFor(type);
+  return findDocumentDir(cwd, void 0, config2.dirs, config2.dir);
+}
+function isUnderDir(child, parent) {
+  const c = normalizeDir(child);
+  const p = normalizeDir(parent);
+  return c === p || c.startsWith(`${p}/`);
+}
+function recursiveBasenames(cwd, relativeDir, type) {
+  const fullDir = import_node_path2.default.join(cwd, relativeDir);
+  return walkMarkdownFiles(fullDir).map((fullPath) => import_node_path2.default.basename(fullPath)).filter((file2) => !isReservedDocFile(type, file2));
+}
+function nextNumberFromFrontMatter(cwd, relativeDir, idPrefix) {
+  const fullDir = import_node_path2.default.join(cwd, relativeDir);
+  const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
+  const numbers = walkMarkdownFiles(fullDir).map((fullPath) => parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8")).data.id).filter((id) => typeof id === "string").map((id) => pattern.exec(id.trim())).filter((match) => Boolean(match)).map((match) => Number(match[1]));
+  return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
+}
+function sanitizeFileName(name) {
+  const base = import_node_path2.default.basename(name.trim());
+  const stem = base.replace(/\.md$/i, "");
+  if (!stem) throw new Error("Invalid filename: empty after removing .md extension");
+  return `${stem}.md`;
+}
+function docDir(cwd, type, explicitDir) {
+  const config2 = configFor(type);
+  return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
+}
+function docFiles(dir) {
+  return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
+}
+function parseDoc(content) {
+  try {
+    const parsed = (0, import_gray_matter.default)(content);
+    return { data: parsed.data || {}, body: parsed.content, error: null };
+  } catch (error51) {
+    return { data: {}, body: content, error: error51 instanceof Error ? error51.message : String(error51) };
+  }
+}
+function sanitizeTitle(title) {
+  const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
+  return cleaned;
+}
+function indexCell(value) {
+  return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+}
+function isForeignDocType(typeValue, expected, relativeDir) {
+  if (typeof typeValue !== "string" || typeValue === expected) return false;
+  if (!docTypes.includes(typeValue)) return false;
+  const normalized = normalizeDir(relativeDir);
+  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+}
+function completeChanges(input) {
+  return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []]));
+}
+function quote(value) {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+function formatRelation(field, values) {
+  return `  ${field}: ${values}`;
+}
+function formatRelationBlock(field, values) {
+  if (values.length === 0) return formatRelation(field, "[]");
+  return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)].join("\n");
+}
+function formatChangeScalar(key, value) {
+  return `${key}: ${quote(value)}`;
+}
+function formatChangeValue(key, value) {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${key}: []`];
+    return [
+      `${key}:`,
+      ...value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => `  - ${quote(item.trim())}`)
+    ];
+  }
+  if (typeof value === "string") return [formatChangeScalar(key, value)];
+  if (typeof value === "number" || typeof value === "boolean") return [`${key}: ${String(value)}`];
+  return [`${key}: ${quote(JSON.stringify(value))}`];
+}
+function formatChangeEntry(entry) {
+  const ordered = [
+    "type",
+    "path",
+    "from",
+    "to",
+    "source",
+    ...Object.keys(entry).filter((key) => !["type", "path", "from", "to", "source"].includes(key)).sort()
+  ].filter((key, index, array2) => key in entry && array2.indexOf(key) === index);
+  const lines = [];
+  for (const key of ordered) {
+    lines.push(...formatChangeValue(key, entry[key]));
+  }
+  return lines;
+}
+function formatChangesBlock(changes) {
+  return [
+    "  changes:",
+    ...changeFields.flatMap((field) => {
+      const entries = changes[field];
+      if (entries.length === 0) return [`    ${field}: []`];
+      return [
+        `    ${field}:`,
+        ...entries.flatMap((entry) => {
+          const lines = formatChangeEntry(entry);
+          return lines.length === 0 ? ["      - {}"] : [`      - ${lines[0]}`, ...lines.slice(1).map((line) => `        ${line}`)];
+        })
+      ];
     })
-  })
-}).passthrough();
-var experimentEventBaseSchema = external_exports.object({
-  schema: external_exports.string().min(1),
-  experiment: external_exports.string().min(1),
-  seq: external_exports.number().int().positive(),
-  type: external_exports.string().min(1),
-  ts: external_exports.string().min(1)
-}).passthrough();
-function posixRelative(from, to) {
-  return import_node_path.default.relative(from, to).replace(/\\/g, "/");
+  ];
 }
-function normalizeFilePath(input) {
-  return input.replace(/\\/g, "/");
+function isPlainObject2(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
-function defaultImplDir(kind) {
-  return kind === "ir" ? "docs/impl/ir" : "docs/impl/exp";
+function formatMetadataScalar(value) {
+  return typeof value === "string" ? quote(value) : String(value);
 }
-function implDir(cwd, kind, explicitDir) {
-  if (explicitDir) return normalizeDir(explicitDir);
-  const defaultDir = defaultImplDir(kind);
-  return import_node_fs.default.existsSync(import_node_path.default.join(cwd, defaultDir)) ? defaultDir : defaultDir;
-}
-function listFiles(dir, ext) {
-  if (!import_node_fs.default.existsSync(dir)) return [];
-  return import_node_fs.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).sort();
-}
-function normalizeExperimentPath(cwd, filePath) {
-  return normalizeFilePath(posixRelative(cwd, import_node_path.default.resolve(filePath)));
-}
-function auditExperimentLogs(cwd, relativeDir) {
-  const dir = import_node_path.default.join(cwd, relativeDir);
-  const files = listFiles(dir, ".jsonl");
-  const findings = [];
-  for (const file2 of files) {
-    const fullPath = import_node_path.default.join(dir, file2);
-    const content = import_node_fs.default.readFileSync(fullPath, "utf8");
-    const lines = content.split(/\r?\n/).filter((line) => line.trim());
-    let previousSeq = 0;
-    const seen = /* @__PURE__ */ new Set();
-    for (let index = 0; index < lines.length; index += 1) {
-      const line = lines[index];
-      let parsed;
-      try {
-        parsed = JSON.parse(line);
-      } catch {
-        findings.push({
-          code: "invalid-json",
-          file: file2,
-          line: index + 1,
-          message: "Line is not valid JSON",
-          severity: "error"
-        });
-        continue;
+function formatMetadataNode(key, value, indent) {
+  if (value === null || value === void 0) return [];
+  const prefix = " ".repeat(indent);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${prefix}${key}: []`];
+    const items = value.flatMap((item) => {
+      if (item === null || item === void 0) return [];
+      if (isPlainObject2(item)) {
+        const childLines = Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3));
+        return childLines.length > 0 ? [`${prefix} -`, ...childLines] : [`${prefix} - {}`];
       }
-      const baseResult = experimentEventBaseSchema.safeParse(parsed);
-      if (!baseResult.success) {
-        findings.push({
-          code: "invalid-event-shape",
-          file: file2,
-          line: index + 1,
-          message: `Invalid event shape: ${baseResult.error.issues.map((issue2) => issue2.message).join(", ")}`,
-          severity: "error"
-        });
-        continue;
-      }
-      if (parsed.schema !== "experiment_event.v1") {
-        findings.push({
-          code: "invalid-event-schema",
-          file: file2,
-          line: index + 1,
-          message: `Unexpected schema: ${String(parsed.schema)}`,
-          severity: "error"
-        });
-      }
-      if (!experimentEventTypes.includes(parsed.type)) {
-        findings.push({
-          code: "invalid-event-type",
-          file: file2,
-          line: index + 1,
-          message: `Invalid event type: ${String(parsed.type)}`,
-          severity: "error"
-        });
-      }
-      const expectedPath = normalizeExperimentPath(cwd, fullPath);
-      if (parsed.experiment !== expectedPath) {
-        findings.push({
-          code: "experiment-path-mismatch",
-          file: file2,
-          line: index + 1,
-          message: `Experiment path mismatch: expected ${expectedPath}`,
-          severity: "error"
-        });
-      }
-      const seq = parsed.seq;
-      if (seen.has(seq) || seq <= previousSeq) {
-        findings.push({
-          code: "non-monotonic-seq",
-          file: file2,
-          line: index + 1,
-          message: `Sequence must be unique and strictly increasing: ${seq}`,
-          severity: "error"
-        });
-      }
-      seen.add(seq);
-      previousSeq = seq;
-    }
+      if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
+      if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
+      return [`${prefix} - ${quote(JSON.stringify(item))}`];
+    });
+    return items.length > 0 ? [`${prefix}${key}:`, ...items] : [`${prefix}${key}: []`];
   }
-  const indexPath = import_node_path.default.join(dir, "README.md");
-  if (!import_node_fs.default.existsSync(indexPath)) {
-    findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+  if (isPlainObject2(value)) {
+    const entries = Object.entries(value).flatMap(([childKey, childValue]) => formatMetadataNode(childKey, childValue, indent + 2));
+    return entries.length > 0 ? [`${prefix}${key}:`, ...entries] : [`${prefix}${key}: {}`];
   }
-  return { directory: relativeDir, files: files.length, findings };
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return [`${prefix}${key}: ${formatMetadataScalar(value)}`];
+  }
+  return [`${prefix}${key}: ${quote(JSON.stringify(value))}`];
+}
+function formatMetadataBlock(metadata) {
+  if (!metadata) return [];
+  const entries = Object.entries(metadata).flatMap(([key, value]) => formatMetadataNode(key, value, 2));
+  return entries.length > 0 ? ["metadata:", ...entries] : ["metadata: {}"];
+}
+function completeRelations(input) {
+  return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []]));
+}
+function frontMatter(config2, number4, title, status, date5, relations, metadata) {
+  if (!config2.statusValues.includes(status)) {
+    throw new Error(`Invalid ${config2.type} status: ${status} (expected one of: ${config2.statusValues.join(", ")})`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date5)) {
+    throw new Error(`Invalid date: ${date5} (expected YYYY-MM-DD)`);
+  }
+  const complete = completeRelations(relations);
+  const changes = completeChanges(relations?.changes);
+  return [
+    "---",
+    `id: ${quote(`${config2.idPrefix}-${String(number4).padStart(4, "0")}`)}`,
+    `type: ${quote(config2.type)}`,
+    `status: ${quote(status)}`,
+    `title: ${quote(sanitizeTitle(title))}`,
+    `created: ${quote(date5)}`,
+    `updated: ${quote(date5)}`,
+    "owners: []",
+    "relations:",
+    formatRelationBlock("source", complete.source),
+    ...formatChangesBlock(changes),
+    ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
+    ...formatMetadataBlock(metadata),
+    "---"
+  ].join("\n");
+}
+function renderBodyTemplate(type, title) {
+  const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", `${type}.md`);
+  if (!import_node_fs2.default.existsSync(templatePath)) return null;
+  return import_node_fs2.default.readFileSync(templatePath, "utf8").replaceAll("{{title}}", title).trimEnd();
+}
+function bodyFor(type, title) {
+  const template = renderBodyTemplate(type, title);
+  if (template) return template;
+  if (type === "idea") {
+    return [
+      `# ${title}`,
+      "",
+      "## Summary",
+      "",
+      "<!-- One or two sentences capturing the core idea. -->",
+      "",
+      "## Problem and Motivation",
+      "",
+      "- <!-- observed pain, opportunity, or trigger -->",
+      "",
+      "## Expected Value",
+      "",
+      "- <!-- who benefits and how -->",
+      "",
+      "## Open Questions",
+      "",
+      "- <!-- question that must be answered before this can be formalized -->",
+      "",
+      "## Next Action",
+      "",
+      "- [ ] Promote to discovery-doc for deeper exploration",
+      "- [ ] Promote directly to spec-doc if requirements are clear",
+      "- [ ] Park for later reconsideration",
+      "- [ ] Discard \u2014 reason: <!-- why -->"
+    ].join("\n");
+  }
+  if (type === "brainstorm") {
+    return [
+      `# ${title}`,
+      "",
+      "## Intent",
+      "",
+      "<!-- Confirm the goal, audience, and reason this matters now. -->",
+      "",
+      "## Constraints",
+      "",
+      "- <!-- technical, product, operational, timeline, or policy constraint -->",
+      "",
+      "## Options",
+      "",
+      "- <!-- option, trade-off, and current lean -->",
+      "",
+      "## Open Questions",
+      "",
+      "- <!-- question that must be resolved before routing -->",
+      "",
+      "## Document Routing",
+      "",
+      "- [ ] ADR needed",
+      "- [ ] Spec needed",
+      "",
+      "## Confirmed Summary",
+      "",
+      "<!-- Write the agreed intent before creating downstream documents. -->"
+    ].join("\n");
+  }
+  if (type === "discovery") {
+    return [
+      `# ${title}`,
+      "",
+      "## Exploration Goal",
+      "",
+      "<!-- What question does this discovery attempt to answer? State the trigger and desired outcome. -->",
+      "",
+      "## Key Issues and Assumptions",
+      "",
+      "- <!-- issue or assumption that must be validated before committing to a direction -->",
+      "",
+      "## Alternatives and Comparison",
+      "",
+      "| Option | Pros | Cons | Lean |",
+      "| --- | --- | --- | --- |",
+      "| <!-- option --> | <!-- pro --> | <!-- con --> | <!-- yes/no/maybe --> |",
+      "",
+      "## Tentative Conclusions and Hypotheses",
+      "",
+      "<!-- Current best guess before committing to a spec or ADR. Mark each as hypothesis or confirmed. -->",
+      "",
+      "## Open Questions",
+      "",
+      "- <!-- question blocking resolution -->",
+      "",
+      "## Promotion Candidates",
+      "",
+      "- [ ] spec-doc needed",
+      "- [ ] adr-doc needed"
+    ].join("\n");
+  }
+  if (type === "spec") {
+    return [
+      `# ${title}`,
+      "",
+      "## Intent",
+      "",
+      "<!-- Describe the user need, problem, and desired outcome. -->",
+      "",
+      "## Scope",
+      "",
+      "### In Scope",
+      "",
+      "- <!-- behavior, workflow, or interface -->",
+      "",
+      "### Out of Scope",
+      "",
+      "- <!-- explicit non-goal -->",
+      "",
+      "## Requirements",
+      "",
+      "- <!-- requirement -->",
+      "",
+      "## Acceptance Criteria",
+      "",
+      "- [ ] <!-- observable behavior or verification -->",
+      "",
+      "## Deferred Design Concerns",
+      "",
+      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+      "",
+      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->"
+    ].join("\n");
+  }
+  if (type === "plan") {
+    return [
+      `# ${title}`,
+      "",
+      "## Goal",
+      "",
+      "<!-- Describe the implementation goal. -->",
+      "",
+      "## Tasks",
+      "",
+      "- [ ] <!-- implementation slice -->",
+      "",
+      "## Verification",
+      "",
+      "- [ ] <!-- command, test, or review step -->"
+    ].join("\n");
+  }
+  if (type === "design") {
+    return [
+      `# ${title}`,
+      "",
+      "## Context",
+      "",
+      "<!-- Describe the problem context and boundaries for this design. -->",
+      "",
+      "## Scope",
+      "",
+      "- <!-- in-scope -->",
+      "- <!-- out-of-scope -->",
+      "",
+      "## Components and Boundaries",
+      "",
+      "- <!-- component and responsibility -->",
+      "",
+      "## Data and Control Flow",
+      "",
+      "- <!-- key flow and decision points -->",
+      "",
+      "## Risks and Trade-offs",
+      "",
+      "- <!-- risk and mitigation -->",
+      "",
+      "## Deferred Design Concerns",
+      "",
+      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+      "",
+      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
+      "",
+      "## References",
+      "",
+      "- <!-- linked spec, ADR, and related docs -->"
+    ].join("\n");
+  }
+  return [
+    `# ${title}`,
+    "",
+    "## Work",
+    "",
+    "<!-- Describe the implementation slice. -->",
+    "",
+    "## Done When",
+    "",
+    "- [ ] <!-- completion criterion -->"
+  ].join("\n");
+}
+function isReservedDocFile(type, file2) {
+  if (type === "design") {
+    return /^overview\.md$/i.test(file2);
+  }
+  return false;
+}
+function overviewDocument(date5) {
+  return [
+    "---",
+    'id: "DESIGN-OVERVIEW"',
+    'type: "design"',
+    'status: "draft"',
+    'title: "System Design Overview"',
+    `created: "${date5}"`,
+    `updated: "${date5}"`,
+    "owners: []",
+    "relations:",
+    ...relationFields.map((field) => formatRelationBlock(field, [])),
+    "---",
+    "",
+    "# System Design Overview",
+    "",
+    "## System Boundaries",
+    "",
+    "- <!-- major subsystems and their boundaries -->",
+    "",
+    "## Core Components",
+    "",
+    "- <!-- component and responsibility -->",
+    "",
+    "## Data Flow",
+    "",
+    "- <!-- high-level data and control flow -->",
+    "",
+    "## Non-Functional Constraints",
+    "",
+    "- <!-- reliability, security, performance, operations -->",
+    "",
+    "## Detailed Design Documents",
+    "",
+    "- <!-- link detailed docs under docs/designs/0001-*.md -->",
+    ""
+  ].join("\n");
+}
+function ensureDesignOverview(fullDir, date5) {
+  const overviewPath = import_node_path2.default.join(fullDir, "overview.md");
+  if (import_node_fs2.default.existsSync(overviewPath)) return;
+  import_node_fs2.default.writeFileSync(overviewPath, overviewDocument(date5), "utf8");
+}
+async function titleFromDocument(content, fallback) {
+  const parsed = parseDoc(content);
+  const data = parsed.data;
+  if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
+  const match = /^#\s+(.+)$/m.exec(parsed.body);
+  return match?.[1]?.trim() || fallback;
+}
+async function docEntries(cwd, type, explicitDir) {
+  const relativeDir = docDir(cwd, type, explicitDir);
+  const dir = import_node_path2.default.join(cwd, relativeDir);
+  const entries = await Promise.all(docFiles(dir).map(async (file2) => {
+    const fullPath = import_node_path2.default.join(dir, file2);
+    const content = import_node_fs2.default.readFileSync(fullPath, "utf8");
+    const data = parseDoc(content).data;
+    return {
+      file: file2,
+      id: typeof data.id === "string" ? data.id : null,
+      path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
+      status: typeof data.status === "string" ? data.status : null,
+      title: await titleFromDocument(content, import_node_path2.default.basename(file2, ".md")),
+      type: typeof data.type === "string" ? data.type : null
+    };
+  }));
+  return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
+}
+async function buildIndex(cwd, type, explicitDir) {
+  const relativeDir = docDir(cwd, type, explicitDir);
+  const entries = await docEntries(cwd, type, explicitDir);
+  const title = `${configFor(type).idPrefix} Documents`;
+  const sorted = type === "design" ? [...entries].sort((a, b) => {
+    if (a.file === "overview.md") return -1;
+    if (b.file === "overview.md") return 1;
+    return a.file.localeCompare(b.file);
+  }) : entries;
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const rows = sorted.map(
+    (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`
+  );
+  const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
+  return `# ${title}
+
+${GENERATED_INDEX_MARKER}
+
+Directory: \`${relativeDir.replace(/\\/g, "/")}\`
+
+${body}
+`;
+}
+function isMarkdownSource(file2) {
+  return file2.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(file2));
+}
+function walkMarkdownFiles(baseDir) {
+  if (!import_node_fs2.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs2.default.readdirSync(baseDir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const fullPath = import_node_path2.default.join(baseDir, entry.name);
+    if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
+    return isMarkdownSource(fullPath) ? [fullPath] : [];
+  }).sort();
+}
+async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
+  const indexPath = import_node_path2.default.join(cwd, relativeDir, "README.md");
+  const relIndex = import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/");
+  if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
+  const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
+  const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
+  if (!isGenerated && !options2.forceIndex) {
+    return { path: relIndex, written: false, reason: "hand-curated" };
+  }
+  const content = await buildIndex(cwd, type, relativeDir);
+  import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
+  return { path: relIndex, written: true, reason: null };
+}
+async function createDocument(type, options2) {
+  const config2 = configFor(type);
+  const cwd = import_node_path2.default.resolve(options2.cwd);
+  const relativeDir = docDir(cwd, type, options2.dir);
+  const fullDir = import_node_path2.default.join(cwd, relativeDir);
+  import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
+  const rootDir = canonicalRootDir(cwd, type);
+  const underRoot = isUnderDir(relativeDir, rootDir);
+  const scopeDir = underRoot ? rootDir : relativeDir;
+  const naming = detectNaming(recursiveBasenames(cwd, scopeDir, type));
+  const localFiles = import_node_fs2.default.readdirSync(fullDir).filter((file2) => file2.endsWith(".md")).filter((file2) => !isReservedDocFile(type, file2));
+  const number4 = Math.max(
+    nextNumberFromFrontMatter(cwd, scopeDir, config2.idPrefix),
+    nextNumber(localFiles)
+  );
+  const title = sanitizeTitle(options2.title);
+  const filename = options2.name ? sanitizeFileName(options2.name) : naming === "slug" ? `${slugify2(title, type)}.md` : `${String(number4).padStart(4, "0")}-${slugify2(title, type)}.md`;
+  if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
+  const outputPath = import_node_path2.default.join(fullDir, filename);
+  if (import_node_fs2.default.existsSync(outputPath)) throw new Error(`Document already exists: ${import_node_path2.default.relative(cwd, outputPath)}`);
+  const date5 = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  const status = options2.status || config2.defaultStatus;
+  const content = `${frontMatter(config2, number4, title, status, date5, options2.relations)}
+
+${bodyFor(type, title)}
+`;
+  import_node_fs2.default.writeFileSync(outputPath, content, "utf8");
+  if (type === "design") ensureDesignOverview(import_node_path2.default.join(cwd, rootDir), date5);
+  const indexRelativeDir = underRoot ? rootDir : relativeDir;
+  const indexResult = await writeGeneratedIndex(cwd, type, indexRelativeDir, options2);
+  return {
+    file: import_node_path2.default.relative(cwd, outputPath).replace(/\\/g, "/"),
+    index: indexResult.path,
+    indexWritten: indexResult.written,
+    indexSkippedReason: indexResult.reason,
+    relativeDir
+  };
+}
+function logIndexResult(result) {
+  if (result.indexWritten) {
+    console.log(`Updated ${result.index}`);
+  } else if (result.indexSkippedReason === "hand-curated") {
+    console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+  } else if (result.indexSkippedReason === "disabled") {
+    console.log(`Skipped index update (--no-index): ${result.index}`);
+  }
 }
 
-// src/skills/impl-doc/scripts/audit_experiment_log.ts
+// src/skills/test-spec-doc/scripts/new_test_spec.ts
+var TEST_SPEC_DOC_GATE_ERROR = "TEST-SPEC-DOC-GATE-001: at least one --verifies target resolving to an existing document is required before creating a test spec.";
 function parseArgs(argv) {
-  const args = { cwd: process.cwd(), json: false };
+  const args = { cwd: process.cwd(), derivesFrom: [], verifies: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--dir") args.dir = argv[++i];
+    if (arg === "--title") args.title = argv[++i];
+    else if (arg === "--verifies") args.verifies.push(argv[++i]);
+    else if (arg === "--derives-from") args.derivesFrom.push(argv[++i]);
+    else if (arg === "--dir") args.dir = argv[++i];
+    else if (arg === "--name") args.name = argv[++i];
+    else if (arg === "--no-index") args.noIndex = true;
+    else if (arg === "--force-index") args.forceIndex = true;
+    else if (arg === "--status") args.status = argv[++i];
+    else if (arg === "--date") args.date = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
-    else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
+    else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
+  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function usage() {
-  return "Usage: node scripts/audit_experiment_log.js [--dir <path>] [--json]";
+  return "Usage: node scripts/new_test_spec.js --title <title> --verifies <doc> [--verifies <doc>...] [--derives-from <doc>...] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+}
+function validateVerifiesGate(cwd, verifies) {
+  if (verifies.length === 0) throw new Error(TEST_SPEC_DOC_GATE_ERROR);
+  for (const target of verifies) {
+    const resolved = import_node_path3.default.resolve(cwd, target);
+    if (!import_node_fs3.default.existsSync(resolved) || !import_node_fs3.default.statSync(resolved).isFile()) {
+      throw new Error(TEST_SPEC_DOC_GATE_ERROR);
+    }
+  }
 }
 async function main() {
   try {
@@ -18287,23 +18810,25 @@ async function main() {
       console.log(usage());
       return;
     }
-    const cwd = import_node_path2.default.resolve(args.cwd);
-    const relativeDir = implDir(cwd, "exp", args.dir);
-    const report = auditExperimentLogs(cwd, relativeDir);
-    if (args.json) {
-      console.log(JSON.stringify(report, null, 2));
-      return;
-    }
-    console.log(`experiment log audit: ${report.directory}`);
-    console.log(`Files: ${report.files}`);
-    if (report.findings.length === 0) {
-      console.log("No findings.");
-      return;
-    }
-    for (const finding of report.findings) {
-      const location = finding.file ? `${report.directory}/${finding.file}` : report.directory;
-      console.log(`[${finding.severity}] ${location}: ${finding.message}`);
-    }
+    if (!args.title) throw new Error("Missing required --title");
+    const resolvedCwd = import_node_path3.default.resolve(args.cwd);
+    validateVerifiesGate(resolvedCwd, args.verifies);
+    const result = await createDocument("test-spec", {
+      cwd: resolvedCwd,
+      date: args.date,
+      dir: args.dir,
+      name: args.name,
+      forceIndex: args.forceIndex,
+      noIndex: args.noIndex,
+      relations: {
+        verifies: [...new Set(args.verifies)],
+        "derives-from": [...new Set(args.derivesFrom)]
+      },
+      status: args.status,
+      title: args.title
+    });
+    console.log(`Created ${result.file}`);
+    logIndexResult(result);
   } catch (error51) {
     console.error(error51 instanceof Error ? error51.message : String(error51));
     console.error(usage());

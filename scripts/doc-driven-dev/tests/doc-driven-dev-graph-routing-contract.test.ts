@@ -34,7 +34,7 @@ function fixtureRepo(statuses: TaskStatus[] = ["todo"], dependsOn: string[][] = 
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-graph-routing-"));
   for (const directory of [
     "docs/ideas", "docs/discovery", "docs/specs", "docs/designs", "docs/plans",
-    "docs/tasks", "docs/adr", "docs/impl/ir", "docs/impl/exp",
+    "docs/tasks", "docs/test-specs", "docs/adr", "docs/impl/ir", "docs/impl/exp",
   ]) {
     fs.mkdirSync(path.join(repo, directory), { recursive: true });
     fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
