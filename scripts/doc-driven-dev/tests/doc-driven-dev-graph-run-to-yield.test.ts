@@ -173,6 +173,7 @@ const canonicalTargets = [
   "docs/designs",
   "docs/plans",
   "docs/tasks",
+  "docs/test-specs",
   "docs/adr",
   "docs/impl/ir",
   "docs/impl/exp",
@@ -202,6 +203,7 @@ const canonicalDocumentPaths = [
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
   "docs/plans/0001-graph.md",
+  "docs/test-specs/0001-graph.md",
   proofRelativePath,
   "docs/impl/ir/0001-task.md",
 ];
@@ -213,7 +215,7 @@ const footerDelegates = new Set([
   "doc-status",
 ]);
 const callerNormalizedDelegates = new Set(["migrate_docs", "scaffold_docs", "build_task_graph"]);
-const callerNormalizedAudits = new Set(["spec", "adr", "design", "plan", "task", "impl-record", "all"]);
+const callerNormalizedAudits = new Set(["spec", "adr", "design", "plan", "task", "test-spec", "impl-record", "all"]);
 
 function proofFile(repo: string): string {
   return path.join(repo, proofRelativePath);
@@ -280,6 +282,7 @@ function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
       case "design": return ["docs/designs/0001-graph.md"];
       case "plan": return ["docs/plans/0001-graph.md"];
       case "task": return taskGraphPaths(route);
+      case "test-spec": return ["docs/test-specs/0001-graph.md"];
       case "impl-record": return ["docs/impl/ir/0001-task.md"];
       case "all": return canonicalDocumentPaths;
     }
@@ -549,6 +552,10 @@ function fixtureRepo(options: {
   writeArtifact(repo, "docs/plans/0001-graph.md", {
     id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
     relations: { "derives-from": ["DESIGN-0001"] },
+  }, "# Graph\n");
+  writeArtifact(repo, "docs/test-specs/0001-graph.md", {
+    id: "TSPEC-0001", type: "test-spec", status: "approved", title: "Graph",
+    relations: { verifies: ["SPEC-0001"] },
   }, "# Graph\n");
   writeArtifact(repo, "docs/impl/ir/0001-task.md", {
     id: "IMPL-0001", type: "implementation-record", status: "complete", title: "Graph implementation",
@@ -1368,6 +1375,7 @@ test("runs planning-flow before downstream plan and task audits", () => {
     "route:planning-to-task-graph",
     "audit:plan",
     "audit:task",
+    "audit:test-spec",
     "delegate:build_task_graph",
     "evidence:planning-to-task-graph",
   ]);

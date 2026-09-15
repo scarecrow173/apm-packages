@@ -17,12 +17,17 @@ or `task-doc`.
 2. Consume the selected approved design and its exact focused lineage.
 3. Invoke `plan-doc` to create or repair one implementation-ready plan.
 4. If the plan awaits review, return `EffectOutcome` `yield` with
-   `approval-required` and create no tasks.
+   `approval-required` and create no test specs or tasks.
 5. After the plan status is `approved`, `in-progress`, or `completed`, invoke
-   `task-doc` once per concrete plan slice, preserving declared dependencies.
-6. Return one exact `EffectOutcome` for `planning-flow` with the current design
-   input and plan/task evidence.
-7. Let the graph re-project; do not call `build_task_graph` or choose the next
+   `test-spec-doc` once per verifiable behavior declared by the approved
+   spec/design, before task breakdown. Skip this step only when the plan
+   declares no verifiable behavior change, and record the reason in evidence.
+6. Invoke `task-doc` once per concrete plan slice, preserving declared
+   dependencies, and link each task to the test specs it satisfies via
+   `relations.verified-by`.
+7. Return one exact `EffectOutcome` for `planning-flow` with the current design
+   input and plan/test-spec/task evidence.
+8. Let the graph re-project; do not call `build_task_graph` or choose the next
    edge inside `planning-flow`.
 
 ## Graph Effect Outcome
@@ -32,7 +37,8 @@ When `doc-driven-dev-graph` invokes this skill, return exactly the
 The footer defines the required `edgeId`, stage, effect identity, authoritative
 input scope, evidence, proof, and yield fields.
 
-Use `completed` for an approved or active plan with linked task evidence, `retry` for
-changed canonical plan/task repair evidence, `yield` with `approval-required` while plan
-review is pending, `yield` with `input-required` when a user-owned planning choice is
-missing, and `yield` with `unrecoverable-blocker` when no declared safe repair exists.
+Use `completed` for an approved or active plan with linked test-spec/task evidence,
+`retry` for changed canonical plan/test-spec/task repair evidence, `yield` with
+`approval-required` while plan review is pending, `yield` with `input-required` when a
+user-owned planning choice is missing, and `yield` with `unrecoverable-blocker` when no
+declared safe repair exists.

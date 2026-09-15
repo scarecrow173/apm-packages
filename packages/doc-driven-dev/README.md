@@ -13,6 +13,7 @@ The package provides focused document skills and graph delegates:
 - `idea-doc`, `deep-dive`, and `briefing-flow` capture and shape discovery.
 - `discovery-doc`, `adr-doc`, and `spec-doc` record intent and decisions.
 - `design-doc`, `plan-doc`, and `task-doc` define approved implementation work.
+- `test-spec-doc` records what tests must guarantee and why.
 - `impl-doc` records implementation and experiment evidence.
 - `doc-status` audits document contracts and links.
 - `implementation-flow` delegates implementation work and review gates.
@@ -72,10 +73,10 @@ Bindings are declared in the Graph Definition:
 
 - migration: `migrate_docs`; bootstrap: `scaffold_docs`;
 - briefing: `briefing-flow`; design: `design-doc`;
-- planning: `planning-flow`, which sequences `plan-doc` approval before
-  `task-doc`;
+- planning: `planning-flow`, which sequences `plan-doc` approval, then
+  `test-spec-doc`, then `task-doc`;
 - task projection: `build_task_graph`, executed by `build_task_graph.js` after
-  `plan`/`task` audits;
+  `plan`/`task`/`test-spec` audits;
 - implementation: `implementation-flow`; exit audit: `doc-status`.
 
 Delegated skills own their briefing, planning, or implementation subgraphs.
@@ -133,6 +134,8 @@ Use front matter relations to preserve the document graph:
 - `implements` links a design, plan, or task to its upstream contract.
 - `derives-from` records design and planning derivation.
 - `references` records supporting documents.
+- `verifies` and `verified-by` link specs, designs, and tasks to the
+  `test-spec` documents that verify them.
 - `defers` and `deferred-by` make deferred scope explicit.
 - `changes` records added, modified, deleted, renamed, moved, and generated
   paths.
