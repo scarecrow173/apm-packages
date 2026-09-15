@@ -86,7 +86,11 @@ Responder 側の protocol: `references/responder-guide.md`。
 - Label: `handoff` に加えて state を 1 つだけ付ける。
   `handoff:needs-response`（Responder の回答待ち）または
   `handoff:needs-requester`（Requester の確認待ち）。残作業がすべて
-  response 依存の場合のみ `handoff:blocking` を追加する。
+  response 依存の場合のみ `handoff:blocking` を追加する。Issue 作成前に
+  label が repository に存在することを確認する（`gh label create`）。
+  `handoff:needs-response` がなければ Responder スキャンは handoff を
+  発見できないため、この確保に失敗した場合は handoff 自体を fail closed
+  にする。
 - 人間の plain comment も有効な response。Responder への label 操作は任意で
   あって必須ではない。
 - commit message は永続的な履歴。意図、現在の挙動、検証済み事項、未確定事項を

@@ -18,8 +18,12 @@ labeled `handoff:needs-response` and process all of them — never stop after
 handling a single one. Each Issue is an independent problem; evaluate it on
 its own evidence.
 
-If the latest round of an Issue already has an adequate response, do not post
-a duplicate — record it as already answered.
+If a responder-side response already exists after the latest Requester round —
+including a response that only requests additional information — and the
+Requester has posted no newer follow-up since, do not post a duplicate
+response.
+Record the Issue as already handled; a pending information request is
+`handoff:needs-requester` in effect even when the label could not be changed.
 
 ## Per-Issue Procedure
 

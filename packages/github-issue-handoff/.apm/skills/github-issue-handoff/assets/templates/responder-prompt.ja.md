@@ -38,7 +38,9 @@ GitHub Issue にコメントできる任意の Responder へ渡してくださ�
    具体的に質問する。
 9. 各 Issue へ回答コメントを書く。
 10. 複数 Issue がある場合は、それぞれを独立した問題として処理する。
-11. 既に最新 round へ十分な回答が存在する場合は、同じ回答を重複投稿しない。
+11. 最新の Requester round 以降に responder 側の回答（追加情報の要求だけ
+    のものも含む）が既に存在し、その後 Requester から新しい follow-up が
+    ない場合は、同じ回答を重複投稿しない。
 12. 権限がある場合は回答後に `handoff:needs-response` を外し、
     `handoff:needs-requester` を付けてもよい。ただし label 変更ができなく
     ても回答コメントは必ず行う。

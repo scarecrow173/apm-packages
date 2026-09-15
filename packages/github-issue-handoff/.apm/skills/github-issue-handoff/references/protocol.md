@@ -83,7 +83,16 @@ current repository policy. Do not silently fall back to an Issue-only handoff.
 
 ## Issue and Draft PR
 
-Create the Issue with the format in `issue-format.md`, then create the PR.
+Before creating the Issue, ensure the protocol labels exist on the
+repository: `handoff`, `handoff:needs-response`, `handoff:needs-requester`,
+and `handoff:blocking` (`gh label list`, then `gh label create` for any that
+are missing). The repository-wide Responder sweep discovers handoffs by the
+`handoff:needs-response` label — if `handoff` and `handoff:needs-response`
+cannot be created or applied, the handoff cannot be completed: stop and
+report instead of filing an undiscoverable Issue.
+
+Then create the Issue with the format in `issue-format.md`, and create the
+PR.
 
 - The PR is mandatory. An Issue without a PR is not a started handoff.
 - Create the PR as a Draft — it exists for review, not for merge yet. Follow
@@ -143,8 +152,10 @@ When resuming:
 6. update your assessment;
 7. continue, follow up, or resolve.
 
-Labels are hints for finding state — never the sole authority on whether a
-response exists.
+Labels drive Responder discovery, so keep them accurate — but never treat
+them as the sole authority on whether a response exists. A Responder without
+label permission still responds by comment; judge state from comments and
+commits.
 
 ## Evaluating Responses
 
@@ -188,7 +199,7 @@ repository state is traceable.
 | `gh` unavailable or unauthenticated | Report and stop; ask the user to install or authenticate. |
 | Repository detection failure or non-GitHub remote | Report and stop; never guess a target. |
 | Issues disabled or insufficient permissions | Report which operation failed and stop. |
-| Label setup failure | Note it on the Issue; labels are protocol hints, not the sole state authority. |
+| Label setup failure | If `handoff` / `handoff:needs-response` cannot be ensured, fail closed before creating the Issue — the Responder scan discovers work by label. Lesser label gaps may be recorded on the Issue. |
 | Branch/commit/push failure | Report the failure point; do not create the Issue. |
 | Issue creation failure | Report; do not create a dangling PR. |
 | PR creation failure | Report the Issue URL and the missing PR; the handoff is incomplete until the PR exists. |

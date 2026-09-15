@@ -16,6 +16,12 @@ Recommended label set:
 exclusive: exactly one of them should be present at a time. Never require the
 Responder to change labels — label updates on their side are optional.
 
+The Requester ensures these labels exist on the repository before creating
+the Issue (`gh label create` as needed). The repository-wide Responder scan
+discovers handoffs by `handoff:needs-response`, so at minimum `handoff` and
+`handoff:needs-response` must be applicable — otherwise the handoff fails
+closed.
+
 ## Issue Title
 
 ```text
@@ -177,8 +183,16 @@ Commit: `<latest pushed sha>`
 
 <!-- github-issue-handoff
 protocol: 1
-round: ...
+round: 20260916T045501Z-b91e02
+requester: local-agent
+branch: feature/example
+commit: def456...
+blocking: false
 -->
 ```
+
+Every round's metadata comment carries the full field set — a follow-up must
+record its own `round`, `branch`, `commit`, and `blocking` so that tooling can
+reconstruct the state of the latest round alone.
 
 Then transition the state label back to `handoff:needs-response`.

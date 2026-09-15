@@ -19,8 +19,11 @@ Responder の起動は repository-wide です。`handoff:needs-response` label �
 してはいけません。各 Issue は独立した問題であり、それぞれの証拠で評価
 します。
 
-Issue の最新 round に十分な回答が既にある場合は、同じ回答を重複投稿せず、
-回答済みとして記録します。
+最新の Requester round 以降に responder 側の回答（追加情報の要求だけを
+含むものも含む）が既に存在し、その後 Requester から新しい follow-up が
+ない場合は、再回答を投稿しないでください。その Issue は処理済みとして
+記録します。label を変更できなかった場合でも、情報待ちの回答は実質
+`handoff:needs-requester` として扱います。
 
 ## Issue ごとの手順
 
