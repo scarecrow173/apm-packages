@@ -15,6 +15,7 @@ export type GraphNode = {
   delegate?: string;
   audits?: string[];
   requiresGates?: string[];
+  commitGate?: boolean;
 };
 export type GraphEdge = {
   id: string;
@@ -54,6 +55,7 @@ const graphNodeSchema = z.object({
   delegate: z.string().min(1).optional(),
   audits: z.array(z.string().min(1)).optional(),
   requiresGates: z.array(z.string().min(1)).optional(),
+  commitGate: z.boolean().optional(),
 }).strict();
 
 const graphEdgeSchema = z.object({

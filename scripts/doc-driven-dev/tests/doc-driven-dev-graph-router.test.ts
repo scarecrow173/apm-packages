@@ -132,6 +132,7 @@ test("returns terminal status when re-entering a terminal node", () => {
     requiredAudits: [],
     blockers: [],
     taskGraph: null,
+    commitGate: false,
   });
   assert.deepEqual(
     route,
@@ -176,6 +177,7 @@ test("returns terminal status when re-entering a terminal node", () => {
     requiredAudits: ["a-audit", "z-audit"],
     blockers: ["a-blocker", "z-blocker"],
     taskGraph,
+    commitGate: false,
   });
   assert.deepEqual(hardBlockedRoute, evaluateRouteDecision(hardBlockedInput).route);
 });

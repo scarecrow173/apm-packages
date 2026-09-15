@@ -20296,7 +20296,8 @@ var graphNodeSchema = external_exports.object({
   kind: external_exports.enum(["action", "delegate", "audit", "terminal"]),
   delegate: external_exports.string().min(1).optional(),
   audits: external_exports.array(external_exports.string().min(1)).optional(),
-  requiresGates: external_exports.array(external_exports.string().min(1)).optional()
+  requiresGates: external_exports.array(external_exports.string().min(1)).optional(),
+  commitGate: external_exports.boolean().optional()
 }).strict();
 var graphEdgeSchema = external_exports.object({
   id: external_exports.string().min(1),
@@ -21420,7 +21421,8 @@ function routeResult(input, result, additionalBlockers = []) {
     delegate: result.delegate,
     requiredAudits: sortedUnique4(result.requiredAudits),
     blockers: sortedUnique4([...input.state.blockers, ...additionalBlockers]),
-    taskGraph: input.state.taskGraph
+    taskGraph: input.state.taskGraph,
+    commitGate: result.commitGate
   };
 }
 function prerequisiteBlockers(node, state) {
@@ -21476,7 +21478,8 @@ function selectedRoute(input, edge) {
     condition: edge.when,
     status: "edge",
     delegate: destination?.delegate ?? null,
-    requiredAudits: destination?.audits ?? []
+    requiredAudits: destination?.audits ?? [],
+    commitGate: destination?.commitGate === true
   });
 }
 function evaluateRouteDecision(input) {
@@ -21494,7 +21497,8 @@ function evaluateRouteDecision(input) {
       condition: "terminal",
       status: "terminal",
       delegate: node.delegate ?? null,
-      requiredAudits: node.audits ?? []
+      requiredAudits: node.audits ?? [],
+      commitGate: false
     });
     return {
       route: route2,
@@ -21516,7 +21520,8 @@ function evaluateRouteDecision(input) {
       condition: "blocked",
       status: "blocked",
       delegate: null,
-      requiredAudits: []
+      requiredAudits: [],
+      commitGate: false
     }, hardBlockers);
     return {
       route: route2,
@@ -21561,7 +21566,8 @@ function evaluateRouteDecision(input) {
       condition: "blocked",
       status: "blocked",
       delegate: null,
-      requiredAudits: []
+      requiredAudits: [],
+      commitGate: false
     }, prerequisiteFailures);
     return {
       route: route2,
@@ -21601,7 +21607,8 @@ function evaluateRouteDecision(input) {
     condition: "blocked",
     status: "blocked",
     delegate: null,
-    requiredAudits: []
+    requiredAudits: [],
+    commitGate: false
   });
   return {
     route,
