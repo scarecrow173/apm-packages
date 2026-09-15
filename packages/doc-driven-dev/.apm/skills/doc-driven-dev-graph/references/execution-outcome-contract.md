@@ -55,7 +55,7 @@ The status variant adds these required and forbidden fields:
 | --- | --- | --- |
 | `completed` | exactly one `proof.canonicalEvidence` (`path`, `id` when present, `fingerprint`) or `proof.providerIdempotency` (`provider`, `key`) | `reason`, `retry` |
 | `retry` | `retry.changedEvidence` with the changed canonical path/ID/fingerprint | `proof`, `reason` |
-| `yield` | `reason`: `approval-required`, `input-required`, `authority-required`, or `unrecoverable-blocker` | `proof`, `retry` |
+| `yield` | `reason`: `approval-required`, `input-required`, `authority-required`, `unrecoverable-blocker`, or `commit-required` | `proof`, `retry` |
 
 `evidence` records the canonical checkpoint for every outcome. A `completed`
 outcome additionally proves this particular effect: either canonical evidence
@@ -77,6 +77,7 @@ type GraphRunResult = {
     | "input-required"
     | "authority-required"
     | "unrecoverable-blocker"
+    | "commit-required"
     | "budget-exhausted"
     | "terminal"
     | "single-step-complete";
@@ -118,6 +119,7 @@ type GraphRunHandoff = {
     completedAudits: string[];
     delegateComplete: boolean;
     evidenceRecorded: boolean;
+    commitBaseline: { head: string | null; dirty: string[] } | null;
   } | null;
   hops: number;
 }
@@ -175,7 +177,7 @@ This contract renders existing semantics; it does not add workflow states.
 | `briefing-flow` | briefing gate passes | recoverable document gap | `input-required` for an unresolved user-only requirement |
 | `design-doc` | design is approved | — | `approval-required` for its designated reviewer; `input-required` for an upstream user decision |
 | `planning-flow` | approved/active plan plus linked test-spec/task evidence (or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior) | changed canonical plan/test-spec/task repair evidence | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
-| `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
+| `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `commit-required` when its slice produced changes it cannot commit within granted authority; `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
 | `doc-status` | documents are Completable | Returned with declared repair evidence | `unrecoverable-blocker` when Returned has no safe repair |
 
 ## Exact caller evaluation

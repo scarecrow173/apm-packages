@@ -29,10 +29,24 @@ For each selected edge:
 6. Dispatch only the returned delegate.
 7. If an audit or delegate explicitly requires input, approval, or authority,
    yield without claiming the edge checkpoint complete.
-8. Persist completion, gate, and follow-up evidence in canonical Markdown.
-9. Mark the edge checkpoint complete and append it to the ordered trace.
-10. Re-enter from `next` with a fresh state projection.
-11. In `single-step` mode yield; in `run-until-yield` mode repeat.
+8. When the selected edge's destination node declares `commitGate` and the
+   caller did not receive the declared `commit-waived` signal, capture the
+   worktree baseline before running audits: `head` from `git rev-parse HEAD`
+   (`null` when the repository has no commits) and sorted `dirty` lines from
+   `git status --porcelain`. Retain it as `commitBaseline` for this edge.
+9. Persist completion, gate, and follow-up evidence in canonical Markdown.
+10. Commit gate: when `commitBaseline` was captured, re-run the same two git
+    commands. The gate passes when `head` changed since baseline, or when every
+    current `dirty` entry was already present in the baseline. Otherwise yield
+    `commit-required`: record the pending edge with `evidenceRecorded` as
+    completed-so-far and `commitBaseline`, and stop without marking the
+    checkpoint complete. If git is unavailable or `cwd` is not a repository,
+    the gate cannot be evaluated; yield `authority-required` instead. A caller
+    that received the declared `commit-waived` signal skips this gate and
+    records the waiver in the run trace.
+11. Mark the edge checkpoint complete and append it to the ordered trace.
+12. Re-enter from `next` with a fresh state projection.
+13. In `single-step` mode yield; in `run-until-yield` mode repeat.
 
 Record completion, gate, and follow-up evidence by persisting those values in
 canonical Markdown.
@@ -77,6 +91,12 @@ type, scope, subject or description, body, footer, task or issue reference
 format, and conventions such as Conventional Commits remain the responsibility
 of existing Git commit tooling and repository conventions.
 
+Commit boundaries remain logical-change based and are not derived from graph
+structure. What changed is enforcement: a node may declare `commitGate`, which
+makes every edge checkpoint into that node subject to the caller-side worktree
+check above, and `commit-required` is an explicit yield reason rather than
+prose guidance.
+
 ## Effect outcome evaluation
 
 Every graph-invoked audit and delegate returns the exact `EffectOutcome` footer
@@ -108,6 +128,7 @@ effect-specific canonical input/evidence mapping is defined in
 | missing permission or irreversible external action outside granted scope | `authority-required` | Never |
 | blocked route with no declared executable repair edge | `unrecoverable-blocker` | Never |
 | hop/retry/repetition budget reached | `budget-exhausted` | Never |
+| commit-gated edge checkpoint ends with new uncommitted changes and no `commit-waived` signal | `commit-required` | Never |
 | selected edge completed and fresh state exposes another declared edge | none | Yes in `run-until-yield` |
 | audit/delegate/evidence success | none | Yes in `run-until-yield` |
 
@@ -166,6 +187,17 @@ completed loop.
   potentially irreversible effect.
 - Run counters and trace may be retained in task/thread handoff metadata; they
   are not Graph State or project authority.
+- A `commit-required` yield retains the pending edge with its
+  `commitBaseline` (`{ head, dirty }`). Resume re-evaluates the gate against
+  the same baseline; it passes once the caller or user has committed the new
+  changes (HEAD advanced) or the new dirty entries were resolved. The gate is
+  evaluated after evidence persistence, so the checkpoint evidence Markdown is
+  part of the logical change being committed.
+- `commitBaseline` is stored in `pending`; it is caller handoff metadata, not
+  Graph State.
+- Files already dirty at baseline remain the user's responsibility: a delegate
+  edit that leaves the same porcelain entry is not detected by this gate. This
+  is an accepted Phase 1 limitation; do not weaken it silently.
 
 This provides same-task crash recovery. Cross-host recovery when both the
 caller handoff and task/thread history are lost remains outside Phase 1;
