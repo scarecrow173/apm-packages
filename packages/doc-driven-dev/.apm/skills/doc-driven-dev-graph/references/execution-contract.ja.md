@@ -28,15 +28,15 @@ one-edge command のままであり、継続を所有するのは router では�
 3. terminal または blocked なら yield table を評価して停止する。
 4. 最初の implementation-flow route を選択するときに task-aware default `maxHops` を
    freeze し、その後 `maxHops` と完全な `GraphRoute` の stable fingerprint を確認する。
-5. すべての required audit を安定した順序で実行する。
-6. 返された delegate だけを dispatch する。
-7. audit または delegate が input、approval、authority を明示的に要求するなら、
-   edge checkpoint を完了したと主張せず yield する。
-8. selected edge の destination node が `commitGate` を宣言し、caller が宣言済み
+5. selected edge の destination node が `commitGate` を宣言し、caller が宣言済み
    `commit-waived` signal を受け取っていない場合、audit 実行前に worktree
    baseline を取得する。`head` は `git rev-parse HEAD`（repository に commit が
    ない場合は `null`）、`dirty` は `git status --porcelain` の sort 済み行とし、
    この edge の `commitBaseline` として保持する。
+6. すべての required audit を安定した順序で実行する。
+7. 返された delegate だけを dispatch する。
+8. audit または delegate が input、approval、authority を明示的に要求するなら、
+   edge checkpoint を完了したと主張せず yield する。
 9. completion、gate、follow-up evidence を canonical Markdown に保存する。
 10. commit gate: `commitBaseline` を取得した場合、同じ 2 つの git command を
     再実行する。baseline 以降に `head` が変化したか、現在の `dirty` entry が
@@ -89,11 +89,12 @@ tests、task status、Implementation Record、verification evidence、upstream a
 形式、Conventional Commits などの convention は、既存の Git commit tooling と
 repository convention の責務です。
 
-commit boundary は logical-change ベースのままであり、graph structure から導出
-されません。変わったのは enforcement です。node は `commitGate` を宣言でき、
-その node を destination とするすべての edge checkpoint が上記の caller-side
-worktree check の対象になり、`commit-required` は prose guidance ではなく明示的な
-yield reason となります。
+上記の rule は何を 1 commit とするかを引き続き規定し、caller-side の
+mechanism がそれを enforce します。commit boundary は logical-change ベースの
+ままであり、graph structure から導出されません。変わったのは enforcement
+です。node は `commitGate` を宣言でき、その node を destination とするすべての
+edge checkpoint が上記の caller-side worktree check の対象になり、
+`commit-required` は prose guidance ではなく明示的な yield reason となります。
 
 ## EffectOutcome の評価
 

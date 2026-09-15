@@ -25,15 +25,15 @@ For each selected edge:
 4. Freeze the task-aware default `maxHops` when the first implementation-flow route
    is selected, then check `maxHops` and the stable fingerprint of the complete
    `GraphRoute`.
-5. Run every required audit in stable order.
-6. Dispatch only the returned delegate.
-7. If an audit or delegate explicitly requires input, approval, or authority,
-   yield without claiming the edge checkpoint complete.
-8. When the selected edge's destination node declares `commitGate` and the
+5. When the selected edge's destination node declares `commitGate` and the
    caller did not receive the declared `commit-waived` signal, capture the
    worktree baseline before running audits: `head` from `git rev-parse HEAD`
    (`null` when the repository has no commits) and sorted `dirty` lines from
    `git status --porcelain`. Retain it as `commitBaseline` for this edge.
+6. Run every required audit in stable order.
+7. Dispatch only the returned delegate.
+8. If an audit or delegate explicitly requires input, approval, or authority,
+   yield without claiming the edge checkpoint complete.
 9. Persist completion, gate, and follow-up evidence in canonical Markdown.
 10. Commit gate: when `commitBaseline` was captured, re-run the same two git
     commands. The gate passes when `head` changed since baseline, or when every
@@ -91,11 +91,12 @@ type, scope, subject or description, body, footer, task or issue reference
 format, and conventions such as Conventional Commits remain the responsibility
 of existing Git commit tooling and repository conventions.
 
-Commit boundaries remain logical-change based and are not derived from graph
-structure. What changed is enforcement: a node may declare `commitGate`, which
-makes every edge checkpoint into that node subject to the caller-side worktree
-check above, and `commit-required` is an explicit yield reason rather than
-prose guidance.
+The rules above still govern what forms one commit; a caller-side mechanism
+now enforces them. Commit boundaries remain logical-change based and are not
+derived from graph structure. What changed is enforcement: a node may declare
+`commitGate`, which makes every edge checkpoint into that node subject to the
+caller-side worktree check above, and `commit-required` is an explicit yield
+reason rather than prose guidance.
 
 ## Effect outcome evaluation
 
