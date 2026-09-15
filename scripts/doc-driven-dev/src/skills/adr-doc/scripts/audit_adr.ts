@@ -11,6 +11,7 @@ const {
   relationLinks,
   validateFrontMatter,
 } = require("./lib/adr_utils.ts");
+const { isForeignDocType, parseDoc } = require("../../lib/doc_suite_utils.ts");
 
 const requiredSections = [
   "Context and Problem Statement",
@@ -67,6 +68,16 @@ function isExternalUrl(target: string): boolean {
 async function auditFile(cwd: string, relativeDir: string, file: string): Promise<Finding[]> {
   const filePath = path.join(cwd, relativeDir, file);
   const content = fs.readFileSync(filePath, "utf8");
+  const parsed = parseDoc(content);
+  if (parsed.error) {
+    return [{
+      severity: "error",
+      file,
+      code: "unparseable-front-matter",
+      message: `Front matter is not valid YAML: ${parsed.error}`,
+    }];
+  }
+  if (isForeignDocType(parsed.data.type, "adr", relativeDir)) return [];
   const findings: Finding[] = [];
   for (const issue of validateFrontMatter(content)) {
     findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${issue.path}: ${issue.message}` });
@@ -128,8 +139,12 @@ async function main(): Promise<void> {
     const cwd = path.resolve(args.cwd);
     const relativeDir = findAdrDir(cwd, args.dir);
     const files = adrFiles(path.join(cwd, relativeDir));
-    const auditFindings = (await Promise.all(files.map((file) => auditFile(cwd, relativeDir, file)))).flat();
-    const findings = auditFindings.concat(indexFindings(cwd, relativeDir, files));
+    const scopedFiles = files.filter((file) => {
+      const data = parseDoc(fs.readFileSync(path.join(cwd, relativeDir, file), "utf8")).data;
+      return !isForeignDocType(data.type, "adr", relativeDir);
+    });
+    const auditFindings = (await Promise.all(scopedFiles.map((file) => auditFile(cwd, relativeDir, file)))).flat();
+    const findings = auditFindings.concat(indexFindings(cwd, relativeDir, scopedFiles));
     const report = { directory: relativeDir, files: files.length, findings };
 
     if (args.json) {
