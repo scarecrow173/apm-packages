@@ -25,7 +25,7 @@ apm install github-issue-handoff@apm-packages
 ```yaml
 dependencies:
   apm:
-    - scarecrow173/apm-packages/packages/github-issue-handoff#v0.1.0
+    - scarecrow173/apm-packages/packages/github-issue-handoff#main
 ```
 
 配布される skill は `.apm/skills/github-issue-handoff/` 配下にあります。

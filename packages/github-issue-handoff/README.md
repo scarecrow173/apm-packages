@@ -24,7 +24,7 @@ Or reference the monorepo subdirectory directly with a version selector:
 ```yaml
 dependencies:
   apm:
-    - scarecrow173/apm-packages/packages/github-issue-handoff#v0.1.0
+    - scarecrow173/apm-packages/packages/github-issue-handoff#main
 ```
 
 The distributed skill lives under `.apm/skills/github-issue-handoff/`.
