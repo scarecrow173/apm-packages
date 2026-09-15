@@ -90,6 +90,13 @@ record them in `impl-doc` experiment logs or CI evidence instead.
 Tasks that implement the behavior should point back with their own
 `verified-by` relation to this test spec.
 
+Relation targets may be written as repo-relative paths or document IDs
+(`TSPEC-0001` style). `doc-status` audits warn when a `verifies` target
+resolves to a document type other than spec, design, or ADR
+(`test-spec-invalid-verifies-target`), and when an approved, in-progress,
+or completed plan neither links a test spec via `verified-by` nor records
+`test-spec-skip` (`plan-missing-test-spec-evidence`).
+
 ## Required Content
 
 Every test spec uses the fixed sections from the template:

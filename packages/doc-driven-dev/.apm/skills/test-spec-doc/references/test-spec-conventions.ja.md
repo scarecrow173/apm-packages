@@ -89,6 +89,13 @@ runtime の pass/fail を `status` に記録しません。テスト結果は揮
 その振る舞いを実装する task は、自身の `verified-by` relation でこの test
 spec を指し戻します。
 
+relation の対象はリポジトリ相対パスまたはドキュメント ID（`TSPEC-0001`
+形式）で記述できます。`doc-status` の監査は、`verifies` の対象が spec、
+design、ADR 以外の型に解決される場合（`test-spec-invalid-verifies-target`）、
+および approved / in-progress / completed の plan が `verified-by` で
+test spec をリンクせず `test-spec-skip` も記録していない場合
+（`plan-missing-test-spec-evidence`）に警告を報告します。
+
 ## 必須コンテンツ
 
 すべての test spec は template の固定セクションを使います。
