@@ -41,8 +41,9 @@ one-edge command のままであり、継続を所有するのは router では�
    edge checkpoint を完了したと主張せず yield する。
 9. completion、gate、follow-up evidence を canonical Markdown に保存する。
 10. commit gate: `commitBaseline` を取得した場合、同じ 2 つの git command を
-    再実行する。baseline 以降に `head` が変化したか、現在の `dirty` entry が
-    すべて baseline に存在していれば gate は通過する。それ以外は
+    再実行する。現在の `dirty` entry がすべて baseline に存在する場合に限り
+    gate は通過する。新しい dirty entry を解消せずに `head` だけが進んでも
+    gate は通過しない。それ以外は
     `commit-required` を yield する: pending edge に `evidenceRecorded` を
     completed-so-far として `commitBaseline` とともに記録し、checkpoint を
     完了と記録せず停止する。git が利用できないか `cwd` が repository でない

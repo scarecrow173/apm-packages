@@ -93,6 +93,7 @@ type GraphRunTrace = {
   delegateComplete: boolean;
   evidenceRecorded: boolean;
   checkpointComplete: boolean;
+  commitWaived: boolean;
 }
 
 type GraphRunHandoff = {
@@ -125,6 +126,9 @@ type GraphRunHandoff = {
 
 `outcomes` と `trace` は caller の順序を保持します。`GraphRunTrace` は各 complete route、
 順序付き outcomes、completed audits、delegate state、evidence/checkpoint flag を持ちます。
+`commitWaived` は、edge の destination が `commitGate` を宣言し、caller がその edge に
+対して宣言済み `commit-waived` signal を適用した場合に `true`、それ以外は `false`
+です。これが run trace に waiver を記録する仕組みです。
 `GraphRunHandoff` は resume field を保持します。すなわち `current`、mode、`maxHops`、focus、
 signals、graph path、completed edge ID、seen route fingerprint、freeze した task-budget basis、
 audit/delegate counter、completed route、trace、outcome、pending edge、hop count です。`null` は

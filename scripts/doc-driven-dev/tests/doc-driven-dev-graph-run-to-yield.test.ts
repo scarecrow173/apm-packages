@@ -109,6 +109,7 @@ type EdgeTrace = {
   delegateComplete: boolean;
   evidenceRecorded: boolean;
   checkpointComplete: boolean;
+  commitWaived: boolean;
 };
 
 type ScenarioHandoff = {
@@ -576,7 +577,9 @@ function captureBaseline(repo: string): CommitBaseline {
 }
 
 function commitGatePasses(baseline: CommitBaseline, after: CommitBaseline): boolean {
-  if (after.head !== baseline.head) return true;
+  // Strict rule: HEAD advancing alone does not pass. The gate passes only when
+  // every current porcelain entry was already present in the baseline. `head`
+  // stays in the captured baseline for trace/debugging context only.
   const baselineDirty = new Set(baseline.dirty);
   return after.dirty.every((entry) => baselineDirty.has(entry));
 }
@@ -733,6 +736,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       delegateComplete,
       evidenceRecorded,
       checkpointComplete: false,
+      commitWaived: route.commitGate === true && signals.has("commit-waived"),
     });
   };
 
@@ -906,6 +910,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       delegateComplete,
       evidenceRecorded: true,
       checkpointComplete: true,
+      commitWaived: route.commitGate === true && signals.has("commit-waived"),
     });
     seenRouteFingerprints.add(fingerprint);
     hops += 1;
@@ -2270,6 +2275,7 @@ test("yields commit-required when a gated checkpoint leaves new uncommitted chan
   assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.checkpoints.length, 1);
   assert.equal(resumed.current, "implementation");
+  assert.equal(resumed.handoff.edgeTrace.at(-1)?.commitWaived, false);
 });
 
 test("commit-waived signal skips the gate and completes the checkpoint", () => {
@@ -2288,6 +2294,7 @@ test("commit-waived signal skips the gate and completes the checkpoint", () => {
   });
   assert.equal(result.yieldReason, null);
   assert.equal(result.checkpoints.length, 1);
+  assert.equal(result.handoff.edgeTrace[0].commitWaived, true);
 });
 
 test("non-gated destinations ignore worktree state", () => {
@@ -2300,4 +2307,96 @@ test("non-gated destinations ignore worktree state", () => {
   });
   assert.equal(result.yieldReason, null);
   assert.equal(result.checkpoints.length, 1);
+});
+
+test("commit gate passes without a commit when dirty entries were already in the baseline", () => {
+  const repo = fixtureRepo();
+  // Dirty the receipt file before the edge starts so the baseline captured at
+  // edge start already contains its porcelain entry.
+  updateArtifact(repo, "docs/tasks/0001-task.md", { title: "pre-existing dirty" });
+  const result = runScenario({
+    repo,
+    current: "task-graph",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "task-graph-to-implementation",
+      applyEvidence: evidence("task-graph-to-implementation"),
+    }],
+  });
+  // No commit happened: the receipt write lands in the already-dirty file, so
+  // every current porcelain entry was present in the baseline and the strict
+  // dirty-subset rule passes. This pins the accepted baseline-dirty
+  // limitation: edits inside an already-dirty file are not detected.
+  assert.equal(result.yieldReason, null);
+  assert.equal(result.checkpoints.length, 1);
+});
+
+test("resume reuses the retained baseline instead of recapturing it", () => {
+  const repo = fixtureRepo();
+  const interrupted = runScenario({
+    repo,
+    current: "task-graph",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "task-graph-to-implementation",
+      yield: "authority-required",
+      delegate: (fixture, _signals, route) => {
+        fs.writeFileSync(path.join(fixture, "slice-output.txt"), "x", "utf8");
+        return yieldOutcome(
+          fixture,
+          route,
+          "delegate",
+          { kind: "delegate", id: route.delegate as string },
+          "authority-required",
+        );
+      },
+    }],
+  });
+  assert.equal(interrupted.yieldReason, "authority-required");
+  // The baseline captured at edge start predates slice-output.txt.
+  assert.deepEqual(interrupted.handoff.pending?.commitBaseline?.dirty, []);
+
+  // Resume without committing. Under retained-baseline semantics
+  // slice-output.txt is not in the baseline, so the gate must yield
+  // commit-required again; a recaptured baseline would wrongly include it
+  // (and the receipt write) and let the gate pass.
+  const resumed = runScenario({
+    repo,
+    current: "task-graph",
+    mode: "run-until-yield",
+    resume: interrupted.handoff,
+    steps: [{
+      expectEdge: "task-graph-to-implementation",
+      yield: "commit-required",
+      applyEvidence: evidence("task-graph-to-implementation"),
+    }],
+  });
+  assert.equal(resumed.yieldReason, "commit-required");
+  assert.equal(resumed.checkpoints.length, 0);
+  assert.deepEqual(
+    resumed.handoff.pending?.commitBaseline,
+    interrupted.handoff.pending?.commitBaseline,
+  );
+});
+
+test("a delegate-emitted commit-required yields without completing the checkpoint", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "task-graph",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "task-graph-to-implementation",
+      yield: "commit-required",
+      delegate: (fixture, _signals, route) => yieldOutcome(
+        fixture,
+        route,
+        "delegate",
+        { kind: "delegate", id: route.delegate as string },
+        "commit-required",
+      ),
+    }],
+  });
+  assert.equal(result.yieldReason, "commit-required");
+  assert.equal(result.checkpoints.length, 0);
 });
