@@ -178,7 +178,7 @@ test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
   const route = JSON.parse(source.stdout);
   assert.deepEqual(JSON.parse(generated.stdout), route);
   assert.deepEqual(Object.keys(route).sort(), [
-    "blockers", "condition", "current", "delegate", "edgeId", "graphId", "next",
+    "blockers", "commitGate", "condition", "current", "delegate", "edgeId", "graphId", "next",
     "requiredAudits", "schemaVersion", "status", "taskGraph",
   ]);
   assert.deepEqual(route, {
@@ -193,6 +193,7 @@ test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
     requiredAudits: [],
     blockers: ["bootstrap-incomplete"],
     taskGraph: null,
+    commitGate: false,
   });
 });
 
@@ -219,6 +220,7 @@ test("source and generated CLIs route a pre-design briefing chain identically", 
     requiredAudits: ["design"],
     blockers: [],
     taskGraph: null,
+    commitGate: false,
   });
 });
 
@@ -237,6 +239,7 @@ test("source and generated CLIs route an approved design through planning-flow i
       requiredAudits: ["design"],
       blockers: [],
       taskGraph: null,
+      commitGate: false,
     },
     planning: {
       schemaVersion: 2,
@@ -250,6 +253,7 @@ test("source and generated CLIs route an approved design through planning-flow i
       requiredAudits: ["design"],
       blockers: [],
       taskGraph: null,
+      commitGate: false,
     },
   };
 

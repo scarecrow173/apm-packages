@@ -44,6 +44,9 @@ test("loads the distributed graph definition with declared delegates", () => {
   assert.deepEqual(graph.nodes["task-graph"].audits, ["plan", "task", "test-spec"]);
   assert.equal(graph.nodes.implementation.delegate, "implementation-flow");
   assert.equal(graph.nodes.implementation.audits, undefined);
+  assert.equal(graph.nodes.implementation.commitGate, true);
+  assert.equal(graph.nodes.briefing.commitGate, undefined);
+  assert.ok(graph.runtimeSignals.includes("commit-waived"));
   assert.deepEqual(graph.nodes["followup-triage"].audits, ["task", "impl-record"]);
   assert.deepEqual(graph.nodes["exit-audit"].audits, ["all"]);
   assert.ok(findEdge(graph, "design", "spec-gap"));
@@ -95,6 +98,19 @@ test("rejects duplicate route selectors and priorities", () => {
     ].join("\n"),
   );
   assert.throws(() => parseGraphDefinition(duplicatePriority), /duplicate edge priority: start \+ 10/);
+});
+
+test("parses commitGate on nodes and rejects non-boolean values", () => {
+  const withGate = validFixture.replace(
+    "  done: { kind: terminal }",
+    "  done: { kind: terminal, commitGate: true }",
+  );
+  assert.equal(parseGraphDefinition(withGate).nodes.done.commitGate, true);
+  const invalid = validFixture.replace(
+    "  done: { kind: terminal }",
+    "  done: { kind: terminal, commitGate: \"yes\" }",
+  );
+  assert.throws(() => parseGraphDefinition(invalid), /commitGate/);
 });
 
 test("rejects invalid terminal and prerequisite-gate declarations", () => {

@@ -12,6 +12,7 @@ type InspectedNode = {
   kind: GraphNode["kind"];
   delegate?: string;
   audits: string[];
+  commitGate?: boolean;
 };
 
 type InspectedEdge = Pick<GraphEdge, "id" | "from" | "to" | "when" | "priority">;
@@ -31,6 +32,7 @@ export type GraphInspection = {
   referencedConditions: string[];
   delegates: Array<{ nodeId: string; delegate: string }>;
   audits: Array<{ nodeId: string; audits: string[] }>;
+  commitGateNodes: string[];
   issues: GraphInspectionIssue[];
   /** Serializable node data used by the Mermaid renderer. */
   nodes: InspectedNode[];
@@ -92,6 +94,7 @@ function renderNode(
 ): string {
   const labels = [escapeMermaidText(node.nodeId), `kind: ${escapeMermaidText(node.kind)}`];
   if (node.delegate !== undefined) labels.push(`delegate: ${escapeMermaidText(node.delegate)}`);
+  if (node.commitGate === true) labels.push("commitGate");
   if (terminalNodes.has(node.nodeId)) labels.push("terminal");
   if (node.audits.length > 0) {
     labels.push(`audits: ${node.audits.map(escapeMermaidText).join(", ")}`);
@@ -140,6 +143,7 @@ export function inspectGraphDefinition(definition: GraphDefinition): GraphInspec
       kind: node.kind,
       ...(node.delegate === undefined ? {} : { delegate: node.delegate }),
       audits: sortedStrings(node.audits ?? []),
+      ...(node.commitGate === true ? { commitGate: true } : {}),
     };
   });
   const delegates = nodes
@@ -148,6 +152,9 @@ export function inspectGraphDefinition(definition: GraphDefinition): GraphInspec
   const audits = nodes
     .filter((node) => node.audits.length > 0)
     .map(({ nodeId, audits: nodeAudits }) => ({ nodeId, audits: nodeAudits }));
+  const commitGateNodes = nodes
+    .filter((node) => node.commitGate === true)
+    .map((node) => node.nodeId);
   const edges = sortedEdges(definition.edges);
 
   const issues: GraphInspectionIssue[] = [];
@@ -180,6 +187,7 @@ export function inspectGraphDefinition(definition: GraphDefinition): GraphInspec
     referencedConditions,
     delegates,
     audits,
+    commitGateNodes,
     issues: issues.sort(issueSort),
     nodes,
     edges,
