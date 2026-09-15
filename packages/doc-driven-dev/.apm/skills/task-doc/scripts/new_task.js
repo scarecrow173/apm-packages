@@ -18586,6 +18586,39 @@ function bodyFor(type, title) {
       "- <!-- linked spec, ADR, and related docs -->"
     ].join("\n");
   }
+  if (type === "test-spec") {
+    return [
+      `# ${title}`,
+      "",
+      "## Purpose",
+      "",
+      "<!-- Why this test spec exists: the intent it preserves and when it may be retired. -->",
+      "",
+      "## Feature",
+      "",
+      "<!-- The behavior under specification, named like a Gherkin Feature. -->",
+      "",
+      "## Rules",
+      "",
+      "- <!-- Rule: an invariant or contract the feature must satisfy -->",
+      "",
+      "## Examples",
+      "",
+      "- <!-- Example: a concrete scenario that pins a rule down, optionally in Given/When/Then form -->",
+      "",
+      "## Guarantees",
+      "",
+      "- <!-- What a correct implementation must guarantee -->",
+      "",
+      "## Non-goals",
+      "",
+      "- <!-- Behavior or coverage this spec deliberately does not verify -->",
+      "",
+      "## Risk",
+      "",
+      "- <!-- What is lost or breaks if these guarantees are dropped -->"
+    ].join("\n");
+  }
   return [
     `# ${title}`,
     "",
@@ -18771,15 +18804,17 @@ function logIndexResult(result) {
 
 // src/skills/task-doc/scripts/new_task.ts
 var TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
+var TASK_DOC_VERIFIED_BY_ERROR = "TASK-DOC-GATE-002: each --verified-by target must resolve to an existing document.";
 var TASKABLE_PLAN_STATUSES = /* @__PURE__ */ new Set(["approved", "in-progress", "completed"]);
 function parseArgs(argv) {
-  const args = { blocks: [], cwd: process.cwd(), dependsOn: [] };
+  const args = { blocks: [], cwd: process.cwd(), dependsOn: [], verifiedBy: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
     else if (arg === "--plan") args.plan = argv[++i];
     else if (arg === "--depends-on") args.dependsOn.push(argv[++i]);
     else if (arg === "--blocks") args.blocks.push(argv[++i]);
+    else if (arg === "--verified-by") args.verifiedBy.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--no-index") args.noIndex = true;
@@ -18795,7 +18830,15 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--depends-on <task>] [--blocks <task>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--depends-on <task>] [--blocks <task>] [--verified-by <test-spec>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+}
+function validateVerifiedBy(cwd, targets) {
+  for (const target of targets) {
+    const resolved = import_node_path3.default.resolve(cwd, target);
+    if (!import_node_fs3.default.existsSync(resolved) || !import_node_fs3.default.statSync(resolved).isFile()) {
+      throw new Error(TASK_DOC_VERIFIED_BY_ERROR);
+    }
+  }
 }
 function validatePlanGate(cwd, planTarget) {
   if (!planTarget) return;
@@ -18821,6 +18864,7 @@ async function main() {
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = import_node_path3.default.resolve(args.cwd);
     validatePlanGate(resolvedCwd, args.plan);
+    validateVerifiedBy(resolvedCwd, args.verifiedBy);
     const linked = args.plan ? [args.plan] : [];
     const result = await createDocument("task", {
       cwd: resolvedCwd,
@@ -18832,7 +18876,8 @@ async function main() {
       relations: {
         implements: linked,
         "depends-on": [.../* @__PURE__ */ new Set([...linked, ...args.dependsOn])],
-        blocks: [...new Set(args.blocks)]
+        blocks: [...new Set(args.blocks)],
+        "verified-by": [...new Set(args.verifiedBy)]
       },
       status: args.status,
       title: args.title
