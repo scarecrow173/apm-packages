@@ -38,12 +38,13 @@ schema は現在 `1` であり、Graph Definition schema version とは独立し
 | `reachableNodes` | 宣言 edge を辿って `entry` から到達できる node。 |
 | `unreachableNodes` | `entry` から到達できない node ID。 |
 | `reachableTerminalNodes` | `entry` から到達できる terminal node。 |
+| `commitGateNodes` | `commitGate: true` を宣言する sort 済み node ID。 |
 | `unusedConditions` | unique な edge の `when` key にない宣言済み condition key。 |
 | `referencedConditions` | unique な edge の `when` key を決定的に sort したもの。 |
 | `delegates` | delegate を持つ node の `{ nodeId, delegate }` entry。 |
 | `audits` | audit 宣言を持つ node の `{ nodeId, audits }` entry。 |
 | `issues` | sort 済み inspection finding。下の issue table を参照。 |
-| `nodes` | serializable node data。`nodeId`、`kind`、optional `delegate`、sort 済み `audits`。 |
+| `nodes` | serializable node data。`nodeId`、`kind`、optional `delegate`、optional `commitGate`、sort 済み `audits`。 |
 | `edges` | serializable edge data。`id`、`from`、`to`、`when`、`priority`。 |
 
 ### Reachability は topology-only
@@ -118,8 +119,8 @@ JSON はこれらの selector を runtime projection 用に受け付けます。
 `--format mermaid` は `flowchart TD` で始まる決定的な text を返します。node 行は node
 ID で sort されます。すべての node は Mermaid syntax では決定的な `nN` alias を使い、
 元の node ID の sort 順に割り当てます。元の ID は escape 済み label に残ります。node
-label には ID と `kind`、宣言されていれば `delegate`、`terminal`、`audits` label が
-含まれます。edge 行は `from`、priority、edge ID の順で sort され、label には condition
+label には ID と `kind`、宣言されていれば `delegate`、`commitGate`、`terminal`、
+`audits` label が含まれます。edge 行は `from`、priority、edge ID の順で sort され、label には condition
 key と priority（`<condition> · p<priority>`）が含まれます。元の node、delegate、audit、
 condition text は escape され、`|` が edge label を終了させることはありません。
 

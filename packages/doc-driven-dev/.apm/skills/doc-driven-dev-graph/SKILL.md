@@ -34,9 +34,9 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
 ```
 
 The JSON result is the `GraphRoute` contract: `current`, one `next`, `edgeId`,
-`condition`, `status`, `delegate`, `requiredAudits`, `blockers`, and the
-selected `taskGraph`. Terminal and blocked results are explicit and do not
-guess a destination.
+`condition`, `status`, `delegate`, `requiredAudits`, `commitGate`, `blockers`,
+and the selected `taskGraph`. Terminal and blocked results are explicit and do
+not guess a destination.
 
 A successful transition selects exactly one declared edge. When no edge
 condition is satisfied, the router returns a fail-closed same-node blocked
@@ -107,8 +107,9 @@ budgets, trace summary, and resume rules are in
 The caller applies the complete Phase 1 yield table in
 [`references/execution-contract.md`](references/execution-contract.md): it
 yields for `terminal`, `approval-required`, `input-required`,
-`authority-required`, `unrecoverable-blocker`, or `budget-exhausted`, and
-repeats only when the table permits automatic continuation. A task marked
+`authority-required`, `unrecoverable-blocker`, `budget-exhausted`, or
+`commit-required`, and repeats only when the table permits automatic
+continuation. A task marked
 `wont-do` never satisfies a dependency; unresolved tasks remain blocked in the
 Dynamic Task Graph.
 
@@ -124,6 +125,13 @@ projection. A task is an implementation scope boundary and may contain one or
 more commits. The canonical boundary policy is in
 [`references/execution-contract.md`](references/execution-contract.md); commit
 message conventions remain owned by existing Git tooling and repository rules.
+
+Enforcement is declared, not advisory: a node may declare `commitGate: true`.
+`GraphRoute.commitGate` carries the declaration to the caller, which captures a
+worktree baseline at edge start and yields `commit-required` when the gated
+checkpoint would complete with new uncommitted changes. The canonical graph
+declares the gate on `implementation`. The declared `commit-waived` runtime
+signal is the only bypass and is recorded in the run trace.
 
 ## Persistence boundary
 
@@ -198,9 +206,9 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 Nodes and edges are sorted stably. Every node uses a deterministic `nN` alias
 in Mermaid syntax, assigned by sorted original node ID; the original ID remains
 in the escaped label. Node labels include node ID and kind, with delegate,
-terminal, and audit labels when declared; edge labels include the condition key
-and priority. Mermaid rendering is text-only and has no routing or persistence
-side effect. Mermaid is definition-only and rejects `--cwd`, `--focus`, and
+commitGate, terminal, and audit labels when declared; edge labels include the
+condition key and priority. Mermaid rendering is text-only and has no routing
+or persistence side effect. Mermaid is definition-only and rejects `--cwd`, `--focus`, and
 `--task-dir`. Original node, delegate, audit, and condition text is escaped;
 `|` cannot terminate an edge label.
 

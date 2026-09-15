@@ -28,14 +28,31 @@ one-edge command のままであり、継続を所有するのは router では�
 3. terminal または blocked なら yield table を評価して停止する。
 4. 最初の implementation-flow route を選択するときに task-aware default `maxHops` を
    freeze し、その後 `maxHops` と完全な `GraphRoute` の stable fingerprint を確認する。
-5. すべての required audit を安定した順序で実行する。
-6. 返された delegate だけを dispatch する。
-7. audit または delegate が input、approval、authority を明示的に要求するなら、
+5. selected edge の destination node が `commitGate` を宣言し、caller が宣言済み
+   `commit-waived` signal を受け取っていない場合、audit 実行前に worktree
+   baseline を取得する。`head` は `git rev-parse HEAD`（repository に commit が
+   ない場合は `null`）、`dirty` は `git status --porcelain` の sort 済み行とし、
+   この edge の `commitBaseline` として保持する。取得した `commitBaseline` は
+   pending edge に保存され、`commit-required` だけでなくすべての mid-edge
+   yield をまたいで保持する。
+6. すべての required audit を安定した順序で実行する。
+7. 返された delegate だけを dispatch する。
+8. audit または delegate が input、approval、authority を明示的に要求するなら、
    edge checkpoint を完了したと主張せず yield する。
-8. completion、gate、follow-up evidence を canonical Markdown に保存する。
-9. edge checkpoint を完了として記録し、ordered trace に追加する。
-10. fresh な state projection で `next` から再入力する。
-11. `single-step` mode では yield し、`run-until-yield` mode では繰り返す。
+9. completion、gate、follow-up evidence を canonical Markdown に保存する。
+10. commit gate: `commitBaseline` を取得した場合、同じ 2 つの git command を
+    再実行する。現在の `dirty` entry がすべて baseline に存在する場合に限り
+    gate は通過する。新しい dirty entry を解消せずに `head` だけが進んでも
+    gate は通過しない。それ以外は
+    `commit-required` を yield する: pending edge に `evidenceRecorded` を
+    completed-so-far として `commitBaseline` とともに記録し、checkpoint を
+    完了と記録せず停止する。git が利用できないか `cwd` が repository でない
+    場合、gate を評価できないため `authority-required` を yield する。宣言済み
+    `commit-waived` signal を受け取った caller はこの gate を skip し、run
+    trace に waiver を記録する。
+11. edge checkpoint を完了として記録し、ordered trace に追加する。
+12. fresh な state projection で `next` から再入力する。
+13. `single-step` mode では yield し、`run-until-yield` mode では繰り返す。
 
 completion、gate、follow-up evidence を canonical Markdown に保存して記録します。
 
@@ -75,6 +92,13 @@ tests、task status、Implementation Record、verification evidence、upstream a
 形式、Conventional Commits などの convention は、既存の Git commit tooling と
 repository convention の責務です。
 
+上記の rule は何を 1 commit とするかを引き続き規定し、caller-side の
+mechanism がそれを enforce します。commit boundary は logical-change ベースの
+ままであり、graph structure から導出されません。変わったのは enforcement
+です。node は `commitGate` を宣言でき、その node を destination とするすべての
+edge checkpoint が上記の caller-side worktree check の対象になり、
+`commit-required` は prose guidance ではなく明示的な yield reason となります。
+
 ## EffectOutcome の評価
 
 graph から呼び出された audit と delegate はすべて
@@ -103,6 +127,7 @@ adapter evidence が missing または malformed なら `authority-required` を
 | 許可の欠落、または granted scope 外の不可逆な external action | `authority-required` | Never |
 | 実行可能な repair edge の宣言がない blocked route | `unrecoverable-blocker` | Never |
 | hop/retry/repetition budget に到達 | `budget-exhausted` | Never |
+| commit-gated edge checkpoint が新しい uncommitted change で終了し、`commit-waived` signal がない | `commit-required` | Never |
 | selected edge が完了し、fresh state が別の declared edge を公開 | none | Yes in `run-until-yield` |
 | audit/delegate/evidence が成功 | none | Yes in `run-until-yield` |
 
@@ -156,6 +181,21 @@ resume しても、完了した loop と誤分類しません。
   `authority-required` を yield する。
 - run counter と trace は task/thread handoff metadata に保持してよいが、Graph
   State または project authority ではない。
+- `commit-required` yield は pending edge とその `commitBaseline`
+  （`{ head, dirty }`）を保持する。resume は同じ baseline に対して gate を
+  再評価し、caller または user が新しい変更を commit して（HEAD が進んで）
+  いるか、新しい dirty entry が解消された時点で通過する。gate は evidence
+  persistence の後に評価されるため、checkpoint evidence Markdown も commit
+  対象の logical change の一部となる。
+- resume では保持した `commitBaseline` を再利用し、再取得はしない。これにより
+  以前の mid-edge yield より前に生じた変更も同じ baseline に対して測定される。
+  `commitBaseline` を持たない pending edge（gate が適用外、または
+  `commit-waived` を受信済み）は resume 時にも何も取得しない。
+- `commitBaseline` は `pending` に保持される。Graph State ではなく caller
+  handoff metadata である。
+- baseline 時点で dirty だった file は引き続き user の責任である。同じ
+  porcelain entry のまま残る delegate edit はこの gate では検出されない。
+  これは Phase 1 で受容済みの制限であり、暗黙に弱めてはいけない。
 
 これは same-task crash recovery を提供します。caller handoff と task/thread
 history の両方を失った cross-host recovery は Phase 1 の対象外です。canonical
