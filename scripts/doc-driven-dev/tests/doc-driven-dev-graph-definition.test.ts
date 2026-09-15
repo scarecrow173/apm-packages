@@ -1,10 +1,10 @@
 import type { GraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const test = require("node:test");
-const { loadGraphDefinition, parseGraphDefinition } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { loadGraphDefinition, parseGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 
 const validFixture = `
 schemaVersion: 2

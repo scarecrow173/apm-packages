@@ -1,9 +1,9 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
 
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/migrate_docs.ts");
 const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
@@ -12,7 +12,7 @@ function tempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-graph-migrate-"));
 }
 
-function runMigrate(cwd, args = []) {
+function runMigrate(cwd: any, args: string[] = []) {
   const result = spawnSync(
     process.execPath,
     [tsxCli, sourceCli, ...args],

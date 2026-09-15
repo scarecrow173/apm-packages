@@ -1,13 +1,10 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const test = require("node:test");
-const {
-  resolveSharedCatalogPath,
-  resolveFlowProfilePath,
-} = require("../../../src/skills/skill-discovery-protocol/scripts/lib/artifact_paths.ts");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
+import { resolveSharedCatalogPath, resolveFlowProfilePath } from "../../../src/skills/skill-discovery-protocol/scripts/lib/artifact_paths";
 
 const skillRoot = path.resolve(__dirname, "../../../../../packages/doc-driven-dev/.apm/skills");
 const sdpScripts = path.join(skillRoot, "skill-discovery-protocol", "scripts");

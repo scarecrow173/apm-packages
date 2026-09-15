@@ -1,11 +1,11 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const test = require("node:test");
-const matter = require("gray-matter");
-const { resolveGraphPath } = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
+import matter from "gray-matter";
+import { resolveGraphPath } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_cli";
 
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
 const inspectCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts");

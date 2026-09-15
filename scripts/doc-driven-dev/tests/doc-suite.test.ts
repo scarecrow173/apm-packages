@@ -1,10 +1,10 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const matter = require("gray-matter");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import matter from "gray-matter";
+import test from "node:test";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
@@ -37,7 +37,7 @@ function repoWithApprovedPlanAndTasks() {
   return repo;
 }
 
-function runScript(skill, name, args, options = {}) {
+function runScript(skill: any, name: any, args: any, options: { cwd?: string } = {}) {
   const result = spawnSync(
     process.execPath,
     [path.join(skillRoot, skill, "scripts", name), ...args],
@@ -55,7 +55,7 @@ function runScript(skill, name, args, options = {}) {
   };
 }
 
-function assertConcepts(text, concepts, label) {
+function assertConcepts(text: any, concepts: any, label: any) {
   const normalized = text.replace(/\s+/g, " ");
 
   for (const concept of concepts) {
@@ -63,8 +63,8 @@ function assertConcepts(text, concepts, label) {
   }
 }
 
-function entriesUnder(directory) {
-  const entries = [];
+function entriesUnder(directory: any): string[] {
+  const entries: string[] = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     if (["node_modules", ".git"].includes(entry.name)) continue;
     const absolute = path.join(directory, entry.name);
@@ -74,15 +74,15 @@ function entriesUnder(directory) {
   return entries;
 }
 
-function markdownSection(text, heading) {
+function markdownSection(text: any, heading: any) {
   const lines = text.split(/\r?\n/);
   const start = lines.indexOf(heading);
   assert.notEqual(start, -1, `missing Markdown section: ${heading}`);
-  const end = lines.findIndex((line, index) => index > start && /^## /.test(line));
+  const end = lines.findIndex((line: any, index: any) => index > start && /^## /.test(line));
   return lines.slice(start + 1, end === -1 ? lines.length : end).join("\n");
 }
 
-function numberedSteps(section) {
+function numberedSteps(section: any) {
   return [...section.matchAll(/^(\d+)\.\s/gm)].map((match) => Number(match[1]));
 }
 
@@ -528,12 +528,12 @@ test("doc-status audits required front matter, status, indexes, relations, and s
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "invalid-status"), true);
-  assert.equal(report.findings.some((finding) => finding.code === "missing-index"), true);
-  assert.equal(report.findings.some((finding) => finding.message.includes("docs/missing-implementation.md")), true);
-  assert.equal(report.findings.some((finding) => finding.message.includes("docs/missing-reference.md")), true);
-  assert.equal(report.findings.some((finding) => finding.message.includes("docs/missing-deferred.md")), true);
-  assert.equal(report.findings.some((finding) => finding.message.includes("https://example.com/source")), false);
+  assert.equal(report.findings.some((finding: any) => finding.code === "invalid-status"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-index"), true);
+  assert.equal(report.findings.some((finding: any) => finding.message.includes("docs/missing-implementation.md")), true);
+  assert.equal(report.findings.some((finding: any) => finding.message.includes("docs/missing-reference.md")), true);
+  assert.equal(report.findings.some((finding: any) => finding.message.includes("docs/missing-deferred.md")), true);
+  assert.equal(report.findings.some((finding: any) => finding.message.includes("https://example.com/source")), false);
 });
 
 test("doc-status audits specs inside subdirectories", () => {
@@ -565,8 +565,8 @@ test("doc-status audits specs inside subdirectories", () => {
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
   assert.equal(report.files, 1, "subdirectory file should be counted");
-  assert.equal(report.findings.some((f) => f.code === "invalid-status"), true, "invalid-status from subdir file");
-  assert.equal(report.findings.some((f) => f.message.includes("docs/missing-in-subdir.md")), true, "broken link in subdir file");
+  assert.equal(report.findings.some((f: any) => f.code === "invalid-status"), true, "invalid-status from subdir file");
+  assert.equal(report.findings.some((f: any) => f.message.includes("docs/missing-in-subdir.md")), true, "broken link in subdir file");
 });
 
 test("graph entrypoint publishes one-edge runtime contract", () => {

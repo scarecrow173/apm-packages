@@ -1,14 +1,14 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const sourceSkillRoot = path.join(repoRoot, "scripts", "doc-driven-dev", "src", "skills");
 const publishedSkillRoot = path.join(repoRoot, "packages", "doc-driven-dev", ".apm", "skills");
 const testsRoot = path.join(repoRoot, "scripts", "doc-driven-dev", "tests");
 
-function walk(dir) {
+function walk(dir: any): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   return entries.flatMap((entry) => {
     const fullPath = path.join(dir, entry.name);
@@ -19,7 +19,7 @@ function walk(dir) {
   });
 }
 
-function toPosix(value) {
+function toPosix(value: any) {
   return value.split(path.sep).join("/");
 }
 
@@ -51,12 +51,12 @@ function listSkillTestDirectories() {
 test("source script entrypoints only exist for published package skills", () => {
   const publishedSkills = listPublishedSkills();
   const entryPoints = walk(sourceSkillRoot)
-    .filter((filePath) => filePath.endsWith(".ts"))
-    .filter((filePath) => toPosix(path.relative(sourceSkillRoot, filePath)).includes("/scripts/"))
-    .filter((filePath) => !toPosix(path.relative(sourceSkillRoot, filePath)).includes("/scripts/lib/"));
+    .filter((filePath: any) => filePath.endsWith(".ts"))
+    .filter((filePath: any) => toPosix(path.relative(sourceSkillRoot, filePath)).includes("/scripts/"))
+    .filter((filePath: any) => !toPosix(path.relative(sourceSkillRoot, filePath)).includes("/scripts/lib/"));
 
   const orphaned = entryPoints
-    .map((filePath) => {
+    .map((filePath: any) => {
       const rel = toPosix(path.relative(sourceSkillRoot, filePath));
       const skill = rel.split("/")[0];
       return publishedSkills.has(skill) ? null : rel;
@@ -71,7 +71,7 @@ test("source script entrypoints only exist for published package skills", () => 
 });
 
 test("tests only reference published package scripts that exist", () => {
-  const testFiles = walk(testsRoot).filter((filePath) => filePath.endsWith(".test.ts"));
+  const testFiles = walk(testsRoot).filter((filePath: any) => filePath.endsWith(".test.ts"));
   const missing = [];
 
   for (const filePath of testFiles) {

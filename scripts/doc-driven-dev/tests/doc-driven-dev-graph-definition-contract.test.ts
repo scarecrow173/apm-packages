@@ -1,12 +1,9 @@
 import type { GraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 
-const assert = require("node:assert/strict");
-const path = require("node:path");
-const test = require("node:test");
-const {
-  loadGraphDefinition,
-  parseGraphDefinition,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts");
+import assert from "node:assert/strict";
+import path from "node:path";
+import test from "node:test";
+import { loadGraphDefinition, parseGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 
 function findEdge(definition: GraphDefinition, from: string, when: string): GraphDefinition["edges"][number] | undefined {
   return definition.edges.find((edge) => edge.from === from && edge.when === when);
