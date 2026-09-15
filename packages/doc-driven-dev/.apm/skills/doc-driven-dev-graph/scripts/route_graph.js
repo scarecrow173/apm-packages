@@ -21208,6 +21208,7 @@ var CANONICAL_TARGETS2 = [
   "docs/designs",
   "docs/plans",
   "docs/tasks",
+  "docs/test-specs",
   "docs/adr",
   "docs/impl/ir",
   "docs/impl/exp"
