@@ -18801,6 +18801,24 @@ function logIndexResult(result) {
     console.log(`Skipped index update (--no-index): ${result.index}`);
   }
 }
+function resolveDocumentReference(cwd, target, fromDir) {
+  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+    const candidate = import_node_path2.default.resolve(base, target);
+    if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return candidate;
+  }
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = import_node_path2.default.join(cwd, dirName);
+      if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) continue;
+      for (const file2 of docFiles(dir)) {
+        const fullPath = import_node_path2.default.join(dir, file2);
+        const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === target) return fullPath;
+      }
+    }
+  }
+  return null;
+}
 
 // src/skills/task-doc/scripts/new_task.ts
 var TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
@@ -18834,8 +18852,7 @@ function usage() {
 }
 function validateVerifiedBy(cwd, targets) {
   for (const target of targets) {
-    const resolved = import_node_path3.default.resolve(cwd, target);
-    if (!import_node_fs3.default.existsSync(resolved) || !import_node_fs3.default.statSync(resolved).isFile()) {
+    if (!resolveDocumentReference(cwd, target)) {
       throw new Error(TASK_DOC_VERIFIED_BY_ERROR);
     }
   }

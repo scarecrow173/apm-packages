@@ -18801,16 +18801,36 @@ function logIndexResult(result) {
     console.log(`Skipped index update (--no-index): ${result.index}`);
   }
 }
+function resolveDocumentReference(cwd, target, fromDir) {
+  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+    const candidate = import_node_path2.default.resolve(base, target);
+    if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return candidate;
+  }
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = import_node_path2.default.join(cwd, dirName);
+      if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) continue;
+      for (const file2 of docFiles(dir)) {
+        const fullPath = import_node_path2.default.join(dir, file2);
+        const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === target) return fullPath;
+      }
+    }
+  }
+  return null;
+}
 
 // src/skills/plan-doc/scripts/new_plan.ts
 var PLAN_DOC_GATE_ERROR = 'PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".';
+var PLAN_DOC_GATE_002_PREFIX = "PLAN-DOC-GATE-002: --verified-by target does not resolve to an existing document";
 function parseArgs(argv) {
-  const args = { cwd: process.cwd(), designTargets: [] };
+  const args = { cwd: process.cwd(), designTargets: [], verifiedByTargets: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
     else if (arg === "--implements") args.implementsTarget = argv[++i];
     else if (arg === "--design") args.designTargets.push(argv[++i]);
+    else if (arg === "--verified-by") args.verifiedByTargets.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--no-index") args.noIndex = true;
@@ -18826,7 +18846,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--verified-by <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
 }
 function resolveFromCwd(cwd, target) {
   return import_node_path3.default.resolve(cwd, target);
@@ -18865,6 +18885,11 @@ async function main() {
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = import_node_path3.default.resolve(args.cwd);
     const designTargets = validateDesignGate(resolvedCwd, args.designTargets);
+    for (const target of args.verifiedByTargets) {
+      if (!resolveDocumentReference(resolvedCwd, target)) {
+        throw new Error(`${PLAN_DOC_GATE_002_PREFIX}: ${target}`);
+      }
+    }
     const linked = args.implementsTarget ? [args.implementsTarget] : [];
     const result = await createDocument("plan", {
       cwd: resolvedCwd,
@@ -18875,7 +18900,8 @@ async function main() {
       noIndex: args.noIndex,
       relations: {
         implements: linked,
-        "derives-from": [...linked, ...designTargets]
+        "derives-from": [...linked, ...designTargets],
+        "verified-by": args.verifiedByTargets
       },
       status: args.status,
       title: args.title

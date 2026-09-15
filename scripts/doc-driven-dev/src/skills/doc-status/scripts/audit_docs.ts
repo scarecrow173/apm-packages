@@ -2,7 +2,7 @@
 "use strict";
 
 import path from "node:path";
-import { auditDocuments } from "../../lib/doc_suite_utils";
+import { auditDocuments, docTypes } from "../../lib/doc_suite_utils";
 
 type CliArgs = {
   cwd: string;
@@ -27,7 +27,22 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec [--dir <path>] [--json]";
+  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all [--dir <path>] [--json]";
+}
+
+async function auditAll(cwd: string, explicitDir?: string) {
+  const merged = { directory: ".", files: 0, findings: [] as Array<{ severity: string; file: string | null; code: string; message: string }> };
+  for (const type of docTypes) {
+    const report = await auditDocuments(cwd, type, explicitDir);
+    merged.files += report.files;
+    for (const finding of report.findings) {
+      merged.findings.push({
+        ...finding,
+        file: finding.file ? `${report.directory}/${finding.file}` : report.directory,
+      });
+    }
+  }
+  return merged;
 }
 
 async function main(): Promise<void> {
@@ -38,7 +53,8 @@ async function main(): Promise<void> {
       return;
     }
     if (!args.type) throw new Error("Missing required --type");
-    const report = await auditDocuments(path.resolve(args.cwd), args.type, args.dir);
+    const cwd = path.resolve(args.cwd);
+    const report = args.type === "all" ? await auditAll(cwd, args.dir) : await auditDocuments(cwd, args.type, args.dir);
     if (args.json) {
       console.log(JSON.stringify(report, null, 2));
       return;
@@ -50,7 +66,9 @@ async function main(): Promise<void> {
       return;
     }
     for (const finding of report.findings) {
-      const location = finding.file ? `${report.directory}/${finding.file}` : report.directory;
+      const location = finding.file
+        ? report.directory === "." ? finding.file : `${report.directory}/${finding.file}`
+        : report.directory;
       console.log(`[${finding.severity}] ${location}: ${finding.message}`);
     }
   } catch (error: unknown) {

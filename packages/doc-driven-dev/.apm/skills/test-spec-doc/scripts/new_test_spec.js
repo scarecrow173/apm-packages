@@ -3418,7 +3418,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs4 = require("fs");
+    var fs3 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3502,7 +3502,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs4.readFileSync(filepath, "utf8");
+      const str2 = fs3.readFileSync(filepath, "utf8");
       const file2 = matter2(str2, options2);
       file2.path = filepath;
       return file2;
@@ -3532,7 +3532,6 @@ var require_gray_matter = __commonJS({
 
 // src/skills/test-spec-doc/scripts/new_test_spec.ts
 var import_node_path3 = __toESM(require("node:path"));
-var import_node_fs3 = __toESM(require("node:fs"));
 
 // src/skills/lib/doc_suite_utils.ts
 var import_node_fs2 = __toESM(require("node:fs"));
@@ -18800,6 +18799,24 @@ function logIndexResult(result) {
     console.log(`Skipped index update (--no-index): ${result.index}`);
   }
 }
+function resolveDocumentReference(cwd, target, fromDir) {
+  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+    const candidate = import_node_path2.default.resolve(base, target);
+    if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return candidate;
+  }
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = import_node_path2.default.join(cwd, dirName);
+      if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) continue;
+      for (const file2 of docFiles(dir)) {
+        const fullPath = import_node_path2.default.join(dir, file2);
+        const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === target) return fullPath;
+      }
+    }
+  }
+  return null;
+}
 
 // src/skills/test-spec-doc/scripts/new_test_spec.ts
 var TEST_SPEC_DOC_GATE_ERROR = "TEST-SPEC-DOC-GATE-001: at least one --verifies target resolving to an existing document is required before creating a test spec.";
@@ -18830,8 +18847,7 @@ function usage() {
 function validateVerifiesGate(cwd, verifies) {
   if (verifies.length === 0) throw new Error(TEST_SPEC_DOC_GATE_ERROR);
   for (const target of verifies) {
-    const resolved = import_node_path3.default.resolve(cwd, target);
-    if (!import_node_fs3.default.existsSync(resolved) || !import_node_fs3.default.statSync(resolved).isFile()) {
+    if (!resolveDocumentReference(cwd, target)) {
       throw new Error(TEST_SPEC_DOC_GATE_ERROR);
     }
   }

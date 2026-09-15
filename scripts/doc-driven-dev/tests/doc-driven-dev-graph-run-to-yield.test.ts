@@ -555,7 +555,7 @@ function fixtureRepo(options: {
   }, "# Graph\n");
   writeArtifact(repo, "docs/plans/0001-graph.md", {
     id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
-    relations: { "derives-from": ["DESIGN-0001"] },
+    relations: { "derives-from": ["DESIGN-0001"], "verified-by": ["docs/test-specs/0001-graph.md"] },
   }, "# Graph\n");
   writeArtifact(repo, "docs/test-specs/0001-graph.md", {
     id: "TSPEC-0001", type: "test-spec", status: "approved", title: "Graph",

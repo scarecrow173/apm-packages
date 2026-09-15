@@ -4,9 +4,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
+import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
 
 const PLAN_DOC_GATE_ERROR = "PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: \"approved\".";
+const PLAN_DOC_GATE_002_PREFIX = "PLAN-DOC-GATE-002: --verified-by target does not resolve to an existing document";
 
 type CliArgs = {
   cwd: string;
@@ -20,15 +21,17 @@ type CliArgs = {
   implementsTarget?: string;
   status?: string;
   title?: string;
+  verifiedByTargets: string[];
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { cwd: process.cwd(), designTargets: [] };
+  const args: CliArgs = { cwd: process.cwd(), designTargets: [], verifiedByTargets: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
     else if (arg === "--implements") args.implementsTarget = argv[++i];
     else if (arg === "--design") args.designTargets.push(argv[++i]);
+    else if (arg === "--verified-by") args.verifiedByTargets.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--no-index") args.noIndex = true;
@@ -45,7 +48,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--verified-by <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
 }
 
 function resolveFromCwd(cwd: string, target: string): string {
@@ -95,6 +98,11 @@ async function main(): Promise<void> {
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = path.resolve(args.cwd);
     const designTargets = validateDesignGate(resolvedCwd, args.designTargets);
+    for (const target of args.verifiedByTargets) {
+      if (!resolveDocumentReference(resolvedCwd, target)) {
+        throw new Error(`${PLAN_DOC_GATE_002_PREFIX}: ${target}`);
+      }
+    }
     const linked = args.implementsTarget ? [args.implementsTarget] : [];
     const result = await createDocument("plan", {
       cwd: resolvedCwd,
@@ -106,6 +114,7 @@ async function main(): Promise<void> {
       relations: {
         implements: linked,
         "derives-from": [...linked, ...designTargets],
+        "verified-by": args.verifiedByTargets,
       },
       status: args.status,
       title: args.title,

@@ -548,34 +548,66 @@ test("doc-status flags test-specs without verifies and plans without test-spec e
   const repo = tempRepo();
   fs.mkdirSync(path.join(repo, "docs/test-specs"), { recursive: true });
   fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/tasks"), { recursive: true });
   fs.writeFileSync(path.join(repo, "docs/test-specs/README.md"), "# test-specs\n", "utf8");
   fs.writeFileSync(path.join(repo, "docs/plans/README.md"), "# plans\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/specs/README.md"), "# specs\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/tasks/README.md"), "# tasks\n", "utf8");
 
   const writeDoc = (relativePath: string, data: Record<string, unknown>) => {
     fs.writeFileSync(path.join(repo, relativePath), matter.stringify("# Doc\n", data), "utf8");
   };
+  const baseDoc = {
+    created: "2026-09-15", updated: "2026-09-15", owners: [],
+  };
 
+  writeDoc("docs/specs/0001-checkout.md", {
+    ...baseDoc, id: "SPEC-0001", type: "spec", status: "approved", title: "Checkout", relations: {},
+  });
+  writeDoc("docs/tasks/0001-implement.md", {
+    ...baseDoc, id: "TASK-0001", type: "task", status: "proposed", title: "Implement", relations: {},
+  });
   writeDoc("docs/test-specs/0001-empty.md", {
-    id: "TSPEC-0001", type: "test-spec", status: "approved", title: "Empty",
-    created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+    ...baseDoc, id: "TSPEC-0001", type: "test-spec", status: "approved", title: "Empty", relations: {},
+  });
+  writeDoc("docs/test-specs/0002-scalar-verifies.md", {
+    ...baseDoc, id: "TSPEC-0002", type: "test-spec", status: "approved", title: "Scalar",
+    relations: { verifies: "docs/specs/0001-checkout.md" },
+  });
+  writeDoc("docs/test-specs/0003-id-verifies.md", {
+    ...baseDoc, id: "TSPEC-0003", type: "test-spec", status: "approved", title: "IdRef",
+    relations: { verifies: ["SPEC-0001"] },
+  });
+  writeDoc("docs/test-specs/0004-task-verifies.md", {
+    ...baseDoc, id: "TSPEC-0004", type: "test-spec", status: "approved", title: "TaskTarget",
+    relations: { verifies: ["docs/tasks/0001-implement.md"] },
   });
   writeDoc("docs/plans/0001-bare.md", {
-    id: "PLAN-0001", type: "plan", status: "approved", title: "Bare",
-    created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+    ...baseDoc, id: "PLAN-0001", type: "plan", status: "approved", title: "Bare", relations: {},
   });
   writeDoc("docs/plans/0002-skipped.md", {
-    id: "PLAN-0002", type: "plan", status: "approved", title: "Skipped",
-    created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+    ...baseDoc, id: "PLAN-0002", type: "plan", status: "approved", title: "Skipped", relations: {},
     "test-spec-skip": "no verifiable behavior in this plan",
   });
   writeDoc("docs/plans/0003-linked.md", {
-    id: "PLAN-0003", type: "plan", status: "approved", title: "Linked",
-    created: "2026-09-15", updated: "2026-09-15", owners: [],
+    ...baseDoc, id: "PLAN-0003", type: "plan", status: "approved", title: "Linked",
     relations: { "verified-by": ["docs/test-specs/0001-empty.md"] },
   });
   writeDoc("docs/plans/0004-draft.md", {
-    id: "PLAN-0004", type: "plan", status: "draft", title: "Draft",
-    created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+    ...baseDoc, id: "PLAN-0004", type: "plan", status: "draft", title: "Draft", relations: {},
+  });
+  writeDoc("docs/plans/0005-linked-id.md", {
+    ...baseDoc, id: "PLAN-0005", type: "plan", status: "approved", title: "LinkedId",
+    relations: { "verified-by": ["TSPEC-0001"] },
+  });
+  writeDoc("docs/plans/0006-linked-scalar.md", {
+    ...baseDoc, id: "PLAN-0006", type: "plan", status: "approved", title: "LinkedScalar",
+    relations: { "verified-by": "docs/test-specs/0001-empty.md" },
+  });
+  writeDoc("docs/plans/0007-linked-spec.md", {
+    ...baseDoc, id: "PLAN-0007", type: "plan", status: "approved", title: "LinkedSpec",
+    relations: { "verified-by": ["docs/specs/0001-checkout.md"] },
   });
 
   const specAudit = runScript("doc-status", "audit_docs.js", ["--type", "test-spec", "--json"], { cwd: repo });
@@ -585,6 +617,10 @@ test("doc-status flags test-specs without verifies and plans without test-spec e
     specReport.findings.some((finding: any) => finding.code === "test-spec-missing-verifies" && finding.file === "0001-empty.md"),
     true,
   );
+  const invalidTargets = specReport.findings
+    .filter((finding: any) => finding.code === "test-spec-invalid-verifies-target")
+    .map((finding: any) => finding.file);
+  assert.deepEqual(invalidTargets, ["0004-task-verifies.md"]);
 
   const planAudit = runScript("doc-status", "audit_docs.js", ["--type", "plan", "--json"], { cwd: repo });
   assert.equal(planAudit.status, 0, planAudit.stderr);
@@ -592,7 +628,17 @@ test("doc-status flags test-specs without verifies and plans without test-spec e
   const flagged = planReport.findings
     .filter((finding: any) => finding.code === "plan-missing-test-spec-evidence")
     .map((finding: any) => finding.file);
-  assert.deepEqual(flagged, ["0001-bare.md"]);
+  assert.deepEqual(flagged, ["0001-bare.md", "0007-linked-spec.md"]);
+
+  const allAudit = runScript("doc-status", "audit_docs.js", ["--type", "all", "--json"], { cwd: repo });
+  assert.equal(allAudit.status, 0, allAudit.stderr);
+  const allReport = JSON.parse(allAudit.stdout);
+  assert.equal(
+    allReport.findings.some(
+      (finding: any) => finding.code === "test-spec-missing-verifies" && finding.file === "docs/test-specs/0001-empty.md",
+    ),
+    true,
+  );
 });
 
 test("doc-status audits required front matter, status, indexes, relations, and sources", () => {
