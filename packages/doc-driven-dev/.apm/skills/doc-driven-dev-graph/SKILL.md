@@ -125,6 +125,13 @@ more commits. The canonical boundary policy is in
 [`references/execution-contract.md`](references/execution-contract.md); commit
 message conventions remain owned by existing Git tooling and repository rules.
 
+Enforcement is declared, not advisory: a node may declare `commitGate: true`.
+`GraphRoute.commitGate` carries the declaration to the caller, which captures a
+worktree baseline at edge start and yields `commit-required` when the gated
+checkpoint would complete with new uncommitted changes. The canonical graph
+declares the gate on `implementation`. The declared `commit-waived` runtime
+signal is the only bypass and is recorded in the run trace.
+
 ## Persistence boundary
 
 Markdown artifacts are durable history and status authority. Graph State and
@@ -198,7 +205,8 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 Nodes and edges are sorted stably. Every node uses a deterministic `nN` alias
 in Mermaid syntax, assigned by sorted original node ID; the original ID remains
 in the escaped label. Node labels include node ID and kind, with delegate,
-terminal, and audit labels when declared; edge labels include the condition key
+commitGate, terminal, and audit labels when declared; edge labels include the
+condition key
 and priority. Mermaid rendering is text-only and has no routing or persistence
 side effect. Mermaid is definition-only and rejects `--cwd`, `--focus`, and
 `--task-dir`. Original node, delegate, audit, and condition text is escaped;

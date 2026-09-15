@@ -119,6 +119,13 @@ Graph node、edge、phase、checkpoint、artifact type、Task Graph projection �
 [`references/execution-contract.ja.md`](references/execution-contract.ja.md) に置き、
 commit message convention は既存の Git tooling と repository rule に委譲します。
 
+enforcement は advisory ではなく宣言です。node は `commitGate: true` を宣言
+できます。`GraphRoute.commitGate` は宣言を caller に伝え、caller は edge 開始時に
+worktree baseline を取得し、gated checkpoint が未 commit の新規変更を残して
+完了しようとしたとき `commit-required` を yield します。canonical graph は
+`implementation` にこの gate を宣言しています。宣言済み `commit-waived`
+runtime signal が唯一の bypass であり、run trace に記録されます。
+
 ## Persistence boundary
 
 Markdown artifact が durable history と status の authority です。Graph State
@@ -192,7 +199,8 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 node と edge は安定した順序で sort されます。すべての node は Mermaid syntax では
 決定的な `nN` alias を使い、元の node ID の sort 順に割り当てます。元の ID は escape
 済み label に残ります。node label には node ID と kind、宣言されている場合は delegate、
-terminal、audit label が含まれ、edge label には condition key と priority が含まれます。
+commitGate、terminal、audit label が含まれ、edge label には condition key と
+priority が含まれます。
 Mermaid rendering は text-only で、routing や persistence への副作用はありません。
 Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir` を拒否します。
 元の node、delegate、audit、condition text は escape され、`|` が edge label を終了
