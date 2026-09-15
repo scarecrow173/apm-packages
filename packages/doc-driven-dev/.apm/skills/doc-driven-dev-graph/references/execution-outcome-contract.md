@@ -95,6 +95,7 @@ type GraphRunTrace = {
   delegateComplete: boolean;
   evidenceRecorded: boolean;
   checkpointComplete: boolean;
+  commitWaived: boolean;
 }
 
 type GraphRunHandoff = {
@@ -127,7 +128,11 @@ type GraphRunHandoff = {
 
 `outcomes` and `trace` preserve caller order. `GraphRunTrace` holds each
 complete route, its ordered outcomes, completed audits, delegate state, and
-evidence/checkpoint flags. `GraphRunHandoff` retains the resume fields:
+evidence/checkpoint flags. `commitWaived` is `true` when the edge's
+destination declares `commitGate` and the caller applied the declared
+`commit-waived` signal for that edge, and `false` otherwise; this is how a
+waived gate is recorded in the run trace. `GraphRunHandoff` retains the
+resume fields:
 `current`, mode, `maxHops`, focus, signals, graph path, completed edge IDs,
 seen route fingerprints, the frozen task-budget basis, audit/delegate counters,
 completed routes, trace, outcomes, pending edge, and hop count. `null` means

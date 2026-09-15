@@ -38,11 +38,11 @@ For each selected edge:
    yield without claiming the edge checkpoint complete.
 9. Persist completion, gate, and follow-up evidence in canonical Markdown.
 10. Commit gate: when `commitBaseline` was captured, re-run the same two git
-    commands. The gate passes when `head` changed since baseline, or when every
-    current `dirty` entry was already present in the baseline. Otherwise yield
-    `commit-required`: record the pending edge with `evidenceRecorded` as
-    completed-so-far and `commitBaseline`, and stop without marking the
-    checkpoint complete. If git is unavailable or `cwd` is not a repository,
+    commands. The gate passes only when every current `dirty` entry was already
+    present in the baseline; `head` advancing without resolving the new dirty
+    entries does not pass the gate. Otherwise yield `commit-required`: record
+    the pending edge with `evidenceRecorded` as completed-so-far and
+    `commitBaseline`, and stop without marking the checkpoint complete. If git is unavailable or `cwd` is not a repository,
     the gate cannot be evaluated; yield `authority-required` instead. A caller
     that received the declared `commit-waived` signal skips this gate and
     records the waiver in the run trace.
