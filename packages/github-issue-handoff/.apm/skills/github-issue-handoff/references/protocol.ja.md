@@ -83,7 +83,15 @@ repository policy、ユーザーの指示、branch protection が push を禁止
 
 ## Issue と Draft PR
 
-`issue-format.md` の形式で Issue を作成し、続けて PR を作成します。
+Issue を作成する前に、protocol の label が repository に存在することを確認
+します: `handoff`、`handoff:needs-response`、`handoff:needs-requester`、
+`handoff:blocking`（`gh label list` で確認し、不足分を `gh label create`
+で作成）。repository-wide の Responder スキャンは
+`handoff:needs-response` label で handoff を発見します。`handoff` と
+`handoff:needs-response` を作成・付与できない場合、handoff は完了できま
+せん。発見されない Issue を作る代わりに、停止して報告してください。
+
+続けて `issue-format.md` の形式で Issue を作成し、PR を作成します。
 
 - PR は必須です。PR のない Issue は開始された handoff ではありません。
 - PR は Draft として作成します。merge ではなく review のために存在します。
@@ -143,8 +151,10 @@ follow-up 後は state label を `handoff:needs-requester` から
 6. assessment を更新する。
 7. 続行、follow-up、または resolve する。
 
-label は state を探すための手掛かりであり、response の有無を判定する唯一の
-権威ではありません。
+label は Responder が handoff を発見する仕組みなので正確に保ちます。
+ただし、response の有無を判定する唯一の権威として扱ってはいけません。
+label 権限のない Responder もコメントで回答します。state は comment と
+commit から判断してください。
 
 ## 回答の評価
 
@@ -186,7 +196,7 @@ Issue を close する前に確認します: 問いが解決済み、implementat
 | `gh` がない・未認証 | 報告して停止し、install または認証をユーザーへ依頼します。 |
 | repository 検出失敗・非 GitHub remote | 報告して停止。対象を推測しません。 |
 | Issues 無効・権限不足 | 失敗した操作を報告して停止します。 |
-| label 設定の失敗 | Issue にその旨を記録。label は protocol の手掛かりであり、唯一の state 権威ではありません。 |
+| label 設定の失敗 | `handoff` / `handoff:needs-response` を確保できない場合は Issue 作成前に fail closed します。Responder スキャンは label で発見するためです。それ以外の label 不備は Issue に記録しても構いません。 |
 | branch / commit / push の失敗 | 失敗箇所を報告し、Issue は作成しません。 |
 | Issue 作成の失敗 | 報告。PR だけを残しません。 |
 | PR 作成の失敗 | Issue URL と PR 未作成である旨を報告。PR ができるまで handoff は未完了です。 |

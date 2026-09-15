@@ -38,7 +38,9 @@ For each Issue:
    instead of guessing.
 9. Write a response comment on the Issue.
 10. When several Issues match, handle each as an independent problem.
-11. If the latest round already has an adequate response, do not post a
+11. If a responder-side response already exists after the latest Requester
+    round — including a response that only requests additional information —
+    and the Requester has posted no newer follow-up since, do not post a
     duplicate.
 12. If you have permission, you may remove `handoff:needs-response` and add
     `handoff:needs-requester`. Even if you cannot change labels, always post

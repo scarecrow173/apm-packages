@@ -89,7 +89,10 @@ Responder-side protocol: `references/responder-guide.md`.
 - Labels: `handoff` plus exactly one state —
   `handoff:needs-response` (awaiting Responder) or
   `handoff:needs-requester` (awaiting Requester); add `handoff:blocking`
-  only when all remaining work is response-dependent.
+  only when all remaining work is response-dependent. Ensure the labels
+  exist on the repository before the Issue (`gh label create`) — without
+  `handoff:needs-response` the Responder sweep cannot discover the
+  handoff, so a failure there fails the handoff closed.
 - Plain human comments are valid responses. Responder label edits are
   optional, never required.
 - Commit messages are permanent history: state intent, current behavior,

@@ -108,6 +108,61 @@ test("issue-format.md defines the Issue body contract and metadata comment", () 
   );
 });
 
+test("every metadata comment example carries the full round field set", () => {
+  const format = read("references/issue-format.md");
+  const blocks = format.match(/<!-- github-issue-handoff[\s\S]*?-->/g) ?? [];
+  assert.ok(
+    blocks.length >= 2,
+    "expected metadata examples for the issue and the follow-up round",
+  );
+  for (const [i, block] of blocks.entries()) {
+    for (const field of [
+      "protocol:",
+      "round:",
+      "branch:",
+      "commit:",
+      "blocking:",
+    ]) {
+      assert.ok(
+        block.includes(field),
+        `metadata block #${i} is missing "${field}"`,
+      );
+    }
+  }
+});
+
+test("requester bootstraps discovery labels or fails closed", () => {
+  const protocol = read("references/protocol.md").replace(/\s+/g, " ");
+  assert.match(protocol, /gh label/, "label bootstrap command not documented");
+  assert.match(
+    protocol,
+    /cannot be completed|fail closed/i,
+    "fail-closed behavior for missing discovery labels not documented",
+  );
+});
+
+test("responder dedup also covers requests for additional information", () => {
+  for (const rel of [
+    "assets/templates/responder-prompt.md",
+    "references/responder-guide.md",
+  ]) {
+    const text = read(rel).replace(/\s+/g, " ");
+    assert.match(
+      text,
+      /additional information/i,
+      `${rel}: dedup must cover info-request responses`,
+    );
+    assert.match(
+      text,
+      /follow-?up/i,
+      `${rel}: dedup must be keyed to newer requester follow-ups`,
+    );
+  }
+  const ja = read("assets/templates/responder-prompt.ja.md");
+  assert.match(ja, /追加情報/);
+  assert.match(ja, /follow-?up/i);
+});
+
 test("responder-guide.md describes the repository-wide responder protocol", () => {
   const guide = read("references/responder-guide.md");
   concepts(

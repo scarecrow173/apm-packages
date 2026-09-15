@@ -75,6 +75,26 @@ test("package manifest declares github-issue-handoff with .apm includes", () => 
   const text = fs.readFileSync(path.join(pkgRoot, "apm.yml"), "utf8");
   assert.match(text, /^name: github-issue-handoff$/m);
   assert.match(text, /^includes:\s*\r?\n\s+- \.apm\//m);
+  assert.doesNotMatch(
+    text,
+    /^  (test|lint-md):/m,
+    "manifest scripts must not reference the repo-only pnpm workspace",
+  );
+});
+
+test("maintainer docs run repo-managed tools through mise exec", () => {
+  for (const rel of [
+    "AGENTS.md",
+    "AGENTS.ja.md",
+    "README.md",
+    "README.ja.md",
+  ]) {
+    const text = fs.readFileSync(path.join(pkgRoot, rel), "utf8");
+    assert.ok(
+      text.includes("mise exec -- pnpm --dir scripts/github-issue-handoff"),
+      `${rel}: validation commands must go through mise exec`,
+    );
+  }
 });
 
 test("root apm.yml registers package in devDependencies and marketplace", () => {

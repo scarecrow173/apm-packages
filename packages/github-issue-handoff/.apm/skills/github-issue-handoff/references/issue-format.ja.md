@@ -16,6 +16,12 @@
 どちらか一方だけが存在します。Responder に label 変更を必須要求しません。
 Responder 側の label 更新は任意です。
 
+Requester は Issue 作成前にこれらの label が repository に存在することを
+確認します（必要に応じて `gh label create`）。repository-wide の
+Responder スキャンは `handoff:needs-response` で handoff を発見するため、
+最低限 `handoff` と `handoff:needs-response` を付与できなければ handoff は
+fail closed です。
+
 ## Issue タイトル
 
 ```text
@@ -177,8 +183,16 @@ Commit: `<latest pushed sha>`
 
 <!-- github-issue-handoff
 protocol: 1
-round: ...
+round: 20260916T045501Z-b91e02
+requester: local-agent
+branch: feature/example
+commit: def456...
+blocking: false
 -->
 ```
+
+各 round の metadata コメントには常に全フィールドを含めます。follow-up は
+必ず自身の `round`、`branch`、`commit`、`blocking` を記録し、tooling が
+最新 round だけから状態を復元できるようにします。
 
 その後、state label を `handoff:needs-response` へ戻します。
