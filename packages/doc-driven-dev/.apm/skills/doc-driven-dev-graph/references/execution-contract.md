@@ -29,7 +29,9 @@ For each selected edge:
    caller did not receive the declared `commit-waived` signal, capture the
    worktree baseline before running audits: `head` from `git rev-parse HEAD`
    (`null` when the repository has no commits) and sorted `dirty` lines from
-   `git status --porcelain`. Retain it as `commitBaseline` for this edge.
+   `git status --porcelain`. Retain it as `commitBaseline` for this edge; once
+   captured it is stored on the pending edge and retained across any mid-edge
+   yield, not only `commit-required`.
 6. Run every required audit in stable order.
 7. Dispatch only the returned delegate.
 8. If an audit or delegate explicitly requires input, approval, or authority,
@@ -194,6 +196,10 @@ completed loop.
   changes (HEAD advanced) or the new dirty entries were resolved. The gate is
   evaluated after evidence persistence, so the checkpoint evidence Markdown is
   part of the logical change being committed.
+- On resume the retained `commitBaseline` is reused, never recaptured, so
+  changes made before an earlier mid-edge yield are still measured against it.
+  A pending edge without a `commitBaseline` — the gate was not applicable or
+  `commit-waived` was received — captures nothing on resume.
 - `commitBaseline` is stored in `pending`; it is caller handoff metadata, not
   Graph State.
 - Files already dirty at baseline remain the user's responsibility: a delegate
