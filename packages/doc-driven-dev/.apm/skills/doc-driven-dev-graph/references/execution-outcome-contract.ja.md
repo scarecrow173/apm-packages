@@ -55,7 +55,7 @@ status variant ごとの required / forbidden field は次のとおりです。
 | --- | --- | --- |
 | `completed` | `proof.canonicalEvidence`（`path`、存在する場合は `id`、`fingerprint`）または `proof.providerIdempotency`（`provider`、`key`）のどちらか 1 つ | `reason`、`retry` |
 | `retry` | 変更された canonical path/ID/fingerprint を持つ `retry.changedEvidence` | `proof`、`reason` |
-| `yield` | `reason`: `approval-required`、`input-required`、`authority-required`、`unrecoverable-blocker` のいずれか | `proof`、`retry` |
+| `yield` | `reason`: `approval-required`、`input-required`、`authority-required`、`unrecoverable-blocker`、`commit-required` のいずれか | `proof`、`retry` |
 
 `evidence` はすべての outcome の canonical checkpoint を記録します。`completed`
 outcome は加えて、この effect 自体を証明します。canonical evidence または external
@@ -75,6 +75,7 @@ type GraphRunResult = {
     | "input-required"
     | "authority-required"
     | "unrecoverable-blocker"
+    | "commit-required"
     | "budget-exhausted"
     | "terminal"
     | "single-step-complete";
@@ -116,6 +117,7 @@ type GraphRunHandoff = {
     completedAudits: string[];
     delegateComplete: boolean;
     evidenceRecorded: boolean;
+    commitBaseline: { head: string | null; dirty: string[] } | null;
   } | null;
   hops: number;
 }
@@ -169,7 +171,7 @@ fingerprint は使用前に current canonical content と照合して resolve �
 | `briefing-flow` | briefing gate が通過する | recoverable document gap | unresolved user-only requirement の `input-required` |
 | `design-doc` | design が approved になる | — | designated reviewer を待つ `approval-required`、upstream user decision がない `input-required` |
 | `planning-flow` | approved/active plan と linked test-spec/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） | changed canonical plan/test-spec/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
-| `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
+| `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | granted authority の範囲で commit できない変更を slice が生成した場合の `commit-required`、permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `doc-status` | documents が Completable になる | declared repair evidence を伴う Returned | safe repair のない Returned の `unrecoverable-blocker` |
 
 ## 正確な caller evaluation

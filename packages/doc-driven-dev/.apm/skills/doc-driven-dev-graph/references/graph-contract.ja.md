@@ -14,6 +14,11 @@ definition は `schemaVersion: 2`、安定した `id`、`entry` node ID、任意
   省略時は空配列です。
 - condition は `signal`、`gate`、`task-graph` predicate のいずれかです。
 - node は `action`、`delegate`、`audit`、`terminal` のいずれかです。
+- node は `commitGate: true` を宣言できます。その node を destination とする
+  すべての edge は [execution-contract.ja.md](execution-contract.ja.md) で
+  定義する caller-side commit gate の対象になります。この flag は commit
+  boundary ではなく enforcement を宣言します。commit boundary は
+  logical-change ベースのままです。
 - edge は一意な ID、既知の endpoint、宣言された condition key、source node
   ごとに一意な priority を持ちます。
 - terminal node に outgoing edge はありません。terminal 以外の node には
@@ -53,3 +58,4 @@ definition の `kind: signal` condition が参照する値でなければなり�
 | `requiredAudits` | 選択先 node の `audits` 宣言を sort して投影した audit。blocked route または選択先に宣言がない場合は空。 |
 | `blockers` | sort 済み fail-closed state blocker。node の `requiresGates` が未達の場合は、安定した `required-gate:<gate>` blocker と各 gate の失敗理由も含め、前提 evidence を可視化する。 |
 | `taskGraph` | 選択 Task Graph projection。なければ `null`。 |
+| `commitGate` | 選択先 node が `commitGate` を宣言した場合は `true`。terminal/blocked route では `false`。 |

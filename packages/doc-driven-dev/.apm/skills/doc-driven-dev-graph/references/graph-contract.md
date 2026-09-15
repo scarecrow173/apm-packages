@@ -14,6 +14,10 @@ optional `runtimeSignals`, and named `conditions`, `nodes`, and `edges`:
   it defaults to an empty list.
 - Conditions are `signal`, `gate`, or `task-graph` predicates.
 - Nodes are `action`, `delegate`, `audit`, or `terminal`.
+- A node may declare `commitGate: true`; every edge whose destination is that
+  node is subject to the caller-side commit gate defined in
+  [execution-contract.md](execution-contract.md). The flag declares enforcement,
+  not a commit boundary: commit boundaries remain logical-change based.
 - Edges have unique IDs, known endpoints, a declared condition key, and a
   unique priority per source node.
 - A terminal node has no outgoing edges. Every non-terminal node has at least
@@ -54,3 +58,4 @@ The stable JSON object contains exactly:
 | `requiredAudits` | Sorted `audits` declared on the selected destination node (empty for blocked routes or when the destination declares none). |
 | `blockers` | Sorted fail-closed state blockers. When a node's declared `requiresGates` is unmet, this also includes a stable `required-gate:<gate>` blocker and each failed gate reason so prerequisite evidence remains visible. |
 | `taskGraph` | Selected Task Graph projection, or `null`. |
+| `commitGate` | `true` when the selected destination declares `commitGate`; `false` for terminal/blocked routes. |
