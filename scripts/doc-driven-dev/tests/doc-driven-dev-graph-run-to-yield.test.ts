@@ -20,13 +20,14 @@ type YieldReason =
   | "authority-required"
   | "unrecoverable-blocker"
   | "budget-exhausted"
+  | "commit-required"
   | "terminal"
   | "single-step-complete";
 
 type ScenarioMode = "single-step" | "run-until-yield";
 
 type EffectYieldReason = Extract<YieldReason,
-  "approval-required" | "input-required" | "authority-required" | "unrecoverable-blocker">;
+  "approval-required" | "input-required" | "authority-required" | "unrecoverable-blocker" | "commit-required">;
 
 type CanonicalReference = {
   path: string;
@@ -89,12 +90,15 @@ type ScenarioStep = {
   observeOnly?: boolean;
 };
 
+type CommitBaseline = { head: string | null; dirty: string[] };
+
 type PendingEdge = {
   route: GraphRoute;
   outcomes: EffectOutcome[];
   completedAudits: string[];
   delegateComplete: boolean;
   evidenceRecorded: boolean;
+  commitBaseline: CommitBaseline | null;
 };
 
 type EdgeTrace = {
@@ -426,7 +430,7 @@ function validateEffectOutcome(
   } else {
     assert.equal("proof" in outcome, false, "yield outcome must not include proof");
     assert.equal("retry" in outcome, false, "yield outcome must not include retry");
-    assert.ok(["approval-required", "input-required", "authority-required", "unrecoverable-blocker"].includes(outcome.reason));
+    assert.ok(["approval-required", "input-required", "authority-required", "unrecoverable-blocker", "commit-required"].includes(outcome.reason));
   }
 }
 
@@ -533,6 +537,50 @@ function evidence(
   };
 }
 
+function committedEvidence(
+  edgeId: string,
+  mutate?: (repo: string, signals: Set<string>) => void,
+): (repo: string, signals: Set<string>) => void {
+  return (repo, signals) => {
+    mutate?.(repo, signals);
+    persistEvidence(repo, edgeId);
+    commitAll(repo);
+  };
+}
+
+function git(repo: string, args: string[]): string {
+  const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout.trim();
+}
+
+function gitInit(repo: string): void {
+  git(repo, ["init", "-q"]);
+  git(repo, ["add", "-A"]);
+  git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "baseline"]);
+}
+
+function commitAll(repo: string): void {
+  git(repo, ["add", "-A"]);
+  git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "checkpoint"]);
+}
+
+function captureBaseline(repo: string): CommitBaseline {
+  const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" });
+  const status = spawnSync("git", ["status", "--porcelain"], { cwd: repo, encoding: "utf8" });
+  if (status.status !== 0) throw new Error(`git status failed: ${status.stderr}`);
+  return {
+    head: head.status === 0 ? head.stdout.trim() : null,
+    dirty: status.stdout.split("\n").filter((line) => line.length > 0).sort(),
+  };
+}
+
+function commitGatePasses(baseline: CommitBaseline, after: CommitBaseline): boolean {
+  if (after.head !== baseline.head) return true;
+  const baselineDirty = new Set(baseline.dirty);
+  return after.dirty.every((entry) => baselineDirty.has(entry));
+}
+
 function fixtureRepo(options: {
   taskStatuses?: TaskStatus[];
   dependsOn?: string[][];
@@ -580,6 +628,7 @@ function fixtureRepo(options: {
       relations: { "derives-from": ["DESIGN-0001"] },
     }, "# Other\n");
   }
+  gitInit(repo);
   return repo;
 }
 
@@ -639,6 +688,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     completedAudits: [...options.resume.pending.completedAudits],
     delegateComplete: options.resume.pending.delegateComplete,
     evidenceRecorded: options.resume.pending.evidenceRecorded,
+    commitBaseline: options.resume.pending.commitBaseline ?? null,
   } : null;
   let projectCalls = 0;
 
@@ -658,6 +708,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     route: GraphRoute,
     edgeOutcomes: EffectOutcome[],
     evidenceRecorded: boolean,
+    commitBaseline: CommitBaseline | null = null,
   ) => {
     const completedAudits = edgeOutcomes
       .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed" && outcome.stage === "audit")
@@ -672,6 +723,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       completedAudits,
       delegateComplete,
       evidenceRecorded,
+      commitBaseline,
     };
     recordTrace(edgeTrace, {
       route,
@@ -745,6 +797,9 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       }
     }
 
+    const commitBaseline = resumingPending?.commitBaseline
+      ?? (route.commitGate && !signals.has("commit-waived") ? captureBaseline(options.repo) : null);
+
     const edgeOutcomes = [...(resumingPending?.outcomes ?? [])];
     const completedAudits = new Set(edgeOutcomes
       .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed" && outcome.stage === "audit")
@@ -761,7 +816,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       persistOutcome(options.repo, outcome);
       const evaluation = evaluateEffectOutcome(outcome);
       if (evaluation === "retry") {
-        savePending(route, edgeOutcomes, false);
+        savePending(route, edgeOutcomes, false, commitBaseline);
         if (index + 1 < options.steps.length) {
           events.push("project");
           state = project();
@@ -771,7 +826,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       }
       if (evaluation) {
         yieldReason = evaluation;
-        savePending(route, edgeOutcomes, false);
+        savePending(route, edgeOutcomes, false, commitBaseline);
         expectYield(step, yieldReason);
         break stepLoop;
       }
@@ -793,7 +848,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       persistOutcome(options.repo, outcome);
       const evaluation = evaluateEffectOutcome(outcome);
       if (evaluation === "retry") {
-        savePending(route, edgeOutcomes, false);
+        savePending(route, edgeOutcomes, false, commitBaseline);
         if (index + 1 < options.steps.length) {
           events.push("project");
           state = project();
@@ -803,7 +858,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       }
       if (evaluation) {
         yieldReason = evaluation;
-        savePending(route, edgeOutcomes, false);
+        savePending(route, edgeOutcomes, false, commitBaseline);
         expectYield(step, yieldReason);
         break stepLoop;
       }
@@ -815,7 +870,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     if (!evidenceRecorded) {
       if (!step.applyEvidence) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false);
+        savePending(route, edgeOutcomes, false, commitBaseline);
         expectYield(step, yieldReason);
         break;
       }
@@ -825,12 +880,21 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
         && evidenceReceipts(options.repo).filter((receipt) => receipt.edgeId === route.edgeId).length > evidenceBefore;
       if (!evidenceRecorded) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false);
+        savePending(route, edgeOutcomes, false, commitBaseline);
         expectYield(step, yieldReason);
         break;
       }
     }
     events.push(`evidence:${route.edgeId}`);
+    if (commitBaseline && !signals.has("commit-waived")) {
+      const after = captureBaseline(options.repo);
+      if (!commitGatePasses(commitBaseline, after)) {
+        yieldReason = "commit-required";
+        savePending(route, edgeOutcomes, true, commitBaseline);
+        expectYield(step, yieldReason);
+        break;
+      }
+    }
     pending = null;
     checkpoints.push(route);
     completedEdges.push(route.edgeId as string);
@@ -988,13 +1052,13 @@ test("observes terminal after the migration path reaches the derived task budget
       { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
       {
         expectEdge: "task-graph-to-implementation",
-        applyEvidence: evidence("task-graph-to-implementation", (fixture) => {
+        applyEvidence: committedEvidence("task-graph-to-implementation", (fixture) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
         }),
       },
       {
         expectEdge: "implementation-retry",
-        applyEvidence: evidence("implementation-retry", (fixture, signals) => {
+        applyEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           updateArtifact(fixture, "docs/tasks/0002-task.md", { status: "done" });
           signals.add("implementation-verified");
         }),
@@ -1203,7 +1267,7 @@ test("freezes focused task budget across resume and refreshes it only for a new 
     mode: "single-step",
     steps: [{
       expectEdge: "task-graph-to-active-implementation",
-      applyEvidence: evidence("task-graph-to-active-implementation"),
+      applyEvidence: committedEvidence("task-graph-to-active-implementation"),
     }],
   });
   assert.equal(first.handoff.taskBudgetCount, 3);
@@ -1217,7 +1281,7 @@ test("freezes focused task budget across resume and refreshes it only for a new 
     resume: first.handoff,
     steps: [{
       expectEdge: "implementation-retry",
-      applyEvidence: evidence("implementation-retry"),
+      applyEvidence: committedEvidence("implementation-retry"),
     }],
   });
   assert.equal(resumed.handoff.taskBudgetCount, 3);
@@ -1229,7 +1293,7 @@ test("freezes focused task budget across resume and refreshes it only for a new 
     mode: "single-step",
     steps: [{
       expectEdge: "implementation-retry",
-      applyEvidence: evidence("implementation-retry"),
+      applyEvidence: committedEvidence("implementation-retry"),
     }],
   });
   assert.equal(nextRun.handoff.taskBudgetCount, 4);
@@ -1245,12 +1309,12 @@ test("preserves a frozen zero task budget across same-run additions and resume",
     steps: [
       {
         expectEdge: "implementation-retry",
-        applyEvidence: evidence("implementation-retry", (fixture) => {
+        applyEvidence: committedEvidence("implementation-retry", (fixture) => {
           addTask(fixture, 2);
           addTask(fixture, 3);
         }),
       },
-      { expectEdge: "implementation-retry", applyEvidence: evidence("implementation-retry") },
+      { expectEdge: "implementation-retry", applyEvidence: committedEvidence("implementation-retry") },
     ],
   });
   assert.equal(result.handoff.taskBudgetCount, 0);
@@ -1262,7 +1326,7 @@ test("preserves a frozen zero task budget across same-run additions and resume",
     current: "implementation",
     mode: "run-until-yield",
     resume: result.handoff,
-    steps: [{ expectEdge: "implementation-retry", applyEvidence: evidence("implementation-retry") }],
+    steps: [{ expectEdge: "implementation-retry", applyEvidence: committedEvidence("implementation-retry") }],
   });
   assert.equal(resumed.handoff.taskBudgetCount, 0);
   assert.equal(resumed.handoff.maxHops, 10);
@@ -1277,7 +1341,7 @@ test("continues implementation retry only after re-projection", () => {
     steps: [
       {
         expectEdge: "implementation-retry",
-        applyEvidence: evidence("implementation-retry", (fixture, signals) => {
+        applyEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
           signals.add("implementation-verified");
           signals.add("followup-terminal");
@@ -1305,13 +1369,13 @@ test("continues implementation retry when the Task Graph advances to the next ru
     steps: [
       {
         expectEdge: "implementation-retry",
-        applyEvidence: evidence("implementation-retry", (fixture) => {
+        applyEvidence: committedEvidence("implementation-retry", (fixture) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
         }),
       },
       {
         expectEdge: "implementation-retry",
-        applyEvidence: evidence("implementation-retry", (fixture, signals) => {
+        applyEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           updateArtifact(fixture, "docs/tasks/0002-task.md", { status: "done" });
           signals.add("implementation-verified");
           signals.add("followup-terminal");
@@ -1453,7 +1517,7 @@ test("stops an unchanged self-loop on its repeated complete-route fingerprint", 
     current: "implementation",
     mode: "run-until-yield",
     steps: [
-      { expectEdge: "implementation-retry", applyEvidence: evidence("implementation-retry") },
+      { expectEdge: "implementation-retry", applyEvidence: committedEvidence("implementation-retry") },
       { expectEdge: "implementation-retry", yield: "budget-exhausted" },
     ],
   });
@@ -1907,7 +1971,7 @@ test("resumes a completed irreversible effect only with a provider idempotency r
     current: "implementation",
     mode: "run-until-yield",
     resume: first.handoff,
-    steps: [{ expectEdge: "implementation-retry", applyEvidence: evidence("implementation-retry") }],
+    steps: [{ expectEdge: "implementation-retry", applyEvidence: committedEvidence("implementation-retry") }],
   });
   assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.delegateCounts["implementation-flow"], 1);
@@ -2169,4 +2233,71 @@ test("fails closed when build_task_graph has no selected Task Graph plan", () =>
     () => effectInputPaths({ taskGraph: null } as unknown as GraphRoute, { kind: "delegate", id: "build_task_graph" }),
     /Missing selected Task Graph plan/,
   );
+});
+
+test("yields commit-required when a gated checkpoint leaves new uncommitted changes", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "task-graph",
+    mode: "run-until-yield",
+    steps: [{
+      expectEdge: "task-graph-to-implementation",
+      yield: "commit-required",
+      applyEvidence: evidence("task-graph-to-implementation", (fixture) => {
+        // A new untracked file plus the persisted receipt leave uncommitted
+        // changes without invalidating the stored delegate outcome.
+        fs.writeFileSync(path.join(fixture, "slice-output.txt"), "implemented slice\n", "utf8");
+      }),
+    }],
+  });
+  assert.equal(result.yieldReason, "commit-required");
+  assert.equal(result.checkpoints.length, 0);
+  assert.equal(result.handoff.pending?.route.edgeId, "task-graph-to-implementation");
+  assert.equal(result.handoff.pending?.evidenceRecorded, true);
+  assert.ok(result.handoff.pending?.commitBaseline);
+
+  commitAll(repo);
+  const resumed = runScenario({
+    repo,
+    current: "task-graph",
+    mode: "run-until-yield",
+    resume: result.handoff,
+    steps: [{ expectEdge: "task-graph-to-implementation" }],
+  });
+  // Resume re-enters the same edge; the retained baseline is reused and the
+  // gate passes once HEAD advanced, completing the checkpoint.
+  assert.equal(resumed.yieldReason, null);
+  assert.equal(resumed.checkpoints.length, 1);
+  assert.equal(resumed.current, "implementation");
+});
+
+test("commit-waived signal skips the gate and completes the checkpoint", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "task-graph",
+    mode: "run-until-yield",
+    signals: ["commit-waived"],
+    steps: [{
+      expectEdge: "task-graph-to-implementation",
+      applyEvidence: evidence("task-graph-to-implementation", (fixture) => {
+        updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+      }),
+    }],
+  });
+  assert.equal(result.yieldReason, null);
+  assert.equal(result.checkpoints.length, 1);
+});
+
+test("non-gated destinations ignore worktree state", () => {
+  const repo = fixtureRepo();
+  const result = runScenario({
+    repo,
+    current: "probe",
+    mode: "run-until-yield",
+    steps: [{ expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") }],
+  });
+  assert.equal(result.yieldReason, null);
+  assert.equal(result.checkpoints.length, 1);
 });
