@@ -27,7 +27,6 @@ export type LayerableAdapterSlot = {
 };
 
 export type AdapterSlot = ExclusiveAdapterSlot | LayerableAdapterSlot;
-};
 
 export type TaxonomyEntry = {
   id: string;
