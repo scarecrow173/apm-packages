@@ -29,7 +29,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/list_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr [--status <status>] [--dir <path>] [--json]";
+  return "Usage: node scripts/list_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec [--status <status>] [--dir <path>] [--json]";
 }
 
 async function main(): Promise<void> {

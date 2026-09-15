@@ -35,7 +35,7 @@ const changeFields = [
   "generated",
 ] as const;
 
-const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr"] as const;
+const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"] as const;
 
 type DocType = typeof docTypes[number];
 type RelationField = typeof relationFields[number];
@@ -191,6 +191,14 @@ const configs: Record<DocType, DocConfig> = {
     statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
     type: "task",
   },
+  "test-spec": {
+    defaultStatus: "draft",
+    dir: "docs/test-specs",
+    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    idPrefix: "TSPEC",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    type: "test-spec",
+  },
   design: {
     defaultStatus: "draft",
     dir: "docs/designs",
@@ -216,6 +224,7 @@ const scaffoldTargets: ScaffoldTarget[] = [
   { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
   { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
   { dir: "docs/tasks", title: "TASK Documents", type: "task" },
+  { dir: "docs/test-specs", title: "TEST-SPEC Documents", type: "test-spec" },
   { dir: "docs/adr", title: "ADR Documents" },
   { dir: "docs/impl/ir", title: "Implementation Record Documents" },
   { dir: "docs/impl/exp", title: "Experiment Log Documents" },
@@ -226,6 +235,7 @@ const canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
 const migrationRoutes: MigrationRoute[] = [
   { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
   { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
+  { targetDir: "docs/test-specs", type: "test-spec", patterns: [/test[-\s]?spec/i, /testspec/i] },
   { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
   { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
   { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
