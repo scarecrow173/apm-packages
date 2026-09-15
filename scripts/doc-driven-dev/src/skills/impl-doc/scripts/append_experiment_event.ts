@@ -3,12 +3,12 @@
 
 const path = require("node:path");
 const {
+  appendExperimentEvent,
   buildExperimentEvent,
   experimentEventTypes,
   nextExperimentSeq,
   parseSetArguments,
   readExperimentEvents,
-  writeExperimentEvents,
 } = require("./lib/impl_doc_utils.ts");
 
 type CliArgs = {
@@ -63,7 +63,7 @@ async function main(): Promise<void> {
       summary: args.summary,
       extra: parseSetArguments(args.setArgs),
     });
-    writeExperimentEvents(filePath, [...events.map((item) => item.value), event]);
+    appendExperimentEvent(filePath, event);
     console.log(`Updated ${path.relative(cwd, filePath).replace(/\\/g, "/")}`);
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));

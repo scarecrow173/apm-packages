@@ -63,7 +63,7 @@ async function main(): Promise<void> {
       explicitDir: args.dir,
     });
     if (fs.existsSync(outputPath)) throw new Error(`Experiment Log already exists: ${posixRelative(cwd, outputPath)}`);
-    fs.writeFileSync(outputPath, "", "utf8");
+    const events: Record<string, unknown>[] = [];
     if (args.type) {
       const baseEvent = buildExperimentEvent({
         cwd,
@@ -75,18 +75,23 @@ async function main(): Promise<void> {
         extra: args.task ? { task: args.task } : undefined,
       });
       const event = renderExperimentTemplate({
-        experiment_path: baseEvent.experiment,
+        experiment_path: String(baseEvent.experiment),
         seq: String(baseEvent.seq),
         event_type: String(baseEvent.type),
         timestamp: String(baseEvent.ts),
         summary: String(baseEvent.summary || ""),
       });
       if (args.task) event.task = args.task;
-      writeExperimentEvents(outputPath, [event]);
+      events.push(event);
     }
-    updateIndexForExperimentDir(cwd, relativeDir);
+    writeExperimentEvents(outputPath, events);
+    const indexResult = updateIndexForExperimentDir(cwd, relativeDir);
     console.log(`Created ${posixRelative(cwd, outputPath)}`);
-    console.log(`Updated ${relativeDir}/README.md`);
+    if (indexResult.written) {
+      console.log(`Updated ${relativeDir}/README.md`);
+    } else {
+      console.warn(`Skipped index update: ${relativeDir}/README.md appears hand-curated (no generated marker). Update it manually.`);
+    }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

@@ -2,9 +2,17 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const matter = require("gray-matter");
 const { z } = require("zod");
-const { changeFields, relationFields } = require("../../../lib/doc_suite_utils.ts");
+const {
+  changeFields,
+  GENERATED_INDEX_MARKER,
+  indexCell,
+  isForeignDocType,
+  isGeneratedIndex,
+  parseDoc,
+  relationFields,
+  sanitizeTitle,
+} = require("../../../lib/doc_suite_utils.ts");
 const { detectNaming, normalizeDir, slugify } = require("../../../lib/document_utils.ts");
 
 const implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"] as const;
@@ -145,7 +153,10 @@ function renderTemplate(name: string, replacements: Record<string, string>): str
 }
 
 function renderExperimentTemplate(replacements: Record<string, string>): Record<string, unknown> {
-  const content = renderTemplate("experiment-log.jsonl", replacements);
+  const escaped = Object.fromEntries(
+    Object.entries(replacements).map(([key, value]) => [key, JSON.stringify(value).slice(1, -1)]),
+  );
+  const content = renderTemplate("experiment-log.jsonl", escaped);
   return JSON.parse(content);
 }
 
@@ -208,10 +219,12 @@ function formatChanges(changes: ChangeMap): string[] {
         `    ${field}:`,
         ...entries.flatMap((entry) => {
           const lines = formatChangeEntry(entry);
-          return [
-            `      - ${lines[0]}`,
-            ...lines.slice(1).map((line) => `        ${line}`),
-          ];
+          return lines.length === 0
+            ? ["      - {}"]
+            : [
+              `      - ${lines[0]}`,
+              ...lines.slice(1).map((line) => `        ${line}`),
+            ];
         }),
       ];
     }),
@@ -233,16 +246,19 @@ function implementationRecordFrontMatter(options: {
   adopted?: string[];
   rejected?: string[];
 }): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(options.date)) {
+    throw new Error(`Invalid date: ${options.date} (expected YYYY-MM-DD)`);
+  }
   const relations = completeRelations(options.relations);
   const changes = completeChanges(options.changes);
   return [
     "---",
-    `id: "IMPL-${String(options.number).padStart(4, "0")}"`,
-    'type: "impl"',
-    `status: "${options.status}"`,
-    `title: ${quote(options.title)}`,
-    `created: "${options.date}"`,
-    `updated: "${options.date}"`,
+    `id: ${quote(`IMPL-${String(options.number).padStart(4, "0")}`)}`,
+    `type: ${quote("impl")}`,
+    `status: ${quote(options.status)}`,
+    `title: ${quote(sanitizeTitle(options.title))}`,
+    `created: ${quote(options.date)}`,
+    `updated: ${quote(options.date)}`,
     "owners: []",
     "relations:",
     ...formatRelationBlock("source", relations.source),
@@ -268,7 +284,8 @@ function buildImplementationRecordContent(options: {
   relations?: Partial<RelationMap>;
   changes?: Partial<ChangeMap>;
 }): string {
-  return `${implementationRecordFrontMatter(options)}\n\n${renderTemplate("implementation-record.md", { title: options.title })}\n`;
+  const title = sanitizeTitle(options.title);
+  return `${implementationRecordFrontMatter({ ...options, title })}\n\n${renderTemplate("implementation-record.md", { title })}\n`;
 }
 
 function parseEventValue(raw: string): unknown {
@@ -299,21 +316,34 @@ function normalizeExperimentPath(cwd: string, filePath: string): string {
   return normalizeFilePath(posixRelative(cwd, path.resolve(filePath)));
 }
 
-function readExperimentEvents(filePath: string): Array<{ raw: string; value: Record<string, unknown> }> {
+function readExperimentEvents(filePath: string): Array<{ line: number; raw: string; value: Record<string, unknown> | null }> {
   if (!fs.existsSync(filePath)) throw new Error(`Experiment Log not found: ${filePath}`);
   const content = fs.readFileSync(filePath, "utf8");
   if (!content.trim()) return [];
   return content
     .split(/\r?\n/)
-    .filter((line) => line.trim())
-    .map((line) => ({ raw: line, value: JSON.parse(line) }));
+    .map((line, index) => ({ line, index }))
+    .filter((entry) => entry.line.trim())
+    .map((entry) => {
+      try {
+        return { line: entry.index + 1, raw: entry.line, value: JSON.parse(entry.line) as Record<string, unknown> };
+      } catch {
+        return { line: entry.index + 1, raw: entry.line, value: null };
+      }
+    });
 }
 
-function nextExperimentSeq(events: Array<{ value: Record<string, unknown> }>): number {
+function nextExperimentSeq(events: Array<{ value: Record<string, unknown> | null }>): number {
   const seqs = events
-    .map((event) => event.value.seq)
+    .map((event) => event.value?.seq)
     .filter((value): value is number => typeof value === "number" && Number.isInteger(value) && value > 0);
   return seqs.length === 0 ? 1 : Math.max(...seqs) + 1;
+}
+
+function appendExperimentEvent(filePath: string, event: Record<string, unknown>): void {
+  const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
+  const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
+  fs.appendFileSync(filePath, `${prefix}${JSON.stringify(event)}\n`, "utf8");
 }
 
 function writeExperimentEvents(filePath: string, events: Record<string, unknown>[]): void {
@@ -341,38 +371,50 @@ function buildExperimentEvent(options: {
   };
 }
 
-function updateIndexForMarkdownDir(cwd: string, relativeDir: string): void {
+type IndexUpdateResult = { written: boolean; reason: "hand-curated" | null };
+
+function writeImplIndex(indexPath: string, content: string, legacyTitle: string): IndexUpdateResult {
+  const existing = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
+  if (existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
+    return { written: false, reason: "hand-curated" };
+  }
+  fs.writeFileSync(indexPath, content, "utf8");
+  return { written: true, reason: null };
+}
+
+function updateIndexForMarkdownDir(cwd: string, relativeDir: string): IndexUpdateResult {
   const dir = path.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
   const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = files.map((file) => {
+  const rows = files.flatMap((file) => {
     const fullPath = path.join(dir, file);
-    const parsed = matter(fs.readFileSync(fullPath, "utf8"));
-    const title = typeof parsed.data.title === "string"
-      ? parsed.data.title
-      : ((/^#\s+(.+)$/m.exec(parsed.content)?.[1]) || path.basename(file, ".md"));
+    const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
+    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
+    const title = typeof parsed.data.title === "string" && parsed.data.title.trim()
+      ? parsed.data.title.trim()
+      : ((/^#\s+(.+)$/m.exec(parsed.body)?.[1]) || path.basename(file, ".md"));
     const id = typeof parsed.data.id === "string" ? parsed.data.id : "—";
     const status = typeof parsed.data.status === "string" ? parsed.data.status : "—";
-    return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
+    return [`| ${indexCell(id)} | ${indexCell(title)} | ${indexCell(status)} | [${indexCell(file)}](./${indexCell(file)}) |`];
   });
   const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
-  fs.writeFileSync(
+  return writeImplIndex(
     path.join(dir, "README.md"),
-    `# Implementation Records\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,
-    "utf8",
+    `# Implementation Records\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,
+    "Implementation Records",
   );
 }
 
-function updateIndexForExperimentDir(cwd: string, relativeDir: string): void {
+function updateIndexForExperimentDir(cwd: string, relativeDir: string): IndexUpdateResult {
   const dir = path.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");
   const header = "| File |\n| --- |";
-  const rows = files.map((file) => `| [${file}](./${file}) |`);
+  const rows = files.map((file) => `| [${indexCell(file)}](./${indexCell(file)}) |`);
   const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
-  fs.writeFileSync(
+  return writeImplIndex(
     path.join(dir, "README.md"),
-    `# Experiment Logs\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,
-    "utf8",
+    `# Experiment Logs\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,
+    "Experiment Logs",
   );
 }
 
@@ -418,7 +460,17 @@ function auditImplementationRecords(cwd: string, relativeDir: string): { directo
   for (const file of files) {
     const fullPath = path.join(dir, file);
     const content = fs.readFileSync(fullPath, "utf8");
-    const parsed = matter(content);
+    const parsed = parseDoc(content);
+    if (parsed.error) {
+      findings.push({
+        code: "unparseable-front-matter",
+        file,
+        message: `Front matter is not valid YAML: ${parsed.error}`,
+        severity: "error",
+      });
+      continue;
+    }
+    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) continue;
     const schemaResult = implementationRecordSchema.safeParse(parsed.data);
     if (!schemaResult.success) {
       for (const issue of schemaResult.error.issues) {
@@ -454,7 +506,7 @@ function auditImplementationRecords(cwd: string, relativeDir: string): { directo
       }
     }
     for (const section of implementationRecordSections) {
-      if (!parsed.content.includes(section)) {
+      if (!parsed.body.includes(section)) {
         findings.push({
           code: "missing-section",
           file,
@@ -557,6 +609,7 @@ function auditExperimentLogs(cwd: string, relativeDir: string): { directory: str
 }
 
 module.exports = {
+  appendExperimentEvent,
   auditExperimentLogs,
   auditImplementationRecords,
   buildExperimentEvent,
