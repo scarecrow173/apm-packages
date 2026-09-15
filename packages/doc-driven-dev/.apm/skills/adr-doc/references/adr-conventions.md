@@ -141,7 +141,7 @@ the meaning of the link, not by the target document type.
 | `derives-from` | Brainstorming notes, specs, ADRs, or upstream docs that produced this ADR. |
 | `derived-by` | Specs, plans, tasks, or ADRs derived from this ADR. |
 | `verifies` | Documents, checks, or criteria this ADR verifies, when applicable. |
-| `verified-by` | Test plans, review notes, or tasks that verify this ADR. |
+| `verified-by` | Test specs, review notes, or tasks that verify this ADR. |
 
 Use file-relative links for internal documents. Use URLs for external sources.
 
