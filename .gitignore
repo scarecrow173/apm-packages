@@ -31,3 +31,9 @@ packages/**/build/
 # APM dependencies
 apm_modules/
 /.worktrees/
+
+# local tool state
+/.serena/
+/.windsurf/
+/.mise-data/
+/.superpowers/

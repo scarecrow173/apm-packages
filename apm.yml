@@ -84,3 +84,8 @@ marketplace:
     source: scarecrow173/apm-packages
     subdir: packages/token-compression
 
+  - name: agent-intelligence
+    category: intelligence
+    source: scarecrow173/apm-packages
+    subdir: packages/agent-intelligence
+
