@@ -1,0 +1,19 @@
+name: github-issue-handoff
+version: 0.1.0
+description: GitHub Issue and Draft PR based async handoff protocol for requesting independent review of coding decisions from any responder.
+author: Akiyoshi Koyama
+license: MIT
+targets:
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - windsurf
+  - agent-skills
+includes:
+  - .apm/
+scripts:
+  validate: "apm compile --validate"
+  preview: "apm compile --dry-run"
+  test: "pnpm test"
+  lint-md: "pnpm run lint:md"
