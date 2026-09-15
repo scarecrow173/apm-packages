@@ -396,13 +396,20 @@ test("new_plan enforces approved design gate with fixed error code", () => {
   );
   assert.equal(draftDesign.status, 0, draftDesign.stderr);
 
-  const mixedCaseDesign = runScript(
-    "design-doc",
-    "new_design.js",
-    ["--title", "Case-sensitive design", "--status", "Approved"],
-    { cwd: repo },
+  fs.writeFileSync(
+    path.join(repo, "docs/designs/0002-case-sensitive-design.md"),
+    matter.stringify("# Case-sensitive design\n", {
+      id: "DESIGN-0002",
+      type: "design",
+      status: "Approved",
+      title: "Case-sensitive design",
+      created: "2026-08-13",
+      updated: "2026-08-13",
+      owners: [],
+      relations: {},
+    }),
+    "utf8",
   );
-  assert.equal(mixedCaseDesign.status, 0, mixedCaseDesign.stderr);
 
   const invalidApproval = runScript(
     "plan-doc",
