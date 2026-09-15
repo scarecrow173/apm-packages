@@ -40,8 +40,8 @@ without a verifiable upstream contract loses its purpose: do not create one.
      --derives-from docs/designs/0001-checkout-design.md
    ```
 
-   `--verifies` may be repeated and each target must exist
-   (TEST-SPEC-DOC-GATE-001). Use `--derives-from` when the test spec
+   `--verifies` may be repeated and each target must resolve to an existing
+   document by path or ID (TEST-SPEC-DOC-GATE-001). Use `--derives-from` when the test spec
    elaborates a specific spec or design. The creation script uses
    `assets/templates/test-spec.md`; if you cannot run it, copy the template
    and fill it manually.

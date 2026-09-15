@@ -38,8 +38,9 @@ test spec を作成するには、少なくとも 1 つの upstream document を
      --derives-from docs/designs/0001-checkout-design.md
    ```
 
-   `--verifies` は繰り返し指定でき、各 target は存在している必要があります
-   （TEST-SPEC-DOC-GATE-001）。test spec が特定の spec や design を詳細化する
+   `--verifies` は繰り返し指定でき、各 target はパスまたは ID で
+   既存ドキュメントに解決できる必要があります（TEST-SPEC-DOC-GATE-001）。
+   test spec が特定の spec や design を詳細化する
    場合は `--derives-from` を使います。作成スクリプトは
    `assets/templates/test-spec.md` を使います。実行できない場合は template を
    コピーして手動で記入してください。

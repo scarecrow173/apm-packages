@@ -60,6 +60,13 @@ Return audit results using this structure:
    node scripts/audit_docs.js --type plan --json
    ```
 
+   Named audits from `doc-driven-dev-graph` map to commands as follows:
+   document types (`spec`, `adr`, `design`, `plan`, `task`, `test-spec`,
+   `idea`, `brainstorm`, `discovery`) run as
+   `audit_docs.js --type <name>`; `all` runs as `audit_docs.js --type all`
+   covering every canonical document type; `impl-record` runs as
+   `impl-doc/scripts/audit_impl_record.js`.
+
 3. Treat `relations.source` as external evidence.
    HTTP, HTTPS, and mail links are allowed and should not be reported as missing
    local files.
