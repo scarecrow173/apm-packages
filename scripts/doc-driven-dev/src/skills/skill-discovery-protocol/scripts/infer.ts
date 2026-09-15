@@ -1,26 +1,12 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
 
-const {
-  defaultScanListPath,
-  defaultInferencePath,
-  loadScanList,
-  readInferenceOrThrow,
-  assertInferenceComplete,
-  writeInferenceDocument,
-} = require("./lib/inference.ts");
-const { SkillReferenceInferenceDocumentSchema } = require("./lib/schemas/inference.ts");
-const {
-  buildInitDocument,
-  mergeInitWithExisting,
-  parseOpsJsonl,
-  applyOps,
-  upsertSkill,
-  deleteSkill,
-} = require("./lib/infer_edit.ts");
+import { defaultScanListPath, defaultInferencePath, loadScanList, readInferenceOrThrow, assertInferenceComplete, writeInferenceDocument } from "./lib/inference";
+import { SkillReferenceInferenceDocumentSchema } from "./lib/schemas/inference";
+import { buildInitDocument, mergeInitWithExisting, parseOpsJsonl, applyOps, upsertSkill, deleteSkill } from "./lib/infer_edit";
 
 type InferCommand = "init" | "apply" | "check" | "set-skill" | "delete-skill";
 
@@ -200,7 +186,7 @@ function main(): void {
     const parsed = SkillReferenceInferenceDocumentSchema.safeParse(doc);
     if (!parsed.success) {
       const details = parsed.error.issues
-        .map((issue: { path: (string | number)[]; message: string }) => `${issue.path.join(".")}: ${issue.message}`)
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
         .join("; ");
       console.error(`Generated inference document failed schema validation: ${details}`);
       process.exitCode = 1;
@@ -237,7 +223,7 @@ function main(): void {
       const parsed = SkillReferenceInferenceDocumentSchema.safeParse(next);
       if (!parsed.success) {
         const details = parsed.error.issues
-          .map((issue: { path: (string | number)[]; message: string }) => `${issue.path.join(".")}: ${issue.message}`)
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
           .join("; ");
         throw new Error(`Edited inference failed schema validation: ${details}`);
       }
@@ -277,7 +263,7 @@ function main(): void {
       const parsed = SkillReferenceInferenceDocumentSchema.safeParse(next);
       if (!parsed.success) {
         const details = parsed.error.issues
-          .map((issue: { path: (string | number)[]; message: string }) => `${issue.path.join(".")}: ${issue.message}`)
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
           .join("; ");
         throw new Error(`Edited inference failed schema validation: ${details}`);
       }
@@ -309,7 +295,7 @@ function main(): void {
       const parsed = SkillReferenceInferenceDocumentSchema.safeParse(next);
       if (!parsed.success) {
         const details = parsed.error.issues
-          .map((issue: { path: (string | number)[]; message: string }) => `${issue.path.join(".")}: ${issue.message}`)
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
           .join("; ");
         throw new Error(`Edited inference failed schema validation: ${details}`);
       }

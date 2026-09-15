@@ -136,4 +136,4 @@ function resolveOne(
   return null;
 }
 
-module.exports = { resolveInvocations };
+export { resolveInvocations };

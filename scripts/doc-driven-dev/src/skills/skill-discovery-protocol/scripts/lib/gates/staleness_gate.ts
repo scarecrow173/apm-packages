@@ -54,4 +54,4 @@ function runStalenessGate(
   };
 }
 
-module.exports = { runStalenessGate };
+export { runStalenessGate };

@@ -30,7 +30,3 @@ export function validateInferenceCompleteness(
     message: `Inference document is incomplete: ${pendingSkills.length} skill(s) still pending review: ${pendingSkills.join(", ")}`,
   };
 }
-
-module.exports = {
-  validateInferenceCompleteness,
-};

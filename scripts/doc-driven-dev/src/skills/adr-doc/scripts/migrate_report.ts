@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const { adrFiles, findAdrDir, hasSection } = require("./lib/adr_utils.ts");
-const { parseDoc } = require("../../lib/doc_suite_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { adrFiles, findAdrDir, hasSection } from "./lib/adr_utils";
+import { parseDoc } from "../../lib/doc_suite_utils";
 const targetSections = [
   "Status",
   "Context and Problem Statement",

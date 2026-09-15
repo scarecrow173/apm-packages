@@ -1,12 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
-const {
-  parseSetArguments,
-  readExperimentEvents,
-  writeExperimentEvents,
-} = require("./lib/impl_doc_utils.ts");
+import path from "node:path";
+import { parseSetArguments, readExperimentEvents, writeExperimentEvents } from "./lib/impl_doc_utils";
 
 type CliArgs = {
   cwd: string;

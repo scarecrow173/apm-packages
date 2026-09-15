@@ -1,18 +1,10 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const matter = require("gray-matter");
-const { z } = require("zod");
-const {
-  detectNaming,
-  findDocumentDir,
-  isIndexFileName,
-  listMarkdownFiles,
-  nextNumber,
-  normalizeDir,
-  slugify,
-} = require("./document_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
+import { z } from "zod";
+import { detectNaming, findDocumentDir, isIndexFileName, listMarkdownFiles, nextNumber, normalizeDir, slugify } from "./document_utils";
 
 const relationFields = [
   "source",
@@ -249,12 +241,12 @@ const changeEntrySchema = z.object({
 
 const changesSchema = z.object(Object.fromEntries(
   changeFields.map((field) => [field, z.array(changeEntrySchema).default([])]),
-)).default({});
+)).prefault({});
 
 const relationSchema = z.object({
   ...Object.fromEntries(relationFields.map((field) => [field, z.array(z.string()).default([])])),
   changes: changesSchema,
-}).default({});
+}).prefault({});
 
 const frontMatterSchema = z.object({
   id: z.string().min(1),
@@ -362,7 +354,7 @@ function isForeignDocType(typeValue: unknown, expected: string, relativeDir: str
   return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 
-function formatIssuePath(pathParts: Array<string | number>): string {
+function formatIssuePath(pathParts: PropertyKey[]): string {
   return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
 }
 
@@ -373,7 +365,7 @@ function validateFrontMatter(content: string): { message: string; path: string }
   }
   const result = frontMatterSchema.safeParse(parsed.data);
   if (result.success) return [];
-  return result.error.issues.map((issue: { message: string; path: Array<string | number> }) => ({
+  return result.error.issues.map((issue) => ({
     message: issue.message,
     path: formatIssuePath(issue.path),
   }));
@@ -382,7 +374,7 @@ function validateFrontMatter(content: string): { message: string; path: string }
 function relationMap(content: string): Record<RelationField, string[]> {
   const data = parseDoc(content).data;
   const rawRelations = data.relations;
-  const result = Object.fromEntries(relationFields.map((field) => [field, []])) as Record<RelationField, string[]>;
+  const result = Object.fromEntries(relationFields.map((field) => [field, [] as string[]])) as Record<RelationField, string[]>;
   if (!rawRelations || typeof rawRelations !== "object" || Array.isArray(rawRelations)) return result;
   const raw = rawRelations as Record<string, unknown>;
   for (const field of relationFields) {
@@ -1060,7 +1052,7 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
 
 type IndexWriteResult = { path: string; written: boolean; reason: "hand-curated" | "disabled" | null };
 
-async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: string, options: CreateDocumentOptions): Promise<IndexWriteResult> {
+async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: string, options: Pick<CreateDocumentOptions, "forceIndex" | "noIndex">): Promise<IndexWriteResult> {
   const indexPath = path.join(cwd, relativeDir, "README.md");
   const relIndex = path.relative(cwd, indexPath).replace(/\\/g, "/");
   if (options.noIndex) return { path: relIndex, written: false, reason: "disabled" };
@@ -1225,7 +1217,7 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
   return { directory: relativeDir, files: files.length, findings };
 }
 
-module.exports = {
+export {
   auditDocuments,
   buildIndex,
   buildGenericIndex,

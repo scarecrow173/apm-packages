@@ -1,10 +1,10 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const matter = require("gray-matter");
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
 
-const { resolvePath } = require("./expand.ts");
+import { resolvePath } from "./expand";
 
 import type { AdapterConfig, RawScannedSkill } from "./types";
 
@@ -166,4 +166,4 @@ function scanSkills(cwd: string, adapter: AdapterConfig): RawScannedSkill[] {
   return allSkills;
 }
 
-module.exports = { scanSkills, scanSkillDirs, parseSkillMd };
+export { scanSkills, scanSkillDirs, parseSkillMd };

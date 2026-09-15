@@ -1,23 +1,10 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const matter = require("gray-matter");
-const {
-  detectNaming: sharedDetectNaming,
-  findDocumentDir,
-  listMarkdownFiles,
-  nextNumber: sharedNextNumber,
-  slugify: sharedSlugify,
-} = require("../../../lib/document_utils.ts");
-const {
-  GENERATED_INDEX_MARKER,
-  indexCell,
-  isForeignDocType,
-  isGeneratedIndex,
-  parseDoc,
-  validateFrontMatter: validateDocSuiteFrontMatter,
-} = require("../../../lib/doc_suite_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
+import { detectNaming as sharedDetectNaming, findDocumentDir, listMarkdownFiles, nextNumber as sharedNextNumber, slugify as sharedSlugify } from "../../../lib/document_utils";
+import { GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
 const relationFields = [
@@ -241,7 +228,7 @@ function writeIndexFile(adrDir: string, content: string, force = false): { writt
 function relationMap(content: string): Record<RelationField, string[]> {
   const data = matterData(content);
   const relations = data.relations;
-  const result = Object.fromEntries(relationFields.map((field) => [field, []])) as Record<RelationField, string[]>;
+  const result = Object.fromEntries(relationFields.map((field) => [field, [] as string[]])) as Record<RelationField, string[]>;
   if (!relations || typeof relations !== "object" || Array.isArray(relations)) return result;
   const raw = relations as Record<string, unknown>;
   for (const field of relationFields) {
@@ -312,7 +299,7 @@ function parseCsv(value: string): string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
-module.exports = {
+export {
   adrEntries,
   adrFiles,
   buildIndex,

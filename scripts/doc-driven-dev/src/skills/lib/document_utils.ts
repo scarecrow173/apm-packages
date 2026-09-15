@@ -1,7 +1,7 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
 
 type NamingMode = "numbered" | "slug";
 
@@ -48,7 +48,7 @@ function findDocumentDir(cwd: string, explicitDir: string | undefined, candidate
   return existing.length === 0 ? defaultDir : existing[0];
 }
 
-module.exports = {
+export {
   detectNaming,
   findDocumentDir,
   isIndexFileName,

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
-const { auditDocuments } = require("../../lib/doc_suite_utils.ts");
+import path from "node:path";
+import { auditDocuments } from "../../lib/doc_suite_utils";
 
 type CliArgs = {
   cwd: string;

@@ -1,6 +1,6 @@
 "use strict";
 
-const path = require("node:path");
+import path from "node:path";
 
 function sdpBase(cwd: string): string {
   return path.resolve(cwd, ".sdp");
@@ -58,7 +58,7 @@ function resolveValidationReportPath(profilePath: string): string {
   return path.join(path.dirname(profilePath), "validation-report.json");
 }
 
-module.exports = {
+export {
   sdpBase,
   adapterDir,
   resolveSharedCatalogPath,

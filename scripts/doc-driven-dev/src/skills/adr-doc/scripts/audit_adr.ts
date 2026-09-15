@@ -1,17 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const {
-  adrFiles,
-  findAdrDir,
-  hasSection,
-  markdownLinks,
-  relationLinks,
-  validateFrontMatter,
-} = require("./lib/adr_utils.ts");
-const { isForeignDocType, parseDoc } = require("../../lib/doc_suite_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { adrFiles, findAdrDir, hasSection, markdownLinks, relationLinks, validateFrontMatter } from "./lib/adr_utils";
+import { isForeignDocType, parseDoc } from "../../lib/doc_suite_utils";
 
 const requiredSections = [
   "Context and Problem Statement",

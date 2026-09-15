@@ -1,8 +1,8 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const yaml = require("js-yaml");
+import fs from "node:fs";
+import path from "node:path";
+import * as yaml from "js-yaml";
 
 import type { AdapterConfig } from "./types";
 
@@ -200,4 +200,4 @@ function loadAdapter(adapterPath: string): AdapterConfig {
   return merged as unknown as AdapterConfig;
 }
 
-module.exports = { loadAdapter, loadYamlFile, deepMerge };
+export { loadAdapter, loadYamlFile, deepMerge };

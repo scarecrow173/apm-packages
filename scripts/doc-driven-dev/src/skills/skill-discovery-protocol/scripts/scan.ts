@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
+import path from "node:path";
 
-const { loadAdapter } = require("./lib/adapter.ts");
-const { scanSkills } = require("./lib/scanner.ts");
-const { writeScanList } = require("./lib/inference.ts");
+import { loadAdapter } from "./lib/adapter";
+import { scanSkills } from "./lib/scanner";
+import { writeScanList } from "./lib/inference";
 
 function parseArgs(argv: string[]): { adapter?: string; cwd?: string; help?: boolean } {
   const args: { adapter?: string; cwd?: string; help?: boolean } = {};

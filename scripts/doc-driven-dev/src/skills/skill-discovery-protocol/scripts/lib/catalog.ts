@@ -31,4 +31,4 @@ function buildCatalog(skills: ScannedSkill[]): SkillReferenceCatalog {
   };
 }
 
-module.exports = { buildCatalog };
+export { buildCatalog };

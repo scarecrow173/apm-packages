@@ -1,17 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const {
-  buildIndex,
-  detectNaming,
-  findAdrDir,
-  nextIdNumber,
-  slugify,
-  writeIndexFile,
-} = require("./lib/adr_utils.ts");
-const { configFor, frontMatter, sanitizeTitle } = require("../../lib/doc_suite_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { buildIndex, detectNaming, findAdrDir, nextIdNumber, slugify, writeIndexFile } from "./lib/adr_utils";
+import { configFor, frontMatter, sanitizeTitle } from "../../lib/doc_suite_utils";
 
 const templates = {
   full: "madr-4-full.md",
