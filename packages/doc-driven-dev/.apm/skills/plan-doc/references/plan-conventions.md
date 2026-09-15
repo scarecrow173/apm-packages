@@ -137,7 +137,7 @@ Use relation fields for meaning, not document type.
 | `superseded-by` | Newer plans that replace this plan. |
 | `related` | Contextual docs without directional dependency. |
 | `verifies` | Specs, ADRs, or acceptance criteria the plan verifies. |
-| `verified-by` | Test plans, task docs, or review notes that verify this plan. |
+| `verified-by` | Test specs, task docs, or review notes that verify this plan. |
 
 Internal documents use relative paths. External sources use URLs.
 
@@ -160,6 +160,11 @@ Plans should include:
     subagent-capable implementation when tasks can run independently, asks for
     user approval before dispatch, and routes execution through capabilities
     discovered in the current environment instead of hardcoded skill IDs.
+
+Plan-level verification entries are per implementation step. Behavior-level
+guarantees that must outlive task slicing belong to `test-spec` documents
+(`docs/test-specs/`); link them from tasks via `relations.verified-by` rather
+than copying their intent into the plan's verification matrix.
 
 ## Task Granularity
 

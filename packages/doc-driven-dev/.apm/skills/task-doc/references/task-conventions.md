@@ -122,7 +122,7 @@ Use relation fields for meaning, not document type.
 | `depends-on` | Tasks, plans, decisions, or specs required before this task can proceed. |
 | `blocks` | Tasks or plans blocked by this task. |
 | `verifies` | Spec, plan, ADR, or behavior this task verifies. |
-| `verified-by` | Test notes, review notes, or follow-up tasks that verify this task. |
+| `verified-by` | Test specs, review notes, or follow-up tasks that verify this task. |
 | `source` | External source that directly constrains the task. |
 | `references` | Supplementary implementation notes or docs. |
 | `defers` | Future work intentionally deferred from this document, pointing to a draft spec/design. |
@@ -169,6 +169,11 @@ Tasks should include:
 
 Done criteria must be checkable. If a task cannot state its verification path,
 return to the plan or spec before starting implementation.
+
+The `## Verification` section holds runnable commands that prove this slice is
+done. When the task satisfies a `test-spec` guarantee, link it via
+`relations.verified-by` instead of copying the guarantee's intent into the
+task.
 
 ## Mutability
 

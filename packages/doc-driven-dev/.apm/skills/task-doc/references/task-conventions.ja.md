@@ -121,7 +121,7 @@ relation は文書種別ではなく意味で選びます。
 | `depends-on` | 先に必要な task、plan、decision、spec。 |
 | `blocks` | この task によってブロックされる task または plan。 |
 | `verifies` | この task が検証する spec、plan、ADR、挙動。 |
-| `verified-by` | この task を検証する test note、review note、follow-up task。 |
+| `verified-by` | この task を検証する test spec、review note、follow-up task。 |
 | `source` | task を直接制約する外部出典。 |
 | `references` | 補助的な実装 note や docs。 |
 | `defers` | この文書から意図的に据え置いた将来作業（draft の spec/design を指す）。 |
@@ -167,6 +167,10 @@ task は次を含めます。
 
 完了条件は検証可能である必要があります。検証経路を書けない task は、実装開始前に
 plan または spec に戻します。
+
+`## Verification` セクションには、この slice の完了を証明する実行可能な
+command を置きます。task が `test-spec` の保証を満たす場合は、保証の意図を
+task に複写せず `relations.verified-by` でリンクします。
 
 ## 可変性
 

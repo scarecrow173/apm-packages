@@ -91,6 +91,11 @@ Status guidance:
 - Change to `blocked` when work is paused for loopback or other explicit
   interruption.
 
+Implementation Records and Experiment Logs record what was tried and what
+resulted. The durable intent behind a guarantee — why a test exists and when
+it may be retired — belongs to `test-spec` documents (`docs/test-specs/`),
+not to `impl-doc`.
+
 ## Experiment Log Events
 
 Experiment Log files are JSONL.

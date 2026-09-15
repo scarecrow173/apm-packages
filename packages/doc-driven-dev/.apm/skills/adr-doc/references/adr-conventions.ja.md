@@ -144,7 +144,7 @@ relation field は他の document skill と共通です。リンク先の文書�
 | `derives-from` | この ADR を生んだ brainstorming note、spec、ADR、上流文書。 |
 | `derived-by` | この ADR から派生した spec、plan、task、ADR。 |
 | `verifies` | 必要に応じて、この ADR が検証する文書、check、criteria。 |
-| `verified-by` | この ADR を検証する test plan、review note、task。 |
+| `verified-by` | この ADR を検証する test spec、review note、task。 |
 
 内部文書には相対パスを使います。外部出典には URL を使います。
 
