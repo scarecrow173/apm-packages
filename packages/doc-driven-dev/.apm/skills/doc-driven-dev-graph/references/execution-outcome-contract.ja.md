@@ -168,7 +168,7 @@ fingerprint は使用前に current canonical content と照合して resolve �
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate が通過する | recoverable document gap | unresolved user-only requirement の `input-required` |
 | `design-doc` | design が approved になる | — | designated reviewer を待つ `approval-required`、upstream user decision がない `input-required` |
-| `planning-flow` | approved/active plan と linked test-spec/task evidence（plan が検証可能な振る舞いを宣言しない場合は記録済みの skip 理由） | changed canonical plan/test-spec/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
+| `planning-flow` | approved/active plan と linked test-spec/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） | changed canonical plan/test-spec/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `doc-status` | documents が Completable になる | declared repair evidence を伴う Returned | safe repair のない Returned の `unrecoverable-blocker` |
 

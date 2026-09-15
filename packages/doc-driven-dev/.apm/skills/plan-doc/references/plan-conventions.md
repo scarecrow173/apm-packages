@@ -166,6 +166,11 @@ guarantees that must outlive task slicing belong to `test-spec` documents
 (`docs/test-specs/`); link them from tasks via `relations.verified-by` rather
 than copying their intent into the plan's verification matrix.
 
+When the plan produces test specs, link them from the plan with
+`relations.verified-by`. When the plan legitimately has no verifiable
+behavior, record `test-spec-skip: "<reason>"` in front matter instead; audits
+flag approved plans that have neither a test-spec link nor a skip reason.
+
 ## Task Granularity
 
 Write tasks so each one is a discrete action.

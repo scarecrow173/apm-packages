@@ -329,7 +329,11 @@ function completedOutcome(
 ): CompletedEffectOutcome {
   const evidence = evidenceReference(repo, route, effect);
   const evidenceReferences = effect.id === "planning-flow"
-    ? [evidence, ...taskGraphPaths(route).map((relativePath) => canonicalReference(repo, relativePath))]
+    ? [
+        evidence,
+        canonicalReference(repo, "docs/test-specs/0001-graph.md"),
+        ...taskGraphPaths(route).map((relativePath) => canonicalReference(repo, relativePath)),
+      ]
     : [evidence];
   return {
     status: "completed",
@@ -1390,6 +1394,7 @@ test("runs planning-flow before downstream plan and task audits", () => {
   ));
   assert.deepEqual(planningOutcome?.evidence, [
     canonicalReference(repo, "docs/plans/0001-graph.md"),
+    canonicalReference(repo, "docs/test-specs/0001-graph.md"),
     canonicalReference(repo, "docs/tasks/0001-task.md"),
     canonicalReference(repo, "docs/tasks/0002-task.md"),
   ]);

@@ -17,9 +17,10 @@ composition boundary です。ユーザーからの直接要求には引き続�
 3. `plan-doc` を呼び出し、実装可能な plan を 1 つ作成または修復します。
 4. plan が review 待ちなら、`EffectOutcome` の `yield` と `approval-required` を返し、test spec と task は作成しません。
 5. plan status が `approved`、`in-progress`、または `completed` になった後、task 分解に先立って、
-   approved spec/design が宣言する検証可能な振る舞いごとに `test-spec-doc` を 1 回呼び出します。
+   approved spec/design が宣言する検証可能な振る舞いごとに `test-spec-doc` を 1 回呼び出し、
+   各 test spec を plan の `relations.verified-by` からリンクします。
    plan が検証可能な振る舞いの変更を含まない場合に限りこの step を skip し、その理由を
-   evidence に記録します。
+   plan の front matter に `test-spec-skip` として記録します。
 6. concrete plan slice ごとに `task-doc` を 1 回呼び出し、宣言された dependency を保持し、
    各 task が満たす test spec を `relations.verified-by` でリンクします。
 7. 現在の design input と plan/test-spec/task evidence を含む、`planning-flow` 用の正確な `EffectOutcome` を 1 つ返します。

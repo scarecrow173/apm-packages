@@ -20,8 +20,10 @@ or `task-doc`.
    `approval-required` and create no test specs or tasks.
 5. After the plan status is `approved`, `in-progress`, or `completed`, invoke
    `test-spec-doc` once per verifiable behavior declared by the approved
-   spec/design, before task breakdown. Skip this step only when the plan
-   declares no verifiable behavior change, and record the reason in evidence.
+   spec/design, before task breakdown, and link each test spec from the plan's
+   `relations.verified-by`. Skip this step only when the plan declares no
+   verifiable behavior change, and record the reason as `test-spec-skip` in
+   the plan front matter.
 6. Invoke `task-doc` once per concrete plan slice, preserving declared
    dependencies, and link each task to the test specs it satisfies via
    `relations.verified-by`.

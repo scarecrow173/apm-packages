@@ -544,6 +544,57 @@ test("new_test_spec requires verifies targets and records relations", () => {
   assert.equal(report.files, 1);
 });
 
+test("doc-status flags test-specs without verifies and plans without test-spec evidence", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/test-specs"), { recursive: true });
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/test-specs/README.md"), "# test-specs\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/plans/README.md"), "# plans\n", "utf8");
+
+  const writeDoc = (relativePath: string, data: Record<string, unknown>) => {
+    fs.writeFileSync(path.join(repo, relativePath), matter.stringify("# Doc\n", data), "utf8");
+  };
+
+  writeDoc("docs/test-specs/0001-empty.md", {
+    id: "TSPEC-0001", type: "test-spec", status: "approved", title: "Empty",
+    created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+  });
+  writeDoc("docs/plans/0001-bare.md", {
+    id: "PLAN-0001", type: "plan", status: "approved", title: "Bare",
+    created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+  });
+  writeDoc("docs/plans/0002-skipped.md", {
+    id: "PLAN-0002", type: "plan", status: "approved", title: "Skipped",
+    created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+    "test-spec-skip": "no verifiable behavior in this plan",
+  });
+  writeDoc("docs/plans/0003-linked.md", {
+    id: "PLAN-0003", type: "plan", status: "approved", title: "Linked",
+    created: "2026-09-15", updated: "2026-09-15", owners: [],
+    relations: { "verified-by": ["docs/test-specs/0001-empty.md"] },
+  });
+  writeDoc("docs/plans/0004-draft.md", {
+    id: "PLAN-0004", type: "plan", status: "draft", title: "Draft",
+    created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
+  });
+
+  const specAudit = runScript("doc-status", "audit_docs.js", ["--type", "test-spec", "--json"], { cwd: repo });
+  assert.equal(specAudit.status, 0, specAudit.stderr);
+  const specReport = JSON.parse(specAudit.stdout);
+  assert.equal(
+    specReport.findings.some((finding: any) => finding.code === "test-spec-missing-verifies" && finding.file === "0001-empty.md"),
+    true,
+  );
+
+  const planAudit = runScript("doc-status", "audit_docs.js", ["--type", "plan", "--json"], { cwd: repo });
+  assert.equal(planAudit.status, 0, planAudit.stderr);
+  const planReport = JSON.parse(planAudit.stdout);
+  const flagged = planReport.findings
+    .filter((finding: any) => finding.code === "plan-missing-test-spec-evidence")
+    .map((finding: any) => finding.file);
+  assert.deepEqual(flagged, ["0001-bare.md"]);
+});
+
 test("doc-status audits required front matter, status, indexes, relations, and sources", () => {
   const repo = tempRepo();
   fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
@@ -749,8 +800,8 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(outcomeContractJa, /`build_task_graph`（focused plan と選択 task document）/);
   assert.match(outcomeContractJa, /`planning-flow` は selected approved design を/);
   assert.match(outcomeContractJa, /selected plan とすべての produced plan-linked test spec および task document を記録/);
-  assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked test-spec\/task evidence \(or recorded skip rationale when the plan declares no verifiable behavior\) \| changed canonical plan\/test-spec\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
-  assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked test-spec\/task evidence（plan が検証可能な振る舞いを宣言しない場合は記録済みの skip 理由） \| changed canonical plan\/test-spec\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
+  assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked test-spec\/task evidence \(or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior\) \| changed canonical plan\/test-spec\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
+  assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked test-spec\/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） \| changed canonical plan\/test-spec\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
   assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*all/s);
   assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
   assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));

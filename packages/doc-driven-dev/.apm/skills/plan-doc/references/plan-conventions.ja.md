@@ -163,6 +163,11 @@ plan レベルの検証項目は実装 step ごとのものです。task 分割�
 verification matrix へ意図を複写せず、task から `relations.verified-by` で
 リンクします。
 
+plan が test spec を生成した場合は、plan 側の `relations.verified-by` から
+リンクします。plan に検証可能な振る舞いが正当に存在しない場合は、代わりに
+front matter に `test-spec-skip: "<理由>"` を記録します。test-spec リンクも
+skip 理由もない approved plan は audit で指摘されます。
+
 ## タスク粒度
 
 task は 1 つの action になるように書きます。

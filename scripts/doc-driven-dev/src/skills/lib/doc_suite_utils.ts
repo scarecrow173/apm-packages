@@ -1226,6 +1226,32 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
     if (typeof data.status === "string" && !config.statusValues.includes(data.status)) {
       findings.push({ severity: "error", file, code: "invalid-status", message: `Invalid ${type} status: ${data.status}` });
     }
+    if (type === "test-spec") {
+      const verifies = (data.relations as Record<string, unknown> | undefined)?.verifies;
+      if (!Array.isArray(verifies) || verifies.length === 0) {
+        findings.push({
+          severity: "warning",
+          file,
+          code: "test-spec-missing-verifies",
+          message: "Test spec has no relations.verifies target (TEST-SPEC-DOC-GATE-001)",
+        });
+      }
+    }
+    if (type === "plan" && typeof data.status === "string" && ["approved", "in-progress", "completed"].includes(data.status)) {
+      const verifiedBy = (data.relations as Record<string, unknown> | undefined)?.["verified-by"];
+      const linked = Array.isArray(verifiedBy) && verifiedBy.some(
+        (target: unknown) => typeof target === "string" && /docs\/test-specs\/|TSPEC-\d+/i.test(target),
+      );
+      const skipped = typeof data["test-spec-skip"] === "string" && data["test-spec-skip"].trim().length > 0;
+      if (!linked && !skipped) {
+        findings.push({
+          severity: "warning",
+          file,
+          code: "plan-missing-test-spec-evidence",
+          message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason",
+        });
+      }
+    }
     for (const relation of relationLinks(content)) {
       if (isExternalLink(relation.target)) continue;
       if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
