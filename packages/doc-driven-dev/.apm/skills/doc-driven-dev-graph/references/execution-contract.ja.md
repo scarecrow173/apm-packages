@@ -32,7 +32,9 @@ one-edge command のままであり、継続を所有するのは router では�
    `commit-waived` signal を受け取っていない場合、audit 実行前に worktree
    baseline を取得する。`head` は `git rev-parse HEAD`（repository に commit が
    ない場合は `null`）、`dirty` は `git status --porcelain` の sort 済み行とし、
-   この edge の `commitBaseline` として保持する。
+   この edge の `commitBaseline` として保持する。取得した `commitBaseline` は
+   pending edge に保存され、`commit-required` だけでなくすべての mid-edge
+   yield をまたいで保持する。
 6. すべての required audit を安定した順序で実行する。
 7. 返された delegate だけを dispatch する。
 8. audit または delegate が input、approval、authority を明示的に要求するなら、
@@ -184,6 +186,10 @@ resume しても、完了した loop と誤分類しません。
   いるか、新しい dirty entry が解消された時点で通過する。gate は evidence
   persistence の後に評価されるため、checkpoint evidence Markdown も commit
   対象の logical change の一部となる。
+- resume では保持した `commitBaseline` を再利用し、再取得はしない。これにより
+  以前の mid-edge yield より前に生じた変更も同じ baseline に対して測定される。
+  `commitBaseline` を持たない pending edge（gate が適用外、または
+  `commit-waived` を受信済み）は resume 時にも何も取得しない。
 - `commitBaseline` は `pending` に保持される。Graph State ではなく caller
   handoff metadata である。
 - baseline 時点で dirty だった file は引き続き user の責任である。同じ
