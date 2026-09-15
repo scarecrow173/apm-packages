@@ -40,6 +40,10 @@ edge なしの terminal 結果のいずれか 1 つを返します。caller は�
 route は idempotent です。blocked route は file 名、path の近さ、隣接 node から
 推測しません。
 
+`commitGate` node は、その edge checkpoint が完了する前に caller-side の
+commit check を要求します。`commit-required` は明示的な yield reason であり、
+`commit-waived` は宣言済みの bypass signal です。
+
 ## Delegate binding
 
 Graph Definition は次の binding を宣言します。

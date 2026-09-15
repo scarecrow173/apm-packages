@@ -145,6 +145,8 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentati
    - それでも同等なら両方適用（スキルはレイヤー、排他しない）。
 7. **Domain/Tooling スキルを追加** — タスクで検出された言語、フレームワーク、プラットフォームに基づく。
    - **resolution override に一致するものがない場合:** フロースタックのデフォルトのみで進行。「追加スキル: なし」と宣言する。
+   - **`GraphRoute.commitGate` が true の場合:** commit-capable な Tooling skill
+     （例: `git-commit`）が active stack で必須。選択を announced stack に記録する。
 8. **アクティブスキルスタックを宣言:**
 
 ```text
@@ -324,6 +326,14 @@ dispatch-specific override・emergency override・その他の non-default routi
 1 行の理由を記録する。
 </HARD-GATE>
 
+<HARD-GATE>
+dispatch した `GraphRoute` が `commitGate` を宣言している場合、logical change が
+uncommitted のままでは task slice を `completed` にできません。resolve された
+commit tooling（profile が `git-commit` を選択した場合はそれ、それ以外は
+repository の commit convention）で commit します。commit が granted authority の
+範囲外なら `completed` ではなく `yield`/`commit-required` を返します。
+</HARD-GATE>
+
 ---
 
 ## アンチパターン
@@ -390,8 +400,10 @@ dispatch-specific override・emergency override・その他の non-default routi
 ごとに正確な [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
 を返します。local partial variant を作成しません。
 
-verified task slice と Implementation Record には `completed`、declared
-spec/design/constraint repair には `retry`、permission のない irreversible effect には
+`completed` は logical change が commit 済みで Implementation Record が完成した
+verified task slice にのみ使い、declared spec/design/constraint repair には
+`retry`、slice が granted authority 内で commit できない変更を生んだ場合は
+`commit-required` を理由とする `yield`、permission のない irreversible effect には
 `authority-required` を理由とする `yield`、declared safe repair がない場合は
 `unrecoverable-blocker` を理由とする `yield` を使います。必須の `edgeId`、stage、effect
 identity、authoritative input scope、proof field はその footer が定義します。

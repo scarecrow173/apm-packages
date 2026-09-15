@@ -38,12 +38,13 @@ schema is version `1`, independent of the Graph Definition schema version.
 | `reachableNodes` | Sorted nodes reachable from `entry` by declared edges. |
 | `unreachableNodes` | Sorted node IDs not reachable from `entry`. |
 | `reachableTerminalNodes` | Sorted terminal nodes reachable from `entry`. |
+| `commitGateNodes` | Sorted node IDs declaring `commitGate: true`. |
 | `unusedConditions` | Declared condition keys absent from the unique edge `when` keys. |
 | `referencedConditions` | Unique edge `when` keys, sorted deterministically. |
 | `delegates` | `{ nodeId, delegate }` entries for nodes with a delegate. |
 | `audits` | `{ nodeId, audits }` entries for nodes with declared audits. |
 | `issues` | Sorted inspection findings; see the issue table below. |
-| `nodes` | Serializable node data: `nodeId`, `kind`, optional `delegate`, and sorted `audits`. |
+| `nodes` | Serializable node data: `nodeId`, `kind`, optional `delegate`, optional `commitGate`, and sorted `audits`. |
 | `edges` | Serializable edge data: `id`, `from`, `to`, `when`, and `priority`. |
 
 ### Reachability is topology-only
@@ -120,7 +121,7 @@ JSON accepts these selectors for runtime projection.
 Node lines are sorted by original node ID. Every node uses a deterministic `nN`
 alias in Mermaid syntax, assigned by that sorted order; the original ID remains
 in the escaped label. A node label contains its ID and `kind`, then optional
-`delegate`, `terminal`, and `audits` labels. Edge lines are sorted by `from`,
+`delegate`, `commitGate`, `terminal`, and `audits` labels. Edge lines are sorted by `from`,
 priority, and edge ID; each label contains the condition key and priority
 (`<condition> · p<priority>`). Original node, delegate, audit, and condition
 text is escaped; `|` cannot terminate an edge label.
