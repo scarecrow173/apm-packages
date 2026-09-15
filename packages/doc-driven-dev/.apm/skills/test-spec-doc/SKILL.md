@@ -1,6 +1,6 @@
 ---
 name: test-spec-doc
-description: Use when recording what a test must guarantee and why, as a canonical test specification document with Feature/Rule/Example structure linked to the specs, designs, or plans it verifies.
+description: Use when recording what a test must guarantee and why, as a canonical test specification document with Feature/Rule/Example structure linked to the specs, designs, or ADRs it verifies.
 license: MIT
 ---
 
@@ -51,9 +51,9 @@ without a verifiable upstream contract loses its purpose: do not create one.
    but stay prose-readable; they are not step definitions.
 4. Link the implementing tasks.
    Tasks that implement the behavior record the test spec in
-   `relations.verified-by`; the test spec records them in
-   `relations.verified-by`'s inverse, `relations.verifies`, only when it
-   verifies the task itself.
+   `relations.verified-by`. Do not point the test spec's `verifies`
+   relation back at tasks; `verifies` always targets the upstream
+   contract the test spec protects (spec, design, or ADR).
 5. Keep status current.
    Use `draft`, `proposed`, `approved`, `deprecated`, or `superseded`.
    Never record pass/fail in `status`; runtime results are volatile and

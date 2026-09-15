@@ -80,7 +80,7 @@ record them in `impl-doc` experiment logs or CI evidence instead.
 
 | Field | Meaning |
 | --- | --- |
-| `verifies` | Specs, designs, plans, ADRs, or tasks whose behavior this test spec verifies. At least one entry is required (TEST-SPEC-DOC-GATE-001). |
+| `verifies` | Specs, designs, or ADRs whose behavior this test spec verifies. At least one entry is required (TEST-SPEC-DOC-GATE-001). |
 | `verified-by` | Tasks or test specs that verify this document, when applicable. |
 | `derives-from` | Specs or designs this test spec elaborates into verifiable guarantees. |
 | `depends-on` | Documents that must remain valid for this test spec to hold. |

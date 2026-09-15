@@ -1,6 +1,6 @@
 ---
 name: test-spec-doc
-description: テストが何を保証し、なぜ存在するのかを、Feature/Rule/Example 構造を持つ正規テスト仕様文書として、検証対象の spec・design・plan にリンクして記録するときに使います。
+description: テストが何を保証し、なぜ存在するのかを、Feature/Rule/Example 構造を持つ正規テスト仕様文書として、検証対象の spec・design・ADR にリンクして記録するときに使います。
 license: MIT
 ---
 
@@ -49,8 +49,8 @@ test spec を作成するには、少なくとも 1 つの upstream document を
    倣いますが、prose として読める形に留め、step definition にはしません。
 4. 実装する task とリンクします。
    その振る舞いを実装する task は `relations.verified-by` に test spec を記録します。
-   test spec 側が task 自体を検証する場合にのみ、逆方向として
-   `relations.verifies` に task を記録します。
+   test spec から task への逆リンクは張りません。test spec の `verifies` は
+   常に保護対象の上流 contract（spec、design、ADR）を指します。
 5. status を最新に保ちます。
    `draft`、`proposed`、`approved`、`deprecated`、`superseded` を使います。
    pass/fail を `status` に記録してはいけません。runtime の結果は揮発的であり、

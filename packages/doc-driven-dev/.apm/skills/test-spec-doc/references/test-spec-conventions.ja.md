@@ -79,7 +79,7 @@ runtime の pass/fail を `status` に記録しません。テスト結果は揮
 
 | フィールド | 意味 |
 | --- | --- |
-| `verifies` | この test spec が検証する spec、design、plan、ADR、task。少なくとも 1 件必須（TEST-SPEC-DOC-GATE-001）。 |
+| `verifies` | この test spec が検証する spec、design、ADR。少なくとも 1 件必須（TEST-SPEC-DOC-GATE-001）。 |
 | `verified-by` | 必要に応じて、この文書を検証する task や test spec。 |
 | `derives-from` | この test spec が検証可能な保証へ詳細化した spec や design。 |
 | `depends-on` | この test spec が成立するために有効であり続ける必要のある文書。 |
