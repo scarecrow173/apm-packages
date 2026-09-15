@@ -2,23 +2,17 @@ import type { GraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts
 import type { GraphRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 import type { TaskStatus } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 
-const assert = require("node:assert/strict");
-const crypto = require("node:crypto");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const test = require("node:test");
-const matter = require("gray-matter");
-const {
-  loadGraphDefinition,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts");
-const {
-  projectGraphState,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts");
-const {
-  routeGraph,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts");
+import assert from "node:assert/strict";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
+import matter from "gray-matter";
+import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
+import { projectGraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
+import { routeGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 
 type YieldReason =
   | "approval-required"
@@ -414,7 +408,7 @@ function validateEffectOutcome(
       && typeof proof.providerIdempotency.key === "string"
       && proof.providerIdempotency.key.length > 0;
     assert.equal(hasCanonicalEvidence !== hasProviderIdempotency, true);
-    if (hasCanonicalEvidence) {
+    if (isCanonicalReference(proof.canonicalEvidence)) {
       assert.ok(canonicalEvidenceMatches(repo, proof.canonicalEvidence), "completed proof must resolve current canonical content");
     }
   } else if (outcome.status === "retry") {
@@ -596,7 +590,7 @@ function traceKey(route: GraphRoute): string {
 }
 
 function recordTrace(traces: EdgeTrace[], trace: EdgeTrace): void {
-  const index = traces.findLastIndex((candidate) =>
+  const index = traces.findLastIndex((candidate: any) =>
     traceKey(candidate.route) === traceKey(trace.route) && !candidate.checkpointComplete,
   );
   if (index < 0) traces.push(trace);
@@ -1893,7 +1887,7 @@ test("resumes a completed irreversible effect only with a provider idempotency r
   assert.equal(first.yieldReason, "authority-required");
   const delegateOutcome = (first.handoff as unknown as { outcomes: Array<Record<string, unknown>> }).outcomes
     .find((outcome) => outcome.stage === "delegate");
-  assert.deepEqual(delegateOutcome.proof, { providerIdempotency: { provider: "deploy", key: "run-1" } });
+  assert.deepEqual(delegateOutcome?.proof, { providerIdempotency: { provider: "deploy", key: "run-1" } });
 
   const resumed = runScenario({
     repo,

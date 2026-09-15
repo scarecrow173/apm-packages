@@ -1,17 +1,11 @@
 import type { GraphInspection } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_inspector";
 
-const assert = require("node:assert/strict");
-const { spawnSync } = require("node:child_process");
-const nodePath = require("node:path");
-const test = require("node:test");
-const {
-  loadGraphDefinition,
-  parseGraphDefinition,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts");
-const {
-  inspectGraphDefinition,
-  renderGraphMermaid,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_inspector.ts");
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import nodePath from "node:path";
+import test from "node:test";
+import { loadGraphDefinition, parseGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
+import { inspectGraphDefinition, renderGraphMermaid } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_inspector";
 
 const unreachableFixture = `
 schemaVersion: 2

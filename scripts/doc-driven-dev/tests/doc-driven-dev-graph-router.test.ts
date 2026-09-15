@@ -4,19 +4,14 @@ import type {
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 import type { GraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
 
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const test = require("node:test");
-const {
-  evaluateCondition,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions.ts");
-const {
-  evaluateRouteDecision,
-  routeGraph,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { evaluateCondition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions";
+import { evaluateRouteDecision, routeGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 
-function stateWith(input: Partial<Pick<GraphState, "gates" | "signals" | "blockers" | "taskGraph">> = {}): GraphState {
+function stateWith(input: Partial<Pick<GraphState, "gates" | "signals" | "blockers" | "hardBlockers" | "taskGraph">> = {}): GraphState {
   return {
     schemaVersion: 2,
     graphId: "arbitrary-graph",

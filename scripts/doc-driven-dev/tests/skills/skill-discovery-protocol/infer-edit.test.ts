@@ -1,9 +1,9 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
 
 const skillRoot = path.resolve(__dirname, "../../../../../packages/doc-driven-dev/.apm/skills");
 const sdpScripts = path.join(skillRoot, "skill-discovery-protocol", "scripts");
@@ -212,7 +212,7 @@ test("sdp infer delete-skill removes one skill", () => {
   base.skills.push({
     name: "task-doc",
     review_status: "reviewed",
-    provides: [{ capability: "task_management" }],
+    provides: [{ capability: "task_management", description: "Manage tasks" }],
     uses: [],
     execution_policy: {
       strictness: "flexible",
