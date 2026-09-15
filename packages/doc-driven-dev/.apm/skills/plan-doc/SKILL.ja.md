@@ -74,6 +74,9 @@ plan は分割します。1 つの plan にまとめるのは、同じクリテ�
 8. relation を記録する。
    生成された plan は上流 spec を `relations.implements` に、
    関連 design と ADR を `relations.derives-from` に記録します。
+   test-spec が既に存在する場合（再計画時など）は `--verified-by` で
+   リンクします。各対象はパスまたは ID で既存ドキュメントに解決できる
+   必要があります（PLAN-DOC-GATE-002）。
 9. plan を実装可能な粒度にする。
    影響ファイル、挙動、テスト、移行手順、検証コマンドを具体化します。
    1 ステップは 1 つのアクションにしてください。

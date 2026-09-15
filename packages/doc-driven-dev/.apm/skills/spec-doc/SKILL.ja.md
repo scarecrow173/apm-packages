@@ -122,7 +122,7 @@ spec を `draft` から `proposed` または `approved` に進める前に、以
 - **architecture 判断が不要な場合:** 承認済み spec から直接 `plan-doc` に
   進みます。純粋なプロダクト作業では ADR は不要です。
 
-dual-track: **spec + ADR（並列）→ plan → task**。
+dual-track: **spec + ADR（並列）→ plan → test-spec → task**。
 
 ## リソース
 

@@ -13,6 +13,7 @@ delegate または audit への宣言済みエッジを最大 1 つ、または�
 - `idea-doc`、`deep-dive`、`briefing-flow`: 探索の記録と整理。
 - `discovery-doc`、`adr-doc`、`spec-doc`: 意図と判断の記録。
 - `design-doc`、`plan-doc`、`task-doc`: 承認済み実装作業の定義。
+- `test-spec-doc`: テストが何を保証し、なぜ存在するかの記録。
 - `impl-doc`: 実装と実験の証跡。
 - `doc-status`: document contract とリンクの audit。
 - `implementation-flow`: 実装作業と review gate の委譲。
@@ -69,8 +70,9 @@ binding は Graph Definition に宣言されています。
 
 - migration: `migrate_docs`; bootstrap: `scaffold_docs`。
 - briefing: `briefing-flow`; design: `design-doc`。
-- planning: `planning-flow`。`plan-doc` の approval 後に `task-doc` を順序付けます。
-- task projection: `build_task_graph`。`plan`/`task` audit 後に
+- planning: `planning-flow`。`plan-doc` の approval 後に `test-spec-doc`、続いて
+  `task-doc` を順序付けます。
+- task projection: `build_task_graph`。`plan`/`task`/`test-spec` audit 後に
   `build_task_graph.js` が実行します。
 - implementation: `implementation-flow`; exit audit: `doc-status`。
 
@@ -128,6 +130,8 @@ front matter relation で document graph を保持します。
 - `implements`: design、plan、task から上流 contract へのリンク。
 - `derives-from`: design と planning の導出元。
 - `references`: 補足 document。
+- `verifies` / `verified-by`: spec、design、task を、それらを検証する
+  `test-spec` 文書へリンクします。
 - `defers` / `deferred-by`: 保留した scope。
 - `changes`: added、modified、deleted、renamed、moved、generated path。
 

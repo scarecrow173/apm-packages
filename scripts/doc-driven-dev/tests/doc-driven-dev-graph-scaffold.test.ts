@@ -45,6 +45,7 @@ test("scaffold_docs creates the canonical docs tree without overview.md", () => 
     "docs/designs/README.md",
     "docs/plans/README.md",
     "docs/tasks/README.md",
+    "docs/test-specs/README.md",
     "docs/adr/README.md",
     "docs/impl/ir/README.md",
     "docs/impl/exp/README.md",

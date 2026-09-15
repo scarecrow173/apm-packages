@@ -136,7 +136,7 @@ relation field は document type ではなく意味のために使います。
 | `superseded-by` | この plan を置き換える新しい plan。 |
 | `related` | 方向性のない関連文書。 |
 | `verifies` | この plan が検証する spec / ADR / acceptance criteria。 |
-| `verified-by` | この plan を検証する test plan / task doc / review note。 |
+| `verified-by` | この plan を検証する test spec / task doc / review note。 |
 
 内部 document には相対 path を使います。外部 source には URL を使います。
 
@@ -157,6 +157,16 @@ plan には次を含めます。
 11. task を独立に進められる場合に委譲型またはサブエージェント対応の実装を
     推奨し、dispatch 前にユーザー承認を求め、hardcode した skill ID ではなく
     現在の環境で発見した能力へ実行を渡す実装ハンドオフ。
+
+plan レベルの検証項目は実装 step ごとのものです。task 分割を生き残るべき
+振る舞いレベルの保証は `test-spec` 文書（`docs/test-specs/`）に置き、plan の
+verification matrix へ意図を複写せず、task から `relations.verified-by` で
+リンクします。
+
+plan が test spec を生成した場合は、plan 側の `relations.verified-by` から
+リンクします。plan に検証可能な振る舞いが正当に存在しない場合は、代わりに
+front matter に `test-spec-skip: "<理由>"` を記録します。test-spec リンクも
+skip 理由もない approved plan は audit で指摘されます。
 
 ## タスク粒度
 

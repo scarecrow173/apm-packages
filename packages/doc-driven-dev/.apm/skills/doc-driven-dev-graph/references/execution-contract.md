@@ -43,8 +43,8 @@ edge IDs in order, route fingerprints, and the final yield reason.
 
 ## Git commit boundary
 
-Across briefing, spec, ADR, design, plan, task, implementation, follow-up, and
-audit work, make each reviewable logical change one commit. A logical change
+Across briefing, spec, ADR, design, plan, test-spec, task, implementation,
+follow-up, and audit work, make each reviewable logical change one commit. A logical change
 should be explainable and reviewable on its own, have a clear verification
 method where practical, have a clear meaning if reverted, and contain no
 unrelated changes. Minimizing or maximizing the number of commits is not a
@@ -91,7 +91,8 @@ fresh projection.
 
 The caller adapter normalizes the declared script delegates (`migrate_docs`,
 `scaffold_docs`, and `build_task_graph`) and named audits (`spec`, `adr`,
-`design`, `plan`, `task`, `impl-record`, and `all`) into `EffectOutcome`.
+`design`, `plan`, `task`, `test-spec`, `impl-record`, and `all`) into
+`EffectOutcome`.
 Skills that can emit the footer return it directly. Missing or malformed adapter
 evidence yields `authority-required`; it never advances a checkpoint. The
 effect-specific canonical input/evidence mapping is defined in

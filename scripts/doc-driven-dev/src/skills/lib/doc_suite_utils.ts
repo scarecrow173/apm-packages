@@ -35,7 +35,7 @@ const changeFields = [
   "generated",
 ] as const;
 
-const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr"] as const;
+const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"] as const;
 
 type DocType = typeof docTypes[number];
 type RelationField = typeof relationFields[number];
@@ -191,6 +191,14 @@ const configs: Record<DocType, DocConfig> = {
     statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
     type: "task",
   },
+  "test-spec": {
+    defaultStatus: "draft",
+    dir: "docs/test-specs",
+    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    idPrefix: "TSPEC",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    type: "test-spec",
+  },
   design: {
     defaultStatus: "draft",
     dir: "docs/designs",
@@ -216,6 +224,7 @@ const scaffoldTargets: ScaffoldTarget[] = [
   { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
   { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
   { dir: "docs/tasks", title: "TASK Documents", type: "task" },
+  { dir: "docs/test-specs", title: "TEST-SPEC Documents", type: "test-spec" },
   { dir: "docs/adr", title: "ADR Documents" },
   { dir: "docs/impl/ir", title: "Implementation Record Documents" },
   { dir: "docs/impl/exp", title: "Experiment Log Documents" },
@@ -226,6 +235,7 @@ const canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
 const migrationRoutes: MigrationRoute[] = [
   { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
   { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
+  { targetDir: "docs/test-specs", type: "test-spec", patterns: [/test[-\s]?spec/i, /testspec/i] },
   { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
   { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
   { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
@@ -721,6 +731,39 @@ function bodyFor(type: DocType, title: string): string {
       "- <!-- linked spec, ADR, and related docs -->",
     ].join("\n");
   }
+  if (type === "test-spec") {
+    return [
+      `# ${title}`,
+      "",
+      "## Purpose",
+      "",
+      "<!-- Why this test spec exists: the intent it preserves and when it may be retired. -->",
+      "",
+      "## Feature",
+      "",
+      "<!-- The behavior under specification, named like a Gherkin Feature. -->",
+      "",
+      "## Rules",
+      "",
+      "- <!-- Rule: an invariant or contract the feature must satisfy -->",
+      "",
+      "## Examples",
+      "",
+      "- <!-- Example: a concrete scenario that pins a rule down, optionally in Given/When/Then form -->",
+      "",
+      "## Guarantees",
+      "",
+      "- <!-- What a correct implementation must guarantee -->",
+      "",
+      "## Non-goals",
+      "",
+      "- <!-- Behavior or coverage this spec deliberately does not verify -->",
+      "",
+      "## Risk",
+      "",
+      "- <!-- What is lost or breaks if these guarantees are dropped -->",
+    ].join("\n");
+  }
   return [
     `# ${title}`,
     "",
@@ -1135,6 +1178,38 @@ function resolvesLocalTarget(cwd: string, fromFile: string, target: string): boo
   return candidates.some((candidate) => fs.existsSync(candidate));
 }
 
+function relationValues(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+  }
+  if (typeof value === "string" && value.trim().length > 0) return [value];
+  return [];
+}
+
+function resolveDocumentReference(cwd: string, target: string, fromDir?: string): string | null {
+  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+    const candidate = path.resolve(base, target);
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+  }
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = path.join(cwd, dirName);
+      if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) continue;
+      for (const file of docFiles(dir)) {
+        const fullPath = path.join(dir, file);
+        const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === target) return fullPath;
+      }
+    }
+  }
+  return null;
+}
+
+function docTypeOfFile(filePath: string): string | null {
+  const parsed = parseDoc(fs.readFileSync(filePath, "utf8"));
+  return typeof parsed.data.type === "string" ? parsed.data.type : null;
+}
+
 async function auditDocuments(cwd: string, type: string, explicitDir?: string): Promise<{ directory: string; files: number; findings: Finding[] }> {
   const config = configFor(type);
   const relativeDir = docDir(cwd, type, explicitDir);
@@ -1182,6 +1257,46 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
     }
     if (typeof data.status === "string" && !config.statusValues.includes(data.status)) {
       findings.push({ severity: "error", file, code: "invalid-status", message: `Invalid ${type} status: ${data.status}` });
+    }
+    if (type === "test-spec") {
+      const verifies = relationValues((data.relations as Record<string, unknown> | undefined)?.verifies);
+      if (verifies.length === 0) {
+        findings.push({
+          severity: "warning",
+          file,
+          code: "test-spec-missing-verifies",
+          message: "Test spec has no relations.verifies target (TEST-SPEC-DOC-GATE-001)",
+        });
+      }
+      for (const target of verifies) {
+        const resolved = resolveDocumentReference(cwd, target, path.dirname(fullPath));
+        if (!resolved) continue; // broken-relation-link reports unresolvable targets
+        const targetType = docTypeOfFile(resolved);
+        if (targetType && !["spec", "design", "adr"].includes(targetType)) {
+          findings.push({
+            severity: "warning",
+            file,
+            code: "test-spec-invalid-verifies-target",
+            message: `Test spec verifies target resolves to type "${targetType}", expected spec, design, or adr: ${target}`,
+          });
+        }
+      }
+    }
+    if (type === "plan" && typeof data.status === "string" && ["approved", "in-progress", "completed"].includes(data.status)) {
+      const verifiedBy = relationValues((data.relations as Record<string, unknown> | undefined)?.["verified-by"]);
+      const linked = verifiedBy.some((target) => {
+        const resolved = resolveDocumentReference(cwd, target, path.dirname(fullPath));
+        return resolved !== null && docTypeOfFile(resolved) === "test-spec";
+      });
+      const skipped = typeof data["test-spec-skip"] === "string" && data["test-spec-skip"].trim().length > 0;
+      if (!linked && !skipped) {
+        findings.push({
+          severity: "warning",
+          file,
+          code: "plan-missing-test-spec-evidence",
+          message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason",
+        });
+      }
     }
     for (const relation of relationLinks(content)) {
       if (isExternalLink(relation.target)) continue;
@@ -1231,6 +1346,8 @@ export {
   isForeignDocType,
   isGeneratedIndex,
   parseDoc,
+  relationValues,
+  resolveDocumentReference,
   sanitizeTitle,
   logIndexResult,
   migrateDocs,

@@ -67,6 +67,9 @@ task を作成するには、以下のいずれかを満たす必要がある:
    の辺を作ります。plan、spec、ADR、design への参照は上流 artifact relation
    であり、Task DAG の辺ではありません。task 作成は参照を記録するだけで
    DAG 全体を検証しません。解決と検証は `build_task_graph.js` を使います。
+   `--verified-by` は繰り返し指定でき、この task が満たす test spec を
+   リンクします。各対象はパスまたは ID で既存文書に解決できる必要があります
+   （TASK-DOC-GATE-002）。
 4. ステータスを更新する。
    `todo`, `in-progress`, `blocked`, `done`, `wont-do` を使います。
 5. task は小さく保つ。

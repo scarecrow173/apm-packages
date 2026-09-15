@@ -63,6 +63,7 @@ const CANONICAL_TARGETS = [
   "docs/designs",
   "docs/plans",
   "docs/tasks",
+  "docs/test-specs",
   "docs/adr",
   "docs/impl/ir",
   "docs/impl/exp",
