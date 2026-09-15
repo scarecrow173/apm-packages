@@ -1,27 +1,17 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
 
-const { loadAdapter } = require("./lib/adapter.ts");
-const { buildCatalog } = require("./lib/catalog.ts");
-const { classifySkills } = require("./lib/classifier.ts");
-const { resolveInvocations } = require("./lib/resolver.ts");
-const { buildProfile } = require("./lib/profile.ts");
-const { stabilizeCatalog, stabilizeProfile, writeArtifact } = require("./lib/renderer.ts");
-const {
-  defaultScanListPath,
-  loadScanList,
-  defaultInferencePath,
-  loadInferenceDocument,
-  assertInferenceComplete,
-  enrichSkills,
-} = require("./lib/inference.ts");
-const {
-  resolveSharedCatalogPath,
-  resolveFlowProfilePath,
-} = require("./lib/artifact_paths.ts");
+import { loadAdapter } from "./lib/adapter";
+import { buildCatalog } from "./lib/catalog";
+import { classifySkills } from "./lib/classifier";
+import { resolveInvocations } from "./lib/resolver";
+import { buildProfile } from "./lib/profile";
+import { stabilizeCatalog, stabilizeProfile, writeArtifact } from "./lib/renderer";
+import { defaultScanListPath, loadScanList, defaultInferencePath, loadInferenceDocument, assertInferenceComplete, enrichSkills } from "./lib/inference";
+import { resolveSharedCatalogPath, resolveFlowProfilePath } from "./lib/artifact_paths";
 
 function parseArgs(argv: string[]): { adapter?: string; cwd?: string; references?: string; help?: boolean } {
   const args: { adapter?: string; cwd?: string; references?: string; help?: boolean } = {};

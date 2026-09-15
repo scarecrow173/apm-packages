@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
-const { auditDocuments } = require("../../lib/doc_suite_utils.ts");
+import path from "node:path";
+import { auditDocuments } from "../../lib/doc_suite_utils";
 
 type CliArgs = {
   cwd: string;
@@ -27,7 +27,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/audit_docs.js --type spec|plan|task|design [--dir <path>] [--json]";
+  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr [--dir <path>] [--json]";
 }
 
 async function main(): Promise<void> {

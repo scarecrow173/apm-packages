@@ -1,12 +1,10 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const test = require("node:test");
-const matter = require("gray-matter");
-const {
-  projectArtifactGraph,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import matter from "gray-matter";
+import { projectArtifactGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph";
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>): void {
   const file = path.join(repo, relativePath);

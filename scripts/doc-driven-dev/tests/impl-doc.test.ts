@@ -1,9 +1,9 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/impl-doc");
 
@@ -11,7 +11,7 @@ function tempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "impl-doc-test-"));
 }
 
-function runScript(name, args, options = {}) {
+function runScript(name: any, args: any, options: { cwd?: string } = {}) {
   const result = spawnSync(
     process.execPath,
     [path.join(skillRoot, "scripts", name), ...args],
@@ -128,7 +128,7 @@ test("audit_impl_record reports front matter, shape, relation, and section issue
   const result = runScript("audit_impl_record.js", ["--json"], { cwd: repo });
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "invalid-front-matter"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "invalid-front-matter"), true);
 
   fs.writeFileSync(
     path.join(repo, "docs/impl/ir/0001-invalid.md"),
@@ -183,9 +183,9 @@ test("audit_impl_record reports front matter, shape, relation, and section issue
   const second = runScript("audit_impl_record.js", ["--json"], { cwd: repo });
   assert.equal(second.status, 0, second.stderr);
   const secondReport = JSON.parse(second.stdout);
-  assert.equal(secondReport.findings.some((finding) => finding.code === "broken-relation-link"), true);
-  assert.equal(secondReport.findings.some((finding) => finding.code === "missing-experiment-link"), true);
-  assert.equal(secondReport.findings.some((finding) => finding.code === "missing-section"), true);
+  assert.equal(secondReport.findings.some((finding: any) => finding.code === "broken-relation-link"), true);
+  assert.equal(secondReport.findings.some((finding: any) => finding.code === "missing-experiment-link"), true);
+  assert.equal(secondReport.findings.some((finding: any) => finding.code === "missing-section"), true);
 });
 
 test("experiment log creation, append, edit, and audit work together", () => {
@@ -270,8 +270,8 @@ test("audit_experiment_log reports invalid JSON, shape, seq, and type errors", (
   const result = runScript("audit_experiment_log.js", ["--json"], { cwd: repo });
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "invalid-json"), true);
-  assert.equal(report.findings.some((finding) => finding.code === "invalid-event-shape"), true);
-  assert.equal(report.findings.some((finding) => finding.code === "non-monotonic-seq"), true);
-  assert.equal(report.findings.some((finding) => finding.code === "invalid-event-type"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "invalid-json"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "invalid-event-shape"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "non-monotonic-seq"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "invalid-event-type"), true);
 });

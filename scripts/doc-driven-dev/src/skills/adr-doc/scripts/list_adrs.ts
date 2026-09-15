@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
-const { adrEntries, findAdrDir } = require("./lib/adr_utils.ts");
+import path from "node:path";
+import { adrEntries, findAdrDir } from "./lib/adr_utils";
 
 type CliArgs = {
   cwd: string;

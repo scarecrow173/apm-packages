@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
-const fs = require("node:fs");
-const matter = require("gray-matter");
-const { createDocument, logIndexResult } = require("../../lib/doc_suite_utils.ts");
+import path from "node:path";
+import fs from "node:fs";
+import matter from "gray-matter";
+import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
 
 const TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
 const TASKABLE_PLAN_STATUSES = new Set(["approved", "in-progress", "completed"]);

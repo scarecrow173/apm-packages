@@ -1,7 +1,7 @@
 "use strict";
 
-const os = require("node:os");
-const path = require("node:path");
+import os from "node:os";
+import path from "node:path";
 
 /**
  * Expand ${VAR} and ${VAR:-default} patterns from process.env.
@@ -40,4 +40,4 @@ function resolvePath(raw: string, cwd: string): string {
     : path.resolve(cwd, expanded);
 }
 
-module.exports = { expandEnvVars, expandHome, resolvePath };
+export { expandEnvVars, expandHome, resolvePath };

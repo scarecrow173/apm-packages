@@ -1,17 +1,10 @@
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const matter = require("gray-matter");
-const { z } = require("zod");
-const {
-  detectNaming,
-  findDocumentDir,
-  listMarkdownFiles,
-  nextNumber,
-  normalizeDir,
-  slugify,
-} = require("./document_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
+import { z } from "zod";
+import { detectNaming, findDocumentDir, isIndexFileName, listMarkdownFiles, nextNumber, normalizeDir, slugify } from "./document_utils";
 
 const relationFields = [
   "source",
@@ -248,12 +241,12 @@ const changeEntrySchema = z.object({
 
 const changesSchema = z.object(Object.fromEntries(
   changeFields.map((field) => [field, z.array(changeEntrySchema).default([])]),
-)).default({});
+)).prefault({});
 
 const relationSchema = z.object({
   ...Object.fromEntries(relationFields.map((field) => [field, z.array(z.string()).default([])])),
   changes: changesSchema,
-}).default({});
+}).prefault({});
 
 const frontMatterSchema = z.object({
   id: z.string().min(1),
@@ -296,7 +289,7 @@ function nextNumberFromFrontMatter(cwd: string, relativeDir: string, idPrefix: s
   const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
   const numbers = walkMarkdownFiles(fullDir)
-    .map((fullPath) => matterData(fs.readFileSync(fullPath, "utf8")).id)
+    .map((fullPath) => parseDoc(fs.readFileSync(fullPath, "utf8")).data.id)
     .filter((id): id is string => typeof id === "string")
     .map((id) => pattern.exec(id.trim()))
     .filter((match): match is RegExpExecArray => Boolean(match))
@@ -328,23 +321,60 @@ function matterData(content: string): Record<string, unknown> {
   return matter(content).data || {};
 }
 
-function formatIssuePath(pathParts: Array<string | number>): string {
+function parseDoc(content: string): { data: Record<string, unknown>; body: string; error: string | null } {
+  try {
+    const parsed = matter(content);
+    return { data: parsed.data || {}, body: parsed.content, error: null };
+  } catch (error: unknown) {
+    return { data: {}, body: content, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function sanitizeTitle(title: string): string {
+  const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
+  return cleaned;
+}
+
+function indexCell(value: string): string {
+  return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+}
+
+function isGeneratedIndex(content: string, legacyTitle?: string): boolean {
+  if (content.includes(GENERATED_INDEX_MARKER)) return true;
+  return Boolean(legacyTitle)
+    && content.startsWith(`# ${legacyTitle}`)
+    && /Directory: `/.test(content);
+}
+
+function isForeignDocType(typeValue: unknown, expected: string, relativeDir: string): boolean {
+  if (typeof typeValue !== "string" || typeValue === expected) return false;
+  if (!(docTypes as readonly string[]).includes(typeValue)) return false;
+  const normalized = normalizeDir(relativeDir);
+  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+}
+
+function formatIssuePath(pathParts: PropertyKey[]): string {
   return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
 }
 
 function validateFrontMatter(content: string): { message: string; path: string }[] {
-  const result = frontMatterSchema.safeParse(matterData(content));
+  const parsed = parseDoc(content);
+  if (parsed.error) {
+    return [{ message: `Front matter is not valid YAML: ${parsed.error}`, path: "$" }];
+  }
+  const result = frontMatterSchema.safeParse(parsed.data);
   if (result.success) return [];
-  return result.error.issues.map((issue: { message: string; path: Array<string | number> }) => ({
+  return result.error.issues.map((issue) => ({
     message: issue.message,
     path: formatIssuePath(issue.path),
   }));
 }
 
 function relationMap(content: string): Record<RelationField, string[]> {
-  const data = matterData(content);
+  const data = parseDoc(content).data;
   const rawRelations = data.relations;
-  const result = Object.fromEntries(relationFields.map((field) => [field, []])) as Record<RelationField, string[]>;
+  const result = Object.fromEntries(relationFields.map((field) => [field, [] as string[]])) as Record<RelationField, string[]>;
   if (!rawRelations || typeof rawRelations !== "object" || Array.isArray(rawRelations)) return result;
   const raw = rawRelations as Record<string, unknown>;
   for (const field of relationFields) {
@@ -420,10 +450,12 @@ function formatChangesBlock(changes: ChangeSet): string[] {
       if (entries.length === 0) return [`    ${field}: []`];
       return [
         `    ${field}:`,
-        ...entries.flatMap((entry) => [
-          "      - " + formatChangeEntry(entry)[0],
-          ...formatChangeEntry(entry).slice(1).map((line) => `        ${line}`),
-        ]),
+        ...entries.flatMap((entry) => {
+          const lines = formatChangeEntry(entry);
+          return lines.length === 0
+            ? ["      - {}"]
+            : [`      - ${lines[0]}`, ...lines.slice(1).map((line) => `        ${line}`)];
+        }),
       ];
     }),
   ];
@@ -445,7 +477,8 @@ function formatMetadataNode(key: string, value: unknown, indent: number): string
     const items = value.flatMap((item) => {
       if (item === null || item === undefined) return [];
       if (isPlainObject(item)) {
-        return [`${prefix} -`, ...Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3))];
+        const childLines = Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3));
+        return childLines.length > 0 ? [`${prefix} -`, ...childLines] : [`${prefix} - {}`];
       }
       if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
       if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
@@ -474,16 +507,22 @@ function completeRelations(input?: RelationInput): Record<RelationField, string[
 }
 
 function frontMatter(config: DocConfig, number: number, title: string, status: string, date: string, relations?: RelationInput, metadata?: MetadataInput): string {
+  if (!config.statusValues.includes(status)) {
+    throw new Error(`Invalid ${config.type} status: ${status} (expected one of: ${config.statusValues.join(", ")})`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error(`Invalid date: ${date} (expected YYYY-MM-DD)`);
+  }
   const complete = completeRelations(relations);
   const changes = completeChanges(relations?.changes);
   return [
     "---",
-    `id: "${config.idPrefix}-${String(number).padStart(4, "0")}"`,
-    `type: "${config.type}"`,
-    `status: "${status}"`,
-    `title: ${quote(title)}`,
-    `created: "${date}"`,
-    `updated: "${date}"`,
+    `id: ${quote(`${config.idPrefix}-${String(number).padStart(4, "0")}`)}`,
+    `type: ${quote(config.type)}`,
+    `status: ${quote(status)}`,
+    `title: ${quote(sanitizeTitle(title))}`,
+    `created: ${quote(date)}`,
+    `updated: ${quote(date)}`,
     "owners: []",
     "relations:",
     formatRelationBlock("source", complete.source),
@@ -748,19 +787,20 @@ function ensureDesignOverview(fullDir: string, date: string): void {
 }
 
 async function titleFromDocument(content: string, fallback: string): Promise<string> {
-  const data = matterData(content);
+  const parsed = parseDoc(content);
+  const data = parsed.data;
   if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
-  const match = /^#\s+(.+)$/m.exec(matter(content).content);
+  const match = /^#\s+(.+)$/m.exec(parsed.body);
   return match?.[1]?.trim() || fallback;
 }
 
 async function docEntries(cwd: string, type: string, explicitDir?: string): Promise<DocEntry[]> {
   const relativeDir = docDir(cwd, type, explicitDir);
   const dir = path.join(cwd, relativeDir);
-  return Promise.all(docFiles(dir).map(async (file) => {
+  const entries = await Promise.all(docFiles(dir).map(async (file) => {
     const fullPath = path.join(dir, file);
     const content = fs.readFileSync(fullPath, "utf8");
-    const data = matterData(content);
+    const data = parseDoc(content).data;
     return {
       file,
       id: typeof data.id === "string" ? data.id : null,
@@ -770,6 +810,7 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
       type: typeof data.type === "string" ? data.type : null,
     };
   }));
+  return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
 
 async function buildIndex(cwd: string, type: string, explicitDir?: string): Promise<string> {
@@ -785,7 +826,7 @@ async function buildIndex(cwd: string, type: string, explicitDir?: string): Prom
     : entries;
   const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
   const rows = sorted.map((entry) =>
-    `| ${entry.id || "—"} | ${entry.title} | ${entry.status || "—"} | [${entry.file}](./${entry.file}) |`,
+    `| ${indexCell(entry.id || "—")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "—")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`,
   );
   const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
   return `# ${title}\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${body}\n`;
@@ -797,7 +838,7 @@ function buildGenericIndex(relativeDir: string, title: string): string {
 }
 
 function isMarkdownSource(file: string): boolean {
-  return file.endsWith(".md") && !/^readme\.md$/i.test(path.basename(file)) && !/^index\.md$/i.test(path.basename(file));
+  return file.endsWith(".md") && !isIndexFileName(path.basename(file));
 }
 
 function isUnderCanonicalDir(relativeFile: string): boolean {
@@ -821,16 +862,16 @@ function defaultMigrationSources(cwd: string): string[] {
 }
 
 function headingTitle(content: string, fallback: string): string {
-  const parsed = matter(content);
-  const data = parsed.data || {};
+  const parsed = parseDoc(content);
+  const data = parsed.data;
   if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
-  const match = /^#\s+(.+)$/m.exec(parsed.content);
+  const match = /^#\s+(.+)$/m.exec(parsed.body);
   return match?.[1]?.trim() || fallback;
 }
 
 function splitByH1(source: string, content: string): MigrationInput[] {
-  const parsed = matter(content);
-  const body = parsed.content.trim();
+  const parsed = parseDoc(content);
+  const body = parsed.body.trim();
   const matches = [...body.matchAll(/^#\s+(.+)$/gm)];
   if (matches.length <= 1) {
     return [{
@@ -912,8 +953,8 @@ function migratedContent(input: MigrationInput, route: MigrationRoute, sourceCon
     return `${migratedFrontMatter(route.type, number, input.title, date, source)}\n\n${input.body.trim()}\n`;
   }
 
-  const parsed = matter(sourceContent);
-  const data = parsed.data || {};
+  const parsed = parseDoc(sourceContent);
+  const data = parsed.data;
   if (Object.keys(data).length > 0) return `${matter.stringify(input.body.trim(), data).trimEnd()}\n`;
   return `---\ntitle: ${quote(input.title)}\nsource: ${quote(source)}\n---\n\n${input.body.trim()}\n`;
 }
@@ -952,12 +993,17 @@ async function migrateDocs(options: MigrationOptions): Promise<MigrationResult> 
       }
 
       const sourceContent = fs.readFileSync(fullFile, "utf8");
+      const sourceParsed = parseDoc(sourceContent);
+      if (sourceParsed.error) {
+        skipped.push({ file: relativeFile, reason: "unparseable-front-matter" });
+        continue;
+      }
       const inputs = options.splitH1
         ? splitByH1(relativeFile, sourceContent)
         : [{
           source: relativeFile,
           title: headingTitle(sourceContent, path.basename(relativeFile, ".md")),
-          body: matter(sourceContent).content.trim(),
+          body: sourceParsed.body.trim(),
         }];
       for (const input of inputs) {
         migrations.push(plannedMigration(cwd, relativeFile, input, sourceContent, date, allocations));
@@ -1006,7 +1052,7 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
 
 type IndexWriteResult = { path: string; written: boolean; reason: "hand-curated" | "disabled" | null };
 
-async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: string, options: CreateDocumentOptions): Promise<IndexWriteResult> {
+async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: string, options: Pick<CreateDocumentOptions, "forceIndex" | "noIndex">): Promise<IndexWriteResult> {
   const indexPath = path.join(cwd, relativeDir, "README.md");
   const relIndex = path.relative(cwd, indexPath).replace(/\\/g, "/");
   if (options.noIndex) return { path: relIndex, written: false, reason: "disabled" };
@@ -1037,22 +1083,24 @@ async function createDocument(type: DocType, options: CreateDocumentOptions): Pr
   const localFiles = fs.readdirSync(fullDir)
     .filter((file) => file.endsWith(".md"))
     .filter((file) => !isReservedDocFile(type, file));
-  const number = naming === "slug"
-    ? nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix)
-    : nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix);
+  const number = Math.max(
+    nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix),
+    nextNumber(localFiles),
+  );
 
+  const title = sanitizeTitle(options.title);
   const filename = options.name
     ? sanitizeFileName(options.name)
     : naming === "slug"
-      ? `${slugify(options.title, type)}.md`
-      : `${String(number).padStart(4, "0")}-${slugify(options.title, type)}.md`;
+      ? `${slugify(title, type)}.md`
+      : `${String(number).padStart(4, "0")}-${slugify(title, type)}.md`;
   if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
   const outputPath = path.join(fullDir, filename);
   if (fs.existsSync(outputPath)) throw new Error(`Document already exists: ${path.relative(cwd, outputPath)}`);
 
   const date = options.date || new Date().toISOString().slice(0, 10);
   const status = options.status || config.defaultStatus;
-  const content = `${frontMatter(config, number, options.title, status, date, options.relations)}\n\n${bodyFor(type, options.title)}\n`;
+  const content = `${frontMatter(config, number, title, status, date, options.relations)}\n\n${bodyFor(type, title)}\n`;
   fs.writeFileSync(outputPath, content, "utf8");
 
   if (type === "design") ensureDesignOverview(path.join(cwd, rootDir), date);
@@ -1106,12 +1154,28 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
     }
   }
 
+  const inScopeFiles: string[] = [];
   for (const file of files) {
     const fullPath = path.join(dir, file);
     const content = fs.readFileSync(fullPath, "utf8");
-    const data = matterData(content);
-    for (const issue of validateFrontMatter(content)) {
-      findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${issue.path}: ${issue.message}` });
+    const parsed = parseDoc(content);
+    if (parsed.error) {
+      findings.push({
+        severity: "error",
+        file,
+        code: "unparseable-front-matter",
+        message: `Front matter is not valid YAML: ${parsed.error}`,
+      });
+      continue;
+    }
+    const data = parsed.data;
+    if (isForeignDocType(data.type, type, relativeDir)) continue;
+    inScopeFiles.push(file);
+    const schemaResult = frontMatterSchema.safeParse(data);
+    if (!schemaResult.success) {
+      for (const issue of schemaResult.error.issues) {
+        findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${formatIssuePath(issue.path)}: ${issue.message}` });
+      }
     }
     if (data.type !== type) {
       findings.push({ severity: "error", file, code: "invalid-type", message: `Expected type ${type}` });
@@ -1137,7 +1201,7 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
     findings.push({ severity: "warning", file: null, code: "missing-index", message: `Missing ${type} index README.md or index.md` });
   } else {
     const index = fs.readFileSync(indexPath, "utf8");
-    for (const file of files) {
+    for (const file of inScopeFiles) {
       if (!index.includes(file)) findings.push({ severity: "warning", file, code: "index-missing-entry", message: `Index does not link ${file}` });
     }
     if (type === "design" && !index.includes("overview.md")) {
@@ -1153,7 +1217,7 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
   return { directory: relativeDir, files: files.length, findings };
 }
 
-module.exports = {
+export {
   auditDocuments,
   buildIndex,
   buildGenericIndex,
@@ -1162,6 +1226,12 @@ module.exports = {
   docEntries,
   docFiles,
   docTypes,
+  GENERATED_INDEX_MARKER,
+  indexCell,
+  isForeignDocType,
+  isGeneratedIndex,
+  parseDoc,
+  sanitizeTitle,
   logIndexResult,
   migrateDocs,
   relationFields,

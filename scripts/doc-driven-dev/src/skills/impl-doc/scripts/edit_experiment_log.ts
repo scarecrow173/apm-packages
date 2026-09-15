@@ -1,12 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
-const {
-  parseSetArguments,
-  readExperimentEvents,
-  writeExperimentEvents,
-} = require("./lib/impl_doc_utils.ts");
+import path from "node:path";
+import { parseSetArguments, readExperimentEvents, writeExperimentEvents } from "./lib/impl_doc_utils";
 
 type CliArgs = {
   cwd: string;
@@ -47,15 +43,19 @@ async function main(): Promise<void> {
     const cwd = path.resolve(args.cwd);
     const filePath = path.resolve(cwd, args.file);
     const events = readExperimentEvents(filePath);
+    const corrupt = events.filter((item) => item.value === null);
+    if (corrupt.length > 0) {
+      throw new Error(`Experiment log contains unparseable JSON at line ${corrupt[0].line}; fix it manually before editing`);
+    }
     const patch = parseSetArguments(args.setArgs);
     let updated = false;
     const nextEvents = events.map((item) => {
-      if (item.value.seq !== args.seq) return item.value;
+      if (item.value!.seq !== args.seq) return item.value!;
       updated = true;
       return {
-        ...item.value,
+        ...item.value!,
         ...patch,
-        seq: item.value.seq,
+        seq: item.value!.seq,
       };
     });
     if (!updated) throw new Error(`Experiment event not found: seq=${args.seq}`);

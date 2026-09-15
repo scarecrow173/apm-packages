@@ -8,22 +8,15 @@ import type {
   TaskStatus,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const test = require("node:test");
-const matter = require("gray-matter");
-const {
-  loadGraphDefinition,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts");
-const {
-  projectGraphState,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts");
-const {
-  evaluateRouteDecision,
-  routeGraph,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import matter from "gray-matter";
+import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
+import { projectGraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
+import { evaluateRouteDecision, routeGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): void {
   const file = path.join(repo, relativePath);

@@ -88,4 +88,4 @@ function matchesCategory(
   return false;
 }
 
-module.exports = { classifySkills };
+export { classifySkills };

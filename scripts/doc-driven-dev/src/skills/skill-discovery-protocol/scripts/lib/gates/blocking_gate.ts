@@ -99,7 +99,7 @@ function checkUnknownSkillOverrides(
   severity: string,
 ): BlockingCheck {
   const details: string[] = [];
-  const overrides = adapter.invocation_resolution.overrides;
+  const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
 
   // Check slot overrides
   if (overrides.slots) {
@@ -135,7 +135,7 @@ function checkCapabilityMismatch(
   severity: string,
 ): BlockingCheck {
   const details: string[] = [];
-  const overrides = adapter.invocation_resolution.overrides;
+  const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
 
   // Check capability overrides - does the preferred skill actually provide that capability?
   if (overrides.capabilities) {
@@ -159,7 +159,7 @@ function checkOverrideNotAllowed(
   severity: string,
 ): BlockingCheck {
   const details: string[] = [];
-  const overrides = adapter.invocation_resolution.overrides;
+  const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
 
   // Build index of uses with override_allowed=false
   const noOverride = new Map<string, Set<string>>(); // capability -> set of skills that disallow override
@@ -205,4 +205,4 @@ function checkUnusedSlots(
   return { type: "unused_slots", result: details.length > 0 ? "warn" : "pass", details };
 }
 
-module.exports = { runBlockingGate };
+export { runBlockingGate };

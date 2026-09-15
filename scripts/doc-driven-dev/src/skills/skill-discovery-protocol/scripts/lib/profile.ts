@@ -67,4 +67,4 @@ function buildProfile(
   };
 }
 
-module.exports = { buildProfile };
+export { buildProfile };

@@ -1,17 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const {
-  buildExperimentEvent,
-  buildNewFilePath,
-  experimentEventTypes,
-  posixRelative,
-  renderExperimentTemplate,
-  updateIndexForExperimentDir,
-  writeExperimentEvents,
-} = require("./lib/impl_doc_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import { buildExperimentEvent, buildNewFilePath, experimentEventTypes, posixRelative, renderExperimentTemplate, updateIndexForExperimentDir, writeExperimentEvents } from "./lib/impl_doc_utils";
 
 type CliArgs = {
   cwd: string;
@@ -54,7 +46,7 @@ async function main(): Promise<void> {
       return;
     }
     if (!args.title) throw new Error("Missing required --title");
-    if (args.type && !experimentEventTypes.includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
+    if (args.type && !(experimentEventTypes as readonly string[]).includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
     const cwd = path.resolve(args.cwd);
     const { outputPath, relativeDir } = buildNewFilePath({
       cwd,
@@ -63,30 +55,35 @@ async function main(): Promise<void> {
       explicitDir: args.dir,
     });
     if (fs.existsSync(outputPath)) throw new Error(`Experiment Log already exists: ${posixRelative(cwd, outputPath)}`);
-    fs.writeFileSync(outputPath, "", "utf8");
+    const events: Record<string, unknown>[] = [];
     if (args.type) {
       const baseEvent = buildExperimentEvent({
         cwd,
         filePath: outputPath,
         seq: 1,
-        type: args.type,
+        type: args.type as (typeof experimentEventTypes)[number],
         ts: args.ts,
         summary: args.summary,
         extra: args.task ? { task: args.task } : undefined,
       });
       const event = renderExperimentTemplate({
-        experiment_path: baseEvent.experiment,
+        experiment_path: String(baseEvent.experiment),
         seq: String(baseEvent.seq),
         event_type: String(baseEvent.type),
         timestamp: String(baseEvent.ts),
         summary: String(baseEvent.summary || ""),
       });
       if (args.task) event.task = args.task;
-      writeExperimentEvents(outputPath, [event]);
+      events.push(event);
     }
-    updateIndexForExperimentDir(cwd, relativeDir);
+    writeExperimentEvents(outputPath, events);
+    const indexResult = updateIndexForExperimentDir(cwd, relativeDir);
     console.log(`Created ${posixRelative(cwd, outputPath)}`);
-    console.log(`Updated ${relativeDir}/README.md`);
+    if (indexResult.written) {
+      console.log(`Updated ${relativeDir}/README.md`);
+    } else {
+      console.warn(`Skipped index update: ${relativeDir}/README.md appears hand-curated (no generated marker). Update it manually.`);
+    }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

@@ -1,39 +1,49 @@
-const assert = require("node:assert/strict");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import test from "node:test";
 
-const {
-  rankCandidates,
-  rankRuntimeGuidance,
-} = require("../../../src/skills/skill-discovery-protocol/scripts/lib/runtime_guidance_ranker.ts");
+import { rankCandidates, rankRuntimeGuidance } from "../../../src/skills/skill-discovery-protocol/scripts/lib/runtime_guidance_ranker";
+import type { ScannedSkill } from "../../../src/skills/skill-discovery-protocol/scripts/lib/types";
 
 test("runtime guidance ranking prefers higher priority_delta and filters incompatible policies", () => {
-  const skills = [
+  const skills: ScannedSkill[] = [
     {
       name: "skill-a",
+      description: "skill-a",
+      provides: [],
+      uses: [],
       execution_policy: {
         strictness: "flexible",
         sequence_required: false,
         allow_step_reordering: true,
         allow_partial_application: true,
       },
+      tags: [],
     },
     {
       name: "skill-b",
+      description: "skill-b",
+      provides: [],
+      uses: [],
       execution_policy: {
         strictness: "rigid",
         sequence_required: true,
         allow_step_reordering: false,
         allow_partial_application: false,
       },
+      tags: [],
     },
     {
       name: "skill-c",
+      description: "skill-c",
+      provides: [],
+      uses: [],
       execution_policy: {
         strictness: "rigid",
         sequence_required: false,
         allow_step_reordering: false,
         allow_partial_application: false,
       },
+      tags: [],
     },
   ];
 

@@ -21,7 +21,7 @@ function zodIssuesToErrors(issues: z.core.$ZodIssue[]): SchemaError[] {
 
     // Translate Zod messages to user-friendly format
     if (issue.code === "invalid_type" && message.includes("received undefined")) {
-      message = `Missing required field: ${issue.path[issue.path.length - 1] ?? field}`;
+      message = `Missing required field: ${String(issue.path[issue.path.length - 1] ?? field)}`;
     }
 
     return { field, message };
@@ -69,4 +69,4 @@ function runSchemaGate(
   };
 }
 
-module.exports = { runSchemaGate, isSnakeCase, validateProfileSchema, validateCatalogSchema, validateAdapterSchema };
+export { runSchemaGate, isSnakeCase, validateProfileSchema, validateCatalogSchema, validateAdapterSchema };

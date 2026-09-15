@@ -20720,7 +20720,9 @@ function artifactChainCandidates(graph, records) {
   const plans = records.filter((record2) => record2.type === "plan" && isValidChainRecord(record2));
   const tasks = records.filter((record2) => record2.type === "task");
   const chains = /* @__PURE__ */ new Map();
-  const add = (chain) => chains.set(chainKey(chain), chain);
+  const add = (chain) => {
+    chains.set(chainKey(chain), chain);
+  };
   const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
   for (const design of designs) {
     const relatedSpecs = specs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));

@@ -1,15 +1,15 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const test = require("node:test");
-const yaml = require("js-yaml");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import * as yaml from "js-yaml";
 
 const adapterPath = path.resolve(
   __dirname,
   "../../../../packages/doc-driven-dev/.apm/skills/implementation-flow/assets/adapters/implementation-adapter.yaml",
 );
 
-function loadAdapter() {
+function loadAdapter(): any {
   return yaml.load(fs.readFileSync(adapterPath, "utf8"));
 }
 

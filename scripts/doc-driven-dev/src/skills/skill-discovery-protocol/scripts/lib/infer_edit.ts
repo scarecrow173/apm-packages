@@ -139,7 +139,7 @@ function applyOps(baseDoc: SkillReferenceInferenceDocument, ops: InferOp[]): Ski
   return next;
 }
 
-module.exports = {
+export {
   buildInitDocument,
   mergeInitWithExisting,
   parseOpsJsonl,

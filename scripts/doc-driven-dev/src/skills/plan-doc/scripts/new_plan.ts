@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const matter = require("gray-matter");
-const { createDocument, logIndexResult } = require("../../lib/doc_suite_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
+import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
 
 const PLAN_DOC_GATE_ERROR = "PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: \"approved\".";
 

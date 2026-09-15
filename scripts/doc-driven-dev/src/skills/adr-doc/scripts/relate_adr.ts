@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const fs = require("node:fs");
-const path = require("node:path");
-const matter = require("gray-matter");
-const { findAdrDir, relationFields } = require("./lib/adr_utils.ts");
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
+import { findAdrDir, relationFields } from "./lib/adr_utils";
 
 type CliArgs = {
   cwd: string;
@@ -69,12 +69,11 @@ function ensureRelation(content: string, relation: string, target: string): stri
   return matter.stringify(parsed.content, data);
 }
 
-function updateOne(cwd: string, relativeDir: string, file: string, relation: string, target: string, write: boolean): string {
+function prepareUpdate(cwd: string, relativeDir: string, file: string, relation: string, target: string): { fullPath: string; label: string; next: string } {
   const fullPath = path.join(cwd, relativeDir, file);
   if (!fs.existsSync(fullPath)) throw new Error(`ADR not found: ${relativeDir}/${file}`);
   const next = ensureRelation(fs.readFileSync(fullPath, "utf8"), relation, target);
-  if (write) fs.writeFileSync(fullPath, next, "utf8");
-  return `${relativeDir}/${file}: ${relation} -> ${target}`;
+  return { fullPath, label: `${relativeDir}/${file}: ${relation} -> ${target}`, next };
 }
 
 function main(): void {
@@ -90,11 +89,14 @@ function main(): void {
     const relativeDir = findAdrDir(cwd, args.dir);
     const from = path.basename(args.from);
     const to = path.basename(args.to);
-    const operations = [updateOne(cwd, relativeDir, from, args.relation, to, args.write)];
+    const updates = [prepareUpdate(cwd, relativeDir, from, args.relation, to)];
     const inverse = inverseRelations[args.relation];
-    if (inverse) operations.push(updateOne(cwd, relativeDir, to, inverse, from, args.write));
+    if (inverse) updates.push(prepareUpdate(cwd, relativeDir, to, inverse, from));
+    if (args.write) {
+      for (const update of updates) fs.writeFileSync(update.fullPath, update.next, "utf8");
+    }
     console.log(args.write ? "Updated ADR relations:" : "DRY RUN: would update ADR relations:");
-    for (const operation of operations) console.log(`- ${operation}`);
+    for (const update of updates) console.log(`- ${update.label}`);
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

@@ -1,5 +1,27 @@
 #!/usr/bin/env node
 "use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 
 // src/skills/skill-discovery-protocol/scripts/lib/query/registry.ts
 var registry = /* @__PURE__ */ new Map();
@@ -330,19 +352,19 @@ var handler10 = {
 register(handler10);
 
 // src/skills/skill-discovery-protocol/scripts/lib/query/loader.ts
-var fs = require("node:fs");
-var path = require("node:path");
+var import_node_fs = __toESM(require("node:fs"));
+var import_node_path = __toESM(require("node:path"));
 function isPathWithinProject(rootDir, candidatePath) {
-  const rel = path.relative(rootDir, candidatePath);
-  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+  const rel = import_node_path.default.relative(rootDir, candidatePath);
+  return rel !== ".." && !rel.startsWith(`..${import_node_path.default.sep}`) && !import_node_path.default.isAbsolute(rel);
 }
 function findSdpRootDir(rootDir, profilePath) {
-  let current = path.dirname(profilePath);
+  let current = import_node_path.default.dirname(profilePath);
   while (isPathWithinProject(rootDir, current)) {
-    if (path.basename(current) === ".sdp") {
+    if (import_node_path.default.basename(current) === ".sdp") {
       return current;
     }
-    const parent = path.dirname(current);
+    const parent = import_node_path.default.dirname(current);
     if (parent === current) {
       break;
     }
@@ -351,39 +373,39 @@ function findSdpRootDir(rootDir, profilePath) {
   return null;
 }
 function loadQueryContext(args) {
-  const cwd = args.cwd ? path.resolve(args.cwd) : process.cwd();
-  const profilePath = path.resolve(cwd, args.profile);
+  const cwd = args.cwd ? import_node_path.default.resolve(args.cwd) : process.cwd();
+  const profilePath = import_node_path.default.resolve(cwd, args.profile);
   if (!isPathWithinProject(cwd, profilePath)) {
     throw new Error(`Profile path is outside project boundary: ${args.profile}`);
   }
-  if (!fs.existsSync(profilePath)) {
+  if (!import_node_fs.default.existsSync(profilePath)) {
     throw new Error(`Profile not found: ${profilePath}`);
   }
-  const profileContent = fs.readFileSync(profilePath, "utf8");
+  const profileContent = import_node_fs.default.readFileSync(profilePath, "utf8");
   const profile = JSON.parse(profileContent);
   if (!profile.schema_version) {
     throw new Error("Invalid profile: missing schema_version");
   }
-  const profileDir = path.dirname(profilePath);
+  const profileDir = import_node_path.default.dirname(profilePath);
   const rootSdpDir = findSdpRootDir(cwd, profilePath);
   const catalog = loadOptionalJson(
-    path.join(profileDir, "skill-reference-catalog.json")
+    import_node_path.default.join(profileDir, "skill-reference-catalog.json")
   ) || (rootSdpDir ? loadOptionalJson(
-    path.join(rootSdpDir, "skill-reference-catalog.json")
+    import_node_path.default.join(rootSdpDir, "skill-reference-catalog.json")
   ) : null);
   const validationReport = loadOptionalJson(
-    path.join(profileDir, "validation-report.json")
+    import_node_path.default.join(profileDir, "validation-report.json")
   ) || (rootSdpDir ? loadOptionalJson(
-    path.join(rootSdpDir, "validation-report.json")
+    import_node_path.default.join(rootSdpDir, "validation-report.json")
   ) : null);
   return { profile, catalog, validationReport, args };
 }
 function loadOptionalJson(filePath) {
-  if (!fs.existsSync(filePath)) {
+  if (!import_node_fs.default.existsSync(filePath)) {
     return null;
   }
   try {
-    const content = fs.readFileSync(filePath, "utf8");
+    const content = import_node_fs.default.readFileSync(filePath, "utf8");
     return JSON.parse(content);
   } catch {
     return null;

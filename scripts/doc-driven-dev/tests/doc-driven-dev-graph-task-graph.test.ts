@@ -3,16 +3,14 @@ import type {
   TaskStatus,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const test = require("node:test");
-const matter = require("gray-matter");
-const {
-  buildTaskGraph,
-} = require("../src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
+import matter from "gray-matter";
+import { buildTaskGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 const taskGraphCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/build_task_graph.ts");
 const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 

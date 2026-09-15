@@ -1,9 +1,9 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
-const { spawnSync } = require("node:child_process");
-const test = require("node:test");
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/adr-doc");
 const commonRelationFields = [
@@ -30,7 +30,7 @@ function tempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "adr-doc-test-"));
 }
 
-function runScript(name, args, options = {}) {
+function runScript(name: any, args: any, options: { cwd?: string } = {}) {
   const result = spawnSync(
     process.execPath,
     [path.join(skillRoot, "scripts", name), ...args],
@@ -134,7 +134,7 @@ test("audit_adr accepts source URLs in common relations", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.message.includes("https://example.com/source")), false);
+  assert.equal(report.findings.some((finding: any) => finding.message.includes("https://example.com/source")), false);
 });
 
 test("new_adr honors --dir and all supported templates", () => {
@@ -224,7 +224,7 @@ test("audit_adr validates relation links when relations are present", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "broken-relation-link"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "broken-relation-link"), true);
 });
 
 test("audit_adr validates reference-style markdown links", () => {
@@ -270,7 +270,7 @@ test("audit_adr validates reference-style markdown links", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "broken-local-link"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "broken-local-link"), true);
 });
 
 test("package scripts expose tests and markdownlint", () => {
@@ -350,8 +350,8 @@ test("review_adr checks agent-readiness without writing", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "missing-affected-paths"), true);
-  assert.equal(report.findings.some((finding) => finding.code === "missing-verification-checks"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-affected-paths"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-verification-checks"), true);
   assert.equal(fs.readFileSync(adrPath, "utf8"), before);
 });
 
@@ -409,7 +409,7 @@ test("check_code_links reports missing Implementation Plan paths", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "missing-implementation-path"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-implementation-path"), true);
 });
 
 test("check_code_links includes nested Implementation Plan subsections", () => {
@@ -443,7 +443,7 @@ test("check_code_links includes nested Implementation Plan subsections", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.message.includes("src/nested-missing.ts")), true);
+  assert.equal(report.findings.some((finding: any) => finding.message.includes("src/nested-missing.ts")), true);
 });
 
 test("review_adr accepts verification checkboxes in nested subsections", () => {
@@ -487,7 +487,7 @@ test("review_adr accepts verification checkboxes in nested subsections", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "missing-verification-checks"), false);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-verification-checks"), false);
 });
 
 test("list_adrs extracts plain text from markdown heading titles", () => {
@@ -560,7 +560,7 @@ test("audit_adr validates front matter with zod schema", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const report = JSON.parse(result.stdout);
-  assert.equal(report.findings.some((finding) => finding.code === "invalid-front-matter"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "invalid-front-matter"), true);
 });
 
 test("audit_adr rejects non-ADR document type", () => {
@@ -626,7 +626,7 @@ test("audit_adr rejects non-ADR document type", () => {
   const report = JSON.parse(result.stdout);
   assert.equal(
     report.findings.some(
-      (finding) =>
+      (finding: any) =>
         finding.code === "invalid-front-matter" && finding.message.includes('Expected type "adr"'),
     ),
     true,
@@ -676,7 +676,7 @@ test("audit_adr rejects legacy top-level ADR front matter fields", () => {
   const report = JSON.parse(result.stdout);
   assert.equal(
     report.findings.some(
-      (finding) =>
+      (finding: any) =>
         finding.code === "invalid-front-matter" &&
         finding.message.includes("id"),
     ),

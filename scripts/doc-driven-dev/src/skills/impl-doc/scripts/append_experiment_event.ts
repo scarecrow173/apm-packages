@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
-const {
-  buildExperimentEvent,
-  experimentEventTypes,
-  nextExperimentSeq,
-  parseSetArguments,
-  readExperimentEvents,
-  writeExperimentEvents,
-} = require("./lib/impl_doc_utils.ts");
+import path from "node:path";
+import { appendExperimentEvent, buildExperimentEvent, experimentEventTypes, nextExperimentSeq, parseSetArguments, readExperimentEvents } from "./lib/impl_doc_utils";
 
 type CliArgs = {
   cwd: string;
@@ -50,7 +43,7 @@ async function main(): Promise<void> {
     }
     if (!args.file) throw new Error("Missing required --file");
     if (!args.type) throw new Error("Missing required --type");
-    if (!experimentEventTypes.includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
+    if (!(experimentEventTypes as readonly string[]).includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
     const cwd = path.resolve(args.cwd);
     const filePath = path.resolve(cwd, args.file);
     const events = readExperimentEvents(filePath);
@@ -58,12 +51,12 @@ async function main(): Promise<void> {
       cwd,
       filePath,
       seq: nextExperimentSeq(events),
-      type: args.type,
+      type: args.type as (typeof experimentEventTypes)[number],
       ts: args.ts,
       summary: args.summary,
       extra: parseSetArguments(args.setArgs),
     });
-    writeExperimentEvents(filePath, [...events.map((item) => item.value), event]);
+    appendExperimentEvent(filePath, event);
     console.log(`Updated ${path.relative(cwd, filePath).replace(/\\/g, "/")}`);
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
