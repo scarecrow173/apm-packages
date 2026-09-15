@@ -3539,16 +3539,19 @@ var require_document_utils = __commonJS({
     function normalizeDir(input) {
       return input.replace(/\\/g, "/").replace(/\/+$/g, "");
     }
+    function isIndexFileName(file) {
+      return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file);
+    }
     function listMarkdownFiles(dir) {
       if (!fs2.existsSync(dir)) return [];
-      return fs2.readdirSync(dir).filter((file) => file.endsWith(".md") && !/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file)).sort();
+      return fs2.readdirSync(dir).filter((file) => file.endsWith(".md") && !isIndexFileName(file)).sort();
     }
     function detectNaming2(files) {
       if (files.some((file) => /^\d{4}-.+\.md$/.test(file))) return "numbered";
       if (files.some((file) => /^[a-z0-9][a-z0-9-]+\.md$/.test(file))) return "slug";
       return "numbered";
     }
-    function nextNumber2(files) {
+    function nextNumber(files) {
       const numbers = files.map((file) => /^(\d{4})-.+\.md$/.exec(file)).filter((match) => Boolean(match)).map((match) => Number(match[1]));
       return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
     }
@@ -3563,8 +3566,9 @@ var require_document_utils = __commonJS({
     module2.exports = {
       detectNaming: detectNaming2,
       findDocumentDir,
+      isIndexFileName,
       listMarkdownFiles,
-      nextNumber: nextNumber2,
+      nextNumber,
       normalizeDir,
       slugify: slugify2
     };
@@ -20457,8 +20461,9 @@ var require_doc_suite_utils = __commonJS({
     var {
       detectNaming: detectNaming2,
       findDocumentDir,
+      isIndexFileName,
       listMarkdownFiles,
-      nextNumber: nextNumber2,
+      nextNumber,
       normalizeDir,
       slugify: slugify2
     } = require_document_utils();
@@ -20621,7 +20626,7 @@ var require_doc_suite_utils = __commonJS({
       const fullDir = path2.join(cwd, relativeDir);
       const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
-      const numbers = walkMarkdownFiles(fullDir).map((fullPath) => matterData(fs2.readFileSync(fullPath, "utf8")).id).filter((id) => typeof id === "string").map((id) => pattern.exec(id.trim())).filter((match) => Boolean(match)).map((match) => Number(match[1]));
+      const numbers = walkMarkdownFiles(fullDir).map((fullPath) => parseDoc(fs2.readFileSync(fullPath, "utf8")).data.id).filter((id) => typeof id === "string").map((id) => pattern.exec(id.trim())).filter((match) => Boolean(match)).map((match) => Number(match[1]));
       return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
     }
     function sanitizeFileName(name) {
@@ -20643,11 +20648,41 @@ var require_doc_suite_utils = __commonJS({
     function matterData(content3) {
       return matter(content3).data || {};
     }
+    function parseDoc(content3) {
+      try {
+        const parsed = matter(content3);
+        return { data: parsed.data || {}, body: parsed.content, error: null };
+      } catch (error) {
+        return { data: {}, body: content3, error: error instanceof Error ? error.message : String(error) };
+      }
+    }
+    function sanitizeTitle2(title) {
+      const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
+      if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
+      return cleaned;
+    }
+    function indexCell(value) {
+      return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+    }
+    function isGeneratedIndex(content3, legacyTitle) {
+      if (content3.includes(GENERATED_INDEX_MARKER)) return true;
+      return Boolean(legacyTitle) && content3.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content3);
+    }
+    function isForeignDocType(typeValue, expected, relativeDir) {
+      if (typeof typeValue !== "string" || typeValue === expected) return false;
+      if (!docTypes.includes(typeValue)) return false;
+      const normalized = normalizeDir(relativeDir);
+      return configFor2(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+    }
     function formatIssuePath(pathParts) {
       return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
     }
     function validateFrontMatter(content3) {
-      const result = frontMatterSchema.safeParse(matterData(content3));
+      const parsed = parseDoc(content3);
+      if (parsed.error) {
+        return [{ message: `Front matter is not valid YAML: ${parsed.error}`, path: "$" }];
+      }
+      const result = frontMatterSchema.safeParse(parsed.data);
       if (result.success) return [];
       return result.error.issues.map((issue) => ({
         message: issue.message,
@@ -20655,7 +20690,7 @@ var require_doc_suite_utils = __commonJS({
       }));
     }
     function relationMap(content3) {
-      const data = matterData(content3);
+      const data = parseDoc(content3).data;
       const rawRelations = data.relations;
       const result = Object.fromEntries(relationFields.map((field) => [field, []]));
       if (!rawRelations || typeof rawRelations !== "object" || Array.isArray(rawRelations)) return result;
@@ -20722,10 +20757,10 @@ var require_doc_suite_utils = __commonJS({
           if (entries.length === 0) return [`    ${field}: []`];
           return [
             `    ${field}:`,
-            ...entries.flatMap((entry) => [
-              "      - " + formatChangeEntry(entry)[0],
-              ...formatChangeEntry(entry).slice(1).map((line) => `        ${line}`)
-            ])
+            ...entries.flatMap((entry) => {
+              const lines = formatChangeEntry(entry);
+              return lines.length === 0 ? ["      - {}"] : [`      - ${lines[0]}`, ...lines.slice(1).map((line) => `        ${line}`)];
+            })
           ];
         })
       ];
@@ -20744,7 +20779,8 @@ var require_doc_suite_utils = __commonJS({
         const items = value.flatMap((item) => {
           if (item === null || item === void 0) return [];
           if (isPlainObject2(item)) {
-            return [`${prefix} -`, ...Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3))];
+            const childLines = Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3));
+            return childLines.length > 0 ? [`${prefix} -`, ...childLines] : [`${prefix} - {}`];
           }
           if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
           if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
@@ -20770,16 +20806,22 @@ var require_doc_suite_utils = __commonJS({
       return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []]));
     }
     function frontMatter2(config, number, title, status, date, relations, metadata) {
+      if (!config.statusValues.includes(status)) {
+        throw new Error(`Invalid ${config.type} status: ${status} (expected one of: ${config.statusValues.join(", ")})`);
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        throw new Error(`Invalid date: ${date} (expected YYYY-MM-DD)`);
+      }
       const complete = completeRelations(relations);
       const changes = completeChanges(relations?.changes);
       return [
         "---",
-        `id: "${config.idPrefix}-${String(number).padStart(4, "0")}"`,
-        `type: "${config.type}"`,
-        `status: "${status}"`,
-        `title: ${quote(title)}`,
-        `created: "${date}"`,
-        `updated: "${date}"`,
+        `id: ${quote(`${config.idPrefix}-${String(number).padStart(4, "0")}`)}`,
+        `type: ${quote(config.type)}`,
+        `status: ${quote(status)}`,
+        `title: ${quote(sanitizeTitle2(title))}`,
+        `created: ${quote(date)}`,
+        `updated: ${quote(date)}`,
         "owners: []",
         "relations:",
         formatRelationBlock("source", complete.source),
@@ -21035,18 +21077,19 @@ var require_doc_suite_utils = __commonJS({
       fs2.writeFileSync(overviewPath, overviewDocument(date), "utf8");
     }
     async function titleFromDocument(content3, fallback) {
-      const data = matterData(content3);
+      const parsed = parseDoc(content3);
+      const data = parsed.data;
       if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
-      const match = /^#\s+(.+)$/m.exec(matter(content3).content);
+      const match = /^#\s+(.+)$/m.exec(parsed.body);
       return match?.[1]?.trim() || fallback;
     }
     async function docEntries(cwd, type, explicitDir) {
       const relativeDir = docDir(cwd, type, explicitDir);
       const dir = path2.join(cwd, relativeDir);
-      return Promise.all(docFiles(dir).map(async (file) => {
+      const entries = await Promise.all(docFiles(dir).map(async (file) => {
         const fullPath = path2.join(dir, file);
         const content3 = fs2.readFileSync(fullPath, "utf8");
-        const data = matterData(content3);
+        const data = parseDoc(content3).data;
         return {
           file,
           id: typeof data.id === "string" ? data.id : null,
@@ -21056,6 +21099,7 @@ var require_doc_suite_utils = __commonJS({
           type: typeof data.type === "string" ? data.type : null
         };
       }));
+      return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
     }
     async function buildIndex2(cwd, type, explicitDir) {
       const relativeDir = docDir(cwd, type, explicitDir);
@@ -21068,7 +21112,7 @@ var require_doc_suite_utils = __commonJS({
       }) : entries;
       const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
       const rows = sorted.map(
-        (entry) => `| ${entry.id || "\u2014"} | ${entry.title} | ${entry.status || "\u2014"} | [${entry.file}](./${entry.file}) |`
+        (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`
       );
       const body = rows.length > 0 ? `${header}
 ${rows.join("\n")}` : header;
@@ -21089,7 +21133,7 @@ Directory: \`${dir}\`
 `;
     }
     function isMarkdownSource(file) {
-      return file.endsWith(".md") && !/^readme\.md$/i.test(path2.basename(file)) && !/^index\.md$/i.test(path2.basename(file));
+      return file.endsWith(".md") && !isIndexFileName(path2.basename(file));
     }
     function isUnderCanonicalDir(relativeFile) {
       const normalized = normalizeDir(relativeFile);
@@ -21108,15 +21152,15 @@ Directory: \`${dir}\`
       return ["docs", "doc", "architecture", "design", "specs", "plans", "tasks"].filter((dir) => fs2.existsSync(path2.join(cwd, dir)));
     }
     function headingTitle(content3, fallback) {
-      const parsed = matter(content3);
-      const data = parsed.data || {};
+      const parsed = parseDoc(content3);
+      const data = parsed.data;
       if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
-      const match = /^#\s+(.+)$/m.exec(parsed.content);
+      const match = /^#\s+(.+)$/m.exec(parsed.body);
       return match?.[1]?.trim() || fallback;
     }
     function splitByH1(source, content3) {
-      const parsed = matter(content3);
-      const body = parsed.content.trim();
+      const parsed = parseDoc(content3);
+      const body = parsed.body.trim();
       const matches = [...body.matchAll(/^#\s+(.+)$/gm)];
       if (matches.length <= 1) {
         return [{
@@ -21152,7 +21196,7 @@ ${input.body.slice(0, 2e3)}`;
       return {
         existing: new Set(existingFiles),
         naming: detectNaming2(existingFiles),
-        next: nextNumber2(existingFiles)
+        next: nextNumber(existingFiles)
       };
     }
     function allocateTargetPath(cwd, targetDir, title, fallback, allocations) {
@@ -21190,8 +21234,8 @@ ${input.body.slice(0, 2e3)}`;
 ${input.body.trim()}
 `;
       }
-      const parsed = matter(sourceContent);
-      const data = parsed.data || {};
+      const parsed = parseDoc(sourceContent);
+      const data = parsed.data;
       if (Object.keys(data).length > 0) return `${matter.stringify(input.body.trim(), data).trimEnd()}
 `;
       return `---
@@ -21233,10 +21277,15 @@ ${input.body.trim()}
             continue;
           }
           const sourceContent = fs2.readFileSync(fullFile, "utf8");
+          const sourceParsed = parseDoc(sourceContent);
+          if (sourceParsed.error) {
+            skipped.push({ file: relativeFile, reason: "unparseable-front-matter" });
+            continue;
+          }
           const inputs = options2.splitH1 ? splitByH1(relativeFile, sourceContent) : [{
             source: relativeFile,
             title: headingTitle(sourceContent, path2.basename(relativeFile, ".md")),
-            body: matter(sourceContent).content.trim()
+            body: sourceParsed.body.trim()
           }];
           for (const input of inputs) {
             migrations.push(plannedMigration(cwd, relativeFile, input, sourceContent, date, allocations));
@@ -21297,16 +21346,20 @@ ${input.body.trim()}
       const scopeDir = underRoot ? rootDir : relativeDir;
       const naming = detectNaming2(recursiveBasenames(cwd, scopeDir, type));
       const localFiles = fs2.readdirSync(fullDir).filter((file) => file.endsWith(".md")).filter((file) => !isReservedDocFile(type, file));
-      const number = naming === "slug" ? nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix) : nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix);
-      const filename = options2.name ? sanitizeFileName(options2.name) : naming === "slug" ? `${slugify2(options2.title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify2(options2.title, type)}.md`;
+      const number = Math.max(
+        nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix),
+        nextNumber(localFiles)
+      );
+      const title = sanitizeTitle2(options2.title);
+      const filename = options2.name ? sanitizeFileName(options2.name) : naming === "slug" ? `${slugify2(title, type)}.md` : `${String(number).padStart(4, "0")}-${slugify2(title, type)}.md`;
       if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
       const outputPath = path2.join(fullDir, filename);
       if (fs2.existsSync(outputPath)) throw new Error(`Document already exists: ${path2.relative(cwd, outputPath)}`);
       const date = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       const status = options2.status || config.defaultStatus;
-      const content3 = `${frontMatter2(config, number, options2.title, status, date, options2.relations)}
+      const content3 = `${frontMatter2(config, number, title, status, date, options2.relations)}
 
-${bodyFor(type, options2.title)}
+${bodyFor(type, title)}
 `;
       fs2.writeFileSync(outputPath, content3, "utf8");
       if (type === "design") ensureDesignOverview(path2.join(cwd, rootDir), date);
@@ -21353,12 +21406,28 @@ ${bodyFor(type, options2.title)}
           });
         }
       }
+      const inScopeFiles = [];
       for (const file of files) {
         const fullPath = path2.join(dir, file);
         const content3 = fs2.readFileSync(fullPath, "utf8");
-        const data = matterData(content3);
-        for (const issue of validateFrontMatter(content3)) {
-          findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${issue.path}: ${issue.message}` });
+        const parsed = parseDoc(content3);
+        if (parsed.error) {
+          findings.push({
+            severity: "error",
+            file,
+            code: "unparseable-front-matter",
+            message: `Front matter is not valid YAML: ${parsed.error}`
+          });
+          continue;
+        }
+        const data = parsed.data;
+        if (isForeignDocType(data.type, type, relativeDir)) continue;
+        inScopeFiles.push(file);
+        const schemaResult = frontMatterSchema.safeParse(data);
+        if (!schemaResult.success) {
+          for (const issue of schemaResult.error.issues) {
+            findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${formatIssuePath(issue.path)}: ${issue.message}` });
+          }
         }
         if (data.type !== type) {
           findings.push({ severity: "error", file, code: "invalid-type", message: `Expected type ${type}` });
@@ -21383,7 +21452,7 @@ ${bodyFor(type, options2.title)}
         findings.push({ severity: "warning", file: null, code: "missing-index", message: `Missing ${type} index README.md or index.md` });
       } else {
         const index2 = fs2.readFileSync(indexPath, "utf8");
-        for (const file of files) {
+        for (const file of inScopeFiles) {
           if (!index2.includes(file)) findings.push({ severity: "warning", file, code: "index-missing-entry", message: `Index does not link ${file}` });
         }
         if (type === "design" && !index2.includes("overview.md")) {
@@ -21406,6 +21475,12 @@ ${bodyFor(type, options2.title)}
       docEntries,
       docFiles,
       docTypes,
+      GENERATED_INDEX_MARKER,
+      indexCell,
+      isForeignDocType,
+      isGeneratedIndex,
+      parseDoc,
+      sanitizeTitle: sanitizeTitle2,
       logIndexResult,
       migrateDocs,
       relationFields,
@@ -30615,6 +30690,11 @@ var require_adr_utils = __commonJS({
       slugify: sharedSlugify
     } = require_document_utils();
     var {
+      GENERATED_INDEX_MARKER,
+      indexCell,
+      isForeignDocType,
+      isGeneratedIndex,
+      parseDoc,
       validateFrontMatter: validateDocSuiteFrontMatter
     } = require_doc_suite_utils();
     var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
@@ -30644,7 +30724,7 @@ var require_adr_utils = __commonJS({
     function detectNaming2(files) {
       return sharedDetectNaming(files);
     }
-    function nextNumber2(files) {
+    function nextNumber(files) {
       return sharedNextNumber(files);
     }
     function slugify2(title) {
@@ -30742,15 +30822,36 @@ var require_adr_utils = __commonJS({
       return [...paths];
     }
     function matterData(content3) {
-      return matter(content3).data || {};
+      return parseDoc(content3).data;
     }
     function validateFrontMatter(content3) {
       const issues = validateDocSuiteFrontMatter(content3);
-      const data = matterData(content3);
-      if (data.type !== "adr") {
+      const parsed = parseDoc(content3);
+      if (parsed.error) return issues;
+      if (parsed.data.type !== "adr") {
         issues.push({ message: 'Expected type "adr"', path: "type" });
       }
       return issues;
+    }
+    function nextIdNumber2(dir, files) {
+      const numbers = [];
+      for (const file of files) {
+        const nameMatch = /^(\d{4})-/.exec(file);
+        if (nameMatch) numbers.push(Number(nameMatch[1]));
+        const data = parseDoc(fs2.readFileSync(path2.join(dir, file), "utf8")).data;
+        const idMatch = typeof data.id === "string" ? /^ADR-(\d{4})$/.exec(data.id.trim()) : null;
+        if (idMatch) numbers.push(Number(idMatch[1]));
+      }
+      return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
+    }
+    function writeIndexFile2(adrDir, content3, force = false) {
+      const indexPath = path2.join(adrDir, "README.md");
+      const existing = fs2.existsSync(indexPath) ? fs2.readFileSync(indexPath, "utf8") : null;
+      if (!force && existing !== null && !isGeneratedIndex(existing, "Architecture Decision Records")) {
+        return { written: false, reason: "hand-curated" };
+      }
+      fs2.writeFileSync(indexPath, content3, "utf8");
+      return { written: true, reason: null };
     }
     function relationMap(content3) {
       const data = matterData(content3);
@@ -30770,36 +30871,56 @@ var require_adr_utils = __commonJS({
     }
     async function adrEntries(cwd, relativeDir) {
       const dir = path2.join(cwd, relativeDir);
-      return Promise.all(adrFiles(dir).map(async (file) => {
+      const entries = await Promise.all(adrFiles(dir).map(async (file) => {
         const fullPath = path2.join(dir, file);
         const content3 = fs2.readFileSync(fullPath, "utf8");
         const data = matterData(content3);
+        if (isForeignDocType(data.type, "adr", relativeDir)) return null;
+        let title = typeof data.title === "string" ? data.title : "";
+        if (!title) {
+          try {
+            title = await titleFromAdr(content3, path2.basename(file, ".md"));
+          } catch {
+            title = path2.basename(file, ".md");
+          }
+        }
         return {
           id: typeof data.id === "string" ? data.id : null,
           file,
           path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
-          title: typeof data.title === "string" ? data.title : await titleFromAdr(content3, path2.basename(file, ".md")),
+          title,
           status: typeof data.status === "string" ? data.status : null,
           date: typeof data.created === "string" ? data.created : null,
           relations: relationMap(content3)
         };
       }));
+      return entries.filter((entry) => entry !== null);
     }
     async function buildIndex2(dir, relativeDir) {
       const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-      const rows = await Promise.all(adrFiles(dir).map(async (file) => {
+      const rows = (await Promise.all(adrFiles(dir).map(async (file) => {
         const content3 = fs2.readFileSync(path2.join(dir, file), "utf8");
         const data = matterData(content3);
-        const title = typeof data.title === "string" && data.title.trim() ? data.title.trim() : await titleFromAdr(content3, path2.basename(file, ".md"));
+        if (isForeignDocType(data.type, "adr", relativeDir)) return null;
+        let title = typeof data.title === "string" && data.title.trim() ? data.title.trim() : "";
+        if (!title) {
+          try {
+            title = await titleFromAdr(content3, path2.basename(file, ".md"));
+          } catch {
+            title = path2.basename(file, ".md");
+          }
+        }
         const status = typeof data.status === "string" ? data.status : "\u2014";
         const numberMatch = /^(\d+)-/.exec(file);
         const fallbackId = numberMatch ? `ADR-${numberMatch[1]}` : "\u2014";
         const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : fallbackId;
-        return `| ${id} | ${title} | ${status} | [${file}](./${file}) |`;
-      }));
+        return `| ${indexCell(id)} | ${indexCell(title)} | ${indexCell(status)} | [${indexCell(file)}](./${indexCell(file)}) |`;
+      }))).filter((row) => row !== null);
       const body = rows.length > 0 ? `${header}
 ${rows.join("\n")}` : header;
       return `# Architecture Decision Records
+
+${GENERATED_INDEX_MARKER}
 
 Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 
@@ -30819,7 +30940,8 @@ ${body}
       hasSection,
       markdownLinks,
       matterData,
-      nextNumber: nextNumber2,
+      nextIdNumber: nextIdNumber2,
+      nextNumber,
       parseCsv,
       referencedPaths,
       relationFields,
@@ -30828,7 +30950,8 @@ ${body}
       sectionBody,
       slugify: slugify2,
       titleFromAdr,
-      validateFrontMatter
+      validateFrontMatter,
+      writeIndexFile: writeIndexFile2
     };
   }
 });
@@ -30840,10 +30963,11 @@ var {
   buildIndex,
   detectNaming,
   findAdrDir,
-  nextNumber,
-  slugify
+  nextIdNumber,
+  slugify,
+  writeIndexFile
 } = require_adr_utils();
-var { configFor, frontMatter } = require_doc_suite_utils();
+var { configFor, frontMatter, sanitizeTitle } = require_doc_suite_utils();
 var templates = {
   full: "madr-4-full.md",
   minimal: "madr-4-minimal.md",
@@ -30859,11 +30983,14 @@ function parseArgs(argv) {
     else if (arg === "--template") args.template = parseTemplate(argv[++i]);
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--date") args.date = argv[++i];
+    else if (arg === "--no-index") args.noIndex = true;
+    else if (arg === "--force-index") args.forceIndex = true;
     else if (arg === "--cwd") args.cwd = argv[++i];
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
+  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function parseTemplate(value) {
@@ -30872,7 +30999,7 @@ function parseTemplate(value) {
 }
 function usage() {
   return [
-    "Usage: node scripts/new_adr.js --title <title> [--dir <path>] [--template full|minimal|bare|bare-minimal]",
+    "Usage: node scripts/new_adr.js --title <title> [--dir <path>] [--template full|minimal|bare|bare-minimal] [--status <status>] [--date <YYYY-MM-DD>] [--no-index|--force-index]",
     "",
     "Creates a new MADR ADR and refreshes the ADR index."
   ].join("\n");
@@ -30898,8 +31025,9 @@ async function main() {
     fs.mkdirSync(adrDir, { recursive: true });
     const files = fs.readdirSync(adrDir);
     const naming = detectNaming(files);
-    const number = nextNumber(files);
-    const slug = slugify(args.title);
+    const number = nextIdNumber(adrDir, files);
+    const title = sanitizeTitle(args.title);
+    const slug = slugify(title);
     const filename = naming === "slug" ? `${slug}.md` : `${String(number).padStart(4, "0")}-${slug}.md`;
     const outputPath = path.join(adrDir, filename);
     if (fs.existsSync(outputPath)) throw new Error(`ADR already exists: ${path.relative(cwd, outputPath)}`);
@@ -30913,16 +31041,26 @@ async function main() {
         informed: []
       }
     };
-    const header = frontMatter(adrConfig, number, args.title, status, date, void 0, metadata);
-    const body = renderTemplate(args.template, { number, title: args.title }).trimStart();
+    const header = frontMatter(adrConfig, number, title, status, date, void 0, metadata);
+    const body = renderTemplate(args.template, { number, title }).trimStart();
     const content3 = `${header}
 
 ${body}
 `;
     fs.writeFileSync(outputPath, content3, "utf8");
-    fs.writeFileSync(path.join(adrDir, "README.md"), await buildIndex(adrDir, relativeDir), "utf8");
+    const indexPath = path.join(adrDir, "README.md");
+    const relativeIndex = path.relative(cwd, indexPath).replace(/\\/g, "/");
     console.log(`Created ${path.relative(cwd, outputPath).replace(/\\/g, "/")}`);
-    console.log(`Updated ${path.relative(cwd, path.join(adrDir, "README.md")).replace(/\\/g, "/")}`);
+    if (args.noIndex) {
+      console.log(`Skipped index update (--no-index): ${relativeIndex}`);
+    } else {
+      const indexResult = writeIndexFile(adrDir, await buildIndex(adrDir, relativeDir), Boolean(args.forceIndex));
+      if (indexResult.written) {
+        console.log(`Updated ${relativeIndex}`);
+      } else {
+        console.warn(`Skipped index update: ${relativeIndex} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
+      }
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

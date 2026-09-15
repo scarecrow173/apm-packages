@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { adrFiles, findAdrDir, referencedPaths, sectionBody } = require("./lib/adr_utils.ts");
+const { parseDoc } = require("../../lib/doc_suite_utils.ts");
 
 type CliArgs = {
   cwd: string;
@@ -16,7 +17,7 @@ type Finding = {
   code: string;
   file: string;
   message: string;
-  severity: "warning";
+  severity: "error" | "warning";
 };
 
 function parseArgs(argv: string[]): CliArgs {
@@ -49,6 +50,10 @@ async function main(): Promise<void> {
     const findings: Finding[] = [];
     for (const file of adrFiles(adrDir)) {
       const content = fs.readFileSync(path.join(adrDir, file), "utf8");
+      if (parseDoc(content).error) {
+        findings.push({ severity: "error", file, code: "unparseable-front-matter", message: "Front matter is not valid YAML" });
+        continue;
+      }
       const implementation = await sectionBody(content, "Implementation Plan");
       for (const target of await referencedPaths(implementation)) {
         const resolved = path.resolve(path.dirname(path.join(adrDir, file)), target);

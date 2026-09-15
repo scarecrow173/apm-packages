@@ -383,13 +383,15 @@ or reviewing it through Phases 0-3. For extended operational guidance, use:
 ### scripts
 
 - `scripts/new_adr.js`: create a new ADR from a MADR template, using repository
-  conventions.
+  conventions; refreshes the generated index (`--no-index` skips, and
+  hand-curated indexes are preserved unless `--force-index` is passed).
 - `scripts/list_adrs.js`: list ADR metadata, statuses, and relations.
 - `scripts/audit_adr.js`: validate front matter, required sections,
   placeholders, local links, relation links, and index coverage.
 - `scripts/review_adr.js`: review agent-readiness.
 - `scripts/check_code_links.js`: check Implementation Plan code references.
-- `scripts/update_index.js`: update ADR index files; dry-run by default.
+- `scripts/update_index.js`: update ADR index files; dry-run by default; refuses
+  to overwrite hand-curated indexes unless `--force` is passed.
 - `scripts/relate_adr.js`: add bidirectional ADR relations.
 - `scripts/migrate_report.js`: report migration actions toward MADR 4.0.0
   without changing files.

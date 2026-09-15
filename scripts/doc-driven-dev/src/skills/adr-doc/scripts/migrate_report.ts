@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { adrFiles, findAdrDir, hasSection } = require("./lib/adr_utils.ts");
+const { parseDoc } = require("../../lib/doc_suite_utils.ts");
 const targetSections = [
   "Status",
   "Context and Problem Statement",
@@ -47,6 +48,9 @@ function usage(): string {
 
 async function migrationFor(cwd: string, relativeDir: string, file: string): Promise<Migration> {
   const content = fs.readFileSync(path.join(cwd, relativeDir, file), "utf8");
+  if (parseDoc(content).error) {
+    return { file, actions: ["Fix unparseable front matter before migrating"] };
+  }
   const sectionPresence = await Promise.all(targetSections.map(async (section) => ({ section, present: await hasSection(content, section) })));
   const missingSections = sectionPresence.filter((item) => !item.present).map((item) => item.section);
   const actions: string[] = [];
