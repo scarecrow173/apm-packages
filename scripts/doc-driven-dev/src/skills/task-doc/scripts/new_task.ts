@@ -4,7 +4,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import matter from "gray-matter";
-import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
+import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
 
 const TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
 const TASK_DOC_VERIFIED_BY_ERROR = "TASK-DOC-GATE-002: each --verified-by target must resolve to an existing document.";
@@ -56,8 +56,7 @@ function usage(): string {
 
 function validateVerifiedBy(cwd: string, targets: string[]): void {
   for (const target of targets) {
-    const resolved = path.resolve(cwd, target);
-    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+    if (!resolveDocumentReference(cwd, target)) {
       throw new Error(TASK_DOC_VERIFIED_BY_ERROR);
     }
   }

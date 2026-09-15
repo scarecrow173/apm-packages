@@ -1178,6 +1178,38 @@ function resolvesLocalTarget(cwd: string, fromFile: string, target: string): boo
   return candidates.some((candidate) => fs.existsSync(candidate));
 }
 
+function relationValues(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+  }
+  if (typeof value === "string" && value.trim().length > 0) return [value];
+  return [];
+}
+
+function resolveDocumentReference(cwd: string, target: string, fromDir?: string): string | null {
+  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+    const candidate = path.resolve(base, target);
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+  }
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = path.join(cwd, dirName);
+      if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) continue;
+      for (const file of docFiles(dir)) {
+        const fullPath = path.join(dir, file);
+        const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === target) return fullPath;
+      }
+    }
+  }
+  return null;
+}
+
+function docTypeOfFile(filePath: string): string | null {
+  const parsed = parseDoc(fs.readFileSync(filePath, "utf8"));
+  return typeof parsed.data.type === "string" ? parsed.data.type : null;
+}
+
 async function auditDocuments(cwd: string, type: string, explicitDir?: string): Promise<{ directory: string; files: number; findings: Finding[] }> {
   const config = configFor(type);
   const relativeDir = docDir(cwd, type, explicitDir);
@@ -1227,8 +1259,8 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
       findings.push({ severity: "error", file, code: "invalid-status", message: `Invalid ${type} status: ${data.status}` });
     }
     if (type === "test-spec") {
-      const verifies = (data.relations as Record<string, unknown> | undefined)?.verifies;
-      if (!Array.isArray(verifies) || verifies.length === 0) {
+      const verifies = relationValues((data.relations as Record<string, unknown> | undefined)?.verifies);
+      if (verifies.length === 0) {
         findings.push({
           severity: "warning",
           file,
@@ -1236,12 +1268,26 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string): 
           message: "Test spec has no relations.verifies target (TEST-SPEC-DOC-GATE-001)",
         });
       }
+      for (const target of verifies) {
+        const resolved = resolveDocumentReference(cwd, target, path.dirname(fullPath));
+        if (!resolved) continue; // broken-relation-link reports unresolvable targets
+        const targetType = docTypeOfFile(resolved);
+        if (targetType && !["spec", "design", "adr"].includes(targetType)) {
+          findings.push({
+            severity: "warning",
+            file,
+            code: "test-spec-invalid-verifies-target",
+            message: `Test spec verifies target resolves to type "${targetType}", expected spec, design, or adr: ${target}`,
+          });
+        }
+      }
     }
     if (type === "plan" && typeof data.status === "string" && ["approved", "in-progress", "completed"].includes(data.status)) {
-      const verifiedBy = (data.relations as Record<string, unknown> | undefined)?.["verified-by"];
-      const linked = Array.isArray(verifiedBy) && verifiedBy.some(
-        (target: unknown) => typeof target === "string" && /docs\/test-specs\/|TSPEC-\d+/i.test(target),
-      );
+      const verifiedBy = relationValues((data.relations as Record<string, unknown> | undefined)?.["verified-by"]);
+      const linked = verifiedBy.some((target) => {
+        const resolved = resolveDocumentReference(cwd, target, path.dirname(fullPath));
+        return resolved !== null && docTypeOfFile(resolved) === "test-spec";
+      });
       const skipped = typeof data["test-spec-skip"] === "string" && data["test-spec-skip"].trim().length > 0;
       if (!linked && !skipped) {
         findings.push({
@@ -1300,6 +1346,8 @@ export {
   isForeignDocType,
   isGeneratedIndex,
   parseDoc,
+  relationValues,
+  resolveDocumentReference,
   sanitizeTitle,
   logIndexResult,
   migrateDocs,

@@ -84,6 +84,7 @@ function completeRepo(taskStatuses: Array<"todo" | "in-progress" | "blocked" | "
   writeArtifact(repo, "docs/plans/0001-graph.md", {
     id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
     relations: { "derives-from": ["DESIGN-0001"] },
+    "test-spec-skip": "fixture exercises routing only",
   }, "# Graph\n");
   taskStatuses.forEach((status, index) => {
     const id = `TASK-${String(index + 1).padStart(4, "0")}`;

@@ -2,8 +2,7 @@
 "use strict";
 
 import path from "node:path";
-import fs from "node:fs";
-import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
+import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
 
 const TEST_SPEC_DOC_GATE_ERROR = "TEST-SPEC-DOC-GATE-001: at least one --verifies target resolving to an existing document is required before creating a test spec.";
 
@@ -50,8 +49,7 @@ function usage(): string {
 function validateVerifiesGate(cwd: string, verifies: string[]): void {
   if (verifies.length === 0) throw new Error(TEST_SPEC_DOC_GATE_ERROR);
   for (const target of verifies) {
-    const resolved = path.resolve(cwd, target);
-    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+    if (!resolveDocumentReference(cwd, target)) {
       throw new Error(TEST_SPEC_DOC_GATE_ERROR);
     }
   }
