@@ -531,13 +531,34 @@ function pruneNestedRoots(roots: string[]): string[] {
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
 
+// Scan roots must stay inside the repository by real path: a symlinked root
+// such as `docs -> /outside` would otherwise have readdirSync follow it and
+// ingest outside Markdown as repository documents.
+function realpathInside(realCwd: string, absolute: string): boolean {
+  let real: string;
+  try {
+    real = fs.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = path.relative(realCwd, real);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
 // ---------------------------------------------------------------------------
 // Repository scan
 // ---------------------------------------------------------------------------
 
 async function scanRepository(options: ScanOptions): Promise<DocumentRepository> {
   const cwd = path.resolve(options.cwd);
-  const roots = pruneNestedRoots(options.roots?.length ? options.roots : defaultScanRoots(cwd));
+  let realCwd: string;
+  try {
+    realCwd = fs.realpathSync(cwd);
+  } catch {
+    realCwd = cwd;
+  }
+  const roots = pruneNestedRoots(options.roots?.length ? options.roots : defaultScanRoots(cwd))
+    .filter((root) => realpathInside(realCwd, path.join(cwd, root)));
   const typeMap = canonicalTypeMap();
 
   const absoluteFiles = new Set<string>();
@@ -623,7 +644,12 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
   };
 
   const fileExistsInsideRoot = (absolute: string): boolean => {
-    return insideRoot(absolute) && fs.existsSync(absolute) && fs.statSync(absolute).isFile();
+    // Lexical containment alone lets `x.md -> /outside` resolve as existing
+    // through the link; require the real path to stay inside the repo too.
+    return insideRoot(absolute)
+      && realpathInside(realCwd, path.resolve(absolute))
+      && fs.existsSync(absolute)
+      && fs.statSync(absolute).isFile();
   };
 
   const splitTarget = (raw: string): { pathname: string; fragment: string | null } => {

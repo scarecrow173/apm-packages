@@ -28484,9 +28484,25 @@ function pruneNestedRoots(roots) {
   const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
+function realpathInside(realCwd, absolute) {
+  let real;
+  try {
+    real = import_node_fs3.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path4.default.relative(realCwd, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path4.default.isAbsolute(rel);
+}
 async function scanRepository(options2) {
   const cwd = import_node_path4.default.resolve(options2.cwd);
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd));
+  let realCwd;
+  try {
+    realCwd = import_node_fs3.default.realpathSync(cwd);
+  } catch {
+    realCwd = cwd;
+  }
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => realpathInside(realCwd, import_node_path4.default.join(cwd, root)));
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
@@ -28562,7 +28578,7 @@ async function scanRepository(options2) {
     return resolved === cwd || resolved.startsWith(`${cwd}${import_node_path4.default.sep}`);
   };
   const fileExistsInsideRoot = (absolute) => {
-    return insideRoot(absolute) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
+    return insideRoot(absolute) && realpathInside(realCwd, import_node_path4.default.resolve(absolute)) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -29597,12 +29613,37 @@ function legacyIdPrefixes() {
 function experimentNumbers(root) {
   const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
   if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Set();
+  let realRoot;
+  try {
+    realRoot = import_node_fs5.default.realpathSync(root);
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+  if (!realpathInside2(realRoot, expDir)) return /* @__PURE__ */ new Set();
   const numbers = /* @__PURE__ */ new Set();
   for (const name of import_node_fs5.default.readdirSync(expDir)) {
+    if (isSymlinkPath(import_node_path6.default.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
     if (match) numbers.add(match[1]);
   }
   return numbers;
+}
+function isSymlinkPath(p) {
+  try {
+    return import_node_fs5.default.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+function realpathInside2(realRoot, absolute) {
+  let real;
+  try {
+    real = import_node_fs5.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path6.default.relative(realRoot, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path6.default.isAbsolute(rel);
 }
 function lintLegacyIdReferences(model, files) {
   const prefixes = legacyIdPrefixes();

@@ -256,3 +256,46 @@ test("audit_docs --type all flags legacy tokens in unmanaged root documents once
   assert.equal(findings[0].file, "AGENTS.md");
   assert.ok(findings[0].message.includes("ADR-0025"));
 });
+
+test("audit_docs does not resolve EXP-NNNN through a symlinked experiment log", (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  fs.writeFileSync(path.join(outside, "run.jsonl"), "{}\n", "utf8");
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  try {
+    fs.symlinkSync(path.join(outside, "run.jsonl"), path.join(repo, "docs/impl/exp", "0001-run.jsonl"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter(),
+    "# Spec\n\nSee EXP-0001 for data.\n");
+
+  const report = auditJson(repo, "spec");
+  const findings = report.findings.filter((finding: any) => finding.code === "unresolved-legacy-reference");
+  assert.equal(findings.length, 1);
+  assert.ok(findings[0].message.includes("EXP-0001"));
+});
+
+test("audit_docs does not ingest documents through a symlinked docs root", (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  writeDoc(path.join(outside, "specs"), "0001-leak.md", specFrontMatter(),
+    "# leak\n\nSee ADR-0025.\n");
+  try {
+    fs.symlinkSync(outside, path.join(repo, "docs"), "junction");
+  } catch {
+    t.skip("directory symlinks are not permitted on this platform");
+    return;
+  }
+
+  const report = auditJson(repo, "all");
+  assert.equal(report.files, 0);
+  assert.equal(
+    report.findings.some(
+      (finding: any) => String(finding.file || "").includes("0001-leak")
+        || String(finding.message || "").includes("ADR-0025"),
+    ),
+    false,
+  );
+});

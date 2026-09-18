@@ -441,16 +441,45 @@ function legacyIdPrefixes(): Set<string> {
 
 // Experiment logs carry no artifact id; `EXP-NNNN` resolves only while a
 // numbered `NNNN-*.jsonl` exists, matching the migrate_ids.js contract that
-// rewrites these tokens to `.jsonl` paths.
+// rewrites these tokens to `.jsonl` paths. Symlinked entries are excluded and
+// the exp dir itself must stay inside the repository so audit semantics match
+// the migrator, which never adopts symlinked logs or roots.
 function experimentNumbers(root: string): Set<string> {
   const expDir = path.join(root, IMPL_EXP_DIR);
   if (!fs.existsSync(expDir)) return new Set();
+  let realRoot: string;
+  try {
+    realRoot = fs.realpathSync(root);
+  } catch {
+    return new Set();
+  }
+  if (!realpathInside(realRoot, expDir)) return new Set();
   const numbers = new Set<string>();
   for (const name of fs.readdirSync(expDir)) {
+    if (isSymlinkPath(path.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
     if (match) numbers.add(match[1]);
   }
   return numbers;
+}
+
+function isSymlinkPath(p: string): boolean {
+  try {
+    return fs.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function realpathInside(realRoot: string, absolute: string): boolean {
+  let real: string;
+  try {
+    real = fs.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = path.relative(realRoot, real);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
 function lintLegacyIdReferences(model: DocumentRepository, files: RepositoryDocument[]): Finding[] {
