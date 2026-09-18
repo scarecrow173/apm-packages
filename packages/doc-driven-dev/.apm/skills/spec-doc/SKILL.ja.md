@@ -61,7 +61,7 @@ spec は次に答える必要があります。
 
 ```yaml
 ---
-id: "SPEC-0001"
+id: "SPEC-034qPUpBj0VYOqxmFLijD5"
 type: "spec"
 status: "draft"
 title: "Define checkout flow"

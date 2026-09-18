@@ -60,7 +60,7 @@ ADR の方針と規約は `adr-conventions.ja.md` に従います。このファ
 node scripts/audit_adr.js --dir docs/adr
 node scripts/review_adr.js --dir docs/adr
 node scripts/update_index.js --dir docs/adr --write
-node scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supersedes --write
+node scripts/relate_adr.js --from new.md --to old.md --relation supersedes --write
 ```
 
 ### 承認後のライフサイクル
@@ -68,7 +68,7 @@ node scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supers
 ADR が accepted になった後:
 
 1. Implementation Plan の項目と follow-up consequence を追跡可能な task に落とす。
-2. PR で ADR を参照する。例: `Implements ADR-0004`。
+2. PR で ADR を参照する。例: `Implements ADR-1AbCdEfGhIjKlMnOpQrStU`。
 3. 主要な実装入口にだけ、少数のコード参照を追加する。
 4. 実装後に Verification を確認する。
 5. ADR に書かれた再検討条件が発火したら見直す。
@@ -95,7 +95,7 @@ node /path/to/adr-doc/scripts/audit_adr.js --dir docs/adr
 node /path/to/adr-doc/scripts/review_adr.js --dir docs/adr
 node /path/to/adr-doc/scripts/check_code_links.js --dir docs/adr
 node /path/to/adr-doc/scripts/update_index.js --dir docs/adr --write
-node /path/to/adr-doc/scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supersedes --write
+node /path/to/adr-doc/scripts/relate_adr.js --from new.md --to old.md --relation supersedes --write
 node /path/to/adr-doc/scripts/migrate_report.js --dir docs/adr
 ```
 

@@ -70,7 +70,7 @@ discovery 文書は中間推論を意図的に記録します。最終的な判�
 
 ```yaml
 ---
-id: "DISC-0001"
+id: "DISC-3QwErTyUiOpAsDfGhJkLzX"
 type: "discovery"
 status: "draft"
 title: "Explore auth strategy options"

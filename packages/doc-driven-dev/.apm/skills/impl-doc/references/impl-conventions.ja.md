@@ -21,16 +21,17 @@ docs/impl/exp/
 既定のファイル名パターン:
 
 ```text
-NNNN-title-with-dashes.md
-NNNN-title-with-dashes.jsonl
+title-with-dashes.md
+title-with-dashes.jsonl
 ```
 
 ルール:
 
-- `NNNN` は各ディレクトリ内のゼロ埋め連番
-- `ir/` と `exp/` は別系列で採番
-- slug は小文字 ASCII のダッシュ区切り
-- 既存が slug-only 規約ならその規約に従う
+- ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
+- `ir/` と `exp/` の名前はそれぞれのディレクトリ内で一意であればよいです。
+- 文書の同一性はファイル名やソート位置ではなく front matter の `id` に
+  あります。既存の `NNNN-<slug>` ファイル名も有効ですが、新規ファイルは
+  常に slug-only の名前を使います。
 
 ## Implementation Record の front matter
 
@@ -151,7 +152,7 @@ Experiment Log の監査項目:
 
 | ID | タイトル | Status | ファイル |
 | --- | --- | --- | --- |
-| IMPL-0001 | Implement checkout flow | completed | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+| IMPL-5RfVgTgBnHkLmQwErTyUiO | Implement checkout flow | completed | [implement-checkout-flow.md](implement-checkout-flow.md) |
 
 索引ルール:
 
@@ -172,7 +173,7 @@ Experiment Log の監査項目:
 
 | ファイル |
 | --- |
-| [0001-checkout-retry.jsonl](0001-checkout-retry.jsonl) |
+| [checkout-retry.jsonl](checkout-retry.jsonl) |
 
 各ログの参照は Implementation Record 側の `metadata.experiments` と relations が
 担うため、README はディレクトリ概覧の役割のみ持ちます。

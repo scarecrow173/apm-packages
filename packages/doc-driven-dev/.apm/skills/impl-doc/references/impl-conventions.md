@@ -22,16 +22,17 @@ via CLI `--dir`.
 Default filename patterns:
 
 ```text
-NNNN-title-with-dashes.md
-NNNN-title-with-dashes.jsonl
+title-with-dashes.md
+title-with-dashes.jsonl
 ```
 
 Rules:
 
-- `NNNN` is a zero-padded sequential number local to each directory.
-- `ir/` and `exp/` use independent numbering.
-- Slugs are lowercase ASCII with dash-separated words.
-- Follow slug-only repository conventions when they already exist.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
+- `ir/` and `exp/` names need to be unique only within their own directory.
+- Document identity lives in the front matter `id`, not in the filename or its
+  sort position. Existing `NNNN-<slug>` filenames remain valid, but new files
+  always use slug-only names.
 
 ## Implementation Record Front Matter
 
@@ -153,7 +154,7 @@ table, in filename order, with these four columns:
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| IMPL-0001 | Implement checkout flow | completed | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+| IMPL-5RfVgTgBnHkLmQwErTyUiO | Implement checkout flow | completed | [implement-checkout-flow.md](implement-checkout-flow.md) |
 
 Index rules:
 
@@ -174,7 +175,7 @@ links, in filename order:
 
 | File |
 | --- |
-| [0001-checkout-retry.jsonl](0001-checkout-retry.jsonl) |
+| [checkout-retry.jsonl](checkout-retry.jsonl) |
 
 The matching Implementation Record links to each log via `metadata.experiments`
 and relations; the README provides a directory-level overview only.

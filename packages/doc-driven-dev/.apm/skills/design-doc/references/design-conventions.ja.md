@@ -16,7 +16,7 @@
 ディレクトリには次を含めます。
 
 - `overview.md`（必須の全体設計マップ）
-- 番号付き詳細設計ファイル（`NNNN-<slug>.md`）または既存 slug-only 形式
+- slug-only 名の詳細設計ファイル（`<slug>.md`）
 - `README.md` 索引
 
 ## ファイル名
@@ -24,20 +24,22 @@
 既定の詳細設計ファイル名:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 ルール:
 
-- `NNNN` は設計ディレクトリ内のゼロ埋め連番。
-- slug は小文字 ASCII とダッシュ。
+- ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
 - `overview.md` は予約名で、詳細設計ファイルとして扱わない。
+- 既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
+  slug-only の名前を使います。
 
-### 採番ソース
+### 識別子
 
-- **numbered ディレクトリ**（`NNNN-<slug>.md` ファイルが存在する場合）では、ディレクトリ内の最大のファイル名接頭辞からローカルに採番します。
-- **slug のみのディレクトリ**（`NNNN-` 接頭辞のファイルが存在しない場合）では、スクリプトは `docs/designs/` 配下のすべての設計ドキュメントの front matter `id:` を再帰的に走査して次の `DESIGN-NNNN` を算出します（サブディレクトリを含む）。これにより、slug 命名 + サブディレクトリ配置でもグローバルな id シーケンスが継続されます。
-- `overview.md`（`DESIGN-OVERVIEW`）は命名判定と採番の双方から除外されます。
+- 各詳細設計文書には作成時に不透明な `DESIGN-<22文字Base62>` id が
+  付与されます。id は UUIDv7 由来で、ファイル名、ディレクトリ内容、
+  作成順序には依存しません。
+- `overview.md`（`DESIGN-OVERVIEW`）は artifact id 生成の対象外です。
 
 ### 明示ファイル名とサブディレクトリ配置
 
@@ -65,12 +67,12 @@ node scripts/new_design.js --title "グラフ視覚化" \
 ```text
 docs/designs/
   payments/
-    0001-design-checkout-orchestration.md
+    design-checkout-orchestration.md
   identity/
-    0001-design-login-sessions.md
+    design-login-sessions.md
 ```
 
-分割時の番号はカテゴリ内ローカルで管理します。
+ファイル名はディレクトリ内で一意であればよいです。
 
 ### 機能別サブディレクトリ
 
@@ -80,12 +82,11 @@ docs/designs/
 ```text
 docs/designs/
   checkout/
-    0001-design-checkout-flow.md
-    0002-design-checkout-api.md
+    design-checkout-flow.md
+    design-checkout-api.md
 ```
 
-まとめて読むべき design 群がある場合に使います。番号は機能ディレクトリ内で
-ローカルに管理します。
+まとめて読むべき design 群がある場合に使います。
 
 ## 必須フロントマター
 
@@ -127,7 +128,7 @@ docs/designs/
 | ID | タイトル | Status | ファイル |
 | --- | --- | --- | --- |
 | DESIGN-OVERVIEW | System Design Overview | draft | [overview.md](overview.md) |
-| DESIGN-0001 | Design checkout orchestration | approved | [0001-design-checkout-orchestration.md](0001-design-checkout-orchestration.md) |
+| DESIGN-2XyZaBcDeFgHiJkLmNoPqR | Design checkout orchestration | approved | [design-checkout-orchestration.md](design-checkout-orchestration.md) |
 
 索引ルール:
 

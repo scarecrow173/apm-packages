@@ -29,30 +29,29 @@ Detection order used by scripts:
 3. `plans/`
 4. `implementation-plans/`
 
-When multiple candidates exist, prefer the directory with numbered plan files
-and an index file. Use `--dir` only when the repository has an explicit
-convention that is not in the detection list.
+When multiple candidates exist, prefer the directory that already contains
+plan files and an index file. Use `--dir` only when the repository has an
+explicit convention that is not in the detection list.
 
 ## Filenames
 
 Default filename pattern:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 Rules:
 
-- `NNNN` is a zero-padded sequential number local to the plan directory.
-- The title slug is lowercase ASCII with words separated by dashes.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
 - Prefer an imperative or implementation-oriented phrase, such as
   `implement-checkout-flow` or `migrate-session-storage`.
 - Name the plan after the work sequence, not just the upstream spec title.
-- Examples: `0001-implement-checkout-flow.md`,
-  `0002-migrate-session-storage.md`.
+- Examples: `implement-checkout-flow.md`, `migrate-session-storage.md`.
 
-If a repository already uses slug-only filenames, follow that convention instead
-of introducing numbering.
+Document identity lives in the front matter `id`, not in the filename or its
+sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
+documents always use slug-only names.
 
 ## Required Front Matter
 
@@ -60,7 +59,7 @@ Plans use the shared document front matter:
 
 ```yaml
 ---
-id: "PLAN-0001"
+id: "PLAN-7N42dgm5tFLK9N8MT7fHC7"
 type: "plan"
 status: "draft"
 title: "Implement checkout flow"
@@ -92,7 +91,7 @@ Required fields:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | Stable document identifier, usually `PLAN-NNNN`. |
+| `id` | Yes | Stable document identifier in `PLAN-<22-char Base62>` form (UUIDv7-derived; legacy `PLAN-NNNN` remains valid). |
 | `type` | Yes | Must be `plan`. |
 | `status` | Yes | Current lifecycle state. |
 | `title` | Yes | Human-readable implementation plan title. |
@@ -200,7 +199,7 @@ If the gate fails, `new_plan` must return:
 Recommended creation command:
 
 ```bash
-node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
+node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
 ```
 
 Plans should name concrete files, modules, commands, or ownership boundaries
@@ -243,7 +242,7 @@ List plans as a Markdown table, in filename order, with these four columns:
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| PLAN-0001 | Implement checkout flow | in-progress | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+| PLAN-7N42dgm5tFLK9N8MT7fHC7 | Implement checkout flow | in-progress | [implement-checkout-flow.md](implement-checkout-flow.md) |
 
 Index rules:
 
@@ -266,16 +265,16 @@ area, team, release, or migration stream:
 ```text
 docs/plans/
   frontend/
-    0001-implement-checkout-flow.md
+    implement-checkout-flow.md
   backend/
-    0001-add-invitation-api.md
+    add-invitation-api.md
   migrations/
-    0001-migrate-session-storage.md
+    migrate-session-storage.md
 ```
 
-Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows. Use area grouping only when a flat directory
-is becoming hard to scan.
+Filenames need to be unique only within their directory. Document the
+categorization scheme in the index before the structure grows. Use area
+grouping only when a flat directory is becoming hard to scan.
 
 ### Feature subdirectories
 
@@ -285,12 +284,12 @@ feature requires multiple related plans:
 ```text
 docs/plans/
   checkout/
-    0001-implement-checkout-flow.md
-    0002-checkout-api-integration.md
+    implement-checkout-flow.md
+    checkout-api-integration.md
 ```
 
 Use this pattern when the plans belong to the same feature and are best
-reviewed together. Keep numbering local to the feature directory.
+reviewed together.
 
 ## Implementation Handoff
 

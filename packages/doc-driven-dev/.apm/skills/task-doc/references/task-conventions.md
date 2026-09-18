@@ -21,32 +21,31 @@ Detection order used by scripts:
 3. `tasks/`
 4. `work-items/`
 
-When multiple candidates exist, prefer the directory with numbered task files
-and an index file. Use `--dir` only when the repository has an explicit
-convention that is not in the detection list.
+When multiple candidates exist, prefer the directory that already contains
+task files and an index file. Use `--dir` only when the repository has an
+explicit convention that is not in the detection list.
 
 ## Filenames
 
 Default filename pattern:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 Rules:
 
-- `NNNN` is a zero-padded sequential number local to the task directory.
-- The title slug is lowercase ASCII with words separated by dashes.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
 - Prefer an imperative phrase naming the implementation slice.
 - Keep titles narrow: one behavior, module, migration step, or verification
   path.
 - Avoid task names that hide scope, such as `cleanup.md`, `fix-stuff.md`, or
   `phase-1.md`.
-- Examples: `0001-wire-checkout-button.md`,
-  `0002-add-invitation-api-tests.md`.
+- Examples: `wire-checkout-button.md`, `add-invitation-api-tests.md`.
 
-If a repository already uses slug-only filenames, follow that convention instead
-of introducing numbering.
+Document identity lives in the front matter `id`, not in the filename or its
+sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
+documents always use slug-only names.
 
 ## Required Front Matter
 
@@ -54,7 +53,7 @@ Tasks use the shared document front matter:
 
 ```yaml
 ---
-id: "TASK-0001"
+id: "TASK-0H5nCkR2mW9xVbYqZeLp3s"
 type: "task"
 status: "todo"
 title: "Wire checkout button"
@@ -86,7 +85,7 @@ Required fields:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | Stable document identifier, usually `TASK-NNNN`. |
+| `id` | Yes | Stable document identifier in `TASK-<22-char Base62>` form (UUIDv7-derived; legacy `TASK-NNNN` remains valid). |
 | `type` | Yes | Must be `task`. |
 | `status` | Yes | Current execution state. |
 | `title` | Yes | Human-readable task title. |
@@ -198,7 +197,7 @@ List tasks as a Markdown table, in filename order, with these four columns:
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| TASK-0001 | Wire checkout button | done | [0001-wire-checkout-button.md](0001-wire-checkout-button.md) |
+| TASK-0H5nCkR2mW9xVbYqZeLp3s | Wire checkout button | done | [wire-checkout-button.md](wire-checkout-button.md) |
 
 Index rules:
 
@@ -221,16 +220,16 @@ area, release, or workstream:
 ```text
 docs/tasks/
   frontend/
-    0001-wire-checkout-button.md
+    wire-checkout-button.md
   backend/
-    0001-add-checkout-endpoint.md
+    add-checkout-endpoint.md
   verification/
-    0001-add-checkout-e2e.md
+    add-checkout-e2e.md
 ```
 
-Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows. Use area grouping only when a flat directory
-is becoming hard to scan.
+Filenames need to be unique only within their directory. Document the
+categorization scheme in the index before the structure grows. Use area
+grouping only when a flat directory is becoming hard to scan.
 
 ### Feature subdirectories
 
@@ -240,10 +239,10 @@ single feature are best tracked together:
 ```text
 docs/tasks/
   checkout/
-    0001-wire-checkout-button.md
-    0002-add-checkout-api-endpoint.md
-    0003-add-checkout-e2e-tests.md
+    wire-checkout-button.md
+    add-checkout-api-endpoint.md
+    add-checkout-e2e-tests.md
 ```
 
 Use this pattern when the tasks belong to the same feature and share a common
-upstream plan. Keep numbering local to the feature directory.
+upstream plan.

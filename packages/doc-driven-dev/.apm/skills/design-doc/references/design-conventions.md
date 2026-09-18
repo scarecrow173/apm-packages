@@ -16,7 +16,7 @@ Detection order used by scripts:
 The directory must contain:
 
 - `overview.md` (required overall design map)
-- numbered detailed design files (`NNNN-<slug>.md`) or existing slug-only style
+- detailed design files using slug-only names (`<slug>.md`)
 - `README.md` index
 
 ## Filenames
@@ -24,25 +24,22 @@ The directory must contain:
 Default detailed design filename pattern:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 Rules:
 
-- `NNNN` is zero-padded and sequential in the design directory.
-- Slug uses lowercase ASCII and dashes.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
 - `overview.md` is reserved and never treated as a detailed design file.
+- Existing `NNNN-<slug>.md` filenames remain valid, but new documents always
+  use slug-only names.
 
-### Numbering source
+### Identity
 
-- In **numbered** directories (`NNNN-<slug>.md` files present), `NNNN` is taken
-  from the highest filename prefix in that directory and incremented locally.
-- In **slug-only** directories (no `NNNN-` prefixes), scripts derive the next
-  sequential `DESIGN-NNNN` id by scanning the front matter `id:` of every design
-  doc under `docs/designs/` recursively (including subdirectories), so the global
-  id sequence continues even when files use slug names and subdirectory layout.
-- `overview.md` (`DESIGN-OVERVIEW`) is excluded from both naming detection and
-  numbering.
+- Each detailed design doc gets an opaque `DESIGN-<22-char Base62>` id at
+  creation time. Ids are UUIDv7-derived and do not depend on filenames,
+  directory contents, or creation order.
+- `overview.md` (`DESIGN-OVERVIEW`) is excluded from artifact-id generation.
 
 ### Explicit filenames and subdirectory placement
 
@@ -73,12 +70,12 @@ For large repositories, design docs may be grouped by area:
 ```text
 docs/designs/
   payments/
-    0001-design-checkout-orchestration.md
+    design-checkout-orchestration.md
   identity/
-    0001-design-login-sessions.md
+    design-login-sessions.md
 ```
 
-Keep numbering local to each category when splitting directories.
+Filenames need to be unique only within their directory.
 
 ### Feature subdirectories
 
@@ -88,12 +85,11 @@ requires multiple related design docs:
 ```text
 docs/designs/
   checkout/
-    0001-design-checkout-flow.md
-    0002-design-checkout-api.md
+    design-checkout-flow.md
+    design-checkout-api.md
 ```
 
-Use this pattern when the designs are best read together as a set. Keep
-numbering local to the feature directory.
+Use this pattern when the designs are best read together as a set.
 
 ## Required Front Matter
 
@@ -136,7 +132,7 @@ four columns:
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
 | DESIGN-OVERVIEW | System Design Overview | draft | [overview.md](overview.md) |
-| DESIGN-0001 | Design checkout orchestration | approved | [0001-design-checkout-orchestration.md](0001-design-checkout-orchestration.md) |
+| DESIGN-2XyZaBcDeFgHiJkLmNoPqR | Design checkout orchestration | approved | [design-checkout-orchestration.md](design-checkout-orchestration.md) |
 
 Index rules:
 

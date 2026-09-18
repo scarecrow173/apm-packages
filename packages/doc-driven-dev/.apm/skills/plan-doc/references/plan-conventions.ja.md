@@ -29,7 +29,7 @@ plan ディレクトリがない場合は、既定で `docs/plans/` を使いま
 3. `plans/`
 4. `implementation-plans/`
 
-複数候補がある場合は、番号付き plan ファイルと index ファイルを持つ
+複数候補がある場合は、既に plan ファイルと index ファイルを持つ
 ディレクトリを優先します。`--dir` は、検出リストにない明示的な規約が
 リポジトリにある場合だけ使います。
 
@@ -38,20 +38,20 @@ plan ディレクトリがない場合は、既定で `docs/plans/` を使いま
 既定のファイル名パターン:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 ルール:
 
-- `NNNN` は plan ディレクトリ内で連番になるゼロ埋め番号です。
-- title slug は小文字 ASCII で、単語をダッシュで区切ります。
+- ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
 - `implement-checkout-flow` や `migrate-session-storage` のような、
   命令形または実装志向の表現を優先します。
 - plan 名は spec のタイトルそのものではなく、作業順序に合わせて付けます。
-- 例: `0001-implement-checkout-flow.md`、`0002-migrate-session-storage.md`
+- 例: `implement-checkout-flow.md`、`migrate-session-storage.md`
 
-リポジトリが slug-only の命名規約を既に使っている場合は、連番を新設せず
-その規約に従います。
+文書の同一性はファイル名やソート位置ではなく front matter の `id` に
+あります。既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
+slug-only の名前を使います。
 
 ## 必須 front matter
 
@@ -59,7 +59,7 @@ plan は共通の document front matter を使います。
 
 ```yaml
 ---
-id: "PLAN-0001"
+id: "PLAN-7N42dgm5tFLK9N8MT7fHC7"
 type: "plan"
 status: "draft"
 title: "Implement checkout flow"
@@ -91,7 +91,7 @@ relations:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | 安定した document identifier。通常は `PLAN-NNNN`。 |
+| `id` | Yes | 安定した document identifier。`PLAN-<22文字Base62>` 形式（UUIDv7由来。従来の `PLAN-NNNN` も有効）。 |
 | `type` | Yes | `plan` であること。 |
 | `status` | Yes | 現在の lifecycle state。 |
 | `title` | Yes | 人が読める実装 plan の題名。 |
@@ -197,7 +197,7 @@ gate に失敗した場合、`new_plan` は次を返します。
 推奨作成コマンド:
 
 ```bash
-node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
+node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
 ```
 
 plan は、既知なら具体的な file、module、command、ownership boundary を書きます。
@@ -237,7 +237,7 @@ plan は実行 artifact であり、作業中は変化してかまいません�
 
 | ID | タイトル | Status | ファイル |
 | --- | --- | --- | --- |
-| PLAN-0001 | Implement checkout flow | in-progress | [0001-implement-checkout-flow.md](0001-implement-checkout-flow.md) |
+| PLAN-7N42dgm5tFLK9N8MT7fHC7 | Implement checkout flow | in-progress | [implement-checkout-flow.md](implement-checkout-flow.md) |
 
 索引ルール:
 
@@ -261,15 +261,15 @@ plan をサブディレクトリに分けてもかまいません。
 ```text
 docs/plans/
   frontend/
-    0001-implement-checkout-flow.md
+    implement-checkout-flow.md
   backend/
-    0001-add-invitation-api.md
+    add-invitation-api.md
   migrations/
-    0001-migrate-session-storage.md
+    migrate-session-storage.md
 ```
 
-番号はカテゴリごとにローカルです。分類スキームは索引に先に書きます。
-フラットなディレクトリが見づらくなった場合だけ使います。
+ファイル名はディレクトリ内で一意であればよいです。分類スキームは索引に
+先に書きます。フラットなディレクトリが見づらくなった場合だけ使います。
 
 ### 機能別サブディレクトリ
 
@@ -279,12 +279,11 @@ docs/plans/
 ```text
 docs/plans/
   checkout/
-    0001-implement-checkout-flow.md
-    0002-checkout-api-integration.md
+    implement-checkout-flow.md
+    checkout-api-integration.md
 ```
 
-同じ機能に属する plan をまとめてレビューすべき場合に使います。番号は機能
-ディレクトリ内でローカルに管理します。
+同じ機能に属する plan をまとめてレビューすべき場合に使います。
 
 ## 実装ハンドオフ
 

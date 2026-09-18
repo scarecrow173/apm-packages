@@ -23,30 +23,29 @@ Detection order used by scripts:
 3. `specs/`
 4. `spec/`
 
-When multiple candidates exist, prefer the directory with numbered spec files
-and an index file. Use `--dir` only when the repository has an explicit
-convention that is not in the detection list.
+When multiple candidates exist, prefer the directory that already contains
+spec files and an index file. Use `--dir` only when the repository has an
+explicit convention that is not in the detection list.
 
 ## Filenames
 
 Default filename pattern:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 Rules:
 
-- `NNNN` is a zero-padded sequential number local to the spec directory.
-- The title slug is lowercase ASCII with words separated by dashes.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
 - Prefer a short verb or noun phrase that names the capability, workflow, or
   externally visible behavior.
 - Avoid vague names such as `feature.md`, `updates.md`, or `misc.md`.
-- Examples: `0001-define-checkout-flow.md`,
-  `0002-add-team-invitations.md`.
+- Examples: `define-checkout-flow.md`, `add-team-invitations.md`.
 
-If a repository already uses slug-only filenames, follow that convention instead
-of introducing numbering.
+Document identity lives in the front matter `id`, not in the filename or its
+sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
+documents always use slug-only names.
 
 ## Required Front Matter
 
@@ -54,7 +53,7 @@ Specs use the shared document front matter:
 
 ```yaml
 ---
-id: "SPEC-0001"
+id: "SPEC-034qPUpBj0VYOqxmFLijD5"
 type: "spec"
 status: "draft"
 title: "Define checkout flow"
@@ -86,7 +85,7 @@ Required fields:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | Stable document identifier, usually `SPEC-NNNN`. |
+| `id` | Yes | Stable document identifier in `SPEC-<22-char Base62>` form (UUIDv7-derived; legacy `SPEC-NNNN` remains valid). |
 | `type` | Yes | Must be `spec`. |
 | `status` | Yes | Current lifecycle state. |
 | `title` | Yes | Human-readable title matching the document intent. |
@@ -185,7 +184,7 @@ List specs as a Markdown table, in filename order, with these four columns:
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| SPEC-0001 | Define checkout flow | approved | [0001-define-checkout-flow.md](0001-define-checkout-flow.md) |
+| SPEC-034qPUpBj0VYOqxmFLijD5 | Define checkout flow | approved | [define-checkout-flow.md](define-checkout-flow.md) |
 
 Index rules:
 
@@ -208,16 +207,16 @@ platform area, documentation area, or team:
 ```text
 docs/specs/
   product/
-    0001-team-invitations.md
+    team-invitations.md
   platform/
-    0001-api-rate-limits.md
+    api-rate-limits.md
   docs/
-    0001-document-lifecycle.md
+    document-lifecycle.md
 ```
 
-Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows. Use area grouping only when a flat directory
-is becoming hard to scan.
+Filenames need to be unique only within their directory. Document the
+categorization scheme in the index before the structure grows. Use area
+grouping only when a flat directory is becoming hard to scan.
 
 ### Feature subdirectories
 
@@ -227,10 +226,9 @@ requires multiple related specs:
 ```text
 docs/specs/
   checkout/
-    0001-define-checkout-flow.md
-    0002-checkout-api-contract.md
-    0003-checkout-edge-cases.md
+    define-checkout-flow.md
+    checkout-api-contract.md
+    checkout-edge-cases.md
 ```
 
-Use this pattern when the specs are best read together as a set. Keep numbering
-local to the feature directory.
+Use this pattern when the specs are best read together as a set.
