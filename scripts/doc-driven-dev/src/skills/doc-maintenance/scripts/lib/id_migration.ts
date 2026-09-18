@@ -11,6 +11,7 @@ import { auditExperimentLogs, auditImplementationRecords, updateIndexForExperime
 
 const IMPL_IR_DIR = "docs/impl/ir";
 const IMPL_EXP_DIR = "docs/impl/exp";
+const EXPERIMENT_ID_PREFIX = "EXP";
 const LOCALE_SUFFIX = /\.[a-z]{2}(-[a-z0-9]+)?$/i;
 const NUMBERED_FILE = /^(\d{4,})-(.*)$/;
 const LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
@@ -74,6 +75,7 @@ type MigrationOptions = {
   allowDirty?: boolean;
   apply?: boolean;
   cwd: string;
+  extraRoots?: string[];
   keepFilenames?: boolean;
 };
 
@@ -94,12 +96,16 @@ function numberedTargetName(fileName: string): string | null {
   return match ? match[2] : null;
 }
 
+const SKIPPED_DIRS = new Set([".git", "node_modules", ".pnpm-store"]);
+
 function walkFiles(baseDir: string, extensions: string[]): string[] {
   if (!fs.existsSync(baseDir)) return [];
   const entries = fs.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
     const fullPath = path.join(baseDir, entry.name);
-    if (entry.isDirectory()) return walkFiles(fullPath, extensions);
+    if (entry.isDirectory()) {
+      return SKIPPED_DIRS.has(entry.name) ? [] : walkFiles(fullPath, extensions);
+    }
     return extensions.some((ext) => entry.name.toLowerCase().endsWith(ext)) ? [fullPath] : [];
   }).sort();
 }
@@ -127,16 +133,73 @@ function isUnderDir(child: string, parent: string): boolean {
   return c === p || c.startsWith(`${p}/`);
 }
 
-function contentRoots(cwd: string, dirs: { dir: string }[]): string[] {
+// Agent-facing documents shipped outside docs/ (root AGENTS.md / README.md and
+// distributed .apm skill documents) carry the same canonical artifact
+// references, so they join the rewrite and unresolved-reference scan scope.
+function distributionDocRoots(cwd: string): string[] {
+  const candidates = [".apm"];
+  const packagesDir = path.join(cwd, "packages");
+  if (fs.existsSync(packagesDir) && fs.statSync(packagesDir).isDirectory()) {
+    for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
+      if (entry.isDirectory()) candidates.push(`packages/${entry.name}/.apm`);
+    }
+  }
+  return candidates.filter((candidate) => {
+    const full = path.join(cwd, candidate);
+    return fs.existsSync(full) && fs.statSync(full).isDirectory();
+  });
+}
+
+function resolveExtraRoots(cwd: string, extraRoots: string[], blockers: Blocker[]): string[] {
+  const resolved: string[] = [];
+  for (const extra of extraRoots) {
+    const absolute = path.resolve(cwd, extra);
+    const rel = normalizeDir(path.relative(cwd, absolute));
+    if (rel === "" || rel === ".") {
+      resolved.push(".");
+      continue;
+    }
+    if (rel.startsWith("..") || path.isAbsolute(rel)) {
+      blockers.push({
+        code: "invalid-extra-root",
+        file: null,
+        message: `Extra content root escapes the repository: ${extra}`,
+      });
+      continue;
+    }
+    if (!fs.existsSync(absolute) || !fs.statSync(absolute).isDirectory()) {
+      blockers.push({
+        code: "invalid-extra-root",
+        file: null,
+        message: `Extra content root is not a directory: ${extra}`,
+      });
+      continue;
+    }
+    resolved.push(rel);
+  }
+  return resolved;
+}
+
+function contentRoots(cwd: string, dirs: { dir: string }[], extraRoots: string[] = []): string[] {
   const roots: string[] = [];
   if (fs.existsSync(path.join(cwd, "docs"))) roots.push("docs");
   for (const { dir } of dirs) {
     if (!isUnderDir(dir, "docs")) roots.push(dir);
   }
+  for (const root of [...distributionDocRoots(cwd), ...extraRoots]) {
+    if (!roots.some((existing) => isUnderDir(root, existing))) roots.push(root);
+  }
   return roots;
 }
 
-function contentFilesUnder(cwd: string, roots: string[]): string[] {
+function rootContentFiles(cwd: string): string[] {
+  return fs.readdirSync(cwd, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+}
+
+function contentFilesUnder(cwd: string, roots: string[], extraFiles: string[] = []): string[] {
   const seen = new Set<string>();
   const files: string[] = [];
   for (const root of roots) {
@@ -146,6 +209,11 @@ function contentFilesUnder(cwd: string, roots: string[]): string[] {
       seen.add(relPath);
       files.push(relPath);
     }
+  }
+  for (const relPath of extraFiles) {
+    if (seen.has(relPath)) continue;
+    seen.add(relPath);
+    files.push(relPath);
   }
   return files.sort();
 }
@@ -234,6 +302,7 @@ function discover(cwd: string, dirs: { dir: string; type: string | null }[], blo
 function knownPrefixes(mappings: Map<string, string>): Set<string> {
   const prefixes = new Set<string>(docTypes.map((type) => configFor(type).idPrefix));
   prefixes.add("IMPL");
+  prefixes.add(EXPERIMENT_ID_PREFIX);
   for (const legacyId of mappings.keys()) {
     prefixes.add(legacyId.slice(0, legacyId.lastIndexOf("-")));
   }
@@ -297,10 +366,38 @@ function planRenames(cwd: string, files: DiscoveredFile[], blockers: Blocker[]):
   return renames;
 }
 
+// Experiment logs carry no artifact id; their canonical reference is the
+// `.jsonl` path. Map each `EXP-NNNN` token to the path the numbered experiment
+// file occupies after renames (or its current path under --keep-filenames).
+function experimentTokenTargets(
+  files: DiscoveredFile[],
+  renames: PlannedRename[],
+): { targets: Map<string, string>; ambiguous: Set<string> } {
+  const byNumber = new Map<string, DiscoveredFile[]>();
+  for (const file of files) {
+    if (file.dir !== IMPL_EXP_DIR || !file.numberedName) continue;
+    const group = byNumber.get(file.numberedName) || [];
+    group.push(file);
+    byNumber.set(file.numberedName, group);
+  }
+  const renameTargets = new Map(renames.map((rename) => [rename.from, rename.to]));
+  const targets = new Map<string, string>();
+  const ambiguous = new Set<string>();
+  for (const [numbered, group] of byNumber) {
+    if (group.length > 1) {
+      ambiguous.add(numbered);
+      continue;
+    }
+    targets.set(`${EXPERIMENT_ID_PREFIX}-${numbered}`, renameTargets.get(group[0].path) ?? group[0].path);
+  }
+  return { targets, ambiguous };
+}
+
 function rewriteContent(
   content: string,
   mappings: Map<string, string>,
   renames: PlannedRename[],
+  experimentTargets: Map<string, string>,
 ): { content: string; replacements: number } {
   let replacements = 0;
   let next = content;
@@ -309,6 +406,13 @@ function rewriteContent(
     next = next.replace(pattern, () => {
       replacements += 1;
       return newId;
+    });
+  }
+  for (const [token, target] of experimentTargets) {
+    const pattern = idTokenPattern(token);
+    next = next.replace(pattern, () => {
+      replacements += 1;
+      return target;
     });
   }
   if (renames.length > 0) {
@@ -367,7 +471,12 @@ async function regenerateIndexes(
   return results;
 }
 
-async function validate(cwd: string, dirs: { dir: string; type: string | null }[], prefixes: Set<string>): Promise<IdMigrationReport["validation"]> {
+async function validate(
+  cwd: string,
+  dirs: { dir: string; type: string | null }[],
+  prefixes: Set<string>,
+  extraRoots: string[],
+): Promise<IdMigrationReport["validation"]> {
   const remainingLegacyIds = new Set<string>();
   const idFiles = new Map<string, string[]>();
   for (const { dir } of dirs) {
@@ -400,7 +509,7 @@ async function validate(cwd: string, dirs: { dir: string; type: string | null }[
     .map(([id]) => id);
 
   const unresolved = new Set<string>();
-  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs))) {
+  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs, extraRoots), rootContentFiles(cwd))) {
     const content = fs.readFileSync(path.join(cwd, relPath), "utf8");
     for (const token of legacyTokens(content, prefixes)) {
       unresolved.add(token);
@@ -486,20 +595,36 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   }
 
   const renames = options.keepFilenames ? [] : planRenames(cwd, files, blockers);
+  const experimentRefs = experimentTokenTargets(files, renames);
 
+  const extraRoots = resolveExtraRoots(cwd, options.extraRoots ?? [], blockers);
   const prefixes = knownPrefixes(mappings);
-  const contentFiles = contentFilesUnder(cwd, contentRoots(cwd, dirs));
+  const contentFiles = contentFilesUnder(
+    cwd,
+    contentRoots(cwd, dirs, extraRoots),
+    rootContentFiles(cwd),
+  );
   const mappedIds = new Set(mappings.keys());
   for (const relPath of contentFiles) {
     const content = fs.readFileSync(path.join(cwd, relPath), "utf8");
     for (const token of new Set(legacyTokens(content, prefixes))) {
-      if (!mappedIds.has(token)) {
+      if (mappedIds.has(token) || experimentRefs.targets.has(token)) continue;
+      const expNumber = token.startsWith(`${EXPERIMENT_ID_PREFIX}-`)
+        ? token.slice(EXPERIMENT_ID_PREFIX.length + 1)
+        : null;
+      if (expNumber && experimentRefs.ambiguous.has(expNumber)) {
         blockers.push({
-          code: "unresolved-legacy-reference",
+          code: "ambiguous-experiment-reference",
           file: relPath,
-          message: `Legacy id ${token} has no matching artifact to remap`,
+          message: `Experiment reference ${token} matches multiple experiment logs; rewrite it to a .jsonl path manually`,
         });
+        continue;
       }
+      blockers.push({
+        code: "unresolved-legacy-reference",
+        file: relPath,
+        message: `Legacy id ${token} has no matching artifact to remap`,
+      });
     }
   }
 
@@ -545,7 +670,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   for (const relPath of contentFiles) {
     const fullPath = path.join(cwd, relPath);
     const original = fs.readFileSync(fullPath, "utf8");
-    let { content, replacements } = rewriteContent(original, mappings, renames);
+    let { content, replacements } = rewriteContent(original, mappings, renames, experimentRefs.targets);
     const injected = injectedIds.get(relPath);
     if (injected && !original.includes(`id: "${injected}"`)) {
       const before = content;
@@ -573,7 +698,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   }
 
   const validation = options.apply
-    ? await validate(cwd, dirs, prefixes)
+    ? await validate(cwd, dirs, prefixes, extraRoots)
     : emptyValidation;
 
   const validationFailed = validation.remainingLegacyIds.length > 0

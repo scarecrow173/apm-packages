@@ -4033,7 +4033,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs7 = require("fs");
+    var fs8 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -4117,7 +4117,7 @@ var require_gray_matter = __commonJS({
       return stringify2(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs7.readFileSync(filepath, "utf8");
+      const str2 = fs8.readFileSync(filepath, "utf8");
       const file2 = matter2(str2, options2);
       file2.path = filepath;
       return file2;
@@ -13330,7 +13330,7 @@ var import_node_path10 = __toESM(require("node:path"));
 
 // src/skills/doc-maintenance/scripts/lib/id_migration.ts
 var import_node_child_process = require("node:child_process");
-var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_fs7 = __toESM(require("node:fs"));
 var import_node_path9 = __toESM(require("node:path"));
 
 // node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/stringify.js
@@ -13435,6 +13435,7 @@ function isLegacyArtifactId(value) {
 var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_lint.ts
+var import_node_fs5 = __toESM(require("node:fs"));
 var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_repository.ts
@@ -28618,7 +28619,8 @@ async function scanRepository(options2) {
       readError = error51 instanceof Error ? error51.message : String(error51);
     }
     const parsed = readError ? { data: {}, body: "", error: readError } : parseDoc(content3);
-    const structure = await extractMarkdownStructure(parsed.body, frontMatterEndLine(content3));
+    const bodyStartLine = frontMatterEndLine(content3);
+    const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
     files.push({
@@ -28640,7 +28642,8 @@ async function scanRepository(options2) {
       headings: structure.headings,
       indexMembership: [],
       localeSiblings: localeSiblingsFor(repoPath, siblingsByDir),
-      body: parsed.body
+      body: parsed.body,
+      bodyStartLine
     });
   }
   const byPath = /* @__PURE__ */ new Map();
@@ -29679,6 +29682,63 @@ function lintDirectory(model, scope) {
   }
   return findings;
 }
+var LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
+var EXPERIMENT_ID_PREFIX = "EXP";
+var IMPL_EXP_DIR = "docs/impl/exp";
+var NUMBERED_EXPERIMENT_FILE = /^(\d{4,})-.*\.jsonl$/i;
+function legacyIdPrefixes() {
+  const prefixes = new Set(docTypes.map((type) => configFor(type).idPrefix));
+  prefixes.add("IMPL");
+  prefixes.add(EXPERIMENT_ID_PREFIX);
+  return prefixes;
+}
+function experimentNumbers(root) {
+  const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
+  if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Set();
+  const numbers = /* @__PURE__ */ new Set();
+  for (const name of import_node_fs5.default.readdirSync(expDir)) {
+    const match = NUMBERED_EXPERIMENT_FILE.exec(name);
+    if (match) numbers.add(match[1]);
+  }
+  return numbers;
+}
+function lintLegacyIdReferences(model, files) {
+  const prefixes = legacyIdPrefixes();
+  const expNumbers = experimentNumbers(model.root);
+  const findings = [];
+  for (const document3 of files) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const match of document3.body.matchAll(LEGACY_ID_TOKEN)) {
+      const token = match[0];
+      if (!prefixes.has(prefixOf(token))) continue;
+      if (!seen.has(token)) {
+        const bodyLine = document3.body.slice(0, match.index).split("\n").length;
+        seen.set(token, document3.bodyStartLine + bodyLine);
+      }
+    }
+    for (const [token, line] of [...seen.entries()].sort((a, b) => a[1] - b[1])) {
+      if (model.lookupById(token).status !== "none") continue;
+      if (prefixOf(token) === EXPERIMENT_ID_PREFIX && expNumbers.has(token.slice(EXPERIMENT_ID_PREFIX.length + 1))) {
+        continue;
+      }
+      findings.push(finding({
+        ruleId: "unresolved-legacy-reference",
+        category: "relation",
+        severity: "error",
+        path: document3.path,
+        line,
+        artifactId: document3.id,
+        message: `Body references legacy artifact id ${token}, which no artifact provides`,
+        target: token,
+        repair: "manual"
+      }));
+    }
+  }
+  return findings;
+}
+function prefixOf(token) {
+  return token.slice(0, token.lastIndexOf("-"));
+}
 function lintScope(model, type, directory) {
   const scope = scopeFor(model, type, directory);
   const findings = [];
@@ -29694,6 +29754,7 @@ function lintScope(model, type, directory) {
       ...lintRequiredRelations(model, document3, type)
     );
   }
+  findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
   findings.push(...lintDirectory(model, scope));
   findings.push(...lintStructure(model, scope));
@@ -29741,7 +29802,7 @@ async function auditDocuments(cwd, type, explicitDir, options2) {
 }
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
-var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path8 = __toESM(require("node:path"));
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
 var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
@@ -29797,18 +29858,18 @@ function isExternalLink(value) {
   return /^(https?:|mailto:)/i.test(value);
 }
 function listFiles(dir, ext) {
-  if (!import_node_fs5.default.existsSync(dir)) return [];
-  return import_node_fs5.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).sort();
+  if (!import_node_fs6.default.existsSync(dir)) return [];
+  return import_node_fs6.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).sort();
 }
 function normalizeExperimentPath(cwd, filePath) {
   return normalizeFilePath(posixRelative(cwd, import_node_path8.default.resolve(filePath)));
 }
 function writeImplIndex(indexPath, content3, legacyTitle) {
-  const existing = import_node_fs5.default.existsSync(indexPath) ? import_node_fs5.default.readFileSync(indexPath, "utf8") : null;
+  const existing = import_node_fs6.default.existsSync(indexPath) ? import_node_fs6.default.readFileSync(indexPath, "utf8") : null;
   if (existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
-  import_node_fs5.default.writeFileSync(indexPath, content3, "utf8");
+  import_node_fs6.default.writeFileSync(indexPath, content3, "utf8");
   return { written: true, reason: null };
 }
 function updateIndexForMarkdownDir(cwd, relativeDir) {
@@ -29817,7 +29878,7 @@ function updateIndexForMarkdownDir(cwd, relativeDir) {
   const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
   const rows = files.flatMap((file2) => {
     const fullPath = import_node_path8.default.join(dir, file2);
-    const parsed = parseDoc(import_node_fs5.default.readFileSync(fullPath, "utf8"));
+    const parsed = parseDoc(import_node_fs6.default.readFileSync(fullPath, "utf8"));
     if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
     const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path8.default.basename(file2, ".md");
     const id = typeof parsed.data.id === "string" ? parsed.data.id : "\u2014";
@@ -29864,7 +29925,7 @@ function resolvesLocalTarget(cwd, fromFile, target) {
     import_node_path8.default.resolve(cwd, target),
     import_node_path8.default.resolve(import_node_path8.default.dirname(fromFile), target)
   ];
-  return candidates.some((candidate) => import_node_fs5.default.existsSync(candidate));
+  return candidates.some((candidate) => import_node_fs6.default.existsSync(candidate));
 }
 function relationLinks(relations) {
   return relationFields.flatMap((field) => {
@@ -29878,7 +29939,7 @@ function auditImplementationRecords(cwd, relativeDir) {
   const findings = [];
   for (const file2 of files) {
     const fullPath = import_node_path8.default.join(dir, file2);
-    const content3 = import_node_fs5.default.readFileSync(fullPath, "utf8");
+    const content3 = import_node_fs6.default.readFileSync(fullPath, "utf8");
     const parsed = parseDoc(content3);
     if (parsed.error) {
       findings.push({
@@ -29936,7 +29997,7 @@ function auditImplementationRecords(cwd, relativeDir) {
     }
   }
   const indexPath = import_node_path8.default.join(dir, "README.md");
-  if (!import_node_fs5.default.existsSync(indexPath)) {
+  if (!import_node_fs6.default.existsSync(indexPath)) {
     findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
   }
   return { directory: relativeDir, files: files.length, findings };
@@ -29947,7 +30008,7 @@ function auditExperimentLogs(cwd, relativeDir) {
   const findings = [];
   for (const file2 of files) {
     const fullPath = import_node_path8.default.join(dir, file2);
-    const content3 = import_node_fs5.default.readFileSync(fullPath, "utf8");
+    const content3 = import_node_fs6.default.readFileSync(fullPath, "utf8");
     const lines = content3.split(/\r?\n/).filter((line) => line.trim());
     let previousSeq = 0;
     const seen = /* @__PURE__ */ new Set();
@@ -30020,7 +30081,7 @@ function auditExperimentLogs(cwd, relativeDir) {
     }
   }
   const indexPath = import_node_path8.default.join(dir, "README.md");
-  if (!import_node_fs5.default.existsSync(indexPath)) {
+  if (!import_node_fs6.default.existsSync(indexPath)) {
     findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
   }
   return { directory: relativeDir, files: files.length, findings };
@@ -30028,10 +30089,11 @@ function auditExperimentLogs(cwd, relativeDir) {
 
 // src/skills/doc-maintenance/scripts/lib/id_migration.ts
 var IMPL_IR_DIR = "docs/impl/ir";
-var IMPL_EXP_DIR = "docs/impl/exp";
+var IMPL_EXP_DIR2 = "docs/impl/exp";
+var EXPERIMENT_ID_PREFIX2 = "EXP";
 var LOCALE_SUFFIX = /\.[a-z]{2}(-[a-z0-9]+)?$/i;
 var NUMBERED_FILE = /^(\d{4,})-(.*)$/;
-var LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
+var LEGACY_ID_TOKEN2 = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
 var MIGRATE_TMP_SUFFIX = ".migrate-tmp";
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -30046,12 +30108,15 @@ function numberedTargetName(fileName) {
   const match = NUMBERED_FILE.exec(fileName);
   return match ? match[2] : null;
 }
+var SKIPPED_DIRS2 = /* @__PURE__ */ new Set([".git", "node_modules", ".pnpm-store"]);
 function walkFiles(baseDir, extensions) {
-  if (!import_node_fs6.default.existsSync(baseDir)) return [];
-  const entries = import_node_fs6.default.readdirSync(baseDir, { withFileTypes: true });
+  if (!import_node_fs7.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs7.default.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
     const fullPath = import_node_path9.default.join(baseDir, entry.name);
-    if (entry.isDirectory()) return walkFiles(fullPath, extensions);
+    if (entry.isDirectory()) {
+      return SKIPPED_DIRS2.has(entry.name) ? [] : walkFiles(fullPath, extensions);
+    }
     return extensions.some((ext) => entry.name.toLowerCase().endsWith(ext)) ? [fullPath] : [];
   }).sort();
 }
@@ -30061,14 +30126,14 @@ function canonicalDirs(cwd) {
   for (const type of docTypes) {
     const config2 = configFor(type);
     for (const candidate of config2.dirs) {
-      if (!import_node_fs6.default.existsSync(import_node_path9.default.join(cwd, candidate))) continue;
+      if (!import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, candidate))) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
       dirs.push({ dir: candidate, type });
     }
   }
-  if (import_node_fs6.default.existsSync(import_node_path9.default.join(cwd, IMPL_IR_DIR))) dirs.push({ dir: IMPL_IR_DIR, type: "impl" });
-  if (import_node_fs6.default.existsSync(import_node_path9.default.join(cwd, IMPL_EXP_DIR))) dirs.push({ dir: IMPL_EXP_DIR, type: "impl-exp" });
+  if (import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, IMPL_IR_DIR))) dirs.push({ dir: IMPL_IR_DIR, type: "impl" });
+  if (import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, IMPL_EXP_DIR2))) dirs.push({ dir: IMPL_EXP_DIR2, type: "impl-exp" });
   return dirs;
 }
 function isUnderDir3(child, parent) {
@@ -30076,15 +30141,63 @@ function isUnderDir3(child, parent) {
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
 }
-function contentRoots(cwd, dirs) {
+function distributionDocRoots(cwd) {
+  const candidates = [".apm"];
+  const packagesDir = import_node_path9.default.join(cwd, "packages");
+  if (import_node_fs7.default.existsSync(packagesDir) && import_node_fs7.default.statSync(packagesDir).isDirectory()) {
+    for (const entry of import_node_fs7.default.readdirSync(packagesDir, { withFileTypes: true })) {
+      if (entry.isDirectory()) candidates.push(`packages/${entry.name}/.apm`);
+    }
+  }
+  return candidates.filter((candidate) => {
+    const full = import_node_path9.default.join(cwd, candidate);
+    return import_node_fs7.default.existsSync(full) && import_node_fs7.default.statSync(full).isDirectory();
+  });
+}
+function resolveExtraRoots(cwd, extraRoots, blockers) {
+  const resolved = [];
+  for (const extra of extraRoots) {
+    const absolute = import_node_path9.default.resolve(cwd, extra);
+    const rel = normalizeDir(import_node_path9.default.relative(cwd, absolute));
+    if (rel === "" || rel === ".") {
+      resolved.push(".");
+      continue;
+    }
+    if (rel.startsWith("..") || import_node_path9.default.isAbsolute(rel)) {
+      blockers.push({
+        code: "invalid-extra-root",
+        file: null,
+        message: `Extra content root escapes the repository: ${extra}`
+      });
+      continue;
+    }
+    if (!import_node_fs7.default.existsSync(absolute) || !import_node_fs7.default.statSync(absolute).isDirectory()) {
+      blockers.push({
+        code: "invalid-extra-root",
+        file: null,
+        message: `Extra content root is not a directory: ${extra}`
+      });
+      continue;
+    }
+    resolved.push(rel);
+  }
+  return resolved;
+}
+function contentRoots(cwd, dirs, extraRoots = []) {
   const roots = [];
-  if (import_node_fs6.default.existsSync(import_node_path9.default.join(cwd, "docs"))) roots.push("docs");
+  if (import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, "docs"))) roots.push("docs");
   for (const { dir } of dirs) {
     if (!isUnderDir3(dir, "docs")) roots.push(dir);
   }
+  for (const root of [...distributionDocRoots(cwd), ...extraRoots]) {
+    if (!roots.some((existing) => isUnderDir3(root, existing))) roots.push(root);
+  }
   return roots;
 }
-function contentFilesUnder(cwd, roots) {
+function rootContentFiles(cwd) {
+  return import_node_fs7.default.readdirSync(cwd, { withFileTypes: true }).filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name)).map((entry) => entry.name).sort();
+}
+function contentFilesUnder(cwd, roots, extraFiles = []) {
   const seen = /* @__PURE__ */ new Set();
   const files = [];
   for (const root of roots) {
@@ -30094,6 +30207,11 @@ function contentFilesUnder(cwd, roots) {
       seen.add(relPath);
       files.push(relPath);
     }
+  }
+  for (const relPath of extraFiles) {
+    if (seen.has(relPath)) continue;
+    seen.add(relPath);
+    files.push(relPath);
   }
   return files.sort();
 }
@@ -30110,7 +30228,7 @@ function discover(cwd, dirs, blockers) {
   const files = [];
   for (const { dir, type: dirType } of dirs) {
     const fullDir = import_node_path9.default.join(cwd, dir);
-    const names = dir === IMPL_EXP_DIR ? import_node_fs6.default.readdirSync(fullDir).filter((name) => name.toLowerCase().endsWith(".jsonl") || name.toLowerCase().endsWith(".md") && !isIndexFileName(name)).sort() : docFiles(fullDir);
+    const names = dir === IMPL_EXP_DIR2 ? import_node_fs7.default.readdirSync(fullDir).filter((name) => name.toLowerCase().endsWith(".jsonl") || name.toLowerCase().endsWith(".md") && !isIndexFileName(name)).sort() : docFiles(fullDir);
     for (const name of names) {
       const relPath = `${dir}/${name}`;
       const fullPath = import_node_path9.default.join(cwd, relPath);
@@ -30131,7 +30249,7 @@ function discover(cwd, dirs, blockers) {
         files.push(base);
         continue;
       }
-      const parsed = parseDoc(import_node_fs6.default.readFileSync(fullPath, "utf8"));
+      const parsed = parseDoc(import_node_fs7.default.readFileSync(fullPath, "utf8"));
       if (parsed.error) {
         blockers.push({
           code: "unparseable-front-matter",
@@ -30175,13 +30293,14 @@ function discover(cwd, dirs, blockers) {
 function knownPrefixes(mappings) {
   const prefixes = new Set(docTypes.map((type) => configFor(type).idPrefix));
   prefixes.add("IMPL");
+  prefixes.add(EXPERIMENT_ID_PREFIX2);
   for (const legacyId of mappings.keys()) {
     prefixes.add(legacyId.slice(0, legacyId.lastIndexOf("-")));
   }
   return prefixes;
 }
 function legacyTokens(content3, prefixes) {
-  const tokens = content3.match(LEGACY_ID_TOKEN) || [];
+  const tokens = content3.match(LEGACY_ID_TOKEN2) || [];
   return tokens.filter((token) => prefixes.has(token.slice(0, token.lastIndexOf("-"))));
 }
 function worktreeDirty(cwd) {
@@ -30212,7 +30331,7 @@ function planRenames(cwd, files, blockers) {
     }
     targetOwners.set(to, file2.path);
     const targetFull = import_node_path9.default.join(cwd, to);
-    if (import_node_fs6.default.existsSync(targetFull) && !renameSources.has(to)) {
+    if (import_node_fs7.default.existsSync(targetFull) && !renameSources.has(to)) {
       blockers.push({
         code: "rename-collision",
         file: file2.path,
@@ -30224,7 +30343,7 @@ function planRenames(cwd, files, blockers) {
   }
   for (const rename of renames) {
     const tmpPath = `${rename.from}${MIGRATE_TMP_SUFFIX}`;
-    if (import_node_fs6.default.existsSync(import_node_path9.default.join(cwd, tmpPath))) {
+    if (import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, tmpPath))) {
       blockers.push({
         code: "rename-temp-collision",
         file: rename.from,
@@ -30234,7 +30353,27 @@ function planRenames(cwd, files, blockers) {
   }
   return renames;
 }
-function rewriteContent(content3, mappings, renames) {
+function experimentTokenTargets(files, renames) {
+  const byNumber = /* @__PURE__ */ new Map();
+  for (const file2 of files) {
+    if (file2.dir !== IMPL_EXP_DIR2 || !file2.numberedName) continue;
+    const group = byNumber.get(file2.numberedName) || [];
+    group.push(file2);
+    byNumber.set(file2.numberedName, group);
+  }
+  const renameTargets = new Map(renames.map((rename) => [rename.from, rename.to]));
+  const targets = /* @__PURE__ */ new Map();
+  const ambiguous = /* @__PURE__ */ new Set();
+  for (const [numbered, group] of byNumber) {
+    if (group.length > 1) {
+      ambiguous.add(numbered);
+      continue;
+    }
+    targets.set(`${EXPERIMENT_ID_PREFIX2}-${numbered}`, renameTargets.get(group[0].path) ?? group[0].path);
+  }
+  return { targets, ambiguous };
+}
+function rewriteContent(content3, mappings, renames, experimentTargets) {
   let replacements = 0;
   let next = content3;
   for (const [legacyId, newId] of mappings) {
@@ -30242,6 +30381,13 @@ function rewriteContent(content3, mappings, renames) {
     next = next.replace(pattern, () => {
       replacements += 1;
       return newId;
+    });
+  }
+  for (const [token, target] of experimentTargets) {
+    const pattern = idTokenPattern(token);
+    next = next.replace(pattern, () => {
+      replacements += 1;
+      return target;
     });
   }
   if (renames.length > 0) {
@@ -30279,11 +30425,11 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
       continue;
     }
-    if (!import_node_fs6.default.existsSync(readmePath)) {
+    if (!import_node_fs7.default.existsSync(readmePath)) {
       results.push({ action: "skipped", path: relReadme });
       continue;
     }
-    const existing = import_node_fs6.default.readFileSync(readmePath, "utf8");
+    const existing = import_node_fs7.default.readFileSync(readmePath, "utf8");
     if (!existing.includes(GENERATED_INDEX_MARKER)) {
       results.push({ action: "hand-curated-rewritten", path: relReadme });
       continue;
@@ -30294,14 +30440,14 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
   }
   return results;
 }
-async function validate2(cwd, dirs, prefixes) {
+async function validate2(cwd, dirs, prefixes, extraRoots) {
   const remainingLegacyIds = /* @__PURE__ */ new Set();
   const idFiles = /* @__PURE__ */ new Map();
   for (const { dir } of dirs) {
     const fullDir = import_node_path9.default.join(cwd, dir);
     for (const name of docFiles(fullDir)) {
       const relPath = `${dir}/${name}`;
-      const parsed = parseDoc(import_node_fs6.default.readFileSync(import_node_path9.default.join(fullDir, name), "utf8"));
+      const parsed = parseDoc(import_node_fs7.default.readFileSync(import_node_path9.default.join(fullDir, name), "utf8"));
       const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
       if (!id) continue;
       if (isLegacyArtifactId(id)) remainingLegacyIds.add(id);
@@ -30314,7 +30460,7 @@ async function validate2(cwd, dirs, prefixes) {
   for (const { dir } of dirs) {
     for (const name of docFiles(import_node_path9.default.join(cwd, dir))) {
       const key = `${dir}::${stemKeyOf(import_node_path9.default.basename(name))}`;
-      const parsed = parseDoc(import_node_fs6.default.readFileSync(import_node_path9.default.join(cwd, dir, name), "utf8"));
+      const parsed = parseDoc(import_node_fs7.default.readFileSync(import_node_path9.default.join(cwd, dir, name), "utf8"));
       const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
       if (!id) continue;
       const set2 = siblingKeys.get(id) || /* @__PURE__ */ new Set();
@@ -30324,8 +30470,8 @@ async function validate2(cwd, dirs, prefixes) {
   }
   const duplicateIds = [...idFiles.entries()].filter(([id, files]) => files.length > 1 && (siblingKeys.get(id)?.size || 0) > 1).map(([id]) => id);
   const unresolved = /* @__PURE__ */ new Set();
-  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs))) {
-    const content3 = import_node_fs6.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
+  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs, extraRoots), rootContentFiles(cwd))) {
+    const content3 = import_node_fs7.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
     for (const token of legacyTokens(content3, prefixes)) {
       unresolved.add(token);
     }
@@ -30398,19 +30544,33 @@ async function migrateArtifactIds(options2) {
     mappings.set(legacyId, newId);
   }
   const renames = options2.keepFilenames ? [] : planRenames(cwd, files, blockers);
+  const experimentRefs = experimentTokenTargets(files, renames);
+  const extraRoots = resolveExtraRoots(cwd, options2.extraRoots ?? [], blockers);
   const prefixes = knownPrefixes(mappings);
-  const contentFiles = contentFilesUnder(cwd, contentRoots(cwd, dirs));
+  const contentFiles = contentFilesUnder(
+    cwd,
+    contentRoots(cwd, dirs, extraRoots),
+    rootContentFiles(cwd)
+  );
   const mappedIds = new Set(mappings.keys());
   for (const relPath of contentFiles) {
-    const content3 = import_node_fs6.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
+    const content3 = import_node_fs7.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
     for (const token of new Set(legacyTokens(content3, prefixes))) {
-      if (!mappedIds.has(token)) {
+      if (mappedIds.has(token) || experimentRefs.targets.has(token)) continue;
+      const expNumber = token.startsWith(`${EXPERIMENT_ID_PREFIX2}-`) ? token.slice(EXPERIMENT_ID_PREFIX2.length + 1) : null;
+      if (expNumber && experimentRefs.ambiguous.has(expNumber)) {
         blockers.push({
-          code: "unresolved-legacy-reference",
+          code: "ambiguous-experiment-reference",
           file: relPath,
-          message: `Legacy id ${token} has no matching artifact to remap`
+          message: `Experiment reference ${token} matches multiple experiment logs; rewrite it to a .jsonl path manually`
         });
+        continue;
       }
+      blockers.push({
+        code: "unresolved-legacy-reference",
+        file: relPath,
+        message: `Legacy id ${token} has no matching artifact to remap`
+      });
     }
   }
   if (options2.apply && !options2.allowDirty) {
@@ -30450,8 +30610,8 @@ async function migrateArtifactIds(options2) {
   const rewrites = [];
   for (const relPath of contentFiles) {
     const fullPath = import_node_path9.default.join(cwd, relPath);
-    const original = import_node_fs6.default.readFileSync(fullPath, "utf8");
-    let { content: content3, replacements } = rewriteContent(original, mappings, renames);
+    const original = import_node_fs7.default.readFileSync(fullPath, "utf8");
+    let { content: content3, replacements } = rewriteContent(original, mappings, renames, experimentRefs.targets);
     const injected = injectedIds.get(relPath);
     if (injected && !original.includes(`id: "${injected}"`)) {
       const before = content3;
@@ -30460,15 +30620,15 @@ async function migrateArtifactIds(options2) {
     }
     if (replacements === 0) continue;
     rewrites.push({ file: relPath, replacements });
-    if (options2.apply) import_node_fs6.default.writeFileSync(fullPath, content3, "utf8");
+    if (options2.apply) import_node_fs7.default.writeFileSync(fullPath, content3, "utf8");
   }
   const indexes = [];
   if (options2.apply) {
     for (const rename of renames) {
-      import_node_fs6.default.renameSync(import_node_path9.default.join(cwd, rename.from), import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
+      import_node_fs7.default.renameSync(import_node_path9.default.join(cwd, rename.from), import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
     }
     for (const rename of renames) {
-      import_node_fs6.default.renameSync(import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path9.default.join(cwd, rename.to));
+      import_node_fs7.default.renameSync(import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path9.default.join(cwd, rename.to));
     }
     const touchedDirs = /* @__PURE__ */ new Set([
       ...files.filter((file2) => file2.synthesizedId || file2.id && isLegacyArtifactId(file2.id)).map((file2) => file2.dir),
@@ -30476,7 +30636,7 @@ async function migrateArtifactIds(options2) {
     ]);
     indexes.push(...await regenerateIndexes(cwd, dirs, touchedDirs));
   }
-  const validation = options2.apply ? await validate2(cwd, dirs, prefixes) : emptyValidation;
+  const validation = options2.apply ? await validate2(cwd, dirs, prefixes, extraRoots) : emptyValidation;
   const validationFailed = validation.remainingLegacyIds.length > 0 || validation.duplicateIds.length > 0 || validation.unresolvedLegacyRefs.length > 0 || validation.auditErrors.length > 0;
   return {
     applied: Boolean(options2.apply),
@@ -30496,12 +30656,14 @@ function parseArgs(argv) {
     allowDirty: false,
     apply: false,
     cwd: process.cwd(),
+    extraRoots: [],
     json: false,
     keepFilenames: false
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--extra-root") args.extraRoots.push(argv[++i]);
     else if (arg === "--apply") args.apply = true;
     else if (arg === "--allow-dirty") args.allowDirty = true;
     else if (arg === "--keep-filenames") args.keepFilenames = true;
@@ -30512,7 +30674,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/migrate_ids.js [--cwd <path>] [--apply] [--keep-filenames] [--allow-dirty] [--json]";
+  return "Usage: node scripts/migrate_ids.js [--cwd <path>] [--apply] [--keep-filenames] [--allow-dirty] [--extra-root <dir>]... [--json]";
 }
 function printHuman(report) {
   console.log(`${report.applied ? "Applied" : "Planned"} artifact id migration`);
@@ -30550,6 +30712,7 @@ async function main() {
       allowDirty: args.allowDirty,
       apply: args.apply,
       cwd: import_node_path10.default.resolve(args.cwd),
+      extraRoots: args.extraRoots,
       keepFilenames: args.keepFilenames
     });
     if (args.json) {
