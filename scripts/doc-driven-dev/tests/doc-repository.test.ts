@@ -294,6 +294,22 @@ test("slugifyAnchor produces github-style anchors", () => {
   assert.equal(slugifyAnchor("日本語 見出し"), "日本語-見出し");
 });
 
+test("id format contract accepts legacy numeric and 22-char base62 ids only", () => {
+  const spec = contractForType("spec");
+  assert.ok(spec);
+  assert.ok(spec.idPattern.test("SPEC-0001"));
+  assert.ok(spec.idPattern.test("SPEC-034qPUpBj0VYOqxmFLijD5"));
+  assert.ok(!spec.idPattern.test("SPEC-AAA"));
+  assert.ok(!spec.idPattern.test("SPEC-A"));
+  assert.ok(!spec.idPattern.test("SPEC-"));
+  assert.ok(!spec.idPattern.test("spec_0001"));
+
+  const impl = contractForType("impl");
+  assert.ok(impl);
+  assert.ok(impl.idPattern.test("IMPL-0001"));
+  assert.ok(!impl.idPattern.test("IMPL-ABC"));
+});
+
 test("localized siblings share one logical artifact identity", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/specs/checkout.md", canonicalFrontMatter({ id: "SPEC-0001" }));

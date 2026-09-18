@@ -14,6 +14,7 @@ type AuditFinding = {
   file: string | null;
   code: string;
   message: string;
+  blocking: boolean;
 };
 
 type AuditReport = {
@@ -44,6 +45,7 @@ function toLegacyFinding(directory: string, finding: Finding): AuditFinding {
     file,
     code: finding.ruleId,
     message: finding.message,
+    blocking: finding.blocking,
   };
 }
 

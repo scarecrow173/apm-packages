@@ -192,3 +192,16 @@ test("audit_docs --type all reports findings from every canonical type once per 
   const invalidStatus = report.findings.find((finding: any) => finding.code === "invalid-status");
   assert.equal(invalidStatus.file, "docs/specs/0001-a.md");
 });
+
+test("legacy audit findings carry the blocking flag", () => {
+  const repo = tempRepo();
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter({
+    relations: { implements: ["SPEC-9999"] },
+  }));
+
+  const report = auditJson(repo, "spec");
+  const broken = report.findings.find((finding: any) => finding.code === "broken-relation-link");
+  assert.ok(broken);
+  assert.equal(broken.blocking, true);
+  assert.ok(report.findings.every((finding: any) => typeof finding.blocking === "boolean"));
+});

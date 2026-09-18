@@ -119,7 +119,7 @@ function contractForDocType(type: string): DocumentContract {
   const contract: DocumentContract = {
     type,
     idPrefix: config.idPrefix,
-    idPattern: new RegExp(`^${config.idPrefix}-[0-9A-Za-z]+$`),
+    idPattern: new RegExp(`^${config.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
     idExceptions: [],
     canonicalDir: config.dir,
     dirs: [...config.dirs],
@@ -169,7 +169,7 @@ const contracts: Record<string, DocumentContract> = {
   impl: {
     type: "impl",
     idPrefix: "IMPL",
-    idPattern: /^IMPL-[0-9A-Za-z]+$/,
+    idPattern: /^IMPL-(?:\d+|[0-9A-Za-z]{22})$/,
     idExceptions: [],
     canonicalDir: "docs/impl",
     dirs: ["docs/impl/ir", "docs/impl/exp"],
@@ -276,6 +276,7 @@ type DocumentRepository = {
   resolvePath(from: RepositoryDocument | null, target: string): PathResolution;
   resolveRelationTarget(from: RepositoryDocument, target: string): RelationResolution;
   hasAnchor(document: RepositoryDocument, slug: string): boolean;
+  sameLogicalArtifact(aPath: string, bPath: string): boolean;
   duplicateIds(): { id: string; paths: string[] }[];
 };
 
@@ -736,6 +737,9 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     hasAnchor(document: RepositoryDocument, slug: string): boolean {
       return document.headings.some((heading) => heading.slug === slug);
     },
+    sameLogicalArtifact(aPath: string, bPath: string): boolean {
+      return artifactKeyOf(aPath) === artifactKeyOf(bPath);
+    },
     duplicateIds(): { id: string; paths: string[] }[] {
       return [...byId.entries()]
         .filter(([, group]) => groupByArtifact(group).size > 1)
@@ -747,6 +751,7 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
 }
 
 export {
+  artifactKeyOf,
   canonicalDocRoots,
   compareFindings,
   contractForType,

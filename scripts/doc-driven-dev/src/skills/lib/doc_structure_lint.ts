@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { contractForType, finding, frontMatterEndLine, isExternalReference, slugifyAnchor } from "./doc_repository";
+import { artifactKeyOf, contractForType, finding, frontMatterEndLine, isExternalReference, slugifyAnchor } from "./doc_repository";
 import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repository";
 import { isIndexFileName, normalizeDir } from "./document_utils";
 import type { LintScope } from "./doc_lint";
@@ -240,20 +240,30 @@ function inboundLinkCounts(model: DocumentRepository): Map<string, number> {
   return counts;
 }
 
+// Inbound counts are computed per logical artifact: localized siblings share
+// one identity, so a relation declared by `foo.md` and re-declared by
+// `foo.ja.md` counts once, and sibling-to-sibling links are not inbound.
 function inboundRelationCounts(model: DocumentRepository): Map<string, number> {
-  const counts = new Map<string, number>();
+  const bySourceArtifact = new Map<string, Set<string>>();
   for (const source of model.files) {
     if (source.kind === "index") continue;
-    const seen = new Set<string>();
-    for (const targets of Object.values(source.relations)) {
-      for (const target of targets) {
+    const sourceKey = artifactKeyOf(source.path);
+    const targets = bySourceArtifact.get(sourceKey) ?? new Set<string>();
+    for (const relationTargets of Object.values(source.relations)) {
+      for (const target of relationTargets) {
         const resolved = model.resolveRelationTarget(source, target);
-        if (resolved.status === "resolved" && resolved.document.path !== source.path) {
-          seen.add(resolved.document.path);
+        if (resolved.status === "resolved"
+          && resolved.document !== null
+          && !model.sameLogicalArtifact(resolved.document.path, source.path)) {
+          targets.add(artifactKeyOf(resolved.document.path));
         }
       }
     }
-    for (const target of seen) counts.set(target, (counts.get(target) ?? 0) + 1);
+    bySourceArtifact.set(sourceKey, targets);
+  }
+  const counts = new Map<string, number>();
+  for (const targets of bySourceArtifact.values()) {
+    for (const target of targets) counts.set(target, (counts.get(target) ?? 0) + 1);
   }
   return counts;
 }
@@ -296,9 +306,11 @@ function lintOrphans(model: DocumentRepository, scope: LintScope): Finding[] {
     const outgoing = Object.values(document.relations).some((targets) =>
       targets.some((target) => {
         const resolved = model.resolveRelationTarget(document, target);
-        return resolved.status === "resolved" && resolved.document.path !== document.path;
+        return resolved.status === "resolved"
+          && resolved.document !== null
+          && !model.sameLogicalArtifact(resolved.document.path, document.path);
       }));
-    if (!outgoing && (relationCounts.get(document.path) ?? 0) === 0) {
+    if (!outgoing && (relationCounts.get(artifactKeyOf(document.path)) ?? 0) === 0) {
       findings.push(finding({
         ruleId: "orphan-relation",
         category: "orphan",

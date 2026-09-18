@@ -29,7 +29,7 @@ function writeFile(root: string, relPath: string, content: string) {
 function seedRepo(root: string) {
   writeFile(root, "docs/specs/checkout.md", [
     "---",
-    "id: SPEC-AAA",
+    "id: SPEC-0001",
     "type: spec",
     "status: draft",
     'title: "Checkout"',
@@ -37,7 +37,7 @@ function seedRepo(root: string) {
     'updated: "2026-01-01"',
     "owners: [team]",
     "relations:",
-    "  implements: [IDEA-AAA]",
+    "  implements: [IDEA-0001]",
     "---",
     "# Checkout",
     "",
@@ -56,12 +56,12 @@ function seedRepo(root: string) {
     "",
     "| ID | Title | Status | File |",
     "| --- | --- | --- | --- |",
-    "| SPEC-AAA | Checkout | draft | [checkout.md](./checkout.md) |",
+    "| SPEC-0001 | Checkout | draft | [checkout.md](./checkout.md) |",
     "",
   ].join("\n"));
   writeFile(root, "docs/ideas/spark.md", [
     "---",
-    "id: IDEA-AAA",
+    "id: IDEA-0001",
     "type: idea",
     "status: draft",
     'title: "Spark"',

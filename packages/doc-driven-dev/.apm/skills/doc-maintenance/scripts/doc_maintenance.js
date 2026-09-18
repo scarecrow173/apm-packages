@@ -28160,7 +28160,7 @@ function contractForDocType(type) {
   const contract = {
     type,
     idPrefix: config2.idPrefix,
-    idPattern: new RegExp(`^${config2.idPrefix}-[0-9A-Za-z]+$`),
+    idPattern: new RegExp(`^${config2.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
     idExceptions: [],
     canonicalDir: config2.dir,
     dirs: [...config2.dirs],
@@ -28209,7 +28209,7 @@ var contracts = {
   impl: {
     type: "impl",
     idPrefix: "IMPL",
-    idPattern: /^IMPL-[0-9A-Za-z]+$/,
+    idPattern: /^IMPL-(?:\d+|[0-9A-Za-z]{22})$/,
     idExceptions: [],
     canonicalDir: "docs/impl",
     dirs: ["docs/impl/ir", "docs/impl/exp"],
@@ -28606,6 +28606,9 @@ async function scanRepository(options2) {
     hasAnchor(document3, slug) {
       return document3.headings.some((heading) => heading.slug === slug);
     },
+    sameLogicalArtifact(aPath, bPath) {
+      return artifactKeyOf(aPath) === artifactKeyOf(bPath);
+    },
     duplicateIds() {
       return [...byId.entries()].filter(([, group]) => groupByArtifact(group).size > 1).map(([id, group]) => ({ id, paths: group.map((document3) => document3.path).sort(compareStrings) })).sort((a, b) => compareStrings(a.id, b.id));
     }
@@ -28923,19 +28926,24 @@ function inboundLinkCounts(model) {
   return counts;
 }
 function inboundRelationCounts(model) {
-  const counts = /* @__PURE__ */ new Map();
+  const bySourceArtifact = /* @__PURE__ */ new Map();
   for (const source of model.files) {
     if (source.kind === "index") continue;
-    const seen = /* @__PURE__ */ new Set();
-    for (const targets of Object.values(source.relations)) {
-      for (const target of targets) {
+    const sourceKey = artifactKeyOf(source.path);
+    const targets = bySourceArtifact.get(sourceKey) ?? /* @__PURE__ */ new Set();
+    for (const relationTargets of Object.values(source.relations)) {
+      for (const target of relationTargets) {
         const resolved = model.resolveRelationTarget(source, target);
-        if (resolved.status === "resolved" && resolved.document.path !== source.path) {
-          seen.add(resolved.document.path);
+        if (resolved.status === "resolved" && resolved.document !== null && !model.sameLogicalArtifact(resolved.document.path, source.path)) {
+          targets.add(artifactKeyOf(resolved.document.path));
         }
       }
     }
-    for (const target of seen) counts.set(target, (counts.get(target) ?? 0) + 1);
+    bySourceArtifact.set(sourceKey, targets);
+  }
+  const counts = /* @__PURE__ */ new Map();
+  for (const targets of bySourceArtifact.values()) {
+    for (const target of targets) counts.set(target, (counts.get(target) ?? 0) + 1);
   }
   return counts;
 }
@@ -28974,9 +28982,9 @@ function lintOrphans(model, scope) {
     }
     const outgoing = Object.values(document3.relations).some((targets) => targets.some((target) => {
       const resolved = model.resolveRelationTarget(document3, target);
-      return resolved.status === "resolved" && resolved.document.path !== document3.path;
+      return resolved.status === "resolved" && resolved.document !== null && !model.sameLogicalArtifact(resolved.document.path, document3.path);
     }));
-    if (!outgoing && (relationCounts.get(document3.path) ?? 0) === 0) {
+    if (!outgoing && (relationCounts.get(artifactKeyOf(document3.path)) ?? 0) === 0) {
       findings.push(finding({
         ruleId: "orphan-relation",
         category: "orphan",
@@ -29190,7 +29198,7 @@ var RECIPROCAL_RELATIONS = {
   "related": "related"
 };
 function relationSourcePaths(document3) {
-  return [document3.path, ...document3.id ? [document3.id] : []];
+  return [document3.path, ...document3.id ? [document3.id] : [], ...document3.localeSiblings];
 }
 function lintParseErrors(document3) {
   if (!document3.parseError) return [];
@@ -29258,7 +29266,7 @@ function lintFrontMatter(document3, scopeType) {
         severity: "error",
         path: document3.path,
         artifactId: document3.id,
-        message: wrongPrefix ? `Artifact ID ${document3.id} does not use the ${contract.idPrefix}- prefix required for type ${scopeType}` : `Artifact ID ${document3.id} does not match the ${scopeType} ID format (${contract.idPrefix}-<id>)`,
+        message: wrongPrefix ? `Artifact ID ${document3.id} does not use the ${contract.idPrefix}- prefix required for type ${scopeType}` : `Artifact ID ${document3.id} does not match the ${scopeType} ID format (${contract.idPrefix}-<digits> or ${contract.idPrefix}-<22-char Base62>)`,
         target: document3.id,
         repair: "migration"
       }));
@@ -29343,7 +29351,7 @@ function lintRelations(model, document3, scopeType) {
       }
       const targetDocument = resolved.status === "resolved" ? resolved.document : null;
       if (!targetDocument) continue;
-      if (targetDocument.path === document3.path) {
+      if (model.sameLogicalArtifact(targetDocument.path, document3.path)) {
         findings.push(finding({
           ruleId: "self-relation",
           category: "relation",
@@ -29378,7 +29386,7 @@ function lintRelations(model, document3, scopeType) {
         if (inverse.length > 0 && !inverse.some((value) => sources.includes(value))) {
           const resolvedInverse = inverse.some((value) => {
             const back = model.resolveRelationTarget(targetDocument, value);
-            return back.status === "resolved" && back.document.path === document3.path;
+            return back.status === "resolved" && back.document !== null && model.sameLogicalArtifact(back.document.path, document3.path);
           });
           if (!resolvedInverse) {
             findings.push(finding({
