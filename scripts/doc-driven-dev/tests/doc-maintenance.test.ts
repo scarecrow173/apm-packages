@@ -5,6 +5,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import { createDocument } from "../src/skills/lib/doc_suite_utils";
+
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
 function tempRepo() {
@@ -37,7 +39,7 @@ function writeSpec(root: string, name: string, id: string, extraFrontMatter = ""
     'updated: "2026-01-01"',
     "owners: [team]",
     "relations:",
-    "  implements: [IDEA-AAA]",
+    "  implements: [IDEA-0001]",
     extraFrontMatter,
     "---",
     `# Spec ${name}`,
@@ -48,7 +50,7 @@ function writeSpec(root: string, name: string, id: string, extraFrontMatter = ""
 function seedIdea(root: string) {
   writeFile(root, "docs/ideas/spark.md", [
     "---",
-    "id: IDEA-AAA",
+    "id: IDEA-0001",
     "type: idea",
     "status: draft",
     'title: "Spark"',
@@ -93,7 +95,7 @@ function snapshot(dir: string): Map<string, string> {
 test("plan previews index regeneration without writing", () => {
   const repo = tempRepo();
   seedIdea(repo);
-  writeSpec(repo, "checkout", "SPEC-AAA");
+  writeSpec(repo, "checkout", "SPEC-0001");
   const before = snapshot(repo);
 
   const result = runScript("doc_maintenance.js", ["plan", "--type", "spec"], repo);
@@ -105,7 +107,7 @@ test("plan previews index regeneration without writing", () => {
 test("apply creates a missing index and is idempotent", () => {
   const repo = tempRepo();
   seedIdea(repo);
-  writeSpec(repo, "checkout", "SPEC-AAA");
+  writeSpec(repo, "checkout", "SPEC-0001");
 
   const first = runScript("doc_maintenance.js", ["apply", "--type", "spec"], repo);
   assert.equal(first.status, 0, first.stderr);
@@ -125,25 +127,25 @@ test("apply creates a missing index and is idempotent", () => {
 test("apply regenerates stale and mismatched managed index entries", () => {
   const repo = tempRepo();
   seedIdea(repo);
-  writeSpec(repo, "checkout", "SPEC-AAA");
-  writeSpec(repo, "other", "SPEC-BBB");
+  writeSpec(repo, "checkout", "SPEC-0001");
+  writeSpec(repo, "other", "SPEC-0002");
   generatedIndex(repo, [
-    "| SPEC-AAA | Wrong Title | active | [checkout.md](./checkout.md) |",
+    "| SPEC-0001 | Wrong Title | active | [checkout.md](./checkout.md) |",
     "| SPEC-GONE | Ghost | draft | [ghost.md](./ghost.md) |",
   ]);
 
   const result = runScript("doc_maintenance.js", ["apply", "--type", "spec"], repo);
   assert.equal(result.status, 0, result.stderr);
   const content = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
-  assert.match(content, /\| SPEC-AAA \| Spec checkout \| draft \|/);
-  assert.match(content, /\| SPEC-BBB \|/);
+  assert.match(content, /\| SPEC-0001 \| Spec checkout \| draft \|/);
+  assert.match(content, /\| SPEC-0002 \|/);
   assert.doesNotMatch(content, /ghost\.md|Wrong Title/);
 });
 
 test("hand-curated index is skipped unless --force-index", () => {
   const repo = tempRepo();
   seedIdea(repo);
-  writeSpec(repo, "checkout", "SPEC-AAA");
+  writeSpec(repo, "checkout", "SPEC-0001");
   writeFile(repo, "docs/specs/README.md", "# Hand-written\n\nThis index is curated.\n");
 
   const plan = runScript("doc_maintenance.js", ["plan", "--type", "spec"], repo);
@@ -166,7 +168,7 @@ test("manual-only findings are skipped, never repaired", () => {
   seedIdea(repo);
   writeFile(repo, "docs/specs/checkout.md", [
     "---",
-    "id: SPEC-AAA",
+    "id: SPEC-0001",
     "type: spec",
     "status: draft",
     'title: "Checkout"',
@@ -174,7 +176,7 @@ test("manual-only findings are skipped, never repaired", () => {
     'updated: "2026-01-01"',
     "owners: [team]",
     "relations:",
-    "  implements: [IDEA-AAA]",
+    "  implements: [IDEA-0001]",
     "---",
     "# Checkout",
     "",
@@ -194,11 +196,11 @@ test("manual-only findings are skipped, never repaired", () => {
 test("fix-link-case normalizes path spelling on case-insensitive filesystems", () => {
   const repo = tempRepo();
   seedIdea(repo);
-  writeSpec(repo, "checkout", "SPEC-AAA");
-  writeSpec(repo, "other", "SPEC-BBB");
+  writeSpec(repo, "checkout", "SPEC-0001");
+  writeSpec(repo, "other", "SPEC-0002");
   writeFile(repo, "docs/specs/checkout.md", [
     "---",
-    "id: SPEC-AAA",
+    "id: SPEC-0001",
     "type: spec",
     "status: draft",
     'title: "Spec checkout"',
@@ -206,7 +208,7 @@ test("fix-link-case normalizes path spelling on case-insensitive filesystems", (
     'updated: "2026-01-01"',
     "owners: [team]",
     "relations:",
-    "  implements: [IDEA-AAA]",
+    "  implements: [IDEA-0001]",
     "---",
     "# Spec checkout",
     "",
@@ -246,8 +248,8 @@ function writeTypedDoc(root: string, relPath: string, id: string, type: string, 
 
 test("shared-directory index is rebuilt once and covers all resident types", () => {
   const repo = tempRepo();
-  writeTypedDoc(repo, "docs/discovery/idea-note.md", "BRAINSTORM-AAA", "brainstorm", "capturing", "Idea note");
-  writeTypedDoc(repo, "docs/discovery/research.md", "DISC-AAA", "discovery", "draft", "Research");
+  writeTypedDoc(repo, "docs/discovery/idea-note.md", "BRAINSTORM-0001", "brainstorm", "capturing", "Idea note");
+  writeTypedDoc(repo, "docs/discovery/research.md", "DISC-0001", "discovery", "draft", "Research");
   writeFile(repo, "docs/discovery/README.md", [
     "# DISC Documents",
     "",
@@ -257,7 +259,7 @@ test("shared-directory index is rebuilt once and covers all resident types", () 
     "",
     "| ID | Title | Status | File |",
     "| --- | --- | --- | --- |",
-    "| DISC-AAA | Research | draft | [research.md](./research.md) |",
+    "| DISC-0001 | Research | draft | [research.md](./research.md) |",
     "",
   ].join("\n"));
 
@@ -282,8 +284,8 @@ test("shared-directory index is rebuilt once and covers all resident types", () 
 
 test("scoped rebuild keeps sibling-type rows in a shared directory", () => {
   const repo = tempRepo();
-  writeTypedDoc(repo, "docs/discovery/idea-note.md", "BRAINSTORM-AAA", "brainstorm", "capturing", "Idea note");
-  writeTypedDoc(repo, "docs/discovery/research.md", "DISC-AAA", "discovery", "draft", "Research");
+  writeTypedDoc(repo, "docs/discovery/idea-note.md", "BRAINSTORM-0001", "brainstorm", "capturing", "Idea note");
+  writeTypedDoc(repo, "docs/discovery/research.md", "DISC-0001", "discovery", "draft", "Research");
   writeFile(repo, "docs/discovery/README.md", [
     "# DISC Documents",
     "",
@@ -293,7 +295,7 @@ test("scoped rebuild keeps sibling-type rows in a shared directory", () => {
     "",
     "| ID | Title | Status | File |",
     "| --- | --- | --- | --- |",
-    "| DISC-AAA | Research | draft | [research.md](./research.md) |",
+    "| DISC-0001 | Research | draft | [research.md](./research.md) |",
     "",
   ].join("\n"));
 
@@ -304,10 +306,40 @@ test("scoped rebuild keeps sibling-type rows in a shared directory", () => {
   assert.match(content, /research\.md/, "discovery rows must survive a brainstorm-scoped rebuild");
 });
 
+test("createDocument keeps sibling-type rows and manual text in a shared index", async () => {
+  const repo = tempRepo();
+  writeTypedDoc(repo, "docs/discovery/idea-note.md", "BRAINSTORM-0001", "brainstorm", "capturing", "Idea note");
+  writeFile(repo, "docs/discovery/README.md", [
+    "# DISC Documents",
+    "",
+    "Curated notes about this directory.",
+    "",
+    "<!-- doc-suite:generated-index -->",
+    "",
+    "Directory: `docs/discovery`",
+    "",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    "| BRAINSTORM-0001 | Idea note | capturing | [idea-note.md](./idea-note.md) |",
+    "",
+    "Trailing operations notes.",
+    "",
+  ].join("\n"));
+
+  const result = await createDocument("discovery", { cwd: repo, title: "Research" });
+  assert.equal(result.indexWritten, true);
+
+  const content = fs.readFileSync(path.join(repo, "docs/discovery/README.md"), "utf8");
+  assert.match(content, /idea-note\.md/, "sibling-type rows must survive document creation");
+  assert.match(content, /research\.md/);
+  assert.match(content, /Curated notes about this directory\./);
+  assert.match(content, /Trailing operations notes\./);
+});
+
 test("managed index rebuild preserves hand-written text around the generated region", () => {
   const repo = tempRepo();
   seedIdea(repo);
-  writeSpec(repo, "checkout", "SPEC-AAA");
+  writeSpec(repo, "checkout", "SPEC-0001");
   writeFile(repo, "docs/specs/README.md", [
     "# SPEC Documents",
     "",
@@ -337,7 +369,7 @@ test("managed index rebuild preserves hand-written text around the generated reg
 test("plan and apply return stable JSON output", () => {
   const repo = tempRepo();
   seedIdea(repo);
-  writeSpec(repo, "checkout", "SPEC-AAA");
+  writeSpec(repo, "checkout", "SPEC-0001");
 
   const plan = JSON.parse(runScript("doc_maintenance.js", ["plan", "--type", "spec", "--json"], repo).stdout);
   assert.equal(plan.command, "plan");

@@ -28000,6 +28000,53 @@ function primaryIndexTypeForDir(dir, candidates) {
   if (scaffoldType && candidates.includes(scaffoldType)) return scaffoldType;
   return [...candidates].sort()[0] ?? "";
 }
+function residentTypesForDir(dir) {
+  const normalized = normalizeDir(dir);
+  return docTypes.filter((type) => {
+    const config2 = configFor(type);
+    return [...config2.dirs, config2.dir].map(normalizeDir).includes(normalized);
+  });
+}
+function mergeManagedIndex(existing, generated) {
+  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
+  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
+  const lines = existing.split("\n");
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerIndex < 0) return `${section}
+`;
+  const preamble = lines.slice(0, markerIndex);
+  const rest = lines.slice(markerIndex + 1);
+  let directoryLine = -1;
+  let regionEnd = -1;
+  for (let i = 0; i < rest.length; i += 1) {
+    const trimmed = rest[i].trim();
+    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
+      directoryLine = i;
+      continue;
+    }
+    if (trimmed.startsWith("|")) {
+      regionEnd = i;
+      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+      break;
+    }
+  }
+  if (regionEnd < 0) regionEnd = directoryLine;
+  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
+    const trimmed = line.trim();
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
+  });
+  const trailing = rest.slice(regionEnd + 1);
+  const head = preamble.join("\n").replace(/\n+$/, "");
+  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
+  const parts = [head, section, tail].filter((part) => part !== "");
+  return `${parts.join("\n\n")}
+`;
+}
+async function renderManagedIndex(cwd, dir, seedType, extraTypes) {
+  const types = [.../* @__PURE__ */ new Set([seedType, ...extraTypes ?? [], ...residentTypesForDir(dir)])].sort();
+  const primary = primaryIndexTypeForDir(dir, types);
+  return buildIndex(cwd, primary, dir, { types });
+}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -28117,6 +28164,20 @@ function walkMarkdownFiles(baseDir) {
     return isMarkdownSource(fullPath) ? [fullPath] : [];
   }).sort();
 }
+async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
+  const indexPath = import_node_path2.default.join(cwd, relativeDir, options2.indexFile ?? "README.md");
+  const relIndex = import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/");
+  if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
+  const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
+  const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
+  if (!isGenerated && !options2.forceIndex) {
+    return { path: relIndex, written: false, reason: "hand-curated" };
+  }
+  const generated = await renderManagedIndex(cwd, relativeDir, type, options2.types);
+  const content3 = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, generated) : generated;
+  import_node_fs2.default.writeFileSync(indexPath, content3, "utf8");
+  return { path: relIndex, written: true, reason: null };
+}
 
 // src/skills/lib/doc_repository.ts
 function finding(input) {
@@ -28224,9 +28285,6 @@ var contracts = {
     expectedUpstream: []
   }
 };
-function documentContracts() {
-  return contracts;
-}
 function contractForType(type) {
   return contracts[type] ?? null;
 }
@@ -29597,10 +29655,6 @@ function scopeIndexPath(model, directory) {
   const chosen = readme ?? candidates.sort()[0];
   return chosen ? `${directory}/${chosen}` : null;
 }
-function residentTypesForDir(directory) {
-  const normalized = normalizeDir(directory);
-  return Object.values(documentContracts()).filter((contract) => [contract.canonicalDir, ...contract.dirs].map(normalizeDir).includes(normalized)).map((contract) => contract.type);
-}
 async function planMaintenance(cwd, query, options2) {
   const resolvedCwd = import_node_path7.default.resolve(cwd);
   const collected = await collectFindings(resolvedCwd, query);
@@ -29671,6 +29725,7 @@ async function planMaintenance(cwd, query, options2) {
         path: indexPath,
         scopeTypes,
         scopeDir: indexPlan.directory,
+        indexFile: import_node_path7.default.posix.basename(indexPath),
         ruleIds,
         detail: indexPlan.exists ? `Regenerate managed index ${indexPath} for types ${scopeTypes.join(", ")}` : `Create generated index ${indexPath} for types ${scopeTypes.join(", ")}`
       });
@@ -29687,41 +29742,6 @@ async function planMaintenance(cwd, query, options2) {
     }
   }
   return { plan: { types: collected.types, directories: [...new Set(directories)], actions, skipped }, findings: collected.findings, model: collected.model };
-}
-function mergeManagedIndex(existing, generated) {
-  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
-  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
-  const lines = existing.split("\n");
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerIndex < 0) return `${section}
-`;
-  const preamble = lines.slice(0, markerIndex);
-  const rest = lines.slice(markerIndex + 1);
-  let directoryLine = -1;
-  let regionEnd = -1;
-  for (let i = 0; i < rest.length; i += 1) {
-    const trimmed = rest[i].trim();
-    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
-      directoryLine = i;
-      continue;
-    }
-    if (trimmed.startsWith("|")) {
-      regionEnd = i;
-      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-      break;
-    }
-  }
-  if (regionEnd < 0) regionEnd = directoryLine;
-  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
-    const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
-  });
-  const trailing = rest.slice(regionEnd + 1);
-  const head = preamble.join("\n").replace(/\n+$/, "");
-  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
-  const parts = [head, section, tail].filter((part) => part !== "");
-  return `${parts.join("\n\n")}
-`;
 }
 function actualEntryName(absolute) {
   const dir = import_node_path7.default.dirname(absolute);
@@ -29766,18 +29786,17 @@ async function applyMaintenance(cwd, query, options2) {
         blocked.push({ action, reason: "unresolvable index scope" });
         continue;
       }
-      const absolute = import_node_path7.default.join(resolvedCwd, action.path);
-      const existing = import_node_fs5.default.existsSync(absolute) ? import_node_fs5.default.readFileSync(absolute, "utf8") : null;
-      if (existing !== null && !options2?.forceIndex && !isGeneratedIndex(existing)) {
-        blocked.push({ action, reason: "hand-curated index" });
-        continue;
+      import_node_fs5.default.mkdirSync(import_node_path7.default.dirname(import_node_path7.default.join(resolvedCwd, action.path)), { recursive: true });
+      const result = await writeGeneratedIndex(resolvedCwd, action.scopeTypes[0], action.scopeDir, {
+        forceIndex: options2?.forceIndex,
+        types: action.scopeTypes,
+        indexFile: action.indexFile
+      });
+      if (result.written) {
+        applied.push(action);
+      } else {
+        blocked.push({ action, reason: result.reason === "hand-curated" ? "hand-curated index" : "index write disabled" });
       }
-      const primaryType = primaryIndexTypeForDir(action.scopeDir, action.scopeTypes);
-      const generated = await buildIndex(resolvedCwd, primaryType, action.scopeDir, { types: action.scopeTypes });
-      const content3 = existing !== null && isGeneratedIndex(existing) ? mergeManagedIndex(existing, generated) : generated;
-      import_node_fs5.default.mkdirSync(import_node_path7.default.dirname(absolute), { recursive: true });
-      import_node_fs5.default.writeFileSync(absolute, content3, "utf8");
-      applied.push(action);
       continue;
     }
     if (action.kind === "fix-link-case") {

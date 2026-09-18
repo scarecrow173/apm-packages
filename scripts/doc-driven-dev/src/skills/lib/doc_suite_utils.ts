@@ -233,6 +233,67 @@ function primaryIndexTypeForDir(dir: string, candidates: string[]): string {
   return [...candidates].sort()[0] ?? "";
 }
 
+// A generated index documents every artifact the directory hosts, not only
+// the type a single writer created. Writers therefore union the requesting
+// types with all types canonically resident in the directory, so writing an
+// index never drops rows owned by a sibling type (for example `brainstorm`
+// and `discovery` both live in `docs/discovery`).
+function residentTypesForDir(dir: string): string[] {
+  const normalized = normalizeDir(dir);
+  return docTypes.filter((type) => {
+    const config = configFor(type);
+    return [...config.dirs, config.dir].map(normalizeDir).includes(normalized);
+  });
+}
+
+// The generated region of a managed index begins at the marker line and runs
+// through the `Directory:` line and the index table. Text before the marker
+// and after the table is hand-written content and must be preserved.
+function mergeManagedIndex(existing: string, generated: string): string {
+  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
+  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
+  const lines = existing.split("\n");
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerIndex < 0) return `${section}\n`;
+  const preamble = lines.slice(0, markerIndex);
+  const rest = lines.slice(markerIndex + 1);
+
+  let directoryLine = -1;
+  let regionEnd = -1;
+  for (let i = 0; i < rest.length; i += 1) {
+    const trimmed = rest[i].trim();
+    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
+      directoryLine = i;
+      continue;
+    }
+    if (trimmed.startsWith("|")) {
+      regionEnd = i;
+      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+      break;
+    }
+  }
+  if (regionEnd < 0) regionEnd = directoryLine;
+
+  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
+    const trimmed = line.trim();
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
+  });
+  const trailing = rest.slice(regionEnd + 1);
+  const head = preamble.join("\n").replace(/\n+$/, "");
+  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
+  const parts = [head, section, tail].filter((part) => part !== "");
+  return `${parts.join("\n\n")}\n`;
+}
+
+// Renders the managed index for a directory using every type that can own
+// rows there: the requesting type, explicit extra types, and all types
+// canonically resident in the directory.
+async function renderManagedIndex(cwd: string, dir: string, seedType: string, extraTypes?: string[]): Promise<string> {
+  const types = [...new Set([seedType, ...(extraTypes ?? []), ...residentTypesForDir(dir)])].sort();
+  const primary = primaryIndexTypeForDir(dir, types);
+  return buildIndex(cwd, primary, dir, { types });
+}
+
 const migrationRoutes: MigrationRoute[] = [
   { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
   { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
@@ -1060,7 +1121,7 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
     if (fs.existsSync(readmePath)) continue;
 
     const content = target.type
-      ? await buildIndex(resolvedCwd, target.type, target.dir)
+      ? await renderManagedIndex(resolvedCwd, target.dir, target.type)
       : buildGenericIndex(target.dir, target.title);
     fs.writeFileSync(readmePath, content, "utf8");
     created.push(path.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
@@ -1071,8 +1132,8 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
 
 type IndexWriteResult = { path: string; written: boolean; reason: "hand-curated" | "disabled" | null };
 
-async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: string, options: Pick<CreateDocumentOptions, "forceIndex" | "noIndex">): Promise<IndexWriteResult> {
-  const indexPath = path.join(cwd, relativeDir, "README.md");
+async function writeGeneratedIndex(cwd: string, type: DocType | string, relativeDir: string, options: Pick<CreateDocumentOptions, "forceIndex" | "noIndex"> & { types?: string[]; indexFile?: string }): Promise<IndexWriteResult> {
+  const indexPath = path.join(cwd, relativeDir, options.indexFile ?? "README.md");
   const relIndex = path.relative(cwd, indexPath).replace(/\\/g, "/");
   if (options.noIndex) return { path: relIndex, written: false, reason: "disabled" };
 
@@ -1082,7 +1143,10 @@ async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: stri
     return { path: relIndex, written: false, reason: "hand-curated" };
   }
 
-  const content = await buildIndex(cwd, type, relativeDir);
+  const generated = await renderManagedIndex(cwd, relativeDir, type, options.types);
+  const content = existing !== null && existing.includes(GENERATED_INDEX_MARKER)
+    ? mergeManagedIndex(existing, generated)
+    : generated;
   fs.writeFileSync(indexPath, content, "utf8");
   return { path: relIndex, written: true, reason: null };
 }
@@ -1186,6 +1250,10 @@ export {
   frontMatterSchema,
   frontMatter,
   relationSchema,
+  residentTypesForDir,
   scaffoldDocsTree,
   validateFrontMatter,
+  writeGeneratedIndex,
 };
+
+export type { DocType };
