@@ -30331,11 +30331,27 @@ async function validate2(cwd, dirs, prefixes) {
     }
   }
   const auditErrors = [];
+  const auditedScopes = /* @__PURE__ */ new Set();
   for (const { dir, type } of dirs) {
-    const findings = type === "impl" ? auditImplementationRecords(cwd, dir).findings : type === "impl-exp" ? auditExperimentLogs(cwd, dir).findings : type ? (await auditDocuments(cwd, type, dir)).findings : [];
-    for (const finding2 of findings) {
-      if (finding2.severity !== "error") continue;
-      auditErrors.push({ code: finding2.code, file: finding2.file, message: finding2.message });
+    if (type === "impl" || type === "impl-exp") {
+      const findings = type === "impl" ? auditImplementationRecords(cwd, dir).findings : auditExperimentLogs(cwd, dir).findings;
+      for (const finding2 of findings) {
+        if (finding2.severity !== "error") continue;
+        auditErrors.push({ code: finding2.code, file: finding2.file, message: finding2.message });
+      }
+      continue;
+    }
+    const resident = residentTypesForDir(dir);
+    const targets = resident.length > 0 ? resident : type ? [type] : [];
+    for (const scopeType of targets) {
+      const scopeKey = `${scopeType}::${normalizeDir(dir)}`;
+      if (auditedScopes.has(scopeKey)) continue;
+      auditedScopes.add(scopeKey);
+      const { findings } = await auditDocuments(cwd, scopeType, dir);
+      for (const finding2 of findings) {
+        if (!finding2.blocking) continue;
+        auditErrors.push({ code: finding2.code, file: finding2.file, message: finding2.message });
+      }
     }
   }
   return {

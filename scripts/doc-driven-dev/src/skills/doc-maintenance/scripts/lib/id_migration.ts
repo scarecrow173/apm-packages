@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { generateArtifactId, isLegacyArtifactId, isNewArtifactId } from "../../../lib/artifact_id";
 import { auditDocuments } from "../../../lib/doc_audit";
-import { configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc, writeGeneratedIndex } from "../../../lib/doc_suite_utils";
+import { configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc, residentTypesForDir, writeGeneratedIndex } from "../../../lib/doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "../../../lib/document_utils";
 import { auditExperimentLogs, auditImplementationRecords, updateIndexForExperimentDir, updateIndexForMarkdownDir } from "../../../impl-doc/scripts/lib/impl_doc_utils";
 
@@ -407,17 +407,33 @@ async function validate(cwd: string, dirs: { dir: string; type: string | null }[
     }
   }
   const auditErrors: { code: string; file: string | null; message: string }[] = [];
+  const auditedScopes = new Set<string>();
   for (const { dir, type } of dirs) {
-    const findings = type === "impl"
-      ? auditImplementationRecords(cwd, dir).findings
-      : type === "impl-exp"
-        ? auditExperimentLogs(cwd, dir).findings
-        : type
-          ? (await auditDocuments(cwd, type, dir)).findings
-          : [];
-    for (const finding of findings) {
-      if (finding.severity !== "error") continue;
-      auditErrors.push({ code: finding.code, file: finding.file, message: finding.message });
+    if (type === "impl" || type === "impl-exp") {
+      const findings = type === "impl"
+        ? auditImplementationRecords(cwd, dir).findings
+        : auditExperimentLogs(cwd, dir).findings;
+      for (const finding of findings) {
+        if (finding.severity !== "error") continue;
+        auditErrors.push({ code: finding.code, file: finding.file, message: finding.message });
+      }
+      continue;
+    }
+    // A shared directory hosts multiple document types (for example
+    // `brainstorm` and `discovery` both live in `docs/discovery`), so audit
+    // every resident type rather than only the canonical one that claimed
+    // the directory.
+    const resident = residentTypesForDir(dir);
+    const targets = resident.length > 0 ? resident : type ? [type] : [];
+    for (const scopeType of targets) {
+      const scopeKey = `${scopeType}::${normalizeDir(dir)}`;
+      if (auditedScopes.has(scopeKey)) continue;
+      auditedScopes.add(scopeKey);
+      const { findings } = await auditDocuments(cwd, scopeType, dir);
+      for (const finding of findings) {
+        if (!finding.blocking) continue;
+        auditErrors.push({ code: finding.code, file: finding.file, message: finding.message });
+      }
     }
   }
   return {
