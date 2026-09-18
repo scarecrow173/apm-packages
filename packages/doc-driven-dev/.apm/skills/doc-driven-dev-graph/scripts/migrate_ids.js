@@ -19484,6 +19484,7 @@ var IMPL_EXP_DIR = "docs/impl/exp";
 var LOCALE_SUFFIX = /\.[a-z]{2}(-[a-z0-9]+)?$/i;
 var NUMBERED_FILE = /^(\d{4,})-(.*)$/;
 var LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
+var MIGRATE_TMP_SUFFIX = ".migrate-tmp";
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -19673,6 +19674,16 @@ function planRenames(cwd, files, blockers) {
     }
     renames.push({ from: file2.path, to });
   }
+  for (const rename of renames) {
+    const tmpPath = `${rename.from}${MIGRATE_TMP_SUFFIX}`;
+    if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, tmpPath))) {
+      blockers.push({
+        code: "rename-temp-collision",
+        file: rename.from,
+        message: `Temporary rename path already exists: ${tmpPath}. Remove it or pass --keep-filenames.`
+      });
+    }
+  }
   return renames;
 }
 function rewriteContent(content, mappings, renames) {
@@ -19731,8 +19742,8 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
     }
     const indexTypes = dirType && docTypes.includes(dirType) ? docTypes.filter((type) => {
       const config2 = configFor(type);
-      const resolved = config2.dirs.find((candidate) => import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, candidate))) || config2.dir;
-      return resolved === dir;
+      const candidates = [...config2.dirs, config2.dir].map((candidate) => normalizeDir(candidate));
+      return candidates.includes(normalizeDir(dir));
     }) : [dirType].filter((type) => Boolean(type));
     for (const indexType of indexTypes.length > 0 ? indexTypes : ["discovery"]) {
       import_node_fs4.default.writeFileSync(readmePath, await buildIndex(cwd, indexType, dir), "utf8");
@@ -19895,12 +19906,11 @@ async function migrateArtifactIds(options2) {
   }
   const indexes = [];
   if (options2.apply) {
-    const tmpSuffix = ".migrate-tmp";
     for (const rename of renames) {
-      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, rename.from), import_node_path4.default.join(cwd, `${rename.from}${tmpSuffix}`));
+      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, rename.from), import_node_path4.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
     }
     for (const rename of renames) {
-      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, `${rename.from}${tmpSuffix}`), import_node_path4.default.join(cwd, rename.to));
+      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path4.default.join(cwd, rename.to));
     }
     const touchedDirs = /* @__PURE__ */ new Set([
       ...files.filter((file2) => file2.synthesizedId || file2.id && isLegacyArtifactId(file2.id)).map((file2) => file2.dir),

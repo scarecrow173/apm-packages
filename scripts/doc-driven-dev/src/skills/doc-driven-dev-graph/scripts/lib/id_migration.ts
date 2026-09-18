@@ -13,6 +13,7 @@ const IMPL_EXP_DIR = "docs/impl/exp";
 const LOCALE_SUFFIX = /\.[a-z]{2}(-[a-z0-9]+)?$/i;
 const NUMBERED_FILE = /^(\d{4,})-(.*)$/;
 const LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
+const MIGRATE_TMP_SUFFIX = ".migrate-tmp";
 
 type Blocker = {
   code: string;
@@ -282,6 +283,16 @@ function planRenames(cwd: string, files: DiscoveredFile[], blockers: Blocker[]):
     }
     renames.push({ from: file.path, to });
   }
+  for (const rename of renames) {
+    const tmpPath = `${rename.from}${MIGRATE_TMP_SUFFIX}`;
+    if (fs.existsSync(path.join(cwd, tmpPath))) {
+      blockers.push({
+        code: "rename-temp-collision",
+        file: rename.from,
+        message: `Temporary rename path already exists: ${tmpPath}. Remove it or pass --keep-filenames.`,
+      });
+    }
+  }
   return renames;
 }
 
@@ -351,8 +362,8 @@ async function regenerateIndexes(
     const indexTypes = dirType && (docTypes as readonly string[]).includes(dirType)
       ? docTypes.filter((type) => {
           const config = configFor(type);
-          const resolved = config.dirs.find((candidate) => fs.existsSync(path.join(cwd, candidate))) || config.dir;
-          return resolved === dir;
+          const candidates = [...config.dirs, config.dir].map((candidate) => normalizeDir(candidate));
+          return candidates.includes(normalizeDir(dir));
         })
       : [dirType].filter((type): type is string => Boolean(type));
     for (const indexType of indexTypes.length > 0 ? indexTypes : ["discovery"]) {
@@ -539,12 +550,11 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
 
   const indexes: IndexEntry[] = [];
   if (options.apply) {
-    const tmpSuffix = ".migrate-tmp";
     for (const rename of renames) {
-      fs.renameSync(path.join(cwd, rename.from), path.join(cwd, `${rename.from}${tmpSuffix}`));
+      fs.renameSync(path.join(cwd, rename.from), path.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
     }
     for (const rename of renames) {
-      fs.renameSync(path.join(cwd, `${rename.from}${tmpSuffix}`), path.join(cwd, rename.to));
+      fs.renameSync(path.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), path.join(cwd, rename.to));
     }
     const touchedDirs = new Set<string>([
       ...files.filter((file) => file.synthesizedId || (file.id && isLegacyArtifactId(file.id))).map((file) => file.dir),
