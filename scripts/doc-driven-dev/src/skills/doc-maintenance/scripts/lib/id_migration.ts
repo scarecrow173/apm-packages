@@ -102,6 +102,9 @@ function walkFiles(baseDir: string, extensions: string[]): string[] {
   if (!fs.existsSync(baseDir)) return [];
   const entries = fs.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
+    // Symlinked entries are never adopted: readFileSync/writeFileSync would
+    // follow them, letting a `x.md -> /outside` link escape the repository.
+    if (entry.isSymbolicLink()) return [];
     const fullPath = path.join(baseDir, entry.name);
     if (entry.isDirectory()) {
       return SKIPPED_DIRS.has(entry.name) ? [] : walkFiles(fullPath, extensions);
@@ -260,7 +263,11 @@ function discover(cwd: string, dirs: { dir: string; type: string | null }[], blo
     const fullDir = path.join(cwd, dir);
     const names = dir === IMPL_EXP_DIR
       ? fs.readdirSync(fullDir)
-        .filter((name) => name.toLowerCase().endsWith(".jsonl") || (name.toLowerCase().endsWith(".md") && !isIndexFileName(name)))
+        .filter((name) => {
+          const lower = name.toLowerCase();
+          if (!(lower.endsWith(".jsonl") || (lower.endsWith(".md") && !isIndexFileName(name)))) return false;
+          return !fs.lstatSync(path.join(fullDir, name)).isSymbolicLink();
+        })
         .sort()
       : docFiles(fullDir);
     for (const name of names) {
