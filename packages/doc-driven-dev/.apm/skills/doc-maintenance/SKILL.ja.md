@@ -82,7 +82,7 @@ canonical スクリプトはこの skill 配下にあり、
 ```bash
 node scripts/scaffold_docs.js --cwd <repo>
 node scripts/migrate_docs.js --cwd <repo> --from <dir> [--split-h1] [--apply] [--json]
-node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-dirty] [--json]
+node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-dirty] [--extra-root <dir>]... [--json]
 ```
 
 3 つとも同じ preview-first contract に従う:
@@ -94,6 +94,12 @@ node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-d
   前に discover / mapping / preflight を行う。blocker があれば mutation
   前に停止し、`apply` は `doc-status` audit（duplicate id、未解決
   relation、壊れた link、index 整合性）でリポジトリを再検証する。
+  参照書き換えは artifact 参照を持ち得る全 active 文書を対象とする:
+  `docs/`、canonical dir、root-level Markdown（`AGENTS.md`、`README.md`
+  など）、配布 agent 文書（`.apm/`、`packages/*/.apm/`）、および
+  `--extra-root` で追加した任意ディレクトリ。`EXP-NNNN` experiment 参照は
+  canonical な `.jsonl` パスへ書き換え、再配置できない legacy token は
+  すべて `unresolved-legacy-reference` として run を停止させる。
 
 ## Read-Write Boundary
 

@@ -82,7 +82,7 @@ same implementation.
 ```bash
 node scripts/scaffold_docs.js --cwd <repo>
 node scripts/migrate_docs.js --cwd <repo> --from <dir> [--split-h1] [--apply] [--json]
-node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-dirty] [--json]
+node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-dirty] [--extra-root <dir>]... [--json]
 ```
 
 All three follow the same preview-first contract:
@@ -94,6 +94,12 @@ All three follow the same preview-first contract:
   `TYPE-NNNN` ids and numbered filenames; any blocker stops the run before
   mutation, and `apply` revalidates the repository with `doc-status` audits
   (duplicate ids, unresolved relations, broken links, index consistency).
+  Reference rewriting covers every active document that can carry artifact
+  references: `docs/`, canonical dirs, root-level Markdown (`AGENTS.md`,
+  `README.md`, ...), distributed agent docs (`.apm/`, `packages/*/.apm/`),
+  plus any `--extra-root` directory. `EXP-NNNN` experiment references rewrite
+  to the canonical `.jsonl` path, and every legacy token that cannot be
+  remapped blocks the run as `unresolved-legacy-reference`.
 
 ## Read-Write Boundary
 
