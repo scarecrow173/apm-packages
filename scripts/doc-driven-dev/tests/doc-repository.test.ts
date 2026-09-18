@@ -293,3 +293,36 @@ test("slugifyAnchor produces github-style anchors", () => {
   assert.equal(slugifyAnchor("  Spaces & Punctuation!  "), "spaces--punctuation");
   assert.equal(slugifyAnchor("日本語 見出し"), "日本語-見出し");
 });
+
+test("localized siblings share one logical artifact identity", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", canonicalFrontMatter({ id: "SPEC-0001" }));
+  writeDoc(repo, "docs/specs/checkout.ja.md", canonicalFrontMatter({ id: "SPEC-0001", title: "Checkout JA" }));
+
+  const model = await scanRepository({ cwd: repo });
+  assert.deepEqual(model.duplicateIds(), []);
+
+  const lookup = model.lookupById("SPEC-0001");
+  assert.equal(lookup.status, "unique");
+  if (lookup.status === "unique") {
+    assert.equal(lookup.document.path, "docs/specs/checkout.md");
+  }
+
+  const relation = model.resolveRelationTarget(
+    model.byPath.get("docs/specs/checkout.ja.md")!,
+    "SPEC-0001",
+  );
+  assert.equal(relation.status, "resolved");
+});
+
+test("duplicate ids across distinct artifacts are still flagged", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/a.md", canonicalFrontMatter({ id: "SPEC-0001" }));
+  writeDoc(repo, "docs/specs/b.md", canonicalFrontMatter({ id: "SPEC-0001", title: "B" }));
+
+  const model = await scanRepository({ cwd: repo });
+  const duplicates = model.duplicateIds();
+  assert.equal(duplicates.length, 1);
+  assert.equal(duplicates[0].id, "SPEC-0001");
+  assert.equal(model.lookupById("SPEC-0001").status, "ambiguous");
+});

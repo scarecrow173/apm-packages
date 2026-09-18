@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { auditDocuments } from "../src/skills/lib/doc_audit";
+import { collectFindings, summarizeHealth } from "../src/skills/lib/doc_report";
 
 const tempDirs: string[] = [];
 
@@ -204,4 +205,28 @@ test("detects case-only mismatches on case-insensitive filesystems", async () =>
   } else {
     assert.ok(codes(report).includes("broken-link"));
   }
+});
+
+test("documented blocking rules flag findings and gate health", async () => {
+  const root = fixture();
+  writeSpec(
+    root,
+    "checkout",
+    "SPEC-AAA",
+    "# Checkout\n\nSee [flow](missing.md).\n",
+    "relations:\n  implements: [SPEC-GONE]\n",
+  );
+  writeSpecIndex(root, []);
+
+  const collected = await collectFindings(root, { type: "spec" });
+  const byRule = new Map(collected.findings.map((finding) => [finding.ruleId, finding]));
+
+  for (const ruleId of ["broken-relation-link", "broken-link", "index-missing-entry"]) {
+    const flagged = byRule.get(ruleId);
+    assert.ok(flagged, `${ruleId} should be reported`);
+    assert.equal(flagged.blocking, true, `${ruleId} should block`);
+  }
+
+  const health = summarizeHealth(collected, collected.findings);
+  assert.ok(health.blocking >= 3, "blocking findings must count toward health gating");
 });
