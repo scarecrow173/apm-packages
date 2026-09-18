@@ -205,3 +205,54 @@ test("legacy audit findings carry the blocking flag", () => {
   assert.equal(broken.blocking, true);
   assert.ok(report.findings.every((finding: any) => typeof finding.blocking === "boolean"));
 });
+
+test("audit_docs flags dangling legacy artifact ids in document bodies", () => {
+  const repo = tempRepo();
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter(),
+    "# Spec\n\nDetails are in SPEC-0099 and DESIGN-0017.\n");
+
+  const report = auditJson(repo, "spec");
+  const findings = report.findings.filter((finding: any) => finding.code === "unresolved-legacy-reference");
+  assert.equal(findings.length, 2);
+  assert.ok(findings.every((finding: any) => finding.severity === "error" && finding.blocking === true));
+  assert.ok(findings.some((finding: any) => finding.message.includes("SPEC-0099")));
+  assert.ok(findings.some((finding: any) => finding.message.includes("DESIGN-0017")));
+});
+
+test("audit_docs ignores body tokens that resolve to existing artifacts", () => {
+  const repo = tempRepo();
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter());
+  writeDoc(path.join(repo, "docs/specs"), "0002-b.md", specFrontMatter({ id: "SPEC-0002" }),
+    "# B\n\nBuilds on SPEC-0001. Text uses UTF-8 per RFC-2119.\n");
+
+  const report = auditJson(repo, "spec");
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "unresolved-legacy-reference"),
+    false,
+  );
+});
+
+test("audit_docs resolves EXP-NNNN tokens against numbered experiment logs", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/impl/exp/0001-foo.jsonl"), "{}\n", "utf8");
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter(),
+    "# Spec\n\nSee EXP-0001 for data and EXP-0099 for the missing run.\n");
+
+  const report = auditJson(repo, "spec");
+  const findings = report.findings.filter((finding: any) => finding.code === "unresolved-legacy-reference");
+  assert.equal(findings.length, 1);
+  assert.ok(findings[0].message.includes("EXP-0099"));
+});
+
+test("audit_docs --type all flags legacy tokens in unmanaged root documents once", () => {
+  const repo = tempRepo();
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter());
+  fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Agents\n\nSee ADR-0025 for context.\n", "utf8");
+
+  const report = auditJson(repo, "all");
+  const findings = report.findings.filter((finding: any) => finding.code === "unresolved-legacy-reference");
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].file, "AGENTS.md");
+  assert.ok(findings[0].message.includes("ADR-0025"));
+});

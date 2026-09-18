@@ -241,6 +241,7 @@ type RepositoryDocument = {
   indexMembership: string[];
   localeSiblings: string[];
   body: string;
+  bodyStartLine: number;
 };
 
 type PathResolution = {
@@ -575,7 +576,8 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
       readError = error instanceof Error ? error.message : String(error);
     }
     const parsed = readError ? { data: {}, body: "", error: readError } : parseDoc(content);
-    const structure = await extractMarkdownStructure(parsed.body, frontMatterEndLine(content));
+    const bodyStartLine = frontMatterEndLine(content);
+    const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data as Record<string, unknown>;
     const owners = Array.isArray(data.owners)
       ? data.owners.filter((owner): owner is string => typeof owner === "string" && Boolean(owner.trim()))
@@ -601,6 +603,7 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
       indexMembership: [],
       localeSiblings: localeSiblingsFor(repoPath, siblingsByDir),
       body: parsed.body,
+      bodyStartLine,
     });
   }
 

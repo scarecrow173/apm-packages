@@ -104,6 +104,11 @@ a stable rule ID. Covered checks include:
 - `broken-relation-link`, `ambiguous-relation-target`,
   `relation-escapes-root`, `self-relation`, `inconsistent-reciprocal-relation`
   — semantic relation violations.
+- `unresolved-legacy-reference` — body text references to legacy `TYPE-NNNN`
+  artifact ids that no artifact provides, including `EXP-NNNN` experiment
+  references without a matching numbered `.jsonl` log. Tokens that still
+  resolve to an existing artifact or experiment file are not reported, so
+  pre-migration repositories stay clean.
 - `test-spec-missing-verifies`, `test-spec-invalid-verifies-target`,
   `plan-missing-test-spec-evidence`, `missing-required-relation`,
   `invalid-relation-target-type` — traceability category rules for
