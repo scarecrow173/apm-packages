@@ -15,7 +15,9 @@ The package provides focused document skills and graph delegates:
 - `design-doc`, `plan-doc`, and `task-doc` define approved implementation work.
 - `test-spec-doc` records what tests must guarantee and why.
 - `impl-doc` records implementation and experiment evidence.
-- `doc-status` audits document contracts and links.
+- `doc-status` audits document contracts and links (read-only).
+- `doc-maintenance` previews and applies safe deterministic repairs, including
+  managed index regeneration.
 - `implementation-flow` delegates implementation work and review gates.
 - `planning-flow` sequences plan approval and task documents for Graph
   delegation.

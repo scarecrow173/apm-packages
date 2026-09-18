@@ -15,7 +15,9 @@ delegate または audit への宣言済みエッジを最大 1 つ、または�
 - `design-doc`、`plan-doc`、`task-doc`: 承認済み実装作業の定義。
 - `test-spec-doc`: テストが何を保証し、なぜ存在するかの記録。
 - `impl-doc`: 実装と実験の証跡。
-- `doc-status`: document contract とリンクの audit。
+- `doc-status`: document contract とリンクの audit（read-only）。
+- `doc-maintenance`: managed index 再生成を含む安全で決定的な修復の
+  preview と apply。
 - `implementation-flow`: 実装作業と review gate の委譲。
 - `planning-flow`: Graph 委譲のための plan approval と task document の順序付け。
 - `skill-discovery-protocol`: 利用可能な skill と adapter の発見。
