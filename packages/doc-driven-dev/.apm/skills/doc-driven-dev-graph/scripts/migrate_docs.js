@@ -19110,11 +19110,14 @@ async function docEntries(cwd, type, explicitDir) {
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
-async function buildIndex(cwd, type, explicitDir) {
+async function buildIndex(cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const entries = await docEntries(cwd, type, explicitDir);
+  const unionTypes = options2?.types ?? [];
+  const entries = unionTypes.length > 1 ? [...new Map(
+    (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
+  ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design" ? [...entries].sort((a, b) => {
+  const sorted = type === "design" || unionTypes.includes("design") ? [...entries].sort((a, b) => {
     if (a.file === "overview.md") return -1;
     if (b.file === "overview.md") return 1;
     return a.file.localeCompare(b.file);

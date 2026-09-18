@@ -222,6 +222,17 @@ const scaffoldTargets: ScaffoldTarget[] = [
 
 const canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
 
+// When several document types share one canonical directory, the scaffold
+// target's type owns the index title; otherwise the first candidate is used.
+function primaryIndexTypeForDir(dir: string, candidates: string[]): string {
+  const normalized = normalizeDir(dir);
+  const scaffoldType = scaffoldTargets.find(
+    (target) => target.type && normalizeDir(target.dir) === normalized,
+  )?.type;
+  if (scaffoldType && candidates.includes(scaffoldType)) return scaffoldType;
+  return [...candidates].sort()[0] ?? "";
+}
+
 const migrationRoutes: MigrationRoute[] = [
   { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
   { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
@@ -821,11 +832,18 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
 
-async function buildIndex(cwd: string, type: string, explicitDir?: string): Promise<string> {
+async function buildIndex(cwd: string, type: string, explicitDir?: string, options?: { types?: string[] }): Promise<string> {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const entries = await docEntries(cwd, type, explicitDir);
+  const unionTypes = options?.types ?? [];
+  const entries = unionTypes.length > 1
+    ? [...new Map(
+        (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir))))
+          .flat()
+          .map((entry) => [entry.file, entry] as const),
+      ).values()].sort((a, b) => a.file.localeCompare(b.file))
+    : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design"
+  const sorted = type === "design" || unionTypes.includes("design")
     ? [...entries].sort((a, b) => {
         if (a.file === "overview.md") return -1;
         if (b.file === "overview.md") return 1;
@@ -1156,6 +1174,7 @@ export {
   isForeignDocType,
   isGeneratedIndex,
   parseDoc,
+  primaryIndexTypeForDir,
   relationValues,
   resolveDocumentReference,
   sanitizeTitle,

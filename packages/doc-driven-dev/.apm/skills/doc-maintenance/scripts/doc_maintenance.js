@@ -27992,6 +27992,14 @@ var scaffoldTargets = [
   { dir: "docs/impl/exp", title: "Experiment Log Documents" }
 ];
 var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+function primaryIndexTypeForDir(dir, candidates) {
+  const normalized = normalizeDir(dir);
+  const scaffoldType = scaffoldTargets.find(
+    (target) => target.type && normalizeDir(target.dir) === normalized
+  )?.type;
+  if (scaffoldType && candidates.includes(scaffoldType)) return scaffoldType;
+  return [...candidates].sort()[0] ?? "";
+}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -28070,11 +28078,14 @@ async function docEntries(cwd, type, explicitDir) {
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
-async function buildIndex(cwd, type, explicitDir) {
+async function buildIndex(cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const entries = await docEntries(cwd, type, explicitDir);
+  const unionTypes = options2?.types ?? [];
+  const entries = unionTypes.length > 1 ? [...new Map(
+    (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
+  ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design" ? [...entries].sort((a, b) => {
+  const sorted = type === "design" || unionTypes.includes("design") ? [...entries].sort((a, b) => {
     if (a.file === "overview.md") return -1;
     if (b.file === "overview.md") return 1;
     return a.file.localeCompare(b.file);
@@ -28213,6 +28224,9 @@ var contracts = {
     expectedUpstream: []
   }
 };
+function documentContracts() {
+  return contracts;
+}
 function contractForType(type) {
   return contracts[type] ?? null;
 }
@@ -29575,61 +29589,63 @@ function scopeIndexPath(model, directory) {
   const chosen = readme ?? candidates.sort()[0];
   return chosen ? `${directory}/${chosen}` : null;
 }
+function residentTypesForDir(directory) {
+  const normalized = normalizeDir(directory);
+  return Object.values(documentContracts()).filter((contract) => [contract.canonicalDir, ...contract.dirs].map(normalizeDir).includes(normalized)).map((contract) => contract.type);
+}
 async function planMaintenance(cwd, query, options2) {
   const resolvedCwd = import_node_path7.default.resolve(cwd);
   const collected = await collectFindings(resolvedCwd, query);
   const actions = [];
   const skipped = [];
-  const consumed = /* @__PURE__ */ new Set();
+  const seenActions = /* @__PURE__ */ new Set();
+  const seenSkipped = /* @__PURE__ */ new Set();
+  const indexPlans = /* @__PURE__ */ new Map();
   const directories = [];
+  const pushSkipped = (entry) => {
+    const key = `${entry.ruleId}|${entry.path ?? ""}|${entry.reason}|${entry.message}`;
+    if (seenSkipped.has(key)) return;
+    seenSkipped.add(key);
+    skipped.push(entry);
+  };
   for (const type of collected.types) {
     const directory = docDir2(resolvedCwd, type, query.dir);
     directories.push(directory);
     const scopeFindings = lintScope(collected.model, type, directory);
-    const indexPath = scopeIndexPath(collected.model, directory) ?? `${directory}/README.md`;
-    const indexAbsolute = import_node_path7.default.join(resolvedCwd, indexPath);
-    const indexExists = import_node_fs5.default.existsSync(indexAbsolute);
-    const indexGenerated = !indexExists || isGeneratedIndex(import_node_fs5.default.readFileSync(indexAbsolute, "utf8"));
-    const indexFindings = scopeFindings.filter((finding2) => INDEX_REBUILD_RULES.has(finding2.ruleId));
-    if (indexFindings.length > 0) {
-      if (indexGenerated || options2?.forceIndex) {
-        actions.push({
-          kind: "rebuild-index",
-          path: indexPath,
-          scopeType: type,
-          scopeDir: directory,
-          ruleIds: [...new Set(indexFindings.map((finding2) => finding2.ruleId))].sort(),
-          detail: indexExists ? `Regenerate managed index ${indexPath} for type ${type}` : `Create generated index ${indexPath} for type ${type}`
-        });
-        for (const finding2 of indexFindings) consumed.add(finding2);
-      } else {
-        for (const finding2 of indexFindings) {
-          consumed.add(finding2);
-          skipped.push({
-            ruleId: finding2.ruleId,
-            category: finding2.category,
-            path: finding2.path ?? indexPath,
-            reason: "hand-curated-index",
-            message: `${finding2.message} (index ${indexPath} is hand-curated; rerun with --force-index to regenerate)`
-          });
-        }
-      }
-    }
     for (const finding2 of scopeFindings) {
-      if (consumed.has(finding2)) continue;
-      if (LINK_CASE_RULES.has(finding2.ruleId) && finding2.path && finding2.target) {
-        actions.push({
-          kind: "fix-link-case",
-          path: finding2.path,
-          linkTarget: finding2.target,
-          linkLine: finding2.line ?? void 0,
-          ruleIds: [finding2.ruleId],
-          detail: `Normalize link target case in ${finding2.path}: ${finding2.target}`
-        });
-        consumed.add(finding2);
+      if (INDEX_REBUILD_RULES.has(finding2.ruleId)) {
+        const indexPath = scopeIndexPath(collected.model, directory) ?? `${directory}/README.md`;
+        const indexAbsolute = import_node_path7.default.join(resolvedCwd, indexPath);
+        const indexExists = import_node_fs5.default.existsSync(indexAbsolute);
+        const indexGenerated = !indexExists || isGeneratedIndex(import_node_fs5.default.readFileSync(indexAbsolute, "utf8"));
+        const plan = indexPlans.get(indexPath) ?? {
+          directory,
+          exists: indexExists,
+          generated: indexGenerated,
+          scopeTypes: /* @__PURE__ */ new Set(),
+          findings: []
+        };
+        plan.scopeTypes.add(type);
+        plan.findings.push(finding2);
+        indexPlans.set(indexPath, plan);
         continue;
       }
-      skipped.push({
+      if (LINK_CASE_RULES.has(finding2.ruleId) && finding2.path && finding2.target) {
+        const key = `fix-link-case|${finding2.path}|${finding2.target}`;
+        if (!seenActions.has(key)) {
+          seenActions.add(key);
+          actions.push({
+            kind: "fix-link-case",
+            path: finding2.path,
+            linkTarget: finding2.target,
+            linkLine: finding2.line ?? void 0,
+            ruleIds: [finding2.ruleId],
+            detail: `Normalize link target case in ${finding2.path}: ${finding2.target}`
+          });
+        }
+        continue;
+      }
+      pushSkipped({
         ruleId: finding2.ruleId,
         category: finding2.category,
         path: finding2.path,
@@ -29638,7 +29654,66 @@ async function planMaintenance(cwd, query, options2) {
       });
     }
   }
-  return { plan: { types: collected.types, directories, actions, skipped }, findings: collected.findings, model: collected.model };
+  for (const [indexPath, indexPlan] of [...indexPlans.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const scopeTypes = [.../* @__PURE__ */ new Set([...indexPlan.scopeTypes, ...residentTypesForDir(indexPlan.directory)])].sort();
+    const ruleIds = [...new Set(indexPlan.findings.map((finding2) => finding2.ruleId))].sort();
+    if (indexPlan.generated || options2?.forceIndex) {
+      actions.push({
+        kind: "rebuild-index",
+        path: indexPath,
+        scopeTypes,
+        scopeDir: indexPlan.directory,
+        ruleIds,
+        detail: indexPlan.exists ? `Regenerate managed index ${indexPath} for types ${scopeTypes.join(", ")}` : `Create generated index ${indexPath} for types ${scopeTypes.join(", ")}`
+      });
+    } else {
+      for (const finding2 of indexPlan.findings) {
+        pushSkipped({
+          ruleId: finding2.ruleId,
+          category: finding2.category,
+          path: finding2.path ?? indexPath,
+          reason: "hand-curated-index",
+          message: `${finding2.message} (index ${indexPath} is hand-curated; rerun with --force-index to regenerate)`
+        });
+      }
+    }
+  }
+  return { plan: { types: collected.types, directories: [...new Set(directories)], actions, skipped }, findings: collected.findings, model: collected.model };
+}
+function mergeManagedIndex(existing, generated) {
+  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
+  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
+  const lines = existing.split("\n");
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerIndex < 0) return `${section}
+`;
+  const preamble = lines.slice(0, markerIndex);
+  const rest = lines.slice(markerIndex + 1);
+  let directoryLine = -1;
+  let regionEnd = -1;
+  for (let i = 0; i < rest.length; i += 1) {
+    const trimmed = rest[i].trim();
+    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
+      directoryLine = i;
+      continue;
+    }
+    if (trimmed.startsWith("|")) {
+      regionEnd = i;
+      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+      break;
+    }
+  }
+  if (regionEnd < 0) regionEnd = directoryLine;
+  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
+    const trimmed = line.trim();
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
+  });
+  const trailing = rest.slice(regionEnd + 1);
+  const head = preamble.join("\n").replace(/\n+$/, "");
+  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
+  const parts = [head, section, tail].filter((part) => part !== "");
+  return `${parts.join("\n\n")}
+`;
 }
 function actualEntryName(absolute) {
   const dir = import_node_path7.default.dirname(absolute);
@@ -29679,16 +29754,19 @@ async function applyMaintenance(cwd, query, options2) {
   const blocked = [];
   for (const action of plan.actions) {
     if (action.kind === "rebuild-index") {
-      if (!action.scopeType || !action.scopeDir) {
+      if (!action.scopeTypes || action.scopeTypes.length === 0 || !action.scopeDir) {
         blocked.push({ action, reason: "unresolvable index scope" });
         continue;
       }
       const absolute = import_node_path7.default.join(resolvedCwd, action.path);
-      if (import_node_fs5.default.existsSync(absolute) && !options2?.forceIndex && !isGeneratedIndex(import_node_fs5.default.readFileSync(absolute, "utf8"))) {
+      const existing = import_node_fs5.default.existsSync(absolute) ? import_node_fs5.default.readFileSync(absolute, "utf8") : null;
+      if (existing !== null && !options2?.forceIndex && !isGeneratedIndex(existing)) {
         blocked.push({ action, reason: "hand-curated index" });
         continue;
       }
-      const content3 = await buildIndex(resolvedCwd, action.scopeType, action.scopeDir);
+      const primaryType = primaryIndexTypeForDir(action.scopeDir, action.scopeTypes);
+      const generated = await buildIndex(resolvedCwd, primaryType, action.scopeDir, { types: action.scopeTypes });
+      const content3 = existing !== null && isGeneratedIndex(existing) ? mergeManagedIndex(existing, generated) : generated;
       import_node_fs5.default.mkdirSync(import_node_path7.default.dirname(absolute), { recursive: true });
       import_node_fs5.default.writeFileSync(absolute, content3, "utf8");
       applied.push(action);
