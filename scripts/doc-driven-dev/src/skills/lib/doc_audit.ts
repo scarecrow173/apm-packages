@@ -1,5 +1,6 @@
 "use strict";
 
+import fs from "node:fs";
 import path from "node:path";
 
 import { lintLegacyIdReferences, lintScope, scopeFor } from "./doc_lint";
@@ -53,6 +54,21 @@ async function buildModel(cwd: string, relativeDirs: string[]): Promise<Document
   return scanRepository({ cwd, roots: scanRoots(relativeDirs) });
 }
 
+// A symlinked doc dir escaping the repository is treated as absent: file
+// listing must not follow it and count outside documents it never audited.
+function dirInsideRepo(cwd: string, absolute: string): boolean {
+  let realCwd: string;
+  let real: string;
+  try {
+    realCwd = fs.realpathSync(cwd);
+    real = fs.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = path.relative(realCwd, real);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
 async function auditWithModel(
   model: DocumentRepository,
   cwd: string,
@@ -61,7 +77,8 @@ async function auditWithModel(
   options?: AuditOptions,
 ): Promise<AuditReport> {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const files = docFiles(path.join(cwd, relativeDir));
+  const fullDir = path.join(cwd, relativeDir);
+  const files = fs.existsSync(fullDir) && dirInsideRepo(cwd, fullDir) ? docFiles(fullDir) : [];
   const findings = lintScope(model, type, relativeDir);
   if (options?.externalLinks) {
     findings.push(...await lintExternalLinks(model, scopeFor(model, type, relativeDir)));

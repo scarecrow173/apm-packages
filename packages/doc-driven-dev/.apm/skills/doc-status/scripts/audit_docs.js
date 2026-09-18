@@ -3427,7 +3427,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs6 = require("fs");
+    var fs7 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -3511,7 +3511,7 @@ var require_gray_matter = __commonJS({
       return stringify2(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs6.readFileSync(filepath, "utf8");
+      const str2 = fs7.readFileSync(filepath, "utf8");
       const file2 = matter2(str2, options2);
       file2.path = filepath;
       return file2;
@@ -13329,6 +13329,7 @@ var init_unist_util_visit = __esm({
 var import_node_path8 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_audit.ts
+var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_lint.ts
@@ -28350,9 +28351,25 @@ function pruneNestedRoots(roots) {
   const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
+function realpathInside(realCwd, absolute) {
+  let real;
+  try {
+    real = import_node_fs3.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path4.default.relative(realCwd, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path4.default.isAbsolute(rel);
+}
 async function scanRepository(options2) {
   const cwd = import_node_path4.default.resolve(options2.cwd);
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd));
+  let realCwd;
+  try {
+    realCwd = import_node_fs3.default.realpathSync(cwd);
+  } catch {
+    realCwd = cwd;
+  }
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => realpathInside(realCwd, import_node_path4.default.join(cwd, root)));
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
@@ -28428,7 +28445,7 @@ async function scanRepository(options2) {
     return resolved === cwd || resolved.startsWith(`${cwd}${import_node_path4.default.sep}`);
   };
   const fileExistsInsideRoot = (absolute) => {
-    return insideRoot(absolute) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
+    return insideRoot(absolute) && realpathInside(realCwd, import_node_path4.default.resolve(absolute)) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -29463,12 +29480,37 @@ function legacyIdPrefixes() {
 function experimentNumbers(root) {
   const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
   if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Set();
+  let realRoot;
+  try {
+    realRoot = import_node_fs5.default.realpathSync(root);
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+  if (!realpathInside2(realRoot, expDir)) return /* @__PURE__ */ new Set();
   const numbers = /* @__PURE__ */ new Set();
   for (const name of import_node_fs5.default.readdirSync(expDir)) {
+    if (isSymlinkPath(import_node_path6.default.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
     if (match) numbers.add(match[1]);
   }
   return numbers;
+}
+function isSymlinkPath(p) {
+  try {
+    return import_node_fs5.default.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+function realpathInside2(realRoot, absolute) {
+  let real;
+  try {
+    real = import_node_fs5.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path6.default.relative(realRoot, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path6.default.isAbsolute(rel);
 }
 function lintLegacyIdReferences(model, files) {
   const prefixes = legacyIdPrefixes();
@@ -29552,9 +29594,22 @@ function toLegacyFinding(directory, finding2) {
 async function buildModel(cwd, relativeDirs) {
   return scanRepository({ cwd, roots: scanRoots(relativeDirs) });
 }
+function dirInsideRepo(cwd, absolute) {
+  let realCwd;
+  let real;
+  try {
+    realCwd = import_node_fs6.default.realpathSync(cwd);
+    real = import_node_fs6.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path7.default.relative(realCwd, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path7.default.isAbsolute(rel);
+}
 async function auditWithModel(model, cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const files = docFiles(import_node_path7.default.join(cwd, relativeDir));
+  const fullDir = import_node_path7.default.join(cwd, relativeDir);
+  const files = import_node_fs6.default.existsSync(fullDir) && dirInsideRepo(cwd, fullDir) ? docFiles(fullDir) : [];
   const findings = lintScope(model, type, relativeDir);
   if (options2?.externalLinks) {
     findings.push(...await lintExternalLinks(model, scopeFor(model, type, relativeDir)));

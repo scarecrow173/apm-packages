@@ -4033,7 +4033,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs8 = require("fs");
+    var fs9 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -4117,7 +4117,7 @@ var require_gray_matter = __commonJS({
       return stringify2(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs8.readFileSync(filepath, "utf8");
+      const str2 = fs9.readFileSync(filepath, "utf8");
       const file2 = matter2(str2, options2);
       file2.path = filepath;
       return file2;
@@ -13330,7 +13330,7 @@ var import_node_path10 = __toESM(require("node:path"));
 
 // src/skills/doc-maintenance/scripts/lib/id_migration.ts
 var import_node_child_process = require("node:child_process");
-var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_fs8 = __toESM(require("node:fs"));
 var import_node_path9 = __toESM(require("node:path"));
 
 // node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/stringify.js
@@ -13432,6 +13432,7 @@ function isLegacyArtifactId(value) {
 }
 
 // src/skills/lib/doc_audit.ts
+var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_lint.ts
@@ -28583,9 +28584,25 @@ function pruneNestedRoots(roots) {
   const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
+function realpathInside(realCwd, absolute) {
+  let real;
+  try {
+    real = import_node_fs3.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path4.default.relative(realCwd, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path4.default.isAbsolute(rel);
+}
 async function scanRepository(options2) {
   const cwd = import_node_path4.default.resolve(options2.cwd);
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd));
+  let realCwd;
+  try {
+    realCwd = import_node_fs3.default.realpathSync(cwd);
+  } catch {
+    realCwd = cwd;
+  }
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => realpathInside(realCwd, import_node_path4.default.join(cwd, root)));
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
@@ -28661,7 +28678,7 @@ async function scanRepository(options2) {
     return resolved === cwd || resolved.startsWith(`${cwd}${import_node_path4.default.sep}`);
   };
   const fileExistsInsideRoot = (absolute) => {
-    return insideRoot(absolute) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
+    return insideRoot(absolute) && realpathInside(realCwd, import_node_path4.default.resolve(absolute)) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -29696,12 +29713,37 @@ function legacyIdPrefixes() {
 function experimentNumbers(root) {
   const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
   if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Set();
+  let realRoot;
+  try {
+    realRoot = import_node_fs5.default.realpathSync(root);
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+  if (!realpathInside2(realRoot, expDir)) return /* @__PURE__ */ new Set();
   const numbers = /* @__PURE__ */ new Set();
   for (const name of import_node_fs5.default.readdirSync(expDir)) {
+    if (isSymlinkPath(import_node_path6.default.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
     if (match) numbers.add(match[1]);
   }
   return numbers;
+}
+function isSymlinkPath(p) {
+  try {
+    return import_node_fs5.default.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+function realpathInside2(realRoot, absolute) {
+  let real;
+  try {
+    real = import_node_fs5.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path6.default.relative(realRoot, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path6.default.isAbsolute(rel);
 }
 function lintLegacyIdReferences(model, files) {
   const prefixes = legacyIdPrefixes();
@@ -29785,9 +29827,22 @@ function toLegacyFinding(directory, finding2) {
 async function buildModel(cwd, relativeDirs) {
   return scanRepository({ cwd, roots: scanRoots(relativeDirs) });
 }
+function dirInsideRepo(cwd, absolute) {
+  let realCwd;
+  let real;
+  try {
+    realCwd = import_node_fs6.default.realpathSync(cwd);
+    real = import_node_fs6.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path7.default.relative(realCwd, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path7.default.isAbsolute(rel);
+}
 async function auditWithModel(model, cwd, type, explicitDir, options2) {
   const relativeDir = docDir2(cwd, type, explicitDir);
-  const files = docFiles(import_node_path7.default.join(cwd, relativeDir));
+  const fullDir = import_node_path7.default.join(cwd, relativeDir);
+  const files = import_node_fs6.default.existsSync(fullDir) && dirInsideRepo(cwd, fullDir) ? docFiles(fullDir) : [];
   const findings = lintScope(model, type, relativeDir);
   if (options2?.externalLinks) {
     findings.push(...await lintExternalLinks(model, scopeFor(model, type, relativeDir)));
@@ -29803,7 +29858,7 @@ async function auditDocuments(cwd, type, explicitDir, options2) {
 }
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
-var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_fs7 = __toESM(require("node:fs"));
 var import_node_path8 = __toESM(require("node:path"));
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
 var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
@@ -29859,18 +29914,18 @@ function isExternalLink(value) {
   return /^(https?:|mailto:)/i.test(value);
 }
 function listFiles(dir, ext) {
-  if (!import_node_fs6.default.existsSync(dir)) return [];
-  return import_node_fs6.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs6.default.lstatSync(import_node_path8.default.join(dir, file2)).isSymbolicLink()).sort();
+  if (!import_node_fs7.default.existsSync(dir)) return [];
+  return import_node_fs7.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs7.default.lstatSync(import_node_path8.default.join(dir, file2)).isSymbolicLink()).sort();
 }
 function normalizeExperimentPath(cwd, filePath) {
   return normalizeFilePath(posixRelative(cwd, import_node_path8.default.resolve(filePath)));
 }
 function writeImplIndex(indexPath, content3, legacyTitle) {
-  const existing = import_node_fs6.default.existsSync(indexPath) ? import_node_fs6.default.readFileSync(indexPath, "utf8") : null;
+  const existing = import_node_fs7.default.existsSync(indexPath) ? import_node_fs7.default.readFileSync(indexPath, "utf8") : null;
   if (existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
-  import_node_fs6.default.writeFileSync(indexPath, content3, "utf8");
+  import_node_fs7.default.writeFileSync(indexPath, content3, "utf8");
   return { written: true, reason: null };
 }
 function updateIndexForMarkdownDir(cwd, relativeDir) {
@@ -29879,7 +29934,7 @@ function updateIndexForMarkdownDir(cwd, relativeDir) {
   const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
   const rows = files.flatMap((file2) => {
     const fullPath = import_node_path8.default.join(dir, file2);
-    const parsed = parseDoc(import_node_fs6.default.readFileSync(fullPath, "utf8"));
+    const parsed = parseDoc(import_node_fs7.default.readFileSync(fullPath, "utf8"));
     if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
     const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path8.default.basename(file2, ".md");
     const id = typeof parsed.data.id === "string" ? parsed.data.id : "\u2014";
@@ -29926,7 +29981,7 @@ function resolvesLocalTarget(cwd, fromFile, target) {
     import_node_path8.default.resolve(cwd, target),
     import_node_path8.default.resolve(import_node_path8.default.dirname(fromFile), target)
   ];
-  return candidates.some((candidate) => import_node_fs6.default.existsSync(candidate));
+  return candidates.some((candidate) => import_node_fs7.default.existsSync(candidate));
 }
 function relationLinks(relations) {
   return relationFields.flatMap((field) => {
@@ -29940,7 +29995,7 @@ function auditImplementationRecords(cwd, relativeDir) {
   const findings = [];
   for (const file2 of files) {
     const fullPath = import_node_path8.default.join(dir, file2);
-    const content3 = import_node_fs6.default.readFileSync(fullPath, "utf8");
+    const content3 = import_node_fs7.default.readFileSync(fullPath, "utf8");
     const parsed = parseDoc(content3);
     if (parsed.error) {
       findings.push({
@@ -29998,7 +30053,7 @@ function auditImplementationRecords(cwd, relativeDir) {
     }
   }
   const indexPath = import_node_path8.default.join(dir, "README.md");
-  if (!import_node_fs6.default.existsSync(indexPath)) {
+  if (!import_node_fs7.default.existsSync(indexPath)) {
     findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
   }
   return { directory: relativeDir, files: files.length, findings };
@@ -30009,7 +30064,7 @@ function auditExperimentLogs(cwd, relativeDir) {
   const findings = [];
   for (const file2 of files) {
     const fullPath = import_node_path8.default.join(dir, file2);
-    const content3 = import_node_fs6.default.readFileSync(fullPath, "utf8");
+    const content3 = import_node_fs7.default.readFileSync(fullPath, "utf8");
     const lines = content3.split(/\r?\n/).filter((line) => line.trim());
     let previousSeq = 0;
     const seen = /* @__PURE__ */ new Set();
@@ -30082,7 +30137,7 @@ function auditExperimentLogs(cwd, relativeDir) {
     }
   }
   const indexPath = import_node_path8.default.join(dir, "README.md");
-  if (!import_node_fs6.default.existsSync(indexPath)) {
+  if (!import_node_fs7.default.existsSync(indexPath)) {
     findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
   }
   return { directory: relativeDir, files: files.length, findings };
@@ -30111,8 +30166,8 @@ function numberedTargetName(fileName) {
 }
 var SKIPPED_DIRS2 = /* @__PURE__ */ new Set([".git", "node_modules", ".pnpm-store"]);
 function walkFiles(baseDir, extensions) {
-  if (!import_node_fs7.default.existsSync(baseDir)) return [];
-  const entries = import_node_fs7.default.readdirSync(baseDir, { withFileTypes: true });
+  if (!import_node_fs8.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs8.default.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
     if (entry.isSymbolicLink()) return [];
     const fullPath = import_node_path9.default.join(baseDir, entry.name);
@@ -30130,7 +30185,7 @@ function canonicalDirs(cwd) {
     const config2 = configFor(type);
     for (const candidate of config2.dirs) {
       const full = import_node_path9.default.join(cwd, candidate);
-      if (!import_node_fs7.default.existsSync(full) || !realpathInside(realCwd, full)) continue;
+      if (!import_node_fs8.default.existsSync(full) || !realpathInside3(realCwd, full)) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
       dirs.push({ dir: candidate, type });
@@ -30138,7 +30193,7 @@ function canonicalDirs(cwd) {
   }
   for (const extra of [IMPL_IR_DIR, IMPL_EXP_DIR2]) {
     const full = import_node_path9.default.join(cwd, extra);
-    if (import_node_fs7.default.existsSync(full) && realpathInside(realCwd, full)) {
+    if (import_node_fs8.default.existsSync(full) && realpathInside3(realCwd, full)) {
       dirs.push({ dir: extra, type: extra === IMPL_IR_DIR ? "impl" : "impl-exp" });
     }
   }
@@ -30149,10 +30204,10 @@ function isUnderDir3(child, parent) {
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
 }
-function realpathInside(realCwd, absolute) {
+function realpathInside3(realCwd, absolute) {
   let real;
   try {
-    real = import_node_fs7.default.realpathSync(absolute);
+    real = import_node_fs8.default.realpathSync(absolute);
   } catch {
     return false;
   }
@@ -30161,7 +30216,7 @@ function realpathInside(realCwd, absolute) {
 }
 function realpathOf(cwd) {
   try {
-    return import_node_fs7.default.realpathSync(cwd);
+    return import_node_fs8.default.realpathSync(cwd);
   } catch {
     return cwd;
   }
@@ -30170,14 +30225,14 @@ function distributionDocRoots(cwd) {
   const realCwd = realpathOf(cwd);
   const candidates = [".apm"];
   const packagesDir = import_node_path9.default.join(cwd, "packages");
-  if (import_node_fs7.default.existsSync(packagesDir) && import_node_fs7.default.statSync(packagesDir).isDirectory()) {
-    for (const entry of import_node_fs7.default.readdirSync(packagesDir, { withFileTypes: true })) {
+  if (import_node_fs8.default.existsSync(packagesDir) && import_node_fs8.default.statSync(packagesDir).isDirectory()) {
+    for (const entry of import_node_fs8.default.readdirSync(packagesDir, { withFileTypes: true })) {
       if (entry.isDirectory()) candidates.push(`packages/${entry.name}/.apm`);
     }
   }
   return candidates.filter((candidate) => {
     const full = import_node_path9.default.join(cwd, candidate);
-    return import_node_fs7.default.existsSync(full) && import_node_fs7.default.statSync(full).isDirectory() && realpathInside(realCwd, full);
+    return import_node_fs8.default.existsSync(full) && import_node_fs8.default.statSync(full).isDirectory() && realpathInside3(realCwd, full);
   });
 }
 function resolveExtraRoots(cwd, extraRoots, blockers) {
@@ -30190,7 +30245,7 @@ function resolveExtraRoots(cwd, extraRoots, blockers) {
       resolved.push(".");
       continue;
     }
-    if (!import_node_fs7.default.existsSync(absolute) || !import_node_fs7.default.statSync(absolute).isDirectory()) {
+    if (!import_node_fs8.default.existsSync(absolute) || !import_node_fs8.default.statSync(absolute).isDirectory()) {
       blockers.push({
         code: "invalid-extra-root",
         file: null,
@@ -30198,7 +30253,7 @@ function resolveExtraRoots(cwd, extraRoots, blockers) {
       });
       continue;
     }
-    if (!realpathInside(realCwd, absolute)) {
+    if (!realpathInside3(realCwd, absolute)) {
       blockers.push({
         code: "invalid-extra-root",
         file: null,
@@ -30213,7 +30268,7 @@ function resolveExtraRoots(cwd, extraRoots, blockers) {
 function contentRoots(cwd, dirs, extraRoots = []) {
   const roots = [];
   const docsRoot = import_node_path9.default.join(cwd, "docs");
-  if (import_node_fs7.default.existsSync(docsRoot) && realpathInside(realpathOf(cwd), docsRoot)) roots.push("docs");
+  if (import_node_fs8.default.existsSync(docsRoot) && realpathInside3(realpathOf(cwd), docsRoot)) roots.push("docs");
   for (const { dir } of dirs) {
     if (!isUnderDir3(dir, "docs")) roots.push(dir);
   }
@@ -30223,7 +30278,7 @@ function contentRoots(cwd, dirs, extraRoots = []) {
   return roots;
 }
 function rootContentFiles(cwd) {
-  return import_node_fs7.default.readdirSync(cwd, { withFileTypes: true }).filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name)).map((entry) => entry.name).sort();
+  return import_node_fs8.default.readdirSync(cwd, { withFileTypes: true }).filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name)).map((entry) => entry.name).sort();
 }
 function contentFilesUnder(cwd, roots, extraFiles = []) {
   const seen = /* @__PURE__ */ new Set();
@@ -30256,10 +30311,10 @@ function discover(cwd, dirs, blockers) {
   const files = [];
   for (const { dir, type: dirType } of dirs) {
     const fullDir = import_node_path9.default.join(cwd, dir);
-    const names = dir === IMPL_EXP_DIR2 ? import_node_fs7.default.readdirSync(fullDir).filter((name) => {
+    const names = dir === IMPL_EXP_DIR2 ? import_node_fs8.default.readdirSync(fullDir).filter((name) => {
       const lower = name.toLowerCase();
       if (!(lower.endsWith(".jsonl") || lower.endsWith(".md") && !isIndexFileName(name))) return false;
-      return !import_node_fs7.default.lstatSync(import_node_path9.default.join(fullDir, name)).isSymbolicLink();
+      return !import_node_fs8.default.lstatSync(import_node_path9.default.join(fullDir, name)).isSymbolicLink();
     }).sort() : docFiles(fullDir);
     for (const name of names) {
       const relPath = `${dir}/${name}`;
@@ -30281,7 +30336,7 @@ function discover(cwd, dirs, blockers) {
         files.push(base);
         continue;
       }
-      const parsed = parseDoc(import_node_fs7.default.readFileSync(fullPath, "utf8"));
+      const parsed = parseDoc(import_node_fs8.default.readFileSync(fullPath, "utf8"));
       if (parsed.error) {
         blockers.push({
           code: "unparseable-front-matter",
@@ -30363,7 +30418,7 @@ function planRenames(cwd, files, blockers) {
     }
     targetOwners.set(to, file2.path);
     const targetFull = import_node_path9.default.join(cwd, to);
-    if (import_node_fs7.default.existsSync(targetFull) && !renameSources.has(to)) {
+    if (import_node_fs8.default.existsSync(targetFull) && !renameSources.has(to)) {
       blockers.push({
         code: "rename-collision",
         file: file2.path,
@@ -30375,7 +30430,7 @@ function planRenames(cwd, files, blockers) {
   }
   for (const rename of renames) {
     const tmpPath = `${rename.from}${MIGRATE_TMP_SUFFIX}`;
-    if (import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, tmpPath))) {
+    if (import_node_fs8.default.existsSync(import_node_path9.default.join(cwd, tmpPath))) {
       blockers.push({
         code: "rename-temp-collision",
         file: rename.from,
@@ -30442,9 +30497,9 @@ function injectMissingId(content3, newId) {
   return content3.replace(/^(---\r?\n)/, `$1id: "${newId}"
 `);
 }
-function isSymlinkPath(p) {
+function isSymlinkPath2(p) {
   try {
-    return import_node_fs7.default.lstatSync(p).isSymbolicLink();
+    return import_node_fs8.default.lstatSync(p).isSymbolicLink();
   } catch {
     return false;
   }
@@ -30455,7 +30510,7 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
     const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
     const readmePath = import_node_path9.default.join(cwd, dir, "README.md");
     const relReadme = `${dir}/README.md`;
-    if (isSymlinkPath(readmePath)) {
+    if (isSymlinkPath2(readmePath)) {
       results.push({ action: "skipped", path: relReadme });
       continue;
     }
@@ -30469,11 +30524,11 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
       continue;
     }
-    if (!import_node_fs7.default.existsSync(readmePath)) {
+    if (!import_node_fs8.default.existsSync(readmePath)) {
       results.push({ action: "skipped", path: relReadme });
       continue;
     }
-    const existing = import_node_fs7.default.readFileSync(readmePath, "utf8");
+    const existing = import_node_fs8.default.readFileSync(readmePath, "utf8");
     if (!existing.includes(GENERATED_INDEX_MARKER)) {
       results.push({ action: "hand-curated-rewritten", path: relReadme });
       continue;
@@ -30491,7 +30546,7 @@ async function validate2(cwd, dirs, prefixes, extraRoots) {
     const fullDir = import_node_path9.default.join(cwd, dir);
     for (const name of docFiles(fullDir)) {
       const relPath = `${dir}/${name}`;
-      const parsed = parseDoc(import_node_fs7.default.readFileSync(import_node_path9.default.join(fullDir, name), "utf8"));
+      const parsed = parseDoc(import_node_fs8.default.readFileSync(import_node_path9.default.join(fullDir, name), "utf8"));
       const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
       if (!id) continue;
       if (isLegacyArtifactId(id)) remainingLegacyIds.add(id);
@@ -30504,7 +30559,7 @@ async function validate2(cwd, dirs, prefixes, extraRoots) {
   for (const { dir } of dirs) {
     for (const name of docFiles(import_node_path9.default.join(cwd, dir))) {
       const key = `${dir}::${stemKeyOf(import_node_path9.default.basename(name))}`;
-      const parsed = parseDoc(import_node_fs7.default.readFileSync(import_node_path9.default.join(cwd, dir, name), "utf8"));
+      const parsed = parseDoc(import_node_fs8.default.readFileSync(import_node_path9.default.join(cwd, dir, name), "utf8"));
       const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
       if (!id) continue;
       const set2 = siblingKeys.get(id) || /* @__PURE__ */ new Set();
@@ -30515,7 +30570,7 @@ async function validate2(cwd, dirs, prefixes, extraRoots) {
   const duplicateIds = [...idFiles.entries()].filter(([id, files]) => files.length > 1 && (siblingKeys.get(id)?.size || 0) > 1).map(([id]) => id);
   const unresolved = /* @__PURE__ */ new Set();
   for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs, extraRoots), rootContentFiles(cwd))) {
-    const content3 = import_node_fs7.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
+    const content3 = import_node_fs8.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
     for (const token of legacyTokens(content3, prefixes)) {
       unresolved.add(token);
     }
@@ -30598,7 +30653,7 @@ async function migrateArtifactIds(options2) {
   );
   const mappedIds = new Set(mappings.keys());
   for (const relPath of contentFiles) {
-    const content3 = import_node_fs7.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
+    const content3 = import_node_fs8.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
     for (const token of new Set(legacyTokens(content3, prefixes))) {
       if (mappedIds.has(token) || experimentRefs.targets.has(token)) continue;
       const expNumber = token.startsWith(`${EXPERIMENT_ID_PREFIX2}-`) ? token.slice(EXPERIMENT_ID_PREFIX2.length + 1) : null;
@@ -30654,7 +30709,7 @@ async function migrateArtifactIds(options2) {
   const rewrites = [];
   for (const relPath of contentFiles) {
     const fullPath = import_node_path9.default.join(cwd, relPath);
-    const original = import_node_fs7.default.readFileSync(fullPath, "utf8");
+    const original = import_node_fs8.default.readFileSync(fullPath, "utf8");
     let { content: content3, replacements } = rewriteContent(original, mappings, renames, experimentRefs.targets);
     const injected = injectedIds.get(relPath);
     if (injected && !original.includes(`id: "${injected}"`)) {
@@ -30664,15 +30719,15 @@ async function migrateArtifactIds(options2) {
     }
     if (replacements === 0) continue;
     rewrites.push({ file: relPath, replacements });
-    if (options2.apply) import_node_fs7.default.writeFileSync(fullPath, content3, "utf8");
+    if (options2.apply) import_node_fs8.default.writeFileSync(fullPath, content3, "utf8");
   }
   const indexes = [];
   if (options2.apply) {
     for (const rename of renames) {
-      import_node_fs7.default.renameSync(import_node_path9.default.join(cwd, rename.from), import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
+      import_node_fs8.default.renameSync(import_node_path9.default.join(cwd, rename.from), import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
     }
     for (const rename of renames) {
-      import_node_fs7.default.renameSync(import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path9.default.join(cwd, rename.to));
+      import_node_fs8.default.renameSync(import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path9.default.join(cwd, rename.to));
     }
     const touchedDirs = /* @__PURE__ */ new Set([
       ...files.filter((file2) => file2.synthesizedId || file2.id && isLegacyArtifactId(file2.id)).map((file2) => file2.dir),
