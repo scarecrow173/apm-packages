@@ -15,7 +15,9 @@ The package provides focused document skills and graph delegates:
 - `design-doc`, `plan-doc`, and `task-doc` define approved implementation work.
 - `test-spec-doc` records what tests must guarantee and why.
 - `impl-doc` records implementation and experiment evidence.
-- `doc-status` audits document contracts and links.
+- `doc-status` audits document contracts and links (read-only).
+- `doc-maintenance` previews and applies safe deterministic repairs, including
+  managed index regeneration.
 - `implementation-flow` delegates implementation work and review gates.
 - `planning-flow` sequences plan approval and task documents for Graph
   delegation.
@@ -166,16 +168,18 @@ GraphRoute JSON contract. See its references for schema and gate details:
 
 ## Migrating existing docs
 
-Preview a migration before applying it:
+`doc-maintenance` owns the migration scripts (the same commands remain
+reachable through compatibility entry points under
+`doc-driven-dev-graph/scripts/`). Preview a migration before applying it:
 
 ```bash
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_docs.js --from docs --json
+node .apm/skills/doc-maintenance/scripts/migrate_docs.js --from docs --json
 ```
 
 Apply only after reviewing the preview:
 
 ```bash
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_docs.js \
+node .apm/skills/doc-maintenance/scripts/migrate_docs.js \
   --from docs --split-h1 --apply
 ```
 

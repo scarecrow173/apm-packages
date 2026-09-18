@@ -111,7 +111,8 @@ yield 時には complete route と順序付き outcome を持つ 1 つの `Graph
 または provider-idempotency proof が fresh projection に対して validate した場合だけです。
 
 caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
-`build_task_graph`）と named audit（`spec`、`adr`、`design`、`plan`、`task`、
+`build_task_graph`。migration script は `doc-maintenance` が所有）と
+named audit（`spec`、`adr`、`design`、`plan`、`task`、
 `test-spec`、`impl-record`、`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
 adapter evidence が missing または malformed なら `authority-required` を yield し、checkpoint
 を進めません。effect 固有の canonical input/evidence mapping は

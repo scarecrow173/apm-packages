@@ -4145,7 +4145,7 @@ var require_uuid62 = __commonJS({
   }
 });
 
-// src/skills/doc-driven-dev-graph/scripts/scaffold_docs.ts
+// src/skills/doc-maintenance/scripts/scaffold_docs.ts
 var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
@@ -18801,6 +18801,26 @@ var scaffoldTargets = [
   { dir: "docs/impl/exp", title: "Experiment Log Documents" }
 ];
 var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+function primaryIndexTypeForDir(dir, candidates) {
+  const normalized = normalizeDir(dir);
+  const scaffoldType = scaffoldTargets.find(
+    (target) => target.type && normalizeDir(target.dir) === normalized
+  )?.type;
+  if (scaffoldType && candidates.includes(scaffoldType)) return scaffoldType;
+  return [...candidates].sort()[0] ?? "";
+}
+function residentTypesForDir(dir) {
+  const normalized = normalizeDir(dir);
+  return docTypes.filter((type) => {
+    const config2 = configFor(type);
+    return [...config2.dirs, config2.dir].map(normalizeDir).includes(normalized);
+  });
+}
+async function renderManagedIndex(cwd, dir, seedType, extraTypes) {
+  const types = [.../* @__PURE__ */ new Set([seedType, ...extraTypes ?? [], ...residentTypesForDir(dir)])].sort();
+  const primary = primaryIndexTypeForDir(dir, types);
+  return buildIndex(cwd, primary, dir, { types });
+}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -18875,11 +18895,14 @@ async function docEntries(cwd, type, explicitDir) {
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
-async function buildIndex(cwd, type, explicitDir) {
+async function buildIndex(cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const entries = await docEntries(cwd, type, explicitDir);
+  const unionTypes = options2?.types ?? [];
+  const entries = unionTypes.length > 1 ? [...new Map(
+    (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
+  ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design" ? [...entries].sort((a, b) => {
+  const sorted = type === "design" || unionTypes.includes("design") ? [...entries].sort((a, b) => {
     if (a.file === "overview.md") return -1;
     if (b.file === "overview.md") return 1;
     return a.file.localeCompare(b.file);
@@ -18927,14 +18950,14 @@ async function scaffoldDocsTree(cwd) {
     import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
     const readmePath = import_node_path2.default.join(fullDir, "README.md");
     if (import_node_fs2.default.existsSync(readmePath)) continue;
-    const content = target.type ? await buildIndex(resolvedCwd, target.type, target.dir) : buildGenericIndex(target.dir, target.title);
+    const content = target.type ? await renderManagedIndex(resolvedCwd, target.dir, target.type) : buildGenericIndex(target.dir, target.title);
     import_node_fs2.default.writeFileSync(readmePath, content, "utf8");
     created.push(import_node_path2.default.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
   }
   return { created, updated };
 }
 
-// src/skills/doc-driven-dev-graph/scripts/scaffold_docs.ts
+// src/skills/doc-maintenance/scripts/scaffold_docs.ts
 function parseArgs(argv) {
   const args = { cwd: process.cwd() };
   for (let i = 0; i < argv.length; i += 1) {

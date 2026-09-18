@@ -41,15 +41,6 @@ const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "de
 type DocType = typeof docTypes[number];
 type RelationField = typeof relationFields[number];
 type ChangeField = typeof changeFields[number];
-type Severity = "error" | "warning" | "info";
-
-type Finding = {
-  code: string;
-  file: string | null;
-  message: string;
-  severity: Severity;
-};
-
 type DocConfig = {
   defaultStatus: string;
   dir: string;
@@ -231,6 +222,78 @@ const scaffoldTargets: ScaffoldTarget[] = [
 
 const canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
 
+// When several document types share one canonical directory, the scaffold
+// target's type owns the index title; otherwise the first candidate is used.
+function primaryIndexTypeForDir(dir: string, candidates: string[]): string {
+  const normalized = normalizeDir(dir);
+  const scaffoldType = scaffoldTargets.find(
+    (target) => target.type && normalizeDir(target.dir) === normalized,
+  )?.type;
+  if (scaffoldType && candidates.includes(scaffoldType)) return scaffoldType;
+  return [...candidates].sort()[0] ?? "";
+}
+
+// A generated index documents every artifact the directory hosts, not only
+// the type a single writer created. Writers therefore union the requesting
+// types with all types canonically resident in the directory, so writing an
+// index never drops rows owned by a sibling type (for example `brainstorm`
+// and `discovery` both live in `docs/discovery`).
+function residentTypesForDir(dir: string): string[] {
+  const normalized = normalizeDir(dir);
+  return docTypes.filter((type) => {
+    const config = configFor(type);
+    return [...config.dirs, config.dir].map(normalizeDir).includes(normalized);
+  });
+}
+
+// The generated region of a managed index begins at the marker line and runs
+// through the `Directory:` line and the index table. Text before the marker
+// and after the table is hand-written content and must be preserved.
+function mergeManagedIndex(existing: string, generated: string): string {
+  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
+  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
+  const lines = existing.split("\n");
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerIndex < 0) return `${section}\n`;
+  const preamble = lines.slice(0, markerIndex);
+  const rest = lines.slice(markerIndex + 1);
+
+  let directoryLine = -1;
+  let regionEnd = -1;
+  for (let i = 0; i < rest.length; i += 1) {
+    const trimmed = rest[i].trim();
+    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
+      directoryLine = i;
+      continue;
+    }
+    if (trimmed.startsWith("|")) {
+      regionEnd = i;
+      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+      break;
+    }
+  }
+  if (regionEnd < 0) regionEnd = directoryLine;
+
+  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
+    const trimmed = line.trim();
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
+  });
+  const trailing = rest.slice(regionEnd + 1);
+  const head = preamble.join("\n").replace(/\n+$/, "");
+  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
+  const parts = [head, section, tail].filter((part) => part !== "");
+  return `${parts.join("\n\n")}\n`;
+}
+
+// Renders the managed index for a directory using every type that can own
+// rows there: the requesting type, explicit extra types, and all types
+// canonically resident in the directory.
+async function renderManagedIndex(cwd: string, dir: string, seedType: string, extraTypes?: string[]): Promise<string> {
+  const types = [...new Set([seedType, ...(extraTypes ?? []), ...residentTypesForDir(dir)])].sort();
+  const primary = primaryIndexTypeForDir(dir, types);
+  return buildIndex(cwd, primary, dir, { types });
+}
+
 const migrationRoutes: MigrationRoute[] = [
   { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
   { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
@@ -376,11 +439,6 @@ function relationMap(content: string): Record<RelationField, string[]> {
 
 function completeChanges(input?: Partial<ChangeSet>): ChangeSet {
   return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []])) as ChangeSet;
-}
-
-function relationLinks(content: string): { field: RelationField; target: string }[] {
-  const relations = relationMap(content);
-  return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
 }
 
 function quote(value: string): string {
@@ -835,11 +893,18 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
 
-async function buildIndex(cwd: string, type: string, explicitDir?: string): Promise<string> {
+async function buildIndex(cwd: string, type: string, explicitDir?: string, options?: { types?: string[] }): Promise<string> {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const entries = await docEntries(cwd, type, explicitDir);
+  const unionTypes = options?.types ?? [];
+  const entries = unionTypes.length > 1
+    ? [...new Map(
+        (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir))))
+          .flat()
+          .map((entry) => [entry.file, entry] as const),
+      ).values()].sort((a, b) => a.file.localeCompare(b.file))
+    : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design"
+  const sorted = type === "design" || unionTypes.includes("design")
     ? [...entries].sort((a, b) => {
         if (a.file === "overview.md") return -1;
         if (b.file === "overview.md") return 1;
@@ -1056,7 +1121,7 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
     if (fs.existsSync(readmePath)) continue;
 
     const content = target.type
-      ? await buildIndex(resolvedCwd, target.type, target.dir)
+      ? await renderManagedIndex(resolvedCwd, target.dir, target.type)
       : buildGenericIndex(target.dir, target.title);
     fs.writeFileSync(readmePath, content, "utf8");
     created.push(path.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
@@ -1067,8 +1132,8 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
 
 type IndexWriteResult = { path: string; written: boolean; reason: "hand-curated" | "disabled" | null };
 
-async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: string, options: Pick<CreateDocumentOptions, "forceIndex" | "noIndex">): Promise<IndexWriteResult> {
-  const indexPath = path.join(cwd, relativeDir, "README.md");
+async function writeGeneratedIndex(cwd: string, type: DocType | string, relativeDir: string, options: Pick<CreateDocumentOptions, "forceIndex" | "noIndex"> & { types?: string[]; indexFile?: string }): Promise<IndexWriteResult> {
+  const indexPath = path.join(cwd, relativeDir, options.indexFile ?? "README.md");
   const relIndex = path.relative(cwd, indexPath).replace(/\\/g, "/");
   if (options.noIndex) return { path: relIndex, written: false, reason: "disabled" };
 
@@ -1078,7 +1143,10 @@ async function writeGeneratedIndex(cwd: string, type: DocType, relativeDir: stri
     return { path: relIndex, written: false, reason: "hand-curated" };
   }
 
-  const content = await buildIndex(cwd, type, relativeDir);
+  const generated = await renderManagedIndex(cwd, relativeDir, type, options.types);
+  const content = existing !== null && existing.includes(GENERATED_INDEX_MARKER)
+    ? mergeManagedIndex(existing, generated)
+    : generated;
   fs.writeFileSync(indexPath, content, "utf8");
   return { path: relIndex, written: true, reason: null };
 }
@@ -1130,14 +1198,6 @@ function logIndexResult(result: { index: string; indexWritten: boolean; indexSki
   }
 }
 
-function resolvesLocalTarget(cwd: string, fromFile: string, target: string): boolean {
-  const candidates = [
-    path.resolve(cwd, target),
-    path.resolve(path.dirname(fromFile), target),
-  ];
-  return candidates.some((candidate) => fs.existsSync(candidate));
-}
-
 function relationValues(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
@@ -1165,135 +1225,7 @@ function resolveDocumentReference(cwd: string, target: string, fromDir?: string)
   return null;
 }
 
-function docTypeOfFile(filePath: string): string | null {
-  const parsed = parseDoc(fs.readFileSync(filePath, "utf8"));
-  return typeof parsed.data.type === "string" ? parsed.data.type : null;
-}
-
-async function auditDocuments(cwd: string, type: string, explicitDir?: string): Promise<{ directory: string; files: number; findings: Finding[] }> {
-  const config = configFor(type);
-  const relativeDir = docDir(cwd, type, explicitDir);
-  const dir = path.join(cwd, relativeDir);
-  const files = docFiles(dir);
-  const findings: Finding[] = [];
-
-  if (type === "design") {
-    const overviewPath = path.join(dir, "overview.md");
-    if (!fs.existsSync(overviewPath)) {
-      findings.push({
-        severity: "error",
-        file: null,
-        code: "missing-overview",
-        message: "Missing required docs/designs/overview.md",
-      });
-    }
-  }
-
-  const inScopeFiles: string[] = [];
-  for (const file of files) {
-    const fullPath = path.join(dir, file);
-    const content = fs.readFileSync(fullPath, "utf8");
-    const parsed = parseDoc(content);
-    if (parsed.error) {
-      findings.push({
-        severity: "error",
-        file,
-        code: "unparseable-front-matter",
-        message: `Front matter is not valid YAML: ${parsed.error}`,
-      });
-      continue;
-    }
-    const data = parsed.data;
-    if (isForeignDocType(data.type, type, relativeDir)) continue;
-    inScopeFiles.push(file);
-    const schemaResult = frontMatterSchema.safeParse(data);
-    if (!schemaResult.success) {
-      for (const issue of schemaResult.error.issues) {
-        findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${formatIssuePath(issue.path)}: ${issue.message}` });
-      }
-    }
-    if (data.type !== type) {
-      findings.push({ severity: "error", file, code: "invalid-type", message: `Expected type ${type}` });
-    }
-    if (typeof data.status === "string" && !config.statusValues.includes(data.status)) {
-      findings.push({ severity: "error", file, code: "invalid-status", message: `Invalid ${type} status: ${data.status}` });
-    }
-    if (type === "test-spec") {
-      const verifies = relationValues((data.relations as Record<string, unknown> | undefined)?.verifies);
-      if (verifies.length === 0) {
-        findings.push({
-          severity: "warning",
-          file,
-          code: "test-spec-missing-verifies",
-          message: "Test spec has no relations.verifies target (TEST-SPEC-DOC-GATE-001)",
-        });
-      }
-      for (const target of verifies) {
-        const resolved = resolveDocumentReference(cwd, target, path.dirname(fullPath));
-        if (!resolved) continue; // broken-relation-link reports unresolvable targets
-        const targetType = docTypeOfFile(resolved);
-        if (targetType && !["spec", "design", "adr"].includes(targetType)) {
-          findings.push({
-            severity: "warning",
-            file,
-            code: "test-spec-invalid-verifies-target",
-            message: `Test spec verifies target resolves to type "${targetType}", expected spec, design, or adr: ${target}`,
-          });
-        }
-      }
-    }
-    if (type === "plan" && typeof data.status === "string" && ["approved", "in-progress", "completed"].includes(data.status)) {
-      const verifiedBy = relationValues((data.relations as Record<string, unknown> | undefined)?.["verified-by"]);
-      const linked = verifiedBy.some((target) => {
-        const resolved = resolveDocumentReference(cwd, target, path.dirname(fullPath));
-        return resolved !== null && docTypeOfFile(resolved) === "test-spec";
-      });
-      const skipped = typeof data["test-spec-skip"] === "string" && data["test-spec-skip"].trim().length > 0;
-      if (!linked && !skipped) {
-        findings.push({
-          severity: "warning",
-          file,
-          code: "plan-missing-test-spec-evidence",
-          message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason",
-        });
-      }
-    }
-    for (const relation of relationLinks(content)) {
-      if (isExternalLink(relation.target)) continue;
-      if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
-        findings.push({
-          severity: "warning",
-          file,
-          code: "broken-relation-link",
-          message: `Relation ${relation.field} points to missing target: ${relation.target}`,
-        });
-      }
-    }
-  }
-
-  const indexPath = ["README.md", "index.md"].map((name) => path.join(dir, name)).find((candidate) => fs.existsSync(candidate));
-  if (!indexPath) {
-    findings.push({ severity: "warning", file: null, code: "missing-index", message: `Missing ${type} index README.md or index.md` });
-  } else {
-    const index = fs.readFileSync(indexPath, "utf8");
-    for (const file of inScopeFiles) {
-      if (!index.includes(file)) findings.push({ severity: "warning", file, code: "index-missing-entry", message: `Index does not link ${file}` });
-    }
-    if (type === "design" && !index.includes("overview.md")) {
-      findings.push({
-        severity: "warning",
-        file: "overview.md",
-        code: "index-missing-overview",
-        message: "Index does not link overview.md",
-      });
-    }
-  }
-
-  return { directory: relativeDir, files: files.length, findings };
-}
-
 export {
-  auditDocuments,
   buildIndex,
   buildGenericIndex,
   configFor,
@@ -1306,6 +1238,7 @@ export {
   isForeignDocType,
   isGeneratedIndex,
   parseDoc,
+  primaryIndexTypeForDir,
   relationValues,
   resolveDocumentReference,
   sanitizeTitle,
@@ -1317,6 +1250,10 @@ export {
   frontMatterSchema,
   frontMatter,
   relationSchema,
+  residentTypesForDir,
   scaffoldDocsTree,
   validateFrontMatter,
+  writeGeneratedIndex,
 };
+
+export type { DocType };

@@ -18893,6 +18893,61 @@ var scaffoldTargets = [
   { dir: "docs/impl/exp", title: "Experiment Log Documents" }
 ];
 var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+function primaryIndexTypeForDir(dir, candidates) {
+  const normalized = normalizeDir(dir);
+  const scaffoldType = scaffoldTargets.find(
+    (target) => target.type && normalizeDir(target.dir) === normalized
+  )?.type;
+  if (scaffoldType && candidates.includes(scaffoldType)) return scaffoldType;
+  return [...candidates].sort()[0] ?? "";
+}
+function residentTypesForDir(dir) {
+  const normalized = normalizeDir(dir);
+  return docTypes.filter((type) => {
+    const config2 = configFor(type);
+    return [...config2.dirs, config2.dir].map(normalizeDir).includes(normalized);
+  });
+}
+function mergeManagedIndex(existing, generated) {
+  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
+  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
+  const lines = existing.split("\n");
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerIndex < 0) return `${section}
+`;
+  const preamble = lines.slice(0, markerIndex);
+  const rest = lines.slice(markerIndex + 1);
+  let directoryLine = -1;
+  let regionEnd = -1;
+  for (let i = 0; i < rest.length; i += 1) {
+    const trimmed = rest[i].trim();
+    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
+      directoryLine = i;
+      continue;
+    }
+    if (trimmed.startsWith("|")) {
+      regionEnd = i;
+      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+      break;
+    }
+  }
+  if (regionEnd < 0) regionEnd = directoryLine;
+  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
+    const trimmed = line.trim();
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
+  });
+  const trailing = rest.slice(regionEnd + 1);
+  const head = preamble.join("\n").replace(/\n+$/, "");
+  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
+  const parts = [head, section, tail].filter((part) => part !== "");
+  return `${parts.join("\n\n")}
+`;
+}
+async function renderManagedIndex(cwd, dir, seedType, extraTypes) {
+  const types = [.../* @__PURE__ */ new Set([seedType, ...extraTypes ?? [], ...residentTypesForDir(dir)])].sort();
+  const primary = primaryIndexTypeForDir(dir, types);
+  return buildIndex(cwd, primary, dir, { types });
+}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -19390,11 +19445,14 @@ async function docEntries(cwd, type, explicitDir) {
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
-async function buildIndex(cwd, type, explicitDir) {
+async function buildIndex(cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const entries = await docEntries(cwd, type, explicitDir);
+  const unionTypes = options2?.types ?? [];
+  const entries = unionTypes.length > 1 ? [...new Map(
+    (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
+  ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design" ? [...entries].sort((a, b) => {
+  const sorted = type === "design" || unionTypes.includes("design") ? [...entries].sort((a, b) => {
     if (a.file === "overview.md") return -1;
     if (b.file === "overview.md") return 1;
     return a.file.localeCompare(b.file);
@@ -19427,7 +19485,7 @@ function walkMarkdownFiles(baseDir) {
   }).sort();
 }
 async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
-  const indexPath = import_node_path2.default.join(cwd, relativeDir, "README.md");
+  const indexPath = import_node_path2.default.join(cwd, relativeDir, options2.indexFile ?? "README.md");
   const relIndex = import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/");
   if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
   const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
@@ -19435,7 +19493,8 @@ async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
   if (!isGenerated && !options2.forceIndex) {
     return { path: relIndex, written: false, reason: "hand-curated" };
   }
-  const content = await buildIndex(cwd, type, relativeDir);
+  const generated = await renderManagedIndex(cwd, relativeDir, type, options2.types);
+  const content = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, generated) : generated;
   import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
   return { path: relIndex, written: true, reason: null };
 }

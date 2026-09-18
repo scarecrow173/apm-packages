@@ -3540,7 +3540,7 @@ var require_gray_matter = __commonJS({
 });
 
 // node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js
-function rng2() {
+function rng() {
   if (poolPtr > rnds8Pool.length - 16) {
     import_crypto.default.randomFillSync(rnds8Pool);
     poolPtr = 0;
@@ -3578,19 +3578,19 @@ var init_validate = __esm({
 
 // node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js
 function stringify(arr, offset = 0) {
-  const uuid3 = (byteToHex2[arr[offset + 0]] + byteToHex2[arr[offset + 1]] + byteToHex2[arr[offset + 2]] + byteToHex2[arr[offset + 3]] + "-" + byteToHex2[arr[offset + 4]] + byteToHex2[arr[offset + 5]] + "-" + byteToHex2[arr[offset + 6]] + byteToHex2[arr[offset + 7]] + "-" + byteToHex2[arr[offset + 8]] + byteToHex2[arr[offset + 9]] + "-" + byteToHex2[arr[offset + 10]] + byteToHex2[arr[offset + 11]] + byteToHex2[arr[offset + 12]] + byteToHex2[arr[offset + 13]] + byteToHex2[arr[offset + 14]] + byteToHex2[arr[offset + 15]]).toLowerCase();
+  const uuid3 = (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
   if (!validate_default(uuid3)) {
     throw TypeError("Stringified UUID is invalid");
   }
   return uuid3;
 }
-var byteToHex2, stringify_default;
+var byteToHex, stringify_default;
 var init_stringify = __esm({
   "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js"() {
     init_validate();
-    byteToHex2 = [];
+    byteToHex = [];
     for (let i = 0; i < 256; ++i) {
-      byteToHex2.push((i + 256).toString(16).substr(1));
+      byteToHex.push((i + 256).toString(16).substr(1));
     }
     stringify_default = stringify;
   }
@@ -3604,7 +3604,7 @@ function v1(options2, buf, offset) {
   let node = options2.node || _nodeId;
   let clockseq = options2.clockseq !== void 0 ? options2.clockseq : _clockseq;
   if (node == null || clockseq == null) {
-    const seedBytes = options2.random || (options2.rng || rng2)();
+    const seedBytes = options2.random || (options2.rng || rng)();
     if (node == null) {
       node = _nodeId = [seedBytes[0] | 1, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
     }
@@ -3773,7 +3773,7 @@ var init_v3 = __esm({
 // node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js
 function v4(options2, buf, offset) {
   options2 = options2 || {};
-  const rnds = options2.random || (options2.rng || rng2)();
+  const rnds = options2.random || (options2.rng || rng)();
   rnds[6] = rnds[6] & 15 | 64;
   rnds[8] = rnds[8] & 63 | 128;
   if (buf) {
@@ -4145,7 +4145,7 @@ var require_uuid62 = __commonJS({
   }
 });
 
-// src/skills/design-doc/scripts/new_design.ts
+// src/skills/doc-maintenance/scripts/scaffold_docs.ts
 var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
@@ -18667,95 +18667,8 @@ function date4(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 256).toString(16).slice(1));
-}
-function unsafeStringify(arr, offset = 0) {
-  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
-}
-
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/rng.js
-var rnds8 = new Uint8Array(16);
-function rng() {
-  return crypto.getRandomValues(rnds8);
-}
-
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/v7.js
-var _state = {};
-function v7(options2, buf, offset) {
-  let bytes;
-  if (options2) {
-    bytes = v7Bytes(options2.random ?? options2.rng?.() ?? rng(), options2.msecs, options2.seq, buf, offset);
-  } else {
-    const now = Date.now();
-    const rnds = rng();
-    updateV7State(_state, now, rnds);
-    bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
-  }
-  return buf ?? unsafeStringify(bytes);
-}
-function updateV7State(state, now, rnds) {
-  state.msecs ??= -Infinity;
-  state.seq ??= 0;
-  if (now > state.msecs) {
-    state.seq = v7Sequence(rnds);
-    state.msecs = now;
-  } else {
-    state.seq = state.seq + 1 | 0;
-    if (state.seq === 0) {
-      state.msecs++;
-    }
-  }
-  return state;
-}
-function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
-  if (rnds.length < 16) {
-    throw new Error("Random bytes length must be >= 16");
-  }
-  if (!buf) {
-    buf = new Uint8Array(16);
-    offset = 0;
-  } else {
-    if (offset < 0 || offset + 16 > buf.length) {
-      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-    }
-  }
-  msecs ??= Date.now();
-  seq ??= v7Sequence(rnds);
-  buf[offset++] = msecs / 1099511627776 & 255;
-  buf[offset++] = msecs / 4294967296 & 255;
-  buf[offset++] = msecs / 16777216 & 255;
-  buf[offset++] = msecs / 65536 & 255;
-  buf[offset++] = msecs / 256 & 255;
-  buf[offset++] = msecs & 255;
-  buf[offset++] = 112 | seq >>> 28 & 15;
-  buf[offset++] = seq >>> 20 & 255;
-  buf[offset++] = 128 | seq >>> 14 & 63;
-  buf[offset++] = seq >>> 6 & 255;
-  buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
-  buf[offset++] = rnds[11];
-  buf[offset++] = rnds[12];
-  buf[offset++] = rnds[13];
-  buf[offset++] = rnds[14];
-  buf[offset++] = rnds[15];
-  return buf;
-}
-function v7Sequence(rnds) {
-  return (rnds[6] & 127) << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
-}
-var v7_default = v7;
-
 // src/skills/lib/artifact_id.ts
 var import_uuid62 = __toESM(require_uuid62());
-var ID_PREFIX_PATTERN = /^[A-Z][A-Z0-9]*$/;
-function generateArtifactId(idPrefix) {
-  if (!ID_PREFIX_PATTERN.test(idPrefix)) {
-    throw new Error(`Invalid artifact id prefix: ${idPrefix}`);
-  }
-  return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
-}
 
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
@@ -18765,9 +18678,6 @@ function normalizeDir(input) {
 }
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
-}
-function slugify2(title, fallback) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
 }
 function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
   if (explicitDir) return normalizeDir(explicitDir);
@@ -18906,41 +18816,6 @@ function residentTypesForDir(dir) {
     return [...config2.dirs, config2.dir].map(normalizeDir).includes(normalized);
   });
 }
-function mergeManagedIndex(existing, generated) {
-  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
-  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
-  const lines = existing.split("\n");
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerIndex < 0) return `${section}
-`;
-  const preamble = lines.slice(0, markerIndex);
-  const rest = lines.slice(markerIndex + 1);
-  let directoryLine = -1;
-  let regionEnd = -1;
-  for (let i = 0; i < rest.length; i += 1) {
-    const trimmed = rest[i].trim();
-    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
-      directoryLine = i;
-      continue;
-    }
-    if (trimmed.startsWith("|")) {
-      regionEnd = i;
-      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-      break;
-    }
-  }
-  if (regionEnd < 0) regionEnd = directoryLine;
-  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
-    const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
-  });
-  const trailing = rest.slice(regionEnd + 1);
-  const head = preamble.join("\n").replace(/\n+$/, "");
-  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
-  const parts = [head, section, tail].filter((part) => part !== "");
-  return `${parts.join("\n\n")}
-`;
-}
 async function renderManagedIndex(cwd, dir, seedType, extraTypes) {
   const types = [.../* @__PURE__ */ new Set([seedType, ...extraTypes ?? [], ...residentTypesForDir(dir)])].sort();
   const primary = primaryIndexTypeForDir(dir, types);
@@ -18971,21 +18846,6 @@ function configFor(type) {
   return configs[type];
 }
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
-function canonicalRootDir(cwd, type) {
-  const config2 = configFor(type);
-  return findDocumentDir(cwd, void 0, config2.dirs, config2.dir);
-}
-function isUnderDir(child, parent) {
-  const c = normalizeDir(child);
-  const p = normalizeDir(parent);
-  return c === p || c.startsWith(`${p}/`);
-}
-function sanitizeFileName(name) {
-  const base = import_node_path2.default.basename(name.trim());
-  const stem = base.replace(/\.md$/i, "");
-  if (!stem) throw new Error("Invalid filename: empty after removing .md extension");
-  return `${stem}.md`;
-}
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -19001,11 +18861,6 @@ function parseDoc(content) {
     return { data: {}, body: content, error: error51 instanceof Error ? error51.message : String(error51) };
   }
 }
-function sanitizeTitle(title) {
-  const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
-  if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
-  return cleaned;
-}
 function indexCell(value) {
   return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
 }
@@ -19014,409 +18869,6 @@ function isForeignDocType(typeValue, expected, relativeDir) {
   if (!docTypes.includes(typeValue)) return false;
   const normalized = normalizeDir(relativeDir);
   return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
-}
-function completeChanges(input) {
-  return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []]));
-}
-function quote(value) {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-function formatRelation(field, values) {
-  return `  ${field}: ${values}`;
-}
-function formatRelationBlock(field, values) {
-  if (values.length === 0) return formatRelation(field, "[]");
-  return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)].join("\n");
-}
-function formatChangeScalar(key, value) {
-  return `${key}: ${quote(value)}`;
-}
-function formatChangeValue(key, value) {
-  if (Array.isArray(value)) {
-    if (value.length === 0) return [`${key}: []`];
-    return [
-      `${key}:`,
-      ...value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => `  - ${quote(item.trim())}`)
-    ];
-  }
-  if (typeof value === "string") return [formatChangeScalar(key, value)];
-  if (typeof value === "number" || typeof value === "boolean") return [`${key}: ${String(value)}`];
-  return [`${key}: ${quote(JSON.stringify(value))}`];
-}
-function formatChangeEntry(entry) {
-  const ordered = [
-    "type",
-    "path",
-    "from",
-    "to",
-    "source",
-    ...Object.keys(entry).filter((key) => !["type", "path", "from", "to", "source"].includes(key)).sort()
-  ].filter((key, index, array2) => key in entry && array2.indexOf(key) === index);
-  const lines = [];
-  for (const key of ordered) {
-    lines.push(...formatChangeValue(key, entry[key]));
-  }
-  return lines;
-}
-function formatChangesBlock(changes) {
-  return [
-    "  changes:",
-    ...changeFields.flatMap((field) => {
-      const entries = changes[field];
-      if (entries.length === 0) return [`    ${field}: []`];
-      return [
-        `    ${field}:`,
-        ...entries.flatMap((entry) => {
-          const lines = formatChangeEntry(entry);
-          return lines.length === 0 ? ["      - {}"] : [`      - ${lines[0]}`, ...lines.slice(1).map((line) => `        ${line}`)];
-        })
-      ];
-    })
-  ];
-}
-function isPlainObject2(value) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-function formatMetadataScalar(value) {
-  return typeof value === "string" ? quote(value) : String(value);
-}
-function formatMetadataNode(key, value, indent) {
-  if (value === null || value === void 0) return [];
-  const prefix = " ".repeat(indent);
-  if (Array.isArray(value)) {
-    if (value.length === 0) return [`${prefix}${key}: []`];
-    const items = value.flatMap((item) => {
-      if (item === null || item === void 0) return [];
-      if (isPlainObject2(item)) {
-        const childLines = Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3));
-        return childLines.length > 0 ? [`${prefix} -`, ...childLines] : [`${prefix} - {}`];
-      }
-      if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
-      if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
-      return [`${prefix} - ${quote(JSON.stringify(item))}`];
-    });
-    return items.length > 0 ? [`${prefix}${key}:`, ...items] : [`${prefix}${key}: []`];
-  }
-  if (isPlainObject2(value)) {
-    const entries = Object.entries(value).flatMap(([childKey, childValue]) => formatMetadataNode(childKey, childValue, indent + 2));
-    return entries.length > 0 ? [`${prefix}${key}:`, ...entries] : [`${prefix}${key}: {}`];
-  }
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return [`${prefix}${key}: ${formatMetadataScalar(value)}`];
-  }
-  return [`${prefix}${key}: ${quote(JSON.stringify(value))}`];
-}
-function formatMetadataBlock(metadata) {
-  if (!metadata) return [];
-  const entries = Object.entries(metadata).flatMap(([key, value]) => formatMetadataNode(key, value, 2));
-  return entries.length > 0 ? ["metadata:", ...entries] : ["metadata: {}"];
-}
-function completeRelations(input) {
-  return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []]));
-}
-function frontMatter(config2, id, title, status, date5, relations, metadata) {
-  if (!config2.statusValues.includes(status)) {
-    throw new Error(`Invalid ${config2.type} status: ${status} (expected one of: ${config2.statusValues.join(", ")})`);
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date5)) {
-    throw new Error(`Invalid date: ${date5} (expected YYYY-MM-DD)`);
-  }
-  const complete = completeRelations(relations);
-  const changes = completeChanges(relations?.changes);
-  return [
-    "---",
-    `id: ${quote(id)}`,
-    `type: ${quote(config2.type)}`,
-    `status: ${quote(status)}`,
-    `title: ${quote(sanitizeTitle(title))}`,
-    `created: ${quote(date5)}`,
-    `updated: ${quote(date5)}`,
-    "owners: []",
-    "relations:",
-    formatRelationBlock("source", complete.source),
-    ...formatChangesBlock(changes),
-    ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
-    ...formatMetadataBlock(metadata),
-    "---"
-  ].join("\n");
-}
-function renderBodyTemplate(type, title) {
-  const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", `${type}.md`);
-  if (!import_node_fs2.default.existsSync(templatePath)) return null;
-  return import_node_fs2.default.readFileSync(templatePath, "utf8").replaceAll("{{title}}", title).trimEnd();
-}
-function bodyFor(type, title) {
-  const template = renderBodyTemplate(type, title);
-  if (template) return template;
-  if (type === "idea") {
-    return [
-      `# ${title}`,
-      "",
-      "## Summary",
-      "",
-      "<!-- One or two sentences capturing the core idea. -->",
-      "",
-      "## Problem and Motivation",
-      "",
-      "- <!-- observed pain, opportunity, or trigger -->",
-      "",
-      "## Expected Value",
-      "",
-      "- <!-- who benefits and how -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question that must be answered before this can be formalized -->",
-      "",
-      "## Next Action",
-      "",
-      "- [ ] Promote to discovery-doc for deeper exploration",
-      "- [ ] Promote directly to spec-doc if requirements are clear",
-      "- [ ] Park for later reconsideration",
-      "- [ ] Discard \u2014 reason: <!-- why -->"
-    ].join("\n");
-  }
-  if (type === "brainstorm") {
-    return [
-      `# ${title}`,
-      "",
-      "## Intent",
-      "",
-      "<!-- Confirm the goal, audience, and reason this matters now. -->",
-      "",
-      "## Constraints",
-      "",
-      "- <!-- technical, product, operational, timeline, or policy constraint -->",
-      "",
-      "## Options",
-      "",
-      "- <!-- option, trade-off, and current lean -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question that must be resolved before routing -->",
-      "",
-      "## Document Routing",
-      "",
-      "- [ ] ADR needed",
-      "- [ ] Spec needed",
-      "",
-      "## Confirmed Summary",
-      "",
-      "<!-- Write the agreed intent before creating downstream documents. -->"
-    ].join("\n");
-  }
-  if (type === "discovery") {
-    return [
-      `# ${title}`,
-      "",
-      "## Exploration Goal",
-      "",
-      "<!-- What question does this discovery attempt to answer? State the trigger and desired outcome. -->",
-      "",
-      "## Key Issues and Assumptions",
-      "",
-      "- <!-- issue or assumption that must be validated before committing to a direction -->",
-      "",
-      "## Alternatives and Comparison",
-      "",
-      "| Option | Pros | Cons | Lean |",
-      "| --- | --- | --- | --- |",
-      "| <!-- option --> | <!-- pro --> | <!-- con --> | <!-- yes/no/maybe --> |",
-      "",
-      "## Tentative Conclusions and Hypotheses",
-      "",
-      "<!-- Current best guess before committing to a spec or ADR. Mark each as hypothesis or confirmed. -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question blocking resolution -->",
-      "",
-      "## Promotion Candidates",
-      "",
-      "- [ ] spec-doc needed",
-      "- [ ] adr-doc needed"
-    ].join("\n");
-  }
-  if (type === "spec") {
-    return [
-      `# ${title}`,
-      "",
-      "## Intent",
-      "",
-      "<!-- Describe the user need, problem, and desired outcome. -->",
-      "",
-      "## Scope",
-      "",
-      "### In Scope",
-      "",
-      "- <!-- behavior, workflow, or interface -->",
-      "",
-      "### Out of Scope",
-      "",
-      "- <!-- explicit non-goal -->",
-      "",
-      "## Requirements",
-      "",
-      "- <!-- requirement -->",
-      "",
-      "## Acceptance Criteria",
-      "",
-      "- [ ] <!-- observable behavior or verification -->",
-      "",
-      "## Deferred Design Concerns",
-      "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
-      "",
-      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->"
-    ].join("\n");
-  }
-  if (type === "plan") {
-    return [
-      `# ${title}`,
-      "",
-      "## Goal",
-      "",
-      "<!-- Describe the implementation goal. -->",
-      "",
-      "## Tasks",
-      "",
-      "- [ ] <!-- implementation slice -->",
-      "",
-      "## Verification",
-      "",
-      "- [ ] <!-- command, test, or review step -->"
-    ].join("\n");
-  }
-  if (type === "design") {
-    return [
-      `# ${title}`,
-      "",
-      "## Context",
-      "",
-      "<!-- Describe the problem context and boundaries for this design. -->",
-      "",
-      "## Scope",
-      "",
-      "- <!-- in-scope -->",
-      "- <!-- out-of-scope -->",
-      "",
-      "## Components and Boundaries",
-      "",
-      "- <!-- component and responsibility -->",
-      "",
-      "## Data and Control Flow",
-      "",
-      "- <!-- key flow and decision points -->",
-      "",
-      "## Risks and Trade-offs",
-      "",
-      "- <!-- risk and mitigation -->",
-      "",
-      "## Deferred Design Concerns",
-      "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
-      "",
-      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
-      "",
-      "## References",
-      "",
-      "- <!-- linked spec, ADR, and related docs -->"
-    ].join("\n");
-  }
-  if (type === "test-spec") {
-    return [
-      `# ${title}`,
-      "",
-      "## Purpose",
-      "",
-      "<!-- Why this test spec exists: the intent it preserves and when it may be retired. -->",
-      "",
-      "## Feature",
-      "",
-      "<!-- The behavior under specification, named like a Gherkin Feature. -->",
-      "",
-      "## Rules",
-      "",
-      "- <!-- Rule: an invariant or contract the feature must satisfy -->",
-      "",
-      "## Examples",
-      "",
-      "- <!-- Example: a concrete scenario that pins a rule down, optionally in Given/When/Then form -->",
-      "",
-      "## Guarantees",
-      "",
-      "- <!-- What a correct implementation must guarantee -->",
-      "",
-      "## Non-goals",
-      "",
-      "- <!-- Behavior or coverage this spec deliberately does not verify -->",
-      "",
-      "## Risk",
-      "",
-      "- <!-- What is lost or breaks if these guarantees are dropped -->"
-    ].join("\n");
-  }
-  return [
-    `# ${title}`,
-    "",
-    "## Work",
-    "",
-    "<!-- Describe the implementation slice. -->",
-    "",
-    "## Done When",
-    "",
-    "- [ ] <!-- completion criterion -->"
-  ].join("\n");
-}
-function isReservedDocFile(type, file2) {
-  if (type === "design") {
-    return /^overview\.md$/i.test(file2);
-  }
-  return false;
-}
-function overviewDocument(date5) {
-  return [
-    "---",
-    'id: "DESIGN-OVERVIEW"',
-    'type: "design"',
-    'status: "draft"',
-    'title: "System Design Overview"',
-    `created: "${date5}"`,
-    `updated: "${date5}"`,
-    "owners: []",
-    "relations:",
-    ...relationFields.map((field) => formatRelationBlock(field, [])),
-    "---",
-    "",
-    "# System Design Overview",
-    "",
-    "## System Boundaries",
-    "",
-    "- <!-- major subsystems and their boundaries -->",
-    "",
-    "## Core Components",
-    "",
-    "- <!-- component and responsibility -->",
-    "",
-    "## Data Flow",
-    "",
-    "- <!-- high-level data and control flow -->",
-    "",
-    "## Non-Functional Constraints",
-    "",
-    "- <!-- reliability, security, performance, operations -->",
-    "",
-    "## Detailed Design Documents",
-    "",
-    "- <!-- link detailed docs under docs/designs/<slug>.md -->",
-    ""
-  ].join("\n");
-}
-function ensureDesignOverview(fullDir, date5) {
-  const overviewPath = import_node_path2.default.join(fullDir, "overview.md");
-  if (import_node_fs2.default.existsSync(overviewPath)) return;
-  import_node_fs2.default.writeFileSync(overviewPath, overviewDocument(date5), "utf8");
 }
 async function titleFromDocument(content, fallback) {
   const parsed = parseDoc(content);
@@ -19470,6 +18922,13 @@ Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 ${body}
 `;
 }
+function buildGenericIndex(relativeDir, title) {
+  const dir = relativeDir.replace(/\\/g, "/");
+  return `# ${title}
+
+Directory: \`${dir}\`
+`;
+}
 function isMarkdownSource(file2) {
   return file2.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(file2));
 }
@@ -19482,84 +18941,35 @@ function walkMarkdownFiles(baseDir) {
     return isMarkdownSource(fullPath) ? [fullPath] : [];
   }).sort();
 }
-async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
-  const indexPath = import_node_path2.default.join(cwd, relativeDir, options2.indexFile ?? "README.md");
-  const relIndex = import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/");
-  if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
-  const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
-  const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
-  if (!isGenerated && !options2.forceIndex) {
-    return { path: relIndex, written: false, reason: "hand-curated" };
+async function scaffoldDocsTree(cwd) {
+  const resolvedCwd = import_node_path2.default.resolve(cwd);
+  const created = [];
+  const updated = [];
+  for (const target of scaffoldTargets) {
+    const fullDir = import_node_path2.default.join(resolvedCwd, target.dir);
+    import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
+    const readmePath = import_node_path2.default.join(fullDir, "README.md");
+    if (import_node_fs2.default.existsSync(readmePath)) continue;
+    const content = target.type ? await renderManagedIndex(resolvedCwd, target.dir, target.type) : buildGenericIndex(target.dir, target.title);
+    import_node_fs2.default.writeFileSync(readmePath, content, "utf8");
+    created.push(import_node_path2.default.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
   }
-  const generated = await renderManagedIndex(cwd, relativeDir, type, options2.types);
-  const content = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, generated) : generated;
-  import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
-  return { path: relIndex, written: true, reason: null };
-}
-async function createDocument(type, options2) {
-  const config2 = configFor(type);
-  const cwd = import_node_path2.default.resolve(options2.cwd);
-  const relativeDir = docDir(cwd, type, options2.dir);
-  const fullDir = import_node_path2.default.join(cwd, relativeDir);
-  import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
-  const rootDir = canonicalRootDir(cwd, type);
-  const underRoot = isUnderDir(relativeDir, rootDir);
-  const title = sanitizeTitle(options2.title);
-  const filename = options2.name ? sanitizeFileName(options2.name) : `${slugify2(title, type)}.md`;
-  if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
-  const outputPath = import_node_path2.default.join(fullDir, filename);
-  if (import_node_fs2.default.existsSync(outputPath)) throw new Error(`Document already exists: ${import_node_path2.default.relative(cwd, outputPath)}`);
-  const date5 = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const status = options2.status || config2.defaultStatus;
-  const content = `${frontMatter(config2, generateArtifactId(config2.idPrefix), title, status, date5, options2.relations)}
-
-${bodyFor(type, title)}
-`;
-  import_node_fs2.default.writeFileSync(outputPath, content, "utf8");
-  if (type === "design") ensureDesignOverview(import_node_path2.default.join(cwd, rootDir), date5);
-  const indexRelativeDir = underRoot ? rootDir : relativeDir;
-  const indexResult = await writeGeneratedIndex(cwd, type, indexRelativeDir, options2);
-  return {
-    file: import_node_path2.default.relative(cwd, outputPath).replace(/\\/g, "/"),
-    index: indexResult.path,
-    indexWritten: indexResult.written,
-    indexSkippedReason: indexResult.reason,
-    relativeDir
-  };
-}
-function logIndexResult(result) {
-  if (result.indexWritten) {
-    console.log(`Updated ${result.index}`);
-  } else if (result.indexSkippedReason === "hand-curated") {
-    console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
-  } else if (result.indexSkippedReason === "disabled") {
-    console.log(`Skipped index update (--no-index): ${result.index}`);
-  }
+  return { created, updated };
 }
 
-// src/skills/design-doc/scripts/new_design.ts
+// src/skills/doc-maintenance/scripts/scaffold_docs.ts
 function parseArgs(argv) {
-  const args = { cwd: process.cwd(), derivesFrom: [] };
+  const args = { cwd: process.cwd() };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--title") args.title = argv[++i];
-    else if (arg === "--from") args.derivesFrom.push(argv[++i]);
-    else if (arg === "--dir") args.dir = argv[++i];
-    else if (arg === "--name") args.name = argv[++i];
-    else if (arg === "--status") args.status = argv[++i];
-    else if (arg === "--date") args.date = argv[++i];
-    else if (arg === "--no-index") args.noIndex = true;
-    else if (arg === "--force-index") args.forceIndex = true;
-    else if (arg === "--cwd") args.cwd = argv[++i];
+    if (arg === "--cwd") args.cwd = argv[++i];
     else if (arg === "--help" || arg === "-h") args.help = true;
-    else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/scaffold_docs.js [--cwd <path>]";
 }
 async function main() {
   try {
@@ -19568,22 +18978,11 @@ async function main() {
       console.log(usage());
       return;
     }
-    if (!args.title) throw new Error("Missing required --title");
-    const result = await createDocument("design", {
-      cwd: import_node_path3.default.resolve(args.cwd),
-      date: args.date,
-      dir: args.dir,
-      name: args.name,
-      forceIndex: args.forceIndex,
-      noIndex: args.noIndex,
-      relations: {
-        "derives-from": args.derivesFrom
-      },
-      status: args.status,
-      title: args.title
-    });
-    console.log(`Created ${result.file}`);
-    logIndexResult(result);
+    const result = await scaffoldDocsTree(import_node_path3.default.resolve(args.cwd));
+    console.log(`Created docs tree scaffold in ${import_node_path3.default.resolve(args.cwd)}`);
+    for (const file2 of result.created) {
+      console.log(`Created ${file2}`);
+    }
   } catch (error51) {
     console.error(error51 instanceof Error ? error51.message : String(error51));
     console.error(usage());

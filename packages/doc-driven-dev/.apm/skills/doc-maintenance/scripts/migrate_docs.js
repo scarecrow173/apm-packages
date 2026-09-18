@@ -4145,7 +4145,7 @@ var require_uuid62 = __commonJS({
   }
 });
 
-// src/skills/design-doc/scripts/new_design.ts
+// src/skills/doc-maintenance/scripts/migrate_docs.ts
 var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
@@ -18946,6 +18946,18 @@ async function renderManagedIndex(cwd, dir, seedType, extraTypes) {
   const primary = primaryIndexTypeForDir(dir, types);
   return buildIndex(cwd, primary, dir, { types });
 }
+var migrationRoutes = [
+  { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
+  { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
+  { targetDir: "docs/test-specs", type: "test-spec", patterns: [/test[-\s]?spec/i, /testspec/i] },
+  { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
+  { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
+  { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
+  { targetDir: "docs/tasks", type: "task", patterns: [/task/i, /todo/i, /work item/i] },
+  { targetDir: "docs/adr", type: null, patterns: [/adr/i, /decision/i, /architecture decision/i] },
+  { targetDir: "docs/impl/ir", type: null, patterns: [/implementation record/i, /impl record/i, /\bir\b/i] },
+  { targetDir: "docs/impl/exp", type: null, patterns: [/experiment/i, /\bexp\b/i, /spike/i] }
+];
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -18971,27 +18983,15 @@ function configFor(type) {
   return configs[type];
 }
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
-function canonicalRootDir(cwd, type) {
-  const config2 = configFor(type);
-  return findDocumentDir(cwd, void 0, config2.dirs, config2.dir);
-}
-function isUnderDir(child, parent) {
-  const c = normalizeDir(child);
-  const p = normalizeDir(parent);
-  return c === p || c.startsWith(`${p}/`);
-}
-function sanitizeFileName(name) {
-  const base = import_node_path2.default.basename(name.trim());
-  const stem = base.replace(/\.md$/i, "");
-  if (!stem) throw new Error("Invalid filename: empty after removing .md extension");
-  return `${stem}.md`;
-}
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
 }
 function docFiles(dir) {
   return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
+}
+function matterData(content) {
+  return (0, import_gray_matter.default)(content).data || {};
 }
 function parseDoc(content) {
   try {
@@ -19140,284 +19140,6 @@ function frontMatter(config2, id, title, status, date5, relations, metadata) {
     "---"
   ].join("\n");
 }
-function renderBodyTemplate(type, title) {
-  const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", `${type}.md`);
-  if (!import_node_fs2.default.existsSync(templatePath)) return null;
-  return import_node_fs2.default.readFileSync(templatePath, "utf8").replaceAll("{{title}}", title).trimEnd();
-}
-function bodyFor(type, title) {
-  const template = renderBodyTemplate(type, title);
-  if (template) return template;
-  if (type === "idea") {
-    return [
-      `# ${title}`,
-      "",
-      "## Summary",
-      "",
-      "<!-- One or two sentences capturing the core idea. -->",
-      "",
-      "## Problem and Motivation",
-      "",
-      "- <!-- observed pain, opportunity, or trigger -->",
-      "",
-      "## Expected Value",
-      "",
-      "- <!-- who benefits and how -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question that must be answered before this can be formalized -->",
-      "",
-      "## Next Action",
-      "",
-      "- [ ] Promote to discovery-doc for deeper exploration",
-      "- [ ] Promote directly to spec-doc if requirements are clear",
-      "- [ ] Park for later reconsideration",
-      "- [ ] Discard \u2014 reason: <!-- why -->"
-    ].join("\n");
-  }
-  if (type === "brainstorm") {
-    return [
-      `# ${title}`,
-      "",
-      "## Intent",
-      "",
-      "<!-- Confirm the goal, audience, and reason this matters now. -->",
-      "",
-      "## Constraints",
-      "",
-      "- <!-- technical, product, operational, timeline, or policy constraint -->",
-      "",
-      "## Options",
-      "",
-      "- <!-- option, trade-off, and current lean -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question that must be resolved before routing -->",
-      "",
-      "## Document Routing",
-      "",
-      "- [ ] ADR needed",
-      "- [ ] Spec needed",
-      "",
-      "## Confirmed Summary",
-      "",
-      "<!-- Write the agreed intent before creating downstream documents. -->"
-    ].join("\n");
-  }
-  if (type === "discovery") {
-    return [
-      `# ${title}`,
-      "",
-      "## Exploration Goal",
-      "",
-      "<!-- What question does this discovery attempt to answer? State the trigger and desired outcome. -->",
-      "",
-      "## Key Issues and Assumptions",
-      "",
-      "- <!-- issue or assumption that must be validated before committing to a direction -->",
-      "",
-      "## Alternatives and Comparison",
-      "",
-      "| Option | Pros | Cons | Lean |",
-      "| --- | --- | --- | --- |",
-      "| <!-- option --> | <!-- pro --> | <!-- con --> | <!-- yes/no/maybe --> |",
-      "",
-      "## Tentative Conclusions and Hypotheses",
-      "",
-      "<!-- Current best guess before committing to a spec or ADR. Mark each as hypothesis or confirmed. -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question blocking resolution -->",
-      "",
-      "## Promotion Candidates",
-      "",
-      "- [ ] spec-doc needed",
-      "- [ ] adr-doc needed"
-    ].join("\n");
-  }
-  if (type === "spec") {
-    return [
-      `# ${title}`,
-      "",
-      "## Intent",
-      "",
-      "<!-- Describe the user need, problem, and desired outcome. -->",
-      "",
-      "## Scope",
-      "",
-      "### In Scope",
-      "",
-      "- <!-- behavior, workflow, or interface -->",
-      "",
-      "### Out of Scope",
-      "",
-      "- <!-- explicit non-goal -->",
-      "",
-      "## Requirements",
-      "",
-      "- <!-- requirement -->",
-      "",
-      "## Acceptance Criteria",
-      "",
-      "- [ ] <!-- observable behavior or verification -->",
-      "",
-      "## Deferred Design Concerns",
-      "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
-      "",
-      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->"
-    ].join("\n");
-  }
-  if (type === "plan") {
-    return [
-      `# ${title}`,
-      "",
-      "## Goal",
-      "",
-      "<!-- Describe the implementation goal. -->",
-      "",
-      "## Tasks",
-      "",
-      "- [ ] <!-- implementation slice -->",
-      "",
-      "## Verification",
-      "",
-      "- [ ] <!-- command, test, or review step -->"
-    ].join("\n");
-  }
-  if (type === "design") {
-    return [
-      `# ${title}`,
-      "",
-      "## Context",
-      "",
-      "<!-- Describe the problem context and boundaries for this design. -->",
-      "",
-      "## Scope",
-      "",
-      "- <!-- in-scope -->",
-      "- <!-- out-of-scope -->",
-      "",
-      "## Components and Boundaries",
-      "",
-      "- <!-- component and responsibility -->",
-      "",
-      "## Data and Control Flow",
-      "",
-      "- <!-- key flow and decision points -->",
-      "",
-      "## Risks and Trade-offs",
-      "",
-      "- <!-- risk and mitigation -->",
-      "",
-      "## Deferred Design Concerns",
-      "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
-      "",
-      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
-      "",
-      "## References",
-      "",
-      "- <!-- linked spec, ADR, and related docs -->"
-    ].join("\n");
-  }
-  if (type === "test-spec") {
-    return [
-      `# ${title}`,
-      "",
-      "## Purpose",
-      "",
-      "<!-- Why this test spec exists: the intent it preserves and when it may be retired. -->",
-      "",
-      "## Feature",
-      "",
-      "<!-- The behavior under specification, named like a Gherkin Feature. -->",
-      "",
-      "## Rules",
-      "",
-      "- <!-- Rule: an invariant or contract the feature must satisfy -->",
-      "",
-      "## Examples",
-      "",
-      "- <!-- Example: a concrete scenario that pins a rule down, optionally in Given/When/Then form -->",
-      "",
-      "## Guarantees",
-      "",
-      "- <!-- What a correct implementation must guarantee -->",
-      "",
-      "## Non-goals",
-      "",
-      "- <!-- Behavior or coverage this spec deliberately does not verify -->",
-      "",
-      "## Risk",
-      "",
-      "- <!-- What is lost or breaks if these guarantees are dropped -->"
-    ].join("\n");
-  }
-  return [
-    `# ${title}`,
-    "",
-    "## Work",
-    "",
-    "<!-- Describe the implementation slice. -->",
-    "",
-    "## Done When",
-    "",
-    "- [ ] <!-- completion criterion -->"
-  ].join("\n");
-}
-function isReservedDocFile(type, file2) {
-  if (type === "design") {
-    return /^overview\.md$/i.test(file2);
-  }
-  return false;
-}
-function overviewDocument(date5) {
-  return [
-    "---",
-    'id: "DESIGN-OVERVIEW"',
-    'type: "design"',
-    'status: "draft"',
-    'title: "System Design Overview"',
-    `created: "${date5}"`,
-    `updated: "${date5}"`,
-    "owners: []",
-    "relations:",
-    ...relationFields.map((field) => formatRelationBlock(field, [])),
-    "---",
-    "",
-    "# System Design Overview",
-    "",
-    "## System Boundaries",
-    "",
-    "- <!-- major subsystems and their boundaries -->",
-    "",
-    "## Core Components",
-    "",
-    "- <!-- component and responsibility -->",
-    "",
-    "## Data Flow",
-    "",
-    "- <!-- high-level data and control flow -->",
-    "",
-    "## Non-Functional Constraints",
-    "",
-    "- <!-- reliability, security, performance, operations -->",
-    "",
-    "## Detailed Design Documents",
-    "",
-    "- <!-- link detailed docs under docs/designs/<slug>.md -->",
-    ""
-  ].join("\n");
-}
-function ensureDesignOverview(fullDir, date5) {
-  const overviewPath = import_node_path2.default.join(fullDir, "overview.md");
-  if (import_node_fs2.default.existsSync(overviewPath)) return;
-  import_node_fs2.default.writeFileSync(overviewPath, overviewDocument(date5), "utf8");
-}
 async function titleFromDocument(content, fallback) {
   const parsed = parseDoc(content);
   const data = parsed.data;
@@ -19470,8 +19192,19 @@ Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 ${body}
 `;
 }
+function buildGenericIndex(relativeDir, title) {
+  const dir = relativeDir.replace(/\\/g, "/");
+  return `# ${title}
+
+Directory: \`${dir}\`
+`;
+}
 function isMarkdownSource(file2) {
   return file2.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(file2));
+}
+function isUnderCanonicalDir(relativeFile) {
+  const normalized = normalizeDir(relativeFile);
+  return canonicalDocDirs.some((dir) => normalized === dir || normalized.startsWith(`${dir}/`));
 }
 function walkMarkdownFiles(baseDir) {
   if (!import_node_fs2.default.existsSync(baseDir)) return [];
@@ -19481,6 +19214,175 @@ function walkMarkdownFiles(baseDir) {
     if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
     return isMarkdownSource(fullPath) ? [fullPath] : [];
   }).sort();
+}
+function defaultMigrationSources(cwd) {
+  return ["docs", "doc", "architecture", "design", "specs", "plans", "tasks"].filter((dir) => import_node_fs2.default.existsSync(import_node_path2.default.join(cwd, dir)));
+}
+function headingTitle(content, fallback) {
+  const parsed = parseDoc(content);
+  const data = parsed.data;
+  if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
+  const match = /^#\s+(.+)$/m.exec(parsed.body);
+  return match?.[1]?.trim() || fallback;
+}
+function splitByH1(source, content) {
+  const parsed = parseDoc(content);
+  const body = parsed.body.trim();
+  const matches = [...body.matchAll(/^#\s+(.+)$/gm)];
+  if (matches.length <= 1) {
+    return [{
+      source,
+      title: headingTitle(content, import_node_path2.default.basename(source, ".md")),
+      body
+    }];
+  }
+  return matches.map((match, index) => {
+    const start = match.index || 0;
+    const end = index + 1 < matches.length ? matches[index + 1].index || body.length : body.length;
+    const chunk = body.slice(start, end).trim();
+    return {
+      source,
+      title: match[1].trim(),
+      body: chunk
+    };
+  });
+}
+function routeFor(input, sourceData) {
+  if (typeof sourceData.type === "string" && docTypes.includes(sourceData.type)) {
+    const config2 = configFor(sourceData.type);
+    return { targetDir: config2.dir, type: config2.type, patterns: [] };
+  }
+  const haystack = `${input.source}
+${input.title}
+${input.body.slice(0, 2e3)}`;
+  return migrationRoutes.find((route) => route.patterns.some((pattern) => pattern.test(haystack))) || { targetDir: "docs/discovery", type: "discovery", patterns: [] };
+}
+function targetAllocation(cwd, targetDir) {
+  const fullTargetDir = import_node_path2.default.join(cwd, targetDir);
+  const existingFiles = import_node_fs2.default.existsSync(fullTargetDir) ? import_node_fs2.default.readdirSync(fullTargetDir).filter((file2) => file2.endsWith(".md")) : [];
+  return {
+    existing: new Set(existingFiles)
+  };
+}
+function allocateTargetPath(cwd, targetDir, title, fallback, allocations) {
+  if (!allocations.has(targetDir)) allocations.set(targetDir, targetAllocation(cwd, targetDir));
+  const allocation = allocations.get(targetDir);
+  let baseName = `${slugify2(title, fallback)}.md`;
+  const ext = import_node_path2.default.extname(baseName);
+  const stem = import_node_path2.default.basename(baseName, ext);
+  let suffix = 2;
+  while (allocation.existing.has(baseName)) {
+    baseName = `${stem}-${suffix}${ext}`;
+    suffix += 1;
+  }
+  allocation.existing.add(baseName);
+  return {
+    target: import_node_path2.default.join(targetDir, baseName).replace(/\\/g, "/")
+  };
+}
+function migratedFrontMatter(type, title, date5, source) {
+  const config2 = configFor(type);
+  return frontMatter(config2, generateArtifactId(config2.idPrefix), title, config2.defaultStatus, date5, {
+    source: [source],
+    changes: {
+      generated: [{ type: "migration", source }]
+    }
+  });
+}
+function migratedContent(input, route, sourceContent, source, date5) {
+  if (route.type) {
+    return `${migratedFrontMatter(route.type, input.title, date5, source)}
+
+${input.body.trim()}
+`;
+  }
+  const parsed = parseDoc(sourceContent);
+  const data = parsed.data;
+  if (Object.keys(data).length > 0) return `${import_gray_matter.default.stringify(input.body.trim(), data).trimEnd()}
+`;
+  return `---
+title: ${quote(input.title)}
+source: ${quote(source)}
+---
+
+${input.body.trim()}
+`;
+}
+function plannedMigration(cwd, source, input, sourceContent, date5, allocations) {
+  const sourceData = matterData(sourceContent);
+  const route = routeFor(input, sourceData);
+  const targetDir = route.targetDir;
+  const { target } = allocateTargetPath(cwd, targetDir, input.title, route.type || "doc", allocations);
+  return {
+    content: migratedContent(input, route, sourceContent, source, date5),
+    source,
+    target,
+    targetDir,
+    title: input.title,
+    type: route.type
+  };
+}
+async function migrateDocs(options2) {
+  const cwd = import_node_path2.default.resolve(options2.cwd);
+  const fromDirs = options2.from && options2.from.length > 0 ? options2.from : defaultMigrationSources(cwd);
+  const skipped = [];
+  const migrations = [];
+  const allocations = /* @__PURE__ */ new Map();
+  const date5 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  for (const fromDir of fromDirs) {
+    const fullFrom = import_node_path2.default.resolve(cwd, fromDir);
+    const files = walkMarkdownFiles(fullFrom);
+    for (const fullFile of files) {
+      const relativeFile = import_node_path2.default.relative(cwd, fullFile).replace(/\\/g, "/");
+      if (!options2.includeCanonical && isUnderCanonicalDir(relativeFile)) {
+        skipped.push({ file: relativeFile, reason: "canonical-doc" });
+        continue;
+      }
+      const sourceContent = import_node_fs2.default.readFileSync(fullFile, "utf8");
+      const sourceParsed = parseDoc(sourceContent);
+      if (sourceParsed.error) {
+        skipped.push({ file: relativeFile, reason: "unparseable-front-matter" });
+        continue;
+      }
+      const inputs = options2.splitH1 ? splitByH1(relativeFile, sourceContent) : [{
+        source: relativeFile,
+        title: headingTitle(sourceContent, import_node_path2.default.basename(relativeFile, ".md")),
+        body: sourceParsed.body.trim()
+      }];
+      for (const input of inputs) {
+        migrations.push(plannedMigration(cwd, relativeFile, input, sourceContent, date5, allocations));
+      }
+    }
+  }
+  const created = [];
+  if (options2.apply) {
+    await scaffoldDocsTree(cwd);
+    for (const migration of migrations) {
+      const targetPath = import_node_path2.default.join(cwd, migration.target);
+      import_node_fs2.default.mkdirSync(import_node_path2.default.dirname(targetPath), { recursive: true });
+      import_node_fs2.default.writeFileSync(targetPath, migration.content, "utf8");
+      created.push(migration.target);
+    }
+    for (const target of scaffoldTargets.filter((item) => item.type)) {
+      await writeGeneratedIndex(cwd, target.type, target.dir, {});
+    }
+  }
+  return { applied: Boolean(options2.apply), created, migrations, skipped };
+}
+async function scaffoldDocsTree(cwd) {
+  const resolvedCwd = import_node_path2.default.resolve(cwd);
+  const created = [];
+  const updated = [];
+  for (const target of scaffoldTargets) {
+    const fullDir = import_node_path2.default.join(resolvedCwd, target.dir);
+    import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
+    const readmePath = import_node_path2.default.join(fullDir, "README.md");
+    if (import_node_fs2.default.existsSync(readmePath)) continue;
+    const content = target.type ? await renderManagedIndex(resolvedCwd, target.dir, target.type) : buildGenericIndex(target.dir, target.title);
+    import_node_fs2.default.writeFileSync(readmePath, content, "utf8");
+    created.push(import_node_path2.default.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
+  }
+  return { created, updated };
 }
 async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
   const indexPath = import_node_path2.default.join(cwd, relativeDir, options2.indexFile ?? "README.md");
@@ -19496,70 +19398,45 @@ async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
   import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
   return { path: relIndex, written: true, reason: null };
 }
-async function createDocument(type, options2) {
-  const config2 = configFor(type);
-  const cwd = import_node_path2.default.resolve(options2.cwd);
-  const relativeDir = docDir(cwd, type, options2.dir);
-  const fullDir = import_node_path2.default.join(cwd, relativeDir);
-  import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
-  const rootDir = canonicalRootDir(cwd, type);
-  const underRoot = isUnderDir(relativeDir, rootDir);
-  const title = sanitizeTitle(options2.title);
-  const filename = options2.name ? sanitizeFileName(options2.name) : `${slugify2(title, type)}.md`;
-  if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
-  const outputPath = import_node_path2.default.join(fullDir, filename);
-  if (import_node_fs2.default.existsSync(outputPath)) throw new Error(`Document already exists: ${import_node_path2.default.relative(cwd, outputPath)}`);
-  const date5 = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const status = options2.status || config2.defaultStatus;
-  const content = `${frontMatter(config2, generateArtifactId(config2.idPrefix), title, status, date5, options2.relations)}
 
-${bodyFor(type, title)}
-`;
-  import_node_fs2.default.writeFileSync(outputPath, content, "utf8");
-  if (type === "design") ensureDesignOverview(import_node_path2.default.join(cwd, rootDir), date5);
-  const indexRelativeDir = underRoot ? rootDir : relativeDir;
-  const indexResult = await writeGeneratedIndex(cwd, type, indexRelativeDir, options2);
-  return {
-    file: import_node_path2.default.relative(cwd, outputPath).replace(/\\/g, "/"),
-    index: indexResult.path,
-    indexWritten: indexResult.written,
-    indexSkippedReason: indexResult.reason,
-    relativeDir
-  };
-}
-function logIndexResult(result) {
-  if (result.indexWritten) {
-    console.log(`Updated ${result.index}`);
-  } else if (result.indexSkippedReason === "hand-curated") {
-    console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
-  } else if (result.indexSkippedReason === "disabled") {
-    console.log(`Skipped index update (--no-index): ${result.index}`);
-  }
-}
-
-// src/skills/design-doc/scripts/new_design.ts
+// src/skills/doc-maintenance/scripts/migrate_docs.ts
 function parseArgs(argv) {
-  const args = { cwd: process.cwd(), derivesFrom: [] };
+  const args = {
+    apply: false,
+    cwd: process.cwd(),
+    from: [],
+    includeCanonical: false,
+    json: false,
+    splitH1: false
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--title") args.title = argv[++i];
-    else if (arg === "--from") args.derivesFrom.push(argv[++i]);
-    else if (arg === "--dir") args.dir = argv[++i];
-    else if (arg === "--name") args.name = argv[++i];
-    else if (arg === "--status") args.status = argv[++i];
-    else if (arg === "--date") args.date = argv[++i];
-    else if (arg === "--no-index") args.noIndex = true;
-    else if (arg === "--force-index") args.forceIndex = true;
-    else if (arg === "--cwd") args.cwd = argv[++i];
+    if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--from") args.from.push(argv[++i]);
+    else if (arg === "--apply") args.apply = true;
+    else if (arg === "--include-canonical") args.includeCanonical = true;
+    else if (arg === "--json") args.json = true;
+    else if (arg === "--split-h1") args.splitH1 = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
-    else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/migrate_docs.js [--cwd <path>] [--from <dir>] [--split-h1] [--include-canonical] [--apply] [--json]";
+}
+function printHuman(report) {
+  console.log(`${report.applied ? "Applied" : "Planned"} docs migration`);
+  if (report.migrations.length === 0) console.log("No source documents selected.");
+  for (const migration of report.migrations) {
+    console.log(`${migration.source} -> ${migration.target}${migration.type ? ` [${migration.type}]` : ""}`);
+  }
+  for (const created of report.created) {
+    console.log(`Created ${created}`);
+  }
+  for (const skipped of report.skipped) {
+    console.log(`Skipped ${skipped.file}: ${skipped.reason}`);
+  }
 }
 async function main() {
   try {
@@ -19568,22 +19445,18 @@ async function main() {
       console.log(usage());
       return;
     }
-    if (!args.title) throw new Error("Missing required --title");
-    const result = await createDocument("design", {
+    const report = await migrateDocs({
+      apply: args.apply,
       cwd: import_node_path3.default.resolve(args.cwd),
-      date: args.date,
-      dir: args.dir,
-      name: args.name,
-      forceIndex: args.forceIndex,
-      noIndex: args.noIndex,
-      relations: {
-        "derives-from": args.derivesFrom
-      },
-      status: args.status,
-      title: args.title
+      from: args.from,
+      includeCanonical: args.includeCanonical,
+      splitH1: args.splitH1
     });
-    console.log(`Created ${result.file}`);
-    logIndexResult(result);
+    if (args.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    printHuman(report);
   } catch (error51) {
     console.error(error51 instanceof Error ? error51.message : String(error51));
     console.error(usage());

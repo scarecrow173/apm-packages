@@ -2,11 +2,12 @@
 "use strict";
 
 import path from "node:path";
-import { auditDocuments, docTypes } from "../../lib/doc_suite_utils";
+import { auditAllDocuments, auditDocuments } from "../../lib/doc_audit";
 
 type CliArgs = {
   cwd: string;
   dir?: string;
+  externalLinks?: boolean;
   help?: boolean;
   json: boolean;
   type?: string;
@@ -20,6 +21,7 @@ function parseArgs(argv: string[]): CliArgs {
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
     else if (arg === "--json") args.json = true;
+    else if (arg === "--external-links") args.externalLinks = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -27,22 +29,11 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all [--dir <path>] [--json]";
+  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all [--dir <path>] [--json] [--external-links]";
 }
 
-async function auditAll(cwd: string, explicitDir?: string) {
-  const merged = { directory: ".", files: 0, findings: [] as Array<{ severity: string; file: string | null; code: string; message: string }> };
-  for (const type of docTypes) {
-    const report = await auditDocuments(cwd, type, explicitDir);
-    merged.files += report.files;
-    for (const finding of report.findings) {
-      merged.findings.push({
-        ...finding,
-        file: finding.file ? `${report.directory}/${finding.file}` : report.directory,
-      });
-    }
-  }
-  return merged;
+async function auditAll(cwd: string, explicitDir?: string, options?: { externalLinks?: boolean }) {
+  return auditAllDocuments(cwd, explicitDir, options);
 }
 
 async function main(): Promise<void> {
@@ -54,7 +45,8 @@ async function main(): Promise<void> {
     }
     if (!args.type) throw new Error("Missing required --type");
     const cwd = path.resolve(args.cwd);
-    const report = args.type === "all" ? await auditAll(cwd, args.dir) : await auditDocuments(cwd, args.type, args.dir);
+    const options = { externalLinks: Boolean(args.externalLinks) };
+    const report = args.type === "all" ? await auditAll(cwd, args.dir, options) : await auditDocuments(cwd, args.type, args.dir, options);
     if (args.json) {
       console.log(JSON.stringify(report, null, 2));
       return;

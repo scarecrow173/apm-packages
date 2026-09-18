@@ -15,7 +15,9 @@ delegate または audit への宣言済みエッジを最大 1 つ、または�
 - `design-doc`、`plan-doc`、`task-doc`: 承認済み実装作業の定義。
 - `test-spec-doc`: テストが何を保証し、なぜ存在するかの記録。
 - `impl-doc`: 実装と実験の証跡。
-- `doc-status`: document contract とリンクの audit。
+- `doc-status`: document contract とリンクの audit（read-only）。
+- `doc-maintenance`: managed index 再生成を含む安全で決定的な修復の
+  preview と apply。
 - `implementation-flow`: 実装作業と review gate の委譲。
 - `planning-flow`: Graph 委譲のための plan approval と task document の順序付け。
 - `skill-discovery-protocol`: 利用可能な skill と adapter の発見。
@@ -160,16 +162,18 @@ schema と gate の詳細は次を参照してください。
 
 ## 既存 docs の migration
 
-適用前に preview します。
+migration スクリプトは `doc-maintenance` が所有します（同じコマンドは
+`doc-driven-dev-graph/scripts/` 配下の互換エントリポイント経由でも
+実行できます）。適用前に preview します。
 
 ```bash
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_docs.js --from docs --json
+node .apm/skills/doc-maintenance/scripts/migrate_docs.js --from docs --json
 ```
 
 preview を確認してから適用します。
 
 ```bash
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_docs.js \
+node .apm/skills/doc-maintenance/scripts/migrate_docs.js \
   --from docs --split-h1 --apply
 ```
 
