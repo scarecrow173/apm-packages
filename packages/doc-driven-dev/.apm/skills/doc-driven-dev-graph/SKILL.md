@@ -65,7 +65,8 @@ tasks and parallelize only independent work.
 
 Graph Definition bindings are explicit:
 
-- migration uses `migrate_docs`; bootstrap uses `scaffold_docs`;
+- migration uses `migrate_docs`; bootstrap uses `scaffold_docs`; both are
+  dispatched by name to the `doc-maintenance` scripts that own migration;
 - briefing delegates to `briefing-flow`; design delegates to `design-doc`;
 - the planning node audits the approved design and dispatches `planning-flow`,
   which sequences `plan-doc` -> approval yield -> `test-spec-doc` -> `task-doc`;
@@ -144,7 +145,7 @@ not create or require a parallel database.
 Use the four routing commands below for distinct purposes. `route_graph.js`
 makes one route decision; `inspect_graph.js` only describes the selected
 definition and, when explicitly requested, its runtime projections. A separate
-maintenance script, `migrate_ids.js`, is documented after them.
+`doc-maintenance` script, `migrate_ids.js`, is documented after them.
 
 ### 1. Normal routing
 
@@ -218,12 +219,15 @@ or persistence side effect. Mermaid is definition-only and rejects `--cwd`, `--f
 `migrate_ids.js` upgrades existing repositories from sequential `TYPE-NNNN`
 ids and `NNNN-<slug>` filenames to the opaque `<PREFIX>-<22-char Base62>` id
 contract and slug-only filenames. It is a maintenance script, not a route
-command, and is never dispatched by the graph.
+command, and is never dispatched by the graph. `doc-maintenance` owns the
+implementation; the canonical script lives under its `scripts/` directory and
+the graph copy at the same name is a compatibility entry point that runs the
+same code.
 
 ```bash
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
+node .apm/skills/doc-maintenance/scripts/migrate_ids.js \
   --cwd <repo> --json            # dry-run plan (default, no writes)
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
+node .apm/skills/doc-maintenance/scripts/migrate_ids.js \
   --cwd <repo> --apply --json    # rewrite ids, references, and filenames
 ```
 

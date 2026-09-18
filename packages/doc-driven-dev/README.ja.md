@@ -162,16 +162,18 @@ schema と gate の詳細は次を参照してください。
 
 ## 既存 docs の migration
 
-適用前に preview します。
+migration スクリプトは `doc-maintenance` が所有します（同じコマンドは
+`doc-driven-dev-graph/scripts/` 配下の互換エントリポイント経由でも
+実行できます）。適用前に preview します。
 
 ```bash
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_docs.js --from docs --json
+node .apm/skills/doc-maintenance/scripts/migrate_docs.js --from docs --json
 ```
 
 preview を確認してから適用します。
 
 ```bash
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_docs.js \
+node .apm/skills/doc-maintenance/scripts/migrate_docs.js \
   --from docs --split-h1 --apply
 ```
 

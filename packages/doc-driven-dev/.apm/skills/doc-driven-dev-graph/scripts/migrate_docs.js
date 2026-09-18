@@ -4145,7 +4145,7 @@ var require_uuid62 = __commonJS({
   }
 });
 
-// src/skills/doc-driven-dev-graph/scripts/migrate_docs.ts
+// src/skills/doc-maintenance/scripts/migrate_docs.ts
 var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
@@ -19340,7 +19340,7 @@ async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
   return { path: relIndex, written: true, reason: null };
 }
 
-// src/skills/doc-driven-dev-graph/scripts/migrate_docs.ts
+// src/skills/doc-maintenance/scripts/migrate_docs.ts
 function parseArgs(argv) {
   const args = {
     apply: false,

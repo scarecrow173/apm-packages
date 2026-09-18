@@ -7,7 +7,7 @@ import matter from "gray-matter";
 import test from "node:test";
 
 import { isNewArtifactId } from "../src/skills/lib/artifact_id";
-import { migrateArtifactIds } from "../src/skills/doc-driven-dev-graph/scripts/lib/id_migration";
+import { migrateArtifactIds } from "../src/skills/doc-maintenance/scripts/lib/id_migration";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
@@ -376,4 +376,22 @@ test("generated migrate_ids.js CLI applies migration end to end", () => {
   const applied = spawnSync(process.execPath, [script, "--cwd", repo, "--apply", "--allow-dirty", "--json"], { encoding: "utf8", windowsHide: true });
   assert.equal(applied.status, 0, applied.stderr);
   assert.ok(fs.existsSync(path.join(repo, "docs/tasks/schema.md")));
+});
+
+test("doc-maintenance migrate_ids.js is the canonical entrypoint and graph path is a compatible wrapper", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+
+  const canonical = path.join(skillRoot, "doc-maintenance", "scripts", "migrate_ids.js");
+  const compat = path.join(skillRoot, "doc-driven-dev-graph", "scripts", "migrate_ids.js");
+  for (const script of [canonical, compat]) {
+    const plan = spawnSync(process.execPath, [script, "--cwd", repo, "--json"], { encoding: "utf8", windowsHide: true });
+    assert.equal(plan.status, 0, `${script}: ${plan.stderr}`);
+    const report = JSON.parse(plan.stdout);
+    assert.equal(report.applied, false);
+    assert.equal(report.mappings.length, 1);
+    assert.equal(report.mappings[0].legacyId, "TASK-0001");
+    assert.deepEqual(report.blockers, []);
+    assert.ok(isNewArtifactId(report.mappings[0].newId));
+  }
 });

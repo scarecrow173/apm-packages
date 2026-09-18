@@ -4145,7 +4145,7 @@ var require_uuid62 = __commonJS({
   }
 });
 
-// src/skills/doc-driven-dev-graph/scripts/scaffold_docs.ts
+// src/skills/doc-maintenance/scripts/scaffold_docs.ts
 var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
@@ -18934,7 +18934,7 @@ async function scaffoldDocsTree(cwd) {
   return { created, updated };
 }
 
-// src/skills/doc-driven-dev-graph/scripts/scaffold_docs.ts
+// src/skills/doc-maintenance/scripts/scaffold_docs.ts
 function parseArgs(argv) {
   const args = { cwd: process.cwd() };
   for (let i = 0; i < argv.length; i += 1) {
