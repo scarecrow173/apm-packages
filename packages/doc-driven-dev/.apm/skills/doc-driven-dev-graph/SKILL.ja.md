@@ -62,7 +62,8 @@ current node の eligible edge は昇順の `priority`、次に安定した edge
 
 Graph Definition の binding は明示的です。
 
-- migration は `migrate_docs`、bootstrap は `scaffold_docs`。
+- migration は `migrate_docs`、bootstrap は `scaffold_docs`。両方とも名前で
+  migration を所有する `doc-maintenance` のスクリプトへ dispatch される。
 - briefing は `briefing-flow`、design は `design-doc` に委譲。
 - planning node は approved design を audit して `planning-flow` を dispatch し、
   `plan-doc` -> approval yield -> `test-spec-doc` -> `task-doc` の順に実行。
@@ -136,8 +137,8 @@ database を作成・要求しません。
 
 次の 4 つの routing command は目的が異なります。`route_graph.js` は 1 回の
 route 判断を行い、`inspect_graph.js` は選択した definition と、明示的に
-要求した場合だけ runtime projection を説明します。別の maintenance script
-である `migrate_ids.js` はこの後で説明します。
+要求した場合だけ runtime projection を説明します。別の `doc-maintenance`
+script である `migrate_ids.js` はこの後で説明します。
 
 ### 1. 通常 route
 
@@ -213,11 +214,14 @@ Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir` を�
 `NNNN-<slug>` ファイル名を、不透明な `<PREFIX>-<22文字Base62>` id
 contract と slug のみのファイル名へ移行します。これは maintenance script
 であり、route command ではなく、graph から dispatch されることもありません。
+実装は `doc-maintenance` が所有し、canonical script はその `scripts/` 配下に
+あります。graph 側の同名スクリプトは同じ実装を実行する互換エントリ
+ポイントです。
 
 ```bash
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
+node .apm/skills/doc-maintenance/scripts/migrate_ids.js \
   --cwd <repo> --json            # dry-run plan（既定、書き込みなし）
-node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
+node .apm/skills/doc-maintenance/scripts/migrate_ids.js \
   --cwd <repo> --apply --json    # id・参照・ファイル名を書き換え
 ```
 

@@ -4,7 +4,8 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { generateArtifactId, isLegacyArtifactId, isNewArtifactId } from "../../../lib/artifact_id";
-import { auditDocuments, buildIndex, configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc } from "../../../lib/doc_suite_utils";
+import { auditDocuments } from "../../../lib/doc_audit";
+import { buildIndex, configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc } from "../../../lib/doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "../../../lib/document_utils";
 import { auditExperimentLogs, auditImplementationRecords, updateIndexForExperimentDir, updateIndexForMarkdownDir } from "../../../impl-doc/scripts/lib/impl_doc_utils";
 

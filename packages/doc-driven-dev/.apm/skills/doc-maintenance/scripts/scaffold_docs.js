@@ -3540,7 +3540,7 @@ var require_gray_matter = __commonJS({
 });
 
 // node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js
-function rng2() {
+function rng() {
   if (poolPtr > rnds8Pool.length - 16) {
     import_crypto.default.randomFillSync(rnds8Pool);
     poolPtr = 0;
@@ -3578,19 +3578,19 @@ var init_validate = __esm({
 
 // node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js
 function stringify(arr, offset = 0) {
-  const uuid3 = (byteToHex2[arr[offset + 0]] + byteToHex2[arr[offset + 1]] + byteToHex2[arr[offset + 2]] + byteToHex2[arr[offset + 3]] + "-" + byteToHex2[arr[offset + 4]] + byteToHex2[arr[offset + 5]] + "-" + byteToHex2[arr[offset + 6]] + byteToHex2[arr[offset + 7]] + "-" + byteToHex2[arr[offset + 8]] + byteToHex2[arr[offset + 9]] + "-" + byteToHex2[arr[offset + 10]] + byteToHex2[arr[offset + 11]] + byteToHex2[arr[offset + 12]] + byteToHex2[arr[offset + 13]] + byteToHex2[arr[offset + 14]] + byteToHex2[arr[offset + 15]]).toLowerCase();
+  const uuid3 = (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
   if (!validate_default(uuid3)) {
     throw TypeError("Stringified UUID is invalid");
   }
   return uuid3;
 }
-var byteToHex2, stringify_default;
+var byteToHex, stringify_default;
 var init_stringify = __esm({
   "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js"() {
     init_validate();
-    byteToHex2 = [];
+    byteToHex = [];
     for (let i = 0; i < 256; ++i) {
-      byteToHex2.push((i + 256).toString(16).substr(1));
+      byteToHex.push((i + 256).toString(16).substr(1));
     }
     stringify_default = stringify;
   }
@@ -3604,7 +3604,7 @@ function v1(options2, buf, offset) {
   let node = options2.node || _nodeId;
   let clockseq = options2.clockseq !== void 0 ? options2.clockseq : _clockseq;
   if (node == null || clockseq == null) {
-    const seedBytes = options2.random || (options2.rng || rng2)();
+    const seedBytes = options2.random || (options2.rng || rng)();
     if (node == null) {
       node = _nodeId = [seedBytes[0] | 1, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
     }
@@ -3773,7 +3773,7 @@ var init_v3 = __esm({
 // node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js
 function v4(options2, buf, offset) {
   options2 = options2 || {};
-  const rnds = options2.random || (options2.rng || rng2)();
+  const rnds = options2.random || (options2.rng || rng)();
   rnds[6] = rnds[6] & 15 | 64;
   rnds[8] = rnds[8] & 63 | 128;
   if (buf) {
@@ -4145,7 +4145,7 @@ var require_uuid62 = __commonJS({
   }
 });
 
-// src/skills/doc-maintenance/scripts/migrate_docs.ts
+// src/skills/doc-maintenance/scripts/scaffold_docs.ts
 var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
@@ -7261,7 +7261,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             })));
           }
         }
-
+        
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -7269,7 +7269,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         } else {
           newResult[${k}] = ${id}.value;
         }
-
+        
       `);
       } else if (!isOptionalIn) {
         doc.write(`
@@ -7306,7 +7306,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
-
+        
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -7314,7 +7314,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         } else {
           newResult[${k}] = ${id}.value;
         }
-
+        
       `);
       }
     }
@@ -18667,95 +18667,8 @@ function date4(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 256).toString(16).slice(1));
-}
-function unsafeStringify(arr, offset = 0) {
-  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
-}
-
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/rng.js
-var rnds8 = new Uint8Array(16);
-function rng() {
-  return crypto.getRandomValues(rnds8);
-}
-
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/v7.js
-var _state = {};
-function v7(options2, buf, offset) {
-  let bytes;
-  if (options2) {
-    bytes = v7Bytes(options2.random ?? options2.rng?.() ?? rng(), options2.msecs, options2.seq, buf, offset);
-  } else {
-    const now = Date.now();
-    const rnds = rng();
-    updateV7State(_state, now, rnds);
-    bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
-  }
-  return buf ?? unsafeStringify(bytes);
-}
-function updateV7State(state, now, rnds) {
-  state.msecs ??= -Infinity;
-  state.seq ??= 0;
-  if (now > state.msecs) {
-    state.seq = v7Sequence(rnds);
-    state.msecs = now;
-  } else {
-    state.seq = state.seq + 1 | 0;
-    if (state.seq === 0) {
-      state.msecs++;
-    }
-  }
-  return state;
-}
-function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
-  if (rnds.length < 16) {
-    throw new Error("Random bytes length must be >= 16");
-  }
-  if (!buf) {
-    buf = new Uint8Array(16);
-    offset = 0;
-  } else {
-    if (offset < 0 || offset + 16 > buf.length) {
-      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-    }
-  }
-  msecs ??= Date.now();
-  seq ??= v7Sequence(rnds);
-  buf[offset++] = msecs / 1099511627776 & 255;
-  buf[offset++] = msecs / 4294967296 & 255;
-  buf[offset++] = msecs / 16777216 & 255;
-  buf[offset++] = msecs / 65536 & 255;
-  buf[offset++] = msecs / 256 & 255;
-  buf[offset++] = msecs & 255;
-  buf[offset++] = 112 | seq >>> 28 & 15;
-  buf[offset++] = seq >>> 20 & 255;
-  buf[offset++] = 128 | seq >>> 14 & 63;
-  buf[offset++] = seq >>> 6 & 255;
-  buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
-  buf[offset++] = rnds[11];
-  buf[offset++] = rnds[12];
-  buf[offset++] = rnds[13];
-  buf[offset++] = rnds[14];
-  buf[offset++] = rnds[15];
-  return buf;
-}
-function v7Sequence(rnds) {
-  return (rnds[6] & 127) << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
-}
-var v7_default = v7;
-
 // src/skills/lib/artifact_id.ts
 var import_uuid62 = __toESM(require_uuid62());
-var ID_PREFIX_PATTERN = /^[A-Z][A-Z0-9]*$/;
-function generateArtifactId(idPrefix) {
-  if (!ID_PREFIX_PATTERN.test(idPrefix)) {
-    throw new Error(`Invalid artifact id prefix: ${idPrefix}`);
-  }
-  return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
-}
 
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
@@ -18765,9 +18678,6 @@ function normalizeDir(input) {
 }
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
-}
-function slugify2(title, fallback) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
 }
 function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
   if (explicitDir) return normalizeDir(explicitDir);
@@ -18891,18 +18801,6 @@ var scaffoldTargets = [
   { dir: "docs/impl/exp", title: "Experiment Log Documents" }
 ];
 var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
-var migrationRoutes = [
-  { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
-  { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
-  { targetDir: "docs/test-specs", type: "test-spec", patterns: [/test[-\s]?spec/i, /testspec/i] },
-  { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
-  { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
-  { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
-  { targetDir: "docs/tasks", type: "task", patterns: [/task/i, /todo/i, /work item/i] },
-  { targetDir: "docs/adr", type: null, patterns: [/adr/i, /decision/i, /architecture decision/i] },
-  { targetDir: "docs/impl/ir", type: null, patterns: [/implementation record/i, /impl record/i, /\bir\b/i] },
-  { targetDir: "docs/impl/exp", type: null, patterns: [/experiment/i, /\bexp\b/i, /spike/i] }
-];
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -18935,9 +18833,6 @@ function docDir(cwd, type, explicitDir) {
 function docFiles(dir) {
   return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
 }
-function matterData(content) {
-  return (0, import_gray_matter.default)(content).data || {};
-}
 function parseDoc(content) {
   try {
     const parsed = (0, import_gray_matter.default)(content);
@@ -18945,11 +18840,6 @@ function parseDoc(content) {
   } catch (error51) {
     return { data: {}, body: content, error: error51 instanceof Error ? error51.message : String(error51) };
   }
-}
-function sanitizeTitle(title) {
-  const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
-  if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
-  return cleaned;
 }
 function indexCell(value) {
   return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
@@ -18959,131 +18849,6 @@ function isForeignDocType(typeValue, expected, relativeDir) {
   if (!docTypes.includes(typeValue)) return false;
   const normalized = normalizeDir(relativeDir);
   return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
-}
-function completeChanges(input) {
-  return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []]));
-}
-function quote(value) {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-function formatRelation(field, values) {
-  return `  ${field}: ${values}`;
-}
-function formatRelationBlock(field, values) {
-  if (values.length === 0) return formatRelation(field, "[]");
-  return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)].join("\n");
-}
-function formatChangeScalar(key, value) {
-  return `${key}: ${quote(value)}`;
-}
-function formatChangeValue(key, value) {
-  if (Array.isArray(value)) {
-    if (value.length === 0) return [`${key}: []`];
-    return [
-      `${key}:`,
-      ...value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => `  - ${quote(item.trim())}`)
-    ];
-  }
-  if (typeof value === "string") return [formatChangeScalar(key, value)];
-  if (typeof value === "number" || typeof value === "boolean") return [`${key}: ${String(value)}`];
-  return [`${key}: ${quote(JSON.stringify(value))}`];
-}
-function formatChangeEntry(entry) {
-  const ordered = [
-    "type",
-    "path",
-    "from",
-    "to",
-    "source",
-    ...Object.keys(entry).filter((key) => !["type", "path", "from", "to", "source"].includes(key)).sort()
-  ].filter((key, index, array2) => key in entry && array2.indexOf(key) === index);
-  const lines = [];
-  for (const key of ordered) {
-    lines.push(...formatChangeValue(key, entry[key]));
-  }
-  return lines;
-}
-function formatChangesBlock(changes) {
-  return [
-    "  changes:",
-    ...changeFields.flatMap((field) => {
-      const entries = changes[field];
-      if (entries.length === 0) return [`    ${field}: []`];
-      return [
-        `    ${field}:`,
-        ...entries.flatMap((entry) => {
-          const lines = formatChangeEntry(entry);
-          return lines.length === 0 ? ["      - {}"] : [`      - ${lines[0]}`, ...lines.slice(1).map((line) => `        ${line}`)];
-        })
-      ];
-    })
-  ];
-}
-function isPlainObject2(value) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-function formatMetadataScalar(value) {
-  return typeof value === "string" ? quote(value) : String(value);
-}
-function formatMetadataNode(key, value, indent) {
-  if (value === null || value === void 0) return [];
-  const prefix = " ".repeat(indent);
-  if (Array.isArray(value)) {
-    if (value.length === 0) return [`${prefix}${key}: []`];
-    const items = value.flatMap((item) => {
-      if (item === null || item === void 0) return [];
-      if (isPlainObject2(item)) {
-        const childLines = Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3));
-        return childLines.length > 0 ? [`${prefix} -`, ...childLines] : [`${prefix} - {}`];
-      }
-      if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
-      if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
-      return [`${prefix} - ${quote(JSON.stringify(item))}`];
-    });
-    return items.length > 0 ? [`${prefix}${key}:`, ...items] : [`${prefix}${key}: []`];
-  }
-  if (isPlainObject2(value)) {
-    const entries = Object.entries(value).flatMap(([childKey, childValue]) => formatMetadataNode(childKey, childValue, indent + 2));
-    return entries.length > 0 ? [`${prefix}${key}:`, ...entries] : [`${prefix}${key}: {}`];
-  }
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return [`${prefix}${key}: ${formatMetadataScalar(value)}`];
-  }
-  return [`${prefix}${key}: ${quote(JSON.stringify(value))}`];
-}
-function formatMetadataBlock(metadata) {
-  if (!metadata) return [];
-  const entries = Object.entries(metadata).flatMap(([key, value]) => formatMetadataNode(key, value, 2));
-  return entries.length > 0 ? ["metadata:", ...entries] : ["metadata: {}"];
-}
-function completeRelations(input) {
-  return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []]));
-}
-function frontMatter(config2, id, title, status, date5, relations, metadata) {
-  if (!config2.statusValues.includes(status)) {
-    throw new Error(`Invalid ${config2.type} status: ${status} (expected one of: ${config2.statusValues.join(", ")})`);
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date5)) {
-    throw new Error(`Invalid date: ${date5} (expected YYYY-MM-DD)`);
-  }
-  const complete = completeRelations(relations);
-  const changes = completeChanges(relations?.changes);
-  return [
-    "---",
-    `id: ${quote(id)}`,
-    `type: ${quote(config2.type)}`,
-    `status: ${quote(status)}`,
-    `title: ${quote(sanitizeTitle(title))}`,
-    `created: ${quote(date5)}`,
-    `updated: ${quote(date5)}`,
-    "owners: []",
-    "relations:",
-    formatRelationBlock("source", complete.source),
-    ...formatChangesBlock(changes),
-    ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
-    ...formatMetadataBlock(metadata),
-    "---"
-  ].join("\n");
 }
 async function titleFromDocument(content, fallback) {
   const parsed = parseDoc(content);
@@ -19144,10 +18909,6 @@ Directory: \`${dir}\`
 function isMarkdownSource(file2) {
   return file2.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(file2));
 }
-function isUnderCanonicalDir(relativeFile) {
-  const normalized = normalizeDir(relativeFile);
-  return canonicalDocDirs.some((dir) => normalized === dir || normalized.startsWith(`${dir}/`));
-}
 function walkMarkdownFiles(baseDir) {
   if (!import_node_fs2.default.existsSync(baseDir)) return [];
   const entries = import_node_fs2.default.readdirSync(baseDir, { withFileTypes: true });
@@ -19156,160 +18917,6 @@ function walkMarkdownFiles(baseDir) {
     if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
     return isMarkdownSource(fullPath) ? [fullPath] : [];
   }).sort();
-}
-function defaultMigrationSources(cwd) {
-  return ["docs", "doc", "architecture", "design", "specs", "plans", "tasks"].filter((dir) => import_node_fs2.default.existsSync(import_node_path2.default.join(cwd, dir)));
-}
-function headingTitle(content, fallback) {
-  const parsed = parseDoc(content);
-  const data = parsed.data;
-  if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
-  const match = /^#\s+(.+)$/m.exec(parsed.body);
-  return match?.[1]?.trim() || fallback;
-}
-function splitByH1(source, content) {
-  const parsed = parseDoc(content);
-  const body = parsed.body.trim();
-  const matches = [...body.matchAll(/^#\s+(.+)$/gm)];
-  if (matches.length <= 1) {
-    return [{
-      source,
-      title: headingTitle(content, import_node_path2.default.basename(source, ".md")),
-      body
-    }];
-  }
-  return matches.map((match, index) => {
-    const start = match.index || 0;
-    const end = index + 1 < matches.length ? matches[index + 1].index || body.length : body.length;
-    const chunk = body.slice(start, end).trim();
-    return {
-      source,
-      title: match[1].trim(),
-      body: chunk
-    };
-  });
-}
-function routeFor(input, sourceData) {
-  if (typeof sourceData.type === "string" && docTypes.includes(sourceData.type)) {
-    const config2 = configFor(sourceData.type);
-    return { targetDir: config2.dir, type: config2.type, patterns: [] };
-  }
-  const haystack = `${input.source}
-${input.title}
-${input.body.slice(0, 2e3)}`;
-  return migrationRoutes.find((route) => route.patterns.some((pattern) => pattern.test(haystack))) || { targetDir: "docs/discovery", type: "discovery", patterns: [] };
-}
-function targetAllocation(cwd, targetDir) {
-  const fullTargetDir = import_node_path2.default.join(cwd, targetDir);
-  const existingFiles = import_node_fs2.default.existsSync(fullTargetDir) ? import_node_fs2.default.readdirSync(fullTargetDir).filter((file2) => file2.endsWith(".md")) : [];
-  return {
-    existing: new Set(existingFiles)
-  };
-}
-function allocateTargetPath(cwd, targetDir, title, fallback, allocations) {
-  if (!allocations.has(targetDir)) allocations.set(targetDir, targetAllocation(cwd, targetDir));
-  const allocation = allocations.get(targetDir);
-  let baseName = `${slugify2(title, fallback)}.md`;
-  const ext = import_node_path2.default.extname(baseName);
-  const stem = import_node_path2.default.basename(baseName, ext);
-  let suffix = 2;
-  while (allocation.existing.has(baseName)) {
-    baseName = `${stem}-${suffix}${ext}`;
-    suffix += 1;
-  }
-  allocation.existing.add(baseName);
-  return {
-    target: import_node_path2.default.join(targetDir, baseName).replace(/\\/g, "/")
-  };
-}
-function migratedFrontMatter(type, title, date5, source) {
-  const config2 = configFor(type);
-  return frontMatter(config2, generateArtifactId(config2.idPrefix), title, config2.defaultStatus, date5, {
-    source: [source],
-    changes: {
-      generated: [{ type: "migration", source }]
-    }
-  });
-}
-function migratedContent(input, route, sourceContent, source, date5) {
-  if (route.type) {
-    return `${migratedFrontMatter(route.type, input.title, date5, source)}
-
-${input.body.trim()}
-`;
-  }
-  const parsed = parseDoc(sourceContent);
-  const data = parsed.data;
-  if (Object.keys(data).length > 0) return `${import_gray_matter.default.stringify(input.body.trim(), data).trimEnd()}
-`;
-  return `---
-title: ${quote(input.title)}
-source: ${quote(source)}
----
-
-${input.body.trim()}
-`;
-}
-function plannedMigration(cwd, source, input, sourceContent, date5, allocations) {
-  const sourceData = matterData(sourceContent);
-  const route = routeFor(input, sourceData);
-  const targetDir = route.targetDir;
-  const { target } = allocateTargetPath(cwd, targetDir, input.title, route.type || "doc", allocations);
-  return {
-    content: migratedContent(input, route, sourceContent, source, date5),
-    source,
-    target,
-    targetDir,
-    title: input.title,
-    type: route.type
-  };
-}
-async function migrateDocs(options2) {
-  const cwd = import_node_path2.default.resolve(options2.cwd);
-  const fromDirs = options2.from && options2.from.length > 0 ? options2.from : defaultMigrationSources(cwd);
-  const skipped = [];
-  const migrations = [];
-  const allocations = /* @__PURE__ */ new Map();
-  const date5 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  for (const fromDir of fromDirs) {
-    const fullFrom = import_node_path2.default.resolve(cwd, fromDir);
-    const files = walkMarkdownFiles(fullFrom);
-    for (const fullFile of files) {
-      const relativeFile = import_node_path2.default.relative(cwd, fullFile).replace(/\\/g, "/");
-      if (!options2.includeCanonical && isUnderCanonicalDir(relativeFile)) {
-        skipped.push({ file: relativeFile, reason: "canonical-doc" });
-        continue;
-      }
-      const sourceContent = import_node_fs2.default.readFileSync(fullFile, "utf8");
-      const sourceParsed = parseDoc(sourceContent);
-      if (sourceParsed.error) {
-        skipped.push({ file: relativeFile, reason: "unparseable-front-matter" });
-        continue;
-      }
-      const inputs = options2.splitH1 ? splitByH1(relativeFile, sourceContent) : [{
-        source: relativeFile,
-        title: headingTitle(sourceContent, import_node_path2.default.basename(relativeFile, ".md")),
-        body: sourceParsed.body.trim()
-      }];
-      for (const input of inputs) {
-        migrations.push(plannedMigration(cwd, relativeFile, input, sourceContent, date5, allocations));
-      }
-    }
-  }
-  const created = [];
-  if (options2.apply) {
-    await scaffoldDocsTree(cwd);
-    for (const migration of migrations) {
-      const targetPath = import_node_path2.default.join(cwd, migration.target);
-      import_node_fs2.default.mkdirSync(import_node_path2.default.dirname(targetPath), { recursive: true });
-      import_node_fs2.default.writeFileSync(targetPath, migration.content, "utf8");
-      created.push(migration.target);
-    }
-    for (const target of scaffoldTargets.filter((item) => item.type)) {
-      await writeGeneratedIndex(cwd, target.type, target.dir, {});
-    }
-  }
-  return { applied: Boolean(options2.apply), created, migrations, skipped };
 }
 async function scaffoldDocsTree(cwd) {
   const resolvedCwd = import_node_path2.default.resolve(cwd);
@@ -19326,58 +18933,20 @@ async function scaffoldDocsTree(cwd) {
   }
   return { created, updated };
 }
-async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
-  const indexPath = import_node_path2.default.join(cwd, relativeDir, "README.md");
-  const relIndex = import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/");
-  if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
-  const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
-  const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
-  if (!isGenerated && !options2.forceIndex) {
-    return { path: relIndex, written: false, reason: "hand-curated" };
-  }
-  const content = await buildIndex(cwd, type, relativeDir);
-  import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
-  return { path: relIndex, written: true, reason: null };
-}
 
-// src/skills/doc-maintenance/scripts/migrate_docs.ts
+// src/skills/doc-maintenance/scripts/scaffold_docs.ts
 function parseArgs(argv) {
-  const args = {
-    apply: false,
-    cwd: process.cwd(),
-    from: [],
-    includeCanonical: false,
-    json: false,
-    splitH1: false
-  };
+  const args = { cwd: process.cwd() };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--cwd") args.cwd = argv[++i];
-    else if (arg === "--from") args.from.push(argv[++i]);
-    else if (arg === "--apply") args.apply = true;
-    else if (arg === "--include-canonical") args.includeCanonical = true;
-    else if (arg === "--json") args.json = true;
-    else if (arg === "--split-h1") args.splitH1 = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
 }
 function usage() {
-  return "Usage: node scripts/migrate_docs.js [--cwd <path>] [--from <dir>] [--split-h1] [--include-canonical] [--apply] [--json]";
-}
-function printHuman(report) {
-  console.log(`${report.applied ? "Applied" : "Planned"} docs migration`);
-  if (report.migrations.length === 0) console.log("No source documents selected.");
-  for (const migration of report.migrations) {
-    console.log(`${migration.source} -> ${migration.target}${migration.type ? ` [${migration.type}]` : ""}`);
-  }
-  for (const created of report.created) {
-    console.log(`Created ${created}`);
-  }
-  for (const skipped of report.skipped) {
-    console.log(`Skipped ${skipped.file}: ${skipped.reason}`);
-  }
+  return "Usage: node scripts/scaffold_docs.js [--cwd <path>]";
 }
 async function main() {
   try {
@@ -19386,18 +18955,11 @@ async function main() {
       console.log(usage());
       return;
     }
-    const report = await migrateDocs({
-      apply: args.apply,
-      cwd: import_node_path3.default.resolve(args.cwd),
-      from: args.from,
-      includeCanonical: args.includeCanonical,
-      splitH1: args.splitH1
-    });
-    if (args.json) {
-      console.log(JSON.stringify(report, null, 2));
-      return;
+    const result = await scaffoldDocsTree(import_node_path3.default.resolve(args.cwd));
+    console.log(`Created docs tree scaffold in ${import_node_path3.default.resolve(args.cwd)}`);
+    for (const file2 of result.created) {
+      console.log(`Created ${file2}`);
     }
-    printHuman(report);
   } catch (error51) {
     console.error(error51 instanceof Error ? error51.message : String(error51));
     console.error(usage());

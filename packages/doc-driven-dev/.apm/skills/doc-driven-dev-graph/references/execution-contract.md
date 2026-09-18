@@ -113,7 +113,8 @@ and canonical-evidence or provider-idempotency proof validate against the
 fresh projection.
 
 The caller adapter normalizes the declared script delegates (`migrate_docs`,
-`scaffold_docs`, and `build_task_graph`) and named audits (`spec`, `adr`,
+`scaffold_docs`, and `build_task_graph` — the migration scripts are owned by
+`doc-maintenance`) and named audits (`spec`, `adr`,
 `design`, `plan`, `task`, `test-spec`, `impl-record`, and `all`) into
 `EffectOutcome`.
 Skills that can emit the footer return it directly. Missing or malformed adapter
