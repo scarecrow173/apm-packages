@@ -65,7 +65,7 @@ const RECIPROCAL_RELATIONS: Record<string, string> = {
 };
 
 function relationSourcePaths(document: RepositoryDocument): string[] {
-  return [document.path, ...(document.id ? [document.id] : [])];
+  return [document.path, ...(document.id ? [document.id] : []), ...document.localeSiblings];
 }
 
 // ---------------------------------------------------------------------------
@@ -142,7 +142,7 @@ function lintFrontMatter(document: RepositoryDocument, scopeType: string): Findi
         artifactId: document.id,
         message: wrongPrefix
           ? `Artifact ID ${document.id} does not use the ${contract.idPrefix}- prefix required for type ${scopeType}`
-          : `Artifact ID ${document.id} does not match the ${scopeType} ID format (${contract.idPrefix}-<id>)`,
+          : `Artifact ID ${document.id} does not match the ${scopeType} ID format (${contract.idPrefix}-<digits> or ${contract.idPrefix}-<22-char Base62>)`,
         target: document.id,
         repair: "migration",
       }));
@@ -231,7 +231,7 @@ function lintRelations(model: DocumentRepository, document: RepositoryDocument, 
       const targetDocument = resolved.status === "resolved" ? resolved.document : null;
       if (!targetDocument) continue;
 
-      if (targetDocument.path === document.path) {
+      if (model.sameLogicalArtifact(targetDocument.path, document.path)) {
         findings.push(finding({
           ruleId: "self-relation",
           category: "relation",
@@ -272,7 +272,9 @@ function lintRelations(model: DocumentRepository, document: RepositoryDocument, 
         if (inverse.length > 0 && !inverse.some((value) => sources.includes(value))) {
           const resolvedInverse = inverse.some((value) => {
             const back = model.resolveRelationTarget(targetDocument, value);
-            return back.status === "resolved" && back.document.path === document.path;
+            return back.status === "resolved"
+              && back.document !== null
+              && model.sameLogicalArtifact(back.document.path, document.path);
           });
           if (!resolvedInverse) {
             findings.push(finding({

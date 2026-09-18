@@ -52,9 +52,9 @@ test.afterEach(() => {
 
 test("flags missing local markdown and image targets", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n\nSee [flow](missing.md) and ![logo](logo.png).\n");
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n\nSee [flow](missing.md) and ![logo](logo.png).\n");
   writeFile(root, "docs/specs/logo.png", "png");
-  writeSpecIndex(root, [indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft")]);
+  writeSpecIndex(root, [indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft")]);
 
   const report = await auditDocuments(root, "spec");
   assert.ok(codes(report).includes("broken-link"));
@@ -63,8 +63,8 @@ test("flags missing local markdown and image targets", async () => {
 
 test("flags missing image targets", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n\n![logo](logo.png)\n");
-  writeSpecIndex(root, [indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft")]);
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n\n![logo](logo.png)\n");
+  writeSpecIndex(root, [indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft")]);
 
   const report = await auditDocuments(root, "spec");
   assert.ok(codes(report).includes("missing-image-link"));
@@ -72,11 +72,11 @@ test("flags missing image targets", async () => {
 
 test("flags missing anchors in local and cross-file links", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n\nSee [self](#nowhere) and [other](other.md#missing).\n");
-  writeSpec(root, "other", "SPEC-BBB", "# Other\n\n## Exists\n\nBody.\n");
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n\nSee [self](#nowhere) and [other](other.md#missing).\n");
+  writeSpec(root, "other", "SPEC-0002", "# Other\n\n## Exists\n\nBody.\n");
   writeSpecIndex(root, [
-    indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft"),
-    indexItem("SPEC-BBB", "other.md", "Spec other", "draft"),
+    indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft"),
+    indexItem("SPEC-0002", "other.md", "Spec other", "draft"),
   ]);
 
   const report = await auditDocuments(root, "spec");
@@ -86,8 +86,8 @@ test("flags missing anchors in local and cross-file links", async () => {
 
 test("accepts anchors that exist", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout Flow\n\nSee [self](#checkout-flow).\n");
-  writeSpecIndex(root, [indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft")]);
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout Flow\n\nSee [self](#checkout-flow).\n");
+  writeSpecIndex(root, [indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft")]);
 
   const report = await auditDocuments(root, "spec");
   assert.ok(!codes(report).includes("broken-anchor"));
@@ -95,8 +95,8 @@ test("accepts anchors that exist", async () => {
 
 test("flags links escaping the repository root", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n\nSee [outside](../../outside.md).\n");
-  writeSpecIndex(root, [indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft")]);
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n\nSee [outside](../../outside.md).\n");
+  writeSpecIndex(root, [indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft")]);
 
   const report = await auditDocuments(root, "spec");
   assert.ok(codes(report).includes("link-escapes-root"));
@@ -104,12 +104,12 @@ test("flags links escaping the repository root", async () => {
 
 test("flags index stale, duplicate, metadata-mismatch, and ordering problems", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n");
-  writeSpec(root, "other", "SPEC-BBB", "# Other\n");
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n");
+  writeSpec(root, "other", "SPEC-0002", "# Other\n");
   writeSpecIndex(root, [
-    indexItem("SPEC-BBB", "other.md", "Spec other", "draft"),
-    indexItem("SPEC-AAA", "checkout.md", "Wrong Title", "active"),
-    indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft"),
+    indexItem("SPEC-0002", "other.md", "Spec other", "draft"),
+    indexItem("SPEC-0001", "checkout.md", "Wrong Title", "active"),
+    indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft"),
     indexItem("SPEC-GONE", "ghost.md", "Ghost", "draft"),
   ]);
 
@@ -121,7 +121,7 @@ test("flags index stale, duplicate, metadata-mismatch, and ordering problems", a
 
 test("flags unparseable index items", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n");
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n");
   writeFile(
     root,
     "docs/specs/README.md",
@@ -134,7 +134,7 @@ test("flags unparseable index items", async () => {
 
 test("classifies orphan navigation and relation findings", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n");
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n");
   writeSpecIndex(root, []);
 
   const report = await auditDocuments(root, "spec");
@@ -148,7 +148,7 @@ test("downgrades orphan severity for root-eligible types", async () => {
   writeFile(
     root,
     "docs/ideas/spark.md",
-    "---\nid: IDEA-AAA\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\n---\n# Spark\n",
+    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\n---\n# Spark\n",
   );
 
   const report = await auditDocuments(root, "idea");
@@ -160,8 +160,8 @@ test("downgrades orphan severity for root-eligible types", async () => {
 
 test("suppresses orphan navigation when the doc is indexed", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n");
-  writeSpecIndex(root, [indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft")]);
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n");
+  writeSpecIndex(root, [indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft")]);
 
   const report = await auditDocuments(root, "spec");
   assert.ok(!codes(report).includes("orphan-navigation"));
@@ -169,13 +169,13 @@ test("suppresses orphan navigation when the doc is indexed", async () => {
 
 test("suppresses orphan relation when relations exist", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n", "relations:\n  implements: [IDEA-AAA]\n");
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n", "relations:\n  implements: [IDEA-0001]\n");
   writeFile(
     root,
     "docs/ideas/spark.md",
-    "---\nid: IDEA-AAA\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\n---\n# Spark\n",
+    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\n---\n# Spark\n",
   );
-  writeSpecIndex(root, [indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft")]);
+  writeSpecIndex(root, [indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft")]);
 
   const report = await auditDocuments(root, "spec");
   assert.ok(!codes(report).includes("orphan-relation"));
@@ -183,8 +183,8 @@ test("suppresses orphan relation when relations exist", async () => {
 
 test("does not check external links by default", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n\nSee [docs](https://example.com/x).\n");
-  writeSpecIndex(root, [indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft")]);
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n\nSee [docs](https://example.com/x).\n");
+  writeSpecIndex(root, [indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft")]);
 
   const report = await auditDocuments(root, "spec");
   assert.ok(!codes(report).some((code) => code.startsWith("external-link")));
@@ -192,11 +192,11 @@ test("does not check external links by default", async () => {
 
 test("detects case-only mismatches on case-insensitive filesystems", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-AAA", "# Checkout\n\nSee [other](OTHER.md).\n");
-  writeSpec(root, "other", "SPEC-BBB", "# Other\n");
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n\nSee [other](OTHER.md).\n");
+  writeSpec(root, "other", "SPEC-0002", "# Other\n");
   writeSpecIndex(root, [
-    indexItem("SPEC-AAA", "checkout.md", "Spec checkout", "draft"),
-    indexItem("SPEC-BBB", "other.md", "Spec other", "draft"),
+    indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft"),
+    indexItem("SPEC-0002", "other.md", "Spec other", "draft"),
   ]);
 
   const report = await auditDocuments(root, "spec");
@@ -207,12 +207,34 @@ test("detects case-only mismatches on case-insensitive filesystems", async () =>
   }
 });
 
+test("localized siblings share artifact identity for self and reciprocal checks", async () => {
+  const root = fixture();
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n");
+  writeFile(
+    root,
+    "docs/specs/checkout.ja.md",
+    "---\nid: SPEC-0001\ntype: spec\nstatus: draft\ntitle: Checkout JA\ncreated: 2026-01-01\nowners: [team]\nrelations:\n  implements: [IDEA-0001]\n  related: [SPEC-0001]\n---\n# Checkout JA\n",
+  );
+  writeFile(
+    root,
+    "docs/ideas/spark.md",
+    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations:\n  implemented-by: [../specs/checkout.md]\n---\n# Spark\n",
+  );
+
+  const collected = await collectFindings(root, { type: "spec" });
+  const codes = collected.findings.map((finding) => finding.ruleId);
+  assert.ok(codes.includes("self-relation"), "a relation to the shared artifact id is a self-relation");
+  assert.ok(!codes.includes("inconsistent-reciprocal-relation"), "a back-link naming the sibling file still resolves to the same artifact");
+  assert.ok(!codes.includes("duplicate-id"));
+  assert.ok(!codes.includes("ambiguous-relation-target"));
+});
+
 test("documented blocking rules flag findings and gate health", async () => {
   const root = fixture();
   writeSpec(
     root,
     "checkout",
-    "SPEC-AAA",
+    "SPEC-0001",
     "# Checkout\n\nSee [flow](missing.md).\n",
     "relations:\n  implements: [SPEC-GONE]\n",
   );

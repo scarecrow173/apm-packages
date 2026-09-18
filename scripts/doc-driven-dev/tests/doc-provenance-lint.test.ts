@@ -35,7 +35,7 @@ test.afterEach(() => {
 test("flags unresolved local source as provenance finding, not relation finding", async () => {
   const root = fixture();
   writeDoc(root, "docs/specs", "checkout", [
-    'id: SPEC-AAA',
+    'id: SPEC-0001',
     'type: spec',
     'status: draft',
     'title: Checkout',
@@ -43,9 +43,9 @@ test("flags unresolved local source as provenance finding, not relation finding"
     'owners: [team]',
     'relations:',
     '  source: ["./evidence/missing.pdf"]',
-    '  implements: [IDEA-AAA]',
+    '  implements: [IDEA-0001]',
   ].join("\n") + "\n");
-  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-AAA\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
+  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
 
   const report = await auditDocuments(root, "spec");
   assert.ok(codes(report).includes("provenance-unresolved-local-source"));
@@ -56,7 +56,7 @@ test("accepts resolvable local file and external URL sources", async () => {
   const root = fixture();
   writeFile(root, "evidence/report.pdf", "pdf");
   writeDoc(root, "docs/specs", "checkout", [
-    'id: SPEC-AAA',
+    'id: SPEC-0001',
     'type: spec',
     'status: draft',
     'title: Checkout',
@@ -64,9 +64,9 @@ test("accepts resolvable local file and external URL sources", async () => {
     'owners: [team]',
     'relations:',
     '  source: ["../../evidence/report.pdf", "https://example.com/research"]',
-    '  implements: [IDEA-AAA]',
+    '  implements: [IDEA-0001]',
   ].join("\n") + "\n");
-  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-AAA\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
+  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
 
   const report = await auditDocuments(root, "spec");
   assert.ok(!codes(report).includes("provenance-unresolved-local-source"));
@@ -76,7 +76,7 @@ test("accepts resolvable local file and external URL sources", async () => {
 test("flags root-escaping source as invalid", async () => {
   const root = fixture();
   writeDoc(root, "docs/specs", "checkout", [
-    'id: SPEC-AAA',
+    'id: SPEC-0001',
     'type: spec',
     'status: draft',
     'title: Checkout',
@@ -84,9 +84,9 @@ test("flags root-escaping source as invalid", async () => {
     'owners: [team]',
     'relations:',
     '  source: ["../../../outside/evidence.pdf"]',
-    '  implements: [IDEA-AAA]',
+    '  implements: [IDEA-0001]',
   ].join("\n") + "\n");
-  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-AAA\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
+  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
 
   const report = await auditDocuments(root, "spec");
   const finding = report.findings.find((item) => item.code === "provenance-invalid-source");
@@ -96,7 +96,7 @@ test("flags root-escaping source as invalid", async () => {
 test("flags missing source evidence for discovery documents", async () => {
   const root = fixture();
   writeDoc(root, "docs/discovery", "research", [
-    'id: DISC-AAA',
+    'id: DISC-0001',
     'type: discovery',
     'status: draft',
     'title: Research',
@@ -113,7 +113,7 @@ test("flags missing source evidence for discovery documents", async () => {
 test("does not flag missing source for types without the contract requirement", async () => {
   const root = fixture();
   writeDoc(root, "docs/specs", "checkout", [
-    'id: SPEC-AAA',
+    'id: SPEC-0001',
     'type: spec',
     'status: draft',
     'title: Checkout',
@@ -121,9 +121,9 @@ test("does not flag missing source for types without the contract requirement", 
     'owners: [team]',
     'relations:',
     '  source: []',
-    '  implements: [IDEA-AAA]',
+    '  implements: [IDEA-0001]',
   ].join("\n") + "\n");
-  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-AAA\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
+  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
 
   const report = await auditDocuments(root, "spec");
   assert.ok(!codes(report).includes("provenance-missing-source"));
@@ -132,7 +132,7 @@ test("does not flag missing source for types without the contract requirement", 
 test("flags missing upstream for types with expected traceability", async () => {
   const root = fixture();
   writeDoc(root, "docs/specs", "checkout", [
-    'id: SPEC-AAA',
+    'id: SPEC-0001',
     'type: spec',
     'status: draft',
     'title: Checkout',
@@ -148,16 +148,16 @@ test("flags missing upstream for types with expected traceability", async () => 
 test("suppresses missing-upstream when an upstream relation is declared", async () => {
   const root = fixture();
   writeDoc(root, "docs/specs", "checkout", [
-    'id: SPEC-AAA',
+    'id: SPEC-0001',
     'type: spec',
     'status: draft',
     'title: Checkout',
     'created: 2026-01-01',
     'owners: [team]',
     'relations:',
-    '  implements: [IDEA-AAA]',
+    '  implements: [IDEA-0001]',
   ].join("\n") + "\n");
-  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-AAA\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
+  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
 
   const report = await auditDocuments(root, "spec");
   assert.ok(!codes(report).includes("traceability-missing-upstream"));
@@ -165,9 +165,9 @@ test("suppresses missing-upstream when an upstream relation is declared", async 
 
 test("does not flag missing upstream for root-eligible or terminal-status docs", async () => {
   const root = fixture();
-  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-AAA\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
+  writeDoc(root, "docs/ideas", "spark", 'id: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations: {}\n');
   writeDoc(root, "docs/specs", "legacy", [
-    'id: SPEC-OLD',
+    'id: SPEC-0002',
     'type: spec',
     'status: superseded',
     'title: Legacy',
@@ -186,16 +186,16 @@ test("does not flag missing upstream for root-eligible or terminal-status docs",
 test("verification findings use the traceability category rules without duplication", async () => {
   const root = fixture();
   writeDoc(root, "docs/test-specs", "checkout", [
-    'id: TEST-SPEC-AAA',
+    'id: TEST-SPEC-0001',
     'type: test-spec',
     'status: draft',
     'title: Checkout tests',
     'created: 2026-01-01',
     'owners: [team]',
     'relations:',
-    '  verifies: [TASK-BBB]',
+    '  verifies: [TASK-0001]',
   ].join("\n") + "\n");
-  writeDoc(root, "docs/tasks", "work", 'id: TASK-BBB\ntype: task\nstatus: todo\ntitle: Work\ncreated: 2026-01-01\nrelations: {}\n');
+  writeDoc(root, "docs/tasks", "work", 'id: TASK-0001\ntype: task\nstatus: todo\ntitle: Work\ncreated: 2026-01-01\nrelations: {}\n');
 
   const report = await auditDocuments(root, "test-spec");
   const invalid = report.findings.filter((item) => item.code === "test-spec-invalid-verifies-target");
