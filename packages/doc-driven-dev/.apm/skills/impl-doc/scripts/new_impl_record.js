@@ -6,6 +6,14 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res, err) => function __init() {
+  if (err) throw err[0];
+  try {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  } catch (e) {
+    throw err = [e], e;
+  }
+};
 var __commonJS = (cb, mod) => function __require() {
   try {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -33,6 +41,613 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js
+function rng2() {
+  if (poolPtr > rnds8Pool.length - 16) {
+    import_crypto.default.randomFillSync(rnds8Pool);
+    poolPtr = 0;
+  }
+  return rnds8Pool.slice(poolPtr, poolPtr += 16);
+}
+var import_crypto, rnds8Pool, poolPtr;
+var init_rng = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js"() {
+    import_crypto = __toESM(require("crypto"));
+    rnds8Pool = new Uint8Array(256);
+    poolPtr = rnds8Pool.length;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js
+var regex_default;
+var init_regex = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js"() {
+    regex_default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js
+function validate(uuid3) {
+  return typeof uuid3 === "string" && regex_default.test(uuid3);
+}
+var validate_default;
+var init_validate = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js"() {
+    init_regex();
+    validate_default = validate;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js
+function stringify(arr, offset = 0) {
+  const uuid3 = (byteToHex2[arr[offset + 0]] + byteToHex2[arr[offset + 1]] + byteToHex2[arr[offset + 2]] + byteToHex2[arr[offset + 3]] + "-" + byteToHex2[arr[offset + 4]] + byteToHex2[arr[offset + 5]] + "-" + byteToHex2[arr[offset + 6]] + byteToHex2[arr[offset + 7]] + "-" + byteToHex2[arr[offset + 8]] + byteToHex2[arr[offset + 9]] + "-" + byteToHex2[arr[offset + 10]] + byteToHex2[arr[offset + 11]] + byteToHex2[arr[offset + 12]] + byteToHex2[arr[offset + 13]] + byteToHex2[arr[offset + 14]] + byteToHex2[arr[offset + 15]]).toLowerCase();
+  if (!validate_default(uuid3)) {
+    throw TypeError("Stringified UUID is invalid");
+  }
+  return uuid3;
+}
+var byteToHex2, stringify_default;
+var init_stringify = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js"() {
+    init_validate();
+    byteToHex2 = [];
+    for (let i = 0; i < 256; ++i) {
+      byteToHex2.push((i + 256).toString(16).substr(1));
+    }
+    stringify_default = stringify;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js
+function v1(options2, buf, offset) {
+  let i = buf && offset || 0;
+  const b = buf || new Array(16);
+  options2 = options2 || {};
+  let node = options2.node || _nodeId;
+  let clockseq = options2.clockseq !== void 0 ? options2.clockseq : _clockseq;
+  if (node == null || clockseq == null) {
+    const seedBytes = options2.random || (options2.rng || rng2)();
+    if (node == null) {
+      node = _nodeId = [seedBytes[0] | 1, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
+    }
+    if (clockseq == null) {
+      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 16383;
+    }
+  }
+  let msecs = options2.msecs !== void 0 ? options2.msecs : Date.now();
+  let nsecs = options2.nsecs !== void 0 ? options2.nsecs : _lastNSecs + 1;
+  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 1e4;
+  if (dt < 0 && options2.clockseq === void 0) {
+    clockseq = clockseq + 1 & 16383;
+  }
+  if ((dt < 0 || msecs > _lastMSecs) && options2.nsecs === void 0) {
+    nsecs = 0;
+  }
+  if (nsecs >= 1e4) {
+    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
+  }
+  _lastMSecs = msecs;
+  _lastNSecs = nsecs;
+  _clockseq = clockseq;
+  msecs += 122192928e5;
+  const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
+  b[i++] = tl >>> 24 & 255;
+  b[i++] = tl >>> 16 & 255;
+  b[i++] = tl >>> 8 & 255;
+  b[i++] = tl & 255;
+  const tmh = msecs / 4294967296 * 1e4 & 268435455;
+  b[i++] = tmh >>> 8 & 255;
+  b[i++] = tmh & 255;
+  b[i++] = tmh >>> 24 & 15 | 16;
+  b[i++] = tmh >>> 16 & 255;
+  b[i++] = clockseq >>> 8 | 128;
+  b[i++] = clockseq & 255;
+  for (let n = 0; n < 6; ++n) {
+    b[i + n] = node[n];
+  }
+  return buf || stringify_default(b);
+}
+var _nodeId, _clockseq, _lastMSecs, _lastNSecs, v1_default;
+var init_v1 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js"() {
+    init_rng();
+    init_stringify();
+    _lastMSecs = 0;
+    _lastNSecs = 0;
+    v1_default = v1;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js
+function parse2(uuid3) {
+  if (!validate_default(uuid3)) {
+    throw TypeError("Invalid UUID");
+  }
+  let v;
+  const arr = new Uint8Array(16);
+  arr[0] = (v = parseInt(uuid3.slice(0, 8), 16)) >>> 24;
+  arr[1] = v >>> 16 & 255;
+  arr[2] = v >>> 8 & 255;
+  arr[3] = v & 255;
+  arr[4] = (v = parseInt(uuid3.slice(9, 13), 16)) >>> 8;
+  arr[5] = v & 255;
+  arr[6] = (v = parseInt(uuid3.slice(14, 18), 16)) >>> 8;
+  arr[7] = v & 255;
+  arr[8] = (v = parseInt(uuid3.slice(19, 23), 16)) >>> 8;
+  arr[9] = v & 255;
+  arr[10] = (v = parseInt(uuid3.slice(24, 36), 16)) / 1099511627776 & 255;
+  arr[11] = v / 4294967296 & 255;
+  arr[12] = v >>> 24 & 255;
+  arr[13] = v >>> 16 & 255;
+  arr[14] = v >>> 8 & 255;
+  arr[15] = v & 255;
+  return arr;
+}
+var parse_default;
+var init_parse = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js"() {
+    init_validate();
+    parse_default = parse2;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js
+function stringToBytes(str2) {
+  str2 = unescape(encodeURIComponent(str2));
+  const bytes = [];
+  for (let i = 0; i < str2.length; ++i) {
+    bytes.push(str2.charCodeAt(i));
+  }
+  return bytes;
+}
+function v35_default(name, version3, hashfunc) {
+  function generateUUID(value, namespace, buf, offset) {
+    if (typeof value === "string") {
+      value = stringToBytes(value);
+    }
+    if (typeof namespace === "string") {
+      namespace = parse_default(namespace);
+    }
+    if (namespace.length !== 16) {
+      throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
+    }
+    let bytes = new Uint8Array(16 + value.length);
+    bytes.set(namespace);
+    bytes.set(value, namespace.length);
+    bytes = hashfunc(bytes);
+    bytes[6] = bytes[6] & 15 | version3;
+    bytes[8] = bytes[8] & 63 | 128;
+    if (buf) {
+      offset = offset || 0;
+      for (let i = 0; i < 16; ++i) {
+        buf[offset + i] = bytes[i];
+      }
+      return buf;
+    }
+    return stringify_default(bytes);
+  }
+  try {
+    generateUUID.name = name;
+  } catch (err) {
+  }
+  generateUUID.DNS = DNS;
+  generateUUID.URL = URL2;
+  return generateUUID;
+}
+var DNS, URL2;
+var init_v35 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js"() {
+    init_stringify();
+    init_parse();
+    DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    URL2 = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js
+function md5(bytes) {
+  if (Array.isArray(bytes)) {
+    bytes = Buffer.from(bytes);
+  } else if (typeof bytes === "string") {
+    bytes = Buffer.from(bytes, "utf8");
+  }
+  return import_crypto2.default.createHash("md5").update(bytes).digest();
+}
+var import_crypto2, md5_default;
+var init_md5 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js"() {
+    import_crypto2 = __toESM(require("crypto"));
+    md5_default = md5;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js
+var v3, v3_default;
+var init_v3 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js"() {
+    init_v35();
+    init_md5();
+    v3 = v35_default("v3", 48, md5_default);
+    v3_default = v3;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js
+function v4(options2, buf, offset) {
+  options2 = options2 || {};
+  const rnds = options2.random || (options2.rng || rng2)();
+  rnds[6] = rnds[6] & 15 | 64;
+  rnds[8] = rnds[8] & 63 | 128;
+  if (buf) {
+    offset = offset || 0;
+    for (let i = 0; i < 16; ++i) {
+      buf[offset + i] = rnds[i];
+    }
+    return buf;
+  }
+  return stringify_default(rnds);
+}
+var v4_default;
+var init_v4 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js"() {
+    init_rng();
+    init_stringify();
+    v4_default = v4;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js
+function sha1(bytes) {
+  if (Array.isArray(bytes)) {
+    bytes = Buffer.from(bytes);
+  } else if (typeof bytes === "string") {
+    bytes = Buffer.from(bytes, "utf8");
+  }
+  return import_crypto3.default.createHash("sha1").update(bytes).digest();
+}
+var import_crypto3, sha1_default;
+var init_sha1 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js"() {
+    import_crypto3 = __toESM(require("crypto"));
+    sha1_default = sha1;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js
+var v5, v5_default;
+var init_v5 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js"() {
+    init_v35();
+    init_sha1();
+    v5 = v35_default("v5", 80, sha1_default);
+    v5_default = v5;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js
+var nil_default;
+var init_nil = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js"() {
+    nil_default = "00000000-0000-0000-0000-000000000000";
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js
+function version(uuid3) {
+  if (!validate_default(uuid3)) {
+    throw TypeError("Invalid UUID");
+  }
+  return parseInt(uuid3.substr(14, 1), 16);
+}
+var version_default;
+var init_version = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js"() {
+    init_validate();
+    version_default = version;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js
+var esm_node_exports = {};
+__export(esm_node_exports, {
+  NIL: () => nil_default,
+  parse: () => parse_default,
+  stringify: () => stringify_default,
+  v1: () => v1_default,
+  v3: () => v3_default,
+  v4: () => v4_default,
+  v5: () => v5_default,
+  validate: () => validate_default,
+  version: () => version_default
+});
+var init_esm_node = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js"() {
+    init_v1();
+    init_v3();
+    init_v4();
+    init_v5();
+    init_nil();
+    init_version();
+    init_validate();
+    init_stringify();
+    init_parse();
+  }
+});
+
+// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
+var require_safe_buffer = __commonJS({
+  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
+    var buffer = require("buffer");
+    var Buffer2 = buffer.Buffer;
+    function copyProps(src, dst) {
+      for (var key in src) {
+        dst[key] = src[key];
+      }
+    }
+    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
+      module2.exports = buffer;
+    } else {
+      copyProps(buffer, exports2);
+      exports2.Buffer = SafeBuffer;
+    }
+    function SafeBuffer(arg, encodingOrOffset, length) {
+      return Buffer2(arg, encodingOrOffset, length);
+    }
+    SafeBuffer.prototype = Object.create(Buffer2.prototype);
+    copyProps(Buffer2, SafeBuffer);
+    SafeBuffer.from = function(arg, encodingOrOffset, length) {
+      if (typeof arg === "number") {
+        throw new TypeError("Argument must not be a number");
+      }
+      return Buffer2(arg, encodingOrOffset, length);
+    };
+    SafeBuffer.alloc = function(size, fill, encoding) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      var buf = Buffer2(size);
+      if (fill !== void 0) {
+        if (typeof encoding === "string") {
+          buf.fill(fill, encoding);
+        } else {
+          buf.fill(fill);
+        }
+      } else {
+        buf.fill(0);
+      }
+      return buf;
+    };
+    SafeBuffer.allocUnsafe = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return Buffer2(size);
+    };
+    SafeBuffer.allocUnsafeSlow = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return buffer.SlowBuffer(size);
+    };
+  }
+});
+
+// node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js
+var require_src = __commonJS({
+  "node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js"(exports2, module2) {
+    "use strict";
+    var _Buffer = require_safe_buffer().Buffer;
+    function base(ALPHABET) {
+      if (ALPHABET.length >= 255) {
+        throw new TypeError("Alphabet too long");
+      }
+      var BASE_MAP = new Uint8Array(256);
+      for (var j = 0; j < BASE_MAP.length; j++) {
+        BASE_MAP[j] = 255;
+      }
+      for (var i = 0; i < ALPHABET.length; i++) {
+        var x = ALPHABET.charAt(i);
+        var xc = x.charCodeAt(0);
+        if (BASE_MAP[xc] !== 255) {
+          throw new TypeError(x + " is ambiguous");
+        }
+        BASE_MAP[xc] = i;
+      }
+      var BASE = ALPHABET.length;
+      var LEADER = ALPHABET.charAt(0);
+      var FACTOR = Math.log(BASE) / Math.log(256);
+      var iFACTOR = Math.log(256) / Math.log(BASE);
+      function encode3(source) {
+        if (Array.isArray(source) || source instanceof Uint8Array) {
+          source = _Buffer.from(source);
+        }
+        if (!_Buffer.isBuffer(source)) {
+          throw new TypeError("Expected Buffer");
+        }
+        if (source.length === 0) {
+          return "";
+        }
+        var zeroes = 0;
+        var length = 0;
+        var pbegin = 0;
+        var pend = source.length;
+        while (pbegin !== pend && source[pbegin] === 0) {
+          pbegin++;
+          zeroes++;
+        }
+        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
+        var b58 = new Uint8Array(size);
+        while (pbegin !== pend) {
+          var carry = source[pbegin];
+          var i2 = 0;
+          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
+            carry += 256 * b58[it1] >>> 0;
+            b58[it1] = carry % BASE >>> 0;
+            carry = carry / BASE >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          pbegin++;
+        }
+        var it2 = size - length;
+        while (it2 !== size && b58[it2] === 0) {
+          it2++;
+        }
+        var str2 = LEADER.repeat(zeroes);
+        for (; it2 < size; ++it2) {
+          str2 += ALPHABET.charAt(b58[it2]);
+        }
+        return str2;
+      }
+      function decodeUnsafe(source) {
+        if (typeof source !== "string") {
+          throw new TypeError("Expected String");
+        }
+        if (source.length === 0) {
+          return _Buffer.alloc(0);
+        }
+        var psz = 0;
+        var zeroes = 0;
+        var length = 0;
+        while (source[psz] === LEADER) {
+          zeroes++;
+          psz++;
+        }
+        var size = (source.length - psz) * FACTOR + 1 >>> 0;
+        var b256 = new Uint8Array(size);
+        while (source[psz]) {
+          var carry = BASE_MAP[source.charCodeAt(psz)];
+          if (carry === 255) {
+            return;
+          }
+          var i2 = 0;
+          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
+            carry += BASE * b256[it3] >>> 0;
+            b256[it3] = carry % 256 >>> 0;
+            carry = carry / 256 >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          psz++;
+        }
+        var it4 = size - length;
+        while (it4 !== size && b256[it4] === 0) {
+          it4++;
+        }
+        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
+        vch.fill(0, 0, zeroes);
+        var j2 = zeroes;
+        while (it4 !== size) {
+          vch[j2++] = b256[it4++];
+        }
+        return vch;
+      }
+      function decode3(string4) {
+        var buffer = decodeUnsafe(string4);
+        if (buffer) {
+          return buffer;
+        }
+        throw new Error("Non-base" + BASE + " character");
+      }
+      return {
+        encode: encode3,
+        decodeUnsafe,
+        decode: decode3
+      };
+    }
+    module2.exports = base;
+  }
+});
+
+// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
+var require_uuid62 = __commonJS({
+  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
+    "use strict";
+    var uuid3 = (init_esm_node(), __toCommonJS(esm_node_exports));
+    var uuidv1 = uuid3.v1;
+    var uuidv42 = uuid3.v4;
+    var uuidv5 = uuid3.v5;
+    var baseX = require_src();
+    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    var OUTPUT_LENGTH = 22;
+    var UUID_LENGTH = 32;
+    var Buffer2 = global ? global.Buffer : void 0;
+    if (typeof Buffer2 === "undefined") {
+      Buffer2 = require("buffer").Buffer;
+    }
+    var UUID62 = class {
+      constructor() {
+        this.base = base62;
+        this.uuid = uuid3;
+        this.baseX = baseX;
+        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
+        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
+      }
+      get customBase() {
+        return this.base;
+      }
+      set customBase(base) {
+        this.base = base;
+      }
+      get length() {
+        return OUTPUT_LENGTH;
+      }
+      get uuidLength() {
+        return UUID_LENGTH;
+      }
+      v4() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv42.apply(this, args);
+        return this.encode(id);
+      }
+      v5() {
+        const args = Array.prototype.slice.call(arguments);
+        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
+          args[1] = this.decode(args[1]);
+        }
+        const id = uuidv5.apply(this, args);
+        return this.encode(id);
+      }
+      v1() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv1.apply(this, args);
+        return this.encode(id);
+      }
+      encode(input, encoding) {
+        encoding = encoding || "hex";
+        if (typeof input === "string") {
+          input = new Buffer2(input.replace(/-/g, ""), encoding);
+        }
+        return ensureLength(this.base.encode(input), OUTPUT_LENGTH);
+      }
+      decode(input, encoding) {
+        encoding = encoding || "hex";
+        const res = ensureLength(
+          new Buffer2(this.base.decode(input)).toString(encoding),
+          UUID_LENGTH
+        );
+        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
+      }
+    };
+    function ensureLength(input, targetLength) {
+      input = input.toString();
+      return `${"0".repeat(32)}${input}`.slice(-targetLength);
+    }
+    module2.exports = new UUID62();
+  }
+});
 
 // node_modules/.pnpm/kind-of@6.0.3/node_modules/kind-of/index.js
 var require_kind_of = __commonJS({
@@ -3368,7 +3983,7 @@ var require_to_file = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/lib/to-file.js"(exports2, module2) {
     "use strict";
     var typeOf = require_kind_of();
-    var stringify = require_stringify();
+    var stringify2 = require_stringify();
     var utils = require_utils();
     module2.exports = function(file2) {
       if (typeOf(file2) !== "object") {
@@ -3387,7 +4002,7 @@ var require_to_file = __commonJS({
         if (options2 && options2.language) {
           file2.language = options2.language;
         }
-        return stringify(file2, data, options2);
+        return stringify2(file2, data, options2);
       });
       file2.content = utils.toString(file2.content);
       file2.isEmpty = false;
@@ -3421,11 +4036,11 @@ var require_gray_matter = __commonJS({
     var fs3 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
-    var stringify = require_stringify();
+    var stringify2 = require_stringify();
     var excerpt = require_excerpt();
     var engines2 = require_engines();
     var toFile = require_to_file();
-    var parse4 = require_parse();
+    var parse5 = require_parse();
     var utils = require_utils();
     function matter2(input, options2) {
       if (input === "") {
@@ -3477,7 +4092,7 @@ var require_gray_matter = __commonJS({
         file2.empty = file2.content;
         file2.data = {};
       } else {
-        file2.data = parse4(file2.language, file2.matter, opts);
+        file2.data = parse5(file2.language, file2.matter, opts);
       }
       if (closeIndex === len) {
         file2.content = "";
@@ -3499,7 +4114,7 @@ var require_gray_matter = __commonJS({
     matter2.engines = engines2;
     matter2.stringify = function(file2, data, options2) {
       if (typeof file2 === "string") file2 = matter2(file2, options2);
-      return stringify(file2, data, options2);
+      return stringify2(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
       const str2 = fs3.readFileSync(filepath, "utf8");
@@ -3533,6 +4148,96 @@ var require_gray_matter = __commonJS({
 // src/skills/impl-doc/scripts/new_impl_record.ts
 var import_node_fs2 = __toESM(require("node:fs"));
 var import_node_path2 = __toESM(require("node:path"));
+
+// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/stringify.js
+var byteToHex = [];
+for (let i = 0; i < 256; ++i) {
+  byteToHex.push((i + 256).toString(16).slice(1));
+}
+function unsafeStringify(arr, offset = 0) {
+  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+}
+
+// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/rng.js
+var rnds8 = new Uint8Array(16);
+function rng() {
+  return crypto.getRandomValues(rnds8);
+}
+
+// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/v7.js
+var _state = {};
+function v7(options2, buf, offset) {
+  let bytes;
+  if (options2) {
+    bytes = v7Bytes(options2.random ?? options2.rng?.() ?? rng(), options2.msecs, options2.seq, buf, offset);
+  } else {
+    const now = Date.now();
+    const rnds = rng();
+    updateV7State(_state, now, rnds);
+    bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
+  }
+  return buf ?? unsafeStringify(bytes);
+}
+function updateV7State(state, now, rnds) {
+  state.msecs ??= -Infinity;
+  state.seq ??= 0;
+  if (now > state.msecs) {
+    state.seq = v7Sequence(rnds);
+    state.msecs = now;
+  } else {
+    state.seq = state.seq + 1 | 0;
+    if (state.seq === 0) {
+      state.msecs++;
+    }
+  }
+  return state;
+}
+function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
+  if (rnds.length < 16) {
+    throw new Error("Random bytes length must be >= 16");
+  }
+  if (!buf) {
+    buf = new Uint8Array(16);
+    offset = 0;
+  } else {
+    if (offset < 0 || offset + 16 > buf.length) {
+      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+    }
+  }
+  msecs ??= Date.now();
+  seq ??= v7Sequence(rnds);
+  buf[offset++] = msecs / 1099511627776 & 255;
+  buf[offset++] = msecs / 4294967296 & 255;
+  buf[offset++] = msecs / 16777216 & 255;
+  buf[offset++] = msecs / 65536 & 255;
+  buf[offset++] = msecs / 256 & 255;
+  buf[offset++] = msecs & 255;
+  buf[offset++] = 112 | seq >>> 28 & 15;
+  buf[offset++] = seq >>> 20 & 255;
+  buf[offset++] = 128 | seq >>> 14 & 63;
+  buf[offset++] = seq >>> 6 & 255;
+  buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
+  buf[offset++] = rnds[11];
+  buf[offset++] = rnds[12];
+  buf[offset++] = rnds[13];
+  buf[offset++] = rnds[14];
+  buf[offset++] = rnds[15];
+  return buf;
+}
+function v7Sequence(rnds) {
+  return (rnds[6] & 127) << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
+}
+var v7_default = v7;
+
+// src/skills/lib/artifact_id.ts
+var import_uuid62 = __toESM(require_uuid62());
+var ID_PREFIX_PATTERN = /^[A-Z][A-Z0-9]*$/;
+function generateArtifactId(idPrefix) {
+  if (!ID_PREFIX_PATTERN.test(idPrefix)) {
+    throw new Error(`Invalid artifact id prefix: ${idPrefix}`);
+  }
+  return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
+}
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
@@ -3721,7 +4426,7 @@ __export(external_exports, {
   object: () => object,
   optional: () => optional,
   overwrite: () => _overwrite,
-  parse: () => parse3,
+  parse: () => parse4,
   parseAsync: () => parseAsync2,
   partialRecord: () => partialRecord,
   pipe: () => pipe,
@@ -4041,7 +4746,7 @@ __export(core_exports2, {
   isValidJWT: () => isValidJWT,
   locales: () => locales_exports,
   meta: () => meta,
-  parse: () => parse2,
+  parse: () => parse3,
   parseAsync: () => parseAsync,
   prettifyError: () => prettifyError,
   process: () => process2,
@@ -4057,7 +4762,7 @@ __export(core_exports2, {
   toJSONSchema: () => toJSONSchema,
   treeifyError: () => treeifyError,
   util: () => util_exports,
-  version: () => version
+  version: () => version2
 });
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
@@ -4986,7 +5691,7 @@ var _parse = (_Err) => (schema, value, _ctx, _params) => {
   }
   return result.value;
 };
-var parse2 = /* @__PURE__ */ _parse($ZodRealError);
+var parse3 = /* @__PURE__ */ _parse($ZodRealError);
 var _parseAsync = (_Err) => async (schema, value, _ctx, params) => {
   const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -5132,10 +5837,10 @@ var nanoid = /^[a-zA-Z0-9_-]{21}$/;
 var duration = /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/;
 var extendedDuration = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
 var guid = /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
-var uuid = (version2) => {
-  if (!version2)
+var uuid = (version3) => {
+  if (!version3)
     return /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
-  return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version2}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
+  return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version3}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
 };
 var uuid4 = /* @__PURE__ */ uuid(4);
 var uuid6 = /* @__PURE__ */ uuid(6);
@@ -5804,7 +6509,7 @@ var Doc = class {
 };
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
-var version = {
+var version2 = {
   major: 4,
   minor: 4,
   patch: 3
@@ -5816,7 +6521,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
-  inst._zod.version = version;
+  inst._zod.version = version2;
   const checks = [...inst._zod.def.checks ?? []];
   if (inst._zod.traits.has("$ZodCheck")) {
     checks.unshift(inst);
@@ -7778,10 +8483,10 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
       throw new Error("implement() must be called with a function");
     }
     return function(...args) {
-      const parsedArgs = inst._def.input ? parse2(inst._def.input, args) : args;
+      const parsedArgs = inst._def.input ? parse3(inst._def.input, args) : args;
       const result = Reflect.apply(func, this, parsedArgs);
       if (inst._def.output) {
-        return parse2(inst._def.output, result);
+        return parse3(inst._def.output, result);
       }
       return result;
     };
@@ -16215,7 +16920,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, {
 });
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
-var parse3 = /* @__PURE__ */ _parse(ZodRealError);
+var parse4 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
@@ -16278,7 +16983,7 @@ var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   inst.def = def;
   inst.type = def.type;
   Object.defineProperty(inst, "_def", { value: def });
-  inst.parse = (data, params) => parse3(inst, data, params, { callee: inst.parse });
+  inst.parse = (data, params) => parse4(inst, data, params, { callee: inst.parse });
   inst.safeParse = (data, params) => safeParse2(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync2(inst, data, params, { callee: inst.parseAsync });
   inst.safeParseAsync = async (data, params) => safeParseAsync2(inst, data, params);
@@ -18011,10 +18716,10 @@ function fromJSONSchema(schema, params) {
   } catch {
     throw new Error("fromJSONSchema input is not valid JSON (possibly cyclic); use $defs/$ref for recursive schemas");
   }
-  const version2 = detectVersion(normalized, params?.defaultTarget);
+  const version3 = detectVersion(normalized, params?.defaultTarget);
   const defs = normalized.$defs || normalized.definitions || {};
   const ctx = {
-    version: version2,
+    version: version3,
     defs,
     refs: /* @__PURE__ */ new Map(),
     processing: /* @__PURE__ */ new Set(),
@@ -18058,11 +18763,6 @@ var import_gray_matter = __toESM(require_gray_matter());
 // src/skills/lib/document_utils.ts
 function normalizeDir(input) {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
-}
-function detectNaming(files) {
-  if (files.some((file2) => /^\d{4}-.+\.md$/.test(file2))) return "numbered";
-  if (files.some((file2) => /^[a-z0-9][a-z0-9-]+\.md$/.test(file2))) return "slug";
-  return "numbered";
 }
 function slugify2(title, fallback) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
@@ -18292,19 +18992,6 @@ function listFiles(dir, ext) {
   if (!import_node_fs.default.existsSync(dir)) return [];
   return import_node_fs.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).sort();
 }
-function detectNamingForFiles(files, ext) {
-  const numbered = new RegExp(`^\\d{4}-.+\\${ext}$`);
-  const slugOnly = new RegExp(`^[a-z0-9][a-z0-9-]+\\${ext}$`);
-  if (files.some((file2) => numbered.test(file2))) return "numbered";
-  if (files.some((file2) => slugOnly.test(file2))) return "slug";
-  return detectNaming(files.filter((file2) => ext === ".md" || file2.endsWith(ext))) === "slug" ? "slug" : "numbered";
-}
-function nextNumberForFiles(files, ext) {
-  const pattern = new RegExp(`^(\\d{4})-.+\\${ext}$`);
-  const numbers = files.map((file2) => pattern.exec(file2)).filter((match) => Boolean(match)).map((match) => Number(match[1]));
-  if (numbers.length > 0) return Math.max(...numbers) + 1;
-  return files.length + 1;
-}
 function renderTemplate(name, replacements) {
   const templatePath = import_node_path.default.join(__dirname, "../assets/templates", name);
   let content = import_node_fs.default.readFileSync(templatePath, "utf8").trimEnd();
@@ -18386,7 +19073,7 @@ function implementationRecordFrontMatter(options2) {
   const changes = completeChanges(options2.changes);
   return [
     "---",
-    `id: ${quote(`IMPL-${String(options2.number).padStart(4, "0")}`)}`,
+    `id: ${quote(options2.id)}`,
     `type: ${quote("impl")}`,
     `status: ${quote(options2.status)}`,
     `title: ${quote(sanitizeTitle(options2.title))}`,
@@ -18452,12 +19139,8 @@ function buildNewFilePath(options2) {
   const fullDir = import_node_path.default.join(options2.cwd, relativeDir);
   ensureDir(fullDir);
   const ext = options2.kind === "ir" ? ".md" : ".jsonl";
-  const files = listFiles(fullDir, ext);
-  const number4 = nextNumberForFiles(files, ext);
-  const naming = detectNamingForFiles(files, ext);
-  const filename = naming === "slug" ? `${slugify2(options2.title, options2.kind)}${ext}` : `${String(number4).padStart(4, "0")}-${slugify2(options2.title, options2.kind)}${ext}`;
+  const filename = `${slugify2(options2.title, options2.kind)}${ext}`;
   return {
-    number: number4,
     outputPath: import_node_path.default.join(fullDir, filename),
     relativeDir
   };
@@ -18494,7 +19177,7 @@ async function main() {
     const status = args.status || "draft";
     if (!implStatuses.includes(status)) throw new Error(`Invalid impl status: ${status}`);
     const cwd = import_node_path2.default.resolve(args.cwd);
-    const { number: number4, outputPath, relativeDir } = buildNewFilePath({
+    const { outputPath, relativeDir } = buildNewFilePath({
       cwd,
       kind: "ir",
       title: args.title,
@@ -18503,7 +19186,7 @@ async function main() {
     if (import_node_fs2.default.existsSync(outputPath)) throw new Error(`Document already exists: ${posixRelative(cwd, outputPath)}`);
     const date5 = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const content = buildImplementationRecordContent({
-      number: number4,
+      id: generateArtifactId("IMPL"),
       title: args.title,
       status,
       date: date5,
@@ -18527,6 +19210,9 @@ async function main() {
 }
 main();
 /*! Bundled license information:
+
+safe-buffer/index.js:
+  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 
 is-extendable/index.js:
   (*!

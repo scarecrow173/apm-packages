@@ -50,13 +50,13 @@ test("new_impl_record creates markdown record and index", () => {
   );
 
   assert.equal(result.status, 0, result.stderr);
-  const recordPath = path.join(repo, "docs/impl/ir/0001-extract-foo-service.md");
+  const recordPath = path.join(repo, "docs/impl/ir/extract-foo-service.md");
   const indexPath = path.join(repo, "docs/impl/ir/README.md");
   assert.equal(fs.existsSync(recordPath), true);
   assert.equal(fs.existsSync(indexPath), true);
 
   const record = fs.readFileSync(recordPath, "utf8");
-  assert.match(record, /^id: "IMPL-0001"$/m);
+  assert.match(record, /^id: "IMPL-[0-9A-Za-z]{22}"$/m);
   assert.match(record, /^type: "impl"$/m);
   assert.match(record, /^status: "completed"$/m);
   assert.match(record, /^title: "Extract foo service"$/m);
@@ -198,7 +198,7 @@ test("experiment log creation, append, edit, and audit work together", () => {
   );
   assert.equal(created.status, 0, created.stderr);
 
-  const logPath = path.join(repo, "docs/impl/exp/0001-try-foo-service-extraction.jsonl");
+  const logPath = path.join(repo, "docs/impl/exp/try-foo-service-extraction.jsonl");
   assert.equal(fs.existsSync(logPath), true);
   assert.equal(fs.readFileSync(logPath, "utf8"), "");
 
@@ -206,7 +206,7 @@ test("experiment log creation, append, edit, and audit work together", () => {
     "append_experiment_event.js",
     [
       "--file",
-      "docs/impl/exp/0001-try-foo-service-extraction.jsonl",
+      "docs/impl/exp/try-foo-service-extraction.jsonl",
       "--type",
       "hypothesis",
       "--summary",
@@ -226,14 +226,14 @@ test("experiment log creation, append, edit, and audit work together", () => {
   assert.equal(firstEvent.summary, "FooService may simplify BarService");
   assert.equal(firstEvent.implementation, "docs/impl/ir/0001-extract-foo-service.md");
   assert.equal(firstEvent.schema, "experiment_event.v1");
-  assert.equal(firstEvent.experiment, "docs/impl/exp/0001-try-foo-service-extraction.jsonl");
+  assert.equal(firstEvent.experiment, "docs/impl/exp/try-foo-service-extraction.jsonl");
   assert.equal(typeof firstEvent.ts, "string");
 
   const edited = runScript(
     "edit_experiment_log.js",
     [
       "--file",
-      "docs/impl/exp/0001-try-foo-service-extraction.jsonl",
+      "docs/impl/exp/try-foo-service-extraction.jsonl",
       "--seq",
       "1",
       "--set",

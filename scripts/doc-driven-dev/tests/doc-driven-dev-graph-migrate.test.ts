@@ -56,10 +56,10 @@ test("migrate_docs apply writes converted spec and preserves original", () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.existsSync(path.join(repo, "legacy", "payment-spec.md")), true);
-  const target = path.join(repo, "docs", "specs", "0001-payment-spec.md");
+  const target = path.join(repo, "docs", "specs", "payment-spec.md");
   assert.equal(fs.existsSync(target), true);
   const content = fs.readFileSync(target, "utf8");
-  assert.match(content, /^id: "SPEC-0001"$/m);
+  assert.match(content, /^id: "SPEC-[0-9A-Za-z]{22}"$/m);
   assert.match(content, /^type: "spec"$/m);
   assert.match(content, /^status: "draft"$/m);
   assert.match(content, /# Payment Spec/);
@@ -77,8 +77,8 @@ test("migrate_docs split-h1 creates separate discovery files", () => {
   const report = JSON.parse(result.stdout);
   assert.equal(report.applied, true);
   assert.equal(report.migrations.length, 2);
-  assert.equal(fs.existsSync(path.join(repo, "docs", "ideas", "0001-first-idea.md")), true);
-  assert.equal(fs.existsSync(path.join(repo, "docs", "ideas", "0002-second-idea.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "docs", "ideas", "first-idea.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "docs", "ideas", "second-idea.md")), true);
 });
 
 test("migrate_docs skips canonical docs by default", () => {

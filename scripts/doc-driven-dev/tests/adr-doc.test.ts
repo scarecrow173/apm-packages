@@ -54,11 +54,11 @@ test("new_adr creates the default MADR ADR and index in docs/adr", () => {
   const result = runScript("new_adr.js", ["--title", "Adopt MADR"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(fs.existsSync(path.join(repo, "docs/adr/0001-adopt-madr.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "docs/adr/adopt-madr.md")), true);
   assert.equal(fs.existsSync(path.join(repo, "docs/adr/README.md")), true);
 
-  const adr = fs.readFileSync(path.join(repo, "docs/adr/0001-adopt-madr.md"), "utf8");
-  assert.match(adr, /^id: "ADR-0001"$/m);
+  const adr = fs.readFileSync(path.join(repo, "docs/adr/adopt-madr.md"), "utf8");
+  assert.match(adr, /^id: "ADR-[0-9A-Za-z]{22}"$/m);
   assert.match(adr, /^type: "adr"$/m);
   assert.match(adr, /^status: "proposed"$/m);
   assert.match(adr, /^title: "Adopt MADR"$/m);
@@ -83,8 +83,8 @@ test("new_adr creates the default MADR ADR and index in docs/adr", () => {
     assert.match(adr, new RegExp(`^    ${field}: \\[\\]$`, "m"));
   }
   const index = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
-  assert.match(index, /\| ADR-0001 \| Adopt MADR \| proposed \| \[0001-adopt-madr\.md\]\(\.\/0001-adopt-madr\.md\) \|/);
-  assert.match(adr, /^# 1\. Adopt MADR/m);
+  assert.match(index, /\| ADR-[0-9A-Za-z]{22} \| Adopt MADR \| proposed \| \[adopt-madr\.md\]\(\.\/adopt-madr\.md\) \|/);
+  assert.match(adr, /^# Adopt MADR/m);
   assert.match(adr, /## Context and Problem Statement/);
   assert.match(adr, /## Decision Drivers/);
   assert.match(adr, /## Pros and Cons of the Options/);
@@ -364,20 +364,20 @@ test("relate_adr is dry-run by default and writes bidirectional relations", () =
 
   const dryRun = runScript(
     "relate_adr.js",
-    ["--dir", "docs/adr", "--from", "0002-new-decision.md", "--to", "0001-old-decision.md", "--relation", "supersedes"],
+    ["--dir", "docs/adr", "--from", "new-decision.md", "--to", "old-decision.md", "--relation", "supersedes"],
     { cwd: repo },
   );
   assert.equal(dryRun.status, 0, dryRun.stderr);
-  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/adr/0002-new-decision.md"), "utf8"), /0001-old-decision\.md/);
+  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/adr/new-decision.md"), "utf8"), /old-decision\.md/);
 
   const write = runScript(
     "relate_adr.js",
-    ["--dir", "docs/adr", "--from", "0002-new-decision.md", "--to", "0001-old-decision.md", "--relation", "supersedes", "--write"],
+    ["--dir", "docs/adr", "--from", "new-decision.md", "--to", "old-decision.md", "--relation", "supersedes", "--write"],
     { cwd: repo },
   );
   assert.equal(write.status, 0, write.stderr);
-  assert.match(fs.readFileSync(path.join(repo, "docs/adr/0002-new-decision.md"), "utf8"), /0001-old-decision\.md/);
-  assert.match(fs.readFileSync(path.join(repo, "docs/adr/0001-old-decision.md"), "utf8"), /0002-new-decision\.md/);
+  assert.match(fs.readFileSync(path.join(repo, "docs/adr/new-decision.md"), "utf8"), /old-decision\.md/);
+  assert.match(fs.readFileSync(path.join(repo, "docs/adr/old-decision.md"), "utf8"), /new-decision\.md/);
 });
 
 test("check_code_links reports missing Implementation Plan paths", () => {
