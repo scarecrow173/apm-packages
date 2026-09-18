@@ -114,6 +114,7 @@ function listFiles(dir: string, ext: ".md" | ".jsonl"): string[] {
   return fs.readdirSync(dir)
     .filter((file) => file.endsWith(ext))
     .filter((file) => ext !== ".md" || (!/^readme\.md$/i.test(file) && !/^index\.md$/i.test(file)))
+    .filter((file) => !fs.lstatSync(path.join(dir, file)).isSymbolicLink())
     .sort();
 }
 

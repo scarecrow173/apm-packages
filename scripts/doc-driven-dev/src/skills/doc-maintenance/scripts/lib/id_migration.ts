@@ -114,19 +114,28 @@ function walkFiles(baseDir: string, extensions: string[]): string[] {
 }
 
 function canonicalDirs(cwd: string): { dir: string; type: string | null }[] {
+  const realCwd = realpathOf(cwd);
   const seen = new Set<string>();
   const dirs: { dir: string; type: string | null }[] = [];
   for (const type of docTypes) {
     const config = configFor(type);
     for (const candidate of config.dirs) {
-      if (!fs.existsSync(path.join(cwd, candidate))) continue;
+      const full = path.join(cwd, candidate);
+      // A symlinked canonical dir pointing outside the repository must not
+      // be adopted: discover/planRenames would treat outside files as
+      // artifacts and could rename or rewrite them.
+      if (!fs.existsSync(full) || !realpathInside(realCwd, full)) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
       dirs.push({ dir: candidate, type });
     }
   }
-  if (fs.existsSync(path.join(cwd, IMPL_IR_DIR))) dirs.push({ dir: IMPL_IR_DIR, type: "impl" });
-  if (fs.existsSync(path.join(cwd, IMPL_EXP_DIR))) dirs.push({ dir: IMPL_EXP_DIR, type: "impl-exp" });
+  for (const extra of [IMPL_IR_DIR, IMPL_EXP_DIR]) {
+    const full = path.join(cwd, extra);
+    if (fs.existsSync(full) && realpathInside(realCwd, full)) {
+      dirs.push({ dir: extra, type: extra === IMPL_IR_DIR ? "impl" : "impl-exp" });
+    }
+  }
   return dirs;
 }
 
@@ -211,7 +220,8 @@ function resolveExtraRoots(cwd: string, extraRoots: string[], blockers: Blocker[
 
 function contentRoots(cwd: string, dirs: { dir: string }[], extraRoots: string[] = []): string[] {
   const roots: string[] = [];
-  if (fs.existsSync(path.join(cwd, "docs"))) roots.push("docs");
+  const docsRoot = path.join(cwd, "docs");
+  if (fs.existsSync(docsRoot) && realpathInside(realpathOf(cwd), docsRoot)) roots.push("docs");
   for (const { dir } of dirs) {
     if (!isUnderDir(dir, "docs")) roots.push(dir);
   }
@@ -471,6 +481,14 @@ function injectMissingId(content: string, newId: string): string {
   return content.replace(/^(---\r?\n)/, `$1id: "${newId}"\n`);
 }
 
+function isSymlinkPath(p: string): boolean {
+  try {
+    return fs.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 async function regenerateIndexes(
   cwd: string,
   dirs: { dir: string; type: string | null }[],
@@ -481,6 +499,12 @@ async function regenerateIndexes(
     const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
     const readmePath = path.join(cwd, dir, "README.md");
     const relReadme = `${dir}/README.md`;
+    // A symlinked index file (including a broken symlink) is never written
+    // through: the helpers below resolve and write this path directly.
+    if (isSymlinkPath(readmePath)) {
+      results.push({ action: "skipped", path: relReadme });
+      continue;
+    }
     if (dirType === "impl") {
       const result = updateIndexForMarkdownDir(cwd, dir);
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });

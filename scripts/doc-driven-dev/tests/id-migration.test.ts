@@ -790,3 +790,69 @@ test("symlinked experiment logs do not resolve EXP-NNNN", async (t) => {
   );
   assert.equal(fs.readFileSync(path.join(outside, "run.jsonl"), "utf8"), "{}\n");
 });
+
+test("a symlinked canonical doc dir escaping the repository is excluded", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideContent = "---\nid: TASK-0001\ntype: task\nstatus: draft\ntitle: leak\ncreated: 2026-08-13\nupdated: 2026-08-13\nowners: []\nrelations: {}\nmetadata: {}\n---\n# leak\n";
+  fs.writeFileSync(path.join(outside, "0001-leak.md"), outsideContent, "utf8");
+  fs.mkdirSync(path.join(repo, "docs"), { recursive: true });
+  try {
+    fs.symlinkSync(outside, path.join(repo, "docs", "tasks"), "junction");
+  } catch {
+    t.skip("directory symlinks are not permitted on this platform");
+    return;
+  }
+  writeDoc(repo, "docs/specs/0001-checkout.md", legacySpec("SPEC-0001", "checkout"), "# checkout\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.ok(fs.existsSync(path.join(repo, "docs/specs/checkout.md")));
+  assert.ok(!report.renames.some((rename) => rename.from.includes("0001-leak")));
+  assert.ok(!report.rewrites.some((rewrite) => rewrite.file.includes("tasks")));
+  assert.equal(fs.readFileSync(path.join(outside, "0001-leak.md"), "utf8"), outsideContent);
+});
+
+test("a symlinked docs root escaping the repository is excluded", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  fs.mkdirSync(path.join(outside, "tasks"), { recursive: true });
+  const docContent = "---\nid: TASK-0001\ntype: task\nstatus: draft\ntitle: leak\ncreated: 2026-08-13\nupdated: 2026-08-13\nowners: []\nrelations: {}\nmetadata: {}\n---\n# leak\n";
+  const notesContent = "# notes\n\nSee TASK-0001.\n";
+  fs.writeFileSync(path.join(outside, "tasks", "0001-leak.md"), docContent, "utf8");
+  fs.writeFileSync(path.join(outside, "notes.md"), notesContent, "utf8");
+  try {
+    fs.symlinkSync(outside, path.join(repo, "docs"), "junction");
+  } catch {
+    t.skip("directory symlinks are not permitted on this platform");
+    return;
+  }
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.renames, []);
+  assert.deepEqual(report.rewrites, []);
+  assert.equal(fs.readFileSync(path.join(outside, "tasks", "0001-leak.md"), "utf8"), docContent);
+  assert.equal(fs.readFileSync(path.join(outside, "notes.md"), "utf8"), notesContent);
+});
+
+test("a symlinked index file is never written through during regeneration", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideContent = "# outside index\n";
+  fs.writeFileSync(path.join(outside, "index.md"), outsideContent, "utf8");
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  try {
+    fs.symlinkSync(path.join(outside, "index.md"), path.join(repo, "docs/tasks", "README.md"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.ok(fs.existsSync(path.join(repo, "docs/tasks/schema.md")));
+  assert.equal(fs.readFileSync(path.join(outside, "index.md"), "utf8"), outsideContent);
+});

@@ -29860,7 +29860,7 @@ function isExternalLink(value) {
 }
 function listFiles(dir, ext) {
   if (!import_node_fs6.default.existsSync(dir)) return [];
-  return import_node_fs6.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).sort();
+  return import_node_fs6.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs6.default.lstatSync(import_node_path8.default.join(dir, file2)).isSymbolicLink()).sort();
 }
 function normalizeExperimentPath(cwd, filePath) {
   return normalizeFilePath(posixRelative(cwd, import_node_path8.default.resolve(filePath)));
@@ -30123,19 +30123,25 @@ function walkFiles(baseDir, extensions) {
   }).sort();
 }
 function canonicalDirs(cwd) {
+  const realCwd = realpathOf(cwd);
   const seen = /* @__PURE__ */ new Set();
   const dirs = [];
   for (const type of docTypes) {
     const config2 = configFor(type);
     for (const candidate of config2.dirs) {
-      if (!import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, candidate))) continue;
+      const full = import_node_path9.default.join(cwd, candidate);
+      if (!import_node_fs7.default.existsSync(full) || !realpathInside(realCwd, full)) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
       dirs.push({ dir: candidate, type });
     }
   }
-  if (import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, IMPL_IR_DIR))) dirs.push({ dir: IMPL_IR_DIR, type: "impl" });
-  if (import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, IMPL_EXP_DIR2))) dirs.push({ dir: IMPL_EXP_DIR2, type: "impl-exp" });
+  for (const extra of [IMPL_IR_DIR, IMPL_EXP_DIR2]) {
+    const full = import_node_path9.default.join(cwd, extra);
+    if (import_node_fs7.default.existsSync(full) && realpathInside(realCwd, full)) {
+      dirs.push({ dir: extra, type: extra === IMPL_IR_DIR ? "impl" : "impl-exp" });
+    }
+  }
   return dirs;
 }
 function isUnderDir3(child, parent) {
@@ -30206,7 +30212,8 @@ function resolveExtraRoots(cwd, extraRoots, blockers) {
 }
 function contentRoots(cwd, dirs, extraRoots = []) {
   const roots = [];
-  if (import_node_fs7.default.existsSync(import_node_path9.default.join(cwd, "docs"))) roots.push("docs");
+  const docsRoot = import_node_path9.default.join(cwd, "docs");
+  if (import_node_fs7.default.existsSync(docsRoot) && realpathInside(realpathOf(cwd), docsRoot)) roots.push("docs");
   for (const { dir } of dirs) {
     if (!isUnderDir3(dir, "docs")) roots.push(dir);
   }
@@ -30435,12 +30442,23 @@ function injectMissingId(content3, newId) {
   return content3.replace(/^(---\r?\n)/, `$1id: "${newId}"
 `);
 }
+function isSymlinkPath(p) {
+  try {
+    return import_node_fs7.default.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
 async function regenerateIndexes(cwd, dirs, touchedDirs) {
   const results = [];
   for (const dir of [...touchedDirs].sort()) {
     const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
     const readmePath = import_node_path9.default.join(cwd, dir, "README.md");
     const relReadme = `${dir}/README.md`;
+    if (isSymlinkPath(readmePath)) {
+      results.push({ action: "skipped", path: relReadme });
+      continue;
+    }
     if (dirType === "impl") {
       const result = updateIndexForMarkdownDir(cwd, dir);
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
