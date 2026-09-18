@@ -133,10 +133,33 @@ function isUnderDir(child: string, parent: string): boolean {
   return c === p || c.startsWith(`${p}/`);
 }
 
+// Scan roots must not escape the repository through symlinks: a lexical
+// containment check is not enough because statSync follows links. Compare
+// canonical real paths instead so `guides -> /outside` is refused.
+function realpathInside(realCwd: string, absolute: string): boolean {
+  let real: string;
+  try {
+    real = fs.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = path.relative(realCwd, real);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+function realpathOf(cwd: string): string {
+  try {
+    return fs.realpathSync(cwd);
+  } catch {
+    return cwd;
+  }
+}
+
 // Agent-facing documents shipped outside docs/ (root AGENTS.md / README.md and
 // distributed .apm skill documents) carry the same canonical artifact
 // references, so they join the rewrite and unresolved-reference scan scope.
 function distributionDocRoots(cwd: string): string[] {
+  const realCwd = realpathOf(cwd);
   const candidates = [".apm"];
   const packagesDir = path.join(cwd, "packages");
   if (fs.existsSync(packagesDir) && fs.statSync(packagesDir).isDirectory()) {
@@ -146,11 +169,14 @@ function distributionDocRoots(cwd: string): string[] {
   }
   return candidates.filter((candidate) => {
     const full = path.join(cwd, candidate);
-    return fs.existsSync(full) && fs.statSync(full).isDirectory();
+    return fs.existsSync(full)
+      && fs.statSync(full).isDirectory()
+      && realpathInside(realCwd, full);
   });
 }
 
 function resolveExtraRoots(cwd: string, extraRoots: string[], blockers: Blocker[]): string[] {
+  const realCwd = realpathOf(cwd);
   const resolved: string[] = [];
   for (const extra of extraRoots) {
     const absolute = path.resolve(cwd, extra);
@@ -159,19 +185,19 @@ function resolveExtraRoots(cwd: string, extraRoots: string[], blockers: Blocker[
       resolved.push(".");
       continue;
     }
-    if (rel.startsWith("..") || path.isAbsolute(rel)) {
-      blockers.push({
-        code: "invalid-extra-root",
-        file: null,
-        message: `Extra content root escapes the repository: ${extra}`,
-      });
-      continue;
-    }
     if (!fs.existsSync(absolute) || !fs.statSync(absolute).isDirectory()) {
       blockers.push({
         code: "invalid-extra-root",
         file: null,
         message: `Extra content root is not a directory: ${extra}`,
+      });
+      continue;
+    }
+    if (!realpathInside(realCwd, absolute)) {
+      blockers.push({
+        code: "invalid-extra-root",
+        file: null,
+        message: `Extra content root escapes the repository: ${extra}`,
       });
       continue;
     }
@@ -369,6 +395,8 @@ function planRenames(cwd: string, files: DiscoveredFile[], blockers: Blocker[]):
 // Experiment logs carry no artifact id; their canonical reference is the
 // `.jsonl` path. Map each `EXP-NNNN` token to the path the numbered experiment
 // file occupies after renames (or its current path under --keep-filenames).
+// Only `.jsonl` files count: a same-numbered Markdown document in the exp dir
+// is not an experiment log and must not absorb or confuse the reference.
 function experimentTokenTargets(
   files: DiscoveredFile[],
   renames: PlannedRename[],
@@ -376,6 +404,7 @@ function experimentTokenTargets(
   const byNumber = new Map<string, DiscoveredFile[]>();
   for (const file of files) {
     if (file.dir !== IMPL_EXP_DIR || !file.numberedName) continue;
+    if (!file.path.toLowerCase().endsWith(".jsonl")) continue;
     const group = byNumber.get(file.numberedName) || [];
     group.push(file);
     byNumber.set(file.numberedName, group);

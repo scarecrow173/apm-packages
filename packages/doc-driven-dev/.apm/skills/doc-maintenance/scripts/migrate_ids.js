@@ -30141,7 +30141,25 @@ function isUnderDir3(child, parent) {
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
 }
+function realpathInside(realCwd, absolute) {
+  let real;
+  try {
+    real = import_node_fs7.default.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = import_node_path9.default.relative(realCwd, real);
+  return rel === "" || !rel.startsWith("..") && !import_node_path9.default.isAbsolute(rel);
+}
+function realpathOf(cwd) {
+  try {
+    return import_node_fs7.default.realpathSync(cwd);
+  } catch {
+    return cwd;
+  }
+}
 function distributionDocRoots(cwd) {
+  const realCwd = realpathOf(cwd);
   const candidates = [".apm"];
   const packagesDir = import_node_path9.default.join(cwd, "packages");
   if (import_node_fs7.default.existsSync(packagesDir) && import_node_fs7.default.statSync(packagesDir).isDirectory()) {
@@ -30151,10 +30169,11 @@ function distributionDocRoots(cwd) {
   }
   return candidates.filter((candidate) => {
     const full = import_node_path9.default.join(cwd, candidate);
-    return import_node_fs7.default.existsSync(full) && import_node_fs7.default.statSync(full).isDirectory();
+    return import_node_fs7.default.existsSync(full) && import_node_fs7.default.statSync(full).isDirectory() && realpathInside(realCwd, full);
   });
 }
 function resolveExtraRoots(cwd, extraRoots, blockers) {
+  const realCwd = realpathOf(cwd);
   const resolved = [];
   for (const extra of extraRoots) {
     const absolute = import_node_path9.default.resolve(cwd, extra);
@@ -30163,19 +30182,19 @@ function resolveExtraRoots(cwd, extraRoots, blockers) {
       resolved.push(".");
       continue;
     }
-    if (rel.startsWith("..") || import_node_path9.default.isAbsolute(rel)) {
-      blockers.push({
-        code: "invalid-extra-root",
-        file: null,
-        message: `Extra content root escapes the repository: ${extra}`
-      });
-      continue;
-    }
     if (!import_node_fs7.default.existsSync(absolute) || !import_node_fs7.default.statSync(absolute).isDirectory()) {
       blockers.push({
         code: "invalid-extra-root",
         file: null,
         message: `Extra content root is not a directory: ${extra}`
+      });
+      continue;
+    }
+    if (!realpathInside(realCwd, absolute)) {
+      blockers.push({
+        code: "invalid-extra-root",
+        file: null,
+        message: `Extra content root escapes the repository: ${extra}`
       });
       continue;
     }
@@ -30357,6 +30376,7 @@ function experimentTokenTargets(files, renames) {
   const byNumber = /* @__PURE__ */ new Map();
   for (const file2 of files) {
     if (file2.dir !== IMPL_EXP_DIR2 || !file2.numberedName) continue;
+    if (!file2.path.toLowerCase().endsWith(".jsonl")) continue;
     const group = byNumber.get(file2.numberedName) || [];
     group.push(file2);
     byNumber.set(file2.numberedName, group);
