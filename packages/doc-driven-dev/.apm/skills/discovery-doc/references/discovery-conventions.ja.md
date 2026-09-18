@@ -27,19 +27,20 @@ discovery または brainstorm ディレクトリが既にある場合はその�
 デフォルトのファイル名パターン:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 ルール:
 
-- `NNNN` は discovery ディレクトリ内でゼロ埋めした通し番号。
-- タイトルスラグは小文字 ASCII でダッシュ区切り。
+- ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
 - 探索トピックに名前を付けた短い名詞句を優先する。
 - `research.md` や `notes.md` のような曖昧な名前は避ける。
-- 例: `0001-explore-auth-strategy-options.md`,
-  `0002-evaluate-event-bus-alternatives.md`。
+- 例: `explore-auth-strategy-options.md`,
+  `evaluate-event-bus-alternatives.md`。
 
-リポジトリがスラグのみのファイル名を既に使っている場合は、その規約に従います。
+文書の同一性はファイル名やソート位置ではなく front matter の `id` に
+あります。既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
+slug-only の名前を使います。
 
 ## 必須フロントマター
 
@@ -47,7 +48,7 @@ discovery 文書は共有フロントマターを使います。
 
 ```yaml
 ---
-id: "DISC-0001"
+id: "DISC-3QwErTyUiOpAsDfGhJkLzX"
 type: "discovery"
 status: "draft"
 title: "Explore auth strategy options"
@@ -79,7 +80,7 @@ relations:
 
 | フィールド | 必須 | 説明 |
 | --- | --- | --- |
-| `id` | Yes | 安定した文書識別子。常に `DISC-NNNN` 形式。 |
+| `id` | Yes | 安定した文書識別子。`DISC-<22文字Base62>` 形式（UUIDv7由来。従来の `DISC-NNNN` も有効）。 |
 | `type` | Yes | `discovery` 固定。 |
 | `status` | Yes | 現在のライフサイクル状態。 |
 | `title` | Yes | 探索トピックに対応した人間向けタイトル。 |
@@ -178,7 +179,7 @@ discovery 文書をファイル名順の 4 列 Markdown テーブルとして列
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| DISC-0001 | Explore auth strategy options | resolved | [0001-explore-auth-strategy-options.md](0001-explore-auth-strategy-options.md) |
+| DISC-3QwErTyUiOpAsDfGhJkLzX | Explore auth strategy options | resolved | [explore-auth-strategy-options.md](explore-auth-strategy-options.md) |
 
 索引ルール:
 
@@ -195,10 +196,9 @@ discovery 文書をファイル名順の 4 列 Markdown テーブルとして列
 ```text
 docs/discovery/
   auth/
-    0001-explore-auth-strategy-options.md
+    explore-auth-strategy-options.md
   infrastructure/
-    0001-evaluate-event-bus-alternatives.md
+    evaluate-event-bus-alternatives.md
 ```
 
-フラットなディレクトリが見づらくなったときだけ使います。採番は各サブディレクトリ内で
-ローカルに管理します。
+フラットなディレクトリが見づらくなったときだけ使います。

@@ -22,7 +22,7 @@ task、その他のプロジェクト文書の近くに置くためです。
 3. `specs/`
 4. `spec/`
 
-複数の候補がある場合は、番号付き spec ファイルと索引ファイルを持つ
+複数の候補がある場合は、既に spec ファイルと索引ファイルを持つ
 ディレクトリを優先します。検出リストにない明示的なリポジトリ規約がある場合
 だけ `--dir` を使います。
 
@@ -31,21 +31,20 @@ task、その他のプロジェクト文書の近くに置くためです。
 既定のファイル名:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 ルール:
 
-- `NNNN` は spec ディレクトリ内で連番になるゼロ埋め番号です。
-- title slug は小文字 ASCII にし、単語をダッシュで区切ります。
+- ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
 - 機能、ワークフロー、外部から見える挙動を表す短い動詞句または名詞句を
   優先します。
 - `feature.md`, `updates.md`, `misc.md` のような曖昧な名前は避けます。
-- 例: `0001-define-checkout-flow.md`,
-  `0002-add-team-invitations.md`。
+- 例: `define-checkout-flow.md`, `add-team-invitations.md`。
 
-リポジトリが slug-only のファイル名を既に使っている場合は、番号付けを
-導入せず既存規約に従います。
+文書の同一性はファイル名やソート位置ではなく front matter の `id` に
+あります。既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
+slug-only の名前を使います。
 
 ## 必須フロントマター
 
@@ -53,7 +52,7 @@ spec は共通 document front matter を使います。
 
 ```yaml
 ---
-id: "SPEC-0001"
+id: "SPEC-034qPUpBj0VYOqxmFLijD5"
 type: "spec"
 status: "draft"
 title: "Define checkout flow"
@@ -85,7 +84,7 @@ relations:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | 安定した文書 ID。通常は `SPEC-NNNN`。 |
+| `id` | Yes | 安定した文書 ID。`SPEC-<22文字Base62>` 形式（UUIDv7由来。従来の `SPEC-NNNN` も有効）。 |
 | `type` | Yes | `spec` 固定。 |
 | `status` | Yes | 現在のライフサイクル状態。 |
 | `title` | Yes | 文書の意図に合う人間向けタイトル。 |
@@ -182,7 +181,7 @@ spec は計画入力であり、ADR のような不変の決定記録ではあ�
 
 | ID | タイトル | Status | ファイル |
 | --- | --- | --- | --- |
-| SPEC-0001 | Define checkout flow | approved | [0001-define-checkout-flow.md](0001-define-checkout-flow.md) |
+| SPEC-034qPUpBj0VYOqxmFLijD5 | Define checkout flow | approved | [define-checkout-flow.md](define-checkout-flow.md) |
 
 索引ルール:
 
@@ -206,15 +205,16 @@ spec は計画入力であり、ADR のような不変の決定記録ではあ�
 ```text
 docs/specs/
   product/
-    0001-team-invitations.md
+    team-invitations.md
   platform/
-    0001-api-rate-limits.md
+    api-rate-limits.md
   docs/
-    0001-document-lifecycle.md
+    document-lifecycle.md
 ```
 
-番号はカテゴリごとにローカルです。構造が大きくなる前に、カテゴリ分けの方針を
-索引に記録します。フラットなディレクトリが読みにくくなった場合だけ使います。
+ファイル名はディレクトリ内で一意であればよいです。構造が大きくなる前に、
+カテゴリ分けの方針を索引に記録します。フラットなディレクトリが
+読みにくくなった場合だけ使います。
 
 ### 機能別サブディレクトリ
 
@@ -224,10 +224,9 @@ docs/specs/
 ```text
 docs/specs/
   checkout/
-    0001-define-checkout-flow.md
-    0002-checkout-api-contract.md
-    0003-checkout-edge-cases.md
+    define-checkout-flow.md
+    checkout-api-contract.md
+    checkout-edge-cases.md
 ```
 
-まとめて読むべき spec 群がある場合に使います。番号は機能ディレクトリ内で
-ローカルに管理します。
+まとめて読むべき spec 群がある場合に使います。

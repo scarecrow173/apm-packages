@@ -65,7 +65,7 @@ plan は分割します。1 つの plan にまとめるのは、同じクリテ�
    自動で読み込みます。スクリプトを実行できない場合のみ直接開きます。
 
    ```bash
-   node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
+   node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
    ```
 
    スクリプトを実行できない場合は、`assets/templates/plan.ja.md` をコピーし、

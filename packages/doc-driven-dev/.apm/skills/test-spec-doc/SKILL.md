@@ -36,8 +36,8 @@ without a verifiable upstream contract loses its purpose: do not create one.
 
    ```bash
    node scripts/new_test_spec.js --title "Checkout total calculation" \
-     --verifies docs/specs/0001-define-checkout-flow.md \
-     --derives-from docs/designs/0001-checkout-design.md
+     --verifies docs/specs/define-checkout-flow.md \
+     --derives-from docs/designs/checkout-design.md
    ```
 
    `--verifies` may be repeated and each target must resolve to an existing

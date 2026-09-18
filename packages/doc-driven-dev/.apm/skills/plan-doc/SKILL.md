@@ -66,7 +66,7 @@ share the same critical path and the same release intent.
    for you. Only open it directly when the script cannot run.
 
    ```bash
-   node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/0001-define-checkout-flow.md --design docs/designs/0001-design-checkout-orchestration.md
+   node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
    ```
 
    If you cannot run the script, copy `assets/templates/plan.md` and fill it

@@ -129,7 +129,7 @@ Before asking any questions, gather context from the repo:
    Identify the specific files, directories, interfaces, tests, and patterns
    that will be affected by the decision.
 4. Check for ADR references in code and docs.
-   Look for `ADR-NNNN`, ADR filenames, and links to ADR directories in comments,
+   Look for `ADR-...` ids, ADR filenames, and links to ADR directories in comments,
    documentation, PR notes, and issue templates. This reveals which existing
    decisions govern which parts of the codebase.
 5. Note what you found.
@@ -347,7 +347,7 @@ After an ADR is accepted:
 
 1. Turn Implementation Plan items and follow-up consequences into trackable
    tasks.
-2. Reference the ADR in PRs, for example `Implements ADR-0004`.
+2. Reference the ADR in PRs, for example `Implements ADR-1AbCdEfGhIjKlMnOpQrStU`.
 3. Add sparse code references at the main implementation entry points.
 4. Check Verification items after implementation.
 5. Revisit the ADR when its stated revisit conditions fire.

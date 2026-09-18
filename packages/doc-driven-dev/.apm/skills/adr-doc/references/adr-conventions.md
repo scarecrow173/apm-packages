@@ -23,26 +23,26 @@ Detection order used by scripts:
 4. `docs/adrs/`
 5. `decisions/`
 
-When multiple candidates exist, prefer the directory with numbered ADR files and
-an index file.
+When multiple candidates exist, prefer the directory that already contains ADR
+files and an index file.
 
 ## Filenames
 
 Default filename pattern:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 Rules:
 
-- `NNNN` is a zero-padded sequential number local to the ADR directory.
-- The title slug is lowercase ASCII with words separated by dashes.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
 - Prefer a short present-tense verb phrase.
-- Examples: `0001-adopt-adrs.md`, `0002-use-postgresql.md`.
+- Examples: `adopt-adrs.md`, `use-postgresql.md`.
 
-If a repository already uses slug-only filenames, follow that convention instead
-of introducing numbering.
+Document identity lives in the front matter `id`, not in the filename or its
+sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
+documents always use slug-only names.
 
 ## Required Front Matter
 
@@ -50,7 +50,7 @@ Every new ADR created by this package includes YAML front matter:
 
 ```yaml
 ---
-id: "ADR-NNNN"
+id: "ADR-1AbCdEfGhIjKlMnOpQrStU"
 type: "adr"
 status: "proposed"
 title: "Decision title"
@@ -85,7 +85,7 @@ Required fields:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | Stable document identifier, usually `ADR-NNNN`. |
+| `id` | Yes | Stable document identifier in `ADR-<22-char Base62>` form (UUIDv7-derived; legacy `ADR-NNNN` remains valid). |
 | `type` | Yes | Shared document type. Use `adr` for ADRs. |
 | `status` | Yes | Current lifecycle state. |
 | `title` | Yes | Human-readable ADR title matching the decision. |
@@ -150,14 +150,14 @@ relations:
   source:
     - "https://example.com/source"
   implemented-by:
-    - "../plans/0002-implement-event-driven-architecture.md"
+    - "../plans/implement-event-driven-architecture.md"
   supersedes:
-    - "0003-use-rest-api.md"
+    - "use-rest-api.md"
   superseded-by: []
   related:
-    - "0007-adopt-event-driven-architecture.md"
+    - "adopt-event-driven-architecture.md"
   refines:
-    - "0005-service-boundaries.md"
+    - "service-boundaries.md"
   references:
     - "https://example.com/background"
 ```
@@ -210,13 +210,13 @@ List ADRs as a Markdown table, in filename order, with these four columns:
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| ADR-0001 | Adopt ADRs | accepted | [0001-adopt-adrs.md](0001-adopt-adrs.md) |
+| ADR-1AbCdEfGhIjKlMnOpQrStU | Adopt ADRs | accepted | [adopt-adrs.md](adopt-adrs.md) |
 
 Index rules:
 
 - Use exactly these four columns: `ID`, `Title`, `Status`, `File`. Take `ID`,
   `Title`, and `Status` from front matter when present. If older ADRs lack
-  `id` or `title`, derive `ID` from the filename number (`ADR-NNNN`) and
+  `id` or `title`, derive `ID` from a legacy filename number (`ADR-NNNN`) and
   `Title` from the H1 heading. The `File` column is a relative link within the
   index directory. Write `—` when a value is missing.
 - Sort rows by filename in ascending order.
@@ -235,15 +235,15 @@ area or team:
 ```text
 docs/adr/
   backend/
-    0001-use-postgresql.md
+    use-postgresql.md
   frontend/
-    0001-use-react.md
+    use-react.md
   infrastructure/
-    0001-use-terraform.md
+    use-terraform.md
 ```
 
-Numbers are local to each category. Document the categorization scheme in the
-index before the structure grows.
+Filenames need to be unique only within their directory. Document the
+categorization scheme in the index before the structure grows.
 
 ### Feature subdirectories
 
@@ -253,9 +253,9 @@ multiple related architectural decisions:
 ```text
 docs/adr/
   checkout/
-    0001-payment-provider-selection.md
-    0002-checkout-session-storage.md
+    payment-provider-selection.md
+    checkout-session-storage.md
 ```
 
 Use this pattern when the decisions are tightly scoped to one feature and are
-best reviewed together. Keep numbering local to the feature directory.
+best reviewed together.

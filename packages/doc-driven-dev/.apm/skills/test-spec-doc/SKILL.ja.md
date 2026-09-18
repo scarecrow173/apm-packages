@@ -34,8 +34,8 @@ test spec を作成するには、少なくとも 1 つの upstream document を
 
    ```bash
    node scripts/new_test_spec.js --title "Checkout total calculation" \
-     --verifies docs/specs/0001-define-checkout-flow.md \
-     --derives-from docs/designs/0001-checkout-design.md
+     --verifies docs/specs/define-checkout-flow.md \
+     --derives-from docs/designs/checkout-design.md
    ```
 
    `--verifies` は繰り返し指定でき、各 target はパスまたは ID で

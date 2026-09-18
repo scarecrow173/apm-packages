@@ -18,7 +18,7 @@ license: MIT
 3. 詳細設計文書を作成する。
 
    ```bash
-   node scripts/new_design.js --title "Design checkout orchestration" --from docs/specs/0001-define-checkout-flow.md --from docs/adr/0003-checkout-runtime.md
+   node scripts/new_design.js --title "Design checkout orchestration" --from docs/specs/define-checkout-flow.md --from docs/adr/checkout-runtime.md
    ```
 
 4. relation を記録する。
@@ -36,7 +36,7 @@ license: MIT
 
 ```yaml
 ---
-id: "DESIGN-0001"
+id: "DESIGN-2XyZaBcDeFgHiJkLmNoPqR"
 type: "design"
 status: "draft"
 title: "Design checkout orchestration"
@@ -69,7 +69,7 @@ relations:
 ## Directory Contract
 
 - `docs/designs/overview.md`: 全体設計の入口。
-- `docs/designs/0001-<slug>.md` 以降: 詳細設計。
+- `docs/designs/<slug>.md` 以降: 詳細設計。
 - `docs/designs/README.md`: スクリプトが更新する索引。
 
 閲覧順序は `overview.md` -> 詳細設計です。

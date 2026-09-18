@@ -61,7 +61,7 @@ Phase 5 では task 開始時に in-progress の Implementation Record を作成
 Experiment Log の JSONL は `append_experiment_event` または `edit_experiment_log` だけで更新する。
 
 ```bash
-node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/0003-implement-foo-service.md --status "in-progress"
+node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/implement-foo-service.md --status "in-progress"
 ```
 
 ### Experiment Log の作成
@@ -71,14 +71,14 @@ node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/
 **読み込まないもの**: `assets/templates/implementation-record.md`。
 
 ```bash
-node scripts/new_experiment_log.js --title "Try foo service extraction" --task docs/tasks/0003-implement-foo-service.md
+node scripts/new_experiment_log.js --title "Try foo service extraction" --task docs/tasks/implement-foo-service.md
 ```
 
 ### イベントの追記
 
 ```bash
 node scripts/append_experiment_event.js \
-  --file docs/impl/exp/0001-try-foo-service-extraction.jsonl \
+  --file docs/impl/exp/try-foo-service-extraction.jsonl \
   --type hypothesis \
   --summary "FooService に分離すると BarService の責務を単純化できる可能性がある"
 ```
@@ -87,9 +87,9 @@ node scripts/append_experiment_event.js \
 
 ```bash
 node scripts/edit_experiment_log.js \
-  --file docs/impl/exp/0001-try-foo-service-extraction.jsonl \
+  --file docs/impl/exp/try-foo-service-extraction.jsonl \
   --seq 4 \
-  --set implementation=docs/impl/ir/0001-extract-foo-service.md
+  --set implementation=docs/impl/ir/extract-foo-service.md
 ```
 
 ### 完了前の監査
