@@ -229,9 +229,10 @@ discover し、各 legacy id を新しい id へ map し（`slug.md`/`slug.ja.md
 experiment の `.jsonl` path を書き換え、番号付きファイルを、連鎖する
 rename 先を上書きしない 2 段階 move で rename し、generated index を
 再生成して validate します。blocker — sibling でない複数ファイル間の
-legacy id 重複、未解決の legacy 参照、rename 先の衝突、番号付き文書の
-front matter 欠落または parse 失敗、不明な document type、dirty な Git
-worktree — が 1 つでもあれば、変更を行う前に停止します。
+legacy id 重複、未解決の legacy 参照、rename 先または一時
+`.migrate-tmp` path の衝突、番号付き文書の front matter 欠落または
+parse 失敗、不明な document type、dirty な Git worktree — が 1 つでも
+あれば、変更を行う前に停止します。
 `--allow-dirty` は worktree チェックだけを回避し、`--keep-filenames`
 は id を書き換えつつ番号付きファイル名を保持します。`--apply` 後は残存
 legacy id、重複 id、未解決参照、doc-suite audit error を再検査し、

@@ -235,8 +235,9 @@ fields, metadata, body text, index tables, and experiment `.jsonl` paths, then
 rename numbered files via a two-phase move that cannot clobber chained rename
 targets, regenerate generated indexes, and validate. Any blocker — duplicate
 legacy id across non-sibling files, unresolved legacy reference, rename-target
-collision, unparseable or missing front matter on a numbered document, unknown
-document type, or a dirty Git worktree — stops the run before any mutation.
+collision (target or temporary `.migrate-tmp` path), unparseable or missing
+front matter on a numbered document, unknown document type, or a dirty Git
+worktree — stops the run before any mutation.
 `--allow-dirty` bypasses only the worktree check; `--keep-filenames` rewrites
 ids but preserves numbered filenames. After `--apply`, the command re-checks
 for remaining legacy ids, duplicate ids, unresolved references, and doc-suite

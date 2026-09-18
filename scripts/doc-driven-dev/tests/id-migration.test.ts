@@ -309,6 +309,44 @@ test("rename chains never clobber existing files", async () => {
   assert.ok(!fs.existsSync(path.join(repo, "docs/tasks/0001-0002-foo.md")));
 });
 
+test("secondary canonical dir regenerates its index with the correct type", async () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/specs/README.md"),
+    "# SPEC Documents\n\n<!-- doc-suite:generated-index -->\n\nDirectory: `docs/specs`\n\n| ID | Title | Status | File |\n| --- | --- | --- | --- |\n",
+    "utf8",
+  );
+  writeDoc(repo, "specs/0001-checkout.md", legacySpec("SPEC-0001", "checkout"), "# checkout\n");
+  fs.writeFileSync(
+    path.join(repo, "specs/README.md"),
+    "# SPEC Documents\n\n<!-- doc-suite:generated-index -->\n\nDirectory: `specs`\n\n| ID | Title | Status | File |\n| --- | --- | --- | --- |\n| SPEC-0001 | checkout | approved | [0001-checkout.md](./0001-checkout.md) |\n",
+    "utf8",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  const index = fs.readFileSync(path.join(repo, "specs/README.md"), "utf8");
+  assert.ok(index.includes("SPEC Documents"));
+  assert.ok(index.includes("checkout.md"));
+  assert.ok(!index.includes("DISC Documents"));
+  assert.ok(!index.includes("SPEC-0001"));
+});
+
+test("existing migrate-temp path blocks before mutation", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  fs.writeFileSync(path.join(repo, "docs/tasks/0001-schema.md.migrate-tmp"), "leftover", "utf8");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.ok(report.blockers.some((blocker) => blocker.code === "rename-temp-collision"));
+  assert.equal(report.ok, false);
+  assert.equal(fs.readFileSync(path.join(repo, "docs/tasks/0001-schema.md.migrate-tmp"), "utf8"), "leftover");
+  assert.ok(fs.existsSync(path.join(repo, "docs/tasks/0001-schema.md")));
+});
+
 test("post-apply audit errors mark the report as failed", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/impl/ir/0001-rec.md", {
