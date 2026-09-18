@@ -18933,6 +18933,9 @@ function docDir(cwd, type, explicitDir) {
 function docFiles(dir) {
   return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
 }
+function isExternalLink(value) {
+  return /^(https?:|mailto:)/i.test(value);
+}
 function parseDoc(content) {
   try {
     const parsed = (0, import_gray_matter.default)(content);
@@ -18953,6 +18956,26 @@ function isForeignDocType(typeValue, expected, relativeDir) {
   if (!docTypes.includes(typeValue)) return false;
   const normalized = normalizeDir(relativeDir);
   return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+}
+function formatIssuePath(pathParts) {
+  return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
+}
+function relationMap(content) {
+  const data = parseDoc(content).data;
+  const rawRelations = data.relations;
+  const result = Object.fromEntries(relationFields.map((field) => [field, []]));
+  if (!rawRelations || typeof rawRelations !== "object" || Array.isArray(rawRelations)) return result;
+  const raw = rawRelations;
+  for (const field of relationFields) {
+    const value = raw[field];
+    if (Array.isArray(value)) result[field] = value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
+    else if (typeof value === "string" && value.trim()) result[field] = [value.trim()];
+  }
+  return result;
+}
+function relationLinks(content) {
+  const relations = relationMap(content);
+  return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
 }
 async function titleFromDocument(content, fallback) {
   const parsed = parseDoc(content);
@@ -19015,11 +19038,174 @@ function walkMarkdownFiles(baseDir) {
     return isMarkdownSource(fullPath) ? [fullPath] : [];
   }).sort();
 }
+function resolvesLocalTarget(cwd, fromFile, target) {
+  const candidates = [
+    import_node_path2.default.resolve(cwd, target),
+    import_node_path2.default.resolve(import_node_path2.default.dirname(fromFile), target)
+  ];
+  return candidates.some((candidate) => import_node_fs2.default.existsSync(candidate));
+}
+function relationValues(value) {
+  if (Array.isArray(value)) {
+    return value.filter((entry) => typeof entry === "string" && entry.trim().length > 0);
+  }
+  if (typeof value === "string" && value.trim().length > 0) return [value];
+  return [];
+}
+function resolveDocumentReference(cwd, target, fromDir) {
+  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+    const candidate = import_node_path2.default.resolve(base, target);
+    if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return candidate;
+  }
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = import_node_path2.default.join(cwd, dirName);
+      if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) continue;
+      for (const file2 of docFiles(dir)) {
+        const fullPath = import_node_path2.default.join(dir, file2);
+        const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === target) return fullPath;
+      }
+    }
+  }
+  return null;
+}
+function docTypeOfFile(filePath) {
+  const parsed = parseDoc(import_node_fs2.default.readFileSync(filePath, "utf8"));
+  return typeof parsed.data.type === "string" ? parsed.data.type : null;
+}
+async function auditDocuments(cwd, type, explicitDir) {
+  const config2 = configFor(type);
+  const relativeDir = docDir(cwd, type, explicitDir);
+  const dir = import_node_path2.default.join(cwd, relativeDir);
+  const files = docFiles(dir);
+  const findings = [];
+  if (type === "design") {
+    const overviewPath = import_node_path2.default.join(dir, "overview.md");
+    if (!import_node_fs2.default.existsSync(overviewPath)) {
+      findings.push({
+        severity: "error",
+        file: null,
+        code: "missing-overview",
+        message: "Missing required docs/designs/overview.md"
+      });
+    }
+  }
+  const inScopeFiles = [];
+  for (const file2 of files) {
+    const fullPath = import_node_path2.default.join(dir, file2);
+    const content = import_node_fs2.default.readFileSync(fullPath, "utf8");
+    const parsed = parseDoc(content);
+    if (parsed.error) {
+      findings.push({
+        severity: "error",
+        file: file2,
+        code: "unparseable-front-matter",
+        message: `Front matter is not valid YAML: ${parsed.error}`
+      });
+      continue;
+    }
+    const data = parsed.data;
+    if (isForeignDocType(data.type, type, relativeDir)) continue;
+    inScopeFiles.push(file2);
+    const schemaResult = frontMatterSchema.safeParse(data);
+    if (!schemaResult.success) {
+      for (const issue2 of schemaResult.error.issues) {
+        findings.push({ severity: "error", file: file2, code: "invalid-front-matter", message: `Invalid front matter ${formatIssuePath(issue2.path)}: ${issue2.message}` });
+      }
+    }
+    if (data.type !== type) {
+      findings.push({ severity: "error", file: file2, code: "invalid-type", message: `Expected type ${type}` });
+    }
+    if (typeof data.status === "string" && !config2.statusValues.includes(data.status)) {
+      findings.push({ severity: "error", file: file2, code: "invalid-status", message: `Invalid ${type} status: ${data.status}` });
+    }
+    if (type === "test-spec") {
+      const verifies = relationValues(data.relations?.verifies);
+      if (verifies.length === 0) {
+        findings.push({
+          severity: "warning",
+          file: file2,
+          code: "test-spec-missing-verifies",
+          message: "Test spec has no relations.verifies target (TEST-SPEC-DOC-GATE-001)"
+        });
+      }
+      for (const target of verifies) {
+        const resolved = resolveDocumentReference(cwd, target, import_node_path2.default.dirname(fullPath));
+        if (!resolved) continue;
+        const targetType = docTypeOfFile(resolved);
+        if (targetType && !["spec", "design", "adr"].includes(targetType)) {
+          findings.push({
+            severity: "warning",
+            file: file2,
+            code: "test-spec-invalid-verifies-target",
+            message: `Test spec verifies target resolves to type "${targetType}", expected spec, design, or adr: ${target}`
+          });
+        }
+      }
+    }
+    if (type === "plan" && typeof data.status === "string" && ["approved", "in-progress", "completed"].includes(data.status)) {
+      const verifiedBy = relationValues(data.relations?.["verified-by"]);
+      const linked = verifiedBy.some((target) => {
+        const resolved = resolveDocumentReference(cwd, target, import_node_path2.default.dirname(fullPath));
+        return resolved !== null && docTypeOfFile(resolved) === "test-spec";
+      });
+      const skipped = typeof data["test-spec-skip"] === "string" && data["test-spec-skip"].trim().length > 0;
+      if (!linked && !skipped) {
+        findings.push({
+          severity: "warning",
+          file: file2,
+          code: "plan-missing-test-spec-evidence",
+          message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason"
+        });
+      }
+    }
+    for (const relation of relationLinks(content)) {
+      if (isExternalLink(relation.target)) continue;
+      if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
+        findings.push({
+          severity: "warning",
+          file: file2,
+          code: "broken-relation-link",
+          message: `Relation ${relation.field} points to missing target: ${relation.target}`
+        });
+      }
+    }
+  }
+  const indexPath = ["README.md", "index.md"].map((name) => import_node_path2.default.join(dir, name)).find((candidate) => import_node_fs2.default.existsSync(candidate));
+  if (!indexPath) {
+    findings.push({ severity: "warning", file: null, code: "missing-index", message: `Missing ${type} index README.md or index.md` });
+  } else {
+    const index = import_node_fs2.default.readFileSync(indexPath, "utf8");
+    for (const file2 of inScopeFiles) {
+      if (!index.includes(file2)) findings.push({ severity: "warning", file: file2, code: "index-missing-entry", message: `Index does not link ${file2}` });
+    }
+    if (type === "design" && !index.includes("overview.md")) {
+      findings.push({
+        severity: "warning",
+        file: "overview.md",
+        code: "index-missing-overview",
+        message: "Index does not link overview.md"
+      });
+    }
+  }
+  return { directory: relativeDir, files: files.length, findings };
+}
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
 var import_node_fs3 = __toESM(require("node:fs"));
 var import_node_path3 = __toESM(require("node:path"));
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
+var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
+var implementationRecordSections = [
+  "## Summary",
+  "## Context",
+  "## Implementation",
+  "## Related Experiments",
+  "## Validation",
+  "## Risks",
+  "## Follow-ups"
+];
 var changeEntrySchema2 = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -19053,9 +19239,21 @@ var experimentEventBaseSchema = external_exports.object({
   type: external_exports.string().min(1),
   ts: external_exports.string().min(1)
 }).passthrough();
+function posixRelative(from, to) {
+  return import_node_path3.default.relative(from, to).replace(/\\/g, "/");
+}
+function normalizeFilePath(input) {
+  return input.replace(/\\/g, "/");
+}
+function isExternalLink2(value) {
+  return /^(https?:|mailto:)/i.test(value);
+}
 function listFiles(dir, ext) {
   if (!import_node_fs3.default.existsSync(dir)) return [];
   return import_node_fs3.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).sort();
+}
+function normalizeExperimentPath(cwd, filePath) {
+  return normalizeFilePath(posixRelative(cwd, import_node_path3.default.resolve(filePath)));
 }
 function writeImplIndex(indexPath, content, legacyTitle) {
   const existing = import_node_fs3.default.existsSync(indexPath) ? import_node_fs3.default.readFileSync(indexPath, "utf8") : null;
@@ -19112,6 +19310,172 @@ ${body}
 `,
     "Experiment Logs"
   );
+}
+function resolvesLocalTarget2(cwd, fromFile, target) {
+  const candidates = [
+    import_node_path3.default.resolve(cwd, target),
+    import_node_path3.default.resolve(import_node_path3.default.dirname(fromFile), target)
+  ];
+  return candidates.some((candidate) => import_node_fs3.default.existsSync(candidate));
+}
+function relationLinks2(relations) {
+  return relationFields.flatMap((field) => {
+    const targets = relations[field];
+    return Array.isArray(targets) ? targets.map((target) => ({ field, target: String(target) })) : [];
+  });
+}
+function auditImplementationRecords(cwd, relativeDir) {
+  const dir = import_node_path3.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".md");
+  const findings = [];
+  for (const file2 of files) {
+    const fullPath = import_node_path3.default.join(dir, file2);
+    const content = import_node_fs3.default.readFileSync(fullPath, "utf8");
+    const parsed = parseDoc(content);
+    if (parsed.error) {
+      findings.push({
+        code: "unparseable-front-matter",
+        file: file2,
+        message: `Front matter is not valid YAML: ${parsed.error}`,
+        severity: "error"
+      });
+      continue;
+    }
+    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) continue;
+    const schemaResult = implementationRecordSchema.safeParse(parsed.data);
+    if (!schemaResult.success) {
+      for (const issue2 of schemaResult.error.issues) {
+        findings.push({
+          code: "invalid-front-matter",
+          file: file2,
+          message: `Invalid front matter ${issue2.path.join(".") || "$"}: ${issue2.message}`,
+          severity: "error"
+        });
+      }
+      continue;
+    }
+    const data = schemaResult.data;
+    for (const relation of relationLinks2(data.relations)) {
+      if (isExternalLink2(relation.target)) continue;
+      if (!resolvesLocalTarget2(cwd, fullPath, relation.target)) {
+        findings.push({
+          code: "broken-relation-link",
+          file: file2,
+          message: `Relation ${relation.field} points to missing target: ${relation.target}`,
+          severity: "warning"
+        });
+      }
+    }
+    for (const experimentPath of [...data.metadata.experiments.adopted, ...data.metadata.experiments.rejected]) {
+      if (!resolvesLocalTarget2(cwd, fullPath, experimentPath)) {
+        findings.push({
+          code: "missing-experiment-link",
+          file: file2,
+          message: `Experiment reference points to missing target: ${experimentPath}`,
+          severity: "warning"
+        });
+      }
+    }
+    for (const section of implementationRecordSections) {
+      if (!parsed.body.includes(section)) {
+        findings.push({
+          code: "missing-section",
+          file: file2,
+          message: `Missing required section: ${section.replace(/^##\s+/, "")}`,
+          severity: "error"
+        });
+      }
+    }
+  }
+  const indexPath = import_node_path3.default.join(dir, "README.md");
+  if (!import_node_fs3.default.existsSync(indexPath)) {
+    findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+  }
+  return { directory: relativeDir, files: files.length, findings };
+}
+function auditExperimentLogs(cwd, relativeDir) {
+  const dir = import_node_path3.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".jsonl");
+  const findings = [];
+  for (const file2 of files) {
+    const fullPath = import_node_path3.default.join(dir, file2);
+    const content = import_node_fs3.default.readFileSync(fullPath, "utf8");
+    const lines = content.split(/\r?\n/).filter((line) => line.trim());
+    let previousSeq = 0;
+    const seen = /* @__PURE__ */ new Set();
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      let parsed;
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        findings.push({
+          code: "invalid-json",
+          file: file2,
+          line: index + 1,
+          message: "Line is not valid JSON",
+          severity: "error"
+        });
+        continue;
+      }
+      const baseResult = experimentEventBaseSchema.safeParse(parsed);
+      if (!baseResult.success) {
+        findings.push({
+          code: "invalid-event-shape",
+          file: file2,
+          line: index + 1,
+          message: `Invalid event shape: ${baseResult.error.issues.map((issue2) => issue2.message).join(", ")}`,
+          severity: "error"
+        });
+        continue;
+      }
+      if (parsed.schema !== "experiment_event.v1") {
+        findings.push({
+          code: "invalid-event-schema",
+          file: file2,
+          line: index + 1,
+          message: `Unexpected schema: ${String(parsed.schema)}`,
+          severity: "error"
+        });
+      }
+      if (!experimentEventTypes.includes(parsed.type)) {
+        findings.push({
+          code: "invalid-event-type",
+          file: file2,
+          line: index + 1,
+          message: `Invalid event type: ${String(parsed.type)}`,
+          severity: "error"
+        });
+      }
+      const expectedPath = normalizeExperimentPath(cwd, fullPath);
+      if (parsed.experiment !== expectedPath) {
+        findings.push({
+          code: "experiment-path-mismatch",
+          file: file2,
+          line: index + 1,
+          message: `Experiment path mismatch: expected ${expectedPath}`,
+          severity: "error"
+        });
+      }
+      const seq = parsed.seq;
+      if (seen.has(seq) || seq <= previousSeq) {
+        findings.push({
+          code: "non-monotonic-seq",
+          file: file2,
+          line: index + 1,
+          message: `Sequence must be unique and strictly increasing: ${seq}`,
+          severity: "error"
+        });
+      }
+      seen.add(seq);
+      previousSeq = seq;
+    }
+  }
+  const indexPath = import_node_path3.default.join(dir, "README.md");
+  if (!import_node_fs3.default.existsSync(indexPath)) {
+    findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+  }
+  return { directory: relativeDir, files: files.length, findings };
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/id_migration.ts
@@ -19304,17 +19668,16 @@ function injectMissingId(content, newId) {
 }
 async function regenerateIndexes(cwd, dirs, touchedDirs) {
   const results = [];
-  for (const { dir, type } of [...touchedDirs].sort().map(
-    (touched) => dirs.find((candidate) => candidate.dir === touched) || { dir: touched, type: null }
-  )) {
+  for (const dir of [...touchedDirs].sort()) {
+    const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
     const readmePath = import_node_path4.default.join(cwd, dir, "README.md");
     const relReadme = `${dir}/README.md`;
-    if (type === "impl") {
+    if (dirType === "impl") {
       const result = updateIndexForMarkdownDir(cwd, dir);
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
       continue;
     }
-    if (type === "impl-exp") {
+    if (dirType === "impl-exp") {
       const result = updateIndexForExperimentDir(cwd, dir);
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
       continue;
@@ -19328,13 +19691,19 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
       results.push({ action: "hand-curated-rewritten", path: relReadme });
       continue;
     }
-    const indexType = type || "discovery";
-    import_node_fs4.default.writeFileSync(readmePath, await buildIndex(cwd, indexType, dir), "utf8");
+    const indexTypes = dirType && docTypes.includes(dirType) ? docTypes.filter((type) => {
+      const config2 = configFor(type);
+      const resolved = config2.dirs.find((candidate) => import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, candidate))) || config2.dir;
+      return resolved === dir;
+    }) : [dirType].filter((type) => Boolean(type));
+    for (const indexType of indexTypes.length > 0 ? indexTypes : ["discovery"]) {
+      import_node_fs4.default.writeFileSync(readmePath, await buildIndex(cwd, indexType, dir), "utf8");
+    }
     results.push({ action: "regenerated", path: relReadme });
   }
   return results;
 }
-function validate2(cwd, dirs, prefixes) {
+async function validate2(cwd, dirs, prefixes) {
   const remainingLegacyIds = /* @__PURE__ */ new Set();
   const idFiles = /* @__PURE__ */ new Map();
   for (const { dir } of dirs) {
@@ -19371,7 +19740,16 @@ function validate2(cwd, dirs, prefixes) {
       unresolved.add(token);
     }
   }
+  const auditErrors = [];
+  for (const { dir, type } of dirs) {
+    const findings = type === "impl" ? auditImplementationRecords(cwd, dir).findings : type === "impl-exp" ? auditExperimentLogs(cwd, dir).findings : type ? (await auditDocuments(cwd, type, dir)).findings : [];
+    for (const finding of findings) {
+      if (finding.severity !== "error") continue;
+      auditErrors.push({ code: finding.code, file: finding.file, message: finding.message });
+    }
+  }
   return {
+    auditErrors,
     duplicateIds: [...new Set(duplicateIds)].sort(),
     remainingLegacyIds: [...remainingLegacyIds].sort(),
     unresolvedLegacyRefs: [...unresolved].sort()
@@ -19447,7 +19825,7 @@ async function migrateArtifactIds(options2) {
     legacyId,
     newId
   }));
-  const emptyValidation = { duplicateIds: [], remainingLegacyIds: [], unresolvedLegacyRefs: [] };
+  const emptyValidation = { auditErrors: [], duplicateIds: [], remainingLegacyIds: [], unresolvedLegacyRefs: [] };
   if (blockers.length > 0) {
     return {
       applied: false,
@@ -19491,7 +19869,7 @@ async function migrateArtifactIds(options2) {
     ]);
     indexes.push(...await regenerateIndexes(cwd, dirs, touchedDirs));
   }
-  const validation = options2.apply ? validate2(cwd, dirs, prefixes) : emptyValidation;
+  const validation = options2.apply ? await validate2(cwd, dirs, prefixes) : emptyValidation;
   return {
     applied: Boolean(options2.apply),
     blockers,
