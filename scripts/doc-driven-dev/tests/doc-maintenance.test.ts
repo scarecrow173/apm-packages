@@ -227,6 +227,113 @@ test("fix-link-case normalizes path spelling on case-insensitive filesystems", (
   assert.match(content, /\(other\.md\)/);
 });
 
+function writeTypedDoc(root: string, relPath: string, id: string, type: string, status: string, title: string) {
+  writeFile(root, relPath, [
+    "---",
+    `id: ${id}`,
+    `type: ${type}`,
+    `status: ${status}`,
+    `title: "${title}"`,
+    'created: "2026-01-01"',
+    'updated: "2026-01-01"',
+    "owners: [team]",
+    "relations: {}",
+    "---",
+    `# ${title}`,
+    "",
+  ].join("\n"));
+}
+
+test("shared-directory index is rebuilt once and covers all resident types", () => {
+  const repo = tempRepo();
+  writeTypedDoc(repo, "docs/discovery/idea-note.md", "BRAINSTORM-AAA", "brainstorm", "capturing", "Idea note");
+  writeTypedDoc(repo, "docs/discovery/research.md", "DISC-AAA", "discovery", "draft", "Research");
+  writeFile(repo, "docs/discovery/README.md", [
+    "# DISC Documents",
+    "",
+    "<!-- doc-suite:generated-index -->",
+    "",
+    "Directory: `docs/discovery`",
+    "",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    "| DISC-AAA | Research | draft | [research.md](./research.md) |",
+    "",
+  ].join("\n"));
+
+  const plan = JSON.parse(runScript("doc_maintenance.js", ["plan", "--type", "all", "--json"], repo).stdout);
+  const rebuilds = plan.actions.filter(
+    (action: { kind: string; path: string }) => action.kind === "rebuild-index" && action.path === "docs/discovery/README.md",
+  );
+  assert.equal(rebuilds.length, 1);
+  assert.deepEqual(rebuilds[0].scopeTypes, ["brainstorm", "discovery"]);
+
+  const apply = runScript("doc_maintenance.js", ["apply", "--type", "all"], repo);
+  assert.equal(apply.status, 0, apply.stderr);
+  const content = fs.readFileSync(path.join(repo, "docs/discovery/README.md"), "utf8");
+  assert.match(content, /idea-note\.md/);
+  assert.match(content, /research\.md/);
+
+  const second = JSON.parse(runScript("doc_maintenance.js", ["plan", "--type", "all", "--json"], repo).stdout);
+  assert.ok(!second.actions.some(
+    (action: { kind: string; path: string }) => action.kind === "rebuild-index" && action.path === "docs/discovery/README.md",
+  ));
+});
+
+test("scoped rebuild keeps sibling-type rows in a shared directory", () => {
+  const repo = tempRepo();
+  writeTypedDoc(repo, "docs/discovery/idea-note.md", "BRAINSTORM-AAA", "brainstorm", "capturing", "Idea note");
+  writeTypedDoc(repo, "docs/discovery/research.md", "DISC-AAA", "discovery", "draft", "Research");
+  writeFile(repo, "docs/discovery/README.md", [
+    "# DISC Documents",
+    "",
+    "<!-- doc-suite:generated-index -->",
+    "",
+    "Directory: `docs/discovery`",
+    "",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    "| DISC-AAA | Research | draft | [research.md](./research.md) |",
+    "",
+  ].join("\n"));
+
+  const apply = runScript("doc_maintenance.js", ["apply", "--type", "brainstorm"], repo);
+  assert.equal(apply.status, 0, apply.stderr);
+  const content = fs.readFileSync(path.join(repo, "docs/discovery/README.md"), "utf8");
+  assert.match(content, /idea-note\.md/);
+  assert.match(content, /research\.md/, "discovery rows must survive a brainstorm-scoped rebuild");
+});
+
+test("managed index rebuild preserves hand-written text around the generated region", () => {
+  const repo = tempRepo();
+  seedIdea(repo);
+  writeSpec(repo, "checkout", "SPEC-AAA");
+  writeFile(repo, "docs/specs/README.md", [
+    "# SPEC Documents",
+    "",
+    "Curated introduction that must survive rebuilds.",
+    "",
+    "<!-- doc-suite:generated-index -->",
+    "",
+    "Directory: `docs/specs`",
+    "",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    "| SPEC-GONE | Ghost | draft | [ghost.md](./ghost.md) |",
+    "",
+    "Operational notes kept below the table.",
+    "",
+  ].join("\n"));
+
+  const apply = runScript("doc_maintenance.js", ["apply", "--type", "spec"], repo);
+  assert.equal(apply.status, 0, apply.stderr);
+  const content = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
+  assert.match(content, /Curated introduction that must survive rebuilds\./);
+  assert.match(content, /Operational notes kept below the table\./);
+  assert.match(content, /checkout\.md/);
+  assert.doesNotMatch(content, /ghost\.md/);
+});
+
 test("plan and apply return stable JSON output", () => {
   const repo = tempRepo();
   seedIdea(repo);

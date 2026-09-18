@@ -6,8 +6,9 @@ import path from "node:path";
 import { collectFindings, docDir } from "./doc_report";
 import type { DocStatusQuery } from "./doc_report";
 import { lintScope } from "./doc_lint";
+import { documentContracts } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
-import { buildIndex, isGeneratedIndex } from "./doc_suite_utils";
+import { buildIndex, GENERATED_INDEX_MARKER, isGeneratedIndex, primaryIndexTypeForDir } from "./doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
@@ -38,7 +39,7 @@ type PlannedAction = {
   path: string;
   ruleIds: string[];
   detail: string;
-  scopeType?: string;
+  scopeTypes?: string[];
   scopeDir?: string;
   linkTarget?: string;
   linkLine?: number;
@@ -85,66 +86,86 @@ function scopeIndexPath(model: DocumentRepository, directory: string): string | 
   return chosen ? `${directory}/${chosen}` : null;
 }
 
+// Several document types may share one canonical directory (for example
+// `brainstorm` and `discovery` both live in `docs/discovery`). Index rebuilds
+// are therefore planned per index path, not per type: one action regenerates
+// the shared index once, listing every document the directory hosts.
+type IndexPlan = {
+  directory: string;
+  exists: boolean;
+  generated: boolean;
+  scopeTypes: Set<string>;
+  findings: Finding[];
+};
+
+// A generated index documents every artifact the directory hosts, not only
+// the types the caller scoped to. Rebuilds therefore union the requesting
+// scopes with all types canonically resident in the directory, so a scoped
+// rebuild cannot drop rows owned by a sibling type.
+function residentTypesForDir(directory: string): string[] {
+  const normalized = normalizeDir(directory);
+  return Object.values(documentContracts())
+    .filter((contract) =>
+      [contract.canonicalDir, ...contract.dirs].map(normalizeDir).includes(normalized))
+    .map((contract) => contract.type);
+}
+
 async function planMaintenance(cwd: string, query: DocStatusQuery, options?: ApplyOptions): Promise<{ plan: MaintenancePlan; findings: Finding[]; model: DocumentRepository }> {
   const resolvedCwd = path.resolve(cwd);
   const collected = await collectFindings(resolvedCwd, query);
   const actions: PlannedAction[] = [];
   const skipped: SkippedFinding[] = [];
-  const consumed = new Set<Finding>();
+  const seenActions = new Set<string>();
+  const seenSkipped = new Set<string>();
+  const indexPlans = new Map<string, IndexPlan>();
   const directories: string[] = [];
+
+  const pushSkipped = (entry: SkippedFinding) => {
+    const key = `${entry.ruleId}|${entry.path ?? ""}|${entry.reason}|${entry.message}`;
+    if (seenSkipped.has(key)) return;
+    seenSkipped.add(key);
+    skipped.push(entry);
+  };
 
   for (const type of collected.types) {
     const directory = docDir(resolvedCwd, type, query.dir);
     directories.push(directory);
     const scopeFindings = lintScope(collected.model, type, directory);
-    const indexPath = scopeIndexPath(collected.model, directory) ?? `${directory}/README.md`;
-    const indexAbsolute = path.join(resolvedCwd, indexPath);
-    const indexExists = fs.existsSync(indexAbsolute);
-    const indexGenerated = !indexExists || isGeneratedIndex(fs.readFileSync(indexAbsolute, "utf8"));
-
-    const indexFindings = scopeFindings.filter((finding) => INDEX_REBUILD_RULES.has(finding.ruleId));
-    if (indexFindings.length > 0) {
-      if (indexGenerated || options?.forceIndex) {
-        actions.push({
-          kind: "rebuild-index",
-          path: indexPath,
-          scopeType: type,
-          scopeDir: directory,
-          ruleIds: [...new Set(indexFindings.map((finding) => finding.ruleId))].sort(),
-          detail: indexExists
-            ? `Regenerate managed index ${indexPath} for type ${type}`
-            : `Create generated index ${indexPath} for type ${type}`,
-        });
-        for (const finding of indexFindings) consumed.add(finding);
-      } else {
-        for (const finding of indexFindings) {
-          consumed.add(finding);
-          skipped.push({
-            ruleId: finding.ruleId,
-            category: finding.category,
-            path: finding.path ?? indexPath,
-            reason: "hand-curated-index",
-            message: `${finding.message} (index ${indexPath} is hand-curated; rerun with --force-index to regenerate)`,
-          });
-        }
-      }
-    }
 
     for (const finding of scopeFindings) {
-      if (consumed.has(finding)) continue;
-      if (LINK_CASE_RULES.has(finding.ruleId) && finding.path && finding.target) {
-        actions.push({
-          kind: "fix-link-case",
-          path: finding.path,
-          linkTarget: finding.target,
-          linkLine: finding.line ?? undefined,
-          ruleIds: [finding.ruleId],
-          detail: `Normalize link target case in ${finding.path}: ${finding.target}`,
-        });
-        consumed.add(finding);
+      if (INDEX_REBUILD_RULES.has(finding.ruleId)) {
+        const indexPath = scopeIndexPath(collected.model, directory) ?? `${directory}/README.md`;
+        const indexAbsolute = path.join(resolvedCwd, indexPath);
+        const indexExists = fs.existsSync(indexAbsolute);
+        const indexGenerated = !indexExists || isGeneratedIndex(fs.readFileSync(indexAbsolute, "utf8"));
+        const plan = indexPlans.get(indexPath) ?? {
+          directory,
+          exists: indexExists,
+          generated: indexGenerated,
+          scopeTypes: new Set<string>(),
+          findings: [],
+        };
+        plan.scopeTypes.add(type);
+        plan.findings.push(finding);
+        indexPlans.set(indexPath, plan);
         continue;
       }
-      skipped.push({
+      if (LINK_CASE_RULES.has(finding.ruleId) && finding.path && finding.target) {
+        const key = `fix-link-case|${finding.path}|${finding.target}`;
+        if (!seenActions.has(key)) {
+          seenActions.add(key);
+          actions.push({
+            kind: "fix-link-case",
+            path: finding.path,
+            linkTarget: finding.target,
+            linkLine: finding.line ?? undefined,
+            ruleIds: [finding.ruleId],
+            detail: `Normalize link target case in ${finding.path}: ${finding.target}`,
+          });
+        }
+        continue;
+      }
+      pushSkipped({
         ruleId: finding.ruleId,
         category: finding.category,
         path: finding.path,
@@ -154,12 +175,78 @@ async function planMaintenance(cwd: string, query: DocStatusQuery, options?: App
     }
   }
 
-  return { plan: { types: collected.types, directories, actions, skipped }, findings: collected.findings, model: collected.model };
+  for (const [indexPath, indexPlan] of [...indexPlans.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const scopeTypes = [...new Set([...indexPlan.scopeTypes, ...residentTypesForDir(indexPlan.directory)])].sort();
+    const ruleIds = [...new Set(indexPlan.findings.map((finding) => finding.ruleId))].sort();
+    if (indexPlan.generated || options?.forceIndex) {
+      actions.push({
+        kind: "rebuild-index",
+        path: indexPath,
+        scopeTypes,
+        scopeDir: indexPlan.directory,
+        ruleIds,
+        detail: indexPlan.exists
+          ? `Regenerate managed index ${indexPath} for types ${scopeTypes.join(", ")}`
+          : `Create generated index ${indexPath} for types ${scopeTypes.join(", ")}`,
+      });
+    } else {
+      for (const finding of indexPlan.findings) {
+        pushSkipped({
+          ruleId: finding.ruleId,
+          category: finding.category,
+          path: finding.path ?? indexPath,
+          reason: "hand-curated-index",
+          message: `${finding.message} (index ${indexPath} is hand-curated; rerun with --force-index to regenerate)`,
+        });
+      }
+    }
+  }
+
+  return { plan: { types: collected.types, directories: [...new Set(directories)], actions, skipped }, findings: collected.findings, model: collected.model };
 }
 
 // ---------------------------------------------------------------------------
 // Apply
 // ---------------------------------------------------------------------------
+
+// A managed index's generated region begins at the marker line and runs
+// through the `Directory:` line and the index table. Text before the marker
+// and after the table is hand-written content and must be preserved.
+function mergeManagedIndex(existing: string, generated: string): string {
+  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
+  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
+  const lines = existing.split("\n");
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerIndex < 0) return `${section}\n`;
+  const preamble = lines.slice(0, markerIndex);
+  const rest = lines.slice(markerIndex + 1);
+
+  let directoryLine = -1;
+  let regionEnd = -1;
+  for (let i = 0; i < rest.length; i += 1) {
+    const trimmed = rest[i].trim();
+    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
+      directoryLine = i;
+      continue;
+    }
+    if (trimmed.startsWith("|")) {
+      regionEnd = i;
+      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+      break;
+    }
+  }
+  if (regionEnd < 0) regionEnd = directoryLine;
+
+  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
+    const trimmed = line.trim();
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
+  });
+  const trailing = rest.slice(regionEnd + 1);
+  const head = preamble.join("\n").replace(/\n+$/, "");
+  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
+  const parts = [head, section, tail].filter((part) => part !== "");
+  return `${parts.join("\n\n")}\n`;
+}
 
 function actualEntryName(absolute: string): string | null {
   const dir = path.dirname(absolute);
@@ -206,16 +293,21 @@ async function applyMaintenance(cwd: string, query: DocStatusQuery, options?: Ap
 
   for (const action of plan.actions) {
     if (action.kind === "rebuild-index") {
-      if (!action.scopeType || !action.scopeDir) {
+      if (!action.scopeTypes || action.scopeTypes.length === 0 || !action.scopeDir) {
         blocked.push({ action, reason: "unresolvable index scope" });
         continue;
       }
       const absolute = path.join(resolvedCwd, action.path);
-      if (fs.existsSync(absolute) && !options?.forceIndex && !isGeneratedIndex(fs.readFileSync(absolute, "utf8"))) {
+      const existing = fs.existsSync(absolute) ? fs.readFileSync(absolute, "utf8") : null;
+      if (existing !== null && !options?.forceIndex && !isGeneratedIndex(existing)) {
         blocked.push({ action, reason: "hand-curated index" });
         continue;
       }
-      const content = await buildIndex(resolvedCwd, action.scopeType, action.scopeDir);
+      const primaryType = primaryIndexTypeForDir(action.scopeDir, action.scopeTypes);
+      const generated = await buildIndex(resolvedCwd, primaryType, action.scopeDir, { types: action.scopeTypes });
+      const content = existing !== null && isGeneratedIndex(existing)
+        ? mergeManagedIndex(existing, generated)
+        : generated;
       fs.mkdirSync(path.dirname(absolute), { recursive: true });
       fs.writeFileSync(absolute, content, "utf8");
       applied.push(action);
