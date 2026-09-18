@@ -39,7 +39,7 @@ title-with-dashes.md
 
 文書の同一性はファイル名やソート位置ではなく front matter の `id` に
 あります。既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
-slug-only の名前を使います。
+slug-only の名前を使います。既存ファイルの移行には `doc-driven-dev-graph/scripts` の `migrate_ids.js` を使います。
 
 ## 必須 Front Matter
 

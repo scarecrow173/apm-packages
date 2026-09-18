@@ -31,7 +31,7 @@ title-with-dashes.jsonl
 - `ir/` と `exp/` の名前はそれぞれのディレクトリ内で一意であればよいです。
 - 文書の同一性はファイル名やソート位置ではなく front matter の `id` に
   あります。既存の `NNNN-<slug>` ファイル名も有効ですが、新規ファイルは
-  常に slug-only の名前を使います。
+  常に slug-only の名前を使います。既存ファイルの移行には `doc-driven-dev-graph/scripts` の `migrate_ids.js` を使います。
 
 ## Implementation Record の front matter
 

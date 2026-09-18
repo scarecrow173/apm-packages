@@ -141,9 +141,10 @@ not create or require a parallel database.
 
 ## Public commands
 
-Use the four commands below for distinct purposes. `route_graph.js` makes one
-route decision; `inspect_graph.js` only describes the selected definition and,
-when explicitly requested, its runtime projections.
+Use the four routing commands below for distinct purposes. `route_graph.js`
+makes one route decision; `inspect_graph.js` only describes the selected
+definition and, when explicitly requested, its runtime projections. A separate
+maintenance script, `migrate_ids.js`, is documented after them.
 
 ### 1. Normal routing
 
@@ -211,6 +212,32 @@ condition key and priority. Mermaid rendering is text-only and has no routing
 or persistence side effect. Mermaid is definition-only and rejects `--cwd`, `--focus`, and
 `--task-dir`. Original node, delegate, audit, and condition text is escaped;
 `|` cannot terminate an edge label.
+
+### 5. Legacy artifact id migration
+
+`migrate_ids.js` upgrades existing repositories from sequential `TYPE-NNNN`
+ids and `NNNN-<slug>` filenames to the opaque `<PREFIX>-<22-char Base62>` id
+contract and slug-only filenames. It is a maintenance script, not a route
+command, and is never dispatched by the graph.
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
+  --cwd <repo> --json            # dry-run plan (default, no writes)
+node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
+  --cwd <repo> --apply --json    # rewrite ids, references, and filenames
+```
+
+The run is staged and fail-closed: discover artifacts, map each legacy id to a
+new id (locale siblings such as `slug.md`/`slug.ja.md` share one id), preflight
+for blockers, rewrite front matter `id`, relation fields, metadata, body text,
+index tables, and experiment `.jsonl` paths, then rename numbered files,
+regenerate generated indexes, and validate. Any blocker — duplicate legacy id
+across non-sibling files, unresolved legacy reference, rename-target
+collision, unparseable front matter, unknown document type, or a dirty Git
+worktree — stops the run before any mutation. `--allow-dirty` bypasses only
+the worktree check; `--keep-filenames` rewrites ids but preserves numbered
+filenames. A clean Git worktree is the rollback path: revert with Git if the
+applied result is wrong. Re-running after a successful apply is a no-op.
 
 ## References
 
