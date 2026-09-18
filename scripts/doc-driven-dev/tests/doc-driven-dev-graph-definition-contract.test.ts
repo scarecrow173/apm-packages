@@ -46,7 +46,7 @@ test("loads the distributed graph definition with declared delegates", () => {
   assert.equal(graph.nodes.implementation.audits, undefined);
   assert.equal(graph.nodes.implementation.commitGate, true);
   assert.equal(graph.nodes.briefing.commitGate, undefined);
-  assert.ok(graph.runtimeSignals.includes("commit-waived"));
+  assert.ok(graph.runtimeSignals?.includes("commit-waived"));
   assert.deepEqual(graph.nodes["followup-triage"].audits, ["task", "impl-record"]);
   assert.deepEqual(graph.nodes["exit-audit"].audits, ["all"]);
   assert.ok(findEdge(graph, "design", "spec-gap"));
