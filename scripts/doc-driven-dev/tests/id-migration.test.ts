@@ -364,18 +364,75 @@ test("post-apply audit errors mark the report as failed", async () => {
 
 test("generated migrate_ids.js CLI applies migration end to end", () => {
   const repo = tempRepo();
-  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  writeDoc(
+    repo,
+    "docs/tasks/0001-schema.md",
+    legacyTask("TASK-0001", "schema", { implements: ["IDEA-0001"] }),
+    "# schema\n",
+  );
+  writeDoc(repo, "docs/ideas/spark.md", {
+    id: "IDEA-0001", type: "idea", status: "draft", title: "spark",
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }, "# spark\n");
+  for (const dir of ["docs/tasks", "docs/ideas"]) {
+    fs.writeFileSync(
+      path.join(repo, dir, "README.md"),
+      "# Index\n\n<!-- doc-suite:generated-index -->\n\nDirectory: `" + dir + "`\n\n| ID | Title | Status | File |\n| --- | --- | --- | --- |\n",
+      "utf8",
+    );
+  }
 
   const script = path.join(skillRoot, "doc-driven-dev-graph", "scripts", "migrate_ids.js");
   const plan = spawnSync(process.execPath, [script, "--cwd", repo, "--json"], { encoding: "utf8", windowsHide: true });
   assert.equal(plan.status, 0, plan.stderr);
   const planReport = JSON.parse(plan.stdout);
   assert.equal(planReport.applied, false);
-  assert.equal(planReport.mappings.length, 1);
+  assert.equal(planReport.mappings.length, 2);
 
   const applied = spawnSync(process.execPath, [script, "--cwd", repo, "--apply", "--allow-dirty", "--json"], { encoding: "utf8", windowsHide: true });
   assert.equal(applied.status, 0, applied.stderr);
   assert.ok(fs.existsSync(path.join(repo, "docs/tasks/schema.md")));
+});
+
+test("post-apply validation fails on warning-severity blocking findings", async () => {
+  const repo = tempRepo();
+  writeDoc(
+    repo,
+    "docs/tasks/0001-schema.md",
+    legacyTask("TASK-0001", "schema", { "depends-on": ["missing.md"] }),
+    "# schema\n",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.validation.auditErrors.some((error) => error.code === "broken-relation-link"),
+    `expected broken-relation-link in ${JSON.stringify(report.validation.auditErrors)}`,
+  );
+});
+
+test("post-apply validation audits every resident type in a shared directory", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/discovery/0001-idea.md", {
+    id: "BRAINSTORM-0001", type: "brainstorm", status: "capturing", title: "idea",
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }, "# idea\n");
+  writeDoc(repo, "docs/discovery/0002-research.md", {
+    id: "DISC-0002", type: "discovery", status: "draft", title: "research",
+    created: "2026-08-13", updated: "2026-08-13", owners: [],
+    relations: { "depends-on": ["missing.md"], source: ["https://example.com/evidence"] },
+  }, "# research\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.validation.auditErrors.some(
+      (error) => error.code === "broken-relation-link" && error.file === "research.md",
+    ),
+    `expected discovery-scope broken-relation-link in ${JSON.stringify(report.validation.auditErrors)}`,
+  );
 });
 
 test("doc-maintenance migrate_ids.js is the canonical entrypoint and graph path is a compatible wrapper", () => {
