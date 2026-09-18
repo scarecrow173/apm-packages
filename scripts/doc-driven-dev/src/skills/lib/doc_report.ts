@@ -83,8 +83,17 @@ async function collectFindings(cwd: string, query: DocStatusQuery): Promise<Coll
       findings.push(...await lintExternalLinks(model, scope));
     }
   }
-  findings.sort(compareFindings);
-  return { model, types, documents, findings };
+  // A shared directory hosts multiple document types, so overlapping scopes
+  // can emit identical findings; collapse them before reporting.
+  const seen = new Set<string>();
+  const deduped = findings.filter((finding) => {
+    const key = `${finding.ruleId}${finding.path}${finding.line}${finding.target}${finding.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  deduped.sort(compareFindings);
+  return { model, types, documents, findings: deduped };
 }
 
 function filterFindings(findings: Finding[], filter: FindingFilter): Finding[] {

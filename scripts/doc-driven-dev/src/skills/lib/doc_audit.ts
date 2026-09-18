@@ -2,7 +2,7 @@
 
 import path from "node:path";
 
-import { lintScope, scopeFor } from "./doc_lint";
+import { lintLegacyIdReferences, lintScope, scopeFor } from "./doc_lint";
 import { lintExternalLinks } from "./doc_structure_lint";
 import { canonicalDocRoots, compareFindings, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
@@ -91,6 +91,32 @@ async function auditAllDocuments(cwd: string, explicitDir?: string, options?: Au
       });
     }
   }
+  // Per-type scopes cover every file under a canonical directory but stop at
+  // unmanaged roots (AGENTS.md, indexes, misplaced docs); the legacy-token
+  // sweep still checks them because they carry the same artifact references.
+  const covered = new Set<string>();
+  for (const type of docTypes) {
+    for (const file of scopeFor(model, type, docDir(cwd, type, explicitDir)).files) {
+      covered.add(file.path);
+    }
+  }
+  const uncovered = model.files.filter((file) => !covered.has(file.path));
+  for (const finding of lintLegacyIdReferences(model, uncovered)) {
+    merged.findings.push({
+      severity: finding.severity,
+      file: finding.path,
+      code: finding.ruleId,
+      message: finding.message,
+      blocking: finding.blocking,
+    });
+  }
+  const seenFindings = new Set<string>();
+  merged.findings = merged.findings.filter((finding) => {
+    const key = `${finding.code}${finding.file}${finding.message}`;
+    if (seenFindings.has(key)) return false;
+    seenFindings.add(key);
+    return true;
+  });
   return merged;
 }
 

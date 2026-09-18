@@ -3427,7 +3427,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs5 = require("fs");
+    var fs6 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -3511,7 +3511,7 @@ var require_gray_matter = __commonJS({
       return stringify2(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs5.readFileSync(filepath, "utf8");
+      const str2 = fs6.readFileSync(filepath, "utf8");
       const file2 = matter2(str2, options2);
       file2.path = filepath;
       return file2;
@@ -13329,6 +13329,7 @@ var init_unist_util_visit = __esm({
 var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_lint.ts
+var import_node_fs5 = __toESM(require("node:fs"));
 var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_repository.ts
@@ -28411,7 +28412,8 @@ async function scanRepository(options2) {
       readError = error51 instanceof Error ? error51.message : String(error51);
     }
     const parsed = readError ? { data: {}, body: "", error: readError } : parseDoc(content3);
-    const structure = await extractMarkdownStructure(parsed.body, frontMatterEndLine(content3));
+    const bodyStartLine = frontMatterEndLine(content3);
+    const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
     files.push({
@@ -28433,7 +28435,8 @@ async function scanRepository(options2) {
       headings: structure.headings,
       indexMembership: [],
       localeSiblings: localeSiblingsFor(repoPath, siblingsByDir),
-      body: parsed.body
+      body: parsed.body,
+      bodyStartLine
     });
   }
   const byPath = /* @__PURE__ */ new Map();
@@ -29472,6 +29475,63 @@ function lintDirectory(model, scope) {
   }
   return findings;
 }
+var LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
+var EXPERIMENT_ID_PREFIX = "EXP";
+var IMPL_EXP_DIR = "docs/impl/exp";
+var NUMBERED_EXPERIMENT_FILE = /^(\d{4,})-.*\.jsonl$/i;
+function legacyIdPrefixes() {
+  const prefixes = new Set(docTypes.map((type) => configFor(type).idPrefix));
+  prefixes.add("IMPL");
+  prefixes.add(EXPERIMENT_ID_PREFIX);
+  return prefixes;
+}
+function experimentNumbers(root) {
+  const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
+  if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Set();
+  const numbers = /* @__PURE__ */ new Set();
+  for (const name of import_node_fs5.default.readdirSync(expDir)) {
+    const match = NUMBERED_EXPERIMENT_FILE.exec(name);
+    if (match) numbers.add(match[1]);
+  }
+  return numbers;
+}
+function lintLegacyIdReferences(model, files) {
+  const prefixes = legacyIdPrefixes();
+  const expNumbers = experimentNumbers(model.root);
+  const findings = [];
+  for (const document3 of files) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const match of document3.body.matchAll(LEGACY_ID_TOKEN)) {
+      const token = match[0];
+      if (!prefixes.has(prefixOf(token))) continue;
+      if (!seen.has(token)) {
+        const bodyLine = document3.body.slice(0, match.index).split("\n").length;
+        seen.set(token, document3.bodyStartLine + bodyLine);
+      }
+    }
+    for (const [token, line] of [...seen.entries()].sort((a, b) => a[1] - b[1])) {
+      if (model.lookupById(token).status !== "none") continue;
+      if (prefixOf(token) === EXPERIMENT_ID_PREFIX && expNumbers.has(token.slice(EXPERIMENT_ID_PREFIX.length + 1))) {
+        continue;
+      }
+      findings.push(finding({
+        ruleId: "unresolved-legacy-reference",
+        category: "relation",
+        severity: "error",
+        path: document3.path,
+        line,
+        artifactId: document3.id,
+        message: `Body references legacy artifact id ${token}, which no artifact provides`,
+        target: token,
+        repair: "manual"
+      }));
+    }
+  }
+  return findings;
+}
+function prefixOf(token) {
+  return token.slice(0, token.lastIndexOf("-"));
+}
 function lintScope(model, type, directory) {
   const scope = scopeFor(model, type, directory);
   const findings = [];
@@ -29487,6 +29547,7 @@ function lintScope(model, type, directory) {
       ...lintRequiredRelations(model, document3, type)
     );
   }
+  findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
   findings.push(...lintDirectory(model, scope));
   findings.push(...lintStructure(model, scope));
@@ -29533,8 +29594,15 @@ async function collectFindings(cwd, query) {
       findings.push(...await lintExternalLinks(model, scope));
     }
   }
-  findings.sort(compareFindings);
-  return { model, types, documents, findings };
+  const seen = /* @__PURE__ */ new Set();
+  const deduped = findings.filter((finding2) => {
+    const key = `${finding2.ruleId}${finding2.path}${finding2.line}${finding2.target}${finding2.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  deduped.sort(compareFindings);
+  return { model, types, documents, findings: deduped };
 }
 function filterFindings(findings, filter) {
   return findings.filter((finding2) => {

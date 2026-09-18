@@ -99,6 +99,11 @@ rule ID で報告する。対象チェック:
 - `broken-relation-link`, `ambiguous-relation-target`,
   `relation-escapes-root`, `self-relation`, `inconsistent-reciprocal-relation`
   — 意味 relation の違反。
+- `unresolved-legacy-reference` — 本文中の旧 `TYPE-NNNN` artifact id 参照で、
+  対応する artifact が存在しないもの。番号付き `.jsonl` log を持たない
+  `EXP-NNNN` experiment 参照も含む。既存 artifact や experiment file に
+  解決できる token は報告しないため、migration 前のリポジトリは
+  クリーンなまま。
 - `test-spec-missing-verifies`, `test-spec-invalid-verifies-target`,
   `plan-missing-test-spec-evidence`, `missing-required-relation`,
   `invalid-relation-target-type` — contract が要求する upstream / 検証
