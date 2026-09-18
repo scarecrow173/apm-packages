@@ -41,15 +41,6 @@ const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "de
 type DocType = typeof docTypes[number];
 type RelationField = typeof relationFields[number];
 type ChangeField = typeof changeFields[number];
-type Severity = "error" | "warning" | "info";
-
-type Finding = {
-  code: string;
-  file: string | null;
-  message: string;
-  severity: Severity;
-};
-
 type DocConfig = {
   defaultStatus: string;
   dir: string;
@@ -376,11 +367,6 @@ function relationMap(content: string): Record<RelationField, string[]> {
 
 function completeChanges(input?: Partial<ChangeSet>): ChangeSet {
   return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []])) as ChangeSet;
-}
-
-function relationLinks(content: string): { field: RelationField; target: string }[] {
-  const relations = relationMap(content);
-  return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
 }
 
 function quote(value: string): string {
@@ -1130,14 +1116,6 @@ function logIndexResult(result: { index: string; indexWritten: boolean; indexSki
   }
 }
 
-function resolvesLocalTarget(cwd: string, fromFile: string, target: string): boolean {
-  const candidates = [
-    path.resolve(cwd, target),
-    path.resolve(path.dirname(fromFile), target),
-  ];
-  return candidates.some((candidate) => fs.existsSync(candidate));
-}
-
 function relationValues(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
@@ -1165,135 +1143,7 @@ function resolveDocumentReference(cwd: string, target: string, fromDir?: string)
   return null;
 }
 
-function docTypeOfFile(filePath: string): string | null {
-  const parsed = parseDoc(fs.readFileSync(filePath, "utf8"));
-  return typeof parsed.data.type === "string" ? parsed.data.type : null;
-}
-
-async function auditDocuments(cwd: string, type: string, explicitDir?: string): Promise<{ directory: string; files: number; findings: Finding[] }> {
-  const config = configFor(type);
-  const relativeDir = docDir(cwd, type, explicitDir);
-  const dir = path.join(cwd, relativeDir);
-  const files = docFiles(dir);
-  const findings: Finding[] = [];
-
-  if (type === "design") {
-    const overviewPath = path.join(dir, "overview.md");
-    if (!fs.existsSync(overviewPath)) {
-      findings.push({
-        severity: "error",
-        file: null,
-        code: "missing-overview",
-        message: "Missing required docs/designs/overview.md",
-      });
-    }
-  }
-
-  const inScopeFiles: string[] = [];
-  for (const file of files) {
-    const fullPath = path.join(dir, file);
-    const content = fs.readFileSync(fullPath, "utf8");
-    const parsed = parseDoc(content);
-    if (parsed.error) {
-      findings.push({
-        severity: "error",
-        file,
-        code: "unparseable-front-matter",
-        message: `Front matter is not valid YAML: ${parsed.error}`,
-      });
-      continue;
-    }
-    const data = parsed.data;
-    if (isForeignDocType(data.type, type, relativeDir)) continue;
-    inScopeFiles.push(file);
-    const schemaResult = frontMatterSchema.safeParse(data);
-    if (!schemaResult.success) {
-      for (const issue of schemaResult.error.issues) {
-        findings.push({ severity: "error", file, code: "invalid-front-matter", message: `Invalid front matter ${formatIssuePath(issue.path)}: ${issue.message}` });
-      }
-    }
-    if (data.type !== type) {
-      findings.push({ severity: "error", file, code: "invalid-type", message: `Expected type ${type}` });
-    }
-    if (typeof data.status === "string" && !config.statusValues.includes(data.status)) {
-      findings.push({ severity: "error", file, code: "invalid-status", message: `Invalid ${type} status: ${data.status}` });
-    }
-    if (type === "test-spec") {
-      const verifies = relationValues((data.relations as Record<string, unknown> | undefined)?.verifies);
-      if (verifies.length === 0) {
-        findings.push({
-          severity: "warning",
-          file,
-          code: "test-spec-missing-verifies",
-          message: "Test spec has no relations.verifies target (TEST-SPEC-DOC-GATE-001)",
-        });
-      }
-      for (const target of verifies) {
-        const resolved = resolveDocumentReference(cwd, target, path.dirname(fullPath));
-        if (!resolved) continue; // broken-relation-link reports unresolvable targets
-        const targetType = docTypeOfFile(resolved);
-        if (targetType && !["spec", "design", "adr"].includes(targetType)) {
-          findings.push({
-            severity: "warning",
-            file,
-            code: "test-spec-invalid-verifies-target",
-            message: `Test spec verifies target resolves to type "${targetType}", expected spec, design, or adr: ${target}`,
-          });
-        }
-      }
-    }
-    if (type === "plan" && typeof data.status === "string" && ["approved", "in-progress", "completed"].includes(data.status)) {
-      const verifiedBy = relationValues((data.relations as Record<string, unknown> | undefined)?.["verified-by"]);
-      const linked = verifiedBy.some((target) => {
-        const resolved = resolveDocumentReference(cwd, target, path.dirname(fullPath));
-        return resolved !== null && docTypeOfFile(resolved) === "test-spec";
-      });
-      const skipped = typeof data["test-spec-skip"] === "string" && data["test-spec-skip"].trim().length > 0;
-      if (!linked && !skipped) {
-        findings.push({
-          severity: "warning",
-          file,
-          code: "plan-missing-test-spec-evidence",
-          message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason",
-        });
-      }
-    }
-    for (const relation of relationLinks(content)) {
-      if (isExternalLink(relation.target)) continue;
-      if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
-        findings.push({
-          severity: "warning",
-          file,
-          code: "broken-relation-link",
-          message: `Relation ${relation.field} points to missing target: ${relation.target}`,
-        });
-      }
-    }
-  }
-
-  const indexPath = ["README.md", "index.md"].map((name) => path.join(dir, name)).find((candidate) => fs.existsSync(candidate));
-  if (!indexPath) {
-    findings.push({ severity: "warning", file: null, code: "missing-index", message: `Missing ${type} index README.md or index.md` });
-  } else {
-    const index = fs.readFileSync(indexPath, "utf8");
-    for (const file of inScopeFiles) {
-      if (!index.includes(file)) findings.push({ severity: "warning", file, code: "index-missing-entry", message: `Index does not link ${file}` });
-    }
-    if (type === "design" && !index.includes("overview.md")) {
-      findings.push({
-        severity: "warning",
-        file: "overview.md",
-        code: "index-missing-overview",
-        message: "Index does not link overview.md",
-      });
-    }
-  }
-
-  return { directory: relativeDir, files: files.length, findings };
-}
-
 export {
-  auditDocuments,
   buildIndex,
   buildGenericIndex,
   configFor,
