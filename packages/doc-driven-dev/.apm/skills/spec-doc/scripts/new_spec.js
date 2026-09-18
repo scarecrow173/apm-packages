@@ -19477,6 +19477,7 @@ function walkMarkdownFiles(baseDir) {
   if (!import_node_fs2.default.existsSync(baseDir)) return [];
   const entries = import_node_fs2.default.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
+    if (entry.isSymbolicLink()) return [];
     const fullPath = import_node_path2.default.join(baseDir, entry.name);
     if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
     return isMarkdownSource(fullPath) ? [fullPath] : [];

@@ -28259,6 +28259,7 @@ function walkMarkdownFiles(baseDir) {
   if (!import_node_fs2.default.existsSync(baseDir)) return [];
   const entries = import_node_fs2.default.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
+    if (entry.isSymbolicLink()) return [];
     const fullPath = import_node_path2.default.join(baseDir, entry.name);
     if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
     return isMarkdownSource(fullPath) ? [fullPath] : [];
@@ -30113,6 +30114,7 @@ function walkFiles(baseDir, extensions) {
   if (!import_node_fs7.default.existsSync(baseDir)) return [];
   const entries = import_node_fs7.default.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
+    if (entry.isSymbolicLink()) return [];
     const fullPath = import_node_path9.default.join(baseDir, entry.name);
     if (entry.isDirectory()) {
       return SKIPPED_DIRS2.has(entry.name) ? [] : walkFiles(fullPath, extensions);
@@ -30247,7 +30249,11 @@ function discover(cwd, dirs, blockers) {
   const files = [];
   for (const { dir, type: dirType } of dirs) {
     const fullDir = import_node_path9.default.join(cwd, dir);
-    const names = dir === IMPL_EXP_DIR2 ? import_node_fs7.default.readdirSync(fullDir).filter((name) => name.toLowerCase().endsWith(".jsonl") || name.toLowerCase().endsWith(".md") && !isIndexFileName(name)).sort() : docFiles(fullDir);
+    const names = dir === IMPL_EXP_DIR2 ? import_node_fs7.default.readdirSync(fullDir).filter((name) => {
+      const lower = name.toLowerCase();
+      if (!(lower.endsWith(".jsonl") || lower.endsWith(".md") && !isIndexFileName(name))) return false;
+      return !import_node_fs7.default.lstatSync(import_node_path9.default.join(fullDir, name)).isSymbolicLink();
+    }).sort() : docFiles(fullDir);
     for (const name of names) {
       const relPath = `${dir}/${name}`;
       const fullPath = import_node_path9.default.join(cwd, relPath);
