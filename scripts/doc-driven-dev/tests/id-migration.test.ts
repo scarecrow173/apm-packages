@@ -259,6 +259,71 @@ test("--apply on dirty git worktree blocks unless --allow-dirty", async () => {
   assert.ok(fs.existsSync(path.join(repo, "docs/tasks/schema.md")));
 });
 
+test("root-level canonical dirs are rewritten and renamed", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "specs/0001-checkout.md", legacySpec("SPEC-0001", "checkout"), "# checkout\n");
+  writeDoc(repo, "tasks/0001-wire.md", {
+    ...legacyTask("TASK-0001", "wire", { "depends-on": ["SPEC-0001"] }),
+  }, "# wire\n\nSee SPEC-0001 and specs/0001-checkout.md.\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.equal(report.mappings.length, 2);
+  assert.ok(fs.existsSync(path.join(repo, "specs/checkout.md")));
+  assert.ok(fs.existsSync(path.join(repo, "tasks/wire.md")));
+  const specData = docFrontMatter(repo, "specs/checkout.md");
+  const specMapping = report.mappings.find((mapping) => mapping.legacyId === "SPEC-0001");
+  assert.equal(specData.id, specMapping?.newId);
+  const taskContent = fs.readFileSync(path.join(repo, "tasks/wire.md"), "utf8");
+  assert.ok(!taskContent.includes("SPEC-0001"));
+  assert.ok(!taskContent.includes("0001-checkout.md"));
+  assert.ok(taskContent.includes(String(specMapping?.newId)));
+});
+
+test("numbered markdown without front matter blocks before mutation", async () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/adr/0003-use-x.md"), "# 3. use x\n\nplain MADR without front matter\n", "utf8");
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.ok(report.blockers.some((blocker) => blocker.code === "missing-front-matter"));
+  assert.ok(fs.existsSync(path.join(repo, "docs/adr/0003-use-x.md")));
+  assert.ok(fs.existsSync(path.join(repo, "docs/tasks/0001-schema.md")));
+});
+
+test("rename chains never clobber existing files", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/0001-0002-foo.md", legacyTask("TASK-0001", "outer"), "# outer doc\n");
+  writeDoc(repo, "docs/tasks/0002-foo.md", legacyTask("TASK-0002", "inner"), "# inner doc\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  const outer = fs.readFileSync(path.join(repo, "docs/tasks/0002-foo.md"), "utf8");
+  const inner = fs.readFileSync(path.join(repo, "docs/tasks/foo.md"), "utf8");
+  assert.ok(outer.includes("# outer doc"));
+  assert.ok(inner.includes("# inner doc"));
+  assert.ok(!fs.existsSync(path.join(repo, "docs/tasks/0001-0002-foo.md")));
+});
+
+test("post-apply audit errors mark the report as failed", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/impl/ir/0001-rec.md", {
+    id: "IMPL-0001", type: "impl", status: "completed", title: "rec",
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+    metadata: { experiments: { adopted: [], rejected: [] } },
+  }, "# rec\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.equal(report.ok, false);
+  assert.ok(report.validation.auditErrors.some((error) => error.code === "missing-section"));
+});
+
 test("generated migrate_ids.js CLI applies migration end to end", () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");

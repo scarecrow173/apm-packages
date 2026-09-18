@@ -19511,15 +19511,42 @@ function canonicalDirs(cwd) {
   const dirs = [];
   for (const type of docTypes) {
     const config2 = configFor(type);
-    const dir = config2.dirs.find((candidate) => import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, candidate))) || config2.dir;
-    if (!import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, dir))) continue;
-    if (seen.has(dir)) continue;
-    seen.add(dir);
-    dirs.push({ dir, type });
+    for (const candidate of config2.dirs) {
+      if (!import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, candidate))) continue;
+      if (seen.has(candidate)) continue;
+      seen.add(candidate);
+      dirs.push({ dir: candidate, type });
+    }
   }
   if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, IMPL_IR_DIR))) dirs.push({ dir: IMPL_IR_DIR, type: "impl" });
   if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, IMPL_EXP_DIR))) dirs.push({ dir: IMPL_EXP_DIR, type: "impl-exp" });
   return dirs;
+}
+function isUnderDir(child, parent) {
+  const c = normalizeDir(child);
+  const p = normalizeDir(parent);
+  return c === p || c.startsWith(`${p}/`);
+}
+function contentRoots(cwd, dirs) {
+  const roots = [];
+  if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, "docs"))) roots.push("docs");
+  for (const { dir } of dirs) {
+    if (!isUnderDir(dir, "docs")) roots.push(dir);
+  }
+  return roots;
+}
+function contentFilesUnder(cwd, roots) {
+  const seen = /* @__PURE__ */ new Set();
+  const files = [];
+  for (const root of roots) {
+    for (const fullPath of walkFiles(import_node_path4.default.join(cwd, root), [".md", ".jsonl"])) {
+      const relPath = import_node_path4.default.relative(cwd, fullPath).replace(/\\/g, "/");
+      if (seen.has(relPath)) continue;
+      seen.add(relPath);
+      files.push(relPath);
+    }
+  }
+  return files.sort();
 }
 function prefixForFile(file2) {
   if (file2.type && docTypes.includes(file2.type)) {
@@ -19567,6 +19594,13 @@ function discover(cwd, dirs, blockers) {
       }
       const data = parsed.data;
       if (Object.keys(data).length === 0) {
+        if (numbered) {
+          blockers.push({
+            code: "missing-front-matter",
+            file: relPath,
+            message: `Numbered document ${relPath} has no front matter, so its ${prefixForFile(base)}-${numbered} identity would be lost on rename. Add front matter (at minimum an id) or move it out of the canonical docs dir before migrating.`
+          });
+        }
         files.push(base);
         continue;
       }
@@ -19651,13 +19685,17 @@ function rewriteContent(content, mappings, renames) {
       return newId;
     });
   }
-  for (const rename of renames) {
-    const basename = import_node_path4.default.basename(rename.from);
-    const target = import_node_path4.default.basename(rename.to);
-    const pattern = new RegExp(escapeRegExp(basename), "g");
-    next = next.replace(pattern, () => {
+  if (renames.length > 0) {
+    const targets = new Map(
+      renames.map((rename) => [import_node_path4.default.basename(rename.from), import_node_path4.default.basename(rename.to)])
+    );
+    const pattern = new RegExp(
+      `(?<![0-9A-Za-z-])(?:${[...targets.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})(?![0-9A-Za-z])`,
+      "g"
+    );
+    next = next.replace(pattern, (match) => {
       replacements += 1;
-      return target;
+      return targets.get(match);
     });
   }
   return { content: next, replacements };
@@ -19733,9 +19771,8 @@ async function validate2(cwd, dirs, prefixes) {
   }
   const duplicateIds = [...idFiles.entries()].filter(([id, files]) => files.length > 1 && (siblingKeys.get(id)?.size || 0) > 1).map(([id]) => id);
   const unresolved = /* @__PURE__ */ new Set();
-  const docsRoot = import_node_path4.default.join(cwd, "docs");
-  for (const fullPath of walkFiles(docsRoot, [".md", ".jsonl"])) {
-    const content = import_node_fs4.default.readFileSync(fullPath, "utf8");
+  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs))) {
+    const content = import_node_fs4.default.readFileSync(import_node_path4.default.join(cwd, relPath), "utf8");
     for (const token of legacyTokens(content, prefixes)) {
       unresolved.add(token);
     }
@@ -19793,10 +19830,7 @@ async function migrateArtifactIds(options2) {
   }
   const renames = options2.keepFilenames ? [] : planRenames(cwd, files, blockers);
   const prefixes = knownPrefixes(mappings);
-  const docsRoot = import_node_path4.default.join(cwd, "docs");
-  const contentFiles = walkFiles(docsRoot, [".md", ".jsonl"]).map(
-    (fullPath) => import_node_path4.default.relative(cwd, fullPath).replace(/\\/g, "/")
-  );
+  const contentFiles = contentFilesUnder(cwd, contentRoots(cwd, dirs));
   const mappedIds = new Set(mappings.keys());
   for (const relPath of contentFiles) {
     const content = import_node_fs4.default.readFileSync(import_node_path4.default.join(cwd, relPath), "utf8");
@@ -19829,6 +19863,7 @@ async function migrateArtifactIds(options2) {
   if (blockers.length > 0) {
     return {
       applied: false,
+      ok: false,
       blockers,
       indexes: [],
       mappings: mappingReports,
@@ -19860,8 +19895,12 @@ async function migrateArtifactIds(options2) {
   }
   const indexes = [];
   if (options2.apply) {
+    const tmpSuffix = ".migrate-tmp";
     for (const rename of renames) {
-      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, rename.from), import_node_path4.default.join(cwd, rename.to));
+      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, rename.from), import_node_path4.default.join(cwd, `${rename.from}${tmpSuffix}`));
+    }
+    for (const rename of renames) {
+      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, `${rename.from}${tmpSuffix}`), import_node_path4.default.join(cwd, rename.to));
     }
     const touchedDirs = /* @__PURE__ */ new Set([
       ...files.filter((file2) => file2.synthesizedId || file2.id && isLegacyArtifactId(file2.id)).map((file2) => file2.dir),
@@ -19870,8 +19909,10 @@ async function migrateArtifactIds(options2) {
     indexes.push(...await regenerateIndexes(cwd, dirs, touchedDirs));
   }
   const validation = options2.apply ? await validate2(cwd, dirs, prefixes) : emptyValidation;
+  const validationFailed = validation.remainingLegacyIds.length > 0 || validation.duplicateIds.length > 0 || validation.unresolvedLegacyRefs.length > 0 || validation.auditErrors.length > 0;
   return {
     applied: Boolean(options2.apply),
+    ok: blockers.length === 0 && !validationFailed,
     blockers,
     indexes,
     mappings: mappingReports,
@@ -19923,8 +19964,11 @@ function printHuman(report) {
     console.error(`BLOCKER ${blocker.code}${blocker.file ? ` [${blocker.file}]` : ""}: ${blocker.message}`);
   }
   if (report.applied) {
-    const { remainingLegacyIds, duplicateIds, unresolvedLegacyRefs } = report.validation;
-    console.log(`Validation: ${remainingLegacyIds.length} remaining legacy ids, ${duplicateIds.length} duplicate ids, ${unresolvedLegacyRefs.length} unresolved legacy refs`);
+    const { auditErrors, remainingLegacyIds, duplicateIds, unresolvedLegacyRefs } = report.validation;
+    console.log(`Validation: ${remainingLegacyIds.length} remaining legacy ids, ${duplicateIds.length} duplicate ids, ${unresolvedLegacyRefs.length} unresolved legacy refs, ${auditErrors.length} audit errors`);
+    for (const error51 of auditErrors) {
+      console.error(`AUDIT ${error51.code}${error51.file ? ` [${error51.file}]` : ""}: ${error51.message}`);
+    }
   }
 }
 async function main() {
@@ -19945,7 +19989,7 @@ async function main() {
     } else {
       printHuman(report);
     }
-    if (report.blockers.length > 0) process.exitCode = 1;
+    if (!report.ok) process.exitCode = 1;
   } catch (error51) {
     console.error(error51 instanceof Error ? error51.message : String(error51));
     console.error(usage());

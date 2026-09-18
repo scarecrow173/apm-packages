@@ -58,8 +58,11 @@ function printHuman(report: IdMigrationReport): void {
     console.error(`BLOCKER ${blocker.code}${blocker.file ? ` [${blocker.file}]` : ""}: ${blocker.message}`);
   }
   if (report.applied) {
-    const { remainingLegacyIds, duplicateIds, unresolvedLegacyRefs } = report.validation;
-    console.log(`Validation: ${remainingLegacyIds.length} remaining legacy ids, ${duplicateIds.length} duplicate ids, ${unresolvedLegacyRefs.length} unresolved legacy refs`);
+    const { auditErrors, remainingLegacyIds, duplicateIds, unresolvedLegacyRefs } = report.validation;
+    console.log(`Validation: ${remainingLegacyIds.length} remaining legacy ids, ${duplicateIds.length} duplicate ids, ${unresolvedLegacyRefs.length} unresolved legacy refs, ${auditErrors.length} audit errors`);
+    for (const error of auditErrors) {
+      console.error(`AUDIT ${error.code}${error.file ? ` [${error.file}]` : ""}: ${error.message}`);
+    }
   }
 }
 
@@ -83,7 +86,7 @@ async function main(): Promise<void> {
     } else {
       printHuman(report);
     }
-    if (report.blockers.length > 0) process.exitCode = 1;
+    if (!report.ok) process.exitCode = 1;
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());
