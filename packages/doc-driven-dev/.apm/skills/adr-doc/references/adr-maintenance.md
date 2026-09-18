@@ -61,7 +61,7 @@ Validate after edits:
 node scripts/audit_adr.js --dir docs/adr
 node scripts/review_adr.js --dir docs/adr
 node scripts/update_index.js --dir docs/adr --write
-node scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supersedes --write
+node scripts/relate_adr.js --from new.md --to old.md --relation supersedes --write
 ```
 
 ### Post-Acceptance Lifecycle
@@ -70,7 +70,7 @@ After an ADR is accepted:
 
 1. Turn Implementation Plan items and follow-up consequences into trackable
    tasks.
-2. Reference the ADR in PRs, for example `Implements ADR-0004`.
+2. Reference the ADR in PRs, for example `Implements ADR-1AbCdEfGhIjKlMnOpQrStU`.
 3. Add sparse code references at the main implementation entry points.
 4. Check Verification items after implementation.
 5. Revisit the ADR when its stated revisit conditions fire.
@@ -97,7 +97,7 @@ node /path/to/adr-doc/scripts/audit_adr.js --dir docs/adr
 node /path/to/adr-doc/scripts/review_adr.js --dir docs/adr
 node /path/to/adr-doc/scripts/check_code_links.js --dir docs/adr
 node /path/to/adr-doc/scripts/update_index.js --dir docs/adr --write
-node /path/to/adr-doc/scripts/relate_adr.js --from 0002-new.md --to 0001-old.md --relation supersedes --write
+node /path/to/adr-doc/scripts/relate_adr.js --from new.md --to old.md --relation supersedes --write
 node /path/to/adr-doc/scripts/migrate_report.js --dir docs/adr
 ```
 

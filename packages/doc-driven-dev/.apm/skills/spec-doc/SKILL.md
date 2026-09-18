@@ -64,7 +64,7 @@ Generated specs use YAML front matter:
 
 ```yaml
 ---
-id: "SPEC-0001"
+id: "SPEC-034qPUpBj0VYOqxmFLijD5"
 type: "spec"
 status: "draft"
 title: "Define checkout flow"

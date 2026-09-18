@@ -63,7 +63,7 @@ before the first code change. Update the record body as implementation
 proceeds. Experiment Log JSONL remains CLI-updated only.
 
 ```bash
-node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/0003-implement-foo-service.md --status "in-progress"
+node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/implement-foo-service.md --status "in-progress"
 ```
 
 ### Creating an Experiment Log
@@ -73,14 +73,14 @@ defines allowed event types and JSONL integrity rules.
 **Do NOT load** `assets/templates/implementation-record.md` for this task.
 
 ```bash
-node scripts/new_experiment_log.js --title "Try foo service extraction" --task docs/tasks/0003-implement-foo-service.md
+node scripts/new_experiment_log.js --title "Try foo service extraction" --task docs/tasks/implement-foo-service.md
 ```
 
 ### Appending Events
 
 ```bash
 node scripts/append_experiment_event.js \
-  --file docs/impl/exp/0001-try-foo-service-extraction.jsonl \
+  --file docs/impl/exp/try-foo-service-extraction.jsonl \
   --type hypothesis \
   --summary "Splitting FooService may simplify BarService responsibilities"
 ```
@@ -89,9 +89,9 @@ node scripts/append_experiment_event.js \
 
 ```bash
 node scripts/edit_experiment_log.js \
-  --file docs/impl/exp/0001-try-foo-service-extraction.jsonl \
+  --file docs/impl/exp/try-foo-service-extraction.jsonl \
   --seq 4 \
-  --set implementation=docs/impl/ir/0001-extract-foo-service.md
+  --set implementation=docs/impl/ir/extract-foo-service.md
 ```
 
 ### Auditing Before Completion

@@ -195,7 +195,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentati
 例:
 
 ```bash
-node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/0001-wire-checkout-button.md --status "in-progress"
+node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
 ```
 
 明確な既知解の task でも `in-progress` の Implementation Record は必須であり、任意なのは Experiment Log だけである。

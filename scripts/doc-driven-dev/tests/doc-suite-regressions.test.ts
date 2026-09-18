@@ -114,10 +114,10 @@ test("brainstorm and discovery documents sharing docs/discovery do not cross-fla
 
   const brainstorm = runScript("doc-status", "audit_docs.js", ["--type", "brainstorm"], repo);
   assert.equal(brainstorm.status, 0, brainstorm.stderr);
-  assert.ok(!brainstorm.stdout.includes("0001-research-a.md"), brainstorm.stdout);
+  assert.ok(!brainstorm.stdout.includes("research-a.md"), brainstorm.stdout);
 });
 
-test("new_adr assigns unique ADR ids in slug-named directories", () => {
+test("new_adr assigns opaque ADR ids alongside legacy ids", () => {
   const repo = tempRepo();
   const dir = path.join(repo, "docs/adr");
   writeDoc(dir, "use-postgres.md", {
@@ -127,7 +127,8 @@ test("new_adr assigns unique ADR ids in slug-named directories", () => {
   const res = runScript("adr-doc", "new_adr.js", ["--title", "Second decision"], repo);
   assert.equal(res.status, 0, res.stderr);
   const created = fs.readFileSync(path.join(dir, "second-decision.md"), "utf8");
-  assert.match(created, /id: "ADR-0002"/);
+  assert.match(created, /id: "ADR-[0-9A-Za-z]{22}"/);
+  assert.doesNotMatch(created, /id: "ADR-0001"/);
 });
 
 test("localized index files are not audited as documents", () => {

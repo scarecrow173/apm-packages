@@ -3,6 +3,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { generateArtifactId } from "../../lib/artifact_id";
 import { buildImplementationRecordContent, buildNewFilePath, implStatuses, posixRelative, updateIndexForMarkdownDir } from "./lib/impl_doc_utils";
 
 type CliArgs = {
@@ -47,7 +48,7 @@ async function main(): Promise<void> {
     const status = args.status || "draft";
     if (!(implStatuses as readonly string[]).includes(status)) throw new Error(`Invalid impl status: ${status}`);
     const cwd = path.resolve(args.cwd);
-    const { number, outputPath, relativeDir } = buildNewFilePath({
+    const { outputPath, relativeDir } = buildNewFilePath({
       cwd,
       kind: "ir",
       title: args.title,
@@ -56,7 +57,7 @@ async function main(): Promise<void> {
     if (fs.existsSync(outputPath)) throw new Error(`Document already exists: ${posixRelative(cwd, outputPath)}`);
     const date = args.date || new Date().toISOString().slice(0, 10);
     const content = buildImplementationRecordContent({
-      number,
+      id: generateArtifactId("IMPL"),
       title: args.title,
       status: status as (typeof implStatuses)[number],
       date,

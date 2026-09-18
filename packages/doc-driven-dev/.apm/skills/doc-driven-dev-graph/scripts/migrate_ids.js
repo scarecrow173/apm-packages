@@ -43,6 +43,612 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js
+function rng2() {
+  if (poolPtr > rnds8Pool.length - 16) {
+    import_crypto.default.randomFillSync(rnds8Pool);
+    poolPtr = 0;
+  }
+  return rnds8Pool.slice(poolPtr, poolPtr += 16);
+}
+var import_crypto, rnds8Pool, poolPtr;
+var init_rng = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js"() {
+    import_crypto = __toESM(require("crypto"));
+    rnds8Pool = new Uint8Array(256);
+    poolPtr = rnds8Pool.length;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js
+var regex_default;
+var init_regex = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js"() {
+    regex_default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js
+function validate(uuid3) {
+  return typeof uuid3 === "string" && regex_default.test(uuid3);
+}
+var validate_default;
+var init_validate = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js"() {
+    init_regex();
+    validate_default = validate;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js
+function stringify(arr, offset = 0) {
+  const uuid3 = (byteToHex2[arr[offset + 0]] + byteToHex2[arr[offset + 1]] + byteToHex2[arr[offset + 2]] + byteToHex2[arr[offset + 3]] + "-" + byteToHex2[arr[offset + 4]] + byteToHex2[arr[offset + 5]] + "-" + byteToHex2[arr[offset + 6]] + byteToHex2[arr[offset + 7]] + "-" + byteToHex2[arr[offset + 8]] + byteToHex2[arr[offset + 9]] + "-" + byteToHex2[arr[offset + 10]] + byteToHex2[arr[offset + 11]] + byteToHex2[arr[offset + 12]] + byteToHex2[arr[offset + 13]] + byteToHex2[arr[offset + 14]] + byteToHex2[arr[offset + 15]]).toLowerCase();
+  if (!validate_default(uuid3)) {
+    throw TypeError("Stringified UUID is invalid");
+  }
+  return uuid3;
+}
+var byteToHex2, stringify_default;
+var init_stringify = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js"() {
+    init_validate();
+    byteToHex2 = [];
+    for (let i = 0; i < 256; ++i) {
+      byteToHex2.push((i + 256).toString(16).substr(1));
+    }
+    stringify_default = stringify;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js
+function v1(options2, buf, offset) {
+  let i = buf && offset || 0;
+  const b = buf || new Array(16);
+  options2 = options2 || {};
+  let node = options2.node || _nodeId;
+  let clockseq = options2.clockseq !== void 0 ? options2.clockseq : _clockseq;
+  if (node == null || clockseq == null) {
+    const seedBytes = options2.random || (options2.rng || rng2)();
+    if (node == null) {
+      node = _nodeId = [seedBytes[0] | 1, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
+    }
+    if (clockseq == null) {
+      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 16383;
+    }
+  }
+  let msecs = options2.msecs !== void 0 ? options2.msecs : Date.now();
+  let nsecs = options2.nsecs !== void 0 ? options2.nsecs : _lastNSecs + 1;
+  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 1e4;
+  if (dt < 0 && options2.clockseq === void 0) {
+    clockseq = clockseq + 1 & 16383;
+  }
+  if ((dt < 0 || msecs > _lastMSecs) && options2.nsecs === void 0) {
+    nsecs = 0;
+  }
+  if (nsecs >= 1e4) {
+    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
+  }
+  _lastMSecs = msecs;
+  _lastNSecs = nsecs;
+  _clockseq = clockseq;
+  msecs += 122192928e5;
+  const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
+  b[i++] = tl >>> 24 & 255;
+  b[i++] = tl >>> 16 & 255;
+  b[i++] = tl >>> 8 & 255;
+  b[i++] = tl & 255;
+  const tmh = msecs / 4294967296 * 1e4 & 268435455;
+  b[i++] = tmh >>> 8 & 255;
+  b[i++] = tmh & 255;
+  b[i++] = tmh >>> 24 & 15 | 16;
+  b[i++] = tmh >>> 16 & 255;
+  b[i++] = clockseq >>> 8 | 128;
+  b[i++] = clockseq & 255;
+  for (let n = 0; n < 6; ++n) {
+    b[i + n] = node[n];
+  }
+  return buf || stringify_default(b);
+}
+var _nodeId, _clockseq, _lastMSecs, _lastNSecs, v1_default;
+var init_v1 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js"() {
+    init_rng();
+    init_stringify();
+    _lastMSecs = 0;
+    _lastNSecs = 0;
+    v1_default = v1;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js
+function parse2(uuid3) {
+  if (!validate_default(uuid3)) {
+    throw TypeError("Invalid UUID");
+  }
+  let v;
+  const arr = new Uint8Array(16);
+  arr[0] = (v = parseInt(uuid3.slice(0, 8), 16)) >>> 24;
+  arr[1] = v >>> 16 & 255;
+  arr[2] = v >>> 8 & 255;
+  arr[3] = v & 255;
+  arr[4] = (v = parseInt(uuid3.slice(9, 13), 16)) >>> 8;
+  arr[5] = v & 255;
+  arr[6] = (v = parseInt(uuid3.slice(14, 18), 16)) >>> 8;
+  arr[7] = v & 255;
+  arr[8] = (v = parseInt(uuid3.slice(19, 23), 16)) >>> 8;
+  arr[9] = v & 255;
+  arr[10] = (v = parseInt(uuid3.slice(24, 36), 16)) / 1099511627776 & 255;
+  arr[11] = v / 4294967296 & 255;
+  arr[12] = v >>> 24 & 255;
+  arr[13] = v >>> 16 & 255;
+  arr[14] = v >>> 8 & 255;
+  arr[15] = v & 255;
+  return arr;
+}
+var parse_default;
+var init_parse = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js"() {
+    init_validate();
+    parse_default = parse2;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js
+function stringToBytes(str2) {
+  str2 = unescape(encodeURIComponent(str2));
+  const bytes = [];
+  for (let i = 0; i < str2.length; ++i) {
+    bytes.push(str2.charCodeAt(i));
+  }
+  return bytes;
+}
+function v35_default(name, version3, hashfunc) {
+  function generateUUID(value, namespace, buf, offset) {
+    if (typeof value === "string") {
+      value = stringToBytes(value);
+    }
+    if (typeof namespace === "string") {
+      namespace = parse_default(namespace);
+    }
+    if (namespace.length !== 16) {
+      throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
+    }
+    let bytes = new Uint8Array(16 + value.length);
+    bytes.set(namespace);
+    bytes.set(value, namespace.length);
+    bytes = hashfunc(bytes);
+    bytes[6] = bytes[6] & 15 | version3;
+    bytes[8] = bytes[8] & 63 | 128;
+    if (buf) {
+      offset = offset || 0;
+      for (let i = 0; i < 16; ++i) {
+        buf[offset + i] = bytes[i];
+      }
+      return buf;
+    }
+    return stringify_default(bytes);
+  }
+  try {
+    generateUUID.name = name;
+  } catch (err) {
+  }
+  generateUUID.DNS = DNS;
+  generateUUID.URL = URL2;
+  return generateUUID;
+}
+var DNS, URL2;
+var init_v35 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js"() {
+    init_stringify();
+    init_parse();
+    DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    URL2 = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js
+function md5(bytes) {
+  if (Array.isArray(bytes)) {
+    bytes = Buffer.from(bytes);
+  } else if (typeof bytes === "string") {
+    bytes = Buffer.from(bytes, "utf8");
+  }
+  return import_crypto2.default.createHash("md5").update(bytes).digest();
+}
+var import_crypto2, md5_default;
+var init_md5 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js"() {
+    import_crypto2 = __toESM(require("crypto"));
+    md5_default = md5;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js
+var v3, v3_default;
+var init_v3 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js"() {
+    init_v35();
+    init_md5();
+    v3 = v35_default("v3", 48, md5_default);
+    v3_default = v3;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js
+function v4(options2, buf, offset) {
+  options2 = options2 || {};
+  const rnds = options2.random || (options2.rng || rng2)();
+  rnds[6] = rnds[6] & 15 | 64;
+  rnds[8] = rnds[8] & 63 | 128;
+  if (buf) {
+    offset = offset || 0;
+    for (let i = 0; i < 16; ++i) {
+      buf[offset + i] = rnds[i];
+    }
+    return buf;
+  }
+  return stringify_default(rnds);
+}
+var v4_default;
+var init_v4 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js"() {
+    init_rng();
+    init_stringify();
+    v4_default = v4;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js
+function sha1(bytes) {
+  if (Array.isArray(bytes)) {
+    bytes = Buffer.from(bytes);
+  } else if (typeof bytes === "string") {
+    bytes = Buffer.from(bytes, "utf8");
+  }
+  return import_crypto3.default.createHash("sha1").update(bytes).digest();
+}
+var import_crypto3, sha1_default;
+var init_sha1 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js"() {
+    import_crypto3 = __toESM(require("crypto"));
+    sha1_default = sha1;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js
+var v5, v5_default;
+var init_v5 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js"() {
+    init_v35();
+    init_sha1();
+    v5 = v35_default("v5", 80, sha1_default);
+    v5_default = v5;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js
+var nil_default;
+var init_nil = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js"() {
+    nil_default = "00000000-0000-0000-0000-000000000000";
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js
+function version(uuid3) {
+  if (!validate_default(uuid3)) {
+    throw TypeError("Invalid UUID");
+  }
+  return parseInt(uuid3.substr(14, 1), 16);
+}
+var version_default;
+var init_version = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js"() {
+    init_validate();
+    version_default = version;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js
+var esm_node_exports = {};
+__export(esm_node_exports, {
+  NIL: () => nil_default,
+  parse: () => parse_default,
+  stringify: () => stringify_default,
+  v1: () => v1_default,
+  v3: () => v3_default,
+  v4: () => v4_default,
+  v5: () => v5_default,
+  validate: () => validate_default,
+  version: () => version_default
+});
+var init_esm_node = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js"() {
+    init_v1();
+    init_v3();
+    init_v4();
+    init_v5();
+    init_nil();
+    init_version();
+    init_validate();
+    init_stringify();
+    init_parse();
+  }
+});
+
+// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
+var require_safe_buffer = __commonJS({
+  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
+    var buffer = require("buffer");
+    var Buffer2 = buffer.Buffer;
+    function copyProps(src, dst) {
+      for (var key in src) {
+        dst[key] = src[key];
+      }
+    }
+    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
+      module2.exports = buffer;
+    } else {
+      copyProps(buffer, exports2);
+      exports2.Buffer = SafeBuffer;
+    }
+    function SafeBuffer(arg, encodingOrOffset, length) {
+      return Buffer2(arg, encodingOrOffset, length);
+    }
+    SafeBuffer.prototype = Object.create(Buffer2.prototype);
+    copyProps(Buffer2, SafeBuffer);
+    SafeBuffer.from = function(arg, encodingOrOffset, length) {
+      if (typeof arg === "number") {
+        throw new TypeError("Argument must not be a number");
+      }
+      return Buffer2(arg, encodingOrOffset, length);
+    };
+    SafeBuffer.alloc = function(size, fill, encoding) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      var buf = Buffer2(size);
+      if (fill !== void 0) {
+        if (typeof encoding === "string") {
+          buf.fill(fill, encoding);
+        } else {
+          buf.fill(fill);
+        }
+      } else {
+        buf.fill(0);
+      }
+      return buf;
+    };
+    SafeBuffer.allocUnsafe = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return Buffer2(size);
+    };
+    SafeBuffer.allocUnsafeSlow = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return buffer.SlowBuffer(size);
+    };
+  }
+});
+
+// node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js
+var require_src = __commonJS({
+  "node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js"(exports2, module2) {
+    "use strict";
+    var _Buffer = require_safe_buffer().Buffer;
+    function base(ALPHABET) {
+      if (ALPHABET.length >= 255) {
+        throw new TypeError("Alphabet too long");
+      }
+      var BASE_MAP = new Uint8Array(256);
+      for (var j = 0; j < BASE_MAP.length; j++) {
+        BASE_MAP[j] = 255;
+      }
+      for (var i = 0; i < ALPHABET.length; i++) {
+        var x = ALPHABET.charAt(i);
+        var xc = x.charCodeAt(0);
+        if (BASE_MAP[xc] !== 255) {
+          throw new TypeError(x + " is ambiguous");
+        }
+        BASE_MAP[xc] = i;
+      }
+      var BASE = ALPHABET.length;
+      var LEADER = ALPHABET.charAt(0);
+      var FACTOR = Math.log(BASE) / Math.log(256);
+      var iFACTOR = Math.log(256) / Math.log(BASE);
+      function encode3(source) {
+        if (Array.isArray(source) || source instanceof Uint8Array) {
+          source = _Buffer.from(source);
+        }
+        if (!_Buffer.isBuffer(source)) {
+          throw new TypeError("Expected Buffer");
+        }
+        if (source.length === 0) {
+          return "";
+        }
+        var zeroes = 0;
+        var length = 0;
+        var pbegin = 0;
+        var pend = source.length;
+        while (pbegin !== pend && source[pbegin] === 0) {
+          pbegin++;
+          zeroes++;
+        }
+        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
+        var b58 = new Uint8Array(size);
+        while (pbegin !== pend) {
+          var carry = source[pbegin];
+          var i2 = 0;
+          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
+            carry += 256 * b58[it1] >>> 0;
+            b58[it1] = carry % BASE >>> 0;
+            carry = carry / BASE >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          pbegin++;
+        }
+        var it2 = size - length;
+        while (it2 !== size && b58[it2] === 0) {
+          it2++;
+        }
+        var str2 = LEADER.repeat(zeroes);
+        for (; it2 < size; ++it2) {
+          str2 += ALPHABET.charAt(b58[it2]);
+        }
+        return str2;
+      }
+      function decodeUnsafe(source) {
+        if (typeof source !== "string") {
+          throw new TypeError("Expected String");
+        }
+        if (source.length === 0) {
+          return _Buffer.alloc(0);
+        }
+        var psz = 0;
+        var zeroes = 0;
+        var length = 0;
+        while (source[psz] === LEADER) {
+          zeroes++;
+          psz++;
+        }
+        var size = (source.length - psz) * FACTOR + 1 >>> 0;
+        var b256 = new Uint8Array(size);
+        while (source[psz]) {
+          var carry = BASE_MAP[source.charCodeAt(psz)];
+          if (carry === 255) {
+            return;
+          }
+          var i2 = 0;
+          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
+            carry += BASE * b256[it3] >>> 0;
+            b256[it3] = carry % 256 >>> 0;
+            carry = carry / 256 >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          psz++;
+        }
+        var it4 = size - length;
+        while (it4 !== size && b256[it4] === 0) {
+          it4++;
+        }
+        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
+        vch.fill(0, 0, zeroes);
+        var j2 = zeroes;
+        while (it4 !== size) {
+          vch[j2++] = b256[it4++];
+        }
+        return vch;
+      }
+      function decode3(string4) {
+        var buffer = decodeUnsafe(string4);
+        if (buffer) {
+          return buffer;
+        }
+        throw new Error("Non-base" + BASE + " character");
+      }
+      return {
+        encode: encode3,
+        decodeUnsafe,
+        decode: decode3
+      };
+    }
+    module2.exports = base;
+  }
+});
+
+// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
+var require_uuid62 = __commonJS({
+  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
+    "use strict";
+    var uuid3 = (init_esm_node(), __toCommonJS(esm_node_exports));
+    var uuidv1 = uuid3.v1;
+    var uuidv42 = uuid3.v4;
+    var uuidv5 = uuid3.v5;
+    var baseX = require_src();
+    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    var OUTPUT_LENGTH = 22;
+    var UUID_LENGTH = 32;
+    var Buffer2 = global ? global.Buffer : void 0;
+    if (typeof Buffer2 === "undefined") {
+      Buffer2 = require("buffer").Buffer;
+    }
+    var UUID62 = class {
+      constructor() {
+        this.base = base62;
+        this.uuid = uuid3;
+        this.baseX = baseX;
+        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
+        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
+      }
+      get customBase() {
+        return this.base;
+      }
+      set customBase(base) {
+        this.base = base;
+      }
+      get length() {
+        return OUTPUT_LENGTH;
+      }
+      get uuidLength() {
+        return UUID_LENGTH;
+      }
+      v4() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv42.apply(this, args);
+        return this.encode(id);
+      }
+      v5() {
+        const args = Array.prototype.slice.call(arguments);
+        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
+          args[1] = this.decode(args[1]);
+        }
+        const id = uuidv5.apply(this, args);
+        return this.encode(id);
+      }
+      v1() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv1.apply(this, args);
+        return this.encode(id);
+      }
+      encode(input, encoding) {
+        encoding = encoding || "hex";
+        if (typeof input === "string") {
+          input = new Buffer2(input.replace(/-/g, ""), encoding);
+        }
+        return ensureLength(this.base.encode(input), OUTPUT_LENGTH);
+      }
+      decode(input, encoding) {
+        encoding = encoding || "hex";
+        const res = ensureLength(
+          new Buffer2(this.base.decode(input)).toString(encoding),
+          UUID_LENGTH
+        );
+        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
+      }
+    };
+    function ensureLength(input, targetLength) {
+      input = input.toString();
+      return `${"0".repeat(32)}${input}`.slice(-targetLength);
+    }
+    module2.exports = new UUID62();
+  }
+});
+
 // node_modules/.pnpm/kind-of@6.0.3/node_modules/kind-of/index.js
 var require_kind_of = __commonJS({
   "node_modules/.pnpm/kind-of@6.0.3/node_modules/kind-of/index.js"(exports2, module2) {
@@ -3427,7 +4033,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs3 = require("fs");
+    var fs5 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -3511,7 +4117,7 @@ var require_gray_matter = __commonJS({
       return stringify2(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs3.readFileSync(filepath, "utf8");
+      const str2 = fs5.readFileSync(filepath, "utf8");
       const file2 = matter2(str2, options2);
       file2.path = filepath;
       return file2;
@@ -3539,614 +4145,111 @@ var require_gray_matter = __commonJS({
   }
 });
 
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js
-function rng2() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    import_crypto.default.randomFillSync(rnds8Pool);
-    poolPtr = 0;
-  }
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
+// src/skills/doc-driven-dev-graph/scripts/migrate_ids.ts
+var import_node_path5 = __toESM(require("node:path"));
+
+// src/skills/doc-driven-dev-graph/scripts/lib/id_migration.ts
+var import_node_child_process = require("node:child_process");
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path4 = __toESM(require("node:path"));
+
+// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/stringify.js
+var byteToHex = [];
+for (let i = 0; i < 256; ++i) {
+  byteToHex.push((i + 256).toString(16).slice(1));
 }
-var import_crypto, rnds8Pool, poolPtr;
-var init_rng = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js"() {
-    import_crypto = __toESM(require("crypto"));
-    rnds8Pool = new Uint8Array(256);
-    poolPtr = rnds8Pool.length;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js
-var regex_default;
-var init_regex = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js"() {
-    regex_default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js
-function validate(uuid3) {
-  return typeof uuid3 === "string" && regex_default.test(uuid3);
+function unsafeStringify(arr, offset = 0) {
+  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
 }
-var validate_default;
-var init_validate = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js"() {
-    init_regex();
-    validate_default = validate;
-  }
-});
 
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js
-function stringify(arr, offset = 0) {
-  const uuid3 = (byteToHex2[arr[offset + 0]] + byteToHex2[arr[offset + 1]] + byteToHex2[arr[offset + 2]] + byteToHex2[arr[offset + 3]] + "-" + byteToHex2[arr[offset + 4]] + byteToHex2[arr[offset + 5]] + "-" + byteToHex2[arr[offset + 6]] + byteToHex2[arr[offset + 7]] + "-" + byteToHex2[arr[offset + 8]] + byteToHex2[arr[offset + 9]] + "-" + byteToHex2[arr[offset + 10]] + byteToHex2[arr[offset + 11]] + byteToHex2[arr[offset + 12]] + byteToHex2[arr[offset + 13]] + byteToHex2[arr[offset + 14]] + byteToHex2[arr[offset + 15]]).toLowerCase();
-  if (!validate_default(uuid3)) {
-    throw TypeError("Stringified UUID is invalid");
-  }
-  return uuid3;
+// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/rng.js
+var rnds8 = new Uint8Array(16);
+function rng() {
+  return crypto.getRandomValues(rnds8);
 }
-var byteToHex2, stringify_default;
-var init_stringify = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js"() {
-    init_validate();
-    byteToHex2 = [];
-    for (let i = 0; i < 256; ++i) {
-      byteToHex2.push((i + 256).toString(16).substr(1));
-    }
-    stringify_default = stringify;
-  }
-});
 
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js
-function v1(options2, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options2 = options2 || {};
-  let node = options2.node || _nodeId;
-  let clockseq = options2.clockseq !== void 0 ? options2.clockseq : _clockseq;
-  if (node == null || clockseq == null) {
-    const seedBytes = options2.random || (options2.rng || rng2)();
-    if (node == null) {
-      node = _nodeId = [seedBytes[0] | 1, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-    if (clockseq == null) {
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 16383;
-    }
+// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/v7.js
+var _state = {};
+function v7(options2, buf, offset) {
+  let bytes;
+  if (options2) {
+    bytes = v7Bytes(options2.random ?? options2.rng?.() ?? rng(), options2.msecs, options2.seq, buf, offset);
+  } else {
+    const now = Date.now();
+    const rnds = rng();
+    updateV7State(_state, now, rnds);
+    bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
   }
-  let msecs = options2.msecs !== void 0 ? options2.msecs : Date.now();
-  let nsecs = options2.nsecs !== void 0 ? options2.nsecs : _lastNSecs + 1;
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 1e4;
-  if (dt < 0 && options2.clockseq === void 0) {
-    clockseq = clockseq + 1 & 16383;
-  }
-  if ((dt < 0 || msecs > _lastMSecs) && options2.nsecs === void 0) {
-    nsecs = 0;
-  }
-  if (nsecs >= 1e4) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq;
-  msecs += 122192928e5;
-  const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
-  b[i++] = tl >>> 24 & 255;
-  b[i++] = tl >>> 16 & 255;
-  b[i++] = tl >>> 8 & 255;
-  b[i++] = tl & 255;
-  const tmh = msecs / 4294967296 * 1e4 & 268435455;
-  b[i++] = tmh >>> 8 & 255;
-  b[i++] = tmh & 255;
-  b[i++] = tmh >>> 24 & 15 | 16;
-  b[i++] = tmh >>> 16 & 255;
-  b[i++] = clockseq >>> 8 | 128;
-  b[i++] = clockseq & 255;
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node[n];
-  }
-  return buf || stringify_default(b);
+  return buf ?? unsafeStringify(bytes);
 }
-var _nodeId, _clockseq, _lastMSecs, _lastNSecs, v1_default;
-var init_v1 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js"() {
-    init_rng();
-    init_stringify();
-    _lastMSecs = 0;
-    _lastNSecs = 0;
-    v1_default = v1;
+function updateV7State(state, now, rnds) {
+  state.msecs ??= -Infinity;
+  state.seq ??= 0;
+  if (now > state.msecs) {
+    state.seq = v7Sequence(rnds);
+    state.msecs = now;
+  } else {
+    state.seq = state.seq + 1 | 0;
+    if (state.seq === 0) {
+      state.msecs++;
+    }
   }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js
-function parse4(uuid3) {
-  if (!validate_default(uuid3)) {
-    throw TypeError("Invalid UUID");
-  }
-  let v;
-  const arr = new Uint8Array(16);
-  arr[0] = (v = parseInt(uuid3.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 255;
-  arr[2] = v >>> 8 & 255;
-  arr[3] = v & 255;
-  arr[4] = (v = parseInt(uuid3.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 255;
-  arr[6] = (v = parseInt(uuid3.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 255;
-  arr[8] = (v = parseInt(uuid3.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 255;
-  arr[10] = (v = parseInt(uuid3.slice(24, 36), 16)) / 1099511627776 & 255;
-  arr[11] = v / 4294967296 & 255;
-  arr[12] = v >>> 24 & 255;
-  arr[13] = v >>> 16 & 255;
-  arr[14] = v >>> 8 & 255;
-  arr[15] = v & 255;
-  return arr;
+  return state;
 }
-var parse_default;
-var init_parse = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js"() {
-    init_validate();
-    parse_default = parse4;
+function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
+  if (rnds.length < 16) {
+    throw new Error("Random bytes length must be >= 16");
   }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js
-function stringToBytes(str2) {
-  str2 = unescape(encodeURIComponent(str2));
-  const bytes = [];
-  for (let i = 0; i < str2.length; ++i) {
-    bytes.push(str2.charCodeAt(i));
+  if (!buf) {
+    buf = new Uint8Array(16);
+    offset = 0;
+  } else {
+    if (offset < 0 || offset + 16 > buf.length) {
+      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+    }
   }
-  return bytes;
+  msecs ??= Date.now();
+  seq ??= v7Sequence(rnds);
+  buf[offset++] = msecs / 1099511627776 & 255;
+  buf[offset++] = msecs / 4294967296 & 255;
+  buf[offset++] = msecs / 16777216 & 255;
+  buf[offset++] = msecs / 65536 & 255;
+  buf[offset++] = msecs / 256 & 255;
+  buf[offset++] = msecs & 255;
+  buf[offset++] = 112 | seq >>> 28 & 15;
+  buf[offset++] = seq >>> 20 & 255;
+  buf[offset++] = 128 | seq >>> 14 & 63;
+  buf[offset++] = seq >>> 6 & 255;
+  buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
+  buf[offset++] = rnds[11];
+  buf[offset++] = rnds[12];
+  buf[offset++] = rnds[13];
+  buf[offset++] = rnds[14];
+  buf[offset++] = rnds[15];
+  return buf;
 }
-function v35_default(name, version3, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    if (typeof value === "string") {
-      value = stringToBytes(value);
-    }
-    if (typeof namespace === "string") {
-      namespace = parse_default(namespace);
-    }
-    if (namespace.length !== 16) {
-      throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
-    }
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 15 | version3;
-    bytes[8] = bytes[8] & 63 | 128;
-    if (buf) {
-      offset = offset || 0;
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-      return buf;
-    }
-    return stringify_default(bytes);
-  }
-  try {
-    generateUUID.name = name;
-  } catch (err) {
-  }
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL2;
-  return generateUUID;
+function v7Sequence(rnds) {
+  return (rnds[6] & 127) << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
 }
-var DNS, URL2;
-var init_v35 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js"() {
-    init_stringify();
-    init_parse();
-    DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
-    URL2 = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
-  }
-});
+var v7_default = v7;
 
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === "string") {
-    bytes = Buffer.from(bytes, "utf8");
+// src/skills/lib/artifact_id.ts
+var import_uuid62 = __toESM(require_uuid62());
+var NEW_ARTIFACT_ID_PATTERN = /^[A-Z][A-Z0-9]*-[0-9A-Za-z]{22}$/;
+var LEGACY_ARTIFACT_ID_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
+var ID_PREFIX_PATTERN = /^[A-Z][A-Z0-9]*$/;
+function generateArtifactId(idPrefix) {
+  if (!ID_PREFIX_PATTERN.test(idPrefix)) {
+    throw new Error(`Invalid artifact id prefix: ${idPrefix}`);
   }
-  return import_crypto2.default.createHash("md5").update(bytes).digest();
+  return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
 }
-var import_crypto2, md5_default;
-var init_md5 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js"() {
-    import_crypto2 = __toESM(require("crypto"));
-    md5_default = md5;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js
-var v3, v3_default;
-var init_v3 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js"() {
-    init_v35();
-    init_md5();
-    v3 = v35_default("v3", 48, md5_default);
-    v3_default = v3;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js
-function v4(options2, buf, offset) {
-  options2 = options2 || {};
-  const rnds = options2.random || (options2.rng || rng2)();
-  rnds[6] = rnds[6] & 15 | 64;
-  rnds[8] = rnds[8] & 63 | 128;
-  if (buf) {
-    offset = offset || 0;
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-    return buf;
-  }
-  return stringify_default(rnds);
+function isNewArtifactId(value) {
+  return NEW_ARTIFACT_ID_PATTERN.test(value.trim());
 }
-var v4_default;
-var init_v4 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js"() {
-    init_rng();
-    init_stringify();
-    v4_default = v4;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === "string") {
-    bytes = Buffer.from(bytes, "utf8");
-  }
-  return import_crypto3.default.createHash("sha1").update(bytes).digest();
+function isLegacyArtifactId(value) {
+  return LEGACY_ARTIFACT_ID_PATTERN.test(value.trim());
 }
-var import_crypto3, sha1_default;
-var init_sha1 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js"() {
-    import_crypto3 = __toESM(require("crypto"));
-    sha1_default = sha1;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js
-var v5, v5_default;
-var init_v5 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js"() {
-    init_v35();
-    init_sha1();
-    v5 = v35_default("v5", 80, sha1_default);
-    v5_default = v5;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js
-var nil_default;
-var init_nil = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js"() {
-    nil_default = "00000000-0000-0000-0000-000000000000";
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js
-function version2(uuid3) {
-  if (!validate_default(uuid3)) {
-    throw TypeError("Invalid UUID");
-  }
-  return parseInt(uuid3.substr(14, 1), 16);
-}
-var version_default;
-var init_version = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js"() {
-    init_validate();
-    version_default = version2;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js
-var esm_node_exports = {};
-__export(esm_node_exports, {
-  NIL: () => nil_default,
-  parse: () => parse_default,
-  stringify: () => stringify_default,
-  v1: () => v1_default,
-  v3: () => v3_default,
-  v4: () => v4_default,
-  v5: () => v5_default,
-  validate: () => validate_default,
-  version: () => version_default
-});
-var init_esm_node = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js"() {
-    init_v1();
-    init_v3();
-    init_v4();
-    init_v5();
-    init_nil();
-    init_version();
-    init_validate();
-    init_stringify();
-    init_parse();
-  }
-});
-
-// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
-var require_safe_buffer = __commonJS({
-  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
-    var buffer = require("buffer");
-    var Buffer2 = buffer.Buffer;
-    function copyProps(src, dst) {
-      for (var key in src) {
-        dst[key] = src[key];
-      }
-    }
-    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
-      module2.exports = buffer;
-    } else {
-      copyProps(buffer, exports2);
-      exports2.Buffer = SafeBuffer;
-    }
-    function SafeBuffer(arg, encodingOrOffset, length) {
-      return Buffer2(arg, encodingOrOffset, length);
-    }
-    SafeBuffer.prototype = Object.create(Buffer2.prototype);
-    copyProps(Buffer2, SafeBuffer);
-    SafeBuffer.from = function(arg, encodingOrOffset, length) {
-      if (typeof arg === "number") {
-        throw new TypeError("Argument must not be a number");
-      }
-      return Buffer2(arg, encodingOrOffset, length);
-    };
-    SafeBuffer.alloc = function(size, fill, encoding) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      var buf = Buffer2(size);
-      if (fill !== void 0) {
-        if (typeof encoding === "string") {
-          buf.fill(fill, encoding);
-        } else {
-          buf.fill(fill);
-        }
-      } else {
-        buf.fill(0);
-      }
-      return buf;
-    };
-    SafeBuffer.allocUnsafe = function(size) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      return Buffer2(size);
-    };
-    SafeBuffer.allocUnsafeSlow = function(size) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      return buffer.SlowBuffer(size);
-    };
-  }
-});
-
-// node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js
-var require_src = __commonJS({
-  "node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js"(exports2, module2) {
-    "use strict";
-    var _Buffer = require_safe_buffer().Buffer;
-    function base(ALPHABET) {
-      if (ALPHABET.length >= 255) {
-        throw new TypeError("Alphabet too long");
-      }
-      var BASE_MAP = new Uint8Array(256);
-      for (var j = 0; j < BASE_MAP.length; j++) {
-        BASE_MAP[j] = 255;
-      }
-      for (var i = 0; i < ALPHABET.length; i++) {
-        var x = ALPHABET.charAt(i);
-        var xc = x.charCodeAt(0);
-        if (BASE_MAP[xc] !== 255) {
-          throw new TypeError(x + " is ambiguous");
-        }
-        BASE_MAP[xc] = i;
-      }
-      var BASE = ALPHABET.length;
-      var LEADER = ALPHABET.charAt(0);
-      var FACTOR = Math.log(BASE) / Math.log(256);
-      var iFACTOR = Math.log(256) / Math.log(BASE);
-      function encode3(source) {
-        if (Array.isArray(source) || source instanceof Uint8Array) {
-          source = _Buffer.from(source);
-        }
-        if (!_Buffer.isBuffer(source)) {
-          throw new TypeError("Expected Buffer");
-        }
-        if (source.length === 0) {
-          return "";
-        }
-        var zeroes = 0;
-        var length = 0;
-        var pbegin = 0;
-        var pend = source.length;
-        while (pbegin !== pend && source[pbegin] === 0) {
-          pbegin++;
-          zeroes++;
-        }
-        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
-        var b58 = new Uint8Array(size);
-        while (pbegin !== pend) {
-          var carry = source[pbegin];
-          var i2 = 0;
-          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
-            carry += 256 * b58[it1] >>> 0;
-            b58[it1] = carry % BASE >>> 0;
-            carry = carry / BASE >>> 0;
-          }
-          if (carry !== 0) {
-            throw new Error("Non-zero carry");
-          }
-          length = i2;
-          pbegin++;
-        }
-        var it2 = size - length;
-        while (it2 !== size && b58[it2] === 0) {
-          it2++;
-        }
-        var str2 = LEADER.repeat(zeroes);
-        for (; it2 < size; ++it2) {
-          str2 += ALPHABET.charAt(b58[it2]);
-        }
-        return str2;
-      }
-      function decodeUnsafe(source) {
-        if (typeof source !== "string") {
-          throw new TypeError("Expected String");
-        }
-        if (source.length === 0) {
-          return _Buffer.alloc(0);
-        }
-        var psz = 0;
-        var zeroes = 0;
-        var length = 0;
-        while (source[psz] === LEADER) {
-          zeroes++;
-          psz++;
-        }
-        var size = (source.length - psz) * FACTOR + 1 >>> 0;
-        var b256 = new Uint8Array(size);
-        while (source[psz]) {
-          var carry = BASE_MAP[source.charCodeAt(psz)];
-          if (carry === 255) {
-            return;
-          }
-          var i2 = 0;
-          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
-            carry += BASE * b256[it3] >>> 0;
-            b256[it3] = carry % 256 >>> 0;
-            carry = carry / 256 >>> 0;
-          }
-          if (carry !== 0) {
-            throw new Error("Non-zero carry");
-          }
-          length = i2;
-          psz++;
-        }
-        var it4 = size - length;
-        while (it4 !== size && b256[it4] === 0) {
-          it4++;
-        }
-        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
-        vch.fill(0, 0, zeroes);
-        var j2 = zeroes;
-        while (it4 !== size) {
-          vch[j2++] = b256[it4++];
-        }
-        return vch;
-      }
-      function decode3(string4) {
-        var buffer = decodeUnsafe(string4);
-        if (buffer) {
-          return buffer;
-        }
-        throw new Error("Non-base" + BASE + " character");
-      }
-      return {
-        encode: encode3,
-        decodeUnsafe,
-        decode: decode3
-      };
-    }
-    module2.exports = base;
-  }
-});
-
-// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
-var require_uuid62 = __commonJS({
-  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
-    "use strict";
-    var uuid3 = (init_esm_node(), __toCommonJS(esm_node_exports));
-    var uuidv1 = uuid3.v1;
-    var uuidv42 = uuid3.v4;
-    var uuidv5 = uuid3.v5;
-    var baseX = require_src();
-    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    var OUTPUT_LENGTH = 22;
-    var UUID_LENGTH = 32;
-    var Buffer2 = global ? global.Buffer : void 0;
-    if (typeof Buffer2 === "undefined") {
-      Buffer2 = require("buffer").Buffer;
-    }
-    var UUID62 = class {
-      constructor() {
-        this.base = base62;
-        this.uuid = uuid3;
-        this.baseX = baseX;
-        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
-        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
-      }
-      get customBase() {
-        return this.base;
-      }
-      set customBase(base) {
-        this.base = base;
-      }
-      get length() {
-        return OUTPUT_LENGTH;
-      }
-      get uuidLength() {
-        return UUID_LENGTH;
-      }
-      v4() {
-        const args = Array.prototype.slice.call(arguments);
-        if (!args[1]) {
-          args[1] = new Buffer2(16);
-        }
-        const id = uuidv42.apply(this, args);
-        return this.encode(id);
-      }
-      v5() {
-        const args = Array.prototype.slice.call(arguments);
-        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
-          args[1] = this.decode(args[1]);
-        }
-        const id = uuidv5.apply(this, args);
-        return this.encode(id);
-      }
-      v1() {
-        const args = Array.prototype.slice.call(arguments);
-        if (!args[1]) {
-          args[1] = new Buffer2(16);
-        }
-        const id = uuidv1.apply(this, args);
-        return this.encode(id);
-      }
-      encode(input, encoding) {
-        encoding = encoding || "hex";
-        if (typeof input === "string") {
-          input = new Buffer2(input.replace(/-/g, ""), encoding);
-        }
-        return ensureLength(this.base.encode(input), OUTPUT_LENGTH);
-      }
-      decode(input, encoding) {
-        encoding = encoding || "hex";
-        const res = ensureLength(
-          new Buffer2(this.base.decode(input)).toString(encoding),
-          UUID_LENGTH
-        );
-        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
-      }
-    };
-    function ensureLength(input, targetLength) {
-      input = input.toString();
-      return `${"0".repeat(32)}${input}`.slice(-targetLength);
-    }
-    module2.exports = new UUID62();
-  }
-});
-
-// src/skills/idea-doc/scripts/new_idea.ts
-var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
 var import_node_fs2 = __toESM(require("node:fs"));
@@ -4336,7 +4439,7 @@ __export(external_exports, {
   object: () => object,
   optional: () => optional,
   overwrite: () => _overwrite,
-  parse: () => parse3,
+  parse: () => parse4,
   parseAsync: () => parseAsync2,
   partialRecord: () => partialRecord,
   pipe: () => pipe,
@@ -4656,7 +4759,7 @@ __export(core_exports2, {
   isValidJWT: () => isValidJWT,
   locales: () => locales_exports,
   meta: () => meta,
-  parse: () => parse2,
+  parse: () => parse3,
   parseAsync: () => parseAsync,
   prettifyError: () => prettifyError,
   process: () => process2,
@@ -4672,7 +4775,7 @@ __export(core_exports2, {
   toJSONSchema: () => toJSONSchema,
   treeifyError: () => treeifyError,
   util: () => util_exports,
-  version: () => version
+  version: () => version2
 });
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
@@ -4919,10 +5022,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path6) {
+  if (!path6)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path6.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -5331,11 +5434,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path6, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path6);
     return iss;
   });
 }
@@ -5482,16 +5585,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path6 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -5518,17 +5621,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path6 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -5560,8 +5663,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path4) {
+  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path6) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -5601,7 +5704,7 @@ var _parse = (_Err) => (schema, value, _ctx, _params) => {
   }
   return result.value;
 };
-var parse2 = /* @__PURE__ */ _parse($ZodRealError);
+var parse3 = /* @__PURE__ */ _parse($ZodRealError);
 var _parseAsync = (_Err) => async (schema, value, _ctx, params) => {
   const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -6419,7 +6522,7 @@ var Doc = class {
 };
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
-var version = {
+var version2 = {
   major: 4,
   minor: 4,
   patch: 3
@@ -6431,7 +6534,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
-  inst._zod.version = version;
+  inst._zod.version = version2;
   const checks = [...inst._zod.def.checks ?? []];
   if (inst._zod.traits.has("$ZodCheck")) {
     checks.unshift(inst);
@@ -7261,7 +7364,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             })));
           }
         }
-        
+
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -7269,7 +7372,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         } else {
           newResult[${k}] = ${id}.value;
         }
-        
+
       `);
       } else if (!isOptionalIn) {
         doc.write(`
@@ -7306,7 +7409,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
-        
+
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -7314,7 +7417,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         } else {
           newResult[${k}] = ${id}.value;
         }
-        
+
       `);
       }
     }
@@ -8393,10 +8496,10 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
       throw new Error("implement() must be called with a function");
     }
     return function(...args) {
-      const parsedArgs = inst._def.input ? parse2(inst._def.input, args) : args;
+      const parsedArgs = inst._def.input ? parse3(inst._def.input, args) : args;
       const result = Reflect.apply(func, this, parsedArgs);
       if (inst._def.output) {
-        return parse2(inst._def.output, result);
+        return parse3(inst._def.output, result);
       }
       return result;
     };
@@ -16830,7 +16933,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, {
 });
 
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
-var parse3 = /* @__PURE__ */ _parse(ZodRealError);
+var parse4 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
@@ -16893,7 +16996,7 @@ var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   inst.def = def;
   inst.type = def.type;
   Object.defineProperty(inst, "_def", { value: def });
-  inst.parse = (data, params) => parse3(inst, data, params, { callee: inst.parse });
+  inst.parse = (data, params) => parse4(inst, data, params, { callee: inst.parse });
   inst.safeParse = (data, params) => safeParse2(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync2(inst, data, params, { callee: inst.parseAsync });
   inst.safeParseAsync = async (data, params) => safeParseAsync2(inst, data, params);
@@ -18253,13 +18356,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path4 = ref.slice(1).split("/").filter(Boolean);
-  if (path4.length === 0) {
+  const path6 = ref.slice(1).split("/").filter(Boolean);
+  if (path6.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path4[0] === defsKey) {
-    const key = path4[1];
+  if (path6[0] === defsKey) {
+    const key = path6[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -18667,96 +18770,6 @@ function date4(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 256).toString(16).slice(1));
-}
-function unsafeStringify(arr, offset = 0) {
-  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
-}
-
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/rng.js
-var rnds8 = new Uint8Array(16);
-function rng() {
-  return crypto.getRandomValues(rnds8);
-}
-
-// node_modules/.pnpm/uuid@14.0.2/node_modules/uuid/dist-node/v7.js
-var _state = {};
-function v7(options2, buf, offset) {
-  let bytes;
-  if (options2) {
-    bytes = v7Bytes(options2.random ?? options2.rng?.() ?? rng(), options2.msecs, options2.seq, buf, offset);
-  } else {
-    const now = Date.now();
-    const rnds = rng();
-    updateV7State(_state, now, rnds);
-    bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
-  }
-  return buf ?? unsafeStringify(bytes);
-}
-function updateV7State(state, now, rnds) {
-  state.msecs ??= -Infinity;
-  state.seq ??= 0;
-  if (now > state.msecs) {
-    state.seq = v7Sequence(rnds);
-    state.msecs = now;
-  } else {
-    state.seq = state.seq + 1 | 0;
-    if (state.seq === 0) {
-      state.msecs++;
-    }
-  }
-  return state;
-}
-function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
-  if (rnds.length < 16) {
-    throw new Error("Random bytes length must be >= 16");
-  }
-  if (!buf) {
-    buf = new Uint8Array(16);
-    offset = 0;
-  } else {
-    if (offset < 0 || offset + 16 > buf.length) {
-      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-    }
-  }
-  msecs ??= Date.now();
-  seq ??= v7Sequence(rnds);
-  buf[offset++] = msecs / 1099511627776 & 255;
-  buf[offset++] = msecs / 4294967296 & 255;
-  buf[offset++] = msecs / 16777216 & 255;
-  buf[offset++] = msecs / 65536 & 255;
-  buf[offset++] = msecs / 256 & 255;
-  buf[offset++] = msecs & 255;
-  buf[offset++] = 112 | seq >>> 28 & 15;
-  buf[offset++] = seq >>> 20 & 255;
-  buf[offset++] = 128 | seq >>> 14 & 63;
-  buf[offset++] = seq >>> 6 & 255;
-  buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
-  buf[offset++] = rnds[11];
-  buf[offset++] = rnds[12];
-  buf[offset++] = rnds[13];
-  buf[offset++] = rnds[14];
-  buf[offset++] = rnds[15];
-  return buf;
-}
-function v7Sequence(rnds) {
-  return (rnds[6] & 127) << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
-}
-var v7_default = v7;
-
-// src/skills/lib/artifact_id.ts
-var import_uuid62 = __toESM(require_uuid62());
-var ID_PREFIX_PATTERN = /^[A-Z][A-Z0-9]*$/;
-function generateArtifactId(idPrefix) {
-  if (!ID_PREFIX_PATTERN.test(idPrefix)) {
-    throw new Error(`Invalid artifact id prefix: ${idPrefix}`);
-  }
-  return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
-}
-
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
@@ -18765,9 +18778,6 @@ function normalizeDir(input) {
 }
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
-}
-function slugify2(title, fallback) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
 }
 function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
   if (explicitDir) return normalizeDir(explicitDir);
@@ -18916,27 +18926,15 @@ function configFor(type) {
   return configs[type];
 }
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
-function canonicalRootDir(cwd, type) {
-  const config2 = configFor(type);
-  return findDocumentDir(cwd, void 0, config2.dirs, config2.dir);
-}
-function isUnderDir(child, parent) {
-  const c = normalizeDir(child);
-  const p = normalizeDir(parent);
-  return c === p || c.startsWith(`${p}/`);
-}
-function sanitizeFileName(name) {
-  const base = import_node_path2.default.basename(name.trim());
-  const stem = base.replace(/\.md$/i, "");
-  if (!stem) throw new Error("Invalid filename: empty after removing .md extension");
-  return `${stem}.md`;
-}
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
 }
 function docFiles(dir) {
   return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
+}
+function isExternalLink(value) {
+  return /^(https?:|mailto:)/i.test(value);
 }
 function parseDoc(content) {
   try {
@@ -18946,13 +18944,12 @@ function parseDoc(content) {
     return { data: {}, body: content, error: error51 instanceof Error ? error51.message : String(error51) };
   }
 }
-function sanitizeTitle(title) {
-  const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
-  if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
-  return cleaned;
-}
 function indexCell(value) {
   return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+}
+function isGeneratedIndex(content, legacyTitle) {
+  if (content.includes(GENERATED_INDEX_MARKER)) return true;
+  return Boolean(legacyTitle) && content.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content);
 }
 function isForeignDocType(typeValue, expected, relativeDir) {
   if (typeof typeValue !== "string" || typeValue === expected) return false;
@@ -18960,408 +18957,25 @@ function isForeignDocType(typeValue, expected, relativeDir) {
   const normalized = normalizeDir(relativeDir);
   return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
-function completeChanges(input) {
-  return Object.fromEntries(changeFields.map((field) => [field, input?.[field] || []]));
+function formatIssuePath(pathParts) {
+  return pathParts.length === 0 ? "$" : pathParts.map((part) => String(part)).join(".");
 }
-function quote(value) {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-function formatRelation(field, values) {
-  return `  ${field}: ${values}`;
-}
-function formatRelationBlock(field, values) {
-  if (values.length === 0) return formatRelation(field, "[]");
-  return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)].join("\n");
-}
-function formatChangeScalar(key, value) {
-  return `${key}: ${quote(value)}`;
-}
-function formatChangeValue(key, value) {
-  if (Array.isArray(value)) {
-    if (value.length === 0) return [`${key}: []`];
-    return [
-      `${key}:`,
-      ...value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => `  - ${quote(item.trim())}`)
-    ];
+function relationMap(content) {
+  const data = parseDoc(content).data;
+  const rawRelations = data.relations;
+  const result = Object.fromEntries(relationFields.map((field) => [field, []]));
+  if (!rawRelations || typeof rawRelations !== "object" || Array.isArray(rawRelations)) return result;
+  const raw = rawRelations;
+  for (const field of relationFields) {
+    const value = raw[field];
+    if (Array.isArray(value)) result[field] = value.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
+    else if (typeof value === "string" && value.trim()) result[field] = [value.trim()];
   }
-  if (typeof value === "string") return [formatChangeScalar(key, value)];
-  if (typeof value === "number" || typeof value === "boolean") return [`${key}: ${String(value)}`];
-  return [`${key}: ${quote(JSON.stringify(value))}`];
+  return result;
 }
-function formatChangeEntry(entry) {
-  const ordered = [
-    "type",
-    "path",
-    "from",
-    "to",
-    "source",
-    ...Object.keys(entry).filter((key) => !["type", "path", "from", "to", "source"].includes(key)).sort()
-  ].filter((key, index, array2) => key in entry && array2.indexOf(key) === index);
-  const lines = [];
-  for (const key of ordered) {
-    lines.push(...formatChangeValue(key, entry[key]));
-  }
-  return lines;
-}
-function formatChangesBlock(changes) {
-  return [
-    "  changes:",
-    ...changeFields.flatMap((field) => {
-      const entries = changes[field];
-      if (entries.length === 0) return [`    ${field}: []`];
-      return [
-        `    ${field}:`,
-        ...entries.flatMap((entry) => {
-          const lines = formatChangeEntry(entry);
-          return lines.length === 0 ? ["      - {}"] : [`      - ${lines[0]}`, ...lines.slice(1).map((line) => `        ${line}`)];
-        })
-      ];
-    })
-  ];
-}
-function isPlainObject2(value) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-function formatMetadataScalar(value) {
-  return typeof value === "string" ? quote(value) : String(value);
-}
-function formatMetadataNode(key, value, indent) {
-  if (value === null || value === void 0) return [];
-  const prefix = " ".repeat(indent);
-  if (Array.isArray(value)) {
-    if (value.length === 0) return [`${prefix}${key}: []`];
-    const items = value.flatMap((item) => {
-      if (item === null || item === void 0) return [];
-      if (isPlainObject2(item)) {
-        const childLines = Object.entries(item).flatMap(([itemKey, itemValue]) => formatMetadataNode(itemKey, itemValue, indent + 3));
-        return childLines.length > 0 ? [`${prefix} -`, ...childLines] : [`${prefix} - {}`];
-      }
-      if (Array.isArray(item)) return [`${prefix} - ${quote(JSON.stringify(item))}`];
-      if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return [`${prefix} - ${formatMetadataScalar(item)}`];
-      return [`${prefix} - ${quote(JSON.stringify(item))}`];
-    });
-    return items.length > 0 ? [`${prefix}${key}:`, ...items] : [`${prefix}${key}: []`];
-  }
-  if (isPlainObject2(value)) {
-    const entries = Object.entries(value).flatMap(([childKey, childValue]) => formatMetadataNode(childKey, childValue, indent + 2));
-    return entries.length > 0 ? [`${prefix}${key}:`, ...entries] : [`${prefix}${key}: {}`];
-  }
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return [`${prefix}${key}: ${formatMetadataScalar(value)}`];
-  }
-  return [`${prefix}${key}: ${quote(JSON.stringify(value))}`];
-}
-function formatMetadataBlock(metadata) {
-  if (!metadata) return [];
-  const entries = Object.entries(metadata).flatMap(([key, value]) => formatMetadataNode(key, value, 2));
-  return entries.length > 0 ? ["metadata:", ...entries] : ["metadata: {}"];
-}
-function completeRelations(input) {
-  return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []]));
-}
-function frontMatter(config2, id, title, status, date5, relations, metadata) {
-  if (!config2.statusValues.includes(status)) {
-    throw new Error(`Invalid ${config2.type} status: ${status} (expected one of: ${config2.statusValues.join(", ")})`);
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date5)) {
-    throw new Error(`Invalid date: ${date5} (expected YYYY-MM-DD)`);
-  }
-  const complete = completeRelations(relations);
-  const changes = completeChanges(relations?.changes);
-  return [
-    "---",
-    `id: ${quote(id)}`,
-    `type: ${quote(config2.type)}`,
-    `status: ${quote(status)}`,
-    `title: ${quote(sanitizeTitle(title))}`,
-    `created: ${quote(date5)}`,
-    `updated: ${quote(date5)}`,
-    "owners: []",
-    "relations:",
-    formatRelationBlock("source", complete.source),
-    ...formatChangesBlock(changes),
-    ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
-    ...formatMetadataBlock(metadata),
-    "---"
-  ].join("\n");
-}
-function renderBodyTemplate(type, title) {
-  const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", `${type}.md`);
-  if (!import_node_fs2.default.existsSync(templatePath)) return null;
-  return import_node_fs2.default.readFileSync(templatePath, "utf8").replaceAll("{{title}}", title).trimEnd();
-}
-function bodyFor(type, title) {
-  const template = renderBodyTemplate(type, title);
-  if (template) return template;
-  if (type === "idea") {
-    return [
-      `# ${title}`,
-      "",
-      "## Summary",
-      "",
-      "<!-- One or two sentences capturing the core idea. -->",
-      "",
-      "## Problem and Motivation",
-      "",
-      "- <!-- observed pain, opportunity, or trigger -->",
-      "",
-      "## Expected Value",
-      "",
-      "- <!-- who benefits and how -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question that must be answered before this can be formalized -->",
-      "",
-      "## Next Action",
-      "",
-      "- [ ] Promote to discovery-doc for deeper exploration",
-      "- [ ] Promote directly to spec-doc if requirements are clear",
-      "- [ ] Park for later reconsideration",
-      "- [ ] Discard \u2014 reason: <!-- why -->"
-    ].join("\n");
-  }
-  if (type === "brainstorm") {
-    return [
-      `# ${title}`,
-      "",
-      "## Intent",
-      "",
-      "<!-- Confirm the goal, audience, and reason this matters now. -->",
-      "",
-      "## Constraints",
-      "",
-      "- <!-- technical, product, operational, timeline, or policy constraint -->",
-      "",
-      "## Options",
-      "",
-      "- <!-- option, trade-off, and current lean -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question that must be resolved before routing -->",
-      "",
-      "## Document Routing",
-      "",
-      "- [ ] ADR needed",
-      "- [ ] Spec needed",
-      "",
-      "## Confirmed Summary",
-      "",
-      "<!-- Write the agreed intent before creating downstream documents. -->"
-    ].join("\n");
-  }
-  if (type === "discovery") {
-    return [
-      `# ${title}`,
-      "",
-      "## Exploration Goal",
-      "",
-      "<!-- What question does this discovery attempt to answer? State the trigger and desired outcome. -->",
-      "",
-      "## Key Issues and Assumptions",
-      "",
-      "- <!-- issue or assumption that must be validated before committing to a direction -->",
-      "",
-      "## Alternatives and Comparison",
-      "",
-      "| Option | Pros | Cons | Lean |",
-      "| --- | --- | --- | --- |",
-      "| <!-- option --> | <!-- pro --> | <!-- con --> | <!-- yes/no/maybe --> |",
-      "",
-      "## Tentative Conclusions and Hypotheses",
-      "",
-      "<!-- Current best guess before committing to a spec or ADR. Mark each as hypothesis or confirmed. -->",
-      "",
-      "## Open Questions",
-      "",
-      "- <!-- question blocking resolution -->",
-      "",
-      "## Promotion Candidates",
-      "",
-      "- [ ] spec-doc needed",
-      "- [ ] adr-doc needed"
-    ].join("\n");
-  }
-  if (type === "spec") {
-    return [
-      `# ${title}`,
-      "",
-      "## Intent",
-      "",
-      "<!-- Describe the user need, problem, and desired outcome. -->",
-      "",
-      "## Scope",
-      "",
-      "### In Scope",
-      "",
-      "- <!-- behavior, workflow, or interface -->",
-      "",
-      "### Out of Scope",
-      "",
-      "- <!-- explicit non-goal -->",
-      "",
-      "## Requirements",
-      "",
-      "- <!-- requirement -->",
-      "",
-      "## Acceptance Criteria",
-      "",
-      "- [ ] <!-- observable behavior or verification -->",
-      "",
-      "## Deferred Design Concerns",
-      "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
-      "",
-      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->"
-    ].join("\n");
-  }
-  if (type === "plan") {
-    return [
-      `# ${title}`,
-      "",
-      "## Goal",
-      "",
-      "<!-- Describe the implementation goal. -->",
-      "",
-      "## Tasks",
-      "",
-      "- [ ] <!-- implementation slice -->",
-      "",
-      "## Verification",
-      "",
-      "- [ ] <!-- command, test, or review step -->"
-    ].join("\n");
-  }
-  if (type === "design") {
-    return [
-      `# ${title}`,
-      "",
-      "## Context",
-      "",
-      "<!-- Describe the problem context and boundaries for this design. -->",
-      "",
-      "## Scope",
-      "",
-      "- <!-- in-scope -->",
-      "- <!-- out-of-scope -->",
-      "",
-      "## Components and Boundaries",
-      "",
-      "- <!-- component and responsibility -->",
-      "",
-      "## Data and Control Flow",
-      "",
-      "- <!-- key flow and decision points -->",
-      "",
-      "## Risks and Trade-offs",
-      "",
-      "- <!-- risk and mitigation -->",
-      "",
-      "## Deferred Design Concerns",
-      "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
-      "",
-      "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
-      "",
-      "## References",
-      "",
-      "- <!-- linked spec, ADR, and related docs -->"
-    ].join("\n");
-  }
-  if (type === "test-spec") {
-    return [
-      `# ${title}`,
-      "",
-      "## Purpose",
-      "",
-      "<!-- Why this test spec exists: the intent it preserves and when it may be retired. -->",
-      "",
-      "## Feature",
-      "",
-      "<!-- The behavior under specification, named like a Gherkin Feature. -->",
-      "",
-      "## Rules",
-      "",
-      "- <!-- Rule: an invariant or contract the feature must satisfy -->",
-      "",
-      "## Examples",
-      "",
-      "- <!-- Example: a concrete scenario that pins a rule down, optionally in Given/When/Then form -->",
-      "",
-      "## Guarantees",
-      "",
-      "- <!-- What a correct implementation must guarantee -->",
-      "",
-      "## Non-goals",
-      "",
-      "- <!-- Behavior or coverage this spec deliberately does not verify -->",
-      "",
-      "## Risk",
-      "",
-      "- <!-- What is lost or breaks if these guarantees are dropped -->"
-    ].join("\n");
-  }
-  return [
-    `# ${title}`,
-    "",
-    "## Work",
-    "",
-    "<!-- Describe the implementation slice. -->",
-    "",
-    "## Done When",
-    "",
-    "- [ ] <!-- completion criterion -->"
-  ].join("\n");
-}
-function isReservedDocFile(type, file2) {
-  if (type === "design") {
-    return /^overview\.md$/i.test(file2);
-  }
-  return false;
-}
-function overviewDocument(date5) {
-  return [
-    "---",
-    'id: "DESIGN-OVERVIEW"',
-    'type: "design"',
-    'status: "draft"',
-    'title: "System Design Overview"',
-    `created: "${date5}"`,
-    `updated: "${date5}"`,
-    "owners: []",
-    "relations:",
-    ...relationFields.map((field) => formatRelationBlock(field, [])),
-    "---",
-    "",
-    "# System Design Overview",
-    "",
-    "## System Boundaries",
-    "",
-    "- <!-- major subsystems and their boundaries -->",
-    "",
-    "## Core Components",
-    "",
-    "- <!-- component and responsibility -->",
-    "",
-    "## Data Flow",
-    "",
-    "- <!-- high-level data and control flow -->",
-    "",
-    "## Non-Functional Constraints",
-    "",
-    "- <!-- reliability, security, performance, operations -->",
-    "",
-    "## Detailed Design Documents",
-    "",
-    "- <!-- link detailed docs under docs/designs/<slug>.md -->",
-    ""
-  ].join("\n");
-}
-function ensureDesignOverview(fullDir, date5) {
-  const overviewPath = import_node_path2.default.join(fullDir, "overview.md");
-  if (import_node_fs2.default.existsSync(overviewPath)) return;
-  import_node_fs2.default.writeFileSync(overviewPath, overviewDocument(date5), "utf8");
+function relationLinks(content) {
+  const relations = relationMap(content);
+  return relationFields.flatMap((field) => relations[field].map((target) => ({ field, target })));
 }
 async function titleFromDocument(content, fallback) {
   const parsed = parseDoc(content);
@@ -19424,83 +19038,948 @@ function walkMarkdownFiles(baseDir) {
     return isMarkdownSource(fullPath) ? [fullPath] : [];
   }).sort();
 }
-async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
-  const indexPath = import_node_path2.default.join(cwd, relativeDir, "README.md");
-  const relIndex = import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/");
-  if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
-  const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
-  const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
-  if (!isGenerated && !options2.forceIndex) {
-    return { path: relIndex, written: false, reason: "hand-curated" };
-  }
-  const content = await buildIndex(cwd, type, relativeDir);
-  import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
-  return { path: relIndex, written: true, reason: null };
+function resolvesLocalTarget(cwd, fromFile, target) {
+  const candidates = [
+    import_node_path2.default.resolve(cwd, target),
+    import_node_path2.default.resolve(import_node_path2.default.dirname(fromFile), target)
+  ];
+  return candidates.some((candidate) => import_node_fs2.default.existsSync(candidate));
 }
-async function createDocument(type, options2) {
+function relationValues(value) {
+  if (Array.isArray(value)) {
+    return value.filter((entry) => typeof entry === "string" && entry.trim().length > 0);
+  }
+  if (typeof value === "string" && value.trim().length > 0) return [value];
+  return [];
+}
+function resolveDocumentReference(cwd, target, fromDir) {
+  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+    const candidate = import_node_path2.default.resolve(base, target);
+    if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return candidate;
+  }
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = import_node_path2.default.join(cwd, dirName);
+      if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) continue;
+      for (const file2 of docFiles(dir)) {
+        const fullPath = import_node_path2.default.join(dir, file2);
+        const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === target) return fullPath;
+      }
+    }
+  }
+  return null;
+}
+function docTypeOfFile(filePath) {
+  const parsed = parseDoc(import_node_fs2.default.readFileSync(filePath, "utf8"));
+  return typeof parsed.data.type === "string" ? parsed.data.type : null;
+}
+async function auditDocuments(cwd, type, explicitDir) {
   const config2 = configFor(type);
-  const cwd = import_node_path2.default.resolve(options2.cwd);
-  const relativeDir = docDir(cwd, type, options2.dir);
-  const fullDir = import_node_path2.default.join(cwd, relativeDir);
-  import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
-  const rootDir = canonicalRootDir(cwd, type);
-  const underRoot = isUnderDir(relativeDir, rootDir);
-  const title = sanitizeTitle(options2.title);
-  const filename = options2.name ? sanitizeFileName(options2.name) : `${slugify2(title, type)}.md`;
-  if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
-  const outputPath = import_node_path2.default.join(fullDir, filename);
-  if (import_node_fs2.default.existsSync(outputPath)) throw new Error(`Document already exists: ${import_node_path2.default.relative(cwd, outputPath)}`);
-  const date5 = options2.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const status = options2.status || config2.defaultStatus;
-  const content = `${frontMatter(config2, generateArtifactId(config2.idPrefix), title, status, date5, options2.relations)}
+  const relativeDir = docDir(cwd, type, explicitDir);
+  const dir = import_node_path2.default.join(cwd, relativeDir);
+  const files = docFiles(dir);
+  const findings = [];
+  if (type === "design") {
+    const overviewPath = import_node_path2.default.join(dir, "overview.md");
+    if (!import_node_fs2.default.existsSync(overviewPath)) {
+      findings.push({
+        severity: "error",
+        file: null,
+        code: "missing-overview",
+        message: "Missing required docs/designs/overview.md"
+      });
+    }
+  }
+  const inScopeFiles = [];
+  for (const file2 of files) {
+    const fullPath = import_node_path2.default.join(dir, file2);
+    const content = import_node_fs2.default.readFileSync(fullPath, "utf8");
+    const parsed = parseDoc(content);
+    if (parsed.error) {
+      findings.push({
+        severity: "error",
+        file: file2,
+        code: "unparseable-front-matter",
+        message: `Front matter is not valid YAML: ${parsed.error}`
+      });
+      continue;
+    }
+    const data = parsed.data;
+    if (isForeignDocType(data.type, type, relativeDir)) continue;
+    inScopeFiles.push(file2);
+    const schemaResult = frontMatterSchema.safeParse(data);
+    if (!schemaResult.success) {
+      for (const issue2 of schemaResult.error.issues) {
+        findings.push({ severity: "error", file: file2, code: "invalid-front-matter", message: `Invalid front matter ${formatIssuePath(issue2.path)}: ${issue2.message}` });
+      }
+    }
+    if (data.type !== type) {
+      findings.push({ severity: "error", file: file2, code: "invalid-type", message: `Expected type ${type}` });
+    }
+    if (typeof data.status === "string" && !config2.statusValues.includes(data.status)) {
+      findings.push({ severity: "error", file: file2, code: "invalid-status", message: `Invalid ${type} status: ${data.status}` });
+    }
+    if (type === "test-spec") {
+      const verifies = relationValues(data.relations?.verifies);
+      if (verifies.length === 0) {
+        findings.push({
+          severity: "warning",
+          file: file2,
+          code: "test-spec-missing-verifies",
+          message: "Test spec has no relations.verifies target (TEST-SPEC-DOC-GATE-001)"
+        });
+      }
+      for (const target of verifies) {
+        const resolved = resolveDocumentReference(cwd, target, import_node_path2.default.dirname(fullPath));
+        if (!resolved) continue;
+        const targetType = docTypeOfFile(resolved);
+        if (targetType && !["spec", "design", "adr"].includes(targetType)) {
+          findings.push({
+            severity: "warning",
+            file: file2,
+            code: "test-spec-invalid-verifies-target",
+            message: `Test spec verifies target resolves to type "${targetType}", expected spec, design, or adr: ${target}`
+          });
+        }
+      }
+    }
+    if (type === "plan" && typeof data.status === "string" && ["approved", "in-progress", "completed"].includes(data.status)) {
+      const verifiedBy = relationValues(data.relations?.["verified-by"]);
+      const linked = verifiedBy.some((target) => {
+        const resolved = resolveDocumentReference(cwd, target, import_node_path2.default.dirname(fullPath));
+        return resolved !== null && docTypeOfFile(resolved) === "test-spec";
+      });
+      const skipped = typeof data["test-spec-skip"] === "string" && data["test-spec-skip"].trim().length > 0;
+      if (!linked && !skipped) {
+        findings.push({
+          severity: "warning",
+          file: file2,
+          code: "plan-missing-test-spec-evidence",
+          message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason"
+        });
+      }
+    }
+    for (const relation of relationLinks(content)) {
+      if (isExternalLink(relation.target)) continue;
+      if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
+        findings.push({
+          severity: "warning",
+          file: file2,
+          code: "broken-relation-link",
+          message: `Relation ${relation.field} points to missing target: ${relation.target}`
+        });
+      }
+    }
+  }
+  const indexPath = ["README.md", "index.md"].map((name) => import_node_path2.default.join(dir, name)).find((candidate) => import_node_fs2.default.existsSync(candidate));
+  if (!indexPath) {
+    findings.push({ severity: "warning", file: null, code: "missing-index", message: `Missing ${type} index README.md or index.md` });
+  } else {
+    const index = import_node_fs2.default.readFileSync(indexPath, "utf8");
+    for (const file2 of inScopeFiles) {
+      if (!index.includes(file2)) findings.push({ severity: "warning", file: file2, code: "index-missing-entry", message: `Index does not link ${file2}` });
+    }
+    if (type === "design" && !index.includes("overview.md")) {
+      findings.push({
+        severity: "warning",
+        file: "overview.md",
+        code: "index-missing-overview",
+        message: "Index does not link overview.md"
+      });
+    }
+  }
+  return { directory: relativeDir, files: files.length, findings };
+}
 
-${bodyFor(type, title)}
-`;
-  import_node_fs2.default.writeFileSync(outputPath, content, "utf8");
-  if (type === "design") ensureDesignOverview(import_node_path2.default.join(cwd, rootDir), date5);
-  const indexRelativeDir = underRoot ? rootDir : relativeDir;
-  const indexResult = await writeGeneratedIndex(cwd, type, indexRelativeDir, options2);
+// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
+var import_node_fs3 = __toESM(require("node:fs"));
+var import_node_path3 = __toESM(require("node:path"));
+var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
+var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
+var implementationRecordSections = [
+  "## Summary",
+  "## Context",
+  "## Implementation",
+  "## Related Experiments",
+  "## Validation",
+  "## Risks",
+  "## Follow-ups"
+];
+var changeEntrySchema2 = external_exports.object({
+  type: external_exports.string().min(1)
+}).passthrough();
+var changesSchema2 = external_exports.object(Object.fromEntries(
+  changeFields.map((field) => [field, external_exports.array(changeEntrySchema2).default([])])
+)).default({});
+var relationsSchema = external_exports.object({
+  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
+  changes: changesSchema2
+}).prefault({});
+var implementationRecordSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  type: external_exports.literal("impl"),
+  status: external_exports.enum(implStatuses),
+  title: external_exports.string().min(1),
+  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  owners: external_exports.array(external_exports.string()),
+  relations: relationsSchema,
+  metadata: external_exports.object({
+    experiments: external_exports.object({
+      adopted: external_exports.array(external_exports.string()).default([]),
+      rejected: external_exports.array(external_exports.string()).default([])
+    })
+  })
+}).passthrough();
+var experimentEventBaseSchema = external_exports.object({
+  schema: external_exports.string().min(1),
+  experiment: external_exports.string().min(1),
+  seq: external_exports.number().int().positive(),
+  type: external_exports.string().min(1),
+  ts: external_exports.string().min(1)
+}).passthrough();
+function posixRelative(from, to) {
+  return import_node_path3.default.relative(from, to).replace(/\\/g, "/");
+}
+function normalizeFilePath(input) {
+  return input.replace(/\\/g, "/");
+}
+function isExternalLink2(value) {
+  return /^(https?:|mailto:)/i.test(value);
+}
+function listFiles(dir, ext) {
+  if (!import_node_fs3.default.existsSync(dir)) return [];
+  return import_node_fs3.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).sort();
+}
+function normalizeExperimentPath(cwd, filePath) {
+  return normalizeFilePath(posixRelative(cwd, import_node_path3.default.resolve(filePath)));
+}
+function writeImplIndex(indexPath, content, legacyTitle) {
+  const existing = import_node_fs3.default.existsSync(indexPath) ? import_node_fs3.default.readFileSync(indexPath, "utf8") : null;
+  if (existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
+    return { written: false, reason: "hand-curated" };
+  }
+  import_node_fs3.default.writeFileSync(indexPath, content, "utf8");
+  return { written: true, reason: null };
+}
+function updateIndexForMarkdownDir(cwd, relativeDir) {
+  const dir = import_node_path3.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".md");
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const rows = files.flatMap((file2) => {
+    const fullPath = import_node_path3.default.join(dir, file2);
+    const parsed = parseDoc(import_node_fs3.default.readFileSync(fullPath, "utf8"));
+    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
+    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path3.default.basename(file2, ".md");
+    const id = typeof parsed.data.id === "string" ? parsed.data.id : "\u2014";
+    const status = typeof parsed.data.status === "string" ? parsed.data.status : "\u2014";
+    return [`| ${indexCell(id)} | ${indexCell(title)} | ${indexCell(status)} | [${indexCell(file2)}](./${indexCell(file2)}) |`];
+  });
+  const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
+  return writeImplIndex(
+    import_node_path3.default.join(dir, "README.md"),
+    `# Implementation Records
+
+${GENERATED_INDEX_MARKER}
+
+Directory: \`${relativeDir}\`
+
+${body}
+`,
+    "Implementation Records"
+  );
+}
+function updateIndexForExperimentDir(cwd, relativeDir) {
+  const dir = import_node_path3.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".jsonl");
+  const header = "| File |\n| --- |";
+  const rows = files.map((file2) => `| [${indexCell(file2)}](./${indexCell(file2)}) |`);
+  const body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
+  return writeImplIndex(
+    import_node_path3.default.join(dir, "README.md"),
+    `# Experiment Logs
+
+${GENERATED_INDEX_MARKER}
+
+Directory: \`${relativeDir}\`
+
+${body}
+`,
+    "Experiment Logs"
+  );
+}
+function resolvesLocalTarget2(cwd, fromFile, target) {
+  const candidates = [
+    import_node_path3.default.resolve(cwd, target),
+    import_node_path3.default.resolve(import_node_path3.default.dirname(fromFile), target)
+  ];
+  return candidates.some((candidate) => import_node_fs3.default.existsSync(candidate));
+}
+function relationLinks2(relations) {
+  return relationFields.flatMap((field) => {
+    const targets = relations[field];
+    return Array.isArray(targets) ? targets.map((target) => ({ field, target: String(target) })) : [];
+  });
+}
+function auditImplementationRecords(cwd, relativeDir) {
+  const dir = import_node_path3.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".md");
+  const findings = [];
+  for (const file2 of files) {
+    const fullPath = import_node_path3.default.join(dir, file2);
+    const content = import_node_fs3.default.readFileSync(fullPath, "utf8");
+    const parsed = parseDoc(content);
+    if (parsed.error) {
+      findings.push({
+        code: "unparseable-front-matter",
+        file: file2,
+        message: `Front matter is not valid YAML: ${parsed.error}`,
+        severity: "error"
+      });
+      continue;
+    }
+    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) continue;
+    const schemaResult = implementationRecordSchema.safeParse(parsed.data);
+    if (!schemaResult.success) {
+      for (const issue2 of schemaResult.error.issues) {
+        findings.push({
+          code: "invalid-front-matter",
+          file: file2,
+          message: `Invalid front matter ${issue2.path.join(".") || "$"}: ${issue2.message}`,
+          severity: "error"
+        });
+      }
+      continue;
+    }
+    const data = schemaResult.data;
+    for (const relation of relationLinks2(data.relations)) {
+      if (isExternalLink2(relation.target)) continue;
+      if (!resolvesLocalTarget2(cwd, fullPath, relation.target)) {
+        findings.push({
+          code: "broken-relation-link",
+          file: file2,
+          message: `Relation ${relation.field} points to missing target: ${relation.target}`,
+          severity: "warning"
+        });
+      }
+    }
+    for (const experimentPath of [...data.metadata.experiments.adopted, ...data.metadata.experiments.rejected]) {
+      if (!resolvesLocalTarget2(cwd, fullPath, experimentPath)) {
+        findings.push({
+          code: "missing-experiment-link",
+          file: file2,
+          message: `Experiment reference points to missing target: ${experimentPath}`,
+          severity: "warning"
+        });
+      }
+    }
+    for (const section of implementationRecordSections) {
+      if (!parsed.body.includes(section)) {
+        findings.push({
+          code: "missing-section",
+          file: file2,
+          message: `Missing required section: ${section.replace(/^##\s+/, "")}`,
+          severity: "error"
+        });
+      }
+    }
+  }
+  const indexPath = import_node_path3.default.join(dir, "README.md");
+  if (!import_node_fs3.default.existsSync(indexPath)) {
+    findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+  }
+  return { directory: relativeDir, files: files.length, findings };
+}
+function auditExperimentLogs(cwd, relativeDir) {
+  const dir = import_node_path3.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".jsonl");
+  const findings = [];
+  for (const file2 of files) {
+    const fullPath = import_node_path3.default.join(dir, file2);
+    const content = import_node_fs3.default.readFileSync(fullPath, "utf8");
+    const lines = content.split(/\r?\n/).filter((line) => line.trim());
+    let previousSeq = 0;
+    const seen = /* @__PURE__ */ new Set();
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      let parsed;
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        findings.push({
+          code: "invalid-json",
+          file: file2,
+          line: index + 1,
+          message: "Line is not valid JSON",
+          severity: "error"
+        });
+        continue;
+      }
+      const baseResult = experimentEventBaseSchema.safeParse(parsed);
+      if (!baseResult.success) {
+        findings.push({
+          code: "invalid-event-shape",
+          file: file2,
+          line: index + 1,
+          message: `Invalid event shape: ${baseResult.error.issues.map((issue2) => issue2.message).join(", ")}`,
+          severity: "error"
+        });
+        continue;
+      }
+      if (parsed.schema !== "experiment_event.v1") {
+        findings.push({
+          code: "invalid-event-schema",
+          file: file2,
+          line: index + 1,
+          message: `Unexpected schema: ${String(parsed.schema)}`,
+          severity: "error"
+        });
+      }
+      if (!experimentEventTypes.includes(parsed.type)) {
+        findings.push({
+          code: "invalid-event-type",
+          file: file2,
+          line: index + 1,
+          message: `Invalid event type: ${String(parsed.type)}`,
+          severity: "error"
+        });
+      }
+      const expectedPath = normalizeExperimentPath(cwd, fullPath);
+      if (parsed.experiment !== expectedPath) {
+        findings.push({
+          code: "experiment-path-mismatch",
+          file: file2,
+          line: index + 1,
+          message: `Experiment path mismatch: expected ${expectedPath}`,
+          severity: "error"
+        });
+      }
+      const seq = parsed.seq;
+      if (seen.has(seq) || seq <= previousSeq) {
+        findings.push({
+          code: "non-monotonic-seq",
+          file: file2,
+          line: index + 1,
+          message: `Sequence must be unique and strictly increasing: ${seq}`,
+          severity: "error"
+        });
+      }
+      seen.add(seq);
+      previousSeq = seq;
+    }
+  }
+  const indexPath = import_node_path3.default.join(dir, "README.md");
+  if (!import_node_fs3.default.existsSync(indexPath)) {
+    findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+  }
+  return { directory: relativeDir, files: files.length, findings };
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/id_migration.ts
+var IMPL_IR_DIR = "docs/impl/ir";
+var IMPL_EXP_DIR = "docs/impl/exp";
+var LOCALE_SUFFIX = /\.[a-z]{2}(-[a-z0-9]+)?$/i;
+var NUMBERED_FILE = /^(\d{4,})-(.*)$/;
+var LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
+var MIGRATE_TMP_SUFFIX = ".migrate-tmp";
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function idTokenPattern(id) {
+  return new RegExp(`(?<![0-9A-Za-z])${escapeRegExp(id)}(?![0-9A-Za-z])`, "g");
+}
+function stemKeyOf(fileName) {
+  return fileName.replace(/\.(md|jsonl)$/i, "").replace(LOCALE_SUFFIX, "");
+}
+function numberedTargetName(fileName) {
+  const match = NUMBERED_FILE.exec(fileName);
+  return match ? match[2] : null;
+}
+function walkFiles(baseDir, extensions) {
+  if (!import_node_fs4.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs4.default.readdirSync(baseDir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const fullPath = import_node_path4.default.join(baseDir, entry.name);
+    if (entry.isDirectory()) return walkFiles(fullPath, extensions);
+    return extensions.some((ext) => entry.name.toLowerCase().endsWith(ext)) ? [fullPath] : [];
+  }).sort();
+}
+function canonicalDirs(cwd) {
+  const seen = /* @__PURE__ */ new Set();
+  const dirs = [];
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    for (const candidate of config2.dirs) {
+      if (!import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, candidate))) continue;
+      if (seen.has(candidate)) continue;
+      seen.add(candidate);
+      dirs.push({ dir: candidate, type });
+    }
+  }
+  if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, IMPL_IR_DIR))) dirs.push({ dir: IMPL_IR_DIR, type: "impl" });
+  if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, IMPL_EXP_DIR))) dirs.push({ dir: IMPL_EXP_DIR, type: "impl-exp" });
+  return dirs;
+}
+function isUnderDir(child, parent) {
+  const c = normalizeDir(child);
+  const p = normalizeDir(parent);
+  return c === p || c.startsWith(`${p}/`);
+}
+function contentRoots(cwd, dirs) {
+  const roots = [];
+  if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, "docs"))) roots.push("docs");
+  for (const { dir } of dirs) {
+    if (!isUnderDir(dir, "docs")) roots.push(dir);
+  }
+  return roots;
+}
+function contentFilesUnder(cwd, roots) {
+  const seen = /* @__PURE__ */ new Set();
+  const files = [];
+  for (const root of roots) {
+    for (const fullPath of walkFiles(import_node_path4.default.join(cwd, root), [".md", ".jsonl"])) {
+      const relPath = import_node_path4.default.relative(cwd, fullPath).replace(/\\/g, "/");
+      if (seen.has(relPath)) continue;
+      seen.add(relPath);
+      files.push(relPath);
+    }
+  }
+  return files.sort();
+}
+function prefixForFile(file2) {
+  if (file2.type && docTypes.includes(file2.type)) {
+    return configFor(file2.type).idPrefix;
+  }
+  if (file2.dirType && docTypes.includes(file2.dirType)) {
+    return configFor(file2.dirType).idPrefix;
+  }
+  return "IMPL";
+}
+function discover(cwd, dirs, blockers) {
+  const files = [];
+  for (const { dir, type: dirType } of dirs) {
+    const fullDir = import_node_path4.default.join(cwd, dir);
+    const names = dir === IMPL_EXP_DIR ? import_node_fs4.default.readdirSync(fullDir).filter((name) => name.toLowerCase().endsWith(".jsonl") || name.toLowerCase().endsWith(".md") && !isIndexFileName(name)).sort() : docFiles(fullDir);
+    for (const name of names) {
+      const relPath = `${dir}/${name}`;
+      const fullPath = import_node_path4.default.join(cwd, relPath);
+      const baseName = import_node_path4.default.basename(name);
+      const isMarkdown = baseName.toLowerCase().endsWith(".md");
+      const numbered = NUMBERED_FILE.exec(baseName)?.[1] || null;
+      const base = {
+        dir,
+        dirType,
+        id: null,
+        numberedName: numbered,
+        path: relPath,
+        stemKey: stemKeyOf(baseName),
+        synthesizedId: null,
+        type: null
+      };
+      if (!isMarkdown) {
+        files.push(base);
+        continue;
+      }
+      const parsed = parseDoc(import_node_fs4.default.readFileSync(fullPath, "utf8"));
+      if (parsed.error) {
+        blockers.push({
+          code: "unparseable-front-matter",
+          file: relPath,
+          message: `Front matter is not valid YAML: ${parsed.error}`
+        });
+        files.push(base);
+        continue;
+      }
+      const data = parsed.data;
+      if (Object.keys(data).length === 0) {
+        if (numbered) {
+          blockers.push({
+            code: "missing-front-matter",
+            file: relPath,
+            message: `Numbered document ${relPath} has no front matter, so its ${prefixForFile(base)}-${numbered} identity would be lost on rename. Add front matter (at minimum an id) or move it out of the canonical docs dir before migrating.`
+          });
+        }
+        files.push(base);
+        continue;
+      }
+      const typeValue = typeof data.type === "string" ? data.type : null;
+      if (typeValue && !docTypes.includes(typeValue) && typeValue !== "impl") {
+        blockers.push({
+          code: "unknown-type",
+          file: relPath,
+          message: `Unrecognized document type: ${typeValue}`
+        });
+      }
+      base.type = typeValue;
+      if (typeof data.id === "string" && data.id.trim()) {
+        base.id = data.id.trim();
+      } else if (numbered) {
+        base.synthesizedId = `${prefixForFile(base)}-${numbered}`;
+      }
+      files.push(base);
+    }
+  }
+  return files;
+}
+function knownPrefixes(mappings) {
+  const prefixes = new Set(docTypes.map((type) => configFor(type).idPrefix));
+  prefixes.add("IMPL");
+  for (const legacyId of mappings.keys()) {
+    prefixes.add(legacyId.slice(0, legacyId.lastIndexOf("-")));
+  }
+  return prefixes;
+}
+function legacyTokens(content, prefixes) {
+  const tokens = content.match(LEGACY_ID_TOKEN) || [];
+  return tokens.filter((token) => prefixes.has(token.slice(0, token.lastIndexOf("-"))));
+}
+function worktreeDirty(cwd) {
+  const probe = (0, import_node_child_process.spawnSync)("git", ["rev-parse", "--is-inside-work-tree"], { cwd, encoding: "utf8" });
+  if (probe.status !== 0) return null;
+  const status = (0, import_node_child_process.spawnSync)("git", ["status", "--porcelain"], { cwd, encoding: "utf8" });
+  if (status.status !== 0) return null;
+  return status.stdout.trim().length > 0;
+}
+function planRenames(cwd, files, blockers) {
+  const renames = [];
+  const renameSources = new Set(
+    files.filter((file2) => numberedTargetName(import_node_path4.default.basename(file2.path)) !== null).map((file2) => file2.path)
+  );
+  const targetOwners = /* @__PURE__ */ new Map();
+  for (const file2 of files) {
+    const targetName = numberedTargetName(import_node_path4.default.basename(file2.path));
+    if (!targetName) continue;
+    const to = `${normalizeDir(import_node_path4.default.dirname(file2.path))}/${targetName}`;
+    const owner = targetOwners.get(to);
+    if (owner && owner !== file2.path) {
+      blockers.push({
+        code: "rename-collision",
+        file: file2.path,
+        message: `Rename target ${to} is claimed by both ${owner} and ${file2.path}`
+      });
+      continue;
+    }
+    targetOwners.set(to, file2.path);
+    const targetFull = import_node_path4.default.join(cwd, to);
+    if (import_node_fs4.default.existsSync(targetFull) && !renameSources.has(to)) {
+      blockers.push({
+        code: "rename-collision",
+        file: file2.path,
+        message: `Rename target already exists: ${to}`
+      });
+      continue;
+    }
+    renames.push({ from: file2.path, to });
+  }
+  for (const rename of renames) {
+    const tmpPath = `${rename.from}${MIGRATE_TMP_SUFFIX}`;
+    if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, tmpPath))) {
+      blockers.push({
+        code: "rename-temp-collision",
+        file: rename.from,
+        message: `Temporary rename path already exists: ${tmpPath}. Remove it or pass --keep-filenames.`
+      });
+    }
+  }
+  return renames;
+}
+function rewriteContent(content, mappings, renames) {
+  let replacements = 0;
+  let next = content;
+  for (const [legacyId, newId] of mappings) {
+    const pattern = idTokenPattern(legacyId);
+    next = next.replace(pattern, () => {
+      replacements += 1;
+      return newId;
+    });
+  }
+  if (renames.length > 0) {
+    const targets = new Map(
+      renames.map((rename) => [import_node_path4.default.basename(rename.from), import_node_path4.default.basename(rename.to)])
+    );
+    const pattern = new RegExp(
+      `(?<![0-9A-Za-z-])(?:${[...targets.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})(?![0-9A-Za-z])`,
+      "g"
+    );
+    next = next.replace(pattern, (match) => {
+      replacements += 1;
+      return targets.get(match);
+    });
+  }
+  return { content: next, replacements };
+}
+function injectMissingId(content, newId) {
+  return content.replace(/^(---\r?\n)/, `$1id: "${newId}"
+`);
+}
+async function regenerateIndexes(cwd, dirs, touchedDirs) {
+  const results = [];
+  for (const dir of [...touchedDirs].sort()) {
+    const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
+    const readmePath = import_node_path4.default.join(cwd, dir, "README.md");
+    const relReadme = `${dir}/README.md`;
+    if (dirType === "impl") {
+      const result = updateIndexForMarkdownDir(cwd, dir);
+      results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
+      continue;
+    }
+    if (dirType === "impl-exp") {
+      const result = updateIndexForExperimentDir(cwd, dir);
+      results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
+      continue;
+    }
+    if (!import_node_fs4.default.existsSync(readmePath)) {
+      results.push({ action: "skipped", path: relReadme });
+      continue;
+    }
+    const existing = import_node_fs4.default.readFileSync(readmePath, "utf8");
+    if (!existing.includes(GENERATED_INDEX_MARKER)) {
+      results.push({ action: "hand-curated-rewritten", path: relReadme });
+      continue;
+    }
+    const indexTypes = dirType && docTypes.includes(dirType) ? docTypes.filter((type) => {
+      const config2 = configFor(type);
+      const candidates = [...config2.dirs, config2.dir].map((candidate) => normalizeDir(candidate));
+      return candidates.includes(normalizeDir(dir));
+    }) : [dirType].filter((type) => Boolean(type));
+    for (const indexType of indexTypes.length > 0 ? indexTypes : ["discovery"]) {
+      import_node_fs4.default.writeFileSync(readmePath, await buildIndex(cwd, indexType, dir), "utf8");
+    }
+    results.push({ action: "regenerated", path: relReadme });
+  }
+  return results;
+}
+async function validate2(cwd, dirs, prefixes) {
+  const remainingLegacyIds = /* @__PURE__ */ new Set();
+  const idFiles = /* @__PURE__ */ new Map();
+  for (const { dir } of dirs) {
+    const fullDir = import_node_path4.default.join(cwd, dir);
+    for (const name of docFiles(fullDir)) {
+      const relPath = `${dir}/${name}`;
+      const parsed = parseDoc(import_node_fs4.default.readFileSync(import_node_path4.default.join(fullDir, name), "utf8"));
+      const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
+      if (!id) continue;
+      if (isLegacyArtifactId(id)) remainingLegacyIds.add(id);
+      const owners = idFiles.get(id) || [];
+      owners.push(relPath);
+      idFiles.set(id, owners);
+    }
+  }
+  const siblingKeys = /* @__PURE__ */ new Map();
+  for (const { dir } of dirs) {
+    for (const name of docFiles(import_node_path4.default.join(cwd, dir))) {
+      const key = `${dir}::${stemKeyOf(import_node_path4.default.basename(name))}`;
+      const parsed = parseDoc(import_node_fs4.default.readFileSync(import_node_path4.default.join(cwd, dir, name), "utf8"));
+      const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
+      if (!id) continue;
+      const set2 = siblingKeys.get(id) || /* @__PURE__ */ new Set();
+      set2.add(key);
+      siblingKeys.set(id, set2);
+    }
+  }
+  const duplicateIds = [...idFiles.entries()].filter(([id, files]) => files.length > 1 && (siblingKeys.get(id)?.size || 0) > 1).map(([id]) => id);
+  const unresolved = /* @__PURE__ */ new Set();
+  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs))) {
+    const content = import_node_fs4.default.readFileSync(import_node_path4.default.join(cwd, relPath), "utf8");
+    for (const token of legacyTokens(content, prefixes)) {
+      unresolved.add(token);
+    }
+  }
+  const auditErrors = [];
+  for (const { dir, type } of dirs) {
+    const findings = type === "impl" ? auditImplementationRecords(cwd, dir).findings : type === "impl-exp" ? auditExperimentLogs(cwd, dir).findings : type ? (await auditDocuments(cwd, type, dir)).findings : [];
+    for (const finding of findings) {
+      if (finding.severity !== "error") continue;
+      auditErrors.push({ code: finding.code, file: finding.file, message: finding.message });
+    }
+  }
   return {
-    file: import_node_path2.default.relative(cwd, outputPath).replace(/\\/g, "/"),
-    index: indexResult.path,
-    indexWritten: indexResult.written,
-    indexSkippedReason: indexResult.reason,
-    relativeDir
+    auditErrors,
+    duplicateIds: [...new Set(duplicateIds)].sort(),
+    remainingLegacyIds: [...remainingLegacyIds].sort(),
+    unresolvedLegacyRefs: [...unresolved].sort()
   };
 }
-function logIndexResult(result) {
-  if (result.indexWritten) {
-    console.log(`Updated ${result.index}`);
-  } else if (result.indexSkippedReason === "hand-curated") {
-    console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
-  } else if (result.indexSkippedReason === "disabled") {
-    console.log(`Skipped index update (--no-index): ${result.index}`);
+async function migrateArtifactIds(options2) {
+  const cwd = import_node_path4.default.resolve(options2.cwd);
+  const blockers = [];
+  const dirs = canonicalDirs(cwd);
+  const files = discover(cwd, dirs, blockers);
+  const existingNewIds = new Set(
+    files.map((file2) => file2.id).filter((id) => Boolean(id && isNewArtifactId(id)))
+  );
+  const legacyGroups = /* @__PURE__ */ new Map();
+  for (const file2 of files) {
+    const legacyId = file2.id && isLegacyArtifactId(file2.id) ? file2.id : file2.synthesizedId;
+    if (!legacyId) continue;
+    const group = legacyGroups.get(legacyId) || [];
+    group.push(file2);
+    legacyGroups.set(legacyId, group);
   }
+  for (const [legacyId, group] of legacyGroups) {
+    const keys = new Set(group.map((file2) => `${file2.dir}::${file2.stemKey}`));
+    if (keys.size > 1) {
+      blockers.push({
+        code: "duplicate-legacy-id",
+        file: group.map((file2) => file2.path).sort()[0],
+        message: `Legacy id ${legacyId} appears in ${group.length} non-sibling files: ${group.map((file2) => file2.path).join(", ")}`
+      });
+    }
+  }
+  const mappings = /* @__PURE__ */ new Map();
+  for (const [legacyId, group] of [...legacyGroups.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const keys = new Set(group.map((file2) => `${file2.dir}::${file2.stemKey}`));
+    if (keys.size > 1) continue;
+    const prefix = legacyId.slice(0, legacyId.lastIndexOf("-"));
+    let newId = generateArtifactId(prefix);
+    while (existingNewIds.has(newId)) newId = generateArtifactId(prefix);
+    existingNewIds.add(newId);
+    mappings.set(legacyId, newId);
+  }
+  const renames = options2.keepFilenames ? [] : planRenames(cwd, files, blockers);
+  const prefixes = knownPrefixes(mappings);
+  const contentFiles = contentFilesUnder(cwd, contentRoots(cwd, dirs));
+  const mappedIds = new Set(mappings.keys());
+  for (const relPath of contentFiles) {
+    const content = import_node_fs4.default.readFileSync(import_node_path4.default.join(cwd, relPath), "utf8");
+    for (const token of new Set(legacyTokens(content, prefixes))) {
+      if (!mappedIds.has(token)) {
+        blockers.push({
+          code: "unresolved-legacy-reference",
+          file: relPath,
+          message: `Legacy id ${token} has no matching artifact to remap`
+        });
+      }
+    }
+  }
+  if (options2.apply && !options2.allowDirty) {
+    const dirty = worktreeDirty(cwd);
+    if (dirty === true) {
+      blockers.push({
+        code: "dirty-worktree",
+        file: null,
+        message: "Worktree has uncommitted changes; commit or stash first, or pass --allow-dirty"
+      });
+    }
+  }
+  const mappingReports = [...mappings.entries()].map(([legacyId, newId]) => ({
+    files: (legacyGroups.get(legacyId) || []).map((file2) => file2.path).sort(),
+    legacyId,
+    newId
+  }));
+  const emptyValidation = { auditErrors: [], duplicateIds: [], remainingLegacyIds: [], unresolvedLegacyRefs: [] };
+  if (blockers.length > 0) {
+    return {
+      applied: false,
+      ok: false,
+      blockers,
+      indexes: [],
+      mappings: mappingReports,
+      renames,
+      rewrites: [],
+      validation: emptyValidation
+    };
+  }
+  const injectedIds = /* @__PURE__ */ new Map();
+  for (const file2 of files) {
+    if (!file2.synthesizedId) continue;
+    const newId = mappings.get(file2.synthesizedId);
+    if (newId) injectedIds.set(file2.path, newId);
+  }
+  const rewrites = [];
+  for (const relPath of contentFiles) {
+    const fullPath = import_node_path4.default.join(cwd, relPath);
+    const original = import_node_fs4.default.readFileSync(fullPath, "utf8");
+    let { content, replacements } = rewriteContent(original, mappings, renames);
+    const injected = injectedIds.get(relPath);
+    if (injected && !original.includes(`id: "${injected}"`)) {
+      const before = content;
+      content = injectMissingId(content, injected);
+      if (content !== before) replacements += 1;
+    }
+    if (replacements === 0) continue;
+    rewrites.push({ file: relPath, replacements });
+    if (options2.apply) import_node_fs4.default.writeFileSync(fullPath, content, "utf8");
+  }
+  const indexes = [];
+  if (options2.apply) {
+    for (const rename of renames) {
+      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, rename.from), import_node_path4.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
+    }
+    for (const rename of renames) {
+      import_node_fs4.default.renameSync(import_node_path4.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path4.default.join(cwd, rename.to));
+    }
+    const touchedDirs = /* @__PURE__ */ new Set([
+      ...files.filter((file2) => file2.synthesizedId || file2.id && isLegacyArtifactId(file2.id)).map((file2) => file2.dir),
+      ...renames.map((rename) => normalizeDir(import_node_path4.default.dirname(rename.from)))
+    ]);
+    indexes.push(...await regenerateIndexes(cwd, dirs, touchedDirs));
+  }
+  const validation = options2.apply ? await validate2(cwd, dirs, prefixes) : emptyValidation;
+  const validationFailed = validation.remainingLegacyIds.length > 0 || validation.duplicateIds.length > 0 || validation.unresolvedLegacyRefs.length > 0 || validation.auditErrors.length > 0;
+  return {
+    applied: Boolean(options2.apply),
+    ok: blockers.length === 0 && !validationFailed,
+    blockers,
+    indexes,
+    mappings: mappingReports,
+    renames,
+    rewrites,
+    validation
+  };
 }
 
-// src/skills/idea-doc/scripts/new_idea.ts
+// src/skills/doc-driven-dev-graph/scripts/migrate_ids.ts
 function parseArgs(argv) {
-  const args = { cwd: process.cwd(), source: [] };
+  const args = {
+    allowDirty: false,
+    apply: false,
+    cwd: process.cwd(),
+    json: false,
+    keepFilenames: false
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--title") args.title = argv[++i];
-    else if (arg === "--from") args.source.push(argv[++i]);
-    else if (arg === "--dir") args.dir = argv[++i];
-    else if (arg === "--name") args.name = argv[++i];
-    else if (arg === "--no-index") args.noIndex = true;
-    else if (arg === "--force-index") args.forceIndex = true;
-    else if (arg === "--status") args.status = argv[++i];
-    else if (arg === "--date") args.date = argv[++i];
-    else if (arg === "--cwd") args.cwd = argv[++i];
+    if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--apply") args.apply = true;
+    else if (arg === "--allow-dirty") args.allowDirty = true;
+    else if (arg === "--keep-filenames") args.keepFilenames = true;
+    else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
-    else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_idea.js --title <title> [--from <source>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/migrate_ids.js [--cwd <path>] [--apply] [--keep-filenames] [--allow-dirty] [--json]";
+}
+function printHuman(report) {
+  console.log(`${report.applied ? "Applied" : "Planned"} artifact id migration`);
+  for (const mapping of report.mappings) {
+    console.log(`${mapping.legacyId} -> ${mapping.newId} (${mapping.files.join(", ")})`);
+  }
+  for (const rename of report.renames) {
+    console.log(`Rename ${rename.from} -> ${rename.to}`);
+  }
+  for (const rewrite of report.rewrites) {
+    console.log(`Rewrite ${rewrite.file} (${rewrite.replacements} replacement${rewrite.replacements === 1 ? "" : "s"})`);
+  }
+  for (const index of report.indexes) {
+    console.log(`Index ${index.path}: ${index.action}`);
+  }
+  for (const blocker of report.blockers) {
+    console.error(`BLOCKER ${blocker.code}${blocker.file ? ` [${blocker.file}]` : ""}: ${blocker.message}`);
+  }
+  if (report.applied) {
+    const { auditErrors, remainingLegacyIds, duplicateIds, unresolvedLegacyRefs } = report.validation;
+    console.log(`Validation: ${remainingLegacyIds.length} remaining legacy ids, ${duplicateIds.length} duplicate ids, ${unresolvedLegacyRefs.length} unresolved legacy refs, ${auditErrors.length} audit errors`);
+    for (const error51 of auditErrors) {
+      console.error(`AUDIT ${error51.code}${error51.file ? ` [${error51.file}]` : ""}: ${error51.message}`);
+    }
+  }
 }
 async function main() {
   try {
@@ -19509,22 +19988,18 @@ async function main() {
       console.log(usage());
       return;
     }
-    if (!args.title) throw new Error("Missing required --title");
-    const result = await createDocument("idea", {
-      cwd: import_node_path3.default.resolve(args.cwd),
-      date: args.date,
-      dir: args.dir,
-      name: args.name,
-      forceIndex: args.forceIndex,
-      noIndex: args.noIndex,
-      relations: {
-        source: args.source
-      },
-      status: args.status,
-      title: args.title
+    const report = await migrateArtifactIds({
+      allowDirty: args.allowDirty,
+      apply: args.apply,
+      cwd: import_node_path5.default.resolve(args.cwd),
+      keepFilenames: args.keepFilenames
     });
-    console.log(`Created ${result.file}`);
-    logIndexResult(result);
+    if (args.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      printHuman(report);
+    }
+    if (!report.ok) process.exitCode = 1;
   } catch (error51) {
     console.error(error51 instanceof Error ? error51.message : String(error51));
     console.error(usage());
@@ -19533,6 +20008,9 @@ async function main() {
 }
 main();
 /*! Bundled license information:
+
+safe-buffer/index.js:
+  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 
 is-extendable/index.js:
   (*!
@@ -19549,7 +20027,4 @@ strip-bom-string/index.js:
    * Copyright (c) 2015, 2017, Jon Schlinkert.
    * Released under the MIT License.
    *)
-
-safe-buffer/index.js:
-  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 */

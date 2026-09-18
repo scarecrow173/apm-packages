@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import { detectNaming as sharedDetectNaming, findDocumentDir, listMarkdownFiles, nextNumber as sharedNextNumber, slugify as sharedSlugify } from "../../../lib/document_utils";
+import { findDocumentDir, listMarkdownFiles, slugify as sharedSlugify } from "../../../lib/document_utils";
 import { GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
@@ -26,7 +26,6 @@ const relationFields = [
 ] as const;
 
 type RelationField = typeof relationFields[number];
-type NamingMode = "numbered" | "slug";
 
 type AdrEntry = {
   id: string | null;
@@ -66,14 +65,6 @@ function findAdrDir(cwd: string, explicitDir?: string): string {
 
 function adrFiles(dir: string): string[] {
   return listMarkdownFiles(dir);
-}
-
-function detectNaming(files: string[]): NamingMode {
-  return sharedDetectNaming(files);
-}
-
-function nextNumber(files: string[]): number {
-  return sharedNextNumber(files);
 }
 
 function slugify(title: string): string {
@@ -203,18 +194,6 @@ function validateFrontMatter(content: string): FrontMatterIssue[] {
   return issues;
 }
 
-function nextIdNumber(dir: string, files: string[]): number {
-  const numbers: number[] = [];
-  for (const file of files) {
-    const nameMatch = /^(\d{4})-/.exec(file);
-    if (nameMatch) numbers.push(Number(nameMatch[1]));
-    const data = parseDoc(fs.readFileSync(path.join(dir, file), "utf8")).data;
-    const idMatch = typeof data.id === "string" ? /^ADR-(\d{4})$/.exec(data.id.trim()) : null;
-    if (idMatch) numbers.push(Number(idMatch[1]));
-  }
-  return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
-}
-
 function writeIndexFile(adrDir: string, content: string, force = false): { written: boolean; reason: "hand-curated" | null } {
   const indexPath = path.join(adrDir, "README.md");
   const existing = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
@@ -304,13 +283,10 @@ export {
   adrFiles,
   buildIndex,
   candidateDirs,
-  detectNaming,
   findAdrDir,
   hasSection,
   markdownLinks,
   matterData,
-  nextIdNumber,
-  nextNumber,
   parseCsv,
   referencedPaths,
   relationFields,

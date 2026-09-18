@@ -3,7 +3,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { buildIndex, detectNaming, findAdrDir, nextIdNumber, slugify, writeIndexFile } from "./lib/adr_utils";
+import { buildIndex, findAdrDir, slugify, writeIndexFile } from "./lib/adr_utils";
+import { generateArtifactId } from "../../lib/artifact_id";
 import { configFor, frontMatter, sanitizeTitle } from "../../lib/doc_suite_utils";
 
 const templates = {
@@ -28,7 +29,6 @@ type CliArgs = {
 };
 
 type TemplateValues = {
-  number: number;
   title: string;
 };
 
@@ -71,7 +71,6 @@ function renderTemplate(templateName: TemplateName, values: TemplateValues): str
     throw new Error(`Unknown template: ${templateName}`);
   }
   return fs.readFileSync(templatePath, "utf8")
-    .replaceAll("{{number}}", String(values.number))
     .replaceAll("{{title}}", values.title);
 }
 
@@ -89,12 +88,9 @@ async function main(): Promise<void> {
     const adrDir = path.join(cwd, relativeDir);
     fs.mkdirSync(adrDir, { recursive: true });
 
-    const files = fs.readdirSync(adrDir);
-    const naming = detectNaming(files);
-    const number = nextIdNumber(adrDir, files);
     const title = sanitizeTitle(args.title);
     const slug = slugify(title);
-    const filename = naming === "slug" ? `${slug}.md` : `${String(number).padStart(4, "0")}-${slug}.md`;
+    const filename = `${slug}.md`;
     const outputPath = path.join(adrDir, filename);
     if (fs.existsSync(outputPath)) throw new Error(`ADR already exists: ${path.relative(cwd, outputPath)}`);
 
@@ -108,8 +104,8 @@ async function main(): Promise<void> {
         informed: [],
       },
     };
-    const header = frontMatter(adrConfig, number, title, status, date, undefined, metadata);
-    const body = renderTemplate(args.template, { number, title }).trimStart();
+    const header = frontMatter(adrConfig, generateArtifactId(adrConfig.idPrefix), title, status, date, undefined, metadata);
+    const body = renderTemplate(args.template, { title }).trimStart();
     const content = `${header}\n\n${body}\n`;
     fs.writeFileSync(outputPath, content, "utf8");
 

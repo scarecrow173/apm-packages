@@ -16,11 +16,11 @@ edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 authoritativeInputs:
-  - { path: docs/tasks/0001-task.md, id: TASK-0001, fingerprint: sha256:input }
+  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:input }
 evidence:
-  - { path: docs/impl/ir/0001-task.md, id: IMPL-0001, fingerprint: sha256:evidence }
+  - { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:evidence }
 proof:
-  canonicalEvidence: { path: docs/impl/ir/0001-task.md, id: IMPL-0001, fingerprint: sha256:evidence }
+  canonicalEvidence: { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:evidence }
 ```
 
 ```yaml
@@ -29,12 +29,12 @@ edgeId: implementation-to-design
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 authoritativeInputs:
-  - { path: docs/tasks/0001-task.md, id: TASK-0001, fingerprint: sha256:before }
+  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:before }
 evidence:
-  - { path: docs/designs/0001-graph.md, id: DESIGN-0001, fingerprint: sha256:changed }
+  - { path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, fingerprint: sha256:changed }
 retry:
   changedEvidence:
-    - { path: docs/designs/0001-graph.md, id: DESIGN-0001, fingerprint: sha256:changed }
+    - { path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, fingerprint: sha256:changed }
 ```
 
 ```yaml
@@ -43,9 +43,9 @@ edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 authoritativeInputs:
-  - { path: docs/tasks/0001-task.md, id: TASK-0001, fingerprint: sha256:input }
+  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:input }
 evidence:
-  - { path: docs/impl/ir/0001-task.md, id: IMPL-0001, fingerprint: sha256:checkpoint }
+  - { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:checkpoint }
 reason: authority-required
 ```
 

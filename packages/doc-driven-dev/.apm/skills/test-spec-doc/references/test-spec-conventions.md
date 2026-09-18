@@ -28,16 +28,18 @@ Detection order used by scripts:
 Default filename pattern:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 Rules:
 
-- `NNNN` is a zero-padded sequential number local to the test spec directory.
-- The title slug is lowercase ASCII with words separated by dashes.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
 - Name the guaranteed behavior, not the test file or suite.
-- Examples: `0001-checkout-total-calculation.md`,
-  `0002-session-expiry.md`.
+- Examples: `checkout-total-calculation.md`, `session-expiry.md`.
+
+Document identity lives in the front matter `id`, not in the filename or its
+sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
+documents always use slug-only names. Run `migrate_ids.js` under `doc-driven-dev-graph/scripts` to upgrade existing files.
 
 ## Required Front Matter
 
@@ -46,7 +48,7 @@ IDs prefixed `TSPEC-`:
 
 ```yaml
 ---
-id: "TSPEC-0001"
+id: "TSPEC-6NbVcXzAsDfGhJkLpOiUyT"
 type: "test-spec"
 status: "draft"
 title: "Checkout total calculation"
@@ -91,7 +93,7 @@ Tasks that implement the behavior should point back with their own
 `verified-by` relation to this test spec.
 
 Relation targets may be written as repo-relative paths or document IDs
-(`TSPEC-0001` style). `doc-status` audits warn when a `verifies` target
+(`TSPEC-<id>` style). `doc-status` audits warn when a `verifies` target
 resolves to a document type other than spec, design, or ADR
 (`test-spec-invalid-verifies-target`), and when an approved, in-progress,
 or completed plan neither links a test spec via `verified-by` nor records
@@ -151,4 +153,4 @@ filename order, with the four shared columns:
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| TSPEC-0001 | Checkout total calculation | approved | [0001-checkout-total-calculation.md](0001-checkout-total-calculation.md) |
+| TSPEC-6NbVcXzAsDfGhJkLpOiUyT | Checkout total calculation | approved | [checkout-total-calculation.md](checkout-total-calculation.md) |

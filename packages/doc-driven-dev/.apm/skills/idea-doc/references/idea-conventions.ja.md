@@ -23,17 +23,20 @@ idea 文書は、探索や仕様化の準備が整う前の、未仕様の早期
 既定のファイル名パターン:
 
 ```text
-NNNN-タイトル-をダッシュ区切りで.md
+タイトル-をダッシュ区切りで.md
 ```
 
 ルール:
 
-- `NNNN` は ideas ディレクトリ内でのゼロパディング連番です。
-- タイトルスラグは英小文字 ASCII でダッシュ区切りにします。
+- ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
 - アイデアのテーマを表す短い名詞句を優先します。
 - `idea.md` や `notes.md` のような曖昧な名前は避けます。
-- 例: `0001-support-offline-mode-for-mobile.md`,
-  `0002-introduce-event-sourcing.md`
+- 例: `support-offline-mode-for-mobile.md`,
+  `introduce-event-sourcing.md`
+
+文書の同一性はファイル名やソート位置ではなく front matter の `id` に
+あります。既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
+slug-only の名前を使います。既存ファイルの移行には `doc-driven-dev-graph/scripts` の `migrate_ids.js` を使います。
 
 ## 必須フロントマター
 
@@ -41,7 +44,7 @@ idea 文書は共有文書フロントマターを使います。
 
 ```yaml
 ---
-id: "IDEA-0001"
+id: "IDEA-4MnBvCxZaSdFgHjKlPoIuY"
 type: "idea"
 status: "draft"
 title: "Support offline mode for mobile"
@@ -73,7 +76,7 @@ relations:
 
 | フィールド | 必須 | 説明 |
 | --- | --- | --- |
-| `id` | 必須 | 安定した文書識別子。常に `IDEA-NNNN` の形式。 |
+| `id` | 必須 | 安定した文書識別子。`IDEA-<22文字Base62>` 形式（UUIDv7由来。従来の `IDEA-NNNN` も有効）。 |
 | `type` | 必須 | `idea` 固定。 |
 | `status` | 必須 | 現在のライフサイクル状態。 |
 | `title` | 必須 | アイデアのテーマに対応した人間が読めるタイトル。 |
@@ -150,7 +153,7 @@ idea 文書をファイル名順に4列の Markdown テーブルで列挙しま�
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| IDEA-0001 | Support offline mode for mobile | promoted | [0001-support-offline-mode-for-mobile.md](0001-support-offline-mode-for-mobile.md) |
+| IDEA-4MnBvCxZaSdFgHjKlPoIuY | Support offline mode for mobile | promoted | [support-offline-mode-for-mobile.md](support-offline-mode-for-mobile.md) |
 
 索引ルール:
 
@@ -168,10 +171,9 @@ idea 文書をファイル名順に4列の Markdown テーブルで列挙しま�
 ```text
 docs/ideas/
   mobile/
-    0001-support-offline-mode.md
+    support-offline-mode.md
   platform/
-    0001-introduce-event-sourcing.md
+    introduce-event-sourcing.md
 ```
 
 フラットなディレクトリが探しにくい場合にのみこのパターンを使います。
-番号付けは各サブディレクトリ内でローカルに管理します。

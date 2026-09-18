@@ -48,9 +48,9 @@ TASK-DOC-GATE-001: the referenced plan must exist and have status
 2. Create a task for one coherent implementation slice.
 
    ```bash
-   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/0001-implement-checkout-flow.md \
-     --depends-on docs/tasks/0001-schema.md --depends-on TASK-0002 \
-     --blocks docs/tasks/0004-ui.md
+   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/implement-checkout-flow.md \
+     --depends-on docs/tasks/schema.md --depends-on TASK-0H5nCkR2mW9xVbYqZeLp3s \
+     --blocks docs/tasks/ui.md
    ```
 
    The creation script follows `references/task-conventions.md` and uses

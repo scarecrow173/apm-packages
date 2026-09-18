@@ -82,7 +82,7 @@ idea 文書は次に答える必要があります。
 
 ```yaml
 ---
-id: "IDEA-0001"
+id: "IDEA-4MnBvCxZaSdFgHjKlPoIuY"
 type: "idea"
 status: "draft"
 title: "Support offline mode for mobile"
