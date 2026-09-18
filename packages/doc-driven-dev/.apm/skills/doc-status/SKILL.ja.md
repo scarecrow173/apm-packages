@@ -41,21 +41,37 @@ type のライフサイクル状態と relation の健全性を確認するた�
 
 ## ワークフロー
 
+統一エントリポイント `doc_status.js` は 4 つの read-only コマンドを提供する。
+`list_docs.js` と `audit_docs.js` は互換 wrapper として残る。
+
 1. 種別またはステータスで文書を一覧する。
 
    ```bash
-   node scripts/list_docs.js --type spec
-   node scripts/list_docs.js --type design
+   node scripts/doc_status.js list --type spec
    node scripts/list_docs.js --type task --status in-progress
    ```
 
-2. フロントマターと relation を監査する。
+2. finding を列挙（`lint`）またはゲート要約を評価（`audit`）する。
 
    ```bash
+   node scripts/doc_status.js lint --type spec --rule broken-link
+   node scripts/doc_status.js audit --type plan --json
    node scripts/audit_docs.js --type spec
-   node scripts/audit_docs.js --type design
-   node scripts/audit_docs.js --type plan --json
    ```
+
+3. リポジトリ全体の health を category 別に集約する。
+
+   ```bash
+   node scripts/doc_status.js health
+   node scripts/doc_status.js health --json
+   ```
+
+   `health` は同じ findings の集約ビューであり、別の scanner ではない。
+   数値スコアは報告しない。
+
+   共通フィルタ: `--type`, `--dir`, `--rule`, `--severity`, `--blocking`,
+   `--status`（list）, `--json`, `--external-links`。finding は決定的順序で
+   出力され、exit status は呼び出し自体が不正な場合のみ `0` 以外になる。
 
    `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
    文書型（`spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `idea`,
@@ -63,19 +79,75 @@ type のライフサイクル状態と relation の健全性を確認するた�
    `all` は全 canonical 文書型を対象とする `audit_docs.js --type all`、
    `impl-record` は `impl-doc/scripts/audit_impl_record.js` です。
 
-3. `relations.source` は外部出典として扱う。
+4. `relations.source` は外部出典として扱う。
    HTTP、HTTPS、mail link は許可し、存在しないローカルファイルとして
    報告しません。
-4. `relations.references` は補助資料として扱う。
+5. `relations.references` は補助資料として扱う。
    ローカルパスの場合は存在確認し、外部資料の場合は URL を許可します。
-5. 壊れた内部 relation、不正ステータス、必須フロントマター欠落、
+6. 壊れた内部 relation、不正ステータス、必須フロントマター欠落、
    索引欠落を報告する。
+
+## 監査カバレッジ
+
+監査は共有 document repository model 上で実行され、すべての問題を安定した
+rule ID で報告する。対象チェック:
+
+- `unparseable-front-matter`, `invalid-front-matter`, `invalid-type`,
+  `invalid-status` — フロントマターと文書 contract の違反。
+- `invalid-id-format`, `invalid-id-prefix`, `duplicate-id` — artifact
+  identity の違反。
+- `broken-relation-link`, `ambiguous-relation-target`,
+  `relation-escapes-root`, `self-relation`, `inconsistent-reciprocal-relation`
+  — 意味 relation の違反。
+- `test-spec-missing-verifies`, `test-spec-invalid-verifies-target`,
+  `plan-missing-test-spec-evidence`, `missing-required-relation`,
+  `invalid-relation-target-type` — contract が要求する upstream / 検証
+  evidence の traceability category rule。
+- `provenance-missing-source`, `provenance-invalid-source`,
+  `provenance-unresolved-local-source` — `relations.source` の provenance。
+  ローカル source path はリポジトリ内で解決必須。外部 URL は外部
+  evidence として分類し、`--external-links` 指定時のみ疎通確認する。
+- `traceability-missing-upstream` — type-aware な upstream の期待。
+  contract が upstream artifact を期待する type（`spec`, `plan`, `task`,
+  `design`）で `implements` / `derives-from` / `refines` relation の宣言が
+  ない場合に warning を出す。root 適格 type と終端 status
+  （`superseded`, `rejected`, `archived`, `deprecated`, `abandoned`,
+  `wont-do`）は対象外。
+- `missing-index`, `index-missing-entry`, `index-missing-overview`,
+  `missing-overview` — 索引とディレクトリ構造の欠落。
+- `broken-link`, `missing-image-link`, `broken-anchor`, `link-escapes-root`,
+  `link-case-mismatch` — ローカル Markdown link と anchor の整合性。
+- `index-stale-entry`, `index-duplicate-entry`, `index-metadata-mismatch`,
+  `index-ordering`, `index-unparseable`, `index-escapes-root` — 索引テーブルの
+  整合性。
+- `orphan-index`, `orphan-navigation`, `orphan-relation` — 索引未掲載、
+  どの Markdown link からも到達不能、意味 relation を持たない文書。
+  severity は type-aware で、root artifact として許可される type は
+  `info`、それ以外は `warning` として報告する。
+- `external-link-broken`, `external-link-redirect`,
+  `external-link-unverifiable` — `audit_docs.js --external-links` による
+  opt-in の外部リンク確認。デフォルトでは無効で、監査は決定的かつ
+  オフライン安全を維持する。
+
+relation target はまず一意な artifact ID で解決し、次にリポジトリ相対または
+文書相対パスで解決する。欠落した relation をファイル名やパス近接から
+推測しない。壊れた link target や orphan の対処も推測せず、レビューまたは
+明示的な maintenance へ報告する。
+
+## Read-Only Invariant
+
+`list_docs.js` と `audit_docs.js` はプロジェクト文書を一切変更しない。
+修復と索引再生成は別の maintenance capability に委譲される。
 
 ## リソース
 
+- `scripts/doc_status.js`: `list` / `lint` / `audit` / `health` コマンド、
+  共通フィルタ、共有 Finding contract 上の安定した JSON 出力を持つ
+  統一 read-only エントリポイント。
 - `scripts/list_docs.js`: 種別とステータスで文書メタデータを一覧します。
-- `scripts/audit_docs.js`: フロントマター、ステータス、relation、索引を
-  検証します。
+- `scripts/audit_docs.js`: フロントマター、ステータス、relation、link、
+  索引、orphan を検証します。`--external-links` で opt-in の外部リンク
+  確認を有効化します。
 
 ## Graph Effect Outcome
 
