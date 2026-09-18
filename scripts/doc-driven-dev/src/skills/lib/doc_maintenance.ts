@@ -6,9 +6,8 @@ import path from "node:path";
 import { collectFindings, docDir } from "./doc_report";
 import type { DocStatusQuery } from "./doc_report";
 import { lintScope } from "./doc_lint";
-import { documentContracts } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
-import { buildIndex, GENERATED_INDEX_MARKER, isGeneratedIndex, primaryIndexTypeForDir } from "./doc_suite_utils";
+import { isGeneratedIndex, residentTypesForDir, writeGeneratedIndex } from "./doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
@@ -41,6 +40,7 @@ type PlannedAction = {
   detail: string;
   scopeTypes?: string[];
   scopeDir?: string;
+  indexFile?: string;
   linkTarget?: string;
   linkLine?: number;
 };
@@ -98,18 +98,6 @@ type IndexPlan = {
   findings: Finding[];
 };
 
-// A generated index documents every artifact the directory hosts, not only
-// the types the caller scoped to. Rebuilds therefore union the requesting
-// scopes with all types canonically resident in the directory, so a scoped
-// rebuild cannot drop rows owned by a sibling type.
-function residentTypesForDir(directory: string): string[] {
-  const normalized = normalizeDir(directory);
-  return Object.values(documentContracts())
-    .filter((contract) =>
-      [contract.canonicalDir, ...contract.dirs].map(normalizeDir).includes(normalized))
-    .map((contract) => contract.type);
-}
-
 async function planMaintenance(cwd: string, query: DocStatusQuery, options?: ApplyOptions): Promise<{ plan: MaintenancePlan; findings: Finding[]; model: DocumentRepository }> {
   const resolvedCwd = path.resolve(cwd);
   const collected = await collectFindings(resolvedCwd, query);
@@ -138,7 +126,7 @@ async function planMaintenance(cwd: string, query: DocStatusQuery, options?: App
         const indexAbsolute = path.join(resolvedCwd, indexPath);
         const indexExists = fs.existsSync(indexAbsolute);
         const indexGenerated = !indexExists || isGeneratedIndex(fs.readFileSync(indexAbsolute, "utf8"));
-        const plan = indexPlans.get(indexPath) ?? {
+        const plan: IndexPlan = indexPlans.get(indexPath) ?? {
           directory,
           exists: indexExists,
           generated: indexGenerated,
@@ -184,6 +172,7 @@ async function planMaintenance(cwd: string, query: DocStatusQuery, options?: App
         path: indexPath,
         scopeTypes,
         scopeDir: indexPlan.directory,
+        indexFile: path.posix.basename(indexPath),
         ruleIds,
         detail: indexPlan.exists
           ? `Regenerate managed index ${indexPath} for types ${scopeTypes.join(", ")}`
@@ -208,45 +197,6 @@ async function planMaintenance(cwd: string, query: DocStatusQuery, options?: App
 // ---------------------------------------------------------------------------
 // Apply
 // ---------------------------------------------------------------------------
-
-// A managed index's generated region begins at the marker line and runs
-// through the `Directory:` line and the index table. Text before the marker
-// and after the table is hand-written content and must be preserved.
-function mergeManagedIndex(existing: string, generated: string): string {
-  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
-  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
-  const lines = existing.split("\n");
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerIndex < 0) return `${section}\n`;
-  const preamble = lines.slice(0, markerIndex);
-  const rest = lines.slice(markerIndex + 1);
-
-  let directoryLine = -1;
-  let regionEnd = -1;
-  for (let i = 0; i < rest.length; i += 1) {
-    const trimmed = rest[i].trim();
-    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
-      directoryLine = i;
-      continue;
-    }
-    if (trimmed.startsWith("|")) {
-      regionEnd = i;
-      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-      break;
-    }
-  }
-  if (regionEnd < 0) regionEnd = directoryLine;
-
-  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
-    const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
-  });
-  const trailing = rest.slice(regionEnd + 1);
-  const head = preamble.join("\n").replace(/\n+$/, "");
-  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
-  const parts = [head, section, tail].filter((part) => part !== "");
-  return `${parts.join("\n\n")}\n`;
-}
 
 function actualEntryName(absolute: string): string | null {
   const dir = path.dirname(absolute);
@@ -297,20 +247,17 @@ async function applyMaintenance(cwd: string, query: DocStatusQuery, options?: Ap
         blocked.push({ action, reason: "unresolvable index scope" });
         continue;
       }
-      const absolute = path.join(resolvedCwd, action.path);
-      const existing = fs.existsSync(absolute) ? fs.readFileSync(absolute, "utf8") : null;
-      if (existing !== null && !options?.forceIndex && !isGeneratedIndex(existing)) {
-        blocked.push({ action, reason: "hand-curated index" });
-        continue;
+      fs.mkdirSync(path.dirname(path.join(resolvedCwd, action.path)), { recursive: true });
+      const result = await writeGeneratedIndex(resolvedCwd, action.scopeTypes[0], action.scopeDir, {
+        forceIndex: options?.forceIndex,
+        types: action.scopeTypes,
+        indexFile: action.indexFile,
+      });
+      if (result.written) {
+        applied.push(action);
+      } else {
+        blocked.push({ action, reason: result.reason === "hand-curated" ? "hand-curated index" : "index write disabled" });
       }
-      const primaryType = primaryIndexTypeForDir(action.scopeDir, action.scopeTypes);
-      const generated = await buildIndex(resolvedCwd, primaryType, action.scopeDir, { types: action.scopeTypes });
-      const content = existing !== null && isGeneratedIndex(existing)
-        ? mergeManagedIndex(existing, generated)
-        : generated;
-      fs.mkdirSync(path.dirname(absolute), { recursive: true });
-      fs.writeFileSync(absolute, content, "utf8");
-      applied.push(action);
       continue;
     }
     if (action.kind === "fix-link-case") {

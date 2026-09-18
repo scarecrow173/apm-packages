@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { generateArtifactId, isLegacyArtifactId, isNewArtifactId } from "../../../lib/artifact_id";
 import { auditDocuments } from "../../../lib/doc_audit";
-import { buildIndex, configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc } from "../../../lib/doc_suite_utils";
+import { configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc, writeGeneratedIndex } from "../../../lib/doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "../../../lib/document_utils";
 import { auditExperimentLogs, auditImplementationRecords, updateIndexForExperimentDir, updateIndexForMarkdownDir } from "../../../impl-doc/scripts/lib/impl_doc_utils";
 
@@ -360,16 +360,8 @@ async function regenerateIndexes(
       results.push({ action: "hand-curated-rewritten", path: relReadme });
       continue;
     }
-    const indexTypes = dirType && (docTypes as readonly string[]).includes(dirType)
-      ? docTypes.filter((type) => {
-          const config = configFor(type);
-          const candidates = [...config.dirs, config.dir].map((candidate) => normalizeDir(candidate));
-          return candidates.includes(normalizeDir(dir));
-        })
-      : [dirType].filter((type): type is string => Boolean(type));
-    for (const indexType of indexTypes.length > 0 ? indexTypes : ["discovery"]) {
-      fs.writeFileSync(readmePath, await buildIndex(cwd, indexType, dir), "utf8");
-    }
+    const seedType = dirType && (docTypes as readonly string[]).includes(dirType) ? dirType : "discovery";
+    await writeGeneratedIndex(cwd, seedType, dir, { forceIndex: true });
     results.push({ action: "regenerated", path: relReadme });
   }
   return results;
