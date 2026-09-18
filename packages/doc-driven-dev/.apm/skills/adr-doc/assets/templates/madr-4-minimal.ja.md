@@ -1,4 +1,4 @@
-# {{number}}. {{title}}
+# {{title}}
 
 ## 背景と問題
 

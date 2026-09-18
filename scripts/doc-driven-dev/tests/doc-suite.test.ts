@@ -133,12 +133,12 @@ test("new_spec creates front matter spec and index", () => {
   const result = runScript("spec-doc", "new_spec.js", ["--title", "Define checkout flow"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
-  const specPath = path.join(repo, "docs/specs/0001-define-checkout-flow.md");
+  const specPath = path.join(repo, "docs/specs/define-checkout-flow.md");
   assert.equal(fs.existsSync(specPath), true);
   assert.equal(fs.existsSync(path.join(repo, "docs/specs/README.md")), true);
 
   const spec = fs.readFileSync(specPath, "utf8");
-  assert.match(spec, /^id: "SPEC-0001"$/m);
+  assert.match(spec, /^id: "SPEC-[0-9A-Za-z]{22}"$/m);
   assert.match(spec, /^type: "spec"$/m);
   assert.match(spec, /^status: "draft"$/m);
   assert.match(spec, /^title: "Define checkout flow"$/m);
@@ -254,7 +254,7 @@ test("new_spec uses the packaged spec template", () => {
   const result = runScript("spec-doc", "new_spec.js", ["--title", "Template driven spec"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
-  const spec = fs.readFileSync(path.join(repo, "docs/specs/0001-template-driven-spec.md"), "utf8");
+  const spec = fs.readFileSync(path.join(repo, "docs/specs/template-driven-spec.md"), "utf8");
   assert.match(spec, /## Why Now/);
   assert.match(spec, /## Users and Value/);
   assert.match(spec, /## Acceptance Criteria/);
@@ -272,7 +272,7 @@ test("doc creation detects existing alternate directories", () => {
     runScript(
       "design-doc",
       "new_design.js",
-      ["--title", "Alternate design dir", "--status", "approved", "--from", "specs/0001-alternate-spec-dir.md", "--dir", "docs/designs"],
+      ["--title", "Alternate design dir", "--status", "approved", "--from", "specs/alternate-spec-dir.md", "--dir", "docs/designs"],
       { cwd: repo },
     ).status,
     0,
@@ -285,9 +285,9 @@ test("doc creation detects existing alternate directories", () => {
         "--title",
         "Alternate plan dir",
         "--implements",
-        "specs/0001-alternate-spec-dir.md",
+        "specs/alternate-spec-dir.md",
         "--design",
-        "docs/designs/0001-alternate-design-dir.md",
+        "docs/designs/alternate-design-dir.md",
       ],
       { cwd: repo },
     ).status,
@@ -295,11 +295,11 @@ test("doc creation detects existing alternate directories", () => {
   );
   assert.equal(runScript("task-doc", "new_task.js", ["--title", "Alternate task dir"], { cwd: repo }).status, 0);
 
-  assert.equal(fs.existsSync(path.join(repo, "specs/0001-alternate-spec-dir.md")), true);
-  assert.equal(fs.existsSync(path.join(repo, "docs/designs/0001-alternate-design-dir.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "specs/alternate-spec-dir.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "docs/designs/alternate-design-dir.md")), true);
   assert.equal(fs.existsSync(path.join(repo, "docs/designs/overview.md")), true);
-  assert.equal(fs.existsSync(path.join(repo, "plans/0001-alternate-plan-dir.md")), true);
-  assert.equal(fs.existsSync(path.join(repo, "tasks/0001-alternate-task-dir.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "plans/alternate-plan-dir.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "tasks/alternate-task-dir.md")), true);
 });
 
 test("new_plan links to spec with implements and derives-from relations", () => {
@@ -309,7 +309,7 @@ test("new_plan links to spec with implements and derives-from relations", () => 
   const design = runScript(
     "design-doc",
     "new_design.js",
-    ["--title", "Design checkout orchestration", "--from", "docs/specs/0001-define-checkout-flow.md", "--status", "approved"],
+    ["--title", "Design checkout orchestration", "--from", "docs/specs/define-checkout-flow.md", "--status", "approved"],
     { cwd: repo },
   );
   assert.equal(design.status, 0, design.stderr);
@@ -321,24 +321,24 @@ test("new_plan links to spec with implements and derives-from relations", () => 
       "--title",
       "Implement checkout flow",
       "--implements",
-      "docs/specs/0001-define-checkout-flow.md",
+      "docs/specs/define-checkout-flow.md",
       "--design",
-      "docs/designs/0001-design-checkout-orchestration.md",
+      "docs/designs/design-checkout-orchestration.md",
     ],
     { cwd: repo },
   );
 
   assert.equal(result.status, 0, result.stderr);
-  const plan = fs.readFileSync(path.join(repo, "docs/plans/0001-implement-checkout-flow.md"), "utf8");
-  assert.match(plan, /^id: "PLAN-0001"$/m);
+  const plan = fs.readFileSync(path.join(repo, "docs/plans/implement-checkout-flow.md"), "utf8");
+  assert.match(plan, /^id: "PLAN-[0-9A-Za-z]{22}"$/m);
   assert.match(plan, /^type: "plan"$/m);
   assert.match(plan, /^  implements:$/m);
-  assert.match(plan, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
+  assert.match(plan, /^    - "docs\/specs\/define-checkout-flow.md"$/m);
   assert.match(plan, /^  changes:$/m);
   assert.match(plan, /^    added: \[\]$/m);
   assert.match(plan, /^  derives-from:$/m);
-  assert.match(plan, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
-  assert.match(plan, /^    - "docs\/designs\/0001-design-checkout-orchestration.md"$/m);
+  assert.match(plan, /^    - "docs\/specs\/define-checkout-flow.md"$/m);
+  assert.match(plan, /^    - "docs\/designs\/design-checkout-orchestration.md"$/m);
 });
 
 test("new_design creates overview, detailed design, and index", () => {
@@ -347,12 +347,12 @@ test("new_design creates overview, detailed design, and index", () => {
   const result = runScript(
     "design-doc",
     "new_design.js",
-    ["--title", "Design checkout orchestration", "--from", "docs/specs/0001-define-checkout-flow.md"],
+    ["--title", "Design checkout orchestration", "--from", "docs/specs/define-checkout-flow.md"],
     { cwd: repo },
   );
 
   assert.equal(result.status, 0, result.stderr);
-  const designPath = path.join(repo, "docs/designs/0001-design-checkout-orchestration.md");
+  const designPath = path.join(repo, "docs/designs/design-checkout-orchestration.md");
   const overviewPath = path.join(repo, "docs/designs/overview.md");
   const indexPath = path.join(repo, "docs/designs/README.md");
   assert.equal(fs.existsSync(designPath), true);
@@ -361,13 +361,13 @@ test("new_design creates overview, detailed design, and index", () => {
 
   const design = fs.readFileSync(designPath, "utf8");
   const overview = fs.readFileSync(overviewPath, "utf8");
-  assert.match(design, /^id: "DESIGN-0001"$/m);
+  assert.match(design, /^id: "DESIGN-[0-9A-Za-z]{22}"$/m);
   assert.match(design, /^type: "design"$/m);
   assert.match(design, /^status: "draft"$/m);
   assert.match(design, /^  changes:$/m);
   assert.match(design, /^    added: \[\]$/m);
   assert.match(design, /^  derives-from:$/m);
-  assert.match(design, /^    - "docs\/specs\/0001-define-checkout-flow.md"$/m);
+  assert.match(design, /^    - "docs\/specs\/define-checkout-flow.md"$/m);
   assert.match(design, /^  defers: \[\]$/m);
   assert.match(design, /^  deferred-by: \[\]$/m);
   assert.match(design, /## Deferred Design Concerns/);
@@ -382,7 +382,7 @@ test("new_plan enforces approved design gate with fixed error code", () => {
   const missingDesign = runScript(
     "plan-doc",
     "new_plan.js",
-    ["--title", "Implement checkout flow", "--implements", "docs/specs/0001-define-checkout-flow.md"],
+    ["--title", "Implement checkout flow", "--implements", "docs/specs/define-checkout-flow.md"],
     { cwd: repo },
   );
   assert.notEqual(missingDesign.status, 0);
@@ -418,9 +418,9 @@ test("new_plan enforces approved design gate with fixed error code", () => {
       "--title",
       "Implement checkout flow",
       "--implements",
-      "docs/specs/0001-define-checkout-flow.md",
+      "docs/specs/define-checkout-flow.md",
       "--design",
-      "docs/designs/0001-draft-checkout-design.md",
+      "docs/designs/draft-checkout-design.md",
       "--design",
       "docs/designs/0002-case-sensitive-design.md",
     ],
@@ -448,8 +448,8 @@ test("new_task requires an approved or active plan and links it", () => {
   );
   assert.equal(created.status, 0, created.stderr);
 
-  const task = fs.readFileSync(path.join(repo, "docs/tasks/0001-wire-checkout-button.md"), "utf8");
-  assert.match(task, /^id: "TASK-0001"$/m);
+  const task = fs.readFileSync(path.join(repo, "docs/tasks/wire-checkout-button.md"), "utf8");
+  assert.match(task, /^id: "TASK-[0-9A-Za-z]{22}"$/m);
   assert.match(task, /^status: "in-progress"$/m);
   assert.match(task, /^  implements:$/m);
   assert.match(task, /^    - "docs\/plans\/0001-plan.md"$/m);
@@ -473,7 +473,7 @@ test("new_task records repeatable task dependencies and blocks relations", () =>
     "--blocks", "docs/tasks/0004-ui.md",
   ], { cwd: repo });
   assert.equal(created.status, 0, created.stderr);
-  const task = fs.readFileSync(path.join(repo, "docs/tasks/0005-implement-api.md"), "utf8");
+  const task = fs.readFileSync(path.join(repo, "docs/tasks/implement-api.md"), "utf8");
   assert.match(task, /^    - "docs\/tasks\/0001-schema.md"$/m);
   assert.match(task, /^    - "TASK-0002"$/m);
   assert.match(task, /^  blocks:\n    - "docs\/tasks\/0004-ui.md"$/m);
@@ -525,10 +525,10 @@ test("new_test_spec requires verifies targets and records relations", () => {
   ], { cwd: repo });
   assert.equal(created.status, 0, created.stderr);
 
-  const specPath = path.join(repo, "docs/test-specs/0001-checkout-total-calculation.md");
+  const specPath = path.join(repo, "docs/test-specs/checkout-total-calculation.md");
   assert.equal(fs.existsSync(specPath), true);
   const doc = fs.readFileSync(specPath, "utf8");
-  assert.match(doc, /^id: "TSPEC-0001"$/m);
+  assert.match(doc, /^id: "TSPEC-[0-9A-Za-z]{22}"$/m);
   assert.match(doc, /^type: "test-spec"$/m);
   assert.match(doc, /^status: "draft"$/m);
   assert.match(doc, /^  verifies:\n    - "docs\/specs\/0001-checkout\.md"$/m);
@@ -1000,7 +1000,7 @@ test("doc-status documents unclassified follow-up review before exit", () => {
   assert.match(graph, /when: followups-unclassified/);
 });
 
-test("new_design continues front-matter id numbering and preserves slug naming in slug repos", () => {
+test("new_design assigns an opaque id and preserves slug naming in slug repos", () => {
   const repo = tempRepo();
   const designs = path.join(repo, "docs/designs");
   fs.mkdirSync(path.join(designs, "storage-port"), { recursive: true });
@@ -1035,18 +1035,18 @@ test("new_design continues front-matter id numbering and preserves slug naming i
 
   assert.equal(result.status, 0, result.stderr);
 
-  // slug 命名で生成され、front matter id はグローバル連番 DESIGN-0026（max(5,25)+1）
+  // slug 命名で生成され、front matter id は既存の連番に依存しない不透明ID
   const created = path.join(designs, "graph-visualization.md");
   assert.equal(fs.existsSync(created), true, "slug-named file expected");
   const body = fs.readFileSync(created, "utf8");
-  assert.match(body, /^id: "DESIGN-0026"$/m);
+  assert.match(body, /^id: "DESIGN-[0-9A-Za-z]{22}"$/m);
 
   // 手キュレーション README は保持される（クロバーしない）
   assert.equal(fs.readFileSync(path.join(designs, "README.md"), "utf8"), handCurated,
     "hand-curated README must be preserved");
 });
 
-test("new_design honors --dir and --name for subdirectory placement with global numbering", () => {
+test("new_design honors --dir and --name for subdirectory placement with opaque ids", () => {
   const repo = tempRepo();
   const designs = path.join(repo, "docs/designs");
   fs.mkdirSync(designs, { recursive: true });
@@ -1074,7 +1074,7 @@ test("new_design honors --dir and --name for subdirectory placement with global 
 
   const created = path.join(designs, "graph-visualization", "design.md");
   assert.equal(fs.existsSync(created), true, "<feature>/design.md expected");
-  assert.match(fs.readFileSync(created, "utf8"), /^id: "DESIGN-0008"$/m);
+  assert.match(fs.readFileSync(created, "utf8"), /^id: "DESIGN-[0-9A-Za-z]{22}"$/m);
 
   // overview と index はサブディレクトリではなくルートに置かれる
   assert.equal(fs.existsSync(path.join(designs, "overview.md")), true);
@@ -1093,7 +1093,7 @@ test("new_spec --no-index skips writing the README index", () => {
     ["--title", "No index spec", "--no-index"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(fs.existsSync(path.join(repo, "docs/specs/0001-no-index-spec.md")), true);
+  assert.equal(fs.existsSync(path.join(repo, "docs/specs/no-index-spec.md")), true);
   assert.equal(fs.existsSync(path.join(repo, "docs/specs/README.md")), false,
     "index must not be created when --no-index is passed");
   assert.match(result.stdout, /Skipped index update \(--no-index\)/);

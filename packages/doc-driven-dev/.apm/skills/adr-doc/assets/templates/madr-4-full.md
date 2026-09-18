@@ -1,4 +1,4 @@
-# {{number}}. {{title}}
+# {{title}}
 
 ## Context and Problem Statement
 
