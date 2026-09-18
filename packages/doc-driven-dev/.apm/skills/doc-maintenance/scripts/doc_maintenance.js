@@ -28326,6 +28326,32 @@ function isUnderDir(child, parent) {
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
 }
+function artifactKeyOf(repoPath) {
+  const dir = import_node_path4.default.posix.dirname(repoPath);
+  const base = import_node_path4.default.posix.basename(repoPath).replace(/\.md$/i, "");
+  const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
+  return `${dir}::${locale ? locale[1] : base}`;
+}
+function groupByArtifact(group) {
+  const buckets = /* @__PURE__ */ new Map();
+  for (const document3 of group) {
+    const key = artifactKeyOf(document3.path);
+    const bucket = buckets.get(key) ?? [];
+    bucket.push(document3);
+    buckets.set(key, bucket);
+  }
+  return buckets;
+}
+function primaryDocumentOf(group) {
+  const nonLocalized = group.filter(
+    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path4.default.posix.basename(document3.path))
+  );
+  const pool = nonLocalized.length > 0 ? nonLocalized : group;
+  return [...pool].sort((a, b) => compareStrings(a.path, b.path))[0];
+}
+function artifactPrimaries(group) {
+  return [...groupByArtifact(group).values()].map(primaryDocumentOf).sort((a, b) => compareStrings(a.path, b.path));
+}
 function canonicalTypeMap() {
   const byDir = /* @__PURE__ */ new Map();
   for (const contract of Object.values(contracts)) {
@@ -28515,8 +28541,11 @@ async function scanRepository(options2) {
     const value = rawTarget.trim();
     if (isExternalReference(value)) return { status: "external" };
     const byIdMatch = byId.get(value);
-    if (byIdMatch && byIdMatch.length === 1) return { status: "resolved", document: byIdMatch[0] };
-    if (byIdMatch && byIdMatch.length > 1) return { status: "ambiguous", candidates: [...byIdMatch].sort((a, b) => compareStrings(a.path, b.path)) };
+    if (byIdMatch) {
+      const primaries = artifactPrimaries(byIdMatch);
+      if (primaries.length === 1) return { status: "resolved", document: primaries[0] };
+      return { status: "ambiguous", candidates: primaries };
+    }
     const resolved = resolvePath(from, value);
     if (resolved.status === "resolved") {
       if (resolved.document) return { status: "resolved", document: resolved.document };
@@ -28554,8 +28583,9 @@ async function scanRepository(options2) {
     lookupById(id) {
       const matches = byId.get(id.trim()) ?? [];
       if (matches.length === 0) return { status: "none" };
-      if (matches.length === 1) return { status: "unique", document: matches[0] };
-      return { status: "ambiguous", candidates: [...matches].sort((a, b) => compareStrings(a.path, b.path)) };
+      const primaries = artifactPrimaries(matches);
+      if (primaries.length === 1) return { status: "unique", document: primaries[0] };
+      return { status: "ambiguous", candidates: primaries };
     },
     resolvePath,
     resolveRelationTarget,
@@ -28563,7 +28593,7 @@ async function scanRepository(options2) {
       return document3.headings.some((heading) => heading.slug === slug);
     },
     duplicateIds() {
-      return [...byId.entries()].filter(([, group]) => group.length > 1).map(([id, group]) => ({ id, paths: group.map((document3) => document3.path).sort(compareStrings) })).sort((a, b) => compareStrings(a.id, b.id));
+      return [...byId.entries()].filter(([, group]) => groupByArtifact(group).size > 1).map(([id, group]) => ({ id, paths: group.map((document3) => document3.path).sort(compareStrings) })).sort((a, b) => compareStrings(a.id, b.id));
     }
   };
   return repository;
@@ -28662,6 +28692,7 @@ function lintTraceability(model, scope) {
         ruleId: "traceability-missing-upstream",
         category: "traceability",
         severity: "warning",
+        blocking: true,
         path: document3.path,
         artifactId: document3.id,
         message: `${scope.type} declares no upstream relation (expected one of: ${expectation.fields.join(", ")})`,
@@ -29259,6 +29290,7 @@ function lintRelations(model, document3, scopeType) {
           ruleId: "ambiguous-relation-target",
           category: "relation",
           severity: "warning",
+          blocking: true,
           path: document3.path,
           artifactId: document3.id,
           message: `Relation ${field} target ${target} matches multiple artifacts: ${resolved.candidates.map((doc) => doc.path).join(", ")}`,
@@ -29272,6 +29304,7 @@ function lintRelations(model, document3, scopeType) {
           ruleId: "relation-escapes-root",
           category: "relation",
           severity: "warning",
+          blocking: true,
           path: document3.path,
           artifactId: document3.id,
           message: `Relation ${field} points outside the repository root: ${target}`,
@@ -29285,6 +29318,7 @@ function lintRelations(model, document3, scopeType) {
           ruleId: "broken-relation-link",
           category: "relation",
           severity: "warning",
+          blocking: true,
           path: document3.path,
           artifactId: document3.id,
           message: `Relation ${field} points to missing target: ${target}`,
@@ -29315,6 +29349,7 @@ function lintRelations(model, document3, scopeType) {
           ruleId,
           category: "traceability",
           severity: "warning",
+          blocking: true,
           path: document3.path,
           artifactId: document3.id,
           message: scopeType === "test-spec" && field === "verifies" ? `Test spec verifies target resolves to type "${targetDocument.type}", expected ${expectedTypes.join(", ").replace(/, ([^,]*)$/, ", or $1")}: ${target}` : `Relation ${field} target resolves to type "${targetDocument.type}", expected one of: ${expectedTypes.join(", ")}: ${target}`,
@@ -29367,6 +29402,7 @@ function lintRequiredRelations(model, document3, scopeType) {
         ruleId: "test-spec-missing-verifies",
         category: "traceability",
         severity: "warning",
+        blocking: true,
         path: document3.path,
         artifactId: document3.id,
         message: `Test spec has no relations.verifies target (${required2.gateCode ?? "TEST-SPEC-DOC-GATE-001"})`,
@@ -29378,6 +29414,7 @@ function lintRequiredRelations(model, document3, scopeType) {
         ruleId: "plan-missing-test-spec-evidence",
         category: "traceability",
         severity: "warning",
+        blocking: true,
         path: document3.path,
         artifactId: document3.id,
         message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason",
@@ -29389,6 +29426,7 @@ function lintRequiredRelations(model, document3, scopeType) {
         ruleId: "missing-required-relation",
         category: "traceability",
         severity: "warning",
+        blocking: true,
         path: document3.path,
         artifactId: document3.id,
         message: `Document requires a resolvable relations.${required2.field} target of type ${required2.targetTypes.join(" or ")}`,
@@ -29424,6 +29462,7 @@ function lintDirectory(model, scope) {
       ruleId: "missing-index",
       category: "index",
       severity: "warning",
+      blocking: true,
       path: null,
       message: `Missing ${scope.type} index README.md or index.md`,
       repair: "safe"
@@ -29438,6 +29477,7 @@ function lintDirectory(model, scope) {
         ruleId: "index-missing-entry",
         category: "index",
         severity: "warning",
+        blocking: true,
         path: document3.path,
         artifactId: document3.id,
         message: `Index does not link ${file2}`,
@@ -29451,6 +29491,7 @@ function lintDirectory(model, scope) {
       ruleId: "index-missing-overview",
       category: "index",
       severity: "warning",
+      blocking: true,
       path: `${dir}/overview.md`,
       message: "Index does not link overview.md",
       target: "overview.md",

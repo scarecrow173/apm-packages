@@ -111,6 +111,7 @@ function lintTraceability(model: DocumentRepository, scope: LintScope): Finding[
         ruleId: "traceability-missing-upstream",
         category: "traceability",
         severity: "warning",
+        blocking: true,
         path: document.path,
         artifactId: document.id,
         message: `${scope.type} declares no upstream relation (expected one of: ${expectation.fields.join(", ")})`,

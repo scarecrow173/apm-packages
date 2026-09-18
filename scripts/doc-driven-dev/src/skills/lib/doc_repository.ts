@@ -423,6 +423,42 @@ function isUnderDir(child: string, parent: string): boolean {
   return c === p || c.startsWith(`${p}/`);
 }
 
+// Locale siblings (`foo.md` / `foo.ja.md`) share one logical artifact identity:
+// the artifact key is the directory plus the stem without the locale suffix.
+function artifactKeyOf(repoPath: string): string {
+  const dir = path.posix.dirname(repoPath);
+  const base = path.posix.basename(repoPath).replace(/\.md$/i, "");
+  const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
+  return `${dir}::${locale ? locale[1] : base}`;
+}
+
+function groupByArtifact(group: RepositoryDocument[]): Map<string, RepositoryDocument[]> {
+  const buckets = new Map<string, RepositoryDocument[]>();
+  for (const document of group) {
+    const key = artifactKeyOf(document.path);
+    const bucket = buckets.get(key) ?? [];
+    bucket.push(document);
+    buckets.set(key, bucket);
+  }
+  return buckets;
+}
+
+// The representative file of a logical artifact is its non-localized document
+// (`foo.md` over `foo.ja.md`); fall back to the first sorted path.
+function primaryDocumentOf(group: RepositoryDocument[]): RepositoryDocument {
+  const nonLocalized = group.filter(
+    (document) => !LOCALE_FILE_PATTERN.test(path.posix.basename(document.path)),
+  );
+  const pool = nonLocalized.length > 0 ? nonLocalized : group;
+  return [...pool].sort((a, b) => compareStrings(a.path, b.path))[0];
+}
+
+function artifactPrimaries(group: RepositoryDocument[]): RepositoryDocument[] {
+  return [...groupByArtifact(group).values()]
+    .map(primaryDocumentOf)
+    .sort((a, b) => compareStrings(a.path, b.path));
+}
+
 function canonicalTypeMap(): { dir: string; types: string[] }[] {
   const byDir = new Map<string, Set<string>>();
   for (const contract of Object.values(contracts)) {
@@ -645,8 +681,11 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     const value = rawTarget.trim();
     if (isExternalReference(value)) return { status: "external" };
     const byIdMatch = byId.get(value);
-    if (byIdMatch && byIdMatch.length === 1) return { status: "resolved", document: byIdMatch[0] };
-    if (byIdMatch && byIdMatch.length > 1) return { status: "ambiguous", candidates: [...byIdMatch].sort((a, b) => compareStrings(a.path, b.path)) };
+    if (byIdMatch) {
+      const primaries = artifactPrimaries(byIdMatch);
+      if (primaries.length === 1) return { status: "resolved", document: primaries[0] };
+      return { status: "ambiguous", candidates: primaries };
+    }
 
     const resolved = resolvePath(from, value);
     if (resolved.status === "resolved") {
@@ -688,8 +727,9 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     lookupById(id: string): IdLookup {
       const matches = byId.get(id.trim()) ?? [];
       if (matches.length === 0) return { status: "none" };
-      if (matches.length === 1) return { status: "unique", document: matches[0] };
-      return { status: "ambiguous", candidates: [...matches].sort((a, b) => compareStrings(a.path, b.path)) };
+      const primaries = artifactPrimaries(matches);
+      if (primaries.length === 1) return { status: "unique", document: primaries[0] };
+      return { status: "ambiguous", candidates: primaries };
     },
     resolvePath,
     resolveRelationTarget,
@@ -698,7 +738,7 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     },
     duplicateIds(): { id: string; paths: string[] }[] {
       return [...byId.entries()]
-        .filter(([, group]) => group.length > 1)
+        .filter(([, group]) => groupByArtifact(group).size > 1)
         .map(([id, group]) => ({ id, paths: group.map((document) => document.path).sort(compareStrings) }))
         .sort((a, b) => compareStrings(a.id, b.id));
     },
