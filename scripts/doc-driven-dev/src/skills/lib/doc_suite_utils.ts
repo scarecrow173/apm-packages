@@ -4,7 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
-import { detectNaming, findDocumentDir, isIndexFileName, listMarkdownFiles, nextNumber, normalizeDir, slugify } from "./document_utils";
+import { generateArtifactId } from "./artifact_id";
+import { findDocumentDir, isIndexFileName, listMarkdownFiles, normalizeDir, slugify } from "./document_utils";
 
 const relationFields = [
   "source",
@@ -138,8 +139,6 @@ type MigrationRoute = {
 
 type TargetAllocation = {
   existing: Set<string>;
-  naming: "numbered" | "slug";
-  next: number;
 };
 
 const configs: Record<DocType, DocConfig> = {
@@ -285,26 +284,6 @@ function isUnderDir(child: string, parent: string): boolean {
   const c = normalizeDir(child);
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
-}
-
-function recursiveBasenames(cwd: string, relativeDir: string, type: DocType): string[] {
-  const fullDir = path.join(cwd, relativeDir);
-  return walkMarkdownFiles(fullDir)
-    .map((fullPath) => path.basename(fullPath))
-    .filter((file) => !isReservedDocFile(type, file));
-}
-
-function nextNumberFromFrontMatter(cwd: string, relativeDir: string, idPrefix: string): number {
-  const fullDir = path.join(cwd, relativeDir);
-  const escapedPrefix = idPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`^${escapedPrefix}-(\\d{4})$`);
-  const numbers = walkMarkdownFiles(fullDir)
-    .map((fullPath) => parseDoc(fs.readFileSync(fullPath, "utf8")).data.id)
-    .filter((id): id is string => typeof id === "string")
-    .map((id) => pattern.exec(id.trim()))
-    .filter((match): match is RegExpExecArray => Boolean(match))
-    .map((match) => Number(match[1]));
-  return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
 }
 
 function sanitizeFileName(name: string): string {
@@ -516,7 +495,7 @@ function completeRelations(input?: RelationInput): Record<RelationField, string[
   return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []])) as Record<RelationField, string[]>;
 }
 
-function frontMatter(config: DocConfig, number: number, title: string, status: string, date: string, relations?: RelationInput, metadata?: MetadataInput): string {
+function frontMatter(config: DocConfig, id: string, title: string, status: string, date: string, relations?: RelationInput, metadata?: MetadataInput): string {
   if (!config.statusValues.includes(status)) {
     throw new Error(`Invalid ${config.type} status: ${status} (expected one of: ${config.statusValues.join(", ")})`);
   }
@@ -527,7 +506,7 @@ function frontMatter(config: DocConfig, number: number, title: string, status: s
   const changes = completeChanges(relations?.changes);
   return [
     "---",
-    `id: ${quote(`${config.idPrefix}-${String(number).padStart(4, "0")}`)}`,
+    `id: ${quote(id)}`,
     `type: ${quote(config.type)}`,
     `status: ${quote(status)}`,
     `title: ${quote(sanitizeTitle(title))}`,
@@ -818,7 +797,7 @@ function overviewDocument(date: string): string {
     "",
     "## Detailed Design Documents",
     "",
-    "- <!-- link detailed docs under docs/designs/0001-*.md -->",
+    "- <!-- link detailed docs under docs/designs/<slug>.md -->",
     "",
   ].join("\n");
 }
@@ -954,18 +933,13 @@ function targetAllocation(cwd: string, targetDir: string): TargetAllocation {
     : [];
   return {
     existing: new Set(existingFiles),
-    naming: detectNaming(existingFiles),
-    next: nextNumber(existingFiles),
   };
 }
 
-function allocateTargetPath(cwd: string, targetDir: string, title: string, fallback: string, allocations: Map<string, TargetAllocation>): { number: number; target: string } {
+function allocateTargetPath(cwd: string, targetDir: string, title: string, fallback: string, allocations: Map<string, TargetAllocation>): { target: string } {
   if (!allocations.has(targetDir)) allocations.set(targetDir, targetAllocation(cwd, targetDir));
   const allocation = allocations.get(targetDir) as TargetAllocation;
-  const number = allocation.next;
-  let baseName = allocation.naming === "slug"
-    ? `${slugify(title, fallback)}.md`
-    : `${String(number).padStart(4, "0")}-${slugify(title, fallback)}.md`;
+  let baseName = `${slugify(title, fallback)}.md`;
   const ext = path.extname(baseName);
   const stem = path.basename(baseName, ext);
   let suffix = 2;
@@ -974,16 +948,14 @@ function allocateTargetPath(cwd: string, targetDir: string, title: string, fallb
     suffix += 1;
   }
   allocation.existing.add(baseName);
-  if (allocation.naming === "numbered") allocation.next += 1;
   return {
-    number,
     target: path.join(targetDir, baseName).replace(/\\/g, "/"),
   };
 }
 
-function migratedFrontMatter(type: DocType, number: number, title: string, date: string, source: string): string {
+function migratedFrontMatter(type: DocType, title: string, date: string, source: string): string {
   const config = configFor(type);
-  return frontMatter(config, number, title, config.defaultStatus, date, {
+  return frontMatter(config, generateArtifactId(config.idPrefix), title, config.defaultStatus, date, {
     source: [source],
     changes: {
       generated: [{ type: "migration", source }],
@@ -991,9 +963,9 @@ function migratedFrontMatter(type: DocType, number: number, title: string, date:
   });
 }
 
-function migratedContent(input: MigrationInput, route: MigrationRoute, sourceContent: string, source: string, number: number, date: string): string {
+function migratedContent(input: MigrationInput, route: MigrationRoute, sourceContent: string, source: string, date: string): string {
   if (route.type) {
-    return `${migratedFrontMatter(route.type, number, input.title, date, source)}\n\n${input.body.trim()}\n`;
+    return `${migratedFrontMatter(route.type, input.title, date, source)}\n\n${input.body.trim()}\n`;
   }
 
   const parsed = parseDoc(sourceContent);
@@ -1006,9 +978,9 @@ function plannedMigration(cwd: string, source: string, input: MigrationInput, so
   const sourceData = matterData(sourceContent);
   const route = routeFor(input, sourceData);
   const targetDir = route.targetDir;
-  const { number, target } = allocateTargetPath(cwd, targetDir, input.title, route.type || "doc", allocations);
+  const { target } = allocateTargetPath(cwd, targetDir, input.title, route.type || "doc", allocations);
   return {
-    content: migratedContent(input, route, sourceContent, source, number, date),
+    content: migratedContent(input, route, sourceContent, source, date),
     source,
     target,
     targetDir,
@@ -1120,30 +1092,18 @@ async function createDocument(type: DocType, options: CreateDocumentOptions): Pr
 
   const rootDir = canonicalRootDir(cwd, type);
   const underRoot = isUnderDir(relativeDir, rootDir);
-  const scopeDir = underRoot ? rootDir : relativeDir;
-
-  const naming = detectNaming(recursiveBasenames(cwd, scopeDir, type));
-  const localFiles = fs.readdirSync(fullDir)
-    .filter((file) => file.endsWith(".md"))
-    .filter((file) => !isReservedDocFile(type, file));
-  const number = Math.max(
-    nextNumberFromFrontMatter(cwd, scopeDir, config.idPrefix),
-    nextNumber(localFiles),
-  );
 
   const title = sanitizeTitle(options.title);
   const filename = options.name
     ? sanitizeFileName(options.name)
-    : naming === "slug"
-      ? `${slugify(title, type)}.md`
-      : `${String(number).padStart(4, "0")}-${slugify(title, type)}.md`;
+    : `${slugify(title, type)}.md`;
   if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
   const outputPath = path.join(fullDir, filename);
   if (fs.existsSync(outputPath)) throw new Error(`Document already exists: ${path.relative(cwd, outputPath)}`);
 
   const date = options.date || new Date().toISOString().slice(0, 10);
   const status = options.status || config.defaultStatus;
-  const content = `${frontMatter(config, number, title, status, date, options.relations)}\n\n${bodyFor(type, title)}\n`;
+  const content = `${frontMatter(config, generateArtifactId(config.idPrefix), title, status, date, options.relations)}\n\n${bodyFor(type, title)}\n`;
   fs.writeFileSync(outputPath, content, "utf8");
 
   if (type === "design") ensureDesignOverview(path.join(cwd, rootDir), date);

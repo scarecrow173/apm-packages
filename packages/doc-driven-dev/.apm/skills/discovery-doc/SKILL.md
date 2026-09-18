@@ -77,7 +77,7 @@ Generated discovery documents use YAML front matter:
 
 ```yaml
 ---
-id: "DISC-0001"
+id: "DISC-3QwErTyUiOpAsDfGhJkLzX"
 type: "discovery"
 status: "draft"
 title: "Explore auth strategy options"

@@ -134,9 +134,10 @@ database を作成・要求しません。
 
 ## 公開 command
 
-次の 4 つの command は目的が異なります。`route_graph.js` は 1 回の route
-判断を行い、`inspect_graph.js` は選択した definition と、明示的に要求した
-場合だけ runtime projection を説明します。
+次の 4 つの routing command は目的が異なります。`route_graph.js` は 1 回の
+route 判断を行い、`inspect_graph.js` は選択した definition と、明示的に
+要求した場合だけ runtime projection を説明します。別の maintenance script
+である `migrate_ids.js` はこの後で説明します。
 
 ### 1. 通常 route
 
@@ -205,6 +206,39 @@ Mermaid rendering は text-only で、routing や persistence への副作用は
 Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir` を拒否します。
 元の node、delegate、audit、condition text は escape され、`|` が edge label を終了
 させることはありません。
+
+### 5. legacy artifact id の migration
+
+`migrate_ids.js` は既存 repository の連番 `TYPE-NNNN` id と
+`NNNN-<slug>` ファイル名を、不透明な `<PREFIX>-<22文字Base62>` id
+contract と slug のみのファイル名へ移行します。これは maintenance script
+であり、route command ではなく、graph から dispatch されることもありません。
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
+  --cwd <repo> --json            # dry-run plan（既定、書き込みなし）
+node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
+  --cwd <repo> --apply --json    # id・参照・ファイル名を書き換え
+```
+
+実行は段階的で fail-closed です: 存在するすべての canonical docs dir
+（`specs/` や `adr/` のような root 直下の dir も含む）から artifact を
+discover し、各 legacy id を新しい id へ map し（`slug.md`/`slug.ja.md`
+のような locale sibling は同じ id を共有）、blocker を preflight した
+うえで、front matter の `id`、relation field、metadata、本文、index 表、
+experiment の `.jsonl` path を書き換え、番号付きファイルを、連鎖する
+rename 先を上書きしない 2 段階 move で rename し、generated index を
+再生成して validate します。blocker — sibling でない複数ファイル間の
+legacy id 重複、未解決の legacy 参照、rename 先または一時
+`.migrate-tmp` path の衝突、番号付き文書の front matter 欠落または
+parse 失敗、不明な document type、dirty な Git worktree — が 1 つでも
+あれば、変更を行う前に停止します。
+`--allow-dirty` は worktree チェックだけを回避し、`--keep-filenames`
+は id を書き換えつつ番号付きファイル名を保持します。`--apply` 後は残存
+legacy id、重複 id、未解決参照、doc-suite audit error を再検査し、
+いずれかがあれば report を `ok: false` として非 0 で終了します。clean な
+Git worktree が rollback 経路です: 適用結果が誤っていれば Git で戻して
+ください。適用成功後の再実行は no-op です。
 
 ## References
 

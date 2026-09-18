@@ -24,17 +24,20 @@ when the repository has an explicit convention that differs.
 Default filename pattern:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 Rules:
 
-- `NNNN` is a zero-padded sequential number local to the ideas directory.
-- The title slug is lowercase ASCII with words separated by dashes.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
 - Prefer a short noun phrase that names the idea topic.
 - Avoid vague names such as `idea.md` or `notes.md`.
-- Examples: `0001-support-offline-mode-for-mobile.md`,
-  `0002-introduce-event-sourcing.md`.
+- Examples: `support-offline-mode-for-mobile.md`,
+  `introduce-event-sourcing.md`.
+
+Document identity lives in the front matter `id`, not in the filename or its
+sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
+documents always use slug-only names. Run `migrate_ids.js` under `doc-driven-dev-graph/scripts` to upgrade existing files.
 
 ## Required Front Matter
 
@@ -42,7 +45,7 @@ Idea documents use the shared document front matter:
 
 ```yaml
 ---
-id: "IDEA-0001"
+id: "IDEA-4MnBvCxZaSdFgHjKlPoIuY"
 type: "idea"
 status: "draft"
 title: "Support offline mode for mobile"
@@ -74,7 +77,7 @@ Required fields:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | Stable document identifier, always `IDEA-NNNN`. |
+| `id` | Yes | Stable document identifier in `IDEA-<22-char Base62>` form (UUIDv7-derived; legacy `IDEA-NNNN` remains valid). |
 | `type` | Yes | Must be `idea`. |
 | `status` | Yes | Current lifecycle state. |
 | `title` | Yes | Human-readable title matching the idea topic. |
@@ -152,7 +155,7 @@ List idea documents as a Markdown table, in filename order, with four columns:
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| IDEA-0001 | Support offline mode for mobile | promoted | [0001-support-offline-mode-for-mobile.md](0001-support-offline-mode-for-mobile.md) |
+| IDEA-4MnBvCxZaSdFgHjKlPoIuY | Support offline mode for mobile | promoted | [support-offline-mode-for-mobile.md](support-offline-mode-for-mobile.md) |
 
 Index rules:
 
@@ -170,10 +173,9 @@ or team:
 ```text
 docs/ideas/
   mobile/
-    0001-support-offline-mode.md
+    support-offline-mode.md
   platform/
-    0001-introduce-event-sourcing.md
+    introduce-event-sourcing.md
 ```
 
-Use this pattern only when a flat directory is hard to scan. Keep numbering
-local to each subdirectory.
+Use this pattern only when a flat directory is hard to scan.

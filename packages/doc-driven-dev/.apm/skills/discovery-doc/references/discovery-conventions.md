@@ -30,19 +30,20 @@ from the detection list.
 Default filename pattern:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 Rules:
 
-- `NNNN` is a zero-padded sequential number local to the discovery directory.
-- The title slug is lowercase ASCII with words separated by dashes.
+- Filenames are slug-only: lowercase ASCII words separated by dashes.
 - Prefer a short noun phrase that names the exploration topic.
 - Avoid vague names such as `research.md` or `notes.md`.
-- Examples: `0001-explore-auth-strategy-options.md`,
-  `0002-evaluate-event-bus-alternatives.md`.
+- Examples: `explore-auth-strategy-options.md`,
+  `evaluate-event-bus-alternatives.md`.
 
-If the repository already uses slug-only filenames, follow that convention.
+Document identity lives in the front matter `id`, not in the filename or its
+sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
+documents always use slug-only names. Run `migrate_ids.js` under `doc-driven-dev-graph/scripts` to upgrade existing files.
 
 ## Required Front Matter
 
@@ -50,7 +51,7 @@ Discovery documents use the shared document front matter:
 
 ```yaml
 ---
-id: "DISC-0001"
+id: "DISC-3QwErTyUiOpAsDfGhJkLzX"
 type: "discovery"
 status: "draft"
 title: "Explore auth strategy options"
@@ -82,7 +83,7 @@ Required fields:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | Stable document identifier, always `DISC-NNNN`. |
+| `id` | Yes | Stable document identifier in `DISC-<22-char Base62>` form (UUIDv7-derived; legacy `DISC-NNNN` remains valid). |
 | `type` | Yes | Must be `discovery`. |
 | `status` | Yes | Current lifecycle state. |
 | `title` | Yes | Human-readable title matching the exploration topic. |
@@ -183,7 +184,7 @@ List discovery documents as a Markdown table, in filename order, with four colum
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| DISC-0001 | Explore auth strategy options | resolved | [0001-explore-auth-strategy-options.md](0001-explore-auth-strategy-options.md) |
+| DISC-3QwErTyUiOpAsDfGhJkLzX | Explore auth strategy options | resolved | [explore-auth-strategy-options.md](explore-auth-strategy-options.md) |
 
 Index rules:
 
@@ -201,10 +202,9 @@ investigation domain:
 ```text
 docs/discovery/
   auth/
-    0001-explore-auth-strategy-options.md
+    explore-auth-strategy-options.md
   infrastructure/
-    0001-evaluate-event-bus-alternatives.md
+    evaluate-event-bus-alternatives.md
 ```
 
-Use this pattern only when a flat directory is hard to scan. Keep numbering
-local to each subdirectory.
+Use this pattern only when a flat directory is hard to scan.

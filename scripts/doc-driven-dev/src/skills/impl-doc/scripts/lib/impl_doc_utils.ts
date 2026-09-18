@@ -3,8 +3,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { generateArtifactId } from "../../../lib/artifact_id";
 import { changeFields, GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, sanitizeTitle } from "../../../lib/doc_suite_utils";
-import { detectNaming, normalizeDir, slugify } from "../../../lib/document_utils";
+import { normalizeDir, slugify } from "../../../lib/document_utils";
 
 const implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"] as const;
 const experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"] as const;
@@ -116,24 +117,6 @@ function listFiles(dir: string, ext: ".md" | ".jsonl"): string[] {
     .sort();
 }
 
-function detectNamingForFiles(files: string[], ext: ".md" | ".jsonl"): "numbered" | "slug" {
-  const numbered = new RegExp(`^\\d{4}-.+\\${ext}$`);
-  const slugOnly = new RegExp(`^[a-z0-9][a-z0-9-]+\\${ext}$`);
-  if (files.some((file) => numbered.test(file))) return "numbered";
-  if (files.some((file) => slugOnly.test(file))) return "slug";
-  return detectNaming(files.filter((file) => ext === ".md" || file.endsWith(ext))) === "slug" ? "slug" : "numbered";
-}
-
-function nextNumberForFiles(files: string[], ext: ".md" | ".jsonl"): number {
-  const pattern = new RegExp(`^(\\d{4})-.+\\${ext}$`);
-  const numbers = files
-    .map((file) => pattern.exec(file))
-    .filter((match): match is RegExpExecArray => Boolean(match))
-    .map((match) => Number(match[1]));
-  if (numbers.length > 0) return Math.max(...numbers) + 1;
-  return files.length + 1;
-}
-
 function renderTemplate(name: string, replacements: Record<string, string>): string {
   const templatePath = path.join(__dirname, "../assets/templates", name);
   let content = fs.readFileSync(templatePath, "utf8").trimEnd();
@@ -228,7 +211,7 @@ function formatRelationBlock(field: RelationField, values: string[]): string[] {
 }
 
 function implementationRecordFrontMatter(options: {
-  number: number;
+  id: string;
   title: string;
   status: typeof implStatuses[number];
   date: string;
@@ -244,7 +227,7 @@ function implementationRecordFrontMatter(options: {
   const changes = completeChanges(options.changes);
   return [
     "---",
-    `id: ${quote(`IMPL-${String(options.number).padStart(4, "0")}`)}`,
+    `id: ${quote(options.id)}`,
     `type: ${quote("impl")}`,
     `status: ${quote(options.status)}`,
     `title: ${quote(sanitizeTitle(options.title))}`,
@@ -268,7 +251,7 @@ function implementationRecordFrontMatter(options: {
 }
 
 function buildImplementationRecordContent(options: {
-  number: number;
+  id: string;
   title: string;
   status: typeof implStatuses[number];
   date: string;
@@ -414,19 +397,13 @@ function buildNewFilePath(options: {
   kind: "ir" | "exp";
   title: string;
   explicitDir?: string;
-}): { number: number; outputPath: string; relativeDir: string } {
+}): { outputPath: string; relativeDir: string } {
   const relativeDir = implDir(options.cwd, options.kind, options.explicitDir);
   const fullDir = path.join(options.cwd, relativeDir);
   ensureDir(fullDir);
   const ext = options.kind === "ir" ? ".md" : ".jsonl";
-  const files = listFiles(fullDir, ext);
-  const number = nextNumberForFiles(files, ext);
-  const naming = detectNamingForFiles(files, ext);
-  const filename = naming === "slug"
-    ? `${slugify(options.title, options.kind)}${ext}`
-    : `${String(number).padStart(4, "0")}-${slugify(options.title, options.kind)}${ext}`;
+  const filename = `${slugify(options.title, options.kind)}${ext}`;
   return {
-    number,
     outputPath: path.join(fullDir, filename),
     relativeDir,
   };

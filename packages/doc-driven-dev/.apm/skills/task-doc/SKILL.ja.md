@@ -49,9 +49,9 @@ task を作成するには、以下のいずれかを満たす必要がある:
 2. ひとまとまりの実装単位として task を作成する。
 
    ```bash
-   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/0001-implement-checkout-flow.md \
-     --depends-on docs/tasks/0001-schema.md --depends-on TASK-0002 \
-     --blocks docs/tasks/0004-ui.md
+   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/implement-checkout-flow.md \
+     --depends-on docs/tasks/schema.md --depends-on TASK-0H5nCkR2mW9xVbYqZeLp3s \
+     --blocks docs/tasks/ui.md
    ```
 
    作成スクリプトは `references/task-conventions.ja.md` に従い、

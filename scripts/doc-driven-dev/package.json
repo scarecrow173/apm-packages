@@ -17,6 +17,8 @@
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",
+    "uuid": "14.0.2",
+    "uuid62": "1.0.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

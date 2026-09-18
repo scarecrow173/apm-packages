@@ -25,7 +25,7 @@ ADR ディレクトリが存在しない場合は、既定で `docs/adr/` を使
 4. `docs/adrs/`
 5. `decisions/`
 
-複数候補がある場合は、番号付き ADR ファイルと索引ファイルを持つ
+複数候補がある場合は、既に ADR ファイルと索引ファイルを持つ
 ディレクトリを優先します。
 
 ## ファイル名
@@ -33,18 +33,18 @@ ADR ディレクトリが存在しない場合は、既定で `docs/adr/` を使
 既定のファイル名パターン:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 ルール:
 
-- `NNNN` は ADR ディレクトリ内で連番となるゼロ埋め番号です。
-- title slug は小文字 ASCII とし、単語をダッシュで区切ります。
+- ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
 - 短い現在形の動詞句を優先します。
-- 例: `0001-adopt-adrs.md`, `0002-use-postgresql.md`
+- 例: `adopt-adrs.md`, `use-postgresql.md`
 
-リポジトリが既に slug-only のファイル名を使っている場合は、
-番号付き形式を導入せず、既存規約に従います。
+文書の同一性はファイル名やソート位置ではなく front matter の `id` に
+あります。既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
+slug-only の名前を使います。既存ファイルの移行には `doc-driven-dev-graph/scripts` の `migrate_ids.js` を使います。
 
 ## 必須フロントマター
 
@@ -52,7 +52,7 @@ NNNN-title-with-dashes.md
 
 ```yaml
 ---
-id: "ADR-NNNN"
+id: "ADR-1AbCdEfGhIjKlMnOpQrStU"
 type: "adr"
 status: "proposed"
 title: "判断タイトル"
@@ -87,7 +87,7 @@ metadata:
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | 安定した文書識別子。通常は `ADR-NNNN`。 |
+| `id` | Yes | 安定した文書識別子。`ADR-<22文字Base62>` 形式（UUIDv7由来。従来の `ADR-NNNN` も有効）。 |
 | `type` | Yes | 共有文書種別。ADR では `adr` を使います。 |
 | `status` | Yes | 現在のライフサイクル状態。 |
 | `title` | Yes | 判断に対応する人間向け ADR タイトル。 |
@@ -153,14 +153,14 @@ relations:
   source:
     - "https://example.com/source"
   implemented-by:
-    - "../plans/0002-implement-event-driven-architecture.md"
+    - "../plans/implement-event-driven-architecture.md"
   supersedes:
-    - "0003-use-rest-api.md"
+    - "use-rest-api.md"
   superseded-by: []
   related:
-    - "0007-adopt-event-driven-architecture.md"
+    - "adopt-event-driven-architecture.md"
   refines:
-    - "0005-service-boundaries.md"
+    - "service-boundaries.md"
   references:
     - "https://example.com/background"
 ```
@@ -212,15 +212,16 @@ ADR 索引の既定ファイルは `README.md` とします。リポジトリが
 
 | ID | タイトル | Status | ファイル |
 | --- | --- | --- | --- |
-| ADR-0001 | Adopt ADRs | accepted | [0001-adopt-adrs.md](0001-adopt-adrs.md) |
+| ADR-1AbCdEfGhIjKlMnOpQrStU | Adopt ADRs | accepted | [adopt-adrs.md](adopt-adrs.md) |
 
 索引ルール:
 
 - 列は `ID` / `タイトル` / `Status` / `ファイル` の 4 列に固定します。
   `ID`、`タイトル`、`Status` は、存在する場合はフロントマターから取ります。
-  古い ADR に `id` または `title` が無い場合は、`ID` はファイル名の連番から
-  導出し（`ADR-NNNN`）、`タイトル` は H1 見出しを使います。`ファイル` 列は
-  索引と同じディレクトリへの相対リンクにします。値が無い場合は `—` を入れます。
+  古い ADR に `id` または `title` が無い場合は、`ID` は従来のファイル名
+  連番から導出し（`ADR-NNNN`）、`タイトル` は H1 見出しを使います。
+  `ファイル` 列は索引と同じディレクトリへの相対リンクにします。
+  値が無い場合は `—` を入れます。
 - 行はファイル名の昇順で並べます。
 - 新規の対象ファイルが追加されたら、同じ変更の中で必ず索引を更新します。
 - 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに
@@ -238,15 +239,15 @@ ADR 索引の既定ファイルは `README.md` とします。リポジトリが
 ```text
 docs/adr/
   backend/
-    0001-use-postgresql.md
+    use-postgresql.md
   frontend/
-    0001-use-react.md
+    use-react.md
   infrastructure/
-    0001-use-terraform.md
+    use-terraform.md
 ```
 
-番号はカテゴリごとにローカルです。構造が大きくなる前に、カテゴリ分けの
-方針を索引に記録します。
+ファイル名はディレクトリ内で一意であればよいです。構造が大きくなる前に、
+カテゴリ分けの方針を索引に記録します。
 
 ### 機能別サブディレクトリ
 
@@ -256,9 +257,8 @@ docs/adr/
 ```text
 docs/adr/
   checkout/
-    0001-payment-provider-selection.md
-    0002-checkout-session-storage.md
+    payment-provider-selection.md
+    checkout-session-storage.md
 ```
 
 決定が1つの機能に強く紐づいていてまとめてレビューすべき場合に使います。
-番号は機能ディレクトリ内でローカルに管理します。

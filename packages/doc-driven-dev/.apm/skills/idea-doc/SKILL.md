@@ -86,7 +86,7 @@ Generated idea documents use YAML front matter:
 
 ```yaml
 ---
-id: "IDEA-0001"
+id: "IDEA-4MnBvCxZaSdFgHjKlPoIuY"
 type: "idea"
 status: "draft"
 title: "Support offline mode for mobile"

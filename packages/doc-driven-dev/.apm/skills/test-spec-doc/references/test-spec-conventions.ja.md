@@ -28,15 +28,18 @@ test spec ディレクトリがない場合は、デフォルトで `docs/test-s
 デフォルトのファイル名パターン:
 
 ```text
-NNNN-title-with-dashes.md
+title-with-dashes.md
 ```
 
 規則:
 
-- `NNNN` は test spec ディレクトリ内でローカルなゼロ埋め連番です。
-- タイトルの slug は小文字 ASCII で、単語をダッシュで区切ります。
+- ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
 - テストファイルやスイートではなく、保証する振る舞いを名付けます。
-- 例: `0001-checkout-total-calculation.md`、`0002-session-expiry.md`。
+- 例: `checkout-total-calculation.md`、`session-expiry.md`。
+
+文書の同一性はファイル名やソート位置ではなく front matter の `id` に
+あります。既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
+slug-only の名前を使います。既存ファイルの移行には `doc-driven-dev-graph/scripts` の `migrate_ids.js` を使います。
 
 ## 必須 Front Matter
 
@@ -45,7 +48,7 @@ test spec は共有 document front matter を使い、`type: "test-spec"` と
 
 ```yaml
 ---
-id: "TSPEC-0001"
+id: "TSPEC-6NbVcXzAsDfGhJkLpOiUyT"
 type: "test-spec"
 status: "draft"
 title: "Checkout total calculation"
@@ -89,7 +92,7 @@ runtime の pass/fail を `status` に記録しません。テスト結果は揮
 その振る舞いを実装する task は、自身の `verified-by` relation でこの test
 spec を指し戻します。
 
-relation の対象はリポジトリ相対パスまたはドキュメント ID（`TSPEC-0001`
+relation の対象はリポジトリ相対パスまたはドキュメント ID（`TSPEC-<id>`
 形式）で記述できます。`doc-status` の監査は、`verifies` の対象が spec、
 design、ADR 以外の型に解決される場合（`test-spec-invalid-verifies-target`）、
 および approved / in-progress / completed の plan が `verified-by` で
@@ -149,4 +152,4 @@ Markdown テーブルで、共有の 4 列で列挙します。
 
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
-| TSPEC-0001 | Checkout total calculation | approved | [0001-checkout-total-calculation.md](0001-checkout-total-calculation.md) |
+| TSPEC-6NbVcXzAsDfGhJkLpOiUyT | Checkout total calculation | approved | [checkout-total-calculation.md](checkout-total-calculation.md) |
