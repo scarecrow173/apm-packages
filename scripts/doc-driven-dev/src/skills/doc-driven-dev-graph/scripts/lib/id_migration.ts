@@ -4,9 +4,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { generateArtifactId, isLegacyArtifactId, isNewArtifactId } from "../../../lib/artifact_id";
-import { buildIndex, configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc } from "../../../lib/doc_suite_utils";
+import { auditDocuments, buildIndex, configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc } from "../../../lib/doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "../../../lib/document_utils";
-import { updateIndexForExperimentDir, updateIndexForMarkdownDir } from "../../../impl-doc/scripts/lib/impl_doc_utils";
+import { auditExperimentLogs, auditImplementationRecords, updateIndexForExperimentDir, updateIndexForMarkdownDir } from "../../../impl-doc/scripts/lib/impl_doc_utils";
 
 const IMPL_IR_DIR = "docs/impl/ir";
 const IMPL_EXP_DIR = "docs/impl/exp";
@@ -60,6 +60,7 @@ type IdMigrationReport = {
   renames: PlannedRename[];
   rewrites: RewriteEntry[];
   validation: {
+    auditErrors: { code: string; file: string | null; message: string }[];
     duplicateIds: string[];
     remainingLegacyIds: string[];
     unresolvedLegacyRefs: string[];
@@ -282,17 +283,16 @@ async function regenerateIndexes(
   touchedDirs: Set<string>,
 ): Promise<IndexEntry[]> {
   const results: IndexEntry[] = [];
-  for (const { dir, type } of [...touchedDirs].sort().map((touched) =>
-    dirs.find((candidate) => candidate.dir === touched) || { dir: touched, type: null },
-  )) {
+  for (const dir of [...touchedDirs].sort()) {
+    const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
     const readmePath = path.join(cwd, dir, "README.md");
     const relReadme = `${dir}/README.md`;
-    if (type === "impl") {
+    if (dirType === "impl") {
       const result = updateIndexForMarkdownDir(cwd, dir);
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
       continue;
     }
-    if (type === "impl-exp") {
+    if (dirType === "impl-exp") {
       const result = updateIndexForExperimentDir(cwd, dir);
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
       continue;
@@ -306,14 +306,22 @@ async function regenerateIndexes(
       results.push({ action: "hand-curated-rewritten", path: relReadme });
       continue;
     }
-    const indexType = type || "discovery";
-    fs.writeFileSync(readmePath, await buildIndex(cwd, indexType, dir), "utf8");
+    const indexTypes = dirType && (docTypes as readonly string[]).includes(dirType)
+      ? docTypes.filter((type) => {
+          const config = configFor(type);
+          const resolved = config.dirs.find((candidate) => fs.existsSync(path.join(cwd, candidate))) || config.dir;
+          return resolved === dir;
+        })
+      : [dirType].filter((type): type is string => Boolean(type));
+    for (const indexType of indexTypes.length > 0 ? indexTypes : ["discovery"]) {
+      fs.writeFileSync(readmePath, await buildIndex(cwd, indexType, dir), "utf8");
+    }
     results.push({ action: "regenerated", path: relReadme });
   }
   return results;
 }
 
-function validate(cwd: string, dirs: { dir: string; type: string | null }[], prefixes: Set<string>): IdMigrationReport["validation"] {
+async function validate(cwd: string, dirs: { dir: string; type: string | null }[], prefixes: Set<string>): Promise<IdMigrationReport["validation"]> {
   const remainingLegacyIds = new Set<string>();
   const idFiles = new Map<string, string[]>();
   for (const { dir } of dirs) {
@@ -353,7 +361,22 @@ function validate(cwd: string, dirs: { dir: string; type: string | null }[], pre
       unresolved.add(token);
     }
   }
+  const auditErrors: { code: string; file: string | null; message: string }[] = [];
+  for (const { dir, type } of dirs) {
+    const findings = type === "impl"
+      ? auditImplementationRecords(cwd, dir).findings
+      : type === "impl-exp"
+        ? auditExperimentLogs(cwd, dir).findings
+        : type
+          ? (await auditDocuments(cwd, type, dir)).findings
+          : [];
+    for (const finding of findings) {
+      if (finding.severity !== "error") continue;
+      auditErrors.push({ code: finding.code, file: finding.file, message: finding.message });
+    }
+  }
   return {
+    auditErrors,
     duplicateIds: [...new Set(duplicateIds)].sort(),
     remainingLegacyIds: [...remainingLegacyIds].sort(),
     unresolvedLegacyRefs: [...unresolved].sort(),
@@ -439,7 +462,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
     newId,
   }));
 
-  const emptyValidation = { duplicateIds: [], remainingLegacyIds: [], unresolvedLegacyRefs: [] };
+  const emptyValidation = { auditErrors: [], duplicateIds: [], remainingLegacyIds: [], unresolvedLegacyRefs: [] };
   if (blockers.length > 0) {
     return {
       applied: false,
@@ -488,7 +511,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   }
 
   const validation = options.apply
-    ? validate(cwd, dirs, prefixes)
+    ? await validate(cwd, dirs, prefixes)
     : emptyValidation;
 
   return {

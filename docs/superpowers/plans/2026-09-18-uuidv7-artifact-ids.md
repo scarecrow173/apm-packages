@@ -71,11 +71,11 @@ packages/doc-driven-dev/.apm/skills/
 - Produces: `isNewArtifactId(value: string): boolean` — `/^[A-Z][A-Z0-9]*-[0-9A-Za-z]{22}$/`
 - Produces: `isLegacyArtifactId(value: string): boolean` — `/^[A-Z][A-Z0-9]*-\d+$/` (used by #85)
 
-- [ ] **Step 1: Write the failing test** — golden vectors (nil UUID → `0000000000000000000000`, max UUID → `7N42dgm5tFLK9N8MT7fHC7`, `01a0b370-64e3-7468-91eb-ab4935e4d903` → `034qPUpBj0VYOqxmFLijD5`), 22-char assertion, round-trip decode, `generateArtifactId` format + 512-iteration uniqueness, validator accept/reject matrix.
-- [ ] **Step 2: Run test to verify it fails** — `mise exec -- pnpm --dir scripts/doc-driven-dev exec tsx --test tests/artifact-id.test.ts` → module not found.
-- [ ] **Step 3: Write minimal implementation** — thin wrappers over `uuid`/`uuid62`; no custom alphabet math.
-- [ ] **Step 4: Run test to verify it passes.**
-- [ ] **Step 5: Commit** — `feat(doc-driven-dev): add shared UUIDv7+Base62 artifact id generator`
+- [x] **Step 1: Write the failing test** — golden vectors (nil UUID → `0000000000000000000000`, max UUID → `7N42dgm5tFLK9N8MT7fHC7`, `01a0b370-64e3-7468-91eb-ab4935e4d903` → `034qPUpBj0VYOqxmFLijD5`), 22-char assertion, round-trip decode, `generateArtifactId` format + 512-iteration uniqueness, validator accept/reject matrix.
+- [x] **Step 2: Run test to verify it fails** — `mise exec -- pnpm --dir scripts/doc-driven-dev exec tsx --test tests/artifact-id.test.ts` → module not found.
+- [x] **Step 3: Write minimal implementation** — thin wrappers over `uuid`/`uuid62`; no custom alphabet math.
+- [x] **Step 4: Run test to verify it passes.**
+- [x] **Step 5: Commit** — `feat(doc-driven-dev): add shared UUIDv7+Base62 artifact id generator`
 
 ### Task 2: `doc_suite_utils` generation path
 
@@ -87,12 +87,12 @@ packages/doc-driven-dev/.apm/skills/
 - Produces: `frontMatter(config, id, title, status, date, relations?, metadata?)` — `id` is now a full ID string (was `number`).
 - Produces: `createDocument` unchanged signature; filenames become `<slug>.md` (or `--name`).
 
-- [ ] **Step 1:** Change `frontMatter(config, number, ...)` → `frontMatter(config, id, ...)`; emit `id: "<PREFIX>-<payload>"`.
-- [ ] **Step 2:** `createDocument`: remove `nextNumberFromFrontMatter`/`nextNumber`/`detectNaming` allocation; `generateArtifactId(config.idPrefix)`; filename `slugify(title, type)` + `.md` unless `--name`; keep reserved-file + existence checks.
-- [ ] **Step 3:** `migratedFrontMatter`/`migratedContent`/`plannedMigration`/`allocateTargetPath`: generate new IDs, slug-only targets; drop `TargetAllocation.next` (keep collision set).
-- [ ] **Step 4:** Remove now-dead helpers (`nextNumberFromFrontMatter`, `recursiveBasenames` if unreferenced, `TargetAllocation.next`); fix overview comment `0001-*.md` → `<slug>.md`.
-- [ ] **Step 5:** Build + run doc-suite tests; expect contract failures — fix in Task 6 (temporarily note).
-- [ ] **Step 6: Commit** — `feat(doc-driven-dev): generate opaque artifact ids and slug filenames in doc suite`
+- [x] **Step 1:** Change `frontMatter(config, number, ...)` → `frontMatter(config, id, ...)`; emit `id: "<PREFIX>-<payload>"`.
+- [x] **Step 2:** `createDocument`: remove `nextNumberFromFrontMatter`/`nextNumber`/`detectNaming` allocation; `generateArtifactId(config.idPrefix)`; filename `slugify(title, type)` + `.md` unless `--name`; keep reserved-file + existence checks.
+- [x] **Step 3:** `migratedFrontMatter`/`migratedContent`/`plannedMigration`/`allocateTargetPath`: generate new IDs, slug-only targets; drop `TargetAllocation.next` (keep collision set).
+- [x] **Step 4:** Remove now-dead helpers (`nextNumberFromFrontMatter`, `recursiveBasenames` if unreferenced, `TargetAllocation.next`); fix overview comment `0001-*.md` → `<slug>.md`.
+- [x] **Step 5:** Build + run doc-suite tests; expect contract failures — fix in Task 6 (temporarily note).
+- [x] **Step 6: Commit** — `feat(doc-driven-dev): generate opaque artifact ids and slug filenames in doc suite`
 
 ### Task 3: ADR path (`new_adr`, `adr_utils`, MADR templates)
 
@@ -100,49 +100,49 @@ packages/doc-driven-dev/.apm/skills/
 - Modify: `src/skills/adr-doc/scripts/new_adr.ts`, `src/skills/adr-doc/scripts/lib/adr_utils.ts`
 - Modify: `packages/doc-driven-dev/.apm/skills/adr-doc/assets/templates/madr-4-{full,minimal,bare,bare-minimal}{,.ja}.md`
 
-- [ ] **Step 1:** Templates: `# {{number}}. {{title}}` → `# {{title}}` (all 8).
-- [ ] **Step 2:** `new_adr.ts`: `generateArtifactId("ADR")`; slug-only filename; `renderTemplate` drops `number` (TemplateValues `{ title }`); keep `--template`/`--status`/`--date`/index flags.
-- [ ] **Step 3:** `adr_utils.ts`: remove `nextIdNumber`; keep filename-number fallback in `buildIndex` for legacy files lacking front-matter `id`.
-- [ ] **Step 4:** Build + `adr-doc.test.ts` passes after Task-6 expectation updates.
-- [ ] **Step 5: Commit** — `feat(doc-driven-dev): issue opaque ids and slug filenames for new ADRs`
+- [x] **Step 1:** Templates: `# {{number}}. {{title}}` → `# {{title}}` (all 8).
+- [x] **Step 2:** `new_adr.ts`: `generateArtifactId("ADR")`; slug-only filename; `renderTemplate` drops `number` (TemplateValues `{ title }`); keep `--template`/`--status`/`--date`/index flags.
+- [x] **Step 3:** `adr_utils.ts`: remove `nextIdNumber`; keep filename-number fallback in `buildIndex` for legacy files lacking front-matter `id`.
+- [x] **Step 4:** Build + `adr-doc.test.ts` passes after Task-6 expectation updates.
+- [x] **Step 5: Commit** — `feat(doc-driven-dev): issue opaque ids and slug filenames for new ADRs`
 
 ### Task 4: impl-doc path (`impl_doc_utils`, new_impl_record, new_experiment_log)
 
 **Files:**
 - Modify: `src/skills/impl-doc/scripts/lib/impl_doc_utils.ts`, `new_impl_record.ts`, `new_experiment_log.ts`
 
-- [ ] **Step 1:** `implementationRecordFrontMatter`/`buildImplementationRecordContent`: `number` → `id` (`IMPL-<payload>`).
-- [ ] **Step 2:** `buildNewFilePath`: slug-only `.md`/`.jsonl`; drop `nextNumberForFiles`/`detectNamingForFiles` (remove if unreferenced).
-- [ ] **Step 3:** Update callers (`new_impl_record` uses `id` not `number`; `new_experiment_log` uses only `outputPath`).
-- [ ] **Step 4:** Build + `impl-doc.test.ts` green after expectation updates.
-- [ ] **Step 5: Commit** — `feat(doc-driven-dev): issue opaque ids and slug filenames for impl docs`
+- [x] **Step 1:** `implementationRecordFrontMatter`/`buildImplementationRecordContent`: `number` → `id` (`IMPL-<payload>`).
+- [x] **Step 2:** `buildNewFilePath`: slug-only `.md`/`.jsonl`; drop `nextNumberForFiles`/`detectNamingForFiles` (remove if unreferenced).
+- [x] **Step 3:** Update callers (`new_impl_record` uses `id` not `number`; `new_experiment_log` uses only `outputPath`).
+- [x] **Step 4:** Build + `impl-doc.test.ts` green after expectation updates.
+- [x] **Step 5: Commit** — `feat(doc-driven-dev): issue opaque ids and slug filenames for impl docs`
 
 ### Task 5: Graph/audit compatibility sweep
 
 **Files:** inspect-only unless a defect found — `task_graph.ts`, `artifact_graph.ts`, `graph_state.ts`, `audit_docs.ts`, `list_docs.ts`, `migrate_report.ts`, `scaffold_docs.ts`, `relate_adr.ts`, `update_index.ts`.
 
-- [ ] **Step 1:** Confirm no `NNNN`/`-(\d{4})` assumptions remain outside legacy-fallback paths (grep evidence in plan research).
-- [ ] **Step 2:** Confirm `resolveDocumentReference`/`resolveArtifactRelation` match by exact `id` — already format-agnostic; add a mixed legacy/new fixture test if coverage is missing.
-- [ ] **Step 3: Commit** any needed fixes separately.
+- [x] **Step 1:** Confirm no `NNNN`/`-(\d{4})` assumptions remain outside legacy-fallback paths (grep evidence in plan research).
+- [x] **Step 2:** Confirm `resolveDocumentReference`/`resolveArtifactRelation` match by exact `id` — already format-agnostic; add a mixed legacy/new fixture test if coverage is missing.
+- [x] **Step 3: Commit** any needed fixes separately.
 
 ### Task 6: Update tests to the new contract
 
 **Files:** `tests/doc-suite.test.ts`, `tests/doc-suite-regressions.test.ts`, `tests/adr-doc.test.ts`, `tests/impl-doc.test.ts`, `tests/doc-driven-dev-graph-*.test.ts` (fixture IDs may stay legacy — they model existing repos; only *generated-output* expectations change).
 
-- [ ] **Step 1:** Generated filenames: `NNNN-<slug>.md` → `<slug>.md`.
-- [ ] **Step 2:** Generated IDs: `PREFIX-\d{4}` → `/^PREFIX-[0-9A-Za-z]{22}$/` (matter-parse and assert pattern + uniqueness per repo).
-- [ ] **Step 3:** Tests named for numbering ("continues front-matter id numbering", "global numbering") re-purposed: assert new-format ID + slug filename; legacy-fixture repos still accept new slug-named docs (mixed state).
-- [ ] **Step 4:** Full suite green: `mise exec -- pnpm --dir scripts/doc-driven-dev test`.
-- [ ] **Step 5: Commit** — `test(doc-driven-dev): update expectations to opaque id and slug filename contract`
+- [x] **Step 1:** Generated filenames: `NNNN-<slug>.md` → `<slug>.md`.
+- [x] **Step 2:** Generated IDs: `PREFIX-\d{4}` → `/^PREFIX-[0-9A-Za-z]{22}$/` (matter-parse and assert pattern + uniqueness per repo).
+- [x] **Step 3:** Tests named for numbering ("continues front-matter id numbering", "global numbering") re-purposed: assert new-format ID + slug filename; legacy-fixture repos still accept new slug-named docs (mixed state).
+- [x] **Step 4:** Full suite green: `mise exec -- pnpm --dir scripts/doc-driven-dev test`.
+- [x] **Step 5: Commit** — `test(doc-driven-dev): update expectations to opaque id and slug filename contract`
 
 ### Task 7: EN/JA documentation sync (#84 scope)
 
 **Files:** `*-conventions.md/.ja.md` (adr, spec, plan, task, design, test-spec, idea, discovery, impl), SKILL.md/.ja.md files describing numbered filenames/IDs, `doc-driven-dev-graph` references where `NNNN` appears normatively, package README if it documents the contract, `execution-outcome-contract` examples.
 
-- [ ] **Step 1:** Rewrite ID sections: `TYPE-NNNN` → `TYPE-<22-char Base62>`; filename rules → slug-only default; index examples → new ID shape; subdirectory sections → drop "numbers local to directory".
-- [ ] **Step 2:** Sync each `.ja.md`.
-- [ ] **Step 3:** `lint:md` + residue/contract tests + `git diff --check`.
-- [ ] **Step 4: Commit** — `docs(doc-driven-dev): document opaque artifact id and slug filename contract`
+- [x] **Step 1:** Rewrite ID sections: `TYPE-NNNN` → `TYPE-<22-char Base62>`; filename rules → slug-only default; index examples → new ID shape; subdirectory sections → drop "numbers local to directory".
+- [x] **Step 2:** Sync each `.ja.md`.
+- [x] **Step 3:** `lint:md` + residue/contract tests + `git diff --check`.
+- [x] **Step 4: Commit** — `docs(doc-driven-dev): document opaque artifact id and slug filename contract`
 
 ### Task 8: #85 — `migrate_ids` migration entrypoint
 
@@ -162,13 +162,13 @@ Flow (fail-closed, plan-before-mutate):
 
 CLI: `node scripts/migrate_ids.js [--cwd <path>] [--apply] [--keep-filenames] [--allow-dirty] [--json]` — dry-run by default; `--apply` requires clean `git status` unless `--allow-dirty`.
 
-- [ ] **Step 1:** Failing test matrix: basic rewrite, sibling ID sharing, mixed repo, collisions → blocker, idempotent re-run, index repair, dry-run purity.
-- [ ] **Step 2:** Implement engine + CLI.
-- [ ] **Step 3:** Tests green; run against fixture repo end-to-end.
-- [ ] **Step 4:** Docs (usage + safety contract), EN/JA sync.
-- [ ] **Step 5: Commit** — `feat(doc-driven-dev): add legacy artifact id migration`
+- [x] **Step 1:** Failing test matrix: basic rewrite, sibling ID sharing, mixed repo, collisions → blocker, idempotent re-run, index repair, dry-run purity.
+- [x] **Step 2:** Implement engine + CLI.
+- [x] **Step 3:** Tests green; run against fixture repo end-to-end.
+- [x] **Step 4:** Docs (usage + safety contract), EN/JA sync.
+- [x] **Step 5: Commit** — `feat(doc-driven-dev): add legacy artifact id migration`
 
 ### Task 9: Final gate
 
-- [ ] `pnpm build`, `pnpm test`, `lint:md`, `tsc --noEmit`, `git diff --check` all green.
-- [ ] Report #84/#85 completion against issue checklists; summarize residual #83 verification gaps for the user.
+- [x] `pnpm build`, `pnpm test`, `lint:md`, `tsc --noEmit`, `git diff --check` all green.
+- [x] Report #84/#85 completion against issue checklists; summarize residual #83 verification gaps for the user.
