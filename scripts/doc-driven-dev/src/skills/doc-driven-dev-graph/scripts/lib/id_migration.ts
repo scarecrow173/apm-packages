@@ -54,6 +54,7 @@ type IndexEntry = {
 
 type IdMigrationReport = {
   applied: boolean;
+  ok: boolean;
   blockers: Blocker[];
   indexes: IndexEntry[];
   mappings: IdMapping[];
@@ -106,15 +107,45 @@ function canonicalDirs(cwd: string): { dir: string; type: string | null }[] {
   const dirs: { dir: string; type: string | null }[] = [];
   for (const type of docTypes) {
     const config = configFor(type);
-    const dir = config.dirs.find((candidate) => fs.existsSync(path.join(cwd, candidate))) || config.dir;
-    if (!fs.existsSync(path.join(cwd, dir))) continue;
-    if (seen.has(dir)) continue;
-    seen.add(dir);
-    dirs.push({ dir, type });
+    for (const candidate of config.dirs) {
+      if (!fs.existsSync(path.join(cwd, candidate))) continue;
+      if (seen.has(candidate)) continue;
+      seen.add(candidate);
+      dirs.push({ dir: candidate, type });
+    }
   }
   if (fs.existsSync(path.join(cwd, IMPL_IR_DIR))) dirs.push({ dir: IMPL_IR_DIR, type: "impl" });
   if (fs.existsSync(path.join(cwd, IMPL_EXP_DIR))) dirs.push({ dir: IMPL_EXP_DIR, type: "impl-exp" });
   return dirs;
+}
+
+function isUnderDir(child: string, parent: string): boolean {
+  const c = normalizeDir(child);
+  const p = normalizeDir(parent);
+  return c === p || c.startsWith(`${p}/`);
+}
+
+function contentRoots(cwd: string, dirs: { dir: string }[]): string[] {
+  const roots: string[] = [];
+  if (fs.existsSync(path.join(cwd, "docs"))) roots.push("docs");
+  for (const { dir } of dirs) {
+    if (!isUnderDir(dir, "docs")) roots.push(dir);
+  }
+  return roots;
+}
+
+function contentFilesUnder(cwd: string, roots: string[]): string[] {
+  const seen = new Set<string>();
+  const files: string[] = [];
+  for (const root of roots) {
+    for (const fullPath of walkFiles(path.join(cwd, root), [".md", ".jsonl"])) {
+      const relPath = path.relative(cwd, fullPath).replace(/\\/g, "/");
+      if (seen.has(relPath)) continue;
+      seen.add(relPath);
+      files.push(relPath);
+    }
+  }
+  return files.sort();
 }
 
 function prefixForFile(file: DiscoveredFile): string {
@@ -168,6 +199,13 @@ function discover(cwd: string, dirs: { dir: string; type: string | null }[], blo
       }
       const data = parsed.data;
       if (Object.keys(data).length === 0) {
+        if (numbered) {
+          blockers.push({
+            code: "missing-front-matter",
+            file: relPath,
+            message: `Numbered document ${relPath} has no front matter, so its ${prefixForFile(base)}-${numbered} identity would be lost on rename. Add front matter (at minimum an id) or move it out of the canonical docs dir before migrating.`,
+          });
+        }
         files.push(base);
         continue;
       }
@@ -261,13 +299,17 @@ function rewriteContent(
       return newId;
     });
   }
-  for (const rename of renames) {
-    const basename = path.basename(rename.from);
-    const target = path.basename(rename.to);
-    const pattern = new RegExp(escapeRegExp(basename), "g");
-    next = next.replace(pattern, () => {
+  if (renames.length > 0) {
+    const targets = new Map(
+      renames.map((rename) => [path.basename(rename.from), path.basename(rename.to)]),
+    );
+    const pattern = new RegExp(
+      `(?<![0-9A-Za-z-])(?:${[...targets.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})(?![0-9A-Za-z])`,
+      "g",
+    );
+    next = next.replace(pattern, (match) => {
       replacements += 1;
-      return target;
+      return targets.get(match) as string;
     });
   }
   return { content: next, replacements };
@@ -354,9 +396,8 @@ async function validate(cwd: string, dirs: { dir: string; type: string | null }[
     .map(([id]) => id);
 
   const unresolved = new Set<string>();
-  const docsRoot = path.join(cwd, "docs");
-  for (const fullPath of walkFiles(docsRoot, [".md", ".jsonl"])) {
-    const content = fs.readFileSync(fullPath, "utf8");
+  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs))) {
+    const content = fs.readFileSync(path.join(cwd, relPath), "utf8");
     for (const token of legacyTokens(content, prefixes)) {
       unresolved.add(token);
     }
@@ -427,10 +468,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   const renames = options.keepFilenames ? [] : planRenames(cwd, files, blockers);
 
   const prefixes = knownPrefixes(mappings);
-  const docsRoot = path.join(cwd, "docs");
-  const contentFiles = walkFiles(docsRoot, [".md", ".jsonl"]).map((fullPath) =>
-    path.relative(cwd, fullPath).replace(/\\/g, "/"),
-  );
+  const contentFiles = contentFilesUnder(cwd, contentRoots(cwd, dirs));
   const mappedIds = new Set(mappings.keys());
   for (const relPath of contentFiles) {
     const content = fs.readFileSync(path.join(cwd, relPath), "utf8");
@@ -466,6 +504,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   if (blockers.length > 0) {
     return {
       applied: false,
+      ok: false,
       blockers,
       indexes: [],
       mappings: mappingReports,
@@ -500,8 +539,12 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
 
   const indexes: IndexEntry[] = [];
   if (options.apply) {
+    const tmpSuffix = ".migrate-tmp";
     for (const rename of renames) {
-      fs.renameSync(path.join(cwd, rename.from), path.join(cwd, rename.to));
+      fs.renameSync(path.join(cwd, rename.from), path.join(cwd, `${rename.from}${tmpSuffix}`));
+    }
+    for (const rename of renames) {
+      fs.renameSync(path.join(cwd, `${rename.from}${tmpSuffix}`), path.join(cwd, rename.to));
     }
     const touchedDirs = new Set<string>([
       ...files.filter((file) => file.synthesizedId || (file.id && isLegacyArtifactId(file.id))).map((file) => file.dir),
@@ -514,8 +557,14 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
     ? await validate(cwd, dirs, prefixes)
     : emptyValidation;
 
+  const validationFailed = validation.remainingLegacyIds.length > 0
+    || validation.duplicateIds.length > 0
+    || validation.unresolvedLegacyRefs.length > 0
+    || validation.auditErrors.length > 0;
+
   return {
     applied: Boolean(options.apply),
+    ok: blockers.length === 0 && !validationFailed,
     blockers,
     indexes,
     mappings: mappingReports,

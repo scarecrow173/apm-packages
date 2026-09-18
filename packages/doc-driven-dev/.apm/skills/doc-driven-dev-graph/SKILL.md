@@ -227,17 +227,22 @@ node .apm/skills/doc-driven-dev-graph/scripts/migrate_ids.js \
   --cwd <repo> --apply --json    # rewrite ids, references, and filenames
 ```
 
-The run is staged and fail-closed: discover artifacts, map each legacy id to a
-new id (locale siblings such as `slug.md`/`slug.ja.md` share one id), preflight
-for blockers, rewrite front matter `id`, relation fields, metadata, body text,
-index tables, and experiment `.jsonl` paths, then rename numbered files,
-regenerate generated indexes, and validate. Any blocker — duplicate legacy id
-across non-sibling files, unresolved legacy reference, rename-target
-collision, unparseable front matter, unknown document type, or a dirty Git
-worktree — stops the run before any mutation. `--allow-dirty` bypasses only
-the worktree check; `--keep-filenames` rewrites ids but preserves numbered
-filenames. A clean Git worktree is the rollback path: revert with Git if the
-applied result is wrong. Re-running after a successful apply is a no-op.
+The run is staged and fail-closed: discover artifacts across every existing
+canonical docs dir (including root-level dirs such as `specs/` or `adr/`), map
+each legacy id to a new id (locale siblings such as `slug.md`/`slug.ja.md`
+share one id), preflight for blockers, rewrite front matter `id`, relation
+fields, metadata, body text, index tables, and experiment `.jsonl` paths, then
+rename numbered files via a two-phase move that cannot clobber chained rename
+targets, regenerate generated indexes, and validate. Any blocker — duplicate
+legacy id across non-sibling files, unresolved legacy reference, rename-target
+collision, unparseable or missing front matter on a numbered document, unknown
+document type, or a dirty Git worktree — stops the run before any mutation.
+`--allow-dirty` bypasses only the worktree check; `--keep-filenames` rewrites
+ids but preserves numbered filenames. After `--apply`, the command re-checks
+for remaining legacy ids, duplicate ids, unresolved references, and doc-suite
+audit errors; any of them marks the report `ok: false` and exits non-zero. A
+clean Git worktree is the rollback path: revert with Git if the applied
+result is wrong. Re-running after a successful apply is a no-op.
 
 ## References
 
