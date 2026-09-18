@@ -32,7 +32,7 @@ title-with-dashes.md
 - ファイル名は slug-only とし、小文字 ASCII で単語をダッシュで区切ります。
 - `overview.md` は予約名で、詳細設計ファイルとして扱わない。
 - 既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
-  slug-only の名前を使います。
+  slug-only の名前を使います。既存ファイルの移行には `doc-driven-dev-graph/scripts` の `migrate_ids.js` を使います。
 
 ### 識別子
 

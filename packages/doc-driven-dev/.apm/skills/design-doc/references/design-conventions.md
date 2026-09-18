@@ -32,7 +32,7 @@ Rules:
 - Filenames are slug-only: lowercase ASCII words separated by dashes.
 - `overview.md` is reserved and never treated as a detailed design file.
 - Existing `NNNN-<slug>.md` filenames remain valid, but new documents always
-  use slug-only names.
+  use slug-only names. Run `migrate_ids.js` under `doc-driven-dev-graph/scripts` to upgrade existing files.
 
 ### Identity
 

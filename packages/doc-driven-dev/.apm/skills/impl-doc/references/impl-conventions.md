@@ -32,7 +32,7 @@ Rules:
 - `ir/` and `exp/` names need to be unique only within their own directory.
 - Document identity lives in the front matter `id`, not in the filename or its
   sort position. Existing `NNNN-<slug>` filenames remain valid, but new files
-  always use slug-only names.
+  always use slug-only names. Run `migrate_ids.js` under `doc-driven-dev-graph/scripts` to upgrade existing files.
 
 ## Implementation Record Front Matter
 

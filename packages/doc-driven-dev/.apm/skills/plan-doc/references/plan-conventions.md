@@ -51,7 +51,7 @@ Rules:
 
 Document identity lives in the front matter `id`, not in the filename or its
 sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
-documents always use slug-only names.
+documents always use slug-only names. Run `migrate_ids.js` under `doc-driven-dev-graph/scripts` to upgrade existing files.
 
 ## Required Front Matter
 
