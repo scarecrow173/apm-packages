@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-09-19T11:43:47.248301+00:00'
+generated_at: '2026-09-19T12:51:57.765494+00:00'
 apm_version: 0.30.0
 dependencies:
 - repo_url: _local/agent-intelligence
@@ -513,8 +513,8 @@ dependencies:
     .agents/skills/skill-discovery-protocol/assets/adapters/general.yaml: sha256:7bdfa2c3ec76623f66cb40c79f49035ce50ff66019432a6cacb487eb1a47116d
     .agents/skills/skill-discovery-protocol/docs/migration.ja.md: sha256:1df1fa134d88def38a597d40122e683eddb42ed1b9870fee5c7c215e537aeb3d
     .agents/skills/skill-discovery-protocol/docs/migration.md: sha256:d5d46f8ba87eec7d53d8b73b45144654f74b7f920b176766e0323439dfe7e728
-    .agents/skills/skill-discovery-protocol/references/cli-reference.ja.md: sha256:09f12a9a7ffefbd77b397b4ff32fcdf104b8a0e43f208d56a65f7130fe0b4b91
-    .agents/skills/skill-discovery-protocol/references/cli-reference.md: sha256:b6aed3afb14fca923be52d202d22d6006cd1b53e9067f293e93f793fc1afc19d
+    .agents/skills/skill-discovery-protocol/references/cli-reference.ja.md: sha256:227db060427b590147541a9adde50d6ae8230ea6ae37e4b6acfd3f61bf26b659
+    .agents/skills/skill-discovery-protocol/references/cli-reference.md: sha256:b433ccede2a23a31803d45662542d59333250307755ed3474b8b523e1b628b12
     .agents/skills/skill-discovery-protocol/references/gate-spec.ja.md: sha256:405873bc08b6c0074d96742fc5705b7bf29be920791f55d1d5b3d2e36742729d
     .agents/skills/skill-discovery-protocol/references/gate-spec.md: sha256:38c29c7cd98f126c83a75a580a9220ab9ee49d7b4d520167e38a269521883bb4
     .agents/skills/skill-discovery-protocol/references/operation-policy.ja.md: sha256:f3ffec7e3d080c2076936219b58542a61cf2c1d22ad5d151aa84c7c93d34d2ce
@@ -679,8 +679,8 @@ dependencies:
     .claude/skills/skill-discovery-protocol/assets/adapters/general.yaml: sha256:7bdfa2c3ec76623f66cb40c79f49035ce50ff66019432a6cacb487eb1a47116d
     .claude/skills/skill-discovery-protocol/docs/migration.ja.md: sha256:1df1fa134d88def38a597d40122e683eddb42ed1b9870fee5c7c215e537aeb3d
     .claude/skills/skill-discovery-protocol/docs/migration.md: sha256:d5d46f8ba87eec7d53d8b73b45144654f74b7f920b176766e0323439dfe7e728
-    .claude/skills/skill-discovery-protocol/references/cli-reference.ja.md: sha256:09f12a9a7ffefbd77b397b4ff32fcdf104b8a0e43f208d56a65f7130fe0b4b91
-    .claude/skills/skill-discovery-protocol/references/cli-reference.md: sha256:b6aed3afb14fca923be52d202d22d6006cd1b53e9067f293e93f793fc1afc19d
+    .claude/skills/skill-discovery-protocol/references/cli-reference.ja.md: sha256:227db060427b590147541a9adde50d6ae8230ea6ae37e4b6acfd3f61bf26b659
+    .claude/skills/skill-discovery-protocol/references/cli-reference.md: sha256:b433ccede2a23a31803d45662542d59333250307755ed3474b8b523e1b628b12
     .claude/skills/skill-discovery-protocol/references/gate-spec.ja.md: sha256:405873bc08b6c0074d96742fc5705b7bf29be920791f55d1d5b3d2e36742729d
     .claude/skills/skill-discovery-protocol/references/gate-spec.md: sha256:38c29c7cd98f126c83a75a580a9220ab9ee49d7b4d520167e38a269521883bb4
     .claude/skills/skill-discovery-protocol/references/operation-policy.ja.md: sha256:f3ffec7e3d080c2076936219b58542a61cf2c1d22ad5d151aa84c7c93d34d2ce
@@ -4445,7 +4445,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:09f12a9a7ffefbd77b397b4ff32fcdf104b8a0e43f208d56a65f7130fe0b4b91
+  content_hash: sha256:227db060427b590147541a9adde50d6ae8230ea6ae37e4b6acfd3f61bf26b659
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/skill-discovery-protocol/references/cli-reference.md
@@ -4454,7 +4454,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:b6aed3afb14fca923be52d202d22d6006cd1b53e9067f293e93f793fc1afc19d
+  content_hash: sha256:b433ccede2a23a31803d45662542d59333250307755ed3474b8b523e1b628b12
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/skill-discovery-protocol/references/gate-spec.ja.md
@@ -7721,7 +7721,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:09f12a9a7ffefbd77b397b4ff32fcdf104b8a0e43f208d56a65f7130fe0b4b91
+  content_hash: sha256:227db060427b590147541a9adde50d6ae8230ea6ae37e4b6acfd3f61bf26b659
 - kind: project-relative
   target: claude
   value: .claude/skills/skill-discovery-protocol/references/cli-reference.md
@@ -7730,7 +7730,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:b6aed3afb14fca923be52d202d22d6006cd1b53e9067f293e93f793fc1afc19d
+  content_hash: sha256:b433ccede2a23a31803d45662542d59333250307755ed3474b8b523e1b628b12
 - kind: project-relative
   target: claude
   value: .claude/skills/skill-discovery-protocol/references/gate-spec.ja.md
