@@ -15,7 +15,6 @@ The source of truth is [apm.yml](./apm.yml). Current dependencies:
 - `github/awesome-copilot/skills/agentic-eval`
 - `github/awesome-copilot/skills/autoresearch`
 - `github/awesome-copilot/skills/copilot-usage-metrics`
-- `github/awesome-copilot/plugins/context-engineering`
 
 ## Related Packages
 

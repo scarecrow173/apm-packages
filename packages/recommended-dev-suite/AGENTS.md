@@ -6,7 +6,7 @@ This file guides agents working under `packages/recommended-dev-suite`.
 
 `recommended-dev-suite` is a dependency-only aggregator for recommended AI-assisted development workflows. Treat [apm.yml](./apm.yml) as the source of truth.
 
-It should contain workflow depth that goes beyond the basic foundation: brainstorming, idea refinement, interview-style clarification, subagent execution, code review loops, systematic debugging, TDD, source-driven work, incremental delivery, CI/CD automation, simplification, and context engineering.
+It should contain workflow depth that goes beyond the basic foundation: brainstorming, idea refinement, interview-style clarification, subagent execution, code review loops, systematic debugging, TDD, source-driven work, incremental delivery, CI/CD automation and simplification.
 
 ## Editing Rules
 
