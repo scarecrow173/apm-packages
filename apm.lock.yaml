@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-09-15T16:48:57.620857+00:00'
+generated_at: '2026-09-19T09:30:38.819193+00:00'
 apm_version: 0.28.0
 dependencies:
 - repo_url: _local/agent-intelligence
@@ -8358,8 +8358,44 @@ deployments:
   content_hash: null
 - kind: uri
   target: mcp
+  value: serena
+  runtime: claude
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
   value: mise
   runtime: codex
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
+  value: serena
+  runtime: codex
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
+  value: mise
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
+  value: serena
+  runtime: copilot
   scope: project
   owners:
   - .
@@ -8376,8 +8412,8 @@ deployments:
   content_hash: null
 - kind: uri
   target: mcp
-  value: mise
-  runtime: vscode
+  value: serena
+  runtime: cursor
   scope: project
   owners:
   - .
@@ -8392,8 +8428,18 @@ deployments:
   - .
   active_owner: .
   content_hash: null
+- kind: uri
+  target: mcp
+  value: serena
+  runtime: windsurf
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
 mcp_servers:
 - mise
+- serena
 mcp_configs:
   mise:
     name: mise
@@ -8404,14 +8450,33 @@ mcp_configs:
     - mcp
     registry: false
     command: mise
+  serena:
+    name: serena
+    transport: stdio
+    args:
+    - exec
+    - --
+    - serena
+    - start-mcp-server
+    - --context
+    - ide-assistant
+    - --project
+    - .
+    registry: false
+    command: mise
 mcp_target_servers:
   claude:
   - mise
+  - serena
   codex:
   - mise
+  - serena
+  copilot:
+  - mise
+  - serena
   cursor:
   - mise
-  vscode:
-  - mise
+  - serena
   windsurf:
   - mise
+  - serena

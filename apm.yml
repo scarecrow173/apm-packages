@@ -31,6 +31,19 @@ devDependencies:
     - mcp
     env:
       MISE_EXPERIMENTAL: '1'
+  - name: serena
+    registry: false
+    transport: stdio
+    command: mise
+    args:
+    - exec
+    - --
+    - serena
+    - start-mcp-server
+    - --context
+    - ide-assistant
+    - --project
+    - .
 marketplace:
   owner:
     name: scarecrow173

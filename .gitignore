@@ -22,6 +22,7 @@ packages/**/build/
 /.github/prompts/
 /.vscode/
 /.mcp.json
+/.github/mcp.json
 
 .pnpm-store/
 
