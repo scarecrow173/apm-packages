@@ -1,6 +1,6 @@
 lockfile_version: '1'
-generated_at: '2026-09-19T09:30:38.819193+00:00'
-apm_version: 0.28.0
+generated_at: '2026-09-19T09:37:45.275060+00:00'
+apm_version: 0.30.0
 dependencies:
 - repo_url: _local/agent-intelligence
   name: agent-intelligence
@@ -96,12 +96,21 @@ dependencies:
   - .agents/skills/doc-driven-dev-graph/scripts/build_task_graph.js
   - .agents/skills/doc-driven-dev-graph/scripts/inspect_graph.js
   - .agents/skills/doc-driven-dev-graph/scripts/migrate_docs.js
+  - .agents/skills/doc-driven-dev-graph/scripts/migrate_ids.js
   - .agents/skills/doc-driven-dev-graph/scripts/route_graph.js
   - .agents/skills/doc-driven-dev-graph/scripts/scaffold_docs.js
+  - .agents/skills/doc-maintenance
+  - .agents/skills/doc-maintenance/SKILL.ja.md
+  - .agents/skills/doc-maintenance/SKILL.md
+  - .agents/skills/doc-maintenance/scripts/doc_maintenance.js
+  - .agents/skills/doc-maintenance/scripts/migrate_docs.js
+  - .agents/skills/doc-maintenance/scripts/migrate_ids.js
+  - .agents/skills/doc-maintenance/scripts/scaffold_docs.js
   - .agents/skills/doc-status
   - .agents/skills/doc-status/SKILL.ja.md
   - .agents/skills/doc-status/SKILL.md
   - .agents/skills/doc-status/scripts/audit_docs.js
+  - .agents/skills/doc-status/scripts/doc_status.js
   - .agents/skills/doc-status/scripts/list_docs.js
   - .agents/skills/idea-doc
   - .agents/skills/idea-doc/SKILL.ja.md
@@ -270,12 +279,21 @@ dependencies:
   - .claude/skills/doc-driven-dev-graph/scripts/build_task_graph.js
   - .claude/skills/doc-driven-dev-graph/scripts/inspect_graph.js
   - .claude/skills/doc-driven-dev-graph/scripts/migrate_docs.js
+  - .claude/skills/doc-driven-dev-graph/scripts/migrate_ids.js
   - .claude/skills/doc-driven-dev-graph/scripts/route_graph.js
   - .claude/skills/doc-driven-dev-graph/scripts/scaffold_docs.js
+  - .claude/skills/doc-maintenance
+  - .claude/skills/doc-maintenance/SKILL.ja.md
+  - .claude/skills/doc-maintenance/SKILL.md
+  - .claude/skills/doc-maintenance/scripts/doc_maintenance.js
+  - .claude/skills/doc-maintenance/scripts/migrate_docs.js
+  - .claude/skills/doc-maintenance/scripts/migrate_ids.js
+  - .claude/skills/doc-maintenance/scripts/scaffold_docs.js
   - .claude/skills/doc-status
   - .claude/skills/doc-status/SKILL.ja.md
   - .claude/skills/doc-status/SKILL.md
   - .claude/skills/doc-status/scripts/audit_docs.js
+  - .claude/skills/doc-status/scripts/doc_status.js
   - .claude/skills/doc-status/scripts/list_docs.js
   - .claude/skills/idea-doc
   - .claude/skills/idea-doc/SKILL.ja.md
@@ -372,34 +390,34 @@ dependencies:
   - .claude/skills/test-spec-doc/references/test-spec-conventions.md
   - .claude/skills/test-spec-doc/scripts/new_test_spec.js
   deployed_file_hashes:
-    .agents/skills/adr-doc/SKILL.ja.md: sha256:57661376b7a113eef57c128134d923ba7a9ca16d96779b9fc2050f9af8c7f968
-    .agents/skills/adr-doc/SKILL.md: sha256:2e4f29e8104a8579075b3fef49ad4b9c8f4af7afcc3b7387f54b0851a0eeebc3
-    .agents/skills/adr-doc/assets/templates/madr-4-bare-minimal.ja.md: sha256:693f318203414c00c1ec1b25737bdbe16d09e6e2ebe0d9b26150c426d5d077e6
-    .agents/skills/adr-doc/assets/templates/madr-4-bare-minimal.md: sha256:7e65731e838044b186dac9ecd6ea82e3fe3effb39befc6fb184872f695dca891
-    .agents/skills/adr-doc/assets/templates/madr-4-bare.ja.md: sha256:ce502ad695a0a5856a703b2d68ace89bc84854f9a8389c8c3415fa6b5a2ce1fe
-    .agents/skills/adr-doc/assets/templates/madr-4-bare.md: sha256:0af42bb1ad4c3ca5ca3de3db131662555392cea34855a529f5c6ecd37b0a0a94
-    .agents/skills/adr-doc/assets/templates/madr-4-full.ja.md: sha256:1bfe9c1b607dad1984cf489b625ae5366d3cacb4cbf38be2887623a91388d627
-    .agents/skills/adr-doc/assets/templates/madr-4-full.md: sha256:577bbbc6808d69b93a9dd946b39145ed115dbd5680c4e46bb02232ca8402d33a
-    .agents/skills/adr-doc/assets/templates/madr-4-minimal.ja.md: sha256:94b8245a73f33e6cf92377885d94e15b5f0a0bcd03e3f62efb27c9e036280f90
-    .agents/skills/adr-doc/assets/templates/madr-4-minimal.md: sha256:4063a4ce42d49d1601e1acc9248ceae482b6c8a76e942c5d2f1400a43a020f29
-    .agents/skills/adr-doc/references/adr-conventions.ja.md: sha256:e0eb16f606d60c8909a5ddce972a140489d327ff8eb2c6f38db4d3bb141ec69e
-    .agents/skills/adr-doc/references/adr-conventions.md: sha256:243b2864f9da40535434d3cc57b33775f729df4d0ca276191da1af421502f917
-    .agents/skills/adr-doc/references/adr-maintenance.ja.md: sha256:47f2dba5a2c898c1f02e85d2b2c978e7fd7ce066a90e3953ee3ed8c6f1787b5d
-    .agents/skills/adr-doc/references/adr-maintenance.md: sha256:5397eb9ed5aaba8c8a641693883efa08e98289e0dae0ee6959a55e6af6a3765d
+    .agents/skills/adr-doc/SKILL.ja.md: sha256:eab702753a9af00a29bceb4136d2d150423ebbfd7b41ce905a631bba73a7cd5d
+    .agents/skills/adr-doc/SKILL.md: sha256:cf98c5b14dae681c44a654e02cd2ac4a7d12c46e0a3305a108019a823d0889cf
+    .agents/skills/adr-doc/assets/templates/madr-4-bare-minimal.ja.md: sha256:5e16bbfc72401ff4bdbaf3f7466f138b2e6315ebe492f7a8a4f788f933aafb98
+    .agents/skills/adr-doc/assets/templates/madr-4-bare-minimal.md: sha256:27d923743692403db521c10d105dbf46776a740adc1e947f7cb637492d284cfd
+    .agents/skills/adr-doc/assets/templates/madr-4-bare.ja.md: sha256:6f0c75e8a4fce93ef89b1e242dbe32e5a5382385fa565acab198581aae37864d
+    .agents/skills/adr-doc/assets/templates/madr-4-bare.md: sha256:b4f7705d37070c64e9aa4f298acb5ba4dbd43df481869bbf9446bf3d55e16d65
+    .agents/skills/adr-doc/assets/templates/madr-4-full.ja.md: sha256:ed88fab18bc194565a01dc824e528e6caaa8a968e2c7d2b15146d9f162f17e73
+    .agents/skills/adr-doc/assets/templates/madr-4-full.md: sha256:edb7c9c2c936953ab44c2de001d125f52090ee7f259e64142c9d6303f240001b
+    .agents/skills/adr-doc/assets/templates/madr-4-minimal.ja.md: sha256:848b398267d165e398700f0761d464e76cad800e048966b9523bc27c542b27a7
+    .agents/skills/adr-doc/assets/templates/madr-4-minimal.md: sha256:c587ca65ca884f24e0282eb64edfdf1b1199113e3f0ce00e879d9ed9cd97e78c
+    .agents/skills/adr-doc/references/adr-conventions.ja.md: sha256:462f4a3c7a0a047e4d98b54f76056744749b935e6e9308337cfdf5be6ab0c5e5
+    .agents/skills/adr-doc/references/adr-conventions.md: sha256:cfab51b5ddc5de267c1160e475af4c85a78530d55ec19a87be87c890aa6ded8d
+    .agents/skills/adr-doc/references/adr-maintenance.ja.md: sha256:32de7abd37e290920e801227186a2c13405233aa4c81d5cd9c4638c276a6152c
+    .agents/skills/adr-doc/references/adr-maintenance.md: sha256:f9d8365c007a534520ba527fc0c558cb44bf8d6082215069eaa94d172f4632ce
     .agents/skills/adr-doc/references/madr-4.ja.md: sha256:9b04e5ca0065e2aa280b1bded194f175c3cfe09a222032f5681e3a39eea8a570
     .agents/skills/adr-doc/references/madr-4.md: sha256:ee363982741c459fffc109c9062da2437a40db6eb5545921858bd341ef038918
     .agents/skills/adr-doc/references/review-checklist.ja.md: sha256:5f6272a83d2d97180dcd7e02d22d6dcdb1fff1bbd775343b3fc1cc90fbd33052
     .agents/skills/adr-doc/references/review-checklist.md: sha256:67e0929e72387f4b12f6dd15000c5bd1b6892b1eae0feb88c25a88893ac53afb
     .agents/skills/adr-doc/references/template-variants.ja.md: sha256:21428c60368966e5a4d68497fbdb8699a4bff4175adc6080322d1eea9d5f0e28
     .agents/skills/adr-doc/references/template-variants.md: sha256:72979d9dc2c62ab0493cbacb87c18429e3b1221e4e6c5355e3800839ea82e246
-    .agents/skills/adr-doc/scripts/audit_adr.js: sha256:f82b2eb34d717a4621f34ec24787623e3fb63813152613b4bd0894f1fecf8316
-    .agents/skills/adr-doc/scripts/check_code_links.js: sha256:5e70f5d9ec8693a78851db9f42c22117db1f4916eff9b01f1339c14cc5858c6c
-    .agents/skills/adr-doc/scripts/list_adrs.js: sha256:e40b2dba240d337ec2922c4ea5ffc337d83f83618a528f60bccb3a3e65e0a6df
-    .agents/skills/adr-doc/scripts/migrate_report.js: sha256:8514af8f20deeb948b5b24e0b5f0093c0fb7ccc4b1fed28bd97fc87c2522c31e
-    .agents/skills/adr-doc/scripts/new_adr.js: sha256:0fabeafebd15b6979a20452e995ab5f1f1d817f897d2a83c02e354f365d43a26
-    .agents/skills/adr-doc/scripts/relate_adr.js: sha256:ea35c0bfbd6138d3d8eef6a0c1aa17421eda004368ff271265c5ad4f1e8c127b
-    .agents/skills/adr-doc/scripts/review_adr.js: sha256:4aa5d13355bbe0748e3b76d2b900b2e1a1f7d9f3a60b2bc5b79b258732b4dbd5
-    .agents/skills/adr-doc/scripts/update_index.js: sha256:7f1d6d065a577e28b1673b10afa74d9371950fa180db53c760cf921d07581659
+    .agents/skills/adr-doc/scripts/audit_adr.js: sha256:e41c6c2cc7a77def02ac8dd29f772b90d9a691ec04dd9437e4d2a2a5592f1f31
+    .agents/skills/adr-doc/scripts/check_code_links.js: sha256:8dc84cffa9a431cdcc3227953d01d80a8e488d796757af1f70e9b01e70fec680
+    .agents/skills/adr-doc/scripts/list_adrs.js: sha256:999dfa7e74eda1eed460971cfc5c22e894d625b8937a22457fc228bbb4c9f85d
+    .agents/skills/adr-doc/scripts/migrate_report.js: sha256:57b73d442633791f6b2b8f948ca281045b4386965dba8a93526fc75adf59fd7d
+    .agents/skills/adr-doc/scripts/new_adr.js: sha256:0cc42db8867be503aaadb44210121cc974cc692948c3019db01702b8b02d530d
+    .agents/skills/adr-doc/scripts/relate_adr.js: sha256:397f34d7eb9ca3c0fac05ac002623a43f74d51d50615550dcf81ee072a134666
+    .agents/skills/adr-doc/scripts/review_adr.js: sha256:f0f069bdd6a9ea886b6ba21e91d513cb837f94bc67119f4e6381c50802b62ca2
+    .agents/skills/adr-doc/scripts/update_index.js: sha256:fcef2d960e9fa8697af14ebc55024ab64b2ef8f2d4b3ee0c2fdb99316af101c5
     .agents/skills/briefing-flow/SKILL.ja.md: sha256:98c8ff8c022fe2b3b10f461c797fbb421276f26e016c8f2c1f9e2d4fe6c50106
     .agents/skills/briefing-flow/SKILL.md: sha256:7dbd53606c4547bab56553fa81717c703f123ac6bcf7d676e9fa9fb5aeb32073
     .agents/skills/briefing-flow/assets/adapters/briefing-adapter.yaml: sha256:ee3098b9bd32361b4d94efb6cc43f0b6fc3f48bb82588f02c767d8053eee8717
@@ -407,79 +425,87 @@ dependencies:
     .agents/skills/briefing-flow/assets/templates/briefing-profile-template.md: sha256:5198c3450279a26eb403e57ecd80365c8a3ff05a263a76ae3578a719357a0885
     .agents/skills/deep-dive/SKILL.ja.md: sha256:3f02ec1c90448e9d33c41fa00360978d72cafff664a131f411671a06aa7f6afb
     .agents/skills/deep-dive/SKILL.md: sha256:17234c1d59d0233783dfc089006f87654c7ef80adf574665b75971d988733aa3
-    .agents/skills/design-doc/SKILL.ja.md: sha256:b55c07b90d70bce63aee8f9f78b0c05fcccc635862e1cb2ca329efc6f22bf1af
-    .agents/skills/design-doc/SKILL.md: sha256:3a1eb2ec788aabb0dcda26498ef2c3c51b16c5deee7061cd7e0e0cc1f804559a
+    .agents/skills/design-doc/SKILL.ja.md: sha256:858c0dc76a1c6f2949fb2ffb67fc911016c5221db9025fe7ebdfd54e445b4228
+    .agents/skills/design-doc/SKILL.md: sha256:3fac8de463e82a599c9b742c90ae29f0bd3a061e4476c173b6fd6b6778f64f37
     .agents/skills/design-doc/assets/templates/design.ja.md: sha256:c54ff9de5fdf22d70b313cf06ee773122ade08ba4f8a9729b622bd343b6f92b6
     .agents/skills/design-doc/assets/templates/design.md: sha256:6f0a275cc7d3e90bde9a224531667db04ef6adf5610c9e3e4f348c7c4d2d8221
-    .agents/skills/design-doc/references/design-conventions.ja.md: sha256:ec31467a81007d9f6c4a8feb9270a0f9baa157436b1424ad436c487a5097f7ec
-    .agents/skills/design-doc/references/design-conventions.md: sha256:9f5ab89dfd81412abdd0f10ad4a57322305bfd43f9265b3ce24bae27e91d4e18
-    .agents/skills/design-doc/scripts/new_design.js: sha256:0ed37383ab04d45b940916a6ef9a0a57d478554a6a6cda198fbcd07a9d0fbc82
-    .agents/skills/discovery-doc/SKILL.ja.md: sha256:ba87261fd73e3364db1fb8ee7f961db34fe5754b90c8400937172e9f8f6a88fd
-    .agents/skills/discovery-doc/SKILL.md: sha256:ce543d804020766e13199faa1d2d4c8786efc9a88e70c29c789040e1d4cc3b7d
+    .agents/skills/design-doc/references/design-conventions.ja.md: sha256:ccbe8f5d8a2e1a061b83d05a1d339bc502cfaf26c64fd3ae9f03b110b8f62349
+    .agents/skills/design-doc/references/design-conventions.md: sha256:167e687bb59a8899ab393802c6a04977a8cae192044e4dfcdf1e0c22fd3ee794
+    .agents/skills/design-doc/scripts/new_design.js: sha256:d798149075481125d69741a381eca183caf869fe40b49ca11072c00e528187a3
+    .agents/skills/discovery-doc/SKILL.ja.md: sha256:966868890540f9e1ae79b7bd00508c07794116d495159ba215076e0526dc456a
+    .agents/skills/discovery-doc/SKILL.md: sha256:a457fd35f9b7df9ffa4d8bc4f8d8af3e91dec9837a2e80a35b18cb72ac89ad89
     .agents/skills/discovery-doc/assets/templates/discovery.ja.md: sha256:38c9df54a44deb4858db23d07c925fd99d7ca7b862cb2bd9e51617dec1643fe7
     .agents/skills/discovery-doc/assets/templates/discovery.md: sha256:e5a8042875afbe390693eacf1540c136b069adcd44c9fe6b8548cdad5bcc7032
-    .agents/skills/discovery-doc/references/discovery-conventions.ja.md: sha256:24f946755a335f2676a723bc57e894776a0867554dc5ef7a0e92f77f517f792b
-    .agents/skills/discovery-doc/references/discovery-conventions.md: sha256:2fa126b6e574da1cce3b3aafb49c7c8a550ecb02c5d12a9405f676a53938150b
-    .agents/skills/discovery-doc/scripts/new_discovery.js: sha256:13dfbbd4cf4963d3b84b78f5c74bec3d6a218c2b60d646d0961bdd5f7a2efc20
-    .agents/skills/doc-driven-dev-graph/SKILL.ja.md: sha256:cca57aa22e6f599bf3c762f351a1aa3d6271e500f9558c8f4f90c9eaab5331b9
-    .agents/skills/doc-driven-dev-graph/SKILL.md: sha256:b7f475029e9bdb41177d93a2ae79a282b55919edbecf5fa3c6406e9212d73a8f
-    .agents/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml: sha256:3741ac0265551c1944d8d614826f43c4831e6bf74633819d132cf17f44014103
-    .agents/skills/doc-driven-dev-graph/references/execution-contract.ja.md: sha256:cbc053fcc67e395cf355b73d8ea32206862c753a20c822ec7f6a885510edebe9
-    .agents/skills/doc-driven-dev-graph/references/execution-contract.md: sha256:7734c9125d5c690a0d238c8539513d37d906927de51db18fbe3d181df03e62ad
-    .agents/skills/doc-driven-dev-graph/references/execution-outcome-contract.ja.md: sha256:89cea29775dbfcc0e5dc76a687f90d229629fd570cad6daa4f8d942cba75c35e
-    .agents/skills/doc-driven-dev-graph/references/execution-outcome-contract.md: sha256:fc6ce4bacbb5a3f136130d9b12b80377a71051723228c430c4f75aac1d31fc76
-    .agents/skills/doc-driven-dev-graph/references/graph-contract.ja.md: sha256:51f14dd67360baa50c6d42e9bd03852d2bda2d944b39119a099270e6496c38dd
-    .agents/skills/doc-driven-dev-graph/references/graph-contract.md: sha256:5561cd5bf6d5373d3b1f5ab73a530582317d99b9bdbb91c5913d8aeb8f488449
-    .agents/skills/doc-driven-dev-graph/references/graph-inspection.ja.md: sha256:2d3367e3b8723a798146e485a5ec8decfe33b3bca98ca39e7ccec7668ec3072c
-    .agents/skills/doc-driven-dev-graph/references/graph-inspection.md: sha256:9e3cd8d92191cea68e28e8b802c6e54ad3df486e80716a461b0f17863c9aba2d
+    .agents/skills/discovery-doc/references/discovery-conventions.ja.md: sha256:f7de6467ee14bac4ca365ab4fcbd176bfaf2a34607bed3258e469557e5bb77e6
+    .agents/skills/discovery-doc/references/discovery-conventions.md: sha256:933779705077b1934e943379aa6ca559d51a97ee8a3476667ffa6bd68581fae6
+    .agents/skills/discovery-doc/scripts/new_discovery.js: sha256:a2daef799f9c5f95f87eb8e03e6f6aad17b75443c349e557f7c82443278c2bb0
+    .agents/skills/doc-driven-dev-graph/SKILL.ja.md: sha256:98d71754cf8d853f2346186c628759078e1fa2029faecf7631852ddca525c051
+    .agents/skills/doc-driven-dev-graph/SKILL.md: sha256:71d50c74d2d549131f68e4274cb7e8f0b86b05932fefda30032c8de2341bdf01
+    .agents/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml: sha256:0772b917c6a15250e02b67b42bdeaabb247ed8bd943c4743a8075c3bd2dffd5f
+    .agents/skills/doc-driven-dev-graph/references/execution-contract.ja.md: sha256:bb1971a8d0e282f57702aeae5acf3c36d85a6bf998e1fa52998e7f0de87b794f
+    .agents/skills/doc-driven-dev-graph/references/execution-contract.md: sha256:ac681e4caa0f7ecdf2198fa6a50a437a63e040469838f853fe24198cd8e1a40a
+    .agents/skills/doc-driven-dev-graph/references/execution-outcome-contract.ja.md: sha256:4109f3faacf2a497d16b0f1461b7cb1fdfce1c9a34ffbbcc0af36a19116a480d
+    .agents/skills/doc-driven-dev-graph/references/execution-outcome-contract.md: sha256:d0532f2b83478ce78cce7d458dd3ba9e5be7a24cb5a9cf9f2bb6e82689288052
+    .agents/skills/doc-driven-dev-graph/references/graph-contract.ja.md: sha256:f26013ea7875345d674ec91b5f5a833d6faf4e8133708976e44d6173e56eab78
+    .agents/skills/doc-driven-dev-graph/references/graph-contract.md: sha256:6c5b2a473be39e204ef369cfa44a2c20dd025b9992e9f155050dfaccf4a91f9f
+    .agents/skills/doc-driven-dev-graph/references/graph-inspection.ja.md: sha256:5b79730179c0614cee280b488e2370bc0a2db42305d37c6d73a563f9f8563cd0
+    .agents/skills/doc-driven-dev-graph/references/graph-inspection.md: sha256:530c85362dbe1ebe6ac221fad02e308baac98eae3b02d4c24d334bcc445af1d1
     .agents/skills/doc-driven-dev-graph/references/graph-state.ja.md: sha256:4663d973ec0b0b245d1b80a929b179874fff9ec4070d4a0e21df4b4d15ee1b62
     .agents/skills/doc-driven-dev-graph/references/graph-state.md: sha256:8c101097abda3ba44dd1240e13dbae356dbf4cc76dfb99fc14f00ccefaf9567d
     .agents/skills/doc-driven-dev-graph/references/task-graph-contract.ja.md: sha256:397e4891a48641e485976e53e83eb162da0db15193742c16a90b7edf0b0b2ec0
     .agents/skills/doc-driven-dev-graph/references/task-graph-contract.md: sha256:fc88b0091ac2738f4536c2f3bcb9a392e0296c46f4b1ecb5eef137bdd0c90c43
     .agents/skills/doc-driven-dev-graph/scripts/build_task_graph.js: sha256:102ba9c5ecb6f36fde1661b888693932ed97972fa247c38a86ca92023264ac91
-    .agents/skills/doc-driven-dev-graph/scripts/inspect_graph.js: sha256:1ad4f083e4f439be0e6a7122558135fcb01669a072891fffb951161ef2000052
-    .agents/skills/doc-driven-dev-graph/scripts/migrate_docs.js: sha256:ecc0b8c9109d4ebb4d9e3cc7dbcd60e1e38b3b80e33ee30f09a5202570105c9d
-    .agents/skills/doc-driven-dev-graph/scripts/route_graph.js: sha256:a5e8005fc77da736e5ebfb3f1aac675a6c06010be5784eb083f62539611ca52d
-    .agents/skills/doc-driven-dev-graph/scripts/scaffold_docs.js: sha256:9b7d73730506884130b3e870f7ef04853da2f6b772b57a4d119663882f203736
-    .agents/skills/doc-status/SKILL.ja.md: sha256:678b7a29233ac833a3b889d80500328d6b1d1ef34a0b072c3dc0f365eda8c62b
-    .agents/skills/doc-status/SKILL.md: sha256:098abad9235ebfe6dfdfabfd1ab9bd98380eda0845aa1477edde800154fce7d4
-    .agents/skills/doc-status/scripts/audit_docs.js: sha256:a35333eb54c9cd5666a7a3371591a89ed588a5f0db4607280d79c62bbcf6cd09
-    .agents/skills/doc-status/scripts/list_docs.js: sha256:78195017acda65ebd3fabb8a734563a49b703a7dd47b3a179bf82e95e7afefb4
-    .agents/skills/idea-doc/SKILL.ja.md: sha256:fb7bc524115eee8872b5cfe7943ff3483f3db0371a8e708f6d319263bd8aebcf
-    .agents/skills/idea-doc/SKILL.md: sha256:275b98998b631763ab21abdcd32f026336327a54b56638e542e932689afdcf45
+    .agents/skills/doc-driven-dev-graph/scripts/inspect_graph.js: sha256:719ee95f17637b9d7130b5b66a2644f4916b1c0da717208b9ffdba9dbd0863d2
+    .agents/skills/doc-driven-dev-graph/scripts/migrate_docs.js: sha256:cca4e02a971a271cf1fa5b34e2b913ff5b5eac7f30b5a16a54a00938bda090e9
+    .agents/skills/doc-driven-dev-graph/scripts/migrate_ids.js: sha256:511ab670a6a27c8bf59baffeed1cfab1dd902cb0202bcc413397dc5b191d0058
+    .agents/skills/doc-driven-dev-graph/scripts/route_graph.js: sha256:d314fc0b2ab65ce47ddab66ffaa1def69bc736f191bdd8c1c8b001fa19d578ce
+    .agents/skills/doc-driven-dev-graph/scripts/scaffold_docs.js: sha256:fc1416b29cb4e1518dbaed42b544d3ce097fa4cb5bf5bd2f8155e9163963c9a3
+    .agents/skills/doc-maintenance/SKILL.ja.md: sha256:3e938aebe756d577f9de7060a4aab1fed4600f4ae5f660cfba311f2ab9c9b0d1
+    .agents/skills/doc-maintenance/SKILL.md: sha256:8c909e2b48656dcadd213cd71d9dc469515000189cbc6f98867e6d0837ef0556
+    .agents/skills/doc-maintenance/scripts/doc_maintenance.js: sha256:00a98c4c640f620e028d1018d3d2db78c8b5350ea91126030e9664f7660d0a0f
+    .agents/skills/doc-maintenance/scripts/migrate_docs.js: sha256:77a7e135e57ff53779754f0ae296903aedf0294bc5267deaf2c39d98341989e5
+    .agents/skills/doc-maintenance/scripts/migrate_ids.js: sha256:a0dd9ad59ab52f3fb9175b68dbc79b7c10a37ad070f18fcc98e4649e3e59ef45
+    .agents/skills/doc-maintenance/scripts/scaffold_docs.js: sha256:368cca1243b663d50ca3cd8b34355179ebf3cf0636b24fc5794030e86efe4652
+    .agents/skills/doc-status/SKILL.ja.md: sha256:d24a66e4d4fedc9232a22b7e767152076f4329603d8edf5671fe435a96f1e170
+    .agents/skills/doc-status/SKILL.md: sha256:92c08fdf0193bfb69ba571d6b16f0d51a2ab3da4eea2c920355a2085db3ecc6f
+    .agents/skills/doc-status/scripts/audit_docs.js: sha256:3cc67c0cd1dedbd740a817bae44067899df37348c0e8c89374db6ca236951cf7
+    .agents/skills/doc-status/scripts/doc_status.js: sha256:7ba74c558c43872e4131dc703e8a3cd643a494ff817605ee7e0e80bc4287a59a
+    .agents/skills/doc-status/scripts/list_docs.js: sha256:6ab9e44409bdb9550da2087ba1fe102b2e483a057128b350c4d8ca844c579268
+    .agents/skills/idea-doc/SKILL.ja.md: sha256:f147c5c559c23c67cfe8c1c28423c430fa8d9c3a01e6124966bc59599e87e302
+    .agents/skills/idea-doc/SKILL.md: sha256:8e06b42de3314ac4b3a2cb48a1e99154f5435b71c596a4d03f69ee4be22cb3fb
     .agents/skills/idea-doc/assets/templates/idea.ja.md: sha256:a23f1285e5f18c9cc6cc46cf731566658eb88235224df046da8a6a82e1e03a60
     .agents/skills/idea-doc/assets/templates/idea.md: sha256:65d4b3afff4070d0cb4b3da3167c16f647087f29f525b18a1db4acffb1c5042c
-    .agents/skills/idea-doc/references/idea-conventions.ja.md: sha256:9f5469f299b65954ba114a58c50eb238820f2ac9a6b8a66c4c9eb46beba62df2
-    .agents/skills/idea-doc/references/idea-conventions.md: sha256:98db0d9f386dac9c91e718a45488da615c52a5dd1b75b53f89480a52c57e082a
-    .agents/skills/idea-doc/scripts/new_idea.js: sha256:abdc44ff4465eb0ffdb62518c398574827f078f55c808f21e9dfdf5c3eb5c704
-    .agents/skills/impl-doc/SKILL.ja.md: sha256:99359506791cb2e84d89975a9ca8056c433465e4c697fd9e5708576b312ae3fc
-    .agents/skills/impl-doc/SKILL.md: sha256:4b79189cee11db50106fa86abca5fdd58f95163e500a5b9aa650195a9c4b1f8a
+    .agents/skills/idea-doc/references/idea-conventions.ja.md: sha256:eb5802e39b6081207e7f0dcfc9dc2d99d41337770ef68e9e8f11d86b9db03bd6
+    .agents/skills/idea-doc/references/idea-conventions.md: sha256:bbca87ef26460aa229c74718f2b0f59af87b763fa67ab6a1503b3f3f1a91d7a5
+    .agents/skills/idea-doc/scripts/new_idea.js: sha256:8ecf743f720207cfd22fd3b81f2693ef5dd5440c27319554a842464f7fc1fd76
+    .agents/skills/impl-doc/SKILL.ja.md: sha256:f428a5bac572182bba9f90424e7483f56a7b670a8c7657501bdf31b9ddd0c049
+    .agents/skills/impl-doc/SKILL.md: sha256:e93179962055816b9065cc54bb329179df470392905706a9ebc92ef354fe20f3
     .agents/skills/impl-doc/assets/templates/experiment-log.ja.jsonl: sha256:78afe13493676a9f8cacdb89525ff93751f893cd77d1544ee97db716d52f24f7
     .agents/skills/impl-doc/assets/templates/experiment-log.jsonl: sha256:78afe13493676a9f8cacdb89525ff93751f893cd77d1544ee97db716d52f24f7
     .agents/skills/impl-doc/assets/templates/implementation-record.ja.md: sha256:0748df37a521455f3fb8b396dff0ebd2e6198da77ab1d2bb37877ee561e9ba93
     .agents/skills/impl-doc/assets/templates/implementation-record.md: sha256:5d91b133cfaa9b8051fbb2f903a7b4907aaf7ce185c213b9a7bdd5c67828ed60
-    .agents/skills/impl-doc/references/impl-conventions.ja.md: sha256:963769c53d393ea966b9f604fb9b89fd21857794b702690de05393f0255e137b
-    .agents/skills/impl-doc/references/impl-conventions.md: sha256:5759af64ff4d2d5ec5aca16b3401f8c370eadf6e114b14409cc5edc98702298a
-    .agents/skills/impl-doc/scripts/append_experiment_event.js: sha256:dcd307540f5888069f4a001c920d61f86e6f34311428d925fe21251f12123441
-    .agents/skills/impl-doc/scripts/audit_experiment_log.js: sha256:a28eb28e70ab75a8987128c009a6f8344d4b344e5babbc017e5699dfd0f027a6
-    .agents/skills/impl-doc/scripts/audit_impl_record.js: sha256:e232d1862b866d011e5fe00f719dac8f1a762b7ed656f36a4c53e5e901f84177
-    .agents/skills/impl-doc/scripts/edit_experiment_log.js: sha256:f9e8e01325e8cd8f92d3919b0fb3ad87015208629d653e3a339d5ad5e941295c
-    .agents/skills/impl-doc/scripts/new_experiment_log.js: sha256:64565b58e0e359909eace0f047e4981f0f711dcd05f6f40e005e6bb51d5e787a
-    .agents/skills/impl-doc/scripts/new_impl_record.js: sha256:6ae2b02cda0d492e7cf2fb461beaf9df621be08f1b1e9001a2737d6bc32e1d87
-    .agents/skills/implementation-flow/SKILL.ja.md: sha256:6d4dd260eec7df3d855c8cfd5ab041ff9f56284f083d8a493335c9c66f204754
-    .agents/skills/implementation-flow/SKILL.md: sha256:bb056e2e5a9c48d0296f1ab7ff10d0b4e7a87b09794a2ea0424504fb8cfb48b3
+    .agents/skills/impl-doc/references/impl-conventions.ja.md: sha256:33e0c55eb732b9083240e43e2a560cf8c0b9c9b5bc4260188a1b288a809a829d
+    .agents/skills/impl-doc/references/impl-conventions.md: sha256:8e05d2fb61c8bc520afe202ed3c6aea76120b206268dc0cc81a37eacc8c24a1d
+    .agents/skills/impl-doc/scripts/append_experiment_event.js: sha256:63f13c1bf9f02219e4c27ea6e5ffeed28b1857ce447b4eb1c9d7eca05d167817
+    .agents/skills/impl-doc/scripts/audit_experiment_log.js: sha256:a54c2d83b4ac93b03292511b5ac144d89c96dcb729cbfcfb96120778a582441b
+    .agents/skills/impl-doc/scripts/audit_impl_record.js: sha256:29d119e01127aabf99f9322e32a8b43389ce5ae2e50d7bbd74df5e00375910ab
+    .agents/skills/impl-doc/scripts/edit_experiment_log.js: sha256:ff5f8b3ca5f146a3c59a138ac9f70bfdef718a35ecabcb1bad564bd2d38344e3
+    .agents/skills/impl-doc/scripts/new_experiment_log.js: sha256:435192b1061ff30f14215f267f95fb2929220e379edc5355e1fcb4cb073adad6
+    .agents/skills/impl-doc/scripts/new_impl_record.js: sha256:cd4cce0ac15d8dcd3a78798bcb1758fdda66fe0948f7cccc5b3262388dd988f7
+    .agents/skills/implementation-flow/SKILL.ja.md: sha256:67e14e27419ee295a91c4f766c0d1740317c4bdc4e857fea7e79ad10ccaff866
+    .agents/skills/implementation-flow/SKILL.md: sha256:0e64a7961dc976544d3d5d26eb25d31287513841c727e1f02e1e1d4b458aa62c
     .agents/skills/implementation-flow/assets/adapters/implementation-adapter.yaml: sha256:60cdfdd5ba0767f25924596448b99f57fcdc30a5c5c9f8f42903cdd75b437f72
     .agents/skills/implementation-flow/assets/templates/implementation-profile-template.ja.md: sha256:0eb838427ec6d434fdcb338fcbe2b1c5499fdf0c0a896a2446a0e305b16c8b11
     .agents/skills/implementation-flow/assets/templates/implementation-profile-template.md: sha256:bdfde6e7180e9ea3f8993e0286d2847f58afdc85eb0bf5f4c6385ac0820d0314
     .agents/skills/implementation-flow/references/review-gate-contract.ja.md: sha256:2bcf398156b2f6778f131fc0c407ccff415626680f7bd232d168e0b4520cc49a
     .agents/skills/implementation-flow/references/review-gate-contract.md: sha256:b09a1565f1b27c6cd23686bc13de12c38b6499bc399f915f56b88a3d9bd7522e
-    .agents/skills/plan-doc/SKILL.ja.md: sha256:c2a53d85b4dbd77629a816dd73ba78a24c2d3f4f2b5c08a9d97b1e16cad2b146
-    .agents/skills/plan-doc/SKILL.md: sha256:cd64487e9902b23731e550bd72850ebd72fe85d6094aa002c0fa6354be60a903
+    .agents/skills/plan-doc/SKILL.ja.md: sha256:23422c10cf6d4c11cdfa05768ed45300a9dee3dc517c2fce3ce734772f585562
+    .agents/skills/plan-doc/SKILL.md: sha256:1e18268697721a5f0346d6e036e048032f328b9e953ca524c40a938c5d4d157f
     .agents/skills/plan-doc/assets/templates/plan.ja.md: sha256:e8a4ef95f158fc8c54b78c5d5bffb4f3f0713a05ee3801ed8ce40060331a3248
     .agents/skills/plan-doc/assets/templates/plan.md: sha256:c930777be141d52090f2b37992d54a3f9c367be192b401233e440b500332bd19
-    .agents/skills/plan-doc/references/plan-conventions.ja.md: sha256:307eb2b56ba3fbe236fc2ed265bcc6b693db70260c48727953d4cc98502610f5
-    .agents/skills/plan-doc/references/plan-conventions.md: sha256:9dabae512f4e97f864d2d1a50a6bb66f08c7d3ef4a4f1faef29bafb6734a1223
-    .agents/skills/plan-doc/scripts/new_plan.js: sha256:dcabe1800932146e8a0d7d343163134c0b2453733d3bdadcd05718067a7e8319
+    .agents/skills/plan-doc/references/plan-conventions.ja.md: sha256:8490d34a98ca5519feed6aceeed86e1e53aa8bba3b43bb019d1bca7de2f5e9f4
+    .agents/skills/plan-doc/references/plan-conventions.md: sha256:82371f4a345f289782d7128d11eba694b39a94a9417ddb1a244ecb7fcc205e0f
+    .agents/skills/plan-doc/scripts/new_plan.js: sha256:ad7e01e4df296ff0443805ab7d5ade44927cec6efadd019ba5d66b273de3ce2f
     .agents/skills/planning-flow/SKILL.ja.md: sha256:5d019e2038545c2757b97b91e61be3d4a80cb52511f92aa31edc32f2c3133405
     .agents/skills/planning-flow/SKILL.md: sha256:e6accf4a48b5e9c323c27498fbc013a901ce487d3164cc720d9aad285df6db5a
     .agents/skills/skill-discovery-protocol/SKILL.ja.md: sha256:4fcdff59d5ad8a40bf5db0760c801f8f26dfbb915f7aaf99b45860245a383283
@@ -509,55 +535,55 @@ dependencies:
     .agents/skills/skill-discovery-protocol/scripts/scan.js: sha256:b2979133ebb00e1af5cf8590fcf5560f920d285e59cb46a34a70fd1c68ddcec7
     .agents/skills/skill-discovery-protocol/scripts/sdp.js: sha256:79a45fb26f81cacbaa1c0f91209576ce7ca4bb062fb30b2d7e94b60983afc5a3
     .agents/skills/skill-discovery-protocol/scripts/validate.js: sha256:c835d5796111ddc29eb3bf04da3d049953eea17edfc702974c67f1ad9322ced0
-    .agents/skills/spec-doc/SKILL.ja.md: sha256:76c77481889348fcb9cac3659233629fa3ef8ad7d2f88186a775121b2cb03549
-    .agents/skills/spec-doc/SKILL.md: sha256:ca793240e19d36d474cbf1bae80f6de49c65aecf58ec1b2d2b96ce0bb463f7bf
+    .agents/skills/spec-doc/SKILL.ja.md: sha256:3a2b411e7b2dd08ad62b7448764c00226c74c100cfb27334216eda61aae66af2
+    .agents/skills/spec-doc/SKILL.md: sha256:88e296ea6cee91331a6bd3004e91f99383f000b0643207b6e153a8082575e169
     .agents/skills/spec-doc/assets/templates/spec.ja.md: sha256:2ca09eb8cc9b3bb0572df7e7b3fea1e2325a6d783e3c7a9eaeb1ed59ed737cf5
     .agents/skills/spec-doc/assets/templates/spec.md: sha256:85fdbb971c5032c8c3b467f59a4dcb688406bb722186e18e5063718c989ecaf7
-    .agents/skills/spec-doc/references/spec-conventions.ja.md: sha256:f23fb9ec05a3afa100e26be0c31e75a87596a88e8e8180bedd1b31c94c7da16d
-    .agents/skills/spec-doc/references/spec-conventions.md: sha256:63e589f74661c7142358821c0989d4b09d8d9659976c376242c3fe35b466c013
-    .agents/skills/spec-doc/scripts/new_spec.js: sha256:e80c21174a89a8b16baa09a13611bea78e0c8bfa747d034100b3c21a2dbdfb47
-    .agents/skills/task-doc/SKILL.ja.md: sha256:0c51c6eb6320e7f5cd6d5a0153e7112a1e13995e97eb167e8889097e95de1295
-    .agents/skills/task-doc/SKILL.md: sha256:769649095be290dbc1e7638edd0bf09bfa5a4efa417a6c8cea4c3dc1c7113c0d
+    .agents/skills/spec-doc/references/spec-conventions.ja.md: sha256:3be9c026e1fa7099ef18c403707a199cf1a3c4949a63fe46e2c29230ab4f2e52
+    .agents/skills/spec-doc/references/spec-conventions.md: sha256:40b3af0c36d65c8336be45e9e71e5037d2587beba4f1dc6c0658ea35a30a44ec
+    .agents/skills/spec-doc/scripts/new_spec.js: sha256:492a8efaf2ca8fda3131ba54cd8e175a410057b36ddb721021baac2fcf40e70f
+    .agents/skills/task-doc/SKILL.ja.md: sha256:13e411b8910b3b84f0870993b387b13e5fd212344e3e3cefb50166577c075df9
+    .agents/skills/task-doc/SKILL.md: sha256:c28a552964948089ab6426f714802c2003f69ba6570caa80588ca73565cdffc0
     .agents/skills/task-doc/assets/templates/task.ja.md: sha256:f79c17e060b0ed1cbf3dd2828cb37f39c0980e75e958f5f928a4c0c38b48f3d4
     .agents/skills/task-doc/assets/templates/task.md: sha256:d86a3d65ff5a413faeaa5482a1635aaf7e78bae137c941b6c0e7d5302fdf9e0c
-    .agents/skills/task-doc/references/task-conventions.ja.md: sha256:443e1f4314c42ce9daf869b566f7f5895b7794fe61789fea22ffcf4cdef55041
-    .agents/skills/task-doc/references/task-conventions.md: sha256:00ff52ad1c96756b80d2a979dbec74119208629703a8543745e318c44b7c670f
-    .agents/skills/task-doc/scripts/new_task.js: sha256:598ce29b293b0d7274795a39a8b355b0af1b004e903c609dbc8ff081766c56a9
-    .agents/skills/test-spec-doc/SKILL.ja.md: sha256:37e7559d8cd99a1be4f370c4355e806254337bbc0dd02b06b475770cfab07c3e
-    .agents/skills/test-spec-doc/SKILL.md: sha256:ee007fdb81fbecb884a3b8fcddb2e08680185df99fcf95109cc17025ad94a006
+    .agents/skills/task-doc/references/task-conventions.ja.md: sha256:2f2221ccd7192317aeecdf8863b8906607a9ea6393d46875da0e4bb86c3dab19
+    .agents/skills/task-doc/references/task-conventions.md: sha256:bf82dd21b0ddab654e20bdd31b278e461718d82295790b814966051ad422c239
+    .agents/skills/task-doc/scripts/new_task.js: sha256:09bc2e98768c07c4fee3ca353bf635157686e8e8b8fdcaef1f73f42035d32b57
+    .agents/skills/test-spec-doc/SKILL.ja.md: sha256:0b00e27146b4a73363f074bef5bc14d2ff3c2f85a9ad5c20114709ffaee81e42
+    .agents/skills/test-spec-doc/SKILL.md: sha256:b2d6ad6cad2a6bdbc1fa5c3f237cb53dfe688128ada40eaaa0922eceaf60621e
     .agents/skills/test-spec-doc/assets/templates/test-spec.ja.md: sha256:b91cdfb8ab4b5196c4fcb4b45a846cf8cb6f2c73e2ce88775569cadc03b0757c
     .agents/skills/test-spec-doc/assets/templates/test-spec.md: sha256:79be3acf026806c00287f34e4f5ed848d5697a6653a4ad22c716ccc93f5723b0
-    .agents/skills/test-spec-doc/references/test-spec-conventions.ja.md: sha256:18e1fafeb6fcc55d95ce7f290481dfb0e72b22134f9d788b18a1d62c4286cb2f
-    .agents/skills/test-spec-doc/references/test-spec-conventions.md: sha256:1cf57301a3153b7b25b8bf748091cb1e99cab84a35cd59da61624d3c890c9b29
-    .agents/skills/test-spec-doc/scripts/new_test_spec.js: sha256:2100c083620635f97c435a443fbf64c9eccfb6d956d3cf2abc0273924862b549
-    .claude/skills/adr-doc/SKILL.ja.md: sha256:57661376b7a113eef57c128134d923ba7a9ca16d96779b9fc2050f9af8c7f968
-    .claude/skills/adr-doc/SKILL.md: sha256:2e4f29e8104a8579075b3fef49ad4b9c8f4af7afcc3b7387f54b0851a0eeebc3
-    .claude/skills/adr-doc/assets/templates/madr-4-bare-minimal.ja.md: sha256:693f318203414c00c1ec1b25737bdbe16d09e6e2ebe0d9b26150c426d5d077e6
-    .claude/skills/adr-doc/assets/templates/madr-4-bare-minimal.md: sha256:7e65731e838044b186dac9ecd6ea82e3fe3effb39befc6fb184872f695dca891
-    .claude/skills/adr-doc/assets/templates/madr-4-bare.ja.md: sha256:ce502ad695a0a5856a703b2d68ace89bc84854f9a8389c8c3415fa6b5a2ce1fe
-    .claude/skills/adr-doc/assets/templates/madr-4-bare.md: sha256:0af42bb1ad4c3ca5ca3de3db131662555392cea34855a529f5c6ecd37b0a0a94
-    .claude/skills/adr-doc/assets/templates/madr-4-full.ja.md: sha256:1bfe9c1b607dad1984cf489b625ae5366d3cacb4cbf38be2887623a91388d627
-    .claude/skills/adr-doc/assets/templates/madr-4-full.md: sha256:577bbbc6808d69b93a9dd946b39145ed115dbd5680c4e46bb02232ca8402d33a
-    .claude/skills/adr-doc/assets/templates/madr-4-minimal.ja.md: sha256:94b8245a73f33e6cf92377885d94e15b5f0a0bcd03e3f62efb27c9e036280f90
-    .claude/skills/adr-doc/assets/templates/madr-4-minimal.md: sha256:4063a4ce42d49d1601e1acc9248ceae482b6c8a76e942c5d2f1400a43a020f29
-    .claude/skills/adr-doc/references/adr-conventions.ja.md: sha256:e0eb16f606d60c8909a5ddce972a140489d327ff8eb2c6f38db4d3bb141ec69e
-    .claude/skills/adr-doc/references/adr-conventions.md: sha256:243b2864f9da40535434d3cc57b33775f729df4d0ca276191da1af421502f917
-    .claude/skills/adr-doc/references/adr-maintenance.ja.md: sha256:47f2dba5a2c898c1f02e85d2b2c978e7fd7ce066a90e3953ee3ed8c6f1787b5d
-    .claude/skills/adr-doc/references/adr-maintenance.md: sha256:5397eb9ed5aaba8c8a641693883efa08e98289e0dae0ee6959a55e6af6a3765d
+    .agents/skills/test-spec-doc/references/test-spec-conventions.ja.md: sha256:1ce8adffecacad2122d3daff83a5c29a0e48408aec62bee21e6504dc8bdc6252
+    .agents/skills/test-spec-doc/references/test-spec-conventions.md: sha256:0972840a281a70137611561cfc33e7ca55955b80fc4cd7b7ecdfbb6b000b9b7d
+    .agents/skills/test-spec-doc/scripts/new_test_spec.js: sha256:69d852f640b276b913cb0a58f0704137b22f53ada3ff0b73e28b8c8585e5eb0f
+    .claude/skills/adr-doc/SKILL.ja.md: sha256:eab702753a9af00a29bceb4136d2d150423ebbfd7b41ce905a631bba73a7cd5d
+    .claude/skills/adr-doc/SKILL.md: sha256:cf98c5b14dae681c44a654e02cd2ac4a7d12c46e0a3305a108019a823d0889cf
+    .claude/skills/adr-doc/assets/templates/madr-4-bare-minimal.ja.md: sha256:5e16bbfc72401ff4bdbaf3f7466f138b2e6315ebe492f7a8a4f788f933aafb98
+    .claude/skills/adr-doc/assets/templates/madr-4-bare-minimal.md: sha256:27d923743692403db521c10d105dbf46776a740adc1e947f7cb637492d284cfd
+    .claude/skills/adr-doc/assets/templates/madr-4-bare.ja.md: sha256:6f0c75e8a4fce93ef89b1e242dbe32e5a5382385fa565acab198581aae37864d
+    .claude/skills/adr-doc/assets/templates/madr-4-bare.md: sha256:b4f7705d37070c64e9aa4f298acb5ba4dbd43df481869bbf9446bf3d55e16d65
+    .claude/skills/adr-doc/assets/templates/madr-4-full.ja.md: sha256:ed88fab18bc194565a01dc824e528e6caaa8a968e2c7d2b15146d9f162f17e73
+    .claude/skills/adr-doc/assets/templates/madr-4-full.md: sha256:edb7c9c2c936953ab44c2de001d125f52090ee7f259e64142c9d6303f240001b
+    .claude/skills/adr-doc/assets/templates/madr-4-minimal.ja.md: sha256:848b398267d165e398700f0761d464e76cad800e048966b9523bc27c542b27a7
+    .claude/skills/adr-doc/assets/templates/madr-4-minimal.md: sha256:c587ca65ca884f24e0282eb64edfdf1b1199113e3f0ce00e879d9ed9cd97e78c
+    .claude/skills/adr-doc/references/adr-conventions.ja.md: sha256:462f4a3c7a0a047e4d98b54f76056744749b935e6e9308337cfdf5be6ab0c5e5
+    .claude/skills/adr-doc/references/adr-conventions.md: sha256:cfab51b5ddc5de267c1160e475af4c85a78530d55ec19a87be87c890aa6ded8d
+    .claude/skills/adr-doc/references/adr-maintenance.ja.md: sha256:32de7abd37e290920e801227186a2c13405233aa4c81d5cd9c4638c276a6152c
+    .claude/skills/adr-doc/references/adr-maintenance.md: sha256:f9d8365c007a534520ba527fc0c558cb44bf8d6082215069eaa94d172f4632ce
     .claude/skills/adr-doc/references/madr-4.ja.md: sha256:9b04e5ca0065e2aa280b1bded194f175c3cfe09a222032f5681e3a39eea8a570
     .claude/skills/adr-doc/references/madr-4.md: sha256:ee363982741c459fffc109c9062da2437a40db6eb5545921858bd341ef038918
     .claude/skills/adr-doc/references/review-checklist.ja.md: sha256:5f6272a83d2d97180dcd7e02d22d6dcdb1fff1bbd775343b3fc1cc90fbd33052
     .claude/skills/adr-doc/references/review-checklist.md: sha256:67e0929e72387f4b12f6dd15000c5bd1b6892b1eae0feb88c25a88893ac53afb
     .claude/skills/adr-doc/references/template-variants.ja.md: sha256:21428c60368966e5a4d68497fbdb8699a4bff4175adc6080322d1eea9d5f0e28
     .claude/skills/adr-doc/references/template-variants.md: sha256:72979d9dc2c62ab0493cbacb87c18429e3b1221e4e6c5355e3800839ea82e246
-    .claude/skills/adr-doc/scripts/audit_adr.js: sha256:f82b2eb34d717a4621f34ec24787623e3fb63813152613b4bd0894f1fecf8316
-    .claude/skills/adr-doc/scripts/check_code_links.js: sha256:5e70f5d9ec8693a78851db9f42c22117db1f4916eff9b01f1339c14cc5858c6c
-    .claude/skills/adr-doc/scripts/list_adrs.js: sha256:e40b2dba240d337ec2922c4ea5ffc337d83f83618a528f60bccb3a3e65e0a6df
-    .claude/skills/adr-doc/scripts/migrate_report.js: sha256:8514af8f20deeb948b5b24e0b5f0093c0fb7ccc4b1fed28bd97fc87c2522c31e
-    .claude/skills/adr-doc/scripts/new_adr.js: sha256:0fabeafebd15b6979a20452e995ab5f1f1d817f897d2a83c02e354f365d43a26
-    .claude/skills/adr-doc/scripts/relate_adr.js: sha256:ea35c0bfbd6138d3d8eef6a0c1aa17421eda004368ff271265c5ad4f1e8c127b
-    .claude/skills/adr-doc/scripts/review_adr.js: sha256:4aa5d13355bbe0748e3b76d2b900b2e1a1f7d9f3a60b2bc5b79b258732b4dbd5
-    .claude/skills/adr-doc/scripts/update_index.js: sha256:7f1d6d065a577e28b1673b10afa74d9371950fa180db53c760cf921d07581659
+    .claude/skills/adr-doc/scripts/audit_adr.js: sha256:e41c6c2cc7a77def02ac8dd29f772b90d9a691ec04dd9437e4d2a2a5592f1f31
+    .claude/skills/adr-doc/scripts/check_code_links.js: sha256:8dc84cffa9a431cdcc3227953d01d80a8e488d796757af1f70e9b01e70fec680
+    .claude/skills/adr-doc/scripts/list_adrs.js: sha256:999dfa7e74eda1eed460971cfc5c22e894d625b8937a22457fc228bbb4c9f85d
+    .claude/skills/adr-doc/scripts/migrate_report.js: sha256:57b73d442633791f6b2b8f948ca281045b4386965dba8a93526fc75adf59fd7d
+    .claude/skills/adr-doc/scripts/new_adr.js: sha256:0cc42db8867be503aaadb44210121cc974cc692948c3019db01702b8b02d530d
+    .claude/skills/adr-doc/scripts/relate_adr.js: sha256:397f34d7eb9ca3c0fac05ac002623a43f74d51d50615550dcf81ee072a134666
+    .claude/skills/adr-doc/scripts/review_adr.js: sha256:f0f069bdd6a9ea886b6ba21e91d513cb837f94bc67119f4e6381c50802b62ca2
+    .claude/skills/adr-doc/scripts/update_index.js: sha256:fcef2d960e9fa8697af14ebc55024ab64b2ef8f2d4b3ee0c2fdb99316af101c5
     .claude/skills/briefing-flow/SKILL.ja.md: sha256:98c8ff8c022fe2b3b10f461c797fbb421276f26e016c8f2c1f9e2d4fe6c50106
     .claude/skills/briefing-flow/SKILL.md: sha256:7dbd53606c4547bab56553fa81717c703f123ac6bcf7d676e9fa9fb5aeb32073
     .claude/skills/briefing-flow/assets/adapters/briefing-adapter.yaml: sha256:ee3098b9bd32361b4d94efb6cc43f0b6fc3f48bb82588f02c767d8053eee8717
@@ -565,79 +591,87 @@ dependencies:
     .claude/skills/briefing-flow/assets/templates/briefing-profile-template.md: sha256:5198c3450279a26eb403e57ecd80365c8a3ff05a263a76ae3578a719357a0885
     .claude/skills/deep-dive/SKILL.ja.md: sha256:3f02ec1c90448e9d33c41fa00360978d72cafff664a131f411671a06aa7f6afb
     .claude/skills/deep-dive/SKILL.md: sha256:17234c1d59d0233783dfc089006f87654c7ef80adf574665b75971d988733aa3
-    .claude/skills/design-doc/SKILL.ja.md: sha256:b55c07b90d70bce63aee8f9f78b0c05fcccc635862e1cb2ca329efc6f22bf1af
-    .claude/skills/design-doc/SKILL.md: sha256:3a1eb2ec788aabb0dcda26498ef2c3c51b16c5deee7061cd7e0e0cc1f804559a
+    .claude/skills/design-doc/SKILL.ja.md: sha256:858c0dc76a1c6f2949fb2ffb67fc911016c5221db9025fe7ebdfd54e445b4228
+    .claude/skills/design-doc/SKILL.md: sha256:3fac8de463e82a599c9b742c90ae29f0bd3a061e4476c173b6fd6b6778f64f37
     .claude/skills/design-doc/assets/templates/design.ja.md: sha256:c54ff9de5fdf22d70b313cf06ee773122ade08ba4f8a9729b622bd343b6f92b6
     .claude/skills/design-doc/assets/templates/design.md: sha256:6f0a275cc7d3e90bde9a224531667db04ef6adf5610c9e3e4f348c7c4d2d8221
-    .claude/skills/design-doc/references/design-conventions.ja.md: sha256:ec31467a81007d9f6c4a8feb9270a0f9baa157436b1424ad436c487a5097f7ec
-    .claude/skills/design-doc/references/design-conventions.md: sha256:9f5ab89dfd81412abdd0f10ad4a57322305bfd43f9265b3ce24bae27e91d4e18
-    .claude/skills/design-doc/scripts/new_design.js: sha256:0ed37383ab04d45b940916a6ef9a0a57d478554a6a6cda198fbcd07a9d0fbc82
-    .claude/skills/discovery-doc/SKILL.ja.md: sha256:ba87261fd73e3364db1fb8ee7f961db34fe5754b90c8400937172e9f8f6a88fd
-    .claude/skills/discovery-doc/SKILL.md: sha256:ce543d804020766e13199faa1d2d4c8786efc9a88e70c29c789040e1d4cc3b7d
+    .claude/skills/design-doc/references/design-conventions.ja.md: sha256:ccbe8f5d8a2e1a061b83d05a1d339bc502cfaf26c64fd3ae9f03b110b8f62349
+    .claude/skills/design-doc/references/design-conventions.md: sha256:167e687bb59a8899ab393802c6a04977a8cae192044e4dfcdf1e0c22fd3ee794
+    .claude/skills/design-doc/scripts/new_design.js: sha256:d798149075481125d69741a381eca183caf869fe40b49ca11072c00e528187a3
+    .claude/skills/discovery-doc/SKILL.ja.md: sha256:966868890540f9e1ae79b7bd00508c07794116d495159ba215076e0526dc456a
+    .claude/skills/discovery-doc/SKILL.md: sha256:a457fd35f9b7df9ffa4d8bc4f8d8af3e91dec9837a2e80a35b18cb72ac89ad89
     .claude/skills/discovery-doc/assets/templates/discovery.ja.md: sha256:38c9df54a44deb4858db23d07c925fd99d7ca7b862cb2bd9e51617dec1643fe7
     .claude/skills/discovery-doc/assets/templates/discovery.md: sha256:e5a8042875afbe390693eacf1540c136b069adcd44c9fe6b8548cdad5bcc7032
-    .claude/skills/discovery-doc/references/discovery-conventions.ja.md: sha256:24f946755a335f2676a723bc57e894776a0867554dc5ef7a0e92f77f517f792b
-    .claude/skills/discovery-doc/references/discovery-conventions.md: sha256:2fa126b6e574da1cce3b3aafb49c7c8a550ecb02c5d12a9405f676a53938150b
-    .claude/skills/discovery-doc/scripts/new_discovery.js: sha256:13dfbbd4cf4963d3b84b78f5c74bec3d6a218c2b60d646d0961bdd5f7a2efc20
-    .claude/skills/doc-driven-dev-graph/SKILL.ja.md: sha256:cca57aa22e6f599bf3c762f351a1aa3d6271e500f9558c8f4f90c9eaab5331b9
-    .claude/skills/doc-driven-dev-graph/SKILL.md: sha256:b7f475029e9bdb41177d93a2ae79a282b55919edbecf5fa3c6406e9212d73a8f
-    .claude/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml: sha256:3741ac0265551c1944d8d614826f43c4831e6bf74633819d132cf17f44014103
-    .claude/skills/doc-driven-dev-graph/references/execution-contract.ja.md: sha256:cbc053fcc67e395cf355b73d8ea32206862c753a20c822ec7f6a885510edebe9
-    .claude/skills/doc-driven-dev-graph/references/execution-contract.md: sha256:7734c9125d5c690a0d238c8539513d37d906927de51db18fbe3d181df03e62ad
-    .claude/skills/doc-driven-dev-graph/references/execution-outcome-contract.ja.md: sha256:89cea29775dbfcc0e5dc76a687f90d229629fd570cad6daa4f8d942cba75c35e
-    .claude/skills/doc-driven-dev-graph/references/execution-outcome-contract.md: sha256:fc6ce4bacbb5a3f136130d9b12b80377a71051723228c430c4f75aac1d31fc76
-    .claude/skills/doc-driven-dev-graph/references/graph-contract.ja.md: sha256:51f14dd67360baa50c6d42e9bd03852d2bda2d944b39119a099270e6496c38dd
-    .claude/skills/doc-driven-dev-graph/references/graph-contract.md: sha256:5561cd5bf6d5373d3b1f5ab73a530582317d99b9bdbb91c5913d8aeb8f488449
-    .claude/skills/doc-driven-dev-graph/references/graph-inspection.ja.md: sha256:2d3367e3b8723a798146e485a5ec8decfe33b3bca98ca39e7ccec7668ec3072c
-    .claude/skills/doc-driven-dev-graph/references/graph-inspection.md: sha256:9e3cd8d92191cea68e28e8b802c6e54ad3df486e80716a461b0f17863c9aba2d
+    .claude/skills/discovery-doc/references/discovery-conventions.ja.md: sha256:f7de6467ee14bac4ca365ab4fcbd176bfaf2a34607bed3258e469557e5bb77e6
+    .claude/skills/discovery-doc/references/discovery-conventions.md: sha256:933779705077b1934e943379aa6ca559d51a97ee8a3476667ffa6bd68581fae6
+    .claude/skills/discovery-doc/scripts/new_discovery.js: sha256:a2daef799f9c5f95f87eb8e03e6f6aad17b75443c349e557f7c82443278c2bb0
+    .claude/skills/doc-driven-dev-graph/SKILL.ja.md: sha256:98d71754cf8d853f2346186c628759078e1fa2029faecf7631852ddca525c051
+    .claude/skills/doc-driven-dev-graph/SKILL.md: sha256:71d50c74d2d549131f68e4274cb7e8f0b86b05932fefda30032c8de2341bdf01
+    .claude/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml: sha256:0772b917c6a15250e02b67b42bdeaabb247ed8bd943c4743a8075c3bd2dffd5f
+    .claude/skills/doc-driven-dev-graph/references/execution-contract.ja.md: sha256:bb1971a8d0e282f57702aeae5acf3c36d85a6bf998e1fa52998e7f0de87b794f
+    .claude/skills/doc-driven-dev-graph/references/execution-contract.md: sha256:ac681e4caa0f7ecdf2198fa6a50a437a63e040469838f853fe24198cd8e1a40a
+    .claude/skills/doc-driven-dev-graph/references/execution-outcome-contract.ja.md: sha256:4109f3faacf2a497d16b0f1461b7cb1fdfce1c9a34ffbbcc0af36a19116a480d
+    .claude/skills/doc-driven-dev-graph/references/execution-outcome-contract.md: sha256:d0532f2b83478ce78cce7d458dd3ba9e5be7a24cb5a9cf9f2bb6e82689288052
+    .claude/skills/doc-driven-dev-graph/references/graph-contract.ja.md: sha256:f26013ea7875345d674ec91b5f5a833d6faf4e8133708976e44d6173e56eab78
+    .claude/skills/doc-driven-dev-graph/references/graph-contract.md: sha256:6c5b2a473be39e204ef369cfa44a2c20dd025b9992e9f155050dfaccf4a91f9f
+    .claude/skills/doc-driven-dev-graph/references/graph-inspection.ja.md: sha256:5b79730179c0614cee280b488e2370bc0a2db42305d37c6d73a563f9f8563cd0
+    .claude/skills/doc-driven-dev-graph/references/graph-inspection.md: sha256:530c85362dbe1ebe6ac221fad02e308baac98eae3b02d4c24d334bcc445af1d1
     .claude/skills/doc-driven-dev-graph/references/graph-state.ja.md: sha256:4663d973ec0b0b245d1b80a929b179874fff9ec4070d4a0e21df4b4d15ee1b62
     .claude/skills/doc-driven-dev-graph/references/graph-state.md: sha256:8c101097abda3ba44dd1240e13dbae356dbf4cc76dfb99fc14f00ccefaf9567d
     .claude/skills/doc-driven-dev-graph/references/task-graph-contract.ja.md: sha256:397e4891a48641e485976e53e83eb162da0db15193742c16a90b7edf0b0b2ec0
     .claude/skills/doc-driven-dev-graph/references/task-graph-contract.md: sha256:fc88b0091ac2738f4536c2f3bcb9a392e0296c46f4b1ecb5eef137bdd0c90c43
     .claude/skills/doc-driven-dev-graph/scripts/build_task_graph.js: sha256:102ba9c5ecb6f36fde1661b888693932ed97972fa247c38a86ca92023264ac91
-    .claude/skills/doc-driven-dev-graph/scripts/inspect_graph.js: sha256:1ad4f083e4f439be0e6a7122558135fcb01669a072891fffb951161ef2000052
-    .claude/skills/doc-driven-dev-graph/scripts/migrate_docs.js: sha256:ecc0b8c9109d4ebb4d9e3cc7dbcd60e1e38b3b80e33ee30f09a5202570105c9d
-    .claude/skills/doc-driven-dev-graph/scripts/route_graph.js: sha256:a5e8005fc77da736e5ebfb3f1aac675a6c06010be5784eb083f62539611ca52d
-    .claude/skills/doc-driven-dev-graph/scripts/scaffold_docs.js: sha256:9b7d73730506884130b3e870f7ef04853da2f6b772b57a4d119663882f203736
-    .claude/skills/doc-status/SKILL.ja.md: sha256:678b7a29233ac833a3b889d80500328d6b1d1ef34a0b072c3dc0f365eda8c62b
-    .claude/skills/doc-status/SKILL.md: sha256:098abad9235ebfe6dfdfabfd1ab9bd98380eda0845aa1477edde800154fce7d4
-    .claude/skills/doc-status/scripts/audit_docs.js: sha256:a35333eb54c9cd5666a7a3371591a89ed588a5f0db4607280d79c62bbcf6cd09
-    .claude/skills/doc-status/scripts/list_docs.js: sha256:78195017acda65ebd3fabb8a734563a49b703a7dd47b3a179bf82e95e7afefb4
-    .claude/skills/idea-doc/SKILL.ja.md: sha256:fb7bc524115eee8872b5cfe7943ff3483f3db0371a8e708f6d319263bd8aebcf
-    .claude/skills/idea-doc/SKILL.md: sha256:275b98998b631763ab21abdcd32f026336327a54b56638e542e932689afdcf45
+    .claude/skills/doc-driven-dev-graph/scripts/inspect_graph.js: sha256:719ee95f17637b9d7130b5b66a2644f4916b1c0da717208b9ffdba9dbd0863d2
+    .claude/skills/doc-driven-dev-graph/scripts/migrate_docs.js: sha256:cca4e02a971a271cf1fa5b34e2b913ff5b5eac7f30b5a16a54a00938bda090e9
+    .claude/skills/doc-driven-dev-graph/scripts/migrate_ids.js: sha256:511ab670a6a27c8bf59baffeed1cfab1dd902cb0202bcc413397dc5b191d0058
+    .claude/skills/doc-driven-dev-graph/scripts/route_graph.js: sha256:d314fc0b2ab65ce47ddab66ffaa1def69bc736f191bdd8c1c8b001fa19d578ce
+    .claude/skills/doc-driven-dev-graph/scripts/scaffold_docs.js: sha256:fc1416b29cb4e1518dbaed42b544d3ce097fa4cb5bf5bd2f8155e9163963c9a3
+    .claude/skills/doc-maintenance/SKILL.ja.md: sha256:3e938aebe756d577f9de7060a4aab1fed4600f4ae5f660cfba311f2ab9c9b0d1
+    .claude/skills/doc-maintenance/SKILL.md: sha256:8c909e2b48656dcadd213cd71d9dc469515000189cbc6f98867e6d0837ef0556
+    .claude/skills/doc-maintenance/scripts/doc_maintenance.js: sha256:00a98c4c640f620e028d1018d3d2db78c8b5350ea91126030e9664f7660d0a0f
+    .claude/skills/doc-maintenance/scripts/migrate_docs.js: sha256:77a7e135e57ff53779754f0ae296903aedf0294bc5267deaf2c39d98341989e5
+    .claude/skills/doc-maintenance/scripts/migrate_ids.js: sha256:a0dd9ad59ab52f3fb9175b68dbc79b7c10a37ad070f18fcc98e4649e3e59ef45
+    .claude/skills/doc-maintenance/scripts/scaffold_docs.js: sha256:368cca1243b663d50ca3cd8b34355179ebf3cf0636b24fc5794030e86efe4652
+    .claude/skills/doc-status/SKILL.ja.md: sha256:d24a66e4d4fedc9232a22b7e767152076f4329603d8edf5671fe435a96f1e170
+    .claude/skills/doc-status/SKILL.md: sha256:92c08fdf0193bfb69ba571d6b16f0d51a2ab3da4eea2c920355a2085db3ecc6f
+    .claude/skills/doc-status/scripts/audit_docs.js: sha256:3cc67c0cd1dedbd740a817bae44067899df37348c0e8c89374db6ca236951cf7
+    .claude/skills/doc-status/scripts/doc_status.js: sha256:7ba74c558c43872e4131dc703e8a3cd643a494ff817605ee7e0e80bc4287a59a
+    .claude/skills/doc-status/scripts/list_docs.js: sha256:6ab9e44409bdb9550da2087ba1fe102b2e483a057128b350c4d8ca844c579268
+    .claude/skills/idea-doc/SKILL.ja.md: sha256:f147c5c559c23c67cfe8c1c28423c430fa8d9c3a01e6124966bc59599e87e302
+    .claude/skills/idea-doc/SKILL.md: sha256:8e06b42de3314ac4b3a2cb48a1e99154f5435b71c596a4d03f69ee4be22cb3fb
     .claude/skills/idea-doc/assets/templates/idea.ja.md: sha256:a23f1285e5f18c9cc6cc46cf731566658eb88235224df046da8a6a82e1e03a60
     .claude/skills/idea-doc/assets/templates/idea.md: sha256:65d4b3afff4070d0cb4b3da3167c16f647087f29f525b18a1db4acffb1c5042c
-    .claude/skills/idea-doc/references/idea-conventions.ja.md: sha256:9f5469f299b65954ba114a58c50eb238820f2ac9a6b8a66c4c9eb46beba62df2
-    .claude/skills/idea-doc/references/idea-conventions.md: sha256:98db0d9f386dac9c91e718a45488da615c52a5dd1b75b53f89480a52c57e082a
-    .claude/skills/idea-doc/scripts/new_idea.js: sha256:abdc44ff4465eb0ffdb62518c398574827f078f55c808f21e9dfdf5c3eb5c704
-    .claude/skills/impl-doc/SKILL.ja.md: sha256:99359506791cb2e84d89975a9ca8056c433465e4c697fd9e5708576b312ae3fc
-    .claude/skills/impl-doc/SKILL.md: sha256:4b79189cee11db50106fa86abca5fdd58f95163e500a5b9aa650195a9c4b1f8a
+    .claude/skills/idea-doc/references/idea-conventions.ja.md: sha256:eb5802e39b6081207e7f0dcfc9dc2d99d41337770ef68e9e8f11d86b9db03bd6
+    .claude/skills/idea-doc/references/idea-conventions.md: sha256:bbca87ef26460aa229c74718f2b0f59af87b763fa67ab6a1503b3f3f1a91d7a5
+    .claude/skills/idea-doc/scripts/new_idea.js: sha256:8ecf743f720207cfd22fd3b81f2693ef5dd5440c27319554a842464f7fc1fd76
+    .claude/skills/impl-doc/SKILL.ja.md: sha256:f428a5bac572182bba9f90424e7483f56a7b670a8c7657501bdf31b9ddd0c049
+    .claude/skills/impl-doc/SKILL.md: sha256:e93179962055816b9065cc54bb329179df470392905706a9ebc92ef354fe20f3
     .claude/skills/impl-doc/assets/templates/experiment-log.ja.jsonl: sha256:78afe13493676a9f8cacdb89525ff93751f893cd77d1544ee97db716d52f24f7
     .claude/skills/impl-doc/assets/templates/experiment-log.jsonl: sha256:78afe13493676a9f8cacdb89525ff93751f893cd77d1544ee97db716d52f24f7
     .claude/skills/impl-doc/assets/templates/implementation-record.ja.md: sha256:0748df37a521455f3fb8b396dff0ebd2e6198da77ab1d2bb37877ee561e9ba93
     .claude/skills/impl-doc/assets/templates/implementation-record.md: sha256:5d91b133cfaa9b8051fbb2f903a7b4907aaf7ce185c213b9a7bdd5c67828ed60
-    .claude/skills/impl-doc/references/impl-conventions.ja.md: sha256:963769c53d393ea966b9f604fb9b89fd21857794b702690de05393f0255e137b
-    .claude/skills/impl-doc/references/impl-conventions.md: sha256:5759af64ff4d2d5ec5aca16b3401f8c370eadf6e114b14409cc5edc98702298a
-    .claude/skills/impl-doc/scripts/append_experiment_event.js: sha256:dcd307540f5888069f4a001c920d61f86e6f34311428d925fe21251f12123441
-    .claude/skills/impl-doc/scripts/audit_experiment_log.js: sha256:a28eb28e70ab75a8987128c009a6f8344d4b344e5babbc017e5699dfd0f027a6
-    .claude/skills/impl-doc/scripts/audit_impl_record.js: sha256:e232d1862b866d011e5fe00f719dac8f1a762b7ed656f36a4c53e5e901f84177
-    .claude/skills/impl-doc/scripts/edit_experiment_log.js: sha256:f9e8e01325e8cd8f92d3919b0fb3ad87015208629d653e3a339d5ad5e941295c
-    .claude/skills/impl-doc/scripts/new_experiment_log.js: sha256:64565b58e0e359909eace0f047e4981f0f711dcd05f6f40e005e6bb51d5e787a
-    .claude/skills/impl-doc/scripts/new_impl_record.js: sha256:6ae2b02cda0d492e7cf2fb461beaf9df621be08f1b1e9001a2737d6bc32e1d87
-    .claude/skills/implementation-flow/SKILL.ja.md: sha256:6d4dd260eec7df3d855c8cfd5ab041ff9f56284f083d8a493335c9c66f204754
-    .claude/skills/implementation-flow/SKILL.md: sha256:bb056e2e5a9c48d0296f1ab7ff10d0b4e7a87b09794a2ea0424504fb8cfb48b3
+    .claude/skills/impl-doc/references/impl-conventions.ja.md: sha256:33e0c55eb732b9083240e43e2a560cf8c0b9c9b5bc4260188a1b288a809a829d
+    .claude/skills/impl-doc/references/impl-conventions.md: sha256:8e05d2fb61c8bc520afe202ed3c6aea76120b206268dc0cc81a37eacc8c24a1d
+    .claude/skills/impl-doc/scripts/append_experiment_event.js: sha256:63f13c1bf9f02219e4c27ea6e5ffeed28b1857ce447b4eb1c9d7eca05d167817
+    .claude/skills/impl-doc/scripts/audit_experiment_log.js: sha256:a54c2d83b4ac93b03292511b5ac144d89c96dcb729cbfcfb96120778a582441b
+    .claude/skills/impl-doc/scripts/audit_impl_record.js: sha256:29d119e01127aabf99f9322e32a8b43389ce5ae2e50d7bbd74df5e00375910ab
+    .claude/skills/impl-doc/scripts/edit_experiment_log.js: sha256:ff5f8b3ca5f146a3c59a138ac9f70bfdef718a35ecabcb1bad564bd2d38344e3
+    .claude/skills/impl-doc/scripts/new_experiment_log.js: sha256:435192b1061ff30f14215f267f95fb2929220e379edc5355e1fcb4cb073adad6
+    .claude/skills/impl-doc/scripts/new_impl_record.js: sha256:cd4cce0ac15d8dcd3a78798bcb1758fdda66fe0948f7cccc5b3262388dd988f7
+    .claude/skills/implementation-flow/SKILL.ja.md: sha256:67e14e27419ee295a91c4f766c0d1740317c4bdc4e857fea7e79ad10ccaff866
+    .claude/skills/implementation-flow/SKILL.md: sha256:0e64a7961dc976544d3d5d26eb25d31287513841c727e1f02e1e1d4b458aa62c
     .claude/skills/implementation-flow/assets/adapters/implementation-adapter.yaml: sha256:60cdfdd5ba0767f25924596448b99f57fcdc30a5c5c9f8f42903cdd75b437f72
     .claude/skills/implementation-flow/assets/templates/implementation-profile-template.ja.md: sha256:0eb838427ec6d434fdcb338fcbe2b1c5499fdf0c0a896a2446a0e305b16c8b11
     .claude/skills/implementation-flow/assets/templates/implementation-profile-template.md: sha256:bdfde6e7180e9ea3f8993e0286d2847f58afdc85eb0bf5f4c6385ac0820d0314
     .claude/skills/implementation-flow/references/review-gate-contract.ja.md: sha256:2bcf398156b2f6778f131fc0c407ccff415626680f7bd232d168e0b4520cc49a
     .claude/skills/implementation-flow/references/review-gate-contract.md: sha256:b09a1565f1b27c6cd23686bc13de12c38b6499bc399f915f56b88a3d9bd7522e
-    .claude/skills/plan-doc/SKILL.ja.md: sha256:c2a53d85b4dbd77629a816dd73ba78a24c2d3f4f2b5c08a9d97b1e16cad2b146
-    .claude/skills/plan-doc/SKILL.md: sha256:cd64487e9902b23731e550bd72850ebd72fe85d6094aa002c0fa6354be60a903
+    .claude/skills/plan-doc/SKILL.ja.md: sha256:23422c10cf6d4c11cdfa05768ed45300a9dee3dc517c2fce3ce734772f585562
+    .claude/skills/plan-doc/SKILL.md: sha256:1e18268697721a5f0346d6e036e048032f328b9e953ca524c40a938c5d4d157f
     .claude/skills/plan-doc/assets/templates/plan.ja.md: sha256:e8a4ef95f158fc8c54b78c5d5bffb4f3f0713a05ee3801ed8ce40060331a3248
     .claude/skills/plan-doc/assets/templates/plan.md: sha256:c930777be141d52090f2b37992d54a3f9c367be192b401233e440b500332bd19
-    .claude/skills/plan-doc/references/plan-conventions.ja.md: sha256:307eb2b56ba3fbe236fc2ed265bcc6b693db70260c48727953d4cc98502610f5
-    .claude/skills/plan-doc/references/plan-conventions.md: sha256:9dabae512f4e97f864d2d1a50a6bb66f08c7d3ef4a4f1faef29bafb6734a1223
-    .claude/skills/plan-doc/scripts/new_plan.js: sha256:dcabe1800932146e8a0d7d343163134c0b2453733d3bdadcd05718067a7e8319
+    .claude/skills/plan-doc/references/plan-conventions.ja.md: sha256:8490d34a98ca5519feed6aceeed86e1e53aa8bba3b43bb019d1bca7de2f5e9f4
+    .claude/skills/plan-doc/references/plan-conventions.md: sha256:82371f4a345f289782d7128d11eba694b39a94a9417ddb1a244ecb7fcc205e0f
+    .claude/skills/plan-doc/scripts/new_plan.js: sha256:ad7e01e4df296ff0443805ab7d5ade44927cec6efadd019ba5d66b273de3ce2f
     .claude/skills/planning-flow/SKILL.ja.md: sha256:5d019e2038545c2757b97b91e61be3d4a80cb52511f92aa31edc32f2c3133405
     .claude/skills/planning-flow/SKILL.md: sha256:e6accf4a48b5e9c323c27498fbc013a901ce487d3164cc720d9aad285df6db5a
     .claude/skills/skill-discovery-protocol/SKILL.ja.md: sha256:4fcdff59d5ad8a40bf5db0760c801f8f26dfbb915f7aaf99b45860245a383283
@@ -667,27 +701,27 @@ dependencies:
     .claude/skills/skill-discovery-protocol/scripts/scan.js: sha256:b2979133ebb00e1af5cf8590fcf5560f920d285e59cb46a34a70fd1c68ddcec7
     .claude/skills/skill-discovery-protocol/scripts/sdp.js: sha256:79a45fb26f81cacbaa1c0f91209576ce7ca4bb062fb30b2d7e94b60983afc5a3
     .claude/skills/skill-discovery-protocol/scripts/validate.js: sha256:c835d5796111ddc29eb3bf04da3d049953eea17edfc702974c67f1ad9322ced0
-    .claude/skills/spec-doc/SKILL.ja.md: sha256:76c77481889348fcb9cac3659233629fa3ef8ad7d2f88186a775121b2cb03549
-    .claude/skills/spec-doc/SKILL.md: sha256:ca793240e19d36d474cbf1bae80f6de49c65aecf58ec1b2d2b96ce0bb463f7bf
+    .claude/skills/spec-doc/SKILL.ja.md: sha256:3a2b411e7b2dd08ad62b7448764c00226c74c100cfb27334216eda61aae66af2
+    .claude/skills/spec-doc/SKILL.md: sha256:88e296ea6cee91331a6bd3004e91f99383f000b0643207b6e153a8082575e169
     .claude/skills/spec-doc/assets/templates/spec.ja.md: sha256:2ca09eb8cc9b3bb0572df7e7b3fea1e2325a6d783e3c7a9eaeb1ed59ed737cf5
     .claude/skills/spec-doc/assets/templates/spec.md: sha256:85fdbb971c5032c8c3b467f59a4dcb688406bb722186e18e5063718c989ecaf7
-    .claude/skills/spec-doc/references/spec-conventions.ja.md: sha256:f23fb9ec05a3afa100e26be0c31e75a87596a88e8e8180bedd1b31c94c7da16d
-    .claude/skills/spec-doc/references/spec-conventions.md: sha256:63e589f74661c7142358821c0989d4b09d8d9659976c376242c3fe35b466c013
-    .claude/skills/spec-doc/scripts/new_spec.js: sha256:e80c21174a89a8b16baa09a13611bea78e0c8bfa747d034100b3c21a2dbdfb47
-    .claude/skills/task-doc/SKILL.ja.md: sha256:0c51c6eb6320e7f5cd6d5a0153e7112a1e13995e97eb167e8889097e95de1295
-    .claude/skills/task-doc/SKILL.md: sha256:769649095be290dbc1e7638edd0bf09bfa5a4efa417a6c8cea4c3dc1c7113c0d
+    .claude/skills/spec-doc/references/spec-conventions.ja.md: sha256:3be9c026e1fa7099ef18c403707a199cf1a3c4949a63fe46e2c29230ab4f2e52
+    .claude/skills/spec-doc/references/spec-conventions.md: sha256:40b3af0c36d65c8336be45e9e71e5037d2587beba4f1dc6c0658ea35a30a44ec
+    .claude/skills/spec-doc/scripts/new_spec.js: sha256:492a8efaf2ca8fda3131ba54cd8e175a410057b36ddb721021baac2fcf40e70f
+    .claude/skills/task-doc/SKILL.ja.md: sha256:13e411b8910b3b84f0870993b387b13e5fd212344e3e3cefb50166577c075df9
+    .claude/skills/task-doc/SKILL.md: sha256:c28a552964948089ab6426f714802c2003f69ba6570caa80588ca73565cdffc0
     .claude/skills/task-doc/assets/templates/task.ja.md: sha256:f79c17e060b0ed1cbf3dd2828cb37f39c0980e75e958f5f928a4c0c38b48f3d4
     .claude/skills/task-doc/assets/templates/task.md: sha256:d86a3d65ff5a413faeaa5482a1635aaf7e78bae137c941b6c0e7d5302fdf9e0c
-    .claude/skills/task-doc/references/task-conventions.ja.md: sha256:443e1f4314c42ce9daf869b566f7f5895b7794fe61789fea22ffcf4cdef55041
-    .claude/skills/task-doc/references/task-conventions.md: sha256:00ff52ad1c96756b80d2a979dbec74119208629703a8543745e318c44b7c670f
-    .claude/skills/task-doc/scripts/new_task.js: sha256:598ce29b293b0d7274795a39a8b355b0af1b004e903c609dbc8ff081766c56a9
-    .claude/skills/test-spec-doc/SKILL.ja.md: sha256:37e7559d8cd99a1be4f370c4355e806254337bbc0dd02b06b475770cfab07c3e
-    .claude/skills/test-spec-doc/SKILL.md: sha256:ee007fdb81fbecb884a3b8fcddb2e08680185df99fcf95109cc17025ad94a006
+    .claude/skills/task-doc/references/task-conventions.ja.md: sha256:2f2221ccd7192317aeecdf8863b8906607a9ea6393d46875da0e4bb86c3dab19
+    .claude/skills/task-doc/references/task-conventions.md: sha256:bf82dd21b0ddab654e20bdd31b278e461718d82295790b814966051ad422c239
+    .claude/skills/task-doc/scripts/new_task.js: sha256:09bc2e98768c07c4fee3ca353bf635157686e8e8b8fdcaef1f73f42035d32b57
+    .claude/skills/test-spec-doc/SKILL.ja.md: sha256:0b00e27146b4a73363f074bef5bc14d2ff3c2f85a9ad5c20114709ffaee81e42
+    .claude/skills/test-spec-doc/SKILL.md: sha256:b2d6ad6cad2a6bdbc1fa5c3f237cb53dfe688128ada40eaaa0922eceaf60621e
     .claude/skills/test-spec-doc/assets/templates/test-spec.ja.md: sha256:b91cdfb8ab4b5196c4fcb4b45a846cf8cb6f2c73e2ce88775569cadc03b0757c
     .claude/skills/test-spec-doc/assets/templates/test-spec.md: sha256:79be3acf026806c00287f34e4f5ed848d5697a6653a4ad22c716ccc93f5723b0
-    .claude/skills/test-spec-doc/references/test-spec-conventions.ja.md: sha256:18e1fafeb6fcc55d95ce7f290481dfb0e72b22134f9d788b18a1d62c4286cb2f
-    .claude/skills/test-spec-doc/references/test-spec-conventions.md: sha256:1cf57301a3153b7b25b8bf748091cb1e99cab84a35cd59da61624d3c890c9b29
-    .claude/skills/test-spec-doc/scripts/new_test_spec.js: sha256:2100c083620635f97c435a443fbf64c9eccfb6d956d3cf2abc0273924862b549
+    .claude/skills/test-spec-doc/references/test-spec-conventions.ja.md: sha256:1ce8adffecacad2122d3daff83a5c29a0e48408aec62bee21e6504dc8bdc6252
+    .claude/skills/test-spec-doc/references/test-spec-conventions.md: sha256:0972840a281a70137611561cfc33e7ca55955b80fc4cd7b7ecdfbb6b000b9b7d
+    .claude/skills/test-spec-doc/scripts/new_test_spec.js: sha256:69d852f640b276b913cb0a58f0704137b22f53ada3ff0b73e28b8c8585e5eb0f
   source: local
   local_path: ./packages/doc-driven-dev
   is_dev: true
@@ -728,26 +762,26 @@ dependencies:
   - .claude/skills/github-issue-handoff/references/responder-guide.ja.md
   - .claude/skills/github-issue-handoff/references/responder-guide.md
   deployed_file_hashes:
-    .agents/skills/github-issue-handoff/SKILL.ja.md: sha256:d1459b3924f011a4fec4dc97cab864cc2c10bbaa2047d43c262b44e597be5807
-    .agents/skills/github-issue-handoff/SKILL.md: sha256:c55a7a1423c938f89df6191e6b38b2ae446add09ea70a29e2dbdfb0bbbb9adcc
-    .agents/skills/github-issue-handoff/assets/templates/responder-prompt.ja.md: sha256:9ce2423ab3f61682d95d221e43e2c9b15d412100be3940a7f171ba48bca5ac58
-    .agents/skills/github-issue-handoff/assets/templates/responder-prompt.md: sha256:74e0bfbb58daa2f733566e61e43609a0892f99780eeab2fde50335044a0fa510
-    .agents/skills/github-issue-handoff/references/issue-format.ja.md: sha256:4eedb4443ae62dcbacd2624f493e87217d9f555f440a8bc942baabcd832355c2
-    .agents/skills/github-issue-handoff/references/issue-format.md: sha256:942057348dd001fbcfe6adc47ba48648f384a9173fce772089580574a0b34607
-    .agents/skills/github-issue-handoff/references/protocol.ja.md: sha256:515d50fd9634151c661d7e3523dd6dbedddce802e3fc4599c3d8c902f8565e12
-    .agents/skills/github-issue-handoff/references/protocol.md: sha256:402ef55ce673ee870097160e8e92d3fc465cb300f17ef6e90895e09e1494e366
-    .agents/skills/github-issue-handoff/references/responder-guide.ja.md: sha256:3b4f8e1e6caad51be60d42c4a4ac0d71bb5750b04151e00a7b98f7b726d4ed43
-    .agents/skills/github-issue-handoff/references/responder-guide.md: sha256:d52edde39b526dfbd079c16b905bc59125f281d0469ed00be9b98077807db87b
-    .claude/skills/github-issue-handoff/SKILL.ja.md: sha256:d1459b3924f011a4fec4dc97cab864cc2c10bbaa2047d43c262b44e597be5807
-    .claude/skills/github-issue-handoff/SKILL.md: sha256:c55a7a1423c938f89df6191e6b38b2ae446add09ea70a29e2dbdfb0bbbb9adcc
-    .claude/skills/github-issue-handoff/assets/templates/responder-prompt.ja.md: sha256:9ce2423ab3f61682d95d221e43e2c9b15d412100be3940a7f171ba48bca5ac58
-    .claude/skills/github-issue-handoff/assets/templates/responder-prompt.md: sha256:74e0bfbb58daa2f733566e61e43609a0892f99780eeab2fde50335044a0fa510
-    .claude/skills/github-issue-handoff/references/issue-format.ja.md: sha256:4eedb4443ae62dcbacd2624f493e87217d9f555f440a8bc942baabcd832355c2
-    .claude/skills/github-issue-handoff/references/issue-format.md: sha256:942057348dd001fbcfe6adc47ba48648f384a9173fce772089580574a0b34607
-    .claude/skills/github-issue-handoff/references/protocol.ja.md: sha256:515d50fd9634151c661d7e3523dd6dbedddce802e3fc4599c3d8c902f8565e12
-    .claude/skills/github-issue-handoff/references/protocol.md: sha256:402ef55ce673ee870097160e8e92d3fc465cb300f17ef6e90895e09e1494e366
-    .claude/skills/github-issue-handoff/references/responder-guide.ja.md: sha256:3b4f8e1e6caad51be60d42c4a4ac0d71bb5750b04151e00a7b98f7b726d4ed43
-    .claude/skills/github-issue-handoff/references/responder-guide.md: sha256:d52edde39b526dfbd079c16b905bc59125f281d0469ed00be9b98077807db87b
+    .agents/skills/github-issue-handoff/SKILL.ja.md: sha256:ce5ede7db7579858173f0d7740d94c8d7fb3221c7b86d47437e26a5978c35f0f
+    .agents/skills/github-issue-handoff/SKILL.md: sha256:193268195ee27e6c499d57c9aa01e501b37a58491b0069549c149eb6ba97e90e
+    .agents/skills/github-issue-handoff/assets/templates/responder-prompt.ja.md: sha256:60f47bbe529aff9b8554011faa503d6555ba14e49d68cafe52df36a9501e5b2e
+    .agents/skills/github-issue-handoff/assets/templates/responder-prompt.md: sha256:a3ae5597a233d1d0f497acbe681a156552886983008947b990eaa0acaef323a4
+    .agents/skills/github-issue-handoff/references/issue-format.ja.md: sha256:e6d77739a5a775294f656c5c5ee11acdb5c781fa5b86eb24a344e3e4ab0645d5
+    .agents/skills/github-issue-handoff/references/issue-format.md: sha256:f0087e5ef5d72af251f3919fe506eb5dbebcb0251a2145d8a313634eb142baad
+    .agents/skills/github-issue-handoff/references/protocol.ja.md: sha256:2f69d37e80550785729359c816eaa59ee753824a572e2727d2a7c5ca60248d3b
+    .agents/skills/github-issue-handoff/references/protocol.md: sha256:7bef854e033610446b50110281cf93c3f6cbcc6241b3df86d403c857be4624f7
+    .agents/skills/github-issue-handoff/references/responder-guide.ja.md: sha256:6207b4a27595468cfb9eb4b5314d39de5fb3b729f84130a811aa6a44584a779e
+    .agents/skills/github-issue-handoff/references/responder-guide.md: sha256:fe07b07b24b7087403e8d86b1b8f83792f5b41427f8ac4cb6f150ef16f24eab4
+    .claude/skills/github-issue-handoff/SKILL.ja.md: sha256:ce5ede7db7579858173f0d7740d94c8d7fb3221c7b86d47437e26a5978c35f0f
+    .claude/skills/github-issue-handoff/SKILL.md: sha256:193268195ee27e6c499d57c9aa01e501b37a58491b0069549c149eb6ba97e90e
+    .claude/skills/github-issue-handoff/assets/templates/responder-prompt.ja.md: sha256:60f47bbe529aff9b8554011faa503d6555ba14e49d68cafe52df36a9501e5b2e
+    .claude/skills/github-issue-handoff/assets/templates/responder-prompt.md: sha256:a3ae5597a233d1d0f497acbe681a156552886983008947b990eaa0acaef323a4
+    .claude/skills/github-issue-handoff/references/issue-format.ja.md: sha256:e6d77739a5a775294f656c5c5ee11acdb5c781fa5b86eb24a344e3e4ab0645d5
+    .claude/skills/github-issue-handoff/references/issue-format.md: sha256:f0087e5ef5d72af251f3919fe506eb5dbebcb0251a2145d8a313634eb142baad
+    .claude/skills/github-issue-handoff/references/protocol.ja.md: sha256:2f69d37e80550785729359c816eaa59ee753824a572e2727d2a7c5ca60248d3b
+    .claude/skills/github-issue-handoff/references/protocol.md: sha256:7bef854e033610446b50110281cf93c3f6cbcc6241b3df86d403c857be4624f7
+    .claude/skills/github-issue-handoff/references/responder-guide.ja.md: sha256:6207b4a27595468cfb9eb4b5314d39de5fb3b729f84130a811aa6a44584a779e
+    .claude/skills/github-issue-handoff/references/responder-guide.md: sha256:fe07b07b24b7087403e8d86b1b8f83792f5b41427f8ac4cb6f150ef16f24eab4
   source: local
   local_path: ./packages/github-issue-handoff
   is_dev: true
@@ -1018,29 +1052,57 @@ dependencies:
 - repo_url: github/awesome-copilot
   name: context-engineering
   host: github.com
-  resolved_commit: 8ae5a99109124c22288eee0254da61741e44d12a
-  resolved_ref: main
+  resolved_commit: b4948a9450659ff5afcbf8c8d35866c13f87d372
+  resolved_ref: b4948a9450659ff5afcbf8c8d35866c13f87d372
   version: 1.0.0
   virtual_path: plugins/context-engineering
   is_virtual: true
   depth: 2
   resolved_by: _local/agent-intelligence
   package_type: marketplace_plugin
-  content_hash: sha256:733fe975deba5c3c792d418083e43fba1d30de1b5f223552d04050e28b3ecb2b
+  deployed_files:
+  - .agents/skills/context-map
+  - .agents/skills/context-map/SKILL.md
+  - .agents/skills/refactor-plan
+  - .agents/skills/refactor-plan/SKILL.md
+  - .agents/skills/what-context-needed
+  - .agents/skills/what-context-needed/SKILL.md
+  - .claude/skills/context-map
+  - .claude/skills/context-map/SKILL.md
+  - .claude/skills/refactor-plan
+  - .claude/skills/refactor-plan/SKILL.md
+  - .claude/skills/what-context-needed
+  - .claude/skills/what-context-needed/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/context-map/SKILL.md: sha256:af0037b06a0b56a5014e16a32538ac419725638659428b7e229ed5bbb9087a37
+    .agents/skills/refactor-plan/SKILL.md: sha256:93741df0042a15c01ae8589e72014dcf53c557c11ca1df69c29737534c312c29
+    .agents/skills/what-context-needed/SKILL.md: sha256:65ed7445bf561a5e5199ac77478d2691c05019e0dc32fdddc23db9e45bd9d135
+    .claude/skills/context-map/SKILL.md: sha256:af0037b06a0b56a5014e16a32538ac419725638659428b7e229ed5bbb9087a37
+    .claude/skills/refactor-plan/SKILL.md: sha256:93741df0042a15c01ae8589e72014dcf53c557c11ca1df69c29737534c312c29
+    .claude/skills/what-context-needed/SKILL.md: sha256:65ed7445bf561a5e5199ac77478d2691c05019e0dc32fdddc23db9e45bd9d135
+  content_hash: sha256:90b878c32fbdaa6563dd5bb16252d1389459c94f42311e102f218690bfcd01c2
   is_dev: true
   declared_license: MIT
 - repo_url: github/awesome-copilot
   name: security-best-practices
   host: github.com
-  resolved_commit: 8ae5a99109124c22288eee0254da61741e44d12a
-  resolved_ref: main
+  resolved_commit: b4948a9450659ff5afcbf8c8d35866c13f87d372
+  resolved_ref: b4948a9450659ff5afcbf8c8d35866c13f87d372
   version: 1.0.0
   virtual_path: plugins/security-best-practices
   is_virtual: true
   depth: 2
   resolved_by: _local/security-governance
   package_type: marketplace_plugin
-  content_hash: sha256:a3112b4e270a51452f30326bedbcc0a30fb9cecd2beff72c5018e7a582616030
+  deployed_files:
+  - .agents/skills/ai-prompt-engineering-safety-review
+  - .agents/skills/ai-prompt-engineering-safety-review/SKILL.md
+  - .claude/skills/ai-prompt-engineering-safety-review
+  - .claude/skills/ai-prompt-engineering-safety-review/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/ai-prompt-engineering-safety-review/SKILL.md: sha256:8ff9d227e96fb3364b9b2e0bd28d73ef0e49cc33fa832dfe8c87d79ddef9a7a7
+    .claude/skills/ai-prompt-engineering-safety-review/SKILL.md: sha256:8ff9d227e96fb3364b9b2e0bd28d73ef0e49cc33fa832dfe8c87d79ddef9a7a7
+  content_hash: sha256:df7ebe3902e3fd030f585f8c1ad1e46b620474148c0af1d50af03c33b7484f89
   is_dev: true
   declared_license: MIT
 - repo_url: github/awesome-copilot
@@ -1992,7 +2054,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:57661376b7a113eef57c128134d923ba7a9ca16d96779b9fc2050f9af8c7f968
+  content_hash: sha256:eab702753a9af00a29bceb4136d2d150423ebbfd7b41ce905a631bba73a7cd5d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/SKILL.md
@@ -2001,7 +2063,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:2e4f29e8104a8579075b3fef49ad4b9c8f4af7afcc3b7387f54b0851a0eeebc3
+  content_hash: sha256:cf98c5b14dae681c44a654e02cd2ac4a7d12c46e0a3305a108019a823d0889cf
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/assets/templates/madr-4-bare-minimal.ja.md
@@ -2010,7 +2072,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:693f318203414c00c1ec1b25737bdbe16d09e6e2ebe0d9b26150c426d5d077e6
+  content_hash: sha256:5e16bbfc72401ff4bdbaf3f7466f138b2e6315ebe492f7a8a4f788f933aafb98
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/assets/templates/madr-4-bare-minimal.md
@@ -2019,7 +2081,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:7e65731e838044b186dac9ecd6ea82e3fe3effb39befc6fb184872f695dca891
+  content_hash: sha256:27d923743692403db521c10d105dbf46776a740adc1e947f7cb637492d284cfd
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/assets/templates/madr-4-bare.ja.md
@@ -2028,7 +2090,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ce502ad695a0a5856a703b2d68ace89bc84854f9a8389c8c3415fa6b5a2ce1fe
+  content_hash: sha256:6f0c75e8a4fce93ef89b1e242dbe32e5a5382385fa565acab198581aae37864d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/assets/templates/madr-4-bare.md
@@ -2037,7 +2099,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:0af42bb1ad4c3ca5ca3de3db131662555392cea34855a529f5c6ecd37b0a0a94
+  content_hash: sha256:b4f7705d37070c64e9aa4f298acb5ba4dbd43df481869bbf9446bf3d55e16d65
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/assets/templates/madr-4-full.ja.md
@@ -2046,7 +2108,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:1bfe9c1b607dad1984cf489b625ae5366d3cacb4cbf38be2887623a91388d627
+  content_hash: sha256:ed88fab18bc194565a01dc824e528e6caaa8a968e2c7d2b15146d9f162f17e73
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/assets/templates/madr-4-full.md
@@ -2055,7 +2117,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:577bbbc6808d69b93a9dd946b39145ed115dbd5680c4e46bb02232ca8402d33a
+  content_hash: sha256:edb7c9c2c936953ab44c2de001d125f52090ee7f259e64142c9d6303f240001b
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/assets/templates/madr-4-minimal.ja.md
@@ -2064,7 +2126,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:94b8245a73f33e6cf92377885d94e15b5f0a0bcd03e3f62efb27c9e036280f90
+  content_hash: sha256:848b398267d165e398700f0761d464e76cad800e048966b9523bc27c542b27a7
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/assets/templates/madr-4-minimal.md
@@ -2073,7 +2135,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:4063a4ce42d49d1601e1acc9248ceae482b6c8a76e942c5d2f1400a43a020f29
+  content_hash: sha256:c587ca65ca884f24e0282eb64edfdf1b1199113e3f0ce00e879d9ed9cd97e78c
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/references/adr-conventions.ja.md
@@ -2082,7 +2144,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:e0eb16f606d60c8909a5ddce972a140489d327ff8eb2c6f38db4d3bb141ec69e
+  content_hash: sha256:462f4a3c7a0a047e4d98b54f76056744749b935e6e9308337cfdf5be6ab0c5e5
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/references/adr-conventions.md
@@ -2091,7 +2153,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:243b2864f9da40535434d3cc57b33775f729df4d0ca276191da1af421502f917
+  content_hash: sha256:cfab51b5ddc5de267c1160e475af4c85a78530d55ec19a87be87c890aa6ded8d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/references/adr-maintenance.ja.md
@@ -2100,7 +2162,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:47f2dba5a2c898c1f02e85d2b2c978e7fd7ce066a90e3953ee3ed8c6f1787b5d
+  content_hash: sha256:32de7abd37e290920e801227186a2c13405233aa4c81d5cd9c4638c276a6152c
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/references/adr-maintenance.md
@@ -2109,7 +2171,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:5397eb9ed5aaba8c8a641693883efa08e98289e0dae0ee6959a55e6af6a3765d
+  content_hash: sha256:f9d8365c007a534520ba527fc0c558cb44bf8d6082215069eaa94d172f4632ce
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/references/madr-4.ja.md
@@ -2172,7 +2234,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:f82b2eb34d717a4621f34ec24787623e3fb63813152613b4bd0894f1fecf8316
+  content_hash: sha256:e41c6c2cc7a77def02ac8dd29f772b90d9a691ec04dd9437e4d2a2a5592f1f31
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/scripts/check_code_links.js
@@ -2181,7 +2243,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:5e70f5d9ec8693a78851db9f42c22117db1f4916eff9b01f1339c14cc5858c6c
+  content_hash: sha256:8dc84cffa9a431cdcc3227953d01d80a8e488d796757af1f70e9b01e70fec680
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/scripts/list_adrs.js
@@ -2190,7 +2252,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:e40b2dba240d337ec2922c4ea5ffc337d83f83618a528f60bccb3a3e65e0a6df
+  content_hash: sha256:999dfa7e74eda1eed460971cfc5c22e894d625b8937a22457fc228bbb4c9f85d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/scripts/migrate_report.js
@@ -2199,7 +2261,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:8514af8f20deeb948b5b24e0b5f0093c0fb7ccc4b1fed28bd97fc87c2522c31e
+  content_hash: sha256:57b73d442633791f6b2b8f948ca281045b4386965dba8a93526fc75adf59fd7d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/scripts/new_adr.js
@@ -2208,7 +2270,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:0fabeafebd15b6979a20452e995ab5f1f1d817f897d2a83c02e354f365d43a26
+  content_hash: sha256:0cc42db8867be503aaadb44210121cc974cc692948c3019db01702b8b02d530d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/scripts/relate_adr.js
@@ -2217,7 +2279,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ea35c0bfbd6138d3d8eef6a0c1aa17421eda004368ff271265c5ad4f1e8c127b
+  content_hash: sha256:397f34d7eb9ca3c0fac05ac002623a43f74d51d50615550dcf81ee072a134666
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/scripts/review_adr.js
@@ -2226,7 +2288,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:4aa5d13355bbe0748e3b76d2b900b2e1a1f7d9f3a60b2bc5b79b258732b4dbd5
+  content_hash: sha256:f0f069bdd6a9ea886b6ba21e91d513cb837f94bc67119f4e6381c50802b62ca2
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/adr-doc/scripts/update_index.js
@@ -2235,7 +2297,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:7f1d6d065a577e28b1673b10afa74d9371950fa180db53c760cf921d07581659
+  content_hash: sha256:fcef2d960e9fa8697af14ebc55024ab64b2ef8f2d4b3ee0c2fdb99316af101c5
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/agent-governance
@@ -2290,6 +2352,24 @@ deployments:
   - github/awesome-copilot/skills/agentic-eval
   active_owner: github/awesome-copilot/skills/agentic-eval
   content_hash: sha256:fb198a5c9b12e746d01a43c9ff3368598fdc1134bb458766f580186f31001573
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/ai-prompt-engineering-safety-review
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/security-best-practices
+  active_owner: github/awesome-copilot/plugins/security-best-practices
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/ai-prompt-engineering-safety-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/security-best-practices
+  active_owner: github/awesome-copilot/plugins/security-best-practices
+  content_hash: sha256:8ff9d227e96fb3364b9b2e0bd28d73ef0e49cc33fa832dfe8c87d79ddef9a7a7
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/apm-usage
@@ -2706,6 +2786,24 @@ deployments:
   content_hash: sha256:f1f575e5af5cb7b2a42ce22dc2112190b2834fef7b31fe75bd44cd0af5db0e62
 - kind: project-relative
   target: agent-skills
+  value: .agents/skills/context-map
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/context-map/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: sha256:af0037b06a0b56a5014e16a32538ac419725638659428b7e229ed5bbb9087a37
+- kind: project-relative
+  target: agent-skills
   value: .agents/skills/conventional-branch
   runtime: null
   scope: project
@@ -2865,7 +2963,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:b55c07b90d70bce63aee8f9f78b0c05fcccc635862e1cb2ca329efc6f22bf1af
+  content_hash: sha256:858c0dc76a1c6f2949fb2ffb67fc911016c5221db9025fe7ebdfd54e445b4228
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/design-doc/SKILL.md
@@ -2874,7 +2972,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:3a1eb2ec788aabb0dcda26498ef2c3c51b16c5deee7061cd7e0e0cc1f804559a
+  content_hash: sha256:3fac8de463e82a599c9b742c90ae29f0bd3a061e4476c173b6fd6b6778f64f37
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/design-doc/assets/templates/design.ja.md
@@ -2901,7 +2999,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ec31467a81007d9f6c4a8feb9270a0f9baa157436b1424ad436c487a5097f7ec
+  content_hash: sha256:ccbe8f5d8a2e1a061b83d05a1d339bc502cfaf26c64fd3ae9f03b110b8f62349
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/design-doc/references/design-conventions.md
@@ -2910,7 +3008,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9f5ab89dfd81412abdd0f10ad4a57322305bfd43f9265b3ce24bae27e91d4e18
+  content_hash: sha256:167e687bb59a8899ab393802c6a04977a8cae192044e4dfcdf1e0c22fd3ee794
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/design-doc/scripts/new_design.js
@@ -2919,7 +3017,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:0ed37383ab04d45b940916a6ef9a0a57d478554a6a6cda198fbcd07a9d0fbc82
+  content_hash: sha256:d798149075481125d69741a381eca183caf869fe40b49ca11072c00e528187a3
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/discovery-doc
@@ -2937,7 +3035,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ba87261fd73e3364db1fb8ee7f961db34fe5754b90c8400937172e9f8f6a88fd
+  content_hash: sha256:966868890540f9e1ae79b7bd00508c07794116d495159ba215076e0526dc456a
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/discovery-doc/SKILL.md
@@ -2946,7 +3044,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ce543d804020766e13199faa1d2d4c8786efc9a88e70c29c789040e1d4cc3b7d
+  content_hash: sha256:a457fd35f9b7df9ffa4d8bc4f8d8af3e91dec9837a2e80a35b18cb72ac89ad89
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/discovery-doc/assets/templates/discovery.ja.md
@@ -2973,7 +3071,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:24f946755a335f2676a723bc57e894776a0867554dc5ef7a0e92f77f517f792b
+  content_hash: sha256:f7de6467ee14bac4ca365ab4fcbd176bfaf2a34607bed3258e469557e5bb77e6
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/discovery-doc/references/discovery-conventions.md
@@ -2982,7 +3080,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:2fa126b6e574da1cce3b3aafb49c7c8a550ecb02c5d12a9405f676a53938150b
+  content_hash: sha256:933779705077b1934e943379aa6ca559d51a97ee8a3476667ffa6bd68581fae6
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/discovery-doc/scripts/new_discovery.js
@@ -2991,7 +3089,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:13dfbbd4cf4963d3b84b78f5c74bec3d6a218c2b60d646d0961bdd5f7a2efc20
+  content_hash: sha256:a2daef799f9c5f95f87eb8e03e6f6aad17b75443c349e557f7c82443278c2bb0
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/dispatching-parallel-agents
@@ -3027,7 +3125,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:cca57aa22e6f599bf3c762f351a1aa3d6271e500f9558c8f4f90c9eaab5331b9
+  content_hash: sha256:98d71754cf8d853f2346186c628759078e1fa2029faecf7631852ddca525c051
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/SKILL.md
@@ -3036,7 +3134,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:b7f475029e9bdb41177d93a2ae79a282b55919edbecf5fa3c6406e9212d73a8f
+  content_hash: sha256:71d50c74d2d549131f68e4274cb7e8f0b86b05932fefda30032c8de2341bdf01
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml
@@ -3045,7 +3143,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:3741ac0265551c1944d8d614826f43c4831e6bf74633819d132cf17f44014103
+  content_hash: sha256:0772b917c6a15250e02b67b42bdeaabb247ed8bd943c4743a8075c3bd2dffd5f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/execution-contract.ja.md
@@ -3054,7 +3152,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:cbc053fcc67e395cf355b73d8ea32206862c753a20c822ec7f6a885510edebe9
+  content_hash: sha256:bb1971a8d0e282f57702aeae5acf3c36d85a6bf998e1fa52998e7f0de87b794f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/execution-contract.md
@@ -3063,7 +3161,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:7734c9125d5c690a0d238c8539513d37d906927de51db18fbe3d181df03e62ad
+  content_hash: sha256:ac681e4caa0f7ecdf2198fa6a50a437a63e040469838f853fe24198cd8e1a40a
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/execution-outcome-contract.ja.md
@@ -3072,7 +3170,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:89cea29775dbfcc0e5dc76a687f90d229629fd570cad6daa4f8d942cba75c35e
+  content_hash: sha256:4109f3faacf2a497d16b0f1461b7cb1fdfce1c9a34ffbbcc0af36a19116a480d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/execution-outcome-contract.md
@@ -3081,7 +3179,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:fc6ce4bacbb5a3f136130d9b12b80377a71051723228c430c4f75aac1d31fc76
+  content_hash: sha256:d0532f2b83478ce78cce7d458dd3ba9e5be7a24cb5a9cf9f2bb6e82689288052
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/graph-contract.ja.md
@@ -3090,7 +3188,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:51f14dd67360baa50c6d42e9bd03852d2bda2d944b39119a099270e6496c38dd
+  content_hash: sha256:f26013ea7875345d674ec91b5f5a833d6faf4e8133708976e44d6173e56eab78
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/graph-contract.md
@@ -3099,7 +3197,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:5561cd5bf6d5373d3b1f5ab73a530582317d99b9bdbb91c5913d8aeb8f488449
+  content_hash: sha256:6c5b2a473be39e204ef369cfa44a2c20dd025b9992e9f155050dfaccf4a91f9f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/graph-inspection.ja.md
@@ -3108,7 +3206,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:2d3367e3b8723a798146e485a5ec8decfe33b3bca98ca39e7ccec7668ec3072c
+  content_hash: sha256:5b79730179c0614cee280b488e2370bc0a2db42305d37c6d73a563f9f8563cd0
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/graph-inspection.md
@@ -3117,7 +3215,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9e3cd8d92191cea68e28e8b802c6e54ad3df486e80716a461b0f17863c9aba2d
+  content_hash: sha256:530c85362dbe1ebe6ac221fad02e308baac98eae3b02d4c24d334bcc445af1d1
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/references/graph-state.ja.md
@@ -3171,7 +3269,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:1ad4f083e4f439be0e6a7122558135fcb01669a072891fffb951161ef2000052
+  content_hash: sha256:719ee95f17637b9d7130b5b66a2644f4916b1c0da717208b9ffdba9dbd0863d2
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/scripts/migrate_docs.js
@@ -3180,7 +3278,16 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ecc0b8c9109d4ebb4d9e3cc7dbcd60e1e38b3b80e33ee30f09a5202570105c9d
+  content_hash: sha256:cca4e02a971a271cf1fa5b34e2b913ff5b5eac7f30b5a16a54a00938bda090e9
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-driven-dev-graph/scripts/migrate_ids.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:511ab670a6a27c8bf59baffeed1cfab1dd902cb0202bcc413397dc5b191d0058
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/scripts/route_graph.js
@@ -3189,7 +3296,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:a5e8005fc77da736e5ebfb3f1aac675a6c06010be5784eb083f62539611ca52d
+  content_hash: sha256:d314fc0b2ab65ce47ddab66ffaa1def69bc736f191bdd8c1c8b001fa19d578ce
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-driven-dev-graph/scripts/scaffold_docs.js
@@ -3198,7 +3305,70 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9b7d73730506884130b3e870f7ef04853da2f6b772b57a4d119663882f203736
+  content_hash: sha256:fc1416b29cb4e1518dbaed42b544d3ce097fa4cb5bf5bd2f8155e9163963c9a3
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-maintenance
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-maintenance/SKILL.ja.md
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:3e938aebe756d577f9de7060a4aab1fed4600f4ae5f660cfba311f2ab9c9b0d1
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-maintenance/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:8c909e2b48656dcadd213cd71d9dc469515000189cbc6f98867e6d0837ef0556
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-maintenance/scripts/doc_maintenance.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:00a98c4c640f620e028d1018d3d2db78c8b5350ea91126030e9664f7660d0a0f
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-maintenance/scripts/migrate_docs.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:77a7e135e57ff53779754f0ae296903aedf0294bc5267deaf2c39d98341989e5
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-maintenance/scripts/migrate_ids.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:a0dd9ad59ab52f3fb9175b68dbc79b7c10a37ad070f18fcc98e4649e3e59ef45
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-maintenance/scripts/scaffold_docs.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:368cca1243b663d50ca3cd8b34355179ebf3cf0636b24fc5794030e86efe4652
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-status
@@ -3216,7 +3386,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:678b7a29233ac833a3b889d80500328d6b1d1ef34a0b072c3dc0f365eda8c62b
+  content_hash: sha256:d24a66e4d4fedc9232a22b7e767152076f4329603d8edf5671fe435a96f1e170
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-status/SKILL.md
@@ -3225,7 +3395,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:098abad9235ebfe6dfdfabfd1ab9bd98380eda0845aa1477edde800154fce7d4
+  content_hash: sha256:92c08fdf0193bfb69ba571d6b16f0d51a2ab3da4eea2c920355a2085db3ecc6f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-status/scripts/audit_docs.js
@@ -3234,7 +3404,16 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:a35333eb54c9cd5666a7a3371591a89ed588a5f0db4607280d79c62bbcf6cd09
+  content_hash: sha256:3cc67c0cd1dedbd740a817bae44067899df37348c0e8c89374db6ca236951cf7
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/doc-status/scripts/doc_status.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:7ba74c558c43872e4131dc703e8a3cd643a494ff817605ee7e0e80bc4287a59a
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doc-status/scripts/list_docs.js
@@ -3243,7 +3422,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:78195017acda65ebd3fabb8a734563a49b703a7dd47b3a179bf82e95e7afefb4
+  content_hash: sha256:6ab9e44409bdb9550da2087ba1fe102b2e483a057128b350c4d8ca844c579268
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/doubt-driven-development
@@ -3549,7 +3728,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:d1459b3924f011a4fec4dc97cab864cc2c10bbaa2047d43c262b44e597be5807
+  content_hash: sha256:ce5ede7db7579858173f0d7740d94c8d7fb3221c7b86d47437e26a5978c35f0f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/SKILL.md
@@ -3558,7 +3737,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:c55a7a1423c938f89df6191e6b38b2ae446add09ea70a29e2dbdfb0bbbb9adcc
+  content_hash: sha256:193268195ee27e6c499d57c9aa01e501b37a58491b0069549c149eb6ba97e90e
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/assets/templates/responder-prompt.ja.md
@@ -3567,7 +3746,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:9ce2423ab3f61682d95d221e43e2c9b15d412100be3940a7f171ba48bca5ac58
+  content_hash: sha256:60f47bbe529aff9b8554011faa503d6555ba14e49d68cafe52df36a9501e5b2e
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/assets/templates/responder-prompt.md
@@ -3576,7 +3755,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:74e0bfbb58daa2f733566e61e43609a0892f99780eeab2fde50335044a0fa510
+  content_hash: sha256:a3ae5597a233d1d0f497acbe681a156552886983008947b990eaa0acaef323a4
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/references/issue-format.ja.md
@@ -3585,7 +3764,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:4eedb4443ae62dcbacd2624f493e87217d9f555f440a8bc942baabcd832355c2
+  content_hash: sha256:e6d77739a5a775294f656c5c5ee11acdb5c781fa5b86eb24a344e3e4ab0645d5
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/references/issue-format.md
@@ -3594,7 +3773,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:942057348dd001fbcfe6adc47ba48648f384a9173fce772089580574a0b34607
+  content_hash: sha256:f0087e5ef5d72af251f3919fe506eb5dbebcb0251a2145d8a313634eb142baad
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/references/protocol.ja.md
@@ -3603,7 +3782,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:515d50fd9634151c661d7e3523dd6dbedddce802e3fc4599c3d8c902f8565e12
+  content_hash: sha256:2f69d37e80550785729359c816eaa59ee753824a572e2727d2a7c5ca60248d3b
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/references/protocol.md
@@ -3612,7 +3791,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:402ef55ce673ee870097160e8e92d3fc465cb300f17ef6e90895e09e1494e366
+  content_hash: sha256:7bef854e033610446b50110281cf93c3f6cbcc6241b3df86d403c857be4624f7
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/references/responder-guide.ja.md
@@ -3621,7 +3800,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:3b4f8e1e6caad51be60d42c4a4ac0d71bb5750b04151e00a7b98f7b726d4ed43
+  content_hash: sha256:6207b4a27595468cfb9eb4b5314d39de5fb3b729f84130a811aa6a44584a779e
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/github-issue-handoff/references/responder-guide.md
@@ -3630,7 +3809,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:d52edde39b526dfbd079c16b905bc59125f281d0469ed00be9b98077807db87b
+  content_hash: sha256:fe07b07b24b7087403e8d86b1b8f83792f5b41427f8ac4cb6f150ef16f24eab4
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/idea-doc
@@ -3648,7 +3827,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:fb7bc524115eee8872b5cfe7943ff3483f3db0371a8e708f6d319263bd8aebcf
+  content_hash: sha256:f147c5c559c23c67cfe8c1c28423c430fa8d9c3a01e6124966bc59599e87e302
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/idea-doc/SKILL.md
@@ -3657,7 +3836,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:275b98998b631763ab21abdcd32f026336327a54b56638e542e932689afdcf45
+  content_hash: sha256:8e06b42de3314ac4b3a2cb48a1e99154f5435b71c596a4d03f69ee4be22cb3fb
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/idea-doc/assets/templates/idea.ja.md
@@ -3684,7 +3863,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9f5469f299b65954ba114a58c50eb238820f2ac9a6b8a66c4c9eb46beba62df2
+  content_hash: sha256:eb5802e39b6081207e7f0dcfc9dc2d99d41337770ef68e9e8f11d86b9db03bd6
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/idea-doc/references/idea-conventions.md
@@ -3693,7 +3872,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:98db0d9f386dac9c91e718a45488da615c52a5dd1b75b53f89480a52c57e082a
+  content_hash: sha256:bbca87ef26460aa229c74718f2b0f59af87b763fa67ab6a1503b3f3f1a91d7a5
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/idea-doc/scripts/new_idea.js
@@ -3702,7 +3881,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:abdc44ff4465eb0ffdb62518c398574827f078f55c808f21e9dfdf5c3eb5c704
+  content_hash: sha256:8ecf743f720207cfd22fd3b81f2693ef5dd5440c27319554a842464f7fc1fd76
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/idea-refine
@@ -3774,7 +3953,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:99359506791cb2e84d89975a9ca8056c433465e4c697fd9e5708576b312ae3fc
+  content_hash: sha256:f428a5bac572182bba9f90424e7483f56a7b670a8c7657501bdf31b9ddd0c049
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/SKILL.md
@@ -3783,7 +3962,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:4b79189cee11db50106fa86abca5fdd58f95163e500a5b9aa650195a9c4b1f8a
+  content_hash: sha256:e93179962055816b9065cc54bb329179df470392905706a9ebc92ef354fe20f3
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/assets/templates/experiment-log.ja.jsonl
@@ -3828,7 +4007,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:963769c53d393ea966b9f604fb9b89fd21857794b702690de05393f0255e137b
+  content_hash: sha256:33e0c55eb732b9083240e43e2a560cf8c0b9c9b5bc4260188a1b288a809a829d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/references/impl-conventions.md
@@ -3837,7 +4016,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:5759af64ff4d2d5ec5aca16b3401f8c370eadf6e114b14409cc5edc98702298a
+  content_hash: sha256:8e05d2fb61c8bc520afe202ed3c6aea76120b206268dc0cc81a37eacc8c24a1d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/scripts/append_experiment_event.js
@@ -3846,7 +4025,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:dcd307540f5888069f4a001c920d61f86e6f34311428d925fe21251f12123441
+  content_hash: sha256:63f13c1bf9f02219e4c27ea6e5ffeed28b1857ce447b4eb1c9d7eca05d167817
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/scripts/audit_experiment_log.js
@@ -3855,7 +4034,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:a28eb28e70ab75a8987128c009a6f8344d4b344e5babbc017e5699dfd0f027a6
+  content_hash: sha256:a54c2d83b4ac93b03292511b5ac144d89c96dcb729cbfcfb96120778a582441b
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/scripts/audit_impl_record.js
@@ -3864,7 +4043,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:e232d1862b866d011e5fe00f719dac8f1a762b7ed656f36a4c53e5e901f84177
+  content_hash: sha256:29d119e01127aabf99f9322e32a8b43389ce5ae2e50d7bbd74df5e00375910ab
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/scripts/edit_experiment_log.js
@@ -3873,7 +4052,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:f9e8e01325e8cd8f92d3919b0fb3ad87015208629d653e3a339d5ad5e941295c
+  content_hash: sha256:ff5f8b3ca5f146a3c59a138ac9f70bfdef718a35ecabcb1bad564bd2d38344e3
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/scripts/new_experiment_log.js
@@ -3882,7 +4061,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:64565b58e0e359909eace0f047e4981f0f711dcd05f6f40e005e6bb51d5e787a
+  content_hash: sha256:435192b1061ff30f14215f267f95fb2929220e379edc5355e1fcb4cb073adad6
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/impl-doc/scripts/new_impl_record.js
@@ -3891,7 +4070,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:6ae2b02cda0d492e7cf2fb461beaf9df621be08f1b1e9001a2737d6bc32e1d87
+  content_hash: sha256:cd4cce0ac15d8dcd3a78798bcb1758fdda66fe0948f7cccc5b3262388dd988f7
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/implementation-flow
@@ -3909,7 +4088,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:6d4dd260eec7df3d855c8cfd5ab041ff9f56284f083d8a493335c9c66f204754
+  content_hash: sha256:67e14e27419ee295a91c4f766c0d1740317c4bdc4e857fea7e79ad10ccaff866
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/implementation-flow/SKILL.md
@@ -3918,7 +4097,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:bb056e2e5a9c48d0296f1ab7ff10d0b4e7a87b09794a2ea0424504fb8cfb48b3
+  content_hash: sha256:0e64a7961dc976544d3d5d26eb25d31287513841c727e1f02e1e1d4b458aa62c
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/implementation-flow/assets/adapters/implementation-adapter.yaml
@@ -4017,7 +4196,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:c2a53d85b4dbd77629a816dd73ba78a24c2d3f4f2b5c08a9d97b1e16cad2b146
+  content_hash: sha256:23422c10cf6d4c11cdfa05768ed45300a9dee3dc517c2fce3ce734772f585562
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/plan-doc/SKILL.md
@@ -4026,7 +4205,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:cd64487e9902b23731e550bd72850ebd72fe85d6094aa002c0fa6354be60a903
+  content_hash: sha256:1e18268697721a5f0346d6e036e048032f328b9e953ca524c40a938c5d4d157f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/plan-doc/assets/templates/plan.ja.md
@@ -4053,7 +4232,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:307eb2b56ba3fbe236fc2ed265bcc6b693db70260c48727953d4cc98502610f5
+  content_hash: sha256:8490d34a98ca5519feed6aceeed86e1e53aa8bba3b43bb019d1bca7de2f5e9f4
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/plan-doc/references/plan-conventions.md
@@ -4062,7 +4241,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9dabae512f4e97f864d2d1a50a6bb66f08c7d3ef4a4f1faef29bafb6734a1223
+  content_hash: sha256:82371f4a345f289782d7128d11eba694b39a94a9417ddb1a244ecb7fcc205e0f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/plan-doc/scripts/new_plan.js
@@ -4071,7 +4250,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:dcabe1800932146e8a0d7d343163134c0b2453733d3bdadcd05718067a7e8319
+  content_hash: sha256:ad7e01e4df296ff0443805ab7d5ade44927cec6efadd019ba5d66b273de3ce2f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/planning-flow
@@ -4180,6 +4359,24 @@ deployments:
   - obra/superpowers/skills/receiving-code-review
   active_owner: obra/superpowers/skills/receiving-code-review
   content_hash: sha256:091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/refactor-plan
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/refactor-plan/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: sha256:93741df0042a15c01ae8589e72014dcf53c557c11ca1df69c29737534c312c29
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/repo-story-time
@@ -4602,7 +4799,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:76c77481889348fcb9cac3659233629fa3ef8ad7d2f88186a775121b2cb03549
+  content_hash: sha256:3a2b411e7b2dd08ad62b7448764c00226c74c100cfb27334216eda61aae66af2
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/spec-doc/SKILL.md
@@ -4611,7 +4808,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ca793240e19d36d474cbf1bae80f6de49c65aecf58ec1b2d2b96ce0bb463f7bf
+  content_hash: sha256:88e296ea6cee91331a6bd3004e91f99383f000b0643207b6e153a8082575e169
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/spec-doc/assets/templates/spec.ja.md
@@ -4638,7 +4835,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:f23fb9ec05a3afa100e26be0c31e75a87596a88e8e8180bedd1b31c94c7da16d
+  content_hash: sha256:3be9c026e1fa7099ef18c403707a199cf1a3c4949a63fe46e2c29230ab4f2e52
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/spec-doc/references/spec-conventions.md
@@ -4647,7 +4844,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:63e589f74661c7142358821c0989d4b09d8d9659976c376242c3fe35b466c013
+  content_hash: sha256:40b3af0c36d65c8336be45e9e71e5037d2587beba4f1dc6c0658ea35a30a44ec
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/spec-doc/scripts/new_spec.js
@@ -4656,7 +4853,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:e80c21174a89a8b16baa09a13611bea78e0c8bfa747d034100b3c21a2dbdfb47
+  content_hash: sha256:492a8efaf2ca8fda3131ba54cd8e175a410057b36ddb721021baac2fcf40e70f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/steer-web-research
@@ -4917,7 +5114,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:0c51c6eb6320e7f5cd6d5a0153e7112a1e13995e97eb167e8889097e95de1295
+  content_hash: sha256:13e411b8910b3b84f0870993b387b13e5fd212344e3e3cefb50166577c075df9
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/task-doc/SKILL.md
@@ -4926,7 +5123,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:769649095be290dbc1e7638edd0bf09bfa5a4efa417a6c8cea4c3dc1c7113c0d
+  content_hash: sha256:c28a552964948089ab6426f714802c2003f69ba6570caa80588ca73565cdffc0
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/task-doc/assets/templates/task.ja.md
@@ -4953,7 +5150,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:443e1f4314c42ce9daf869b566f7f5895b7794fe61789fea22ffcf4cdef55041
+  content_hash: sha256:2f2221ccd7192317aeecdf8863b8906607a9ea6393d46875da0e4bb86c3dab19
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/task-doc/references/task-conventions.md
@@ -4962,7 +5159,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:00ff52ad1c96756b80d2a979dbec74119208629703a8543745e318c44b7c670f
+  content_hash: sha256:bf82dd21b0ddab654e20bdd31b278e461718d82295790b814966051ad422c239
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/task-doc/scripts/new_task.js
@@ -4971,7 +5168,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:598ce29b293b0d7274795a39a8b355b0af1b004e903c609dbc8ff081766c56a9
+  content_hash: sha256:09bc2e98768c07c4fee3ca353bf635157686e8e8b8fdcaef1f73f42035d32b57
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/test-driven-development
@@ -5007,7 +5204,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:37e7559d8cd99a1be4f370c4355e806254337bbc0dd02b06b475770cfab07c3e
+  content_hash: sha256:0b00e27146b4a73363f074bef5bc14d2ff3c2f85a9ad5c20114709ffaee81e42
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/test-spec-doc/SKILL.md
@@ -5016,7 +5213,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ee007fdb81fbecb884a3b8fcddb2e08680185df99fcf95109cc17025ad94a006
+  content_hash: sha256:b2d6ad6cad2a6bdbc1fa5c3f237cb53dfe688128ada40eaaa0922eceaf60621e
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/test-spec-doc/assets/templates/test-spec.ja.md
@@ -5043,7 +5240,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:18e1fafeb6fcc55d95ce7f290481dfb0e72b22134f9d788b18a1d62c4286cb2f
+  content_hash: sha256:1ce8adffecacad2122d3daff83a5c29a0e48408aec62bee21e6504dc8bdc6252
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/test-spec-doc/references/test-spec-conventions.md
@@ -5052,7 +5249,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:1cf57301a3153b7b25b8bf748091cb1e99cab84a35cd59da61624d3c890c9b29
+  content_hash: sha256:0972840a281a70137611561cfc33e7ca55955b80fc4cd7b7ecdfbb6b000b9b7d
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/test-spec-doc/scripts/new_test_spec.js
@@ -5061,7 +5258,25 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:2100c083620635f97c435a443fbf64c9eccfb6d956d3cf2abc0273924862b549
+  content_hash: sha256:69d852f640b276b913cb0a58f0704137b22f53ada3ff0b73e28b8c8585e5eb0f
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/what-context-needed
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/what-context-needed/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: sha256:65ed7445bf561a5e5199ac77478d2691c05019e0dc32fdddc23db9e45bd9d135
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/writing-plans
@@ -5178,7 +5393,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:57661376b7a113eef57c128134d923ba7a9ca16d96779b9fc2050f9af8c7f968
+  content_hash: sha256:eab702753a9af00a29bceb4136d2d150423ebbfd7b41ce905a631bba73a7cd5d
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/SKILL.md
@@ -5187,7 +5402,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:2e4f29e8104a8579075b3fef49ad4b9c8f4af7afcc3b7387f54b0851a0eeebc3
+  content_hash: sha256:cf98c5b14dae681c44a654e02cd2ac4a7d12c46e0a3305a108019a823d0889cf
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/assets/templates/madr-4-bare-minimal.ja.md
@@ -5196,7 +5411,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:693f318203414c00c1ec1b25737bdbe16d09e6e2ebe0d9b26150c426d5d077e6
+  content_hash: sha256:5e16bbfc72401ff4bdbaf3f7466f138b2e6315ebe492f7a8a4f788f933aafb98
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/assets/templates/madr-4-bare-minimal.md
@@ -5205,7 +5420,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:7e65731e838044b186dac9ecd6ea82e3fe3effb39befc6fb184872f695dca891
+  content_hash: sha256:27d923743692403db521c10d105dbf46776a740adc1e947f7cb637492d284cfd
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/assets/templates/madr-4-bare.ja.md
@@ -5214,7 +5429,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ce502ad695a0a5856a703b2d68ace89bc84854f9a8389c8c3415fa6b5a2ce1fe
+  content_hash: sha256:6f0c75e8a4fce93ef89b1e242dbe32e5a5382385fa565acab198581aae37864d
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/assets/templates/madr-4-bare.md
@@ -5223,7 +5438,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:0af42bb1ad4c3ca5ca3de3db131662555392cea34855a529f5c6ecd37b0a0a94
+  content_hash: sha256:b4f7705d37070c64e9aa4f298acb5ba4dbd43df481869bbf9446bf3d55e16d65
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/assets/templates/madr-4-full.ja.md
@@ -5232,7 +5447,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:1bfe9c1b607dad1984cf489b625ae5366d3cacb4cbf38be2887623a91388d627
+  content_hash: sha256:ed88fab18bc194565a01dc824e528e6caaa8a968e2c7d2b15146d9f162f17e73
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/assets/templates/madr-4-full.md
@@ -5241,7 +5456,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:577bbbc6808d69b93a9dd946b39145ed115dbd5680c4e46bb02232ca8402d33a
+  content_hash: sha256:edb7c9c2c936953ab44c2de001d125f52090ee7f259e64142c9d6303f240001b
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/assets/templates/madr-4-minimal.ja.md
@@ -5250,7 +5465,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:94b8245a73f33e6cf92377885d94e15b5f0a0bcd03e3f62efb27c9e036280f90
+  content_hash: sha256:848b398267d165e398700f0761d464e76cad800e048966b9523bc27c542b27a7
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/assets/templates/madr-4-minimal.md
@@ -5259,7 +5474,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:4063a4ce42d49d1601e1acc9248ceae482b6c8a76e942c5d2f1400a43a020f29
+  content_hash: sha256:c587ca65ca884f24e0282eb64edfdf1b1199113e3f0ce00e879d9ed9cd97e78c
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/references/adr-conventions.ja.md
@@ -5268,7 +5483,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:e0eb16f606d60c8909a5ddce972a140489d327ff8eb2c6f38db4d3bb141ec69e
+  content_hash: sha256:462f4a3c7a0a047e4d98b54f76056744749b935e6e9308337cfdf5be6ab0c5e5
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/references/adr-conventions.md
@@ -5277,7 +5492,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:243b2864f9da40535434d3cc57b33775f729df4d0ca276191da1af421502f917
+  content_hash: sha256:cfab51b5ddc5de267c1160e475af4c85a78530d55ec19a87be87c890aa6ded8d
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/references/adr-maintenance.ja.md
@@ -5286,7 +5501,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:47f2dba5a2c898c1f02e85d2b2c978e7fd7ce066a90e3953ee3ed8c6f1787b5d
+  content_hash: sha256:32de7abd37e290920e801227186a2c13405233aa4c81d5cd9c4638c276a6152c
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/references/adr-maintenance.md
@@ -5295,7 +5510,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:5397eb9ed5aaba8c8a641693883efa08e98289e0dae0ee6959a55e6af6a3765d
+  content_hash: sha256:f9d8365c007a534520ba527fc0c558cb44bf8d6082215069eaa94d172f4632ce
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/references/madr-4.ja.md
@@ -5358,7 +5573,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:f82b2eb34d717a4621f34ec24787623e3fb63813152613b4bd0894f1fecf8316
+  content_hash: sha256:e41c6c2cc7a77def02ac8dd29f772b90d9a691ec04dd9437e4d2a2a5592f1f31
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/scripts/check_code_links.js
@@ -5367,7 +5582,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:5e70f5d9ec8693a78851db9f42c22117db1f4916eff9b01f1339c14cc5858c6c
+  content_hash: sha256:8dc84cffa9a431cdcc3227953d01d80a8e488d796757af1f70e9b01e70fec680
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/scripts/list_adrs.js
@@ -5376,7 +5591,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:e40b2dba240d337ec2922c4ea5ffc337d83f83618a528f60bccb3a3e65e0a6df
+  content_hash: sha256:999dfa7e74eda1eed460971cfc5c22e894d625b8937a22457fc228bbb4c9f85d
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/scripts/migrate_report.js
@@ -5385,7 +5600,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:8514af8f20deeb948b5b24e0b5f0093c0fb7ccc4b1fed28bd97fc87c2522c31e
+  content_hash: sha256:57b73d442633791f6b2b8f948ca281045b4386965dba8a93526fc75adf59fd7d
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/scripts/new_adr.js
@@ -5394,7 +5609,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:0fabeafebd15b6979a20452e995ab5f1f1d817f897d2a83c02e354f365d43a26
+  content_hash: sha256:0cc42db8867be503aaadb44210121cc974cc692948c3019db01702b8b02d530d
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/scripts/relate_adr.js
@@ -5403,7 +5618,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ea35c0bfbd6138d3d8eef6a0c1aa17421eda004368ff271265c5ad4f1e8c127b
+  content_hash: sha256:397f34d7eb9ca3c0fac05ac002623a43f74d51d50615550dcf81ee072a134666
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/scripts/review_adr.js
@@ -5412,7 +5627,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:4aa5d13355bbe0748e3b76d2b900b2e1a1f7d9f3a60b2bc5b79b258732b4dbd5
+  content_hash: sha256:f0f069bdd6a9ea886b6ba21e91d513cb837f94bc67119f4e6381c50802b62ca2
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc/scripts/update_index.js
@@ -5421,7 +5636,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:7f1d6d065a577e28b1673b10afa74d9371950fa180db53c760cf921d07581659
+  content_hash: sha256:fcef2d960e9fa8697af14ebc55024ab64b2ef8f2d4b3ee0c2fdb99316af101c5
 - kind: project-relative
   target: claude
   value: .claude/skills/agent-governance
@@ -5476,6 +5691,24 @@ deployments:
   - github/awesome-copilot/skills/agentic-eval
   active_owner: github/awesome-copilot/skills/agentic-eval
   content_hash: sha256:fb198a5c9b12e746d01a43c9ff3368598fdc1134bb458766f580186f31001573
+- kind: project-relative
+  target: claude
+  value: .claude/skills/ai-prompt-engineering-safety-review
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/security-best-practices
+  active_owner: github/awesome-copilot/plugins/security-best-practices
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/ai-prompt-engineering-safety-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/security-best-practices
+  active_owner: github/awesome-copilot/plugins/security-best-practices
+  content_hash: sha256:8ff9d227e96fb3364b9b2e0bd28d73ef0e49cc33fa832dfe8c87d79ddef9a7a7
 - kind: project-relative
   target: claude
   value: .claude/skills/apm-usage
@@ -5892,6 +6125,24 @@ deployments:
   content_hash: sha256:f1f575e5af5cb7b2a42ce22dc2112190b2834fef7b31fe75bd44cd0af5db0e62
 - kind: project-relative
   target: claude
+  value: .claude/skills/context-map
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/context-map/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: sha256:af0037b06a0b56a5014e16a32538ac419725638659428b7e229ed5bbb9087a37
+- kind: project-relative
+  target: claude
   value: .claude/skills/conventional-branch
   runtime: null
   scope: project
@@ -6051,7 +6302,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:b55c07b90d70bce63aee8f9f78b0c05fcccc635862e1cb2ca329efc6f22bf1af
+  content_hash: sha256:858c0dc76a1c6f2949fb2ffb67fc911016c5221db9025fe7ebdfd54e445b4228
 - kind: project-relative
   target: claude
   value: .claude/skills/design-doc/SKILL.md
@@ -6060,7 +6311,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:3a1eb2ec788aabb0dcda26498ef2c3c51b16c5deee7061cd7e0e0cc1f804559a
+  content_hash: sha256:3fac8de463e82a599c9b742c90ae29f0bd3a061e4476c173b6fd6b6778f64f37
 - kind: project-relative
   target: claude
   value: .claude/skills/design-doc/assets/templates/design.ja.md
@@ -6087,7 +6338,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ec31467a81007d9f6c4a8feb9270a0f9baa157436b1424ad436c487a5097f7ec
+  content_hash: sha256:ccbe8f5d8a2e1a061b83d05a1d339bc502cfaf26c64fd3ae9f03b110b8f62349
 - kind: project-relative
   target: claude
   value: .claude/skills/design-doc/references/design-conventions.md
@@ -6096,7 +6347,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9f5ab89dfd81412abdd0f10ad4a57322305bfd43f9265b3ce24bae27e91d4e18
+  content_hash: sha256:167e687bb59a8899ab393802c6a04977a8cae192044e4dfcdf1e0c22fd3ee794
 - kind: project-relative
   target: claude
   value: .claude/skills/design-doc/scripts/new_design.js
@@ -6105,7 +6356,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:0ed37383ab04d45b940916a6ef9a0a57d478554a6a6cda198fbcd07a9d0fbc82
+  content_hash: sha256:d798149075481125d69741a381eca183caf869fe40b49ca11072c00e528187a3
 - kind: project-relative
   target: claude
   value: .claude/skills/discovery-doc
@@ -6123,7 +6374,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ba87261fd73e3364db1fb8ee7f961db34fe5754b90c8400937172e9f8f6a88fd
+  content_hash: sha256:966868890540f9e1ae79b7bd00508c07794116d495159ba215076e0526dc456a
 - kind: project-relative
   target: claude
   value: .claude/skills/discovery-doc/SKILL.md
@@ -6132,7 +6383,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ce543d804020766e13199faa1d2d4c8786efc9a88e70c29c789040e1d4cc3b7d
+  content_hash: sha256:a457fd35f9b7df9ffa4d8bc4f8d8af3e91dec9837a2e80a35b18cb72ac89ad89
 - kind: project-relative
   target: claude
   value: .claude/skills/discovery-doc/assets/templates/discovery.ja.md
@@ -6159,7 +6410,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:24f946755a335f2676a723bc57e894776a0867554dc5ef7a0e92f77f517f792b
+  content_hash: sha256:f7de6467ee14bac4ca365ab4fcbd176bfaf2a34607bed3258e469557e5bb77e6
 - kind: project-relative
   target: claude
   value: .claude/skills/discovery-doc/references/discovery-conventions.md
@@ -6168,7 +6419,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:2fa126b6e574da1cce3b3aafb49c7c8a550ecb02c5d12a9405f676a53938150b
+  content_hash: sha256:933779705077b1934e943379aa6ca559d51a97ee8a3476667ffa6bd68581fae6
 - kind: project-relative
   target: claude
   value: .claude/skills/discovery-doc/scripts/new_discovery.js
@@ -6177,7 +6428,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:13dfbbd4cf4963d3b84b78f5c74bec3d6a218c2b60d646d0961bdd5f7a2efc20
+  content_hash: sha256:a2daef799f9c5f95f87eb8e03e6f6aad17b75443c349e557f7c82443278c2bb0
 - kind: project-relative
   target: claude
   value: .claude/skills/dispatching-parallel-agents
@@ -6213,7 +6464,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:cca57aa22e6f599bf3c762f351a1aa3d6271e500f9558c8f4f90c9eaab5331b9
+  content_hash: sha256:98d71754cf8d853f2346186c628759078e1fa2029faecf7631852ddca525c051
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/SKILL.md
@@ -6222,7 +6473,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:b7f475029e9bdb41177d93a2ae79a282b55919edbecf5fa3c6406e9212d73a8f
+  content_hash: sha256:71d50c74d2d549131f68e4274cb7e8f0b86b05932fefda30032c8de2341bdf01
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml
@@ -6231,7 +6482,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:3741ac0265551c1944d8d614826f43c4831e6bf74633819d132cf17f44014103
+  content_hash: sha256:0772b917c6a15250e02b67b42bdeaabb247ed8bd943c4743a8075c3bd2dffd5f
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/execution-contract.ja.md
@@ -6240,7 +6491,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:cbc053fcc67e395cf355b73d8ea32206862c753a20c822ec7f6a885510edebe9
+  content_hash: sha256:bb1971a8d0e282f57702aeae5acf3c36d85a6bf998e1fa52998e7f0de87b794f
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/execution-contract.md
@@ -6249,7 +6500,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:7734c9125d5c690a0d238c8539513d37d906927de51db18fbe3d181df03e62ad
+  content_hash: sha256:ac681e4caa0f7ecdf2198fa6a50a437a63e040469838f853fe24198cd8e1a40a
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/execution-outcome-contract.ja.md
@@ -6258,7 +6509,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:89cea29775dbfcc0e5dc76a687f90d229629fd570cad6daa4f8d942cba75c35e
+  content_hash: sha256:4109f3faacf2a497d16b0f1461b7cb1fdfce1c9a34ffbbcc0af36a19116a480d
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/execution-outcome-contract.md
@@ -6267,7 +6518,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:fc6ce4bacbb5a3f136130d9b12b80377a71051723228c430c4f75aac1d31fc76
+  content_hash: sha256:d0532f2b83478ce78cce7d458dd3ba9e5be7a24cb5a9cf9f2bb6e82689288052
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/graph-contract.ja.md
@@ -6276,7 +6527,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:51f14dd67360baa50c6d42e9bd03852d2bda2d944b39119a099270e6496c38dd
+  content_hash: sha256:f26013ea7875345d674ec91b5f5a833d6faf4e8133708976e44d6173e56eab78
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/graph-contract.md
@@ -6285,7 +6536,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:5561cd5bf6d5373d3b1f5ab73a530582317d99b9bdbb91c5913d8aeb8f488449
+  content_hash: sha256:6c5b2a473be39e204ef369cfa44a2c20dd025b9992e9f155050dfaccf4a91f9f
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/graph-inspection.ja.md
@@ -6294,7 +6545,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:2d3367e3b8723a798146e485a5ec8decfe33b3bca98ca39e7ccec7668ec3072c
+  content_hash: sha256:5b79730179c0614cee280b488e2370bc0a2db42305d37c6d73a563f9f8563cd0
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/graph-inspection.md
@@ -6303,7 +6554,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9e3cd8d92191cea68e28e8b802c6e54ad3df486e80716a461b0f17863c9aba2d
+  content_hash: sha256:530c85362dbe1ebe6ac221fad02e308baac98eae3b02d4c24d334bcc445af1d1
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/references/graph-state.ja.md
@@ -6357,7 +6608,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:1ad4f083e4f439be0e6a7122558135fcb01669a072891fffb951161ef2000052
+  content_hash: sha256:719ee95f17637b9d7130b5b66a2644f4916b1c0da717208b9ffdba9dbd0863d2
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/scripts/migrate_docs.js
@@ -6366,7 +6617,16 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ecc0b8c9109d4ebb4d9e3cc7dbcd60e1e38b3b80e33ee30f09a5202570105c9d
+  content_hash: sha256:cca4e02a971a271cf1fa5b34e2b913ff5b5eac7f30b5a16a54a00938bda090e9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-driven-dev-graph/scripts/migrate_ids.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:511ab670a6a27c8bf59baffeed1cfab1dd902cb0202bcc413397dc5b191d0058
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/scripts/route_graph.js
@@ -6375,7 +6635,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:a5e8005fc77da736e5ebfb3f1aac675a6c06010be5784eb083f62539611ca52d
+  content_hash: sha256:d314fc0b2ab65ce47ddab66ffaa1def69bc736f191bdd8c1c8b001fa19d578ce
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-driven-dev-graph/scripts/scaffold_docs.js
@@ -6384,7 +6644,70 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9b7d73730506884130b3e870f7ef04853da2f6b772b57a4d119663882f203736
+  content_hash: sha256:fc1416b29cb4e1518dbaed42b544d3ce097fa4cb5bf5bd2f8155e9163963c9a3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-maintenance
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-maintenance/SKILL.ja.md
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:3e938aebe756d577f9de7060a4aab1fed4600f4ae5f660cfba311f2ab9c9b0d1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-maintenance/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:8c909e2b48656dcadd213cd71d9dc469515000189cbc6f98867e6d0837ef0556
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-maintenance/scripts/doc_maintenance.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:00a98c4c640f620e028d1018d3d2db78c8b5350ea91126030e9664f7660d0a0f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-maintenance/scripts/migrate_docs.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:77a7e135e57ff53779754f0ae296903aedf0294bc5267deaf2c39d98341989e5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-maintenance/scripts/migrate_ids.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:a0dd9ad59ab52f3fb9175b68dbc79b7c10a37ad070f18fcc98e4649e3e59ef45
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-maintenance/scripts/scaffold_docs.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:368cca1243b663d50ca3cd8b34355179ebf3cf0636b24fc5794030e86efe4652
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-status
@@ -6402,7 +6725,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:678b7a29233ac833a3b889d80500328d6b1d1ef34a0b072c3dc0f365eda8c62b
+  content_hash: sha256:d24a66e4d4fedc9232a22b7e767152076f4329603d8edf5671fe435a96f1e170
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-status/SKILL.md
@@ -6411,7 +6734,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:098abad9235ebfe6dfdfabfd1ab9bd98380eda0845aa1477edde800154fce7d4
+  content_hash: sha256:92c08fdf0193bfb69ba571d6b16f0d51a2ab3da4eea2c920355a2085db3ecc6f
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-status/scripts/audit_docs.js
@@ -6420,7 +6743,16 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:a35333eb54c9cd5666a7a3371591a89ed588a5f0db4607280d79c62bbcf6cd09
+  content_hash: sha256:3cc67c0cd1dedbd740a817bae44067899df37348c0e8c89374db6ca236951cf7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/doc-status/scripts/doc_status.js
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/doc-driven-dev
+  active_owner: ./packages/doc-driven-dev
+  content_hash: sha256:7ba74c558c43872e4131dc703e8a3cd643a494ff817605ee7e0e80bc4287a59a
 - kind: project-relative
   target: claude
   value: .claude/skills/doc-status/scripts/list_docs.js
@@ -6429,7 +6761,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:78195017acda65ebd3fabb8a734563a49b703a7dd47b3a179bf82e95e7afefb4
+  content_hash: sha256:6ab9e44409bdb9550da2087ba1fe102b2e483a057128b350c4d8ca844c579268
 - kind: project-relative
   target: claude
   value: .claude/skills/doubt-driven-development
@@ -6735,7 +7067,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:d1459b3924f011a4fec4dc97cab864cc2c10bbaa2047d43c262b44e597be5807
+  content_hash: sha256:ce5ede7db7579858173f0d7740d94c8d7fb3221c7b86d47437e26a5978c35f0f
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/SKILL.md
@@ -6744,7 +7076,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:c55a7a1423c938f89df6191e6b38b2ae446add09ea70a29e2dbdfb0bbbb9adcc
+  content_hash: sha256:193268195ee27e6c499d57c9aa01e501b37a58491b0069549c149eb6ba97e90e
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/assets/templates/responder-prompt.ja.md
@@ -6753,7 +7085,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:9ce2423ab3f61682d95d221e43e2c9b15d412100be3940a7f171ba48bca5ac58
+  content_hash: sha256:60f47bbe529aff9b8554011faa503d6555ba14e49d68cafe52df36a9501e5b2e
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/assets/templates/responder-prompt.md
@@ -6762,7 +7094,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:74e0bfbb58daa2f733566e61e43609a0892f99780eeab2fde50335044a0fa510
+  content_hash: sha256:a3ae5597a233d1d0f497acbe681a156552886983008947b990eaa0acaef323a4
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/references/issue-format.ja.md
@@ -6771,7 +7103,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:4eedb4443ae62dcbacd2624f493e87217d9f555f440a8bc942baabcd832355c2
+  content_hash: sha256:e6d77739a5a775294f656c5c5ee11acdb5c781fa5b86eb24a344e3e4ab0645d5
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/references/issue-format.md
@@ -6780,7 +7112,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:942057348dd001fbcfe6adc47ba48648f384a9173fce772089580574a0b34607
+  content_hash: sha256:f0087e5ef5d72af251f3919fe506eb5dbebcb0251a2145d8a313634eb142baad
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/references/protocol.ja.md
@@ -6789,7 +7121,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:515d50fd9634151c661d7e3523dd6dbedddce802e3fc4599c3d8c902f8565e12
+  content_hash: sha256:2f69d37e80550785729359c816eaa59ee753824a572e2727d2a7c5ca60248d3b
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/references/protocol.md
@@ -6798,7 +7130,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:402ef55ce673ee870097160e8e92d3fc465cb300f17ef6e90895e09e1494e366
+  content_hash: sha256:7bef854e033610446b50110281cf93c3f6cbcc6241b3df86d403c857be4624f7
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/references/responder-guide.ja.md
@@ -6807,7 +7139,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:3b4f8e1e6caad51be60d42c4a4ac0d71bb5750b04151e00a7b98f7b726d4ed43
+  content_hash: sha256:6207b4a27595468cfb9eb4b5314d39de5fb3b729f84130a811aa6a44584a779e
 - kind: project-relative
   target: claude
   value: .claude/skills/github-issue-handoff/references/responder-guide.md
@@ -6816,7 +7148,7 @@ deployments:
   owners:
   - ./packages/github-issue-handoff
   active_owner: ./packages/github-issue-handoff
-  content_hash: sha256:d52edde39b526dfbd079c16b905bc59125f281d0469ed00be9b98077807db87b
+  content_hash: sha256:fe07b07b24b7087403e8d86b1b8f83792f5b41427f8ac4cb6f150ef16f24eab4
 - kind: project-relative
   target: claude
   value: .claude/skills/idea-doc
@@ -6834,7 +7166,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:fb7bc524115eee8872b5cfe7943ff3483f3db0371a8e708f6d319263bd8aebcf
+  content_hash: sha256:f147c5c559c23c67cfe8c1c28423c430fa8d9c3a01e6124966bc59599e87e302
 - kind: project-relative
   target: claude
   value: .claude/skills/idea-doc/SKILL.md
@@ -6843,7 +7175,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:275b98998b631763ab21abdcd32f026336327a54b56638e542e932689afdcf45
+  content_hash: sha256:8e06b42de3314ac4b3a2cb48a1e99154f5435b71c596a4d03f69ee4be22cb3fb
 - kind: project-relative
   target: claude
   value: .claude/skills/idea-doc/assets/templates/idea.ja.md
@@ -6870,7 +7202,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9f5469f299b65954ba114a58c50eb238820f2ac9a6b8a66c4c9eb46beba62df2
+  content_hash: sha256:eb5802e39b6081207e7f0dcfc9dc2d99d41337770ef68e9e8f11d86b9db03bd6
 - kind: project-relative
   target: claude
   value: .claude/skills/idea-doc/references/idea-conventions.md
@@ -6879,7 +7211,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:98db0d9f386dac9c91e718a45488da615c52a5dd1b75b53f89480a52c57e082a
+  content_hash: sha256:bbca87ef26460aa229c74718f2b0f59af87b763fa67ab6a1503b3f3f1a91d7a5
 - kind: project-relative
   target: claude
   value: .claude/skills/idea-doc/scripts/new_idea.js
@@ -6888,7 +7220,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:abdc44ff4465eb0ffdb62518c398574827f078f55c808f21e9dfdf5c3eb5c704
+  content_hash: sha256:8ecf743f720207cfd22fd3b81f2693ef5dd5440c27319554a842464f7fc1fd76
 - kind: project-relative
   target: claude
   value: .claude/skills/idea-refine
@@ -6960,7 +7292,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:99359506791cb2e84d89975a9ca8056c433465e4c697fd9e5708576b312ae3fc
+  content_hash: sha256:f428a5bac572182bba9f90424e7483f56a7b670a8c7657501bdf31b9ddd0c049
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/SKILL.md
@@ -6969,7 +7301,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:4b79189cee11db50106fa86abca5fdd58f95163e500a5b9aa650195a9c4b1f8a
+  content_hash: sha256:e93179962055816b9065cc54bb329179df470392905706a9ebc92ef354fe20f3
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/assets/templates/experiment-log.ja.jsonl
@@ -7014,7 +7346,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:963769c53d393ea966b9f604fb9b89fd21857794b702690de05393f0255e137b
+  content_hash: sha256:33e0c55eb732b9083240e43e2a560cf8c0b9c9b5bc4260188a1b288a809a829d
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/references/impl-conventions.md
@@ -7023,7 +7355,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:5759af64ff4d2d5ec5aca16b3401f8c370eadf6e114b14409cc5edc98702298a
+  content_hash: sha256:8e05d2fb61c8bc520afe202ed3c6aea76120b206268dc0cc81a37eacc8c24a1d
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/scripts/append_experiment_event.js
@@ -7032,7 +7364,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:dcd307540f5888069f4a001c920d61f86e6f34311428d925fe21251f12123441
+  content_hash: sha256:63f13c1bf9f02219e4c27ea6e5ffeed28b1857ce447b4eb1c9d7eca05d167817
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/scripts/audit_experiment_log.js
@@ -7041,7 +7373,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:a28eb28e70ab75a8987128c009a6f8344d4b344e5babbc017e5699dfd0f027a6
+  content_hash: sha256:a54c2d83b4ac93b03292511b5ac144d89c96dcb729cbfcfb96120778a582441b
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/scripts/audit_impl_record.js
@@ -7050,7 +7382,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:e232d1862b866d011e5fe00f719dac8f1a762b7ed656f36a4c53e5e901f84177
+  content_hash: sha256:29d119e01127aabf99f9322e32a8b43389ce5ae2e50d7bbd74df5e00375910ab
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/scripts/edit_experiment_log.js
@@ -7059,7 +7391,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:f9e8e01325e8cd8f92d3919b0fb3ad87015208629d653e3a339d5ad5e941295c
+  content_hash: sha256:ff5f8b3ca5f146a3c59a138ac9f70bfdef718a35ecabcb1bad564bd2d38344e3
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/scripts/new_experiment_log.js
@@ -7068,7 +7400,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:64565b58e0e359909eace0f047e4981f0f711dcd05f6f40e005e6bb51d5e787a
+  content_hash: sha256:435192b1061ff30f14215f267f95fb2929220e379edc5355e1fcb4cb073adad6
 - kind: project-relative
   target: claude
   value: .claude/skills/impl-doc/scripts/new_impl_record.js
@@ -7077,7 +7409,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:6ae2b02cda0d492e7cf2fb461beaf9df621be08f1b1e9001a2737d6bc32e1d87
+  content_hash: sha256:cd4cce0ac15d8dcd3a78798bcb1758fdda66fe0948f7cccc5b3262388dd988f7
 - kind: project-relative
   target: claude
   value: .claude/skills/implementation-flow
@@ -7095,7 +7427,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:6d4dd260eec7df3d855c8cfd5ab041ff9f56284f083d8a493335c9c66f204754
+  content_hash: sha256:67e14e27419ee295a91c4f766c0d1740317c4bdc4e857fea7e79ad10ccaff866
 - kind: project-relative
   target: claude
   value: .claude/skills/implementation-flow/SKILL.md
@@ -7104,7 +7436,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:bb056e2e5a9c48d0296f1ab7ff10d0b4e7a87b09794a2ea0424504fb8cfb48b3
+  content_hash: sha256:0e64a7961dc976544d3d5d26eb25d31287513841c727e1f02e1e1d4b458aa62c
 - kind: project-relative
   target: claude
   value: .claude/skills/implementation-flow/assets/adapters/implementation-adapter.yaml
@@ -7203,7 +7535,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:c2a53d85b4dbd77629a816dd73ba78a24c2d3f4f2b5c08a9d97b1e16cad2b146
+  content_hash: sha256:23422c10cf6d4c11cdfa05768ed45300a9dee3dc517c2fce3ce734772f585562
 - kind: project-relative
   target: claude
   value: .claude/skills/plan-doc/SKILL.md
@@ -7212,7 +7544,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:cd64487e9902b23731e550bd72850ebd72fe85d6094aa002c0fa6354be60a903
+  content_hash: sha256:1e18268697721a5f0346d6e036e048032f328b9e953ca524c40a938c5d4d157f
 - kind: project-relative
   target: claude
   value: .claude/skills/plan-doc/assets/templates/plan.ja.md
@@ -7239,7 +7571,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:307eb2b56ba3fbe236fc2ed265bcc6b693db70260c48727953d4cc98502610f5
+  content_hash: sha256:8490d34a98ca5519feed6aceeed86e1e53aa8bba3b43bb019d1bca7de2f5e9f4
 - kind: project-relative
   target: claude
   value: .claude/skills/plan-doc/references/plan-conventions.md
@@ -7248,7 +7580,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:9dabae512f4e97f864d2d1a50a6bb66f08c7d3ef4a4f1faef29bafb6734a1223
+  content_hash: sha256:82371f4a345f289782d7128d11eba694b39a94a9417ddb1a244ecb7fcc205e0f
 - kind: project-relative
   target: claude
   value: .claude/skills/plan-doc/scripts/new_plan.js
@@ -7257,7 +7589,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:dcabe1800932146e8a0d7d343163134c0b2453733d3bdadcd05718067a7e8319
+  content_hash: sha256:ad7e01e4df296ff0443805ab7d5ade44927cec6efadd019ba5d66b273de3ce2f
 - kind: project-relative
   target: claude
   value: .claude/skills/planning-flow
@@ -7366,6 +7698,24 @@ deployments:
   - obra/superpowers/skills/receiving-code-review
   active_owner: obra/superpowers/skills/receiving-code-review
   content_hash: sha256:091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-plan
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-plan/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: sha256:93741df0042a15c01ae8589e72014dcf53c557c11ca1df69c29737534c312c29
 - kind: project-relative
   target: claude
   value: .claude/skills/repo-story-time
@@ -7788,7 +8138,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:76c77481889348fcb9cac3659233629fa3ef8ad7d2f88186a775121b2cb03549
+  content_hash: sha256:3a2b411e7b2dd08ad62b7448764c00226c74c100cfb27334216eda61aae66af2
 - kind: project-relative
   target: claude
   value: .claude/skills/spec-doc/SKILL.md
@@ -7797,7 +8147,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ca793240e19d36d474cbf1bae80f6de49c65aecf58ec1b2d2b96ce0bb463f7bf
+  content_hash: sha256:88e296ea6cee91331a6bd3004e91f99383f000b0643207b6e153a8082575e169
 - kind: project-relative
   target: claude
   value: .claude/skills/spec-doc/assets/templates/spec.ja.md
@@ -7824,7 +8174,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:f23fb9ec05a3afa100e26be0c31e75a87596a88e8e8180bedd1b31c94c7da16d
+  content_hash: sha256:3be9c026e1fa7099ef18c403707a199cf1a3c4949a63fe46e2c29230ab4f2e52
 - kind: project-relative
   target: claude
   value: .claude/skills/spec-doc/references/spec-conventions.md
@@ -7833,7 +8183,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:63e589f74661c7142358821c0989d4b09d8d9659976c376242c3fe35b466c013
+  content_hash: sha256:40b3af0c36d65c8336be45e9e71e5037d2587beba4f1dc6c0658ea35a30a44ec
 - kind: project-relative
   target: claude
   value: .claude/skills/spec-doc/scripts/new_spec.js
@@ -7842,7 +8192,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:e80c21174a89a8b16baa09a13611bea78e0c8bfa747d034100b3c21a2dbdfb47
+  content_hash: sha256:492a8efaf2ca8fda3131ba54cd8e175a410057b36ddb721021baac2fcf40e70f
 - kind: project-relative
   target: claude
   value: .claude/skills/steer-web-research
@@ -8103,7 +8453,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:0c51c6eb6320e7f5cd6d5a0153e7112a1e13995e97eb167e8889097e95de1295
+  content_hash: sha256:13e411b8910b3b84f0870993b387b13e5fd212344e3e3cefb50166577c075df9
 - kind: project-relative
   target: claude
   value: .claude/skills/task-doc/SKILL.md
@@ -8112,7 +8462,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:769649095be290dbc1e7638edd0bf09bfa5a4efa417a6c8cea4c3dc1c7113c0d
+  content_hash: sha256:c28a552964948089ab6426f714802c2003f69ba6570caa80588ca73565cdffc0
 - kind: project-relative
   target: claude
   value: .claude/skills/task-doc/assets/templates/task.ja.md
@@ -8139,7 +8489,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:443e1f4314c42ce9daf869b566f7f5895b7794fe61789fea22ffcf4cdef55041
+  content_hash: sha256:2f2221ccd7192317aeecdf8863b8906607a9ea6393d46875da0e4bb86c3dab19
 - kind: project-relative
   target: claude
   value: .claude/skills/task-doc/references/task-conventions.md
@@ -8148,7 +8498,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:00ff52ad1c96756b80d2a979dbec74119208629703a8543745e318c44b7c670f
+  content_hash: sha256:bf82dd21b0ddab654e20bdd31b278e461718d82295790b814966051ad422c239
 - kind: project-relative
   target: claude
   value: .claude/skills/task-doc/scripts/new_task.js
@@ -8157,7 +8507,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:598ce29b293b0d7274795a39a8b355b0af1b004e903c609dbc8ff081766c56a9
+  content_hash: sha256:09bc2e98768c07c4fee3ca353bf635157686e8e8b8fdcaef1f73f42035d32b57
 - kind: project-relative
   target: claude
   value: .claude/skills/test-driven-development
@@ -8193,7 +8543,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:37e7559d8cd99a1be4f370c4355e806254337bbc0dd02b06b475770cfab07c3e
+  content_hash: sha256:0b00e27146b4a73363f074bef5bc14d2ff3c2f85a9ad5c20114709ffaee81e42
 - kind: project-relative
   target: claude
   value: .claude/skills/test-spec-doc/SKILL.md
@@ -8202,7 +8552,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:ee007fdb81fbecb884a3b8fcddb2e08680185df99fcf95109cc17025ad94a006
+  content_hash: sha256:b2d6ad6cad2a6bdbc1fa5c3f237cb53dfe688128ada40eaaa0922eceaf60621e
 - kind: project-relative
   target: claude
   value: .claude/skills/test-spec-doc/assets/templates/test-spec.ja.md
@@ -8229,7 +8579,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:18e1fafeb6fcc55d95ce7f290481dfb0e72b22134f9d788b18a1d62c4286cb2f
+  content_hash: sha256:1ce8adffecacad2122d3daff83a5c29a0e48408aec62bee21e6504dc8bdc6252
 - kind: project-relative
   target: claude
   value: .claude/skills/test-spec-doc/references/test-spec-conventions.md
@@ -8238,7 +8588,7 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:1cf57301a3153b7b25b8bf748091cb1e99cab84a35cd59da61624d3c890c9b29
+  content_hash: sha256:0972840a281a70137611561cfc33e7ca55955b80fc4cd7b7ecdfbb6b000b9b7d
 - kind: project-relative
   target: claude
   value: .claude/skills/test-spec-doc/scripts/new_test_spec.js
@@ -8247,7 +8597,25 @@ deployments:
   owners:
   - ./packages/doc-driven-dev
   active_owner: ./packages/doc-driven-dev
-  content_hash: sha256:2100c083620635f97c435a443fbf64c9eccfb6d956d3cf2abc0273924862b549
+  content_hash: sha256:69d852f640b276b913cb0a58f0704137b22f53ada3ff0b73e28b8c8585e5eb0f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/what-context-needed
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/what-context-needed/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/plugins/context-engineering
+  active_owner: github/awesome-copilot/plugins/context-engineering
+  content_hash: sha256:65ed7445bf561a5e5199ac77478d2691c05019e0dc32fdddc23db9e45bd9d135
 - kind: project-relative
   target: claude
   value: .claude/skills/writing-plans
