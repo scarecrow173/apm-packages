@@ -28,7 +28,6 @@ The source of truth is [apm.yml](./apm.yml). Current dependencies:
 - `addyosmani/agent-skills/skills/incremental-implementation`
 - `addyosmani/agent-skills/skills/ci-cd-and-automation`
 - `addyosmani/agent-skills/skills/code-simplification`
-- `addyosmani/agent-skills/skills/context-engineering`
 
 ## Maintenance
 
