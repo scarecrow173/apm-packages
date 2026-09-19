@@ -106,7 +106,7 @@ PowerShell から `sdp infer set-skill` 用の JSON を生成する際、2つの
 PowerShell の `Out-File -Encoding utf8` は UTF-8 with BOM を出力する。Node.js の `JSON.parse` は BOM 付き JSON を読めず、以下をスローする:
 
 ```
-Unexpected token '﻿', "﻿{..." is not valid JSON
+Unexpected token '\ufeff', "\ufeff{..." is not valid JSON
 ```
 
 BOM なしで書き込むには `System.Text.UTF8Encoding($false)` を使う:
