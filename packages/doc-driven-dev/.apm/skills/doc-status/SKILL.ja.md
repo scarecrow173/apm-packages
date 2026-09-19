@@ -76,7 +76,9 @@ type のライフサイクル状態と relation の健全性を確認するた�
    `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
    文書型（`spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `idea`,
    `brainstorm`, `discovery`）は `audit_docs.js --type <name>`、
-   `all` は全 canonical 文書型を対象とする `audit_docs.js --type all`、
+   `all` は全 canonical 文書型に加えて、root-level の unmanaged Markdown と
+   配布 `.apm` skill 文書への legacy-reference sweep も対象とする
+   `audit_docs.js --type all`、
    `impl-record` は `impl-doc/scripts/audit_impl_record.js` です。
 
 4. `relations.source` は外部出典として扱う。
@@ -99,6 +101,14 @@ rule ID で報告する。対象チェック:
 - `broken-relation-link`, `ambiguous-relation-target`,
   `relation-escapes-root`, `self-relation`, `inconsistent-reciprocal-relation`
   — 意味 relation の違反。
+- `unresolved-legacy-reference` — 本文中の旧 `TYPE-NNNN` artifact id 参照で、
+  対応する artifact が存在しないもの。番号付き `.jsonl` log を持たない
+  `EXP-NNNN` experiment 参照も含む。既存 artifact や experiment file に
+  解決できる token は報告しないため、migration 前のリポジトリは
+  クリーンなまま。
+- `ambiguous-experiment-reference` — 同一番号の numbered `.jsonl` experiment
+  log が複数存在し、一意の canonical path を決められない `EXP-NNNN` 参照。
+  `.jsonl` path へ手動で書き換える必要がある。
 - `test-spec-missing-verifies`, `test-spec-invalid-verifies-target`,
   `plan-missing-test-spec-evidence`, `missing-required-relation`,
   `invalid-relation-target-type` — contract が要求する upstream / 検証
