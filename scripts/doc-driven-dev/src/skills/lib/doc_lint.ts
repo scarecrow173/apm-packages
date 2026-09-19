@@ -439,28 +439,30 @@ function legacyIdPrefixes(): Set<string> {
   return prefixes;
 }
 
-// Experiment logs carry no artifact id; `EXP-NNNN` resolves only while a
-// numbered `NNNN-*.jsonl` exists, matching the migrate_ids.js contract that
-// rewrites these tokens to `.jsonl` paths. Symlinked entries are excluded and
-// the exp dir itself must stay inside the repository so audit semantics match
-// the migrator, which never adopts symlinked logs or roots.
-function experimentNumbers(root: string): Set<string> {
+// Experiment logs carry no artifact id; `EXP-NNNN` resolves only while
+// exactly one numbered `NNNN-*.jsonl` exists, matching the migrate_ids.js
+// contract that rewrites these tokens to `.jsonl` paths. Counts are kept per
+// number so a duplicate number is ambiguous rather than silently resolved.
+// Symlinked entries are excluded and the exp dir itself must stay inside the
+// repository so audit semantics match the migrator, which never adopts
+// symlinked logs or roots.
+function experimentNumbers(root: string): Map<string, number> {
   const expDir = path.join(root, IMPL_EXP_DIR);
-  if (!fs.existsSync(expDir)) return new Set();
+  if (!fs.existsSync(expDir)) return new Map();
   let realRoot: string;
   try {
     realRoot = fs.realpathSync(root);
   } catch {
-    return new Set();
+    return new Map();
   }
-  if (!realpathInside(realRoot, expDir)) return new Set();
-  const numbers = new Set<string>();
+  if (!realpathInside(realRoot, expDir)) return new Map();
+  const counts = new Map<string, number>();
   for (const name of fs.readdirSync(expDir)) {
     if (isSymlinkPath(path.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
-    if (match) numbers.add(match[1]);
+    if (match) counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
   }
-  return numbers;
+  return counts;
 }
 
 function isSymlinkPath(p: string): boolean {
@@ -498,9 +500,23 @@ function lintLegacyIdReferences(model: DocumentRepository, files: RepositoryDocu
     }
     for (const [token, line] of [...seen.entries()].sort((a, b) => a[1] - b[1])) {
       if (model.lookupById(token).status !== "none") continue;
-      if (prefixOf(token) === EXPERIMENT_ID_PREFIX
-        && expNumbers.has(token.slice(EXPERIMENT_ID_PREFIX.length + 1))) {
-        continue;
+      if (prefixOf(token) === EXPERIMENT_ID_PREFIX) {
+        const count = expNumbers.get(token.slice(EXPERIMENT_ID_PREFIX.length + 1)) ?? 0;
+        if (count === 1) continue;
+        if (count > 1) {
+          findings.push(finding({
+            ruleId: "ambiguous-experiment-reference",
+            category: "relation",
+            severity: "error",
+            path: document.path,
+            line,
+            artifactId: document.id,
+            message: `Experiment reference ${token} matches multiple experiment logs; rewrite it to a .jsonl path manually`,
+            target: token,
+            repair: "manual",
+          }));
+          continue;
+        }
       }
       findings.push(finding({
         ruleId: "unresolved-legacy-reference",

@@ -299,3 +299,43 @@ test("audit_docs does not ingest documents through a symlinked docs root", (t) =
     false,
   );
 });
+
+test("audit_docs --type all flags legacy tokens in distributed .apm skill docs", () => {
+  const repo = tempRepo();
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter());
+  fs.mkdirSync(path.join(repo, ".apm/skills/alpha"), { recursive: true });
+  fs.writeFileSync(path.join(repo, ".apm/skills/alpha/SKILL.md"), "# Alpha\n\nSee TASK-0007.\n", "utf8");
+  fs.mkdirSync(path.join(repo, "packages/foo/.apm/skills/bar"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "packages/foo/.apm/skills/bar/SKILL.md"), "# Bar\n\nSee ADR-0025.\n", "utf8");
+
+  const report = auditJson(repo, "all");
+  const findings = report.findings.filter((finding: any) => finding.code === "unresolved-legacy-reference");
+  assert.ok(
+    findings.some(
+      (finding: any) => finding.file === "packages/foo/.apm/skills/bar/SKILL.md"
+        && finding.message.includes("ADR-0025"),
+    ),
+  );
+  assert.ok(
+    findings.some(
+      (finding: any) => finding.file === ".apm/skills/alpha/SKILL.md"
+        && finding.message.includes("TASK-0007"),
+    ),
+  );
+});
+
+test("audit_docs flags ambiguous EXP-NNNN when multiple experiment logs share a number", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/impl/exp/0001-a.jsonl"), "{}\n", "utf8");
+  fs.writeFileSync(path.join(repo, "docs/impl/exp/0001-b.jsonl"), "{}\n", "utf8");
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter(),
+    "# Spec\n\nSee EXP-0001 for data.\n");
+
+  const report = auditJson(repo, "spec");
+  const findings = report.findings.filter((finding: any) => finding.code === "ambiguous-experiment-reference");
+  assert.equal(findings.length, 1);
+  assert.ok(findings[0].message.includes("EXP-0001"));
+  assert.equal(findings[0].severity, "error");
+  assert.equal(findings[0].blocking, true);
+});

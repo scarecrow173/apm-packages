@@ -29712,21 +29712,21 @@ function legacyIdPrefixes() {
 }
 function experimentNumbers(root) {
   const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
-  if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Set();
+  if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
   let realRoot;
   try {
     realRoot = import_node_fs5.default.realpathSync(root);
   } catch {
-    return /* @__PURE__ */ new Set();
+    return /* @__PURE__ */ new Map();
   }
-  if (!realpathInside2(realRoot, expDir)) return /* @__PURE__ */ new Set();
-  const numbers = /* @__PURE__ */ new Set();
+  if (!realpathInside2(realRoot, expDir)) return /* @__PURE__ */ new Map();
+  const counts = /* @__PURE__ */ new Map();
   for (const name of import_node_fs5.default.readdirSync(expDir)) {
     if (isSymlinkPath(import_node_path6.default.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
-    if (match) numbers.add(match[1]);
+    if (match) counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
   }
-  return numbers;
+  return counts;
 }
 function isSymlinkPath(p) {
   try {
@@ -29761,8 +29761,23 @@ function lintLegacyIdReferences(model, files) {
     }
     for (const [token, line] of [...seen.entries()].sort((a, b) => a[1] - b[1])) {
       if (model.lookupById(token).status !== "none") continue;
-      if (prefixOf(token) === EXPERIMENT_ID_PREFIX && expNumbers.has(token.slice(EXPERIMENT_ID_PREFIX.length + 1))) {
-        continue;
+      if (prefixOf(token) === EXPERIMENT_ID_PREFIX) {
+        const count = expNumbers.get(token.slice(EXPERIMENT_ID_PREFIX.length + 1)) ?? 0;
+        if (count === 1) continue;
+        if (count > 1) {
+          findings.push(finding({
+            ruleId: "ambiguous-experiment-reference",
+            category: "relation",
+            severity: "error",
+            path: document3.path,
+            line,
+            artifactId: document3.id,
+            message: `Experiment reference ${token} matches multiple experiment logs; rewrite it to a .jsonl path manually`,
+            target: token,
+            repair: "manual"
+          }));
+          continue;
+        }
       }
       findings.push(finding({
         ruleId: "unresolved-legacy-reference",

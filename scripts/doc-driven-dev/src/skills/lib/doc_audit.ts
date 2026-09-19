@@ -94,9 +94,27 @@ async function auditDocuments(cwd: string, type: string, explicitDir?: string, o
   return auditWithModel(model, cwd, type, explicitDir, options);
 }
 
+// Distributed agent-facing docs (.apm skill documents) carry the same
+// artifact references the migrator rewrites, so the --type all legacy-token
+// sweep needs them in the model to catch re-introduced legacy ids. Root
+// containment by real path is enforced inside scanRepository.
+function distributionDocRoots(cwd: string): string[] {
+  const candidates = [".apm"];
+  const packagesDir = path.join(cwd, "packages");
+  if (fs.existsSync(packagesDir) && fs.statSync(packagesDir).isDirectory()) {
+    for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
+      if (entry.isDirectory()) candidates.push(`packages/${entry.name}/.apm`);
+    }
+  }
+  return candidates.filter((candidate) => {
+    const full = path.join(cwd, candidate);
+    return fs.existsSync(full) && fs.statSync(full).isDirectory();
+  });
+}
+
 async function auditAllDocuments(cwd: string, explicitDir?: string, options?: AuditOptions): Promise<AuditReport> {
   const relativeDirs = docTypes.map((type) => docDir(cwd, type, explicitDir));
-  const model = await buildModel(cwd, relativeDirs);
+  const model = await buildModel(cwd, [...relativeDirs, ...distributionDocRoots(cwd)]);
   const merged: AuditReport = { directory: ".", files: 0, findings: [] };
   for (const type of docTypes) {
     const report = await auditWithModel(model, cwd, type, explicitDir, options);
