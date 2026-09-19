@@ -15,7 +15,6 @@
 - `github/awesome-copilot/skills/agentic-eval`
 - `github/awesome-copilot/skills/autoresearch`
 - `github/awesome-copilot/skills/copilot-usage-metrics`
-- `github/awesome-copilot/plugins/context-engineering`
 
 ## 関連 Package
 
