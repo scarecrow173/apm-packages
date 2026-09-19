@@ -237,10 +237,18 @@ each legacy id to a new id (locale siblings such as `slug.md`/`slug.ja.md`
 share one id), preflight for blockers, rewrite front matter `id`, relation
 fields, metadata, body text, index tables, and experiment `.jsonl` paths, then
 rename numbered files via a two-phase move that cannot clobber chained rename
-targets, regenerate generated indexes, and validate. Any blocker — duplicate
-legacy id across non-sibling files, unresolved legacy reference, rename-target
+targets, regenerate generated indexes, and validate. Reference rewriting and
+the unresolved-reference check cover every active document, not only `docs/`:
+root-level Markdown (`AGENTS.md`, `README.md`), distributed agent docs under
+`.apm/` and `packages/*/.apm/`, and any `--extra-root <dir>` passed on the
+command line. `EXP-NNNN` references to experiment logs rewrite to the
+canonical `.jsonl` path because experiment artifacts carry no artifact id.
+Any blocker — duplicate
+legacy id across non-sibling files, unresolved legacy reference, ambiguous
+experiment reference, rename-target
 collision (target or temporary `.migrate-tmp` path), unparseable or missing
-front matter on a numbered document, unknown document type, or a dirty Git
+front matter on a numbered document, unknown document type, invalid
+`--extra-root`, or a dirty Git
 worktree — stops the run before any mutation.
 `--allow-dirty` bypasses only the worktree check; `--keep-filenames` rewrites
 ids but preserves numbered filenames. After `--apply`, the command re-checks

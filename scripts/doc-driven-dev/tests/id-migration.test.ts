@@ -452,3 +452,407 @@ test("doc-maintenance migrate_ids.js is the canonical entrypoint and graph path 
     assert.ok(isNewArtifactId(report.mappings[0].newId));
   }
 });
+
+test("EXP-NNNN references are rewritten to the experiment log path", async () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/impl/exp/0001-foo.jsonl"),
+    `${JSON.stringify({
+      schema: "experiment_event.v1",
+      experiment: "docs/impl/exp/0001-foo.jsonl",
+      seq: 1,
+      type: "start",
+      ts: "2026-08-13T00:00:00.000Z",
+    })}\n`,
+    "utf8",
+  );
+  writeDoc(
+    repo,
+    "docs/specs/0001-checkout.md",
+    legacySpec("SPEC-0001", "checkout"),
+    "# checkout\n\nSee EXP-0001 for the measurement history.\n",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.ok(fs.existsSync(path.join(repo, "docs/impl/exp/foo.jsonl")));
+  const specContent = fs.readFileSync(path.join(repo, "docs/specs/checkout.md"), "utf8");
+  assert.ok(!specContent.includes("EXP-0001"));
+  assert.ok(specContent.includes("docs/impl/exp/foo.jsonl"));
+  assert.ok(report.rewrites.some((rewrite) => rewrite.file === "docs/specs/0001-checkout.md"));
+});
+
+test("EXP-NNNN with no matching experiment log blocks as unresolved-legacy-reference", async () => {
+  const repo = tempRepo();
+  writeDoc(
+    repo,
+    "docs/specs/0001-checkout.md",
+    legacySpec("SPEC-0001", "checkout"),
+    "# checkout\n\nSee EXP-0099 for the measurement history.\n",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo });
+
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.blockers.some(
+      (blocker) => blocker.code === "unresolved-legacy-reference" && blocker.message.includes("EXP-0099"),
+    ),
+  );
+  assert.ok(fs.existsSync(path.join(repo, "docs/specs/0001-checkout.md")));
+});
+
+test("EXP-NNNN matching multiple experiment logs blocks as ambiguous", async () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  for (const name of ["0001-a.jsonl", "0001-b.jsonl"]) {
+    fs.writeFileSync(path.join(repo, "docs/impl/exp", name), "{}\n", "utf8");
+  }
+  writeDoc(
+    repo,
+    "docs/specs/0001-checkout.md",
+    legacySpec("SPEC-0001", "checkout"),
+    "# checkout\n\nSee EXP-0001 for the measurement history.\n",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.ok(
+    report.blockers.some(
+      (blocker) => blocker.code === "ambiguous-experiment-reference" && blocker.message.includes("EXP-0001"),
+    ),
+  );
+  const specContent = fs.readFileSync(path.join(repo, "docs/specs/0001-checkout.md"), "utf8");
+  assert.ok(specContent.includes("EXP-0001"));
+});
+
+test("--keep-filenames rewrites EXP-NNNN to the numbered experiment path", async () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/impl/exp/0001-foo.jsonl"), "{}\n", "utf8");
+  writeDoc(
+    repo,
+    "docs/specs/0001-checkout.md",
+    legacySpec("SPEC-0001", "checkout"),
+    "# checkout\n\nSee EXP-0001 for the measurement history.\n",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true, keepFilenames: true });
+
+  assert.deepEqual(report.blockers, []);
+  const specContent = fs.readFileSync(path.join(repo, "docs/specs/0001-checkout.md"), "utf8");
+  assert.ok(!specContent.includes("EXP-0001"));
+  assert.ok(specContent.includes("docs/impl/exp/0001-foo.jsonl"));
+});
+
+test("root-level AGENTS.md references are rewritten", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Agents\n\nSee TASK-0001 for the work.\n", "utf8");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  const mapping = report.mappings.find((entry) => entry.legacyId === "TASK-0001");
+  assert.ok(mapping);
+  const agents = fs.readFileSync(path.join(repo, "AGENTS.md"), "utf8");
+  assert.ok(!agents.includes("TASK-0001"));
+  assert.ok(agents.includes(mapping.newId));
+  assert.ok(report.rewrites.some((rewrite) => rewrite.file === "AGENTS.md"));
+});
+
+test("unresolved legacy tokens in root-level docs block the run", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  const agentsContent = "# Agents\n\nSee ADR-0025 and TASK-0001 for context.\n";
+  fs.writeFileSync(path.join(repo, "AGENTS.md"), agentsContent, "utf8");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.ok(
+    report.blockers.some(
+      (blocker) => blocker.code === "unresolved-legacy-reference"
+        && blocker.file === "AGENTS.md"
+        && blocker.message.includes("ADR-0025"),
+    ),
+  );
+  // A blocker must stop the run before any mutation: AGENTS.md stays
+  // byte-identical (the mappable TASK-0001 is not rewritten) and the numbered
+  // document is not renamed.
+  assert.equal(fs.readFileSync(path.join(repo, "AGENTS.md"), "utf8"), agentsContent);
+  assert.ok(fs.existsSync(path.join(repo, "docs/tasks/0001-schema.md")));
+  assert.equal(docFrontMatter(repo, "docs/tasks/0001-schema.md").id, "TASK-0001");
+});
+
+test("non-doc-suite tokens in expanded scope do not block", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  fs.writeFileSync(path.join(repo, "README.md"), "# Readme\n\nFiles must be UTF-8 per RFC-2119.\n", "utf8");
+
+  const report = await migrateArtifactIds({ cwd: repo });
+
+  assert.deepEqual(report.blockers, []);
+});
+
+test("distributed .apm skill documents under packages/ are rewritten", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/discovery/0009-research.md", {
+    id: "DISC-0009", type: "discovery", status: "draft", title: "research",
+    created: "2026-08-13", updated: "2026-08-13", owners: [],
+    relations: { source: ["https://example.com/evidence"] },
+  }, "# research\n");
+  const skillDir = path.join(repo, "packages/apm/.apm/skills/usage");
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(skillDir, "SKILL.md"),
+    "# Usage\n\nDerived from DISC-0009 and docs/discovery/0009-research.md.\n",
+    "utf8",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  const mapping = report.mappings.find((entry) => entry.legacyId === "DISC-0009");
+  assert.ok(mapping);
+  const skill = fs.readFileSync(path.join(skillDir, "SKILL.md"), "utf8");
+  assert.ok(!skill.includes("DISC-0009"));
+  assert.ok(skill.includes(mapping.newId));
+  assert.ok(skill.includes("docs/discovery/research.md"));
+});
+
+test("--extra-root extends the scan scope and escapes are blocked", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  const extraDir = path.join(repo, "guides");
+  fs.mkdirSync(extraDir, { recursive: true });
+  fs.writeFileSync(path.join(extraDir, "onboarding.md"), "# Guide\n\nSee TASK-0001.\n", "utf8");
+
+  const scoped = await migrateArtifactIds({ cwd: repo, apply: true, extraRoots: ["guides"] });
+  const mapping = scoped.mappings.find((entry) => entry.legacyId === "TASK-0001");
+  assert.ok(mapping);
+  const guide = fs.readFileSync(path.join(extraDir, "onboarding.md"), "utf8");
+  assert.ok(!guide.includes("TASK-0001"));
+  assert.ok(guide.includes(mapping.newId));
+
+  const escaping = await migrateArtifactIds({ cwd: repo, extraRoots: ["../outside"] });
+  assert.ok(escaping.blockers.some((blocker) => blocker.code === "invalid-extra-root"));
+
+  const missing = await migrateArtifactIds({ cwd: repo, extraRoots: ["no-such-dir"] });
+  assert.ok(missing.blockers.some((blocker) => blocker.code === "invalid-extra-root"));
+});
+
+test("EXP-NNNN resolves to the .jsonl log even beside a same-number markdown", async () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/impl/exp/0001-run.jsonl"), "{}\n", "utf8");
+  writeDoc(repo, "docs/impl/exp/0001-notes.md", {
+    id: "IMPL-0001", type: "impl", status: "draft", title: "notes",
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+    metadata: { experiments: { adopted: [], rejected: [] } },
+  }, "# notes\n");
+  writeDoc(
+    repo,
+    "docs/specs/0001-checkout.md",
+    legacySpec("SPEC-0001", "checkout"),
+    "# checkout\n\nSee EXP-0001 for the measurement history.\n",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  const specContent = fs.readFileSync(path.join(repo, "docs/specs/checkout.md"), "utf8");
+  assert.ok(specContent.includes("docs/impl/exp/run.jsonl"));
+  assert.ok(!specContent.includes("EXP-0001"));
+});
+
+test("EXP-NNNN with only a same-number markdown blocks as unresolved", async () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  writeDoc(repo, "docs/impl/exp/0001-notes.md", {
+    id: "IMPL-0001", type: "impl", status: "draft", title: "notes",
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+    metadata: { experiments: { adopted: [], rejected: [] } },
+  }, "# notes\n");
+  writeDoc(
+    repo,
+    "docs/specs/0001-checkout.md",
+    legacySpec("SPEC-0001", "checkout"),
+    "# checkout\n\nSee EXP-0001 for the measurement history.\n",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo });
+
+  assert.ok(
+    report.blockers.some(
+      (blocker) => blocker.code === "unresolved-legacy-reference" && blocker.message.includes("EXP-0001"),
+    ),
+  );
+  assert.ok(!report.blockers.some((blocker) => blocker.code === "ambiguous-experiment-reference"));
+});
+
+test("--extra-root rejects a symlinked directory that escapes the repository", async () => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  fs.writeFileSync(path.join(outside, "notes.md"), "# Outside\n\nSee TASK-0001.\n", "utf8");
+  fs.symlinkSync(outside, path.join(repo, "guides"), "junction");
+
+  const report = await migrateArtifactIds({ cwd: repo, extraRoots: ["guides"] });
+
+  assert.ok(report.blockers.some((blocker) => blocker.code === "invalid-extra-root"));
+  assert.equal(fs.readFileSync(path.join(outside, "notes.md"), "utf8"), "# Outside\n\nSee TASK-0001.\n");
+});
+
+test("distribution doc roots that are symlinks escaping the repository are excluded", async () => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  fs.mkdirSync(path.join(outside, "skills"), { recursive: true });
+  fs.writeFileSync(path.join(outside, "skills", "SKILL.md"), "# S\n\nSee ADR-0025.\n", "utf8");
+  fs.symlinkSync(outside, path.join(repo, ".apm"), "junction");
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.ok(fs.existsSync(path.join(repo, "docs/tasks/schema.md")));
+  assert.ok(fs.readFileSync(path.join(outside, "skills", "SKILL.md"), "utf8").includes("ADR-0025"));
+});
+
+test("symlinked files inside scan roots are never adopted or rewritten", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideContent = "# Outside\n\nSee TASK-0001.\n";
+  fs.writeFileSync(path.join(outside, "leak.md"), outsideContent, "utf8");
+  fs.mkdirSync(path.join(repo, "guides"), { recursive: true });
+  try {
+    fs.symlinkSync(path.join(outside, "leak.md"), path.join(repo, "guides", "leak.md"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, extraRoots: ["guides"], apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.ok(fs.existsSync(path.join(repo, "docs/tasks/schema.md")));
+  assert.ok(!report.rewrites.some((rewrite) => rewrite.file === "guides/leak.md"));
+  assert.equal(fs.readFileSync(path.join(outside, "leak.md"), "utf8"), outsideContent);
+});
+
+test("symlinked numbered docs in canonical dirs are never adopted or renamed", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideContent = "---\nid: TASK-9999\ntype: task\nstatus: draft\ntitle: leak\ncreated: 2026-08-13\nupdated: 2026-08-13\nowners: []\nrelations: {}\nmetadata: {}\n---\n# leak\n";
+  fs.writeFileSync(path.join(outside, "leak.md"), outsideContent, "utf8");
+  fs.mkdirSync(path.join(repo, "docs/tasks"), { recursive: true });
+  try {
+    fs.symlinkSync(path.join(outside, "leak.md"), path.join(repo, "docs/tasks", "9999-leak.md"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.ok(fs.existsSync(path.join(repo, "docs/tasks/9999-leak.md")));
+  assert.equal(fs.readFileSync(path.join(outside, "leak.md"), "utf8"), outsideContent);
+  assert.ok(!report.renames.some((rename) => rename.from.includes("9999")));
+});
+
+test("symlinked experiment logs do not resolve EXP-NNNN", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  fs.writeFileSync(path.join(outside, "run.jsonl"), "{}\n", "utf8");
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  try {
+    fs.symlinkSync(path.join(outside, "run.jsonl"), path.join(repo, "docs/impl/exp", "0001-run.jsonl"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+  writeDoc(
+    repo,
+    "docs/specs/0001-checkout.md",
+    legacySpec("SPEC-0001", "checkout"),
+    "# checkout\n\nSee EXP-0001 for the measurement history.\n",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.ok(
+    report.blockers.some(
+      (blocker) => blocker.code === "unresolved-legacy-reference" && blocker.message.includes("EXP-0001"),
+    ),
+  );
+  assert.equal(fs.readFileSync(path.join(outside, "run.jsonl"), "utf8"), "{}\n");
+});
+
+test("a symlinked canonical doc dir escaping the repository is excluded", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideContent = "---\nid: TASK-0001\ntype: task\nstatus: draft\ntitle: leak\ncreated: 2026-08-13\nupdated: 2026-08-13\nowners: []\nrelations: {}\nmetadata: {}\n---\n# leak\n";
+  fs.writeFileSync(path.join(outside, "0001-leak.md"), outsideContent, "utf8");
+  fs.mkdirSync(path.join(repo, "docs"), { recursive: true });
+  try {
+    fs.symlinkSync(outside, path.join(repo, "docs", "tasks"), "junction");
+  } catch {
+    t.skip("directory symlinks are not permitted on this platform");
+    return;
+  }
+  writeDoc(repo, "docs/specs/0001-checkout.md", legacySpec("SPEC-0001", "checkout"), "# checkout\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.ok(fs.existsSync(path.join(repo, "docs/specs/checkout.md")));
+  assert.ok(!report.renames.some((rename) => rename.from.includes("0001-leak")));
+  assert.ok(!report.rewrites.some((rewrite) => rewrite.file.includes("tasks")));
+  assert.equal(fs.readFileSync(path.join(outside, "0001-leak.md"), "utf8"), outsideContent);
+});
+
+test("a symlinked docs root escaping the repository is excluded", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  fs.mkdirSync(path.join(outside, "tasks"), { recursive: true });
+  const docContent = "---\nid: TASK-0001\ntype: task\nstatus: draft\ntitle: leak\ncreated: 2026-08-13\nupdated: 2026-08-13\nowners: []\nrelations: {}\nmetadata: {}\n---\n# leak\n";
+  const notesContent = "# notes\n\nSee TASK-0001.\n";
+  fs.writeFileSync(path.join(outside, "tasks", "0001-leak.md"), docContent, "utf8");
+  fs.writeFileSync(path.join(outside, "notes.md"), notesContent, "utf8");
+  try {
+    fs.symlinkSync(outside, path.join(repo, "docs"), "junction");
+  } catch {
+    t.skip("directory symlinks are not permitted on this platform");
+    return;
+  }
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.renames, []);
+  assert.deepEqual(report.rewrites, []);
+  assert.equal(fs.readFileSync(path.join(outside, "tasks", "0001-leak.md"), "utf8"), docContent);
+  assert.equal(fs.readFileSync(path.join(outside, "notes.md"), "utf8"), notesContent);
+});
+
+test("a symlinked index file is never written through during regeneration", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideContent = "# outside index\n";
+  fs.writeFileSync(path.join(outside, "index.md"), outsideContent, "utf8");
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  try {
+    fs.symlinkSync(path.join(outside, "index.md"), path.join(repo, "docs/tasks", "README.md"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.ok(fs.existsSync(path.join(repo, "docs/tasks/schema.md")));
+  assert.equal(fs.readFileSync(path.join(outside, "index.md"), "utf8"), outsideContent);
+});

@@ -9,6 +9,7 @@ type CliArgs = {
   allowDirty: boolean;
   apply: boolean;
   cwd: string;
+  extraRoots: string[];
   help?: boolean;
   json: boolean;
   keepFilenames: boolean;
@@ -19,6 +20,7 @@ function parseArgs(argv: string[]): CliArgs {
     allowDirty: false,
     apply: false,
     cwd: process.cwd(),
+    extraRoots: [],
     json: false,
     keepFilenames: false,
   };
@@ -26,6 +28,7 @@ function parseArgs(argv: string[]): CliArgs {
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--extra-root") args.extraRoots.push(argv[++i]);
     else if (arg === "--apply") args.apply = true;
     else if (arg === "--allow-dirty") args.allowDirty = true;
     else if (arg === "--keep-filenames") args.keepFilenames = true;
@@ -37,7 +40,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/migrate_ids.js [--cwd <path>] [--apply] [--keep-filenames] [--allow-dirty] [--json]";
+  return "Usage: node scripts/migrate_ids.js [--cwd <path>] [--apply] [--keep-filenames] [--allow-dirty] [--extra-root <dir>]... [--json]";
 }
 
 function printHuman(report: IdMigrationReport): void {
@@ -78,6 +81,7 @@ async function main(): Promise<void> {
       allowDirty: args.allowDirty,
       apply: args.apply,
       cwd: path.resolve(args.cwd),
+      extraRoots: args.extraRoots,
       keepFilenames: args.keepFilenames,
     });
 

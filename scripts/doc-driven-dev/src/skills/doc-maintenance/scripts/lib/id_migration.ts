@@ -11,6 +11,7 @@ import { auditExperimentLogs, auditImplementationRecords, updateIndexForExperime
 
 const IMPL_IR_DIR = "docs/impl/ir";
 const IMPL_EXP_DIR = "docs/impl/exp";
+const EXPERIMENT_ID_PREFIX = "EXP";
 const LOCALE_SUFFIX = /\.[a-z]{2}(-[a-z0-9]+)?$/i;
 const NUMBERED_FILE = /^(\d{4,})-(.*)$/;
 const LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
@@ -74,6 +75,7 @@ type MigrationOptions = {
   allowDirty?: boolean;
   apply?: boolean;
   cwd: string;
+  extraRoots?: string[];
   keepFilenames?: boolean;
 };
 
@@ -94,30 +96,46 @@ function numberedTargetName(fileName: string): string | null {
   return match ? match[2] : null;
 }
 
+const SKIPPED_DIRS = new Set([".git", "node_modules", ".pnpm-store"]);
+
 function walkFiles(baseDir: string, extensions: string[]): string[] {
   if (!fs.existsSync(baseDir)) return [];
   const entries = fs.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
+    // Symlinked entries are never adopted: readFileSync/writeFileSync would
+    // follow them, letting a `x.md -> /outside` link escape the repository.
+    if (entry.isSymbolicLink()) return [];
     const fullPath = path.join(baseDir, entry.name);
-    if (entry.isDirectory()) return walkFiles(fullPath, extensions);
+    if (entry.isDirectory()) {
+      return SKIPPED_DIRS.has(entry.name) ? [] : walkFiles(fullPath, extensions);
+    }
     return extensions.some((ext) => entry.name.toLowerCase().endsWith(ext)) ? [fullPath] : [];
   }).sort();
 }
 
 function canonicalDirs(cwd: string): { dir: string; type: string | null }[] {
+  const realCwd = realpathOf(cwd);
   const seen = new Set<string>();
   const dirs: { dir: string; type: string | null }[] = [];
   for (const type of docTypes) {
     const config = configFor(type);
     for (const candidate of config.dirs) {
-      if (!fs.existsSync(path.join(cwd, candidate))) continue;
+      const full = path.join(cwd, candidate);
+      // A symlinked canonical dir pointing outside the repository must not
+      // be adopted: discover/planRenames would treat outside files as
+      // artifacts and could rename or rewrite them.
+      if (!fs.existsSync(full) || !realpathInside(realCwd, full)) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
       dirs.push({ dir: candidate, type });
     }
   }
-  if (fs.existsSync(path.join(cwd, IMPL_IR_DIR))) dirs.push({ dir: IMPL_IR_DIR, type: "impl" });
-  if (fs.existsSync(path.join(cwd, IMPL_EXP_DIR))) dirs.push({ dir: IMPL_EXP_DIR, type: "impl-exp" });
+  for (const extra of [IMPL_IR_DIR, IMPL_EXP_DIR]) {
+    const full = path.join(cwd, extra);
+    if (fs.existsSync(full) && realpathInside(realCwd, full)) {
+      dirs.push({ dir: extra, type: extra === IMPL_IR_DIR ? "impl" : "impl-exp" });
+    }
+  }
   return dirs;
 }
 
@@ -127,16 +145,100 @@ function isUnderDir(child: string, parent: string): boolean {
   return c === p || c.startsWith(`${p}/`);
 }
 
-function contentRoots(cwd: string, dirs: { dir: string }[]): string[] {
+// Scan roots must not escape the repository through symlinks: a lexical
+// containment check is not enough because statSync follows links. Compare
+// canonical real paths instead so `guides -> /outside` is refused.
+function realpathInside(realCwd: string, absolute: string): boolean {
+  let real: string;
+  try {
+    real = fs.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = path.relative(realCwd, real);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+function realpathOf(cwd: string): string {
+  try {
+    return fs.realpathSync(cwd);
+  } catch {
+    return cwd;
+  }
+}
+
+// Agent-facing documents shipped outside docs/ (root AGENTS.md / README.md and
+// distributed .apm skill documents) carry the same canonical artifact
+// references, so they join the rewrite and unresolved-reference scan scope.
+function distributionDocRoots(cwd: string): string[] {
+  const realCwd = realpathOf(cwd);
+  const candidates = [".apm"];
+  const packagesDir = path.join(cwd, "packages");
+  if (fs.existsSync(packagesDir) && fs.statSync(packagesDir).isDirectory()) {
+    for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
+      if (entry.isDirectory()) candidates.push(`packages/${entry.name}/.apm`);
+    }
+  }
+  return candidates.filter((candidate) => {
+    const full = path.join(cwd, candidate);
+    return fs.existsSync(full)
+      && fs.statSync(full).isDirectory()
+      && realpathInside(realCwd, full);
+  });
+}
+
+function resolveExtraRoots(cwd: string, extraRoots: string[], blockers: Blocker[]): string[] {
+  const realCwd = realpathOf(cwd);
+  const resolved: string[] = [];
+  for (const extra of extraRoots) {
+    const absolute = path.resolve(cwd, extra);
+    const rel = normalizeDir(path.relative(cwd, absolute));
+    if (rel === "" || rel === ".") {
+      resolved.push(".");
+      continue;
+    }
+    if (!fs.existsSync(absolute) || !fs.statSync(absolute).isDirectory()) {
+      blockers.push({
+        code: "invalid-extra-root",
+        file: null,
+        message: `Extra content root is not a directory: ${extra}`,
+      });
+      continue;
+    }
+    if (!realpathInside(realCwd, absolute)) {
+      blockers.push({
+        code: "invalid-extra-root",
+        file: null,
+        message: `Extra content root escapes the repository: ${extra}`,
+      });
+      continue;
+    }
+    resolved.push(rel);
+  }
+  return resolved;
+}
+
+function contentRoots(cwd: string, dirs: { dir: string }[], extraRoots: string[] = []): string[] {
   const roots: string[] = [];
-  if (fs.existsSync(path.join(cwd, "docs"))) roots.push("docs");
+  const docsRoot = path.join(cwd, "docs");
+  if (fs.existsSync(docsRoot) && realpathInside(realpathOf(cwd), docsRoot)) roots.push("docs");
   for (const { dir } of dirs) {
     if (!isUnderDir(dir, "docs")) roots.push(dir);
+  }
+  for (const root of [...distributionDocRoots(cwd), ...extraRoots]) {
+    if (!roots.some((existing) => isUnderDir(root, existing))) roots.push(root);
   }
   return roots;
 }
 
-function contentFilesUnder(cwd: string, roots: string[]): string[] {
+function rootContentFiles(cwd: string): string[] {
+  return fs.readdirSync(cwd, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+}
+
+function contentFilesUnder(cwd: string, roots: string[], extraFiles: string[] = []): string[] {
   const seen = new Set<string>();
   const files: string[] = [];
   for (const root of roots) {
@@ -146,6 +248,11 @@ function contentFilesUnder(cwd: string, roots: string[]): string[] {
       seen.add(relPath);
       files.push(relPath);
     }
+  }
+  for (const relPath of extraFiles) {
+    if (seen.has(relPath)) continue;
+    seen.add(relPath);
+    files.push(relPath);
   }
   return files.sort();
 }
@@ -166,7 +273,11 @@ function discover(cwd: string, dirs: { dir: string; type: string | null }[], blo
     const fullDir = path.join(cwd, dir);
     const names = dir === IMPL_EXP_DIR
       ? fs.readdirSync(fullDir)
-        .filter((name) => name.toLowerCase().endsWith(".jsonl") || (name.toLowerCase().endsWith(".md") && !isIndexFileName(name)))
+        .filter((name) => {
+          const lower = name.toLowerCase();
+          if (!(lower.endsWith(".jsonl") || (lower.endsWith(".md") && !isIndexFileName(name)))) return false;
+          return !fs.lstatSync(path.join(fullDir, name)).isSymbolicLink();
+        })
         .sort()
       : docFiles(fullDir);
     for (const name of names) {
@@ -234,6 +345,7 @@ function discover(cwd: string, dirs: { dir: string; type: string | null }[], blo
 function knownPrefixes(mappings: Map<string, string>): Set<string> {
   const prefixes = new Set<string>(docTypes.map((type) => configFor(type).idPrefix));
   prefixes.add("IMPL");
+  prefixes.add(EXPERIMENT_ID_PREFIX);
   for (const legacyId of mappings.keys()) {
     prefixes.add(legacyId.slice(0, legacyId.lastIndexOf("-")));
   }
@@ -297,10 +409,41 @@ function planRenames(cwd: string, files: DiscoveredFile[], blockers: Blocker[]):
   return renames;
 }
 
+// Experiment logs carry no artifact id; their canonical reference is the
+// `.jsonl` path. Map each `EXP-NNNN` token to the path the numbered experiment
+// file occupies after renames (or its current path under --keep-filenames).
+// Only `.jsonl` files count: a same-numbered Markdown document in the exp dir
+// is not an experiment log and must not absorb or confuse the reference.
+function experimentTokenTargets(
+  files: DiscoveredFile[],
+  renames: PlannedRename[],
+): { targets: Map<string, string>; ambiguous: Set<string> } {
+  const byNumber = new Map<string, DiscoveredFile[]>();
+  for (const file of files) {
+    if (file.dir !== IMPL_EXP_DIR || !file.numberedName) continue;
+    if (!file.path.toLowerCase().endsWith(".jsonl")) continue;
+    const group = byNumber.get(file.numberedName) || [];
+    group.push(file);
+    byNumber.set(file.numberedName, group);
+  }
+  const renameTargets = new Map(renames.map((rename) => [rename.from, rename.to]));
+  const targets = new Map<string, string>();
+  const ambiguous = new Set<string>();
+  for (const [numbered, group] of byNumber) {
+    if (group.length > 1) {
+      ambiguous.add(numbered);
+      continue;
+    }
+    targets.set(`${EXPERIMENT_ID_PREFIX}-${numbered}`, renameTargets.get(group[0].path) ?? group[0].path);
+  }
+  return { targets, ambiguous };
+}
+
 function rewriteContent(
   content: string,
   mappings: Map<string, string>,
   renames: PlannedRename[],
+  experimentTargets: Map<string, string>,
 ): { content: string; replacements: number } {
   let replacements = 0;
   let next = content;
@@ -309,6 +452,13 @@ function rewriteContent(
     next = next.replace(pattern, () => {
       replacements += 1;
       return newId;
+    });
+  }
+  for (const [token, target] of experimentTargets) {
+    const pattern = idTokenPattern(token);
+    next = next.replace(pattern, () => {
+      replacements += 1;
+      return target;
     });
   }
   if (renames.length > 0) {
@@ -331,6 +481,14 @@ function injectMissingId(content: string, newId: string): string {
   return content.replace(/^(---\r?\n)/, `$1id: "${newId}"\n`);
 }
 
+function isSymlinkPath(p: string): boolean {
+  try {
+    return fs.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 async function regenerateIndexes(
   cwd: string,
   dirs: { dir: string; type: string | null }[],
@@ -341,6 +499,12 @@ async function regenerateIndexes(
     const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
     const readmePath = path.join(cwd, dir, "README.md");
     const relReadme = `${dir}/README.md`;
+    // A symlinked index file (including a broken symlink) is never written
+    // through: the helpers below resolve and write this path directly.
+    if (isSymlinkPath(readmePath)) {
+      results.push({ action: "skipped", path: relReadme });
+      continue;
+    }
     if (dirType === "impl") {
       const result = updateIndexForMarkdownDir(cwd, dir);
       results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
@@ -367,7 +531,12 @@ async function regenerateIndexes(
   return results;
 }
 
-async function validate(cwd: string, dirs: { dir: string; type: string | null }[], prefixes: Set<string>): Promise<IdMigrationReport["validation"]> {
+async function validate(
+  cwd: string,
+  dirs: { dir: string; type: string | null }[],
+  prefixes: Set<string>,
+  extraRoots: string[],
+): Promise<IdMigrationReport["validation"]> {
   const remainingLegacyIds = new Set<string>();
   const idFiles = new Map<string, string[]>();
   for (const { dir } of dirs) {
@@ -400,7 +569,7 @@ async function validate(cwd: string, dirs: { dir: string; type: string | null }[
     .map(([id]) => id);
 
   const unresolved = new Set<string>();
-  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs))) {
+  for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs, extraRoots), rootContentFiles(cwd))) {
     const content = fs.readFileSync(path.join(cwd, relPath), "utf8");
     for (const token of legacyTokens(content, prefixes)) {
       unresolved.add(token);
@@ -486,20 +655,36 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   }
 
   const renames = options.keepFilenames ? [] : planRenames(cwd, files, blockers);
+  const experimentRefs = experimentTokenTargets(files, renames);
 
+  const extraRoots = resolveExtraRoots(cwd, options.extraRoots ?? [], blockers);
   const prefixes = knownPrefixes(mappings);
-  const contentFiles = contentFilesUnder(cwd, contentRoots(cwd, dirs));
+  const contentFiles = contentFilesUnder(
+    cwd,
+    contentRoots(cwd, dirs, extraRoots),
+    rootContentFiles(cwd),
+  );
   const mappedIds = new Set(mappings.keys());
   for (const relPath of contentFiles) {
     const content = fs.readFileSync(path.join(cwd, relPath), "utf8");
     for (const token of new Set(legacyTokens(content, prefixes))) {
-      if (!mappedIds.has(token)) {
+      if (mappedIds.has(token) || experimentRefs.targets.has(token)) continue;
+      const expNumber = token.startsWith(`${EXPERIMENT_ID_PREFIX}-`)
+        ? token.slice(EXPERIMENT_ID_PREFIX.length + 1)
+        : null;
+      if (expNumber && experimentRefs.ambiguous.has(expNumber)) {
         blockers.push({
-          code: "unresolved-legacy-reference",
+          code: "ambiguous-experiment-reference",
           file: relPath,
-          message: `Legacy id ${token} has no matching artifact to remap`,
+          message: `Experiment reference ${token} matches multiple experiment logs; rewrite it to a .jsonl path manually`,
         });
+        continue;
       }
+      blockers.push({
+        code: "unresolved-legacy-reference",
+        file: relPath,
+        message: `Legacy id ${token} has no matching artifact to remap`,
+      });
     }
   }
 
@@ -545,7 +730,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   for (const relPath of contentFiles) {
     const fullPath = path.join(cwd, relPath);
     const original = fs.readFileSync(fullPath, "utf8");
-    let { content, replacements } = rewriteContent(original, mappings, renames);
+    let { content, replacements } = rewriteContent(original, mappings, renames, experimentRefs.targets);
     const injected = injectedIds.get(relPath);
     if (injected && !original.includes(`id: "${injected}"`)) {
       const before = content;
@@ -573,7 +758,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
   }
 
   const validation = options.apply
-    ? await validate(cwd, dirs, prefixes)
+    ? await validate(cwd, dirs, prefixes, extraRoots)
     : emptyValidation;
 
   const validationFailed = validation.remainingLegacyIds.length > 0

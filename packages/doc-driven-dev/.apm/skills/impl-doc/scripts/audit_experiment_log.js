@@ -18792,7 +18792,7 @@ function implDir(cwd, kind, explicitDir) {
 }
 function listFiles(dir, ext) {
   if (!import_node_fs.default.existsSync(dir)) return [];
-  return import_node_fs.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).sort();
+  return import_node_fs.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs.default.lstatSync(import_node_path.default.join(dir, file2)).isSymbolicLink()).sort();
 }
 function normalizeExperimentPath(cwd, filePath) {
   return normalizeFilePath(posixRelative(cwd, import_node_path.default.resolve(filePath)));

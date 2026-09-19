@@ -937,6 +937,9 @@ function walkMarkdownFiles(baseDir: string): string[] {
   if (!fs.existsSync(baseDir)) return [];
   const entries = fs.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
+    // Never adopt symlinked entries: reads and writes would follow them and
+    // could reach files outside the repository.
+    if (entry.isSymbolicLink()) return [];
     const fullPath = path.join(baseDir, entry.name);
     if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
     return isMarkdownSource(fullPath) ? [fullPath] : [];

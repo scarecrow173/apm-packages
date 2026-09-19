@@ -1,12 +1,13 @@
 "use strict";
 
+import fs from "node:fs";
 import path from "node:path";
 
 import { contractForType, finding, isExternalReference, sortFindings } from "./doc_repository";
 import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repository";
 import { lintProvenance, lintTraceability } from "./doc_provenance_lint";
 import { lintStructure } from "./doc_structure_lint";
-import { frontMatterSchema, isForeignDocType } from "./doc_suite_utils";
+import { configFor, docTypes, frontMatterSchema, isForeignDocType } from "./doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
@@ -423,6 +424,121 @@ function lintDirectory(model: DocumentRepository, scope: LintScope): Finding[] {
 }
 
 // ---------------------------------------------------------------------------
+// Legacy id references in document bodies
+// ---------------------------------------------------------------------------
+
+const LEGACY_ID_TOKEN = /(?<![0-9A-Za-z])[A-Z][A-Z0-9]*-\d+(?![0-9A-Za-z])/g;
+const EXPERIMENT_ID_PREFIX = "EXP";
+const IMPL_EXP_DIR = "docs/impl/exp";
+const NUMBERED_EXPERIMENT_FILE = /^(\d{4,})-.*\.jsonl$/i;
+
+function legacyIdPrefixes(): Set<string> {
+  const prefixes = new Set<string>(docTypes.map((type) => configFor(type).idPrefix));
+  prefixes.add("IMPL");
+  prefixes.add(EXPERIMENT_ID_PREFIX);
+  return prefixes;
+}
+
+// Experiment logs carry no artifact id; `EXP-NNNN` resolves only while
+// exactly one numbered `NNNN-*.jsonl` exists, matching the migrate_ids.js
+// contract that rewrites these tokens to `.jsonl` paths. Counts are kept per
+// number so a duplicate number is ambiguous rather than silently resolved.
+// Symlinked entries are excluded and the exp dir itself must stay inside the
+// repository so audit semantics match the migrator, which never adopts
+// symlinked logs or roots.
+function experimentNumbers(root: string): Map<string, number> {
+  const expDir = path.join(root, IMPL_EXP_DIR);
+  if (!fs.existsSync(expDir)) return new Map();
+  let realRoot: string;
+  try {
+    realRoot = fs.realpathSync(root);
+  } catch {
+    return new Map();
+  }
+  if (!realpathInside(realRoot, expDir)) return new Map();
+  const counts = new Map<string, number>();
+  for (const name of fs.readdirSync(expDir)) {
+    if (isSymlinkPath(path.join(expDir, name))) continue;
+    const match = NUMBERED_EXPERIMENT_FILE.exec(name);
+    if (match) counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function isSymlinkPath(p: string): boolean {
+  try {
+    return fs.lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function realpathInside(realRoot: string, absolute: string): boolean {
+  let real: string;
+  try {
+    real = fs.realpathSync(absolute);
+  } catch {
+    return false;
+  }
+  const rel = path.relative(realRoot, real);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+function lintLegacyIdReferences(model: DocumentRepository, files: RepositoryDocument[]): Finding[] {
+  const prefixes = legacyIdPrefixes();
+  const expNumbers = experimentNumbers(model.root);
+  const findings: Finding[] = [];
+  for (const document of files) {
+    const seen = new Map<string, number>();
+    for (const match of document.body.matchAll(LEGACY_ID_TOKEN)) {
+      const token = match[0];
+      if (!prefixes.has(prefixOf(token))) continue;
+      if (!seen.has(token)) {
+        const bodyLine = document.body.slice(0, match.index).split("\n").length;
+        seen.set(token, document.bodyStartLine + bodyLine);
+      }
+    }
+    for (const [token, line] of [...seen.entries()].sort((a, b) => a[1] - b[1])) {
+      if (model.lookupById(token).status !== "none") continue;
+      if (prefixOf(token) === EXPERIMENT_ID_PREFIX) {
+        const count = expNumbers.get(token.slice(EXPERIMENT_ID_PREFIX.length + 1)) ?? 0;
+        if (count === 1) continue;
+        if (count > 1) {
+          findings.push(finding({
+            ruleId: "ambiguous-experiment-reference",
+            category: "relation",
+            severity: "error",
+            path: document.path,
+            line,
+            artifactId: document.id,
+            message: `Experiment reference ${token} matches multiple experiment logs; rewrite it to a .jsonl path manually`,
+            target: token,
+            repair: "manual",
+          }));
+          continue;
+        }
+      }
+      findings.push(finding({
+        ruleId: "unresolved-legacy-reference",
+        category: "relation",
+        severity: "error",
+        path: document.path,
+        line,
+        artifactId: document.id,
+        message: `Body references legacy artifact id ${token}, which no artifact provides`,
+        target: token,
+        repair: "manual",
+      }));
+    }
+  }
+  return findings;
+}
+
+function prefixOf(token: string): string {
+  return token.slice(0, token.lastIndexOf("-"));
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -441,6 +557,7 @@ function lintScope(model: DocumentRepository, type: string, directory: string): 
       ...lintRequiredRelations(model, document, type),
     );
   }
+  findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
   findings.push(...lintDirectory(model, scope));
   findings.push(...lintStructure(model, scope));
@@ -449,5 +566,5 @@ function lintScope(model: DocumentRepository, type: string, directory: string): 
   return sortFindings(findings);
 }
 
-export { lintScope, scopeFor };
+export { lintLegacyIdReferences, lintScope, scopeFor };
 export type { LintScope };
