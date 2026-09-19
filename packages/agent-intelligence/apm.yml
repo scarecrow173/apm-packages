@@ -15,7 +15,10 @@ dependencies:
     - github/awesome-copilot/skills/agentic-eval#main
     - github/awesome-copilot/skills/autoresearch#main
     - github/awesome-copilot/skills/copilot-usage-metrics#main
-    - github/awesome-copilot/plugins/context-engineering#main
+    # pinned: upstream plugin manifests declare stale component paths after
+    # the repo restructure in d1fdc318; this is the last commit where
+    # plugins/context-engineering is self-contained
+    - github/awesome-copilot/plugins/context-engineering#b4948a9450659ff5afcbf8c8d35866c13f87d372
     - obra/superpowers/skills/writing-skills#main
     - softaworks/agent-toolkit/skills/skill-judge#main
     
