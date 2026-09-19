@@ -81,8 +81,9 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    document types (`spec`, `adr`, `design`, `plan`, `task`, `test-spec`,
    `idea`, `brainstorm`, `discovery`) run as
    `audit_docs.js --type <name>`; `all` runs as `audit_docs.js --type all`
-   covering every canonical document type; `impl-record` runs as
-   `impl-doc/scripts/audit_impl_record.js`.
+   covering every canonical document type plus a legacy-reference sweep over
+   root-level unmanaged Markdown and distributed `.apm` skill documents;
+   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js`.
 
 4. Treat `relations.source` as external evidence.
    HTTP, HTTPS, and mail links are allowed and should not be reported as missing
@@ -109,6 +110,9 @@ a stable rule ID. Covered checks include:
   references without a matching numbered `.jsonl` log. Tokens that still
   resolve to an existing artifact or experiment file are not reported, so
   pre-migration repositories stay clean.
+- `ambiguous-experiment-reference` — body text `EXP-NNNN` references whose
+  number matches multiple numbered `.jsonl` experiment logs, so no unique
+  canonical path exists; rewrite the token to a `.jsonl` path manually.
 - `test-spec-missing-verifies`, `test-spec-invalid-verifies-target`,
   `plan-missing-test-spec-evidence`, `missing-required-relation`,
   `invalid-relation-target-type` — traceability category rules for
