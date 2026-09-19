@@ -6,7 +6,7 @@
 
 `recommended-dev-suite` は、推奨 AI 支援開発 workflow を束ねる dependency-only aggregator です。[apm.yml](./apm.yml) を正本として扱ってください。
 
-対象は、basic foundation を超える workflow の深さです。brainstorming、idea refinement、interview-style clarification、subagent execution、code review loop、systematic debugging、TDD、source-driven work、incremental delivery、CI/CD automation、simplification、context engineering を主な範囲とします。
+対象は、basic foundation を超える workflow の深さです。brainstorming、idea refinement、interview-style clarification、subagent execution、code review loop、systematic debugging、TDD、source-driven work、incremental delivery、CI/CD automation、simplification を主な範囲とします。
 
 ## Editing Rules
 

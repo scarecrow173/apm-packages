@@ -16,4 +16,3 @@ dependencies:
     - github/awesome-copilot/skills/audit-integrity#main
     - github/awesome-copilot/skills/agent-governance#main
     - github/awesome-copilot/skills/agent-supply-chain#main
-    - github/awesome-copilot/plugins/security-best-practices#main
