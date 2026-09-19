@@ -28,7 +28,6 @@ agent が intent clarification、planning、implementation、verification、debu
 - `addyosmani/agent-skills/skills/incremental-implementation`
 - `addyosmani/agent-skills/skills/ci-cd-and-automation`
 - `addyosmani/agent-skills/skills/code-simplification`
-- `addyosmani/agent-skills/skills/context-engineering`
 
 ## Maintenance
 
