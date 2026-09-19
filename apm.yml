@@ -41,9 +41,8 @@ devDependencies:
     - serena
     - start-mcp-server
     - --context
-    - ide-assistant
-    - --project
-    - .
+    - ide
+    - --project-from-cwd
 marketplace:
   owner:
     name: scarecrow173

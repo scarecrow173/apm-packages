@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-09-19T11:09:46.050309+00:00'
+generated_at: '2026-09-19T11:43:47.248301+00:00'
 apm_version: 0.30.0
 dependencies:
 - repo_url: _local/agent-intelligence
@@ -8671,9 +8671,8 @@ mcp_configs:
     - serena
     - start-mcp-server
     - --context
-    - ide-assistant
-    - --project
-    - .
+    - ide
+    - --project-from-cwd
     registry: false
     command: mise
 mcp_target_servers:
