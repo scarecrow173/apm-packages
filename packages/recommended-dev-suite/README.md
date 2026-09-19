@@ -2,7 +2,7 @@
 
 `recommended-dev-suite` is a recommended APM aggregator for richer AI-assisted development workflows.
 
-This package assumes the basic foundation is already available or intentionally handled elsewhere. It adds opinionated workflow skills for planning, refinement, debugging, review, TDD, source-grounded implementation, CI/CD, simplification, and context engineering.
+This package assumes the basic foundation is already available or intentionally handled elsewhere. It adds opinionated workflow skills for planning, refinement, debugging, review, TDD, source-grounded implementation, CI/CD and simplification.
 
 ## What It Covers
 

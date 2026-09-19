@@ -2,7 +2,7 @@
 
 `recommended-dev-suite` は、より厚い AI 支援開発 workflow をまとめる推奨 APM aggregator です。
 
-この package は、basic foundation が既に利用できるか、別途管理されている前提で扱います。planning、refinement、debugging、review、TDD、source-grounded implementation、CI/CD、simplification、context engineering など、意見を持った workflow skill を追加します。
+この package は、basic foundation が既に利用できるか、別途管理されている前提で扱います。planning、refinement、debugging、review、TDD、source-grounded implementation、CI/CD、simplification など、意見を持った workflow skill を追加します。
 
 ## 対象範囲
 
