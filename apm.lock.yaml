@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-09-19T09:37:45.275060+00:00'
+generated_at: '2026-09-19T11:09:46.050309+00:00'
 apm_version: 0.30.0
 dependencies:
 - repo_url: _local/agent-intelligence
@@ -1050,62 +1050,6 @@ dependencies:
   content_hash: sha256:133428ac28fa75cf6f8cf5dafea8d603022852ce59a0520620784c7e3dc7e519
   is_dev: true
 - repo_url: github/awesome-copilot
-  name: context-engineering
-  host: github.com
-  resolved_commit: b4948a9450659ff5afcbf8c8d35866c13f87d372
-  resolved_ref: b4948a9450659ff5afcbf8c8d35866c13f87d372
-  version: 1.0.0
-  virtual_path: plugins/context-engineering
-  is_virtual: true
-  depth: 2
-  resolved_by: _local/agent-intelligence
-  package_type: marketplace_plugin
-  deployed_files:
-  - .agents/skills/context-map
-  - .agents/skills/context-map/SKILL.md
-  - .agents/skills/refactor-plan
-  - .agents/skills/refactor-plan/SKILL.md
-  - .agents/skills/what-context-needed
-  - .agents/skills/what-context-needed/SKILL.md
-  - .claude/skills/context-map
-  - .claude/skills/context-map/SKILL.md
-  - .claude/skills/refactor-plan
-  - .claude/skills/refactor-plan/SKILL.md
-  - .claude/skills/what-context-needed
-  - .claude/skills/what-context-needed/SKILL.md
-  deployed_file_hashes:
-    .agents/skills/context-map/SKILL.md: sha256:af0037b06a0b56a5014e16a32538ac419725638659428b7e229ed5bbb9087a37
-    .agents/skills/refactor-plan/SKILL.md: sha256:93741df0042a15c01ae8589e72014dcf53c557c11ca1df69c29737534c312c29
-    .agents/skills/what-context-needed/SKILL.md: sha256:65ed7445bf561a5e5199ac77478d2691c05019e0dc32fdddc23db9e45bd9d135
-    .claude/skills/context-map/SKILL.md: sha256:af0037b06a0b56a5014e16a32538ac419725638659428b7e229ed5bbb9087a37
-    .claude/skills/refactor-plan/SKILL.md: sha256:93741df0042a15c01ae8589e72014dcf53c557c11ca1df69c29737534c312c29
-    .claude/skills/what-context-needed/SKILL.md: sha256:65ed7445bf561a5e5199ac77478d2691c05019e0dc32fdddc23db9e45bd9d135
-  content_hash: sha256:90b878c32fbdaa6563dd5bb16252d1389459c94f42311e102f218690bfcd01c2
-  is_dev: true
-  declared_license: MIT
-- repo_url: github/awesome-copilot
-  name: security-best-practices
-  host: github.com
-  resolved_commit: b4948a9450659ff5afcbf8c8d35866c13f87d372
-  resolved_ref: b4948a9450659ff5afcbf8c8d35866c13f87d372
-  version: 1.0.0
-  virtual_path: plugins/security-best-practices
-  is_virtual: true
-  depth: 2
-  resolved_by: _local/security-governance
-  package_type: marketplace_plugin
-  deployed_files:
-  - .agents/skills/ai-prompt-engineering-safety-review
-  - .agents/skills/ai-prompt-engineering-safety-review/SKILL.md
-  - .claude/skills/ai-prompt-engineering-safety-review
-  - .claude/skills/ai-prompt-engineering-safety-review/SKILL.md
-  deployed_file_hashes:
-    .agents/skills/ai-prompt-engineering-safety-review/SKILL.md: sha256:8ff9d227e96fb3364b9b2e0bd28d73ef0e49cc33fa832dfe8c87d79ddef9a7a7
-    .claude/skills/ai-prompt-engineering-safety-review/SKILL.md: sha256:8ff9d227e96fb3364b9b2e0bd28d73ef0e49cc33fa832dfe8c87d79ddef9a7a7
-  content_hash: sha256:df7ebe3902e3fd030f585f8c1ad1e46b620474148c0af1d50af03c33b7484f89
-  is_dev: true
-  declared_license: MIT
-- repo_url: github/awesome-copilot
   name: agent-governance
   host: github.com
   resolved_commit: 8ae5a99109124c22288eee0254da61741e44d12a
@@ -1666,6 +1610,7 @@ dependencies:
   - .agents/skills/apm-usage/package-authoring.md
   - .agents/skills/apm-usage/troubleshooting.md
   - .agents/skills/apm-usage/workflow.md
+  - .claude/agents/apm-expert.md
   - .claude/skills/apm-usage
   - .claude/skills/apm-usage/SKILL.md
   - .claude/skills/apm-usage/authentication.md
@@ -1676,6 +1621,9 @@ dependencies:
   - .claude/skills/apm-usage/package-authoring.md
   - .claude/skills/apm-usage/troubleshooting.md
   - .claude/skills/apm-usage/workflow.md
+  - .codex/agents/apm-expert.toml
+  - .cursor/agents/apm-expert.md
+  - .github/agents/apm-expert.agent.md
   deployed_file_hashes:
     .agents/skills/apm-usage/SKILL.md: sha256:e020dd84d578054403884e7d71aaf6b87fdac7835da9661923d9de8853cbf140
     .agents/skills/apm-usage/authentication.md: sha256:d2f3fff27edfc55d39212a741d1e092fba7cbc293e3e3decc5280464c4405401
@@ -1686,6 +1634,7 @@ dependencies:
     .agents/skills/apm-usage/package-authoring.md: sha256:acf5b500725d91e406a68f1962ea1c8c4a5ce693c0fbd3206d332ac1ca4bf7bf
     .agents/skills/apm-usage/troubleshooting.md: sha256:9ee88100a64857f25e9cb49d1a56d3921d8e69974158c11b0d9431f4ce68362d
     .agents/skills/apm-usage/workflow.md: sha256:805207ce68f51ee84d967f95ae9a3c316dfb7da011ebc8f5cc18a1817333a64f
+    .claude/agents/apm-expert.md: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
     .claude/skills/apm-usage/SKILL.md: sha256:e020dd84d578054403884e7d71aaf6b87fdac7835da9661923d9de8853cbf140
     .claude/skills/apm-usage/authentication.md: sha256:d2f3fff27edfc55d39212a741d1e092fba7cbc293e3e3decc5280464c4405401
     .claude/skills/apm-usage/commands.md: sha256:c465e3577393fe781d99822c047c40142fecdefc5239a0b0ff4aac4ab1c232c1
@@ -1695,6 +1644,9 @@ dependencies:
     .claude/skills/apm-usage/package-authoring.md: sha256:acf5b500725d91e406a68f1962ea1c8c4a5ce693c0fbd3206d332ac1ca4bf7bf
     .claude/skills/apm-usage/troubleshooting.md: sha256:9ee88100a64857f25e9cb49d1a56d3921d8e69974158c11b0d9431f4ce68362d
     .claude/skills/apm-usage/workflow.md: sha256:805207ce68f51ee84d967f95ae9a3c316dfb7da011ebc8f5cc18a1817333a64f
+    .codex/agents/apm-expert.toml: sha256:0b4bec64f7c6ab70df3841237928eaccfb927789d45300870ce56163230498c4
+    .cursor/agents/apm-expert.md: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
+    .github/agents/apm-expert.agent.md: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
   content_hash: sha256:8d432503f5acd6e0e9e0db6989c583171f8a67d91fbf94560c161c5416506aa6
   is_dev: true
   declared_license: MIT
@@ -2354,24 +2306,6 @@ deployments:
   content_hash: sha256:fb198a5c9b12e746d01a43c9ff3368598fdc1134bb458766f580186f31001573
 - kind: project-relative
   target: agent-skills
-  value: .agents/skills/ai-prompt-engineering-safety-review
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/security-best-practices
-  active_owner: github/awesome-copilot/plugins/security-best-practices
-  content_hash: null
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/ai-prompt-engineering-safety-review/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/security-best-practices
-  active_owner: github/awesome-copilot/plugins/security-best-practices
-  content_hash: sha256:8ff9d227e96fb3364b9b2e0bd28d73ef0e49cc33fa832dfe8c87d79ddef9a7a7
-- kind: project-relative
-  target: agent-skills
   value: .agents/skills/apm-usage
   runtime: null
   scope: project
@@ -2784,24 +2718,6 @@ deployments:
   - github/awesome-copilot/skills/commit-message-storyteller
   active_owner: github/awesome-copilot/skills/commit-message-storyteller
   content_hash: sha256:f1f575e5af5cb7b2a42ce22dc2112190b2834fef7b31fe75bd44cd0af5db0e62
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/context-map
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: null
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/context-map/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: sha256:af0037b06a0b56a5014e16a32538ac419725638659428b7e229ed5bbb9087a37
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/conventional-branch
@@ -4361,24 +4277,6 @@ deployments:
   content_hash: sha256:091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438
 - kind: project-relative
   target: agent-skills
-  value: .agents/skills/refactor-plan
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: null
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/refactor-plan/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: sha256:93741df0042a15c01ae8589e72014dcf53c557c11ca1df69c29737534c312c29
-- kind: project-relative
-  target: agent-skills
   value: .agents/skills/repo-story-time
   runtime: null
   scope: project
@@ -5261,24 +5159,6 @@ deployments:
   content_hash: sha256:69d852f640b276b913cb0a58f0704137b22f53ada3ff0b73e28b8c8585e5eb0f
 - kind: project-relative
   target: agent-skills
-  value: .agents/skills/what-context-needed
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: null
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/what-context-needed/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: sha256:65ed7445bf561a5e5199ac77478d2691c05019e0dc32fdddc23db9e45bd9d135
-- kind: project-relative
-  target: agent-skills
   value: .agents/skills/writing-plans
   runtime: null
   scope: project
@@ -5376,6 +5256,15 @@ deployments:
   - obra/superpowers/skills/writing-skills
   active_owner: obra/superpowers/skills/writing-skills
   content_hash: sha256:c711346852c911b24a84aa161e0cff06a4cd7f4e2fa9e9c0a266cead5afcbade
+- kind: project-relative
+  target: claude
+  value: .claude/agents/apm-expert.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
 - kind: project-relative
   target: claude
   value: .claude/skills/adr-doc
@@ -5691,24 +5580,6 @@ deployments:
   - github/awesome-copilot/skills/agentic-eval
   active_owner: github/awesome-copilot/skills/agentic-eval
   content_hash: sha256:fb198a5c9b12e746d01a43c9ff3368598fdc1134bb458766f580186f31001573
-- kind: project-relative
-  target: claude
-  value: .claude/skills/ai-prompt-engineering-safety-review
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/security-best-practices
-  active_owner: github/awesome-copilot/plugins/security-best-practices
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/ai-prompt-engineering-safety-review/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/security-best-practices
-  active_owner: github/awesome-copilot/plugins/security-best-practices
-  content_hash: sha256:8ff9d227e96fb3364b9b2e0bd28d73ef0e49cc33fa832dfe8c87d79ddef9a7a7
 - kind: project-relative
   target: claude
   value: .claude/skills/apm-usage
@@ -6123,24 +5994,6 @@ deployments:
   - github/awesome-copilot/skills/commit-message-storyteller
   active_owner: github/awesome-copilot/skills/commit-message-storyteller
   content_hash: sha256:f1f575e5af5cb7b2a42ce22dc2112190b2834fef7b31fe75bd44cd0af5db0e62
-- kind: project-relative
-  target: claude
-  value: .claude/skills/context-map
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/context-map/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: sha256:af0037b06a0b56a5014e16a32538ac419725638659428b7e229ed5bbb9087a37
 - kind: project-relative
   target: claude
   value: .claude/skills/conventional-branch
@@ -7700,24 +7553,6 @@ deployments:
   content_hash: sha256:091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438
 - kind: project-relative
   target: claude
-  value: .claude/skills/refactor-plan
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/refactor-plan/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: sha256:93741df0042a15c01ae8589e72014dcf53c557c11ca1df69c29737534c312c29
-- kind: project-relative
-  target: claude
   value: .claude/skills/repo-story-time
   runtime: null
   scope: project
@@ -8600,24 +8435,6 @@ deployments:
   content_hash: sha256:69d852f640b276b913cb0a58f0704137b22f53ada3ff0b73e28b8c8585e5eb0f
 - kind: project-relative
   target: claude
-  value: .claude/skills/what-context-needed
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/what-context-needed/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - github/awesome-copilot/plugins/context-engineering
-  active_owner: github/awesome-copilot/plugins/context-engineering
-  content_hash: sha256:65ed7445bf561a5e5199ac77478d2691c05019e0dc32fdddc23db9e45bd9d135
-- kind: project-relative
-  target: claude
   value: .claude/skills/writing-plans
   runtime: null
   scope: project
@@ -8715,6 +8532,33 @@ deployments:
   - obra/superpowers/skills/writing-skills
   active_owner: obra/superpowers/skills/writing-skills
   content_hash: sha256:c711346852c911b24a84aa161e0cff06a4cd7f4e2fa9e9c0a266cead5afcbade
+- kind: project-relative
+  target: codex
+  value: .codex/agents/apm-expert.toml
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:0b4bec64f7c6ab70df3841237928eaccfb927789d45300870ce56163230498c4
+- kind: project-relative
+  target: copilot
+  value: .github/agents/apm-expert.agent.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
+- kind: project-relative
+  target: cursor
+  value: .cursor/agents/apm-expert.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
 - kind: uri
   target: mcp
   value: mise

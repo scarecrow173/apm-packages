@@ -16,7 +16,6 @@
 - `github/awesome-copilot/skills/audit-integrity`
 - `github/awesome-copilot/skills/agent-governance`
 - `github/awesome-copilot/skills/agent-supply-chain`
-- `github/awesome-copilot/plugins/security-best-practices`
 
 ## 関連 Package
 

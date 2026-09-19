@@ -16,7 +16,6 @@ The source of truth is [apm.yml](./apm.yml). Current dependencies:
 - `github/awesome-copilot/skills/audit-integrity`
 - `github/awesome-copilot/skills/agent-governance`
 - `github/awesome-copilot/skills/agent-supply-chain`
-- `github/awesome-copilot/plugins/security-best-practices`
 
 ## Related Packages
 
