@@ -169,3 +169,6 @@ Completable result には `completed`、declared repair evidence を伴う Retur
 `retry`、safe repair のない Returned には `unrecoverable-blocker` を理由とする `yield`
 を使います。必須の `edgeId`、stage、effect identity、authoritative input scope、proof
 field はその footer が定義します。
+
+Graph の状態、ステータス別タスクカード、残存タスク、draft 文書を手動生成する
+オフライン HTML で確認するには、[doc-dashboard](../doc-dashboard/SKILL.ja.md) を使います。
