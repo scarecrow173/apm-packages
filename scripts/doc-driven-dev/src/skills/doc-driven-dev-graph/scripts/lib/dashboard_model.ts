@@ -53,7 +53,16 @@ export function documentBucket(status: string | null): "draft" | "proposed" | "c
 }
 
 export function summarizeTasks(rows: readonly { path: string; status: string | null }[]): TaskSummary {
-  const unique = [...new Map(rows.map((row) => [row.path, row])).values()];
+  const statusesByPath = new Map<string, Set<string | null>>();
+  for (const row of rows) {
+    const statuses = statusesByPath.get(row.path) ?? new Set<string | null>();
+    statuses.add(row.status);
+    statusesByPath.set(row.path, statuses);
+  }
+  const unique = [...statusesByPath].map(([path, statuses]) => ({
+    path,
+    status: statuses.size === 1 ? [...statuses][0] : null,
+  }));
   const valid = new Set(["todo", "in-progress", "blocked", "done", "wont-do"]);
   const count = (status: string) => unique.filter((row) => row.status === status).length;
   const total = unique.filter((row) => valid.has(row.status ?? "")).length;

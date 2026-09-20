@@ -19,3 +19,23 @@ test("wont-do and invalid status are not completion", () => {
   assert.equal(documentBucket("capturing"), "capturing");
   assert.equal(documentBucket(null), "other");
 });
+
+test("conflicting duplicate statuses are unknown independent of order", () => {
+  const expected = { total: 0, done: 0, wontDo: 0, remaining: 0, unknown: 1, doneRatio: null };
+  assert.deepEqual(summarizeTasks([
+    { path: "conflict.md", status: null },
+    { path: "conflict.md", status: "done" },
+  ]), expected);
+  assert.deepEqual(summarizeTasks([
+    { path: "conflict.md", status: "done" },
+    { path: "conflict.md", status: null },
+  ]), expected);
+  assert.deepEqual(summarizeTasks([
+    { path: "conflict.md", status: "todo" },
+    { path: "conflict.md", status: "done" },
+  ]), expected);
+  assert.deepEqual(summarizeTasks([
+    { path: "conflict.md", status: "done" },
+    { path: "conflict.md", status: "todo" },
+  ]), expected);
+});
