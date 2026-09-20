@@ -72,7 +72,7 @@ for (const scenario of [
         id: "TASK-0001",
         type: "task",
         status: scenario.startsWith("active") ? "in-progress" : "todo",
-        relations: { implements: ["PLAN-0001"], "depends-on": ["TASK-0002"] },
+        relations: { implements: [planPath], "depends-on": ["TASK-0002"] },
       });
       write("docs/tasks/b.md", {
         id: "TASK-0002",
@@ -83,7 +83,7 @@ for (const scenario of [
             ? "todo"
             : "done",
         relations: {
-          implements: ["PLAN-0001"],
+          implements: [planPath],
           ...(scenario === "cycle" ? { "depends-on": ["TASK-0001"] } : {}),
         },
       });
@@ -94,7 +94,7 @@ for (const scenario of [
         id: "TASK-0001",
         type: "task",
         status: "todo",
-        relations: { implements: ["PLAN-0002"] },
+        relations: { implements: [planPath] },
       });
     }
     if (scenario === "orphan") {
@@ -119,10 +119,19 @@ for (const scenario of [
     assert.deepEqual(report.state, projectGraphState({ cwd, graphId: definition.id, focus, signals: [] }));
     assert.deepEqual(report.decision, evaluateRouteDecision({ current: "task-graph", definition, state: report.state }));
     if (scenario !== "empty") {
+      const graph = report.plans.find((plan) => plan.path === planPath)?.graph;
+      assert.ok(graph);
+      assert.ok(graph.nodes.length > 0, `${scenario} should exercise real task nodes`);
       assert.deepEqual(
-        report.plans.find((plan) => plan.path === planPath)?.graph,
+        graph,
         buildTaskGraph({ cwd, plan: planPath }),
       );
+      if (scenario === "done") assert.deepEqual(graph.runnable, ["TASK-0001"]);
+      if (scenario === "wont-do") assert.deepEqual(graph.runnable, []);
+      if (scenario === "active") assert.deepEqual(graph.resumableActive, ["TASK-0001"]);
+      if (scenario === "active-waiting") assert.deepEqual(graph.resumableActive, []);
+      if (scenario === "cycle") assert.ok(graph.issues.some((issue) => issue.code === "task-cycle"));
+      if (scenario === "duplicate") assert.ok(graph.issues.some((issue) => issue.code === "duplicate-task-id"));
     }
     if (scenario === "unmanaged") {
       assert.equal(report.inventory.find((row) => row.path.endsWith("raw.md"))?.kind, "unmanaged");
