@@ -6,7 +6,11 @@ import path from "node:path";
 import test from "node:test";
 import matter from "gray-matter";
 
-import { parseDashboardArgs, writeDashboard } from "../src/skills/doc-driven-dev-graph/scripts/lib/dashboard_cli";
+import {
+  parseDashboardArgs,
+  writeDashboard,
+  writeDashboardWithOperations,
+} from "../src/skills/doc-driven-dev-graph/scripts/lib/dashboard_cli";
 
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/build_dashboard.ts");
 const generatedCli = path.resolve(
@@ -188,6 +192,50 @@ test("write failures do not leave temporary dashboard files", (t) => {
   fs.writeFileSync(path.join(cwd, "blocked"), "not a directory");
   assert.throws(() => writeDashboard(cwd, "blocked/report.html", "new", true));
   assert.deepEqual(fs.readdirSync(cwd), ["blocked"]);
+});
+
+test("partial temporary writes are removed while the old report stays byte-identical", (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-partial-write-"));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  const output = path.join(cwd, "report.html");
+  const original = Buffer.from([0x6f, 0x6c, 0x64, 0x00, 0xff]);
+  fs.writeFileSync(output, original);
+
+  assert.throws(() => writeDashboardWithOperations(cwd, "report.html", "replacement", true, {
+    randomUUID: () => "partial-write",
+    openExclusive: (file) => fs.openSync(file, "wx"),
+    write: (fd) => {
+      fs.writeSync(fd, "partial");
+      throw new Error("injected partial write failure");
+    },
+    close: (fd) => fs.closeSync(fd),
+    link: (from, to) => fs.linkSync(from, to),
+    rename: (from, to) => fs.renameSync(from, to),
+    unlink: (file) => fs.unlinkSync(file),
+  }), /injected partial write failure/);
+
+  assert.deepEqual(fs.readFileSync(output), original);
+  assert.deepEqual(fs.readdirSync(cwd), ["report.html"]);
+});
+
+test("exclusive temporary-name collisions preserve the foreign file", (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-temp-collision-"));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  const temp = path.join(cwd, ".report.html.collision.tmp");
+  fs.writeFileSync(temp, "foreign");
+
+  assert.throws(() => writeDashboardWithOperations(cwd, "report.html", "new", false, {
+    randomUUID: () => "collision",
+    openExclusive: (file) => fs.openSync(file, "wx"),
+    write: (fd, html) => fs.writeFileSync(fd, html, "utf8"),
+    close: (fd) => fs.closeSync(fd),
+    link: (from, to) => fs.linkSync(from, to),
+    rename: (from, to) => fs.renameSync(from, to),
+    unlink: (file) => fs.unlinkSync(file),
+  }), /EEXIST|exist/i);
+
+  assert.equal(fs.readFileSync(temp, "utf8"), "foreign");
+  assert.equal(fs.existsSync(path.join(cwd, "report.html")), false);
 });
 
 test("source and generated CLIs produce equivalent HTML", (t) => {
