@@ -51,6 +51,21 @@ test("graph SVG has safe IDs and a readable text equivalent", () => {
   assert.doesNotMatch(svg, /<script|<foreignObject|(?:href|src)\s*=/i);
 });
 
+test("graph text fallback lists every node including isolated nodes", () => {
+  const value = snapshot();
+  value.definition = {
+    ...definition,
+    nodeCount: definition.nodeCount + 1,
+    nodes: [...definition.nodes, {
+      nodeId: "isolated<&", kind: "audit", delegate: "review<x>", audits: ["audit<&"], commitGate: true,
+    }],
+  };
+
+  const html = renderDashboard(value);
+  assert.match(html, /<h3>全 graph node<\/h3>[\s\S]*<th scope="col">node ID<\/th>/);
+  assert.match(html, /全 graph node[\s\S]*isolated&lt;&amp;[\s\S]*review&lt;x&gt;[\s\S]*audit&lt;&amp;/);
+});
+
 test("standalone HTML escapes content and stays offline", () => {
   const hostile = item('docs/specs/日本語".md', "draft", {
     id: "SPEC-0001", type: "spec", title: "</script><img src=x onerror=alert(1)>", graphCovered: false,
@@ -225,4 +240,11 @@ test("task board renders before graph with shared document links, empty lanes, a
   assert.match(html, /graph 未対応/);
   assert.match(html, /dependency:&lt;PRE&gt;/);
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
+});
+
+test("a card document target remains visible when document filters mark its row hidden", () => {
+  const html = renderDashboard(snapshot([item("docs/tasks/a.md", "todo")]));
+  assert.match(html, /data-task-card[\s\S]*href="#doc-0"/);
+  assert.match(html, /tr:target\{display:table-row!important\}/);
+  assert.match(html, /<tr id="doc-0" data-document-row/);
 });
