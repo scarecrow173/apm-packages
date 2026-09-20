@@ -173,3 +173,7 @@ Use `completed` for a Completable result, `retry` for Returned with declared
 repair evidence, and `yield` with `unrecoverable-blocker` for Returned without
 a safe repair. The required `edgeId`, stage, effect identity, authoritative
 input scope, and proof fields are defined by that footer.
+
+For a manually generated offline HTML view of graph facts, remaining tasks,
+status-lane task cards, and draft documents, use
+[doc-dashboard](../doc-dashboard/SKILL.md).

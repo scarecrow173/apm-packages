@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - ユーザー指定: **単一HTMLを手動生成**。
-- 本文書は設計・実装計画。実装、skill の配布、文書の approved 化はこの作業に含めない。
+- 本文書は設計・実装計画。2026-09-21 の追加指示で、ブランチを作成してサブエージェント方式で実装することが承認された。文書の approved 化は含めない。
 - 実行系コマンドは `mise exec -- <command>` を使う。
 - Markdown / YAML が唯一の状態 authority。HTML と snapshot は再生成可能な表示物。
 - Graph の条件、gate、priority、task runnable 判定を表示側で再実装しない。
@@ -991,6 +991,19 @@ git add packages/doc-driven-dev/.apm/skills/doc-dashboard packages/doc-driven-de
 git commit -m "docs(doc-driven-dev): add dashboard skill and reporting contract"
 ```
 
+### Task 6: ステータス別カンバン表示（追加要望）
+
+2026-09-21 の追加要望により Task 4 と Task 5 の間で実施する。
+
+- [ ] 集計の直後に、未着手・進行中・ブロック中・完了・見送りのレーンを置く。
+- [ ] canonical task を path 単位のカードで表示し、タイトル、ID、所属 plan、依存関係、既存 DAG の実行・再開候補や理由を示す。
+- [ ] 不明ステータスは専用レーンに残し、孤立・Graph 未対応 task も表示する。依存待ち todo のステータスを blocked に変更しない。
+- [ ] Graph・監査・文書一覧・詳細表は補助ビューとして保持する。オフライン・JavaScript 無効でも読める単一 HTML とする。
+- [ ] 狭い画面ではボード内を横スクロールでき、ページ全体ははみ出さない。キーボード操作と安全な内部リンクを確認する。
+- [ ] renderer / board のテスト、型検査、bundle 再生成、実ブラウザ確認を行う。
+
+主な変更先: `dashboard_render.ts`、必要に応じた board / HTML 共通 helper、renderer テスト、生成済み `build_dashboard.js`。スキル文書は Task 5 でこの表示を説明する。HTML は読み取り専用 snapshot であり、ドラッグによる文書更新や常駐サーバーは対象外。
+
 ## 5. 受け入れ条件と coverage
 
 | 要求 | 証拠 / task |
@@ -1008,13 +1021,12 @@ git commit -m "docs(doc-driven-dev): add dashboard skill and reporting contract"
 
 ## 6. 今回の境界と実装時の引き継ぎ
 
-今回の成果物はこの設計・実装計画のみ。上の checkbox は未実施であり、future implementation の test pass を表していない。
+初回は設計・実装計画を成果物とし、その後の追加指示で `feature/doc-driven-dev-dashboard` ブランチ上の実装まで範囲を拡張した。checkbox と末尾の実行記録は実装・検証結果に合わせて更新する。
 既存の canonical design / plan を approved にせず、Graph の task DAG も作成していない。
 
-実装に進む場合の選択肢:
+実装方式:
 
-1. **Subagent-Driven:** task ごとに実装担当を分け、成果物ごとにレビューする。
-2. **Inline Execution:** `superpowers:executing-plans` に従い、この順番で実装・検証する。
+**Subagent-Driven:** task ごとに実装担当を分け、成果物ごとにレビューする（ユーザー指定）。実装順は Task 1 → 2 → 3 → 4 → 6 → 5 とする。
 
 ### 計画の自己レビュー
 
@@ -1023,3 +1035,20 @@ git commit -m "docs(doc-driven-dev): add dashboard skill and reporting contract"
 - 調査で見つかった current 不在、wont-do と blocked の重なり、title 不在、bundle path 依存、audit coverage の差を契約として明記した。
 - 各 task に Files / Interfaces / failing test / 実装方針と code / 検証 command / commit 境界を定義した。
 - 実装対象は一つの報告 capability。watch / Web hosting / 更新操作 / 任意本文 preview は別要求として扱う。
+
+## 7. 実行記録
+
+ブランチ: `feature/doc-driven-dev-dashboard`。開始点: `559ac447`。サブエージェントが各 task を実装し、別の担当が仕様と品質をレビューする。
+
+### 実装時に確定した判断
+
+1. ユーザー指定に従い、既存 checkout に feature branch を作成した。追加 worktree は作らない。誤判断時の影響は同一 checkout での競合なので、担当ファイルを限定し既存変更を保持する。
+2. サブエージェント方式を唯一の実装進行役とし、別の implementation-flow を重ねない。個別の契約と検証は維持する。誤判断時は追加 orchestration 固有の手順を補う必要がある。
+3. 初回の設計のみという境界は、後続のブランチ作成・実装指示により更新した。canonical 文書の承認や外部公開には拡張しない。
+4. Git wrapper の staging 表示に不整合があったため、Git の実体で index / HEAD を確認しコミットした。hook は無効化しない。
+5. 同一 path の重複 status が衝突する場合、計画例の後勝ちではなく「不明」にする。完了を過大表示しないための判断であり、衝突解消までは有効 task 集計から除外される。
+6. 既存 task graph の plan 所属は ID ではなく `relations.implements` の canonical plan path で指定する。計画の fixture 例を修正し、空 graph 同士の比較で合格しない独立 assertion を追加した。runtime の所属規則は変えない。
+7. 一時ファイルの書き込みを cleanup 対象の try / finally 内に置き、排他作成に成功したファイルだけを削除する。計画のサンプルより失敗時の旧 HTML 保持を優先した。名前衝突時は他のファイルを残して生成を失敗させる。
+8. 追加要望のカンバンを概要の直後に置き、Graph と詳細表を補助ビューとして維持する。status と依存上の実行可否は別に表示し、HTML から状態を書き換えない。
+
+最終検証と完了 task は作業完了時にここへ記録する。

@@ -266,3 +266,6 @@ Git worktree が rollback 経路です: 適用結果が誤っていれば Git �
   Task Graph 合成と fail-closed dependency 規則。
 - [`references/graph-inspection.ja.md`](references/graph-inspection.ja.md) — inspection
   field、topology reachability、route explanation、Mermaid の決定性。
+
+Graph の状態、ステータス別タスクカード、残存タスク、draft 文書を手動生成する
+オフライン HTML で確認するには、[doc-dashboard](../doc-dashboard/SKILL.ja.md) を使います。
