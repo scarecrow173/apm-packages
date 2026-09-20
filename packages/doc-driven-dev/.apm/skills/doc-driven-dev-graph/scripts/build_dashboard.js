@@ -33456,6 +33456,62 @@ function renderExecutionSvg(inspection, selected) {
   return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="execution-title execution-desc" viewBox="0 0 ${width} ${height}"><title id="execution-title">Execution Graph</title><desc id="execution-desc">\u9077\u79FB\u6761\u4EF6\u306F\u76F4\u5F8C\u306E\u8868\u3092\u53C2\u7167</desc><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="context-stroke"/></marker></defs><style>text{font:14px system-ui,sans-serif;fill:#172033}.node-kind{font-size:12px}.selected-label{font-size:11px;font-weight:700;fill:#8b1e45}</style>${edgePaths}${nodeGroups}</svg>`;
 }
 
+// src/skills/doc-driven-dev-graph/scripts/lib/dashboard_board.ts
+var permanentLanes = [
+  { status: "todo", label: "todo / \u672A\u7740\u624B" },
+  { status: "in-progress", label: "in-progress / \u9032\u884C\u4E2D" },
+  { status: "blocked", label: "blocked / \u30D6\u30ED\u30C3\u30AF\u4E2D" },
+  { status: "done", label: "done / \u5B8C\u4E86" },
+  { status: "wont-do", label: "wont-do / \u898B\u9001\u308A" }
+];
+var validStatuses = new Set(permanentLanes.map((lane) => lane.status));
+var compare = (left, right) => left.localeCompare(right);
+function laneFor(item) {
+  if (item.parseError !== null || !validStatuses.has(item.status)) return "unknown";
+  return item.status;
+}
+function buildTaskBoard(inventory, plans) {
+  const memberships = /* @__PURE__ */ new Map();
+  for (const plan of plans) {
+    const blockedById = new Map(plan.graph.blocked.map((entry) => [entry.id, entry.reasons]));
+    for (const node2 of plan.graph.nodes) {
+      const entries = memberships.get(node2.path) ?? [];
+      entries.push({
+        plan: plan.path,
+        taskId: node2.id,
+        dependencies: [...node2.dependsOn],
+        runnable: plan.graph.runnable.includes(node2.id),
+        resumable: plan.graph.resumableActive.includes(node2.id),
+        blockReasons: [...blockedById.get(node2.id) ?? []]
+      });
+      memberships.set(node2.path, entries);
+    }
+  }
+  const cardsByPath = /* @__PURE__ */ new Map();
+  for (const item of inventory) {
+    if (item.kind !== "canonical" || item.type !== "task") continue;
+    const entries = [...memberships.get(item.path) ?? []].sort((left, right) => compare(left.plan, right.plan));
+    cardsByPath.set(item.path, {
+      path: item.path,
+      id: item.id,
+      title: item.title,
+      status: item.status,
+      lane: laneFor(item),
+      parseError: item.parseError,
+      coverage: !item.graphCovered ? "graph-uncovered" : entries.length === 0 ? "no-plan" : "covered",
+      memberships: entries
+    });
+  }
+  const cards = [...cardsByPath.values()].sort((left, right) => compare(left.path, right.path));
+  const lanes = permanentLanes.map((lane) => ({
+    ...lane,
+    cards: cards.filter((card) => card.lane === lane.status)
+  }));
+  const unknown2 = cards.filter((card) => card.lane === "unknown");
+  if (unknown2.length > 0) lanes.push({ status: "unknown", label: "unknown / \u4E0D\u660E", cards: unknown2 });
+  return { lanes };
+}
+
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_render.ts
 function escapeHtml(value) {
   const escaped = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -33464,7 +33520,10 @@ function escapeHtml(value) {
 var e = (value) => escapeHtml(value === null || value === void 0 || value === "" ? "\u672A\u6307\u5B9A" : String(value));
 var list2 = (values) => values.length ? values.map(e).join(", ") : "\u306A\u3057";
 var bool = (value) => value ? "\u306F\u3044" : "\u3044\u3044\u3048";
-var compare = (left, right) => left.localeCompare(right);
+var compare2 = (left, right) => left.localeCompare(right);
+function documentAnchors(inventory) {
+  return new Map([...inventory].sort((left, right) => compare2(left.path, right.path)).map((row, index2) => [row.path, `doc-${index2}`]));
+}
 function table(headers, rows, empty2 = "0 \u4EF6") {
   if (rows.length === 0) return `<p class="empty">${e(empty2)}</p>`;
   return `<div class="table-scroll" tabindex="0"><table><thead><tr>${headers.map((header) => `<th scope="col">${e(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
@@ -33511,17 +33570,30 @@ function renderGraph(snapshot) {
   const route = decision?.route;
   const explanation = decision?.explanation;
   const routeSummary = !decision ? "<p><strong>\u73FE\u5728\u30CE\u30FC\u30C9\u672A\u6307\u5B9A</strong>\u3002\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC\u306F\u8A55\u4FA1\u3057\u3066\u3044\u307E\u305B\u3093\u3002</p>" : `<div class="callout"><h3>\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC\uFF08\u6307\u5B9A\u6761\u4EF6\u304B\u3089\u306E\u8A55\u4FA1\uFF09</h3><dl class="facts"><div><dt>\u73FE\u5728\u30CE\u30FC\u30C9</dt><dd>${e(route?.current)}</dd></div><div><dt>route status</dt><dd>${e(route?.status)}</dd></div><div><dt>\u6B21\u30CE\u30FC\u30C9</dt><dd>${e(route?.next)}</dd></div><div><dt>edge</dt><dd>${e(route?.edgeId)}</dd></div><div><dt>condition</dt><dd>${e(route?.condition)}</dd></div><div><dt>delegate</dt><dd>${e(route?.delegate)}</dd></div></dl><p><strong>required audits:</strong> ${list2(route?.requiredAudits ?? [])}</p><p><strong>commit gate:</strong> ${e(bool(route?.commitGate ?? false))}</p><p><strong>hard blockers:</strong> ${list2(explanation?.hardBlockers ?? [])}</p><p><strong>blocked reasons:</strong> ${list2(explanation?.blockedReasons ?? [])}</p></div>`;
-  const gateRows = Object.entries(snapshot.state.gates).sort(([left], [right]) => compare(left, right)).map(([name, gate2]) => [e(name), e(gate2.status), list2(gate2.reasons)]);
-  const edgeRows = [...snapshot.definition.edges].sort((left, right) => compare(left.from, right.from) || left.priority - right.priority || compare(left.id, right.id)).map((edge) => [e(edge.id), e(edge.from), e(edge.to), e(edge.when), e(edge.priority)]);
+  const gateRows = Object.entries(snapshot.state.gates).sort(([left], [right]) => compare2(left, right)).map(([name, gate2]) => [e(name), e(gate2.status), list2(gate2.reasons)]);
+  const edgeRows = [...snapshot.definition.edges].sort((left, right) => compare2(left.from, right.from) || left.priority - right.priority || compare2(left.id, right.id)).map((edge) => [e(edge.id), e(edge.from), e(edge.to), e(edge.when), e(edge.priority)]);
   const topologyRows = snapshot.definition.issues.map((issue2) => [e(issue2.severity), e(issue2.code), e(issue2.nodeId), e(issue2.condition)]);
   return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2>${routeSummary}<p><strong>caller supplied signals:</strong> ${list2(snapshot.requested.signals)}</p><p><strong>state signals:</strong> ${list2(snapshot.state.signals)}</p><p><strong>hard blockers:</strong> ${list2(snapshot.state.hardBlockers)}</p>${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}<h3>\u5168 graph edge</h3>${table(["edge ID", "from", "to", "condition", "priority"], edgeRows)}<h3>gate</h3>${table(["gate", "status", "reasons"], gateRows, "gate 0 \u4EF6")}<h3>Graph topology issues</h3>${table(["severity", "code", "node", "condition"], topologyRows)}</section>`;
 }
+function renderTaskBoard(snapshot, ids) {
+  const board = buildTaskBoard(snapshot.inventory, snapshot.plans);
+  const coverageLabel = (coverage) => coverage === "covered" ? "Graph \u5BFE\u8C61" : coverage === "no-plan" ? "plan \u672A\u6240\u5C5E" : "graph \u672A\u5BFE\u5FDC";
+  const lanes = board.lanes.map((lane) => {
+    const cards = lane.cards.map((card) => {
+      const memberships = card.memberships.map((membership) => `<li><strong>plan:</strong> <code>${e(membership.plan)}</code><br><strong>dependencies:</strong> ${list2(membership.dependencies)}<br><span class="badge">runnable: ${e(bool(membership.runnable))}</span> <span class="badge">resumable: ${e(bool(membership.resumable))}</span><br><strong>\u505C\u6B62\u7406\u7531:</strong> ${list2(membership.blockReasons)}</li>`).join("");
+      const title = ids.has(card.path) ? `<a href="#${ids.get(card.path)}">${e(card.title)}</a>` : e(card.title);
+      return `<article class="task-card" data-task-card data-task-path="${escapeHtml(card.path)}"><h4>${title}</h4><p class="task-id"><code>${e(card.id)}</code></p><p><span class="status-badge">${e(card.status)}</span> <span class="coverage-badge">${e(coverageLabel(card.coverage))}</span></p><p class="task-path"><code>${e(card.path)}</code></p>${card.parseError ? `<p class="warning"><strong>parse error:</strong> ${e(card.parseError)}</p>` : ""}${memberships ? `<ul class="membership-list">${memberships}</ul>` : `<p class="empty">plan membership \u306A\u3057\u3002\u4F9D\u5B58\u5224\u5B9A\u306F\u4E0D\u660E\u3067\u3059\u3002</p>`}</article>`;
+    }).join("");
+    return `<section class="kanban-lane lane-${lane.status}" data-kanban-lane="${lane.status}" aria-labelledby="lane-${lane.status}-heading"><h3 id="lane-${lane.status}-heading">${e(lane.label)} <span class="lane-count" aria-label="${lane.cards.length} \u4EF6">${lane.cards.length}</span></h3><div class="lane-cards">${cards || `<p class="empty lane-empty">\u3053\u306E lane \u306B\u30BF\u30B9\u30AF\u306F\u3042\u308A\u307E\u305B\u3093</p>`}</div></section>`;
+  }).join("");
+  return `<section id="task-board" aria-labelledby="task-board-heading"><h2 id="task-board-heading">\u30BF\u30B9\u30AF\u30DC\u30FC\u30C9</h2><p>\u30BF\u30B9\u30AF\u306F\u6587\u66F8\u306E\u30B9\u30C6\u30FC\u30BF\u30B9\u3054\u3068\u306B\u8868\u793A\u3057\u307E\u3059\u3002\u4F9D\u5B58\u95A2\u4FC2\u306B\u3088\u308B\u5B9F\u884C\u53EF\u5426\u306F\u30AB\u30FC\u30C9\u5185\u3067\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002</p><div class="kanban-scroll" tabindex="0" role="region" aria-label="\u30BF\u30B9\u30AF Kanban \u30DC\u30FC\u30C9"><div class="kanban-board">${lanes}</div></div></section>`;
+}
 function renderPlans(snapshot) {
-  const plans = [...snapshot.plans].sort((left, right) => compare(left.path, right.path));
+  const plans = [...snapshot.plans].sort((left, right) => compare2(left.path, right.path));
   const body = plans.map((plan) => {
     const graph = plan.graph;
     const blocked = new Map(graph.blocked.map((entry) => [entry.id, entry.reasons]));
-    const nodes = [...graph.nodes].sort((left, right) => compare(left.path, right.path)).map((node2) => [
+    const nodes = [...graph.nodes].sort((left, right) => compare2(left.path, right.path)).map((node2) => [
       e(node2.id),
       e(node2.path),
       e(node2.status),
@@ -33539,10 +33611,10 @@ function renderPlans(snapshot) {
   return `<section id="tasks" aria-labelledby="tasks-heading"><h2 id="tasks-heading">plan \u3054\u3068\u306E\u30BF\u30B9\u30AF</h2>${body || '<p class="empty">plan 0 \u4EF6</p>'}</section>`;
 }
 function renderDocuments(snapshot) {
-  const inventory = [...snapshot.inventory].sort((left, right) => compare(left.path, right.path));
-  const ids = new Map(inventory.map((row, index2) => [row.path, `doc-${index2}`]));
-  const types = [...new Set(inventory.map((row) => row.type).filter((value) => value !== null))].sort(compare);
-  const statuses = [...new Set(inventory.map((row) => row.status).filter((value) => value !== null))].sort(compare);
+  const inventory = [...snapshot.inventory].sort((left, right) => compare2(left.path, right.path));
+  const ids = documentAnchors(inventory);
+  const types = [...new Set(inventory.map((row) => row.type).filter((value) => value !== null))].sort(compare2);
+  const statuses = [...new Set(inventory.map((row) => row.status).filter((value) => value !== null))].sort(compare2);
   const rows = inventory.map((row) => {
     const bucket = row.kind === "unmanaged" ? "\u7BA1\u7406\u5BFE\u8C61\u5916" : { draft: "draft", proposed: "proposed", capturing: "capturing", other: "\u305D\u306E\u4ED6" }[documentBucket(row.status)];
     return `<tr id="${ids.get(row.path)}" data-document-row data-type="${e(row.type ?? "")}" data-status="${e(row.status ?? "")}"><td>${e(bucket)}</td><td>${e(row.id)}</td><td>${e(row.type)}</td><td>${e(row.title)}</td><td><code>${e(row.path)}</code></td><td>${e(row.status)}</td><td>${e(row.updated)}</td><td>${e(bool(row.graphCovered))}</td><td>${e(row.parseError)}</td></tr>`;
@@ -33568,7 +33640,8 @@ function renderDiagnostics(snapshot) {
 }
 var filterScript = String.raw`const form=document.querySelector('[data-filters]');if(form)form.addEventListener('input',()=>{const query=form.querySelector('[name="query"]').value.toLocaleLowerCase();const type=form.querySelector('[name="type"]').value;const status=form.querySelector('[name="status"]').value;let visible=0;for(const row of document.querySelectorAll('[data-document-row]')){row.hidden=!row.textContent.toLocaleLowerCase().includes(query)||(type!==''&&row.dataset.type!==type)||(status!==''&&row.dataset.status!==status);if(!row.hidden)visible+=1;}document.querySelector('[data-result-count]').textContent=String(visible);});`;
 function renderDashboard(snapshot) {
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'"><title>\u6587\u66F8\u99C6\u52D5\u958B\u767A\u306E\u9032\u884C\u72B6\u6CC1</title><style>:root{color-scheme:light dark;font-family:system-ui,sans-serif}*{box-sizing:border-box}body{max-width:1200px;margin:auto;padding:24px;line-height:1.6;overflow-wrap:anywhere}nav,.metrics,form,.facts{display:flex;flex-wrap:wrap;gap:12px 16px}.metrics>div,.facts>div,.callout{padding:.5rem .8rem;border:1px solid #8792a2;border-radius:8px}.metrics dt,.facts dt{font-size:.85rem}.metrics dd,.facts dd{margin:0;font-size:1.25rem;font-weight:700}.table-scroll{max-width:100%;overflow:auto;border:1px solid #8792a2}table{border-collapse:collapse;width:100%;min-width:42rem}th,td{padding:8px;border-bottom:1px solid #888;text-align:left;vertical-align:top}code{white-space:normal;overflow-wrap:anywhere}pre,.graph-scroll{overflow:auto}[hidden]{display:none!important}:focus-visible{outline:3px solid #5879ff}svg{display:block;width:100%;min-width:760px;height:auto}.graph-scroll{max-width:100%}details{margin-block:1rem;padding:.5rem;border:1px solid #8792a2;border-radius:8px}.warning{font-weight:700;color:#a33}@media(max-width:640px){body{padding:12px}h1{font-size:1.6rem}.metrics>div{flex:1 1 8rem}}@media print{nav,form{display:none}details>*{display:block}}</style></head><body><header><h1>\u6587\u66F8\u99C6\u52D5\u958B\u767A\u306E\u9032\u884C\u72B6\u6CC1</h1><p><strong>repository:</strong> ${e(snapshot.repositoryName)} / <strong>\u5BFE\u8C61:</strong> ${list2(snapshot.requested.focus)} / <strong>\u958B\u59CB:</strong> ${e(snapshot.startedAt)} / <strong>\u751F\u6210\u6642\u70B9:</strong> ${e(snapshot.generatedAt)}</p><p>\u3053\u306E\u753B\u9762\u306F\u751F\u6210\u6642\u70B9\u306E\u72B6\u614B\u3067\u3059\u3002\u66F4\u65B0\u3059\u308B\u306B\u306F\u30B3\u30DE\u30F3\u30C9\u3092\u518D\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002</p></header><nav aria-label="\u30BB\u30AF\u30B7\u30E7\u30F3"><a href="#graph">Graph</a><a href="#tasks">\u30BF\u30B9\u30AF</a><a href="#documents">\u6587\u66F8</a><a href="#diagnostics">\u8A3A\u65AD</a></nav><main>${renderMetrics(snapshot)}<div class="graph-scroll">${renderGraph(snapshot)}</div>${renderPlans(snapshot)}${renderDocuments(snapshot)}${renderDiagnostics(snapshot)}</main><noscript>\u5168\u60C5\u5831\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u7D5E\u308A\u8FBC\u307F\u306B\u306F JavaScript \u304C\u5FC5\u8981\u3067\u3059\u3002</noscript><script>${filterScript}</script></body></html>`;
+  const ids = documentAnchors(snapshot.inventory);
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'"><title>\u6587\u66F8\u99C6\u52D5\u958B\u767A\u306E\u9032\u884C\u72B6\u6CC1</title><style>:root{color-scheme:light;font-family:system-ui,sans-serif;color:#172033;background:#f5f7fb}*{box-sizing:border-box}html,body{max-width:100%;overflow-x:hidden}body{max-width:1200px;margin:auto;padding:24px;line-height:1.6;overflow-wrap:anywhere}nav,.metrics,form,.facts{display:flex;flex-wrap:wrap;gap:12px 16px}.metrics>div,.facts>div,.callout{padding:.5rem .8rem;border:1px solid #8792a2;border-radius:8px;background:#fff}.metrics dt,.facts dt{font-size:.85rem}.metrics dd,.facts dd{margin:0;font-size:1.25rem;font-weight:700}.kanban-scroll{width:100%;max-width:100%;overflow-x:auto;padding:.25rem 0 1rem}.kanban-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(17rem,1fr);gap:1rem;width:max-content;min-width:100%}.kanban-lane{padding:.75rem;border:1px solid #bcc5d3;border-top:5px solid #64748b;border-radius:12px;background:#e9eef5}.lane-todo{border-top-color:#64748b}.lane-in-progress{border-top-color:#2563eb;background:#eaf2ff}.lane-blocked{border-top-color:#b42318;background:#fff0ee}.lane-done{border-top-color:#16803c;background:#ebf8ef}.lane-wont-do{border-top-color:#7c3aed;background:#f4efff}.lane-unknown{border-top-color:#b36b00;background:#fff6df}.kanban-lane h3{margin:.1rem 0 .75rem;font-size:1rem}.lane-count,.badge,.status-badge,.coverage-badge{display:inline-block;padding:.1rem .45rem;border:1px solid currentColor;border-radius:999px;font-size:.78rem}.lane-count{float:right}.lane-cards{display:grid;gap:.75rem}.task-card{min-width:0;padding:.8rem;border:1px solid #c7cfda;border-radius:9px;background:#fff;box-shadow:0 2px 7px #24324a18}.task-card h4,.task-card p{margin:.2rem 0 .55rem}.task-card a{color:#174ea6;font-weight:700}.task-id,.task-path{font-size:.85rem}.membership-list{margin:.6rem 0 0;padding-left:1.2rem}.membership-list li+li{margin-top:.55rem}.lane-empty{padding:.75rem;border:1px dashed #98a3b3;border-radius:8px;background:#ffffffaa}.table-scroll{max-width:100%;overflow:auto;border:1px solid #8792a2}table{border-collapse:collapse;width:100%;min-width:42rem}th,td{padding:8px;border-bottom:1px solid #888;text-align:left;vertical-align:top}code{white-space:normal;overflow-wrap:anywhere}pre,.graph-scroll{overflow:auto}[hidden]{display:none!important}:focus-visible{outline:3px solid #5879ff;outline-offset:2px}svg{display:block;width:100%;min-width:760px;height:auto}.graph-scroll{max-width:100%}details{margin-block:1rem;padding:.5rem;border:1px solid #8792a2;border-radius:8px;background:#fff}.warning{font-weight:700;color:#a33}@media(max-width:640px){body{padding:12px}h1{font-size:1.6rem}.metrics>div{flex:1 1 8rem}.kanban-board{grid-auto-columns:minmax(min(17rem,calc(100vw - 40px)),calc(100vw - 40px))}}@media print{nav,form{display:none}details>*{display:block}.kanban-scroll{overflow:visible}.kanban-board{display:block;width:auto}.kanban-lane{break-inside:avoid;margin-bottom:1rem}}</style></head><body><header><h1>\u6587\u66F8\u99C6\u52D5\u958B\u767A\u306E\u9032\u884C\u72B6\u6CC1</h1><p><strong>repository:</strong> ${e(snapshot.repositoryName)} / <strong>\u5BFE\u8C61:</strong> ${list2(snapshot.requested.focus)} / <strong>\u958B\u59CB:</strong> ${e(snapshot.startedAt)} / <strong>\u751F\u6210\u6642\u70B9:</strong> ${e(snapshot.generatedAt)}</p><p>\u3053\u306E\u753B\u9762\u306F\u751F\u6210\u6642\u70B9\u306E\u72B6\u614B\u3067\u3059\u3002\u66F4\u65B0\u3059\u308B\u306B\u306F\u30B3\u30DE\u30F3\u30C9\u3092\u518D\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002</p></header><nav aria-label="\u30BB\u30AF\u30B7\u30E7\u30F3"><a href="#task-board">\u30BF\u30B9\u30AF\u30DC\u30FC\u30C9</a><a href="#graph">Graph</a><a href="#tasks">\u30BF\u30B9\u30AF\u8A73\u7D30</a><a href="#documents">\u6587\u66F8</a><a href="#diagnostics">\u8A3A\u65AD</a></nav><main>${renderMetrics(snapshot)}${renderTaskBoard(snapshot, ids)}<div class="graph-scroll">${renderGraph(snapshot)}</div>${renderPlans(snapshot)}${renderDocuments(snapshot)}${renderDiagnostics(snapshot)}</main><noscript>\u5168\u60C5\u5831\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u7D5E\u308A\u8FBC\u307F\u306B\u306F JavaScript \u304C\u5FC5\u8981\u3067\u3059\u3002</noscript><script>${filterScript}</script></body></html>`;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts

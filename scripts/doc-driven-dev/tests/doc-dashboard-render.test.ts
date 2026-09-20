@@ -199,3 +199,30 @@ test("plans render declared status separately from DAG eligibility and every dep
   assert.match(html, /依存上 runnable/);
   assert.match(html, /TASK-A[\s\S]*TASK-B/);
 });
+
+test("task board renders before graph with shared document links, empty lanes, and escaped hostile data", () => {
+  const value = snapshot([
+    item("docs/tasks/hostile.md", "todo", {
+      id: "<TASK-X>", title: "</article><script>alert(1)</script>", graphCovered: false,
+    }),
+  ]);
+  value.plans = [{
+    path: "docs/plans/<p>.md", status: "in-progress",
+    graph: {
+      schemaVersion: 1, plan: "docs/plans/<p>.md", nodes: [
+        { id: "OTHER-ID", path: "docs/tasks/hostile.md", status: "todo", dependsOn: ["<PRE>"], blocks: [] },
+      ], edges: [], runnable: [], active: [], resumableActive: [], completed: [],
+      blocked: [{ id: "OTHER-ID", reasons: ["dependency:<PRE>"] }], issues: [],
+    },
+  }];
+
+  const html = renderDashboard(value);
+  assert.ok(html.indexOf('id="task-board"') < html.indexOf('id="graph"'));
+  assert.match(html, /aria-label="タスク Kanban ボード"/);
+  assert.match(html, /todo \/ 未着手/);
+  assert.match(html, /in-progress \/ 進行中[\s\S]*この lane にタスクはありません/);
+  assert.match(html, /href="#doc-0"/);
+  assert.match(html, /graph 未対応/);
+  assert.match(html, /dependency:&lt;PRE&gt;/);
+  assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
+});
