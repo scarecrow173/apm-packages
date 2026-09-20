@@ -100,6 +100,63 @@ test("draft canonical and unmanaged documents are labeled and filterable", () =>
   assert.match(html, /href="#doc-0"/);
 });
 
+test("repository metrics count canonical draft states separately from unmanaged and parse errors", () => {
+  const value = snapshot([
+    item("docs/specs/draft.md", "draft", { type: "spec" }),
+    item("docs/specs/proposed.md", "proposed", { type: "spec" }),
+    item("docs/ideas/capturing.md", "capturing", { type: "idea" }),
+    item("notes/unmanaged-draft.md", "draft", { type: null, kind: "unmanaged" }),
+    item("docs/specs/broken.md", "draft", { type: "spec", parseError: "invalid YAML" }),
+  ]);
+  const html = renderDashboard(value);
+  assert.match(html, /<dt>草案<\/dt><dd>1<\/dd>/);
+  assert.match(html, /<dt>レビュー候補<\/dt><dd>1<\/dd>/);
+  assert.match(html, /<dt>記録中<\/dt><dd>1<\/dd>/);
+  assert.doesNotMatch(html, /草案・レビュー候補/);
+});
+
+test("repository-wide and selected focus task summaries are explicitly distinct", () => {
+  const value = snapshot([
+    item("docs/tasks/a1.md", "done"),
+    item("docs/tasks/a2.md", "todo"),
+    item("docs/tasks/b1.md", "todo"),
+    item("docs/tasks/b2.md", "todo"),
+    item("docs/tasks/b3.md", "wont-do"),
+  ]);
+  value.requested.focus = ["docs/plans/a.md"];
+  value.state.focus = ["docs/plans/a.md"];
+  value.state.taskGraph = {
+    schemaVersion: 1, plan: "docs/plans/a.md",
+    nodes: [
+      { id: "A1", path: "docs/tasks/a1.md", status: "done", dependsOn: [], blocks: [] },
+      { id: "A2", path: "docs/tasks/a2.md", status: "todo", dependsOn: [], blocks: [] },
+    ],
+    edges: [], runnable: ["A2"], active: [], resumableActive: [], completed: ["A1"], blocked: [], issues: [],
+  };
+  value.plans = [
+    { path: "docs/plans/a.md", status: "in-progress", graph: value.state.taskGraph },
+    { path: "docs/plans/b.md", status: "in-progress", graph: {
+      ...value.state.taskGraph, plan: "docs/plans/b.md",
+      nodes: [
+        { id: "B1", path: "docs/tasks/b1.md", status: "todo", dependsOn: [], blocks: [] },
+        { id: "B2", path: "docs/tasks/b2.md", status: "todo", dependsOn: [], blocks: [] },
+        { id: "B3", path: "docs/tasks/b3.md", status: "wont-do", dependsOn: [], blocks: [] },
+      ], completed: [], runnable: ["B1", "B2"],
+    } },
+  ];
+  const html = renderDashboard(value);
+  assert.match(html, /リポジトリ全体[\s\S]*<dt>残存<\/dt><dd>3<\/dd>[\s\S]*<dt>対応しない<\/dt><dd>1<\/dd>/);
+  assert.match(html, /選択中の plan・focus[\s\S]*docs\/plans\/a\.md[\s\S]*<dt>残存<\/dt><dd>1<\/dd>[\s\S]*<dt>完了<\/dt><dd>1<\/dd>/);
+});
+
+test("focus summary reports unselected or unresolved state without inference", () => {
+  assert.match(renderDashboard(snapshot([item("docs/tasks/a.md", "todo")])), /選択対象なし/);
+  const value = snapshot([item("docs/tasks/a.md", "todo")]);
+  value.requested.focus = ["docs/plans/missing.md"];
+  value.state.focus = ["docs/plans/missing.md"];
+  assert.match(renderDashboard(value), /task graph 未解決/);
+});
+
 test("blocked route preview is shown as supplied evidence", () => {
   const value = snapshot();
   value.requested.current = "briefing";
