@@ -33597,6 +33597,15 @@ function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
 
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_cli.ts
 var DEFAULT_OUTPUT = "reports/doc-driven-dev/index.html";
+var defaultWriteOperations = {
+  randomUUID: import_node_crypto.randomUUID,
+  openExclusive: (file2) => import_node_fs10.default.openSync(file2, "wx"),
+  write: (fd, html) => import_node_fs10.default.writeFileSync(fd, html, { encoding: "utf8" }),
+  close: (fd) => import_node_fs10.default.closeSync(fd),
+  link: (from, to) => import_node_fs10.default.linkSync(from, to),
+  rename: (from, to) => import_node_fs10.default.renameSync(from, to),
+  unlink: (file2) => import_node_fs10.default.unlinkSync(file2)
+};
 var requiredValue = (argv, index2) => {
   const value = argv[index2 + 1];
   if (!value || value.startsWith("--")) throw new Error(`Missing value for ${argv[index2]}`);
@@ -33668,6 +33677,9 @@ function assertExistingAncestorsInside(root, targetParent) {
   if (!isInside2(root, realAncestor)) throw new Error(`Output ancestor resolves outside repository: ${cursor}`);
 }
 function writeDashboard(cwd, outputValue, html, force) {
+  return writeDashboardWithOperations(cwd, outputValue, html, force, defaultWriteOperations);
+}
+function writeDashboardWithOperations(cwd, outputValue, html, force, operations) {
   const rootPath = import_node_path11.default.resolve(cwd);
   const rootStat = import_node_fs10.default.statSync(rootPath);
   if (!rootStat.isDirectory()) throw new Error(`Dashboard cwd is not a directory: ${rootPath}`);
@@ -33686,14 +33698,30 @@ function writeDashboard(cwd, outputValue, html, force) {
   if (!isInside2(root, realParent)) throw new Error(`Output parent resolves outside repository: ${parent}`);
   assertRegularOutput(output);
   if (!force && import_node_fs10.default.existsSync(output)) throw new Error(`Output already exists; pass --force to replace it: ${output}`);
-  const temp = import_node_path11.default.join(realParent, `.${import_node_path11.default.basename(output)}.${(0, import_node_crypto.randomUUID)()}.tmp`);
-  import_node_fs10.default.writeFileSync(temp, html, { encoding: "utf8", flag: "wx" });
+  const temp = import_node_path11.default.join(realParent, `.${import_node_path11.default.basename(output)}.${operations.randomUUID()}.tmp`);
+  let fd;
+  let ownsTemp = false;
   try {
+    fd = operations.openExclusive(temp);
+    ownsTemp = true;
+    operations.write(fd, html);
+    operations.close(fd);
+    fd = void 0;
     assertRegularOutput(output);
-    if (force && import_node_fs10.default.existsSync(output)) import_node_fs10.default.renameSync(temp, output);
-    else import_node_fs10.default.linkSync(temp, output);
+    if (force && import_node_fs10.default.existsSync(output)) operations.rename(temp, output);
+    else operations.link(temp, output);
   } finally {
-    if (import_node_fs10.default.existsSync(temp)) import_node_fs10.default.unlinkSync(temp);
+    try {
+      if (fd !== void 0) operations.close(fd);
+    } finally {
+      if (ownsTemp) {
+        try {
+          operations.unlink(temp);
+        } catch (error51) {
+          if (error51.code !== "ENOENT") throw error51;
+        }
+      }
+    }
   }
   return output;
 }

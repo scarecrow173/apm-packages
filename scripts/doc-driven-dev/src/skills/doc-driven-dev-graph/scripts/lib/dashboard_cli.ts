@@ -19,6 +19,26 @@ export type DashboardArgs = {
 
 const DEFAULT_OUTPUT = "reports/doc-driven-dev/index.html";
 
+type DashboardWriteOperations = {
+  randomUUID: () => string;
+  openExclusive: (file: string) => number;
+  write: (fd: number, html: string) => void;
+  close: (fd: number) => void;
+  link: (from: string, to: string) => void;
+  rename: (from: string, to: string) => void;
+  unlink: (file: string) => void;
+};
+
+const defaultWriteOperations: DashboardWriteOperations = {
+  randomUUID,
+  openExclusive: (file) => fs.openSync(file, "wx"),
+  write: (fd, html) => fs.writeFileSync(fd, html, { encoding: "utf8" }),
+  close: (fd) => fs.closeSync(fd),
+  link: (from, to) => fs.linkSync(from, to),
+  rename: (from, to) => fs.renameSync(from, to),
+  unlink: (file) => fs.unlinkSync(file),
+};
+
 const requiredValue = (argv: string[], index: number): string => {
   const value = argv[index + 1];
   if (!value || value.startsWith("--")) throw new Error(`Missing value for ${argv[index]}`);
@@ -97,6 +117,16 @@ function assertExistingAncestorsInside(root: string, targetParent: string): void
 }
 
 export function writeDashboard(cwd: string, outputValue: string, html: string, force: boolean): string {
+  return writeDashboardWithOperations(cwd, outputValue, html, force, defaultWriteOperations);
+}
+
+export function writeDashboardWithOperations(
+  cwd: string,
+  outputValue: string,
+  html: string,
+  force: boolean,
+  operations: DashboardWriteOperations,
+): string {
   const rootPath = path.resolve(cwd);
   const rootStat = fs.statSync(rootPath);
   if (!rootStat.isDirectory()) throw new Error(`Dashboard cwd is not a directory: ${rootPath}`);
@@ -118,14 +148,30 @@ export function writeDashboard(cwd: string, outputValue: string, html: string, f
   assertRegularOutput(output);
   if (!force && fs.existsSync(output)) throw new Error(`Output already exists; pass --force to replace it: ${output}`);
 
-  const temp = path.join(realParent, `.${path.basename(output)}.${randomUUID()}.tmp`);
-  fs.writeFileSync(temp, html, { encoding: "utf8", flag: "wx" });
+  const temp = path.join(realParent, `.${path.basename(output)}.${operations.randomUUID()}.tmp`);
+  let fd: number | undefined;
+  let ownsTemp = false;
   try {
+    fd = operations.openExclusive(temp);
+    ownsTemp = true;
+    operations.write(fd, html);
+    operations.close(fd);
+    fd = undefined;
     assertRegularOutput(output);
-    if (force && fs.existsSync(output)) fs.renameSync(temp, output);
-    else fs.linkSync(temp, output);
+    if (force && fs.existsSync(output)) operations.rename(temp, output);
+    else operations.link(temp, output);
   } finally {
-    if (fs.existsSync(temp)) fs.unlinkSync(temp);
+    try {
+      if (fd !== undefined) operations.close(fd);
+    } finally {
+      if (ownsTemp) {
+        try {
+          operations.unlink(temp);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+      }
+    }
   }
   return output;
 }
