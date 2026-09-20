@@ -20,14 +20,31 @@ function table(headers: string[], rows: string[][], empty = "0 件"): string {
 function renderMetrics(snapshot: DashboardSnapshot): string {
   const canonicalTasks = snapshot.inventory.filter((row) => row.kind === "canonical" && row.type === "task");
   const summary = summarizeTasks(canonicalTasks);
-  const drafts = snapshot.inventory.filter((row) => ["draft", "proposed", "capturing"].includes(row.status ?? "")).length;
+  const canonicalDocuments = snapshot.inventory.filter((row) => row.kind === "canonical" && row.parseError === null);
+  const countStatus = (status: string): number => canonicalDocuments.filter((row) => row.status === status).length;
   const ratio = summary.doneRatio === null ? "対象タスクなし" : `${Math.round(summary.doneRatio * 100)}%`;
   const metrics = [
     ["残存", summary.remaining], ["完了", summary.done], ["対応しない", summary.wontDo],
-    ["不明", summary.unknown], ["進捗", ratio], ["草案・レビュー候補", drafts],
+    ["不明", summary.unknown], ["進捗", ratio], ["草案", countStatus("draft")],
+    ["レビュー候補", countStatus("proposed")], ["記録中", countStatus("capturing")],
     ["blocking findings", snapshot.health.blocking],
   ];
-  return `<section aria-labelledby="summary-heading"><h2 id="summary-heading">概要</h2><dl class="metrics">${metrics.map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl></section>`;
+  const metricList = (values: Array<Array<string | number>>): string => `<dl class="metrics">${values.map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl>`;
+  const selected = snapshot.state.taskGraph;
+  let focused: string;
+  if (selected) {
+    const selectedSummary = summarizeTasks(selected.nodes);
+    const selectedRatio = selectedSummary.doneRatio === null ? "対象タスクなし" : `${Math.round(selectedSummary.doneRatio * 100)}%`;
+    focused = `<h3>選択中の plan・focus</h3><p><strong>plan:</strong> <code>${e(selected.plan)}</code></p>${metricList([
+      ["残存", selectedSummary.remaining], ["完了", selectedSummary.done], ["対応しない", selectedSummary.wontDo],
+      ["不明", selectedSummary.unknown], ["進捗", selectedRatio],
+    ])}`;
+  } else if (snapshot.requested.focus.length > 0 || snapshot.state.focus.length > 0) {
+    focused = `<h3>選択中の plan・focus</h3><p>task graph 未解決: ${list(snapshot.state.focus.length > 0 ? snapshot.state.focus : snapshot.requested.focus)}</p>`;
+  } else {
+    focused = "<h3>選択中の plan・focus</h3><p>選択対象なし。focus は未指定です。</p>";
+  }
+  return `<section aria-labelledby="summary-heading"><h2 id="summary-heading">概要</h2><h3>リポジトリ全体</h3>${metricList(metrics)}${focused}</section>`;
 }
 
 function renderGraph(snapshot: DashboardSnapshot): string {
