@@ -1052,3 +1052,16 @@ git commit -m "docs(doc-driven-dev): add dashboard skill and reporting contract"
 8. 追加要望のカンバンを概要の直後に置き、Graph と詳細表を補助ビューとして維持する。status と依存上の実行可否は別に表示し、HTML から状態を書き換えない。
 
 最終検証と完了 task は作業完了時にここへ記録する。
+
+### 完了記録
+
+| Task | 状態 | 実装コミット / 証拠 |
+| --- | --- | --- |
+| 1 | complete | `286a7ef..5bc9331`; model tests and typecheck passed. |
+| 2 | complete | `3135b98`, `16d03b4`; collector tests and package suite passed. |
+| 3 | complete | `0dc5d98`, `680babf`; renderer tests, typecheck, browser fixture passed. |
+| 4 | complete | `4b9f49d`, `5eb450a`; CLI tests, output-safety checks, typecheck/build passed. |
+| 6 | complete | `8dce762`, `29c52b2`; Kanban tests, browser fixture, 390px/no-JS checks, final re-review passed. |
+| 5 | complete | `86adc1e`; contract test, Markdown lint, typecheck and package suite passed; bilingual skill distributed. |
+
+Final package suite, typecheck, Markdown lint, bundle build, browser fixture, actual repository HTML, and `git diff --check` passed. The final review accepted one minor presentation tradeoff: a filter count can remain zero while a `:target` row is temporarily visible for an internal card link; the filter count continues to mean matching rows.
