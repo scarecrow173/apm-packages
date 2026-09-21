@@ -486,6 +486,29 @@ test("backlog lists draft documents as cards separate from the kanban board", ()
   assert.match(empty, /draft 文書はありません/);
 });
 
+test("chrome exposes a manual theme toggle, early data-theme script, and tinted chrome", () => {
+  const html = renderDashboard(snapshot());
+  assert.match(html, /<script>\(function\(\)\{try\{var t=localStorage\.getItem\('doc-dashboard-theme'\)/);
+  assert.match(html, /<script>\(function[\s\S]*<style>/);
+  assert.match(html, /\[data-theme="dark"\]/);
+  assert.match(html, /:root:not\(\[data-theme\]\)/);
+  assert.match(html, /<button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false"/);
+  assert.match(html, /backdrop-filter:blur\(10px\)/);
+  assert.match(html, /body::before\{content:"";position:fixed/);
+  assert.match(html, /color-mix\(in srgb,currentColor 11%,transparent\)/);
+  assert.match(html, /class="header-row"/);
+  assert.match(html, /class="subtitle"/);
+});
+
+test("header pulse dot reflects whether anything blocks progress", () => {
+  const clean = renderDashboard(snapshot());
+  assert.match(clean, /<span class="pulse-dot"/);
+  assert.doesNotMatch(clean, /class="pulse-dot pulse-bad"/);
+  const value = snapshot();
+  value.state.hardBlockers = ["focus-required"];
+  assert.match(renderDashboard(value), /class="pulse-dot pulse-bad"/);
+});
+
 test("pico classless css is inlined ahead of dashboard overrides without external assets", () => {
   const html = renderDashboard(snapshot());
   assert.match(html, /Pico CSS/);

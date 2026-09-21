@@ -31,7 +31,14 @@ findings severityの積み棒、選択中plan / focusのfactsを表示します�
 `#task-board` はタスクの主画面として従来どおりです。`#backlog` はstatusが `draft` の
 canonical文書をカードで一覧し、今後レビュー・着手する候補を文書表の行へリンクします。
 
-配色は閲覧環境のcolor scheme（light / darkのCSS変数）に従います。done / wont-doレーンは
+ヘッダのpulse dotは進行を止める項目の有無を映します（存在する間は赤、なければ緑）。
+配色は閲覧環境のcolor schemeに従い、navのトグルボタンまたは `T` キーで `<html>` の
+`data-theme` を手動切替できます。選択はlocalStorageに保持され、
+JavaScriptなしでは `prefers-color-scheme` のフォールバックが効きます。
+バッジとピルはセマンティックカラーの `color-mix` 半透明塗り、sticky navは半透明＋
+backdrop blur、ページ背面には薄いgrid backdropを敷きます（printとreduced-motionでは無効）。
+
+done / wont-doレーンは
 折り畳み、各レーンのカード一覧はレーン内でスクロールします。readinessフィルタと
 長い詳細セクションの全開閉ボタンを備え、文書フィルタの状態は `#filter=` のURL hashに
 保持します。スタイルと挙動はすべてinlineで、画像はdata URIのfaviconのみです。
