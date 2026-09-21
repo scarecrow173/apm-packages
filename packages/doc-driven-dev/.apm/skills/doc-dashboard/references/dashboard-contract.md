@@ -34,7 +34,7 @@ monospace `.chip` chips for signals, required audits, and blockers
 the plan status pill. `#documents` places its filters on a toolbar-like strip
 with a monospace result count. Tables use muted sticky headers, accent-tinted
 row hover, and a `tr:target` highlight. `#attention` panels take a
-blocked-color left border only while non-empty, `#backlog` cards take a
+blocked-color left border only while non-empty, `#backlog` strip cards take a
 draft-color left border, section headings carry an accent square marker, and
 the footer note sits below a separator in muted text.
 
@@ -46,9 +46,10 @@ severity stacked bar plus the focused plan/focus facts. Charts are inline SVG
 or CSS only; `role="img"`, `<title>`, and legend lists keep them readable
 without color alone.
 
-`#task-board` remains the primary task surface and stays unchanged. `#backlog`
-lists canonical documents whose status is `draft` as cards — the pool of
-candidates to review or start next — linked to their document-table rows.
+`#task-board` remains the primary task surface and stays unchanged. Inside it,
+above the kanban lanes, a `#backlog` strip lists canonical documents whose
+status is `draft` as cards — the pool of candidates to review or start next —
+linked to their document-table rows.
 
 A header pulse dot mirrors whether anything blocks progress (red while
 blockers exist, otherwise green). The theme follows the viewer's color scheme

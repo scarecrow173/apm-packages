@@ -31,7 +31,7 @@ plan別 `<summary>` 行はplan status pillを持ちます。`#documents` のフ�
 ツールバー風の帯に置き、結果件数は等幅で示します。表はmutedなstickyヘッダ、
 アクセント色を乗せた行hover、`tr:target` のハイライトを使います。
 `#attention` のパネルは中身がある間だけblocked色の左ボーダーを付け、
-`#backlog` カードはdraft色の左ボーダーを付けます。セクション見出しには
+`#backlog` ストリップのカードはdraft色の左ボーダーを付けます。セクション見出しには
 アクセント色の四角マーカー、footer注記は区切り線の下にmuted色で置きます。
 
 レポートは監視dashboard風のチャート中心構成です。`#overview` はアクセントカラー付きの
@@ -40,8 +40,9 @@ kanbanレーン色と一致したタスクstatusドーナツ、文書区分の�
 findings severityの積み棒、選択中plan / focusのfactsを表示します。
 チャートはinline SVGまたはCSSのみで、`role="img"`、`<title>`、凡例リストで色以外でも読み取れます。
 
-`#task-board` はタスクの主画面として従来どおりです。`#backlog` はstatusが `draft` の
-canonical文書をカードで一覧し、今後レビュー・着手する候補を文書表の行へリンクします。
+`#task-board` はタスクの主画面として従来どおりです。その内部のkanbanレーン上段に
+`#backlog` ストリップを置き、statusが `draft` のcanonical文書をカードで一覧して
+今後レビュー・着手する候補を文書表の行へリンクします。
 
 ヘッダのpulse dotは進行を止める項目の有無を映します（存在する間は赤、なければ緑）。
 配色は閲覧環境のcolor schemeに従い、navのトグルボタンまたは `T` キーで `<html>` の
