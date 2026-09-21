@@ -367,6 +367,8 @@ test("attention and summary share a top grid and the nav stays sticky", () => {
   const html = renderDashboard(snapshot());
   assert.match(html, /<div class="top-grid"><section id="attention"[\s\S]*<section aria-labelledby="summary-heading">/);
   assert.match(html, /nav\{position:sticky/);
+  assert.match(html, /<nav aria-label="セクション"><ul><li><a href="#attention">/);
+  assert.match(html, /<footer><small>この画面は生成時点の状態です/);
   assert.match(html, /@media\(min-width:960px\)\{\.top-grid\{grid-template-columns/);
 });
 
@@ -436,8 +438,8 @@ test("document status renders as a pill and tables get sticky headers", () => {
   const html = renderDashboard(snapshot([item("docs/specs/a.md", "draft", { type: "spec" })]));
   assert.match(html, /<span class="status-pill bucket-draft">draft<\/span>/);
   assert.match(html, /thead th\{position:sticky/);
-  assert.match(html, /tbody tr:nth-child\(even\)\{background:var\(--zebra\)/);
-  assert.match(html, /tbody tr:hover\{background:var\(--hover\)/);
+  assert.match(html, /<table class="striped">/);
+  assert.match(html, /tbody tr:hover td,tbody tr:hover th\{background:var\(--hover\)/);
 });
 
 test("sections offer expand and collapse controls and filter state persists to the hash", () => {
@@ -454,7 +456,7 @@ test("pico classless css is inlined ahead of dashboard overrides without externa
   const html = renderDashboard(snapshot());
   assert.match(html, /Pico CSS/);
   assert.match(html, /--pico-font-family/);
-  assert.match(html, /body>header,body>main\{max-width:none/);
+  assert.match(html, /body>header,body>main,body>footer\{max-width:none/);
   assert.match(html, /form input:not\(\[type=checkbox\],\[type=radio\]\),form select\{width:auto\}/);
   assert.match(html, /\.task-card\{min-width:0;margin-bottom:0/);
   assert.doesNotMatch(html, /<link[^>]+href="(?!data:)|<script[^>]+src=|fetch\(/i);

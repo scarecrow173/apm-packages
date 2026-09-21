@@ -26,7 +26,11 @@ blocking finding、task graph issueを集約し、
 長い詳細セクションの全開閉ボタンを備え、文書フィルタの状態は `#filter=` のURL hashに
 保持します。スタイルと挙動はすべてinlineで、画像はdata URIのfaviconのみです。
 `<style>` ブロックの先頭にはビルド時に生成されるvendored Pico CSS v2 classless（MIT）を置き、
-その後にdashboard固有の上書きを続けます。閲覧時にstylesheetをfetchしません。
+その後にdashboard固有の上書きを続けます。上書きの基礎tokenは `--pico-*` 変数を参照し、
+laneやstatusのセマンティックカラーだけ独自のlight / darkパレットを持ちます。
+マークアップはPico classlessの規約に従い、`nav > ul` のセクションリンク、
+`table.striped` の縞模様テーブル、再生成注意書きの `footer` を使います。
+閲覧時にstylesheetをfetchしません。
 
 ## 件数と対象範囲
 
