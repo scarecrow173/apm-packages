@@ -21,6 +21,11 @@ blocking finding、task graph issueを集約し、
 文書表の自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
 種別とstatusは専用selectに残ります。
 
+配色は閲覧環境のcolor scheme（light / darkのCSS変数）に従います。done / wont-doレーンは
+折り畳み、各レーンのカード一覧はレーン内でスクロールします。readinessフィルタと
+長い詳細セクションの全開閉ボタンを備え、文書フィルタの状態は `#filter=` のURL hashに
+保持します。スタイルと挙動はすべてinlineで、画像はdata URIのfaviconのみです。
+
 ## 件数と対象範囲
 
 - 残存は有効な `todo`、`in-progress`、`blocked`。完了は `done` のみです。`wont-do` は

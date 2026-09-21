@@ -179,7 +179,8 @@ test("standalone HTML escapes content and stays offline", () => {
   assert.ok(html.includes("&lt;/script&gt;&lt;img"));
   assert.ok(!html.includes("<img src=x"));
   assert.ok(!html.includes(value.state.cwd));
-  assert.doesNotMatch(html, /<script[^>]+src=|<link[^>]+href=|fetch\(/i);
+  assert.doesNotMatch(html, /<script[^>]+src=|<link[^>]+href="(?!data:)|fetch\(/i);
+  assert.match(html, /<link rel="icon" href="data:image\/svg\+xml,/);
   assert.match(html, /data-filters/);
   assert.match(html, /name="query"/);
   assert.match(html, /name="type"/);
@@ -349,4 +350,102 @@ test("a card document target remains visible when document filters mark its row 
   assert.match(html, /data-task-card[\s\S]*href="#doc-0"/);
   assert.match(html, /tr:target\{display:table-row!important\}/);
   assert.match(html, /<tr id="doc-0" data-document-row/);
+});
+
+test("theme uses CSS variables with a dark scheme and tabular metrics", () => {
+  const html = renderDashboard(snapshot());
+  assert.match(html, /color-scheme:light dark/);
+  assert.match(html, /@media\(prefers-color-scheme:dark\)/);
+  assert.match(html, /font-variant-numeric:tabular-nums/);
+  assert.match(html, /class="skip-link" href="#main"/);
+  assert.match(html, /<main id="main">/);
+  assert.match(html, /<time datetime="2026-09-21T00:00:01Z" data-relative>/);
+  assert.match(html, /data-relative/);
+});
+
+test("attention and summary share a top grid and the nav stays sticky", () => {
+  const html = renderDashboard(snapshot());
+  assert.match(html, /<div class="top-grid"><section id="attention"[\s\S]*<section aria-labelledby="summary-heading">/);
+  assert.match(html, /nav\{position:sticky/);
+  assert.match(html, /@media\(min-width:960px\)\{\.top-grid\{grid-template-columns/);
+});
+
+test("done and wont-do lanes fold while active lanes stay expanded sections", () => {
+  const value = snapshot([
+    item("docs/tasks/a.md", "done"),
+    item("docs/tasks/b.md", "wont-do"),
+    item("docs/tasks/c.md", "todo"),
+  ]);
+  const html = renderDashboard(value);
+  assert.match(html, /<details class="kanban-lane lane-done" data-kanban-lane="done"><summary class="lane-heading">done \/ 完了/);
+  assert.match(html, /<details class="kanban-lane lane-wont-do" data-kanban-lane="wont-do"><summary class="lane-heading">wont-do \/ 見送り/);
+  assert.match(html, /<section class="kanban-lane lane-todo" data-kanban-lane="todo" aria-labelledby="lane-todo-heading"><h3 id="lane-todo-heading">todo \/ 未着手/);
+  assert.match(html, /data-board-filters/);
+  assert.match(html, /name="readiness"/);
+  assert.match(html, /data-readiness=""/);
+});
+
+test("cards expose readiness flags for filtering and lanes scroll internally", () => {
+  const value = snapshot([item("docs/tasks/a.md", "todo")]);
+  value.plans = [{
+    path: "docs/plans/p.md", status: "in-progress",
+    graph: {
+      schemaVersion: 1, plan: "docs/plans/p.md",
+      nodes: [{ id: "A", path: "docs/tasks/a.md", status: "todo", dependsOn: [], blocks: [] }],
+      edges: [], runnable: ["A"], active: [], resumableActive: [], completed: [], blocked: [], issues: [],
+    },
+  }];
+  const html = renderDashboard(value);
+  assert.match(html, /data-task-card[^>]*data-readiness="runnable"/);
+  assert.match(html, /\.lane-cards\{min-height:0;overflow-y:auto/);
+  assert.match(html, /\.kanban-lane\{[^}]*max-height:75vh/);
+});
+
+test("execution svg exposes node and edge hooks for hover highlighting", () => {
+  const html = renderDashboard(snapshot());
+  assert.match(html, /class="edge" data-from="node-\d+" data-to="node-\d+"/);
+  assert.match(html, /g id="node-\d+" data-node="node-\d+"/);
+  assert.match(html, /edge-connected/);
+  assert.match(html, /edge-dim/);
+  assert.match(html, /class="graph-legend"/);
+  assert.match(html, /指定ノード（現在）/);
+});
+
+test("current node and selected edge get dedicated svg classes", () => {
+  const value = snapshot();
+  value.requested.current = "briefing";
+  value.decision = {
+    route: {
+      schemaVersion: 2, graphId: definition.graphId, current: "briefing", next: "design",
+      edgeId: "briefing-to-design", condition: "spec-gap", status: "edge", delegate: "design-doc",
+      requiredAudits: [], blockers: [], taskGraph: null, commitGate: false,
+    },
+    explanation: {
+      currentNode: "briefing", hardBlockers: [], prerequisiteGates: [], evaluatedEdges: [],
+      selectedEdgeId: "briefing-to-design", selectedDestinationAudits: [], blockedReasons: [],
+    },
+  };
+  const html = renderDashboard(value);
+  assert.match(html, /class="node-rect current"/);
+  assert.match(html, /class="edge edge-active"/);
+  assert.match(html, /dash-pulse/);
+  assert.match(html, /prefers-reduced-motion:reduce/);
+});
+
+test("document status renders as a pill and tables get sticky headers", () => {
+  const html = renderDashboard(snapshot([item("docs/specs/a.md", "draft", { type: "spec" })]));
+  assert.match(html, /<span class="status-pill bucket-draft">draft<\/span>/);
+  assert.match(html, /thead th\{position:sticky/);
+  assert.match(html, /tbody tr:nth-child\(even\)\{background:var\(--zebra\)/);
+  assert.match(html, /tbody tr:hover\{background:var\(--hover\)/);
+});
+
+test("sections offer expand and collapse controls and filter state persists to the hash", () => {
+  const html = renderDashboard(snapshot());
+  assert.match(html, /data-open-all="#tasks"/);
+  assert.match(html, /data-close-all="#tasks"/);
+  assert.match(html, /data-open-all="#diagnostics"/);
+  assert.match(html, /data-close-all="#diagnostics"/);
+  assert.match(html, /#filter=/);
+  assert.match(html, /history\.replaceState/);
 });
