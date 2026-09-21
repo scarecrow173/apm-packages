@@ -22,6 +22,18 @@ blocked reason、blocking finding、task graph issueを種別ごとのパネル�
 文書表の自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
 種別とstatusは専用selectに残ります。
 
+主要画面より下のセクションは共通の検査用デザインを使います。`<details>`
+グループは半透明のアコーディオンカードで、summary行はhoverで強調され、
+開いている間は区切り線が付きます。`#graph` のroute previewはアクセント色を
+乗せた `.callout` パネルで、eyebrow見出し・status pill・signal / required audit /
+blockerの等幅 `.chip` を並べます（blockerは `chip-danger` で強調）。
+plan別 `<summary>` 行はplan status pillを持ちます。`#documents` のフィルタは
+ツールバー風の帯に置き、結果件数は等幅で示します。表はmutedなstickyヘッダ、
+アクセント色を乗せた行hover、`tr:target` のハイライトを使います。
+`#attention` のパネルは中身がある間だけblocked色の左ボーダーを付け、
+`#backlog` カードはdraft色の左ボーダーを付けます。セクション見出しには
+アクセント色の四角マーカー、footer注記は区切り線の下にmuted色で置きます。
+
 レポートは監視dashboard風のチャート中心構成です。`#overview` はアクセントカラー付きの
 statパネル（tabular numeralsの大数字）を並べ、`#charts` はinlineパネルとして
 kanbanレーン色と一致したタスクstatusドーナツ、文書区分の横棒グラフ、graph coverageゲージ、
