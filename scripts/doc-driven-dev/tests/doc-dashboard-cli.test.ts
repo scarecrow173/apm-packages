@@ -60,7 +60,7 @@ function createFixture(prefix = "dashboard cli 日本語 "): string {
 
 function normalizeHtml(html: string): string {
   return html.replace(/<strong>開始:<\/strong> [^<]+/, "<strong>開始:</strong> TIME")
-    .replace(/<strong>生成時点:<\/strong> [^<]+/, "<strong>生成時点:</strong> TIME");
+    .replace(/<strong>生成時点:<\/strong> <time datetime="[^"]*" data-relative>[^<]*<\/time>/, "<strong>生成時点:</strong> TIME");
 }
 
 test("parses defaults and resolves cwd and output from their documented bases", () => {

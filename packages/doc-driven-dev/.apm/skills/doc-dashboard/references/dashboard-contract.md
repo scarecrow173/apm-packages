@@ -24,6 +24,12 @@ membership details stay collapsed. The document table's free-text filter
 matches only ID, title, and canonical path via `data-search-text`; type and
 status stay on their dedicated selects.
 
+The report follows the viewer's color scheme (light/dark CSS variables), keeps
+done/wont-do lanes folded, scrolls lane card lists inside each lane, and offers
+a readiness filter plus expand/collapse controls for long detail sections. The
+document filter state persists in a `#filter=` URL hash. All styling and
+behavior is inline; the only image is a data-URI favicon.
+
 ## Metrics and coverage
 
 - Remaining means valid `todo`, `in-progress`, and `blocked` tasks. `done` is
