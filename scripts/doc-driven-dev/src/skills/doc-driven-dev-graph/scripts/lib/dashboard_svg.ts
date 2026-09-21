@@ -10,6 +10,14 @@ function short(value: string): string {
   return value.length <= 26 ? value : `${value.slice(0, 25)}…`;
 }
 
+const kindGlyphs: Record<string, string> = {
+  action: "▶", delegate: "⇄", audit: "✓", terminal: "■",
+};
+
+function kindClass(kind: string): string {
+  return `kind-${kind.toLowerCase().replace(/[^a-z-]/g, "") || "unknown"}`;
+}
+
 export function renderExecutionSvg(
   inspection: GraphInspection,
   selected: { current: string | null; edgeId: string | null },
@@ -32,12 +40,17 @@ export function renderExecutionSvg(
     const d = edge.from === edge.to
       ? `M ${from.x + nodeWidth - 28} ${from.y} C ${from.x + nodeWidth + 60} ${from.y - 45}, ${from.x + nodeWidth + 60} ${from.y + 45}, ${from.x + nodeWidth} ${from.y + 24}`
       : `M ${from.x + nodeWidth / 2} ${from.y + nodeHeight} C ${from.x + nodeWidth / 2} ${from.y + nodeHeight + 38}, ${to.x + nodeWidth / 2} ${to.y - 38}, ${to.x + nodeWidth / 2} ${to.y}`;
-    return `<path id="edge-${index}" class="edge${active ? " edge-active" : ""}" data-from="${from.alias}" data-to="${to.alias}" d="${d}" marker-end="url(#arrow)"><title>${xml(`${edge.id}: ${edge.from} → ${edge.to}; ${edge.when}; priority ${edge.priority}`)}</title></path>${active ? `<text x="${from.x + 4}" y="${from.y + nodeHeight + 18}" class="selected-label">選択 edge</text>` : ""}`;
+    const label = active
+      ? `<text x="${to.x + nodeWidth / 2}" y="${to.y - 10}" class="edge-label" text-anchor="middle">${xml(short(edge.when))}</text>`
+      : "";
+    return `<path id="edge-${index}" class="edge${active ? " edge-active" : ""}" data-from="${from.alias}" data-to="${to.alias}" d="${d}" marker-end="url(#arrow)"><title>${xml(`${edge.id}: ${edge.from} → ${edge.to}; ${edge.when}; priority ${edge.priority}`)}</title></path>${label}`;
   }).join("");
   const nodeGroups = nodes.map((node) => {
     const position = positions.get(node.nodeId)!;
     const current = node.nodeId === selected.current;
-    return `<g id="${position.alias}" data-node="${position.alias}"><title>${xml(`${node.nodeId} (${node.kind})`)}</title><rect class="node-rect${current ? " current" : ""}" x="${position.x}" y="${position.y}" width="${nodeWidth}" height="${nodeHeight}" rx="8"/><text x="${position.x + 12}" y="${position.y + 28}">${xml(short(node.nodeId))}</text><text x="${position.x + 12}" y="${position.y + 53}" class="node-kind">kind: ${xml(short(node.kind))}</text>${current ? `<text x="${position.x + 118}" y="${position.y + 53}" class="selected-label">指定ノード</text>` : ""}</g>`;
+    const glyph = kindGlyphs[node.kind] ?? "·";
+    return `<g id="${position.alias}" data-node="${position.alias}" class="${kindClass(node.kind)}"><title>${xml(`${node.nodeId} (${node.kind})`)}</title><rect class="node-rect${current ? " current" : ""}" x="${position.x}" y="${position.y}" width="${nodeWidth}" height="${nodeHeight}" rx="10"/><rect class="node-icon" x="${position.x + 11}" y="${position.y + 13}" width="19" height="19" rx="5"/><text class="node-glyph" x="${position.x + 20.5}" y="${position.y + 27}" text-anchor="middle">${xml(glyph)}</text><text class="node-title" x="${position.x + 38}" y="${position.y + 29}">${xml(short(node.nodeId))}</text><text x="${position.x + 38}" y="${position.y + 53}" class="node-kind">kind: ${xml(short(node.kind))}</text>${current ? `<text x="${position.x + nodeWidth - 12}" y="${position.y + 18}" class="selected-label" text-anchor="end">現在</text>` : ""}</g>`;
   }).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="execution-title execution-desc" viewBox="0 0 ${width} ${height}"><title id="execution-title">Execution Graph</title><desc id="execution-desc">遷移条件は直後の表を参照</desc><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="context-stroke"/></marker></defs><style>text{font:14px system-ui,sans-serif;fill:var(--fg,#172033)}.node-kind{font-size:12px}.selected-label{font-size:11px;font-weight:700;fill:var(--sel,#8b1e45)}.node-rect{fill:var(--card,#f8fafc);stroke:var(--node-border,#334155);stroke-width:2}.node-rect.current{fill:var(--current-fill,#fff1c2);stroke:var(--current-border,#a15c00);stroke-width:4;animation:dash-pulse 1.8s ease-in-out infinite}.edge{fill:none;stroke:var(--edge,#64748b);stroke-width:2}.edge.edge-active{stroke:var(--sel-edge,#c02c5b);stroke-width:4}.edge.edge-dim{opacity:.15}.edge.edge-connected{stroke:var(--sel-edge,#c02c5b);stroke-width:3}g[data-node]:hover .node-rect{stroke-width:3}@keyframes dash-pulse{0%,100%{opacity:1}50%{opacity:.55}}@media(prefers-reduced-motion:reduce){.node-rect.current{animation:none}}</style>${edgePaths}${nodeGroups}</svg>`;
+  const style = `text{font-family:var(--pico-font-family-monospace,ui-monospace,monospace);font-size:13px;fill:var(--fg,#172033)}.node-title{font-weight:700}.node-kind{font-size:11px;fill:var(--muted,#64748b)}.selected-label{font-size:10px;font-weight:700;letter-spacing:.06em;fill:var(--sel,#8b1e45)}.edge-label{font-size:10px;fill:var(--sel-edge,#c02c5b)}.kind-action{--kind:var(--progress,#2563eb)}.kind-delegate{--kind:var(--wontdo,#7c3aed)}.kind-audit{--kind:var(--unknown,#b36b00)}.kind-terminal{--kind:var(--done,#16803c)}.node-rect{fill:color-mix(in srgb,var(--kind,var(--node-border,#334155)) 9%,var(--card,#f8fafc));stroke:var(--kind,var(--node-border,#334155));stroke-width:1.5}.node-icon{fill:color-mix(in srgb,var(--kind,#334155) 14%,transparent);stroke:var(--kind,#334155);stroke-width:1.2}.node-glyph{font-size:11px;fill:var(--kind,#334155)}.node-rect.current{stroke-width:3;filter:drop-shadow(0 0 6px var(--kind,var(--current-border,#a15c00)));animation:dash-pulse 1.8s ease-in-out infinite}.edge{fill:none;stroke:var(--accent,#2563eb);stroke-width:1.8;opacity:.8}.edge.edge-active{stroke:var(--sel-edge,#c02c5b);stroke-width:3.5;opacity:1;filter:drop-shadow(0 0 4px var(--sel-edge,#c02c5b))}.edge.edge-dim{opacity:.12}.edge.edge-connected{stroke:var(--sel-edge,#c02c5b);stroke-width:3;opacity:1}g[data-node]:hover .node-rect{stroke-width:2.5;filter:drop-shadow(0 0 5px var(--kind,#334155))}@keyframes dash-pulse{0%,100%{opacity:1}50%{opacity:.6}}@media(prefers-reduced-motion:reduce){.node-rect.current{animation:none}}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="execution-title execution-desc" viewBox="0 0 ${width} ${height}"><title id="execution-title">Execution Graph</title><desc id="execution-desc">遷移条件は直後の表を参照</desc><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="context-stroke"/></marker></defs><style>${style}</style>${edgePaths}${nodeGroups}</svg>`;
 }

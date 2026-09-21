@@ -27,11 +27,18 @@ status stay on their dedicated selects.
 
 Sections below the primary surfaces share one inspection chrome. `<details>`
 groups render as translucent accordion cards whose summary rows highlight on
-hover and gain a separator while open. The `#graph` route preview is an
-accent-tinted `.callout` panel with an eyebrow heading, a status pill, and
-monospace `.chip` chips for signals, required audits, and blockers
-(danger-tinted `chip-danger` for blockers); per-plan `<summary>` rows carry
-the plan status pill. `#documents` places its filters on a toolbar-like strip
+hover and gain a separator while open. The `#graph` section keeps its
+Execution Graph always visible inside a `.graph-canvas` frame: an eyebrow
+header with graph metadata, a gridded `.graph-stage`, and an in-frame legend
+keyed to node kinds. Nodes are kind-colored cards (action/delegate/audit/
+terminal) with an icon glyph, monospace title, and kind caption; the current
+node glows, the selected edge carries a condition label, and hovering a node
+highlights connected edges while dimming the rest. The route preview reads
+as a route-probe panel: an eyebrow heading, a `current → next` chip path with
+a status pill, edge/condition/delegate/commit-gate facts, and monospace
+`.chip` chips for signals, required audits, and blockers (danger-tinted
+`chip-danger` for blockers); per-plan `<summary>` rows carry the plan status
+pill. `#documents` places its filters on a toolbar-like strip
 with a monospace result count. Tables use muted sticky headers, accent-tinted
 row hover, and a `tr:target` highlight. `#attention` panels take a
 blocked-color left border only while non-empty, `#backlog` strip cards take a
