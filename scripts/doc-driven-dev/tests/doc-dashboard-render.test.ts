@@ -449,3 +449,13 @@ test("sections offer expand and collapse controls and filter state persists to t
   assert.match(html, /#filter=/);
   assert.match(html, /history\.replaceState/);
 });
+
+test("pico classless css is inlined ahead of dashboard overrides without external assets", () => {
+  const html = renderDashboard(snapshot());
+  assert.match(html, /Pico CSS/);
+  assert.match(html, /--pico-font-family/);
+  assert.match(html, /body>header,body>main\{max-width:none/);
+  assert.match(html, /form input:not\(\[type=checkbox\],\[type=radio\]\),form select\{width:auto\}/);
+  assert.match(html, /\.task-card\{min-width:0;margin-bottom:0/);
+  assert.doesNotMatch(html, /<link[^>]+href="(?!data:)|<script[^>]+src=|fetch\(/i);
+});
