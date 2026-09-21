@@ -80,7 +80,7 @@ test("graph and diagnostic detail sections are collapsed by default", () => {
 test("attention section stays neutral when nothing blocks progress", () => {
   const html = renderDashboard(snapshot());
   assert.match(html, /<section id="attention" class="attention"/);
-  assert.match(html, /hard blockers: 0 \/ blocking findings: 0 \/ task graph issues: 0/);
+  assert.match(html, /hard blockers: 0 \/ route blocked reasons: 0 \/ blocking findings: 0 \/ task graph issues: 0/);
   assert.match(html, /進行を止める項目はありません/);
   assert.ok(html.indexOf('id="attention"') < html.indexOf('id="task-board"'));
 });
@@ -103,11 +103,32 @@ test("attention section aggregates hard blockers, blocking findings, and task gr
   }];
   const html = renderDashboard(value);
   assert.match(html, /class="attention attention-active"/);
-  assert.match(html, /hard blockers: 1 \/ blocking findings: 1 \/ task graph issues: 1/);
+  assert.match(html, /hard blockers: 1 \/ route blocked reasons: 0 \/ blocking findings: 1 \/ task graph issues: 1/);
   assert.match(html, /hard blocker:<\/strong> focus-required/);
   assert.match(html, /blocking finding:<\/strong> <code>broken-relation-link<\/code> <code>docs\/specs\/a\.md<\/code>:12 — missing target/);
   assert.match(html, /task graph:<\/strong> <code>docs\/plans\/p\.md<\/code> <code>task-cycle<\/code> — cycle detected \(tasks: A\)/);
   assert.match(html, /<details open><summary>findings \(1 \/ blocking 1\)<\/summary>/);
+});
+
+test("attention section surfaces blocked route reasons instead of claiming nothing blocks", () => {
+  const value = snapshot();
+  value.requested.current = "migration";
+  value.decision = {
+    route: {
+      schemaVersion: 2, graphId: definition.graphId, current: "migration", next: "migration",
+      edgeId: null, condition: "blocked", status: "blocked", delegate: null,
+      requiredAudits: [], blockers: [], taskGraph: null, commitGate: false,
+    },
+    explanation: {
+      currentNode: "migration", hardBlockers: [], prerequisiteGates: [], evaluatedEdges: [],
+      selectedEdgeId: null, selectedDestinationAudits: [], blockedReasons: ["no-matching-edge"],
+    },
+  };
+  const html = renderDashboard(value);
+  assert.match(html, /class="attention attention-active"/);
+  assert.match(html, /route blocked reasons: 1/);
+  assert.match(html, /route blocked:<\/strong> no-matching-edge/);
+  assert.doesNotMatch(html, /進行を止める項目はありません/);
 });
 
 test("document free-text search is limited to id, title, and path", () => {

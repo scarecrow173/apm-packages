@@ -14,7 +14,8 @@ opaque ID、依存関係、所属plan、coverage、runnable / resumable の別�
 opaque IDの重複カードは統合しません。依存待ちtaskはcanonical statusのレーンに残ります。
 Graph、route preview、plan別task詳細、文書・relation表、diagnosticも残します。
 
-先頭の `#attention` セクションはhard blocker、blocking finding、task graph issueを集約し、
+先頭の `#attention` セクションはhard blocker、route previewのblocked reason、
+blocking finding、task graph issueを集約し、
 空なら「進行を止める項目はありません」と表示します。カードのreadinessバッジはplan所属を
 またいだrunnable / resumable / blockedの集約で、plan別のmembership詳細は折り畳みます。
 文書表の自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
