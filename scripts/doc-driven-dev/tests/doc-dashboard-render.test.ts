@@ -445,7 +445,7 @@ test("cards expose readiness flags for filtering and lanes scroll internally", (
 
 test("execution svg exposes node and edge hooks for hover highlighting", () => {
   const html = renderDashboard(snapshot());
-  assert.match(html, /class="edge" data-from="node-\d+" data-to="node-\d+"/);
+  assert.match(html, /class="edge edge-[a-z]+" data-from="node-\d+" data-to="node-\d+"/);
   assert.match(html, /g id="node-\d+" data-node="node-\d+"/);
   assert.match(html, /edge-connected/);
   assert.match(html, /edge-dim/);
@@ -469,7 +469,7 @@ test("current node and selected edge get dedicated svg classes", () => {
   };
   const html = renderDashboard(value);
   assert.match(html, /class="node-rect current"/);
-  assert.match(html, /class="edge edge-active"/);
+  assert.match(html, /class="edge edge-fwd edge-active"/);
   assert.match(html, /dash-pulse/);
   assert.match(html, /prefers-reduced-motion:reduce/);
 });
