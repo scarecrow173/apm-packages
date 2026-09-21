@@ -32,9 +32,12 @@ Execution Graph always visible inside a `.graph-canvas` frame: an eyebrow
 header with graph metadata, a gridded `.graph-stage`, and an in-frame legend
 keyed to node kinds and edge classes. The canvas uses a semantic layered
 layout: a main spine walks the highest-priority outgoing edge from `entry` to
-completion, side nodes sit in a setup lane above, and backward edges arc
-through a return channel below (spine-to-spine) or wrap over the top
-(spine-to-branch). Edges are class-colored — forward (accent), backward/repair
+completion, side nodes sit in a setup lane above, and a long spine folds into
+two left-to-right rows — the row-wrap edge rides the deepest inter-row channel
+lane and drops into the next row's first node. Backward edges draw as routed
+wires through the inter-row channel (into row 0 bottoms) or the return channel
+below row 1 (spine-to-spine within row 1), while spine-to-branch returns feed
+the left margin and wrap over the top. Edges are class-colored — forward (accent), backward/repair
 (`edge-back`), and self-loop retry (`edge-self` dashed) — and parallel edges
 between the same pair merge into one path with a combined title. Nodes are
 kind-colored cards (action/delegate/audit/terminal) with an icon glyph,
