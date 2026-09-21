@@ -30,7 +30,10 @@ a readiness filter plus expand/collapse controls for long detail sections. The
 document filter state persists in a `#filter=` URL hash. All styling and
 behavior is inline; the only image is a data-URI favicon. The `<style>` block
 prepends vendored Pico CSS v2 classless (MIT) generated at build time, followed
-by dashboard overrides; no stylesheet is fetched at view time.
+by dashboard overrides that alias base tokens to `--pico-*` variables; semantic
+lane/status colors keep their own light/dark palette. The markup follows Pico
+classless conventions: `nav > ul` section links, `table.striped` tables, and a
+`footer` regeneration note. No stylesheet is fetched at view time.
 
 ## Metrics and coverage
 
