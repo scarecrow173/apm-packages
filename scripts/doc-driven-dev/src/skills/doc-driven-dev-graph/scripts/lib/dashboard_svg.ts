@@ -18,6 +18,13 @@ function kindClass(kind: string): string {
   return `kind-${kind.toLowerCase().replace(/[^a-z-]/g, "") || "unknown"}`;
 }
 
+export { kindGlyphs as nodeKindGlyphs, kindClass as nodeKindClass };
+
+/** Flow order for labels outside the SVG: BFS distance from entry. */
+export function nodeFlowOrder(inspection: GraphInspection): Map<string, number> {
+  return computeDistance(inspection);
+}
+
 type Edge = GraphInspection["edges"][number];
 type Pair = { from: string; to: string; edges: Edge[] };
 type Classified = Pair & { cls: "self" | "fwd" | "back"; topWrap: boolean };

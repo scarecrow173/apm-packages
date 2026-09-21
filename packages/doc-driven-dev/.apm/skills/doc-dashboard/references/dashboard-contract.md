@@ -43,11 +43,19 @@ between the same pair merge into one path with a combined title. Nodes are
 kind-colored cards (action/delegate/audit/terminal) with an icon glyph,
 monospace title, and kind caption; the current
 node glows, the selected edge carries a condition label, and hovering a node
-highlights connected edges while dimming the rest. The route preview reads
-as a route-probe panel: an eyebrow heading, a `current → next` chip path with
-a status pill, edge/condition/delegate/commit-gate facts, and monospace
-`.chip` chips for signals, required audits, and blockers (danger-tinted
-`chip-danger` for blockers); per-plan `<summary>` rows carry the plan status
+highlights connected edges while dimming the rest. Above the canvas a
+`.probe-grid` pairs the route probe with two side panels. The route preview
+reads as a route-probe panel: an eyebrow heading, a `current → next` path of
+kind-colored `.probe-node` chips (icon glyph + monospace name, matching canvas
+node colors) joined by a `.probe-link` connector that carries the edge
+condition (a danger ✕ marker when the route is blocked or stays in place), a
+status pill, edge/condition/delegate/commit-gate facts, and labeled `.chip`
+groups for required audits and blockers (danger-tinted `chip-danger`). The
+`signals` panel groups supplied/state/hard-blocker chips under eyebrow labels,
+and the `gates` panel renders each gate as a status-dot pill in graph flow
+order (pass/fail/blocked colors, failure reasons in the tooltip) with an
+`N/M pass` score. Diagnostic `<details>` summaries carry `lane-count` badges;
+per-plan `<summary>` rows carry the plan status
 pill. `#documents` places its filters on a toolbar-like strip
 with a monospace result count. Tables use muted sticky headers, accent-tinted
 row hover, and a `tr:target` highlight. `#attention` panels take a
