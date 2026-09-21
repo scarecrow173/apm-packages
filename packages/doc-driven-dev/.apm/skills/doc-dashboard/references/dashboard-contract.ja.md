@@ -21,6 +21,15 @@ blocking finding、task graph issueを集約し、
 文書表の自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
 種別とstatusは専用selectに残ります。
 
+レポートは監視dashboard風のチャート中心構成です。`#overview` はアクセントカラー付きの
+statパネル（tabular numeralsの大数字）を並べ、`#charts` はinlineパネルとして
+kanbanレーン色と一致したタスクstatusドーナツ、文書区分の横棒グラフ、graph coverageゲージ、
+findings severityの積み棒、選択中plan / focusのfactsを表示します。
+チャートはinline SVGまたはCSSのみで、`role="img"`、`<title>`、凡例リストで色以外でも読み取れます。
+
+`#task-board` はタスクの主画面として従来どおりです。`#backlog` はstatusが `draft` の
+canonical文書をカードで一覧し、今後レビュー・着手する候補を文書表の行へリンクします。
+
 配色は閲覧環境のcolor scheme（light / darkのCSS変数）に従います。done / wont-doレーンは
 折り畳み、各レーンのカード一覧はレーン内でスクロールします。readinessフィルタと
 長い詳細セクションの全開閉ボタンを備え、文書フィルタの状態は `#filter=` のURL hashに
