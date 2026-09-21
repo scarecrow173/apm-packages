@@ -38,10 +38,16 @@ edgeは種別色分けで、前進（accent）・戻り/修復（`edge-back`）�
 ノードはkind色（action / delegate / audit / terminal）のカードで、アイコングリフ・等幅タイトル・
 kindキャプションを持ちます。現在ノードはグローで強調し、選択edgeには
 条件ラベルを付け、ノードにhoverすると接続edgeだけが強調され他は減光します。
+キャンバス上段の `.probe-grid` はroute probeと2つの補助パネルを並べます。
 route previewはroute probeパネルで、eyebrow見出し・`current → next` の
-chipパス・status pill・edge / condition / delegate / commit gateのfacts、
-signal / required audit / blockerの等幅 `.chip` を並べます（blockerは
-`chip-danger` で強調）。plan別 `<summary>` 行はplan status pillを持ちます。`#documents` のフィルタは
+kind色 `.probe-node` チップ（アイコングリフ+等幅名、キャンバスのノード色と共通）を
+edge条件ラベル付きの `.probe-link` コネクタで結び（blocked/現状維持時はdanger色の
+✕マーカー）、status pill・edge / condition / delegate / commit gateのfacts・
+required audit / blockerのラベル付き `.chip` 群（blockerは `chip-danger`）を示します。
+`signals` パネルはsupplied / state / hard blockerのchipをラベル付きで並べ、
+`gates` パネルは各gateをフロー順のstatusドット付きピル（pass / fail / blocked色、
+理由はtooltip）と `N/M pass` スコアで示します。診断系 `<details>` のsummaryは
+`lane-count` バッジを持ち、plan別 `<summary>` 行はplan status pillを持ちます。`#documents` のフィルタは
 ツールバー風の帯に置き、結果件数は等幅で示します。表はmutedなstickyヘッダ、
 アクセント色を乗せた行hover、`tr:target` のハイライトを使います。
 `#attention` のパネルは中身がある間だけblocked色の左ボーダーを付け、

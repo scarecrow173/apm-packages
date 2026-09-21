@@ -62,7 +62,7 @@ test("graph text fallback lists every node including isolated nodes", () => {
   };
 
   const html = renderDashboard(value);
-  assert.match(html, /<details><summary>全 graph node<\/summary>[\s\S]*<th scope="col">node ID<\/th>/);
+  assert.match(html, /<details><summary>全 graph node <span class="lane-count"[^>]*>\d+<\/span><\/summary>[\s\S]*<th scope="col">node ID<\/th>/);
   assert.match(html, /全 graph node[\s\S]*isolated&lt;&amp;[\s\S]*review&lt;x&gt;[\s\S]*audit&lt;&amp;/);
 });
 
@@ -72,8 +72,8 @@ test("graph canvas is always visible and diagnostic detail sections are collapse
   assert.match(html, /<div class="graph-stage"><svg/);
   assert.doesNotMatch(html, /<details><summary>Execution Graph<\/summary>/);
   for (const summary of ["全 graph node", "全 graph edge", "gate", "Graph topology issues"]) {
-    assert.match(html, new RegExp(`<details><summary>${summary}</summary>`));
-    assert.doesNotMatch(html, new RegExp(`<details open><summary>${summary}</summary>`));
+    assert.match(html, new RegExp(`<details><summary>${summary} <span class="lane-count"`));
+    assert.doesNotMatch(html, new RegExp(`<details open><summary>${summary}`));
   }
   assert.match(html, /<details><summary>findings \(0 \/ blocking 0\)<\/summary>/);
   assert.match(html, /<details><summary>artifact relation issues \(0\)<\/summary>/);
@@ -99,11 +99,12 @@ test("secondary sections use chip-based signals, callout route preview, and tint
     },
   };
   const html = renderDashboard(value);
-  assert.match(html, /<strong>caller supplied signals:<\/strong> <span class="chip">requested-signal<\/span>/);
-  assert.match(html, /<strong>state signals:<\/strong> <span class="chip">focus-a<\/span>/);
-  assert.match(html, /<strong>hard blockers:<\/strong> <span class="chip chip-danger">focus-required<\/span>/);
+  assert.match(html, /<div class="probe-panel"><h3>signals<\/h3>/);
+  assert.match(html, /<span class="signal-label">supplied<\/span><span class="chip">requested-signal<\/span>/);
+  assert.match(html, /<span class="signal-label">state<\/span><span class="chip">focus-a<\/span>/);
+  assert.match(html, /<span class="signal-label">hard blockers<\/span><span class="chip chip-danger">focus-required<\/span>/);
   assert.match(html, /<div class="callout route-probe"><h3>遷移プレビュー（指定条件からの評価）<\/h3>/);
-  assert.match(html, /<p class="route-path"><span class="chip chip-route">spec<\/span><span class="route-arrow">→<\/span><span class="chip chip-route">plan<\/span> <span class="status-pill status-/);
+  assert.match(html, /<p class="route-path"><span class="probe-node probe-unknown"><span class="probe-glyph"[^>]*>\?<\/span>spec<\/span><span class="probe-link"><span class="probe-edge-label">ready<\/span><span class="route-arrow"[^>]*>→<\/span><\/span><span class="probe-node probe-unknown">/);
   assert.match(html, /<dt>edge<\/dt><dd>spec-to-plan<\/dd>/);
   assert.match(html, /details\{margin-block:\.8rem;padding:0;border:1px solid var\(--border-soft\)/);
   assert.match(html, /details>summary\{display:block;padding:\.65rem \.95rem;font-weight:600\}/);
