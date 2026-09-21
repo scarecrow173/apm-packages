@@ -54,8 +54,10 @@ groups for required audits and blockers (danger-tinted `chip-danger`). The
 `signals` panel groups supplied/state/hard-blocker chips under eyebrow labels,
 and the `gates` panel renders each gate as a status-dot pill in graph flow
 order (pass/fail/blocked colors, failure reasons in the tooltip) with an
-`N/M pass` score. Diagnostic `<details>` summaries carry `lane-count` badges;
-per-plan `<summary>` rows carry the plan status
+`N/M pass` score. Graph topology issues surface as danger chips inside the
+signals panel only when present; node/edge/gate inspection tables are omitted
+because the canvas and panels already carry that information. Per-plan
+`<summary>` rows carry the plan status
 pill. `#documents` places its filters on a toolbar-like strip
 with a monospace result count. Tables use muted sticky headers, accent-tinted
 row hover, and a `tr:target` highlight. `#attention` panels take a

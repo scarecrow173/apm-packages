@@ -46,8 +46,10 @@ edge条件ラベル付きの `.probe-link` コネクタで結び（blocked/現�
 required audit / blockerのラベル付き `.chip` 群（blockerは `chip-danger`）を示します。
 `signals` パネルはsupplied / state / hard blockerのchipをラベル付きで並べ、
 `gates` パネルは各gateをフロー順のstatusドット付きピル（pass / fail / blocked色、
-理由はtooltip）と `N/M pass` スコアで示します。診断系 `<details>` のsummaryは
-`lane-count` バッジを持ち、plan別 `<summary>` 行はplan status pillを持ちます。`#documents` のフィルタは
+理由はtooltip）と `N/M pass` スコアで示します。Graph topology issueは存在する
+ときだけsignalsパネルにdanger chipとして表示し、node / edge / gateの検査表は
+キャンバスとパネルが同じ情報を持つため省略します。plan別 `<summary>` 行は
+plan status pillを持ちます。`#documents` のフィルタは
 ツールバー風の帯に置き、結果件数は等幅で示します。表はmutedなstickyヘッダ、
 アクセント色を乗せた行hover、`tr:target` のハイライトを使います。
 `#attention` のパネルは中身がある間だけblocked色の左ボーダーを付け、
