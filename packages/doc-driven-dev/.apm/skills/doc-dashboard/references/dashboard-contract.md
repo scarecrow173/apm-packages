@@ -24,6 +24,18 @@ membership details stay collapsed. The document table's free-text filter
 matches only ID, title, and canonical path via `data-search-text`; type and
 status stay on their dedicated selects.
 
+The report is chart-first, in the style of monitoring dashboards. `#overview`
+shows stat panels (accent-colored cards with tabular numerals) and `#charts`
+renders inline panels: a task-status donut keyed to the kanban lane colors,
+document-bucket horizontal bars, a graph-coverage gauge, and a findings
+severity stacked bar plus the focused plan/focus facts. Charts are inline SVG
+or CSS only; `role="img"`, `<title>`, and legend lists keep them readable
+without color alone.
+
+`#task-board` remains the primary task surface and stays unchanged. `#backlog`
+lists canonical documents whose status is `draft` as cards — the pool of
+candidates to review or start next — linked to their document-table rows.
+
 The report follows the viewer's color scheme (light/dark CSS variables), keeps
 done/wont-do lanes folded, scrolls lane card lists inside each lane, and offers
 a readiness filter plus expand/collapse controls for long detail sections. The

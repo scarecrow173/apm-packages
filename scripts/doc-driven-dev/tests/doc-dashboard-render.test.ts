@@ -363,13 +363,13 @@ test("theme uses CSS variables with a dark scheme and tabular metrics", () => {
   assert.match(html, /data-relative/);
 });
 
-test("attention and summary share a top grid and the nav stays sticky", () => {
+test("attention leads into stat panels and the nav stays sticky", () => {
   const html = renderDashboard(snapshot());
-  assert.match(html, /<div class="top-grid"><section id="attention"[\s\S]*<section aria-labelledby="summary-heading">/);
+  assert.match(html, /<section id="attention"[\s\S]*<section id="overview" aria-labelledby="summary-heading">/);
   assert.match(html, /nav\{position:sticky/);
   assert.match(html, /<nav aria-label="セクション"><ul><li><a href="#attention">/);
   assert.match(html, /<footer><small>この画面は生成時点の状態です/);
-  assert.match(html, /@media\(min-width:960px\)\{\.top-grid\{grid-template-columns/);
+  assert.match(html, /class="stat-grid"/);
 });
 
 test("done and wont-do lanes fold while active lanes stay expanded sections", () => {
@@ -450,6 +450,39 @@ test("sections offer expand and collapse controls and filter state persists to t
   assert.match(html, /data-close-all="#diagnostics"/);
   assert.match(html, /#filter=/);
   assert.match(html, /history\.replaceState/);
+});
+
+test("charts visualize task status, document buckets, coverage, and findings", () => {
+  const html = renderDashboard(snapshot([
+    item("docs/tasks/a.md", "done"),
+    item("docs/tasks/b.md", "todo"),
+    item("docs/specs/c.md", "draft", { type: "spec" }),
+  ]));
+  assert.match(html, /<section id="charts"/);
+  assert.match(html, /class="donut" role="img"/);
+  assert.match(html, /donut-seg seg-done/);
+  assert.match(html, /donut-seg seg-todo/);
+  assert.match(html, /donut-value/);
+  assert.match(html, /class="hbars"/);
+  assert.match(html, /hbar-fill fill-draft/);
+  assert.match(html, /class="gauge"/);
+  assert.match(html, /gauge-fill/);
+  assert.match(html, /選択中の plan・focus/);
+});
+
+test("backlog lists draft documents as cards separate from the kanban board", () => {
+  const html = renderDashboard(snapshot([
+    item("docs/specs/new-spec.md", "draft", { type: "spec", id: "SPEC-1", title: "新しい仕様" }),
+    item("docs/tasks/t.md", "todo"),
+  ]));
+  assert.match(html, /<section id="backlog"/);
+  assert.match(html, /検討・着手候補（draft 文書）/);
+  assert.match(html, /class="task-card doc-card"/);
+  assert.match(html, /<a href="#doc-0">新しい仕様<\/a>/);
+  assert.match(html, /href="#backlog"/);
+  assert.doesNotMatch(html, /draft 文書はありません/);
+  const empty = renderDashboard(snapshot());
+  assert.match(empty, /draft 文書はありません/);
 });
 
 test("pico classless css is inlined ahead of dashboard overrides without external assets", () => {
