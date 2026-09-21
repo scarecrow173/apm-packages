@@ -506,12 +506,15 @@ test("charts visualize task status, document buckets, coverage, and findings", (
   assert.match(html, /選択中の plan・focus/);
 });
 
-test("backlog lists draft documents as cards separate from the kanban board", () => {
+test("backlog strip lists draft documents above the lanes inside the task board", () => {
   const html = renderDashboard(snapshot([
     item("docs/specs/new-spec.md", "draft", { type: "spec", id: "SPEC-1", title: "新しい仕様" }),
     item("docs/tasks/t.md", "todo"),
   ]));
-  assert.match(html, /<section id="backlog"/);
+  assert.match(html, /<div id="backlog" class="backlog-strip">/);
+  assert.doesNotMatch(html, /<section id="backlog"/);
+  assert.ok(html.indexOf('id="task-board"') < html.indexOf('id="backlog"'));
+  assert.ok(html.indexOf('id="backlog"') < html.indexOf('class="kanban-board"'));
   assert.match(html, /検討・着手候補（draft 文書）/);
   assert.match(html, /class="task-card doc-card"/);
   assert.match(html, /<a href="#doc-0">新しい仕様<\/a>/);
