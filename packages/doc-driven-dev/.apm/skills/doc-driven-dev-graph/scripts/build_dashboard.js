@@ -1164,20 +1164,20 @@ var require_omap = __commonJS({
     var _toString = Object.prototype.toString;
     function resolveYamlOmap(data) {
       if (data === null) return true;
-      var objectKeys = {}, index2, length, pair, pairKey, pairHasKey, object2 = data;
+      var objectKeys = {}, index2, length, pair, pairKey2, pairHasKey, object2 = data;
       for (index2 = 0, length = object2.length; index2 < length; index2 += 1) {
         pair = object2[index2];
         pairHasKey = false;
         if (_toString.call(pair) !== "[object Object]") return false;
-        for (pairKey in pair) {
-          if (_hasOwnProperty.call(pair, pairKey)) {
+        for (pairKey2 in pair) {
+          if (_hasOwnProperty.call(pair, pairKey2)) {
             if (!pairHasKey) pairHasKey = true;
             else return false;
           }
         }
         if (!pairHasKey) return false;
-        if (_hasOwnProperty.call(objectKeys, pairKey)) return false;
-        Object.defineProperty(objectKeys, pairKey, { value: true });
+        if (_hasOwnProperty.call(objectKeys, pairKey2)) return false;
+        Object.defineProperty(objectKeys, pairKey2, { value: true });
       }
       return true;
     }
@@ -33441,6 +33441,11 @@ var NODE_W = 230;
 var NODE_H = 72;
 var COL = 270;
 var MARGIN_X = 40;
+var MID_LANE_TOP = 16;
+var MID_LANE_STEP = 18;
+var GAP_LANE_STEP = 20;
+var SELF_CLEAR = 56;
+var SPLIT_MIN = 6;
 function computeSpine(inspection) {
   const spine = [];
   const seen = /* @__PURE__ */ new Set();
@@ -33466,35 +33471,104 @@ function computeDistance(inspection) {
   }
   return distance;
 }
+var pairKey = (pair) => `${pair.from}->${pair.to}`;
+function classifyPairs(pairs, distance, rowOf) {
+  return pairs.map((pair) => {
+    if (pair.from === pair.to) return { ...pair, cls: "self", topWrap: false };
+    const fromDist = distance.get(pair.from) ?? Number.MAX_SAFE_INTEGER;
+    const toDist = distance.get(pair.to) ?? Number.MAX_SAFE_INTEGER;
+    const backward = toDist < fromDist && !(fromDist === Number.MAX_SAFE_INTEGER && toDist === Number.MAX_SAFE_INTEGER);
+    const topWrap = backward && rowOf(pair.from) >= 0 && rowOf(pair.to) === -1;
+    return { ...pair, cls: backward ? "back" : "fwd", topWrap };
+  });
+}
 function computeLayout(inspection, pairs) {
   const nodes = [...inspection.nodes].sort((left, right) => left.nodeId.localeCompare(right.nodeId));
   const aliases = new Map(nodes.map((node2, index2) => [node2.nodeId, `node-${index2}`]));
   const spine = computeSpine(inspection);
   const spineIndex = new Map(spine.map((nodeId, index2) => [nodeId, index2]));
   const distance = computeDistance(inspection);
+  const splitAt = spine.length >= SPLIT_MIN ? Math.ceil(spine.length / 2) : spine.length;
+  const rowOf = (nodeId) => {
+    const index2 = spineIndex.get(nodeId);
+    return index2 === void 0 ? -1 : index2 < splitAt ? 0 : 1;
+  };
+  const classified = classifyPairs(pairs, distance, rowOf);
+  const span = (pair) => Math.abs(
+    (spineIndex.get(pair.from) ?? 0) - (spineIndex.get(pair.to) ?? 0)
+  );
+  const byKey = (left, right) => pairKey(left).localeCompare(pairKey(right));
+  const bySpan = (left, right) => span(right) - span(left) || byKey(left, right);
+  const isContinuation = (pair) => spineIndex.get(pair.from) === splitAt - 1 && spineIndex.get(pair.to) === splitAt;
+  const midA = classified.filter((pair) => pair.cls === "back" && !pair.topWrap && rowOf(pair.from) === 0 && rowOf(pair.to) === 0).sort(bySpan);
+  const midB = classified.filter((pair) => pair.cls === "back" && !pair.topWrap && rowOf(pair.from) === 1 && rowOf(pair.to) === 0).sort(bySpan);
+  const midC = classified.filter((pair) => pair.topWrap && rowOf(pair.from) === 1 || pair.cls === "back" && rowOf(pair.from) === -1 && rowOf(pair.to) === 1 || pair.cls === "fwd" && rowOf(pair.from) === 1 && rowOf(pair.to) === -1 || pair.cls === "fwd" && rowOf(pair.from) === -1 && rowOf(pair.to) === 1).sort(byKey);
+  const midD = classified.filter((pair) => pair.cls !== "self" && !pair.topWrap && rowOf(pair.from) === 0 && rowOf(pair.to) === 1 && !isContinuation(pair)).sort(byKey);
+  const midKeys = [...midA, ...midB, ...midC, ...midD, ...classified.filter(isContinuation)].map(pairKey);
+  const bottomPairs = classified.filter((pair) => pair.cls === "back" && rowOf(pair.from) === 1 && rowOf(pair.to) === 1).sort(bySpan);
+  const bottomDepth = new Map(bottomPairs.map((pair, index2) => [pairKey(pair), 56 + index2 * 26]));
+  const overTop = classified.filter((pair) => pair.topWrap || pair.cls !== "self" && rowOf(pair.from) === 1 && rowOf(pair.to) === -1 || pair.cls !== "self" && rowOf(pair.from) === -1 && rowOf(pair.to) === 1).sort(byKey);
+  const marginX = new Map(overTop.map((pair, index2) => [pairKey(pair), 14 + index2 * 12]));
+  const wrapLaneY = /* @__PURE__ */ new Map();
+  const gapPairs = classified.filter((pair) => pair.topWrap && rowOf(pair.from) === 0).sort(byKey);
+  const gapLaneY = /* @__PURE__ */ new Map();
   const offSpine = nodes.filter((node2) => !spineIndex.has(node2.nodeId)).map((node2) => {
     const targets = inspection.edges.filter((edge) => edge.from === node2.nodeId && spineIndex.has(edge.to)).map((edge) => spineIndex.get(edge.to));
     const sources = inspection.edges.filter((edge) => edge.to === node2.nodeId && spineIndex.has(edge.from)).map((edge) => spineIndex.get(edge.from));
     const anchor = targets.length > 0 ? Math.min(...targets) : sources.length > 0 ? Math.min(...sources) : Number.MAX_SAFE_INTEGER;
     return { nodeId: node2.nodeId, anchor };
   }).sort((left, right) => left.anchor - right.anchor || left.nodeId.localeCompare(right.nodeId));
-  const branchCount = offSpine.length;
-  const topWrapLanes = pairs.filter((pair) => spineIndex.has(pair.from) && !spineIndex.has(pair.to)).length;
-  const branchY = 60 + Math.max(1, topWrapLanes) * 26;
-  const spineY = branchCount > 0 ? branchY + NODE_H + 120 : branchY;
+  const branchY = 60 + Math.max(1, overTop.length) * 26;
+  const row0Gap = Math.max(120, SELF_CLEAR + gapPairs.length * GAP_LANE_STEP + 24);
+  const spineY0 = branchY + NODE_H + row0Gap;
+  const rowGap = midKeys.length > 0 ? MID_LANE_TOP + (midKeys.length - 1) * MID_LANE_STEP + SELF_CLEAR + 28 : 96;
+  const hasRow1 = splitAt < spine.length;
+  const spineY1 = spineY0 + NODE_H + rowGap;
+  const midLaneY = new Map(midKeys.map((key, index2) => [
+    key,
+    spineY0 + NODE_H + MID_LANE_TOP + index2 * MID_LANE_STEP
+  ]));
+  overTop.forEach((pair, index2) => wrapLaneY.set(pairKey(pair), branchY - 60 - index2 * 26));
+  gapPairs.forEach((pair, index2) => gapLaneY.set(pairKey(pair), spineY0 - SELF_CLEAR - 8 - index2 * GAP_LANE_STEP));
   const position2 = /* @__PURE__ */ new Map();
   spine.forEach((nodeId, index2) => {
-    position2.set(nodeId, { x: MARGIN_X + index2 * COL, y: spineY, alias: aliases.get(nodeId) });
+    const column = index2 < splitAt ? index2 : index2 - splitAt;
+    position2.set(nodeId, {
+      x: MARGIN_X + column * COL,
+      y: index2 < splitAt ? spineY0 : spineY1,
+      alias: aliases.get(nodeId)
+    });
   });
   const usedColumns = /* @__PURE__ */ new Set();
   for (const node2 of offSpine) {
-    let column = node2.anchor === Number.MAX_SAFE_INTEGER ? usedColumns.size : node2.anchor;
+    const anchored = node2.anchor === Number.MAX_SAFE_INTEGER ? usedColumns.size : node2.anchor;
+    let column = anchored < splitAt ? anchored : anchored - splitAt;
     while (usedColumns.has(column)) column += 1;
     usedColumns.add(column);
     position2.set(node2.nodeId, { x: MARGIN_X + column * COL, y: branchY, alias: aliases.get(node2.nodeId) });
   }
-  const width = MARGIN_X * 2 + Math.max(spine.length, branchCount) * COL - 30;
-  return { position: position2, spineIndex, distance, width, spineY, branchY, topWrapLanes };
+  const maxCols = Math.max(splitAt, spine.length - splitAt, offSpine.length);
+  const width = MARGIN_X + maxCols * COL + 44;
+  const height = hasRow1 ? spineY1 + NODE_H + (bottomPairs.length > 0 ? 56 + (bottomPairs.length - 1) * 26 : 24) + 64 : midKeys.length > 0 ? spineY0 + NODE_H + MID_LANE_TOP + (midKeys.length - 1) * MID_LANE_STEP + 64 : spineY0 + NODE_H + 90;
+  return {
+    position: position2,
+    spineIndex,
+    distance,
+    rowOf,
+    splitAt,
+    classified,
+    width,
+    height,
+    branchY,
+    spineY0,
+    spineY1,
+    row0Gap,
+    midLaneY,
+    gapLaneY,
+    wrapLaneY,
+    marginX,
+    bottomDepth
+  };
 }
 function renderExecutionSvg(inspection, selected) {
   const nodes = [...inspection.nodes].sort((left, right) => left.nodeId.localeCompare(right.nodeId));
@@ -33508,24 +33582,8 @@ function renderExecutionSvg(inspection, selected) {
   }
   const pairs = [...pairMap.values()];
   const layout = computeLayout(inspection, pairs);
-  const { position: position2, spineIndex, distance } = layout;
-  const spineBottom = layout.spineY + NODE_H;
-  const classified = pairs.map((pair) => {
-    if (pair.from === pair.to) return { ...pair, cls: "self", topWrap: false };
-    const fromDist = distance.get(pair.from) ?? Number.MAX_SAFE_INTEGER;
-    const toDist = distance.get(pair.to) ?? Number.MAX_SAFE_INTEGER;
-    const backward = toDist < fromDist && !(fromDist === Number.MAX_SAFE_INTEGER && toDist === Number.MAX_SAFE_INTEGER);
-    const topWrap = backward && spineIndex.has(pair.from) && !spineIndex.has(pair.to);
-    return { ...pair, cls: backward ? "back" : "fwd", topWrap };
-  });
-  const backArcs = classified.filter((pair) => pair.cls === "back" && !pair.topWrap).sort((left, right) => {
-    const span = (pair) => (spineIndex.get(pair.from) ?? 0) - (spineIndex.get(pair.to) ?? 0);
-    const bySpan = span(right) - span(left);
-    return bySpan !== 0 ? bySpan : left.from.localeCompare(right.from) || left.to.localeCompare(right.to);
-  });
-  const backDepth = new Map(backArcs.map((pair, index2) => [`${pair.from}->${pair.to}`, 56 + index2 * 26]));
-  const topArcs = classified.filter((pair) => pair.topWrap).sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
-  const topDepth = new Map(topArcs.map((pair, index2) => [`${pair.from}->${pair.to}`, index2]));
+  const { position: position2, classified, rowOf } = layout;
+  const isContinuation = (pair) => layout.spineIndex.get(pair.from) === layout.splitAt - 1 && layout.spineIndex.get(pair.to) === layout.splitAt;
   const spread = (pairsForNode, keyOf) => {
     const offsets = /* @__PURE__ */ new Map();
     const groups = /* @__PURE__ */ new Map();
@@ -33535,28 +33593,32 @@ function renderExecutionSvg(inspection, selected) {
     }
     for (const group of groups.values()) {
       group.forEach((pair, index2) => {
-        offsets.set(`${pair.from}->${pair.to}`, (index2 - (group.length - 1) / 2) * 16);
+        offsets.set(pairKey(pair), (index2 - (group.length - 1) / 2) * 16);
       });
     }
     return offsets;
   };
-  const backStartOffset = spread(classified.filter((pair) => pair.cls === "back"), (pair) => pair.from);
-  const backEndOffset = spread(classified.filter((pair) => pair.cls === "back"), (pair) => pair.to);
+  const backPairs = classified.filter((pair) => pair.cls === "back");
+  const backStartOffset = spread(backPairs, (pair) => pair.from);
+  const backEndOffset = spread(backPairs, (pair) => pair.to);
   const activeEdge = edges.find((edge) => edge.id === selected.edgeId);
-  const maxDepth = backArcs.length > 0 ? 56 + (backArcs.length - 1) * 26 : 0;
-  const height = spineBottom + maxDepth + 60;
   const edgePaths = classified.map((pair) => {
     const from = position2.get(pair.from);
     const to = position2.get(pair.to);
     if (!from || !to) return "";
-    const key = `${pair.from}->${pair.to}`;
+    const key = pairKey(pair);
     const active = pair.edges.some((edge) => edge.id === selected.edgeId);
     const ids = pair.edges.map((edge) => edge.id).join(", ");
     const conditions = pair.edges.map((edge) => edge.when).join("; ");
     const cls = `edge edge-${pair.cls}${active ? " edge-active" : ""}`;
-    const startX = from.x + NODE_W / 2;
-    const startY = pair.cls === "self" || pair.topWrap ? from.y : from.y + NODE_H;
-    const endX = to.x + NODE_W / 2;
+    const startX = from.x + NODE_W / 2 + (pair.cls === "back" ? backStartOffset.get(key) ?? 0 : 0);
+    const endX = to.x + NODE_W / 2 + (pair.cls === "back" ? backEndOffset.get(key) ?? 0 : 0);
+    const fr = rowOf(pair.from);
+    const tr = rowOf(pair.to);
+    const laneY = layout.midLaneY.get(key) ?? layout.spineY0 + NODE_H + MID_LANE_TOP;
+    const wy = layout.wrapLaneY.get(key) ?? layout.branchY - 60;
+    const mx = layout.marginX.get(key) ?? 14;
+    const gapY = layout.gapLaneY.get(key) ?? layout.spineY0 - SELF_CLEAR - 8;
     let d;
     let labelX = endX;
     let labelY = to.y - 10;
@@ -33565,38 +33627,82 @@ function renderExecutionSvg(inspection, selected) {
       labelX = startX;
       labelY = from.y - 52;
     } else if (pair.cls === "back" && pair.topWrap) {
-      const lane = topDepth.get(key) ?? 0;
-      const wy = layout.branchY - 60 - lane * 26;
-      const sx = startX + (backStartOffset.get(key) ?? 0);
-      const ex = endX + (backEndOffset.get(key) ?? 0);
-      d = `M ${sx} ${from.y} C ${sx} ${wy}, ${ex} ${wy}, ${ex} ${to.y}`;
-      labelX = (sx + ex) / 2;
-      labelY = wy - 6;
+      if (fr === 0) {
+        d = `M ${startX} ${from.y} L ${startX} ${gapY} L ${mx} ${gapY} L ${mx} ${wy} L ${endX} ${wy} L ${endX} ${to.y}`;
+      } else {
+        d = `M ${startX} ${from.y} L ${startX} ${laneY} L ${mx} ${laneY} L ${mx} ${wy} L ${endX} ${wy} L ${endX} ${to.y}`;
+      }
+      labelX = (mx + endX) / 2;
+      labelY = wy - 8;
+    } else if (pair.cls === "back" && tr === 0) {
+      if (fr === -1) {
+        d = `M ${startX} ${from.y + NODE_H} C ${startX} ${from.y + NODE_H + 60}, ${endX} ${to.y - 44}, ${endX} ${to.y}`;
+      } else {
+        const exit2 = fr === 0 ? from.y + NODE_H : from.y;
+        d = `M ${startX} ${exit2} L ${startX} ${laneY} L ${endX} ${laneY} L ${endX} ${to.y + NODE_H}`;
+        labelX = (startX + endX) / 2;
+        labelY = laneY - 8;
+      }
+    } else if (pair.cls === "back" && tr === 1 && fr === 1) {
+      const depth = layout.bottomDepth.get(key) ?? 56;
+      d = `M ${startX} ${from.y + NODE_H} L ${startX} ${from.y + NODE_H + depth} L ${endX} ${to.y + NODE_H + depth} L ${endX} ${to.y + NODE_H}`;
+      labelX = (startX + endX) / 2;
+      labelY = from.y + NODE_H + depth + 14;
+    } else if (pair.cls === "back" && tr === 1 && fr === 0) {
+      d = `M ${startX} ${from.y + NODE_H} L ${startX} ${laneY} L ${endX} ${laneY} L ${endX} ${to.y}`;
+      labelX = (startX + endX) / 2;
+      labelY = laneY - 8;
+    } else if (pair.cls === "back" && tr === 1) {
+      d = `M ${startX} ${from.y} L ${startX} ${wy} L ${mx} ${wy} L ${mx} ${laneY} L ${endX} ${laneY} L ${endX} ${to.y}`;
+      labelX = (mx + endX) / 2;
+      labelY = wy - 8;
     } else if (pair.cls === "back") {
-      const depth = backDepth.get(key) ?? 56;
-      const sx = startX + (backStartOffset.get(key) ?? 0);
-      const ex = endX + (backEndOffset.get(key) ?? 0);
-      d = `M ${sx} ${startY} C ${sx} ${startY + depth}, ${ex} ${to.y + NODE_H + depth}, ${ex} ${to.y + NODE_H}`;
+      d = `M ${startX} ${from.y + NODE_H} C ${startX} ${from.y + NODE_H + 56}, ${endX} ${to.y + NODE_H + 56}, ${endX} ${to.y + NODE_H}`;
+    } else if (isContinuation(pair)) {
+      const sx = from.x + NODE_W / 2 + 28;
+      const ex = to.x + NODE_W - 30;
+      d = `M ${sx} ${from.y + NODE_H} L ${sx} ${laneY} L ${ex} ${laneY} L ${ex} ${to.y}`;
       labelX = (sx + ex) / 2;
-      labelY = startY + depth + 12;
-    } else if (spineIndex.has(pair.from) && spineIndex.has(pair.to)) {
-      const span = (spineIndex.get(pair.to) ?? 0) - (spineIndex.get(pair.from) ?? 0);
-      if (span === 1) {
+      labelY = laneY - 8;
+    } else if (fr >= 0 && tr >= 0) {
+      const span = (layout.spineIndex.get(pair.to) ?? 0) - (layout.spineIndex.get(pair.from) ?? 0);
+      if (fr !== tr) {
+        d = `M ${startX} ${from.y + NODE_H} L ${startX} ${laneY} L ${endX} ${laneY} L ${endX} ${to.y}`;
+        labelX = (startX + endX) / 2;
+        labelY = laneY - 8;
+      } else if (span === 1) {
         d = `M ${from.x + NODE_W} ${from.y + NODE_H / 2} L ${to.x} ${to.y + NODE_H / 2}`;
         labelY = to.y - 10;
-      } else {
-        const lift = 44 + Math.min(span, 4) * 18;
+      } else if (fr === 0) {
+        const lift = Math.min(44 + Math.min(span, 4) * 18, layout.row0Gap - 46);
         d = `M ${startX} ${from.y} C ${startX} ${from.y - lift}, ${endX} ${to.y - lift}, ${endX} ${to.y}`;
         labelX = (startX + endX) / 2;
         labelY = Math.min(from.y, to.y) - lift - 6;
+      } else {
+        const dip = 30;
+        d = `M ${startX} ${from.y + NODE_H} L ${startX} ${from.y + NODE_H + dip} L ${endX} ${to.y + NODE_H + dip} L ${endX} ${to.y + NODE_H}`;
+        labelX = (startX + endX) / 2;
+        labelY = from.y + NODE_H + dip + 12;
       }
-    } else if (spineIndex.has(pair.from)) {
-      d = `M ${startX} ${from.y} C ${startX} ${from.y - 80}, ${endX} ${to.y + NODE_H + 42}, ${endX} ${to.y + NODE_H}`;
-      labelX = (startX + endX) / 2;
-      labelY = Math.min(from.y, to.y) - 14;
-    } else if (spineIndex.has(pair.to)) {
-      d = `M ${startX} ${from.y + NODE_H} C ${startX} ${from.y + NODE_H + 78}, ${endX} ${to.y - 42}, ${endX} ${to.y}`;
-      labelY = to.y - 10;
+    } else if (fr >= 0 && tr === -1) {
+      if (fr === 0) {
+        d = `M ${startX} ${from.y} C ${startX} ${from.y - 80}, ${endX} ${to.y + NODE_H + 42}, ${endX} ${to.y + NODE_H}`;
+        labelX = (startX + endX) / 2;
+        labelY = Math.min(from.y, to.y) - 14;
+      } else {
+        d = `M ${startX} ${from.y} L ${startX} ${laneY} L ${mx} ${laneY} L ${mx} ${wy} L ${endX} ${wy} L ${endX} ${to.y}`;
+        labelX = (mx + endX) / 2;
+        labelY = wy - 8;
+      }
+    } else if (fr === -1 && tr >= 0) {
+      if (tr === 0) {
+        d = `M ${startX} ${from.y + NODE_H} C ${startX} ${from.y + NODE_H + 78}, ${endX} ${to.y - 42}, ${endX} ${to.y}`;
+        labelY = to.y - 10;
+      } else {
+        d = `M ${startX} ${from.y} L ${startX} ${wy} L ${mx} ${wy} L ${mx} ${laneY} L ${endX} ${laneY} L ${endX} ${to.y}`;
+        labelX = (mx + endX) / 2;
+        labelY = wy - 8;
+      }
     } else {
       const sameRow = from.y === to.y;
       d = sameRow ? `M ${from.x + NODE_W} ${from.y + NODE_H / 2} L ${to.x} ${to.y + NODE_H / 2}` : `M ${startX} ${from.y + NODE_H} C ${startX} ${from.y + NODE_H + 60}, ${endX} ${to.y - 40}, ${endX} ${to.y}`;
@@ -33610,8 +33716,8 @@ function renderExecutionSvg(inspection, selected) {
     const glyph = kindGlyphs[node2.kind] ?? "\xB7";
     return `<g id="${pos.alias}" data-node="${pos.alias}" class="${kindClass(node2.kind)}"><title>${xml(`${node2.nodeId} (${node2.kind})`)}</title><rect class="node-rect${current ? " current" : ""}" x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="10"/><rect class="node-icon" x="${pos.x + 11}" y="${pos.y + 13}" width="19" height="19" rx="5"/><text class="node-glyph" x="${pos.x + 20.5}" y="${pos.y + 27}" text-anchor="middle">${xml(glyph)}</text><text class="node-title" x="${pos.x + 38}" y="${pos.y + 29}">${xml(short(node2.nodeId))}</text><text x="${pos.x + 38}" y="${pos.y + 53}" class="node-kind">kind: ${xml(short(node2.kind))}</text>${current ? `<text x="${pos.x + NODE_W - 12}" y="${pos.y + 18}" class="selected-label" text-anchor="end">\u73FE\u5728</text>` : ""}</g>`;
   }).join("");
-  const style = `text{font-family:var(--pico-font-family-monospace,ui-monospace,monospace);font-size:13px;fill:var(--fg,#172033)}.node-title{font-weight:700}.node-kind{font-size:11px;fill:var(--muted,#64748b)}.selected-label{font-size:10px;font-weight:700;letter-spacing:.06em;fill:var(--sel,#8b1e45)}.edge-label{font-size:10px;fill:var(--sel-edge,#c02c5b)}.kind-action{--kind:var(--progress,#2563eb)}.kind-delegate{--kind:var(--wontdo,#7c3aed)}.kind-audit{--kind:var(--unknown,#b36b00)}.kind-terminal{--kind:var(--done,#16803c)}.node-rect{fill:color-mix(in srgb,var(--kind,var(--node-border,#334155)) 9%,var(--card,#f8fafc));stroke:var(--kind,var(--node-border,#334155));stroke-width:1.5}.node-icon{fill:color-mix(in srgb,var(--kind,#334155) 14%,transparent);stroke:var(--kind,#334155);stroke-width:1.2}.node-glyph{font-size:11px;fill:var(--kind,#334155)}.node-rect.current{stroke-width:3;filter:drop-shadow(0 0 6px var(--kind,var(--current-border,#a15c00)));animation:dash-pulse 1.8s ease-in-out infinite}.edge{fill:none;stroke-width:1.8;opacity:.85}.edge-fwd{stroke:var(--accent,#2563eb)}.edge-back{stroke:var(--unknown,#b36b00)}.edge-self{stroke:var(--muted,#64748b);stroke-dasharray:5 4}.edge.edge-active{stroke:var(--sel-edge,#c02c5b);stroke-width:3.5;opacity:1;stroke-dasharray:none;filter:drop-shadow(0 0 4px var(--sel-edge,#c02c5b))}.edge.edge-dim{opacity:.12}.edge.edge-connected{stroke:var(--sel-edge,#c02c5b);stroke-width:3;opacity:1;stroke-dasharray:none}g[data-node]:hover .node-rect{stroke-width:2.5;filter:drop-shadow(0 0 5px var(--kind,#334155))}@keyframes dash-pulse{0%,100%{opacity:1}50%{opacity:.6}}@media(prefers-reduced-motion:reduce){.node-rect.current{animation:none}}`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="execution-title execution-desc" viewBox="0 0 ${layout.width} ${height}"><title id="execution-title">Execution Graph</title><desc id="execution-desc">\u4E0A\u6BB5\u306F\u30BB\u30C3\u30C8\u30A2\u30C3\u30D7\u3001\u4E2D\u6BB5\u306F\u30E1\u30A4\u30F3\u30D5\u30ED\u30FC\u3001\u4E0B\u6BB5\u306F\u623B\u308A\u30FB\u4FEE\u5FA9\u306E\u9077\u79FB\u3067\u3059\u3002\u9077\u79FB\u6761\u4EF6\u306F\u76F4\u5F8C\u306E\u8868\u3092\u53C2\u7167</desc><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="context-stroke"/></marker></defs><style>${style}</style>${edgePaths}${nodeGroups}</svg>`;
+  const style = `text{font-family:var(--pico-font-family-monospace,ui-monospace,monospace);font-size:13px;fill:var(--fg,#172033)}.node-title{font-weight:700}.node-kind{font-size:11px;fill:var(--muted,#64748b)}.selected-label{font-size:10px;font-weight:700;letter-spacing:.06em;fill:var(--sel,#8b1e45)}.edge-label{font-size:10px;fill:var(--sel-edge,#c02c5b)}.kind-action{--kind:var(--progress,#2563eb)}.kind-delegate{--kind:var(--wontdo,#7c3aed)}.kind-audit{--kind:var(--unknown,#b36b00)}.kind-terminal{--kind:var(--done,#16803c)}.node-rect{fill:color-mix(in srgb,var(--kind,var(--node-border,#334155)) 9%,var(--card,#f8fafc));stroke:var(--kind,var(--node-border,#334155));stroke-width:1.5}.node-icon{fill:color-mix(in srgb,var(--kind,#334155) 14%,transparent);stroke:var(--kind,#334155);stroke-width:1.2}.node-glyph{font-size:11px;fill:var(--kind,#334155)}.node-rect.current{stroke-width:3;filter:drop-shadow(0 0 6px var(--kind,var(--current-border,#a15c00)));animation:dash-pulse 1.8s ease-in-out infinite}.edge{fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;opacity:.85}.edge-fwd{stroke:var(--accent,#2563eb)}.edge-back{stroke:var(--unknown,#b36b00)}.edge-self{stroke:var(--muted,#64748b);stroke-dasharray:5 4}.edge.edge-active{stroke:var(--sel-edge,#c02c5b);stroke-width:3.5;opacity:1;stroke-dasharray:none;filter:drop-shadow(0 0 4px var(--sel-edge,#c02c5b))}.edge.edge-dim{opacity:.12}.edge.edge-connected{stroke:var(--sel-edge,#c02c5b);stroke-width:3;opacity:1;stroke-dasharray:none}g[data-node]:hover .node-rect{stroke-width:2.5;filter:drop-shadow(0 0 5px var(--kind,#334155))}@keyframes dash-pulse{0%,100%{opacity:1}50%{opacity:.6}}@media(prefers-reduced-motion:reduce){.node-rect.current{animation:none}}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="execution-title execution-desc" viewBox="0 0 ${layout.width} ${layout.height}"><title id="execution-title">Execution Graph</title><desc id="execution-desc">\u4E0A\u6BB5\u306F\u30BB\u30C3\u30C8\u30A2\u30C3\u30D7\u3001\u4E2D\u592E2\u6BB5\u306F\u30E1\u30A4\u30F3\u30D5\u30ED\u30FC\uFF08\u53F3\u7AEF\u3067\u4E0B\u6BB5\u3078\u6298\u308A\u8FD4\u3057\uFF09\u3001\u6BB5\u9593\u3068\u4E0B\u6BB5\u306F\u623B\u308A\u30FB\u4FEE\u5FA9\u306E\u9077\u79FB\u3067\u3059\u3002\u9077\u79FB\u6761\u4EF6\u306F\u76F4\u5F8C\u306E\u8868\u3092\u53C2\u7167</desc><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="context-stroke"/></marker></defs><style>${style}</style>${edgePaths}${nodeGroups}</svg>`;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_board.ts

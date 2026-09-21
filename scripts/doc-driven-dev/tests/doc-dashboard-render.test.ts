@@ -453,6 +453,20 @@ test("execution svg exposes node and edge hooks for hover highlighting", () => {
   assert.match(html, /指定ノード（現在）/);
 });
 
+test("execution svg wraps a long spine into two rows to keep nodes readable", () => {
+  const svg = renderExecutionSvg(definition, { current: null, edgeId: null });
+  const dims = /viewBox="0 0 (\d+) (\d+)"/.exec(svg);
+  assert.ok(dims, "svg has a viewBox");
+  assert.ok(Number(dims![1]) <= 1600, `viewBox width ${dims![1]} stays compact instead of one long row`);
+  const rows = new Map<number, number>();
+  for (const match of svg.matchAll(/<rect class="node-rect[^"]*" x="([\d.]+)" y="([\d.]+)"/g)) {
+    rows.set(Number(match[2]), (rows.get(Number(match[2])) ?? 0) + 1);
+  }
+  assert.equal(rows.size, 3, "branch lane plus two spine rows");
+  assert.match(svg, /id="edge-task-graph-_implementation"[^>]*d="M [\d.]+ [\d.]+ L /);
+  assert.match(svg, /中央2段はメインフロー/);
+});
+
 test("current node and selected edge get dedicated svg classes", () => {
   const value = snapshot();
   value.requested.current = "briefing";

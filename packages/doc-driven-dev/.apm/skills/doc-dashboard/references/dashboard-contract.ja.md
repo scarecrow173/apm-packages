@@ -28,8 +28,11 @@ blocked reason、blocking finding、task graph issueを種別ごとのパネル�
 `.graph-canvas` フレームに収め、eyebrowヘッダにgraphメタ情報、gridを敷いた
 `.graph-stage`、ノードkind別・edge種別のフレーム内凡例を置きます。キャンバスは
 意味的な階層レイアウトで、`entry` から最優先の外向きedgeを辿った主スパインを
-中段に、それ以外のノードを上段のセットアップレーンに、戻りedgeは下段の
-リターンチャネル（spine→spine）または上段越しのラップ（spine→branch）に配置します。
+中段に、それ以外のノードを上段のセットアップレーンに配置します。長いスパインは
+左→右の2段に折り返し、段またぎの継続edgeは段間チャネルの最深レーンを通って
+下段先頭ノードへ降ります。戻りedgeはルーティングワイヤー状に、段間チャネル
+（row 0下面へ入る）または下段のリターンチャネル（row 1内のspine→spine）を通り、
+spine→branch の戻りは左マージンを上がって上段越しにラップします。
 edgeは種別色分けで、前進（accent）・戻り/修復（`edge-back`）・自己ループのretry
 （`edge-self` 破線）を区別し、同一ペアの並列edgeは結合タイトル付きの1本にまとめます。
 ノードはkind色（action / delegate / audit / terminal）のカードで、アイコングリフ・等幅タイトル・
