@@ -25,6 +25,19 @@ membership details stay collapsed. The document table's free-text filter
 matches only ID, title, and canonical path via `data-search-text`; type and
 status stay on their dedicated selects.
 
+Sections below the primary surfaces share one inspection chrome. `<details>`
+groups render as translucent accordion cards whose summary rows highlight on
+hover and gain a separator while open. The `#graph` route preview is an
+accent-tinted `.callout` panel with an eyebrow heading, a status pill, and
+monospace `.chip` chips for signals, required audits, and blockers
+(danger-tinted `chip-danger` for blockers); per-plan `<summary>` rows carry
+the plan status pill. `#documents` places its filters on a toolbar-like strip
+with a monospace result count. Tables use muted sticky headers, accent-tinted
+row hover, and a `tr:target` highlight. `#attention` panels take a
+blocked-color left border only while non-empty, `#backlog` cards take a
+draft-color left border, section headings carry an accent square marker, and
+the footer note sits below a separator in muted text.
+
 The report is chart-first, in the style of monitoring dashboards. `#overview`
 shows stat panels (accent-colored cards with tabular numerals) and `#charts`
 renders inline panels: a task-status donut keyed to the kanban lane colors,

@@ -77,6 +77,41 @@ test("graph and diagnostic detail sections are collapsed by default", () => {
   assert.match(html, /<details><summary>対象外・不明情報 \(0\)<\/summary>/);
 });
 
+test("secondary sections use chip-based signals, callout route preview, and tinted panels", () => {
+  const value = snapshot();
+  value.state.signals = ["focus-a"];
+  value.state.hardBlockers = ["focus-required"];
+  value.state.blockers = ["gate:commit"];
+  value.requested.signals = ["requested-signal"];
+  value.decision = {
+    route: {
+      schemaVersion: 2, graphId: definition.graphId, current: "spec", next: "plan",
+      edgeId: "spec-to-plan", condition: "ready", status: "edge", delegate: null,
+      requiredAudits: ["audit-spec"], blockers: [], taskGraph: null, commitGate: false,
+    },
+    explanation: {
+      currentNode: "spec", hardBlockers: ["focus-required"], prerequisiteGates: [],
+      evaluatedEdges: [], selectedEdgeId: "spec-to-plan", selectedDestinationAudits: [],
+      blockedReasons: ["gate:commit"],
+    },
+  };
+  const html = renderDashboard(value);
+  assert.match(html, /<strong>caller supplied signals:<\/strong> <span class="chip">requested-signal<\/span>/);
+  assert.match(html, /<strong>state signals:<\/strong> <span class="chip">focus-a<\/span>/);
+  assert.match(html, /<strong>hard blockers:<\/strong> <span class="chip chip-danger">focus-required<\/span>/);
+  assert.match(html, /<div class="callout"><h3>遷移プレビュー（指定条件からの評価）<\/h3>/);
+  assert.match(html, /<dt>route status<\/dt><dd><span class="status-pill status-/);
+  assert.match(html, /details\{margin-block:\.8rem;padding:0;border:1px solid var\(--border-soft\)/);
+  assert.match(html, /details>summary\{display:block;padding:\.65rem \.95rem;font-weight:600\}/);
+  assert.match(html, /attention-group\{[^}]*border-left:4px solid var\(--blocked\)/);
+  assert.match(html, /attention-empty\{border-left-color:var\(--border\)/);
+  assert.match(html, /doc-card\{border-left:4px solid var\(--unknown\)\}/);
+  assert.match(html, /form\[data-filters\]\{padding:\.6rem \.8rem;border:1px solid var\(--border-soft\)/);
+  assert.match(html, /detail-toggle button\{[^}]*border-radius:999px/);
+  assert.match(html, /main h2::before\{content:""/);
+  assert.match(html, /footer\{margin-top:2\.2rem/);
+});
+
 test("attention section stays neutral when nothing blocks progress", () => {
   const html = renderDashboard(snapshot());
   assert.match(html, /<section id="attention" class="attention"/);
@@ -313,7 +348,7 @@ test("plans render declared status separately from DAG eligibility and every dep
     },
   }];
   const html = renderDashboard(value);
-  assert.match(html, /plan status/);
+  assert.match(html, /<code>docs\/plans\/p\.md<\/code> — <span class="status-pill status-draft">draft<\/span>/);
   assert.match(html, /依存上 runnable/);
   assert.match(html, /TASK-A[\s\S]*TASK-B/);
 });
@@ -440,7 +475,7 @@ test("document status renders as a pill and tables get sticky headers", () => {
   assert.match(html, /<span class="status-pill bucket-draft">draft<\/span>/);
   assert.match(html, /thead th\{position:sticky/);
   assert.match(html, /<table class="striped">/);
-  assert.match(html, /tbody tr:hover td,tbody tr:hover th\{background:var\(--hover\)/);
+  assert.match(html, /tbody tr:hover td,tbody tr:hover th\{background:color-mix\(in srgb,var\(--accent\) 5%,var\(--hover\)\)/);
 });
 
 test("sections offer expand and collapse controls and filter state persists to the hash", () => {
