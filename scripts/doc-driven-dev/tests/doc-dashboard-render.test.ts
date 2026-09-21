@@ -80,9 +80,9 @@ test("graph and diagnostic detail sections are collapsed by default", () => {
 test("attention section stays neutral when nothing blocks progress", () => {
   const html = renderDashboard(snapshot());
   assert.match(html, /<section id="attention" class="attention"/);
-  assert.match(html, /hard blockers: 0 \/ route blocked reasons: 0 \/ blocking findings: 0 \/ task graph issues: 0/);
   assert.match(html, /進行を止める項目はありません/);
-  assert.ok(html.indexOf('id="attention"') < html.indexOf('id="task-board"'));
+  assert.ok(html.indexOf('id="task-board"') < html.indexOf('id="attention"'));
+  assert.ok(html.indexOf('id="attention"') < html.indexOf('id="diagnostics"'));
 });
 
 test("attention section aggregates hard blockers, blocking findings, and task graph issues", () => {
@@ -103,10 +103,11 @@ test("attention section aggregates hard blockers, blocking findings, and task gr
   }];
   const html = renderDashboard(value);
   assert.match(html, /class="attention attention-active"/);
-  assert.match(html, /hard blockers: 1 \/ route blocked reasons: 0 \/ blocking findings: 1 \/ task graph issues: 1/);
-  assert.match(html, /hard blocker:<\/strong> focus-required/);
-  assert.match(html, /blocking finding:<\/strong> <code>broken-relation-link<\/code> <code>docs\/specs\/a\.md<\/code>:12 — missing target/);
-  assert.match(html, /task graph:<\/strong> <code>docs\/plans\/p\.md<\/code> <code>task-cycle<\/code> — cycle detected \(tasks: A\)/);
+  assert.match(html, /進行を止めている項目を種別ごとに集約します（3 件）/);
+  assert.match(html, /<h3>hard blockers <span class="lane-count"[^>]*>1<\/span><\/h3><ul><li>focus-required<\/li>/);
+  assert.match(html, /<h3>blocking findings <span class="lane-count"[^>]*>1<\/span><\/h3><ul><li><code>broken-relation-link<\/code> <code>docs\/specs\/a\.md<\/code>:12 — missing target<\/li>/);
+  assert.match(html, /<h3>task graph issues <span class="lane-count"[^>]*>1<\/span><\/h3><ul><li><code>docs\/plans\/p\.md<\/code> <code>task-cycle<\/code> — cycle detected \(tasks: A\)<\/li>/);
+  assert.match(html, /<h3>route blocked <span class="lane-count"[^>]*>0<\/span><\/h3><p class="empty">なし<\/p>/);
   assert.match(html, /<details open><summary>findings \(1 \/ blocking 1\)<\/summary>/);
 });
 
@@ -126,8 +127,7 @@ test("attention section surfaces blocked route reasons instead of claiming nothi
   };
   const html = renderDashboard(value);
   assert.match(html, /class="attention attention-active"/);
-  assert.match(html, /route blocked reasons: 1/);
-  assert.match(html, /route blocked:<\/strong> no-matching-edge/);
+  assert.match(html, /<h3>route blocked <span class="lane-count"[^>]*>1<\/span><\/h3><ul><li>no-matching-edge<\/li>/);
   assert.doesNotMatch(html, /進行を止める項目はありません/);
 });
 
@@ -363,11 +363,12 @@ test("theme uses CSS variables with a dark scheme and tabular metrics", () => {
   assert.match(html, /data-relative/);
 });
 
-test("attention leads into stat panels and the nav stays sticky", () => {
+test("overview leads into charts and the nav stays sticky", () => {
   const html = renderDashboard(snapshot());
-  assert.match(html, /<section id="attention"[\s\S]*<section id="overview" aria-labelledby="summary-heading">/);
+  assert.match(html, /<section id="overview" aria-labelledby="summary-heading">[\s\S]*<section id="charts"/);
   assert.match(html, /nav\{position:sticky/);
-  assert.match(html, /<nav aria-label="セクション"><ul><li><a href="#attention">/);
+  assert.match(html, /<nav aria-label="セクション"><ul><li><a href="#overview">/);
+  assert.match(html, /<a href="#attention">要対応<\/a><\/li><li><a href="#diagnostics">診断<\/a>/);
   assert.match(html, /<footer><small>この画面は生成時点の状態です/);
   assert.match(html, /class="stat-grid"/);
 });
