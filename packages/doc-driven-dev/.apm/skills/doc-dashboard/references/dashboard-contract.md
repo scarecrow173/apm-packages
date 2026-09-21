@@ -37,8 +37,16 @@ without color alone.
 lists canonical documents whose status is `draft` as cards — the pool of
 candidates to review or start next — linked to their document-table rows.
 
-The report follows the viewer's color scheme (light/dark CSS variables), keeps
-done/wont-do lanes folded, scrolls lane card lists inside each lane, and offers
+A header pulse dot mirrors whether anything blocks progress (red while
+blockers exist, otherwise green). The theme follows the viewer's color scheme
+and can be overridden manually: a nav toggle button (or the `T` key) switches
+`data-theme` on `<html>` and persists the choice in `localStorage`; without
+JavaScript the `prefers-color-scheme` fallback still applies. Badges and pills
+use translucent `color-mix` fills keyed to their semantic border color, the
+sticky nav is translucent with a backdrop blur, and a faint grid backdrop sits
+behind the page (disabled for print and reduced-motion).
+
+The report keeps done/wont-do lanes folded, scrolls lane card lists inside each lane, and offers
 a readiness filter plus expand/collapse controls for long detail sections. The
 document filter state persists in a `#filter=` URL hash. All styling and
 behavior is inline; the only image is a data-URI favicon. The `<style>` block
