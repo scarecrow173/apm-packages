@@ -16,6 +16,8 @@ delegate または audit への宣言済みエッジを最大 1 つ、または�
 - `test-spec-doc`: テストが何を保証し、なぜ存在するかの記録。
 - `impl-doc`: 実装と実験の証跡。
 - `doc-status`: document contract とリンクの audit（read-only）。
+- [`doc-dashboard`](.apm/skills/doc-dashboard/SKILL.ja.md): ステータス別タスクカード、
+  残存作業、draft 文書を表示するオフラインレポート。
 - `doc-maintenance`: managed index 再生成を含む安全で決定的な修復の
   preview と apply。
 - `implementation-flow`: 実装作業と review gate の委譲。
@@ -179,3 +181,10 @@ node .apm/skills/doc-maintenance/scripts/migrate_docs.js \
 
 不足している canonical tree は `scaffold_docs.js` で bootstrap し、生成された
 証跡を `doc-status` で audit してください。
+
+## Dashboard
+
+Graph の状態、ステータス別のタスクカード、残存タスク、draft 文書を手動生成する
+オフライン HTML で確認するには、[doc-dashboard](.apm/skills/doc-dashboard/SKILL.ja.md)
+を使います。生成されたボードは read-only snapshot で、canonical Markdown と Graph
+YAML が authority です。

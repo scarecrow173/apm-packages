@@ -16,6 +16,8 @@ The package provides focused document skills and graph delegates:
 - `test-spec-doc` records what tests must guarantee and why.
 - `impl-doc` records implementation and experiment evidence.
 - `doc-status` audits document contracts and links (read-only).
+- [`doc-dashboard`](.apm/skills/doc-dashboard/SKILL.md) renders a manually generated offline board of graph facts,
+  status-lane task cards, remaining work, and draft documents.
 - `doc-maintenance` previews and applies safe deterministic repairs, including
   managed index regeneration.
 - `implementation-flow` delegates implementation work and review gates.
@@ -185,3 +187,10 @@ node .apm/skills/doc-maintenance/scripts/migrate_docs.js \
 
 Bootstrap a missing canonical tree with `scaffold_docs.js`, then use
 `doc-status` to audit the generated evidence.
+
+## Dashboard
+
+For a manually generated offline HTML view of graph facts, remaining tasks,
+status-lane task cards, and draft documents, use
+[doc-dashboard](.apm/skills/doc-dashboard/SKILL.md). The generated board is a
+read-only snapshot; canonical Markdown and Graph YAML remain authoritative.

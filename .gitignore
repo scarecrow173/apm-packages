@@ -37,3 +37,5 @@ apm_modules/
 /.windsurf/
 /.mise-data/
 /.superpowers/
+# generated local doc-driven development dashboard
+/reports/doc-driven-dev/

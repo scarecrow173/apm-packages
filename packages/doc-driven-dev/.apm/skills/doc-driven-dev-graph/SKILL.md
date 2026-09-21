@@ -273,3 +273,7 @@ result is wrong. Re-running after a successful apply is a no-op.
   Task Graph composition and fail-closed dependency rules.
 - [`references/graph-inspection.md`](references/graph-inspection.md) — inspection
   fields, topology reachability, route explanations, and Mermaid determinism.
+
+For a manually generated offline HTML view of graph facts, remaining tasks,
+status-lane task cards, and draft documents, use
+[doc-dashboard](../doc-dashboard/SKILL.md).
