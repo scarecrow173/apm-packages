@@ -33584,7 +33584,7 @@ function renderGraph(snapshot) {
   ]);
   const edgeRows = [...snapshot.definition.edges].sort((left, right) => compare2(left.from, right.from) || left.priority - right.priority || compare2(left.id, right.id)).map((edge) => [e(edge.id), e(edge.from), e(edge.to), e(edge.when), e(edge.priority)]);
   const topologyRows = snapshot.definition.issues.map((issue2) => [e(issue2.severity), e(issue2.code), e(issue2.nodeId), e(issue2.condition)]);
-  return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2>${routeSummary}<p><strong>caller supplied signals:</strong> ${list2(snapshot.requested.signals)}</p><p><strong>state signals:</strong> ${list2(snapshot.state.signals)}</p><p><strong>hard blockers:</strong> ${list2(snapshot.state.hardBlockers)}</p>${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}<h3>\u5168 graph node</h3>${table(["node ID", "kind", "delegate", "audits", "commit gate", "terminal", "reachable"], nodeRows, "node 0 \u4EF6")}<h3>\u5168 graph edge</h3>${table(["edge ID", "from", "to", "condition", "priority"], edgeRows)}<h3>gate</h3>${table(["gate", "status", "reasons"], gateRows, "gate 0 \u4EF6")}<h3>Graph topology issues</h3>${table(["severity", "code", "node", "condition"], topologyRows)}</section>`;
+  return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2>${routeSummary}<p><strong>caller supplied signals:</strong> ${list2(snapshot.requested.signals)}</p><p><strong>state signals:</strong> ${list2(snapshot.state.signals)}</p><p><strong>hard blockers:</strong> ${list2(snapshot.state.hardBlockers)}</p><details><summary>Execution Graph</summary>${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}</details><details><summary>\u5168 graph node</summary>${table(["node ID", "kind", "delegate", "audits", "commit gate", "terminal", "reachable"], nodeRows, "node 0 \u4EF6")}</details><details><summary>\u5168 graph edge</summary>${table(["edge ID", "from", "to", "condition", "priority"], edgeRows)}</details><details><summary>gate</summary>${table(["gate", "status", "reasons"], gateRows, "gate 0 \u4EF6")}</details><details><summary>Graph topology issues</summary>${table(["severity", "code", "node", "condition"], topologyRows)}</details></section>`;
 }
 function renderTaskBoard(snapshot, ids) {
   const board = buildTaskBoard(snapshot.inventory, snapshot.plans);
@@ -33641,13 +33641,13 @@ function renderRelations(snapshot, ids) {
     e(edge.kind),
     edge.to ? anchor(edge.to) : `<span class="warning">${edge.external ? "external" : "\u672A\u89E3\u6C7A"}</span>`
   ]);
-  return `<h3>\u6587\u66F8\u9593\u306E\u95A2\u4FC2</h3>${table(["from", "relation", "kind", "to"], rows)}`;
+  return `<details><summary>\u6587\u66F8\u9593\u306E\u95A2\u4FC2</summary>${table(["from", "relation", "kind", "to"], rows)}</details>`;
 }
 function renderDiagnostics(snapshot) {
   const findings = snapshot.findings.map((finding2) => [e(finding2.severity), e(bool(finding2.blocking)), e(finding2.ruleId), e(finding2.path), e(finding2.line), e(finding2.message)]);
   const graphIssues = snapshot.state.artifactGraph.issues.map((issue2) => [e(issue2.code), e(issue2.message)]);
   const notes = snapshot.coverageNotes.map((note) => [e(note)]);
-  return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">\u8A3A\u65AD</h2><h3>findings</h3>${table(["severity", "blocking", "rule ID", "path", "line", "message"], findings)}<h3>artifact relation issues</h3>${table(["code", "message"], graphIssues)}<h3>\u5BFE\u8C61\u5916\u30FB\u4E0D\u660E\u60C5\u5831</h3>${table(["note"], notes)}</section>`;
+  return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">\u8A3A\u65AD</h2><details><summary>findings</summary>${table(["severity", "blocking", "rule ID", "path", "line", "message"], findings)}</details><details><summary>artifact relation issues</summary>${table(["code", "message"], graphIssues)}</details><details><summary>\u5BFE\u8C61\u5916\u30FB\u4E0D\u660E\u60C5\u5831</summary>${table(["note"], notes)}</details></section>`;
 }
 var filterScript = String.raw`const form=document.querySelector('[data-filters]');if(form)form.addEventListener('input',()=>{const query=form.querySelector('[name="query"]').value.toLocaleLowerCase();const type=form.querySelector('[name="type"]').value;const status=form.querySelector('[name="status"]').value;let visible=0;for(const row of document.querySelectorAll('[data-document-row]')){row.hidden=!row.textContent.toLocaleLowerCase().includes(query)||(type!==''&&row.dataset.type!==type)||(status!==''&&row.dataset.status!==status);if(!row.hidden)visible+=1;}document.querySelector('[data-result-count]').textContent=String(visible);});`;
 function renderDashboard(snapshot) {
