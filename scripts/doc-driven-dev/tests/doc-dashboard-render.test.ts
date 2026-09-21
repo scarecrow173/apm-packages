@@ -62,8 +62,16 @@ test("graph text fallback lists every node including isolated nodes", () => {
   };
 
   const html = renderDashboard(value);
-  assert.match(html, /<h3>全 graph node<\/h3>[\s\S]*<th scope="col">node ID<\/th>/);
+  assert.match(html, /<details><summary>全 graph node<\/summary>[\s\S]*<th scope="col">node ID<\/th>/);
   assert.match(html, /全 graph node[\s\S]*isolated&lt;&amp;[\s\S]*review&lt;x&gt;[\s\S]*audit&lt;&amp;/);
+});
+
+test("graph and diagnostic detail sections are collapsed by default", () => {
+  const html = renderDashboard(snapshot());
+  for (const summary of ["Execution Graph", "全 graph node", "全 graph edge", "gate", "Graph topology issues", "findings", "artifact relation issues", "対象外・不明情報"]) {
+    assert.match(html, new RegExp(`<details><summary>${summary}</summary>`));
+    assert.doesNotMatch(html, new RegExp(`<details open><summary>${summary}</summary>`));
+  }
 });
 
 test("standalone HTML escapes content and stays offline", () => {

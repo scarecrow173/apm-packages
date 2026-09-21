@@ -71,7 +71,7 @@ function renderGraph(snapshot: DashboardSnapshot): string {
   const edgeRows = [...snapshot.definition.edges].sort((left, right) => compare(left.from, right.from) || left.priority - right.priority || compare(left.id, right.id))
     .map((edge) => [e(edge.id), e(edge.from), e(edge.to), e(edge.when), e(edge.priority)]);
   const topologyRows = snapshot.definition.issues.map((issue) => [e(issue.severity), e(issue.code), e(issue.nodeId), e(issue.condition)]);
-  return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2>${routeSummary}<p><strong>caller supplied signals:</strong> ${list(snapshot.requested.signals)}</p><p><strong>state signals:</strong> ${list(snapshot.state.signals)}</p><p><strong>hard blockers:</strong> ${list(snapshot.state.hardBlockers)}</p>${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}<h3>全 graph node</h3>${table(["node ID", "kind", "delegate", "audits", "commit gate", "terminal", "reachable"], nodeRows, "node 0 件")}<h3>全 graph edge</h3>${table(["edge ID", "from", "to", "condition", "priority"], edgeRows)}<h3>gate</h3>${table(["gate", "status", "reasons"], gateRows, "gate 0 件")}<h3>Graph topology issues</h3>${table(["severity", "code", "node", "condition"], topologyRows)}</section>`;
+  return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2>${routeSummary}<p><strong>caller supplied signals:</strong> ${list(snapshot.requested.signals)}</p><p><strong>state signals:</strong> ${list(snapshot.state.signals)}</p><p><strong>hard blockers:</strong> ${list(snapshot.state.hardBlockers)}</p><details><summary>Execution Graph</summary>${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}</details><details><summary>全 graph node</summary>${table(["node ID", "kind", "delegate", "audits", "commit gate", "terminal", "reachable"], nodeRows, "node 0 件")}</details><details><summary>全 graph edge</summary>${table(["edge ID", "from", "to", "condition", "priority"], edgeRows)}</details><details><summary>gate</summary>${table(["gate", "status", "reasons"], gateRows, "gate 0 件")}</details><details><summary>Graph topology issues</summary>${table(["severity", "code", "node", "condition"], topologyRows)}</details></section>`;
 }
 
 function renderTaskBoard(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, string>): string {
@@ -124,14 +124,14 @@ function renderRelations(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, s
     anchor(edge.from), e(edge.relation), e(edge.kind),
     edge.to ? anchor(edge.to) : `<span class="warning">${edge.external ? "external" : "未解決"}</span>`,
   ]);
-  return `<h3>文書間の関係</h3>${table(["from", "relation", "kind", "to"], rows)}`;
+  return `<details><summary>文書間の関係</summary>${table(["from", "relation", "kind", "to"], rows)}</details>`;
 }
 
 function renderDiagnostics(snapshot: DashboardSnapshot): string {
   const findings = snapshot.findings.map((finding) => [e(finding.severity), e(bool(finding.blocking)), e(finding.ruleId), e(finding.path), e(finding.line), e(finding.message)]);
   const graphIssues = snapshot.state.artifactGraph.issues.map((issue) => [e(issue.code), e(issue.message)]);
   const notes = snapshot.coverageNotes.map((note) => [e(note)]);
-  return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">診断</h2><h3>findings</h3>${table(["severity", "blocking", "rule ID", "path", "line", "message"], findings)}<h3>artifact relation issues</h3>${table(["code", "message"], graphIssues)}<h3>対象外・不明情報</h3>${table(["note"], notes)}</section>`;
+  return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">診断</h2><details><summary>findings</summary>${table(["severity", "blocking", "rule ID", "path", "line", "message"], findings)}</details><details><summary>artifact relation issues</summary>${table(["code", "message"], graphIssues)}</details><details><summary>対象外・不明情報</summary>${table(["note"], notes)}</details></section>`;
 }
 
 const filterScript = String.raw`const form=document.querySelector('[data-filters]');if(form)form.addEventListener('input',()=>{const query=form.querySelector('[name="query"]').value.toLocaleLowerCase();const type=form.querySelector('[name="type"]').value;const status=form.querySelector('[name="status"]').value;let visible=0;for(const row of document.querySelectorAll('[data-document-row]')){row.hidden=!row.textContent.toLocaleLowerCase().includes(query)||(type!==''&&row.dataset.type!==type)||(status!==''&&row.dataset.status!==status);if(!row.hidden)visible+=1;}document.querySelector('[data-result-count]').textContent=String(visible);});`;
