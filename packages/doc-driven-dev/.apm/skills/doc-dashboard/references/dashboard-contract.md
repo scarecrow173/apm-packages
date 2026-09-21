@@ -16,6 +16,13 @@ runnable/resumable projections. Duplicate opaque IDs are not merged. A waiting
 todo remains in its canonical lane. Graph, route preview, plan task details,
 document/relation tables, and diagnostics remain available.
 
+The `#attention` section at the top aggregates hard blockers, blocking
+findings, and task graph issues; it reports that nothing blocks progress when
+empty. Card readiness badges aggregate runnable/resumable/blocked across plan
+memberships, and per-plan membership details stay collapsed. The document
+table's free-text filter matches only ID, title, and canonical path via
+`data-search-text`; type and status stay on their dedicated selects.
+
 ## Metrics and coverage
 
 - Remaining means valid `todo`, `in-progress`, and `blocked` tasks. `done` is
