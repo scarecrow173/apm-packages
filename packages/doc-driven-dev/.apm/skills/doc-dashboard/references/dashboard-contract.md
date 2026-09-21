@@ -30,8 +30,15 @@ groups render as translucent accordion cards whose summary rows highlight on
 hover and gain a separator while open. The `#graph` section keeps its
 Execution Graph always visible inside a `.graph-canvas` frame: an eyebrow
 header with graph metadata, a gridded `.graph-stage`, and an in-frame legend
-keyed to node kinds. Nodes are kind-colored cards (action/delegate/audit/
-terminal) with an icon glyph, monospace title, and kind caption; the current
+keyed to node kinds and edge classes. The canvas uses a semantic layered
+layout: a main spine walks the highest-priority outgoing edge from `entry` to
+completion, side nodes sit in a setup lane above, and backward edges arc
+through a return channel below (spine-to-spine) or wrap over the top
+(spine-to-branch). Edges are class-colored — forward (accent), backward/repair
+(`edge-back`), and self-loop retry (`edge-self` dashed) — and parallel edges
+between the same pair merge into one path with a combined title. Nodes are
+kind-colored cards (action/delegate/audit/terminal) with an icon glyph,
+monospace title, and kind caption; the current
 node glows, the selected edge carries a condition label, and hovering a node
 highlights connected edges while dimming the rest. The route preview reads
 as a route-probe panel: an eyebrow heading, a `current → next` chip path with

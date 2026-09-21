@@ -26,8 +26,13 @@ blocked reason、blocking finding、task graph issueを種別ごとのパネル�
 グループは半透明のアコーディオンカードで、summary行はhoverで強調され、
 開いている間は区切り線が付きます。`#graph` のExecution Graphは常時表示の
 `.graph-canvas` フレームに収め、eyebrowヘッダにgraphメタ情報、gridを敷いた
-`.graph-stage`、ノードkind別のフレーム内凡例を置きます。ノードはkind色
-（action / delegate / audit / terminal）のカードで、アイコングリフ・等幅タイトル・
+`.graph-stage`、ノードkind別・edge種別のフレーム内凡例を置きます。キャンバスは
+意味的な階層レイアウトで、`entry` から最優先の外向きedgeを辿った主スパインを
+中段に、それ以外のノードを上段のセットアップレーンに、戻りedgeは下段の
+リターンチャネル（spine→spine）または上段越しのラップ（spine→branch）に配置します。
+edgeは種別色分けで、前進（accent）・戻り/修復（`edge-back`）・自己ループのretry
+（`edge-self` 破線）を区別し、同一ペアの並列edgeは結合タイトル付きの1本にまとめます。
+ノードはkind色（action / delegate / audit / terminal）のカードで、アイコングリフ・等幅タイトル・
 kindキャプションを持ちます。現在ノードはグローで強調し、選択edgeには
 条件ラベルを付け、ノードにhoverすると接続edgeだけが強調され他は減光します。
 route previewはroute probeパネルで、eyebrow見出し・`current → next` の
