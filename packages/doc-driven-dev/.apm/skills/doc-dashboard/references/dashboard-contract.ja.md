@@ -24,10 +24,16 @@ blocked reason、blocking finding、task graph issueを種別ごとのパネル�
 
 主要画面より下のセクションは共通の検査用デザインを使います。`<details>`
 グループは半透明のアコーディオンカードで、summary行はhoverで強調され、
-開いている間は区切り線が付きます。`#graph` のroute previewはアクセント色を
-乗せた `.callout` パネルで、eyebrow見出し・status pill・signal / required audit /
-blockerの等幅 `.chip` を並べます（blockerは `chip-danger` で強調）。
-plan別 `<summary>` 行はplan status pillを持ちます。`#documents` のフィルタは
+開いている間は区切り線が付きます。`#graph` のExecution Graphは常時表示の
+`.graph-canvas` フレームに収め、eyebrowヘッダにgraphメタ情報、gridを敷いた
+`.graph-stage`、ノードkind別のフレーム内凡例を置きます。ノードはkind色
+（action / delegate / audit / terminal）のカードで、アイコングリフ・等幅タイトル・
+kindキャプションを持ちます。現在ノードはグローで強調し、選択edgeには
+条件ラベルを付け、ノードにhoverすると接続edgeだけが強調され他は減光します。
+route previewはroute probeパネルで、eyebrow見出し・`current → next` の
+chipパス・status pill・edge / condition / delegate / commit gateのfacts、
+signal / required audit / blockerの等幅 `.chip` を並べます（blockerは
+`chip-danger` で強調）。plan別 `<summary>` 行はplan status pillを持ちます。`#documents` のフィルタは
 ツールバー風の帯に置き、結果件数は等幅で示します。表はmutedなstickyヘッダ、
 アクセント色を乗せた行hover、`tr:target` のハイライトを使います。
 `#attention` のパネルは中身がある間だけblocked色の左ボーダーを付け、
