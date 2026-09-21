@@ -25,6 +25,8 @@ blocking finding、task graph issueを集約し、
 折り畳み、各レーンのカード一覧はレーン内でスクロールします。readinessフィルタと
 長い詳細セクションの全開閉ボタンを備え、文書フィルタの状態は `#filter=` のURL hashに
 保持します。スタイルと挙動はすべてinlineで、画像はdata URIのfaviconのみです。
+`<style>` ブロックの先頭にはビルド時に生成されるvendored Pico CSS v2 classless（MIT）を置き、
+その後にdashboard固有の上書きを続けます。閲覧時にstylesheetをfetchしません。
 
 ## 件数と対象範囲
 
