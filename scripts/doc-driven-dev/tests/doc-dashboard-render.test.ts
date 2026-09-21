@@ -68,10 +68,82 @@ test("graph text fallback lists every node including isolated nodes", () => {
 
 test("graph and diagnostic detail sections are collapsed by default", () => {
   const html = renderDashboard(snapshot());
-  for (const summary of ["Execution Graph", "全 graph node", "全 graph edge", "gate", "Graph topology issues", "findings", "artifact relation issues", "対象外・不明情報"]) {
+  for (const summary of ["Execution Graph", "全 graph node", "全 graph edge", "gate", "Graph topology issues"]) {
     assert.match(html, new RegExp(`<details><summary>${summary}</summary>`));
     assert.doesNotMatch(html, new RegExp(`<details open><summary>${summary}</summary>`));
   }
+  assert.match(html, /<details><summary>findings \(0 \/ blocking 0\)<\/summary>/);
+  assert.match(html, /<details><summary>artifact relation issues \(0\)<\/summary>/);
+  assert.match(html, /<details><summary>対象外・不明情報 \(0\)<\/summary>/);
+});
+
+test("attention section stays neutral when nothing blocks progress", () => {
+  const html = renderDashboard(snapshot());
+  assert.match(html, /<section id="attention" class="attention"/);
+  assert.match(html, /hard blockers: 0 \/ blocking findings: 0 \/ task graph issues: 0/);
+  assert.match(html, /進行を止める項目はありません/);
+  assert.ok(html.indexOf('id="attention"') < html.indexOf('id="task-board"'));
+});
+
+test("attention section aggregates hard blockers, blocking findings, and task graph issues", () => {
+  const value = snapshot();
+  value.state.hardBlockers = ["focus-required"];
+  value.findings = [{
+    ruleId: "broken-relation-link", category: "relation", severity: "error", blocking: true,
+    path: "docs/specs/a.md", line: 12, artifactId: null, message: "missing target", target: null, repair: "manual",
+  }];
+  value.plans = [{
+    path: "docs/plans/p.md", status: "in-progress",
+    graph: {
+      schemaVersion: 1, plan: "docs/plans/p.md",
+      nodes: [{ id: "A", path: "docs/tasks/a.md", status: "todo", dependsOn: [], blocks: [] }],
+      edges: [], runnable: [], active: [], resumableActive: [], completed: [], blocked: [],
+      issues: [{ code: "task-cycle", message: "cycle detected", tasks: ["A"] }],
+    },
+  }];
+  const html = renderDashboard(value);
+  assert.match(html, /class="attention attention-active"/);
+  assert.match(html, /hard blockers: 1 \/ blocking findings: 1 \/ task graph issues: 1/);
+  assert.match(html, /hard blocker:<\/strong> focus-required/);
+  assert.match(html, /blocking finding:<\/strong> <code>broken-relation-link<\/code> <code>docs\/specs\/a\.md<\/code>:12 — missing target/);
+  assert.match(html, /task graph:<\/strong> <code>docs\/plans\/p\.md<\/code> <code>task-cycle<\/code> — cycle detected \(tasks: A\)/);
+  assert.match(html, /<details open><summary>findings \(1 \/ blocking 1\)<\/summary>/);
+});
+
+test("document free-text search is limited to id, title, and path", () => {
+  const value = snapshot([
+    item("docs/specs/scope.md", "mystery-status", {
+      id: "SPEC-9", type: "spec", title: "Scoped", updated: "2099-01-01", parseError: "yaml boom",
+    }),
+    item("docs/tasks/none.md", "todo", { id: null, title: "Plain" }),
+  ]);
+  const html = renderDashboard(value);
+  const searchTexts = [...html.matchAll(/data-search-text="([^"]*)"/g)].map((match) => match[1]);
+  assert.deepEqual(searchTexts, ["SPEC-9 Scoped docs/specs/scope.md", "Plain docs/tasks/none.md"]);
+  assert.doesNotMatch(searchTexts[0], /mystery-status|2099-01-01|yaml boom|管理対象外|その他/);
+  assert.doesNotMatch(searchTexts[1], /todo|未指定/);
+  assert.match(html, /dataset\.searchText\|\|''\)\.toLocaleLowerCase\(\)\.includes\(query\)/);
+});
+
+test("task cards surface readiness badges and fold plan membership details", () => {
+  const value = snapshot([item("docs/tasks/a.md", "todo"), item("docs/tasks/b.md", "blocked")]);
+  value.plans = [{
+    path: "docs/plans/p.md", status: "in-progress",
+    graph: {
+      schemaVersion: 1, plan: "docs/plans/p.md",
+      nodes: [
+        { id: "A", path: "docs/tasks/a.md", status: "todo", dependsOn: [], blocks: ["B"] },
+        { id: "B", path: "docs/tasks/b.md", status: "blocked", dependsOn: ["A"], blocks: [] },
+      ],
+      edges: [{ from: "A", to: "B" }], runnable: ["A"], active: [], resumableActive: ["A"],
+      completed: [], blocked: [{ id: "B", reasons: ["dependency:A"] }], issues: [],
+    },
+  }];
+  const html = renderDashboard(value);
+  assert.match(html, /badge-runnable">runnable</);
+  assert.match(html, /badge-resumable">resumable</);
+  assert.match(html, /badge-blocked">blocked</);
+  assert.match(html, /<details class="membership-details"><summary>plan \/ 依存 \(1\)<\/summary><ul class="membership-list">/);
 });
 
 test("standalone HTML escapes content and stays offline", () => {
@@ -105,7 +177,7 @@ test("empty and unknown inventories avoid a misleading completion rate", () => {
 test("done and wont-do remain separate task metrics", () => {
   const done = renderDashboard(snapshot([item("a", "done"), item("b", "done")]));
   assert.match(done, /<dt>完了<\/dt><dd>2<\/dd>/);
-  assert.match(done, /100%/);
+  assert.match(done, /<dt>完了率 \(done\)<\/dt><dd>100%<\/dd>/);
   const wontDo = renderDashboard(snapshot([item("a", "wont-do"), item("b", "wont-do")]));
   assert.match(wontDo, /<dt>対応しない<\/dt><dd>2<\/dd>/);
   assert.match(wontDo, /0%/);
@@ -121,6 +193,7 @@ test("draft canonical and unmanaged documents are labeled and filterable", () =>
   assert.match(html, /管理対象外/);
   assert.match(html, /data-type="spec" data-status="draft"/);
   assert.match(html, /href="#doc-0"/);
+  assert.match(html, /<details><summary>文書内リンク \(2 件\)<\/summary>/);
 });
 
 test("repository metrics count canonical draft states separately from unmanaged and parse errors", () => {
