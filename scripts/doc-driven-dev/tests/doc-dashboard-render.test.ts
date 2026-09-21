@@ -47,11 +47,11 @@ test("graph SVG has safe IDs and a readable text equivalent", () => {
   const svg = renderExecutionSvg(definition, { current: null, edgeId: null });
   assert.match(svg, /<svg/);
   assert.match(svg, /<title[^>]*>Execution Graph<\/title>/);
-  assert.match(svg, /遷移条件は直後の表を参照/);
+  assert.match(svg, /遷移条件はedgeのツールチップと遷移プレビューを参照/);
   assert.doesNotMatch(svg, /<script|<foreignObject|(?:href|src)\s*=/i);
 });
 
-test("graph text fallback lists every node including isolated nodes", () => {
+test("graph canvas lists every node including isolated nodes with escaping", () => {
   const value = snapshot();
   value.definition = {
     ...definition,
@@ -62,8 +62,9 @@ test("graph text fallback lists every node including isolated nodes", () => {
   };
 
   const html = renderDashboard(value);
-  assert.match(html, /<details><summary>全 graph node <span class="lane-count"[^>]*>\d+<\/span><\/summary>[\s\S]*<th scope="col">node ID<\/th>/);
-  assert.match(html, /全 graph node[\s\S]*isolated&lt;&amp;[\s\S]*review&lt;x&gt;[\s\S]*audit&lt;&amp;/);
+  assert.match(html, /<title>isolated&lt;&amp; \(audit\)<\/title>/);
+  assert.match(html, />isolated&lt;&amp;<\/text>/);
+  assert.doesNotMatch(html, /review<x>|audit<&/);
 });
 
 test("graph canvas is always visible and diagnostic detail sections are collapsed by default", () => {
@@ -71,9 +72,8 @@ test("graph canvas is always visible and diagnostic detail sections are collapse
   assert.match(html, /<div class="graph-canvas"><div class="canvas-head"><span class="canvas-eyebrow">Execution Graph<\/span>/);
   assert.match(html, /<div class="graph-stage"><svg/);
   assert.doesNotMatch(html, /<details><summary>Execution Graph<\/summary>/);
-  for (const summary of ["全 graph node", "全 graph edge", "gate", "Graph topology issues"]) {
-    assert.match(html, new RegExp(`<details><summary>${summary} <span class="lane-count"`));
-    assert.doesNotMatch(html, new RegExp(`<details open><summary>${summary}`));
+  for (const summary of ["全 graph node", "全 graph edge", "gate ", "Graph topology issues"]) {
+    assert.doesNotMatch(html, new RegExp(`<details><summary>${summary}`));
   }
   assert.match(html, /<details><summary>findings \(0 \/ blocking 0\)<\/summary>/);
   assert.match(html, /<details><summary>artifact relation issues \(0\)<\/summary>/);
