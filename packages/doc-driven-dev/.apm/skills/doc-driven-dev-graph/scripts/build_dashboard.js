@@ -33568,13 +33568,15 @@ function renderMetrics(snapshot) {
 function renderAttention(snapshot) {
   const blockingFindings = snapshot.findings.filter((finding2) => finding2.blocking);
   const taskIssues = snapshot.plans.flatMap((plan) => plan.graph.issues.map((issue2) => ({ plan: plan.path, issue: issue2 })));
+  const routeBlockedReasons = snapshot.decision?.route.status === "blocked" ? snapshot.decision.explanation?.blockedReasons ?? [] : [];
   const items = [
     ...snapshot.state.hardBlockers.map((blocker) => `<li><strong>hard blocker:</strong> ${e(blocker)}</li>`),
+    ...routeBlockedReasons.map((reason) => `<li><strong>route blocked:</strong> ${e(reason)}</li>`),
     ...blockingFindings.map((finding2) => `<li><strong>blocking finding:</strong> <code>${e(finding2.ruleId)}</code> <code>${e(finding2.path)}</code>${finding2.line === null ? "" : `:${e(finding2.line)}`} \u2014 ${e(finding2.message)}</li>`),
     ...taskIssues.map(({ plan, issue: issue2 }) => `<li><strong>task graph:</strong> <code>${e(plan)}</code> <code>${e(issue2.code)}</code> \u2014 ${e(issue2.message)} (tasks: ${list2(issue2.tasks)})</li>`)
   ];
   const body = items.length === 0 ? `<p class="empty">\u9032\u884C\u3092\u6B62\u3081\u308B\u9805\u76EE\u306F\u3042\u308A\u307E\u305B\u3093</p>` : `<ul>${items.join("")}</ul>`;
-  return `<section id="attention" class="${items.length === 0 ? "attention" : "attention attention-active"}" aria-labelledby="attention-heading"><h2 id="attention-heading">\u8981\u5BFE\u5FDC</h2><p>hard blockers: ${snapshot.state.hardBlockers.length} / blocking findings: ${blockingFindings.length} / task graph issues: ${taskIssues.length}</p>${body}</section>`;
+  return `<section id="attention" class="${items.length === 0 ? "attention" : "attention attention-active"}" aria-labelledby="attention-heading"><h2 id="attention-heading">\u8981\u5BFE\u5FDC</h2><p>hard blockers: ${snapshot.state.hardBlockers.length} / route blocked reasons: ${routeBlockedReasons.length} / blocking findings: ${blockingFindings.length} / task graph issues: ${taskIssues.length}</p>${body}</section>`;
 }
 function renderGraph(snapshot) {
   const decision = snapshot.decision;

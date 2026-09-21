@@ -55,15 +55,19 @@ function renderMetrics(snapshot: DashboardSnapshot): string {
 function renderAttention(snapshot: DashboardSnapshot): string {
   const blockingFindings = snapshot.findings.filter((finding) => finding.blocking);
   const taskIssues = snapshot.plans.flatMap((plan) => plan.graph.issues.map((issue) => ({ plan: plan.path, issue })));
+  const routeBlockedReasons = snapshot.decision?.route.status === "blocked"
+    ? (snapshot.decision.explanation?.blockedReasons ?? [])
+    : [];
   const items = [
     ...snapshot.state.hardBlockers.map((blocker) => `<li><strong>hard blocker:</strong> ${e(blocker)}</li>`),
+    ...routeBlockedReasons.map((reason) => `<li><strong>route blocked:</strong> ${e(reason)}</li>`),
     ...blockingFindings.map((finding) => `<li><strong>blocking finding:</strong> <code>${e(finding.ruleId)}</code> <code>${e(finding.path)}</code>${finding.line === null ? "" : `:${e(finding.line)}`} — ${e(finding.message)}</li>`),
     ...taskIssues.map(({ plan, issue }) => `<li><strong>task graph:</strong> <code>${e(plan)}</code> <code>${e(issue.code)}</code> — ${e(issue.message)} (tasks: ${list(issue.tasks)})</li>`),
   ];
   const body = items.length === 0
     ? `<p class="empty">進行を止める項目はありません</p>`
     : `<ul>${items.join("")}</ul>`;
-  return `<section id="attention" class="${items.length === 0 ? "attention" : "attention attention-active"}" aria-labelledby="attention-heading"><h2 id="attention-heading">要対応</h2><p>hard blockers: ${snapshot.state.hardBlockers.length} / blocking findings: ${blockingFindings.length} / task graph issues: ${taskIssues.length}</p>${body}</section>`;
+  return `<section id="attention" class="${items.length === 0 ? "attention" : "attention attention-active"}" aria-labelledby="attention-heading"><h2 id="attention-heading">要対応</h2><p>hard blockers: ${snapshot.state.hardBlockers.length} / route blocked reasons: ${routeBlockedReasons.length} / blocking findings: ${blockingFindings.length} / task graph issues: ${taskIssues.length}</p>${body}</section>`;
 }
 
 function renderGraph(snapshot: DashboardSnapshot): string {
