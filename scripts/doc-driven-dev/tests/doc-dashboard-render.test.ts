@@ -105,7 +105,8 @@ test("secondary sections use chip-based signals, callout route preview, and tint
   assert.match(html, /<span class="signal-label">hard blockers<\/span><span class="chip chip-danger">focus-required<\/span>/);
   assert.match(html, /<div class="callout route-probe"><h3>遷移プレビュー（指定条件からの評価）<\/h3>/);
   assert.match(html, /<p class="route-path"><span class="probe-node probe-unknown"><span class="probe-glyph"[^>]*>\?<\/span>spec<\/span><span class="probe-link"><span class="probe-edge-label">ready<\/span><span class="route-arrow"[^>]*>→<\/span><\/span><span class="probe-node probe-unknown">/);
-  assert.match(html, /<dt>edge<\/dt><dd>spec-to-plan<\/dd>/);
+  assert.match(html, /<span class="chip">edge: spec-to-plan<\/span>/);
+  assert.match(html, /<span class="chip">commit gate: いいえ<\/span>/);
   assert.match(html, /details\{margin-block:\.8rem;padding:0;border:1px solid var\(--border-soft\)/);
   assert.match(html, /details>summary\{display:block;padding:\.65rem \.95rem;font-weight:600\}/);
   assert.match(html, /attention-group\{[^}]*border-left:4px solid var\(--blocked\)/);

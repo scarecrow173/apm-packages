@@ -42,7 +42,7 @@ kindキャプションを持ちます。現在ノードはグローで強調し�
 route previewはroute probeパネルで、eyebrow見出し・`current → next` の
 kind色 `.probe-node` チップ（アイコングリフ+等幅名、キャンバスのノード色と共通）を
 edge条件ラベル付きの `.probe-link` コネクタで結び（blocked/現状維持時はdanger色の
-✕マーカー）、status pill・edge / condition / delegate / commit gateのfacts・
+✕マーカー）、status pill・edge / delegate / commit gateの `route` chip行・
 required audit / blockerのラベル付き `.chip` 群（blockerは `chip-danger`）を示します。
 `signals` パネルはsupplied / state / hard blockerのchipをラベル付きで並べ、
 `gates` パネルは各gateをフロー順のstatusドット付きピル（pass / fail / blocked色、

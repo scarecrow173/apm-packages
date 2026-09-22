@@ -164,9 +164,10 @@ function renderGraph(snapshot: DashboardSnapshot): string {
   const decision = snapshot.decision;
   const route = decision?.route;
   const explanation = decision?.explanation;
+  const chip = (value: string, danger = false): string => `<span class="chip${danger ? " chip-danger" : ""}">${e(value)}</span>`;
   const chips = (values: readonly string[], danger = false): string => values.length === 0
     ? `<span class="empty">なし</span>`
-    : values.map((value) => `<span class="chip${danger ? " chip-danger" : ""}">${e(value)}</span>`).join(" ");
+    : values.map((value) => chip(value, danger)).join(" ");
   const statusPill = (status: string | null | undefined): string => {
     const cls = status === "blocked" ? "status-blocked" : status === "terminal" ? "status-done" : "status-in-progress";
     return `<span class="status-pill ${cls}">${e(status)}</span>`;
@@ -184,7 +185,7 @@ function renderGraph(snapshot: DashboardSnapshot): string {
     : `<span class="probe-link"><span class="probe-edge-label">${e(route.condition)}</span><span class="route-arrow" aria-hidden="true">→</span></span>`;
   const routeSummary = !decision
     ? `<div class="callout route-probe probe-muted"><h3>遷移プレビュー</h3><p class="empty">現在ノード未指定。遷移プレビューは評価していません。</p></div>`
-    : `<div class="callout route-probe"><h3>遷移プレビュー（指定条件からの評価）</h3><p class="route-path">${probeNode(route?.current)}${probeLink}${stays ? "" : probeNode(route?.next)} ${statusPill(route?.status)}</p><dl class="facts"><div><dt>edge</dt><dd>${e(route?.edgeId)}</dd></div><div><dt>condition</dt><dd>${e(route?.condition)}</dd></div><div><dt>delegate</dt><dd>${e(route?.delegate)}</dd></div><div><dt>commit gate</dt><dd>${e(bool(route?.commitGate ?? false))}</dd></div></dl><div class="signal-group"><span class="signal-label">required audits</span>${chips(route?.requiredAudits ?? [])}</div><div class="signal-group"><span class="signal-label">hard blockers</span>${chips(explanation?.hardBlockers ?? [], true)}</div><div class="signal-group"><span class="signal-label">blocked reasons</span>${chips(explanation?.blockedReasons ?? [], true)}</div></div>`;
+    : `<div class="callout route-probe"><h3>遷移プレビュー（指定条件からの評価）</h3><p class="route-path">${probeNode(route?.current)}${probeLink}${stays ? "" : probeNode(route?.next)} ${statusPill(route?.status)}</p><div class="signal-group"><span class="signal-label">route</span>${chip(`edge: ${route?.edgeId ?? "なし"}`)}${chip(`delegate: ${route?.delegate ?? "なし"}`)}${chip(`commit gate: ${bool(route?.commitGate ?? false)}`)}</div><div class="signal-group"><span class="signal-label">required audits</span>${chips(route?.requiredAudits ?? [])}</div><div class="signal-group"><span class="signal-label">hard blockers</span>${chips(explanation?.hardBlockers ?? [], true)}</div><div class="signal-group"><span class="signal-label">blocked reasons</span>${chips(explanation?.blockedReasons ?? [], true)}</div></div>`;
   const nodeOrder = nodeFlowOrder(snapshot.definition);
   const gateEntries = Object.entries(snapshot.state.gates)
     .sort(([left], [right]) => (nodeOrder.get(left) ?? Number.MAX_SAFE_INTEGER) - (nodeOrder.get(right) ?? Number.MAX_SAFE_INTEGER) || compare(left, right));
