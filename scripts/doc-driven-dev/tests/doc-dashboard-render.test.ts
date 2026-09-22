@@ -355,8 +355,9 @@ test("plans render declared status separately from DAG eligibility and every dep
   }];
   const html = renderDashboard(value);
   assert.match(html, /<code>docs\/plans\/p\.md<\/code> — <span class="status-pill status-draft">draft<\/span>/);
-  assert.match(html, /依存上 runnable/);
-  assert.match(html, /TASK-A[\s\S]*TASK-B/);
+  assert.match(html, /<span class="status-pill status-todo">todo<\/span> <code>TASK-A<\/code>[\s\S]*<span class="badge badge-runnable">runnable<\/span>/);
+  assert.match(html, /<span class="status-pill status-blocked">blocked<\/span> <code>TASK-B<\/code>[\s\S]*<span class="chip chip-danger">dependency:TASK-A<\/span>/);
+  assert.match(html, /<span class="chip">TASK-A → TASK-B<\/span>/);
 });
 
 test("task board renders before graph with shared document links, empty lanes, and escaped hostile data", () => {
@@ -389,8 +390,8 @@ test("task board renders before graph with shared document links, empty lanes, a
 test("a card document target remains visible when document filters mark its row hidden", () => {
   const html = renderDashboard(snapshot([item("docs/tasks/a.md", "todo")]));
   assert.match(html, /data-task-card[\s\S]*href="#doc-0"/);
-  assert.match(html, /tr:target\{display:table-row!important\}/);
-  assert.match(html, /<tr id="doc-0" data-document-row/);
+  assert.match(html, /\.doc-row:target\{background:color-mix\(in srgb,var\(--accent\) 10%,var\(--card\)\);border-left-color:var\(--accent\)\}/);
+  assert.match(html, /<div class="doc-row" id="doc-0" data-document-row/);
 });
 
 test("theme uses CSS variables with a dark scheme and tabular metrics", () => {
@@ -490,12 +491,12 @@ test("current node and selected edge get dedicated svg classes", () => {
   assert.match(html, /prefers-reduced-motion:reduce/);
 });
 
-test("document status renders as a pill and tables get sticky headers", () => {
+test("document status renders as a pill and document rows use card styling", () => {
   const html = renderDashboard(snapshot([item("docs/specs/a.md", "draft", { type: "spec" })]));
   assert.match(html, /<span class="status-pill bucket-draft">draft<\/span>/);
-  assert.match(html, /thead th\{position:sticky/);
-  assert.match(html, /<table class="striped">/);
-  assert.match(html, /tbody tr:hover td,tbody tr:hover th\{background:color-mix\(in srgb,var\(--accent\) 5%,var\(--hover\)\)/);
+  assert.match(html, /<div class="doc-list" tabindex="0"><div class="doc-row"/);
+  assert.doesNotMatch(html, /<table|<thead|<tbody|<tr |<td|<th /);
+  assert.match(html, /\.doc-row:hover\{background:color-mix\(in srgb,var\(--accent\) 5%,var\(--hover\)\)/);
 });
 
 test("sections offer expand and collapse controls and filter state persists to the hash", () => {

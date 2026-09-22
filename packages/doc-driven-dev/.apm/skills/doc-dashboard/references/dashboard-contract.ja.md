@@ -12,14 +12,14 @@ image、network、server、watchへの依存はありません。authorityはcan
 カードは `data-task-card` とcanonical `data-task-path` で識別します。status、title、
 opaque ID、依存関係、所属plan、coverage、runnable / resumable の別の投影結果を示します。
 opaque IDの重複カードは統合しません。依存待ちtaskはcanonical statusのレーンに残ります。
-Graph、route preview、plan別task詳細、文書・relation表、diagnosticも残します。
+Graph、route preview、plan別task詳細、文書・relationリスト、diagnosticも残します。
 
 diagnosticの手前に置く `#attention` セクションはhard blocker、route previewの
 blocked reason、blocking finding、task graph issueを種別ごとのパネルに分け、
 件数バッジ付きで集約します。空なら「進行を止める項目はありません」と表示します。
 カードのreadinessバッジはplan所属を
 またいだrunnable / resumable / blockedの集約で、plan別のmembership詳細は折り畳みます。
-文書表の自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
+文書リストの自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
 種別とstatusは専用selectに残ります。
 
 主要画面より下のセクションは共通の検査用デザインを使います。`<details>`
@@ -50,8 +50,9 @@ required audit / blockerのラベル付き `.chip` 群（blockerは `chip-danger
 ときだけsignalsパネルにdanger chipとして表示し、node / edge / gateの検査表は
 キャンバスとパネルが同じ情報を持つため省略します。plan別 `<summary>` 行は
 plan status pillを持ちます。`#documents` のフィルタは
-ツールバー風の帯に置き、結果件数は等幅で示します。表はmutedなstickyヘッダ、
-アクセント色を乗せた行hover、`tr:target` のハイライトを使います。
+ツールバー風の帯に置き、結果件数は等幅で示します。明細は `.row-list` の行アイテムと
+`.doc-row` カードで構成し、アクセント色のhoverと `:target` ハイライトを使います。
+`<table>` 要素は使いません。
 `#attention` のパネルは中身がある間だけblocked色の左ボーダーを付け、
 `#backlog` ストリップのカードはdraft色の左ボーダーを付けます。セクション見出しには
 アクセント色の四角マーカー、footer注記は区切り線の下にmuted色で置きます。
@@ -64,7 +65,7 @@ findings severityの積み棒、選択中plan / focusのfactsを表示します�
 
 `#task-board` はタスクの主画面として従来どおりです。その内部のkanbanレーン上段に
 `#backlog` ストリップを置き、statusが `draft` のcanonical文書をカードで一覧して
-今後レビュー・着手する候補を文書表の行へリンクします。
+今後レビュー・着手する候補を文書行へリンクします。
 
 ヘッダのpulse dotは進行を止める項目の有無を映します（存在する間は赤、なければ緑）。
 配色は閲覧環境のcolor schemeに従い、navのトグルボタンまたは `T` キーで `<html>` の
@@ -81,7 +82,7 @@ done / wont-doレーンは
 その後にdashboard固有の上書きを続けます。上書きの基礎tokenは `--pico-*` 変数を参照し、
 laneやstatusのセマンティックカラーだけ独自のlight / darkパレットを持ちます。
 マークアップはPico classlessの規約に従い、`nav > ul` のセクションリンク、
-`table.striped` の縞模様テーブル、再生成注意書きの `footer` を使います。
+`details` の検査グループ、再生成注意書きの `footer` を使います。
 閲覧時にstylesheetをfetchしません。
 
 ## 件数と対象範囲
