@@ -49,8 +49,8 @@ reads as a route-probe panel: an eyebrow heading, a `current → next` path of
 kind-colored `.probe-node` chips (icon glyph + monospace name, matching canvas
 node colors) joined by a `.probe-link` connector that carries the edge
 condition (a danger ✕ marker when the route is blocked or stays in place), a
-status pill, edge/condition/delegate/commit-gate facts, and labeled `.chip`
-groups for required audits and blockers (danger-tinted `chip-danger`). The
+status pill, a `route` row of edge/delegate/commit-gate chips, and labeled
+`.chip` groups for required audits and blockers (danger-tinted `chip-danger`). The
 `signals` panel groups supplied/state/hard-blocker chips under eyebrow labels,
 and the `gates` panel renders each gate as a status-dot pill in graph flow
 order (pass/fail/blocked colors, failure reasons in the tooltip) with an
