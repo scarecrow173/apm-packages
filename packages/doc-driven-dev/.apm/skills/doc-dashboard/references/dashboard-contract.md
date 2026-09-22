@@ -14,21 +14,89 @@ Cards use `data-task-card` and canonical `data-task-path` identity. They show
 status, title, opaque ID, dependencies, plan membership, coverage, and separate
 runnable/resumable projections. Duplicate opaque IDs are not merged. A waiting
 todo remains in its canonical lane. Graph, route preview, plan task details,
-document/relation tables, and diagnostics remain available.
+document/relation rows, and diagnostics remain available.
 
-The `#attention` section at the top aggregates hard blockers, blocked-route
-reasons from the route preview, blocking findings, and task graph issues; it
-reports that nothing blocks progress when empty. Card readiness badges
+The `#attention` section sits before diagnostics and groups hard blockers,
+blocked-route reasons from the route preview, blocking findings, and task
+graph issues into per-category panels with count badges; it reports that
+nothing blocks progress when empty. Card readiness badges
 aggregate runnable/resumable/blocked across plan memberships, and per-plan
-membership details stay collapsed. The document table's free-text filter
+membership details stay collapsed. The document list's free-text filter
 matches only ID, title, and canonical path via `data-search-text`; type and
 status stay on their dedicated selects.
 
-The report follows the viewer's color scheme (light/dark CSS variables), keeps
-done/wont-do lanes folded, scrolls lane card lists inside each lane, and offers
+Sections below the primary surfaces share one inspection chrome. `<details>`
+groups render as translucent accordion cards whose summary rows highlight on
+hover and gain a separator while open. The `#graph` section keeps its
+Execution Graph always visible inside a `.graph-canvas` frame: an eyebrow
+header with graph metadata, a gridded `.graph-stage`, and an in-frame legend
+keyed to node kinds and edge classes. The canvas uses a semantic layered
+layout: a main spine walks the highest-priority outgoing edge from `entry` to
+completion, side nodes sit in a setup lane above, and a long spine folds into
+two left-to-right rows — the row-wrap edge rides the deepest inter-row channel
+lane and drops into the next row's first node. Backward edges draw as routed
+wires through the inter-row channel (into row 0 bottoms) or the return channel
+below row 1 (spine-to-spine within row 1), while spine-to-branch returns feed
+the left margin and wrap over the top. Edges are class-colored — forward (accent), backward/repair
+(`edge-back`), and self-loop retry (`edge-self` dashed) — and parallel edges
+between the same pair merge into one path with a combined title. Nodes are
+kind-colored cards (action/delegate/audit/terminal) with an icon glyph,
+monospace title, and kind caption; the current
+node glows, the selected edge carries a condition label, and hovering a node
+highlights connected edges while dimming the rest. Above the canvas a
+`.probe-grid` pairs the route probe with two side panels. The route preview
+reads as a route-probe panel: an eyebrow heading, a `current → next` path of
+kind-colored `.probe-node` chips (icon glyph + monospace name, matching canvas
+node colors) joined by a `.probe-link` connector that carries the edge
+condition (a danger ✕ marker when the route is blocked or stays in place), a
+status pill, a `route` row of edge/delegate/commit-gate chips, and labeled
+`.chip` groups for required audits and blockers (danger-tinted `chip-danger`). The
+`signals` panel groups supplied/state/hard-blocker chips under eyebrow labels,
+and the `gates` panel renders each gate as a status-dot pill in graph flow
+order (pass/fail/blocked colors, failure reasons in the tooltip) with an
+`N/M pass` score. Graph topology issues surface as danger chips inside the
+signals panel only when present; node/edge/gate inspection tables are omitted
+because the canvas and panels already carry that information. Per-plan
+`<summary>` rows carry the plan status
+pill. `#documents` places its filters on a toolbar-like strip
+with a monospace result count. Record lists render as `.row-list`
+items and `.doc-row` cards with accent-tinted hover and a `:target`
+highlight; there are no `<table>` elements. `#attention` panels take a
+blocked-color left border only while non-empty, `#backlog` strip cards take a
+draft-color left border, section headings carry an accent square marker, and
+the footer note sits below a separator in muted text.
+
+The report is chart-first, in the style of monitoring dashboards. `#overview`
+shows stat panels (accent-colored cards with tabular numerals) and `#charts`
+renders inline panels: a task-status donut keyed to the kanban lane colors,
+document-bucket horizontal bars, a graph-coverage gauge, and a findings
+severity stacked bar plus the focused plan/focus facts. Charts are inline SVG
+or CSS only; `role="img"`, `<title>`, and legend lists keep them readable
+without color alone.
+
+`#task-board` remains the primary task surface and stays unchanged. Inside it,
+above the kanban lanes, a `#backlog` strip lists canonical documents whose
+status is `draft` as cards — the pool of candidates to review or start next —
+linked to their document rows.
+
+A header pulse dot mirrors whether anything blocks progress (red while
+blockers exist, otherwise green). The theme follows the viewer's color scheme
+and can be overridden manually: a nav toggle button (or the `T` key) switches
+`data-theme` on `<html>` and persists the choice in `localStorage`; without
+JavaScript the `prefers-color-scheme` fallback still applies. Badges and pills
+use translucent `color-mix` fills keyed to their semantic border color, the
+sticky nav is translucent with a backdrop blur, and a faint grid backdrop sits
+behind the page (disabled for print and reduced-motion).
+
+The report keeps done/wont-do lanes folded, scrolls lane card lists inside each lane, and offers
 a readiness filter plus expand/collapse controls for long detail sections. The
 document filter state persists in a `#filter=` URL hash. All styling and
-behavior is inline; the only image is a data-URI favicon.
+behavior is inline; the only image is a data-URI favicon. The `<style>` block
+prepends vendored Pico CSS v2 classless (MIT) generated at build time, followed
+by dashboard overrides that alias base tokens to `--pico-*` variables; semantic
+lane/status colors keep their own light/dark palette. The markup follows Pico
+classless conventions: `nav > ul` section links, `details` inspection groups, and a
+`footer` regeneration note. No stylesheet is fetched at view time.
 
 ## Metrics and coverage
 
