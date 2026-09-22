@@ -14,14 +14,14 @@ Cards use `data-task-card` and canonical `data-task-path` identity. They show
 status, title, opaque ID, dependencies, plan membership, coverage, and separate
 runnable/resumable projections. Duplicate opaque IDs are not merged. A waiting
 todo remains in its canonical lane. Graph, route preview, plan task details,
-document/relation tables, and diagnostics remain available.
+document/relation rows, and diagnostics remain available.
 
 The `#attention` section sits before diagnostics and groups hard blockers,
 blocked-route reasons from the route preview, blocking findings, and task
 graph issues into per-category panels with count badges; it reports that
 nothing blocks progress when empty. Card readiness badges
 aggregate runnable/resumable/blocked across plan memberships, and per-plan
-membership details stay collapsed. The document table's free-text filter
+membership details stay collapsed. The document list's free-text filter
 matches only ID, title, and canonical path via `data-search-text`; type and
 status stay on their dedicated selects.
 
@@ -59,8 +59,9 @@ signals panel only when present; node/edge/gate inspection tables are omitted
 because the canvas and panels already carry that information. Per-plan
 `<summary>` rows carry the plan status
 pill. `#documents` places its filters on a toolbar-like strip
-with a monospace result count. Tables use muted sticky headers, accent-tinted
-row hover, and a `tr:target` highlight. `#attention` panels take a
+with a monospace result count. Record lists render as `.row-list`
+items and `.doc-row` cards with accent-tinted hover and a `:target`
+highlight; there are no `<table>` elements. `#attention` panels take a
 blocked-color left border only while non-empty, `#backlog` strip cards take a
 draft-color left border, section headings carry an accent square marker, and
 the footer note sits below a separator in muted text.
@@ -76,7 +77,7 @@ without color alone.
 `#task-board` remains the primary task surface and stays unchanged. Inside it,
 above the kanban lanes, a `#backlog` strip lists canonical documents whose
 status is `draft` as cards — the pool of candidates to review or start next —
-linked to their document-table rows.
+linked to their document rows.
 
 A header pulse dot mirrors whether anything blocks progress (red while
 blockers exist, otherwise green). The theme follows the viewer's color scheme
@@ -94,7 +95,7 @@ behavior is inline; the only image is a data-URI favicon. The `<style>` block
 prepends vendored Pico CSS v2 classless (MIT) generated at build time, followed
 by dashboard overrides that alias base tokens to `--pico-*` variables; semantic
 lane/status colors keep their own light/dark palette. The markup follows Pico
-classless conventions: `nav > ul` section links, `table.striped` tables, and a
+classless conventions: `nav > ul` section links, `details` inspection groups, and a
 `footer` regeneration note. No stylesheet is fetched at view time.
 
 ## Metrics and coverage
