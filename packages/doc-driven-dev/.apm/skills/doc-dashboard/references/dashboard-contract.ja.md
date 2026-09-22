@@ -12,19 +12,78 @@ image、network、server、watchへの依存はありません。authorityはcan
 カードは `data-task-card` とcanonical `data-task-path` で識別します。status、title、
 opaque ID、依存関係、所属plan、coverage、runnable / resumable の別の投影結果を示します。
 opaque IDの重複カードは統合しません。依存待ちtaskはcanonical statusのレーンに残ります。
-Graph、route preview、plan別task詳細、文書・relation表、diagnosticも残します。
+Graph、route preview、plan別task詳細、文書・relationリスト、diagnosticも残します。
 
-先頭の `#attention` セクションはhard blocker、route previewのblocked reason、
-blocking finding、task graph issueを集約し、
-空なら「進行を止める項目はありません」と表示します。カードのreadinessバッジはplan所属を
+diagnosticの手前に置く `#attention` セクションはhard blocker、route previewの
+blocked reason、blocking finding、task graph issueを種別ごとのパネルに分け、
+件数バッジ付きで集約します。空なら「進行を止める項目はありません」と表示します。
+カードのreadinessバッジはplan所属を
 またいだrunnable / resumable / blockedの集約で、plan別のmembership詳細は折り畳みます。
-文書表の自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
+文書リストの自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
 種別とstatusは専用selectに残ります。
 
-配色は閲覧環境のcolor scheme（light / darkのCSS変数）に従います。done / wont-doレーンは
+主要画面より下のセクションは共通の検査用デザインを使います。`<details>`
+グループは半透明のアコーディオンカードで、summary行はhoverで強調され、
+開いている間は区切り線が付きます。`#graph` のExecution Graphは常時表示の
+`.graph-canvas` フレームに収め、eyebrowヘッダにgraphメタ情報、gridを敷いた
+`.graph-stage`、ノードkind別・edge種別のフレーム内凡例を置きます。キャンバスは
+意味的な階層レイアウトで、`entry` から最優先の外向きedgeを辿った主スパインを
+中段に、それ以外のノードを上段のセットアップレーンに配置します。長いスパインは
+左→右の2段に折り返し、段またぎの継続edgeは段間チャネルの最深レーンを通って
+下段先頭ノードへ降ります。戻りedgeはルーティングワイヤー状に、段間チャネル
+（row 0下面へ入る）または下段のリターンチャネル（row 1内のspine→spine）を通り、
+spine→branch の戻りは左マージンを上がって上段越しにラップします。
+edgeは種別色分けで、前進（accent）・戻り/修復（`edge-back`）・自己ループのretry
+（`edge-self` 破線）を区別し、同一ペアの並列edgeは結合タイトル付きの1本にまとめます。
+ノードはkind色（action / delegate / audit / terminal）のカードで、アイコングリフ・等幅タイトル・
+kindキャプションを持ちます。現在ノードはグローで強調し、選択edgeには
+条件ラベルを付け、ノードにhoverすると接続edgeだけが強調され他は減光します。
+キャンバス上段の `.probe-grid` はroute probeと2つの補助パネルを並べます。
+route previewはroute probeパネルで、eyebrow見出し・`current → next` の
+kind色 `.probe-node` チップ（アイコングリフ+等幅名、キャンバスのノード色と共通）を
+edge条件ラベル付きの `.probe-link` コネクタで結び（blocked/現状維持時はdanger色の
+✕マーカー）、status pill・edge / delegate / commit gateの `route` chip行・
+required audit / blockerのラベル付き `.chip` 群（blockerは `chip-danger`）を示します。
+`signals` パネルはsupplied / state / hard blockerのchipをラベル付きで並べ、
+`gates` パネルは各gateをフロー順のstatusドット付きピル（pass / fail / blocked色、
+理由はtooltip）と `N/M pass` スコアで示します。Graph topology issueは存在する
+ときだけsignalsパネルにdanger chipとして表示し、node / edge / gateの検査表は
+キャンバスとパネルが同じ情報を持つため省略します。plan別 `<summary>` 行は
+plan status pillを持ちます。`#documents` のフィルタは
+ツールバー風の帯に置き、結果件数は等幅で示します。明細は `.row-list` の行アイテムと
+`.doc-row` カードで構成し、アクセント色のhoverと `:target` ハイライトを使います。
+`<table>` 要素は使いません。
+`#attention` のパネルは中身がある間だけblocked色の左ボーダーを付け、
+`#backlog` ストリップのカードはdraft色の左ボーダーを付けます。セクション見出しには
+アクセント色の四角マーカー、footer注記は区切り線の下にmuted色で置きます。
+
+レポートは監視dashboard風のチャート中心構成です。`#overview` はアクセントカラー付きの
+statパネル（tabular numeralsの大数字）を並べ、`#charts` はinlineパネルとして
+kanbanレーン色と一致したタスクstatusドーナツ、文書区分の横棒グラフ、graph coverageゲージ、
+findings severityの積み棒、選択中plan / focusのfactsを表示します。
+チャートはinline SVGまたはCSSのみで、`role="img"`、`<title>`、凡例リストで色以外でも読み取れます。
+
+`#task-board` はタスクの主画面として従来どおりです。その内部のkanbanレーン上段に
+`#backlog` ストリップを置き、statusが `draft` のcanonical文書をカードで一覧して
+今後レビュー・着手する候補を文書行へリンクします。
+
+ヘッダのpulse dotは進行を止める項目の有無を映します（存在する間は赤、なければ緑）。
+配色は閲覧環境のcolor schemeに従い、navのトグルボタンまたは `T` キーで `<html>` の
+`data-theme` を手動切替できます。選択はlocalStorageに保持され、
+JavaScriptなしでは `prefers-color-scheme` のフォールバックが効きます。
+バッジとピルはセマンティックカラーの `color-mix` 半透明塗り、sticky navは半透明＋
+backdrop blur、ページ背面には薄いgrid backdropを敷きます（printとreduced-motionでは無効）。
+
+done / wont-doレーンは
 折り畳み、各レーンのカード一覧はレーン内でスクロールします。readinessフィルタと
 長い詳細セクションの全開閉ボタンを備え、文書フィルタの状態は `#filter=` のURL hashに
 保持します。スタイルと挙動はすべてinlineで、画像はdata URIのfaviconのみです。
+`<style>` ブロックの先頭にはビルド時に生成されるvendored Pico CSS v2 classless（MIT）を置き、
+その後にdashboard固有の上書きを続けます。上書きの基礎tokenは `--pico-*` 変数を参照し、
+laneやstatusのセマンティックカラーだけ独自のlight / darkパレットを持ちます。
+マークアップはPico classlessの規約に従い、`nav > ul` のセクションリンク、
+`details` の検査グループ、再生成注意書きの `footer` を使います。
+閲覧時にstylesheetをfetchしません。
 
 ## 件数と対象範囲
 
