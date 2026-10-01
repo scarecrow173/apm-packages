@@ -102,7 +102,7 @@ test("secondary sections use chip-based signals, callout route preview, and tint
   assert.match(html, /<div class="probe-panel"><h3>signals<\/h3>/);
   assert.match(html, /<span class="signal-label">supplied<\/span><span class="chip">requested-signal<\/span>/);
   assert.match(html, /<span class="signal-label">state<\/span><span class="chip">focus-a<\/span>/);
-  assert.match(html, /<span class="signal-label">hard blockers<\/span><span class="chip chip-danger">focus-required<\/span>/);
+  assert.match(html, /<p class="probe-note probe-note-danger"><a href="#attention">hard blockers 1 件 → 要対応<\/a><\/p>/);
   assert.match(html, /<div class="callout route-probe"><h3>遷移プレビュー（指定条件からの評価）<\/h3>/);
   assert.match(html, /<p class="route-path"><span class="probe-node probe-unknown"><span class="probe-glyph"[^>]*>\?<\/span>spec<\/span><span class="probe-link"><span class="probe-edge-label">ready<\/span><span class="route-arrow"[^>]*>→<\/span><\/span><span class="probe-node probe-unknown">/);
   assert.match(html, /<span class="chip">edge: spec-to-plan<\/span>/);
@@ -145,9 +145,9 @@ test("attention section aggregates hard blockers, blocking findings, and task gr
   const html = renderDashboard(value);
   assert.match(html, /class="attention attention-active"/);
   assert.match(html, /進行を止めている項目を種別ごとに集約します（3 件）/);
-  assert.match(html, /<h3>hard blockers <span class="lane-count"[^>]*>1<\/span><\/h3><ul><li>focus-required<\/li>/);
-  assert.match(html, /<h3>blocking findings <span class="lane-count"[^>]*>1<\/span><\/h3><ul><li><code>broken-relation-link<\/code> <code>docs\/specs\/a\.md<\/code>:12 — missing target<\/li>/);
-  assert.match(html, /<h3>task graph issues <span class="lane-count"[^>]*>1<\/span><\/h3><ul><li><code>docs\/plans\/p\.md<\/code> <code>task-cycle<\/code> — cycle detected \(tasks: A\)<\/li>/);
+  assert.match(html, /<h3>hard blockers <span class="lane-count"[^>]*>1<\/span><\/h3><ul class="issue-list"><li class="issue-row"><span class="issue-main"><span class="issue-dot"[^>]*><\/span><span class="issue-msg">進行対象（focus）の指定が必要です<\/span><\/span><span class="issue-meta"><span class="issue-tag">focus-required<\/span><\/span><\/li>/);
+  assert.match(html, /<h3>blocking findings <span class="lane-count"[^>]*>1<\/span><\/h3><ul class="issue-list"><li class="issue-row"><span class="issue-main"><span class="issue-dot"[^>]*><\/span><span class="issue-msg">missing target<\/span><\/span><span class="issue-meta"><span class="issue-tag">relation · broken-relation-link<\/span><code class="issue-loc">docs\/specs\/a\.md:12<\/code><span class="issue-repair repair-manual">手動<\/span><\/span><\/li>/);
+  assert.match(html, /<h3>task graph issues <span class="lane-count"[^>]*>1<\/span><\/h3><ul class="issue-list"><li class="issue-row"><span class="issue-main"><span class="issue-dot"[^>]*><\/span><span class="issue-msg">cycle detected<\/span><\/span><span class="issue-meta"><span class="issue-tag">task-cycle<\/span><code class="issue-loc">docs\/plans\/p\.md<\/code><span class="issue-sub">tasks: A<\/span><\/span><\/li>/);
   assert.match(html, /<h3>route blocked <span class="lane-count"[^>]*>0<\/span><\/h3><p class="empty">なし<\/p>/);
   assert.match(html, /<details open><summary>findings \(1 \/ blocking 1\)<\/summary>/);
 });
@@ -168,7 +168,7 @@ test("attention section surfaces blocked route reasons instead of claiming nothi
   };
   const html = renderDashboard(value);
   assert.match(html, /class="attention attention-active"/);
-  assert.match(html, /<h3>route blocked <span class="lane-count"[^>]*>1<\/span><\/h3><ul><li>no-matching-edge<\/li>/);
+  assert.match(html, /<h3>route blocked <span class="lane-count"[^>]*>1<\/span><\/h3><ul class="issue-list"><li class="issue-row"><span class="issue-main"><span class="issue-dot"[^>]*><\/span><span class="issue-msg">現在の状態に合う遷移 edge がありません<\/span><\/span><span class="issue-meta"><span class="issue-tag">no-matching-edge<\/span><\/span><\/li>/);
   assert.doesNotMatch(html, /進行を止める項目はありません/);
 });
 
