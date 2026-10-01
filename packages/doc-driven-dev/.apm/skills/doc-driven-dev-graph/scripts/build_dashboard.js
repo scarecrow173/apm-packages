@@ -361,7 +361,7 @@ var require_common = __commonJS({
 var require_exception = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/exception.js"(exports2, module2) {
     "use strict";
-    function YAMLException2(reason, mark) {
+    function YAMLException3(reason, mark) {
       Error.call(this);
       this.name = "YAMLException";
       this.reason = reason;
@@ -373,9 +373,9 @@ var require_exception = __commonJS({
         this.stack = new Error().stack || "";
       }
     }
-    YAMLException2.prototype = Object.create(Error.prototype);
-    YAMLException2.prototype.constructor = YAMLException2;
-    YAMLException2.prototype.toString = function toString2(compact) {
+    YAMLException3.prototype = Object.create(Error.prototype);
+    YAMLException3.prototype.constructor = YAMLException3;
+    YAMLException3.prototype.toString = function toString2(compact) {
       var result = this.name + ": ";
       result += this.reason || "(unknown reason)";
       if (!compact && this.mark) {
@@ -383,7 +383,7 @@ var require_exception = __commonJS({
       }
       return result;
     };
-    module2.exports = YAMLException2;
+    module2.exports = YAMLException3;
   }
 });
 
@@ -449,7 +449,7 @@ var require_mark = __commonJS({
 var require_type = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/type.js"(exports2, module2) {
     "use strict";
-    var YAMLException2 = require_exception();
+    var YAMLException3 = require_exception();
     var TYPE_CONSTRUCTOR_OPTIONS = [
       "kind",
       "resolve",
@@ -480,7 +480,7 @@ var require_type = __commonJS({
       options2 = options2 || {};
       Object.keys(options2).forEach(function(name) {
         if (TYPE_CONSTRUCTOR_OPTIONS.indexOf(name) === -1) {
-          throw new YAMLException2('Unknown option "' + name + '" is met in definition of "' + tag + '" YAML type.');
+          throw new YAMLException3('Unknown option "' + name + '" is met in definition of "' + tag + '" YAML type.');
         }
       });
       this.tag = tag;
@@ -497,7 +497,7 @@ var require_type = __commonJS({
       this.defaultStyle = options2["defaultStyle"] || null;
       this.styleAliases = compileStyleAliases(options2["styleAliases"] || null);
       if (YAML_NODE_KINDS.indexOf(this.kind) === -1) {
-        throw new YAMLException2('Unknown kind "' + this.kind + '" is specified for "' + tag + '" YAML type.');
+        throw new YAMLException3('Unknown kind "' + this.kind + '" is specified for "' + tag + '" YAML type.');
       }
     }
     module2.exports = Type;
@@ -509,7 +509,7 @@ var require_schema = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/schema.js"(exports2, module2) {
     "use strict";
     var common = require_common();
-    var YAMLException2 = require_exception();
+    var YAMLException3 = require_exception();
     var Type = require_type();
     function compileList(schema, name, result) {
       var exclude = [];
@@ -549,7 +549,7 @@ var require_schema = __commonJS({
       this.explicit = definition2.explicit || [];
       this.implicit.forEach(function(type) {
         if (type.loadKind && type.loadKind !== "scalar") {
-          throw new YAMLException2("There is a non-scalar type in the implicit list of a schema. Implicit resolving of such types is not supported.");
+          throw new YAMLException3("There is a non-scalar type in the implicit list of a schema. Implicit resolving of such types is not supported.");
         }
       });
       this.compiledImplicit = compileList(this, "implicit", []);
@@ -569,19 +569,19 @@ var require_schema = __commonJS({
           types = arguments[1];
           break;
         default:
-          throw new YAMLException2("Wrong number of arguments for Schema.create function");
+          throw new YAMLException3("Wrong number of arguments for Schema.create function");
       }
       schemas = common.toArray(schemas);
       types = common.toArray(types);
       if (!schemas.every(function(schema) {
         return schema instanceof Schema3;
       })) {
-        throw new YAMLException2("Specified list of super schemas (or a single Schema object) contains a non-Schema object.");
+        throw new YAMLException3("Specified list of super schemas (or a single Schema object) contains a non-Schema object.");
       }
       if (!types.every(function(type) {
         return type instanceof Type;
       })) {
-        throw new YAMLException2("Specified list of YAML types (or a single Type object) contains a non-Type object.");
+        throw new YAMLException3("Specified list of YAML types (or a single Type object) contains a non-Type object.");
       }
       return new Schema3({
         include: schemas,
@@ -1429,7 +1429,7 @@ var require_loader = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/loader.js"(exports2, module2) {
     "use strict";
     var common = require_common();
-    var YAMLException2 = require_exception();
+    var YAMLException3 = require_exception();
     var Mark = require_mark();
     var DEFAULT_SAFE_SCHEMA = require_default_safe();
     var DEFAULT_FULL_SCHEMA = require_default_full();
@@ -1438,9 +1438,9 @@ var require_loader = __commonJS({
     var CONTEXT_FLOW_OUT2 = 2;
     var CONTEXT_BLOCK_IN2 = 3;
     var CONTEXT_BLOCK_OUT2 = 4;
-    var CHOMPING_CLIP = 1;
-    var CHOMPING_STRIP = 2;
-    var CHOMPING_KEEP = 3;
+    var CHOMPING_CLIP2 = 1;
+    var CHOMPING_STRIP2 = 2;
+    var CHOMPING_KEEP2 = 3;
     var PATTERN_NON_PRINTABLE2 = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/;
     var PATTERN_NON_ASCII_LINE_BREAKS = /[\x85\u2028\u2029]/;
     var PATTERN_FLOW_INDICATORS2 = /[,\[\]\{\}]/;
@@ -1541,7 +1541,7 @@ var require_loader = __commonJS({
       this.documents = [];
     }
     function generateError(state, message) {
-      return new YAMLException2(
+      return new YAMLException3(
         message,
         new Mark(state.filename, state.input, state.position, state.line, state.position - state.lineStart)
       );
@@ -1614,7 +1614,7 @@ var require_loader = __commonJS({
         state.result += _result;
       }
     }
-    function chargeMergeWork(state) {
+    function chargeMergeWork2(state) {
       state.totalMergeKeys += 1;
       if (state.maxTotalMergeKeys !== -1 && state.totalMergeKeys > state.maxTotalMergeKeys) {
         throwError2(state, "merge keys exceeded maxTotalMergeKeys (" + state.maxTotalMergeKeys + ")");
@@ -1625,11 +1625,11 @@ var require_loader = __commonJS({
       if (!common.isObject(source)) {
         throwError2(state, "cannot merge mappings; the provided source object is unacceptable");
       }
-      chargeMergeWork(state);
+      chargeMergeWork2(state);
       sourceKeys = Object.keys(source);
       for (index2 = 0, quantity = sourceKeys.length; index2 < quantity; index2 += 1) {
         key = sourceKeys[index2];
-        chargeMergeWork(state);
+        chargeMergeWork2(state);
         if (!_hasOwnProperty.call(destination, key)) {
           setProperty(destination, key, source[key]);
           overridableKeys[key] = true;
@@ -1967,7 +1967,7 @@ var require_loader = __commonJS({
       throwError2(state, "unexpected end of the stream within a flow collection");
     }
     function readBlockScalar2(state, nodeIndent) {
-      var captureStart, folding, chomping = CHOMPING_CLIP, didReadContent = false, detectedIndent = false, textIndent = nodeIndent, emptyLines = 0, atMoreIndented = false, tmp, ch;
+      var captureStart, folding, chomping = CHOMPING_CLIP2, didReadContent = false, detectedIndent = false, textIndent = nodeIndent, emptyLines = 0, atMoreIndented = false, tmp, ch;
       ch = state.input.charCodeAt(state.position);
       if (ch === 124) {
         folding = false;
@@ -1981,8 +1981,8 @@ var require_loader = __commonJS({
       while (ch !== 0) {
         ch = state.input.charCodeAt(++state.position);
         if (ch === 43 || ch === 45) {
-          if (CHOMPING_CLIP === chomping) {
-            chomping = ch === 43 ? CHOMPING_KEEP : CHOMPING_STRIP;
+          if (CHOMPING_CLIP2 === chomping) {
+            chomping = ch === 43 ? CHOMPING_KEEP2 : CHOMPING_STRIP2;
           } else {
             throwError2(state, "repeat of a chomping mode identifier");
           }
@@ -2025,9 +2025,9 @@ var require_loader = __commonJS({
           continue;
         }
         if (state.lineIndent < textIndent) {
-          if (chomping === CHOMPING_KEEP) {
+          if (chomping === CHOMPING_KEEP2) {
             state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
-          } else if (chomping === CHOMPING_CLIP) {
+          } else if (chomping === CHOMPING_CLIP2) {
             if (didReadContent) {
               state.result += "\n";
             }
@@ -2537,7 +2537,7 @@ var require_loader = __commonJS({
       } else if (documents.length === 1) {
         return documents[0];
       }
-      throw new YAMLException2("expected a single document in the stream, but found more");
+      throw new YAMLException3("expected a single document in the stream, but found more");
     }
     function safeLoadAll(input, iterator, options2) {
       if (typeof iterator === "object" && iterator !== null && typeof options2 === "undefined") {
@@ -2561,7 +2561,7 @@ var require_dumper = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/dumper.js"(exports2, module2) {
     "use strict";
     var common = require_common();
-    var YAMLException2 = require_exception();
+    var YAMLException3 = require_exception();
     var DEFAULT_FULL_SCHEMA = require_default_full();
     var DEFAULT_SAFE_SCHEMA = require_default_safe();
     var _toString = Object.prototype.toString;
@@ -2590,22 +2590,22 @@ var require_dumper = __commonJS({
     var CHAR_LEFT_CURLY_BRACKET = 123;
     var CHAR_VERTICAL_LINE = 124;
     var CHAR_RIGHT_CURLY_BRACKET = 125;
-    var ESCAPE_SEQUENCES2 = {};
-    ESCAPE_SEQUENCES2[0] = "\\0";
-    ESCAPE_SEQUENCES2[7] = "\\a";
-    ESCAPE_SEQUENCES2[8] = "\\b";
-    ESCAPE_SEQUENCES2[9] = "\\t";
-    ESCAPE_SEQUENCES2[10] = "\\n";
-    ESCAPE_SEQUENCES2[11] = "\\v";
-    ESCAPE_SEQUENCES2[12] = "\\f";
-    ESCAPE_SEQUENCES2[13] = "\\r";
-    ESCAPE_SEQUENCES2[27] = "\\e";
-    ESCAPE_SEQUENCES2[34] = '\\"';
-    ESCAPE_SEQUENCES2[92] = "\\\\";
-    ESCAPE_SEQUENCES2[133] = "\\N";
-    ESCAPE_SEQUENCES2[160] = "\\_";
-    ESCAPE_SEQUENCES2[8232] = "\\L";
-    ESCAPE_SEQUENCES2[8233] = "\\P";
+    var ESCAPE_SEQUENCES = {};
+    ESCAPE_SEQUENCES[0] = "\\0";
+    ESCAPE_SEQUENCES[7] = "\\a";
+    ESCAPE_SEQUENCES[8] = "\\b";
+    ESCAPE_SEQUENCES[9] = "\\t";
+    ESCAPE_SEQUENCES[10] = "\\n";
+    ESCAPE_SEQUENCES[11] = "\\v";
+    ESCAPE_SEQUENCES[12] = "\\f";
+    ESCAPE_SEQUENCES[13] = "\\r";
+    ESCAPE_SEQUENCES[27] = "\\e";
+    ESCAPE_SEQUENCES[34] = '\\"';
+    ESCAPE_SEQUENCES[92] = "\\\\";
+    ESCAPE_SEQUENCES[133] = "\\N";
+    ESCAPE_SEQUENCES[160] = "\\_";
+    ESCAPE_SEQUENCES[8232] = "\\L";
+    ESCAPE_SEQUENCES[8233] = "\\P";
     var DEPRECATED_BOOLEANS_SYNTAX = [
       "y",
       "Y",
@@ -2656,7 +2656,7 @@ var require_dumper = __commonJS({
         handle = "U";
         length = 8;
       } else {
-        throw new YAMLException2("code point within a string may not be greater than 0xFFFFFFFF");
+        throw new YAMLException3("code point within a string may not be greater than 0xFFFFFFFF");
       }
       return "\\" + handle + common.repeat("0", length - string6.length) + string6;
     }
@@ -2801,7 +2801,7 @@ var require_dumper = __commonJS({
           case STYLE_DOUBLE:
             return '"' + escapeString(string6, lineWidth) + '"';
           default:
-            throw new YAMLException2("impossible error: invalid scalar style");
+            throw new YAMLException3("impossible error: invalid scalar style");
         }
       })();
     }
@@ -2871,7 +2871,7 @@ var require_dumper = __commonJS({
             continue;
           }
         }
-        escapeSeq = ESCAPE_SEQUENCES2[char];
+        escapeSeq = ESCAPE_SEQUENCES[char];
         result += !escapeSeq && isPrintable(char) ? string6[i] : escapeSeq || encodeHex(char);
       }
       return result;
@@ -2934,7 +2934,7 @@ var require_dumper = __commonJS({
       } else if (typeof state.sortKeys === "function") {
         objectKeyList.sort(state.sortKeys);
       } else if (state.sortKeys) {
-        throw new YAMLException2("sortKeys must be a boolean or a function");
+        throw new YAMLException3("sortKeys must be a boolean or a function");
       }
       for (index2 = 0, length = objectKeyList.length; index2 < length; index2 += 1) {
         pairBuffer = "";
@@ -2986,7 +2986,7 @@ var require_dumper = __commonJS({
             } else if (_hasOwnProperty.call(type.represent, style)) {
               _result = type.represent[style](object2, style);
             } else {
-              throw new YAMLException2("!<" + type.tag + '> tag resolver accepts not "' + style + '" style');
+              throw new YAMLException3("!<" + type.tag + '> tag resolver accepts not "' + style + '" style');
             }
             state.dump = _result;
           }
@@ -3050,7 +3050,7 @@ var require_dumper = __commonJS({
           }
         } else {
           if (state.skipInvalid) return false;
-          throw new YAMLException2("unacceptable kind of an object to dump " + type);
+          throw new YAMLException3("unacceptable kind of an object to dump " + type);
         }
         if (state.tag !== null && state.tag !== "?") {
           state.dump = "!<" + state.tag + "> " + state.dump;
@@ -30056,9 +30056,8 @@ var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
 var import_node_fs6 = __toESM(require("node:fs"));
 
-// node_modules/.pnpm/js-yaml@5.2.2/node_modules/js-yaml/dist/js-yaml.mjs
+// node_modules/.pnpm/js-yaml@5.4.1/node_modules/js-yaml/dist/js-yaml.mjs
 var NOT_RESOLVED = /* @__PURE__ */ Symbol("NOT_RESOLVED");
-var MERGE_KEY = /* @__PURE__ */ Symbol("MERGE_KEY");
 function defineScalarTag(tagName, options2) {
   return {
     tagName,
@@ -30067,9 +30066,9 @@ function defineScalarTag(tagName, options2) {
     matchByTagPrefix: options2.matchByTagPrefix ?? false,
     implicitFirstChars: options2.implicitFirstChars ?? null,
     resolve: options2.resolve,
-    identify: options2.identify ?? null,
+    identify: options2.identify,
     represent: options2.represent ?? ((data) => String(data)),
-    representTagName: options2.representTagName ?? null
+    representTagName: options2.representTagName ?? (() => tagName)
   };
 }
 function defineSequenceTag(tagName, options2) {
@@ -30083,9 +30082,9 @@ function defineSequenceTag(tagName, options2) {
     addItem: options2.addItem,
     finalize: options2.finalize ?? ((carrier) => carrier),
     carrierIsResult,
-    identify: options2.identify ?? null,
+    identify: options2.identify,
     represent: options2.represent ?? ((data) => data),
-    representTagName: options2.representTagName ?? null
+    representTagName: options2.representTagName ?? (() => tagName)
   };
 }
 function defineMappingTag(tagName, options2) {
@@ -30102,9 +30101,9 @@ function defineMappingTag(tagName, options2) {
     get: options2.get,
     finalize: options2.finalize ?? ((carrier) => carrier),
     carrierIsResult,
-    identify: options2.identify ?? null,
+    identify: options2.identify,
     represent: options2.represent ?? ((data) => data),
-    representTagName: options2.representTagName ?? null
+    representTagName: options2.representTagName ?? (() => tagName)
   };
 }
 var strTag = defineScalarTag("tag:yaml.org,2002:str", {
@@ -30453,9 +30452,10 @@ var mergeTag = defineScalarTag("tag:yaml.org,2002:merge", {
   implicit: true,
   implicitFirstChars: ["<"],
   resolve: (source, isExplicit) => {
-    if (source === "<<" || isExplicit && source === "") return MERGE_KEY;
+    if (source === "<<" || isExplicit && source === "") return "<<";
     return NOT_RESOLVED;
-  }
+  },
+  identify: () => false
 });
 var BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/;
 function resolveYamlBinary(source) {
@@ -30478,6 +30478,11 @@ var binaryTag = defineScalarTag("tag:yaml.org,2002:binary", {
 });
 var YAML_DATE_REGEXP = /* @__PURE__ */ new RegExp("^([0-9][0-9][0-9][0-9])-([0-9][0-9])-([0-9][0-9])$");
 var YAML_TIMESTAMP_REGEXP = /* @__PURE__ */ new RegExp("^([0-9][0-9][0-9][0-9])-([0-9][0-9]?)-([0-9][0-9]?)(?:[Tt]|[ \\t]+)([0-9][0-9]?):([0-9][0-9]):([0-9][0-9])(?:\\.([0-9]*))?(?:[ \\t]*(Z|([-+])([0-9][0-9]?)(?::([0-9][0-9]))?))?$");
+function makeUtcDate(year, month, day, hour = 0, minute = 0, second = 0, fraction = 0) {
+  const date5 = new Date(Date.UTC(year, month, day, hour, minute, second, fraction));
+  date5.setUTCFullYear(year, month, day);
+  return date5;
+}
 function resolveYamlTimestamp(source) {
   let match = YAML_DATE_REGEXP.exec(source);
   if (match === null) match = YAML_TIMESTAMP_REGEXP.exec(source);
@@ -30486,7 +30491,7 @@ function resolveYamlTimestamp(source) {
   const month = +match[2] - 1;
   const day = +match[3];
   if (!match[4]) {
-    const date6 = new Date(Date.UTC(year, month, day));
+    const date6 = makeUtcDate(year, month, day);
     if (date6.getUTCFullYear() !== year || date6.getUTCMonth() !== month || date6.getUTCDate() !== day) return NOT_RESOLVED;
     return date6;
   }
@@ -30500,7 +30505,7 @@ function resolveYamlTimestamp(source) {
     while (value.length < 3) value += "0";
     fraction = +value;
   }
-  const date5 = new Date(Date.UTC(year, month, day, hour, minute, second, fraction));
+  const date5 = makeUtcDate(year, month, day, hour, minute, second, fraction);
   if (date5.getUTCFullYear() !== year || date5.getUTCMonth() !== month || date5.getUTCDate() !== day) return NOT_RESOLVED;
   if (match[9]) {
     const offsetHour = +match[10];
@@ -30555,7 +30560,8 @@ var omapTag = defineSequenceTag("tag:yaml.org,2002:omap", {
     carrier.list.push(item);
     return "";
   },
-  finalize: (carrier) => carrier.list
+  finalize: (carrier) => carrier.list,
+  identify: () => false
 });
 var pairsTag = defineSequenceTag("tag:yaml.org,2002:pairs", {
   create: () => [],
@@ -30571,7 +30577,8 @@ var pairsTag = defineSequenceTag("tag:yaml.org,2002:pairs", {
     if (keys.length !== 1) return "cannot resolve a pairs item";
     container.push([keys[0], object2[keys[0]]]);
     return "";
-  }
+  },
+  identify: () => false
 });
 var mapTag = defineMappingTag("tag:yaml.org,2002:map", {
   create: () => ({}),
@@ -30598,7 +30605,11 @@ var mapTag = defineMappingTag("tag:yaml.org,2002:map", {
     return Object.prototype.hasOwnProperty.call(container, String(key));
   },
   keys: (container) => Object.keys(container),
-  get: (container, key) => container[String(key)]
+  get: (container, key) => {
+    const normalizedKey = String(key);
+    if (!Object.prototype.hasOwnProperty.call(container, normalizedKey)) return null;
+    return container[normalizedKey];
+  }
 });
 var setTag = defineMappingTag("tag:yaml.org,2002:set", {
   create: () => /* @__PURE__ */ new Set(),
@@ -30619,9 +30630,9 @@ var setTag = defineMappingTag("tag:yaml.org,2002:set", {
 });
 function createTagDefinitionMap() {
   return {
-    scalar: {},
-    sequence: {},
-    mapping: {}
+    scalar: /* @__PURE__ */ Object.create(null),
+    sequence: /* @__PURE__ */ Object.create(null),
+    mapping: /* @__PURE__ */ Object.create(null)
   };
 }
 function createTagDefinitionListMap() {
@@ -30648,11 +30659,35 @@ function compileTags(tags) {
 }
 var Schema = class Schema2 {
   tags;
+  /** @internal */
   implicitScalarTags;
+  /**
+  * Dispatch implicit scalar resolvers by `source.charAt(0)`. Each bucket holds
+  * the resolvers that may match that key, in schema order; a key absent from
+  * the map uses
+  * {@link Schema.implicitScalarAnyFirstChar}
+  * (resolvers that declared no first-char constraint, so they apply to any
+  * first character).
+  */
   implicitScalarByFirstChar;
   implicitScalarAnyFirstChar;
+  /**
+  * The default scalar tag (`!!str`), resolved once so the composer's fallback
+  * for unresolved plain scalars avoids a keyed lookup per scalar.
+  *
+  * @internal
+  */
   defaultScalarTag;
+  /**
+  * The default container tags (`!!seq` / `!!map`), used by the dumper: when a
+  * value is identified by its default tag, the tag is implicit and not
+  * printed. Undefined if the schema does not define them (then such values
+  * can't be dumped).
+  *
+  * @internal
+  */
   defaultSequenceTag;
+  /** @internal */
   defaultMappingTag;
   exact;
   prefix;
@@ -30698,6 +30733,52 @@ var Schema = class Schema2 {
     this.exact = exact;
     this.prefix = prefix;
   }
+  /** @internal */
+  lookupScalarTag(tagName) {
+    const exactTag = this.exact.scalar[tagName];
+    if (exactTag) return exactTag;
+    for (const tag of this.prefix.scalar) if (tagName.startsWith(tag.tagName)) return tag;
+  }
+  /** @internal */
+  lookupSequenceTag(tagName) {
+    const exactTag = this.exact.sequence[tagName];
+    if (exactTag) return exactTag;
+    for (const tag of this.prefix.sequence) if (tagName.startsWith(tag.tagName)) return tag;
+  }
+  /** @internal */
+  lookupMappingTag(tagName) {
+    const exactTag = this.exact.mapping[tagName];
+    if (exactTag) return exactTag;
+    for (const tag of this.prefix.mapping) if (tagName.startsWith(tag.tagName)) return tag;
+  }
+  /** @internal */
+  resolveImplicitScalarTag(source) {
+    const candidates = this.implicitScalarByFirstChar.get(source.charAt(0)) ?? this.implicitScalarAnyFirstChar;
+    for (const tag2 of candidates) {
+      const value = tag2.resolve(source, false, tag2.tagName);
+      if (value !== NOT_RESOLVED) return {
+        value,
+        tag: tag2
+      };
+    }
+    const tag = this.defaultScalarTag;
+    return {
+      value: tag.resolve(source, false, tag.tagName),
+      tag
+    };
+  }
+  /**
+  * Creates a new schema with the specified tags added. If a tag already
+  * exists, it is replaced by the specified tag.
+  *
+  * @example
+  *
+  * ```javascript
+  * import { CORE_SCHEMA, mergeTag, realMapTag } from 'js-yaml'
+  *
+  * const schema = CORE_SCHEMA.withTags(mergeTag, realMapTag)
+  * ```
+  */
   withTags(...tags) {
     let flatTags = [];
     for (const tag of tags) flatTags = flatTags.concat(tag);
@@ -30736,6 +30817,19 @@ var YAML11_SCHEMA = new Schema([
   pairsTag,
   setTag
 ]);
+var DUMP_SCHEMA = YAML11_SCHEMA.withTags({
+  ...intYaml11Tag,
+  resolve: (source, isExplicit, tagName) => {
+    const result = intYaml11Tag.resolve(source, isExplicit, tagName);
+    return result === NOT_RESOLVED ? intCoreTag.resolve(source, isExplicit, tagName) : result;
+  }
+}, {
+  ...floatYaml11Tag,
+  resolve: (source, isExplicit, tagName) => {
+    const result = floatYaml11Tag.resolve(source, isExplicit, tagName);
+    return result === NOT_RESOLVED ? floatCoreTag.resolve(source, isExplicit, tagName) : result;
+  }
+});
 var realMapTag = defineMappingTag("tag:yaml.org,2002:map", {
   create: () => /* @__PURE__ */ new Map(),
   addPair: (container, key, value) => {
@@ -30791,7 +30885,11 @@ var legacyMapTag = defineMappingTag("tag:yaml.org,2002:map", {
     return normalizedKey !== null && Object.prototype.hasOwnProperty.call(container, normalizedKey);
   },
   keys: (container) => Object.keys(container),
-  get: (container, key) => container[String(key)]
+  get: (container, key) => {
+    const normalizedKey = String(key);
+    if (!Object.prototype.hasOwnProperty.call(container, normalizedKey)) return null;
+    return container[normalizedKey];
+  }
 });
 var DEFAULT_SNIPPET_OPTIONS = {
   maxLength: 79,
@@ -30868,9 +30966,13 @@ function formatError2(exception, compact) {
 ${exception.mark.snippet}`;
   return `${exception.reason} ${where}`;
 }
-var YAMLException = class extends Error {
+var YAMLException = class YAMLException2 extends Error {
   reason;
   mark;
+  /**
+  * Optional `mark` contains source snippet data. Usually, use
+  * {@link YAMLException.throwAt} instead of passing it directly.
+  */
   constructor(reason, mark) {
     super();
     this.name = "YAMLException";
@@ -30879,34 +30981,65 @@ var YAMLException = class extends Error {
     this.message = formatError2(this, false);
     if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
   }
+  /**
+  * Returns the formatted error, omitting the source snippet in compact mode.
+  */
   toString(compact) {
     return `${this.name}: ${formatError2(this, compact)}`;
   }
-};
-function throwErrorAt(source, position2, message, filename = "") {
-  let line = 0;
-  let lineStart = 0;
-  for (let index2 = 0; index2 < position2; index2++) {
-    const ch = source.charCodeAt(index2);
-    if (ch === 10) {
-      line++;
-      lineStart = index2 + 1;
-    } else if (ch === 13) {
-      line++;
-      if (source.charCodeAt(index2 + 1) === 10) index2++;
-      lineStart = index2 + 1;
+  /**
+  * Builds a YAMLException with a source snippet and throws it. `source` is
+  * the raw input text; `position` is an offset into it.
+  */
+  static throwAt(source, position2, message, filename = "") {
+    let line = 0;
+    let lineStart = 0;
+    for (let index2 = 0; index2 < position2; index2++) {
+      const ch = source.charCodeAt(index2);
+      if (ch === 10) {
+        line++;
+        lineStart = index2 + 1;
+      } else if (ch === 13) {
+        line++;
+        if (source.charCodeAt(index2 + 1) === 10) index2++;
+        lineStart = index2 + 1;
+      }
     }
+    const mark = {
+      name: filename,
+      buffer: source,
+      position: position2,
+      line,
+      column: position2 - lineStart
+    };
+    mark.snippet = makeSnippet(mark);
+    throw new YAMLException2(message, mark);
   }
-  const mark = {
-    name: filename,
-    buffer: source,
-    position: position2,
-    line,
-    column: position2 - lineStart
-  };
-  mark.snippet = makeSnippet(mark);
-  throw new YAMLException(message, mark);
-}
+};
+var EVENT_ID = {
+  DOCUMENT: 1,
+  SEQUENCE: 2,
+  MAPPING: 3,
+  SCALAR: 4,
+  ALIAS: 5,
+  POP: 6
+};
+var SCALAR_STYLE = {
+  PLAIN: 1,
+  SINGLE_QUOTED: 2,
+  DOUBLE_QUOTED: 3,
+  LITERAL_BLOCK: 4,
+  FOLDED_BLOCK: 5
+};
+var COLLECTION_STYLE = {
+  BLOCK: 1,
+  FLOW: 2
+};
+var CHOMPING_MODE = {
+  CLIP: 1,
+  STRIP: 2,
+  KEEP: 3
+};
 var NO_RANGE$3 = -1;
 function simpleEscapeSequence(c) {
   switch (c) {
@@ -31104,8 +31237,8 @@ function getBlockValue(input, start, end, indent, chomping, folded) {
     didReadContent = true;
     emptyLines = 0;
   }
-  if (chomping === 3) result += "\n".repeat(didReadContent ? 1 + emptyLines : emptyLines);
-  else if (chomping !== 2) {
+  if (chomping === CHOMPING_MODE.KEEP) result += "\n".repeat(didReadContent ? 1 + emptyLines : emptyLines);
+  else if (chomping !== CHOMPING_MODE.STRIP) {
     if (didReadContent) result += "\n";
   }
   return result;
@@ -31115,22 +31248,22 @@ function getScalarValue(input, scalar) {
   const { valueStart, valueEnd } = scalar;
   if (scalar.fast) return input.slice(valueStart, valueEnd);
   switch (scalar.style) {
-    case 2:
+    case SCALAR_STYLE.SINGLE_QUOTED:
       return getSingleQuotedValue(input, valueStart, valueEnd);
-    case 3:
+    case SCALAR_STYLE.DOUBLE_QUOTED:
       return getDoubleQuotedValue(input, valueStart, valueEnd);
-    case 4:
+    case SCALAR_STYLE.LITERAL_BLOCK:
       return getBlockValue(input, valueStart, valueEnd, scalar.indent, scalar.chomping, false);
-    case 5:
+    case SCALAR_STYLE.FOLDED_BLOCK:
       return getBlockValue(input, valueStart, valueEnd, scalar.indent, scalar.chomping, true);
     default:
       return getPlainValue(input, valueStart, valueEnd);
   }
 }
-var DEFAULT_TAG_HANDLERS = {
+var DEFAULT_TAG_HANDLERS = Object.assign(/* @__PURE__ */ Object.create(null), {
   "!": "!",
   "!!": "tag:yaml.org,2002:"
-};
+});
 function tagNameFull(rawTag, tagHandlers) {
   if (rawTag.startsWith("!<") && rawTag.endsWith(">")) return decodeURIComponent(rawTag.slice(2, -1));
   const handleEnd = rawTag.indexOf("!", 1);
@@ -31139,6 +31272,7 @@ function tagNameFull(rawTag, tagHandlers) {
   return decodeURIComponent(prefix) + decodeURIComponent(rawTag.slice(handle.length));
 }
 var NO_RANGE$2 = -1;
+var MERGE_TAG_NAME = "tag:yaml.org,2002:merge";
 var DEFAULT_CONSTRUCTOR_OPTIONS = {
   filename: "",
   schema: CORE_SCHEMA,
@@ -31154,25 +31288,15 @@ function eventPosition$1(event) {
   return 0;
 }
 function throwError$1(state, message) {
-  throwErrorAt(state.source, state.position, message, state.filename);
+  YAMLException.throwAt(state.source, state.position, message, state.filename);
 }
 function finalizeCollection(state, position2, tag, carrier) {
   try {
     return tag.finalize(carrier);
   } catch (error51) {
     if (error51 instanceof YAMLException) throw error51;
-    throwErrorAt(state.source, position2, error51 instanceof Error ? error51.message : String(error51), state.filename);
+    YAMLException.throwAt(state.source, position2, error51 instanceof Error ? error51.message : String(error51), state.filename);
   }
-}
-function lookupTag(exact, prefix, tagName) {
-  const exactTag = exact[tagName];
-  if (exactTag) return exactTag;
-  for (const tag of prefix) if (tagName.startsWith(tag.tagName)) return tag;
-}
-function findExplicitTag(state, exact, prefix, tagName, nodeKind) {
-  const tag = lookupTag(exact, prefix, tagName);
-  if (tag) return tag;
-  throwError$1(state, `unknown ${nodeKind} tag !<${tagName}>`);
 }
 function constructScalar(state, event) {
   const source = getScalarValue(state.source, event);
@@ -31184,7 +31308,7 @@ function constructScalar(state, event) {
       tag: strTag2
     };
     const tagName = tagNameFull(rawTag, state.tagHandlers);
-    const scalarTag = lookupTag(state.schema.exact.scalar, state.schema.prefix.scalar, tagName);
+    const scalarTag = state.schema.lookupScalarTag(tagName);
     if (scalarTag) {
       const result = scalarTag.resolve(source, true, tagName);
       if (result === NOT_RESOLVED) throwError$1(state, `cannot resolve a node with !<${tagName}> explicit tag`);
@@ -31193,7 +31317,7 @@ function constructScalar(state, event) {
         tag: scalarTag
       };
     }
-    const collectionTagDef = lookupTag(state.schema.exact.mapping, state.schema.prefix.mapping, tagName) ?? lookupTag(state.schema.exact.sequence, state.schema.prefix.sequence, tagName);
+    const collectionTagDef = state.schema.lookupMappingTag(tagName) ?? state.schema.lookupSequenceTag(tagName);
     if (collectionTagDef) {
       if (source !== "") throwError$1(state, `cannot resolve a node with !<${tagName}> explicit tag`);
       const carrier = collectionTagDef.create(tagName);
@@ -31204,50 +31328,49 @@ function constructScalar(state, event) {
     }
     throwError$1(state, `unknown scalar tag !<${tagName}>`);
   }
-  if (event.style === 1) {
-    const candidates = state.schema.implicitScalarByFirstChar.get(source.charAt(0)) ?? state.schema.implicitScalarAnyFirstChar;
-    for (const tag of candidates) {
-      const result = tag.resolve(source, false, tag.tagName);
-      if (result !== NOT_RESOLVED) return {
-        value: result,
-        tag
-      };
-    }
-  }
+  if (event.style === SCALAR_STYLE.PLAIN) return state.schema.resolveImplicitScalarTag(source);
   return {
     value: strTag2.resolve(source, false, strTag2.tagName),
     tag: strTag2
   };
 }
-function collectionTag(state, event, exact, prefix, defaultTagName, nodeKind) {
+function collectionTagName(state, event, defaultTagName) {
   const rawTag = event.tagStart === NO_RANGE$2 ? "" : state.source.slice(event.tagStart, event.tagEnd);
-  const tagName = rawTag === "" || rawTag === "!" ? defaultTagName : tagNameFull(rawTag, state.tagHandlers);
-  return {
-    tagName,
-    tag: findExplicitTag(state, exact, prefix, tagName, nodeKind)
-  };
+  return rawTag === "" || rawTag === "!" ? defaultTagName : tagNameFull(rawTag, state.tagHandlers);
 }
 function isMappingTag(tag) {
   return tag.nodeKind === "mapping";
 }
+function chargeMergeWork(state) {
+  state.totalMergeKeys++;
+  if (state.maxTotalMergeKeys !== -1 && state.totalMergeKeys > state.maxTotalMergeKeys) throwError$1(state, `merge keys exceeded maxTotalMergeKeys (${state.maxTotalMergeKeys})`);
+}
 function mergeKeys(state, frame, source, sourceTag) {
+  chargeMergeWork(state);
   for (const sourceKey of sourceTag.keys(source)) {
-    if (state.maxTotalMergeKeys !== -1 && ++state.totalMergeKeys > state.maxTotalMergeKeys) throwError$1(state, `merge keys exceeded maxTotalMergeKeys (${state.maxTotalMergeKeys})`);
+    chargeMergeWork(state);
     if (frame.tag.has(frame.value, sourceKey)) continue;
     const err = frame.tag.addPair(frame.value, sourceKey, sourceTag.get(source, sourceKey));
     if (err) throwError$1(state, err);
-    (frame.overridable ??= /* @__PURE__ */ new Set()).add(sourceKey);
+    frame.overridable ??= /* @__PURE__ */ new Set();
+    frame.overridable.add(sourceKey);
   }
 }
 function mergeSource(state, frame, source, sourceTag) {
   state.position = frame.keyPosition;
   if (isMappingTag(sourceTag)) mergeKeys(state, frame, source, sourceTag);
-  else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) for (const element of source) mergeKeys(state, frame, element, frame.tag);
-  else throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
+  else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) {
+    if (source.length > 100) throwError$1(state, "abnormal merge sequence size");
+    for (const element of source) {
+      const elementTag = state.nodeTags.get(element);
+      if (!elementTag) throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
+      mergeKeys(state, frame, element, elementTag);
+    }
+  } else throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
 }
 function addMappingValue(state, frame, key, value, tag) {
   state.position = frame.keyPosition;
-  if (key === MERGE_KEY) {
+  if (frame.keyIsMerge) {
     mergeSource(state, frame, value, tag);
     return;
   }
@@ -31262,9 +31385,7 @@ function addValue(state, value, tag) {
     frame.value = value;
     frame.hasValue = true;
   } else if (frame.kind === "sequence") {
-    if (frame.merge) {
-      if (!isMappingTag(tag)) throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
-    }
+    if (isMappingTag(tag)) state.nodeTags.set(value, tag);
     const err = frame.tag.addItem(frame.value, value, frame.index++);
     if (err) throwError$1(state, err);
   } else if (frame.hasKey) {
@@ -31276,6 +31397,7 @@ function addValue(state, value, tag) {
     frame.key = value;
     frame.keyPosition = state.position;
     frame.hasKey = true;
+    frame.keyIsMerge = tag.tagName === MERGE_TAG_NAME;
   }
 }
 function storeAnchor(state, event, value, tag, isValueFinal) {
@@ -31300,6 +31422,7 @@ function constructFromEvents(events, options2) {
     position: 0,
     frames: [],
     anchors: /* @__PURE__ */ new Map(),
+    nodeTags: /* @__PURE__ */ new Map(),
     tagHandlers: /* @__PURE__ */ Object.create(null),
     totalMergeKeys: 0,
     aliasCount: 0
@@ -31308,8 +31431,9 @@ function constructFromEvents(events, options2) {
     const event = state.events[state.eventIndex++];
     state.position = eventPosition$1(event);
     switch (event.type) {
-      case 1:
+      case EVENT_ID.DOCUMENT:
         state.anchors = /* @__PURE__ */ new Map();
+        state.nodeTags = /* @__PURE__ */ new Map();
         state.aliasCount = 0;
         state.tagHandlers = /* @__PURE__ */ Object.create(null);
         for (const directive of event.directives) if (directive.kind === "tag") state.tagHandlers[directive.handle] = directive.prefix;
@@ -31320,47 +31444,49 @@ function constructFromEvents(events, options2) {
           hasValue: false
         });
         break;
-      case 4: {
+      case EVENT_ID.SCALAR: {
         const { value, tag } = constructScalar(state, event);
         storeAnchor(state, event, value, tag, true);
         addValue(state, value, tag);
         break;
       }
-      case 2: {
-        const definition2 = collectionTag(state, event, state.schema.exact.sequence, state.schema.prefix.sequence, "tag:yaml.org,2002:seq", "sequence");
-        const value = definition2.tag.create(definition2.tagName);
-        const anchor = storeAnchor(state, event, value, definition2.tag, definition2.tag.carrierIsResult);
-        const parent = state.frames[state.frames.length - 1];
-        const merge2 = parent !== void 0 && parent.kind === "mapping" && parent.hasKey && parent.key === MERGE_KEY;
+      case EVENT_ID.SEQUENCE: {
+        const tagName = collectionTagName(state, event, "tag:yaml.org,2002:seq");
+        const tag = state.schema.lookupSequenceTag(tagName);
+        if (!tag) throwError$1(state, `unknown sequence tag !<${tagName}>`);
+        const value = tag.create(tagName);
+        const anchor = storeAnchor(state, event, value, tag, tag.carrierIsResult);
         state.frames.push({
           kind: "sequence",
           position: state.position,
           value,
-          tag: definition2.tag,
+          tag,
           anchor,
-          index: 0,
-          merge: merge2
+          index: 0
         });
         break;
       }
-      case 3: {
-        const definition2 = collectionTag(state, event, state.schema.exact.mapping, state.schema.prefix.mapping, "tag:yaml.org,2002:map", "mapping");
-        const value = definition2.tag.create(definition2.tagName);
-        const anchor = storeAnchor(state, event, value, definition2.tag, definition2.tag.carrierIsResult);
+      case EVENT_ID.MAPPING: {
+        const tagName = collectionTagName(state, event, "tag:yaml.org,2002:map");
+        const tag = state.schema.lookupMappingTag(tagName);
+        if (!tag) throwError$1(state, `unknown mapping tag !<${tagName}>`);
+        const value = tag.create(tagName);
+        const anchor = storeAnchor(state, event, value, tag, tag.carrierIsResult);
         state.frames.push({
           kind: "mapping",
           position: state.position,
           value,
-          tag: definition2.tag,
+          tag,
           anchor,
           key: void 0,
           keyPosition: state.position,
           hasKey: false,
+          keyIsMerge: false,
           overridable: null
         });
         break;
       }
-      case 5: {
+      case EVENT_ID.ALIAS: {
         if (state.maxAliases !== -1 && ++state.aliasCount > state.maxAliases) throwError$1(state, `aliases exceeded maxAliases (${state.maxAliases})`);
         const name = state.source.slice(event.anchorStart, event.anchorEnd);
         const anchor = state.anchors.get(name);
@@ -31369,8 +31495,12 @@ function constructFromEvents(events, options2) {
         addValue(state, anchor.value, anchor.tag);
         break;
       }
-      case 6: {
+      case EVENT_ID.POP: {
         const frame = state.frames.pop();
+        if (frame.kind === "mapping" && frame.hasKey) {
+          state.position = frame.keyPosition;
+          throwError$1(state, "incomplete mapping pair in event stream");
+        }
         if (frame.kind === "document") state.documents.push(frame.value);
         else {
           const value = frame.tag.carrierIsResult ? frame.value : finalizeCollection(state, frame.position, frame.tag, frame.value);
@@ -31406,7 +31536,7 @@ var DEFAULT_PARSER_OPTIONS = {
 };
 function addDocumentEvent(state, explicitStart, explicitEnd) {
   state.events.push({
-    type: 1,
+    type: EVENT_ID.DOCUMENT,
     explicitStart,
     explicitEnd,
     directives: state.directives
@@ -31414,7 +31544,7 @@ function addDocumentEvent(state, explicitStart, explicitEnd) {
 }
 function addSequenceEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd, style) {
   state.events.push({
-    type: 2,
+    type: EVENT_ID.SEQUENCE,
     start,
     anchorStart,
     anchorEnd,
@@ -31425,7 +31555,7 @@ function addSequenceEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd
 }
 function addMappingEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd, style) {
   state.events.push({
-    type: 3,
+    type: EVENT_ID.MAPPING,
     start,
     anchorStart,
     anchorEnd,
@@ -31436,18 +31566,18 @@ function addMappingEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd,
 }
 function insertFlowPairMappingEvent(state, snapshot) {
   state.events.splice(snapshot.eventsLength, 0, {
-    type: 3,
+    type: EVENT_ID.MAPPING,
     start: snapshot.position,
     anchorStart: NO_RANGE$1,
     anchorEnd: NO_RANGE$1,
     tagStart: NO_RANGE$1,
     tagEnd: NO_RANGE$1,
-    style: 2
+    style: COLLECTION_STYLE.FLOW
   });
 }
-function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tagStart, tagEnd, style, chomping = 1, indent = -1, fast = false) {
+function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tagStart, tagEnd, style, chomping = CHOMPING_MODE.CLIP, indent = -1, fast = false) {
   state.events.push({
-    type: 4,
+    type: EVENT_ID.SCALAR,
     valueStart,
     valueEnd,
     anchorStart,
@@ -31462,16 +31592,16 @@ function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tag
 }
 function addAliasEvent(state, anchorStart, anchorEnd) {
   state.events.push({
-    type: 5,
+    type: EVENT_ID.ALIAS,
     anchorStart,
     anchorEnd
   });
 }
 function addPopEvent(state) {
-  state.events.push({ type: 6 });
+  state.events.push({ type: EVENT_ID.POP });
 }
 function addEmptyScalarEvent(state) {
-  addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, 1);
+  addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, SCALAR_STYLE.PLAIN);
 }
 function emptyProperties() {
   return {
@@ -31500,7 +31630,7 @@ function restoreState(state, snapshot) {
   state.events.length = snapshot.eventsLength;
 }
 function throwError(state, message) {
-  throwErrorAt(state.input.slice(0, state.length), state.position, message, state.filename);
+  YAMLException.throwAt(state.input.slice(0, state.length), state.position, message, state.filename);
 }
 function isEol(c) {
   return c === 10 || c === 13;
@@ -31578,6 +31708,24 @@ function testDocumentSeparator(state, position2 = state.position) {
     return following === 0 || isWsOrEol(following);
   }
   return false;
+}
+function skipByteOrderMark(state) {
+  if (state.position === state.lineStart && state.input.charCodeAt(state.position) === 65279) {
+    state.position++;
+    state.lineStart = state.position;
+  }
+}
+function testDocumentBoundary(state) {
+  if (state.position !== state.lineStart) return false;
+  if (testDocumentSeparator(state)) return true;
+  if (state.input.charCodeAt(state.position) !== 65279) return false;
+  const snapshot = snapshotState(state);
+  skipByteOrderMark(state);
+  skipSeparationSpace(state, true);
+  const ch = state.input.charCodeAt(state.position);
+  const result = state.position === state.lineStart && (ch === 37 || ch === 45 && testDocumentSeparator(state));
+  restoreState(state, snapshot);
+  return result;
 }
 function skipUntilLineEnd(state) {
   let ch = state.input.charCodeAt(state.position);
@@ -31668,7 +31816,7 @@ function readSingleQuotedScalar(state, nodeIndent, props) {
       }
       const end = state.position;
       state.position++;
-      addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 2, 1, -1, simple);
+      addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.SINGLE_QUOTED, CHOMPING_MODE.CLIP, -1, simple);
       return true;
     }
     if (isEol(ch)) {
@@ -31690,7 +31838,7 @@ function readDoubleQuotedScalar(state, nodeIndent, props) {
     if (ch === 34) {
       const end = state.position;
       state.position++;
-      addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 3, 1, -1, simple);
+      addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.DOUBLE_QUOTED, CHOMPING_MODE.CLIP, -1, simple);
       return true;
     }
     if (ch === 92) {
@@ -31718,18 +31866,18 @@ function readDoubleQuotedScalar(state, nodeIndent, props) {
 }
 function readBlockScalar(state, parentIndent, props) {
   const ch = state.input.charCodeAt(state.position);
-  let chomping = 1;
+  let chomping = CHOMPING_MODE.CLIP;
   let indent = -1;
   let detectedIndent = false;
   if (ch !== 124 && ch !== 62) return false;
-  const style = ch === 124 ? 4 : 5;
+  const style = ch === 124 ? SCALAR_STYLE.LITERAL_BLOCK : SCALAR_STYLE.FOLDED_BLOCK;
   state.position++;
   while (state.input.charCodeAt(state.position) !== 0) {
     const current = state.input.charCodeAt(state.position);
     const digit = fromDecimalCode(current);
     if (current === 43 || current === 45) {
-      if (chomping !== 1) throwError(state, "repeat of a chomping mode identifier");
-      chomping = current === 43 ? 3 : 2;
+      if (chomping !== CHOMPING_MODE.CLIP) throwError(state, "repeat of a chomping mode identifier");
+      chomping = current === 43 ? CHOMPING_MODE.KEEP : CHOMPING_MODE.STRIP;
       state.position++;
     } else if (digit >= 0) {
       if (digit === 0) throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
@@ -31762,7 +31910,7 @@ function readBlockScalar(state, parentIndent, props) {
       } else if (column > 0) valueEnd = linePosition + column;
       break;
     }
-    if (linePosition === state.lineStart && testDocumentSeparator(state, linePosition)) break;
+    if (testDocumentBoundary(state)) break;
     if (!detectedIndent && contentIndent === -1 && isEol(first)) maxLeadingIndent = Math.max(maxLeadingIndent, column);
     if (!detectedIndent && contentIndent === -1 && !isEol(first)) {
       if (first === 9 && column < parentIndent) {
@@ -31815,7 +31963,7 @@ function readPlainScalar(state, nodeIndent, nodeContext, props) {
   const inFlow = nodeContext === CONTEXT_FLOW_IN;
   let multiline = false;
   while (ch !== 0) {
-    if (state.position === state.lineStart && testDocumentSeparator(state)) break;
+    if (testDocumentBoundary(state)) break;
     if (ch === 58) {
       const following = state.input.charCodeAt(state.position + 1);
       if (isWsOrEolOrEnd(following) || inFlow && isFlowIndicator(following)) break;
@@ -31844,7 +31992,7 @@ function readPlainScalar(state, nodeIndent, nodeContext, props) {
   }
   if (end === start) return false;
   checkPrintable(state, start, end);
-  addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1, 1, -1, !multiline);
+  addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.PLAIN, CHOMPING_MODE.CLIP, -1, !multiline);
   return true;
 }
 function skipFlowSeparationSpace(state, nodeIndent) {
@@ -31859,8 +32007,8 @@ function readFlowCollection(state, nodeIndent, props) {
   let readNext = true;
   if (ch !== 91 && ch !== 123) return false;
   const terminator = isMapping ? 125 : 93;
-  if (isMapping) addMappingEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 2);
-  else addSequenceEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 2);
+  if (isMapping) addMappingEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.FLOW);
+  else addSequenceEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.FLOW);
   state.position++;
   while (state.input.charCodeAt(state.position) !== 0) {
     skipFlowSeparationSpace(state, nodeIndent);
@@ -31914,7 +32062,7 @@ function readFlowCollection(state, nodeIndent, props) {
 }
 function readBlockSequence(state, nodeIndent, props) {
   if (state.firstTabInLine !== -1 || state.input.charCodeAt(state.position) !== 45 || !isWsOrEolOrEnd(state.input.charCodeAt(state.position + 1))) return false;
-  addSequenceEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1);
+  addSequenceEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.BLOCK);
   while (state.input.charCodeAt(state.position) === 45 && isWsOrEolOrEnd(state.input.charCodeAt(state.position + 1))) {
     if (state.firstTabInLine !== -1) {
       state.position = state.firstTabInLine;
@@ -31950,7 +32098,7 @@ function readBlockMapping(state, nodeIndent, flowIndent, props) {
     const entryLine = state.line;
     if ((ch === 63 || ch === 58) && isWsOrEolOrEnd(following)) {
       if (!mappingOpened) {
-        addMappingEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1);
+        addMappingEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.BLOCK);
         mappingOpened = true;
       }
       if (ch === 63) {
@@ -31980,7 +32128,7 @@ function readBlockMapping(state, nodeIndent, flowIndent, props) {
           if (!isWsOrEolOrEnd(ch)) throwError(state, "a whitespace character is expected after the key-value separator within a block mapping");
           if (!mappingOpened) {
             restoreState(state, beforeKey);
-            addMappingEvent(state, beforeKey.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1);
+            addMappingEvent(state, beforeKey.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.BLOCK);
             mappingOpened = true;
             parseNode(state, flowIndent, CONTEXT_FLOW_OUT, false, true);
             ch = state.input.charCodeAt(state.position);
@@ -32041,10 +32189,6 @@ function parseNode(state, parentIndent, nodeContext, allowToSeek, allowCompact, 
     else if (state.lineIndent === parentIndent) indentStatus = 0;
     else indentStatus = -1;
   }
-  if (state.position === state.lineStart && testDocumentSeparator(state)) {
-    state.depth--;
-    return false;
-  }
   if (indentStatus === 1) while (true) {
     const ch = state.input.charCodeAt(state.position);
     const propertyState = snapshotState(state);
@@ -32052,7 +32196,7 @@ function parseNode(state, parentIndent, nodeContext, allowToSeek, allowCompact, 
     if (atNewLine && allowBlockStyles && (props.tagStart !== NO_RANGE$1 || props.anchorStart !== NO_RANGE$1) && (ch === 33 || ch === 38)) {
       const fallbackState = snapshotState(state);
       const flowIndent = parentIndent + 1;
-      if (readBlockMapping(state, state.position - state.lineStart, flowIndent, props) && state.events[fallbackState.eventsLength]?.type === 3) {
+      if (readBlockMapping(state, state.position - state.lineStart, flowIndent, props) && state.events[fallbackState.eventsLength]?.type === EVENT_ID.MAPPING) {
         state.depth--;
         return true;
       }
@@ -32080,7 +32224,7 @@ function parseNode(state, parentIndent, nodeContext, allowToSeek, allowCompact, 
         const fallbackState = snapshotState(state);
         const propertyIndent = propertyStart.position - propertyStart.lineStart;
         restoreState(state, propertyStart);
-        if (readBlockMapping(state, propertyIndent, flowIndent, emptyProperties()) && state.events[fallbackState.eventsLength]?.type === 3) hasContent = true;
+        if (readBlockMapping(state, propertyIndent, flowIndent, emptyProperties()) && state.events[fallbackState.eventsLength]?.type === EVENT_ID.MAPPING) hasContent = true;
         else restoreState(state, fallbackState);
       }
       if (!hasContent && (allowBlockScalars && readBlockScalar(state, flowIndent, props) || readSingleQuotedScalar(state, flowIndent, props) || readDoubleQuotedScalar(state, flowIndent, props) || readAlias(state, props) || readPlainScalar(state, flowIndent, nodeContext, props))) hasContent = true;
@@ -32089,7 +32233,7 @@ function parseNode(state, parentIndent, nodeContext, allowToSeek, allowCompact, 
   }
   allowBlockScalars = allowBlockScalars && !hasContent;
   if (!hasContent && (props.anchorStart !== NO_RANGE$1 || props.tagStart !== NO_RANGE$1 || allowBlockScalars)) {
-    addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1);
+    addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.PLAIN);
     hasContent = true;
   }
   state.depth--;
@@ -32174,9 +32318,9 @@ function readDocument(state) {
     }
   }
   const documentEvent = state.events[documentEventIndex];
-  if (documentEvent?.type === 1) documentEvent.explicitEnd = explicitEnd;
+  if (documentEvent?.type === EVENT_ID.DOCUMENT) documentEvent.explicitEnd = explicitEnd;
   addPopEvent(state);
-  if (!explicitEnd && state.position < state.length && !(state.position === state.lineStart && testDocumentSeparator(state))) throwError(state, "end of the stream or a document separator is expected");
+  if (!explicitEnd && state.position < state.length && !testDocumentBoundary(state)) throwError(state, "end of the stream or a document separator is expected");
 }
 function parseEvents(input, options2) {
   const length = input.length;
@@ -32196,9 +32340,9 @@ function parseEvents(input, options2) {
     events: []
   };
   const nullpos = input.indexOf("\0");
-  if (nullpos !== -1) throwErrorAt(input, nullpos, "null byte is not allowed in input", state.filename);
-  if (state.input.charCodeAt(state.position) === 65279) state.position++;
+  if (nullpos !== -1) YAMLException.throwAt(input, nullpos, "null byte is not allowed in input", state.filename);
   while (state.position < state.length) {
+    skipByteOrderMark(state);
     skipSeparationSpace(state, true);
     if (state.position >= state.length) break;
     const documentStart = state.position;
@@ -32231,27 +32375,108 @@ function load(input, options2) {
   if (documents.length === 1) return documents[0];
   throw new YAMLException("expected a single document in the stream, but found more");
 }
-var ESCAPE_SEQUENCES = {};
-ESCAPE_SEQUENCES[0] = "\\0";
-ESCAPE_SEQUENCES[7] = "\\a";
-ESCAPE_SEQUENCES[8] = "\\b";
-ESCAPE_SEQUENCES[9] = "\\t";
-ESCAPE_SEQUENCES[10] = "\\n";
-ESCAPE_SEQUENCES[11] = "\\v";
-ESCAPE_SEQUENCES[12] = "\\f";
-ESCAPE_SEQUENCES[13] = "\\r";
-ESCAPE_SEQUENCES[27] = "\\e";
-ESCAPE_SEQUENCES[34] = '\\"';
-ESCAPE_SEQUENCES[92] = "\\\\";
-ESCAPE_SEQUENCES[133] = "\\N";
-ESCAPE_SEQUENCES[160] = "\\_";
-ESCAPE_SEQUENCES[8232] = "\\L";
-ESCAPE_SEQUENCES[8233] = "\\P";
+function hasBit(mask, bit) {
+  return (mask & 1 << bit) !== 0;
+}
+var DEFAULT_SCALAR_STYLE_RULES = {
+  applyQuoteFlowKeysOption,
+  doubleQuoteForInvisibles,
+  doubleQuoteWhitespaceOnly,
+  applyForceQuotesOption,
+  tryLongOrMultilineAsBlock,
+  quoteInvalidPlain,
+  fallbackToDoubleQuoted
+};
+function _preferredQuotedStyle(layout) {
+  if (layout.presenterOptions.quoteStyle === "single" && hasBit(layout.allowedStylesMask, SCALAR_STYLE.SINGLE_QUOTED)) return SCALAR_STYLE.SINGLE_QUOTED;
+  return SCALAR_STYLE.DOUBLE_QUOTED;
+}
+function applyQuoteFlowKeysOption(layout) {
+  if (!layout.presenterOptions.quoteFlowKeys) return;
+  if (!layout.isKey || !layout.flowOnly || layout.style !== SCALAR_STYLE.PLAIN) return;
+  layout.style = SCALAR_STYLE.DOUBLE_QUOTED;
+}
+function doubleQuoteForInvisibles(layout) {
+  if (layout.style === SCALAR_STYLE.PLAIN && /[\t\x7F-\xA0\u2028\u2029\uFEFF\uFFFE\uFFFF]/.test(layout.node.value)) layout.style = SCALAR_STYLE.DOUBLE_QUOTED;
+}
+function doubleQuoteWhitespaceOnly(layout) {
+  if (layout.style === SCALAR_STYLE.PLAIN && /^\s+$/.test(layout.node.value)) layout.style = SCALAR_STYLE.DOUBLE_QUOTED;
+}
+function applyForceQuotesOption(layout) {
+  if (!layout.presenterOptions.forceQuotes) return;
+  if (layout.isKey || layout.style !== SCALAR_STYLE.PLAIN) return;
+  layout.style = layout.node.value.includes("\n") ? SCALAR_STYLE.DOUBLE_QUOTED : _preferredQuotedStyle(layout);
+}
+function tryLongOrMultilineAsBlock(layout) {
+  if (layout.style !== SCALAR_STYLE.PLAIN || layout.isKey) return;
+  const value = layout.node.value;
+  const multiline = value.indexOf("\n") !== -1;
+  if (!hasBit(layout.allowedStylesMask, SCALAR_STYLE.LITERAL_BLOCK)) {
+    if (multiline) layout.style = SCALAR_STYLE.DOUBLE_QUOTED;
+    return;
+  }
+  const w = layout.presenterOptions.lineWidth;
+  if (w === -1) {
+    if (multiline) layout.style = SCALAR_STYLE.LITERAL_BLOCK;
+    return;
+  }
+  const availableWidth = Math.max(Math.min(w, 40), w - layout.shiftOfContent);
+  let position2 = 0;
+  let shouldFold = false;
+  while (position2 <= value.length) {
+    let lineEnd = value.length;
+    const nextLineBreak = value.indexOf("\n", position2);
+    if (nextLineBreak !== -1) lineEnd = nextLineBreak;
+    const line = value.slice(position2, lineEnd);
+    if (line.length > availableWidth && line[0] !== " " && / [^ \t]/.test(line)) shouldFold = true;
+    if (nextLineBreak === -1) break;
+    position2 = nextLineBreak + 1;
+  }
+  if (shouldFold) layout.style = SCALAR_STYLE.FOLDED_BLOCK;
+  else if (multiline) layout.style = SCALAR_STYLE.LITERAL_BLOCK;
+}
+function quoteInvalidPlain(layout) {
+  if (layout.style === SCALAR_STYLE.PLAIN && !hasBit(layout.allowedStylesMask, SCALAR_STYLE.PLAIN)) layout.style = _preferredQuotedStyle(layout);
+}
+function fallbackToDoubleQuoted(layout) {
+  if (!hasBit(layout.allowedStylesMask, layout.style)) layout.style = SCALAR_STYLE.DOUBLE_QUOTED;
+}
+var SRC_C_PRINTABLE = "[\\x09\\x0A\\x0D\\x20-\\x7E\\x85\\xA0-\\uD7FF\\uE000-\\uFFFD\\u{10000}-\\u{10FFFF}]";
+var SRC_B_CHAR = "[\\n\\r]";
+var SRC_C_BYTE_ORDER_MARK = "\\uFEFF";
+var SRC_S_WHITE = "[ \\t]";
+var SRC_NB_CHAR = `(?:(?!(?:${SRC_B_CHAR}|${SRC_C_BYTE_ORDER_MARK}))${SRC_C_PRINTABLE})`;
+var SRC_NS_CHAR = `(?:(?!${SRC_S_WHITE})${SRC_NB_CHAR})`;
+var SRC_NB_JSON = "[\\x09\\x20-\\uD7FF\\uE000-\\uFFFF\\u{10000}-\\u{10FFFF}]";
+var SRC_C_INDICATOR = "[-?:,\\[\\]{}#&*!|>'\"%@`]";
+var SRC_C_FLOW_INDICATOR = "[,\\[\\]{}]";
+var SRC_NS_PLAIN_SAFE_FLOW_OUT = SRC_NS_CHAR;
+var SRC_NS_PLAIN_SAFE_FLOW_IN = `(?:(?!${SRC_C_FLOW_INDICATOR})${SRC_NS_CHAR})`;
+var SRC_NS_PLAIN_FIRST_FLOW_OUT = `(?:(?:(?!${SRC_C_INDICATOR})${SRC_NS_CHAR})|[?:-](?=${SRC_NS_PLAIN_SAFE_FLOW_OUT}))`;
+var SRC_NS_PLAIN_FIRST_FLOW_IN = `(?:(?:(?!${SRC_C_INDICATOR})${SRC_NS_CHAR})|[?:-](?=${SRC_NS_PLAIN_SAFE_FLOW_IN}))`;
+var SRC_NS_PLAIN_CHAR_FLOW_OUT = `(?:(?:(?![:#])${SRC_NS_PLAIN_SAFE_FLOW_OUT})|:(?=${SRC_NS_PLAIN_SAFE_FLOW_OUT}))#*`;
+var SRC_NS_PLAIN_CHAR_FLOW_IN = `(?:(?:(?![:#])${SRC_NS_PLAIN_SAFE_FLOW_IN})|:(?=${SRC_NS_PLAIN_SAFE_FLOW_IN}))#*`;
+var SRC_NB_NS_PLAIN_IN_LINE_FLOW_OUT = `(?:${SRC_S_WHITE}*${SRC_NS_PLAIN_CHAR_FLOW_OUT})*`;
+var SRC_NB_NS_PLAIN_IN_LINE_FLOW_IN = `(?:${SRC_S_WHITE}*${SRC_NS_PLAIN_CHAR_FLOW_IN})*`;
+var SRC_NS_PLAIN_ONE_LINE_FLOW_OUT = `${SRC_NS_PLAIN_FIRST_FLOW_OUT}#*${SRC_NB_NS_PLAIN_IN_LINE_FLOW_OUT}`;
+var SRC_NS_PLAIN_ONE_LINE_FLOW_IN = `${SRC_NS_PLAIN_FIRST_FLOW_IN}#*${SRC_NB_NS_PLAIN_IN_LINE_FLOW_IN}`;
+var SRC_NS_PLAIN_ONE_LINE_BLOCK_KEY = SRC_NS_PLAIN_ONE_LINE_FLOW_OUT;
+var SRC_NS_PLAIN_ONE_LINE_FLOW_KEY = SRC_NS_PLAIN_ONE_LINE_FLOW_IN;
+var SRC_S_NS_PLAIN_NEXT_LINE_FLOW_OUT = `\\n+${SRC_NS_PLAIN_CHAR_FLOW_OUT}${SRC_NB_NS_PLAIN_IN_LINE_FLOW_OUT}`;
+var SRC_S_NS_PLAIN_NEXT_LINE_FLOW_IN = `\\n+${SRC_NS_PLAIN_CHAR_FLOW_IN}${SRC_NB_NS_PLAIN_IN_LINE_FLOW_IN}`;
+var SRC_NS_PLAIN_MULTI_LINE_FLOW_OUT = `${SRC_NS_PLAIN_ONE_LINE_FLOW_OUT}(?:${SRC_S_NS_PLAIN_NEXT_LINE_FLOW_OUT})*`;
+var SRC_NS_PLAIN_MULTI_LINE_FLOW_IN = `${SRC_NS_PLAIN_ONE_LINE_FLOW_IN}(?:${SRC_S_NS_PLAIN_NEXT_LINE_FLOW_IN})*`;
+var NS_PLAIN_FLOW_OUT = new RegExp(`^(?:${SRC_NS_PLAIN_MULTI_LINE_FLOW_OUT})$`, "u");
+var NS_PLAIN_FLOW_IN = new RegExp(`^(?:${SRC_NS_PLAIN_MULTI_LINE_FLOW_IN})$`, "u");
+var NS_PLAIN_BLOCK_KEY = new RegExp(`^(?:${SRC_NS_PLAIN_ONE_LINE_BLOCK_KEY})$`, "u");
+var NS_PLAIN_FLOW_KEY = new RegExp(`^(?:${SRC_NS_PLAIN_ONE_LINE_FLOW_KEY})$`, "u");
+var NB_SINGLE_ONE_LINE = new RegExp(`^(?:${SRC_NB_JSON})*$`, "u");
+var NB_SINGLE_MULTI_LINE = new RegExp(`^(?:${SRC_NB_JSON}|\\n)*$`, "u");
+var BLOCK_SCALAR_CONTENT = new RegExp(`^(?:${SRC_NB_CHAR}|\\n)*$`, "u");
 var DEFAULT_PRESENTER_OPTIONS = {
   indent: 2,
   seqNoIndent: false,
   seqInlineFirst: true,
-  sortKeys: false,
   lineWidth: 80,
   flowBracketPadding: false,
   flowSkipCommaSpace: false,
@@ -32259,30 +32484,35 @@ var DEFAULT_PRESENTER_OPTIONS = {
   quoteFlowKeys: false,
   quoteStyle: "single",
   forceQuotes: false,
+  scalarStyleRules: Object.keys(DEFAULT_SCALAR_STYLE_RULES).map((name) => Reflect.get(DEFAULT_SCALAR_STYLE_RULES, name)),
   tagBeforeAnchor: false
 };
-var DEFAULT_DUMP_SCHEMA = YAML11_SCHEMA.withTags({
-  ...intYaml11Tag,
-  resolve: (source, isExplicit, tagName) => {
-    const result = intYaml11Tag.resolve(source, isExplicit, tagName);
-    return result === NOT_RESOLVED ? intCoreTag.resolve(source, isExplicit, tagName) : result;
-  }
-}, {
-  ...floatYaml11Tag,
-  resolve: (source, isExplicit, tagName) => {
-    const result = floatYaml11Tag.resolve(source, isExplicit, tagName);
-    return result === NOT_RESOLVED ? floatCoreTag.resolve(source, isExplicit, tagName) : result;
-  }
-});
 var DEFAULT_DUMP_OPTIONS = {
   ...DEFAULT_PRESENTER_OPTIONS,
-  schema: DEFAULT_DUMP_SCHEMA,
+  schema: DUMP_SCHEMA,
   skipInvalid: false,
   noRefs: false,
   flowLevel: -1,
+  sortKeys: false,
   transform: () => {
   }
 };
+var EVENT_DOCUMENT = EVENT_ID.DOCUMENT;
+var EVENT_SEQUENCE = EVENT_ID.SEQUENCE;
+var EVENT_MAPPING = EVENT_ID.MAPPING;
+var EVENT_SCALAR = EVENT_ID.SCALAR;
+var EVENT_ALIAS = EVENT_ID.ALIAS;
+var EVENT_POP = EVENT_ID.POP;
+var SCALAR_STYLE_PLAIN = SCALAR_STYLE.PLAIN;
+var SCALAR_STYLE_SINGLE_QUOTED = SCALAR_STYLE.SINGLE_QUOTED;
+var SCALAR_STYLE_DOUBLE_QUOTED = SCALAR_STYLE.DOUBLE_QUOTED;
+var SCALAR_STYLE_LITERAL_BLOCK = SCALAR_STYLE.LITERAL_BLOCK;
+var SCALAR_STYLE_FOLDED_BLOCK = SCALAR_STYLE.FOLDED_BLOCK;
+var COLLECTION_STYLE_BLOCK = COLLECTION_STYLE.BLOCK;
+var COLLECTION_STYLE_FLOW = COLLECTION_STYLE.FLOW;
+var CHOMPING_CLIP = CHOMPING_MODE.CLIP;
+var CHOMPING_STRIP = CHOMPING_MODE.STRIP;
+var CHOMPING_KEEP = CHOMPING_MODE.KEEP;
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
 var graphNodeId = external_exports.string().min(1);
@@ -33724,7 +33954,7 @@ function renderExecutionSvg(inspection, selected) {
     const glyph = kindGlyphs[node2.kind] ?? "\xB7";
     return `<g id="${pos.alias}" data-node="${pos.alias}" class="${kindClass(node2.kind)}"><title>${xml(`${node2.nodeId} (${node2.kind})`)}</title><rect class="node-rect${current ? " current" : ""}" x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="10"/><rect class="node-icon" x="${pos.x + 11}" y="${pos.y + 13}" width="19" height="19" rx="5"/><text class="node-glyph" x="${pos.x + 20.5}" y="${pos.y + 27}" text-anchor="middle">${xml(glyph)}</text><text class="node-title" x="${pos.x + 38}" y="${pos.y + 29}">${xml(short(node2.nodeId))}</text><text x="${pos.x + 38}" y="${pos.y + 53}" class="node-kind">kind: ${xml(short(node2.kind))}</text>${current ? `<text x="${pos.x + NODE_W - 12}" y="${pos.y + 18}" class="selected-label" text-anchor="end">\u73FE\u5728</text>` : ""}</g>`;
   }).join("");
-  const style = `text{font-family:var(--pico-font-family-monospace,ui-monospace,monospace);font-size:13px;fill:var(--fg,#172033)}.node-title{font-weight:700}.node-kind{font-size:11px;fill:var(--muted,#64748b)}.selected-label{font-size:10px;font-weight:700;letter-spacing:.06em;fill:var(--sel,#8b1e45)}.edge-label{font-size:10px;fill:var(--sel-edge,#c02c5b)}.kind-action{--kind:var(--progress,#2563eb)}.kind-delegate{--kind:var(--wontdo,#7c3aed)}.kind-audit{--kind:var(--unknown,#b36b00)}.kind-terminal{--kind:var(--done,#16803c)}.node-rect{fill:color-mix(in srgb,var(--kind,var(--node-border,#334155)) 9%,var(--card,#f8fafc));stroke:var(--kind,var(--node-border,#334155));stroke-width:1.5}.node-icon{fill:color-mix(in srgb,var(--kind,#334155) 14%,transparent);stroke:var(--kind,#334155);stroke-width:1.2}.node-glyph{font-size:11px;fill:var(--kind,#334155)}.node-rect.current{stroke-width:3;filter:drop-shadow(0 0 6px var(--kind,var(--current-border,#a15c00)));animation:dash-pulse 1.8s ease-in-out infinite}.edge{fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;opacity:.85}.edge-fwd{stroke:var(--accent,#2563eb)}.edge-back{stroke:var(--unknown,#b36b00)}.edge-self{stroke:var(--muted,#64748b);stroke-dasharray:5 4}.edge.edge-active{stroke:var(--sel-edge,#c02c5b);stroke-width:3.5;opacity:1;stroke-dasharray:none;filter:drop-shadow(0 0 4px var(--sel-edge,#c02c5b))}.edge.edge-dim{opacity:.12}.edge.edge-connected{stroke:var(--sel-edge,#c02c5b);stroke-width:3;opacity:1;stroke-dasharray:none}g[data-node]:hover .node-rect{stroke-width:2.5;filter:drop-shadow(0 0 5px var(--kind,#334155))}@keyframes dash-pulse{0%,100%{opacity:1}50%{opacity:.6}}@media(prefers-reduced-motion:reduce){.node-rect.current{animation:none}}`;
+  const style = `text{font-family:var(--pico-font-family-monospace,ui-monospace,monospace);font-size:12.5px;fill:var(--fg,#172033)}.node-title{font-weight:650;letter-spacing:-.01em}.node-kind{font-size:10.5px;fill:var(--muted,#64748b);letter-spacing:.03em}.selected-label{font-size:10px;font-weight:700;letter-spacing:.08em;fill:var(--sel,#8b1e45)}.edge-label{font-size:10px;fill:var(--sel-edge,#c02c5b)}.kind-action{--kind:var(--progress,#2563eb)}.kind-delegate{--kind:var(--wontdo,#7c3aed)}.kind-audit{--kind:var(--unknown,#b36b00)}.kind-terminal{--kind:var(--done,#16803c)}.node-rect{fill:color-mix(in srgb,var(--kind,var(--node-border,#334155)) 9%,var(--card,#f8fafc));stroke:var(--kind,var(--node-border,#334155));stroke-width:1.5}.node-icon{fill:color-mix(in srgb,var(--kind,#334155) 14%,transparent);stroke:var(--kind,#334155);stroke-width:1.2}.node-glyph{font-size:11px;fill:var(--kind,#334155)}.node-rect.current{stroke-width:3;filter:drop-shadow(0 0 7px var(--kind,var(--current-border,#a15c00)));animation:dash-pulse 1.8s ease-in-out infinite}.edge{fill:none;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round;opacity:.8;transition:opacity .15s ease}.edge-fwd{stroke:var(--accent,#2563eb)}.edge-back{stroke:var(--unknown,#b36b00)}.edge-self{stroke:var(--muted,#64748b);stroke-dasharray:5 4}.edge.edge-active{stroke:var(--sel-edge,#c02c5b);stroke-width:3.5;opacity:1;stroke-dasharray:none;filter:drop-shadow(0 0 4px var(--sel-edge,#c02c5b))}.edge.edge-dim{opacity:.1}.edge.edge-connected{stroke:var(--sel-edge,#c02c5b);stroke-width:3;opacity:1;stroke-dasharray:none}g[data-node]:hover .node-rect{stroke-width:2.5;filter:drop-shadow(0 0 5px var(--kind,#334155))}@keyframes dash-pulse{0%,100%{opacity:1}50%{opacity:.6}}@media(prefers-reduced-motion:reduce){.node-rect.current{animation:none}}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="execution-title execution-desc" viewBox="0 0 ${layout.width} ${layout.height}"><title id="execution-title">Execution Graph</title><desc id="execution-desc">\u4E0A\u6BB5\u306F\u30BB\u30C3\u30C8\u30A2\u30C3\u30D7\u3001\u4E2D\u592E2\u6BB5\u306F\u30E1\u30A4\u30F3\u30D5\u30ED\u30FC\uFF08\u53F3\u7AEF\u3067\u4E0B\u6BB5\u3078\u6298\u308A\u8FD4\u3057\uFF09\u3001\u6BB5\u9593\u3068\u4E0B\u6BB5\u306F\u623B\u308A\u30FB\u4FEE\u5FA9\u306E\u9077\u79FB\u3067\u3059\u3002\u9077\u79FB\u6761\u4EF6\u306Fedge\u306E\u30C4\u30FC\u30EB\u30C1\u30C3\u30D7\u3068\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC\u3092\u53C2\u7167</desc><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="context-stroke"/></marker></defs><style>${style}</style>${edgePaths}${nodeGroups}</svg>`;
 }
 
@@ -33909,18 +34139,70 @@ function renderBacklogStrip(snapshot, ids) {
   }).join("");
   return `<div id="backlog" class="backlog-strip"><h3>\u691C\u8A0E\u30FB\u7740\u624B\u5019\u88DC\uFF08draft \u6587\u66F8\uFF09</h3><p>status \u304C draft \u306E canonical \u6587\u66F8\u3067\u3059\u3002\u4ECA\u5F8C\u30EC\u30D3\u30E5\u30FC\u30FB\u7740\u624B\u3059\u308B\u5BFE\u8C61\u3068\u3057\u3066\u4E00\u89A7\u3057\u307E\u3059\uFF08${drafts.length} \u4EF6\uFF09\u3002</p><div class="backlog-grid">${cards || `<p class="empty">draft \u6587\u66F8\u306F\u3042\u308A\u307E\u305B\u3093</p>`}</div></div>`;
 }
-function renderAttention(snapshot) {
+function renderAttention(snapshot, ids) {
+  const repairLabels = { safe: "\u81EA\u52D5\u4FEE\u5FA9\u53EF", migration: "\u79FB\u884C", manual: "\u624B\u52D5" };
+  const location = (file2, line) => {
+    if (file2 === null) return "";
+    const text3 = `${e(file2)}${line === null ? "" : `:${e(line)}`}`;
+    const anchorId = ids.get(file2);
+    return anchorId === void 0 ? `<code class="issue-loc">${text3}</code>` : `<a class="issue-loc" href="#${anchorId}">${text3}</a>`;
+  };
+  const issueRow = (message, meta3) => `<li class="issue-row"><span class="issue-main"><span class="issue-dot" aria-hidden="true"></span><span class="issue-msg">${message}</span></span>${meta3 === "" ? "" : `<span class="issue-meta">${meta3}</span>`}</li>`;
+  const reasonLabels = {
+    "focus-required": "\u9032\u884C\u5BFE\u8C61\uFF08focus\uFF09\u306E\u6307\u5B9A\u304C\u5FC5\u8981\u3067\u3059",
+    "focus-invalid": "\u6307\u5B9A\u3055\u308C\u305F focus \u3092\u89E3\u6C7A\u3067\u304D\u307E\u305B\u3093",
+    "duplicate-id": "\u6587\u66F8 ID \u304C\u91CD\u8907\u3057\u3066\u3044\u307E\u3059",
+    "followups-conflicting": "follow-up signal \u304C\u7AF6\u5408\u3057\u3066\u3044\u307E\u3059",
+    "artifact-graph": "artifact graph gate \u304C\u672A\u5408\u683C\u3067\u3059",
+    "no-matching-edge": "\u73FE\u5728\u306E\u72B6\u614B\u306B\u5408\u3046\u9077\u79FB edge \u304C\u3042\u308A\u307E\u305B\u3093"
+  };
+  const reasonRow = (code) => {
+    if (code.startsWith("required-gate:")) {
+      const [gate2, ...rest] = code.slice("required-gate:".length).split(":");
+      const detail = rest.join(":");
+      const sub = detail === "" ? "" : detail === "missing" ? "gate \u672A\u5B9A\u7FA9" : detail.startsWith("status-") ? `status: ${detail.slice(7)}` : detail;
+      return issueRow(`\u524D\u63D0 gate <code>${e(gate2)}</code> \u304C\u672A\u5408\u683C\u3067\u3059`, `<span class="issue-tag">required-gate</span>${sub === "" ? "" : `<span class="issue-sub">${e(sub)}</span>`}`);
+    }
+    if (code.startsWith("broken-relation:")) {
+      const detail = code.slice("broken-relation:".length);
+      const parsed = detail.match(/^(.*?) from (\S+) to (\S+) \((\S+)\)$/);
+      if (parsed) {
+        const kindMatch = parsed[1].match(/^Broken (\S+) relation$/);
+        const message = kindMatch ? `${kindMatch[1]} \u95A2\u4FC2\u304C\u89E3\u6C7A\u3067\u304D\u307E\u305B\u3093` : parsed[1];
+        return issueRow(e(message), [
+          `<span class="issue-tag">broken-relation</span>`,
+          location(parsed[2], null),
+          `<span class="issue-sub">\u2192 ${e(parsed[3])}</span>`
+        ].join(""));
+      }
+      return issueRow(e(detail), `<span class="issue-tag">broken-relation</span>`);
+    }
+    const label = reasonLabels[code];
+    return issueRow(label === void 0 ? `<code>${e(code)}</code>` : e(label), label === void 0 ? "" : `<span class="issue-tag">${e(code)}</span>`);
+  };
   const blockingFindings = snapshot.findings.filter((finding2) => finding2.blocking);
   const taskIssues = snapshot.plans.flatMap((plan) => plan.graph.issues.map((issue2) => ({ plan: plan.path, issue: issue2 })));
   const routeBlockedReasons = snapshot.decision?.route.status === "blocked" ? snapshot.decision.explanation?.blockedReasons ?? [] : [];
+  const findingRows = blockingFindings.map((finding2) => issueRow(e(finding2.message), [
+    `<span class="issue-tag">${e(finding2.category)} \xB7 ${e(finding2.ruleId)}</span>`,
+    location(finding2.path, finding2.line),
+    finding2.target === null ? "" : `<span class="issue-sub">\u2192 ${e(finding2.target)}</span>`,
+    `<span class="issue-repair repair-${e(finding2.repair)}">${e(repairLabels[finding2.repair] ?? finding2.repair)}</span>`
+  ].filter((part) => part !== "").join("")));
+  const taskIssueRows = taskIssues.map(({ plan, issue: issue2 }) => issueRow(e(issue2.message), [
+    `<span class="issue-tag">${e(issue2.code)}</span>`,
+    location(plan, null),
+    `<span class="issue-sub">tasks: ${list2(issue2.tasks)}</span>`
+  ].join("")));
   const groups = [
-    { label: "hard blockers", items: snapshot.state.hardBlockers.map((blocker) => `<li>${e(blocker)}</li>`) },
-    { label: "route blocked", items: routeBlockedReasons.map((reason) => `<li>${e(reason)}</li>`) },
-    { label: "blocking findings", items: blockingFindings.map((finding2) => `<li><code>${e(finding2.ruleId)}</code> <code>${e(finding2.path)}</code>${finding2.line === null ? "" : `:${e(finding2.line)}`} \u2014 ${e(finding2.message)}</li>`) },
-    { label: "task graph issues", items: taskIssues.map(({ plan, issue: issue2 }) => `<li><code>${e(plan)}</code> <code>${e(issue2.code)}</code> \u2014 ${e(issue2.message)} (tasks: ${list2(issue2.tasks)})</li>`) }
+    { label: "hard blockers", items: snapshot.state.hardBlockers.map(reasonRow) },
+    { label: "route blocked", items: routeBlockedReasons.map(reasonRow) },
+    { label: "blocking findings", items: findingRows },
+    { label: "task graph issues", items: taskIssueRows }
   ];
   const total = groups.reduce((count, group) => count + group.items.length, 0);
-  const body = total === 0 ? `<p class="empty">\u9032\u884C\u3092\u6B62\u3081\u308B\u9805\u76EE\u306F\u3042\u308A\u307E\u305B\u3093</p>` : `<div class="attention-groups">${groups.map((group) => `<div class="attention-group${group.items.length === 0 ? " attention-empty" : ""}"><h3>${e(group.label)} <span class="lane-count" aria-label="${group.items.length} \u4EF6">${group.items.length}</span></h3>${group.items.length === 0 ? `<p class="empty">\u306A\u3057</p>` : `<ul>${group.items.join("")}</ul>`}</div>`).join("")}</div>`;
+  const groupBody = (group) => group.items.length === 0 ? `<p class="empty">\u306A\u3057</p>` : `<ul class="issue-list">${group.items.join("")}</ul>`;
+  const body = total === 0 ? `<p class="empty">\u9032\u884C\u3092\u6B62\u3081\u308B\u9805\u76EE\u306F\u3042\u308A\u307E\u305B\u3093</p>` : `<div class="attention-groups">${groups.map((group) => `<div class="attention-group${group.items.length === 0 ? " attention-empty" : ""}"><h3>${e(group.label)} <span class="lane-count" aria-label="${group.items.length} \u4EF6">${group.items.length}</span></h3>${groupBody(group)}</div>`).join("")}</div>`;
   return `<section id="attention" class="${total === 0 ? "attention" : "attention attention-active"}" aria-labelledby="attention-heading"><h2 id="attention-heading">\u8981\u5BFE\u5FDC</h2><p>\u9032\u884C\u3092\u6B62\u3081\u3066\u3044\u308B\u9805\u76EE\u3092\u7A2E\u5225\u3054\u3068\u306B\u96C6\u7D04\u3057\u307E\u3059\uFF08${total} \u4EF6\uFF09\u3002</p>${body}</section>`;
 }
 function renderGraph(snapshot) {
@@ -33942,12 +34224,14 @@ function renderGraph(snapshot) {
   const blocked = route?.status === "blocked";
   const stays = route !== null && route !== void 0 && route.next === route.current;
   const probeLink = !route ? "" : stays ? `<span class="probe-link${blocked ? " probe-blocked" : ""}"><span class="probe-edge-label">no edge</span><span class="route-arrow" aria-hidden="true">${blocked ? "\u2715" : "\u2192"}</span></span>` : `<span class="probe-link"><span class="probe-edge-label">${e(route.condition)}</span><span class="route-arrow" aria-hidden="true">\u2192</span></span>`;
-  const routeSummary = !decision ? `<div class="callout route-probe probe-muted"><h3>\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC</h3><p class="empty">\u73FE\u5728\u30CE\u30FC\u30C9\u672A\u6307\u5B9A\u3002\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC\u306F\u8A55\u4FA1\u3057\u3066\u3044\u307E\u305B\u3093\u3002</p></div>` : `<div class="callout route-probe"><h3>\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC\uFF08\u6307\u5B9A\u6761\u4EF6\u304B\u3089\u306E\u8A55\u4FA1\uFF09</h3><p class="route-path">${probeNode(route?.current)}${probeLink}${stays ? "" : probeNode(route?.next)} ${statusPill(route?.status)}</p><div class="signal-group"><span class="signal-label">route</span>${chip(`edge: ${route?.edgeId ?? "\u306A\u3057"}`)}${chip(`delegate: ${route?.delegate ?? "\u306A\u3057"}`)}${chip(`commit gate: ${bool(route?.commitGate ?? false)}`)}</div><div class="signal-group"><span class="signal-label">required audits</span>${chips(route?.requiredAudits ?? [])}</div><div class="signal-group"><span class="signal-label">hard blockers</span>${chips(explanation?.hardBlockers ?? [], true)}</div><div class="signal-group"><span class="signal-label">blocked reasons</span>${chips(explanation?.blockedReasons ?? [], true)}</div></div>`;
+  const reasonRow = (explanation?.blockedReasons.length ?? 0) === 0 ? "" : `<div class="signal-group"><span class="signal-label">blocked reasons</span>${chips(explanation?.blockedReasons ?? [], true)}</div>`;
+  const routeSummary = !decision ? `<div class="callout route-probe probe-muted"><h3>\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC</h3><p class="empty">\u73FE\u5728\u30CE\u30FC\u30C9\u672A\u6307\u5B9A\u3002\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC\u306F\u8A55\u4FA1\u3057\u3066\u3044\u307E\u305B\u3093\u3002</p></div>` : `<div class="callout route-probe"><h3>\u9077\u79FB\u30D7\u30EC\u30D3\u30E5\u30FC\uFF08\u6307\u5B9A\u6761\u4EF6\u304B\u3089\u306E\u8A55\u4FA1\uFF09</h3><p class="route-path">${probeNode(route?.current)}${probeLink}${stays ? "" : probeNode(route?.next)} ${statusPill(route?.status)}</p><div class="signal-group"><span class="signal-label">route</span>${chip(`edge: ${route?.edgeId ?? "\u306A\u3057"}`)}${chip(`delegate: ${route?.delegate ?? "\u306A\u3057"}`)}${chip(`commit gate: ${bool(route?.commitGate ?? false)}`)}</div><div class="signal-group"><span class="signal-label">required audits</span>${chips(route?.requiredAudits ?? [])}</div>${reasonRow}</div>`;
   const nodeOrder = nodeFlowOrder(snapshot.definition);
   const gateEntries = Object.entries(snapshot.state.gates).sort(([left], [right]) => (nodeOrder.get(left) ?? Number.MAX_SAFE_INTEGER) - (nodeOrder.get(right) ?? Number.MAX_SAFE_INTEGER) || compare2(left, right));
   const passCount = gateEntries.filter(([, gate2]) => gate2.status === "pass").length;
   const topologyChips = snapshot.definition.issues.map((issue2) => [issue2.severity, issue2.code, issue2.nodeId, issue2.condition].filter(Boolean).join(" "));
-  const signalPanel = `<div class="probe-panel"><h3>signals</h3><div class="signal-group"><span class="signal-label">supplied</span>${chips(snapshot.requested.signals)}</div><div class="signal-group"><span class="signal-label">state</span>${chips(snapshot.state.signals)}</div><div class="signal-group"><span class="signal-label">hard blockers</span>${chips(snapshot.state.hardBlockers, true)}</div>${topologyChips.length === 0 ? "" : `<div class="signal-group"><span class="signal-label">topology issues</span>${chips(topologyChips, true)}</div>`}</div>`;
+  const hardBlockerNote = snapshot.state.hardBlockers.length === 0 ? `<p class="probe-note">hard blockers: \u306A\u3057</p>` : `<p class="probe-note probe-note-danger"><a href="#attention">hard blockers ${snapshot.state.hardBlockers.length} \u4EF6 \u2192 \u8981\u5BFE\u5FDC</a></p>`;
+  const signalPanel = `<div class="probe-panel"><h3>signals</h3><div class="signal-group"><span class="signal-label">supplied</span>${chips(snapshot.requested.signals)}</div><div class="signal-group"><span class="signal-label">state</span>${chips(snapshot.state.signals)}</div>${topologyChips.length === 0 ? "" : `<div class="signal-group"><span class="signal-label">topology issues</span>${chips(topologyChips, true)}</div>`}${hardBlockerNote}</div>`;
   const gatePanel = `<div class="probe-panel"><h3>gates <span class="gate-score">${passCount}/${gateEntries.length} pass</span></h3>${gateEntries.length === 0 ? `<p class="empty">gate \u8A55\u4FA1\u306A\u3057</p>` : `<div class="gate-pills">${gateEntries.map(([name, gate2]) => `<span class="gate-pill gate-${e(gate2.status)}"${gate2.reasons.length === 0 ? "" : ` title="${e(gate2.reasons.join("; "))}"`}><span class="gate-dot" aria-hidden="true"></span>${e(name)}</span>`).join("")}</div>`}</div>`;
   const canvas = `<div class="graph-canvas"><div class="canvas-head"><span class="canvas-eyebrow">Execution Graph</span><span class="graph-meta">${e(snapshot.definition.graphId)} \xB7 ${snapshot.definition.nodes.length} nodes \xB7 ${snapshot.definition.edges.length} edges</span></div><div class="graph-stage">${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}</div><ul class="graph-legend"><li><span class="legend-swatch sw-action"></span>action</li><li><span class="legend-swatch sw-delegate"></span>delegate</li><li><span class="legend-swatch sw-audit"></span>audit</li><li><span class="legend-swatch sw-terminal"></span>terminal</li><li><span class="legend-line sw-fwd"></span>\u524D\u9032\u9077\u79FB</li><li><span class="legend-line sw-back"></span>\u623B\u308A\u30FB\u4FEE\u5FA9</li><li><span class="legend-line sw-retry"></span>\u30EA\u30C8\u30E9\u30A4</li><li><span class="legend-swatch swatch-current"></span>\u6307\u5B9A\u30CE\u30FC\u30C9\uFF08\u73FE\u5728\uFF09</li><li><span class="legend-swatch swatch-edge"></span>\u9078\u629E edge</li><li>\u30CE\u30FC\u30C9\u306B\u30AB\u30FC\u30BD\u30EB\u3092\u5408\u308F\u305B\u308B\u3068\u63A5\u7D9A edge \u304C\u5F37\u8ABF\u3055\u308C\u307E\u3059</li></ul></div>`;
   return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2><div class="probe-grid">${routeSummary}<div class="probe-side">${signalPanel}${gatePanel}</div></div>${canvas}</section>`;
@@ -34048,14 +34332,336 @@ applyTheme(document.documentElement.dataset.theme||'');
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){try{if(!localStorage.getItem(themeKey))applyTheme('');}catch(e){applyTheme('');}});
 })();`;
 var themeScript = String.raw`(function(){try{var t=localStorage.getItem('doc-dashboard-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();`;
-var darkVars = String.raw`--todo:#8fa3bf;--progress:#6ea8ff;--blocked:#ff8a7e;--done:#4ed08a;--wontdo:#b18cff;--unknown:#e0a83c;--attention-active:#33201f;--lane-progress-bg:#16233f;--lane-blocked-bg:#332022;--lane-done-bg:#16301f;--lane-wontdo-bg:#251b3d;--lane-unknown-bg:#332a16;--lane-empty:#ffffff14;--shadow:#00000055;--shadow-hover:#00000088`;
-var styles = String.raw`:root{color-scheme:light dark;--bg:var(--pico-background-color);--fg:var(--pico-color);--muted:var(--pico-muted-color);--card:var(--pico-card-background-color);--border:var(--pico-muted-border-color);--border-soft:var(--pico-card-border-color);--accent:var(--pico-primary);--hover:var(--pico-secondary-background);--warn:var(--pico-del-color);--todo:#64748b;--progress:#2563eb;--blocked:#b42318;--done:#16803c;--wontdo:#7c3aed;--unknown:#b36b00;--attention-active:#fff6f5;--lane-bg:var(--pico-secondary-background);--lane-progress-bg:#eaf2ff;--lane-blocked-bg:#fff0ee;--lane-done-bg:#ebf8ef;--lane-wontdo-bg:#f4efff;--lane-unknown-bg:#fff6df;--lane-empty:#ffffffaa;--shadow:#24324a18;--shadow-hover:#24324a30}
-[data-theme="dark"]{${darkVars}}@media(prefers-color-scheme:dark){:root:not([data-theme]){${darkVars}}}
-html,body{max-width:100%;overflow-x:hidden}body{max-width:1200px;margin:auto;padding:24px;overflow-wrap:anywhere}body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(color-mix(in srgb,var(--border) 32%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--border) 32%,transparent) 1px,transparent 1px);background-size:28px 28px;mask-image:radial-gradient(ellipse 120% 90% at 50% 0%,#000 25%,transparent 75%);-webkit-mask-image:radial-gradient(ellipse 120% 90% at 50% 0%,#000 25%,transparent 75%)}body>header,body>main,body>footer{max-width:none;padding:0}a{color:var(--accent)}.skip-link{position:absolute;transform:translateY(-250%);left:12px;z-index:100;padding:.5rem .9rem;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--fg)}.skip-link:focus{transform:none;top:8px}nav{position:sticky;top:0;z-index:20;justify-content:flex-start;background:color-mix(in srgb,var(--bg) 76%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding-block:.45rem;border-bottom:1px solid var(--border-soft)}nav ul{flex-wrap:wrap;gap:2px 8px}nav,form,.facts{display:flex;flex-wrap:wrap;gap:12px 16px}nav a[aria-current]{font-weight:700;text-decoration:underline;text-underline-offset:4px}.theme-toggle{margin:0;padding:.2rem .7rem;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--fg);font-size:.8rem;line-height:1.4;cursor:pointer}.theme-toggle:hover{background:var(--hover)}.header-row{display:flex;align-items:center;gap:.65rem}.header-row h1{margin:0}.pulse-dot{width:.65rem;height:.65rem;flex:none;border-radius:50%;background:var(--done);box-shadow:0 0 0 4px color-mix(in srgb,var(--done) 18%,transparent);animation:pulse-dot 2.4s ease-in-out infinite}.pulse-bad{background:var(--blocked);box-shadow:0 0 0 4px color-mix(in srgb,var(--blocked) 18%,transparent)}@keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.78);opacity:.6}}.subtitle{color:var(--muted);font-size:.9rem}.facts>div,.callout{padding:.5rem .8rem;border:1px solid var(--border);border-radius:8px;background:var(--card)}.callout{border-left:4px solid var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--card))}.callout h3{margin:.1rem 0 .6rem;font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}.chip{display:inline-block;padding:.12rem .55rem;border:1px solid var(--border);border-radius:999px;background:var(--card);font-family:var(--pico-font-family-monospace);font-size:.78rem}.chip-danger{color:var(--blocked);border-color:currentColor;background:color-mix(in srgb,currentColor 10%,transparent)}.facts dt{font-size:.85rem}.facts dd{margin:0;font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}main>section{margin-block:1.5rem}main h2{display:flex;align-items:center;gap:.55rem;border-bottom:2px solid var(--border-soft);padding-bottom:.35rem}main h2::before{content:"";width:.55rem;height:.55rem;flex:none;border-radius:.18rem;background:var(--accent)}footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--border-soft);text-align:center;color:var(--muted)}.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem;margin:0}.stat{padding:.55rem .9rem;border:1px solid var(--border-soft);border-left:4px solid var(--stat-accent,var(--border));border-radius:8px;background:color-mix(in srgb,var(--stat-accent,var(--border)) 7%,var(--card))}.stat dt{font-size:.8rem;color:var(--muted)}.stat dd{margin:0;font-size:1.5rem;font-weight:700;font-family:var(--pico-font-family-monospace);font-variant-numeric:tabular-nums}.accent-progress{--stat-accent:var(--progress)}.accent-done{--stat-accent:var(--done)}.accent-wontdo{--stat-accent:var(--wontdo)}.accent-unknown{--stat-accent:var(--unknown)}.accent-blocked{--stat-accent:var(--blocked)}.accent-draft{--stat-accent:var(--unknown)}.accent-capturing{--stat-accent:var(--accent)}.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}.panel{padding:.8rem 1rem;border:1px solid var(--border);border-radius:10px;background:var(--card)}.panel h3{margin:.1rem 0 .7rem;font-size:.95rem}.donut-wrap{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap}.donut{width:140px;height:140px;min-width:140px;flex:none}.donut-seg{fill:none;stroke-width:20}.donut-empty{stroke:var(--border-soft)}.donut-value{font-size:1.35rem;font-weight:700;fill:var(--fg)}.donut-label{font-size:.72rem;fill:var(--fg)}.chart-legend{list-style:none;margin:0;padding:0;display:grid;gap:.25rem;font-size:.85rem}.seg-todo{stroke:var(--todo);background:var(--todo)}.seg-inprogress{stroke:var(--progress);background:var(--progress)}.seg-blocked{stroke:var(--blocked);background:var(--blocked)}.seg-done{stroke:var(--done);background:var(--done)}.seg-wontdo{stroke:var(--wontdo);background:var(--wontdo)}.seg-unknown{stroke:var(--unknown);background:var(--unknown)}.hbars{list-style:none;margin:0;padding:0;display:grid;gap:.45rem;font-size:.85rem}.hbars li{display:grid;grid-template-columns:8rem 1fr 2.2rem;align-items:center;gap:.6rem}.hbar-track{display:block;height:.95rem;border-radius:5px;background:var(--lane-bg);overflow:hidden}.hbar-fill{display:block;height:100%;border-radius:5px;min-width:0}.hbar-count{text-align:right;font-variant-numeric:tabular-nums}.fill-draft{background:var(--unknown)}.fill-proposed{background:var(--progress)}.fill-capturing{background:var(--accent)}.fill-other{background:var(--todo)}.fill-unmanaged{background:var(--border)}.fill-parse{background:var(--blocked)}.fill-error{background:var(--blocked)}.fill-warning{background:var(--unknown)}.fill-info{background:var(--progress)}.gauge{height:1.15rem;border-radius:7px;background:var(--lane-bg);overflow:hidden}.gauge-fill{display:block;height:100%;background:var(--done)}.gauge-note{margin:.45rem 0 0;font-size:.85rem}.stack-bar{display:flex;height:1.15rem;border-radius:7px;overflow:hidden;background:var(--lane-bg)}.stack-seg{display:block;height:100%}.backlog-strip{margin-block:.8rem;padding:.7rem .9rem;border:1px solid var(--border-soft);border-radius:10px;background:color-mix(in srgb,var(--card) 82%,transparent)}.backlog-strip h3{margin:.1rem 0 .4rem;font-size:.95rem}.backlog-strip>p{margin:.2rem 0 .5rem;font-size:.85rem;color:var(--muted)}.backlog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(16rem,1fr));gap:.75rem}form input:not([type=checkbox],[type=radio]),form select{width:auto}form input,form select,form label{margin-bottom:0}form[data-filters]{padding:.6rem .8rem;border:1px solid var(--border-soft);border-radius:10px;background:color-mix(in srgb,var(--card) 82%,transparent)}[data-result-count]{font-family:var(--pico-font-family-monospace);font-weight:700}.detail-toggle{margin-block:.4rem}.detail-toggle button{margin:0;padding:.3rem .8rem;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--fg);font-size:.8rem;cursor:pointer}.detail-toggle button:hover{background:var(--hover)}.kanban-scroll{width:100%;max-width:100%;overflow-x:auto;padding:.25rem 0 1rem}.kanban-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(17rem,1fr);gap:1rem;width:max-content;min-width:100%;align-items:start}.kanban-lane{display:flex;flex-direction:column;max-height:75vh;margin-block:0;padding:.75rem;border:1px solid var(--border-soft);border-top:5px solid var(--todo);border-radius:12px;background:var(--lane-bg)}.lane-cards{min-height:0;overflow-y:auto;display:grid;gap:.75rem}.lane-todo{border-top-color:var(--todo)}.lane-in-progress{border-top-color:var(--progress);background:var(--lane-progress-bg)}.lane-blocked{border-top-color:var(--blocked);background:var(--lane-blocked-bg)}.lane-done{border-top-color:var(--done);background:var(--lane-done-bg)}.lane-wont-do{border-top-color:var(--wontdo);background:var(--lane-wontdo-bg)}.lane-unknown{border-top-color:var(--unknown);background:var(--lane-unknown-bg)}.kanban-lane h3,.lane-heading{margin:.1rem 0 .75rem;font-size:1rem;font-weight:700}.lane-heading{cursor:pointer;padding:.15rem .2rem}.lane-count,.badge,.status-badge,.coverage-badge,.status-pill{display:inline-block;padding:.1rem .45rem;border:1px solid currentColor;border-radius:999px;font-size:.78rem;background:color-mix(in srgb,currentColor 11%,transparent)}.lane-count{float:right}.status-todo{color:var(--todo)}.status-in-progress{color:var(--progress)}.status-blocked{color:var(--blocked)}.status-done{color:var(--done)}.status-wont-do{color:var(--wontdo)}.status-unknown{color:var(--unknown)}.status-draft{color:var(--unknown)}.bucket-draft{color:var(--unknown)}.bucket-proposed{color:var(--progress)}.bucket-capturing{color:var(--unknown)}.bucket-other{color:var(--todo)}.badge-runnable{color:var(--done)}.badge-resumable{color:var(--progress)}.badge-blocked{color:var(--blocked)}.badge-runnable::before{content:"▶ "}.badge-resumable::before{content:"↻ "}.badge-blocked::before{content:"✕ "}.task-card details{margin-block:.45rem;padding:0}.task-card details>summary{padding:.35rem .55rem;font-size:.85rem;font-weight:600}.task-card details>:not(summary){margin-inline:.5rem}.doc-card{border-left:4px solid var(--unknown)}.attention{padding:.4rem .9rem;border:1px solid var(--border);border-radius:8px;background:var(--card)}.attention-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}.attention-group{padding:.7rem .9rem;border:1px solid var(--border);border-left:4px solid var(--blocked);border-radius:10px;background:color-mix(in srgb,var(--blocked) 5%,var(--bg))}.attention-group h3{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin:.1rem 0 .5rem;font-size:.95rem}.attention-group ul{margin:0;padding-inline-start:1.1rem}.attention-group li{margin-block:.35rem;font-size:.9rem}.attention-empty{border-left-color:var(--border);background:var(--bg);opacity:.55}.attention-active{border-color:var(--blocked);background:var(--attention-active)}.task-card{min-width:0;margin-bottom:0;padding:.8rem;border:1px solid var(--border-soft);border-radius:9px;background:var(--card);box-shadow:0 2px 7px var(--shadow);transition:transform .15s ease,box-shadow .15s ease}.task-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px var(--shadow-hover)}.task-card h4,.task-card p{margin:.2rem 0 .55rem}.task-card a{color:var(--accent);font-weight:700}.task-id,.task-path{font-size:.85rem;color:var(--muted)}.facts dt,.gauge-note,.empty,.chart-legend{color:var(--muted)}.membership-list{margin:.6rem 0 0;padding-left:1.2rem}.membership-list li+li{margin-top:.55rem}.lane-empty{padding:.75rem;border:1px dashed var(--border);border-radius:8px;background:var(--lane-empty)}code{white-space:normal;overflow-wrap:anywhere}.row-list{list-style:none;margin:0;padding:0;display:grid;gap:.4rem}.row-item{display:flex;align-items:baseline;gap:.35rem .6rem;flex-wrap:wrap;padding:.4rem .65rem;border:1px solid var(--border-soft);border-radius:8px;background:var(--card);font-size:.85rem}.row-meta{color:var(--muted);font-size:.78rem}.row-danger{border-left:3px solid var(--blocked)}.chip-line{display:flex;flex-wrap:wrap;gap:.4rem}.muted{color:var(--muted)}.doc-list{display:grid;gap:.45rem;max-height:72vh;overflow:auto;padding:.15rem}.doc-row{padding:.45rem .7rem;border:1px solid var(--border-soft);border-left:3px solid var(--border);border-radius:8px;background:var(--card)}.doc-row:hover{background:color-mix(in srgb,var(--accent) 5%,var(--hover))}.doc-row:target{background:color-mix(in srgb,var(--accent) 10%,var(--card));border-left-color:var(--accent)}.doc-head{display:flex;align-items:baseline;gap:.45rem .6rem;flex-wrap:wrap}.doc-title{min-width:0}.doc-time{margin-left:auto;color:var(--muted);font-size:.78rem;white-space:nowrap}.doc-sub{display:flex;align-items:baseline;gap:.3rem .7rem;flex-wrap:wrap;margin-top:.3rem;font-size:.78rem}.doc-path{color:var(--muted);font-size:.78rem}pre,.graph-scroll{overflow:auto}[hidden]{display:none!important}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}svg{display:block;width:100%;min-width:760px;height:auto}.graph-scroll{max-width:100%}.graph-canvas{margin-block:.8rem;padding:.7rem .9rem;border:1px solid var(--border-soft);border-radius:12px;background:color-mix(in srgb,var(--card) 75%,transparent)}.canvas-head{display:flex;justify-content:space-between;align-items:baseline;gap:.35rem .8rem;flex-wrap:wrap;margin-bottom:.55rem}.canvas-eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.graph-meta{font-family:var(--pico-font-family-monospace);font-size:.78rem;color:var(--muted)}.graph-stage{overflow-x:auto;padding:.5rem;border:1px solid var(--border-soft);border-radius:8px;background-image:linear-gradient(color-mix(in srgb,var(--border) 28%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--border) 28%,transparent) 1px,transparent 1px);background-size:24px 24px}.probe-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(17rem,1fr);gap:.8rem;align-items:stretch}.probe-side{display:grid;gap:.8rem;align-content:start}.probe-panel{padding:.5rem .8rem;border:1px solid var(--border);border-radius:8px;background:var(--card)}.probe-panel h3{margin:.1rem 0 .55rem;font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}.probe-muted{border-left-color:var(--border);background:var(--card)}.route-path{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin:.25rem 0 .65rem}.probe-node{display:inline-flex;align-items:center;gap:.42rem;padding:.32rem .7rem .32rem .42rem;border:1.5px solid var(--kind,var(--border));border-radius:9px;background:color-mix(in srgb,var(--kind,var(--border)) 9%,var(--card));font-family:var(--pico-font-family-monospace);font-size:.85rem;font-weight:700}.probe-glyph{display:inline-flex;align-items:center;justify-content:center;width:1.15rem;height:1.15rem;border-radius:4px;background:color-mix(in srgb,var(--kind,var(--border)) 14%,transparent);color:var(--kind,var(--border));font-size:.68rem}.probe-node.kind-action{--kind:var(--progress)}.probe-node.kind-delegate{--kind:var(--wontdo)}.probe-node.kind-audit{--kind:var(--unknown)}.probe-node.kind-terminal{--kind:var(--done)}.probe-unknown{--kind:var(--border);color:var(--muted)}.probe-link{display:inline-flex;flex-direction:column;align-items:center;min-width:5rem;padding-inline:.15rem}.probe-edge-label{max-width:11rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--pico-font-family-monospace);font-size:.66rem;color:var(--muted)}.route-arrow{color:var(--muted);font-weight:700;font-size:1.2rem;line-height:1}.probe-blocked .route-arrow,.probe-blocked .probe-edge-label{color:var(--blocked)}.signal-group{display:flex;align-items:baseline;gap:.45rem .55rem;flex-wrap:wrap;margin-block:.35rem}.signal-label{flex:none;min-width:6.8rem;font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.gate-pills{display:flex;flex-wrap:wrap;gap:.4rem}.gate-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.16rem .6rem;border:1px solid color-mix(in srgb,var(--g,var(--border)) 45%,var(--border));border-radius:999px;background:color-mix(in srgb,var(--g,var(--border)) 8%,var(--card));font-family:var(--pico-font-family-monospace);font-size:.75rem}.gate-dot{width:.5rem;height:.5rem;flex:none;border-radius:50%;background:var(--g,var(--border))}.gate-pass{--g:var(--done)}.gate-fail{--g:var(--unknown)}.gate-blocked{--g:var(--blocked)}.gate-score{float:right;font-family:var(--pico-font-family-monospace);font-size:.78rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}@media(max-width:900px){.probe-grid{grid-template-columns:1fr}}.graph-legend{display:flex;flex-wrap:wrap;gap:.35rem 1.2rem;margin:.55rem 0 0;padding:.5rem .15rem 0;border-top:1px solid var(--border-soft);list-style:none;font-size:.8rem;color:var(--muted)}.legend-swatch{display:inline-block;width:.8rem;height:.8rem;margin-right:.3rem;border:1.5px solid var(--sw,var(--border));border-radius:.25rem;background:color-mix(in srgb,var(--sw,var(--border)) 14%,transparent);vertical-align:-1px}.sw-action{--sw:var(--progress)}.sw-delegate{--sw:var(--wontdo)}.sw-audit{--sw:var(--unknown)}.sw-terminal{--sw:var(--done)}.swatch-current{--sw:var(--unknown)}.swatch-edge{height:0;width:1.1rem;border:0;border-top:3px solid var(--accent);border-radius:0;background:none;vertical-align:3px}.legend-line{display:inline-block;width:1.1rem;height:0;margin-right:.3rem;border-top:2.5px solid var(--edge,var(--border));vertical-align:3px}.sw-fwd{--edge:var(--accent)}.sw-back{--edge:var(--unknown)}.sw-retry{--edge:var(--muted);border-top-style:dashed}details{margin-block:.8rem;padding:0;border:1px solid var(--border-soft);border-radius:10px;background:color-mix(in srgb,var(--card) 82%,transparent);overflow:hidden}details>summary{display:block;padding:.65rem .95rem;font-weight:600}details>summary:hover{background:var(--hover)}details[open]>summary{margin-bottom:0;border-bottom:1px solid var(--border-soft)}details>:not(summary){margin-inline:.95rem}details[open]>:not(summary){margin-top:.7rem}details>:not(summary):last-child{margin-bottom:.9rem}.warning{font-weight:700;color:var(--warn)}@media(prefers-reduced-motion:reduce){.task-card{transition:none}.task-card:hover{transform:none}.pulse-dot{animation:none}}@media(max-width:640px){body{padding:12px}h1{font-size:1.6rem}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.kanban-board{grid-auto-columns:minmax(min(17rem,calc(100vw - 40px)),calc(100vw - 40px))}}@media print{nav,form,.skip-link{display:none}body::before{display:none}.attention{break-inside:avoid}details>*{display:block}.kanban-scroll{overflow:visible}.kanban-board{display:block;width:auto}.kanban-lane{break-inside:avoid;max-height:none;margin-bottom:1rem}.lane-cards{overflow:visible}}`;
+var darkVars = String.raw`--pico-background-color:#0a0d13;--pico-color:#e7eaf2;--pico-muted-color:#8a93a6;--pico-card-background-color:#121722;--pico-muted-border-color:#ffffff26;--pico-card-border-color:#ffffff12;--pico-primary:#8fa2ff;--pico-primary-hover:#a8b6ff;--pico-secondary-background:#1a2130;--pico-del-color:#ff8f82;--pico-form-element-background-color:#0e121b;--pico-form-element-border-color:#ffffff22;--pico-form-element-color:#e7eaf2;--accent:#8fa2ff;--accent-2:#5eead4;--todo:#93a7c4;--progress:#7aa5ff;--blocked:#ff8f82;--done:#59d193;--wontdo:#b18cff;--unknown:#e8b153;--attention-active:#221417;--lane-bg:#10141d;--lane-progress-bg:#131c30;--lane-blocked-bg:#261419;--lane-done-bg:#0f241c;--lane-wontdo-bg:#1e1733;--lane-unknown-bg:#251c0e;--lane-empty:#ffffff08;--shadow:#00000060;--shadow-hover:#00000092;--stage:#0b0f16;--stage-dot:#ffffff18`;
+var styles = String.raw`:root{color-scheme:light dark;--pico-background-color:#f4f5f7;--pico-color:#191e28;--pico-muted-color:#5d6472;--pico-card-background-color:#ffffff;--pico-muted-border-color:#1b233330;--pico-card-border-color:#1b233314;--pico-primary:#4f46e5;--pico-primary-hover:#4038cc;--pico-secondary-background:#eceef2;--pico-del-color:#b42318;--pico-form-element-background-color:#ffffff;--pico-form-element-border-color:#1b23332a;--pico-form-element-color:#191e28;--bg:var(--pico-background-color);--fg:var(--pico-color);--muted:var(--pico-muted-color);--card:var(--pico-card-background-color);--border:var(--pico-muted-border-color);--border-soft:var(--pico-card-border-color);--accent:var(--pico-primary);--accent-2:#0891b2;--hover:var(--pico-secondary-background);--warn:var(--pico-del-color);--todo:#64748b;--progress:#2563eb;--blocked:#d92d20;--done:#15803d;--wontdo:#7c3aed;--unknown:#b54708;--attention-active:#fdf3f2;--lane-bg:#eceef2;--lane-progress-bg:#eef3fe;--lane-blocked-bg:#fdf0ee;--lane-done-bg:#ecf7f1;--lane-wontdo-bg:#f4f0fd;--lane-unknown-bg:#fdf7e8;--lane-empty:#ffffffb0;--shadow:#141b2e14;--shadow-hover:#141b2e28;--stage:#eef0f6;--stage-dot:#1b23331f;--font-display:"Segoe UI Variable Display","Inter","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Meiryo",-apple-system,system-ui,sans-serif}
+[data-theme="dark"]{${darkVars}}
+@media(prefers-color-scheme:dark){:root:not([data-theme]){${darkVars}}}
+html,body{max-width:100%;overflow-x:hidden}
+body{max-width:1240px;margin:auto;padding:20px 28px 36px;overflow-wrap:anywhere;font-family:var(--font-display);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background-image:linear-gradient(color-mix(in srgb,var(--border) 24%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--border) 24%,transparent) 1px,transparent 1px);background-size:32px 32px;mask-image:radial-gradient(ellipse 130% 85% at 50% 0%,#000 18%,transparent 72%);-webkit-mask-image:radial-gradient(ellipse 130% 85% at 50% 0%,#000 18%,transparent 72%)}
+body::after{content:"";position:fixed;inset:-14% -10% auto;height:52vh;z-index:-1;pointer-events:none;background:radial-gradient(44% 62% at 24% 0%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 72%),radial-gradient(40% 54% at 78% 2%,color-mix(in srgb,var(--accent-2) 12%,transparent),transparent 72%);animation:aurora 26s ease-in-out infinite alternate}
+@keyframes aurora{from{transform:translate3d(-2%,0,0) scale(1)}to{transform:translate3d(2%,4%,0) scale(1.05)}}
+body>header,body>main,body>footer{max-width:none;padding:0}
+::selection{background:color-mix(in srgb,var(--accent) 26%,transparent)}
+a{color:var(--accent)}
+.skip-link{position:absolute;transform:translateY(-250%);left:12px;z-index:100;padding:.5rem .9rem;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--fg)}
+.skip-link:focus{transform:none;top:8px}
+section[id],div[id^="doc-"]{scroll-margin-top:5rem}
+body>header{padding-top:1.2rem}
+.eyebrow{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;font-size:.7rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.eyebrow-state{margin-left:auto;padding:.2rem .7rem;border:1px solid var(--border-soft);border-radius:999px;background:color-mix(in srgb,var(--card) 70%,transparent);font-family:var(--pico-font-family-monospace);font-size:.66rem;letter-spacing:.1em;color:var(--fg)}
+.eyebrow-state.state-bad{color:var(--blocked);border-color:color-mix(in srgb,var(--blocked) 45%,var(--border-soft))}
+.header-row{display:flex;align-items:center;gap:.65rem;margin-top:.5rem}
+.header-row h1{margin:0;font-family:var(--font-display);font-size:clamp(1.9rem,1.2rem+3vw,2.85rem);line-height:1.04;letter-spacing:-.02em;font-weight:750}
+.pulse-dot{width:.6rem;height:.6rem;flex:none;border-radius:50%;background:var(--done);box-shadow:0 0 0 4px color-mix(in srgb,var(--done) 18%,transparent);animation:pulse-dot 2.4s ease-in-out infinite}
+.pulse-bad{background:var(--blocked);box-shadow:0 0 0 4px color-mix(in srgb,var(--blocked) 18%,transparent)}
+@keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.78);opacity:.6}}
+.subtitle{display:flex;flex-wrap:wrap;gap:.45rem 1.6rem;margin:.95rem 0 0;color:var(--muted);font-size:.84rem}
+.subtitle .meta{display:inline-flex;align-items:baseline;gap:.45rem;min-width:0}
+.subtitle strong{font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hero{display:flex;align-items:center;gap:1.4rem 2.6rem;flex-wrap:wrap;margin-top:1.4rem;padding:1.3rem 1.5rem;border:1px solid var(--border-soft);border-radius:16px;background:linear-gradient(155deg,color-mix(in srgb,var(--accent) 7%,var(--card)),var(--card) 58%);box-shadow:0 1px 2px var(--shadow),0 20px 44px -30px var(--shadow-hover)}
+.hero-metric{display:flex;flex-direction:column;flex:none}
+.hero-value{font-family:var(--font-display);font-size:clamp(2.5rem,4.6vw,3.4rem);font-weight:800;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;background:linear-gradient(115deg,var(--fg) 20%,var(--accent) 80%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-label{margin-top:.4rem;font-size:.66rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.hero-mid{flex:1;min-width:220px;display:flex;flex-direction:column;gap:.55rem}
+.hero-track{height:.5rem;border-radius:999px;background:color-mix(in srgb,var(--fg) 8%,transparent);overflow:hidden}
+.hero-fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.hero-note{font-size:.76rem;color:var(--muted)}
+.hero-facts{display:flex;gap:1.8rem;margin:0;flex-wrap:wrap}
+.hero-facts>div{display:flex;flex-direction:column;gap:.15rem}
+.hero-facts dt{font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.hero-facts dd{margin:0;font-family:var(--font-display);font-size:1.45rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.hero-facts dd.hero-bad{color:var(--blocked)}
+nav{position:sticky;top:0;z-index:20;display:flex;justify-content:flex-start;margin-top:1.2rem;padding-block:.45rem;background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:blur(10px) saturate(1.4);backdrop-filter:blur(10px) saturate(1.4);border-bottom:1px solid var(--border-soft)}
+nav ul{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px}
+nav a{display:inline-block;padding:.3rem .78rem;border-radius:999px;color:var(--muted);font-size:.84rem;text-decoration:none;transition:background .15s ease,color .15s ease}
+nav a:hover{color:var(--fg);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+nav a[aria-current]{color:var(--fg);font-weight:650;background:color-mix(in srgb,var(--accent) 15%,transparent)}
+nav li:last-child{margin-left:auto}
+.theme-toggle{margin:0;padding:.26rem .8rem;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--fg);font-size:.74rem;font-family:var(--pico-font-family-monospace);line-height:1.4;cursor:pointer;letter-spacing:.04em}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+main>*{margin-block:0}
+main>*+*{margin-top:2.6rem}
+main h2{display:flex;align-items:center;gap:.6rem;margin:0 0 .4rem;padding-bottom:.6rem;border-bottom:1px solid var(--border-soft);font-family:var(--font-display);font-size:1.42rem;font-weight:750;letter-spacing:-.015em}
+main h2::before{content:"";width:.85rem;height:.85rem;flex:none;border-radius:.24rem;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+main h3{font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+main h4{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.facts>div,.callout{padding:.55rem .85rem;border:1px solid var(--border-soft);border-radius:10px;background:var(--card)}
+.callout{border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 4%,var(--card))}
+.callout h3{margin:.1rem 0 .6rem;font-size:.72rem}
+.chip{display:inline-flex;align-items:center;padding:.14rem .6rem;border:1px solid var(--border-soft);border-radius:999px;background:var(--card);font-family:var(--pico-font-family-monospace);font-size:.72rem;line-height:1.5}
+.chip-danger{color:var(--blocked);border-color:color-mix(in srgb,var(--blocked) 40%,var(--border-soft));background:color-mix(in srgb,currentColor 10%,transparent)}
+.facts dt{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.facts dd{margin:.15rem 0 0;font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
+footer{margin-top:2.2rem;padding-top:1.1rem;border-top:1px solid var(--border-soft);text-align:center;color:var(--muted);font-size:.8rem}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.4rem,1fr));gap:.7rem;margin:0}
+.stat{position:relative;padding:.7rem .95rem .8rem;border:1px solid var(--border-soft);border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--stat-accent,var(--border)) 8%,var(--card)),var(--card) 70%);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease}
+.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--stat-accent,var(--border));opacity:.8}
+.stat:hover{transform:translateY(-2px);box-shadow:0 10px 24px -16px var(--shadow-hover)}
+.stat dt{font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.stat dd{margin:.35rem 0 0;font-family:var(--font-display);font-size:1.75rem;font-weight:750;line-height:1.05;font-variant-numeric:tabular-nums}
+.accent-progress{--stat-accent:var(--progress)}
+.accent-done{--stat-accent:var(--done)}
+.accent-wontdo{--stat-accent:var(--wontdo)}
+.accent-unknown{--stat-accent:var(--unknown)}
+.accent-blocked{--stat-accent:var(--blocked)}
+.accent-draft{--stat-accent:var(--unknown)}
+.accent-capturing{--stat-accent:var(--accent)}
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.9rem}
+.panel{padding:.9rem 1.05rem 1rem;border:1px solid var(--border-soft);border-radius:14px;background:var(--card)}
+.panel h3{margin:.05rem 0 .8rem}
+.donut-wrap{display:flex;align-items:center;gap:1.3rem;flex-wrap:wrap}
+.donut{width:148px;height:148px;min-width:148px;flex:none}
+.donut-seg{fill:none;stroke-width:15}
+.donut-empty{stroke:var(--border-soft)}
+.donut-value{font-size:1.55rem;font-weight:750;fill:var(--fg);font-family:var(--font-display)}
+.donut-label{font-size:.68rem;fill:var(--muted);letter-spacing:.08em}
+.chart-legend{list-style:none;margin:0;padding:0;display:grid;gap:.3rem;font-size:.8rem;color:var(--muted)}
+.chart-legend strong{color:var(--fg);font-variant-numeric:tabular-nums;font-weight:650}
+.seg-todo{stroke:var(--todo);background:var(--todo)}
+.seg-inprogress{stroke:var(--progress);background:var(--progress)}
+.seg-blocked{stroke:var(--blocked);background:var(--blocked)}
+.seg-done{stroke:var(--done);background:var(--done)}
+.seg-wontdo{stroke:var(--wontdo);background:var(--wontdo)}
+.seg-unknown{stroke:var(--unknown);background:var(--unknown)}
+.hbars{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;font-size:.8rem}
+.hbars li{display:grid;grid-template-columns:7.6rem 1fr 2.2rem;align-items:center;gap:.7rem}
+.hbar-label{color:var(--muted)}
+.hbar-track{display:block;height:.5rem;border-radius:999px;background:color-mix(in srgb,var(--fg) 7%,transparent);overflow:hidden}
+.hbar-fill{display:block;height:100%;border-radius:999px;min-width:0}
+.hbar-count{text-align:right;font-variant-numeric:tabular-nums;font-weight:650}
+.fill-draft{background:var(--unknown)}
+.fill-proposed{background:var(--progress)}
+.fill-capturing{background:var(--accent)}
+.fill-other{background:var(--todo)}
+.fill-unmanaged{background:var(--border)}
+.fill-parse{background:var(--blocked)}
+.fill-error{background:var(--blocked)}
+.fill-warning{background:var(--unknown)}
+.fill-info{background:var(--progress)}
+.gauge{height:.5rem;border-radius:999px;background:color-mix(in srgb,var(--fg) 7%,transparent);overflow:hidden}
+.gauge-fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--done),color-mix(in srgb,var(--done) 62%,var(--accent-2)))}
+.gauge-note{margin:.5rem 0 0;font-size:.8rem;color:var(--muted)}
+.gauge-note strong{color:var(--fg);font-variant-numeric:tabular-nums}
+.stack-bar{display:flex;height:.6rem;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--fg) 7%,transparent)}
+.stack-seg{display:block;height:100%}
+.backlog-strip{margin-block:1rem;padding:.9rem 1.05rem;border:1px solid var(--border-soft);border-radius:14px;background:color-mix(in srgb,var(--card) 75%,transparent)}
+.backlog-strip h3{margin:.05rem 0 .45rem}
+.backlog-strip>p{margin:.2rem 0 .7rem;font-size:.82rem;color:var(--muted)}
+.backlog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(16rem,1fr));gap:.8rem}
+form input:not([type=checkbox],[type=radio]),form select{width:auto}
+form input,form select,form label{margin-bottom:0}
+form input,form select{border-radius:8px;font-size:.85rem}
+form label{display:inline-flex;align-items:center;gap:.45rem;font-size:.78rem;font-weight:650;color:var(--muted)}
+form,.facts{display:flex;flex-wrap:wrap;gap:12px 16px}
+form[data-filters]{padding:.6rem .8rem;border:1px solid var(--border-soft);border-radius:12px;background:color-mix(in srgb,var(--card) 78%,transparent);margin-block:.6rem}
+[data-result-count]{font-family:var(--pico-font-family-monospace);font-weight:700}
+.detail-toggle{margin-block:.4rem}
+.detail-toggle button{margin:0;padding:.32rem .85rem;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--fg);font-size:.78rem;cursor:pointer;transition:border-color .15s ease,color .15s ease}
+.detail-toggle button:hover{border-color:var(--accent);color:var(--accent)}
+.kanban-scroll{width:100%;max-width:100%;overflow-x:auto;padding:.3rem .1rem 1rem;scroll-snap-type:x proximity}
+.kanban-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(17.5rem,1fr);gap:.9rem;width:max-content;min-width:100%;align-items:start}
+.kanban-lane{display:flex;flex-direction:column;max-height:75vh;margin-block:0;padding:.8rem .8rem .9rem;border:1px solid var(--border-soft);border-top:3px solid var(--todo);border-radius:14px;background:var(--lane-bg);scroll-snap-align:start}
+.lane-cards{min-height:0;overflow-y:auto;display:grid;gap:.7rem;padding:.15rem .05rem}
+.lane-todo{border-top-color:var(--todo)}
+.lane-in-progress{border-top-color:var(--progress);background:var(--lane-progress-bg)}
+.lane-blocked{border-top-color:var(--blocked);background:var(--lane-blocked-bg)}
+.lane-done{border-top-color:var(--done);background:var(--lane-done-bg)}
+.lane-wont-do{border-top-color:var(--wontdo);background:var(--lane-wontdo-bg)}
+.lane-unknown{border-top-color:var(--unknown);background:var(--lane-unknown-bg)}
+.kanban-lane h3,.lane-heading{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin:.05rem 0 .7rem;font-size:.88rem;font-weight:700;letter-spacing:.05em;color:var(--fg)}
+.lane-heading{cursor:pointer;padding:.2rem .25rem;border-radius:8px}
+.lane-heading:hover{background:color-mix(in srgb,var(--fg) 5%,transparent)}
+.lane-count,.badge,.status-badge,.coverage-badge,.status-pill{display:inline-flex;align-items:center;padding:.12rem .55rem;border:1px solid color-mix(in srgb,currentColor 45%,transparent);border-radius:999px;font-size:.7rem;font-weight:650;letter-spacing:.05em;line-height:1.5;background:color-mix(in srgb,currentColor 11%,transparent)}
+.lane-count{color:var(--muted);font-family:var(--pico-font-family-monospace);letter-spacing:0}
+.status-pill{text-transform:uppercase;font-size:.64rem}
+.status-todo{color:var(--todo)}
+.status-in-progress{color:var(--progress)}
+.status-blocked{color:var(--blocked)}
+.status-done{color:var(--done)}
+.status-wont-do{color:var(--wontdo)}
+.status-unknown{color:var(--unknown)}
+.status-draft{color:var(--unknown)}
+.bucket-draft{color:var(--unknown)}
+.bucket-proposed{color:var(--progress)}
+.bucket-capturing{color:var(--unknown)}
+.bucket-other{color:var(--todo)}
+.badge-runnable{color:var(--done)}
+.badge-resumable{color:var(--progress)}
+.badge-blocked{color:var(--blocked)}
+.badge-runnable::before{content:"▶ ";font-size:.85em}
+.badge-resumable::before{content:"↻ ";font-size:.9em}
+.badge-blocked::before{content:"✕ ";font-size:.85em}
+.coverage-badge{color:var(--muted);border-color:var(--border-soft);background:transparent;font-weight:600}
+.task-card{min-width:0;margin-bottom:0;padding:.85rem .95rem;border:1px solid var(--border-soft);border-radius:12px;background:var(--card);box-shadow:0 1px 2px var(--shadow);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.task-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 42%,var(--border-soft));box-shadow:0 12px 26px -16px var(--shadow-hover)}
+.task-card h4,.task-card p{margin:.2rem 0 .55rem}
+.task-card h4{font-size:.95rem;font-weight:650;line-height:1.4;letter-spacing:0;text-transform:none;color:var(--fg)}
+.task-card a{color:var(--fg);text-decoration:none}
+.task-card a:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.task-id,.task-path{font-size:.78rem;color:var(--muted)}
+.task-card details{margin-block:.45rem;padding:0;border-radius:9px}
+.task-card details>summary{padding:.4rem .6rem;font-size:.78rem;font-weight:650}
+.task-card details>:not(summary){margin-inline:.55rem}
+.doc-card{border-left:4px solid var(--unknown)}
+.attention{padding:1rem 1.15rem;border:1px solid var(--border-soft);border-radius:14px;background:var(--card)}
+.attention-groups{display:flex;flex-wrap:wrap;gap:.9rem;margin-top:.7rem}
+.attention-group{flex:1 1 300px;padding:.75rem .95rem;border:1px solid var(--border-soft);border-left:4px solid var(--blocked);border-radius:10px;background:color-mix(in srgb,var(--blocked) 4%,var(--card))}
+.attention-group h3{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin:.05rem 0 .55rem;font-size:.74rem}
+.attention-group ul{margin:0;padding-inline-start:0}
+.attention-group li{margin-block:.35rem;font-size:.85rem}
+.issue-list{list-style:none;display:flex;flex-direction:column}
+.issue-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem .8rem;padding:.5rem 0;border-top:1px solid var(--border-soft)}
+.issue-list>.issue-row:first-child{border-top:0;padding-top:.05rem}
+.issue-main{display:flex;align-items:baseline;gap:.5rem;flex:1 1 240px;min-width:0}
+.issue-dot{width:.45rem;height:.45rem;flex:none;align-self:center;border-radius:50%;background:var(--blocked)}
+.issue-msg{font-size:.84rem;line-height:1.45;min-width:0;overflow-wrap:anywhere}
+.issue-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:.3rem .55rem;justify-content:flex-end;text-align:end}
+.issue-tag{flex:none;padding:.08rem .45rem;border:1px solid var(--border-soft);border-radius:999px;background:color-mix(in srgb,var(--blocked) 5%,var(--card));font-family:var(--pico-font-family-monospace);font-size:.62rem;letter-spacing:.02em;color:var(--muted)}
+.issue-loc{font-family:var(--pico-font-family-monospace);font-size:.7rem;color:var(--muted);overflow-wrap:anywhere}
+a.issue-loc:hover{color:var(--accent)}
+.issue-sub{font-family:var(--pico-font-family-monospace);font-size:.66rem;color:var(--muted)}
+.issue-repair{flex:none;padding:.08rem .42rem;border-radius:5px;font-size:.6rem;font-weight:700;letter-spacing:.06em}
+.repair-safe{color:var(--done);background:color-mix(in srgb,var(--done) 12%,transparent)}
+.repair-migration{color:var(--unknown);background:color-mix(in srgb,var(--unknown) 14%,transparent)}
+.repair-manual{color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent)}
+.attention-empty{border-left-color:var(--border);flex:0 1 220px;background:var(--card);opacity:.55}
+.attention-active{border-color:color-mix(in srgb,var(--blocked) 45%,var(--border-soft));background:linear-gradient(180deg,color-mix(in srgb,var(--blocked) 7%,var(--card)),var(--card) 65%);box-shadow:0 14px 34px -22px color-mix(in srgb,var(--blocked) 55%,transparent)}
+.facts dt,.gauge-note,.empty,.chart-legend{color:var(--muted)}
+.empty{font-size:.84rem}
+.membership-list{margin:.55rem 0 0;padding-left:1.1rem;font-size:.82rem}
+.membership-list li+li{margin-top:.55rem}
+.lane-empty{padding:.8rem;border:1px dashed var(--border);border-radius:9px;background:var(--lane-empty);font-size:.82rem}
+code{white-space:normal;overflow-wrap:anywhere;font-size:.92em}
+.row-list{list-style:none;margin:0;padding:0;display:grid;gap:.45rem}
+.row-item{display:flex;align-items:baseline;gap:.35rem .6rem;flex-wrap:wrap;padding:.45rem .7rem;border:1px solid var(--border-soft);border-radius:9px;background:var(--card);font-size:.82rem}
+.row-meta{color:var(--muted);font-size:.74rem}
+.row-danger{border-left:3px solid var(--blocked)}
+.chip-line{display:flex;flex-wrap:wrap;gap:.4rem}
+.muted{color:var(--muted)}
+.doc-list{display:grid;gap:.5rem;max-height:72vh;overflow:auto;padding:.15rem}
+.doc-row{padding:.55rem .8rem;border:1px solid var(--border-soft);border-left:3px solid var(--border);border-radius:10px;background:var(--card);transition:border-color .15s ease}
+.doc-row:hover{background:color-mix(in srgb,var(--accent) 5%,var(--hover))}
+.doc-row:target{background:color-mix(in srgb,var(--accent) 10%,var(--card));border-left-color:var(--accent)}
+.doc-head{display:flex;align-items:baseline;gap:.45rem .7rem;flex-wrap:wrap}
+.doc-title{min-width:0;font-weight:650}
+.doc-time{margin-left:auto;color:var(--muted);font-size:.72rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.doc-sub{display:flex;align-items:baseline;gap:.3rem .8rem;flex-wrap:wrap;margin-top:.35rem;font-size:.74rem}
+.doc-path{color:var(--muted);font-size:.74rem}
+pre,.graph-scroll{overflow:auto}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--fg) 18%,transparent);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--fg) 30%,transparent);background-clip:content-box}
+*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--fg) 22%,transparent) transparent}
+svg{display:block;width:100%;min-width:760px;height:auto}
+.graph-scroll{max-width:100%}
+.graph-canvas{margin-block:.9rem;padding:.95rem 1.1rem;border:1px solid var(--border-soft);border-radius:14px;background:var(--card)}
+.canvas-head{display:flex;justify-content:space-between;align-items:baseline;gap:.35rem .8rem;flex-wrap:wrap;margin-bottom:.6rem}
+.canvas-eyebrow{font-size:.66rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.graph-meta{font-family:var(--pico-font-family-monospace);font-size:.74rem;color:var(--muted)}
+.graph-stage{overflow-x:auto;padding:.6rem;border:1px solid var(--border-soft);border-radius:10px;background-color:var(--stage);background-image:radial-gradient(circle,var(--stage-dot) 1px,transparent 1.3px);background-size:22px 22px}
+.probe-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(17rem,1fr);gap:.9rem;align-items:stretch}
+.probe-side{display:grid;gap:.9rem;align-content:start}
+.probe-panel{padding:.6rem .9rem .75rem;border:1px solid var(--border-soft);border-radius:10px;background:var(--card)}
+.probe-panel h3{margin:.05rem 0 .6rem;font-size:.72rem}
+.probe-muted{border-left-color:var(--border);background:var(--card)}
+.route-path{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.3rem 0 .7rem}
+.probe-node{display:inline-flex;align-items:center;gap:.45rem;padding:.34rem .75rem .34rem .45rem;border:1.5px solid var(--kind,var(--border));border-radius:10px;background:color-mix(in srgb,var(--kind,var(--border)) 9%,var(--card));font-family:var(--pico-font-family-monospace);font-size:.82rem;font-weight:700}
+.probe-glyph{display:inline-flex;align-items:center;justify-content:center;width:1.2rem;height:1.2rem;border-radius:5px;background:color-mix(in srgb,var(--kind,var(--border)) 15%,transparent);color:var(--kind,var(--border));font-size:.68rem}
+.probe-node.kind-action{--kind:var(--progress)}
+.probe-node.kind-delegate{--kind:var(--wontdo)}
+.probe-node.kind-audit{--kind:var(--unknown)}
+.probe-node.kind-terminal{--kind:var(--done)}
+.probe-unknown{--kind:var(--border);color:var(--muted)}
+.probe-link{display:inline-flex;flex-direction:column;align-items:center;min-width:5.2rem;padding-inline:.15rem}
+.probe-edge-label{max-width:11rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--pico-font-family-monospace);font-size:.64rem;color:var(--muted)}
+.route-arrow{color:var(--muted);font-weight:700;font-size:1.2rem;line-height:1}
+.probe-blocked .route-arrow,.probe-blocked .probe-edge-label{color:var(--blocked)}
+.signal-group{display:flex;align-items:baseline;gap:.4rem .6rem;flex-wrap:wrap;margin-block:.4rem}
+.signal-label{flex:none;min-width:6.6rem;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.probe-note{margin:.6rem 0 0;padding:.42rem .7rem;border-radius:8px;background:color-mix(in srgb,var(--done) 8%,var(--card));font-family:var(--pico-font-family-monospace);font-size:.72rem;color:var(--muted)}
+.probe-note-danger{background:color-mix(in srgb,var(--blocked) 10%,var(--card));color:var(--blocked)}
+.probe-note a{color:inherit;font-weight:700;text-decoration:none}
+.probe-note a:hover{text-decoration:underline}
+.gate-pills{display:flex;flex-wrap:wrap;gap:.4rem}
+.gate-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.18rem .65rem;border:1px solid color-mix(in srgb,var(--g,var(--border)) 45%,var(--border-soft));border-radius:999px;background:color-mix(in srgb,var(--g,var(--border)) 8%,var(--card));font-family:var(--pico-font-family-monospace);font-size:.72rem}
+.gate-dot{width:.5rem;height:.5rem;flex:none;border-radius:50%;background:var(--g,var(--border))}
+.gate-pass{--g:var(--done)}
+.gate-fail{--g:var(--unknown)}
+.gate-blocked{--g:var(--blocked)}
+.gate-score{float:right;font-family:var(--pico-font-family-monospace);font-size:.74rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}
+@media(max-width:900px){.probe-grid{grid-template-columns:1fr}}
+.graph-legend{display:flex;flex-wrap:wrap;gap:.4rem 1.3rem;margin:.6rem 0 0;padding:.6rem .15rem 0;border-top:1px solid var(--border-soft);list-style:none;font-size:.76rem;color:var(--muted)}
+.legend-swatch{display:inline-block;width:.8rem;height:.8rem;margin-right:.3rem;border:1.5px solid var(--sw,var(--border));border-radius:.25rem;background:color-mix(in srgb,var(--sw,var(--border)) 14%,transparent);vertical-align:-1px}
+.sw-action{--sw:var(--progress)}
+.sw-delegate{--sw:var(--wontdo)}
+.sw-audit{--sw:var(--unknown)}
+.sw-terminal{--sw:var(--done)}
+.swatch-current{--sw:var(--unknown)}
+.swatch-edge{height:0;width:1.1rem;border:0;border-top:3px solid var(--accent);border-radius:0;background:none;vertical-align:3px}
+.legend-line{display:inline-block;width:1.1rem;height:0;margin-right:.3rem;border-top:2.5px solid var(--edge,var(--border));vertical-align:3px}
+.sw-fwd{--edge:var(--accent)}
+.sw-back{--edge:var(--unknown)}
+.sw-retry{--edge:var(--muted);border-top-style:dashed}
+details{margin-block:.8rem;padding:0;border:1px solid var(--border-soft);border-radius:12px;background:color-mix(in srgb,var(--card) 82%,transparent);overflow:hidden}
+details>summary{display:block;padding:.65rem .95rem;font-weight:600}
+details>summary{position:relative;cursor:pointer}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:"";position:absolute;right:1rem;top:calc(50% - .22rem);width:.48rem;height:.48rem;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .18s ease}
+details[open]>summary::after{transform:rotate(225deg);top:calc(50% - .12rem)}
+details>summary:hover{background:var(--hover)}
+details[open]>summary{margin-bottom:0;border-bottom:1px solid var(--border-soft)}
+details>:not(summary){margin-inline:.95rem}
+details[open]>:not(summary){margin-top:.7rem}
+details>:not(summary):last-child{margin-bottom:.9rem}
+.warning{font-weight:700;color:var(--warn)}
+@media(prefers-reduced-motion:no-preference){
+main>*{animation:rise .55s cubic-bezier(.22,.61,.25,1) both}
+main>*:nth-child(2){animation-delay:.05s}
+main>*:nth-child(3){animation-delay:.1s}
+main>*:nth-child(4){animation-delay:.15s}
+main>*:nth-child(5){animation-delay:.2s}
+main>*:nth-child(6){animation-delay:.25s}
+main>*:nth-child(7){animation-delay:.3s}
+main>*:nth-child(8){animation-delay:.35s}
+body>header{animation:rise .5s cubic-bezier(.22,.61,.25,1) both}
+}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.task-card{transition:none}
+.task-card:hover{transform:none}
+.pulse-dot{animation:none}
+body::after{animation:none}
+}
+@media(max-width:640px){body{padding:12px 14px 28px}
+h1{font-size:1.6rem}
+.hero{gap:1.1rem;padding:1rem 1.1rem}
+.hero-facts{gap:1.2rem}
+.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.kanban-board{grid-auto-columns:minmax(min(17rem,calc(100vw - 40px)),calc(100vw - 40px))}
+}
+@media print{nav,form,.skip-link{display:none}
+body::before,body::after{display:none}
+main>*{animation:none}
+.attention{break-inside:avoid}
+details>*{display:block}
+.kanban-scroll{overflow:visible}
+.kanban-board{display:block;width:auto}
+.kanban-lane{break-inside:avoid;max-height:none;margin-bottom:1rem}
+.lane-cards{overflow:visible}
+}`;
 function renderDashboard(snapshot) {
   const ids = documentAnchors(snapshot.inventory);
   const hasBlocking = snapshot.state.hardBlockers.length > 0 || snapshot.findings.some((finding2) => finding2.blocking) || snapshot.plans.some((plan) => plan.graph.issues.length > 0) || snapshot.decision?.route.status === "blocked" && (snapshot.decision.explanation?.blockedReasons?.length ?? 0) > 0;
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; connect-src 'none'"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E"><title>\u6587\u66F8\u99C6\u52D5\u958B\u767A\u306E\u9032\u884C\u72B6\u6CC1</title><script>${themeScript}</script><style>${picoClasslessCss}${styles}</style></head><body><a class="skip-link" href="#main">\u672C\u6587\u3078\u79FB\u52D5</a><header><div class="header-row"><span class="pulse-dot${hasBlocking ? " pulse-bad" : ""}" aria-hidden="true" title="${hasBlocking ? "\u8981\u5BFE\u5FDC\u3042\u308A" : "\u30D6\u30ED\u30C3\u30AB\u30FC\u306A\u3057"}"></span><h1>\u6587\u66F8\u99C6\u52D5\u958B\u767A\u306E\u9032\u884C\u72B6\u6CC1</h1></div><p class="subtitle"><strong>repository:</strong> ${e(snapshot.repositoryName)} / <strong>\u5BFE\u8C61:</strong> ${list2(snapshot.requested.focus)} / <strong>\u958B\u59CB:</strong> ${e(snapshot.startedAt)} / <strong>\u751F\u6210\u6642\u70B9:</strong> <time datetime="${escapeHtml(snapshot.generatedAt)}" data-relative>${e(snapshot.generatedAt)}</time></p></header><nav aria-label="\u30BB\u30AF\u30B7\u30E7\u30F3"><ul><li><a href="#overview">\u6982\u8981</a></li><li><a href="#charts">\u30C1\u30E3\u30FC\u30C8</a></li><li><a href="#task-board">\u30BF\u30B9\u30AF\u30DC\u30FC\u30C9</a></li><li><a href="#backlog">\u5019\u88DC</a></li><li><a href="#graph">Graph</a></li><li><a href="#tasks">\u30BF\u30B9\u30AF\u8A73\u7D30</a></li><li><a href="#documents">\u6587\u66F8</a></li><li><a href="#attention">\u8981\u5BFE\u5FDC</a></li><li><a href="#diagnostics">\u8A3A\u65AD</a></li><li><button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" title="\u30C6\u30FC\u30DE\u5207\u66FF (T)">\u30C6\u30FC\u30DE</button></li></ul></nav><main id="main">${renderMetrics(snapshot)}${renderCharts(snapshot)}${renderTaskBoard(snapshot, ids)}<div class="graph-scroll">${renderGraph(snapshot)}</div>${renderPlans(snapshot)}${renderDocuments(snapshot)}${renderAttention(snapshot)}${renderDiagnostics(snapshot)}</main><footer><small>\u3053\u306E\u753B\u9762\u306F\u751F\u6210\u6642\u70B9\u306E\u72B6\u614B\u3067\u3059\u3002\u66F4\u65B0\u3059\u308B\u306B\u306F\u30B3\u30DE\u30F3\u30C9\u3092\u518D\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002</small></footer><noscript>\u5168\u60C5\u5831\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u7D5E\u308A\u8FBC\u307F\u306B\u306F JavaScript \u304C\u5FC5\u8981\u3067\u3059\u3002</noscript><script>${filterScript}</script></body></html>`;
+  const canonicalTasks = snapshot.inventory.filter((row) => row.kind === "canonical" && row.type === "task");
+  const summary = summarizeTasks(canonicalTasks);
+  const heroPct = summary.doneRatio === null ? null : Math.round(summary.doneRatio * 100);
+  const heroBlockers = snapshot.state.hardBlockers.length + snapshot.findings.filter((finding2) => finding2.blocking).length;
+  const canonicalDocs = snapshot.inventory.filter((row) => row.kind === "canonical").length;
+  const hero = `<div class="hero"><div class="hero-metric"><span class="hero-value">${heroPct === null ? "\u2014" : `${heroPct}%`}</span><span class="hero-label">\u5168\u4F53\u5B8C\u4E86\u7387</span></div><div class="hero-mid"><div class="hero-track" role="img" aria-label="\u5B8C\u4E86\u7387 ${heroPct === null ? "\u306A\u3057" : `${heroPct}%`}"><span class="hero-fill" style="width:${heroPct ?? 0}%"></span></div><p class="hero-note">${heroPct === null ? "\u5BFE\u8C61\u30BF\u30B9\u30AF\u306A\u3057" : `${summary.total} \u30BF\u30B9\u30AF\u4E2D ${summary.done} \u4EF6\u5B8C\u4E86`}</p></div><dl class="hero-facts"><div><dt>\u6B8B\u5B58</dt><dd>${summary.remaining}</dd></div><div><dt>blocking</dt><dd${heroBlockers > 0 ? ` class="hero-bad"` : ""}>${heroBlockers}</dd></div><div><dt>\u6587\u66F8</dt><dd>${canonicalDocs}</dd></div></dl></div>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; connect-src 'none'"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E"><title>\u6587\u66F8\u99C6\u52D5\u958B\u767A\u306E\u9032\u884C\u72B6\u6CC1</title><script>${themeScript}</script><style>${picoClasslessCss}${styles}</style></head><body><a class="skip-link" href="#main">\u672C\u6587\u3078\u79FB\u52D5</a><header><div class="eyebrow"><span class="pulse-dot${hasBlocking ? " pulse-bad" : ""}" aria-hidden="true" title="${hasBlocking ? "\u8981\u5BFE\u5FDC\u3042\u308A" : "\u30D6\u30ED\u30C3\u30AB\u30FC\u306A\u3057"}"></span><span>DOC-DRIVEN DEVELOPMENT \xB7 PROGRESS SNAPSHOT</span><span class="eyebrow-state${hasBlocking ? " state-bad" : ""}">${hasBlocking ? "\u8981\u5BFE\u5FDC\u3042\u308A" : "\u30D6\u30ED\u30C3\u30AB\u30FC\u306A\u3057"}</span></div><div class="header-row"><h1>\u6587\u66F8\u99C6\u52D5\u958B\u767A\u306E\u9032\u884C\u72B6\u6CC1</h1></div><p class="subtitle"><span class="meta"><strong>repository</strong><span>${e(snapshot.repositoryName)}</span></span><span class="meta"><strong>\u5BFE\u8C61</strong><span>${list2(snapshot.requested.focus)}</span></span><span class="meta"><strong>\u958B\u59CB</strong><span>${e(snapshot.startedAt)}</span></span><span class="meta"><strong>\u751F\u6210\u6642\u70B9</strong><time datetime="${escapeHtml(snapshot.generatedAt)}" data-relative>${e(snapshot.generatedAt)}</time></span></p>${hero}</header><nav aria-label="\u30BB\u30AF\u30B7\u30E7\u30F3"><ul><li><a href="#overview">\u6982\u8981</a></li><li><a href="#charts">\u30C1\u30E3\u30FC\u30C8</a></li><li><a href="#task-board">\u30BF\u30B9\u30AF\u30DC\u30FC\u30C9</a></li><li><a href="#backlog">\u5019\u88DC</a></li><li><a href="#graph">Graph</a></li><li><a href="#tasks">\u30BF\u30B9\u30AF\u8A73\u7D30</a></li><li><a href="#documents">\u6587\u66F8</a></li><li><a href="#attention">\u8981\u5BFE\u5FDC</a></li><li><a href="#diagnostics">\u8A3A\u65AD</a></li><li><button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" title="\u30C6\u30FC\u30DE\u5207\u66FF (T)">\u30C6\u30FC\u30DE</button></li></ul></nav><main id="main">${renderMetrics(snapshot)}${renderCharts(snapshot)}${renderTaskBoard(snapshot, ids)}<div class="graph-scroll">${renderGraph(snapshot)}</div>${renderPlans(snapshot)}${renderDocuments(snapshot)}${renderAttention(snapshot, ids)}${renderDiagnostics(snapshot)}</main><footer><small>\u3053\u306E\u753B\u9762\u306F\u751F\u6210\u6642\u70B9\u306E\u72B6\u614B\u3067\u3059\u3002\u66F4\u65B0\u3059\u308B\u306B\u306F\u30B3\u30DE\u30F3\u30C9\u3092\u518D\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002</small></footer><noscript>\u5168\u60C5\u5831\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u7D5E\u308A\u8FBC\u307F\u306B\u306F JavaScript \u304C\u5FC5\u8981\u3067\u3059\u3002</noscript><script>${filterScript}</script></body></html>`;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts
@@ -34276,5 +34882,5 @@ safe-buffer/index.js:
   (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 
 js-yaml/dist/js-yaml.mjs:
-  (*! js-yaml 5.2.2 https://github.com/nodeca/js-yaml @license MIT *)
+  (*! js-yaml 5.4.1 https://github.com/nodeca/js-yaml @license MIT *)
 */
