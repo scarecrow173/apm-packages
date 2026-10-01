@@ -29378,6 +29378,11 @@ var RECIPROCAL_RELATIONS = {
 function relationSourcePaths(document3) {
   return [document3.path, ...document3.id ? [document3.id] : [], ...document3.localeSiblings];
 }
+function reciprocalApplies(document3, inverseField, targetDocument) {
+  const inverseRule = contractForType(targetDocument.type ?? "")?.requiredRelations.find((rule) => rule.field === inverseField);
+  if (!inverseRule) return true;
+  return document3.type !== null && inverseRule.targetTypes.includes(document3.type);
+}
 function lintParseErrors(document3) {
   if (!document3.parseError) return [];
   return [finding({
@@ -29558,7 +29563,7 @@ function lintRelations(model, document3, scopeType) {
         }));
       }
       const reciprocal = RECIPROCAL_RELATIONS[field];
-      if (reciprocal) {
+      if (reciprocal && reciprocalApplies(document3, reciprocal, targetDocument)) {
         const inverse = targetDocument.relations[reciprocal] ?? [];
         const sources = relationSourcePaths(document3);
         if (inverse.length > 0 && !inverse.some((value) => sources.includes(value))) {

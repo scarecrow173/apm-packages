@@ -69,6 +69,22 @@ function relationSourcePaths(document: RepositoryDocument): string[] {
   return [document.path, ...(document.id ? [document.id] : []), ...document.localeSiblings];
 }
 
+// Typed reciprocal semantics: an inverse link is only expected when the
+// target type's contract could legally express it back to the source type.
+// `plan`/`task` -> `verified-by` -> `test-spec` is a verification-evidence
+// link; `test-spec.verifies` may only target spec/design/adr, so it can
+// never reciprocate a plan or task source.
+function reciprocalApplies(
+  document: RepositoryDocument,
+  inverseField: string,
+  targetDocument: RepositoryDocument,
+): boolean {
+  const inverseRule = contractForType(targetDocument.type ?? "")
+    ?.requiredRelations.find((rule) => rule.field === inverseField);
+  if (!inverseRule) return true;
+  return document.type !== null && inverseRule.targetTypes.includes(document.type);
+}
+
 // ---------------------------------------------------------------------------
 // Rules
 // ---------------------------------------------------------------------------
@@ -267,7 +283,7 @@ function lintRelations(model: DocumentRepository, document: RepositoryDocument, 
       }
 
       const reciprocal = RECIPROCAL_RELATIONS[field];
-      if (reciprocal) {
+      if (reciprocal && reciprocalApplies(document, reciprocal, targetDocument)) {
         const inverse = targetDocument.relations[reciprocal] ?? [];
         const sources = relationSourcePaths(document);
         if (inverse.length > 0 && !inverse.some((value) => sources.includes(value))) {
