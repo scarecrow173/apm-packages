@@ -90,7 +90,10 @@ runtime の pass/fail を `status` に記録しません。テスト結果は揮
 | `related` | 方向性のある依存を持たない文脈上の文書。 |
 
 その振る舞いを実装する task は、自身の `verified-by` relation でこの test
-spec を指し戻します。
+spec を指し戻します。plan や task からの `verified-by` link は検証証跡の
+link として扱われるため、`doc-status` はそれらに対する `verifies` の
+逆リンクを要求しません。reciprocal check は、リンク先の文書型が逆方向の
+relation を合法的に宣言できる場合にのみ適用されます。
 
 relation の対象はリポジトリ相対パスまたはドキュメント ID（`TSPEC-<id>`
 形式）で記述できます。`doc-status` の監査は、`verifies` の対象が spec、
