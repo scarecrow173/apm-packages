@@ -137,6 +137,62 @@ test("audit_docs flags declared reciprocal relations that do not link back", () 
   );
 });
 
+test("audit_docs treats plan/task verified-by to a test-spec as evidence, not reciprocal", () => {
+  const repo = tempRepo();
+  for (const dir of ["docs/specs", "docs/plans", "docs/tasks", "docs/test-specs"]) {
+    fs.mkdirSync(path.join(repo, dir), { recursive: true });
+    fs.writeFileSync(path.join(repo, dir, "README.md"), `# ${dir}\n`, "utf8");
+  }
+  writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter({ status: "approved" }));
+  writeDoc(path.join(repo, "docs/specs"), "0002-b.md", specFrontMatter({
+    id: "SPEC-0002",
+    status: "approved",
+    relations: { "verified-by": ["TSPEC-0002"] },
+  }));
+  writeDoc(path.join(repo, "docs/test-specs"), "0001-ts.md", specFrontMatter({
+    id: "TSPEC-0001",
+    type: "test-spec",
+    status: "approved",
+    title: "TS1",
+    relations: { verifies: ["SPEC-0001"] },
+  }));
+  writeDoc(path.join(repo, "docs/test-specs"), "0002-ts.md", specFrontMatter({
+    id: "TSPEC-0002",
+    type: "test-spec",
+    status: "approved",
+    title: "TS2",
+    relations: { verifies: ["SPEC-0001"] },
+  }));
+  writeDoc(path.join(repo, "docs/plans"), "0001-p.md", specFrontMatter({
+    id: "PLAN-0001",
+    type: "plan",
+    status: "approved",
+    title: "Plan",
+    relations: { "verified-by": ["TSPEC-0001"] },
+  }));
+  writeDoc(path.join(repo, "docs/tasks"), "0001-t.md", specFrontMatter({
+    id: "TASK-0001",
+    type: "task",
+    status: "todo",
+    title: "Task",
+    relations: { "verified-by": ["TSPEC-0001"] },
+  }));
+
+  const report = auditJson(repo, "all");
+  const flagged = report.findings
+    .filter((finding: any) => finding.code === "inconsistent-reciprocal-relation")
+    .map((finding: any) => finding.file);
+  assert.deepEqual(flagged, ["docs/specs/0002-b.md"]);
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "plan-missing-test-spec-evidence"),
+    false,
+  );
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "test-spec-invalid-verifies-target"),
+    false,
+  );
+});
+
 test("audit_docs reports invalid verifies target types via the shared contract", () => {
   const repo = tempRepo();
   writeDoc(path.join(repo, "docs/tasks"), "0001-t.md", specFrontMatter({
