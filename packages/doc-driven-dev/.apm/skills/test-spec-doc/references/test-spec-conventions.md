@@ -90,7 +90,10 @@ record them in `impl-doc` experiment logs or CI evidence instead.
 | `related` | Contextual docs without directional dependency. |
 
 Tasks that implement the behavior should point back with their own
-`verified-by` relation to this test spec.
+`verified-by` relation to this test spec. `verified-by` links from plans and
+tasks are verification-evidence links, so `doc-status` does not require a
+`verifies` back-link for them; the reciprocal check applies only where the
+linked document's type can legally declare one.
 
 Relation targets may be written as repo-relative paths or document IDs
 (`TSPEC-<id>` style). `doc-status` audits warn when a `verifies` target
