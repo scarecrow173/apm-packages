@@ -1,6 +1,7 @@
 # Report Format
 
-レビュープロトコルで各ロール間に受け渡される成果物のContract。
+review protocol の各 role（Reviewer A / Reviewer B / Validator / Judge /
+Coordinator）間で受け渡される成果物の Contract。
 
 ## Issue Candidate
 
@@ -47,7 +48,7 @@ SeverityはReviewerのConfidenceではなく、実際のImpactに基づいて決
 
 ## 最終レポート
 
-Coordinatorの最終レポートは、以下をこの順序で含む。
+Coordinator（protocol を実行する agent）の最終レポートは、以下をこの順序で含む。
 
 - **Confirmed P0/P1** — 確認されたBlocking Issueとその解決内容。
 - **Rejected false positives** — 除外された重要なREJECTED候補とその理由。

@@ -1,6 +1,8 @@
 # Report Format
 
-Contracts for the artifacts passed between roles in the review protocol.
+Contracts for the artifacts passed between the roles — Reviewer A,
+Reviewer B, Validator, Judge, and the Coordinator — in the review
+protocol.
 
 ## Issue Candidate
 
@@ -53,7 +55,7 @@ Severity is assigned by actual impact — never by reviewer confidence.
 
 ## Final Report
 
-The Coordinator's final report contains, in order:
+The Coordinator — the agent running the protocol — reports, in order:
 
 - **Confirmed P0/P1** — each confirmed blocking issue and how it was
   resolved.

@@ -14,8 +14,8 @@ spec・design・plan・implementation・code・document といった artifact �
 - **Coordinator**: review を実行する agent — 評価基準を確定し、
   reviewer を派遣し、candidate をルーティングし、承認された修正を
   適用し、停止時期を判断する。
-- **Reviewer A / Reviewer B**: 異なる failure space を探索し、完了まで
-  互いの findings を見ない 2 人の独立した reviewer。
+- **Reviewer A / Reviewer B**: 異なる領域をカバーし、完了まで互いの
+  findings を見ない 2 人の独立した reviewer。
 - **Validator**: 各 Issue Candidate を客観的な証拠に照らして検証する
   独立した role。
 - **Judge**: 検証済みの結果を統合し、severity と blocking 状態を決定

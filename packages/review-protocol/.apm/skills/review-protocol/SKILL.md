@@ -14,8 +14,8 @@ comments.
 - **Coordinator**: the agent running the review — fixes evaluation criteria,
   dispatches reviewers, routes candidates, applies approved fixes, decides
   when to stop.
-- **Reviewer A / Reviewer B**: two independent reviewers who explore different
-  failure space and never see each other's findings before finishing.
+- **Reviewer A / Reviewer B**: two independent reviewers who cover different
+  ground and never see each other's findings before finishing.
 - **Validator**: a separate role that verifies each Issue Candidate against
   objective evidence.
 - **Judge**: a separate role that integrates verified results and decides
