@@ -141,26 +141,26 @@ to the Validator.
 
 Accepting the artifact leads to a severe, hard-to-recover failure.
 
-**Blocking**
+Status: **Blocking**
 
 ### P1 — Major
 
 Unmet requirements, serious contradictions, realistic failures, or
 important design defects that materially prevent the purpose.
 
-**Blocking**
+Status: **Blocking**
 
 ### P2 — Minor
 
 Limited-scope problems, or improvements that do not prevent the purpose.
 
-**Non-blocking**
+Status: **Non-blocking**
 
 ### P3 — Nit
 
 Expression, style, preference, optional cleanup or optimization.
 
-**Non-blocking**
+Status: **Non-blocking**
 
 Severity is determined by actual impact, not by reviewer confidence.
 
