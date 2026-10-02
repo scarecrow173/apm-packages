@@ -22,6 +22,7 @@ devDependencies:
   - ./packages/visualization
   - ./packages/token-compression
   - ./packages/agent-intelligence
+  - ./packages/review-protocol
   mcp:
   - name: mise
     registry: false
@@ -106,4 +107,9 @@ marketplace:
     category: intelligence
     source: scarecrow173/apm-packages
     subdir: packages/agent-intelligence
+
+  - name: review-protocol
+    category: workflow
+    source: scarecrow173/apm-packages
+    subdir: packages/review-protocol
 
