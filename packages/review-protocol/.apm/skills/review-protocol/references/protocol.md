@@ -186,8 +186,9 @@ Do not restart every reviewer from scratch for each small fix. A full
 re-review happens only when a fix significantly changed assumptions,
 structure, responsibilities, boundaries, or key decisions.
 
-A full review runs at most **two** cycles. If blocking issues still cannot
-be resolved, stop the autonomous fix loop and defer to a human.
+As a rule, a full review runs at most **two** cycles. If blocking issues
+still cannot be resolved, stop the autonomous fix loop and defer to a
+human.
 
 ## 10. Stop conditions
 

@@ -179,3 +179,137 @@ test("no secrets-shaped content in package docs", () => {
     );
   }
 });
+
+test("report-format.md binds severity to blocking disposition", () => {
+  const format = read("references/report-format.md").replace(/\s+/g, " ");
+  assert.match(
+    format,
+    /P0[^|]*\|[^|]*\| *Blocking *\|/,
+    "P0 must be Blocking in the severity table",
+  );
+  assert.match(
+    format,
+    /P1[^|]*\|[^|]*\| *Blocking *\|/,
+    "P1 must be Blocking in the severity table",
+  );
+  assert.match(
+    format,
+    /P2[^|]*\|[^|]*\| *Non-blocking *\|/,
+    "P2 must be Non-blocking in the severity table",
+  );
+  assert.match(
+    format,
+    /P3[^|]*\|[^|]*\| *Non-blocking *\|/,
+    "P3 must be Non-blocking in the severity table",
+  );
+});
+
+test("report-format.md binds verdicts to dispositions", () => {
+  const format = read("references/report-format.md").replace(/\s+/g, " ");
+  assert.match(
+    format,
+    /REJECTED *\|[^|]*\| *Excluded/,
+    "REJECTED must be excluded from further processing",
+  );
+  assert.match(
+    format,
+    /UNVERIFIED *\|[^|]*\| *Non-blocking/,
+    "UNVERIFIED must be non-blocking in principle",
+  );
+  assert.match(
+    format,
+    /CONFIRMED *\|[^|]*\|[^|]*blocking/i,
+    "CONFIRMED must enter severity judgment for blocking",
+  );
+});
+
+test("protocol.md binds each severity to its blocking status", () => {
+  const protocol = read("references/protocol.md").replace(/\s+/g, " ");
+  assert.match(
+    protocol,
+    /P0 — Critical.*?Status: \*\*Blocking\*\*/,
+    "P0 must be Blocking",
+  );
+  assert.match(
+    protocol,
+    /P1 — Major.*?Status: \*\*Blocking\*\*/,
+    "P1 must be Blocking",
+  );
+  assert.match(
+    protocol,
+    /P2 — Minor.*?Status: \*\*Non-blocking\*\*/,
+    "P2 must be Non-blocking",
+  );
+  assert.match(
+    protocol,
+    /P3 — Nit.*?Status: \*\*Non-blocking\*\*/,
+    "P3 must be Non-blocking",
+  );
+});
+
+test("fix scope is limited to CONFIRMED P0/P1 in SKILL.md and protocol.md", () => {
+  for (const rel of ["SKILL.md", "references/protocol.md"]) {
+    const text = read(rel).replace(/\s+/g, " ");
+    assert.match(
+      text,
+      /(only|limited to)[^.]*CONFIRMED[^.]*P0[^.]*P1|CONFIRMED P0\/P1/i,
+      `${rel}: fix scope must be limited to confirmed P0/P1`,
+    );
+  }
+});
+
+test("Japanese skill docs keep protocol tokens verbatim", () => {
+  const files = [
+    "SKILL.ja.md",
+    "references/protocol.ja.md",
+    "references/report-format.ja.md",
+  ];
+  const TOKENS = [
+    /Reviewer A/,
+    /Reviewer B/,
+    /Validator/,
+    /Judge/,
+    /Issue Candidate/,
+    /CONFIRMED/,
+    /REJECTED/,
+    /UNVERIFIED/,
+    /\bP0\b/,
+    /\bP1\b/,
+    /\bP2\b/,
+    /\bP3\b/,
+    /Failure Scenario/,
+    /ACCEPT WITH NON-BLOCKING NOTES/,
+    /\bACCEPT\b/,
+    /\bBLOCKED\b/,
+  ];
+  for (const rel of files) {
+    const text = read(rel);
+    for (const token of TOKENS) {
+      assert.match(text, token, `${rel}: missing protocol token ${token}`);
+    }
+  }
+  const jaProtocol = read("references/protocol.ja.md");
+  assert.match(
+    jaProtocol,
+    /最大2|2サイクル/,
+    "protocol.ja.md: two-cycle re-review cap missing",
+  );
+});
+
+test("report-format.ja.md keeps Issue Candidate field names verbatim", () => {
+  const format = read("references/report-format.ja.md").replace(/\s+/g, " ");
+  for (const field of [
+    "Claim",
+    "Location",
+    "Failure Scenario",
+    "Impact",
+    "Evidence",
+    "Proposed Severity",
+    "Validation Method",
+  ]) {
+    assert.ok(
+      format.includes(field),
+      `report-format.ja.md: missing Issue Candidate field "${field}"`,
+    );
+  }
+});
