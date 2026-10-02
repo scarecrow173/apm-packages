@@ -161,25 +161,25 @@ Judgeが新しい問題に気付いた場合は、確定せず、新しいIssue 
 
 成果物を受け入れると重大かつ回復困難なFailureにつながる。
 
-**Blocking**
+Status: **Blocking**
 
 ### P1 — Major
 
 要求未達、重大な矛盾、現実的なFailure、重要な設計欠陥など、目的達成を実質的に妨げる。
 
-**Blocking**
+Status: **Blocking**
 
 ### P2 — Minor
 
 限定的な問題や、改善価値はあるが目的達成を妨げない問題。
 
-**Non-blocking**
+Status: **Non-blocking**
 
 ### P3 — Nit
 
 表現、style、好み、任意のcleanup・最適化。
 
-**Non-blocking**
+Status: **Non-blocking**
 
 SeverityはReviewerのConfidenceではなく、**実際のImpact**に基づいて決定する。
 
