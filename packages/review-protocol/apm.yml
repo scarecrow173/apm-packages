@@ -1,0 +1,17 @@
+name: review-protocol
+version: 0.1.0
+description: Evidence-gated review protocol for agent artifacts — parallel independent reviewers produce issue candidates, a Validator verifies them against evidence, a Judge assigns severity, and only confirmed blocking issues are fixed.
+author: Akiyoshi Koyama
+license: MIT
+targets:
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - windsurf
+  - agent-skills
+includes:
+  - .apm/
+scripts:
+  validate: "apm compile --validate"
+  preview: "apm compile --dry-run"
