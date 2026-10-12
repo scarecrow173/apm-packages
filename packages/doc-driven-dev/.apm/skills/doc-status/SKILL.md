@@ -104,7 +104,9 @@ a stable rule ID. Covered checks include:
   violations.
 - `broken-relation-link`, `ambiguous-relation-target`,
   `relation-escapes-root`, `self-relation`, `inconsistent-reciprocal-relation`
-  — semantic relation violations.
+  — semantic relation violations. The reciprocal check covers typed
+  directional pairs only; `related` is a one-directional context link and
+  does not require a back-link.
 - `unresolved-legacy-reference` — body text references to legacy `TYPE-NNNN`
   artifact ids that no artifact provides, including `EXP-NNNN` experiment
   references without a matching numbered `.jsonl` log. Tokens that still

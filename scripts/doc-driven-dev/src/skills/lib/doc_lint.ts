@@ -47,6 +47,10 @@ function scopeFor(model: DocumentRepository, type: string, directory: string): L
 // Relation helpers
 // ---------------------------------------------------------------------------
 
+// Typed directional pairs whose inverse declaration is expected on the
+// target. `related` is intentionally absent: it is a one-directional
+// context pointer (hub documents cannot maintain back-link lists), so no
+// `related` back-link is required.
 const RECIPROCAL_RELATIONS: Record<string, string> = {
   "implements": "implemented-by",
   "implemented-by": "implements",
@@ -62,7 +66,6 @@ const RECIPROCAL_RELATIONS: Record<string, string> = {
   "deferred-by": "defers",
   "depends-on": "blocks",
   "blocks": "depends-on",
-  "related": "related",
 };
 
 function relationSourcePaths(document: RepositoryDocument): string[] {

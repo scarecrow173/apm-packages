@@ -140,6 +140,11 @@ replacement decisions, link both ways when possible:
 - New spec: `relations.supersedes` points to the old spec.
 - Old spec: `relations.superseded-by` points to the new spec.
 
+`related` is a one-directional context pointer: linking to a document does
+not oblige it to link back, and `doc-status` does not flag missing `related`
+back-links. Typed pairs (`implements`/`implemented-by`, `depends-on`/`blocks`,
+and so on) still expect reciprocal declarations.
+
 ## Required Content
 
 Every spec should answer:
