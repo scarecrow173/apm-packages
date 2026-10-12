@@ -139,6 +139,11 @@ relation は文書種別ではなく意味で選びます。
 - 新 spec: `relations.supersedes` が古い spec を指す。
 - 旧 spec: `relations.superseded-by` が新 spec を指す。
 
+`related` は一方向の context pointer です。文書への link に対して link 先が
+逆リンクを張る義務はなく、`doc-status` も `related` の逆リンク欠落を検出
+しません。`implements`/`implemented-by` や `depends-on`/`blocks` などの
+typed pair は引き続き相互宣言を求められます。
+
 ## 必須内容
 
 spec は次に答えます。
