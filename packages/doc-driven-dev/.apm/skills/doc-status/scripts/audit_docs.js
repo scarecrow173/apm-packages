@@ -29139,8 +29139,7 @@ var RECIPROCAL_RELATIONS = {
   "defers": "deferred-by",
   "deferred-by": "defers",
   "depends-on": "blocks",
-  "blocks": "depends-on",
-  "related": "related"
+  "blocks": "depends-on"
 };
 function relationSourcePaths(document3) {
   return [document3.path, ...document3.id ? [document3.id] : [], ...document3.localeSiblings];
