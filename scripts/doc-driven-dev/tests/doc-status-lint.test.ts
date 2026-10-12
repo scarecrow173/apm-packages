@@ -137,6 +137,44 @@ test("audit_docs flags declared reciprocal relations that do not link back", () 
   );
 });
 
+test("audit_docs treats related as a one-directional context link", () => {
+  const repo = tempRepo();
+  writeDoc(path.join(repo, "docs/specs"), "0001-s.md", specFrontMatter({
+    status: "approved",
+    relations: { blocks: ["ADR-0001"] },
+  }));
+  writeDoc(path.join(repo, "docs/adr"), "0001-a.md", specFrontMatter({
+    id: "ADR-0001",
+    type: "adr",
+    status: "accepted",
+    title: "ADR",
+  }));
+  writeDoc(path.join(repo, "docs/designs"), "0001-d.md", specFrontMatter({
+    id: "DESIGN-0001",
+    type: "design",
+    status: "approved",
+    title: "Design",
+    relations: { related: ["ADR-0001"] },
+  }));
+  writeDoc(path.join(repo, "docs/tasks"), "0001-t.md", specFrontMatter({
+    id: "TASK-0001",
+    type: "task",
+    status: "todo",
+    title: "Task",
+    relations: {
+      related: ["DESIGN-0001"],
+      "depends-on": ["SPEC-0001"],
+    },
+  }));
+
+  const report = auditJson(repo, "all");
+  const flagged = report.findings
+    .filter((finding: any) => finding.code === "inconsistent-reciprocal-relation")
+    .map((finding: any) => finding.message);
+  assert.equal(flagged.length, 1);
+  assert.ok(flagged[0].includes("depends-on"), "typed pairs still require a back-link");
+});
+
 test("audit_docs treats plan/task verified-by to a test-spec as evidence, not reciprocal", () => {
   const repo = tempRepo();
   for (const dir of ["docs/specs", "docs/plans", "docs/tasks", "docs/test-specs"]) {
