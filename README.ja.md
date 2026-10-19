@@ -21,6 +21,11 @@ mise の shims は uv との無限ループ回避のため PATH から除外さ�
 アクティベートしないと `uv`, `python`, `node` などのバージョン管理が効かず、
 コマンドが見つからないか誤ったバージョンで実行されます。
 
+fresh clone 後は、作業開始前に一度 `mise install` を実行して pin 済み toolchain
+を復元してください。`mise.toml` / `mise.lock` に記録されたバージョンがローカルの
+mise state にインストールされます。`mise.toml` や `mise.lock` が変更された場合も
+`mise install` を再実行してください。
+
 ## インストール
 
 利用者側は `apm.yml` でこのコレクション全体を依存先として登録できます：

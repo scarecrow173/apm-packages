@@ -21,6 +21,11 @@ The `mise` shims are excluded from PATH to prevent infinite loops with `uv`.
 Without activation, version management for `uv`, `python`, `node`, and other tools will not work.
 Commands may not be found, or incorrect versions will be executed.
 
+On a fresh clone, restore the pinned toolchain once with `mise install` before
+starting work. It installs the versions recorded in `mise.toml`/`mise.lock`
+into the local mise state. Re-run `mise install` whenever `mise.toml` or
+`mise.lock` changes.
+
 ## Installation
 
 Consumers can install this entire package collection by adding it to their `apm.yml`:
