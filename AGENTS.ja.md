@@ -53,3 +53,12 @@ pin 済み toolchain（`mise.toml` + `mise.lock`）を復元してください�
 - 生成キャッシュやローカル作業ディレクトリを version control に含めないでください。
 - 繰り返し発生する transient artifact は `.gitignore` に追加してください。
 - `.pnpm-store/` のような workspace 専用 cache directory はコミットしないでください。
+
+## 5. Git worktrees
+
+- `.worktreeinclude` は、worktree 対応ツールが新規 worktree へコピーする
+  Git ignore 対象の APM 生成 assets を列挙しています。`.gitignore` の
+  "apm install generated deployment outputs" ブロックとの整合を保ってください。
+- これらの assets が存在しない worktree（非対応ツールや fresh checkout）では、
+  作業前に `mise install` のあと `apm install` を実行してください。
+  `apm.yml`、`apm.lock.yaml`、manifest 変更後も `apm install` を再実行してください。
