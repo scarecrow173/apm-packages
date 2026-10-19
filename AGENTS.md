@@ -66,3 +66,12 @@ On a fresh clone, restore the pinned toolchain once with `mise install`
 - Keep generated caches and local working directories out of version control.
 - Add new transient artifacts to `.gitignore` when they appear repeatedly.
 - Avoid committing workspace-only cache directories such as `.pnpm-store/`.
+
+## 5. Git worktrees
+
+- `.worktreeinclude` lists the gitignored APM-generated assets that
+  worktree-aware tools copy into new worktrees. Keep it aligned with the
+  "apm install generated deployment outputs" block in `.gitignore`.
+- In a worktree that lacks those assets (unsupported tool or fresh
+  checkout), run `mise install` then `apm install` before working. Re-run
+  `apm install` after `apm.yml`, `apm.lock.yaml`, or manifest changes.

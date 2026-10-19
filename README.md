@@ -47,6 +47,18 @@ apm install .
 `node_modules` trees that may contain hidden Unicode fixtures in third-party
 test files.
 
+## Git worktrees
+
+`.worktreeinclude` lists the gitignored APM-generated assets (installed
+dependencies under `apm_modules/`, deployed agent/skills outputs, and MCP
+config) so worktree-aware tools can copy them into new worktrees and a
+worktree is usable without a fresh `apm install`.
+
+If a worktree lacks those assets (a tool without `.worktreeinclude` support,
+or a checkout where they do not exist yet), run `mise install` and then
+`apm install` inside the worktree. Re-run `apm install` whenever `apm.yml`,
+`apm.lock.yaml`, or package manifests change.
+
 ## Repository structure
 
 This is a **monorepo-hybrid** layout:

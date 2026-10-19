@@ -47,6 +47,18 @@ apm install .
 依存パッケージのテストファイルに含まれる不可視 Unicode 文字による
 一時的なブロックを回避しやすくなります。
 
+## Git worktree
+
+`.worktreeinclude` には、Git ignore 対象の APM 生成 assets
+（`apm_modules/` 配下の install 済み依存、展開済み agent/skills 出力、
+MCP 設定）を列挙しています。`.worktreeinclude` 対応ツールはこれらを新規
+worktree へコピーするため、`apm install` なしで worktree を利用開始できます。
+
+assets が存在しない worktree（`.worktreeinclude` 非対応ツール、または
+まだ生成されていない checkout）では、worktree 内で `mise install` のあと
+`apm install` を実行してください。`apm.yml`、`apm.lock.yaml`、または
+package manifest が変更された場合も `apm install` を再実行してください。
+
 ## リポジトリ構成
 
 **monorepo-hybrid** レイアウトです：
