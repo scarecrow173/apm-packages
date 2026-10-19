@@ -1,0 +1,26 @@
+# Gitignored APM-generated assets to copy into new git worktrees.
+# Read by worktree tooling that supports .worktreeinclude (Claude Code
+# worktrees, Conductor, git-worktreeinclude, ...). Only files that git
+# already ignores are ever copied; tracked files are checked out normally.
+# Keep this aligned with the "apm install generated deployment outputs"
+# block in .gitignore. Local tool state (.mise/, .mise-data/, .windsurf/,
+# .superpowers/, .serena/ caches), dependency caches, and build outputs are
+# intentionally not inherited.
+
+# APM-installed dependency store
+/apm_modules/
+
+# apm install deployment outputs (root consumer mode)
+/.agents/*
+!/.agents/plugins/
+/.claude/
+/.codex/
+/.cursor/
+/.vscode/
+/.github/agents/
+/.github/instructions/
+/.github/skills/
+/.github/hooks/
+/.github/prompts/
+/.mcp.json
+/.github/mcp.json
