@@ -37,5 +37,9 @@ apm_modules/
 /.windsurf/
 /.mise-data/
 /.superpowers/
+# mise local state; keep dep-graph sidecars under .mise/locks/ committable
+# because mise.lock may reference them by digest (pipx/npm backends)
+/.mise/*
+!/.mise/locks/
 # generated local doc-driven development dashboard
 /reports/doc-driven-dev/

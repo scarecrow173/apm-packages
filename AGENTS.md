@@ -17,6 +17,10 @@ Without `mise exec --`, version management for `uv`, `python`, `node`, and other
 tools may not work; commands may not be found, or incorrect versions may be
 executed.
 
+On a fresh clone, restore the pinned toolchain once with `mise install`
+(`mise.toml` + `mise.lock`) before running other commands. Re-run
+`mise install` whenever `mise.toml` or `mise.lock` changes.
+
 ## 1. Scope
 
 - Paths in this file are repository-root-relative unless a command block says otherwise.

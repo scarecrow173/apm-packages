@@ -16,6 +16,10 @@ mise exec -- <command> [args...]
 `mise exec --` を使用しないと `uv`、`python`、`node` などのバージョン管理が
 機能せず、コマンドが見つからないか、誤ったバージョンで実行される場合があります。
 
+fresh clone 後は、ほかのコマンドより先に一度 `mise install` を実行して
+pin 済み toolchain（`mise.toml` + `mise.lock`）を復元してください。
+`mise.toml` や `mise.lock` が変更された場合も `mise install` を再実行してください。
+
 ## 1. Scope
 
 - このファイル中のパスは、コマンドブロックで明示しない限りリポジトリルート基準です。
