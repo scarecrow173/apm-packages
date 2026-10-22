@@ -7,7 +7,8 @@ UV_EXCLUDE_NEWER = "1 week"
 
 [tools]
 node = "24.22.1"
-pnpm = "11.2.2"
+# eMudhra CA 修正版(GHSA-hq85-5cpj-mr62 対応)の 11系 backport を exact pin。
+pnpm = "11.28.7"
 python = "3.14.5"
 uv = "0.13.5"
 "github:microsoft/apm" = "0.33.0"
