@@ -6,10 +6,10 @@ lockfile = true
 UV_EXCLUDE_NEWER = "1 week"
 
 [tools]
-node = "24.14.0"
+node = "24.22.1"
 pnpm = "11.2.2"
 python = "3.14.5"
-uv = "0.11.16"
+uv = "0.13.5"
 "github:microsoft/apm" = "0.33.0"
 "pipx:serena-agent" = "latest"
 
