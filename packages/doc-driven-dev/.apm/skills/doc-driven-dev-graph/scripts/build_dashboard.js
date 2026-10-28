@@ -30038,12 +30038,15 @@ function resolveArtifactFocus(cwd, graph, records, values) {
     return { focus, blockers: ["focus-invalid"] };
   }
   if (isArtifactFocusAmbiguous(graph, records, focus)) return { focus, blockers: ["focus-required"] };
-  const component = lineageComponent(graph, focus);
-  const plans = records.filter((record2) => component.includes(record2.path) && record2.type === "plan");
-  if (focus.length > 1 && !selectArtifactChain(graph, records, focus)) return { focus, blockers: ["focus-required"] };
+  const chain = selectArtifactChain(graph, records, focus);
+  if (focus.length > 1 && !chain) return { focus, blockers: ["focus-required"] };
   const rank = { plan: 0, design: 1, spec: 2, adr: 3, task: 4 };
   const focused = records.filter((record2) => focus.includes(record2.path)).sort((left, right) => (rank[left.type ?? ""] ?? 9) - (rank[right.type ?? ""] ?? 9) || compareStrings2(left.path, right.path))[0];
-  if (plans.length > 1 && focused?.type !== "plan") return { focus, blockers: ["focus-required"] };
+  if (!chain) {
+    const component = lineageComponent(graph, focus);
+    const plans = records.filter((record2) => component.includes(record2.path) && record2.type === "plan");
+    if (plans.length > 1 && focused?.type !== "plan") return { focus, blockers: ["focus-required"] };
+  }
   return { focus, focusedPath: focused?.path, blockers: [] };
 }
 var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
