@@ -274,6 +274,8 @@ result is wrong. Re-running after a successful apply is a no-op.
   evidence-backed caller loop.
 - [`references/execution-outcome-contract.md`](references/execution-outcome-contract.md) —
   typed audit/delegate outcomes and scope-valid resume proof.
+- [`references/delegate-execution-policy.md`](references/delegate-execution-policy.md) —
+  deterministic per-dispatch execution-mode selection and `DelegateHandoff`.
 - [`references/run-trace-contract.md`](references/run-trace-contract.md) —
   structured run-trace events, JSONL export, and deterministic run counters.
 - [`references/task-graph-contract.md`](references/task-graph-contract.md) —
