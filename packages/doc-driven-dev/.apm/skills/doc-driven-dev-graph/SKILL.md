@@ -38,6 +38,11 @@ The JSON result is the `GraphRoute` contract: `current`, one `next`, `edgeId`,
 and the selected `taskGraph`. Terminal and blocked results are explicit and do
 not guess a destination.
 
+Optional diagnostics: pass `--trace-file <path> --run-id <id>` to append
+`artifact-scan` and `route-selected` JSONL run-trace events (see
+[`references/run-trace-contract.md`](references/run-trace-contract.md)).
+Tracing is off by default and never changes the returned `GraphRoute`.
+
 A successful transition selects exactly one declared edge. When no edge
 condition is satisfied, the router returns a fail-closed same-node blocked
 result with no edge; terminal results are also edge-less. No implicit or
@@ -269,6 +274,8 @@ result is wrong. Re-running after a successful apply is a no-op.
   evidence-backed caller loop.
 - [`references/execution-outcome-contract.md`](references/execution-outcome-contract.md) —
   typed audit/delegate outcomes and scope-valid resume proof.
+- [`references/run-trace-contract.md`](references/run-trace-contract.md) —
+  structured run-trace events, JSONL export, and deterministic run counters.
 - [`references/task-graph-contract.md`](references/task-graph-contract.md) —
   Task Graph composition and fail-closed dependency rules.
 - [`references/graph-inspection.md`](references/graph-inspection.md) — inspection

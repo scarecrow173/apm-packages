@@ -58,7 +58,11 @@ completion、gate、follow-up evidence を canonical Markdown に保存して記
 
 checkpoint は audit、delegate、evidence が記録された後にだけ完了します。run の
 trace summary には mode、bounded counter、順序付き completed edge ID、route
-fingerprint、最終 yield reason を記録します。
+fingerprint、最終 yield reason を記録します。その trace の機械可読 event
+schema、JSONL export、run ごとの counter は
+[run-trace-contract.ja.md](run-trace-contract.ja.md) で定義します。trace は
+非権威の診断データであり、canonical Markdown や Graph State を置き換えま
+せん。
 
 ## Git commit boundary
 
