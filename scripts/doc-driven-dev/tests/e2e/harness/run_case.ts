@@ -78,6 +78,9 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
       applyEvidence,
       proofPath,
       executionMode: "tool", // the scripted adapter IS a tool — honest mode attribution
+      // Case-declared delegate-mode policy: overrides executionMode and adds
+      // modeReason on every effect-dispatched event of every leg when present.
+      policy: e2eCase.policy,
       trace: { file: traceFile, runId },
       resume: options.resume === false ? undefined : resume,
     });
