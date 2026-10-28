@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -192,4 +193,115 @@ test("readTraceFile rejects malformed lines instead of skipping them", () => {
   const file = path.join(dir, "trace.jsonl");
   fs.writeFileSync(file, `${JSON.stringify({ v: 1, runId: "r", seq: 1, kind: "run-yield", reason: "terminal", hops: 0, completedEdges: [] })}\nnot-json\n`, "utf8");
   assert.throws(() => readTraceFile(file), /line 2/);
+});
+
+const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
+const generatedCli = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/scripts/route_graph.js");
+const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
+
+function graphFile(repo: string): string {
+  const file = path.join(repo, "graph.yaml");
+  fs.writeFileSync(file, `schemaVersion: 2
+id: trace-fixture
+entry: start
+conditions:
+  advance: { kind: signal, signal: advance }
+  finish: { kind: signal, signal: finish }
+nodes:
+  start: { kind: action }
+  next: { kind: delegate, delegate: next-handler }
+  done: { kind: terminal }
+edges:
+  - { id: start-to-next, from: start, to: next, when: advance, priority: 10 }
+  - { id: next-to-done, from: next, to: done, when: finish, priority: 10 }
+`, "utf8");
+  return file;
+}
+
+function runSource(cwd: string, args: string[]) {
+  const result = spawnSync(process.execPath, [tsxCli, sourceCli, ...args], { cwd, encoding: "utf8", windowsHide: true });
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+function runGenerated(cwd: string, args: string[]) {
+  const result = spawnSync(process.execPath, [generatedCli, ...args], { cwd, encoding: "utf8", windowsHide: true });
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+// The fixture artifacts carry "active" statuses, so without --focus the router
+// blocks on focus-required. Pass an explicit focus to get an `edge` route.
+const traceArgs = (graph: string, traceFile: string, runId: string) => [
+  "--graph", graph, "--signal", "advance", "--focus", "docs/specs/0001-graph.md",
+  "--json", "--trace-file", traceFile, "--run-id", runId,
+];
+
+test("route_graph appends artifact-scan and route-selected events", () => {
+  const { repo } = fixtureRepo();
+  const graph = graphFile(repo);
+  const traceFile = path.join(repo, "traces", "run.jsonl");
+  const source = runSource(repo, traceArgs(graph, traceFile, "r-1"));
+  assert.equal(source.status, 0, source.stderr);
+  const events = readTraceFile(traceFile);
+  assert.deepEqual(events.map((event) => event.kind), ["artifact-scan", "route-selected"]);
+  assert.deepEqual(events.map((event) => event.seq), [1, 2]);
+  const scan = events[0] as Extract<typeof events[number], { kind: "artifact-scan" }>;
+  assert.equal(scan.scans, 2, "project + gate re-scan are both measured");
+  assert.equal(scan.uniqueFiles, 3);
+  assert.equal(scan.filesRead, 6);
+  assert.ok(scan.bytesRead > 0);
+  const route = events[1] as Extract<typeof events[number], { kind: "route-selected" }>;
+  assert.equal(route.edgeId, "start-to-next");
+  assert.equal(route.delegate, "next-handler");
+  assert.equal(route.status, "edge");
+  assert.deepEqual(route.focus, ["docs/specs/0001-graph.md"]);
+  assert.equal(route.runId, "r-1");
+  assert.match(route.routeHash, /^[0-9a-f]{64}$/);
+});
+
+test("generated CLI emits identical trace events and identical stdout", () => {
+  const { repo } = fixtureRepo();
+  const graph = graphFile(repo);
+  const traceFile = path.join(repo, "trace.jsonl");
+  const generatedTraceFile = path.join(repo, "generated-trace.jsonl");
+  const args = ["--graph", graph, "--signal", "advance", "--focus", "docs/specs/0001-graph.md", "--json"];
+  const source = runSource(repo, [...args, "--trace-file", traceFile, "--run-id", "r-2"]);
+  const generated = runGenerated(repo, [...args, "--trace-file", generatedTraceFile, "--run-id", "r-2"]);
+  assert.equal(generated.status, 0, generated.stderr);
+  assert.deepEqual(JSON.parse(generated.stdout), JSON.parse(source.stdout));
+  // Route output is identical with and without tracing.
+  const plain = runSource(repo, args);
+  assert.deepEqual(JSON.parse(plain.stdout), JSON.parse(source.stdout));
+  const generatedEvents = readTraceFile(generatedTraceFile);
+  assert.deepEqual(generatedEvents.map((event) => event.kind), ["artifact-scan", "route-selected"]);
+  // The generated bundle emits exactly what the source CLI emits.
+  assert.deepEqual(
+    normalizeForCompare(generatedEvents),
+    normalizeForCompare(readTraceFile(traceFile)),
+  );
+});
+
+test("a second invocation continues the per-runId sequence", () => {
+  const { repo } = fixtureRepo();
+  const graph = graphFile(repo);
+  const traceFile = path.join(repo, "trace.jsonl");
+  runSource(repo, traceArgs(graph, traceFile, "r-3"));
+  runSource(repo, traceArgs(graph, traceFile, "r-3"));
+  const events = readTraceFile(traceFile);
+  assert.deepEqual(events.map((event) => event.seq), [1, 2, 3, 4]);
+});
+
+test("trace requires both flags and never leaks document bodies", () => {
+  const { repo } = fixtureRepo();
+  const graph = graphFile(repo);
+  const lonely = runSource(repo, ["--graph", graph, "--json", "--trace-file", path.join(repo, "t.jsonl")]);
+  assert.equal(lonely.status, 1);
+  assert.match(lonely.stderr, /--trace-file and --run-id/);
+  const noTrace = path.join(repo, "absent.jsonl");
+  runSource(repo, ["--graph", graph, "--signal", "advance", "--json"]);
+  assert.equal(fs.existsSync(noTrace), false);
+  const marker = "SECRET-BODY-SENTINEL";
+  writeArtifact(repo, "docs/specs/0002-secret.md", { id: "SPEC-0002", type: "spec", status: "approved", title: "S" }, marker);
+  const traceFile = path.join(repo, "trace.jsonl");
+  runSource(repo, ["--graph", graph, "--signal", "advance", "--json", "--trace-file", traceFile, "--run-id", "r-4"]);
+  assert.equal(fs.readFileSync(traceFile, "utf8").includes(marker), false);
 });
