@@ -113,6 +113,9 @@ graph から呼び出された audit と delegate はすべて
 yield 時には complete route と順序付き outcome を持つ 1 つの `GraphRunResult` handoff を
 記録します。completed effect を再利用できるのは、receipt scope と canonical-evidence
 または provider-idempotency proof が fresh projection に対して validate した場合だけです。
+delegate の execution mode は
+[`delegate-execution-policy.ja.md`](delegate-execution-policy.ja.md) に従って選択され、
+mode と選択理由は trace の `effect-dispatched` event に記録されます。
 
 caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
 `build_task_graph`。migration script は `doc-maintenance` が所有）と

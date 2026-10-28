@@ -145,7 +145,7 @@ Profile の生成と検証は `skill-discovery-protocol` スキルが担当す�
 
 ## Phase C: 収集・生成
 
-情報を集め、文書を並列に生成する。十分な情報が揃ったらすぐにサブエージェントへディスパッチし、コンテキストの鮮度低下を防ぐ。
+情報を集め、文書を並列に生成する。十分な情報が揃ったらすぐに文書スキルをディスパッチし、コンテキストの鮮度低下を防ぐ。各ディスパッチの mode は delegate execution-mode policy が選択する。
 
 ### 情報収集
 
@@ -159,21 +159,22 @@ Profile の生成と検証は `skill-discovery-protocol` スキルが担当す�
 
 ### ディスパッチトリガー
 
-情報収集と並行して、条件が満たされたらサブエージェントをディスパッチする:
+情報収集と並行して、条件が満たされたら各文書スキルをディスパッチする:
 
 | Trigger | Fire Condition | Action |
 | ------- | -------------- | ------ |
-| discovery-doc | 問題空間が曖昧、代替案が存在する、または重大な調査を実施した — 探索結果を正本 artifact として永続化する | サブエージェントを起動し `discovery-doc` スキルを委譲（任意；該当時は spec/adr より前に発火） |
-| spec-doc | 目的、範囲、acceptance criteria、除外事項が揃った | サブエージェントを起動し `spec-doc` スキルを委譲 |
-| adr-doc | 採用方針、代替案、理由、影響が揃った | サブエージェントを起動し `adr-doc` スキルを委譲 |
+| discovery-doc | 問題空間が曖昧、代替案が存在する、または重大な調査を実施した — 探索結果を正本 artifact として永続化する | delegate execution-mode policy に従って `discovery-doc` スキルをディスパッチ（任意；該当時は spec/adr より前に発火） |
+| spec-doc | 目的、範囲、acceptance criteria、除外事項が揃った | delegate execution-mode policy に従って `spec-doc` スキルをディスパッチ |
+| adr-doc | 採用方針、代替案、理由、影響が揃った | delegate execution-mode policy に従って `adr-doc` スキルをディスパッチ |
 
 **ディスパッチ原則:**
 
 - **両方を待たない。** 先に準備できたトリガーをすぐに発火する。
+- 各ディスパッチの execution mode は [delegate execution-mode policy](../doc-driven-dev-graph/references/delegate-execution-policy.ja.md)（`<skill-root>/doc-driven-dev-graph/references/delegate-execution-policy.ja.md`；`<skill-root>` は `.agents/skills/`、`.apm/skills/`、`.claude/skills/` のいずれか）に従って選択する。`same-context` がデフォルトであり、policy が delegated mode を選択した場合にのみサブエージェントを起動し、最小の `DelegateHandoff` contract を引き渡す。
 - 情報収集はディスパッチ後も続ける（非ブロッキング）。
 - 両方のスキルは独立にディスパッチできる。並列実行でよい。
 - ディスパッチ時に渡す情報は、その時点の**生の収集結果**を含める。要約して劣化させない。
-- サブエージェントは各スキルのワークフローに従って文書を生成する。
+- ディスパッチされた delegate は各スキルのワークフローに従って文書を生成する。
 
 ### 停止条件
 
@@ -182,8 +183,8 @@ Phase C は、次のすべてが満たされるまで反復する:
 - 主要なユースケースについて、入力 / 処理 / 期待結果を説明できる。
 - 重要な制約（技術、運用、期限、品質）が明示されている。
 - 未解決の項目が "pre-implementation blocker" か "manageable downstream" に分類されている。
-- `spec-doc` が生成済み（サブエージェント完了）。
-- `adr-doc` が生成済み（サブエージェント完了）。
+- `spec-doc` が生成済み（ディスパッチされた effect が完了）。
+- `adr-doc` が生成済み（ディスパッチされた effect が完了）。
 
 Stop conditions が満たされない場合:
 

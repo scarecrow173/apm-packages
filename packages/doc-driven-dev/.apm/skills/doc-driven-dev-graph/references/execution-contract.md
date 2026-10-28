@@ -114,7 +114,9 @@ results and hop/retry/repetition budgets separately before effect outcomes.
 At yield, it records one `GraphRunResult` handoff with the complete route and
 ordered outcomes. A completed effect is reusable only when the receipt scope
 and canonical-evidence or provider-idempotency proof validate against the
-fresh projection.
+fresh projection. Delegate execution mode is selected per
+[`delegate-execution-policy.md`](delegate-execution-policy.md); the mode and
+selection reason are recorded on the trace `effect-dispatched` event.
 
 The caller adapter normalizes the declared script delegates (`migrate_docs`,
 `scaffold_docs`, and `build_task_graph` — the migration scripts are owned by
