@@ -3418,7 +3418,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs6 = require("fs");
+    var fs7 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3502,7 +3502,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter3.read = function(filepath, options2) {
-      const str2 = fs6.readFileSync(filepath, "utf8");
+      const str2 = fs7.readFileSync(filepath, "utf8");
       const file2 = matter3(str2, options2);
       file2.path = filepath;
       return file2;
@@ -3531,7 +3531,7 @@ var require_gray_matter = __commonJS({
 });
 
 // src/skills/doc-driven-dev-graph/scripts/route_graph.ts
-var import_node_path5 = __toESM(require("node:path"));
+var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
 var import_node_fs = __toESM(require("node:fs"));
@@ -6760,10 +6760,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path7) {
+  if (!path7)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path7.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -7172,11 +7172,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path7, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path7);
     return iss;
   });
 }
@@ -7323,16 +7323,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError2(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path6 = []) => {
+  const processError = (error52, path7 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -7359,17 +7359,17 @@ function formatError2(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path6 = []) => {
+  const processError = (error52, path7 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -7401,8 +7401,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path6) {
+  const path7 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path7) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -20094,13 +20094,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path6 = ref.slice(1).split("/").filter(Boolean);
-  if (path6.length === 0) {
+  const path7 = ref.slice(1).split("/").filter(Boolean);
+  if (path7.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path6[0] === defsKey) {
-    const key = path6[1];
+  if (path7[0] === defsKey) {
+    const key = path7[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -20679,6 +20679,9 @@ var import_node_path4 = __toESM(require("node:path"));
 var import_node_fs3 = __toESM(require("node:fs"));
 var import_node_path2 = __toESM(require("node:path"));
 var import_gray_matter = __toESM(require_gray_matter());
+function createArtifactScanCollector() {
+  return { scans: 0, filesRead: 0, bytesRead: 0, filePaths: /* @__PURE__ */ new Set() };
+}
 var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
   "implements",
   "implemented-by",
@@ -20767,7 +20770,7 @@ function relationValues(raw, ownerPath) {
   }
   return { relations: result, issues };
 }
-function readRecords(options2) {
+function readRecords(options2, collector) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
   const taskDir = options2.taskDir ?? "docs/tasks";
   const directories = sortedUnique([...CANONICAL_TARGETS, normalizeArtifactPath(cwd, taskDir)]);
@@ -20775,7 +20778,13 @@ function readRecords(options2) {
   const records = [];
   for (const absolutePath of files.map((file2) => import_node_path2.default.resolve(cwd, file2))) {
     try {
-      const parsed = (0, import_gray_matter.default)(import_node_fs3.default.readFileSync(absolutePath, "utf8"));
+      const raw = import_node_fs3.default.readFileSync(absolutePath, "utf8");
+      if (collector) {
+        collector.filesRead += 1;
+        collector.bytesRead += Buffer.byteLength(raw, "utf8");
+        collector.filePaths.add(normalizeArtifactPath(cwd, absolutePath));
+      }
+      const parsed = (0, import_gray_matter.default)(raw);
       const data = parsed.data;
       const recordPath = normalizeArtifactPath(cwd, absolutePath);
       const relationResult = relationValues(data.relations, recordPath);
@@ -20848,9 +20857,10 @@ function edgeCompare(left, right) {
   };
   return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings(left.from, right.from) || compareStrings(left.relation, right.relation) || compareStrings(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
 }
-function scanArtifactGraph(options2) {
+function scanArtifactGraph(options2, collector) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
-  const records = readRecords({ ...options2, cwd });
+  if (collector) collector.scans += 1;
+  const records = readRecords({ ...options2, cwd }, collector);
   const nodes = records.map(({ path: recordPath, id, type }) => ({ path: recordPath, id, type }));
   const byId = /* @__PURE__ */ new Map();
   for (const record2 of records) {
@@ -21519,9 +21529,9 @@ function fallbackRecords(cwd, graph) {
     relationIssues: []
   }));
 }
-function evaluateGraphGates(state) {
+function evaluateGraphGates(state, collector) {
   const cwd = import_node_path4.default.resolve(state.cwd);
-  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir });
+  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir }, collector);
   const records = projection.records.length > 0 ? projection.records : fallbackRecords(cwd, state.artifactGraph);
   const resolution = resolveArtifactFocus(cwd, state.artifactGraph, records, state.focus);
   const focused = findRecord(records, resolution.focusedPath);
@@ -21579,10 +21589,10 @@ function evaluateGraphGates(state) {
   gates["exit-audit"] = state.signals.includes("exit-audit-pass") ? gate("pass") : gate("blocked", ["exit-audit-pass"]);
   return gates;
 }
-function projectGraphState(options2) {
+function projectGraphState(options2, collector) {
   const cwd = import_node_path4.default.resolve(options2.cwd);
   const taskDir = options2.taskDir ?? "docs/tasks";
-  const projection = scanArtifactGraph({ cwd, taskDir });
+  const projection = scanArtifactGraph({ cwd, taskDir }, collector);
   const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options2.focus ?? []);
   const blockers = sortedUnique3([
     ...resolution.blockers,
@@ -21608,10 +21618,10 @@ function projectGraphState(options2) {
     taskGraph
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
-  state.gates = evaluateGraphGates(state);
+  state.gates = evaluateGraphGates(state, collector);
   if (state.gates.planning?.reasons.some((reason) => reason.startsWith("task-graph:"))) {
     state.blockers = sortedUnique3([...state.blockers, "task-graph-invalid"]);
-    state.gates = evaluateGraphGates(state);
+    state.gates = evaluateGraphGates(state, collector);
   }
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
   state.hardBlockers = deriveHardBlockers(state.blockers, state.signals, state.gates);
@@ -21854,9 +21864,228 @@ function evaluateRouteDecision(input) {
   };
 }
 
+// src/skills/doc-driven-dev-graph/scripts/lib/run_trace.ts
+var import_node_crypto = __toESM(require("node:crypto"));
+var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_path5 = __toESM(require("node:path"));
+var TRACE_SCHEMA_VERSION = 1;
+var EXECUTION_MODES = ["same-context", "subagent", "tool", "unknown"];
+var EFFECT_YIELD_REASONS = [
+  "approval-required",
+  "input-required",
+  "authority-required",
+  "unrecoverable-blocker",
+  "commit-required"
+];
+var RUN_YIELD_REASONS = [
+  ...EFFECT_YIELD_REASONS,
+  "budget-exhausted",
+  "terminal",
+  "single-step-complete"
+];
+var ABSOLUTE_PATH = /^(?:[a-zA-Z]:[\\/]|\\\\|\/|~[\\/])/;
+var BLOCKER_TOKEN = /^[a-z0-9-]+:sha256:[0-9a-f]{12}$/;
+function fail(message) {
+  throw new Error(`run trace: ${message}`);
+}
+function requireCount(value, field) {
+  if (!Number.isInteger(value) || value < 0) {
+    fail(`${field} must be a non-negative integer`);
+  }
+  return value;
+}
+function requireString(value, field) {
+  if (typeof value !== "string" || value.length === 0) fail(`${field} must be a non-empty string`);
+  return value;
+}
+function requireStringArray(value, field) {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    fail(`${field} must be a string array`);
+  }
+  return value;
+}
+function requireRelativePaths(value, field) {
+  const paths = requireStringArray(value, field);
+  for (const item of paths) {
+    if (ABSOLUTE_PATH.test(item)) fail(`${field} must use repo-relative paths, got: ${item}`);
+  }
+  return paths;
+}
+function requireStage(value) {
+  if (value !== "audit" && value !== "delegate") fail(`stage must be audit or delegate`);
+  return value;
+}
+function sanitizeBlocker(blocker) {
+  if (BLOCKER_TOKEN.test(blocker)) return blocker;
+  const separator = blocker.indexOf(":");
+  if (separator === -1) return blocker;
+  const kind = blocker.slice(0, separator);
+  const digest = import_node_crypto.default.createHash("sha256").update(blocker).digest("hex").slice(0, 12);
+  return `${kind}:sha256:${digest}`;
+}
+function baseFields(record2) {
+  if (record2.v !== TRACE_SCHEMA_VERSION) fail(`unsupported schema version: ${String(record2.v)}`);
+  const seq = requireCount(record2.seq, "seq");
+  if (seq < 1) fail("seq must be a positive integer");
+  return { v: TRACE_SCHEMA_VERSION, runId: requireString(record2.runId, "runId"), seq };
+}
+function normalizeTraceEvent(raw) {
+  if (!raw || typeof raw !== "object") fail("event must be an object");
+  const record2 = raw;
+  const base = baseFields(record2);
+  switch (record2.kind) {
+    case "artifact-scan":
+      return {
+        ...base,
+        kind: "artifact-scan",
+        scans: requireCount(record2.scans, "scans"),
+        filesRead: requireCount(record2.filesRead, "filesRead"),
+        uniqueFiles: requireCount(record2.uniqueFiles, "uniqueFiles"),
+        bytesRead: requireCount(record2.bytesRead, "bytesRead")
+      };
+    case "route-selected": {
+      const status = record2.status;
+      if (status !== "edge" && status !== "terminal" && status !== "blocked") {
+        fail("route-selected status must be edge, terminal, or blocked");
+      }
+      if (typeof record2.commitGate !== "boolean") {
+        fail("commitGate must be a boolean");
+      }
+      const event = {
+        ...base,
+        kind: "route-selected",
+        current: requireString(record2.current, "current"),
+        next: requireString(record2.next, "next"),
+        edgeId: record2.edgeId === null ? null : requireString(record2.edgeId, "edgeId"),
+        status,
+        condition: requireString(record2.condition, "condition"),
+        delegate: record2.delegate === null ? null : requireString(record2.delegate, "delegate"),
+        requiredAudits: requireStringArray(record2.requiredAudits, "requiredAudits"),
+        commitGate: record2.commitGate,
+        blockers: requireStringArray(record2.blockers, "blockers").map(sanitizeBlocker),
+        focus: requireRelativePaths(record2.focus, "focus"),
+        tasks: requireTasks(record2.tasks),
+        routeHash: requireString(record2.routeHash, "routeHash")
+      };
+      if (record2.durationMs !== void 0) {
+        if (!Number.isFinite(record2.durationMs) || record2.durationMs < 0) {
+          fail("durationMs must be a finite non-negative number");
+        }
+        event.durationMs = record2.durationMs;
+      }
+      return event;
+    }
+    case "effect-dispatched": {
+      const mode = record2.executionMode;
+      if (!EXECUTION_MODES.includes(mode)) {
+        fail(`executionMode must be one of ${EXECUTION_MODES.join(", ")}`);
+      }
+      return {
+        ...base,
+        kind: "effect-dispatched",
+        edgeId: requireString(record2.edgeId, "edgeId"),
+        stage: requireStage(record2.stage),
+        effectId: requireString(record2.effectId, "effectId"),
+        executionMode: mode,
+        focusPaths: requireRelativePaths(record2.focusPaths, "focusPaths")
+      };
+    }
+    case "effect-outcome": {
+      const outcome = record2.outcome;
+      if (outcome !== "completed" && outcome !== "retry" && outcome !== "yield") {
+        fail("effect-outcome outcome must be completed, retry, or yield");
+      }
+      if (record2.reason !== void 0 && !EFFECT_YIELD_REASONS.includes(record2.reason)) {
+        fail(`effect-outcome reason must be one of ${EFFECT_YIELD_REASONS.join(", ")}`);
+      }
+      if (outcome !== "yield" && record2.reason !== void 0) {
+        fail("effect-outcome reason is only valid for yield outcomes");
+      }
+      if (outcome === "yield" && record2.reason === void 0) {
+        fail("effect-outcome yield requires a reason");
+      }
+      const event = {
+        ...base,
+        kind: "effect-outcome",
+        edgeId: requireString(record2.edgeId, "edgeId"),
+        stage: requireStage(record2.stage),
+        effectId: requireString(record2.effectId, "effectId"),
+        outcome,
+        evidencePaths: requireRelativePaths(record2.evidencePaths, "evidencePaths")
+      };
+      if (record2.reason !== void 0) event.reason = record2.reason;
+      return event;
+    }
+    case "run-yield": {
+      if (!RUN_YIELD_REASONS.includes(record2.reason)) {
+        fail(`run-yield reason must be one of ${RUN_YIELD_REASONS.join(", ")}`);
+      }
+      return {
+        ...base,
+        kind: "run-yield",
+        reason: record2.reason,
+        hops: requireCount(record2.hops, "hops"),
+        completedEdges: requireStringArray(record2.completedEdges, "completedEdges")
+      };
+    }
+    default:
+      fail(`unknown trace event kind: ${String(record2.kind)}`);
+  }
+}
+function requireTasks(value) {
+  if (!Array.isArray(value)) fail("tasks must be an array");
+  return value.map((entry) => {
+    if (!entry || typeof entry !== "object") fail("tasks entries must be objects");
+    const task = entry;
+    return { id: requireString(task.id, "tasks[].id"), status: requireString(task.status, "tasks[].status") };
+  });
+}
+function appendTraceEvent(filePath, input) {
+  const resolved = import_node_path5.default.resolve(filePath);
+  const existing = import_node_fs6.default.existsSync(resolved) ? readTraceFile(resolved) : [];
+  const seq = existing.filter((event2) => event2.runId === input.runId).length + 1;
+  const event = normalizeTraceEvent({ ...input, seq });
+  import_node_fs6.default.mkdirSync(import_node_path5.default.dirname(resolved), { recursive: true });
+  import_node_fs6.default.appendFileSync(resolved, `${JSON.stringify(event)}
+`, "utf8");
+  return event;
+}
+function readTraceFile(filePath) {
+  const text = import_node_fs6.default.readFileSync(filePath, "utf8");
+  const events = [];
+  text.split("\n").forEach((line, index) => {
+    if (line.trim().length === 0) return;
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      fail(`line ${index + 1} is not valid JSON`);
+    }
+    try {
+      events.push(normalizeTraceEvent(parsed));
+    } catch (error51) {
+      const message = error51 instanceof Error ? error51.message : String(error51);
+      throw new Error(`line ${index + 1}: ${message}`);
+    }
+  });
+  return events;
+}
+function sortValue(value) {
+  if (Array.isArray(value)) return value.map(sortValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, sortValue(value[key])])
+    );
+  }
+  return value;
+}
+function stableRouteHash(route) {
+  return import_node_crypto.default.createHash("sha256").update(JSON.stringify(sortValue(route))).digest("hex");
+}
+
 // src/skills/doc-driven-dev-graph/scripts/route_graph.ts
 function usage() {
-  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--cwd <path>] [--explain] --json";
+  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--cwd <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
 }
 function requiredValue(argv, index, option) {
   const value = argv[index + 1];
@@ -21890,7 +22119,13 @@ function parseArgs(argv) {
       args.taskDir = requiredValue(argv, index, arg);
       index += 1;
     } else if (arg === "--cwd") {
-      args.cwd = import_node_path5.default.resolve(requiredValue(argv, index, arg));
+      args.cwd = import_node_path6.default.resolve(requiredValue(argv, index, arg));
+      index += 1;
+    } else if (arg === "--trace-file") {
+      args.traceFile = requiredValue(argv, index, arg);
+      index += 1;
+    } else if (arg === "--run-id") {
+      args.runId = requiredValue(argv, index, arg);
       index += 1;
     } else if (arg === "--json") {
       args.json = true;
@@ -21918,20 +22153,56 @@ function validateSignals(definition, signals) {
 }
 function run(args) {
   if (args.explain && !args.json) throw new Error("--explain requires --json");
+  if (args.traceFile === void 0 !== (args.runId === void 0)) {
+    throw new Error("--trace-file and --run-id must be provided together");
+  }
   const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
   validateSignals(definition, args.signals);
   const current = args.current ?? definition.entry;
   if (!Object.prototype.hasOwnProperty.call(definition.nodes, current)) {
     throw new Error(`Unknown graph node: ${current}`);
   }
+  const collector = args.traceFile ? createArtifactScanCollector() : void 0;
   const state = projectGraphState({
     cwd: args.cwd,
     graphId: definition.id,
     taskDir: args.taskDir,
     focus: args.focus,
     signals: args.signals
-  });
+  }, collector);
   const decision = evaluateRouteDecision({ current, definition, state });
+  if (args.traceFile && args.runId && collector) {
+    try {
+      appendTraceEvent(args.traceFile, {
+        v: 1,
+        runId: args.runId,
+        kind: "artifact-scan",
+        scans: collector.scans,
+        filesRead: collector.filesRead,
+        uniqueFiles: collector.filePaths.size,
+        bytesRead: collector.bytesRead
+      });
+      appendTraceEvent(args.traceFile, {
+        v: 1,
+        runId: args.runId,
+        kind: "route-selected",
+        current: decision.route.current,
+        next: decision.route.next,
+        edgeId: decision.route.edgeId,
+        status: decision.route.status,
+        condition: decision.route.condition,
+        delegate: decision.route.delegate,
+        requiredAudits: decision.route.requiredAudits,
+        commitGate: decision.route.commitGate,
+        blockers: decision.route.blockers,
+        focus: state.focus,
+        tasks: (decision.route.taskGraph?.nodes ?? []).map((node) => ({ id: node.id, status: node.status })),
+        routeHash: stableRouteHash(decision.route)
+      });
+    } catch (error51) {
+      console.error(`run trace append failed: ${error51 instanceof Error ? error51.message : String(error51)}`);
+    }
+  }
   console.log(JSON.stringify(args.explain ? { route: decision.route, explanation: decision.explanation } : decision.route, null, 2));
 }
 function main() {

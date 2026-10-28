@@ -36,6 +36,11 @@ JSON 結果は `GraphRoute` contract です。`current`、1 つの `next`、`edg
 選択した `taskGraph` を含みます。terminal と blocked は明示的な結果であり、
 遷移先を推測しません。
 
+Optional diagnostics: `--trace-file <path> --run-id <id>` を指定すると、
+`artifact-scan` と `route-selected` の JSONL run-trace event を追記します
+（[`references/run-trace-contract.ja.md`](references/run-trace-contract.ja.md)
+参照）。trace は既定で無効であり、返される `GraphRoute` を変えません。
+
 成功する遷移は宣言済み edge を 1 つだけ選択します。condition を満たす edge が
 ない場合、router は edge を持たない fail-closed の同一 node blocked 結果を返し、
 terminal 結果も edge を持ちません。caller が暗黙の edge や隣接 node を追加する
@@ -262,6 +267,8 @@ Git worktree が rollback 経路です: 適用結果が誤っていれば Git �
   evidence に基づく caller loop。
 - [`references/execution-outcome-contract.ja.md`](references/execution-outcome-contract.ja.md) —
   typed audit/delegate outcome と scope-valid な resume proof。
+- [`references/run-trace-contract.ja.md`](references/run-trace-contract.ja.md) —
+  構造化 run-trace event、JSONL export、決定的 run counter。
 - [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) —
   Task Graph 合成と fail-closed dependency 規則。
 - [`references/graph-inspection.ja.md`](references/graph-inspection.ja.md) — inspection
