@@ -237,23 +237,37 @@ function validateUniversalInvariants(run: CaseRun): string[] {
   });
 
   // 2. Continuity within each leg: route-selected[n+1].current ===
-  //    route-selected[n].next. Legs partition at run-yield events — a resume
-  //    leg legitimately re-routes the pending edge from its `from` node, so
+  //    route-selected[n].next when the edge completed — and ===
+  //    route-selected[n].current when it did not: a `retry` outcome re-projects
+  //    from the same node (the runner only assigns `current = route.next` on
+  //    edge completion). Legs partition at run-yield events — a resume leg
+  //    legitimately re-routes the pending edge from its `from` node, so
   //    continuity must not span the boundary.
   let previous: RouteSelectedEvent | null = null;
+  let retryBetween = false;
   for (const event of events) {
     if (event.kind === "run-yield") {
       previous = null;
+      retryBetween = false;
+      continue;
+    }
+    if (event.kind === "effect-outcome" && event.outcome === "retry") {
+      retryBetween = true;
       continue;
     }
     if (event.kind !== "route-selected") continue;
-    if (previous && event.current !== previous.next) {
-      failures.push(
-        `route continuity broken: route "${previous.edgeId ?? previous.status}" next=${previous.next}` +
-        ` but next route-selected current=${event.current}`,
-      );
+    if (previous) {
+      const expected = retryBetween ? previous.current : previous.next;
+      if (event.current !== expected) {
+        failures.push(
+          `route continuity broken: route "${previous.edgeId ?? previous.status}"` +
+          ` ${retryBetween ? "re-routed from" : "next="}${expected}` +
+          ` but next route-selected current=${event.current}`,
+        );
+      }
     }
     previous = event;
+    retryBetween = false;
   }
 
   // 3. Every edgeId in run-yield.completedEdges has a checkpointEvidence
