@@ -19,7 +19,10 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { isDeepStrictEqual } from "node:util";
 import matter from "gray-matter";
+import { loadGraphDefinition } from "./graph_definition";
+import { resolveGraphPath } from "./graph_cli";
 import type { GraphRoute } from "./graph_router";
+import { appendTraceEvent, type ExecutionMode, type TraceEventInput } from "./run_trace";
 
 export type YieldReason =
   | "terminal" | "single-step-complete" | "budget-exhausted"
@@ -330,4 +333,442 @@ export function commitGatePasses(baseline: CommitBaseline, after: CommitBaseline
   // stays in the captured baseline for trace/debugging context only.
   const baselineDirty = new Set(baseline.dirty);
   return after.dirty.every((entry) => baselineDirty.has(entry));
+}
+
+export type EffectDispatchContext = {
+  repo: string;
+  route: GraphRoute;
+  effect: CallerEffect;
+  signals: ReadonlySet<string>;
+};
+
+/** Injected effect executor — an LLM, tool, or scripted adapter. */
+export type EffectDispatcher = (ctx: EffectDispatchContext) => EffectOutcome;
+
+export type CallerRunnerOptions = {
+  repo: string;
+  /** Spawn: executable [...prefixArgs, ...routeArgs]. */
+  router: { executable: string; prefixArgs: string[] };
+  /** Default: resolveGraphPath(undefined, repo). */
+  graphPath?: string;
+  /** Default: definition entry node. */
+  current?: string;
+  /** Default: []. */
+  focus?: string[];
+  /** Default: []. */
+  signals?: string[];
+  /** Default: "run-until-yield". */
+  mode?: "run-until-yield" | "single-step";
+  /** Explicit fixed budget; absent -> topology budget below. */
+  maxHops?: number;
+  /**
+   * Default true: the first implementation-flow route freezes the hop budget
+   * at 10 + (activeTasks - 1). Pass false to keep the plain topology budget.
+   */
+  taskBudget?: boolean;
+  dispatcher: EffectDispatcher;
+  /** Adapter-owned authoritative input mapping, resolved to live canonical refs. */
+  resolveInputs: (route: GraphRoute, effect: CallerEffect) => string[];
+  /** Adapter-owned canonical evidence path mapping (consumed by dispatchers). */
+  resolveEvidence: (route: GraphRoute, effect: CallerEffect) => string;
+  /**
+   * Evidence-phase hook; default persistEvidence(repo, proofPath, edgeId).
+   * Receives the run's live signal set (the oracle's mutable-signal channel).
+   */
+  applyEvidence?: (repo: string, signals: ReadonlySet<string>, edgeId: string) => void;
+  /** Canonical doc holding outcome+evidence front matter. */
+  proofPath?: string;
+  /** The dispatcher's nature, caller-declared; recorded on effect-dispatched. */
+  executionMode?: ExecutionMode;
+  trace?: { file: string; runId: string };
+  resume?: CallerHandoff;
+};
+
+export type PendingEdge = {
+  route: GraphRoute;
+  outcomes: EffectOutcome[];
+  completedAudits: string[];
+  delegateComplete: boolean;
+  evidenceRecorded: boolean;
+  commitBaseline: CommitBaseline | null;
+};
+
+/** JSON-serializable — callers may persist it across sessions. */
+export type CallerHandoff = {
+  current: string;
+  mode: "run-until-yield" | "single-step";
+  maxHops: number;
+  yieldReason: YieldReason | null;
+  focus: string[];
+  signals: string[];
+  graphPath: string;
+  completedEdges: string[];
+  seenRouteFingerprints: string[];
+  taskBudgetCount: number | null;
+  auditCounts: Record<string, number>;
+  delegateCounts: Record<string, number>;
+  outcomes: EffectOutcome[];
+  pending: PendingEdge | null;
+  hops: number;
+};
+
+export type CallerRunResult = {
+  routes: GraphRoute[];
+  checkpoints: GraphRoute[];
+  yieldReason: YieldReason | null;
+  current: string;
+  hops: number;
+  outcomes: EffectOutcome[];
+  completedEdges: string[];
+  /** "route:<id>", "audit:<id>", "delegate:<id>", "evidence:<id>", "project". */
+  events: string[];
+  handoff: CallerHandoff;
+};
+
+/**
+ * Drive the caller loop: spawn the route_graph CLI once per hop (a fresh
+ * projection per process), run the declared audits then the delegate, record
+ * canonical evidence, enforce the commit gate, and re-enter at next until the
+ * graph yields. All oracle `runScenario` semantics are preserved; effect work
+ * is delegated to the injected dispatcher.
+ */
+export function runCaller(options: CallerRunnerOptions): CallerRunResult {
+  const repo = options.repo;
+  const proofPath = options.proofPath ?? DEFAULT_PROOF_PATH;
+  const graphPath = options.graphPath ?? options.resume?.graphPath ?? resolveGraphPath(undefined, repo);
+  const definition = loadGraphDefinition(graphPath);
+  const mode = options.resume?.mode ?? options.mode ?? "run-until-yield";
+  const topologyBaseHops = 10;
+  let taskBudgetCount = options.resume
+    ? options.resume.taskBudgetCount
+    : options.maxHops === undefined ? 0 : null;
+  let taskBudgetFrozen = options.resume !== undefined || options.maxHops !== undefined || options.taskBudget === false;
+  let maxHops = options.resume?.maxHops
+    ?? options.maxHops
+    ?? topologyBaseHops;
+  const focus = options.focus ?? options.resume?.focus ?? [];
+  const signals = new Set(options.signals ?? options.resume?.signals ?? []);
+  let current = options.resume?.current ?? options.current ?? definition.entry;
+  let hops = options.resume?.hops ?? 0;
+  const routes: GraphRoute[] = [];
+  const checkpoints: GraphRoute[] = [];
+  const completedEdges = [...(options.resume?.completedEdges ?? [])];
+  const seenRouteFingerprints = new Set(options.resume?.seenRouteFingerprints ?? []);
+  const auditCounts = { ...(options.resume?.auditCounts ?? {}) };
+  const delegateCounts = { ...(options.resume?.delegateCounts ?? {}) };
+  const outcomes = [...(options.resume?.outcomes ?? [])];
+  const events: string[] = [];
+  let pending: PendingEdge | null = options.resume?.pending ? {
+    route: options.resume.pending.route,
+    outcomes: [...options.resume.pending.outcomes],
+    completedAudits: [...options.resume.pending.completedAudits],
+    delegateComplete: options.resume.pending.delegateComplete,
+    evidenceRecorded: options.resume.pending.evidenceRecorded,
+    commitBaseline: options.resume.pending.commitBaseline ?? null,
+  } : null;
+  const trace = options.trace;
+  const executionMode = options.executionMode ?? "unknown";
+
+  const emitTrace = (input: TraceEventInput): void => {
+    if (!trace) return;
+    try {
+      appendTraceEvent(trace.file, input);
+    } catch (error: unknown) {
+      // Diagnostics never fail a run.
+      console.error(`run trace append failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const routeOnce = (): GraphRoute => {
+    const args = [
+      ...options.router.prefixArgs,
+      "--graph", graphPath,
+      "--cwd", repo,
+      "--current", current,
+      ...focus.flatMap((entry) => ["--focus", entry]),
+      ...[...signals].flatMap((signal) => ["--signal", signal]),
+      "--task-dir", "docs/tasks",
+      "--json",
+      ...(trace ? ["--trace-file", trace.file, "--run-id", trace.runId] : []),
+    ];
+    const result = spawnSync(options.router.executable, args, { encoding: "utf8" });
+    if (result.status !== 0) {
+      throw new Error(`route_graph invocation failed: ${result.stderr || result.error?.message || result.stdout}`);
+    }
+    try {
+      return JSON.parse(result.stdout) as GraphRoute;
+    } catch {
+      throw new Error(`route_graph invocation failed: ${result.stderr || result.stdout}`);
+    }
+  };
+
+  const resolveEffectInputs = (route: GraphRoute, effect: CallerEffect): CanonicalReference[] => {
+    const paths = options.resolveInputs(route, effect);
+    return [...new Set(paths)].sort().map((relativePath) => canonicalReference(repo, relativePath));
+  };
+
+  /**
+   * Dispatch one effect: emit effect-dispatched before validation, then
+   * assertEffectOutcome is the sole input-binding enforcer and runs before any
+   * persist. Accepted outcomes emit effect-outcome; rejected ones leave only
+   * the dispatch event (no outcome event, no persisted outcome).
+   */
+  const dispatchEffect = (
+    route: GraphRoute,
+    stage: "audit" | "delegate",
+    effect: CallerEffect,
+  ): { outcome: EffectOutcome } | { rejection: OutcomeRejection } => {
+    const expectedInputs = resolveEffectInputs(route, effect);
+    emitTrace({
+      v: 1, runId: trace?.runId ?? "", kind: "effect-dispatched",
+      edgeId: route.edgeId as string, stage, effectId: effect.id,
+      executionMode, focusPaths: expectedInputs.map((entry) => entry.path),
+    });
+    try {
+      const outcome = options.dispatcher({ repo, route, effect, signals });
+      assertEffectOutcome(repo, route, outcome, stage, effect, expectedInputs);
+      emitTrace({
+        v: 1, runId: trace?.runId ?? "", kind: "effect-outcome",
+        edgeId: route.edgeId as string, stage, effectId: effect.id,
+        outcome: outcome.status,
+        ...(outcome.status === "yield" ? { reason: outcome.reason } : {}),
+        evidencePaths: outcome.evidence.map((entry) => entry.path),
+      });
+      return { outcome };
+    } catch (error: unknown) {
+      if (error instanceof OutcomeRejection) return { rejection: error };
+      throw error;
+    }
+  };
+
+  const savePending = (
+    route: GraphRoute,
+    edgeOutcomes: EffectOutcome[],
+    evidenceRecorded: boolean,
+    commitBaseline: CommitBaseline | null = null,
+  ): void => {
+    const completedAudits = edgeOutcomes
+      .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed" && outcome.stage === "audit")
+      .map((outcome) => outcome.effect.id)
+      .sort();
+    const delegateComplete = edgeOutcomes.some((outcome) => (
+      outcome.status === "completed" && outcome.stage === "delegate" && outcome.effect.id === route.delegate
+    ));
+    pending = {
+      route,
+      outcomes: [...edgeOutcomes],
+      completedAudits,
+      delegateComplete,
+      evidenceRecorded,
+      commitBaseline,
+    };
+  };
+
+  let yieldReason: YieldReason | null = null;
+  let firstRoute = true;
+  hopLoop: while (yieldReason === null) {
+    if (!firstRoute) events.push("project");
+    firstRoute = false;
+    const route = routeOnce();
+    routes.push(route);
+    events.push(`route:${route.edgeId ?? route.status}`);
+
+    if (!taskBudgetFrozen && route.delegate === "implementation-flow") {
+      if (!route.taskGraph || route.taskGraph.issues.length !== 0) {
+        throw new Error("implementation-flow route requires a selected Task Graph without issues");
+      }
+      taskBudgetCount = route.taskGraph.nodes
+        .filter((task) => ["todo", "in-progress", "blocked"].includes(task.status))
+        .length;
+      maxHops = topologyBaseHops + Math.max(0, taskBudgetCount - 1);
+      taskBudgetFrozen = true;
+    }
+
+    if (route.status === "terminal") {
+      yieldReason = "terminal";
+      break;
+    }
+    if (route.status === "blocked") {
+      yieldReason = route.blockers.includes("focus-required") || route.blockers.includes("focus-invalid")
+        ? "input-required"
+        : "unrecoverable-blocker";
+      break;
+    }
+    if (hops >= maxHops) {
+      yieldReason = "budget-exhausted";
+      break;
+    }
+
+    const routeFingerprint = JSON.stringify(route);
+    if (seenRouteFingerprints.has(routeFingerprint)) {
+      yieldReason = "budget-exhausted";
+      break;
+    }
+
+    const resumingPending = pending?.route.edgeId === route.edgeId && pending.route.current === route.current
+      ? pending
+      : null;
+    if (resumingPending) {
+      const invalidReceipt = resumingPending.outcomes
+        .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
+        .some((outcome) => !isReusableCompletedOutcome(repo, route, outcome, proofPath));
+      const unverifiedEvidence = resumingPending.evidenceRecorded && !hasEvidence(repo, proofPath, route.edgeId as string);
+      if (invalidReceipt || unverifiedEvidence) {
+        yieldReason = "authority-required";
+        break;
+      }
+    }
+
+    const commitBaseline = resumingPending?.commitBaseline
+      ?? (route.commitGate && !signals.has("commit-waived") ? captureBaseline(repo) : null);
+
+    const edgeOutcomes = [...(resumingPending?.outcomes ?? [])];
+    const completedAudits = new Set(edgeOutcomes
+      .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed" && outcome.stage === "audit")
+      .map((outcome) => outcome.effect.id));
+    for (const audit of route.requiredAudits) {
+      if (completedAudits.has(audit)) continue;
+      events.push(`audit:${audit}`);
+      const effect: CallerEffect = { kind: "audit", id: audit };
+      const dispatched = dispatchEffect(route, "audit", effect);
+      if ("rejection" in dispatched) {
+        yieldReason = "authority-required";
+        savePending(route, edgeOutcomes, false, commitBaseline);
+        break hopLoop;
+      }
+      const outcome = dispatched.outcome;
+      edgeOutcomes.push(outcome);
+      outcomes.push(outcome);
+      persistOutcome(repo, proofPath, outcome);
+      const evaluation = evaluateEffectOutcome(outcome);
+      if (evaluation === "retry") {
+        // A retry promises changed evidence; an identical retry outcome on an
+        // identical re-route can never progress, so the run stops instead of
+        // looping forever (the oracle bounded this with its finite step list).
+        const repeatedRetry = edgeOutcomes.slice(0, -1)
+          .some((prior) => JSON.stringify(prior) === JSON.stringify(outcome));
+        savePending(route, edgeOutcomes, false, commitBaseline);
+        if (repeatedRetry) {
+          yieldReason = "budget-exhausted";
+          break hopLoop;
+        }
+        continue hopLoop;
+      }
+      if (evaluation) {
+        yieldReason = evaluation;
+        savePending(route, edgeOutcomes, false, commitBaseline);
+        break hopLoop;
+      }
+      completedAudits.add(audit);
+      auditCounts[audit] = (auditCounts[audit] ?? 0) + 1;
+    }
+
+    let delegateComplete = edgeOutcomes.some((outcome) => (
+      outcome.status === "completed" && outcome.stage === "delegate" && outcome.effect.id === route.delegate
+    ));
+    if (route.delegate && !delegateComplete) {
+      events.push(`delegate:${route.delegate}`);
+      const effect: CallerEffect = { kind: "delegate", id: route.delegate };
+      const dispatched = dispatchEffect(route, "delegate", effect);
+      if ("rejection" in dispatched) {
+        yieldReason = "authority-required";
+        savePending(route, edgeOutcomes, false, commitBaseline);
+        break hopLoop;
+      }
+      const outcome = dispatched.outcome;
+      edgeOutcomes.push(outcome);
+      outcomes.push(outcome);
+      persistOutcome(repo, proofPath, outcome);
+      const evaluation = evaluateEffectOutcome(outcome);
+      if (evaluation === "retry") {
+        const repeatedRetry = edgeOutcomes.slice(0, -1)
+          .some((prior) => JSON.stringify(prior) === JSON.stringify(outcome));
+        savePending(route, edgeOutcomes, false, commitBaseline);
+        if (repeatedRetry) {
+          yieldReason = "budget-exhausted";
+          break hopLoop;
+        }
+        continue hopLoop;
+      }
+      if (evaluation) {
+        yieldReason = evaluation;
+        savePending(route, edgeOutcomes, false, commitBaseline);
+        break hopLoop;
+      }
+      delegateCounts[route.delegate] = (delegateCounts[route.delegate] ?? 0) + 1;
+      delegateComplete = true;
+    }
+
+    let evidenceRecorded = resumingPending?.evidenceRecorded === true && hasEvidence(repo, proofPath, route.edgeId as string);
+    if (!evidenceRecorded) {
+      const evidenceBefore = evidenceReceipts(repo, proofPath).filter((receipt) => receipt.edgeId === route.edgeId).length;
+      if (options.applyEvidence) {
+        options.applyEvidence(repo, signals, route.edgeId as string);
+      } else {
+        persistEvidence(repo, proofPath, route.edgeId as string);
+      }
+      evidenceRecorded = hasEvidence(repo, proofPath, route.edgeId as string)
+        && evidenceReceipts(repo, proofPath).filter((receipt) => receipt.edgeId === route.edgeId).length > evidenceBefore;
+      if (!evidenceRecorded) {
+        yieldReason = "authority-required";
+        savePending(route, edgeOutcomes, false, commitBaseline);
+        break;
+      }
+    }
+    events.push(`evidence:${route.edgeId}`);
+    if (commitBaseline && !signals.has("commit-waived")) {
+      const after = captureBaseline(repo);
+      if (!commitGatePasses(commitBaseline, after)) {
+        yieldReason = "commit-required";
+        savePending(route, edgeOutcomes, true, commitBaseline);
+        break;
+      }
+    }
+    pending = null;
+    checkpoints.push(route);
+    completedEdges.push(route.edgeId as string);
+    seenRouteFingerprints.add(routeFingerprint);
+    hops += 1;
+    current = route.next;
+
+    if (mode === "single-step") {
+      yieldReason = "single-step-complete";
+      break;
+    }
+  }
+
+  const handoff: CallerHandoff = {
+    current,
+    mode,
+    maxHops,
+    yieldReason,
+    focus: [...focus],
+    signals: [...signals].sort(),
+    graphPath,
+    completedEdges,
+    seenRouteFingerprints: [...seenRouteFingerprints],
+    taskBudgetCount,
+    auditCounts,
+    delegateCounts,
+    outcomes,
+    pending,
+    hops,
+  };
+  if (yieldReason !== null) {
+    emitTrace({
+      v: 1, runId: trace?.runId ?? "", kind: "run-yield",
+      reason: yieldReason, hops, completedEdges: [...completedEdges],
+    });
+  }
+  return {
+    routes,
+    checkpoints,
+    yieldReason,
+    current,
+    hops,
+    outcomes,
+    completedEdges,
+    events,
+    handoff: JSON.parse(JSON.stringify(handoff)) as CallerHandoff,
+  };
 }
