@@ -11,6 +11,7 @@ import { case09 } from "./case-09-commit-required";
 import { case10a, case10b, case10c } from "./case-10-outcome-rejections";
 import { case11 } from "./case-11-audit-retry";
 import { case12a, case12b, case12c } from "./case-12-budgets-terminal";
+import { case13a, case13b, case13c } from "./case-13-execution-modes";
 
 export const CASES: E2ECase[] = [
   case01, case02, case03, case04, case05, case06,
@@ -20,4 +21,5 @@ export const CASES: E2ECase[] = [
   case10a, case10b, case10c,
   case11,
   case12a, case12b, case12c,
+  case13a, case13b, case13c,
 ];

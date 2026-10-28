@@ -3,7 +3,12 @@
  * dispatcher script keyed by edgeId, optional multi-run legs for resume flows,
  * and the expectations the independent validator checks.
  */
-import type { CallerRunnerOptions } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
+import type {
+  CallerEffect,
+  CallerRunnerOptions,
+} from "../../../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
+import type { PolicyFacts } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/delegate_policy";
+import type { GraphRoute } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 import type { CaseExpect } from "./case_validator";
 import type { createFixtureRepo } from "./fixture_manager";
 import type { EdgeScript, Mutator } from "./scripted_dispatcher";
@@ -24,6 +29,12 @@ export type E2ECase = {
   proofPath?: string;
   /** Dispatcher script (keyed by edgeId). */
   script?: Record<string, EdgeScript>;
+  /**
+   * Optional per-effect execution-mode policy, passed verbatim to runCaller's
+   * `policy` option on every leg. Absent → `effect-dispatched` carries the
+   * declared executionMode ("tool" for the scripted adapter) and no modeReason.
+   */
+  policy?: (route: GraphRoute, effect: CallerEffect) => PolicyFacts;
   /** Multi-run legs (resume flows). Leg 0 is always a fresh run. */
   steps?: Array<{
     /** Applied between runs (e.g. approval edit). */
