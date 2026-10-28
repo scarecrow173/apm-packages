@@ -21983,7 +21983,7 @@ function normalizeTraceEvent(raw) {
       if (!EXECUTION_MODES.includes(mode)) {
         fail(`executionMode must be one of ${EXECUTION_MODES.join(", ")}`);
       }
-      return {
+      const event = {
         ...base,
         kind: "effect-dispatched",
         edgeId: requireString(record2.edgeId, "edgeId"),
@@ -21992,6 +21992,10 @@ function normalizeTraceEvent(raw) {
         executionMode: mode,
         focusPaths: requireRelativePaths(record2.focusPaths, "focusPaths")
       };
+      if (typeof record2.modeReason === "string" && record2.modeReason.length > 0) {
+        event.modeReason = record2.modeReason;
+      }
+      return event;
     }
     case "effect-outcome": {
       const outcome = record2.outcome;
