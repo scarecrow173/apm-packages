@@ -20889,7 +20889,7 @@ function relationValues(raw, ownerPath) {
   }
   return { relations: result, issues };
 }
-function readRecords(options2) {
+function readRecords(options2, collector) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
   const taskDir = options2.taskDir ?? "docs/tasks";
   const directories = sortedUnique([...CANONICAL_TARGETS, normalizeArtifactPath(cwd, taskDir)]);
@@ -20897,7 +20897,13 @@ function readRecords(options2) {
   const records = [];
   for (const absolutePath of files.map((file2) => import_node_path2.default.resolve(cwd, file2))) {
     try {
-      const parsed = (0, import_gray_matter.default)(import_node_fs3.default.readFileSync(absolutePath, "utf8"));
+      const raw = import_node_fs3.default.readFileSync(absolutePath, "utf8");
+      if (collector) {
+        collector.filesRead += 1;
+        collector.bytesRead += Buffer.byteLength(raw, "utf8");
+        collector.filePaths.add(normalizeArtifactPath(cwd, absolutePath));
+      }
+      const parsed = (0, import_gray_matter.default)(raw);
       const data = parsed.data;
       const recordPath = normalizeArtifactPath(cwd, absolutePath);
       const relationResult = relationValues(data.relations, recordPath);
@@ -20970,9 +20976,10 @@ function edgeCompare(left, right) {
   };
   return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings2(left.from, right.from) || compareStrings2(left.relation, right.relation) || compareStrings2(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
 }
-function scanArtifactGraph(options2) {
+function scanArtifactGraph(options2, collector) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
-  const records = readRecords({ ...options2, cwd });
+  if (collector) collector.scans += 1;
+  const records = readRecords({ ...options2, cwd }, collector);
   const nodes = records.map(({ path: recordPath, id, type }) => ({ path: recordPath, id, type }));
   const byId = /* @__PURE__ */ new Map();
   for (const record2 of records) {
@@ -21641,9 +21648,9 @@ function fallbackRecords(cwd, graph) {
     relationIssues: []
   }));
 }
-function evaluateGraphGates(state) {
+function evaluateGraphGates(state, collector) {
   const cwd = import_node_path4.default.resolve(state.cwd);
-  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir });
+  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir }, collector);
   const records = projection.records.length > 0 ? projection.records : fallbackRecords(cwd, state.artifactGraph);
   const resolution = resolveArtifactFocus(cwd, state.artifactGraph, records, state.focus);
   const focused = findRecord(records, resolution.focusedPath);
@@ -21701,10 +21708,10 @@ function evaluateGraphGates(state) {
   gates["exit-audit"] = state.signals.includes("exit-audit-pass") ? gate("pass") : gate("blocked", ["exit-audit-pass"]);
   return gates;
 }
-function projectGraphState(options2) {
+function projectGraphState(options2, collector) {
   const cwd = import_node_path4.default.resolve(options2.cwd);
   const taskDir = options2.taskDir ?? "docs/tasks";
-  const projection = scanArtifactGraph({ cwd, taskDir });
+  const projection = scanArtifactGraph({ cwd, taskDir }, collector);
   const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options2.focus ?? []);
   const blockers = sortedUnique3([
     ...resolution.blockers,
@@ -21730,10 +21737,10 @@ function projectGraphState(options2) {
     taskGraph
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
-  state.gates = evaluateGraphGates(state);
+  state.gates = evaluateGraphGates(state, collector);
   if (state.gates.planning?.reasons.some((reason) => reason.startsWith("task-graph:"))) {
     state.blockers = sortedUnique3([...state.blockers, "task-graph-invalid"]);
-    state.gates = evaluateGraphGates(state);
+    state.gates = evaluateGraphGates(state, collector);
   }
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
   state.hardBlockers = deriveHardBlockers(state.blockers, state.signals, state.gates);

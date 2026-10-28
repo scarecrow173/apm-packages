@@ -55,7 +55,11 @@ canonical Markdown.
 
 The checkpoint is complete only after its audits, delegate, and evidence are
 recorded. A run trace summary records the mode, bounded counters, completed
-edge IDs in order, route fingerprints, and the final yield reason.
+edge IDs in order, route fingerprints, and the final yield reason. The
+machine-readable event schema, JSONL export, and per-run counters for that
+trace are defined in [run-trace-contract.md](run-trace-contract.md); the trace
+is non-authoritative diagnostic data and never replaces canonical Markdown or
+Graph State.
 
 ## Git commit boundary
 
