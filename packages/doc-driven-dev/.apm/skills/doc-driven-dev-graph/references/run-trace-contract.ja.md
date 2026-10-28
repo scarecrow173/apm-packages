@@ -79,7 +79,10 @@ caller が audit/delegate を駆動するときに記録します。`route_graph
 
 `edgeId`、`stage`（`audit`/`delegate`）、`effectId`、`executionMode`
 （`same-context`、`subagent`、`tool`、`unknown`）、`focusPaths`
-（effect に渡した repo 相対 artifact path）。
+（effect に渡した repo 相対 artifact path）。`modeReason` は任意です。
+caller 側の execution-mode policy が mode を決定した場合、policy の選択
+理由を `;` 連結したトークン列を記録します。正規化では空でない文字列の
+場合のみ保持されます（理由リストであり、パスではありません）。
 
 ### `effect-outcome`
 
@@ -129,8 +132,10 @@ outcome 数、yield reason、scan 合計（`scans`、`filesRead`、`bytesRead`�
 
 trace は LLM token、cost、provider・model 名、prompt、文書本文、secret を
 一切記録しません — schema にそれらを保持できる field が存在しません。
-生データが必要な caller は trace の外で各自の管理下に保持します。将来の
-コントラクト改定で field を追加する場合は `v` を上げます。
+生データが必要な caller は trace の外で各自の管理下に保持します。
+コントラクト改定での field 追加は、additive-optional な拡張（未知の
+field は読み取り時に落とされます）または `v` の increment のみで
+行われます。
 
 trace が無効（`--trace-file` なし）でも routing、evidence、gate は変わり
 ません。trace 追記が失敗しても stderr に警告するだけで、route は失敗
