@@ -136,6 +136,17 @@ test("normalizeTraceEvent rejects malformed and unsafe events", () => {
   assert.equal("rawPrompt" in event, false);
 });
 
+test("route-selected normalization rejects missing commitGate", () => {
+  const baseRouteSelected = {
+    v: 1, runId: "r", seq: 1, kind: "route-selected", current: "a", next: "a",
+    edgeId: null, status: "blocked", condition: "blocked", delegate: null,
+    requiredAudits: [], commitGate: false, blockers: [], focus: [],
+    tasks: [], routeHash: "x",
+  };
+  const { commitGate: _omitted, ...rest } = baseRouteSelected;
+  assert.throws(() => normalizeTraceEvent(rest), /commitGate/);
+});
+
 test("summarizeTrace aggregates routes, dispatches, outcomes, and scans", () => {
   const events = [
     normalizeTraceEvent({ v: 1, runId: "r", seq: 1, kind: "artifact-scan", scans: 2, filesRead: 14, uniqueFiles: 7, bytesRead: 4096 }),
