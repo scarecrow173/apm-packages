@@ -33,7 +33,8 @@ JSON Lines (`.jsonl`), one event per line, UTF-8. Every event carries:
 
 `seq` is the only ordering field; consumers sort by `(runId, seq)`. Writers
 append; nothing rewrites earlier lines. A trace file may hold multiple runs;
-events are grouped by `runId`.
+events are grouped by `runId`. Each trace file has a single writer at a time —
+concurrent appends can interleave and corrupt `seq` ordering.
 
 ## CLI-emitted events
 
@@ -61,9 +62,10 @@ One per invocation, emitted after `artifact-scan`.
 | `edgeId` | selected edge, or `null` for terminal/blocked |
 | `status` | `edge`, `terminal`, or `blocked` |
 | `condition` | matched condition key, or `terminal`/`blocked` |
-| `delegate`, `requiredAudits`, `commitGate`, `blockers` | copied from `GraphRoute` |
+| `delegate`, `requiredAudits`, `commitGate` | copied from `GraphRoute` |
+| `blockers` | `GraphRoute` blockers; free-text entries are normalized to `<kind>:sha256:<12hex>` tokens (see below) |
 | `focus` | resolved repo-relative focus paths |
-| `tasks` | selected Task Graph nodes as `{ id, status }` |
+| `tasks` | selected Task Graph nodes; `{ id, status }` copies task front-matter identifiers verbatim — they are the correlation keys |
 | `routeHash` | sha256 of the key-sorted JSON of the complete `GraphRoute` |
 | `durationMs` | optional wall-clock diagnostic; never asserted exactly |
 
@@ -82,7 +84,8 @@ never emits them.
 
 `edgeId`, `stage`, `effectId`, `outcome` (`completed`/`retry`/`yield`),
 `evidencePaths` (repo-relative), and `reason` — required when `outcome` is
-`yield`, one of `approval-required`, `input-required`, `authority-required`,
+`yield` and rejected on `completed`/`retry` outcomes (the validator enforces
+both); one of `approval-required`, `input-required`, `authority-required`,
 `unrecoverable-blocker`, `commit-required`.
 
 ### `run-yield`
@@ -104,6 +107,13 @@ expressed by the per-`runId` sequence, and completed-edge ids accumulate in
   recorded. Fixture runs use fixed `runId` values.
 - `focusPaths`/`evidencePaths`/`focus` hold repo-relative paths only;
   normalization rejects absolute paths (POSIX, Windows drive, UNC, `~`).
+- `route-selected.blockers` records only bounded tokens. A blocker carrying
+  free text after a `<kind>:` prefix — such as a `broken-relation:` message
+  embedding a relation target — is normalized to `<kind>:sha256:<12hex>`, a
+  deterministic content hash that keeps the actionable kind while dropping
+  embedded paths and secrets. Kind-less blockers (`focus-required`,
+  `duplicate-id`, …) pass through verbatim, and so do `tasks[].id`/`status`:
+  those are the correlation identifiers the trace exists to carry.
 - `normalizeTraceEvent` drops fields outside this contract, so unexpected
   content cannot leak through a newer producer.
 - `durationMs` is wall-clock diagnostic only; `normalizeForCompare` strips it
@@ -116,10 +126,10 @@ blocked/terminal counts, audit and delegate dispatch counts, execution-mode
 counts, outcome counts, yield reasons, and scan totals (`scans`, `filesRead`,
 `bytesRead`, `uniqueFilesMax`).
 
-The trace never records LLM tokens, cost, provider names, prompts, document
-bodies, or secrets — the schema carries no field that could hold them. Callers
-that need raw payloads keep them outside the trace under their own controls;
-a future contract revision adds fields only by bumping `v`.
+The trace never records LLM tokens, cost, provider or model names, prompts,
+document bodies, or secrets — the schema carries no field that could hold
+them. Callers that need raw payloads keep them outside the trace under their
+own controls; a future contract revision adds fields only by bumping `v`.
 
 Disabled tracing (no `--trace-file`) leaves routing, evidence, and gates
 unchanged. A failed trace append warns on stderr and never fails a route.

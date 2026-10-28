@@ -10,6 +10,15 @@ import {
   scanArtifactGraph,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph";
 import { projectGraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
+import {
+  appendTraceEvent,
+  normalizeForCompare,
+  normalizeTraceEvent,
+  readTraceFile,
+  stableRouteHash,
+  summarizeTrace,
+  type TraceEvent,
+} from "../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 
 const CANONICAL_TARGETS = [
   "docs/ideas", "docs/discovery", "docs/specs", "docs/designs", "docs/plans",
@@ -80,16 +89,6 @@ test("omitting the collector keeps projections identical", () => {
   assert.deepEqual(traced, plain);
 });
 
-import {
-  appendTraceEvent,
-  normalizeForCompare,
-  normalizeTraceEvent,
-  readTraceFile,
-  stableRouteHash,
-  summarizeTrace,
-  type TraceEvent,
-} from "../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
-
 test("appendTraceEvent assigns per-runId sequence numbers", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "run-trace-seq-"));
   const file = path.join(dir, "trace.jsonl");
@@ -146,6 +145,32 @@ test("route-selected normalization rejects missing commitGate", () => {
   };
   const { commitGate: _omitted, ...rest } = baseRouteSelected;
   assert.throws(() => normalizeTraceEvent(rest), /commitGate/);
+});
+
+test("route-selected blockers are tokenized deterministically and idempotently", () => {
+  const raw = {
+    v: 1, runId: "r", seq: 1, kind: "route-selected", current: "a", next: "a",
+    edgeId: null, status: "blocked", condition: "blocked", delegate: null,
+    requiredAudits: [], commitGate: false,
+    blockers: [
+      "broken-relation:Broken implements relation from docs/specs/x.md to /abs/secret.md",
+      "focus-required",
+    ],
+    focus: [], tasks: [], routeHash: "x",
+  };
+  const event = normalizeTraceEvent(raw);
+  assert.equal(event.kind, "route-selected");
+  if (event.kind !== "route-selected") return;
+  assert.equal(event.blockers.length, 2);
+  assert.match(event.blockers[0], /^broken-relation:sha256:[0-9a-f]{12}$/);
+  assert.equal(event.blockers[1], "focus-required", "kind-less blockers pass through verbatim");
+  assert.equal(JSON.stringify(event).includes("/abs/"), false);
+  // Deterministic: the same free-text blocker maps to the same token.
+  const again = normalizeTraceEvent(raw);
+  assert.deepEqual(again, event);
+  // Idempotent: already-tokenized blockers survive a second normalization.
+  const reread = normalizeTraceEvent(JSON.parse(JSON.stringify(event)));
+  assert.deepEqual(reread, event);
 });
 
 test("summarizeTrace aggregates routes, dispatches, outcomes, and scans", () => {
@@ -304,4 +329,38 @@ test("trace requires both flags and never leaks document bodies", () => {
   const traceFile = path.join(repo, "trace.jsonl");
   runSource(repo, ["--graph", graph, "--signal", "advance", "--json", "--trace-file", traceFile, "--run-id", "r-4"]);
   assert.equal(fs.readFileSync(traceFile, "utf8").includes(marker), false);
+});
+
+test("an absolute-path relation reaches the trace only as a hashed blocker token", () => {
+  const { repo } = fixtureRepo();
+  writeArtifact(repo, "docs/specs/0002-broken.md", {
+    id: "SPEC-0002", type: "spec", status: "approved", title: "Broken",
+    relations: { implements: ["/abs/x.md"] },
+  }, "# Broken\n");
+  const graph = graphFile(repo);
+  const traceFile = path.join(repo, "trace.jsonl");
+  const result = runSource(repo, traceArgs(graph, traceFile, "r-5"));
+  assert.equal(result.status, 0, result.stderr);
+  // The stdout route keeps the human-readable blocker; only the trace tokenizes it.
+  assert.ok(JSON.parse(result.stdout).blockers.some((blocker: string) => blocker.includes("/abs/x.md")));
+  assert.equal(fs.readFileSync(traceFile, "utf8").includes("/abs/x.md"), false);
+  const route = readTraceFile(traceFile).find((event) => event.kind === "route-selected");
+  const blocker = route?.kind === "route-selected"
+    ? route.blockers.find((item) => item.startsWith("broken-relation:"))
+    : undefined;
+  assert.match(blocker ?? "", /^broken-relation:sha256:[0-9a-f]{12}$/);
+});
+
+test("an unwritable trace file warns on stderr without failing the route", () => {
+  const { repo } = fixtureRepo();
+  const graph = graphFile(repo);
+  // A regular file where the trace directory belongs makes mkdir/append fail.
+  const occupied = path.join(repo, "not-a-directory");
+  fs.writeFileSync(occupied, "occupied\n", "utf8");
+  const result = runSource(repo, traceArgs(graph, path.join(occupied, "trace.jsonl"), "r-6"));
+  assert.equal(result.status, 0, result.stderr);
+  const route = JSON.parse(result.stdout);
+  assert.equal(route.schemaVersion, 2);
+  assert.equal(route.edgeId, "start-to-next");
+  assert.match(result.stderr, /run trace append failed/);
 });

@@ -21884,6 +21884,7 @@ var RUN_YIELD_REASONS = [
   "single-step-complete"
 ];
 var ABSOLUTE_PATH = /^(?:[a-zA-Z]:[\\/]|\\\\|\/|~[\\/])/;
+var BLOCKER_TOKEN = /^[a-z0-9-]+:sha256:[0-9a-f]{12}$/;
 function fail(message) {
   throw new Error(`run trace: ${message}`);
 }
@@ -21913,6 +21914,14 @@ function requireRelativePaths(value, field) {
 function requireStage(value) {
   if (value !== "audit" && value !== "delegate") fail(`stage must be audit or delegate`);
   return value;
+}
+function sanitizeBlocker(blocker) {
+  if (BLOCKER_TOKEN.test(blocker)) return blocker;
+  const separator = blocker.indexOf(":");
+  if (separator === -1) return blocker;
+  const kind = blocker.slice(0, separator);
+  const digest = import_node_crypto.default.createHash("sha256").update(blocker).digest("hex").slice(0, 12);
+  return `${kind}:sha256:${digest}`;
 }
 function baseFields(record2) {
   if (record2.v !== TRACE_SCHEMA_VERSION) fail(`unsupported schema version: ${String(record2.v)}`);
@@ -21953,7 +21962,7 @@ function normalizeTraceEvent(raw) {
         delegate: record2.delegate === null ? null : requireString(record2.delegate, "delegate"),
         requiredAudits: requireStringArray(record2.requiredAudits, "requiredAudits"),
         commitGate: record2.commitGate,
-        blockers: requireStringArray(record2.blockers, "blockers"),
+        blockers: requireStringArray(record2.blockers, "blockers").map(sanitizeBlocker),
         focus: requireRelativePaths(record2.focus, "focus"),
         tasks: requireTasks(record2.tasks),
         routeHash: requireString(record2.routeHash, "routeHash")
