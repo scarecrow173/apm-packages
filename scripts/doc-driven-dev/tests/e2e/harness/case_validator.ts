@@ -47,8 +47,27 @@ export type CaseExpect = {
   edgeSequence?: (string | null)[];
   /** run-yield.completedEdges of the LAST leg's run-yield event. */
   completedEdges?: string[];
-  /** Trace kind tallies over the WHOLE run's events (all legs). */
-  events?: { kind: string; count?: number; min?: number }[];
+  /**
+   * Trace tallies over the evaluated scope's events (the WHOLE run for the
+   * case-level expect; the leg's own partition for steps[].expect). Optional
+   * `edgeId`/`stage` narrow the tally to events carrying those fields —
+   * e.g. "zero audit dispatches on the resumed edge" for pending reuse.
+   */
+  events?: { kind: string; edgeId?: string; stage?: "audit" | "delegate"; count?: number; min?: number }[];
+  /**
+   * LAST route-selected in the evaluated scope must carry each blocker:
+   * string entries require verbatim membership (sanitized token form, e.g.
+   * "focus-required"), RegExp entries match any one blocker (e.g.
+   * /^broken-relation:sha256:[0-9a-f]{12}$/).
+   */
+  blockersContain?: (string | RegExp)[];
+  /**
+   * Selected-task assertions: each entry's {id,status} must appear in the
+   * `tasks` projection of the LAST route-selected in scope carrying the named
+   * edgeId. Edge-scoped because a completed run may legitimately mutate the
+   * task status after the asserted routing decision.
+   */
+  tasksContain?: { edgeId: string; id: string; status: string }[];
   /** End-of-run repo state — re-read from disk at validation time. */
   finalFiles?: Record<string, { frontmatter?: Record<string, unknown>; bodyIncludes?: string[] }>;
 };
@@ -133,12 +152,51 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
     }
   }
   for (const spec of expect.events ?? []) {
-    const count = events.filter((event) => event.kind === spec.kind).length;
+    const label = `event kind "${spec.kind}"`
+      + (spec.edgeId !== undefined ? ` edge "${spec.edgeId}"` : "")
+      + (spec.stage !== undefined ? ` stage "${spec.stage}"` : "");
+    const count = events.filter((event) => {
+      if (event.kind !== spec.kind) return false;
+      if (spec.edgeId !== undefined && (!("edgeId" in event) || event.edgeId !== spec.edgeId)) return false;
+      if (spec.stage !== undefined && (!("stage" in event) || event.stage !== spec.stage)) return false;
+      return true;
+    }).length;
     if (spec.count !== undefined && count !== spec.count) {
-      failures.push(`event kind "${spec.kind}": expected count ${spec.count}, got ${count}`);
+      failures.push(`${label}: expected count ${spec.count}, got ${count}`);
     }
     if (spec.min !== undefined && count < spec.min) {
-      failures.push(`event kind "${spec.kind}": expected at least ${spec.min}, got ${count}`);
+      failures.push(`${label}: expected at least ${spec.min}, got ${count}`);
+    }
+  }
+  for (const needle of expect.blockersContain ?? []) {
+    const lastRoute = events.filter((event): event is RouteSelectedEvent => event.kind === "route-selected").at(-1);
+    if (!lastRoute) {
+      failures.push(`blockersContain: no route-selected event in scope (expected ${String(needle)})`);
+      continue;
+    }
+    const found = typeof needle === "string"
+      ? lastRoute.blockers.includes(needle)
+      : lastRoute.blockers.some((blocker) => needle.test(blocker));
+    if (!found) {
+      failures.push(
+        `blockersContain: last route-selected blockers ${JSON.stringify(lastRoute.blockers)}`
+        + ` do not contain ${String(needle)}`,
+      );
+    }
+  }
+  for (const entry of expect.tasksContain ?? []) {
+    const target = events.filter((event): event is RouteSelectedEvent => (
+      event.kind === "route-selected" && event.edgeId === entry.edgeId
+    )).at(-1);
+    if (!target) {
+      failures.push(`tasksContain: no route-selected for edge "${entry.edgeId}" in scope`);
+      continue;
+    }
+    if (!target.tasks.some((task) => task.id === entry.id && task.status === entry.status)) {
+      failures.push(
+        `tasksContain: route-selected "${entry.edgeId}" tasks ${JSON.stringify(target.tasks)}`
+        + ` do not contain ${JSON.stringify({ id: entry.id, status: entry.status })}`,
+      );
     }
   }
   for (const [rel, spec] of Object.entries(expect.finalFiles ?? {})) {
