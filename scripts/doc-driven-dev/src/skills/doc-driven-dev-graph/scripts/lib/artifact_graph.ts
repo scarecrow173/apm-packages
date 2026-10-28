@@ -37,6 +37,18 @@ export type ArtifactGraphProjection = {
   records: ArtifactRecord[];
 };
 
+export type ArtifactScanCollector = {
+  scans: number;
+  filesRead: number;
+  bytesRead: number;
+  filePaths: Set<string>;
+};
+
+/** Create a mutable accumulator for artifact read diagnostics. */
+export function createArtifactScanCollector(): ArtifactScanCollector {
+  return { scans: 0, filesRead: 0, bytesRead: 0, filePaths: new Set() };
+}
+
 /** Relations that connect documents in a lifecycle chain. */
 export const LINEAGE_RELATIONS: ReadonlySet<string> = new Set([
   "implements",
@@ -139,7 +151,7 @@ function relationValues(raw: unknown, ownerPath: string): { relations: Record<st
   return { relations: result, issues };
 }
 
-function readRecords(options: ArtifactGraphOptions): ArtifactRecord[] {
+function readRecords(options: ArtifactGraphOptions, collector?: ArtifactScanCollector): ArtifactRecord[] {
   const cwd = path.resolve(options.cwd);
   const taskDir = options.taskDir ?? "docs/tasks";
   const directories = sortedUnique([...CANONICAL_TARGETS, normalizeArtifactPath(cwd, taskDir)]);
@@ -147,7 +159,13 @@ function readRecords(options: ArtifactGraphOptions): ArtifactRecord[] {
   const records: ArtifactRecord[] = [];
   for (const absolutePath of files.map((file) => path.resolve(cwd, file))) {
     try {
-      const parsed = matter(fs.readFileSync(absolutePath, "utf8"));
+      const raw = fs.readFileSync(absolutePath, "utf8");
+      if (collector) {
+        collector.filesRead += 1;
+        collector.bytesRead += Buffer.byteLength(raw, "utf8");
+        collector.filePaths.add(normalizeArtifactPath(cwd, absolutePath));
+      }
+      const parsed = matter(raw);
       const data = parsed.data as Record<string, unknown>;
       const recordPath = normalizeArtifactPath(cwd, absolutePath);
       const relationResult = relationValues(data.relations, recordPath);
@@ -239,9 +257,10 @@ function edgeCompare(left: ArtifactEdge, right: ArtifactEdge): number {
 }
 
 /** Project Markdown front matter into an explicit graph and retain scan metadata for state gates. */
-export function scanArtifactGraph(options: ArtifactGraphOptions): ArtifactGraphProjection {
+export function scanArtifactGraph(options: ArtifactGraphOptions, collector?: ArtifactScanCollector): ArtifactGraphProjection {
   const cwd = path.resolve(options.cwd);
-  const records = readRecords({ ...options, cwd });
+  if (collector) collector.scans += 1;
+  const records = readRecords({ ...options, cwd }, collector);
   const nodes: ArtifactNode[] = records.map(({ path: recordPath, id, type }) => ({ path: recordPath, id, type }));
   const byId = new Map<string, ArtifactRecord[]>();
   for (const record of records) {

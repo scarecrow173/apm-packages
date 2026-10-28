@@ -9,6 +9,7 @@ import {
   selectArtifactChain,
   type ArtifactGraph,
   type ArtifactRecord,
+  type ArtifactScanCollector,
 } from "./artifact_graph";
 import {
   buildTaskGraph,
@@ -144,9 +145,9 @@ function fallbackRecords(cwd: string, graph: ArtifactGraph): ArtifactRecord[] {
 }
 
 /** Evaluate generic gate facts from a projected Graph State. */
-export function evaluateGraphGates(state: GraphState): GraphGateResults {
+export function evaluateGraphGates(state: GraphState, collector?: ArtifactScanCollector): GraphGateResults {
   const cwd = path.resolve(state.cwd);
-  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir });
+  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir }, collector);
   const records = projection.records.length > 0 ? projection.records : fallbackRecords(cwd, state.artifactGraph);
   const resolution = resolveArtifactFocus(cwd, state.artifactGraph, records, state.focus);
   const focused = findRecord(records, resolution.focusedPath);
@@ -212,10 +213,10 @@ export function evaluateGraphGates(state: GraphState): GraphGateResults {
 }
 
 /** Project Markdown artifacts, focus, gates, signals, blockers, and the selected Task Graph. */
-export function projectGraphState(options: ProjectGraphStateOptions): GraphState {
+export function projectGraphState(options: ProjectGraphStateOptions, collector?: ArtifactScanCollector): GraphState {
   const cwd = path.resolve(options.cwd);
   const taskDir = options.taskDir ?? "docs/tasks";
-  const projection = scanArtifactGraph({ cwd, taskDir });
+  const projection = scanArtifactGraph({ cwd, taskDir }, collector);
   const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options.focus ?? []);
   const blockers = sortedUnique([
     ...resolution.blockers,
@@ -244,10 +245,10 @@ export function projectGraphState(options: ProjectGraphStateOptions): GraphState
     taskGraph,
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
-  state.gates = evaluateGraphGates(state);
+  state.gates = evaluateGraphGates(state, collector);
   if (state.gates.planning?.reasons.some((reason) => reason.startsWith("task-graph:"))) {
     state.blockers = sortedUnique([...state.blockers, "task-graph-invalid"]);
-    state.gates = evaluateGraphGates(state);
+    state.gates = evaluateGraphGates(state, collector);
   }
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
   state.hardBlockers = deriveHardBlockers(state.blockers, state.signals, state.gates);
