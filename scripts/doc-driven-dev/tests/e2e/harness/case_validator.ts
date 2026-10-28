@@ -34,14 +34,22 @@ const RUN_YIELD_REASONS: readonly YieldReason[] = [
 ];
 
 export type CaseExpect = {
-  /** Final run-yield reason (or expected terminal). */
+  /**
+   * Final-leg run-yield reason — the LAST run-yield event in scope (for a
+   * leg-scoped check, that leg's run-yield).
+   */
   yield: YieldReason;
-  /** route-selected edgeIds in order (nulls allowed as "blocked"/"terminal"). */
+  /**
+   * route-selected edgeIds of the LAST leg's trace partition in order
+   * (nulls allowed as "blocked"/"terminal"). Earlier legs' routes are not
+   * part of this sequence — assert them via steps[].expect instead.
+   */
   edgeSequence?: (string | null)[];
-  /** run-yield.completedEdges. */
+  /** run-yield.completedEdges of the LAST leg's run-yield event. */
   completedEdges?: string[];
-  /** Trace kind tallies. */
+  /** Trace kind tallies over the WHOLE run's events (all legs). */
   events?: { kind: string; count?: number; min?: number }[];
+  /** End-of-run repo state — re-read from disk at validation time. */
   finalFiles?: Record<string, { frontmatter?: Record<string, unknown>; bodyIncludes?: string[] }>;
 };
 
@@ -75,15 +83,33 @@ function readReceipts(repo: string, proofPath: string): EvidenceReceipt[] {
 }
 
 /**
+ * Split a run's events into per-leg slices: every leg ends with exactly one
+ * run-yield event, so partitions close at each run-yield.
+ */
+export function partitionByLegs(events: TraceEvent[]): TraceEvent[][] {
+  const legs: TraceEvent[][] = [[]];
+  for (const event of events) {
+    legs[legs.length - 1].push(event);
+    if (event.kind === "run-yield") legs.push([]);
+  }
+  if (legs[legs.length - 1].length === 0) legs.pop();
+  return legs;
+}
+
+/**
  * Expectation-only checks (yield, sequences, tallies, final files) against the
- * events visible in `run.traceEvents`. runCase uses this for per-leg expects:
- * universal invariants run once over the whole case; each leg's expectations
- * run against that leg's own event slice.
+ * events visible in `run.traceEvents`. Field scoping is explicit:
+ * yield/edgeSequence/completedEdges evaluate the LAST leg's partition in the
+ * given scope (final-leg expectations); events tallies and finalFiles span
+ * the whole run/repo. runCase uses this for per-leg expects: universal
+ * invariants run once over the whole case; each leg's expectations run
+ * against that leg's own event slice.
  */
 export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): string[] {
   const failures: string[] = [];
   const events = run.traceEvents;
-  const routeEvents = events.filter((event): event is RouteSelectedEvent => event.kind === "route-selected");
+  const lastLegRoutes = (partitionByLegs(events).at(-1) ?? [])
+    .filter((event): event is RouteSelectedEvent => event.kind === "route-selected");
   const yieldEvents = events.filter((event): event is RunYieldEvent => event.kind === "run-yield");
 
   if (expect.yield !== undefined) {
@@ -95,7 +121,7 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
     }
   }
   if (expect.edgeSequence !== undefined) {
-    const actual = routeEvents.map((event) => event.edgeId);
+    const actual = lastLegRoutes.map((event) => event.edgeId);
     if (!isDeepStrictEqual(actual, expect.edgeSequence)) {
       failures.push(`edgeSequence mismatch: expected ${JSON.stringify(expect.edgeSequence)}, got ${JSON.stringify(actual)}`);
     }
