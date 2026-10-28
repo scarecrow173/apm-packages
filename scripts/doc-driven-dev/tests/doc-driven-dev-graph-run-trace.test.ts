@@ -136,6 +136,29 @@ test("normalizeTraceEvent rejects malformed and unsafe events", () => {
   assert.equal("rawPrompt" in event, false);
 });
 
+test("effect-dispatched modeReason passes through only as a non-empty string", () => {
+  const base = {
+    v: 1, runId: "r", seq: 1, kind: "effect-dispatched",
+    edgeId: "a-to-b", stage: "delegate", effectId: "briefing-flow",
+    executionMode: "subagent", focusPaths: ["docs/specs/0001-graph.md"],
+  };
+  const withReason = normalizeTraceEvent({
+    ...base, modeReason: "independent-scope;parallel-candidate",
+  });
+  assert.equal(
+    withReason.kind === "effect-dispatched" ? withReason.modeReason : undefined,
+    "independent-scope;parallel-candidate",
+  );
+  // It is a free reason-token list, not a path — non-string or empty values
+  // drop like unknown fields instead of failing the event.
+  for (const invalid of [123, "", null, ["independent-scope"], { reason: "x" }]) {
+    const event = normalizeTraceEvent({ ...base, modeReason: invalid });
+    assert.equal(event.kind, "effect-dispatched");
+    assert.equal("modeReason" in event, false, `modeReason ${JSON.stringify(invalid)} must drop`);
+  }
+  assert.equal("modeReason" in normalizeTraceEvent(base), false);
+});
+
 test("route-selected normalization rejects missing commitGate", () => {
   const baseRouteSelected = {
     v: 1, runId: "r", seq: 1, kind: "route-selected", current: "a", next: "a",

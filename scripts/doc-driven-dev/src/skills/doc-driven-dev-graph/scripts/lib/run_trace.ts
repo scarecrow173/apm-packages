@@ -57,6 +57,7 @@ export type EffectDispatchedEvent = TraceEventBase & {
   effectId: string;
   executionMode: ExecutionMode;
   focusPaths: string[];
+  modeReason?: string;
 };
 
 export type EffectOutcomeEvent = TraceEventBase & {
@@ -218,7 +219,7 @@ export function normalizeTraceEvent(raw: unknown): TraceEvent {
       if (!EXECUTION_MODES.includes(mode as ExecutionMode)) {
         fail(`executionMode must be one of ${EXECUTION_MODES.join(", ")}`);
       }
-      return {
+      const event: EffectDispatchedEvent = {
         ...base, kind: "effect-dispatched",
         edgeId: requireString(record.edgeId, "edgeId"),
         stage: requireStage(record.stage),
@@ -226,6 +227,12 @@ export function normalizeTraceEvent(raw: unknown): TraceEvent {
         executionMode: mode as ExecutionMode,
         focusPaths: requireRelativePaths(record.focusPaths, "focusPaths"),
       };
+      // Optional free field: a caller-declared reason-token list (never a
+      // path), kept only as a non-empty plain string — anything else drops.
+      if (typeof record.modeReason === "string" && record.modeReason.length > 0) {
+        event.modeReason = record.modeReason;
+      }
+      return event;
     }
     case "effect-outcome": {
       const outcome = record.outcome;
