@@ -224,6 +224,60 @@ test("source and generated CLIs route a pre-design briefing chain identically", 
   });
 });
 
+function sharedUpstreamRepo(): string {
+  const repo = preDesignRepo();
+  writeArtifact(repo, "docs/ideas/0001-root.md", {
+    id: "IDEA-0001", type: "idea", status: "active", title: "Root Idea",
+  }, "# Root Idea\n");
+  writeArtifact(repo, "docs/discovery/0001-graph.md", {
+    id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
+    relations: { "derived-by": ["SPEC-0001", "ADR-0001"], "derives-from": ["IDEA-0001"] },
+  }, "# Graph Discovery\n");
+  for (const index of [2, 3]) {
+    const suffix = String(index).padStart(4, "0");
+    writeArtifact(repo, `docs/discovery/${suffix}-chain.md`, {
+      id: `DISC-${suffix}`, type: "discovery", status: "confirmed", title: `Discovery ${index}`,
+      relations: { "derives-from": ["IDEA-0001"] },
+    }, `# Discovery ${index}\n`);
+    writeArtifact(repo, `docs/specs/${suffix}-chain.md`, {
+      id: `SPEC-${suffix}`, type: "spec", status: "proposed", title: `Spec ${index}`,
+      relations: { "derives-from": [`DISC-${suffix}`] },
+    }, `# Spec ${index}\n\n## Acceptance Criteria\n\n- [ ] chain\n`);
+    writeArtifact(repo, `docs/adr/${suffix}-chain.md`, {
+      id: `ADR-${suffix}`, type: "adr", status: "accepted", title: `ADR ${index}`,
+      relations: { "derives-from": [`DISC-${suffix}`] },
+    }, `# ADR ${index}\n\n## Considered Options\n\n### A\n\n### B\n`);
+    writeArtifact(repo, `docs/designs/${suffix}-chain.md`, {
+      id: `DESIGN-${suffix}`, type: "design", status: "approved", title: `Design ${index}`,
+      relations: { "derives-from": [`SPEC-${suffix}`, `ADR-${suffix}`] },
+    }, `# Design ${index}\n`);
+    writeArtifact(repo, `docs/plans/${suffix}-chain.md`, {
+      id: `PLAN-${suffix}`, type: "plan", status: "completed", title: `Plan ${index}`,
+      relations: { "derives-from": [`DESIGN-${suffix}`] },
+    }, `# Plan ${index}\n`);
+  }
+  return repo;
+}
+
+test("source and generated CLIs route a unique chain past shared-upstream plans", () => {
+  const repo = sharedUpstreamRepo();
+  for (const focus of [["--focus", "SPEC-0001"], ["--focus", "DISC-0001"]]) {
+    const args = [
+      "--graph", canonicalGraphPath(), "--current", "briefing",
+      ...focus, "--cwd", repo, "--json",
+    ];
+    const source = runSource(repo, args);
+    const generated = runCli(generatedCli, repo, args);
+    assert.equal(source.status, 0, source.stderr);
+    assert.equal(generated.status, 0, generated.stderr);
+    assert.deepEqual(JSON.parse(generated.stdout), JSON.parse(source.stdout));
+    const route = JSON.parse(source.stdout);
+    assert.equal(route.status, "edge", focus.join(" "));
+    assert.equal(route.edgeId, "briefing-to-design", focus.join(" "));
+    assert.deepEqual(route.blockers, [], focus.join(" "));
+  }
+});
+
 test("source and generated CLIs route an approved design through planning-flow identically", () => {
   const repo = approvedDesignRepo();
   const expected = {
