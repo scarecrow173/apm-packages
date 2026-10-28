@@ -176,6 +176,9 @@ export function normalizeTraceEvent(raw: unknown): TraceEvent {
       if (status !== "edge" && status !== "terminal" && status !== "blocked") {
         fail("route-selected status must be edge, terminal, or blocked");
       }
+      if (typeof record.commitGate !== "boolean") {
+        fail("commitGate must be a boolean");
+      }
       const event: RouteSelectedEvent = {
         ...base, kind: "route-selected",
         current: requireString(record.current, "current"),
@@ -185,7 +188,7 @@ export function normalizeTraceEvent(raw: unknown): TraceEvent {
         condition: requireString(record.condition, "condition"),
         delegate: record.delegate === null ? null : requireString(record.delegate, "delegate"),
         requiredAudits: requireStringArray(record.requiredAudits, "requiredAudits"),
-        commitGate: record.commitGate === true,
+        commitGate: record.commitGate,
         blockers: requireStringArray(record.blockers, "blockers"),
         focus: requireRelativePaths(record.focus, "focus"),
         tasks: requireTasks(record.tasks),
