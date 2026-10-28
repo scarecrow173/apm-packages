@@ -33,7 +33,9 @@ JSON Lines（`.jsonl`）。1 行に 1 event、UTF-8。すべての event が持�
 
 順序付けは `seq` のみです。consumer は `(runId, seq)` で並び替えます。
 writer は追記のみで、既存行は書き換えません。1 つの trace ファイルに複数
-run が共存でき、event は `runId` でグループ化します。
+run が共存でき、event は `runId` でグループ化します。各 trace ファイルは
+常に単一の writer が書き込みます — 並行追記は行がインターリーブし、
+`seq` の順序を壊す可能性があります。
 
 ## CLI が出力する event
 
@@ -61,9 +63,10 @@ invocation ごとに 1 件、`artifact-scan` の後に出力されます。
 | `edgeId` | 選択された edge。terminal/blocked では `null` |
 | `status` | `edge`、`terminal`、`blocked` のいずれか |
 | `condition` | 一致した condition key、または `terminal`/`blocked` |
-| `delegate`, `requiredAudits`, `commitGate`, `blockers` | `GraphRoute` から転記 |
+| `delegate`, `requiredAudits`, `commitGate` | `GraphRoute` から転記 |
+| `blockers` | `GraphRoute` の blocker。自由文を含む項目は `<kind>:sha256:<12hex>` トークンに正規化されます（後述） |
 | `focus` | 解決済みの repo 相対 focus path |
-| `tasks` | 選択された Task Graph node（`{ id, status }`） |
+| `tasks` | 選択された Task Graph node。`{ id, status }` は task front matter の識別子をそのまま転記する相関キーです |
 | `routeHash` | 完全な `GraphRoute` を key ソートした JSON の sha256 |
 | `durationMs` | 任意の壁時計診断値。厳密一致で assert してはいけません |
 
@@ -81,9 +84,10 @@ caller が audit/delegate を駆動するときに記録します。`route_graph
 ### `effect-outcome`
 
 `edgeId`、`stage`、`effectId`、`outcome`（`completed`/`retry`/`yield`）、
-`evidencePaths`（repo 相対）、`reason`。`outcome` が `yield` のとき必須で、
-`approval-required`、`input-required`、`authority-required`、
-`unrecoverable-blocker`、`commit-required` のいずれか。
+`evidencePaths`（repo 相対）、`reason`。`outcome` が `yield` のとき必須、
+`completed`/`retry` では拒否されます（validator が両方を強制します）。
+値は `approval-required`、`input-required`、`authority-required`、
+`unrecoverable-blocker`、`commit-required` のいずれかです。
 
 ### `run-yield`
 
@@ -103,6 +107,14 @@ resume された run は同じ `runId` で追記を続けます。`seq` は増�
   fixture の run は固定 `runId` を使います。
 - `focusPaths`/`evidencePaths`/`focus` は repo 相対パスのみです。正規化は
   絶対パス（POSIX、Windows drive、UNC、`~`）を拒否します。
+- `route-selected.blockers` は bounded なトークンのみを記録します。
+  `<kind>:` プレフィックスの後に自由文を持つ blocker（relation target を
+  埋め込んだ `broken-relation:` メッセージなど）は
+  `<kind>:sha256:<12hex>` に正規化されます — 対応可能な kind を残しつつ、
+  埋め込まれたパスや機密を落とす決定的な内容ハッシュです。kind を持たない
+  blocker（`focus-required`、`duplicate-id` など）はそのまま転記され、
+  `tasks[].id`/`status` も同様です — これらは trace が保持するための
+  相関識別子です。
 - `normalizeTraceEvent` はこのコントラクト外の field を落とすため、新しい
   producer から予期しない内容が漏れません。
 - `durationMs` は壁時計の診断値のみです。`normalizeForCompare` は fixture
@@ -115,10 +127,10 @@ blocked/terminal 数、audit・delegate の dispatch 数、execution mode 数、
 outcome 数、yield reason、scan 合計（`scans`、`filesRead`、`bytesRead`、
 `uniqueFilesMax`）。
 
-trace は LLM token、cost、provider 名、prompt、文書本文、secret を一切記録
-しません — schema にそれらを保持できる field が存在しません。生データが
-必要な caller は trace の外で各自の管理下に保持します。将来のコントラクト
-改定で field を追加する場合は `v` を上げます。
+trace は LLM token、cost、provider・model 名、prompt、文書本文、secret を
+一切記録しません — schema にそれらを保持できる field が存在しません。
+生データが必要な caller は trace の外で各自の管理下に保持します。将来の
+コントラクト改定で field を追加する場合は `v` を上げます。
 
 trace が無効（`--trace-file` なし）でも routing、evidence、gate は変わり
 ません。trace 追記が失敗しても stderr に警告するだけで、route は失敗

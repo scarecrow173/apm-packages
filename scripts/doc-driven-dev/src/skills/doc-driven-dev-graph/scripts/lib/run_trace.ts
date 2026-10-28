@@ -113,6 +113,7 @@ const RUN_YIELD_REASONS: readonly string[] = [
   ...EFFECT_YIELD_REASONS, "budget-exhausted", "terminal", "single-step-complete",
 ];
 const ABSOLUTE_PATH = /^(?:[a-zA-Z]:[\\/]|\\\\|\/|~[\\/])/;
+const BLOCKER_TOKEN = /^[a-z0-9-]+:sha256:[0-9a-f]{12}$/;
 
 function fail(message: string): never {
   throw new Error(`run trace: ${message}`);
@@ -148,6 +149,16 @@ function requireRelativePaths(value: unknown, field: string): string[] {
 function requireStage(value: unknown): "audit" | "delegate" {
   if (value !== "audit" && value !== "delegate") fail(`stage must be audit or delegate`);
   return value;
+}
+
+/** Map a free-text blocker to a bounded deterministic token: kind + content hash. */
+function sanitizeBlocker(blocker: string): string {
+  if (BLOCKER_TOKEN.test(blocker)) return blocker;
+  const separator = blocker.indexOf(":");
+  if (separator === -1) return blocker;
+  const kind = blocker.slice(0, separator);
+  const digest = crypto.createHash("sha256").update(blocker).digest("hex").slice(0, 12);
+  return `${kind}:sha256:${digest}`;
 }
 
 function baseFields(record: Record<string, unknown>): TraceEventBase {
@@ -189,7 +200,7 @@ export function normalizeTraceEvent(raw: unknown): TraceEvent {
         delegate: record.delegate === null ? null : requireString(record.delegate, "delegate"),
         requiredAudits: requireStringArray(record.requiredAudits, "requiredAudits"),
         commitGate: record.commitGate,
-        blockers: requireStringArray(record.blockers, "blockers"),
+        blockers: requireStringArray(record.blockers, "blockers").map(sanitizeBlocker),
         focus: requireRelativePaths(record.focus, "focus"),
         tasks: requireTasks(record.tasks),
         routeHash: requireString(record.routeHash, "routeHash"),
@@ -316,7 +327,11 @@ export function stableRouteHash(route: unknown): string {
   return crypto.createHash("sha256").update(JSON.stringify(sortValue(route))).digest("hex");
 }
 
-/** Per-run aggregate counters for measurement and fixture comparison. */
+/**
+ * Per-run aggregate counters for measurement and fixture comparison.
+ * Callers must pre-filter events by `runId`; this aggregates whatever array it
+ * receives and adopts the first event's `runId` as the summary label.
+ */
 export function summarizeTrace(events: TraceEvent[]): TraceSummary {
   const scoped = [...events].sort((a, b) => a.seq - b.seq);
   const runId = scoped[0]?.runId ?? "";
