@@ -178,6 +178,92 @@ test("fails closed when a discovery has multiple pre-design briefing chains", ()
   assert.equal(state.gates.briefing.status, "blocked");
 });
 
+function sharedUpstreamRepo(planStatus: string = "completed"): string {
+  const repo = preDesignRepo();
+  writeArtifact(repo, "docs/ideas/0001-root.md", {
+    id: "IDEA-0001", type: "idea", status: "active", title: "Root Idea",
+  }, "# Root Idea\n");
+  writeArtifact(repo, "docs/discovery/0001-graph.md", {
+    id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
+    relations: { "derived-by": ["SPEC-0001", "ADR-0001"], "derives-from": ["IDEA-0001"] },
+  }, "# Graph Discovery\n");
+  for (const index of [2, 3]) {
+    const suffix = String(index).padStart(4, "0");
+    writeArtifact(repo, `docs/discovery/${suffix}-chain.md`, {
+      id: `DISC-${suffix}`, type: "discovery", status: "confirmed", title: `Discovery ${index}`,
+      relations: { "derives-from": ["IDEA-0001"] },
+    }, `# Discovery ${index}\n`);
+    writeArtifact(repo, `docs/specs/${suffix}-chain.md`, {
+      id: `SPEC-${suffix}`, type: "spec", status: "proposed", title: `Spec ${index}`,
+      relations: { "derives-from": [`DISC-${suffix}`] },
+    }, `# Spec ${index}\n\n## Acceptance Criteria\n\n- [ ] chain\n`);
+    writeArtifact(repo, `docs/adr/${suffix}-chain.md`, {
+      id: `ADR-${suffix}`, type: "adr", status: "accepted", title: `ADR ${index}`,
+      relations: { "derives-from": [`DISC-${suffix}`] },
+    }, `# ADR ${index}\n\n## Considered Options\n\n### A\n\n### B\n`);
+    writeArtifact(repo, `docs/designs/${suffix}-chain.md`, {
+      id: `DESIGN-${suffix}`, type: "design", status: "approved", title: `Design ${index}`,
+      relations: { "derives-from": [`SPEC-${suffix}`, `ADR-${suffix}`] },
+    }, `# Design ${index}\n`);
+    writeArtifact(repo, `docs/plans/${suffix}-chain.md`, {
+      id: `PLAN-${suffix}`, type: "plan", status: planStatus, title: `Plan ${index}`,
+      relations: { "derives-from": [`DESIGN-${suffix}`] },
+    }, `# Plan ${index}\n`);
+  }
+  return repo;
+}
+
+test("unique focused chain is not vetoed by plans in sibling chains sharing an upstream", () => {
+  const repo = sharedUpstreamRepo();
+  for (const focus of [["SPEC-0001"], ["DISC-0001"], ["SPEC-0001", "ADR-0001"], ["docs/specs/0001-graph.md"]]) {
+    const state = projectGraphState({ cwd: repo, focus });
+    assert.equal(state.blockers.includes("focus-required"), false, focus.join(","));
+    assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] }, focus.join(","));
+    const route = routeGraph({
+      current: "briefing",
+      definition: loadGraphDefinition(path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml")),
+      state,
+    });
+    assert.deepEqual({ edgeId: route.edgeId, next: route.next, status: route.status }, {
+      edgeId: "briefing-to-design", next: "design", status: "edge",
+    }, focus.join(","));
+  }
+});
+
+test("sibling plans sharing an upstream do not veto focus at other statuses", () => {
+  const repo = sharedUpstreamRepo("in-progress");
+  const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001"] });
+  assert.equal(state.blockers.includes("focus-required"), false);
+  assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] });
+});
+
+test("still fails closed on genuinely ambiguous focus with shared upstream plans", () => {
+  const repo = sharedUpstreamRepo();
+  writeArtifact(repo, "docs/specs/0004-other.md", {
+    id: "SPEC-0004", type: "spec", status: "proposed", title: "Other",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Other\n\n## Acceptance Criteria\n\n- [ ] other\n");
+  writeArtifact(repo, "docs/discovery/0001-graph.md", {
+    id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
+    relations: { "derived-by": ["SPEC-0001", "SPEC-0004", "ADR-0001"], "derives-from": ["IDEA-0001"] },
+  }, "# Graph Discovery\n");
+  const state = projectGraphState({ cwd: repo, focus: ["DISC-0001"] });
+  assert.ok(state.blockers.includes("focus-required"));
+  assert.equal(state.gates.briefing.status, "blocked");
+});
+
+test("plans competing for the same design never auto-pick", () => {
+  const repo = fixtureRepo();
+  writeArtifact(repo, "docs/plans/0002-other.md", {
+    id: "PLAN-0002", type: "plan", status: "approved", title: "Other Plan",
+    relations: { "derives-from": ["DESIGN-0001"] },
+  }, "# Other Plan\n");
+  const blocked = projectGraphState({ cwd: repo, focus: ["DESIGN-0001"] });
+  assert.ok(blocked.blockers.includes("focus-required"));
+  const focused = projectGraphState({ cwd: repo, focus: ["PLAN-0001"] });
+  assert.equal(focused.blockers.includes("focus-required"), false);
+});
+
 test("keeps an existing focused design chain and selects its plan only through lineage", () => {
   const repo = fixtureRepo();
   const state: GraphState = projectGraphState({
