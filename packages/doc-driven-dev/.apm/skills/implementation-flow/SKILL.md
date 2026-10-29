@@ -235,8 +235,8 @@ sufficient for parallel dispatch. Parallelize slices only when their declared
 [references/parallel-delegation-contract.md](references/parallel-delegation-contract.md)
 for eligibility, isolation, merge-verification, and fallback rules. Serial
 execution is always the default fallback; never guess a scope. The slice's
-own task doc and its `docs/impl/` evidence need no scope declaration; another
-task's document is never writable.
+own task doc and its declared `docs/impl/` evidence need no scope
+declaration; another task's document is never writable.
 
 Apply each skill in the active stack according to its priority:
 

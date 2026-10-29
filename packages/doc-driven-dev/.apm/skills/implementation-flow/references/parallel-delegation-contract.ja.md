@@ -76,8 +76,10 @@ task 同士は引き続き並行実行できます。`decision` が `parallel` �
   保護された path からの rename が純粋な追加に偽装されることはありません。
 - 宣言された scope の外の touched path → `scope-violation`。
 - contract 上すでに必須な 2 種類の書き込みは scope 宣言を要しません:
-  slice 自身の task doc（status/front-matter 更新）と `docs/impl/` 配下の
-  evidence 成果物（implementation record）。
+  slice 自身の task doc（status/front-matter 更新）と `evidencePaths` に
+  宣言された `docs/impl/` 配下の evidence 成果物（implementation record）。
+  未宣言の `docs/impl/` への書き込みは他の path と同様に通常の scope 検証を
+  通ります。
 - 他の task の文書は一切書き込めません — scope 宣言で許可することはできず、
   自分以外の task doc に触れた場合 → `blocked`。
 - 同じ path を 2 つの slice が触れた → `write-collision` → `merge-review`。
@@ -102,11 +104,16 @@ slice の結果を受理する前に、各 slice を検証します
 （`verifyParallelMerge`）:
 
 - **Scope** — 実際の touched path が宣言された scope 内に収まること。
-  scope の権威は task doc の `## Affected Files` です: doc が読める場合、
-  supplied `declaredScope` の各項目は doc の宣言で包含されている必要があり、
-  doc の宣言にない、またはそれより広い項目は inflated な主張として
-  `blocked` されます。他の task 文書を対象とする違反は `blocked` 相当、
-  その他の scope 外 path は `merge-review` 相当です。
+  scope の権威は task doc の `## Affected Files` であり、主張された
+  `taskDocPath` は何かを許可する前に検証されます: task 文書 subtree 内に
+  正規化されること、checkout 内に存在し parse できること、slice 自身の
+  task ID を持つこと（front matter の `id`、なければ本文中の ID）。
+  検証できない主張は `blocked` であり、own-doc 免除も scope 権威も与え
+  ません。そのうえで supplied `declaredScope` の各項目は束縛された doc の
+  宣言で包含されている必要があり、doc の宣言にない、またはそれより広い
+  項目は inflated な主張として `blocked` されます（doc の file 項目は
+  directory 主張を包含しません）。他の task 文書を対象とする違反は
+  `blocked` 相当、その他の scope 外 path は `merge-review` 相当です。
 - **Collision** — 同じ path を触った slice が 2 つ以上ないこと。
 - **Evidence binding** — すべての evidence path が `docs/impl/` 配下か slice
   自身の task doc であり、かつファイル内容が slice 自身の task ID を文字どおり
@@ -176,7 +183,8 @@ node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-
 slices ファイルは
 `[{ taskId, declaredScope, evidencePaths, taskDocPath, touchedPaths?, baseRef? }]`
 です。supplied フィールドは**信頼されるのではなく主張として検証**されます:
-`declaredScope` は task doc の `## Affected Files` と照合され、
+`taskDocPath` は権威として機能する前に slice 自身の task 文書へ束縛される
+必要があり、`declaredScope` はその doc の `## Affected Files` と照合され、
 `touchedPaths` は宣言 scope と contract が暗に許可する書き込みと照合され、
 `evidencePaths` は evidence subtree と task-ID binding と照合されます —
 `docs/impl/` の symlink が checkout 外の evidence を束縛できないよう

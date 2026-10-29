@@ -79,8 +79,10 @@ completes, collect its actual diff — `git diff --name-only` plus
   protected path cannot masquerade as a pure addition.
 - A touched path outside the declared scope → `scope-violation`.
 - Two writes need no scope declaration because the contract already requires
-  them: the slice's own task doc (its status/front-matter update) and
-  evidence artifacts under `docs/impl/` (the implementation record).
+  them: the slice's own task doc (its status/front-matter update) and the
+  slice's declared evidence artifacts under `docs/impl/` (the implementation
+  record listed in `evidencePaths`). An undeclared `docs/impl/` write goes
+  through normal scope verification like any other path.
 - Another task's document is never writable — no scope declaration can
   grant it; touching any task doc other than the slice's own → `blocked`.
 - The same path touched by two slices → `write-collision` → `merge-review`.
@@ -105,11 +107,17 @@ Before slice results are accepted, verify each one
 (`verifyParallelMerge`):
 
 - **Scope** — actual touched paths stay within the declared scope. The task
-  doc's `## Affected Files` is the authority for that scope: when the doc is
-  readable, every supplied `declaredScope` entry must be covered by it — an
-  entry absent from or wider than the doc's declaration is an inflated claim
-  and blocks. A violation targeting another task's document is
-  `blocked`-severity; other out-of-scope paths are `merge-review`-severity.
+  doc's `## Affected Files` is the authority for that scope, and the claimed
+  `taskDocPath` is verified before it grants anything: it must normalize
+  inside the task-doc subtree, exist and parse inside the checkout, and carry
+  the slice's own task ID (front matter `id`, else the ID literally in the
+  body). An unverified claim is `blocked` and grants neither the own-doc
+  exemption nor scope authority. Every supplied `declaredScope` entry must
+  then be covered by the bound doc's declaration — an entry absent from or
+  wider than the doc's declaration is an inflated claim and blocks (a file
+  entry in the doc never covers a directory claim). A violation targeting
+  another task's document is `blocked`-severity; other out-of-scope paths are
+  `merge-review`-severity.
 - **Collision** — no two slices touched the same path.
 - **Evidence binding** — every evidence path lives under `docs/impl/` or is
   the slice's own task doc, and its file content literally contains the
@@ -178,11 +186,12 @@ node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-
 
 A slices file is
 `[{ taskId, declaredScope, evidencePaths, taskDocPath, touchedPaths?, baseRef? }]`.
-Supplied fields are **asserted, not trusted**: `declaredScope` is re-verified
-against the task doc's `## Affected Files`, `touchedPaths` against the
-declared scope plus the contract-implied writes, and `evidencePaths` against
-the evidence subtree and task-ID binding — including a realpath check so a
-`docs/impl/` symlink cannot bind evidence outside the checkout. Prefer
+Supplied fields are **asserted, not trusted**: `taskDocPath` must bind to the
+slice's own task document before it acts as authority, `declaredScope` is
+re-verified against that doc's `## Affected Files`, `touchedPaths` against
+the declared scope plus the contract-implied writes, and `evidencePaths`
+against the evidence subtree and task-ID binding — including a realpath
+check so a `docs/impl/` symlink cannot bind evidence outside the checkout. Prefer
 omitting `touchedPaths` so the verifier collects the real diff with
 `collectChangedPaths`; a slice-level `baseRef` wins over `--base-ref`
 (default `HEAD`) and must predate the slice — a base at or after the slice's
