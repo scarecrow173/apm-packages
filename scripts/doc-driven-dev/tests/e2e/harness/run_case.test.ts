@@ -140,18 +140,20 @@ test("briefing pending audit refuses a spec edit between yield and resume", { ti
 // Issue #124: the baseline separates the runtime scan channel (summed
 // artifact-scan events — the whole-repo projection, which is allowed) from
 // the document bodies actually supplied to dispatched effects (the union of
-// every accepted outcome's authoritativeInputs paths).
+// every effect-dispatched event's focusPaths — including rejected dispatches).
 test("runCase records a scan-vs-delegate-input read baseline", { timeout: 120_000 }, () => {
   const { run, report } = runCase(case01);
   assert.deepEqual(report.failures, []);
   const baseline = run.baseline;
   assert.ok(baseline, "run.baseline missing");
 
-  // Delegate inputs = unique authoritativeInputs paths across every accepted
-  // outcome of the run (audit and delegate stages alike — both are bodies
-  // handed to the dispatched effect, not to the scan channel).
+  // Delegate inputs = unique focusPaths across every effect-dispatched event
+  // (emitted before outcome validation, so rejected dispatches count too —
+  // audit and delegate stages alike).
   const expectedInputs = new Set(
-    run.result.outcomes.flatMap((outcome) => outcome.authoritativeInputs.map((ref) => ref.path)),
+    run.traceEvents
+      .filter((event) => event.kind === "effect-dispatched")
+      .flatMap((event) => event.focusPaths),
   );
   assert.equal(baseline.delegateInputs.files, expectedInputs.size);
   assert.ok(baseline.delegateInputs.files > 0);
