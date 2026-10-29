@@ -12,7 +12,7 @@ export type SliceOutcome = {
   declaredScope: string[];     // normalized paths from ## Affected Files (files + dir prefixes)
   touchedPaths: string[];      // actual diff (from collectChangedPaths or supplied)
   evidencePaths: string[];
-  taskDocPath: string;         // e.g. docs/tasks/0002-task.md
+  taskDocPath: string;         // asserted; must bind to the slice's own doc (e.g. docs/tasks/0002-task.md)
 };
 export type MergeFinding = {
   code: "scope-violation" | "write-collision" | "evidence-mismatch";
@@ -74,6 +74,17 @@ function scopeContains(pattern: ScopePattern, touched: string): boolean {
   const patternKey = scopeKey(pattern.path);
   if (pattern.kind === "file") return key === patternKey;
   return key === patternKey || key.startsWith(`${patternKey}/`);
+}
+
+/**
+ * Whether a task-doc-declared pattern covers a supplied scope claim. A file
+ * entry covers only an identical file claim; a dir entry covers any claim
+ * inside its prefix. A file entry never covers a directory claim — `src/a`
+ * declared as a file does not authorize the `src/a/` subtree.
+ */
+function declaredCovers(declared: ScopePattern, claim: ScopePattern): boolean {
+  if (claim.kind === "dir" && declared.kind === "file") return false;
+  return scopeContains(declared, claim.path);
 }
 
 /**
@@ -169,22 +180,6 @@ function isAllowedEvidencePath(normalized: string, taskDocPath: string): boolean
   return key.startsWith("docs/impl/") || key === scopeKey(taskDocPath);
 }
 
-/**
- * Authority-side read of a task doc's `## Affected Files`. Returns null when
- * the doc is unreadable — the inflation check is skipped then and the doc's
- * validity is reported by the normal taskDocPath checks instead. An absent or
- * empty section resolves to zero patterns, so every supplied scope entry is
- * an inflated claim.
- */
-function readTaskDocScope(cwd: string, taskDocPath: string): { patterns: ScopePattern[]; hasOpaque: boolean } | null {
-  try {
-    const content = matter(fs.readFileSync(path.join(cwd, taskDocPath), "utf8")).content;
-    return parseAffectedScope(content) ?? { patterns: [], hasOpaque: false };
-  } catch {
-    return null;
-  }
-}
-
 // Severity ladder: evidence-mismatch and task-doc scope violations are
 // blocked-severity (2); write-collision and other scope violations are
 // merge-review-severity (1). Unverifiable paths and malformed slice inputs
@@ -197,11 +192,107 @@ const REVIEW_SEVERITY = 1;
 type RankedFinding = MergeFinding & { severity: number };
 
 /**
+ * Verified binding between a slice and its claimed task document. The task
+ * doc is scope authority and grants the own-doc write exemption, so the claim
+ * is verified before either is used. A failed binding grants nothing: the
+ * claimed path keeps its normal task-doc protection and supplied scope
+ * entries cannot appeal to the doc's declaration.
+ */
+type TaskDocBinding = {
+  /** Normalized own-doc path once bound; null when the claim failed. */
+  ownTaskDoc: string | null;
+  /** The doc's `## Affected Files` once bound; null otherwise. */
+  docScope: { patterns: ScopePattern[]; hasOpaque: boolean } | null;
+};
+
+/**
+ * Verify a slice's `taskDocPath` claim and, when it holds, read the doc's
+ * declared scope. The claim is bound only when the normalized path sits
+ * inside the task-doc subtree, the file exists and parses inside the
+ * checkout, and it carries the slice's own task ID — front matter `id` (the
+ * task-doc convention), else the task ID literally present in the body. A
+ * different front matter `id` marks another task's document, and body
+ * mentions never override it. Every failure pushes a blocked finding and
+ * returns the unbound result — the claim grants no exemption or authority.
+ */
+function bindTaskDoc(
+  cwd: string,
+  outcome: SliceOutcome,
+  taskDir: string,
+  findings: RankedFinding[],
+): TaskDocBinding {
+  const unbound: TaskDocBinding = { ownTaskDoc: null, docScope: null };
+  const taskDocPath = normalizeVerifiedPath(outcome.taskDocPath);
+  if (taskDocPath === null) {
+    findings.push({
+      code: "evidence-mismatch",
+      taskId: outcome.taskId,
+      path: outcome.taskDocPath,
+      message: `${outcome.taskId} taskDocPath ${JSON.stringify(outcome.taskDocPath)} is not a verifiable repo-relative path`,
+      severity: BLOCKED_SEVERITY,
+    });
+    return unbound;
+  }
+  if (!isTaskDocPath(taskDocPath, taskDir)) {
+    findings.push({
+      code: "evidence-mismatch",
+      taskId: outcome.taskId,
+      path: taskDocPath,
+      message: `${outcome.taskId} taskDocPath ${taskDocPath} is outside the task-doc subtree ${taskDir}; it cannot be the slice's own task document`,
+      severity: BLOCKED_SEVERITY,
+    });
+    return unbound;
+  }
+  let parsed: matter.GrayMatterFile<string>;
+  try {
+    // Same containment rule as evidence binding: a symlinked task doc that
+    // resolves outside the checkout cannot serve as scope authority.
+    const resolved = fs.realpathSync(path.join(cwd, taskDocPath));
+    const root = fs.realpathSync(cwd);
+    if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+      throw new Error("task doc resolves outside the checkout");
+    }
+    parsed = matter(fs.readFileSync(resolved, "utf8"));
+  } catch {
+    findings.push({
+      code: "evidence-mismatch",
+      taskId: outcome.taskId,
+      path: taskDocPath,
+      message: `${outcome.taskId} taskDocPath ${taskDocPath} is missing, unreadable, or resolves outside the repository; the slice's task document cannot be verified`,
+      severity: BLOCKED_SEVERITY,
+    });
+    return unbound;
+  }
+  const frontId = typeof parsed.data.id === "string" ? parsed.data.id : null;
+  const bound = outcome.taskId.trim().length > 0
+    && (frontId !== null ? frontId === outcome.taskId : parsed.content.includes(outcome.taskId));
+  if (!bound) {
+    findings.push({
+      code: "evidence-mismatch",
+      taskId: outcome.taskId,
+      path: taskDocPath,
+      message: `${outcome.taskId} taskDocPath ${taskDocPath} does not carry the slice's task ID; it is not the slice's own task document`,
+      severity: BLOCKED_SEVERITY,
+    });
+    return unbound;
+  }
+  return {
+    ownTaskDoc: taskDocPath,
+    // An absent or empty ## Affected Files resolves to zero patterns, so
+    // every supplied scope entry is an inflated claim.
+    docScope: parseAffectedScope(parsed.content) ?? { patterns: [], hasOpaque: false },
+  };
+}
+
+/**
  * Deterministic merge verification over completed slices: the actual diff of
  * each slice must stay inside its declared scope, no two slices may touch the
  * same path, and each evidence file must live in the slice's evidence scope
- * and bind to the slice's own task ID. An empty slice list, duplicate task
- * IDs, or unverifiable paths are malformed input and fail closed to blocked.
+ * and bind to the slice's own task ID. The claimed `taskDocPath` is bound to
+ * the slice before it grants anything — scope authority or the own-doc write
+ * exemption — and a claim that does not verify blocks. An empty slice list,
+ * duplicate task IDs, or unverifiable paths are malformed input and fail
+ * closed to blocked.
  */
 export function verifyParallelMerge(
   cwd: string,
@@ -237,11 +328,23 @@ export function verifyParallelMerge(
     seenTaskIds.add(outcome.taskId);
   }
 
-  for (const outcome of slices) {
-    const ownTaskDoc = normalizeVerifiedPath(outcome.taskDocPath);
-    // The task doc's ## Affected Files is the authority for the slice's
-    // declared scope; supplied entries are asserted against it below.
-    const docScope = ownTaskDoc === null ? null : readTaskDocScope(cwd, ownTaskDoc);
+  // taskDocPath is asserted, not trusted: bind each claim to the slice before
+  // it is used as scope authority or the own-doc write exemption. A failed
+  // binding is already a blocked finding and grants nothing.
+  const bound = slices.map((outcome) => bindTaskDoc(cwd, outcome, taskDir, findings));
+
+  for (const [index, outcome] of slices.entries()) {
+    const { ownTaskDoc, docScope } = bound[index];
+    // Only the slice's declared evidence artifacts under docs/impl/ are
+    // contract-implied writes; undeclared docs/impl/ writes go through the
+    // normal scope check like any other path.
+    const declaredEvidenceKeys = new Set(
+      outcome.evidencePaths
+        .map((raw) => normalizeVerifiedPath(raw))
+        .filter((normalized): normalized is string => normalized !== null)
+        .map(scopeKey)
+        .filter((key) => key.startsWith("docs/impl/")),
+    );
     const patterns: ScopePattern[] = [];
     for (const rawScope of outcome.declaredScope) {
       const pattern = parseScopeEntry(rawScope);
@@ -262,7 +365,7 @@ export function verifyParallelMerge(
       // confirmed declared — every entry blocks.
       if (docScope !== null) {
         const covered = !docScope.hasOpaque
-          && docScope.patterns.some((declared) => scopeContains(declared, pattern.path));
+          && docScope.patterns.some((declared) => declaredCovers(declared, pattern));
         if (!covered) {
           findings.push({
             code: "scope-violation",
@@ -303,9 +406,10 @@ export function verifyParallelMerge(
         continue;
       }
       // Contract-implied writes need no scope declaration: the slice's own
-      // task doc (its required status/front-matter update) and the evidence
-      // subtree under docs/impl/ (the required implementation record).
-      if ((ownTaskDoc !== null && touchedKey === scopeKey(ownTaskDoc)) || touchedKey.startsWith("docs/impl/")) {
+      // task doc (its required status/front-matter update) and the slice's
+      // declared evidence artifacts under docs/impl/ (the required
+      // implementation record listed in evidencePaths).
+      if ((ownTaskDoc !== null && touchedKey === scopeKey(ownTaskDoc)) || declaredEvidenceKeys.has(touchedKey)) {
         continue;
       }
       if (patterns.some((pattern) => scopeContains(pattern, touched))) continue;
@@ -340,17 +444,10 @@ export function verifyParallelMerge(
     });
   }
 
-  for (const outcome of slices) {
-    const taskDocPath = normalizeVerifiedPath(outcome.taskDocPath);
-    if (taskDocPath === null) {
-      findings.push({
-        code: "evidence-mismatch",
-        taskId: outcome.taskId,
-        path: outcome.taskDocPath,
-        message: `${outcome.taskId} taskDocPath ${JSON.stringify(outcome.taskDocPath)} is not a verifiable repo-relative path`,
-        severity: BLOCKED_SEVERITY,
-      });
-    }
+  for (const [index, outcome] of slices.entries()) {
+    // The bound own-doc path, not the asserted one: an unbound claim may not
+    // admit evidence "as the slice's own task doc" either.
+    const taskDocPath = bound[index].ownTaskDoc;
     for (const raw of outcome.evidencePaths) {
       const evidencePath = normalizeVerifiedPath(raw);
       if (evidencePath === null) {

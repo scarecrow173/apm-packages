@@ -4374,6 +4374,10 @@ function scopeContains(pattern, touched) {
   if (pattern.kind === "file") return key === patternKey;
   return key === patternKey || key.startsWith(`${patternKey}/`);
 }
+function declaredCovers(declared, claim) {
+  if (claim.kind === "dir" && declared.kind === "file") return false;
+  return scopeContains(declared, claim.path);
+}
 function isTaskDocPath(normalized, taskDir) {
   const key = scopeKey(normalized);
   const dirKey = scopeKey(taskDir);
@@ -4425,16 +4429,68 @@ function isAllowedEvidencePath(normalized, taskDocPath) {
   const key = scopeKey(normalized);
   return key.startsWith("docs/impl/") || key === scopeKey(taskDocPath);
 }
-function readTaskDocScope(cwd, taskDocPath) {
-  try {
-    const content = (0, import_gray_matter3.default)(import_node_fs3.default.readFileSync(import_node_path3.default.join(cwd, taskDocPath), "utf8")).content;
-    return parseAffectedScope(content) ?? { patterns: [], hasOpaque: false };
-  } catch {
-    return null;
-  }
-}
 var BLOCKED_SEVERITY = 2;
 var REVIEW_SEVERITY = 1;
+function bindTaskDoc(cwd, outcome, taskDir, findings) {
+  const unbound = { ownTaskDoc: null, docScope: null };
+  const taskDocPath = normalizeVerifiedPath(outcome.taskDocPath);
+  if (taskDocPath === null) {
+    findings.push({
+      code: "evidence-mismatch",
+      taskId: outcome.taskId,
+      path: outcome.taskDocPath,
+      message: `${outcome.taskId} taskDocPath ${JSON.stringify(outcome.taskDocPath)} is not a verifiable repo-relative path`,
+      severity: BLOCKED_SEVERITY
+    });
+    return unbound;
+  }
+  if (!isTaskDocPath(taskDocPath, taskDir)) {
+    findings.push({
+      code: "evidence-mismatch",
+      taskId: outcome.taskId,
+      path: taskDocPath,
+      message: `${outcome.taskId} taskDocPath ${taskDocPath} is outside the task-doc subtree ${taskDir}; it cannot be the slice's own task document`,
+      severity: BLOCKED_SEVERITY
+    });
+    return unbound;
+  }
+  let parsed;
+  try {
+    const resolved = import_node_fs3.default.realpathSync(import_node_path3.default.join(cwd, taskDocPath));
+    const root = import_node_fs3.default.realpathSync(cwd);
+    if (resolved !== root && !resolved.startsWith(`${root}${import_node_path3.default.sep}`)) {
+      throw new Error("task doc resolves outside the checkout");
+    }
+    parsed = (0, import_gray_matter3.default)(import_node_fs3.default.readFileSync(resolved, "utf8"));
+  } catch {
+    findings.push({
+      code: "evidence-mismatch",
+      taskId: outcome.taskId,
+      path: taskDocPath,
+      message: `${outcome.taskId} taskDocPath ${taskDocPath} is missing, unreadable, or resolves outside the repository; the slice's task document cannot be verified`,
+      severity: BLOCKED_SEVERITY
+    });
+    return unbound;
+  }
+  const frontId = typeof parsed.data.id === "string" ? parsed.data.id : null;
+  const bound = outcome.taskId.trim().length > 0 && (frontId !== null ? frontId === outcome.taskId : parsed.content.includes(outcome.taskId));
+  if (!bound) {
+    findings.push({
+      code: "evidence-mismatch",
+      taskId: outcome.taskId,
+      path: taskDocPath,
+      message: `${outcome.taskId} taskDocPath ${taskDocPath} does not carry the slice's task ID; it is not the slice's own task document`,
+      severity: BLOCKED_SEVERITY
+    });
+    return unbound;
+  }
+  return {
+    ownTaskDoc: taskDocPath,
+    // An absent or empty ## Affected Files resolves to zero patterns, so
+    // every supplied scope entry is an inflated claim.
+    docScope: parseAffectedScope(parsed.content) ?? { patterns: [], hasOpaque: false }
+  };
+}
 function verifyParallelMerge(cwd, slices, options2 = {}) {
   if (slices.length === 0) return { verdict: "blocked", findings: [] };
   const taskDir = normalizeVerifiedPath(options2.taskDir ?? "docs/tasks") ?? "docs/tasks";
@@ -4458,9 +4514,12 @@ function verifyParallelMerge(cwd, slices, options2 = {}) {
     }
     seenTaskIds.add(outcome.taskId);
   }
-  for (const outcome of slices) {
-    const ownTaskDoc = normalizeVerifiedPath(outcome.taskDocPath);
-    const docScope = ownTaskDoc === null ? null : readTaskDocScope(cwd, ownTaskDoc);
+  const bound = slices.map((outcome) => bindTaskDoc(cwd, outcome, taskDir, findings));
+  for (const [index, outcome] of slices.entries()) {
+    const { ownTaskDoc, docScope } = bound[index];
+    const declaredEvidenceKeys = new Set(
+      outcome.evidencePaths.map((raw) => normalizeVerifiedPath(raw)).filter((normalized) => normalized !== null).map(scopeKey).filter((key) => key.startsWith("docs/impl/"))
+    );
     const patterns = [];
     for (const rawScope of outcome.declaredScope) {
       const pattern = parseScopeEntry(rawScope);
@@ -4476,7 +4535,7 @@ function verifyParallelMerge(cwd, slices, options2 = {}) {
       }
       patterns.push(pattern);
       if (docScope !== null) {
-        const covered = !docScope.hasOpaque && docScope.patterns.some((declared) => scopeContains(declared, pattern.path));
+        const covered = !docScope.hasOpaque && docScope.patterns.some((declared) => declaredCovers(declared, pattern));
         if (!covered) {
           findings.push({
             code: "scope-violation",
@@ -4511,7 +4570,7 @@ function verifyParallelMerge(cwd, slices, options2 = {}) {
         });
         continue;
       }
-      if (ownTaskDoc !== null && touchedKey === scopeKey(ownTaskDoc) || touchedKey.startsWith("docs/impl/")) {
+      if (ownTaskDoc !== null && touchedKey === scopeKey(ownTaskDoc) || declaredEvidenceKeys.has(touchedKey)) {
         continue;
       }
       if (patterns.some((pattern) => scopeContains(pattern, touched))) continue;
@@ -4544,17 +4603,8 @@ function verifyParallelMerge(cwd, slices, options2 = {}) {
       severity: REVIEW_SEVERITY
     });
   }
-  for (const outcome of slices) {
-    const taskDocPath = normalizeVerifiedPath(outcome.taskDocPath);
-    if (taskDocPath === null) {
-      findings.push({
-        code: "evidence-mismatch",
-        taskId: outcome.taskId,
-        path: outcome.taskDocPath,
-        message: `${outcome.taskId} taskDocPath ${JSON.stringify(outcome.taskDocPath)} is not a verifiable repo-relative path`,
-        severity: BLOCKED_SEVERITY
-      });
-    }
+  for (const [index, outcome] of slices.entries()) {
+    const taskDocPath = bound[index].ownTaskDoc;
     for (const raw of outcome.evidencePaths) {
       const evidencePath = normalizeVerifiedPath(raw);
       if (evidencePath === null) {

@@ -226,8 +226,8 @@ node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks
 merge verification、fallback の規則は
 [references/parallel-delegation-contract.ja.md](references/parallel-delegation-contract.ja.md)
 を参照。serial 実行は常に default fallback であり、scope を推測しない。
-slice 自身の task doc と `docs/impl/` の evidence は scope 宣言を要しない;
-他の task の文書は一切書き込めない。
+slice 自身の task doc と宣言済みの `docs/impl/` evidence は scope 宣言を
+要しない; 他の task の文書は一切書き込めない。
 
 アクティブスタック内の各スキルを優先度に従って適用する:
 

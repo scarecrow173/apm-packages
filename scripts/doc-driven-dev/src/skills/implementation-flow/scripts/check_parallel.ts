@@ -163,10 +163,11 @@ function runMergeVerification(cwd: string, args: CliArgs): MergeReport {
     throw new Error(`Unable to read slices JSON ${JSON.stringify(slicesArg)}: ${error instanceof Error ? error.message : String(error)}`);
   }
   const inputs = parseSliceInputs(parsed);
-  // Supplied fields are asserted, not trusted: verifyParallelMerge re-checks
-  // declaredScope against the task doc's ## Affected Files. Omit touchedPaths
-  // so the verifier collects the real diff itself — baseRef must predate the
-  // slice (a slice-level baseRef wins over --base-ref; both default to HEAD).
+  // Supplied fields are asserted, not trusted: verifyParallelMerge binds
+  // taskDocPath to the slice and re-checks declaredScope against the task
+  // doc's ## Affected Files. Omit touchedPaths so the verifier collects the
+  // real diff itself — baseRef must predate the slice (a slice-level baseRef
+  // wins over --base-ref; both default to HEAD).
   const slices: SliceOutcome[] = inputs.map((input) => ({
     taskId: input.taskId,
     declaredScope: input.declaredScope,
