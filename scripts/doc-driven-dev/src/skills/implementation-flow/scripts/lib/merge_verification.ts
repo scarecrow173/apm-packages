@@ -43,7 +43,7 @@ function normalizeGitPath(raw: string): string {
  * unverifiable and return null instead of being silently rewritten.
  */
 function normalizeVerifiedPath(raw: string): string | null {
-  let text = raw.replace(/\\/g, "/");
+  let text = raw.trim().replace(/\\/g, "/");
   if (text.startsWith("/") || /^[A-Za-z]:/.test(text)) return null;
   while (text.startsWith("./")) text = text.slice(2);
   const segments = text.split("/").filter((segment) => segment.length > 0 && segment !== ".");
@@ -62,7 +62,7 @@ type ScopePattern = { kind: "file" | "dir"; path: string };
  * strict path rules return null (unverifiable — the caller blocks).
  */
 function parseScopeEntry(raw: string): ScopePattern | null {
-  let text = raw.replace(/\\/g, "/");
+  let text = raw.trim().replace(/\\/g, "/");
   if (text.startsWith("/") || /^[A-Za-z]:/.test(text)) return null;
   while (text.startsWith("./")) text = text.slice(2);
   let isDir = false;
@@ -121,7 +121,9 @@ export function collectChangedPaths(repo: string, baseRef = "HEAD"): string[] {
   const changed = new Set<string>();
   // `-z` + `core.quotepath=false` yields exact NUL-separated paths — no
   // quoting/unescaping needed even for spaces or non-ASCII filenames.
-  for (const entry of git(repo, ["-c", "core.quotepath=false", "diff", "--name-only", "-z", baseRef]).split("\0")) {
+  // `--no-renames` expands renames to delete+add so BOTH endpoints surface —
+  // a rename out of a protected path must not masquerade as a pure addition.
+  for (const entry of git(repo, ["-c", "core.quotepath=false", "diff", "--name-only", "-z", "--no-renames", baseRef]).split("\0")) {
     if (entry) changed.add(normalizeGitPath(entry));
   }
   // `-uall`: report every untracked file instead of collapsing fully
@@ -131,11 +133,16 @@ export function collectChangedPaths(repo: string, baseRef = "HEAD"): string[] {
     const entry = statusEntries[index];
     if (!entry) continue;
     // Porcelain -z: `XY <path>`; rename/copy entries carry the destination
-    // here and the source in the following NUL field, which we skip.
+    // here and the SOURCE in the following NUL field. Record the source too —
+    // dropping it would hide a rename out of a protected path — then skip it.
     const status = entry.slice(0, 2);
     const entryPath = entry.slice(3);
     if (entryPath) changed.add(normalizeGitPath(entryPath));
-    if (status.includes("R") || status.includes("C")) index += 1;
+    if (status.includes("R") || status.includes("C")) {
+      const source = statusEntries[index + 1];
+      if (source) changed.add(normalizeGitPath(source));
+      index += 1;
+    }
   }
   return [...changed].sort();
 }
@@ -146,6 +153,8 @@ export function collectChangedPaths(repo: string, baseRef = "HEAD"): string[] {
  * slice's own task ID (front matter or body). Any failure → false.
  */
 export function verifyEvidenceBinding(cwd: string, evidencePath: string, taskId: string): boolean {
+  // An empty task ID would pass `.includes("")` on any file — fail closed.
+  if (!taskId.trim()) return false;
   const normalized = normalizeVerifiedPath(evidencePath);
   if (normalized === null) return false;
   try {
