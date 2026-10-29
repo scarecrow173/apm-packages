@@ -15,7 +15,8 @@ import {
   type EffectDispatcher,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import type { GraphRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
-import { readTraceFile } from "../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
+import type { DelegateMode, PolicyFacts } from "../src/skills/doc-driven-dev-graph/scripts/lib/delegate_policy";
+import { readTraceFile, type EffectDispatchedEvent } from "../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 
 const PROOF = "docs/tasks/0001-task.md";
 
@@ -311,6 +312,66 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
   assert.deepEqual(events.map((event) => event.seq), events.map((_, i) => i + 1)); // contiguous per-runId seq
   assert.equal(events.filter((e) => e.kind === "effect-dispatched").length,
     events.filter((e) => e.kind === "effect-outcome").length);
+  // Without a policy hook the additive modeReason field stays absent and the
+  // caller-declared executionMode (default "unknown") is untouched.
+  assert.equal(events.every((event) => event.kind !== "effect-dispatched"
+    || (!("modeReason" in event) && event.executionMode === "unknown")), true);
   assert.equal(events.at(-1)?.kind, "run-yield");
   assert.equal((events.at(-1) as any).reason, "terminal");
+});
+
+test("runCaller stamps the policy's per-effect mode decision on effect-dispatched", () => {
+  const dir = happyRepo();
+  const tsx = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
+  const cli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
+  const trace = path.join(dir, "trace.jsonl");
+  const dispatcher: EffectDispatcher = (ctx) => completed(dir, ctx.route, ctx.effect.kind, ctx.effect);
+  const hostCapabilities: ReadonlySet<DelegateMode> = new Set<DelegateMode>([
+    "same-context", "subagent-as-tool", "isolated-subagent",
+  ]);
+  // Every effect looks independent + parallel-safe except briefing-flow,
+  // which carries an explicit override — exercises both the selected-mode
+  // path and the override-reason path through to the trace.
+  const policy = (_route: GraphRoute, effect: CallerEffect): PolicyFacts => ({
+    effectId: effect.id,
+    stage: effect.kind,
+    independentScope: true,
+    sharedJudgment: false,
+    contextCost: "low",
+    parallelCandidate: true,
+    hostCapabilities,
+    ...(effect.id === "briefing-flow"
+      ? { override: { mode: "isolated-subagent" as const, reason: "eval-fixture" } }
+      : {}),
+  });
+  const result = runCaller({
+    repo: dir, router: { executable: process.execPath, prefixArgs: [tsx, cli] },
+    focus: ["PLAN-0001"],
+    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+    dispatcher,
+    resolveInputs: testResolveInputs, resolveEvidence: testResolveEvidence,
+    applyEvidence: (repoDir, _signals, edgeId) => {
+      if (edgeId === "task-graph-to-implementation") updateArtifact(repoDir, PROOF, { status: "done" });
+      persistEvidence(repoDir, PROOF, edgeId);
+    },
+    policy,
+    trace: { file: trace, runId: "e2e-policy" },
+  });
+  assert.equal(result.yieldReason, "terminal");
+  const events = readTraceFile(trace).filter((event) => event.runId === "e2e-policy");
+  const dispatched = events.filter(
+    (event): event is EffectDispatchedEvent => event.kind === "effect-dispatched",
+  );
+  assert.ok(dispatched.length > 0);
+  for (const event of dispatched) {
+    // The policy supersedes the caller-declared executionMode on the event.
+    assert.equal(event.executionMode, "subagent");
+    assert.equal(typeof event.modeReason, "string");
+  }
+  const overridden = dispatched.find(
+    (event) => event.stage === "delegate" && event.effectId === "briefing-flow",
+  );
+  assert.equal(overridden?.modeReason, "override:eval-fixture");
+  const standard = dispatched.find((event) => event.effectId !== "briefing-flow");
+  assert.equal(standard?.modeReason, "independent-scope;parallel-candidate");
 });

@@ -267,6 +267,8 @@ Git worktree が rollback 経路です: 適用結果が誤っていれば Git �
   evidence に基づく caller loop。
 - [`references/execution-outcome-contract.ja.md`](references/execution-outcome-contract.ja.md) —
   typed audit/delegate outcome と scope-valid な resume proof。
+- [`references/delegate-execution-policy.ja.md`](references/delegate-execution-policy.ja.md) —
+  決定的な dispatch ごとの execution-mode 選択と `DelegateHandoff`。
 - [`references/run-trace-contract.ja.md`](references/run-trace-contract.ja.md) —
   構造化 run-trace event、JSONL export、決定的 run counter。
 - [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) —

@@ -78,7 +78,10 @@ never emits them.
 
 `edgeId`, `stage` (`audit`/`delegate`), `effectId`, `executionMode`
 (`same-context`, `subagent`, `tool`, or `unknown`), and `focusPaths`
-(repo-relative artifact paths handed to the effect).
+(repo-relative artifact paths handed to the effect). `modeReason` is
+optional: when a caller-side execution-mode policy selected the mode, it
+records the policy's `;`-joined reason tokens; normalization keeps it only
+as a non-empty plain string (it is a reason list, never a path).
 
 ### `effect-outcome`
 
@@ -129,7 +132,8 @@ counts, outcome counts, yield reasons, and scan totals (`scans`, `filesRead`,
 The trace never records LLM tokens, cost, provider or model names, prompts,
 document bodies, or secrets — the schema carries no field that could hold
 them. Callers that need raw payloads keep them outside the trace under their
-own controls; a future contract revision adds fields only by bumping `v`.
+own controls; contract revisions add fields only as additive-optional
+extensions (unknown fields drop on read) or by bumping `v`.
 
 Disabled tracing (no `--trace-file`) leaves routing, evidence, and gates
 unchanged. A failed trace append warns on stderr and never fails a route.
