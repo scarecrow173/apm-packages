@@ -166,6 +166,10 @@ Tasks should include:
 6. Verification command, test, or manual review.
 7. Notes about what is explicitly out of scope for this task.
 
+For a task to be eligible for parallel delegation, its `## Affected Files`
+entries must be path-verifiable file or directory paths. Free-form module or
+feature names are not verifiable and force serial execution.
+
 Done criteria must be checkable. If a task cannot state its verification path,
 return to the plan or spec before starting implementation.
 

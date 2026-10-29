@@ -220,6 +220,13 @@ node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks
 - `taskGraph.edges` の dependency edge を使って依存する作業の順序を決め、その
   edge 上で独立している作業だけを並列化する。
 
+**並列 delegation**: dependency の独立性は並列 dispatch の必要条件であって
+十分条件ではない。各 slice の宣言済み `## Affected Files` write scope が
+検証可能な形で分離している場合にだけ並列化する — eligibility、isolation、
+merge verification、fallback の規則は
+[references/parallel-delegation-contract.ja.md](references/parallel-delegation-contract.ja.md)
+を参照。serial 実行は常に default fallback であり、scope を推測しない。
+
 アクティブスタック内の各スキルを優先度に従って適用する:
 
 1. 各スキル固有のプロセスに従う（そのスキルの SKILL.md を読む）。
@@ -356,6 +363,7 @@ repository の commit convention）で commit します。commit が granted aut
 | オーバーエンジニアリング | タスクが要求していないものを構築 |
 | ループバック信号の無視 | spec/design のギャップが明らかな時に継続 |
 | エビデンスなしの自信 | テスト合格や検証済みデータなしに「動く」 |
+| 「Affected Files がなくてもよい」 | 未宣言の write scope は serial を強制 — parallel scope を推測しない |
 
 ---
 
