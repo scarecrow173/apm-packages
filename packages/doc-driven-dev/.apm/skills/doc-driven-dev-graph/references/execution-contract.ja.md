@@ -117,6 +117,13 @@ delegate の execution mode は
 [`delegate-execution-policy.ja.md`](delegate-execution-policy.ja.md) に従って選択され、
 mode と選択理由は trace の `effect-dispatched` event に記録されます。
 
+delegate に渡す document body は
+[`context-retrieval-contract.ja.md`](context-retrieval-contract.ja.md) の
+progressive retrieval contract に従います — 選択には L1 metadata、authoritative
+input には L2 の検証済み body fetch、記録済みの理由がある場合に限り L3 bounded
+traversal を使います。required evidence と gate 必須の document は常に取得され、
+stale fingerprint は再利用ではなく再投影と再取得を引き起こします。
+
 caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
 `build_task_graph`。migration script は `doc-maintenance` が所有）と
 named audit（`spec`、`adr`、`design`、`plan`、`task`、
