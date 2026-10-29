@@ -3,6 +3,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import matter from "gray-matter";
+import { parseAffectedScope } from "./parallel_safety";
+import { scopeKey, toScopeEntry, type ScopePattern } from "./scope_entry";
 
 export type SliceOutcome = {
   taskId: string;
@@ -54,38 +57,23 @@ function normalizeVerifiedPath(raw: string): string | null {
   return normalized ? normalized : null;
 }
 
-type ScopePattern = { kind: "file" | "dir"; path: string };
-
 /**
- * Interpret a declared-scope string: a trailing `/` or `/*` marks a dir
- * prefix; anything else is an exact-match file entry. Entries failing the
- * strict path rules return null (unverifiable — the caller blocks).
+ * Interpret a declared-scope string via the shared scope-entry rules
+ * (`scope_entry.ts`): opaque prose — bare words like `auth module`, markup-
+ * wrapped text, non-path entries — and entries failing strict path rules
+ * return null (unverifiable — the caller blocks).
  */
 function parseScopeEntry(raw: string): ScopePattern | null {
-  let text = raw.trim().replace(/\\/g, "/");
-  if (text.startsWith("/") || /^[A-Za-z]:/.test(text)) return null;
-  while (text.startsWith("./")) text = text.slice(2);
-  let isDir = false;
-  if (text.endsWith("/*")) {
-    isDir = true;
-    text = text.slice(0, -2);
-  } else if (text.endsWith("/")) {
-    isDir = true;
-    text = text.replace(/\/+$/, "");
-  }
-  const segments = text.split("/").filter((segment) => segment.length > 0 && segment !== ".");
-  if (segments.some((segment) => segment === ".." || segment.includes("*") || segment.includes("?"))) {
-    return null;
-  }
-  const normalized = segments.join("/");
-  if (!normalized) return null;
-  return { kind: isDir ? "dir" : "file", path: normalized };
+  const resolution = toScopeEntry(raw);
+  return "opaque" in resolution ? null : resolution.pattern;
 }
 
 /** Dir prefixes match only on a `/` boundary, same rule as overlapPath. */
 function scopeContains(pattern: ScopePattern, touched: string): boolean {
-  if (pattern.kind === "file") return touched === pattern.path;
-  return touched === pattern.path || touched.startsWith(`${pattern.path}/`);
+  const key = scopeKey(touched);
+  const patternKey = scopeKey(pattern.path);
+  if (pattern.kind === "file") return key === patternKey;
+  return key === patternKey || key.startsWith(`${patternKey}/`);
 }
 
 /**
@@ -94,7 +82,9 @@ function scopeContains(pattern: ScopePattern, touched: string): boolean {
  * violation targeting this subtree is blocked rather than merge-review.
  */
 function isTaskDocPath(normalized: string, taskDir: string): boolean {
-  return normalized === taskDir || normalized.startsWith(`${taskDir}/`);
+  const key = scopeKey(normalized);
+  const dirKey = scopeKey(taskDir);
+  return key === dirKey || key.startsWith(`${dirKey}/`);
 }
 
 function git(repo: string, args: string[]): string {
@@ -158,7 +148,13 @@ export function verifyEvidenceBinding(cwd: string, evidencePath: string, taskId:
   const normalized = normalizeVerifiedPath(evidencePath);
   if (normalized === null) return false;
   try {
-    return fs.readFileSync(path.join(cwd, normalized), "utf8").includes(taskId);
+    // A repo-relative path can still escape the checkout through a symlink
+    // (for example a docs/impl/ entry pointing outside the repo): resolve the
+    // real path and require it to stay under the resolved cwd.
+    const resolved = fs.realpathSync(path.join(cwd, normalized));
+    const root = fs.realpathSync(cwd);
+    if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) return false;
+    return fs.readFileSync(resolved, "utf8").includes(taskId);
   } catch {
     return false;
   }
@@ -169,7 +165,24 @@ export function verifyEvidenceBinding(cwd: string, evidencePath: string, taskId:
  * task doc; anywhere else is out of the evidence scope by definition.
  */
 function isAllowedEvidencePath(normalized: string, taskDocPath: string): boolean {
-  return normalized.startsWith("docs/impl/") || normalized === taskDocPath;
+  const key = scopeKey(normalized);
+  return key.startsWith("docs/impl/") || key === scopeKey(taskDocPath);
+}
+
+/**
+ * Authority-side read of a task doc's `## Affected Files`. Returns null when
+ * the doc is unreadable — the inflation check is skipped then and the doc's
+ * validity is reported by the normal taskDocPath checks instead. An absent or
+ * empty section resolves to zero patterns, so every supplied scope entry is
+ * an inflated claim.
+ */
+function readTaskDocScope(cwd: string, taskDocPath: string): { patterns: ScopePattern[]; hasOpaque: boolean } | null {
+  try {
+    const content = matter(fs.readFileSync(path.join(cwd, taskDocPath), "utf8")).content;
+    return parseAffectedScope(content) ?? { patterns: [], hasOpaque: false };
+  } catch {
+    return null;
+  }
 }
 
 // Severity ladder: evidence-mismatch and task-doc scope violations are
@@ -225,6 +238,10 @@ export function verifyParallelMerge(
   }
 
   for (const outcome of slices) {
+    const ownTaskDoc = normalizeVerifiedPath(outcome.taskDocPath);
+    // The task doc's ## Affected Files is the authority for the slice's
+    // declared scope; supplied entries are asserted against it below.
+    const docScope = ownTaskDoc === null ? null : readTaskDocScope(cwd, ownTaskDoc);
     const patterns: ScopePattern[] = [];
     for (const rawScope of outcome.declaredScope) {
       const pattern = parseScopeEntry(rawScope);
@@ -236,8 +253,27 @@ export function verifyParallelMerge(
           message: `${outcome.taskId} declared scope entry ${JSON.stringify(rawScope)} is not a verifiable repo-relative path`,
           severity: BLOCKED_SEVERITY,
         });
-      } else {
-        patterns.push(pattern);
+        continue;
+      }
+      patterns.push(pattern);
+      // Scope inflation: a supplied entry not covered by the task doc's own
+      // declaration is a claim wider than authorized → blocked. When the doc
+      // side is unverifiable (opaque entries), nothing supplied can be
+      // confirmed declared — every entry blocks.
+      if (docScope !== null) {
+        const covered = !docScope.hasOpaque
+          && docScope.patterns.some((declared) => scopeContains(declared, pattern.path));
+        if (!covered) {
+          findings.push({
+            code: "scope-violation",
+            taskId: outcome.taskId,
+            path: rawScope,
+            message: docScope.hasOpaque
+              ? `${outcome.taskId} declared scope entry ${JSON.stringify(rawScope)} cannot be verified: the task doc's ## Affected Files is not verifiable`
+              : `${outcome.taskId} declared scope entry ${JSON.stringify(rawScope)} is not declared by the task doc's ## Affected Files`,
+            severity: BLOCKED_SEVERITY,
+          });
+        }
       }
     }
     for (const raw of outcome.touchedPaths) {
@@ -252,36 +288,54 @@ export function verifyParallelMerge(
         });
         continue;
       }
+      const touchedKey = scopeKey(touched);
+      // Another task's document is never writable: a scope declaration
+      // cannot grant it, since status/front-matter writes silently alter
+      // other tasks. Checked before the scope short-circuit on purpose.
+      if (isTaskDocPath(touched, taskDir) && (ownTaskDoc === null || touchedKey !== scopeKey(ownTaskDoc))) {
+        findings.push({
+          code: "scope-violation",
+          taskId: outcome.taskId,
+          path: touched,
+          message: `${outcome.taskId} touched task document ${touched} outside its own task document`,
+          severity: BLOCKED_SEVERITY,
+        });
+        continue;
+      }
+      // Contract-implied writes need no scope declaration: the slice's own
+      // task doc (its required status/front-matter update) and the evidence
+      // subtree under docs/impl/ (the required implementation record).
+      if ((ownTaskDoc !== null && touchedKey === scopeKey(ownTaskDoc)) || touchedKey.startsWith("docs/impl/")) {
+        continue;
+      }
       if (patterns.some((pattern) => scopeContains(pattern, touched))) continue;
-      const taskDocViolation = isTaskDocPath(touched, taskDir);
       findings.push({
         code: "scope-violation",
         taskId: outcome.taskId,
         path: touched,
-        message: taskDocViolation
-          ? `${outcome.taskId} touched task document ${touched} outside its declared scope`
-          : `${outcome.taskId} touched ${touched} outside its declared scope`,
-        severity: taskDocViolation ? BLOCKED_SEVERITY : REVIEW_SEVERITY,
+        message: `${outcome.taskId} touched ${touched} outside its declared scope`,
+        severity: REVIEW_SEVERITY,
       });
     }
   }
 
-  const touchersByPath = new Map<string, string[]>();
+  const touchersByPath = new Map<string, { path: string; taskIds: string[] }>();
   for (const outcome of slices) {
     for (const raw of outcome.touchedPaths) {
       const touched = normalizeVerifiedPath(raw) ?? raw;
       if (!touched) continue;
-      const touchers = touchersByPath.get(touched) ?? [];
-      if (!touchers.includes(outcome.taskId)) touchers.push(outcome.taskId);
-      touchersByPath.set(touched, touchers);
+      const key = scopeKey(touched);
+      const entry = touchersByPath.get(key) ?? { path: touched, taskIds: [] };
+      if (!entry.taskIds.includes(outcome.taskId)) entry.taskIds.push(outcome.taskId);
+      touchersByPath.set(key, entry);
     }
   }
-  for (const [touched, touchers] of touchersByPath) {
-    if (touchers.length < 2) continue;
+  for (const { path: touched, taskIds } of touchersByPath.values()) {
+    if (taskIds.length < 2) continue;
     findings.push({
       code: "write-collision",
       path: touched,
-      message: `${touched} was touched by multiple slices (${touchers.join(", ")}); refusing last-writer-win`,
+      message: `${touched} was touched by multiple slices (${taskIds.join(", ")}); refusing last-writer-win`,
       severity: REVIEW_SEVERITY,
     });
   }

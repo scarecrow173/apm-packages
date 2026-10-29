@@ -234,7 +234,9 @@ sufficient for parallel dispatch. Parallelize slices only when their declared
 `## Affected Files` write scopes are verifiably disjoint — see
 [references/parallel-delegation-contract.md](references/parallel-delegation-contract.md)
 for eligibility, isolation, merge-verification, and fallback rules. Serial
-execution is always the default fallback; never guess a scope.
+execution is always the default fallback; never guess a scope. The slice's
+own task doc and its `docs/impl/` evidence need no scope declaration; another
+task's document is never writable.
 
 Apply each skill in the active stack according to its priority:
 

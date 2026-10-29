@@ -346,3 +346,54 @@ test("normalized paths still conflict across differing spellings", () => {
   assert.equal(report.decision, "serial");
   assert.deepEqual(report.conflicts, [{ a: "TASK-0001", b: "TASK-0002", path: "src/shared.ts" }]);
 });
+
+// --- fenced code blocks are documentation, not declarations -------------------
+
+test("a fenced ## Affected Files section is a phantom and does not declare scope", () => {
+  const fenced = "# Task\n\n```md\n## Affected Files\n\n- src/x.ts\n```\n\n## Verification\n\n- [ ] node --test\n";
+  assert.equal(parseAffectedFiles(fenced), null);
+  const tilde = "# Task\n\n~~~\n## Affected Files\n\n- src/x.ts\n~~~\n";
+  assert.equal(parseAffectedFiles(tilde), null);
+  const report = evaluateParallelSafety(
+    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
+    [
+      { id: "TASK-0001", body: fenced },
+      { id: "TASK-0002", body: taskBody("- src/b.ts") },
+    ],
+  );
+  assert.equal(report.decision, "serial");
+  assert.deepEqual(serialReasons(report, "TASK-0001"), ["scope-undeclared"]);
+});
+
+test("bullets inside a fenced block do not enter the scope", () => {
+  const body = taskBody("- src/real.ts\n\n```\n- src/fake.ts\n```\n");
+  assert.deepEqual(parseAffectedFiles(body), [
+    { pattern: { kind: "file", path: "src/real.ts" } },
+  ]);
+});
+
+test("an unclosed fence drops the remainder of the body", () => {
+  const body = "# Task\n\n```\n## Affected Files\n\n- src/x.ts\n";
+  assert.equal(parseAffectedFiles(body), null);
+});
+
+test("bullets under a ### subsection do not enter the scope", () => {
+  const body = "# Task\n\n## Affected Files\n\n- src/real.ts\n\n### Notes\n\n- src/leak.ts\n\n#### Deep\n\n- src/deep.ts\n";
+  assert.deepEqual(parseAffectedFiles(body), [
+    { pattern: { kind: "file", path: "src/real.ts" } },
+  ]);
+});
+
+// --- case-folded path comparison -----------------------------------------------
+
+test("declared paths conflict across case differences", () => {
+  const report = evaluateParallelSafety(
+    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
+    [
+      { id: "TASK-0001", body: taskBody("- SRC/SHARED.TS") },
+      { id: "TASK-0002", body: taskBody("- src/shared.ts") },
+    ],
+  );
+  assert.equal(report.decision, "serial");
+  assert.deepEqual(report.conflicts, [{ a: "TASK-0001", b: "TASK-0002", path: "SRC/SHARED.TS" }]);
+});

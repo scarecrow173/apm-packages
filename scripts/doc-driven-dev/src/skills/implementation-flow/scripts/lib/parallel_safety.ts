@@ -1,6 +1,12 @@
 "use strict";
 
 import type { TaskGraphResult } from "../../../doc-driven-dev-graph/scripts/lib/task_graph";
+import {
+  scopeKey,
+  stripFencedBlocks,
+  toScopeEntry,
+  type ScopePattern,
+} from "./scope_entry";
 
 // WritePattern matches the cross-task contract verbatim: the declared type
 // only guarantees `path` on dir entries, but this implementation always
@@ -23,7 +29,7 @@ export type ParallelReport = {
 };
 
 /** Internal shape: every resolved pattern carries its normalized path. */
-type ScopedPattern = WritePattern & { path: string };
+type ScopedPattern = ScopePattern;
 
 // Verbatim port of the sectionBody helper from
 // briefing-flow/scripts/lib/briefing_audit.ts (itself ported from
@@ -51,62 +57,36 @@ function hasSection(body: string, heading: string): boolean {
 const BULLET_ITEM = /^\s*[-*+]\s+(.*)$/;
 const HTML_COMMENT = /<!--[\s\S]*?-->/g;
 const CHECKBOX_MARKER = /^\[[ xX]?\]\s*/;
-// Entries still containing code-span/link/brace/angle markup after cleaning
-// are prose, not verifiable paths — they must fail closed to opaque.
-const MARKUP_CHARS = /[`[\]{}<>]/;
-
-/**
- * Normalize a declared scope path to forward-slash repo-relative form.
- * Returns null for entries that cannot be verified deterministically:
- * absolute paths, `..` escapes, and embedded glob segments.
- */
-function normalizeScopePath(raw: string): { path: string; isDir: boolean } | null {
-  let text = raw.trim().replace(/\\/g, "/");
-  // Reject POSIX roots, UNC-style `//`, and drive-letter absolutes (`C:`).
-  if (text.startsWith("/") || /^[A-Za-z]:/.test(text)) return null;
-  while (text.startsWith("./")) text = text.slice(2);
-  let isDir = false;
-  if (text.endsWith("/*")) {
-    isDir = true;
-    text = text.slice(0, -2);
-  } else if (text.endsWith("/")) {
-    isDir = true;
-    text = text.replace(/\/+$/, "");
-  }
-  const segments = text.split("/").filter((segment) => segment.length > 0 && segment !== ".");
-  if (segments.some((segment) => segment === ".." || segment.includes("*") || segment.includes("?"))) return null;
-  const normalized = segments.join("/");
-  if (!normalized) return null;
-  return { path: normalized, isDir };
-}
+const SUB_HEADING = /^#{3,6}\s/;
+const TOP_HEADING = /^#{1,2}\s/;
 
 /** Internal parse shape: patterns always carry their normalized path. */
 type ParsedScopeEntry = { pattern: ScopedPattern } | { opaque: string };
-
-function toScopeEntry(text: string): ParsedScopeEntry {
-  if (MARKUP_CHARS.test(text)) return { opaque: text };
-  // A bare word with no path separators is a module/feature name, not a path.
-  if (!text.includes("/") && !text.includes(".") && !text.includes("\\")) {
-    return { opaque: text };
-  }
-  const normalized = normalizeScopePath(text);
-  if (!normalized) return { opaque: text };
-  const pattern: ScopedPattern = normalized.isDir
-    ? { kind: "dir", path: normalized.path }
-    : { kind: "file", path: normalized.path };
-  return { pattern };
-}
 
 /**
  * Parse the `## Affected Files` section of a task body into scope entries.
  * Returns null when the section is absent; an empty array when the section
  * is present but declares no usable entries (comments/placeholders only).
+ * Fenced code blocks are stripped first — a heading or bullet inside a
+ * fence is documentation, not a declaration — and bullets nested under a
+ * `###`+ subsection (for example `### Notes`) never enter the scope.
  */
 function parseAffectedEntries(body: string): ParsedScopeEntry[] | null {
-  if (!hasSection(body, "Affected Files")) return null;
-  const section = sectionBody(body, "Affected Files");
+  const stripped = stripFencedBlocks(body);
+  if (!hasSection(stripped, "Affected Files")) return null;
+  const section = sectionBody(stripped, "Affected Files");
   const entries: ParsedScopeEntry[] = [];
+  let inSubSection = false;
   for (const line of section.split(/\r?\n/)) {
+    if (SUB_HEADING.test(line)) {
+      inSubSection = true;
+      continue;
+    }
+    if (TOP_HEADING.test(line)) {
+      inSubSection = false;
+      continue;
+    }
+    if (inSubSection) continue;
     const match = BULLET_ITEM.exec(line);
     if (!match) continue;
     // Strip comments first, then trim so a leading checkbox marker is anchored.
@@ -127,23 +107,45 @@ export function parseAffectedFiles(body: string): ScopeEntry[] | null {
 }
 
 /**
+ * Resolved `## Affected Files` scope for authority-side comparison:
+ * `null` when the section is absent (the task declares no scope at all),
+ * otherwise the verifiable patterns plus whether any opaque entry exists.
+ */
+export function parseAffectedScope(body: string): { patterns: ScopedPattern[]; hasOpaque: boolean } | null {
+  const entries = parseAffectedEntries(body);
+  if (entries === null) return null;
+  const patterns: ScopedPattern[] = [];
+  let hasOpaque = false;
+  for (const entry of entries) {
+    if ("opaque" in entry) hasOpaque = true;
+    else patterns.push(entry.pattern);
+  }
+  return { patterns, hasOpaque };
+}
+
+/**
  * Returns the most specific conflicting path when two write patterns overlap:
  * file==file on equal paths, a dir prefix containing the other's path, or
  * dir∩dir when either prefix contains the other. Null when disjoint.
  */
 function overlapPath(left: ScopedPattern, right: ScopedPattern): string | null {
+  // Paths compare case-folded (Windows dev env) but report original case.
+  const leftKey = scopeKey(left.path);
+  const rightKey = scopeKey(right.path);
   if (left.kind === "file" && right.kind === "file") {
-    return left.path === right.path ? left.path : null;
+    return leftKey === rightKey ? left.path : null;
   }
   if (left.kind === "dir" && right.kind === "dir") {
-    if (left.path === right.path) return left.path;
-    if (left.path.startsWith(`${right.path}/`)) return left.path;
-    if (right.path.startsWith(`${left.path}/`)) return right.path;
+    if (leftKey === rightKey) return left.path;
+    if (leftKey.startsWith(`${rightKey}/`)) return left.path;
+    if (rightKey.startsWith(`${leftKey}/`)) return right.path;
     return null;
   }
   const dir = left.kind === "dir" ? left : right;
   const file = left.kind === "dir" ? right : left;
-  if (file.path === dir.path || file.path.startsWith(`${dir.path}/`)) return file.path;
+  const dirKey = scopeKey(dir.path);
+  const fileKey = scopeKey(file.path);
+  if (fileKey === dirKey || fileKey.startsWith(`${dirKey}/`)) return file.path;
   return null;
 }
 
@@ -183,19 +185,13 @@ export function evaluateParallelSafety(
 
   for (const id of eligible) {
     const body = bodyById.get(id);
-    const entries = body === undefined ? null : parseAffectedEntries(body);
-    if (entries === null || entries.length === 0) {
+    const scope = body === undefined ? null : parseAffectedScope(body);
+    if (scope === null || (scope.patterns.length === 0 && !scope.hasOpaque)) {
       addReason(id, "scope-undeclared");
       continue;
     }
-    const patterns: ScopedPattern[] = [];
-    let hasOpaque = false;
-    for (const entry of entries) {
-      if ("opaque" in entry) hasOpaque = true;
-      else patterns.push(entry.pattern);
-    }
-    if (hasOpaque) addReason(id, "scope-unverifiable");
-    patternsById.set(id, patterns);
+    if (scope.hasOpaque) addReason(id, "scope-unverifiable");
+    patternsById.set(id, scope.patterns);
   }
 
   // Pairwise write-scope overlap: any task in a conflict pair is serial.

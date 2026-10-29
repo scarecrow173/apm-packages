@@ -40,6 +40,12 @@ task の eligibility は Task Graph projection が権威であり、この contr
 - scope 判定は `Affected Files` という見出しに literal（case-insensitive）で
   マッチします。ローカライズされた見出しはセクション欠落として扱われ、
   現在は `scope-undeclared` → serial になります。
+- フェンス付きコードブロック（```` ``` ```` / `~~~`）内の見出しや bullet は
+  宣言ではなく文書です — フェンス内の `## Affected Files` はセクションを
+  構成しません。セクション内の `###` 以深のサブセクション配下の bullet も
+  scope に入りません。
+- path は case-insensitive に比較されます（開発環境は Windows）。
+  大文字小文字の綴り違いだけで scope や collision 判定を迂回できません。
 
 ## Conflict Classes
 
@@ -69,6 +75,11 @@ task 同士は引き続き並行実行できます。`decision` が `parallel` �
 - rename は source と destination の両方の path として報告されるため、
   保護された path からの rename が純粋な追加に偽装されることはありません。
 - 宣言された scope の外の touched path → `scope-violation`。
+- contract 上すでに必須な 2 種類の書き込みは scope 宣言を要しません:
+  slice 自身の task doc（status/front-matter 更新）と `docs/impl/` 配下の
+  evidence 成果物（implementation record）。
+- 他の task の文書は一切書き込めません — scope 宣言で許可することはできず、
+  自分以外の task doc に触れた場合 → `blocked`。
 - 同じ path を 2 つの slice が触れた → `write-collision` → `merge-review`。
   last-writer-win が黙って受理されることはありません。
 
@@ -90,10 +101,12 @@ task 同士は引き続き並行実行できます。`decision` が `parallel` �
 slice の結果を受理する前に、各 slice を検証します
 （`verifyParallelMerge`）:
 
-- **Scope** — 実際の touched path が宣言された scope 内に収まること。task 文書
-  subtree（デフォルト `docs/tasks/`。status と front matter が置かれる場所）を
-  対象とする違反は `blocked` 相当、その他の scope 外 path は `merge-review`
-  相当です。
+- **Scope** — 実際の touched path が宣言された scope 内に収まること。
+  scope の権威は task doc の `## Affected Files` です: doc が読める場合、
+  supplied `declaredScope` の各項目は doc の宣言で包含されている必要があり、
+  doc の宣言にない、またはそれより広い項目は inflated な主張として
+  `blocked` されます。他の task 文書を対象とする違反は `blocked` 相当、
+  その他の scope 外 path は `merge-review` 相当です。
 - **Collision** — 同じ path を触った slice が 2 つ以上ないこと。
 - **Evidence binding** — すべての evidence path が `docs/impl/` 配下か slice
   自身の task doc であり、かつファイル内容が slice 自身の task ID を文字どおり
@@ -162,9 +175,16 @@ node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-
 
 slices ファイルは
 `[{ taskId, declaredScope, evidencePaths, taskDocPath, touchedPaths?, baseRef? }]`
-です。`touchedPaths` がない場合、CLI は `collectChangedPaths` で実際の diff を
-収集します。slice 単位の `baseRef` は `--base-ref` より優先されます
-（既定 `HEAD`）。
+です。supplied フィールドは**信頼されるのではなく主張として検証**されます:
+`declaredScope` は task doc の `## Affected Files` と照合され、
+`touchedPaths` は宣言 scope と contract が暗に許可する書き込みと照合され、
+`evidencePaths` は evidence subtree と task-ID binding と照合されます —
+`docs/impl/` の symlink が checkout 外の evidence を束縛できないよう
+realpath チェックも含みます。`touchedPaths` は省略して verifier が
+`collectChangedPaths` で実際の diff を収集する方が望ましいです。
+slice 単位の `baseRef` は `--base-ref` より優先され（既定 `HEAD`）、
+slice より前の時点を指す必要があります — slice の変更以後の base では
+収集される diff が権威あるものではなく不完全になります。
 
 この contract が対象とするのはリポジトリ内の repo 相対 path のみです。
 checkout 外の共有リソース — service、共有ディレクトリ、リモート状態など —
