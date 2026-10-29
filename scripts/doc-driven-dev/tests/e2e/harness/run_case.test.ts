@@ -9,6 +9,7 @@ import test from "node:test";
 import type { E2ECase } from "./case_types";
 import { runCase } from "./run_case";
 import { case01 } from "../cases/case-01-happy-path";
+import { case14c } from "../cases/case-14-briefing-execution";
 import { checkExpectations, type CaseRun } from "./case_validator";
 import { createFixtureRepo, updateArtifact } from "./fixture_manager";
 
@@ -95,4 +96,65 @@ test("briefing audit expectation checks JSON and exit status for both outcomes",
   assert.deepEqual(checkExpectations(run, { briefingAudit: { ...audit, consistent: true } }), []);
   assert.match(checkExpectations(run, { briefingAudit: { ...audit, consistent: false } }).join("\n"), /briefingAudit:/);
   assert.match(checkExpectations(run, { briefingAudit: { ...audit, spec: "missing.md", consistent: true } }).join("\n"), /briefingAudit:/);
+});
+
+test("briefing pending audit refuses a spec edit between yield and resume", { timeout: 120_000 }, () => {
+  const e2eCase: E2ECase = {
+    ...case14c,
+    id: "harness-briefing-stale-pending-audit",
+    steps: [
+      case14c.steps![0],
+      {
+        mutateBefore: [{ append: { path: "docs/specs/0001-graph.md", body: "\nChanged before resume.\n" } }],
+        expect: {
+          yield: "authority-required",
+          edgeSequence: ["briefing-retry"],
+          completedEdges: ["probe-to-briefing"],
+          events: [
+            { kind: "effect-dispatched", edgeId: "briefing-retry", count: 0 },
+          ],
+          briefingAudit: { spec: "docs/specs/0001-graph.md", adr: "docs/adr/0001-graph.md", consistent: false },
+          checkpointReceipts: [{ edgeId: "briefing-retry", count: 0 }],
+        },
+      },
+    ],
+    expect: {
+      yield: "authority-required",
+      edgeSequence: ["briefing-retry"],
+      completedEdges: ["probe-to-briefing"],
+      events: [
+        { kind: "run-yield", reason: "input-required", count: 1 },
+        { kind: "run-yield", reason: "authority-required", count: 1 },
+        { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "audit", count: 2 },
+        { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "delegate", count: 1 },
+      ],
+      briefingAudit: { spec: "docs/specs/0001-graph.md", adr: "docs/adr/0001-graph.md", consistent: false },
+      checkpointReceipts: [{ edgeId: "briefing-retry", count: 0 }],
+    },
+  };
+  const { report } = runCase(e2eCase);
+  assert.deepEqual(report.failures, []);
+});
+
+test("leg-boundary audit and receipt expectations are not evaluated on final state", { timeout: 120_000 }, () => {
+  const first = case14c.steps![0];
+  const e2eCase: E2ECase = {
+    ...case14c,
+    id: "harness-briefing-leg-snapshot",
+    steps: [
+      {
+        ...first,
+        expect: {
+          ...first.expect,
+          briefingAudit: { spec: "docs/specs/0001-graph.md", adr: "docs/adr/0001-graph.md", consistent: true },
+          checkpointReceipts: [{ edgeId: "briefing-retry", count: 1 }],
+        },
+      },
+      case14c.steps![1],
+    ],
+  };
+  const { report } = runCase(e2eCase);
+  assert.equal(report.failures.length, 2);
+  assert.match(report.failures.join("\n"), /leg 1: briefingAudit:/);
+  assert.match(report.failures.join("\n"), /leg 1: checkpointReceipts briefing-retry: expected 1, got 0/);
 });
