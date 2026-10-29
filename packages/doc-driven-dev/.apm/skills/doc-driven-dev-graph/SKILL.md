@@ -276,6 +276,8 @@ result is wrong. Re-running after a successful apply is a no-op.
   typed audit/delegate outcomes and scope-valid resume proof.
 - [`references/delegate-execution-policy.md`](references/delegate-execution-policy.md) —
   deterministic per-dispatch execution-mode selection and `DelegateHandoff`.
+- [`references/context-retrieval-contract.md`](references/context-retrieval-contract.md) —
+  progressive L0–L3 artifact context retrieval, validation, and finding codes.
 - [`references/run-trace-contract.md`](references/run-trace-contract.md) —
   structured run-trace events, JSONL export, and deterministic run counters.
 - [`references/task-graph-contract.md`](references/task-graph-contract.md) —

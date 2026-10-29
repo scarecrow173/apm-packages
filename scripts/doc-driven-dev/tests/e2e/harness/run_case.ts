@@ -3,6 +3,7 @@
  * report. All nondeterminism (temp paths, durations) stays outside asserted
  * state; every leg drives the real route_graph CLI via tsx.
  */
+import fs from "node:fs";
 import path from "node:path";
 import {
   persistEvidence,
@@ -13,7 +14,8 @@ import {
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import { resolveGraphPath } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/graph_cli";
 import { loadGraphDefinition } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
-import { readTraceFile } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
+import { summarizeBaseline } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/context_metrics";
+import { readTraceFile, summarizeTrace } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 import type { E2ECase } from "./case_types";
 import { checkExpectations, partitionByLegs, validateCase, type CaseRun } from "./case_validator";
 import { commitAll, createFixtureRepo } from "./fixture_manager";
@@ -102,12 +104,35 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
   // the emitted route set or the runner's internal copy.
   const definition = loadGraphDefinition(graphPath);
   const last = legResults[legResults.length - 1];
+
+  // Issue #124 baseline. Scan channel: summed artifact-scan trace events
+  // (summarizeTrace already aggregates filesRead/bytesRead per routing hop).
+  // Delegate-input channel: unique focusPaths across every effect-dispatched
+  // event — emitted before outcome validation, so rejected dispatches count
+  // too. A third channel (in-process canonicalReference fingerprint reads) is
+  // intentionally not counted here; see context_metrics.ts doc.
+  const delegatePaths = traceEvents
+    .filter((event) => event.kind === "effect-dispatched")
+    .flatMap((event) => event.focusPaths);
+  // Bytes are measured at end-of-run state; a path removed mid-case — or a
+  // non-file ref like the "." workspace root — deterministically counts 0.
+  const inputSize = (relativePath: string): number => {
+    try {
+      const stat = fs.statSync(path.join(repo, relativePath));
+      return stat.isFile() ? stat.size : 0;
+    } catch {
+      return 0;
+    }
+  };
+  const baseline = summarizeBaseline(summarizeTrace(traceEvents), delegatePaths, inputSize);
+
   const run: CaseRun = {
     result: { ...last, events: legResults.flatMap((leg) => leg.events) },
     traceEvents,
     repo,
     definition,
     proofPath,
+    baseline,
   };
 
   const failures = [...validateCase(run, e2eCase.expect), ...legFileFailures];

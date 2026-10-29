@@ -16,6 +16,7 @@ import {
   type EvidenceReceipt,
   type YieldReason,
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
+import type { ContextBaseline } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/context_metrics";
 import type { GraphDefinition } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 import type {
   EffectDispatchedEvent,
@@ -102,6 +103,13 @@ export type CaseRun = {
   definition: GraphDefinition;
   /** Canonical doc carrying checkpointEvidence; default docs/tasks/0001-task.md. */
   proofPath?: string;
+  /**
+   * Issue #124 baseline: runtime artifact-scan reads vs the document bodies
+   * actually supplied to dispatched effects (unique authoritativeInputs
+   * paths). Optional — only runCase computes it; ad-hoc CaseRun literals in
+   * unit tests may omit it.
+   */
+  baseline?: ContextBaseline;
 };
 
 function gitStatus(repo: string): string[] {
