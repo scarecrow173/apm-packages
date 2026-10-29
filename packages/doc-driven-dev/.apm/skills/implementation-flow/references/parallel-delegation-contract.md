@@ -39,6 +39,9 @@ write scope:
   serial.
 - Any unverifiable entry → `scope-unverifiable` → serial. The judgment never
   infers scope from prose or guesses a likely path.
+- The scope check matches the `Affected Files` heading literally
+  (case-insensitive); a localized heading reads as a missing section and
+  currently resolves to `scope-undeclared` → serial.
 
 ## Conflict Classes
 
@@ -137,9 +140,10 @@ node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-
 - `--verify-merge` mode reads slice outcomes and prints a `MergeReport`.
   Exit `0` when `verdict` is `merge`; `1` otherwise.
 - The two modes are mutually exclusive. `--cwd` defaults to the process
-  working directory; `--task-dir` defaults to `docs/tasks`. With `--json`,
-  errors print as `{"error": "..."}` on stdout; otherwise they print to
-  stderr with usage.
+  working directory; `--task-dir` defaults to `docs/tasks`. `--help` (`-h`)
+  prints usage to stdout and exits `0`. With `--json`, errors print as
+  `{"error": "..."}` on stdout; otherwise they print to stderr with usage —
+  argument and runtime errors always exit `1`.
 
 `ParallelReport` fields:
 
@@ -164,3 +168,7 @@ A slices file is
 When `touchedPaths` is absent, the CLI collects the real diff with
 `collectChangedPaths`; a slice-level `baseRef` wins over `--base-ref`
 (default `HEAD`).
+
+This contract covers repo-relative paths inside the repository only; shared
+resources outside the checkout — services, shared directories, remote state —
+remain the dispatcher's responsibility to serialize.

@@ -37,6 +37,9 @@ task の eligibility は Task Graph projection が権威であり、この contr
   serial。
 - 検証不能な項目が 1 つでもある → `scope-unverifiable` → serial。判定は
   記述から scope を推測したり、ありそうな path を当てはめたりしません。
+- scope 判定は `Affected Files` という見出しに literal（case-insensitive）で
+  マッチします。ローカライズされた見出しはセクション欠落として扱われ、
+  現在は `scope-undeclared` → serial になります。
 
 ## Conflict Classes
 
@@ -134,9 +137,10 @@ node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-
 - `--verify-merge` モードは slice の結果を読み、`MergeReport` を出力します。
   `verdict` が `merge` のとき exit `0`、それ以外は exit `1`。
 - 2 つのモードは排他です。`--cwd` はプロセスの作業ディレクトリが既定、
-  `--task-dir` は `docs/tasks` が既定です。`--json` 付きではエラーが
+  `--task-dir` は `docs/tasks` が既定です。`--help`（`-h`）は usage を
+  stdout に出力して exit `0` で終了します。`--json` 付きではエラーが
   `{"error": "..."}` として stdout に出力され、それ以外は usage とともに
-  stderr に出力されます。
+  stderr に出力されます — 引数エラーとランタイムエラーは常に exit `1` です。
 
 `ParallelReport` のフィールド:
 
@@ -161,3 +165,7 @@ slices ファイルは
 です。`touchedPaths` がない場合、CLI は `collectChangedPaths` で実際の diff を
 収集します。slice 単位の `baseRef` は `--base-ref` より優先されます
 （既定 `HEAD`）。
+
+この contract が対象とするのはリポジトリ内の repo 相対 path のみです。
+checkout 外の共有リソース — service、共有ディレクトリ、リモート状態など —
+の直列化は引き続き dispatcher の責任です。
