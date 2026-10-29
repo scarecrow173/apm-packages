@@ -30,7 +30,7 @@ function usage(): string {
   return "Usage: node scripts/audit_briefing.js --spec <path> --adr <path> [--cwd DIR] [--json]";
 }
 
-function main(): void {
+async function main(): Promise<void> {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -40,7 +40,7 @@ function main(): void {
     if (!args.spec || !args.adr) throw new Error("Both --spec and --adr are required");
 
     const cwd = path.resolve(args.cwd);
-    const report = auditBriefingPair(cwd, args.spec, args.adr);
+    const report = await auditBriefingPair(cwd, args.spec, args.adr);
 
     if (args.json) {
       console.log(JSON.stringify(report, null, 2));
@@ -61,4 +61,4 @@ function main(): void {
   }
 }
 
-main();
+void main();

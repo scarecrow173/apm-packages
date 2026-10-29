@@ -205,7 +205,7 @@ export function classifyArtifactRelation(relation: string): ArtifactEdgeKind {
   return "contextual";
 }
 
-function localTarget(cwd: string, owner: ArtifactRecord, value: string): { path: string; exists: boolean } {
+export function localTarget(cwd: string, owner: ArtifactRecord, value: string): { path: string; exists: boolean } {
   const trimmed = value.trim();
   const ownerCandidate = path.resolve(path.dirname(owner.absolutePath), trimmed);
   const rootCandidate = path.resolve(cwd, trimmed);
