@@ -55,6 +55,7 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
 
   const legs = e2eCase.steps ?? [{}];
   const legResults: CallerRunResult[] = [];
+  const legFileFailures: string[] = [];
   let resume: CallerHandoff | undefined;
   for (const [index, step] of legs.entries()) {
     for (const mutator of step.mutateBefore ?? []) applyMutator(repo, mutator);
@@ -86,6 +87,14 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
     });
     resume = result.handoff;
     legResults.push(result);
+    // Capture these filesystem assertions before the next leg can mutate
+    // their inputs. Other leg expectations retain their existing scoping.
+    const { briefingAudit, checkpointReceipts } = step.expect ?? {};
+    if (briefingAudit || checkpointReceipts) {
+      const legRun: CaseRun = { result, traceEvents: [], repo, definition: loadGraphDefinition(graphPath), proofPath };
+      legFileFailures.push(...checkExpectations(legRun, { briefingAudit, checkpointReceipts })
+        .map((failure) => `leg ${index + 1}: ${failure}`));
+    }
   }
 
   const traceEvents = readTraceFile(traceFile).filter((event) => event.runId === runId);
@@ -101,7 +110,7 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
     proofPath,
   };
 
-  const failures = validateCase(run, e2eCase.expect);
+  const failures = [...validateCase(run, e2eCase.expect), ...legFileFailures];
   const partitions = partitionByLegs(traceEvents);
   legs.forEach((step, index) => {
     if (!step.expect) return;
@@ -110,7 +119,8 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
       result: legResults[index],
       traceEvents: partitions[index] ?? [],
     };
-    failures.push(...checkExpectations(legRun, step.expect));
+    const { briefingAudit: _audit, checkpointReceipts: _receipts, ...remaining } = step.expect;
+    failures.push(...checkExpectations(legRun, remaining));
   });
 
   const report = reportCase(e2eCase.id, run, failures, Date.now() - started);
