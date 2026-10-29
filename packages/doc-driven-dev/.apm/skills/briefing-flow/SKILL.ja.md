@@ -278,13 +278,13 @@ Profile ベースの構成を省略しないこと。
 spec-doc の `status` が `proposed` 以上になるまで、briefing 完了を宣言しないこと。
 `draft` のまま通過するのは禁止である。acceptance criteria のない spec は、計画の土台にならない。
 
-**Why:** 不完全な Phase 1 の出力は、Phase 3-4 の再設計の 40% を引き起こす。
+**Why:** 不完全な Phase 1 の出力は、後続フェーズの再設計を引き起こす主な原因となる。
 </HARD-GATE>
 
 <HARD-GATE>
 緊急修正のシナリオでも、次のフェーズへ進む前に、最低でも spec-doc または adr-doc を証拠として残すこと。
 
-**Why:** 証拠のない緊急修正は、恒久的な技術的負債になる。最低限の証拠は 10 分で作れるが、謎コードのデバッグには何時間もかかる。
+**Why:** 証拠のない緊急修正は、恒久的な技術的負債になる。最低限の証拠は小さなコストで残せるが、記録のない変更のデバッグははるかに高くつく。
 </HARD-GATE>
 
 <HARD-GATE>
@@ -306,7 +306,7 @@ Profile が選択したスキルをデフォルトのルーティングポリシ
 | "Acceptance criteria can be added later" | criteria のない spec は検証不能な計画になる |
 | "Alternatives are obvious" | 1 案しかない ADR には意思決定の理由がない |
 | "Spending too much time on briefing" | stop conditions が満たされたら止める。満たされるまで続ける |
-| "It's urgent, skip the spec" | 最低限の証拠は 10 分。省略すると何時間から何日も失う |
+| "It's urgent, skip the spec" | 最低限の証拠は小さなコストで残せる。省略するとはるかに高くつく |
 
 ## Graph Effect Outcome
 

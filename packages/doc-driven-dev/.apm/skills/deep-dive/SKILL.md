@@ -59,10 +59,10 @@ Write down your best current read and confidence level.
 
 ```text
 HYPOTHESIS: You want ...
-CONFIDENCE: ~40% - missing: ...
+CONFIDENCE: low - missing: ...
 ```
 
-Confidence below ~70% should include a short reason.
+A low or uncertain confidence should include a short reason.
 
 ### Step 3: Ask one question at a time
 
