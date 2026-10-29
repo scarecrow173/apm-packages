@@ -27,6 +27,8 @@ import type {
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 
 const DEFAULT_PROOF_PATH = "docs/tasks/0001-task.md";
+const TSX_CLI = path.resolve(__dirname, "../../../node_modules/tsx/dist/cli.mjs");
+const BRIEFING_AUDIT = path.resolve(__dirname, "../../../src/skills/briefing-flow/scripts/audit_briefing.ts");
 
 const RUN_YIELD_REASONS: readonly YieldReason[] = [
   "terminal", "single-step-complete", "budget-exhausted",
@@ -81,6 +83,8 @@ export type CaseExpect = {
   tasksContain?: { edgeId: string; id: string; status: string }[];
   /** End-of-run repo state — re-read from disk at validation time. */
   finalFiles?: Record<string, { frontmatter?: Record<string, unknown>; bodyIncludes?: string[] }>;
+  /** End-of-run pair audit via the real CLI; paths are fixture-relative. */
+  briefingAudit?: { spec: string; adr: string; consistent: boolean };
 };
 
 export type CaseRun = {
@@ -232,6 +236,20 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
       if (!parsed.content.includes(needle)) {
         failures.push(`finalFiles ${rel}: body missing substring ${JSON.stringify(needle)}`);
       }
+    }
+  }
+  if (expect.briefingAudit) {
+    const { spec, adr, consistent } = expect.briefingAudit;
+    const result = spawnSync(process.execPath, [TSX_CLI, BRIEFING_AUDIT, "--cwd", run.repo, "--spec", spec, "--adr", adr, "--json"], { encoding: "utf8" });
+    try {
+      const report: unknown = JSON.parse(result.stdout);
+      if (!report || typeof report !== "object" || !("consistent" in report)
+          || typeof report.consistent !== "boolean") throw new Error("missing boolean consistent");
+      if (report.consistent !== consistent || result.status !== (consistent ? 0 : 1)) {
+        failures.push(`briefingAudit: expected consistent=${consistent}, exit=${consistent ? 0 : 1}; got consistent=${report.consistent}, exit=${result.status}`);
+      }
+    } catch (error) {
+      failures.push(`briefingAudit: invalid CLI result (exit=${result.status}, stderr=${result.stderr}): ${String(error)}`);
     }
   }
   return failures;

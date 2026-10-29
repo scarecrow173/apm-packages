@@ -9,6 +9,8 @@ import test from "node:test";
 import type { E2ECase } from "./case_types";
 import { runCase } from "./run_case";
 import { case01 } from "../cases/case-01-happy-path";
+import { checkExpectations, type CaseRun } from "./case_validator";
+import { createFixtureRepo, updateArtifact } from "./fixture_manager";
 
 const HAPPY_SEQUENCE = [
   "probe-to-briefing", "briefing-to-design", "design-to-planning",
@@ -81,3 +83,16 @@ for (const e2eCase of CASES) {
     assert.equal(report.pass, true);
   });
 }
+
+test("briefing audit expectation checks JSON and exit status for both outcomes", () => {
+  const repo = createFixtureRepo();
+  const run = { repo, traceEvents: [] } as unknown as CaseRun;
+  const audit = { spec: "docs/specs/0001-graph.md", adr: "docs/adr/0001-graph.md" };
+  // Default fixture has no spec/ADR pairing; checking for true must fail.
+  assert.deepEqual(checkExpectations(run, { briefingAudit: { ...audit, consistent: false } }), []);
+  assert.match(checkExpectations(run, { briefingAudit: { ...audit, consistent: true } }).join("\n"), /briefingAudit:/);
+  updateArtifact(repo, audit.spec, { relations: { "derives-from": ["ADR-0001"] } });
+  assert.deepEqual(checkExpectations(run, { briefingAudit: { ...audit, consistent: true } }), []);
+  assert.match(checkExpectations(run, { briefingAudit: { ...audit, consistent: false } }).join("\n"), /briefingAudit:/);
+  assert.match(checkExpectations(run, { briefingAudit: { ...audit, spec: "missing.md", consistent: true } }).join("\n"), /briefingAudit:/);
+});
