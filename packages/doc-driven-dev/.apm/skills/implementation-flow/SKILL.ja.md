@@ -125,6 +125,11 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentati
 [`assets/templates/implementation-profile-template.ja.md`](assets/templates/implementation-profile-template.ja.md)
 を読みます。通常の実行では読みません。
 
+**段階的ロード:** まず profile を解決し、次に profile が applicable と示した
+skill の `SKILL.md` 本文だけを読み、references と scripts は active step が
+必要とするときだけ読む —
+[progressive-loading-contract](../skill-discovery-protocol/references/progressive-loading-contract.ja.md) を参照。
+
 ---
 
 ## Phase B: 構成

@@ -118,6 +118,11 @@ profile.
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.
 
+**Staged loading:** resolve the profile first, then load `SKILL.md` bodies only
+for skills the profile marks applicable, then load references and scripts only
+when the active step needs them — see
+[progressive-loading-contract](../skill-discovery-protocol/references/progressive-loading-contract.md).
+
 ---
 
 ## Phase B: Configure
