@@ -250,13 +250,18 @@ must conform (dates use `YYYY-MM-DD`, owners and standard link relation fields
 are arrays, while `relations.changes` is an object; omitted relation fields
 default to empty). Spec status must be `proposed`,
 `approved`, or `implemented`; ADR status must be `proposed` or `accepted`.
-It checks the required counts, a unique typed artifact chain in canonical graph
-directories, relevant relation resolution and duplicate IDs, and existence of
-local Markdown link/image destinations in the two documents. External URLs,
-fragment targets and destination contents are not checked; placeholders are
-warnings. The audit does not establish semantic identity or detect semantic
-contradictions or whether known constraints are correctly represented; the
-caller must perform the separate check above.
+It checks the required counts, typed pair evidence in canonical graph records,
+relevant relation resolution and duplicate IDs, and existence of local Markdown
+link/image destinations in the two documents. Pair evidence can be a direct
+relation, a shared discovery anchor, or a shared approved design. The audit
+checks both documents and all shared discovery anchors; when neither direct
+nor discovery evidence exists, it checks all supporting designs instead. It
+does not validate plans or select a downstream chain; design/plan focus
+ambiguity belongs to the graph's focus gate. External URLs, fragment targets
+and destination contents are not checked; placeholders are warnings. The
+audit does not establish semantic identity or detect semantic contradictions
+or whether known constraints are correctly represented; the caller must
+perform the separate check above.
 
 ### Actions on Gate Failure
 

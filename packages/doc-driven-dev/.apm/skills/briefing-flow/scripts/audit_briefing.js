@@ -28435,17 +28435,19 @@ async function auditBriefingPair(cwd, specPath, adrPath) {
   const adr = loadDoc(root, adrPath, "adr", findings);
   if (adr) await auditDocContent(root, adr, "adr", findings);
   const { graph, records } = scanArtifactGraph({ cwd: root });
-  const candidates = spec && adr ? artifactChainCandidates(graph, records).filter((chain2) => chain2.spec === spec.path && chain2.adr === adr.path) : [];
-  if (spec && adr && candidates.length !== 1) {
+  const specRecord = records.find((record2) => record2.path === spec?.path && record2.type === "spec");
+  const adrRecord = records.find((record2) => record2.path === adr?.path && record2.type === "adr");
+  const anchors = specRecord && adrRecord ? preDesignAnchors(graph, records, specRecord, adrRecord) : void 0;
+  const candidates = spec && adr && anchors === void 0 ? artifactChainCandidates(graph, records).filter((chain) => chain.spec === spec.path && chain.adr === adr.path) : [];
+  if (spec && adr && anchors === void 0 && candidates.length === 0) {
     findings.push({
       severity: "error",
       code: "inconsistent-pairing",
       file: null,
-      message: `Spec ${spec.path} and ADR ${adr.path} must belong to one unambiguous typed artifact chain`
+      message: `Spec ${spec.path} and ADR ${adr.path} lack a typed pair relation`
     });
   }
-  const chain = candidates.length === 1 ? candidates[0] : void 0;
-  const relevant = /* @__PURE__ */ new Set([spec?.path, adr?.path, chain?.design, chain?.plan, ...chain?.anchors ?? []]);
+  const relevant = /* @__PURE__ */ new Set([spec?.path, adr?.path, ...anchors ?? [], ...candidates.map((chain) => chain.design)]);
   for (const doc of [spec, adr]) {
     if (doc && !records.some((record2) => record2.path === doc.path)) {
       findings.push({ severity: "error", code: "noncanonical-artifact", file: doc.path, message: "Document is not in the artifact graph's canonical record set" });

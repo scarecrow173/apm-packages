@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import matter from "gray-matter";
 import { auditBriefingPair, type BriefingAuditReport } from "../src/skills/briefing-flow/scripts/lib/briefing_audit";
+import { resolveArtifactFocus, scanArtifactGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
@@ -292,8 +293,9 @@ test("does not pair a noncanonical discovery", async () => {
   assert.ok(codes(await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md")).includes("inconsistent-pairing"));
 });
 
-test("uses typed design chains and rejects ambiguous or unrelated designs", async () => {
+test("accepts multiple supporting designs but rejects designs connecting only one document each", async () => {
   const repo = pairedRepo();
+  fs.unlinkSync(path.join(repo, "docs/discovery/0001-graph.md"));
   for (const [file, id, type, body] of [
     ["docs/specs/0001-graph.md", "SPEC-0001", "spec", SPEC_BODY],
     ["docs/adr/0001-graph.md", "ADR-0001", "adr", ADR_BODY],
@@ -304,10 +306,86 @@ test("uses typed design chains and rejects ambiguous or unrelated designs", asyn
   design("docs/designs/a.md", ["SPEC-0001", "ADR-0001"]);
   assert.equal((await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md")).consistent, true);
   design("docs/designs/b.md", ["SPEC-0001", "ADR-0001"]);
-  assert.ok(codes(await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md")).includes("inconsistent-pairing"));
+  assert.equal((await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md")).consistent, true);
+  const { graph, records } = scanArtifactGraph({ cwd: repo });
+  assert.deepEqual(resolveArtifactFocus(repo, graph, records, ["SPEC-0001", "ADR-0001"]).blockers, ["focus-required"]);
   design("docs/designs/a.md", ["SPEC-0001"]);
   design("docs/designs/b.md", ["ADR-0001"]);
   assert.ok(codes(await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md")).includes("inconsistent-pairing"));
+});
+
+test("accepts two plans for one spec/ADR pair without selecting a plan", async () => {
+  const repo = pairedRepo();
+  fs.unlinkSync(path.join(repo, "docs/discovery/0001-graph.md"));
+  for (const [file, id, type, body] of [
+    ["docs/specs/0001-graph.md", "SPEC-0001", "spec", SPEC_BODY],
+    ["docs/adr/0001-graph.md", "ADR-0001", "adr", ADR_BODY],
+  ] as const) writeArtifact(repo, file, { id, type, status: "proposed", title: id }, body);
+  writeArtifact(repo, "docs/designs/a.md", {
+    id: "DESIGN-1", type: "design", status: "approved", title: "Design",
+    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+  }, "# Design\n");
+  for (const id of ["PLAN-1", "PLAN-2"]) writeArtifact(repo, `docs/plans/${id}.md`, {
+    id, type: "plan", status: "approved", title: id, relations: { "derives-from": ["DESIGN-1"] },
+  }, "# Plan\n");
+  assert.equal((await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md")).consistent, true);
+  const { graph, records } = scanArtifactGraph({ cwd: repo });
+  assert.deepEqual(resolveArtifactFocus(repo, graph, records, ["SPEC-0001", "ADR-0001"]).blockers, ["focus-required"]);
+  writeArtifact(repo, "docs/plans/PLAN-2.md", {
+    id: "PLAN-2", type: "plan", status: "approved", title: "Plan",
+    relations: { "derives-from": ["DESIGN-1", "MISSING"], related: [42] },
+  }, "# Plan\n");
+  assert.equal((await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md")).consistent, true);
+});
+
+test("direct pair evidence survives separate downstream designs", async () => {
+  const repo = pairedRepo();
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Spec",
+    relations: { "derives-from": ["ADR-0001"] },
+  }, SPEC_BODY);
+  writeArtifact(repo, "docs/adr/0001-graph.md", {
+    id: "ADR-0001", type: "adr", status: "proposed", title: "ADR",
+  }, ADR_BODY);
+  for (const [id, target] of [["A", "SPEC-0001"], ["B", "ADR-0001"]]) {
+    writeArtifact(repo, `docs/designs/${id}.md`, {
+      id, type: "design", status: "approved", title: id, relations: { "derives-from": [target] },
+    }, "# Design\n");
+  }
+  assert.equal((await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md")).consistent, true);
+});
+
+test("checks all supporting designs when pair evidence depends on designs", async () => {
+  const repo = pairedRepo();
+  fs.unlinkSync(path.join(repo, "docs/discovery/0001-graph.md"));
+  for (const [file, id, type, body] of [
+    ["docs/specs/0001-graph.md", "SPEC-0001", "spec", SPEC_BODY],
+    ["docs/adr/0001-graph.md", "ADR-0001", "adr", ADR_BODY],
+  ] as const) writeArtifact(repo, file, { id, type, status: "proposed", title: id }, body);
+  for (const [id, extra] of [["A", []], ["B", ["MISSING"]]] as const) writeArtifact(repo, `docs/designs/${id}.md`, {
+    id, type: "design", status: "approved", title: id,
+    relations: { "derives-from": ["SPEC-0001", "ADR-0001", ...extra], related: id === "B" ? [42] : [] },
+  }, "# Design\n");
+  const report = await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md");
+  assert.ok(codes(report).includes("broken-relation-link"));
+  assert.ok(codes(report).includes("invalid-relation"));
+  assert.equal(report.consistent, false);
+});
+
+test("rejects duplicate IDs in any supporting design", async () => {
+  const repo = pairedRepo();
+  fs.unlinkSync(path.join(repo, "docs/discovery/0001-graph.md"));
+  for (const [file, id, type, body] of [
+    ["docs/specs/0001-graph.md", "SPEC-0001", "spec", SPEC_BODY],
+    ["docs/adr/0001-graph.md", "ADR-0001", "adr", ADR_BODY],
+  ] as const) writeArtifact(repo, file, { id, type, status: "proposed", title: id }, body);
+  for (const name of ["A", "B"]) writeArtifact(repo, `docs/designs/${name}.md`, {
+    id: "DESIGN-DUP", type: "design", status: "approved", title: name,
+    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+  }, "# Design\n");
+  const report = await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md");
+  assert.ok(codes(report).includes("duplicate-id"));
+  assert.equal(report.consistent, false);
 });
 
 test("fails closed on a selected discovery's malformed or missing relations", async () => {
