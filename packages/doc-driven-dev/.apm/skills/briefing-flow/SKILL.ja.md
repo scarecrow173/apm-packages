@@ -157,24 +157,27 @@ Profile の生成と検証は `skill-discovery-protocol` スキルが担当す�
    - **Flexible skills**: 意図を保ちつつ、状況に合わせて調整する。
 3. スキルはレイヤーであり、排他的ではない。複数のスキルが同時に適用される。
 
-### ディスパッチトリガー
+### ディスパッチ条件
 
-情報収集と並行して、条件が満たされたら各文書スキルをディスパッチする:
+spec と ADR は同じ問題の制約、選択肢、acceptance criteria を共有するため、
+**デフォルトではこの delegate 内で same-context skill として生成する**
+（[delegate execution-mode policy](../doc-driven-dev-graph/references/delegate-execution-policy.ja.md) の `shared-judgment`）。
+sub-agent dispatch は、真に独立した作業にのみ予約する。
 
-| Trigger | Fire Condition | Action |
-| ------- | -------------- | ------ |
-| discovery-doc | 問題空間が曖昧、代替案が存在する、または重大な調査を実施した — 探索結果を正本 artifact として永続化する | delegate execution-mode policy に従って `discovery-doc` スキルをディスパッチ（任意；該当時は spec/adr より前に発火） |
-| spec-doc | 目的、範囲、acceptance criteria、除外事項が揃った | delegate execution-mode policy に従って `spec-doc` スキルをディスパッチ |
-| adr-doc | 採用方針、代替案、理由、影響が揃った | delegate execution-mode policy に従って `adr-doc` スキルをディスパッチ |
+| Trigger | Fire Condition | Execution |
+| ------- | -------------- | --------- |
+| spec-doc | 目的、範囲、acceptance criteria、除外事項が揃った | same-context skill（デフォルト） |
+| adr-doc | 採用方針、代替案、理由、影響が揃った | same-context skill（デフォルト）；spec-doc に続けて同じ context で実行してよい |
+| discovery-doc | 問題空間が曖昧、代替案が存在する、または重大な調査を実施した | same-context または delegated — execution-mode policy に従う。独立した調査や分離された edit scope は `subagent-as-tool` を正当化し得る |
+| Independent research | 外部検証、black-box review、または context-heavy な探索 | policy による delegated mode のみ；spec/adr のデフォルトにはしない |
 
-**ディスパッチ原則:**
+**実行原則:**
 
-- **両方を待たない。** 先に準備できたトリガーをすぐに発火する。
-- 各ディスパッチの execution mode は [delegate execution-mode policy](../doc-driven-dev-graph/references/delegate-execution-policy.ja.md)（`<skill-root>/doc-driven-dev-graph/references/delegate-execution-policy.ja.md`；`<skill-root>` は `.agents/skills/`、`.apm/skills/`、`.claude/skills/` のいずれか）に従って選択する。`same-context` がデフォルトであり、policy が delegated mode を選択した場合にのみサブエージェントを起動し、最小の `DelegateHandoff` contract を引き渡す。
-- 情報収集はディスパッチ後も続ける（非ブロッキング）。
-- 両方のスキルは独立にディスパッチできる。並列実行でよい。
-- ディスパッチ時に渡す情報は、その時点の**生の収集結果**を含める。要約して劣化させない。
-- ディスパッチされた delegate は各スキルのワークフローに従って文書を生成する。
+- **両方を待たない。** 先に準備できた文書から開始する。もう一方は条件が揃ったとき同じ context で続く。
+- **暗黙の並列ではなく、逐次または段階的に。** 両方が準備できた場合は順番に書く（spec 次に ADR、または readiness が示す順序）— shared judgment は互いの決定を参照することで効果を発揮する。並行して実行できるのは independent な delegate のみである。
+- 情報収集は drafting と並行して続ける（非ブロッキング）。
+- どの dispatch に渡す情報も、その時点の**生の収集結果**である。delegated dispatch には `DelegateHandoff` の最小 contract（canonical refs、criteria、permissions、budget、completion）が適用される。要約して劣化させない。
+- delegated dispatch が文書を生成して返した場合、main loop は Phase D の前に pair を再検証する: `scripts/audit_briefing.js --spec <path> --adr <path> --json` を実行し、`consistent: true` が必須である（この audit は status、acceptance criteria、considered options、pairing relation、link 整合性を決定論的に強制する）。
 
 ### 停止条件
 
@@ -209,7 +212,7 @@ Stop conditions が満たされない場合:
 - [ ] `adr-doc` に少なくとも 2 つのエントリが `## Considered Options` にある
 - [ ] Entry Decision (A-1/A-2/A-3/A-4/A-5) の選択が記録されている
 - [ ] "pre-implementation blocker" に分類された未解決項目が残っていない
-- [ ] 両方の文書が同じ問題文脈を参照している
+- [ ] `spec-doc`/`adr-doc` pair が静的に整合している — `scripts/audit_briefing.js` が `consistent: true` を報告する（同じ問題文脈は pairing relation によって強制される）
 
 ### ゲート不通過時のアクション
 
