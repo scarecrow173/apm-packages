@@ -84,6 +84,7 @@ and register it in `cases/index.ts`. Fields:
 | `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document mutators applied when the delegate completes, `commitEvidence` to commit during evidence persistence. Unscripted effects throw — no silent defaults. |
 | `steps` | Multi-leg runs. Each leg: `mutateBefore` (applied between runs), `options` (`focus`/`signals`/`current`/`mode`/`maxHops`, plus `resume:false` for a fresh run — on resumed legs the prior `CallerHandoff` wins `current`/`mode`/`maxHops`), `expect` (evaluated against that leg's own trace partition). |
 | `expect` | Final-leg expectations: `yield`, `edgeSequence`, `completedEdges` scope to the last leg; `events` tallies span the whole run; `blockersContain`/`tasksContain` match `route-selected` payloads; `finalFiles` re-reads end-of-run repo state. |
+| `expect.briefingAudit` | Run the real source `audit_briefing` CLI via tsx against the final fixture (`spec`, `adr`, and expected `consistent`); check both JSON and exit status. Like `finalFiles`, this reads end-of-run state, including for leg expectations. |
 
 ## Running
 
@@ -121,7 +122,7 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 
 | Criterion | Where it lands |
 | --- | --- |
-| >= 10 regression cases | 21 `E2ECase` entries in `cases/` (13 files; e2e-07/10/12/13 carry a/b/c siblings). |
+| >= 10 regression cases | 23 `E2ECase` entries in `cases/` (14 files; e2e-07/10/12/13 carry a/b/c siblings). |
 | Real CLI + filesystem + git + Markdown + fresh projection | Every case: real temp git repo, `route_graph` spawned via tsx once per hop, projection recomputed per invocation. |
 | Deterministic delegate/audit replacement incl. error/yield/resume/commit | `scriptedDispatcher` (completed/retry/yield/malformed); exercised by e2e-03/11 (retry), e2e-04 (resume), e2e-08 (resume after budget), e2e-09 (commit), e2e-10 (rejections), e2e-02 (input-required). |
 | Reproducible + contract-violation detection (hard gates) | Six universal invariants + per-case expectation DSL; `compareNormalizedTraces` for reproducibility; e2e-05/07/10 target contract violations. |
@@ -150,6 +151,8 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 | e2e-13a | No policy: declared `executionMode:"tool"` unchanged; zero `modeReason` emissions | additive trace schema |
 | e2e-13b | Declared policy: `sharedJudgment`/`default` -> all-`same-context` + `modeReason`; still terminal | policy mode selection + reason tokens |
 | e2e-13c | `isolated-subagent` on spec audit; `scope-mismatch` -> same `authority-required` as e2e-10c | mode-independent rejection |
+| e2e-14a | Scripted pair creation with shared-judgment attribution; real pair audit | graph trace + artifact consistency |
+| e2e-14c | Scripted partial pair -> briefing-retry edge -> pair repair; real pair audit | gate re-entry + artifact consistency |
 
 ## What this harness does NOT verify
 
@@ -158,6 +161,12 @@ reproducibility only. It does not measure real-LLM output quality,
 subagent-vs-same-context model quality, semantic document quality,
 token/cost/latency improvements, or model skill-selection accuracy. Never
 infer model-quality conclusions from case diffs or trace comparisons.
+The policy changes trace attribution, not the dispatcher: e2e-14a/14c do not
+execute briefing-flow's inner skills or verify actual execution mode.
+The graph has no `discovery-doc`, `spec-doc`, or `adr-doc` dispatch events,
+so the planned e2e-14b comparison of real inner execution paths is not covered.
+e2e-14c exercises a gate retry edge after a completed scripted delegate, not
+an EffectOutcome `retry` or a two-leg resume.
 The in-process oracle test (`doc-driven-dev-graph-run-to-yield.test.ts`)
 and this spawned-CLI runner are two independent implementations of the
 same contract; the runner additionally emits the #120 run-level trace
