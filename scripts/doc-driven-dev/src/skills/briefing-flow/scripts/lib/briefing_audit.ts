@@ -11,6 +11,7 @@ import {
   artifactChainCandidates,
   isExternalArtifactReference,
   localTarget,
+  preDesignAnchors,
   resolveArtifactRelation,
   scanArtifactGraph,
   type ArtifactRecord,
@@ -202,19 +203,24 @@ export async function auditBriefingPair(cwd: string, specPath: string, adrPath: 
   const adr = loadDoc(root, adrPath, "adr", findings);
   if (adr) await auditDocContent(root, adr, "adr", findings);
   const { graph, records } = scanArtifactGraph({ cwd: root });
-  const candidates = spec && adr
+  const specRecord = records.find((record) => record.path === spec?.path && record.type === "spec");
+  const adrRecord = records.find((record) => record.path === adr?.path && record.type === "adr");
+  // Direct/discovery pair evidence is independent of downstream chain selection.
+  const anchors = specRecord && adrRecord ? preDesignAnchors(graph, records, specRecord, adrRecord) : undefined;
+  const candidates = spec && adr && anchors === undefined
     ? artifactChainCandidates(graph, records).filter((chain) => chain.spec === spec.path && chain.adr === adr.path)
     : [];
-  if (spec && adr && candidates.length !== 1) {
+  if (spec && adr && anchors === undefined && candidates.length === 0) {
     findings.push({
       severity: "error",
       code: "inconsistent-pairing",
       file: null,
-      message: `Spec ${spec.path} and ADR ${adr.path} must belong to one unambiguous typed artifact chain`,
+      message: `Spec ${spec.path} and ADR ${adr.path} lack a typed pair relation`,
     });
   }
-  const chain = candidates.length === 1 ? candidates[0] : undefined;
-  const relevant = new Set([spec?.path, adr?.path, chain?.design, chain?.plan, ...(chain?.anchors ?? [])]);
+  // Check every supporting discovery or design, never pick an arbitrary
+  // downstream chain. Plan/task validity and focus belong to the graph gate.
+  const relevant = new Set([spec?.path, adr?.path, ...(anchors ?? []), ...candidates.map((chain) => chain.design)]);
   for (const doc of [spec, adr]) {
     if (doc && !records.some((record) => record.path === doc.path)) {
       findings.push({ severity: "error", code: "noncanonical-artifact", file: doc.path, message: "Document is not in the artifact graph's canonical record set" });

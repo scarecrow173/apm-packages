@@ -394,7 +394,8 @@ function chainMembers(chain: ArtifactChain): Set<string> {
     .filter((value): value is string => Boolean(value)));
 }
 
-function preDesignAnchors(graph: ArtifactGraph, records: ArtifactRecord[], spec: ArtifactRecord, adr: ArtifactRecord): string[] | undefined {
+/** Return discovery anchors, an empty array for a direct pair, or undefined when unrelated. */
+export function preDesignAnchors(graph: ArtifactGraph, records: ArtifactRecord[], spec: ArtifactRecord, adr: ArtifactRecord): string[] | undefined {
   const direct = graph.edges.some((edge) => edge.kind === "lineage"
     && ["derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation)
     && ((edge.from === spec.path && edge.to === adr.path) || (edge.from === adr.path && edge.to === spec.path)));

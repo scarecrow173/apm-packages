@@ -223,11 +223,15 @@ Stop conditions が満たされない場合:
 は配列、`relations.changes` は object、省略された relation fields は空がデフォルト）。
 spec の status は `proposed`、
 `approved`、`implemented`、ADR は `proposed` または `accepted` が必要。
-必須項目数、graph の canonical directories 内の一意な typed artifact chain、
-関連する relation の解決と重複 ID、両文書内のローカル Markdown link/image
-の参照先の存在を検査する。外部 URL、fragment の参照先、参照先の内容は検査せず、
-placeholder は警告となる。この audit は意味的同一性や意味的矛盾、既知の制約が
-正しく反映されたことを証明しない。caller は上記の別途確認を行う。
+必須項目数、graph の canonical records 内の typed pair evidence、関連する relation
+の解決と重複 ID、両文書内のローカル Markdown link/image の参照先の存在を検査する。
+pair evidence は直接 relation、共通 discovery anchor、または共通の承認済み design
+である。両文書とすべての共通 discovery anchor を検査し、直接 evidence も discovery
+evidence もない場合は代わりにすべての supporting design を検査する。plan の検証や
+下流 chain の選択は行わず、design/plan の focus 曖昧性は graph の focus gate に委ねる。
+外部 URL、fragment の参照先、参照先の内容は検査せず、placeholder は警告となる。
+この audit は意味的同一性や意味的矛盾、既知の制約が正しく反映されたことを証明しない。
+caller は上記の別途確認を行う。
 
 ### ゲート不通過時のアクション
 
