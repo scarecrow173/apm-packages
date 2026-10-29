@@ -121,7 +121,7 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 
 | Criterion | Where it lands |
 | --- | --- |
-| >= 10 regression cases | 18 `E2ECase` entries in `cases/` (12 files; e2e-07/10/12 carry a/b/c siblings). |
+| >= 10 regression cases | 21 `E2ECase` entries in `cases/` (13 files; e2e-07/10/12/13 carry a/b/c siblings). |
 | Real CLI + filesystem + git + Markdown + fresh projection | Every case: real temp git repo, `route_graph` spawned via tsx once per hop, projection recomputed per invocation. |
 | Deterministic delegate/audit replacement incl. error/yield/resume/commit | `scriptedDispatcher` (completed/retry/yield/malformed); exercised by e2e-03/11 (retry), e2e-04 (resume), e2e-08 (resume after budget), e2e-09 (commit), e2e-10 (rejections), e2e-02 (input-required). |
 | Reproducible + contract-violation detection (hard gates) | Six universal invariants + per-case expectation DSL; `compareNormalizedTraces` for reproducibility; e2e-05/07/10 target contract violations. |
@@ -147,6 +147,9 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 | e2e-12a | `maxHops: 3` -> `budget-exhausted` after exactly 3 completed edges | hop budget |
 | e2e-12b | Identical delegate retries -> `repeatedRetry` guard -> `budget-exhausted` | stall budget |
 | e2e-12c | `current: "complete"` -> immediate terminal, zero hops | terminal idempotency |
+| e2e-13a | No policy: declared `executionMode:"tool"` unchanged; zero `modeReason` emissions | additive trace schema |
+| e2e-13b | Declared policy: `sharedJudgment`/`default` -> all-`same-context` + `modeReason`; still terminal | policy mode selection + reason tokens |
+| e2e-13c | `isolated-subagent` on spec audit; `scope-mismatch` -> same `authority-required` as e2e-10c | mode-independent rejection |
 
 ## What this harness does NOT verify
 

@@ -20,6 +20,7 @@ import type { GraphDefinition } from "../../../src/skills/doc-driven-dev-graph/s
 import type {
   EffectDispatchedEvent,
   EffectOutcomeEvent,
+  ExecutionMode,
   RouteSelectedEvent,
   RunYieldEvent,
   TraceEvent,
@@ -53,7 +54,17 @@ export type CaseExpect = {
    * `edgeId`/`stage` narrow the tally to events carrying those fields —
    * e.g. "zero audit dispatches on the resumed edge" for pending reuse.
    */
-  events?: { kind: string; edgeId?: string; stage?: "audit" | "delegate"; count?: number; min?: number }[];
+  events?: {
+    kind: string;
+    edgeId?: string;
+    stage?: "audit" | "delegate";
+    /** effect-dispatched only: exact executionMode ("tool"/"same-context"/…). */
+    executionMode?: ExecutionMode;
+    /** effect-dispatched only: modeReason CONTAINS this substring (token search). */
+    modeReason?: string;
+    count?: number;
+    min?: number;
+  }[];
   /**
    * LAST route-selected in the evaluated scope must carry each blocker:
    * string entries require verbatim membership (sanitized token form, e.g.
@@ -154,11 +165,17 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
   for (const spec of expect.events ?? []) {
     const label = `event kind "${spec.kind}"`
       + (spec.edgeId !== undefined ? ` edge "${spec.edgeId}"` : "")
-      + (spec.stage !== undefined ? ` stage "${spec.stage}"` : "");
+      + (spec.stage !== undefined ? ` stage "${spec.stage}"` : "")
+      + (spec.executionMode !== undefined ? ` mode "${spec.executionMode}"` : "")
+      + (spec.modeReason !== undefined ? ` modeReason~"${spec.modeReason}"` : "");
     const count = events.filter((event) => {
       if (event.kind !== spec.kind) return false;
       if (spec.edgeId !== undefined && (!("edgeId" in event) || event.edgeId !== spec.edgeId)) return false;
       if (spec.stage !== undefined && (!("stage" in event) || event.stage !== spec.stage)) return false;
+      if (spec.executionMode !== undefined
+          && (!("executionMode" in event) || event.executionMode !== spec.executionMode)) return false;
+      if (spec.modeReason !== undefined
+          && (!("modeReason" in event) || !event.modeReason?.includes(spec.modeReason))) return false;
       return true;
     }).length;
     if (spec.count !== undefined && count !== spec.count) {

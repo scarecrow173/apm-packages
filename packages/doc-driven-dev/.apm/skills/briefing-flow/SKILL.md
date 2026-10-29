@@ -158,9 +158,10 @@ For detailed category definitions, see the adapter's `classification.taxonomy` i
 
 ## Phase C: Gather & Generate
 
-Gather information and produce documents in parallel. Dispatch to sub-agents
+Gather information and produce documents in parallel. Dispatch document skills
 immediately when sufficient information is gathered, preventing context freshness
-(detail level) degradation.
+(detail level) degradation. The delegate execution-mode policy selects each
+dispatch's mode.
 
 ### Information Gathering
 
@@ -174,21 +175,22 @@ Apply each skill in the active stack according to its priority:
 
 ### Dispatch Triggers
 
-In parallel with information gathering, dispatch to sub-agents when conditions are met:
+In parallel with information gathering, dispatch each document skill when its conditions are met:
 
 | Trigger | Fire Condition | Action |
 | ------- | -------------- | ------ |
-| discovery-doc | Problem space is ambiguous, alternatives exist, or significant research was done — persist exploration output as a canonical artifact | Spawn sub-agent and delegate `discovery-doc` skill (optional; fire before spec/adr when applicable) |
-| spec-doc | Purpose, scope, acceptance criteria, and exclusions are available | Spawn sub-agent and delegate `spec-doc` skill |
-| adr-doc | Chosen approach, alternatives, rationale, and impact are available | Spawn sub-agent and delegate `adr-doc` skill |
+| discovery-doc | Problem space is ambiguous, alternatives exist, or significant research was done — persist exploration output as a canonical artifact | Dispatch `discovery-doc` skill per the delegate execution-mode policy (optional; fire before spec/adr when applicable) |
+| spec-doc | Purpose, scope, acceptance criteria, and exclusions are available | Dispatch `spec-doc` skill per the delegate execution-mode policy |
+| adr-doc | Chosen approach, alternatives, rationale, and impact are available | Dispatch `adr-doc` skill per the delegate execution-mode policy |
 
 **Dispatch principles:**
 
 - **Do not wait for both.** Fire whichever trigger is ready first.
+- Select each dispatch's execution mode per the [delegate execution-mode policy](../doc-driven-dev-graph/references/delegate-execution-policy.md) at `<skill-root>/doc-driven-dev-graph/references/delegate-execution-policy.md` (`<skill-root>` is `.agents/skills/`, `.apm/skills/`, or `.claude/skills/`). `same-context` is the default — spawn a sub-agent only when the policy selects a delegated mode, and hand off the minimum `DelegateHandoff` contract.
 - Information gathering continues after dispatch (non-blocking).
 - Both skills can be dispatched independently — concurrent execution is fine.
 - Information passed at dispatch must include **raw collection results at that point**. Do not degrade through summarization.
-- Sub-agents follow each skill's workflow to produce the document.
+- Dispatched delegates follow each skill's workflow to produce the document.
 
 ### Stop Conditions
 
@@ -197,8 +199,8 @@ Phase C iterates until ALL of the following stop conditions are met:
 - For key use cases, input/processing/expected results can be explained.
 - Critical constraints (technical, operational, timeline, quality) are made explicit.
 - Open items are classified as "pre-implementation blocker" or "manageable downstream".
-- `spec-doc` has been generated (sub-agent has completed).
-- `adr-doc` has been generated (sub-agent has completed).
+- `spec-doc` has been generated (the dispatched effect has completed).
+- `adr-doc` has been generated (the dispatched effect has completed).
 
 If stop conditions are not met:
 

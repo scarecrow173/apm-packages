@@ -23,6 +23,7 @@ import { loadGraphDefinition } from "./graph_definition";
 import { resolveGraphPath } from "./graph_cli";
 import type { GraphRoute } from "./graph_router";
 import { appendTraceEvent, type ExecutionMode, type TraceEventInput } from "./run_trace";
+import { selectDelegateMode, toExecutionMode, type PolicyFacts } from "./delegate_policy";
 
 export type YieldReason =
   | "terminal" | "single-step-complete" | "budget-exhausted"
@@ -380,6 +381,13 @@ export type CallerRunnerOptions = {
   proofPath?: string;
   /** The dispatcher's nature, caller-declared; recorded on effect-dispatched. */
   executionMode?: ExecutionMode;
+  /**
+   * Optional per-effect execution-mode policy. When provided, each dispatch
+   * feeds its facts through selectDelegateMode: the decision's mode overrides
+   * `executionMode` on effect-dispatched and its reasons are recorded as
+   * modeReason. Absent, the event carries the declared executionMode only.
+   */
+  policy?: (route: GraphRoute, effect: CallerEffect) => PolicyFacts;
   trace?: { file: string; runId: string };
   resume?: CallerHandoff;
 };
@@ -519,10 +527,15 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     effect: CallerEffect,
   ): { outcome: EffectOutcome } | { rejection: OutcomeRejection } => {
     const expectedInputs = resolveEffectInputs(route, effect);
+    const decision = options.policy
+      ? selectDelegateMode(options.policy(route, effect))
+      : undefined;
     emitTrace({
       v: 1, runId: trace?.runId ?? "", kind: "effect-dispatched",
       edgeId: route.edgeId as string, stage, effectId: effect.id,
-      executionMode, focusPaths: expectedInputs.map((entry) => entry.path),
+      executionMode: decision ? toExecutionMode(decision.mode) : executionMode,
+      focusPaths: expectedInputs.map((entry) => entry.path),
+      ...(decision ? { modeReason: decision.reasons.join(";") } : {}),
     });
     try {
       const outcome = options.dispatcher({ repo, route, effect, signals });
