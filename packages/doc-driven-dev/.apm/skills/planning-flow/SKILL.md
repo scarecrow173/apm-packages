@@ -32,6 +32,11 @@ or `task-doc`.
 8. Let the graph re-project; do not call `build_task_graph` or choose the next
    edge inside `planning-flow`.
 
+**Staged loading:** this subgraph consumes no `.sdp` profile — apply the same
+discipline by loading each invoked document skill's body at its dispatch step
+and its references only when the step needs them — see
+[progressive-loading-contract](../skill-discovery-protocol/references/progressive-loading-contract.md).
+
 ## Graph Effect Outcome
 
 When `doc-driven-dev-graph` invokes this skill, return exactly the

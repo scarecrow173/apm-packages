@@ -26,6 +26,11 @@ composition boundary です。ユーザーからの直接要求には引き続�
 7. 現在の design input と plan/test-spec/task evidence を含む、`planning-flow` 用の正確な `EffectOutcome` を 1 つ返します。
 8. graph に再 projection を任せます。`planning-flow` 内で `build_task_graph` を呼び出したり、次の edge を選んだりしません。
 
+**段階的ロード:** この subgraph は `.sdp` profile を消費しない。同じ規律として、
+呼び出す各 document skill の本文はその dispatch step で読み、references は
+step が必要とするときだけ読む —
+[progressive-loading-contract](../skill-discovery-protocol/references/progressive-loading-contract.ja.md) を参照。
+
 ## Graph Effect Outcome
 
 `doc-driven-dev-graph` からこの skill が呼び出された場合、正確な
