@@ -46,7 +46,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 | ----- | ------- | ------ |
 | A. Assess | 要求を理解し、情報状態を判定する | Entry Decision を記録 + 特性を特定 |
 | B. Configure | スキルを発見し、briefing 用の skill stack を構成する | 有効な skill stack を宣言 |
-| C. Gather & Generate | 情報を集め、文書を並列生成する | discovery-doc（任意）+ spec-doc + adr-doc を生成 |
+| C. Gather & Generate | 情報を集め、文書を逐次または段階的に生成する | discovery-doc（任意）+ spec-doc + adr-doc を生成 |
 | D. Gate | 完了条件を検証し、次段階への準備完了を確認する | Gate の合否判定 |
 
 ---
@@ -145,7 +145,7 @@ Profile の生成と検証は `skill-discovery-protocol` スキルが担当す�
 
 ## Phase C: 収集・生成
 
-情報を集め、文書を並列に生成する。十分な情報が揃ったらすぐに文書スキルをディスパッチし、コンテキストの鮮度低下を防ぐ。各ディスパッチの mode は delegate execution-mode policy が選択する。
+情報を集め、文書を逐次または段階的に生成する。情報収集は drafting と並行して続けてよい。十分な情報が揃ったらすぐに文書スキルをディスパッチし、コンテキストの鮮度低下を防ぐ。各ディスパッチの mode は delegate execution-mode policy が選択する。
 
 ### 情報収集
 
@@ -177,7 +177,7 @@ sub-agent dispatch は、真に独立した作業にのみ予約する。
 - **暗黙の並列ではなく、逐次または段階的に。** 両方が準備できた場合は順番に書く（spec 次に ADR、または readiness が示す順序）— shared judgment は互いの決定を参照することで効果を発揮する。並行して実行できるのは independent な delegate のみである。
 - 情報収集は drafting と並行して続ける（非ブロッキング）。
 - どの dispatch に渡す情報も、その時点の**生の収集結果**である。delegated dispatch には `DelegateHandoff` の最小 contract（canonical refs、criteria、permissions、budget、completion）が適用される。要約して劣化させない。
-- delegated dispatch が文書を生成して返した場合、main loop は Phase D の前に pair を再検証する: `scripts/audit_briefing.js --spec <path> --adr <path> --json` を実行し、`consistent: true` が必須である（この audit は status、acceptance criteria、considered options、pairing relation、link 整合性を決定論的に強制する）。
+- delegated dispatch が文書を生成して返した場合、main loop は Phase D の前に下記の静的 audit で pair を再検証する。
 
 ### 停止条件
 
@@ -212,13 +212,29 @@ Stop conditions が満たされない場合:
 - [ ] `adr-doc` に少なくとも 2 つのエントリが `## Considered Options` にある
 - [ ] Entry Decision (A-1/A-2/A-3/A-4/A-5) の選択が記録されている
 - [ ] "pre-implementation blocker" に分類された未解決項目が残っていない
-- [ ] `spec-doc`/`adr-doc` pair が静的に整合している — `scripts/audit_briefing.js` が `consistent: true` を報告する（同じ問題文脈は pairing relation によって強制される）
+- [ ] caller が両文書の問題文脈が同じであることを確認し、収集情報に照らして既知の制約と矛盾を確認する。不一致は解消するか Phase C に戻る。
+- [ ] 静的 pair audit が `consistent: true` を報告する:
+  `node <skill-root>/briefing-flow/scripts/audit_briefing.js --cwd <repo-root> --spec <path> --adr <path> --json`。
+  spec と ADR のパスは `<repo-root>` からの相対パスである。
+
+静的 audit は **両文書** に doc-suite frontmatter schema を適用する:
+`id`、`type`、`status`、`title`、`created`、`updated`、`owners`、`relations`
+が schema に従うこと（日付は `YYYY-MM-DD`、owners と標準 link relation fields
+は配列、`relations.changes` は object、省略された relation fields は空がデフォルト）。
+spec の status は `proposed`、
+`approved`、`implemented`、ADR は `proposed` または `accepted` が必要。
+必須項目数、graph の canonical directories 内の一意な typed artifact chain、
+関連する relation の解決と重複 ID、両文書内のローカル Markdown link/image
+の参照先の存在を検査する。外部 URL、fragment の参照先、参照先の内容は検査せず、
+placeholder は警告となる。この audit は意味的同一性や意味的矛盾、既知の制約が
+正しく反映されたことを証明しない。caller は上記の別途確認を行う。
 
 ### ゲート不通過時のアクション
 
 - spec-doc が不完全 → Phase C に戻って dispatch trigger を再度発火する。
 - spec を書くには情報が不足している → Phase C に戻って追加収集を行う。
 - adr-doc の alternatives が不足している → Frame / Discover スキルで選択肢を広げるため Phase C に戻る。
+- pair audit または問題文脈・制約の確認が不通過 → 文書を修正し両方を再確認する。
 - Gate が通った → briefing 完了を宣言し、次段階（Design）への準備完了を通知する。
 
 ---

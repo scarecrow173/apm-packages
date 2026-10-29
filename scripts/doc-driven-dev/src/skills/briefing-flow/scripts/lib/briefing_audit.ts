@@ -3,13 +3,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
-  configFor,
-  docFiles,
   parseDoc,
-  relationValues,
-  resolveDocumentReference,
   validateFrontMatter,
 } from "../../../lib/doc_suite_utils";
+import { markdownDestinations } from "../../../adr-doc/scripts/lib/adr_utils";
+import {
+  artifactChainCandidates,
+  isExternalArtifactReference,
+  localTarget,
+  resolveArtifactRelation,
+  scanArtifactGraph,
+  type ArtifactRecord,
+} from "../../../doc-driven-dev-graph/scripts/lib/artifact_graph";
 
 export type BriefingAuditFinding = {
   severity: "error" | "warning" | "info";
@@ -32,27 +37,14 @@ type AuditedDoc = {
   body: string;
   content: string;
   data: Record<string, unknown>;
-  id: string | null;
   path: string;
-  relations: Record<string, string[]>;
 };
 
 // Chain-status contract shared with artifact_graph.ts CHAIN_STATUSES.
 const SPEC_STATUSES: ReadonlySet<string> = new Set(["proposed", "approved", "implemented"]);
 const ADR_STATUSES: ReadonlySet<string> = new Set(["proposed", "accepted"]);
 
-// Mirrors the direct spec<->adr pairing relations in preDesignAnchors
-// (doc-driven-dev-graph/scripts/lib/artifact_graph.ts).
-const PAIR_RELATIONS: ReadonlySet<string> = new Set(["derives-from", "derived-by", "refines", "refined-by"]);
-const DERIVES_FROM: ReadonlySet<string> = new Set(["derives-from"]);
-const DERIVED_BY: ReadonlySet<string> = new Set(["derived-by"]);
-
-const EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 const PLACEHOLDER_MARKER = /TODO|{{[^}]+}}|<!--\s*(option|driver|justification|Describe)/i;
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
-}
 
 function isInside(cwd: string, candidate: string): boolean {
   const root = path.resolve(cwd);
@@ -62,20 +54,6 @@ function isInside(cwd: string, candidate: string): boolean {
 
 function normalizePath(cwd: string, target: string): string {
   return path.relative(path.resolve(cwd), path.resolve(target)).split(path.sep).join("/");
-}
-
-// Every non-"changes" front-matter relation key is a candidate link, matching
-// the artifact graph's relation extraction (artifact_graph.ts relationValues).
-function relationMap(data: Record<string, unknown>): Record<string, string[]> {
-  const raw = data.relations;
-  const result: Record<string, string[]> = {};
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
-  for (const key of Object.keys(raw as Record<string, unknown>).sort(compareStrings)) {
-    if (key === "changes") continue;
-    const values = relationValues((raw as Record<string, unknown>)[key]);
-    if (values.length > 0) result[key] = values;
-  }
-  return result;
 }
 
 // Verbatim port of sectionBody/consideredOptionCount from
@@ -112,9 +90,7 @@ function toAuditedDoc(cwd: string, absolutePath: string, content: string): Audit
     body: parsed.body,
     content,
     data: parsed.data,
-    id: typeof parsed.data.id === "string" ? parsed.data.id : null,
     path: normalizePath(cwd, absolutePath),
-    relations: relationMap(parsed.data),
   };
 }
 
@@ -122,7 +98,10 @@ function loadDoc(cwd: string, inputPath: string, role: DocRole, findings: Briefi
   const absolutePath = path.resolve(cwd, inputPath);
   const relativePath = normalizePath(cwd, absolutePath);
   const label = role === "spec" ? "Spec" : "ADR";
-  if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
+  let content: string;
+  try {
+    content = fs.readFileSync(absolutePath, "utf8");
+  } catch {
     findings.push({
       severity: "error",
       code: "missing-file",
@@ -131,7 +110,6 @@ function loadDoc(cwd: string, inputPath: string, role: DocRole, findings: Briefi
     });
     return null;
   }
-  const content = fs.readFileSync(absolutePath, "utf8");
   const doc = toAuditedDoc(cwd, absolutePath, content);
   if (!doc) {
     const parsed = parseDoc(content);
@@ -146,75 +124,7 @@ function loadDoc(cwd: string, inputPath: string, role: DocRole, findings: Briefi
   return doc;
 }
 
-function resolveTarget(cwd: string, owner: AuditedDoc, target: string): string | null {
-  const trimmed = target.trim();
-  if (EXTERNAL_REFERENCE.test(trimmed)) return null;
-  const resolved = resolveDocumentReference(cwd, trimmed, path.dirname(owner.absolutePath));
-  if (!resolved || !isInside(cwd, resolved)) return null;
-  return path.resolve(resolved);
-}
-
-// True when one of owner's `relationNames` values points at `target`, matching
-// the graph's id-first-then-path resolution in resolveArtifactRelation.
-function referencesDoc(cwd: string, owner: AuditedDoc, relationNames: ReadonlySet<string>, target: AuditedDoc): boolean {
-  for (const [field, values] of Object.entries(owner.relations)) {
-    if (!relationNames.has(field)) continue;
-    for (const value of values) {
-      const trimmed = value.trim();
-      if (EXTERNAL_REFERENCE.test(trimmed)) continue;
-      if (target.id && trimmed === target.id) return true;
-      const resolved = resolveTarget(cwd, owner, trimmed);
-      if (resolved && resolved === target.absolutePath) return true;
-    }
-  }
-  return false;
-}
-
-// Candidate discovery anchors: every type:"discovery" record in the canonical
-// discovery directories plus any resolvable derives-from target elsewhere,
-// mirroring the record set preDesignAnchors filters over.
-function discoveryAnchors(cwd: string, spec: AuditedDoc, adr: AuditedDoc): AuditedDoc[] {
-  const candidates = new Map<string, AuditedDoc>();
-  const add = (absolutePath: string): void => {
-    const resolved = path.resolve(absolutePath);
-    if (!isInside(cwd, resolved) || !fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) return;
-    const relativePath = normalizePath(cwd, resolved);
-    if (candidates.has(relativePath)) return;
-    let content: string;
-    try {
-      content = fs.readFileSync(resolved, "utf8");
-    } catch {
-      return;
-    }
-    const doc = toAuditedDoc(cwd, resolved, content);
-    if (doc && doc.data.type === "discovery") candidates.set(relativePath, doc);
-  };
-  for (const dir of configFor("discovery").dirs) {
-    const base = path.join(cwd, dir);
-    for (const file of docFiles(base)) add(path.join(base, file));
-  }
-  for (const artifact of [spec, adr]) {
-    for (const value of artifact.relations["derives-from"] ?? []) {
-      const resolved = resolveTarget(cwd, artifact, value);
-      if (resolved) add(resolved);
-    }
-  }
-  return [...candidates.values()].sort((left, right) => compareStrings(left.path, right.path));
-}
-
-// Mirrors preDesignAnchors: consistent when a direct typed lineage relation
-// links spec<->adr in either direction, or one discovery record anchors both
-// (artifact --derives-from--> discovery or discovery --derived-by--> artifact).
-function isPairingConsistent(cwd: string, spec: AuditedDoc, adr: AuditedDoc): boolean {
-  if (referencesDoc(cwd, spec, PAIR_RELATIONS, adr) || referencesDoc(cwd, adr, PAIR_RELATIONS, spec)) {
-    return true;
-  }
-  return discoveryAnchors(cwd, spec, adr).some((discovery) =>
-    (referencesDoc(cwd, spec, DERIVES_FROM, discovery) || referencesDoc(cwd, discovery, DERIVED_BY, spec))
-    && (referencesDoc(cwd, adr, DERIVES_FROM, discovery) || referencesDoc(cwd, discovery, DERIVED_BY, adr)));
-}
-
-function auditDocContent(cwd: string, doc: AuditedDoc, role: DocRole, findings: BriefingAuditFinding[]): void {
+async function auditDocContent(cwd: string, doc: AuditedDoc, role: DocRole, findings: BriefingAuditFinding[]): Promise<void> {
   for (const issue of validateFrontMatter(doc.content)) {
     findings.push({
       severity: "error",
@@ -265,36 +175,53 @@ function auditDocContent(cwd: string, doc: AuditedDoc, role: DocRole, findings: 
       message: "Contains unresolved placeholders",
     });
   }
-  for (const [field, values] of Object.entries(doc.relations)) {
-    for (const target of values) {
-      if (EXTERNAL_REFERENCE.test(target.trim())) continue;
-      if (!resolveTarget(cwd, doc, target)) {
-        findings.push({
-          severity: "error",
-          code: "broken-relation-link",
-          file: doc.path,
-          message: `Relation ${field} points to missing target: ${target}`,
-        });
-      }
+  for (const url of await markdownDestinations(doc.content)) {
+    if (isExternalArtifactReference(url) || url.startsWith("#")) continue;
+    const pathname = url.split(/[?#]/, 1)[0];
+    if (!pathname) continue;
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(pathname);
+    } catch {
+      findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Invalid local link: ${url}` });
+      continue;
+    }
+    const target = path.resolve(path.dirname(doc.absolutePath), decoded);
+    if (!isInside(cwd, target) || !fs.existsSync(target)) {
+      findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Broken local link: ${url}` });
     }
   }
 }
 
 /** Audit a spec/ADR pair for briefing consistency. Read-only; never writes. */
-export function auditBriefingPair(cwd: string, specPath: string, adrPath: string): BriefingAuditReport {
+export async function auditBriefingPair(cwd: string, specPath: string, adrPath: string): Promise<BriefingAuditReport> {
   const root = path.resolve(cwd);
   const findings: BriefingAuditFinding[] = [];
   const spec = loadDoc(root, specPath, "spec", findings);
-  if (spec) auditDocContent(root, spec, "spec", findings);
+  if (spec) await auditDocContent(root, spec, "spec", findings);
   const adr = loadDoc(root, adrPath, "adr", findings);
-  if (adr) auditDocContent(root, adr, "adr", findings);
-  if (spec && adr && !isPairingConsistent(root, spec, adr)) {
+  if (adr) await auditDocContent(root, adr, "adr", findings);
+  const { graph, records } = scanArtifactGraph({ cwd: root });
+  const candidates = spec && adr
+    ? artifactChainCandidates(graph, records).filter((chain) => chain.spec === spec.path && chain.adr === adr.path)
+    : [];
+  if (spec && adr && candidates.length !== 1) {
     findings.push({
       severity: "error",
       code: "inconsistent-pairing",
       file: null,
-      message: `Spec ${spec.path} and ADR ${adr.path} share no derives-from/derived-by/refines/refined-by relation or common discovery anchor`,
+      message: `Spec ${spec.path} and ADR ${adr.path} must belong to one unambiguous typed artifact chain`,
     });
+  }
+  const chain = candidates.length === 1 ? candidates[0] : undefined;
+  const relevant = new Set([spec?.path, adr?.path, chain?.design, chain?.plan, ...(chain?.anchors ?? [])]);
+  for (const doc of [spec, adr]) {
+    if (doc && !records.some((record) => record.path === doc.path)) {
+      findings.push({ severity: "error", code: "noncanonical-artifact", file: doc.path, message: "Document is not in the artifact graph's canonical record set" });
+    }
+  }
+  for (const record of records.filter((item) => relevant.has(item.path))) {
+    auditRelations(root, record, records, findings);
   }
   return {
     spec: spec?.path ?? null,
@@ -302,4 +229,25 @@ export function auditBriefingPair(cwd: string, specPath: string, adrPath: string
     findings,
     consistent: !findings.some((finding) => finding.severity === "error"),
   };
+}
+
+function auditRelations(cwd: string, record: ArtifactRecord, records: ArtifactRecord[], findings: BriefingAuditFinding[]): void {
+  if (record.id && records.filter((other) => other.id === record.id).length > 1) {
+    findings.push({ severity: "error", code: "duplicate-id", file: record.path, message: `Duplicate artifact ID: ${record.id}` });
+  }
+  for (const issue of record.relationIssues) {
+    findings.push({ severity: "error", code: "invalid-relation", file: record.path, message: issue });
+  }
+  for (const [field, values] of Object.entries(record.relations)) {
+    for (const value of values) {
+      if (isExternalArtifactReference(value)) continue;
+      const matches = records.filter((other) => other.id === value);
+      const target = resolveArtifactRelation(cwd, record, value, records);
+      if (matches.length > 1 || (!target && !localTarget(cwd, record, value).exists)) {
+        findings.push({ severity: "error", code: "broken-relation-link", file: record.path, message: `Relation ${field} has an unresolved or ambiguous target: ${value}` });
+      } else if (target?.id && records.filter((other) => other.id === target.id).length > 1) {
+        findings.push({ severity: "error", code: "duplicate-id", file: record.path, message: `Relation ${field} targets duplicate artifact ID: ${target.id}` });
+      }
+    }
+  }
 }

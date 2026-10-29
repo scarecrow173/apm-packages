@@ -164,6 +164,17 @@ async function markdownLinks(content: string): Promise<MarkdownLink[]> {
   return links;
 }
 
+/** Markdown destinations, including images and reference definitions; excludes code. */
+async function markdownDestinations(content: string): Promise<string[]> {
+  const tree = await markdownAst(content);
+  const { visit } = await loadMarkdownModules();
+  const urls: string[] = [];
+  visit(tree, ["link", "image", "definition"], (node: MarkdownNode) => {
+    if (node.url) urls.push(node.url);
+  });
+  return urls;
+}
+
 async function referencedPaths(content: string): Promise<string[]> {
   const tree = await markdownAst(content);
   const { visit } = await loadMarkdownModules();
@@ -286,6 +297,7 @@ export {
   findAdrDir,
   hasSection,
   markdownLinks,
+  markdownDestinations,
   matterData,
   parseCsv,
   referencedPaths,

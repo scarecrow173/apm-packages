@@ -50,7 +50,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 | ----- | ------- | ------ |
 | A. Assess | Understand the request, determine information state | Entry Decision recorded + characteristics identified |
 | B. Configure | Discover skills, build/load skill stack for briefing | Active skill stack declared |
-| C. Gather & Generate | Gather information and produce documents in parallel | discovery-doc (optional) + spec-doc + adr-doc generated |
+| C. Gather & Generate | Gather information and produce documents sequentially or in stages | discovery-doc (optional) + spec-doc + adr-doc generated |
 | D. Gate | Verify completion conditions, confirm readiness for next phase | Gate pass/fail decision |
 
 ---
@@ -158,7 +158,8 @@ For detailed category definitions, see the adapter's `classification.taxonomy` i
 
 ## Phase C: Gather & Generate
 
-Gather information and produce documents in parallel. Dispatch document skills
+Gather information and produce documents sequentially or in stages; information
+gathering may continue alongside drafting. Dispatch document skills
 immediately when sufficient information is gathered, preventing context freshness
 (detail level) degradation. The delegate execution-mode policy selects each
 dispatch's mode.
@@ -201,10 +202,7 @@ dispatch is reserved for genuinely independent work.
   (canonical refs, criteria, permissions, budget, completion) applies; do not
   degrade through summarization.
 - When a delegated dispatch delivers a document, the main loop re-verifies the
-  pair before Phase D: run `scripts/audit_briefing.js --spec <path> --adr
-  <path> --json`; `consistent: true` is required (the audit enforces status,
-  acceptance criteria, considered options, pairing relations, and link
-  integrity deterministically).
+  pair before Phase D using the static audit below.
 
 ### Stop Conditions
 
@@ -239,13 +237,33 @@ Briefing is NOT complete until ALL of the following conditions are met:
 - [ ] `adr-doc` exists with at least 2 entries under `## Considered Options`
 - [ ] Entry Decision (A-1/A-2/A-3/A-4/A-5) selection is recorded
 - [ ] No open items classified as "pre-implementation blocker" remain unresolved
-- [ ] `spec-doc`/`adr-doc` pair is statically consistent — `scripts/audit_briefing.js` reports `consistent: true` (same problem context enforced by pairing relations)
+- [ ] The caller confirms both documents reference the same problem context and
+  checks known constraints and contradictions against the gathered information;
+  resolve any mismatch or return to Phase C.
+- [ ] The static pair audit reports `consistent: true`:
+  `node <skill-root>/briefing-flow/scripts/audit_briefing.js --cwd <repo-root> --spec <path> --adr <path> --json`.
+  Paths for spec and ADR are relative to `<repo-root>`.
+
+The static audit applies the doc-suite frontmatter schema to **both** documents:
+`id`, `type`, `status`, `title`, `created`, `updated`, `owners` and `relations`
+must conform (dates use `YYYY-MM-DD`, owners and standard link relation fields
+are arrays, while `relations.changes` is an object; omitted relation fields
+default to empty). Spec status must be `proposed`,
+`approved`, or `implemented`; ADR status must be `proposed` or `accepted`.
+It checks the required counts, a unique typed artifact chain in canonical graph
+directories, relevant relation resolution and duplicate IDs, and existence of
+local Markdown link/image destinations in the two documents. External URLs,
+fragment targets and destination contents are not checked; placeholders are
+warnings. The audit does not establish semantic identity or detect semantic
+contradictions or whether known constraints are correctly represented; the
+caller must perform the separate check above.
 
 ### Actions on Gate Failure
 
 - spec-doc incomplete → return to Phase C and re-fire dispatch trigger.
 - Insufficient information to write spec → return to Phase C for additional gathering.
 - adr-doc alternatives insufficient → return to Phase C using Frame/Discover skills to expand options.
+- Pair audit or problem-context/constraint check fails → repair the documents and recheck both.
 - Gate passes → declare briefing complete and signal readiness for next phase (Design).
 
 ---

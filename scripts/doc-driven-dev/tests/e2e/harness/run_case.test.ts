@@ -89,10 +89,11 @@ test("briefing audit expectation checks JSON and exit status for both outcomes",
   const repo = createFixtureRepo();
   const run = { repo, traceEvents: [] } as unknown as CaseRun;
   const audit = { spec: "docs/specs/0001-graph.md", adr: "docs/adr/0001-graph.md" };
-  // Default fixture has no spec/ADR pairing; checking for true must fail.
+  // The default fixture has a shared design chain. Make the spec invalid first.
+  updateArtifact(repo, audit.spec, { status: "draft" });
   assert.deepEqual(checkExpectations(run, { briefingAudit: { ...audit, consistent: false } }), []);
   assert.match(checkExpectations(run, { briefingAudit: { ...audit, consistent: true } }).join("\n"), /briefingAudit:/);
-  updateArtifact(repo, audit.spec, { relations: { "derives-from": ["ADR-0001"] } });
+  updateArtifact(repo, audit.spec, { status: "proposed" });
   assert.deepEqual(checkExpectations(run, { briefingAudit: { ...audit, consistent: true } }), []);
   assert.match(checkExpectations(run, { briefingAudit: { ...audit, consistent: false } }).join("\n"), /briefingAudit:/);
   assert.match(checkExpectations(run, { briefingAudit: { ...audit, spec: "missing.md", consistent: true } }).join("\n"), /briefingAudit:/);
