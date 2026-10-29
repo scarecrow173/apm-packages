@@ -3,8 +3,11 @@
  *
  * Separates the runtime artifact scan's reads (filesRead/bytesRead — the
  * whole-repo projection channel, which is allowed) from the document bodies
- * actually passed to delegates (authoritative input refs). The ratio makes
- * the separation measurable: full-scan bytes vs delegate-passed bytes.
+ * actually passed to delegates (dispatched focus paths). The ratio makes the
+ * separation measurable: full-scan bytes vs delegate-passed bytes. A third
+ * channel exists — in-process canonicalReference fingerprint reads — which
+ * is intentionally not included in `scan`; do not read `scan` as "all bytes
+ * read by the run."
  */
 
 export type ReadMetrics = { files: number; bytes: number };

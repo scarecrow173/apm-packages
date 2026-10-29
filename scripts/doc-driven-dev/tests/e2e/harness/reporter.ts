@@ -72,6 +72,18 @@ export function formatReport(reports: CaseReport[]): string {
     .trimEnd();
   const lines = [line(header), line(widths.map((width) => "-".repeat(width)))];
   for (const row of rows) lines.push(line(row));
+  const baselined = reports.filter((report) => report.baseline);
+  if (baselined.length > 0) {
+    lines.push("", "baseline (scan files/bytes vs delegate-input files/bytes):");
+    for (const report of baselined) {
+      const b = report.baseline!;
+      lines.push(
+        `  ${report.caseId}: scan ${b.scan.files}/${b.scan.bytes}`
+        + `  inputs ${b.delegateInputs.files}/${b.delegateInputs.bytes}`
+        + `  ratio ${b.ratio.toFixed(3)}`,
+      );
+    }
+  }
   for (const report of reports) {
     if (report.failures.length === 0) continue;
     lines.push("", `${report.caseId} failures:`);

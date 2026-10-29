@@ -107,12 +107,13 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
 
   // Issue #124 baseline. Scan channel: summed artifact-scan trace events
   // (summarizeTrace already aggregates filesRead/bytesRead per routing hop).
-  // Delegate-input channel: unique authoritativeInputs paths across every
-  // accepted outcome of every leg — unioned over legResults rather than the
-  // last leg alone so resume:false legs contribute their own outcomes.
-  const delegatePaths = legResults
-    .flatMap((leg) => leg.outcomes)
-    .flatMap((outcome) => outcome.authoritativeInputs.map((ref) => ref.path));
+  // Delegate-input channel: unique focusPaths across every effect-dispatched
+  // event — emitted before outcome validation, so rejected dispatches count
+  // too. A third channel (in-process canonicalReference fingerprint reads) is
+  // intentionally not counted here; see context_metrics.ts doc.
+  const delegatePaths = traceEvents
+    .filter((event) => event.kind === "effect-dispatched")
+    .flatMap((event) => event.focusPaths);
   // Bytes are measured at end-of-run state; a path removed mid-case — or a
   // non-file ref like the "." workspace root — deterministically counts 0.
   const inputSize = (relativePath: string): number => {
