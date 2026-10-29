@@ -201,7 +201,7 @@ through `impl-doc`.
 Example command:
 
 ```bash
-node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
+node ../impl-doc/scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
 ```
 
 Known-solution work does not skip this phase. The Implementation Record is
