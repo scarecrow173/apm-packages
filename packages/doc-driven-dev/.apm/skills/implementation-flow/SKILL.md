@@ -229,6 +229,15 @@ the authoritative handoff:
 - Use `taskGraph.edges` to order dependent work, and parallelize only work that
   those dependency edges show is independent.
 
+**Parallel delegation**: dependency independence is necessary but not
+sufficient for parallel dispatch. Parallelize slices only when their declared
+`## Affected Files` write scopes are verifiably disjoint — see
+[references/parallel-delegation-contract.md](references/parallel-delegation-contract.md)
+for eligibility, isolation, merge-verification, and fallback rules. Serial
+execution is always the default fallback; never guess a scope. The slice's
+own task doc and its declared `docs/impl/` evidence need no scope
+declaration; another task's document is never writable.
+
 Apply each skill in the active stack according to its priority:
 
 1. Follow each skill's own process (read the skill's SKILL.md).
@@ -371,6 +380,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 | Over-engineering | Building what task doesn't require |
 | Ignoring loopback signals | Continuing when spec/design gaps are apparent |
 | Confidence without evidence | "It works" without passing tests or verified data |
+| "Missing Affected Files is fine" | Undeclared write scope forces serial — parallel scope is never guessed |
 
 ---
 
