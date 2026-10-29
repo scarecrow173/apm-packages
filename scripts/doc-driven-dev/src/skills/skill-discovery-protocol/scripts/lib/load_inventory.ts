@@ -114,20 +114,27 @@ const SCRIPT_PATH_RE = /([A-Za-z0-9._<>/-]*scripts\/[A-Za-z0-9._-]+\.js)\b/g;
 const SDP_CLI_RE = /\bsdp\s+(scan|infer|profile|validate|query)\b/g;
 const SDP_ARTIFACT_RE = /(\.sdp\/[A-Za-z0-9._/-]*[A-Za-z0-9_-])/g;
 const ADAPTER_RE = /([A-Za-z0-9._<>/-]*assets\/adapters\/[A-Za-z0-9._-]+\.ya?ml)/g;
+// Verbs match at the verb position with first-letter case alternation —
+// sentence/bullet/step-initial capitals are the normal case. The skill-name
+// pattern stays case-sensitive.
+const INVOKE_VERB = "(?:[Rr]e-)?[Ii]nvoke[sd]?";
+const ROUTE_VERB =
+  "(?:[Uu]se[sd]?|[Uu]sing|[Rr]uns?|[Dd]elegates?\\s+to"
+  + "|[Dd]ispatch(?:es)?(?:\\s+to)?|[Hh]ands?\\s+off\\s+to)";
 const INVOKE_QUOTED_RE = new RegExp(
-  "\\b(?:re-)?invoke[sd]?\\s+(?:from\\s+)?" + QUOTED_NAME,
+  "\\b" + INVOKE_VERB + "\\s+(?:from\\s+)?" + QUOTED_NAME,
   "g",
 );
 const INVOKE_BARE_RE = new RegExp(
-  "\\b(?:re-)?invoke[sd]?\\s+(?:from\\s+)?(" + SKILL_NAME_PATTERN + ")\\b",
+  "\\b" + INVOKE_VERB + "\\s+(?:from\\s+)?(" + SKILL_NAME_PATTERN + ")\\b",
   "g",
 );
 const VERB_QUOTED_RE = new RegExp(
-  "\\b(?:use[sd]?|using|runs?|delegates?\\s+to)\\s+" + QUOTED_NAME,
+  "\\b" + ROUTE_VERB + "\\s+" + QUOTED_NAME,
   "g",
 );
 const NAME_THEN_INVOKE_RE = new RegExp(
-  QUOTED_NAME + "\\s+(?:re-)?invoke[sd]?\\b",
+  QUOTED_NAME + "\\s+" + INVOKE_VERB + "\\b",
   "g",
 );
 const SKILL_LINK_RE = /\.\.\/([a-z0-9][a-z0-9_-]*)\/SKILL\.md/g;

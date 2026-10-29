@@ -34,6 +34,7 @@ const DEMO_BODY = `
 - Use \`other-skill\` — see the [\`other-skill\` SKILL](../other-skill/SKILL.md) for details.
 - Run \`sdp scan --adapter <yaml>\` then \`sdp validate\`.
 - If needed, run \`node scripts/gone.js\` to repair.
+- Hand off to \`handoff-target\` when drafting completes.
 `;
 
 const DEMO_SKILL = `---
@@ -147,7 +148,8 @@ test("inventoryFlow classifies every directive kind with line and optional flag"
     },
   ]);
 
-  // line 16: `use <name>` and `../<name>/SKILL.md` dedupe to one directive.
+  // line 16: capitalized `Use <name>` (verb alternation) and
+  // `../<name>/SKILL.md` both fire and dedupe to one directive.
   // "See the" is not a marker (only "see also"), so not optional.
   assert.deepEqual(directivesAt(inventory, 16), [
     { kind: "skill-invoke", target: "other-skill", line: 16, optional: false },
@@ -169,7 +171,12 @@ test("inventoryFlow classifies every directive kind with line and optional flag"
     },
   ]);
 
-  assert.equal(inventory.totals.directives, 11);
+  // line 19: "Hand off to `name`" is a delegation directive.
+  assert.deepEqual(directivesAt(inventory, 19), [
+    { kind: "skill-invoke", target: "handoff-target", line: 19, optional: false },
+  ]);
+
+  assert.equal(inventory.totals.directives, 12);
 });
 
 test("inventoryFlow resolves targets to package files and counts only shipped-kind misses", () => {
@@ -212,6 +219,11 @@ test("inventoryFlow resolves targets to package files and counts only shipped-ki
       path: "demo-flow/scripts/sdp.js",
       exists: true,
       bytes: stat("demo-flow/scripts/sdp.js"),
+    },
+    {
+      path: "handoff-target/SKILL.md",
+      exists: false,
+      bytes: 0,
     },
     {
       path: "other-skill/SKILL.md",
