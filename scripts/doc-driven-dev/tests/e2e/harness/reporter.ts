@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
+import type { ContextBaseline } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/context_metrics";
 import {
   normalizeForCompare,
   summarizeTrace,
@@ -22,6 +23,12 @@ export type CaseReport = {
   edgeSequence: string[];
   failures: string[];
   traceSummary: TraceSummary;
+  /**
+   * Issue #124 baseline: runtime scan reads vs delegate-passed body reads.
+   * Serialized verbatim into the JSONL report; absent only when the CaseRun
+   * carried no baseline.
+   */
+  baseline?: ContextBaseline;
   /** Reference only — never asserted. */
   durationMs: number;
 };
@@ -39,6 +46,7 @@ export function reportCase(caseId: string, run: CaseRun, failures: string[], dur
       .map((event) => event.edgeId ?? event.status),
     failures: [...failures],
     traceSummary: summarizeTrace(run.traceEvents),
+    baseline: run.baseline,
     durationMs,
   };
 }
