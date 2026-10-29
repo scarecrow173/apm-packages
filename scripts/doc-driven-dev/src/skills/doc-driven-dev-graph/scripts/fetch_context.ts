@@ -55,7 +55,7 @@ function usage(): string {
 
 function requiredValue(argv: string[], index: number, option: string): string {
   const value = argv[index + 1];
-  if (value === undefined || value.startsWith("--")) {
+  if (!value || value.startsWith("--")) {
     throw new Error(`Missing value for ${option}`);
   }
   return value;
@@ -75,11 +75,10 @@ function splitPathValue(raw: string, option: string): PathValue {
 }
 
 function parseDepth(raw: string): number {
-  const depth = Number(raw);
-  if (!Number.isInteger(depth) || depth < 0) {
+  if (!/^\d+$/.test(raw)) {
     throw new Error(`--depth must be an integer >= 0: ${raw}`);
   }
-  return depth;
+  return Number(raw);
 }
 
 function parseArgs(argv: string[]): CliArgs {

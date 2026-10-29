@@ -19840,7 +19840,7 @@ function usage() {
 }
 function requiredValue(argv, index, option) {
   const value = argv[index + 1];
-  if (value === void 0 || value.startsWith("--")) {
+  if (!value || value.startsWith("--")) {
     throw new Error(`Missing value for ${option}`);
   }
   return value;
@@ -19857,11 +19857,10 @@ function splitPathValue(raw, option) {
   return { path: refPath, value };
 }
 function parseDepth(raw) {
-  const depth = Number(raw);
-  if (!Number.isInteger(depth) || depth < 0) {
+  if (!/^\d+$/.test(raw)) {
     throw new Error(`--depth must be an integer >= 0: ${raw}`);
   }
-  return depth;
+  return Number(raw);
 }
 function parseArgs(argv) {
   const args = {
