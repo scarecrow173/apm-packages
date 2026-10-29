@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
+import type { ContextBaseline } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/context_metrics";
 import {
   normalizeForCompare,
   summarizeTrace,
@@ -22,6 +23,12 @@ export type CaseReport = {
   edgeSequence: string[];
   failures: string[];
   traceSummary: TraceSummary;
+  /**
+   * Issue #124 baseline: runtime scan reads vs delegate-passed body reads.
+   * Serialized verbatim into the JSONL report; absent only when the CaseRun
+   * carried no baseline.
+   */
+  baseline?: ContextBaseline;
   /** Reference only — never asserted. */
   durationMs: number;
 };
@@ -39,6 +46,7 @@ export function reportCase(caseId: string, run: CaseRun, failures: string[], dur
       .map((event) => event.edgeId ?? event.status),
     failures: [...failures],
     traceSummary: summarizeTrace(run.traceEvents),
+    baseline: run.baseline,
     durationMs,
   };
 }
@@ -64,6 +72,18 @@ export function formatReport(reports: CaseReport[]): string {
     .trimEnd();
   const lines = [line(header), line(widths.map((width) => "-".repeat(width)))];
   for (const row of rows) lines.push(line(row));
+  const baselined = reports.filter((report) => report.baseline);
+  if (baselined.length > 0) {
+    lines.push("", "baseline (scan files/bytes vs delegate-input files/bytes):");
+    for (const report of baselined) {
+      const b = report.baseline!;
+      lines.push(
+        `  ${report.caseId}: scan ${b.scan.files}/${b.scan.bytes}`
+        + `  inputs ${b.delegateInputs.files}/${b.delegateInputs.bytes}`
+        + `  ratio ${b.ratio.toFixed(3)}`,
+      );
+    }
+  }
   for (const report of reports) {
     if (report.failures.length === 0) continue;
     lines.push("", `${report.caseId} failures:`);

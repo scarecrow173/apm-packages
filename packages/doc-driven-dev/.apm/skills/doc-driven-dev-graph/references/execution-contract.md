@@ -118,6 +118,13 @@ fresh projection. Delegate execution mode is selected per
 [`delegate-execution-policy.md`](delegate-execution-policy.md); the mode and
 selection reason are recorded on the trace `effect-dispatched` event.
 
+Document bodies handed to delegates follow the progressive retrieval contract
+in [`context-retrieval-contract.md`](context-retrieval-contract.md): L1
+metadata for selection, L2 validated body fetch for authoritative inputs, and
+L3 bounded traversal only with a recorded reason. Required evidence and
+gate-required documents are always fetched; a stale fingerprint triggers
+re-projection and re-fetch, never reuse.
+
 The caller adapter normalizes the declared script delegates (`migrate_docs`,
 `scaffold_docs`, and `build_task_graph` — the migration scripts are owned by
 `doc-maintenance`) and named audits (`spec`, `adr`,
