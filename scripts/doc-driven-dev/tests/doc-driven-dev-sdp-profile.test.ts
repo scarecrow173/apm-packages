@@ -28,8 +28,8 @@ import { inventoryAll } from "../src/skills/skill-discovery-protocol/scripts/lib
  * separate deterministic gate (re-generation diff modulo timestamps).
  *
  * The staged-loading regression guard compares a live `inventoryAll` run on
- * the real package against the audited artifacts in
- * `.superpowers/sdd/2026-10-29-skill-discovery/`. `referencedBytes` is
+ * the real package against the audited artifacts committed under
+ * `tests/fixtures/skill-discovery-inventory/`. `referencedBytes` is
  * deliberately not asserted: the audit's +714 KB increase was a re-attribution
  * (`impl-doc/scripts/new_impl_record.js` resolved once the path was fixed),
  * not new waste.
@@ -43,7 +43,7 @@ const sdpScripts = path.join(skillRoot, "skill-discovery-protocol", "scripts");
 
 const artifactsDir = path.resolve(
   __dirname,
-  "../../../.superpowers/sdd/2026-10-29-skill-discovery",
+  "fixtures/skill-discovery-inventory",
 );
 
 // ─── CLI helpers (generated bundle, same spawn convention as profile.test.ts) ───
