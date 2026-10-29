@@ -48,14 +48,14 @@ export const case14a: E2ECase = {
   },
 };
 
-// Gate-level re-entry, not an EffectOutcome retry or an actual skill run:
-// the first completed scripted delegate writes just the spec; the briefing
-// gate routes back to briefing-flow, whose second scripted completion repairs
-// the pair. This exercises the observable part of late-arriving repair.
+// The first completed delegate writes only the spec; the briefing gate routes
+// back, and the second delegate yields input-required after both audits. Resume
+// reuses those receipts before the delegate repairs spec+ADR. This is an
+// EffectOutcome yield, NOT a retry outcome or an actual skill execution.
 export const case14c: E2ECase = {
   ...case14a,
   id: "e2e-14c",
-  description: "scripted partial pair → briefing-retry edge → repair and pair audit",
+  description: "partial pair → input-required yield → pending resume repairs pair",
   script: {
     ...case01.script,
     "probe-to-briefing": {
@@ -63,14 +63,50 @@ export const case14c: E2ECase = {
       mutate: [specWrite],
     },
     "briefing-retry": {
-      audits: { spec: "completed", adr: "completed" }, delegate: "completed",
+      audits: { spec: "completed", adr: "completed" }, delegate: [{ yield: "input-required" }, "completed"],
       mutate: [adrWrite, { append: { path: spec, body: "\nLate information incorporated.\n" } }],
     },
   },
+  steps: [
+    {
+      expect: {
+        yield: "input-required",
+        edgeSequence: ["probe-to-briefing", "briefing-retry"],
+        completedEdges: ["probe-to-briefing"],
+        briefingAudit: { spec, adr, consistent: false },
+        checkpointReceipts: [{ edgeId: "probe-to-briefing", count: 1 }, { edgeId: "briefing-retry", count: 0 }],
+        events: [
+          { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "audit", count: 2 },
+          { kind: "effect-outcome", edgeId: "briefing-retry", stage: "audit", effectId: "spec", outcome: "completed", count: 1 },
+          { kind: "effect-outcome", edgeId: "briefing-retry", stage: "audit", effectId: "adr", outcome: "completed", count: 1 },
+          { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "delegate", effectId: "briefing-flow", count: 1 },
+          { kind: "effect-outcome", edgeId: "briefing-retry", stage: "delegate", effectId: "briefing-flow", outcome: "yield", reason: "input-required", count: 1 },
+          { kind: "effect-outcome", edgeId: "briefing-retry", outcome: "retry", count: 0 },
+        ],
+      },
+    },
+    {
+      expect: {
+        yield: "terminal",
+        edgeSequence: [
+          "briefing-retry", "briefing-to-design", "design-to-planning", "planning-to-task-graph",
+          "task-graph-to-implementation", "implementation-to-followup-triage",
+          "followup-triage-terminal", "exit-audit-to-complete", null,
+        ],
+        briefingAudit: { spec, adr, consistent: true },
+        checkpointReceipts: [{ edgeId: "probe-to-briefing", count: 1 }, { edgeId: "briefing-retry", count: 1 }],
+        events: [
+          { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "audit", count: 0 },
+          { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "delegate", effectId: "briefing-flow", executionMode: "same-context", modeReason: "shared-judgment", count: 1 },
+          { kind: "effect-outcome", edgeId: "briefing-retry", stage: "delegate", effectId: "briefing-flow", outcome: "completed", count: 1 },
+        ],
+      },
+    },
+  ],
   expect: {
     ...case14a.expect,
     edgeSequence: [
-      "probe-to-briefing", "briefing-retry", "briefing-to-design", "design-to-planning",
+      "briefing-retry", "briefing-to-design", "design-to-planning",
       "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
       "followup-triage-terminal", "exit-audit-to-complete", null,
     ],
@@ -80,7 +116,9 @@ export const case14c: E2ECase = {
       "followup-triage-terminal", "exit-audit-to-complete",
     ],
     events: [
-      { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "delegate", executionMode: "same-context", modeReason: "shared-judgment", count: 1 },
+      { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "delegate", executionMode: "same-context", modeReason: "shared-judgment", count: 2 },
+      { kind: "run-yield", reason: "input-required", count: 1 },
+      { kind: "run-yield", reason: "terminal", count: 1 },
     ],
     finalFiles: {
       ...case14a.expect.finalFiles,

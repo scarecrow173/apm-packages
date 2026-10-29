@@ -82,9 +82,10 @@ and register it in `cases/index.ts`. Fields:
 | `graph`, `proofPath` | Custom graph YAML (repo-relative) and proof doc (default `docs/tasks/0001-task.md`). |
 | `maxHops`, `mode` | Hop budget; `run-until-yield` (default) or `single-step`. |
 | `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document mutators applied when the delegate completes, `commitEvidence` to commit during evidence persistence. Unscripted effects throw — no silent defaults. |
-| `steps` | Multi-leg runs. Each leg: `mutateBefore` (applied between runs), `options` (`focus`/`signals`/`current`/`mode`/`maxHops`, plus `resume:false` for a fresh run — on resumed legs the prior `CallerHandoff` wins `current`/`mode`/`maxHops`), `expect` (evaluated against that leg's own trace partition). |
+| `steps` | Multi-leg runs. Each leg: `mutateBefore` (applied between runs), `options` (`focus`/`signals`/`current`/`mode`/`maxHops`, plus `resume:false` for a fresh run — on resumed legs the prior `CallerHandoff` wins `current`/`mode`/`maxHops`), `expect` (trace checks use that leg's partition). |
 | `expect` | Final-leg expectations: `yield`, `edgeSequence`, `completedEdges` scope to the last leg; `events` tallies span the whole run; `blockersContain`/`tasksContain` match `route-selected` payloads; `finalFiles` re-reads end-of-run repo state. |
-| `expect.briefingAudit` | Run the real source `audit_briefing` CLI via tsx against the final fixture (`spec`, `adr`, and expected `consistent`); check both JSON and exit status. Like `finalFiles`, this reads end-of-run state, including for leg expectations. |
+| `expect.briefingAudit` | Run the real source `audit_briefing` CLI via tsx against the fixture (`spec`, `adr`, and expected `consistent`); check both JSON and exit status. A step expectation runs immediately after that leg; a top-level expectation reads the final state. |
+| `expect.checkpointReceipts` | Assert counts of persisted proof-document receipts by edge. Step expectations read at the leg boundary; top-level expectations read final state. A checkpoint is not a trace event; trace `run-yield.completedEdges` is asserted separately. |
 
 ## Running
 
@@ -152,7 +153,7 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 | e2e-13b | Declared policy: `sharedJudgment`/`default` -> all-`same-context` + `modeReason`; still terminal | policy mode selection + reason tokens |
 | e2e-13c | `isolated-subagent` on spec audit; `scope-mismatch` -> same `authority-required` as e2e-10c | mode-independent rejection |
 | e2e-14a | Scripted pair creation with shared-judgment attribution; real pair audit | graph trace + artifact consistency |
-| e2e-14c | Scripted partial pair -> briefing-retry edge -> pair repair; real pair audit | gate re-entry + artifact consistency |
+| e2e-14c | Scripted partial pair -> briefing-retry delegate yields `input-required` -> pending resume repairs pair | yield/resume, audit receipt reuse, leg-boundary pair audits and checkpoint receipts |
 
 ## What this harness does NOT verify
 
@@ -165,8 +166,10 @@ The policy changes trace attribution, not the dispatcher: e2e-14a/14c do not
 execute briefing-flow's inner skills or verify actual execution mode.
 The graph has no `discovery-doc`, `spec-doc`, or `adr-doc` dispatch events,
 so the planned e2e-14b comparison of real inner execution paths is not covered.
-e2e-14c exercises a gate retry edge after a completed scripted delegate, not
-an EffectOutcome `retry` or a two-leg resume.
+e2e-14c exercises a two-leg resume after an EffectOutcome `yield`, not an
+EffectOutcome `retry`. A separate harness test verifies an audited spec edit
+between yield and resume is rejected as `authority-required`; the successful
+case changes the spec only inside the resumed delegate after receipt validation.
 The in-process oracle test (`doc-driven-dev-graph-run-to-yield.test.ts`)
 and this spawned-CLI runner are two independent implementations of the
 same contract; the runner additionally emits the #120 run-level trace
