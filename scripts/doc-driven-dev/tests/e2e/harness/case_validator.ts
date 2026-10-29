@@ -27,6 +27,8 @@ import type {
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 
 const DEFAULT_PROOF_PATH = "docs/tasks/0001-task.md";
+const TSX_CLI = path.resolve(__dirname, "../../../node_modules/tsx/dist/cli.mjs");
+const BRIEFING_AUDIT = path.resolve(__dirname, "../../../src/skills/briefing-flow/scripts/audit_briefing.ts");
 
 const RUN_YIELD_REASONS: readonly YieldReason[] = [
   "terminal", "single-step-complete", "budget-exhausted",
@@ -58,6 +60,12 @@ export type CaseExpect = {
     kind: string;
     edgeId?: string;
     stage?: "audit" | "delegate";
+    /** Effect dispatch or outcome identity. */
+    effectId?: string;
+    /** effect-outcome only. */
+    outcome?: "completed" | "retry" | "yield";
+    /** effect-outcome / run-yield reason. */
+    reason?: string;
     /** effect-dispatched only: exact executionMode ("tool"/"same-context"/…). */
     executionMode?: ExecutionMode;
     /** effect-dispatched only: modeReason CONTAINS this substring (token search). */
@@ -81,6 +89,10 @@ export type CaseExpect = {
   tasksContain?: { edgeId: string; id: string; status: string }[];
   /** End-of-run repo state — re-read from disk at validation time. */
   finalFiles?: Record<string, { frontmatter?: Record<string, unknown>; bodyIncludes?: string[] }>;
+  /** Pair audit via the real CLI; step expectations run immediately after that leg. */
+  briefingAudit?: { spec: string; adr: string; consistent: boolean };
+  /** Counts of persisted checkpoint receipts; step expectations run after that leg. */
+  checkpointReceipts?: { edgeId: string; count: number }[];
 };
 
 export type CaseRun = {
@@ -166,12 +178,18 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
     const label = `event kind "${spec.kind}"`
       + (spec.edgeId !== undefined ? ` edge "${spec.edgeId}"` : "")
       + (spec.stage !== undefined ? ` stage "${spec.stage}"` : "")
+      + (spec.effectId !== undefined ? ` effect "${spec.effectId}"` : "")
+      + (spec.outcome !== undefined ? ` outcome "${spec.outcome}"` : "")
+      + (spec.reason !== undefined ? ` reason "${spec.reason}"` : "")
       + (spec.executionMode !== undefined ? ` mode "${spec.executionMode}"` : "")
       + (spec.modeReason !== undefined ? ` modeReason~"${spec.modeReason}"` : "");
     const count = events.filter((event) => {
       if (event.kind !== spec.kind) return false;
       if (spec.edgeId !== undefined && (!("edgeId" in event) || event.edgeId !== spec.edgeId)) return false;
       if (spec.stage !== undefined && (!("stage" in event) || event.stage !== spec.stage)) return false;
+      if (spec.effectId !== undefined && (!("effectId" in event) || event.effectId !== spec.effectId)) return false;
+      if (spec.outcome !== undefined && (!("outcome" in event) || event.outcome !== spec.outcome)) return false;
+      if (spec.reason !== undefined && (!("reason" in event) || event.reason !== spec.reason)) return false;
       if (spec.executionMode !== undefined
           && (!("executionMode" in event) || event.executionMode !== spec.executionMode)) return false;
       if (spec.modeReason !== undefined
@@ -232,6 +250,31 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
       if (!parsed.content.includes(needle)) {
         failures.push(`finalFiles ${rel}: body missing substring ${JSON.stringify(needle)}`);
       }
+    }
+  }
+  if (expect.briefingAudit) {
+    const { spec, adr, consistent } = expect.briefingAudit;
+    const result = spawnSync(process.execPath, [TSX_CLI, BRIEFING_AUDIT, "--cwd", run.repo, "--spec", spec, "--adr", adr, "--json"], { encoding: "utf8" });
+    try {
+      const report: unknown = JSON.parse(result.stdout);
+      if (!report || typeof report !== "object" || !("consistent" in report)
+          || typeof report.consistent !== "boolean") throw new Error("missing boolean consistent");
+      if (report.consistent !== consistent || result.status !== (consistent ? 0 : 1)) {
+        failures.push(`briefingAudit: expected consistent=${consistent}, exit=${consistent ? 0 : 1}; got consistent=${report.consistent}, exit=${result.status}`);
+      }
+    } catch (error) {
+      failures.push(`briefingAudit: invalid CLI result (exit=${result.status}, stderr=${result.stderr}): ${String(error)}`);
+    }
+  }
+  if (expect.checkpointReceipts) {
+    try {
+      const receipts = evidenceReceipts(run.repo, run.proofPath ?? DEFAULT_PROOF_PATH);
+      for (const { edgeId, count } of expect.checkpointReceipts) {
+        const actual = receipts.filter((receipt) => receipt.edgeId === edgeId).length;
+        if (actual !== count) failures.push(`checkpointReceipts ${edgeId}: expected ${count}, got ${actual}`);
+      }
+    } catch (error) {
+      failures.push(`checkpointReceipts: failed to read proof: ${String(error)}`);
     }
   }
   return failures;

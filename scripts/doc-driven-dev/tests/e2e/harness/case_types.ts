@@ -56,6 +56,8 @@ export type E2ECase = {
     /**
      * Per-leg expectations — evaluated against this leg's own trace slice
      * (between the previous leg's run-yield and this leg's run-yield).
+     * briefingAudit/checkpointReceipts use the filesystem at the leg boundary;
+     * finalFiles retains its end-of-run semantics.
      */
     expect?: Partial<CaseExpect>;
   }>;

@@ -50,7 +50,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 | ----- | ------- | ------ |
 | A. Assess | Understand the request, determine information state | Entry Decision recorded + characteristics identified |
 | B. Configure | Discover skills, build/load skill stack for briefing | Active skill stack declared |
-| C. Gather & Generate | Gather information and produce documents in parallel | discovery-doc (optional) + spec-doc + adr-doc generated |
+| C. Gather & Generate | Gather information and produce documents sequentially or in stages | discovery-doc (optional) + spec-doc + adr-doc generated |
 | D. Gate | Verify completion conditions, confirm readiness for next phase | Gate pass/fail decision |
 
 ---
@@ -158,7 +158,8 @@ For detailed category definitions, see the adapter's `classification.taxonomy` i
 
 ## Phase C: Gather & Generate
 
-Gather information and produce documents in parallel. Dispatch document skills
+Gather information and produce documents sequentially or in stages; information
+gathering may continue alongside drafting. Dispatch document skills
 immediately when sufficient information is gathered, preventing context freshness
 (detail level) degradation. The delegate execution-mode policy selects each
 dispatch's mode.
@@ -173,24 +174,35 @@ Apply each skill in the active stack according to its priority:
    - **Flexible skills**: Apply the spirit; adapt to context.
 3. Skills layer — they are not exclusive. Multiple skills apply simultaneously.
 
-### Dispatch Triggers
+### Dispatch Conditions
 
-In parallel with information gathering, dispatch each document skill when its conditions are met:
+Spec and ADR share the same problem's constraints, options, and acceptance
+criteria — they are produced **as same-context skills inside this delegate by
+default** (`shared-judgment` under the [delegate execution-mode policy](../doc-driven-dev-graph/references/delegate-execution-policy.md)). Sub-agent
+dispatch is reserved for genuinely independent work.
 
-| Trigger | Fire Condition | Action |
-| ------- | -------------- | ------ |
-| discovery-doc | Problem space is ambiguous, alternatives exist, or significant research was done — persist exploration output as a canonical artifact | Dispatch `discovery-doc` skill per the delegate execution-mode policy (optional; fire before spec/adr when applicable) |
-| spec-doc | Purpose, scope, acceptance criteria, and exclusions are available | Dispatch `spec-doc` skill per the delegate execution-mode policy |
-| adr-doc | Chosen approach, alternatives, rationale, and impact are available | Dispatch `adr-doc` skill per the delegate execution-mode policy |
+| Trigger | Fire Condition | Execution |
+| ------- | -------------- | --------- |
+| spec-doc | Purpose, scope, acceptance criteria, and exclusions are available | Same-context skill (default) |
+| adr-doc | Chosen approach, alternatives, rationale, and impact are available | Same-context skill (default); may follow spec-doc immediately in the same context |
+| discovery-doc | Problem space is ambiguous, alternatives exist, or significant research was done | Same-context or delegated per the execution-mode policy — independent research/separated edit scope may justify `subagent-as-tool` |
+| Independent research | External verification, black-box review, or context-heavy exploration | Delegated mode per the policy only; never default for spec/adr |
 
-**Dispatch principles:**
+**Execution principles:**
 
-- **Do not wait for both.** Fire whichever trigger is ready first.
-- Select each dispatch's execution mode per the [delegate execution-mode policy](../doc-driven-dev-graph/references/delegate-execution-policy.md) at `<skill-root>/doc-driven-dev-graph/references/delegate-execution-policy.md` (`<skill-root>` is `.agents/skills/`, `.apm/skills/`, or `.claude/skills/`). `same-context` is the default — spawn a sub-agent only when the policy selects a delegated mode, and hand off the minimum `DelegateHandoff` contract.
-- Information gathering continues after dispatch (non-blocking).
-- Both skills can be dispatched independently — concurrent execution is fine.
-- Information passed at dispatch must include **raw collection results at that point**. Do not degrade through summarization.
-- Dispatched delegates follow each skill's workflow to produce the document.
+- **Do not wait for both.** Start whichever document is ready first; the other
+  follows in the same context when its condition lands.
+- **Sequential or staged, not silently parallel.** When both are ready, write
+  them in order (spec then ADR, or the order readiness dictates) — shared
+  judgment benefits from seeing each other's decisions; only an independent
+  delegate may run concurrently.
+- Information gathering continues alongside drafting (non-blocking).
+- Information passed to any dispatch is the **raw collection results at that
+  point** — for a delegated dispatch, the `DelegateHandoff` minimum contract
+  (canonical refs, criteria, permissions, budget, completion) applies; do not
+  degrade through summarization.
+- When a delegated dispatch delivers a document, the main loop re-verifies the
+  pair before Phase D using the static audit below.
 
 ### Stop Conditions
 
@@ -225,13 +237,38 @@ Briefing is NOT complete until ALL of the following conditions are met:
 - [ ] `adr-doc` exists with at least 2 entries under `## Considered Options`
 - [ ] Entry Decision (A-1/A-2/A-3/A-4/A-5) selection is recorded
 - [ ] No open items classified as "pre-implementation blocker" remain unresolved
-- [ ] Both documents reference the same problem context
+- [ ] The caller confirms both documents reference the same problem context and
+  checks known constraints and contradictions against the gathered information;
+  resolve any mismatch or return to Phase C.
+- [ ] The static pair audit reports `consistent: true`:
+  `node <skill-root>/briefing-flow/scripts/audit_briefing.js --cwd <repo-root> --spec <path> --adr <path> --json`.
+  Paths for spec and ADR are relative to `<repo-root>`.
+
+The static audit applies the doc-suite frontmatter schema to **both** documents:
+`id`, `type`, `status`, `title`, `created`, `updated`, `owners` and `relations`
+must conform (dates use `YYYY-MM-DD`, owners and standard link relation fields
+are arrays, while `relations.changes` is an object; omitted relation fields
+default to empty). Spec status must be `proposed`,
+`approved`, or `implemented`; ADR status must be `proposed` or `accepted`.
+It checks the required counts, typed pair evidence in canonical graph records,
+relevant relation resolution and duplicate IDs, and existence of local Markdown
+link/image destinations in the two documents. Pair evidence can be a direct
+relation, a shared discovery anchor, or a shared approved design. The audit
+checks both documents and all shared discovery anchors; when neither direct
+nor discovery evidence exists, it checks all supporting designs instead. It
+does not validate plans or select a downstream chain; design/plan focus
+ambiguity belongs to the graph's focus gate. External URLs, fragment targets
+and destination contents are not checked; placeholders are warnings. The
+audit does not establish semantic identity or detect semantic contradictions
+or whether known constraints are correctly represented; the caller must
+perform the separate check above.
 
 ### Actions on Gate Failure
 
 - spec-doc incomplete → return to Phase C and re-fire dispatch trigger.
 - Insufficient information to write spec → return to Phase C for additional gathering.
 - adr-doc alternatives insufficient → return to Phase C using Frame/Discover skills to expand options.
+- Pair audit or problem-context/constraint check fails → repair the documents and recheck both.
 - Gate passes → declare briefing complete and signal readiness for next phase (Design).
 
 ---
