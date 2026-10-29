@@ -137,6 +137,41 @@ test("briefing pending audit refuses a spec edit between yield and resume", { ti
   assert.deepEqual(report.failures, []);
 });
 
+// Issue #124: the baseline separates the runtime scan channel (summed
+// artifact-scan events — the whole-repo projection, which is allowed) from
+// the document bodies actually supplied to dispatched effects (the union of
+// every accepted outcome's authoritativeInputs paths).
+test("runCase records a scan-vs-delegate-input read baseline", { timeout: 120_000 }, () => {
+  const { run, report } = runCase(case01);
+  assert.deepEqual(report.failures, []);
+  const baseline = run.baseline;
+  assert.ok(baseline, "run.baseline missing");
+
+  // Delegate inputs = unique authoritativeInputs paths across every accepted
+  // outcome of the run (audit and delegate stages alike — both are bodies
+  // handed to the dispatched effect, not to the scan channel).
+  const expectedInputs = new Set(
+    run.result.outcomes.flatMap((outcome) => outcome.authoritativeInputs.map((ref) => ref.path)),
+  );
+  assert.equal(baseline.delegateInputs.files, expectedInputs.size);
+  assert.ok(baseline.delegateInputs.files > 0);
+  assert.ok(baseline.delegateInputs.bytes > 0);
+
+  // Scan totals come straight from the trace's artifact-scan events — the
+  // same aggregation traceSummary reports, so the two channels agree.
+  assert.equal(baseline.scan.files, report.traceSummary.filesRead);
+  assert.equal(baseline.scan.bytes, report.traceSummary.bytesRead);
+
+  // Every delegate input is itself a canonical doc the scan re-reads at each
+  // routing hop, so the scan strictly dominates on this fixture and the
+  // ratio stays within [0, 1]. (artifact-scan events do NOT count the
+  // caller's own canonicalReference reads — inputs ⊆ scanned set is what
+  // keeps the bound honest here.)
+  assert.ok(baseline.scan.files >= baseline.delegateInputs.files);
+  assert.ok(baseline.scan.bytes >= baseline.delegateInputs.bytes);
+  assert.ok(baseline.ratio > 0 && baseline.ratio <= 1);
+});
+
 test("leg-boundary audit and receipt expectations are not evaluated on final state", { timeout: 120_000 }, () => {
   const first = case14c.steps![0];
   const e2eCase: E2ECase = {
