@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -9,6 +10,12 @@ import {
   verifyParallelMerge,
   type SliceOutcome,
 } from "../src/skills/implementation-flow/scripts/lib/merge_verification";
+
+function git(repo: string, args: string[]): string {
+  const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout.trim();
+}
 
 function writeFile(repo: string, rel: string, content: string): void {
   const file = path.join(repo, rel);
@@ -64,6 +71,25 @@ test("collectChangedPaths reports filenames with spaces unquoted", () => {
   const repo = createFixtureRepo();
   writeFile(repo, "src/with space.ts", "export const spaced = 0;\n");
   assert.deepEqual(collectChangedPaths(repo), ["src/with space.ts"]);
+});
+
+test("collectChangedPaths reports both endpoints of a staged rename", () => {
+  const repo = createFixtureRepo();
+  fs.mkdirSync(path.join(repo, "src"), { recursive: true });
+  git(repo, ["mv", "docs/tasks/0001-task.md", "src/renamed.ts"]);
+  const changed = collectChangedPaths(repo);
+  assert.ok(changed.includes("docs/tasks/0001-task.md"), `missing rename source in ${JSON.stringify(changed)}`);
+  assert.ok(changed.includes("src/renamed.ts"));
+});
+
+test("collectChangedPaths reports both endpoints of a committed rename via baseRef", () => {
+  const repo = createFixtureRepo();
+  fs.mkdirSync(path.join(repo, "src"), { recursive: true });
+  git(repo, ["mv", "docs/tasks/0001-task.md", "src/renamed.ts"]);
+  commitAll(repo);
+  const changed = collectChangedPaths(repo, "HEAD~1");
+  assert.ok(changed.includes("docs/tasks/0001-task.md"), `missing rename source in ${JSON.stringify(changed)}`);
+  assert.ok(changed.includes("src/renamed.ts"));
 });
 
 test("collectChangedPaths dedupes staged entries reported by porcelain and diff", () => {
@@ -265,9 +291,18 @@ test("a traversal in an evidence path cannot escape docs/impl/", () => {
   assert.equal(report.findings[0].path, "docs/impl/../tasks/0001-task.md");
 });
 
+test("a whitespace-padded traversal is still rejected after trimming", () => {
+  const repo = createFixtureRepo();
+  const report = verifyParallelMerge(repo, [
+    slice({ declaredScope: ["src/"], touchedPaths: [".. "] }),
+  ]);
+  assert.equal(report.verdict, "blocked");
+  assert.equal(report.findings[0].code, "scope-violation");
+});
+
 test("unverifiable declared scope entries are blocked scope-violations", () => {
   const repo = createFixtureRepo();
-  for (const badScope of ["../outside.ts", "C:/temp/x.ts", "/etc/passwd", "src/gen/**/x.ts"]) {
+  for (const badScope of ["../outside.ts", "C:/temp/x.ts", "/etc/passwd", "src/gen/**/x.ts", "../outside.ts "]) {
     const report = verifyParallelMerge(repo, [slice({ declaredScope: [badScope] })]);
     assert.equal(report.verdict, "blocked", `scope ${badScope}`);
     assert.equal(report.findings[0].code, "scope-violation");
@@ -295,6 +330,13 @@ test("verifyEvidenceBinding rejects unverifiable paths without reading outside c
   assert.equal(verifyEvidenceBinding(repo, "/etc/passwd", "TASK-0001"), false);
 });
 
+test("verifyEvidenceBinding rejects an empty task ID instead of matching everything", () => {
+  const repo = createFixtureRepo();
+  writeFile(repo, "docs/impl/evidence.md", "# Evidence\n");
+  assert.equal(verifyEvidenceBinding(repo, "docs/impl/evidence.md", ""), false);
+  assert.equal(verifyEvidenceBinding(repo, "docs/impl/evidence.md", "  "), false);
+});
+
 // --- bad-input fail-closed checks --------------------------------------------
 
 test("duplicate slice taskIds are blocked instead of masking collisions", () => {
@@ -310,6 +352,21 @@ test("duplicate slice taskIds are blocked instead of masking collisions", () => 
 test("an empty slice list fails closed to blocked, not a vacuous merge", () => {
   const report = verifyParallelMerge(createFixtureRepo(), []);
   assert.equal(report.verdict, "blocked");
+});
+
+test("an empty slice taskId fails closed instead of binding any evidence", () => {
+  const repo = createFixtureRepo();
+  writeFile(repo, "docs/impl/evidence.md", "# Evidence\n");
+  const report = verifyParallelMerge(repo, [
+    slice({
+      taskId: "",
+      declaredScope: ["src/a.ts"],
+      touchedPaths: ["src/a.ts"],
+      evidencePaths: ["docs/impl/evidence.md"],
+    }),
+  ]);
+  assert.equal(report.verdict, "blocked");
+  assert.equal(report.findings[0].code, "evidence-mismatch");
 });
 
 // --- taskDir option -----------------------------------------------------------
