@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { createFixtureRepo, updateArtifact, writeArtifact } from "./e2e/harness/fixture_manager";
+import { createFixtureRepo } from "./e2e/harness/fixture_manager";
 import { canonicalReference } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import {
   expandArtifactContext,
