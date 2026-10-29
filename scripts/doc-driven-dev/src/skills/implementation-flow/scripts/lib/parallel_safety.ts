@@ -28,10 +28,14 @@ type ScopedPattern = WritePattern & { path: string };
 // Verbatim port of the sectionBody helper from
 // briefing-flow/scripts/lib/briefing_audit.ts (itself ported from
 // doc-driven-dev-graph/scripts/lib/graph_state.ts) so `##` heading extraction
-// cannot drift between audits.
+// cannot drift between audits. The heading regex is shared via headingPattern.
+function headingPattern(heading: string): RegExp {
+  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
+}
+
 function sectionBody(body: string, heading: string): string {
   const lines = body.split(/\r?\n/);
-  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
+  const pattern = headingPattern(heading);
   const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
   if (start < 0) return "";
   const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
@@ -40,13 +44,16 @@ function sectionBody(body: string, heading: string): string {
 }
 
 function hasSection(body: string, heading: string): boolean {
-  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
+  const pattern = headingPattern(heading);
   return body.split(/\r?\n/).some((line) => pattern.test(line.trimEnd()));
 }
 
 const BULLET_ITEM = /^\s*[-*+]\s+(.*)$/;
 const HTML_COMMENT = /<!--[\s\S]*?-->/g;
 const CHECKBOX_MARKER = /^\[[ xX]?\]\s*/;
+// Entries still containing code-span/link/brace/angle markup after cleaning
+// are prose, not verifiable paths — they must fail closed to opaque.
+const MARKUP_CHARS = /[`[\]{}<>]/;
 
 /**
  * Normalize a declared scope path to forward-slash repo-relative form.
@@ -73,7 +80,11 @@ function normalizeScopePath(raw: string): { path: string; isDir: boolean } | nul
   return { path: normalized, isDir };
 }
 
-function toScopeEntry(text: string): ScopeEntry {
+/** Internal parse shape: patterns always carry their normalized path. */
+type ParsedScopeEntry = { pattern: ScopedPattern } | { opaque: string };
+
+function toScopeEntry(text: string): ParsedScopeEntry {
+  if (MARKUP_CHARS.test(text)) return { opaque: text };
   // A bare word with no path separators is a module/feature name, not a path.
   if (!text.includes("/") && !text.includes(".") && !text.includes("\\")) {
     return { opaque: text };
@@ -91,18 +102,28 @@ function toScopeEntry(text: string): ScopeEntry {
  * Returns null when the section is absent; an empty array when the section
  * is present but declares no usable entries (comments/placeholders only).
  */
-export function parseAffectedFiles(body: string): ScopeEntry[] | null {
+function parseAffectedEntries(body: string): ParsedScopeEntry[] | null {
   if (!hasSection(body, "Affected Files")) return null;
   const section = sectionBody(body, "Affected Files");
-  const entries: ScopeEntry[] = [];
+  const entries: ParsedScopeEntry[] = [];
   for (const line of section.split(/\r?\n/)) {
     const match = BULLET_ITEM.exec(line);
     if (!match) continue;
-    const text = match[1].replace(HTML_COMMENT, "").replace(CHECKBOX_MARKER, "").trim();
+    // Strip comments first, then trim so a leading checkbox marker is anchored.
+    let text = match[1].replace(HTML_COMMENT, "").trim().replace(CHECKBOX_MARKER, "").trim();
+    // Unwrap a single code span so `src/x.ts` still verifies as a path;
+    // any leftover markup is caught by MARKUP_CHARS and turns opaque.
+    if (text.length > 2 && text.startsWith("`") && text.endsWith("`")) {
+      text = text.slice(1, -1).trim();
+    }
     if (!text) continue;
     entries.push(toScopeEntry(text));
   }
   return entries;
+}
+
+export function parseAffectedFiles(body: string): ScopeEntry[] | null {
+  return parseAffectedEntries(body);
 }
 
 /**
@@ -162,7 +183,7 @@ export function evaluateParallelSafety(
 
   for (const id of eligible) {
     const body = bodyById.get(id);
-    const entries = body === undefined ? null : parseAffectedFiles(body);
+    const entries = body === undefined ? null : parseAffectedEntries(body);
     if (entries === null || entries.length === 0) {
       addReason(id, "scope-undeclared");
       continue;
@@ -171,7 +192,7 @@ export function evaluateParallelSafety(
     let hasOpaque = false;
     for (const entry of entries) {
       if ("opaque" in entry) hasOpaque = true;
-      else patterns.push(entry.pattern as ScopedPattern);
+      else patterns.push(entry.pattern);
     }
     if (hasOpaque) addReason(id, "scope-unverifiable");
     patternsById.set(id, patterns);
@@ -191,7 +212,7 @@ export function evaluateParallelSafety(
         for (const patternB of patternsB) {
           const path = overlapPath(patternA, patternB);
           if (path === null) continue;
-          const key = `${a} ${b} ${path}`;
+          const key = `${a}\u0000${b}\u0000${path}`;
           if (!seenConflicts.has(key)) {
             seenConflicts.add(key);
             conflicts.push({ a, b, path });

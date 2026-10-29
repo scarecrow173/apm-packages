@@ -98,6 +98,33 @@ test("parseAffectedFiles marks absolute paths and .. escapes as opaque", () => {
   ]);
 });
 
+test("parseAffectedFiles strips a checkbox marker left behind by comment removal", () => {
+  assert.deepEqual(parseAffectedFiles(taskBody("- <!-- c --> [ ] src/x.ts")), [
+    { pattern: { kind: "file", path: "src/x.ts" } },
+  ]);
+});
+
+test("parseAffectedFiles unwraps a code-span path", () => {
+  assert.deepEqual(parseAffectedFiles(taskBody("- `src/auth/`")), [
+    { pattern: { kind: "dir", path: "src/auth" } },
+  ]);
+});
+
+test("parseAffectedFiles turns markup-wrapped entries opaque instead of fake patterns", () => {
+  assert.deepEqual(parseAffectedFiles(taskBody("- {{src/x.ts}}")), [
+    { opaque: "{{src/x.ts}}" },
+  ]);
+  assert.deepEqual(parseAffectedFiles(taskBody("- [link](src/x.ts)")), [
+    { opaque: "[link](src/x.ts)" },
+  ]);
+  assert.deepEqual(parseAffectedFiles(taskBody("- src/<module>.ts")), [
+    { opaque: "src/<module>.ts" },
+  ]);
+  assert.deepEqual(parseAffectedFiles(taskBody("- src/`gen`/x.ts")), [
+    { opaque: "src/`gen`/x.ts" },
+  ]);
+});
+
 // --- evaluateParallelSafety -------------------------------------------------
 
 test("two runnable tasks with disjoint scopes run in parallel", () => {
@@ -280,6 +307,32 @@ test("a single clean eligible task cannot run in parallel", () => {
   assert.equal(report.decision, "serial");
   assert.deepEqual(report.parallel, ["TASK-0001"]);
   assert.deepEqual(report.serial, []);
+});
+
+test("a markup-wrapped entry is scope-unverifiable, not a silently disjoint pattern", () => {
+  const report = evaluateParallelSafety(
+    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
+    [
+      { id: "TASK-0001", body: taskBody("- {{src/x.ts}}") },
+      { id: "TASK-0002", body: taskBody("- src/x.ts") },
+    ],
+  );
+  assert.equal(report.decision, "serial");
+  assert.deepEqual(serialReasons(report, "TASK-0001"), ["scope-unverifiable"]);
+  assert.deepEqual(report.parallel, ["TASK-0002"]);
+  assert.deepEqual(report.conflicts, []);
+});
+
+test("a comment-then-checkbox entry still participates in conflict detection", () => {
+  const report = evaluateParallelSafety(
+    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
+    [
+      { id: "TASK-0001", body: taskBody("- <!-- c --> [ ] src/x.ts") },
+      { id: "TASK-0002", body: taskBody("- src/x.ts") },
+    ],
+  );
+  assert.equal(report.decision, "serial");
+  assert.deepEqual(report.conflicts, [{ a: "TASK-0001", b: "TASK-0002", path: "src/x.ts" }]);
 });
 
 test("normalized paths still conflict across differing spellings", () => {
