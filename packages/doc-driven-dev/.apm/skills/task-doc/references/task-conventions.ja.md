@@ -164,6 +164,12 @@ task は次を含めます。
 6. 検証 command、test、manual review。
 7. この task の明示的な範囲外。
 
+task を並列 delegation の対象にするには、`## Affected Files` の項目が
+パス検証可能な file / directory path である必要があります。自由形式の
+module 名や feature 名は検証できず、serial 実行を強制します。scope 判定は
+`Affected Files` という見出しに literal（case-insensitive）でマッチするため、
+ローカライズされた見出しは現在 scope 未宣言として扱われ、serial を強制します。
+
 完了条件は検証可能である必要があります。検証経路を書けない task は、実装開始前に
 plan または spec に戻します。
 
