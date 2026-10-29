@@ -42,6 +42,12 @@ write scope:
 - The scope check matches the `Affected Files` heading literally
   (case-insensitive); a localized heading reads as a missing section and
   currently resolves to `scope-undeclared` → serial.
+- Headings and bullets inside fenced code blocks (```` ``` ```` / `~~~`) are
+  documentation, not declarations — a fenced `## Affected Files` never
+  creates a section. Bullets under `###`+ subsections inside the section do
+  not enter the scope either.
+- Paths compare case-insensitively (Windows dev environment); a case-only
+  spelling drift never bypasses a scope or collision check.
 
 ## Conflict Classes
 
@@ -72,6 +78,11 @@ completes, collect its actual diff — `git diff --name-only` plus
 - Renames report both source and destination paths, so a rename out of a
   protected path cannot masquerade as a pure addition.
 - A touched path outside the declared scope → `scope-violation`.
+- Two writes need no scope declaration because the contract already requires
+  them: the slice's own task doc (its status/front-matter update) and
+  evidence artifacts under `docs/impl/` (the implementation record).
+- Another task's document is never writable — no scope declaration can
+  grant it; touching any task doc other than the slice's own → `blocked`.
 - The same path touched by two slices → `write-collision` → `merge-review`.
   Last-writer-win is never accepted silently.
 
@@ -93,10 +104,12 @@ bound to its own task:
 Before slice results are accepted, verify each one
 (`verifyParallelMerge`):
 
-- **Scope** — actual touched paths stay within the declared scope. A
-  violation targeting the task-document subtree (`docs/tasks/` by default,
-  where status and front matter live) is `blocked`-severity; other
-  out-of-scope paths are `merge-review`-severity.
+- **Scope** — actual touched paths stay within the declared scope. The task
+  doc's `## Affected Files` is the authority for that scope: when the doc is
+  readable, every supplied `declaredScope` entry must be covered by it — an
+  entry absent from or wider than the doc's declaration is an inflated claim
+  and blocks. A violation targeting another task's document is
+  `blocked`-severity; other out-of-scope paths are `merge-review`-severity.
 - **Collision** — no two slices touched the same path.
 - **Evidence binding** — every evidence path lives under `docs/impl/` or is
   the slice's own task doc, and its file content literally contains the
@@ -165,9 +178,15 @@ node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-
 
 A slices file is
 `[{ taskId, declaredScope, evidencePaths, taskDocPath, touchedPaths?, baseRef? }]`.
-When `touchedPaths` is absent, the CLI collects the real diff with
+Supplied fields are **asserted, not trusted**: `declaredScope` is re-verified
+against the task doc's `## Affected Files`, `touchedPaths` against the
+declared scope plus the contract-implied writes, and `evidencePaths` against
+the evidence subtree and task-ID binding — including a realpath check so a
+`docs/impl/` symlink cannot bind evidence outside the checkout. Prefer
+omitting `touchedPaths` so the verifier collects the real diff with
 `collectChangedPaths`; a slice-level `baseRef` wins over `--base-ref`
-(default `HEAD`).
+(default `HEAD`) and must predate the slice — a base at or after the slice's
+changes makes the collected diff incomplete rather than authoritative.
 
 This contract covers repo-relative paths inside the repository only; shared
 resources outside the checkout — services, shared directories, remote state —

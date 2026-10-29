@@ -3314,10 +3314,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file.data, data);
       const open = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter4 = engine.stringify(data, options2).trim();
+      const matter5 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter4 !== "{}") {
-        buf = newline(open) + newline(matter4) + newline(close);
+      if (matter5 !== "{}") {
+        buf = newline(open) + newline(matter5) + newline(close);
       }
       if (typeof file.excerpt === "string" && file.excerpt !== "") {
         if (str2.indexOf(file.excerpt.trim()) === -1) {
@@ -3423,19 +3423,19 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse2 = require_parse();
     var utils = require_utils();
-    function matter4(input, options2) {
+    function matter5(input, options2) {
       if (input === "") {
         return { data: {}, content: input, excerpt: "", orig: input };
       }
       let file = toFile(input);
-      const cached = matter4.cache[file.content];
+      const cached = matter5.cache[file.content];
       if (!options2) {
         if (cached) {
           file = Object.assign({}, cached);
           file.orig = cached.orig;
           return file;
         }
-        matter4.cache[file.content] = file;
+        matter5.cache[file.content] = file;
       }
       return parseMatter(file, options2);
     }
@@ -3457,7 +3457,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter4.language(str2, opts);
+      const language = matter5.language(str2, opts);
       if (language.name) {
         file.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -3492,24 +3492,24 @@ var require_gray_matter = __commonJS({
       }
       return file;
     }
-    matter4.engines = engines2;
-    matter4.stringify = function(file, data, options2) {
-      if (typeof file === "string") file = matter4(file, options2);
+    matter5.engines = engines2;
+    matter5.stringify = function(file, data, options2) {
+      if (typeof file === "string") file = matter5(file, options2);
       return stringify(file, data, options2);
     };
-    matter4.read = function(filepath, options2) {
+    matter5.read = function(filepath, options2) {
       const str2 = fs5.readFileSync(filepath, "utf8");
-      const file = matter4(str2, options2);
+      const file = matter5(str2, options2);
       file.path = filepath;
       return file;
     };
-    matter4.test = function(str2, options2) {
+    matter5.test = function(str2, options2) {
       return utils.startsWith(str2, defaults(options2).delimiters[0]);
     };
-    matter4.language = function(str2, options2) {
+    matter5.language = function(str2, options2) {
       const opts = defaults(options2);
       const open = opts.delimiters[0];
-      if (matter4.test(str2)) {
+      if (matter5.test(str2)) {
         str2 = str2.slice(open.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -3518,18 +3518,18 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter4.cache = {};
-    matter4.clearCache = function() {
-      matter4.cache = {};
+    matter5.cache = {};
+    matter5.clearCache = function() {
+      matter5.cache = {};
     };
-    module2.exports = matter4;
+    module2.exports = matter5;
   }
 });
 
 // src/skills/implementation-flow/scripts/check_parallel.ts
 var import_node_fs4 = __toESM(require("node:fs"));
 var import_node_path4 = __toESM(require("node:path"));
-var import_gray_matter3 = __toESM(require_gray_matter());
+var import_gray_matter4 = __toESM(require_gray_matter());
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
 var import_node_fs = __toESM(require("node:fs"));
@@ -4134,27 +4134,11 @@ function buildTaskGraph(options2) {
   return summarizeTaskGraph(plan, parsed, resolved.edges, issues);
 }
 
-// src/skills/implementation-flow/scripts/lib/parallel_safety.ts
-function headingPattern(heading) {
-  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
-}
-function sectionBody(body, heading) {
-  const lines = body.split(/\r?\n/);
-  const pattern = headingPattern(heading);
-  const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
-  if (start < 0) return "";
-  const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
-  const section = endOffset < 0 ? lines.slice(start + 1) : lines.slice(start + 1, start + 1 + endOffset);
-  return section.join("\n").trim();
-}
-function hasSection(body, heading) {
-  const pattern = headingPattern(heading);
-  return body.split(/\r?\n/).some((line) => pattern.test(line.trimEnd()));
-}
-var BULLET_ITEM = /^\s*[-*+]\s+(.*)$/;
-var HTML_COMMENT = /<!--[\s\S]*?-->/g;
-var CHECKBOX_MARKER = /^\[[ xX]?\]\s*/;
+// src/skills/implementation-flow/scripts/lib/scope_entry.ts
 var MARKUP_CHARS = /[`[\]{}<>]/;
+function scopeKey(text) {
+  return text.toLowerCase();
+}
 function normalizeScopePath(raw) {
   let text = raw.trim().replace(/\\/g, "/");
   if (text.startsWith("/") || /^[A-Za-z]:/.test(text)) return null;
@@ -4180,14 +4164,78 @@ function toScopeEntry(text) {
   }
   const normalized = normalizeScopePath(text);
   if (!normalized) return { opaque: text };
-  const pattern = normalized.isDir ? { kind: "dir", path: normalized.path } : { kind: "file", path: normalized.path };
-  return { pattern };
+  return { pattern: { kind: normalized.isDir ? "dir" : "file", path: normalized.path } };
 }
+var FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
+var FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})\s*$/;
+function stripFencedBlocks(body) {
+  const kept = [];
+  let fenceChar = "";
+  let fenceLen = 0;
+  for (const line of body.split(/\r?\n/)) {
+    if (fenceChar === "") {
+      const open = FENCE_OPEN.exec(line);
+      if (open) {
+        const run = open[1];
+        const info = line.slice(line.indexOf(run) + run.length);
+        if (info.includes(run[0])) {
+          kept.push(line);
+          continue;
+        }
+        fenceChar = run[0];
+        fenceLen = run.length;
+        continue;
+      }
+      kept.push(line);
+      continue;
+    }
+    const close = FENCE_CLOSE.exec(line);
+    if (close && close[1][0] === fenceChar && close[1].length >= fenceLen) {
+      fenceChar = "";
+      fenceLen = 0;
+    }
+  }
+  return kept.join("\n");
+}
+
+// src/skills/implementation-flow/scripts/lib/parallel_safety.ts
+function headingPattern(heading) {
+  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
+}
+function sectionBody(body, heading) {
+  const lines = body.split(/\r?\n/);
+  const pattern = headingPattern(heading);
+  const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
+  if (start < 0) return "";
+  const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
+  const section = endOffset < 0 ? lines.slice(start + 1) : lines.slice(start + 1, start + 1 + endOffset);
+  return section.join("\n").trim();
+}
+function hasSection(body, heading) {
+  const pattern = headingPattern(heading);
+  return body.split(/\r?\n/).some((line) => pattern.test(line.trimEnd()));
+}
+var BULLET_ITEM = /^\s*[-*+]\s+(.*)$/;
+var HTML_COMMENT = /<!--[\s\S]*?-->/g;
+var CHECKBOX_MARKER = /^\[[ xX]?\]\s*/;
+var SUB_HEADING = /^#{3,6}\s/;
+var TOP_HEADING = /^#{1,2}\s/;
 function parseAffectedEntries(body) {
-  if (!hasSection(body, "Affected Files")) return null;
-  const section = sectionBody(body, "Affected Files");
+  const stripped = stripFencedBlocks(body);
+  if (!hasSection(stripped, "Affected Files")) return null;
+  const section = sectionBody(stripped, "Affected Files");
   const entries = [];
+  let inSubSection = false;
   for (const line of section.split(/\r?\n/)) {
+    if (SUB_HEADING.test(line)) {
+      inSubSection = true;
+      continue;
+    }
+    if (TOP_HEADING.test(line)) {
+      inSubSection = false;
+      continue;
+    }
+    if (inSubSection) continue;
     const match = BULLET_ITEM.exec(line);
     if (!match) continue;
     let text = match[1].replace(HTML_COMMENT, "").trim().replace(CHECKBOX_MARKER, "").trim();
@@ -4199,19 +4247,34 @@ function parseAffectedEntries(body) {
   }
   return entries;
 }
+function parseAffectedScope(body) {
+  const entries = parseAffectedEntries(body);
+  if (entries === null) return null;
+  const patterns = [];
+  let hasOpaque = false;
+  for (const entry of entries) {
+    if ("opaque" in entry) hasOpaque = true;
+    else patterns.push(entry.pattern);
+  }
+  return { patterns, hasOpaque };
+}
 function overlapPath(left, right) {
+  const leftKey = scopeKey(left.path);
+  const rightKey = scopeKey(right.path);
   if (left.kind === "file" && right.kind === "file") {
-    return left.path === right.path ? left.path : null;
+    return leftKey === rightKey ? left.path : null;
   }
   if (left.kind === "dir" && right.kind === "dir") {
-    if (left.path === right.path) return left.path;
-    if (left.path.startsWith(`${right.path}/`)) return left.path;
-    if (right.path.startsWith(`${left.path}/`)) return right.path;
+    if (leftKey === rightKey) return left.path;
+    if (leftKey.startsWith(`${rightKey}/`)) return left.path;
+    if (rightKey.startsWith(`${leftKey}/`)) return right.path;
     return null;
   }
   const dir = left.kind === "dir" ? left : right;
   const file = left.kind === "dir" ? right : left;
-  if (file.path === dir.path || file.path.startsWith(`${dir.path}/`)) return file.path;
+  const dirKey = scopeKey(dir.path);
+  const fileKey = scopeKey(file.path);
+  if (fileKey === dirKey || fileKey.startsWith(`${dirKey}/`)) return file.path;
   return null;
 }
 function evaluateParallelSafety(taskGraph, tasks) {
@@ -4236,19 +4299,13 @@ function evaluateParallelSafety(taskGraph, tasks) {
   };
   for (const id of eligible) {
     const body = bodyById.get(id);
-    const entries = body === void 0 ? null : parseAffectedEntries(body);
-    if (entries === null || entries.length === 0) {
+    const scope = body === void 0 ? null : parseAffectedScope(body);
+    if (scope === null || scope.patterns.length === 0 && !scope.hasOpaque) {
       addReason(id, "scope-undeclared");
       continue;
     }
-    const patterns = [];
-    let hasOpaque = false;
-    for (const entry of entries) {
-      if ("opaque" in entry) hasOpaque = true;
-      else patterns.push(entry.pattern);
-    }
-    if (hasOpaque) addReason(id, "scope-unverifiable");
-    patternsById.set(id, patterns);
+    if (scope.hasOpaque) addReason(id, "scope-unverifiable");
+    patternsById.set(id, scope.patterns);
   }
   const conflicts = [];
   const seenConflicts = /* @__PURE__ */ new Set();
@@ -4290,6 +4347,7 @@ function evaluateParallelSafety(taskGraph, tasks) {
 var import_node_fs3 = __toESM(require("node:fs"));
 var import_node_path3 = __toESM(require("node:path"));
 var import_node_child_process = require("node:child_process");
+var import_gray_matter3 = __toESM(require_gray_matter());
 function normalizeGitPath(raw) {
   let text = raw.replace(/\\/g, "/");
   while (text.startsWith("./")) text = text.slice(2);
@@ -4307,31 +4365,19 @@ function normalizeVerifiedPath(raw) {
   return normalized ? normalized : null;
 }
 function parseScopeEntry(raw) {
-  let text = raw.trim().replace(/\\/g, "/");
-  if (text.startsWith("/") || /^[A-Za-z]:/.test(text)) return null;
-  while (text.startsWith("./")) text = text.slice(2);
-  let isDir = false;
-  if (text.endsWith("/*")) {
-    isDir = true;
-    text = text.slice(0, -2);
-  } else if (text.endsWith("/")) {
-    isDir = true;
-    text = text.replace(/\/+$/, "");
-  }
-  const segments = text.split("/").filter((segment) => segment.length > 0 && segment !== ".");
-  if (segments.some((segment) => segment === ".." || segment.includes("*") || segment.includes("?"))) {
-    return null;
-  }
-  const normalized = segments.join("/");
-  if (!normalized) return null;
-  return { kind: isDir ? "dir" : "file", path: normalized };
+  const resolution = toScopeEntry(raw);
+  return "opaque" in resolution ? null : resolution.pattern;
 }
 function scopeContains(pattern, touched) {
-  if (pattern.kind === "file") return touched === pattern.path;
-  return touched === pattern.path || touched.startsWith(`${pattern.path}/`);
+  const key = scopeKey(touched);
+  const patternKey = scopeKey(pattern.path);
+  if (pattern.kind === "file") return key === patternKey;
+  return key === patternKey || key.startsWith(`${patternKey}/`);
 }
 function isTaskDocPath(normalized, taskDir) {
-  return normalized === taskDir || normalized.startsWith(`${taskDir}/`);
+  const key = scopeKey(normalized);
+  const dirKey = scopeKey(taskDir);
+  return key === dirKey || key.startsWith(`${dirKey}/`);
 }
 function git(repo, args) {
   const result = (0, import_node_child_process.spawnSync)("git", args, { cwd: repo, encoding: "utf8" });
@@ -4367,13 +4413,25 @@ function verifyEvidenceBinding(cwd, evidencePath, taskId) {
   const normalized = normalizeVerifiedPath(evidencePath);
   if (normalized === null) return false;
   try {
-    return import_node_fs3.default.readFileSync(import_node_path3.default.join(cwd, normalized), "utf8").includes(taskId);
+    const resolved = import_node_fs3.default.realpathSync(import_node_path3.default.join(cwd, normalized));
+    const root = import_node_fs3.default.realpathSync(cwd);
+    if (resolved !== root && !resolved.startsWith(`${root}${import_node_path3.default.sep}`)) return false;
+    return import_node_fs3.default.readFileSync(resolved, "utf8").includes(taskId);
   } catch {
     return false;
   }
 }
 function isAllowedEvidencePath(normalized, taskDocPath) {
-  return normalized.startsWith("docs/impl/") || normalized === taskDocPath;
+  const key = scopeKey(normalized);
+  return key.startsWith("docs/impl/") || key === scopeKey(taskDocPath);
+}
+function readTaskDocScope(cwd, taskDocPath) {
+  try {
+    const content = (0, import_gray_matter3.default)(import_node_fs3.default.readFileSync(import_node_path3.default.join(cwd, taskDocPath), "utf8")).content;
+    return parseAffectedScope(content) ?? { patterns: [], hasOpaque: false };
+  } catch {
+    return null;
+  }
 }
 var BLOCKED_SEVERITY = 2;
 var REVIEW_SEVERITY = 1;
@@ -4401,6 +4459,8 @@ function verifyParallelMerge(cwd, slices, options2 = {}) {
     seenTaskIds.add(outcome.taskId);
   }
   for (const outcome of slices) {
+    const ownTaskDoc = normalizeVerifiedPath(outcome.taskDocPath);
+    const docScope = ownTaskDoc === null ? null : readTaskDocScope(cwd, ownTaskDoc);
     const patterns = [];
     for (const rawScope of outcome.declaredScope) {
       const pattern = parseScopeEntry(rawScope);
@@ -4412,8 +4472,20 @@ function verifyParallelMerge(cwd, slices, options2 = {}) {
           message: `${outcome.taskId} declared scope entry ${JSON.stringify(rawScope)} is not a verifiable repo-relative path`,
           severity: BLOCKED_SEVERITY
         });
-      } else {
-        patterns.push(pattern);
+        continue;
+      }
+      patterns.push(pattern);
+      if (docScope !== null) {
+        const covered = !docScope.hasOpaque && docScope.patterns.some((declared) => scopeContains(declared, pattern.path));
+        if (!covered) {
+          findings.push({
+            code: "scope-violation",
+            taskId: outcome.taskId,
+            path: rawScope,
+            message: docScope.hasOpaque ? `${outcome.taskId} declared scope entry ${JSON.stringify(rawScope)} cannot be verified: the task doc's ## Affected Files is not verifiable` : `${outcome.taskId} declared scope entry ${JSON.stringify(rawScope)} is not declared by the task doc's ## Affected Files`,
+            severity: BLOCKED_SEVERITY
+          });
+        }
       }
     }
     for (const raw of outcome.touchedPaths) {
@@ -4428,14 +4500,27 @@ function verifyParallelMerge(cwd, slices, options2 = {}) {
         });
         continue;
       }
+      const touchedKey = scopeKey(touched);
+      if (isTaskDocPath(touched, taskDir) && (ownTaskDoc === null || touchedKey !== scopeKey(ownTaskDoc))) {
+        findings.push({
+          code: "scope-violation",
+          taskId: outcome.taskId,
+          path: touched,
+          message: `${outcome.taskId} touched task document ${touched} outside its own task document`,
+          severity: BLOCKED_SEVERITY
+        });
+        continue;
+      }
+      if (ownTaskDoc !== null && touchedKey === scopeKey(ownTaskDoc) || touchedKey.startsWith("docs/impl/")) {
+        continue;
+      }
       if (patterns.some((pattern) => scopeContains(pattern, touched))) continue;
-      const taskDocViolation = isTaskDocPath(touched, taskDir);
       findings.push({
         code: "scope-violation",
         taskId: outcome.taskId,
         path: touched,
-        message: taskDocViolation ? `${outcome.taskId} touched task document ${touched} outside its declared scope` : `${outcome.taskId} touched ${touched} outside its declared scope`,
-        severity: taskDocViolation ? BLOCKED_SEVERITY : REVIEW_SEVERITY
+        message: `${outcome.taskId} touched ${touched} outside its declared scope`,
+        severity: REVIEW_SEVERITY
       });
     }
   }
@@ -4444,17 +4529,18 @@ function verifyParallelMerge(cwd, slices, options2 = {}) {
     for (const raw of outcome.touchedPaths) {
       const touched = normalizeVerifiedPath(raw) ?? raw;
       if (!touched) continue;
-      const touchers = touchersByPath.get(touched) ?? [];
-      if (!touchers.includes(outcome.taskId)) touchers.push(outcome.taskId);
-      touchersByPath.set(touched, touchers);
+      const key = scopeKey(touched);
+      const entry = touchersByPath.get(key) ?? { path: touched, taskIds: [] };
+      if (!entry.taskIds.includes(outcome.taskId)) entry.taskIds.push(outcome.taskId);
+      touchersByPath.set(key, entry);
     }
   }
-  for (const [touched, touchers] of touchersByPath) {
-    if (touchers.length < 2) continue;
+  for (const { path: touched, taskIds } of touchersByPath.values()) {
+    if (taskIds.length < 2) continue;
     findings.push({
       code: "write-collision",
       path: touched,
-      message: `${touched} was touched by multiple slices (${touchers.join(", ")}); refusing last-writer-win`,
+      message: `${touched} was touched by multiple slices (${taskIds.join(", ")}); refusing last-writer-win`,
       severity: REVIEW_SEVERITY
     });
   }
@@ -4596,7 +4682,7 @@ function runParallelCheck(cwd, args) {
   const tasks = [];
   for (const node of taskGraph.nodes) {
     try {
-      tasks.push({ id: node.id, body: (0, import_gray_matter3.default)(import_node_fs4.default.readFileSync(import_node_path4.default.join(cwd, node.path), "utf8")).content });
+      tasks.push({ id: node.id, body: (0, import_gray_matter4.default)(import_node_fs4.default.readFileSync(import_node_path4.default.join(cwd, node.path), "utf8")).content });
     } catch {
     }
   }
