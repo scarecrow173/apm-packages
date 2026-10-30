@@ -19301,6 +19301,10 @@ function bodyFor(type, title) {
     return [
       `# ${title}`,
       "",
+      "## Summary",
+      "",
+      "<!-- Two or three sentences: the goal, the current best conclusion or hypothesis, and its confidence. Keep this section small \u2014 the bounded head every reader sees. -->",
+      "",
       "## Exploration Goal",
       "",
       "<!-- What question does this discovery attempt to answer? State the trigger and desired outcome. -->",
@@ -19326,7 +19330,11 @@ function bodyFor(type, title) {
       "## Promotion Candidates",
       "",
       "- [ ] spec-doc needed",
-      "- [ ] adr-doc needed"
+      "- [ ] adr-doc needed",
+      "",
+      "## Evidence",
+      "",
+      "<!-- Append-only evidence tail: dated raw-research entries go here, never in the sections above. Do not edit or reorder existing entries; readers needing only the conclusions may stop at this heading. -->"
     ].join("\n");
   }
   if (type === "spec") {

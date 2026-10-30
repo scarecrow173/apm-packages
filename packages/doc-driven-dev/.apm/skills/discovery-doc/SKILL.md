@@ -75,6 +75,12 @@ A discovery document should answer:
 Discovery documents intentionally cover intermediate reasoning, not final
 decisions. Final decisions belong in ADRs. Final requirements belong in specs.
 
+Keep the head bounded: `## Summary` carries the goal and the current
+conclusion in two or three sentences, and raw research dumps live only in
+the append-only `## Evidence` tail — a reader who needs only the
+conclusions may stop reading at that heading. The conventions document the
+full structure rules and the grandfathered-file policy.
+
 ## Front Matter
 
 Generated discovery documents use YAML front matter:
@@ -141,6 +147,7 @@ revision before being promoted to spec or ADR.
 | 6 | **Promotion candidates identified** | It is clear whether a spec, ADR, or neither is needed. |
 | 7 | **No final decision included** | Architecture decisions belong in ADRs, requirements in specs. |
 | 8 | **Status correct** | Front matter `status` reflects the actual exploration state. |
+| 9 | **Bounded head** | `## Summary` states the conclusion compactly; raw dumps live under `## Evidence`, not inline in the head sections. |
 
 ## Relationship with spec-doc and adr-doc
 

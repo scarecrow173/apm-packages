@@ -152,6 +152,35 @@ Every discovery document should answer:
 Keep conclusions tentative and clearly labeled as hypotheses until they are
 promoted to a spec or ADR.
 
+## Document Structure
+
+A discovery document has two regions:
+
+- **Bounded head** — the front matter plus every section from `## Summary`
+  through `## Sources and Relations`. The head carries the question, the
+  reasoning, the conclusions, and the links. Keep it small: `## Summary`
+  is two or three sentences, and the working sections record only what a
+  reader needs to evaluate the conclusions.
+- **`## Evidence` tail** — the last section, and the only place raw
+  research dumps belong. It is append-only: add new dated entries at the
+  bottom and never edit, reorder, or delete existing entries. Command
+  output, captured tables, long quotes, and research dumps go here; head
+  sections summarize or link the evidence they rely on instead of
+  inlining it.
+
+A reader who only needs the conclusions may stop reading at the
+`## Evidence` heading — the head is the bounded read regardless of how
+much evidence accumulates below it. This keeps promotion and lineage
+reviews cheap on evidence-heavy documents: the lifecycle analysis (Issue
+#127) measured discovery documents at ~93% of corpus body bytes, almost
+entirely write-once research dumps that stay on the doc as audit evidence
+but need not be re-read.
+
+Documents written before this convention remain valid as-is — there is no
+bulk migration. Restructure opportunistically when a document grows an
+oversized inline dump: move the raw material under `## Evidence` and
+leave a short summary or pointer in the head.
+
 ## Mutability
 
 Discovery documents are working notes until promoted.
@@ -163,6 +192,9 @@ Discovery documents are working notes until promoted.
 - `resolved` documents should be treated as historical evidence. Prefer dated
   notes or a new discovery document over rewriting a resolved record.
 - `archived` documents preserve the exploration context; do not overwrite them.
+- The `## Evidence` tail is append-only at every status: extend it with new
+  dated entries; do not rewrite entries already recorded, even in
+  `draft`/`active`.
 - Status, owner, and relation updates are acceptable in-place edits at any status.
 
 ## One Topic per File Rule

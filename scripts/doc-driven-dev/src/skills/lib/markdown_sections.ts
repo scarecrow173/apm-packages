@@ -60,6 +60,7 @@ const SECTION_HEADING_ALIASES: Readonly<Record<string, readonly string[]>> = {
   "Tentative Conclusions and Hypotheses": ["暫定結論・仮説"],
   "Open Questions": ["未解決の論点", "未解決事項"],
   "Promotion Candidates": ["昇華先候補"],
+  "Evidence": ["エビデンス"],
   // idea-doc
   "Summary": ["要約"],
   "Problem and Motivation": ["課題と動機"],
