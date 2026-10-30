@@ -3559,7 +3559,7 @@ var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
   "evidence-refs",
   "evidenceRefs"
 ]);
-var CANONICAL_TARGETS = [
+var CANONICAL_DOC_DIRS = [
   "docs/ideas",
   "docs/discovery",
   "docs/specs",
@@ -3588,6 +3588,14 @@ function isInside(cwd, candidate) {
   const root = import_node_path.default.resolve(cwd);
   const resolved = import_node_path.default.resolve(candidate);
   return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function resolveContainedTaskDir(cwd, taskDir) {
+  const candidate = taskDir ?? "docs/tasks";
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
+  }
+  return normalizeArtifactPath(cwd, resolved);
 }
 function markdownFiles(dir) {
   if (!import_node_fs.default.existsSync(dir) || !import_node_fs.default.statSync(dir).isDirectory()) return [];
@@ -3632,8 +3640,8 @@ function relationValues(raw, ownerPath) {
 }
 function readRecords(options2, collector) {
   const cwd = import_node_path.default.resolve(options2.cwd);
-  const taskDir = options2.taskDir ?? "docs/tasks";
-  const directories = sortedUnique([...CANONICAL_TARGETS, normalizeArtifactPath(cwd, taskDir)]);
+  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
+  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
   const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path.default.join(cwd, directory))));
   const records = [];
   for (const absolutePath of files.map((file2) => import_node_path.default.resolve(cwd, file2))) {
@@ -19581,18 +19589,6 @@ var RUN_YIELD_REASONS = [
 ];
 
 // src/skills/doc-driven-dev-graph/scripts/lib/caller_runner.ts
-var CANONICAL_TARGETS2 = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp"
-];
 function fingerprint(value) {
   return import_node_crypto.default.createHash("sha256").update(value).digest("hex");
 }
@@ -19605,7 +19601,7 @@ function filesystemEntryKind(target) {
 }
 function canonicalReference(repo, relativePath) {
   if (relativePath === ".") {
-    const entries = CANONICAL_TARGETS2.flatMap((directory) => {
+    const entries = CANONICAL_DOC_DIRS.flatMap((directory) => {
       const target = import_node_path2.default.join(repo, directory);
       return [
         `${directory}:${filesystemEntryKind(target)}`,
@@ -19629,18 +19625,6 @@ function canonicalReference(repo, relativePath) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_context.ts
-var CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp"
-];
 function compareStrings2(left, right) {
   return left.localeCompare(right);
 }
@@ -19714,14 +19698,15 @@ function listArtifactMetadata(cwd, focus, taskDir) {
   })).sort((left, right) => compareStrings2(left.path, right.path));
   return { metadata, findings: finalizeFindings(findings) };
 }
-function isCanonicalDocPath(normalizedPath) {
+function isCanonicalDocPath(normalizedPath, canonicalDirs) {
   const base = normalizedPath.split("/").pop() ?? "";
   if (!base.toLowerCase().endsWith(".md")) return false;
   if (/^(?:readme|index)\.md$/i.test(base)) return false;
-  return CANONICAL_DOC_DIRS.some((directory) => normalizedPath.startsWith(`${directory}/`));
+  return canonicalDirs.some((directory) => directory === "" || normalizedPath.startsWith(`${directory}/`));
 }
-function fetchArtifactBodies(cwd, refs) {
+function fetchArtifactBodies(cwd, refs, taskDir) {
   const repo = import_node_path3.default.resolve(cwd);
+  const canonicalDirs = [...CANONICAL_DOC_DIRS, resolveContainedTaskDir(repo, taskDir)];
   const documents = [];
   const findings = [];
   for (const ref of refs) {
@@ -19739,7 +19724,7 @@ function fetchArtifactBodies(cwd, refs) {
       continue;
     }
     const normalized = normalizeArtifactPath(repo, resolved);
-    if (!isCanonicalDocPath(normalized)) {
+    if (!isCanonicalDocPath(normalized, canonicalDirs)) {
       fail("not-canonical", `Ref path is not a canonical artifact doc: ${ref.path}`);
       continue;
     }
@@ -19772,7 +19757,7 @@ function fetchArtifactBodies(cwd, refs) {
 }
 function expandArtifactContext(cwd, fromPath, options2) {
   const repo = import_node_path3.default.resolve(cwd);
-  const { records } = scanArtifactGraph({ cwd: repo });
+  const { records } = scanArtifactGraph({ cwd: repo, taskDir: options2.taskDir });
   const findings = [];
   const byPath = new Map(records.map((record2) => [record2.path, record2]));
   let root;
@@ -19826,6 +19811,17 @@ function expandArtifactContext(cwd, fromPath, options2) {
       }
     }
   }
+  if (options2.relations !== void 0) {
+    const declared = new Set(records.flatMap((record2) => Object.keys(record2.relations)));
+    for (const name of relations) {
+      if (!declared.has(name)) {
+        findings.push({
+          code: "unused-relation",
+          message: `Requested relation ${name} is not declared on any scanned artifact record`
+        });
+      }
+    }
+  }
   nodes.sort((left, right) => left.depth - right.depth || compareStrings2(left.path, right.path));
   return {
     nodes,
@@ -19836,7 +19832,7 @@ function expandArtifactContext(cwd, fromPath, options2) {
 
 // src/skills/doc-driven-dev-graph/scripts/fetch_context.ts
 function usage() {
-  return "Usage: node fetch_context.js [--cwd <dir>] <mode> [options] [--json]\n  L1 metadata: --metadata --focus <id-or-path> [--focus <x> ...] [--task-dir <dir>]\n  L2 fetch:    --fetch <path> [--fetch <path> ...] [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...]\n  L3 expand:   --expand <id-or-path> [--relations <a,b,c>] [--depth <n>] [--reason <text>]\nExactly one mode is required per invocation.";
+  return "Usage: node fetch_context.js [--cwd <dir>] <mode> [options] [--json]\n  L1 metadata: --metadata --focus <id-or-path> [--focus <x> ...] [--task-dir <dir>]\n  L2 fetch:    --fetch <path> [--fetch <path> ...] [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] [--task-dir <dir>]\n  L3 expand:   --expand <id-or-path> [--relations <a,b,c>] [--depth <n>] [--reason <text>] [--task-dir <dir>]\nExactly one mode is required per invocation.";
 }
 function requiredValue(argv, index, option) {
   const value = argv[index + 1];
@@ -19934,13 +19930,11 @@ function resolveMode(args) {
     [args.reason !== void 0, "--reason"]
   ] : mode === "fetch" ? [
     [args.focus.length > 0, "--focus"],
-    [args.taskDir !== void 0, "--task-dir"],
     [args.relations !== void 0, "--relations"],
     [args.depth !== void 0, "--depth"],
     [args.reason !== void 0, "--reason"]
   ] : [
     [args.focus.length > 0, "--focus"],
-    [args.taskDir !== void 0, "--task-dir"],
     [args.idRefs.length > 0, "--id"],
     [args.fingerprintRefs.length > 0, "--fingerprint"]
   ];
@@ -19990,13 +19984,14 @@ function run(args) {
     const { metadata, findings } = listArtifactMetadata(cwd, args.focus, args.taskDir);
     emitReport({ metadata, findings }, findings);
   } else if (mode === "fetch") {
-    const result = fetchArtifactBodies(cwd, buildFetchRefs(cwd, args));
+    const result = fetchArtifactBodies(cwd, buildFetchRefs(cwd, args), args.taskDir);
     emitReport(result, result.findings);
   } else {
     const result = expandArtifactContext(cwd, args.expand, {
       ...args.relations !== void 0 ? { relations: parseRelations(args.relations) } : {},
       ...args.depth !== void 0 ? { maxDepth: args.depth } : {},
-      ...args.reason !== void 0 ? { reason: args.reason } : {}
+      ...args.reason !== void 0 ? { reason: args.reason } : {},
+      ...args.taskDir !== void 0 ? { taskDir: args.taskDir } : {}
     });
     emitReport(result, result.findings);
   }

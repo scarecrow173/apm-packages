@@ -36,3 +36,18 @@ test("existing non-Markdown local relations are valid while missing files remain
   assert.equal(graph.issues.some((issue: { message: string }) => issue.message.includes("src/missing.py")), true);
   assert.equal(graph.issues.filter((issue: { code: string }) => issue.code === "broken-relation").length, 1);
 });
+
+test("projectArtifactGraph refuses a taskDir that escapes the checkout", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "artifact-graph-taskdir-"));
+  for (const taskDir of ["../outside", "./../outside", path.dirname(repo)]) {
+    assert.throws(
+      () => projectArtifactGraph({ cwd: repo, taskDir }),
+      /--task-dir escapes the checkout/,
+      `taskDir ${taskDir} must be rejected`,
+    );
+  }
+  // Contained values — default, redundant, and custom — scan normally.
+  for (const taskDir of ["docs/tasks", "./docs/tasks", "docs/../docs/tasks", "docs/work-items"]) {
+    assert.doesNotThrow(() => projectArtifactGraph({ cwd: repo, taskDir }), taskDir);
+  }
+});
