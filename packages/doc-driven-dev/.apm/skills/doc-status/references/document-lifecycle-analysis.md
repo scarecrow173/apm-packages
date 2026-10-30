@@ -43,8 +43,8 @@ pipeline**, not a new diagnostic:
 | `collectFindings` + `summarizeHealth` (`lib/doc_report.ts`) | The exact findings and health categories `doc_status audit/health` reports |
 | `inboundLinkCounts` + `inboundRelationCounts` (`lib/doc_structure_lint.ts`) | The same inbound-coverage maps `lintOrphans` uses (exported for reuse — no logic duplicated) |
 
-The only new semantics are aggregation (per-type buckets), a
-**settled / in-flight** status axis, and a **stale-upstream** heuristic:
+The only new semantics are aggregation (per-type buckets) over two status
+axes — both now single-sourced in `lib/doc_repository.ts`:
 
 - *Settled* = the document's own lifecycle work has concluded
   (`done`, `wont-do`, `completed`, `implemented`, `resolved`, `routed`,
@@ -55,10 +55,14 @@ The only new semantics are aggregation (per-type buckets), a
 - *Stale upstream* = an in-flight document with ≥1 resolved
   `implements`/`derives-from`/`refines` target in a dead status
   (`superseded`/`rejected`/`deprecated`/`archived`/`abandoned`/`wont-do`/
-  `completed`/`done`). Heuristic signal, not a contract — resolved/active
+  `completed`/`done`). **Promoted in #166:** the heuristic became the
+  `stale-upstream` doc-status rule — the stats consume the shared
+  `staleUpstreamTargets` predicate, so the counts below are the same edges
+  `doc_status lint` reports as non-blocking warnings. Resolved/active
   upstreams and normative baselines never flag.
 - Legacy fixture spelling `type: "implementation-record"` merges into the
-  `impl` bucket (`TYPE_ALIASES`) — same artifact kind, pre-contract spelling.
+  `impl` bucket (`LIFECYCLE_TYPE_ALIASES`) — same artifact kind,
+  pre-contract spelling.
 
 ### 2.2 Corpora
 
@@ -112,18 +116,18 @@ lint reports them.
 | Settled / in-flight | 0 / 7 | 0 / 68 | 57 / 49 |
 | Stale-upstream docs | 0 | 0 | 3 |
 | Duplicate-id groups | 0 | 0 | 0 |
-| Findings (blocking/warn/info) | 21 (0/0/21) | 348 (86/239/23) | 33 (6/8/19) |
+| Findings (blocking/warn/info) | 21 (0/0/21) | 348 (86/239/23) | 37 (6/12/19) |
 
 ### 3.2 Per-type — long-running corpus
 
 | Type | Files | Settled | Stale | Body bytes | Max file | Orphans (rel/idx/nav) | Findings |
 | ---- | ----- | ------- | ----- | ---------- | -------- | --------------------- | -------- |
-| task | 23 | 17 (74%) | 2 | 1,106 | 48 | 0/0/0 | 0 |
+| task | 23 | 17 (74%) | 2 | 1,106 | 48 | 0/0/0 | 2 |
 | impl | 18 | 16 (89%) | 0 | 1,318 | 70 | 0/0/0 | 0* |
 | spec | 11 | 7 (64%) | 0 | 1,117 | 102 | 1/0/0 | 4 |
 | discovery | 10 | 6 (60%) | 0 | 39,809 | 39,018 | 3/3/3 | 14 |
 | plan | 9 | 6 (67%) | 0 | 120 | 12 | 1/0/0 | 1 |
-| design | 9 | 0 | 1 | 219 | 25 | 1/0/0 | 2 |
+| design | 9 | 0 | 1 | 219 | 25 | 1/0/0 | 4 |
 | adr | 8 | 1 (13%) | 0 | 377 | 62 | 0/0/0 | 0 |
 | idea | 8 | 3 (38%) | 0 | 136 | 16 | 8/0/0 | 8 |
 | test-spec | 7 | 1 (14%) | 0 | 118 | 17 | 0/0/0 | 0 |
@@ -165,6 +169,7 @@ Status distributions (long-running): task `done` 15 / `todo` 4 / `wont-do`
 | broken-relation-link | 1 | `SPEC-9201 → DISC-9999` |
 | inconsistent-reciprocal-relation | 1 | `SPEC-0502` not back-linked in `DISC-0501.derived-by` — supersession drift |
 | traceability-missing-upstream | 2 | `SPEC-0001`, `DESIGN-OVERVIEW` |
+| stale-upstream | 4 | `DESIGN-0501` ×2 edges (`SPEC-0501` + `ADR-0501`), `TASK-0503`/`TASK-0504` on completed `PLAN-0501` |
 | provenance-missing-source / provenance-unresolved-local-source | 1 / 1 | orphan discoveries |
 | (indexes) | — | 2 findings attach to index files themselves |
 
@@ -211,7 +216,7 @@ in a ~100-doc corpus) silently removes documents from the reachable
 surface. `doc-status` already reports all of these; `doc-maintenance`
 already regenerates indexes. The gap is cadence, not capability.
 
-### 4.5 Lifecycle-debt edges are small, real, and currently invisible
+### 4.5 Lifecycle-debt edges are small, real, and were invisible until #166
 
 3 stale-upstream docs (todo tasks on a completed plan; approved design on a
 superseded spec), 1 reciprocal-relation break from supersession, 2
@@ -229,8 +234,9 @@ unresolved relation targets, 2 provenance gaps. Individually minor — but
   back-link, leaving `inconsistent-reciprocal-relation` drift no one is
   told to fix.
 
-Neither is covered by a dedicated doc-status rule today; the stale-upstream
-heuristic is where this analysis surfaced them.
+The stale-upstream edges are now surfaced by the dedicated `stale-upstream`
+rule (landed in #166 — see §6); the reciprocal-drift gap remains
+instruction-level (A2), and this analysis is still where it was measured.
 
 ## 5. Required vs optional classification
 
@@ -300,7 +306,10 @@ Two cross-cutting observations:
 5. `test-spec-skip` resolution semantics (C3) — one issue; **landed as
    #165**.
 6. Promote the stale-upstream heuristic into a `doc-status` lint rule if
-   the signal proves stable on real repos — one issue.
+   the signal proves stable on real repos — one issue; **landed as #166**:
+   `stale-upstream` is a non-blocking warning emitted once per dead
+   upstream edge, and the stats consume the same `staleUpstreamTargets`
+   predicate the rule runs on.
 
 ## 7. Explicit non-actions
 

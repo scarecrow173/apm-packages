@@ -124,6 +124,15 @@ rule ID で報告する。対象チェック:
   ない場合に warning を出す。root 適格 type と終端 status
   （`superseded`, `rejected`, `archived`, `deprecated`, `abandoned`,
   `wont-do`）は対象外。
+- `stale-upstream` — 死んだ上流に乗っている in-flight 文書。
+  `implements` / `derives-from` / `refines` のターゲットが、dead status
+  （`superseded`, `rejected`, `deprecated`, `archived`, `abandoned`,
+  `wont-do`, `completed`, `done`）の文書に解決した場合、dead ターゲット
+  ごとに warning を出す。`completed`/`done` も dead とみなす —— 完了済み
+  plan 上の in-flight task は「残し忘れ」そのもの —— 一方で
+  `approved`/`accepted`/`implemented`/`resolved` の上流や settled な
+  文書はフラグされない。non-blocking な warning: stale 系譜は契約違反
+  ではなく、向き先変更またはクローズを促すシグナル。
 - `missing-index`, `index-missing-entry`, `index-missing-overview`,
   `missing-overview` — 索引とディレクトリ構造の欠落。
 - `broken-link`, `missing-image-link`, `broken-anchor`, `link-escapes-root`,
