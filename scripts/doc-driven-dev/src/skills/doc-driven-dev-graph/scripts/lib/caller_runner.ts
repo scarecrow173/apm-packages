@@ -435,6 +435,18 @@ export type CallerRunnerOptions = {
    * `budget-exhausted`. Default: {@link DEFAULT_MAX_DISPATCHES_PER_EDGE}.
    */
   maxDispatchesPerEdge?: number;
+  /**
+   * Run-level dispatch bound: every effect dispatch in the run counts once,
+   * across all edges. The per-edge budget resets when routing selects a
+   * different edge, so an adapter alternating retries across edges — each
+   * staying under its own per-edge count — would otherwise loop forever;
+   * hops and route fingerprints never grow because nothing completes.
+   * Reaching the bound yields `budget-exhausted`. Default: the run's
+   * current `maxHops` times `maxDispatchesPerEdge` — every hop's edge
+   * consuming its full per-edge budget — so the bound stays generous yet
+   * finite as the task-aware hop budget freezes upward.
+   */
+  maxTotalDispatches?: number;
   dispatcher: EffectDispatcher;
   /** Adapter-owned authoritative input mapping, resolved to live canonical refs. */
   resolveInputs: (route: GraphRoute, effect: CallerEffect) => string[];
@@ -496,6 +508,7 @@ export type CallerHandoff = {
   mode: "run-until-yield" | "single-step";
   maxHops: number;
   maxDispatchesPerEdge: number;
+  maxTotalDispatches: number;
   yieldReason: YieldReason | null;
   focus: string[];
   signals: string[];
@@ -507,6 +520,8 @@ export type CallerHandoff = {
   delegateCounts: Record<string, number>;
   outcomes: EffectOutcome[];
   pending: PendingEdge | null;
+  /** Run-level count of every effect dispatch so far (#131). */
+  totalDispatches: number;
   hops: number;
 };
 
@@ -547,6 +562,12 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   const maxDispatchesPerEdge = options.resume?.maxDispatchesPerEdge
     ?? options.maxDispatchesPerEdge
     ?? DEFAULT_MAX_DISPATCHES_PER_EDGE;
+  const configuredMaxTotalDispatches = options.resume?.maxTotalDispatches
+    ?? options.maxTotalDispatches;
+  // The default scales with the run's own budgets — evaluated at each check
+  // so it tracks the task-aware maxHops freeze upward.
+  const totalDispatchBound = (): number => configuredMaxTotalDispatches
+    ?? maxHops * maxDispatchesPerEdge;
   const focus = options.focus ?? options.resume?.focus ?? [];
   const signals = new Set(options.signals ?? options.resume?.signals ?? []);
   let current = options.resume?.current ?? options.current ?? definition.entry;
@@ -558,6 +579,12 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   const auditCounts = { ...(options.resume?.auditCounts ?? {}) };
   const delegateCounts = { ...(options.resume?.delegateCounts ?? {}) };
   const outcomes = [...(options.resume?.outcomes ?? [])];
+  // Run-level dispatch count — seeded from the handoff so a resumed run
+  // continues the same budget instead of restarting it. Handoffs written
+  // before the field existed approximate it with the recorded outcome
+  // count — every stored outcome was a dispatch.
+  let totalDispatches = options.resume?.totalDispatches
+    ?? (options.resume?.outcomes ?? []).length;
   const events: string[] = [];
   let pending: PendingEdge | null = options.resume?.pending ? {
     route: options.resume.pending.route,
@@ -834,7 +861,11 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       .map((outcome) => outcome.effect.id));
     for (const audit of route.requiredAudits) {
       if (completedAudits.has(audit)) continue;
-      if (edgeDispatches >= maxDispatchesPerEdge) {
+      // Two dispatch bounds guard every effect: the pending edge's own
+      // budget and the run total — the latter catches retries rotated
+      // across different edges, which reset the per-edge count.
+      if (edgeDispatches >= maxDispatchesPerEdge
+          || totalDispatches >= totalDispatchBound()) {
         yieldReason = "budget-exhausted";
         savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         break hopLoop;
@@ -842,6 +873,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       events.push(`audit:${audit}`);
       const effect: CallerEffect = { kind: "audit", id: audit };
       edgeDispatches += 1;
+      totalDispatches += 1;
       const dispatched = dispatchEffect(route, "audit", effect);
       if ("rejection" in dispatched) {
         yieldReason = "authority-required";
@@ -880,7 +912,8 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       outcome.status === "completed" && outcome.stage === "delegate" && outcome.effect.id === route.delegate
     ));
     if (route.delegate && !delegateComplete) {
-      if (edgeDispatches >= maxDispatchesPerEdge) {
+      if (edgeDispatches >= maxDispatchesPerEdge
+          || totalDispatches >= totalDispatchBound()) {
         yieldReason = "budget-exhausted";
         savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         break hopLoop;
@@ -888,6 +921,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       events.push(`delegate:${route.delegate}`);
       const effect: CallerEffect = { kind: "delegate", id: route.delegate };
       edgeDispatches += 1;
+      totalDispatches += 1;
       const dispatched = dispatchEffect(route, "delegate", effect);
       if ("rejection" in dispatched) {
         yieldReason = "authority-required";
@@ -961,6 +995,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     mode,
     maxHops,
     maxDispatchesPerEdge,
+    maxTotalDispatches: totalDispatchBound(),
     yieldReason,
     focus: [...focus],
     signals: [...signals].sort(),
@@ -972,6 +1007,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     delegateCounts,
     outcomes,
     pending,
+    totalDispatches,
     hops,
   };
   if (yieldReason !== null) {

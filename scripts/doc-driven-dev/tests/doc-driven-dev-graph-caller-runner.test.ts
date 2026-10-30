@@ -698,6 +698,74 @@ test("the per-edge dispatch budget is configurable via maxDispatchesPerEdge", ()
   assert.equal(events.at(-1)?.kind, "run-yield");
 });
 
+/**
+ * The `design` audit retries forever and flips the design doc's `status`
+ * between draft and approved on every call, so the design gate alternates
+ * pass/fail and routing rotates between `design-to-planning` and
+ * `design-retry` — each pending edge is replaced before its per-edge count
+ * can accumulate. Only the run-level total bound can stop this loop.
+ */
+function alternatingEdgeRetryDispatcher(dir: string): EffectDispatcher {
+  let attempt = 0;
+  return (ctx) => {
+    if (ctx.effect.kind === "audit" && ctx.effect.id === "design") {
+      const inputs = testInputs(dir, ctx.route, ctx.effect);
+      attempt += 1;
+      // Flip the design gate pass/fail so routing alternates edges, and
+      // change the title so every retry payload is byte-distinct.
+      updateArtifact(dir, "docs/designs/0001-graph.md", {
+        title: `Alternating retry ${attempt}`,
+        status: attempt % 2 === 1 ? "draft" : "approved",
+      });
+      const evidence = ref(dir, "docs/designs/0001-graph.md");
+      return {
+        outcome: {
+          status: "retry",
+          edgeId: ctx.route.edgeId as string,
+          stage: "audit",
+          effect: ctx.effect,
+          authoritativeInputs: inputs,
+          evidence: [evidence],
+          retry: { changedEvidence: [evidence] },
+        },
+        observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+      };
+    }
+    return {
+      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+    };
+  };
+}
+
+test("retries alternated across different edges trip the run-level total dispatch bound", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  const dispatcher = alternatingEdgeRetryDispatcher(dir);
+  const result = runCaller({
+    ...runnerArgs(dir, dispatcher, trace),
+    current: "design", focus: ["PLAN-0001"], maxTotalDispatches: 5,
+  });
+  assert.equal(result.yieldReason, "budget-exhausted");
+  // The gate flip rotated the route on every pass: design-to-planning and
+  // design-retry strictly alternate, and every retry payload was distinct —
+  // so neither the per-edge budget nor repeatedRetry could have fired.
+  assert.deepEqual(
+    result.routes.map((route) => route.edgeId),
+    ["design-to-planning", "design-retry", "design-to-planning", "design-retry", "design-to-planning", "design-retry"],
+  );
+  assert.equal(result.outcomes.length, 5);
+  assert.equal(new Set(result.outcomes.map((outcome) => JSON.stringify(outcome))).size, 5);
+  // The last saved pending edge carries 0 dispatches — the per-edge count
+  // never accumulated because the pending slot rotated every pass.
+  assert.equal(result.handoff.pending?.dispatches, 0);
+  assert.equal(result.handoff.totalDispatches, 5);
+  assert.equal(result.handoff.maxTotalDispatches, 5);
+  const last = readTraceFile(trace).at(-1);
+  assert.equal(last?.kind, "run-yield");
+  assert.equal(last?.kind === "run-yield" && last.reason, "budget-exhausted");
+});
+
 test("the pending-edge dispatch count survives a mid-edge yield and resume", () => {
   const dir = happyRepo();
   const trace = path.join(dir, "trace.jsonl");
@@ -737,4 +805,53 @@ test("the pending-edge dispatch count survives a mid-edge yield and resume", () 
   assert.equal(second.handoff.pending?.dispatches, 3);
   // outcomes accumulate across the resumed run: retry, yield, retry.
   assert.equal(second.outcomes.length, 3);
+});
+
+test("a handoff written before the run-level bound seeds totalDispatches from outcomes", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  let calls = 0;
+  // Leg 1: retry then input-required yield — the run consumed 2 dispatches.
+  const leg1Dispatcher = distinctRetryDispatcher(dir);
+  const yieldAfter: EffectDispatcher = (ctx) => {
+    calls += 1;
+    if (calls === 2) {
+      const inputs = testInputs(dir, ctx.route, ctx.effect);
+      return {
+        outcome: {
+          status: "yield",
+          edgeId: ctx.route.edgeId as string,
+          stage: "audit",
+          effect: ctx.effect,
+          authoritativeInputs: inputs,
+          evidence: [ref(dir, "docs/designs/0001-graph.md")],
+          reason: "input-required",
+        },
+        observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+      };
+    }
+    return leg1Dispatcher(ctx);
+  };
+  const first = runCaller({ ...runnerArgs(dir, yieldAfter, trace), current: "design", focus: ["PLAN-0001"] });
+  assert.equal(first.yieldReason, "input-required");
+  // Simulate a handoff serialized by the pre-total-bound caller: it carries
+  // maxDispatchesPerEdge and pending.dispatches but neither new field.
+  const oldHandoff = first.handoff as Partial<typeof first.handoff>;
+  delete oldHandoff.totalDispatches;
+  delete oldHandoff.maxTotalDispatches;
+  // Leg 2: resume the old handoff with a tight total bound. The seed comes
+  // from outcomes.length (2), the bound from the option (3) — so exactly one
+  // more dispatch runs before budget-exhausted.
+  const second = runCaller({
+    ...runnerArgs(dir, distinctRetryDispatcher(dir), trace),
+    resume: first.handoff, maxTotalDispatches: 3,
+  });
+  assert.equal(second.yieldReason, "budget-exhausted");
+  assert.equal(second.handoff.totalDispatches, 3);
+  // 2 resumed outcomes + 1 new dispatch — proves the count seeded at 2, not 0.
+  assert.equal(second.outcomes.length, 3);
+  // The per-edge count (3) stayed under the resumed budget (10), so the
+  // total bound was the one that fired.
+  assert.equal(second.handoff.maxDispatchesPerEdge, 10);
+  assert.equal(second.handoff.pending?.dispatches, 3);
 });

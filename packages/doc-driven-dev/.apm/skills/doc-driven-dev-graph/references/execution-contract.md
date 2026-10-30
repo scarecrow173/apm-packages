@@ -190,6 +190,16 @@ per-edge dispatch budget = maxDispatchesPerEdge default 10
   on the pending edge inside the handoff, so resume cannot reset it; a
   different selected edge starts its own count.
 
+run-level dispatch budget = maxTotalDispatches default
+  current maxHops × maxDispatchesPerEdge
+  Every effect dispatch in the run counts once across all edges, so retries
+  alternated across different edges — each pending slot replaced before its
+  per-edge count can accumulate — still reach a finite bound. The default
+  lets every hop's edge consume its full per-edge budget; it is evaluated
+  against the run's current (possibly task-adjusted) maxHops. Reaching it
+  yields budget-exhausted. Both the bound and the accumulated count are
+  carried in the handoff, so resume continues the same run's budget.
+
 changing repair loop = bounded by the frozen maxHops
   A task retry or repair that reaches this limit yields budget-exhausted and
   hands control to a new run. Budget exhaustion is neither an execution error

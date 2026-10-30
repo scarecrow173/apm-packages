@@ -128,8 +128,8 @@ both); one of `approval-required`, `input-required`, `authority-required`,
 `single-step-complete`), `hops`, and `completedEdges` in order.
 `budget-exhausted` is the single reason for every bounded-autonomy stop
 (see [execution-contract.md](execution-contract.md)): the hop budget, a
-repeated route fingerprint, a byte-identical retry outcome, or the
-per-edge dispatch budget.
+repeated route fingerprint, a byte-identical retry outcome, the per-edge
+dispatch budget, or the run-level total dispatch budget.
 
 ### Resume semantics
 
