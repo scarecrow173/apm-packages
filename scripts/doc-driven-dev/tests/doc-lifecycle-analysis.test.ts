@@ -124,6 +124,11 @@ test("long-running corpus is mostly settled evidence with layered debt", async (
   assert.ok(stats.corpus.staleUpstreamDocuments >= 3, `staleUpstream ${stats.corpus.staleUpstreamDocuments}`);
   assert.ok(stats.types.task.staleUpstream >= 2);
   assert.ok(stats.types.design.staleUpstream >= 1);
+  // Issue #166: the promoted doc-status rule surfaces the same edges as
+  // findings — one `stale-upstream` finding per dead upstream target
+  // (DESIGN-0501 has two: SPEC-0501 + ADR-0501; TASK-0503/0504 one each).
+  assert.ok((stats.findings.byRuleId["stale-upstream"] ?? 0) >= 4,
+    `stale-upstream findings ${stats.findings.byRuleId["stale-upstream"]}`);
 
   // Status distributions show lifecycle stages, not a single state.
   assert.ok((stats.types.task.statusCounts.done ?? 0) >= 10);

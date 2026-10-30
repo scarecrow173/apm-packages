@@ -114,6 +114,101 @@ const ROOT_ARTIFACT_TYPES: ReadonlySet<string> = new Set(["idea", "brainstorm", 
 
 const TRACEABILITY_TERMINAL_STATUSES = ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"];
 
+// ---------------------------------------------------------------------------
+// Lifecycle status axes
+// ---------------------------------------------------------------------------
+//
+// Status-axis policy shared by the `stale-upstream` lint rule
+// (`doc_provenance_lint.ts`) and the lifecycle-stats projection
+// (`lifecycle_stats.ts`) — one authoritative definition, two consumers
+// (Issue #166, promoted from the Issue #127 heuristic).
+
+/**
+ * "Settled" = the document's own lifecycle work has concluded; it persists as
+ * historical evidence even though it may still be referenced. This is NOT the
+ * graph's terminal-status notion — `approved` designs and `accepted` ADRs stay
+ * in-flight because they remain the normative baseline in-flight work derives
+ * from. Unknown types get an empty set (everything counts as in-flight).
+ */
+const SETTLED_STATUSES: Record<string, ReadonlySet<string>> = {
+  idea: new Set(["promoted", "parked", "archived", "superseded"]),
+  brainstorm: new Set(["routed", "superseded"]),
+  discovery: new Set(["resolved", "archived", "superseded"]),
+  spec: new Set(["implemented", "superseded", "rejected"]),
+  plan: new Set(["completed", "superseded"]),
+  task: new Set(["done", "wont-do"]),
+  design: new Set(["superseded", "rejected"]),
+  adr: new Set(["rejected", "deprecated", "superseded"]),
+  "test-spec": new Set(["deprecated", "superseded"]),
+  impl: new Set(["completed", "abandoned", "superseded"]),
+};
+
+/**
+ * Dead upstream statuses for the stale-upstream rule: an in-flight document
+ * depending on a dead upstream was probably left behind. `completed` / `done`
+ * count as dead here because an in-flight task/impl on a finished plan/task is
+ * exactly the "forgotten leftover" symptom; `resolved` and
+ * `approved`/`accepted` do NOT — deriving from settled evidence or a normative
+ * baseline is normal.
+ */
+const DEAD_UPSTREAM_STATUSES: ReadonlySet<string> = new Set([
+  "superseded",
+  "rejected",
+  "deprecated",
+  "archived",
+  "abandoned",
+  "wont-do",
+  "completed",
+  "done",
+]);
+
+/** Upstream relation fields — the lineage contract's expected-upstream set. */
+const UPSTREAM_FIELDS: ReadonlySet<string> = new Set(["implements", "derives-from", "refines"]);
+
+/** Legacy fixture spelling merged into the canonical `impl` bucket. */
+const LIFECYCLE_TYPE_ALIASES: Record<string, string> = { "implementation-record": "impl" };
+
+function lifecycleBucketOf(document: RepositoryDocument): string {
+  if (document.kind === "unmanaged") return "unmanaged";
+  const declared = document.type ?? "untyped";
+  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
+}
+
+function isSettled(document: RepositoryDocument): boolean {
+  if (document.status === null) return false;
+  return SETTLED_STATUSES[lifecycleBucketOf(document)]?.has(document.status) ?? false;
+}
+
+type StaleUpstreamTarget = {
+  field: string;
+  target: string;
+  upstream: RepositoryDocument;
+};
+
+/**
+ * Stale upstream: an in-flight document riding on a dead upstream. Returns the
+ * resolved `implements`/`derives-from`/`refines` targets whose upstream
+ * document carries a dead status — one entry per dead target so callers can
+ * report or count each edge. Unresolved, `resolved-file` (non-document), and
+ * status-less targets never qualify; neither do settled sources.
+ */
+function staleUpstreamTargets(model: DocumentRepository, document: RepositoryDocument): StaleUpstreamTarget[] {
+  if (isSettled(document)) return [];
+  const stale: StaleUpstreamTarget[] = [];
+  for (const [field, targets] of Object.entries(document.relations)) {
+    if (!UPSTREAM_FIELDS.has(field)) continue;
+    for (const target of targets) {
+      const resolved = model.resolveRelationTarget(document, target);
+      if (resolved.status === "resolved"
+        && resolved.document.status !== null
+        && DEAD_UPSTREAM_STATUSES.has(resolved.document.status)) {
+        stale.push({ field, target, upstream: resolved.document });
+      }
+    }
+  }
+  return stale;
+}
+
 function contractForDocType(type: string): DocumentContract {
   const config = configFor(type);
   const contract: DocumentContract = {
@@ -138,7 +233,7 @@ function contractForDocType(type: string): DocumentContract {
   }
   if (type === "spec" || type === "plan" || type === "task" || type === "design") {
     contract.expectedUpstream = [
-      { fields: ["implements", "derives-from", "refines"], skipStatuses: TRACEABILITY_TERMINAL_STATUSES },
+      { fields: [...UPSTREAM_FIELDS], skipStatuses: TRACEABILITY_TERMINAL_STATUSES },
     ];
   }
   if (type === "design") {
@@ -768,13 +863,19 @@ export {
   canonicalDocRoots,
   compareFindings,
   contractForType,
+  DEAD_UPSTREAM_STATUSES,
   documentContracts,
   finding,
   frontMatterEndLine,
   isExternalReference,
+  isSettled,
+  lifecycleBucketOf,
   scanRepository,
+  SETTLED_STATUSES,
   slugifyAnchor,
   sortFindings,
+  staleUpstreamTargets,
+  UPSTREAM_FIELDS,
 };
 
 export type {
@@ -792,5 +893,6 @@ export type {
   RepositoryDocument,
   RequiredRelation,
   ScanOptions,
+  StaleUpstreamTarget,
   UpstreamExpectation,
 };

@@ -5,11 +5,14 @@
  *
  * This module measures what a document corpus costs to keep around. It does
  * NOT re-implement any diagnostic: repository parsing, relation/path
- * resolution, orphan semantics, lint findings, and health categories all come
- * from the existing doc-status surface (`scanRepository`, `collectFindings`,
- * `summarizeHealth`, `inboundLinkCounts`, `inboundRelationCounts`). The only
- * additions are aggregation (per-type bucketing), a settled/in-flight status
- * axis, and a stale-upstream heuristic.
+ * resolution, orphan semantics, lint findings, health categories, and the
+ * lifecycle status axes all come from the existing doc-status surface
+ * (`scanRepository`, `collectFindings`, `summarizeHealth`,
+ * `inboundLinkCounts`, `inboundRelationCounts`). The only addition is
+ * aggregation (per-type bucketing) over the shared settled/in-flight and
+ * stale-upstream semantics — the latter was promoted to the `stale-upstream`
+ * lint rule in Issue #166 and lives in `doc_repository.ts`
+ * (`staleUpstreamTargets`), which this projection consumes.
  *
  * Output is a JSON-stable object — sorted keys, no wall-clock values, no
  * environment-sensitive data — so committed fixtures can byte-compare it.
@@ -20,72 +23,15 @@ import {
   artifactKeyOf,
   documentContracts,
   isExternalReference,
+  isSettled,
+  lifecycleBucketOf,
+  staleUpstreamTargets,
   type DocumentRepository,
   type Finding,
   type RepositoryDocument,
 } from "./doc_repository";
 import { inboundLinkCounts, inboundRelationCounts } from "./doc_structure_lint";
 import type { HealthReport } from "./doc_report";
-
-// ---------------------------------------------------------------------------
-// Status axes
-// ---------------------------------------------------------------------------
-
-/**
- * "Settled" = the document's own lifecycle work has concluded; it persists as
- * historical evidence even though it may still be referenced. This is NOT the
- * graph's terminal-status notion — `approved` designs and `accepted` ADRs stay
- * in-flight because they remain the normative baseline in-flight work derives
- * from. Unknown types get an empty set (everything counts as in-flight).
- */
-const SETTLED_STATUSES: Record<string, ReadonlySet<string>> = {
-  idea: new Set(["promoted", "parked", "archived", "superseded"]),
-  brainstorm: new Set(["routed", "superseded"]),
-  discovery: new Set(["resolved", "archived", "superseded"]),
-  spec: new Set(["implemented", "superseded", "rejected"]),
-  plan: new Set(["completed", "superseded"]),
-  task: new Set(["done", "wont-do"]),
-  design: new Set(["superseded", "rejected"]),
-  adr: new Set(["rejected", "deprecated", "superseded"]),
-  "test-spec": new Set(["deprecated", "superseded"]),
-  impl: new Set(["completed", "abandoned", "superseded"]),
-};
-
-/**
- * Dead upstream statuses for the stale-upstream heuristic: an in-flight
- * document depending on a dead upstream was probably left behind. `completed`
- * / `done` count as dead here because an in-flight task/impl on a finished
- * plan/task is exactly the "forgotten leftover" symptom; `resolved` and
- * `approved`/`accepted` do NOT — deriving from settled evidence or a normative
- * baseline is normal.
- */
-const DEAD_UPSTREAM_STATUSES: ReadonlySet<string> = new Set([
-  "superseded",
-  "rejected",
-  "deprecated",
-  "archived",
-  "abandoned",
-  "wont-do",
-  "completed",
-  "done",
-]);
-
-/** Upstream relation fields — the lineage contract's expected-upstream set. */
-const UPSTREAM_FIELDS: ReadonlySet<string> = new Set(["implements", "derives-from", "refines"]);
-
-/** Legacy fixture spelling merged into the canonical `impl` bucket. */
-const TYPE_ALIASES: Record<string, string> = { "implementation-record": "impl" };
-
-function bucketOf(document: RepositoryDocument): string {
-  if (document.kind === "unmanaged") return "unmanaged";
-  const declared = document.type ?? "untyped";
-  return TYPE_ALIASES[declared] ?? declared;
-}
-
-function isSettled(document: RepositoryDocument): boolean {
-  if (document.status === null) return false;
-  return SETTLED_STATUSES[bucketOf(document)]?.has(document.status) ?? false;
-}
 
 // ---------------------------------------------------------------------------
 // Stats shapes
@@ -227,7 +173,7 @@ async function analyzeCorpus(cwd: string, options: { label?: string } = {}): Pro
 
   const typeStats = new Map<string, TypeStats>();
   const statsFor = (document: RepositoryDocument): TypeStats => {
-    const bucket = bucketOf(document);
+    const bucket = lifecycleBucketOf(document);
     let stats = typeStats.get(bucket);
     if (!stats) {
       stats = emptyTypeStats();
@@ -263,7 +209,7 @@ async function analyzeCorpus(cwd: string, options: { label?: string } = {}): Pro
       continue;
     }
     const stats = statsFor(document);
-    const bucket = bucketOf(document);
+    const bucket = lifecycleBucketOf(document);
     artifactBucket.set(artifactKeyOf(document.path), bucket);
 
     corpus.documents += 1;
@@ -287,7 +233,14 @@ async function analyzeCorpus(cwd: string, options: { label?: string } = {}): Pro
       corpus.inFlightDocuments += 1;
     }
 
-    let hasStaleUpstream = false;
+    // Stale upstream: in-flight document riding on a dead upstream — the
+    // shared `stale-upstream` rule semantics (Issue #166), consumed here as a
+    // count rather than duplicated.
+    if (staleUpstreamTargets(model, document).length > 0) {
+      stats.staleUpstream += 1;
+      corpus.staleUpstreamDocuments += 1;
+    }
+
     for (const [field, targets] of Object.entries(document.relations)) {
       let fieldCounts = byField.get(field);
       if (!fieldCounts) {
@@ -299,19 +252,7 @@ async function analyzeCorpus(cwd: string, options: { label?: string } = {}): Pro
         addResolution(corpusRelations, resolved.status);
         addResolution(stats.relations, resolved.status);
         addResolution(fieldCounts, resolved.status);
-        // Stale upstream: in-flight document riding on a dead upstream.
-        if (UPSTREAM_FIELDS.has(field)
-          && !isSettled(document)
-          && resolved.status === "resolved"
-          && resolved.document.status !== null
-          && DEAD_UPSTREAM_STATUSES.has(resolved.document.status)) {
-          hasStaleUpstream = true;
-        }
       }
-    }
-    if (hasStaleUpstream) {
-      stats.staleUpstream += 1;
-      corpus.staleUpstreamDocuments += 1;
     }
 
     if ((linkCounts.get(document.path) ?? 0) > 0) stats.inboundLinkTargets += 1;
@@ -384,7 +325,7 @@ async function analyzeCorpus(cwd: string, options: { label?: string } = {}): Pro
       continue;
     }
     findingsSummary.onDocuments += 1;
-    const stats = typeStats.get(bucketOf(target));
+    const stats = typeStats.get(lifecycleBucketOf(target));
     if (!stats) continue;
     stats.findings += 1;
     if (item.blocking) stats.blockingFindings += 1;
@@ -426,5 +367,15 @@ async function analyzeCorpus(cwd: string, options: { label?: string } = {}): Pro
   };
 }
 
-export { analyzeCorpus, SETTLED_STATUSES, DEAD_UPSTREAM_STATUSES, UPSTREAM_FIELDS };
+export { analyzeCorpus };
+// Re-exported for API stability: the canonical definitions now live in
+// `doc_repository.ts` alongside the `stale-upstream` rule (Issue #166).
+export {
+  DEAD_UPSTREAM_STATUSES,
+  isSettled,
+  lifecycleBucketOf,
+  SETTLED_STATUSES,
+  staleUpstreamTargets,
+  UPSTREAM_FIELDS,
+} from "./doc_repository";
 export type { CorpusLifecycleStats, RelationResolutionCounts, TypeStats };

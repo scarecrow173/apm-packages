@@ -129,6 +129,15 @@ a stable rule ID. Covered checks include:
   relation is declared. Root-eligible types and terminal statuses
   (`superseded`, `rejected`, `archived`, `deprecated`, `abandoned`,
   `wont-do`) are exempt.
+- `stale-upstream` — in-flight documents riding on a dead upstream. An
+  `implements`, `derives-from`, or `refines` target that resolves to a
+  document in a dead status (`superseded`, `rejected`, `deprecated`,
+  `archived`, `abandoned`, `wont-do`, `completed`, `done`) warns once per
+  dead target. `completed`/`done` count as dead — an in-flight task on a
+  finished plan is the forgotten-leftover case — while
+  `approved`/`accepted`/`implemented`/`resolved` upstreams and settled
+  source documents never flag. Non-blocking warning: stale lineage is a
+  signal to re-point or close, not a contract violation.
 - `missing-index`, `index-missing-entry`, `index-missing-overview`,
   `missing-overview` — index and directory structure gaps.
 - `broken-link`, `missing-image-link`, `broken-anchor`, `link-escapes-root`,
