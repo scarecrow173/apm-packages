@@ -109,7 +109,12 @@ JSON inspection は既定では `definition` だけを含みます。runtime sel
 `--focus`、`--task-dir` のいずれか）を渡すと、新しい projection の `state`、
 `artifactGraph`、`taskGraph` が追加されます。projection は read-only で、route、delegate
 dispatch、並行 state store の作成を行いません。明示的 focus が invalid または required
-に解決される場合は推測せず fail-closed になります。
+に解決される場合は推測せず fail-closed になります。checkout 外に解決される
+`--task-dir` は、どの file も読まれる前に caller error となります —
+`route_graph.js` と `fetch_context.js` が強制するのと同じ containment rule
+で、symlinked directory が外を指せないよう real path で適用されます。
+`--task-dir` は再帰的な scan root です — `.` は `node_modules`/`.git` を
+含む checkout 全体を走査するため、focused な directory に保ってください。
 
 Mermaid format は definition-only であり、`--cwd`、`--focus`、`--task-dir` を拒否します。
 JSON はこれらの selector を runtime projection 用に受け付けます。

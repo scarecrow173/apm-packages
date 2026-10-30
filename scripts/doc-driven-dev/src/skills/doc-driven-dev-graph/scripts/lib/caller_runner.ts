@@ -19,6 +19,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { isDeepStrictEqual } from "node:util";
 import matter from "gray-matter";
+import { CANONICAL_DOC_DIRS } from "./artifact_graph";
 import { loadGraphDefinition } from "./graph_definition";
 import { resolveGraphPath } from "./graph_cli";
 import type { GraphRoute } from "./graph_router";
@@ -61,23 +62,6 @@ export type CommitBaseline = { head: string | null; dirty: string[] };
 export class OutcomeRejection extends Error {}
 
 /**
- * Canonical workspace directories fingerprinted for the "." reference, in the
- * declared artifact order (same contract as graph_state.ts / artifact_graph.ts).
- */
-const CANONICAL_TARGETS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp",
-];
-
-/**
  * Default canonical doc carrying caller bookkeeping (`effectOutcomes` and
  * `checkpointEvidence` front matter). Callers may override it per run; see
  * CallerRunnerOptions.proofPath.
@@ -98,7 +82,9 @@ function filesystemEntryKind(target: string): string {
 
 export function canonicalReference(repo: string, relativePath: string): CanonicalReference {
   if (relativePath === ".") {
-    const entries = CANONICAL_TARGETS.flatMap((directory) => {
+    // The "." workspace fingerprint covers the canonical doc directories in
+    // their declared order — CANONICAL_DOC_DIRS is the single authority.
+    const entries = CANONICAL_DOC_DIRS.flatMap((directory) => {
       const target = path.join(repo, directory);
       return [
         `${directory}:${filesystemEntryKind(target)}`,

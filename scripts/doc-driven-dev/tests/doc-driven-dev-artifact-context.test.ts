@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { createFixtureRepo } from "./e2e/harness/fixture_manager";
+import { createFixtureRepo, writeArtifact } from "./e2e/harness/fixture_manager";
 import { canonicalReference } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
+import { scanArtifactGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph";
 import {
   expandArtifactContext,
   fetchArtifactBodies,
@@ -175,6 +176,28 @@ test("L2 rejects missing files, escapes, non-canonical and unparsable paths", ()
   assert.deepEqual(codeFor("docs/specs/0009-bad.md"), ["unreadable"]);
 });
 
+test("L2 refuses a linked ref that resolves outside the checkout", (t) => {
+  const repo = createFixtureRepo();
+  const outside = path.resolve(repo, "../artifact-ctx-linked-outside");
+  fs.mkdirSync(outside, { recursive: true });
+  const outsidePlan = path.join(outside, "0001-plan.md");
+  fs.writeFileSync(outsidePlan, "---\nid: PLAN-EXT\ntype: plan\nstatus: approved\n---\n# Outside\n", "utf8");
+  const link = path.join(repo, "docs/specs/0002-linked.md");
+  try {
+    fs.symlinkSync(outsidePlan, link, "file");
+  } catch (error: unknown) {
+    t.skip(`cannot create file symlinks here: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+
+  // The ref is lexically inside a canonical dir but its real path escapes —
+  // the same path-escape refusal, never a body read.
+  const result = fetchArtifactBodies(repo, [{ path: "docs/specs/0002-linked.md" }]);
+
+  assert.deepEqual(result.documents, []);
+  assert.deepEqual(result.findings.map((finding) => finding.code), ["path-escape"]);
+});
+
 // --- L3: expandArtifactContext -----------------------------------------------
 
 test("L3 traverses lineage relations in BFS order with depth and via", () => {
@@ -331,6 +354,128 @@ test("L3 fails closed on a duplicated-id expansion root", () => {
   const { nodes, findings } = expandArtifactContext(repo, "DUP-T", {});
   assert.deepEqual(nodes, []);
   assert.ok(findings.some((finding) => finding.code === "duplicate-id"));
+});
+
+test("L3 reports explicitly requested relations no scanned record declares as unused-relation", () => {
+  const repo = createFixtureRepo();
+  // "implements" is declared on task records even though no edge walks it
+  // from the plan — declared on the scan set counts, walked or not. The typo
+  // "implementz" is declared nowhere, so traversal could never use it.
+  const { nodes, findings } = expandArtifactContext(repo, "docs/plans/0001-graph.md", {
+    relations: ["implements", "implementz"],
+  });
+  assert.deepEqual(nodes, [
+    { path: "docs/plans/0001-graph.md", id: "PLAN-0001", depth: 0, via: null },
+  ]);
+  assert.deepEqual(findings, [{
+    code: "unused-relation",
+    message: "Requested relation implementz is not declared on any scanned artifact record",
+  }]);
+});
+
+test("L3 emits no unused-relation finding for declared relations or the default set", () => {
+  const repo = createFixtureRepo();
+  const declared = expandArtifactContext(repo, "docs/plans/0001-graph.md", {
+    relations: ["derives-from", "verified-by"],
+  });
+  assert.deepEqual(declared.findings, []);
+
+  // The default lineage set is curated, not caller-typed — names absent from
+  // the corpus (e.g. refines, refined-by) must not produce findings.
+  const defaulted = expandArtifactContext(repo, "docs/plans/0001-graph.md", {});
+  assert.ok(defaulted.findings.every((finding) => finding.code !== "unused-relation"));
+});
+
+test("L3 declared-relation check uses the --task-dir scan set", () => {
+  const repo = createFixtureRepo({
+    files: {
+      "docs/work-items/0001-task.md": {
+        frontmatter: {
+          id: "TASK-CUSTOM", type: "task", status: "todo", title: "Custom",
+          relations: { "depends-on": ["TASK-0001"] },
+        },
+        body: "# Custom task\n",
+      },
+    },
+  });
+  // depends-on is declared only inside docs/work-items: undeclared in the
+  // default scan (unused-relation), declared once --task-dir joins the set.
+  const withoutDir = expandArtifactContext(repo, "docs/plans/0001-graph.md", {
+    relations: ["depends-on"],
+  });
+  assert.ok(withoutDir.findings.some((finding) => finding.code === "unused-relation"
+    && finding.message.includes("depends-on")));
+  const withDir = expandArtifactContext(repo, "docs/plans/0001-graph.md", {
+    taskDir: "docs/work-items",
+    relations: ["depends-on"],
+  });
+  assert.deepEqual(withDir.findings, []);
+});
+
+// --- L1↔L2↔L3 --task-dir parity and containment (#141/#142) -------------------
+
+test("L1 lists a task doc from --task-dir; L2/L3 refuse the same paths without it", () => {
+  const repo = createFixtureRepo({
+    files: {
+      "docs/work-items/0001-task.md": {
+        frontmatter: {
+          id: "TASK-CUSTOM", type: "task", status: "todo", title: "Custom",
+          relations: { implements: ["docs/plans/0001-graph.md"] },
+        },
+        body: "# Custom task\n",
+      },
+    },
+  });
+
+  const { metadata } = listArtifactMetadata(repo, ["PLAN-0001"], "docs/work-items");
+  assert.ok(metadata.some((entry) => entry.path === "docs/work-items/0001-task.md"
+    && entry.id === "TASK-CUSTOM"));
+
+  // L2 parity: the doc L1 lists must not come back not-canonical.
+  const refused = fetchArtifactBodies(repo, [{ path: "docs/work-items/0001-task.md" }]);
+  assert.deepEqual(refused.documents, []);
+  assert.ok(refused.findings.some((finding) => finding.code === "not-canonical"));
+  const fetched = fetchArtifactBodies(repo, [{ path: "docs/work-items/0001-task.md" }], "docs/work-items");
+  assert.deepEqual(fetched.findings, []);
+  assert.equal(fetched.documents.length, 1);
+  assert.equal(fetched.documents[0].id, "TASK-CUSTOM");
+  assert.ok(fetched.documents[0].body.includes("# Custom task"));
+
+  // L3 parity: the expansion root exists only in the matching scan set.
+  const missing = expandArtifactContext(repo, "TASK-CUSTOM", { relations: ["implements"] });
+  assert.ok(missing.findings.some((finding) => finding.code === "not-found"));
+  const expanded = expandArtifactContext(repo, "TASK-CUSTOM", {
+    taskDir: "docs/work-items",
+    relations: ["implements"],
+  });
+  assert.deepEqual(expanded.findings, []);
+  assert.deepEqual(expanded.nodes.map((node) => node.path), [
+    "docs/work-items/0001-task.md",
+    "docs/plans/0001-graph.md",
+  ]);
+});
+
+test("an escaping taskDir fails closed identically at every level", () => {
+  const repo = createFixtureRepo();
+  writeArtifact(repo, "docs/specs/0002-sentinel.md", {
+    id: "SENT-0002", type: "spec", status: "approved", title: "Sentinel",
+  }, "# Sentinel\n");
+  const escapes = ["../outside", "./../outside", path.dirname(repo)];
+  for (const taskDir of escapes) {
+    assert.throws(() => scanArtifactGraph({ cwd: repo, taskDir }), /--task-dir escapes the checkout/, taskDir);
+    assert.throws(() => listArtifactMetadata(repo, ["PLAN-0001"], taskDir), /--task-dir escapes the checkout/, taskDir);
+    assert.throws(
+      () => fetchArtifactBodies(repo, [{ path: "docs/specs/0002-sentinel.md" }], taskDir),
+      /--task-dir escapes the checkout/,
+      taskDir,
+    );
+    assert.throws(() => expandArtifactContext(repo, "PLAN-0001", { taskDir }), /--task-dir escapes the checkout/, taskDir);
+  }
+  // Contained task dirs — default, redundant, and nested custom — scan fine.
+  for (const taskDir of ["docs/tasks", "./docs/tasks", "docs/../docs/tasks", "docs/work-items"]) {
+    assert.doesNotThrow(() => scanArtifactGraph({ cwd: repo, taskDir }), taskDir);
+    assert.doesNotThrow(() => listArtifactMetadata(repo, ["PLAN-0001"], taskDir), taskDir);
+  }
 });
 
 test("L3 only follows the relations it is asked to follow", () => {

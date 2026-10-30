@@ -23,11 +23,14 @@ import path from "node:path";
 import matter from "gray-matter";
 
 import {
+  CANONICAL_DOC_DIRS,
   isExternalArtifactReference,
+  isInsideCheckout,
   LINEAGE_RELATIONS,
   normalizeArtifactPath,
   resolveArtifactFocus,
   resolveArtifactRelation,
+  resolveContainedTaskDir,
   scanArtifactGraph,
   selectArtifactChain,
   type ArtifactChain,
@@ -53,23 +56,9 @@ export type FetchResult = {
   findings: ContextFinding[];
 };
 
-export type ExpandOptions = { relations?: string[]; maxDepth?: number; reason?: string };
+export type ExpandOptions = { relations?: string[]; maxDepth?: number; reason?: string; taskDir?: string };
 export type ExpandNode = { path: string; id: string | null; depth: number; via: string | null };
 export type ExpandResult = { nodes: ExpandNode[]; findings: ContextFinding[]; reason?: string };
-
-/** Canonical doc-bearing directories (mirrors artifact_graph CANONICAL_TARGETS). */
-const CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp",
-];
 
 function compareStrings(left: string, right: string): number {
   return left.localeCompare(right);
@@ -173,25 +162,39 @@ export function listArtifactMetadata(
   return { metadata, findings: finalizeFindings(findings) };
 }
 
-/** Path is a scannable canonical artifact doc (canonical dir, .md, not an index). */
-function isCanonicalDocPath(normalizedPath: string): boolean {
+/**
+ * Path is a scannable canonical artifact doc: under one of the canonical
+ * doc-bearing directories (the CANONICAL_DOC_DIRS authority plus the resolved
+ * `--task-dir`), ends in `.md`, and is not a README/index file. An empty
+ * `""` directory entry models the checkout root — every contained doc path
+ * sits inside it, matching the scan set.
+ */
+function isCanonicalDocPath(normalizedPath: string, canonicalDirs: readonly string[]): boolean {
   const base = normalizedPath.split("/").pop() ?? "";
   if (!base.toLowerCase().endsWith(".md")) return false;
   if (/^(?:readme|index)\.md$/i.test(base)) return false;
-  return CANONICAL_DOC_DIRS.some((directory) => normalizedPath.startsWith(`${directory}/`));
+  return canonicalDirs.some((directory) => directory === "" || normalizedPath.startsWith(`${directory}/`));
 }
 
 /**
  * L2 — validated body fetch. Every ref must resolve inside the checkout, name
  * a canonical artifact doc that exists and parses; supplied `id`/`fingerprint`
- * must match the live canonical reference. Refused refs land in `findings`,
- * never in `documents`.
+ * must match the live canonical reference. `taskDir` is the same `--task-dir`
+ * selector L1 accepts: it extends the canonical scan set so a ref that L1 can
+ * list is never refused here as `not-canonical` (L1→L2 parity, Issue #141).
+ * The shared containment rule applies — an escaping `taskDir` throws before
+ * any ref is validated, identical to the scan boundary (Issue #142).
+ * Refused refs land in `findings`, never in `documents`.
  */
 export function fetchArtifactBodies(
   cwd: string,
   refs: Array<{ path: string; id?: string; fingerprint?: string }>,
+  taskDir?: string,
 ): FetchResult {
   const repo = path.resolve(cwd);
+  // Resolve up front: an escaping --task-dir is a caller error identical to
+  // the one the artifact scan raises — fail closed before touching refs.
+  const canonicalDirs: readonly string[] = [...CANONICAL_DOC_DIRS, resolveContainedTaskDir(repo, taskDir)];
   const documents: FetchResult["documents"] = [];
   const findings: ContextFinding[] = [];
 
@@ -205,13 +208,15 @@ export function fetchArtifactBodies(
       continue;
     }
     const resolved = path.resolve(repo, ref.path);
-    const relative = path.relative(repo, resolved);
-    if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    // Containment is checked lexically and by real path — a symlinked doc
+    // inside the checkout that resolves outside must not be read (same
+    // boundary rule as the task-dir selector).
+    if (!isInsideCheckout(repo, resolved)) {
       fail("path-escape", `Ref path escapes the checkout: ${ref.path}`);
       continue;
     }
     const normalized = normalizeArtifactPath(repo, resolved);
-    if (!isCanonicalDocPath(normalized)) {
+    if (!isCanonicalDocPath(normalized, canonicalDirs)) {
       fail("not-canonical", `Ref path is not a canonical artifact doc: ${ref.path}`);
       continue;
     }
@@ -249,8 +254,14 @@ export function fetchArtifactBodies(
 /**
  * L3 — deterministic BFS over typed relations from `fromPath` (unique ID or
  * checkout-relative path). Default traversal set is LINEAGE_RELATIONS; default
- * depth is 2. Visited-set cycle guard and duplicate suppression are built in;
- * every refused lookup is recorded as a finding.
+ * depth is 2. `taskDir` is the same `--task-dir` selector L1 accepts, so the
+ * scan set matches the metadata projection (Issue #141). Visited-set cycle
+ * guard and duplicate suppression are built in; every refused lookup is
+ * recorded as a finding. An explicitly requested `--relations` name that no
+ * scanned record declares is reported as `unused-relation` — "declared" means
+ * present in some scanned record's relation keys anywhere in the scan set,
+ * not only on the walked nodes, because the finding exists to catch typos:
+ * a misspelled name appears nowhere at all (Issue #143).
  */
 export function expandArtifactContext(
   cwd: string,
@@ -258,7 +269,7 @@ export function expandArtifactContext(
   options: ExpandOptions,
 ): ExpandResult {
   const repo = path.resolve(cwd);
-  const { records } = scanArtifactGraph({ cwd: repo });
+  const { records } = scanArtifactGraph({ cwd: repo, taskDir: options.taskDir });
   const findings: ContextFinding[] = [];
   const byPath = new Map(records.map((record) => [record.path, record]));
 
@@ -312,6 +323,21 @@ export function expandArtifactContext(
         visited.add(target.path);
         nodes.push({ path: target.path, id: target.id, depth: depth + 1, via: relation });
         queue.push({ record: target, depth: depth + 1 });
+      }
+    }
+  }
+
+  // A relation name the caller explicitly requested but that no scanned
+  // record declares can never be traversed — almost certainly a typo. The
+  // default lineage set is curated, so only explicit --relations are checked.
+  if (options.relations !== undefined) {
+    const declared = new Set(records.flatMap((record) => Object.keys(record.relations)));
+    for (const name of relations) {
+      if (!declared.has(name)) {
+        findings.push({
+          code: "unused-relation",
+          message: `Requested relation ${name} is not declared on any scanned artifact record`,
+        });
       }
     }
   }

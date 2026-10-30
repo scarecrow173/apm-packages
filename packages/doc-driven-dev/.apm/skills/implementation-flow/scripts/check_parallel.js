@@ -3552,7 +3552,7 @@ var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
   "evidence-refs",
   "evidenceRefs"
 ]);
-var CANONICAL_TARGETS = [
+var CANONICAL_DOC_DIRS = [
   "docs/ideas",
   "docs/discovery",
   "docs/specs",
@@ -3577,10 +3577,42 @@ function normalizeArtifactPath(cwd, target) {
 function isExternalArtifactReference(value) {
   return EXTERNAL_REFERENCE.test(value.trim());
 }
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
 function isInside(cwd, candidate) {
-  const root = import_node_path.default.resolve(cwd);
-  const resolved = import_node_path.default.resolve(candidate);
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
   return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function isInsideCheckout(cwd, candidate) {
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) return false;
+  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
+}
+function resolveContainedTaskDir(cwd, taskDir) {
+  const candidate = taskDir ?? "docs/tasks";
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
+  }
+  if (import_node_fs.default.existsSync(resolved) && !isInsideRealpath(cwd, resolved)) {
+    throw new Error(`--task-dir escapes the checkout through a link: ${candidate}`);
+  }
+  return normalizeArtifactPath(cwd, stripExtendedLengthPrefix(resolved));
 }
 function markdownFiles(dir) {
   if (!import_node_fs.default.existsSync(dir) || !import_node_fs.default.statSync(dir).isDirectory()) return [];
@@ -3625,8 +3657,8 @@ function relationValues(raw, ownerPath) {
 }
 function readRecords(options2, collector) {
   const cwd = import_node_path.default.resolve(options2.cwd);
-  const taskDir = options2.taskDir ?? "docs/tasks";
-  const directories = sortedUnique([...CANONICAL_TARGETS, normalizeArtifactPath(cwd, taskDir)]);
+  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
+  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
   const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path.default.join(cwd, directory))));
   const records = [];
   for (const absolutePath of files.map((file) => import_node_path.default.resolve(cwd, file))) {
@@ -3959,6 +3991,7 @@ function resolveReference(cwd, owner, reference, index) {
 }
 function isExistingArtifactReference(cwd, taskDir, owner, reference) {
   const candidate = import_node_path2.default.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
+  if (!isInsideCheckout(cwd, candidate)) return false;
   if (!import_node_fs2.default.existsSync(candidate) || !import_node_fs2.default.statSync(candidate).isFile()) return false;
   const taskRoot = import_node_path2.default.resolve(cwd, taskDir);
   const candidatePath = import_node_path2.default.resolve(candidate);
@@ -4119,7 +4152,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
 function buildTaskGraph(options2) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
   const plan = normalizeRepoPath(cwd, options2.plan);
-  const taskDir = options2.taskDir ?? "docs/tasks";
+  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
   const parsed = readTaskDocuments(cwd, taskDir).filter((task) => task.implements.includes(plan));
   const indexed = indexTasks(parsed);
   const resolved = resolveTaskEdges(cwd, taskDir, indexed);
