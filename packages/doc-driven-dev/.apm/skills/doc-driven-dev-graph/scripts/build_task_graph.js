@@ -3532,12 +3532,11 @@ var import_node_path2 = __toESM(require("node:path"));
 var import_gray_matter2 = __toESM(require_gray_matter());
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
+var import_gray_matter = __toESM(require_gray_matter());
+
+// src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
-var import_gray_matter = __toESM(require_gray_matter());
-function normalizeArtifactPath(cwd, target) {
-  return import_node_path.default.relative(import_node_path.default.resolve(cwd), import_node_path.default.resolve(cwd, target)).split(import_node_path.default.sep).join("/");
-}
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -3545,6 +3544,10 @@ function stripExtendedLengthPrefix(value) {
 }
 function containmentKey(value) {
   const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function repoPathKey(value) {
+  const normalized = value.replace(/\\/g, "/");
   return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 function isInside(cwd, candidate) {
@@ -3564,16 +3567,29 @@ function isInsideCheckout(cwd, candidate) {
   if (!isInside(cwd, resolved)) return false;
   return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
 }
-function resolveContainedTaskDir(cwd, taskDir) {
-  const candidate = taskDir ?? "docs/tasks";
-  const resolved = import_node_path.default.resolve(cwd, candidate);
+function toRepoRelative(cwd, absolute) {
+  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
+}
+function resolveContainedDir(cwd, dir, flag = "--dir") {
+  const resolved = import_node_path.default.resolve(cwd, dir);
   if (!isInside(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
+    throw new Error(`${flag} escapes the checkout: ${dir}`);
   }
-  if (import_node_fs.default.existsSync(resolved) && !isInsideRealpath(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout through a link: ${candidate}`);
+  if (import_node_fs.default.existsSync(resolved)) {
+    if (!isInsideRealpath(cwd, resolved)) {
+      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
+    }
+    return toRepoRelative(
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
+    );
   }
-  return normalizeArtifactPath(cwd, stripExtendedLengthPrefix(resolved));
+  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
+function resolveContainedTaskDir(cwd, taskDir) {
+  return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
@@ -3748,7 +3764,7 @@ function indexTasks(tasks) {
       continue;
     }
     byId.set(task.id, task);
-    byPath.set(task.file, task);
+    byPath.set(repoPathKey(task.file), task);
   }
   return { tasks: sortedTasks, byId, byPath, issues };
 }
@@ -3756,16 +3772,13 @@ function resolveReference(cwd, owner, reference, index) {
   const byId = index.byId.get(reference);
   if (byId) return byId;
   const normalized = normalizeOwnedRepoPath(cwd, owner.file, reference);
-  return index.byPath.get(normalized);
+  return index.byPath.get(repoPathKey(normalized));
 }
 function isExistingArtifactReference(cwd, taskDir, owner, reference) {
   const candidate = import_node_path2.default.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
   if (!isInsideCheckout(cwd, candidate)) return false;
   if (!import_node_fs2.default.existsSync(candidate) || !import_node_fs2.default.statSync(candidate).isFile()) return false;
-  const taskRoot = import_node_path2.default.resolve(cwd, taskDir);
-  const candidatePath = import_node_path2.default.resolve(candidate);
-  const insideTaskDir = candidatePath === taskRoot || candidatePath.startsWith(`${taskRoot}${import_node_path2.default.sep}`);
-  if (insideTaskDir) return false;
+  if (isInside(import_node_path2.default.resolve(cwd, taskDir), candidate)) return false;
   try {
     const type = (0, import_gray_matter2.default)(import_node_fs2.default.readFileSync(candidate, "utf8")).data?.type;
     return ["plan", "spec", "adr", "design"].includes(type);
@@ -3778,7 +3791,7 @@ function readArtifactIds(cwd, taskDir) {
   const ids = /* @__PURE__ */ new Set();
   for (const file of markdownFiles(cwd)) {
     const absolute = import_node_path2.default.resolve(file);
-    if (absolute === taskRoot || absolute.startsWith(`${taskRoot}${import_node_path2.default.sep}`)) continue;
+    if (isInside(taskRoot, absolute)) continue;
     try {
       const data = (0, import_gray_matter2.default)(import_node_fs2.default.readFileSync(file, "utf8")).data;
       if (["plan", "spec", "adr", "design"].includes(data.type) && typeof data.id === "string" && data.id.trim()) {

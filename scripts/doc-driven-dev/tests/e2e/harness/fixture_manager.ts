@@ -27,7 +27,7 @@ export const CANONICAL_DIRS = [
   "docs/impl/ir",
 ];
 
-/** Directories the bootstrap gate fingerprints (caller_runner CANONICAL_TARGETS). */
+/** Directories the bootstrap gate fingerprints (artifact CANONICAL_DOC_DIRS). */
 const SCAFFOLD_DIRS = [
   "docs/ideas",
   "docs/discovery",

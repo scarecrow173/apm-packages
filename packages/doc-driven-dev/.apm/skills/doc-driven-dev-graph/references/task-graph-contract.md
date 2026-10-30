@@ -12,6 +12,15 @@ node .apm/skills/doc-driven-dev-graph/scripts/build_task_graph.js \
   --plan <path> [--task-dir <path>] [--cwd <path>] [--json]
 ```
 
+`--task-dir` selects the task-doc subtree to scan (default `docs/tasks`) and
+must stay inside the checkout. An absolute-outside or `..`-escaping value, or
+a path that resolves outside through a link, is a caller error: the command
+fails closed with `--task-dir escapes the checkout` and a non-zero exit
+before any file is read. The same rule guards `--task-dir` on
+`route_graph.js`, `inspect_graph.js`, `fetch_context.js`, and
+`check_parallel.js` — every artifact scan validates the selector once at the
+shared boundary rather than in each CLI.
+
 Task IDs are unique. `depends-on` and `blocks` relations are normalized into
 directed edges. The public projection contains:
 

@@ -11,6 +11,14 @@ node .apm/skills/doc-driven-dev-graph/scripts/build_task_graph.js \
   --plan <path> [--task-dir <path>] [--cwd <path>] [--json]
 ```
 
+`--task-dir` は scan 対象の task-doc subtree を選択します (default `docs/tasks`) が、
+checkout 内に留まる必要があります。checkout 外の絶対パス、`..` で抜ける値、link 経由で
+外に解決される path は caller error です。コマンドはファイルを読む前に
+`--task-dir escapes the checkout` で fail closed し、非ゼロで終了します。
+`route_graph.js`、`inspect_graph.js`、`fetch_context.js`、`check_parallel.js` の
+`--task-dir` も同じ rule で guard されます — すべての artifact scan は各 CLI ではなく
+共有 boundary で selector を一度だけ validate します。
+
 Task ID は一意です。`depends-on` と `blocks` relation は有向 edge に正規化します。
 public projection には次を含みます。
 
