@@ -28016,8 +28016,22 @@ var SECTION_HEADING_ALIASES = {
   "Available Skills": ["\u5229\u7528\u53EF\u80FD\u306A\u30B9\u30AD\u30EB"],
   "Category Assignments": ["\u30AB\u30C6\u30B4\u30EA\u5272\u308A\u5F53\u3066"]
 };
+var SECTION_BODY_LABEL_ALIASES = {
+  // adr-doc (MADR 4 templates): `* Label:` bullets under Implementation Plan
+  "Affected paths": ["\u5F71\u97FF\u3059\u308B\u30D1\u30B9"],
+  "Constraints": ["\u5236\u7D04"],
+  "Patterns to follow": ["\u5F93\u3046\u30D1\u30BF\u30FC\u30F3"]
+};
 function headingNames(canonicalHeading) {
   return [canonicalHeading, ...SECTION_HEADING_ALIASES[canonicalHeading] ?? []];
+}
+function bodyLabelNames(canonicalLabel) {
+  return [canonicalLabel, ...SECTION_BODY_LABEL_ALIASES[canonicalLabel] ?? []];
+}
+function bodyLabelPattern(...canonicalLabels) {
+  const spellings = canonicalLabels.flatMap(bodyLabelNames);
+  const alternation = spellings.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  return new RegExp(`(?:${alternation}):`, "i");
 }
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
@@ -28167,10 +28181,10 @@ async function reviewFile(cwd, relativeDir, file2) {
     if (!await hasSection(content3, section)) findings.push({ severity: "error", file: file2, code: "missing-agent-section", message: `Missing section: ${section}` });
   }
   const implementation = await sectionBody(content3, "Implementation Plan");
-  if (!/Affected paths?:/i.test(implementation)) {
+  if (!bodyLabelPattern("Affected paths", "Affected path").test(implementation)) {
     findings.push({ severity: "warning", file: file2, code: "missing-affected-paths", message: "Implementation Plan should name affected paths" });
   }
-  if (!/(Patterns to follow|Constraints):/i.test(implementation)) {
+  if (!bodyLabelPattern("Patterns to follow", "Constraints").test(implementation)) {
     findings.push({ severity: "warning", file: file2, code: "missing-implementation-constraints", message: "Implementation Plan should name constraints or patterns to follow" });
   }
   const verification = await sectionBody(content3, "Verification");

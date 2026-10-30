@@ -683,3 +683,247 @@ test("audit_adr rejects legacy top-level ADR front matter fields", () => {
     true,
   );
 });
+
+test("review_adr accepts localized Implementation Plan labels from the shipped ja template", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-localized.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "---",
+      "",
+      "# 1. Localized ADR",
+      "",
+      "## 背景と問題",
+      "",
+      "## 検討した選択肢",
+      "",
+      "## 決定内容",
+      "",
+      "## 実装計画",
+      "",
+      "* 影響するパス: `src/app.ts`",
+      "* 従うパターン: 既存の ADR スクリプト。",
+      "",
+      "## 検証",
+      "",
+      "* [ ] テストを実行する",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("review_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-affected-paths"), false);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-implementation-constraints"), false);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-agent-section"), false);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-verification-checks"), false);
+});
+
+test("review_adr accepts the 制約 label from the ja minimal template variant", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-localized-minimal.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "---",
+      "",
+      "# 1. Localized Minimal ADR",
+      "",
+      "## 背景と問題",
+      "",
+      "## 検討した選択肢",
+      "",
+      "## 決定内容",
+      "",
+      "## 実装計画",
+      "",
+      "* 影響するパス: `src/app.ts`",
+      "* 制約: 既存の API を維持する。",
+      "",
+      "## 検証",
+      "",
+      "* [ ] テストを実行する",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("review_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-affected-paths"), false);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-implementation-constraints"), false);
+});
+
+test("review_adr still warns when the Implementation Plan labels are truly absent", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-no-labels.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "---",
+      "",
+      "# 1. No Labels",
+      "",
+      "## Context and Problem Statement",
+      "",
+      "## Considered Options",
+      "",
+      "## Decision Outcome",
+      "",
+      "## Implementation Plan",
+      "",
+      "* 避けるパターン: なし",
+      "",
+      "## Verification",
+      "",
+      "* [ ] Run tests",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("review_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-affected-paths"), true);
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-implementation-constraints"), true);
+});
+
+test("audit_adr resolves Pros and Cons of the Options in English and Japanese", () => {
+  for (const [file, heading] of [
+    ["0001-english.md", "## Pros and Cons of the Options"],
+    ["0002-japanese.md", "## 選択肢の利点と欠点"],
+  ] as const) {
+    const repo = tempRepo();
+    fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+    fs.writeFileSync(
+      path.join(repo, "docs/adr", file),
+      [
+        "---",
+        'status: "accepted"',
+        'date: "2026-05-23"',
+        "---",
+        "",
+        "# 1. Options ADR",
+        "",
+        "## Context and Problem Statement",
+        "",
+        "## Considered Options",
+        "",
+        "## Decision Outcome",
+        "",
+        "## Implementation Plan",
+        "",
+        "## Verification",
+        "",
+        heading,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const result = runScript("audit_adr.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(result.stdout);
+    const recommendedFindings = report.findings.filter(
+      (finding: any) => finding.code === "missing-recommended-section" && finding.message.includes("Pros and Cons"),
+    );
+    assert.deepEqual(recommendedFindings, [], `${file} should resolve ${heading}`);
+  }
+});
+
+test("migrate_report does not request a Status section or the short Pros and Cons name", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-madr4.md"),
+    [
+      "---",
+      'id: "ADR-0001"',
+      'type: "adr"',
+      'status: "accepted"',
+      'title: "MADR4"',
+      'created: "2026-05-23"',
+      'updated: "2026-05-23"',
+      "owners: []",
+      "relations:",
+      "  source: []",
+      "---",
+      "",
+      "# 1. MADR4",
+      "",
+      "## Context and Problem Statement",
+      "",
+      "## Decision Drivers",
+      "",
+      "## Considered Options",
+      "",
+      "## Decision Outcome",
+      "",
+      "### Consequences",
+      "",
+      "### Confirmation",
+      "",
+      "## Pros and Cons of the Options",
+      "",
+      "## More Information",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("migrate_report.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  const actions = report.migrations.flatMap((migration: any) => migration.actions);
+  const sectionActions = actions.filter((action: string) => action.startsWith("Add or map sections"));
+  assert.deepEqual(sectionActions, [], `unexpected missing-section actions: ${sectionActions}`);
+});
+
+test("migrate_report resolves the localized Pros and Cons alias", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/adr/0001-localized.md"),
+    [
+      "---",
+      'status: "accepted"',
+      'date: "2026-05-23"',
+      "---",
+      "",
+      "# 1. Localized",
+      "",
+      "## 選択肢の利点と欠点",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const result = runScript("migrate_report.js", ["--dir", "docs/adr", "--json"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  const actions = report.migrations.flatMap((migration: any) => migration.actions);
+  const sectionAction = actions.find((action: string) => action.startsWith("Add or map sections"));
+  assert.ok(sectionAction, "expected a missing-sections action");
+  assert.equal(sectionAction.includes("Pros and Cons"), false, `unexpected: ${sectionAction}`);
+  assert.equal(sectionAction.includes("Status"), false, `unexpected: ${sectionAction}`);
+});

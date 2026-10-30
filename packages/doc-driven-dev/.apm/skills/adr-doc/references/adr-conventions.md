@@ -193,7 +193,10 @@ For fuller ADRs, also capture:
 Audit and review scripts resolve these section headings by canonical English
 name plus declared localized template aliases (for example `背景と問題`
 matches `Context and Problem Statement`); the canonical spelling wins when
-both appear.
+both appear. The same alias rule applies to the fixed `Label:` bullets inside
+`## Implementation Plan` (for example `影響するパス:` matches
+`Affected paths:`). Status is read from front matter; a `## Status` body
+section is not part of the MADR 4 contract.
 
 ## Mutability
 

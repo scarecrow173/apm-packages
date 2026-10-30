@@ -754,10 +754,11 @@ const CONTRACT_LINK_ALLOWANCE: Record<string, number> = {
 };
 
 // Task 3's measured alwaysOnChars growth: +302 briefing, +302 impl, +316
-// planning, +168 sdp = +1088. +1200 covers it with ~10% headroom for
-// incidental edits while still catching bulk growth of the always-on
-// instruction surface — the regression this guard exists for.
-const ALWAYS_ON_TASK3_TOLERANCE = 1200;
+// planning, +168 sdp = +1088; later incidental doc edits (audit-behavior
+// notes such as #154's fenced-block clause) consumed the rest of the
+// headroom. +1400 keeps the bound tight — bulk growth of the always-on
+// instruction surface is the regression this guard exists for.
+const ALWAYS_ON_TASK3_TOLERANCE = 1400;
 
 /** Multiset diff of (kind,target) pairs: directives in `live` not in `base`. */
 function addedDirectives(
