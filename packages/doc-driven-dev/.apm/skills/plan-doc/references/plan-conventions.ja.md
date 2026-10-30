@@ -225,7 +225,9 @@ plan は実行 artifact であり、作業中は変化してかまいません�
   元の順序は説明なく消さないでください。
 - `completed` plan は実際に行ったことと検証結果を残すべきです。
 - 大きな再計画は、元の plan が作業を表さなくなったら superseding plan を
-  作ってください。
+  作ってください。supersede した plan の未完了 task は付け替えるか
+  クローズし、進行中の依存文書が置き換えた plan を追跡し続けないように
+  します。
 - status / owner / relation の更新は in-place で問題ありません。
 
 ## インデックス

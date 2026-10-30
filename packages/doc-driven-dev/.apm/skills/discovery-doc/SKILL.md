@@ -23,7 +23,9 @@ to persist exploration outputs as a canonical artifact.
 1. Scan existing docs before creating a new one.
    Use the directory and naming rules in `references/discovery-conventions.md`.
    Check `docs/discovery/`, `docs/specs/`, and `docs/adr/` to avoid duplicate
-   exploration or contradicting existing conclusions.
+   exploration or contradicting existing conclusions. When the work continues
+   the same investigation, update the existing document instead of opening a
+   new file; reserve new files for distinct questions.
 2. Confirm the exploration scope with the human.
    Confirm the trigger, the open question being answered, what alternatives
    were considered, and what research evidence exists.
@@ -46,8 +48,10 @@ to persist exploration outputs as a canonical artifact.
    it manually.
 
 4. Record meaningful relations in YAML front matter.
-   Use `relations.source` for external evidence, research reports, and issue
-   links that prompted the exploration.
+   Use `relations.source` for the upstream doc, external evidence, research
+   reports, or issue links that prompted the exploration — record it at
+   creation, for brainstorm records too, so no capture doc is left without a
+   traceable origin.
    Use `relations.derived-by` to point forward to specs or ADRs that were
    written from this discovery.
    Use `relations.related` for contextual docs without directional dependency.

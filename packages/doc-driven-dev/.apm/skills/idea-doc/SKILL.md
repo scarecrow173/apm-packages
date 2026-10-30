@@ -40,7 +40,9 @@ to `spec-doc` when requirements are already clear.
 
 1. Capture the idea promptly.
    Do not wait for the idea to be fully formed. An incomplete record is better
-   than no record. Check `docs/ideas/` to avoid duplicates.
+   than no record. Check `docs/ideas/` first: when the new thought refines or
+   continues an existing idea, update that file instead of creating a
+   near-duplicate.
 2. Create the idea document.
 
    **MANDATORY**: Load `references/idea-conventions.md` before this step —
@@ -56,9 +58,10 @@ to `spec-doc` when requirements are already clear.
 
    If you cannot run the script, copy `assets/templates/idea.md` and fill it manually.
 
-3. Record sources if available.
-   Use `relations.source` for the link, issue, or conversation that prompted
-   the idea. External links (URLs) are valid source values.
+3. Record the source at creation.
+   Use `relations.source` for the upstream doc or question the idea feeds, or
+   for the link, issue, or conversation that prompted it — a source-less idea
+   is left untraceable. External links (URLs) are valid source values.
 4. Set next action.
    Decide immediately whether to promote, park, or discard.
    Fill in the `Next Action` section of the template.

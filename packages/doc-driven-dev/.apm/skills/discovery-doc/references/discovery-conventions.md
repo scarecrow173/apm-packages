@@ -123,8 +123,14 @@ Use relation fields for meaning, not document type.
 | `defers` | Future explorations intentionally deferred from this document. |
 | `deferred-by` | Documents that deferred this exploration to a later phase. |
 
-Internal documents use relative paths. External sources use URLs. Always link
-both ways when possible:
+Internal documents use relative paths. External sources use URLs.
+
+Record `relations.source` at creation — the upstream doc, research link,
+issue, or conversation that prompted the exploration. Brainstorm records
+kept in this directory follow the same rule: no capture document should be
+left without a traceable origin.
+
+Always link both ways when possible:
 
 - Discovery that generates a spec: set `relations.derived-by` to the spec;
   set `relations.derives-from` in the spec to point back here.
@@ -151,6 +157,9 @@ promoted to a spec or ADR.
 Discovery documents are working notes until promoted.
 
 - `draft` and `active` documents may be edited freely.
+- Continuing the same investigation updates the existing `draft`/`active`
+  document; create a new file for a distinct question, not for new findings
+  on the same question.
 - `resolved` documents should be treated as historical evidence. Prefer dated
   notes or a new discovery document over rewriting a resolved record.
 - `archived` documents preserve the exploration context; do not overwrite them.

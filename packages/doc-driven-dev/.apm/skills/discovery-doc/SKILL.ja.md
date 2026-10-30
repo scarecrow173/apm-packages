@@ -22,7 +22,8 @@ license: MIT
 1. 新規作成前に既存文書を確認する。
    ディレクトリと命名規約は `references/discovery-conventions.ja.md` に従います。
    `docs/discovery/`、`docs/specs/`、`docs/adr/` を確認し、重複した探索や
-   既存の結論との矛盾を避けます。
+   既存の結論との矛盾を避けます。同じ調査の継続なら新規ファイルを作らず
+   既存文書を更新し、別の問いの場合のみ新規作成します。
 2. 人間と探索スコープを確認する。
    きっかけ、答えようとしている問い、検討した代替案、調査証拠を確認します。
 3. discovery 文書を作成する。
@@ -40,8 +41,9 @@ license: MIT
    コピーして手動で埋めます。英語版は `assets/templates/discovery.md` です。
 
 4. YAML フロントマターに意味付き relation を記録する。
-   外部証拠・調査レポート・探索のきっかけとなった issue リンクは `relations.source`
-   に記録します。
+   上流文書・外部証拠・調査レポート・探索のきっかけとなった issue リンクは
+   `relations.source` に記録します — brainstorm 記録も含め作成時に記録し、
+   出所を追跡できないキャプチャ文書を残さないようにします。
    この discovery から作成した spec や ADR を `relations.derived-by` で前向きに指します。
    方向性のない文脈的な関連は `relations.related` に記録します。
 5. 結論を下流文書へ昇華する。
