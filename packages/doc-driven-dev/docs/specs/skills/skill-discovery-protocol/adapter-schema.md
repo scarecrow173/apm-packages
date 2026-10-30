@@ -189,6 +189,28 @@ validation:
     enabled: true
 ```
 
+**`validation.schema` rules:**
+
+- `true` (default) — run the baseline schema gate over the adapter,
+  catalog, and profile
+- `false` — skip the schema gate; `validation-report` records
+  `schema_validation.result = "skipped"` with no errors
+- A skipped schema gate never counts as freshness evidence: the
+  `validated_at` re-stamp requires an actual schema pass, so with
+  `schema: false` age-stale artifacts are not repaired in-band
+
+**`validation.deterministic.compare` rules:**
+
+- Entries select which regenerated artifacts are compared:
+  `"profile"` → Flow Profile, `"catalog"` → Skill Reference Catalog,
+  `"profile+catalog-artifacts"` → both
+- `"validation-report:exclude-timestamp"` is documentational — the gate
+  regenerates artifacts, never a validation report, so the entry selects
+  nothing; it records that timestamp fields are stripped from every
+  comparison
+- A `compare` list selecting no artifacts leaves the gate with no
+  targets and it reports `result: "skipped"`
+
 **`validation.invocation` rules:**
 
 - `enabled: true` — run the invocation gate (blocking_validations)

@@ -80,6 +80,21 @@ overall_result = schema ∧ staleness ∧ deterministic ∧ blocking
 
 成果物と adapter 設定の構造的正しさを検証する。
 
+### 設定
+
+```yaml
+validation:
+  schema: true
+```
+
+`validation.schema` は boolean 単体（他ゲートの `enabled` オブジェクトとは
+異なる形）で、既定値は `true` である。`schema: false` の場合、ゲートは
+完全にスキップされ、レポートには `result: "skipped"` が記録される —
+他ゲートが無効化された場合と同じ状態である。基礎ゲートのスキップは
+最も危険なスキップである: どのゲートも成果物の構造を検査しなくなるため、
+スキップされた schema ゲートは鮮度の証拠にならない — `validated_at` は
+schema ゲートが実際に pass した場合にのみ更新される（§5 参照）。
+
 ### 実行されるチェック
 
 | チェック | 対象 | 条件 |
@@ -131,7 +146,7 @@ overall_result = schema ∧ staleness ∧ deterministic ∧ blocking
 
 ```json
 {
-  "result": "pass" | "fail",
+  "result": "pass" | "fail" | "skipped",
   "errors": [
     {
       "path": "scan.scopes.project.roots",
@@ -200,7 +215,8 @@ Flow Profile（フィールドが存在する場合）の `validated_at` を再�
 更新で上書きされることはない。
 
 この更新は鮮度を実際に検査した実行にのみ適用される — `--adapter` と
-deterministic ゲートの pass が必要である。`--profile` のみの実行では
+schema ゲートの pass、deterministic ゲートの pass が必要である。
+`--profile` のみの実行では
 staleness・deterministic・blocking の各ゲートがスキップされるため、
 schema の pass だけでは鮮度を証明できず、`validated_at` は再刻印されない。
 スキップされた deterministic ゲート
@@ -208,8 +224,12 @@ schema の pass だけでは鮮度を証明できず、`validated_at` は再刻�
 比較対象がなかった場合）も同様に鮮度の証拠にならない:
 実行が生成を再実行していない以上、経年のみの staleness 失敗は修復されず、
 未検証の内容の上に `validated_at` が再刻印されることもない。
+スキップされた schema ゲート（`validation.schema: false`）も同じく
+更新を妨げる: どのゲートも成果物の構造を検査していないため、
+更新には schema ゲートの失敗がないだけではなく実際の pass が必要である。
 スキップされた staleness・blocking ゲートはそれ自体では更新を妨げない
-— 成果物の内容を再導出して比較するのは deterministic ゲートのみである。
+— staleness は deterministic の pass にない内容チェックを追加しないし、
+blocking は鮮度ではなく invocation ポリシーを検査するためである。
 再刻印自体は best-effort であり、成果物を書き換えられない場合は
 `sdp validate` が stderr に警告を出すが、実行結果と検証レポートは
 影響を受けない。
@@ -262,11 +282,23 @@ validation:
 
 ### 比較対象
 
-| 対象 | 比較内容 |
-| ---- | -------- |
+`compare` の各エントリは比較対象の再生成成果物を選択する:
+
+| エントリ | 選択対象 |
+| -------- | -------- |
 | `profile` | Flow Profile JSON |
-| `profile+catalog-artifacts` | Flow Profile + Skill Reference Catalog |
-| `validation-report:exclude-timestamp` | `generated_at` を除いた Validation Report |
+| `catalog` | Skill Reference Catalog JSON |
+| `profile+catalog-artifacts` | 両方の成果物（複合セレクタ） |
+| `validation-report:exclude-timestamp` | なし — 記述用（実対象なし） |
+
+エントリはファイルラベルではなく文書レベルのセレクタである。
+`validation-report:exclude-timestamp` が指す再生成成果物は存在しない
+— ゲートが再実行するのは生成であり検証ではないため、比較すべき
+再生成レポートはない。このエントリは、すべての比較でタイムスタンプ
+フィールド（`generated_at`/`validated_at`）が除外されることを示す
+記述である。成果物を 1 つも選択しないエントリは無効（inert）であり、
+`compare` リストが成果物をまったく選択しない場合、ゲートには比較対象が
+残らず `result: "skipped"`（理由: "No artifacts to compare"）を返す。
 
 ### 安定性メカニズム
 
@@ -287,7 +319,7 @@ validation:
       "details": null
     },
     {
-      "target": "profile+catalog-artifacts",
+      "target": "catalog",
       "diff_found": true,
       "details": "catalog.skills[3].description differs"
     }
@@ -384,7 +416,7 @@ validation:
 
 ### ゲート実行順序
 
-1. Schema（常に実行）
+1. Schema（`validation.schema = false` の場合スキップ）
 2. Staleness（`--adapter` と catalog が必要。`validation.staleness.enabled = false` の場合もスキップ）
 3. Deterministic（`--adapter` が必要。`validation.deterministic.enabled = false` の場合もスキップ）
 4. Blocking（`--adapter` と catalog が必要。`validation.invocation.enabled = false` の場合もスキップ）

@@ -81,6 +81,22 @@ All validation errors follow a consistent structure:
 
 Validates structural correctness of artifacts and adapter configuration.
 
+### Configuration
+
+```yaml
+validation:
+  schema: true
+```
+
+`validation.schema` is a bare boolean (unlike the other gates' `enabled`
+objects) and defaults to `true`. When `schema: false`, the gate is
+skipped entirely and the report records `result: "skipped"` — the same
+state the other gates record when disabled. Skipping the baseline gate
+is the most dangerous skip: no gate then inspects the artifacts'
+structure, so a skipped schema gate is never freshness evidence —
+`validated_at` is only refreshed when the schema gate actually passed
+(see §5).
+
 ### Checks Performed
 
 | Check | Target | Condition |
@@ -132,7 +148,7 @@ A non-conforming identifier produces:
 
 ```json
 {
-  "result": "pass" | "fail",
+  "result": "pass" | "fail" | "skipped",
   "errors": [
     {
       "path": "scan.scopes.project.roots",
@@ -202,16 +218,20 @@ detected on subsequent runs. An unparseable basis date is corruption, not
 age, and is likewise never refreshed over.
 
 The refresh only applies to a run that actually checked freshness: it
-requires `--adapter` AND a deterministic-gate pass. A `--profile`-only
-run skips the staleness, deterministic, and blocking gates, so a schema
-pass alone proves nothing about freshness and never re-stamps
-`validated_at`. A skipped deterministic gate — disabled via
+requires `--adapter`, a schema-gate pass, AND a deterministic-gate pass.
+A `--profile`-only run skips the staleness, deterministic, and blocking
+gates, so a schema pass alone proves nothing about freshness and never
+re-stamps `validated_at`. A skipped deterministic gate — disabled via
 `validation.deterministic.enabled: false` or left with no comparison
 targets — is not freshness evidence either: the run never re-executed
 generation, so a pure-age staleness failure is not repaired and
-`validated_at` is never re-stamped over unverified content. Skipped
-staleness or blocking gates do not by themselves block the refresh —
-only the deterministic gate re-derives and compares artifact content.
+`validated_at` is never re-stamped over unverified content. A skipped
+schema gate (`validation.schema: false`) blocks the refresh the same
+way: no gate inspected the artifacts' structure, so the refresh
+requires an actual schema pass — not merely the absence of a schema
+failure. Skipped staleness or blocking gates do not by themselves block
+the refresh — staleness adds no content check the deterministic pass
+lacks, and blocking checks invocation policy, not freshness.
 The re-stamp itself is best-effort: if an artifact cannot be rewritten,
 `sdp validate` warns on stderr and the run result and the validation
 report are unaffected.
@@ -263,11 +283,23 @@ gate is not freshness evidence for the `validated_at` refresh (see §5).
 
 ### Comparison Targets
 
-| Target | What Is Compared |
-| ------ | ---------------- |
+`compare` entries select which regenerated artifacts are compared:
+
+| Entry | Selects |
+| ----- | ------- |
 | `profile` | Flow Profile JSON |
-| `profile+catalog-artifacts` | Flow Profile + Skill Reference Catalog |
-| `validation-report:exclude-timestamp` | Validation Report with `generated_at` stripped |
+| `catalog` | Skill Reference Catalog JSON |
+| `profile+catalog-artifacts` | Both artifacts (composite selector) |
+| `validation-report:exclude-timestamp` | None — documentational |
+
+Entries are document-level selectors, not file labels.
+`validation-report:exclude-timestamp` names no regenerated artifact —
+the gate re-runs generation, never validation, so no regenerated report
+exists to compare. The entry records that timestamp fields
+(`generated_at`/`validated_at`) are stripped from every comparison.
+An entry that selects no artifact is inert; a `compare` list selecting
+no artifacts at all leaves the gate with no targets and it reports
+`result: "skipped"` (reason: "No artifacts to compare").
 
 ### Stability Mechanisms
 
@@ -288,7 +320,7 @@ gate is not freshness evidence for the `validated_at` refresh (see §5).
       "details": null
     },
     {
-      "target": "profile+catalog-artifacts",
+      "target": "catalog",
       "diff_found": true,
       "details": "catalog.skills[3].description differs"
     }
@@ -385,7 +417,7 @@ The validation report aggregates all gate results:
 
 ### Gate Execution Order
 
-1. Schema (always runs)
+1. Schema (skipped when `validation.schema = false`)
 2. Staleness (requires `--adapter` and a catalog; also skipped when `validation.staleness.enabled = false`)
 3. Deterministic (requires `--adapter`; also skipped when `validation.deterministic.enabled = false`)
 4. Blocking (requires `--adapter` and a catalog; also skipped when `validation.invocation.enabled = false`)

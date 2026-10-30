@@ -2571,7 +2571,7 @@ function deepMerge(target, source) {
   }
   return result;
 }
-function findAdapterSearchDirs(adapterDir) {
+function findAdapterSearchDirs(adapterDir, extendsSearchDirs = []) {
   const dirs = [];
   let current = adapterDir;
   const skillTreeRoot = import_node_path.default.resolve(adapterDir, "..", "..", "..");
@@ -2585,6 +2585,7 @@ function findAdapterSearchDirs(adapterDir) {
     current = parent;
   }
   const bundledAdapterCandidates = [
+    ...extendsSearchDirs,
     import_node_path.default.resolve(__dirname, "..", "assets", "adapters"),
     import_node_path.default.resolve(__dirname, "..", "..", "assets", "adapters")
   ];
@@ -2595,14 +2596,14 @@ function findAdapterSearchDirs(adapterDir) {
   }
   return dirs;
 }
-function loadAdapter(adapterPath) {
+function loadAdapter(adapterPath, options2 = {}) {
   const absPath = import_node_path.default.resolve(adapterPath);
   if (!import_node_fs.default.existsSync(absPath)) {
     throw new Error(`Adapter not found: ${adapterPath}`);
   }
   const raw = loadYamlFile(absPath);
   const adapterDir = import_node_path.default.dirname(absPath);
-  const searchDirs = findAdapterSearchDirs(adapterDir);
+  const searchDirs = findAdapterSearchDirs(adapterDir, options2.extendsSearchDirs ?? []);
   let merged = {};
   if (raw.extends && Array.isArray(raw.extends)) {
     const parents = resolveExtends(searchDirs, raw.extends, /* @__PURE__ */ new Set());
@@ -22428,6 +22429,11 @@ var import_node_fs5 = __toESM(require("node:fs"));
 function stripTimestampsForCompare(content) {
   return content.replace(/"generated_at"\s*:\s*"[^"]*"/g, '"generated_at": ""').replace(/"validated_at"\s*:\s*"[^"]*"/g, '"validated_at": ""');
 }
+var COMPARE_TARGET_LABELS = {
+  profile: ["profile"],
+  catalog: ["catalog"],
+  "profile+catalog-artifacts": ["profile", "catalog"]
+};
 function runDeterministicGate(profilePath, catalogPath, adapterPath, cwd, compare, referencesPath) {
   if (!adapterPath) {
     return {
@@ -22454,7 +22460,10 @@ function runDeterministicGate(profilePath, catalogPath, adapterPath, cwd, compar
     targets.push({ path: catalogPath, label: "catalog" });
   }
   if (compare && compare.length > 0) {
-    targets = targets.filter((t) => compare.includes(t.label));
+    const selectedLabels = new Set(
+      compare.flatMap((entry) => COMPARE_TARGET_LABELS[entry] ?? [])
+    );
+    targets = targets.filter((t) => selectedLabels.has(t.label));
   }
   if (targets.length === 0) {
     return {
@@ -22912,11 +22921,15 @@ async function main() {
     currentRawSkills = scanSkills(cwd, adapter);
   }
   const currentCatalogSkills = Array.isArray(catalog?.skills) ? catalog.skills : [];
-  const schemaResult = runSchemaGate(
+  const schemaEnabled = adapter?.validation?.schema ?? true;
+  const schemaResult = schemaEnabled ? runSchemaGate(
     profileData,
     catalogData,
     adapter ? adapter : null
-  );
+  ) : {
+    result: "skipped",
+    errors: []
+  };
   const stalenessEnabled = adapter?.validation?.staleness?.enabled ?? true;
   let stalenessResult;
   if (catalog && adapter && stalenessEnabled) {
@@ -22963,7 +22976,7 @@ async function main() {
     deterministicResult.result,
     blockingResult.result
   ].some((r) => r === "fail");
-  const refreshEligible = adapter !== null && !nonStalenessFail && deterministicResult.result === "pass" && (stalenessResult.result !== "fail" || stalenessAgeOnly);
+  const refreshEligible = adapter !== null && !nonStalenessFail && schemaResult.result === "pass" && deterministicResult.result === "pass" && (stalenessResult.result !== "fail" || stalenessAgeOnly);
   const pendingRefresh = [];
   if (refreshEligible) {
     const refreshedAt = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");

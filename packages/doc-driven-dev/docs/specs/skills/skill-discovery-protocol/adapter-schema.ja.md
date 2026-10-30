@@ -184,6 +184,26 @@ validation:
     enabled: true
 ```
 
+**`validation.schema` ルール:**
+
+- `true`（既定） — adapter・catalog・profile に対して基礎 schema ゲートを実行する
+- `false` — schema ゲートをスキップする。`validation-report` には
+  `schema_validation.result = "skipped"` がエラーなしで記録される
+- スキップされた schema ゲートは鮮度の証拠にならない: `validated_at` の
+  再刻印には schema ゲートの実際の pass が必要なため、`schema: false`
+  では経年 stale の成果物はその場で修復されない
+
+**`validation.deterministic.compare` ルール:**
+
+- エントリは比較対象の再生成成果物を選択する:
+  `"profile"` → Flow Profile、`"catalog"` → Skill Reference Catalog、
+  `"profile+catalog-artifacts"` → 両方
+- `"validation-report:exclude-timestamp"` は記述用 — ゲートが再生成するのは
+  成果物であり validation report ではないため、このエントリは何も選択しない。
+  すべての比較でタイムスタンプフィールドが除外されることを示す記述である
+- 成果物をまったく選択しない `compare` リストはゲートに比較対象を
+  残さず、`result: "skipped"` を返す
+
 **`validation.invocation` ルール:**
 
 - `enabled: true` — invocation gate（blocking_validations）を実行する

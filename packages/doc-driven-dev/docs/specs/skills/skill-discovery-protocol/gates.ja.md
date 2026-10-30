@@ -70,13 +70,19 @@ overall_result = schema && staleness && deterministic && blocking_validations
 
 ### 比較対象
 
-adapter の `validation.deterministic.compare` で指定:
+adapter の `validation.deterministic.compare` で指定する。各エントリは
+比較対象の再生成成果物を選択する:
 
-| Target | Description |
+| エントリ | 選択対象 |
 | --- | --- |
-| `profile` | Flow Profile JSON の全体比較 |
-| `profile+catalog-artifacts` | Flow Profile + Skill Reference Catalog の比較 |
-| `validation-report:exclude-timestamp` | validation-report のタイムスタンプ除外比較 |
+| `profile` | Flow Profile JSON |
+| `catalog` | Skill Reference Catalog JSON |
+| `profile+catalog-artifacts` | 両方の成果物（複合セレクタ） |
+| `validation-report:exclude-timestamp` | なし — 記述用。すべての比較でタイムスタンプフィールドが除外されることを示す |
+
+成果物を 1 つも選択しないエントリは無効（inert）であり、`compare`
+リストが成果物をまったく選択しない場合、ゲートには比較対象が残らず
+`result: "skipped"` を返す。
 
 ### 検証手順
 

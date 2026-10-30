@@ -71,7 +71,17 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
   return result;
 }
 
-function findAdapterSearchDirs(adapterDir: string): string[] {
+type LoadAdapterOptions = {
+  /**
+   * Extra directories searched for `extends` parents, in order, after the
+   * adapter's own skill tree and before the `__dirname`-derived bundled
+   * candidates. Lets callers supply the bundled adapter location explicitly
+   * instead of relying on this file's layout.
+   */
+  extendsSearchDirs?: string[];
+};
+
+function findAdapterSearchDirs(adapterDir: string, extendsSearchDirs: string[] = []): string[] {
   const dirs: string[] = [];
   // Search only within the current skill tree first so legacy root copies
   // outside .apm/skills are never considered.
@@ -88,8 +98,11 @@ function findAdapterSearchDirs(adapterDir: string): string[] {
   }
 
   // Support both direct source execution (lib -> ../.. -> assets) and bundled
-  // entrypoint execution (__dirname at scripts/ -> .. -> assets).
+  // entrypoint execution (__dirname at scripts/ -> .. -> assets). Caller-supplied
+  // dirs take precedence over the derived bundled candidates so an explicit
+  // bundled location always wins.
   const bundledAdapterCandidates = [
+    ...extendsSearchDirs,
     path.resolve(__dirname, "..", "assets", "adapters"),
     path.resolve(__dirname, "..", "..", "assets", "adapters"),
   ];
@@ -101,7 +114,7 @@ function findAdapterSearchDirs(adapterDir: string): string[] {
   return dirs;
 }
 
-function loadAdapter(adapterPath: string): AdapterConfig {
+function loadAdapter(adapterPath: string, options: LoadAdapterOptions = {}): AdapterConfig {
   const absPath = path.resolve(adapterPath);
   if (!fs.existsSync(absPath)) {
     throw new Error(`Adapter not found: ${adapterPath}`);
@@ -111,7 +124,7 @@ function loadAdapter(adapterPath: string): AdapterConfig {
   const adapterDir = path.dirname(absPath);
 
   // Build search paths for extends resolution by walking up from adapter location
-  const searchDirs = findAdapterSearchDirs(adapterDir);
+  const searchDirs = findAdapterSearchDirs(adapterDir, options.extendsSearchDirs ?? []);
 
   let merged: Record<string, unknown> = {};
 
@@ -201,3 +214,4 @@ function loadAdapter(adapterPath: string): AdapterConfig {
 }
 
 export { loadAdapter, loadYamlFile, deepMerge };
+export type { LoadAdapterOptions };

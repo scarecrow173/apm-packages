@@ -6,7 +6,7 @@ import { FlowProfileSchema } from "../schemas/profile";
 import type { z } from "zod";
 
 type SchemaError = { field: string; message: string };
-type SchemaResult = { result: "pass" | "fail"; errors: SchemaError[] };
+type SchemaResult = { result: "pass" | "fail" | "skipped"; errors: SchemaError[] };
 
 const SNAKE_CASE_RE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
 

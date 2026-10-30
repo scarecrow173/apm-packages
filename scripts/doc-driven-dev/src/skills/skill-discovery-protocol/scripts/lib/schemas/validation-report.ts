@@ -57,7 +57,7 @@ export const ValidationReportSchema = z.object({
   repository: z.string(),
   adapter_id: z.string(),
   schema_validation: z.object({
-    result: z.enum(["pass", "fail"]),
+    result: gateResult,
     errors: z.array(SchemaErrorSchema),
   }),
   staleness_validation: StalenessValidationSchema,
