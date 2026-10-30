@@ -2552,7 +2552,7 @@ function deepMerge(target, source) {
   }
   return result;
 }
-function findAdapterSearchDirs(adapterDir2) {
+function findAdapterSearchDirs(adapterDir2, extendsSearchDirs = []) {
   const dirs = [];
   let current = adapterDir2;
   const skillTreeRoot = import_node_path.default.resolve(adapterDir2, "..", "..", "..");
@@ -2566,6 +2566,7 @@ function findAdapterSearchDirs(adapterDir2) {
     current = parent;
   }
   const bundledAdapterCandidates = [
+    ...extendsSearchDirs,
     import_node_path.default.resolve(__dirname, "..", "assets", "adapters"),
     import_node_path.default.resolve(__dirname, "..", "..", "assets", "adapters")
   ];
@@ -2576,14 +2577,14 @@ function findAdapterSearchDirs(adapterDir2) {
   }
   return dirs;
 }
-function loadAdapter(adapterPath) {
+function loadAdapter(adapterPath, options = {}) {
   const absPath = import_node_path.default.resolve(adapterPath);
   if (!import_node_fs.default.existsSync(absPath)) {
     throw new Error(`Adapter not found: ${adapterPath}`);
   }
   const raw = loadYamlFile(absPath);
   const adapterDir2 = import_node_path.default.dirname(absPath);
-  const searchDirs = findAdapterSearchDirs(adapterDir2);
+  const searchDirs = findAdapterSearchDirs(adapterDir2, options.extendsSearchDirs ?? []);
   let merged = {};
   if (raw.extends && Array.isArray(raw.extends)) {
     const parents = resolveExtends(searchDirs, raw.extends, /* @__PURE__ */ new Set());
