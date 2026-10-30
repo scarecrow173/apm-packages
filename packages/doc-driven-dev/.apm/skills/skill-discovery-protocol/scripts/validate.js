@@ -22429,6 +22429,11 @@ var import_node_fs5 = __toESM(require("node:fs"));
 function stripTimestampsForCompare(content) {
   return content.replace(/"generated_at"\s*:\s*"[^"]*"/g, '"generated_at": ""').replace(/"validated_at"\s*:\s*"[^"]*"/g, '"validated_at": ""');
 }
+var COMPARE_TARGET_LABELS = {
+  profile: ["profile"],
+  catalog: ["catalog"],
+  "profile+catalog-artifacts": ["profile", "catalog"]
+};
 function runDeterministicGate(profilePath, catalogPath, adapterPath, cwd, compare, referencesPath) {
   if (!adapterPath) {
     return {
@@ -22455,7 +22460,10 @@ function runDeterministicGate(profilePath, catalogPath, adapterPath, cwd, compar
     targets.push({ path: catalogPath, label: "catalog" });
   }
   if (compare && compare.length > 0) {
-    targets = targets.filter((t) => compare.includes(t.label));
+    const selectedLabels = new Set(
+      compare.flatMap((entry) => COMPARE_TARGET_LABELS[entry] ?? [])
+    );
+    targets = targets.filter((t) => selectedLabels.has(t.label));
   }
   if (targets.length === 0) {
     return {
@@ -22913,11 +22921,15 @@ async function main() {
     currentRawSkills = scanSkills(cwd, adapter);
   }
   const currentCatalogSkills = Array.isArray(catalog?.skills) ? catalog.skills : [];
-  const schemaResult = runSchemaGate(
+  const schemaEnabled = adapter?.validation?.schema ?? true;
+  const schemaResult = schemaEnabled ? runSchemaGate(
     profileData,
     catalogData,
     adapter ? adapter : null
-  );
+  ) : {
+    result: "skipped",
+    errors: []
+  };
   const stalenessEnabled = adapter?.validation?.staleness?.enabled ?? true;
   let stalenessResult;
   if (catalog && adapter && stalenessEnabled) {
@@ -22964,7 +22976,7 @@ async function main() {
     deterministicResult.result,
     blockingResult.result
   ].some((r) => r === "fail");
-  const refreshEligible = adapter !== null && !nonStalenessFail && deterministicResult.result === "pass" && (stalenessResult.result !== "fail" || stalenessAgeOnly);
+  const refreshEligible = adapter !== null && !nonStalenessFail && schemaResult.result === "pass" && deterministicResult.result === "pass" && (stalenessResult.result !== "fail" || stalenessAgeOnly);
   const pendingRefresh = [];
   if (refreshEligible) {
     const refreshedAt = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");

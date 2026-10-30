@@ -106,24 +106,22 @@ Validation Report は `sdp validate` の出力として、成果物の品質状�
 ### `overall_result` 算出式
 
 ```
-overall_result = schema_validation.result == "pass"
-             && staleness_validation.result == "pass"
-             && deterministic_validation.result == "pass"
-             && blocking_validations.result == "pass"
+overall_result = "fail"  いずれかのゲート結果が "fail" の場合
+               = "pass"  それ以外（"skipped" のゲートは実行を失敗させない）
 ```
 
 ### `schema_validation`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `result` | `"pass"` \| `"fail"` | 検証結果 |
+| `result` | `"pass"` \| `"fail"` \| `"skipped"` | 検証結果（`validation.schema = false` の場合 `"skipped"`） |
 | `errors` | array | 失敗項目一覧（キー名、期待型、実際値など） |
 
 ### `staleness_validation`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `result` | `"pass"` \| `"fail"` | 検証結果 |
+| `result` | `"pass"` \| `"fail"` \| `"skipped"` | 検証結果 |
 | `basis` | string | 基準フィールド名 |
 | `basis_date` | ISO 8601 | 基準日時 |
 | `max_age_days` | number | 許容日数 |
@@ -135,7 +133,7 @@ overall_result = schema_validation.result == "pass"
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `result` | `"pass"` \| `"fail"` | 検証結果 |
+| `result` | `"pass"` \| `"fail"` \| `"skipped"` | 検証結果 |
 | `comparisons` | array | 比較対象ごとの結果 |
 | `comparisons[].target` | string | 比較対象識別子 |
 | `comparisons[].diff_found` | boolean | 差分があったか |
@@ -144,7 +142,7 @@ overall_result = schema_validation.result == "pass"
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `result` | `"pass"` \| `"fail"` | 検証結果 |
+| `result` | `"pass"` \| `"fail"` \| `"skipped"` | 検証結果 |
 | `checks` | array | 個別チェック結果 |
 | `checks[].type` | string | チェック種別 |
 | `checks[].result` | `"pass"` \| `"fail"` | 個別結果 |

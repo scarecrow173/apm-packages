@@ -84,21 +84,22 @@ sdp validate --adapter <adapter-yaml>
 - `--profile` only: Schema gate runs; Staleness, Deterministic, and Blocking gates are **skipped**
 - `--adapter` only: Schema-only validation of adapter YAML configuration
 
-Adapter flags can skip individual gates: `validation.staleness.enabled: false`,
+Adapter flags can skip individual gates: `validation.schema: false`,
+`validation.staleness.enabled: false`,
 `validation.deterministic.enabled: false`, and
 `validation.invocation.enabled: false` each record `result: "skipped"` in
-the report instead of running their gate (gate-spec.md §5–§7).
+the report instead of running their gate (gate-spec.md §4–§7).
 
 On overall pass, `sdp validate` re-stamps `validated_at` on the catalog and
-the profile. The re-stamp requires `--adapter` AND a deterministic-gate
-pass — a `--profile`-only run skips every currency gate and never
-re-stamps, and a skipped deterministic gate is not freshness evidence
-either. Age-only staleness (no skill drift) with the deterministic gate
-passing is refreshed and reported as pass — this is the documented
-recovery path for expired artifacts. Failing runs never refresh
-timestamps, and the re-stamp itself is best-effort: an unwritable
-artifact warns on stderr without changing the result
-(gate-spec.md §5).
+the profile. The re-stamp requires `--adapter`, a schema-gate pass, AND a
+deterministic-gate pass — a `--profile`-only run skips every currency
+gate and never re-stamps, and a skipped schema or deterministic gate is
+not freshness evidence either. Age-only staleness (no skill drift) with
+the schema and deterministic gates passing is refreshed and reported as
+pass — this is the documented recovery path for expired artifacts.
+Failing runs never refresh timestamps, and the re-stamp itself is
+best-effort: an unwritable artifact warns on stderr without changing the
+result (gate-spec.md §5).
 
 ### 1.5 `sdp query`
 

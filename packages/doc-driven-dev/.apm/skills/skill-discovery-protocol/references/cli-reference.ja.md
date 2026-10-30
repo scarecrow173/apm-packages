@@ -86,15 +86,18 @@ sdp validate --adapter <adapter-yaml>
 - `--adapter` のみ: Adapter YAML 設定のスキーマのみ検証
 
 adapter のフラグで個別ゲートをスキップできる:
-`validation.staleness.enabled: false`、`validation.deterministic.enabled: false`、
+`validation.schema: false`、`validation.staleness.enabled: false`、
+`validation.deterministic.enabled: false`、
 `validation.invocation.enabled: false` はそれぞれゲートを実行せず、
-レポートに `result: "skipped"` を記録する（gate-spec.ja.md §5〜§7）。
+レポートに `result: "skipped"` を記録する（gate-spec.ja.md §4〜§7）。
 
 overall pass 時、`sdp validate` は catalog と profile の `validated_at` を
-再刻印する。再刻印には `--adapter` と deterministic ゲートの pass が
+再刻印する。再刻印には `--adapter` と schema ゲートの pass、
+deterministic ゲートの pass が
 必要 — `--profile` のみの実行では鮮度ゲートがすべてスキップされるため
-再刻印せず、スキップされた deterministic ゲートも鮮度の証拠にならない。
-deterministic ゲートが pass している経年のみの staleness（スキル差分
+再刻印せず、スキップされた schema / deterministic ゲートも鮮度の
+証拠にならない。
+schema と deterministic ゲートが pass している経年のみの staleness（スキル差分
 なし）は更新されて pass と報告される — これが期限切れ成果物の文書化
 された回復経路である。fail した実行では timestamp を一切更新しない。
 また再刻印自体は best-effort であり、書き込めない成果物は stderr に
