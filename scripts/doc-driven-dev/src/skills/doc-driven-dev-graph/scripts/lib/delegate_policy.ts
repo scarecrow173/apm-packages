@@ -90,8 +90,12 @@ export function selectDelegateMode(facts: PolicyFacts): PolicyDecision {
  * Minimum JSON-serializable contract a dispatched delegate effect receives.
  * `authoritativeInputs`/`sourceRefs` carry live canonical references —
  * verification-relevant information is never substituted with summaries.
+ * `executionMode` records the trace-taxonomy mode the dispatch was requested
+ * under, so the receiving adapter and the `dispatch-observed` report name the
+ * same request.
  */
 export type DelegateHandoff = {
+  executionMode: ExecutionMode;
   focus: string[];
   authoritativeInputs: CanonicalReference[];
   sourceRefs: CanonicalReference[];
@@ -108,6 +112,8 @@ const DEFAULT_COMPLETION = "completed EffectOutcome with canonical evidence";
 
 /** Assemble a DelegateHandoff; absent fields fall back to the empty/default contract. */
 export function buildDelegateHandoff(options: {
+  /** The requested execution mode the handoff is dispatched under. */
+  mode: ExecutionMode;
   focus: string[];
   inputs: CanonicalReference[];
   sourceRefs?: CanonicalReference[];
@@ -118,6 +124,7 @@ export function buildDelegateHandoff(options: {
   completion?: string;
 }): DelegateHandoff {
   return {
+    executionMode: options.mode,
     focus: [...options.focus],
     authoritativeInputs: [...options.inputs],
     sourceRefs: [...(options.sourceRefs ?? [])],

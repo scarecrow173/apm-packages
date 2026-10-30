@@ -159,6 +159,45 @@ test("effect-dispatched modeReason passes through only as a non-empty string", (
   assert.equal("modeReason" in normalizeTraceEvent(base), false);
 });
 
+test("dispatch-observed normalization validates mode and method enums", () => {
+  const base = {
+    v: 1, runId: "r", seq: 1, kind: "dispatch-observed",
+    edgeId: "probe-to-briefing", stage: "delegate", effectId: "briefing-flow",
+    target: "research", requested: "subagent", actual: "subagent", method: "subagent-spawn",
+  };
+  const event = normalizeTraceEvent(base);
+  assert.equal(event.kind, "dispatch-observed");
+  if (event.kind === "dispatch-observed") {
+    assert.equal(event.target, "research");
+    assert.equal(event.actual, "subagent");
+    assert.equal(event.method, "subagent-spawn");
+  }
+  for (const field of ["requested", "actual"]) {
+    assert.throws(() => normalizeTraceEvent({ ...base, [field]: "sideways" }), /must be one of/);
+  }
+  assert.throws(() => normalizeTraceEvent({ ...base, method: "teleport" }), /method must be one of/);
+  assert.throws(() => normalizeTraceEvent({ ...base, target: "" }), /target/);
+  assert.throws(() => normalizeTraceEvent({ ...base, stage: "setup" }), /stage/);
+  // Unknown extra fields drop on read.
+  const stripped = normalizeTraceEvent({ ...base, prompt: "drop me" });
+  assert.equal("prompt" in stripped, false);
+});
+
+test("summarizeTrace tallies dispatch-observed by actual mode and method", () => {
+  const events = [
+    normalizeTraceEvent({ v: 1, runId: "r", seq: 1, kind: "dispatch-observed", edgeId: "e", stage: "delegate", effectId: "briefing-flow", target: "briefing-flow", requested: "same-context", actual: "same-context", method: "scripted" }),
+    normalizeTraceEvent({ v: 1, runId: "r", seq: 2, kind: "dispatch-observed", edgeId: "e", stage: "delegate", effectId: "briefing-flow", target: "research", requested: "subagent", actual: "subagent", method: "subagent-spawn" }),
+    normalizeTraceEvent({ v: 1, runId: "r", seq: 3, kind: "dispatch-observed", edgeId: "e", stage: "delegate", effectId: "briefing-flow", target: "adr-doc", requested: "same-context", actual: "same-context", method: "inline-skill" }),
+  ];
+  const summary = summarizeTrace(events);
+  assert.equal(summary.dispatchObservations.total, 3);
+  assert.equal(summary.dispatchObservations.byActual.subagent, 1);
+  assert.equal(summary.dispatchObservations.byActual["same-context"], 2);
+  assert.equal(summary.dispatchObservations.byMethod["subagent-spawn"], 1);
+  assert.equal(summary.dispatchObservations.byMethod["inline-skill"], 1);
+  assert.equal(summary.dispatchObservations.byMethod.scripted, 1);
+});
+
 test("route-selected normalization rejects missing commitGate", () => {
   const baseRouteSelected = {
     v: 1, runId: "r", seq: 1, kind: "route-selected", current: "a", next: "a",

@@ -80,8 +80,9 @@ test("mode taxonomy maps onto the trace ExecutionMode enum", () => {
   assert.equal(toExecutionMode("isolated-subagent"), "subagent");
 });
 
-test("handoff carries canonical refs, permissions, budget, completion — no summaries", () => {
+test("handoff carries mode, canonical refs, permissions, budget, completion — no summaries", () => {
   const handoff = buildDelegateHandoff({
+    mode: "subagent",
     focus: ["docs/specs/0001-graph.md"],
     inputs: [{ path: "docs/specs/0001-graph.md", id: "SPEC-0001", fingerprint: "sha256:abc" }],
     sourceRefs: [{ path: "docs/discovery/0001-graph.md", id: "DISC-0001", fingerprint: "sha256:def" }],
@@ -91,6 +92,7 @@ test("handoff carries canonical refs, permissions, budget, completion — no sum
     maxHops: 4,
     completion: "EffectOutcome footer with canonical evidence",
   });
+  assert.equal(handoff.executionMode, "subagent");
   assert.deepEqual(handoff.focus, ["docs/specs/0001-graph.md"]);
   assert.equal(handoff.authoritativeInputs[0].id, "SPEC-0001");
   assert.equal(handoff.budget.maxHops, 4);

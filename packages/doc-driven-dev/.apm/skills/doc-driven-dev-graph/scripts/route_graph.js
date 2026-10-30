@@ -21966,6 +21966,13 @@ var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path5 = __toESM(require("node:path"));
 var TRACE_SCHEMA_VERSION = 1;
 var EXECUTION_MODES = ["same-context", "subagent", "tool", "unknown"];
+var DISPATCH_METHODS = [
+  "inline-skill",
+  "subagent-spawn",
+  "tool-call",
+  "scripted",
+  "not-executed"
+];
 var EFFECT_YIELD_REASONS = [
   "approval-required",
   "input-required",
@@ -22089,6 +22096,31 @@ function normalizeTraceEvent(raw) {
         event.modeReason = record2.modeReason;
       }
       return event;
+    }
+    case "dispatch-observed": {
+      const requested = record2.requested;
+      const actual = record2.actual;
+      const method = record2.method;
+      if (!EXECUTION_MODES.includes(requested)) {
+        fail(`requested must be one of ${EXECUTION_MODES.join(", ")}`);
+      }
+      if (!EXECUTION_MODES.includes(actual)) {
+        fail(`actual must be one of ${EXECUTION_MODES.join(", ")}`);
+      }
+      if (!DISPATCH_METHODS.includes(method)) {
+        fail(`method must be one of ${DISPATCH_METHODS.join(", ")}`);
+      }
+      return {
+        ...base,
+        kind: "dispatch-observed",
+        edgeId: requireString(record2.edgeId, "edgeId"),
+        stage: requireStage(record2.stage),
+        effectId: requireString(record2.effectId, "effectId"),
+        target: requireString(record2.target, "target"),
+        requested,
+        actual,
+        method
+      };
     }
     case "effect-outcome": {
       const outcome = record2.outcome;

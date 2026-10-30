@@ -7,7 +7,9 @@ this repository use `scripts/lib/delegate_policy.ts` (`selectDelegateMode`,
 `toExecutionMode`, `buildDelegateHandoff`); agent callers apply the same
 selection order and handoff contract. The policy is deterministic: it maps
 dispatch facts to a mode plus recorded reasons and never spawns anything
-itself — dispatch remains the caller's responsibility.
+itself — dispatch remains the caller's responsibility, and the selected mode
+is an *input to dispatch*: the caller hands it to the dispatcher as
+`requestedMode` together with the `DelegateHandoff` for delegated modes.
 
 ## Dispatch facts
 
@@ -68,6 +70,7 @@ JSON-serializable:
 
 | Field | Content |
 | --- | --- |
+| `executionMode` | the trace `ExecutionMode` the dispatch was requested under (`tool`/`subagent`) — the handoff pins it, so a delegate cannot run under a different mode than the one the runner recorded |
 | `focus` | repo-relative paths the delegate concentrates on |
 | `authoritativeInputs` | live canonical references the outcome must echo verbatim |
 | `sourceRefs` | additional live canonical references supplied for context |
@@ -82,6 +85,37 @@ Never substitute verification-relevant information with lossy summaries: the
 handoff carries live references and the delegate resolves their current
 content. The `completion` field declares the `EffectOutcome` footer as the
 completion shape — the delegate finishes by emitting that footer.
+
+## Dispatch observation boundary
+
+`requestedMode` is a dispatch input, not a trace label. The dispatcher —
+host adapter or deterministic scripted dispatcher — must either honor it or
+decline, and it reports what it *actually* executed through a
+`DispatchResult`: the `EffectOutcome` plus one or more
+`DispatchObservation` records `{ target, requested, actual, method }`:
+
+- Exactly one **self-observation** (`target` equal to the dispatched
+  effect's id) whose `requested` echoes `requestedMode` and whose `actual`
+  names the mode the dispatch ran as.
+- Zero or more **internal observations** (`target` naming adapter-internal
+  work — e.g. `spec-doc`, `adr-doc`, or `research` inside `briefing-flow`)
+  that expose a composite delegate's real execution path. `method` names
+  the mechanism the adapter used — `scripted`, `inline-skill`,
+  `subagent-spawn`, `tool-call`, or `not-executed` for a declined dispatch.
+
+The caller records every observation as a `dispatch-observed` trace event
+(see [run-trace-contract.md](run-trace-contract.md)) and enforces the
+boundary before the outcome is accepted:
+
+- A self-observation whose `actual` contradicts `requested` rejects the
+  dispatch like any malformed outcome — a mode report is evidence, and a
+  dishonest one is a contract breach.
+- A dispatch that cannot honor the mode — capability or authorization —
+  declines with `method: "not-executed"` and a `yield` outcome; it never
+  silently switches to `same-context`.
+- Internal observations are the adapter's own report and are not re-checked
+  by the runner; they are how a trace proves an independent subagent spawn
+  happened rather than a same-context audit relabelled as research.
 
 ## Return contract
 
@@ -120,8 +154,16 @@ undeclared edge or wrong focus fails the same outcome checks.
 ## Non-goals
 
 - No model-quality evaluation — the policy maps dispatch facts to a mode, it
-  does not judge which model or agent performs better.
+  does not judge which model or agent performs better; `dispatch-observed`
+  records *what mechanism ran*, never how well.
+- No token, cost, or latency comparison — the observation boundary carries
+  no fields for them and the trace schema never will (see the trace
+  non-goals).
 - No provider-specific subagent API requirement — the contract is the mode,
-  the handoff, and the return; each host maps them to its own mechanisms.
+  the handoff, the return, and the observation; each host maps them to its
+  own mechanisms (a real adapter spawns a subagent; the deterministic
+  scripted dispatcher records the same truthfully).
 - No edge proliferation — execution mode never changes graph topology; do not
-  add edges, delegates, or conditions to express a mode.
+  add edges, delegates, or conditions to express a mode. Internal
+  observations describe work inside one dispatched effect, never new graph
+  effects.

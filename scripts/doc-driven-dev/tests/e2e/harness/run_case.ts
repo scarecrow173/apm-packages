@@ -39,7 +39,10 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
     ? path.resolve(repo, e2eCase.graph)
     : resolveGraphPath(undefined, repo);
   const script = e2eCase.script ?? {};
-  const dispatcher = scriptedDispatcher({ repo, proofPath, script });
+  const dispatcher = scriptedDispatcher({
+    repo, proofPath, script,
+    unsupportedModes: e2eCase.unsupportedModes,
+  });
   // The trace file lives next to the fixture repo — never inside it, so the
   // JSONL itself can never dirty the commit gate's porcelain check.
   const traceFile = path.join(path.dirname(repo), `${path.basename(repo)}-trace.jsonl`);
@@ -84,6 +87,7 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
       // Case-declared delegate-mode policy: overrides executionMode and adds
       // modeReason on every effect-dispatched event of every leg when present.
       policy: e2eCase.policy,
+      buildHandoff: e2eCase.buildHandoff,
       trace: { file: traceFile, runId },
       resume: options.resume === false ? undefined : resume,
     });

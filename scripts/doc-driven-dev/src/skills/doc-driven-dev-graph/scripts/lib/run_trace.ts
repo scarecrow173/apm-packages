@@ -6,6 +6,17 @@ export const TRACE_SCHEMA_VERSION = 1;
 
 export type ExecutionMode = "same-context" | "subagent" | "tool" | "unknown";
 
+/**
+ * Adapter-reported dispatch mechanism on `dispatch-observed`:
+ * - `inline-skill` — the effect ran inside the host's own context;
+ * - `subagent-spawn` — a bounded sub-dispatch was spawned (tool-call or isolated);
+ * - `tool-call` — a non-agent tool execution produced the outcome;
+ * - `scripted` — a deterministic/scripted adapter simulated the dispatch;
+ * - `not-executed` — the adapter declined the dispatch (mode unavailable,
+ *   scope breach); nothing executed and the outcome must be a yield.
+ */
+export type DispatchMethod = "inline-skill" | "subagent-spawn" | "tool-call" | "scripted" | "not-executed";
+
 export type EffectYieldReason =
   | "approval-required"
   | "input-required"
@@ -60,6 +71,27 @@ export type EffectDispatchedEvent = TraceEventBase & {
   modeReason?: string;
 };
 
+/**
+ * One per dispatch the adapter actually performed for an `effect-dispatched`:
+ * the requested dispatch itself (`target === effectId`) plus any adapter-
+ * internal sub-dispatches it reports (e.g. a briefing-flow delegate running
+ * `spec-doc`/`adr-doc` inline and an independent `research` spawn). Emitted
+ * by the caller from the dispatcher's own report — never from routing.
+ */
+export type DispatchObservedEvent = TraceEventBase & {
+  kind: "dispatch-observed";
+  edgeId: string;
+  stage: "audit" | "delegate";
+  effectId: string;
+  /** Dispatched target: `effectId` for the requested dispatch, else the adapter-internal target id. */
+  target: string;
+  /** Mode this (sub-)dispatch was requested under. */
+  requested: ExecutionMode;
+  /** Mode the adapter actually used; `unknown` only when nothing executed. */
+  actual: ExecutionMode;
+  method: DispatchMethod;
+};
+
 export type EffectOutcomeEvent = TraceEventBase & {
   kind: "effect-outcome";
   edgeId: string;
@@ -81,6 +113,7 @@ export type TraceEvent =
   | ArtifactScanEvent
   | RouteSelectedEvent
   | EffectDispatchedEvent
+  | DispatchObservedEvent
   | EffectOutcomeEvent
   | RunYieldEvent;
 
@@ -97,6 +130,11 @@ export type TraceSummary = {
   auditsDispatched: Record<string, number>;
   delegatesDispatched: Record<string, number>;
   executionModes: Record<ExecutionMode, number>;
+  dispatchObservations: {
+    total: number;
+    byActual: Record<ExecutionMode, number>;
+    byMethod: Record<DispatchMethod, number>;
+  };
   effectOutcomes: { completed: number; retry: number; yield: number };
   yieldReasons: Record<string, number>;
   scans: number;
@@ -106,6 +144,9 @@ export type TraceSummary = {
 };
 
 const EXECUTION_MODES: readonly ExecutionMode[] = ["same-context", "subagent", "tool", "unknown"];
+const DISPATCH_METHODS: readonly DispatchMethod[] = [
+  "inline-skill", "subagent-spawn", "tool-call", "scripted", "not-executed",
+];
 const EFFECT_YIELD_REASONS: readonly string[] = [
   "approval-required", "input-required", "authority-required",
   "unrecoverable-blocker", "commit-required",
@@ -234,6 +275,30 @@ export function normalizeTraceEvent(raw: unknown): TraceEvent {
       }
       return event;
     }
+    case "dispatch-observed": {
+      const requested = record.requested;
+      const actual = record.actual;
+      const method = record.method;
+      if (!EXECUTION_MODES.includes(requested as ExecutionMode)) {
+        fail(`requested must be one of ${EXECUTION_MODES.join(", ")}`);
+      }
+      if (!EXECUTION_MODES.includes(actual as ExecutionMode)) {
+        fail(`actual must be one of ${EXECUTION_MODES.join(", ")}`);
+      }
+      if (!DISPATCH_METHODS.includes(method as DispatchMethod)) {
+        fail(`method must be one of ${DISPATCH_METHODS.join(", ")}`);
+      }
+      return {
+        ...base, kind: "dispatch-observed",
+        edgeId: requireString(record.edgeId, "edgeId"),
+        stage: requireStage(record.stage),
+        effectId: requireString(record.effectId, "effectId"),
+        target: requireString(record.target, "target"),
+        requested: requested as ExecutionMode,
+        actual: actual as ExecutionMode,
+        method: method as DispatchMethod,
+      };
+    }
     case "effect-outcome": {
       const outcome = record.outcome;
       if (outcome !== "completed" && outcome !== "retry" && outcome !== "yield") {
@@ -352,6 +417,11 @@ export function summarizeTrace(events: TraceEvent[]): TraceSummary {
     auditsDispatched: {},
     delegatesDispatched: {},
     executionModes: { "same-context": 0, subagent: 0, tool: 0, unknown: 0 },
+    dispatchObservations: {
+      total: 0,
+      byActual: { "same-context": 0, subagent: 0, tool: 0, unknown: 0 },
+      byMethod: { "inline-skill": 0, "subagent-spawn": 0, "tool-call": 0, scripted: 0, "not-executed": 0 },
+    },
     effectOutcomes: { completed: 0, retry: 0, yield: 0 },
     yieldReasons: {},
     scans: 0,
@@ -379,6 +449,11 @@ export function summarizeTrace(events: TraceEvent[]): TraceSummary {
       case "effect-dispatched":
         summary.executionModes[event.executionMode] += 1;
         bump(event.stage === "audit" ? summary.auditsDispatched : summary.delegatesDispatched, event.effectId);
+        break;
+      case "dispatch-observed":
+        summary.dispatchObservations.total += 1;
+        summary.dispatchObservations.byActual[event.actual] += 1;
+        summary.dispatchObservations.byMethod[event.method] += 1;
         break;
       case "effect-outcome":
         summary.effectOutcomes[event.outcome] += 1;
