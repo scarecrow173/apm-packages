@@ -615,3 +615,126 @@ test("malformed observation entries reject like a malformed outcome — no trace
     );
   }
 });
+
+// ---------------------------------------------------------------------------
+// Per-edge dispatch budget (#131): a dispatcher that returns a BYTE-DISTINCT
+// retry outcome on every call defeats repeatedRetry (identical-payload only),
+// never completes an edge for hops/fingerprint bounds — only the dispatch
+// count against the pending edge can stop it.
+// ---------------------------------------------------------------------------
+
+/**
+ * The `design` audit on design-to-planning retries forever, mutating its own
+ * evidence doc each call so every retry payload differs by content hash.
+ * All other effects complete normally.
+ */
+function distinctRetryDispatcher(dir: string): EffectDispatcher {
+  let attempt = 0;
+  return (ctx) => {
+    if (ctx.effect.kind === "audit" && ctx.effect.id === "design") {
+      // Snapshot authoritative inputs before mutating — the runner resolved
+      // the same live refs when it dispatched.
+      const inputs = testInputs(dir, ctx.route, ctx.effect);
+      attempt += 1;
+      updateArtifact(dir, "docs/designs/0001-graph.md", { title: `Graph retry ${attempt}` });
+      const evidence = ref(dir, "docs/designs/0001-graph.md");
+      return {
+        outcome: {
+          status: "retry",
+          edgeId: ctx.route.edgeId as string,
+          stage: "audit",
+          effect: ctx.effect,
+          authoritativeInputs: inputs,
+          evidence: [evidence],
+          retry: { changedEvidence: [evidence] },
+        },
+        observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+      };
+    }
+    return {
+      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+    };
+  };
+}
+
+test("byte-distinct retry outcomes on the same pending edge exhaust the dispatch budget", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  const dispatcher = distinctRetryDispatcher(dir);
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), current: "design", focus: ["PLAN-0001"] });
+  assert.equal(result.yieldReason, "budget-exhausted");
+  assert.equal(result.hops, 0);
+  assert.deepEqual(result.completedEdges, []);
+  // The default budget admits exactly 10 dispatches against the pending
+  // edge — all retries, every payload distinct (JSON.stringify unique),
+  // so repeatedRetry never fired.
+  assert.equal(result.outcomes.length, 10);
+  assert.equal(new Set(result.outcomes.map((outcome) => JSON.stringify(outcome))).size, 10);
+  assert.equal(result.handoff.pending?.route.edgeId, "design-to-planning");
+  assert.equal(result.handoff.pending?.dispatches, 10);
+  assert.equal(result.handoff.maxDispatchesPerEdge, 10);
+  const events = readTraceFile(trace);
+  assert.equal(events.filter((event) => event.kind === "effect-dispatched").length, 10);
+  const last = events.at(-1);
+  assert.equal(last?.kind, "run-yield");
+  assert.equal(last?.kind === "run-yield" && last.reason, "budget-exhausted");
+});
+
+test("the per-edge dispatch budget is configurable via maxDispatchesPerEdge", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  const dispatcher = distinctRetryDispatcher(dir);
+  const result = runCaller({
+    ...runnerArgs(dir, dispatcher, trace),
+    current: "design", focus: ["PLAN-0001"], maxDispatchesPerEdge: 3,
+  });
+  assert.equal(result.yieldReason, "budget-exhausted");
+  assert.equal(result.outcomes.length, 3);
+  assert.equal(result.handoff.pending?.dispatches, 3);
+  assert.equal(result.handoff.maxDispatchesPerEdge, 3);
+  const events = readTraceFile(trace);
+  assert.equal(events.filter((event) => event.kind === "effect-dispatched").length, 3);
+  assert.equal(events.at(-1)?.kind, "run-yield");
+});
+
+test("the pending-edge dispatch count survives a mid-edge yield and resume", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  let calls = 0;
+  // Leg 1: first dispatch retries, second yields input-required — the
+  // pending edge already consumed 2 of its 3 dispatches when the run stops.
+  const leg1Dispatcher = distinctRetryDispatcher(dir);
+  const yieldAfter: EffectDispatcher = (ctx) => {
+    calls += 1;
+    if (calls === 2) {
+      const inputs = testInputs(dir, ctx.route, ctx.effect);
+      return {
+        outcome: {
+          status: "yield",
+          edgeId: ctx.route.edgeId as string,
+          stage: "audit",
+          effect: ctx.effect,
+          authoritativeInputs: inputs,
+          evidence: [ref(dir, "docs/designs/0001-graph.md")],
+          reason: "input-required",
+        },
+        observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+      };
+    }
+    return leg1Dispatcher(ctx);
+  };
+  const first = runCaller({
+    ...runnerArgs(dir, yieldAfter, trace),
+    current: "design", focus: ["PLAN-0001"], maxDispatchesPerEdge: 3,
+  });
+  assert.equal(first.yieldReason, "input-required");
+  assert.equal(first.handoff.pending?.dispatches, 2);
+  // Leg 2: resume — the handoff carries both the count and the configured
+  // budget, so one more retry (3) hits the budget on the next re-route.
+  const second = runCaller({ ...runnerArgs(dir, distinctRetryDispatcher(dir), trace), resume: first.handoff });
+  assert.equal(second.yieldReason, "budget-exhausted");
+  assert.equal(second.handoff.pending?.dispatches, 3);
+  // outcomes accumulate across the resumed run: retry, yield, retry.
+  assert.equal(second.outcomes.length, 3);
+});

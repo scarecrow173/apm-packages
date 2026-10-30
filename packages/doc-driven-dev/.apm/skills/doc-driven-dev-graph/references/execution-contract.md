@@ -144,7 +144,7 @@ effect-specific canonical input/evidence mapping is defined in
 | explicit missing focus/requirement/value only the user can choose | `input-required` | Never |
 | missing permission or irreversible external action outside granted scope | `authority-required` | Never |
 | blocked route with no declared executable repair edge | `unrecoverable-blocker` | Never |
-| hop/retry/repetition budget reached | `budget-exhausted` | Never |
+| hop/retry/repetition/dispatch budget reached | `budget-exhausted` | Never |
 | commit-gated edge checkpoint ends with new uncommitted changes and no `commit-waived` signal | `commit-required` | Never |
 | selected edge completed and fresh state exposes another declared edge | none | Yes in `run-until-yield` |
 | audit/delegate/evidence success | none | Yes in `run-until-yield` |
@@ -179,6 +179,16 @@ route fingerprint = stable JSON serialization of the complete GraphRoute
   the next runnable task changes task statuses plus runnable/active/resumableActive/completed,
   so the next declared edge may continue. If the same fingerprint is observed again in the
   same run, yield budget-exhausted.
+
+per-edge dispatch budget = maxDispatchesPerEdge default 10
+  Total effect dispatches one pending edge may consume, counted before every
+  dispatch and independently of outcome payload, route fingerprint, and hop
+  completion. A retry outcome never completes an edge, so hops and route
+  fingerprints never grow on a retry loop, and a byte-distinct retry never
+  trips the repeatedRetry guard — this counter is the bound an adapter
+  cannot evade. Reaching it yields budget-exhausted. The count is recorded
+  on the pending edge inside the handoff, so resume cannot reset it; a
+  different selected edge starts its own count.
 
 changing repair loop = bounded by the frozen maxHops
   A task retry or repair that reaches this limit yields budget-exhausted and
