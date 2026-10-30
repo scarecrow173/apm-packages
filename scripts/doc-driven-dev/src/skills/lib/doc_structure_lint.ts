@@ -514,4 +514,12 @@ function lintStructure(model: DocumentRepository, scope: LintScope): Finding[] {
   return findings;
 }
 
-export { lintDocumentLinks, lintExternalLinks, lintIndexConsistency, lintOrphans, lintStructure };
+export {
+  inboundLinkCounts,
+  inboundRelationCounts,
+  lintDocumentLinks,
+  lintExternalLinks,
+  lintIndexConsistency,
+  lintOrphans,
+  lintStructure,
+};

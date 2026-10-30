@@ -1,0 +1,391 @@
+{
+  "tool": "doc-lifecycle-stats/1",
+  "label": "small",
+  "corpus": {
+    "scannedMarkdown": 17,
+    "documents": 7,
+    "canonicalDocuments": 7,
+    "unmanagedDocuments": 0,
+    "indexes": 10,
+    "bodyBytes": 181,
+    "settledDocuments": 0,
+    "inFlightDocuments": 7,
+    "staleUpstreamDocuments": 0,
+    "duplicateIdGroups": 0,
+    "missingTypes": [
+      "brainstorm",
+      "discovery",
+      "idea"
+    ]
+  },
+  "relations": {
+    "declared": 6,
+    "resolved": 6,
+    "resolvedFile": 0,
+    "ambiguous": 0,
+    "unresolved": 0,
+    "escaped": 0,
+    "external": 0,
+    "inboundTargets": 5,
+    "byField": {
+      "derives-from": {
+        "declared": 3,
+        "resolved": 3,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "implements": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "verified-by": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "verifies": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      }
+    }
+  },
+  "links": {
+    "declared": 0,
+    "images": 0,
+    "internal": 0,
+    "external": 0,
+    "unresolved": 0,
+    "escaped": 0,
+    "inboundTargets": 0
+  },
+  "findings": {
+    "total": 21,
+    "blocking": 9,
+    "warnings": 12,
+    "infos": 0,
+    "onDocuments": 19,
+    "onIndexes": 0,
+    "unattributed": 2,
+    "byRuleId": {
+      "index-missing-entry": 6,
+      "index-missing-overview": 1,
+      "missing-overview": 1,
+      "orphan-index": 6,
+      "orphan-navigation": 6,
+      "traceability-missing-upstream": 1
+    },
+    "byCategory": {
+      "index": 7,
+      "orphan": 12,
+      "structure": 1,
+      "traceability": 1
+    },
+    "health": {
+      "documents": 6,
+      "blocking": 9,
+      "warnings": 12,
+      "infos": 0,
+      "categories": [
+        {
+          "category": "traceability",
+          "blocking": 1,
+          "warnings": 0,
+          "infos": 0,
+          "clean": false
+        },
+        {
+          "category": "index",
+          "blocking": 7,
+          "warnings": 0,
+          "infos": 0,
+          "clean": false
+        },
+        {
+          "category": "orphan",
+          "blocking": 0,
+          "warnings": 12,
+          "infos": 0,
+          "clean": false
+        },
+        {
+          "category": "structure",
+          "blocking": 1,
+          "warnings": 0,
+          "infos": 0,
+          "clean": false
+        }
+      ]
+    }
+  },
+  "types": {
+    "adr": {
+      "files": 1,
+      "localizedFiles": 0,
+      "bodyBytes": 45,
+      "maxBodyBytes": 45,
+      "statusCounts": {
+        "accepted": 1
+      },
+      "settled": 0,
+      "inFlight": 1,
+      "staleUpstream": 0,
+      "inboundLinkTargets": 0,
+      "inboundRelationTargets": 1,
+      "relations": {
+        "declared": 0,
+        "resolved": 0,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "links": {
+        "declared": 0,
+        "images": 0,
+        "internal": 0,
+        "external": 0,
+        "unresolved": 0,
+        "escaped": 0
+      },
+      "orphanIndex": 1,
+      "orphanNavigation": 1,
+      "orphanRelation": 0,
+      "findings": 3,
+      "blockingFindings": 1
+    },
+    "design": {
+      "files": 1,
+      "localizedFiles": 0,
+      "bodyBytes": 8,
+      "maxBodyBytes": 8,
+      "statusCounts": {
+        "approved": 1
+      },
+      "settled": 0,
+      "inFlight": 1,
+      "staleUpstream": 0,
+      "inboundLinkTargets": 0,
+      "inboundRelationTargets": 1,
+      "relations": {
+        "declared": 2,
+        "resolved": 2,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "links": {
+        "declared": 0,
+        "images": 0,
+        "internal": 0,
+        "external": 0,
+        "unresolved": 0,
+        "escaped": 0
+      },
+      "orphanIndex": 1,
+      "orphanNavigation": 1,
+      "orphanRelation": 0,
+      "findings": 3,
+      "blockingFindings": 1
+    },
+    "impl": {
+      "files": 1,
+      "localizedFiles": 0,
+      "bodyBytes": 24,
+      "maxBodyBytes": 24,
+      "statusCounts": {
+        "complete": 1
+      },
+      "settled": 0,
+      "inFlight": 1,
+      "staleUpstream": 0,
+      "inboundLinkTargets": 0,
+      "inboundRelationTargets": 0,
+      "relations": {
+        "declared": 0,
+        "resolved": 0,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "links": {
+        "declared": 0,
+        "images": 0,
+        "internal": 0,
+        "external": 0,
+        "unresolved": 0,
+        "escaped": 0
+      },
+      "orphanIndex": 0,
+      "orphanNavigation": 0,
+      "orphanRelation": 0,
+      "findings": 0,
+      "blockingFindings": 0
+    },
+    "plan": {
+      "files": 1,
+      "localizedFiles": 0,
+      "bodyBytes": 8,
+      "maxBodyBytes": 8,
+      "statusCounts": {
+        "approved": 1
+      },
+      "settled": 0,
+      "inFlight": 1,
+      "staleUpstream": 0,
+      "inboundLinkTargets": 0,
+      "inboundRelationTargets": 1,
+      "relations": {
+        "declared": 2,
+        "resolved": 2,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "links": {
+        "declared": 0,
+        "images": 0,
+        "internal": 0,
+        "external": 0,
+        "unresolved": 0,
+        "escaped": 0
+      },
+      "orphanIndex": 1,
+      "orphanNavigation": 1,
+      "orphanRelation": 0,
+      "findings": 3,
+      "blockingFindings": 1
+    },
+    "spec": {
+      "files": 1,
+      "localizedFiles": 0,
+      "bodyBytes": 45,
+      "maxBodyBytes": 45,
+      "statusCounts": {
+        "approved": 1
+      },
+      "settled": 0,
+      "inFlight": 1,
+      "staleUpstream": 0,
+      "inboundLinkTargets": 0,
+      "inboundRelationTargets": 1,
+      "relations": {
+        "declared": 0,
+        "resolved": 0,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "links": {
+        "declared": 0,
+        "images": 0,
+        "internal": 0,
+        "external": 0,
+        "unresolved": 0,
+        "escaped": 0
+      },
+      "orphanIndex": 1,
+      "orphanNavigation": 1,
+      "orphanRelation": 0,
+      "findings": 4,
+      "blockingFindings": 2
+    },
+    "task": {
+      "files": 1,
+      "localizedFiles": 0,
+      "bodyBytes": 43,
+      "maxBodyBytes": 43,
+      "statusCounts": {
+        "todo": 1
+      },
+      "settled": 0,
+      "inFlight": 1,
+      "staleUpstream": 0,
+      "inboundLinkTargets": 0,
+      "inboundRelationTargets": 0,
+      "relations": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "links": {
+        "declared": 0,
+        "images": 0,
+        "internal": 0,
+        "external": 0,
+        "unresolved": 0,
+        "escaped": 0
+      },
+      "orphanIndex": 1,
+      "orphanNavigation": 1,
+      "orphanRelation": 0,
+      "findings": 3,
+      "blockingFindings": 1
+    },
+    "test-spec": {
+      "files": 1,
+      "localizedFiles": 0,
+      "bodyBytes": 8,
+      "maxBodyBytes": 8,
+      "statusCounts": {
+        "approved": 1
+      },
+      "settled": 0,
+      "inFlight": 1,
+      "staleUpstream": 0,
+      "inboundLinkTargets": 0,
+      "inboundRelationTargets": 1,
+      "relations": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "links": {
+        "declared": 0,
+        "images": 0,
+        "internal": 0,
+        "external": 0,
+        "unresolved": 0,
+        "escaped": 0
+      },
+      "orphanIndex": 1,
+      "orphanNavigation": 1,
+      "orphanRelation": 0,
+      "findings": 3,
+      "blockingFindings": 1
+    }
+  }
+}
