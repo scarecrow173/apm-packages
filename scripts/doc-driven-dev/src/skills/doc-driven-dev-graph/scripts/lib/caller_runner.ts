@@ -9,7 +9,8 @@
  * Effect dispatch is injected: callers supply an EffectDispatcher (LLM, tool,
  * or scripted adapter). This module owns outcome validation, canonical
  * evidence receipts, outcome persistence, the commit baseline/gate, pending
- * edge resume, bounded hops, and run-level trace events — never effect work.
+ * edge resume, bounded hops and per-edge dispatch budgets, and run-level
+ * trace events — never effect work.
  * The trace it appends is diagnostic only (see run-trace-contract.md).
  */
 
@@ -81,6 +82,14 @@ export class OutcomeRejection extends Error {}
  * CallerRunnerOptions.proofPath.
  */
 const DEFAULT_PROOF_PATH = "docs/tasks/0001-task.md";
+
+/**
+ * Default per-edge dispatch budget — the same order as the topology hop
+ * base (10). The declared graph's heaviest edge dispatches 4 times per
+ * clean pass (3 audits + 1 delegate), so 10 leaves honest retries several
+ * re-routes of headroom while still bounding a pathological adapter.
+ */
+export const DEFAULT_MAX_DISPATCHES_PER_EDGE = 10;
 
 export function fingerprint(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -416,6 +425,28 @@ export type CallerRunnerOptions = {
    * at 10 + (activeTasks - 1). Pass false to keep the plain topology budget.
    */
   taskBudget?: boolean;
+  /**
+   * Per-edge dispatch budget: the total number of effect dispatches one
+   * pending edge may consume across re-routes, counted independently of
+   * outcome payloads, route fingerprints, and hop completion. `hops` only
+   * grows on completed edges and `repeatedRetry` only fires on a byte-
+   * identical prior retry, so an adapter returning byte-distinct `retry`
+   * outcomes would otherwise loop forever (#131). Reaching the budget yields
+   * `budget-exhausted`. Default: {@link DEFAULT_MAX_DISPATCHES_PER_EDGE}.
+   */
+  maxDispatchesPerEdge?: number;
+  /**
+   * Run-level dispatch bound: every effect dispatch in the run counts once,
+   * across all edges. The per-edge budget resets when routing selects a
+   * different edge, so an adapter alternating retries across edges — each
+   * staying under its own per-edge count — would otherwise loop forever;
+   * hops and route fingerprints never grow because nothing completes.
+   * Reaching the bound yields `budget-exhausted`. Default: the run's
+   * current `maxHops` times `maxDispatchesPerEdge` — every hop's edge
+   * consuming its full per-edge budget — so the bound stays generous yet
+   * finite as the task-aware hop budget freezes upward.
+   */
+  maxTotalDispatches?: number;
   dispatcher: EffectDispatcher;
   /** Adapter-owned authoritative input mapping, resolved to live canonical refs. */
   resolveInputs: (route: GraphRoute, effect: CallerEffect) => string[];
@@ -463,6 +494,12 @@ export type PendingEdge = {
   delegateComplete: boolean;
   evidenceRecorded: boolean;
   commitBaseline: CommitBaseline | null;
+  /**
+   * Effect dispatches this pending edge has consumed so far (#131). Counts
+   * every dispatch — not only retries — and persists through the handoff
+   * so the budget cannot be reset by serializing and resuming mid-edge.
+   */
+  dispatches: number;
 };
 
 /** JSON-serializable — callers may persist it across sessions. */
@@ -470,6 +507,8 @@ export type CallerHandoff = {
   current: string;
   mode: "run-until-yield" | "single-step";
   maxHops: number;
+  maxDispatchesPerEdge: number;
+  maxTotalDispatches: number;
   yieldReason: YieldReason | null;
   focus: string[];
   signals: string[];
@@ -481,6 +520,8 @@ export type CallerHandoff = {
   delegateCounts: Record<string, number>;
   outcomes: EffectOutcome[];
   pending: PendingEdge | null;
+  /** Run-level count of every effect dispatch so far (#131). */
+  totalDispatches: number;
   hops: number;
 };
 
@@ -518,6 +559,15 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   let maxHops = options.resume?.maxHops
     ?? options.maxHops
     ?? topologyBaseHops;
+  const maxDispatchesPerEdge = options.resume?.maxDispatchesPerEdge
+    ?? options.maxDispatchesPerEdge
+    ?? DEFAULT_MAX_DISPATCHES_PER_EDGE;
+  const configuredMaxTotalDispatches = options.resume?.maxTotalDispatches
+    ?? options.maxTotalDispatches;
+  // The default scales with the run's own budgets — evaluated at each check
+  // so it tracks the task-aware maxHops freeze upward.
+  const totalDispatchBound = (): number => configuredMaxTotalDispatches
+    ?? maxHops * maxDispatchesPerEdge;
   const focus = options.focus ?? options.resume?.focus ?? [];
   const signals = new Set(options.signals ?? options.resume?.signals ?? []);
   let current = options.resume?.current ?? options.current ?? definition.entry;
@@ -529,6 +579,12 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   const auditCounts = { ...(options.resume?.auditCounts ?? {}) };
   const delegateCounts = { ...(options.resume?.delegateCounts ?? {}) };
   const outcomes = [...(options.resume?.outcomes ?? [])];
+  // Run-level dispatch count — seeded from the handoff so a resumed run
+  // continues the same budget instead of restarting it. Handoffs written
+  // before the field existed approximate it with the recorded outcome
+  // count — every stored outcome was a dispatch.
+  let totalDispatches = options.resume?.totalDispatches
+    ?? (options.resume?.outcomes ?? []).length;
   const events: string[] = [];
   let pending: PendingEdge | null = options.resume?.pending ? {
     route: options.resume.pending.route,
@@ -537,6 +593,9 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     delegateComplete: options.resume.pending.delegateComplete,
     evidenceRecorded: options.resume.pending.evidenceRecorded,
     commitBaseline: options.resume.pending.commitBaseline ?? null,
+    // Handoffs written before the field existed keep their recorded
+    // outcomes as the dispatch count — every stored outcome was a dispatch.
+    dispatches: options.resume.pending.dispatches ?? options.resume.pending.outcomes.length,
   } : null;
   const trace = options.trace;
   const executionMode = options.executionMode ?? "unknown";
@@ -712,6 +771,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     route: GraphRoute,
     edgeOutcomes: EffectOutcome[],
     evidenceRecorded: boolean,
+    dispatches: number,
     commitBaseline: CommitBaseline | null = null,
   ): void => {
     const completedAudits = edgeOutcomes
@@ -728,6 +788,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       delegateComplete,
       evidenceRecorded,
       commitBaseline,
+      dispatches,
     };
   };
 
@@ -775,6 +836,11 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     const resumingPending = pending?.route.edgeId === route.edgeId && pending.route.current === route.current
       ? pending
       : null;
+    // Per-edge dispatch budget (#131): the count lives on the pending edge,
+    // so re-routes of the same edge — whether the prior outcome was an
+    // identical retry or a byte-distinct one — all draw down one budget.
+    // A different selected edge starts its own count.
+    let edgeDispatches = resumingPending?.dispatches ?? 0;
     if (resumingPending) {
       const invalidReceipt = resumingPending.outcomes
         .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
@@ -795,12 +861,23 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       .map((outcome) => outcome.effect.id));
     for (const audit of route.requiredAudits) {
       if (completedAudits.has(audit)) continue;
+      // Two dispatch bounds guard every effect: the pending edge's own
+      // budget and the run total — the latter catches retries rotated
+      // across different edges, which reset the per-edge count.
+      if (edgeDispatches >= maxDispatchesPerEdge
+          || totalDispatches >= totalDispatchBound()) {
+        yieldReason = "budget-exhausted";
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        break hopLoop;
+      }
       events.push(`audit:${audit}`);
       const effect: CallerEffect = { kind: "audit", id: audit };
+      edgeDispatches += 1;
+      totalDispatches += 1;
       const dispatched = dispatchEffect(route, "audit", effect);
       if ("rejection" in dispatched) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       const outcome = dispatched.outcome;
@@ -812,9 +889,10 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
         // A retry promises changed evidence; an identical retry outcome on an
         // identical re-route can never progress, so the run stops instead of
         // looping forever (the oracle bounded this with its finite step list).
+        // Distinct payloads fall through to the per-edge dispatch budget.
         const repeatedRetry = edgeOutcomes.slice(0, -1)
           .some((prior) => JSON.stringify(prior) === JSON.stringify(outcome));
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         if (repeatedRetry) {
           yieldReason = "budget-exhausted";
           break hopLoop;
@@ -823,7 +901,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       }
       if (evaluation) {
         yieldReason = evaluation;
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       completedAudits.add(audit);
@@ -834,12 +912,20 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       outcome.status === "completed" && outcome.stage === "delegate" && outcome.effect.id === route.delegate
     ));
     if (route.delegate && !delegateComplete) {
+      if (edgeDispatches >= maxDispatchesPerEdge
+          || totalDispatches >= totalDispatchBound()) {
+        yieldReason = "budget-exhausted";
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        break hopLoop;
+      }
       events.push(`delegate:${route.delegate}`);
       const effect: CallerEffect = { kind: "delegate", id: route.delegate };
+      edgeDispatches += 1;
+      totalDispatches += 1;
       const dispatched = dispatchEffect(route, "delegate", effect);
       if ("rejection" in dispatched) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       const outcome = dispatched.outcome;
@@ -850,7 +936,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       if (evaluation === "retry") {
         const repeatedRetry = edgeOutcomes.slice(0, -1)
           .some((prior) => JSON.stringify(prior) === JSON.stringify(outcome));
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         if (repeatedRetry) {
           yieldReason = "budget-exhausted";
           break hopLoop;
@@ -859,7 +945,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       }
       if (evaluation) {
         yieldReason = evaluation;
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       delegateCounts[route.delegate] = (delegateCounts[route.delegate] ?? 0) + 1;
@@ -878,7 +964,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
         && evidenceReceipts(repo, proofPath).filter((receipt) => receipt.edgeId === route.edgeId).length > evidenceBefore;
       if (!evidenceRecorded) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
         break;
       }
     }
@@ -887,7 +973,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       const after = captureBaseline(repo);
       if (!commitGatePasses(commitBaseline, after)) {
         yieldReason = "commit-required";
-        savePending(route, edgeOutcomes, true, commitBaseline);
+        savePending(route, edgeOutcomes, true, edgeDispatches, commitBaseline);
         break;
       }
     }
@@ -908,6 +994,8 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     current,
     mode,
     maxHops,
+    maxDispatchesPerEdge,
+    maxTotalDispatches: totalDispatchBound(),
     yieldReason,
     focus: [...focus],
     signals: [...signals].sort(),
@@ -919,6 +1007,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     delegateCounts,
     outcomes,
     pending,
+    totalDispatches,
     hops,
   };
   if (yieldReason !== null) {
