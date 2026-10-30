@@ -101,13 +101,16 @@ and register it in `cases/index.ts`. Fields:
 | `focus`, `signals` | Caller focus ids and runtime signals. Routing past `focus-required` needs `focus`; the implementation/followup/exit-audit gates need their `*-verified`/`*-pass` signals. |
 | `graph`, `proofPath` | Custom graph YAML (repo-relative) and proof doc (default `docs/tasks/0001-task.md`). |
 | `maxHops`, `mode` | Hop budget; `run-until-yield` (default) or `single-step`. |
-| `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document mutators applied when the delegate completes, `commitEvidence` to commit during evidence persistence, `subDispatches` internal dispatch plan (scalar repeats per completed delegate dispatch, queue consumed per dispatch), `reportActual` to simulate a dishonest self-report. Unscripted effects throw — no silent defaults. |
+| `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document mutators applied when the delegate completes, `commitEvidence` to commit during evidence persistence, `subDispatches` internal dispatch plan, `reportActual` to simulate a dishonest self-report. Unscripted effects throw — no silent defaults. |
+| `script.subDispatches` | `SubDispatchSpec[]` (repeats per delegate dispatch that resolves `completed` — a `yield`/`retry` spec consumes nothing, so queues stay aligned across yields; e2e-15c depends on this) or `SubDispatchSpec[][]` (one plan consumed per completed dispatch). Fields: `target` (internal dispatch name), `requested` (mode, default `same-context`), `method` (override the mechanism report), `mutate` (mutators), `writeScope` (required for delegated requests that mutate — fail-closed refusal otherwise), `refuse` (decline outright), `staleReturn` (execute but return unresolvable evidence → delegate yields), `reportActual` (dishonest mode report → runner rejects). A refused/rejected entry stops the plan and forces the delegate to `yield authority-required`. |
 | `unsupportedModes` | `ExecutionMode[]` the simulated host cannot execute — a dispatch requesting one declines `not-executed` + `yield` instead of silently switching. |
-| `buildHandoff` | Optional `CallerRunnerOptions.buildHandoff` override; the runner calls it for every delegated policy decision and rejects a handoff whose `executionMode` mismatches the request. |
+| `buildHandoff` | Optional `CallerRunnerOptions.buildHandoff` override; the runner calls it for every delegated policy decision and rejects a falsy return or a handoff whose `executionMode` mismatches the request. |
 | `steps` | Multi-leg runs. Each leg: `mutateBefore` (applied between runs), `options` (`focus`/`signals`/`current`/`mode`/`maxHops`, plus `resume:false` for a fresh run — on resumed legs the prior `CallerHandoff` wins `current`/`mode`/`maxHops`), `expect` (trace checks use that leg's partition). |
 | `expect` | Final-leg expectations: `yield`, `edgeSequence`, `completedEdges` scope to the last leg; `events` tallies span the whole run; `blockersContain`/`tasksContain` match `route-selected` payloads; `finalFiles` re-reads end-of-run repo state. |
 | `expect.briefingAudit` | Run the real source `audit_briefing` CLI via tsx against the fixture (`spec`, `adr`, and expected `consistent`); check both JSON and exit status. A step expectation runs immediately after that leg; a top-level expectation reads the final state. |
 | `expect.checkpointReceipts` | Assert counts of persisted proof-document receipts by edge. Step expectations read at the leg boundary; top-level expectations read final state. A checkpoint is not a trace event; trace `run-yield.completedEdges` is asserted separately. |
+
+Write scopes (`SubDispatchSpec.writeScope`, `DelegateHandoff.permissions.read`/`.write`) use `pathInScope` semantics — **prefix match with a trailing `/`, or exact path match; no glob syntax**. `docs/specs/` covers `docs/specs/0001-graph.md`; `docs/specs/0001-graph.md` covers only that file. `docs/specs/**` is a literal string that matches nothing under the trailing-`/` rule — do not write glob patterns into checked positions. Path-less mutators (`{ commit: true }`) are unauthorized under any delegated scope: a commit is caller-phase work no write scope can express.
 
 ## Running
 
@@ -145,7 +148,7 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 
 | Criterion | Where it lands |
 | --- | --- |
-| >= 10 regression cases | 32 `E2ECase` entries in `cases/` (15 files; e2e-07/10/12/13/15 carry a/b/c/… siblings). |
+| >= 10 regression cases | 33 `E2ECase` entries in `cases/` (15 files; e2e-07/10/12/13/15 carry a/b/c/… siblings). |
 | Real CLI + filesystem + git + Markdown + fresh projection | Every case: real temp git repo, `route_graph` spawned via tsx once per hop, projection recomputed per invocation. |
 | Deterministic delegate/audit replacement incl. error/yield/resume/commit | `scriptedDispatcher` (completed/retry/yield/malformed); exercised by e2e-03/11 (retry), e2e-04 (resume), e2e-08 (resume after budget), e2e-09 (commit), e2e-10 (rejections), e2e-02 (input-required). |
 | Reproducible + contract-violation detection (hard gates) | Seven universal invariants + per-case expectation DSL; `compareNormalizedTraces` for reproducibility; e2e-05/07/10 target contract violations. |
@@ -185,6 +188,7 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 | e2e-15g | Delegate returns stale-fingerprint outcome on same-context path | stale-evidence rejection |
 | e2e-15h | Executed research spawn returns stale evidence -> delegate yield | stale-evidence rejection on delegated path |
 | e2e-15i | Policy delegates briefing-flow itself; caller-built handoff scopes writes; `actual: subagent` | requested mode -> handoff -> scoped execution -> observed actual |
+| e2e-15j | Policy delegates briefing-flow but host lacks `subagent` -> top-level dispatch declines `not-executed` + `yield` | top-level capability refusal, no silent switch |
 
 ## What this harness does NOT verify
 

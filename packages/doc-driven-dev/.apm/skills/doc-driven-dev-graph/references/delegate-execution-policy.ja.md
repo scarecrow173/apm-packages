@@ -116,9 +116,11 @@ caller はすべての observation を `dispatch-observed` trace event として
 - mode を尊重できない dispatch（capability または権限の不足）は、
   `method: "not-executed"` と `yield` outcome で拒否を返し、`same-context`
   への暗黙の切り替えは行いません。
-- internal observation は adapter 自身の報告であり、runner は再検査しません
-  — これらが、same-context の audit を research と読み替えただけではなく
-  独立した subagent spawn が実際に行われたことを trace が証明する手段です。
+- internal observation は adapter 自身の報告 — runner が再検査しない
+  自己申告データであり、same-context の audit を research と読み替えただけ
+  ではなく独立した subagent spawn が実行されたことを attest する手段です。
+  trace がその証拠を保持できるよう、adapter はこの報告を誠実に実装
+  しなければなりません。
 
 ## Return contract
 

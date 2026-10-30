@@ -15,7 +15,7 @@ import { case13a, case13b, case13c } from "./case-13-execution-modes";
 import { case14a, case14c } from "./case-14-briefing-execution";
 import {
   case15a, case15b, case15c, case15d,
-  case15e, case15f, case15g, case15h, case15i,
+  case15e, case15f, case15g, case15h, case15i, case15j,
 } from "./case-15-dispatch-observation";
 
 export const CASES: E2ECase[] = [
@@ -29,5 +29,5 @@ export const CASES: E2ECase[] = [
   case13a, case13b, case13c,
   case14a, case14c,
   case15a, case15b, case15c, case15d,
-  case15e, case15f, case15g, case15h, case15i,
+  case15e, case15f, case15g, case15h, case15i, case15j,
 ];

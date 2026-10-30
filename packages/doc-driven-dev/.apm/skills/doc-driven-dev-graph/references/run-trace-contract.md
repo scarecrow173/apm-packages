@@ -97,7 +97,7 @@ report of what ran:
 | --- | --- |
 | `target` | what the dispatch executed — equal to `effectId` for the self-observation, or an adapter-internal dispatch name (e.g. `spec-doc`, `adr-doc`, `research` inside `briefing-flow`) for work inside a composite delegate |
 | `requested` | the mode the dispatch was asked to run (`same-context`/`subagent`/`tool`/`unknown`) |
-| `actual` | the mode the dispatcher reports it ran as (`unknown` when declined) |
+| `actual` | the mode the dispatcher reports it ran as; declined dispatches report `unknown` |
 | `method` | the execution mechanism: `scripted` (deterministic adapter), `inline-skill` (ran in the caller's context), `subagent-spawn` (independent bounded subagent), `tool-call` (bounded tool-shaped delegation), or `not-executed` (declined) |
 
 Every accepted dispatch yields exactly one self-observation
@@ -109,9 +109,10 @@ self-observation — rejects the dispatch like a malformed outcome; the trace
 then keeps the observation as the forensic record and emits no
 `effect-outcome` for it. `method: "not-executed"` is honest only with a
 `yield` outcome. Internal observations (`target !== effectId`) are the
-adapter's own report: they are how a trace proves an independent spawn
-happened rather than a same-context audit relabelled as delegated work, and
-they never represent new graph effects.
+adapter's own report — self-attested data the runner does not re-verify:
+they attest that an independent spawn ran rather than a same-context audit
+relabelled as delegated work, so adapters must implement the report
+honestly. They never represent new graph effects.
 
 ### `effect-outcome`
 

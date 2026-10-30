@@ -97,7 +97,7 @@ dispatcher が実行したと報告する dispatch 1 件につき 1 event。
 | --- | --- |
 | `target` | dispatch が実行した対象 — self-observation では `effectId` と等しく、composite delegate 内の作業（`briefing-flow` 内の `spec-doc`、`adr-doc`、`research` など）では adapter 内部の dispatch 名 |
 | `requested` | dispatch に要求された mode（`same-context`/`subagent`/`tool`/`unknown`） |
-| `actual` | dispatcher が実際に実行したと報告する mode（拒否時は `unknown`） |
+| `actual` | dispatcher が実行したと報告する mode。拒否された dispatch は `unknown` を報告する |
 | `method` | 実行の仕組み — `scripted`（決定的 adapter）、`inline-skill`（caller の context で実行）、`subagent-spawn`（独立した bounded subagent）、`tool-call`（bounded な tool 型 delegation）、`not-executed`（拒否） |
 
 受理されたすべての dispatch はちょうど 1 件の self-observation
@@ -109,9 +109,10 @@ dispatch は、malformed な outcome と同様に拒否されます — trace �
 observation が forensic な記録として残り、`effect-outcome` は出力されま
 せん。`method: "not-executed"` が正直であるのは `yield` outcome と組み
 合わせた場合のみです。internal observation（`target !== effectId`）は
-adapter 自身の報告であり、same-context の audit を delegated な作業と読み
-替えただけではなく独立した spawn が実際に行われたことを trace が証明する
-手段です — 新しい graph effect を表すものではありません。
+adapter 自身の報告 — runner が再検証しない自己申告データであり、
+same-context の audit を delegated な作業と読み替えただけではなく独立した
+spawn が実行されたことを attest する手段です。adapter はこの報告を誠実に
+実装しなければなりません。新しい graph effect を表すものではありません。
 
 ### `effect-outcome`
 

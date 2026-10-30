@@ -135,9 +135,10 @@ export type SubDispatchSpec = {
   /** Mutators applied by this sub-dispatch, in order. */
   mutate?: Mutator[];
   /**
-   * Permitted write scope for the bounded path (repo-relative prefixes or
-   * exact paths). Required for a delegated sub-dispatch that mutates —
-   * absent means fail-closed refusal; a mutator outside it is refused as an
+   * Permitted write scope for the bounded path — `pathInScope` grammar:
+   * trailing-`/` prefix or exact path match, no globs. Required for a
+   * delegated sub-dispatch that mutates — absent means fail-closed refusal;
+   * a mutator outside it (or a path-less `commit` mutator) is refused as an
    * unauthorized change. Ignored for same-context sub-dispatches (they run
    * in the caller's context, like the top-level inline path).
    */
@@ -285,7 +286,11 @@ function buildOutcome(
   throw new Error(`Unknown outcome spec: ${JSON.stringify(spec)}`);
 }
 
-/** The repo-relative path a mutator writes; commit mutators touch no path. */
+/**
+ * The repo-relative path a mutator writes; `{commit:true}` touches no path.
+ * Path-less mutators are unauthorized under any delegated scope — a commit
+ * is caller-phase work no write scope can express.
+ */
 function mutatorPath(mutator: Mutator): string | null {
   if ("write" in mutator) return mutator.write.path;
   if ("set" in mutator) return mutator.set.path;
@@ -293,7 +298,12 @@ function mutatorPath(mutator: Mutator): string | null {
   return null;
 }
 
-/** Prefix-or-exact scope membership on repo-relative paths (posix-normalized). */
+/**
+ * Scope membership on repo-relative paths (posix-normalized): a scope ending
+ * in `/` is a prefix match (`docs/specs/` covers its subtree); anything else
+ * is an exact-path match. No glob syntax — `docs/specs/**` is a literal
+ * string that matches nothing.
+ */
 export function pathInScope(relativePath: string, scopes: readonly string[]): boolean {
   const rel = relativePath.split(path.sep).join("/");
   return scopes.some((scope) => {
@@ -398,10 +408,14 @@ export function scriptedDispatcher(options: {
       const writePaths = mutators.map(mutatorPath).filter((p): p is string => p !== null);
       // A delegated sub-dispatch mutating without a declared writeScope is a
       // fail-closed contract breach — like a handoff that grants no writes.
+      // A path-less mutator ({commit:true}) is unauthorized outright: a
+      // commit is caller-phase work, not dispatch work, and no writeScope can
+      // express it — the bounded spawn may not commit.
       const scope = sub.writeScope;
       const unauthorized = delegated(requested)
-        && writePaths.length > 0
-        && (scope === undefined || !writePaths.every((p) => pathInScope(p, scope)));
+        && (mutators.some((mutator) => mutatorPath(mutator) === null)
+          || (writePaths.length > 0
+            && (scope === undefined || !writePaths.every((p) => pathInScope(p, scope)))));
       const declined = sub.refuse === true || unsupported.has(requested) || unauthorized;
       if (declined) {
         observations.push({ target: sub.target, requested, actual: "unknown", method: "not-executed" });
@@ -459,8 +473,12 @@ export function scriptedDispatcher(options: {
       ? options.script[edgeId]?.mutate ?? []
       : [];
     if (ctx.handoff) {
+      // Mutators are confined to the handoff write scope; a path-less
+      // mutator ({commit:true}) is refused outright — commits are
+      // caller-phase work and no permission scope can express them.
+      const unscoped = mutators.some((mutator) => mutatorPath(mutator) === null);
       const writePaths = mutators.map(mutatorPath).filter((p): p is string => p !== null);
-      if (writePaths.length > 0 && !writePaths.every((p) => pathInScope(p, ctx.handoff!.permissions.write))) {
+      if (unscoped || !writePaths.every((p) => pathInScope(p, ctx.handoff!.permissions.write))) {
         return refused();
       }
     }

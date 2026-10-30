@@ -15,7 +15,11 @@ import {
   type EffectDispatcher,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import type { GraphRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
-import type { DelegateMode, PolicyFacts } from "../src/skills/doc-driven-dev-graph/scripts/lib/delegate_policy";
+import {
+  buildDelegateHandoff,
+  type DelegateMode,
+  type PolicyFacts,
+} from "../src/skills/doc-driven-dev-graph/scripts/lib/delegate_policy";
 import { readTraceFile, type EffectDispatchedEvent } from "../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 
 const PROOF = "docs/tasks/0001-task.md";
@@ -514,4 +518,100 @@ test("a delegated policy decision attaches a handoff carrying the requested mode
   // handoff; same-context dispatches saw none.
   assert.equal(seen.includes("tool"), true);
   assert.equal(seen.includes(undefined), true);
+});
+
+test("a self-observation echoing a different requested mode rejects the dispatch", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  // The adapter ran honestly (actual === requested-mode "tool") but echoes
+  // the wrong request in `requested` — a self-report that misattributes the
+  // request is rejected exactly like a mismatched actual.
+  const dispatcher: EffectDispatcher = (ctx) => ({
+    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    observations: [{ target: ctx.effect.id, requested: "same-context", actual: "tool", method: "scripted" }],
+  });
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "tool", focus: ["PLAN-0001"] });
+  assert.equal(result.yieldReason, "authority-required");
+  assert.equal(
+    readTraceFile(trace).some((event) => event.kind === "effect-outcome"),
+    false,
+  );
+});
+
+test("a handoff whose executionMode mismatches the request rejects the dispatch", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  const dispatcher: EffectDispatcher = (ctx) => ({
+    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+  });
+  const policy = (_route: GraphRoute, effect: CallerEffect): PolicyFacts => ({
+    effectId: effect.id,
+    stage: effect.kind,
+    independentScope: effect.id === "spec",
+    sharedJudgment: false,
+    contextCost: "low",
+    parallelCandidate: false,
+    hostCapabilities: new Set<DelegateMode>(["same-context", "subagent-as-tool", "isolated-subagent"]),
+  });
+  const result = runCaller({
+    ...runnerArgs(dir, dispatcher, trace),
+    focus: ["PLAN-0001"],
+    policy,
+    // The spec audit is delegated ("tool"), but the builder pins a
+    // "subagent" handoff — the delegate would run under a different
+    // contract than the runner recorded.
+    buildHandoff: ({ inputs }) => buildDelegateHandoff({ mode: "subagent", focus: [], inputs }),
+  });
+  assert.equal(result.yieldReason, "authority-required");
+});
+
+test("a delegated decision producing no handoff rejects the dispatch", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  const dispatcher: EffectDispatcher = (ctx) => ({
+    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+  });
+  const policy = (_route: GraphRoute, effect: CallerEffect): PolicyFacts => ({
+    effectId: effect.id,
+    stage: effect.kind,
+    independentScope: effect.id === "spec",
+    sharedJudgment: false,
+    contextCost: "low",
+    parallelCandidate: false,
+    hostCapabilities: new Set<DelegateMode>(["same-context", "subagent-as-tool", "isolated-subagent"]),
+  });
+  const result = runCaller({
+    ...runnerArgs(dir, dispatcher, trace),
+    focus: ["PLAN-0001"],
+    policy,
+    // Falsy return = no scope to delegate — running anyway would be an
+    // unbounded dispatch.
+    buildHandoff: () => undefined as never,
+  });
+  assert.equal(result.yieldReason, "authority-required");
+});
+
+test("malformed observation entries reject like a malformed outcome — no trace drop, no TypeError", () => {
+  for (const bad of [null, "research", { target: 7, requested: "same-context", actual: "same-context", method: "scripted" }, { target: "x", requested: "sideways", actual: "same-context", method: "scripted" }, { target: "x", requested: "same-context", actual: "same-context", method: "teleport" }]) {
+    const dir = happyRepo();
+    const trace = path.join(dir, "trace.jsonl");
+    const dispatcher: EffectDispatcher = (ctx) => ({
+      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      observations: [
+        { target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" },
+        bad,
+      ] as never,
+    });
+    const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), focus: ["PLAN-0001"] });
+    assert.equal(result.yieldReason, "authority-required", `entry ${JSON.stringify(bad)} must reject`);
+    // Entries are validated before ANY is emitted — a malformed report is an
+    // all-or-nothing breach, so no dispatch-observed event reaches the trace
+    // (and no normalize-drop can hide it).
+    assert.equal(
+      readTraceFile(trace).filter((event) => event.kind === "dispatch-observed").length,
+      0,
+    );
+  }
 });
