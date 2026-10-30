@@ -157,21 +157,35 @@ function setupEnv(dir: string) {
 
   const validationReport = {
     schema_version: "1.0",
-    validated_at: "2026-01-01T00:00:00Z",
-    adapter_id: "regression-adapter",
-    overall_result: "pass",
-    schema_validation: { result: "pass" },
-    staleness_validation: { result: "pass" },
-    deterministic_validation: { result: "pass" },
-    blocking_validations: { result: "pass" },
     generated_at: "2026-01-01T00:00:00Z",
-    checks: [
-      { name: "schema", status: "passed" },
-      { name: "staleness", status: "passed" },
-      { name: "deterministic", status: "passed" },
-      { name: "blocking", status: "passed" },
-    ],
-    summary: { total: 4, passed: 4, failed: 0, skipped: 0 },
+    repository: "regression-repo",
+    adapter_id: "regression-adapter",
+    schema_validation: { result: "pass", errors: [] },
+    staleness_validation: {
+      result: "pass",
+      basis: "validated_at",
+      basis_date: "2026-01-01T00:00:00Z",
+      max_age_days: 30,
+      age_days: 0,
+      new_skills: [],
+      removed_skills: [],
+    },
+    deterministic_validation: { result: "pass", comparisons: [] },
+    blocking_validations: { result: "pass", checks: [] },
+    catalog_validation: {
+      skill_count: 1,
+      reference_count: 1,
+      capability_count: 1,
+      orphan_skills: [],
+    },
+    profile_validation: {
+      flow_count: 1,
+      flow_stack_slot_count: 0,
+      unresolved_slots: [],
+      resolved_invocation_count: 1,
+      unused_override_warnings: [],
+    },
+    overall_result: "pass",
   };
 
   fs.writeFileSync(
@@ -303,7 +317,8 @@ test("regression: validation-status returns valid JSON", () => {
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.equal(data.adapter_id, "regression-adapter");
-  assert.ok(data.summary);
+  assert.equal(data.overall_result, "pass");
+  assert.ok(data.gates);
 });
 
 test("regression: adapter-scoped profile can load root catalog", () => {
