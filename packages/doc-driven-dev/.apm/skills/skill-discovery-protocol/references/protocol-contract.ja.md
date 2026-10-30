@@ -100,6 +100,7 @@ Required top-level fields:
 
 Catalog は `slots` / `slot_count` / `resolved_invocations` を持ってはならない。
 invocation slot は Flow Profile の `flow_stack.slots[]` が保持する。
+
 - `provides[]` と `uses[]` の要素型スキーマについては、上記 §4 Inference Contract を参照.
 
 ## 6. Flow Profile Contract

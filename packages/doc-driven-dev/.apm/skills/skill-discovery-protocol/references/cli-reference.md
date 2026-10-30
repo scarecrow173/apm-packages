@@ -104,7 +104,7 @@ When generating JSON for `sdp infer set-skill` from PowerShell, two pitfalls app
 
 PowerShell `Out-File -Encoding utf8` writes UTF-8 with BOM. Node.js `JSON.parse` cannot read BOM-prefixed JSON and throws:
 
-```
+```text
 Unexpected token '\ufeff', "\ufeff{..." is not valid JSON
 ```
 

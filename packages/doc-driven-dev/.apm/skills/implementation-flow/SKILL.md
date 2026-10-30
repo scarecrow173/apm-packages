@@ -127,6 +127,11 @@ If you need to refresh or compare the repository-specific profile skeleton, load
 [`assets/templates/implementation-profile-template.md`](assets/templates/implementation-profile-template.md)
 before editing template-driven sections. Do not load it for normal execution.
 
+**Staged loading:** resolve the profile first, then load `SKILL.md` bodies only
+for skills the profile marks applicable, then load references and scripts only
+when the active step needs them — see
+[progressive-loading-contract](../skill-discovery-protocol/references/progressive-loading-contract.md).
+
 ---
 
 ## Phase B: Configure
@@ -201,7 +206,7 @@ through `impl-doc`.
 Example command:
 
 ```bash
-node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
+node ../impl-doc/scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
 ```
 
 Known-solution work does not skip this phase. The Implementation Record is
