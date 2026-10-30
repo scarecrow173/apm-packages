@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { configFor, docTypes, parseDoc, relationFields } from "./doc_suite_utils";
+import { isSettledStatus, lifecycleBucketForType, SETTLED_STATUSES } from "./doc_lifecycle";
 import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, nonReferenceRelationKeys, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
@@ -123,25 +124,8 @@ const TRACEABILITY_TERMINAL_STATUSES = ["superseded", "rejected", "archived", "d
 // (`lifecycle_stats.ts`) — one authoritative definition, two consumers
 // (Issue #166, promoted from the Issue #127 heuristic).
 
-/**
- * "Settled" = the document's own lifecycle work has concluded; it persists as
- * historical evidence even though it may still be referenced. This is NOT the
- * graph's terminal-status notion — `approved` designs and `accepted` ADRs stay
- * in-flight because they remain the normative baseline in-flight work derives
- * from. Unknown types get an empty set (everything counts as in-flight).
- */
-const SETTLED_STATUSES: Record<string, ReadonlySet<string>> = {
-  idea: new Set(["promoted", "parked", "archived", "superseded"]),
-  brainstorm: new Set(["routed", "superseded"]),
-  discovery: new Set(["resolved", "archived", "superseded"]),
-  spec: new Set(["implemented", "superseded", "rejected"]),
-  plan: new Set(["completed", "superseded"]),
-  task: new Set(["done", "wont-do"]),
-  design: new Set(["superseded", "rejected"]),
-  adr: new Set(["rejected", "deprecated", "superseded"]),
-  "test-spec": new Set(["deprecated", "superseded"]),
-  impl: new Set(["completed", "abandoned", "superseded"]),
-};
+// SETTLED_STATUSES is imported from `doc_lifecycle.ts` — the single authority
+// for the settled axis — and re-exported below for API stability.
 
 /**
  * Dead upstream statuses for the stale-upstream rule: an in-flight document
@@ -165,18 +149,13 @@ const DEAD_UPSTREAM_STATUSES: ReadonlySet<string> = new Set([
 /** Upstream relation fields — the lineage contract's expected-upstream set. */
 const UPSTREAM_FIELDS: ReadonlySet<string> = new Set(["implements", "derives-from", "refines"]);
 
-/** Legacy fixture spelling merged into the canonical `impl` bucket. */
-const LIFECYCLE_TYPE_ALIASES: Record<string, string> = { "implementation-record": "impl" };
-
 function lifecycleBucketOf(document: RepositoryDocument): string {
   if (document.kind === "unmanaged") return "unmanaged";
-  const declared = document.type ?? "untyped";
-  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
+  return lifecycleBucketForType(document.type);
 }
 
 function isSettled(document: RepositoryDocument): boolean {
-  if (document.status === null) return false;
-  return SETTLED_STATUSES[lifecycleBucketOf(document)]?.has(document.status) ?? false;
+  return isSettledStatus(lifecycleBucketOf(document), document.status);
 }
 
 type StaleUpstreamTarget = {

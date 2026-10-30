@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { findDocumentDir, listMarkdownFiles, slugify as sharedSlugify } from "../../../lib/document_utils";
-import { GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
+import { GENERATED_INDEX_MARKER, isForeignDocType, isGeneratedIndex, parseDoc, renderIndexBody, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
 import { headingNames } from "../../../lib/markdown_sections";
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
@@ -271,8 +271,7 @@ async function adrEntries(cwd: string, relativeDir: string): Promise<AdrEntry[]>
 }
 
 async function buildIndex(dir: string, relativeDir: string): Promise<string> {
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = (await Promise.all(adrFiles(dir).map(async (file) => {
+  const entries = (await Promise.all(adrFiles(dir).map(async (file) => {
     const content = fs.readFileSync(path.join(dir, file), "utf8");
     const data = matterData(content);
     if (isForeignDocType(data.type, "adr", relativeDir)) return null;
@@ -284,13 +283,19 @@ async function buildIndex(dir: string, relativeDir: string): Promise<string> {
         title = path.basename(file, ".md");
       }
     }
-    const status = typeof data.status === "string" ? data.status : "—";
+    const status = typeof data.status === "string" ? data.status : null;
     const numberMatch = /^(\d+)-/.exec(file);
     const fallbackId = numberMatch ? `ADR-${numberMatch[1]}` : "—";
     const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : fallbackId;
-    return `| ${indexCell(id)} | ${indexCell(title)} | ${indexCell(status)} | [${indexCell(file)}](./${indexCell(file)}) |`;
-  }))).filter((row): row is string => row !== null);
-  const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
+    return {
+      file,
+      id,
+      status,
+      title,
+      type: typeof data.type === "string" ? data.type : null,
+    };
+  }))).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  const body = renderIndexBody(entries, { settledType: "adr" });
   return `# Architecture Decision Records\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${body}\n`;
 }
 

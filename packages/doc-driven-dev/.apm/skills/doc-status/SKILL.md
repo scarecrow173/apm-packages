@@ -47,7 +47,8 @@ Return audit results using this structure:
 The unified `doc_status.js` entry point exposes four read-only commands.
 `list_docs.js` and `audit_docs.js` remain as compatibility wrappers.
 
-1. List documents by type or status.
+1. List documents by type or status; each entry shows `status` and
+   `created` (capture-layer age).
 
    ```bash
    node scripts/doc_status.js list --type spec
@@ -70,7 +71,8 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    ```
 
    `health` is an aggregate view over the same findings — it is not a second
-   scanner and reports no numeric score.
+   scanner and reports no numeric score. Its `Orphans` line (`orphans` in
+   `--json`) rolls up `orphan-*` findings by rule and document type.
 
    Shared filters: `--type`, `--dir`, `--rule`, `--severity`,
    `--blocking`, `--status` (list), `--json`, `--external-links`.
@@ -144,7 +146,10 @@ a stable rule ID. Covered checks include:
   `link-case-mismatch` — local Markdown link and anchor integrity.
 - `index-stale-entry`, `index-duplicate-entry`, `index-metadata-mismatch`,
   `index-ordering`, `index-unparseable`, `index-escapes-root` — index table
-  consistency.
+  consistency. Managed indexes are status-aware — in-flight rows first,
+  then a `## Settled` tier; `index-ordering` flags rows violating that
+  order and `index-metadata-mismatch` flags status cells that no longer
+  match front matter.
 - `orphan-index`, `orphan-navigation`, `orphan-relation` — documents not
   listed in the index, unreachable from any Markdown link, or lacking
   semantic relations. Severity is type-aware: types allowed as root

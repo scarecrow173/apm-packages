@@ -71,6 +71,15 @@ The same repair applied twice is a no-op the second time: index regeneration
 produces deterministic output for the same document set, and applied link
 normalizations no longer appear as findings.
 
+## Status-Transition Close-Out
+
+Status edits are manual front-matter changes — no command transitions a
+document — but they can move a row between the in-flight table and the
+`## Settled` tier. On every `status` change, regenerate the owning index
+in the same change (`plan` then `apply` with `--type <type>`); `doc_status
+lint` reports the stale index until then. Regeneration is also the
+two-tier format migration.
+
 ## Migration Commands
 
 `doc-maintenance` also owns the repository migration entry points. The graph

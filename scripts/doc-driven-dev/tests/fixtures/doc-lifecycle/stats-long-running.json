@@ -177,7 +177,23 @@
           "infos": 19,
           "clean": false
         }
-      ]
+      ],
+      "orphans": {
+        "total": 22,
+        "byRule": {
+          "orphan-relation": 16,
+          "orphan-index": 3,
+          "orphan-navigation": 3
+        },
+        "byType": {
+          "design": 1,
+          "brainstorm": 2,
+          "discovery": 9,
+          "idea": 8,
+          "plan": 1,
+          "spec": 1
+        }
+      }
     }
   },
   "types": {

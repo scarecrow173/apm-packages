@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { generateArtifactId } from "../../../lib/artifact_id";
-import { changeFields, GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, sanitizeTitle } from "../../../lib/doc_suite_utils";
+import { changeFields, GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
 import { resolveContainedDir, slugify } from "../../../lib/document_utils";
 import { hasSection } from "../../../lib/markdown_sections";
 
@@ -364,19 +364,18 @@ function writeImplIndex(indexPath: string, content: string, legacyTitle: string)
 function updateIndexForMarkdownDir(cwd: string, relativeDir: string): IndexUpdateResult {
   const dir = path.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = files.flatMap((file) => {
+  const entries = files.flatMap((file) => {
     const fullPath = path.join(dir, file);
     const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
     if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
     const title = typeof parsed.data.title === "string" && parsed.data.title.trim()
       ? parsed.data.title.trim()
       : ((/^#\s+(.+)$/m.exec(parsed.body)?.[1]) || path.basename(file, ".md"));
-    const id = typeof parsed.data.id === "string" ? parsed.data.id : "—";
-    const status = typeof parsed.data.status === "string" ? parsed.data.status : "—";
-    return [`| ${indexCell(id)} | ${indexCell(title)} | ${indexCell(status)} | [${indexCell(file)}](./${indexCell(file)}) |`];
+    const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
+    const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
+    return [{ file, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
   });
-  const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
+  const body = renderIndexBody(entries, { settledType: "impl" });
   return writeImplIndex(
     path.join(dir, "README.md"),
     `# Implementation Records\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,

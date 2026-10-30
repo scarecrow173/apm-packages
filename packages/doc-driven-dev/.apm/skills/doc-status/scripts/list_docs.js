@@ -18918,6 +18918,7 @@ async function docEntries(cwd, type, explicitDir) {
     const content = import_node_fs2.default.readFileSync(fullPath, "utf8");
     const data = parseDoc(content).data;
     return {
+      created: typeof data.created === "string" ? data.created : null,
       file: file2,
       id: typeof data.id === "string" ? data.id : null,
       path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
@@ -18975,8 +18976,11 @@ async function main() {
     }
     console.log(`${args.type} documents:`);
     for (const entry of entries) {
-      const status = entry.status ? ` [${entry.status}]` : "";
-      console.log(`- ${entry.path}${status}: ${entry.title}`);
+      const meta3 = [
+        entry.status,
+        entry.created ? `created ${entry.created}` : null
+      ].filter((part) => Boolean(part)).join(", ");
+      console.log(`- ${entry.path}${meta3 ? ` [${meta3}]` : ""}: ${entry.title}`);
     }
   } catch (error51) {
     console.error(error51 instanceof Error ? error51.message : String(error51));

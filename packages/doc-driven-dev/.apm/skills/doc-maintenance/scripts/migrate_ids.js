@@ -27962,6 +27962,29 @@ function date4(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
+// src/skills/lib/doc_lifecycle.ts
+var SETTLED_STATUSES = {
+  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
+  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
+  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
+  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
+  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
+  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
+  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
+  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
+  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
+  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
+};
+var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
+function lifecycleBucketForType(type) {
+  const declared = type ?? "untyped";
+  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
+}
+function isSettledStatus(type, status) {
+  if (!status) return false;
+  return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
+}
+
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
@@ -28196,9 +28219,17 @@ function mergeManagedIndex(existing, generated) {
     }
   }
   if (regionEnd < 0) regionEnd = directoryLine;
+  const settledMarkerIndex = rest.findIndex(
+    (line, offset) => offset > regionEnd && line.includes(GENERATED_SETTLED_MARKER)
+  );
+  if (settledMarkerIndex >= 0) {
+    regionEnd = settledMarkerIndex;
+    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim() === "") regionEnd += 1;
+    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+  }
   const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
     const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|") && !line.includes(GENERATED_INDEX_MARKER) && !line.includes(GENERATED_SETTLED_MARKER);
   });
   const trailing = rest.slice(regionEnd + 1);
   const head = preamble.join("\n").replace(/\n+$/, "");
@@ -28239,6 +28270,7 @@ function configFor(type) {
   return configs[type];
 }
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -28282,6 +28314,7 @@ async function docEntries(cwd, type, explicitDir) {
     const content3 = import_node_fs2.default.readFileSync(fullPath, "utf8");
     const data = parseDoc(content3).data;
     return {
+      created: typeof data.created === "string" ? data.created : null,
       file: file2,
       id: typeof data.id === "string" ? data.id : null,
       path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
@@ -28292,6 +28325,26 @@ async function docEntries(cwd, type, explicitDir) {
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
+function renderIndexBody(entries, options2 = {}) {
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const compare = (left, right) => {
+    if (options2.overviewFirst) {
+      if (left.file === "overview.md") return -1;
+      if (right.file === "overview.md") return 1;
+    }
+    return left.file.localeCompare(right.file);
+  };
+  const row = (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
+  const settled = (entry) => isSettledStatus(entry.type ?? options2.settledType ?? null, entry.status);
+  const active = entries.filter((entry) => !settled(entry)).sort(compare);
+  const settledEntries = entries.filter(settled).sort(compare);
+  const body = [header, ...active.map(row)].join("\n");
+  return settledEntries.length > 0 ? `${body}
+
+## Settled ${GENERATED_SETTLED_MARKER}
+
+${[header, ...settledEntries.map(row)].join("\n")}` : body;
+}
 async function buildIndex(cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
   const unionTypes = options2?.types ?? [];
@@ -28299,17 +28352,10 @@ async function buildIndex(cwd, type, explicitDir, options2) {
     (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
   ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design" || unionTypes.includes("design") ? [...entries].sort((a, b) => {
-    if (a.file === "overview.md") return -1;
-    if (b.file === "overview.md") return 1;
-    return a.file.localeCompare(b.file);
-  }) : entries;
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = sorted.map(
-    (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`
-  );
-  const body = rows.length > 0 ? `${header}
-${rows.join("\n")}` : header;
+  const body = renderIndexBody(entries, {
+    overviewFirst: type === "design" || unionTypes.includes("design"),
+    settledType: type
+  });
   return `# ${title}
 
 ${GENERATED_INDEX_MARKER}
@@ -28384,18 +28430,6 @@ var REQUIRED_FRONT_MATTER_FIELDS = [
 ];
 var ROOT_ARTIFACT_TYPES = /* @__PURE__ */ new Set(["idea", "brainstorm", "discovery"]);
 var TRACEABILITY_TERMINAL_STATUSES = ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"];
-var SETTLED_STATUSES = {
-  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
-  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
-  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
-  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
-  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
-  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
-  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
-  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
-  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
-  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
-};
 var DEAD_UPSTREAM_STATUSES = /* @__PURE__ */ new Set([
   "superseded",
   "rejected",
@@ -28407,15 +28441,12 @@ var DEAD_UPSTREAM_STATUSES = /* @__PURE__ */ new Set([
   "done"
 ]);
 var UPSTREAM_FIELDS = /* @__PURE__ */ new Set(["implements", "derives-from", "refines"]);
-var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
 function lifecycleBucketOf(document3) {
   if (document3.kind === "unmanaged") return "unmanaged";
-  const declared = document3.type ?? "untyped";
-  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
+  return lifecycleBucketForType(document3.type);
 }
 function isSettled(document3) {
-  if (document3.status === null) return false;
-  return SETTLED_STATUSES[lifecycleBucketOf(document3)]?.has(document3.status) ?? false;
+  return isSettledStatus(lifecycleBucketOf(document3), document3.status);
 }
 function staleUpstreamTargets(model, document3) {
   if (isSettled(document3)) return [];
@@ -29337,6 +29368,12 @@ function lintIndexConsistency(model, scope, index2) {
   const seen = /* @__PURE__ */ new Set();
   const { rows, malformed } = indexTableRows(index2);
   const rowFiles = [];
+  const indexDir = normalizeDir(import_node_path5.default.posix.dirname(index2.path));
+  const residentTypes = residentTypesForDir(indexDir);
+  const indexPrimaryType = primaryIndexTypeForDir(
+    indexDir,
+    residentTypes.length > 0 ? residentTypes : [scope.type]
+  );
   let lineOffset = 0;
   try {
     lineOffset = frontMatterEndLine(import_node_fs4.default.readFileSync(import_node_path5.default.join(model.root, index2.path), "utf8"));
@@ -29393,25 +29430,28 @@ function lintIndexConsistency(model, scope, index2) {
       }));
     }
     seen.add(resolved.path);
-    rowFiles.push(import_node_path5.default.posix.basename(resolved.path));
     const member = model.byPath.get(resolved.path);
+    rowFiles.push({
+      file: import_node_path5.default.posix.basename(resolved.path),
+      settled: member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false
+    });
     if (member && member.kind === "canonical") {
-      const expected = [
+      const expected2 = [
         ["id", member.id],
         ["title", member.title],
         ["status", member.status]
       ];
-      for (const [field, value] of expected) {
+      for (const [field, value] of expected2) {
         if (value === null) continue;
-        const actual = field === "id" ? row.id : field === "title" ? row.title : row.status;
-        if (actual !== value) {
+        const actual2 = field === "id" ? row.id : field === "title" ? row.title : row.status;
+        if (actual2 !== value) {
           findings.push(finding({
             ruleId: "index-metadata-mismatch",
             category: "index",
             severity: "warning",
             path: index2.path,
             artifactId: member.id,
-            message: `Index row for ${row.file} has ${field} "${actual}", expected "${value}"`,
+            message: `Index row for ${row.file} has ${field} "${actual2}", expected "${value}"`,
             target: row.file,
             repair: "safe"
           }));
@@ -29419,14 +29459,19 @@ function lintIndexConsistency(model, scope, index2) {
       }
     }
   }
-  const sorted = [...rowFiles].sort((a, b) => {
+  const compareGroup = (left, right) => {
     if (scope.type === "design") {
-      if (a === "overview.md") return -1;
-      if (b === "overview.md") return 1;
+      if (left === "overview.md") return -1;
+      if (right === "overview.md") return 1;
     }
-    return a.localeCompare(b);
-  });
-  if (rowFiles.length > 1 && rowFiles.some((file2, i) => file2 !== sorted[i])) {
+    return left.localeCompare(right);
+  };
+  const expected = [
+    ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
+    ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup)
+  ];
+  const actual = rowFiles.map((entry) => entry.file);
+  if (actual.length > 1 && actual.some((file2, i) => file2 !== expected[i])) {
     findings.push(finding({
       ruleId: "index-ordering",
       category: "index",
@@ -30152,18 +30197,16 @@ function writeImplIndex(indexPath, content3, legacyTitle) {
 function updateIndexForMarkdownDir(cwd, relativeDir) {
   const dir = import_node_path8.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = files.flatMap((file2) => {
+  const entries = files.flatMap((file2) => {
     const fullPath = import_node_path8.default.join(dir, file2);
     const parsed = parseDoc(import_node_fs7.default.readFileSync(fullPath, "utf8"));
     if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
     const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path8.default.basename(file2, ".md");
-    const id = typeof parsed.data.id === "string" ? parsed.data.id : "\u2014";
-    const status = typeof parsed.data.status === "string" ? parsed.data.status : "\u2014";
-    return [`| ${indexCell(id)} | ${indexCell(title)} | ${indexCell(status)} | [${indexCell(file2)}](./${indexCell(file2)}) |`];
+    const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
+    const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
+    return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
   });
-  const body = rows.length > 0 ? `${header}
-${rows.join("\n")}` : header;
+  const body = renderIndexBody(entries, { settledType: "impl" });
   return writeImplIndex(
     import_node_path8.default.join(dir, "README.md"),
     `# Implementation Records

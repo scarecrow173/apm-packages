@@ -194,8 +194,15 @@ discovery 文書をファイル名順の 4 列 Markdown テーブルとして列
 - 列は `ID`, `Title`, `Status`, `File` の 4 列のみを使います。`ID`・`Title`・`Status`
   はフロントマターから取得し、`File` 列は索引ディレクトリ内の相対リンクです。
   値が欠如している場合は `—` と記載します。
-- 行はファイル名の昇順でソートします。
-- 新しい discovery 文書を追加するたびに索引を更新します。
+- 行は各層ごとにファイル名の昇順でソートします。in-flight の文書は先頭の
+  テーブルに、settled なステータス（`resolved`、`archived`、`superseded`。
+  同じ索引を共有する brainstorm は `routed`、`superseded`）の文書は下段の
+  `## Settled` テーブルにファイル名昇順で掲載します。Settled の行もリンクは
+  維持され、履歴を隠さずに強調を抑える構成です。
+- discovery 文書の追加や `status` の変更時は索引を更新してください。
+  `doc_maintenance.js plan|apply` が管理索引を再生成します。実行するまでの間、
+  `doc_status lint` がドリフト（`index-metadata-mismatch`、`index-ordering`）を
+  報告します。
 
 ## サブディレクトリ分類
 

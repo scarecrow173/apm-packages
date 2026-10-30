@@ -171,8 +171,15 @@ Index rules:
 - Use exactly these four columns: `ID`, `Title`, `Status`, `File`. Take `ID`,
   `Title`, and `Status` from the document front matter; the `File` column is a
   relative link within the index directory. Write `—` when a value is missing.
-- Sort rows by filename in ascending order.
-- Update the index whenever a new idea document is added.
+- Sort rows by filename in ascending order within each tier. In-flight ideas
+  fill the main table; ideas with a settled status (`promoted`, `parked`,
+  `archived`, `superseded`) move to a `## Settled` table below it, also
+  filename-ordered. Settled rows stay linked — the tier de-emphasizes
+  history without hiding it.
+- Update the index whenever a document is added or its `status` changes.
+  `doc_maintenance.js plan|apply` regenerates managed indexes; `doc_status
+  lint` reports the drift (`index-metadata-mismatch`, `index-ordering`)
+  until it does.
 
 ## Subdirectory Grouping
 
