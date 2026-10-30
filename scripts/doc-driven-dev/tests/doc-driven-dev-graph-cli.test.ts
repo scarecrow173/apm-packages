@@ -736,6 +736,31 @@ test("CLI rejects unknown options, missing values, bad graphs, and invalid focus
   assert.match(invalidFocus.stderr, /focus|invalid|unknown/i);
 });
 
+test("--task-dir escaping the checkout fails closed identically on route and inspect CLIs", () => {
+  const repo = completeRepo();
+  const outsideAbsolute = path.dirname(repo);
+  for (const taskDir of ["../outside", "./../outside", outsideAbsolute]) {
+    for (const [name, result] of [
+      ["route(source)", runSource(repo, ["--task-dir", taskDir, "--focus", "PLAN-0001", "--json"])],
+      ["route(generated)", runCli(generatedCli, repo, ["--task-dir", taskDir, "--focus", "PLAN-0001", "--json"])],
+      ["inspect(source)", runInspect(repo, ["--task-dir", taskDir, "--format", "json", "--cwd", repo])],
+      ["inspect(generated)", runGeneratedInspect(repo, ["--task-dir", taskDir, "--format", "json", "--cwd", repo])],
+    ] as const) {
+      assert.notEqual(result.status, 0, `${name} --task-dir ${taskDir} must exit nonzero`);
+      assert.match(result.stderr, /--task-dir escapes the checkout/, `${name} --task-dir ${taskDir}`);
+    }
+  }
+
+  // Contained task dirs — default, explicit, and redundant-but-inside —
+  // project state normally on both CLIs.
+  for (const taskDir of ["docs/tasks", "docs/../docs/tasks"]) {
+    const route = runSource(repo, ["--task-dir", taskDir, "--focus", "PLAN-0001", "--json"]);
+    assert.equal(route.status, 0, `${taskDir}: ${route.stderr}`);
+    const inspection = runInspect(repo, ["--task-dir", taskDir, "--format", "json", "--cwd", repo]);
+    assert.equal(inspection.status, 0, `${taskDir}: ${inspection.stderr}`);
+  }
+});
+
 test("explain mode requires JSON output", () => {
   const repo = tempRepo();
   const graph = graphFile(repo);

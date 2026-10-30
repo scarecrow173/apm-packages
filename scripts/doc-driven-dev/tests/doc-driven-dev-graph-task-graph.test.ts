@@ -289,6 +289,145 @@ test("buildTaskGraph does not fall back from an explicit owner-relative dependen
   assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
 });
 
+test("buildTaskGraph rejects a taskDir that escapes the checkout", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-containment-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  const absoluteOutside = path.join(os.tmpdir(), "task-graph-elsewhere");
+  for (const taskDir of ["../outside", "./../outside", absoluteOutside]) {
+    assert.throws(
+      () => buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md", taskDir }),
+      /--task-dir escapes the checkout/,
+      `taskDir ${taskDir} must be rejected before any file is read`,
+    );
+  }
+});
+
+test("buildTaskGraph honors a contained custom taskDir", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-custom-dir-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  fs.mkdirSync(path.join(repo, "docs/custom-tasks"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/custom-tasks/0001-task.md"), matter.stringify("# Task\n", {
+    id: "TASK-0001",
+    type: "task",
+    status: "todo",
+    title: "TASK-0001",
+    created: "2026-08-13",
+    updated: "2026-08-13",
+    owners: [],
+    relations: { implements: ["../plans/0001-plan.md"], "depends-on": [], blocks: [] },
+  }), "utf8");
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md", taskDir: "docs/custom-tasks" });
+
+  assert.deepEqual(result.nodes.map((node) => node.id), ["TASK-0001"]);
+  assert.deepEqual(result.runnable, ["TASK-0001"]);
+  assert.deepEqual(result.issues, []);
+});
+
+test("build_task_graph CLI rejects an escaping --task-dir before scanning", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-cli-escape-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  // A task OUTSIDE the checkout that implements the plan — if the scan
+  // leaked, it would surface as a runnable node on stdout with exit 0.
+  const outside = path.resolve(repo, "../task-graph-cli-outside");
+  fs.mkdirSync(outside, { recursive: true });
+  fs.writeFileSync(path.join(outside, "0009-task.md"), matter.stringify("# Task\n", {
+    id: "TASK-0009",
+    type: "task",
+    status: "todo",
+    title: "TASK-0009",
+    created: "2026-08-13",
+    updated: "2026-08-13",
+    owners: [],
+    relations: { implements: ["docs/plans/0001-plan.md"], "depends-on": [], blocks: [] },
+  }), "utf8");
+
+  for (const taskDir of ["../task-graph-cli-outside", "./../task-graph-cli-outside", outside]) {
+    const run = spawnSync(process.execPath, [tsxCli, taskGraphCli, "--cwd", repo, "--plan", "docs/plans/0001-plan.md", "--task-dir", taskDir, "--json"], { encoding: "utf8" });
+    assert.equal(run.status, 1, `--task-dir ${taskDir} must exit 1`);
+    assert.equal(run.stdout, "", `--task-dir ${taskDir} must not produce a scan result`);
+    assert.match(run.stderr, /--task-dir escapes the checkout/);
+  }
+});
+
+test("build_task_graph CLI honors a contained custom --task-dir", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-cli-custom-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  fs.mkdirSync(path.join(repo, "docs/custom-tasks"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/custom-tasks/0001-task.md"), matter.stringify("# Task\n", {
+    id: "TASK-0001",
+    type: "task",
+    status: "todo",
+    title: "TASK-0001",
+    created: "2026-08-13",
+    updated: "2026-08-13",
+    owners: [],
+    relations: { implements: ["../plans/0001-plan.md"], "depends-on": [], blocks: [] },
+  }), "utf8");
+
+  const run = spawnSync(process.execPath, [tsxCli, taskGraphCli, "--cwd", repo, "--plan", "docs/plans/0001-plan.md", "--task-dir", "docs/custom-tasks", "--json"], { encoding: "utf8" });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout) as TaskGraphResult;
+  assert.deepEqual(result.nodes.map((node) => node.id), ["TASK-0001"]);
+  assert.deepEqual(result.runnable, ["TASK-0001"]);
+});
+
+test("buildTaskGraph refuses artifact references that resolve outside the checkout", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-outside-ref-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  // An outside plan doc — readable pre-fix, must now be refused as
+  // missing-task-reference rather than adopted as an artifact relation.
+  const outside = path.resolve(repo, "../task-graph-outside-artifacts");
+  fs.mkdirSync(outside, { recursive: true });
+  const outsidePlan = path.join(outside, "0001-plan.md");
+  fs.writeFileSync(outsidePlan, matter.stringify("# Plan\n", {
+    id: "PLAN-0002", type: "plan", status: "approved", title: "Outside",
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }), "utf8");
+  writeTask(repo, "TASK-0001", {
+    status: "todo",
+    dependsOn: ["../../../task-graph-outside-artifacts/0001-plan.md", outsidePlan],
+  });
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.edges, []);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference", "missing-task-reference"]);
+});
+
+test("buildTaskGraph refuses an artifact reference through a linked file", (t) => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-linked-ref-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  const outside = path.resolve(repo, "../task-graph-linked-artifacts");
+  fs.mkdirSync(outside, { recursive: true });
+  const outsidePlan = path.join(outside, "0001-plan.md");
+  fs.writeFileSync(outsidePlan, matter.stringify("# Plan\n", {
+    id: "PLAN-0002", type: "plan", status: "approved", title: "Outside",
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }), "utf8");
+  const link = path.join(repo, "docs/specs/linked-plan.md");
+  fs.mkdirSync(path.dirname(link), { recursive: true });
+  try {
+    fs.symlinkSync(outsidePlan, link, "file");
+  } catch (error: unknown) {
+    t.skip(`cannot create file symlinks here: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: ["docs/specs/linked-plan.md"] });
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md" });
+
+  assert.deepEqual(result.edges, []);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
+});
+
 test("buildTaskGraph does not fall back from canonical dependency paths to nested owner paths", () => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-canonical-missing-"));
   fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });

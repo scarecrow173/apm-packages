@@ -343,6 +343,30 @@ test("custom task directories remain authoritative during gate evaluation", () =
   assert.equal(state.gates.planning.status, "pass");
 });
 
+test("an escaping taskDir fails closed before scanning; contained forms normalize", () => {
+  const repo = fixtureRepo();
+  const outsideAbsolute = path.dirname(repo);
+  for (const taskDir of ["../outside", "./../outside", outsideAbsolute]) {
+    assert.throws(
+      () => projectGraphState({ cwd: repo, taskDir, focus: ["PLAN-0001"] }),
+      /--task-dir escapes the checkout/,
+      `taskDir ${taskDir} must be rejected`,
+    );
+  }
+  // Contained task dirs project normally and state.taskDir carries the
+  // canonical checkout-relative form the scan enforced.
+  for (const [input, normalized] of [
+    ["docs/tasks", "docs/tasks"],
+    ["./docs/tasks", "docs/tasks"],
+    ["docs/../docs/tasks", "docs/tasks"],
+  ] as const) {
+    const state = projectGraphState({ cwd: repo, taskDir: input, focus: ["PLAN-0001"] });
+    assert.equal(state.taskDir, normalized, input);
+    // The normalized dir joined the scan set: the task docs are records.
+    assert.ok(state.artifactGraph.nodes.some((node) => node.path === "docs/tasks/0001-route.md"), input);
+  }
+});
+
 test("malformed relation shapes fail closed as graph issues", () => {
   const repo = fixtureRepo();
   writeArtifact(repo, "docs/designs/0002-malformed.md", {

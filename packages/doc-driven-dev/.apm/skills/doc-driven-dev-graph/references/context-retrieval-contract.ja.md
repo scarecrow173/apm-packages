@@ -61,12 +61,17 @@ L1 は、どの document を読むかを決めるときや、handoff の focus l
 | `broken-relation` | 宣言された relation target が record に解決されない — scan または included record の未解決 neighbor が報告。 |
 | `ambiguous-target` | included record の relation target が、その ID を持つ record が複数あるため解決不能。 |
 
+`--task-dir` は、その directory を canonical docs directory とともに artifact
+scan 集合へ追加します。同じ selector が L2 と L3 でも受け付けられ、
+containment 検査が適用されます — 後述の guard を参照してください。
+
 ## L2 — body fetch
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/fetch_context.js \
   [--cwd <repo>] --fetch <path> [--fetch <path> ...] \
-  [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] [--json]
+  [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] \
+  [--task-dir <dir>] [--json]
 ```
 
 出力は `{ "level": "L2", "documents": [...], "findings": [...] }` で、各 document は
@@ -92,7 +97,7 @@ Pin の意味論:
 | Finding code | 発生条件 |
 | --- | --- |
 | `path-escape` | ref が絶対 path、または checkout を脱出する（`..`）。 |
-| `not-canonical` | ref が canonical artifact doc でない — canonical docs directory（`docs/ideas`、`docs/discovery`、`docs/specs`、`docs/designs`、`docs/plans`、`docs/tasks`、`docs/test-specs`、`docs/adr`、`docs/impl/ir`、`docs/impl/exp`）の外、`.md` でない、または `README`/`index` ファイル。 |
+| `not-canonical` | ref が canonical artifact doc でない — canonical docs directory（`docs/ideas`、`docs/discovery`、`docs/specs`、`docs/designs`、`docs/plans`、`docs/tasks`、`docs/test-specs`、`docs/adr`、`docs/impl/ir`、`docs/impl/exp`）と解決済み `--task-dir` の外、`.md` でない、または `README`/`index` ファイル。 |
 | `not-found` | ref がファイルとして存在しない。 |
 | `unreadable` | ファイルが artifact doc として parse できない。 |
 | `id-mismatch` | `--id` が解決済み artifact ID と一致しない。 |
@@ -103,7 +108,7 @@ Pin の意味論:
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/fetch_context.js \
   [--cwd <repo>] --expand <id-or-path> [--relations <a,b,c>] \
-  [--depth <n>] [--reason "<text>"] [--json]
+  [--depth <n>] [--reason "<text>"] [--task-dir <dir>] [--json]
 ```
 
 出力は `{ "nodes": [...], "findings": [...], "reason"?: <text> }` です。各 node は
@@ -133,6 +138,14 @@ expand せず、推測もしません — lookup ごとの失敗はすべて fin
 | `not-found` | expansion root が artifact に解決されない。 |
 | `broken-relation` | 宣言された relation target が record に解決されない。 |
 | `ambiguous-target` | relation target が、その ID を持つ record が複数あるため解決不能。 |
+| `unused-relation` | `--relations` で明示的に要求された名前が、スキャンされたどの artifact record でも宣言されていない — traversal では決して使えないため、ほぼ確実に typo。 |
+
+`unused-relation` は relation 名の綴り間違いを検出するためにあります。
+「宣言されている」とは、scan 集合内のいずれかの record の relation key に
+存在することを意味します — walk 対象外の record でだけ使われている
+relation も宣言済みとみなされ、finding は生成されません。検査対象は
+caller が明示的に要求した名前のみです。デフォルトの lineage 集合は
+curated 済みであり、報告されません。
 
 ## Guard と invariant
 
@@ -158,6 +171,18 @@ expand せず、推測もしません — lookup ごとの失敗はすべて fin
 - **1 invocation につき mode は 1 つだけ。** `--metadata`、`--fetch`、`--expand` は
   相互排他であり、各 supporting flag は自分の mode でのみ有効です — 他 mode の
   flag は黙って捨てるのではなく caller error です。
+- **`--task-dir` は 1 つ、scan 集合も 1 つ。** `--task-dir` は L1、L2、L3 で
+  同じ custom task-doc directory を選択するため、L1 が列挙する path が L2 で
+  `not-canonical` として拒否されることはなく、L3 の root も同じ projection
+  で解決されます。directory は checkout 内に解決されなければなりません —
+  artifact scan が強制する containment rule です。脱出する値や checkout
+  外の絶対 path は、何も読まれる前に caller error として発生し、すべての
+  level と `route_graph.js`/`inspect_graph.js` で同一です。finding では
+  ありません。containment は real path でも検査されます — checkout 内の
+  symlinked directory が外に解決される場合も同様に拒否されます。この値は
+  再帰的な scan root です — `.`（または空の値）は checkout 自体を
+  task-doc の scan 集合にし、`node_modules`/`.git` を含むすべてを走査
+  します。focused な directory に保ってください。
 
 ## CLI と exit code
 
@@ -168,7 +193,7 @@ directory）、`--help` は usage を表示します。
 | --- | --- | --- |
 | 成功、finding なし | mode の結果 | `0` |
 | 成功、finding あり | 空でない `findings` を含む mode の結果 | `1` |
-| CLI-level error — 不明な flag、値の欠落、mode の競合、malformed な `--id`/`--fingerprint`/`--depth`/`--relations`、または他 mode の flag | stdout に `{ "error": "..." }`、stderr に message と usage | `1` |
+| CLI-level error — 不明な flag、値の欠落、mode の競合、malformed な `--id`/`--fingerprint`/`--depth`/`--relations`、checkout を脱出する `--task-dir`、または他 mode の flag | stdout に `{ "error": "..." }`、stderr に message と usage | `1` |
 
 finding はデータです — caller が対処しなければならない fail-closed の拒否であり、
 crash ではありません。finding がある場合の非 0 終了は contract です。闇雲に

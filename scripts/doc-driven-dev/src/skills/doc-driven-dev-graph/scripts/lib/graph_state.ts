@@ -3,8 +3,10 @@ import path from "node:path";
 
 import {
   artifactHasRelation,
+  CANONICAL_DOC_DIRS,
   projectArtifactGraph,
   resolveArtifactFocus,
+  resolveContainedTaskDir,
   scanArtifactGraph,
   selectArtifactChain,
   type ArtifactGraph,
@@ -42,18 +44,6 @@ export type ProjectGraphStateOptions = {
   signals?: GraphSignal[];
 };
 
-const CANONICAL_TARGETS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp",
-] as const;
 const FOLLOWUP_SIGNALS = new Set([
   "followup-bug-fix",
   "followup-decision-briefing",
@@ -85,7 +75,7 @@ function consideredOptionCount(body: string): number {
 
 function bootstrapReasons(cwd: string): string[] {
   const reasons: string[] = [];
-  for (const directory of CANONICAL_TARGETS) {
+  for (const directory of CANONICAL_DOC_DIRS) {
     const full = path.join(cwd, directory);
     if (!fs.existsSync(full) || !fs.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
     if (!fs.existsSync(path.join(full, "README.md"))) reasons.push(`missing-index:${directory}/README.md`);
@@ -206,7 +196,9 @@ export function evaluateGraphGates(state: GraphState, collector?: ArtifactScanCo
 /** Project Markdown artifacts, focus, gates, signals, blockers, and the selected Task Graph. */
 export function projectGraphState(options: ProjectGraphStateOptions, collector?: ArtifactScanCollector): GraphState {
   const cwd = path.resolve(options.cwd);
-  const taskDir = options.taskDir ?? "docs/tasks";
+  // Normalize + validate once so `state.taskDir` carries the canonical
+  // checkout-relative form the scan already enforced (Issue #142).
+  const taskDir = resolveContainedTaskDir(cwd, options.taskDir);
   const projection = scanArtifactGraph({ cwd, taskDir }, collector);
   const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options.focus ?? []);
   const blockers = sortedUnique([

@@ -12,6 +12,10 @@
  *   --expand    L3 bounded deterministic BFS over typed relations
  *               (expandArtifactContext).
  *
+ * --task-dir selects the custom task-doc directory at every level — the scan
+ * set is identical at L1/L2/L3 — and is containment-checked: an escaping or
+ * absolute-outside value is a caller error before anything is read.
+ *
  * Output is always JSON on stdout. Mode results exit 1 when the lib reports
  * findings (fail-closed refusals are data, not crashes). CLI-level failures —
  * unknown flags, missing values, conflicting modes, malformed --id/--depth —
@@ -48,8 +52,8 @@ type CliArgs = {
 function usage(): string {
   return "Usage: node fetch_context.js [--cwd <dir>] <mode> [options] [--json]\n"
     + "  L1 metadata: --metadata --focus <id-or-path> [--focus <x> ...] [--task-dir <dir>]\n"
-    + "  L2 fetch:    --fetch <path> [--fetch <path> ...] [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...]\n"
-    + "  L3 expand:   --expand <id-or-path> [--relations <a,b,c>] [--depth <n>] [--reason <text>]\n"
+    + "  L2 fetch:    --fetch <path> [--fetch <path> ...] [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] [--task-dir <dir>]\n"
+    + "  L3 expand:   --expand <id-or-path> [--relations <a,b,c>] [--depth <n>] [--reason <text>] [--task-dir <dir>]\n"
     + "Exactly one mode is required per invocation.";
 }
 
@@ -163,14 +167,12 @@ function resolveMode(args: CliArgs): Mode {
     : mode === "fetch"
       ? [
         [args.focus.length > 0, "--focus"],
-        [args.taskDir !== undefined, "--task-dir"],
         [args.relations !== undefined, "--relations"],
         [args.depth !== undefined, "--depth"],
         [args.reason !== undefined, "--reason"],
       ]
       : [
         [args.focus.length > 0, "--focus"],
-        [args.taskDir !== undefined, "--task-dir"],
         [args.idRefs.length > 0, "--id"],
         [args.fingerprintRefs.length > 0, "--fingerprint"],
       ];
@@ -231,13 +233,14 @@ function run(args: CliArgs): void {
     const { metadata, findings } = listArtifactMetadata(cwd, args.focus, args.taskDir);
     emitReport({ metadata, findings }, findings);
   } else if (mode === "fetch") {
-    const result = fetchArtifactBodies(cwd, buildFetchRefs(cwd, args));
+    const result = fetchArtifactBodies(cwd, buildFetchRefs(cwd, args), args.taskDir);
     emitReport(result, result.findings);
   } else {
     const result = expandArtifactContext(cwd, args.expand as string, {
       ...(args.relations !== undefined ? { relations: parseRelations(args.relations) } : {}),
       ...(args.depth !== undefined ? { maxDepth: args.depth } : {}),
       ...(args.reason !== undefined ? { reason: args.reason } : {}),
+      ...(args.taskDir !== undefined ? { taskDir: args.taskDir } : {}),
     });
     emitReport(result, result.findings);
   }
