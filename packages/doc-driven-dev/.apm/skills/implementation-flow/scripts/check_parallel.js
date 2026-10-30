@@ -4127,7 +4127,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
 function buildTaskGraph(options2) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
   const plan = normalizeRepoPath(cwd, options2.plan);
-  const taskDir = options2.taskDir ?? "docs/tasks";
+  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
   const parsed = readTaskDocuments(cwd, taskDir).filter((task) => task.implements.includes(plan));
   const indexed = indexTasks(parsed);
   const resolved = resolveTaskEdges(cwd, taskDir, indexed);

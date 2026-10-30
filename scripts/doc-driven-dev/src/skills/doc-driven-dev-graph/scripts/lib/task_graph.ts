@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 
+import { resolveContainedTaskDir } from "./artifact_graph";
+
 /** Lifecycle statuses accepted by task-doc. */
 export type TaskStatus = "todo" | "in-progress" | "blocked" | "done" | "wont-do";
 
@@ -506,7 +508,12 @@ export function summarizeTaskGraph(
 export function buildTaskGraph(options: BuildTaskGraphOptions): TaskGraphResult {
   const cwd = path.resolve(options.cwd);
   const plan = normalizeRepoPath(cwd, options.plan);
-  const taskDir = options.taskDir ?? "docs/tasks";
+  // Containment is validated once here — the single authority point every
+  // task-graph build passes through — so readTaskDocuments/resolveTaskEdges
+  // and the internals they feed (readArtifactIds, isExistingArtifactReference)
+  // all resolve the normalized, contained form rather than re-checking.
+  // Same rule and error as the artifact-scan boundary (Issue #142).
+  const taskDir = resolveContainedTaskDir(cwd, options.taskDir);
   const parsed = readTaskDocuments(cwd, taskDir)
     .filter((task) => task.implements.includes(plan));
   const indexed = indexTasks(parsed);
