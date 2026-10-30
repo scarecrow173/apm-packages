@@ -126,6 +126,28 @@ test("accepts a spec/adr pair authored with localized section headings", async (
   assert.equal(report.consistent, true);
 });
 
+test("a fenced ## Acceptance Criteria section does not satisfy the spec check", async () => {
+  const repo = pairedRepo();
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Graph",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Graph\n\n```md\n## Acceptance Criteria\n\n- [ ] fake\n```\n");
+  const report = await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md");
+  assert.ok(codes(report).includes("spec-acceptance-criteria"));
+  assert.equal(report.consistent, false);
+});
+
+test("a fenced ## Considered Options section does not satisfy the adr check", async () => {
+  const repo = pairedRepo();
+  writeArtifact(repo, "docs/adr/0001-graph.md", {
+    id: "ADR-0001", type: "adr", status: "proposed", title: "Graph ADR",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Graph ADR\n\n```md\n## Considered Options\n\n### A\n\n### B\n```\n");
+  const report = await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md");
+  assert.ok(codes(report).includes("adr-considered-options"));
+  assert.equal(report.consistent, false);
+});
+
 test("a localized-but-undeclared heading still fails the spec check closed", async () => {
   const repo = pairedRepo();
   writeArtifact(repo, "docs/specs/0001-graph.md", {
