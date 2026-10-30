@@ -581,6 +581,143 @@ test("validate deterministic gate skipped without --adapter", () => {
   assert.ok(result.stdout.includes("Deterministic: skipped"));
 });
 
+test("validate deterministic.enabled: false skips the gate and the report reflects it", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  // The flag — not `compare` — controls the gate: `compare` stays
+  // populated, yet `enabled: false` must skip the gate entirely.
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace(
+    "  deterministic:\n    enabled: true",
+    "  deterministic:\n    enabled: false",
+  );
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Deterministic: skipped"));
+
+  const report = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
+  );
+  assert.equal(report.deterministic_validation.result, "skipped");
+  assert.equal(report.deterministic_validation.comparisons.length, 0);
+  assert.ok(report.deterministic_validation.reason);
+  assert.equal(report.overall_result, "pass");
+
+  // A skipped deterministic gate is not currency evidence: the run must
+  // not re-stamp validated_at it never verified.
+  assert.ok(
+    !result.stdout.includes("Refreshed validated_at"),
+    `disabled gate must not refresh: ${result.stdout}`,
+  );
+});
+
+test("validate deterministic.enabled: false does not self-heal age-stale artifacts via refresh", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace(
+    "  deterministic:\n    enabled: true",
+    "  deterministic:\n    enabled: false",
+  );
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  // Pure-age staleness: the deterministic gate is the only gate that
+  // proves artifact *content* is current, and it is disabled — so the
+  // stale timestamp must stay a failure instead of being repaired in-band.
+  const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  const agedDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+  catalog.validated_at = agedDate;
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(
+    result.status,
+    1,
+    `skipped gate is not currency proof — stale timestamp must stay a failure: ${result.stderr}\n${result.stdout}`,
+  );
+  assert.ok(result.stdout.includes("Deterministic: skipped"));
+  assert.ok(result.stdout.includes("Staleness:     fail"));
+  assert.ok(!result.stdout.includes("Refreshed validated_at"));
+
+  const onDisk = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  assert.equal(onDisk.validated_at, agedDate, "validated_at must not be re-stamped over unverified content");
+});
+
+test("validate deterministic gate runs when enabled is absent (default true)", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  // Omitting `enabled` defaults to true in loadAdapter — the gate runs.
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace(
+    "  deterministic:\n    enabled: true\n",
+    "  deterministic:\n",
+  );
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Deterministic: pass"));
+});
+
+test("validate staleness.enabled: false skips the staleness gate", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace(
+    "  staleness:\n    enabled: true",
+    "  staleness:\n    enabled: false",
+  );
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Staleness:     skipped"));
+
+  const report = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
+  );
+  assert.equal(report.staleness_validation.result, "skipped");
+  // The deterministic pass still proves content currency, so the overall
+  // run passes with the staleness gate disabled.
+  assert.equal(report.deterministic_validation.result, "pass");
+  assert.equal(report.overall_result, "pass");
+});
+
 // ─── Validate: Blocking gate ───
 
 test("validate blocking gate detects unresolved required capability", () => {
