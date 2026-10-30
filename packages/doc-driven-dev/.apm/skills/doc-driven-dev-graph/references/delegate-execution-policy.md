@@ -113,9 +113,11 @@ boundary before the outcome is accepted:
 - A dispatch that cannot honor the mode — capability or authorization —
   declines with `method: "not-executed"` and a `yield` outcome; it never
   silently switches to `same-context`.
-- Internal observations are the adapter's own report and are not re-checked
-  by the runner; they are how a trace proves an independent subagent spawn
-  happened rather than a same-context audit relabelled as research.
+- Internal observations are the adapter's own report — self-attested data
+  the runner does not re-verify. They attest that an independent subagent
+  spawn ran rather than a same-context audit relabelled as research, so
+  adapters must implement the report honestly for the trace to carry that
+  proof.
 
 ## Return contract
 

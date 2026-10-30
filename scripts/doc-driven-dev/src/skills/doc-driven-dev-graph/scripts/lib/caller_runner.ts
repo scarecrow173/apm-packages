@@ -25,6 +25,8 @@ import { resolveGraphPath } from "./graph_cli";
 import type { GraphRoute } from "./graph_router";
 import {
   appendTraceEvent,
+  DISPATCH_METHODS,
+  EXECUTION_MODES,
   type DispatchMethod,
   type ExecutionMode,
   type TraceEventInput,
@@ -619,13 +621,42 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
           });
     }
     try {
+      // A delegated decision must carry a handoff — an absent or falsy one
+      // would run the dispatch unscoped, and a mode-mismatched one means the
+      // delegate executes under a different contract than the runner
+      // recorded. Both reject like any outcome violation.
+      if (decision && decision.mode !== "same-context" && !handoff) {
+        throw new OutcomeRejection(
+          `delegated dispatch on ${effect.id} requires a DelegateHandoff — an absent one would run unscoped`,
+        );
+      }
       if (handoff && handoff.executionMode !== requestedMode) {
         throw new OutcomeRejection(
           `delegate handoff executionMode ${handoff.executionMode} does not match requested mode ${requestedMode}`,
         );
       }
       const result = options.dispatcher({ repo, route, effect, signals, requestedMode, handoff });
-      const observations = Array.isArray(result?.observations) ? result.observations : [];
+      // Observation entries are adapter output — untrusted input at this
+      // boundary. Every entry is structurally validated BEFORE any event is
+      // emitted: a malformed observation rejects like a malformed outcome
+      // instead of reaching the trace as a null-dereference or a silently
+      // dropped normalize failure.
+      const rawObservations = Array.isArray(result?.observations) ? result.observations : [];
+      const observations = rawObservations.map((entry: DispatchObservation, index: number) => {
+        const observation = entry as DispatchObservation | null | undefined;
+        const valid = observation !== null && typeof observation === "object"
+          && typeof observation.target === "string" && observation.target.length > 0
+          && EXECUTION_MODES.includes(observation.requested)
+          && EXECUTION_MODES.includes(observation.actual)
+          && DISPATCH_METHODS.includes(observation.method);
+        if (!valid) {
+          throw new OutcomeRejection(
+            `dispatch observation ${index} is malformed — target must be a non-empty string`
+            + ` and requested/actual/method must be declared enum members`,
+          );
+        }
+        return observation;
+      });
       for (const observation of observations) {
         emitTrace({
           v: 1, runId: trace?.runId ?? "", kind: "dispatch-observed",

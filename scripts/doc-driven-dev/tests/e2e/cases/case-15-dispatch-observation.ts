@@ -467,6 +467,58 @@ export const case15h: E2ECase = {
 };
 
 /**
+ * e2e-15j `delegated-top-level-unavailable`: the policy delegates
+ * briefing-flow itself (requested `subagent`) and the simulated host cannot
+ * execute subagents — the adapter's capability gate declines the TOP-LEVEL
+ * dispatch (`not-executed` + `yield`), never silently switching to
+ * same-context. This is the top-level counterpart of 15d's internal refusal.
+ */
+export const case15j: E2ECase = {
+  id: "e2e-15j",
+  description: "top-level mode unavailable: subagent delegate declined not-executed, honest yield",
+  fixture,
+  focus: ["PLAN-0001"],
+  signals: case01.signals,
+  policy: (_route, effect): PolicyFacts => ({
+    effectId: effect.id,
+    stage: effect.kind,
+    independentScope: false,
+    sharedJudgment: false,
+    contextCost: "low",
+    parallelCandidate: false,
+    hostCapabilities: ALL_MODES,
+    ...(effect.kind === "delegate" && effect.id === "briefing-flow"
+      ? { override: { mode: "isolated-subagent" as const, reason: "eval-fixture" } }
+      : {}),
+  }),
+  unsupportedModes: ["subagent"],
+  script: {
+    "probe-to-briefing": {
+      audits: { spec: "completed", adr: "completed" },
+      delegate: "completed",
+    },
+  },
+  expect: {
+    yield: "authority-required",
+    edgeSequence: ["probe-to-briefing"],
+    completedEdges: [],
+    events: [
+      { kind: "effect-dispatched", edgeId: "probe-to-briefing", stage: "delegate", executionMode: "subagent", count: 1 },
+      { kind: "dispatch-observed", edgeId: "probe-to-briefing", target: "briefing-flow", requested: "subagent", actual: "unknown", method: "not-executed", count: 1 },
+      // Audits ran same-context and completed; the delegate never claimed work.
+      { kind: "effect-outcome", edgeId: "probe-to-briefing", stage: "audit", outcome: "completed", count: 2 },
+      { kind: "effect-outcome", edgeId: "probe-to-briefing", stage: "delegate", outcome: "yield", reason: "authority-required", count: 1 },
+      // No silent same-context execution of the requested subagent dispatch.
+      { kind: "dispatch-observed", target: "briefing-flow", actual: "same-context", count: 0 },
+    ],
+    finalFiles: {
+      [spec]: { frontmatter: { status: "draft" } },
+      [adr]: { frontmatter: { status: "draft" } },
+    },
+  },
+};
+
+/**
  * e2e-15i `delegated-top-level-handoff`: the policy delegates briefing-flow
  * itself (isolated-subagent); the runner attaches the caller-built handoff
  * granting write scope over spec/adr, and the adapter's mutations stay

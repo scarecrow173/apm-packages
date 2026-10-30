@@ -87,7 +87,7 @@ export type DispatchObservedEvent = TraceEventBase & {
   target: string;
   /** Mode this (sub-)dispatch was requested under. */
   requested: ExecutionMode;
-  /** Mode the adapter actually used; `unknown` only when nothing executed. */
+  /** Mode the adapter reports it used; declined dispatches report `unknown`. */
   actual: ExecutionMode;
   method: DispatchMethod;
 };
@@ -143,8 +143,8 @@ export type TraceSummary = {
   bytesRead: number;
 };
 
-const EXECUTION_MODES: readonly ExecutionMode[] = ["same-context", "subagent", "tool", "unknown"];
-const DISPATCH_METHODS: readonly DispatchMethod[] = [
+export const EXECUTION_MODES: readonly ExecutionMode[] = ["same-context", "subagent", "tool", "unknown"];
+export const DISPATCH_METHODS: readonly DispatchMethod[] = [
   "inline-skill", "subagent-spawn", "tool-call", "scripted", "not-executed",
 ];
 const EFFECT_YIELD_REASONS: readonly string[] = [
