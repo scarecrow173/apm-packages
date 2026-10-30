@@ -203,6 +203,9 @@ skill の `SKILL.md` 本文だけを読み、references と scripts は active s
 node ../impl-doc/scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
 ```
 
+相対 script path は caller の作業ディレクトリではなく、インストール済み
+skill directory 基準です。実行前に絶対パスへ解決します。
+
 明確な既知解の task でも `in-progress` の Implementation Record は必須であり、任意なのは Experiment Log だけである。
 
 ---

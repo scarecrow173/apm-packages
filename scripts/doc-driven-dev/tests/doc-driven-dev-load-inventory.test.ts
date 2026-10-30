@@ -35,6 +35,9 @@ const DEMO_BODY = `
 - Run \`sdp scan --adapter <yaml>\` then \`sdp validate\`.
 - If needed, run \`node scripts/gone.js\` to repair.
 - Hand off to \`handoff-target\` when drafting completes.
+- Use \`single-step\` for debugging; \`run-until-yield\` is the normal mode.
+- Re-invoke \`demo-flow\` to refresh the demo context.
+- Repair with \`do_thing.js\`; skip \`gone.js\` when it is absent.
 `;
 
 const DEMO_SKILL = `---
@@ -176,7 +179,22 @@ test("inventoryFlow classifies every directive kind with line and optional flag"
     { kind: "skill-invoke", target: "handoff-target", line: 19, optional: false },
   ]);
 
-  assert.equal(inventory.totals.directives, 12);
+  // line 20: `single-step` / `run-until-yield` are caller run-mode names, not
+  // skills — "Use `single-step`" must not produce a skill-invoke directive.
+  assert.deepEqual(directivesAt(inventory, 20), []);
+
+  // line 21: a skill-invoke naming the owning skill is self-description, not
+  // a cross-skill load — it is dropped entirely.
+  assert.deepEqual(directivesAt(inventory, 21), []);
+
+  // line 22: a bare `.js` basename resolves to scripts/<file>.js when the
+  // owning skill ships it (`do_thing.js`); `gone.js` is not shipped, so it
+  // emits nothing and can never inflate `missing`.
+  assert.deepEqual(directivesAt(inventory, 22), [
+    { kind: "script", target: "scripts/do_thing.js", line: 22, optional: false },
+  ]);
+
+  assert.equal(inventory.totals.directives, 13);
 });
 
 test("inventoryFlow resolves targets to package files and counts only shipped-kind misses", () => {
@@ -239,8 +257,20 @@ test("inventoryFlow resolves targets to package files and counts only shipped-ki
 
   // Missing counts only reference/script/adapter targets: missing-note.md and
   // gone.js. The absent .sdp runtime artifact and the skill-invoke target are
-  // recorded but not counted.
+  // recorded but not counted. Run-mode names, self-invocation targets, and
+  // unshipped bare basenames never produce a resolved file at all.
   assert.equal(inventory.totals.missing, 2);
+  for (const excluded of [
+    "demo-flow/SKILL.md",
+    "single-step/SKILL.md",
+    "run-until-yield/SKILL.md",
+    "demo-flow/gone.js",
+  ]) {
+    assert.ok(
+      !inventory.referencedFiles.some((f) => f.path === excluded),
+      `${excluded} must not appear in referencedFiles`,
+    );
+  }
   const expectedBytes =
     stat("demo-flow/assets/adapters/demo-adapter.yaml") +
     stat("demo-flow/references/guide.md") +
@@ -263,6 +293,33 @@ test("inventoryAll inventories every skill dir with a SKILL.md, sorted by name",
     result.totals.directives,
     result.flows.reduce((sum, f) => sum + f.totals.directives, 0),
   );
+});
+
+test("inventoryFlow normalizes CRLF so front matter never leaks into alwaysOnChars", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "load-inventory-crlf-"));
+  const CRLF_BODY =
+    "\r\n# CRLF Flow\r\n\r\n- Load [the guide](references/guide.md) for conventions.\r\n";
+  const CRLF_SKILL = `---\r\nname: crlf-flow\r\ndescription: "CRLF demo"\r\n---\r\n${CRLF_BODY}`;
+  writeFile(root, "crlf-flow/SKILL.md", CRLF_SKILL);
+  writeFile(root, "crlf-flow/references/guide.md", "# Guide\n");
+
+  const inventory = inventoryFlow(path.join(root, "crlf-flow"), root);
+  assert.equal(inventory.skillBytes, Buffer.byteLength(CRLF_SKILL, "utf8"));
+  // Without normalization, `---\r` never equals `---` and the whole file
+  // (front matter included) would count as the always-on body.
+  assert.equal(
+    inventory.alwaysOnChars,
+    CRLF_BODY.replace(/\r\n/g, "\n").length,
+    "front matter must not leak into alwaysOnChars for CRLF files",
+  );
+  assert.deepEqual(inventory.directives, [
+    {
+      kind: "reference",
+      target: "references/guide.md",
+      line: 8,
+      optional: false,
+    },
+  ]);
 });
 
 // ─── Real package tests ───
