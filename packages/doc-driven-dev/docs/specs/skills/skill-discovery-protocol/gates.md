@@ -71,13 +71,19 @@ Validates that re-running with the same input produces identical output.
 
 ### Comparison Targets
 
-Specified by the adapter's `validation.deterministic.compare`:
+Specified by the adapter's `validation.deterministic.compare`. Entries
+select which regenerated artifacts are compared:
 
-| Target | Description |
+| Entry | Selects |
 | --- | --- |
-| `profile` | Full comparison of the Flow Profile JSON |
-| `profile+catalog-artifacts` | Comparison of Flow Profile + Skill Reference Catalog |
-| `validation-report:exclude-timestamp` | validation-report comparison excluding timestamps |
+| `profile` | Flow Profile JSON |
+| `catalog` | Skill Reference Catalog JSON |
+| `profile+catalog-artifacts` | Both artifacts (composite selector) |
+| `validation-report:exclude-timestamp` | None — documentational; records that timestamp fields are stripped from every comparison |
+
+An entry selecting no artifact is inert; a `compare` list selecting no
+artifacts leaves the gate with no targets and it reports
+`result: "skipped"`.
 
 ### Procedure
 

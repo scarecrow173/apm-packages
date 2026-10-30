@@ -718,6 +718,195 @@ test("validate staleness.enabled: false skips the staleness gate", () => {
   assert.equal(report.overall_result, "pass");
 });
 
+// ─── Validate: validation.schema flag ───
+
+test("validate validation.schema: false skips the schema gate", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  // `schema: false` skips the baseline structural gate — the flag, not
+  // artifact presence, decides whether it runs (the same semantics the
+  // other gates' `enabled` flags already had).
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace("  schema: true", "  schema: false");
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Schema:        skipped"));
+
+  const report = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
+  );
+  assert.equal(report.schema_validation.result, "skipped");
+  assert.equal(report.schema_validation.errors.length, 0);
+  assert.equal(report.overall_result, "pass");
+});
+
+test("validate validation.schema: false does not self-heal age-stale artifacts via refresh", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace("  schema: true", "  schema: false");
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  // Pure-age staleness: with the schema gate skipped, no gate inspected
+  // the artifacts' structure — the stale timestamp must stay a failure
+  // instead of being repaired in-band.
+  const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  const agedDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+  catalog.validated_at = agedDate;
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(
+    result.status,
+    1,
+    `skipped schema gate is not currency proof — stale timestamp must stay a failure: ${result.stderr}\n${result.stdout}`,
+  );
+  assert.ok(result.stdout.includes("Schema:        skipped"));
+  assert.ok(result.stdout.includes("Staleness:     fail"));
+  assert.ok(!result.stdout.includes("Refreshed validated_at"));
+
+  const onDisk = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  assert.equal(onDisk.validated_at, agedDate, "validated_at must not be re-stamped over unverified content");
+});
+
+test("validate validation.schema: false still fails on content drift via the deterministic gate", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace("  schema: true", "  schema: false");
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  // Removing a required field is a schema break the skipped gate would
+  // have reported — but the deterministic gate still catches the content
+  // drift, so the run must not pass.
+  const profilePath = path.join(dir, ".sdp", "test-adapter", "test-adapter-profile.json");
+  const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+  delete profile.adapter_id;
+  fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 1, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Schema:        skipped"));
+  assert.ok(result.stdout.includes("Deterministic: fail"));
+
+  const report = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
+  );
+  assert.equal(report.schema_validation.result, "skipped");
+  assert.equal(report.deterministic_validation.result, "fail");
+  assert.equal(report.overall_result, "fail");
+});
+
+// ─── Validate: deterministic compare entries select artifacts ───
+
+test("validate deterministic compare profile+catalog-artifacts detects catalog drift", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  // `profile+catalog-artifacts` is a composite selector: it must compare
+  // BOTH regenerated artifacts — not just the profile. Catalog drift the
+  // bare "profile" entry misses must fail this gate.
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace(
+    '    compare:\n      - "profile"',
+    '    compare:\n      - "profile+catalog-artifacts"',
+  );
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  // Tamper with catalog content (not a timestamp, not a schema break —
+  // the description stays a string) so only the deterministic gate sees it.
+  const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  catalog.skills[0].description = "tampered description";
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(
+    result.status,
+    1,
+    `catalog drift must fail the deterministic gate: ${result.stderr}\n${result.stdout}`,
+  );
+  assert.ok(result.stdout.includes("Deterministic: fail"));
+
+  const report = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
+  );
+  const catalogComparison = report.deterministic_validation.comparisons.find(
+    (c: { target: string }) => c.target === "catalog",
+  );
+  assert.ok(catalogComparison, "catalog must be a comparison target");
+  assert.equal(catalogComparison.diff_found, true);
+});
+
+test("validate deterministic compare entries naming no artifact leave no targets", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+
+  // `validation-report:exclude-timestamp` is documentational: the gate
+  // regenerates the profile and catalog, never a validation report, so
+  // the entry selects no artifact. A compare list selecting nothing
+  // leaves the gate with no targets and it reports "skipped".
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const modified = adapterContent.replace(
+    '    compare:\n      - "profile"',
+    '    compare:\n      - "validation-report:exclude-timestamp"',
+  );
+  assert.notEqual(modified, adapterContent, "adapter yaml must have been modified");
+  fs.writeFileSync(adapterPath, modified, "utf8");
+
+  generateArtifacts(dir);
+
+  const result = runValidate(
+    ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Deterministic: skipped"));
+
+  const report = JSON.parse(
+    fs.readFileSync(path.join(dir, ".sdp", "test-adapter", "validation-report.json"), "utf8"),
+  );
+  assert.equal(report.deterministic_validation.result, "skipped");
+  assert.ok(report.deterministic_validation.reason.includes("No artifacts"));
+  // A skipped deterministic gate is not currency evidence either.
+  assert.ok(!result.stdout.includes("Refreshed validated_at"));
+});
+
 // ─── Validate: Blocking gate ───
 
 test("validate blocking gate detects unresolved required capability", () => {

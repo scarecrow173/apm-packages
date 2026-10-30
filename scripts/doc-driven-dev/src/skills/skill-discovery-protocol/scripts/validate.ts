@@ -391,11 +391,21 @@ async function main(): Promise<void> {
     : [];
 
   // ─── Gate 1: Schema Validation ───
-  const schemaResult = runSchemaGate(
-    profileData,
-    catalogData,
-    adapter ? (adapter as unknown as Record<string, unknown>) : null,
-  );
+  // `validation.schema: false` skips the baseline structural gate — the
+  // flag, not artifact presence, decides whether it runs. The skipped
+  // report shape matches the other gates. Without `--adapter` the flag
+  // defaults to true, so a schema-only run always validates.
+  const schemaEnabled = adapter?.validation?.schema ?? true;
+  const schemaResult = schemaEnabled
+    ? runSchemaGate(
+        profileData,
+        catalogData,
+        adapter ? (adapter as unknown as Record<string, unknown>) : null,
+      )
+    : {
+        result: "skipped" as const,
+        errors: [] as { field: string; message: string }[],
+      };
 
   // ─── Gate 2: Staleness Validation ───
   // `validation.staleness.enabled: false` skips the gate entirely — the
@@ -475,6 +485,11 @@ async function main(): Promise<void> {
   // over unverified content. (Skipped staleness/blocking gates are
   // different: staleness adds no content check the deterministic pass
   // lacks, and blocking checks invocation policy, not freshness.)
+  //
+  // The schema gate is held to the same standard: a skipped schema gate
+  // (`validation.schema: false`) means no gate ever inspected the
+  // artifacts' structure, so the refresh also requires an actual schema
+  // pass — not merely the absence of a schema failure.
   const stalenessAgeOnly =
     stalenessResult.result === "fail" &&
     // An unparseable basis date is corruption, not age: the refresh
@@ -491,6 +506,7 @@ async function main(): Promise<void> {
   const refreshEligible =
     adapter !== null &&
     !nonStalenessFail &&
+    schemaResult.result === "pass" &&
     deterministicResult.result === "pass" &&
     (stalenessResult.result !== "fail" || stalenessAgeOnly);
 
