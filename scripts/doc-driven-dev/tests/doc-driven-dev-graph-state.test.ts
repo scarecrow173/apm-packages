@@ -7,7 +7,7 @@ import path from "node:path";
 import test from "node:test";
 import matter from "gray-matter";
 import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
-import { projectGraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
+import { projectGraphState, sectionBody } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
 import { routeGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): void {
@@ -378,4 +378,36 @@ test("multiple valid chains fail closed even when only one has a plan", () => {
   const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001"] });
   assert.ok(state.blockers.includes("focus-required"));
   assert.equal(state.taskGraph, null);
+});
+
+test("sectionBody matches headings containing regex metacharacters literally", () => {
+  const body = [
+    "# Doc",
+    "",
+    "## Acceptance (v2) [draft]",
+    "",
+    "metachar section",
+    "",
+    "## Spec.1: a+b",
+    "",
+    "dotted section",
+    "",
+    "## Tail",
+    "",
+    "tail section",
+  ].join("\n");
+  assert.equal(sectionBody(body, "Acceptance (v2) [draft]"), "metachar section");
+  assert.equal(sectionBody(body, "Spec.1: a+b"), "dotted section");
+  // A line that only satisfies the *unescaped* regex reading must not match:
+  // "(v2)" as a group plus "[draft]" as a class would accept "## Acceptance v2d".
+  assert.equal(sectionBody("## Acceptance v2d\n\ndecoy\n", "Acceptance (v2) [draft]"), "");
+});
+
+test("sectionBody builds a valid RegExp for headings ending in regex-significant characters", () => {
+  const body = "## Foo]\n\nbracket section\n\n## Foo\\\n\nbackslash section\n";
+  assert.equal(sectionBody(body, "Foo]"), "bracket section");
+  assert.equal(sectionBody(body, "Foo\\"), "backslash section");
+  // An unbalanced "[" reached the RegExp constructor unescaped and used to throw.
+  assert.doesNotThrow(() => sectionBody(body, "["));
+  assert.equal(sectionBody(body, "["), "");
 });
