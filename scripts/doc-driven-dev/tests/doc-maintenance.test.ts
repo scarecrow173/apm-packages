@@ -5,7 +5,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-import { createDocument } from "../src/skills/lib/doc_suite_utils";
+import { createDocument, migrateDocs, scaffoldDocsTree } from "../src/skills/lib/doc_suite_utils";
+import { CANONICAL_DOC_DIRS } from "../src/skills/lib/document_utils";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
@@ -380,4 +381,27 @@ test("plan and apply return stable JSON output", () => {
   assert.equal(apply.command, "apply");
   assert.equal(typeof apply.findingsBefore, "number");
   assert.equal(typeof apply.findingsAfter, "number");
+});
+
+test("scaffold targets are sourced from CANONICAL_DOC_DIRS, not a parallel list", async () => {
+  const repo = tempRepo();
+  const result = await scaffoldDocsTree(repo);
+  // The scaffolded tree is exactly the canonical directory set — a drifted
+  // second list (the pre-consolidation scaffoldTargets) could not produce
+  // this equality (Issue #156).
+  assert.deepEqual(result.created.sort(), CANONICAL_DOC_DIRS.map((dir) => `${dir}/README.md`).sort());
+  for (const dir of CANONICAL_DOC_DIRS) {
+    assert.equal(fs.existsSync(path.join(repo, dir, "README.md")), true, `${dir}/README.md missing`);
+  }
+});
+
+test("migrateDocs rejects an escaping --from root at the library boundary", async () => {
+  const repo = tempRepo();
+  for (const from of ["../outside", path.dirname(repo)]) {
+    await assert.rejects(
+      () => migrateDocs({ cwd: repo, from: [from] }),
+      /--from escapes the checkout/,
+      `--from ${from} must be rejected`,
+    );
+  }
 });

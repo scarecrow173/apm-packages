@@ -13337,8 +13337,60 @@ var import_gray_matter2 = __toESM(require_gray_matter());
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
+var CANONICAL_DOC_DIRS = [
+  "docs/ideas",
+  "docs/discovery",
+  "docs/specs",
+  "docs/designs",
+  "docs/plans",
+  "docs/tasks",
+  "docs/test-specs",
+  "docs/adr",
+  "docs/impl/ir",
+  "docs/impl/exp"
+];
 function normalizeDir(input) {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function isInside(cwd, candidate) {
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
+  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function toRepoRelative(cwd, absolute) {
+  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
+}
+function resolveContainedDir(cwd, dir, flag = "--dir") {
+  const resolved = import_node_path.default.resolve(cwd, dir);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`${flag} escapes the checkout: ${dir}`);
+  }
+  if (import_node_fs.default.existsSync(resolved)) {
+    if (!isInsideRealpath(cwd, resolved)) {
+      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
+    }
+    return toRepoRelative(
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
+    );
+  }
+  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
 }
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
@@ -13348,7 +13400,7 @@ function listMarkdownFiles(dir) {
   return import_node_fs.default.readdirSync(dir).filter((file2) => file2.endsWith(".md") && !isIndexFileName(file2)).sort();
 }
 function findDocumentDir(cwd, explicitDir, candidateDirs2, defaultDir) {
-  if (explicitDir) return normalizeDir(explicitDir);
+  if (explicitDir) return resolveContainedDir(cwd, explicitDir);
   const existing = candidateDirs2.filter((candidate) => import_node_fs.default.existsSync(import_node_path.default.join(cwd, candidate)));
   return existing.length === 0 ? defaultDir : existing[0];
 }
@@ -27976,19 +28028,22 @@ var configs = {
     type: "adr"
   }
 };
-var scaffoldTargets = [
-  { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
-  { dir: "docs/discovery", title: "DISCOVERY Documents", type: "discovery" },
-  { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
-  { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
-  { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
-  { dir: "docs/tasks", title: "TASK Documents", type: "task" },
-  { dir: "docs/test-specs", title: "TEST-SPEC Documents", type: "test-spec" },
-  { dir: "docs/adr", title: "ADR Documents" },
-  { dir: "docs/impl/ir", title: "Implementation Record Documents" },
-  { dir: "docs/impl/exp", title: "Experiment Log Documents" }
-];
-var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+var scaffoldIndexMeta = {
+  "docs/ideas": { title: "IDEA Documents", type: "idea" },
+  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
+  "docs/specs": { title: "SPEC Documents", type: "spec" },
+  "docs/designs": { title: "DESIGN Documents", type: "design" },
+  "docs/plans": { title: "PLAN Documents", type: "plan" },
+  "docs/tasks": { title: "TASK Documents", type: "task" },
+  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
+  "docs/adr": { title: "ADR Documents" },
+  "docs/impl/ir": { title: "Implementation Record Documents" },
+  "docs/impl/exp": { title: "Experiment Log Documents" }
+};
+var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
+  dir,
+  ...scaffoldIndexMeta[dir]
+}));
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();

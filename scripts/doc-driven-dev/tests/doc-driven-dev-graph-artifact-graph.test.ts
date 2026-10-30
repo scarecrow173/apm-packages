@@ -97,6 +97,53 @@ test("projectArtifactGraph refuses a taskDir that escapes through a link", (t) =
   assert.doesNotThrow(() => projectArtifactGraph({ cwd: internal, taskDir: "docs/tasks" }));
 });
 
+test("a linked taskDir alias scans its real directory once under canonical spelling", (t) => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "artifact-graph-alias-"));
+  writeArtifact(repo, "docs/tasks/0001-task.md", {
+    id: "TASK-0001", type: "task", status: "todo", title: "Real", relations: {},
+  });
+  if (!linkDirectory(t, path.join(repo, "docs/tasks"), path.join(repo, "docs/tasks-alias"))) return;
+
+  const graph = projectArtifactGraph({ cwd: repo, taskDir: "docs/tasks-alias" });
+  // The alias resolves to the real directory — one record, canonical path,
+  // no phantom duplicate-id from scanning the same files under two spellings.
+  const taskPaths = graph.nodes.filter((node) => node.id === "TASK-0001").map((node) => node.path);
+  assert.deepEqual(taskPaths, ["docs/tasks/0001-task.md"]);
+  assert.equal(graph.issues.some((issue) => issue.code === "duplicate-id"), false);
+});
+
+test("a custom linked taskDir records files under their real directory", (t) => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "artifact-graph-custom-alias-"));
+  writeArtifact(repo, "docs/work-items/0001-task.md", {
+    id: "TASK-0001", type: "task", status: "todo", title: "Custom", relations: {},
+  });
+  if (!linkDirectory(t, path.join(repo, "docs/work-items"), path.join(repo, "docs/work-link"))) return;
+
+  const graph = projectArtifactGraph({ cwd: repo, taskDir: "docs/work-link" });
+  const taskPaths = graph.nodes.filter((node) => node.id === "TASK-0001").map((node) => node.path);
+  assert.deepEqual(taskPaths, ["docs/work-items/0001-task.md"]);
+  assert.equal(graph.issues.some((issue) => issue.code === "duplicate-id"), false);
+});
+
+test("a canonical directory linked outside the checkout contributes no records", (t) => {
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "artifact-graph-adr-outside-"));
+  fs.mkdirSync(path.join(outside, "adr"), { recursive: true });
+  fs.writeFileSync(path.join(outside, "adr/0001-adr.md"), matter.stringify("# ADR\n", {
+    id: "ADR-0001", type: "adr", status: "accepted", title: "Outside", relations: {},
+  }), "utf8");
+
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "artifact-graph-adr-link-"));
+  fs.mkdirSync(path.join(repo, "docs"), { recursive: true });
+  writeArtifact(repo, "docs/tasks/0001-task.md", {
+    id: "TASK-0001", type: "task", status: "todo", title: "Inside", relations: {},
+  });
+  if (!linkDirectory(t, path.join(outside, "adr"), path.join(repo, "docs/adr"))) return;
+
+  const graph = projectArtifactGraph({ cwd: repo });
+  assert.equal(graph.nodes.some((node) => node.id === "ADR-0001"), false);
+  assert.equal(graph.nodes.some((node) => node.id === "TASK-0001"), true);
+});
+
 test("resolveContainedTaskDir folds Windows interior case and extended-length prefixes", (t) => {
   if (process.platform !== "win32") {
     t.skip("case-folded and extended-length compares are Windows semantics");

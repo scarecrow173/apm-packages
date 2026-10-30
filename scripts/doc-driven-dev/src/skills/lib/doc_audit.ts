@@ -8,7 +8,7 @@ import { lintExternalLinks } from "./doc_structure_lint";
 import { canonicalDocRoots, compareFindings, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
 import { configFor, docFiles, docTypes } from "./doc_suite_utils";
-import { findDocumentDir, normalizeDir } from "./document_utils";
+import { findDocumentDir, isInsideRealpath, normalizeDir } from "./document_utils";
 
 type AuditFinding = {
   severity: string;
@@ -56,19 +56,7 @@ async function buildModel(cwd: string, relativeDirs: string[]): Promise<Document
 
 // A symlinked doc dir escaping the repository is treated as absent: file
 // listing must not follow it and count outside documents it never audited.
-function dirInsideRepo(cwd: string, absolute: string): boolean {
-  let realCwd: string;
-  let real: string;
-  try {
-    realCwd = fs.realpathSync(cwd);
-    real = fs.realpathSync(absolute);
-  } catch {
-    return false;
-  }
-  const rel = path.relative(realCwd, real);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-}
-
+// The shared realpath containment check fails closed (Issue #156).
 async function auditWithModel(
   model: DocumentRepository,
   cwd: string,
@@ -78,7 +66,7 @@ async function auditWithModel(
 ): Promise<AuditReport> {
   const relativeDir = docDir(cwd, type, explicitDir);
   const fullDir = path.join(cwd, relativeDir);
-  const files = fs.existsSync(fullDir) && dirInsideRepo(cwd, fullDir) ? docFiles(fullDir) : [];
+  const files = fs.existsSync(fullDir) && isInsideRealpath(cwd, fullDir) ? docFiles(fullDir) : [];
   const findings = lintScope(model, type, relativeDir);
   if (options?.externalLinks) {
     findings.push(...await lintExternalLinks(model, scopeFor(model, type, relativeDir)));

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 
-import { isInsideCheckout, resolveContainedTaskDir } from "./artifact_graph";
+import { isInside, isInsideCheckout, repoPathKey, resolveContainedTaskDir } from "./artifact_graph";
 
 /** Lifecycle statuses accepted by task-doc. */
 export type TaskStatus = "todo" | "in-progress" | "blocked" | "done" | "wont-do";
@@ -279,7 +279,10 @@ export function indexTasks(tasks: ParsedTask[]): IndexedTasks {
       continue;
     }
     byId.set(task.id, task);
-    byPath.set(task.file, task);
+    // The map key folds case on Windows so a `DOCS/TASKS/x.md` reference
+    // resolves the same task record as `docs/tasks/x.md` — a case-variant
+    // spelling must not mint a phantom missing reference (Issue #156).
+    byPath.set(repoPathKey(task.file), task);
   }
   return { tasks: sortedTasks, byId, byPath, issues };
 }
@@ -293,7 +296,7 @@ function resolveReference(
   const byId = index.byId.get(reference);
   if (byId) return byId;
   const normalized = normalizeOwnedRepoPath(cwd, owner.file, reference);
-  return index.byPath.get(normalized);
+  return index.byPath.get(repoPathKey(normalized));
 }
 
 function isExistingArtifactReference(
@@ -309,10 +312,10 @@ function isExistingArtifactReference(
   // reference as missing-task-reference, keeping the refusal fail-closed.
   if (!isInsideCheckout(cwd, candidate)) return false;
   if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) return false;
-  const taskRoot = path.resolve(cwd, taskDir);
-  const candidatePath = path.resolve(candidate);
-  const insideTaskDir = candidatePath === taskRoot || candidatePath.startsWith(`${taskRoot}${path.sep}`);
-  if (insideTaskDir) return false;
+  // Shared lexical containment: the candidate path must exist to read its
+  // type, and the checkout realpath rule was applied above — the remaining
+  // question is only whether it sits inside the task subtree.
+  if (isInside(path.resolve(cwd, taskDir), candidate)) return false;
   try {
     const type = matter(fs.readFileSync(candidate, "utf8")).data?.type;
     return ["plan", "spec", "adr", "design"].includes(type);
@@ -326,7 +329,10 @@ function readArtifactIds(cwd: string, taskDir: string): Set<string> {
   const ids = new Set<string>();
   for (const file of markdownFiles(cwd)) {
     const absolute = path.resolve(file);
-    if (absolute === taskRoot || absolute.startsWith(`${taskRoot}${path.sep}`)) continue;
+    // Folded lexical compare: on a case-insensitive filesystem the task dir
+    // may exist under a different case than the selector spelled — a
+    // case-variant must still be excluded from artifact IDs (Issue #156).
+    if (isInside(taskRoot, absolute)) continue;
     try {
       const data = matter(fs.readFileSync(file, "utf8")).data as Record<string, unknown>;
       if (["plan", "spec", "adr", "design"].includes(data.type as string) && typeof data.id === "string" && data.id.trim()) {

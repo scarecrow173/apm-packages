@@ -28,6 +28,7 @@ import {
   isInsideCheckout,
   LINEAGE_RELATIONS,
   normalizeArtifactPath,
+  repoPathKey,
   resolveArtifactFocus,
   resolveArtifactRelation,
   resolveContainedTaskDir,
@@ -173,7 +174,10 @@ function isCanonicalDocPath(normalizedPath: string, canonicalDirs: readonly stri
   const base = normalizedPath.split("/").pop() ?? "";
   if (!base.toLowerCase().endsWith(".md")) return false;
   if (/^(?:readme|index)\.md$/i.test(base)) return false;
-  return canonicalDirs.some((directory) => directory === "" || normalizedPath.startsWith(`${directory}/`));
+  // repoPathKey folds case on Windows so a `DOCS/TASKS/x.md` ref still names
+  // the same canonical file the scan recorded (Issue #156).
+  const key = repoPathKey(normalizedPath);
+  return canonicalDirs.some((directory) => directory === "" || key.startsWith(`${repoPathKey(directory)}/`));
 }
 
 /**

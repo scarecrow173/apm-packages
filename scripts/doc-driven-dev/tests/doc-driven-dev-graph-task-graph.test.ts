@@ -444,3 +444,23 @@ test("buildTaskGraph does not fall back from canonical dependency paths to neste
   assert.deepEqual(result.edges, []);
   assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-task-reference"]);
 });
+
+test("a linked taskDir alias resolves to the real directory so no phantom duplicates appear", (t) => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "task-graph-alias-"));
+  fs.mkdirSync(path.join(repo, "docs/plans"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/plans/0001-plan.md"), "# Plan\n", "utf8");
+  writeTask(repo, "TASK-0001", { status: "todo", dependsOn: [] });
+  try {
+    fs.symlinkSync(path.join(repo, "docs/tasks"), path.join(repo, "docs/tasks-alias"), process.platform === "win32" ? "junction" : "dir");
+  } catch (error: unknown) {
+    t.skip(`cannot create directory links here: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+
+  const result = buildTaskGraph({ cwd: repo, plan: "docs/plans/0001-plan.md", taskDir: "docs/tasks-alias" });
+
+  // The alias resolves to docs/tasks — node paths carry the real spelling,
+  // and the file is indexed once, so no phantom duplicate-id issue mints.
+  assert.deepEqual(result.nodes.map((node) => node.path), ["docs/tasks/0001-task.md"]);
+  assert.equal(result.issues.some((issue) => issue.code === "duplicate-task-id"), false);
+});

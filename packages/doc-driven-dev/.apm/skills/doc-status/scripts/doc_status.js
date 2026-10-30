@@ -27861,14 +27861,71 @@ var import_uuid62 = __toESM(require_uuid62());
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
+var CANONICAL_DOC_DIRS = [
+  "docs/ideas",
+  "docs/discovery",
+  "docs/specs",
+  "docs/designs",
+  "docs/plans",
+  "docs/tasks",
+  "docs/test-specs",
+  "docs/adr",
+  "docs/impl/ir",
+  "docs/impl/exp"
+];
 function normalizeDir(input) {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function isInside(cwd, candidate) {
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
+  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function isInsideCheckout(cwd, candidate) {
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) return false;
+  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
+}
+function toRepoRelative(cwd, absolute) {
+  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
+}
+function resolveContainedDir(cwd, dir, flag = "--dir") {
+  const resolved = import_node_path.default.resolve(cwd, dir);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`${flag} escapes the checkout: ${dir}`);
+  }
+  if (import_node_fs.default.existsSync(resolved)) {
+    if (!isInsideRealpath(cwd, resolved)) {
+      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
+    }
+    return toRepoRelative(
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
+    );
+  }
+  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
 }
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
 }
 function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
-  if (explicitDir) return normalizeDir(explicitDir);
+  if (explicitDir) return resolveContainedDir(cwd, explicitDir);
   const existing = candidateDirs.filter((candidate) => import_node_fs.default.existsSync(import_node_path.default.join(cwd, candidate)));
   return existing.length === 0 ? defaultDir : existing[0];
 }
@@ -27976,19 +28033,22 @@ var configs = {
     type: "adr"
   }
 };
-var scaffoldTargets = [
-  { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
-  { dir: "docs/discovery", title: "DISCOVERY Documents", type: "discovery" },
-  { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
-  { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
-  { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
-  { dir: "docs/tasks", title: "TASK Documents", type: "task" },
-  { dir: "docs/test-specs", title: "TEST-SPEC Documents", type: "test-spec" },
-  { dir: "docs/adr", title: "ADR Documents" },
-  { dir: "docs/impl/ir", title: "Implementation Record Documents" },
-  { dir: "docs/impl/exp", title: "Experiment Log Documents" }
-];
-var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+var scaffoldIndexMeta = {
+  "docs/ideas": { title: "IDEA Documents", type: "idea" },
+  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
+  "docs/specs": { title: "SPEC Documents", type: "spec" },
+  "docs/designs": { title: "DESIGN Documents", type: "design" },
+  "docs/plans": { title: "PLAN Documents", type: "plan" },
+  "docs/tasks": { title: "TASK Documents", type: "task" },
+  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
+  "docs/adr": { title: "ADR Documents" },
+  "docs/impl/ir": { title: "Implementation Record Documents" },
+  "docs/impl/exp": { title: "Experiment Log Documents" }
+};
+var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
+  dir,
+  ...scaffoldIndexMeta[dir]
+}));
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -28376,25 +28436,9 @@ function pruneNestedRoots(roots) {
   const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
-function realpathInside(realCwd, absolute) {
-  let real;
-  try {
-    real = import_node_fs3.default.realpathSync(absolute);
-  } catch {
-    return false;
-  }
-  const rel = import_node_path4.default.relative(realCwd, real);
-  return rel === "" || !rel.startsWith("..") && !import_node_path4.default.isAbsolute(rel);
-}
 async function scanRepository(options2) {
   const cwd = import_node_path4.default.resolve(options2.cwd);
-  let realCwd;
-  try {
-    realCwd = import_node_fs3.default.realpathSync(cwd);
-  } catch {
-    realCwd = cwd;
-  }
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => realpathInside(realCwd, import_node_path4.default.join(cwd, root)));
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path4.default.join(cwd, root)));
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
@@ -28465,12 +28509,9 @@ async function scanRepository(options2) {
     group.push(document3);
     byId.set(document3.id, group);
   }
-  const insideRoot = (absolute) => {
-    const resolved = import_node_path4.default.resolve(absolute);
-    return resolved === cwd || resolved.startsWith(`${cwd}${import_node_path4.default.sep}`);
-  };
+  const insideRoot = (absolute) => isInside(cwd, absolute);
   const fileExistsInsideRoot = (absolute) => {
-    return insideRoot(absolute) && realpathInside(realCwd, import_node_path4.default.resolve(absolute)) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
+    return isInsideCheckout(cwd, absolute) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -29509,13 +29550,7 @@ function legacyIdPrefixes() {
 function experimentNumbers(root) {
   const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
   if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
-  let realRoot;
-  try {
-    realRoot = import_node_fs5.default.realpathSync(root);
-  } catch {
-    return /* @__PURE__ */ new Map();
-  }
-  if (!realpathInside2(realRoot, expDir)) return /* @__PURE__ */ new Map();
+  if (!isInsideRealpath(root, expDir)) return /* @__PURE__ */ new Map();
   const counts = /* @__PURE__ */ new Map();
   for (const name of import_node_fs5.default.readdirSync(expDir)) {
     if (isSymlinkPath(import_node_path6.default.join(expDir, name))) continue;
@@ -29530,16 +29565,6 @@ function isSymlinkPath(p) {
   } catch {
     return false;
   }
-}
-function realpathInside2(realRoot, absolute) {
-  let real;
-  try {
-    real = import_node_fs5.default.realpathSync(absolute);
-  } catch {
-    return false;
-  }
-  const rel = import_node_path6.default.relative(realRoot, real);
-  return rel === "" || !rel.startsWith("..") && !import_node_path6.default.isAbsolute(rel);
 }
 function lintLegacyIdReferences(model, files) {
   const prefixes = legacyIdPrefixes();
