@@ -479,7 +479,7 @@ test("content-tampered profile: deterministic gate reports the drift", () => {
   assert.equal(restored.status, 0, `validate stderr: ${restored.stderr}\nstdout: ${restored.stdout}`);
 });
 
-test("field-missing profile: validate blocks, query emits no fabricated applicability", () => {
+test("field-missing profile: validate writes report and fails, query fails closed", () => {
   const dir = tempDir();
   setupProject(dir);
   regenerate(dir);
@@ -491,28 +491,41 @@ test("field-missing profile: validate blocks, query emits no fabricated applicab
     "utf8",
   );
 
-  // Observed: exit 2. The schema gate flags the drift first, but the blocking
-  // gate then dereferences the missing `resolved_invocations` and the run
-  // aborts on the generic error path before writing validation-report.json —
-  // so the artifact is still blocked, just with a degraded error channel.
+  // Fixed boundary (#145): the blocking gate no longer dereferences the
+  // missing fields, so the run completes normally — schema gate reports
+  // the drift, validation-report.json is written, and the exit code is a
+  // validation failure (1), not the generic input-error crash (2).
   const result = validateAll(dir);
-  assert.equal(result.status, 2, "drifted profile must not validate");
+  assert.equal(result.status, 1, "drifted profile must fail validation");
   assert.ok(
     !result.stdout.includes("Overall:       pass"),
     "drifted profile must never report pass",
   );
 
-  // Hard gate substance: query never fabricates applicability from an invalid
-  // profile. Observed CLI behavior: exit 0 printing `undefined` (the handler
-  // returns the missing `resolved_invocations` field and the JSON renderer
-  // serializes it) — reported as a finding; the contract-critical property
-  // asserted here is that no skill is claimed applicable.
+  const reportPath = path.join(dir, ".sdp", ADAPTER_ID, "validation-report.json");
+  assert.ok(
+    fs.existsSync(reportPath),
+    "validate must still write validation-report.json for a schema-incomplete profile",
+  );
+  const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  assert.equal(report.schema_validation.result, "fail");
+  assert.equal(report.overall_result, "fail");
+  assert.ok(report.schema_validation.errors.length > 0);
+
+  // Hard gate substance: query never fabricates applicability from an
+  // invalid profile. The loader now rejects the profile at the boundary —
+  // nonzero exit with a structured error, never a printed `undefined`.
   const queried = runQuery(["--profile", PROFILE_REL, "resolution"], dir);
+  assert.notEqual(queried.status, 0, "invalid profile must not resolve");
   assert.ok(
     !queried.stdout.includes("gate-skill"),
     "invalid profile must not yield any skill applicability",
   );
-  assert.equal(queried.stdout.trim(), "undefined");
+  assert.ok(
+    !queried.stdout.includes("undefined"),
+    "query must not print undefined for a schema-incomplete profile",
+  );
+  assert.ok(queried.stderr.includes("Invalid profile"));
 
   // A profile with no schema_version at all is rejected outright.
   fs.writeFileSync(profileAbsPath(dir), JSON.stringify({ adapter_id: ADAPTER_ID }), "utf8");
@@ -521,26 +534,74 @@ test("field-missing profile: validate blocks, query emits no fabricated applicab
   assert.ok(blocked.stderr.includes("Invalid profile"));
 });
 
-test("stale profile: staleness gate detects aged catalog basis date", () => {
+test("schema-incomplete profile: query resolution fails nonzero with structured error (#145)", () => {
   const dir = tempDir();
   setupProject(dir);
   regenerate(dir);
 
-  // Stale = catalog validated_at older than adapter max_age_days (30).
-  // Edit the timestamp in place to preserve renderJson formatting (LF +
-  // trailing newline) — see the regeneration-limitation test below.
+  // schema_version present, required fields missing — the loader must
+  // reject this at the boundary instead of letting handlers dereference
+  // absent fields.
+  fs.writeFileSync(
+    profileAbsPath(dir),
+    JSON.stringify({ schema_version: "1.0", adapter_id: ADAPTER_ID }, null, 2),
+    "utf8",
+  );
+
+  const resolution = runQuery(["--profile", PROFILE_REL, "resolution"], dir);
+  assert.notEqual(resolution.status, 0);
+  assert.ok(resolution.stderr.includes("Invalid profile"));
+  assert.ok(
+    !resolution.stdout.includes("undefined"),
+    "resolution must not print undefined",
+  );
+
+  // Regression: `resolution --skill x` used to crash on `.filter` of the
+  // missing array (TypeError). It now fails cleanly at the loader.
+  const filtered = runQuery(
+    ["--profile", PROFILE_REL, "resolution", "--skill", "gate-skill-a"],
+    dir,
+  );
+  assert.notEqual(filtered.status, 0);
+  assert.ok(filtered.stderr.includes("Invalid profile"));
+  assert.ok(
+    !filtered.stderr.includes("TypeError"),
+    `expected structured error, got crash: ${filtered.stderr}`,
+  );
+  assert.ok(!filtered.stdout.includes("undefined"));
+
+  // The boundary applies to every subcommand, not just resolution.
+  const flowStack = runQuery(["--profile", PROFILE_REL, "flow-stack"], dir);
+  assert.notEqual(flowStack.status, 0);
+  assert.ok(flowStack.stderr.includes("Invalid profile"));
+});
+
+test("validate on overall fail does not refresh validated_at (drift stays detected)", () => {
+  const dir = tempDir();
+  setupProject(dir);
+  regenerate(dir);
+
+  // Age the catalog so the staleness gate fails on the timestamp basis…
   const catalogPath = catalogAbsPath(dir);
+  const agedDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
   const aged = fs
     .readFileSync(catalogPath, "utf8")
-    .replace(
-      /"validated_at": "[^"]*"/,
-      `"validated_at": "${new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()}"`,
-    );
+    .replace(/"validated_at": "[^"]*"/, `"validated_at": "${agedDate}"`);
   fs.writeFileSync(catalogPath, aged, "utf8");
 
+  // …and tamper the profile so a substantive gate (deterministic drift)
+  // also fails. A failed run must never re-stamp validated_at: that
+  // would erase the evidence the gates exist to report.
+  const profilePath = profileAbsPath(dir);
+  const tampered = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+  tampered.resolved_invocations = [];
+  fs.writeFileSync(profilePath, JSON.stringify(tampered, null, 2), "utf8");
+
   const result = validateAll(dir);
-  assert.equal(result.status, 1, "aged catalog must fail the staleness gate");
+  assert.equal(result.status, 1, "drifted artifacts must fail validation");
   assert.ok(result.stdout.includes("Staleness:     fail"));
+  assert.ok(result.stdout.includes("Deterministic: fail"));
+  assert.ok(result.stdout.includes("Overall:       fail"));
 
   const report = JSON.parse(
     fs.readFileSync(
@@ -551,41 +612,59 @@ test("stale profile: staleness gate detects aged catalog basis date", () => {
   assert.equal(report.staleness_validation.result, "fail");
   assert.equal(report.staleness_validation.basis, "validated_at");
   assert.ok(report.staleness_validation.age_days >= 60);
+
+  // The aged timestamp is preserved byte-for-byte — no in-band refresh
+  // on a failing validation.
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  assert.equal(catalog.validated_at, agedDate);
 });
 
-test("stale-by-age alone is not cleared by no-change regeneration (observed limitation)", () => {
+test("stale-by-age alone recovers via regen + validate refreshing validated_at (#144)", () => {
   const dir = tempDir();
   setupProject(dir);
   regenerate(dir);
 
   const catalogPath = catalogAbsPath(dir);
+  const agedDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
   const aged = fs
     .readFileSync(catalogPath, "utf8")
-    .replace(
-      /"validated_at": "[^"]*"/,
-      `"validated_at": "${new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()}"`,
-    );
+    .replace(/"validated_at": "[^"]*"/, `"validated_at": "${agedDate}"`);
   fs.writeFileSync(catalogPath, aged, "utf8");
 
-  // writeArtifact compares modulo timestamps, so a regen on unchanged inputs
-  // is a no-op and the aged validated_at is preserved — the gate keeps
-  // failing. Documented behavior pinned here; recovery needs a content change
-  // or deleting the artifact first (verified below).
+  // writeArtifact compares modulo timestamps, so a regen on unchanged
+  // inputs is still a no-op — the aged validated_at is preserved on disk
+  // until validate re-stamps it in-band.
   runScan(["--adapter", "gate-adapter.yaml"], dir);
   const noOp = runProfile(["--adapter", "gate-adapter.yaml"], dir);
   assert.equal(noOp.status, 0);
   assert.ok(noOp.stdout.includes("Unchanged") || noOp.stdout.includes("up to date"));
 
-  const stillStale = validateAll(dir);
-  assert.equal(stillStale.status, 1, "no-change regen does not refresh validated_at");
+  // The documented recovery path now closes the loop: with age as the
+  // only staleness defect and every other gate passing, `sdp validate`
+  // re-stamps validated_at on the artifacts and reports pass.
+  const healed = validateAll(dir);
+  assert.equal(healed.status, 0, `validate stderr: ${healed.stderr}\nstdout: ${healed.stdout}`);
+  assert.ok(healed.stdout.includes("Staleness:     pass"));
+  assert.ok(healed.stdout.includes("Overall:       pass"));
+  assert.ok(healed.stdout.includes("Refreshed validated_at"));
 
-  // Recovery path that does work: remove the artifacts and regenerate.
-  fs.rmSync(catalogPath);
-  fs.rmSync(profileAbsPath(dir));
-  regenerate(dir);
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  assert.notEqual(catalog.validated_at, agedDate);
+  assert.ok(
+    new Date(catalog.validated_at).getTime() > new Date(agedDate).getTime(),
+    "validate must re-stamp a newer validated_at",
+  );
+  const profile = JSON.parse(fs.readFileSync(profileAbsPath(dir), "utf8"));
+  assert.ok(
+    new Date(profile.validated_at).getTime() > new Date(agedDate).getTime(),
+    "profile validated_at is refreshed alongside the catalog",
+  );
 
-  const recovered = validateAll(dir);
-  assert.equal(recovered.status, 0, `validate stderr: ${recovered.stderr}\nstdout: ${recovered.stdout}`);
+  // Re-running validate now passes the staleness gate on the refreshed
+  // basis — the documented procedure fully recovers pure-age staleness.
+  const second = validateAll(dir);
+  assert.equal(second.status, 0, `validate stderr: ${second.stderr}\nstdout: ${second.stdout}`);
+  assert.ok(second.stdout.includes("Staleness:     pass"));
 });
 
 test("stale profile: skill drift is detected and the adapter path regenerates", () => {

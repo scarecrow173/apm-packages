@@ -82,8 +82,17 @@ sdp validate --adapter <adapter-yaml>
 ```
 
 - `--profile --adapter` (両方): 完全 4 ゲート検証（Schema、Staleness、Deterministic、Blocking）
-- `--profile` のみ: Schema と Staleness ゲートが実行；Deterministic と Blocking ゲートは **スキップ**
+- `--profile` のみ: Schema ゲートのみ実行；Staleness、Deterministic、Blocking ゲートは **スキップ**
 - `--adapter` のみ: Adapter YAML 設定のスキーマのみ検証
+
+overall pass 時、`sdp validate` は catalog と profile の `validated_at` を
+再刻印する。再刻印には `--adapter` が必要 — `--profile` のみの実行では
+鮮度ゲートがすべてスキップされるため再刻印しない。他の gate がすべて
+pass している経年のみの staleness（スキル差分なし）は更新されて pass と
+報告される — これが期限切れ成果物の文書化された回復経路である。fail
+した実行では timestamp を一切更新しない。また再刻印自体は best-effort
+であり、書き込めない成果物は stderr に警告を出すが結果は変わらない
+（gate-spec.ja.md §5 参照）。
 
 ### 1.5 `sdp query`
 

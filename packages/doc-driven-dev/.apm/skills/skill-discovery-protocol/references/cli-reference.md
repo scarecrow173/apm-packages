@@ -81,8 +81,17 @@ sdp validate --adapter <adapter-yaml>
 ```
 
 - `--profile --adapter` (both): Full 4-gate validation (Schema, Staleness, Deterministic, Blocking)
-- `--profile` only: Schema and Staleness gates run; Deterministic and Blocking gates are **skipped**
+- `--profile` only: Schema gate runs; Staleness, Deterministic, and Blocking gates are **skipped**
 - `--adapter` only: Schema-only validation of adapter YAML configuration
+
+On overall pass, `sdp validate` re-stamps `validated_at` on the catalog and
+the profile. The re-stamp requires `--adapter` — a `--profile`-only run
+skips every currency gate and never re-stamps. Age-only staleness (no skill
+drift) with all other gates passing is refreshed and reported as pass —
+this is the documented recovery path for expired artifacts. Failing runs
+never refresh timestamps, and the re-stamp itself is best-effort: an
+unwritable artifact warns on stderr without changing the result
+(gate-spec.md §5).
 
 ### 1.5 `sdp query`
 

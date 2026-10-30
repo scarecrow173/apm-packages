@@ -166,6 +166,7 @@ validation:
 | Check | Condition |
 | ----- | --------- |
 | Age limit | `now - validated_at <= max_age_days` |
+| Unparseable basis date | Treated as stale — fails closed (`age_days = -1`) |
 | New skills | No skills added since last `validated_at` |
 | Removed skills | No skills removed since last `validated_at` |
 
@@ -174,6 +175,34 @@ validation:
 - Compare current scan results against the skill list in existing catalog
 - New directories with `SKILL.md` → `new_skills[]`
 - Directories removed or `SKILL.md` deleted → `removed_skills[]`
+
+### `validated_at` Refresh on Pass
+
+A completed `sdp validate` run is itself the event `validated_at`
+records. When the overall result is pass, `sdp validate` re-stamps
+`validated_at` on the Skill Reference Catalog and on the Flow Profile
+(when the field is present there).
+
+This also covers the pure-age staleness case: when the only failing gate
+is staleness by age alone (`new_skills` and `removed_skills` both empty),
+the other gates have already proven the artifacts' content current, so
+`validated_at` is refreshed and the staleness gate is re-evaluated — the
+run reports pass. This is what keeps the documented regeneration path
+able to recover age-only staleness: regeneration alone is a no-op for
+unchanged content (the writer compares modulo timestamps), and the
+following `sdp validate` performs the in-band timestamp refresh.
+
+On any other failure — skill drift, schema errors, deterministic diff, or
+blocking violations — `validated_at` is never refreshed, so drift stays
+detected on subsequent runs. An unparseable basis date is corruption, not
+age, and is likewise never refreshed over.
+
+The refresh only applies to a run that actually checked freshness: it
+requires `--adapter`. A `--profile`-only run skips the staleness,
+deterministic, and blocking gates, so a schema pass alone proves nothing
+about freshness and never re-stamps `validated_at`. The re-stamp itself
+is best-effort: if an artifact cannot be rewritten, `sdp validate` warns
+on stderr and the run result and the validation report are unaffected.
 
 ### Result Schema
 
@@ -340,9 +369,9 @@ The validation report aggregates all gate results:
 ### Gate Execution Order
 
 1. Schema (always runs)
-2. Staleness (always runs)
-3. Deterministic (always runs)
-4. Blocking (runs unless `validation.invocation.enabled = false`)
+2. Staleness (requires `--adapter` and a catalog; otherwise reported `skipped`)
+3. Deterministic (requires `--adapter`; otherwise reported `skipped`)
+4. Blocking (requires `--adapter` and a catalog; also skipped when `validation.invocation.enabled = false`)
 
 Even if Gate 1 fails, all subsequent gates still execute to provide
 a complete picture of all issues.
