@@ -8,9 +8,9 @@ import {
   createFixtureRepo,
   updateArtifact,
   writeArtifact,
-  type DocSpec,
 } from "./e2e/harness/fixture_manager";
 import { runCase } from "./e2e/harness/run_case";
+import { benchmarkCorpusFiles } from "./fixtures/doc-lifecycle/corpora";
 import { canonicalReference } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 
 /**
@@ -309,117 +309,7 @@ test("--expand reports requested-but-undeclared relations as unused-relation (#1
 
 // --- Step 2: large corpus ------------------------------------------------------
 
-const pad = (value: number): string => String(value).padStart(4, "0");
-
-/**
- * The Task-5 large corpus: createFixtureRepo's standard chain plus ~60 extra
- * canonical docs — 20 discovery (one ≥50KB body so scan bytes dominate), 15
- * specs (11 bulk + an en/ja sibling pair + an a↔b derives-from cycle), 10
- * ADRs, 10 tasks bound to PLAN-0002 (a second chain), 5 idea docs.
- *
- * `pathologies` adds the dup-ID pair and the broken relation. Both are
- * scan-level `duplicate-id`/`broken-relation` issues — which graph_state
- * promotes to ROUTER hard blockers — so the pathological corpus can never
- * dispatch a delegate; it is used only where recorded findings or a blocked
- * run are the expectation.
- */
-function largeCorpusFiles(pathologies: { dupId?: boolean; brokenRelation?: boolean }): Record<string, DocSpec> {
-  const doc = (frontmatter: Record<string, unknown>, body: string): DocSpec => ({ frontmatter, body });
-  const files: Record<string, DocSpec> = {};
-
-  for (let index = 1; index <= 19; index += 1) {
-    const n = pad(index);
-    files[`docs/discovery/${n}-bulk.md`] = doc(
-      { id: `DISC-${n}`, type: "discovery", status: "confirmed", title: `Discovery ${n}` },
-      `# Discovery ${n}\n`,
-    );
-  }
-  files["docs/discovery/0020-big.md"] = doc(
-    { id: "DISC-0020", type: "discovery", status: "confirmed", title: "Oversized discovery" },
-    `# Oversized discovery\n\n${"evidence line\n".repeat(4000)}`, // ≈56 KB body
-  );
-
-  for (let index = 1; index <= 11; index += 1) {
-    const n = pad(100 + index);
-    files[`docs/specs/${n}-bulk.md`] = doc(
-      { id: `SPEC-B${n}`, type: "spec", status: "approved", title: `Bulk spec ${n}` },
-      `# Bulk spec ${n}\n`,
-    );
-  }
-  // en + ja siblings scan as DISTINCT records — no locale merging in the
-  // artifact graph (verified against scanArtifactGraph).
-  files["docs/specs/0100-pair.md"] = doc(
-    { id: "SPEC-0100", type: "spec", status: "approved", title: "Pair spec" },
-    "# Pair\n",
-  );
-  files["docs/specs/0100-pair.ja.md"] = doc(
-    { id: "SPEC-0100-JA", type: "spec", status: "approved", title: "Pair spec (ja)" },
-    "# Pair (ja)\n",
-  );
-  files["docs/specs/0300-cyc-a.md"] = doc(
-    { id: "CYC-A", type: "spec", status: "approved", title: "Cycle A",
-      relations: { "derives-from": ["CYC-B"] } },
-    "# Cycle A\n",
-  );
-  files["docs/specs/0301-cyc-b.md"] = doc(
-    { id: "CYC-B", type: "spec", status: "approved", title: "Cycle B",
-      relations: { "derives-from": ["CYC-A"] } },
-    "# Cycle B\n",
-  );
-
-  for (let index = 1; index <= 10; index += 1) {
-    const n = pad(100 + index);
-    files[`docs/adr/${n}-bulk.md`] = doc(
-      { id: `ADR-B${n}`, type: "adr", status: "accepted", title: `Bulk ADR ${n}` },
-      `# Bulk ADR ${n}\n\n## Considered Options\n\n### A\n`,
-    );
-  }
-  // Path-form implements is required for task-graph membership; these tasks
-  // bind PLAN-0002's chain, never PLAN-0001's.
-  for (let index = 1; index <= 10; index += 1) {
-    const n = pad(100 + index);
-    files[`docs/tasks/${n}-bulk.md`] = doc(
-      { id: `TASK-B${n}`, type: "task", status: "todo", title: `Bulk task ${n}`,
-        relations: { implements: ["docs/plans/0002-other.md"] } },
-      `# Bulk task ${n}\n`,
-    );
-  }
-  for (let index = 1; index <= 5; index += 1) {
-    const n = pad(100 + index);
-    files[`docs/ideas/${n}-idea.md`] = doc(
-      { id: `IDEA-B${n}`, type: "idea", status: "captured", title: `Idea ${n}` },
-      `# Idea ${n}\n`,
-    );
-  }
-
-  // PLAN-0001 references the en+ja pair so --metadata covers them as
-  // typed-relation neighbors without disturbing the focus chain.
-  files["docs/plans/0001-graph.md"] = doc(
-    { id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
-      relations: {
-        "derives-from": ["DESIGN-0001"],
-        "verified-by": ["docs/test-specs/0001-graph.md"],
-        references: ["docs/specs/0100-pair.md", "docs/specs/0100-pair.ja.md"],
-      } },
-    "# Graph\n",
-  );
-
-  if (pathologies.dupId) {
-    files["docs/specs/0200-dup-a.md"] = doc(
-      { id: "DUP-PAIR", type: "spec", status: "approved", title: "Dup A" }, "# Dup A\n");
-    files["docs/specs/0201-dup-b.md"] = doc(
-      { id: "DUP-PAIR", type: "spec", status: "approved", title: "Dup B" }, "# Dup B\n");
-  }
-  if (pathologies.brokenRelation) {
-    files["docs/specs/0400-broken.md"] = doc(
-      { id: "SPEC-BROKEN", type: "spec", status: "approved", title: "Broken",
-        relations: { "derives-from": ["GHOST-9999"] } },
-      "# Broken\n",
-    );
-  }
-  return files;
-}
-
+const largeCorpusFiles = benchmarkCorpusFiles;
 test("large corpus --metadata covers only the chain subset — ja siblings distinct, pathologies reported", () => {
   const repo = createFixtureRepo({
     secondPlan: true,
