@@ -48,8 +48,11 @@ async function main(): Promise<void> {
     }
     console.log(`${args.type} documents:`);
     for (const entry of entries) {
-      const status = entry.status ? ` [${entry.status}]` : "";
-      console.log(`- ${entry.path}${status}: ${entry.title}`);
+      const meta = [
+        entry.status,
+        entry.created ? `created ${entry.created}` : null,
+      ].filter((part): part is string => Boolean(part)).join(", ");
+      console.log(`- ${entry.path}${meta ? ` [${meta}]` : ""}: ${entry.title}`);
     }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));

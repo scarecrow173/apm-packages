@@ -5,6 +5,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
 import { generateArtifactId } from "./artifact_id";
+import { isSettledStatus } from "./doc_lifecycle";
 import {
   CANONICAL_DOC_DIRS,
   findDocumentDir,
@@ -85,6 +86,7 @@ type CreateDocumentOptions = {
 };
 
 type DocEntry = {
+  created: string | null;
   file: string;
   id: string | null;
   path: string;
@@ -266,8 +268,10 @@ function residentTypesForDir(dir: string): string[] {
 }
 
 // The generated region of a managed index begins at the marker line and runs
-// through the `Directory:` line and the index table. Text before the marker
-// and after the table is hand-written content and must be preserved.
+// through the `Directory:` line, the index table, and the optional
+// `## Settled` tier below it (its marker claims the block as generated too).
+// Text before the marker and after the generated region is hand-written
+// content and must be preserved.
 function mergeManagedIndex(existing: string, generated: string): string {
   const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
   const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
@@ -293,9 +297,24 @@ function mergeManagedIndex(existing: string, generated: string): string {
   }
   if (regionEnd < 0) regionEnd = directoryLine;
 
+  // A `## Settled <!-- doc-suite:settled-index -->` block below the first
+  // table belongs to the generated region (including any table under it);
+  // fold it into the replaced span so regeneration never leaves a stale copy.
+  const settledMarkerIndex = rest.findIndex(
+    (line, offset) => offset > regionEnd && line.includes(GENERATED_SETTLED_MARKER),
+  );
+  if (settledMarkerIndex >= 0) {
+    regionEnd = settledMarkerIndex;
+    // Blank lines separate the heading from its table — skip them before the
+    // table run so the whole block is replaced.
+    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim() === "") regionEnd += 1;
+    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+  }
+
   const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
     const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|");
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|")
+      && !line.includes(GENERATED_INDEX_MARKER) && !line.includes(GENERATED_SETTLED_MARKER);
   });
   const trailing = rest.slice(regionEnd + 1);
   const head = preamble.join("\n").replace(/\n+$/, "");
@@ -358,6 +377,10 @@ function configFor(type: string): DocConfig {
 }
 
 const GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+// Marks the `## Settled` tier of a status-aware generated index; the heading
+// carries the marker so `mergeManagedIndex` treats the block as generated
+// region rather than hand-written prose (Issue #162/#163).
+const GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 
 function canonicalRootDir(cwd: string, type: string): string {
   const config = configFor(type);
@@ -903,6 +926,7 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
     const content = fs.readFileSync(fullPath, "utf8");
     const data = parseDoc(content).data;
     return {
+      created: typeof data.created === "string" ? data.created : null,
       file,
       id: typeof data.id === "string" ? data.id : null,
       path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
@@ -912,6 +936,47 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
     };
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
+}
+
+type IndexRowEntry = {
+  file: string;
+  id: string | null;
+  status: string | null;
+  title: string;
+  type?: string | null;
+};
+
+/**
+ * Status-aware index body (Issue #162/#163): in-flight rows keep the original
+ * table; settled rows move to a `## Settled` tier below it so historical
+ * evidence stays one link away but visually de-emphasized. The settled axis
+ * comes from `doc_lifecycle` (`isSettledStatus`) — the same authority lint
+ * and lifecycle-stats use — not a new front-matter flag. Ordering is
+ * deterministic: `overview.md` first within its tier (design indexes), then
+ * file-lexical inside each tier.
+ *
+ * `settledType` is the fallback lifecycle bucket for rows whose front matter
+ * lacks `type:` — pass the index's primary resident type.
+ */
+function renderIndexBody(entries: IndexRowEntry[], options: { overviewFirst?: boolean; settledType?: string } = {}): string {
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const compare = (left: IndexRowEntry, right: IndexRowEntry): number => {
+    if (options.overviewFirst) {
+      if (left.file === "overview.md") return -1;
+      if (right.file === "overview.md") return 1;
+    }
+    return left.file.localeCompare(right.file);
+  };
+  const row = (entry: IndexRowEntry): string =>
+    `| ${indexCell(entry.id || "—")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "—")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
+  const settled = (entry: IndexRowEntry): boolean =>
+    isSettledStatus(entry.type ?? options.settledType ?? null, entry.status);
+  const active = entries.filter((entry) => !settled(entry)).sort(compare);
+  const settledEntries = entries.filter(settled).sort(compare);
+  const body = [header, ...active.map(row)].join("\n");
+  return settledEntries.length > 0
+    ? `${body}\n\n## Settled ${GENERATED_SETTLED_MARKER}\n\n${[header, ...settledEntries.map(row)].join("\n")}`
+    : body;
 }
 
 async function buildIndex(cwd: string, type: string, explicitDir?: string, options?: { types?: string[] }): Promise<string> {
@@ -925,18 +990,10 @@ async function buildIndex(cwd: string, type: string, explicitDir?: string, optio
       ).values()].sort((a, b) => a.file.localeCompare(b.file))
     : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design" || unionTypes.includes("design")
-    ? [...entries].sort((a, b) => {
-        if (a.file === "overview.md") return -1;
-        if (b.file === "overview.md") return 1;
-        return a.file.localeCompare(b.file);
-      })
-    : entries;
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = sorted.map((entry) =>
-    `| ${indexCell(entry.id || "—")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "—")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`,
-  );
-  const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
+  const body = renderIndexBody(entries, {
+    overviewFirst: type === "design" || unionTypes.includes("design"),
+    settledType: type,
+  });
   return `# ${title}\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${body}\n`;
 }
 
@@ -1263,12 +1320,14 @@ export {
   docFiles,
   docTypes,
   GENERATED_INDEX_MARKER,
+  GENERATED_SETTLED_MARKER,
   indexCell,
   isForeignDocType,
   isGeneratedIndex,
   parseDoc,
   primaryIndexTypeForDir,
   relationValues,
+  renderIndexBody,
   resolveDocumentReference,
   sanitizeTitle,
   logIndexResult,
@@ -1285,4 +1344,4 @@ export {
   writeGeneratedIndex,
 };
 
-export type { DocType };
+export type { DocType, IndexRowEntry };

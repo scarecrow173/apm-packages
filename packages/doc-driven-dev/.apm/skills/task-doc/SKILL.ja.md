@@ -103,6 +103,10 @@ task を作成するには、以下のいずれかを満たす必要がある:
    フォローアップ task を追加する。
 
 すべての検証コマンドがパスするまで、task を `done` に移動できません。
+ステータス変更時 —— `done`/`wont-do` は行を索引の `## Settled` 層へ
+移します —— には、同一変更内で `doc_maintenance.js plan|apply --type task`
+により `docs/tasks/README.md` を再生成します。再生成までは
+`doc_status lint` が古い索引を報告します。
 
 ## リソース
 

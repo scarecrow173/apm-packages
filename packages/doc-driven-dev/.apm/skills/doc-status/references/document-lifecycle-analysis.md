@@ -283,15 +283,15 @@ Two cross-cutting observations:
 
 | # | Recommendation | Measured basis | Effort |
 | - | -------------- | -------------- | ------ |
-| B1 | Status-aware index views: generated index tables partitioned or annotated so settled docs are visible-but-de-emphasized (active-first ordering or a settled section) | §4.2 | medium |
-| B2 | Regenerate indexes on a cadence (doc-maintenance already owns regeneration; doc-status already reports drift) — wire regeneration into the close-out path rather than relying on manual runs | §4.4 | small |
-| B3 | Surface capture-layer age/linked-ness in `doc_status` output consumers (the orphan findings already exist; the gap is visibility) | §4.1 | small |
+| B1 | Status-aware index views — **landed in #162/#163**: generated indexes emit the in-flight table first, then a `## Settled` tier (`<!-- doc-suite:settled-index -->`), each filename-ordered (`overview.md` first for designs), partitioned by the shared `isSettled` status authority | §4.2 | medium |
+| B2 | Regenerate indexes on a cadence — **landed in #162** as documented convention, not a code hook: status transitions are manual front-matter edits with no transition API, so every conventions doc and `doc-maintenance` instruct regenerating the owning index in the same change; `doc_status lint` reports `index-metadata-mismatch`/`index-ordering` until then and the graph exit audit surfaces it | §4.4 | small |
+| B3 | Surface capture-layer age/linked-ness — **landed in #162**: `doc_status health` prints an `Orphans` roll-up (total, per-rule, per-type; `orphans` object in JSON) and `list` shows `created` per entry | §4.1 | small |
 
 ### Bucket C — structure changes requiring migration (each = own issue)
 
 | # | Recommendation | Measured basis | Migration concerns |
 | - | -------------- | -------------- | ------------------ |
-| C1 | Consider a settled/historical index tier or `archive:` front-matter flag consumed by indexes/navigation (status authority unchanged — a presentation axis) | §4.2 | Back-fill flag derivation from status; index-format change needs a doc-maintenance migration; reversible by flag removal |
+| C1 | Settled/historical index tier vs `archive:` flag — **resolved in #163 as derived status, no flag**: `isSettled(status)` fully expresses the presentation axis, so no `archive:` front-matter field was added (a second axis would only drift against `status`). The format change *is* the migration: legacy single-table managed indexes are regenerated into the tier layout rather than grandfathered | §4.2 | Back-fill flag derivation from status; index-format change needs a doc-maintenance migration; reversible by flag removal |
 | C2 | Discovery evidence structure: split oversized evidence dumps into a summary front-matter section + append-only evidence tail so L1 metadata stays small regardless of evidence mass | §4.3 | Body-format convention change; existing files grandfathered; template + convention docs migrate |
 | C3 | Teach relation resolution that `test-spec-skip` is a reason string, not a target — **landed in #165**: the ingestion boundaries exempt it as a non-reference `relations:` key and the `verified-by` gate reads the recorded reason | §4.5 | Contract-visible: `test-spec-skip` is a documented metadata key under `relations:`; small blast radius |
 
@@ -300,8 +300,12 @@ Two cross-cutting observations:
 1. Skill-instruction pass: update-vs-create + source-required guidance
    (A1–A3) — one issue.
 2. Status-aware index/navigation views + close-out index regeneration
-   (B1–B3) — one issue.
-3. Settled-tier presentation flag (`archive:` axis) (C1) — one issue.
+   (B1–B3) — one issue; **landed as #162**: the two-tier generated index,
+   the `index-ordering` drift rule, the documented close-out regeneration
+   convention, and the `health`/`list` visibility additions.
+3. Settled-tier presentation flag (`archive:` axis) (C1) — one issue;
+   **landed as #163**: rejected the flag — the settled tier derives from the
+   existing `status` authority, so no new front-matter field exists to drift.
 4. Discovery evidence front/tail structure (C2) — one issue.
 5. `test-spec-skip` resolution semantics (C3) — one issue; **landed as
    #165**.

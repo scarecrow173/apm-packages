@@ -2,7 +2,7 @@
 
 import { lintScope, scopeFor } from "./doc_lint";
 import { lintExternalLinks } from "./doc_structure_lint";
-import { canonicalDocRoots, compareFindings, scanRepository } from "./doc_repository";
+import { canonicalDocRoots, compareFindings, lifecycleBucketOf, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
 import { configFor, docEntries, docTypes } from "./doc_suite_utils";
 import { findDocumentDir, normalizeDir } from "./document_utils";
@@ -34,12 +34,19 @@ type HealthCategory = {
   clean: boolean;
 };
 
+type HealthOrphanSummary = {
+  total: number;
+  byRule: Record<string, number>;
+  byType: Record<string, number>;
+};
+
 type HealthReport = {
   documents: number;
   blocking: number;
   warnings: number;
   infos: number;
   categories: HealthCategory[];
+  orphans: HealthOrphanSummary;
 };
 
 const CATEGORY_ORDER = [
@@ -139,7 +146,21 @@ function summarizeHealth(collected: CollectedFindings, findings: Finding[]): Hea
     bucket.clean = bucket.blocking === 0 && bucket.warnings === 0 && bucket.infos === 0;
     return bucket;
   });
-  return { documents: collected.documents, blocking, warnings, infos, categories };
+
+  // Orphan roll-up (Issue #162 B3): the per-document `orphan-*` findings stay
+  // the diagnostic detail, but health consumers get the capture-layer
+  // linked-ness signal as one aggregate — total orphans, split per rule
+  // (index / navigation / relation) and per lifecycle bucket.
+  const orphans: HealthOrphanSummary = { total: 0, byRule: {}, byType: {} };
+  for (const item of findings) {
+    if (item.category !== "orphan") continue;
+    orphans.total += 1;
+    orphans.byRule[item.ruleId] = (orphans.byRule[item.ruleId] ?? 0) + 1;
+    const member = item.path ? collected.model.byPath.get(item.path) : undefined;
+    const bucket = member ? lifecycleBucketOf(member) : "unattributed";
+    orphans.byType[bucket] = (orphans.byType[bucket] ?? 0) + 1;
+  }
+  return { documents: collected.documents, blocking, warnings, infos, categories, orphans };
 }
 
 async function listDocuments(cwd: string, query: { type?: string; dir?: string; status?: string }) {
@@ -155,4 +176,4 @@ async function listDocuments(cwd: string, query: { type?: string; dir?: string; 
 }
 
 export { collectFindings, docDir, filterFindings, listDocuments, summarizeHealth };
-export type { CollectedFindings, DocStatusQuery, FindingFilter, HealthCategory, HealthReport };
+export type { CollectedFindings, DocStatusQuery, FindingFilter, HealthCategory, HealthOrphanSummary, HealthReport };

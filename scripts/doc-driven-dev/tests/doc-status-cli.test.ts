@@ -144,12 +144,17 @@ test("doc_status health aggregates findings by category without a numeric score"
   assert.match(result.stdout, /Documents: \d+/);
   assert.match(result.stdout, /Blocking: +\d+/);
   assert.match(result.stdout, /link\s+1 blocking/);
+  // Issue #162 B3 — the capture-layer orphan roll-up is a stable output line.
+  assert.match(result.stdout, /Orphans: +\d+/);
   assert.doesNotMatch(result.stdout, /score/i);
 
   const json = runScript("doc_status.js", ["health", "--json"], repo);
   const report = JSON.parse(json.stdout);
   assert.equal(report.command, "health");
   assert.ok(Array.isArray(report.categories));
+  assert.equal(typeof report.orphans?.total, "number");
+  assert.equal(typeof report.orphans?.byRule, "object");
+  assert.equal(typeof report.orphans?.byType, "object");
   const link = report.categories.find((item: { category: string }) => item.category === "link");
   assert.ok(link);
   assert.equal(link.blocking, 1);
@@ -170,11 +175,14 @@ test("doc_status list works with and without --type", () => {
   assert.equal(single.status, 0, single.stderr);
   assert.match(single.stdout, /checkout\.md/);
   assert.doesNotMatch(single.stdout, /spark\.md/);
+  // Issue #162 B3 — capture-layer age is part of the row meta.
+  assert.match(single.stdout, /checkout\.md \[draft, created 2026-01-01\]/);
 
   const all = runScript("doc_status.js", ["list"], repo);
   assert.equal(all.status, 0, all.stderr);
   assert.match(all.stdout, /checkout\.md/);
   assert.match(all.stdout, /spark\.md/);
+  assert.match(all.stdout, /created 2026-01-01/);
 });
 
 test("doc_status commands are read-only", () => {

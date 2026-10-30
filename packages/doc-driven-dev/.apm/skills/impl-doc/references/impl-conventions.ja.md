@@ -159,9 +159,14 @@ Experiment Log の監査項目:
 - 列は `ID` / `タイトル` / `Status` / `ファイル` の 4 列に固定し、front matter
   から取ります。`ファイル` 列は索引と同じディレクトリへの相対リンクにします。
   値が無い場合は `-` を入れます。
-- 行はファイル名の昇順で並べます。
-- 新規の Implementation Record が追加されたら、同じ変更の中で必ず索引を更新
-  します。
+- 行は各層ごとにファイル名の昇順で並べます。in-flight の記録は先頭の
+  テーブルに、settled なステータス（`completed`、`abandoned`、`superseded`）の
+  記録は下段の `## Settled` テーブルにファイル名昇順で掲載します。Settled の
+  行もリンクは維持され、履歴を隠さずに強調を抑える構成です。
+- 記録の追加や `status` の変更時は索引を更新してください。
+  `doc_maintenance.js plan|apply` が管理索引を再生成します。実行するまでの間、
+  `doc_status lint` がドリフト（`index-metadata-mismatch`、`index-ordering`）を
+  報告します。
 - 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに
   1 つのテーブルを配置することを推奨します。
 

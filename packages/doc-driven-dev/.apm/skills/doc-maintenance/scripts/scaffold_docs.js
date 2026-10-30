@@ -18670,6 +18670,29 @@ config(en_default());
 // src/skills/lib/artifact_id.ts
 var import_uuid62 = __toESM(require_uuid62());
 
+// src/skills/lib/doc_lifecycle.ts
+var SETTLED_STATUSES = {
+  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
+  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
+  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
+  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
+  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
+  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
+  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
+  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
+  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
+  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
+};
+var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
+function lifecycleBucketForType(type) {
+  const declared = type ?? "untyped";
+  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
+}
+function isSettledStatus(type, status) {
+  if (!status) return false;
+  return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
+}
+
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
@@ -18903,6 +18926,7 @@ function configFor(type) {
   return configs[type];
 }
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -18942,6 +18966,7 @@ async function docEntries(cwd, type, explicitDir) {
     const content = import_node_fs2.default.readFileSync(fullPath, "utf8");
     const data = parseDoc(content).data;
     return {
+      created: typeof data.created === "string" ? data.created : null,
       file: file2,
       id: typeof data.id === "string" ? data.id : null,
       path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
@@ -18952,6 +18977,26 @@ async function docEntries(cwd, type, explicitDir) {
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
+function renderIndexBody(entries, options2 = {}) {
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const compare = (left, right) => {
+    if (options2.overviewFirst) {
+      if (left.file === "overview.md") return -1;
+      if (right.file === "overview.md") return 1;
+    }
+    return left.file.localeCompare(right.file);
+  };
+  const row = (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
+  const settled = (entry) => isSettledStatus(entry.type ?? options2.settledType ?? null, entry.status);
+  const active = entries.filter((entry) => !settled(entry)).sort(compare);
+  const settledEntries = entries.filter(settled).sort(compare);
+  const body = [header, ...active.map(row)].join("\n");
+  return settledEntries.length > 0 ? `${body}
+
+## Settled ${GENERATED_SETTLED_MARKER}
+
+${[header, ...settledEntries.map(row)].join("\n")}` : body;
+}
 async function buildIndex(cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
   const unionTypes = options2?.types ?? [];
@@ -18959,17 +19004,10 @@ async function buildIndex(cwd, type, explicitDir, options2) {
     (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
   ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
   const title = `${configFor(type).idPrefix} Documents`;
-  const sorted = type === "design" || unionTypes.includes("design") ? [...entries].sort((a, b) => {
-    if (a.file === "overview.md") return -1;
-    if (b.file === "overview.md") return 1;
-    return a.file.localeCompare(b.file);
-  }) : entries;
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = sorted.map(
-    (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`
-  );
-  const body = rows.length > 0 ? `${header}
-${rows.join("\n")}` : header;
+  const body = renderIndexBody(entries, {
+    overviewFirst: type === "design" || unionTypes.includes("design"),
+    settledType: type
+  });
   return `# ${title}
 
 ${GENERATED_INDEX_MARKER}
