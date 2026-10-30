@@ -167,8 +167,9 @@ task は次を含めます。
 task を並列 delegation の対象にするには、`## Affected Files` の項目が
 パス検証可能な file / directory path である必要があります。自由形式の
 module 名や feature 名は検証できず、serial 実行を強制します。scope 判定は
-`Affected Files` という見出しに literal（case-insensitive）でマッチするため、
-ローカライズされた見出しは現在 scope 未宣言として扱われ、serial を強制します。
+canonical な `Affected Files` 見出しか宣言済みのローカライズ別名
+（`影響ファイル`）に case-insensitive でマッチします。固定語彙以外の
+見出しは依然 scope 未宣言として扱われ、serial を強制します。
 
 完了条件は検証可能である必要があります。検証経路を書けない task は、実装開始前に
 plan または spec に戻します。

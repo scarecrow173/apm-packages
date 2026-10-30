@@ -16,6 +16,7 @@ import {
   scanArtifactGraph,
   type ArtifactRecord,
 } from "../../../doc-driven-dev-graph/scripts/lib/artifact_graph";
+import { sectionBody, subHeadingCount } from "../../../lib/markdown_sections";
 
 export type BriefingAuditFinding = {
   severity: "error" | "warning" | "info";
@@ -57,22 +58,10 @@ function normalizePath(cwd: string, target: string): string {
   return path.relative(path.resolve(cwd), path.resolve(target)).split(path.sep).join("/");
 }
 
-// Verbatim port of sectionBody/consideredOptionCount from
-// doc-driven-dev-graph/scripts/lib/graph_state.ts so option counting cannot drift.
-function sectionBody(body: string, heading: string): string {
-  const lines = body.split(/\r?\n/);
-  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
-  const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
-  if (start < 0) return "";
-  const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
-  const section = endOffset < 0 ? lines.slice(start + 1) : lines.slice(start + 1, start + 1 + endOffset);
-  return section.join("\n").trim();
-}
-
 function consideredOptionCount(body: string): number {
   const section = sectionBody(body, "Considered Options");
   if (!section) return 0;
-  const headings = section.match(/^###\s+.+$/gim)?.length ?? 0;
+  const headings = subHeadingCount(section);
   const listItems = section.match(/^\s*[-*+]\s+\S/gm)?.length ?? 0;
   return Math.max(headings, listItems);
 }

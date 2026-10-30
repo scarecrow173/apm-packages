@@ -230,6 +230,7 @@ spec の status は `proposed`、
 `approved`、`implemented`、ADR は `proposed` または `accepted` が必要。
 必須項目数、graph の canonical records 内の typed pair evidence、関連する relation
 の解決と重複 ID、両文書内のローカル Markdown link/image の参照先の存在を検査する。
+`##` セクション検査は canonical 見出しか宣言済みのローカライズ別名を受理する。
 pair evidence は直接 relation、共通 discovery anchor、または共通の承認済み design
 である。両文書とすべての共通 discovery anchor を検査し、直接 evidence も discovery
 evidence もない場合は代わりにすべての supporting design を検査する。plan の検証や

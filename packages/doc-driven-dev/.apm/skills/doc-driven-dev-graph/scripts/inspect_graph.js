@@ -21563,6 +21563,87 @@ function buildTaskGraph(options2) {
   return summarizeTaskGraph(plan, parsed, resolved.edges, issues);
 }
 
+// src/skills/lib/markdown_sections.ts
+var SECTION_HEADING_ALIASES = {
+  // task-doc
+  "Work": ["\u4F5C\u696D"],
+  "Classification": ["\u5206\u985E"],
+  "Upstream Documents": ["\u4E0A\u6D41\u6587\u66F8"],
+  "Dependencies": ["\u4F9D\u5B58\u95A2\u4FC2"],
+  "Affected Files": ["\u5F71\u97FF\u30D5\u30A1\u30A4\u30EB"],
+  "Done When": ["\u5B8C\u4E86\u6761\u4EF6"],
+  "Verification": ["\u691C\u8A3C"],
+  // spec-doc
+  "What Should Be Built": ["\u4F55\u3092\u4F5C\u308B\u3079\u304D\u304B"],
+  "Why Now": ["\u306A\u305C\u4ECA\u5FC5\u8981\u304B"],
+  "Users and Value": ["\u5229\u7528\u8005\u3068\u4FA1\u5024"],
+  "Scope": ["\u7BC4\u56F2", "\u30B9\u30B3\u30FC\u30D7"],
+  "In Scope": ["\u7BC4\u56F2\u5185"],
+  "Out of Scope": ["\u7BC4\u56F2\u5916"],
+  "Requirements": ["\u8981\u4EF6"],
+  "Acceptance Criteria": ["\u53D7\u3051\u5165\u308C\u57FA\u6E96"],
+  "Sources and Relations": ["\u51FA\u5178\u3068 Relations", "\u51FA\u5178\u30FBRelations"],
+  // discovery-doc
+  "Exploration Goal": ["\u63A2\u7D22\u76EE\u7684"],
+  "Key Issues and Assumptions": ["\u8AD6\u70B9\u30FB\u524D\u63D0"],
+  "Alternatives and Comparison": ["\u4EE3\u66FF\u6848\u3068\u6BD4\u8F03"],
+  "Tentative Conclusions and Hypotheses": ["\u66AB\u5B9A\u7D50\u8AD6\u30FB\u4EEE\u8AAC"],
+  "Open Questions": ["\u672A\u89E3\u6C7A\u306E\u8AD6\u70B9", "\u672A\u89E3\u6C7A\u4E8B\u9805"],
+  "Promotion Candidates": ["\u6607\u83EF\u5148\u5019\u88DC"],
+  // idea-doc
+  "Summary": ["\u8981\u7D04"],
+  "Problem and Motivation": ["\u8AB2\u984C\u3068\u52D5\u6A5F"],
+  "Expected Value": ["\u60F3\u5B9A\u4FA1\u5024"],
+  "Next Action": ["\u6B21\u306E\u30A2\u30AF\u30B7\u30E7\u30F3"],
+  // plan-doc
+  "Goal": ["\u76EE\u7684"],
+  "File Map": ["\u30D5\u30A1\u30A4\u30EB\u8868"],
+  "Implementation Sequence": ["\u5B9F\u88C5\u9806\u5E8F"],
+  "Dependencies and Risks": ["\u4F9D\u5B58\u95A2\u4FC2\u3068\u30EA\u30B9\u30AF"],
+  "Task Breakdown": ["Task \u5206\u89E3"],
+  "Open Questions / Gaps": ["\u672A\u89E3\u6C7A\u4E8B\u9805 / gap"],
+  "Self-Review": ["\u81EA\u5DF1\u30EC\u30D3\u30E5\u30FC"],
+  "Implementation Handoff": ["\u5B9F\u88C5\u30CF\u30F3\u30C9\u30AA\u30D5"],
+  "Review Handoff": ["\u30EC\u30D3\u30E5\u30FC\u7528\u30CF\u30F3\u30C9\u30AA\u30D5"],
+  // adr-doc (MADR 4 templates)
+  "Context and Problem Statement": ["\u80CC\u666F\u3068\u554F\u984C"],
+  "Decision Drivers": ["\u6C7A\u5B9A\u30C9\u30E9\u30A4\u30D0\u30FC"],
+  "Considered Options": ["\u691C\u8A0E\u3057\u305F\u9078\u629E\u80A2"],
+  "Decision Outcome": ["\u6C7A\u5B9A\u5185\u5BB9"],
+  "Consequences": ["\u5F71\u97FF"],
+  "Confirmation": ["\u78BA\u8A8D\u65B9\u6CD5"],
+  "Implementation Plan": ["\u5B9F\u88C5\u8A08\u753B"],
+  "Pros and Cons of the Options": ["\u9078\u629E\u80A2\u306E\u5229\u70B9\u3068\u6B20\u70B9"],
+  "Option": ["\u9078\u629E\u80A2"],
+  "Option 1": ["\u9078\u629E\u80A2 1"],
+  "Option 2": ["\u9078\u629E\u80A2 2"],
+  "More Information": ["\u8FFD\u52A0\u60C5\u5831"],
+  // implementation-flow profile
+  "Available Skills": ["\u5229\u7528\u53EF\u80FD\u306A\u30B9\u30AD\u30EB"],
+  "Category Assignments": ["\u30AB\u30C6\u30B4\u30EA\u5272\u308A\u5F53\u3066"]
+};
+function headingNames(canonicalHeading) {
+  return [canonicalHeading, ...SECTION_HEADING_ALIASES[canonicalHeading] ?? []];
+}
+function headingPattern(heading) {
+  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
+}
+function sectionBody(body, canonicalHeading) {
+  const lines = body.split(/\r?\n/);
+  for (const name of headingNames(canonicalHeading)) {
+    const pattern = headingPattern(name);
+    const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
+    if (start < 0) continue;
+    const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
+    const section = endOffset < 0 ? lines.slice(start + 1) : lines.slice(start + 1, start + 1 + endOffset);
+    return section.join("\n").trim();
+  }
+  return "";
+}
+function subHeadingCount(section, depth = 3) {
+  return section.match(new RegExp(`^#{${depth}}\\s+.+$`, "gm"))?.length ?? 0;
+}
+
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
 var CANONICAL_TARGETS2 = [
   "docs/ideas",
@@ -21593,19 +21674,10 @@ function sortedUnique3(values) {
 function gate(status, reasons = []) {
   return { status, reasons: sortedUnique3(reasons) };
 }
-function sectionBody(body, heading) {
-  const lines = body.split(/\r?\n/);
-  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
-  const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
-  if (start < 0) return "";
-  const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
-  const section = endOffset < 0 ? lines.slice(start + 1) : lines.slice(start + 1, start + 1 + endOffset);
-  return section.join("\n").trim();
-}
 function consideredOptionCount(body) {
   const section = sectionBody(body, "Considered Options");
   if (!section) return 0;
-  const headings = section.match(/^###\s+.+$/gim)?.length ?? 0;
+  const headings = subHeadingCount(section);
   const listItems = section.match(/^\s*[-*+]\s+\S/gm)?.length ?? 0;
   return Math.max(headings, listItems);
 }

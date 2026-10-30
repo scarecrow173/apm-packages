@@ -257,7 +257,8 @@ default to empty). Spec status must be `proposed`,
 `approved`, or `implemented`; ADR status must be `proposed` or `accepted`.
 It checks the required counts, typed pair evidence in canonical graph records,
 relevant relation resolution and duplicate IDs, and existence of local Markdown
-link/image destinations in the two documents. Pair evidence can be a direct
+link/image destinations in the two documents. `##` checks accept canonical or
+declared localized heading aliases. Pair evidence can be a direct
 relation, a shared discovery anchor, or a shared approved design. The audit
 checks both documents and all shared discovery anchors; when neither direct
 nor discovery evidence exists, it checks all supporting designs instead. It
