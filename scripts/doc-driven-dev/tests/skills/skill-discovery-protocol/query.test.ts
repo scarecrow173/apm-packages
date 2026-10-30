@@ -144,14 +144,35 @@ function setupQueryEnv(dir: string) {
 
   const validationReport = {
     schema_version: "1.0",
-    validated_at: "2026-01-01T00:00:00Z",
+    generated_at: "2026-01-01T00:00:00Z",
+    repository: "test-repo",
     adapter_id: "test-adapter",
-    checks: [
-      { name: "schema", status: "passed" },
-      { name: "staleness", status: "passed" },
-      { name: "deterministic", status: "skipped", message: "Not configured" },
-    ],
-    summary: { total: 3, passed: 2, failed: 0, skipped: 1 },
+    schema_validation: { result: "pass", errors: [] },
+    staleness_validation: {
+      result: "pass",
+      basis: "validated_at",
+      basis_date: "2026-01-01T00:00:00Z",
+      max_age_days: 30,
+      age_days: 0,
+      new_skills: [],
+      removed_skills: [],
+    },
+    deterministic_validation: { result: "skipped", comparisons: [], reason: "Not configured" },
+    blocking_validations: { result: "pass", checks: [] },
+    catalog_validation: {
+      skill_count: 2,
+      reference_count: 2,
+      capability_count: 2,
+      orphan_skills: [],
+    },
+    profile_validation: {
+      flow_count: 1,
+      flow_stack_slot_count: 0,
+      unresolved_slots: [],
+      resolved_invocation_count: 1,
+      unused_override_warnings: [],
+    },
+    overall_result: "pass",
   };
 
   fs.writeFileSync(
@@ -479,11 +500,31 @@ test("query: validation-status returns report summary", () => {
   assert.equal(result.status, 0, `stderr: ${result.stderr}`);
   const data = JSON.parse(result.stdout);
   assert.equal(data.adapter_id, "test-adapter");
-  assert.equal(data.summary.total, 3);
-  assert.equal(data.summary.passed, 2);
-  assert.equal(data.summary.failed, 0);
-  assert.equal(data.summary.skipped, 1);
-  assert.ok(Array.isArray(data.checks));
+  assert.equal(data.overall_result, "pass");
+  assert.equal(data.gates.schema, "pass");
+  assert.equal(data.gates.staleness, "pass");
+  assert.equal(data.gates.deterministic, "skipped");
+  assert.equal(data.gates.blocking, "pass");
+  assert.ok(Array.isArray(data.schema_errors));
+  assert.equal(data.catalog.skill_count, 2);
+});
+
+test("query: validation-status with malformed report exits nonzero", () => {
+  const dir = tempDir();
+  setupQueryEnv(dir);
+
+  fs.writeFileSync(
+    path.join(dir, ".sdp", "validation-report.json"),
+    JSON.stringify({ schema_version: "1.0", validated_at: "x", checks: [] }),
+    "utf8",
+  );
+
+  const result = runQuery(
+    ["--profile", ".sdp/test-profile.json", "validation-status"],
+    dir,
+  );
+  assert.notEqual(result.status, 0);
+  assert.ok(result.stderr.includes("Invalid validation report"));
 });
 
 test("query: validation-status without report shows error", () => {

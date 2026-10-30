@@ -1,6 +1,9 @@
 "use strict";
 
 import type { FlowProfile, SkillReferenceCatalog } from "../types";
+import type { ValidationReport } from "../schemas/validation-report";
+
+export type { ValidationReport };
 
 // ─── Query Types ───
 
@@ -14,14 +17,6 @@ export type QueryArgs = {
   cwd?: string;
   help?: boolean;
   format?: "json" | "md" | "table";
-};
-
-export type ValidationReport = {
-  schema_version: string;
-  validated_at: string;
-  adapter_id: string;
-  checks: { name: string; status: string; message?: string }[];
-  summary: { total: number; passed: number; failed: number; skipped: number };
 };
 
 export type QueryContext = {

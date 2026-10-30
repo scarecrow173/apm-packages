@@ -70,3 +70,5 @@ export const ValidationReportSchema = z.object({
   profile_validation: ProfileValidationSchema,
   overall_result: z.enum(["pass", "fail"]),
 });
+
+export type ValidationReport = z.infer<typeof ValidationReportSchema>;
