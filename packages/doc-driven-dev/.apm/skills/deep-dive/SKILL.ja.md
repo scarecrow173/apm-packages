@@ -56,10 +56,10 @@ license: MIT
 
 ```text
 HYPOTHESIS: You want ...
-CONFIDENCE: ~40% - missing: ...
+CONFIDENCE: low - missing: ...
 ```
 
-確信度が 70% 未満なら、足りない情報を短く添えます。
+確信度が低い、または不確かな場合は、足りない情報を短く添えます。
 
 ### Step 3: 一問ずつ質問する
 

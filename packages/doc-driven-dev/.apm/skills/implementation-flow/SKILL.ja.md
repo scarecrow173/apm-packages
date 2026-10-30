@@ -125,6 +125,11 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentati
 [`assets/templates/implementation-profile-template.ja.md`](assets/templates/implementation-profile-template.ja.md)
 を読みます。通常の実行では読みません。
 
+**段階的ロード:** まず profile を解決し、次に profile が applicable と示した
+skill の `SKILL.md` 本文だけを読み、references と scripts は active step が
+必要とするときだけ読む —
+[progressive-loading-contract](../skill-discovery-protocol/references/progressive-loading-contract.ja.md) を参照。
+
 ---
 
 ## Phase B: 構成
@@ -195,7 +200,7 @@ Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentati
 例:
 
 ```bash
-node scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
+node ../impl-doc/scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
 ```
 
 明確な既知解の task でも `in-progress` の Implementation Record は必須であり、任意なのは Experiment Log だけである。

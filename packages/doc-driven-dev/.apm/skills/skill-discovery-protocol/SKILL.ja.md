@@ -193,4 +193,6 @@ scan data がないときは `sdp scan` を先に実行してください。infe
 - [Gate Specification (Japanese)](references/gate-spec.ja.md)
 - [Schema Reference](references/schema-reference.md)
 - [Schema Reference (Japanese)](references/schema-reference.ja.md)
+- [Progressive Loading Contract](references/progressive-loading-contract.md)
+- [Progressive Loading Contract (Japanese)](references/progressive-loading-contract.ja.md)
 - Spec details: `docs/specs/skills/skill-discovery-protocol/`

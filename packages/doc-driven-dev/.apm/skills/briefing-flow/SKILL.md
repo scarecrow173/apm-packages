@@ -118,6 +118,11 @@ profile.
 
 See [skill-discovery-protocol](../skill-discovery-protocol/SKILL.md) for full details.
 
+**Staged loading:** resolve the profile first, then load `SKILL.md` bodies only
+for skills the profile marks applicable, then load references and scripts only
+when the active step needs them — see
+[progressive-loading-contract](../skill-discovery-protocol/references/progressive-loading-contract.md).
+
 ---
 
 ## Phase B: Configure
@@ -312,7 +317,7 @@ Do not declare briefing complete until spec-doc `status` is `proposed` or above.
 Passing through with `draft` status is not allowed. A spec without acceptance
 criteria cannot serve as a foundation for planning.
 
-**Why:** Incomplete Phase 1 output causes 40% of Phase 3-4 redesigns.
+**Why:** Incomplete Phase 1 output is a common cause of downstream redesign.
 </HARD-GATE>
 
 <HARD-GATE>
@@ -320,7 +325,7 @@ Even in urgent fix scenarios, leave at minimum a spec-doc or adr-doc as
 evidence before proceeding to the next phase.
 
 **Why:** Urgent fixes without evidence become permanent technical debt.
-Minimum evidence takes 10 minutes; debugging mystery code takes hours.
+Minimum evidence is cheap to leave; debugging undocumented changes costs far more.
 </HARD-GATE>
 
 <HARD-GATE>
@@ -345,7 +350,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 | "Acceptance criteria can be added later" | Spec without criteria produces unverifiable plans |
 | "Alternatives are obvious" | ADR with only one option has no decision rationale |
 | "Spending too much time on briefing" | Stop when stop conditions are met. Continue until they are |
-| "It's urgent, skip the spec" | Minimum evidence is 10 minutes. Skipping costs hours to days |
+| "It's urgent, skip the spec" | Minimal evidence is cheap to leave; skipping it costs far more |
 
 ## Graph Effect Outcome
 
