@@ -7,7 +7,9 @@ execution mode をどう選択するかを定義します。リポジトリ内�
 `buildDelegateHandoff`）を使い、エージェント caller は同じ選択順序と handoff
 contract を適用します。この policy は決定的です — dispatch fact を mode と記録
 済みの理由に対応付けるだけで、それ自体は何も起動しません。dispatch は引き続き
-caller の責務です。
+caller の責務であり、選択された mode は *dispatch への入力* です — caller は
+それを `requestedMode` として、delegated mode では `DelegateHandoff` とともに
+dispatcher に渡します。
 
 ## Dispatch fact
 
@@ -70,6 +72,7 @@ JSON-serializable な `DelegateHandoff` を受け取ります。
 
 | Field | 内容 |
 | --- | --- |
+| `executionMode` | dispatch が要求された trace `ExecutionMode`（`tool`/`subagent`）— handoff がこれを固定するため、delegate は runner が記録した mode と異なる mode で実行できない |
 | `focus` | delegate が集中する repo 相対 path |
 | `authoritativeInputs` | outcome がそのまま echo しなければならない live canonical reference |
 | `sourceRefs` | context として渡す追加の live canonical reference |
@@ -84,6 +87,40 @@ verification に関係する情報を lossy な要約で代用してはいけま
 live reference を保持し、delegate がその時点の内容を解決します。`completion`
 field は `EffectOutcome` footer を完了形状として宣言します — delegate はその
 footer を出力して完了します。
+
+## Dispatch observation 境界
+
+`requestedMode` は dispatch への入力であり、trace のラベルではありません。
+dispatcher — host adapter でも決定的な scripted dispatcher でも — はそれを
+尊重するか、拒否するかのどちらかでなければならず、*実際に* 実行した内容を
+`DispatchResult` で報告します。`DispatchResult` は `EffectOutcome` に加えて
+1 件以上の `DispatchObservation` レコード `{ target, requested, actual,
+method }` を持ちます。
+
+- ちょうど 1 件の **self-observation**（`target` が dispatch された effect
+  の id に等しい）が、`requested` に `requestedMode` を反映し、`actual` に
+  dispatch が実行された mode を記録します。
+- 0 件以上の **internal observation**（`target` が adapter 内部の作業を
+  示す — たとえば `briefing-flow` 内の `spec-doc`、`adr-doc`、`research`）が、
+  composite delegate の実際の実行パスを可視化します。`method` は adapter が
+  使った仕組みを示します — `scripted`、`inline-skill`、`subagent-spawn`、
+  `tool-call`、または拒否された dispatch の `not-executed`。
+
+caller はすべての observation を `dispatch-observed` trace event として記録し
+（[run-trace-contract.ja.md](run-trace-contract.ja.md) を参照）、outcome を
+受理する前にこの境界を強制します。
+
+- `requested` と矛盾する `actual` を持つ self-observation は、malformed な
+  outcome と同様に dispatch を拒否します — mode の報告は evidence であり、
+  不実な報告は contract 違反です。
+- mode を尊重できない dispatch（capability または権限の不足）は、
+  `method: "not-executed"` と `yield` outcome で拒否を返し、`same-context`
+  への暗黙の切り替えは行いません。
+- internal observation は adapter 自身の報告 — runner が再検査しない
+  自己申告データであり、same-context の audit を research と読み替えただけ
+  ではなく独立した subagent spawn が実行されたことを attest する手段です。
+  trace がその証拠を保持できるよう、adapter はこの報告を誠実に実装
+  しなければなりません。
 
 ## Return contract
 
@@ -123,7 +160,16 @@ focus は同じ outcome チェックで失敗します。
 
 - model の品質評価は行いません — policy は dispatch fact を mode に対応付ける
   ものであり、どの model や agent が優れているかを判断しません。
+  `dispatch-observed` が記録するのは *どの仕組みが実行されたか* であり、
+  品質ではありません。
+- token・cost・latency の比較は行いません — observation 境界にそれらを保持
+  する field はなく、trace schema にも今後追加されません（trace の非対象を
+  参照）。
 - provider 固有の subagent API を要求しません — contract は mode、handoff、
-  return であり、各 host が自前の仕組みに対応付けます。
+  return、observation であり、各 host が自前の仕組みに対応付けます（実際の
+  adapter は subagent を起動し、決定的な scripted dispatcher は同じ事実を
+  忠実に記録します）。
 - edge の増殖をしません — execution mode は graph topology を変更しません。
   mode を表現するために edge、delegate、condition を追加してはいけません。
+  internal observation は 1 つの dispatch された effect 内の作業を記述する
+  ものであり、新しい graph effect ではありません。

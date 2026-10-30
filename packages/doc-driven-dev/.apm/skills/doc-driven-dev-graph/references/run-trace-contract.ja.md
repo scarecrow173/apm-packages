@@ -83,6 +83,36 @@ caller が audit/delegate を駆動するときに記録します。`route_graph
 caller 側の execution-mode policy が mode を決定した場合、policy の選択
 理由を `;` 連結したトークン列を記録します。正規化では空でない文字列の
 場合のみ保持されます（理由リストであり、パスではありません）。
+ここでの `executionMode` は dispatcher に渡された *要求された* mode であり、
+dispatcher が実際に実行した内容は `dispatch-observed` が記録します。
+
+### `dispatch-observed`
+
+dispatcher が実行したと報告する dispatch 1 件につき 1 event。
+`DispatchResult` が返った直後、`effect-outcome` の前に出力されます。
+`edgeId`、`stage`、`effectId` は生成元の `effect-dispatched` と対応します。
+残りの field は dispatcher 自身が報告した実行内容です。
+
+| Field | 意味 |
+| --- | --- |
+| `target` | dispatch が実行した対象 — self-observation では `effectId` と等しく、composite delegate 内の作業（`briefing-flow` 内の `spec-doc`、`adr-doc`、`research` など）では adapter 内部の dispatch 名 |
+| `requested` | dispatch に要求された mode（`same-context`/`subagent`/`tool`/`unknown`） |
+| `actual` | dispatcher が実行したと報告する mode。拒否された dispatch は `unknown` を報告する |
+| `method` | 実行の仕組み — `scripted`（決定的 adapter）、`inline-skill`（caller の context で実行）、`subagent-spawn`（独立した bounded subagent）、`tool-call`（bounded な tool 型 delegation）、`not-executed`（拒否） |
+
+受理されたすべての dispatch はちょうど 1 件の self-observation
+（`target === effectId`）を持ち、その `requested` は生成元の
+`effect-dispatched.executionMode` と一致し、実行された dispatch の `actual`
+もそれと一致します（`requested === "unknown"` の場合は `actual` チェックを
+免除）。要求と矛盾する self-report、または self-observation を持たない
+dispatch は、malformed な outcome と同様に拒否されます — trace にはその
+observation が forensic な記録として残り、`effect-outcome` は出力されま
+せん。`method: "not-executed"` が正直であるのは `yield` outcome と組み
+合わせた場合のみです。internal observation（`target !== effectId`）は
+adapter 自身の報告 — runner が再検証しない自己申告データであり、
+same-context の audit を delegated な作業と読み替えただけではなく独立した
+spawn が実行されたことを attest する手段です。adapter はこの報告を誠実に
+実装しなければなりません。新しい graph effect を表すものではありません。
 
 ### `effect-outcome`
 
@@ -127,8 +157,9 @@ resume された run は同じ `runId` で追記を続けます。`seq` は増�
 
 `summarizeTrace` は run ごとに集計します: route 選択数、順序付き edge ID、
 blocked/terminal 数、audit・delegate の dispatch 数、execution mode 数、
-outcome 数、yield reason、scan 合計（`scans`、`filesRead`、`bytesRead`、
-`uniqueFilesMax`）。
+outcome 数、yield reason、dispatch-observation 合計（`dispatchObservations`:
+`total`、`byActual`、`byMethod`）、scan 合計（`scans`、`filesRead`、
+`bytesRead`、`uniqueFilesMax`）。
 
 trace は LLM token、cost、provider・model 名、prompt、文書本文、secret を
 一切記録しません — schema にそれらを保持できる field が存在しません。

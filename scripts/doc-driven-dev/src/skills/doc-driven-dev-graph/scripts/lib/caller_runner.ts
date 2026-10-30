@@ -23,8 +23,22 @@ import { CANONICAL_DOC_DIRS } from "./artifact_graph";
 import { loadGraphDefinition } from "./graph_definition";
 import { resolveGraphPath } from "./graph_cli";
 import type { GraphRoute } from "./graph_router";
-import { appendTraceEvent, type ExecutionMode, type TraceEventInput } from "./run_trace";
-import { selectDelegateMode, toExecutionMode, type PolicyFacts } from "./delegate_policy";
+import {
+  appendTraceEvent,
+  DISPATCH_METHODS,
+  EXECUTION_MODES,
+  type DispatchMethod,
+  type ExecutionMode,
+  type TraceEventInput,
+} from "./run_trace";
+import {
+  buildDelegateHandoff,
+  selectDelegateMode,
+  toExecutionMode,
+  type DelegateHandoff,
+  type PolicyDecision,
+  type PolicyFacts,
+} from "./delegate_policy";
 
 export type YieldReason =
   | "terminal" | "single-step-complete" | "budget-exhausted"
@@ -327,10 +341,59 @@ export type EffectDispatchContext = {
   route: GraphRoute;
   effect: CallerEffect;
   signals: ReadonlySet<string>;
+  /**
+   * The execution mode this dispatch is requested under: the policy
+   * decision's mode projected onto the trace taxonomy, or the caller-
+   * declared `executionMode` when no policy runs. The adapter must honor
+   * it or decline — never silently switch (see DispatchResult).
+   */
+  requestedMode: ExecutionMode;
+  /**
+   * Present only when the policy decision selected a delegated mode
+   * (`subagent-as-tool`/`isolated-subagent` → `tool`/`subagent`): the
+   * #122 handoff the adapter must confine the dispatch to. Absent for
+   * `same-context` requests — a caller-declared `executionMode` describes
+   * the adapter's nature and never by itself delegates a dispatch.
+   */
+  handoff?: DelegateHandoff;
+};
+
+/**
+ * The adapter's own report of one dispatch it performed. Exactly one
+ * observation per DispatchResult must carry `target === effect.id` (the
+ * self-observation); further entries record adapter-internal sub-dispatches
+ * a composite delegate (e.g. briefing-flow) performed on the way to its
+ * outcome — same-context inner skills, bounded research spawns, refusals.
+ * `requested`/`actual` carry the trace ExecutionMode taxonomy; `method`
+ * names the mechanism (`not-executed` only for a declined dispatch).
+ */
+export type DispatchObservation = {
+  target: string;
+  requested: ExecutionMode;
+  actual: ExecutionMode;
+  method: DispatchMethod;
+};
+
+/**
+ * What an EffectDispatcher returns: the #122 outcome plus the adapter's
+ * report of what it actually did. The runner emits every observation as a
+ * `dispatch-observed` trace event and enforces the attribution contract on
+ * the self-observation before validating the outcome:
+ *
+ * - `requested` must equal `ctx.requestedMode`;
+ * - an executed dispatch (`method !== "not-executed"`) must report
+ *   `actual === requestedMode` when the request named a mode — a mismatch
+ *   is a silent-switch attempt and rejects like any outcome violation;
+ * - `method: "not-executed"` (declined dispatch) requires a `yield`
+ *   outcome — a refusal must not claim completed work.
+ */
+export type DispatchResult = {
+  outcome: EffectOutcome;
+  observations: DispatchObservation[];
 };
 
 /** Injected effect executor — an LLM, tool, or scripted adapter. */
-export type EffectDispatcher = (ctx: EffectDispatchContext) => EffectOutcome;
+export type EffectDispatcher = (ctx: EffectDispatchContext) => DispatchResult;
 
 export type CallerRunnerOptions = {
   repo: string;
@@ -370,10 +433,25 @@ export type CallerRunnerOptions = {
   /**
    * Optional per-effect execution-mode policy. When provided, each dispatch
    * feeds its facts through selectDelegateMode: the decision's mode overrides
-   * `executionMode` on effect-dispatched and its reasons are recorded as
-   * modeReason. Absent, the event carries the declared executionMode only.
+   * `executionMode` on effect-dispatched, its reasons are recorded as
+   * modeReason, and it becomes the dispatch's `requestedMode`. Absent, the
+   * event carries the declared executionMode only.
    */
   policy?: (route: GraphRoute, effect: CallerEffect) => PolicyFacts;
+  /**
+   * Optional handoff builder for delegated dispatches (a policy decision of
+   * `subagent-as-tool`/`isolated-subagent`). When absent the runner supplies
+   * a minimal handoff: `focus`/`authoritativeInputs` from the resolved input
+   * references, empty permissions (fail-closed write scope), default budget
+   * and completion. A returned handoff whose `executionMode` differs from
+   * the requested mode rejects the dispatch.
+   */
+  buildHandoff?: (args: {
+    route: GraphRoute;
+    effect: CallerEffect;
+    decision: PolicyDecision;
+    inputs: CanonicalReference[];
+  }) => DelegateHandoff;
   trace?: { file: string; runId: string };
   resume?: CallerHandoff;
 };
@@ -502,10 +580,15 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   };
 
   /**
-   * Dispatch one effect: emit effect-dispatched before validation, then
-   * assertEffectOutcome is the sole input-binding enforcer and runs before any
-   * persist. Accepted outcomes emit effect-outcome; rejected ones leave only
-   * the dispatch event (no outcome event, no persisted outcome).
+   * Dispatch one effect: emit effect-dispatched before execution, hand the
+   * dispatcher the requested mode (and a #122 handoff when the policy
+   * delegated), then record what the adapter reports as dispatch-observed
+   * events before validation. assertEffectOutcome remains the sole
+   * input-binding enforcer and runs before any persist; the observation
+   * contract is enforced first — a dispatch that misreports its own mode is
+   * a contract breach identical to a malformed outcome. Accepted outcomes
+   * emit effect-outcome; rejected ones leave the dispatch and observation
+   * events as the forensic record (no outcome event, no persisted outcome).
    */
   const dispatchEffect = (
     route: GraphRoute,
@@ -516,24 +599,109 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     const decision = options.policy
       ? selectDelegateMode(options.policy(route, effect))
       : undefined;
+    const requestedMode: ExecutionMode = decision ? toExecutionMode(decision.mode) : executionMode;
     emitTrace({
       v: 1, runId: trace?.runId ?? "", kind: "effect-dispatched",
       edgeId: route.edgeId as string, stage, effectId: effect.id,
-      executionMode: decision ? toExecutionMode(decision.mode) : executionMode,
+      executionMode: requestedMode,
       focusPaths: expectedInputs.map((entry) => entry.path),
       ...(decision ? { modeReason: decision.reasons.join(";") } : {}),
     });
+    // A handoff exists only when the policy decision delegated the dispatch.
+    // The declared executionMode ("tool" for a scripted adapter, say) is the
+    // adapter's nature — it never delegates by itself, so it gets no handoff.
+    let handoff: DelegateHandoff | undefined;
+    if (decision && decision.mode !== "same-context") {
+      handoff = options.buildHandoff
+        ? options.buildHandoff({ route, effect, decision, inputs: expectedInputs })
+        : buildDelegateHandoff({
+            mode: requestedMode,
+            focus: expectedInputs.map((entry) => entry.path),
+            inputs: expectedInputs,
+          });
+    }
     try {
-      const outcome = options.dispatcher({ repo, route, effect, signals });
-      assertEffectOutcome(repo, route, outcome, stage, effect, expectedInputs);
+      // A delegated decision must carry a handoff — an absent or falsy one
+      // would run the dispatch unscoped, and a mode-mismatched one means the
+      // delegate executes under a different contract than the runner
+      // recorded. Both reject like any outcome violation.
+      if (decision && decision.mode !== "same-context" && !handoff) {
+        throw new OutcomeRejection(
+          `delegated dispatch on ${effect.id} requires a DelegateHandoff — an absent one would run unscoped`,
+        );
+      }
+      if (handoff && handoff.executionMode !== requestedMode) {
+        throw new OutcomeRejection(
+          `delegate handoff executionMode ${handoff.executionMode} does not match requested mode ${requestedMode}`,
+        );
+      }
+      const result = options.dispatcher({ repo, route, effect, signals, requestedMode, handoff });
+      // Observation entries are adapter output — untrusted input at this
+      // boundary. Every entry is structurally validated BEFORE any event is
+      // emitted: a malformed observation rejects like a malformed outcome
+      // instead of reaching the trace as a null-dereference or a silently
+      // dropped normalize failure.
+      const rawObservations = Array.isArray(result?.observations) ? result.observations : [];
+      const observations = rawObservations.map((entry: DispatchObservation, index: number) => {
+        const observation = entry as DispatchObservation | null | undefined;
+        const valid = observation !== null && typeof observation === "object"
+          && typeof observation.target === "string" && observation.target.length > 0
+          && EXECUTION_MODES.includes(observation.requested)
+          && EXECUTION_MODES.includes(observation.actual)
+          && DISPATCH_METHODS.includes(observation.method);
+        if (!valid) {
+          throw new OutcomeRejection(
+            `dispatch observation ${index} is malformed — target must be a non-empty string`
+            + ` and requested/actual/method must be declared enum members`,
+          );
+        }
+        return observation;
+      });
+      for (const observation of observations) {
+        emitTrace({
+          v: 1, runId: trace?.runId ?? "", kind: "dispatch-observed",
+          edgeId: route.edgeId as string, stage, effectId: effect.id,
+          target: observation.target,
+          requested: observation.requested,
+          actual: observation.actual,
+          method: observation.method,
+        });
+      }
+      if (!result || typeof result !== "object" || !result.outcome || typeof result.outcome !== "object") {
+        throw new OutcomeRejection("DispatchResult must carry an outcome object");
+      }
+      // Attribution contract on the self-observation — enforced before the
+      // outcome is trusted. Internal sub-dispatch records (target ≠
+      // effect.id) are the adapter's own report and are not re-checked here.
+      const self = observations.filter((observation) => observation.target === effect.id);
+      if (self.length !== 1) {
+        throw new OutcomeRejection(
+          `dispatch must report exactly one self-observation (target === ${effect.id}), got ${self.length}`,
+        );
+      }
+      if (self[0].requested !== requestedMode) {
+        throw new OutcomeRejection(
+          `dispatch observation requested mode ${self[0].requested} does not match the request ${requestedMode}`,
+        );
+      }
+      if (self[0].method === "not-executed") {
+        if (result.outcome.status !== "yield") {
+          throw new OutcomeRejection("a declined dispatch (not-executed) must return a yield outcome");
+        }
+      } else if (requestedMode !== "unknown" && self[0].actual !== requestedMode) {
+        throw new OutcomeRejection(
+          `dispatch executed in mode ${self[0].actual}, not the requested ${requestedMode} — mode switches are never silent`,
+        );
+      }
+      assertEffectOutcome(repo, route, result.outcome, stage, effect, expectedInputs);
       emitTrace({
         v: 1, runId: trace?.runId ?? "", kind: "effect-outcome",
         edgeId: route.edgeId as string, stage, effectId: effect.id,
-        outcome: outcome.status,
-        ...(outcome.status === "yield" ? { reason: outcome.reason } : {}),
-        evidencePaths: outcome.evidence.map((entry) => entry.path),
+        outcome: result.outcome.status,
+        ...(result.outcome.status === "yield" ? { reason: result.outcome.reason } : {}),
+        evidencePaths: result.outcome.evidence.map((entry) => entry.path),
       });
-      return { outcome };
+      return { outcome: result.outcome };
     } catch (error: unknown) {
       if (error instanceof OutcomeRejection) return { rejection: error };
       throw error;
