@@ -17,6 +17,7 @@ import {
   type ArtifactRecord,
 } from "../../../doc-driven-dev-graph/scripts/lib/artifact_graph";
 import { sectionBody, subHeadingCount } from "../../../lib/markdown_sections";
+import { isInsideCheckout } from "../../../lib/document_utils";
 
 export type BriefingAuditFinding = {
   severity: "error" | "warning" | "info";
@@ -47,12 +48,6 @@ const SPEC_STATUSES: ReadonlySet<string> = new Set(["proposed", "approved", "imp
 const ADR_STATUSES: ReadonlySet<string> = new Set(["proposed", "accepted"]);
 
 const PLACEHOLDER_MARKER = /TODO|{{[^}]+}}|<!--\s*(option|driver|justification|Describe)/i;
-
-function isInside(cwd: string, candidate: string): boolean {
-  const root = path.resolve(cwd);
-  const resolved = path.resolve(candidate);
-  return resolved === root || resolved.startsWith(`${root}${path.sep}`);
-}
 
 function normalizePath(cwd: string, target: string): string {
   return path.relative(path.resolve(cwd), path.resolve(target)).split(path.sep).join("/");
@@ -177,7 +172,10 @@ async function auditDocContent(cwd: string, doc: AuditedDoc, role: DocRole, find
       continue;
     }
     const target = path.resolve(path.dirname(doc.absolutePath), decoded);
-    if (!isInside(cwd, target) || !fs.existsSync(target)) {
+    // Checkout containment, not only lexical: a link whose target resolves
+    // outside through a symlink is broken for repo purposes the same way a
+    // `../` escape is (Issue #156).
+    if (!isInsideCheckout(cwd, target) || !fs.existsSync(target)) {
       findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Broken local link: ${url}` });
     }
   }

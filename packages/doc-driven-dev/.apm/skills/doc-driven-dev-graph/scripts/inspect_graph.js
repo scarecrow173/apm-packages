@@ -3418,7 +3418,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs6 = require("fs");
+    var fs7 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3502,7 +3502,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter3.read = function(filepath, options2) {
-      const str2 = fs6.readFileSync(filepath, "utf8");
+      const str2 = fs7.readFileSync(filepath, "utf8");
       const file2 = matter3(str2, options2);
       file2.path = filepath;
       return file2;
@@ -3531,7 +3531,7 @@ var require_gray_matter = __commonJS({
 });
 
 // src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts
-var import_node_path5 = __toESM(require("node:path"));
+var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts
 var import_node_fs = __toESM(require("node:fs"));
@@ -6784,10 +6784,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path7) {
+  if (!path7)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path7.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -7196,11 +7196,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path7, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path7);
     return iss;
   });
 }
@@ -7347,16 +7347,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError2(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path6 = []) => {
+  const processError = (error52, path7 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -7383,17 +7383,17 @@ function formatError2(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path6 = []) => {
+  const processError = (error52, path7 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -7425,8 +7425,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path6) {
+  const path7 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path7) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -20118,13 +20118,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path6 = ref.slice(1).split("/").filter(Boolean);
-  if (path6.length === 0) {
+  const path7 = ref.slice(1).split("/").filter(Boolean);
+  if (path7.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path6[0] === defsKey) {
-    const key = path6[1];
+  if (path7[0] === defsKey) {
+    const key = path7[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -20794,30 +20794,17 @@ function renderGraphMermaid(inspection) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-var import_node_fs5 = __toESM(require("node:fs"));
-var import_node_path4 = __toESM(require("node:path"));
+var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_path5 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path3 = __toESM(require("node:path"));
+var import_gray_matter = __toESM(require_gray_matter());
+
+// src/skills/lib/document_utils.ts
 var import_node_fs3 = __toESM(require("node:fs"));
 var import_node_path2 = __toESM(require("node:path"));
-var import_gray_matter = __toESM(require_gray_matter());
-var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
-  "implements",
-  "implemented-by",
-  "derives-from",
-  "derived-by",
-  "refines",
-  "refined-by"
-]);
-var TASK_DEPENDENCY_RELATIONS = /* @__PURE__ */ new Set(["depends-on", "blocks"]);
-var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
-  "verifies",
-  "verified-by",
-  "references",
-  "evidence",
-  "evidence-refs",
-  "evidenceRefs"
-]);
 var CANONICAL_DOC_DIRS = [
   "docs/ideas",
   "docs/discovery",
@@ -20830,19 +20817,6 @@ var CANONICAL_DOC_DIRS = [
   "docs/impl/ir",
   "docs/impl/exp"
 ];
-var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
-function compareStrings2(left, right) {
-  return left.localeCompare(right);
-}
-function sortedUnique(values) {
-  return [...new Set(values)].sort(compareStrings2);
-}
-function normalizeArtifactPath(cwd, target) {
-  return import_node_path2.default.relative(import_node_path2.default.resolve(cwd), import_node_path2.default.resolve(cwd, target)).split(import_node_path2.default.sep).join("/");
-}
-function isExternalArtifactReference(value) {
-  return EXTERNAL_REFERENCE.test(value.trim());
-}
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -20850,6 +20824,10 @@ function stripExtendedLengthPrefix(value) {
 }
 function containmentKey(value) {
   const normalized = stripExtendedLengthPrefix(import_node_path2.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function repoPathKey(value) {
+  const normalized = value.replace(/\\/g, "/");
   return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 function isInside(cwd, candidate) {
@@ -20869,23 +20847,74 @@ function isInsideCheckout(cwd, candidate) {
   if (!isInside(cwd, resolved)) return false;
   return !import_node_fs3.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
 }
-function resolveContainedTaskDir(cwd, taskDir) {
-  const candidate = taskDir ?? "docs/tasks";
-  const resolved = import_node_path2.default.resolve(cwd, candidate);
+function toRepoRelative(cwd, absolute) {
+  return import_node_path2.default.relative(import_node_path2.default.resolve(cwd), absolute).split(import_node_path2.default.sep).join("/");
+}
+function resolveContainedDir(cwd, dir, flag = "--dir") {
+  const resolved = import_node_path2.default.resolve(cwd, dir);
   if (!isInside(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
+    throw new Error(`${flag} escapes the checkout: ${dir}`);
   }
-  if (import_node_fs3.default.existsSync(resolved) && !isInsideRealpath(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout through a link: ${candidate}`);
+  if (import_node_fs3.default.existsSync(resolved)) {
+    if (!isInsideRealpath(cwd, resolved)) {
+      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
+    }
+    return toRepoRelative(
+      stripExtendedLengthPrefix(import_node_fs3.default.realpathSync(cwd)),
+      stripExtendedLengthPrefix(import_node_fs3.default.realpathSync(resolved))
+    );
   }
-  return normalizeArtifactPath(cwd, stripExtendedLengthPrefix(resolved));
+  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
+}
+function scanRootKey(cwd, directory) {
+  const absolute = import_node_path2.default.resolve(cwd, directory);
+  try {
+    return containmentKey(stripExtendedLengthPrefix(import_node_fs3.default.realpathSync(absolute)));
+  } catch {
+    return containmentKey(absolute);
+  }
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
+var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
+  "implements",
+  "implemented-by",
+  "derives-from",
+  "derived-by",
+  "refines",
+  "refined-by"
+]);
+var TASK_DEPENDENCY_RELATIONS = /* @__PURE__ */ new Set(["depends-on", "blocks"]);
+var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
+  "verifies",
+  "verified-by",
+  "references",
+  "evidence",
+  "evidence-refs",
+  "evidenceRefs"
+]);
+var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
+function compareStrings2(left, right) {
+  return left.localeCompare(right);
+}
+function sortedUnique(values) {
+  return [...new Set(values)].sort(compareStrings2);
+}
+function normalizeArtifactPath(cwd, target) {
+  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), import_node_path3.default.resolve(cwd, target)).split(import_node_path3.default.sep).join("/");
+}
+function isExternalArtifactReference(value) {
+  return EXTERNAL_REFERENCE.test(value.trim());
+}
+function resolveContainedTaskDir(cwd, taskDir) {
+  return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
 }
 function markdownFiles(dir) {
-  if (!import_node_fs3.default.existsSync(dir) || !import_node_fs3.default.statSync(dir).isDirectory()) return [];
+  if (!import_node_fs4.default.existsSync(dir) || !import_node_fs4.default.statSync(dir).isDirectory()) return [];
   const files = [];
   const visit = (current) => {
-    for (const entry of import_node_fs3.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings2(a.name, b.name))) {
-      const full = import_node_path2.default.join(current, entry.name);
+    for (const entry of import_node_fs4.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings2(a.name, b.name))) {
+      const full = import_node_path3.default.join(current, entry.name);
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md") && !/^(?:readme|index)\.md$/i.test(entry.name)) files.push(full);
     }
@@ -20922,14 +20951,23 @@ function relationValues(raw, ownerPath) {
   return { relations: result, issues };
 }
 function readRecords(options2, collector) {
-  const cwd = import_node_path2.default.resolve(options2.cwd);
+  const cwd = import_node_path3.default.resolve(options2.cwd);
   const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
-  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
-  const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path2.default.join(cwd, directory))));
+  const seenRoots = /* @__PURE__ */ new Set();
+  const directories = [];
+  for (const directory of [...CANONICAL_DOC_DIRS, taskDir]) {
+    const key = scanRootKey(cwd, directory);
+    if (seenRoots.has(key)) continue;
+    seenRoots.add(key);
+    const absolute = import_node_path3.default.join(cwd, directory);
+    if (import_node_fs4.default.existsSync(absolute) && !isInsideRealpath(cwd, absolute)) continue;
+    directories.push(directory);
+  }
+  const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path3.default.join(cwd, directory))));
   const records = [];
-  for (const absolutePath of files.map((file2) => import_node_path2.default.resolve(cwd, file2))) {
+  for (const absolutePath of files.map((file2) => import_node_path3.default.resolve(cwd, file2))) {
     try {
-      const raw = import_node_fs3.default.readFileSync(absolutePath, "utf8");
+      const raw = import_node_fs4.default.readFileSync(absolutePath, "utf8");
       if (collector) {
         collector.filesRead += 1;
         collector.bytesRead += Buffer.byteLength(raw, "utf8");
@@ -20975,13 +21013,13 @@ function classifyArtifactRelation(relation) {
 }
 function localTarget(cwd, owner, value) {
   const trimmed = value.trim();
-  const ownerCandidate = import_node_path2.default.resolve(import_node_path2.default.dirname(owner.absolutePath), trimmed);
-  const rootCandidate = import_node_path2.default.resolve(cwd, trimmed);
+  const ownerCandidate = import_node_path3.default.resolve(import_node_path3.default.dirname(owner.absolutePath), trimmed);
+  const rootCandidate = import_node_path3.default.resolve(cwd, trimmed);
   const documentRelative = trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed === "." || trimmed === "..";
   const preferred = documentRelative ? ownerCandidate : rootCandidate;
   const fallback = documentRelative ? rootCandidate : ownerCandidate;
-  const chosen = isInside(cwd, preferred) && import_node_fs3.default.existsSync(preferred) ? preferred : fallback;
-  const exists = isInside(cwd, chosen) && import_node_fs3.default.existsSync(chosen) && import_node_fs3.default.statSync(chosen).isFile();
+  const chosen = isInside(cwd, preferred) && import_node_fs4.default.existsSync(preferred) ? preferred : fallback;
+  const exists = isInside(cwd, chosen) && import_node_fs4.default.existsSync(chosen) && import_node_fs4.default.statSync(chosen).isFile();
   return {
     path: isInside(cwd, chosen) ? normalizeArtifactPath(cwd, chosen) : normalizeArtifactPath(cwd, preferred),
     exists
@@ -20994,7 +21032,7 @@ function resolveArtifactRelation(cwd, source, rawValue, records) {
   if (byId.length === 1) return byId[0];
   if (byId.length > 1) return void 0;
   const target = localTarget(cwd, source, value);
-  return records.find((record2) => record2.path === target.path);
+  return records.find((record2) => repoPathKey(record2.path) === repoPathKey(target.path));
 }
 function issueCompare(left, right) {
   return compareStrings2(left.code, right.code) || compareStrings2(left.message, right.message);
@@ -21009,7 +21047,7 @@ function edgeCompare(left, right) {
   return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings2(left.from, right.from) || compareStrings2(left.relation, right.relation) || compareStrings2(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
 }
 function scanArtifactGraph(options2, collector) {
-  const cwd = import_node_path2.default.resolve(options2.cwd);
+  const cwd = import_node_path3.default.resolve(options2.cwd);
   if (collector) collector.scans += 1;
   const records = readRecords({ ...options2, cwd }, collector);
   const nodes = records.map(({ path: recordPath, id, type }) => ({ path: recordPath, id, type }));
@@ -21234,8 +21272,8 @@ var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
 ]);
 
 // src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
-var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path4 = __toESM(require("node:path"));
 var import_gray_matter2 = __toESM(require_gray_matter());
 var TASK_STATUSES = /* @__PURE__ */ new Set([
   "todo",
@@ -21251,22 +21289,22 @@ function sortedUnique2(values) {
   return [...new Set(values)].sort(compareStrings3);
 }
 function normalizeRepoPath(cwd, target) {
-  const absolute = import_node_path3.default.resolve(cwd, target);
-  return import_node_path3.default.relative(cwd, absolute).split(import_node_path3.default.sep).join("/");
+  const absolute = import_node_path4.default.resolve(cwd, target);
+  return import_node_path4.default.relative(cwd, absolute).split(import_node_path4.default.sep).join("/");
 }
 function normalizeOwnedRepoPath(cwd, ownerFile, reference) {
-  const ownerCandidate = import_node_path3.default.resolve(cwd, import_node_path3.default.dirname(ownerFile), reference);
-  const rootCandidate = import_node_path3.default.resolve(cwd, reference);
+  const ownerCandidate = import_node_path4.default.resolve(cwd, import_node_path4.default.dirname(ownerFile), reference);
+  const rootCandidate = import_node_path4.default.resolve(cwd, reference);
   const documentRelative = reference.startsWith("./") || reference.startsWith("../") || reference === "." || reference === ".." || !reference.includes("/") && !reference.includes("\\");
   const chosen = documentRelative ? ownerCandidate : rootCandidate;
   return normalizeRepoPath(cwd, chosen);
 }
 function markdownFiles2(dir) {
-  if (!import_node_fs4.default.existsSync(dir) || !import_node_fs4.default.statSync(dir).isDirectory()) return [];
+  if (!import_node_fs5.default.existsSync(dir) || !import_node_fs5.default.statSync(dir).isDirectory()) return [];
   const result = [];
   const visit = (current) => {
-    for (const entry of import_node_fs4.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings3(a.name, b.name))) {
-      const full = import_node_path3.default.join(current, entry.name);
+    for (const entry of import_node_fs5.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings3(a.name, b.name))) {
+      const full = import_node_path4.default.join(current, entry.name);
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) result.push(full);
     }
@@ -21316,13 +21354,13 @@ function relationValues2(raw, key, issues, taskId, file2) {
   return [];
 }
 function readTaskDocuments(cwd, taskDir) {
-  const root = import_node_path3.default.resolve(cwd, taskDir);
+  const root = import_node_path4.default.resolve(cwd, taskDir);
   const tasks = [];
   for (const file2 of markdownFiles2(root)) {
     const relativeFile = normalizeRepoPath(cwd, file2);
     let data;
     try {
-      data = (0, import_gray_matter2.default)(import_node_fs4.default.readFileSync(file2, "utf8")).data;
+      data = (0, import_gray_matter2.default)(import_node_fs5.default.readFileSync(file2, "utf8")).data;
     } catch (error51) {
       tasks.push({
         id: "",
@@ -21408,7 +21446,7 @@ function indexTasks(tasks) {
       continue;
     }
     byId.set(task.id, task);
-    byPath.set(task.file, task);
+    byPath.set(repoPathKey(task.file), task);
   }
   return { tasks: sortedTasks, byId, byPath, issues };
 }
@@ -21416,31 +21454,28 @@ function resolveReference(cwd, owner, reference, index) {
   const byId = index.byId.get(reference);
   if (byId) return byId;
   const normalized = normalizeOwnedRepoPath(cwd, owner.file, reference);
-  return index.byPath.get(normalized);
+  return index.byPath.get(repoPathKey(normalized));
 }
 function isExistingArtifactReference(cwd, taskDir, owner, reference) {
-  const candidate = import_node_path3.default.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
+  const candidate = import_node_path4.default.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
   if (!isInsideCheckout(cwd, candidate)) return false;
-  if (!import_node_fs4.default.existsSync(candidate) || !import_node_fs4.default.statSync(candidate).isFile()) return false;
-  const taskRoot = import_node_path3.default.resolve(cwd, taskDir);
-  const candidatePath = import_node_path3.default.resolve(candidate);
-  const insideTaskDir = candidatePath === taskRoot || candidatePath.startsWith(`${taskRoot}${import_node_path3.default.sep}`);
-  if (insideTaskDir) return false;
+  if (!import_node_fs5.default.existsSync(candidate) || !import_node_fs5.default.statSync(candidate).isFile()) return false;
+  if (isInside(import_node_path4.default.resolve(cwd, taskDir), candidate)) return false;
   try {
-    const type = (0, import_gray_matter2.default)(import_node_fs4.default.readFileSync(candidate, "utf8")).data?.type;
+    const type = (0, import_gray_matter2.default)(import_node_fs5.default.readFileSync(candidate, "utf8")).data?.type;
     return ["plan", "spec", "adr", "design"].includes(type);
   } catch {
     return false;
   }
 }
 function readArtifactIds(cwd, taskDir) {
-  const taskRoot = import_node_path3.default.resolve(cwd, taskDir);
+  const taskRoot = import_node_path4.default.resolve(cwd, taskDir);
   const ids = /* @__PURE__ */ new Set();
   for (const file2 of markdownFiles2(cwd)) {
-    const absolute = import_node_path3.default.resolve(file2);
-    if (absolute === taskRoot || absolute.startsWith(`${taskRoot}${import_node_path3.default.sep}`)) continue;
+    const absolute = import_node_path4.default.resolve(file2);
+    if (isInside(taskRoot, absolute)) continue;
     try {
-      const data = (0, import_gray_matter2.default)(import_node_fs4.default.readFileSync(file2, "utf8")).data;
+      const data = (0, import_gray_matter2.default)(import_node_fs5.default.readFileSync(file2, "utf8")).data;
       if (["plan", "spec", "adr", "design"].includes(data.type) && typeof data.id === "string" && data.id.trim()) {
         ids.add(data.id.trim());
       }
@@ -21579,7 +21614,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
   };
 }
 function buildTaskGraph(options2) {
-  const cwd = import_node_path3.default.resolve(options2.cwd);
+  const cwd = import_node_path4.default.resolve(options2.cwd);
   const plan = normalizeRepoPath(cwd, options2.plan);
   const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
   const parsed = readTaskDocuments(cwd, taskDir).filter((task) => task.implements.includes(plan));
@@ -21736,9 +21771,9 @@ function consideredOptionCount(body) {
 function bootstrapReasons(cwd) {
   const reasons = [];
   for (const directory of CANONICAL_DOC_DIRS) {
-    const full = import_node_path4.default.join(cwd, directory);
-    if (!import_node_fs5.default.existsSync(full) || !import_node_fs5.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
-    if (!import_node_fs5.default.existsSync(import_node_path4.default.join(full, "README.md"))) reasons.push(`missing-index:${directory}/README.md`);
+    const full = import_node_path5.default.join(cwd, directory);
+    if (!import_node_fs6.default.existsSync(full) || !import_node_fs6.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
+    if (!import_node_fs6.default.existsSync(import_node_path5.default.join(full, "README.md"))) reasons.push(`missing-index:${directory}/README.md`);
   }
   return reasons;
 }
@@ -21768,7 +21803,7 @@ function deriveHardBlockers(blockers, signals, gates) {
 function fallbackRecords(cwd, graph) {
   return graph.nodes.map((node) => ({
     ...node,
-    absolutePath: import_node_path4.default.join(cwd, node.path),
+    absolutePath: import_node_path5.default.join(cwd, node.path),
     body: "",
     status: null,
     relations: {},
@@ -21776,7 +21811,7 @@ function fallbackRecords(cwd, graph) {
   }));
 }
 function evaluateGraphGates(state, collector) {
-  const cwd = import_node_path4.default.resolve(state.cwd);
+  const cwd = import_node_path5.default.resolve(state.cwd);
   const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir }, collector);
   const records = projection.records.length > 0 ? projection.records : fallbackRecords(cwd, state.artifactGraph);
   const resolution = resolveArtifactFocus(cwd, state.artifactGraph, records, state.focus);
@@ -21836,7 +21871,7 @@ function evaluateGraphGates(state, collector) {
   return gates;
 }
 function projectGraphState(options2, collector) {
-  const cwd = import_node_path4.default.resolve(options2.cwd);
+  const cwd = import_node_path5.default.resolve(options2.cwd);
   const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
   const projection = scanArtifactGraph({ cwd, taskDir }, collector);
   const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options2.focus ?? []);
@@ -21904,7 +21939,7 @@ function parseArgs(argv) {
       args.format = parseFormat(requiredValue(argv, index, arg));
       index += 1;
     } else if (arg === "--cwd") {
-      args.cwd = import_node_path5.default.resolve(requiredValue(argv, index, arg));
+      args.cwd = import_node_path6.default.resolve(requiredValue(argv, index, arg));
       args.cwdExplicit = true;
       index += 1;
     } else if (arg === "--focus") {

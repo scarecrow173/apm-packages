@@ -8,7 +8,7 @@ import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repo
 import { lintProvenance, lintTraceability } from "./doc_provenance_lint";
 import { lintStructure } from "./doc_structure_lint";
 import { configFor, docTypes, frontMatterSchema, isForeignDocType } from "./doc_suite_utils";
-import { isIndexFileName, normalizeDir } from "./document_utils";
+import { isIndexFileName, isInsideRealpath, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
 // Scope
@@ -468,13 +468,9 @@ function legacyIdPrefixes(): Set<string> {
 function experimentNumbers(root: string): Map<string, number> {
   const expDir = path.join(root, IMPL_EXP_DIR);
   if (!fs.existsSync(expDir)) return new Map();
-  let realRoot: string;
-  try {
-    realRoot = fs.realpathSync(root);
-  } catch {
-    return new Map();
-  }
-  if (!realpathInside(realRoot, expDir)) return new Map();
+  // The exp dir must stay inside the repository by real path — the shared
+  // check fails closed so a symlinked dir cannot import outside logs.
+  if (!isInsideRealpath(root, expDir)) return new Map();
   const counts = new Map<string, number>();
   for (const name of fs.readdirSync(expDir)) {
     if (isSymlinkPath(path.join(expDir, name))) continue;
@@ -490,17 +486,6 @@ function isSymlinkPath(p: string): boolean {
   } catch {
     return false;
   }
-}
-
-function realpathInside(realRoot: string, absolute: string): boolean {
-  let real: string;
-  try {
-    real = fs.realpathSync(absolute);
-  } catch {
-    return false;
-  }
-  const rel = path.relative(realRoot, real);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
 function lintLegacyIdReferences(model: DocumentRepository, files: RepositoryDocument[]): Finding[] {

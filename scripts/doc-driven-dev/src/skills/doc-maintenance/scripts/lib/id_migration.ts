@@ -6,7 +6,7 @@ import path from "node:path";
 import { generateArtifactId, isLegacyArtifactId, isNewArtifactId } from "../../../lib/artifact_id";
 import { auditDocuments } from "../../../lib/doc_audit";
 import { configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc, residentTypesForDir, writeGeneratedIndex } from "../../../lib/doc_suite_utils";
-import { isIndexFileName, normalizeDir } from "../../../lib/document_utils";
+import { isIndexFileName, isInsideRealpath, normalizeDir } from "../../../lib/document_utils";
 import { auditExperimentLogs, auditImplementationRecords, updateIndexForExperimentDir, updateIndexForMarkdownDir } from "../../../impl-doc/scripts/lib/impl_doc_utils";
 
 const IMPL_IR_DIR = "docs/impl/ir";
@@ -114,7 +114,6 @@ function walkFiles(baseDir: string, extensions: string[]): string[] {
 }
 
 function canonicalDirs(cwd: string): { dir: string; type: string | null }[] {
-  const realCwd = realpathOf(cwd);
   const seen = new Set<string>();
   const dirs: { dir: string; type: string | null }[] = [];
   for (const type of docTypes) {
@@ -124,7 +123,7 @@ function canonicalDirs(cwd: string): { dir: string; type: string | null }[] {
       // A symlinked canonical dir pointing outside the repository must not
       // be adopted: discover/planRenames would treat outside files as
       // artifacts and could rename or rewrite them.
-      if (!fs.existsSync(full) || !realpathInside(realCwd, full)) continue;
+      if (!fs.existsSync(full) || !isInsideRealpath(cwd, full)) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
       dirs.push({ dir: candidate, type });
@@ -132,7 +131,7 @@ function canonicalDirs(cwd: string): { dir: string; type: string | null }[] {
   }
   for (const extra of [IMPL_IR_DIR, IMPL_EXP_DIR]) {
     const full = path.join(cwd, extra);
-    if (fs.existsSync(full) && realpathInside(realCwd, full)) {
+    if (fs.existsSync(full) && isInsideRealpath(cwd, full)) {
       dirs.push({ dir: extra, type: extra === IMPL_IR_DIR ? "impl" : "impl-exp" });
     }
   }
@@ -146,32 +145,14 @@ function isUnderDir(child: string, parent: string): boolean {
 }
 
 // Scan roots must not escape the repository through symlinks: a lexical
-// containment check is not enough because statSync follows links. Compare
-// canonical real paths instead so `guides -> /outside` is refused.
-function realpathInside(realCwd: string, absolute: string): boolean {
-  let real: string;
-  try {
-    real = fs.realpathSync(absolute);
-  } catch {
-    return false;
-  }
-  const rel = path.relative(realCwd, real);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-}
-
-function realpathOf(cwd: string): string {
-  try {
-    return fs.realpathSync(cwd);
-  } catch {
-    return cwd;
-  }
-}
+// containment check is not enough because statSync follows links. The shared
+// realpath containment check compares canonical real paths and fails closed,
+// so `guides -> /outside` is refused (Issue #156).
 
 // Agent-facing documents shipped outside docs/ (root AGENTS.md / README.md and
 // distributed .apm skill documents) carry the same canonical artifact
 // references, so they join the rewrite and unresolved-reference scan scope.
 function distributionDocRoots(cwd: string): string[] {
-  const realCwd = realpathOf(cwd);
   const candidates = [".apm"];
   const packagesDir = path.join(cwd, "packages");
   if (fs.existsSync(packagesDir) && fs.statSync(packagesDir).isDirectory()) {
@@ -183,12 +164,11 @@ function distributionDocRoots(cwd: string): string[] {
     const full = path.join(cwd, candidate);
     return fs.existsSync(full)
       && fs.statSync(full).isDirectory()
-      && realpathInside(realCwd, full);
+      && isInsideRealpath(cwd, full);
   });
 }
 
 function resolveExtraRoots(cwd: string, extraRoots: string[], blockers: Blocker[]): string[] {
-  const realCwd = realpathOf(cwd);
   const resolved: string[] = [];
   for (const extra of extraRoots) {
     const absolute = path.resolve(cwd, extra);
@@ -205,7 +185,7 @@ function resolveExtraRoots(cwd: string, extraRoots: string[], blockers: Blocker[
       });
       continue;
     }
-    if (!realpathInside(realCwd, absolute)) {
+    if (!isInsideRealpath(cwd, absolute)) {
       blockers.push({
         code: "invalid-extra-root",
         file: null,
@@ -221,7 +201,7 @@ function resolveExtraRoots(cwd: string, extraRoots: string[], blockers: Blocker[
 function contentRoots(cwd: string, dirs: { dir: string }[], extraRoots: string[] = []): string[] {
   const roots: string[] = [];
   const docsRoot = path.join(cwd, "docs");
-  if (fs.existsSync(docsRoot) && realpathInside(realpathOf(cwd), docsRoot)) roots.push("docs");
+  if (fs.existsSync(docsRoot) && isInsideRealpath(cwd, docsRoot)) roots.push("docs");
   for (const { dir } of dirs) {
     if (!isUnderDir(dir, "docs")) roots.push(dir);
   }

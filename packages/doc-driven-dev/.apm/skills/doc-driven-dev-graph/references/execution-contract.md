@@ -50,6 +50,12 @@ For each selected edge:
 12. Re-enter from `next` with a fresh state projection.
 13. In `single-step` mode yield; in `run-until-yield` mode repeat.
 
+The caller owns the route invocation: `runCaller` appends a pinned
+`--task-dir docs/tasks` after any adapter `prefixArgs`, because the caller's
+own task bookkeeping — the proof document and the task-aware hop budget —
+is anchored at `docs/tasks`. Last flag wins deliberately; an adapter-supplied
+`--task-dir` is never honored.
+
 Record completion, gate, and follow-up evidence by persisting those values in
 canonical Markdown.
 
