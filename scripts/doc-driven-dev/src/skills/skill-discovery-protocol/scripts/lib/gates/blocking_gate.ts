@@ -26,15 +26,19 @@ function runBlockingGate(
   adapter: AdapterConfig,
   skills: ScannedSkill[],
 ): BlockingResult {
+  if (!Array.isArray(skills)) skills = [];
   const checks: BlockingCheck[] = [];
   const invResolution = adapter.invocation_resolution;
   const overrides = invResolution.overrides ?? { capabilities: {} as Record<string, never> };
 
-  // Build helper indices
+  // Build helper indices. Profile and catalog reach this gate as
+  // untrusted artifacts: the schema gate reports their defects but all
+  // gates still run, so every dereference stays guarded (?? [] / ?.) to
+  // keep the run alive long enough to write validation-report.json.
   const skillNames = new Set(skills.map((s) => s.name));
   const skillProvides = new Map<string, Set<string>>();
   for (const skill of skills) {
-    const caps = new Set(skill.provides.map((p) => p.capability));
+    const caps = new Set((skill.provides ?? []).map((p) => p.capability));
     skillProvides.set(skill.name, caps);
   }
 
@@ -75,11 +79,11 @@ function checkUnresolvedRequired(
 
   // Find all required uses that are not resolved
   const resolvedCaps = new Set(
-    profile.resolved_invocations.map((inv) => `${inv.source_skill}::${inv.capability}`),
+    (profile.resolved_invocations ?? []).map((inv) => `${inv.source_skill}::${inv.capability}`),
   );
 
   for (const skill of skills) {
-    for (const use of skill.uses) {
+    for (const use of skill.uses ?? []) {
       if (use.required) {
         const key = `${skill.name}::${use.capability}`;
         if (!resolvedCaps.has(key)) {
@@ -164,7 +168,7 @@ function checkOverrideNotAllowed(
   // Build index of uses with override_allowed=false
   const noOverride = new Map<string, Set<string>>(); // capability -> set of skills that disallow override
   for (const skill of skills) {
-    for (const use of skill.uses) {
+    for (const use of skill.uses ?? []) {
       if (!use.override_allowed) {
         if (!noOverride.has(use.capability)) noOverride.set(use.capability, new Set());
         noOverride.get(use.capability)!.add(skill.name);
@@ -193,9 +197,9 @@ function checkUnusedSlots(
   const details: string[] = [];
 
   // Check for slots defined in flow_stack but never used in resolved_invocations
-  const usedSlots = new Set(profile.resolved_invocations.map((inv) => inv.slot));
+  const usedSlots = new Set((profile.resolved_invocations ?? []).map((inv) => inv.slot));
 
-  for (const slot of profile.flow_stack.slots) {
+  for (const slot of profile.flow_stack?.slots ?? []) {
     if (!usedSlots.has(slot.slot_id) && !slot.default) {
       details.push(`Slot "${slot.slot_id}" has no resolved invocation and no default`);
     }

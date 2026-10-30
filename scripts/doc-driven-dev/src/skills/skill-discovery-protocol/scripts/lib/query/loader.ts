@@ -43,9 +43,39 @@ export function loadQueryContext(args: QueryArgs): QueryContext {
   const profileContent = fs.readFileSync(profilePath, "utf8");
   const profile: FlowProfile = JSON.parse(profileContent);
 
-  // Schema pre-validation
+  // Schema pre-validation: fail closed on profiles whose required
+  // top-level fields are missing or mis-typed. Query handlers
+  // dereference these fields directly, and the profile artifact is
+  // untrusted input — shape enforcement belongs at this boundary.
   if (!profile.schema_version) {
     throw new Error("Invalid profile: missing schema_version");
+  }
+
+  const requiredArrayFields = [
+    "resolved_invocations",
+    "runtime_guidance",
+    "warnings",
+  ] as const;
+  for (const field of requiredArrayFields) {
+    if (!Array.isArray(profile[field])) {
+      throw new Error(`Invalid profile: missing or invalid ${field}`);
+    }
+  }
+
+  if (
+    typeof profile.flow_stack !== "object" ||
+    profile.flow_stack === null ||
+    !Array.isArray(profile.flow_stack.slots)
+  ) {
+    throw new Error("Invalid profile: missing or invalid flow_stack");
+  }
+
+  if (
+    typeof profile.classification !== "object" ||
+    profile.classification === null ||
+    !Array.isArray(profile.classification.categories)
+  ) {
+    throw new Error("Invalid profile: missing or invalid classification");
   }
 
   // Load co-located catalog, then fallback to discovered .sdp root.
@@ -60,6 +90,13 @@ export function loadQueryContext(args: QueryArgs): QueryContext {
         path.join(rootSdpDir, "skill-reference-catalog.json"),
       )
       : null);
+
+  // A catalog that parses but lacks the skills array is invalid input,
+  // not an absent catalog — fail closed rather than letting handlers
+  // dereference it.
+  if (catalog && !Array.isArray(catalog.skills)) {
+    throw new Error("Invalid catalog: missing or invalid skills");
+  }
 
   // Load co-located validation report, then fallback to discovered .sdp root.
   const validationReport =

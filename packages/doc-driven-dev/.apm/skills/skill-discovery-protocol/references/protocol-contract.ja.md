@@ -93,7 +93,7 @@ Required top-level fields:
 | ----- | ---- | ----------- |
 | `schema_version` | string | `"1.0"` |
 | `generated_at` | ISO 8601 | 生成日時 |
-| `validated_at` | ISO 8601 | 最終検証日時 |
+| `validated_at` | ISO 8601 | 最終検証日時。overall pass 時に `sdp validate` が再刻印する |
 | `skill_count` | number | skill 総数 |
 | `capability_count` | number | capability 総数 |
 | `skills` | array | skill entry 一覧 |
@@ -117,6 +117,10 @@ Flow Profile は flow 固有成果物であり、adapter の分類と解決結�
 
 schema、staleness、deterministic、blocking validation の結果を記録する。
 すべての必須 gate が pass の場合だけ `overall_result` は `"pass"` になる。
+
+overall pass 時、`sdp validate` は catalog と profile の `validated_at` も
+再刻印する。いずれかの gate が fail の場合は一切更新しない
+（gate-spec.ja.md §5 参照）。
 
 ## 8. Derived Outputs
 

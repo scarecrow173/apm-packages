@@ -49,6 +49,28 @@ function loadJson(filePath: string): Record<string, unknown> | null {
   return JSON.parse(content);
 }
 
+/**
+ * Re-stamp `validated_at` on an artifact after a successful validation.
+ * Writes directly (not via writeArtifact): this is a timestamp refresh,
+ * not a regeneration, so it must not be swallowed by the modulo-timestamp
+ * comparison. Everything else is preserved — the parsed object is
+ * re-emitted through renderJson, the same canonical format `sdp profile`
+ * uses. Returns true only when the file was actually rewritten; an
+ * artifact without the field is left untouched (never fabricated).
+ */
+function refreshValidatedAt(
+  filePath: string,
+  data: Record<string, unknown>,
+  timestamp: string,
+): boolean {
+  if (typeof data.validated_at !== "string" || data.validated_at === timestamp) {
+    return false;
+  }
+  data.validated_at = timestamp;
+  fs.writeFileSync(filePath, renderJson(data), "utf8");
+  return true;
+}
+
 function isPathWithinProject(rootDir: string, candidatePath: string): boolean {
   const rel = path.relative(rootDir, candidatePath);
   return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
@@ -99,7 +121,10 @@ function findCatalogPath(profilePath: string, profile: Record<string, unknown>, 
     }
     if (fs.existsSync(candidate)) {
       const data = loadJson(candidate);
-      if (data && data.skills) {
+      // Any defined skills field marks this as a catalog artifact — even a
+      // malformed one — so the schema gate can report it instead of the
+      // file being silently treated as absent.
+      if (data && data.skills !== undefined) {
         return candidate;
       }
     }
@@ -162,29 +187,33 @@ function buildCatalogValidation(
   }
 
   const referencedSkills = new Set<string>();
-  if (profile.resolved_invocations) {
+  if (Array.isArray(profile.resolved_invocations)) {
     for (const inv of profile.resolved_invocations) {
       referencedSkills.add(inv.source_skill);
       referencedSkills.add(inv.resolved_skill);
     }
   }
-  if (profile.classification?.categories) {
+  if (Array.isArray(profile.classification?.categories)) {
     for (const cat of profile.classification.categories) {
-      for (const s of cat.skills) referencedSkills.add(s);
+      for (const s of cat?.skills ?? []) referencedSkills.add(s);
     }
   }
-  if (profile.classification?.unmatched_skills) {
+  if (Array.isArray(profile.classification?.unmatched_skills)) {
     for (const s of profile.classification.unmatched_skills) referencedSkills.add(s);
   }
 
+  const catalogSkills = Array.isArray(catalog.skills) ? catalog.skills : [];
   const orphanSkills: string[] = [];
-  for (const skill of catalog.skills) {
+  for (const skill of catalogSkills) {
     if (!referencedSkills.has(skill.name)) {
       orphanSkills.push(skill.name);
     }
   }
 
-  const referenceCount = catalog.skills.reduce((sum, s) => sum + s.provides.length, 0);
+  const referenceCount = catalogSkills.reduce(
+    (sum, s) => sum + (Array.isArray(s?.provides) ? s.provides.length : 0),
+    0,
+  );
 
   return {
     skill_count: catalog.skill_count,
@@ -232,17 +261,23 @@ function buildProfileValidation(
     }
   }
 
-  const resolvedSlots = new Set((profile.resolved_invocations || []).map((inv) => inv.slot));
-  const unresolvedSlots = (profile.flow_stack?.slots || [])
+  const resolvedInvocations = Array.isArray(profile.resolved_invocations)
+    ? profile.resolved_invocations
+    : [];
+  const resolvedSlots = new Set(resolvedInvocations.map((inv) => inv.slot));
+  const flowStackSlots = Array.isArray(profile.flow_stack?.slots)
+    ? profile.flow_stack.slots
+    : [];
+  const unresolvedSlots = flowStackSlots
     .filter((slot) => !resolvedSlots.has(slot.slot_id) && !slot.default)
     .map((slot) => slot.slot_id)
     .sort();
 
   return {
     flow_count: 1,
-    flow_stack_slot_count: profile.flow_stack?.slots?.length ?? 0,
+    flow_stack_slot_count: flowStackSlots.length,
     unresolved_slots: unresolvedSlots,
-    resolved_invocation_count: profile.resolved_invocations?.length ?? 0,
+    resolved_invocation_count: resolvedInvocations.length,
     unused_override_warnings: unusedOverrideWarnings,
   };
 }
@@ -335,7 +370,9 @@ async function main(): Promise<void> {
   if (adapter) {
     currentRawSkills = scanSkills(cwd, adapter);
   }
-  const currentCatalogSkills: ScannedSkill[] = catalog?.skills ?? [];
+  const currentCatalogSkills: ScannedSkill[] = Array.isArray(catalog?.skills)
+    ? catalog.skills
+    : [];
 
   // ─── Gate 1: Schema Validation ───
   const schemaResult = runSchemaGate(
@@ -383,6 +420,45 @@ async function main(): Promise<void> {
   const catalogValidation = buildCatalogValidation(profile, catalog);
   const profileValidation = buildProfileValidation(profile, adapter);
 
+  // ─── validated_at refresh ───
+  // A validation run is itself the event `validated_at` records. When
+  // every gate that ran passes, re-stamp `validated_at` on the catalog
+  // and the profile.
+  //
+  // When the ONLY failure is age-based staleness (no new/removed skills),
+  // the artifacts' content is proven current by the schema and
+  // deterministic gates — the stale timestamp is the sole defect, and it
+  // is exactly what this run repairs. Refresh `validated_at`, then
+  // re-evaluate the staleness gate so the documented regen path
+  // (scan → infer → profile → validate) recovers pure-age staleness.
+  // Any other failure (skill drift, schema errors, deterministic diff,
+  // blocking violations) means the artifacts are NOT proven current:
+  // never refresh, so drift stays detected on the next run.
+  const stalenessAgeOnly =
+    stalenessResult.result === "fail" &&
+    stalenessResult.new_skills.length === 0 &&
+    stalenessResult.removed_skills.length === 0;
+  const nonStalenessFail = [
+    schemaResult.result,
+    deterministicResult.result,
+    blockingResult.result,
+  ].some((r) => r === "fail");
+
+  const refreshedArtifacts: string[] = [];
+  if (!nonStalenessFail && (stalenessResult.result !== "fail" || stalenessAgeOnly)) {
+    const refreshedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+    if (catalogPath && catalogData && refreshValidatedAt(catalogPath, catalogData, refreshedAt)) {
+      refreshedArtifacts.push(path.basename(catalogPath));
+    }
+    if (refreshValidatedAt(profilePath, profileData, refreshedAt)) {
+      refreshedArtifacts.push(path.basename(profilePath));
+    }
+    if (stalenessAgeOnly && catalog && adapter) {
+      const maxAgeDays = adapter.validation?.staleness?.max_age_days ?? 30;
+      stalenessResult = runStalenessGate(catalog, currentRawSkills, maxAgeDays);
+    }
+  }
+
   // ─── Compute overall_result ───
   const gateResults = [
     schemaResult.result,
@@ -424,6 +500,9 @@ async function main(): Promise<void> {
   console.log(`Deterministic: ${deterministicResult.result}`);
   console.log(`Blocking:      ${blockingResult.result}`);
   console.log(`Overall:       ${overallResult}`);
+  if (refreshedArtifacts.length > 0) {
+    console.log(`Refreshed validated_at: ${refreshedArtifacts.join(", ")}`);
+  }
   console.log(`Report: ${reportPath}`);
 
   if (schemaResult.errors.length > 0) {

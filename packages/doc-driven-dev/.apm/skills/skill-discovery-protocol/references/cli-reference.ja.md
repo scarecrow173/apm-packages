@@ -85,6 +85,12 @@ sdp validate --adapter <adapter-yaml>
 - `--profile` のみ: Schema と Staleness ゲートが実行；Deterministic と Blocking ゲートは **スキップ**
 - `--adapter` のみ: Adapter YAML 設定のスキーマのみ検証
 
+overall pass 時、`sdp validate` は catalog と profile の `validated_at` を
+再刻印する。他の gate がすべて pass している経年のみの staleness（スキル
+差分なし）は更新されて pass と報告される — これが期限切れ成果物の
+文書化された回復経路である。fail した実行では timestamp を一切更新しない
+（gate-spec.ja.md §5 参照）。
+
 ### 1.5 `sdp query`
 
 ```text

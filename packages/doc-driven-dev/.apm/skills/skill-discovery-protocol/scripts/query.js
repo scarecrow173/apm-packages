@@ -105,6 +105,9 @@ var handler3 = {
   description: "\u89E3\u6C7A\u95A2\u4FC2\u4E00\u89A7",
   execute(ctx) {
     const invocations = ctx.profile.resolved_invocations;
+    if (!Array.isArray(invocations)) {
+      throw new Error("Invalid profile: missing or invalid resolved_invocations");
+    }
     if (ctx.args.skill) {
       return invocations.filter((i) => i.source_skill === ctx.args.skill);
     }
@@ -386,6 +389,22 @@ function loadQueryContext(args) {
   if (!profile.schema_version) {
     throw new Error("Invalid profile: missing schema_version");
   }
+  const requiredArrayFields = [
+    "resolved_invocations",
+    "runtime_guidance",
+    "warnings"
+  ];
+  for (const field of requiredArrayFields) {
+    if (!Array.isArray(profile[field])) {
+      throw new Error(`Invalid profile: missing or invalid ${field}`);
+    }
+  }
+  if (typeof profile.flow_stack !== "object" || profile.flow_stack === null || !Array.isArray(profile.flow_stack.slots)) {
+    throw new Error("Invalid profile: missing or invalid flow_stack");
+  }
+  if (typeof profile.classification !== "object" || profile.classification === null || !Array.isArray(profile.classification.categories)) {
+    throw new Error("Invalid profile: missing or invalid classification");
+  }
   const profileDir = import_node_path.default.dirname(profilePath);
   const rootSdpDir = findSdpRootDir(cwd, profilePath);
   const catalog = loadOptionalJson(
@@ -393,6 +412,9 @@ function loadQueryContext(args) {
   ) || (rootSdpDir ? loadOptionalJson(
     import_node_path.default.join(rootSdpDir, "skill-reference-catalog.json")
   ) : null);
+  if (catalog && !Array.isArray(catalog.skills)) {
+    throw new Error("Invalid catalog: missing or invalid skills");
+  }
   const validationReport = loadOptionalJson(
     import_node_path.default.join(profileDir, "validation-report.json")
   ) || (rootSdpDir ? loadOptionalJson(
@@ -578,6 +600,11 @@ async function main() {
     return;
   }
   const result = handler11.execute(ctx);
+  if (result === void 0) {
+    console.error(`Error: query "${handler11.name}" produced no result`);
+    process.exitCode = 1;
+    return;
+  }
   const format = args.format || "json";
   const renderer = getRenderer(format);
   console.log(renderer.render(result));
