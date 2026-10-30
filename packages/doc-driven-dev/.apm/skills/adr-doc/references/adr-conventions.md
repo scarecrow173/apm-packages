@@ -166,6 +166,8 @@ For replacement decisions, link both ways when possible:
 
 - New ADR: `relations.supersedes` points to the old ADR.
 - Old ADR: `relations.superseded-by` points to the new ADR.
+- Also re-point or close in-flight dependents (specs, plans, tasks) that
+  still cite the replaced ADR.
 
 ## Minimal MADR Content
 

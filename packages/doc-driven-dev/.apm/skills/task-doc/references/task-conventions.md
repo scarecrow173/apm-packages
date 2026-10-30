@@ -194,6 +194,9 @@ Tasks are active execution records.
 - `done` tasks should preserve completion evidence and verification notes.
 - If the task scope changes substantially, create a new task or supersede the
   old one instead of broadening it silently.
+- A task file holds one delegable work item. Work smaller than a single
+  coherent action stays in the plan's own task list rather than becoming a
+  micro-task file.
 - Status, owner, and relation updates are acceptable in-place edits.
 
 ## Index

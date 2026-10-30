@@ -16,6 +16,8 @@ implementation plans.
 2. Ensure overview-first structure.
    Keep `docs/designs/overview.md` as the global design map.
 3. Create a detailed design document.
+   While iterating the same baseline, update the existing design doc; create
+   a new file for a distinct design topic or a superseding redesign.
 
    ```bash
    node scripts/new_design.js --title "Design checkout orchestration" --from docs/specs/define-checkout-flow.md --from docs/adr/checkout-runtime.md

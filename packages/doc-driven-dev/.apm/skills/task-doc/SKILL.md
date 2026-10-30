@@ -73,7 +73,9 @@ TASK-DOC-GATE-001: the referenced plan must exist and have status
    Use `todo`, `in-progress`, `blocked`, `done`, or `wont-do`.
 5. Prefer short tasks.
    Split work when one task mixes unrelated files, behaviors, or verification
-   paths.
+   paths. Keep a floor too: a task file should be a delegable work item —
+   fold items smaller than one coherent action into the plan's own task list
+   instead of creating micro-task files.
 
 ## Done Criteria Requirements
 

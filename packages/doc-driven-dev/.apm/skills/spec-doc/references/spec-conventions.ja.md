@@ -171,7 +171,10 @@ spec は計画入力であり、ADR のような不変の決定記録ではあ�
 - `draft` と `proposed` の spec は自由に編集できます。
 - `approved` の spec は、範囲を変えない明確化であれば追記できます。
 - 承認後に範囲、挙動、受け入れ基準を大きく変える場合は、新しい spec を作るか
-  古い spec を明示的に supersede します。
+  古い spec を明示的に supersede します。supersede するときは
+  `supersedes`/`superseded-by` を双方向にリンクし、置き換えた spec を
+  参照し続ける進行中の依存文書（plan、design、task）を付け替えるか
+  クローズします。
 - `implemented` の spec は履歴証拠として扱います。実装済みの意図を書き換える
   より、日付付き note または superseding spec を優先します。
 - status、owner、relation の更新は同一ファイル内で許容します。

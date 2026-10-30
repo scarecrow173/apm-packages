@@ -169,6 +169,8 @@ relations:
 
 - 新しい ADR: `relations.supersedes` で古い ADR を指す。
 - 古い ADR: `relations.superseded-by` で新しい ADR を指す。
+- 置き換えた ADR を引用し続ける進行中の依存文書（spec、plan、task）も
+  付け替えるかクローズします。
 
 ## 最小 MADR 内容
 

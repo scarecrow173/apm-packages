@@ -197,6 +197,10 @@ real gaps instead of style changes.
 Plan status values: `draft`, `approved`, `in-progress`, `blocked`,
 `completed`, `superseded`.
 
+Update the plan in place for status, progress, and in-package scope changes;
+supersede only when the plan no longer describes the work — then close or
+re-point its still-open tasks.
+
 ## Never
 
 - Never force unrelated subsystems into a single plan without calling out the

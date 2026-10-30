@@ -173,7 +173,9 @@ Specs are planning inputs, not immutable decision records.
 - `draft` and `proposed` specs may be edited freely.
 - `approved` specs may receive clarifications that do not change scope.
 - Substantive scope, behavior, or acceptance changes after approval should
-  create a new spec or explicitly supersede the old one.
+  create a new spec or explicitly supersede the old one. On supersession,
+  link `supersedes`/`superseded-by` both ways and re-point or close in-flight
+  dependents (plans, designs, tasks) that still target the replaced spec.
 - `implemented` specs should be treated as historical evidence. Prefer dated
   notes or superseding specs over rewriting implemented intent.
 - Status, owner, and relation updates are acceptable in-place edits.
