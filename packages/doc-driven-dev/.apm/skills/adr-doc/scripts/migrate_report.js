@@ -28055,14 +28055,13 @@ async function hasSection(content3, section) {
 
 // src/skills/adr-doc/scripts/migrate_report.ts
 var targetSections = [
-  "Status",
   "Context and Problem Statement",
   "Decision Drivers",
   "Considered Options",
   "Decision Outcome",
   "Consequences",
   "Confirmation",
-  "Pros and Cons",
+  "Pros and Cons of the Options",
   "More Information"
 ];
 function parseArgs(argv) {

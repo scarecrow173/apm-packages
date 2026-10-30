@@ -17,7 +17,7 @@ const recommendedSections = [
   "Decision Drivers",
   "Consequences",
   "Confirmation",
-  "Pros and Cons",
+  "Pros and Cons of the Options",
   "More Information",
 ];
 
