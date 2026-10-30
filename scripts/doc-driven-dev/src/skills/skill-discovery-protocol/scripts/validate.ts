@@ -50,16 +50,16 @@ function loadJson(filePath: string): Record<string, unknown> | null {
 }
 
 /**
- * Re-stamp `validated_at` on an artifact after a successful validation.
- * Writes directly (not via writeArtifact): this is a timestamp refresh,
- * not a regeneration, so it must not be swallowed by the modulo-timestamp
- * comparison. Everything else is preserved — the parsed object is
- * re-emitted through renderJson, the same canonical format `sdp profile`
- * uses. Returns true only when the file was actually rewritten; an
- * artifact without the field is left untouched (never fabricated).
+ * Stage a `validated_at` re-stamp on an artifact after a successful
+ * validation — in memory only. The caller performs the actual file write
+ * after validation-report.json is safely on disk (the refresh is
+ * best-effort and must never block or fail the report write). The write
+ * bypasses writeArtifact's modulo-timestamp no-op by emitting through
+ * renderJson, the same canonical format `sdp profile` uses. Returns true
+ * only when the object now holds a new timestamp that must be persisted;
+ * an artifact without the field is left untouched (never fabricated).
  */
-function refreshValidatedAt(
-  filePath: string,
+function stageValidatedAtRefresh(
   data: Record<string, unknown>,
   timestamp: string,
 ): boolean {
@@ -67,7 +67,6 @@ function refreshValidatedAt(
     return false;
   }
   data.validated_at = timestamp;
-  fs.writeFileSync(filePath, renderJson(data), "utf8");
   return true;
 }
 
@@ -189,13 +188,15 @@ function buildCatalogValidation(
   const referencedSkills = new Set<string>();
   if (Array.isArray(profile.resolved_invocations)) {
     for (const inv of profile.resolved_invocations) {
+      if (inv == null) continue;
       referencedSkills.add(inv.source_skill);
       referencedSkills.add(inv.resolved_skill);
     }
   }
   if (Array.isArray(profile.classification?.categories)) {
     for (const cat of profile.classification.categories) {
-      for (const s of cat?.skills ?? []) referencedSkills.add(s);
+      const catSkills = cat != null && Array.isArray(cat.skills) ? cat.skills : [];
+      for (const s of catSkills) referencedSkills.add(s);
     }
   }
   if (Array.isArray(profile.classification?.unmatched_skills)) {
@@ -205,6 +206,7 @@ function buildCatalogValidation(
   const catalogSkills = Array.isArray(catalog.skills) ? catalog.skills : [];
   const orphanSkills: string[] = [];
   for (const skill of catalogSkills) {
+    if (skill == null) continue;
     if (!referencedSkills.has(skill.name)) {
       orphanSkills.push(skill.name);
     }
@@ -216,9 +218,9 @@ function buildCatalogValidation(
   );
 
   return {
-    skill_count: catalog.skill_count,
+    skill_count: typeof catalog.skill_count === "number" ? catalog.skill_count : 0,
     reference_count: referenceCount,
-    capability_count: catalog.capability_count,
+    capability_count: typeof catalog.capability_count === "number" ? catalog.capability_count : 0,
     orphan_skills: orphanSkills.sort(),
   };
 }
@@ -229,12 +231,19 @@ function buildProfileValidation(
 ): ValidationReport["profile_validation"] {
   const unusedOverrideWarnings: string[] = [];
 
+  // Untrusted artifacts: truthy non-arrays like {} or "x" survive `?? []` /
+  // `|| []` and crash `.filter`/`.map`, so every collection is narrowed with
+  // Array.isArray and non-object elements are skipped before dereferencing.
+  const resolvedInvocations = Array.isArray(profile.resolved_invocations)
+    ? profile.resolved_invocations
+    : [];
+
   if (adapter) {
-    const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} as Record<string, never> };
+    const overrides = adapter.invocation_resolution?.overrides ?? { capabilities: {} as Record<string, never> };
 
     const resolvedBySlot = new Set(
-      (profile.resolved_invocations || [])
-        .filter((inv) => inv.resolution_method === "slot_override")
+      resolvedInvocations
+        .filter((inv) => inv?.resolution_method === "slot_override")
         .map((inv) => inv.slot),
     );
 
@@ -247,8 +256,8 @@ function buildProfileValidation(
     }
 
     const resolvedByCap = new Set(
-      (profile.resolved_invocations || [])
-        .filter((inv) => inv.resolution_method === "capability_override")
+      resolvedInvocations
+        .filter((inv) => inv?.resolution_method === "capability_override")
         .map((inv) => inv.capability),
     );
 
@@ -261,15 +270,14 @@ function buildProfileValidation(
     }
   }
 
-  const resolvedInvocations = Array.isArray(profile.resolved_invocations)
-    ? profile.resolved_invocations
-    : [];
-  const resolvedSlots = new Set(resolvedInvocations.map((inv) => inv.slot));
+  const resolvedSlots = new Set(
+    resolvedInvocations.filter((inv) => inv != null).map((inv) => inv.slot),
+  );
   const flowStackSlots = Array.isArray(profile.flow_stack?.slots)
     ? profile.flow_stack.slots
     : [];
   const unresolvedSlots = flowStackSlots
-    .filter((slot) => !resolvedSlots.has(slot.slot_id) && !slot.default)
+    .filter((slot) => slot != null && !resolvedSlots.has(slot.slot_id) && !slot.default)
     .map((slot) => slot.slot_id)
     .sort();
 
@@ -340,6 +348,14 @@ async function main(): Promise<void> {
     console.error(`Error: Invalid JSON in ${args.profile}`);
     process.exitCode = 2;
     return;
+  }
+
+  // A JSON literal (null, "x", 5, []) parses but is not a profile object.
+  // Normalize to {} so the schema gate reports the malformed artifact —
+  // downstream field guards then see ordinary missing fields instead of
+  // crashing on a primitive before the report can be written.
+  if (profileData === null || typeof profileData !== "object" || Array.isArray(profileData)) {
+    profileData = {};
   }
 
   const profile = profileData as unknown as FlowProfile;
@@ -420,10 +436,12 @@ async function main(): Promise<void> {
   const catalogValidation = buildCatalogValidation(profile, catalog);
   const profileValidation = buildProfileValidation(profile, adapter);
 
-  // ─── validated_at refresh ───
-  // A validation run is itself the event `validated_at` records. When
-  // every gate that ran passes, re-stamp `validated_at` on the catalog
-  // and the profile.
+  // ─── validated_at refresh (decision + in-memory staging) ───
+  // A validation run is itself the event `validated_at` records — but
+  // only a run that actually checked currency. Refresh requires
+  // --adapter: without it the staleness, deterministic, and blocking
+  // gates are all skipped, so a schema-only pass proves nothing about
+  // freshness and must never re-stamp `validated_at`.
   //
   // When the ONLY failure is age-based staleness (no new/removed skills),
   // the artifacts' content is proven current by the schema and
@@ -436,6 +454,10 @@ async function main(): Promise<void> {
   // never refresh, so drift stays detected on the next run.
   const stalenessAgeOnly =
     stalenessResult.result === "fail" &&
+    // An unparseable basis date is corruption, not age: the refresh
+    // repairs an expired timestamp, never a garbage one (which may be
+    // tampering), so it stays a failure for regeneration to fix.
+    !Number.isNaN(new Date(stalenessResult.basis_date).getTime()) &&
     stalenessResult.new_skills.length === 0 &&
     stalenessResult.removed_skills.length === 0;
   const nonStalenessFail = [
@@ -443,15 +465,22 @@ async function main(): Promise<void> {
     deterministicResult.result,
     blockingResult.result,
   ].some((r) => r === "fail");
+  const refreshEligible =
+    adapter !== null &&
+    !nonStalenessFail &&
+    (stalenessResult.result !== "fail" || stalenessAgeOnly);
 
-  const refreshedArtifacts: string[] = [];
-  if (!nonStalenessFail && (stalenessResult.result !== "fail" || stalenessAgeOnly)) {
+  // Stage the new timestamp in memory now — the staleness re-evaluation
+  // and the report must observe it — but defer the file writes until
+  // after validation-report.json is safely on disk (below).
+  const pendingRefresh: { filePath: string; data: Record<string, unknown> }[] = [];
+  if (refreshEligible) {
     const refreshedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-    if (catalogPath && catalogData && refreshValidatedAt(catalogPath, catalogData, refreshedAt)) {
-      refreshedArtifacts.push(path.basename(catalogPath));
+    if (catalogPath && catalogData && stageValidatedAtRefresh(catalogData, refreshedAt)) {
+      pendingRefresh.push({ filePath: catalogPath, data: catalogData });
     }
-    if (refreshValidatedAt(profilePath, profileData, refreshedAt)) {
-      refreshedArtifacts.push(path.basename(profilePath));
+    if (stageValidatedAtRefresh(profileData, refreshedAt)) {
+      pendingRefresh.push({ filePath: profilePath, data: profileData });
     }
     if (stalenessAgeOnly && catalog && adapter) {
       const maxAgeDays = adapter.validation?.staleness?.max_age_days ?? 30;
@@ -473,7 +502,7 @@ async function main(): Promise<void> {
     schema_version: "1.0",
     generated_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
     repository: path.basename(cwd),
-    adapter_id: (profileData.adapter_id as string) || "",
+    adapter_id: typeof profileData.adapter_id === "string" ? profileData.adapter_id : "",
     schema_validation: schemaResult,
     staleness_validation: stalenessResult,
     deterministic_validation: deterministicResult,
@@ -493,6 +522,22 @@ async function main(): Promise<void> {
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   const reportContent = renderJson(report);
   fs.writeFileSync(reportPath, reportContent, "utf8");
+
+  // ─── Best-effort validated_at refresh writes ───
+  // The report is safely on disk; a failed re-stamp (read-only artifact,
+  // permissions, ...) warns on stderr but must never turn a passing run
+  // into exit 2 or prevent the report write above.
+  const refreshedArtifacts: string[] = [];
+  for (const target of pendingRefresh) {
+    try {
+      fs.writeFileSync(target.filePath, renderJson(target.data), "utf8");
+      refreshedArtifacts.push(path.basename(target.filePath));
+    } catch (e: unknown) {
+      console.error(
+        `Warning: could not refresh validated_at on ${path.basename(target.filePath)}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
 
   // ─── Output summary ───
   console.log(`Schema:        ${schemaResult.result}`);

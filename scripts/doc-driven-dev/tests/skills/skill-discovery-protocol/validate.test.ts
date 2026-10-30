@@ -787,3 +787,228 @@ test("validate exit code 0 when all pass, 1 when fail, 2 on input error", () => 
   const inputErr = runValidate(["--blah"], dir);
   assert.equal(inputErr.status, 2);
 });
+
+// ─── Validate: malformed artifact shapes (fail-closed boundary) ───
+// Every mis-typed artifact must yield a gate-fail report (exit 1), never
+// an uncaught exception before validation-report.json is written (exit 2).
+
+const PROFILE_REL = ".sdp/test-adapter/test-adapter-profile.json";
+const CATALOG_REL = ".sdp/skill-reference-catalog.json";
+const REPORT_REL = ".sdp/test-adapter/validation-report.json";
+
+function reportJson(dir: string) {
+  const reportPath = path.join(dir, REPORT_REL);
+  assert.ok(fs.existsSync(reportPath), "validation-report.json must be written");
+  return JSON.parse(fs.readFileSync(reportPath, "utf8"));
+}
+
+test("mis-typed artifact fields produce a gate-fail report, not a crash", () => {
+  // Each mutation used to crash a `.map`/iteration before the report
+  // write: truthy non-arrays like {} and "x" sail through `?? []`.
+  const profileMutations: Record<string, unknown>[] = [
+    { resolved_invocations: {} },
+    { resolved_invocations: "x" },
+    { flow_stack: { slots: "x" } },
+  ];
+  for (const patch of profileMutations) {
+    const dir = tempDir();
+    setupTestProject(dir);
+    generateArtifacts(dir);
+
+    const profilePath = path.join(dir, PROFILE_REL);
+    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    Object.assign(profile, patch);
+    fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
+
+    const result = runValidate(
+      ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+      dir,
+    );
+    assert.equal(
+      result.status,
+      1,
+      `patch ${JSON.stringify(patch)}: expected exit 1, got ${result.status} — ${result.stderr}`,
+    );
+    const report = reportJson(dir);
+    assert.equal(report.schema_validation.result, "fail");
+    assert.equal(report.overall_result, "fail");
+  }
+
+  // Mis-typed catalog skills: {} and a primitive profile document.
+  const dir2 = tempDir();
+  setupTestProject(dir2);
+  generateArtifacts(dir2);
+  const catalogPath = path.join(dir2, CATALOG_REL);
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  catalog.skills = {};
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
+
+  const catResult = runValidate(
+    ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+    dir2,
+  );
+  assert.equal(catResult.status, 1, `catalog skills {}: ${catResult.stderr}`);
+  assert.equal(reportJson(dir2).overall_result, "fail");
+
+  const dir3 = tempDir();
+  setupTestProject(dir3);
+  generateArtifacts(dir3);
+  fs.writeFileSync(path.join(dir3, PROFILE_REL), "null", "utf8");
+  const litResult = runValidate(
+    ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+    dir3,
+  );
+  assert.equal(litResult.status, 1, `literal profile: ${litResult.stderr}`);
+  assert.equal(reportJson(dir3).schema_validation.result, "fail");
+});
+
+test("null array elements in artifacts produce a report, not a crash", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+  generateArtifacts(dir);
+
+  const profilePath = path.join(dir, PROFILE_REL);
+  const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+  profile.resolved_invocations = [null];
+  profile.flow_stack.slots = [null];
+  fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), "utf8");
+
+  const catalogPath = path.join(dir, CATALOG_REL);
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  catalog.skills = [null];
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
+
+  const result = runValidate(
+    ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 1, `null elements: ${result.stderr}`);
+  const report = reportJson(dir);
+  assert.equal(report.schema_validation.result, "fail");
+  assert.equal(report.overall_result, "fail");
+});
+
+test("adapter missing invocation_resolution inner keys produces a report, not a crash", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+  generateArtifacts(dir);
+
+  // loadAdapter only checks top-level required keys — an adapter whose
+  // invocation_resolution omits unresolved/invalid_override must not
+  // crash the blocking gate before the report write.
+  const adapterPath = path.join(dir, "test-adapter.yaml");
+  const adapterContent = fs.readFileSync(adapterPath, "utf8");
+  const stripped = adapterContent
+    .replace(/  unresolved:\n    required: "fail"\n    optional: "warn"\n/, "")
+    .replace(/  invalid_override:\n    unknown_skill: "fail"\n    capability_mismatch: "warn"\n    override_not_allowed: "warn"\n/, "");
+  assert.notEqual(stripped, adapterContent, "adapter yaml must have been stripped");
+  fs.writeFileSync(adapterPath, stripped, "utf8");
+
+  const result = runValidate(
+    ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 1, `stripped adapter: ${result.stderr}`);
+  const report = reportJson(dir);
+  assert.equal(report.overall_result, "fail");
+});
+
+test("refresh failure on a read-only artifact warns but still writes the report and passes", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+  generateArtifacts(dir);
+
+  // Age the catalog so the refresh path is exercised (pure-age staleness).
+  const catalogPath = path.join(dir, CATALOG_REL);
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  const agedDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+  catalog.validated_at = agedDate;
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
+
+  // Read-only artifact: the re-stamp write must fail without killing the run.
+  fs.chmodSync(catalogPath, 0o444);
+  try {
+    const result = runValidate(
+      ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+      dir,
+    );
+    assert.equal(
+      result.status,
+      0,
+      `refresh failure must not fail the run: ${result.stderr}\n${result.stdout}`,
+    );
+    assert.ok(result.stdout.includes("Overall:       pass"));
+    assert.ok(
+      result.stderr.includes("could not refresh validated_at"),
+      `expected a refresh warning on stderr, got: ${result.stderr}`,
+    );
+
+    const report = reportJson(dir);
+    assert.equal(report.overall_result, "pass");
+
+    // The failed write leaves the aged timestamp on disk untouched.
+    const onDisk = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+    assert.equal(onDisk.validated_at, agedDate);
+  } finally {
+    fs.chmodSync(catalogPath, 0o666);
+  }
+});
+
+test("schema-only run (no --adapter) never refreshes validated_at", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+  generateArtifacts(dir);
+
+  // Age the catalog 60 days: with no --adapter the staleness gate is
+  // skipped, so a schema-only pass must not re-stamp freshness it never
+  // checked.
+  const catalogPath = path.join(dir, CATALOG_REL);
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  const agedDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+  catalog.validated_at = agedDate;
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
+
+  const result = runValidate(["--profile", PROFILE_REL], dir);
+  assert.equal(result.status, 0, `schema-only run: ${result.stderr}`);
+  assert.ok(result.stdout.includes("Staleness:     skipped"));
+  assert.ok(
+    !result.stdout.includes("Refreshed validated_at"),
+    `schema-only run must not refresh: ${result.stdout}`,
+  );
+
+  const onDisk = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  assert.equal(onDisk.validated_at, agedDate, "aged validated_at must be preserved");
+
+  const report = reportJson(dir);
+  assert.equal(report.staleness_validation.result, "skipped");
+  assert.equal(report.overall_result, "pass");
+});
+
+test("unparseable validated_at fails the staleness gate and is not refreshed over", () => {
+  const dir = tempDir();
+  setupTestProject(dir);
+  generateArtifacts(dir);
+
+  // A garbage basis date parses to NaN — NaN > max_age_days is false, so
+  // without the guard the age check silently passed.
+  const catalogPath = path.join(dir, CATALOG_REL);
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  catalog.validated_at = "not-a-date";
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf8");
+
+  const result = runValidate(
+    ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 1, `garbage validated_at must fail: ${result.stderr}`);
+  assert.ok(result.stdout.includes("Staleness:     fail"));
+
+  const report = reportJson(dir);
+  assert.equal(report.staleness_validation.result, "fail");
+  assert.equal(report.staleness_validation.basis_date, "not-a-date");
+
+  // A corrupt timestamp is not an "expired" one — the refresh path must
+  // not stamp validated over it.
+  const onDisk = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  assert.equal(onDisk.validated_at, "not-a-date");
+});
