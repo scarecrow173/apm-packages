@@ -398,8 +398,12 @@ async function main(): Promise<void> {
   );
 
   // ─── Gate 2: Staleness Validation ───
+  // `validation.staleness.enabled: false` skips the gate entirely — the
+  // flag, not the presence of a catalog, decides whether it runs. The
+  // skipped report shape matches the no-adapter / no-catalog paths.
+  const stalenessEnabled = adapter?.validation?.staleness?.enabled ?? true;
   let stalenessResult;
-  if (catalog && adapter) {
+  if (catalog && adapter && stalenessEnabled) {
     const maxAgeDays = adapter.validation?.staleness?.max_age_days ?? 30;
     stalenessResult = runStalenessGate(catalog, currentRawSkills, maxAgeDays);
   } else {
@@ -407,7 +411,7 @@ async function main(): Promise<void> {
       result: "skipped",
       basis: "validated_at",
       basis_date: "",
-      max_age_days: 30,
+      max_age_days: adapter?.validation?.staleness?.max_age_days ?? 30,
       age_days: 0,
       new_skills: [] as string[],
       removed_skills: [] as string[],
@@ -415,13 +419,23 @@ async function main(): Promise<void> {
   }
 
   // ─── Gate 3: Deterministic Validation ───
-  const deterministicResult = runDeterministicGate(
-    profilePath,
-    catalogPath,
-    adapterAbsPath,
-    cwd,
-    adapter?.validation?.deterministic?.compare,
-  );
+  // `validation.deterministic.enabled: false` skips the gate even when
+  // `compare` is populated — the flag, not the list, controls the gate.
+  const deterministicEnabled = adapter?.validation?.deterministic?.enabled ?? true;
+  const deterministicResult = deterministicEnabled
+    ? runDeterministicGate(
+        profilePath,
+        catalogPath,
+        adapterAbsPath,
+        cwd,
+        adapter?.validation?.deterministic?.compare,
+      )
+    : {
+        result: "skipped" as const,
+        comparisons: [] as { target: string; diff_found: boolean }[],
+        reason:
+          "Deterministic gate disabled by adapter (validation.deterministic.enabled: false)",
+      };
 
   // ─── Gate 4: Blocking Validations ───
   let blockingResult;
@@ -452,6 +466,15 @@ async function main(): Promise<void> {
   // Any other failure (skill drift, schema errors, deterministic diff,
   // blocking violations) means the artifacts are NOT proven current:
   // never refresh, so drift stays detected on the next run.
+  //
+  // A skipped deterministic gate is not currency evidence: the run never
+  // re-executed generation (adapter disabled it, no adapter, or no
+  // comparison targets), so nothing proved the artifacts' content
+  // current. The refresh therefore requires an actual deterministic
+  // pass — a skipped or failed gate must never re-stamp `validated_at`
+  // over unverified content. (Skipped staleness/blocking gates are
+  // different: staleness adds no content check the deterministic pass
+  // lacks, and blocking checks invocation policy, not freshness.)
   const stalenessAgeOnly =
     stalenessResult.result === "fail" &&
     // An unparseable basis date is corruption, not age: the refresh
@@ -468,6 +491,7 @@ async function main(): Promise<void> {
   const refreshEligible =
     adapter !== null &&
     !nonStalenessFail &&
+    deterministicResult.result === "pass" &&
     (stalenessResult.result !== "fail" || stalenessAgeOnly);
 
   // Stage the new timestamp in memory now — the staleness re-evaluation

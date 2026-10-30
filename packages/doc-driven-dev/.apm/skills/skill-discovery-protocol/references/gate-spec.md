@@ -161,6 +161,10 @@ validation:
     max_age_days: 30
 ```
 
+When `enabled: false`, the gate is skipped entirely and the report records
+`result: "skipped"` — the same state as a missing catalog or `--adapter`.
+The flag, not the presence of a catalog, decides whether the gate runs.
+
 ### Checks Performed
 
 | Check | Condition |
@@ -198,17 +202,25 @@ detected on subsequent runs. An unparseable basis date is corruption, not
 age, and is likewise never refreshed over.
 
 The refresh only applies to a run that actually checked freshness: it
-requires `--adapter`. A `--profile`-only run skips the staleness,
-deterministic, and blocking gates, so a schema pass alone proves nothing
-about freshness and never re-stamps `validated_at`. The re-stamp itself
-is best-effort: if an artifact cannot be rewritten, `sdp validate` warns
-on stderr and the run result and the validation report are unaffected.
+requires `--adapter` AND a deterministic-gate pass. A `--profile`-only
+run skips the staleness, deterministic, and blocking gates, so a schema
+pass alone proves nothing about freshness and never re-stamps
+`validated_at`. A skipped deterministic gate — disabled via
+`validation.deterministic.enabled: false` or left with no comparison
+targets — is not freshness evidence either: the run never re-executed
+generation, so a pure-age staleness failure is not repaired and
+`validated_at` is never re-stamped over unverified content. Skipped
+staleness or blocking gates do not by themselves block the refresh —
+only the deterministic gate re-derives and compares artifact content.
+The re-stamp itself is best-effort: if an artifact cannot be rewritten,
+`sdp validate` warns on stderr and the run result and the validation
+report are unaffected.
 
 ### Result Schema
 
 ```json
 {
-  "result": "pass" | "fail",
+  "result": "pass" | "fail" | "skipped",
   "basis": "validated_at",
   "basis_date": "2025-01-15T10:30:00Z",
   "max_age_days": 30,
@@ -235,6 +247,11 @@ validation:
       - "profile+catalog-artifacts"
       - "validation-report:exclude-timestamp"
 ```
+
+When `enabled: false`, the gate is skipped entirely and the report
+records `result: "skipped"` — regardless of `compare` entries. The flag,
+not the list, controls whether the gate runs. A skipped deterministic
+gate is not freshness evidence for the `validated_at` refresh (see §5).
 
 ### Procedure
 
@@ -263,7 +280,7 @@ validation:
 
 ```json
 {
-  "result": "pass" | "fail",
+  "result": "pass" | "fail" | "skipped",
   "comparisons": [
     {
       "target": "profile",
@@ -318,8 +335,8 @@ When `enabled: false`, Gate 4 is skipped entirely but recorded in the report:
 
 ```json
 {
-  "result": "skip",
-  "reason": "invocation validation disabled in adapter"
+  "result": "skipped",
+  "checks": []
 }
 ```
 
@@ -327,7 +344,7 @@ When `enabled: false`, Gate 4 is skipped entirely but recorded in the report:
 
 ```json
 {
-  "result": "pass" | "fail" | "skip",
+  "result": "pass" | "fail" | "skipped",
   "checks": [
     {
       "type": "unresolved_required",
@@ -369,8 +386,8 @@ The validation report aggregates all gate results:
 ### Gate Execution Order
 
 1. Schema (always runs)
-2. Staleness (requires `--adapter` and a catalog; otherwise reported `skipped`)
-3. Deterministic (requires `--adapter`; otherwise reported `skipped`)
+2. Staleness (requires `--adapter` and a catalog; also skipped when `validation.staleness.enabled = false`)
+3. Deterministic (requires `--adapter`; also skipped when `validation.deterministic.enabled = false`)
 4. Blocking (requires `--adapter` and a catalog; also skipped when `validation.invocation.enabled = false`)
 
 Even if Gate 1 fails, all subsequent gates still execute to provide
