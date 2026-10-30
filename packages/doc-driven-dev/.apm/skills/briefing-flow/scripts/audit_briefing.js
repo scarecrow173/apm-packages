@@ -27867,6 +27867,10 @@ var CANONICAL_DOC_DIRS = [
   "docs/impl/ir",
   "docs/impl/exp"
 ];
+var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
+  "changes",
+  "test-spec-skip"
+]);
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -27978,7 +27982,9 @@ var changesSchema = external_exports.object(Object.fromEntries(
 )).prefault({});
 var relationSchema = external_exports.object({
   ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
-  changes: changesSchema
+  changes: changesSchema,
+  // A non-empty reason string, not a relation target (Issue #165).
+  "test-spec-skip": external_exports.string().min(1).optional()
 }).prefault({});
 var frontMatterSchema = external_exports.object({
   id: external_exports.string().min(1),
@@ -28218,7 +28224,7 @@ function relationValues(raw, ownerPath) {
   const issues = [];
   for (const key of Object.keys(raw).sort(compareStrings)) {
     const value = raw[key];
-    if (key === "changes" && value && typeof value === "object" && !Array.isArray(value)) continue;
+    if (nonReferenceRelationKeys.has(key)) continue;
     if (typeof value !== "string" && !Array.isArray(value)) {
       issues.push(`invalid-relation:${ownerPath}:${key}`);
       result[key] = [];

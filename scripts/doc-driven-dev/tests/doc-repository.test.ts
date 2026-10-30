@@ -195,6 +195,32 @@ test("relation resolution handles IDs, paths, ambiguity, and external targets", 
   assert.equal(fresh.resolveRelationTarget(planAgain, "docs/specs/assets/flow.png").status, "resolved-file");
 });
 
+test("non-reference relations keys never enter the resolvable relation map", async () => {
+  const repo = healthyRepo();
+  writeDoc(repo, "docs/plans/skipped-verification.md", canonicalFrontMatter({
+    id: "PLAN-0002",
+    type: "plan",
+    title: "Skipped verification",
+    status: "approved",
+    relations: {
+      "test-spec-skip": "docs-only change, no verifiable behavior",
+      "derives-from": ["SPEC-0001"],
+      changes: { added: [{ type: "docs", path: "docs/plans/skipped-verification.md" }] },
+    },
+  }));
+
+  const model = await scanRepository({ cwd: repo });
+  const plan = model.byPath.get("docs/plans/skipped-verification.md");
+  assert.ok(plan);
+
+  // `test-spec-skip` is a reason string and `changes` a change set — neither
+  // is a document target, so both are exempted at ingestion instead of
+  // reaching resolution consumers (Issue #165).
+  assert.equal(plan.relations["test-spec-skip"], undefined);
+  assert.equal(plan.relations["changes"], undefined);
+  assert.deepEqual(plan.relations["derives-from"], ["SPEC-0001"]);
+});
+
 test("path resolution refuses escapes outside the repository root", async () => {
   const repo = healthyRepo();
   fs.writeFileSync(path.join(os.tmpdir(), "outside-secret.md"), "# outside\n", "utf8");

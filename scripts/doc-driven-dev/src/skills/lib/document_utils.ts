@@ -25,6 +25,19 @@ const CANONICAL_DOC_DIRS = [
 
 type CanonicalDocDir = typeof CANONICAL_DOC_DIRS[number];
 
+/**
+ * `relations:` keys whose values are metadata rather than document
+ * references: `changes` carries a change set and `test-spec-skip` carries a
+ * human reason string for skipping test-spec evidence. The ingestion
+ * boundaries (`extractRelations` in the repository model, `relationValues`
+ * in the artifact graph) exempt these keys from artifact-target resolution
+ * so no consumer ever treats their values as links (Issue #165).
+ */
+const nonReferenceRelationKeys: ReadonlySet<string> = new Set([
+  "changes",
+  "test-spec-skip",
+]);
+
 function normalizeDir(input: string): string {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
 }
@@ -190,6 +203,7 @@ export {
   isInsideCheckout,
   isInsideRealpath,
   listMarkdownFiles,
+  nonReferenceRelationKeys,
   normalizeDir,
   repoPathKey,
   resolveContainedDir,

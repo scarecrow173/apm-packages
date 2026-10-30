@@ -100,7 +100,8 @@ relation の対象はリポジトリ相対パスまたはドキュメント ID�
 形式）で記述できます。`doc-status` の監査は、`verifies` の対象が spec、
 design、ADR 以外の型に解決される場合（`test-spec-invalid-verifies-target`）、
 および approved / in-progress / completed の plan が `verified-by` で
-test spec をリンクせず `test-spec-skip` も記録していない場合
+test spec をリンクせず、`relations:` に `test-spec-skip` の理由
+(リンク先ではなく理由文字列)も記録していない場合
 （`plan-missing-test-spec-evidence`）に警告を報告します。
 
 ## 必須コンテンツ
