@@ -409,6 +409,9 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 - Each Implementation Record is completed and audited before task closure,
   referencing and auditing any Experiment Logs (exp) created during
   implementation.
+- Close-out regenerated the owning directory indexes in the same change
+  (`doc_maintenance.js plan|apply --type <type>`): settled rows move to the
+  `## Settled` tier; `doc_status lint` reports stale indexes until then.
 
 ## Loopback Rules
 

@@ -160,7 +160,25 @@
           "infos": 0,
           "clean": false
         }
-      ]
+      ],
+      "orphans": {
+        "total": 180,
+        "byRule": {
+          "orphan-index": 67,
+          "orphan-navigation": 67,
+          "orphan-relation": 46
+        },
+        "byType": {
+          "adr": 32,
+          "design": 2,
+          "discovery": 60,
+          "idea": 15,
+          "plan": 4,
+          "spec": 43,
+          "task": 22,
+          "test-spec": 2
+        }
+      }
     }
   },
   "types": {

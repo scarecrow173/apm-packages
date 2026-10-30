@@ -28015,6 +28015,29 @@ function generateArtifactId(idPrefix) {
   return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
 }
 
+// src/skills/lib/doc_lifecycle.ts
+var SETTLED_STATUSES = {
+  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
+  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
+  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
+  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
+  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
+  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
+  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
+  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
+  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
+  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
+};
+var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
+function lifecycleBucketForType(type) {
+  const declared = type ?? "untyped";
+  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
+}
+function isSettledStatus(type, status) {
+  if (!status) return false;
+  return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
+}
+
 // src/skills/lib/doc_suite_utils.ts
 var relationFields = [
   "source",
@@ -28161,6 +28184,7 @@ function configFor(type) {
   return configs[type];
 }
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 function parseDoc(content3) {
   try {
     const parsed = (0, import_gray_matter.default)(content3);
@@ -28312,6 +28336,26 @@ function frontMatter(config2, id, title, status, date5, relations, metadata) {
     "---"
   ].join("\n");
 }
+function renderIndexBody(entries, options2 = {}) {
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const compare = (left, right) => {
+    if (options2.overviewFirst) {
+      if (left.file === "overview.md") return -1;
+      if (right.file === "overview.md") return 1;
+    }
+    return left.file.localeCompare(right.file);
+  };
+  const row = (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
+  const settled = (entry) => isSettledStatus(entry.type ?? options2.settledType ?? null, entry.status);
+  const active = entries.filter((entry) => !settled(entry)).sort(compare);
+  const settledEntries = entries.filter(settled).sort(compare);
+  const body = [header, ...active.map(row)].join("\n");
+  return settledEntries.length > 0 ? `${body}
+
+## Settled ${GENERATED_SETTLED_MARKER}
+
+${[header, ...settledEntries.map(row)].join("\n")}` : body;
+}
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
 var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
@@ -28374,8 +28418,7 @@ function writeIndexFile(adrDir, content3, force = false) {
   return { written: true, reason: null };
 }
 async function buildIndex(dir, relativeDir) {
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-  const rows = (await Promise.all(adrFiles(dir).map(async (file2) => {
+  const entries = (await Promise.all(adrFiles(dir).map(async (file2) => {
     const content3 = import_node_fs2.default.readFileSync(import_node_path3.default.join(dir, file2), "utf8");
     const data = matterData(content3);
     if (isForeignDocType(data.type, "adr", relativeDir)) return null;
@@ -28387,14 +28430,19 @@ async function buildIndex(dir, relativeDir) {
         title = import_node_path3.default.basename(file2, ".md");
       }
     }
-    const status = typeof data.status === "string" ? data.status : "\u2014";
+    const status = typeof data.status === "string" ? data.status : null;
     const numberMatch = /^(\d+)-/.exec(file2);
     const fallbackId = numberMatch ? `ADR-${numberMatch[1]}` : "\u2014";
     const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : fallbackId;
-    return `| ${indexCell(id)} | ${indexCell(title)} | ${indexCell(status)} | [${indexCell(file2)}](./${indexCell(file2)}) |`;
-  }))).filter((row) => row !== null);
-  const body = rows.length > 0 ? `${header}
-${rows.join("\n")}` : header;
+    return {
+      file: file2,
+      id,
+      status,
+      title,
+      type: typeof data.type === "string" ? data.type : null
+    };
+  }))).filter((entry) => entry !== null);
+  const body = renderIndexBody(entries, { settledType: "adr" });
   return `# Architecture Decision Records
 
 ${GENERATED_INDEX_MARKER}

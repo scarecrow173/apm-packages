@@ -1,4 +1,5 @@
 import type { DocSpec } from "../../e2e/harness/fixture_manager";
+import { isSettledStatus } from "../../../src/skills/lib/doc_lifecycle";
 
 /**
  * Document-corpus builders for the Issue #127 lifecycle analysis.
@@ -136,19 +137,49 @@ export function benchmarkCorpusFiles(pathologies: { dupId?: boolean; brokenRelat
 // Long-running project corpus
 // ---------------------------------------------------------------------------
 
-type IndexRow = { id: string; title: string; status: string; file: string };
+/**
+ * `type`/`docStatus` describe the *document's* real lifecycle coordinates;
+ * `status` is the cell text actually written into the row. Keeping them
+ * separate lets the fixture plant a stale row (TASK-0101 shows `todo` while
+ * the doc is `done`) that still sorts into the tier a faithful regeneration
+ * would place the document in — matching `renderIndexBody`.
+ */
+type IndexRow = {
+  id: string;
+  title: string;
+  status: string;
+  file: string;
+  type?: string;
+  docStatus?: string;
+};
 
 /**
- * A generated-style index (`doc-suite:generated-index` marker + index table),
- * matching `writeGeneratedIndex` output shape. Rows must carry the doc's real
+ * A generated-style index (`doc-suite:generated-index` marker + status-aware
+ * two-tier table), matching `writeGeneratedIndex`/`renderIndexBody` output
+ * shape: in-flight rows first, then a `## Settled` tier, each file-lexical
+ * (overview.md first for designs). Rows must carry the doc's real
  * id/title/status or doc-status reports `index-metadata-mismatch`.
  */
 function indexReadme(dir: string, title: string, rows: IndexRow[], extra = ""): string {
-  const table = rows.map((row) =>
-    `| ${row.id} | ${row.title} | ${row.status} | [${row.file}](./${row.file}) |`,
-  ).join("\n");
-  return `# ${title}\n\n<!-- doc-suite:generated-index -->\n\nDirectory: \`${dir}\`\n\n`
-    + `| ID | Title | Status | File |\n| --- | --- | --- | --- |\n${table}\n${extra}`;
+  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const compare = (a: IndexRow, b: IndexRow): number => {
+    if (dir === "docs/designs") {
+      if (a.file === "overview.md") return -1;
+      if (b.file === "overview.md") return 1;
+    }
+    return a.file.localeCompare(b.file);
+  };
+  const settled = (row: IndexRow): boolean =>
+    isSettledStatus(row.type ?? "untyped", row.docStatus ?? row.status);
+  const line = (row: IndexRow): string =>
+    `| ${row.id} | ${row.title} | ${row.status} | [${row.file}](./${row.file}) |`;
+  const active = rows.filter((row) => !settled(row)).sort(compare);
+  const settledRows = rows.filter(settled).sort(compare);
+  const body = `${header}\n${active.map(line).join("\n")}`
+    + (settledRows.length > 0
+      ? `\n\n## Settled <!-- doc-suite:settled-index -->\n\n${header}\n${settledRows.map(line).join("\n")}`
+      : "");
+  return `# ${title}\n\n<!-- doc-suite:generated-index -->\n\nDirectory: \`${dir}\`\n\n${body}\n${extra}`;
 }
 
 /**
@@ -183,7 +214,7 @@ export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
     files[`${dir}/${rel}`] = doc(frontmatter, body);
     addRow(dir, {
       id: String(frontmatter.id), title: String(frontmatter.title),
-      status: String(frontmatter.status), file: rel,
+      status: String(frontmatter.status), file: rel, type: String(frontmatter.type),
     });
   };
 
@@ -436,42 +467,36 @@ export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
   // The default createFixtureRepo chain (0001-*) lives in the same dirs, so
   // the generated-style indexes must list it too.
   const defaultChainRows: Record<string, IndexRow[]> = {
-    "docs/specs": [{ id: "SPEC-0001", title: "Graph", status: "approved", file: "0001-graph.md" }],
-    "docs/adr": [{ id: "ADR-0001", title: "Graph", status: "accepted", file: "0001-graph.md" }],
-    "docs/designs": [{ id: "DESIGN-0001", title: "Graph", status: "approved", file: "0001-graph.md" }],
-    "docs/plans": [{ id: "PLAN-0001", title: "Graph", status: "approved", file: "0001-graph.md" }],
-    "docs/test-specs": [{ id: "TSPEC-0001", title: "Graph", status: "approved", file: "0001-graph.md" }],
-    "docs/tasks": [{ id: "TASK-0001", title: "TASK-0001", status: "todo", file: "0001-task.md" }],
-    "docs/impl/ir": [{ id: "IMPL-0001", title: "Graph implementation", status: "complete", file: "0001-task.md" }],
+    "docs/specs": [{ id: "SPEC-0001", title: "Graph", status: "approved", file: "0001-graph.md", type: "spec" }],
+    "docs/adr": [{ id: "ADR-0001", title: "Graph", status: "accepted", file: "0001-graph.md", type: "adr" }],
+    "docs/designs": [{ id: "DESIGN-0001", title: "Graph", status: "approved", file: "0001-graph.md", type: "design" }],
+    "docs/plans": [{ id: "PLAN-0001", title: "Graph", status: "approved", file: "0001-graph.md", type: "plan" }],
+    "docs/test-specs": [{ id: "TSPEC-0001", title: "Graph", status: "approved", file: "0001-graph.md", type: "test-spec" }],
+    "docs/tasks": [{ id: "TASK-0001", title: "TASK-0001", status: "todo", file: "0001-task.md", type: "task" }],
+    "docs/impl/ir": [{ id: "IMPL-0001", title: "Graph implementation", status: "complete", file: "0001-task.md", type: "implementation-record" }],
   };
   const rowsFor = (dir: string): IndexRow[] =>
-    [...(indexRows[dir] ?? []), ...(defaultChainRows[dir] ?? [])].sort((a, b) => {
-      if (dir === "docs/designs") {
-        if (a.file === "overview.md") return -1;
-        if (b.file === "overview.md") return 1;
-      }
-      return a.file.localeCompare(b.file);
-    });
+    [...(indexRows[dir] ?? []), ...(defaultChainRows[dir] ?? [])];
 
   files["docs/ideas/README.md"] = indexReadme("docs/ideas", "IDEA Documents", rowsFor("docs/ideas"));
   files["docs/specs/README.md"] = indexReadme("docs/specs", "SPEC Documents", [
     ...rowsFor("docs/specs"),
-    { id: "SPEC-0098", title: "Deleted spec", status: "approved", file: "0098-deleted.md" },
+    { id: "SPEC-0098", title: "Deleted spec", status: "approved", file: "0098-deleted.md", type: "spec" },
   ]);
   files["docs/adr/README.md"] = indexReadme("docs/adr", "ADR Documents", rowsFor("docs/adr"));
   files["docs/designs/README.md"] = indexReadme("docs/designs", "DESIGN Documents", [
-    { id: "DESIGN-OVERVIEW", title: "Design overview", status: "approved", file: "overview.md" },
+    { id: "DESIGN-OVERVIEW", title: "Design overview", status: "approved", file: "overview.md", type: "design" },
     ...rowsFor("docs/designs"),
   ]);
   files["docs/plans/README.md"] = indexReadme("docs/plans", "PLAN Documents", [
     ...rowsFor("docs/plans"),
-    { id: "PLAN-9302", title: "Plan 9302", status: "superseded", file: "9302-dead.md" },
+    { id: "PLAN-9302", title: "Plan 9302", status: "superseded", file: "9302-dead.md", type: "plan" },
   ]);
   files["docs/test-specs/README.md"] = indexReadme("docs/test-specs", "TEST-SPEC Documents", rowsFor("docs/test-specs"));
   files["docs/impl/ir/README.md"] = indexReadme("docs/impl/ir", "Implementation Record Documents", rowsFor("docs/impl/ir"));
   files["docs/tasks/README.md"] = indexReadme("docs/tasks", "TASK Documents",
     rowsFor("docs/tasks").map((row) =>
-      row.id === "TASK-0101" ? { ...row, status: "todo" } : row));
+      row.id === "TASK-0101" ? { ...row, status: "todo", docStatus: "done" } : row));
 
   // Discovery index covers brainstorms + chained discoveries but skips the
   // three orphans (9103–9105) — realistic coverage debt.

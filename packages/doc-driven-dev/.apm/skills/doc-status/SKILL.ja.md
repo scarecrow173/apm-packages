@@ -44,7 +44,8 @@ type のライフサイクル状態と relation の健全性を確認するた�
 統一エントリポイント `doc_status.js` は 4 つの read-only コマンドを提供する。
 `list_docs.js` と `audit_docs.js` は互換 wrapper として残る。
 
-1. 種別またはステータスで文書を一覧する。
+1. 種別またはステータスで文書を一覧する。各エントリは `status` と
+   `created`（キャプチャ層の経過）を表示する。
 
    ```bash
    node scripts/doc_status.js list --type spec
@@ -67,7 +68,8 @@ type のライフサイクル状態と relation の健全性を確認するた�
    ```
 
    `health` は同じ findings の集約ビューであり、別の scanner ではない。
-   数値スコアは報告しない。
+   数値スコアは報告しない。`Orphans` 行（`--json` では `orphans`）が
+   `orphan-*` findings をルール別・文書型別に集約する。
 
    共通フィルタ: `--type`, `--dir`, `--rule`, `--severity`, `--blocking`,
    `--status`（list）, `--json`, `--external-links`。finding は決定的順序で
@@ -139,7 +141,10 @@ rule ID で報告する。対象チェック:
   `link-case-mismatch` — ローカル Markdown link と anchor の整合性。
 - `index-stale-entry`, `index-duplicate-entry`, `index-metadata-mismatch`,
   `index-ordering`, `index-unparseable`, `index-escapes-root` — 索引テーブルの
-  整合性。
+  整合性。管理索引は status-aware —— in-flight の行が先、その下に
+  `## Settled` 層が続く。`index-ordering` はその順序違反の行を、
+  `index-metadata-mismatch` は front matter と不一致になった
+  status セルを指摘する。
 - `orphan-index`, `orphan-navigation`, `orphan-relation` — 索引未掲載、
   どの Markdown link からも到達不能、意味 relation を持たない文書。
   severity は type-aware で、root artifact として許可される type は

@@ -229,8 +229,16 @@ Index rules:
   `id` or `title`, derive `ID` from a legacy filename number (`ADR-NNNN`) and
   `Title` from the H1 heading. The `File` column is a relative link within the
   index directory. Write `—` when a value is missing.
-- Sort rows by filename in ascending order.
-- Whenever a new target file is added, update the index in the same change.
+- Sort rows by filename in ascending order within each tier. In-flight ADRs
+  fill the main table; ADRs with a settled status (`rejected`, `deprecated`,
+  `superseded`) move to a `## Settled` table below it, also
+  filename-ordered. Settled rows stay linked — the tier de-emphasizes
+  history without hiding it. `accepted`/`proposed` ADRs stay in-flight: they
+  are the normative baseline current work derives from.
+- Update the index whenever a document is added or its `status` changes.
+  `doc_maintenance.js plan|apply` regenerates managed indexes; `doc_status
+  lint` reports the drift (`index-metadata-mismatch`, `index-ordering`)
+  until it does.
 - As entries grow, split the index into multiple headings, one table per
   heading, for readability. Align the split with the subdirectory grouping
   (category or feature) so each heading maps to one group.
