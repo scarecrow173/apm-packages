@@ -173,6 +173,12 @@ Constraints:
 - The profile MUST reference only skills that exist in the Skill Reference Catalog
 - `resolved_invocations` MUST contain only skills present in the catalog
 - `flow_stack.slots[]` is adapter-owned and stored only in the Flow Profile
+- `classification.categories` membership is non-exclusive: a skill matching
+  several taxonomy entries belongs to each of them. Lane boundaries are an
+  adapter-owned decision; flow adapters record the intended boundary in
+  comments beside `classification.taxonomy` (for example, briefing's
+  internal/broad `discover` vs external `research`, and implementation's
+  correctness-validation `verify` vs post-implementation-gate `review`).
 - `execution_policy` is the hard constraint layer; `runtime_guidance` is the
   soft ranking signal and is read after policy checks
 

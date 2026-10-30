@@ -58,9 +58,18 @@ classification:
         capabilities: ["implementation_documentation"]
         tags: ["documentation", "impl-doc"]
         description_patterns: ["impl-doc", "implementation record", "experiment log", "docs/impl"]
+    # Lane boundary (#146): verify and review are distinct lanes.
+    # verify = correctness validation, including adversarial review.
+    # review = post-implementation judgment gates (code review, security
+    # audit). review description_patterns are phrase-level or word-anchored
+    # so that "adversarial review" resolves to verify only, and so that
+    # words like "investigate" cannot collide via the substring "gate".
+    # A skill that genuinely spans both lanes (e.g., declares both
+    # adversarial_review and code_review) remains a correct multi-category
+    # member.
     - id: "verify"
       label: "Verify"
-      description: "Skills that validate correctness"
+      description: "Skills that validate correctness, including adversarial review"
       match:
         capabilities: ["source_verification", "adversarial_review"]
         tags: ["verify", "validation"]
@@ -71,7 +80,7 @@ classification:
       match:
         capabilities: ["code_review", "security_audit"]
         tags: ["review", "audit"]
-        description_patterns: ["review", "audit"]
+        description_patterns: ["code review", "security audit", "post-implementation", "\\bgate"]
     - id: "domain"
       label: "Domain"
       description: "Language/framework/platform-specific skills"

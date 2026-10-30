@@ -109,6 +109,11 @@ invocation slot は Flow Profile の `flow_stack.slots[]` が保持する。
 
 Flow Profile は flow 固有成果物であり、adapter の分類と解決結果を保持する。
 `flow_stack.slots[]`、`resolved_invocations`、`runtime_guidance` はここに保存する。
+`classification.categories` の所属は排他ではない。複数の taxonomy エントリに
+一致する skill はそれぞれのカテゴリに属する。レーン境界は adapter 所有者の
+決定であり、flow adapter は `classification.taxonomy` 横のコメントに意図した
+境界を記録する（例: briefing の内部/広範な `discover` と外部 `research`、
+implementation の正確性検証 `verify` と実装後ゲート `review`）。
 `execution-policy` は hard constraint、`runtime_guidance` は soft ranking signal として扱う。
 
 ## 7. Validation Report Contract
