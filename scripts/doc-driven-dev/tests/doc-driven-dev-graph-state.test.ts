@@ -135,6 +135,23 @@ test("passes the briefing gate on a spec/ADR authored with localized headings", 
   assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] });
 });
 
+test("a fenced ## Acceptance Criteria or ## Considered Options cannot satisfy the briefing gate", () => {
+  const repo = preDesignRepo();
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Graph",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Graph\n\n```md\n## Acceptance Criteria\n\n- [ ] fake\n```\n");
+  writeArtifact(repo, "docs/adr/0001-graph.md", {
+    id: "ADR-0001", type: "adr", status: "proposed", title: "Graph ADR",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Graph ADR\n\n```md\n## Considered Options\n\n### 案A\n\n### 案B\n```\n");
+  const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001", "ADR-0001"] });
+  assert.deepEqual(state.gates.briefing, {
+    status: "fail",
+    reasons: ["acceptance-criteria", "considered-options"],
+  });
+});
+
 test("does not pair SPEC and ADR that only refine the same discovery", () => {
   const repo = preDesignRepo();
   writeArtifact(repo, "docs/discovery/0001-graph.md", {

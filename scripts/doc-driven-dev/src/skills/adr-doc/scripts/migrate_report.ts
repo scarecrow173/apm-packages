@@ -5,15 +5,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { adrFiles, findAdrDir, hasSection } from "./lib/adr_utils";
 import { parseDoc } from "../../lib/doc_suite_utils";
+// MADR 4.0.0 template section headings. Status is intentionally absent:
+// MADR 4 carries it in front matter (checked by the metadata scan below),
+// and no shipped template emits a `## Status` heading, so listing it here
+// would report a phantom missing section on every conformant ADR.
 const targetSections = [
-  "Status",
   "Context and Problem Statement",
   "Decision Drivers",
   "Considered Options",
   "Decision Outcome",
   "Consequences",
   "Confirmation",
-  "Pros and Cons",
+  "Pros and Cons of the Options",
   "More Information",
 ];
 

@@ -29939,6 +29939,37 @@ var SECTION_HEADING_ALIASES = {
   "Available Skills": ["\u5229\u7528\u53EF\u80FD\u306A\u30B9\u30AD\u30EB"],
   "Category Assignments": ["\u30AB\u30C6\u30B4\u30EA\u5272\u308A\u5F53\u3066"]
 };
+var FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
+var FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})\s*$/;
+function stripFencedBlocks(body) {
+  const kept = [];
+  let fenceChar = "";
+  let fenceLen = 0;
+  for (const line of body.split(/\r?\n/)) {
+    if (fenceChar === "") {
+      const open = FENCE_OPEN.exec(line);
+      if (open) {
+        const run = open[1];
+        const info = line.slice(line.indexOf(run) + run.length);
+        if (info.includes(run[0])) {
+          kept.push(line);
+          continue;
+        }
+        fenceChar = run[0];
+        fenceLen = run.length;
+        continue;
+      }
+      kept.push(line);
+      continue;
+    }
+    const close = FENCE_CLOSE.exec(line);
+    if (close && close[1][0] === fenceChar && close[1].length >= fenceLen) {
+      fenceChar = "";
+      fenceLen = 0;
+    }
+  }
+  return kept.join("\n");
+}
 function headingNames(canonicalHeading) {
   return [canonicalHeading, ...SECTION_HEADING_ALIASES[canonicalHeading] ?? []];
 }
@@ -29946,7 +29977,7 @@ function headingPattern(heading) {
   return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
 }
 function hasSection(body, canonicalHeading) {
-  const lines = body.split(/\r?\n/);
+  const lines = stripFencedBlocks(body).split(/\r?\n/);
   return headingNames(canonicalHeading).some((name) => {
     const pattern = headingPattern(name);
     return lines.some((line) => pattern.test(line.trimEnd()));

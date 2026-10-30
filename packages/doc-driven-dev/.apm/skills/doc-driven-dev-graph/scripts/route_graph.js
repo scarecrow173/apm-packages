@@ -21536,6 +21536,37 @@ var SECTION_HEADING_ALIASES = {
   "Available Skills": ["\u5229\u7528\u53EF\u80FD\u306A\u30B9\u30AD\u30EB"],
   "Category Assignments": ["\u30AB\u30C6\u30B4\u30EA\u5272\u308A\u5F53\u3066"]
 };
+var FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
+var FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})\s*$/;
+function stripFencedBlocks(body) {
+  const kept = [];
+  let fenceChar = "";
+  let fenceLen = 0;
+  for (const line of body.split(/\r?\n/)) {
+    if (fenceChar === "") {
+      const open = FENCE_OPEN.exec(line);
+      if (open) {
+        const run2 = open[1];
+        const info = line.slice(line.indexOf(run2) + run2.length);
+        if (info.includes(run2[0])) {
+          kept.push(line);
+          continue;
+        }
+        fenceChar = run2[0];
+        fenceLen = run2.length;
+        continue;
+      }
+      kept.push(line);
+      continue;
+    }
+    const close = FENCE_CLOSE.exec(line);
+    if (close && close[1][0] === fenceChar && close[1].length >= fenceLen) {
+      fenceChar = "";
+      fenceLen = 0;
+    }
+  }
+  return kept.join("\n");
+}
 function headingNames(canonicalHeading) {
   return [canonicalHeading, ...SECTION_HEADING_ALIASES[canonicalHeading] ?? []];
 }
@@ -21543,7 +21574,7 @@ function headingPattern(heading) {
   return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
 }
 function sectionBody(body, canonicalHeading) {
-  const lines = body.split(/\r?\n/);
+  const lines = stripFencedBlocks(body).split(/\r?\n/);
   for (const name of headingNames(canonicalHeading)) {
     const pattern = headingPattern(name);
     const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
@@ -21555,7 +21586,7 @@ function sectionBody(body, canonicalHeading) {
   return "";
 }
 function subHeadingCount(section, depth = 3) {
-  return section.match(new RegExp(`^#{${depth}}\\s+.+$`, "gm"))?.length ?? 0;
+  return stripFencedBlocks(section).match(new RegExp(`^#{${depth}}\\s+.+$`, "gm"))?.length ?? 0;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts

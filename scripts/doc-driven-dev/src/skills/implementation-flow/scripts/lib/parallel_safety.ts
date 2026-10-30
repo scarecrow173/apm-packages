@@ -3,7 +3,6 @@
 import type { TaskGraphResult } from "../../../doc-driven-dev-graph/scripts/lib/task_graph";
 import {
   scopeKey,
-  stripFencedBlocks,
   toScopeEntry,
   type ScopePattern,
 } from "./scope_entry";
@@ -45,14 +44,13 @@ type ParsedScopeEntry = { pattern: ScopedPattern } | { opaque: string };
  * Parse the `## Affected Files` section of a task body into scope entries.
  * Returns null when the section is absent; an empty array when the section
  * is present but declares no usable entries (comments/placeholders only).
- * Fenced code blocks are stripped first — a heading or bullet inside a
- * fence is documentation, not a declaration — and bullets nested under a
- * `###`+ subsection (for example `### Notes`) never enter the scope.
+ * `hasSection`/`sectionBody` strip fenced code blocks — a heading or bullet
+ * inside a fence is documentation, not a declaration — and bullets nested
+ * under a `###`+ subsection (for example `### Notes`) never enter the scope.
  */
 function parseAffectedEntries(body: string): ParsedScopeEntry[] | null {
-  const stripped = stripFencedBlocks(body);
-  if (!hasSection(stripped, "Affected Files")) return null;
-  const section = sectionBody(stripped, "Affected Files");
+  if (!hasSection(body, "Affected Files")) return null;
+  const section = sectionBody(body, "Affected Files");
   const entries: ParsedScopeEntry[] = [];
   let inSubSection = false;
   for (const line of section.split(/\r?\n/)) {

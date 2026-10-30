@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { adrFiles, findAdrDir, hasSection, relationLinks, sectionBody, validateFrontMatter } from "./lib/adr_utils";
 import { parseDoc } from "../../lib/doc_suite_utils";
+import { bodyLabelPattern } from "../../lib/markdown_sections";
 
 type CliArgs = {
   cwd: string;
@@ -56,10 +57,15 @@ async function reviewFile(cwd: string, relativeDir: string, file: string): Promi
     if (!(await hasSection(content, section))) findings.push({ severity: "error", file, code: "missing-agent-section", message: `Missing section: ${section}` });
   }
   const implementation = await sectionBody(content, "Implementation Plan");
-  if (!/Affected paths?:/i.test(implementation)) {
+  // Body labels are template vocabulary too: the shipped .ja.md MADR
+  // templates emit 影響するパス:/従うパターン:/制約: for the English
+  // spellings, and bodyLabelPattern accepts canonical + declared aliases
+  // (lib/markdown_sections.ts). "Affected path" keeps the singular
+  // tolerance of the original Affected paths? check.
+  if (!bodyLabelPattern("Affected paths", "Affected path").test(implementation)) {
     findings.push({ severity: "warning", file, code: "missing-affected-paths", message: "Implementation Plan should name affected paths" });
   }
-  if (!/(Patterns to follow|Constraints):/i.test(implementation)) {
+  if (!bodyLabelPattern("Patterns to follow", "Constraints").test(implementation)) {
     findings.push({ severity: "warning", file, code: "missing-implementation-constraints", message: "Implementation Plan should name constraints or patterns to follow" });
   }
   const verification = await sectionBody(content, "Verification");
