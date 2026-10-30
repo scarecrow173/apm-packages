@@ -184,6 +184,16 @@ per-edge dispatch budget = maxDispatchesPerEdge default 10
   記録されるため resume で reset できず、別の edge が選択された場合は
   その edge 独自の count から始まる。
 
+run-level dispatch budget = maxTotalDispatches default
+  current maxHops × maxDispatchesPerEdge
+  run 内のすべての effect dispatch を edge をまたいで 1 回ずつ数えるため、
+  異なる edge 間で retry を交互に繰り返す adapter — 各 pending slot が
+  per-edge count を蓄積する前に置き換わる — にも有限の上限へ到達させる。
+  default はすべての hop の edge が per-edge budget を使い切る場合を許容し、
+  run の現在の (task 調整済みの場合もある) maxHops に対して評価される。
+  到達すると budget-exhausted を yield する。bound と累積 count の両方が
+  handoff に保持されるため、resume は同じ run の budget を継続する。
+
 changing repair loop = frozen maxHops で境界付ける
   この limit に到達する task retry または repair は budget-exhausted を yield し、
   新しい run に control を渡す。budget exhaustion は execution error でも successful checkpoint でもない。
