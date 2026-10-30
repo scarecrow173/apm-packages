@@ -100,6 +100,7 @@ type GraphRunHandoff = {
   current: string;
   mode: "single-step" | "run-until-yield";
   maxHops: number;
+  maxDispatchesPerEdge: number;
   yieldReason: GraphRunResult["reason"] | null;
   focus: string[];
   signals: string[];
@@ -119,6 +120,7 @@ type GraphRunHandoff = {
     delegateComplete: boolean;
     evidenceRecorded: boolean;
     commitBaseline: { head: string | null; dirty: string[] } | null;
+    dispatches: number;
   } | null;
   hops: number;
 }
@@ -129,7 +131,8 @@ type GraphRunHandoff = {
 `commitWaived` は、edge の destination が `commitGate` を宣言し、caller がその edge に
 対して宣言済み `commit-waived` signal を適用した場合に `true`、それ以外は `false`
 です。これが run trace に waiver を記録する仕組みです。
-`GraphRunHandoff` は resume field を保持します。すなわち `current`、mode、`maxHops`、focus、
+`GraphRunHandoff` は resume field を保持します。すなわち `current`、mode、`maxHops`、
+per-edge dispatch budget の `maxDispatchesPerEdge`、focus、
 signals、graph path、completed edge ID、seen route fingerprint、freeze した task-budget basis、
 audit/delegate counter、completed route、trace、outcome、pending edge、hop count です。`null` は
 caller が explicit `maxHops` を supplied したことを表し、non-negative number は immutable な

@@ -126,6 +126,10 @@ spawn が実行されたことを attest する手段です。adapter はこの�
 
 `reason`（`effect-outcome` の全 reason に `budget-exhausted`、`terminal`、
 `single-step-complete` を加えたもの）、`hops`、順序付き `completedEdges`。
+`budget-exhausted` はすべての bounded-autonomy 停止（hop budget、route
+fingerprint の再検出、byte 単位で同一の retry outcome、per-edge
+dispatch budget）を表す単一の reason です（
+[execution-contract.ja.md](execution-contract.ja.md) 参照）。
 
 ### Resume の意味
 

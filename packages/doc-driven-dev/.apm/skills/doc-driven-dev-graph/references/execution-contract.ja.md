@@ -141,7 +141,7 @@ adapter evidence が missing または malformed なら `authority-required` を
 | user だけが選べる focus/requirement/value の明示的な欠落 | `input-required` | Never |
 | 許可の欠落、または granted scope 外の不可逆な external action | `authority-required` | Never |
 | 実行可能な repair edge の宣言がない blocked route | `unrecoverable-blocker` | Never |
-| hop/retry/repetition budget に到達 | `budget-exhausted` | Never |
+| hop/retry/repetition/dispatch budget に到達 | `budget-exhausted` | Never |
 | commit-gated edge checkpoint が新しい uncommitted change で終了し、`commit-waived` signal がない | `commit-required` | Never |
 | selected edge が完了し、fresh state が別の declared edge を公開 | none | Yes in `run-until-yield` |
 | audit/delegate/evidence が成功 | none | Yes in `run-until-yield` |
@@ -173,6 +173,16 @@ route fingerprint = stable JSON serialization of the complete GraphRoute
   complete route は fresh Task Graph projection を含む。次の runnable task を公開する completed task は
   task status と runnable/active/resumableActive/completed を変更するため、次の declared edge は継続できる。
   同じ fingerprint を同じ run で再び観測したら budget-exhausted を yield する。
+
+per-edge dispatch budget = maxDispatchesPerEdge default 10
+  1 つの pending edge が消費できる effect dispatch の総数。dispatch ごとに、
+  outcome payload、route fingerprint、hop 完了とは独立に数える。retry
+  outcome は edge を完了しないため hop も route fingerprint も増えず、
+  byte 単位で異なる retry は repeatedRetry guard にも引っかからない —
+  この counter は adapter が回避できない上限である。到達すると
+  budget-exhausted を yield する。count は handoff 内の pending edge に
+  記録されるため resume で reset できず、別の edge が選択された場合は
+  その edge 独自の count から始まる。
 
 changing repair loop = frozen maxHops で境界付ける
   この limit に到達する task retry または repair は budget-exhausted を yield し、
