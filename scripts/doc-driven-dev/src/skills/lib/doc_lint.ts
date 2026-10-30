@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { contractForType, finding, isExternalReference, sortFindings } from "./doc_repository";
 import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repository";
-import { lintProvenance, lintTraceability } from "./doc_provenance_lint";
+import { lintProvenance, lintStaleUpstreams, lintTraceability } from "./doc_provenance_lint";
 import { lintStructure } from "./doc_structure_lint";
 import { configFor, docTypes, frontMatterSchema, isForeignDocType } from "./doc_suite_utils";
 import { isIndexFileName, isInsideRealpath, normalizeDir } from "./document_utils";
@@ -582,6 +582,7 @@ function lintScope(model: DocumentRepository, type: string, directory: string): 
   findings.push(...lintStructure(model, scope));
   findings.push(...lintProvenance(model, scope));
   findings.push(...lintTraceability(model, scope));
+  findings.push(...lintStaleUpstreams(model, scope));
   return sortFindings(findings);
 }
 

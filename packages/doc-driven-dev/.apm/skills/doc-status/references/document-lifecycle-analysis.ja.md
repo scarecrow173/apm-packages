@@ -42,8 +42,8 @@ doc-status パイプライン上の射影**である。
 | `collectFindings` + `summarizeHealth`(`lib/doc_report.ts`) | `doc_status audit/health` が報告するのと完全に同一のファインディングとヘルス・カテゴリ |
 | `inboundLinkCounts` + `inboundRelationCounts`(`lib/doc_structure_lint.ts`) | `lintOrphans` が使うのと同一の内向きカバレッジ・マップ(再利用のため export —— ロジックの複製なし) |
 
-新しい意味論は集約(タイプ別バケット)、**settled / in-flight** の
-ステータス軸、**stale-upstream** ヒューリスティックのみである。
+新しい意味論は、2つのステータス軸に対する集約(タイプ別バケット)のみ
+—— いずれも現在は `lib/doc_repository.ts` に単一ソース化されている。
 
 - *Settled* = ドキュメント自身のライフサイクル作業が完了した状態
   (`done`、`wont-do`、`completed`、`implemented`、`resolved`、
@@ -56,11 +56,15 @@ doc-status パイプライン上の射影**である。
   (`superseded`/`rejected`/`deprecated`/`archived`/`abandoned`/
   `wont-do`/`completed`/`done`)の上流ターゲットに
   `implements`/`derives-from`/`refines` で解決済みリレーションを
-  1つ以上持つ状態。契約ではなくヒューリスティック信号 ——
-  resolved/active な上流や規範的ベースラインは決してフラグされない。
+  1つ以上持つ状態。**#166 で昇格:** ヒューリスティックは
+  `stale-upstream` doc-status ルールとなった —— 統計は共有の
+  `staleUpstreamTargets` 述語を消費するため、以下の件数は
+  `doc_status lint` が non-blocking warning として報告するのと同じ
+  エッジである。resolved/active な上流や規範的ベースラインは決して
+  フラグされない。
 - 旧フィクスチャ表記 `type: "implementation-record"` は `impl`
-  バケットにマージする(`TYPE_ALIASES`)—— 同じアーティファクト種の
-  契約以前の綴り。
+  バケットにマージする(`LIFECYCLE_TYPE_ALIASES`)—— 同じ
+  アーティファクト種の契約以前の綴り。
 
 ### 2.2 コーパス
 
@@ -115,18 +119,18 @@ doc-status パイプライン上の射影**である。
 | settled / in-flight | 0 / 7 | 0 / 68 | 57 / 49 |
 | stale-upstream 文書 | 0 | 0 | 3 |
 | duplicate-id グループ | 0 | 0 | 0 |
-| ファインディング(ブロッキング/警告/情報) | 21 (0/0/21) | 348 (86/239/23) | 33 (6/8/19) |
+| ファインディング(ブロッキング/警告/情報) | 21 (0/0/21) | 348 (86/239/23) | 37 (6/12/19) |
 
 ### 3.2 タイプ別 —— long-running コーパス
 
 | タイプ | ファイル数 | settled | stale | 本文バイト | 最大ファイル | 孤児(rel/idx/nav) | ファインディング |
 | ------ | ---------- | ------- | ----- | ---------- | ------------ | ----------------- | ---------------- |
-| task | 23 | 17 (74%) | 2 | 1,106 | 48 | 0/0/0 | 0 |
+| task | 23 | 17 (74%) | 2 | 1,106 | 48 | 0/0/0 | 2 |
 | impl | 18 | 16 (89%) | 0 | 1,318 | 70 | 0/0/0 | 0* |
 | spec | 11 | 7 (64%) | 0 | 1,117 | 102 | 1/0/0 | 4 |
 | discovery | 10 | 6 (60%) | 0 | 39,809 | 39,018 | 3/3/3 | 14 |
 | plan | 9 | 6 (67%) | 0 | 120 | 12 | 1/0/0 | 1 |
-| design | 9 | 0 | 1 | 219 | 25 | 1/0/0 | 2 |
+| design | 9 | 0 | 1 | 219 | 25 | 1/0/0 | 4 |
 | adr | 8 | 1 (13%) | 0 | 377 | 62 | 0/0/0 | 0 |
 | idea | 8 | 3 (38%) | 0 | 136 | 16 | 8/0/0 | 8 |
 | test-spec | 7 | 1 (14%) | 0 | 118 | 17 | 0/0/0 | 0 |
@@ -170,6 +174,7 @@ impl `completed` 15 / `in-progress` 1 / `superseded` 1 /
 | broken-relation-link | 1 | `SPEC-9201 → DISC-9999` |
 | inconsistent-reciprocal-relation | 1 | `SPEC-0502` が `DISC-0501.derived-by` に逆リンクされていない —— 置換ドリフト |
 | traceability-missing-upstream | 2 | `SPEC-0001`、`DESIGN-OVERVIEW` |
+| stale-upstream | 4 | `DESIGN-0501` の2エッジ(`SPEC-0501` + `ADR-0501`)、完了済み `PLAN-0501` 上の `TASK-0503`/`TASK-0504` |
 | provenance-missing-source / provenance-unresolved-local-source | 1 / 1 | 孤児 discovery |
 | (インデックス) | — | 2 件のファインディングはインデックスファイル自体に付く |
 
@@ -219,7 +224,7 @@ stale-entry、metadata-mismatch、missing-entry)は文書を到達可能面
 `doc-maintenance` は既にインデックスを再生成する。欠けているのは
 能力ではなく頻度である。
 
-### 4.5 ライフサイクル債務エッジは小さいが実在し、現状不可視
+### 4.5 ライフサイクル債務エッジは小さいが実在し、#166 まで不可視だった
 
 3件の stale-upstream(完了 plan 上の todo task;置換済み spec 上の
 承認済み design)、置換由来の相互リレーション破断1件、未解決
@@ -237,8 +242,9 @@ stale-entry、metadata-mismatch、missing-entry)は文書を到達可能面
   直すよう指示されない `inconsistent-reciprocal-relation` ドリフトを
   残す。
 
-どちらも今日の doc-status 専用ルールではカバーされず、
-stale-upstream ヒューリスティックが本分析でそれらを表面化した。
+stale-upstream エッジは現在、専用の `stale-upstream` ルールが表面化する
+(#166 で適用 —— §6 参照)。相互リレーションのドリフトは引き続き
+指示レベルの課題(A2)であり、本分析がその計測地点であり続ける。
 
 ## 5. 必須 vs 任意の分類
 
@@ -305,7 +311,10 @@ stale-upstream ヒューリスティックが本分析でそれらを表面化�
 4. discovery エビデンス前段/尾部構造(C2)—— 1 issue。
 5. `test-spec-skip` 解決意味論(C3)—— 1 issue;**#165 として適用済み**。
 6. 実リポジトリで信号が安定することが証明されれば stale-upstream
-   ヒューリスティックを `doc-status` lint ルールへ昇格 —— 1 issue。
+   ヒューリスティックを `doc-status` lint ルールへ昇格 —— 1 issue;
+   **#166 として適用済み**: `stale-upstream` は dead な上流エッジごとに
+   発行される non-blocking warning であり、統計はルールが使うのと同じ
+   `staleUpstreamTargets` 述語を消費する。
 
 ## 7. 明示的な不作為
 

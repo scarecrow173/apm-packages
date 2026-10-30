@@ -28151,6 +28151,53 @@ var REQUIRED_FRONT_MATTER_FIELDS = [
 ];
 var ROOT_ARTIFACT_TYPES = /* @__PURE__ */ new Set(["idea", "brainstorm", "discovery"]);
 var TRACEABILITY_TERMINAL_STATUSES = ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"];
+var SETTLED_STATUSES = {
+  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
+  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
+  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
+  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
+  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
+  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
+  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
+  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
+  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
+  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
+};
+var DEAD_UPSTREAM_STATUSES = /* @__PURE__ */ new Set([
+  "superseded",
+  "rejected",
+  "deprecated",
+  "archived",
+  "abandoned",
+  "wont-do",
+  "completed",
+  "done"
+]);
+var UPSTREAM_FIELDS = /* @__PURE__ */ new Set(["implements", "derives-from", "refines"]);
+var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
+function lifecycleBucketOf(document3) {
+  if (document3.kind === "unmanaged") return "unmanaged";
+  const declared = document3.type ?? "untyped";
+  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
+}
+function isSettled(document3) {
+  if (document3.status === null) return false;
+  return SETTLED_STATUSES[lifecycleBucketOf(document3)]?.has(document3.status) ?? false;
+}
+function staleUpstreamTargets(model, document3) {
+  if (isSettled(document3)) return [];
+  const stale = [];
+  for (const [field, targets] of Object.entries(document3.relations)) {
+    if (!UPSTREAM_FIELDS.has(field)) continue;
+    for (const target of targets) {
+      const resolved = model.resolveRelationTarget(document3, target);
+      if (resolved.status === "resolved" && resolved.document.status !== null && DEAD_UPSTREAM_STATUSES.has(resolved.document.status)) {
+        stale.push({ field, target, upstream: resolved.document });
+      }
+    }
+  }
+  return stale;
+}
 function contractForDocType(type) {
   const config2 = configFor(type);
   const contract = {
@@ -28175,7 +28222,7 @@ function contractForDocType(type) {
   }
   if (type === "spec" || type === "plan" || type === "task" || type === "design") {
     contract.expectedUpstream = [
-      { fields: ["implements", "derives-from", "refines"], skipStatuses: TRACEABILITY_TERMINAL_STATUSES }
+      { fields: [...UPSTREAM_FIELDS], skipStatuses: TRACEABILITY_TERMINAL_STATUSES }
     ];
   }
   if (type === "design") {
@@ -28706,6 +28753,25 @@ function lintTraceability(model, scope) {
         artifactId: document3.id,
         message: `${scope.type} declares no upstream relation (expected one of: ${expectation.fields.join(", ")})`,
         target: expectation.fields.join(", "),
+        repair: "manual"
+      }));
+    }
+  }
+  return findings;
+}
+function lintStaleUpstreams(model, scope) {
+  const findings = [];
+  for (const document3 of scope.documents) {
+    if (document3.parseError) continue;
+    for (const stale of staleUpstreamTargets(model, document3)) {
+      findings.push(finding({
+        ruleId: "stale-upstream",
+        category: "traceability",
+        severity: "warning",
+        path: document3.path,
+        artifactId: document3.id,
+        message: `In-flight document ${stale.field} a ${stale.upstream.status} upstream: ${stale.target} \u2014 re-point or close`,
+        target: stale.target,
         repair: "manual"
       }));
     }
@@ -29630,6 +29696,7 @@ function lintScope(model, type, directory) {
   findings.push(...lintStructure(model, scope));
   findings.push(...lintProvenance(model, scope));
   findings.push(...lintTraceability(model, scope));
+  findings.push(...lintStaleUpstreams(model, scope));
   return sortFindings(findings);
 }
 
