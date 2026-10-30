@@ -46,16 +46,21 @@ export type PackageInventory = {
 // file is the authoritative instruction surface; `SKILL.ja.md` mirrors it, so
 // scanning both would double-count. Every line is scanned, including front
 // matter (the `description` field is stage-0 loaded text and can name
-// `.sdp` artifacts). Line numbers are 1-based file lines.
+// `.sdp` artifacts). Line numbers are 1-based file lines. Input is normalized
+// (`\r\n` → `\n`) before parsing so front-matter detection and line numbers
+// are line-ending-agnostic.
 //
 // Load directive kinds and their patterns:
 //
 // - reference: any path token containing `references/<file>.md`, e.g.
 //   `references/x.md`, `[x](references/x.md)`, `../<skill>/references/x.md`.
 // - script: path tokens containing `scripts/<file>.js` (including
-//   `node <path>/scripts/<file>.js`), `node <path>.js` invocations, and bare
+//   `node <path>/scripts/<file>.js`), `node <path>.js` invocations, bare
 //   `sdp <verb>` CLI invocations (`scan|infer|profile|validate|query`), which
-//   resolve to this skill's `scripts/sdp.js` entry point.
+//   resolve to this skill's `scripts/sdp.js` entry point, and bare
+//   `<file>.js` basenames — counted only when the owning skill ships
+//   `scripts/<file>.js`, so a bare basename can never count as missing
+//   (e.g. a basename that names a sibling skill's script emits nothing).
 // - sdp-artifact: `.sdp/<path>` file mentions (runtime outputs, e.g.
 //   `.sdp/<flow>-default/<flow>-profile.json`). Bare `.sdp` without a path is
 //   not a file mention and is not counted.
@@ -75,6 +80,15 @@ export type PackageInventory = {
 //   Bare backticked skill-name mentions without an invocation verb are NOT
 //   counted: e.g. "`task-doc` entries" names a document type, not a skill
 //   load.
+//   A captured name equal to the owning skill's name is dropped entirely —
+//   self-invocation is self-description, not a cross-skill load. Names in
+//   KNOWN_NON_SKILL_NAMES (caller run-mode flags such as `single-step` /
+//   `run-until-yield`) are likewise excluded: "Use `single-step`" selects a
+//   run mode, not a skill.
+//   Known gaps (accepted boundary — natural-language coverage is unbounded):
+//   passive/long-range verb phrases ("dispatched by name to `x`"), an invoke
+//   verb at line end with the skill name on the next line, and other
+//   phrasings outside rules a–e are not detected.
 // - adapter: any path token containing `assets/adapters/<file>.yaml`, e.g.
 //   `assets/adapters/x.yaml`, `.apm/skills/<skill>/assets/adapters/x.yaml`,
 //   `<skill-root>/<skill>/assets/adapters/x.yaml`.
@@ -95,6 +109,8 @@ export type PackageInventory = {
 //   consumer-repo runtime outputs and are never present in the package.
 // - `skill-invoke` targets resolve to `<packageRoot>/<skill>/SKILL.md`.
 // - `sdp <verb>` script targets resolve to this skill's `scripts/sdp.js`.
+// - Bare `*.js` basename targets are emitted pre-resolved as
+//   `scripts/<file>.js` and follow the usual bare-path rule.
 //
 // `missing` counts unique resolved files that do not exist AND were reached
 // via `reference`, `script`, or `adapter` directives — files the package is
@@ -108,9 +124,21 @@ export type PackageInventory = {
 const SKILL_NAME_PATTERN = "[a-z0-9][a-z0-9_-]*-[a-z0-9_-]*";
 const QUOTED_NAME = "[`'\"](" + SKILL_NAME_PATTERN + ")[`'\"]";
 
+// Hyphenated tokens that match the skill-name shape but are not skills:
+// doc-driven-dev-graph caller run-mode flags. Without this list, phrasing
+// like "Use `single-step`" would emit a bogus skill-invoke directive.
+const KNOWN_NON_SKILL_NAMES: ReadonlySet<string> = new Set([
+  "single-step",
+  "run-until-yield",
+]);
+
 const REFERENCE_RE = /([A-Za-z0-9._<>/-]*references\/[A-Za-z0-9._-]+\.md)/g;
 const SCRIPT_NODE_RE = /\bnode\s+[`'"]?([A-Za-z0-9._<>/-]+\.js)\b/g;
 const SCRIPT_PATH_RE = /([A-Za-z0-9._<>/-]*scripts\/[A-Za-z0-9._-]+\.js)\b/g;
+// A `<file>.js` token with no path segments. Only emitted as a directive when
+// the owning skill ships `scripts/<file>.js` (see extractLineDirectives); a
+// token preceded by a path separator was already captured by the rules above.
+const BARE_SCRIPT_RE = /\b([A-Za-z0-9][A-Za-z0-9._-]*\.js)\b/g;
 const SDP_CLI_RE = /\bsdp\s+(scan|infer|profile|validate|query)\b/g;
 const SDP_ARTIFACT_RE = /(\.sdp\/[A-Za-z0-9._/-]*[A-Za-z0-9_-])/g;
 const ADAPTER_RE = /([A-Za-z0-9._<>/-]*assets\/adapters\/[A-Za-z0-9._-]+\.ya?ml)/g;
@@ -163,9 +191,11 @@ function isOptionalLine(line: string): boolean {
 function extractLineDirectives(
   line: string,
   lineNo: number,
+  scriptBasenames: ReadonlySet<string>,
 ): Array<{ kind: LoadDirectiveKind; target: string }> {
   const found: Array<{ kind: LoadDirectiveKind; target: string }> = [];
   const push = (kind: LoadDirectiveKind, target: string) => {
+    if (kind === "skill-invoke" && KNOWN_NON_SKILL_NAMES.has(target)) return;
     if (!found.some((d) => d.kind === kind && d.target === target)) {
       found.push({ kind, target });
     }
@@ -177,6 +207,15 @@ function extractLineDirectives(
   collect("reference", REFERENCE_RE);
   collect("script", SCRIPT_NODE_RE);
   collect("script", SCRIPT_PATH_RE);
+  // Bare `<file>.js` basenames count only when the owning skill ships
+  // `scripts/<file>.js`; the normalized target dedupes with path-form
+  // mentions above. An unresolvable basename emits nothing, so it can
+  // never inflate `missing`.
+  for (const match of line.matchAll(BARE_SCRIPT_RE)) {
+    const prev = match.index === 0 ? "" : line[match.index - 1];
+    if (prev === "/" || prev === "\\") continue;
+    if (scriptBasenames.has(match[1])) push("script", `scripts/${match[1]}`);
+  }
   collect("sdp-artifact", SDP_ARTIFACT_RE);
   collect("adapter", ADAPTER_RE);
   for (const match of line.matchAll(SDP_CLI_RE)) {
@@ -200,6 +239,24 @@ function listSiblingSkillNames(packageRoot: string): Set<string> {
   }
   for (const entry of entries) {
     if (entry.isDirectory()) names.add(entry.name);
+  }
+  return names;
+}
+
+// Basenames of the `*.js` files the owning skill ships under `scripts/` — the
+// set a bare `<file>.js` mention must hit to become a script directive.
+function listScriptBasenames(skillRoot: string): Set<string> {
+  const names = new Set<string>();
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(path.join(skillRoot, "scripts"), {
+      withFileTypes: true,
+    });
+  } catch {
+    return names;
+  }
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.endsWith(".js")) names.add(entry.name);
   }
   return names;
 }
@@ -255,8 +312,9 @@ function inventoryFlow(skillDir: string, packageRoot: string): FlowInventory {
   const skillsPackageRoot = path.resolve(packageRoot);
   const flow = path.basename(skillRoot);
   const skillFile = path.join(skillRoot, "SKILL.md");
-  const content = fs.readFileSync(skillFile, "utf8");
+  const content = fs.readFileSync(skillFile, "utf8").replace(/\r\n?/g, "\n");
   const siblingNames = listSiblingSkillNames(skillsPackageRoot);
+  const scriptBasenames = listScriptBasenames(skillRoot);
 
   const directives: LoadDirective[] = [];
   const resolved = new Map<
@@ -268,8 +326,15 @@ function inventoryFlow(skillDir: string, packageRoot: string): FlowInventory {
   for (let i = 0; i < lines.length; i += 1) {
     const lineNo = i + 1;
     const optional = isOptionalLine(lines[i]);
-    for (const { kind, target } of extractLineDirectives(lines[i], lineNo)) {
+    for (const { kind, target } of extractLineDirectives(
+      lines[i],
+      lineNo,
+      scriptBasenames,
+    )) {
       const normalizedTarget = target.replace(/\\/g, "/");
+      // A skill-invoke naming the owning skill is self-description, not a
+      // cross-skill load: record neither the directive nor the file reference.
+      if (kind === "skill-invoke" && normalizedTarget === flow) continue;
       directives.push({ kind, target: normalizedTarget, line: lineNo, optional });
       const rel = resolveTargetPath(kind, normalizedTarget, flow, siblingNames);
       const stat = fileStat(path.join(skillsPackageRoot, rel));
