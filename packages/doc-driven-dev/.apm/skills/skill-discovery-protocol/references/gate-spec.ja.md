@@ -165,6 +165,7 @@ validation:
 | チェック | 条件 |
 | -------- | ---- |
 | 経過日数制限 | `now - validated_at <= max_age_days` |
+| 解析不能な基準日 | stale として扱う — fail closed（`age_days = -1`） |
 | 新規スキル | 最後の `validated_at` 以降にスキルが追加されていない |
 | 削除スキル | 最後の `validated_at` 以降にスキルが削除されていない |
 
@@ -190,7 +191,15 @@ Flow Profile（フィールドが存在する場合）の `validated_at` を再�
 
 それ以外の失敗（スキル差分、schema エラー、deterministic 差分、blocking
 違反）では `validated_at` は一切更新されず、ドリフトは次回実行時も
-検出され続ける。
+検出され続ける。解析不能な基準日は経年ではなく破損であり、同様に
+更新で上書きされることはない。
+
+この更新は鮮度を実際に検査した実行にのみ適用される — `--adapter` が
+必要である。`--profile` のみの実行では staleness・deterministic・
+blocking の各ゲートがスキップされるため、schema の pass だけでは
+鮮度を証明できず、`validated_at` は再刻印されない。再刻印自体は
+best-effort であり、成果物を書き換えられない場合は `sdp validate` が
+stderr に警告を出すが、実行結果と検証レポートは影響を受けない。
 
 ### 結果スキーマ
 
@@ -357,9 +366,9 @@ validation:
 ### ゲート実行順序
 
 1. Schema（常に実行）
-2. Staleness（常に実行）
-3. Deterministic（常に実行）
-4. Blocking（`validation.invocation.enabled = false` でない限り実行）
+2. Staleness（`--adapter` と catalog が必要。なければ `skipped` と報告）
+3. Deterministic（`--adapter` が必要。なければ `skipped` と報告）
+4. Blocking（`--adapter` と catalog が必要。`validation.invocation.enabled = false` の場合もスキップ）
 
 Gate 1 が失敗しても後続のすべてのゲートは実行され、
 全問題の完全な把握が可能。

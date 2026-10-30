@@ -166,6 +166,7 @@ validation:
 | Check | Condition |
 | ----- | --------- |
 | Age limit | `now - validated_at <= max_age_days` |
+| Unparseable basis date | Treated as stale — fails closed (`age_days = -1`) |
 | New skills | No skills added since last `validated_at` |
 | Removed skills | No skills removed since last `validated_at` |
 
@@ -193,7 +194,15 @@ following `sdp validate` performs the in-band timestamp refresh.
 
 On any other failure — skill drift, schema errors, deterministic diff, or
 blocking violations — `validated_at` is never refreshed, so drift stays
-detected on subsequent runs.
+detected on subsequent runs. An unparseable basis date is corruption, not
+age, and is likewise never refreshed over.
+
+The refresh only applies to a run that actually checked freshness: it
+requires `--adapter`. A `--profile`-only run skips the staleness,
+deterministic, and blocking gates, so a schema pass alone proves nothing
+about freshness and never re-stamps `validated_at`. The re-stamp itself
+is best-effort: if an artifact cannot be rewritten, `sdp validate` warns
+on stderr and the run result and the validation report are unaffected.
 
 ### Result Schema
 
@@ -360,9 +369,9 @@ The validation report aggregates all gate results:
 ### Gate Execution Order
 
 1. Schema (always runs)
-2. Staleness (always runs)
-3. Deterministic (always runs)
-4. Blocking (runs unless `validation.invocation.enabled = false`)
+2. Staleness (requires `--adapter` and a catalog; otherwise reported `skipped`)
+3. Deterministic (requires `--adapter`; otherwise reported `skipped`)
+4. Blocking (requires `--adapter` and a catalog; also skipped when `validation.invocation.enabled = false`)
 
 Even if Gate 1 fails, all subsequent gates still execute to provide
 a complete picture of all issues.
