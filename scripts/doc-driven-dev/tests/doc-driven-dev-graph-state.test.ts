@@ -121,6 +121,20 @@ test("selects a pre-design SPEC and ADR through a direct typed relation", () => 
   assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] });
 });
 
+test("passes the briefing gate on a spec/ADR authored with localized headings", () => {
+  const repo = preDesignRepo();
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Graph",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Graph\n\n## 受け入れ基準\n\n- [ ] graph state\n");
+  writeArtifact(repo, "docs/adr/0001-graph.md", {
+    id: "ADR-0001", type: "adr", status: "proposed", title: "Graph ADR",
+    relations: { "derives-from": ["DISC-0001"] },
+  }, "# Graph ADR\n\n## 検討した選択肢\n\n### 案A\n\n### 案B\n");
+  const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001", "ADR-0001"] });
+  assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] });
+});
+
 test("does not pair SPEC and ADR that only refine the same discovery", () => {
   const repo = preDesignRepo();
   writeArtifact(repo, "docs/discovery/0001-graph.md", {

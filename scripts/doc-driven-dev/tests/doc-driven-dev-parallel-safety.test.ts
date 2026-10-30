@@ -299,6 +299,44 @@ test("with three tasks only the conflicting pair goes serial", () => {
   assert.deepEqual(serialReasons(report, "TASK-0003"), []);
 });
 
+// --- localized section headings ------------------------------------------------
+
+test("a task declaring ## 影響ファイル resolves scope and stays parallel-eligible", () => {
+  const jaTask = (affectedFiles: string) => `# タスク\n\n## 影響ファイル\n\n${affectedFiles}\n\n## 検証\n\n- [ ] node --test\n`;
+  const report = evaluateParallelSafety(
+    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
+    [
+      { id: "TASK-0001", body: jaTask("- src/a.ts") },
+      { id: "TASK-0002", body: jaTask("- src/b.ts") },
+    ],
+  );
+  assert.equal(report.decision, "parallel");
+  assert.deepEqual(report.parallel, ["TASK-0001", "TASK-0002"]);
+  assert.deepEqual(report.serial, []);
+});
+
+test("a localized heading that is not a declared alias still fails closed", () => {
+  // "## 影響するファイル" is not the template alias — scope reads as undeclared.
+  const body = "# Task\n\n## 影響するファイル\n\n- src/a.ts\n";
+  assert.equal(parseAffectedFiles(body), null);
+  const report = evaluateParallelSafety(
+    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
+    [
+      { id: "TASK-0001", body },
+      { id: "TASK-0002", body: taskBody("- src/b.ts") },
+    ],
+  );
+  assert.equal(report.decision, "serial");
+  assert.deepEqual(serialReasons(report, "TASK-0001"), ["scope-undeclared"]);
+});
+
+test("the canonical Affected Files section wins when an alias is also present", () => {
+  const body = "# Task\n\n## 影響ファイル\n\n- src/alias.ts\n\n## Affected Files\n\n- src/canonical.ts\n";
+  assert.deepEqual(parseAffectedFiles(body), [
+    { pattern: { kind: "file", path: "src/canonical.ts" } },
+  ]);
+});
+
 test("a single clean eligible task cannot run in parallel", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001"] }),

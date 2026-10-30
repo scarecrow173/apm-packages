@@ -193,6 +193,11 @@ relations:
 - Pros and cons of options。
 - More information と source links。
 
+監査・レビュー スクリプトは、これらのセクション見出しを canonical な
+英語名と宣言済みのローカライズ別名（例: `背景と問題` は `Context and
+Problem Statement` にマッチ）で解決します。両方がある場合は canonical
+表記が優先されます。
+
 ## 可変性
 
 ADR ファイルは判断履歴です。

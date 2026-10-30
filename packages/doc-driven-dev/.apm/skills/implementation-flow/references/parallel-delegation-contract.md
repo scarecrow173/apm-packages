@@ -39,9 +39,11 @@ write scope:
   serial.
 - Any unverifiable entry → `scope-unverifiable` → serial. The judgment never
   infers scope from prose or guesses a likely path.
-- The scope check matches the `Affected Files` heading literally
-  (case-insensitive); a localized heading reads as a missing section and
-  currently resolves to `scope-undeclared` → serial.
+- The scope check matches the canonical `Affected Files` heading plus its
+  declared localized aliases (the ja task template's `影響ファイル`),
+  case-insensitive. A heading outside that fixed vocabulary still reads as
+  a missing section → `scope-undeclared` → serial, and the canonical
+  heading wins when both spellings appear in one document.
 - Headings and bullets inside fenced code blocks (```` ``` ```` / `~~~`) are
   documentation, not declarations — a fenced `## Affected Files` never
   creates a section. Bullets under `###`+ subsections inside the section do
