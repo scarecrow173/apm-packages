@@ -153,8 +153,8 @@ ACTIVE SKILL STACK FOR THIS BRIEFING:
 | Priority | Category | Rationale |
 | -------- | -------- | --------- |
 | 1 | Frame | Structure problem/options before gathering information |
-| 2 | Discover | Explore and find external information |
-| 3 | Research | Conduct deep-dive investigation |
+| 2 | Discover | Explore and gather internal information |
+| 3 | Research | Conduct external web research |
 | 4 | Document | Formalize organized information into official documents |
 
 For detailed category definitions, see the adapter's `classification.taxonomy` in `assets/adapters/briefing-adapter.yaml`.
