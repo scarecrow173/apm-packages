@@ -21662,6 +21662,7 @@ var SECTION_HEADING_ALIASES = {
   "Tentative Conclusions and Hypotheses": ["\u66AB\u5B9A\u7D50\u8AD6\u30FB\u4EEE\u8AAC"],
   "Open Questions": ["\u672A\u89E3\u6C7A\u306E\u8AD6\u70B9", "\u672A\u89E3\u6C7A\u4E8B\u9805"],
   "Promotion Candidates": ["\u6607\u83EF\u5148\u5019\u88DC"],
+  "Evidence": ["\u30A8\u30D3\u30C7\u30F3\u30B9"],
   // idea-doc
   "Summary": ["\u8981\u7D04"],
   "Problem and Motivation": ["\u8AB2\u984C\u3068\u52D5\u6A5F"],

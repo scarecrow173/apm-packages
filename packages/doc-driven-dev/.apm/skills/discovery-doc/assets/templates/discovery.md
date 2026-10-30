@@ -1,5 +1,12 @@
 # {{title}}
 
+## Summary
+
+<!-- Two or three sentences: the exploration goal, the current best
+     conclusion or hypothesis, and its confidence. Keep this section small —
+     it is the bounded head every reader sees. Details belong in the
+     sections below; raw research dumps belong in "## Evidence". -->
+
 ## Exploration Goal
 
 <!-- What question does this discovery attempt to answer?
@@ -32,3 +39,13 @@
 ## Sources and Relations
 
 <!-- List external research, issue links, user interviews, and upstream discovery artifacts. -->
+
+## Evidence
+
+<!-- Append-only evidence tail — the only place raw research dumps belong.
+     - Append new dated entries at the bottom; never edit, reorder, or
+       delete existing entries.
+     - Command output, captured tables, long quotes, and research dumps go
+       here, not in the sections above; head sections summarize or link the
+       evidence they rely on.
+     - A reader who only needs the conclusions may stop at this heading. -->
