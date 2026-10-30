@@ -20699,7 +20699,7 @@ var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
   "evidence-refs",
   "evidenceRefs"
 ]);
-var CANONICAL_TARGETS = [
+var CANONICAL_DOC_DIRS = [
   "docs/ideas",
   "docs/discovery",
   "docs/specs",
@@ -20728,6 +20728,14 @@ function isInside(cwd, candidate) {
   const root = import_node_path2.default.resolve(cwd);
   const resolved = import_node_path2.default.resolve(candidate);
   return resolved === root || resolved.startsWith(`${root}${import_node_path2.default.sep}`);
+}
+function resolveContainedTaskDir(cwd, taskDir) {
+  const candidate = taskDir ?? "docs/tasks";
+  const resolved = import_node_path2.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
+  }
+  return normalizeArtifactPath(cwd, resolved);
 }
 function markdownFiles(dir) {
   if (!import_node_fs3.default.existsSync(dir) || !import_node_fs3.default.statSync(dir).isDirectory()) return [];
@@ -20772,8 +20780,8 @@ function relationValues(raw, ownerPath) {
 }
 function readRecords(options2, collector) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
-  const taskDir = options2.taskDir ?? "docs/tasks";
-  const directories = sortedUnique([...CANONICAL_TARGETS, normalizeArtifactPath(cwd, taskDir)]);
+  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
+  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
   const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path2.default.join(cwd, directory))));
   const records = [];
   for (const absolutePath of files.map((file2) => import_node_path2.default.resolve(cwd, file2))) {
@@ -21526,18 +21534,6 @@ function subHeadingCount(section, depth = 3) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-var CANONICAL_TARGETS2 = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp"
-];
 var FOLLOWUP_SIGNALS = /* @__PURE__ */ new Set([
   "followup-bug-fix",
   "followup-decision-briefing",
@@ -21564,7 +21560,7 @@ function consideredOptionCount(body) {
 }
 function bootstrapReasons(cwd) {
   const reasons = [];
-  for (const directory of CANONICAL_TARGETS2) {
+  for (const directory of CANONICAL_DOC_DIRS) {
     const full = import_node_path4.default.join(cwd, directory);
     if (!import_node_fs5.default.existsSync(full) || !import_node_fs5.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
     if (!import_node_fs5.default.existsSync(import_node_path4.default.join(full, "README.md"))) reasons.push(`missing-index:${directory}/README.md`);
@@ -21666,7 +21662,7 @@ function evaluateGraphGates(state, collector) {
 }
 function projectGraphState(options2, collector) {
   const cwd = import_node_path4.default.resolve(options2.cwd);
-  const taskDir = options2.taskDir ?? "docs/tasks";
+  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
   const projection = scanArtifactGraph({ cwd, taskDir }, collector);
   const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options2.focus ?? []);
   const blockers = sortedUnique3([

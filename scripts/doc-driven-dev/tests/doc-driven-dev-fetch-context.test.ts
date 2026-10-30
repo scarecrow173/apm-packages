@@ -230,6 +230,83 @@ test("conflicting modes fail at the CLI boundary with an error payload", () => {
   assert.equal(typeof report.error, "string");
 });
 
+test("--task-dir escaping the checkout is a caller error in every mode (#142)", () => {
+  const repo = createFixtureRepo();
+  for (const taskDir of ["../outside", "./../outside", path.dirname(repo)]) {
+    for (const mode of [
+      ["--metadata", "--focus", "PLAN-0001"],
+      ["--fetch", "docs/plans/0001-graph.md"],
+      ["--expand", "docs/plans/0001-graph.md"],
+    ]) {
+      const { status, report } = runCli(repo, [...mode, "--task-dir", taskDir]);
+      assert.equal(status, 1, `${mode[0]} --task-dir ${taskDir}`);
+      assert.equal(typeof report.error, "string", `${mode[0]} --task-dir ${taskDir}`);
+      assert.match(String(report.error), /--task-dir escapes the checkout/, `${mode[0]} --task-dir ${taskDir}`);
+    }
+  }
+  // Contained task dirs work in every mode.
+  const metadata = runCli(repo, ["--metadata", "--focus", "PLAN-0001", "--task-dir", "docs/tasks"]);
+  assert.equal(metadata.status, 0, metadata.stderr);
+  const fetched = runCli(repo, ["--fetch", "docs/tasks/0001-task.md", "--task-dir", "docs/tasks"]);
+  assert.equal(fetched.status, 0, fetched.stderr);
+  const expanded = runCli(repo, ["--expand", "docs/plans/0001-graph.md", "--task-dir", "docs/tasks"]);
+  assert.equal(expanded.status, 0, expanded.stderr);
+});
+
+test("--task-dir keeps L1/L2/L3 on one scan set (#141)", () => {
+  const repo = createFixtureRepo();
+  writeArtifact(repo, "docs/work-items/0001-task.md", {
+    id: "TASK-CUSTOM", type: "task", status: "todo", title: "Custom",
+    relations: { implements: ["docs/plans/0001-graph.md"] },
+  }, "# Custom task\n");
+
+  // L1 lists the custom-dir record only when --task-dir is supplied.
+  const listed = runCli(repo, ["--metadata", "--focus", "PLAN-0001", "--task-dir", "docs/work-items"]);
+  assert.equal(listed.status, 0, listed.stderr);
+  assert.ok((listed.report.metadata as MetadataEntry[]).some((entry) =>
+    entry.path === "docs/work-items/0001-task.md" && entry.id === "TASK-CUSTOM"));
+
+  // L2 refuses the same path as not-canonical without the dir, accepts it with.
+  const refused = runCli(repo, ["--fetch", "docs/work-items/0001-task.md"]);
+  assert.equal(refused.status, 1);
+  assert.ok(findings(refused.report).some((finding) => finding.code === "not-canonical"));
+  const fetched = runCli(repo, ["--fetch", "docs/work-items/0001-task.md", "--task-dir", "docs/work-items"]);
+  assert.equal(fetched.status, 0, fetched.stderr);
+  assert.equal((fetched.report.documents as FetchDocument[])[0].id, "TASK-CUSTOM");
+
+  // L3 resolves the custom-dir root only with the dir.
+  const missing = runCli(repo, ["--expand", "TASK-CUSTOM"]);
+  assert.equal(missing.status, 1);
+  assert.ok(findings(missing.report).some((finding) => finding.code === "not-found"));
+  const expanded = runCli(repo, [
+    "--expand", "TASK-CUSTOM", "--task-dir", "docs/work-items", "--relations", "implements",
+  ]);
+  assert.equal(expanded.status, 0, expanded.stderr);
+  assert.deepEqual((expanded.report.nodes as ExpandNode[]).map((node) => node.path), [
+    "docs/work-items/0001-task.md",
+    "docs/plans/0001-graph.md",
+  ]);
+});
+
+test("--expand reports requested-but-undeclared relations as unused-relation (#143)", () => {
+  const repo = createFixtureRepo();
+  // "implements" is declared on task records even though no edge walks it
+  // from the plan; "implementz" is declared nowhere — a typo the caller sees.
+  const { status, report } = runCli(repo, [
+    "--expand", "docs/plans/0001-graph.md", "--relations", "implements,implementz",
+  ]);
+  assert.equal(status, 1);
+  const unused = findings(report).filter((finding) => finding.code === "unused-relation");
+  assert.equal(unused.length, 1);
+  assert.ok(unused[0].message.includes("implementz"));
+
+  // Declared relations — walked or merely present on scanned records — give
+  // no finding, and a clean traversal exits 0.
+  const clean = runCli(repo, ["--expand", "docs/plans/0001-graph.md", "--relations", "derives-from"]);
+  assert.equal(clean.status, 0, clean.stderr);
+  assert.deepEqual(findings(clean.report), []);
+});
+
 // --- Step 2: large corpus ------------------------------------------------------
 
 const pad = (value: number): string => String(value).padStart(4, "0");

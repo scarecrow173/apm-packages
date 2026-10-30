@@ -68,7 +68,13 @@ const EVIDENCE_RELATIONS: ReadonlySet<string> = new Set([
   "evidence-refs",
   "evidenceRefs",
 ]);
-const CANONICAL_TARGETS = [
+/**
+ * Canonical doc-bearing directories — the single authority shared by the
+ * artifact scan, graph-state bootstrap reasons, the caller-runner workspace
+ * "." fingerprint, and the L2 canonical-doc check (Issue #141). A custom
+ * `--task-dir` extends, never replaces, this set.
+ */
+export const CANONICAL_DOC_DIRS = [
   "docs/ideas",
   "docs/discovery",
   "docs/specs",
@@ -102,6 +108,24 @@ function isInside(cwd: string, candidate: string): boolean {
   const root = path.resolve(cwd);
   const resolved = path.resolve(candidate);
   return resolved === root || resolved.startsWith(`${root}${path.sep}`);
+}
+
+/**
+ * Resolve `taskDir` (the `--task-dir` selector) to its normalized
+ * checkout-relative form and enforce the one containment rule: the directory
+ * must stay inside the checkout. An absolute-outside or `..`-escaping value
+ * is a caller error — the boundary fails closed by throwing before any file
+ * is read, so every caller of the artifact scan rejects identically
+ * (Issue #142). Callers needing the canonical directory set pair this result
+ * with CANONICAL_DOC_DIRS.
+ */
+export function resolveContainedTaskDir(cwd: string, taskDir?: string): string {
+  const candidate = taskDir ?? "docs/tasks";
+  const resolved = path.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
+  }
+  return normalizeArtifactPath(cwd, resolved);
 }
 
 function markdownFiles(dir: string): string[] {
@@ -153,8 +177,10 @@ function relationValues(raw: unknown, ownerPath: string): { relations: Record<st
 
 function readRecords(options: ArtifactGraphOptions, collector?: ArtifactScanCollector): ArtifactRecord[] {
   const cwd = path.resolve(options.cwd);
-  const taskDir = options.taskDir ?? "docs/tasks";
-  const directories = sortedUnique([...CANONICAL_TARGETS, normalizeArtifactPath(cwd, taskDir)]);
+  // Containment is validated once here — the single boundary every artifact
+  // scan passes through — rather than in each CLI (Issue #142).
+  const taskDir = resolveContainedTaskDir(cwd, options.taskDir);
+  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
   const files = sortedUnique(directories.flatMap((directory) => markdownFiles(path.join(cwd, directory))));
   const records: ArtifactRecord[] = [];
   for (const absolutePath of files.map((file) => path.resolve(cwd, file))) {

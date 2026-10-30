@@ -28073,7 +28073,7 @@ var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
   "evidence-refs",
   "evidenceRefs"
 ]);
-var CANONICAL_TARGETS = [
+var CANONICAL_DOC_DIRS = [
   "docs/ideas",
   "docs/discovery",
   "docs/specs",
@@ -28102,6 +28102,14 @@ function isInside(cwd, candidate) {
   const root = import_node_path2.default.resolve(cwd);
   const resolved = import_node_path2.default.resolve(candidate);
   return resolved === root || resolved.startsWith(`${root}${import_node_path2.default.sep}`);
+}
+function resolveContainedTaskDir(cwd, taskDir) {
+  const candidate = taskDir ?? "docs/tasks";
+  const resolved = import_node_path2.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
+  }
+  return normalizeArtifactPath(cwd, resolved);
 }
 function markdownFiles(dir) {
   if (!import_node_fs.default.existsSync(dir) || !import_node_fs.default.statSync(dir).isDirectory()) return [];
@@ -28146,8 +28154,8 @@ function relationValues(raw, ownerPath) {
 }
 function readRecords(options2, collector) {
   const cwd = import_node_path2.default.resolve(options2.cwd);
-  const taskDir = options2.taskDir ?? "docs/tasks";
-  const directories = sortedUnique([...CANONICAL_TARGETS, normalizeArtifactPath(cwd, taskDir)]);
+  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
+  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
   const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path2.default.join(cwd, directory))));
   const records = [];
   for (const absolutePath of files.map((file2) => import_node_path2.default.resolve(cwd, file2))) {

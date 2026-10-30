@@ -110,7 +110,9 @@ runtime selector (`--cwd`, `--focus`, or `--task-dir`) adds `state`,
 `artifactGraph`, and `taskGraph` from a fresh projection. The projection is
 read-only; it does not route, dispatch a delegate, or create a parallel state
 store. An explicit focus that resolves to an invalid or required focus fails
-closed instead of guessing.
+closed instead of guessing. A `--task-dir` that resolves outside the checkout
+is a caller error before any file is read — the same containment rule
+`route_graph.js` and `fetch_context.js` enforce.
 
 Mermaid is definition-only and rejects `--cwd`, `--focus`, and `--task-dir`.
 JSON accepts these selectors for runtime projection.

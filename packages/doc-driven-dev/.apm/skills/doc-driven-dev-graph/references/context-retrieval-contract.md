@@ -63,12 +63,17 @@ On `focus-required` or `focus-invalid` the result carries no metadata.
 | `broken-relation` | A declared relation target does not resolve to a record — reported by the scan or by an included record's unresolved neighbor. |
 | `ambiguous-target` | An included record's relation target is unresolvable because more than one record carries that ID. |
 
+`--task-dir` adds its directory to the artifact scan set alongside the
+canonical docs directories. The same selector is accepted by L2 and L3 and it
+is containment-checked — see the guards below.
+
 ## L2 — body fetch
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/fetch_context.js \
   [--cwd <repo>] --fetch <path> [--fetch <path> ...] \
-  [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] [--json]
+  [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] \
+  [--task-dir <dir>] [--json]
 ```
 
 Output: `{ "level": "L2", "documents": [...], "findings": [...] }`, where each
@@ -96,7 +101,7 @@ Each refused ref lands in `findings`, never in `documents`:
 | Finding code | Raised when |
 | --- | --- |
 | `path-escape` | The ref is absolute or escapes the checkout (`..`). |
-| `not-canonical` | The ref is not a canonical artifact doc — outside the canonical docs directories (`docs/ideas`, `docs/discovery`, `docs/specs`, `docs/designs`, `docs/plans`, `docs/tasks`, `docs/test-specs`, `docs/adr`, `docs/impl/ir`, `docs/impl/exp`), not `.md`, or a `README`/`index` file. |
+| `not-canonical` | The ref is not a canonical artifact doc — outside the canonical docs directories (`docs/ideas`, `docs/discovery`, `docs/specs`, `docs/designs`, `docs/plans`, `docs/tasks`, `docs/test-specs`, `docs/adr`, `docs/impl/ir`, `docs/impl/exp`) plus the resolved `--task-dir`, not `.md`, or a `README`/`index` file. |
 | `not-found` | The ref does not exist as a file. |
 | `unreadable` | The file does not parse as an artifact doc. |
 | `id-mismatch` | `--id` does not equal the resolved artifact ID. |
@@ -107,7 +112,7 @@ Each refused ref lands in `findings`, never in `documents`:
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/fetch_context.js \
   [--cwd <repo>] --expand <id-or-path> [--relations <a,b,c>] \
-  [--depth <n>] [--reason "<text>"] [--json]
+  [--depth <n>] [--reason "<text>"] [--task-dir <dir>] [--json]
 ```
 
 Output: `{ "nodes": [...], "findings": [...], "reason"?: <text> }`. Each node
@@ -137,6 +142,13 @@ as a finding, never skipped silently.
 | `not-found` | The expansion root does not resolve to an artifact. |
 | `broken-relation` | A declared relation target does not resolve to a record. |
 | `ambiguous-target` | A relation target is unresolvable because more than one record carries that ID. |
+| `unused-relation` | An explicitly `--relations`-requested name is not declared on any scanned artifact record — almost certainly a typo, since traversal could never use it. |
+
+`unused-relation` exists to catch misspelled relation names. "Declared" means
+present in some record's relation keys anywhere in the scan set — a relation
+used only on records outside the walk still counts as declared and produces no
+finding. Only names the caller explicitly requested are checked; the default
+lineage set is curated and is never reported.
 
 ## Guards and invariants
 
@@ -163,6 +175,13 @@ as a finding, never skipped silently.
   `--expand` are mutually exclusive, and each supporting flag is valid only
   with its own mode — a foreign flag is a caller error, not something to
   drop.
+- **One `--task-dir`, one scan set.** `--task-dir` selects the same custom
+  task-doc directory at L1, L2, and L3, so a path L1 lists is never refused
+  by L2 as `not-canonical` and L3 roots resolve in the same projection. The
+  directory must resolve inside the checkout — the containment rule the
+  artifact scan enforces. An escaping or absolute-outside value is a caller
+  error raised before anything is read, identical at every level and on
+  `route_graph.js`/`inspect_graph.js`, not a finding.
 
 ## CLI and exit codes
 
@@ -173,7 +192,7 @@ current directory) and `--help` prints usage.
 | --- | --- | --- |
 | Success, no findings | Mode result | `0` |
 | Success with findings | Mode result with non-empty `findings` | `1` |
-| CLI-level error — unknown flag, missing value, conflicting modes, malformed `--id`/`--fingerprint`/`--depth`/`--relations`, or a flag foreign to the mode | `{ "error": "..." }` on stdout; message and usage on stderr | `1` |
+| CLI-level error — unknown flag, missing value, conflicting modes, malformed `--id`/`--fingerprint`/`--depth`/`--relations`, a `--task-dir` escaping the checkout, or a flag foreign to the mode | `{ "error": "..." }` on stdout; message and usage on stderr | `1` |
 
 Findings are data — fail-closed refusals the caller must act on — not
 crashes. A non-zero exit on findings is the contract; inspect `findings`
