@@ -115,6 +115,11 @@ in `relations.derived-by`.
 Keep relations minimal. Idea documents do not need full relation coverage;
 use `source` and `derived-by` when applicable.
 
+Record `source` at creation whenever something prompted the idea — the
+upstream spec, plan, or question it feeds, or the link, issue, or
+conversation that raised it. An idea with no recorded source has no
+traceable origin.
+
 ## Required Content
 
 Every idea document should answer:
@@ -133,6 +138,10 @@ longer, the idea is ready for `discovery-doc`.
 Each idea document records a single, distinct idea. If a conversation or
 meeting produces multiple ideas, create a separate file for each. Do not
 bundle unrelated ideas into one document.
+
+Refining, scoping, or parking the same idea is an in-place update of the
+existing file (or a `supersedes` link when it is rewritten); a new file
+earns its keep only for a genuinely different idea.
 
 ## Promotion Rule
 

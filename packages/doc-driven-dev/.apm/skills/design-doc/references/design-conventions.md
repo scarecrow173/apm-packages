@@ -59,7 +59,8 @@ node scripts/new_design.js --title "Graph Visualization" \
 - `draft` design docs may be refined freely.
 - `approved` design docs should preserve rationale and note updates explicitly.
 - Large redesigns should create a superseding design doc instead of silently
-  rewriting history.
+  rewriting history, and should re-point or close dependents (plans, tasks)
+  that still target the replaced baseline.
 
 ## Subdirectory Grouping
 

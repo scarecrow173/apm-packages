@@ -230,7 +230,8 @@ Plans are execution artifacts and may evolve while work is active.
   reality, but do not erase the original sequence without explanation.
 - `completed` plans should preserve what was actually done and verified.
 - Substantive re-planning should create a superseding plan when the old plan no
-  longer describes the work.
+  longer describes the work. Re-point or close the superseded plan's open
+  tasks so no in-flight dependents keep tracking the replaced plan.
 - Status, owner, and relation updates are acceptable in-place edits.
 
 ## Index

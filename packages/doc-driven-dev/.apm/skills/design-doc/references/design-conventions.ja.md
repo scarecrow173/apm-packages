@@ -56,7 +56,9 @@ node scripts/new_design.js --title "グラフ視覚化" \
 
 - `draft` の design 文書は自由に更新できます。
 - `approved` の design 文書は、意図を残しつつ差分理由を明示して更新します。
-- 大きな再設計は履歴を消すのではなく superseding design 文書で表現します。
+- 大きな再設計は履歴を消すのではなく superseding design 文書で表現し、
+  置き換えたベースラインを参照し続ける依存文書（plan、task）は
+  付け替えるかクローズします。
 
 ## サブディレクトリ管理
 

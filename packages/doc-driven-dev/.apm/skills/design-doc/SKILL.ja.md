@@ -16,6 +16,8 @@ license: MIT
 2. overview-first 構成を維持する。
    `docs/designs/overview.md` を全体設計の入り口にします。
 3. 詳細設計文書を作成する。
+   同じベースラインを反復する間は既存の設計文書を更新し、別の設計テーマや
+   supersede する再設計のときだけ新規ファイルを作成します。
 
    ```bash
    node scripts/new_design.js --title "Design checkout orchestration" --from docs/specs/define-checkout-flow.md --from docs/adr/checkout-runtime.md
