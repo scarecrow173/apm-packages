@@ -19021,7 +19021,9 @@ var changesSchema = external_exports.object(Object.fromEntries(
 )).prefault({});
 var relationSchema = external_exports.object({
   ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
-  changes: changesSchema
+  changes: changesSchema,
+  // A non-empty reason string, not a relation target (Issue #165).
+  "test-spec-skip": external_exports.string().min(1).optional()
 }).prefault({});
 var frontMatterSchema = external_exports.object({
   id: external_exports.string().min(1),

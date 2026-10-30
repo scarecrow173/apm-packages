@@ -112,7 +112,7 @@ lint reports them.
 | Settled / in-flight | 0 / 7 | 0 / 68 | 57 / 49 |
 | Stale-upstream docs | 0 | 0 | 3 |
 | Duplicate-id groups | 0 | 0 | 0 |
-| Findings (blocking/warn/info) | 21 (0/0/21) | 348 (86/239/23) | 34 (7/8/19) |
+| Findings (blocking/warn/info) | 21 (0/0/21) | 348 (86/239/23) | 33 (6/8/19) |
 
 ### 3.2 Per-type — long-running corpus
 
@@ -122,7 +122,7 @@ lint reports them.
 | impl | 18 | 16 (89%) | 0 | 1,318 | 70 | 0/0/0 | 0* |
 | spec | 11 | 7 (64%) | 0 | 1,117 | 102 | 1/0/0 | 4 |
 | discovery | 10 | 6 (60%) | 0 | 39,809 | 39,018 | 3/3/3 | 14 |
-| plan | 9 | 6 (67%) | 0 | 120 | 12 | 1/0/0 | 2 |
+| plan | 9 | 6 (67%) | 0 | 120 | 12 | 1/0/0 | 1 |
 | design | 9 | 0 | 1 | 219 | 25 | 1/0/0 | 2 |
 | adr | 8 | 1 (13%) | 0 | 377 | 62 | 0/0/0 | 0 |
 | idea | 8 | 3 (38%) | 0 | 136 | 16 | 8/0/0 | 8 |
@@ -140,13 +140,14 @@ Status distributions (long-running): task `done` 15 / `todo` 4 / `wont-do`
 
 ### 3.3 Relations and references — long-running
 
-- 120 declared relation values: `implements` 39, `derives-from` 41,
+- 119 declared relation values: `implements` 39, `derives-from` 41,
   `derived-by` 14, `verifies` 7, `verified-by` 7, `source` 9,
-  `supersedes`/`superseded-by`/`test-spec-skip` 1 each. Lineage fields
+  `supersedes`/`superseded-by` 1 each. Lineage fields
   (`implements`+`derives-from`+`refines`) = 67% of declared.
-- Resolution: 110 resolved, 7 external (discovery source URLs), 3
-  unresolved (the planted `DISC-9999`, the dead local `source`, and the
-  `test-spec-skip` reason string — see §4.5).
+  (`test-spec-skip` is a non-reference metadata key and no longer counts
+  as a relation — see §4.5.)
+- Resolution: 110 resolved, 7 external (discovery source URLs), 2
+  unresolved (the planted `DISC-9999` and the dead local `source`).
 - 63 / 106 artifacts receive ≥1 inbound resolved relation — 40% of the
   corpus are relation-islands, matching the orphan findings.
 - Markdown links: 17 declared (16 resolved `impl→task` links, 1 unmanaged
@@ -161,7 +162,7 @@ Status distributions (long-running): task `done` 15 / `todo` 4 / `wont-do`
 | orphan-relation | 16 | 8 ideas + 2 brainstorms + 3 discovery orphans + superseded plan + broken spec + design overview |
 | orphan-index / orphan-navigation / index-missing-entry | 3 / 3 / 3 | the 3 un-indexed orphan discoveries |
 | index-stale-entry / index-metadata-mismatch | 1 / 1 | deleted spec row; task row lagging its doc's status |
-| broken-relation-link | 2 | `SPEC-9201 → DISC-9999`, `PLAN-9301 test-spec-skip` (§4.5) |
+| broken-relation-link | 1 | `SPEC-9201 → DISC-9999` |
 | inconsistent-reciprocal-relation | 1 | `SPEC-0502` not back-linked in `DISC-0501.derived-by` — supersession drift |
 | traceability-missing-upstream | 2 | `SPEC-0001`, `DESIGN-OVERVIEW` |
 | provenance-missing-source / provenance-unresolved-local-source | 1 / 1 | orphan discoveries |
@@ -213,13 +214,17 @@ already regenerates indexes. The gap is cadence, not capability.
 ### 4.5 Lifecycle-debt edges are small, real, and currently invisible
 
 3 stale-upstream docs (todo tasks on a completed plan; approved design on a
-superseded spec), 1 reciprocal-relation break from supersession, 3
+superseded spec), 1 reciprocal-relation break from supersession, 2
 unresolved relation targets, 2 provenance gaps. Individually minor — but
 **two observations the stats exposed**:
 
 - `test-spec-skip: "<reason>"` (documented convention in
-  `plan-conventions`) currently resolves as a relation target and reports
-  `broken-relation-link` — a reason string counted as a broken reference.
+  `plan-conventions`) previously resolved as a relation target and
+  reported `broken-relation-link` — a reason string counted as a broken
+  reference. **Resolved in #165:** the relation-ingestion boundaries now
+  exempt `test-spec-skip` as a non-reference metadata key (alongside
+  `changes`), so the recorded reason no longer resolves, counts, or gates
+  as a relation.
 - A superseding spec does not automatically produce the `derived-by`
   back-link, leaving `inconsistent-reciprocal-relation` drift no one is
   told to fix.
@@ -282,7 +287,7 @@ Two cross-cutting observations:
 | - | -------------- | -------------- | ------------------ |
 | C1 | Consider a settled/historical index tier or `archive:` front-matter flag consumed by indexes/navigation (status authority unchanged — a presentation axis) | §4.2 | Back-fill flag derivation from status; index-format change needs a doc-maintenance migration; reversible by flag removal |
 | C2 | Discovery evidence structure: split oversized evidence dumps into a summary front-matter section + append-only evidence tail so L1 metadata stays small regardless of evidence mass | §4.3 | Body-format convention change; existing files grandfathered; template + convention docs migrate |
-| C3 | Teach relation resolution that `test-spec-skip` is a reason string, not a target (or move it out of `relations:` — contract-visible either way) | §4.5 | Schema-visible change: needs contract review + migration note; small blast radius |
+| C3 | Teach relation resolution that `test-spec-skip` is a reason string, not a target — **landed in #165**: the ingestion boundaries exempt it as a non-reference `relations:` key and the `verified-by` gate reads the recorded reason | §4.5 | Contract-visible: `test-spec-skip` is a documented metadata key under `relations:`; small blast radius |
 
 ### Suggested follow-up issues (one per implementation effort)
 
@@ -292,7 +297,8 @@ Two cross-cutting observations:
    (B1–B3) — one issue.
 3. Settled-tier presentation flag (`archive:` axis) (C1) — one issue.
 4. Discovery evidence front/tail structure (C2) — one issue.
-5. `test-spec-skip` resolution semantics (C3) — one issue.
+5. `test-spec-skip` resolution semantics (C3) — one issue; **landed as
+   #165**.
 6. Promote the stale-upstream heuristic into a `doc-status` lint rule if
    the signal proves stable on real repos — one issue.
 

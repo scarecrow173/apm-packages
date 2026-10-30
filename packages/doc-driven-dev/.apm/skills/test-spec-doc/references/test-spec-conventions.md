@@ -101,7 +101,8 @@ Relation targets may be written as repo-relative paths or document IDs
 resolves to a document type other than spec, design, or ADR
 (`test-spec-invalid-verifies-target`), and when an approved, in-progress,
 or completed plan neither links a test spec via `verified-by` nor records
-`test-spec-skip` (`plan-missing-test-spec-evidence`).
+a `test-spec-skip` reason under `relations:` — a reason string, not a
+relation target (`plan-missing-test-spec-evidence`).
 
 ## Required Content
 

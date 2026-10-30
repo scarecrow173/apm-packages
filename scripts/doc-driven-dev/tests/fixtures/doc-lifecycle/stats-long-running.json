@@ -15,11 +15,11 @@
     "missingTypes": []
   },
   "relations": {
-    "declared": 120,
+    "declared": 119,
     "resolved": 110,
     "resolvedFile": 0,
     "ambiguous": 0,
-    "unresolved": 3,
+    "unresolved": 2,
     "escaped": 0,
     "external": 7,
     "inboundTargets": 63,
@@ -78,15 +78,6 @@
         "escaped": 0,
         "external": 0
       },
-      "test-spec-skip": {
-        "declared": 1,
-        "resolved": 0,
-        "resolvedFile": 0,
-        "ambiguous": 0,
-        "unresolved": 1,
-        "escaped": 0,
-        "external": 0
-      },
       "verified-by": {
         "declared": 7,
         "resolved": 7,
@@ -117,15 +108,15 @@
     "inboundTargets": 102
   },
   "findings": {
-    "total": 34,
-    "blocking": 7,
+    "total": 33,
+    "blocking": 6,
     "warnings": 8,
     "infos": 19,
-    "onDocuments": 32,
+    "onDocuments": 31,
     "onIndexes": 2,
     "unattributed": 0,
     "byRuleId": {
-      "broken-relation-link": 2,
+      "broken-relation-link": 1,
       "inconsistent-reciprocal-relation": 1,
       "index-metadata-mismatch": 1,
       "index-missing-entry": 3,
@@ -141,18 +132,18 @@
       "index": 5,
       "orphan": 22,
       "provenance": 2,
-      "relation": 3,
+      "relation": 2,
       "traceability": 2
     },
     "health": {
       "documents": 87,
-      "blocking": 7,
+      "blocking": 6,
       "warnings": 8,
       "infos": 19,
       "categories": [
         {
           "category": "relation",
-          "blocking": 2,
+          "blocking": 1,
           "warnings": 1,
           "infos": 0,
           "clean": false
@@ -434,11 +425,11 @@
       "inboundLinkTargets": 9,
       "inboundRelationTargets": 7,
       "relations": {
-        "declared": 16,
+        "declared": 15,
         "resolved": 15,
         "resolvedFile": 0,
         "ambiguous": 0,
-        "unresolved": 1,
+        "unresolved": 0,
         "escaped": 0,
         "external": 0
       },
@@ -453,8 +444,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 1,
-      "findings": 2,
-      "blockingFindings": 1
+      "findings": 1,
+      "blockingFindings": 0
     },
     "spec": {
       "files": 11,

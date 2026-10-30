@@ -49,6 +49,30 @@ test("existing non-Markdown local relations are valid while missing files remain
   assert.equal(graph.issues.filter((issue: { code: string }) => issue.code === "broken-relation").length, 1);
 });
 
+test("test-spec-skip under relations projects no edge and no broken-relation issue", () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "artifact-graph-skip-"));
+  writeArtifact(repo, "docs/plans/0001-skip.md", {
+    id: "PLAN-0001",
+    type: "plan",
+    status: "approved",
+    relations: {
+      "test-spec-skip": "docs-only change, no verifiable behavior",
+      "derives-from": ["MISSING-0001"],
+    },
+  });
+
+  const graph = projectArtifactGraph({ cwd: repo });
+  // The skip reason is a non-reference key: it projects neither an edge nor
+  // a broken-relation issue, while a genuine missing target still reports
+  // (Issue #165).
+  assert.equal(graph.edges.some((edge) => edge.relation === "test-spec-skip"), false);
+  assert.equal(graph.issues.some((issue) => issue.message.includes("test-spec-skip")), false);
+  assert.deepEqual(
+    graph.issues.filter((issue) => issue.code === "broken-relation").map((issue) => issue.message),
+    ["Broken derives-from relation from docs/plans/0001-skip.md to MISSING-0001 (docs/plans/MISSING-0001)"],
+  );
+});
+
 test("projectArtifactGraph refuses a taskDir that escapes the checkout", () => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "artifact-graph-taskdir-"));
   for (const taskDir of ["../outside", "./../outside", path.dirname(repo)]) {

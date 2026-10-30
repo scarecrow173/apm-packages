@@ -231,6 +231,58 @@ test("audit_docs treats plan/task verified-by to a test-spec as evidence, not re
   );
 });
 
+test("audit_docs treats relations.test-spec-skip as a reason string, not a target", () => {
+  const repo = tempRepo();
+  writeDoc(path.join(repo, "docs/plans"), "0001-skip.md", specFrontMatter({
+    id: "PLAN-0001",
+    type: "plan",
+    status: "approved",
+    title: "Skip",
+    relations: { "test-spec-skip": "docs-only change, no verifiable behavior" },
+  }));
+  writeDoc(path.join(repo, "docs/plans"), "0002-broken.md", specFrontMatter({
+    id: "PLAN-0002",
+    type: "plan",
+    status: "approved",
+    title: "Broken",
+    relations: { "test-spec-skip": "docs-only change", "derives-from": ["DESIGN-9999"] },
+  }));
+
+  const report = auditJson(repo, "plan");
+  // The reason string is exempt from resolution — the only broken relation
+  // is the genuinely missing DESIGN-9999 target (Issue #165).
+  const brokenLinks = report.findings.filter((finding: any) => finding.code === "broken-relation-link");
+  assert.equal(brokenLinks.length, 1);
+  assert.ok(brokenLinks[0].message.includes("DESIGN-9999"));
+  assert.equal(brokenLinks[0].file, "0002-broken.md");
+  // The recorded skip reason satisfies the verified-by evidence gate.
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "plan-missing-test-spec-evidence"),
+    false,
+  );
+});
+
+test("audit_docs flags a non-string test-spec-skip and still requires evidence", () => {
+  const repo = tempRepo();
+  writeDoc(path.join(repo, "docs/plans"), "0001-malformed.md", specFrontMatter({
+    id: "PLAN-0001",
+    type: "plan",
+    status: "approved",
+    title: "Malformed",
+    relations: { "test-spec-skip": ["not-a-scalar"] },
+  }));
+
+  const report = auditJson(repo, "plan");
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "invalid-front-matter"),
+    true,
+  );
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "plan-missing-test-spec-evidence"),
+    true,
+  );
+});
+
 test("audit_docs reports invalid verifies target types via the shared contract", () => {
   const repo = tempRepo();
   writeDoc(path.join(repo, "docs/tasks"), "0001-t.md", specFrontMatter({

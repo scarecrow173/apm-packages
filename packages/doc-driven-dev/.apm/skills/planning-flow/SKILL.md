@@ -22,8 +22,9 @@ or `task-doc`.
    `test-spec-doc` once per verifiable behavior declared by the approved
    spec/design, before task breakdown, and link each test spec from the plan's
    `relations.verified-by`. Skip this step only when the plan declares no
-   verifiable behavior change, and record the reason as `test-spec-skip` in
-   the plan front matter.
+   verifiable behavior change, and record the reason as `test-spec-skip`
+   under `relations:` in the plan front matter (a reason string, not a
+   relation target).
 6. Invoke `task-doc` once per concrete plan slice, preserving declared
    dependencies, and link each task to the test specs it satisfies via
    `relations.verified-by`.

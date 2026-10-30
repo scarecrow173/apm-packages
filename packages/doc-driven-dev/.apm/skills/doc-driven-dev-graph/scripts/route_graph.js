@@ -20695,6 +20695,10 @@ var CANONICAL_DOC_DIRS = [
   "docs/impl/ir",
   "docs/impl/exp"
 ];
+var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
+  "changes",
+  "test-spec-skip"
+]);
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -20812,7 +20816,7 @@ function relationValues(raw, ownerPath) {
   const issues = [];
   for (const key of Object.keys(raw).sort(compareStrings)) {
     const value = raw[key];
-    if (key === "changes" && value && typeof value === "object" && !Array.isArray(value)) continue;
+    if (nonReferenceRelationKeys.has(key)) continue;
     if (typeof value !== "string" && !Array.isArray(value)) {
       issues.push(`invalid-relation:${ownerPath}:${key}`);
       result[key] = [];
