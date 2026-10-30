@@ -54,6 +54,12 @@ one-edge command のままであり、継続を所有するのは router では�
 12. fresh な state projection で `next` から再入力する。
 13. `single-step` mode では yield し、`run-until-yield` mode では繰り返す。
 
+route invocation の flag は caller が所有します。`runCaller` は adapter の
+`prefixArgs` の後に pinned な `--task-dir docs/tasks` を付けます。
+caller 自身の task bookkeeping (proof document と task-aware hop budget) が
+`docs/tasks` に anchor されるためで、後ろの flag が意図的に優先され、
+adapter が渡す `--task-dir` は採用されません。
+
 completion、gate、follow-up evidence を canonical Markdown に保存して記録します。
 
 checkpoint は audit、delegate、evidence が記録された後にだけ完了します。run の

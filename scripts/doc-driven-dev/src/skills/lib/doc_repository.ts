@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { configFor, docTypes, parseDoc, relationFields } from "./doc_suite_utils";
-import { isIndexFileName, normalizeDir } from "./document_utils";
+import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
 // Finding contract
@@ -531,34 +531,18 @@ function pruneNestedRoots(roots: string[]): string[] {
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
 
-// Scan roots must stay inside the repository by real path: a symlinked root
-// such as `docs -> /outside` would otherwise have readdirSync follow it and
-// ingest outside Markdown as repository documents.
-function realpathInside(realCwd: string, absolute: string): boolean {
-  let real: string;
-  try {
-    real = fs.realpathSync(absolute);
-  } catch {
-    return false;
-  }
-  const rel = path.relative(realCwd, real);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-}
-
 // ---------------------------------------------------------------------------
 // Repository scan
 // ---------------------------------------------------------------------------
 
 async function scanRepository(options: ScanOptions): Promise<DocumentRepository> {
   const cwd = path.resolve(options.cwd);
-  let realCwd: string;
-  try {
-    realCwd = fs.realpathSync(cwd);
-  } catch {
-    realCwd = cwd;
-  }
+  // Scan roots must stay inside the repository by real path: a symlinked
+  // root such as `docs -> /outside` would otherwise have readdirSync follow
+  // it and ingest outside Markdown as repository documents. The shared
+  // realpath containment check fails closed (Issue #156).
   const roots = pruneNestedRoots(options.roots?.length ? options.roots : defaultScanRoots(cwd))
-    .filter((root) => realpathInside(realCwd, path.join(cwd, root)));
+    .filter((root) => isInsideRealpath(cwd, path.join(cwd, root)));
   const typeMap = canonicalTypeMap();
 
   const absoluteFiles = new Set<string>();
@@ -638,16 +622,13 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     byId.set(document.id, group);
   }
 
-  const insideRoot = (absolute: string): boolean => {
-    const resolved = path.resolve(absolute);
-    return resolved === cwd || resolved.startsWith(`${cwd}${path.sep}`);
-  };
+  const insideRoot = (absolute: string): boolean => isInside(cwd, absolute);
 
   const fileExistsInsideRoot = (absolute: string): boolean => {
     // Lexical containment alone lets `x.md -> /outside` resolve as existing
-    // through the link; require the real path to stay inside the repo too.
-    return insideRoot(absolute)
-      && realpathInside(realCwd, path.resolve(absolute))
+    // through the link; require the real path to stay inside the repo too —
+    // exactly what isInsideCheckout checks for an existing path.
+    return isInsideCheckout(cwd, absolute)
       && fs.existsSync(absolute)
       && fs.statSync(absolute).isFile();
   };

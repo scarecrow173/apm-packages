@@ -20,7 +20,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { isDeepStrictEqual } from "node:util";
 import matter from "gray-matter";
-import { CANONICAL_DOC_DIRS } from "./artifact_graph";
+import { CANONICAL_DOC_DIRS, isInside } from "./artifact_graph";
 import { loadGraphDefinition } from "./graph_definition";
 import { resolveGraphPath } from "./graph_cli";
 import type { GraphRoute } from "./graph_router";
@@ -143,8 +143,7 @@ export function isCanonicalReference(value: unknown): value is CanonicalReferenc
 export function canonicalEvidenceMatches(repo: string, evidence: CanonicalReference): boolean {
   if (path.isAbsolute(evidence.path)) return false;
   const resolved = path.resolve(repo, evidence.path);
-  const relative = path.relative(repo, resolved);
-  if (relative.startsWith("..") || path.isAbsolute(relative) || !fs.existsSync(resolved)) return false;
+  if (!isInside(repo, resolved) || !fs.existsSync(resolved)) return false;
   try {
     const current = canonicalReference(repo, evidence.path);
     return current.id === evidence.id && current.fingerprint === evidence.fingerprint;
@@ -406,7 +405,12 @@ export type EffectDispatcher = (ctx: EffectDispatchContext) => DispatchResult;
 
 export type CallerRunnerOptions = {
   repo: string;
-  /** Spawn: executable [...prefixArgs, ...routeArgs]. */
+  /**
+   * Spawn: executable [...prefixArgs, ...routeArgs]. The runner appends its
+   * own routing flags after prefixArgs, including a pinned
+   * `--task-dir docs/tasks` — the caller owns the task-doc scan root, so an
+   * adapter-supplied --task-dir in prefixArgs is overridden, never honored.
+   */
   router: { executable: string; prefixArgs: string[] };
   /** Default: resolveGraphPath(undefined, repo). */
   graphPath?: string;
@@ -618,6 +622,12 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       "--current", current,
       ...focus.flatMap((entry) => ["--focus", entry]),
       ...[...signals].flatMap((signal) => ["--signal", signal]),
+      // The caller owns the task-doc scan root: its own bookkeeping — the
+      // proof doc (DEFAULT_PROOF_PATH) and the task-aware hop budget — is
+      // anchored at docs/tasks, so the pinned flag is appended after
+      // prefixArgs and deliberately wins over any adapter-supplied
+      // --task-dir (Issue #156; see execution-contract "Selected-edge
+      // protocol").
       "--task-dir", "docs/tasks",
       "--json",
       ...(trace ? ["--trace-file", trace.file, "--run-id", trace.runId] : []),

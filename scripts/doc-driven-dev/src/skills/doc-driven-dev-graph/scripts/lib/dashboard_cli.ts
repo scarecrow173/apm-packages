@@ -5,6 +5,7 @@ import path from "node:path";
 import { collectDashboard } from "./dashboard_collect";
 import { renderDashboard } from "./dashboard_render";
 import { resolveGraphPath } from "./graph_cli";
+import { isInside } from "../../../lib/document_utils";
 
 export type DashboardArgs = {
   cwd: string;
@@ -45,10 +46,13 @@ const requiredValue = (argv: string[], index: number): string => {
   return value;
 };
 
-const isInside = (root: string, target: string): boolean => {
-  const relative = path.relative(root, target);
-  return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`));
-};
+// Lexical `isInside` (shared helper, not `isInsideCheckout`) is the right
+// check for the output path: the leaf does not exist yet, so realpath
+// cannot run on it — the write protocol instead realpaths the nearest
+// existing ancestor (below) and the final parent after mkdir, which is the
+// equivalent ancestor-realpath coverage a not-yet-created target needs.
+// Operands at the ancestor/parent checks are already realpathed, so the
+// lexical compare on canonical paths is exact.
 
 export function parseDashboardArgs(argv: string[], processCwd: string): DashboardArgs {
   let cwdValue = ".";

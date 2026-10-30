@@ -6,6 +6,8 @@ import { spawnSync } from "node:child_process";
 import matter from "gray-matter";
 import { parseAffectedScope } from "./parallel_safety";
 import { scopeKey, toScopeEntry, type ScopePattern } from "./scope_entry";
+import { resolveContainedTaskDir } from "../../../doc-driven-dev-graph/scripts/lib/artifact_graph";
+import { isInsideRealpath } from "../../../lib/document_utils";
 
 export type SliceOutcome = {
   taskId: string;
@@ -161,10 +163,10 @@ export function verifyEvidenceBinding(cwd: string, evidencePath: string, taskId:
   try {
     // A repo-relative path can still escape the checkout through a symlink
     // (for example a docs/impl/ entry pointing outside the repo): resolve the
-    // real path and require it to stay under the resolved cwd.
+    // real path and require it to stay under the resolved cwd — the shared
+    // realpath containment check fails closed.
+    if (!isInsideRealpath(cwd, path.join(cwd, normalized))) return false;
     const resolved = fs.realpathSync(path.join(cwd, normalized));
-    const root = fs.realpathSync(cwd);
-    if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) return false;
     return fs.readFileSync(resolved, "utf8").includes(taskId);
   } catch {
     return false;
@@ -247,12 +249,10 @@ function bindTaskDoc(
   try {
     // Same containment rule as evidence binding: a symlinked task doc that
     // resolves outside the checkout cannot serve as scope authority.
-    const resolved = fs.realpathSync(path.join(cwd, taskDocPath));
-    const root = fs.realpathSync(cwd);
-    if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+    if (!isInsideRealpath(cwd, path.join(cwd, taskDocPath))) {
       throw new Error("task doc resolves outside the checkout");
     }
-    parsed = matter(fs.readFileSync(resolved, "utf8"));
+    parsed = matter(fs.readFileSync(fs.realpathSync(path.join(cwd, taskDocPath)), "utf8"));
   } catch {
     findings.push({
       code: "evidence-mismatch",
@@ -299,11 +299,20 @@ export function verifyParallelMerge(
   slices: SliceOutcome[],
   options: MergeVerifyOptions = {},
 ): MergeReport {
+  // The protected task-doc subtree defaults to docs/tasks. --task-dir is the
+  // same directory selector the artifact scan validates: an escaping value is
+  // a caller error that throws here, never a silent fallback to the default —
+  // silently relocating the protected subtree would disable protection for
+  // the docs/tasks writes the verifier exists to guard (Issue #156). The
+  // check runs before the empty-slice early-out so a bad flag always fails.
+  const resolvedTaskDir = resolveContainedTaskDir(cwd, options.taskDir);
+  const taskDir = normalizeVerifiedPath(resolvedTaskDir);
+  if (taskDir === null) {
+    throw new Error(`--task-dir is not a verifiable repo-relative path: ${options.taskDir ?? "docs/tasks"}`);
+  }
+
   if (slices.length === 0) return { verdict: "blocked", findings: [] };
 
-  // The protected task-doc subtree defaults to docs/tasks; an unverifiable
-  // override falls back to the default rather than disabling protection.
-  const taskDir = normalizeVerifiedPath(options.taskDir ?? "docs/tasks") ?? "docs/tasks";
   const findings: RankedFinding[] = [];
 
   // Slice identity must be unique — duplicated task IDs let one slice's diff

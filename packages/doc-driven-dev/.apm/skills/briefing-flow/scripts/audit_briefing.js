@@ -3427,7 +3427,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs3 = require("fs");
+    var fs4 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -3511,7 +3511,7 @@ var require_gray_matter = __commonJS({
       return stringify2(file2, data, options2);
     };
     matter4.read = function(filepath, options2) {
-      const str2 = fs3.readFileSync(filepath, "utf8");
+      const str2 = fs4.readFileSync(filepath, "utf8");
       const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
@@ -4550,10 +4550,10 @@ var init_vfile_message = __esm({
 });
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js
-var import_node_path;
+var import_node_path2;
 var init_minpath = __esm({
   "node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js"() {
-    import_node_path = __toESM(require("node:path"), 1);
+    import_node_path2 = __toESM(require("node:path"), 1);
   }
 });
 
@@ -4588,9 +4588,9 @@ var init_minurl = __esm({
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/index.js
 function assertPart(part, name) {
-  if (part && part.includes(import_node_path.default.sep)) {
+  if (part && part.includes(import_node_path2.default.sep)) {
     throw new Error(
-      "`" + name + "` cannot be a path: did not expect `" + import_node_path.default.sep + "`"
+      "`" + name + "` cannot be a path: did not expect `" + import_node_path2.default.sep + "`"
     );
   }
 }
@@ -4599,8 +4599,8 @@ function assertNonEmpty(part, name) {
     throw new Error("`" + name + "` cannot be empty");
   }
 }
-function assertPath(path4, name) {
-  if (!path4) {
+function assertPath(path5, name) {
+  if (!path5) {
     throw new Error("Setting `" + name + "` requires `path` to be set too");
   }
 }
@@ -4688,7 +4688,7 @@ var init_lib4 = __esm({
        *   Basename.
        */
       get basename() {
-        return typeof this.path === "string" ? import_node_path.default.basename(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path2.default.basename(this.path) : void 0;
       }
       /**
        * Set basename (including extname) (`'index.min.js'`).
@@ -4705,7 +4705,7 @@ var init_lib4 = __esm({
       set basename(basename) {
         assertNonEmpty(basename, "basename");
         assertPart(basename, "basename");
-        this.path = import_node_path.default.join(this.dirname || "", basename);
+        this.path = import_node_path2.default.join(this.dirname || "", basename);
       }
       /**
        * Get the parent path (example: `'~'`).
@@ -4714,7 +4714,7 @@ var init_lib4 = __esm({
        *   Dirname.
        */
       get dirname() {
-        return typeof this.path === "string" ? import_node_path.default.dirname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path2.default.dirname(this.path) : void 0;
       }
       /**
        * Set the parent path (example: `'~'`).
@@ -4728,7 +4728,7 @@ var init_lib4 = __esm({
        */
       set dirname(dirname) {
         assertPath(this.basename, "dirname");
-        this.path = import_node_path.default.join(dirname || "", this.basename);
+        this.path = import_node_path2.default.join(dirname || "", this.basename);
       }
       /**
        * Get the extname (including dot) (example: `'.js'`).
@@ -4737,7 +4737,7 @@ var init_lib4 = __esm({
        *   Extname.
        */
       get extname() {
-        return typeof this.path === "string" ? import_node_path.default.extname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path2.default.extname(this.path) : void 0;
       }
       /**
        * Set the extname (including dot) (example: `'.js'`).
@@ -4762,7 +4762,7 @@ var init_lib4 = __esm({
             throw new Error("`extname` cannot contain multiple dots");
           }
         }
-        this.path = import_node_path.default.join(this.dirname, this.stem + (extname || ""));
+        this.path = import_node_path2.default.join(this.dirname, this.stem + (extname || ""));
       }
       /**
        * Get the full path (example: `'~/index.min.js'`).
@@ -4785,13 +4785,13 @@ var init_lib4 = __esm({
        * @returns {undefined}
        *   Nothing.
        */
-      set path(path4) {
-        if (isUrl(path4)) {
-          path4 = (0, import_node_url.fileURLToPath)(path4);
+      set path(path5) {
+        if (isUrl(path5)) {
+          path5 = (0, import_node_url.fileURLToPath)(path5);
         }
-        assertNonEmpty(path4, "path");
-        if (this.path !== path4) {
-          this.history.push(path4);
+        assertNonEmpty(path5, "path");
+        if (this.path !== path5) {
+          this.history.push(path5);
         }
       }
       /**
@@ -4801,7 +4801,7 @@ var init_lib4 = __esm({
        *   Stem.
        */
       get stem() {
-        return typeof this.path === "string" ? import_node_path.default.basename(this.path, this.extname) : void 0;
+        return typeof this.path === "string" ? import_node_path2.default.basename(this.path, this.extname) : void 0;
       }
       /**
        * Set the stem (basename w/o extname) (example: `'index.min'`).
@@ -4818,7 +4818,7 @@ var init_lib4 = __esm({
       set stem(stem) {
         assertNonEmpty(stem, "stem");
         assertPart(stem, "stem");
-        this.path = import_node_path.default.join(this.dirname || "", stem + (this.extname || ""));
+        this.path = import_node_path2.default.join(this.dirname || "", stem + (this.extname || ""));
       }
       // Normal prototypal methods.
       /**
@@ -13326,11 +13326,11 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/briefing-flow/scripts/audit_briefing.ts
-var import_node_path4 = __toESM(require("node:path"));
+var import_node_path5 = __toESM(require("node:path"));
 
 // src/skills/briefing-flow/scripts/lib/briefing_audit.ts
-var import_node_fs2 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
+var import_node_fs3 = __toESM(require("node:fs"));
+var import_node_path4 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
 var import_gray_matter = __toESM(require_gray_matter());
@@ -14101,10 +14101,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -14513,11 +14513,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -14664,16 +14664,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path5 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -14700,17 +14700,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path5 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -14742,8 +14742,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path4) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -27435,13 +27435,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path4 = ref.slice(1).split("/").filter(Boolean);
-  if (path4.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path4[0] === defsKey) {
-    const key = path4[1];
+  if (path5[0] === defsKey) {
+    const key = path5[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -27852,6 +27852,79 @@ config(en_default());
 // src/skills/lib/artifact_id.ts
 var import_uuid62 = __toESM(require_uuid62());
 
+// src/skills/lib/document_utils.ts
+var import_node_fs = __toESM(require("node:fs"));
+var import_node_path = __toESM(require("node:path"));
+var CANONICAL_DOC_DIRS = [
+  "docs/ideas",
+  "docs/discovery",
+  "docs/specs",
+  "docs/designs",
+  "docs/plans",
+  "docs/tasks",
+  "docs/test-specs",
+  "docs/adr",
+  "docs/impl/ir",
+  "docs/impl/exp"
+];
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function repoPathKey(value) {
+  const normalized = value.replace(/\\/g, "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function isInside(cwd, candidate) {
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
+  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function isInsideCheckout(cwd, candidate) {
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) return false;
+  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
+}
+function toRepoRelative(cwd, absolute) {
+  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
+}
+function resolveContainedDir(cwd, dir, flag = "--dir") {
+  const resolved = import_node_path.default.resolve(cwd, dir);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`${flag} escapes the checkout: ${dir}`);
+  }
+  if (import_node_fs.default.existsSync(resolved)) {
+    if (!isInsideRealpath(cwd, resolved)) {
+      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
+    }
+    return toRepoRelative(
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
+    );
+  }
+  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
+}
+function scanRootKey(cwd, directory) {
+  const absolute = import_node_path.default.resolve(cwd, directory);
+  try {
+    return containmentKey(stripExtendedLengthPrefix(import_node_fs.default.realpathSync(absolute)));
+  } catch {
+    return containmentKey(absolute);
+  }
+}
+
 // src/skills/lib/doc_suite_utils.ts
 var relationFields = [
   "source",
@@ -27881,19 +27954,22 @@ var changeFields = [
   "generated"
 ];
 var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
-var scaffoldTargets = [
-  { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
-  { dir: "docs/discovery", title: "DISCOVERY Documents", type: "discovery" },
-  { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
-  { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
-  { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
-  { dir: "docs/tasks", title: "TASK Documents", type: "task" },
-  { dir: "docs/test-specs", title: "TEST-SPEC Documents", type: "test-spec" },
-  { dir: "docs/adr", title: "ADR Documents" },
-  { dir: "docs/impl/ir", title: "Implementation Record Documents" },
-  { dir: "docs/impl/exp", title: "Experiment Log Documents" }
-];
-var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+var scaffoldIndexMeta = {
+  "docs/ideas": { title: "IDEA Documents", type: "idea" },
+  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
+  "docs/specs": { title: "SPEC Documents", type: "spec" },
+  "docs/designs": { title: "DESIGN Documents", type: "design" },
+  "docs/plans": { title: "PLAN Documents", type: "plan" },
+  "docs/tasks": { title: "TASK Documents", type: "task" },
+  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
+  "docs/adr": { title: "ADR Documents" },
+  "docs/impl/ir": { title: "Implementation Record Documents" },
+  "docs/impl/exp": { title: "Experiment Log Documents" }
+};
+var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
+  dir,
+  ...scaffoldIndexMeta[dir]
+}));
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -28084,8 +28160,8 @@ async function markdownDestinations(content3) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
-var import_node_fs = __toESM(require("node:fs"));
-var import_node_path2 = __toESM(require("node:path"));
+var import_node_fs2 = __toESM(require("node:fs"));
+var import_node_path3 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
 var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
   "implements",
@@ -28104,18 +28180,6 @@ var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
   "evidence-refs",
   "evidenceRefs"
 ]);
-var CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp"
-];
 var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 function compareStrings(left, right) {
   return left.localeCompare(right);
@@ -28124,49 +28188,20 @@ function sortedUnique(values) {
   return [...new Set(values)].sort(compareStrings);
 }
 function normalizeArtifactPath(cwd, target) {
-  return import_node_path2.default.relative(import_node_path2.default.resolve(cwd), import_node_path2.default.resolve(cwd, target)).split(import_node_path2.default.sep).join("/");
+  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), import_node_path3.default.resolve(cwd, target)).split(import_node_path3.default.sep).join("/");
 }
 function isExternalArtifactReference(value) {
   return EXTERNAL_REFERENCE.test(value.trim());
 }
-function stripExtendedLengthPrefix(value) {
-  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
-  if (value.startsWith("\\\\?\\")) return value.slice(4);
-  return value;
-}
-function containmentKey(value) {
-  const normalized = stripExtendedLengthPrefix(import_node_path2.default.resolve(value));
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
-function isInside(cwd, candidate) {
-  const root = containmentKey(cwd);
-  const resolved = containmentKey(candidate);
-  return resolved === root || resolved.startsWith(`${root}${import_node_path2.default.sep}`);
-}
-function isInsideRealpath(cwd, candidate) {
-  try {
-    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
-  } catch {
-    return false;
-  }
-}
 function resolveContainedTaskDir(cwd, taskDir) {
-  const candidate = taskDir ?? "docs/tasks";
-  const resolved = import_node_path2.default.resolve(cwd, candidate);
-  if (!isInside(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
-  }
-  if (import_node_fs.default.existsSync(resolved) && !isInsideRealpath(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout through a link: ${candidate}`);
-  }
-  return normalizeArtifactPath(cwd, stripExtendedLengthPrefix(resolved));
+  return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
 }
 function markdownFiles(dir) {
-  if (!import_node_fs.default.existsSync(dir) || !import_node_fs.default.statSync(dir).isDirectory()) return [];
+  if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) return [];
   const files = [];
   const visit2 = (current) => {
-    for (const entry of import_node_fs.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
-      const full = import_node_path2.default.join(current, entry.name);
+    for (const entry of import_node_fs2.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
+      const full = import_node_path3.default.join(current, entry.name);
       if (entry.isDirectory()) visit2(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md") && !/^(?:readme|index)\.md$/i.test(entry.name)) files.push(full);
     }
@@ -28203,14 +28238,23 @@ function relationValues(raw, ownerPath) {
   return { relations: result, issues };
 }
 function readRecords(options2, collector) {
-  const cwd = import_node_path2.default.resolve(options2.cwd);
+  const cwd = import_node_path3.default.resolve(options2.cwd);
   const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
-  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
-  const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path2.default.join(cwd, directory))));
+  const seenRoots = /* @__PURE__ */ new Set();
+  const directories = [];
+  for (const directory of [...CANONICAL_DOC_DIRS, taskDir]) {
+    const key = scanRootKey(cwd, directory);
+    if (seenRoots.has(key)) continue;
+    seenRoots.add(key);
+    const absolute = import_node_path3.default.join(cwd, directory);
+    if (import_node_fs2.default.existsSync(absolute) && !isInsideRealpath(cwd, absolute)) continue;
+    directories.push(directory);
+  }
+  const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path3.default.join(cwd, directory))));
   const records = [];
-  for (const absolutePath of files.map((file2) => import_node_path2.default.resolve(cwd, file2))) {
+  for (const absolutePath of files.map((file2) => import_node_path3.default.resolve(cwd, file2))) {
     try {
-      const raw = import_node_fs.default.readFileSync(absolutePath, "utf8");
+      const raw = import_node_fs2.default.readFileSync(absolutePath, "utf8");
       if (collector) {
         collector.filesRead += 1;
         collector.bytesRead += Buffer.byteLength(raw, "utf8");
@@ -28256,13 +28300,13 @@ function classifyArtifactRelation(relation) {
 }
 function localTarget(cwd, owner, value) {
   const trimmed = value.trim();
-  const ownerCandidate = import_node_path2.default.resolve(import_node_path2.default.dirname(owner.absolutePath), trimmed);
-  const rootCandidate = import_node_path2.default.resolve(cwd, trimmed);
+  const ownerCandidate = import_node_path3.default.resolve(import_node_path3.default.dirname(owner.absolutePath), trimmed);
+  const rootCandidate = import_node_path3.default.resolve(cwd, trimmed);
   const documentRelative = trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed === "." || trimmed === "..";
   const preferred = documentRelative ? ownerCandidate : rootCandidate;
   const fallback = documentRelative ? rootCandidate : ownerCandidate;
-  const chosen = isInside(cwd, preferred) && import_node_fs.default.existsSync(preferred) ? preferred : fallback;
-  const exists = isInside(cwd, chosen) && import_node_fs.default.existsSync(chosen) && import_node_fs.default.statSync(chosen).isFile();
+  const chosen = isInside(cwd, preferred) && import_node_fs2.default.existsSync(preferred) ? preferred : fallback;
+  const exists = isInside(cwd, chosen) && import_node_fs2.default.existsSync(chosen) && import_node_fs2.default.statSync(chosen).isFile();
   return {
     path: isInside(cwd, chosen) ? normalizeArtifactPath(cwd, chosen) : normalizeArtifactPath(cwd, preferred),
     exists
@@ -28275,7 +28319,7 @@ function resolveArtifactRelation(cwd, source, rawValue, records) {
   if (byId.length === 1) return byId[0];
   if (byId.length > 1) return void 0;
   const target = localTarget(cwd, source, value);
-  return records.find((record2) => record2.path === target.path);
+  return records.find((record2) => repoPathKey(record2.path) === repoPathKey(target.path));
 }
 function issueCompare(left, right) {
   return compareStrings(left.code, right.code) || compareStrings(left.message, right.message);
@@ -28290,7 +28334,7 @@ function edgeCompare(left, right) {
   return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings(left.from, right.from) || compareStrings(left.relation, right.relation) || compareStrings(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
 }
 function scanArtifactGraph(options2, collector) {
-  const cwd = import_node_path2.default.resolve(options2.cwd);
+  const cwd = import_node_path3.default.resolve(options2.cwd);
   if (collector) collector.scans += 1;
   const records = readRecords({ ...options2, cwd }, collector);
   const nodes = records.map(({ path: recordPath, id, type }) => ({ path: recordPath, id, type }));
@@ -28431,13 +28475,8 @@ function artifactChainCandidates(graph, records) {
 var SPEC_STATUSES = /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]);
 var ADR_STATUSES = /* @__PURE__ */ new Set(["proposed", "accepted"]);
 var PLACEHOLDER_MARKER = /TODO|{{[^}]+}}|<!--\s*(option|driver|justification|Describe)/i;
-function isInside2(cwd, candidate) {
-  const root = import_node_path3.default.resolve(cwd);
-  const resolved = import_node_path3.default.resolve(candidate);
-  return resolved === root || resolved.startsWith(`${root}${import_node_path3.default.sep}`);
-}
 function normalizePath(cwd, target) {
-  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), import_node_path3.default.resolve(target)).split(import_node_path3.default.sep).join("/");
+  return import_node_path4.default.relative(import_node_path4.default.resolve(cwd), import_node_path4.default.resolve(target)).split(import_node_path4.default.sep).join("/");
 }
 function consideredOptionCount(body) {
   const section = sectionBody(body, "Considered Options");
@@ -28455,7 +28494,7 @@ function toAuditedDoc(cwd, absolutePath, content3) {
   const parsed = parseDoc(content3);
   if (parsed.error) return null;
   return {
-    absolutePath: import_node_path3.default.resolve(absolutePath),
+    absolutePath: import_node_path4.default.resolve(absolutePath),
     body: parsed.body,
     content: content3,
     data: parsed.data,
@@ -28463,12 +28502,12 @@ function toAuditedDoc(cwd, absolutePath, content3) {
   };
 }
 function loadDoc(cwd, inputPath, role, findings) {
-  const absolutePath = import_node_path3.default.resolve(cwd, inputPath);
+  const absolutePath = import_node_path4.default.resolve(cwd, inputPath);
   const relativePath = normalizePath(cwd, absolutePath);
   const label = role === "spec" ? "Spec" : "ADR";
   let content3;
   try {
-    content3 = import_node_fs2.default.readFileSync(absolutePath, "utf8");
+    content3 = import_node_fs3.default.readFileSync(absolutePath, "utf8");
   } catch {
     findings.push({
       severity: "error",
@@ -28553,14 +28592,14 @@ async function auditDocContent(cwd, doc, role, findings) {
       findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Invalid local link: ${url2}` });
       continue;
     }
-    const target = import_node_path3.default.resolve(import_node_path3.default.dirname(doc.absolutePath), decoded);
-    if (!isInside2(cwd, target) || !import_node_fs2.default.existsSync(target)) {
+    const target = import_node_path4.default.resolve(import_node_path4.default.dirname(doc.absolutePath), decoded);
+    if (!isInsideCheckout(cwd, target) || !import_node_fs3.default.existsSync(target)) {
       findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Broken local link: ${url2}` });
     }
   }
 }
 async function auditBriefingPair(cwd, specPath, adrPath) {
-  const root = import_node_path3.default.resolve(cwd);
+  const root = import_node_path4.default.resolve(cwd);
   const findings = [];
   const spec = loadDoc(root, specPath, "spec", findings);
   if (spec) await auditDocContent(root, spec, "spec", findings);
@@ -28641,7 +28680,7 @@ async function main() {
       return;
     }
     if (!args.spec || !args.adr) throw new Error("Both --spec and --adr are required");
-    const cwd = import_node_path4.default.resolve(args.cwd);
+    const cwd = import_node_path5.default.resolve(args.cwd);
     const report = await auditBriefingPair(cwd, args.spec, args.adr);
     if (args.json) {
       console.log(JSON.stringify(report, null, 2));

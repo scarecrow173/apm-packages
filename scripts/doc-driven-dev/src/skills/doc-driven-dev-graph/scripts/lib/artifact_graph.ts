@@ -3,6 +3,27 @@ import path from "node:path";
 
 import matter from "gray-matter";
 
+import {
+  isInside,
+  isInsideCheckout,
+  isInsideRealpath,
+  repoPathKey,
+  resolveContainedDir,
+  scanRootKey,
+} from "../../../lib/document_utils";
+
+// CANONICAL_DOC_DIRS and the containment helpers live in the shared lib
+// layer (src/skills/lib/document_utils.ts) — one authority every skill can
+// import without inverting the dependency direction. They are re-exported
+// here so graph-side callers keep a single boundary import (Issue #156).
+export {
+  CANONICAL_DOC_DIRS,
+  isInside,
+  isInsideCheckout,
+  repoPathKey,
+} from "../../../lib/document_utils";
+import { CANONICAL_DOC_DIRS } from "../../../lib/document_utils";
+
 export type ArtifactEdgeKind = "lineage" | "task-dependency" | "contextual" | "evidence";
 export type ArtifactNode = { path: string; id: string | null; type: string | null };
 export type ArtifactEdge = {
@@ -68,24 +89,6 @@ const EVIDENCE_RELATIONS: ReadonlySet<string> = new Set([
   "evidence-refs",
   "evidenceRefs",
 ]);
-/**
- * Canonical doc-bearing directories — the single authority shared by the
- * artifact scan, graph-state bootstrap reasons, the caller-runner workspace
- * "." fingerprint, and the L2 canonical-doc check (Issue #141). A custom
- * `--task-dir` extends, never replaces, this set.
- */
-export const CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp",
-] as const;
 const EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 
 function compareStrings(left: string, right: string): number {
@@ -105,62 +108,6 @@ export function isExternalArtifactReference(value: string): boolean {
 }
 
 /**
- * Strip the Windows extended-length prefix (`\\?\`, or `\\?\UNC\` → `\\`).
- * `fs.realpathSync` emits it and verbatim absolute inputs may carry it; it is
- * plumbing, not path identity.
- */
-function stripExtendedLengthPrefix(value: string): string {
-  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
-  if (value.startsWith("\\\\?\\")) return value.slice(4);
-  return value;
-}
-
-/**
- * Containment compare key — fold a path to what identifies it for
- * inside-checks. `path.win32.resolve` folds the drive letter but keeps
- * interior case, so an absolute path spelled with different case is still
- * the same directory and must not falsely fail containment; POSIX stays
- * case-sensitive.
- */
-function containmentKey(value: string): string {
-  const normalized = stripExtendedLengthPrefix(path.resolve(value));
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
-
-function isInside(cwd: string, candidate: string): boolean {
-  const root = containmentKey(cwd);
-  const resolved = containmentKey(candidate);
-  return resolved === root || resolved.startsWith(`${root}${path.sep}`);
-}
-
-/**
- * Real-path containment: a symlinked path inside the checkout can resolve
- * outside it, and readdirSync/readFileSync follow the link — the vector
- * doc_repository and merge_verification already guard the same way. Both
- * sides are realpathed so casing stays consistent; any failure fails closed.
- */
-function isInsideRealpath(cwd: string, candidate: string): boolean {
-  try {
-    return isInside(fs.realpathSync(cwd), fs.realpathSync(candidate));
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Whether `candidate` stays inside the checkout — lexically and, when the
- * path exists, by real path so a symlinked entry cannot smuggle outside
- * content through a passing prefix check. A nonexistent path cannot yield
- * content, so the realpath branch only runs on existing paths (the same
- * tolerance the scan applies to absent directories).
- */
-export function isInsideCheckout(cwd: string, candidate: string): boolean {
-  const resolved = path.resolve(cwd, candidate);
-  if (!isInside(cwd, resolved)) return false;
-  return !fs.existsSync(resolved) || isInsideRealpath(cwd, resolved);
-}
-
-/**
  * Resolve `taskDir` (the `--task-dir` selector) to its normalized
  * checkout-relative form and enforce the one containment rule: the directory
  * must stay inside the checkout. An absolute-outside or `..`-escaping value
@@ -168,19 +115,14 @@ export function isInsideCheckout(cwd: string, candidate: string): boolean {
  * is read, so every caller of the artifact scan rejects identically
  * (Issue #142). Lexical containment alone is not enough — an existing target
  * that resolves outside through a symlink is rejected the same way.
+ * An existing directory returns in real-path form, so a linked alias or
+ * case-variant selector yields the same records as the canonical spelling
+ * instead of scanning the files twice (Issue #156).
  * Callers needing the canonical directory set pair this result with
  * CANONICAL_DOC_DIRS.
  */
 export function resolveContainedTaskDir(cwd: string, taskDir?: string): string {
-  const candidate = taskDir ?? "docs/tasks";
-  const resolved = path.resolve(cwd, candidate);
-  if (!isInside(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
-  }
-  if (fs.existsSync(resolved) && !isInsideRealpath(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout through a link: ${candidate}`);
-  }
-  return normalizeArtifactPath(cwd, stripExtendedLengthPrefix(resolved));
+  return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
 }
 
 function markdownFiles(dir: string): string[] {
@@ -235,7 +177,24 @@ function readRecords(options: ArtifactGraphOptions, collector?: ArtifactScanColl
   // Containment is validated once here — the single boundary every artifact
   // scan passes through — rather than in each CLI (Issue #142).
   const taskDir = resolveContainedTaskDir(cwd, options.taskDir);
-  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
+  // Scan-root identity is the real directory, not the spelled selector: a
+  // linked alias or a case-variant (`DOCS\TASKS`) of a canonical directory
+  // names the same files, and scanning both spellings would mint phantom
+  // duplicate-id findings on every doc (Issue #156). The first spelling —
+  // canonical dirs before the custom taskDir — supplies the record paths.
+  const seenRoots = new Set<string>();
+  const directories: string[] = [];
+  for (const directory of [...CANONICAL_DOC_DIRS, taskDir]) {
+    const key = scanRootKey(cwd, directory);
+    if (seenRoots.has(key)) continue;
+    seenRoots.add(key);
+    const absolute = path.join(cwd, directory);
+    // A scan root that exists but resolves outside the checkout (a symlinked
+    // canonical dir) contributes no records — the same fail-closed skip the
+    // repository model applies to symlinked roots.
+    if (fs.existsSync(absolute) && !isInsideRealpath(cwd, absolute)) continue;
+    directories.push(directory);
+  }
   const files = sortedUnique(directories.flatMap((directory) => markdownFiles(path.join(cwd, directory))));
   const records: ArtifactRecord[] = [];
   for (const absolutePath of files.map((file) => path.resolve(cwd, file))) {
@@ -316,7 +275,9 @@ export function resolveArtifactRelation(
   if (byId.length === 1) return byId[0];
   if (byId.length > 1) return undefined;
   const target = localTarget(cwd, source, value);
-  return records.find((record) => record.path === target.path);
+  // Path identity is case-folded on Windows — a `DOCS/TASKS/x.md` reference
+  // resolves the same record as `docs/tasks/x.md` there (Issue #156).
+  return records.find((record) => repoPathKey(record.path) === repoPathKey(target.path));
 }
 
 function issueCompare(left: ArtifactGraphIssue, right: ArtifactGraphIssue): number {

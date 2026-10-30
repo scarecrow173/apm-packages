@@ -27864,14 +27864,83 @@ var import_uuid62 = __toESM(require_uuid62());
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
+var CANONICAL_DOC_DIRS = [
+  "docs/ideas",
+  "docs/discovery",
+  "docs/specs",
+  "docs/designs",
+  "docs/plans",
+  "docs/tasks",
+  "docs/test-specs",
+  "docs/adr",
+  "docs/impl/ir",
+  "docs/impl/exp"
+];
 function normalizeDir(input) {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function repoPathKey(value) {
+  const normalized = value.replace(/\\/g, "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function isInside(cwd, candidate) {
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
+  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function isInsideCheckout(cwd, candidate) {
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) return false;
+  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
+}
+function toRepoRelative(cwd, absolute) {
+  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
+}
+function resolveContainedDir(cwd, dir, flag = "--dir") {
+  const resolved = import_node_path.default.resolve(cwd, dir);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`${flag} escapes the checkout: ${dir}`);
+  }
+  if (import_node_fs.default.existsSync(resolved)) {
+    if (!isInsideRealpath(cwd, resolved)) {
+      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
+    }
+    return toRepoRelative(
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
+    );
+  }
+  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
+}
+function scanRootKey(cwd, directory) {
+  const absolute = import_node_path.default.resolve(cwd, directory);
+  try {
+    return containmentKey(stripExtendedLengthPrefix(import_node_fs.default.realpathSync(absolute)));
+  } catch {
+    return containmentKey(absolute);
+  }
 }
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
 }
 function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
-  if (explicitDir) return normalizeDir(explicitDir);
+  if (explicitDir) return resolveContainedDir(cwd, explicitDir);
   const existing = candidateDirs.filter((candidate) => import_node_fs.default.existsSync(import_node_path.default.join(cwd, candidate)));
   return existing.length === 0 ? defaultDir : existing[0];
 }
@@ -27979,19 +28048,22 @@ var configs = {
     type: "adr"
   }
 };
-var scaffoldTargets = [
-  { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
-  { dir: "docs/discovery", title: "DISCOVERY Documents", type: "discovery" },
-  { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
-  { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
-  { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
-  { dir: "docs/tasks", title: "TASK Documents", type: "task" },
-  { dir: "docs/test-specs", title: "TEST-SPEC Documents", type: "test-spec" },
-  { dir: "docs/adr", title: "ADR Documents" },
-  { dir: "docs/impl/ir", title: "Implementation Record Documents" },
-  { dir: "docs/impl/exp", title: "Experiment Log Documents" }
-];
-var canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+var scaffoldIndexMeta = {
+  "docs/ideas": { title: "IDEA Documents", type: "idea" },
+  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
+  "docs/specs": { title: "SPEC Documents", type: "spec" },
+  "docs/designs": { title: "DESIGN Documents", type: "design" },
+  "docs/plans": { title: "PLAN Documents", type: "plan" },
+  "docs/tasks": { title: "TASK Documents", type: "task" },
+  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
+  "docs/adr": { title: "ADR Documents" },
+  "docs/impl/ir": { title: "Implementation Record Documents" },
+  "docs/impl/exp": { title: "Experiment Log Documents" }
+};
+var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
+  dir,
+  ...scaffoldIndexMeta[dir]
+}));
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -28334,25 +28406,9 @@ function pruneNestedRoots(roots) {
   const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
-function realpathInside(realCwd, absolute) {
-  let real;
-  try {
-    real = import_node_fs2.default.realpathSync(absolute);
-  } catch {
-    return false;
-  }
-  const rel = import_node_path3.default.relative(realCwd, real);
-  return rel === "" || !rel.startsWith("..") && !import_node_path3.default.isAbsolute(rel);
-}
 async function scanRepository(options2) {
   const cwd = import_node_path3.default.resolve(options2.cwd);
-  let realCwd;
-  try {
-    realCwd = import_node_fs2.default.realpathSync(cwd);
-  } catch {
-    realCwd = cwd;
-  }
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => realpathInside(realCwd, import_node_path3.default.join(cwd, root)));
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path3.default.join(cwd, root)));
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
@@ -28423,12 +28479,9 @@ async function scanRepository(options2) {
     group.push(document3);
     byId.set(document3.id, group);
   }
-  const insideRoot = (absolute) => {
-    const resolved = import_node_path3.default.resolve(absolute);
-    return resolved === cwd || resolved.startsWith(`${cwd}${import_node_path3.default.sep}`);
-  };
+  const insideRoot = (absolute) => isInside(cwd, absolute);
   const fileExistsInsideRoot = (absolute) => {
-    return insideRoot(absolute) && realpathInside(realCwd, import_node_path3.default.resolve(absolute)) && import_node_fs2.default.existsSync(absolute) && import_node_fs2.default.statSync(absolute).isFile();
+    return isInsideCheckout(cwd, absolute) && import_node_fs2.default.existsSync(absolute) && import_node_fs2.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -29467,13 +29520,7 @@ function legacyIdPrefixes() {
 function experimentNumbers(root) {
   const expDir = import_node_path5.default.join(root, IMPL_EXP_DIR);
   if (!import_node_fs4.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
-  let realRoot;
-  try {
-    realRoot = import_node_fs4.default.realpathSync(root);
-  } catch {
-    return /* @__PURE__ */ new Map();
-  }
-  if (!realpathInside2(realRoot, expDir)) return /* @__PURE__ */ new Map();
+  if (!isInsideRealpath(root, expDir)) return /* @__PURE__ */ new Map();
   const counts = /* @__PURE__ */ new Map();
   for (const name of import_node_fs4.default.readdirSync(expDir)) {
     if (isSymlinkPath(import_node_path5.default.join(expDir, name))) continue;
@@ -29488,16 +29535,6 @@ function isSymlinkPath(p) {
   } catch {
     return false;
   }
-}
-function realpathInside2(realRoot, absolute) {
-  let real;
-  try {
-    real = import_node_fs4.default.realpathSync(absolute);
-  } catch {
-    return false;
-  }
-  const rel = import_node_path5.default.relative(realRoot, real);
-  return rel === "" || !rel.startsWith("..") && !import_node_path5.default.isAbsolute(rel);
 }
 function lintLegacyIdReferences(model, files) {
   const prefixes = legacyIdPrefixes();
@@ -29679,18 +29716,6 @@ var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
   "evidence-refs",
   "evidenceRefs"
 ]);
-var CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp"
-];
 var EXTERNAL_REFERENCE2 = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 function compareStrings2(left, right) {
   return left.localeCompare(right);
@@ -29704,42 +29729,8 @@ function normalizeArtifactPath(cwd, target) {
 function isExternalArtifactReference(value) {
   return EXTERNAL_REFERENCE2.test(value.trim());
 }
-function stripExtendedLengthPrefix(value) {
-  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
-  if (value.startsWith("\\\\?\\")) return value.slice(4);
-  return value;
-}
-function containmentKey(value) {
-  const normalized = stripExtendedLengthPrefix(import_node_path6.default.resolve(value));
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
-function isInside(cwd, candidate) {
-  const root = containmentKey(cwd);
-  const resolved = containmentKey(candidate);
-  return resolved === root || resolved.startsWith(`${root}${import_node_path6.default.sep}`);
-}
-function isInsideRealpath(cwd, candidate) {
-  try {
-    return isInside(import_node_fs5.default.realpathSync(cwd), import_node_fs5.default.realpathSync(candidate));
-  } catch {
-    return false;
-  }
-}
-function isInsideCheckout(cwd, candidate) {
-  const resolved = import_node_path6.default.resolve(cwd, candidate);
-  if (!isInside(cwd, resolved)) return false;
-  return !import_node_fs5.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
-}
 function resolveContainedTaskDir(cwd, taskDir) {
-  const candidate = taskDir ?? "docs/tasks";
-  const resolved = import_node_path6.default.resolve(cwd, candidate);
-  if (!isInside(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout: ${candidate}`);
-  }
-  if (import_node_fs5.default.existsSync(resolved) && !isInsideRealpath(cwd, resolved)) {
-    throw new Error(`--task-dir escapes the checkout through a link: ${candidate}`);
-  }
-  return normalizeArtifactPath(cwd, stripExtendedLengthPrefix(resolved));
+  return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
 }
 function markdownFiles(dir) {
   if (!import_node_fs5.default.existsSync(dir) || !import_node_fs5.default.statSync(dir).isDirectory()) return [];
@@ -29785,7 +29776,16 @@ function relationValues(raw, ownerPath) {
 function readRecords(options2, collector) {
   const cwd = import_node_path6.default.resolve(options2.cwd);
   const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
-  const directories = sortedUnique([...CANONICAL_DOC_DIRS, taskDir]);
+  const seenRoots = /* @__PURE__ */ new Set();
+  const directories = [];
+  for (const directory of [...CANONICAL_DOC_DIRS, taskDir]) {
+    const key = scanRootKey(cwd, directory);
+    if (seenRoots.has(key)) continue;
+    seenRoots.add(key);
+    const absolute = import_node_path6.default.join(cwd, directory);
+    if (import_node_fs5.default.existsSync(absolute) && !isInsideRealpath(cwd, absolute)) continue;
+    directories.push(directory);
+  }
   const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path6.default.join(cwd, directory))));
   const records = [];
   for (const absolutePath of files.map((file2) => import_node_path6.default.resolve(cwd, file2))) {
@@ -29855,7 +29855,7 @@ function resolveArtifactRelation(cwd, source, rawValue, records) {
   if (byId.length === 1) return byId[0];
   if (byId.length > 1) return void 0;
   const target = localTarget(cwd, source, value);
-  return records.find((record2) => record2.path === target.path);
+  return records.find((record2) => repoPathKey(record2.path) === repoPathKey(target.path));
 }
 function issueCompare(left, right) {
   return compareStrings2(left.code, right.code) || compareStrings2(left.message, right.message);
@@ -33202,7 +33202,7 @@ function indexTasks(tasks) {
       continue;
     }
     byId.set(task.id, task);
-    byPath.set(task.file, task);
+    byPath.set(repoPathKey(task.file), task);
   }
   return { tasks: sortedTasks, byId, byPath, issues };
 }
@@ -33210,16 +33210,13 @@ function resolveReference(cwd, owner, reference, index2) {
   const byId = index2.byId.get(reference);
   if (byId) return byId;
   const normalized = normalizeOwnedRepoPath(cwd, owner.file, reference);
-  return index2.byPath.get(normalized);
+  return index2.byPath.get(repoPathKey(normalized));
 }
 function isExistingArtifactReference(cwd, taskDir, owner, reference) {
   const candidate = import_node_path7.default.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
   if (!isInsideCheckout(cwd, candidate)) return false;
   if (!import_node_fs7.default.existsSync(candidate) || !import_node_fs7.default.statSync(candidate).isFile()) return false;
-  const taskRoot = import_node_path7.default.resolve(cwd, taskDir);
-  const candidatePath = import_node_path7.default.resolve(candidate);
-  const insideTaskDir = candidatePath === taskRoot || candidatePath.startsWith(`${taskRoot}${import_node_path7.default.sep}`);
-  if (insideTaskDir) return false;
+  if (isInside(import_node_path7.default.resolve(cwd, taskDir), candidate)) return false;
   try {
     const type = (0, import_gray_matter3.default)(import_node_fs7.default.readFileSync(candidate, "utf8")).data?.type;
     return ["plan", "spec", "adr", "design"].includes(type);
@@ -33232,7 +33229,7 @@ function readArtifactIds(cwd, taskDir) {
   const ids = /* @__PURE__ */ new Set();
   for (const file2 of markdownFiles2(cwd)) {
     const absolute = import_node_path7.default.resolve(file2);
-    if (absolute === taskRoot || absolute.startsWith(`${taskRoot}${import_node_path7.default.sep}`)) continue;
+    if (isInside(taskRoot, absolute)) continue;
     try {
       const data = (0, import_gray_matter3.default)(import_node_fs7.default.readFileSync(file2, "utf8")).data;
       if (["plan", "spec", "adr", "design"].includes(data.type) && typeof data.id === "string" && data.id.trim()) {
@@ -34837,10 +34834,6 @@ var requiredValue = (argv, index2) => {
   if (!value || value.startsWith("--")) throw new Error(`Missing value for ${argv[index2]}`);
   return value;
 };
-var isInside2 = (root, target) => {
-  const relative = import_node_path11.default.relative(root, target);
-  return relative === "" || !import_node_path11.default.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${import_node_path11.default.sep}`);
-};
 function parseDashboardArgs(argv, processCwd) {
   let cwdValue = ".";
   let graphValue;
@@ -34900,7 +34893,7 @@ function assertExistingAncestorsInside(root, targetParent) {
     cursor = parent;
   }
   const realAncestor = import_node_fs10.default.realpathSync(cursor);
-  if (!isInside2(root, realAncestor)) throw new Error(`Output ancestor resolves outside repository: ${cursor}`);
+  if (!isInside(root, realAncestor)) throw new Error(`Output ancestor resolves outside repository: ${cursor}`);
 }
 function writeDashboard(cwd, outputValue, html, force) {
   return writeDashboardWithOperations(cwd, outputValue, html, force, defaultWriteOperations);
@@ -34911,7 +34904,7 @@ function writeDashboardWithOperations(cwd, outputValue, html, force, operations)
   if (!rootStat.isDirectory()) throw new Error(`Dashboard cwd is not a directory: ${rootPath}`);
   const root = import_node_fs10.default.realpathSync(rootPath);
   const requestedOutput = import_node_path11.default.resolve(rootPath, outputValue);
-  if (!isInside2(rootPath, requestedOutput)) throw new Error(`Output is outside repository: ${requestedOutput}`);
+  if (!isInside(rootPath, requestedOutput)) throw new Error(`Output is outside repository: ${requestedOutput}`);
   if (import_node_path11.default.extname(requestedOutput).toLowerCase() !== ".html") throw new Error(`Output must use the .html extension: ${requestedOutput}`);
   const relativeOutput = import_node_path11.default.relative(rootPath, requestedOutput);
   const output = import_node_path11.default.resolve(root, relativeOutput);
@@ -34921,7 +34914,7 @@ function writeDashboardWithOperations(cwd, outputValue, html, force, operations)
   if (!force && import_node_fs10.default.existsSync(output)) throw new Error(`Output already exists; pass --force to replace it: ${output}`);
   import_node_fs10.default.mkdirSync(parent, { recursive: true });
   const realParent = import_node_fs10.default.realpathSync(parent);
-  if (!isInside2(root, realParent)) throw new Error(`Output parent resolves outside repository: ${parent}`);
+  if (!isInside(root, realParent)) throw new Error(`Output parent resolves outside repository: ${parent}`);
   assertRegularOutput(output);
   if (!force && import_node_fs10.default.existsSync(output)) throw new Error(`Output already exists; pass --force to replace it: ${output}`);
   const temp = import_node_path11.default.join(realParent, `.${import_node_path11.default.basename(output)}.${operations.randomUUID()}.tmp`);

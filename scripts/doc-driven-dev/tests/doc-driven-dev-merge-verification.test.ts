@@ -451,6 +451,35 @@ test("the taskDir option relocates the protected task-doc boundary", () => {
   assert.equal(review.verdict, "merge-review");
 });
 
+test("an escaping taskDir is rejected instead of falling back to docs/tasks", () => {
+  const repo = createFixtureRepo();
+  for (const taskDir of ["../outside", "./../outside", path.dirname(repo), "docs/../../outside"]) {
+    assert.throws(
+      () => verifyParallelMerge(repo, [], { taskDir }),
+      /--task-dir escapes the checkout/,
+      `taskDir ${taskDir} must be rejected`,
+    );
+  }
+  // The same check runs at check_parallel's --task-dir boundary, but the
+  // library fails closed on its own so no caller can verify against an
+  // outside or silently defaulted directory.
+});
+
+test("a taskDir escaping through a link is rejected", (t) => {
+  const repo = createFixtureRepo();
+  const outside = fs.mkdtempSync(path.join(path.dirname(repo), "merge-outside-"));
+  try {
+    fs.symlinkSync(outside, path.join(repo, "docs/tasks-link"), process.platform === "win32" ? "junction" : "dir");
+  } catch {
+    t.skip("cannot create symlinks/junctions here");
+    return;
+  }
+  assert.throws(
+    () => verifyParallelMerge(repo, [], { taskDir: "docs/tasks-link" }),
+    /--task-dir escapes the checkout/,
+  );
+});
+
 // --- declared-scope authority (task doc ## Affected Files) --------------------
 
 test("a supplied scope entry wider than the task doc declaration is blocked", () => {

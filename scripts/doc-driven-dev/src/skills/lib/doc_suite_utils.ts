@@ -5,7 +5,16 @@ import path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
 import { generateArtifactId } from "./artifact_id";
-import { findDocumentDir, isIndexFileName, listMarkdownFiles, normalizeDir, slugify } from "./document_utils";
+import {
+  CANONICAL_DOC_DIRS,
+  findDocumentDir,
+  isIndexFileName,
+  listMarkdownFiles,
+  normalizeDir,
+  resolveContainedDir,
+  slugify,
+  type CanonicalDocDir,
+} from "./document_utils";
 
 const relationFields = [
   "source",
@@ -207,20 +216,30 @@ const configs: Record<DocType, DocConfig> = {
   },
 };
 
-const scaffoldTargets: ScaffoldTarget[] = [
-  { dir: "docs/ideas", title: "IDEA Documents", type: "idea" },
-  { dir: "docs/discovery", title: "DISCOVERY Documents", type: "discovery" },
-  { dir: "docs/specs", title: "SPEC Documents", type: "spec" },
-  { dir: "docs/designs", title: "DESIGN Documents", type: "design" },
-  { dir: "docs/plans", title: "PLAN Documents", type: "plan" },
-  { dir: "docs/tasks", title: "TASK Documents", type: "task" },
-  { dir: "docs/test-specs", title: "TEST-SPEC Documents", type: "test-spec" },
-  { dir: "docs/adr", title: "ADR Documents" },
-  { dir: "docs/impl/ir", title: "Implementation Record Documents" },
-  { dir: "docs/impl/exp", title: "Experiment Log Documents" },
-];
+// Per-directory index metadata for the scaffold. The Record key is the
+// canonical directory itself, so a CANONICAL_DOC_DIRS entry without
+// scaffold metadata fails to compile — the directory list is never
+// restated here (Issue #156).
+const scaffoldIndexMeta: Record<CanonicalDocDir, { title: string; type?: DocType }> = {
+  "docs/ideas": { title: "IDEA Documents", type: "idea" },
+  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
+  "docs/specs": { title: "SPEC Documents", type: "spec" },
+  "docs/designs": { title: "DESIGN Documents", type: "design" },
+  "docs/plans": { title: "PLAN Documents", type: "plan" },
+  "docs/tasks": { title: "TASK Documents", type: "task" },
+  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
+  "docs/adr": { title: "ADR Documents" },
+  "docs/impl/ir": { title: "Implementation Record Documents" },
+  "docs/impl/exp": { title: "Experiment Log Documents" },
+};
 
-const canonicalDocDirs = scaffoldTargets.map((target) => target.dir);
+// Scaffold targets are CANONICAL_DOC_DIRS — the single authority — paired
+// with their index metadata. The scaffold walks the same set the artifact
+// scan reads, so a canonical dir can never silently lose its index.
+const scaffoldTargets: ScaffoldTarget[] = CANONICAL_DOC_DIRS.map((dir) => ({
+  dir,
+  ...scaffoldIndexMeta[dir],
+}));
 
 // When several document types share one canonical directory, the scaffold
 // target's type owns the index title; otherwise the first candidate is used.
@@ -930,7 +949,7 @@ function isMarkdownSource(file: string): boolean {
 
 function isUnderCanonicalDir(relativeFile: string): boolean {
   const normalized = normalizeDir(relativeFile);
-  return canonicalDocDirs.some((dir) => normalized === dir || normalized.startsWith(`${dir}/`));
+  return CANONICAL_DOC_DIRS.some((dir) => normalized === dir || normalized.startsWith(`${dir}/`));
 }
 
 function walkMarkdownFiles(baseDir: string): string[] {
@@ -1059,7 +1078,12 @@ function plannedMigration(cwd: string, source: string, input: MigrationInput, so
 
 async function migrateDocs(options: MigrationOptions): Promise<MigrationResult> {
   const cwd = path.resolve(options.cwd);
-  const fromDirs = (options.from && options.from.length > 0) ? options.from : defaultMigrationSources(cwd);
+  // Each --from is a scan root: it must stay inside the checkout, enforced by
+  // the same shared rule as --dir/--task-dir. An escaping value is rejected,
+  // never walked (Issue #156).
+  const fromDirs = (options.from && options.from.length > 0)
+    ? options.from.map((dir) => resolveContainedDir(cwd, dir, "--from"))
+    : defaultMigrationSources(cwd);
   const skipped: MigrationResult["skipped"] = [];
   const migrations: MigrationPlan[] = [];
   const allocations = new Map<string, TargetAllocation>();
