@@ -22389,9 +22389,15 @@ function runStalenessGate(catalog, currentSkills, maxAgeDays) {
   const basisDate = catalog.validated_at || catalog.generated_at;
   const basisTs = new Date(basisDate).getTime();
   const now = Date.now();
-  const ageDays = Math.floor((now - basisTs) / (1e3 * 60 * 60 * 24));
-  const catalogSkillNames = new Set(catalog.skills.map((s) => s.name));
-  const currentSkillNames = new Set(currentSkills.map((s) => s.name));
+  const basisUnparseable = Number.isNaN(basisTs);
+  const ageDays = basisUnparseable ? -1 : Math.floor((now - basisTs) / (1e3 * 60 * 60 * 24));
+  const catalogSkills = Array.isArray(catalog.skills) ? catalog.skills : [];
+  const catalogSkillNames = new Set(
+    catalogSkills.filter((s) => s != null).map((s) => s.name)
+  );
+  const currentSkillNames = new Set(
+    (Array.isArray(currentSkills) ? currentSkills : []).filter((s) => s != null).map((s) => s.name)
+  );
   const newSkills = [];
   const removedSkills = [];
   for (const name of currentSkillNames) {
@@ -22404,7 +22410,7 @@ function runStalenessGate(catalog, currentSkills, maxAgeDays) {
       removedSkills.push(name);
     }
   }
-  const stale = ageDays > maxAgeDays;
+  const stale = basisUnparseable || ageDays > maxAgeDays;
   const skillsChanged = newSkills.length > 0 || removedSkills.length > 0;
   return {
     result: stale || skillsChanged ? "fail" : "pass",
@@ -22517,22 +22523,25 @@ function runDeterministicGate(profilePath, catalogPath, adapterPath, cwd, compar
 
 // src/skills/skill-discovery-protocol/scripts/lib/gates/blocking_gate.ts
 function runBlockingGate(profile, catalog, adapter, skills) {
+  if (!Array.isArray(skills)) skills = [];
   const checks = [];
-  const invResolution = adapter.invocation_resolution;
+  const invResolution = adapter.invocation_resolution ?? {};
   const overrides = invResolution.overrides ?? { capabilities: {} };
-  const skillNames = new Set(skills.map((s) => s.name));
+  const skillNames = new Set(skills.filter((s) => s != null).map((s) => s.name));
   const skillProvides = /* @__PURE__ */ new Map();
   for (const skill of skills) {
-    const caps = new Set(skill.provides.map((p) => p.capability));
+    if (skill == null) continue;
+    const provides = Array.isArray(skill.provides) ? skill.provides : [];
+    const caps = new Set(provides.filter((p) => p != null).map((p) => p.capability));
     skillProvides.set(skill.name, caps);
   }
-  const unresolvedCheck = checkUnresolvedRequired(profile, skills, invResolution.unresolved.required);
+  const unresolvedCheck = checkUnresolvedRequired(profile, skills, invResolution.unresolved?.required);
   checks.push(unresolvedCheck);
-  const unknownSkillCheck = checkUnknownSkillOverrides({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skillNames, invResolution.invalid_override.unknown_skill);
+  const unknownSkillCheck = checkUnknownSkillOverrides({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skillNames, invResolution.invalid_override?.unknown_skill);
   checks.push(unknownSkillCheck);
-  const capMismatchCheck = checkCapabilityMismatch({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skillProvides, invResolution.invalid_override.capability_mismatch);
+  const capMismatchCheck = checkCapabilityMismatch({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skillProvides, invResolution.invalid_override?.capability_mismatch);
   checks.push(capMismatchCheck);
-  const overrideNotAllowedCheck = checkOverrideNotAllowed({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skills, invResolution.invalid_override.override_not_allowed);
+  const overrideNotAllowedCheck = checkOverrideNotAllowed({ ...adapter, invocation_resolution: { ...invResolution, overrides } }, skills, invResolution.invalid_override?.override_not_allowed);
   checks.push(overrideNotAllowedCheck);
   const unusedSlotsCheck = checkUnusedSlots(profile, catalog);
   checks.push(unusedSlotsCheck);
@@ -22544,12 +22553,15 @@ function runBlockingGate(profile, catalog, adapter, skills) {
 }
 function checkUnresolvedRequired(profile, skills, severity) {
   const details = [];
+  const resolvedInvocations = Array.isArray(profile.resolved_invocations) ? profile.resolved_invocations : [];
   const resolvedCaps = new Set(
-    profile.resolved_invocations.map((inv) => `${inv.source_skill}::${inv.capability}`)
+    resolvedInvocations.filter((inv) => inv != null).map((inv) => `${inv.source_skill}::${inv.capability}`)
   );
   for (const skill of skills) {
-    for (const use of skill.uses) {
-      if (use.required) {
+    if (skill == null) continue;
+    const uses = Array.isArray(skill.uses) ? skill.uses : [];
+    for (const use of uses) {
+      if (use != null && use.required) {
         const key = `${skill.name}::${use.capability}`;
         if (!resolvedCaps.has(key)) {
           details.push(`${skill.name} requires "${use.capability}" but no provider resolved`);
@@ -22562,23 +22574,23 @@ function checkUnresolvedRequired(profile, skills, severity) {
 }
 function checkUnknownSkillOverrides(adapter, skillNames, severity) {
   const details = [];
-  const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
+  const overrides = adapter.invocation_resolution?.overrides ?? { capabilities: {} };
   if (overrides.slots) {
     for (const [slotId, override] of Object.entries(overrides.slots)) {
-      if (override.use && !skillNames.has(override.use)) {
+      if (override?.use && !skillNames.has(override.use)) {
         details.push(`Slot override "${slotId}" references unknown skill "${override.use}"`);
       }
-      if (override.fallback && !skillNames.has(override.fallback)) {
+      if (override?.fallback && !skillNames.has(override.fallback)) {
         details.push(`Slot override "${slotId}" fallback references unknown skill "${override.fallback}"`);
       }
     }
   }
   if (overrides.capabilities) {
     for (const [cap, override] of Object.entries(overrides.capabilities)) {
-      if (override.prefer && !skillNames.has(override.prefer)) {
+      if (override?.prefer && !skillNames.has(override.prefer)) {
         details.push(`Capability override "${cap}" references unknown skill "${override.prefer}"`);
       }
-      if (override.fallback && !skillNames.has(override.fallback)) {
+      if (override?.fallback && !skillNames.has(override.fallback)) {
         details.push(`Capability override "${cap}" fallback references unknown skill "${override.fallback}"`);
       }
     }
@@ -22588,10 +22600,10 @@ function checkUnknownSkillOverrides(adapter, skillNames, severity) {
 }
 function checkCapabilityMismatch(adapter, skillProvides, severity) {
   const details = [];
-  const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
+  const overrides = adapter.invocation_resolution?.overrides ?? { capabilities: {} };
   if (overrides.capabilities) {
     for (const [cap, override] of Object.entries(overrides.capabilities)) {
-      if (override.prefer) {
+      if (override?.prefer) {
         const caps = skillProvides.get(override.prefer);
         if (caps && !caps.has(cap)) {
           details.push(`Capability override "${cap}": skill "${override.prefer}" does not provide "${cap}"`);
@@ -22604,11 +22616,13 @@ function checkCapabilityMismatch(adapter, skillProvides, severity) {
 }
 function checkOverrideNotAllowed(adapter, skills, severity) {
   const details = [];
-  const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
+  const overrides = adapter.invocation_resolution?.overrides ?? { capabilities: {} };
   const noOverride = /* @__PURE__ */ new Map();
   for (const skill of skills) {
-    for (const use of skill.uses) {
-      if (!use.override_allowed) {
+    if (skill == null) continue;
+    const uses = Array.isArray(skill.uses) ? skill.uses : [];
+    for (const use of uses) {
+      if (use != null && !use.override_allowed) {
         if (!noOverride.has(use.capability)) noOverride.set(use.capability, /* @__PURE__ */ new Set());
         noOverride.get(use.capability).add(skill.name);
       }
@@ -22627,9 +22641,13 @@ function checkOverrideNotAllowed(adapter, skills, severity) {
 }
 function checkUnusedSlots(profile, catalog) {
   const details = [];
-  const usedSlots = new Set(profile.resolved_invocations.map((inv) => inv.slot));
-  for (const slot of profile.flow_stack.slots) {
-    if (!usedSlots.has(slot.slot_id) && !slot.default) {
+  const resolvedInvocations = Array.isArray(profile.resolved_invocations) ? profile.resolved_invocations : [];
+  const usedSlots = new Set(
+    resolvedInvocations.filter((inv) => inv != null).map((inv) => inv.slot)
+  );
+  const flowStackSlots = Array.isArray(profile.flow_stack?.slots) ? profile.flow_stack.slots : [];
+  for (const slot of flowStackSlots) {
+    if (slot != null && !usedSlots.has(slot.slot_id) && !slot.default) {
       details.push(`Slot "${slot.slot_id}" has no resolved invocation and no default`);
     }
   }
@@ -22677,6 +22695,13 @@ function loadJson(filePath) {
   const content = import_node_fs6.default.readFileSync(filePath, "utf8");
   return JSON.parse(content);
 }
+function stageValidatedAtRefresh(data, timestamp) {
+  if (typeof data.validated_at !== "string" || data.validated_at === timestamp) {
+    return false;
+  }
+  data.validated_at = timestamp;
+  return true;
+}
 function isPathWithinProject(rootDir, candidatePath) {
   const rel = import_node_path7.default.relative(rootDir, candidatePath);
   return rel !== ".." && !rel.startsWith(`..${import_node_path7.default.sep}`) && !import_node_path7.default.isAbsolute(rel);
@@ -22719,7 +22744,7 @@ function findCatalogPath(profilePath, profile, cwd) {
     }
     if (import_node_fs6.default.existsSync(candidate)) {
       const data = loadJson(candidate);
-      if (data && data.skills) {
+      if (data && data.skills !== void 0) {
         return candidate;
       }
     }
@@ -22736,40 +22761,48 @@ function buildCatalogValidation(profile, catalog) {
     };
   }
   const referencedSkills = /* @__PURE__ */ new Set();
-  if (profile.resolved_invocations) {
+  if (Array.isArray(profile.resolved_invocations)) {
     for (const inv of profile.resolved_invocations) {
+      if (inv == null) continue;
       referencedSkills.add(inv.source_skill);
       referencedSkills.add(inv.resolved_skill);
     }
   }
-  if (profile.classification?.categories) {
+  if (Array.isArray(profile.classification?.categories)) {
     for (const cat of profile.classification.categories) {
-      for (const s of cat.skills) referencedSkills.add(s);
+      const catSkills = cat != null && Array.isArray(cat.skills) ? cat.skills : [];
+      for (const s of catSkills) referencedSkills.add(s);
     }
   }
-  if (profile.classification?.unmatched_skills) {
+  if (Array.isArray(profile.classification?.unmatched_skills)) {
     for (const s of profile.classification.unmatched_skills) referencedSkills.add(s);
   }
+  const catalogSkills = Array.isArray(catalog.skills) ? catalog.skills : [];
   const orphanSkills = [];
-  for (const skill of catalog.skills) {
+  for (const skill of catalogSkills) {
+    if (skill == null) continue;
     if (!referencedSkills.has(skill.name)) {
       orphanSkills.push(skill.name);
     }
   }
-  const referenceCount = catalog.skills.reduce((sum, s) => sum + s.provides.length, 0);
+  const referenceCount = catalogSkills.reduce(
+    (sum, s) => sum + (Array.isArray(s?.provides) ? s.provides.length : 0),
+    0
+  );
   return {
-    skill_count: catalog.skill_count,
+    skill_count: typeof catalog.skill_count === "number" ? catalog.skill_count : 0,
     reference_count: referenceCount,
-    capability_count: catalog.capability_count,
+    capability_count: typeof catalog.capability_count === "number" ? catalog.capability_count : 0,
     orphan_skills: orphanSkills.sort()
   };
 }
 function buildProfileValidation(profile, adapter) {
   const unusedOverrideWarnings = [];
+  const resolvedInvocations = Array.isArray(profile.resolved_invocations) ? profile.resolved_invocations : [];
   if (adapter) {
-    const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
+    const overrides = adapter.invocation_resolution?.overrides ?? { capabilities: {} };
     const resolvedBySlot = new Set(
-      (profile.resolved_invocations || []).filter((inv) => inv.resolution_method === "slot_override").map((inv) => inv.slot)
+      resolvedInvocations.filter((inv) => inv?.resolution_method === "slot_override").map((inv) => inv.slot)
     );
     if (overrides.slots) {
       for (const slotId of Object.keys(overrides.slots)) {
@@ -22779,7 +22812,7 @@ function buildProfileValidation(profile, adapter) {
       }
     }
     const resolvedByCap = new Set(
-      (profile.resolved_invocations || []).filter((inv) => inv.resolution_method === "capability_override").map((inv) => inv.capability)
+      resolvedInvocations.filter((inv) => inv?.resolution_method === "capability_override").map((inv) => inv.capability)
     );
     if (overrides.capabilities) {
       for (const cap of Object.keys(overrides.capabilities)) {
@@ -22789,13 +22822,16 @@ function buildProfileValidation(profile, adapter) {
       }
     }
   }
-  const resolvedSlots = new Set((profile.resolved_invocations || []).map((inv) => inv.slot));
-  const unresolvedSlots = (profile.flow_stack?.slots || []).filter((slot) => !resolvedSlots.has(slot.slot_id) && !slot.default).map((slot) => slot.slot_id).sort();
+  const resolvedSlots = new Set(
+    resolvedInvocations.filter((inv) => inv != null).map((inv) => inv.slot)
+  );
+  const flowStackSlots = Array.isArray(profile.flow_stack?.slots) ? profile.flow_stack.slots : [];
+  const unresolvedSlots = flowStackSlots.filter((slot) => slot != null && !resolvedSlots.has(slot.slot_id) && !slot.default).map((slot) => slot.slot_id).sort();
   return {
     flow_count: 1,
-    flow_stack_slot_count: profile.flow_stack?.slots?.length ?? 0,
+    flow_stack_slot_count: flowStackSlots.length,
     unresolved_slots: unresolvedSlots,
-    resolved_invocation_count: profile.resolved_invocations?.length ?? 0,
+    resolved_invocation_count: resolvedInvocations.length,
     unused_override_warnings: unusedOverrideWarnings
   };
 }
@@ -22850,6 +22886,9 @@ async function main() {
     process.exitCode = 2;
     return;
   }
+  if (profileData === null || typeof profileData !== "object" || Array.isArray(profileData)) {
+    profileData = {};
+  }
   const profile = profileData;
   const catalogPath = findCatalogPath(profilePath, profileData, cwd);
   let catalogData = null;
@@ -22872,7 +22911,7 @@ async function main() {
   if (adapter) {
     currentRawSkills = scanSkills(cwd, adapter);
   }
-  const currentCatalogSkills = catalog?.skills ?? [];
+  const currentCatalogSkills = Array.isArray(catalog?.skills) ? catalog.skills : [];
   const schemaResult = runSchemaGate(
     profileData,
     catalogData,
@@ -22909,6 +22948,30 @@ async function main() {
   }
   const catalogValidation = buildCatalogValidation(profile, catalog);
   const profileValidation = buildProfileValidation(profile, adapter);
+  const stalenessAgeOnly = stalenessResult.result === "fail" && // An unparseable basis date is corruption, not age: the refresh
+  // repairs an expired timestamp, never a garbage one (which may be
+  // tampering), so it stays a failure for regeneration to fix.
+  !Number.isNaN(new Date(stalenessResult.basis_date).getTime()) && stalenessResult.new_skills.length === 0 && stalenessResult.removed_skills.length === 0;
+  const nonStalenessFail = [
+    schemaResult.result,
+    deterministicResult.result,
+    blockingResult.result
+  ].some((r) => r === "fail");
+  const refreshEligible = adapter !== null && !nonStalenessFail && (stalenessResult.result !== "fail" || stalenessAgeOnly);
+  const pendingRefresh = [];
+  if (refreshEligible) {
+    const refreshedAt = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
+    if (catalogPath && catalogData && stageValidatedAtRefresh(catalogData, refreshedAt)) {
+      pendingRefresh.push({ filePath: catalogPath, data: catalogData });
+    }
+    if (stageValidatedAtRefresh(profileData, refreshedAt)) {
+      pendingRefresh.push({ filePath: profilePath, data: profileData });
+    }
+    if (stalenessAgeOnly && catalog && adapter) {
+      const maxAgeDays = adapter.validation?.staleness?.max_age_days ?? 30;
+      stalenessResult = runStalenessGate(catalog, currentRawSkills, maxAgeDays);
+    }
+  }
   const gateResults = [
     schemaResult.result,
     stalenessResult.result,
@@ -22920,7 +22983,7 @@ async function main() {
     schema_version: "1.0",
     generated_at: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z"),
     repository: import_node_path7.default.basename(cwd),
-    adapter_id: profileData.adapter_id || "",
+    adapter_id: typeof profileData.adapter_id === "string" ? profileData.adapter_id : "",
     schema_validation: schemaResult,
     staleness_validation: stalenessResult,
     deterministic_validation: deterministicResult,
@@ -22938,11 +23001,25 @@ async function main() {
   import_node_fs6.default.mkdirSync(import_node_path7.default.dirname(reportPath), { recursive: true });
   const reportContent = renderJson(report);
   import_node_fs6.default.writeFileSync(reportPath, reportContent, "utf8");
+  const refreshedArtifacts = [];
+  for (const target of pendingRefresh) {
+    try {
+      import_node_fs6.default.writeFileSync(target.filePath, renderJson(target.data), "utf8");
+      refreshedArtifacts.push(import_node_path7.default.basename(target.filePath));
+    } catch (e) {
+      console.error(
+        `Warning: could not refresh validated_at on ${import_node_path7.default.basename(target.filePath)}: ${e instanceof Error ? e.message : String(e)}`
+      );
+    }
+  }
   console.log(`Schema:        ${schemaResult.result}`);
   console.log(`Staleness:     ${stalenessResult.result}`);
   console.log(`Deterministic: ${deterministicResult.result}`);
   console.log(`Blocking:      ${blockingResult.result}`);
   console.log(`Overall:       ${overallResult}`);
+  if (refreshedArtifacts.length > 0) {
+    console.log(`Refreshed validated_at: ${refreshedArtifacts.join(", ")}`);
+  }
   console.log(`Report: ${reportPath}`);
   if (schemaResult.errors.length > 0) {
     console.error(`

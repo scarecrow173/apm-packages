@@ -107,6 +107,14 @@ async function main(): Promise<void> {
   }
 
   const result = handler.execute(ctx);
+  if (result === undefined) {
+    // Defense in depth: a handler that produces no result must not
+    // degrade into a rendered "undefined" — report a structured error
+    // and fail.
+    console.error(`Error: query "${handler.name}" produced no result`);
+    process.exitCode = 1;
+    return;
+  }
   const format: OutputFormat = args.format || "json";
   const renderer = getRenderer(format);
   console.log(renderer.render(result));
