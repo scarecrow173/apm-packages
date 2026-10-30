@@ -74,9 +74,9 @@ function gate(status: GraphGateResult["status"], reasons: string[] = []): GraphG
   return { status, reasons: sortedUnique(reasons) };
 }
 
-function sectionBody(body: string, heading: string): string {
+export function sectionBody(body: string, heading: string): string {
   const lines = body.split(/\r?\n/);
-  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*$`, "i");
+  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
   const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
   if (start < 0) return "";
   const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));

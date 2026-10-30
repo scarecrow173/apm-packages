@@ -21595,7 +21595,7 @@ function gate(status, reasons = []) {
 }
 function sectionBody(body, heading) {
   const lines = body.split(/\r?\n/);
-  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*$`, "i");
+  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
   const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
   if (start < 0) return "";
   const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
