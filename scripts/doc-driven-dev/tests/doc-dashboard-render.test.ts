@@ -34,7 +34,10 @@ function snapshot(inventory: InventoryItem[] = []): DashboardSnapshot {
     decision: null,
     inventory,
     plans: [], findings: [],
-    health: { documents: inventory.length, blocking: 0, warnings: 0, infos: 0, categories: [] },
+    health: {
+      documents: inventory.length, blocking: 0, warnings: 0, infos: 0, categories: [],
+      orphans: { total: 0, byRule: {}, byType: {} },
+    },
     coverageNotes: [],
   };
 }

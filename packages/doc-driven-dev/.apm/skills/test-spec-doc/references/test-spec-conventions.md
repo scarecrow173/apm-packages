@@ -159,3 +159,10 @@ filename order, with the four shared columns:
 | ID | Title | Status | File |
 | --- | --- | --- | --- |
 | TSPEC-6NbVcXzAsDfGhJkLpOiUyT | Checkout total calculation | approved | [checkout-total-calculation.md](checkout-total-calculation.md) |
+
+In-flight test specs fill the main table; test specs with a settled status
+(`deprecated`, `superseded`) move to a `## Settled` table below it, also
+filename-ordered. Update the index whenever a document is added or its
+`status` changes — `doc_maintenance.js plan|apply` regenerates managed
+indexes and `doc_status lint` reports drift (`index-metadata-mismatch`,
+`index-ordering`) until it does.

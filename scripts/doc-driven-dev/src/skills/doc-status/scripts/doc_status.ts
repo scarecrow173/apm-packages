@@ -80,8 +80,11 @@ async function runList(args: CliArgs, cwd: string): Promise<void> {
   for (const group of groups) {
     console.log(`${group.type} documents (${group.directory}):`);
     for (const entry of group.entries) {
-      const status = entry.status ? ` [${entry.status}]` : "";
-      console.log(`- ${entry.path}${status}: ${entry.title}`);
+      const meta = [
+        entry.status,
+        entry.created ? `created ${entry.created}` : null,
+      ].filter((part): part is string => Boolean(part)).join(", ");
+      console.log(`- ${entry.path}${meta ? ` [${meta}]` : ""}: ${entry.title}`);
     }
   }
 }
@@ -119,6 +122,17 @@ async function runHealth(args: CliArgs, cwd: string): Promise<void> {
   console.log(`Blocking:  ${health.blocking}`);
   console.log(`Warnings:  ${health.warnings}`);
   console.log(`Infos:     ${health.infos}`);
+  // Orphan roll-up (Issue #162 B3): capture-layer linked-ness at a glance —
+  // which orphan rule fired and which lifecycle bucket the orphans live in.
+  const orphanRules = Object.entries(health.orphans.byRule)
+    .map(([rule, count]) => `${rule.replace(/^orphan-/, "")} ${count}`)
+    .join(", ");
+  const orphanTypes = Object.entries(health.orphans.byType)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([type, count]) => `${type} ${count}`)
+    .join(", ");
+  const orphanDetail = orphanRules ? ` (${orphanRules}${orphanTypes ? `; by type: ${orphanTypes}` : ""})` : "";
+  console.log(`Orphans:   ${health.orphans.total}${orphanDetail}`);
   console.log("");
   for (const category of health.categories) {
     const status = category.clean

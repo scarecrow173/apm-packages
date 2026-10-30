@@ -5,6 +5,8 @@ import path from "node:path";
 
 import { artifactKeyOf, contractForType, finding, frontMatterEndLine, isExternalReference, slugifyAnchor } from "./doc_repository";
 import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repository";
+import { isSettledStatus } from "./doc_lifecycle";
+import { primaryIndexTypeForDir, residentTypesForDir } from "./doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "./document_utils";
 import type { LintScope } from "./doc_lint";
 
@@ -386,7 +388,17 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
 
   const seen = new Set<string>();
   const { rows, malformed } = indexTableRows(index);
-  const rowFiles: string[] = [];
+  // Each resolved row records its basename plus its settled tier: the
+  // deterministic ordering is overview.md first (design scopes), then
+  // in-flight rows file-lexical, then settled rows file-lexical — mirroring
+  // `renderIndexBody` in doc_suite_utils (Issue #162).
+  const rowFiles: { file: string; settled: boolean }[] = [];
+  const indexDir = normalizeDir(path.posix.dirname(index.path));
+  const residentTypes = residentTypesForDir(indexDir);
+  const indexPrimaryType = primaryIndexTypeForDir(
+    indexDir,
+    residentTypes.length > 0 ? residentTypes : [scope.type],
+  );
   let lineOffset = 0;
   try {
     lineOffset = frontMatterEndLine(fs.readFileSync(path.join(model.root, index.path), "utf8"));
@@ -445,9 +457,12 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
       }));
     }
     seen.add(resolved.path);
-    rowFiles.push(path.posix.basename(resolved.path));
-
     const member = model.byPath.get(resolved.path);
+    rowFiles.push({
+      file: path.posix.basename(resolved.path),
+      settled: member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false,
+    });
+
     if (member && member.kind === "canonical") {
       const expected: [string, string | null][] = [
         ["id", member.id],
@@ -473,14 +488,19 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
     }
   }
 
-  const sorted = [...rowFiles].sort((a, b) => {
+  const compareGroup = (left: string, right: string): number => {
     if (scope.type === "design") {
-      if (a === "overview.md") return -1;
-      if (b === "overview.md") return 1;
+      if (left === "overview.md") return -1;
+      if (right === "overview.md") return 1;
     }
-    return a.localeCompare(b);
-  });
-  if (rowFiles.length > 1 && rowFiles.some((file, i) => file !== sorted[i])) {
+    return left.localeCompare(right);
+  };
+  const expected = [
+    ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
+    ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup),
+  ];
+  const actual = rowFiles.map((entry) => entry.file);
+  if (actual.length > 1 && actual.some((file, i) => file !== expected[i])) {
     findings.push(finding({
       ruleId: "index-ordering",
       category: "index",

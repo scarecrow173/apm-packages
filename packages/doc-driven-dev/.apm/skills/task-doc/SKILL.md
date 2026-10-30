@@ -101,7 +101,11 @@ but must not be the sole verification.
 3. If no automated check is possible, document why and add a follow-up task to
    create one.
 
-A task cannot move to `done` until all verification commands pass.
+A task cannot move to `done` until all verification commands pass. When
+status changes — `done`/`wont-do` move the row to the index's `## Settled`
+tier — regenerate `docs/tasks/README.md` in the same change via
+`doc_maintenance.js plan|apply --type task`; `doc_status lint` reports the
+stale index until then.
 
 ## Resources
 

@@ -44,6 +44,8 @@ test("audit_docs reports unparseable front matter instead of crashing", () => {
   const list = runScript("doc-status", "list_docs.js", ["--type", "task"], repo);
   assert.equal(list.status, 0, list.stderr);
   assert.match(list.stdout, /0001-good\.md/);
+  // Issue #162 B3 — the compatibility wrapper exposes capture-layer age too.
+  assert.match(list.stdout, /created 2026-09-15/);
 });
 
 test("new_task rejects an unknown status before writing any file", () => {

@@ -131,7 +131,22 @@
           "infos": 0,
           "clean": false
         }
-      ]
+      ],
+      "orphans": {
+        "total": 12,
+        "byRule": {
+          "orphan-index": 6,
+          "orphan-navigation": 6
+        },
+        "byType": {
+          "adr": 2,
+          "design": 2,
+          "plan": 2,
+          "spec": 2,
+          "task": 2,
+          "test-spec": 2
+        }
+      }
     }
   },
   "types": {
