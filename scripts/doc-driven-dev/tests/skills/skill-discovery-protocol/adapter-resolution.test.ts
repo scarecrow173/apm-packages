@@ -64,12 +64,21 @@ readable_outputs:
 
 test("loadAdapter resolves general from bundled skill-discovery-protocol assets", () => {
   const dir = tempDir();
-  const bundledGeneralDir = path.resolve(
+  // The bundled adapters dir the built scripts resolve via __dirname
+  // (scripts/../assets/adapters). Injected explicitly so the test supplies
+  // the bundled location instead of creating it inside the source tree —
+  // writing and deleting src/.../assets/adapters during a parallel test run
+  // raced doc-suite's entriesUnder walk with intermittent ENOENT.
+  const bundledAdaptersDir = path.resolve(
     __dirname,
-    "../../../src/skills/skill-discovery-protocol/assets/adapters",
+    "../../../../../packages/doc-driven-dev/.apm/skills/skill-discovery-protocol/assets/adapters",
   );
+  assert.ok(
+    fs.existsSync(path.join(bundledAdaptersDir, "general.yaml")),
+    "bundled general.yaml must exist in the packaged skill assets",
+  );
+
   fs.mkdirSync(path.join(dir, ".apm", "assets", "adapters"), { recursive: true });
-  fs.mkdirSync(bundledGeneralDir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, ".apm", "assets", "adapters", "general.yaml"),
     `schema_version: "1.0"
@@ -80,63 +89,6 @@ scan:
       enabled: true
       roots:
         - "LEGACY_ROOT_SENTINEL"
-`,
-    "utf8",
-  );
-  fs.writeFileSync(
-    path.join(bundledGeneralDir, "general.yaml"),
-    `# yaml-language-server: $schema=../../../schemas/adapter.schema.json
-schema_version: "1.0"
-adapter_id: "general"
-protocol:
-  name: "skill-discovery-protocol"
-  min_version: "1.0"
-enabled: true
-scan:
-  scopes:
-    project:
-      enabled: true
-      roots:
-        - ".apm/skills"
-        - ".agents/skills"
-        - ".github/skills"
-        - ".github/agents"
-        - ".cursor/rules"
-        - ".claude/commands"
-        - ".gemini/skills"
-        - ".gemini/commands"
-        - ".opencode/skills"
-        - "apm_modules"
-        - "."
-profile:
-  title: "General Skill Reference"
-validation:
-  schema: true
-  staleness:
-    enabled: true
-    basis: "validated_at"
-    max_age_days: 30
-  deterministic:
-    enabled: true
-    compare:
-      - "profile"
-      - "profile+catalog-artifacts"
-      - "validation-report:exclude-timestamp"
-  invocation:
-    enabled: false
-render:
-  stable_sort:
-    skills: ["name"]
-    invocations: ["source_skill", "slot", "capability"]
-  normalize_whitespace: true
-  newline: "lf"
-artifacts:
-  protocol:
-    skill_reference_catalog: "skill-reference-catalog.json"
-readable_outputs:
-  enabled: true
-  include:
-    - "skill_reference_catalog"
 `,
     "utf8",
   );
@@ -151,7 +103,7 @@ readable_outputs:
     );
 
     for (const adapterPath of [briefingAdapter, implementationAdapter]) {
-      const adapter = loadAdapter(adapterPath);
+      const adapter = loadAdapter(adapterPath, { extendsSearchDirs: [bundledAdaptersDir] });
       const roots = adapter.scan.scopes.project.roots;
 
       assert.ok(Array.isArray(roots), "project roots should exist");
@@ -160,7 +112,6 @@ readable_outputs:
       assert.ok(!roots.includes("LEGACY_ROOT_SENTINEL"), "legacy .apm/assets/adapters copy must not be used");
     }
   } finally {
-    fs.rmSync(path.join(dir, ".apm"), { recursive: true, force: true });
-    fs.rmSync(bundledGeneralDir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 });
