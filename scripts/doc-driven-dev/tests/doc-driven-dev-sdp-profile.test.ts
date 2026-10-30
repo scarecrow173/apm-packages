@@ -737,15 +737,19 @@ function kindCounts(flows: { directives: { kind: string }[] }[]): Record<string,
   return counts;
 }
 
-// Bounds vs the audit's stored artifacts. The audit (Task 2) recorded zero
-// directive change and +40 alwaysOnChars; Task 3 then added staged-loading
-// paragraphs linking the progressive-loading contract — the only
-// post-audit additions this guard tolerates, enumerated below.
+// Bounds vs the stored artifacts. #147 re-pinned both fixture JSONs from a
+// single live `inventoryAll` run under the current extraction rules
+// (regenerate via tests/fixtures/skill-discovery-inventory/write_inventory.ts),
+// so the baseline↔final equality checks are a tripwire for one-sided
+// fixture edits. The original Task-2 audit snapshots (pre/post-fix, older
+// rules) live in `.superpowers/sdd/2026-10-29-skill-discovery/`.
 const ALWAYS_ON_TOLERANCE = 100;
 
 // Per-flow count of new `reference` directives Task 3 added: one contract
 // link per staged-loading paragraph in the three flows, plus the en/ja
-// entries added to the skill-discovery-protocol references index.
+// entries added to the skill-discovery-protocol references index. Kept as
+// headroom for further progressive-loading-contract links after the #147
+// re-pin; every other new directive must fail the guard.
 const CONTRACT_LINK_ALLOWANCE: Record<string, number> = {
   "briefing-flow": 1,
   "implementation-flow": 1,
@@ -753,11 +757,10 @@ const CONTRACT_LINK_ALLOWANCE: Record<string, number> = {
   "skill-discovery-protocol": 2,
 };
 
-// Task 3's measured alwaysOnChars growth: +302 briefing, +302 impl, +316
-// planning, +168 sdp = +1088; later incidental doc edits (audit-behavior
-// notes such as #154's fenced-block clause) consumed the rest of the
-// headroom. +1400 keeps the bound tight — bulk growth of the always-on
-// instruction surface is the regression this guard exists for.
+// Growth bound for the always-on instruction surface over the stored
+// baseline — bulk growth is the regression this guard exists for. The
+// #147 re-pin moved the anchor to the current package state, so this is
+// headroom for future SKILL.md growth, not a re-measurement of Task 3.
 const ALWAYS_ON_TASK3_TOLERANCE = 1400;
 
 /** Multiset diff of (kind,target) pairs: directives in `live` not in `base`. */
@@ -783,12 +786,12 @@ test("staged-loading guard: stored final inventory is consistent with baseline",
   assert.equal(
     final.totals.directives,
     baseline.totals.directives,
-    "audit recorded no directive-count change",
+    "stored endpoint must not drift from the pinned baseline",
   );
-  assert.equal(final.totals.missing, 0, "audit closed the single missing target");
+  assert.equal(final.totals.missing, 0, "no shipped-kind target may go missing");
   assert.ok(
     final.totals.alwaysOnChars <= baseline.totals.alwaysOnChars + ALWAYS_ON_TOLERANCE,
-    `audit alwaysOnChars delta ${final.totals.alwaysOnChars - baseline.totals.alwaysOnChars} exceeds tolerance`,
+    `stored alwaysOnChars delta ${final.totals.alwaysOnChars - baseline.totals.alwaysOnChars} exceeds tolerance`,
   );
   assert.deepEqual(kindCounts(final.flows), kindCounts(baseline.flows));
 });

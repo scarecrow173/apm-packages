@@ -285,7 +285,7 @@ Profile ベースの構成を省略しないこと。
 spec-doc の `status` が `proposed` 以上になるまで、briefing 完了を宣言しないこと。
 `draft` のまま通過するのは禁止である。acceptance criteria のない spec は、計画の土台にならない。
 
-**Why:** 不完全な Phase 1 の出力は、後続フェーズの再設計を引き起こす主な原因となる。
+**Why:** 不完全な Phase 1 の出力は、後続フェーズの再設計を引き起こすよくある原因の一つである。
 </HARD-GATE>
 
 <HARD-GATE>

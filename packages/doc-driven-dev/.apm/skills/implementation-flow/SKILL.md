@@ -209,6 +209,10 @@ Example command:
 node ../impl-doc/scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
 ```
 
+The relative script path resolves against the installed skill directory, not
+the caller's working directory. Resolve it to an absolute path before
+execution.
+
 Known-solution work does not skip this phase. The Implementation Record is
 opened before code changes begin; only the Experiment Log remains optional when
 the task is mechanical.
