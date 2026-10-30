@@ -5,6 +5,7 @@ import path from "node:path";
 
 import type { FlowProfile, SkillReferenceCatalog } from "../types";
 import type { QueryArgs, QueryContext, ValidationReport } from "./registry";
+import { ValidationReportSchema } from "../schemas/validation-report";
 
 function isPathWithinProject(rootDir: string, candidatePath: string): boolean {
   const rel = path.relative(rootDir, candidatePath);
@@ -99,17 +100,32 @@ export function loadQueryContext(args: QueryArgs): QueryContext {
   }
 
   // Load co-located validation report, then fallback to discovered .sdp root.
+  // A present-but-malformed report is an invalid artifact, not an absent one —
+  // fail closed rather than letting handlers read undefined fields.
   const validationReport =
-    loadOptionalJson<ValidationReport>(
-      path.join(profileDir, "validation-report.json"),
-    ) ||
+    loadValidationReport(path.join(profileDir, "validation-report.json")) ||
     (rootSdpDir
-      ? loadOptionalJson<ValidationReport>(
-        path.join(rootSdpDir, "validation-report.json"),
-      )
+      ? loadValidationReport(path.join(rootSdpDir, "validation-report.json"))
       : null);
 
   return { profile, catalog, validationReport, args };
+}
+
+function loadValidationReport(filePath: string): ValidationReport | null {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    throw new Error(`Invalid validation report: ${filePath} is not valid JSON`);
+  }
+  const result = ValidationReportSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new Error(`Invalid validation report: ${filePath} does not match the report schema`);
+  }
+  return result.data;
 }
 
 function loadOptionalJson<T>(filePath: string): T | null {
