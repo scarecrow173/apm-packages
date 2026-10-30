@@ -7,6 +7,7 @@ import {
   toScopeEntry,
   type ScopePattern,
 } from "./scope_entry";
+import { hasSection, sectionBody } from "../../../lib/markdown_sections";
 
 // WritePattern matches the cross-task contract verbatim: the declared type
 // only guarantees `path` on dir entries, but this implementation always
@@ -30,29 +31,6 @@ export type ParallelReport = {
 
 /** Internal shape: every resolved pattern carries its normalized path. */
 type ScopedPattern = ScopePattern;
-
-// Verbatim port of the sectionBody helper from
-// briefing-flow/scripts/lib/briefing_audit.ts (itself ported from
-// doc-driven-dev-graph/scripts/lib/graph_state.ts) so `##` heading extraction
-// cannot drift between audits. The heading regex is shared via headingPattern.
-function headingPattern(heading: string): RegExp {
-  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
-}
-
-function sectionBody(body: string, heading: string): string {
-  const lines = body.split(/\r?\n/);
-  const pattern = headingPattern(heading);
-  const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
-  if (start < 0) return "";
-  const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
-  const section = endOffset < 0 ? lines.slice(start + 1) : lines.slice(start + 1, start + 1 + endOffset);
-  return section.join("\n").trim();
-}
-
-function hasSection(body: string, heading: string): boolean {
-  const pattern = headingPattern(heading);
-  return body.split(/\r?\n/).some((line) => pattern.test(line.trimEnd()));
-}
 
 const BULLET_ITEM = /^\s*[-*+]\s+(.*)$/;
 const HTML_COMMENT = /<!--[\s\S]*?-->/g;

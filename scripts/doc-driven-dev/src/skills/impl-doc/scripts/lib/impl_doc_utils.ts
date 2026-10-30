@@ -6,17 +6,18 @@ import { z } from "zod";
 import { generateArtifactId } from "../../../lib/artifact_id";
 import { changeFields, GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, sanitizeTitle } from "../../../lib/doc_suite_utils";
 import { normalizeDir, slugify } from "../../../lib/document_utils";
+import { hasSection } from "../../../lib/markdown_sections";
 
 const implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"] as const;
 const experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"] as const;
 const implementationRecordSections = [
-  "## Summary",
-  "## Context",
-  "## Implementation",
-  "## Related Experiments",
-  "## Validation",
-  "## Risks",
-  "## Follow-ups",
+  "Summary",
+  "Context",
+  "Implementation",
+  "Related Experiments",
+  "Validation",
+  "Risks",
+  "Follow-ups",
 ] as const;
 
 type Severity = "error" | "warning" | "info";
@@ -478,11 +479,11 @@ function auditImplementationRecords(cwd: string, relativeDir: string): { directo
       }
     }
     for (const section of implementationRecordSections) {
-      if (!parsed.body.includes(section)) {
+      if (!hasSection(parsed.body, section)) {
         findings.push({
           code: "missing-section",
           file,
-          message: `Missing required section: ${section.replace(/^##\s+/, "")}`,
+          message: `Missing required section: ${section}`,
           severity: "error",
         });
       }

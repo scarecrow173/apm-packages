@@ -5,6 +5,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { findDocumentDir, listMarkdownFiles, slugify as sharedSlugify } from "../../../lib/document_utils";
 import { GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
+import { headingNames } from "../../../lib/markdown_sections";
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
 const relationFields = [
@@ -112,17 +113,25 @@ async function headingNodes(content: string): Promise<MarkdownNode[]> {
   return headings;
 }
 
+// Section matching is locale-aware: callers pass the canonical English
+// heading and headingNames also accepts its declared template aliases (see
+// lib/markdown_sections.ts). The canonical name wins when both spellings
+// appear in one document.
 async function hasSection(content: string, section: string): Promise<boolean> {
-  const target = normalizeHeading(section);
-  return (await headingNodes(content)).some((heading) => normalizeHeading(textFromNode(heading)) === target);
+  const targets = new Set(headingNames(section).map(normalizeHeading));
+  return (await headingNodes(content)).some((heading) => targets.has(normalizeHeading(textFromNode(heading))));
 }
 
 async function sectionBody(content: string, section: string): Promise<string> {
   const parsed = matter(content).content;
   const lines = parsed.split(/\r?\n/);
-  const target = normalizeHeading(section);
   const headings = await headingNodes(content);
-  const start = headings.find((heading) => normalizeHeading(textFromNode(heading)) === target);
+  let start: MarkdownNode | undefined;
+  for (const name of headingNames(section)) {
+    const target = normalizeHeading(name);
+    start = headings.find((heading) => normalizeHeading(textFromNode(heading)) === target);
+    if (start) break;
+  }
   if (!start || typeof start.depth !== "number" || !start.position?.end?.line) return "";
 
   const next = headings.find((heading) => {

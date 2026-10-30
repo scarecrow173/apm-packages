@@ -169,8 +169,10 @@ Tasks should include:
 For a task to be eligible for parallel delegation, its `## Affected Files`
 entries must be path-verifiable file or directory paths. Free-form module or
 feature names are not verifiable and force serial execution. The scope check
-matches the `Affected Files` heading literally (case-insensitive); a localized
-heading currently reads as undeclared scope and forces serial.
+matches the canonical `Affected Files` heading or a declared localized alias
+(case-insensitive) — the ja template's `影響ファイル` is accepted — while a
+heading outside that fixed vocabulary still reads as undeclared scope and
+forces serial.
 
 Done criteria must be checkable. If a task cannot state its verification path,
 return to the plan or spec before starting implementation.

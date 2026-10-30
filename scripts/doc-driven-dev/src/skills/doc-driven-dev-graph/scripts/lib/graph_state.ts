@@ -15,6 +15,7 @@ import {
   buildTaskGraph,
   type TaskGraphResult,
 } from "./task_graph";
+import { sectionBody, subHeadingCount } from "../../../lib/markdown_sections";
 
 export type GraphGateResult = { status: "pass" | "fail" | "blocked"; reasons: string[] };
 export type GraphGateResults = Record<string, GraphGateResult>;
@@ -74,20 +75,10 @@ function gate(status: GraphGateResult["status"], reasons: string[] = []): GraphG
   return { status, reasons: sortedUnique(reasons) };
 }
 
-export function sectionBody(body: string, heading: string): string {
-  const lines = body.split(/\r?\n/);
-  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
-  const start = lines.findIndex((line) => pattern.test(line.trimEnd()));
-  if (start < 0) return "";
-  const endOffset = lines.slice(start + 1).findIndex((line) => /^##\s+/.test(line));
-  const section = endOffset < 0 ? lines.slice(start + 1) : lines.slice(start + 1, start + 1 + endOffset);
-  return section.join("\n").trim();
-}
-
 function consideredOptionCount(body: string): number {
   const section = sectionBody(body, "Considered Options");
   if (!section) return 0;
-  const headings = section.match(/^###\s+.+$/gim)?.length ?? 0;
+  const headings = subHeadingCount(section);
   const listItems = section.match(/^\s*[-*+]\s+\S/gm)?.length ?? 0;
   return Math.max(headings, listItems);
 }
@@ -255,4 +246,4 @@ export function projectGraphState(options: ProjectGraphStateOptions, collector?:
   return state;
 }
 
-export { projectArtifactGraph };
+export { projectArtifactGraph, sectionBody };
