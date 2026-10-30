@@ -37,9 +37,11 @@ task の eligibility は Task Graph projection が権威であり、この contr
   serial。
 - 検証不能な項目が 1 つでもある → `scope-unverifiable` → serial。判定は
   記述から scope を推測したり、ありそうな path を当てはめたりしません。
-- scope 判定は `Affected Files` という見出しに literal（case-insensitive）で
-  マッチします。ローカライズされた見出しはセクション欠落として扱われ、
-  現在は `scope-undeclared` → serial になります。
+- scope 判定は canonical な `Affected Files` 見出しと宣言済みの
+  ローカライズ別名（ja task テンプレートの `影響ファイル`）に
+  case-insensitive でマッチします。その固定語彙以外の見出しは依然
+  セクション欠落として扱われ `scope-undeclared` → serial となり、
+  canonical と別名が同一文書に併存する場合は canonical が優先されます。
 - フェンス付きコードブロック（```` ``` ```` / `~~~`）内の見出しや bullet は
   宣言ではなく文書です — フェンス内の `## Affected Files` はセクションを
   構成しません。セクション内の `###` 以深のサブセクション配下の bullet も

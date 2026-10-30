@@ -190,6 +190,11 @@ For fuller ADRs, also capture:
 - Pros and cons of options.
 - More information and source links.
 
+Audit and review scripts resolve these section headings by canonical English
+name plus declared localized template aliases (for example `背景と問題`
+matches `Context and Problem Statement`); the canonical spelling wins when
+both appear.
+
 ## Mutability
 
 ADR files are decision history.
