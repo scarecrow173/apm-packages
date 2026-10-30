@@ -19,6 +19,8 @@ import {
 import type { ContextBaseline } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/context_metrics";
 import type { GraphDefinition } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 import type {
+  DispatchMethod,
+  DispatchObservedEvent,
   EffectDispatchedEvent,
   EffectOutcomeEvent,
   ExecutionMode,
@@ -71,6 +73,14 @@ export type CaseExpect = {
     executionMode?: ExecutionMode;
     /** effect-dispatched only: modeReason CONTAINS this substring (token search). */
     modeReason?: string;
+    /** dispatch-observed only: exact target id (effectId = self-observation). */
+    target?: string;
+    /** dispatch-observed only: exact requested mode. */
+    requested?: ExecutionMode;
+    /** dispatch-observed only: exact actual mode. */
+    actual?: ExecutionMode;
+    /** dispatch-observed only: exact dispatch method. */
+    method?: DispatchMethod;
     count?: number;
     min?: number;
   }[];
@@ -190,7 +200,11 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
       + (spec.outcome !== undefined ? ` outcome "${spec.outcome}"` : "")
       + (spec.reason !== undefined ? ` reason "${spec.reason}"` : "")
       + (spec.executionMode !== undefined ? ` mode "${spec.executionMode}"` : "")
-      + (spec.modeReason !== undefined ? ` modeReason~"${spec.modeReason}"` : "");
+      + (spec.modeReason !== undefined ? ` modeReason~"${spec.modeReason}"` : "")
+      + (spec.target !== undefined ? ` target "${spec.target}"` : "")
+      + (spec.requested !== undefined ? ` requested "${spec.requested}"` : "")
+      + (spec.actual !== undefined ? ` actual "${spec.actual}"` : "")
+      + (spec.method !== undefined ? ` method "${spec.method}"` : "");
     const count = events.filter((event) => {
       if (event.kind !== spec.kind) return false;
       if (spec.edgeId !== undefined && (!("edgeId" in event) || event.edgeId !== spec.edgeId)) return false;
@@ -202,6 +216,10 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
           && (!("executionMode" in event) || event.executionMode !== spec.executionMode)) return false;
       if (spec.modeReason !== undefined
           && (!("modeReason" in event) || !event.modeReason?.includes(spec.modeReason))) return false;
+      if (spec.target !== undefined && (!("target" in event) || event.target !== spec.target)) return false;
+      if (spec.requested !== undefined && (!("requested" in event) || event.requested !== spec.requested)) return false;
+      if (spec.actual !== undefined && (!("actual" in event) || event.actual !== spec.actual)) return false;
+      if (spec.method !== undefined && (!("method" in event) || event.method !== spec.method)) return false;
       return true;
     }).length;
     if (spec.count !== undefined && count !== spec.count) {
@@ -391,11 +409,18 @@ function validateUniversalInvariants(run: CaseRun): string[] {
   // 6. No orphan outcomes: every effect-outcome matches an earlier
   //    effect-dispatched with the same edgeId+stage+effectId.
   const unmatchedDispatches = new Map<string, number>();
+  // For invariant 7: every effect-dispatched in emission order, plus whether
+  // its dispatch produced an outcome (accepted) or was rejected before it.
+  const dispatchedEvents: { key: string; event: EffectDispatchedEvent; seq: number; accepted: boolean }[] = [];
+  const latestDispatch = new Map<string, { accepted: boolean }>();
   for (const event of events) {
     if (event.kind === "effect-dispatched") {
       const dispatched = event as EffectDispatchedEvent;
       const key = `${dispatched.edgeId}${dispatched.stage}${dispatched.effectId}`;
       unmatchedDispatches.set(key, (unmatchedDispatches.get(key) ?? 0) + 1);
+      const entry = { key, event: dispatched, seq: event.seq, accepted: false };
+      dispatchedEvents.push(entry);
+      latestDispatch.set(key, entry);
     } else if (event.kind === "effect-outcome") {
       const outcome = event as EffectOutcomeEvent;
       const key = `${outcome.edgeId}${outcome.stage}${outcome.effectId}`;
@@ -408,6 +433,48 @@ function validateUniversalInvariants(run: CaseRun): string[] {
       } else {
         unmatchedDispatches.set(key, pending - 1);
       }
+      const producer = latestDispatch.get(key);
+      if (producer) producer.accepted = true;
+    }
+  }
+
+  // 7. Dispatch attribution: every dispatch-observed records what the adapter
+  //    actually did for a prior effect-dispatched (same edgeId+stage+effectId).
+  //    Each self-observation (target === effectId) of an ACCEPTED dispatch —
+  //    one that produced an outcome — is checked against the dispatch that
+  //    produced it (the nearest prior same-key dispatch event): `requested`
+  //    must equal its executionMode, and an executed dispatch
+  //    (method !== "not-executed") must show `actual` equal to it. A rejected
+  //    dispatch may leave a mismatched report in the trace — that report is
+  //    the forensic record the rejection enforced, not a consistency failure.
+  //    Observations of effects that were never dispatched always fail.
+  for (const event of events) {
+    if (event.kind !== "dispatch-observed") continue;
+    const observed = event as DispatchObservedEvent;
+    const key = `${observed.edgeId}${observed.stage}${observed.effectId}`;
+    const producer = [...dispatchedEvents]
+      .reverse()
+      .find((entry) => entry.key === key && entry.seq < event.seq);
+    if (!producer) {
+      failures.push(
+        `dispatch-observed "${observed.target}" on ${observed.edgeId} has no prior effect-dispatched`,
+      );
+      continue;
+    }
+    if (!producer.accepted || observed.target !== observed.effectId) continue; // rejected report or internal record
+    if (observed.requested !== producer.event.executionMode) {
+      failures.push(
+        `dispatch-observed self-report on ${observed.edgeId} requested "${observed.requested}"`
+        + ` but the dispatch recorded "${producer.event.executionMode}"`,
+      );
+    }
+    if (producer.event.executionMode !== "unknown"
+        && observed.method !== "not-executed"
+        && observed.actual !== producer.event.executionMode) {
+      failures.push(
+        `dispatch-observed self-report on ${observed.edgeId} executed as "${observed.actual}"`
+        + ` but the dispatch recorded "${producer.event.executionMode}" — a silent mode switch`,
+      );
     }
   }
 

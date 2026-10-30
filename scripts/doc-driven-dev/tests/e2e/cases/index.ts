@@ -13,6 +13,10 @@ import { case11 } from "./case-11-audit-retry";
 import { case12a, case12b, case12c } from "./case-12-budgets-terminal";
 import { case13a, case13b, case13c } from "./case-13-execution-modes";
 import { case14a, case14c } from "./case-14-briefing-execution";
+import {
+  case15a, case15b, case15c, case15d,
+  case15e, case15f, case15g, case15h, case15i,
+} from "./case-15-dispatch-observation";
 
 export const CASES: E2ECase[] = [
   case01, case02, case03, case04, case05, case06,
@@ -24,4 +28,6 @@ export const CASES: E2ECase[] = [
   case12a, case12b, case12c,
   case13a, case13b, case13c,
   case14a, case14c,
+  case15a, case15b, case15c, case15d,
+  case15e, case15f, case15g, case15h, case15i,
 ];

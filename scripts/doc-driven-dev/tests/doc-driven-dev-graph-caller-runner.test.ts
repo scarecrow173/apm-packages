@@ -283,7 +283,10 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
   const tsx = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
   const cli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
   const trace = path.join(dir, "trace.jsonl");
-  const dispatcher: EffectDispatcher = (ctx) => completed(dir, ctx.route, ctx.effect.kind, ctx.effect);
+  const dispatcher: EffectDispatcher = (ctx) => ({
+    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+  });
   const result = runCaller({
     repo: dir, router: { executable: process.execPath, prefixArgs: [tsx, cli] },
     focus: ["PLAN-0001"],
@@ -325,7 +328,10 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
   const tsx = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
   const cli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
   const trace = path.join(dir, "trace.jsonl");
-  const dispatcher: EffectDispatcher = (ctx) => completed(dir, ctx.route, ctx.effect.kind, ctx.effect);
+  const dispatcher: EffectDispatcher = (ctx) => ({
+    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+  });
   const hostCapabilities: ReadonlySet<DelegateMode> = new Set<DelegateMode>([
     "same-context", "subagent-as-tool", "isolated-subagent",
   ]);
@@ -374,4 +380,138 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
   assert.equal(overridden?.modeReason, "override:eval-fixture");
   const standard = dispatched.find((event) => event.effectId !== "briefing-flow");
   assert.equal(standard?.modeReason, "independent-scope;parallel-candidate");
+});
+
+// ---------------------------------------------------------------------------
+// Dispatch observation boundary (#135): the runner hands the requested mode
+// to the dispatcher, records its report as dispatch-observed events, and
+// rejects any self-observation that contradicts the request.
+// ---------------------------------------------------------------------------
+
+function runnerArgs(dir: string, dispatcher: EffectDispatcher, trace: string) {
+  const tsx = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
+  const cli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
+  return {
+    repo: dir,
+    router: { executable: process.execPath, prefixArgs: [tsx, cli] },
+    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+    dispatcher,
+    resolveInputs: testResolveInputs,
+    resolveEvidence: testResolveEvidence,
+    applyEvidence: (repoDir: string, _signals: ReadonlySet<string>, edgeId: string) => {
+      if (edgeId === "task-graph-to-implementation") updateArtifact(repoDir, PROOF, { status: "done" });
+      persistEvidence(repoDir, PROOF, edgeId);
+    },
+    trace: { file: trace, runId: "obs-boundary" },
+  };
+}
+
+test("a self-observation reporting a different actual mode rejects the dispatch", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  // The first spec audit reports it ran same-context while the declared
+  // requested mode is "tool" — a silent switch, rejected like any violation.
+  const dispatcher: EffectDispatcher = (ctx) => ({
+    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: "same-context", method: "inline-skill" }],
+  });
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "tool", focus: ["PLAN-0001"] });
+  assert.equal(result.yieldReason, "authority-required");
+  const events = readTraceFile(trace);
+  const observed = events.filter((event) => event.kind === "dispatch-observed");
+  assert.equal(observed.length, 1);
+  assert.equal(observed[0].kind === "dispatch-observed" && observed[0].actual, "same-context");
+  // The rejected dispatch left no effect-outcome — the observation is the
+  // forensic record of what the adapter claimed it did.
+  assert.equal(events.some((event) => event.kind === "effect-outcome"), false);
+});
+
+test("a declined dispatch yields honestly; an executing dispatch may not claim not-executed", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  // The spec audit declines (unsupported mode simulation): not-executed +
+  // yield is the honest refusal shape and flows to the run yield.
+  const dispatcher: EffectDispatcher = (ctx) => {
+    if (ctx.effect.kind === "audit" && ctx.effect.id === "spec") {
+      return {
+        outcome: {
+          status: "yield",
+          edgeId: ctx.route.edgeId as string,
+          stage: "audit",
+          effect: ctx.effect,
+          authoritativeInputs: testInputs(dir, ctx.route, ctx.effect),
+          evidence: [ref(dir, "docs/specs/0001-graph.md")],
+          reason: "authority-required",
+        },
+        observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: "unknown", method: "not-executed" }],
+      };
+    }
+    return {
+      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+    };
+  };
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "subagent", focus: ["PLAN-0001"] });
+  assert.equal(result.yieldReason, "authority-required");
+  const observed = readTraceFile(trace).filter((event) => event.kind === "dispatch-observed");
+  // Audits dispatch in graph order — whichever ran before spec recorded an
+  // executed observation; the spec decline is the not-executed record.
+  const declined = observed.filter((event) => event.kind === "dispatch-observed" && event.method === "not-executed");
+  assert.equal(declined.length, 1);
+  if (declined[0].kind === "dispatch-observed") {
+    assert.equal(declined[0].effectId, "spec");
+    assert.equal(declined[0].requested, "subagent");
+    assert.equal(declined[0].actual, "unknown");
+  }
+  // The declining dispatch produced a yield outcome, never a completed one.
+  const outcomes = readTraceFile(trace).filter((event) => event.kind === "effect-outcome");
+  assert.equal(outcomes.some(
+    (event) => event.kind === "effect-outcome" && event.effectId === "spec" && event.outcome === "yield",
+  ), true);
+  assert.equal(outcomes.some(
+    (event) => event.kind === "effect-outcome" && event.effectId === "spec" && event.outcome === "completed",
+  ), false);
+});
+
+test("a dispatcher reporting no self-observation is rejected", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  const dispatcher: EffectDispatcher = (ctx) => ({
+    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    observations: [{ target: "some-other-dispatch", requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+  });
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), focus: ["PLAN-0001"] });
+  assert.equal(result.yieldReason, "authority-required");
+});
+
+test("a delegated policy decision attaches a handoff carrying the requested mode", () => {
+  const dir = happyRepo();
+  const trace = path.join(dir, "trace.jsonl");
+  const seen: (string | undefined)[] = [];
+  const dispatcher: EffectDispatcher = (ctx) => {
+    seen.push(ctx.handoff?.executionMode);
+    return {
+      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
+    };
+  };
+  const policy = (_route: GraphRoute, effect: CallerEffect): PolicyFacts => ({
+    effectId: effect.id,
+    stage: effect.kind,
+    independentScope: effect.id === "spec",
+    sharedJudgment: false,
+    contextCost: "low",
+    parallelCandidate: false,
+    hostCapabilities: new Set<DelegateMode>(["same-context", "subagent-as-tool", "isolated-subagent"]),
+  });
+  const result = runCaller({
+    ...runnerArgs(dir, dispatcher, trace),
+    focus: ["PLAN-0001"],
+    policy,
+  });
+  assert.equal(result.yieldReason, "terminal");
+  // The spec audit ran delegated (subagent-as-tool → "tool") and received a
+  // handoff; same-context dispatches saw none.
+  assert.equal(seen.includes("tool"), true);
+  assert.equal(seen.includes(undefined), true);
 });
