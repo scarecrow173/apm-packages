@@ -3584,10 +3584,31 @@ function normalizeArtifactPath(cwd, target) {
 function isExternalArtifactReference(value) {
   return EXTERNAL_REFERENCE.test(value.trim());
 }
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
 function isInside(cwd, candidate) {
-  const root = import_node_path.default.resolve(cwd);
-  const resolved = import_node_path.default.resolve(candidate);
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
   return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function isInsideCheckout(cwd, candidate) {
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) return false;
+  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
 }
 function resolveContainedTaskDir(cwd, taskDir) {
   const candidate = taskDir ?? "docs/tasks";
@@ -3595,7 +3616,10 @@ function resolveContainedTaskDir(cwd, taskDir) {
   if (!isInside(cwd, resolved)) {
     throw new Error(`--task-dir escapes the checkout: ${candidate}`);
   }
-  return normalizeArtifactPath(cwd, resolved);
+  if (import_node_fs.default.existsSync(resolved) && !isInsideRealpath(cwd, resolved)) {
+    throw new Error(`--task-dir escapes the checkout through a link: ${candidate}`);
+  }
+  return normalizeArtifactPath(cwd, stripExtendedLengthPrefix(resolved));
 }
 function markdownFiles(dir) {
   if (!import_node_fs.default.existsSync(dir) || !import_node_fs.default.statSync(dir).isDirectory()) return [];
@@ -19718,8 +19742,7 @@ function fetchArtifactBodies(cwd, refs, taskDir) {
       continue;
     }
     const resolved = import_node_path3.default.resolve(repo, ref.path);
-    const relative = import_node_path3.default.relative(repo, resolved);
-    if (relative === ".." || relative.startsWith(`..${import_node_path3.default.sep}`) || import_node_path3.default.isAbsolute(relative)) {
+    if (!isInsideCheckout(repo, resolved)) {
       fail("path-escape", `Ref path escapes the checkout: ${ref.path}`);
       continue;
     }

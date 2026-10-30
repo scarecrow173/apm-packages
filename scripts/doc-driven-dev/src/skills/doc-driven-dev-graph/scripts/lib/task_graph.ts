@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 
-import { resolveContainedTaskDir } from "./artifact_graph";
+import { isInsideCheckout, resolveContainedTaskDir } from "./artifact_graph";
 
 /** Lifecycle statuses accepted by task-doc. */
 export type TaskStatus = "todo" | "in-progress" | "blocked" | "done" | "wont-do";
@@ -303,6 +303,11 @@ function isExistingArtifactReference(
   reference: string,
 ): boolean {
   const candidate = path.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
+  // A reference resolving outside the checkout can never name a task-graph
+  // artifact — refuse it without reading (the same containment, including
+  // realpath, that the scan boundary applies). The caller then records the
+  // reference as missing-task-reference, keeping the refusal fail-closed.
+  if (!isInsideCheckout(cwd, candidate)) return false;
   if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) return false;
   const taskRoot = path.resolve(cwd, taskDir);
   const candidatePath = path.resolve(candidate);
