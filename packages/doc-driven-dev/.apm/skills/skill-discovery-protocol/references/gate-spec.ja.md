@@ -160,6 +160,11 @@ validation:
     max_age_days: 30
 ```
 
+`enabled: false` の場合、ゲートは完全にスキップされ、レポートには
+`result: "skipped"` が記録される — catalog や `--adapter` がない場合と
+同じ状態である。ゲートを実行するかどうかは catalog の有無ではなく
+このフラグが決定する。
+
 ### 実行されるチェック
 
 | チェック | 条件 |
@@ -194,18 +199,26 @@ Flow Profile（フィールドが存在する場合）の `validated_at` を再�
 検出され続ける。解析不能な基準日は経年ではなく破損であり、同様に
 更新で上書きされることはない。
 
-この更新は鮮度を実際に検査した実行にのみ適用される — `--adapter` が
-必要である。`--profile` のみの実行では staleness・deterministic・
-blocking の各ゲートがスキップされるため、schema の pass だけでは
-鮮度を証明できず、`validated_at` は再刻印されない。再刻印自体は
-best-effort であり、成果物を書き換えられない場合は `sdp validate` が
-stderr に警告を出すが、実行結果と検証レポートは影響を受けない。
+この更新は鮮度を実際に検査した実行にのみ適用される — `--adapter` と
+deterministic ゲートの pass が必要である。`--profile` のみの実行では
+staleness・deterministic・blocking の各ゲートがスキップされるため、
+schema の pass だけでは鮮度を証明できず、`validated_at` は再刻印されない。
+スキップされた deterministic ゲート
+（`validation.deterministic.enabled: false` で無効化された場合や、
+比較対象がなかった場合）も同様に鮮度の証拠にならない:
+実行が生成を再実行していない以上、経年のみの staleness 失敗は修復されず、
+未検証の内容の上に `validated_at` が再刻印されることもない。
+スキップされた staleness・blocking ゲートはそれ自体では更新を妨げない
+— 成果物の内容を再導出して比較するのは deterministic ゲートのみである。
+再刻印自体は best-effort であり、成果物を書き換えられない場合は
+`sdp validate` が stderr に警告を出すが、実行結果と検証レポートは
+影響を受けない。
 
 ### 結果スキーマ
 
 ```json
 {
-  "result": "pass" | "fail",
+  "result": "pass" | "fail" | "skipped",
   "basis": "validated_at",
   "basis_date": "2025-01-15T10:30:00Z",
   "max_age_days": 30,
@@ -232,6 +245,12 @@ validation:
       - "profile+catalog-artifacts"
       - "validation-report:exclude-timestamp"
 ```
+
+`enabled: false` の場合、`compare` の指定内容にかかわらずゲートは
+完全にスキップされ、レポートには `result: "skipped"` が記録される。
+ゲートを実行するかどうかはリストではなくこのフラグが決定する。
+スキップされた deterministic ゲートは `validated_at` 更新の鮮度証拠に
+ならない（§5 参照）。
 
 ### 手順
 
@@ -260,7 +279,7 @@ validation:
 
 ```json
 {
-  "result": "pass" | "fail",
+  "result": "pass" | "fail" | "skipped",
   "comparisons": [
     {
       "target": "profile",
@@ -315,8 +334,8 @@ validation:
 
 ```json
 {
-  "result": "skip",
-  "reason": "invocation validation disabled in adapter"
+  "result": "skipped",
+  "checks": []
 }
 ```
 
@@ -324,7 +343,7 @@ validation:
 
 ```json
 {
-  "result": "pass" | "fail" | "skip",
+  "result": "pass" | "fail" | "skipped",
   "checks": [
     {
       "type": "unresolved_required",
@@ -366,8 +385,8 @@ validation:
 ### ゲート実行順序
 
 1. Schema（常に実行）
-2. Staleness（`--adapter` と catalog が必要。なければ `skipped` と報告）
-3. Deterministic（`--adapter` が必要。なければ `skipped` と報告）
+2. Staleness（`--adapter` と catalog が必要。`validation.staleness.enabled = false` の場合もスキップ）
+3. Deterministic（`--adapter` が必要。`validation.deterministic.enabled = false` の場合もスキップ）
 4. Blocking（`--adapter` と catalog が必要。`validation.invocation.enabled = false` の場合もスキップ）
 
 Gate 1 が失敗しても後続のすべてのゲートは実行され、

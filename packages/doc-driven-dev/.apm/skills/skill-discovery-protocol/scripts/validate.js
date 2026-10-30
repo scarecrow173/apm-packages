@@ -22917,8 +22917,9 @@ async function main() {
     catalogData,
     adapter ? adapter : null
   );
+  const stalenessEnabled = adapter?.validation?.staleness?.enabled ?? true;
   let stalenessResult;
-  if (catalog && adapter) {
+  if (catalog && adapter && stalenessEnabled) {
     const maxAgeDays = adapter.validation?.staleness?.max_age_days ?? 30;
     stalenessResult = runStalenessGate(catalog, currentRawSkills, maxAgeDays);
   } else {
@@ -22926,19 +22927,24 @@ async function main() {
       result: "skipped",
       basis: "validated_at",
       basis_date: "",
-      max_age_days: 30,
+      max_age_days: adapter?.validation?.staleness?.max_age_days ?? 30,
       age_days: 0,
       new_skills: [],
       removed_skills: []
     };
   }
-  const deterministicResult = runDeterministicGate(
+  const deterministicEnabled = adapter?.validation?.deterministic?.enabled ?? true;
+  const deterministicResult = deterministicEnabled ? runDeterministicGate(
     profilePath,
     catalogPath,
     adapterAbsPath,
     cwd,
     adapter?.validation?.deterministic?.compare
-  );
+  ) : {
+    result: "skipped",
+    comparisons: [],
+    reason: "Deterministic gate disabled by adapter (validation.deterministic.enabled: false)"
+  };
   let blockingResult;
   const invocationEnabled = adapter?.validation?.invocation?.enabled ?? true;
   if (adapter && catalog && invocationEnabled) {
@@ -22957,7 +22963,7 @@ async function main() {
     deterministicResult.result,
     blockingResult.result
   ].some((r) => r === "fail");
-  const refreshEligible = adapter !== null && !nonStalenessFail && (stalenessResult.result !== "fail" || stalenessAgeOnly);
+  const refreshEligible = adapter !== null && !nonStalenessFail && deterministicResult.result === "pass" && (stalenessResult.result !== "fail" || stalenessAgeOnly);
   const pendingRefresh = [];
   if (refreshEligible) {
     const refreshedAt = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
