@@ -22390,7 +22390,8 @@ function runStalenessGate(catalog, currentSkills, maxAgeDays) {
   const basisTs = new Date(basisDate).getTime();
   const now = Date.now();
   const ageDays = Math.floor((now - basisTs) / (1e3 * 60 * 60 * 24));
-  const catalogSkillNames = new Set(catalog.skills.map((s) => s.name));
+  const catalogSkills = Array.isArray(catalog.skills) ? catalog.skills : [];
+  const catalogSkillNames = new Set(catalogSkills.map((s) => s.name));
   const currentSkillNames = new Set(currentSkills.map((s) => s.name));
   const newSkills = [];
   const removedSkills = [];
@@ -22517,13 +22518,14 @@ function runDeterministicGate(profilePath, catalogPath, adapterPath, cwd, compar
 
 // src/skills/skill-discovery-protocol/scripts/lib/gates/blocking_gate.ts
 function runBlockingGate(profile, catalog, adapter, skills) {
+  if (!Array.isArray(skills)) skills = [];
   const checks = [];
   const invResolution = adapter.invocation_resolution;
   const overrides = invResolution.overrides ?? { capabilities: {} };
   const skillNames = new Set(skills.map((s) => s.name));
   const skillProvides = /* @__PURE__ */ new Map();
   for (const skill of skills) {
-    const caps = new Set(skill.provides.map((p) => p.capability));
+    const caps = new Set((skill.provides ?? []).map((p) => p.capability));
     skillProvides.set(skill.name, caps);
   }
   const unresolvedCheck = checkUnresolvedRequired(profile, skills, invResolution.unresolved.required);
@@ -22545,10 +22547,10 @@ function runBlockingGate(profile, catalog, adapter, skills) {
 function checkUnresolvedRequired(profile, skills, severity) {
   const details = [];
   const resolvedCaps = new Set(
-    profile.resolved_invocations.map((inv) => `${inv.source_skill}::${inv.capability}`)
+    (profile.resolved_invocations ?? []).map((inv) => `${inv.source_skill}::${inv.capability}`)
   );
   for (const skill of skills) {
-    for (const use of skill.uses) {
+    for (const use of skill.uses ?? []) {
       if (use.required) {
         const key = `${skill.name}::${use.capability}`;
         if (!resolvedCaps.has(key)) {
@@ -22607,7 +22609,7 @@ function checkOverrideNotAllowed(adapter, skills, severity) {
   const overrides = adapter.invocation_resolution.overrides ?? { capabilities: {} };
   const noOverride = /* @__PURE__ */ new Map();
   for (const skill of skills) {
-    for (const use of skill.uses) {
+    for (const use of skill.uses ?? []) {
       if (!use.override_allowed) {
         if (!noOverride.has(use.capability)) noOverride.set(use.capability, /* @__PURE__ */ new Set());
         noOverride.get(use.capability).add(skill.name);
@@ -22627,8 +22629,8 @@ function checkOverrideNotAllowed(adapter, skills, severity) {
 }
 function checkUnusedSlots(profile, catalog) {
   const details = [];
-  const usedSlots = new Set(profile.resolved_invocations.map((inv) => inv.slot));
-  for (const slot of profile.flow_stack.slots) {
+  const usedSlots = new Set((profile.resolved_invocations ?? []).map((inv) => inv.slot));
+  for (const slot of profile.flow_stack?.slots ?? []) {
     if (!usedSlots.has(slot.slot_id) && !slot.default) {
       details.push(`Slot "${slot.slot_id}" has no resolved invocation and no default`);
     }
@@ -22677,6 +22679,14 @@ function loadJson(filePath) {
   const content = import_node_fs6.default.readFileSync(filePath, "utf8");
   return JSON.parse(content);
 }
+function refreshValidatedAt(filePath, data, timestamp) {
+  if (typeof data.validated_at !== "string" || data.validated_at === timestamp) {
+    return false;
+  }
+  data.validated_at = timestamp;
+  import_node_fs6.default.writeFileSync(filePath, renderJson(data), "utf8");
+  return true;
+}
 function isPathWithinProject(rootDir, candidatePath) {
   const rel = import_node_path7.default.relative(rootDir, candidatePath);
   return rel !== ".." && !rel.startsWith(`..${import_node_path7.default.sep}`) && !import_node_path7.default.isAbsolute(rel);
@@ -22719,7 +22729,7 @@ function findCatalogPath(profilePath, profile, cwd) {
     }
     if (import_node_fs6.default.existsSync(candidate)) {
       const data = loadJson(candidate);
-      if (data && data.skills) {
+      if (data && data.skills !== void 0) {
         return candidate;
       }
     }
@@ -22736,27 +22746,31 @@ function buildCatalogValidation(profile, catalog) {
     };
   }
   const referencedSkills = /* @__PURE__ */ new Set();
-  if (profile.resolved_invocations) {
+  if (Array.isArray(profile.resolved_invocations)) {
     for (const inv of profile.resolved_invocations) {
       referencedSkills.add(inv.source_skill);
       referencedSkills.add(inv.resolved_skill);
     }
   }
-  if (profile.classification?.categories) {
+  if (Array.isArray(profile.classification?.categories)) {
     for (const cat of profile.classification.categories) {
-      for (const s of cat.skills) referencedSkills.add(s);
+      for (const s of cat?.skills ?? []) referencedSkills.add(s);
     }
   }
-  if (profile.classification?.unmatched_skills) {
+  if (Array.isArray(profile.classification?.unmatched_skills)) {
     for (const s of profile.classification.unmatched_skills) referencedSkills.add(s);
   }
+  const catalogSkills = Array.isArray(catalog.skills) ? catalog.skills : [];
   const orphanSkills = [];
-  for (const skill of catalog.skills) {
+  for (const skill of catalogSkills) {
     if (!referencedSkills.has(skill.name)) {
       orphanSkills.push(skill.name);
     }
   }
-  const referenceCount = catalog.skills.reduce((sum, s) => sum + s.provides.length, 0);
+  const referenceCount = catalogSkills.reduce(
+    (sum, s) => sum + (Array.isArray(s?.provides) ? s.provides.length : 0),
+    0
+  );
   return {
     skill_count: catalog.skill_count,
     reference_count: referenceCount,
@@ -22789,13 +22803,15 @@ function buildProfileValidation(profile, adapter) {
       }
     }
   }
-  const resolvedSlots = new Set((profile.resolved_invocations || []).map((inv) => inv.slot));
-  const unresolvedSlots = (profile.flow_stack?.slots || []).filter((slot) => !resolvedSlots.has(slot.slot_id) && !slot.default).map((slot) => slot.slot_id).sort();
+  const resolvedInvocations = Array.isArray(profile.resolved_invocations) ? profile.resolved_invocations : [];
+  const resolvedSlots = new Set(resolvedInvocations.map((inv) => inv.slot));
+  const flowStackSlots = Array.isArray(profile.flow_stack?.slots) ? profile.flow_stack.slots : [];
+  const unresolvedSlots = flowStackSlots.filter((slot) => !resolvedSlots.has(slot.slot_id) && !slot.default).map((slot) => slot.slot_id).sort();
   return {
     flow_count: 1,
-    flow_stack_slot_count: profile.flow_stack?.slots?.length ?? 0,
+    flow_stack_slot_count: flowStackSlots.length,
     unresolved_slots: unresolvedSlots,
-    resolved_invocation_count: profile.resolved_invocations?.length ?? 0,
+    resolved_invocation_count: resolvedInvocations.length,
     unused_override_warnings: unusedOverrideWarnings
   };
 }
@@ -22872,7 +22888,7 @@ async function main() {
   if (adapter) {
     currentRawSkills = scanSkills(cwd, adapter);
   }
-  const currentCatalogSkills = catalog?.skills ?? [];
+  const currentCatalogSkills = Array.isArray(catalog?.skills) ? catalog.skills : [];
   const schemaResult = runSchemaGate(
     profileData,
     catalogData,
@@ -22909,6 +22925,26 @@ async function main() {
   }
   const catalogValidation = buildCatalogValidation(profile, catalog);
   const profileValidation = buildProfileValidation(profile, adapter);
+  const stalenessAgeOnly = stalenessResult.result === "fail" && stalenessResult.new_skills.length === 0 && stalenessResult.removed_skills.length === 0;
+  const nonStalenessFail = [
+    schemaResult.result,
+    deterministicResult.result,
+    blockingResult.result
+  ].some((r) => r === "fail");
+  const refreshedArtifacts = [];
+  if (!nonStalenessFail && (stalenessResult.result !== "fail" || stalenessAgeOnly)) {
+    const refreshedAt = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
+    if (catalogPath && catalogData && refreshValidatedAt(catalogPath, catalogData, refreshedAt)) {
+      refreshedArtifacts.push(import_node_path7.default.basename(catalogPath));
+    }
+    if (refreshValidatedAt(profilePath, profileData, refreshedAt)) {
+      refreshedArtifacts.push(import_node_path7.default.basename(profilePath));
+    }
+    if (stalenessAgeOnly && catalog && adapter) {
+      const maxAgeDays = adapter.validation?.staleness?.max_age_days ?? 30;
+      stalenessResult = runStalenessGate(catalog, currentRawSkills, maxAgeDays);
+    }
+  }
   const gateResults = [
     schemaResult.result,
     stalenessResult.result,
@@ -22943,6 +22979,9 @@ async function main() {
   console.log(`Deterministic: ${deterministicResult.result}`);
   console.log(`Blocking:      ${blockingResult.result}`);
   console.log(`Overall:       ${overallResult}`);
+  if (refreshedArtifacts.length > 0) {
+    console.log(`Refreshed validated_at: ${refreshedArtifacts.join(", ")}`);
+  }
   console.log(`Report: ${reportPath}`);
   if (schemaResult.errors.length > 0) {
     console.error(`

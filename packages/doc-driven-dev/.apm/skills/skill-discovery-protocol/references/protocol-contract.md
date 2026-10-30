@@ -126,7 +126,7 @@ Required top-level fields:
 | ----- | ---- | ----------- |
 | `schema_version` | string | `"1.0"` |
 | `generated_at` | ISO 8601 | Generation timestamp |
-| `validated_at` | ISO 8601 | Last validation timestamp |
+| `validated_at` | ISO 8601 | Last validation timestamp; re-stamped by `sdp validate` on overall pass |
 | `skill_count` | number | Total skills discovered |
 | `capability_count` | number | Total unique capabilities |
 | `skills` | array | Skill entries |
@@ -182,6 +182,9 @@ Constraints:
 
 The report records schema, staleness, deterministic, and blocking validation
 results. `overall_result` is `"pass"` only when all required gates pass.
+
+On overall pass, `sdp validate` also re-stamps `validated_at` on the catalog
+and the profile; on any failure it is never refreshed (see gate-spec.md §5).
 
 ## 8. Derived Outputs
 

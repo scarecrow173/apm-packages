@@ -22,8 +22,11 @@ function runStalenessGate(
   const now = Date.now();
   const ageDays = Math.floor((now - basisTs) / (1000 * 60 * 60 * 24));
 
-  // Detect added/removed skills
-  const catalogSkillNames = new Set(catalog.skills.map((s) => s.name));
+  // Detect added/removed skills. The catalog is an untrusted artifact:
+  // schema errors are reported by the schema gate, but every gate still
+  // runs — guard the dereference so the report is always written.
+  const catalogSkills = Array.isArray(catalog.skills) ? catalog.skills : [];
+  const catalogSkillNames = new Set(catalogSkills.map((s) => s.name));
   const currentSkillNames = new Set(currentSkills.map((s) => s.name));
 
   const newSkills: string[] = [];

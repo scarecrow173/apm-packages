@@ -175,6 +175,26 @@ validation:
 - New directories with `SKILL.md` → `new_skills[]`
 - Directories removed or `SKILL.md` deleted → `removed_skills[]`
 
+### `validated_at` Refresh on Pass
+
+A completed `sdp validate` run is itself the event `validated_at`
+records. When the overall result is pass, `sdp validate` re-stamps
+`validated_at` on the Skill Reference Catalog and on the Flow Profile
+(when the field is present there).
+
+This also covers the pure-age staleness case: when the only failing gate
+is staleness by age alone (`new_skills` and `removed_skills` both empty),
+the other gates have already proven the artifacts' content current, so
+`validated_at` is refreshed and the staleness gate is re-evaluated — the
+run reports pass. This is what keeps the documented regeneration path
+able to recover age-only staleness: regeneration alone is a no-op for
+unchanged content (the writer compares modulo timestamps), and the
+following `sdp validate` performs the in-band timestamp refresh.
+
+On any other failure — skill drift, schema errors, deterministic diff, or
+blocking violations — `validated_at` is never refreshed, so drift stays
+detected on subsequent runs.
+
 ### Result Schema
 
 ```json

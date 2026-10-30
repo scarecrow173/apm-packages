@@ -452,12 +452,14 @@ test("validate schema gate detects non-snake_case slot_id", () => {
 
 // ─── Validate: Staleness gate ───
 
-test("validate staleness gate detects old validated_at", () => {
+test("validate refreshes aged validated_at when all other gates pass", () => {
   const dir = tempDir();
   setupTestProject(dir);
   generateArtifacts(dir);
 
-  // Modify catalog validated_at to 60 days ago
+  // Modify catalog validated_at to 60 days ago — pure-age staleness. The
+  // artifacts' content is proven current by the schema and deterministic
+  // gates, so validate re-stamps validated_at in-band and the run passes.
   const catalogPath = path.join(dir, ".sdp", "skill-reference-catalog.json");
   const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
   const oldDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
@@ -468,8 +470,16 @@ test("validate staleness gate detects old validated_at", () => {
     ["--profile", ".sdp/test-adapter/test-adapter-profile.json", "--adapter", "test-adapter.yaml"],
     dir,
   );
-  assert.equal(result.status, 1);
-  assert.ok(result.stdout.includes("Staleness:     fail"));
+  assert.equal(result.status, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+  assert.ok(result.stdout.includes("Staleness:     pass"));
+  assert.ok(result.stdout.includes("Refreshed validated_at"));
+
+  const refreshed = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  assert.notEqual(refreshed.validated_at, oldDate);
+  assert.ok(
+    new Date(refreshed.validated_at).getTime() > new Date(oldDate).getTime(),
+    "validate must write back a newer validated_at",
+  );
 });
 
 test("validate staleness gate detects new skills", () => {

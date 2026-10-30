@@ -174,6 +174,24 @@ validation:
 - `SKILL.md` を含む新規ディレクトリ → `new_skills[]`
 - ディレクトリの削除または `SKILL.md` の削除 → `removed_skills[]`
 
+### pass 時の `validated_at` 更新
+
+`sdp validate` の実行そのものが `validated_at` が記録するイベントである。
+overall result が pass の場合、`sdp validate` は Skill Reference Catalog と
+Flow Profile（フィールドが存在する場合）の `validated_at` を再刻印する。
+
+経年のみの staleness ケースもこれで回復する: fail した gate が
+経過日数のみの staleness（`new_skills`・`removed_skills` がともに空）だけの場合、
+他の gate が成果物の内容の正当性をすでに証明しているため、`validated_at` を
+更新してから staleness gate を再評価し、結果は pass として報告される。
+再生成だけでは内容が変わらない限り no-op（timestamp 差分は比較対象外）で
+あるため、この in-band 更新こそが文書化された再生成経路による
+経年 staleness の回復手段となる。
+
+それ以外の失敗（スキル差分、schema エラー、deterministic 差分、blocking
+違反）では `validated_at` は一切更新されず、ドリフトは次回実行時も
+検出され続ける。
+
 ### 結果スキーマ
 
 ```json
