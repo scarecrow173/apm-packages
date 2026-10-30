@@ -178,7 +178,11 @@ curated 済みであり、報告されません。
   artifact scan が強制する containment rule です。脱出する値や checkout
   外の絶対 path は、何も読まれる前に caller error として発生し、すべての
   level と `route_graph.js`/`inspect_graph.js` で同一です。finding では
-  ありません。
+  ありません。containment は real path でも検査されます — checkout 内の
+  symlinked directory が外に解決される場合も同様に拒否されます。この値は
+  再帰的な scan root です — `.`（または空の値）は checkout 自体を
+  task-doc の scan 集合にし、`node_modules`/`.git` を含むすべてを走査
+  します。focused な directory に保ってください。
 
 ## CLI と exit code
 

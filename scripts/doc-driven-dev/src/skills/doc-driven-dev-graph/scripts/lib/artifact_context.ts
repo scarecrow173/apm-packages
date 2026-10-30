@@ -25,6 +25,7 @@ import matter from "gray-matter";
 import {
   CANONICAL_DOC_DIRS,
   isExternalArtifactReference,
+  isInsideCheckout,
   LINEAGE_RELATIONS,
   normalizeArtifactPath,
   resolveArtifactFocus,
@@ -207,8 +208,10 @@ export function fetchArtifactBodies(
       continue;
     }
     const resolved = path.resolve(repo, ref.path);
-    const relative = path.relative(repo, resolved);
-    if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    // Containment is checked lexically and by real path — a symlinked doc
+    // inside the checkout that resolves outside must not be read (same
+    // boundary rule as the task-dir selector).
+    if (!isInsideCheckout(repo, resolved)) {
       fail("path-escape", `Ref path escapes the checkout: ${ref.path}`);
       continue;
     }

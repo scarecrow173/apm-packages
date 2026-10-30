@@ -112,7 +112,10 @@ read-only; it does not route, dispatch a delegate, or create a parallel state
 store. An explicit focus that resolves to an invalid or required focus fails
 closed instead of guessing. A `--task-dir` that resolves outside the checkout
 is a caller error before any file is read — the same containment rule
-`route_graph.js` and `fetch_context.js` enforce.
+`route_graph.js` and `fetch_context.js` enforce, applied by real path so a
+symlinked directory cannot point outside. `--task-dir` is a recursive scan
+root: `.` scans the entire checkout including `node_modules`/`.git`, so keep
+it a focused directory.
 
 Mermaid is definition-only and rejects `--cwd`, `--focus`, and `--task-dir`.
 JSON accepts these selectors for runtime projection.

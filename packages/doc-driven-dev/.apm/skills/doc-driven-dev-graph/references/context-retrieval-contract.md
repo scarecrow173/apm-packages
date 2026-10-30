@@ -181,7 +181,12 @@ lineage set is curated and is never reported.
   directory must resolve inside the checkout — the containment rule the
   artifact scan enforces. An escaping or absolute-outside value is a caller
   error raised before anything is read, identical at every level and on
-  `route_graph.js`/`inspect_graph.js`, not a finding.
+  `route_graph.js`/`inspect_graph.js`, not a finding. Containment is checked
+  by real path too: a symlinked directory inside the checkout that resolves
+  outside is rejected the same way. The value is a recursive scan root —
+  `.` (or an empty value) makes the checkout itself the task-doc scan set,
+  walking everything including `node_modules`/`.git`; keep it a focused
+  directory.
 
 ## CLI and exit codes
 

@@ -176,6 +176,28 @@ test("L2 rejects missing files, escapes, non-canonical and unparsable paths", ()
   assert.deepEqual(codeFor("docs/specs/0009-bad.md"), ["unreadable"]);
 });
 
+test("L2 refuses a linked ref that resolves outside the checkout", (t) => {
+  const repo = createFixtureRepo();
+  const outside = path.resolve(repo, "../artifact-ctx-linked-outside");
+  fs.mkdirSync(outside, { recursive: true });
+  const outsidePlan = path.join(outside, "0001-plan.md");
+  fs.writeFileSync(outsidePlan, "---\nid: PLAN-EXT\ntype: plan\nstatus: approved\n---\n# Outside\n", "utf8");
+  const link = path.join(repo, "docs/specs/0002-linked.md");
+  try {
+    fs.symlinkSync(outsidePlan, link, "file");
+  } catch (error: unknown) {
+    t.skip(`cannot create file symlinks here: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+
+  // The ref is lexically inside a canonical dir but its real path escapes —
+  // the same path-escape refusal, never a body read.
+  const result = fetchArtifactBodies(repo, [{ path: "docs/specs/0002-linked.md" }]);
+
+  assert.deepEqual(result.documents, []);
+  assert.deepEqual(result.findings.map((finding) => finding.code), ["path-escape"]);
+});
+
 // --- L3: expandArtifactContext -----------------------------------------------
 
 test("L3 traverses lineage relations in BFS order with depth and via", () => {

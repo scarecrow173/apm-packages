@@ -29704,10 +29704,31 @@ function normalizeArtifactPath(cwd, target) {
 function isExternalArtifactReference(value) {
   return EXTERNAL_REFERENCE2.test(value.trim());
 }
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path6.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
 function isInside(cwd, candidate) {
-  const root = import_node_path6.default.resolve(cwd);
-  const resolved = import_node_path6.default.resolve(candidate);
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
   return resolved === root || resolved.startsWith(`${root}${import_node_path6.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs5.default.realpathSync(cwd), import_node_fs5.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function isInsideCheckout(cwd, candidate) {
+  const resolved = import_node_path6.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) return false;
+  return !import_node_fs5.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
 }
 function resolveContainedTaskDir(cwd, taskDir) {
   const candidate = taskDir ?? "docs/tasks";
@@ -29715,7 +29736,10 @@ function resolveContainedTaskDir(cwd, taskDir) {
   if (!isInside(cwd, resolved)) {
     throw new Error(`--task-dir escapes the checkout: ${candidate}`);
   }
-  return normalizeArtifactPath(cwd, resolved);
+  if (import_node_fs5.default.existsSync(resolved) && !isInsideRealpath(cwd, resolved)) {
+    throw new Error(`--task-dir escapes the checkout through a link: ${candidate}`);
+  }
+  return normalizeArtifactPath(cwd, stripExtendedLengthPrefix(resolved));
 }
 function markdownFiles(dir) {
   if (!import_node_fs5.default.existsSync(dir) || !import_node_fs5.default.statSync(dir).isDirectory()) return [];
@@ -33190,6 +33214,7 @@ function resolveReference(cwd, owner, reference, index2) {
 }
 function isExistingArtifactReference(cwd, taskDir, owner, reference) {
   const candidate = import_node_path7.default.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
+  if (!isInsideCheckout(cwd, candidate)) return false;
   if (!import_node_fs7.default.existsSync(candidate) || !import_node_fs7.default.statSync(candidate).isFile()) return false;
   const taskRoot = import_node_path7.default.resolve(cwd, taskDir);
   const candidatePath = import_node_path7.default.resolve(candidate);
