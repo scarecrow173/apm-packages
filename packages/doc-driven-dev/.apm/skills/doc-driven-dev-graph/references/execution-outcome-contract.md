@@ -102,6 +102,8 @@ type GraphRunHandoff = {
   current: string;
   mode: "single-step" | "run-until-yield";
   maxHops: number;
+  maxDispatchesPerEdge: number;
+  maxTotalDispatches: number;
   yieldReason: GraphRunResult["reason"] | null;
   focus: string[];
   signals: string[];
@@ -121,7 +123,9 @@ type GraphRunHandoff = {
     delegateComplete: boolean;
     evidenceRecorded: boolean;
     commitBaseline: { head: string | null; dirty: string[] } | null;
+    dispatches: number;
   } | null;
+  totalDispatches: number;
   hops: number;
 }
 ```
@@ -133,8 +137,11 @@ destination declares `commitGate` and the caller applied the declared
 `commit-waived` signal for that edge, and `false` otherwise; this is how a
 waived gate is recorded in the run trace. `GraphRunHandoff` retains the
 resume fields:
-`current`, mode, `maxHops`, focus, signals, graph path, completed edge IDs,
+`current`, mode, `maxHops`, the per-edge dispatch budget `maxDispatchesPerEdge`,
+the run-level dispatch bound `maxTotalDispatches`,
+focus, signals, graph path, completed edge IDs,
 seen route fingerprints, the frozen task-budget basis, audit/delegate counters,
+the accumulated `totalDispatches` count,
 completed routes, trace, outcomes, pending edge, and hop count. `null` means
 the caller supplied an explicit `maxHops`; a non-negative number is the
 immutable dynamic-default basis.
