@@ -65,8 +65,9 @@ Inside `planning-flow`, test specs are created after plan approval and before
 task breakdown. They derive from the approved spec and design — not from task
 slices — because task boundaries may change while the guarantees must hold.
 When the plan declares no verifiable behavior, skip creation and record
-`test-spec-skip: "<reason>"` in the plan front matter so audits can tell a
-deliberate skip from an omission.
+`test-spec-skip: "<reason>"` under `relations:` in the plan front matter — a
+reason string, not a link target — so audits can tell a deliberate skip from
+an omission.
 
 ## Required Content
 

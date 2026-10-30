@@ -337,6 +337,8 @@ const changesSchema = z.object(Object.fromEntries(
 const relationSchema = z.object({
   ...Object.fromEntries(relationFields.map((field) => [field, z.array(z.string()).default([])])),
   changes: changesSchema,
+  // A non-empty reason string, not a relation target (Issue #165).
+  "test-spec-skip": z.string().min(1).optional(),
 }).prefault({});
 
 const frontMatterSchema = z.object({

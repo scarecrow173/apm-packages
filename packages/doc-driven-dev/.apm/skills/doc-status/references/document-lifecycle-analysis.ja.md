@@ -115,7 +115,7 @@ doc-status パイプライン上の射影**である。
 | settled / in-flight | 0 / 7 | 0 / 68 | 57 / 49 |
 | stale-upstream 文書 | 0 | 0 | 3 |
 | duplicate-id グループ | 0 | 0 | 0 |
-| ファインディング(ブロッキング/警告/情報) | 21 (0/0/21) | 348 (86/239/23) | 34 (7/8/19) |
+| ファインディング(ブロッキング/警告/情報) | 21 (0/0/21) | 348 (86/239/23) | 33 (6/8/19) |
 
 ### 3.2 タイプ別 —— long-running コーパス
 
@@ -125,7 +125,7 @@ doc-status パイプライン上の射影**である。
 | impl | 18 | 16 (89%) | 0 | 1,318 | 70 | 0/0/0 | 0* |
 | spec | 11 | 7 (64%) | 0 | 1,117 | 102 | 1/0/0 | 4 |
 | discovery | 10 | 6 (60%) | 0 | 39,809 | 39,018 | 3/3/3 | 14 |
-| plan | 9 | 6 (67%) | 0 | 120 | 12 | 1/0/0 | 2 |
+| plan | 9 | 6 (67%) | 0 | 120 | 12 | 1/0/0 | 1 |
 | design | 9 | 0 | 1 | 219 | 25 | 1/0/0 | 2 |
 | adr | 8 | 1 (13%) | 0 | 377 | 62 | 0/0/0 | 0 |
 | idea | 8 | 3 (38%) | 0 | 136 | 16 | 8/0/0 | 8 |
@@ -144,13 +144,14 @@ impl `completed` 15 / `in-progress` 1 / `superseded` 1 /
 
 ### 3.3 リレーションと参照 —— long-running
 
-- 宣言リレーション値 120: `implements` 39、`derives-from` 41、
+- 宣言リレーション値 119: `implements` 39、`derives-from` 41、
   `derived-by` 14、`verifies` 7、`verified-by` 7、`source` 9、
-  `supersedes`/`superseded-by`/`test-spec-skip` 各1。系譜フィールド
+  `supersedes`/`superseded-by` 各1。系譜フィールド
   (`implements`+`derives-from`+`refines`)= 宣言の67%。
+  (`test-spec-skip` は非参照メタデータ・キーであり、もはや
+  リレーションとして数えない —— §4.5 参照)。
 - 解決: 110 resolved、7 external(discovery の source URL)、
-  3 unresolved(仕込んだ `DISC-9999`、死んだローカル `source`、
-  `test-spec-skip` の理由文字列 —— §4.5 参照)。
+  2 unresolved(仕込んだ `DISC-9999` と死んだローカル `source`)。
 - 106 アーティファクト中 63 が解決済み内向きリレーションを1つ以上
   受ける —— コーパスの40%がリレーション孤島であり、孤児
   ファインディングと一致する。
@@ -166,7 +167,7 @@ impl `completed` 15 / `in-progress` 1 / `superseded` 1 /
 | orphan-relation | 16 | idea 8 + brainstorm 2 + discovery 孤児 3 + 置換済み plan + 壊れた spec + design overview |
 | orphan-index / orphan-navigation / index-missing-entry | 3 / 3 / 3 | 未収載の discovery 孤児3件 |
 | index-stale-entry / index-metadata-mismatch | 1 / 1 | 削除済み spec 行、doc の status から遅れた task 行 |
-| broken-relation-link | 2 | `SPEC-9201 → DISC-9999`、`PLAN-9301 test-spec-skip`(§4.5) |
+| broken-relation-link | 1 | `SPEC-9201 → DISC-9999` |
 | inconsistent-reciprocal-relation | 1 | `SPEC-0502` が `DISC-0501.derived-by` に逆リンクされていない —— 置換ドリフト |
 | traceability-missing-upstream | 2 | `SPEC-0001`、`DESIGN-OVERVIEW` |
 | provenance-missing-source / provenance-unresolved-local-source | 1 / 1 | 孤児 discovery |
@@ -222,13 +223,16 @@ stale-entry、metadata-mismatch、missing-entry)は文書を到達可能面
 
 3件の stale-upstream(完了 plan 上の todo task;置換済み spec 上の
 承認済み design)、置換由来の相互リレーション破断1件、未解決
-リレーション・ターゲット3件、出所欠落2件。個々は軽微 —— だが
+リレーション・ターゲット2件、出所欠落2件。個々は軽微 —— だが
 **統計が暴露した観測が2つある**:
 
 - `test-spec-skip: "<理由>"`(`plan-conventions` に記載の慣行)は
-  現在リレーション・ターゲットとして解決され、
-  `broken-relation-link` を報告する —— 理由文字列が壊れた参照と
-  して数えられている。
+  かつてリレーション・ターゲットとして解決され、
+  `broken-relation-link` を報告していた —— 理由文字列が壊れた参照と
+  して数えられていた。**#165 で解決:** リレーション取り込み境界が
+  `test-spec-skip` を(`changes` と同じく)非参照メタデータ・キーとして
+  免除するようになり、記録された理由はリレーションとして
+  解決・集計・ゲート判定されない。
 - 置換する spec は `derived-by` の逆リンクを自動では生まず、誰にも
   直すよう指示されない `inconsistent-reciprocal-relation` ドリフトを
   残す。
@@ -289,7 +293,7 @@ stale-upstream ヒューリスティックが本分析でそれらを表面化�
 | - | ---- | -------- | -------------------- |
 | C1 | settled/歴史用インデックス層、またはインデックス/ナビゲーションが消費する `archive:` front-matter フラグの検討(ステータス権威は不変 —— 表示軸) | §4.2 | status からのフラグ導出バックフィル;インデックス形式変更は doc-maintenance マイグレーション;フラグ除去で可逆 |
 | C2 | discovery エビデンス構造: 巨大エビデンス・ダンプを要約 front-matter 節+追記専用エビデンス尾部に分割し、証跡量に関わらず L1 メタデータを小さく保つ | §4.3 | 本文形式の慣行変更;既存ファイルは経過措置;テンプレート+慣行文書が移行 |
-| C3 | リレーション解決に `test-spec-skip` がターゲットではなく理由文字列であることを教える(または `relations:` の外へ —— いずれにせよ契約可視) | §4.5 | スキーマ可視の変更: 契約レビュー+マイグレーション注記が必要;影響範囲は小 |
+| C3 | リレーション解決に `test-spec-skip` がターゲットではなく理由文字列であることを教える —— **#165 で適用済み**: 取り込み境界が `relations:` 配下の非参照キーとして免除し、`verified-by` ゲートが記録された理由を読む | §4.5 | 契約可視: `test-spec-skip` は `relations:` 配下の文書化済みメタデータ・キー;影響範囲は小 |
 
 ### 推奨するフォローアップ issue(実装単位ごとに1件)
 
@@ -299,7 +303,7 @@ stale-upstream ヒューリスティックが本分析でそれらを表面化�
    アウト時インデックス再生成(B1–B3)—— 1 issue。
 3. settled 層表示フラグ(`archive:` 軸)(C1)—— 1 issue。
 4. discovery エビデンス前段/尾部構造(C2)—— 1 issue。
-5. `test-spec-skip` 解決意味論(C3)—— 1 issue。
+5. `test-spec-skip` 解決意味論(C3)—— 1 issue;**#165 として適用済み**。
 6. 実リポジトリで信号が安定することが証明されれば stale-upstream
    ヒューリスティックを `doc-status` lint ルールへ昇格 —— 1 issue。
 

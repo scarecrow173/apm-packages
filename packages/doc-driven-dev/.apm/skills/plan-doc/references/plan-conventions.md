@@ -167,8 +167,18 @@ than copying their intent into the plan's verification matrix.
 
 When the plan produces test specs, link them from the plan with
 `relations.verified-by`. When the plan legitimately has no verifiable
-behavior, record `test-spec-skip: "<reason>"` in front matter instead; audits
-flag approved plans that have neither a test-spec link nor a skip reason.
+behavior, record the reason under `relations:` instead — `test-spec-skip` is
+a reason string recorded next to the `verified-by` it replaces, not a
+relation target:
+
+```yaml
+relations:
+  verified-by: []
+  test-spec-skip: "docs-only change; no verifiable behavior"
+```
+
+Audits flag approved plans that have neither a test-spec link nor a skip
+reason.
 
 ## Task Granularity
 

@@ -165,7 +165,16 @@ verification matrix へ意図を複写せず、task から `relations.verified-b
 
 plan が test spec を生成した場合は、plan 側の `relations.verified-by` から
 リンクします。plan に検証可能な振る舞いが正当に存在しない場合は、代わりに
-front matter に `test-spec-skip: "<理由>"` を記録します。test-spec リンクも
+`relations:` に理由を記録します —— `test-spec-skip` は置き換える
+`verified-by` の隣に置く理由文字列であり、relation のリンク先ではありません。
+
+```yaml
+relations:
+  verified-by: []
+  test-spec-skip: "docs-only の変更で、検証可能な振る舞いなし"
+```
+
+test-spec リンクも
 skip 理由もない approved plan は audit で指摘されます。
 
 ## タスク粒度
