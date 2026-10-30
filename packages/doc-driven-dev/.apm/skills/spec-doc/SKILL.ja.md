@@ -20,6 +20,8 @@ spec は、何を作るべきか、なぜ必要か、誰のためか、何を範
    目的、きっかけ、利用者、ユーザー価値、制約、非目標、受け入れ基準、
    出典を確認します。
 3. spec を作成または更新する。
+   同じ feature 範囲内の改訂は既存 spec をその場で更新し、実質的な
+   スコープや方向の変更のときだけ supersede します。
 
    ```bash
    node scripts/new_spec.js --title "Define checkout flow"

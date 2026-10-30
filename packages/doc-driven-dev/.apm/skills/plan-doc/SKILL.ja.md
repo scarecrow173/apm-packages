@@ -185,6 +185,10 @@ plan を進める前に、元の文書ともう一度照らし合わせます。
 Plan のステータス値: `draft`, `approved`, `in-progress`, `blocked`,
 `completed`, `superseded`。
 
+ステータス・進捗・パッケージ内のスコープ変更は plan をその場で更新し、
+作業内容を表さなくなったときだけ supersede します — その場合は未完了の
+task をクローズするか新しい plan へ付け替えます。
+
 ## 禁止事項
 
 - 関係のないサブシステムを 1 つの plan に押し込まないでください。

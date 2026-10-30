@@ -21,6 +21,8 @@ verified before code is written.
    Confirm goal, trigger, audience, user value, constraints, non-goals,
    acceptance criteria, and source material.
 3. Create or update the spec.
+   Revisions within the same feature scope update the existing spec in
+   place; supersede only for substantive scope or direction changes.
    Preferred creation command:
 
    ```bash
