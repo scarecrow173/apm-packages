@@ -9,6 +9,7 @@ import type {
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import type { PolicyFacts } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/delegate_policy";
 import type { GraphRoute } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
+import type { ExecutionMode } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 import type { CaseExpect } from "./case_validator";
 import type { createFixtureRepo } from "./fixture_manager";
 import type { EdgeScript, Mutator } from "./scripted_dispatcher";
@@ -35,6 +36,14 @@ export type E2ECase = {
    * declared executionMode ("tool" for the scripted adapter) and no modeReason.
    */
   policy?: (route: GraphRoute, effect: CallerEffect) => PolicyFacts;
+  /**
+   * Modes the scripted adapter cannot execute — dispatching one is refused
+   * (not-executed + yield), never silently switched. Simulates a host
+   * without the capability.
+   */
+  unsupportedModes?: ExecutionMode[];
+  /** Passed verbatim to runCaller's `buildHandoff` on every leg. */
+  buildHandoff?: CallerRunnerOptions["buildHandoff"];
   /** Multi-run legs (resume flows). Leg 0 is always a fresh run. */
   steps?: Array<{
     /** Applied between runs (e.g. approval edit). */

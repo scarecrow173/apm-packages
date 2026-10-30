@@ -22,12 +22,23 @@ models, no wall-clock gates.
   `completed`/`retry`/`yield`/malformed outcomes with real canonical
   references (resolved via the authoritative input/evidence mapping ported
   from the oracle) and applies minimal document mutators. It never
-  self-grades: no gate checks, no expectation logic.
+  self-grades: no gate checks, no expectation logic. It also plays the host
+  adapter at the #135 dispatch boundary: it receives `requestedMode` (and a
+  `DelegateHandoff` for delegated modes), returns a `DispatchResult`
+  (outcome + observations), enforces the handoff write scope on top-level
+  mutators, declines `unsupportedModes` as `not-executed` + `yield` rather
+  than silently switching, and runs each edge's `subDispatches` internal
+  plan — same-context internals as `inline-skill`, delegated ones bounded
+  by a declared `writeScope` as `subagent-spawn`, each recorded as a
+  `dispatch-observed` event. A scripted internal dispatch is a deterministic
+  model of what a real adapter does by literally spawning a subagent; it
+  proves the *boundary contract*, never model quality.
 - `harness/run_case.ts` — thin case runner: fixture -> multi-leg `runCaller`
   loop (each hop spawns `route_graph` via tsx, `executionMode: "tool"`,
   `--trace-file` JSONL beside — never inside — the repo) -> trace ->
-  validator -> report. `run_case.test.ts` is its unit test and runs as part
-  of `test:e2e`.
+  validator -> report. Case-declared `policy`, `buildHandoff`, and
+  `unsupportedModes` pass straight through to the runner/dispatcher.
+  `run_case.test.ts` is its unit test and runs as part of `test:e2e`.
 - `harness/case_validator.ts` — independent hard gates (below) plus the
   expectation DSL. It never trusts run state: evidence receipts are re-read
   from the proof doc, git state is re-queried, edge ids are validated
@@ -42,7 +53,7 @@ models, no wall-clock gates.
 
 ## Validator invariants (universal hard gates)
 
-Every case — pass or fail expectations — must satisfy all six. Any
+Every case — pass or fail expectations — must satisfy all seven. Any
 violation is a failure line; there are no soft warnings.
 
 1. **Declared edges.** Every `route-selected.edgeId` is `null` or an edge id
@@ -67,6 +78,15 @@ violation is a failure line; there are no soft warnings.
    edge ids.
 6. **No orphan outcomes.** Every `effect-outcome` matches an earlier
    `effect-dispatched` with the same `edgeId` + `stage` + `effectId`.
+7. **Dispatch attribution.** Every `dispatch-observed` correlates to a
+   prior `effect-dispatched` (`edgeId` + `stage` + `effectId`). For an
+   *accepted* dispatch (one that produced an outcome), the self-observation
+   (`target === effectId`) must echo that dispatch's `executionMode` in
+   `requested`, and an executed dispatch (`method !== "not-executed"`) must
+   show `actual` equal to it — an independent re-check of the runner's own
+   gate against the emitted trace. A rejected dispatch may leave a
+   mismatched report in the trace; that report is the forensic record the
+   rejection enforced, not a consistency failure.
 
 ## Adding a case
 
@@ -81,11 +101,16 @@ and register it in `cases/index.ts`. Fields:
 | `focus`, `signals` | Caller focus ids and runtime signals. Routing past `focus-required` needs `focus`; the implementation/followup/exit-audit gates need their `*-verified`/`*-pass` signals. |
 | `graph`, `proofPath` | Custom graph YAML (repo-relative) and proof doc (default `docs/tasks/0001-task.md`). |
 | `maxHops`, `mode` | Hop budget; `run-until-yield` (default) or `single-step`. |
-| `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document mutators applied when the delegate completes, `commitEvidence` to commit during evidence persistence. Unscripted effects throw — no silent defaults. |
+| `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document mutators applied when the delegate completes, `commitEvidence` to commit during evidence persistence, `subDispatches` internal dispatch plan, `reportActual` to simulate a dishonest self-report. Unscripted effects throw — no silent defaults. |
+| `script.subDispatches` | `SubDispatchSpec[]` (repeats per delegate dispatch that resolves `completed` — a `yield`/`retry` spec consumes nothing, so queues stay aligned across yields; e2e-15c depends on this) or `SubDispatchSpec[][]` (one plan consumed per completed dispatch). Fields: `target` (internal dispatch name), `requested` (mode, default `same-context`), `method` (override the mechanism report), `mutate` (mutators), `writeScope` (required for delegated requests that mutate — fail-closed refusal otherwise), `refuse` (decline outright), `staleReturn` (execute but return unresolvable evidence → delegate yields), `reportActual` (dishonest mode report → runner rejects). A refused/rejected entry stops the plan and forces the delegate to `yield authority-required`. |
+| `unsupportedModes` | `ExecutionMode[]` the simulated host cannot execute — a dispatch requesting one declines `not-executed` + `yield` instead of silently switching. |
+| `buildHandoff` | Optional `CallerRunnerOptions.buildHandoff` override; the runner calls it for every delegated policy decision and rejects a falsy return or a handoff whose `executionMode` mismatches the request. |
 | `steps` | Multi-leg runs. Each leg: `mutateBefore` (applied between runs), `options` (`focus`/`signals`/`current`/`mode`/`maxHops`, plus `resume:false` for a fresh run — on resumed legs the prior `CallerHandoff` wins `current`/`mode`/`maxHops`), `expect` (trace checks use that leg's partition). |
 | `expect` | Final-leg expectations: `yield`, `edgeSequence`, `completedEdges` scope to the last leg; `events` tallies span the whole run; `blockersContain`/`tasksContain` match `route-selected` payloads; `finalFiles` re-reads end-of-run repo state. |
 | `expect.briefingAudit` | Run the real source `audit_briefing` CLI via tsx against the fixture (`spec`, `adr`, and expected `consistent`); check both JSON and exit status. A step expectation runs immediately after that leg; a top-level expectation reads the final state. |
 | `expect.checkpointReceipts` | Assert counts of persisted proof-document receipts by edge. Step expectations read at the leg boundary; top-level expectations read final state. A checkpoint is not a trace event; trace `run-yield.completedEdges` is asserted separately. |
+
+Write scopes (`SubDispatchSpec.writeScope`, `DelegateHandoff.permissions.read`/`.write`) use `pathInScope` semantics — **prefix match with a trailing `/`, or exact path match; no glob syntax**. `docs/specs/` covers `docs/specs/0001-graph.md`; `docs/specs/0001-graph.md` covers only that file. `docs/specs/**` is a literal string that matches nothing under the trailing-`/` rule — do not write glob patterns into checked positions. Path-less mutators (`{ commit: true }`) are unauthorized under any delegated scope: a commit is caller-phase work no write scope can express.
 
 ## Running
 
@@ -123,10 +148,10 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 
 | Criterion | Where it lands |
 | --- | --- |
-| >= 10 regression cases | 23 `E2ECase` entries in `cases/` (14 files; e2e-07/10/12/13 carry a/b/c siblings). |
+| >= 10 regression cases | 33 `E2ECase` entries in `cases/` (15 files; e2e-07/10/12/13/15 carry a/b/c/… siblings). |
 | Real CLI + filesystem + git + Markdown + fresh projection | Every case: real temp git repo, `route_graph` spawned via tsx once per hop, projection recomputed per invocation. |
 | Deterministic delegate/audit replacement incl. error/yield/resume/commit | `scriptedDispatcher` (completed/retry/yield/malformed); exercised by e2e-03/11 (retry), e2e-04 (resume), e2e-08 (resume after budget), e2e-09 (commit), e2e-10 (rejections), e2e-02 (input-required). |
-| Reproducible + contract-violation detection (hard gates) | Six universal invariants + per-case expectation DSL; `compareNormalizedTraces` for reproducibility; e2e-05/07/10 target contract violations. |
+| Reproducible + contract-violation detection (hard gates) | Seven universal invariants + per-case expectation DSL; `compareNormalizedTraces` for reproducibility; e2e-05/07/10 target contract violations. |
 | Per-case + aggregate report | `CaseReport` JSONL + `formatReport` table; `${os.tmpdir()}/e2e-report.jsonl`. |
 | Non-goals documented | "What this harness does NOT verify" below. |
 | Existing tests + lint green | Suite runs under `pnpm test`; this file is covered by `lint:md`. |
@@ -154,6 +179,16 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 | e2e-13c | `isolated-subagent` on spec audit; `scope-mismatch` -> same `authority-required` as e2e-10c | mode-independent rejection |
 | e2e-14a | Scripted pair creation with shared-judgment attribution; real pair audit | graph trace + artifact consistency |
 | e2e-14c | Scripted partial pair -> briefing-retry delegate yields `input-required` -> pending resume repairs pair | yield/resume, audit receipt reuse, leg-boundary pair audits and checkpoint receipts |
+| e2e-15a | Same-context path: spec-doc/adr-doc observed `inline-skill`, zero spawns, same graph dispatches as 15b | dispatch-observed boundary; requested==actual==trace |
+| e2e-15b | Independent research observed `subagent-spawn` bounded to `docs/discovery/`; pair stays inline | real internal path difference at identical `effect-dispatched` counts |
+| e2e-15c | Delegated path: research spawn, `input-required` yield, resume writes pair + late-arriving info | retry/yield/resume + late info on the delegated path |
+| e2e-15d | Host lacks `subagent`: research declines `not-executed`, delegate yields `authority-required` | no silent same-context fallback |
+| e2e-15e | Adapter reports `actual: same-context` while `subagent` was requested -> dispatch rejected | self-observation honesty gate |
+| e2e-15f | Research write outside `writeScope` -> refused `not-executed` -> yield | unauthorized-change rejection on delegated path |
+| e2e-15g | Delegate returns stale-fingerprint outcome on same-context path | stale-evidence rejection |
+| e2e-15h | Executed research spawn returns stale evidence -> delegate yield | stale-evidence rejection on delegated path |
+| e2e-15i | Policy delegates briefing-flow itself; caller-built handoff scopes writes; `actual: subagent` | requested mode -> handoff -> scoped execution -> observed actual |
+| e2e-15j | Policy delegates briefing-flow but host lacks `subagent` -> top-level dispatch declines `not-executed` + `yield` | top-level capability refusal, no silent switch |
 
 ## What this harness does NOT verify
 
@@ -162,10 +197,15 @@ reproducibility only. It does not measure real-LLM output quality,
 subagent-vs-same-context model quality, semantic document quality,
 token/cost/latency improvements, or model skill-selection accuracy. Never
 infer model-quality conclusions from case diffs or trace comparisons.
-The policy changes trace attribution, not the dispatcher: e2e-14a/14c do not
-execute briefing-flow's inner skills or verify actual execution mode.
-The graph has no `discovery-doc`, `spec-doc`, or `adr-doc` dispatch events,
-so the planned e2e-14b comparison of real inner execution paths is not covered.
+The dispatcher boundary IS observable now: `dispatch-observed` records what the
+adapter actually ran (self-observation plus internal sub-dispatch records), and
+e2e-15 compares the same-context pair path against the independent research
+path at identical `effect-dispatched` counts. What it still cannot prove is
+model quality — a scripted `subagent-spawn` record is the deterministic model
+of a host adapter literally spawning a subagent, not the spawn itself, and a
+scripted audit relabelled "research" would only prove a label, which is why
+internal observations must describe real adapter behavior (scope-bounded,
+capability-gated, refusable) rather than renamed fields.
 e2e-14c exercises a two-leg resume after an EffectOutcome `yield`, not an
 EffectOutcome `retry`. A separate harness test verifies an audited spec edit
 between yield and resume is rejected as `authority-required`; the successful

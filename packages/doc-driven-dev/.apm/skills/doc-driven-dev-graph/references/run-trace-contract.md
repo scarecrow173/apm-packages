@@ -82,6 +82,37 @@ never emits them.
 optional: when a caller-side execution-mode policy selected the mode, it
 records the policy's `;`-joined reason tokens; normalization keeps it only
 as a non-empty plain string (it is a reason list, never a path).
+`executionMode` here is the *requested* mode handed to the dispatcher; what
+the dispatcher actually executed is recorded by `dispatch-observed`.
+
+### `dispatch-observed`
+
+One event per dispatch the dispatcher reports performing, emitted
+immediately after its `DispatchResult` returns and before `effect-outcome`.
+`edgeId`, `stage`, and `effectId` correlate it to the producing
+`effect-dispatched`. The remaining fields record the dispatcher's own
+report of what ran:
+
+| Field | Meaning |
+| --- | --- |
+| `target` | what the dispatch executed — equal to `effectId` for the self-observation, or an adapter-internal dispatch name (e.g. `spec-doc`, `adr-doc`, `research` inside `briefing-flow`) for work inside a composite delegate |
+| `requested` | the mode the dispatch was asked to run (`same-context`/`subagent`/`tool`/`unknown`) |
+| `actual` | the mode the dispatcher reports it ran as; declined dispatches report `unknown` |
+| `method` | the execution mechanism: `scripted` (deterministic adapter), `inline-skill` (ran in the caller's context), `subagent-spawn` (independent bounded subagent), `tool-call` (bounded tool-shaped delegation), or `not-executed` (declined) |
+
+Every accepted dispatch yields exactly one self-observation
+(`target === effectId`): its `requested` equals the producing
+`effect-dispatched.executionMode`, and an executed dispatch reports
+`actual` equal to it (`requested === "unknown"` exempts the `actual`
+check). A self-report that contradicts the request — or a dispatch with no
+self-observation — rejects the dispatch like a malformed outcome; the trace
+then keeps the observation as the forensic record and emits no
+`effect-outcome` for it. `method: "not-executed"` is honest only with a
+`yield` outcome. Internal observations (`target !== effectId`) are the
+adapter's own report — self-attested data the runner does not re-verify:
+they attest that an independent spawn ran rather than a same-context audit
+relabelled as delegated work, so adapters must implement the report
+honestly. They never represent new graph effects.
 
 ### `effect-outcome`
 
@@ -126,8 +157,9 @@ expressed by the per-`runId` sequence, and completed-edge ids accumulate in
 
 `summarizeTrace` aggregates per run: route selections, ordered edge IDs,
 blocked/terminal counts, audit and delegate dispatch counts, execution-mode
-counts, outcome counts, yield reasons, and scan totals (`scans`, `filesRead`,
-`bytesRead`, `uniqueFilesMax`).
+counts, outcome counts, yield reasons, dispatch-observation totals
+(`dispatchObservations`: `total`, `byActual`, `byMethod`), and scan totals
+(`scans`, `filesRead`, `bytesRead`, `uniqueFilesMax`).
 
 The trace never records LLM tokens, cost, provider or model names, prompts,
 document bodies, or secrets — the schema carries no field that could hold
