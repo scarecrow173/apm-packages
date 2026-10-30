@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { configFor, docTypes, parseDoc, relationFields } from "./doc_suite_utils";
-import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, normalizeDir } from "./document_utils";
+import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, nonReferenceRelationKeys, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
 // Finding contract
@@ -487,7 +487,10 @@ function extractRelations(data: Record<string, unknown>): Record<string, string[
   const raw = data.relations;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (key === "changes") continue;
+    // Non-reference keys (`changes`, `test-spec-skip`) carry metadata — a
+    // change set or a skip-reason string — never a document target, so they
+    // never enter the relation map consumers resolve (Issue #165).
+    if (nonReferenceRelationKeys.has(key)) continue;
     const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
     const values = items.filter((item): item is string => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
     if (values.length > 0) result[key] = [...new Set(values)].sort(compareStrings);

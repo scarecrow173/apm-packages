@@ -315,6 +315,23 @@ function lintRelations(model: DocumentRepository, document: RepositoryDocument, 
   return findings;
 }
 
+// A skip field such as `test-spec-skip` carries a free-text reason, not a
+// relation target. The convention records it under `relations:` next to the
+// `verified-by` it replaces; a top-level front-matter field also counts for
+// backward compatibility. It never appears in `document.relations` — the
+// repository model exempts it as a non-reference key at ingestion — so the
+// gate reads the raw front matter (Issue #165).
+function skipReasonRecorded(document: RepositoryDocument, field: string): boolean {
+  const topLevel = document.frontMatter[field];
+  if (typeof topLevel === "string" && topLevel.trim().length > 0) return true;
+  const relations = document.frontMatter.relations;
+  if (relations && typeof relations === "object" && !Array.isArray(relations)) {
+    const nested = (relations as Record<string, unknown>)[field];
+    if (typeof nested === "string" && nested.trim().length > 0) return true;
+  }
+  return false;
+}
+
 function lintRequiredRelations(model: DocumentRepository, document: RepositoryDocument, scopeType: string): Finding[] {
   const contract = contractForType(scopeType);
   if (!contract) return [];
@@ -326,9 +343,7 @@ function lintRequiredRelations(model: DocumentRepository, document: RepositoryDo
       const resolved = model.resolveRelationTarget(document, target);
       return resolved.status === "resolved" && required.targetTypes.includes(resolved.document.type ?? "");
     });
-    const skip = required.skipField
-      && typeof document.frontMatter[required.skipField] === "string"
-      && (document.frontMatter[required.skipField] as string).trim().length > 0;
+    const skip = required.skipField !== undefined && skipReasonRecorded(document, required.skipField);
     if (linked || skip) continue;
 
     if (scopeType === "test-spec" && required.field === "verifies") {

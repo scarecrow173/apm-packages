@@ -27977,6 +27977,10 @@ var CANONICAL_DOC_DIRS = [
   "docs/impl/ir",
   "docs/impl/exp"
 ];
+var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
+  "changes",
+  "test-spec-skip"
+]);
 function normalizeDir(input) {
   return input.replace(/\\/g, "/").replace(/\/+$/g, "");
 }
@@ -28216,7 +28220,9 @@ var changesSchema = external_exports.object(Object.fromEntries(
 )).prefault({});
 var relationSchema = external_exports.object({
   ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
-  changes: changesSchema
+  changes: changesSchema,
+  // A non-empty reason string, not a relation target (Issue #165).
+  "test-spec-skip": external_exports.string().min(1).optional()
 }).prefault({});
 var frontMatterSchema = external_exports.object({
   id: external_exports.string().min(1),
@@ -28608,7 +28614,7 @@ function extractRelations(data) {
   const raw = data.relations;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
   for (const [key, value] of Object.entries(raw)) {
-    if (key === "changes") continue;
+    if (nonReferenceRelationKeys.has(key)) continue;
     const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
     const values = items.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
     if (values.length > 0) result[key] = [...new Set(values)].sort(compareStrings);
@@ -29629,6 +29635,16 @@ function lintRelations(model, document3, scopeType) {
   }
   return findings;
 }
+function skipReasonRecorded(document3, field) {
+  const topLevel = document3.frontMatter[field];
+  if (typeof topLevel === "string" && topLevel.trim().length > 0) return true;
+  const relations = document3.frontMatter.relations;
+  if (relations && typeof relations === "object" && !Array.isArray(relations)) {
+    const nested = relations[field];
+    if (typeof nested === "string" && nested.trim().length > 0) return true;
+  }
+  return false;
+}
 function lintRequiredRelations(model, document3, scopeType) {
   const contract = contractForType(scopeType);
   if (!contract) return [];
@@ -29640,7 +29656,7 @@ function lintRequiredRelations(model, document3, scopeType) {
       const resolved = model.resolveRelationTarget(document3, target);
       return resolved.status === "resolved" && required2.targetTypes.includes(resolved.document.type ?? "");
     });
-    const skip = required2.skipField && typeof document3.frontMatter[required2.skipField] === "string" && document3.frontMatter[required2.skipField].trim().length > 0;
+    const skip = required2.skipField !== void 0 && skipReasonRecorded(document3, required2.skipField);
     if (linked || skip) continue;
     if (scopeType === "test-spec" && required2.field === "verifies") {
       findings.push(finding({

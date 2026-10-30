@@ -22,7 +22,7 @@ export {
   isInsideCheckout,
   repoPathKey,
 } from "../../../lib/document_utils";
-import { CANONICAL_DOC_DIRS } from "../../../lib/document_utils";
+import { CANONICAL_DOC_DIRS, nonReferenceRelationKeys } from "../../../lib/document_utils";
 
 export type ArtifactEdgeKind = "lineage" | "task-dependency" | "contextual" | "evidence";
 export type ArtifactNode = { path: string; id: string | null; type: string | null };
@@ -152,7 +152,10 @@ function relationValues(raw: unknown, ownerPath: string): { relations: Record<st
   const issues: string[] = [];
   for (const key of Object.keys(raw as Record<string, unknown>).sort(compareStrings)) {
     const value = (raw as Record<string, unknown>)[key];
-    if (key === "changes" && value && typeof value === "object" && !Array.isArray(value)) continue;
+    // Non-reference keys (`changes`, `test-spec-skip`) carry metadata — a
+    // change set or a skip-reason string — never a document target, so they
+    // become neither edges nor broken-relation issues (Issue #165).
+    if (nonReferenceRelationKeys.has(key)) continue;
     if (typeof value !== "string" && !Array.isArray(value)) {
       issues.push(`invalid-relation:${ownerPath}:${key}`);
       result[key] = [];
