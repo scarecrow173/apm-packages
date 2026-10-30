@@ -24,6 +24,20 @@ function stripTimestampsForCompare(content: string): string {
 }
 
 /**
+ * Which artifact targets a `validation.deterministic.compare` entry selects.
+ * Entries are document-level selectors, not file labels: the composite
+ * "profile+catalog-artifacts" selects both regenerated artifacts. Entries
+ * that name no regenerated artifact — e.g. "validation-report:exclude-
+ * timestamp", which records that timestamp fields are stripped from every
+ * comparison (see stripTimestampsForCompare) — select nothing.
+ */
+const COMPARE_TARGET_LABELS: Record<string, string[]> = {
+  profile: ["profile"],
+  catalog: ["catalog"],
+  "profile+catalog-artifacts": ["profile", "catalog"],
+};
+
+/**
  * Run the deterministic gate:
  * 1. Save current profile/catalog
  * 2. Re-run generate via adapter
@@ -67,9 +81,15 @@ function runDeterministicGate(
     targets.push({ path: catalogPath, label: "catalog" });
   }
 
-  // If compare config is provided, filter targets
+  // If compare config is provided, keep only the artifacts its entries
+  // select. An entry that maps to no artifact target (unknown or
+  // documentational) selects nothing; a compare list selecting no
+  // artifacts leaves the gate with no targets and it reports "skipped".
   if (compare && compare.length > 0) {
-    targets = targets.filter(t => compare.includes(t.label));
+    const selectedLabels = new Set(
+      compare.flatMap((entry) => COMPARE_TARGET_LABELS[entry] ?? []),
+    );
+    targets = targets.filter((t) => selectedLabels.has(t.label));
   }
 
   if (targets.length === 0) {

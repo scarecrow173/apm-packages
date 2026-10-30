@@ -107,24 +107,22 @@ validations.
 ### `overall_result` Formula
 
 ```
-overall_result = schema_validation.result == "pass"
-             && staleness_validation.result == "pass"
-             && deterministic_validation.result == "pass"
-             && blocking_validations.result == "pass"
+overall_result = "fail"  when any gate result is "fail"
+               = "pass"  otherwise (a "skipped" gate does not fail the run)
 ```
 
 ### `schema_validation`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `result` | `"pass"` \| `"fail"` | Validation result |
+| `result` | `"pass"` \| `"fail"` \| `"skipped"` | Validation result (`"skipped"` when `validation.schema = false`) |
 | `errors` | array | Failed items (key name, expected type, actual value, etc.) |
 
 ### `staleness_validation`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `result` | `"pass"` \| `"fail"` | Validation result |
+| `result` | `"pass"` \| `"fail"` \| `"skipped"` | Validation result |
 | `basis` | string | Basis field name |
 | `basis_date` | ISO 8601 | Basis timestamp |
 | `max_age_days` | number | Allowed age in days |
@@ -136,7 +134,7 @@ overall_result = schema_validation.result == "pass"
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `result` | `"pass"` \| `"fail"` | Validation result |
+| `result` | `"pass"` \| `"fail"` \| `"skipped"` | Validation result |
 | `comparisons` | array | Result per comparison target |
 | `comparisons[].target` | string | Comparison target identifier |
 | `comparisons[].diff_found` | boolean | Whether a diff was found |
@@ -145,7 +143,7 @@ overall_result = schema_validation.result == "pass"
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `result` | `"pass"` \| `"fail"` | Validation result |
+| `result` | `"pass"` \| `"fail"` \| `"skipped"` | Validation result |
 | `checks` | array | Individual check results |
 | `checks[].type` | string | Check type |
 | `checks[].result` | `"pass"` \| `"fail"` | Individual result |
