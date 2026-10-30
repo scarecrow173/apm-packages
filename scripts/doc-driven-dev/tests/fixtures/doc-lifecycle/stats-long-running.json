@@ -108,11 +108,11 @@
     "inboundTargets": 102
   },
   "findings": {
-    "total": 33,
+    "total": 37,
     "blocking": 6,
-    "warnings": 8,
+    "warnings": 12,
     "infos": 19,
-    "onDocuments": 31,
+    "onDocuments": 35,
     "onIndexes": 2,
     "unattributed": 0,
     "byRuleId": {
@@ -126,6 +126,7 @@
       "orphan-relation": 16,
       "provenance-missing-source": 1,
       "provenance-unresolved-local-source": 1,
+      "stale-upstream": 4,
       "traceability-missing-upstream": 2
     },
     "byCategory": {
@@ -133,12 +134,12 @@
       "orphan": 22,
       "provenance": 2,
       "relation": 2,
-      "traceability": 2
+      "traceability": 6
     },
     "health": {
       "documents": 87,
       "blocking": 6,
-      "warnings": 8,
+      "warnings": 12,
       "infos": 19,
       "categories": [
         {
@@ -151,7 +152,7 @@
         {
           "category": "traceability",
           "blocking": 2,
-          "warnings": 0,
+          "warnings": 4,
           "infos": 0,
           "clean": false
         },
@@ -289,7 +290,7 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 1,
-      "findings": 2,
+      "findings": 4,
       "blockingFindings": 1
     },
     "discovery": {
@@ -523,7 +524,7 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
+      "findings": 2,
       "blockingFindings": 0
     },
     "test-spec": {
