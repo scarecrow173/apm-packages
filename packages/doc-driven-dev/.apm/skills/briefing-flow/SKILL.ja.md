@@ -140,8 +140,8 @@ skill の `SKILL.md` 本文だけを読み、references と scripts は active s
 | Priority | Category | Rationale |
 | -------- | -------- | --------- |
 | 1 | Frame | 情報収集の前に問題や選択肢を構造化する |
-| 2 | Discover | 外部情報を探索・発見する |
-| 3 | Research | 深い調査を行う |
+| 2 | Discover | 内部の情報を探索・収集する |
+| 3 | Research | 外部 Web 調査を行う |
 | 4 | Document | 整理された情報を正式文書にする |
 
 詳細なカテゴリ定義は、`assets/adapters/briefing-adapter.yaml` の `classification.taxonomy` を参照する。

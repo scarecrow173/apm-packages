@@ -50,20 +50,29 @@ classification:
         capabilities: ["problem_framing", "option_analysis", "requirements_interrogation"]
         tags: ["frame", "structure", "organize"]
         description_patterns: ["structure", "organize", "define", "interrogate", "clarify"]
+    # Lane boundary (#146): discover and research are distinct lanes.
+    # discover = broad/internal information gathering and exploration.
+    # research = explicitly external web research only.
+    # discover patterns are anchored at word starts ("\b") so that
+    # "research" cannot leak into discover through the shared substring
+    # "search"; inflections ("exploration", "searching", "gathering",
+    # "discovery") still match. A skill that genuinely spans both lanes
+    # (e.g., declares both information_gathering and web_research) remains
+    # a correct multi-category member.
     - id: "discover"
       label: "Discover"
-      description: "Skills that explore and find information"
+      description: "Skills that gather and explore broad or internal information"
       match:
-        capabilities: ["web_research", "information_gathering"]
+        capabilities: ["information_gathering"]
         tags: ["discover", "search", "explore"]
-        description_patterns: ["explore", "search", "find", "gather", "web research"]
+        description_patterns: ["\\bexplore", "\\bsearch", "\\bfind", "\\bgather", "\\bdiscover"]
     - id: "research"
       label: "Research"
       description: "Skills that conduct external web research"
       match:
-        capabilities: ["web_research", "information_gathering"]
-        tags: ["research", "search", "explore", "web"]
-        description_patterns: ["explore", "search", "find", "gather", "web research"]
+        capabilities: ["web_research"]
+        tags: ["research", "web", "external", "deep-dive"]
+        description_patterns: ["research", "web research", "external", "deep dive", "literature", "look up"]
     - id: "document"
       label: "Document"
       description: "Skills that produce formal documents"
