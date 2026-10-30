@@ -292,7 +292,7 @@ Two cross-cutting observations:
 | # | Recommendation | Measured basis | Migration concerns |
 | - | -------------- | -------------- | ------------------ |
 | C1 | Settled/historical index tier vs `archive:` flag — **resolved in #163 as derived status, no flag**: `isSettled(status)` fully expresses the presentation axis, so no `archive:` front-matter field was added (a second axis would only drift against `status`). The format change *is* the migration: legacy single-table managed indexes are regenerated into the tier layout rather than grandfathered | §4.2 | Back-fill flag derivation from status; index-format change needs a doc-maintenance migration; reversible by flag removal |
-| C2 | Discovery evidence structure: split oversized evidence dumps into a summary front-matter section + append-only evidence tail so L1 metadata stays small regardless of evidence mass | §4.3 | Body-format convention change; existing files grandfathered; template + convention docs migrate |
+| C2 | Discovery evidence structure — **landed in #164**: the template now opens with a bounded `## Summary` head and ends with an append-only `## Evidence` tail, so a reader needing only conclusions stops at the `## Evidence` heading while evidence mass stays on the doc. The bounded channel is the L2 body read — L1 output never carried bodies | §4.3 | Body-format convention change; existing files grandfathered; template + convention docs migrated |
 | C3 | Teach relation resolution that `test-spec-skip` is a reason string, not a target — **landed in #165**: the ingestion boundaries exempt it as a non-reference `relations:` key and the `verified-by` gate reads the recorded reason | §4.5 | Contract-visible: `test-spec-skip` is a documented metadata key under `relations:`; small blast radius |
 
 ### Suggested follow-up issues (one per implementation effort)
@@ -306,7 +306,10 @@ Two cross-cutting observations:
 3. Settled-tier presentation flag (`archive:` axis) (C1) — one issue;
    **landed as #163**: rejected the flag — the settled tier derives from the
    existing `status` authority, so no new front-matter field exists to drift.
-4. Discovery evidence front/tail structure (C2) — one issue.
+4. Discovery evidence front/tail structure (C2) — one issue; **landed as
+   #164**: bounded `## Summary` head + append-only `## Evidence` tail on
+   the discovery template and conventions; evidence stays on the doc, and
+   existing files are grandfathered.
 5. `test-spec-skip` resolution semantics (C3) — one issue; **landed as
    #165**.
 6. Promote the stale-upstream heuristic into a `doc-status` lint rule if

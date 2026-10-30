@@ -220,7 +220,7 @@
         {
           "path": "adr-doc/references/adr-conventions.md",
           "exists": true,
-          "bytes": 9340
+          "bytes": 9875
         },
         {
           "path": "adr-doc/references/adr-maintenance.md",
@@ -245,12 +245,12 @@
         {
           "path": "adr-doc/scripts/audit_adr.js",
           "exists": true,
-          "bytes": 987671
+          "bytes": 987721
         },
         {
           "path": "adr-doc/scripts/check_code_links.js",
           "exists": true,
-          "bytes": 980850
+          "bytes": 980900
         },
         {
           "path": "adr-doc/scripts/list_adrs.js",
@@ -260,12 +260,12 @@
         {
           "path": "adr-doc/scripts/migrate_report.js",
           "exists": true,
-          "bytes": 980220
+          "bytes": 980270
         },
         {
           "path": "adr-doc/scripts/new_adr.js",
           "exists": true,
-          "bytes": 991945
+          "bytes": 994053
         },
         {
           "path": "adr-doc/scripts/relate_adr.js",
@@ -275,12 +275,12 @@
         {
           "path": "adr-doc/scripts/review_adr.js",
           "exists": true,
-          "bytes": 984893
+          "bytes": 984943
         },
         {
           "path": "adr-doc/scripts/update_index.js",
           "exists": true,
-          "bytes": 980976
+          "bytes": 983084
         },
         {
           "path": "deep-dive/SKILL.md",
@@ -290,7 +290,7 @@
       ],
       "totals": {
         "directives": 35,
-        "referencedBytes": 7613282,
+        "referencedBytes": 7618233,
         "missing": 0
       }
     },
@@ -487,7 +487,7 @@
         {
           "path": "briefing-flow/scripts/audit_briefing.js",
           "exists": true,
-          "bytes": 1002820
+          "bytes": 1002870
         },
         {
           "path": "doc-driven-dev-graph/references/delegate-execution-policy.md",
@@ -517,7 +517,7 @@
       ],
       "totals": {
         "directives": 28,
-        "referencedBytes": 1057631,
+        "referencedBytes": 1057681,
         "missing": 0
       }
     },
@@ -597,12 +597,12 @@
         {
           "path": "design-doc/references/design-conventions.md",
           "exists": true,
-          "bytes": 5130
+          "bytes": 5518
         },
         {
           "path": "design-doc/scripts/new_design.js",
           "exists": true,
-          "bytes": 729106
+          "bytes": 731853
         },
         {
           "path": "doc-driven-dev-graph/references/execution-outcome-contract.md",
@@ -617,14 +617,14 @@
       ],
       "totals": {
         "directives": 5,
-        "referencedBytes": 758939,
+        "referencedBytes": 762074,
         "missing": 0
       }
     },
     {
       "flow": "discovery-doc",
-      "skillBytes": 8646,
-      "alwaysOnChars": 8220,
+      "skillBytes": 9130,
+      "alwaysOnChars": 8702,
       "directives": [
         {
           "kind": "skill-invoke",
@@ -659,19 +659,19 @@
         {
           "kind": "script",
           "target": "scripts/new_discovery.js",
-          "line": 187,
+          "line": 194,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/discovery-conventions.md",
-          "line": 188,
+          "line": 195,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/new_discovery.js",
-          "line": 192,
+          "line": 199,
           "optional": false
         }
       ],
@@ -684,17 +684,17 @@
         {
           "path": "discovery-doc/references/discovery-conventions.md",
           "exists": true,
-          "bytes": 7940
+          "bytes": 10098
         },
         {
           "path": "discovery-doc/scripts/new_discovery.js",
           "exists": true,
-          "bytes": 729118
+          "bytes": 731865
         }
       ],
       "totals": {
         "directives": 8,
-        "referencedBytes": 755407,
+        "referencedBytes": 760312,
         "missing": 0
       }
     },
@@ -731,17 +731,17 @@
         {
           "path": "doc-driven-dev-graph/scripts/build_dashboard.js",
           "exists": true,
-          "bytes": 1383808
+          "bytes": 1385776
         },
         {
           "path": "doc-status/SKILL.md",
           "exists": true,
-          "bytes": 8980
+          "bytes": 9370
         }
       ],
       "totals": {
         "directives": 3,
-        "referencedBytes": 1402098,
+        "referencedBytes": 1404456,
         "missing": 0
       }
     },
@@ -1024,27 +1024,27 @@
         {
           "path": "doc-driven-dev-graph/scripts/inspect_graph.js",
           "exists": true,
-          "bytes": 837112
+          "bytes": 837162
         },
         {
           "path": "doc-driven-dev-graph/scripts/migrate_ids.js",
           "exists": true,
-          "bytes": 1092132
+          "bytes": 1094113
         },
         {
           "path": "doc-driven-dev-graph/scripts/route_graph.js",
           "exists": true,
-          "bytes": 850764
+          "bytes": 850814
         },
         {
           "path": "doc-maintenance/scripts/migrate_ids.js",
           "exists": true,
-          "bytes": 1092164
+          "bytes": 1094145
         },
         {
           "path": "implementation-flow/SKILL.md",
           "exists": true,
-          "bytes": 22093
+          "bytes": 22314
         },
         {
           "path": "planning-flow/SKILL.md",
@@ -1054,14 +1054,14 @@
       ],
       "totals": {
         "directives": 34,
-        "referencedBytes": 4140687,
+        "referencedBytes": 4144970,
         "missing": 0
       }
     },
     {
       "flow": "doc-maintenance",
-      "skillBytes": 5091,
-      "alwaysOnChars": 4835,
+      "skillBytes": 5513,
+      "alwaysOnChars": 5253,
       "directives": [
         {
           "kind": "script",
@@ -1090,43 +1090,43 @@
         {
           "kind": "script",
           "target": "scripts/scaffold_docs.js",
-          "line": 83,
+          "line": 92,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_docs.js",
-          "line": 84,
+          "line": 93,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_ids.js",
-          "line": 85,
+          "line": 94,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/doc_maintenance.js",
-          "line": 115,
+          "line": 124,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_docs.js",
-          "line": 117,
+          "line": 126,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_ids.js",
-          "line": 117,
+          "line": 126,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/scaffold_docs.js",
-          "line": 118,
+          "line": 127,
           "optional": false
         }
       ],
@@ -1134,34 +1134,34 @@
         {
           "path": "doc-maintenance/scripts/doc_maintenance.js",
           "exists": true,
-          "bytes": 1057589
+          "bytes": 1059621
         },
         {
           "path": "doc-maintenance/scripts/migrate_docs.js",
           "exists": true,
-          "bytes": 727274
+          "bytes": 729544
         },
         {
           "path": "doc-maintenance/scripts/migrate_ids.js",
           "exists": true,
-          "bytes": 1092164
+          "bytes": 1094145
         },
         {
           "path": "doc-maintenance/scripts/scaffold_docs.js",
           "exists": true,
-          "bytes": 707628
+          "bytes": 709410
         }
       ],
       "totals": {
         "directives": 11,
-        "referencedBytes": 3584655,
+        "referencedBytes": 3592720,
         "missing": 0
       }
     },
     {
       "flow": "doc-status",
-      "skillBytes": 8980,
-      "alwaysOnChars": 8767,
+      "skillBytes": 9370,
+      "alwaysOnChars": 9155,
       "directives": [
         {
           "kind": "script",
@@ -1184,19 +1184,13 @@
         {
           "kind": "script",
           "target": "scripts/doc_status.js",
-          "line": 53,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/list_docs.js",
           "line": 54,
           "optional": false
         },
         {
           "kind": "script",
-          "target": "scripts/doc_status.js",
-          "line": 60,
+          "target": "scripts/list_docs.js",
+          "line": 55,
           "optional": false
         },
         {
@@ -1207,14 +1201,14 @@
         },
         {
           "kind": "script",
-          "target": "scripts/audit_docs.js",
+          "target": "scripts/doc_status.js",
           "line": 62,
           "optional": false
         },
         {
           "kind": "script",
-          "target": "scripts/doc_status.js",
-          "line": 68,
+          "target": "scripts/audit_docs.js",
+          "line": 63,
           "optional": false
         },
         {
@@ -1225,68 +1219,74 @@
         },
         {
           "kind": "script",
+          "target": "scripts/doc_status.js",
+          "line": 70,
+          "optional": false
+        },
+        {
+          "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 83,
+          "line": 85,
           "optional": false
         },
         {
           "kind": "script",
           "target": "impl-doc/scripts/audit_impl_record.js",
-          "line": 86,
+          "line": 88,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 154,
+          "line": 159,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 164,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/list_docs.js",
-          "line": 164,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/doc_status.js",
           "line": 169,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/list_docs.js",
-          "line": 172,
+          "line": 169,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/doc_status.js",
+          "line": 174,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/list_docs.js",
+          "line": 177,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 173,
+          "line": 178,
           "optional": false
         },
         {
           "kind": "skill-invoke",
           "target": "doc-driven-dev-graph",
-          "line": 179,
+          "line": 184,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "../doc-driven-dev-graph/references/execution-outcome-contract.md",
-          "line": 180,
+          "line": 185,
           "optional": false
         },
         {
           "kind": "skill-invoke",
           "target": "doc-dashboard",
-          "line": 190,
+          "line": 195,
           "optional": false
         }
       ],
@@ -1309,27 +1309,27 @@
         {
           "path": "doc-status/scripts/audit_docs.js",
           "exists": true,
-          "bytes": 1044022
+          "bytes": 1045479
         },
         {
           "path": "doc-status/scripts/doc_status.js",
           "exists": true,
-          "bytes": 1047788
+          "bytes": 1050375
         },
         {
           "path": "doc-status/scripts/list_docs.js",
           "exists": true,
-          "bytes": 704965
+          "bytes": 705147
         },
         {
           "path": "impl-doc/scripts/audit_impl_record.js",
           "exists": true,
-          "bytes": 712698
+          "bytes": 712748
         }
       ],
       "totals": {
         "directives": 21,
-        "referencedBytes": 3537294,
+        "referencedBytes": 3541570,
         "missing": 0
       }
     },
@@ -1385,22 +1385,22 @@
         {
           "path": "discovery-doc/SKILL.md",
           "exists": true,
-          "bytes": 8646
+          "bytes": 9130
         },
         {
           "path": "idea-doc/references/idea-conventions.md",
           "exists": true,
-          "bytes": 5985
+          "bytes": 6444
         },
         {
           "path": "idea-doc/scripts/new_idea.js",
           "exists": true,
-          "bytes": 729074
+          "bytes": 731821
         }
       ],
       "totals": {
         "directives": 7,
-        "referencedBytes": 743705,
+        "referencedBytes": 747395,
         "missing": 0
       }
     },
@@ -1480,7 +1480,7 @@
         {
           "path": "impl-doc/references/impl-conventions.md",
           "exists": true,
-          "bytes": 4503
+          "bytes": 4926
         },
         {
           "path": "impl-doc/scripts/append_experiment_event.js",
@@ -1495,7 +1495,7 @@
         {
           "path": "impl-doc/scripts/audit_impl_record.js",
           "exists": true,
-          "bytes": 712698
+          "bytes": 712748
         },
         {
           "path": "impl-doc/scripts/edit_experiment_log.js",
@@ -1510,19 +1510,19 @@
         {
           "path": "impl-doc/scripts/new_impl_record.js",
           "exists": true,
-          "bytes": 716110
+          "bytes": 718191
         }
       ],
       "totals": {
         "directives": 11,
-        "referencedBytes": 4248556,
+        "referencedBytes": 4251110,
         "missing": 0
       }
     },
     {
       "flow": "implementation-flow",
-      "skillBytes": 22093,
-      "alwaysOnChars": 21632,
+      "skillBytes": 22314,
+      "alwaysOnChars": 21853,
       "directives": [
         {
           "kind": "sdp-artifact",
@@ -1731,13 +1731,13 @@
         {
           "kind": "skill-invoke",
           "target": "doc-driven-dev-graph",
-          "line": 435,
+          "line": 438,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "../doc-driven-dev-graph/references/execution-outcome-contract.md",
-          "line": 436,
+          "line": 439,
           "optional": false
         }
       ],
@@ -1765,7 +1765,7 @@
         {
           "path": "impl-doc/scripts/new_impl_record.js",
           "exists": true,
-          "bytes": 716110
+          "bytes": 718191
         },
         {
           "path": "impl-doc/SKILL.md",
@@ -1800,7 +1800,7 @@
       ],
       "totals": {
         "directives": 36,
-        "referencedBytes": 780069,
+        "referencedBytes": 782150,
         "missing": 0
       }
     },
@@ -1850,17 +1850,17 @@
         {
           "path": "plan-doc/references/plan-conventions.md",
           "exists": true,
-          "bytes": 12004
+          "bytes": 12424
         },
         {
           "path": "plan-doc/scripts/new_plan.js",
           "exists": true,
-          "bytes": 732292
+          "bytes": 735039
         }
       ],
       "totals": {
         "directives": 6,
-        "referencedBytes": 744296,
+        "referencedBytes": 747463,
         "missing": 0
       }
     },
@@ -1930,12 +1930,12 @@
         {
           "path": "task-doc/SKILL.md",
           "exists": true,
-          "bytes": 4766
+          "bytes": 5013
         }
       ],
       "totals": {
         "directives": 6,
-        "referencedBytes": 48145,
+        "referencedBytes": 48392,
         "missing": 0
       }
     },
@@ -2380,24 +2380,24 @@
         {
           "path": "spec-doc/references/spec-conventions.md",
           "exists": true,
-          "bytes": 8539
+          "bytes": 8973
         },
         {
           "path": "spec-doc/scripts/new_spec.js",
           "exists": true,
-          "bytes": 728928
+          "bytes": 731675
         }
       ],
       "totals": {
         "directives": 4,
-        "referencedBytes": 737467,
+        "referencedBytes": 740648,
         "missing": 0
       }
     },
     {
       "flow": "task-doc",
-      "skillBytes": 4766,
-      "alwaysOnChars": 4588,
+      "skillBytes": 5013,
+      "alwaysOnChars": 4831,
       "directives": [
         {
           "kind": "script",
@@ -2414,13 +2414,13 @@
         {
           "kind": "script",
           "target": "scripts/new_task.js",
-          "line": 108,
+          "line": 112,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/task-conventions.md",
-          "line": 109,
+          "line": 113,
           "optional": false
         }
       ],
@@ -2428,17 +2428,17 @@
         {
           "path": "task-doc/references/task-conventions.md",
           "exists": true,
-          "bytes": 9222
+          "bytes": 9632
         },
         {
           "path": "task-doc/scripts/new_task.js",
           "exists": true,
-          "bytes": 731898
+          "bytes": 734645
         }
       ],
       "totals": {
         "directives": 4,
-        "referencedBytes": 741120,
+        "referencedBytes": 744277,
         "missing": 0
       }
     },
@@ -2476,27 +2476,27 @@
         {
           "path": "test-spec-doc/references/test-spec-conventions.md",
           "exists": true,
-          "bytes": 6637
+          "bytes": 7035
         },
         {
           "path": "test-spec-doc/scripts/new_test_spec.js",
           "exists": true,
-          "bytes": 730734
+          "bytes": 733481
         }
       ],
       "totals": {
         "directives": 4,
-        "referencedBytes": 737371,
+        "referencedBytes": 740516,
         "missing": 0
       }
     }
   ],
   "totals": {
     "flows": 18,
-    "skillBytes": 154615,
-    "alwaysOnChars": 148729,
+    "skillBytes": 156379,
+    "alwaysOnChars": 150481,
     "directives": 278,
-    "referencedBytes": 31758866,
+    "referencedBytes": 31812111,
     "missing": 0
   }
 }
