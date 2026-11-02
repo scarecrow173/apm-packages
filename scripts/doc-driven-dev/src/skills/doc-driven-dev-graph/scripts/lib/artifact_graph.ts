@@ -486,10 +486,13 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
     add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
   }
   const unassignedSpecs = specs.filter((spec) => !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], spec.path)));
-  const unassignedAdrs = adrs.filter((adr) => !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], adr.path)));
   const paired = new Set<string>();
   for (const spec of unassignedSpecs) {
-    for (const adr of unassignedAdrs) {
+    // An ADR already claimed by a design chain can still pair with a new spec:
+    // pair evidence is independent of downstream chain selection, the same
+    // authority the briefing audit applies through preDesignAnchors. The ADR
+    // then belongs to both chains, so focusing it alone stays ambiguous.
+    for (const adr of adrs) {
       const anchors = preDesignAnchors(graph, records, spec, adr);
       if (!anchors) continue;
       add({ spec: spec.path, adr: adr.path, tasks: [], anchors });

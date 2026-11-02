@@ -20,7 +20,10 @@ repository に複数の active chain がある場合、`--focus` path または 
 
 design 作成前は、正確な typed lineage が SPEC と ADR を直接結ぶか、両方が同じ
 直近の discovery から派生する場合に限り、有効な SPEC と ADR を 1 つの briefing
-chain として扱います。その discovery も chain の有効な focus です。該当する pair
+chain として扱います。その discovery も chain の有効な focus です。pair 根拠は
+ADR が未使用であることに依存しません。既存の design chain が参照する ADR も
+新しい spec の briefing pair に加わり、その ADR は両方の chain に属するため、
+共有 ADR だけを focus しても曖昧なままです。該当する pair
 が複数なら曖昧なまま `focus-required` となり、basename、path の近さ、より広い
 lineage component の所属から artifact を結合しません。
 
