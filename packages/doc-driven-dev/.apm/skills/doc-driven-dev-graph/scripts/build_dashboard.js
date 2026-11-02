@@ -35320,7 +35320,7 @@ function artifactChainCandidates(graph, records) {
   const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
   for (const design of designs) {
     const relatedSpecs = specs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
-    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from"], candidate.path));
+    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
     const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
     for (const spec of cartesian(relatedSpecs, [void 0])) {
       for (const adr of cartesian(relatedAdrs, [void 0])) {

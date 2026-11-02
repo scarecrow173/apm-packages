@@ -463,7 +463,10 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
 
   for (const design of designs) {
     const relatedSpecs = specs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
-    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from"], candidate.path));
+    // Keep the ADR claim set identical to the exclusion/singleton checks
+    // below: a design `implements` edge claims the ADR, so the chain must own
+    // it too or the artifact would vanish from every chain.
+    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
     const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
     for (const spec of cartesian(relatedSpecs, [undefined])) {
       for (const adr of cartesian(relatedAdrs, [undefined])) {

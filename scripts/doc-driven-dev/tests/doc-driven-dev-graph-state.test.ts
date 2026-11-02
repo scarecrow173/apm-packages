@@ -228,6 +228,23 @@ test("a spec related to multiple ADRs still fails closed until the pair is focus
   assert.deepEqual(focused.gates.briefing, { status: "pass", reasons: [] });
 });
 
+test("an ADR claimed through design implements stays in the chain and is diagnosed", () => {
+  const repo = fixtureRepo();
+  removeArtifacts(repo, ["docs/tasks/0001-route.md", "docs/tasks/0002-prepare.md"]);
+  writeArtifact(repo, "docs/designs/0001-graph.md", {
+    id: "DESIGN-0001", type: "design", status: "approved", title: "Graph Design",
+    relations: { "derives-from": ["SPEC-0001"], implements: ["ADR-0001"] },
+  }, "# Graph Design\n");
+  const state = projectGraphState({ cwd: repo, focus: ["ADR-0001"] });
+  // The implements edge is a claim, so the ADR belongs to the design chain
+  // instead of dropping out of every chain; the design gate then reports the
+  // missing derives-from relation rather than losing the artifact.
+  assert.equal(state.blockers.includes("focus-required"), false);
+  assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] });
+  assert.equal(state.gates.design.status, "fail");
+  assert.ok(state.gates.design.reasons.includes("design-adr-relation"));
+});
+
 test("a spec already claimed by a design does not re-pair with a new ADR", () => {
   const repo = fixtureRepo();
   removeArtifacts(repo, ["docs/tasks/0001-route.md", "docs/tasks/0002-prepare.md"]);
