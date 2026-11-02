@@ -168,6 +168,87 @@ test("does not pair SPEC and ADR that only refine the same discovery", () => {
   assert.equal(state.gates.briefing.status, "blocked");
 });
 
+test("pairs a new spec with an ADR already claimed by an existing design chain", () => {
+  const repo = fixtureRepo();
+  // The stock tasks carry a deliberately broken relation that would hard-block
+  // routing; the claim scenario only needs spec/adr/design/plan.
+  removeArtifacts(repo, ["docs/tasks/0001-route.md", "docs/tasks/0002-prepare.md"]);
+  writeArtifact(repo, "docs/specs/0002-followup.md", {
+    id: "SPEC-0002", type: "spec", status: "approved", title: "Follow-up",
+    relations: { "derives-from": ["ADR-0001"] },
+  }, "# Follow-up\n\n## Acceptance Criteria\n\n- [ ] reuse the accepted decision\n");
+  for (const focus of [["SPEC-0002"], ["SPEC-0002", "ADR-0001"], ["docs/specs/0002-followup.md"]]) {
+    const state = projectGraphState({ cwd: repo, focus });
+    assert.equal(state.blockers.includes("focus-required"), false, focus.join(","));
+    assert.deepEqual(state.gates.briefing, { status: "pass", reasons: [] }, focus.join(","));
+    const route = routeGraph({
+      current: "briefing",
+      definition: loadGraphDefinition(path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml")),
+      state,
+    });
+    assert.deepEqual({ edgeId: route.edgeId, next: route.next, status: route.status }, {
+      edgeId: "briefing-to-design", next: "design", status: "edge",
+    }, focus.join(","));
+  }
+});
+
+test("a spec reusing a design-claimed ADR leaves existing chains selectable", () => {
+  const repo = fixtureRepo();
+  writeArtifact(repo, "docs/specs/0002-followup.md", {
+    id: "SPEC-0002", type: "spec", status: "approved", title: "Follow-up",
+    relations: { "derives-from": ["ADR-0001"] },
+  }, "# Follow-up\n\n## Acceptance Criteria\n\n- [ ] reuse the accepted decision\n");
+  // The existing design chain still resolves unchanged through its own members.
+  for (const focus of [["SPEC-0001"], ["DESIGN-0001"], ["PLAN-0001"], ["SPEC-0001", "ADR-0001"], ["ADR-0001", "DESIGN-0001"]]) {
+    const state = projectGraphState({ cwd: repo, focus });
+    assert.equal(state.blockers.includes("focus-required"), false, focus.join(","));
+    assert.equal(state.taskGraph?.plan, "docs/plans/0001-graph.md", focus.join(","));
+  }
+  // The shared ADR alone no longer names a unique chain: it belongs to the
+  // design chain and the new briefing pair, so focus fails closed.
+  const ambiguous = projectGraphState({ cwd: repo, focus: ["ADR-0001"] });
+  assert.ok(ambiguous.blockers.includes("focus-required"));
+  assert.equal(ambiguous.gates.briefing.status, "blocked");
+});
+
+test("a spec related to multiple ADRs still fails closed until the pair is focused", () => {
+  const repo = fixtureRepo();
+  writeArtifact(repo, "docs/adr/0002-other.md", {
+    id: "ADR-0002", type: "adr", status: "accepted", title: "Other ADR",
+  }, "# Other ADR\n\n## Considered Options\n\n### A\n\n### B\n");
+  writeArtifact(repo, "docs/specs/0002-followup.md", {
+    id: "SPEC-0002", type: "spec", status: "approved", title: "Follow-up",
+    relations: { "derives-from": ["ADR-0001", "ADR-0002"] },
+  }, "# Follow-up\n\n## Acceptance Criteria\n\n- [ ] reuse accepted decisions\n");
+  const ambiguous = projectGraphState({ cwd: repo, focus: ["SPEC-0002"] });
+  assert.ok(ambiguous.blockers.includes("focus-required"));
+  assert.equal(ambiguous.gates.briefing.status, "blocked");
+  const focused = projectGraphState({ cwd: repo, focus: ["SPEC-0002", "ADR-0002"] });
+  assert.equal(focused.blockers.includes("focus-required"), false);
+  assert.deepEqual(focused.gates.briefing, { status: "pass", reasons: [] });
+});
+
+test("a spec already claimed by a design does not re-pair with a new ADR", () => {
+  const repo = fixtureRepo();
+  removeArtifacts(repo, ["docs/tasks/0001-route.md", "docs/tasks/0002-prepare.md"]);
+  writeArtifact(repo, "docs/adr/0002-amend.md", {
+    id: "ADR-0002", type: "adr", status: "proposed", title: "Amending ADR",
+    relations: { "derives-from": ["SPEC-0001"] },
+  }, "# Amending ADR\n\n## Considered Options\n\n### A\n\n### B\n");
+  // SPEC-0001 is owned by its design chain; the new ADR cannot pull it into a
+  // second briefing chain, so the spec's chain keeps resolving uniquely.
+  const focused = projectGraphState({ cwd: repo, focus: ["SPEC-0001"] });
+  assert.equal(focused.blockers.includes("focus-required"), false);
+  assert.equal(focused.taskGraph?.plan, "docs/plans/0001-graph.md");
+  // The unpaired new ADR reports its missing spec rather than a fake pair.
+  const lonely = projectGraphState({ cwd: repo, focus: ["ADR-0002"] });
+  assert.equal(lonely.blockers.includes("focus-required"), false);
+  assert.deepEqual(lonely.gates.briefing, {
+    status: "fail",
+    reasons: ["acceptance-criteria", "spec-status"],
+  });
+});
+
 test("keeps a pre-design SPEC-only chain incomplete", () => {
   const repo = fixtureRepo();
   removeArtifacts(repo, [
