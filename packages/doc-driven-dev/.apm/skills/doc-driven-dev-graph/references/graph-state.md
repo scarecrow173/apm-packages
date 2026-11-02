@@ -21,9 +21,15 @@ explicit authority and reruns the route.
 
 Before a design exists, a valid SPEC and ADR form one briefing chain only when
 exact typed lineage relates them directly or both derive from the same immediate
-discovery. The discovery is also a valid focus for that chain. Multiple matching
+discovery. The discovery is also a valid focus for that chain. Pair evidence
+does not depend on the ADR being unused: an ADR already claimed by a design
+chain still joins a new spec's briefing pair and then belongs to both chains,
+so focusing on the shared ADR alone stays ambiguous. Multiple matching
 pairs remain ambiguous and produce `focus-required`; basenames, path proximity,
-and broader lineage-component membership never pair artifacts.
+and broader lineage-component membership never pair artifacts. A design claims
+its upstream spec and ADR through `derives-from` or `implements`, so a claimed
+artifact belongs to that design's chain instead of pairing elsewhere; the
+design gate still requires `derives-from` for the design-to-ADR relation.
 
 ## Gates and signals
 
