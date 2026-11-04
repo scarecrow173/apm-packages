@@ -38167,7 +38167,7 @@ function evaluateCondition(condition, state) {
     return (state.taskGraph?.issues.length ?? 0) === 0 && (state.taskGraph?.resumableActive.length ?? 0) > 0;
   }
   if (condition.state === "invalid") return (state.taskGraph?.issues.length ?? 0) > 0;
-  return state.taskGraph !== null && state.taskGraph.runnable.length === 0 && state.taskGraph.active.length === 0 && state.taskGraph.issues.length === 0;
+  return state.taskGraph !== null && state.taskGraph.completed.length > 0 && state.taskGraph.runnable.length === 0 && state.taskGraph.active.length === 0 && state.taskGraph.blocked.length === 0 && state.taskGraph.issues.length === 0;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts
@@ -38377,7 +38377,7 @@ function evaluateRouteDecision(input2) {
     delegate: null,
     requiredAudits: [],
     commitGate: false
-  });
+  }, ["no-matching-edge"]);
   return {
     route,
     explanation: {
