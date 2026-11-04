@@ -209,6 +209,73 @@ test("keeps dependents blocked by wont-do predecessors while resolving completio
   assert.equal(route.next, "task-graph");
 });
 
+test("routes a completed-only task graph to follow-up triage", () => {
+  const definition = graphDefinition();
+  for (const planStatus of ["approved", "completed"] as const) {
+    const repo = fixtureRepo(["done"]);
+    if (planStatus !== "approved") {
+      writeArtifact(repo, "docs/plans/0001-graph.md", {
+        id: "PLAN-0001", type: "plan", status: planStatus, title: "Graph",
+        relations: { "derives-from": ["DESIGN-0001"] },
+      }, "# Graph\n");
+    }
+    const decision = evaluateRouteDecision({ current: "task-graph", definition, state: stateFor(repo) });
+    assert.equal(decision.route.status, "edge", planStatus);
+    assert.equal(decision.route.edgeId, "task-graph-to-followup-triage", planStatus);
+    assert.equal(decision.route.next, "followup-triage", planStatus);
+    assert.deepEqual(decision.route.requiredAudits, ["impl-record", "task"], planStatus);
+    assert.deepEqual(decision.route.taskGraph?.completed, ["TASK-0001"], planStatus);
+    assert.equal(decision.explanation.selectedEdgeId, "task-graph-to-followup-triage", planStatus);
+  }
+});
+
+test("task-graph edges cover done, in-progress, and todo task states", () => {
+  const definition = graphDefinition();
+  const cases: Array<{ statuses: TaskStatus[]; edgeId: string; next: string }> = [
+    { statuses: ["done"], edgeId: "task-graph-to-followup-triage", next: "followup-triage" },
+    { statuses: ["in-progress"], edgeId: "task-graph-to-active-implementation", next: "implementation" },
+    { statuses: ["todo"], edgeId: "task-graph-to-implementation", next: "implementation" },
+  ];
+  for (const entry of cases) {
+    const route = routeGraph({
+      current: "task-graph",
+      definition,
+      state: stateFor(fixtureRepo(entry.statuses)),
+    });
+    assert.equal(route.edgeId, entry.edgeId, entry.statuses.join(","));
+    assert.equal(route.next, entry.next, entry.statuses.join(","));
+  }
+});
+
+test("keeps blocked, wont-do, and unresolved residue out of the idle route", () => {
+  const definition = graphDefinition();
+  const cases: Array<{ statuses: TaskStatus[]; dependsOn?: string[][] }> = [
+    { statuses: ["wont-do"] },
+    { statuses: ["blocked"] },
+    { statuses: ["done", "wont-do"] },
+    { statuses: ["done", "blocked"] },
+    { statuses: ["wont-do", "todo"], dependsOn: [[], ["TASK-0001"]] },
+  ];
+  for (const entry of cases) {
+    const route = routeGraph({
+      current: "task-graph",
+      definition,
+      state: stateFor(fixtureRepo(entry.statuses, entry.dependsOn ?? [])),
+    });
+    assert.equal(route.status, "blocked", entry.statuses.join(","));
+    assert.equal(route.edgeId, null, entry.statuses.join(","));
+    assert.ok(route.blockers.includes("no-matching-edge"), entry.statuses.join(","));
+  }
+});
+
+test("an empty task graph is invalid rather than idle", () => {
+  const definition = graphDefinition();
+  const route = routeGraph({ current: "task-graph", definition, state: stateFor(fixtureRepo([])) });
+  assert.ok((route.taskGraph?.issues.length ?? 0) > 0);
+  assert.equal(route.edgeId, "task-graph-to-planning");
+  assert.equal(route.next, "planning");
+});
+
 test("does not let implementation verification bypass an incomplete implementation gate", () => {
   const definition = graphDefinition();
   const state = stateFor(fixtureRepo(["todo"]), ["implementation-verified"]);

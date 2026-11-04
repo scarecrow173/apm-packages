@@ -19,7 +19,8 @@ import type { E2ECase } from "../harness/case_types";
  * TASK-0002 stays `todo` — deliberately: a resumed leg re-SELECTS the pending
  * edge from a fresh projection, and `task-graph-to-implementation` only
  * matches while some task is runnable (if leg 1 had closed every task, the
- * re-route would find `no-matching-edge` — verified live). The pending match
+ * re-route would select the completed-only `task-graph-to-followup-triage`
+ * edge instead of the pending one — verified live). The pending match
  * is on edgeId+current only, so the smaller runnable set is fine.
  *
  * Leg 2's `mutateBefore: [{commit:true}]` is the missing caller-side commit.

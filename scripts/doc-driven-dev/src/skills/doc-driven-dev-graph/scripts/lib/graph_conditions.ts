@@ -16,7 +16,9 @@ export function evaluateCondition(condition: GraphCondition, state: GraphState):
   }
   if (condition.state === "invalid") return (state.taskGraph?.issues.length ?? 0) > 0;
   return state.taskGraph !== null
+    && state.taskGraph.completed.length > 0
     && state.taskGraph.runnable.length === 0
     && state.taskGraph.active.length === 0
+    && state.taskGraph.blocked.length === 0
     && state.taskGraph.issues.length === 0;
 }

@@ -33,6 +33,11 @@ downstream dependency wait と無関係な blocked task は、eligible な task 
 delegate に渡され、delegate は依存する active task を順序付け、独立した作業だけを
 並列化します。`wont-do` は依存関係を満たしません。
 
+`idle` routing predicate は completed-only の状態です。少なくとも 1 件の task が
+`done` で、`runnable`、`active`、`blocked`、`issues` がすべて空の場合に成立します。
+これは empty selection (`plan-has-no-tasks`)、`blocked` や `wont-do` の残件、未解決の
+dependency とは区別され、それらは idle ではありません。
+
 ## Fail-closed behavior
 
 重複 ID、解決できない task reference、cycle、不正な relation、task のない plan は

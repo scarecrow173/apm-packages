@@ -302,7 +302,7 @@ export function evaluateRouteDecision(input: RouteInput): RouteDecision {
     delegate: null,
     requiredAudits: [],
     commitGate: false,
-  });
+  }, ["no-matching-edge"]);
   return {
     route,
     explanation: {

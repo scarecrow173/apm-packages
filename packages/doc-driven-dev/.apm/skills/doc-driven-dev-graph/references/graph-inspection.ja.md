@@ -97,7 +97,8 @@ issue は code、node ID、condition の順で sort され、同じ definition �
 3. 宣言された prerequisite repair edge を priority、次に edge ID の順で先に評価します。
 4. required gate が未達のままなら、安定した gate blocker と reason を付けて blocked になります。
 5. 残りの outgoing edge を priority、次に edge ID の順で評価し、最初に match したものを選びます。
-6. match する edge がなければ `no-matching-edge` で blocked になります。
+6. match する edge がなければ `no-matching-edge` が `blockers` と
+   `blockedReasons` に記録され blocked になります。
 
 command は選択 destination を再帰的に評価しません。1 回の判断に使った evidence を
 記録し、caller が Markdown evidence を保存し、required audit を実行してから次の turn
