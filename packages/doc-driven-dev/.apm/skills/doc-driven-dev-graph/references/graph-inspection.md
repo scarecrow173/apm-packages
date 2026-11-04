@@ -97,7 +97,8 @@ The evaluation order is deterministic:
 3. Declared prerequisite repair edges are evaluated first, in priority then edge-ID order.
 4. If required gates still fail, the result is blocked with the stable gate blockers and reasons.
 5. Remaining outgoing edges are evaluated in priority then edge-ID order; the first match is selected.
-6. If no edge matches, the result is blocked with `no-matching-edge`.
+6. If no edge matches, the result is blocked with `no-matching-edge` in both
+   `blockers` and `blockedReasons`.
 
 The command does not recursively evaluate the selected destination. It records
 the evidence for one decision and leaves the caller to persist Markdown evidence,

@@ -35,6 +35,11 @@ remain in `active` only. The complete projection, including dependency edges,
 is passed to the implementation delegate; it sequences dependent active tasks
 and parallelizes only independent work. `wont-do` does not satisfy a dependency.
 
+The `idle` routing predicate is the completed-only state: at least one task is
+`done` and `runnable`, `active`, `blocked`, and `issues` are all empty. It is
+distinct from an empty selection (`plan-has-no-tasks`), `blocked` or `wont-do`
+residue, and unresolved dependencies — none of which are idle.
+
 ## Fail-closed behavior
 
 Duplicate IDs, unresolved task references, cycles, malformed relations, and a

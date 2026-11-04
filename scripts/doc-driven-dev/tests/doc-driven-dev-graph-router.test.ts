@@ -190,6 +190,7 @@ test("returns a blocked result when no declared condition is satisfied", () => {
   assert.equal(route.condition, "blocked");
   assert.equal(route.status, "blocked");
   assert.equal(route.delegate, null);
+  assert.deepEqual(route.blockers, ["no-matching-edge"]);
   assert.deepEqual(route, evaluateRouteDecision(input).route);
 });
 
@@ -295,10 +296,14 @@ test("evaluates runnable, active, invalid, and idle task-graph conditions", () =
   assert.equal(evaluateCondition(active, stateWith({ taskGraph: taskGraph({ resumableActive: ["TASK-1"], issues: [{ code: "task-cycle" }] }) })), false);
   assert.equal(evaluateCondition(invalid, stateWith({ taskGraph: taskGraph({ issues: [{ code: "task-cycle" }] }) })), true);
   assert.equal(evaluateCondition(invalid, stateWith({ taskGraph: taskGraph() })), false);
-  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph() })), true);
-  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ active: ["TASK-1"] }) })), false);
-  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ runnable: ["TASK-1"] }) })), false);
-  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ issues: [{ code: "task-cycle" }] }) })), false);
+  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph() })), false);
+  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ completed: ["TASK-1"] }) })), true);
+  assert.equal(evaluateCondition(idle, stateWith({
+    taskGraph: taskGraph({ completed: ["TASK-1"], blocked: [{ id: "TASK-2", reasons: ["status:wont-do"] }] }),
+  })), false);
+  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ completed: ["TASK-1"], active: ["TASK-2"] }) })), false);
+  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ completed: ["TASK-1"], runnable: ["TASK-2"] }) })), false);
+  assert.equal(evaluateCondition(idle, stateWith({ taskGraph: taskGraph({ completed: ["TASK-1"], issues: [{ code: "task-cycle" }] }) })), false);
   assert.equal(evaluateCondition(active, stateWith({ taskGraph: null })), false);
   assert.equal(evaluateCondition(idle, stateWith({ taskGraph: null })), false);
 });

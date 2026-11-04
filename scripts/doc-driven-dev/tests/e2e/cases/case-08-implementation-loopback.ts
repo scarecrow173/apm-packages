@@ -29,8 +29,9 @@ import type { E2ECase } from "../harness/case_types";
  * `task-graph-to-implementation`. `build_task_graph`'s scripted mutate reopens
  * TASK-0001 (`todo`) — the honest post-repair state that makes
  * `tasks-runnable` true so the fourth edge reaches `implementation`
- * (with all tasks `done` that edge cannot match — verified live:
- * no-matching-edge). `implementation-flow` then marks it `done` again so the
+ * (with all tasks `done` that edge cannot match — verified live: the
+ * completed-only projection selects `task-graph-to-followup-triage` instead).
+ * `implementation-flow` then marks it `done` again so the
  * next implementation projection still passes the gate. `commit-waived`
  * (declared runtime signal) skips the commit baseline inside the loop;
  * `commitEvidence` still commits the mutated docs so the completed commitGate
