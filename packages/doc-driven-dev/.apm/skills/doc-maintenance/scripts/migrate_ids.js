@@ -33366,6 +33366,7 @@ var INDEX_TITLES = {
   "docs/impl/exp": "Experiment Logs"
 };
 var PROMOTE_INDEX_MUTATOR = "promote_index";
+var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
 var SHARED_CREATORS = {
   idea: "new_idea",
   discovery: "new_discovery",
@@ -33433,7 +33434,7 @@ function buildContracts() {
       residentTypes: ["impl"],
       indexFormat: "impl-4col",
       indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_impl_record"]
     },
     {
@@ -33443,7 +33444,7 @@ function buildContracts() {
       residentTypes: ["exp"],
       indexFormat: "exp-1col",
       indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_experiment_log"]
     }
   ];
@@ -35565,11 +35566,19 @@ function normalizeExperimentPath(cwd, filePath) {
   return normalizeFilePath(posixRelative(cwd, import_node_path8.default.resolve(filePath)));
 }
 function writeImplIndex(indexPath, content3, legacyTitle, force = false) {
+  let isSymlink = false;
+  try {
+    isSymlink = import_node_fs7.default.lstatSync(indexPath).isSymbolicLink();
+  } catch {
+    isSymlink = false;
+  }
+  if (isSymlink) return { written: false, reason: "hand-curated" };
   const existing = import_node_fs7.default.existsSync(indexPath) ? import_node_fs7.default.readFileSync(indexPath, "utf8") : null;
   if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
-  import_node_fs7.default.writeFileSync(indexPath, content3, "utf8");
+  const merged = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content3) : content3;
+  import_node_fs7.default.writeFileSync(indexPath, merged, "utf8");
   return { written: true, reason: null };
 }
 function updateIndexForMarkdownDir(cwd, relativeDir, options2) {

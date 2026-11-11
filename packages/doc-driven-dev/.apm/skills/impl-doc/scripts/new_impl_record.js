@@ -24150,6 +24150,7 @@ var INDEX_TITLES = {
   "docs/impl/exp": "Experiment Logs"
 };
 var PROMOTE_INDEX_MUTATOR = "promote_index";
+var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
 var SHARED_CREATORS = {
   idea: "new_idea",
   discovery: "new_discovery",
@@ -24217,7 +24218,7 @@ function buildContracts() {
       residentTypes: ["impl"],
       indexFormat: "impl-4col",
       indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_impl_record"]
     },
     {
@@ -24227,7 +24228,7 @@ function buildContracts() {
       residentTypes: ["exp"],
       indexFormat: "exp-1col",
       indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_experiment_log"]
     }
   ];
@@ -24313,6 +24314,49 @@ var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
   dir,
   ...scaffoldIndexMeta[dir]
 }));
+function mergeManagedIndex(existing, generated) {
+  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
+  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
+  const lines = existing.split("\n");
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerIndex < 0) return `${section}
+`;
+  const preamble = lines.slice(0, markerIndex);
+  const rest = lines.slice(markerIndex + 1);
+  let directoryLine = -1;
+  let regionEnd = -1;
+  for (let i = 0; i < rest.length; i += 1) {
+    const trimmed = rest[i].trim();
+    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
+      directoryLine = i;
+      continue;
+    }
+    if (trimmed.startsWith("|")) {
+      regionEnd = i;
+      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+      break;
+    }
+  }
+  if (regionEnd < 0) regionEnd = directoryLine;
+  const settledMarkerIndex = rest.findIndex(
+    (line, offset) => offset > regionEnd && line.includes(GENERATED_SETTLED_MARKER)
+  );
+  if (settledMarkerIndex >= 0) {
+    regionEnd = settledMarkerIndex;
+    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim() === "") regionEnd += 1;
+    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
+  }
+  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
+    const trimmed = line.trim();
+    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|") && !line.includes(GENERATED_INDEX_MARKER) && !line.includes(GENERATED_SETTLED_MARKER);
+  });
+  const trailing = rest.slice(regionEnd + 1);
+  const head = preamble.join("\n").replace(/\n+$/, "");
+  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
+  const parts = [head, section, tail].filter((part) => part !== "");
+  return `${parts.join("\n\n")}
+`;
+}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -24548,11 +24592,19 @@ ${renderTemplate("implementation-record.md", { title })}
 `;
 }
 function writeImplIndex(indexPath, content, legacyTitle, force = false) {
+  let isSymlink = false;
+  try {
+    isSymlink = import_node_fs2.default.lstatSync(indexPath).isSymbolicLink();
+  } catch {
+    isSymlink = false;
+  }
+  if (isSymlink) return { written: false, reason: "hand-curated" };
   const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
   if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
-  import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
+  const merged = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content) : content;
+  import_node_fs2.default.writeFileSync(indexPath, merged, "utf8");
   return { written: true, reason: null };
 }
 function updateIndexForMarkdownDir(cwd, relativeDir, options2) {

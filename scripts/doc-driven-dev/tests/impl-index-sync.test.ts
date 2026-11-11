@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -714,4 +715,219 @@ test("parseImplIndexRows returns typed rows for managed content and errors other
   if (expParsed.ok) {
     assert.deepEqual(expParsed.rows[0], { file: "a.jsonl", cells: ["[a.jsonl](./a.jsonl)"], tier: "active" });
   }
+});
+
+// --- CLI + creator alignment (built scripts; requires `pnpm run build`) ------
+
+const implRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/impl-doc");
+
+function runImplScript(name: string, args: string[], cwd: string) {
+  const result = spawnSync(process.execPath, [path.join(implRoot, "scripts", name), ...args], {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+}
+
+const runSync = (args: string[], cwd: string) => runImplScript("sync_impl_index.js", args, cwd);
+
+test("CLI: preview prints the plan and writes nothing", () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
+  for (const spec of [a, b]) writeIr(repo, spec);
+  writeIrIndex(repo, { active: [a, b] });
+  rewriteIr(repo, { ...b, status: "completed" });
+
+  const before = treeHashes(repo);
+  const result = runSync(["--cwd", repo, "--kind", "ir"], repo);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /sync/i);
+  assert.match(result.stdout, /preview|--apply/i);
+  assert.match(result.stdout, /b\.md/);
+  assert.deepEqual(treeHashes(repo), before, "preview must not write");
+});
+
+test("CLI: --apply --kind ir syncs drift and --json emits the plan shape", () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
+  for (const spec of [a, b]) writeIr(repo, spec);
+  writeIrIndex(repo, { active: [a, b] });
+  rewriteIr(repo, { ...b, status: "completed" });
+
+  const result = runSync(["--cwd", repo, "--kind", "ir", "--apply", "--json"], repo);
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.kind, "ir");
+  assert.equal(report.directory, "docs/impl/ir");
+  assert.equal(report.verdict, "sync");
+  assert.equal(report.applied, true);
+  assert.equal(report.written, true);
+  assert.match(report.planHash, /^[0-9a-f]{64}$/);
+  assert.ok(Array.isArray(report.changes));
+  assert.ok(
+    report.changes.some((change: { file: string; kind: string }) => change.file === "b.md" && change.kind === "move-tier"),
+    "expected a move-tier change for b.md",
+  );
+  assert.ok(report.pins && typeof report.pins === "object");
+  assert.ok(report.pins.sources["a.md"]);
+  assert.deepEqual(report.plannedFiles, ["docs/impl/ir/README.md"]);
+
+  const content = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
+  assert.ok(content.indexOf("[b.md](./b.md)") > content.indexOf("## Settled"), "b.md settled");
+
+  const again = runSync(["--cwd", repo, "--kind", "ir", "--apply", "--json"], repo);
+  const second = JSON.parse(again.stdout);
+  assert.equal(second.verdict, "in-sync");
+  assert.equal(second.written, false, "re-apply is a no-op");
+});
+
+test("CLI: --kind exp syncs membership and order drift", () => {
+  const repo = tempRepo();
+  for (const file of ["a.jsonl", "b.jsonl", "c.jsonl"]) writeExp(repo, file);
+  writeExpIndex(repo, { files: ["c.jsonl", "a.jsonl"] }); // missing b, wrong order
+
+  const result = runSync(["--cwd", repo, "--kind", "exp", "--apply", "--json"], repo);
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.kind, "exp");
+  assert.equal(report.verdict, "sync");
+  assert.equal(report.written, true);
+
+  const content = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
+  const rows = content.split("\n").filter((line) => line.startsWith("| ["));
+  assert.deepEqual(rows, [expRow("a.jsonl"), expRow("b.jsonl"), expRow("c.jsonl")]);
+});
+
+test("CLI: --expect rejects apply when the plan drifted; files stay byte-identical", () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
+  for (const spec of [a, b]) writeIr(repo, spec);
+  writeIrIndex(repo, { active: [a, b] });
+  rewriteIr(repo, { ...b, status: "completed" });
+
+  const preview = runSync(["--cwd", repo, "--kind", "ir", "--json"], repo);
+  assert.equal(preview.status, 0, preview.stderr);
+  const { planHash } = JSON.parse(preview.stdout);
+  assert.match(planHash, /^[0-9a-f]{64}$/);
+
+  // Drift between preview and apply: flip b back so the reconcile disappears.
+  rewriteIr(repo, { ...b, status: "draft" });
+  const before = treeHashes(repo);
+  const apply = runSync(["--cwd", repo, "--kind", "ir", "--apply", "--expect", planHash, "--json"], repo);
+  assert.equal(apply.status, 1, "a stale plan must not apply");
+  const report = JSON.parse(apply.stdout);
+  assert.equal(report.written, false);
+  assert.match(report.reason ?? "", /drift/i);
+  assert.deepEqual(treeHashes(repo), before, "rejected apply must not write");
+});
+
+test("CLI: invalid invocations exit 1", () => {
+  const repo = tempRepo();
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+
+  assert.equal(runSync(["--cwd", repo], repo).status, 1, "missing --kind");
+  assert.equal(runSync(["--cwd", repo, "--kind", "bogus"], repo).status, 1, "bad --kind");
+  assert.equal(runSync(["--cwd", repo, "--kind", "ir", "--bogus"], repo).status, 1, "unknown flag");
+  assert.equal(runSync(["--cwd", repo, "--kind", "ir", "--expect"], repo).status, 1, "--expect needs a value");
+  assert.equal(runSync(["--cwd", repo, "--kind", "ir", "--help"], repo).status, 0, "--help exits 0");
+});
+
+test("CLI: rejected verdict exits 1 in preview and apply; README stays byte-identical", () => {
+  const repo = tempRepo();
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+  writeRawIndex(repo, "# Implementation Records\n\nNo marker here.\n");
+  const indexPath = path.join(repo, "docs/impl/ir/README.md");
+  const before = shaFile(indexPath);
+
+  const preview = runSync(["--cwd", repo, "--kind", "ir"], repo);
+  assert.equal(preview.status, 1, "preview of a rejected plan exits 1");
+  assert.match(preview.stdout + preview.stderr, /reject|hand-curated|marker/i);
+
+  const apply = runSync(["--cwd", repo, "--kind", "ir", "--apply"], repo);
+  assert.equal(apply.status, 1);
+  assert.equal(shaFile(indexPath), before, "rejected README must be byte-identical");
+});
+
+test("CLI: preview and owner audits are read-only", () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
+  for (const spec of [a, b]) writeIr(repo, spec);
+  writeIrIndex(repo, { active: [a, b] });
+  rewriteIr(repo, { ...b, status: "completed" });
+  writeExp(repo, "x.jsonl");
+  writeExpIndex(repo, { files: [] }); // missing row → exp drift
+
+  const before = treeHashes(repo);
+  assert.equal(runSync(["--cwd", repo, "--kind", "ir"], repo).status, 0);
+  assert.equal(runSync(["--cwd", repo, "--kind", "exp"], repo).status, 0);
+  assert.equal(runImplScript("audit_impl_record.js", ["--cwd", repo, "--json"], repo).status, 0);
+  assert.equal(runImplScript("audit_experiment_log.js", ["--cwd", repo, "--json"], repo).status, 0);
+  assert.deepEqual(treeHashes(repo), before, "preview + audits must not write");
+});
+
+test("CLI: new_impl_record preserves hand-written preamble/tail in a managed README", () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  writeIr(repo, a);
+  writeIrIndex(repo, {
+    active: [a],
+    preamble: "# Team board\n\nCurated intro.\n\n",
+    tail: "\n## Notes\n\nKeep this note.\n",
+  });
+
+  const result = runImplScript("new_impl_record.js", ["--title", "Gamma Work", "--cwd", repo], repo);
+  assert.equal(result.status, 0, result.stderr);
+
+  const content = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
+  assert.ok(content.includes("# Team board\n\nCurated intro."), "preamble preserved");
+  assert.ok(content.includes("## Notes\n\nKeep this note."), "tail preserved");
+  assert.ok(content.includes("gamma-work.md"), "new row added");
+  assert.equal(planImplIndexSync(repo, "ir").verdict, "in-sync", "creator output stays sync-clean");
+});
+
+test("CLI: new_experiment_log preserves hand-written preamble/tail in a managed README", () => {
+  const repo = tempRepo();
+  writeExp(repo, "a.jsonl");
+  writeExpIndex(repo, {
+    files: ["a.jsonl"],
+    preamble: "# Experiment board\n\nIntro note.\n\n",
+    tail: "\nTail note.\n",
+  });
+
+  const result = runImplScript("new_experiment_log.js", ["--title", "Beta Probe", "--cwd", repo], repo);
+  assert.equal(result.status, 0, result.stderr);
+
+  const content = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
+  assert.ok(content.includes("# Experiment board\n\nIntro note."), "preamble preserved");
+  assert.ok(content.includes("Tail note."), "tail preserved");
+  assert.ok(content.includes("beta-probe.jsonl"), "new row added");
+  assert.equal(planImplIndexSync(repo, "exp").verdict, "in-sync", "creator output stays sync-clean");
+});
+
+test("CLI: symlinked README — creators skip with a warning, sync rejects", (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideFile = path.join(outside, "index.md");
+  fs.writeFileSync(outsideFile, "# Implementation Records\n\n", "utf8");
+  fs.mkdirSync(path.join(repo, "docs/impl/ir"), { recursive: true });
+  try {
+    fs.symlinkSync(outsideFile, path.join(repo, "docs/impl/ir", "README.md"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+
+  const created = runImplScript("new_impl_record.js", ["--title", "Gamma Work", "--cwd", repo], repo);
+  assert.equal(created.status, 0, created.stderr);
+  assert.match(created.stdout + created.stderr, /Skipped index update|hand-curated/i);
+  assert.equal(fs.readFileSync(outsideFile, "utf8"), "# Implementation Records\n\n", "symlink target untouched");
+
+  const synced = runSync(["--cwd", repo, "--kind", "ir", "--apply"], repo);
+  assert.equal(synced.status, 1, "sync must reject a symlinked index");
+  assert.equal(fs.readFileSync(outsideFile, "utf8"), "# Implementation Records\n\n", "symlink target untouched");
 });

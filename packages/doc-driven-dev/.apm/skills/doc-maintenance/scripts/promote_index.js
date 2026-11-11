@@ -4321,6 +4321,7 @@ var INDEX_TITLES = {
   "docs/impl/exp": "Experiment Logs"
 };
 var PROMOTE_INDEX_MUTATOR = "promote_index";
+var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
 var SHARED_CREATORS = {
   idea: "new_idea",
   discovery: "new_discovery",
@@ -4388,7 +4389,7 @@ function buildContracts() {
       residentTypes: ["impl"],
       indexFormat: "impl-4col",
       indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_impl_record"]
     },
     {
@@ -4398,7 +4399,7 @@ function buildContracts() {
       residentTypes: ["exp"],
       indexFormat: "exp-1col",
       indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_experiment_log"]
     }
   ];
@@ -24495,11 +24496,19 @@ function listFiles(dir, ext) {
   return import_node_fs4.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs4.default.lstatSync(import_node_path4.default.join(dir, file2)).isSymbolicLink()).sort();
 }
 function writeImplIndex(indexPath, content, legacyTitle, force = false) {
+  let isSymlink = false;
+  try {
+    isSymlink = import_node_fs4.default.lstatSync(indexPath).isSymbolicLink();
+  } catch {
+    isSymlink = false;
+  }
+  if (isSymlink) return { written: false, reason: "hand-curated" };
   const existing = import_node_fs4.default.existsSync(indexPath) ? import_node_fs4.default.readFileSync(indexPath, "utf8") : null;
   if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
-  import_node_fs4.default.writeFileSync(indexPath, content, "utf8");
+  const merged = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content) : content;
+  import_node_fs4.default.writeFileSync(indexPath, merged, "utf8");
   return { written: true, reason: null };
 }
 function updateIndexForMarkdownDir(cwd, relativeDir, options2) {
