@@ -5,6 +5,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import { ValidationReportSchema } from "../../../src/skills/skill-discovery-protocol/scripts/lib/schemas/validation-report";
+
 const skillRoot = path.resolve(__dirname, "../../../../../packages/doc-driven-dev/.apm/skills");
 const sdpScripts = path.join(skillRoot, "skill-discovery-protocol", "scripts");
 
@@ -66,7 +68,7 @@ function runGenerate(args: string[], cwd: string) {
   };
 }
 
-function setupTestProject(dir: string) {
+function setupTestProject(dir: string, extraSlotsYaml = "") {
   const skillsDir = path.join(dir, ".apm", "skills");
 
   // Skill A
@@ -149,7 +151,7 @@ flow_stack:
           reason: "Default reviewer"
         - skill: "skill-a"
           reason: "Fallback author"
-
+${extraSlotsYaml}
 classification:
   unmatched:
     action: "assign"
@@ -1337,4 +1339,74 @@ test("unparseable validated_at fails the staleness gate and is not refreshed ove
   // not stamp validated over it.
   const onDisk = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
   assert.equal(onDisk.validated_at, "not-a-date");
+});
+
+// ─── Validate: warn-severity checks round-trip through the report schema (#191) ───
+// Producer → schema round-trip: an adapter slot with no `default` (and no
+// resolved invocation) makes checkUnusedSlots emit a check-level "warn".
+// The emitted report must parse under ValidationReportSchema — warn is a
+// check severity, never a gate result.
+
+// An unused slot: valid adapter slot_type with no `default:` key, so the
+// generated profile mirrors it and nothing resolves into it.
+const UNUSED_SLOT_YAML = `    - slot_id: "review_checklist"
+      slot_type: "exclusive"
+      activation: "on_demand"
+`;
+
+test("warn-emitting profile produces a schema-valid report (unused_slots warn)", () => {
+  const dir = tempDir();
+  setupTestProject(dir, UNUSED_SLOT_YAML);
+  generateArtifacts(dir);
+  const result = runValidate(
+    ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.equal(result.status, 0, `validate failed: ${result.stderr}`);
+
+  const report = reportJson(dir);
+  const warnCheck = report.blocking_validations.checks.find(
+    (check: { type: string }) => check.type === "unused_slots",
+  );
+  assert.ok(warnCheck, "expected an unused_slots check");
+  assert.equal(warnCheck.result, "warn");
+  assert.ok(warnCheck.details.length >= 1, "warning details must be preserved");
+  assert.match(warnCheck.details.join("\n"), /review_checklist/);
+  assert.equal(report.blocking_validations.result, "pass", "warn must not promote the aggregate");
+  assert.equal(report.overall_result, "pass");
+
+  const parsed = ValidationReportSchema.safeParse(report);
+  assert.ok(parsed.success, JSON.stringify(parsed.error?.issues ?? []));
+});
+
+test("a fail check still fails the report while a sibling warn stays warn", () => {
+  const dir = tempDir();
+  setupTestProject(dir, UNUSED_SLOT_YAML);
+  // skill-a now requires a capability nobody provides; adapter sets
+  // unresolved.required = "fail" → unresolved_required check = fail.
+  writeInferenceFile(
+    dir,
+    inferenceDocument([
+      { capability: "missing_capability", required: true, override_allowed: true },
+    ]),
+  );
+  generateArtifacts(dir);
+  const result = runValidate(
+    ["--profile", PROFILE_REL, "--adapter", "test-adapter.yaml"],
+    dir,
+  );
+  assert.notEqual(result.status, 0, "overall fail must exit non-zero");
+
+  const report = reportJson(dir);
+  const failCheck = report.blocking_validations.checks.find(
+    (check: { type: string }) => check.type === "unresolved_required",
+  );
+  const warnCheck = report.blocking_validations.checks.find(
+    (check: { type: string }) => check.type === "unused_slots",
+  );
+  assert.equal(failCheck.result, "fail");
+  assert.equal(warnCheck.result, "warn");
+  assert.equal(report.blocking_validations.result, "fail");
+  assert.equal(report.overall_result, "fail");
+  assert.ok(ValidationReportSchema.safeParse(report).success);
 });
