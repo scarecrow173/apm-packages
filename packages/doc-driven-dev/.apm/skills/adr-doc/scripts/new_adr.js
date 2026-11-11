@@ -13408,6 +13408,207 @@ function findDocumentDir(cwd, explicitDir, candidateDirs2, defaultDir) {
   return existing.length === 0 ? defaultDir : existing[0];
 }
 
+// src/skills/lib/doc_types.ts
+var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
+var configs = {
+  idea: {
+    defaultStatus: "draft",
+    dir: "docs/ideas",
+    dirs: ["docs/ideas"],
+    idPrefix: "IDEA",
+    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
+    type: "idea"
+  },
+  brainstorm: {
+    defaultStatus: "capturing",
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    idPrefix: "BRAINSTORM",
+    statusValues: ["capturing", "confirmed", "routed", "superseded"],
+    type: "brainstorm"
+  },
+  discovery: {
+    defaultStatus: "draft",
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    idPrefix: "DISC",
+    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
+    type: "discovery"
+  },
+  spec: {
+    defaultStatus: "draft",
+    dir: "docs/specs",
+    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
+    idPrefix: "SPEC",
+    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
+    type: "spec"
+  },
+  plan: {
+    defaultStatus: "draft",
+    dir: "docs/plans",
+    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
+    idPrefix: "PLAN",
+    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
+    type: "plan"
+  },
+  task: {
+    defaultStatus: "todo",
+    dir: "docs/tasks",
+    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
+    idPrefix: "TASK",
+    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
+    type: "task"
+  },
+  "test-spec": {
+    defaultStatus: "draft",
+    dir: "docs/test-specs",
+    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    idPrefix: "TSPEC",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    type: "test-spec"
+  },
+  design: {
+    defaultStatus: "draft",
+    dir: "docs/designs",
+    dirs: ["docs/designs", "docs/design", "designs", "design"],
+    idPrefix: "DESIGN",
+    statusValues: ["draft", "approved", "superseded", "rejected"],
+    type: "design"
+  },
+  adr: {
+    defaultStatus: "proposed",
+    dir: "docs/adr",
+    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+    idPrefix: "ADR",
+    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+    type: "adr"
+  }
+};
+function configFor(type) {
+  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
+  return configs[type];
+}
+
+// src/skills/lib/doc_ownership.ts
+var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
+var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
+var ADR_MUTATORS = ["update_index", "relate_adr"];
+var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
+var SHARED_CREATORS = {
+  idea: "new_idea",
+  discovery: "new_discovery",
+  spec: "new_spec",
+  plan: "new_plan",
+  task: "new_task",
+  design: "new_design",
+  adr: "new_adr",
+  "test-spec": "new_test_spec"
+};
+function buildContracts() {
+  const rows = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const adr = type === "adr";
+    for (const dir of config2.dirs) {
+      const normalized = normalizeDir(dir);
+      let row = rows.get(normalized);
+      if (!row) {
+        row = {
+          canonical: false,
+          owner: adr ? "adr-doc" : "doc-suite",
+          residents: [],
+          mutators: /* @__PURE__ */ new Set(),
+          auditors: /* @__PURE__ */ new Set()
+        };
+        rows.set(normalized, row);
+      }
+      row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
+      if (!row.residents.includes(type)) row.residents.push(type);
+      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      if (adr) {
+        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
+        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
+      }
+    }
+  }
+  const shared = [...rows.entries()].map(([dir, row]) => ({
+    dir,
+    canonical: row.canonical,
+    owner: row.owner,
+    residentTypes: row.residents,
+    indexFormat: "shared-4col",
+    mutators: [...row.mutators].sort(),
+    auditors: [...row.auditors].sort()
+  }));
+  const implRows = [
+    {
+      dir: "docs/impl",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: [],
+      indexFormat: "none",
+      mutators: [],
+      auditors: []
+    },
+    {
+      dir: "docs/impl/ir",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["impl"],
+      indexFormat: "impl-4col",
+      mutators: ["new_impl_record", "migrate_ids"],
+      auditors: ["audit_impl_record"]
+    },
+    {
+      dir: "docs/impl/exp",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["exp"],
+      indexFormat: "exp-1col",
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids"],
+      auditors: ["audit_experiment_log"]
+    }
+  ];
+  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
+}
+var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
+function ownershipForDir(directory) {
+  const normalized = normalizeDir(directory);
+  let best = null;
+  for (const contract of DIRECTORY_CONTRACTS) {
+    if (normalized === contract.dir || normalized.startsWith(`${contract.dir}/`)) {
+      if (!best || contract.dir.length > best.dir.length) best = contract;
+    }
+  }
+  return best;
+}
+function describeOwnership(directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership) return `custom directory "${normalized}" (no declared owner)`;
+  const residents = ownership.residentTypes.length > 0 ? ownership.residentTypes.join(", ") : "none";
+  return `"${ownership.dir}" (owned by ${ownership.owner}; resident types: ${residents})`;
+}
+function checkTypeScope(type, directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership || ownership.residentTypes.includes(type)) {
+    return { ok: true, directory: normalized, ownership, reason: null };
+  }
+  return {
+    ok: false,
+    directory: normalized,
+    ownership,
+    reason: `Scope mismatch: type "${type}" is not resident in ${describeOwnership(normalized)}`
+  };
+}
+function assertTypeScope(type, directory) {
+  const check2 = checkTypeScope(type, directory);
+  if (!check2.ok) throw new Error(check2.reason ?? "Scope mismatch");
+}
+
 // src/skills/lib/doc_suite_utils.ts
 var import_gray_matter = __toESM(require_gray_matter());
 
@@ -33241,87 +33442,6 @@ function isSettledStatus(type, status) {
   return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
 }
 
-// src/skills/lib/doc_types.ts
-var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
-var configs = {
-  idea: {
-    defaultStatus: "draft",
-    dir: "docs/ideas",
-    dirs: ["docs/ideas"],
-    idPrefix: "IDEA",
-    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
-    type: "idea"
-  },
-  brainstorm: {
-    defaultStatus: "capturing",
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    idPrefix: "BRAINSTORM",
-    statusValues: ["capturing", "confirmed", "routed", "superseded"],
-    type: "brainstorm"
-  },
-  discovery: {
-    defaultStatus: "draft",
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    idPrefix: "DISC",
-    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
-    type: "discovery"
-  },
-  spec: {
-    defaultStatus: "draft",
-    dir: "docs/specs",
-    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
-    idPrefix: "SPEC",
-    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
-    type: "spec"
-  },
-  plan: {
-    defaultStatus: "draft",
-    dir: "docs/plans",
-    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
-    idPrefix: "PLAN",
-    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
-    type: "plan"
-  },
-  task: {
-    defaultStatus: "todo",
-    dir: "docs/tasks",
-    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
-    idPrefix: "TASK",
-    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
-    type: "task"
-  },
-  "test-spec": {
-    defaultStatus: "draft",
-    dir: "docs/test-specs",
-    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
-    idPrefix: "TSPEC",
-    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
-    type: "test-spec"
-  },
-  design: {
-    defaultStatus: "draft",
-    dir: "docs/designs",
-    dirs: ["docs/designs", "docs/design", "designs", "design"],
-    idPrefix: "DESIGN",
-    statusValues: ["draft", "approved", "superseded", "rejected"],
-    type: "design"
-  },
-  adr: {
-    defaultStatus: "proposed",
-    dir: "docs/adr",
-    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
-    idPrefix: "ADR",
-    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
-    type: "adr"
-  }
-};
-function configFor(type) {
-  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
-  return configs[type];
-}
-
 // src/skills/lib/doc_suite_utils.ts
 var relationFields = [
   "source",
@@ -33565,7 +33685,9 @@ ${[header, ...settledEntries.map(row)].join("\n")}` : body;
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
 var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
 function findAdrDir(cwd, explicitDir) {
-  return findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
+  const resolved = findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
+  assertTypeScope("adr", resolved);
+  return resolved;
 }
 function adrFiles(dir) {
   return listMarkdownFiles(dir);

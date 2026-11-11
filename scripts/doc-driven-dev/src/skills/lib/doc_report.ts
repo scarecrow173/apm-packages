@@ -5,8 +5,8 @@ import { lintExternalLinks } from "./doc_structure_lint";
 import { scopeTypesForQuery } from "./doc_ownership";
 import { canonicalDocRoots, compareFindings, lifecycleBucketOf, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
-import { configFor, docEntries } from "./doc_suite_utils";
-import { findDocumentDir, normalizeDir, resolveContainedDir } from "./document_utils";
+import { docDir, docEntries } from "./doc_suite_utils";
+import { normalizeDir, resolveContainedDir } from "./document_utils";
 
 type DocStatusQuery = {
   type?: string;
@@ -60,11 +60,6 @@ const CATEGORY_ORDER = [
   "orphan",
   "structure",
 ];
-
-function docDir(cwd: string, type: string, explicitDir?: string): string {
-  const config = configFor(type);
-  return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
-}
 
 function scanRoots(relativeDirs: string[]): string[] {
   return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { generateArtifactId } from "../../../lib/artifact_id";
 import { changeFields, GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
 import { resolveContainedDir, slugify } from "../../../lib/document_utils";
+import { assertTypeScope } from "../../../lib/doc_ownership";
 import { hasSection } from "../../../lib/markdown_sections";
 
 const implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"] as const;
@@ -107,10 +108,11 @@ function defaultImplDir(kind: "ir" | "exp"): string {
 function implDir(cwd: string, kind: "ir" | "exp", explicitDir?: string): string {
   // An explicit --dir is a directory selector like --task-dir: contained by
   // the same shared rule so an escaping value is rejected, not walked or
-  // written outside the checkout (Issue #156).
-  if (explicitDir) return resolveContainedDir(cwd, explicitDir);
-  const defaultDir = defaultImplDir(kind);
-  return fs.existsSync(path.join(cwd, defaultDir)) ? defaultDir : defaultDir;
+  // written outside the checkout (Issue #156). Ownership then decides
+  // whether impl/exp artifacts may live there at all (Issue #183).
+  const resolved = explicitDir ? resolveContainedDir(cwd, explicitDir) : defaultImplDir(kind);
+  assertTypeScope(kind === "ir" ? "impl" : "exp", resolved);
+  return resolved;
 }
 
 function listFiles(dir: string, ext: ".md" | ".jsonl"): string[] {

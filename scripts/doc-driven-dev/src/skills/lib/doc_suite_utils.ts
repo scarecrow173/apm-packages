@@ -16,6 +16,7 @@ import {
   slugify,
   type CanonicalDocDir,
 } from "./document_utils";
+import { assertTypeScope } from "./doc_ownership";
 import { configFor, configs, docTypes } from "./doc_types";
 import type { DocConfig, DocType } from "./doc_types";
 
@@ -311,9 +312,15 @@ function sanitizeFileName(name: string): string {
   return `${stem}.md`;
 }
 
+// Single resolution boundary for shared-suite types: containment first
+// (findDocumentDir -> resolveContainedDir), then ownership. Any type that
+// is not resident in the resolved dir fails closed here, before callers
+// can mkdir, write, or index (Issue #183).
 function docDir(cwd: string, type: string, explicitDir?: string): string {
   const config = configFor(type);
-  return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
+  const resolved = findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
+  assertTypeScope(type, resolved);
+  return resolved;
 }
 
 function docFiles(dir: string): string[] {
@@ -1235,6 +1242,7 @@ export {
   buildGenericIndex,
   configFor,
   createDocument,
+  docDir,
   docEntries,
   docFiles,
   docTypes,
