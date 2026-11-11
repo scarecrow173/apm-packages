@@ -2,10 +2,11 @@
 
 import { lintScope, scopeFor } from "./doc_lint";
 import { lintExternalLinks } from "./doc_structure_lint";
+import { scopeTypesForQuery } from "./doc_ownership";
 import { canonicalDocRoots, compareFindings, lifecycleBucketOf, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
-import { configFor, docEntries, docTypes } from "./doc_suite_utils";
-import { findDocumentDir, normalizeDir } from "./document_utils";
+import { configFor, docEntries } from "./doc_suite_utils";
+import { findDocumentDir, normalizeDir, resolveContainedDir } from "./document_utils";
 
 type DocStatusQuery = {
   type?: string;
@@ -69,20 +70,19 @@ function scanRoots(relativeDirs: string[]): string[] {
   return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
 }
 
-function resolveTypes(type?: string): string[] {
-  if (!type || type === "all") return [...docTypes];
-  configFor(type);
-  return [type];
+function resolveQueryScope(cwd: string, query: { type?: string; dir?: string }): { types: string[]; explicitDir: string | null } {
+  const explicitDir = query.dir ? resolveContainedDir(cwd, query.dir) : null;
+  return { types: scopeTypesForQuery(explicitDir, query.type), explicitDir };
 }
 
 async function collectFindings(cwd: string, query: DocStatusQuery): Promise<CollectedFindings> {
-  const types = resolveTypes(query.type);
-  const relativeDirs = types.map((type) => docDir(cwd, type, query.dir));
+  const { types, explicitDir } = resolveQueryScope(cwd, query);
+  const relativeDirs = types.map((type) => explicitDir ?? docDir(cwd, type));
   const model = await scanRepository({ cwd, roots: scanRoots(relativeDirs) });
   const findings: Finding[] = [];
   let documents = 0;
   for (const type of types) {
-    const directory = docDir(cwd, type, query.dir);
+    const directory = explicitDir ?? docDir(cwd, type);
     const scope = scopeFor(model, type, directory);
     documents += scope.documents.length;
     findings.push(...lintScope(model, type, directory));
@@ -164,11 +164,11 @@ function summarizeHealth(collected: CollectedFindings, findings: Finding[]): Hea
 }
 
 async function listDocuments(cwd: string, query: { type?: string; dir?: string; status?: string }) {
-  const types = resolveTypes(query.type);
+  const { types, explicitDir } = resolveQueryScope(cwd, query);
   const groups: { type: string; directory: string; entries: Awaited<ReturnType<typeof docEntries>> }[] = [];
   for (const type of types) {
-    const directory = docDir(cwd, type, query.dir);
-    const entries = (await docEntries(cwd, type, query.dir))
+    const directory = explicitDir ?? docDir(cwd, type);
+    const entries = (await docEntries(cwd, type, directory))
       .filter((entry) => !query.status || entry.status === query.status);
     groups.push({ type, directory, entries });
   }
