@@ -92,11 +92,17 @@ canonical スクリプトはこの skill 配下にあり、
 node scripts/scaffold_docs.js --cwd <repo>
 node scripts/migrate_docs.js --cwd <repo> --from <dir> [--split-h1] [--apply] [--json]
 node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-dirty] [--extra-root <dir>]... [--json]
+node scripts/promote_index.js --cwd <repo> [--dir <path>] [--apply] [--json]
 ```
 
-3 つとも同じ preview-first contract に従う:
+`scaffold_docs` のみ即時作成のエントリポイントであり、他はすべて
+preview-first に従う:
 
-- `scaffold_docs` は既存ファイルを上書きせず canonical docs tree を作る。
+- `scaffold_docs` は既存ファイルを上書きせず canonical docs tree を作り、
+  初回実行時に各ディレクトリの contract index(`docs/adr`・
+  `docs/impl/ir`・`docs/impl/exp` ではオーナー形式)を書き込む。この
+  書き込みは repair ではなく bootstrap の副作用であるため preview
+  フェーズはない。
 - `migrate_docs` は canonical docs への import を plan し、`--apply` で
   書き込む。
 - `migrate_ids` は legacy `TYPE-NNNN` id と numbered filename を書き換える
@@ -109,6 +115,12 @@ node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-d
   `--extra-root` で追加した任意ディレクトリ。`EXP-NNNN` experiment 参照は
   canonical な `.jsonl` パスへ書き換え、再配置できない legacy token は
   すべて `unresolved-legacy-reference` として run を停止させる。
+- `promote_index` は `docs/adr`、`docs/impl/ir`、`docs/impl/exp` にある
+  未編集の旧 scaffold README の取り込みを preview / apply する。適格性は
+  バイト単位で判定し、旧 scaffold が生成した index と完全一致する
+  ファイルのみが対象で、書き換えはオーナーの index writer に委譲される。
+  hand-curated または変更済みのファイルは `rejected` として報告され、
+  一切変更されない。
 
 ## Read-Write Boundary
 
@@ -124,6 +136,7 @@ node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-d
 - `scripts/doc_maintenance.js`: safe repair と managed index 再生成の
   plan / apply エントリポイント。
 - `scripts/migrate_docs.js`、`scripts/migrate_ids.js`、
-  `scripts/scaffold_docs.js`: この skill が所有する migration /
-  bootstrap エントリポイント（`doc-driven-dev-graph/scripts/` 配下の
-  互換スクリプト経由でも実行可能）。
+  `scripts/scaffold_docs.js`、`scripts/promote_index.js`: この skill が
+  所有する migration / bootstrap エントリポイント（先の 3 つは
+  `doc-driven-dev-graph/scripts/` 配下の互換スクリプト経由でも実行
+  可能）。

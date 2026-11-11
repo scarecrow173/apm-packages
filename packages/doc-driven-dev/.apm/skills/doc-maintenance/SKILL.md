@@ -92,12 +92,16 @@ same implementation.
 node scripts/scaffold_docs.js --cwd <repo>
 node scripts/migrate_docs.js --cwd <repo> --from <dir> [--split-h1] [--apply] [--json]
 node scripts/migrate_ids.js --cwd <repo> [--apply] [--keep-filenames] [--allow-dirty] [--extra-root <dir>]... [--json]
+node scripts/promote_index.js --cwd <repo> [--dir <path>] [--apply] [--json]
 ```
 
-All three follow the same preview-first contract:
+`scaffold_docs` is the one immediate-create entry point; the rest are
+preview-first:
 
 - `scaffold_docs` creates the canonical docs tree without overwriting existing
-  files.
+  files, writing each directory's contract index — the owner format for
+  `docs/adr`, `docs/impl/ir`, `docs/impl/exp` — on first run. Its write side
+  effects are bootstrap, not repair, so it has no preview phase.
 - `migrate_docs` plans imports into canonical docs; `--apply` writes.
 - `migrate_ids` discovers, maps, and preflights before rewriting legacy
   `TYPE-NNNN` ids and numbered filenames; any blocker stops the run before
@@ -109,6 +113,12 @@ All three follow the same preview-first contract:
   plus any `--extra-root` directory. `EXP-NNNN` experiment references rewrite
   to the canonical `.jsonl` path, and every legacy token that cannot be
   remapped blocks the run as `unresolved-legacy-reference`.
+- `promote_index` previews and applies the adoption of unedited legacy
+  scaffold READMEs in `docs/adr`, `docs/impl/ir`, and `docs/impl/exp`.
+  Eligibility is byte-level: the file must match the exact index the old
+  scaffold wrote, and the rewrite is delegated to the owning index writer.
+  Hand-curated or modified files are reported as `rejected` and never
+  touched.
 
 ## Read-Write Boundary
 
@@ -124,6 +134,7 @@ All three follow the same preview-first contract:
 - `scripts/doc_maintenance.js`: plan/apply entry point for safe repairs and
   managed index regeneration.
 - `scripts/migrate_docs.js`, `scripts/migrate_ids.js`,
-  `scripts/scaffold_docs.js`: migration and bootstrap entry points owned by
-  this skill (also reachable through the compatibility scripts under
+  `scripts/scaffold_docs.js`, `scripts/promote_index.js`: migration and
+  bootstrap entry points owned by this skill (the first three are also
+  reachable through the compatibility scripts under
   `doc-driven-dev-graph/scripts/`).
