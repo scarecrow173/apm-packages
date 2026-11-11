@@ -354,16 +354,16 @@ function buildExperimentEvent(options: {
 
 type IndexUpdateResult = { written: boolean; reason: "hand-curated" | null };
 
-function writeImplIndex(indexPath: string, content: string, legacyTitle: string): IndexUpdateResult {
+function writeImplIndex(indexPath: string, content: string, legacyTitle: string, force = false): IndexUpdateResult {
   const existing = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
-  if (existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
+  if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
   fs.writeFileSync(indexPath, content, "utf8");
   return { written: true, reason: null };
 }
 
-function updateIndexForMarkdownDir(cwd: string, relativeDir: string): IndexUpdateResult {
+function updateIndexForMarkdownDir(cwd: string, relativeDir: string, options?: { force?: boolean }): IndexUpdateResult {
   const dir = path.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
   const entries = files.flatMap((file) => {
@@ -382,10 +382,11 @@ function updateIndexForMarkdownDir(cwd: string, relativeDir: string): IndexUpdat
     path.join(dir, "README.md"),
     `# Implementation Records\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,
     "Implementation Records",
+    options?.force === true,
   );
 }
 
-function updateIndexForExperimentDir(cwd: string, relativeDir: string): IndexUpdateResult {
+function updateIndexForExperimentDir(cwd: string, relativeDir: string, options?: { force?: boolean }): IndexUpdateResult {
   const dir = path.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");
   const header = INDEX_TABLE_HEADER_1COL;
@@ -395,6 +396,7 @@ function updateIndexForExperimentDir(cwd: string, relativeDir: string): IndexUpd
     path.join(dir, "README.md"),
     `# Experiment Logs\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir}\`\n\n${body}\n`,
     "Experiment Logs",
+    options?.force === true,
   );
 }
 

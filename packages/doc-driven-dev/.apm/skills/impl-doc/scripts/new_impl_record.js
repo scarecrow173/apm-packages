@@ -24537,15 +24537,15 @@ function buildImplementationRecordContent(options2) {
 ${renderTemplate("implementation-record.md", { title })}
 `;
 }
-function writeImplIndex(indexPath, content, legacyTitle) {
+function writeImplIndex(indexPath, content, legacyTitle, force = false) {
   const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
-  if (existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
+  if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
   import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
   return { written: true, reason: null };
 }
-function updateIndexForMarkdownDir(cwd, relativeDir) {
+function updateIndexForMarkdownDir(cwd, relativeDir, options2) {
   const dir = import_node_path2.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
   const entries = files.flatMap((file2) => {
@@ -24568,7 +24568,8 @@ Directory: \`${relativeDir}\`
 
 ${body}
 `,
-    "Implementation Records"
+    "Implementation Records",
+    options2?.force === true
   );
 }
 function buildNewFilePath(options2) {

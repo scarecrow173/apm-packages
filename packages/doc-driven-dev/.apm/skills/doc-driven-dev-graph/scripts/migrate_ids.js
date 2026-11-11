@@ -35522,15 +35522,15 @@ function listFiles(dir, ext) {
 function normalizeExperimentPath(cwd, filePath) {
   return normalizeFilePath(posixRelative(cwd, import_node_path8.default.resolve(filePath)));
 }
-function writeImplIndex(indexPath, content3, legacyTitle) {
+function writeImplIndex(indexPath, content3, legacyTitle, force = false) {
   const existing = import_node_fs7.default.existsSync(indexPath) ? import_node_fs7.default.readFileSync(indexPath, "utf8") : null;
-  if (existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
+  if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
   import_node_fs7.default.writeFileSync(indexPath, content3, "utf8");
   return { written: true, reason: null };
 }
-function updateIndexForMarkdownDir(cwd, relativeDir) {
+function updateIndexForMarkdownDir(cwd, relativeDir, options2) {
   const dir = import_node_path8.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
   const entries = files.flatMap((file2) => {
@@ -35553,10 +35553,11 @@ Directory: \`${relativeDir}\`
 
 ${body}
 `,
-    "Implementation Records"
+    "Implementation Records",
+    options2?.force === true
   );
 }
-function updateIndexForExperimentDir(cwd, relativeDir) {
+function updateIndexForExperimentDir(cwd, relativeDir, options2) {
   const dir = import_node_path8.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");
   const header = INDEX_TABLE_HEADER_1COL;
@@ -35573,7 +35574,8 @@ Directory: \`${relativeDir}\`
 
 ${body}
 `,
-    "Experiment Logs"
+    "Experiment Logs",
+    options2?.force === true
   );
 }
 function resolvesLocalTarget(cwd, fromFile, target) {
