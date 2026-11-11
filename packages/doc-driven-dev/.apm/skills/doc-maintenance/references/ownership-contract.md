@@ -53,7 +53,7 @@ case/spelling variants resolve to the same owned row.
   `doc_maintenance`, `scaffold_docs`, `migrate_docs`, `migrate_ids`
 - `impl-doc`: `new_impl_record`, `new_experiment_log`,
   `append_experiment_event`, `edit_experiment_log`, `migrate_ids`,
-  `promote_index`
+  `promote_index`, `sync_impl_index`
 
 ## Audit owners per owner
 
@@ -85,8 +85,8 @@ and left byte-identical; there is no force path for unverified files.
 - A directory with no owner (a custom `--dir` inside the checkout) accepts
   any type. Ownership never claims unlisted paths.
 - Only `shared-4col` territory is eligible for `doc_maintenance` index
-  repair. `impl-4col` and `exp-1col` indexes are repaired by impl-doc
-  tooling only; `--force-index` never widens this boundary.
+  repair. `impl-4col` and `exp-1col` indexes are reconciled by
+  `sync_impl_index` only; `--force-index` never widens this boundary.
 - `docs/impl` is an owned container with no resident types: nothing may be
   created or audited directly inside it.
 - Scope mismatches fail closed: the CLI exits non-zero with a reason, and

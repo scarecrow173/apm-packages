@@ -143,6 +143,9 @@ Experiment Log audit checks:
 - unique, strictly increasing `seq`
 - `experiment` path matches the file path
 
+Both audits also check the managed `README.md` index read-only and report
+`index-*` findings (see the impl-doc skill for the code list).
+
 ## Index
 
 Each directory uses `README.md` as its index.
@@ -167,11 +170,16 @@ Index rules:
   filename-ordered. Settled rows stay linked — the tier de-emphasizes
   history without hiding it.
 - Update the index whenever a record is added or its `status` changes.
-  `doc_maintenance.js plan|apply` regenerates managed indexes; `doc_status
-  lint` reports the drift (`index-metadata-mismatch`, `index-ordering`)
-  until it does.
-- As entries grow, split the index into multiple headings, one table per
-  heading, for readability.
+  `sync_impl_index.js --kind ir` previews the reconcile (verdict
+  `in-sync` / `sync` / `create` / `rejected`); pass `--apply` to write it.
+  `audit_impl_record.js` reports the drift (`index-missing-entry`,
+  `index-stale-entry`, `index-metadata-mismatch`, `index-tier-mismatch`,
+  `index-ordering`) until it is applied. `doc_maintenance` and
+  `doc_status` do not repair impl indexes.
+- The managed region is exactly one active table plus an optional
+  `## Settled` table. Keep hand-written notes outside the generated
+  region (before the marker or after the tables); additional index
+  tables make the index ambiguous and are rejected.
 
 ### Experiment Logs
 
@@ -185,5 +193,9 @@ links, in filename order:
 
 The matching Implementation Record links to each log via `metadata.experiments`
 and relations; the README provides a directory-level overview only.
+
+`sync_impl_index.js --kind exp` reconciles this index the same way: preview
+by default, `--apply` to write, `rejected` for hand-curated or malformed
+READMEs.
 
 Whenever a new Experiment Log is added, update the index in the same change.
