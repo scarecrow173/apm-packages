@@ -580,16 +580,22 @@ async function planIndexMaterialization(cwd: string, options?: IndexMaterializeP
 // --- apply -------------------------------------------------------------------
 
 // Re-verify a target's pins against the live filesystem so a source, index,
-// or listing change between the re-plan and the write fails closed.
-function verifyTargetPins(cwd: string, target: IndexMaterializeTarget): boolean {
+// or listing change between the re-plan and the write fails closed. Returns
+// the drift reason to report, or null when every pin still holds.
+function verifyTargetPins(cwd: string, target: IndexMaterializeTarget): string | null {
   try {
     const dirAbs = path.join(cwd, target.directory);
     const files = sourcePaths(cwd, target.directory);
     const live = computeSourcePins(dirAbs, files);
-    if (live.sources !== target.pins.sources || live.fileList !== target.pins.fileList) return false;
-    return inspectIndex(path.join(cwd, target.indexPath)).pin === target.pins.index;
+    if (live.sources !== target.pins.sources || live.fileList !== target.pins.fileList) {
+      return "source drift: index sources changed since the plan was computed";
+    }
+    if (inspectIndex(path.join(cwd, target.indexPath)).pin !== target.pins.index) {
+      return "index drift: the index file changed since the plan was computed";
+    }
+    return null;
   } catch {
-    return false;
+    return "source drift: index sources could not be re-verified";
   }
 }
 
@@ -662,8 +668,9 @@ async function applyIndexMaterialization(
       }
       continue;
     }
-    if (!verifyTargetPins(resolvedCwd, target)) {
-      blocked.push({ target, reason: "index sources changed since the plan was computed" });
+    const drift = verifyTargetPins(resolvedCwd, target);
+    if (drift) {
+      blocked.push({ target, reason: drift });
       continue;
     }
     const indexAbs = path.join(resolvedCwd, target.indexPath);

@@ -831,3 +831,334 @@ test("apply --expect blocks impl targets on plan drift with zero writes", async 
   const applied = await applyIndexMaterialization(repo, { dir: "docs/impl/ir", expectPlanHash: plan.planHash });
   assert.deepEqual(applied.written, ["docs/impl/ir/README.md"]);
 });
+
+// --- apply: --expect over a multi-target plan -------------------------------
+
+test("apply --expect blocks every actionable target on global drift — zero writes", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+  writeDoc(repo, "docs/adr/0001-use-pgsql.md", {
+    id: "ADR-0001",
+    type: "adr",
+    status: "proposed",
+    title: "Use PostgreSQL",
+  });
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+
+  // Every enumerated target is actionable (create) — ALL land in blocked.
+  const plan = await planIndexMaterialization(repo);
+  assert.ok(plan.targets.length > 1, "multi-target plan");
+  const before = treeHashes(repo);
+  const refused = await applyIndexMaterialization(repo, { expectPlanHash: "0".repeat(64) });
+  assert.deepEqual(refused.written, []);
+  assert.equal(refused.blocked.length, plan.targets.length, "every actionable target blocked");
+  assert.ok(refused.blocked.every((entry) => /plan drift/.test(entry.reason)));
+  assert.deepEqual(treeHashes(repo), before, "a rejected --expect writes nothing");
+
+  // A correct apply writes only repo-relative index paths.
+  const applied = await applyIndexMaterialization(repo);
+  const plannedPaths = new Set(plan.targets.map((target) => target.indexPath));
+  assert.ok(applied.written.length > 0);
+  assert.ok(
+    applied.written.every((file) => !path.isAbsolute(file) && plannedPaths.has(file)),
+    "written entries are repo-relative index paths from the fresh plan",
+  );
+
+  // Mixed verdicts: a new source makes docs/specs sync; the rest stay
+  // in-sync. A wrong --expect still blocks every actionable target — and an
+  // in-sync target is a silent no-op (never written, never blocked).
+  writeDoc(repo, "docs/specs/late.md", specDoc("late", "Late arrival", "draft", "SPEC-0002"));
+  const repPlan = await planIndexMaterialization(repo);
+  const actionable = repPlan.targets.filter((target) => target.verdict !== "in-sync");
+  assert.equal(actionable.length, 1);
+  assert.equal(actionable[0].directory, "docs/specs");
+
+  const before2 = treeHashes(repo);
+  const refused2 = await applyIndexMaterialization(repo, { expectPlanHash: "0".repeat(64) });
+  assert.deepEqual(refused2.written, []);
+  assert.equal(refused2.blocked.length, actionable.length);
+  assert.equal(refused2.blocked[0].target.directory, "docs/specs");
+  assert.match(refused2.blocked[0].reason, /plan drift/);
+  assert.deepEqual(treeHashes(repo), before2, "a rejected --expect writes nothing");
+});
+
+// --- apply: mid-apply drift revalidation (plan→write TOCTOU) -----------------
+//
+// Deterministic interpose: applyIndexMaterialization snapshots pins in a
+// synchronous prefix, then suspends at its first await (the index render).
+// A synchronous mutation between invoking apply and awaiting it lands in that
+// gap — after the pin snapshot, before verifyTargetPins and the write — which
+// is exactly the window the pin revalidation exists to close.
+
+test("apply blocks a shared write when a source file drifts mid-apply", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+  writeSharedIndex(repo, "docs/specs", "SPEC Documents", []);
+
+  const indexBefore = shaFile(path.join(repo, "docs/specs/README.md"));
+  const pending = applyIndexMaterialization(repo, { dir: "docs/specs" });
+  fs.appendFileSync(path.join(repo, "docs/specs/checkout.md"), "\nconcurrent edit\n", "utf8");
+  const result = await pending;
+
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /source drift/);
+  assert.equal(shaFile(path.join(repo, "docs/specs/README.md")), indexBefore, "index untouched");
+});
+
+test("apply blocks a shared write when the source file list drifts mid-apply", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+  writeSharedIndex(repo, "docs/specs", "SPEC Documents", []);
+
+  const indexBefore = shaFile(path.join(repo, "docs/specs/README.md"));
+  const pending = applyIndexMaterialization(repo, { dir: "docs/specs" });
+  writeDoc(repo, "docs/specs/late.md", specDoc("late", "Late arrival", "draft", "SPEC-0002"));
+  const result = await pending;
+
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /source drift/);
+  assert.equal(shaFile(path.join(repo, "docs/specs/README.md")), indexBefore, "index untouched");
+});
+
+test("apply blocks a shared write when the index file drifts mid-apply", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+  writeSharedIndex(repo, "docs/specs", "SPEC Documents", []);
+
+  const pending = applyIndexMaterialization(repo, { dir: "docs/specs" });
+  fs.appendFileSync(path.join(repo, "docs/specs/README.md"), "\nconcurrent edit\n", "utf8");
+  const result = await pending;
+
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /index drift/);
+  assert.ok(fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8").endsWith("concurrent edit\n"));
+
+  // Same guard on a create verdict: an index appearing mid-apply is drift,
+  // never an overwrite of whoever just wrote it.
+  const repo2 = tempRepo();
+  writeDoc(repo2, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+  const pending2 = applyIndexMaterialization(repo2, { dir: "docs/specs" });
+  writeFile(repo2, "docs/specs/README.md", "# Concurrent index\n");
+  const result2 = await pending2;
+
+  assert.deepEqual(result2.written, []);
+  assert.equal(result2.blocked.length, 1);
+  assert.match(result2.blocked[0].reason, /index drift/);
+  assert.equal(fs.readFileSync(path.join(repo2, "docs/specs/README.md"), "utf8"), "# Concurrent index\n");
+});
+
+test("apply blocks ADR writes on mid-apply source, listing, and index drift", async () => {
+  const repo = tempRepo();
+  const adrDoc = { id: "ADR-0001", type: "adr", status: "proposed", title: "Use PostgreSQL" };
+  writeDoc(repo, "docs/adr/0001-use-pgsql.md", adrDoc);
+  writeSharedIndex(repo, "docs/adr", "Architecture Decision Records", []);
+  const indexAbs = path.join(repo, "docs/adr/README.md");
+
+  // Phase 1 — source content drift.
+  let pending = applyIndexMaterialization(repo, { dir: "docs/adr" });
+  fs.appendFileSync(path.join(repo, "docs/adr/0001-use-pgsql.md"), "\nconcurrent edit\n", "utf8");
+  let result = await pending;
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /source drift/);
+
+  // Phase 2 — index content drift (the re-plan absorbs the phase-1 mutation).
+  pending = applyIndexMaterialization(repo, { dir: "docs/adr" });
+  fs.appendFileSync(indexAbs, "\nconcurrent edit\n", "utf8");
+  result = await pending;
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /index drift/);
+  assert.ok(fs.readFileSync(indexAbs, "utf8").endsWith("concurrent edit\n"), "index untouched");
+
+  // Phase 3 — listing drift (a new source appearing mid-apply).
+  pending = applyIndexMaterialization(repo, { dir: "docs/adr" });
+  writeDoc(repo, "docs/adr/0002-use-sqlite.md", {
+    id: "ADR-0002",
+    type: "adr",
+    status: "proposed",
+    title: "Use SQLite",
+  });
+  result = await pending;
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /source drift/);
+});
+
+// --- apply: mid-apply symlink swaps -------------------------------------------
+
+test("apply blocks a shared index swapped for a symlink mid-apply", async (t) => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+  writeSharedIndex(repo, "docs/specs", "SPEC Documents", []);
+  const indexAbs = path.join(repo, "docs/specs/README.md");
+
+  // Preflight: file symlinks may require privileges (Windows).
+  const probe = path.join(repo, "probe-link");
+  try {
+    fs.symlinkSync(indexAbs, probe);
+    fs.rmSync(probe);
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+
+  // Swap in a symlink to an identical-bytes copy: the index pin still matches
+  // (the hash follows the link), so the lstat re-check — not pin drift — is
+  // what blocks the write.
+  const outside = tempRepo();
+  const copy = path.join(outside, "index-copy.md");
+  const original = fs.readFileSync(indexAbs, "utf8");
+  fs.writeFileSync(copy, original, "utf8");
+
+  const pending = applyIndexMaterialization(repo, { dir: "docs/specs" });
+  fs.rmSync(indexAbs);
+  fs.symlinkSync(copy, indexAbs);
+  const result = await pending;
+
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /symbolic link/);
+  assert.ok(fs.lstatSync(indexAbs).isSymbolicLink(), "apply must not replace the symlink");
+  assert.equal(fs.readFileSync(copy, "utf8"), original, "link target untouched");
+});
+
+test("apply blocks an ADR index swapped for a symlink mid-apply", async (t) => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/adr/0001-use-pgsql.md", {
+    id: "ADR-0001",
+    type: "adr",
+    status: "proposed",
+    title: "Use PostgreSQL",
+  });
+  writeSharedIndex(repo, "docs/adr", "Architecture Decision Records", []);
+  const indexAbs = path.join(repo, "docs/adr/README.md");
+
+  const probe = path.join(repo, "probe-link");
+  try {
+    fs.symlinkSync(indexAbs, probe);
+    fs.rmSync(probe);
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+
+  const outside = tempRepo();
+  const copy = path.join(outside, "index-copy.md");
+  const original = fs.readFileSync(indexAbs, "utf8");
+  fs.writeFileSync(copy, original, "utf8");
+
+  const pending = applyIndexMaterialization(repo, { dir: "docs/adr" });
+  fs.rmSync(indexAbs);
+  fs.symlinkSync(copy, indexAbs);
+  const result = await pending;
+
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /symbolic link/);
+  assert.ok(fs.lstatSync(indexAbs).isSymbolicLink(), "apply must not replace the symlink");
+  assert.equal(fs.readFileSync(copy, "utf8"), original, "link target untouched");
+});
+
+test("apply blocks an impl index swapped for a symlink mid-apply", async (t) => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  writeIr(repo, a);
+  writeIrIndex(repo, {});
+  const indexAbs = path.join(repo, "docs/impl/ir/README.md");
+
+  const probe = path.join(repo, "probe-link");
+  try {
+    fs.symlinkSync(indexAbs, probe);
+    fs.rmSync(probe);
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+
+  const outside = tempRepo();
+  const copy = path.join(outside, "index-copy.md");
+  const original = fs.readFileSync(indexAbs, "utf8");
+  fs.writeFileSync(copy, original, "utf8");
+
+  // The impl plan phase is fully synchronous; the swap lands between the outer
+  // plan snapshot and the owner apply's internal re-plan — which must refuse.
+  const pending = applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  fs.rmSync(indexAbs);
+  fs.symlinkSync(copy, indexAbs);
+  const result = await pending;
+
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /symbolic link/);
+  assert.ok(fs.lstatSync(indexAbs).isSymbolicLink(), "apply must not replace the symlink");
+  assert.equal(fs.readFileSync(copy, "utf8"), original, "link target untouched");
+});
+
+// --- apply: mid-apply drift on impl targets (owner gate) ----------------------
+
+test("apply blocks impl targets on mid-apply source and index drift", async () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  writeIr(repo, a);
+  writeIrIndex(repo, {});
+  const indexAbs = path.join(repo, "docs/impl/ir/README.md");
+  const indexBefore = shaFile(indexAbs);
+
+  // Front-matter drift between the outer plan and the owner apply's re-plan
+  // fails the per-target expectPlanHash gate: the owner reports plan drift.
+  let pending = applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  writeIr(repo, { ...a, status: "completed" });
+  let result = await pending;
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.match(result.blocked[0].reason, /plan drift/);
+  assert.equal(shaFile(indexAbs), indexBefore, "index untouched");
+
+  // Index-byte drift that keeps the index well-formed produces the same owner
+  // re-plan (identical verdict/changes → identical planHash), so the owner
+  // apply absorbs it: it merges the LIVE index — never the stale snapshot —
+  // and the concurrent edit survives as preserved prose. This is the
+  // documented delegation boundary: the owner engine's own pins cover its
+  // re-plan→write window.
+  pending = applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  fs.appendFileSync(indexAbs, "\nconcurrent edit\n", "utf8");
+  result = await pending;
+  assert.deepEqual(result.written, ["docs/impl/ir/README.md"]);
+  assert.deepEqual(result.blocked, []);
+  const merged = fs.readFileSync(indexAbs, "utf8");
+  assert.ok(merged.includes("concurrent edit"), "owner merge preserves the mid-apply edit");
+  assert.ok(merged.includes("[a.md](./a.md)"), "generated rows present");
+});
+
+// --- apply: idempotence across kinds -----------------------------------------
+
+test("a second apply is a no-op across kinds — in-sync targets never write or block", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+  writeDoc(repo, "docs/adr/0001-use-pgsql.md", {
+    id: "ADR-0001",
+    type: "adr",
+    status: "proposed",
+    title: "Use PostgreSQL",
+  });
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+  writeExp(repo, "0001-one.jsonl");
+
+  const first = await applyIndexMaterialization(repo);
+  assert.ok(first.written.length > 0, "first apply materializes the missing indexes");
+  assert.deepEqual(first.blocked, []);
+
+  const before = treeHashes(repo);
+  const second = await applyIndexMaterialization(repo);
+  assert.deepEqual(second.written, []);
+  assert.deepEqual(second.blocked, [], "in-sync targets — impl included — are silent no-ops");
+  assert.ok(
+    second.plan.targets.every((target) => target.verdict === "in-sync"),
+    "every target in-sync after apply — the report is deterministic",
+  );
+  assert.deepEqual(treeHashes(repo), before, "second apply changed nothing");
+});
