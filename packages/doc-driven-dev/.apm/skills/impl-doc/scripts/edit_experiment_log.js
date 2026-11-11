@@ -24145,6 +24145,9 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
+var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
+var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
@@ -24220,6 +24223,9 @@ function writeExperimentEvents(filePath, events) {
 `;
   import_node_fs.default.writeFileSync(filePath, content, "utf8");
 }
+var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
+var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
+var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
 
 // src/skills/impl-doc/scripts/edit_experiment_log.ts
 function parseArgs(argv) {

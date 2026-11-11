@@ -24271,6 +24271,7 @@ var frontMatterSchema = external_exports.object({
 }).passthrough();
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
+var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
 var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
 function indexCell(value) {
   return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
@@ -24387,6 +24388,9 @@ function writeImplIndex(indexPath, content, legacyTitle, force = false) {
   import_node_fs2.default.writeFileSync(indexPath, merged, "utf8");
   return { written: true, reason: null };
 }
+var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
+var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
+var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
 function updateIndexForExperimentDir(cwd, relativeDir, options2) {
   const dir = import_node_path2.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");

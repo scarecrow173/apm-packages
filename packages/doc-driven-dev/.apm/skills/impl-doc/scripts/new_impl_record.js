@@ -24382,6 +24382,7 @@ var frontMatterSchema = external_exports.object({
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
 function parseDoc(content) {
   try {
     const parsed = (0, import_gray_matter.default)(content);
@@ -24607,19 +24608,24 @@ function writeImplIndex(indexPath, content, legacyTitle, force = false) {
   import_node_fs2.default.writeFileSync(indexPath, merged, "utf8");
   return { written: true, reason: null };
 }
-function updateIndexForMarkdownDir(cwd, relativeDir, options2) {
-  const dir = import_node_path2.default.join(cwd, relativeDir);
-  const files = listFiles(dir, ".md");
-  const entries = files.flatMap((file2) => {
-    const fullPath = import_node_path2.default.join(dir, file2);
-    const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
+var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
+var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
+var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
+function implIndexEntries(dirAbs, relativeDir, files) {
+  return files.flatMap((file2) => {
+    const parsed = parseDoc(import_node_fs2.default.readFileSync(import_node_path2.default.join(dirAbs, file2), "utf8"));
+    if (parsed.error) return [];
     if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
     const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path2.default.basename(file2, ".md");
     const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
     const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
     return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
   });
-  const body = renderIndexBody(entries, { settledType: "impl" });
+}
+function updateIndexForMarkdownDir(cwd, relativeDir, options2) {
+  const dir = import_node_path2.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".md");
+  const body = renderIndexBody(implIndexEntries(dir, relativeDir, files), { settledType: "impl" });
   return writeImplIndex(
     import_node_path2.default.join(dir, "README.md"),
     `# Implementation Records

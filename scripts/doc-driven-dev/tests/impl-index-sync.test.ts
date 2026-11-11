@@ -11,6 +11,10 @@ import {
   parseImplIndexRows,
   planImplIndexSync,
 } from "../src/skills/impl-doc/scripts/lib/impl_index_sync";
+import {
+  auditExperimentLogs,
+  auditImplementationRecords,
+} from "../src/skills/impl-doc/scripts/lib/impl_doc_utils";
 
 /**
  * Issue #186/#187 — impl-doc owner index-sync engine.
@@ -930,4 +934,160 @@ test("CLI: symlinked README — creators skip with a warning, sync rejects", (t)
   const synced = runSync(["--cwd", repo, "--kind", "ir", "--apply"], repo);
   assert.equal(synced.status, 1, "sync must reject a symlinked index");
   assert.equal(fs.readFileSync(outsideFile, "utf8"), "# Implementation Records\n\n", "symlink target untouched");
+});
+
+// --- index-aware owner audits -------------------------------------------------
+
+function indexFindingCodes(findings: { code: string }[]): string[] {
+  return findings.filter((finding) => finding.code.startsWith("index-")).map((finding) => finding.code).sort();
+}
+
+test("audit IR: in-sync managed index produces zero index findings", () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "completed" };
+  for (const spec of [a, b]) writeIr(repo, spec);
+  writeIrIndex(repo, { active: [a], settled: [b] });
+
+  const report = auditImplementationRecords(repo, "docs/impl/ir");
+  assert.deepEqual(indexFindingCodes(report.findings), []);
+});
+
+test("audit IR: flags missing/stale/metadata/tier/order index drift", () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "completed" };
+  const c: IrSpec = { file: "c.md", id: "IMPL-C", title: "Gamma", status: "draft" };
+  const d: IrSpec = { file: "d.md", id: "IMPL-D", title: "Delta", status: "draft" };
+  const e: IrSpec = { file: "e.md", id: "IMPL-E", title: "Epsilon", status: "draft" };
+  for (const spec of [a, b, c, d, e]) writeIr(repo, spec);
+  writeIrIndex(repo, {
+    active: [
+      c, // order drift: c listed before a
+      { file: "a.md", id: "IMPL-A", title: "Alpha", status: "in-progress" }, // metadata-mismatch
+      { file: "ghost.md", id: "IMPL-G", title: "Ghost", status: "draft" }, // stale-entry
+    ],
+    settled: [
+      { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" }, // metadata-mismatch (status cell)
+      d, // tier-mismatch: draft row inside the Settled tier
+    ],
+  });
+  // e.md has no index row → index-missing-entry.
+
+  const report = auditImplementationRecords(repo, "docs/impl/ir");
+  const codes = indexFindingCodes(report.findings);
+  assert.equal(codes.filter((code) => code === "index-missing-entry").length, 1, "e.md missing row");
+  assert.equal(codes.filter((code) => code === "index-stale-entry").length, 1, "ghost.md stale row");
+  assert.equal(codes.filter((code) => code === "index-metadata-mismatch").length, 2, "a.md + b.md cell drift");
+  assert.equal(codes.filter((code) => code === "index-tier-mismatch").length, 1, "d.md wrong tier");
+  assert.equal(codes.filter((code) => code === "index-ordering").length, 1, "row order drift");
+  assert.ok(!codes.includes("index-unparseable"), "structure parses fine");
+  assert.ok(!codes.includes("index-escapes-root"), "no escaping rows");
+});
+
+test("audit IR: index classification — not-managed, unparseable, duplicate, escaping", () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  writeIr(repo, a);
+
+  // hand-curated: no marker
+  writeRawIndex(repo, "# Implementation Records\n\nDirectory: `docs/impl/ir`\n\n| ID | Title | Status | File |\n| --- | --- | --- | --- |\n| IMPL-A | Alpha | draft | [a.md](./a.md) |\n");
+  assert.deepEqual(indexFindingCodes(auditImplementationRecords(repo, "docs/impl/ir").findings), ["index-not-managed"]);
+
+  // ambiguous: marker twice
+  writeIrIndex(repo, { active: [a] });
+  const indexPath = path.join(repo, "docs/impl/ir/README.md");
+  fs.writeFileSync(indexPath, `${fs.readFileSync(indexPath, "utf8")}\n${MARKER}\n`, "utf8");
+  assert.deepEqual(indexFindingCodes(auditImplementationRecords(repo, "docs/impl/ir").findings), ["index-not-managed"]);
+
+  // broken table → index-unparseable (error)
+  writeRawIndex(repo, `# Implementation Records\n\n${MARKER}\n\nDirectory: \`docs/impl/ir\`\n\n${IR_HEADER}\n| IMPL-A | Alpha | draft |\n`);
+  let report = auditImplementationRecords(repo, "docs/impl/ir");
+  assert.deepEqual(indexFindingCodes(report.findings), ["index-unparseable"]);
+  assert.equal(report.findings.find((finding) => finding.code === "index-unparseable")?.severity, "error");
+
+  // duplicate rows → index-duplicate-entry (warning)
+  writeRawIndex(repo, `# Implementation Records\n\n${MARKER}\n\nDirectory: \`docs/impl/ir\`\n\n${IR_HEADER}\n| IMPL-A | Alpha | draft | [a.md](./a.md) |\n| IMPL-A | Alpha | draft | [a.md](./a.md) |\n`);
+  report = auditImplementationRecords(repo, "docs/impl/ir");
+  assert.deepEqual(indexFindingCodes(report.findings), ["index-duplicate-entry"]);
+  assert.equal(report.findings.find((finding) => finding.code === "index-duplicate-entry")?.severity, "warning");
+
+  // escaping row link → index-escapes-root (error)
+  writeRawIndex(repo, `# Implementation Records\n\n${MARKER}\n\nDirectory: \`docs/impl/ir\`\n\n${IR_HEADER}\n| IMPL-A | Alpha | draft | [a.md](../a.md) |\n`);
+  report = auditImplementationRecords(repo, "docs/impl/ir");
+  assert.deepEqual(indexFindingCodes(report.findings), ["index-escapes-root"]);
+  assert.equal(report.findings.find((finding) => finding.code === "index-escapes-root")?.severity, "error");
+});
+
+test("audit IR: missing README keeps only the existing missing-index warning", () => {
+  const repo = tempRepo();
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+
+  const report = auditImplementationRecords(repo, "docs/impl/ir");
+  assert.ok(report.findings.some((finding) => finding.code === "missing-index"));
+  assert.deepEqual(indexFindingCodes(report.findings), []);
+});
+
+test("audit IR: symlinked README → index-not-managed", (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideFile = path.join(outside, "index.md");
+  fs.writeFileSync(outsideFile, "# Implementation Records\n\n", "utf8");
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+  fs.mkdirSync(path.join(repo, "docs/impl/ir"), { recursive: true });
+  try {
+    fs.symlinkSync(outsideFile, path.join(repo, "docs/impl/ir", "README.md"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+
+  const report = auditImplementationRecords(repo, "docs/impl/ir");
+  assert.deepEqual(indexFindingCodes(report.findings), ["index-not-managed"]);
+});
+
+test("audit EXP: flags membership, order, and stale index drift", () => {
+  const repo = tempRepo();
+  for (const file of ["a.jsonl", "b.jsonl", "c.jsonl"]) writeExp(repo, file);
+  writeExpIndex(repo, { files: ["c.jsonl", "ghost.jsonl", "a.jsonl"] }); // missing b, stale ghost, order drift
+
+  const report = auditExperimentLogs(repo, "docs/impl/exp");
+  const codes = indexFindingCodes(report.findings);
+  assert.equal(codes.filter((code) => code === "index-missing-entry").length, 1, "b.jsonl missing row");
+  assert.equal(codes.filter((code) => code === "index-stale-entry").length, 1, "ghost.jsonl stale row");
+  assert.equal(codes.filter((code) => code === "index-ordering").length, 1, "row order drift");
+});
+
+test("audit EXP: structural index problems map to dedicated codes", () => {
+  const repo = tempRepo();
+  writeExp(repo, "a.jsonl");
+
+  // no marker → index-not-managed
+  writeRawIndex(repo, "# Experiment Logs\n\n| File |\n| --- |\n| [a.jsonl](./a.jsonl) |\n", "docs/impl/exp");
+  assert.deepEqual(indexFindingCodes(auditExperimentLogs(repo, "docs/impl/exp").findings), ["index-not-managed"]);
+
+  // duplicate rows → index-duplicate-entry
+  writeRawIndex(repo, `# Experiment Logs\n\n${MARKER}\n\nDirectory: \`docs/impl/exp\`\n\n${EXP_HEADER}\n| [a.jsonl](./a.jsonl) |\n| [a.jsonl](./a.jsonl) |\n`, "docs/impl/exp");
+  assert.deepEqual(indexFindingCodes(auditExperimentLogs(repo, "docs/impl/exp").findings), ["index-duplicate-entry"]);
+
+  // escaping row link → index-escapes-root
+  writeRawIndex(repo, `# Experiment Logs\n\n${MARKER}\n\nDirectory: \`docs/impl/exp\`\n\n${EXP_HEADER}\n| [a.jsonl](../a.jsonl) |\n`, "docs/impl/exp");
+  assert.deepEqual(indexFindingCodes(auditExperimentLogs(repo, "docs/impl/exp").findings), ["index-escapes-root"]);
+
+  // wrong cell count → index-unparseable
+  writeRawIndex(repo, `# Experiment Logs\n\n${MARKER}\n\nDirectory: \`docs/impl/exp\`\n\n${EXP_HEADER}\n| [a.jsonl](./a.jsonl) | extra |\n`, "docs/impl/exp");
+  assert.deepEqual(indexFindingCodes(auditExperimentLogs(repo, "docs/impl/exp").findings), ["index-unparseable"]);
+});
+
+test("audit EXP: JSONL findings and index findings coexist without conflation", () => {
+  const repo = tempRepo();
+  writeExp(repo, "a.jsonl");
+  fs.appendFileSync(path.join(repo, "docs/impl/exp", "a.jsonl"), "this is not json\n", "utf8");
+  writeExp(repo, "b.jsonl");
+  writeExpIndex(repo, { files: ["a.jsonl"] }); // b.jsonl has no row
+
+  const report = auditExperimentLogs(repo, "docs/impl/exp");
+  const codes = report.findings.map((finding) => finding.code);
+  assert.ok(codes.includes("invalid-json"), "JSONL finding still reported");
+  assert.ok(codes.includes("index-missing-entry"), "index finding still reported");
 });

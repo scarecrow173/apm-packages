@@ -6,17 +6,20 @@ import path from "node:path";
 
 import {
   GENERATED_INDEX_MARKER,
-  GENERATED_SETTLED_MARKER,
   INDEX_TABLE_HEADER_1COL,
-  INDEX_TABLE_HEADER_4COL,
   indexCell,
-  isForeignDocType,
   mergeManagedIndex,
-  parseDoc,
   renderIndexBody,
 } from "../../../lib/doc_suite_utils";
 import type { IndexRowEntry } from "../../../lib/doc_suite_utils";
-import { auditImplementationRecords, implDir, listFiles } from "./impl_doc_utils";
+import {
+  auditImplementationRecords,
+  implDir,
+  implIndexEntries,
+  listFiles,
+  parseImplIndexRows,
+} from "./impl_doc_utils";
+import type { ImplIndexRow, ManagedIndexRows } from "./impl_doc_utils";
 
 // ---------------------------------------------------------------------------
 // impl-doc owner index-sync engine (Issues #186/#187)
@@ -60,16 +63,6 @@ type SyncPlan = {
   plannedFiles: string[]; // ["<dir>/README.md"] when a write is planned
 };
 
-type ImplIndexRow = {
-  file: string;
-  cells: string[];
-  tier: "active" | "settled";
-};
-
-type ManagedIndexRows =
-  | { ok: true; rows: ImplIndexRow[] }
-  | { ok: false; reason: string };
-
 // Canonical index titles — not exported by doc_ownership, kept in sync with
 // INDEX_TITLES there and with what updateIndexFor*Dir writers emit.
 const INDEX_TITLES: Record<ImplIndexKind, string> = {
@@ -77,57 +70,12 @@ const INDEX_TITLES: Record<ImplIndexKind, string> = {
   exp: "Experiment Logs",
 };
 
-const SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
-const [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
-const [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
-
 function sha256Text(content: string): string {
   return createHash("sha256").update(content, "utf8").digest("hex");
 }
 
 function sha256File(file: string): string {
   return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
-}
-
-// Split a `| a | b |` row into trimmed cell texts, preserving `\|` escapes so
-// comparisons against `indexCell`-rendered expectations stay exact. Returns
-// null when the line is not a well-formed pipe row.
-function splitRowCells(line: string): string[] | null {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("|")) return null;
-  if (!trimmed.endsWith("|") || trimmed.endsWith("\\|")) return null;
-  const body = trimmed.slice(1, -1);
-  const cells: string[] = [];
-  let current = "";
-  for (let i = 0; i < body.length; i += 1) {
-    const ch = body[i];
-    if (ch === "\\" && i + 1 < body.length) {
-      current += ch + body[i + 1];
-      i += 1;
-      continue;
-    }
-    if (ch === "|") {
-      cells.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += ch;
-  }
-  cells.push(current.trim());
-  return cells;
-}
-
-// Extract the row's file identity from its file cell: a markdown link whose
-// target is `./<bare-filename>`. Anything else — missing link, absolute path,
-// `..` segments, nested paths — is unparseable and fails closed.
-function extractRowFile(cell: string): string | null {
-  const match = /^\[(.*)\]\((.*)\)$/.exec(cell.trim());
-  if (!match) return null;
-  const target = match[2].trim();
-  if (!target.startsWith("./")) return null;
-  const file = target.slice(2);
-  if (file === "" || file === "." || file === ".." || /[/\\:]/.test(file)) return null;
-  return file;
 }
 
 function cellsEqual(left: string[], right: string[]): boolean {
@@ -152,104 +100,6 @@ function summarizeRow(row: ImplIndexRow): string {
   return row.cells.join(" | ");
 }
 
-/**
- * Strict managed-index row parser — the single authority Task 3 audits reuse.
- * Accepts only the exact structure the impl index writers emit: one
- * generated-index marker, a `Directory:` line, the canonical table header and
- * separator, well-formed rows, and at most one `## Settled` tier. Anything
- * else is a structured error, never a guess.
- */
-function parseImplIndexRows(content: string, kind: ImplIndexKind): ManagedIndexRows {
-  const fail = (reason: string): ManagedIndexRows => ({ ok: false, reason });
-  const lines = content.split("\n");
-
-  const markerLines = lines.filter((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerLines.length === 0) {
-    return fail("hand-curated or ambiguous index: missing generated-index marker");
-  }
-  if (markerLines.length > 1) {
-    return fail("ambiguous index: multiple generated-index markers");
-  }
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-
-  const expectedCells = kind === "ir" ? 4 : 1;
-  const fileCellIndex = kind === "ir" ? 3 : 0;
-  const headerLine = kind === "ir" ? IR_HEADER_LINE : EXP_HEADER_LINE;
-  const separatorLine = kind === "ir" ? IR_SEPARATOR_LINE : EXP_SEPARATOR_LINE;
-
-  let cursor = markerIndex + 1;
-  const skipBlank = (): void => {
-    while (cursor < lines.length && lines[cursor].trim() === "") cursor += 1;
-  };
-
-  const parseRow = (line: string, tier: ImplIndexRow["tier"]): ImplIndexRow | null => {
-    const cells = splitRowCells(line);
-    if (!cells || cells.length !== expectedCells) return null;
-    const file = extractRowFile(cells[fileCellIndex]);
-    if (file === null) return null;
-    return { file, cells, tier };
-  };
-
-  const parseTable = (tier: ImplIndexRow["tier"]): { rows: ImplIndexRow[] } | { error: string } => {
-    if (
-      cursor + 1 >= lines.length
-      || lines[cursor].trim() !== headerLine
-      || lines[cursor + 1].trim() !== separatorLine
-    ) {
-      return { error: `malformed ${tier} index table header` };
-    }
-    cursor += 2;
-    const rows: ImplIndexRow[] = [];
-    while (cursor < lines.length && lines[cursor].trim().startsWith("|")) {
-      const row = parseRow(lines[cursor], tier);
-      if (!row) return { error: `unparseable ${tier} index row: ${lines[cursor].trim()}` };
-      rows.push(row);
-      cursor += 1;
-    }
-    return { rows };
-  };
-
-  skipBlank();
-  if (cursor >= lines.length || !lines[cursor].trim().startsWith("Directory:")) {
-    return fail("missing Directory line after the generated-index marker");
-  }
-  cursor += 1;
-
-  skipBlank();
-  const active = parseTable("active");
-  if ("error" in active) return fail(active.error);
-
-  skipBlank();
-  const rows: ImplIndexRow[] = [...active.rows];
-  if (cursor < lines.length && lines[cursor].trim() === SETTLED_HEADING) {
-    cursor += 1;
-    skipBlank();
-    const settled = parseTable("settled");
-    if ("error" in settled) return fail(settled.error);
-    rows.push(...settled.rows);
-    skipBlank();
-  }
-
-  // Everything past the recognized region is hand-owned tail — except stray
-  // index markers or table rows, which make the structure ambiguous.
-  for (; cursor < lines.length; cursor += 1) {
-    const trimmed = lines[cursor].trim();
-    if (trimmed.includes(GENERATED_SETTLED_MARKER)) {
-      return fail("settled-index marker outside the managed index region");
-    }
-    if (trimmed.startsWith("|")) {
-      return fail("table row outside the managed index region");
-    }
-  }
-
-  const seen = new Set<string>();
-  for (const row of rows) {
-    if (seen.has(row.file)) return fail(`duplicate index row for ${row.file}`);
-    seen.add(row.file);
-  }
-  return { ok: true, rows };
-}
-
 // --- source scan ------------------------------------------------------------
 
 // IR index entries mirror updateIndexForMarkdownDir exactly so the expected
@@ -270,17 +120,7 @@ function collectIrState(
   }
   const blockers = [...blockersByFile.entries()].map(([file, message]) => `${file}: ${message}`);
 
-  const entries = files.flatMap((file) => {
-    const parsed = parseDoc(fs.readFileSync(path.join(dirAbs, file), "utf8"));
-    if (parsed.error) return [];
-    if (isForeignDocType(parsed.data.type, "impl", directory)) return [];
-    const title = typeof parsed.data.title === "string" && parsed.data.title.trim()
-      ? parsed.data.title.trim()
-      : ((/^#\s+(.+)$/m.exec(parsed.body)?.[1]) || path.basename(file, ".md"));
-    const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
-    const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
-    return [{ file, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
-  });
+  const entries = implIndexEntries(dirAbs, directory, files);
   return { entries, blockers };
 }
 
