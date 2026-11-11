@@ -84,6 +84,21 @@ test("docEntries for adr applies idFromFile and titleFromHeading fallbacks", asy
   assert.equal(numbered.title, "Use PostgreSQL");
 });
 
+test("alias dir without its own indexTitle falls back to the canonical contract title", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/decisions/0003-monorepo.md", {
+    id: "ADR-0003", type: "adr", status: "accepted", title: "Keep a monorepo", created: "2026-01-04",
+  }, "# 3. Keep a monorepo\n");
+
+  const content = await buildIndex(repo, "adr", "docs/decisions");
+  // The alias contract row carries no indexTitle; the canonical docs/adr
+  // contract row supplies it so the heading matches the ADR writer's legacy
+  // hardcoded title rather than the generic `${idPrefix} Documents`.
+  assert.ok(content.startsWith("# Architecture Decision Records"), content);
+  assert.match(content, /Directory: `docs\/decisions`/);
+  assert.match(content, /\| ADR-0003 \| Keep a monorepo \| accepted \|/);
+});
+
 test("mergeManagedIndex preserves hand-written preamble, trailing prose, and in-region notes", () => {
   const existing = [
     "# Hand-written ADR notes",

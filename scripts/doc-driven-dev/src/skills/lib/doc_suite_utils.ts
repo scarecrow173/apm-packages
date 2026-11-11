@@ -930,7 +930,8 @@ async function buildIndex(cwd: string, type: string, explicitDir?: string, optio
           .map((entry) => [entry.file, entry] as const),
       ).values()].sort((a, b) => a.file.localeCompare(b.file))
     : await docEntries(cwd, type, explicitDir);
-  const contractTitle = ownershipForDir(normalizeDir(relativeDir))?.indexTitle;
+  const contractTitle = ownershipForDir(normalizeDir(relativeDir))?.indexTitle
+    ?? ownershipForDir(normalizeDir(configFor(type).dir))?.indexTitle;
   const title = contractTitle ?? `${configFor(type).idPrefix} Documents`;
   const body = renderIndexBody(entries, {
     overviewFirst: type === "design" || unionTypes.includes("design"),
