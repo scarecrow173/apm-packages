@@ -126,9 +126,11 @@ node scripts/sync_impl_index.js --kind ir --apply --expect <planHash>
   Hand-written preamble and tail content around the generated region is
   preserved byte-for-byte. `--dir` selects an alternative impl directory
   inside the checkout; paths outside it are rejected.
-- `doc_maintenance` and `doc_status` do not repair impl indexes —
-  `sync_impl_index` is the only mutator for `docs/impl/ir` and
-  `docs/impl/exp` indexes.
+- `doc_status` and the `doc_maintenance` repair verbs do not repair impl
+  indexes — `sync_impl_index` is the only mutator for `docs/impl/ir` and
+  `docs/impl/exp` indexes. The `doc_maintenance index` op can materialize
+  them, but only by dispatching to this same safe sync API: it is a
+  cross-owner entrypoint, not a second write path.
 
 Both audits are read-only and report index drift as findings:
 

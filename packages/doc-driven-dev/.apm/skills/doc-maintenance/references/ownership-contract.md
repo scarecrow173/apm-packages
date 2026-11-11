@@ -87,6 +87,12 @@ and left byte-identical; there is no force path for unverified files.
 - Only `shared-4col` territory is eligible for `doc_maintenance` index
   repair. `impl-4col` and `exp-1col` indexes are reconciled by
   `sync_impl_index` only; `--force-index` never widens this boundary.
+- `doc_maintenance index` is the index-only materialization op, distinct
+  from `plan|apply` repair: it dispatches each write to the directory's
+  owning writer (the shared renderer/merge for `shared-4col`, the ADR
+  managed writer, or the impl sync engine). `impl-4col` and `exp-1col`
+  indexes are still written only through the `sync_impl_index` safe sync
+  API — the op delegates to that API rather than writing them itself.
 - `docs/impl` is an owned container with no resident types: nothing may be
   created or audited directly inside it.
 - Scope mismatches fail closed: the CLI exits non-zero with a reason, and

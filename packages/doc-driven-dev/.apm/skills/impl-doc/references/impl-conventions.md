@@ -174,8 +174,10 @@ Index rules:
   `in-sync` / `sync` / `create` / `rejected`); pass `--apply` to write it.
   `audit_impl_record.js` reports the drift (`index-missing-entry`,
   `index-stale-entry`, `index-metadata-mismatch`, `index-tier-mismatch`,
-  `index-ordering`) until it is applied. `doc_maintenance` and
-  `doc_status` do not repair impl indexes.
+  `index-ordering`) until it is applied. `doc_status` and the
+  `doc_maintenance` repair verbs do not repair impl indexes;
+  `doc_maintenance index` materializes them only through the same safe
+  sync API.
 - The managed region is exactly one active table plus an optional
   `## Settled` table. Keep hand-written notes outside the generated
   region (before the marker or after the tables); additional index

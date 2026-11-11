@@ -1310,6 +1310,7 @@ export {
   primaryIndexTypeForDir,
   relationValues,
   renderIndexBody,
+  renderManagedIndex,
   resolveDocumentReference,
   sanitizeTitle,
   logIndexResult,

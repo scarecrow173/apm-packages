@@ -65,6 +65,34 @@ node scripts/doc_maintenance.js apply --force-index --json
   （`findings before` / `findings after`）を出力する。
 - オプション: `--type`, `--dir`, `--force-index`, `--json`。
 
+`index` は managed index を明示的に materialize するエントリポイント —
+INDEX のみを対象とし、全オーナーを横断する。`plan`/`apply` と異なり
+managed index コンテンツ以外には一切触れず（link 正規化やソース修復は
+行わない）、各書き込みをオーナー writer に分派する。shared-4col
+ディレクトリは共有 renderer/merge、`docs/adr` は ADR managed writer、
+`docs/impl/ir`/`docs/impl/exp` は impl-doc の safe sync エンジン
+（`sync_impl_index` と同じ API — 無条件 writer は使わない）経由で
+書き込む。
+
+```bash
+node scripts/doc_maintenance.js index plan [--dir <path>] [--json]
+node scripts/doc_maintenance.js index apply [--dir <path>] [--expect <planHash>] [--json]
+```
+
+- `index plan` — preview のみ。書き込まない。各 target の directory・
+  kind・owner・verdict（`in-sync` / `sync` / `create` / `rejected`）・
+  変更数・source 数・`planHash` を報告する。
+- `index apply` — 再計画し、すべての drift pin（source・file list・
+  index バイト列）を live filesystem と照合してから書き込む。
+  `written` と `blocked` のリストを報告し、blocked target があれば
+  非ゼロ終了する。`--expect <planHash>` は事前に preview した
+  `planHash` に apply をピン留めし、再計算結果が異なれば全書き込みを
+  拒否する。rejected target（hand-curated・malformed・symlink・
+  `docs/impl` 自体のような contract 外ディレクトリ）は報告のみで
+  一切書き込まれない。
+- オプション: `--dir`, `--expect`, `--json`。`index` に `--type` と
+  `--force-index` は存在しない（contract 上 strict）。
+
 ## 冪等性
 
 同じ修復を二度実行すると二度目は no-op になる。index 再生成は同じ文書
@@ -127,14 +155,19 @@ preview-first に従う:
 - `doc-status`（`list` / `lint` / `audit` / `health`）はファイルを
   一切変更しない。
 - managed index の書き換え、link パス正規化、文書 migration ができるのは
-  `doc-maintenance` のみで、明示的な `apply` コマンド経由に限られる。
+  `doc-maintenance` のみで、明示的な apply（whitelist 修復の `apply`、
+  managed index materialization の `index apply`）経由に限られる。
+- managed index materialization は `index apply` のみを通る。各書き込みは
+  ディレクトリのオーナー writer に分派され、impl 索引へは
+  `sync_impl_index` の safe sync API 経由でのみ到達する。
 - migration も同じ preview-first contract で plan / apply されるが、
   repair コマンドが暗黙に実行することはない。
 
 ## リソース
 
 - `scripts/doc_maintenance.js`: safe repair と managed index 再生成の
-  plan / apply エントリポイント。
+  plan / apply エントリポイント。`index plan|apply` は全オーナー横断の
+  managed index materialization エントリポイント。
 - `scripts/migrate_docs.js`、`scripts/migrate_ids.js`、
   `scripts/scaffold_docs.js`、`scripts/promote_index.js`: この skill が
   所有する migration / bootstrap エントリポイント（先の 3 つは
