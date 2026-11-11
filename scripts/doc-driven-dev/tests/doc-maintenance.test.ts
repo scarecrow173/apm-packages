@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import { createDocument, migrateDocs, scaffoldDocsTree } from "../src/skills/lib/doc_suite_utils";
+import { planMaintenance } from "../src/skills/lib/doc_maintenance";
 import { CANONICAL_DOC_DIRS } from "../src/skills/lib/document_utils";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
@@ -141,6 +142,33 @@ test("apply regenerates stale and mismatched managed index entries", () => {
   assert.match(content, /\| SPEC-0001 \| Spec checkout \| draft \|/);
   assert.match(content, /\| SPEC-0002 \|/);
   assert.doesNotMatch(content, /ghost\.md|Wrong Title/);
+});
+
+test("index-tier-mismatch routes into the index rebuild plan", async () => {
+  const repo = tempRepo();
+  seedIdea(repo);
+  writeSpec(repo, "checkout", "SPEC-0001");
+  writeTypedDoc(repo, "docs/specs/old.md", "SPEC-0002", "spec", "implemented", "Old");
+  // Generated index keeps the settled doc's row in the active table — lint
+  // reports index-tier-mismatch and regeneration is its safe repair (Issue #189).
+  generatedIndex(repo, [
+    "| SPEC-0001 | Spec checkout | draft | [checkout.md](./checkout.md) |",
+    "| SPEC-0002 | Old | implemented | [old.md](./old.md) |",
+  ]);
+
+  const { plan } = await planMaintenance(repo, { type: "spec" });
+  const rebuild = plan.actions.find(
+    (action) => action.kind === "rebuild-index" && action.path === "docs/specs/README.md",
+  );
+  assert.ok(rebuild, `expected a rebuild-index action: ${JSON.stringify(plan.actions)}`);
+  assert.ok(
+    rebuild.ruleIds.includes("index-tier-mismatch"),
+    `index-tier-mismatch must route to rebuild: ${JSON.stringify(rebuild.ruleIds)}`,
+  );
+  assert.ok(
+    !plan.skipped.some((item) => item.ruleId === "index-tier-mismatch"),
+    "a rebuild-routed finding must not surface as manual/skipped",
+  );
 });
 
 test("hand-curated index is skipped unless --force-index", () => {
