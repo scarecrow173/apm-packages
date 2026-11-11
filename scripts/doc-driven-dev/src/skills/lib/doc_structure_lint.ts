@@ -8,7 +8,7 @@ import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repo
 import { isSettledStatus } from "./doc_lifecycle";
 import { primaryIndexTypeForDir, residentTypesForDir } from "./doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "./document_utils";
-import type { LintScope } from "./doc_lint";
+import type { AuditProfile, LintScope } from "./doc_lint";
 
 // ---------------------------------------------------------------------------
 // Markdown link integrity
@@ -226,9 +226,18 @@ async function lintExternalLinks(model: DocumentRepository, scope: LintScope): P
 // Orphan detection
 // ---------------------------------------------------------------------------
 
-function inboundLinkCounts(model: DocumentRepository): Map<string, number> {
+// `includeIndexLinks` controls whether links contributed by index files count
+// toward inbound reachability. The index is a generated view of the canonical
+// graph; the artifact profile excludes its links so a document reachable only
+// through the index still reads as navigation-orphaned (Issue #195).
+function inboundLinkCounts(
+  model: DocumentRepository,
+  options: { includeIndexLinks?: boolean } = {},
+): Map<string, number> {
+  const includeIndexLinks = options.includeIndexLinks ?? true;
   const counts = new Map<string, number>();
   for (const source of model.files) {
+    if (!includeIndexLinks && source.kind === "index") continue;
     const seen = new Set<string>();
     for (const link of source.links) {
       if (link.isImage || isExternalReference(link.target)) continue;
@@ -270,9 +279,13 @@ function inboundRelationCounts(model: DocumentRepository): Map<string, number> {
   return counts;
 }
 
-function lintOrphans(model: DocumentRepository, scope: LintScope): Finding[] {
+function lintOrphans(
+  model: DocumentRepository,
+  scope: LintScope,
+  profile: AuditProfile = "materialized",
+): Finding[] {
   const findings: Finding[] = [];
-  const linkCounts = inboundLinkCounts(model);
+  const linkCounts = inboundLinkCounts(model, { includeIndexLinks: profile !== "artifact" });
   const relationCounts = inboundRelationCounts(model);
   const contract = contractForType(scope.type);
   const severity = contract?.allowsRootArtifact ? "info" : "warning";
@@ -281,7 +294,7 @@ function lintOrphans(model: DocumentRepository, scope: LintScope): Finding[] {
 
   for (const document of scope.documents) {
     if (document.parseError) continue;
-    if (hasIndex && document.indexMembership.length === 0) {
+    if (profile !== "artifact" && hasIndex && document.indexMembership.length === 0) {
       findings.push(finding({
         ruleId: "orphan-index",
         category: "orphan",
@@ -518,7 +531,11 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
 // Entry points
 // ---------------------------------------------------------------------------
 
-function lintStructure(model: DocumentRepository, scope: LintScope): Finding[] {
+function lintStructure(
+  model: DocumentRepository,
+  scope: LintScope,
+  profile: AuditProfile = "materialized",
+): Finding[] {
   const dir = scope.directory;
   const indexCandidates = model.files.filter((file) =>
     normalizeDir(path.posix.dirname(file.path)) === dir
@@ -528,9 +545,9 @@ function lintStructure(model: DocumentRepository, scope: LintScope): Finding[] {
 
   const findings = [
     ...lintDocumentLinks(model, scope),
-    ...lintOrphans(model, scope),
+    ...lintOrphans(model, scope, profile),
   ];
-  if (index) findings.push(...lintIndexConsistency(model, scope, index));
+  if (index && profile !== "artifact") findings.push(...lintIndexConsistency(model, scope, index));
   return findings;
 }
 
