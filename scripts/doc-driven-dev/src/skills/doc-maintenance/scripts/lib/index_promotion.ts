@@ -87,7 +87,7 @@ async function applyIndexPromotions(cwd: string, onlyDir?: string): Promise<Inde
     let written: boolean;
     if (dir === "docs/adr") {
       const absoluteDir = path.join(resolvedCwd, dir);
-      written = writeIndexFile(absoluteDir, await buildAdrIndex(absoluteDir, dir), true).written;
+      written = writeIndexFile(absoluteDir, await buildAdrIndex(resolvedCwd, dir), true).written;
     } else if (dir === "docs/impl/ir") {
       written = updateIndexForMarkdownDir(resolvedCwd, dir, { force: true }).written;
     } else if (dir === "docs/impl/exp") {

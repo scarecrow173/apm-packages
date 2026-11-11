@@ -33247,6 +33247,16 @@ var configs = {
     dir: "docs/adr",
     dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
     idPrefix: "ADR",
+    indexRow: {
+      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
+      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
+      // every producer derives identical rows (Issue #185).
+      idFromFile: (file2) => {
+        const match = /^(\d+)-/.exec(file2);
+        return match ? `ADR-${match[1]}` : null;
+      },
+      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
+    },
     statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
     type: "adr"
   }

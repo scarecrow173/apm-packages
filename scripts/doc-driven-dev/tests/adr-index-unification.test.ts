@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -12,6 +13,9 @@ import {
   mergeManagedIndex,
 } from "../src/skills/lib/doc_suite_utils";
 import { buildIndex as buildAdrIndex } from "../src/skills/adr-doc/scripts/lib/adr_utils";
+
+const adrRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/adr-doc");
+const maintenanceRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-maintenance");
 
 /**
  * Issue #185 — unify ADR index writes on the common managed-index pipeline.
@@ -39,6 +43,25 @@ function writeDoc(root: string, rel: string, frontmatter: Record<string, string>
   writeFile(root, rel, `---\n${head.join("\n")}\n---\n\n${body}`);
 }
 
+// The generated `.apm` bundles are the public contract — e2e cases spawn the
+// shipped CLIs the same way doc-driven-dev-graph-scaffold.test.ts does
+// (rebuild with `pnpm run build` before running this file).
+function runSkill(root: string, name: string, args: string[], cwd: string) {
+  const result = spawnSync(process.execPath, [path.join(root, "scripts", name), ...args], {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  return { status: result.status, stdout: result.stdout || "", stderr: result.stderr || "" };
+}
+
+// Everything the generated marker owns: the Directory line, the index table,
+// and the optional `## Settled` tier. Hand-written preamble sits before the
+// marker, trailing prose after the generated region.
+function managedRegion(content: string): string {
+  return content.slice(content.indexOf(GENERATED_INDEX_MARKER));
+}
+
 // Scaffold-managed README + two ADRs. One ADR has NO front matter id/title —
 // MADR filename `0007-use-pgsql.md` and H1 `# 7. Use PostgreSQL` carry the
 // decision number; the other is a normal new_adr-style doc (id/title
@@ -61,7 +84,7 @@ test("common buildIndex renders ADR rows identical to adr semantics", async () =
   const content = await buildIndex(repo, "adr");
 
   // Byte-identical to what the dedicated ADR writer renders for the same dir.
-  const adrWriter = await buildAdrIndex(path.join(repo, "docs/adr"), "docs/adr");
+  const adrWriter = await buildAdrIndex(repo, "docs/adr");
   assert.equal(content, adrWriter);
 
   // Contract indexTitle, not the `${idPrefix} Documents` fallback.
@@ -145,4 +168,98 @@ test("mergeManagedIndex preserves hand-written preamble, trailing prose, and in-
   assert.match(merged, /## Notes\n\nkeep me/);
   // The generated table content is refreshed.
   assert.match(merged, /\| ADR-0002 \| New \| accepted \|/);
+});
+
+// ---------------------------------------------------------------------------
+// End-to-end: the three producers spawn as the shipped `.apm` CLIs.
+// ---------------------------------------------------------------------------
+
+test("new_adr, update_index --write, and doc_maintenance produce the same managed index", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+
+  for (const title of ["Adopt MADR", "Use PostgreSQL"]) {
+    const created = runSkill(adrRoot, "new_adr.js", ["--title", title, "--cwd", repo], repo);
+    assert.equal(created.status, 0, created.stderr);
+  }
+  const indexPath = path.join(repo, "docs/adr/README.md");
+  const producerA = fs.readFileSync(indexPath, "utf8");
+
+  // Producer B: the shared maintenance writer rebuilds the missing index.
+  fs.unlinkSync(indexPath);
+  const maintenance = runSkill(
+    maintenanceRoot,
+    "doc_maintenance.js",
+    ["apply", "--dir", "docs/adr", "--cwd", repo],
+    repo,
+  );
+  assert.equal(maintenance.status, 0, maintenance.stderr);
+  const producerB = fs.readFileSync(indexPath, "utf8");
+
+  // Producer C: the dedicated ADR index writer.
+  fs.unlinkSync(indexPath);
+  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
+  assert.equal(update.status, 0, update.stderr);
+  const producerC = fs.readFileSync(indexPath, "utf8");
+
+  for (const content of [producerA, producerB, producerC]) {
+    assert.ok(content.startsWith("# Architecture Decision Records"), content);
+    assert.match(content, /adopt-madr\.md/);
+    assert.match(content, /use-postgresql\.md/);
+  }
+  assert.equal(managedRegion(producerB), managedRegion(producerA));
+  assert.equal(managedRegion(producerC), managedRegion(producerA));
+});
+
+test("update_index --write preserves hand-written preamble and tail on a managed index", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+  const first = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  assert.equal(first.status, 0, first.stderr);
+
+  const indexPath = path.join(repo, "docs/adr/README.md");
+  const managed = fs.readFileSync(indexPath, "utf8");
+  fs.writeFileSync(indexPath, `# Custom Intro\n\n${managed}\n\n## Team Notes\n\nhand written\n`, "utf8");
+
+  // A second ADR arrives without touching the index, so regeneration must
+  // merge new rows while leaving the hand-written bookends in place.
+  const second = runSkill(adrRoot, "new_adr.js", ["--title", "Use PostgreSQL", "--cwd", repo, "--no-index"], repo);
+  assert.equal(second.status, 0, second.stderr);
+
+  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
+  assert.equal(update.status, 0, update.stderr);
+
+  const content = fs.readFileSync(indexPath, "utf8");
+  assert.ok(content.startsWith("# Custom Intro"), content);
+  assert.ok(content.indexOf("# Custom Intro") < content.indexOf(GENERATED_INDEX_MARKER));
+  assert.match(content, /## Team Notes\n\nhand written/);
+  assert.ok(content.indexOf("## Team Notes") > content.indexOf(GENERATED_INDEX_MARKER));
+  // Rows were regenerated across the merge, not appended stale.
+  assert.match(content, /adopt-madr\.md/);
+  assert.match(content, /use-postgresql\.md/);
+});
+
+test("hand-curated README still refused by default; --force replaces it", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+  const first = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  assert.equal(first.status, 0, first.stderr);
+
+  const indexPath = path.join(repo, "docs/adr/README.md");
+  const curated = "# My Notes\n\nhand curated\n";
+  fs.writeFileSync(indexPath, curated, "utf8");
+
+  const refused = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
+  assert.equal(refused.status, 0, refused.stderr);
+  assert.match(refused.stdout + refused.stderr, /hand-curated/);
+  assert.equal(fs.readFileSync(indexPath, "utf8"), curated);
+
+  const forced = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--force", "--cwd", repo], repo);
+  assert.equal(forced.status, 0, forced.stderr);
+  const content = fs.readFileSync(indexPath, "utf8");
+  assert.ok(content.includes(GENERATED_INDEX_MARKER), content);
+  assert.match(content, /adopt-madr\.md/);
 });
