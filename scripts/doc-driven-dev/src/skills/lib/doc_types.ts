@@ -19,6 +19,12 @@ type DocConfig = {
   dir: string;
   dirs: string[];
   idPrefix: string;
+  indexRow?: {
+    // Fallback ID when front matter `id:` is absent; return null for no fallback.
+    idFromFile?: (file: string) => string | null;
+    // Normalize a heading-derived title (NOT applied to front-matter `title:`).
+    titleFromHeading?: (heading: string) => string;
+  };
   statusValues: string[];
   type: DocType;
 };
@@ -93,6 +99,17 @@ const configs: Record<DocType, DocConfig> = {
     dir: "docs/adr",
     dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
     idPrefix: "ADR",
+    indexRow: {
+      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
+      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
+      // every producer derives identical rows (Issue #185).
+      idFromFile: (file: string) => {
+        const match = /^(\d+)-/.exec(file);
+        return match ? `ADR-${match[1]}` : null;
+      },
+      titleFromHeading: (heading: string) =>
+        heading.replace(/^\d+\.\s*/, "").trim(),
+    },
     statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
     type: "adr",
   },
