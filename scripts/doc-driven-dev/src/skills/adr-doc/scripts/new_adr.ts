@@ -115,7 +115,7 @@ async function main(): Promise<void> {
     if (args.noIndex) {
       console.log(`Skipped index update (--no-index): ${relativeIndex}`);
     } else {
-      const indexResult = writeIndexFile(adrDir, await buildIndex(adrDir, relativeDir), Boolean(args.forceIndex));
+      const indexResult = writeIndexFile(adrDir, await buildIndex(cwd, relativeDir), Boolean(args.forceIndex));
       if (indexResult.written) {
         console.log(`Updated ${relativeIndex}`);
       } else {

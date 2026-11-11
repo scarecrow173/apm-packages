@@ -314,7 +314,7 @@ test("ADR index partitions rejected/deprecated records into the Settled tier", a
   });
 
   // buildIndex returns the generated body; update_index.js writes it.
-  const content = await buildAdrIndex(path.join(repo, "docs/adr"), "docs/adr");
+  const content = await buildAdrIndex(repo, "docs/adr");
   assert.match(content, /## Settled <!-- doc-suite:settled-index -->/);
   // `accepted` stays in-flight — it is the normative baseline, not a close-out.
   assert.deepEqual(activeFiles(content), ["0001-use-es.md"]);
