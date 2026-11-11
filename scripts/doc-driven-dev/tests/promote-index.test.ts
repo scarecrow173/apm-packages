@@ -110,6 +110,24 @@ test("CRLF legacy scaffold output is still promotable", () => {
   assert.ok(fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8").includes("generated-index"));
 });
 
+test("a symlinked index file is rejected and never written through", (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  const outsideFile = path.join(outside, "legacy.md");
+  fs.writeFileSync(outsideFile, LEGACY["docs/adr"], "utf8");
+  fs.mkdirSync(path.join(repo, "docs/adr"), { recursive: true });
+  try {
+    fs.symlinkSync(outsideFile, path.join(repo, "docs/adr", "README.md"));
+  } catch {
+    t.skip("file symlinks are not permitted on this platform");
+    return;
+  }
+
+  const result = runPromote(["--cwd", repo, "--apply"], repo);
+  assert.equal(result.status, 1, "symlinked index must be rejected");
+  assert.equal(fs.readFileSync(outsideFile, "utf8"), LEGACY["docs/adr"], "symlink target untouched");
+});
+
 test("--json emits the verdict report and --dir scopes to one contract dir", () => {
   const repo = tempRepo();
   seedLegacy(repo);

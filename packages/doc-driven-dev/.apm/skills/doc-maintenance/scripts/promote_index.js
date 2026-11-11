@@ -33651,6 +33651,9 @@ function classify(cwd, dir) {
   if (!import_node_fs4.default.existsSync(absoluteIndex)) {
     return { dir, path: relativeIndex, verdict: "noop-missing", detail: "no index file present" };
   }
+  if (import_node_fs4.default.lstatSync(absoluteIndex).isSymbolicLink()) {
+    return { dir, path: relativeIndex, verdict: "rejected", detail: "index file is a symbolic link; refusing to write through it" };
+  }
   const content3 = import_node_fs4.default.readFileSync(absoluteIndex, "utf8");
   if (content3.includes(GENERATED_INDEX_MARKER)) {
     return { dir, path: relativeIndex, verdict: "noop-managed", detail: "already a managed index" };
@@ -33687,14 +33690,18 @@ async function applyIndexPromotions(cwd, onlyDir) {
       results.push(verdict);
       continue;
     }
+    let written;
     if (dir === "docs/adr") {
       const absoluteDir = import_node_path5.default.join(resolvedCwd, dir);
-      writeIndexFile(absoluteDir, await buildIndex(absoluteDir, dir), true);
+      written = writeIndexFile(absoluteDir, await buildIndex(absoluteDir, dir), true).written;
     } else if (dir === "docs/impl/ir") {
-      updateIndexForMarkdownDir(resolvedCwd, dir, { force: true });
+      written = updateIndexForMarkdownDir(resolvedCwd, dir, { force: true }).written;
     } else if (dir === "docs/impl/exp") {
-      updateIndexForExperimentDir(resolvedCwd, dir, { force: true });
+      written = updateIndexForExperimentDir(resolvedCwd, dir, { force: true }).written;
+    } else {
+      throw new Error(`No owner writer registered for promoted dir ${dir}`);
     }
+    if (!written) throw new Error(`Owner writer refused the promoted index for ${dir}`);
     results.push({ ...verdict, detail: "promoted to the owner-managed index" });
   }
   return results;
