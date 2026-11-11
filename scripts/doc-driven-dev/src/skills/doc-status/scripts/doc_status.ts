@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { collectFindings, filterFindings, listDocuments, summarizeHealth } from "../../lib/doc_report";
+import type { AuditProfile } from "../../lib/doc_report";
 import type { Finding } from "../../lib/doc_repository";
 
 type CliArgs = {
@@ -13,6 +14,7 @@ type CliArgs = {
   externalLinks?: boolean;
   help?: boolean;
   json: boolean;
+  profile?: AuditProfile;
   rule?: string;
   severity?: string;
   status?: string;
@@ -31,6 +33,13 @@ function parseArgs(argv: string[]): CliArgs {
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--rule") args.rule = argv[++i];
     else if (arg === "--severity") args.severity = argv[++i];
+    else if (arg === "--profile") {
+      const value = argv[++i];
+      if (value !== "artifact" && value !== "materialized") {
+        throw new Error(`Invalid --profile value: ${value}; expected artifact|materialized`);
+      }
+      args.profile = value;
+    }
     else if (arg === "--blocking") args.blocking = true;
     else if (arg === "--json") args.json = true;
     else if (arg === "--external-links") args.externalLinks = true;
@@ -54,7 +63,7 @@ function usage(): string {
     "Options:",
     "  [--type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all]",
     "  [--dir <path>] [--status <status>] [--rule <ruleId>] [--severity error|warning|info]",
-    "  [--blocking] [--json] [--external-links]",
+    "  [--profile artifact|materialized] [--blocking] [--json] [--external-links]",
   ].join("\n");
 }
 
@@ -90,7 +99,12 @@ async function runList(args: CliArgs, cwd: string): Promise<void> {
 }
 
 async function runLint(args: CliArgs, cwd: string, audit: boolean): Promise<void> {
-  const collected = await collectFindings(cwd, { type: args.type, dir: args.dir, externalLinks: args.externalLinks });
+  const collected = await collectFindings(cwd, {
+    type: args.type,
+    dir: args.dir,
+    externalLinks: args.externalLinks,
+    profile: args.profile,
+  });
   const findings = filterFindings(collected.findings, {
     rule: args.rule,
     severity: args.severity,
@@ -99,15 +113,28 @@ async function runLint(args: CliArgs, cwd: string, audit: boolean): Promise<void
   const blocking = findings.filter((finding) => finding.blocking).length;
   const command = audit ? "audit" : "lint";
   if (args.json) {
-    console.log(JSON.stringify({ command, blocking, documents: collected.documents, findings }, null, 2));
+    console.log(JSON.stringify({
+      command,
+      profile: collected.profile,
+      gates: collected.gates,
+      blocking,
+      documents: collected.documents,
+      findings,
+    }, null, 2));
     return;
   }
   console.log(`${command}: ${collected.documents} document(s), ${findings.length} finding(s), ${blocking} blocking`);
+  console.log(`profile: ${collected.profile}`);
   printFindings(findings);
 }
 
 async function runHealth(args: CliArgs, cwd: string): Promise<void> {
-  const collected = await collectFindings(cwd, { type: args.type, dir: args.dir, externalLinks: args.externalLinks });
+  const collected = await collectFindings(cwd, {
+    type: args.type,
+    dir: args.dir,
+    externalLinks: args.externalLinks,
+    profile: args.profile,
+  });
   const findings = filterFindings(collected.findings, {
     rule: args.rule,
     severity: args.severity,
@@ -115,9 +142,10 @@ async function runHealth(args: CliArgs, cwd: string): Promise<void> {
   });
   const health = summarizeHealth(collected, findings);
   if (args.json) {
-    console.log(JSON.stringify({ command: "health", ...health }, null, 2));
+    console.log(JSON.stringify({ command: "health", profile: collected.profile, gates: collected.gates, ...health }, null, 2));
     return;
   }
+  console.log(`Profile:   ${collected.profile}`);
   console.log(`Documents: ${health.documents}`);
   console.log(`Blocking:  ${health.blocking}`);
   console.log(`Warnings:  ${health.warnings}`);

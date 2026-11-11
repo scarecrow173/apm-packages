@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { auditDocuments } from "../src/skills/lib/doc_audit";
 import { lintScope, MATERIALIZED_RULE_IDS } from "../src/skills/lib/doc_lint";
 import type { AuditProfile } from "../src/skills/lib/doc_lint";
+// Namespace import: Task 2 adds `profileGates` and the gate-name constants to
+// doc_report; referencing them off the namespace keeps the suite loadable even
+// before the implementation lands.
+import * as docReport from "../src/skills/lib/doc_report";
 import { scanRepository } from "../src/skills/lib/doc_repository";
 import type { Finding } from "../src/skills/lib/doc_repository";
 
@@ -241,4 +247,238 @@ test("omitting the profile behaves exactly like explicit materialized", async ()
   const explicitMaterialized = lintScope(model, "spec", "docs/specs", "materialized");
   assert.deepEqual(implicitProfile, explicitMaterialized);
   assert.ok(codes(implicitProfile).includes("index-missing-entry"), "default keeps materialized index checks");
+});
+
+// ---------------------------------------------------------------------------
+// Collection layer + CLI threading (Issue #195, Task 2)
+// ---------------------------------------------------------------------------
+
+const MATERIALIZED_GATE_NAMES = [
+  "index-consistency",
+  "index-membership",
+  "index-presence",
+  "orphan-index-membership",
+];
+
+test("profileGates reports ran/skipped check groups per profile", () => {
+  assert.equal(typeof docReport.profileGates, "function", "doc_report exports profileGates");
+  assert.ok(Array.isArray(docReport.ARTIFACT_GATES), "doc_report exports ARTIFACT_GATES");
+  assert.ok(Array.isArray(docReport.MATERIALIZED_ONLY_GATES), "doc_report exports MATERIALIZED_ONLY_GATES");
+  assert.deepEqual([...docReport.MATERIALIZED_ONLY_GATES].sort(), MATERIALIZED_GATE_NAMES);
+  assert.deepEqual(docReport.profileGates("artifact"), {
+    ran: [...docReport.ARTIFACT_GATES],
+    skipped: [...docReport.MATERIALIZED_ONLY_GATES],
+  });
+  assert.deepEqual(docReport.profileGates("materialized"), {
+    ran: [...docReport.ARTIFACT_GATES, ...docReport.MATERIALIZED_ONLY_GATES],
+    skipped: [],
+  });
+});
+
+test("collectFindings threads the query profile and reports gates", async () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+
+  const artifact = await docReport.collectFindings(root, { type: "spec", profile: "artifact" });
+  assert.equal(artifact.profile, "artifact");
+  assert.deepEqual(codes(artifact.findings), [], "artifact run sees no index findings without a README");
+  assert.deepEqual([...artifact.gates.skipped].sort(), MATERIALIZED_GATE_NAMES);
+
+  const materialized = await docReport.collectFindings(root, { type: "spec" });
+  assert.equal(materialized.profile, "materialized", "unspecified profile stays materialized");
+  assert.deepEqual(materialized.gates.skipped, []);
+  assert.ok(materialized.gates.ran.includes("index-presence"));
+  assert.ok(codes(materialized.findings).includes("missing-index"));
+});
+
+test("auditDocuments reports profile and gates on the report envelope", async () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+
+  const artifact = await auditDocuments(root, "spec", undefined, { profile: "artifact" });
+  assert.equal(artifact.profile, "artifact");
+  assert.deepEqual([...artifact.gates.skipped].sort(), MATERIALIZED_GATE_NAMES);
+  assert.deepEqual(artifact.findings, []);
+
+  const materialized = await auditDocuments(root, "spec");
+  assert.equal(materialized.profile, "materialized");
+  assert.deepEqual(materialized.gates.skipped, []);
+  assert.ok(materialized.findings.some((finding) => finding.code === "missing-index"));
+});
+
+// --- CLI-level: the generated bundles accept --profile ----------------------
+
+const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
+
+function runCli(name: string, args: string[], cwd: string) {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(skillRoot, "doc-status", "scripts", name), ...args],
+    { cwd, encoding: "utf8", windowsHide: true },
+  );
+  return { status: result.status, stdout: result.stdout || "", stderr: result.stderr || "" };
+}
+
+function snapshot(dir: string): Map<string, string> {
+  const files = new Map<string, string>();
+  const walk = (current: string) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else files.set(path.relative(dir, full), fs.readFileSync(full, "utf8"));
+    }
+  };
+  walk(dir);
+  return files;
+}
+
+test("doc_status lint --profile artifact skips index gates; default stays materialized", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root); // valid canonical docs, NO README in docs/specs
+
+  const artifact = runCli("doc_status.js", ["lint", "--type", "spec", "--json", "--profile", "artifact"], root);
+  assert.equal(artifact.status, 0, artifact.stderr);
+  const artifactReport = JSON.parse(artifact.stdout);
+  assert.equal(artifactReport.command, "lint");
+  assert.equal(artifactReport.profile, "artifact");
+  assert.equal(artifactReport.blocking, 0);
+  assert.deepEqual(artifactReport.findings, []);
+  assert.deepEqual([...artifactReport.gates.skipped].sort(), MATERIALIZED_GATE_NAMES);
+
+  const materialized = runCli("doc_status.js", ["lint", "--type", "spec", "--json"], root);
+  assert.equal(materialized.status, 0, materialized.stderr);
+  const materializedReport = JSON.parse(materialized.stdout);
+  assert.equal(materializedReport.profile, "materialized");
+  assert.deepEqual(materializedReport.gates.skipped, []);
+  assert.ok(
+    materializedReport.findings.some((finding: { ruleId: string }) => finding.ruleId === "missing-index"),
+    "default lint still reports the missing README",
+  );
+
+  const human = runCli("doc_status.js", ["lint", "--type", "spec", "--profile", "artifact"], root);
+  assert.equal(human.status, 0, human.stderr);
+  assert.match(human.stdout, /profile: artifact/);
+});
+
+test("doc_status audit --profile artifact reports profile and gates", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+
+  const result = runCli("doc_status.js", ["audit", "--type", "spec", "--json", "--profile", "artifact"], root);
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.command, "audit");
+  assert.equal(report.profile, "artifact");
+  assert.equal(report.blocking, 0);
+  assert.ok(report.gates.ran.includes("front-matter"));
+  assert.ok(report.gates.skipped.includes("index-consistency"));
+});
+
+test("doc_status health --profile artifact drops the orphan-index roll-up", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+  // The index lists only a.md: under materialized b.md is an orphan-index;
+  // under artifact the index contributes nothing and b.md has no orphan.
+  writeSpecIndex(root, [indexRow("SPEC-0001", "Spec A", "draft", "a.md")]);
+
+  const artifact = runCli("doc_status.js", ["health", "--type", "spec", "--json", "--profile", "artifact"], root);
+  assert.equal(artifact.status, 0, artifact.stderr);
+  const report = JSON.parse(artifact.stdout);
+  assert.equal(report.profile, "artifact");
+  assert.ok(report.gates.skipped.includes("orphan-index-membership"));
+  assert.equal(report.orphans.total, 0);
+  assert.ok(!("orphan-index" in report.orphans.byRule), "artifact roll-up has no orphan-index bucket");
+
+  const materialized = runCli("doc_status.js", ["health", "--type", "spec", "--json"], root);
+  assert.equal(materialized.status, 0, materialized.stderr);
+  const materializedReport = JSON.parse(materialized.stdout);
+  assert.equal(materializedReport.orphans.byRule["orphan-index"], 1);
+});
+
+test("doc_status list accepts --profile without applying it", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+  const result = runCli("doc_status.js", ["list", "--type", "spec", "--profile", "artifact"], root);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /a\.md/);
+});
+
+test("audit_docs --profile artifact reports profile; default keeps missing-index", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+
+  const artifact = runCli("audit_docs.js", ["--type", "spec", "--json", "--profile", "artifact"], root);
+  assert.equal(artifact.status, 0, artifact.stderr);
+  const report = JSON.parse(artifact.stdout);
+  assert.equal(report.profile, "artifact");
+  assert.ok(report.gates.skipped.includes("index-presence"));
+  assert.deepEqual(report.findings, []);
+
+  const materialized = runCli("audit_docs.js", ["--type", "spec", "--json"], root);
+  assert.equal(materialized.status, 0, materialized.stderr);
+  const materializedReport = JSON.parse(materialized.stdout);
+  assert.equal(materializedReport.profile, "materialized");
+  assert.ok(
+    materializedReport.findings.some((finding: { code: string }) => finding.code === "missing-index"),
+    "default audit_docs still reports the missing README",
+  );
+});
+
+test("audit_docs --type all --profile artifact merges a uniform profile envelope", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+
+  const result = runCli("audit_docs.js", ["--type", "all", "--json", "--profile", "artifact"], root);
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.profile, "artifact");
+  assert.deepEqual([...report.gates.skipped].sort(), MATERIALIZED_GATE_NAMES);
+  assert.ok(
+    !report.findings.some((finding: { code: string }) => MATERIALIZED_RULE_IDS.has(finding.code)),
+    "merged --type all report carries no index-surface findings under artifact",
+  );
+});
+
+test("explicit --profile materialized matches the omitted-profile output", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+
+  const explicit = runCli("doc_status.js", ["lint", "--type", "spec", "--json", "--profile", "materialized"], root);
+  const omitted = runCli("doc_status.js", ["lint", "--type", "spec", "--json"], root);
+  assert.equal(explicit.status, 0, explicit.stderr);
+  assert.equal(omitted.status, 0, omitted.stderr);
+  assert.deepEqual(JSON.parse(explicit.stdout), JSON.parse(omitted.stdout));
+});
+
+test("--profile rejects an unknown value on both CLIs", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+
+  const lint = runCli("doc_status.js", ["lint", "--type", "spec", "--profile", "bogus"], root);
+  assert.notEqual(lint.status, 0, "doc_status rejects --profile bogus");
+  assert.match(lint.stderr, /--profile/);
+
+  const audit = runCli("audit_docs.js", ["--type", "spec", "--profile", "bogus"], root);
+  assert.notEqual(audit.status, 0, "audit_docs rejects --profile bogus");
+  assert.match(audit.stderr, /--profile/);
+});
+
+test("--profile runs are read-only under both profiles", () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+  writeSpecIndex(root, [indexRow("SPEC-0001", "Spec A", "draft", "a.md")]);
+
+  const before = snapshot(root);
+  for (const args of [
+    ["lint", "--type", "spec", "--profile", "artifact"],
+    ["lint", "--type", "spec"],
+    ["audit", "--type", "spec", "--profile", "artifact"],
+    ["health", "--type", "spec", "--profile", "artifact"],
+  ]) {
+    const result = runCli("doc_status.js", args, root);
+    assert.equal(result.status, 0, `doc_status ${args.join(" ")}: ${result.stderr}`);
+  }
+  const auditDocs = runCli("audit_docs.js", ["--type", "spec", "--json", "--profile", "artifact"], root);
+  assert.equal(auditDocs.status, 0, auditDocs.stderr);
+  assert.deepEqual(snapshot(root), before);
 });

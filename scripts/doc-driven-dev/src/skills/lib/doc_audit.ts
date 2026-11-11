@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { lintLegacyIdReferences, lintScope, scopeFor } from "./doc_lint";
+import { profileGates } from "./doc_report";
+import type { AuditProfile, ProfileGates } from "./doc_report";
 import { lintExternalLinks } from "./doc_structure_lint";
 import { scopeTypesForQuery } from "./doc_ownership";
 import { canonicalDocRoots, compareFindings, scanRepository } from "./doc_repository";
@@ -23,10 +25,13 @@ type AuditReport = {
   directory: string;
   files: number;
   findings: AuditFinding[];
+  profile: AuditProfile;
+  gates: ProfileGates;
 };
 
 type AuditOptions = {
   externalLinks?: boolean;
+  profile?: AuditProfile;
 };
 
 function scanRoots(relativeDirs: string[]): string[] {
@@ -63,13 +68,14 @@ async function auditWithModel(
   const relativeDir = docDir(cwd, type, explicitDir);
   const fullDir = path.join(cwd, relativeDir);
   const files = fs.existsSync(fullDir) && isInsideRealpath(cwd, fullDir) ? docFiles(fullDir) : [];
-  const findings = lintScope(model, type, relativeDir);
+  const profile = options?.profile ?? "materialized";
+  const findings = lintScope(model, type, relativeDir, profile);
   if (options?.externalLinks) {
     findings.push(...await lintExternalLinks(model, scopeFor(model, type, relativeDir)));
     findings.sort(compareFindings);
   }
   const legacy = findings.map((finding) => toLegacyFinding(relativeDir, finding));
-  return { directory: relativeDir, files: files.length, findings: legacy };
+  return { directory: relativeDir, files: files.length, findings: legacy, profile, gates: profileGates(profile) };
 }
 
 async function auditDocuments(cwd: string, type: string, explicitDir?: string, options?: AuditOptions): Promise<AuditReport> {
@@ -101,7 +107,8 @@ async function auditAllDocuments(cwd: string, explicitDir?: string, options?: Au
   const types = scopeTypesForQuery(normalizedDir, "all");
   const relativeDirs = types.map((type) => normalizedDir ?? docDir(cwd, type));
   const model = await buildModel(cwd, [...relativeDirs, ...distributionDocRoots(cwd)]);
-  const merged: AuditReport = { directory: ".", files: 0, findings: [] };
+  const profile = options?.profile ?? "materialized";
+  const merged: AuditReport = { directory: ".", files: 0, findings: [], profile, gates: profileGates(profile) };
   for (const type of types) {
     const report = await auditWithModel(model, cwd, type, normalizedDir ?? undefined, options);
     merged.files += report.files;

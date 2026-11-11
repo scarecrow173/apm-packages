@@ -1,6 +1,7 @@
 "use strict";
 
 import { lintScope, scopeFor } from "./doc_lint";
+import type { AuditProfile } from "./doc_lint";
 import { lintExternalLinks } from "./doc_structure_lint";
 import { scopeTypesForQuery } from "./doc_ownership";
 import { canonicalDocRoots, compareFindings, lifecycleBucketOf, scanRepository } from "./doc_repository";
@@ -12,6 +13,7 @@ type DocStatusQuery = {
   type?: string;
   dir?: string;
   externalLinks?: boolean;
+  profile?: AuditProfile;
 };
 
 type FindingFilter = {
@@ -20,11 +22,18 @@ type FindingFilter = {
   blocking?: boolean;
 };
 
+type ProfileGates = {
+  ran: string[];
+  skipped: string[];
+};
+
 type CollectedFindings = {
   model: DocumentRepository;
   types: string[];
   documents: number;
   findings: Finding[];
+  profile: AuditProfile;
+  gates: ProfileGates;
 };
 
 type HealthCategory = {
@@ -61,6 +70,34 @@ const CATEGORY_ORDER = [
   "structure",
 ];
 
+// Check-group names reported in the lint/audit/health output envelopes — the
+// names are stable and JSON-visible, so consumers can tell which evaluation
+// surface a run covered. `artifact` runs the canonical-document gates;
+// `materialized` adds the managed-index gates on top (Issue #195).
+const ARTIFACT_GATES = [
+  "front-matter",
+  "relations",
+  "directory-required-files",
+  "links",
+  "orphan-navigation",
+  "orphan-relation",
+  "provenance",
+  "traceability",
+] as const;
+
+const MATERIALIZED_ONLY_GATES = [
+  "index-presence",
+  "index-membership",
+  "index-consistency",
+  "orphan-index-membership",
+] as const;
+
+function profileGates(profile: AuditProfile): ProfileGates {
+  return profile === "artifact"
+    ? { ran: [...ARTIFACT_GATES], skipped: [...MATERIALIZED_ONLY_GATES] }
+    : { ran: [...ARTIFACT_GATES, ...MATERIALIZED_ONLY_GATES], skipped: [] };
+}
+
 function scanRoots(relativeDirs: string[]): string[] {
   return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
 }
@@ -72,6 +109,7 @@ function resolveQueryScope(cwd: string, query: { type?: string; dir?: string }):
 
 async function collectFindings(cwd: string, query: DocStatusQuery): Promise<CollectedFindings> {
   const { types, explicitDir } = resolveQueryScope(cwd, query);
+  const profile = query.profile ?? "materialized";
   const relativeDirs = types.map((type) => explicitDir ?? docDir(cwd, type));
   const model = await scanRepository({ cwd, roots: scanRoots(relativeDirs) });
   const findings: Finding[] = [];
@@ -80,7 +118,7 @@ async function collectFindings(cwd: string, query: DocStatusQuery): Promise<Coll
     const directory = explicitDir ?? docDir(cwd, type);
     const scope = scopeFor(model, type, directory);
     documents += scope.documents.length;
-    findings.push(...lintScope(model, type, directory));
+    findings.push(...lintScope(model, type, directory, profile));
     if (query.externalLinks) {
       findings.push(...await lintExternalLinks(model, scope));
     }
@@ -95,7 +133,7 @@ async function collectFindings(cwd: string, query: DocStatusQuery): Promise<Coll
     return true;
   });
   deduped.sort(compareFindings);
-  return { model, types, documents, findings: deduped };
+  return { model, types, documents, findings: deduped, profile, gates: profileGates(profile) };
 }
 
 function filterFindings(findings: Finding[], filter: FindingFilter): Finding[] {
@@ -170,5 +208,14 @@ async function listDocuments(cwd: string, query: { type?: string; dir?: string; 
   return groups;
 }
 
-export { collectFindings, docDir, filterFindings, listDocuments, summarizeHealth };
-export type { CollectedFindings, DocStatusQuery, FindingFilter, HealthCategory, HealthOrphanSummary, HealthReport };
+export {
+  ARTIFACT_GATES,
+  collectFindings,
+  docDir,
+  filterFindings,
+  listDocuments,
+  MATERIALIZED_ONLY_GATES,
+  profileGates,
+  summarizeHealth,
+};
+export type { AuditProfile, CollectedFindings, DocStatusQuery, FindingFilter, HealthCategory, HealthOrphanSummary, HealthReport, ProfileGates };
