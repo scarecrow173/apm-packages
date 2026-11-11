@@ -65,6 +65,32 @@ node scripts/doc_maintenance.js apply --force-index --json
   (`findings before` / `findings after`).
 - Options: `--type`, `--dir`, `--force-index`, `--json`.
 
+`index` is the explicit managed-index materialization entrypoint — INDEX
+only, across every owner. Unlike `plan`/`apply` it touches nothing outside
+managed index content (no link normalization, no source repairs), and it
+dispatches each write to the owning writer: shared-4col directories through
+the shared renderer/merge, `docs/adr` through the ADR managed writer, and
+`docs/impl/ir`/`docs/impl/exp` through the impl-doc safe sync engine (the
+same API `sync_impl_index` uses — never the unconditional writers).
+
+```bash
+node scripts/doc_maintenance.js index plan [--dir <path>] [--json]
+node scripts/doc_maintenance.js index apply [--dir <path>] [--expect <planHash>] [--json]
+```
+
+- `index plan` — preview only; writes nothing. Reports each target's
+  directory, kind, owner, verdict (`in-sync` / `sync` / `create` /
+  `rejected`), change count, source count, and `planHash`.
+- `index apply` — re-plans, re-validates every drift pin (sources, file
+  list, index bytes) against the live filesystem, then writes. Reports the
+  `written` and `blocked` lists; any blocked target exits non-zero.
+  `--expect <planHash>` pins the apply to a previously previewed `planHash`
+  and refuses all writes when the recomputed plan differs. Rejected
+  targets — hand-curated, malformed, symlinked, or out-of-contract
+  directories such as `docs/impl` itself — are reported and never written.
+- Options: `--dir`, `--expect`, `--json`. There is no `--type` or
+  `--force-index` on `index` — strict by contract.
+
 ## Idempotency
 
 The same repair applied twice is a no-op the second time: index regeneration
@@ -124,15 +150,20 @@ preview-first:
 
 - `doc-status` (`list` / `lint` / `audit` / `health`) never modifies files.
 - `doc-maintenance` is the only skill that may rewrite managed index content,
-  normalize link paths, or run document migrations, and only through the
-  explicit `apply` command.
+  normalize link paths, or run document migrations, and only through an
+  explicit apply — `apply` for whitelisted repairs, `index apply` for
+  managed index materialization.
+- Managed index materialization goes through `index apply` only: each write
+  dispatches to the directory's owning writer, and impl indexes are reached
+  exclusively through the `sync_impl_index` safe sync API.
 - Migration is planned and applied through the same preview-first contract
   but is never performed implicitly by a repair command.
 
 ## Resources
 
 - `scripts/doc_maintenance.js`: plan/apply entry point for safe repairs and
-  managed index regeneration.
+  managed index regeneration; `index plan|apply` is the explicit managed
+  index materialization entrypoint across owners.
 - `scripts/migrate_docs.js`, `scripts/migrate_ids.js`,
   `scripts/scaffold_docs.js`, `scripts/promote_index.js`: migration and
   bootstrap entry points owned by this skill (the first three are also
