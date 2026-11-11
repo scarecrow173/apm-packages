@@ -387,7 +387,9 @@ index 保守、bootstrap パターン、カテゴリ構成については
 - `scripts/review_adr.js`: agent-readiness をレビューする。
 - `scripts/check_code_links.js`: Implementation Plan のコード参照を確認する。
 - `scripts/update_index.js`: ADR 索引を更新する。既定では dry-run。
-  手書き索引は `--force` を付けない限り上書きしない。
+  手書き索引は `--force` を付けない限り上書きしない。旧 scaffold が
+  生成した marker なし README は、強制上書きではなく doc-maintenance の
+  `promote_index.js` で取り込める。
 - `scripts/relate_adr.js`: ADR relations を双方向に追加する。
 - `scripts/migrate_report.js`: ファイルを書き換えず、MADR 4.0.0 へ寄せる移行
   アクションを報告する。
