@@ -54,7 +54,7 @@
   `doc_maintenance`、`scaffold_docs`、`migrate_docs`、`migrate_ids`
 - `impl-doc`: `new_impl_record`、`new_experiment_log`、
   `append_experiment_event`、`edit_experiment_log`、`migrate_ids`、
-  `promote_index`
+  `promote_index`、`sync_impl_index`
 
 ## Audit owners per owner
 
@@ -88,7 +88,7 @@ index 書き込みをブロックする。`promote_index`(preview、`--apply` �
 - オーナー未定義のディレクトリ(checkout 内のカスタム `--dir`)は任意の
   type を受け付ける。オーナーシップが未記載のパスを占有することはない。
 - `doc_maintenance` による index 修復は `shared-4col` 領域のみが対象。
-  `impl-4col` / `exp-1col` の index は impl-doc のツールのみが修復し、
+  `impl-4col` / `exp-1col` の index は `sync_impl_index` のみが同期し、
   `--force-index` でこの境界を越えることはできない。
 - `docs/impl` は resident type を持たないオーナー管理コンテナであり、
   直下への作成・監査はできない。
