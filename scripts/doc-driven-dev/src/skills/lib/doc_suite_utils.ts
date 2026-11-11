@@ -956,8 +956,9 @@ const LEGACY_SCAFFOLD_INDEX_TITLES: Record<string, string> = {
 };
 
 function legacyScaffoldIndex(dir: string): string | null {
-  const title = LEGACY_SCAFFOLD_INDEX_TITLES[normalizeDir(dir)];
-  return title ? buildGenericIndex(dir, title) : null;
+  const normalized = normalizeDir(dir);
+  const title = LEGACY_SCAFFOLD_INDEX_TITLES[normalized];
+  return title ? buildGenericIndex(normalized, title) : null;
 }
 
 function isMarkdownSource(file: string): boolean {

@@ -50,6 +50,27 @@ test("scaffoldDocsTree writes marker-bearing owner indexes for ADR/IR/EXP", asyn
   assert.ok(specIndex.includes(GENERATED_INDEX_MARKER));
 });
 
+test("empty contract index is byte-identical to what each owner writer produces on an empty dir", async () => {
+  const repo = tempRepo();
+  const adrDir = path.join(repo, "docs/adr");
+  const irDir = path.join(repo, "docs/impl/ir");
+  const expDir = path.join(repo, "docs/impl/exp");
+  for (const dir of [adrDir, irDir, expDir]) fs.mkdirSync(dir, { recursive: true });
+
+  const { buildIndex } = await import("../src/skills/adr-doc/scripts/lib/adr_utils");
+  const { updateIndexForMarkdownDir, updateIndexForExperimentDir } = await import(
+    "../src/skills/impl-doc/scripts/lib/impl_doc_utils"
+  );
+
+  assert.equal(await buildIndex(adrDir, "docs/adr"), emptyIndexForDir("docs/adr"));
+
+  updateIndexForMarkdownDir(repo, "docs/impl/ir");
+  assert.equal(fs.readFileSync(path.join(irDir, "README.md"), "utf8"), emptyIndexForDir("docs/impl/ir"));
+
+  updateIndexForExperimentDir(repo, "docs/impl/exp");
+  assert.equal(fs.readFileSync(path.join(expDir, "README.md"), "utf8"), emptyIndexForDir("docs/impl/exp"));
+});
+
 test("legacyScaffoldIndex reproduces the pre-#184 generic READMEs byte-for-byte", () => {
   assert.equal(legacyScaffoldIndex("docs/adr"), "# ADR Documents\n\nDirectory: `docs/adr`\n");
   assert.equal(legacyScaffoldIndex("docs/impl/ir"), "# Implementation Record Documents\n\nDirectory: `docs/impl/ir`\n");
