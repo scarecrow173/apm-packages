@@ -87,8 +87,9 @@ async function runApply(args: CliArgs, cwd: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  let args: CliArgs = { cwd: process.cwd(), json: false };
   try {
-    const args = parseArgs(process.argv.slice(2));
+    args = parseArgs(process.argv.slice(2));
     if (args.help || !args.command) {
       console.log(usage());
       if (!args.help && !args.command) process.exitCode = 1;
@@ -99,8 +100,13 @@ async function main(): Promise<void> {
     if (args.command === "plan") await runPlan(args, cwd);
     else await runApply(args, cwd);
   } catch (error: unknown) {
-    console.error(error instanceof Error ? error.message : String(error));
-    console.error(usage());
+    const message = error instanceof Error ? error.message : String(error);
+    if (args.json) {
+      console.log(JSON.stringify({ command: args.command ?? null, error: message }));
+    } else {
+      console.error(message);
+      console.error(usage());
+    }
     process.exitCode = 1;
   }
 }

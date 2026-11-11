@@ -5,10 +5,11 @@ import path from "node:path";
 
 import { lintLegacyIdReferences, lintScope, scopeFor } from "./doc_lint";
 import { lintExternalLinks } from "./doc_structure_lint";
+import { scopeTypesForQuery } from "./doc_ownership";
 import { canonicalDocRoots, compareFindings, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
-import { configFor, docFiles, docTypes } from "./doc_suite_utils";
-import { findDocumentDir, isInsideRealpath, normalizeDir } from "./document_utils";
+import { docDir, docFiles } from "./doc_suite_utils";
+import { isInsideRealpath, normalizeDir, resolveContainedDir } from "./document_utils";
 
 type AuditFinding = {
   severity: string;
@@ -27,11 +28,6 @@ type AuditReport = {
 type AuditOptions = {
   externalLinks?: boolean;
 };
-
-function docDir(cwd: string, type: string, explicitDir?: string): string {
-  const config = configFor(type);
-  return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
-}
 
 function scanRoots(relativeDirs: string[]): string[] {
   return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
@@ -101,11 +97,13 @@ function distributionDocRoots(cwd: string): string[] {
 }
 
 async function auditAllDocuments(cwd: string, explicitDir?: string, options?: AuditOptions): Promise<AuditReport> {
-  const relativeDirs = docTypes.map((type) => docDir(cwd, type, explicitDir));
+  const normalizedDir = explicitDir ? resolveContainedDir(cwd, explicitDir) : null;
+  const types = scopeTypesForQuery(normalizedDir, "all");
+  const relativeDirs = types.map((type) => normalizedDir ?? docDir(cwd, type));
   const model = await buildModel(cwd, [...relativeDirs, ...distributionDocRoots(cwd)]);
   const merged: AuditReport = { directory: ".", files: 0, findings: [] };
-  for (const type of docTypes) {
-    const report = await auditWithModel(model, cwd, type, explicitDir, options);
+  for (const type of types) {
+    const report = await auditWithModel(model, cwd, type, normalizedDir ?? undefined, options);
     merged.files += report.files;
     for (const finding of report.findings) {
       merged.findings.push({
@@ -118,8 +116,8 @@ async function auditAllDocuments(cwd: string, explicitDir?: string, options?: Au
   // unmanaged roots (AGENTS.md, indexes, misplaced docs); the legacy-token
   // sweep still checks them because they carry the same artifact references.
   const covered = new Set<string>();
-  for (const type of docTypes) {
-    for (const file of scopeFor(model, type, docDir(cwd, type, explicitDir)).files) {
+  for (const type of types) {
+    for (const file of scopeFor(model, type, normalizedDir ?? docDir(cwd, type)).files) {
       covered.add(file.path);
     }
   }
