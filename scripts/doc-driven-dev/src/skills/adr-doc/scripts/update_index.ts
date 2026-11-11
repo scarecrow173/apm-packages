@@ -44,7 +44,7 @@ async function main(): Promise<void> {
     const adrDir = path.join(cwd, relativeDir);
     if (!fs.existsSync(adrDir)) throw new Error(`ADR directory not found: ${relativeDir}`);
 
-    const output = await buildIndex(adrDir, relativeDir);
+    const output = await buildIndex(cwd, relativeDir);
     const indexPath = path.join(adrDir, "README.md");
     if (args.write) {
       const result = writeIndexFile(adrDir, output, args.force);

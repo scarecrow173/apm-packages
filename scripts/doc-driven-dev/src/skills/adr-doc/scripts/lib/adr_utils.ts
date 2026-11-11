@@ -5,7 +5,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { findDocumentDir, listMarkdownFiles, slugify as sharedSlugify } from "../../../lib/document_utils";
 import { assertTypeScope } from "../../../lib/doc_ownership";
-import { GENERATED_INDEX_MARKER, isForeignDocType, isGeneratedIndex, parseDoc, renderIndexBody, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
+import { buildIndex as buildManagedIndex, GENERATED_INDEX_MARKER, isForeignDocType, isGeneratedIndex, mergeManagedIndex, parseDoc, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
 import { headingNames } from "../../../lib/markdown_sections";
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
@@ -227,7 +227,12 @@ function writeIndexFile(adrDir: string, content: string, force = false): { writt
   if (!force && existing !== null && !isGeneratedIndex(existing, "Architecture Decision Records")) {
     return { written: false, reason: "hand-curated" };
   }
-  fs.writeFileSync(indexPath, content, "utf8");
+  // Managed indexes merge into the marked region so hand-written preamble,
+  // trailing prose, and in-region notes survive regeneration (Issue #185).
+  const output = existing !== null && existing.includes(GENERATED_INDEX_MARKER)
+    ? mergeManagedIndex(existing, content)
+    : content;
+  fs.writeFileSync(indexPath, output, "utf8");
   return { written: true, reason: null };
 }
 
@@ -277,33 +282,11 @@ async function adrEntries(cwd: string, relativeDir: string): Promise<AdrEntry[]>
   return entries.filter((entry): entry is AdrEntry => entry !== null);
 }
 
-async function buildIndex(dir: string, relativeDir: string): Promise<string> {
-  const entries = (await Promise.all(adrFiles(dir).map(async (file) => {
-    const content = fs.readFileSync(path.join(dir, file), "utf8");
-    const data = matterData(content);
-    if (isForeignDocType(data.type, "adr", relativeDir)) return null;
-    let title = typeof data.title === "string" && data.title.trim() ? data.title.trim() : "";
-    if (!title) {
-      try {
-        title = await titleFromAdr(content, path.basename(file, ".md"));
-      } catch {
-        title = path.basename(file, ".md");
-      }
-    }
-    const status = typeof data.status === "string" ? data.status : null;
-    const numberMatch = /^(\d+)-/.exec(file);
-    const fallbackId = numberMatch ? `ADR-${numberMatch[1]}` : "—";
-    const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : fallbackId;
-    return {
-      file,
-      id,
-      status,
-      title,
-      type: typeof data.type === "string" ? data.type : null,
-    };
-  }))).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-  const body = renderIndexBody(entries, { settledType: "adr" });
-  return `# Architecture Decision Records\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${relativeDir.replace(/\\/g, "/")}\`\n\n${body}\n`;
+// The shared managed-index pipeline renders ADR rows/tiers and resolves the
+// index title from the ownership contract — this wrapper only pins the type
+// so every ADR producer shares one renderer (Issue #185).
+async function buildIndex(cwd: string, relativeDir: string): Promise<string> {
+  return buildManagedIndex(cwd, "adr", relativeDir);
 }
 
 function parseCsv(value: string): string[] {
