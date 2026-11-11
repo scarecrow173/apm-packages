@@ -1060,8 +1060,8 @@
     },
     {
       "flow": "doc-maintenance",
-      "skillBytes": 6255,
-      "alwaysOnChars": 5991,
+      "skillBytes": 8147,
+      "alwaysOnChars": 7867,
       "directives": [
         {
           "kind": "script",
@@ -1089,56 +1089,68 @@
         },
         {
           "kind": "script",
-          "target": "scripts/scaffold_docs.js",
-          "line": 92,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/migrate_docs.js",
-          "line": 93,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/migrate_ids.js",
-          "line": 94,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/promote_index.js",
-          "line": 95,
+          "target": "scripts/doc_maintenance.js",
+          "line": 77,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/doc_maintenance.js",
-          "line": 134,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/migrate_docs.js",
-          "line": 136,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/migrate_ids.js",
-          "line": 136,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/promote_index.js",
-          "line": 137,
+          "line": 78,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/scaffold_docs.js",
-          "line": 137,
+          "line": 118,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/migrate_docs.js",
+          "line": 119,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/migrate_ids.js",
+          "line": 120,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/promote_index.js",
+          "line": 121,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/doc_maintenance.js",
+          "line": 164,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/migrate_docs.js",
+          "line": 167,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/migrate_ids.js",
+          "line": 167,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/promote_index.js",
+          "line": 168,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/scaffold_docs.js",
+          "line": 168,
           "optional": false
         }
       ],
@@ -1146,7 +1158,7 @@
         {
           "path": "doc-maintenance/scripts/doc_maintenance.js",
           "exists": true,
-          "bytes": 1285305
+          "bytes": 1337578
         },
         {
           "path": "doc-maintenance/scripts/migrate_docs.js",
@@ -1170,8 +1182,8 @@
         }
       ],
       "totals": {
-        "directives": 13,
-        "referencedBytes": 5433562,
+        "directives": 15,
+        "referencedBytes": 5485835,
         "missing": 0
       }
     },
@@ -1452,8 +1464,8 @@
     },
     {
       "flow": "impl-doc",
-      "skillBytes": 8340,
-      "alwaysOnChars": 7990,
+      "skillBytes": 8523,
+      "alwaysOnChars": 8173,
       "directives": [
         {
           "kind": "reference",
@@ -1524,19 +1536,19 @@
         {
           "kind": "reference",
           "target": "references/impl-conventions.md",
-          "line": 182,
+          "line": 184,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/new_impl_record.js",
-          "line": 185,
+          "line": 187,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/new_experiment_log.js",
-          "line": 187,
+          "line": 189,
           "optional": false
         }
       ],
@@ -1544,7 +1556,7 @@
         {
           "path": "impl-doc/references/impl-conventions.md",
           "exists": true,
-          "bytes": 5597
+          "bytes": 5697
         },
         {
           "path": "impl-doc/scripts/append_experiment_event.js",
@@ -1584,7 +1596,7 @@
       ],
       "totals": {
         "directives": 14,
-        "referencedBytes": 6562652,
+        "referencedBytes": 6562752,
         "missing": 0
       }
     },
@@ -1839,7 +1851,7 @@
         {
           "path": "impl-doc/SKILL.md",
           "exists": true,
-          "bytes": 8340
+          "bytes": 8523
         },
         {
           "path": "implementation-flow/assets/adapters/implementation-adapter.yaml",
@@ -1869,7 +1881,7 @@
       ],
       "totals": {
         "directives": 36,
-        "referencedBytes": 1006897,
+        "referencedBytes": 1007080,
         "missing": 0
       }
     },
@@ -2562,10 +2574,10 @@
   ],
   "totals": {
     "flows": 18,
-    "skillBytes": 161860,
-    "alwaysOnChars": 155926,
-    "directives": 287,
-    "referencedBytes": 42169012,
+    "skillBytes": 163935,
+    "alwaysOnChars": 157985,
+    "directives": 289,
+    "referencedBytes": 42221568,
     "missing": 0
   }
 }
