@@ -144,23 +144,25 @@ function kindForDir(directory: string): IndexTargetKind | null {
   return contract.owner === "adr-doc" ? "adr" : "shared";
 }
 
-// Every managed index dir in scope. Without --dir that is each shared type's
-// resolved dir (canonical or first existing alias, deduped — brainstorm and
-// discovery share docs/discovery) plus the impl leaf dirs, which Task 2 will
-// dispatch. With --dir the selector resolves through the shared containment
-// boundary exactly like the other doc ops.
+// Every managed index dir CANDIDATE in scope, as spelled by the doc-type
+// configs — each shared type's resolved dir (canonical or first existing
+// alias — brainstorm and discovery share docs/discovery) plus the impl leaf
+// dirs, which Task 2 will dispatch. Spellings are only candidates: planning
+// collapses every one through resolveContainedDir (realpath + containment)
+// and dedupes by real path before a dir becomes a target.
 function managedDirs(cwd: string, explicitDir?: string): string[] {
   if (explicitDir !== undefined) {
     return [normalizeDir(resolveContainedDir(cwd, explicitDir))];
   }
   const dirs = new Map<string, string>();
-  for (const type of docTypes) {
-    const dir = normalizeDir(docDir(cwd, type));
-    dirs.set(repoPathKey(dir), dir);
-  }
+  const push = (dir: string) => {
+    const normalized = normalizeDir(dir);
+    dirs.set(repoPathKey(normalized), normalized);
+  };
+  for (const type of docTypes) push(docDir(cwd, type));
   for (const contract of DIRECTORY_CONTRACTS) {
     if (contract.indexFormat === "impl-4col" || contract.indexFormat === "exp-1col") {
-      dirs.set(repoPathKey(contract.dir), contract.dir);
+      push(contract.dir);
     }
   }
   return [...dirs.values()].sort((a, b) => a.localeCompare(b));
@@ -355,6 +357,39 @@ function sameDocument(left: string, right: string): boolean {
   return left.replace(/\s+$/, "") === right.replace(/\s+$/, "");
 }
 
+// A fail-closed target for a directory that must not be planned at all: an
+// escaping link, a repo-root scope, or an unclaimed dir with no residents.
+// `pinIndex` is false exactly when the index path itself must not be touched
+// (the directory's on-disk identity is outside the checkout).
+function rejectedTarget(
+  cwd: string,
+  directory: string,
+  indexPath: string,
+  reason: string,
+  pinIndex: boolean,
+): IndexMaterializeTarget {
+  const empty = sha256Text("");
+  const pins: IndexMaterializePins = {
+    sources: empty,
+    fileList: empty,
+    index: pinIndex ? inspectIndex(path.join(cwd, indexPath)).pin : null,
+  };
+  const changes: IndexMaterializeChange[] = [];
+  return {
+    kind: kindForDir(directory) ?? "shared",
+    owner: ownershipForDir(directory)?.owner ?? null,
+    directory,
+    indexPath,
+    verdict: "rejected",
+    reason,
+    changes,
+    pins,
+    sourceCount: 0,
+    planHash: sha256Text(JSON.stringify({ changes, directory, pins, verdict: "rejected" })),
+    plannedFiles: [],
+  };
+}
+
 async function planManagedTarget(
   cwd: string,
   kind: "shared" | "adr",
@@ -363,7 +398,6 @@ async function planManagedTarget(
   const dirAbs = path.join(cwd, directory);
   const files = sourcePaths(cwd, directory);
   const contract = ownershipForDir(directory);
-  const generated = await renderExpected(cwd, kind, directory, files);
 
   const indexFile = kind === "adr" ? "README.md" : indexFileNameForDir(dirAbs);
   const indexPath = `${directory}/${indexFile}`;
@@ -374,7 +408,10 @@ async function planManagedTarget(
   let reason: string | undefined;
   let changes: IndexMaterializeChange[] = [];
   let content: string | undefined;
+  let generated = "";
 
+  // Fail-closed verdicts classify before the expected body is rendered — a
+  // doomed target never pays for the render (or for its doc parses).
   if (state.status === "symlink" || state.status === "not-file") {
     verdict = "rejected";
     reason = "index-not-regular-file";
@@ -384,19 +421,22 @@ async function planManagedTarget(
   } else if (state.status === "file" && !isGeneratedIndex(state.existing ?? "")) {
     verdict = "rejected";
     reason = "hand-curated-index";
-  } else if (state.status === "missing") {
-    verdict = "create";
-    content = generated;
-    changes = computeChanges([], layoutRows(parseManagedIndexLayout(generated)));
   } else {
-    const existing = state.existing ?? "";
-    const merged = mergeManagedIndex(existing, generated);
-    if (sameDocument(merged, existing)) {
-      verdict = "in-sync";
+    generated = await renderExpected(cwd, kind, directory, files);
+    if (state.status === "missing") {
+      verdict = "create";
+      content = generated;
+      changes = computeChanges([], layoutRows(parseManagedIndexLayout(generated)));
     } else {
-      verdict = "sync";
-      content = merged;
-      changes = computeChanges(layoutRows(parseManagedIndexLayout(existing)), layoutRows(parseManagedIndexLayout(merged)));
+      const existing = state.existing ?? "";
+      const merged = mergeManagedIndex(existing, generated);
+      if (sameDocument(merged, existing)) {
+        verdict = "in-sync";
+      } else {
+        verdict = "sync";
+        content = merged;
+        changes = computeChanges(layoutRows(parseManagedIndexLayout(existing)), layoutRows(parseManagedIndexLayout(merged)));
+      }
     }
   }
 
@@ -445,7 +485,32 @@ async function computeIndexMaterialization(
 ): Promise<{ plan: IndexMaterializePlan; internals: Map<string, TargetInternals> }> {
   const targets: IndexMaterializeTarget[] = [];
   const internals = new Map<string, TargetInternals>();
-  for (const directory of managedDirs(cwd, explicitDir)) {
+  const seen = new Set<string>();
+  for (const candidate of managedDirs(cwd, explicitDir)) {
+    // Containment first, same boundary as --dir: every enumerated candidate
+    // collapses to its real path inside the checkout. A linked dir escaping
+    // the repo fails closed on a rejected target — its name is reported but
+    // nothing outside is ever read or written.
+    let directory: string;
+    try {
+      directory = normalizeDir(resolveContainedDir(cwd, candidate));
+    } catch {
+      const key = repoPathKey(candidate);
+      if (!seen.has(key)) {
+        seen.add(key);
+        targets.push(rejectedTarget(cwd, candidate, `${candidate}/README.md`, "directory-not-contained", false));
+      }
+      continue;
+    }
+    // Alias collapse: one target per real dir, no double reads/writes.
+    const key = repoPathKey(directory);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // A --dir that resolves to the checkout root has no managed index.
+    if (directory === "") {
+      targets.push(rejectedTarget(cwd, directory, "README.md", "unscoped-root", true));
+      continue;
+    }
     const kind = kindForDir(directory);
     // impl-doc territory (ir/exp, and the index-less docs/impl container) is
     // filtered out of targets until Task 2 wires the owner dispatch.
@@ -453,8 +518,12 @@ async function computeIndexMaterialization(
     // A selector that lands on a file hosts no managed index — skip it.
     const dirAbs = path.join(cwd, directory);
     if (fs.existsSync(dirAbs) && !fs.statSync(dirAbs).isDirectory()) continue;
-    // Only unclaimed dirs *with* resident docs materialize a shared index.
-    if (!ownershipForDir(directory) && sourcePaths(cwd, directory).length === 0) continue;
+    // Only unclaimed dirs *with* resident docs materialize a shared index
+    // (sharedRepairAllowed parity); empty unclaimed dirs reject, not create.
+    if (!ownershipForDir(directory) && sourcePaths(cwd, directory).length === 0) {
+      targets.push(rejectedTarget(cwd, directory, `${directory}/${indexFileNameForDir(dirAbs)}`, "unclaimed-empty-directory", true));
+      continue;
+    }
     const planned = await planTarget(cwd, kind, directory);
     targets.push(planned.target);
     internals.set(planned.target.indexPath, planned.internals);

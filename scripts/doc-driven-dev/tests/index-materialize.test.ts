@@ -317,6 +317,64 @@ test("plan enumerates managed dirs without --dir and scopes with --dir", async (
   assert.equal(fileScoped.targets.length, 0);
 });
 
+test("plan rejects a symlinked canonical dir escaping the checkout", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  writeFile(outside, "evil.md", "# outside content that must never be read\n");
+  try {
+    fs.mkdirSync(path.join(repo, "docs"), { recursive: true });
+    fs.symlinkSync(outside, path.join(repo, "docs/specs"), "dir");
+  } catch {
+    t.skip("directory symlinks are not permitted on this platform");
+    return;
+  }
+
+  const plan = await planIndexMaterialization(repo);
+  const target = targetFor(plan, "docs/specs");
+  assert.equal(target.verdict, "rejected");
+  assert.equal(target.reason, "directory-not-contained");
+  assert.equal(target.sourceCount, 0, "escaping dirs are never scanned");
+  assert.equal(target.pins.index, null, "outside index path is never touched");
+  assert.equal("content" in target, false);
+
+  // An explicit --dir at an escaping path still throws at the containment
+  // boundary, exactly like the other doc ops.
+  await assert.rejects(
+    planIndexMaterialization(repo, { dir: "docs/specs" }),
+    /escapes the checkout/,
+  );
+
+  // Apply must not write anything through the link either.
+  const applied = await applyIndexMaterialization(repo);
+  assert.ok(!applied.written.includes("docs/specs/README.md"));
+  const blocked = applied.blocked.find((item) => item.target.directory === "docs/specs");
+  assert.equal(blocked?.target.reason, "directory-not-contained");
+  assert.equal(fs.readFileSync(path.join(outside, "evil.md"), "utf8"), "# outside content that must never be read\n");
+  assert.deepEqual(fs.readdirSync(outside).sort(), ["evil.md"], "apply wrote nothing outside");
+});
+
+test("plan dedupes dir spellings that resolve to the same real dir", async (t) => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+  writeSharedIndex(repo, "docs/specs", "SPEC Documents", [
+    row("SPEC-0001", "Spec checkout", "draft", "checkout.md"),
+  ]);
+  try {
+    fs.symlinkSync(path.join(repo, "docs/specs"), path.join(repo, "docs/ideas"), "dir");
+  } catch {
+    t.skip("directory symlinks are not permitted on this platform");
+    return;
+  }
+
+  const plan = await planIndexMaterialization(repo);
+  const specTargets = plan.targets.filter((target) => target.directory === "docs/specs");
+  assert.equal(specTargets.length, 1, "one real dir = one target");
+  assert.ok(
+    !plan.targets.some((target) => target.directory === "docs/ideas"),
+    "the linked alias collapses to the real dir — no second target",
+  );
+});
+
 test("plan scopes an unclaimed --dir with resident docs as shared", async () => {
   const repo = tempRepo();
   writeDoc(repo, "custom/docs/thing.md", specDoc("thing", "Thing", "draft", "SPEC-0009"));
@@ -329,10 +387,38 @@ test("plan scopes an unclaimed --dir with resident docs as shared", async () => 
   assert.equal(target.verdict, "create");
   assert.equal(target.sourceCount, 1);
   assert.ok(target.content?.includes("thing.md"));
+});
 
-  // An unclaimed dir with no resident docs is not a materialization target.
-  const empty = await planIndexMaterialization(repo, { dir: "custom/empty" });
-  assert.equal(empty.targets.length, 0);
+test("plan rejects an unclaimed --dir with no resident docs", async () => {
+  const repo = tempRepo();
+
+  // An unclaimed dir with NO residents is rejected — never a shared target
+  // (sharedRepairAllowed parity: no managed-index contract, no residents).
+  const missing = await planIndexMaterialization(repo, { dir: "custom/empty" });
+  assert.equal(missing.targets.length, 1);
+  assert.equal(missing.targets[0].verdict, "rejected");
+  assert.equal(missing.targets[0].reason, "unclaimed-empty-directory");
+  assert.equal(missing.targets[0].owner, null);
+
+  // Same for an unclaimed dir that exists but holds only an index file.
+  writeFile(repo, "custom/index-only/README.md", "# Curated\n");
+  const indexOnly = await planIndexMaterialization(repo, { dir: "custom/index-only" });
+  assert.equal(indexOnly.targets.length, 1);
+  assert.equal(indexOnly.targets[0].verdict, "rejected");
+  assert.equal(indexOnly.targets[0].reason, "unclaimed-empty-directory");
+});
+
+test("plan rejects an unscoped repo-root --dir, never a create", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
+
+  for (const dir of [".", ""]) {
+    const plan = await planIndexMaterialization(repo, { dir });
+    assert.equal(plan.targets.length, 1, `--dir "${dir}" must yield one rejected target`);
+    assert.equal(plan.targets[0].verdict, "rejected");
+    assert.equal(plan.targets[0].reason, "unscoped-root");
+    assert.deepEqual(plan.targets[0].plannedFiles, []);
+  }
 });
 
 // --- planHash ----------------------------------------------------------------
