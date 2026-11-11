@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { findDocumentDir, listMarkdownFiles, slugify as sharedSlugify } from "../../../lib/document_utils";
+import { assertTypeScope } from "../../../lib/doc_ownership";
 import { GENERATED_INDEX_MARKER, isForeignDocType, isGeneratedIndex, parseDoc, renderIndexBody, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
 import { headingNames } from "../../../lib/markdown_sections";
 
@@ -60,8 +61,14 @@ type MarkdownLink = {
   url: string;
 };
 
+// ADR dir resolution boundary: containment first (findDocumentDir ->
+// resolveContainedDir), then ownership — ADR artifacts may only live in
+// adr-owned territory; every creator/mutator inherits the check here,
+// before any mkdir or write (Issue #183).
 function findAdrDir(cwd: string, explicitDir?: string): string {
-  return findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
+  const resolved = findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
+  assertTypeScope("adr", resolved);
+  return resolved;
 }
 
 function adrFiles(dir: string): string[] {
