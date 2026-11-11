@@ -134,6 +134,24 @@ test("idFromFile applies to the basename for nested ADR files", async () => {
   assert.equal(nested.id, "ADR-0011");
 });
 
+test("indexRow hooks do not leak onto foreign-typed files", async () => {
+  const repo = seedAdrRepo();
+  // A foreign-typed file with NO front-matter id and a numbered basename:
+  // the ADR filename/heading fallbacks must not rewrite its identity.
+  writeDoc(repo, "docs/adr/0042-foreign.md", {
+    type: "idea", status: "draft", title: "Foreign note", created: "2026-01-05",
+  }, "# 42. Foreign note\n");
+  const entries = await docEntries(repo, "adr");
+  const foreign = entries.find((entry) => entry.file === "0042-foreign.md");
+  assert.ok(foreign, "foreign file still produces an index row");
+  assert.equal(foreign.id, null);
+  // An untyped file in an ADR dir IS treated as a resident ADR (hooks apply).
+  writeFile(repo, "docs/adr/0043-untyped.md", "# 43. Untyped decision\n\n## Context\n\nBody.\n");
+  const untyped = (await docEntries(repo, "adr")).find((entry) => entry.file === "0043-untyped.md");
+  assert.equal(untyped?.id, "ADR-0043");
+  assert.equal(untyped?.title, "Untyped decision");
+});
+
 test("mergeManagedIndex preserves hand-written preamble, trailing prose, and in-region notes", () => {
   const existing = [
     "# Hand-written ADR notes",

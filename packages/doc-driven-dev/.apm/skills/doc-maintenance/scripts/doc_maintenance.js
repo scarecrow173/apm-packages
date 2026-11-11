@@ -33585,14 +33585,16 @@ async function docEntries(cwd, type, explicitDir) {
     const fullPath = import_node_path2.default.join(dir, file2);
     const content3 = import_node_fs2.default.readFileSync(fullPath, "utf8");
     const data = parseDoc(content3).data;
+    const entryType = typeof data.type === "string" ? data.type : null;
+    const hooks = entryType === null || entryType === type ? indexRow : void 0;
     return {
       created: typeof data.created === "string" ? data.created : null,
       file: file2,
-      id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : indexRow?.idFromFile?.(import_node_path2.default.basename(file2)) ?? null,
+      id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : hooks?.idFromFile?.(import_node_path2.default.basename(file2)) ?? null,
       path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
-      title: await titleFromDocument(content3, import_node_path2.default.basename(file2, ".md"), indexRow?.titleFromHeading),
-      type: typeof data.type === "string" ? data.type : null
+      title: await titleFromDocument(content3, import_node_path2.default.basename(file2, ".md"), hooks?.titleFromHeading),
+      type: entryType
     };
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
