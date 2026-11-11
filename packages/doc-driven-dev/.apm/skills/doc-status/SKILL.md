@@ -82,10 +82,15 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    Named audits from `doc-driven-dev-graph` map to commands as follows:
    document types (`spec`, `adr`, `design`, `plan`, `task`, `test-spec`,
    `idea`, `brainstorm`, `discovery`) run as
-   `audit_docs.js --type <name>`; `all` runs as `audit_docs.js --type all`
+   `audit_docs.js --type <name> --profile artifact`; `all` runs as
+   `audit_docs.js --type all --profile artifact`
    covering every canonical document type plus a legacy-reference sweep over
    root-level unmanaged Markdown and distributed `.apm` skill documents;
-   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js`.
+   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js`, which needs
+   no profile flag (its only index observation is a non-blocking warning).
+   Graph-dispatched audits run the `artifact` profile so a missing or stale
+   index never gates graph execution; direct strict checks may omit
+   `--profile` to keep the default `materialized` coverage.
 
 4. Treat `relations.source` as external evidence.
    HTTP, HTTPS, and mail links are allowed and should not be reported as missing
