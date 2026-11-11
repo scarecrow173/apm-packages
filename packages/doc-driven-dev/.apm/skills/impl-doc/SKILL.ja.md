@@ -124,9 +124,12 @@ node scripts/sync_impl_index.js --kind ir --apply --expect <planHash>
   生成領域の前後にある手書きの preamble / tail はバイト単位で保持され
   ます。`--dir` は checkout 内の別 impl ディレクトリを選択します。外部
   パスは拒否されます。
-- `doc_maintenance` と `doc_status` は impl 索引を修復しません。
+- `doc_status` と `doc_maintenance` の修復 verb は impl 索引を修復しません。
   `docs/impl/ir` と `docs/impl/exp` の索引を変更できるのは
-  `sync_impl_index` だけです。
+  `sync_impl_index` だけです。`doc_maintenance index` op はこれらの索引を
+  materialize できますが、書き込みは同じ safe sync API への分派に
+  限られます — 第二の書き込み経路ではなく、オーナー横断のエントリ
+  ポイントです。
 
 両監査は読み取り専用で、索引ドリフトを finding として報告します:
 

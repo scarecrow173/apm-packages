@@ -172,8 +172,9 @@ finding を報告します(コード一覧は impl-doc スキルを参照)。
   `--apply` で書き込みます。適用するまでの間、
   `audit_impl_record.js` がドリフト（`index-missing-entry`、
   `index-stale-entry`、`index-metadata-mismatch`、`index-tier-mismatch`、
-  `index-ordering`）を報告します。`doc_maintenance` と `doc_status` は
-  impl 索引を修復しません。
+  `index-ordering`）を報告します。`doc_status` と `doc_maintenance` の
+  修復 verb は impl 索引を修復しません。`doc_maintenance index` は同じ
+  safe sync API 経由でのみ materialize します。
 - 管理領域は active テーブル 1 つと任意の `## Settled` テーブルだけです。
   手書きの注記は生成領域の外（マーカーより前、またはテーブルより後）に
   置いてください。索引テーブルを追加すると曖昧とみなされ拒否されます。

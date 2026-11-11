@@ -90,6 +90,12 @@ index 書き込みをブロックする。`promote_index`(preview、`--apply` �
 - `doc_maintenance` による index 修復は `shared-4col` 領域のみが対象。
   `impl-4col` / `exp-1col` の index は `sync_impl_index` のみが同期し、
   `--force-index` でこの境界を越えることはできない。
+- `doc_maintenance index` は `plan|apply` の修復とは別の、index 専用
+  materialization op である。各書き込みをディレクトリのオーナー writer
+  （`shared-4col` では共有 renderer/merge、ADR managed writer、impl
+  sync エンジン）に分派する。`impl-4col` / `exp-1col` の index は
+  引き続き `sync_impl_index` の safe sync API のみが書き込み、この
+  op は直接書き込まず同 API に委譲する。
 - `docs/impl` は resident type を持たないオーナー管理コンテナであり、
   直下への作成・監査はできない。
 - scope 不適合は fail-closed:CLI は理由付きで非ゼロ終了し、ファイルの

@@ -411,6 +411,226 @@ test("plan and apply return stable JSON output", () => {
   assert.equal(typeof apply.findingsAfter, "number");
 });
 
+// --- index plan|apply (Issue #197) -------------------------------------------
+//
+// CLI surface over the index materialization lib: `index plan` is a read-only
+// per-target preview (verdicts, changes, pins, planHash); `index apply`
+// re-plans, re-validates pins, and writes only through owner writers.
+// The repair plan|apply verbs are untouched — impl dirs still Scope-mismatch
+// there (pinned in doc-scope-preflight.test.ts).
+
+const INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+const INDEX_HEADER = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+
+function writeImplRecord(root: string, file: string, id: string, status: string) {
+  writeFile(root, `docs/impl/ir/${file}`, [
+    "---",
+    `id: "${id}"`,
+    'type: "impl"',
+    `status: "${status}"`,
+    `title: "${id}"`,
+    'created: "2026-01-01"',
+    'updated: "2026-01-01"',
+    "owners: []",
+    "relations: {}",
+    "metadata:",
+    "  experiments:",
+    "    adopted: []",
+    "    rejected: []",
+    "---",
+    "",
+    `# ${id}`,
+    "",
+  ].join("\n"));
+}
+
+function writeImplIndex(root: string, rows: string[]) {
+  writeFile(root, "docs/impl/ir/README.md", [
+    "# Implementation Records",
+    "",
+    INDEX_MARKER,
+    "",
+    "Directory: `docs/impl/ir`",
+    "",
+    INDEX_HEADER,
+    ...rows,
+    "",
+  ].join("\n"));
+}
+
+test("index plan previews targets as JSON and writes nothing", () => {
+  const repo = tempRepo();
+  writeSpec(repo, "checkout", "SPEC-0001");
+  const before = snapshot(repo);
+
+  const result = runScript("doc_maintenance.js", ["index", "plan", "--dir", "docs/specs", "--json"], repo);
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.command, "index plan");
+  assert.match(report.planHash, /^[0-9a-f]{64}$/);
+  assert.equal(report.targets.length, 1);
+  const target = report.targets[0];
+  assert.equal(target.directory, "docs/specs");
+  assert.equal(target.kind, "shared");
+  assert.equal(target.owner, "doc-suite");
+  assert.equal(target.verdict, "create");
+  assert.equal(target.indexPath, "docs/specs/README.md");
+  assert.equal(target.sourceCount, 1);
+  assert.equal("content" in target, false, "JSON targets never carry the write payload");
+  assert.match(target.planHash, /^[0-9a-f]{64}$/);
+  assert.deepEqual(snapshot(repo), before, "index plan must be read-only");
+
+  const text = runScript("doc_maintenance.js", ["index", "plan", "--dir", "docs/specs"], repo);
+  assert.equal(text.status, 0, text.stderr);
+  assert.match(text.stdout, /index plan: 1 target\(s\)/);
+  assert.match(text.stdout, /docs\/specs kind=shared owner=doc-suite verdict=create/);
+  assert.deepEqual(snapshot(repo), before);
+});
+
+test("index apply writes a stale shared index; second apply is a no-op", () => {
+  const repo = tempRepo();
+  writeSpec(repo, "checkout", "SPEC-0001");
+  writeSpec(repo, "other", "SPEC-0002");
+  generatedIndex(repo, [
+    "| SPEC-0001 | Spec checkout | draft | [checkout.md](./checkout.md) |",
+  ]);
+
+  const apply = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/specs"], repo);
+  assert.equal(apply.status, 0, apply.stderr);
+  assert.match(apply.stdout, /index apply: 1 written, 0 blocked/);
+  const content = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
+  assert.match(content, /other\.md/);
+  assert.match(content, /doc-suite:generated-index/);
+
+  const again = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/specs", "--json"], repo);
+  assert.equal(again.status, 0, again.stderr);
+  const report = JSON.parse(again.stdout);
+  assert.equal(report.command, "index apply");
+  assert.deepEqual(report.written, []);
+  assert.deepEqual(report.blocked, []);
+  assert.equal(fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8"), content);
+});
+
+test("index apply --expect binds to a prior planHash and refuses drift", () => {
+  const repo = tempRepo();
+  writeSpec(repo, "checkout", "SPEC-0001");
+  writeSpec(repo, "other", "SPEC-0002");
+  generatedIndex(repo, [
+    "| SPEC-0001 | Spec checkout | draft | [checkout.md](./checkout.md) |",
+  ]);
+
+  const plan = JSON.parse(
+    runScript("doc_maintenance.js", ["index", "plan", "--dir", "docs/specs", "--json"], repo).stdout,
+  );
+  const before = snapshot(repo);
+
+  const refused = runScript("doc_maintenance.js", [
+    "index", "apply", "--dir", "docs/specs", "--expect", "0".repeat(64), "--json",
+  ], repo);
+  assert.equal(refused.status, 1, "a wrong --expect must fail closed");
+  const refusal = JSON.parse(refused.stdout);
+  assert.deepEqual(refusal.written, []);
+  assert.equal(refusal.blocked.length, 1);
+  assert.match(refusal.blocked[0].reason, /plan drift/);
+  assert.deepEqual(snapshot(repo), before, "a refused apply writes nothing");
+
+  const applied = runScript("doc_maintenance.js", [
+    "index", "apply", "--dir", "docs/specs", "--expect", plan.planHash,
+  ], repo);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.match(applied.stdout, /index apply: 1 written, 0 blocked/);
+
+  // --expect is index-apply-only: the repair verbs and index plan reject it.
+  for (const argv of [
+    ["index", "plan", "--expect", plan.planHash],
+    ["apply", "--expect", plan.planHash],
+  ]) {
+    const misuse = runScript("doc_maintenance.js", argv, repo);
+    assert.equal(misuse.status, 1, `${argv.join(" ")} must reject --expect`);
+    assert.match(`${misuse.stdout}\n${misuse.stderr}`, /--expect requires index apply/);
+  }
+});
+
+test("index apply --dir docs/impl/ir repairs the IR index through the owner sync API", () => {
+  const repo = tempRepo();
+  writeImplRecord(repo, "a.md", "IMPL-A", "draft");
+  writeImplRecord(repo, "b.md", "IMPL-B", "draft");
+  writeImplIndex(repo, [
+    "| IMPL-A | IMPL-A | draft | [a.md](./a.md) |",
+    "| IMPL-B | IMPL-B | draft | [b.md](./b.md) |",
+  ]);
+  // Status drift: b is now settled — the IR owner sync must move the row.
+  writeImplRecord(repo, "b.md", "IMPL-B", "completed");
+
+  const apply = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/ir"], repo);
+  assert.equal(apply.status, 0, apply.stderr);
+  assert.match(apply.stdout, /\[written\] docs\/impl\/ir\/README\.md/);
+  const content = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
+  const settledAt = content.indexOf("## Settled");
+  assert.ok(settledAt > 0, "owner sync produced a settled tier");
+  assert.ok(content.indexOf("[b.md](./b.md)") > settledAt, "b.md moved to the settled tier");
+
+  // The repair surface still refuses impl dirs outright (preflight pin).
+  for (const verb of ["plan", "apply"]) {
+    const repair = runScript("doc_maintenance.js", [verb, "--dir", "docs/impl/ir"], repo);
+    assert.notEqual(repair.status, 0, `repair ${verb} must fail closed on impl dirs`);
+    assert.match(`${repair.stdout}\n${repair.stderr}`, /Scope mismatch/);
+  }
+});
+
+test("index ops stay fail-closed on the docs/impl container", () => {
+  const repo = tempRepo();
+  writeImplRecord(repo, "a.md", "IMPL-A", "draft");
+  const before = snapshot(repo);
+
+  // plan reports the rejected target without failing — preview stays honest.
+  const plan = runScript("doc_maintenance.js", ["index", "plan", "--dir", "docs/impl"], repo);
+  assert.equal(plan.status, 0, plan.stderr);
+  assert.match(plan.stdout, /verdict=rejected/);
+  assert.match(plan.stdout, /impl container has no managed index/);
+  assert.deepEqual(snapshot(repo), before, "index plan writes nothing");
+
+  // apply blocks the same target and exits non-zero — nothing is created.
+  const apply = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/impl", "--json"], repo);
+  assert.equal(apply.status, 1, "blocked targets must fail the apply");
+  const report = JSON.parse(apply.stdout);
+  assert.deepEqual(report.written, []);
+  assert.equal(report.blocked.length, 1);
+  assert.equal(report.blocked[0].target.verdict, "rejected");
+  assert.match(report.blocked[0].reason, /impl container has no managed index/);
+  assert.deepEqual(snapshot(repo), before, "a rejected target is reported, never written");
+});
+
+test("index apply reports rejected targets without writing them", () => {
+  const repo = tempRepo();
+  writeSpec(repo, "checkout", "SPEC-0001");
+  writeFile(repo, "docs/specs/README.md", "# Hand-written\n\nCurated index — no marker.\n");
+  const indexBefore = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
+
+  const plan = runScript("doc_maintenance.js", ["index", "plan", "--dir", "docs/specs"], repo);
+  assert.equal(plan.status, 0, plan.stderr);
+  assert.match(plan.stdout, /verdict=rejected reason=hand-curated-index/);
+
+  const apply = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/specs"], repo);
+  assert.equal(apply.status, 1, "a rejected target blocks the apply");
+  assert.match(apply.stdout, /\[blocked\] docs\/specs\/README\.md: hand-curated-index/);
+  assert.equal(fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8"), indexBefore);
+
+  // No force path exists on the index op.
+  const forced = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/specs", "--force-index"], repo);
+  assert.equal(forced.status, 1, "--force-index is not part of the index contract");
+  assert.equal(fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8"), indexBefore);
+});
+
+test("index requires a plan|apply verb", () => {
+  const repo = tempRepo();
+  for (const argv of [["index"], ["index", "bogus"], ["index", "--dir", "docs/specs"]]) {
+    const result = runScript("doc_maintenance.js", argv, repo);
+    assert.equal(result.status, 1, `${argv.join(" ")} must be a usage error`);
+    assert.match(`${result.stdout}\n${result.stderr}`, /index requires a verb|Unknown index verb/);
+  }
+});
+
 test("scaffold targets are sourced from CANONICAL_DOC_DIRS, not a parallel list", async () => {
   const repo = tempRepo();
   const result = await scaffoldDocsTree(repo);
