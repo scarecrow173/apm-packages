@@ -122,6 +122,17 @@ test("alias dir without its own indexTitle falls back to the canonical contract 
   assert.match(content, /\| ADR-0003 \| Keep a monorepo \| accepted \|/);
 });
 
+test("idFromFile applies to the basename for nested ADR files", async () => {
+  const repo = seedAdrRepo();
+  // walkMarkdownFiles recurses — a nested MADR-numbered file must derive its
+  // id from the basename, not fail the `^(\d+)-` anchor on the relative path.
+  writeFile(repo, "docs/adr/archive/0011-keep-cqrs.md", "# 11. Keep CQRS\n\n## Context\n\nEvent sourcing.\n");
+  const entries = await docEntries(repo, "adr");
+  const nested = entries.find((entry) => entry.file === "archive/0011-keep-cqrs.md");
+  assert.ok(nested, "nested ADR must produce an entry");
+  assert.equal(nested.id, "ADR-0011");
+});
+
 test("mergeManagedIndex preserves hand-written preamble, trailing prose, and in-region notes", () => {
   const existing = [
     "# Hand-written ADR notes",
