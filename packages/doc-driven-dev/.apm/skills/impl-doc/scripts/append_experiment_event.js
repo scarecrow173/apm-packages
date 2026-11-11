@@ -23994,6 +23994,7 @@ var INDEX_TITLES = {
   "docs/impl/exp": "Experiment Logs"
 };
 var PROMOTE_INDEX_MUTATOR = "promote_index";
+var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
 var SHARED_CREATORS = {
   idea: "new_idea",
   discovery: "new_discovery",
@@ -24061,7 +24062,7 @@ function buildContracts() {
       residentTypes: ["impl"],
       indexFormat: "impl-4col",
       indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_impl_record"]
     },
     {
@@ -24071,7 +24072,7 @@ function buildContracts() {
       residentTypes: ["exp"],
       indexFormat: "exp-1col",
       indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_experiment_log"]
     }
   ];
@@ -24145,6 +24146,9 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
+var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
+var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
@@ -24246,6 +24250,9 @@ function buildExperimentEvent(options2) {
     ...options2.extra || {}
   };
 }
+var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
+var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
+var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
 
 // src/skills/impl-doc/scripts/append_experiment_event.ts
 function parseArgs(argv) {

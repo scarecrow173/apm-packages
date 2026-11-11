@@ -140,3 +140,11 @@ test("promote_index is a declared mutator for exactly the three owner index dirs
     assert.equal(has, expected, `${row.dir} promote_index mutator`);
   }
 });
+
+test("sync_impl_index is a declared mutator for exactly the two impl index dirs", () => {
+  for (const row of DIRECTORY_CONTRACTS) {
+    const has = row.mutators.includes("sync_impl_index");
+    const expected = ["docs/impl/ir", "docs/impl/exp"].includes(row.dir);
+    assert.equal(has, expected, `${row.dir} sync_impl_index mutator`);
+  }
+});
