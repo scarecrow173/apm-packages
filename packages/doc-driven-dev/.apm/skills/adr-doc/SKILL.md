@@ -390,10 +390,12 @@ or reviewing it through Phases 0-3. For extended operational guidance, use:
   placeholders, local links, relation links, and index coverage.
 - `scripts/review_adr.js`: review agent-readiness.
 - `scripts/check_code_links.js`: check Implementation Plan code references.
-- `scripts/update_index.js`: update ADR index files; dry-run by default; refuses
-  to overwrite hand-curated indexes unless `--force` is passed. Marker-less
-  READMEs written by an old scaffold can be adopted through doc-maintenance's
-  `promote_index.js` instead of force-overwriting.
+- `scripts/update_index.js`: update ADR index files; dry-run by default;
+  `--write` applies, `--force` replaces hand-curated indexes. Managed indexes
+  merge into the generated region — hand-written preamble and trailing notes
+  are preserved. Marker-less READMEs written by an old scaffold can be
+  adopted through doc-maintenance's `promote_index.js` instead of
+  force-overwriting.
 - `scripts/relate_adr.js`: add bidirectional ADR relations.
 - `scripts/migrate_report.js`: report migration actions toward MADR 4.0.0
   without changing files.

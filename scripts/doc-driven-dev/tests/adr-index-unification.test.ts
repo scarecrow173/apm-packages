@@ -10,6 +10,7 @@ import {
   docEntries,
   emptyIndexForDir,
   GENERATED_INDEX_MARKER,
+  GENERATED_SETTLED_MARKER,
   mergeManagedIndex,
 } from "../src/skills/lib/doc_suite_utils";
 import { buildIndex as buildAdrIndex } from "../src/skills/adr-doc/scripts/lib/adr_utils";
@@ -273,4 +274,208 @@ test("hand-curated README still refused by default; --force replaces it", () => 
   const content = fs.readFileSync(indexPath, "utf8");
   assert.ok(content.includes(GENERATED_INDEX_MARKER), content);
   assert.match(content, /adopt-madr\.md/);
+});
+
+test("update_index --dir docs/decisions writes the canonical ADR index at the alias dir", () => {
+  const repo = tempRepo();
+  // Alias dirs are not scaffolded; seed one ADR so the dir exists.
+  writeDoc(repo, "docs/decisions/0003-monorepo.md", {
+    id: "ADR-0003", type: "adr", status: "accepted", title: "Keep a monorepo", created: "2026-01-04",
+  }, "# 3. Keep a monorepo\n");
+
+  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/decisions", "--write", "--cwd", repo], repo);
+  assert.equal(update.status, 0, update.stderr);
+
+  const content = fs.readFileSync(path.join(repo, "docs/decisions/README.md"), "utf8");
+  // The alias contract row carries no indexTitle, so the canonical docs/adr
+  // contract supplies it — same H1 as the canonical dir, not "ADR Documents".
+  assert.ok(content.startsWith("# Architecture Decision Records"), content);
+  assert.ok(content.includes(GENERATED_INDEX_MARKER), content);
+  assert.match(content, /Directory: `docs\/decisions`/);
+  assert.match(content, /\| ADR-0003 \| Keep a monorepo \| accepted \|/);
+});
+
+test("update_index rejects a non-adr --dir without writing", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+
+  // docs/ideas is doc-suite territory (resident type: idea); the ADR writer
+  // must fail closed on the ownership boundary, before touching any file.
+  const ideasIndex = path.join(repo, "docs/ideas/README.md");
+  const before = fs.existsSync(ideasIndex) ? fs.readFileSync(ideasIndex, "utf8") : null;
+
+  const rejected = runSkill(adrRoot, "update_index.js", ["--dir", "docs/ideas", "--write", "--cwd", repo], repo);
+  assert.notEqual(rejected.status, 0, "non-adr --dir must fail the type-scope check");
+  assert.match(rejected.stderr, /Scope mismatch/);
+  if (before === null) assert.ok(!fs.existsSync(ideasIndex));
+  else assert.equal(fs.readFileSync(ideasIndex, "utf8"), before);
+});
+
+test("settled ADRs land in the ## Settled tier identically across all three producers", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+
+  const adrs: [string, string][] = [
+    ["Keep REST", "accepted"],
+    ["Drop SOAP", "rejected"],
+    ["Retire XML", "deprecated"],
+    ["Move to gRPC", "superseded"],
+  ];
+  for (const [title, status] of adrs) {
+    const created = runSkill(adrRoot, "new_adr.js", ["--title", title, "--status", status, "--cwd", repo], repo);
+    assert.equal(created.status, 0, created.stderr);
+  }
+  const indexPath = path.join(repo, "docs/adr/README.md");
+  const producerA = fs.readFileSync(indexPath, "utf8");
+
+  fs.unlinkSync(indexPath);
+  const maintenance = runSkill(
+    maintenanceRoot,
+    "doc_maintenance.js",
+    ["apply", "--dir", "docs/adr", "--cwd", repo],
+    repo,
+  );
+  assert.equal(maintenance.status, 0, maintenance.stderr);
+  const producerB = fs.readFileSync(indexPath, "utf8");
+
+  fs.unlinkSync(indexPath);
+  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
+  assert.equal(update.status, 0, update.stderr);
+  const producerC = fs.readFileSync(indexPath, "utf8");
+
+  // ADR settled statuses come from doc_lifecycle: rejected/deprecated/
+  // superseded drop below `## Settled`; accepted stays in the active table.
+  for (const content of [producerA, producerB, producerC]) {
+    const settledAt = content.indexOf("## Settled");
+    assert.ok(settledAt > 0, content);
+    assert.ok(content.includes(GENERATED_SETTLED_MARKER), content);
+    const activeRegion = content.slice(0, settledAt);
+    const settledRegion = content.slice(settledAt);
+    assert.match(activeRegion, /keep-rest\.md/);
+    for (const file of ["drop-soap", "retire-xml", "move-to-grpc"]) {
+      assert.doesNotMatch(activeRegion, new RegExp(`${file}\\.md`));
+      assert.match(settledRegion, new RegExp(`\\| ADR-\\w+ \\| [^|]+ \\| (rejected|deprecated|superseded) \\| \\[${file}\\.md\\]`));
+    }
+  }
+  assert.equal(managedRegion(producerB), managedRegion(producerA));
+  assert.equal(managedRegion(producerC), managedRegion(producerA));
+});
+
+test("a foreign-typed file in docs/adr is indexed identically by all three producers", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+  const first = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  assert.equal(first.status, 0, first.stderr);
+
+  // A misplaced idea squatting in ADR territory is in scope for the index —
+  // doc_lint's index-missing-entry rule requires in-scope docs to be indexed —
+  // so every producer renders its own IDEA-* row. The ADR filename fallback
+  // must not rewrite the declared id into ADR-0099.
+  writeDoc(repo, "docs/adr/0099-note.md", {
+    id: "IDEA-0099", type: "idea", status: "draft", title: "Misplaced idea", created: "2026-01-03",
+  }, "# Misplaced\n");
+
+  const second = runSkill(adrRoot, "new_adr.js", ["--title", "Use PostgreSQL", "--cwd", repo], repo);
+  assert.equal(second.status, 0, second.stderr);
+  const indexPath = path.join(repo, "docs/adr/README.md");
+  const producerA = fs.readFileSync(indexPath, "utf8");
+
+  fs.unlinkSync(indexPath);
+  const maintenance = runSkill(
+    maintenanceRoot,
+    "doc_maintenance.js",
+    ["apply", "--dir", "docs/adr", "--cwd", repo],
+    repo,
+  );
+  assert.equal(maintenance.status, 0, maintenance.stderr);
+  const producerB = fs.readFileSync(indexPath, "utf8");
+
+  fs.unlinkSync(indexPath);
+  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
+  assert.equal(update.status, 0, update.stderr);
+  const producerC = fs.readFileSync(indexPath, "utf8");
+
+  for (const content of [producerA, producerB, producerC]) {
+    assert.match(content, /\| IDEA-0099 \| Misplaced idea \| draft \|/);
+    assert.doesNotMatch(content, /ADR-0099/);
+  }
+  assert.equal(managedRegion(producerB), managedRegion(producerA));
+  assert.equal(managedRegion(producerC), managedRegion(producerA));
+});
+
+test("new_adr --no-index leaves README bytes untouched; --force-index overwrites a hand-curated README", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+  const first = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  assert.equal(first.status, 0, first.stderr);
+
+  const indexPath = path.join(repo, "docs/adr/README.md");
+  const managed = fs.readFileSync(indexPath, "utf8");
+
+  const noIndex = runSkill(adrRoot, "new_adr.js", ["--title", "Use PostgreSQL", "--no-index", "--cwd", repo], repo);
+  assert.equal(noIndex.status, 0, noIndex.stderr);
+  assert.match(noIndex.stdout, /--no-index/);
+  assert.equal(fs.readFileSync(indexPath, "utf8"), managed);
+
+  const curated = "# My Notes\n\nhand curated\n";
+  fs.writeFileSync(indexPath, curated, "utf8");
+  const forced = runSkill(adrRoot, "new_adr.js", ["--title", "Keep CQRS", "--force-index", "--cwd", repo], repo);
+  assert.equal(forced.status, 0, forced.stderr);
+  const content = fs.readFileSync(indexPath, "utf8");
+  assert.ok(content.includes(GENERATED_INDEX_MARKER), content);
+  assert.match(content, /adopt-madr\.md/);
+  assert.match(content, /use-postgresql\.md/);
+  assert.match(content, /keep-cqrs\.md/);
+});
+
+test("update_index dry-run changes zero bytes", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+  const first = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  assert.equal(first.status, 0, first.stderr);
+
+  const indexPath = path.join(repo, "docs/adr/README.md");
+  const before = fs.readFileSync(indexPath, "utf8");
+
+  const dry = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--cwd", repo], repo);
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.match(dry.stdout, /DRY RUN/);
+  assert.equal(fs.readFileSync(indexPath, "utf8"), before);
+
+  // A missing index stays missing — dry-run never creates it either.
+  fs.unlinkSync(indexPath);
+  const dryMissing = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--cwd", repo], repo);
+  assert.equal(dryMissing.status, 0, dryMissing.stderr);
+  assert.match(dryMissing.stdout, /DRY RUN/);
+  assert.ok(!fs.existsSync(indexPath));
+});
+
+test("second new_adr on an existing managed index preserves prior hand edits", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+  const first = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  assert.equal(first.status, 0, first.stderr);
+
+  const indexPath = path.join(repo, "docs/adr/README.md");
+  const managed = fs.readFileSync(indexPath, "utf8");
+  fs.writeFileSync(indexPath, `# Custom Intro\n\n${managed}\n\n## Team Notes\n\nhand written\n`, "utf8");
+
+  // new_adr's index refresh is a merge, not an overwrite: hand-written
+  // bookends survive and the new row lands inside the generated region.
+  const second = runSkill(adrRoot, "new_adr.js", ["--title", "Use PostgreSQL", "--cwd", repo], repo);
+  assert.equal(second.status, 0, second.stderr);
+
+  const content = fs.readFileSync(indexPath, "utf8");
+  assert.ok(content.startsWith("# Custom Intro"), content);
+  assert.ok(content.indexOf("# Custom Intro") < content.indexOf(GENERATED_INDEX_MARKER));
+  assert.match(content, /## Team Notes\n\nhand written/);
+  assert.ok(content.indexOf("## Team Notes") > content.indexOf(GENERATED_INDEX_MARKER));
+  assert.match(content, /adopt-madr\.md/);
+  assert.match(content, /use-postgresql\.md/);
 });
