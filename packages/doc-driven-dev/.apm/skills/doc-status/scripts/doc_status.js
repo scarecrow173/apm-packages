@@ -33262,6 +33262,7 @@ var INDEX_TITLES = {
   "docs/impl/exp": "Experiment Logs"
 };
 var PROMOTE_INDEX_MUTATOR = "promote_index";
+var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
 var SHARED_CREATORS = {
   idea: "new_idea",
   discovery: "new_discovery",
@@ -33329,7 +33330,7 @@ function buildContracts() {
       residentTypes: ["impl"],
       indexFormat: "impl-4col",
       indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_impl_record"]
     },
     {
@@ -33339,7 +33340,7 @@ function buildContracts() {
       residentTypes: ["exp"],
       indexFormat: "exp-1col",
       indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_experiment_log"]
     }
   ];

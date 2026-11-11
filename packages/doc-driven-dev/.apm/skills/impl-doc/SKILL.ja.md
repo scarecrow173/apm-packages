@@ -99,6 +99,48 @@ node scripts/audit_impl_record.js --json
 node scripts/audit_experiment_log.js --json
 ```
 
+### ディレクトリ索引の同期
+
+`docs/impl/ir/README.md` と `docs/impl/exp/README.md` は管理索引です。
+`new_*` 系クリエイターは書き込み時に索引を最新化しますが、status 変更や
+ドリフトの解消はオーナーの同期ツールで明示的に行います:
+
+```bash
+node scripts/sync_impl_index.js --kind ir            # プレビューのみ — 書き込まない
+node scripts/sync_impl_index.js --kind exp --apply   # 同期を書き込む
+node scripts/sync_impl_index.js --kind ir --apply --expect <planHash>
+```
+
+- デフォルトはプレビューで、`--apply` のときだけ書き込みます。`--json` は
+  計画を JSON で出力します。`--expect` は事前にプレビューした `planHash`
+  に apply をピン留めし、再計算結果が異なれば中断します。
+- verdict は `in-sync`(no-op)、`sync`(ドリフト解消)、`create`(README
+  欠落)、`rejected`(fail-closed)です。手作業でキュレートされた索引、
+  曖昧・不正・競合した索引、シンボリックリンクの README やディレクトリ
+  外へ出るリンクなど安全でない索引は `rejected` となり、絶対に書き込み
+  ません。先に README またはソースを修復してください。
+- apply は再計画し、全ソースファイル・ファイル一覧・README の SHA-256
+  ピンを検証してから、temp ファイル + rename でアトミックに書き込みます。
+  生成領域の前後にある手書きの preamble / tail はバイト単位で保持され
+  ます。`--dir` は checkout 内の別 impl ディレクトリを選択します。外部
+  パスは拒否されます。
+- `doc_maintenance` と `doc_status` は impl 索引を修復しません。
+  `docs/impl/ir` と `docs/impl/exp` の索引を変更できるのは
+  `sync_impl_index` だけです。
+
+両監査は読み取り専用で、索引ドリフトを finding として報告します:
+
+- `missing-index` — `README.md` が無い(warning)
+- `index-not-managed` — README に生成マーカーが無い、シンボリック
+  リンクである、または通常の管理ファイルでない(warning)
+- `index-missing-entry` / `index-stale-entry` /
+  `index-duplicate-entry` — 行の所属ドリフト(warning)
+- `index-metadata-mismatch` / `index-tier-mismatch` — 行セルまたは
+  active/settled 層がソースの真実と一致しない(warning)
+- `index-ordering` — 行順が決定的順序と異なる(info)
+- `index-unparseable` / `index-escapes-root` — 構造が不正、または索引
+  ディレクトリ外へ出るリンク(error)
+
 ## NEVER
 
 - NEVER task 実装を開始する前に in-progress の ir を作成または再利用せずに

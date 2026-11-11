@@ -141,6 +141,9 @@ Experiment Log の監査項目:
 - `seq` が一意かつ昇順
 - `experiment` パスが実ファイルと一致
 
+両監査は管理 `README.md` 索引も読み取り専用で検査し、`index-*` の
+finding を報告します(コード一覧は impl-doc スキルを参照)。
+
 ## 索引
 
 各ディレクトリは `README.md` を索引として使います。
@@ -164,11 +167,16 @@ Experiment Log の監査項目:
   記録は下段の `## Settled` テーブルにファイル名昇順で掲載します。Settled の
   行もリンクは維持され、履歴を隠さずに強調を抑える構成です。
 - 記録の追加や `status` の変更時は索引を更新してください。
-  `doc_maintenance.js plan|apply` が管理索引を再生成します。実行するまでの間、
-  `doc_status lint` がドリフト（`index-metadata-mismatch`、`index-ordering`）を
-  報告します。
-- 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに
-  1 つのテーブルを配置することを推奨します。
+  `sync_impl_index.js --kind ir` が同期内容をプレビューします
+  （verdict は `in-sync` / `sync` / `create` / `rejected`）。
+  `--apply` で書き込みます。適用するまでの間、
+  `audit_impl_record.js` がドリフト（`index-missing-entry`、
+  `index-stale-entry`、`index-metadata-mismatch`、`index-tier-mismatch`、
+  `index-ordering`）を報告します。`doc_maintenance` と `doc_status` は
+  impl 索引を修復しません。
+- 管理領域は active テーブル 1 つと任意の `## Settled` テーブルだけです。
+  手書きの注記は生成領域の外（マーカーより前、またはテーブルより後）に
+  置いてください。索引テーブルを追加すると曖昧とみなされ拒否されます。
 
 ### Experiment Log
 
@@ -182,5 +190,9 @@ Experiment Log の監査項目:
 
 各ログの参照は Implementation Record 側の `metadata.experiments` と relations が
 担うため、README はディレクトリ概覧の役割のみ持ちます。
+
+この索引も `sync_impl_index.js --kind exp` で同様に同期します。デフォルトは
+プレビュー、`--apply` で書き込み、手作業キュレートや不正な README は
+`rejected` になります。
 
 新規の Experiment Log が追加されたら、同じ変更の中で必ず索引を更新します。
