@@ -24886,7 +24886,7 @@ async function docEntries(cwd, type, explicitDir) {
     return {
       created: typeof data.created === "string" ? data.created : null,
       file: file2,
-      id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : indexRow?.idFromFile?.(file2) ?? null,
+      id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : indexRow?.idFromFile?.(import_node_path2.default.basename(file2)) ?? null,
       path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
       title: await titleFromDocument(content, import_node_path2.default.basename(file2, ".md"), indexRow?.titleFromHeading),

@@ -869,7 +869,7 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
       file,
       id: (typeof data.id === "string" && data.id.trim())
         ? data.id.trim()
-        : indexRow?.idFromFile?.(file) ?? null,
+        : indexRow?.idFromFile?.(path.basename(file)) ?? null,
       path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
       title: await titleFromDocument(content, path.basename(file, ".md"), indexRow?.titleFromHeading),
