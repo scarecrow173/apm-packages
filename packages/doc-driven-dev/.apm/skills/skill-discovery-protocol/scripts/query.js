@@ -3048,13 +3048,13 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
         canary.aborted = true;
         return canary;
       }
-      const checkResult = runChecks(payload, checks, ctx);
-      if (checkResult instanceof Promise) {
+      const checkResult2 = runChecks(payload, checks, ctx);
+      if (checkResult2 instanceof Promise) {
         if (ctx.async === false)
           throw new $ZodAsyncError();
-        return checkResult.then((checkResult2) => inst._zod.parse(checkResult2, ctx));
+        return checkResult2.then((checkResult3) => inst._zod.parse(checkResult3, ctx));
       }
-      return inst._zod.parse(checkResult, ctx);
+      return inst._zod.parse(checkResult2, ctx);
     };
     inst._zod.run = (payload, ctx) => {
       if (ctx.skipChecks) {
@@ -20094,6 +20094,7 @@ var SchemaErrorSchema = external_exports.object({
   message: external_exports.string()
 });
 var gateResult = external_exports.enum(["pass", "fail", "skipped"]);
+var checkResult = external_exports.enum(["pass", "fail", "warn", "skipped"]);
 var StalenessValidationSchema = external_exports.object({
   result: gateResult,
   basis: external_exports.string(),
@@ -20115,7 +20116,7 @@ var DeterministicValidationSchema = external_exports.object({
 });
 var BlockingCheckSchema = external_exports.object({
   type: external_exports.string(),
-  result: gateResult,
+  result: checkResult,
   details: external_exports.array(external_exports.string())
 });
 var CatalogValidationSchema = external_exports.object({
@@ -20143,7 +20144,9 @@ var ValidationReportSchema = external_exports.object({
   staleness_validation: StalenessValidationSchema,
   deterministic_validation: DeterministicValidationSchema,
   blocking_validations: external_exports.object({
-    result: external_exports.string(),
+    // Producer emits exactly the gate enum: "skipped" when the invocation
+    // gate is disabled (validate.ts), else pass/fail — never "warn".
+    result: gateResult,
     checks: external_exports.array(BlockingCheckSchema)
   }),
   catalog_validation: CatalogValidationSchema,
