@@ -72,7 +72,8 @@ type のライフサイクル状態と relation の健全性を確認するた�
    `orphan-*` findings をルール別・文書型別に集約する。
 
    共通フィルタ: `--type`, `--dir`, `--rule`, `--severity`, `--blocking`,
-   `--status`（list）, `--json`, `--external-links`。finding は決定的順序で
+   `--status`（list）, `--json`, `--external-links`,
+   `--profile`（lint, audit, health）。finding は決定的順序で
    出力され、exit status は呼び出し自体が不正な場合のみ `0` 以外になる。
 
    `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
@@ -99,7 +100,11 @@ type のライフサイクル状態と relation の健全性を確認するた�
 ## 監査カバレッジ
 
 監査は共有 document repository model 上で実行され、すべての問題を安定した
-rule ID で報告する。対象チェック:
+rule ID で報告する。`--profile materialized`（デフォルト）は以下の全 rule
+を評価し、`--profile artifact` は canonical 文書の完全性のみを評価して
+index チェックをスキップする —— missing / stale な index は
+artifact profile の finding を一切生じさせない。JSON 出力は有効な
+profile と、実行・スキップされたチェック群を報告する。対象チェック:
 
 - `unparseable-front-matter`, `invalid-front-matter`, `invalid-type`,
   `invalid-status` — フロントマターと文書 contract の違反。
@@ -140,20 +145,23 @@ rule ID で報告する。対象チェック:
   `approved`/`accepted`/`implemented`/`resolved` の上流や settled な
   文書はフラグされない。non-blocking な warning: stale 系譜は契約違反
   ではなく、向き先変更またはクローズを促すシグナル。
-- `missing-index`, `index-missing-entry`, `index-missing-overview`,
-  `missing-overview` — 索引とディレクトリ構造の欠落。
+- `missing-overview` — 必須 canonical ディレクトリ文書。両 profile で実行。
+- `missing-index`, `index-missing-entry`, `index-missing-overview` —
+  索引の存在とカバレッジの欠落。materialized profile のみ。
 - `broken-link`, `missing-image-link`, `broken-anchor`, `link-escapes-root`,
   `link-case-mismatch` — ローカル Markdown link と anchor の整合性。
 - `index-stale-entry`, `index-duplicate-entry`, `index-metadata-mismatch`,
   `index-ordering`, `index-unparseable`, `index-escapes-root` — 索引テーブルの
-  整合性。管理索引は status-aware —— in-flight の行が先、その下に
-  `## Settled` 層が続く。`index-ordering` はその順序違反の行を、
-  `index-metadata-mismatch` は front matter と不一致になった
-  status セルを指摘する。
-- `orphan-index`, `orphan-navigation`, `orphan-relation` — 索引未掲載、
-  どの Markdown link からも到達不能、意味 relation を持たない文書。
-  severity は type-aware で、root artifact として許可される type は
-  `info`、それ以外は `warning` として報告する。
+  整合性。materialized profile のみ。管理索引は status-aware ——
+  in-flight の行が先、その下に `## Settled` 層が続く。`index-ordering` は
+  その順序違反の行を、`index-metadata-mismatch` は front matter と
+  不一致になった status セルを指摘する。
+- `orphan-index` — 索引未掲載の文書。materialized profile のみ。
+- `orphan-navigation`, `orphan-relation` — canonical Markdown link の
+  どれからも到達不能、または意味 relation を持たない文書。両 profile;
+  `artifact` では index ファイル内の link は inbound navigation に
+  カウントしない。severity は type-aware で、root artifact として許可
+  される type は `info`、それ以外は `warning` として報告する。
 - `external-link-broken`, `external-link-redirect`,
   `external-link-unverifiable` — `audit_docs.js --external-links` による
   opt-in の外部リンク確認。デフォルトでは無効で、監査は決定的かつ

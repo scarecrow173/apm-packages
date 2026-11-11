@@ -162,6 +162,28 @@ test("inconsistent index emits lintIndexConsistency findings only under material
   assert.ok(materializedCodes.includes("index-ordering"), "materialized reports the misordered rows");
 });
 
+test("status and tier drift between front matter and index rows is materialized-only", async () => {
+  const root = fixture();
+  writeLinkedSpecPair(root);
+  writeSpec(root, "old", "SPEC-0003", "Old Spec", "# Old\n\nSee [a](a.md).\n", IMPLEMENTS_IDEA, "superseded");
+  // Two drift forms: a.md's status cell disagrees with its front matter, and
+  // the settled SPEC-0003 is ordered ahead of the in-flight rows (it belongs
+  // under `## Settled`, so expected order puts it last).
+  writeSpecIndex(root, [
+    indexRow("SPEC-0003", "Old Spec", "superseded", "old.md"),
+    indexRow("SPEC-0001", "Spec A", "approved", "a.md"),
+    indexRow("SPEC-0002", "Spec B", "draft", "b.md"),
+  ]);
+
+  const artifact = await lint(root, "artifact");
+  assert.deepEqual(materializedFindings(artifact), [], "index drift is invisible to the artifact profile");
+
+  const materialized = await lint(root, "materialized");
+  const materializedCodes = codes(materialized);
+  assert.ok(materializedCodes.includes("index-metadata-mismatch"), "materialized reports the stale status cell");
+  assert.ok(materializedCodes.includes("index-ordering"), "materialized reports the settled row ordered ahead of in-flight rows");
+});
+
 test("artifact profile still catches canonical-document defects", async () => {
   const root = fixture();
   writeIdea(root);
