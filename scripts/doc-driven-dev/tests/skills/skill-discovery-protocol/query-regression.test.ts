@@ -516,3 +516,57 @@ test("regression: completely unknown subcommand exits 2", () => {
   assert.equal(result.status, 2);
   assert.ok(result.stderr.includes("Available subcommands:"));
 });
+
+function rewriteReport(dir: string, mutate: (report: any) => void) {
+  const reportPath = path.join(dir, ".sdp", "validation-report.json");
+  const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  mutate(report);
+  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf8");
+}
+
+const WARN_CHECK = {
+  type: "unused_slots",
+  result: "warn",
+  details: ['Slot "beta_review" has no resolved invocation and no default'],
+};
+
+test("query subcommands accept a report containing a warn-level check", () => {
+  const dir = tempDir();
+  setupEnv(dir);
+  rewriteReport(dir, (report) => {
+    report.blocking_validations.checks.push({ ...WARN_CHECK });
+  });
+  for (const subcommand of ["categories", "flow-stack", "unresolved", "validation-status"]) {
+    const result = runQuery(["--profile", ".sdp/regression-profile.json", subcommand], dir);
+    assert.equal(result.status, 0, `${subcommand}: ${result.stderr}`);
+    assert.doesNotThrow(() => JSON.parse(result.stdout), `${subcommand} must return JSON`);
+  }
+});
+
+test("query rejects gate-level warn, unknown check enums, and missing fields", () => {
+  const mutators: Array<(report: any) => void> = [
+    (r) => { r.schema_validation.result = "warn"; },
+    (r) => { r.blocking_validations.result = "warn"; },
+    (r) => { r.overall_result = "warn"; },
+    (r) => { r.blocking_validations.checks.push({ type: "x", result: "error", details: [] }); },
+    (r) => { r.blocking_validations.checks.push({ type: "x", result: "warn" }); }, // details missing
+    (r) => { delete r.blocking_validations.checks; },
+  ];
+  for (const mutate of mutators) {
+    const dir = tempDir();
+    setupEnv(dir);
+    rewriteReport(dir, mutate);
+    const result = runQuery(["--profile", ".sdp/regression-profile.json", "categories"], dir);
+    assert.notEqual(result.status, 0, `must fail: ${mutate.toString().slice(0, 70)}`);
+    assert.match(`${result.stdout}\n${result.stderr}`, /Invalid validation report/);
+  }
+});
+
+test("query rejects a malformed (non-JSON) validation report", () => {
+  const dir = tempDir();
+  setupEnv(dir);
+  fs.writeFileSync(path.join(dir, ".sdp", "validation-report.json"), "{ not json", "utf8");
+  const result = runQuery(["--profile", ".sdp/regression-profile.json", "categories"], dir);
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Invalid validation report/);
+});
