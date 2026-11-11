@@ -49,10 +49,11 @@ case/spelling variants resolve to the same owned row.
 - `doc-suite`: `new_idea`, `new_discovery`, `new_spec`, `new_plan`,
   `new_task`, `new_design`, `new_test_spec`, `doc_maintenance`,
   `scaffold_docs`, `migrate_docs`, `migrate_ids`
-- `adr-doc`: `new_adr`, `update_index`, `relate_adr`, `doc_maintenance`,
-  `scaffold_docs`, `migrate_docs`, `migrate_ids`
+- `adr-doc`: `new_adr`, `update_index`, `relate_adr`, `promote_index`,
+  `doc_maintenance`, `scaffold_docs`, `migrate_docs`, `migrate_ids`
 - `impl-doc`: `new_impl_record`, `new_experiment_log`,
-  `append_experiment_event`, `edit_experiment_log`, `migrate_ids`
+  `append_experiment_event`, `edit_experiment_log`, `migrate_ids`,
+  `promote_index`
 
 ## Audit owners per owner
 
@@ -61,6 +62,23 @@ case/spelling variants resolve to the same owned row.
   `check_code_links` plus the doc-suite inspectors above for the shared
   4-column index
 - `impl-doc`: `audit_impl_record`, `audit_experiment_log`
+
+## Index initialization
+
+`scaffold_docs` is an immediate-create initializer, not a preview-first
+maintenance run: it creates every canonical directory and writes each
+directory's contract index when none exists. Shared-suite dirs get the typed
+managed index; `docs/adr`, `docs/impl/ir`, and `docs/impl/exp` get the
+owner's contract format — 4-column + `## Settled` for ADR and IR, one-column
+`| File |` for EXP — always carrying `<!-- doc-suite:generated-index -->` so
+the owning writers never see scaffold output as hand-curated. Existing
+READMEs are never overwritten.
+
+A README produced by a pre-#184 scaffold has no marker and blocks owner
+index writes. `promote_index` (preview, `--apply` to write) promotes only a
+file byte-identical to that exact legacy output — EOL normalization aside —
+and regenerates it through the owning writer. Any other content is rejected
+and left byte-identical; there is no force path for unverified files.
 
 ## Scope rules
 

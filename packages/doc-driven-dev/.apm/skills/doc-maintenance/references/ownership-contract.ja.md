@@ -50,10 +50,11 @@
 - `doc-suite`: `new_idea`、`new_discovery`、`new_spec`、`new_plan`、
   `new_task`、`new_design`、`new_test_spec`、`doc_maintenance`、
   `scaffold_docs`、`migrate_docs`、`migrate_ids`
-- `adr-doc`: `new_adr`、`update_index`、`relate_adr`、`doc_maintenance`、
-  `scaffold_docs`、`migrate_docs`、`migrate_ids`
+- `adr-doc`: `new_adr`、`update_index`、`relate_adr`、`promote_index`、
+  `doc_maintenance`、`scaffold_docs`、`migrate_docs`、`migrate_ids`
 - `impl-doc`: `new_impl_record`、`new_experiment_log`、
-  `append_experiment_event`、`edit_experiment_log`、`migrate_ids`
+  `append_experiment_event`、`edit_experiment_log`、`migrate_ids`、
+  `promote_index`
 
 ## Audit owners per owner
 
@@ -62,6 +63,25 @@
   `check_code_links`。加えて共有 4 列 index については上記 doc-suite の
   検査 CLI も有効
 - `impl-doc`: `audit_impl_record`、`audit_experiment_log`
+
+## Index initialization
+
+`scaffold_docs` は preview-first の maintenance ではなく、即時作成の
+初期化ツールである。全 canonical ディレクトリを作成し、index が
+存在しない場合はそのディレクトリの contract index を書き込む。
+shared-suite のディレクトリには型付き managed index を、
+`docs/adr`・`docs/impl/ir`・`docs/impl/exp` にはオーナーの contract
+形式(ADR と IR は 4 列+`## Settled`、EXP は 1 列 `| File |`)を、常に
+`<!-- doc-suite:generated-index -->` 付きで生成する。これによりオーナー
+writer が scaffold 出力を hand-curated と誤認することはない。既存の
+README は一切上書きしない。
+
+Issue #184 以前の scaffold が生成した README には marker がなく、オーナーの
+index 書き込みをブロックする。`promote_index`(preview、`--apply` で
+書き込み)は、その旧出力とバイト一致(EOL 正規化のみ考慮)する
+ファイルのみを昇格対象とし、オーナー writer を通じて再生成する。
+それ以外の内容は拒否され、ファイルはバイト単位で不変のまま残る。
+未検証ファイルへの force 経路は存在しない。
 
 ## Scope rules
 

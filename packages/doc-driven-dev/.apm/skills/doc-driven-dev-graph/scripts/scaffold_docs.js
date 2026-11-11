@@ -24049,6 +24049,12 @@ var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "m
 var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
 var ADR_MUTATORS = ["update_index", "relate_adr"];
 var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
+var INDEX_TITLES = {
+  "docs/adr": "Architecture Decision Records",
+  "docs/impl/ir": "Implementation Records",
+  "docs/impl/exp": "Experiment Logs"
+};
+var PROMOTE_INDEX_MUTATOR = "promote_index";
 var SHARED_CREATORS = {
   idea: "new_idea",
   discovery: "new_discovery",
@@ -24078,6 +24084,7 @@ function buildContracts() {
         rows.set(normalized, row);
       }
       row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
+      if (INDEX_TITLES[normalized]) row.mutators.add(PROMOTE_INDEX_MUTATOR);
       if (!row.residents.includes(type)) row.residents.push(type);
       if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
       for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
@@ -24094,6 +24101,7 @@ function buildContracts() {
     owner: row.owner,
     residentTypes: row.residents,
     indexFormat: "shared-4col",
+    indexTitle: INDEX_TITLES[dir],
     mutators: [...row.mutators].sort(),
     auditors: [...row.auditors].sort()
   }));
@@ -24113,7 +24121,8 @@ function buildContracts() {
       owner: "impl-doc",
       residentTypes: ["impl"],
       indexFormat: "impl-4col",
-      mutators: ["new_impl_record", "migrate_ids"],
+      indexTitle: INDEX_TITLES["docs/impl/ir"],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR],
       auditors: ["audit_impl_record"]
     },
     {
@@ -24122,7 +24131,8 @@ function buildContracts() {
       owner: "impl-doc",
       residentTypes: ["exp"],
       indexFormat: "exp-1col",
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids"],
+      indexTitle: INDEX_TITLES["docs/impl/exp"],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR],
       auditors: ["audit_experiment_log"]
     }
   ];
@@ -24200,9 +24210,9 @@ var scaffoldIndexMeta = {
   "docs/plans": { title: "PLAN Documents", type: "plan" },
   "docs/tasks": { title: "TASK Documents", type: "task" },
   "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
-  "docs/adr": { title: "ADR Documents" },
-  "docs/impl/ir": { title: "Implementation Record Documents" },
-  "docs/impl/exp": { title: "Experiment Log Documents" }
+  "docs/adr": { title: "Architecture Decision Records" },
+  "docs/impl/ir": { title: "Implementation Records" },
+  "docs/impl/exp": { title: "Experiment Logs" }
 };
 var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
   dir,
@@ -24252,6 +24262,8 @@ var frontMatterSchema = external_exports.object({
 }).passthrough();
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
+var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -24305,7 +24317,7 @@ async function docEntries(cwd, type, explicitDir) {
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
 }
 function renderIndexBody(entries, options2 = {}) {
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const header = INDEX_TABLE_HEADER_4COL;
   const compare = (left, right) => {
     if (options2.overviewFirst) {
       if (left.file === "overview.md") return -1;
@@ -24344,11 +24356,18 @@ Directory: \`${relativeDir.replace(/\\/g, "/")}\`
 ${body}
 `;
 }
-function buildGenericIndex(relativeDir, title) {
-  const dir = relativeDir.replace(/\\/g, "/");
-  return `# ${title}
+function emptyIndexForDir(dir) {
+  const normalized = normalizeDir(dir);
+  const contract = ownershipForDir(normalized);
+  if (!contract || !contract.canonical || !contract.indexTitle) return null;
+  const header = contract.indexFormat === "exp-1col" ? INDEX_TABLE_HEADER_1COL : INDEX_TABLE_HEADER_4COL;
+  return `# ${contract.indexTitle}
 
-Directory: \`${dir}\`
+${GENERATED_INDEX_MARKER}
+
+Directory: \`${normalized}\`
+
+${header}
 `;
 }
 function isMarkdownSource(file2) {
@@ -24373,7 +24392,9 @@ async function scaffoldDocsTree(cwd) {
     import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
     const readmePath = import_node_path2.default.join(fullDir, "README.md");
     if (import_node_fs2.default.existsSync(readmePath)) continue;
-    const content = target.type ? await renderManagedIndex(resolvedCwd, target.dir, target.type) : buildGenericIndex(target.dir, target.title);
+    const content = target.type ? await renderManagedIndex(resolvedCwd, target.dir, target.type) : emptyIndexForDir(target.dir) ?? (() => {
+      throw new Error(`No index contract for scaffold dir ${target.dir}`);
+    })();
     import_node_fs2.default.writeFileSync(readmePath, content, "utf8");
     created.push(import_node_path2.default.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
   }

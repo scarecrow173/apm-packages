@@ -69,3 +69,74 @@ test("scaffold_docs preserves existing README files", () => {
   assert.equal(fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8"), "# existing\n");
   assert.equal(fs.existsSync(path.join(repo, "docs/designs/overview.md")), false);
 });
+
+const adrRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/adr-doc");
+const implRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/impl-doc");
+const maintenanceRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-maintenance");
+
+function runSkill(root: string, name: string, args: string[], cwd: string) {
+  const result = spawnSync(process.execPath, [path.join(root, "scripts", name), ...args], {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+test("scaffolded owner indexes accept creator writes end to end", () => {
+  const repo = tempRepo();
+  const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(scaffold.status, 0, scaffold.stderr);
+
+  for (const dir of ["docs/adr", "docs/impl/ir", "docs/impl/exp"]) {
+    const content = fs.readFileSync(path.join(repo, dir, "README.md"), "utf8");
+    assert.ok(content.includes("doc-suite:generated-index"), `${dir} scaffold index is managed`);
+  }
+
+  const adr = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  assert.equal(adr.status, 0, adr.stderr);
+  assert.doesNotMatch(adr.stdout + adr.stderr, /hand-curated/);
+  assert.match(fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8"), /adopt-madr\.md/);
+
+  const ir = runSkill(implRoot, "new_impl_record.js", ["--title", "Extract foo", "--cwd", repo], repo);
+  assert.equal(ir.status, 0, ir.stderr);
+  assert.doesNotMatch(ir.stdout + ir.stderr, /hand-curated/);
+  assert.match(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), /extract-foo\.md/);
+
+  const exp = runSkill(implRoot, "new_experiment_log.js", ["--title", "Try caches", "--cwd", repo], repo);
+  assert.equal(exp.status, 0, exp.stderr);
+  assert.doesNotMatch(exp.stdout + exp.stderr, /hand-curated/);
+  const expIndex = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
+  assert.match(expIndex, /try-caches\.jsonl/);
+  assert.doesNotMatch(expIndex, /\| Title \|/, "EXP index stays one-column");
+});
+
+test("a second scaffold run leaves managed owner indexes untouched", () => {
+  const repo = tempRepo();
+  runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  const before = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
+
+  const again = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
+  assert.equal(again.status, 0, again.stderr);
+  assert.equal(fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8"), before);
+});
+
+test("migrate_docs --apply produces contract-conformant owner indexes", () => {
+  const repo = tempRepo();
+  fs.mkdirSync(path.join(repo, "docs"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/old-decision.md"),
+    "# Decision: keep JSONL logs\n\nBody of a decision record to migrate.\n",
+    "utf8",
+  );
+
+  const migrate = runSkill(maintenanceRoot, "migrate_docs.js", ["--cwd", repo, "--apply"], repo);
+  assert.equal(migrate.status, 0, migrate.stderr);
+
+  const adrIndex = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
+  assert.match(adrIndex, /^# Architecture Decision Records/m);
+  assert.ok(adrIndex.includes("doc-suite:generated-index"));
+  const expIndex = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
+  assert.match(expIndex, /\| File \|/);
+});
