@@ -205,3 +205,25 @@ test("doc_status exits non-zero on unknown command or missing command", () => {
   const missing = runScript("doc_status.js", [], repo);
   assert.notEqual(missing.status, 0);
 });
+
+test("audit_docs --owners requires --type all", () => {
+  const root = tempRepo();
+  const result = runScript("audit_docs.js", ["--type", "spec", "--owners"], root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /--owners requires --type all/);
+});
+
+test("audit_docs --type all --owners includes ownerAudits in JSON", () => {
+  const root = tempRepo();
+  const result = runScript("audit_docs.js", ["--type", "all", "--owners", "--json"], root);
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.deepEqual(report.ownerAudits.map((o) => o.name), ["impl-record", "experiment-log"]);
+});
+
+test("audit_docs --owners rejects --dir", () => {
+  const root = tempRepo();
+  const result = runScript("audit_docs.js", ["--type", "all", "--owners", "--dir", "docs/specs"], root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /--owners cannot be combined with --dir/);
+});
