@@ -864,16 +864,21 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
     const fullPath = path.join(dir, file);
     const content = fs.readFileSync(fullPath, "utf8");
     const data = parseDoc(content).data;
+    const entryType = typeof data.type === "string" ? data.type : null;
+    // Type-keyed row hooks describe the scan type's own filename/heading
+    // conventions; a foreign-typed file (e.g. an `idea` doc misplaced into
+    // docs/adr) must not inherit them (Issue #185 review).
+    const hooks = entryType === null || entryType === type ? indexRow : undefined;
     return {
       created: typeof data.created === "string" ? data.created : null,
       file,
       id: (typeof data.id === "string" && data.id.trim())
         ? data.id.trim()
-        : indexRow?.idFromFile?.(path.basename(file)) ?? null,
+        : hooks?.idFromFile?.(path.basename(file)) ?? null,
       path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
-      title: await titleFromDocument(content, path.basename(file, ".md"), indexRow?.titleFromHeading),
-      type: typeof data.type === "string" ? data.type : null,
+      title: await titleFromDocument(content, path.basename(file, ".md"), hooks?.titleFromHeading),
+      type: entryType,
     };
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
