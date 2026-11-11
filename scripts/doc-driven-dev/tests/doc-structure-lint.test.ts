@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { auditDocuments } from "../src/skills/lib/doc_audit";
+import { parseManagedIndexLayout } from "../src/skills/lib/doc_index_tiers";
 import { collectFindings, summarizeHealth } from "../src/skills/lib/doc_report";
 
 const tempDirs: string[] = [];
@@ -251,4 +252,226 @@ test("documented blocking rules flag findings and gate health", async () => {
 
   const health = summarizeHealth(collected, collected.findings);
   assert.ok(health.blocking >= 3, "blocking findings must count toward health gating");
+});
+
+// ---------------------------------------------------------------------------
+// Issue #189 — tier-aware managed-index parser + strict tier findings
+// ---------------------------------------------------------------------------
+// parseManagedIndexLayout classifies each shared 4-column row by the section
+// it physically sits in (active / settled / unknown) so lint audits placement
+// and structure, not only row content. Structural and tier findings are
+// managed-index only: an index opts in via <!-- doc-suite:generated-index -->,
+// and a hand-curated index keeps today's flat behavior with zero new findings.
+
+function writeGeneratedSpecIndex(root: string, sections: string) {
+  writeFile(
+    root,
+    "docs/specs/README.md",
+    `---\ntype: index\nof: spec\nstatus: active\ntitle: Spec Index\ncreated: 2026-01-01\n---\n# Spec Index\n\n<!-- doc-suite:generated-index -->\n\nDirectory: \`docs/specs\`\n\n${sections}`,
+  );
+}
+
+function writeSettledSpec(root: string, name: string, id: string, title: string, status = "implemented") {
+  writeFile(
+    root,
+    `docs/specs/${name}.md`,
+    `---\nid: ${id}\ntype: spec\nstatus: ${status}\ntitle: ${title}\ncreated: 2026-01-01\nowners: [team]\n---\n# ${title}\n`,
+  );
+}
+
+test("parseManagedIndexLayout classifies active and settled rows", () => {
+  const layout = parseManagedIndexLayout([
+    "# Spec Index",
+    "<!-- doc-suite:generated-index -->",
+    "Directory: `docs/specs`",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    "| SPEC-0001 | A | draft | [a.md](a.md) |",
+    "",
+    "## Settled <!-- doc-suite:settled-index -->",
+    "",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    "| SPEC-0002 | B | completed | [b.md](b.md) |",
+  ].join("\n"));
+  assert.equal(layout.generated, true);
+  assert.equal(layout.rows.length, 2);
+  assert.equal(layout.rows[0].tier, "active");
+  assert.equal(layout.rows[0].row.file, "a.md");
+  assert.equal(layout.rows[1].tier, "settled");
+  assert.equal(layout.settledHeadings, 1);
+  assert.equal(layout.unmarkedSettledHeadings, 0);
+});
+
+test("parseManagedIndexLayout flags unknown-heading tables and duplicate Settled", () => {
+  const layout = parseManagedIndexLayout([
+    "# I", "<!-- doc-suite:generated-index -->",
+    "| ID | Title | Status | File |", "| --- | --- | --- | --- |",
+    "| SPEC-0001 | A | draft | [a.md](a.md) |",
+    "## Archive",
+    "| ID | Title | Status | File |", "| --- | --- | --- | --- |",
+    "| SPEC-0002 | B | completed | [b.md](b.md) |",
+    "## Settled",           // no marker -> unmarked
+    "| ID | Title | Status | File |", "| --- | --- | --- | --- |",
+    "| SPEC-0003 | C | completed | [c.md](c.md) |",
+    "## Settled <!-- doc-suite:settled-index -->",  // duplicate
+  ].join("\n"));
+  assert.equal(layout.unknownSectionTables.length, 1);
+  assert.equal(layout.unknownSectionTables[0].heading, "Archive");
+  assert.equal(layout.rows.find((r) => r.row.file === "b.md")?.tier, "unknown");
+  assert.equal(layout.settledHeadings, 2);
+  assert.equal(layout.unmarkedSettledHeadings, 1);
+});
+
+test("index-tier-mismatch fires when a settled doc sits in the active table", async () => {
+  const root = fixture();
+  writeSpec(root, "a", "SPEC-0001", "# Spec A\n");
+  writeSettledSpec(root, "b", "SPEC-0002", "Spec b");
+  // Generated index whose single table lists BOTH rows before any
+  // ## Settled heading — b.md's row sits in the wrong tier.
+  writeGeneratedSpecIndex(root, [
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    indexItem("SPEC-0001", "a.md", "Spec a", "draft"),
+    indexItem("SPEC-0002", "b.md", "Spec b", "implemented"),
+    "",
+  ].join("\n"));
+
+  const collected = await collectFindings(root, { type: "spec" });
+  const tier = collected.findings.filter((finding) => finding.ruleId === "index-tier-mismatch");
+  assert.equal(tier.length, 1);
+  assert.equal(tier[0].severity, "warning");
+  assert.match(tier[0].message, /b\.md.*active table/);
+});
+
+test("index-tier-mismatch fires for an in-flight doc in the settled table", async () => {
+  const root = fixture();
+  writeSpec(root, "a", "SPEC-0001", "# Spec A\n");
+  writeSpec(root, "c", "SPEC-0002", "# Spec C\n");
+  // Both docs are draft (in-flight); a.md's row was regenerated under the
+  // Settled tier while c.md's row correctly stays active.
+  writeGeneratedSpecIndex(root, [
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    indexItem("SPEC-0002", "c.md", "Spec c", "draft"),
+    "",
+    "## Settled <!-- doc-suite:settled-index -->",
+    "",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    indexItem("SPEC-0001", "a.md", "Spec a", "draft"),
+    "",
+  ].join("\n"));
+
+  const collected = await collectFindings(root, { type: "spec" });
+  const tier = collected.findings.filter((finding) => finding.ruleId === "index-tier-mismatch");
+  assert.equal(tier.length, 1);
+  assert.equal(tier[0].severity, "warning");
+  assert.match(tier[0].message, /a\.md.*settled table/);
+});
+
+test("index-unparseable flags managed-index structural anomalies", async () => {
+  const table = [
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    indexItem("SPEC-0001", "a.md", "Spec a", "draft"),
+  ].join("\n");
+  const anomalies: { name: string; body: string; message: RegExp }[] = [
+    {
+      name: "table under an unrecognized heading",
+      body: `${table}\n\n## Archive\n\n${table}\n`,
+      message: /unrecognized heading: Archive/,
+    },
+    {
+      name: "duplicate ## Settled heading",
+      body: `${table}\n\n## Settled <!-- doc-suite:settled-index -->\n\n## Settled <!-- doc-suite:settled-index -->\n`,
+      message: /## Settled 2 times/,
+    },
+    {
+      name: "## Settled without the managed marker",
+      body: `${table}\n\n## Settled\n`,
+      message: /without the managed settled-index marker/,
+    },
+    {
+      name: "second table inside the active section",
+      body: `${table}\n\n${table}\n`,
+      message: /more than one table in the active section/,
+    },
+  ];
+
+  for (const anomaly of anomalies) {
+    const root = fixture();
+    writeSpec(root, "a", "SPEC-0001", "# Spec A\n");
+    writeGeneratedSpecIndex(root, anomaly.body);
+    const collected = await collectFindings(root, { type: "spec" });
+    const unparseable = collected.findings.filter((finding) => finding.ruleId === "index-unparseable");
+    assert.ok(
+      unparseable.some((finding) => finding.severity === "warning" && anomaly.message.test(finding.message)),
+      `${anomaly.name}: ${JSON.stringify(unparseable)}`,
+    );
+  }
+});
+
+test("non-generated index keeps legacy behavior: no tier or structure findings", async () => {
+  const root = fixture();
+  writeSpec(root, "a", "SPEC-0001", "# Spec A\n");
+  writeSettledSpec(root, "b", "SPEC-0002", "Spec b");
+  // Same misplaced settled row, but the README is hand-curated: no marker and
+  // no ## Settled. The managed-only tier and structure rules stay silent; the
+  // legacy flat ordering (in-flight first, settled last) still applies.
+  writeSpecIndex(root, [
+    indexItem("SPEC-0002", "b.md", "Spec b", "implemented"),
+    indexItem("SPEC-0001", "a.md", "Spec a", "draft"),
+  ]);
+
+  const collected = await collectFindings(root, { type: "spec" });
+  const codes = collected.findings.map((finding) => finding.ruleId);
+  assert.ok(!codes.includes("index-tier-mismatch"), "tier audit is managed-index only");
+  assert.ok(!codes.includes("index-unparseable"), "no structural findings on a flat table");
+  assert.ok(codes.includes("index-ordering"), "legacy flat ordering still applies");
+});
+
+test("index-ordering compares within each tier independently", async () => {
+  const root = fixture();
+  writeSpec(root, "a", "SPEC-0001", "# Spec A\n");
+  writeSpec(root, "b", "SPEC-0002", "# Spec B\n");
+  writeSettledSpec(root, "old", "SPEC-0003", "Spec old");
+  // Active rows [b.md, a.md] are out of order; the settled tier is correctly
+  // sorted — the rule must fire once for the active tier alone.
+  writeGeneratedSpecIndex(root, [
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    indexItem("SPEC-0002", "b.md", "Spec b", "draft"),
+    indexItem("SPEC-0001", "a.md", "Spec a", "draft"),
+    "",
+    "## Settled <!-- doc-suite:settled-index -->",
+    "",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    indexItem("SPEC-0003", "old.md", "Spec old", "implemented"),
+    "",
+  ].join("\n"));
+
+  const collected = await collectFindings(root, { type: "spec" });
+  const ordering = collected.findings.filter((finding) => finding.ruleId === "index-ordering");
+  assert.equal(ordering.length, 1);
+  assert.equal(ordering[0].severity, "info");
+});
+
+test("artifact profile emits none of the new findings", async () => {
+  const root = fixture();
+  writeSpec(root, "a", "SPEC-0001", "# Spec A\n");
+  writeSettledSpec(root, "b", "SPEC-0002", "Spec b");
+  writeGeneratedSpecIndex(root, [
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    indexItem("SPEC-0001", "a.md", "Spec a", "draft"),
+    indexItem("SPEC-0002", "b.md", "Spec b", "implemented"),
+    "",
+  ].join("\n"));
+
+  const collected = await collectFindings(root, { type: "spec", profile: "artifact" });
+  const codes = collected.findings.map((finding) => finding.ruleId);
+  assert.ok(!codes.includes("index-tier-mismatch"), "tier audit is materialized-only");
+  assert.ok(!codes.includes("index-unparseable"), "index structure is materialized-only");
 });

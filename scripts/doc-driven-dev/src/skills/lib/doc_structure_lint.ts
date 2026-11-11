@@ -5,6 +5,8 @@ import path from "node:path";
 
 import { artifactKeyOf, contractForType, finding, frontMatterEndLine, isExternalReference, slugifyAnchor } from "./doc_repository";
 import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repository";
+import { parseManagedIndexLayout } from "./doc_index_tiers";
+import type { IndexRowTier } from "./doc_index_tiers";
 import { isSettledStatus } from "./doc_lifecycle";
 import { primaryIndexTypeForDir, residentTypesForDir } from "./doc_suite_utils";
 import { isIndexFileName, normalizeDir } from "./document_utils";
@@ -345,45 +347,6 @@ function lintOrphans(
 // Index consistency
 // ---------------------------------------------------------------------------
 
-type IndexRow = {
-  id: string;
-  title: string;
-  status: string;
-  file: string;
-};
-
-function unescapeCell(value: string): string {
-  return value.replace(/\\\|/g, "|").trim();
-}
-
-function indexTableRows(index: RepositoryDocument): { rows: IndexRow[]; malformed: { line: number; text: string }[] } {
-  const rows: IndexRow[] = [];
-  const malformed: { line: number; text: string }[] = [];
-  index.body.split(/\r?\n/).forEach((line, offset) => {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-      const cells = trimmed.slice(1, -1).split(/(?<!\\)\|/).map(unescapeCell);
-      if (/^-{3,}/.test(cells[0]) || /^id$/i.test(cells[0])) return;
-      if (cells.length < 4) {
-        malformed.push({ line: offset + 1, text: trimmed });
-        return;
-      }
-      const fileMatch = /\[([^\]]*)\]\(([^)]*)\)/.exec(cells[3]);
-      rows.push({
-        id: cells[0],
-        title: cells[1],
-        status: cells[2],
-        file: fileMatch ? fileMatch[2].trim() : cells[3],
-      });
-      return;
-    }
-    if (/^[-*+]\s+/.test(trimmed) && !/\[[^\]]*\]\([^)]*\)/.test(trimmed)) {
-      malformed.push({ line: offset + 1, text: trimmed });
-    }
-  });
-  return { rows, malformed };
-}
-
 function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index: RepositoryDocument): Finding[] {
   const findings: Finding[] = [];
   if (index.parseError) {
@@ -400,12 +363,7 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
   }
 
   const seen = new Set<string>();
-  const { rows, malformed } = indexTableRows(index);
-  // Each resolved row records its basename plus its settled tier: the
-  // deterministic ordering is overview.md first (design scopes), then
-  // in-flight rows file-lexical, then settled rows file-lexical — mirroring
-  // `renderIndexBody` in doc_suite_utils (Issue #162).
-  const rowFiles: { file: string; settled: boolean }[] = [];
+  const layout = parseManagedIndexLayout(index.body);
   const indexDir = normalizeDir(path.posix.dirname(index.path));
   const residentTypes = residentTypesForDir(indexDir);
   const indexPrimaryType = primaryIndexTypeForDir(
@@ -419,7 +377,37 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
     lineOffset = 0;
   }
 
-  for (const item of malformed) {
+  // Structural anomalies are managed-layout violations: only indexes that
+  // opted in via the generated marker get them — a hand-curated index keeps
+  // its own sections (Issue #189).
+  const structural = (message: string, line?: number): void => {
+    findings.push(finding({
+      ruleId: "index-unparseable",
+      category: "index",
+      severity: "warning",
+      path: index.path,
+      line: line !== undefined ? line + lineOffset : undefined,
+      message,
+      target: index.path,
+      repair: "safe",
+    }));
+  };
+  if (layout.generated) {
+    if (layout.settledHeadings > 1) {
+      structural(`Index declares ## Settled ${layout.settledHeadings} times; expected at most one`);
+    }
+    if (layout.unmarkedSettledHeadings > 0) {
+      structural("Index has a ## Settled heading without the managed settled-index marker");
+    }
+    for (const table of layout.unknownSectionTables) {
+      structural(`Index has a table under unrecognized heading: ${table.heading}`, table.line);
+    }
+    for (const table of layout.extraTables) {
+      structural(`Index has more than one table in the ${table.tier} section`, table.line);
+    }
+  }
+
+  for (const item of layout.malformed) {
     findings.push(finding({
       ruleId: "index-unparseable",
       category: "index",
@@ -432,7 +420,16 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
     }));
   }
 
-  for (const row of rows) {
+  // Resolved row files per physical tier — ordering is checked inside each
+  // tier, mirroring renderIndexBody's per-tier sort (Issue #189). The legacy
+  // flat formula (in-flight rows then settled rows, each file-lexical, with
+  // overview.md first for design scopes — Issue #162) still applies to
+  // non-generated indexes.
+  const tierFiles: Record<Exclude<IndexRowTier, "unknown">, string[]> = { active: [], settled: [] };
+  const rowFiles: { file: string; settled: boolean }[] = [];
+
+  for (const placed of layout.rows) {
+    const row = placed.row;
     const resolved = model.resolvePath(index, row.file);
     if (resolved.status === "escaped") {
       findings.push(finding({
@@ -471,10 +468,9 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
     }
     seen.add(resolved.path);
     const member = model.byPath.get(resolved.path);
-    rowFiles.push({
-      file: path.posix.basename(resolved.path),
-      settled: member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false,
-    });
+    const settled = member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false;
+    rowFiles.push({ file: path.posix.basename(resolved.path), settled });
+    if (placed.tier !== "unknown") tierFiles[placed.tier].push(path.posix.basename(resolved.path));
 
     if (member && member.kind === "canonical") {
       const expected: [string, string | null][] = [
@@ -498,6 +494,23 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
           }));
         }
       }
+      // Settled comes from the SOURCE document's front matter; the tier comes
+      // from the row's PHYSICAL table — that comparison is the point of #189.
+      if (layout.generated && placed.tier !== "unknown" && (placed.tier === "settled") !== settled) {
+        findings.push(finding({
+          ruleId: "index-tier-mismatch",
+          category: "index",
+          severity: "warning",
+          path: index.path,
+          line: placed.line + lineOffset,
+          artifactId: member.id,
+          message: settled
+            ? `Index lists settled document ${row.file} in the active table`
+            : `Index lists in-flight document ${row.file} in the settled table`,
+          target: row.file,
+          repair: "safe",
+        }));
+      }
     }
   }
 
@@ -508,12 +521,22 @@ function lintIndexConsistency(model: DocumentRepository, scope: LintScope, index
     }
     return left.localeCompare(right);
   };
-  const expected = [
-    ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
-    ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup),
-  ];
-  const actual = rowFiles.map((entry) => entry.file);
-  if (actual.length > 1 && actual.some((file, i) => file !== expected[i])) {
+  let misordered: boolean;
+  if (layout.generated) {
+    misordered = (["active", "settled"] as const).some((tier) => {
+      const files = tierFiles[tier];
+      const expected = [...files].sort(compareGroup);
+      return files.length > 1 && files.some((file, i) => file !== expected[i]);
+    });
+  } else {
+    const expected = [
+      ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
+      ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup),
+    ];
+    const actual = rowFiles.map((entry) => entry.file);
+    misordered = actual.length > 1 && actual.some((file, i) => file !== expected[i]);
+  }
+  if (misordered) {
     findings.push(finding({
       ruleId: "index-ordering",
       category: "index",
