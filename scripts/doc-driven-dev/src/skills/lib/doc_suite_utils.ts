@@ -841,17 +841,25 @@ function ensureDesignOverview(fullDir: string, date: string): void {
   fs.writeFileSync(overviewPath, overviewDocument(date), "utf8");
 }
 
-async function titleFromDocument(content: string, fallback: string): Promise<string> {
+async function titleFromDocument(
+  content: string,
+  fallback: string,
+  headingToTitle?: (heading: string) => string,
+): Promise<string> {
   const parsed = parseDoc(content);
   const data = parsed.data;
   if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
   const match = /^#\s+(.+)$/m.exec(parsed.body);
-  return match?.[1]?.trim() || fallback;
+  const heading = match?.[1]?.trim();
+  if (!heading) return fallback;
+  const normalized = headingToTitle ? headingToTitle(heading).trim() : heading;
+  return normalized || fallback;
 }
 
 async function docEntries(cwd: string, type: string, explicitDir?: string): Promise<DocEntry[]> {
   const relativeDir = docDir(cwd, type, explicitDir);
   const dir = path.join(cwd, relativeDir);
+  const indexRow = configFor(type).indexRow;
   const entries = await Promise.all(docFiles(dir).map(async (file) => {
     const fullPath = path.join(dir, file);
     const content = fs.readFileSync(fullPath, "utf8");
@@ -859,10 +867,12 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
     return {
       created: typeof data.created === "string" ? data.created : null,
       file,
-      id: typeof data.id === "string" ? data.id : null,
+      id: (typeof data.id === "string" && data.id.trim())
+        ? data.id.trim()
+        : indexRow?.idFromFile?.(file) ?? null,
       path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
-      title: await titleFromDocument(content, path.basename(file, ".md")),
+      title: await titleFromDocument(content, path.basename(file, ".md"), indexRow?.titleFromHeading),
       type: typeof data.type === "string" ? data.type : null,
     };
   }));
@@ -920,7 +930,8 @@ async function buildIndex(cwd: string, type: string, explicitDir?: string, optio
           .map((entry) => [entry.file, entry] as const),
       ).values()].sort((a, b) => a.file.localeCompare(b.file))
     : await docEntries(cwd, type, explicitDir);
-  const title = `${configFor(type).idPrefix} Documents`;
+  const contractTitle = ownershipForDir(normalizeDir(relativeDir))?.indexTitle;
+  const title = contractTitle ?? `${configFor(type).idPrefix} Documents`;
   const body = renderIndexBody(entries, {
     overviewFirst: type === "design" || unionTypes.includes("design"),
     settledType: type,
@@ -1288,6 +1299,7 @@ export {
   isForeignDocType,
   isGeneratedIndex,
   legacyScaffoldIndex,
+  mergeManagedIndex,
   parseDoc,
   primaryIndexTypeForDir,
   relationValues,
