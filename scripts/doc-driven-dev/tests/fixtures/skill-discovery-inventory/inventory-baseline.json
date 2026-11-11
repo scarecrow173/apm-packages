@@ -736,12 +736,12 @@
         {
           "path": "doc-status/SKILL.md",
           "exists": true,
-          "bytes": 10406
+          "bytes": 11680
         }
       ],
       "totals": {
         "directives": 3,
-        "referencedBytes": 1631572,
+        "referencedBytes": 1632846,
         "missing": 0
       }
     },
@@ -1177,8 +1177,8 @@
     },
     {
       "flow": "doc-status",
-      "skillBytes": 10406,
-      "alwaysOnChars": 10185,
+      "skillBytes": 11680,
+      "alwaysOnChars": 11455,
       "directives": [
         {
           "kind": "script",
@@ -1243,55 +1243,37 @@
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 86,
+          "line": 83,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 87,
+          "line": 88,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/audit_docs.js",
+          "line": 97,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/audit_docs.js",
+          "line": 98,
           "optional": false
         },
         {
           "kind": "script",
           "target": "impl-doc/scripts/audit_impl_record.js",
-          "line": 90,
+          "line": 101,
           "optional": false
         },
         {
           "kind": "script",
           "target": "impl-doc/scripts/audit_experiment_log.js",
-          "line": 91,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/audit_docs.js",
-          "line": 176,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/audit_docs.js",
-          "line": 186,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/list_docs.js",
-          "line": 186,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/doc_status.js",
-          "line": 191,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/list_docs.js",
-          "line": 194,
+          "line": 102,
           "optional": false
         },
         {
@@ -1301,21 +1283,51 @@
           "optional": false
         },
         {
+          "kind": "script",
+          "target": "scripts/audit_docs.js",
+          "line": 205,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/list_docs.js",
+          "line": 205,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/doc_status.js",
+          "line": 210,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/list_docs.js",
+          "line": 213,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/audit_docs.js",
+          "line": 214,
+          "optional": false
+        },
+        {
           "kind": "skill-invoke",
           "target": "doc-driven-dev-graph",
-          "line": 201,
+          "line": 221,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "../doc-driven-dev-graph/references/execution-outcome-contract.md",
-          "line": 202,
+          "line": 222,
           "optional": false
         },
         {
           "kind": "skill-invoke",
           "target": "doc-dashboard",
-          "line": 212,
+          "line": 232,
           "optional": false
         }
       ],
@@ -1362,7 +1374,7 @@
         }
       ],
       "totals": {
-        "directives": 23,
+        "directives": 25,
         "referencedBytes": 5406780,
         "missing": 0
       }
@@ -2550,10 +2562,10 @@
   ],
   "totals": {
     "flows": 18,
-    "skillBytes": 160586,
-    "alwaysOnChars": 154656,
-    "directives": 285,
-    "referencedBytes": 42167738,
+    "skillBytes": 161860,
+    "alwaysOnChars": 155926,
+    "directives": 287,
+    "referencedBytes": 42169012,
     "missing": 0
   }
 }
