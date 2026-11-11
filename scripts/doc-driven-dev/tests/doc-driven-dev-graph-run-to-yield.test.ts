@@ -220,7 +220,7 @@ const footerDelegates = new Set([
   "doc-status",
 ]);
 const callerNormalizedDelegates = new Set(["migrate_docs", "scaffold_docs", "build_task_graph"]);
-const callerNormalizedAudits = new Set(["spec", "adr", "design", "plan", "task", "test-spec", "impl-record", "all"]);
+const callerNormalizedAudits = new Set(["spec", "adr", "design", "plan", "task", "test-spec", "impl-record", "experiment-log", "all"]);
 
 function proofFile(repo: string): string {
   return path.join(repo, proofRelativePath);
@@ -289,6 +289,7 @@ function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
       case "task": return taskGraphPaths(route);
       case "test-spec": return ["docs/test-specs/0001-graph.md"];
       case "impl-record": return ["docs/impl/ir/0001-task.md"];
+      case "experiment-log": return ["docs/impl/exp/README.md"];
       case "all": return canonicalDocumentPaths;
     }
   }
@@ -594,6 +595,11 @@ function fixtureRepo(options: {
     fs.mkdirSync(path.join(repo, directory), { recursive: true });
     fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
   }
+  // The experiment-log audit's canonical input anchor is the managed exp
+  // index; it needs a front-matter id to resolve as a CanonicalReference.
+  writeArtifact(repo, "docs/impl/exp/README.md", {
+    id: "EXP-INDEX", title: "Experiment Logs",
+  }, "# Experiment Logs\n");
   writeArtifact(repo, "docs/specs/0001-graph.md", {
     id: "SPEC-0001", type: "spec", status: "approved", title: "Graph",
   }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
@@ -2092,7 +2098,7 @@ test("normalizes every declared script delegate and named audit into typed outco
     .filter((delegate): delegate is string => Boolean(delegate)))].sort();
   const declaredAudits = [...new Set(Object.values(graph.nodes).flatMap((node) => node.audits ?? []))].sort();
   const scriptDelegates = ["migrate_docs", "scaffold_docs", "build_task_graph"];
-  const namedAudits = ["spec", "adr", "design", "plan", "task", "impl-record", "all"];
+  const namedAudits = ["spec", "adr", "design", "plan", "task", "test-spec", "impl-record", "experiment-log", "all"];
   assert.ok(scriptDelegates.every((effect) => declaredDelegates.includes(effect)));
   assert.ok(namedAudits.every((effect) => declaredAudits.includes(effect)));
   assert.ok(scriptDelegates.every((effect) => isCallerNormalizedEffect("delegate", effect)));

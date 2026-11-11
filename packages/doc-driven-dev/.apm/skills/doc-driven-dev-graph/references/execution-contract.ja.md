@@ -133,7 +133,7 @@ stale fingerprint は再利用ではなく再投影と再取得を引き起こ�
 caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
 `build_task_graph`。migration script は `doc-maintenance` が所有）と
 named audit（`spec`、`adr`、`design`、`plan`、`task`、
-`test-spec`、`impl-record`、`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
+`test-spec`、`impl-record`、`experiment-log`、`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
 adapter evidence が missing または malformed なら `authority-required` を yield し、checkpoint
 を進めません。effect 固有の canonical input/evidence mapping は
 [execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) に定義します。

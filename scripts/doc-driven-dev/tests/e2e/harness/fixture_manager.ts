@@ -179,6 +179,11 @@ export function createFixtureRepo(options: {
       fs.mkdirSync(path.join(repo, directory), { recursive: true });
       fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
     }
+    // The experiment-log audit's canonical input anchor is the managed exp
+    // index; it needs a front-matter id to resolve as a CanonicalReference.
+    writeArtifact(repo, "docs/impl/exp/README.md", {
+      id: "EXP-INDEX", title: "Experiment Logs",
+    }, "# Experiment Logs\n");
   }
   const docs: Record<string, DocSpec | string> = defaultDocs(options);
   for (const [rel, spec] of Object.entries(options.files ?? {})) {

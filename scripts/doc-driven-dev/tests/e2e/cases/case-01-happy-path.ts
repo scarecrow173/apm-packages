@@ -7,7 +7,8 @@ import type { E2ECase } from "../harness/case_types";
  * Delegate/audit/commitGate bindings belong to each edge's DESTINATION node:
  * probe-to-briefing dispatches briefing-flow + audits [spec,adr];
  * implementation-to-followup-triage runs audits [task,impl-record] with no
- * delegate; followup-triage-terminal dispatches doc-status + audits [all];
+ * delegate; followup-triage-terminal dispatches doc-status + audits
+ * [all, impl-record, experiment-log];
  * task-graph-to-implementation has commitGate (destination implementation);
  * exit-audit-to-complete has no effects (destination complete is terminal —
  * only evidence is recorded).
@@ -47,7 +48,7 @@ export const case01: E2ECase = {
       commitEvidence: true,
     },
     "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
-    "followup-triage-terminal": { audits: { all: "completed" }, delegate: "completed" },
+    "followup-triage-terminal": { audits: { all: "completed", "experiment-log": "completed", "impl-record": "completed" }, delegate: "completed" },
     "exit-audit-to-complete": {},
   },
   expect: {

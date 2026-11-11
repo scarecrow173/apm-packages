@@ -69,6 +69,7 @@ export function standardResolveInputs(
       case "task": return taskGraphPaths(route, proofPath);
       case "test-spec": return ["docs/test-specs/0001-graph.md"];
       case "impl-record": return ["docs/impl/ir/0001-task.md"];
+      case "experiment-log": return ["docs/impl/exp/README.md"];
       case "all": return canonicalDocumentPaths(proofPath);
     }
   }

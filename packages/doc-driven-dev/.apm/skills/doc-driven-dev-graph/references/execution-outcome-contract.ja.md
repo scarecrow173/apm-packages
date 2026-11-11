@@ -151,7 +151,7 @@ generated JavaScript を変更せず、次の declared effect を同じ `EffectO
 | Declared effects | Footer owner |
 | --- | --- |
 | `migrate_docs`, `scaffold_docs`, `build_task_graph` | script delegate 用の caller adapter |
-| `spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `impl-record`, `all` | named audit 用の caller adapter |
+| `spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, `all` | named audit 用の caller adapter |
 | `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `doc-status` | 呼び出された skill |
 
 adapter は `completed` または `retry` を返す前に effect 固有の canonical input と evidence を
@@ -163,11 +163,13 @@ adapter は `completed` または `retry` を返す前に effect 固有の canon
 receipt scope は generic な Task Graph fallback ではなく effect を使います。standard document
 graph では、`spec`、`adr`、`design`、`plan` audit は対応する canonical document を読み、`task`
 は選択された Task Graph task document、`test-spec` は対応する test specification document、
-`impl-record` はその Implementation Record、`all` は
+`impl-record` はその Implementation Record、`experiment-log` は `docs/impl/exp` の
+Experiment Log（`.jsonl`）、`all` は
 declared canonical document set を読みます。graph から dispatch される文書型 audit は
 `audit_docs.js --type <name> --profile artifact`、`all` は
 `audit_docs.js --type all --profile artifact` として実行され、`impl-record` は
-`impl-doc/scripts/audit_impl_record.js` として実行されます。`artifact` profile は canonical
+`impl-doc/scripts/audit_impl_record.js`、`experiment-log` は
+`impl-doc/scripts/audit_experiment_log.js` として実行されます。`artifact` profile は canonical
 document の整合性だけを評価するため、missing または stale な index が graph execution を
 gate することはありません。`briefing-flow` は spec と ADR を読み、`design-doc`
 は spec と ADR を読み design evidence を記録し、`planning-flow` は selected approved design を

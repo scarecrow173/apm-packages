@@ -101,7 +101,7 @@ export const case15a: E2ECase = {
     edgeSequence: [...HAPPY_EDGES, null],
     completedEdges: HAPPY_EDGES,
     events: [
-      // 16 graph-level dispatches (2 audits + 1 delegate on this edge).
+      // 18 graph-level dispatches (2 audits + 1 delegate on this edge).
       { kind: "effect-dispatched", edgeId: "probe-to-briefing", count: 3 },
       // …but 5 dispatch-observed records on it: 2 audit selfs + delegate
       // self + spec-doc + adr-doc internals.
@@ -112,9 +112,9 @@ export const case15a: E2ECase = {
       { kind: "dispatch-observed", target: "research", count: 0 },
       { kind: "dispatch-observed", method: "subagent-spawn", count: 0 },
       { kind: "dispatch-observed", method: "not-executed", count: 0 },
-      // 16 self-observations + 2 internal = 18.
-      { kind: "dispatch-observed", count: 18 },
-      { kind: "dispatch-observed", actual: "same-context", count: 18 },
+      // 18 self-observations + 2 internal = 20.
+      { kind: "dispatch-observed", count: 20 },
+      { kind: "dispatch-observed", actual: "same-context", count: 20 },
     ],
     checkpointReceipts: [{ edgeId: "probe-to-briefing", count: 1 }],
     briefingAudit: { spec, adr, consistent: true },
@@ -162,8 +162,8 @@ export const case15b: E2ECase = {
       { kind: "dispatch-observed", edgeId: "probe-to-briefing", target: "adr-doc", method: "inline-skill", count: 1 },
       { kind: "dispatch-observed", method: "subagent-spawn", count: 1 },
       { kind: "dispatch-observed", method: "not-executed", count: 0 },
-      // 16 self + research + spec-doc + adr-doc = 19.
-      { kind: "dispatch-observed", count: 19 },
+      // 18 self + research + spec-doc + adr-doc = 21.
+      { kind: "dispatch-observed", count: 21 },
       { kind: "dispatch-observed", actual: "subagent", count: 1 },
     ],
     checkpointReceipts: [{ edgeId: "probe-to-briefing", count: 1 }],
