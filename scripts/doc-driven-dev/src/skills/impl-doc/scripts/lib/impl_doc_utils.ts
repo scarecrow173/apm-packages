@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { generateArtifactId } from "../../../lib/artifact_id";
-import { changeFields, GENERATED_INDEX_MARKER, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
+import { changeFields, GENERATED_INDEX_MARKER, INDEX_TABLE_HEADER_1COL, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
 import { resolveContainedDir, slugify } from "../../../lib/document_utils";
 import { assertTypeScope } from "../../../lib/doc_ownership";
 import { hasSection } from "../../../lib/markdown_sections";
@@ -388,7 +388,7 @@ function updateIndexForMarkdownDir(cwd: string, relativeDir: string): IndexUpdat
 function updateIndexForExperimentDir(cwd: string, relativeDir: string): IndexUpdateResult {
   const dir = path.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");
-  const header = "| File |\n| --- |";
+  const header = INDEX_TABLE_HEADER_1COL;
   const rows = files.map((file) => `| [${indexCell(file)}](./${indexCell(file)}) |`);
   const body = rows.length > 0 ? `${header}\n${rows.join("\n")}` : header;
   return writeImplIndex(

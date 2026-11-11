@@ -33,6 +33,9 @@ type DirectoryContract = {
   owner: DocOwner;
   residentTypes: readonly ResidentKind[];
   indexFormat: IndexFormat;
+  // Canonical index title for dirs whose index is not derivable from a
+  // shared type (owner formats). Aliases and title-less shared rows omit it.
+  indexTitle?: string;
   mutators: readonly string[];
   auditors: readonly string[];
 };
@@ -48,6 +51,16 @@ const DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", 
 const DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"] as const;
 const ADR_MUTATORS = ["update_index", "relate_adr"] as const;
 const ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"] as const;
+
+// Canonical index titles for owner-format dirs. Only canonical dirs need
+// one: aliases share the owner writer at write time, and scaffold never
+// targets them.
+const INDEX_TITLES: Record<string, string> = {
+  "docs/adr": "Architecture Decision Records",
+  "docs/impl/ir": "Implementation Records",
+  "docs/impl/exp": "Experiment Logs",
+};
+const PROMOTE_INDEX_MUTATOR = "promote_index";
 
 // `brainstorm` has no creator script: the brainstorming skill authors those
 // documents directly, so it is absent here.
@@ -87,6 +100,7 @@ function buildContracts(): DirectoryContract[] {
         rows.set(normalized, row);
       }
       row.canonical = row.canonical || normalized === normalizeDir(config.dir);
+      if (INDEX_TITLES[normalized]) row.mutators.add(PROMOTE_INDEX_MUTATOR);
       if (!row.residents.includes(type)) row.residents.push(type);
       if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
       for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
@@ -103,6 +117,7 @@ function buildContracts(): DirectoryContract[] {
     owner: row.owner,
     residentTypes: row.residents,
     indexFormat: "shared-4col",
+    indexTitle: INDEX_TITLES[dir],
     mutators: [...row.mutators].sort(),
     auditors: [...row.auditors].sort(),
   }));
@@ -125,7 +140,8 @@ function buildContracts(): DirectoryContract[] {
       owner: "impl-doc",
       residentTypes: ["impl"],
       indexFormat: "impl-4col",
-      mutators: ["new_impl_record", "migrate_ids"],
+      indexTitle: INDEX_TITLES["docs/impl/ir"],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR],
       auditors: ["audit_impl_record"],
     },
     {
@@ -134,7 +150,8 @@ function buildContracts(): DirectoryContract[] {
       owner: "impl-doc",
       residentTypes: ["exp"],
       indexFormat: "exp-1col",
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids"],
+      indexTitle: INDEX_TITLES["docs/impl/exp"],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR],
       auditors: ["audit_experiment_log"],
     },
   ];
