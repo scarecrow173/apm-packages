@@ -564,3 +564,40 @@ test("sectionBody builds a valid RegExp for headings ending in regex-significant
   assert.doesNotThrow(() => sectionBody(body, "["));
   assert.equal(sectionBody(body, "["), "");
 });
+
+test("bootstrap gate ignores missing README indexes but still requires canonical dirs", () => {
+  // Every canonical doc dir exists and holds a real artifact, but no README
+  // index: indexes are derived (materialized) views, so their absence must not
+  // gate graph execution (Issue #195).
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "graph-state-"));
+  for (const directory of [
+    "docs/ideas", "docs/discovery", "docs/specs", "docs/designs", "docs/plans",
+    "docs/tasks", "docs/test-specs", "docs/adr", "docs/impl/ir", "docs/impl/exp",
+  ]) {
+    fs.mkdirSync(path.join(repo, directory), { recursive: true });
+  }
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Graph",
+  }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph state\n");
+
+  const state = projectGraphState({ cwd: repo, focus: ["SPEC-0001"] });
+  assert.deepEqual(state.gates.bootstrap, { status: "pass", reasons: [] });
+  assert.equal(state.blockers.includes("bootstrap-incomplete"), false);
+  assert.equal(state.signals.includes("bootstrap-incomplete"), false);
+  assert.ok(
+    state.gates.bootstrap.reasons.every((reason) => !reason.startsWith("missing-index:")),
+    "no missing-index:* reason may gate the graph",
+  );
+
+  // A genuinely absent tree still triggers bootstrap through missing-directory.
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), "graph-state-empty-"));
+  const emptyState = projectGraphState({ cwd: empty });
+  assert.equal(emptyState.gates.bootstrap.status, "fail");
+  assert.ok(emptyState.gates.bootstrap.reasons.includes("missing-directory:docs/specs"));
+  assert.ok(
+    emptyState.gates.bootstrap.reasons.every((reason) => reason.startsWith("missing-directory:")),
+    "bootstrap reasons are missing-directory only",
+  );
+  assert.ok(emptyState.blockers.includes("bootstrap-incomplete"));
+  assert.ok(emptyState.signals.includes("bootstrap-incomplete"));
+});

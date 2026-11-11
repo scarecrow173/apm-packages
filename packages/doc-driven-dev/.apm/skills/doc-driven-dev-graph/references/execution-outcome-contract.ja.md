@@ -164,7 +164,12 @@ receipt scope は generic な Task Graph fallback ではなく effect を使い�
 graph では、`spec`、`adr`、`design`、`plan` audit は対応する canonical document を読み、`task`
 は選択された Task Graph task document、`test-spec` は対応する test specification document、
 `impl-record` はその Implementation Record、`all` は
-declared canonical document set を読みます。`briefing-flow` は spec と ADR を読み、`design-doc`
+declared canonical document set を読みます。graph から dispatch される文書型 audit は
+`audit_docs.js --type <name> --profile artifact`、`all` は
+`audit_docs.js --type all --profile artifact` として実行され、`impl-record` は
+`impl-doc/scripts/audit_impl_record.js` として実行されます。`artifact` profile は canonical
+document の整合性だけを評価するため、missing または stale な index が graph execution を
+gate することはありません。`briefing-flow` は spec と ADR を読み、`design-doc`
 は spec と ADR を読み design evidence を記録し、`planning-flow` は selected approved design を
 読み、selected plan とすべての produced plan-linked test spec および task document を記録します。
 `implementation-flow` は選択 task と design/plan と linked test spec を読み Implementation Record を記録し、

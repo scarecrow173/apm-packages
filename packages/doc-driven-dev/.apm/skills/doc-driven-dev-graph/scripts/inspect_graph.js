@@ -27018,7 +27018,6 @@ function bootstrapReasons(cwd) {
   for (const directory of CANONICAL_DOC_DIRS) {
     const full = import_node_path5.default.join(cwd, directory);
     if (!import_node_fs6.default.existsSync(full) || !import_node_fs6.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
-    if (!import_node_fs6.default.existsSync(import_node_path5.default.join(full, "README.md"))) reasons.push(`missing-index:${directory}/README.md`);
   }
   return reasons;
 }

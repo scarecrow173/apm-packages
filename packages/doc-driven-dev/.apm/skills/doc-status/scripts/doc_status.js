@@ -34390,9 +34390,11 @@ async function lintExternalLinks(model, scope) {
   }
   return findings;
 }
-function inboundLinkCounts(model) {
+function inboundLinkCounts(model, options2 = {}) {
+  const includeIndexLinks = options2.includeIndexLinks ?? true;
   const counts = /* @__PURE__ */ new Map();
   for (const source of model.files) {
+    if (!includeIndexLinks && source.kind === "index") continue;
     const seen = /* @__PURE__ */ new Set();
     for (const link of source.links) {
       if (link.isImage || isExternalReference(link.target)) continue;
@@ -34427,16 +34429,16 @@ function inboundRelationCounts(model) {
   }
   return counts;
 }
-function lintOrphans(model, scope) {
+function lintOrphans(model, scope, profile = "materialized") {
   const findings = [];
-  const linkCounts = inboundLinkCounts(model);
+  const linkCounts = inboundLinkCounts(model, { includeIndexLinks: profile !== "artifact" });
   const relationCounts = inboundRelationCounts(model);
   const contract = contractForType(scope.type);
   const severity = contract?.allowsRootArtifact ? "info" : "warning";
   const hasIndex = model.files.some((file2) => file2.kind === "index" && normalizeDir(import_node_path5.default.posix.dirname(file2.path)) === scope.directory);
   for (const document3 of scope.documents) {
     if (document3.parseError) continue;
-    if (hasIndex && document3.indexMembership.length === 0) {
+    if (profile !== "artifact" && hasIndex && document3.indexMembership.length === 0) {
       findings.push(finding({
         ruleId: "orphan-index",
         category: "orphan",
@@ -34642,15 +34644,15 @@ function lintIndexConsistency(model, scope, index2) {
   }
   return findings;
 }
-function lintStructure(model, scope) {
+function lintStructure(model, scope, profile = "materialized") {
   const dir = scope.directory;
   const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path5.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path5.default.posix.basename(file2.path)));
   const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path5.default.posix.basename(file2.path))) ?? indexCandidates[0];
   const findings = [
     ...lintDocumentLinks(model, scope),
-    ...lintOrphans(model, scope)
+    ...lintOrphans(model, scope, profile)
   ];
-  if (index2) findings.push(...lintIndexConsistency(model, scope, index2));
+  if (index2 && profile !== "artifact") findings.push(...lintIndexConsistency(model, scope, index2));
   return findings;
 }
 
@@ -34967,7 +34969,7 @@ function lintRequiredRelations(model, document3, scopeType) {
   }
   return findings;
 }
-function lintDirectory(model, scope) {
+function lintDirectory(model, scope, profile) {
   const findings = [];
   const contract = contractForType(scope.type);
   const dir = scope.directory;
@@ -34985,6 +34987,7 @@ function lintDirectory(model, scope) {
       }));
     }
   }
+  if (profile === "artifact") return findings;
   const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path6.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path6.default.posix.basename(file2.path)));
   const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path6.default.posix.basename(file2.path))) ?? indexCandidates[0];
   if (!index2) {
@@ -35111,7 +35114,7 @@ function lintLegacyIdReferences(model, files) {
 function prefixOf(token) {
   return token.slice(0, token.lastIndexOf("-"));
 }
-function lintScope(model, type, directory) {
+function lintScope(model, type, directory, profile = "materialized") {
   const scope = scopeFor(model, type, directory);
   const findings = [];
   for (const document3 of scope.documents) {
@@ -35128,8 +35131,8 @@ function lintScope(model, type, directory) {
   }
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
-  findings.push(...lintDirectory(model, scope));
-  findings.push(...lintStructure(model, scope));
+  findings.push(...lintDirectory(model, scope, profile));
+  findings.push(...lintStructure(model, scope, profile));
   findings.push(...lintProvenance(model, scope));
   findings.push(...lintTraceability(model, scope));
   findings.push(...lintStaleUpstreams(model, scope));
@@ -35147,6 +35150,25 @@ var CATEGORY_ORDER = [
   "orphan",
   "structure"
 ];
+var ARTIFACT_GATES = [
+  "front-matter",
+  "relations",
+  "directory-required-files",
+  "links",
+  "orphan-navigation",
+  "orphan-relation",
+  "provenance",
+  "traceability"
+];
+var MATERIALIZED_ONLY_GATES = [
+  "index-presence",
+  "index-membership",
+  "index-consistency",
+  "orphan-index-membership"
+];
+function profileGates(profile) {
+  return profile === "artifact" ? { ran: [...ARTIFACT_GATES], skipped: [...MATERIALIZED_ONLY_GATES] } : { ran: [...ARTIFACT_GATES, ...MATERIALIZED_ONLY_GATES], skipped: [] };
+}
 function scanRoots(relativeDirs) {
   return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
 }
@@ -35156,6 +35178,7 @@ function resolveQueryScope(cwd, query) {
 }
 async function collectFindings(cwd, query) {
   const { types, explicitDir } = resolveQueryScope(cwd, query);
+  const profile = query.profile ?? "materialized";
   const relativeDirs = types.map((type) => explicitDir ?? docDir(cwd, type));
   const model = await scanRepository({ cwd, roots: scanRoots(relativeDirs) });
   const findings = [];
@@ -35164,7 +35187,7 @@ async function collectFindings(cwd, query) {
     const directory = explicitDir ?? docDir(cwd, type);
     const scope = scopeFor(model, type, directory);
     documents += scope.documents.length;
-    findings.push(...lintScope(model, type, directory));
+    findings.push(...lintScope(model, type, directory, profile));
     if (query.externalLinks) {
       findings.push(...await lintExternalLinks(model, scope));
     }
@@ -35177,7 +35200,7 @@ async function collectFindings(cwd, query) {
     return true;
   });
   deduped.sort(compareFindings);
-  return { model, types, documents, findings: deduped };
+  return { model, types, documents, findings: deduped, profile, gates: profileGates(profile) };
 }
 function filterFindings(findings, filter) {
   return findings.filter((finding2) => {
@@ -35253,7 +35276,13 @@ function parseArgs(argv) {
     else if (arg === "--status") args.status = argv[++i];
     else if (arg === "--rule") args.rule = argv[++i];
     else if (arg === "--severity") args.severity = argv[++i];
-    else if (arg === "--blocking") args.blocking = true;
+    else if (arg === "--profile") {
+      const value = argv[++i];
+      if (value !== "artifact" && value !== "materialized") {
+        throw new Error(`Invalid --profile value: ${value}; expected artifact|materialized`);
+      }
+      args.profile = value;
+    } else if (arg === "--blocking") args.blocking = true;
     else if (arg === "--json") args.json = true;
     else if (arg === "--external-links") args.externalLinks = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -35275,7 +35304,7 @@ function usage() {
     "Options:",
     "  [--type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all]",
     "  [--dir <path>] [--status <status>] [--rule <ruleId>] [--severity error|warning|info]",
-    "  [--blocking] [--json] [--external-links]"
+    "  [--profile artifact|materialized] [--blocking] [--json] [--external-links]"
   ].join("\n");
 }
 function printFindings(findings) {
@@ -35308,7 +35337,12 @@ async function runList(args, cwd) {
   }
 }
 async function runLint(args, cwd, audit) {
-  const collected = await collectFindings(cwd, { type: args.type, dir: args.dir, externalLinks: args.externalLinks });
+  const collected = await collectFindings(cwd, {
+    type: args.type,
+    dir: args.dir,
+    externalLinks: args.externalLinks,
+    profile: args.profile
+  });
   const findings = filterFindings(collected.findings, {
     rule: args.rule,
     severity: args.severity,
@@ -35317,14 +35351,27 @@ async function runLint(args, cwd, audit) {
   const blocking = findings.filter((finding2) => finding2.blocking).length;
   const command = audit ? "audit" : "lint";
   if (args.json) {
-    console.log(JSON.stringify({ command, blocking, documents: collected.documents, findings }, null, 2));
+    console.log(JSON.stringify({
+      command,
+      profile: collected.profile,
+      gates: collected.gates,
+      blocking,
+      documents: collected.documents,
+      findings
+    }, null, 2));
     return;
   }
   console.log(`${command}: ${collected.documents} document(s), ${findings.length} finding(s), ${blocking} blocking`);
+  console.log(`profile: ${collected.profile}`);
   printFindings(findings);
 }
 async function runHealth(args, cwd) {
-  const collected = await collectFindings(cwd, { type: args.type, dir: args.dir, externalLinks: args.externalLinks });
+  const collected = await collectFindings(cwd, {
+    type: args.type,
+    dir: args.dir,
+    externalLinks: args.externalLinks,
+    profile: args.profile
+  });
   const findings = filterFindings(collected.findings, {
     rule: args.rule,
     severity: args.severity,
@@ -35332,9 +35379,10 @@ async function runHealth(args, cwd) {
   });
   const health = summarizeHealth(collected, findings);
   if (args.json) {
-    console.log(JSON.stringify({ command: "health", ...health }, null, 2));
+    console.log(JSON.stringify({ command: "health", profile: collected.profile, gates: collected.gates, ...health }, null, 2));
     return;
   }
+  console.log(`Profile:   ${collected.profile}`);
   console.log(`Documents: ${health.documents}`);
   console.log(`Blocking:  ${health.blocking}`);
   console.log(`Warnings:  ${health.warnings}`);

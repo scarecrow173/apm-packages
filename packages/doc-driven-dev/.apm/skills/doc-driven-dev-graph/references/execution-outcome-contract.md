@@ -170,7 +170,12 @@ standard document graph, `spec`, `adr`, `design`, and `plan` audits read their
 matching canonical document; `task` reads selected Task Graph task documents;
 `test-spec` reads its matching test specification documents; `impl-record`
 reads its Implementation Record; and `all` reads the declared
-canonical document set. `briefing-flow` reads the spec and ADR, `design-doc`
+canonical document set. Graph-dispatched doc-type audits run as
+`audit_docs.js --type <name> --profile artifact` and `all` runs as
+`audit_docs.js --type all --profile artifact`; `impl-record` runs as
+`impl-doc/scripts/audit_impl_record.js`. The `artifact` profile evaluates
+canonical-document integrity only, so a missing or stale index never gates
+graph execution. `briefing-flow` reads the spec and ADR, `design-doc`
 reads the spec and ADR and records design evidence, `planning-flow` reads the
 selected approved design and records the selected plan and all produced
 plan-linked test spec and task documents, `implementation-flow` reads selected tasks plus
