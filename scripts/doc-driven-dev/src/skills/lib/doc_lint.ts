@@ -31,6 +31,7 @@ const MATERIALIZED_RULE_IDS: ReadonlySet<string> = new Set([
   "index-unparseable",
   "index-escapes-root",
   "index-stale-entry",
+  "index-tier-mismatch",
   "index-duplicate-entry",
   "index-metadata-mismatch",
   "index-ordering",

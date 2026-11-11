@@ -242,6 +242,34 @@ test("lint flags a settled row stranded in the active table", async () => {
     `expected index-ordering finding: ${JSON.stringify(findings)}`);
 });
 
+test("a single settled task in the active table is detected end to end", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/one.md", {
+    id: "TASK-0001", type: "task", status: "done", title: "One", created: "2026-01-01",
+  });
+  // The Issue #189 case: a lone completed row in the only table of a managed
+  // task index — no ## Settled heading exists for it to hide under, but its
+  // physical placement is still the active tier.
+  writeDoc(repo, "docs/tasks/README.md", {}, [
+    "# TASK Documents",
+    "",
+    "<!-- doc-suite:generated-index -->",
+    "",
+    "Directory: `docs/tasks`",
+    "",
+    "| ID | Title | Status | File |",
+    "| --- | --- | --- | --- |",
+    "| TASK-0001 | One | done | [one.md](./one.md) |",
+    "",
+  ].join("\n"));
+
+  const findings = await indexFindings(repo, "task");
+  const tier = findings.filter((item) => item.ruleId === "index-tier-mismatch");
+  assert.equal(tier.length, 1, `expected one tier-mismatch: ${JSON.stringify(findings)}`);
+  assert.equal(tier[0].severity, "warning");
+  assert.match(tier[0].message, /one\.md.*active table/);
+});
+
 test("regenerating a legacy index keeps hand-written preamble and tail", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/tasks/0001-old.md", {
