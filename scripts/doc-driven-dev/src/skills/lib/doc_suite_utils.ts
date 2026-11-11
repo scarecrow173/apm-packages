@@ -16,7 +16,7 @@ import {
   slugify,
   type CanonicalDocDir,
 } from "./document_utils";
-import { assertTypeScope } from "./doc_ownership";
+import { assertTypeScope, ownershipForDir } from "./doc_ownership";
 import { configFor, configs, docTypes } from "./doc_types";
 import type { DocConfig, DocType } from "./doc_types";
 
@@ -147,9 +147,9 @@ const scaffoldIndexMeta: Record<CanonicalDocDir, { title: string; type?: DocType
   "docs/plans": { title: "PLAN Documents", type: "plan" },
   "docs/tasks": { title: "TASK Documents", type: "task" },
   "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
-  "docs/adr": { title: "ADR Documents" },
-  "docs/impl/ir": { title: "Implementation Record Documents" },
-  "docs/impl/exp": { title: "Experiment Log Documents" },
+  "docs/adr": { title: "Architecture Decision Records" },
+  "docs/impl/ir": { title: "Implementation Records" },
+  "docs/impl/exp": { title: "Experiment Logs" },
 };
 
 // Scaffold targets are CANONICAL_DOC_DIRS — the single authority — paired
@@ -293,6 +293,11 @@ const GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 // carries the marker so `mergeManagedIndex` treats the block as generated
 // region rather than hand-written prose (Issue #162/#163).
 const GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
+
+// Index table headers shared by every managed index format so the scaffold's
+// contract index and the owner writers emit byte-identical bodies.
+const INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+const INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
 
 function canonicalRootDir(cwd: string, type: string): string {
   const config = configFor(type);
@@ -885,7 +890,7 @@ type IndexRowEntry = {
  * lacks `type:` — pass the index's primary resident type.
  */
 function renderIndexBody(entries: IndexRowEntry[], options: { overviewFirst?: boolean; settledType?: string } = {}): string {
-  const header = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+  const header = INDEX_TABLE_HEADER_4COL;
   const compare = (left: IndexRowEntry, right: IndexRowEntry): number => {
     if (options.overviewFirst) {
       if (left.file === "overview.md") return -1;
@@ -926,6 +931,33 @@ async function buildIndex(cwd: string, type: string, explicitDir?: string, optio
 function buildGenericIndex(relativeDir: string, title: string): string {
   const dir = relativeDir.replace(/\\/g, "/");
   return `# ${title}\n\nDirectory: \`${dir}\`\n`;
+}
+
+// The empty managed index a directory's ownership contract prescribes.
+// Only contract rows carrying an indexTitle produce one; shared-suite typed
+// dirs render through renderManagedIndex instead (union types, id-prefix
+// titles), and unclaimed or index-less dirs return null (Issue #184).
+function emptyIndexForDir(dir: string): string | null {
+  const normalized = normalizeDir(dir);
+  const contract = ownershipForDir(normalized);
+  if (!contract || !contract.canonical || !contract.indexTitle) return null;
+  const header = contract.indexFormat === "exp-1col" ? INDEX_TABLE_HEADER_1COL : INDEX_TABLE_HEADER_4COL;
+  return `# ${contract.indexTitle}\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${normalized}\`\n\n${header}\n`;
+}
+
+// Byte template of the generic README pre-#184 scaffolds wrote for owner
+// dirs (no marker, `# <X Documents>` title). The promotion tool compares
+// candidate files against this exact output — never title similarity —
+// before an owner writer may adopt them.
+const LEGACY_SCAFFOLD_INDEX_TITLES: Record<string, string> = {
+  "docs/adr": "ADR Documents",
+  "docs/impl/ir": "Implementation Record Documents",
+  "docs/impl/exp": "Experiment Log Documents",
+};
+
+function legacyScaffoldIndex(dir: string): string | null {
+  const title = LEGACY_SCAFFOLD_INDEX_TITLES[normalizeDir(dir)];
+  return title ? buildGenericIndex(dir, title) : null;
 }
 
 function isMarkdownSource(file: string): boolean {
@@ -1134,7 +1166,7 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
 
     const content = target.type
       ? await renderManagedIndex(resolvedCwd, target.dir, target.type)
-      : buildGenericIndex(target.dir, target.title);
+      : emptyIndexForDir(target.dir) ?? (() => { throw new Error(`No index contract for scaffold dir ${target.dir}`); })();
     fs.writeFileSync(readmePath, content, "utf8");
     created.push(path.relative(resolvedCwd, readmePath).replace(/\\/g, "/"));
   }
@@ -1246,11 +1278,15 @@ export {
   docEntries,
   docFiles,
   docTypes,
+  emptyIndexForDir,
   GENERATED_INDEX_MARKER,
   GENERATED_SETTLED_MARKER,
+  INDEX_TABLE_HEADER_1COL,
+  INDEX_TABLE_HEADER_4COL,
   indexCell,
   isForeignDocType,
   isGeneratedIndex,
+  legacyScaffoldIndex,
   parseDoc,
   primaryIndexTypeForDir,
   relationValues,

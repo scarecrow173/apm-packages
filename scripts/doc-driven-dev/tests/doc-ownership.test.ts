@@ -120,3 +120,23 @@ test("contract table invariants hold", () => {
   assert.deepEqual(impl.residentTypes, []);
   assert.equal(impl.indexFormat, "none");
 });
+
+test("owner-format dirs carry their canonical index titles", () => {
+  const titles = Object.fromEntries(
+    DIRECTORY_CONTRACTS.map((row) => [row.dir, row.indexTitle ?? null]),
+  );
+  assert.equal(titles["docs/adr"], "Architecture Decision Records");
+  assert.equal(titles["docs/impl/ir"], "Implementation Records");
+  assert.equal(titles["docs/impl/exp"], "Experiment Logs");
+  assert.equal(titles["docs/impl"], null);
+  assert.equal(titles["docs/specs"], null);
+  assert.equal(titles["docs/decisions"], null); // alias rows carry no title
+});
+
+test("promote_index is a declared mutator for exactly the three owner index dirs", () => {
+  for (const row of DIRECTORY_CONTRACTS) {
+    const has = row.mutators.includes("promote_index");
+    const expected = ["docs/adr", "docs/impl/ir", "docs/impl/exp"].includes(row.dir);
+    assert.equal(has, expected, `${row.dir} promote_index mutator`);
+  }
+});
