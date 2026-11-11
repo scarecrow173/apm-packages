@@ -87,8 +87,10 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    `audit_docs.js --type all --profile artifact`
    covering every canonical document type plus a legacy-reference sweep over
    root-level unmanaged Markdown and distributed `.apm` skill documents;
-   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js`, which needs
-   no profile flag (its only index observation is a non-blocking warning).
+   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js` and
+   `experiment-log` runs as `impl-doc/scripts/audit_experiment_log.js`, which
+   need no profile flag (their only index observation is a non-blocking
+   warning).
    Graph-dispatched audits run the `artifact` profile so a missing or stale
    index never gates graph execution; direct strict checks may omit
    `--profile` to keep the default `materialized` coverage.

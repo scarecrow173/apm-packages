@@ -155,7 +155,7 @@ changing Graph Definition YAML, scripts, or generated JavaScript:
 | Declared effects | Footer owner |
 | --- | --- |
 | `migrate_docs`, `scaffold_docs`, `build_task_graph` | caller adapter for script delegates |
-| `spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `impl-record`, `all` | caller adapter for named audits |
+| `spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, `all` | caller adapter for named audits |
 | `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `doc-status` | invoked skill |
 
 The adapter records effect-specific canonical inputs and evidence before it
@@ -169,11 +169,13 @@ The receipt scope uses the effect, not a generic Task Graph fallback. In the
 standard document graph, `spec`, `adr`, `design`, and `plan` audits read their
 matching canonical document; `task` reads selected Task Graph task documents;
 `test-spec` reads its matching test specification documents; `impl-record`
-reads its Implementation Record; and `all` reads the declared
+reads its Implementation Record; `experiment-log` reads the Experiment Logs
+in `docs/impl/exp` (`.jsonl`); and `all` reads the declared
 canonical document set. Graph-dispatched doc-type audits run as
 `audit_docs.js --type <name> --profile artifact` and `all` runs as
 `audit_docs.js --type all --profile artifact`; `impl-record` runs as
-`impl-doc/scripts/audit_impl_record.js`. The `artifact` profile evaluates
+`impl-doc/scripts/audit_impl_record.js` and `experiment-log` runs as
+`impl-doc/scripts/audit_experiment_log.js`. The `artifact` profile evaluates
 canonical-document integrity only, so a missing or stale index never gates
 graph execution. `briefing-flow` reads the spec and ADR, `design-doc`
 reads the spec and ADR and records design evidence, `planning-flow` reads the

@@ -848,7 +848,7 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(outcomeContractJa, /selected plan とすべての produced plan-linked test spec および task document を記録/);
   assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked test-spec\/task evidence \(or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior\) \| changed canonical plan\/test-spec\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
   assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked test-spec\/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） \| changed canonical plan\/test-spec\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
-  assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*all/s);
+  assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*experiment-log.*all/s);
   assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
   assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));
   assert.ok(effectsJa[0].indexOf("## アンチパターン") < effectsJa[0].indexOf("## Graph Effect Outcome"));
@@ -878,9 +878,11 @@ test("graph-dispatched doc audits map to audit_docs with the artifact profile", 
     assert.match(text, /audit_docs\.js --type <name> --profile artifact/);
     assert.match(text, /audit_docs\.js --type all --profile artifact/);
     assert.match(text, /impl-doc\/scripts\/audit_impl_record\.js/);
+    assert.match(text, /impl-doc\/scripts\/audit_experiment_log\.js/);
     // audit_impl_record.js rejects unknown args — a --profile flag on it would
     // break graph dispatch; pin that the docs never pair them.
     assert.doesNotMatch(text, /audit_impl_record\.js --profile/);
+    assert.doesNotMatch(text, /audit_experiment_log\.js --profile/);
   }
 });
 
@@ -906,7 +908,7 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
   }
   assert.match(graphDefinition, /^  planning: \{ kind: delegate, delegate: planning-flow, audits: \[design\] \}$/m);
   assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[plan, task, test-spec\] \}$/m);
-  assert.match(graphDefinition, /^  exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all\], requiresGates: \[/m);
+  assert.match(graphDefinition, /^  exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all, impl-record, experiment-log\], requiresGates: \[/m);
   for (const text of [readme, readmeJa, agents, agentsJa]) {
     assert.match(text, /planning-flow/);
     assert.match(text, /build_task_graph/);
