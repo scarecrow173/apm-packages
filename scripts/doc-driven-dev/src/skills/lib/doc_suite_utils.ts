@@ -16,6 +16,8 @@ import {
   slugify,
   type CanonicalDocDir,
 } from "./document_utils";
+import { configFor, configs, docTypes } from "./doc_types";
+import type { DocConfig, DocType } from "./doc_types";
 
 const relationFields = [
   "source",
@@ -46,19 +48,8 @@ const changeFields = [
   "generated",
 ] as const;
 
-const docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"] as const;
-
-type DocType = typeof docTypes[number];
 type RelationField = typeof relationFields[number];
 type ChangeField = typeof changeFields[number];
-type DocConfig = {
-  defaultStatus: string;
-  dir: string;
-  dirs: string[];
-  idPrefix: string;
-  statusValues: string[];
-  type: DocType;
-};
 
 type ChangeEntry = {
   type: string;
@@ -141,81 +132,6 @@ type MigrationRoute = {
 
 type TargetAllocation = {
   existing: Set<string>;
-};
-
-const configs: Record<DocType, DocConfig> = {
-  idea: {
-    defaultStatus: "draft",
-    dir: "docs/ideas",
-    dirs: ["docs/ideas"],
-    idPrefix: "IDEA",
-    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
-    type: "idea",
-  },
-  brainstorm: {
-    defaultStatus: "capturing",
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    idPrefix: "BRAINSTORM",
-    statusValues: ["capturing", "confirmed", "routed", "superseded"],
-    type: "brainstorm",
-  },
-  discovery: {
-    defaultStatus: "draft",
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    idPrefix: "DISC",
-    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
-    type: "discovery",
-  },
-  spec: {
-    defaultStatus: "draft",
-    dir: "docs/specs",
-    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
-    idPrefix: "SPEC",
-    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
-    type: "spec",
-  },
-  plan: {
-    defaultStatus: "draft",
-    dir: "docs/plans",
-    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
-    idPrefix: "PLAN",
-    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
-    type: "plan",
-  },
-  task: {
-    defaultStatus: "todo",
-    dir: "docs/tasks",
-    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
-    idPrefix: "TASK",
-    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
-    type: "task",
-  },
-  "test-spec": {
-    defaultStatus: "draft",
-    dir: "docs/test-specs",
-    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
-    idPrefix: "TSPEC",
-    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
-    type: "test-spec",
-  },
-  design: {
-    defaultStatus: "draft",
-    dir: "docs/designs",
-    dirs: ["docs/designs", "docs/design", "designs", "design"],
-    idPrefix: "DESIGN",
-    statusValues: ["draft", "approved", "superseded", "rejected"],
-    type: "design",
-  },
-  adr: {
-    defaultStatus: "proposed",
-    dir: "docs/adr",
-    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
-    idPrefix: "ADR",
-    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
-    type: "adr",
-  },
 };
 
 // Per-directory index metadata for the scaffold. The Record key is the
@@ -370,11 +286,6 @@ const frontMatterSchema = z.object({
   owners: z.array(z.string()),
   relations: relationSchema,
 }).passthrough();
-
-function configFor(type: string): DocConfig {
-  if (!docTypes.includes(type as DocType)) throw new Error(`Unknown document type: ${type}`);
-  return configs[type as DocType];
-}
 
 const GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 // Marks the `## Settled` tier of a status-aware generated index; the heading
