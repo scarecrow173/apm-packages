@@ -24499,6 +24499,217 @@ function listFiles(dir, ext) {
   if (!import_node_fs2.default.existsSync(dir)) return [];
   return import_node_fs2.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs2.default.lstatSync(import_node_path2.default.join(dir, file2)).isSymbolicLink()).sort();
 }
+var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
+var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
+var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
+function splitRowCells(line) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|")) return null;
+  if (!trimmed.endsWith("|") || trimmed.endsWith("\\|")) return null;
+  const body = trimmed.slice(1, -1);
+  const cells = [];
+  let current = "";
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i];
+    if (ch === "\\" && i + 1 < body.length) {
+      current += ch + body[i + 1];
+      i += 1;
+      continue;
+    }
+    if (ch === "|") {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  cells.push(current.trim());
+  return cells;
+}
+function extractRowFile(cell) {
+  const match = /^\[(.*)\]\((.*)\)$/.exec(cell.trim());
+  if (!match) return { code: "bad-row" };
+  const target = match[2].trim();
+  if (target.startsWith("./")) {
+    const file2 = target.slice(2);
+    if (file2 !== "" && file2 !== "." && file2 !== ".." && !/[/\\:]/.test(file2)) return { file: file2 };
+    return { code: "escaping-row" };
+  }
+  if (/^\.{1,2}\//.test(target) || target.startsWith("/") || /^[a-zA-Z]:/.test(target)) {
+    return { code: "escaping-row" };
+  }
+  return { code: "bad-row" };
+}
+function parseImplIndexRows(content, kind) {
+  const fail = (reason, code) => ({ ok: false, reason, code });
+  const lines = content.split("\n");
+  const markerLines = lines.filter((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerLines.length === 0) {
+    return fail("hand-curated or ambiguous index: missing generated-index marker", "missing-marker");
+  }
+  if (markerLines.length > 1) {
+    return fail("ambiguous index: multiple generated-index markers", "ambiguous-marker");
+  }
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  const expectedCells = kind === "ir" ? 4 : 1;
+  const fileCellIndex = kind === "ir" ? 3 : 0;
+  const headerLine = kind === "ir" ? IR_HEADER_LINE : EXP_HEADER_LINE;
+  const separatorLine = kind === "ir" ? IR_SEPARATOR_LINE : EXP_SEPARATOR_LINE;
+  let cursor = markerIndex + 1;
+  const skipBlank = () => {
+    while (cursor < lines.length && lines[cursor].trim() === "") cursor += 1;
+  };
+  const parseRow = (line, tier) => {
+    const cells = splitRowCells(line);
+    if (!cells || cells.length !== expectedCells) {
+      return { error: `unparseable ${tier} index row: ${line.trim()}`, code: "bad-row" };
+    }
+    const fileCell = extractRowFile(cells[fileCellIndex]);
+    if ("code" in fileCell) {
+      return { error: `unparseable ${tier} index row: ${line.trim()}`, code: fileCell.code };
+    }
+    return { file: fileCell.file, cells, tier };
+  };
+  const parseTable = (tier) => {
+    if (cursor + 1 >= lines.length || lines[cursor].trim() !== headerLine || lines[cursor + 1].trim() !== separatorLine) {
+      return { error: `malformed ${tier} index table header`, code: "bad-table-header" };
+    }
+    cursor += 2;
+    const rows2 = [];
+    while (cursor < lines.length && lines[cursor].trim().startsWith("|")) {
+      const row = parseRow(lines[cursor], tier);
+      if ("error" in row) return row;
+      rows2.push(row);
+      cursor += 1;
+    }
+    return { rows: rows2 };
+  };
+  skipBlank();
+  if (cursor >= lines.length || !lines[cursor].trim().startsWith("Directory:")) {
+    return fail("missing Directory line after the generated-index marker", "missing-directory");
+  }
+  cursor += 1;
+  skipBlank();
+  const active = parseTable("active");
+  if ("error" in active) return fail(active.error, active.code);
+  skipBlank();
+  const rows = [...active.rows];
+  if (cursor < lines.length && lines[cursor].trim() === SETTLED_HEADING) {
+    cursor += 1;
+    skipBlank();
+    const settled = parseTable("settled");
+    if ("error" in settled) return fail(settled.error, settled.code);
+    rows.push(...settled.rows);
+    skipBlank();
+  }
+  for (; cursor < lines.length; cursor += 1) {
+    const trimmed = lines[cursor].trim();
+    if (trimmed.includes(GENERATED_SETTLED_MARKER)) {
+      return fail("settled-index marker outside the managed index region", "stray-settled-marker");
+    }
+    if (trimmed.startsWith("|")) {
+      return fail("table row outside the managed index region", "stray-table-row");
+    }
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const row of rows) {
+    if (seen.has(row.file)) return fail(`duplicate index row for ${row.file}`, "duplicate-row");
+    seen.add(row.file);
+  }
+  return { ok: true, rows };
+}
+function implIndexEntries(dirAbs, relativeDir, files) {
+  return files.flatMap((file2) => {
+    const parsed = parseDoc(import_node_fs2.default.readFileSync(import_node_path2.default.join(dirAbs, file2), "utf8"));
+    if (parsed.error) return [];
+    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
+    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path2.default.basename(file2, ".md");
+    const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
+    const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
+    return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
+  });
+}
+function expectedIndexRows(kind, dirAbs, relativeDir, files) {
+  const expected = /* @__PURE__ */ new Map();
+  if (kind === "exp") {
+    for (const file2 of files) {
+      expected.set(file2, { cells: [`[${indexCell(file2)}](./${indexCell(file2)})`], tier: "active" });
+    }
+    return expected;
+  }
+  for (const entry of implIndexEntries(dirAbs, relativeDir, files)) {
+    expected.set(entry.file, {
+      cells: [
+        indexCell(entry.id || "\u2014"),
+        indexCell(entry.title),
+        indexCell(entry.status || "\u2014"),
+        `[${indexCell(entry.file)}](./${indexCell(entry.file)})`
+      ],
+      tier: isSettledStatus(entry.type ?? "impl", entry.status) ? "settled" : "active"
+    });
+  }
+  return expected;
+}
+function expectedIndexSequence(kind, expected) {
+  if (kind === "exp") return [...expected.keys()];
+  const tierFiles = (tier) => [...expected.entries()].filter(([, want]) => want.tier === tier).map(([file2]) => file2).sort((left, right) => left.localeCompare(right));
+  return [...tierFiles("active"), ...tierFiles("settled")];
+}
+function cellsEqual(left, right) {
+  return left.length === right.length && left.every((cell, index) => cell === right[index]);
+}
+function sameStringSequence(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
+  const indexPath = import_node_path2.default.join(dirAbs, "README.md");
+  let stats = null;
+  try {
+    stats = import_node_fs2.default.lstatSync(indexPath);
+  } catch {
+    stats = null;
+  }
+  if (!stats) return;
+  const push = (code, message, severity) => {
+    findings.push({ code, file: "README.md", message: `${relativeDir}/README.md ${message}`, severity });
+  };
+  if (!stats.isFile()) {
+    push("index-not-managed", "is a symbolic link or not a regular file", "warning");
+    return;
+  }
+  const content = import_node_fs2.default.readFileSync(indexPath, "utf8");
+  const parsed = parseImplIndexRows(content, kind);
+  if (!parsed.ok) {
+    const code = parsed.code === "missing-marker" || parsed.code === "ambiguous-marker" ? "index-not-managed" : parsed.code === "duplicate-row" ? "index-duplicate-entry" : parsed.code === "escaping-row" ? "index-escapes-root" : "index-unparseable";
+    const severity = code === "index-escapes-root" || code === "index-unparseable" ? "error" : "warning";
+    push(code, `is not a manageable generated index: ${parsed.reason}`, severity);
+    return;
+  }
+  const expected = expectedIndexRows(kind, dirAbs, relativeDir, files);
+  const rowsByFile = new Map(parsed.rows.map((row) => [row.file, row]));
+  for (const [file2, want] of expected) {
+    const row = rowsByFile.get(file2);
+    if (!row) {
+      push("index-missing-entry", `has no row for ${file2}`, "warning");
+      continue;
+    }
+    if (!cellsEqual(row.cells, want.cells)) {
+      push("index-metadata-mismatch", `row for ${file2} does not match the document front matter`, "warning");
+    }
+    if (row.tier !== want.tier) {
+      push("index-tier-mismatch", `row for ${file2} sits in the ${row.tier} tier but the document expects ${want.tier}`, "warning");
+    }
+  }
+  for (const row of parsed.rows) {
+    if (!expected.has(row.file)) {
+      push("index-stale-entry", `row links ${row.file}, which is not an indexable document in this directory`, "warning");
+    }
+  }
+  const currentSequence = parsed.rows.filter((row) => expected.has(row.file)).map((row) => row.file);
+  if (!sameStringSequence(currentSequence, expectedIndexSequence(kind, expected))) {
+    push("index-ordering", "row order differs from the deterministic index order", "info");
+  }
+}
 function resolvesLocalTarget(cwd, fromFile, target) {
   const candidates = [
     import_node_path2.default.resolve(cwd, target),
@@ -24576,8 +24787,16 @@ function auditImplementationRecords(cwd, relativeDir) {
     }
   }
   const indexPath = import_node_path2.default.join(dir, "README.md");
-  if (!import_node_fs2.default.existsSync(indexPath)) {
+  let indexStats = null;
+  try {
+    indexStats = import_node_fs2.default.lstatSync(indexPath);
+  } catch {
+    indexStats = null;
+  }
+  if (!indexStats) {
     findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+  } else {
+    auditManagedIndex("ir", dir, relativeDir, files, findings);
   }
   return { directory: relativeDir, files: files.length, findings };
 }
@@ -24587,53 +24806,17 @@ var INDEX_TITLES2 = {
   ir: "Implementation Records",
   exp: "Experiment Logs"
 };
-var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
-var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
-var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
 function sha256Text(content) {
   return (0, import_node_crypto.createHash)("sha256").update(content, "utf8").digest("hex");
 }
 function sha256File(file2) {
   return (0, import_node_crypto.createHash)("sha256").update(import_node_fs3.default.readFileSync(file2)).digest("hex");
 }
-function splitRowCells(line) {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("|")) return null;
-  if (!trimmed.endsWith("|") || trimmed.endsWith("\\|")) return null;
-  const body = trimmed.slice(1, -1);
-  const cells = [];
-  let current = "";
-  for (let i = 0; i < body.length; i += 1) {
-    const ch = body[i];
-    if (ch === "\\" && i + 1 < body.length) {
-      current += ch + body[i + 1];
-      i += 1;
-      continue;
-    }
-    if (ch === "|") {
-      cells.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += ch;
-  }
-  cells.push(current.trim());
-  return cells;
-}
-function extractRowFile(cell) {
-  const match = /^\[(.*)\]\((.*)\)$/.exec(cell.trim());
-  if (!match) return null;
-  const target = match[2].trim();
-  if (!target.startsWith("./")) return null;
-  const file2 = target.slice(2);
-  if (file2 === "" || file2 === "." || file2 === ".." || /[/\\:]/.test(file2)) return null;
-  return file2;
-}
-function cellsEqual(left, right) {
+function cellsEqual2(left, right) {
   return left.length === right.length && left.every((cell, index) => cell === right[index]);
 }
 function rowsMatch(left, right) {
-  return left.tier === right.tier && cellsEqual(left.cells, right.cells);
+  return left.tier === right.tier && cellsEqual2(left.cells, right.cells);
 }
 function sameSequence(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
@@ -24646,80 +24829,6 @@ function sameFileSet(left, right) {
 function summarizeRow(row) {
   return row.cells.join(" | ");
 }
-function parseImplIndexRows(content, kind) {
-  const fail = (reason) => ({ ok: false, reason });
-  const lines = content.split("\n");
-  const markerLines = lines.filter((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerLines.length === 0) {
-    return fail("hand-curated or ambiguous index: missing generated-index marker");
-  }
-  if (markerLines.length > 1) {
-    return fail("ambiguous index: multiple generated-index markers");
-  }
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  const expectedCells = kind === "ir" ? 4 : 1;
-  const fileCellIndex = kind === "ir" ? 3 : 0;
-  const headerLine = kind === "ir" ? IR_HEADER_LINE : EXP_HEADER_LINE;
-  const separatorLine = kind === "ir" ? IR_SEPARATOR_LINE : EXP_SEPARATOR_LINE;
-  let cursor = markerIndex + 1;
-  const skipBlank = () => {
-    while (cursor < lines.length && lines[cursor].trim() === "") cursor += 1;
-  };
-  const parseRow = (line, tier) => {
-    const cells = splitRowCells(line);
-    if (!cells || cells.length !== expectedCells) return null;
-    const file2 = extractRowFile(cells[fileCellIndex]);
-    if (file2 === null) return null;
-    return { file: file2, cells, tier };
-  };
-  const parseTable = (tier) => {
-    if (cursor + 1 >= lines.length || lines[cursor].trim() !== headerLine || lines[cursor + 1].trim() !== separatorLine) {
-      return { error: `malformed ${tier} index table header` };
-    }
-    cursor += 2;
-    const rows2 = [];
-    while (cursor < lines.length && lines[cursor].trim().startsWith("|")) {
-      const row = parseRow(lines[cursor], tier);
-      if (!row) return { error: `unparseable ${tier} index row: ${lines[cursor].trim()}` };
-      rows2.push(row);
-      cursor += 1;
-    }
-    return { rows: rows2 };
-  };
-  skipBlank();
-  if (cursor >= lines.length || !lines[cursor].trim().startsWith("Directory:")) {
-    return fail("missing Directory line after the generated-index marker");
-  }
-  cursor += 1;
-  skipBlank();
-  const active = parseTable("active");
-  if ("error" in active) return fail(active.error);
-  skipBlank();
-  const rows = [...active.rows];
-  if (cursor < lines.length && lines[cursor].trim() === SETTLED_HEADING) {
-    cursor += 1;
-    skipBlank();
-    const settled = parseTable("settled");
-    if ("error" in settled) return fail(settled.error);
-    rows.push(...settled.rows);
-    skipBlank();
-  }
-  for (; cursor < lines.length; cursor += 1) {
-    const trimmed = lines[cursor].trim();
-    if (trimmed.includes(GENERATED_SETTLED_MARKER)) {
-      return fail("settled-index marker outside the managed index region");
-    }
-    if (trimmed.startsWith("|")) {
-      return fail("table row outside the managed index region");
-    }
-  }
-  const seen = /* @__PURE__ */ new Set();
-  for (const row of rows) {
-    if (seen.has(row.file)) return fail(`duplicate index row for ${row.file}`);
-    seen.add(row.file);
-  }
-  return { ok: true, rows };
-}
 function collectIrState(cwd, directory, dirAbs, files) {
   const blockersByFile = /* @__PURE__ */ new Map();
   for (const finding of auditImplementationRecords(cwd, directory).findings) {
@@ -24728,15 +24837,7 @@ function collectIrState(cwd, directory, dirAbs, files) {
     if (!blockersByFile.has(finding.file)) blockersByFile.set(finding.file, finding.message);
   }
   const blockers = [...blockersByFile.entries()].map(([file2, message]) => `${file2}: ${message}`);
-  const entries = files.flatMap((file2) => {
-    const parsed = parseDoc(import_node_fs3.default.readFileSync(import_node_path3.default.join(dirAbs, file2), "utf8"));
-    if (parsed.error) return [];
-    if (isForeignDocType(parsed.data.type, "impl", directory)) return [];
-    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path3.default.basename(file2, ".md");
-    const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
-    const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
-    return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
-  });
+  const entries = implIndexEntries(dirAbs, directory, files);
   return { entries, blockers };
 }
 function renderGeneratedDoc(kind, directory, entries, files) {
@@ -24788,7 +24889,7 @@ function computeDrift(kind, currentRows, expectedRows) {
       changes.push({ file: expected.file, kind: "move-tier", before: current.tier, after: expected.tier });
       continue;
     }
-    if (!cellsEqual(current.cells, expected.cells)) {
+    if (!cellsEqual2(current.cells, expected.cells)) {
       changes.push({
         file: expected.file,
         kind: "update-status",
