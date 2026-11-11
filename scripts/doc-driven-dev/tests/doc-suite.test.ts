@@ -859,6 +859,31 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(executionContract, /exact.*EffectOutcome.*match/i);
 });
 
+test("graph-dispatched doc audits map to audit_docs with the artifact profile", () => {
+  const docStatus = fs.readFileSync(path.join(skillRoot, "doc-status", "SKILL.md"), "utf8");
+  const docStatusJa = fs.readFileSync(path.join(skillRoot, "doc-status", "SKILL.ja.md"), "utf8");
+  const outcomeContract = fs.readFileSync(
+    path.join(skillRoot, "doc-driven-dev-graph", "references", "execution-outcome-contract.md"),
+    "utf8",
+  );
+  const outcomeContractJa = fs.readFileSync(
+    path.join(skillRoot, "doc-driven-dev-graph", "references", "execution-outcome-contract.ja.md"),
+    "utf8",
+  );
+
+  // Graph-dispatched named audits run the artifact profile so derived index
+  // state never gates graph execution; the flag string is identical in both
+  // languages (Issue #195).
+  for (const text of [docStatus, docStatusJa, outcomeContract, outcomeContractJa]) {
+    assert.match(text, /audit_docs\.js --type <name> --profile artifact/);
+    assert.match(text, /audit_docs\.js --type all --profile artifact/);
+    assert.match(text, /impl-doc\/scripts\/audit_impl_record\.js/);
+    // audit_impl_record.js rejects unknown args — a --profile flag on it would
+    // break graph dispatch; pin that the docs never pair them.
+    assert.doesNotMatch(text, /audit_impl_record\.js --profile/);
+  }
+});
+
 test("graph docs bind delegates, audits, and condition-driven subgraphs", () => {
   const root = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
   const skill = fs.readFileSync(path.join(root, "doc-driven-dev-graph/SKILL.md"), "utf8");

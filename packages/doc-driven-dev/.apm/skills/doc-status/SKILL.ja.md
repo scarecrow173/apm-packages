@@ -77,11 +77,16 @@ type のライフサイクル状態と relation の健全性を確認するた�
 
    `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
    文書型（`spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `idea`,
-   `brainstorm`, `discovery`）は `audit_docs.js --type <name>`、
+   `brainstorm`, `discovery`）は `audit_docs.js --type <name> --profile artifact`、
    `all` は全 canonical 文書型に加えて、root-level の unmanaged Markdown と
    配布 `.apm` skill 文書への legacy-reference sweep も対象とする
-   `audit_docs.js --type all`、
-   `impl-record` は `impl-doc/scripts/audit_impl_record.js` です。
+   `audit_docs.js --type all --profile artifact`、
+   `impl-record` は `impl-doc/scripts/audit_impl_record.js` です（profile flag
+   は不要 —— index の観測は non-blocking warning のみ）。
+   Graph から dispatch される audit は `artifact` profile で実行されるため、
+   missing または stale な index が graph execution を gate することは
+   ありません。直接の厳密チェックでは `--profile` を省略して default の
+   `materialized` coverage を維持できます。
 
 4. `relations.source` は外部出典として扱う。
    HTTP、HTTPS、mail link は許可し、存在しないローカルファイルとして

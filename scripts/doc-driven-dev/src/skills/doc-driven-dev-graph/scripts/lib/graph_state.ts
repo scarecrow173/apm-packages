@@ -73,12 +73,16 @@ function consideredOptionCount(body: string): number {
   return Math.max(headings, listItems);
 }
 
+// Indexes are derived (materialized) views, so a missing or stale README is
+// never a bootstrap reason — only a genuinely absent canonical tree gates
+// graph execution (Issue #195). scaffold_docs still creates indexes when it
+// runs; audit_docs --profile artifact keeps them out of graph-dispatched
+// audits the same way.
 function bootstrapReasons(cwd: string): string[] {
   const reasons: string[] = [];
   for (const directory of CANONICAL_DOC_DIRS) {
     const full = path.join(cwd, directory);
     if (!fs.existsSync(full) || !fs.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
-    if (!fs.existsSync(path.join(full, "README.md"))) reasons.push(`missing-index:${directory}/README.md`);
   }
   return reasons;
 }
