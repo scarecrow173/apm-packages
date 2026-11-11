@@ -599,6 +599,7 @@ export {
   implementationRecordSections,
   implDir,
   implStatuses,
+  listFiles,
   normalizeExperimentPath,
   parseSetArguments,
   posixRelative,
