@@ -24316,15 +24316,15 @@ function buildExperimentEvent(options2) {
     ...options2.extra || {}
   };
 }
-function writeImplIndex(indexPath, content, legacyTitle) {
+function writeImplIndex(indexPath, content, legacyTitle, force = false) {
   const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
-  if (existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
+  if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
   import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
   return { written: true, reason: null };
 }
-function updateIndexForExperimentDir(cwd, relativeDir) {
+function updateIndexForExperimentDir(cwd, relativeDir, options2) {
   const dir = import_node_path2.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");
   const header = INDEX_TABLE_HEADER_1COL;
@@ -24341,7 +24341,8 @@ Directory: \`${relativeDir}\`
 
 ${body}
 `,
-    "Experiment Logs"
+    "Experiment Logs",
+    options2?.force === true
   );
 }
 function buildNewFilePath(options2) {
