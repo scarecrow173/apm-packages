@@ -20,6 +20,7 @@ const INDEX_REBUILD_RULES = new Set([
   "index-missing-entry",
   "index-missing-overview",
   "index-stale-entry",
+  "index-tier-mismatch",
   "index-duplicate-entry",
   "index-metadata-mismatch",
   "index-ordering",
