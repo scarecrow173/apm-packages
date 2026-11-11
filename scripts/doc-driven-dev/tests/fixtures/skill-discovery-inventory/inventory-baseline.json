@@ -497,7 +497,7 @@
         {
           "path": "doc-driven-dev-graph/references/execution-outcome-contract.md",
           "exists": true,
-          "bytes": 10630
+          "bytes": 10794
         },
         {
           "path": "doc-driven-dev-graph/SKILL.md",
@@ -517,7 +517,7 @@
       ],
       "totals": {
         "directives": 28,
-        "referencedBytes": 1278420,
+        "referencedBytes": 1278584,
         "missing": 0
       }
     },
@@ -607,7 +607,7 @@
         {
           "path": "doc-driven-dev-graph/references/execution-outcome-contract.md",
           "exists": true,
-          "bytes": 10630
+          "bytes": 10794
         },
         {
           "path": "doc-driven-dev-graph/SKILL.md",
@@ -617,7 +617,7 @@
       ],
       "totals": {
         "directives": 5,
-        "referencedBytes": 982463,
+        "referencedBytes": 982627,
         "missing": 0
       }
     },
@@ -731,17 +731,17 @@
         {
           "path": "doc-driven-dev-graph/scripts/build_dashboard.js",
           "exists": true,
-          "bytes": 1608263
+          "bytes": 1611856
         },
         {
           "path": "doc-status/SKILL.md",
           "exists": true,
-          "bytes": 10327
+          "bytes": 11680
         }
       ],
       "totals": {
         "directives": 3,
-        "referencedBytes": 1627900,
+        "referencedBytes": 1632846,
         "missing": 0
       }
     },
@@ -984,12 +984,12 @@
         {
           "path": "doc-driven-dev-graph/references/execution-contract.md",
           "exists": true,
-          "bytes": 14600
+          "bytes": 14618
         },
         {
           "path": "doc-driven-dev-graph/references/execution-outcome-contract.md",
           "exists": true,
-          "bytes": 10630
+          "bytes": 10794
         },
         {
           "path": "doc-driven-dev-graph/references/graph-contract.md",
@@ -1029,7 +1029,7 @@
         {
           "path": "doc-driven-dev-graph/scripts/migrate_ids.js",
           "exists": true,
-          "bytes": 1324431
+          "bytes": 1327892
         },
         {
           "path": "doc-driven-dev-graph/scripts/route_graph.js",
@@ -1039,7 +1039,7 @@
         {
           "path": "doc-maintenance/scripts/migrate_ids.js",
           "exists": true,
-          "bytes": 1324431
+          "bytes": 1327892
         },
         {
           "path": "implementation-flow/SKILL.md",
@@ -1054,7 +1054,7 @@
       ],
       "totals": {
         "directives": 34,
-        "referencedBytes": 5036864,
+        "referencedBytes": 5043968,
         "missing": 0
       }
     },
@@ -1146,7 +1146,7 @@
         {
           "path": "doc-maintenance/scripts/doc_maintenance.js",
           "exists": true,
-          "bytes": 1281821
+          "bytes": 1285305
         },
         {
           "path": "doc-maintenance/scripts/migrate_docs.js",
@@ -1156,7 +1156,7 @@
         {
           "path": "doc-maintenance/scripts/migrate_ids.js",
           "exists": true,
-          "bytes": 1324431
+          "bytes": 1327892
         },
         {
           "path": "doc-maintenance/scripts/promote_index.js",
@@ -1171,14 +1171,14 @@
       ],
       "totals": {
         "directives": 13,
-        "referencedBytes": 5426617,
+        "referencedBytes": 5433562,
         "missing": 0
       }
     },
     {
       "flow": "doc-status",
-      "skillBytes": 10327,
-      "alwaysOnChars": 10106,
+      "skillBytes": 11680,
+      "alwaysOnChars": 11455,
       "directives": [
         {
           "kind": "script",
@@ -1243,73 +1243,91 @@
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 86,
+          "line": 83,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 87,
+          "line": 88,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/audit_docs.js",
+          "line": 97,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/audit_docs.js",
+          "line": 98,
           "optional": false
         },
         {
           "kind": "script",
           "target": "impl-doc/scripts/audit_impl_record.js",
-          "line": 90,
+          "line": 101,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "impl-doc/scripts/audit_experiment_log.js",
+          "line": 102,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 174,
+          "line": 195,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 184,
+          "line": 205,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/list_docs.js",
-          "line": 184,
+          "line": 205,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/doc_status.js",
-          "line": 189,
+          "line": 210,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/list_docs.js",
-          "line": 192,
+          "line": 213,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/audit_docs.js",
-          "line": 193,
+          "line": 214,
           "optional": false
         },
         {
           "kind": "skill-invoke",
           "target": "doc-driven-dev-graph",
-          "line": 199,
+          "line": 221,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "../doc-driven-dev-graph/references/execution-outcome-contract.md",
-          "line": 200,
+          "line": 222,
           "optional": false
         },
         {
           "kind": "skill-invoke",
           "target": "doc-dashboard",
-          "line": 210,
+          "line": 232,
           "optional": false
         }
       ],
@@ -1322,7 +1340,7 @@
         {
           "path": "doc-driven-dev-graph/references/execution-outcome-contract.md",
           "exists": true,
-          "bytes": 10630
+          "bytes": 10794
         },
         {
           "path": "doc-driven-dev-graph/SKILL.md",
@@ -1332,17 +1350,22 @@
         {
           "path": "doc-status/scripts/audit_docs.js",
           "exists": true,
-          "bytes": 1267501
+          "bytes": 1296050
         },
         {
           "path": "doc-status/scripts/doc_status.js",
           "exists": true,
-          "bytes": 1272782
+          "bytes": 1276375
         },
         {
           "path": "doc-status/scripts/list_docs.js",
           "exists": true,
           "bytes": 924972
+        },
+        {
+          "path": "impl-doc/scripts/audit_experiment_log.js",
+          "exists": true,
+          "bytes": 938268
         },
         {
           "path": "impl-doc/scripts/audit_impl_record.js",
@@ -1351,8 +1374,8 @@
         }
       ],
       "totals": {
-        "directives": 22,
-        "referencedBytes": 4436206,
+        "directives": 25,
+        "referencedBytes": 5406780,
         "missing": 0
       }
     },
@@ -1801,7 +1824,7 @@
         {
           "path": "doc-driven-dev-graph/references/execution-outcome-contract.md",
           "exists": true,
-          "bytes": 10630
+          "bytes": 10794
         },
         {
           "path": "doc-driven-dev-graph/SKILL.md",
@@ -1846,7 +1869,7 @@
       ],
       "totals": {
         "directives": 36,
-        "referencedBytes": 1006733,
+        "referencedBytes": 1006897,
         "missing": 0
       }
     },
@@ -1956,7 +1979,7 @@
         {
           "path": "doc-driven-dev-graph/references/execution-outcome-contract.md",
           "exists": true,
-          "bytes": 10630
+          "bytes": 10794
         },
         {
           "path": "doc-driven-dev-graph/SKILL.md",
@@ -1981,7 +2004,7 @@
       ],
       "totals": {
         "directives": 6,
-        "referencedBytes": 48734,
+        "referencedBytes": 48898,
         "missing": 0
       }
     },
@@ -2539,10 +2562,10 @@
   ],
   "totals": {
     "flows": 18,
-    "skillBytes": 160507,
-    "alwaysOnChars": 154577,
-    "directives": 284,
-    "referencedBytes": 41178787,
+    "skillBytes": 161860,
+    "alwaysOnChars": 155926,
+    "directives": 287,
+    "referencedBytes": 42169012,
     "missing": 0
   }
 }

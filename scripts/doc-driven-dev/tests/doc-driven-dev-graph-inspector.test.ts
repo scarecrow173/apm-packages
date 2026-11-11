@@ -224,7 +224,7 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
   assert.match(first, /audits: adr, spec/);
   assert.match(first, /planning.*audits: design/);
   assert.match(first, /task-graph.*audits: plan, task/);
-  assert.match(first, /exit-audit.*audits: all/);
+  assert.match(first, /exit-audit.*audits: all, experiment-log, impl-record/);
   assert.match(first, /complete.*terminal/);
   assert.match(first, /briefing.*delegate/);
   assert.match(first, /\|bootstrap · p20\|/);

@@ -134,8 +134,8 @@ re-projection and re-fetch, never reuse.
 The caller adapter normalizes the declared script delegates (`migrate_docs`,
 `scaffold_docs`, and `build_task_graph` — the migration scripts are owned by
 `doc-maintenance`) and named audits (`spec`, `adr`,
-`design`, `plan`, `task`, `test-spec`, `impl-record`, and `all`) into
-`EffectOutcome`.
+`design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, and
+`all`) into `EffectOutcome`.
 Skills that can emit the footer return it directly. Missing or malformed adapter
 evidence yields `authority-required`; it never advances a checkpoint. The
 effect-specific canonical input/evidence mapping is defined in

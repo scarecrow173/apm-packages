@@ -109,6 +109,16 @@ test("loads and validates the distributed doc-driven-dev graph definition", () =
   assert.ok(definition.edges.length > 0);
 });
 
+test("exit-audit binds shared and owner audits in stable order", () => {
+  const file = path.resolve(
+    __dirname,
+    "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml",
+  );
+  const definition: GraphDefinition = loadGraphDefinition(file);
+  const node = definition.nodes["exit-audit"];
+  assert.deepEqual(node.audits, ["all", "impl-record", "experiment-log"]);
+});
+
 test("rejects an edge that uses an unknown condition", () => {
   assert.throws(() => parseGraphDefinition(unknownConditionFixture), /unknown condition: missing-condition/);
 });

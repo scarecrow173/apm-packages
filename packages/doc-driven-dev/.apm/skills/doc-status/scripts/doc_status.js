@@ -33483,6 +33483,8 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
+var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -34205,6 +34207,85 @@ function lintStaleUpstreams(model, scope) {
 // src/skills/lib/doc_structure_lint.ts
 var import_node_fs4 = __toESM(require("node:fs"));
 var import_node_path5 = __toESM(require("node:path"));
+
+// src/skills/lib/doc_index_tiers.ts
+var HEADING2 = /^##\s+(.*)$/;
+var SETTLED_HEADING = /^##\s+Settled\b/i;
+var TABLE_LINE = /^\|.*\|$/;
+var LIST_ITEM = /^[-*+]\s+/;
+var LINK = /\[[^\]]*\]\([^)]*\)/;
+function unescapeCell(value) {
+  return value.replace(/\\\|/g, "|").trim();
+}
+function parseManagedIndexLayout(content3) {
+  const layout = {
+    generated: content3.includes(GENERATED_INDEX_MARKER),
+    rows: [],
+    malformed: [],
+    settledHeadings: 0,
+    unmarkedSettledHeadings: 0,
+    unknownSectionTables: [],
+    extraTables: []
+  };
+  let tier = "active";
+  let sectionHeading = "";
+  let sectionTables = 0;
+  let inTable = false;
+  content3.split(/\r?\n/).forEach((line, offset) => {
+    const trimmed = line.trim();
+    const heading = HEADING2.exec(trimmed);
+    if (heading) {
+      if (SETTLED_HEADING.test(trimmed)) {
+        tier = "settled";
+        layout.settledHeadings += 1;
+        if (!trimmed.includes(GENERATED_SETTLED_MARKER)) layout.unmarkedSettledHeadings += 1;
+      } else {
+        tier = "unknown";
+      }
+      sectionHeading = heading[1].trim();
+      sectionTables = 0;
+      inTable = false;
+      return;
+    }
+    if (TABLE_LINE.test(trimmed)) {
+      if (!inTable) {
+        inTable = true;
+        sectionTables += 1;
+        if (tier === "unknown" && sectionTables === 1) {
+          layout.unknownSectionTables.push({ line: offset + 1, heading: sectionHeading });
+        }
+        if ((tier === "active" || tier === "settled") && sectionTables > 1) {
+          layout.extraTables.push({ line: offset + 1, tier });
+        }
+      }
+      const cells = trimmed.slice(1, -1).split(/(?<!\\)\|/).map(unescapeCell);
+      if (/^-{3,}/.test(cells[0]) || /^id$/i.test(cells[0])) return;
+      if (cells.length < 4) {
+        layout.malformed.push({ line: offset + 1, text: trimmed });
+        return;
+      }
+      const fileMatch = /\[([^\]]*)\]\(([^)]*)\)/.exec(cells[3]);
+      layout.rows.push({
+        tier,
+        line: offset + 1,
+        row: {
+          id: cells[0],
+          title: cells[1],
+          status: cells[2],
+          file: fileMatch ? fileMatch[2].trim() : cells[3]
+        }
+      });
+      return;
+    }
+    inTable = false;
+    if (LIST_ITEM.test(trimmed) && !LINK.test(trimmed)) {
+      layout.malformed.push({ line: offset + 1, text: trimmed });
+    }
+  });
+  return layout;
+}
+
+// src/skills/lib/doc_structure_lint.ts
 function caseInsensitiveExists(model, absolute) {
   const dir = import_node_path5.default.dirname(absolute);
   const base = import_node_path5.default.basename(absolute).toLowerCase();
@@ -34482,36 +34563,6 @@ function lintOrphans(model, scope, profile = "materialized") {
   }
   return findings;
 }
-function unescapeCell(value) {
-  return value.replace(/\\\|/g, "|").trim();
-}
-function indexTableRows(index2) {
-  const rows = [];
-  const malformed = [];
-  index2.body.split(/\r?\n/).forEach((line, offset) => {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-      const cells = trimmed.slice(1, -1).split(/(?<!\\)\|/).map(unescapeCell);
-      if (/^-{3,}/.test(cells[0]) || /^id$/i.test(cells[0])) return;
-      if (cells.length < 4) {
-        malformed.push({ line: offset + 1, text: trimmed });
-        return;
-      }
-      const fileMatch = /\[([^\]]*)\]\(([^)]*)\)/.exec(cells[3]);
-      rows.push({
-        id: cells[0],
-        title: cells[1],
-        status: cells[2],
-        file: fileMatch ? fileMatch[2].trim() : cells[3]
-      });
-      return;
-    }
-    if (/^[-*+]\s+/.test(trimmed) && !/\[[^\]]*\]\([^)]*\)/.test(trimmed)) {
-      malformed.push({ line: offset + 1, text: trimmed });
-    }
-  });
-  return { rows, malformed };
-}
 function lintIndexConsistency(model, scope, index2) {
   const findings = [];
   if (index2.parseError) {
@@ -34527,8 +34578,7 @@ function lintIndexConsistency(model, scope, index2) {
     return findings;
   }
   const seen = /* @__PURE__ */ new Set();
-  const { rows, malformed } = indexTableRows(index2);
-  const rowFiles = [];
+  const layout = parseManagedIndexLayout(index2.body);
   const indexDir = normalizeDir(import_node_path5.default.posix.dirname(index2.path));
   const residentTypes = residentTypesForDir(indexDir);
   const indexPrimaryType = primaryIndexTypeForDir(
@@ -34541,7 +34591,33 @@ function lintIndexConsistency(model, scope, index2) {
   } catch {
     lineOffset = 0;
   }
-  for (const item of malformed) {
+  const structural = (message, line) => {
+    findings.push(finding({
+      ruleId: "index-unparseable",
+      category: "index",
+      severity: "warning",
+      path: index2.path,
+      line: line !== void 0 ? line + lineOffset : void 0,
+      message,
+      target: index2.path,
+      repair: "safe"
+    }));
+  };
+  if (layout.generated) {
+    if (layout.settledHeadings > 1) {
+      structural(`Index declares ## Settled ${layout.settledHeadings} times; expected at most one`);
+    }
+    if (layout.unmarkedSettledHeadings > 0) {
+      structural("Index has a ## Settled heading without the managed settled-index marker");
+    }
+    for (const table of layout.unknownSectionTables) {
+      structural(`Index has a table under unrecognized heading: ${table.heading}`, table.line);
+    }
+    for (const table of layout.extraTables) {
+      structural(`Index has more than one table in the ${table.tier} section`, table.line);
+    }
+  }
+  for (const item of layout.malformed) {
     findings.push(finding({
       ruleId: "index-unparseable",
       category: "index",
@@ -34553,7 +34629,10 @@ function lintIndexConsistency(model, scope, index2) {
       repair: "safe"
     }));
   }
-  for (const row of rows) {
+  const tierFiles = { active: [], settled: [] };
+  const rowFiles = [];
+  for (const placed of layout.rows) {
+    const row = placed.row;
     const resolved = model.resolvePath(index2, row.file);
     if (resolved.status === "escaped") {
       findings.push(finding({
@@ -34592,31 +34671,43 @@ function lintIndexConsistency(model, scope, index2) {
     }
     seen.add(resolved.path);
     const member = model.byPath.get(resolved.path);
-    rowFiles.push({
-      file: import_node_path5.default.posix.basename(resolved.path),
-      settled: member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false
-    });
+    const settled = member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false;
+    rowFiles.push({ file: import_node_path5.default.posix.basename(resolved.path), settled });
+    if (placed.tier !== "unknown") tierFiles[placed.tier].push(import_node_path5.default.posix.basename(resolved.path));
     if (member && member.kind === "canonical") {
-      const expected2 = [
+      const expected = [
         ["id", member.id],
         ["title", member.title],
         ["status", member.status]
       ];
-      for (const [field, value] of expected2) {
+      for (const [field, value] of expected) {
         if (value === null) continue;
-        const actual2 = field === "id" ? row.id : field === "title" ? row.title : row.status;
-        if (actual2 !== value) {
+        const actual = field === "id" ? row.id : field === "title" ? row.title : row.status;
+        if (actual !== value) {
           findings.push(finding({
             ruleId: "index-metadata-mismatch",
             category: "index",
             severity: "warning",
             path: index2.path,
             artifactId: member.id,
-            message: `Index row for ${row.file} has ${field} "${actual2}", expected "${value}"`,
+            message: `Index row for ${row.file} has ${field} "${actual}", expected "${value}"`,
             target: row.file,
             repair: "safe"
           }));
         }
+      }
+      if (layout.generated && placed.tier !== "unknown" && placed.tier === "settled" !== settled) {
+        findings.push(finding({
+          ruleId: "index-tier-mismatch",
+          category: "index",
+          severity: "warning",
+          path: index2.path,
+          line: placed.line + lineOffset,
+          artifactId: member.id,
+          message: settled ? `Index lists settled document ${row.file} in the active table` : `Index lists in-flight document ${row.file} in the settled table`,
+          target: row.file,
+          repair: "safe"
+        }));
       }
     }
   }
@@ -34627,12 +34718,22 @@ function lintIndexConsistency(model, scope, index2) {
     }
     return left.localeCompare(right);
   };
-  const expected = [
-    ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
-    ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup)
-  ];
-  const actual = rowFiles.map((entry) => entry.file);
-  if (actual.length > 1 && actual.some((file2, i) => file2 !== expected[i])) {
+  let misordered;
+  if (layout.generated) {
+    misordered = ["active", "settled"].some((tier) => {
+      const files = tierFiles[tier];
+      const expected = [...files].sort(compareGroup);
+      return files.length > 1 && files.some((file2, i) => file2 !== expected[i]);
+    });
+  } else {
+    const expected = [
+      ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
+      ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup)
+    ];
+    const actual = rowFiles.map((entry) => entry.file);
+    misordered = actual.length > 1 && actual.some((file2, i) => file2 !== expected[i]);
+  }
+  if (misordered) {
     findings.push(finding({
       ruleId: "index-ordering",
       category: "index",
