@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { generateArtifactId } from "../../../lib/artifact_id";
-import { changeFields, GENERATED_INDEX_MARKER, INDEX_TABLE_HEADER_1COL, indexCell, isForeignDocType, isGeneratedIndex, parseDoc, relationFields, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
+import { changeFields, GENERATED_INDEX_MARKER, INDEX_TABLE_HEADER_1COL, indexCell, isForeignDocType, isGeneratedIndex, mergeManagedIndex, parseDoc, relationFields, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
 import { resolveContainedDir, slugify } from "../../../lib/document_utils";
 import { assertTypeScope } from "../../../lib/doc_ownership";
 import { hasSection } from "../../../lib/markdown_sections";
@@ -355,11 +355,23 @@ function buildExperimentEvent(options: {
 type IndexUpdateResult = { written: boolean; reason: "hand-curated" | null };
 
 function writeImplIndex(indexPath: string, content: string, legacyTitle: string, force = false): IndexUpdateResult {
+  // lstat before reading: a symlink (even a broken one) must never be
+  // written through to its target.
+  let isSymlink = false;
+  try {
+    isSymlink = fs.lstatSync(indexPath).isSymbolicLink();
+  } catch {
+    isSymlink = false;
+  }
+  if (isSymlink) return { written: false, reason: "hand-curated" };
   const existing = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
   if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
     return { written: false, reason: "hand-curated" };
   }
-  fs.writeFileSync(indexPath, content, "utf8");
+  const merged = existing !== null && existing.includes(GENERATED_INDEX_MARKER)
+    ? mergeManagedIndex(existing, content)
+    : content;
+  fs.writeFileSync(indexPath, merged, "utf8");
   return { written: true, reason: null };
 }
 

@@ -61,6 +61,7 @@ const INDEX_TITLES: Record<string, string> = {
   "docs/impl/exp": "Experiment Logs",
 };
 const PROMOTE_INDEX_MUTATOR = "promote_index";
+const SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
 
 // `brainstorm` has no creator script: the brainstorming skill authors those
 // documents directly, so it is absent here.
@@ -141,7 +142,7 @@ function buildContracts(): DirectoryContract[] {
       residentTypes: ["impl"],
       indexFormat: "impl-4col",
       indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_impl_record"],
     },
     {
@@ -151,7 +152,7 @@ function buildContracts(): DirectoryContract[] {
       residentTypes: ["exp"],
       indexFormat: "exp-1col",
       indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
       auditors: ["audit_experiment_log"],
     },
   ];
