@@ -62,7 +62,7 @@ test("empty contract index is byte-identical to what each owner writer produces 
     "../src/skills/impl-doc/scripts/lib/impl_doc_utils"
   );
 
-  assert.equal(await buildIndex(adrDir, "docs/adr"), emptyIndexForDir("docs/adr"));
+  assert.equal(await buildIndex(repo, "docs/adr"), emptyIndexForDir("docs/adr"));
 
   updateIndexForMarkdownDir(repo, "docs/impl/ir");
   assert.equal(fs.readFileSync(path.join(irDir, "README.md"), "utf8"), emptyIndexForDir("docs/impl/ir"));

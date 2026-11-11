@@ -24127,6 +24127,16 @@ var configs = {
     dir: "docs/adr",
     dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
     idPrefix: "ADR",
+    indexRow: {
+      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
+      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
+      // every producer derives identical rows (Issue #185).
+      idFromFile: (file2) => {
+        const match = /^(\d+)-/.exec(file2);
+        return match ? `ADR-${match[1]}` : null;
+      },
+      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
+    },
     statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
     type: "adr"
   }
@@ -24855,28 +24865,34 @@ function ensureDesignOverview(fullDir, date5) {
   if (import_node_fs2.default.existsSync(overviewPath)) return;
   import_node_fs2.default.writeFileSync(overviewPath, overviewDocument(date5), "utf8");
 }
-async function titleFromDocument(content, fallback) {
+async function titleFromDocument(content, fallback, headingToTitle) {
   const parsed = parseDoc(content);
   const data = parsed.data;
   if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
   const match = /^#\s+(.+)$/m.exec(parsed.body);
-  return match?.[1]?.trim() || fallback;
+  const heading = match?.[1]?.trim();
+  if (!heading) return fallback;
+  const normalized = headingToTitle ? headingToTitle(heading).trim() : heading;
+  return normalized || fallback;
 }
 async function docEntries(cwd, type, explicitDir) {
   const relativeDir = docDir(cwd, type, explicitDir);
   const dir = import_node_path2.default.join(cwd, relativeDir);
+  const indexRow = configFor(type).indexRow;
   const entries = await Promise.all(docFiles(dir).map(async (file2) => {
     const fullPath = import_node_path2.default.join(dir, file2);
     const content = import_node_fs2.default.readFileSync(fullPath, "utf8");
     const data = parseDoc(content).data;
+    const entryType = typeof data.type === "string" ? data.type : null;
+    const hooks = entryType === null || entryType === type ? indexRow : void 0;
     return {
       created: typeof data.created === "string" ? data.created : null,
       file: file2,
-      id: typeof data.id === "string" ? data.id : null,
+      id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : hooks?.idFromFile?.(import_node_path2.default.basename(file2)) ?? null,
       path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
-      title: await titleFromDocument(content, import_node_path2.default.basename(file2, ".md")),
-      type: typeof data.type === "string" ? data.type : null
+      title: await titleFromDocument(content, import_node_path2.default.basename(file2, ".md"), hooks?.titleFromHeading),
+      type: entryType
     };
   }));
   return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
@@ -24907,7 +24923,8 @@ async function buildIndex(cwd, type, explicitDir, options2) {
   const entries = unionTypes.length > 1 ? [...new Map(
     (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
   ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
-  const title = `${configFor(type).idPrefix} Documents`;
+  const contractTitle = ownershipForDir(normalizeDir(relativeDir))?.indexTitle ?? ownershipForDir(normalizeDir(configFor(type).dir))?.indexTitle;
+  const title = contractTitle ?? `${configFor(type).idPrefix} Documents`;
   const body = renderIndexBody(entries, {
     overviewFirst: type === "design" || unionTypes.includes("design"),
     settledType: type
