@@ -9,6 +9,12 @@ const SchemaErrorSchema = z.object({
 
 const gateResult = z.enum(["pass", "fail", "skipped"]);
 
+// Check-level diagnostics carry a fourth severity the gate aggregates never
+// produce: `warn` (e.g. checkUnusedSlots). Gate results stay three-valued so
+// a warning can never silently downgrade a fail at the aggregate level
+// (Issue #191).
+const checkResult = z.enum(["pass", "fail", "warn", "skipped"]);
+
 const StalenessValidationSchema = z.object({
   result: gateResult,
   basis: z.string(),
@@ -32,7 +38,7 @@ const DeterministicValidationSchema = z.object({
 
 const BlockingCheckSchema = z.object({
   type: z.string(),
-  result: gateResult,
+  result: checkResult,
   details: z.array(z.string()),
 });
 
@@ -63,7 +69,9 @@ export const ValidationReportSchema = z.object({
   staleness_validation: StalenessValidationSchema,
   deterministic_validation: DeterministicValidationSchema,
   blocking_validations: z.object({
-    result: z.string(),
+    // Producer emits exactly the gate enum: "skipped" when the invocation
+    // gate is disabled (validate.ts), else pass/fail — never "warn".
+    result: gateResult,
     checks: z.array(BlockingCheckSchema),
   }),
   catalog_validation: CatalogValidationSchema,

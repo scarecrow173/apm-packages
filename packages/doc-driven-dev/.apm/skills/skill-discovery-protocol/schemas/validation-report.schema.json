@@ -142,7 +142,12 @@
       "type": "object",
       "properties": {
         "result": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "skipped"
+          ]
         },
         "checks": {
           "type": "array",
@@ -157,6 +162,7 @@
                 "enum": [
                   "pass",
                   "fail",
+                  "warn",
                   "skipped"
                 ]
               },
