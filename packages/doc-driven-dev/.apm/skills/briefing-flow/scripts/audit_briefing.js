@@ -33132,6 +33132,9 @@ function scanRootKey(cwd, directory) {
   }
 }
 
+// src/skills/lib/doc_types.ts
+var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
+
 // src/skills/lib/doc_suite_utils.ts
 var relationFields = [
   "source",
@@ -33160,7 +33163,6 @@ var changeFields = [
   "moved",
   "generated"
 ];
-var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
 var scaffoldIndexMeta = {
   "docs/ideas": { title: "IDEA Documents", type: "idea" },
   "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
