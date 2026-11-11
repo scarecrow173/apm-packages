@@ -80,6 +80,17 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    Findings print in deterministic order; exit status is `0` unless the
    invocation itself is invalid.
 
+   `audit_docs.js --type all` audits the shared suite only — `idea`,
+   `brainstorm`, `discovery`, `spec`, `plan`, `task`, `design`, `adr`, and
+   `test-spec`. impl-doc's owned directories (`docs/impl/ir`,
+   `docs/impl/exp`) are never inside a `--type` scope; their integrity is
+   owned by `audit_impl_record.js` and `audit_experiment_log.js`.
+   `audit_docs.js --type all --owners` is the package-wide audit: the
+   shared report plus `ownerAudits` entries for `impl-record` and
+   `experiment-log`. `--owners` requires `--type all` and cannot be
+   combined with `--dir`; owner audits always run their full check
+   regardless of `--profile`.
+
    Named audits from `doc-driven-dev-graph` map to commands as follows:
    document types (`spec`, `adr`, `design`, `plan`, `task`, `test-spec`,
    `idea`, `brainstorm`, `discovery`) run as
@@ -87,11 +98,16 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    `audit_docs.js --type all --profile artifact`
    covering every canonical document type plus a legacy-reference sweep over
    root-level unmanaged Markdown and distributed `.apm` skill documents;
-   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js`, which needs
-   no profile flag (its only index observation is a non-blocking warning).
+   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js` and
+   `experiment-log` runs as `impl-doc/scripts/audit_experiment_log.js`, which
+   need no profile flag (their only index observation is a non-blocking
+   warning).
    Graph-dispatched audits run the `artifact` profile so a missing or stale
    index never gates graph execution; direct strict checks may omit
-   `--profile` to keep the default `materialized` coverage.
+   `--profile` to keep the default `materialized` coverage. The `exit-audit`
+   node runs named audits `all`, `impl-record`, and `experiment-log`; `all`
+   keeps `--profile artifact`, so owner findings stay visible while index
+   state still cannot gate graph execution.
 
 4. Treat `relations.source` as external evidence.
    HTTP, HTTPS, and mail links are allowed and should not be reported as missing
@@ -157,11 +173,16 @@ check groups ran or were skipped. Covered checks include:
 - `broken-link`, `missing-image-link`, `broken-anchor`, `link-escapes-root`,
   `link-case-mismatch` — local Markdown link and anchor integrity.
 - `index-stale-entry`, `index-duplicate-entry`, `index-metadata-mismatch`,
-  `index-ordering`, `index-unparseable`, `index-escapes-root` — index table
-  consistency. Materialized profile only. Managed indexes are status-aware —
-  in-flight rows first, then a `## Settled` tier; `index-ordering` flags rows
-  violating that order and `index-metadata-mismatch` flags status cells that
-  no longer match front matter.
+  `index-ordering`, `index-tier-mismatch`, `index-unparseable`,
+  `index-escapes-root` — index table consistency. Materialized profile only.
+  Managed indexes are status-aware — in-flight rows first, then a
+  `## Settled` tier; `index-ordering` flags rows violating the deterministic
+  ordering and `index-metadata-mismatch` flags status cells that no longer
+  match front matter. `index-tier-mismatch` flags a managed index row in the
+  wrong tier — a settled document still in the active table or an in-flight
+  document under `## Settled`. It is a `materialized`-profile warning
+  repaired by the owning materialization path (index regeneration), never
+  by editing the index by hand.
 - `orphan-index` — documents not listed in the index. Materialized profile
   only.
 - `orphan-navigation`, `orphan-relation` — documents unreachable from any
@@ -192,7 +213,8 @@ index regeneration are delegated to a separate maintenance capability.
 - `scripts/list_docs.js`: list document metadata by type and status.
 - `scripts/audit_docs.js`: validate front matter, statuses, relations, links,
   index coverage, and orphans. `--external-links` enables opt-in external
-  link probing.
+  link probing; `--owners` extends `--type all` into the package-wide
+  audit.
 
 ## Graph Effect Outcome
 

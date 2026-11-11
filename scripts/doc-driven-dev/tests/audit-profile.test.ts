@@ -103,6 +103,7 @@ test("MATERIALIZED_RULE_IDS pins exactly the index-surface rule ids", () => {
     "index-missing-overview",
     "index-ordering",
     "index-stale-entry",
+    "index-tier-mismatch",
     "index-unparseable",
     "missing-index",
     "orphan-index",

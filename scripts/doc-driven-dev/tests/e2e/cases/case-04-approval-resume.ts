@@ -56,7 +56,7 @@ export const case04: E2ECase = {
       commitEvidence: true,
     },
     "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
-    "followup-triage-terminal": { audits: { all: "completed" }, delegate: "completed" },
+    "followup-triage-terminal": { audits: { all: "completed", "experiment-log": "completed", "impl-record": "completed" }, delegate: "completed" },
     "exit-audit-to-complete": {},
   },
   steps: [

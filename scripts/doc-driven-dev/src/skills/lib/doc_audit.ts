@@ -16,9 +16,17 @@ import { isInsideRealpath, normalizeDir, resolveContainedDir } from "./document_
 type AuditFinding = {
   severity: string;
   file: string | null;
+  line?: number;          // populated by owner audits; toLegacyFinding unchanged
   code: string;
   message: string;
   blocking: boolean;
+};
+
+type OwnerAuditSummary = {
+  name: string;            // named-audit identity: "impl-record" | "experiment-log"
+  directory: string;
+  files: number;
+  findings: AuditFinding[];
 };
 
 type AuditReport = {
@@ -27,6 +35,7 @@ type AuditReport = {
   findings: AuditFinding[];
   profile: AuditProfile;
   gates: ProfileGates;
+  ownerAudits?: OwnerAuditSummary[];
 };
 
 type AuditOptions = {
@@ -149,4 +158,4 @@ async function auditAllDocuments(cwd: string, explicitDir?: string, options?: Au
 }
 
 export { auditAllDocuments, auditDocuments };
-export type { AuditFinding, AuditOptions, AuditReport };
+export type { AuditFinding, AuditOptions, AuditReport, OwnerAuditSummary };

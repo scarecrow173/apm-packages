@@ -18,9 +18,10 @@ import { case01 } from "./case-01-happy-path";
  *   planning-to-task-graph     3 audits [plan,task,test-spec] + build_task_graph = 4
  *   task-graph-to-implementation                       implementation-flow = 1
  *   implementation-to-followup-triage 2 audits [task, impl-record]         = 2
- *   followup-triage-terminal   1 audit  [all]        + doc-status         = 2
+ *   followup-triage-terminal   3 audits [all, experiment-log, impl-record]
+ *                                        + doc-status                     = 4
  *   exit-audit-to-complete     (terminal — evidence only)                  = 0
- *                                                                     = 16
+ *                                                                     = 18
  *
  * Host capabilities are declared maximal (all three modes) so the selected
  * mode is the policy's own choice — no `host-unsupported` fallback noise.
@@ -37,7 +38,7 @@ const HAPPY_EDGES = [
   "followup-triage-terminal", "exit-audit-to-complete",
 ];
 const GATE_SIGNALS = ["implementation-verified", "followup-terminal", "exit-audit-pass"];
-const DISPATCH_TOTAL = 16;
+const DISPATCH_TOTAL = 18;
 
 /**
  * PolicyFacts for one dispatch: effect identity from the runner's dispatch,

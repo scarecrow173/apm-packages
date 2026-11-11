@@ -3427,7 +3427,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs7 = require("fs");
+    var fs8 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -3511,7 +3511,7 @@ var require_gray_matter = __commonJS({
       return stringify2(file2, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs7.readFileSync(filepath, "utf8");
+      const str2 = fs8.readFileSync(filepath, "utf8");
       const file2 = matter2(str2, options2);
       file2.path = filepath;
       return file2;
@@ -4599,8 +4599,8 @@ function assertNonEmpty(part, name) {
     throw new Error("`" + name + "` cannot be empty");
   }
 }
-function assertPath(path8, name) {
-  if (!path8) {
+function assertPath(path9, name) {
+  if (!path9) {
     throw new Error("Setting `" + name + "` requires `path` to be set too");
   }
 }
@@ -4785,13 +4785,13 @@ var init_lib4 = __esm({
        * @returns {undefined}
        *   Nothing.
        */
-      set path(path8) {
-        if (isUrl(path8)) {
-          path8 = (0, import_node_url.fileURLToPath)(path8);
+      set path(path9) {
+        if (isUrl(path9)) {
+          path9 = (0, import_node_url.fileURLToPath)(path9);
         }
-        assertNonEmpty(path8, "path");
-        if (this.path !== path8) {
-          this.history.push(path8);
+        assertNonEmpty(path9, "path");
+        if (this.path !== path9) {
+          this.history.push(path9);
         }
       }
       /**
@@ -13326,7 +13326,7 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-status/scripts/audit_docs.ts
-var import_node_path8 = __toESM(require("node:path"));
+var import_node_path9 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_audit.ts
 var import_node_fs6 = __toESM(require("node:fs"));
@@ -14162,10 +14162,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path8) {
-  if (!path8)
+function getElementAtPath(obj, path9) {
+  if (!path9)
     return obj;
-  return path8.reduce((acc, key) => acc?.[key], obj);
+  return path9.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -14505,11 +14505,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path8, issues) {
+function prefixIssues(path9, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path8);
+    iss.path.unshift(path9);
     return iss;
   });
 }
@@ -14971,16 +14971,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path8 = []) => {
+  const processError = (error63, path9 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path8, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else {
-        const fullpath = [...path8, ...issue2.path];
+        const fullpath = [...path9, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -15019,17 +15019,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path8 = []) => {
+  const processError = (error63, path9 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path8, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else {
-        const fullpath = [...path8, ...issue2.path];
+        const fullpath = [...path9, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -15068,8 +15068,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path8 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path8) {
+  const path9 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path9) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -32207,13 +32207,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path8 = ref.slice(1).split("/").filter(Boolean);
-  if (path8.length === 0) {
+  const path9 = ref.slice(1).split("/").filter(Boolean);
+  if (path9.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path8[0] === defsKey) {
-    const key = path8[1] === void 0 ? void 0 : decodeJSONPointerSegment(path8[1]);
+  if (path9[0] === defsKey) {
+    const key = path9[1] === void 0 ? void 0 : decodeJSONPointerSegment(path9[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -33487,6 +33487,10 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
+var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
+var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
+var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -33503,6 +33507,9 @@ function parseDoc(content3) {
   } catch (error62) {
     return { data: {}, body: content3, error: error62 instanceof Error ? error62.message : String(error62) };
   }
+}
+function indexCell(value) {
+  return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
 }
 function isForeignDocType(typeValue, expected, relativeDir) {
   if (typeof typeValue !== "string" || typeValue === expected) return false;
@@ -34177,6 +34184,85 @@ function lintStaleUpstreams(model, scope) {
 // src/skills/lib/doc_structure_lint.ts
 var import_node_fs4 = __toESM(require("node:fs"));
 var import_node_path5 = __toESM(require("node:path"));
+
+// src/skills/lib/doc_index_tiers.ts
+var HEADING2 = /^##\s+(.*)$/;
+var SETTLED_HEADING = /^##\s+Settled\b/i;
+var TABLE_LINE = /^\|.*\|$/;
+var LIST_ITEM = /^[-*+]\s+/;
+var LINK = /\[[^\]]*\]\([^)]*\)/;
+function unescapeCell(value) {
+  return value.replace(/\\\|/g, "|").trim();
+}
+function parseManagedIndexLayout(content3) {
+  const layout = {
+    generated: content3.includes(GENERATED_INDEX_MARKER),
+    rows: [],
+    malformed: [],
+    settledHeadings: 0,
+    unmarkedSettledHeadings: 0,
+    unknownSectionTables: [],
+    extraTables: []
+  };
+  let tier = "active";
+  let sectionHeading = "";
+  let sectionTables = 0;
+  let inTable = false;
+  content3.split(/\r?\n/).forEach((line, offset) => {
+    const trimmed = line.trim();
+    const heading = HEADING2.exec(trimmed);
+    if (heading) {
+      if (SETTLED_HEADING.test(trimmed)) {
+        tier = "settled";
+        layout.settledHeadings += 1;
+        if (!trimmed.includes(GENERATED_SETTLED_MARKER)) layout.unmarkedSettledHeadings += 1;
+      } else {
+        tier = "unknown";
+      }
+      sectionHeading = heading[1].trim();
+      sectionTables = 0;
+      inTable = false;
+      return;
+    }
+    if (TABLE_LINE.test(trimmed)) {
+      if (!inTable) {
+        inTable = true;
+        sectionTables += 1;
+        if (tier === "unknown" && sectionTables === 1) {
+          layout.unknownSectionTables.push({ line: offset + 1, heading: sectionHeading });
+        }
+        if ((tier === "active" || tier === "settled") && sectionTables > 1) {
+          layout.extraTables.push({ line: offset + 1, tier });
+        }
+      }
+      const cells = trimmed.slice(1, -1).split(/(?<!\\)\|/).map(unescapeCell);
+      if (/^-{3,}/.test(cells[0]) || /^id$/i.test(cells[0])) return;
+      if (cells.length < 4) {
+        layout.malformed.push({ line: offset + 1, text: trimmed });
+        return;
+      }
+      const fileMatch = /\[([^\]]*)\]\(([^)]*)\)/.exec(cells[3]);
+      layout.rows.push({
+        tier,
+        line: offset + 1,
+        row: {
+          id: cells[0],
+          title: cells[1],
+          status: cells[2],
+          file: fileMatch ? fileMatch[2].trim() : cells[3]
+        }
+      });
+      return;
+    }
+    inTable = false;
+    if (LIST_ITEM.test(trimmed) && !LINK.test(trimmed)) {
+      layout.malformed.push({ line: offset + 1, text: trimmed });
+    }
+  });
+  return layout;
+}
+
+// src/skills/lib/doc_structure_lint.ts
 function caseInsensitiveExists(model, absolute) {
   const dir = import_node_path5.default.dirname(absolute);
   const base = import_node_path5.default.basename(absolute).toLowerCase();
@@ -34454,36 +34540,6 @@ function lintOrphans(model, scope, profile = "materialized") {
   }
   return findings;
 }
-function unescapeCell(value) {
-  return value.replace(/\\\|/g, "|").trim();
-}
-function indexTableRows(index2) {
-  const rows = [];
-  const malformed = [];
-  index2.body.split(/\r?\n/).forEach((line, offset) => {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-      const cells = trimmed.slice(1, -1).split(/(?<!\\)\|/).map(unescapeCell);
-      if (/^-{3,}/.test(cells[0]) || /^id$/i.test(cells[0])) return;
-      if (cells.length < 4) {
-        malformed.push({ line: offset + 1, text: trimmed });
-        return;
-      }
-      const fileMatch = /\[([^\]]*)\]\(([^)]*)\)/.exec(cells[3]);
-      rows.push({
-        id: cells[0],
-        title: cells[1],
-        status: cells[2],
-        file: fileMatch ? fileMatch[2].trim() : cells[3]
-      });
-      return;
-    }
-    if (/^[-*+]\s+/.test(trimmed) && !/\[[^\]]*\]\([^)]*\)/.test(trimmed)) {
-      malformed.push({ line: offset + 1, text: trimmed });
-    }
-  });
-  return { rows, malformed };
-}
 function lintIndexConsistency(model, scope, index2) {
   const findings = [];
   if (index2.parseError) {
@@ -34499,8 +34555,7 @@ function lintIndexConsistency(model, scope, index2) {
     return findings;
   }
   const seen = /* @__PURE__ */ new Set();
-  const { rows, malformed } = indexTableRows(index2);
-  const rowFiles = [];
+  const layout = parseManagedIndexLayout(index2.body);
   const indexDir = normalizeDir(import_node_path5.default.posix.dirname(index2.path));
   const residentTypes = residentTypesForDir(indexDir);
   const indexPrimaryType = primaryIndexTypeForDir(
@@ -34513,7 +34568,33 @@ function lintIndexConsistency(model, scope, index2) {
   } catch {
     lineOffset = 0;
   }
-  for (const item of malformed) {
+  const structural = (message, line) => {
+    findings.push(finding({
+      ruleId: "index-unparseable",
+      category: "index",
+      severity: "warning",
+      path: index2.path,
+      line: line !== void 0 ? line + lineOffset : void 0,
+      message,
+      target: index2.path,
+      repair: "safe"
+    }));
+  };
+  if (layout.generated) {
+    if (layout.settledHeadings > 1) {
+      structural(`Index declares ## Settled ${layout.settledHeadings} times; expected at most one`);
+    }
+    if (layout.unmarkedSettledHeadings > 0) {
+      structural("Index has a ## Settled heading without the managed settled-index marker");
+    }
+    for (const table of layout.unknownSectionTables) {
+      structural(`Index has a table under unrecognized heading: ${table.heading}`, table.line);
+    }
+    for (const table of layout.extraTables) {
+      structural(`Index has more than one table in the ${table.tier} section`, table.line);
+    }
+  }
+  for (const item of layout.malformed) {
     findings.push(finding({
       ruleId: "index-unparseable",
       category: "index",
@@ -34525,7 +34606,10 @@ function lintIndexConsistency(model, scope, index2) {
       repair: "safe"
     }));
   }
-  for (const row of rows) {
+  const tierFiles = { active: [], settled: [] };
+  const rowFiles = [];
+  for (const placed of layout.rows) {
+    const row = placed.row;
     const resolved = model.resolvePath(index2, row.file);
     if (resolved.status === "escaped") {
       findings.push(finding({
@@ -34564,31 +34648,43 @@ function lintIndexConsistency(model, scope, index2) {
     }
     seen.add(resolved.path);
     const member = model.byPath.get(resolved.path);
-    rowFiles.push({
-      file: import_node_path5.default.posix.basename(resolved.path),
-      settled: member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false
-    });
+    const settled = member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false;
+    rowFiles.push({ file: import_node_path5.default.posix.basename(resolved.path), settled });
+    if (placed.tier !== "unknown") tierFiles[placed.tier].push(import_node_path5.default.posix.basename(resolved.path));
     if (member && member.kind === "canonical") {
-      const expected2 = [
+      const expected = [
         ["id", member.id],
         ["title", member.title],
         ["status", member.status]
       ];
-      for (const [field, value] of expected2) {
+      for (const [field, value] of expected) {
         if (value === null) continue;
-        const actual2 = field === "id" ? row.id : field === "title" ? row.title : row.status;
-        if (actual2 !== value) {
+        const actual = field === "id" ? row.id : field === "title" ? row.title : row.status;
+        if (actual !== value) {
           findings.push(finding({
             ruleId: "index-metadata-mismatch",
             category: "index",
             severity: "warning",
             path: index2.path,
             artifactId: member.id,
-            message: `Index row for ${row.file} has ${field} "${actual2}", expected "${value}"`,
+            message: `Index row for ${row.file} has ${field} "${actual}", expected "${value}"`,
             target: row.file,
             repair: "safe"
           }));
         }
+      }
+      if (layout.generated && placed.tier !== "unknown" && placed.tier === "settled" !== settled) {
+        findings.push(finding({
+          ruleId: "index-tier-mismatch",
+          category: "index",
+          severity: "warning",
+          path: index2.path,
+          line: placed.line + lineOffset,
+          artifactId: member.id,
+          message: settled ? `Index lists settled document ${row.file} in the active table` : `Index lists in-flight document ${row.file} in the settled table`,
+          target: row.file,
+          repair: "safe"
+        }));
       }
     }
   }
@@ -34599,12 +34695,22 @@ function lintIndexConsistency(model, scope, index2) {
     }
     return left.localeCompare(right);
   };
-  const expected = [
-    ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
-    ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup)
-  ];
-  const actual = rowFiles.map((entry) => entry.file);
-  if (actual.length > 1 && actual.some((file2, i) => file2 !== expected[i])) {
+  let misordered;
+  if (layout.generated) {
+    misordered = ["active", "settled"].some((tier) => {
+      const files = tierFiles[tier];
+      const expected = [...files].sort(compareGroup);
+      return files.length > 1 && files.some((file2, i) => file2 !== expected[i]);
+    });
+  } else {
+    const expected = [
+      ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
+      ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup)
+    ];
+    const actual = rowFiles.map((entry) => entry.file);
+    misordered = actual.length > 1 && actual.some((file2, i) => file2 !== expected[i]);
+  }
+  if (misordered) {
     findings.push(finding({
       ruleId: "index-ordering",
       category: "index",
@@ -35224,6 +35330,602 @@ async function auditAllDocuments(cwd, explicitDir, options2) {
   return merged;
 }
 
+// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
+var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_path8 = __toESM(require("node:path"));
+
+// src/skills/lib/markdown_sections.ts
+var SECTION_HEADING_ALIASES = {
+  // task-doc
+  "Work": ["\u4F5C\u696D"],
+  "Classification": ["\u5206\u985E"],
+  "Upstream Documents": ["\u4E0A\u6D41\u6587\u66F8"],
+  "Dependencies": ["\u4F9D\u5B58\u95A2\u4FC2"],
+  "Affected Files": ["\u5F71\u97FF\u30D5\u30A1\u30A4\u30EB"],
+  "Done When": ["\u5B8C\u4E86\u6761\u4EF6"],
+  "Verification": ["\u691C\u8A3C"],
+  // spec-doc
+  "What Should Be Built": ["\u4F55\u3092\u4F5C\u308B\u3079\u304D\u304B"],
+  "Why Now": ["\u306A\u305C\u4ECA\u5FC5\u8981\u304B"],
+  "Users and Value": ["\u5229\u7528\u8005\u3068\u4FA1\u5024"],
+  "Scope": ["\u7BC4\u56F2", "\u30B9\u30B3\u30FC\u30D7"],
+  "In Scope": ["\u7BC4\u56F2\u5185"],
+  "Out of Scope": ["\u7BC4\u56F2\u5916"],
+  "Requirements": ["\u8981\u4EF6"],
+  "Acceptance Criteria": ["\u53D7\u3051\u5165\u308C\u57FA\u6E96"],
+  "Sources and Relations": ["\u51FA\u5178\u3068 Relations", "\u51FA\u5178\u30FBRelations"],
+  // discovery-doc
+  "Exploration Goal": ["\u63A2\u7D22\u76EE\u7684"],
+  "Key Issues and Assumptions": ["\u8AD6\u70B9\u30FB\u524D\u63D0"],
+  "Alternatives and Comparison": ["\u4EE3\u66FF\u6848\u3068\u6BD4\u8F03"],
+  "Tentative Conclusions and Hypotheses": ["\u66AB\u5B9A\u7D50\u8AD6\u30FB\u4EEE\u8AAC"],
+  "Open Questions": ["\u672A\u89E3\u6C7A\u306E\u8AD6\u70B9", "\u672A\u89E3\u6C7A\u4E8B\u9805"],
+  "Promotion Candidates": ["\u6607\u83EF\u5148\u5019\u88DC"],
+  "Evidence": ["\u30A8\u30D3\u30C7\u30F3\u30B9"],
+  // idea-doc
+  "Summary": ["\u8981\u7D04"],
+  "Problem and Motivation": ["\u8AB2\u984C\u3068\u52D5\u6A5F"],
+  "Expected Value": ["\u60F3\u5B9A\u4FA1\u5024"],
+  "Next Action": ["\u6B21\u306E\u30A2\u30AF\u30B7\u30E7\u30F3"],
+  // plan-doc
+  "Goal": ["\u76EE\u7684"],
+  "File Map": ["\u30D5\u30A1\u30A4\u30EB\u8868"],
+  "Implementation Sequence": ["\u5B9F\u88C5\u9806\u5E8F"],
+  "Dependencies and Risks": ["\u4F9D\u5B58\u95A2\u4FC2\u3068\u30EA\u30B9\u30AF"],
+  "Task Breakdown": ["Task \u5206\u89E3"],
+  "Open Questions / Gaps": ["\u672A\u89E3\u6C7A\u4E8B\u9805 / gap"],
+  "Self-Review": ["\u81EA\u5DF1\u30EC\u30D3\u30E5\u30FC"],
+  "Implementation Handoff": ["\u5B9F\u88C5\u30CF\u30F3\u30C9\u30AA\u30D5"],
+  "Review Handoff": ["\u30EC\u30D3\u30E5\u30FC\u7528\u30CF\u30F3\u30C9\u30AA\u30D5"],
+  // adr-doc (MADR 4 templates)
+  "Context and Problem Statement": ["\u80CC\u666F\u3068\u554F\u984C"],
+  "Decision Drivers": ["\u6C7A\u5B9A\u30C9\u30E9\u30A4\u30D0\u30FC"],
+  "Considered Options": ["\u691C\u8A0E\u3057\u305F\u9078\u629E\u80A2"],
+  "Decision Outcome": ["\u6C7A\u5B9A\u5185\u5BB9"],
+  "Consequences": ["\u5F71\u97FF"],
+  "Confirmation": ["\u78BA\u8A8D\u65B9\u6CD5"],
+  "Implementation Plan": ["\u5B9F\u88C5\u8A08\u753B"],
+  "Pros and Cons of the Options": ["\u9078\u629E\u80A2\u306E\u5229\u70B9\u3068\u6B20\u70B9"],
+  "Option": ["\u9078\u629E\u80A2"],
+  "Option 1": ["\u9078\u629E\u80A2 1"],
+  "Option 2": ["\u9078\u629E\u80A2 2"],
+  "More Information": ["\u8FFD\u52A0\u60C5\u5831"],
+  // implementation-flow profile
+  "Available Skills": ["\u5229\u7528\u53EF\u80FD\u306A\u30B9\u30AD\u30EB"],
+  "Category Assignments": ["\u30AB\u30C6\u30B4\u30EA\u5272\u308A\u5F53\u3066"]
+};
+var FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
+var FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})\s*$/;
+function stripFencedBlocks(body) {
+  const kept = [];
+  let fenceChar = "";
+  let fenceLen = 0;
+  for (const line of body.split(/\r?\n/)) {
+    if (fenceChar === "") {
+      const open2 = FENCE_OPEN.exec(line);
+      if (open2) {
+        const run = open2[1];
+        const info = line.slice(line.indexOf(run) + run.length);
+        if (info.includes(run[0])) {
+          kept.push(line);
+          continue;
+        }
+        fenceChar = run[0];
+        fenceLen = run.length;
+        continue;
+      }
+      kept.push(line);
+      continue;
+    }
+    const close = FENCE_CLOSE.exec(line);
+    if (close && close[1][0] === fenceChar && close[1].length >= fenceLen) {
+      fenceChar = "";
+      fenceLen = 0;
+    }
+  }
+  return kept.join("\n");
+}
+function headingNames(canonicalHeading) {
+  return [canonicalHeading, ...SECTION_HEADING_ALIASES[canonicalHeading] ?? []];
+}
+function headingPattern(heading) {
+  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
+}
+function hasSection(body, canonicalHeading) {
+  const lines = stripFencedBlocks(body).split(/\r?\n/);
+  return headingNames(canonicalHeading).some((name) => {
+    const pattern = headingPattern(name);
+    return lines.some((line) => pattern.test(line.trimEnd()));
+  });
+}
+
+// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
+var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
+var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
+var implementationRecordSections = [
+  "Summary",
+  "Context",
+  "Implementation",
+  "Related Experiments",
+  "Validation",
+  "Risks",
+  "Follow-ups"
+];
+var changeEntrySchema2 = external_exports.object({
+  type: external_exports.string().min(1)
+}).passthrough();
+var changesSchema2 = external_exports.object(Object.fromEntries(
+  changeFields.map((field) => [field, external_exports.array(changeEntrySchema2).default([])])
+)).default({});
+var relationsSchema = external_exports.object({
+  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
+  changes: changesSchema2
+}).prefault({});
+var implementationRecordSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  type: external_exports.literal("impl"),
+  status: external_exports.enum(implStatuses),
+  title: external_exports.string().min(1),
+  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  owners: external_exports.array(external_exports.string()),
+  relations: relationsSchema,
+  metadata: external_exports.object({
+    experiments: external_exports.object({
+      adopted: external_exports.array(external_exports.string()).default([]),
+      rejected: external_exports.array(external_exports.string()).default([])
+    })
+  })
+}).passthrough();
+var experimentEventBaseSchema = external_exports.object({
+  schema: external_exports.string().min(1),
+  experiment: external_exports.string().min(1),
+  seq: external_exports.number().int().positive(),
+  type: external_exports.string().min(1),
+  ts: external_exports.string().min(1)
+}).passthrough();
+function posixRelative(from, to) {
+  return import_node_path8.default.relative(from, to).replace(/\\/g, "/");
+}
+function normalizeFilePath(input2) {
+  return input2.replace(/\\/g, "/");
+}
+function isExternalLink(value) {
+  return /^(https?:|mailto:)/i.test(value);
+}
+function defaultImplDir(kind) {
+  return kind === "ir" ? "docs/impl/ir" : "docs/impl/exp";
+}
+function implDir(cwd, kind, explicitDir) {
+  const resolved = explicitDir ? resolveContainedDir(cwd, explicitDir) : defaultImplDir(kind);
+  assertTypeScope(kind === "ir" ? "impl" : "exp", resolved);
+  return resolved;
+}
+function listFiles(dir, ext) {
+  if (!import_node_fs7.default.existsSync(dir)) return [];
+  return import_node_fs7.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs7.default.lstatSync(import_node_path8.default.join(dir, file2)).isSymbolicLink()).sort();
+}
+function normalizeExperimentPath(cwd, filePath) {
+  return normalizeFilePath(posixRelative(cwd, import_node_path8.default.resolve(filePath)));
+}
+var SETTLED_HEADING2 = `## Settled ${GENERATED_SETTLED_MARKER}`;
+var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
+var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
+function splitRowCells(line) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|")) return null;
+  if (!trimmed.endsWith("|") || trimmed.endsWith("\\|")) return null;
+  const body = trimmed.slice(1, -1);
+  const cells = [];
+  let current = "";
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i];
+    if (ch === "\\" && i + 1 < body.length) {
+      current += ch + body[i + 1];
+      i += 1;
+      continue;
+    }
+    if (ch === "|") {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  cells.push(current.trim());
+  return cells;
+}
+function extractRowFile(cell) {
+  const match = /^\[(.*)\]\((.*)\)$/.exec(cell.trim());
+  if (!match) return { code: "bad-row" };
+  const target = match[2].trim();
+  if (target.startsWith("./")) {
+    const file2 = target.slice(2);
+    if (file2 !== "" && file2 !== "." && file2 !== ".." && !/[/\\:]/.test(file2)) return { file: file2 };
+    return { code: "escaping-row" };
+  }
+  if (/^\.{1,2}\//.test(target) || target.startsWith("/") || /^[a-zA-Z]:/.test(target)) {
+    return { code: "escaping-row" };
+  }
+  return { code: "bad-row" };
+}
+function parseImplIndexRows(content3, kind) {
+  const fail = (reason, code) => ({ ok: false, reason, code });
+  const lines = content3.split("\n");
+  const markerLines = lines.filter((line) => line.includes(GENERATED_INDEX_MARKER));
+  if (markerLines.length === 0) {
+    return fail("hand-curated or ambiguous index: missing generated-index marker", "missing-marker");
+  }
+  if (markerLines.length > 1) {
+    return fail("ambiguous index: multiple generated-index markers", "ambiguous-marker");
+  }
+  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
+  const expectedCells = kind === "ir" ? 4 : 1;
+  const fileCellIndex = kind === "ir" ? 3 : 0;
+  const headerLine = kind === "ir" ? IR_HEADER_LINE : EXP_HEADER_LINE;
+  const separatorLine = kind === "ir" ? IR_SEPARATOR_LINE : EXP_SEPARATOR_LINE;
+  let cursor = markerIndex + 1;
+  const skipBlank = () => {
+    while (cursor < lines.length && lines[cursor].trim() === "") cursor += 1;
+  };
+  const parseRow = (line, tier) => {
+    const cells = splitRowCells(line);
+    if (!cells || cells.length !== expectedCells) {
+      return { error: `unparseable ${tier} index row: ${line.trim()}`, code: "bad-row" };
+    }
+    const fileCell = extractRowFile(cells[fileCellIndex]);
+    if ("code" in fileCell) {
+      return { error: `unparseable ${tier} index row: ${line.trim()}`, code: fileCell.code };
+    }
+    return { file: fileCell.file, cells, tier };
+  };
+  const parseTable = (tier) => {
+    if (cursor + 1 >= lines.length || lines[cursor].trim() !== headerLine || lines[cursor + 1].trim() !== separatorLine) {
+      return { error: `malformed ${tier} index table header`, code: "bad-table-header" };
+    }
+    cursor += 2;
+    const rows2 = [];
+    while (cursor < lines.length && lines[cursor].trim().startsWith("|")) {
+      const row = parseRow(lines[cursor], tier);
+      if ("error" in row) return row;
+      rows2.push(row);
+      cursor += 1;
+    }
+    return { rows: rows2 };
+  };
+  skipBlank();
+  if (cursor >= lines.length || !lines[cursor].trim().startsWith("Directory:")) {
+    return fail("missing Directory line after the generated-index marker", "missing-directory");
+  }
+  cursor += 1;
+  skipBlank();
+  const active = parseTable("active");
+  if ("error" in active) return fail(active.error, active.code);
+  skipBlank();
+  const rows = [...active.rows];
+  if (cursor < lines.length && lines[cursor].trim() === SETTLED_HEADING2) {
+    cursor += 1;
+    skipBlank();
+    const settled = parseTable("settled");
+    if ("error" in settled) return fail(settled.error, settled.code);
+    rows.push(...settled.rows);
+    skipBlank();
+  }
+  for (; cursor < lines.length; cursor += 1) {
+    const trimmed = lines[cursor].trim();
+    if (trimmed.includes(GENERATED_SETTLED_MARKER)) {
+      return fail("settled-index marker outside the managed index region", "stray-settled-marker");
+    }
+    if (trimmed.startsWith("|")) {
+      return fail("table row outside the managed index region", "stray-table-row");
+    }
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const row of rows) {
+    if (seen.has(row.file)) return fail(`duplicate index row for ${row.file}`, "duplicate-row");
+    seen.add(row.file);
+  }
+  return { ok: true, rows };
+}
+function implIndexEntries(dirAbs, relativeDir, files) {
+  return files.flatMap((file2) => {
+    const parsed = parseDoc(import_node_fs7.default.readFileSync(import_node_path8.default.join(dirAbs, file2), "utf8"));
+    if (parsed.error) return [];
+    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
+    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path8.default.basename(file2, ".md");
+    const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
+    const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
+    return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
+  });
+}
+function expectedIndexRows(kind, dirAbs, relativeDir, files) {
+  const expected = /* @__PURE__ */ new Map();
+  if (kind === "exp") {
+    for (const file2 of files) {
+      expected.set(file2, { cells: [`[${indexCell(file2)}](./${indexCell(file2)})`], tier: "active" });
+    }
+    return expected;
+  }
+  for (const entry of implIndexEntries(dirAbs, relativeDir, files)) {
+    expected.set(entry.file, {
+      cells: [
+        indexCell(entry.id || "\u2014"),
+        indexCell(entry.title),
+        indexCell(entry.status || "\u2014"),
+        `[${indexCell(entry.file)}](./${indexCell(entry.file)})`
+      ],
+      tier: isSettledStatus(entry.type ?? "impl", entry.status) ? "settled" : "active"
+    });
+  }
+  return expected;
+}
+function expectedIndexSequence(kind, expected) {
+  if (kind === "exp") return [...expected.keys()];
+  const tierFiles = (tier) => [...expected.entries()].filter(([, want]) => want.tier === tier).map(([file2]) => file2).sort((left, right) => left.localeCompare(right));
+  return [...tierFiles("active"), ...tierFiles("settled")];
+}
+function cellsEqual(left, right) {
+  return left.length === right.length && left.every((cell, index2) => cell === right[index2]);
+}
+function sameStringSequence(left, right) {
+  return left.length === right.length && left.every((value, index2) => value === right[index2]);
+}
+function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
+  const indexPath = import_node_path8.default.join(dirAbs, "README.md");
+  let stats = null;
+  try {
+    stats = import_node_fs7.default.lstatSync(indexPath);
+  } catch {
+    stats = null;
+  }
+  if (!stats) return;
+  const push2 = (code, message, severity) => {
+    findings.push({ code, file: "README.md", message: `${relativeDir}/README.md ${message}`, severity });
+  };
+  if (!stats.isFile()) {
+    push2("index-not-managed", "is a symbolic link or not a regular file", "warning");
+    return;
+  }
+  const content3 = import_node_fs7.default.readFileSync(indexPath, "utf8");
+  const parsed = parseImplIndexRows(content3, kind);
+  if (!parsed.ok) {
+    const code = parsed.code === "missing-marker" || parsed.code === "ambiguous-marker" ? "index-not-managed" : parsed.code === "duplicate-row" ? "index-duplicate-entry" : parsed.code === "escaping-row" ? "index-escapes-root" : "index-unparseable";
+    const severity = code === "index-escapes-root" || code === "index-unparseable" ? "error" : "warning";
+    push2(code, `is not a manageable generated index: ${parsed.reason}`, severity);
+    return;
+  }
+  const expected = expectedIndexRows(kind, dirAbs, relativeDir, files);
+  const rowsByFile = new Map(parsed.rows.map((row) => [row.file, row]));
+  for (const [file2, want] of expected) {
+    const row = rowsByFile.get(file2);
+    if (!row) {
+      push2("index-missing-entry", `has no row for ${file2}`, "warning");
+      continue;
+    }
+    if (!cellsEqual(row.cells, want.cells)) {
+      push2("index-metadata-mismatch", `row for ${file2} does not match the document front matter`, "warning");
+    }
+    if (row.tier !== want.tier) {
+      push2("index-tier-mismatch", `row for ${file2} sits in the ${row.tier} tier but the document expects ${want.tier}`, "warning");
+    }
+  }
+  for (const row of parsed.rows) {
+    if (!expected.has(row.file)) {
+      push2("index-stale-entry", `row links ${row.file}, which is not an indexable document in this directory`, "warning");
+    }
+  }
+  const currentSequence = parsed.rows.filter((row) => expected.has(row.file)).map((row) => row.file);
+  if (!sameStringSequence(currentSequence, expectedIndexSequence(kind, expected))) {
+    push2("index-ordering", "row order differs from the deterministic index order", "info");
+  }
+}
+function resolvesLocalTarget(cwd, fromFile, target) {
+  const candidates = [
+    import_node_path8.default.resolve(cwd, target),
+    import_node_path8.default.resolve(import_node_path8.default.dirname(fromFile), target)
+  ];
+  return candidates.some((candidate) => import_node_fs7.default.existsSync(candidate));
+}
+function relationLinks(relations) {
+  return relationFields.flatMap((field) => {
+    const targets = relations[field];
+    return Array.isArray(targets) ? targets.map((target) => ({ field, target: String(target) })) : [];
+  });
+}
+function auditImplementationRecords(cwd, relativeDir) {
+  const dir = import_node_path8.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".md");
+  const findings = [];
+  for (const file2 of files) {
+    const fullPath = import_node_path8.default.join(dir, file2);
+    const content3 = import_node_fs7.default.readFileSync(fullPath, "utf8");
+    const parsed = parseDoc(content3);
+    if (parsed.error) {
+      findings.push({
+        code: "unparseable-front-matter",
+        file: file2,
+        message: `Front matter is not valid YAML: ${parsed.error}`,
+        severity: "error"
+      });
+      continue;
+    }
+    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) continue;
+    const schemaResult = implementationRecordSchema.safeParse(parsed.data);
+    if (!schemaResult.success) {
+      for (const issue2 of schemaResult.error.issues) {
+        findings.push({
+          code: "invalid-front-matter",
+          file: file2,
+          message: `Invalid front matter ${issue2.path.join(".") || "$"}: ${issue2.message}`,
+          severity: "error"
+        });
+      }
+      continue;
+    }
+    const data = schemaResult.data;
+    for (const relation of relationLinks(data.relations)) {
+      if (isExternalLink(relation.target)) continue;
+      if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
+        findings.push({
+          code: "broken-relation-link",
+          file: file2,
+          message: `Relation ${relation.field} points to missing target: ${relation.target}`,
+          severity: "warning"
+        });
+      }
+    }
+    for (const experimentPath of [...data.metadata.experiments.adopted, ...data.metadata.experiments.rejected]) {
+      if (!resolvesLocalTarget(cwd, fullPath, experimentPath)) {
+        findings.push({
+          code: "missing-experiment-link",
+          file: file2,
+          message: `Experiment reference points to missing target: ${experimentPath}`,
+          severity: "warning"
+        });
+      }
+    }
+    for (const section of implementationRecordSections) {
+      if (!hasSection(parsed.body, section)) {
+        findings.push({
+          code: "missing-section",
+          file: file2,
+          message: `Missing required section: ${section}`,
+          severity: "error"
+        });
+      }
+    }
+  }
+  const indexPath = import_node_path8.default.join(dir, "README.md");
+  let indexStats = null;
+  try {
+    indexStats = import_node_fs7.default.lstatSync(indexPath);
+  } catch {
+    indexStats = null;
+  }
+  if (!indexStats) {
+    findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+  } else {
+    auditManagedIndex("ir", dir, relativeDir, files, findings);
+  }
+  return { directory: relativeDir, files: files.length, findings };
+}
+function auditExperimentLogs(cwd, relativeDir) {
+  const dir = import_node_path8.default.join(cwd, relativeDir);
+  const files = listFiles(dir, ".jsonl");
+  const findings = [];
+  for (const file2 of files) {
+    const fullPath = import_node_path8.default.join(dir, file2);
+    const content3 = import_node_fs7.default.readFileSync(fullPath, "utf8");
+    const lines = content3.split(/\r?\n/).filter((line) => line.trim());
+    let previousSeq = 0;
+    const seen = /* @__PURE__ */ new Set();
+    for (let index2 = 0; index2 < lines.length; index2 += 1) {
+      const line = lines[index2];
+      let parsed;
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        findings.push({
+          code: "invalid-json",
+          file: file2,
+          line: index2 + 1,
+          message: "Line is not valid JSON",
+          severity: "error"
+        });
+        continue;
+      }
+      const baseResult = experimentEventBaseSchema.safeParse(parsed);
+      if (!baseResult.success) {
+        findings.push({
+          code: "invalid-event-shape",
+          file: file2,
+          line: index2 + 1,
+          message: `Invalid event shape: ${baseResult.error.issues.map((issue2) => issue2.message).join(", ")}`,
+          severity: "error"
+        });
+        continue;
+      }
+      if (parsed.schema !== "experiment_event.v1") {
+        findings.push({
+          code: "invalid-event-schema",
+          file: file2,
+          line: index2 + 1,
+          message: `Unexpected schema: ${String(parsed.schema)}`,
+          severity: "error"
+        });
+      }
+      if (!experimentEventTypes.includes(parsed.type)) {
+        findings.push({
+          code: "invalid-event-type",
+          file: file2,
+          line: index2 + 1,
+          message: `Invalid event type: ${String(parsed.type)}`,
+          severity: "error"
+        });
+      }
+      const expectedPath = normalizeExperimentPath(cwd, fullPath);
+      if (parsed.experiment !== expectedPath) {
+        findings.push({
+          code: "experiment-path-mismatch",
+          file: file2,
+          line: index2 + 1,
+          message: `Experiment path mismatch: expected ${expectedPath}`,
+          severity: "error"
+        });
+      }
+      const seq = parsed.seq;
+      if (seen.has(seq) || seq <= previousSeq) {
+        findings.push({
+          code: "non-monotonic-seq",
+          file: file2,
+          line: index2 + 1,
+          message: `Sequence must be unique and strictly increasing: ${seq}`,
+          severity: "error"
+        });
+      }
+      seen.add(seq);
+      previousSeq = seq;
+    }
+  }
+  const indexPath = import_node_path8.default.join(dir, "README.md");
+  let indexStats = null;
+  try {
+    indexStats = import_node_fs7.default.lstatSync(indexPath);
+  } catch {
+    indexStats = null;
+  }
+  if (!indexStats) {
+    findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
+  } else {
+    auditManagedIndex("exp", dir, relativeDir, files, findings);
+  }
+  return { directory: relativeDir, files: files.length, findings };
+}
+
+// src/skills/doc-status/scripts/lib/owner_audits.ts
+var OWNER_AUDITS = [
+  { name: "impl-record", run: (cwd) => auditImplementationRecords(cwd, implDir(cwd, "ir")) },
+  { name: "experiment-log", run: (cwd) => auditExperimentLogs(cwd, implDir(cwd, "exp")) }
+];
+function collectOwnerAudits(cwd) {
+  return OWNER_AUDITS.map(({ name, run }) => {
+    const report = run(cwd);
+    return {
+      name,
+      directory: report.directory,
+      files: report.files,
+      findings: report.findings.map((finding2) => ({
+        severity: finding2.severity,
+        file: finding2.file ? `${report.directory}/${finding2.file}` : report.directory,
+        line: finding2.line,
+        code: finding2.code,
+        message: finding2.message,
+        blocking: finding2.severity === "error"
+      }))
+    };
+  });
+}
+
 // src/skills/doc-status/scripts/audit_docs.ts
 function parseArgs(argv) {
   const args = { cwd: process.cwd(), json: false };
@@ -35239,6 +35941,7 @@ function parseArgs(argv) {
       }
       args.profile = value;
     } else if (arg === "--json") args.json = true;
+    else if (arg === "--owners") args.owners = true;
     else if (arg === "--external-links") args.externalLinks = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
@@ -35246,7 +35949,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all [--dir <path>] [--json] [--external-links] [--profile artifact|materialized]";
+  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all [--dir <path>] [--json] [--external-links] [--profile artifact|materialized] [--owners]\n  --owners requires --type all and cannot be combined with --dir";
 }
 async function auditAll(cwd, explicitDir, options2) {
   return auditAllDocuments(cwd, explicitDir, options2);
@@ -35259,9 +35962,12 @@ async function main() {
       return;
     }
     if (!args.type) throw new Error("Missing required --type");
-    const cwd = import_node_path8.default.resolve(args.cwd);
+    if (args.owners && args.type !== "all") throw new Error("--owners requires --type all");
+    if (args.owners && args.dir) throw new Error("--owners cannot be combined with --dir");
+    const cwd = import_node_path9.default.resolve(args.cwd);
     const options2 = { externalLinks: Boolean(args.externalLinks), profile: args.profile };
     const report = args.type === "all" ? await auditAll(cwd, args.dir, options2) : await auditDocuments(cwd, args.type, args.dir, options2);
+    if (args.owners) report.ownerAudits = collectOwnerAudits(cwd);
     if (args.json) {
       console.log(JSON.stringify(report, null, 2));
       return;
@@ -35271,11 +35977,17 @@ async function main() {
     console.log(`Files: ${report.files}`);
     if (report.findings.length === 0) {
       console.log("No findings.");
-      return;
+    } else {
+      for (const finding2 of report.findings) {
+        const location = finding2.file ? report.directory === "." ? finding2.file : `${report.directory}/${finding2.file}` : report.directory;
+        console.log(`[${finding2.severity}] ${location}: ${finding2.message}`);
+      }
     }
-    for (const finding2 of report.findings) {
-      const location = finding2.file ? report.directory === "." ? finding2.file : `${report.directory}/${finding2.file}` : report.directory;
-      console.log(`[${finding2.severity}] ${location}: ${finding2.message}`);
+    for (const owner of report.ownerAudits ?? []) {
+      console.log(`owner audit ${owner.name}: ${owner.directory} (${owner.files} files)`);
+      for (const finding2 of owner.findings) {
+        console.log(`[${finding2.severity}] ${finding2.file}: ${finding2.message}`);
+      }
     }
   } catch (error62) {
     console.error(error62 instanceof Error ? error62.message : String(error62));

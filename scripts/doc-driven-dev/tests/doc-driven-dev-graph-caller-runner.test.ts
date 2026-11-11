@@ -179,6 +179,11 @@ function happyRepo(): string {
     fs.mkdirSync(path.join(dir, directory), { recursive: true });
     fs.writeFileSync(path.join(dir, directory, "README.md"), `# ${directory}\n`, "utf8");
   }
+  // The experiment-log audit's canonical input anchor is the managed exp
+  // index; it needs a front-matter id to resolve as a CanonicalReference.
+  writeArtifact(dir, "docs/impl/exp/README.md", {
+    id: "EXP-INDEX", title: "Experiment Logs",
+  }, "# Experiment Logs\n");
   writeArtifact(dir, "docs/specs/0001-graph.md", {
     id: "SPEC-0001", type: "spec", status: "approved", title: "Graph",
   }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
@@ -230,6 +235,7 @@ function testResolveInputs(route: GraphRoute, effect: CallerEffect): string[] {
       case "task": return taskGraphPaths(route);
       case "test-spec": return ["docs/test-specs/0001-graph.md"];
       case "impl-record": return ["docs/impl/ir/0001-task.md"];
+      case "experiment-log": return ["docs/impl/exp/README.md"];
       case "all": return canonicalDocumentPaths;
     }
   }
@@ -315,6 +321,10 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
      "task-graph-to-implementation", "implementation-to-followup-triage",
      "followup-triage-terminal", "exit-audit-to-complete", "terminal"],
   );
+  // exit-audit declares audits [all, impl-record, experiment-log]; the route
+  // exposes requiredAudits in the router's stable sorted projection.
+  const exitAuditRoute = result.routes.find((route) => route.next === "exit-audit");
+  assert.deepEqual(exitAuditRoute?.requiredAudits, ["all", "experiment-log", "impl-record"]);
   const events = readTraceFile(trace).filter((event) => event.runId === "e2e-happy");
   assert.deepEqual(events.map((event) => event.seq), events.map((_, i) => i + 1)); // contiguous per-runId seq
   assert.equal(events.filter((e) => e.kind === "effect-dispatched").length,

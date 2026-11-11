@@ -76,18 +76,33 @@ type のライフサイクル状態と relation の健全性を確認するた�
    `--profile`（lint, audit, health）。finding は決定的順序で
    出力され、exit status は呼び出し自体が不正な場合のみ `0` 以外になる。
 
+   `audit_docs.js --type all` が監査するのは shared suite のみ ——
+   `idea`、`brainstorm`、`discovery`、`spec`、`plan`、`task`、`design`、
+   `adr`、`test-spec` です。impl-doc の所有 directory（`docs/impl/ir`、
+   `docs/impl/exp`）は `--type` scope に含まれません。その整合性は
+   `audit_impl_record.js` と `audit_experiment_log.js` が所有します。
+   `audit_docs.js --type all --owners` は package-wide audit です:
+   shared report に `impl-record` と `experiment-log` の `ownerAudits`
+   entry を追加します。`--owners` は `--type all` を必須とし、`--dir`
+   とは併用できません。owner audit は `--profile` に関係なく常に
+   full check を実行します。
+
    `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
    文書型（`spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `idea`,
    `brainstorm`, `discovery`）は `audit_docs.js --type <name> --profile artifact`、
    `all` は全 canonical 文書型に加えて、root-level の unmanaged Markdown と
    配布 `.apm` skill 文書への legacy-reference sweep も対象とする
    `audit_docs.js --type all --profile artifact`、
-   `impl-record` は `impl-doc/scripts/audit_impl_record.js` です（profile flag
-   は不要 —— index の観測は non-blocking warning のみ）。
+   `impl-record` は `impl-doc/scripts/audit_impl_record.js`、`experiment-log` は
+   `impl-doc/scripts/audit_experiment_log.js` です（profile flag は不要 ——
+   index の観測は non-blocking warning のみ）。
    Graph から dispatch される audit は `artifact` profile で実行されるため、
    missing または stale な index が graph execution を gate することは
    ありません。直接の厳密チェックでは `--profile` を省略して default の
-   `materialized` coverage を維持できます。
+   `materialized` coverage を維持できます。`exit-audit` node は named audit
+   `all`、`impl-record`、`experiment-log` を実行します。`all` は
+   `--profile artifact` を維持するため、index の状態に graph execution を
+   gate させることなく owner の finding を可視化できます。
 
 4. `relations.source` は外部出典として扱う。
    HTTP、HTTPS、mail link は許可し、存在しないローカルファイルとして
@@ -151,11 +166,16 @@ profile と、実行・スキップされたチェック群を報告する。対
 - `broken-link`, `missing-image-link`, `broken-anchor`, `link-escapes-root`,
   `link-case-mismatch` — ローカル Markdown link と anchor の整合性。
 - `index-stale-entry`, `index-duplicate-entry`, `index-metadata-mismatch`,
-  `index-ordering`, `index-unparseable`, `index-escapes-root` — 索引テーブルの
-  整合性。materialized profile のみ。管理索引は status-aware ——
-  in-flight の行が先、その下に `## Settled` 層が続く。`index-ordering` は
-  その順序違反の行を、`index-metadata-mismatch` は front matter と
-  不一致になった status セルを指摘する。
+  `index-ordering`, `index-tier-mismatch`, `index-unparseable`,
+  `index-escapes-root` — 索引テーブルの整合性。materialized profile のみ。
+  管理索引は status-aware —— in-flight の行が先、その下に `## Settled`
+  層が続く。`index-ordering` は deterministic ordering 違反の行を、
+  `index-metadata-mismatch` は front matter と不一致になった status
+  セルを指摘する。`index-tier-mismatch` は誤った層にある管理索引の行 ——
+  active テーブルに残った settled 文書、または `## Settled` 下の
+  in-flight 文書 —— を指摘する `materialized` profile の warning で、
+  索引を手編集するのではなく、所有する materialization path
+  （索引の再生成）で修復します。
 - `orphan-index` — 索引未掲載の文書。materialized profile のみ。
 - `orphan-navigation`, `orphan-relation` — canonical Markdown link の
   どれからも到達不能、または意味 relation を持たない文書。両 profile;
@@ -185,7 +205,8 @@ relation target はまず一意な artifact ID で解決し、次にリポジト
 - `scripts/list_docs.js`: 種別とステータスで文書メタデータを一覧します。
 - `scripts/audit_docs.js`: フロントマター、ステータス、relation、link、
   索引、orphan を検証します。`--external-links` で opt-in の外部リンク
-  確認を有効化します。
+  確認を有効化し、`--owners` は `--type all` を package-wide audit に
+  拡張します。
 
 ## Graph Effect Outcome
 
