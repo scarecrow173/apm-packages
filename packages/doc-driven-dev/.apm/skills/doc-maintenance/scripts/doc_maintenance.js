@@ -33164,34 +33164,7 @@ function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
   return existing.length === 0 ? defaultDir : existing[0];
 }
 
-// src/skills/lib/doc_suite_utils.ts
-var relationFields = [
-  "source",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "supersedes",
-  "superseded-by",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by"
-];
-var changeFields = [
-  "added",
-  "modified",
-  "deleted",
-  "renamed",
-  "moved",
-  "generated"
-];
+// src/skills/lib/doc_types.ts
 var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
 var configs = {
   idea: {
@@ -33267,6 +33240,179 @@ var configs = {
     type: "adr"
   }
 };
+function configFor(type) {
+  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
+  return configs[type];
+}
+
+// src/skills/lib/doc_ownership.ts
+var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
+var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
+var ADR_MUTATORS = ["update_index", "relate_adr"];
+var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
+var SHARED_CREATORS = {
+  idea: "new_idea",
+  discovery: "new_discovery",
+  spec: "new_spec",
+  plan: "new_plan",
+  task: "new_task",
+  design: "new_design",
+  adr: "new_adr",
+  "test-spec": "new_test_spec"
+};
+function buildContracts() {
+  const rows = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const adr = type === "adr";
+    for (const dir of config2.dirs) {
+      const normalized = normalizeDir(dir);
+      let row = rows.get(normalized);
+      if (!row) {
+        row = {
+          canonical: false,
+          owner: adr ? "adr-doc" : "doc-suite",
+          residents: [],
+          mutators: /* @__PURE__ */ new Set(),
+          auditors: /* @__PURE__ */ new Set()
+        };
+        rows.set(normalized, row);
+      }
+      row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
+      if (!row.residents.includes(type)) row.residents.push(type);
+      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      if (adr) {
+        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
+        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
+      }
+    }
+  }
+  const shared = [...rows.entries()].map(([dir, row]) => ({
+    dir,
+    canonical: row.canonical,
+    owner: row.owner,
+    residentTypes: row.residents,
+    indexFormat: "shared-4col",
+    mutators: [...row.mutators].sort(),
+    auditors: [...row.auditors].sort()
+  }));
+  const implRows = [
+    {
+      dir: "docs/impl",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: [],
+      indexFormat: "none",
+      mutators: [],
+      auditors: []
+    },
+    {
+      dir: "docs/impl/ir",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["impl"],
+      indexFormat: "impl-4col",
+      mutators: ["new_impl_record", "migrate_ids"],
+      auditors: ["audit_impl_record"]
+    },
+    {
+      dir: "docs/impl/exp",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["exp"],
+      indexFormat: "exp-1col",
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids"],
+      auditors: ["audit_experiment_log"]
+    }
+  ];
+  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
+}
+var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
+function ownershipForDir(directory) {
+  const normalized = normalizeDir(directory);
+  let best = null;
+  for (const contract of DIRECTORY_CONTRACTS) {
+    if (normalized === contract.dir || normalized.startsWith(`${contract.dir}/`)) {
+      if (!best || contract.dir.length > best.dir.length) best = contract;
+    }
+  }
+  return best;
+}
+function describeOwnership(directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership) return `custom directory "${normalized}" (no declared owner)`;
+  const residents = ownership.residentTypes.length > 0 ? ownership.residentTypes.join(", ") : "none";
+  return `"${ownership.dir}" (owned by ${ownership.owner}; resident types: ${residents})`;
+}
+function checkTypeScope(type, directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership || ownership.residentTypes.includes(type)) {
+    return { ok: true, directory: normalized, ownership, reason: null };
+  }
+  return {
+    ok: false,
+    directory: normalized,
+    ownership,
+    reason: `Scope mismatch: type "${type}" is not resident in ${describeOwnership(normalized)}`
+  };
+}
+function assertTypeScope(type, directory) {
+  const check2 = checkTypeScope(type, directory);
+  if (!check2.ok) throw new Error(check2.reason ?? "Scope mismatch");
+}
+function sharedTypesResidentIn(directory) {
+  const ownership = ownershipForDir(directory);
+  if (!ownership) return [...docTypes];
+  return ownership.residentTypes.filter((type) => docTypes.includes(type));
+}
+function scopeTypesForQuery(directory, requestedType) {
+  if (requestedType && requestedType !== "all") {
+    configFor(requestedType);
+    if (directory !== null && !sharedTypesResidentIn(directory).includes(requestedType)) {
+      throw new Error(`Scope mismatch: type "${requestedType}" is not resident in ${describeOwnership(directory)}`);
+    }
+    return [requestedType];
+  }
+  if (directory === null) return [...docTypes];
+  const residents = sharedTypesResidentIn(directory);
+  if (residents.length === 0) {
+    throw new Error(`Scope mismatch: no shared-suite document types are resident in ${describeOwnership(directory)}`);
+  }
+  return residents;
+}
+
+// src/skills/lib/doc_suite_utils.ts
+var relationFields = [
+  "source",
+  "implements",
+  "implemented-by",
+  "depends-on",
+  "blocks",
+  "supersedes",
+  "superseded-by",
+  "related",
+  "refines",
+  "refined-by",
+  "derives-from",
+  "derived-by",
+  "verifies",
+  "verified-by",
+  "references",
+  "defers",
+  "deferred-by"
+];
+var changeFields = [
+  "added",
+  "modified",
+  "deleted",
+  "renamed",
+  "moved",
+  "generated"
+];
 var scaffoldIndexMeta = {
   "docs/ideas": { title: "IDEA Documents", type: "idea" },
   "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
@@ -33368,15 +33514,13 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
-function configFor(type) {
-  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
-  return configs[type];
-}
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
-  return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
+  const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
+  assertTypeScope(type, resolved);
+  return resolved;
 }
 function docFiles(dir) {
   return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
@@ -35082,26 +35226,21 @@ function lintScope(model, type, directory) {
 }
 
 // src/skills/lib/doc_report.ts
-function docDir2(cwd, type, explicitDir) {
-  const config2 = configFor(type);
-  return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
-}
 function scanRoots(relativeDirs) {
   return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
 }
-function resolveTypes(type) {
-  if (!type || type === "all") return [...docTypes];
-  configFor(type);
-  return [type];
+function resolveQueryScope(cwd, query) {
+  const explicitDir = query.dir ? resolveContainedDir(cwd, query.dir) : null;
+  return { types: scopeTypesForQuery(explicitDir, query.type), explicitDir };
 }
 async function collectFindings(cwd, query) {
-  const types = resolveTypes(query.type);
-  const relativeDirs = types.map((type) => docDir2(cwd, type, query.dir));
+  const { types, explicitDir } = resolveQueryScope(cwd, query);
+  const relativeDirs = types.map((type) => explicitDir ?? docDir(cwd, type));
   const model = await scanRepository({ cwd, roots: scanRoots(relativeDirs) });
   const findings = [];
   let documents = 0;
   for (const type of types) {
-    const directory = docDir2(cwd, type, query.dir);
+    const directory = explicitDir ?? docDir(cwd, type);
     const scope = scopeFor(model, type, directory);
     documents += scope.documents.length;
     findings.push(...lintScope(model, type, directory));
@@ -35156,7 +35295,7 @@ async function planMaintenance(cwd, query, options2) {
     skipped.push(entry);
   };
   for (const type of collected.types) {
-    const directory = docDir2(resolvedCwd, type, query.dir);
+    const directory = docDir(resolvedCwd, type, query.dir);
     directories.push(directory);
     const scopeFindings = lintScope(collected.model, type, directory);
     for (const finding2 of scopeFindings) {
@@ -35373,8 +35512,9 @@ async function runApply(args, cwd) {
   console.log(`validation: ${report.findingsBefore} finding(s) before, ${report.findingsAfter} after rescan`);
 }
 async function main() {
+  let args = { cwd: process.cwd(), json: false };
   try {
-    const args = parseArgs(process.argv.slice(2));
+    args = parseArgs(process.argv.slice(2));
     if (args.help || !args.command) {
       console.log(usage());
       if (!args.help && !args.command) process.exitCode = 1;
@@ -35385,8 +35525,13 @@ async function main() {
     if (args.command === "plan") await runPlan(args, cwd);
     else await runApply(args, cwd);
   } catch (error62) {
-    console.error(error62 instanceof Error ? error62.message : String(error62));
-    console.error(usage());
+    const message = error62 instanceof Error ? error62.message : String(error62);
+    if (args.json) {
+      console.log(JSON.stringify({ command: args.command ?? null, error: message }));
+    } else {
+      console.error(message);
+      console.error(usage());
+    }
     process.exitCode = 1;
   }
 }
