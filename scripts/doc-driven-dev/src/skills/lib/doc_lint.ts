@@ -11,6 +11,33 @@ import { configFor, docTypes, frontMatterSchema, isForeignDocType } from "./doc_
 import { isIndexFileName, isInsideRealpath, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
+// Audit profiles
+// ---------------------------------------------------------------------------
+
+// `artifact` audits the canonical document graph only — front matter,
+// relations, links, provenance, traceability, required canonical files, and
+// canonical-graph orphans. `materialized` (the default, Issue #195) adds the
+// managed-index checks on top: index presence, membership, consistency, and
+// index-membership orphans.
+type AuditProfile = "artifact" | "materialized";
+
+// RuleIds evaluated only under the materialized profile. The tag lives next
+// to the rules it classifies; finding categories are not a faithful boundary
+// (`orphan-index` is category "orphan", `missing-overview` is "structure").
+const MATERIALIZED_RULE_IDS: ReadonlySet<string> = new Set([
+  "missing-index",
+  "index-missing-entry",
+  "index-missing-overview",
+  "index-unparseable",
+  "index-escapes-root",
+  "index-stale-entry",
+  "index-duplicate-entry",
+  "index-metadata-mismatch",
+  "index-ordering",
+  "orphan-index",
+]);
+
+// ---------------------------------------------------------------------------
 // Scope
 // ---------------------------------------------------------------------------
 
@@ -387,11 +414,13 @@ function lintRequiredRelations(model: DocumentRepository, document: RepositoryDo
   return findings;
 }
 
-function lintDirectory(model: DocumentRepository, scope: LintScope): Finding[] {
+function lintDirectory(model: DocumentRepository, scope: LintScope, profile: AuditProfile): Finding[] {
   const findings: Finding[] = [];
   const contract = contractForType(scope.type);
   const dir = scope.directory;
 
+  // Required canonical files (e.g. the design overview.md) are part of the
+  // artifact contract itself — they run under both profiles.
   for (const requiredFile of contract?.requiredDirectoryFiles ?? []) {
     const requiredPath = `${dir}/${requiredFile}`;
     if (!model.files.some((file) => file.path === requiredPath)) {
@@ -406,6 +435,10 @@ function lintDirectory(model: DocumentRepository, scope: LintScope): Finding[] {
       }));
     }
   }
+
+  // Everything below evaluates the managed index — a materialized view of the
+  // canonical graph, not part of the artifact contract (Issue #195).
+  if (profile === "artifact") return findings;
 
   const indexCandidates = model.files.filter((file) =>
     normalizeDir(path.posix.dirname(file.path)) === dir
@@ -561,7 +594,12 @@ function prefixOf(token: string): string {
 // Entry point
 // ---------------------------------------------------------------------------
 
-function lintScope(model: DocumentRepository, type: string, directory: string): Finding[] {
+function lintScope(
+  model: DocumentRepository,
+  type: string,
+  directory: string,
+  profile: AuditProfile = "materialized",
+): Finding[] {
   const scope = scopeFor(model, type, directory);
   const findings: Finding[] = [];
   for (const document of scope.documents) {
@@ -578,13 +616,13 @@ function lintScope(model: DocumentRepository, type: string, directory: string): 
   }
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
-  findings.push(...lintDirectory(model, scope));
-  findings.push(...lintStructure(model, scope));
+  findings.push(...lintDirectory(model, scope, profile));
+  findings.push(...lintStructure(model, scope, profile));
   findings.push(...lintProvenance(model, scope));
   findings.push(...lintTraceability(model, scope));
   findings.push(...lintStaleUpstreams(model, scope));
   return sortFindings(findings);
 }
 
-export { lintLegacyIdReferences, lintScope, scopeFor };
-export type { LintScope };
+export { lintLegacyIdReferences, lintScope, MATERIALIZED_RULE_IDS, scopeFor };
+export type { AuditProfile, LintScope };

@@ -34588,9 +34588,11 @@ async function lintExternalLinks(model, scope) {
   }
   return findings;
 }
-function inboundLinkCounts(model) {
+function inboundLinkCounts(model, options2 = {}) {
+  const includeIndexLinks = options2.includeIndexLinks ?? true;
   const counts = /* @__PURE__ */ new Map();
   for (const source of model.files) {
+    if (!includeIndexLinks && source.kind === "index") continue;
     const seen = /* @__PURE__ */ new Set();
     for (const link of source.links) {
       if (link.isImage || isExternalReference(link.target)) continue;
@@ -34625,16 +34627,16 @@ function inboundRelationCounts(model) {
   }
   return counts;
 }
-function lintOrphans(model, scope) {
+function lintOrphans(model, scope, profile = "materialized") {
   const findings = [];
-  const linkCounts = inboundLinkCounts(model);
+  const linkCounts = inboundLinkCounts(model, { includeIndexLinks: profile !== "artifact" });
   const relationCounts = inboundRelationCounts(model);
   const contract = contractForType(scope.type);
   const severity = contract?.allowsRootArtifact ? "info" : "warning";
   const hasIndex = model.files.some((file2) => file2.kind === "index" && normalizeDir(import_node_path5.default.posix.dirname(file2.path)) === scope.directory);
   for (const document3 of scope.documents) {
     if (document3.parseError) continue;
-    if (hasIndex && document3.indexMembership.length === 0) {
+    if (profile !== "artifact" && hasIndex && document3.indexMembership.length === 0) {
       findings.push(finding({
         ruleId: "orphan-index",
         category: "orphan",
@@ -34840,15 +34842,15 @@ function lintIndexConsistency(model, scope, index2) {
   }
   return findings;
 }
-function lintStructure(model, scope) {
+function lintStructure(model, scope, profile = "materialized") {
   const dir = scope.directory;
   const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path5.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path5.default.posix.basename(file2.path)));
   const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path5.default.posix.basename(file2.path))) ?? indexCandidates[0];
   const findings = [
     ...lintDocumentLinks(model, scope),
-    ...lintOrphans(model, scope)
+    ...lintOrphans(model, scope, profile)
   ];
-  if (index2) findings.push(...lintIndexConsistency(model, scope, index2));
+  if (index2 && profile !== "artifact") findings.push(...lintIndexConsistency(model, scope, index2));
   return findings;
 }
 
@@ -35165,7 +35167,7 @@ function lintRequiredRelations(model, document3, scopeType) {
   }
   return findings;
 }
-function lintDirectory(model, scope) {
+function lintDirectory(model, scope, profile) {
   const findings = [];
   const contract = contractForType(scope.type);
   const dir = scope.directory;
@@ -35183,6 +35185,7 @@ function lintDirectory(model, scope) {
       }));
     }
   }
+  if (profile === "artifact") return findings;
   const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path6.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path6.default.posix.basename(file2.path)));
   const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path6.default.posix.basename(file2.path))) ?? indexCandidates[0];
   if (!index2) {
@@ -35309,7 +35312,7 @@ function lintLegacyIdReferences(model, files) {
 function prefixOf(token) {
   return token.slice(0, token.lastIndexOf("-"));
 }
-function lintScope(model, type, directory) {
+function lintScope(model, type, directory, profile = "materialized") {
   const scope = scopeFor(model, type, directory);
   const findings = [];
   for (const document3 of scope.documents) {
@@ -35326,12 +35329,33 @@ function lintScope(model, type, directory) {
   }
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
-  findings.push(...lintDirectory(model, scope));
-  findings.push(...lintStructure(model, scope));
+  findings.push(...lintDirectory(model, scope, profile));
+  findings.push(...lintStructure(model, scope, profile));
   findings.push(...lintProvenance(model, scope));
   findings.push(...lintTraceability(model, scope));
   findings.push(...lintStaleUpstreams(model, scope));
   return sortFindings(findings);
+}
+
+// src/skills/lib/doc_report.ts
+var ARTIFACT_GATES = [
+  "front-matter",
+  "relations",
+  "directory-required-files",
+  "links",
+  "orphan-navigation",
+  "orphan-relation",
+  "provenance",
+  "traceability"
+];
+var MATERIALIZED_ONLY_GATES = [
+  "index-presence",
+  "index-membership",
+  "index-consistency",
+  "orphan-index-membership"
+];
+function profileGates(profile) {
+  return profile === "artifact" ? { ran: [...ARTIFACT_GATES], skipped: [...MATERIALIZED_ONLY_GATES] } : { ran: [...ARTIFACT_GATES, ...MATERIALIZED_ONLY_GATES], skipped: [] };
 }
 
 // src/skills/lib/doc_audit.ts
@@ -35355,13 +35379,14 @@ async function auditWithModel(model, cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
   const fullDir = import_node_path7.default.join(cwd, relativeDir);
   const files = import_node_fs6.default.existsSync(fullDir) && isInsideRealpath(cwd, fullDir) ? docFiles(fullDir) : [];
-  const findings = lintScope(model, type, relativeDir);
+  const profile = options2?.profile ?? "materialized";
+  const findings = lintScope(model, type, relativeDir, profile);
   if (options2?.externalLinks) {
     findings.push(...await lintExternalLinks(model, scopeFor(model, type, relativeDir)));
     findings.sort(compareFindings);
   }
   const legacy = findings.map((finding2) => toLegacyFinding(relativeDir, finding2));
-  return { directory: relativeDir, files: files.length, findings: legacy };
+  return { directory: relativeDir, files: files.length, findings: legacy, profile, gates: profileGates(profile) };
 }
 async function auditDocuments(cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);

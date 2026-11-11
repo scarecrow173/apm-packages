@@ -75,17 +75,23 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    `--json`) rolls up `orphan-*` findings by rule and document type.
 
    Shared filters: `--type`, `--dir`, `--rule`, `--severity`,
-   `--blocking`, `--status` (list), `--json`, `--external-links`.
+   `--blocking`, `--status` (list), `--json`, `--external-links`,
+   `--profile` (lint, audit, health).
    Findings print in deterministic order; exit status is `0` unless the
    invocation itself is invalid.
 
    Named audits from `doc-driven-dev-graph` map to commands as follows:
    document types (`spec`, `adr`, `design`, `plan`, `task`, `test-spec`,
    `idea`, `brainstorm`, `discovery`) run as
-   `audit_docs.js --type <name>`; `all` runs as `audit_docs.js --type all`
+   `audit_docs.js --type <name> --profile artifact`; `all` runs as
+   `audit_docs.js --type all --profile artifact`
    covering every canonical document type plus a legacy-reference sweep over
    root-level unmanaged Markdown and distributed `.apm` skill documents;
-   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js`.
+   `impl-record` runs as `impl-doc/scripts/audit_impl_record.js`, which needs
+   no profile flag (its only index observation is a non-blocking warning).
+   Graph-dispatched audits run the `artifact` profile so a missing or stale
+   index never gates graph execution; direct strict checks may omit
+   `--profile` to keep the default `materialized` coverage.
 
 4. Treat `relations.source` as external evidence.
    HTTP, HTTPS, and mail links are allowed and should not be reported as missing
@@ -98,7 +104,11 @@ The unified `doc_status.js` entry point exposes four read-only commands.
 ## Audit Coverage
 
 Audits run on a shared document repository model and report every problem with
-a stable rule ID. Covered checks include:
+a stable rule ID. `--profile materialized` (the default) evaluates every rule
+below; `--profile artifact` evaluates only canonical-document integrity and
+skips the index checks — a missing or stale index never produces an
+artifact-profile finding. JSON output reports the active profile and which
+check groups ran or were skipped. Covered checks include:
 
 - `unparseable-front-matter`, `invalid-front-matter`, `invalid-type`,
   `invalid-status` — front matter and document contract violations.
@@ -140,20 +150,25 @@ a stable rule ID. Covered checks include:
   `approved`/`accepted`/`implemented`/`resolved` upstreams and settled
   source documents never flag. Non-blocking warning: stale lineage is a
   signal to re-point or close, not a contract violation.
-- `missing-index`, `index-missing-entry`, `index-missing-overview`,
-  `missing-overview` — index and directory structure gaps.
+- `missing-overview` — required canonical directory documents. Runs in both
+  profiles.
+- `missing-index`, `index-missing-entry`, `index-missing-overview` — index
+  presence and coverage gaps. Materialized profile only.
 - `broken-link`, `missing-image-link`, `broken-anchor`, `link-escapes-root`,
   `link-case-mismatch` — local Markdown link and anchor integrity.
 - `index-stale-entry`, `index-duplicate-entry`, `index-metadata-mismatch`,
   `index-ordering`, `index-unparseable`, `index-escapes-root` — index table
-  consistency. Managed indexes are status-aware — in-flight rows first,
-  then a `## Settled` tier; `index-ordering` flags rows violating that
-  order and `index-metadata-mismatch` flags status cells that no longer
-  match front matter.
-- `orphan-index`, `orphan-navigation`, `orphan-relation` — documents not
-  listed in the index, unreachable from any Markdown link, or lacking
-  semantic relations. Severity is type-aware: types allowed as root
-  artifacts report these as `info`, others as `warning`.
+  consistency. Materialized profile only. Managed indexes are status-aware —
+  in-flight rows first, then a `## Settled` tier; `index-ordering` flags rows
+  violating that order and `index-metadata-mismatch` flags status cells that
+  no longer match front matter.
+- `orphan-index` — documents not listed in the index. Materialized profile
+  only.
+- `orphan-navigation`, `orphan-relation` — documents unreachable from any
+  canonical Markdown link, or lacking semantic relations. Both profiles; under
+  `artifact`, links inside index files do not count as inbound navigation.
+  Severity is type-aware: types allowed as root artifacts report these as
+  `info`, others as `warning`.
 - `external-link-broken`, `external-link-redirect`,
   `external-link-unverifiable` — opt-in external link probing via
   `audit_docs.js --external-links`. Disabled by default so audits stay
