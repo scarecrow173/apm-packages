@@ -35266,6 +35266,7 @@ async function main() {
       return;
     }
     console.log(`${args.type} audit: ${report.directory}`);
+    console.log(`profile: ${report.profile}`);
     console.log(`Files: ${report.files}`);
     if (report.findings.length === 0) {
       console.log("No findings.");
