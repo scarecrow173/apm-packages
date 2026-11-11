@@ -18,13 +18,18 @@ import type {
  * Issue #197 — index-only materialization op for doc-maintenance.
  *
  * Covers the normalized per-target plan (`verdict`, `changes`, `pins`,
- * `planHash`, merged `content`) for shared-4col dirs and the ADR dir, plus
- * `applyIndexMaterialization` for those kinds: `--expect` global-hash gating,
- * pin revalidation, atomic shared writes, and the ADR owner-writer path.
+ * `planHash`, merged `content`) for shared-4col dirs, the ADR dir, and the
+ * impl-doc IR/EXP dirs (Task 2: delegated to the owner sync API — pins and
+ * planHash pass through from `SyncPlan`, `content` stays absent), plus
+ * `applyIndexMaterialization`: `--expect` global-hash gating, pin
+ * revalidation, atomic shared writes, the ADR owner-writer path, and the
+ * impl `applyImplIndexSync` delegation with per-target `expectPlanHash`.
  */
 
 const MARKER = "<!-- doc-suite:generated-index -->";
+const SETTLED = "<!-- doc-suite:settled-index -->";
 const HEADER4 = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+const EXP_HEADER = "| File |\n| --- |";
 
 function tempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "index-materialize-"));
@@ -83,6 +88,72 @@ function writeSharedIndex(
     : "";
   const doc = `${preamble}${MARKER}\n\nDirectory: \`${dir}\`\n\n${indexBody(rows)}${settled}\n${options.tail ?? ""}`;
   writeFile(root, `${dir}/README.md`, doc);
+}
+
+// --- impl-doc (IR/EXP) fixtures — copied from impl-index-sync.test.ts ------
+
+type IrSpec = { file: string; id: string; title: string; status: string };
+
+function writeIr(repo: string, spec: IrSpec) {
+  writeFile(repo, `docs/impl/ir/${spec.file}`, [
+    "---",
+    `id: "${spec.id}"`,
+    'type: "impl"',
+    `status: "${spec.status}"`,
+    `title: "${spec.title}"`,
+    'created: "2026-01-01"',
+    'updated: "2026-01-01"',
+    "owners: []",
+    "metadata:",
+    "  experiments:",
+    "    adopted: []",
+    "    rejected: []",
+    "---",
+    "",
+    `# ${spec.title}`,
+    "",
+  ].join("\n"));
+}
+
+function irRow(spec: IrSpec): string {
+  return `| ${spec.id} | ${spec.title} | ${spec.status} | [${spec.file}](./${spec.file}) |`;
+}
+
+function irIndexBody(active: IrSpec[], settled: IrSpec[]): string {
+  const head = [HEADER4, ...active.map(irRow)].join("\n");
+  if (settled.length === 0) return head;
+  return `${head}\n\n## Settled ${SETTLED}\n\n${[HEADER4, ...settled.map(irRow)].join("\n")}`;
+}
+
+function writeIrIndex(
+  repo: string,
+  options: { active?: IrSpec[]; settled?: IrSpec[]; preamble?: string; tail?: string } = {},
+) {
+  const doc = `${options.preamble ?? "# Implementation Records\n\n"}${MARKER}\n\n`
+    + `Directory: \`docs/impl/ir\`\n\n${irIndexBody(options.active ?? [], options.settled ?? [])}\n${options.tail ?? ""}`;
+  writeFile(repo, "docs/impl/ir/README.md", doc);
+}
+
+function writeExp(repo: string, file: string) {
+  writeFile(
+    repo,
+    `docs/impl/exp/${file}`,
+    `${JSON.stringify({ schema: "experiment_event.v1", experiment: `docs/impl/exp/${file}`, seq: 1, type: "start", ts: "2026-01-01T00:00:00Z" })}\n`,
+  );
+}
+
+function expRow(file: string): string {
+  return `| [${file}](./${file}) |`;
+}
+
+function expIndexBody(files: string[]): string {
+  return files.length > 0 ? `${EXP_HEADER}\n${files.map(expRow).join("\n")}` : EXP_HEADER;
+}
+
+function writeExpIndex(repo: string, options: { files?: string[]; preamble?: string; tail?: string } = {}) {
+  const doc = `${options.preamble ?? "# Experiment Logs\n\n"}${MARKER}\n\n`
+    + `Directory: \`docs/impl/exp\`\n\n${expIndexBody(options.files ?? [])}\n${options.tail ?? ""}`;
+  writeFile(repo, "docs/impl/exp/README.md", doc);
 }
 
 function shaFile(file: string): string {
@@ -275,14 +346,141 @@ test("plan reports the ADR dir via the adr kind and adr-doc owner", async () => 
   assert.ok(target.content?.includes("0001-use-pgsql.md"));
 });
 
+// --- plan: impl-doc IR/EXP via the owner sync API ----------------------------
+
+test("plan dispatches docs/impl/ir as an ir target through the owner sync plan", async () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
+  const c: IrSpec = { file: "c.md", id: "IMPL-C", title: "Gamma", status: "completed" };
+  const d: IrSpec = { file: "d.md", id: "IMPL-D", title: "Delta", status: "draft" };
+  for (const spec of [a, b, c]) writeIr(repo, spec);
+  writeIrIndex(repo, { active: [a, b], settled: [c] });
+  // b flips to a settled status; d is a brand-new source with no row.
+  writeIr(repo, { ...b, status: "completed" });
+  writeIr(repo, d);
+
+  const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  assert.equal(plan.targets.length, 1);
+  const target = plan.targets[0];
+  assert.equal(target.kind, "ir");
+  assert.equal(target.owner, "impl-doc");
+  assert.equal(target.directory, "docs/impl/ir");
+  assert.equal(target.indexPath, "docs/impl/ir/README.md");
+  assert.equal(target.verdict, "sync");
+  assert.deepEqual(target.plannedFiles, ["docs/impl/ir/README.md"]);
+  const kinds = new Map(target.changes.map((change) => [change.file, change.kind]));
+  assert.equal(kinds.get("d.md"), "add");
+  assert.ok(!kinds.has("a.md") && !kinds.has("c.md"), "stable rows report no change");
+  const move = target.changes.find((change) => change.file === "b.md");
+  assert.equal(move?.kind, "move-tier");
+  assert.equal(move?.before, "active");
+  assert.equal(move?.after, "settled");
+  // Owner pins pass through verbatim: fileList is the sorted source listing
+  // and sources the per-file sha256 map — not the shared digest strings.
+  assert.deepEqual(target.pins.fileList, ["a.md", "b.md", "c.md", "d.md"]);
+  const sources = target.pins.sources as Record<string, string>;
+  assert.match(sources["a.md"] ?? "", /^[0-9a-f]{64}$/);
+  assert.ok(target.pins.index);
+  assert.equal(target.sourceCount, 4);
+  assert.match(target.planHash, /^[0-9a-f]{64}$/);
+  assert.equal("content" in target, false, "impl write payload lives inside the owner apply");
+});
+
+test("plan reports create for an impl dir with no README", async () => {
+  const repo = tempRepo();
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+
+  const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  const target = plan.targets[0];
+  assert.equal(target.verdict, "create");
+  assert.equal(target.pins.index, null);
+  assert.deepEqual(target.plannedFiles, ["docs/impl/ir/README.md"]);
+  assert.ok(target.changes.every((change) => change.kind === "add"));
+  assert.equal("content" in target, false);
+});
+
+test("plan rejects a malformed impl index with the owner reason", async () => {
+  const repo = tempRepo();
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+  // Marker present but the row is short a cell — the owner's strict parser
+  // rejects, and the reason is ITS vocabulary, not the shared classifier's.
+  writeFile(repo, "docs/impl/ir/README.md",
+    `# Implementation Records\n\n${MARKER}\n\nDirectory: \`docs/impl/ir\`\n\n${HEADER4}\n| IMPL-A | Alpha | draft |\n`);
+
+  const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  const target = plan.targets[0];
+  assert.equal(target.verdict, "rejected");
+  assert.match(target.reason ?? "", /index row|unparseable/i);
+  assert.deepEqual(target.changes, []);
+  assert.deepEqual(target.plannedFiles, []);
+
+  const applied = await applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  assert.deepEqual(applied.written, []);
+  assert.equal(applied.blocked[0]?.target.verdict, "rejected");
+});
+
+test("plan rejects the docs/impl container — no managed index contract", async () => {
+  const repo = tempRepo();
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+
+  const plan = await planIndexMaterialization(repo, { dir: "docs/impl" });
+  assert.equal(plan.targets.length, 1);
+  const target = plan.targets[0];
+  assert.equal(target.verdict, "rejected");
+  assert.equal(target.reason, "impl container has no managed index");
+  assert.equal(target.owner, "impl-doc");
+  assert.equal(target.kind, "none");
+  assert.deepEqual(target.plannedFiles, []);
+
+  const applied = await applyIndexMaterialization(repo, { dir: "docs/impl" });
+  assert.deepEqual(applied.written, []);
+  assert.equal(applied.blocked.length, 1);
+  assert.equal(applied.blocked[0].target.reason, "impl container has no managed index");
+});
+
+test("plan dispatches docs/impl/exp as an exp target; a missing row syncs as add", async () => {
+  const repo = tempRepo();
+  writeExp(repo, "0001-one.jsonl");
+  writeExp(repo, "0002-two.jsonl");
+  writeExpIndex(repo, { files: ["0001-one.jsonl"] });
+
+  const plan = await planIndexMaterialization(repo, { dir: "docs/impl/exp" });
+  assert.equal(plan.targets.length, 1);
+  const target = plan.targets[0];
+  assert.equal(target.kind, "exp");
+  assert.equal(target.owner, "impl-doc");
+  assert.equal(target.verdict, "sync");
+  assert.deepEqual(target.plannedFiles, ["docs/impl/exp/README.md"]);
+  assert.deepEqual(
+    target.changes.map((change) => [change.file, change.kind]),
+    [["0002-two.jsonl", "add"]],
+  );
+  assert.deepEqual(target.pins.fileList, ["0001-one.jsonl", "0002-two.jsonl"]);
+  assert.equal(target.sourceCount, 2);
+  assert.equal("content" in target, false);
+});
+
+test("plan reports create for an exp dir with no README", async () => {
+  const repo = tempRepo();
+  writeExp(repo, "0001-one.jsonl");
+
+  const plan = await planIndexMaterialization(repo, { dir: "docs/impl/exp" });
+  const target = plan.targets[0];
+  assert.equal(target.verdict, "create");
+  assert.equal(target.pins.index, null);
+  assert.deepEqual(target.plannedFiles, ["docs/impl/exp/README.md"]);
+  assert.ok(target.changes.every((change) => change.kind === "add"));
+});
+
 // --- enumeration / scoping ---------------------------------------------------
 
 test("plan enumerates managed dirs without --dir and scopes with --dir", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
-  // impl-doc territory must never reach targets until Task 2 dispatch lands.
-  writeFile(repo, "docs/impl/ir/alpha.md", "# impl\n");
-  writeFile(repo, "docs/impl/exp/0001.jsonl", "{}\n");
+  // impl leaf dirs join enumeration when they exist on disk.
+  writeIr(repo, { file: "alpha.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+  writeExp(repo, "0001-exp.jsonl");
 
   const plan = await planIndexMaterialization(repo);
   const directories = plan.targets.map((target) => target.directory).sort();
@@ -291,26 +489,37 @@ test("plan enumerates managed dirs without --dir and scopes with --dir", async (
     "docs/designs",
     "docs/discovery",
     "docs/ideas",
+    "docs/impl/exp",
+    "docs/impl/ir",
     "docs/plans",
     "docs/specs",
     "docs/tasks",
     "docs/test-specs",
   ]);
-  assert.ok(!plan.targets.some((target) => target.directory.startsWith("docs/impl")));
   const byDir = new Map(plan.targets.map((target) => [target.directory, target]));
   assert.equal(byDir.get("docs/adr")?.kind, "adr");
   assert.equal(byDir.get("docs/adr")?.owner, "adr-doc");
   assert.equal(byDir.get("docs/specs")?.kind, "shared");
   assert.equal(byDir.get("docs/specs")?.owner, "doc-suite");
+  assert.equal(byDir.get("docs/impl/ir")?.kind, "ir");
+  assert.equal(byDir.get("docs/impl/ir")?.owner, "impl-doc");
+  assert.equal(byDir.get("docs/impl/exp")?.kind, "exp");
+  assert.equal(byDir.get("docs/impl/exp")?.owner, "impl-doc");
+
+  // impl leaf dirs absent on disk are NOT enumerated — no phantom create.
+  const bare = tempRepo();
+  const barePlan = await planIndexMaterialization(bare);
+  assert.ok(!barePlan.targets.some((target) => target.directory.startsWith("docs/impl")));
 
   const scoped = await planIndexMaterialization(repo, { dir: "docs/specs" });
   assert.equal(scoped.targets.length, 1);
   assert.equal(scoped.targets[0].directory, "docs/specs");
   assert.equal(scoped.targets[0].kind, "shared");
 
-  // impl dirs are managed index dirs but stay filtered until Task 2.
+  // impl dirs are managed index dirs: --dir selects them by kind.
   const implScoped = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
-  assert.equal(implScoped.targets.length, 0);
+  assert.equal(implScoped.targets.length, 1);
+  assert.equal(implScoped.targets[0].kind, "ir");
 
   // A --dir that lands on a file hosts no managed index.
   const fileScoped = await planIndexMaterialization(repo, { dir: "docs/specs/checkout.md" });
@@ -351,6 +560,29 @@ test("plan rejects a symlinked canonical dir escaping the checkout", async (t) =
   assert.equal(blocked?.target.reason, "directory-not-contained");
   assert.equal(fs.readFileSync(path.join(outside, "evil.md"), "utf8"), "# outside content that must never be read\n");
   assert.deepEqual(fs.readdirSync(outside).sort(), ["evil.md"], "apply wrote nothing outside");
+});
+
+test("plan rejects an enumerated impl dir that escapes the checkout", async (t) => {
+  const repo = tempRepo();
+  const outside = tempRepo();
+  writeFile(outside, "a.md", "# outside content that must never be read\n");
+  try {
+    fs.mkdirSync(path.join(repo, "docs/impl"), { recursive: true });
+    fs.symlinkSync(outside, path.join(repo, "docs/impl/ir"), "dir");
+  } catch {
+    t.skip("directory symlinks are not permitted on this platform");
+    return;
+  }
+
+  const plan = await planIndexMaterialization(repo);
+  const target = targetFor(plan, "docs/impl/ir");
+  assert.equal(target.verdict, "rejected");
+  assert.equal(target.reason, "directory-not-contained");
+  assert.equal(target.sourceCount, 0);
+
+  const applied = await applyIndexMaterialization(repo);
+  assert.ok(!applied.written.some((file) => file.startsWith("docs/impl")));
+  assert.deepEqual(fs.readdirSync(outside).sort(), ["a.md"], "apply wrote nothing outside");
 });
 
 test("plan dedupes dir spellings that resolve to the same real dir", async (t) => {
@@ -542,4 +774,60 @@ test("apply syncs the ADR index through the owner writer", async () => {
 
   const again = await planIndexMaterialization(repo, { dir: "docs/adr" });
   assert.equal(targetFor(again, "docs/adr").verdict, "in-sync");
+});
+
+// --- apply: impl-doc IR/EXP via the owner sync API ---------------------------
+
+test("apply writes a stale IR index through the owner sync API", async () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
+  for (const spec of [a, b]) writeIr(repo, spec);
+  writeIrIndex(repo, { active: [a, b], tail: "\nHand notes.\n" });
+  writeIr(repo, { ...b, status: "completed" });
+
+  const result = await applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  assert.deepEqual(result.written, ["docs/impl/ir/README.md"]);
+  assert.deepEqual(result.blocked, []);
+
+  const content = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
+  const settledAt = content.indexOf("## Settled");
+  assert.ok(settledAt > 0, "settled tier exists after sync");
+  assert.ok(content.indexOf("[a.md](./a.md)") > -1 && content.indexOf("[a.md](./a.md)") < settledAt, "a stays active");
+  assert.ok(content.indexOf("[b.md](./b.md)") > settledAt, "b moved to settled");
+  assert.match(content, /Hand notes\./, "hand-written tail survives the owner merge");
+
+  const again = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  assert.equal(targetFor(again, "docs/impl/ir").verdict, "in-sync");
+});
+
+test("apply creates a missing impl index through the owner sync API", async () => {
+  const repo = tempRepo();
+  writeExp(repo, "0001-one.jsonl");
+
+  const result = await applyIndexMaterialization(repo, { dir: "docs/impl/exp" });
+  assert.deepEqual(result.written, ["docs/impl/exp/README.md"]);
+  const content = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
+  assert.ok(content.startsWith(`# Experiment Logs\n\n${MARKER}\n\nDirectory: \`docs/impl/exp\`\n\n`));
+  assert.ok(content.includes(expRow("0001-one.jsonl")));
+});
+
+test("apply --expect blocks impl targets on plan drift with zero writes", async () => {
+  const repo = tempRepo();
+  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
+  const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
+  for (const spec of [a, b]) writeIr(repo, spec);
+  writeIrIndex(repo, { active: [a] });
+
+  const before = treeHashes(repo);
+  const result = await applyIndexMaterialization(repo, { dir: "docs/impl/ir", expectPlanHash: "0".repeat(64) });
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.equal(result.blocked[0].target.kind, "ir");
+  assert.match(result.blocked[0].reason, /plan drift/);
+  assert.deepEqual(treeHashes(repo), before, "a rejected --expect writes nothing");
+
+  const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  const applied = await applyIndexMaterialization(repo, { dir: "docs/impl/ir", expectPlanHash: plan.planHash });
+  assert.deepEqual(applied.written, ["docs/impl/ir/README.md"]);
 });
