@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { auditAllDocuments, auditDocuments } from "../../lib/doc_audit";
+import type { AuditOptions } from "../../lib/doc_audit";
 
 type CliArgs = {
   cwd: string;
@@ -10,6 +11,7 @@ type CliArgs = {
   externalLinks?: boolean;
   help?: boolean;
   json: boolean;
+  profile?: AuditOptions["profile"];
   type?: string;
 };
 
@@ -20,6 +22,13 @@ function parseArgs(argv: string[]): CliArgs {
     if (arg === "--type") args.type = argv[++i];
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--profile") {
+      const value = argv[++i];
+      if (value !== "artifact" && value !== "materialized") {
+        throw new Error(`Invalid --profile value: ${value}; expected artifact|materialized`);
+      }
+      args.profile = value;
+    }
     else if (arg === "--json") args.json = true;
     else if (arg === "--external-links") args.externalLinks = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -29,10 +38,10 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all [--dir <path>] [--json] [--external-links]";
+  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all [--dir <path>] [--json] [--external-links] [--profile artifact|materialized]";
 }
 
-async function auditAll(cwd: string, explicitDir?: string, options?: { externalLinks?: boolean }) {
+async function auditAll(cwd: string, explicitDir?: string, options?: AuditOptions) {
   return auditAllDocuments(cwd, explicitDir, options);
 }
 
@@ -45,7 +54,7 @@ async function main(): Promise<void> {
     }
     if (!args.type) throw new Error("Missing required --type");
     const cwd = path.resolve(args.cwd);
-    const options = { externalLinks: Boolean(args.externalLinks) };
+    const options: AuditOptions = { externalLinks: Boolean(args.externalLinks), profile: args.profile };
     const report = args.type === "all" ? await auditAll(cwd, args.dir, options) : await auditDocuments(cwd, args.type, args.dir, options);
     if (args.json) {
       console.log(JSON.stringify(report, null, 2));

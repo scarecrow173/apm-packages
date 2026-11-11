@@ -118,7 +118,7 @@ async function planMaintenance(cwd: string, query: DocStatusQuery, options?: App
   for (const type of collected.types) {
     const directory = docDir(resolvedCwd, type, query.dir);
     directories.push(directory);
-    const scopeFindings = lintScope(collected.model, type, directory);
+    const scopeFindings = lintScope(collected.model, type, directory, collected.profile);
 
     for (const finding of scopeFindings) {
       if (INDEX_REBUILD_RULES.has(finding.ruleId)) {
