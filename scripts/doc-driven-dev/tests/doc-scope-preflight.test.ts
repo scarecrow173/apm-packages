@@ -140,3 +140,85 @@ test("legitimate scopes still work: shared dir, shared repair, custom dir", asyn
   const custom = runScript("doc-status", "list_docs.js", ["--type", "spec", "--dir", "custom/specs"], repo);
   assert.equal(custom.status, 0, custom.stderr);
 });
+
+test("shared-type creators reject foreign-owned dirs before writing anything", () => {
+  const repo = tempRepo();
+  writeImplTree(repo);
+  writeSpecTree(repo);
+  // gate fixtures for new_plan / new_test_spec (same pattern as doc-dir-containment.test.ts)
+  writeFile(repo, "docs/designs/overview.md", "# Designs\n");
+  writeFile(repo, "docs/designs/0001-design.md", [
+    "---", 'id: "DESIGN-0001"', 'type: "design"', 'status: "approved"',
+    'title: "Design"', 'created: "2026-01-01"', 'updated: "2026-01-01"',
+    "owners: []", "relations: {}", "---", "", "# Design", "",
+  ].join("\n"));
+
+  const creators: Array<[string, string, string[]]> = [
+    ["idea-doc", "new_idea.js", ["--title", "X"]],
+    ["discovery-doc", "new_discovery.js", ["--title", "X"]],
+    ["design-doc", "new_design.js", ["--title", "X"]],
+    ["plan-doc", "new_plan.js", ["--title", "X", "--design", "docs/designs/0001-design.md"]],
+    ["spec-doc", "new_spec.js", ["--title", "X"]],
+    ["task-doc", "new_task.js", ["--title", "X"]],
+    ["test-spec-doc", "new_test_spec.js", ["--title", "X", "--verifies", "docs/specs/0001-spec.md"]],
+  ];
+  for (const [skill, script, args] of creators) {
+    for (const dir of ["docs/impl/ir", "docs/impl/exp", "docs/decisions", "docs/tasks"]) {
+      const foreignDir = dir === "docs/tasks" && skill === "task-doc" ? "docs/impl/ir" : dir;
+      const before = snapshotTree(repo);
+      const result = runScript(skill, script, [...args, "--dir", foreignDir], repo);
+      assert.notEqual(result.status, 0, `${script} --dir ${foreignDir} must fail`);
+      assert.match(`${result.stdout}\n${result.stderr}`, /Scope mismatch/, `${script} --dir ${foreignDir}`);
+      assert.deepEqual(snapshotTree(repo), before, `${script} must not create files or indexes`);
+    }
+  }
+});
+
+test("adr and impl creators reject foreign-owned dirs, accept own and custom dirs", () => {
+  const repo = tempRepo();
+  writeImplTree(repo);
+  writeSpecTree(repo);
+  const before = snapshotTree(repo);
+
+  for (const [skill, script, args] of [
+    ["adr-doc", "new_adr.js", ["--title", "X"]],
+    ["adr-doc", "update_index.js", ["--write"]],
+    ["adr-doc", "relate_adr.js", ["--from", "a.md", "--to", "b.md", "--relation", "related", "--write"]],
+    ["impl-doc", "new_impl_record.js", ["--title", "X"]],
+    ["impl-doc", "new_experiment_log.js", ["--title", "X"]],
+  ] as Array<[string, string, string[]]>) {
+    const dir = script.startsWith("new_impl") || script.startsWith("new_experiment") ? "docs/specs" : "docs/impl/ir";
+    const result = runScript(skill, script, [...args, "--dir", dir], repo);
+    assert.notEqual(result.status, 0, `${script} --dir ${dir} must fail`);
+    assert.match(`${result.stdout}\n${result.stderr}`, /Scope mismatch/, script);
+  }
+  assert.deepEqual(snapshotTree(repo), before);
+
+  // read-side boundary: list_docs reaches docDir through docEntries
+  const list = runScript("doc-status", "list_docs.js", ["--type", "spec", "--dir", "docs/impl/ir"], repo);
+  assert.notEqual(list.status, 0);
+  assert.match(`${list.stdout}\n${list.stderr}`, /Scope mismatch/);
+
+  // own canonical / alias dirs still work
+  const adr = runScript("adr-doc", "new_adr.js", ["--title", "Good"], repo);
+  assert.equal(adr.status, 0, adr.stderr);
+  const ir = runScript("impl-doc", "new_impl_record.js", ["--title", "Good"], repo);
+  assert.equal(ir.status, 0, ir.stderr);
+  const exp = runScript("impl-doc", "new_experiment_log.js", ["--title", "Good"], repo);
+  assert.equal(exp.status, 0, exp.stderr);
+
+  // custom dirs stay open (existing --dir contract)
+  const custom = runScript("spec-doc", "new_spec.js", ["--title", "Custom", "--dir", "custom/specs"], repo);
+  assert.equal(custom.status, 0, custom.stderr);
+  const customIr = runScript("impl-doc", "new_impl_record.js", ["--title", "Custom IR", "--dir", "custom/ir"], repo);
+  assert.equal(customIr.status, 0, customIr.stderr);
+});
+
+test("nested dirs inside foreign ownership also reject", () => {
+  const repo = tempRepo();
+  writeImplTree(repo);
+  const result = runScript("spec-doc", "new_spec.js", ["--title", "X", "--dir", "docs/impl/ir/nested"], repo);
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /Scope mismatch/);
+  assert.equal(fs.existsSync(path.join(repo, "docs/impl/ir/nested")), false, "no mkdir may happen on rejection");
+});

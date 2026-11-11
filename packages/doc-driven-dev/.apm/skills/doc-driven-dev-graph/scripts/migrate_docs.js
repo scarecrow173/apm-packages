@@ -24134,6 +24134,126 @@ function configFor(type) {
   return configs[type];
 }
 
+// src/skills/lib/doc_ownership.ts
+var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
+var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
+var ADR_MUTATORS = ["update_index", "relate_adr"];
+var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
+var SHARED_CREATORS = {
+  idea: "new_idea",
+  discovery: "new_discovery",
+  spec: "new_spec",
+  plan: "new_plan",
+  task: "new_task",
+  design: "new_design",
+  adr: "new_adr",
+  "test-spec": "new_test_spec"
+};
+function buildContracts() {
+  const rows = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const adr = type === "adr";
+    for (const dir of config2.dirs) {
+      const normalized = normalizeDir(dir);
+      let row = rows.get(normalized);
+      if (!row) {
+        row = {
+          canonical: false,
+          owner: adr ? "adr-doc" : "doc-suite",
+          residents: [],
+          mutators: /* @__PURE__ */ new Set(),
+          auditors: /* @__PURE__ */ new Set()
+        };
+        rows.set(normalized, row);
+      }
+      row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
+      if (!row.residents.includes(type)) row.residents.push(type);
+      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      if (adr) {
+        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
+        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
+      }
+    }
+  }
+  const shared = [...rows.entries()].map(([dir, row]) => ({
+    dir,
+    canonical: row.canonical,
+    owner: row.owner,
+    residentTypes: row.residents,
+    indexFormat: "shared-4col",
+    mutators: [...row.mutators].sort(),
+    auditors: [...row.auditors].sort()
+  }));
+  const implRows = [
+    {
+      dir: "docs/impl",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: [],
+      indexFormat: "none",
+      mutators: [],
+      auditors: []
+    },
+    {
+      dir: "docs/impl/ir",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["impl"],
+      indexFormat: "impl-4col",
+      mutators: ["new_impl_record", "migrate_ids"],
+      auditors: ["audit_impl_record"]
+    },
+    {
+      dir: "docs/impl/exp",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["exp"],
+      indexFormat: "exp-1col",
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids"],
+      auditors: ["audit_experiment_log"]
+    }
+  ];
+  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
+}
+var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
+function ownershipForDir(directory) {
+  const normalized = normalizeDir(directory);
+  let best = null;
+  for (const contract of DIRECTORY_CONTRACTS) {
+    if (normalized === contract.dir || normalized.startsWith(`${contract.dir}/`)) {
+      if (!best || contract.dir.length > best.dir.length) best = contract;
+    }
+  }
+  return best;
+}
+function describeOwnership(directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership) return `custom directory "${normalized}" (no declared owner)`;
+  const residents = ownership.residentTypes.length > 0 ? ownership.residentTypes.join(", ") : "none";
+  return `"${ownership.dir}" (owned by ${ownership.owner}; resident types: ${residents})`;
+}
+function checkTypeScope(type, directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership || ownership.residentTypes.includes(type)) {
+    return { ok: true, directory: normalized, ownership, reason: null };
+  }
+  return {
+    ok: false,
+    directory: normalized,
+    ownership,
+    reason: `Scope mismatch: type "${type}" is not resident in ${describeOwnership(normalized)}`
+  };
+}
+function assertTypeScope(type, directory) {
+  const check2 = checkTypeScope(type, directory);
+  if (!check2.ok) throw new Error(check2.reason ?? "Scope mismatch");
+}
+
 // src/skills/lib/doc_suite_utils.ts
 var relationFields = [
   "source",
@@ -24279,7 +24399,9 @@ var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
-  return findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
+  const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
+  assertTypeScope(type, resolved);
+  return resolved;
 }
 function docFiles(dir) {
   return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));

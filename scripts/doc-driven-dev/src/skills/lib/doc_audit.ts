@@ -5,11 +5,11 @@ import path from "node:path";
 
 import { lintLegacyIdReferences, lintScope, scopeFor } from "./doc_lint";
 import { lintExternalLinks } from "./doc_structure_lint";
-import { assertTypeScope, scopeTypesForQuery } from "./doc_ownership";
+import { scopeTypesForQuery } from "./doc_ownership";
 import { canonicalDocRoots, compareFindings, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
-import { configFor, docFiles } from "./doc_suite_utils";
-import { findDocumentDir, isInsideRealpath, normalizeDir, resolveContainedDir } from "./document_utils";
+import { docDir, docFiles } from "./doc_suite_utils";
+import { isInsideRealpath, normalizeDir, resolveContainedDir } from "./document_utils";
 
 type AuditFinding = {
   severity: string;
@@ -28,11 +28,6 @@ type AuditReport = {
 type AuditOptions = {
   externalLinks?: boolean;
 };
-
-function docDir(cwd: string, type: string, explicitDir?: string): string {
-  const config = configFor(type);
-  return findDocumentDir(cwd, explicitDir, config.dirs, config.dir);
-}
 
 function scanRoots(relativeDirs: string[]): string[] {
   return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
@@ -79,7 +74,6 @@ async function auditWithModel(
 
 async function auditDocuments(cwd: string, type: string, explicitDir?: string, options?: AuditOptions): Promise<AuditReport> {
   const relativeDir = docDir(cwd, type, explicitDir);
-  assertTypeScope(type, relativeDir);
   const model = await buildModel(cwd, [relativeDir]);
   return auditWithModel(model, cwd, type, explicitDir, options);
 }
