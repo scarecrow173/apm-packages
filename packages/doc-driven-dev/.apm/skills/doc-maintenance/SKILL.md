@@ -128,11 +128,32 @@ preview-first:
   files, writing each directory's contract index — the owner format for
   `docs/adr`, `docs/impl/ir`, `docs/impl/exp` — on first run. Its write side
   effects are bootstrap, not repair, so it has no preview phase.
-- `migrate_docs` plans imports into canonical docs; `--apply` writes.
+- `migrate_docs` plans imports into canonical docs; `--apply` writes. A
+  recognized `type:` in front matter is a typed route — `type: adr` still
+  migrates into `docs/adr` under the declared `adr-doc` mutator row. A route
+  reached only by content patterns never writes into an owner dir: sources
+  whose text guesses `docs/adr`, `docs/impl/ir`, or `docs/impl/exp` are
+  skipped as `unsupported-owner-route` in plan and apply alike. Apply
+  re-checks every canonical target dir for containment — a target that
+  escapes the checkout or resolves through a link is a hard failure, never
+  a write through the link — and the scaffold bootstrap it triggers gates
+  each directory creation and index write on the same realpath check.
+  Materializing owner indexes (`docs/adr`, `docs/impl/*`) stays with the
+  `index` entrypoint and owner writers; apply regenerates shared-suite
+  managed indexes only.
 - `migrate_ids` discovers, maps, and preflights before rewriting legacy
-  `TYPE-NNNN` ids and numbered filenames; any blocker stops the run before
-  mutation, and `apply` revalidates the repository with `doc-status` audits
-  (duplicate ids, unresolved relations, broken links, index consistency).
+  `TYPE-NNNN` ids and numbered filenames. Any preflight blocker stops the
+  run before mutation — `ok: false` with `failureStage: "preflight"` means
+  zero writes. `apply` rewrites references, renames files, regenerates each
+  touched index through its owning writer (the shared managed-index writer,
+  the ADR writer for `docs/adr`, the impl-doc safe sync engine for
+  `docs/impl/ir`/`docs/impl/exp`), then revalidates the repository with
+  `doc-status` audits (duplicate ids, unresolved relations, broken links,
+  index consistency). Each index reports `regenerated`, `skipped`, or
+  `blocked`, with an optional `reason` on skipped/blocked entries; a
+  `blocked` index fails the run like a validation error. `ok: false` with
+  `failureStage: "validation"` means the mutations are on disk and not
+  rolled back — revert with Git.
   Reference rewriting covers every active document that can carry artifact
   references: `docs/`, canonical dirs, root-level Markdown (`AGENTS.md`,
   `README.md`, ...), distributed agent docs (`.apm/`, `packages/*/.apm/`),

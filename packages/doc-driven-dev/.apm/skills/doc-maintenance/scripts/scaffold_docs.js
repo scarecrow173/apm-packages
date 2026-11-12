@@ -24275,6 +24275,15 @@ var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
 var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
+function dirContainedForWrite(cwd, fullDir) {
+  let probe = fullDir;
+  while (!import_node_fs2.default.existsSync(probe)) {
+    const parent = import_node_path2.default.dirname(probe);
+    if (parent === probe) return false;
+    probe = parent;
+  }
+  return isInsideRealpath(cwd, probe);
+}
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -24407,6 +24416,7 @@ async function scaffoldDocsTree(cwd) {
   const updated = [];
   for (const target of scaffoldTargets) {
     const fullDir = import_node_path2.default.join(resolvedCwd, target.dir);
+    if (!dirContainedForWrite(resolvedCwd, fullDir)) continue;
     import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
     const readmePath = import_node_path2.default.join(fullDir, "README.md");
     if (import_node_fs2.default.existsSync(readmePath)) continue;

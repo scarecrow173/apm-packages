@@ -24420,6 +24420,15 @@ var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
 var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
+function dirContainedForWrite(cwd, fullDir) {
+  let probe = fullDir;
+  while (!import_node_fs2.default.existsSync(probe)) {
+    const parent = import_node_path2.default.dirname(probe);
+    if (parent === probe) return false;
+    probe = parent;
+  }
+  return isInsideRealpath(cwd, probe);
+}
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -24779,15 +24788,20 @@ ${input2.body.trim()}
 function plannedMigration(cwd, source, input2, sourceContent, date5, allocations) {
   const sourceData = matterData(sourceContent);
   const route = routeFor(input2, sourceData);
+  if (route.type === null) {
+    return { skipped: { file: source, reason: "unsupported-owner-route" } };
+  }
   const targetDir = route.targetDir;
-  const { target } = allocateTargetPath(cwd, targetDir, input2.title, route.type || "doc", allocations);
+  const { target } = allocateTargetPath(cwd, targetDir, input2.title, route.type, allocations);
   return {
-    content: migratedContent(input2, route, sourceContent, source, date5),
-    source,
-    target,
-    targetDir,
-    title: input2.title,
-    type: route.type
+    plan: {
+      content: migratedContent(input2, route, sourceContent, source, date5),
+      source,
+      target,
+      targetDir,
+      title: input2.title,
+      type: route.type
+    }
   };
 }
 async function migrateDocs(options2) {
@@ -24818,7 +24832,12 @@ async function migrateDocs(options2) {
         body: sourceParsed.body.trim()
       }];
       for (const input2 of inputs) {
-        migrations.push(plannedMigration(cwd, relativeFile, input2, sourceContent, date5, allocations));
+        const planned = plannedMigration(cwd, relativeFile, input2, sourceContent, date5, allocations);
+        if ("skipped" in planned) {
+          skipped.push(planned.skipped);
+        } else {
+          migrations.push(planned.plan);
+        }
       }
     }
   }
@@ -24826,12 +24845,17 @@ async function migrateDocs(options2) {
   if (options2.apply) {
     await scaffoldDocsTree(cwd);
     for (const migration of migrations) {
+      const targetDir = resolveContainedDir(cwd, migration.targetDir, "migrate target");
+      if (!dirContainedForWrite(cwd, import_node_path2.default.join(cwd, targetDir))) {
+        throw new Error(`migrate target escapes the checkout through a link: ${migration.targetDir}`);
+      }
       const targetPath = import_node_path2.default.join(cwd, migration.target);
       import_node_fs2.default.mkdirSync(import_node_path2.default.dirname(targetPath), { recursive: true });
       import_node_fs2.default.writeFileSync(targetPath, migration.content, "utf8");
       created.push(migration.target);
     }
     for (const target of scaffoldTargets.filter((item) => item.type)) {
+      if (!dirContainedForWrite(cwd, import_node_path2.default.join(cwd, target.dir))) continue;
       await writeGeneratedIndex(cwd, target.type, target.dir, {});
     }
   }
@@ -24843,6 +24867,7 @@ async function scaffoldDocsTree(cwd) {
   const updated = [];
   for (const target of scaffoldTargets) {
     const fullDir = import_node_path2.default.join(resolvedCwd, target.dir);
+    if (!dirContainedForWrite(resolvedCwd, fullDir)) continue;
     import_node_fs2.default.mkdirSync(fullDir, { recursive: true });
     const readmePath = import_node_path2.default.join(fullDir, "README.md");
     if (import_node_fs2.default.existsSync(readmePath)) continue;

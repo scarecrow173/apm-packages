@@ -132,11 +132,34 @@ preview-first に従う:
   書き込みは repair ではなく bootstrap の副作用であるため preview
   フェーズはない。
 - `migrate_docs` は canonical docs への import を plan し、`--apply` で
-  書き込む。
+  書き込む。front matter で認識された `type:` は typed route であり、
+  `type: adr` は宣言済み `adr-doc` mutator 行のもとで引き続き
+  `docs/adr` へ migrate する。content pattern のみで到達した route は
+  オーナー dir へ一切書き込まない。本文から `docs/adr`・
+  `docs/impl/ir`・`docs/impl/exp` へ推測された source は plan / apply
+  ともに `unsupported-owner-route` として skip される。apply は全
+  canonical target dir の containment を再検査し、checkout を逸脱
+  する、または link 経由で解決される target は hard failure であり、
+  link 越しの書き込みは行わない。apply が起動する scaffold bootstrap
+  も、各ディレクトリ作成と index 書き込みを同じ realpath check で
+  gate する。オーナー index（`docs/adr`、`docs/impl/*`）の
+  materialize は `index` エントリポイントとオーナー writer に委ね
+  られ、apply が再生成するのは shared-suite の managed index のみ
+  である。
 - `migrate_ids` は legacy `TYPE-NNNN` id と numbered filename を書き換える
-  前に discover / mapping / preflight を行う。blocker があれば mutation
-  前に停止し、`apply` は `doc-status` audit（duplicate id、未解決
-  relation、壊れた link、index 整合性）でリポジトリを再検証する。
+  前に discover / mapping / preflight を行う。preflight blocker があれば
+  mutation 前に停止し、`ok: false` かつ `failureStage: "preflight"` は
+  書き込みゼロを意味する。`apply` は参照を書き換え、ファイルを
+  rename し、触れた index をすべてオーナー writer 経由で再生成
+  （shared 領域は managed-index writer、`docs/adr` は ADR writer、
+  `docs/impl/ir` / `docs/impl/exp` は impl-doc safe sync エンジン）
+  してから、`doc-status` audit（duplicate id、未解決 relation、
+  壊れた link、index 整合性）でリポジトリを再検証する。各 index は
+  `regenerated`、`skipped`、`blocked` のいずれかを報告し、
+  skipped / blocked の entry には任意の `reason` が付く。`blocked`
+  の index は validation error と同様に run を失敗させる。`ok: false` かつ
+  `failureStage: "validation"` は mutation が disk に残ったまま
+  rollback されないことを意味し、Git で戻す。
   参照書き換えは artifact 参照を持ち得る全 active 文書を対象とする:
   `docs/`、canonical dir、root-level Markdown（`AGENTS.md`、`README.md`
   など）、配布 agent 文書（`.apm/`、`packages/*/.apm/`）、および
