@@ -43,612 +43,6 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js
-function rng2() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    import_crypto.default.randomFillSync(rnds8Pool);
-    poolPtr = 0;
-  }
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-var import_crypto, rnds8Pool, poolPtr;
-var init_rng = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js"() {
-    import_crypto = __toESM(require("crypto"));
-    rnds8Pool = new Uint8Array(256);
-    poolPtr = rnds8Pool.length;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js
-var regex_default;
-var init_regex = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js"() {
-    regex_default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js
-function validate(uuid3) {
-  return typeof uuid3 === "string" && regex_default.test(uuid3);
-}
-var validate_default;
-var init_validate = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js"() {
-    init_regex();
-    validate_default = validate;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js
-function stringify(arr, offset = 0) {
-  const uuid3 = (byteToHex2[arr[offset + 0]] + byteToHex2[arr[offset + 1]] + byteToHex2[arr[offset + 2]] + byteToHex2[arr[offset + 3]] + "-" + byteToHex2[arr[offset + 4]] + byteToHex2[arr[offset + 5]] + "-" + byteToHex2[arr[offset + 6]] + byteToHex2[arr[offset + 7]] + "-" + byteToHex2[arr[offset + 8]] + byteToHex2[arr[offset + 9]] + "-" + byteToHex2[arr[offset + 10]] + byteToHex2[arr[offset + 11]] + byteToHex2[arr[offset + 12]] + byteToHex2[arr[offset + 13]] + byteToHex2[arr[offset + 14]] + byteToHex2[arr[offset + 15]]).toLowerCase();
-  if (!validate_default(uuid3)) {
-    throw TypeError("Stringified UUID is invalid");
-  }
-  return uuid3;
-}
-var byteToHex2, stringify_default;
-var init_stringify = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js"() {
-    init_validate();
-    byteToHex2 = [];
-    for (let i = 0; i < 256; ++i) {
-      byteToHex2.push((i + 256).toString(16).substr(1));
-    }
-    stringify_default = stringify;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js
-function v1(options2, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options2 = options2 || {};
-  let node3 = options2.node || _nodeId;
-  let clockseq = options2.clockseq !== void 0 ? options2.clockseq : _clockseq;
-  if (node3 == null || clockseq == null) {
-    const seedBytes = options2.random || (options2.rng || rng2)();
-    if (node3 == null) {
-      node3 = _nodeId = [seedBytes[0] | 1, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-    if (clockseq == null) {
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 16383;
-    }
-  }
-  let msecs = options2.msecs !== void 0 ? options2.msecs : Date.now();
-  let nsecs = options2.nsecs !== void 0 ? options2.nsecs : _lastNSecs + 1;
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 1e4;
-  if (dt < 0 && options2.clockseq === void 0) {
-    clockseq = clockseq + 1 & 16383;
-  }
-  if ((dt < 0 || msecs > _lastMSecs) && options2.nsecs === void 0) {
-    nsecs = 0;
-  }
-  if (nsecs >= 1e4) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq;
-  msecs += 122192928e5;
-  const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
-  b[i++] = tl >>> 24 & 255;
-  b[i++] = tl >>> 16 & 255;
-  b[i++] = tl >>> 8 & 255;
-  b[i++] = tl & 255;
-  const tmh = msecs / 4294967296 * 1e4 & 268435455;
-  b[i++] = tmh >>> 8 & 255;
-  b[i++] = tmh & 255;
-  b[i++] = tmh >>> 24 & 15 | 16;
-  b[i++] = tmh >>> 16 & 255;
-  b[i++] = clockseq >>> 8 | 128;
-  b[i++] = clockseq & 255;
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node3[n];
-  }
-  return buf || stringify_default(b);
-}
-var _nodeId, _clockseq, _lastMSecs, _lastNSecs, v1_default;
-var init_v1 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js"() {
-    init_rng();
-    init_stringify();
-    _lastMSecs = 0;
-    _lastNSecs = 0;
-    v1_default = v1;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js
-function parse2(uuid3) {
-  if (!validate_default(uuid3)) {
-    throw TypeError("Invalid UUID");
-  }
-  let v;
-  const arr = new Uint8Array(16);
-  arr[0] = (v = parseInt(uuid3.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 255;
-  arr[2] = v >>> 8 & 255;
-  arr[3] = v & 255;
-  arr[4] = (v = parseInt(uuid3.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 255;
-  arr[6] = (v = parseInt(uuid3.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 255;
-  arr[8] = (v = parseInt(uuid3.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 255;
-  arr[10] = (v = parseInt(uuid3.slice(24, 36), 16)) / 1099511627776 & 255;
-  arr[11] = v / 4294967296 & 255;
-  arr[12] = v >>> 24 & 255;
-  arr[13] = v >>> 16 & 255;
-  arr[14] = v >>> 8 & 255;
-  arr[15] = v & 255;
-  return arr;
-}
-var parse_default;
-var init_parse = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js"() {
-    init_validate();
-    parse_default = parse2;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js
-function stringToBytes(str2) {
-  str2 = unescape(encodeURIComponent(str2));
-  const bytes = [];
-  for (let i = 0; i < str2.length; ++i) {
-    bytes.push(str2.charCodeAt(i));
-  }
-  return bytes;
-}
-function v35_default(name, version3, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    if (typeof value === "string") {
-      value = stringToBytes(value);
-    }
-    if (typeof namespace === "string") {
-      namespace = parse_default(namespace);
-    }
-    if (namespace.length !== 16) {
-      throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
-    }
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 15 | version3;
-    bytes[8] = bytes[8] & 63 | 128;
-    if (buf) {
-      offset = offset || 0;
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-      return buf;
-    }
-    return stringify_default(bytes);
-  }
-  try {
-    generateUUID.name = name;
-  } catch (err) {
-  }
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL2;
-  return generateUUID;
-}
-var DNS, URL2;
-var init_v35 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js"() {
-    init_stringify();
-    init_parse();
-    DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
-    URL2 = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === "string") {
-    bytes = Buffer.from(bytes, "utf8");
-  }
-  return import_crypto2.default.createHash("md5").update(bytes).digest();
-}
-var import_crypto2, md5_default;
-var init_md5 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js"() {
-    import_crypto2 = __toESM(require("crypto"));
-    md5_default = md5;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js
-var v3, v3_default;
-var init_v3 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js"() {
-    init_v35();
-    init_md5();
-    v3 = v35_default("v3", 48, md5_default);
-    v3_default = v3;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js
-function v4(options2, buf, offset) {
-  options2 = options2 || {};
-  const rnds = options2.random || (options2.rng || rng2)();
-  rnds[6] = rnds[6] & 15 | 64;
-  rnds[8] = rnds[8] & 63 | 128;
-  if (buf) {
-    offset = offset || 0;
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-    return buf;
-  }
-  return stringify_default(rnds);
-}
-var v4_default;
-var init_v4 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js"() {
-    init_rng();
-    init_stringify();
-    v4_default = v4;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === "string") {
-    bytes = Buffer.from(bytes, "utf8");
-  }
-  return import_crypto3.default.createHash("sha1").update(bytes).digest();
-}
-var import_crypto3, sha1_default;
-var init_sha1 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js"() {
-    import_crypto3 = __toESM(require("crypto"));
-    sha1_default = sha1;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js
-var v5, v5_default;
-var init_v5 = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js"() {
-    init_v35();
-    init_sha1();
-    v5 = v35_default("v5", 80, sha1_default);
-    v5_default = v5;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js
-var nil_default;
-var init_nil = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js"() {
-    nil_default = "00000000-0000-0000-0000-000000000000";
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js
-function version(uuid3) {
-  if (!validate_default(uuid3)) {
-    throw TypeError("Invalid UUID");
-  }
-  return parseInt(uuid3.substr(14, 1), 16);
-}
-var version_default;
-var init_version = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js"() {
-    init_validate();
-    version_default = version;
-  }
-});
-
-// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js
-var esm_node_exports = {};
-__export(esm_node_exports, {
-  NIL: () => nil_default,
-  parse: () => parse_default,
-  stringify: () => stringify_default,
-  v1: () => v1_default,
-  v3: () => v3_default,
-  v4: () => v4_default,
-  v5: () => v5_default,
-  validate: () => validate_default,
-  version: () => version_default
-});
-var init_esm_node = __esm({
-  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js"() {
-    init_v1();
-    init_v3();
-    init_v4();
-    init_v5();
-    init_nil();
-    init_version();
-    init_validate();
-    init_stringify();
-    init_parse();
-  }
-});
-
-// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
-var require_safe_buffer = __commonJS({
-  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
-    var buffer = require("buffer");
-    var Buffer2 = buffer.Buffer;
-    function copyProps(src, dst) {
-      for (var key in src) {
-        dst[key] = src[key];
-      }
-    }
-    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
-      module2.exports = buffer;
-    } else {
-      copyProps(buffer, exports2);
-      exports2.Buffer = SafeBuffer;
-    }
-    function SafeBuffer(arg, encodingOrOffset, length) {
-      return Buffer2(arg, encodingOrOffset, length);
-    }
-    SafeBuffer.prototype = Object.create(Buffer2.prototype);
-    copyProps(Buffer2, SafeBuffer);
-    SafeBuffer.from = function(arg, encodingOrOffset, length) {
-      if (typeof arg === "number") {
-        throw new TypeError("Argument must not be a number");
-      }
-      return Buffer2(arg, encodingOrOffset, length);
-    };
-    SafeBuffer.alloc = function(size, fill, encoding) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      var buf = Buffer2(size);
-      if (fill !== void 0) {
-        if (typeof encoding === "string") {
-          buf.fill(fill, encoding);
-        } else {
-          buf.fill(fill);
-        }
-      } else {
-        buf.fill(0);
-      }
-      return buf;
-    };
-    SafeBuffer.allocUnsafe = function(size) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      return Buffer2(size);
-    };
-    SafeBuffer.allocUnsafeSlow = function(size) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      return buffer.SlowBuffer(size);
-    };
-  }
-});
-
-// node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js
-var require_src = __commonJS({
-  "node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js"(exports2, module2) {
-    "use strict";
-    var _Buffer = require_safe_buffer().Buffer;
-    function base(ALPHABET) {
-      if (ALPHABET.length >= 255) {
-        throw new TypeError("Alphabet too long");
-      }
-      var BASE_MAP = new Uint8Array(256);
-      for (var j = 0; j < BASE_MAP.length; j++) {
-        BASE_MAP[j] = 255;
-      }
-      for (var i = 0; i < ALPHABET.length; i++) {
-        var x = ALPHABET.charAt(i);
-        var xc = x.charCodeAt(0);
-        if (BASE_MAP[xc] !== 255) {
-          throw new TypeError(x + " is ambiguous");
-        }
-        BASE_MAP[xc] = i;
-      }
-      var BASE = ALPHABET.length;
-      var LEADER = ALPHABET.charAt(0);
-      var FACTOR = Math.log(BASE) / Math.log(256);
-      var iFACTOR = Math.log(256) / Math.log(BASE);
-      function encode3(source) {
-        if (Array.isArray(source) || source instanceof Uint8Array) {
-          source = _Buffer.from(source);
-        }
-        if (!_Buffer.isBuffer(source)) {
-          throw new TypeError("Expected Buffer");
-        }
-        if (source.length === 0) {
-          return "";
-        }
-        var zeroes = 0;
-        var length = 0;
-        var pbegin = 0;
-        var pend = source.length;
-        while (pbegin !== pend && source[pbegin] === 0) {
-          pbegin++;
-          zeroes++;
-        }
-        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
-        var b58 = new Uint8Array(size);
-        while (pbegin !== pend) {
-          var carry = source[pbegin];
-          var i2 = 0;
-          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
-            carry += 256 * b58[it1] >>> 0;
-            b58[it1] = carry % BASE >>> 0;
-            carry = carry / BASE >>> 0;
-          }
-          if (carry !== 0) {
-            throw new Error("Non-zero carry");
-          }
-          length = i2;
-          pbegin++;
-        }
-        var it2 = size - length;
-        while (it2 !== size && b58[it2] === 0) {
-          it2++;
-        }
-        var str2 = LEADER.repeat(zeroes);
-        for (; it2 < size; ++it2) {
-          str2 += ALPHABET.charAt(b58[it2]);
-        }
-        return str2;
-      }
-      function decodeUnsafe(source) {
-        if (typeof source !== "string") {
-          throw new TypeError("Expected String");
-        }
-        if (source.length === 0) {
-          return _Buffer.alloc(0);
-        }
-        var psz = 0;
-        var zeroes = 0;
-        var length = 0;
-        while (source[psz] === LEADER) {
-          zeroes++;
-          psz++;
-        }
-        var size = (source.length - psz) * FACTOR + 1 >>> 0;
-        var b256 = new Uint8Array(size);
-        while (source[psz]) {
-          var carry = BASE_MAP[source.charCodeAt(psz)];
-          if (carry === 255) {
-            return;
-          }
-          var i2 = 0;
-          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
-            carry += BASE * b256[it3] >>> 0;
-            b256[it3] = carry % 256 >>> 0;
-            carry = carry / 256 >>> 0;
-          }
-          if (carry !== 0) {
-            throw new Error("Non-zero carry");
-          }
-          length = i2;
-          psz++;
-        }
-        var it4 = size - length;
-        while (it4 !== size && b256[it4] === 0) {
-          it4++;
-        }
-        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
-        vch.fill(0, 0, zeroes);
-        var j2 = zeroes;
-        while (it4 !== size) {
-          vch[j2++] = b256[it4++];
-        }
-        return vch;
-      }
-      function decode4(string6) {
-        var buffer = decodeUnsafe(string6);
-        if (buffer) {
-          return buffer;
-        }
-        throw new Error("Non-base" + BASE + " character");
-      }
-      return {
-        encode: encode3,
-        decodeUnsafe,
-        decode: decode4
-      };
-    }
-    module2.exports = base;
-  }
-});
-
-// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
-var require_uuid62 = __commonJS({
-  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
-    "use strict";
-    var uuid3 = (init_esm_node(), __toCommonJS(esm_node_exports));
-    var uuidv1 = uuid3.v1;
-    var uuidv42 = uuid3.v4;
-    var uuidv5 = uuid3.v5;
-    var baseX = require_src();
-    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    var OUTPUT_LENGTH = 22;
-    var UUID_LENGTH = 32;
-    var Buffer2 = global ? global.Buffer : void 0;
-    if (typeof Buffer2 === "undefined") {
-      Buffer2 = require("buffer").Buffer;
-    }
-    var UUID62 = class {
-      constructor() {
-        this.base = base62;
-        this.uuid = uuid3;
-        this.baseX = baseX;
-        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
-        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
-      }
-      get customBase() {
-        return this.base;
-      }
-      set customBase(base) {
-        this.base = base;
-      }
-      get length() {
-        return OUTPUT_LENGTH;
-      }
-      get uuidLength() {
-        return UUID_LENGTH;
-      }
-      v4() {
-        const args = Array.prototype.slice.call(arguments);
-        if (!args[1]) {
-          args[1] = new Buffer2(16);
-        }
-        const id = uuidv42.apply(this, args);
-        return this.encode(id);
-      }
-      v5() {
-        const args = Array.prototype.slice.call(arguments);
-        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
-          args[1] = this.decode(args[1]);
-        }
-        const id = uuidv5.apply(this, args);
-        return this.encode(id);
-      }
-      v1() {
-        const args = Array.prototype.slice.call(arguments);
-        if (!args[1]) {
-          args[1] = new Buffer2(16);
-        }
-        const id = uuidv1.apply(this, args);
-        return this.encode(id);
-      }
-      encode(input2, encoding) {
-        encoding = encoding || "hex";
-        if (typeof input2 === "string") {
-          input2 = new Buffer2(input2.replace(/-/g, ""), encoding);
-        }
-        return ensureLength(this.base.encode(input2), OUTPUT_LENGTH);
-      }
-      decode(input2, encoding) {
-        encoding = encoding || "hex";
-        const res = ensureLength(
-          new Buffer2(this.base.decode(input2)).toString(encoding),
-          UUID_LENGTH
-        );
-        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
-      }
-    };
-    function ensureLength(input2, targetLength) {
-      input2 = input2.toString();
-      return `${"0".repeat(32)}${input2}`.slice(-targetLength);
-    }
-    module2.exports = new UUID62();
-  }
-});
-
 // node_modules/.pnpm/kind-of@6.0.3/node_modules/kind-of/index.js
 var require_kind_of = __commonJS({
   "node_modules/.pnpm/kind-of@6.0.3/node_modules/kind-of/index.js"(exports2, module2) {
@@ -3933,10 +3327,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file2.data, data);
       const open2 = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter2 = engine.stringify(data, options2).trim();
+      const matter3 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter2 !== "{}") {
-        buf = newline(open2) + newline(matter2) + newline(close);
+      if (matter3 !== "{}") {
+        buf = newline(open2) + newline(matter3) + newline(close);
       }
       if (typeof file2.excerpt === "string" && file2.excerpt !== "") {
         if (str2.indexOf(file2.excerpt.trim()) === -1) {
@@ -4033,7 +3427,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs9 = require("fs");
+    var fs11 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -4042,19 +3436,19 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse6 = require_parse();
     var utils = require_utils();
-    function matter2(input2, options2) {
+    function matter3(input2, options2) {
       if (input2 === "") {
         return { data: {}, content: input2, excerpt: "", orig: input2 };
       }
       let file2 = toFile(input2);
-      const cached2 = matter2.cache[file2.content];
+      const cached2 = matter3.cache[file2.content];
       if (!options2) {
         if (cached2) {
           file2 = Object.assign({}, cached2);
           file2.orig = cached2.orig;
           return file2;
         }
-        matter2.cache[file2.content] = file2;
+        matter3.cache[file2.content] = file2;
       }
       return parseMatter(file2, options2);
     }
@@ -4076,7 +3470,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter2.language(str2, opts);
+      const language = matter3.language(str2, opts);
       if (language.name) {
         file2.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -4111,24 +3505,24 @@ var require_gray_matter = __commonJS({
       }
       return file2;
     }
-    matter2.engines = engines2;
-    matter2.stringify = function(file2, data, options2) {
-      if (typeof file2 === "string") file2 = matter2(file2, options2);
+    matter3.engines = engines2;
+    matter3.stringify = function(file2, data, options2) {
+      if (typeof file2 === "string") file2 = matter3(file2, options2);
       return stringify2(file2, data, options2);
     };
-    matter2.read = function(filepath, options2) {
-      const str2 = fs9.readFileSync(filepath, "utf8");
-      const file2 = matter2(str2, options2);
+    matter3.read = function(filepath, options2) {
+      const str2 = fs11.readFileSync(filepath, "utf8");
+      const file2 = matter3(str2, options2);
       file2.path = filepath;
       return file2;
     };
-    matter2.test = function(str2, options2) {
+    matter3.test = function(str2, options2) {
       return utils.startsWith(str2, defaults(options2).delimiters[0]);
     };
-    matter2.language = function(str2, options2) {
+    matter3.language = function(str2, options2) {
       const opts = defaults(options2);
       const open2 = opts.delimiters[0];
-      if (matter2.test(str2)) {
+      if (matter3.test(str2)) {
         str2 = str2.slice(open2.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -4137,11 +3531,617 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter2.cache = {};
-    matter2.clearCache = function() {
-      matter2.cache = {};
+    matter3.cache = {};
+    matter3.clearCache = function() {
+      matter3.cache = {};
     };
-    module2.exports = matter2;
+    module2.exports = matter3;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js
+function rng2() {
+  if (poolPtr > rnds8Pool.length - 16) {
+    import_crypto.default.randomFillSync(rnds8Pool);
+    poolPtr = 0;
+  }
+  return rnds8Pool.slice(poolPtr, poolPtr += 16);
+}
+var import_crypto, rnds8Pool, poolPtr;
+var init_rng = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/rng.js"() {
+    import_crypto = __toESM(require("crypto"));
+    rnds8Pool = new Uint8Array(256);
+    poolPtr = rnds8Pool.length;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js
+var regex_default;
+var init_regex = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/regex.js"() {
+    regex_default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js
+function validate2(uuid3) {
+  return typeof uuid3 === "string" && regex_default.test(uuid3);
+}
+var validate_default;
+var init_validate = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/validate.js"() {
+    init_regex();
+    validate_default = validate2;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js
+function stringify(arr, offset = 0) {
+  const uuid3 = (byteToHex2[arr[offset + 0]] + byteToHex2[arr[offset + 1]] + byteToHex2[arr[offset + 2]] + byteToHex2[arr[offset + 3]] + "-" + byteToHex2[arr[offset + 4]] + byteToHex2[arr[offset + 5]] + "-" + byteToHex2[arr[offset + 6]] + byteToHex2[arr[offset + 7]] + "-" + byteToHex2[arr[offset + 8]] + byteToHex2[arr[offset + 9]] + "-" + byteToHex2[arr[offset + 10]] + byteToHex2[arr[offset + 11]] + byteToHex2[arr[offset + 12]] + byteToHex2[arr[offset + 13]] + byteToHex2[arr[offset + 14]] + byteToHex2[arr[offset + 15]]).toLowerCase();
+  if (!validate_default(uuid3)) {
+    throw TypeError("Stringified UUID is invalid");
+  }
+  return uuid3;
+}
+var byteToHex2, stringify_default;
+var init_stringify = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/stringify.js"() {
+    init_validate();
+    byteToHex2 = [];
+    for (let i = 0; i < 256; ++i) {
+      byteToHex2.push((i + 256).toString(16).substr(1));
+    }
+    stringify_default = stringify;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js
+function v1(options2, buf, offset) {
+  let i = buf && offset || 0;
+  const b = buf || new Array(16);
+  options2 = options2 || {};
+  let node3 = options2.node || _nodeId;
+  let clockseq = options2.clockseq !== void 0 ? options2.clockseq : _clockseq;
+  if (node3 == null || clockseq == null) {
+    const seedBytes = options2.random || (options2.rng || rng2)();
+    if (node3 == null) {
+      node3 = _nodeId = [seedBytes[0] | 1, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
+    }
+    if (clockseq == null) {
+      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 16383;
+    }
+  }
+  let msecs = options2.msecs !== void 0 ? options2.msecs : Date.now();
+  let nsecs = options2.nsecs !== void 0 ? options2.nsecs : _lastNSecs + 1;
+  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 1e4;
+  if (dt < 0 && options2.clockseq === void 0) {
+    clockseq = clockseq + 1 & 16383;
+  }
+  if ((dt < 0 || msecs > _lastMSecs) && options2.nsecs === void 0) {
+    nsecs = 0;
+  }
+  if (nsecs >= 1e4) {
+    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
+  }
+  _lastMSecs = msecs;
+  _lastNSecs = nsecs;
+  _clockseq = clockseq;
+  msecs += 122192928e5;
+  const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
+  b[i++] = tl >>> 24 & 255;
+  b[i++] = tl >>> 16 & 255;
+  b[i++] = tl >>> 8 & 255;
+  b[i++] = tl & 255;
+  const tmh = msecs / 4294967296 * 1e4 & 268435455;
+  b[i++] = tmh >>> 8 & 255;
+  b[i++] = tmh & 255;
+  b[i++] = tmh >>> 24 & 15 | 16;
+  b[i++] = tmh >>> 16 & 255;
+  b[i++] = clockseq >>> 8 | 128;
+  b[i++] = clockseq & 255;
+  for (let n = 0; n < 6; ++n) {
+    b[i + n] = node3[n];
+  }
+  return buf || stringify_default(b);
+}
+var _nodeId, _clockseq, _lastMSecs, _lastNSecs, v1_default;
+var init_v1 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v1.js"() {
+    init_rng();
+    init_stringify();
+    _lastMSecs = 0;
+    _lastNSecs = 0;
+    v1_default = v1;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js
+function parse4(uuid3) {
+  if (!validate_default(uuid3)) {
+    throw TypeError("Invalid UUID");
+  }
+  let v;
+  const arr = new Uint8Array(16);
+  arr[0] = (v = parseInt(uuid3.slice(0, 8), 16)) >>> 24;
+  arr[1] = v >>> 16 & 255;
+  arr[2] = v >>> 8 & 255;
+  arr[3] = v & 255;
+  arr[4] = (v = parseInt(uuid3.slice(9, 13), 16)) >>> 8;
+  arr[5] = v & 255;
+  arr[6] = (v = parseInt(uuid3.slice(14, 18), 16)) >>> 8;
+  arr[7] = v & 255;
+  arr[8] = (v = parseInt(uuid3.slice(19, 23), 16)) >>> 8;
+  arr[9] = v & 255;
+  arr[10] = (v = parseInt(uuid3.slice(24, 36), 16)) / 1099511627776 & 255;
+  arr[11] = v / 4294967296 & 255;
+  arr[12] = v >>> 24 & 255;
+  arr[13] = v >>> 16 & 255;
+  arr[14] = v >>> 8 & 255;
+  arr[15] = v & 255;
+  return arr;
+}
+var parse_default;
+var init_parse = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/parse.js"() {
+    init_validate();
+    parse_default = parse4;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js
+function stringToBytes(str2) {
+  str2 = unescape(encodeURIComponent(str2));
+  const bytes = [];
+  for (let i = 0; i < str2.length; ++i) {
+    bytes.push(str2.charCodeAt(i));
+  }
+  return bytes;
+}
+function v35_default(name, version3, hashfunc) {
+  function generateUUID(value, namespace, buf, offset) {
+    if (typeof value === "string") {
+      value = stringToBytes(value);
+    }
+    if (typeof namespace === "string") {
+      namespace = parse_default(namespace);
+    }
+    if (namespace.length !== 16) {
+      throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
+    }
+    let bytes = new Uint8Array(16 + value.length);
+    bytes.set(namespace);
+    bytes.set(value, namespace.length);
+    bytes = hashfunc(bytes);
+    bytes[6] = bytes[6] & 15 | version3;
+    bytes[8] = bytes[8] & 63 | 128;
+    if (buf) {
+      offset = offset || 0;
+      for (let i = 0; i < 16; ++i) {
+        buf[offset + i] = bytes[i];
+      }
+      return buf;
+    }
+    return stringify_default(bytes);
+  }
+  try {
+    generateUUID.name = name;
+  } catch (err) {
+  }
+  generateUUID.DNS = DNS;
+  generateUUID.URL = URL2;
+  return generateUUID;
+}
+var DNS, URL2;
+var init_v35 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v35.js"() {
+    init_stringify();
+    init_parse();
+    DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    URL2 = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js
+function md5(bytes) {
+  if (Array.isArray(bytes)) {
+    bytes = Buffer.from(bytes);
+  } else if (typeof bytes === "string") {
+    bytes = Buffer.from(bytes, "utf8");
+  }
+  return import_crypto2.default.createHash("md5").update(bytes).digest();
+}
+var import_crypto2, md5_default;
+var init_md5 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js"() {
+    import_crypto2 = __toESM(require("crypto"));
+    md5_default = md5;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js
+var v3, v3_default;
+var init_v3 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v3.js"() {
+    init_v35();
+    init_md5();
+    v3 = v35_default("v3", 48, md5_default);
+    v3_default = v3;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js
+function v4(options2, buf, offset) {
+  options2 = options2 || {};
+  const rnds = options2.random || (options2.rng || rng2)();
+  rnds[6] = rnds[6] & 15 | 64;
+  rnds[8] = rnds[8] & 63 | 128;
+  if (buf) {
+    offset = offset || 0;
+    for (let i = 0; i < 16; ++i) {
+      buf[offset + i] = rnds[i];
+    }
+    return buf;
+  }
+  return stringify_default(rnds);
+}
+var v4_default;
+var init_v4 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v4.js"() {
+    init_rng();
+    init_stringify();
+    v4_default = v4;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js
+function sha1(bytes) {
+  if (Array.isArray(bytes)) {
+    bytes = Buffer.from(bytes);
+  } else if (typeof bytes === "string") {
+    bytes = Buffer.from(bytes, "utf8");
+  }
+  return import_crypto3.default.createHash("sha1").update(bytes).digest();
+}
+var import_crypto3, sha1_default;
+var init_sha1 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js"() {
+    import_crypto3 = __toESM(require("crypto"));
+    sha1_default = sha1;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js
+var v5, v5_default;
+var init_v5 = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/v5.js"() {
+    init_v35();
+    init_sha1();
+    v5 = v35_default("v5", 80, sha1_default);
+    v5_default = v5;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js
+var nil_default;
+var init_nil = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/nil.js"() {
+    nil_default = "00000000-0000-0000-0000-000000000000";
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js
+function version2(uuid3) {
+  if (!validate_default(uuid3)) {
+    throw TypeError("Invalid UUID");
+  }
+  return parseInt(uuid3.substr(14, 1), 16);
+}
+var version_default;
+var init_version = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/version.js"() {
+    init_validate();
+    version_default = version2;
+  }
+});
+
+// node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js
+var esm_node_exports = {};
+__export(esm_node_exports, {
+  NIL: () => nil_default,
+  parse: () => parse_default,
+  stringify: () => stringify_default,
+  v1: () => v1_default,
+  v3: () => v3_default,
+  v4: () => v4_default,
+  v5: () => v5_default,
+  validate: () => validate_default,
+  version: () => version_default
+});
+var init_esm_node = __esm({
+  "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/index.js"() {
+    init_v1();
+    init_v3();
+    init_v4();
+    init_v5();
+    init_nil();
+    init_version();
+    init_validate();
+    init_stringify();
+    init_parse();
+  }
+});
+
+// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
+var require_safe_buffer = __commonJS({
+  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
+    var buffer = require("buffer");
+    var Buffer2 = buffer.Buffer;
+    function copyProps(src, dst) {
+      for (var key in src) {
+        dst[key] = src[key];
+      }
+    }
+    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
+      module2.exports = buffer;
+    } else {
+      copyProps(buffer, exports2);
+      exports2.Buffer = SafeBuffer;
+    }
+    function SafeBuffer(arg, encodingOrOffset, length) {
+      return Buffer2(arg, encodingOrOffset, length);
+    }
+    SafeBuffer.prototype = Object.create(Buffer2.prototype);
+    copyProps(Buffer2, SafeBuffer);
+    SafeBuffer.from = function(arg, encodingOrOffset, length) {
+      if (typeof arg === "number") {
+        throw new TypeError("Argument must not be a number");
+      }
+      return Buffer2(arg, encodingOrOffset, length);
+    };
+    SafeBuffer.alloc = function(size, fill, encoding) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      var buf = Buffer2(size);
+      if (fill !== void 0) {
+        if (typeof encoding === "string") {
+          buf.fill(fill, encoding);
+        } else {
+          buf.fill(fill);
+        }
+      } else {
+        buf.fill(0);
+      }
+      return buf;
+    };
+    SafeBuffer.allocUnsafe = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return Buffer2(size);
+    };
+    SafeBuffer.allocUnsafeSlow = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return buffer.SlowBuffer(size);
+    };
+  }
+});
+
+// node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js
+var require_src = __commonJS({
+  "node_modules/.pnpm/base-x@3.0.9/node_modules/base-x/src/index.js"(exports2, module2) {
+    "use strict";
+    var _Buffer = require_safe_buffer().Buffer;
+    function base(ALPHABET) {
+      if (ALPHABET.length >= 255) {
+        throw new TypeError("Alphabet too long");
+      }
+      var BASE_MAP = new Uint8Array(256);
+      for (var j = 0; j < BASE_MAP.length; j++) {
+        BASE_MAP[j] = 255;
+      }
+      for (var i = 0; i < ALPHABET.length; i++) {
+        var x = ALPHABET.charAt(i);
+        var xc = x.charCodeAt(0);
+        if (BASE_MAP[xc] !== 255) {
+          throw new TypeError(x + " is ambiguous");
+        }
+        BASE_MAP[xc] = i;
+      }
+      var BASE = ALPHABET.length;
+      var LEADER = ALPHABET.charAt(0);
+      var FACTOR = Math.log(BASE) / Math.log(256);
+      var iFACTOR = Math.log(256) / Math.log(BASE);
+      function encode3(source) {
+        if (Array.isArray(source) || source instanceof Uint8Array) {
+          source = _Buffer.from(source);
+        }
+        if (!_Buffer.isBuffer(source)) {
+          throw new TypeError("Expected Buffer");
+        }
+        if (source.length === 0) {
+          return "";
+        }
+        var zeroes = 0;
+        var length = 0;
+        var pbegin = 0;
+        var pend = source.length;
+        while (pbegin !== pend && source[pbegin] === 0) {
+          pbegin++;
+          zeroes++;
+        }
+        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
+        var b58 = new Uint8Array(size);
+        while (pbegin !== pend) {
+          var carry = source[pbegin];
+          var i2 = 0;
+          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
+            carry += 256 * b58[it1] >>> 0;
+            b58[it1] = carry % BASE >>> 0;
+            carry = carry / BASE >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          pbegin++;
+        }
+        var it2 = size - length;
+        while (it2 !== size && b58[it2] === 0) {
+          it2++;
+        }
+        var str2 = LEADER.repeat(zeroes);
+        for (; it2 < size; ++it2) {
+          str2 += ALPHABET.charAt(b58[it2]);
+        }
+        return str2;
+      }
+      function decodeUnsafe(source) {
+        if (typeof source !== "string") {
+          throw new TypeError("Expected String");
+        }
+        if (source.length === 0) {
+          return _Buffer.alloc(0);
+        }
+        var psz = 0;
+        var zeroes = 0;
+        var length = 0;
+        while (source[psz] === LEADER) {
+          zeroes++;
+          psz++;
+        }
+        var size = (source.length - psz) * FACTOR + 1 >>> 0;
+        var b256 = new Uint8Array(size);
+        while (source[psz]) {
+          var carry = BASE_MAP[source.charCodeAt(psz)];
+          if (carry === 255) {
+            return;
+          }
+          var i2 = 0;
+          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
+            carry += BASE * b256[it3] >>> 0;
+            b256[it3] = carry % 256 >>> 0;
+            carry = carry / 256 >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          psz++;
+        }
+        var it4 = size - length;
+        while (it4 !== size && b256[it4] === 0) {
+          it4++;
+        }
+        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
+        vch.fill(0, 0, zeroes);
+        var j2 = zeroes;
+        while (it4 !== size) {
+          vch[j2++] = b256[it4++];
+        }
+        return vch;
+      }
+      function decode4(string6) {
+        var buffer = decodeUnsafe(string6);
+        if (buffer) {
+          return buffer;
+        }
+        throw new Error("Non-base" + BASE + " character");
+      }
+      return {
+        encode: encode3,
+        decodeUnsafe,
+        decode: decode4
+      };
+    }
+    module2.exports = base;
+  }
+});
+
+// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
+var require_uuid62 = __commonJS({
+  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
+    "use strict";
+    var uuid3 = (init_esm_node(), __toCommonJS(esm_node_exports));
+    var uuidv1 = uuid3.v1;
+    var uuidv42 = uuid3.v4;
+    var uuidv5 = uuid3.v5;
+    var baseX = require_src();
+    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    var OUTPUT_LENGTH = 22;
+    var UUID_LENGTH = 32;
+    var Buffer2 = global ? global.Buffer : void 0;
+    if (typeof Buffer2 === "undefined") {
+      Buffer2 = require("buffer").Buffer;
+    }
+    var UUID62 = class {
+      constructor() {
+        this.base = base62;
+        this.uuid = uuid3;
+        this.baseX = baseX;
+        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
+        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
+      }
+      get customBase() {
+        return this.base;
+      }
+      set customBase(base) {
+        this.base = base;
+      }
+      get length() {
+        return OUTPUT_LENGTH;
+      }
+      get uuidLength() {
+        return UUID_LENGTH;
+      }
+      v4() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv42.apply(this, args);
+        return this.encode(id);
+      }
+      v5() {
+        const args = Array.prototype.slice.call(arguments);
+        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
+          args[1] = this.decode(args[1]);
+        }
+        const id = uuidv5.apply(this, args);
+        return this.encode(id);
+      }
+      v1() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv1.apply(this, args);
+        return this.encode(id);
+      }
+      encode(input2, encoding) {
+        encoding = encoding || "hex";
+        if (typeof input2 === "string") {
+          input2 = new Buffer2(input2.replace(/-/g, ""), encoding);
+        }
+        return ensureLength(this.base.encode(input2), OUTPUT_LENGTH);
+      }
+      decode(input2, encoding) {
+        encoding = encoding || "hex";
+        const res = ensureLength(
+          new Buffer2(this.base.decode(input2)).toString(encoding),
+          UUID_LENGTH
+        );
+        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
+      }
+    };
+    function ensureLength(input2, targetLength) {
+      input2 = input2.toString();
+      return `${"0".repeat(32)}${input2}`.slice(-targetLength);
+    }
+    module2.exports = new UUID62();
   }
 });
 
@@ -4550,10 +4550,10 @@ var init_vfile_message = __esm({
 });
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js
-var import_node_path3;
+var import_node_path4;
 var init_minpath = __esm({
   "node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js"() {
-    import_node_path3 = __toESM(require("node:path"), 1);
+    import_node_path4 = __toESM(require("node:path"), 1);
   }
 });
 
@@ -4588,9 +4588,9 @@ var init_minurl = __esm({
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/index.js
 function assertPart(part, name) {
-  if (part && part.includes(import_node_path3.default.sep)) {
+  if (part && part.includes(import_node_path4.default.sep)) {
     throw new Error(
-      "`" + name + "` cannot be a path: did not expect `" + import_node_path3.default.sep + "`"
+      "`" + name + "` cannot be a path: did not expect `" + import_node_path4.default.sep + "`"
     );
   }
 }
@@ -4599,8 +4599,8 @@ function assertNonEmpty(part, name) {
     throw new Error("`" + name + "` cannot be empty");
   }
 }
-function assertPath(path10, name) {
-  if (!path10) {
+function assertPath(path12, name) {
+  if (!path12) {
     throw new Error("Setting `" + name + "` requires `path` to be set too");
   }
 }
@@ -4688,7 +4688,7 @@ var init_lib4 = __esm({
        *   Basename.
        */
       get basename() {
-        return typeof this.path === "string" ? import_node_path3.default.basename(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path4.default.basename(this.path) : void 0;
       }
       /**
        * Set basename (including extname) (`'index.min.js'`).
@@ -4705,7 +4705,7 @@ var init_lib4 = __esm({
       set basename(basename) {
         assertNonEmpty(basename, "basename");
         assertPart(basename, "basename");
-        this.path = import_node_path3.default.join(this.dirname || "", basename);
+        this.path = import_node_path4.default.join(this.dirname || "", basename);
       }
       /**
        * Get the parent path (example: `'~'`).
@@ -4714,7 +4714,7 @@ var init_lib4 = __esm({
        *   Dirname.
        */
       get dirname() {
-        return typeof this.path === "string" ? import_node_path3.default.dirname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path4.default.dirname(this.path) : void 0;
       }
       /**
        * Set the parent path (example: `'~'`).
@@ -4728,7 +4728,7 @@ var init_lib4 = __esm({
        */
       set dirname(dirname) {
         assertPath(this.basename, "dirname");
-        this.path = import_node_path3.default.join(dirname || "", this.basename);
+        this.path = import_node_path4.default.join(dirname || "", this.basename);
       }
       /**
        * Get the extname (including dot) (example: `'.js'`).
@@ -4737,7 +4737,7 @@ var init_lib4 = __esm({
        *   Extname.
        */
       get extname() {
-        return typeof this.path === "string" ? import_node_path3.default.extname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path4.default.extname(this.path) : void 0;
       }
       /**
        * Set the extname (including dot) (example: `'.js'`).
@@ -4762,7 +4762,7 @@ var init_lib4 = __esm({
             throw new Error("`extname` cannot contain multiple dots");
           }
         }
-        this.path = import_node_path3.default.join(this.dirname, this.stem + (extname || ""));
+        this.path = import_node_path4.default.join(this.dirname, this.stem + (extname || ""));
       }
       /**
        * Get the full path (example: `'~/index.min.js'`).
@@ -4785,13 +4785,13 @@ var init_lib4 = __esm({
        * @returns {undefined}
        *   Nothing.
        */
-      set path(path10) {
-        if (isUrl(path10)) {
-          path10 = (0, import_node_url.fileURLToPath)(path10);
+      set path(path12) {
+        if (isUrl(path12)) {
+          path12 = (0, import_node_url.fileURLToPath)(path12);
         }
-        assertNonEmpty(path10, "path");
-        if (this.path !== path10) {
-          this.history.push(path10);
+        assertNonEmpty(path12, "path");
+        if (this.path !== path12) {
+          this.history.push(path12);
         }
       }
       /**
@@ -4801,7 +4801,7 @@ var init_lib4 = __esm({
        *   Stem.
        */
       get stem() {
-        return typeof this.path === "string" ? import_node_path3.default.basename(this.path, this.extname) : void 0;
+        return typeof this.path === "string" ? import_node_path4.default.basename(this.path, this.extname) : void 0;
       }
       /**
        * Set the stem (basename w/o extname) (example: `'index.min'`).
@@ -4818,7 +4818,7 @@ var init_lib4 = __esm({
       set stem(stem) {
         assertNonEmpty(stem, "stem");
         assertPart(stem, "stem");
-        this.path = import_node_path3.default.join(this.dirname || "", stem + (this.extname || ""));
+        this.path = import_node_path4.default.join(this.dirname || "", stem + (this.extname || ""));
       }
       // Normal prototypal methods.
       /**
@@ -13326,122 +13326,315 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-maintenance/scripts/migrate_ids.ts
-var import_node_path10 = __toESM(require("node:path"));
+var import_node_path12 = __toESM(require("node:path"));
 
 // src/skills/doc-maintenance/scripts/lib/id_migration.ts
 var import_node_child_process = require("node:child_process");
-var import_node_fs8 = __toESM(require("node:fs"));
-var import_node_path9 = __toESM(require("node:path"));
+var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_path11 = __toESM(require("node:path"));
 
-// node_modules/.pnpm/uuid@14.0.3/node_modules/uuid/dist-node/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 256).toString(16).slice(1));
-}
-function unsafeStringify(arr, offset = 0) {
-  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
-}
-
-// node_modules/.pnpm/uuid@14.0.3/node_modules/uuid/dist-node/rng.js
-var rnds8 = new Uint8Array(16);
-function rng() {
-  return crypto.getRandomValues(rnds8);
-}
-
-// node_modules/.pnpm/uuid@14.0.3/node_modules/uuid/dist-node/v7.js
-var _state = {};
-function v7(options2, buf, offset) {
-  let bytes;
-  if (options2) {
-    bytes = v7Bytes(options2.random ?? options2.rng?.() ?? rng(), options2.msecs, options2.seq, buf, offset);
-  } else {
-    const now = Date.now();
-    const rnds = rng();
-    updateV7State(_state, now, rnds);
-    bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
-  }
-  return buf ?? unsafeStringify(bytes);
-}
-function updateV7State(state, now, rnds) {
-  state.msecs ??= -Infinity;
-  state.seq ??= 0;
-  if (now > state.msecs) {
-    state.seq = v7Sequence(rnds);
-    state.msecs = now;
-  } else {
-    state.seq = state.seq + 1 | 0;
-    if (state.seq === 0) {
-      state.msecs++;
-    }
-  }
-  return state;
-}
-function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
-  if (rnds.length < 16) {
-    throw new Error("Random bytes length must be >= 16");
-  }
-  if (!buf) {
-    buf = new Uint8Array(16);
-    offset = 0;
-  } else {
-    if (offset < 0 || offset + 16 > buf.length) {
-      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-    }
-  }
-  msecs ??= Date.now();
-  seq ??= v7Sequence(rnds);
-  buf[offset++] = msecs / 1099511627776 & 255;
-  buf[offset++] = msecs / 4294967296 & 255;
-  buf[offset++] = msecs / 16777216 & 255;
-  buf[offset++] = msecs / 65536 & 255;
-  buf[offset++] = msecs / 256 & 255;
-  buf[offset++] = msecs & 255;
-  buf[offset++] = 112 | seq >>> 28 & 15;
-  buf[offset++] = seq >>> 20 & 255;
-  buf[offset++] = 128 | seq >>> 14 & 63;
-  buf[offset++] = seq >>> 6 & 255;
-  buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
-  buf[offset++] = rnds[11];
-  buf[offset++] = rnds[12];
-  buf[offset++] = rnds[13];
-  buf[offset++] = rnds[14];
-  buf[offset++] = rnds[15];
-  return buf;
-}
-function v7Sequence(rnds) {
-  return (rnds[6] & 127) << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
-}
-var v7_default = v7;
-
-// src/skills/lib/artifact_id.ts
-var import_uuid62 = __toESM(require_uuid62());
-var NEW_ARTIFACT_ID_PATTERN = /^[A-Z][A-Z0-9]*-[0-9A-Za-z]{22}$/;
-var LEGACY_ARTIFACT_ID_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
-var ID_PREFIX_PATTERN = /^[A-Z][A-Z0-9]*$/;
-function generateArtifactId(idPrefix) {
-  if (!ID_PREFIX_PATTERN.test(idPrefix)) {
-    throw new Error(`Invalid artifact id prefix: ${idPrefix}`);
-  }
-  return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
-}
-function isNewArtifactId(value) {
-  return NEW_ARTIFACT_ID_PATTERN.test(value.trim());
-}
-function isLegacyArtifactId(value) {
-  return LEGACY_ARTIFACT_ID_PATTERN.test(value.trim());
-}
-
-// src/skills/lib/doc_audit.ts
-var import_node_fs6 = __toESM(require("node:fs"));
-var import_node_path7 = __toESM(require("node:path"));
-
-// src/skills/lib/doc_lint.ts
-var import_node_fs5 = __toESM(require("node:fs"));
-var import_node_path6 = __toESM(require("node:path"));
-
-// src/skills/lib/doc_repository.ts
+// src/skills/adr-doc/scripts/lib/adr_utils.ts
 var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path4 = __toESM(require("node:path"));
+var import_node_path3 = __toESM(require("node:path"));
+var import_gray_matter2 = __toESM(require_gray_matter());
+
+// src/skills/lib/document_utils.ts
+var import_node_fs = __toESM(require("node:fs"));
+var import_node_path = __toESM(require("node:path"));
+var CANONICAL_DOC_DIRS = [
+  "docs/ideas",
+  "docs/discovery",
+  "docs/specs",
+  "docs/designs",
+  "docs/plans",
+  "docs/tasks",
+  "docs/test-specs",
+  "docs/adr",
+  "docs/impl/ir",
+  "docs/impl/exp"
+];
+var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
+  "changes",
+  "test-spec-skip"
+]);
+function normalizeDir(input2) {
+  return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function isInside(cwd, candidate) {
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
+  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function isInsideCheckout(cwd, candidate) {
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) return false;
+  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
+}
+function toRepoRelative(cwd, absolute) {
+  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
+}
+function resolveContainedDir(cwd, dir, flag = "--dir") {
+  const resolved = import_node_path.default.resolve(cwd, dir);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`${flag} escapes the checkout: ${dir}`);
+  }
+  if (import_node_fs.default.existsSync(resolved)) {
+    if (!isInsideRealpath(cwd, resolved)) {
+      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
+    }
+    return toRepoRelative(
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
+    );
+  }
+  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
+}
+function isIndexFileName(file2) {
+  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
+}
+function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
+  if (explicitDir) return resolveContainedDir(cwd, explicitDir);
+  const existing = candidateDirs.filter((candidate) => import_node_fs.default.existsSync(import_node_path.default.join(cwd, candidate)));
+  return existing.length === 0 ? defaultDir : existing[0];
+}
+
+// src/skills/lib/doc_types.ts
+var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
+var configs = {
+  idea: {
+    defaultStatus: "draft",
+    dir: "docs/ideas",
+    dirs: ["docs/ideas"],
+    idPrefix: "IDEA",
+    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
+    type: "idea"
+  },
+  brainstorm: {
+    defaultStatus: "capturing",
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    idPrefix: "BRAINSTORM",
+    statusValues: ["capturing", "confirmed", "routed", "superseded"],
+    type: "brainstorm"
+  },
+  discovery: {
+    defaultStatus: "draft",
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    idPrefix: "DISC",
+    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
+    type: "discovery"
+  },
+  spec: {
+    defaultStatus: "draft",
+    dir: "docs/specs",
+    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
+    idPrefix: "SPEC",
+    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
+    type: "spec"
+  },
+  plan: {
+    defaultStatus: "draft",
+    dir: "docs/plans",
+    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
+    idPrefix: "PLAN",
+    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
+    type: "plan"
+  },
+  task: {
+    defaultStatus: "todo",
+    dir: "docs/tasks",
+    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
+    idPrefix: "TASK",
+    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
+    type: "task"
+  },
+  "test-spec": {
+    defaultStatus: "draft",
+    dir: "docs/test-specs",
+    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    idPrefix: "TSPEC",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    type: "test-spec"
+  },
+  design: {
+    defaultStatus: "draft",
+    dir: "docs/designs",
+    dirs: ["docs/designs", "docs/design", "designs", "design"],
+    idPrefix: "DESIGN",
+    statusValues: ["draft", "approved", "superseded", "rejected"],
+    type: "design"
+  },
+  adr: {
+    defaultStatus: "proposed",
+    dir: "docs/adr",
+    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+    idPrefix: "ADR",
+    indexRow: {
+      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
+      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
+      // every producer derives identical rows (Issue #185).
+      idFromFile: (file2) => {
+        const match = /^(\d+)-/.exec(file2);
+        return match ? `ADR-${match[1]}` : null;
+      },
+      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
+    },
+    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+    type: "adr"
+  }
+};
+function configFor(type) {
+  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
+  return configs[type];
+}
+
+// src/skills/lib/doc_ownership.ts
+var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
+var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
+var ADR_MUTATORS = ["update_index", "relate_adr"];
+var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
+var INDEX_TITLES = {
+  "docs/adr": "Architecture Decision Records",
+  "docs/impl/ir": "Implementation Records",
+  "docs/impl/exp": "Experiment Logs"
+};
+var PROMOTE_INDEX_MUTATOR = "promote_index";
+var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
+var SHARED_CREATORS = {
+  idea: "new_idea",
+  discovery: "new_discovery",
+  spec: "new_spec",
+  plan: "new_plan",
+  task: "new_task",
+  design: "new_design",
+  adr: "new_adr",
+  "test-spec": "new_test_spec"
+};
+function buildContracts() {
+  const rows = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const adr = type === "adr";
+    for (const dir of config2.dirs) {
+      const normalized = normalizeDir(dir);
+      let row = rows.get(normalized);
+      if (!row) {
+        row = {
+          canonical: false,
+          owner: adr ? "adr-doc" : "doc-suite",
+          residents: [],
+          mutators: /* @__PURE__ */ new Set(),
+          auditors: /* @__PURE__ */ new Set()
+        };
+        rows.set(normalized, row);
+      }
+      row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
+      if (INDEX_TITLES[normalized]) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      if (!row.residents.includes(type)) row.residents.push(type);
+      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      if (adr) {
+        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
+        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
+      }
+    }
+  }
+  const shared = [...rows.entries()].map(([dir, row]) => ({
+    dir,
+    canonical: row.canonical,
+    owner: row.owner,
+    residentTypes: row.residents,
+    indexFormat: "shared-4col",
+    indexTitle: INDEX_TITLES[dir],
+    mutators: [...row.mutators].sort(),
+    auditors: [...row.auditors].sort()
+  }));
+  const implRows = [
+    {
+      dir: "docs/impl",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: [],
+      indexFormat: "none",
+      mutators: [],
+      auditors: []
+    },
+    {
+      dir: "docs/impl/ir",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["impl"],
+      indexFormat: "impl-4col",
+      indexTitle: INDEX_TITLES["docs/impl/ir"],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
+      auditors: ["audit_impl_record"]
+    },
+    {
+      dir: "docs/impl/exp",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["exp"],
+      indexFormat: "exp-1col",
+      indexTitle: INDEX_TITLES["docs/impl/exp"],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
+      auditors: ["audit_experiment_log"]
+    }
+  ];
+  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
+}
+var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
+function ownershipForDir(directory) {
+  const normalized = normalizeDir(directory);
+  let best = null;
+  for (const contract of DIRECTORY_CONTRACTS) {
+    if (normalized === contract.dir || normalized.startsWith(`${contract.dir}/`)) {
+      if (!best || contract.dir.length > best.dir.length) best = contract;
+    }
+  }
+  return best;
+}
+function describeOwnership(directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership) return `custom directory "${normalized}" (no declared owner)`;
+  const residents = ownership.residentTypes.length > 0 ? ownership.residentTypes.join(", ") : "none";
+  return `"${ownership.dir}" (owned by ${ownership.owner}; resident types: ${residents})`;
+}
+function checkTypeScope(type, directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership || ownership.residentTypes.includes(type)) {
+    return { ok: true, directory: normalized, ownership, reason: null };
+  }
+  return {
+    ok: false,
+    directory: normalized,
+    ownership,
+    reason: `Scope mismatch: type "${type}" is not resident in ${describeOwnership(normalized)}`
+  };
+}
+function assertTypeScope(type, directory) {
+  const check2 = checkTypeScope(type, directory);
+  if (!check2.ok) throw new Error(check2.reason ?? "Scope mismatch");
+}
 
 // src/skills/lib/doc_suite_utils.ts
 var import_node_fs2 = __toESM(require("node:fs"));
@@ -13646,7 +13839,7 @@ __export(external_exports, {
   optional: () => optional,
   output: () => output,
   overwrite: () => _overwrite,
-  parse: () => parse4,
+  parse: () => parse3,
   parseAsync: () => parseAsync2,
   partialRecord: () => partialRecord,
   pipe: () => pipe,
@@ -13703,7 +13896,7 @@ __export(external_exports, {
   uuidv4: () => uuidv4,
   uuidv6: () => uuidv6,
   uuidv7: () => uuidv7,
-  validate: () => validate2,
+  validate: () => validate,
   validateAsync: () => validateAsync,
   void: () => _void2,
   withParser: () => withParser,
@@ -13998,7 +14191,7 @@ __export(core_exports2, {
   memoizer: () => memoizer,
   mergeValues: () => mergeValues,
   meta: () => meta,
-  parse: () => parse3,
+  parse: () => parse2,
   parseAsync: () => parseAsync,
   parseURLObject: () => parseURLObject,
   prettifyError: () => prettifyError,
@@ -14021,10 +14214,10 @@ __export(core_exports2, {
   urlHostnameOk: () => urlHostnameOk,
   urlProtocolOk: () => urlProtocolOk,
   util: () => util_exports,
-  validate: () => validate2,
+  validate: () => validate,
   validateAsync: () => validateAsync,
   validateURL: () => validateURL,
-  version: () => version2,
+  version: () => version,
   withParser: () => withParser
 });
 
@@ -14265,10 +14458,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path10) {
-  if (!path10)
+function getElementAtPath(obj, path12) {
+  if (!path12)
     return obj;
-  return path10.reduce((acc, key) => acc?.[key], obj);
+  return path12.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -14608,11 +14801,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path10, issues) {
+function prefixIssues(path12, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path10);
+    iss.path.unshift(path12);
     return iss;
   });
 }
@@ -15074,16 +15267,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path10 = []) => {
+  const processError = (error63, path12 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path10, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else {
-        const fullpath = [...path10, ...issue2.path];
+        const fullpath = [...path12, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -15122,17 +15315,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path10 = []) => {
+  const processError = (error63, path12 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path10, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else {
-        const fullpath = [...path10, ...issue2.path];
+        const fullpath = [...path12, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -15171,8 +15364,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path10 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path10) {
+  const path12 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path12) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -15218,7 +15411,7 @@ var _parse = (_Err) => {
   };
   return fn;
 };
-var parse3 = /* @__PURE__ */ _parse($ZodRealError);
+var parse2 = /* @__PURE__ */ _parse($ZodRealError);
 var _parseAsync = (_Err) => {
   const fn = async (schema, value, _ctx, params) => {
     const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
@@ -15273,7 +15466,7 @@ var _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
 var COMPILE_INVALID = /* @__PURE__ */ Symbol.for("zod.compile.invalid");
 var COMPILE_FALLBACK = /* @__PURE__ */ Symbol.for("zod.compile.fallback");
-var validate2 = ((schema, value, _ctx) => {
+var validate = ((schema, value, _ctx) => {
   const validator = schema._zod.bag.validator;
   if (validator !== void 0) {
     if (validator(value) !== COMPILE_INVALID)
@@ -16048,7 +16241,7 @@ ${content3.join("\n")}
 };
 
 // node_modules/.pnpm/zod@4.6.6/node_modules/zod/v4/core/versions.js
-var version2 = {
+var version = {
   major: 4,
   minor: 6,
   patch: 6
@@ -16060,7 +16253,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
-  inst._zod.version = version2;
+  inst._zod.version = version;
   const defChecks = inst._zod.def.checks;
   const checks = inst._zod.traits.has("$ZodCheck") ? [inst, ...defChecks ?? []] : defChecks?.length ? [...defChecks] : [];
   for (const ch of checks) {
@@ -18371,10 +18564,10 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
       throw new Error("implement() must be called with a function");
     }
     return Object.defineProperty(function(...args) {
-      const parsedArgs = inst._def.input ? parse3(inst._def.input, args) : args;
+      const parsedArgs = inst._def.input ? parse2(inst._def.input, args) : args;
       const result = Reflect.apply(func, this, parsedArgs);
       if (inst._def.output) {
-        return parse3(inst._def.output, result);
+        return parse2(inst._def.output, result);
       }
       return result;
     }, "_zod", { value: inst._zod, enumerable: false });
@@ -30681,7 +30874,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, void 0
 });
 
 // node_modules/.pnpm/zod@4.6.6/node_modules/zod/v4/classic/parse.js
-var parse4 = /* @__PURE__ */ _parse(ZodRealError);
+var parse3 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
@@ -30818,7 +31011,7 @@ var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
     util_exports.own(this, "~standard", value);
   },
   parse: function _parse2(data, params) {
-    return parse4(this, data, params, { callee: _parse2 });
+    return parse3(this, data, params, { callee: _parse2 });
   },
   parseAsync: async function _parseAsync2(data, params) {
     return await parseAsync2(this, data, params, { callee: _parseAsync2 });
@@ -30837,7 +31030,7 @@ var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
     util_exports.own(this, "spa", value);
   },
   validate(data, params) {
-    return validate2(this, data, params);
+    return validate(this, data, params);
   },
   validateAsync(data, params) {
     return validateAsync(this, data, params);
@@ -32310,13 +32503,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path10 = ref.slice(1).split("/").filter(Boolean);
-  if (path10.length === 0) {
+  const path12 = ref.slice(1).split("/").filter(Boolean);
+  if (path12.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path10[0] === defsKey) {
-    const key = path10[1] === void 0 ? void 0 : decodeJSONPointerSegment(path10[1]);
+  if (path12[0] === defsKey) {
+    const key = path12[1] === void 0 ? void 0 : decodeJSONPointerSegment(path12[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -33165,6 +33358,104 @@ function date4(params) {
   return _coercedDate(ZodDate, params);
 }
 
+// node_modules/.pnpm/uuid@14.0.3/node_modules/uuid/dist-node/stringify.js
+var byteToHex = [];
+for (let i = 0; i < 256; ++i) {
+  byteToHex.push((i + 256).toString(16).slice(1));
+}
+function unsafeStringify(arr, offset = 0) {
+  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+}
+
+// node_modules/.pnpm/uuid@14.0.3/node_modules/uuid/dist-node/rng.js
+var rnds8 = new Uint8Array(16);
+function rng() {
+  return crypto.getRandomValues(rnds8);
+}
+
+// node_modules/.pnpm/uuid@14.0.3/node_modules/uuid/dist-node/v7.js
+var _state = {};
+function v7(options2, buf, offset) {
+  let bytes;
+  if (options2) {
+    bytes = v7Bytes(options2.random ?? options2.rng?.() ?? rng(), options2.msecs, options2.seq, buf, offset);
+  } else {
+    const now = Date.now();
+    const rnds = rng();
+    updateV7State(_state, now, rnds);
+    bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
+  }
+  return buf ?? unsafeStringify(bytes);
+}
+function updateV7State(state, now, rnds) {
+  state.msecs ??= -Infinity;
+  state.seq ??= 0;
+  if (now > state.msecs) {
+    state.seq = v7Sequence(rnds);
+    state.msecs = now;
+  } else {
+    state.seq = state.seq + 1 | 0;
+    if (state.seq === 0) {
+      state.msecs++;
+    }
+  }
+  return state;
+}
+function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
+  if (rnds.length < 16) {
+    throw new Error("Random bytes length must be >= 16");
+  }
+  if (!buf) {
+    buf = new Uint8Array(16);
+    offset = 0;
+  } else {
+    if (offset < 0 || offset + 16 > buf.length) {
+      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+    }
+  }
+  msecs ??= Date.now();
+  seq ??= v7Sequence(rnds);
+  buf[offset++] = msecs / 1099511627776 & 255;
+  buf[offset++] = msecs / 4294967296 & 255;
+  buf[offset++] = msecs / 16777216 & 255;
+  buf[offset++] = msecs / 65536 & 255;
+  buf[offset++] = msecs / 256 & 255;
+  buf[offset++] = msecs & 255;
+  buf[offset++] = 112 | seq >>> 28 & 15;
+  buf[offset++] = seq >>> 20 & 255;
+  buf[offset++] = 128 | seq >>> 14 & 63;
+  buf[offset++] = seq >>> 6 & 255;
+  buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
+  buf[offset++] = rnds[11];
+  buf[offset++] = rnds[12];
+  buf[offset++] = rnds[13];
+  buf[offset++] = rnds[14];
+  buf[offset++] = rnds[15];
+  return buf;
+}
+function v7Sequence(rnds) {
+  return (rnds[6] & 127) << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
+}
+var v7_default = v7;
+
+// src/skills/lib/artifact_id.ts
+var import_uuid62 = __toESM(require_uuid62());
+var NEW_ARTIFACT_ID_PATTERN = /^[A-Z][A-Z0-9]*-[0-9A-Za-z]{22}$/;
+var LEGACY_ARTIFACT_ID_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
+var ID_PREFIX_PATTERN = /^[A-Z][A-Z0-9]*$/;
+function generateArtifactId(idPrefix) {
+  if (!ID_PREFIX_PATTERN.test(idPrefix)) {
+    throw new Error(`Invalid artifact id prefix: ${idPrefix}`);
+  }
+  return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
+}
+function isNewArtifactId(value) {
+  return NEW_ARTIFACT_ID_PATTERN.test(value.trim());
+}
+function isLegacyArtifactId(value) {
+  return LEGACY_ARTIFACT_ID_PATTERN.test(value.trim());
+}
+
 // src/skills/lib/doc_lifecycle.ts
 var SETTLED_STATUSES = {
   idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
@@ -33186,304 +33477,6 @@ function lifecycleBucketForType(type) {
 function isSettledStatus(type, status) {
   if (!status) return false;
   return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
-}
-
-// src/skills/lib/document_utils.ts
-var import_node_fs = __toESM(require("node:fs"));
-var import_node_path = __toESM(require("node:path"));
-var CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp"
-];
-var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
-  "changes",
-  "test-spec-skip"
-]);
-function normalizeDir(input2) {
-  return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
-}
-function stripExtendedLengthPrefix(value) {
-  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
-  if (value.startsWith("\\\\?\\")) return value.slice(4);
-  return value;
-}
-function containmentKey(value) {
-  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
-function isInside(cwd, candidate) {
-  const root = containmentKey(cwd);
-  const resolved = containmentKey(candidate);
-  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
-}
-function isInsideRealpath(cwd, candidate) {
-  try {
-    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
-  } catch {
-    return false;
-  }
-}
-function isInsideCheckout(cwd, candidate) {
-  const resolved = import_node_path.default.resolve(cwd, candidate);
-  if (!isInside(cwd, resolved)) return false;
-  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
-}
-function toRepoRelative(cwd, absolute) {
-  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
-}
-function resolveContainedDir(cwd, dir, flag = "--dir") {
-  const resolved = import_node_path.default.resolve(cwd, dir);
-  if (!isInside(cwd, resolved)) {
-    throw new Error(`${flag} escapes the checkout: ${dir}`);
-  }
-  if (import_node_fs.default.existsSync(resolved)) {
-    if (!isInsideRealpath(cwd, resolved)) {
-      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
-    }
-    return toRepoRelative(
-      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
-      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
-    );
-  }
-  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
-}
-function isIndexFileName(file2) {
-  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
-}
-function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
-  if (explicitDir) return resolveContainedDir(cwd, explicitDir);
-  const existing = candidateDirs.filter((candidate) => import_node_fs.default.existsSync(import_node_path.default.join(cwd, candidate)));
-  return existing.length === 0 ? defaultDir : existing[0];
-}
-
-// src/skills/lib/doc_types.ts
-var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
-var configs = {
-  idea: {
-    defaultStatus: "draft",
-    dir: "docs/ideas",
-    dirs: ["docs/ideas"],
-    idPrefix: "IDEA",
-    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
-    type: "idea"
-  },
-  brainstorm: {
-    defaultStatus: "capturing",
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    idPrefix: "BRAINSTORM",
-    statusValues: ["capturing", "confirmed", "routed", "superseded"],
-    type: "brainstorm"
-  },
-  discovery: {
-    defaultStatus: "draft",
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    idPrefix: "DISC",
-    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
-    type: "discovery"
-  },
-  spec: {
-    defaultStatus: "draft",
-    dir: "docs/specs",
-    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
-    idPrefix: "SPEC",
-    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
-    type: "spec"
-  },
-  plan: {
-    defaultStatus: "draft",
-    dir: "docs/plans",
-    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
-    idPrefix: "PLAN",
-    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
-    type: "plan"
-  },
-  task: {
-    defaultStatus: "todo",
-    dir: "docs/tasks",
-    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
-    idPrefix: "TASK",
-    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
-    type: "task"
-  },
-  "test-spec": {
-    defaultStatus: "draft",
-    dir: "docs/test-specs",
-    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
-    idPrefix: "TSPEC",
-    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
-    type: "test-spec"
-  },
-  design: {
-    defaultStatus: "draft",
-    dir: "docs/designs",
-    dirs: ["docs/designs", "docs/design", "designs", "design"],
-    idPrefix: "DESIGN",
-    statusValues: ["draft", "approved", "superseded", "rejected"],
-    type: "design"
-  },
-  adr: {
-    defaultStatus: "proposed",
-    dir: "docs/adr",
-    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
-    idPrefix: "ADR",
-    indexRow: {
-      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
-      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
-      // every producer derives identical rows (Issue #185).
-      idFromFile: (file2) => {
-        const match = /^(\d+)-/.exec(file2);
-        return match ? `ADR-${match[1]}` : null;
-      },
-      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
-    },
-    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
-    type: "adr"
-  }
-};
-function configFor(type) {
-  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
-  return configs[type];
-}
-
-// src/skills/lib/doc_ownership.ts
-var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
-var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
-var ADR_MUTATORS = ["update_index", "relate_adr"];
-var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
-var INDEX_TITLES = {
-  "docs/adr": "Architecture Decision Records",
-  "docs/impl/ir": "Implementation Records",
-  "docs/impl/exp": "Experiment Logs"
-};
-var PROMOTE_INDEX_MUTATOR = "promote_index";
-var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
-var SHARED_CREATORS = {
-  idea: "new_idea",
-  discovery: "new_discovery",
-  spec: "new_spec",
-  plan: "new_plan",
-  task: "new_task",
-  design: "new_design",
-  adr: "new_adr",
-  "test-spec": "new_test_spec"
-};
-function buildContracts() {
-  const rows = /* @__PURE__ */ new Map();
-  for (const type of docTypes) {
-    const config2 = configFor(type);
-    const adr = type === "adr";
-    for (const dir of config2.dirs) {
-      const normalized = normalizeDir(dir);
-      let row = rows.get(normalized);
-      if (!row) {
-        row = {
-          canonical: false,
-          owner: adr ? "adr-doc" : "doc-suite",
-          residents: [],
-          mutators: /* @__PURE__ */ new Set(),
-          auditors: /* @__PURE__ */ new Set()
-        };
-        rows.set(normalized, row);
-      }
-      row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
-      if (INDEX_TITLES[normalized]) row.mutators.add(PROMOTE_INDEX_MUTATOR);
-      if (!row.residents.includes(type)) row.residents.push(type);
-      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
-      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
-      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
-      if (adr) {
-        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
-        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
-      }
-    }
-  }
-  const shared = [...rows.entries()].map(([dir, row]) => ({
-    dir,
-    canonical: row.canonical,
-    owner: row.owner,
-    residentTypes: row.residents,
-    indexFormat: "shared-4col",
-    indexTitle: INDEX_TITLES[dir],
-    mutators: [...row.mutators].sort(),
-    auditors: [...row.auditors].sort()
-  }));
-  const implRows = [
-    {
-      dir: "docs/impl",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: [],
-      indexFormat: "none",
-      mutators: [],
-      auditors: []
-    },
-    {
-      dir: "docs/impl/ir",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: ["impl"],
-      indexFormat: "impl-4col",
-      indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
-      auditors: ["audit_impl_record"]
-    },
-    {
-      dir: "docs/impl/exp",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: ["exp"],
-      indexFormat: "exp-1col",
-      indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
-      auditors: ["audit_experiment_log"]
-    }
-  ];
-  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
-}
-var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
-function ownershipForDir(directory) {
-  const normalized = normalizeDir(directory);
-  let best = null;
-  for (const contract of DIRECTORY_CONTRACTS) {
-    if (normalized === contract.dir || normalized.startsWith(`${contract.dir}/`)) {
-      if (!best || contract.dir.length > best.dir.length) best = contract;
-    }
-  }
-  return best;
-}
-function describeOwnership(directory) {
-  const normalized = normalizeDir(directory);
-  const ownership = ownershipForDir(normalized);
-  if (!ownership) return `custom directory "${normalized}" (no declared owner)`;
-  const residents = ownership.residentTypes.length > 0 ? ownership.residentTypes.join(", ") : "none";
-  return `"${ownership.dir}" (owned by ${ownership.owner}; resident types: ${residents})`;
-}
-function checkTypeScope(type, directory) {
-  const normalized = normalizeDir(directory);
-  const ownership = ownershipForDir(normalized);
-  if (!ownership || ownership.residentTypes.includes(type)) {
-    return { ok: true, directory: normalized, ownership, reason: null };
-  }
-  return {
-    ok: false,
-    directory: normalized,
-    ownership,
-    reason: `Scope mismatch: type "${type}" is not resident in ${describeOwnership(normalized)}`
-  };
-}
-function assertTypeScope(type, directory) {
-  const check2 = checkTypeScope(type, directory);
-  if (!check2.ok) throw new Error(check2.reason ?? "Scope mismatch");
 }
 
 // src/skills/lib/doc_suite_utils.ts
@@ -33750,7 +33743,137 @@ async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
   return { path: relIndex, written: true, reason: null };
 }
 
+// src/skills/lib/markdown_sections.ts
+var SECTION_HEADING_ALIASES = {
+  // task-doc
+  "Work": ["\u4F5C\u696D"],
+  "Classification": ["\u5206\u985E"],
+  "Upstream Documents": ["\u4E0A\u6D41\u6587\u66F8"],
+  "Dependencies": ["\u4F9D\u5B58\u95A2\u4FC2"],
+  "Affected Files": ["\u5F71\u97FF\u30D5\u30A1\u30A4\u30EB"],
+  "Done When": ["\u5B8C\u4E86\u6761\u4EF6"],
+  "Verification": ["\u691C\u8A3C"],
+  // spec-doc
+  "What Should Be Built": ["\u4F55\u3092\u4F5C\u308B\u3079\u304D\u304B"],
+  "Why Now": ["\u306A\u305C\u4ECA\u5FC5\u8981\u304B"],
+  "Users and Value": ["\u5229\u7528\u8005\u3068\u4FA1\u5024"],
+  "Scope": ["\u7BC4\u56F2", "\u30B9\u30B3\u30FC\u30D7"],
+  "In Scope": ["\u7BC4\u56F2\u5185"],
+  "Out of Scope": ["\u7BC4\u56F2\u5916"],
+  "Requirements": ["\u8981\u4EF6"],
+  "Acceptance Criteria": ["\u53D7\u3051\u5165\u308C\u57FA\u6E96"],
+  "Sources and Relations": ["\u51FA\u5178\u3068 Relations", "\u51FA\u5178\u30FBRelations"],
+  // discovery-doc
+  "Exploration Goal": ["\u63A2\u7D22\u76EE\u7684"],
+  "Key Issues and Assumptions": ["\u8AD6\u70B9\u30FB\u524D\u63D0"],
+  "Alternatives and Comparison": ["\u4EE3\u66FF\u6848\u3068\u6BD4\u8F03"],
+  "Tentative Conclusions and Hypotheses": ["\u66AB\u5B9A\u7D50\u8AD6\u30FB\u4EEE\u8AAC"],
+  "Open Questions": ["\u672A\u89E3\u6C7A\u306E\u8AD6\u70B9", "\u672A\u89E3\u6C7A\u4E8B\u9805"],
+  "Promotion Candidates": ["\u6607\u83EF\u5148\u5019\u88DC"],
+  "Evidence": ["\u30A8\u30D3\u30C7\u30F3\u30B9"],
+  // idea-doc
+  "Summary": ["\u8981\u7D04"],
+  "Problem and Motivation": ["\u8AB2\u984C\u3068\u52D5\u6A5F"],
+  "Expected Value": ["\u60F3\u5B9A\u4FA1\u5024"],
+  "Next Action": ["\u6B21\u306E\u30A2\u30AF\u30B7\u30E7\u30F3"],
+  // plan-doc
+  "Goal": ["\u76EE\u7684"],
+  "File Map": ["\u30D5\u30A1\u30A4\u30EB\u8868"],
+  "Implementation Sequence": ["\u5B9F\u88C5\u9806\u5E8F"],
+  "Dependencies and Risks": ["\u4F9D\u5B58\u95A2\u4FC2\u3068\u30EA\u30B9\u30AF"],
+  "Task Breakdown": ["Task \u5206\u89E3"],
+  "Open Questions / Gaps": ["\u672A\u89E3\u6C7A\u4E8B\u9805 / gap"],
+  "Self-Review": ["\u81EA\u5DF1\u30EC\u30D3\u30E5\u30FC"],
+  "Implementation Handoff": ["\u5B9F\u88C5\u30CF\u30F3\u30C9\u30AA\u30D5"],
+  "Review Handoff": ["\u30EC\u30D3\u30E5\u30FC\u7528\u30CF\u30F3\u30C9\u30AA\u30D5"],
+  // adr-doc (MADR 4 templates)
+  "Context and Problem Statement": ["\u80CC\u666F\u3068\u554F\u984C"],
+  "Decision Drivers": ["\u6C7A\u5B9A\u30C9\u30E9\u30A4\u30D0\u30FC"],
+  "Considered Options": ["\u691C\u8A0E\u3057\u305F\u9078\u629E\u80A2"],
+  "Decision Outcome": ["\u6C7A\u5B9A\u5185\u5BB9"],
+  "Consequences": ["\u5F71\u97FF"],
+  "Confirmation": ["\u78BA\u8A8D\u65B9\u6CD5"],
+  "Implementation Plan": ["\u5B9F\u88C5\u8A08\u753B"],
+  "Pros and Cons of the Options": ["\u9078\u629E\u80A2\u306E\u5229\u70B9\u3068\u6B20\u70B9"],
+  "Option": ["\u9078\u629E\u80A2"],
+  "Option 1": ["\u9078\u629E\u80A2 1"],
+  "Option 2": ["\u9078\u629E\u80A2 2"],
+  "More Information": ["\u8FFD\u52A0\u60C5\u5831"],
+  // implementation-flow profile
+  "Available Skills": ["\u5229\u7528\u53EF\u80FD\u306A\u30B9\u30AD\u30EB"],
+  "Category Assignments": ["\u30AB\u30C6\u30B4\u30EA\u5272\u308A\u5F53\u3066"]
+};
+var FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
+var FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})\s*$/;
+function stripFencedBlocks(body) {
+  const kept = [];
+  let fenceChar = "";
+  let fenceLen = 0;
+  for (const line of body.split(/\r?\n/)) {
+    if (fenceChar === "") {
+      const open2 = FENCE_OPEN.exec(line);
+      if (open2) {
+        const run = open2[1];
+        const info = line.slice(line.indexOf(run) + run.length);
+        if (info.includes(run[0])) {
+          kept.push(line);
+          continue;
+        }
+        fenceChar = run[0];
+        fenceLen = run.length;
+        continue;
+      }
+      kept.push(line);
+      continue;
+    }
+    const close = FENCE_CLOSE.exec(line);
+    if (close && close[1][0] === fenceChar && close[1].length >= fenceLen) {
+      fenceChar = "";
+      fenceLen = 0;
+    }
+  }
+  return kept.join("\n");
+}
+function headingNames(canonicalHeading) {
+  return [canonicalHeading, ...SECTION_HEADING_ALIASES[canonicalHeading] ?? []];
+}
+function headingPattern(heading) {
+  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
+}
+function hasSection(body, canonicalHeading) {
+  const lines = stripFencedBlocks(body).split(/\r?\n/);
+  return headingNames(canonicalHeading).some((name) => {
+    const pattern = headingPattern(name);
+    return lines.some((line) => pattern.test(line.trimEnd()));
+  });
+}
+
+// src/skills/adr-doc/scripts/lib/adr_utils.ts
+function writeIndexFile(adrDir, content3, force = false) {
+  const indexPath = import_node_path3.default.join(adrDir, "README.md");
+  const existing = import_node_fs3.default.existsSync(indexPath) ? import_node_fs3.default.readFileSync(indexPath, "utf8") : null;
+  if (!force && existing !== null && !isGeneratedIndex(existing, "Architecture Decision Records")) {
+    return { written: false, reason: "hand-curated" };
+  }
+  const output2 = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content3) : content3;
+  import_node_fs3.default.writeFileSync(indexPath, output2, "utf8");
+  return { written: true, reason: null };
+}
+async function buildIndex2(cwd, relativeDir) {
+  return buildIndex(cwd, "adr", relativeDir);
+}
+
+// src/skills/lib/doc_audit.ts
+var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_path8 = __toESM(require("node:path"));
+
+// src/skills/lib/doc_lint.ts
+var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_path7 = __toESM(require("node:path"));
+
 // src/skills/lib/doc_repository.ts
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path5 = __toESM(require("node:path"));
 function finding(input2) {
   const severity = input2.severity ?? "error";
   return {
@@ -33977,12 +34100,12 @@ function isExternalReference(value) {
   return EXTERNAL_REFERENCE.test(trimmed);
 }
 function walkMarkdownFiles2(root) {
-  if (!import_node_fs3.default.existsSync(root) || !import_node_fs3.default.statSync(root).isDirectory()) return [];
+  if (!import_node_fs4.default.existsSync(root) || !import_node_fs4.default.statSync(root).isDirectory()) return [];
   const files = [];
   const visitDir = (dir) => {
-    const entries = import_node_fs3.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
+    const entries = import_node_fs4.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
     for (const entry of entries) {
-      const full = import_node_path4.default.join(dir, entry.name);
+      const full = import_node_path5.default.join(dir, entry.name);
       if (entry.isDirectory()) {
         if (!SKIPPED_DIRS.has(entry.name)) visitDir(full);
       } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
@@ -33994,7 +34117,7 @@ function walkMarkdownFiles2(root) {
   return files.sort(compareStrings);
 }
 function toRepoPath(cwd, absolute) {
-  return import_node_path4.default.relative(cwd, absolute).split(import_node_path4.default.sep).join("/");
+  return import_node_path5.default.relative(cwd, absolute).split(import_node_path5.default.sep).join("/");
 }
 function isUnderDir(child, parent) {
   const c = normalizeDir(child);
@@ -34002,8 +34125,8 @@ function isUnderDir(child, parent) {
   return c === p || c.startsWith(`${p}/`);
 }
 function artifactKeyOf(repoPath) {
-  const dir = import_node_path4.default.posix.dirname(repoPath);
-  const base = import_node_path4.default.posix.basename(repoPath).replace(/\.md$/i, "");
+  const dir = import_node_path5.default.posix.dirname(repoPath);
+  const base = import_node_path5.default.posix.basename(repoPath).replace(/\.md$/i, "");
   const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
   return `${dir}::${locale ? locale[1] : base}`;
 }
@@ -34019,7 +34142,7 @@ function groupByArtifact(group) {
 }
 function primaryDocumentOf(group) {
   const nonLocalized = group.filter(
-    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path4.default.posix.basename(document3.path))
+    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path5.default.posix.basename(document3.path))
   );
   const pool = nonLocalized.length > 0 ? nonLocalized : group;
   return [...pool].sort((a, b) => compareStrings(a.path, b.path))[0];
@@ -34040,7 +34163,7 @@ function canonicalTypeMap() {
   return [...byDir.entries()].map(([dir, types]) => ({ dir, types: [...types].sort(compareStrings) })).sort((a, b) => b.dir.length - a.dir.length || compareStrings(a.dir, b.dir));
 }
 function expectedTypesFor(repoPath, typeMap) {
-  const dir = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
+  const dir = normalizeDir(import_node_path5.default.posix.dirname(repoPath));
   const match = typeMap.find((entry) => isUnderDir(dir, entry.dir));
   return match ? match.types : [];
 }
@@ -34061,8 +34184,8 @@ function stringField(data, field) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 function localeSiblingsFor(repoPath, siblingsByDir) {
-  const dir = import_node_path4.default.posix.dirname(repoPath);
-  const base = import_node_path4.default.posix.basename(repoPath);
+  const dir = import_node_path5.default.posix.dirname(repoPath);
+  const base = import_node_path5.default.posix.basename(repoPath);
   const peers = siblingsByDir.get(dir);
   if (!peers) return [];
   const localeMatch = LOCALE_FILE_PATTERN.exec(base);
@@ -34075,9 +34198,9 @@ function localeSiblingsFor(repoPath, siblingsByDir) {
 }
 function defaultScanRoots(cwd) {
   const roots = /* @__PURE__ */ new Set();
-  if (import_node_fs3.default.existsSync(import_node_path4.default.join(cwd, "docs"))) roots.add("docs");
+  if (import_node_fs4.default.existsSync(import_node_path5.default.join(cwd, "docs"))) roots.add("docs");
   for (const dir of canonicalDocRoots()) {
-    if (import_node_fs3.default.existsSync(import_node_path4.default.join(cwd, dir))) roots.add(dir);
+    if (import_node_fs4.default.existsSync(import_node_path5.default.join(cwd, dir))) roots.add(dir);
   }
   return [...roots].sort(compareStrings);
 }
@@ -34086,26 +34209,26 @@ function pruneNestedRoots(roots) {
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
 async function scanRepository(options2) {
-  const cwd = import_node_path4.default.resolve(options2.cwd);
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path4.default.join(cwd, root)));
+  const cwd = import_node_path5.default.resolve(options2.cwd);
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path5.default.join(cwd, root)));
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
-    for (const file2 of walkMarkdownFiles2(import_node_path4.default.join(cwd, root))) absoluteFiles.add(file2);
+    for (const file2 of walkMarkdownFiles2(import_node_path5.default.join(cwd, root))) absoluteFiles.add(file2);
   }
   if (options2.includeTopLevelMarkdown !== false) {
-    for (const entry of import_node_fs3.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
+    for (const entry of import_node_fs4.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
       if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-        absoluteFiles.add(import_node_path4.default.join(cwd, entry.name));
+        absoluteFiles.add(import_node_path5.default.join(cwd, entry.name));
       }
     }
   }
   const siblingsByDir = /* @__PURE__ */ new Map();
   for (const absolute of absoluteFiles) {
     const repoPath = toRepoPath(cwd, absolute);
-    const dir = import_node_path4.default.posix.dirname(repoPath);
+    const dir = import_node_path5.default.posix.dirname(repoPath);
     const peers = siblingsByDir.get(dir) ?? /* @__PURE__ */ new Set();
-    peers.add(import_node_path4.default.posix.basename(repoPath));
+    peers.add(import_node_path5.default.posix.basename(repoPath));
     siblingsByDir.set(dir, peers);
   }
   const files = [];
@@ -34113,11 +34236,11 @@ async function scanRepository(options2) {
     const repoPath = toRepoPath(cwd, absolute);
     const expectedTypes = expectedTypesFor(repoPath, typeMap);
     const canonical = expectedTypes.length > 0;
-    const kind = !canonical ? "unmanaged" : isIndexFileName(import_node_path4.default.posix.basename(repoPath)) ? "index" : "canonical";
+    const kind = !canonical ? "unmanaged" : isIndexFileName(import_node_path5.default.posix.basename(repoPath)) ? "index" : "canonical";
     let content3 = "";
     let readError = null;
     try {
-      content3 = import_node_fs3.default.readFileSync(absolute, "utf8");
+      content3 = import_node_fs4.default.readFileSync(absolute, "utf8");
     } catch (error62) {
       readError = error62 instanceof Error ? error62.message : String(error62);
     }
@@ -34160,7 +34283,7 @@ async function scanRepository(options2) {
   }
   const insideRoot = (absolute) => isInside(cwd, absolute);
   const fileExistsInsideRoot = (absolute) => {
-    return isInsideCheckout(cwd, absolute) && import_node_fs3.default.existsSync(absolute) && import_node_fs3.default.statSync(absolute).isFile();
+    return isInsideCheckout(cwd, absolute) && import_node_fs4.default.existsSync(absolute) && import_node_fs4.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -34183,10 +34306,10 @@ async function scanRepository(options2) {
       return { status: "resolved", path: self, fragment, document: self ? byPath.get(self) ?? null : null };
     }
     const docRelative = pathname.startsWith("./") || pathname.startsWith("../") || pathname === "." || pathname === "..";
-    const candidates = docRelative ? [from ? import_node_path4.default.resolve(import_node_path4.default.dirname(from.absolutePath), pathname) : null, import_node_path4.default.resolve(cwd, pathname)] : [import_node_path4.default.resolve(cwd, pathname), from ? import_node_path4.default.resolve(import_node_path4.default.dirname(from.absolutePath), pathname) : null];
-    if (import_node_path4.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
+    const candidates = docRelative ? [from ? import_node_path5.default.resolve(import_node_path5.default.dirname(from.absolutePath), pathname) : null, import_node_path5.default.resolve(cwd, pathname)] : [import_node_path5.default.resolve(cwd, pathname), from ? import_node_path5.default.resolve(import_node_path5.default.dirname(from.absolutePath), pathname) : null];
+    if (import_node_path5.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
       candidates.length = 0;
-      candidates.push(import_node_path4.default.resolve(pathname));
+      candidates.push(import_node_path5.default.resolve(pathname));
     }
     let sawEscaped = false;
     for (const candidate of candidates) {
@@ -34401,8 +34524,8 @@ function lintStaleUpstreams(model, scope) {
 }
 
 // src/skills/lib/doc_structure_lint.ts
-var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path5 = __toESM(require("node:path"));
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_index_tiers.ts
 var HEADING2 = /^##\s+(.*)$/;
@@ -34483,13 +34606,13 @@ function parseManagedIndexLayout(content3) {
 
 // src/skills/lib/doc_structure_lint.ts
 function caseInsensitiveExists(model, absolute) {
-  const dir = import_node_path5.default.dirname(absolute);
-  const base = import_node_path5.default.basename(absolute).toLowerCase();
-  if (!import_node_fs4.default.existsSync(dir)) return null;
-  const match = import_node_fs4.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base);
+  const dir = import_node_path6.default.dirname(absolute);
+  const base = import_node_path6.default.basename(absolute).toLowerCase();
+  if (!import_node_fs5.default.existsSync(dir)) return null;
+  const match = import_node_fs5.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base);
   if (!match) return null;
-  const candidate = import_node_path5.default.join(dir, match);
-  return import_node_fs4.default.existsSync(candidate) && import_node_fs4.default.statSync(candidate).isFile() ? candidate : null;
+  const candidate = import_node_path6.default.join(dir, match);
+  return import_node_fs5.default.existsSync(candidate) && import_node_fs5.default.statSync(candidate).isFile() ? candidate : null;
 }
 function lintDocumentLinks(model, scope) {
   const findings = [];
@@ -34513,7 +34636,7 @@ function lintDocumentLinks(model, scope) {
         continue;
       }
       if (resolved.status === "unresolved") {
-        const absolute = import_node_path5.default.resolve(model.root, resolved.path ?? link.target);
+        const absolute = import_node_path6.default.resolve(model.root, resolved.path ?? link.target);
         const caseMatch = resolved.path ? caseInsensitiveExists(model, absolute) : null;
         if (caseMatch) {
           findings.push(finding({
@@ -34523,7 +34646,7 @@ function lintDocumentLinks(model, scope) {
             path: document3.path,
             line: link.line,
             artifactId: document3.id,
-            message: `Link target differs only by case: ${link.target} (actual: ${import_node_path5.default.basename(caseMatch)})`,
+            message: `Link target differs only by case: ${link.target} (actual: ${import_node_path6.default.basename(caseMatch)})`,
             target: link.target,
             repair: "safe"
           }));
@@ -34545,14 +34668,14 @@ function lintDocumentLinks(model, scope) {
       if (resolved.status === "resolved" && resolved.path) {
         const targetBase = (() => {
           try {
-            return decodeURIComponent(import_node_path5.default.posix.basename(link.target.split("#")[0].split("?")[0]));
+            return decodeURIComponent(import_node_path6.default.posix.basename(link.target.split("#")[0].split("?")[0]));
           } catch {
-            return import_node_path5.default.posix.basename(link.target.split("#")[0].split("?")[0]);
+            return import_node_path6.default.posix.basename(link.target.split("#")[0].split("?")[0]);
           }
         })();
-        const absolute = import_node_path5.default.resolve(model.root, resolved.path);
-        const dir = import_node_path5.default.dirname(absolute);
-        const actualBase = import_node_fs4.default.existsSync(dir) ? import_node_fs4.default.readdirSync(dir).find((entry) => entry.toLowerCase() === targetBase.toLowerCase()) : void 0;
+        const absolute = import_node_path6.default.resolve(model.root, resolved.path);
+        const dir = import_node_path6.default.dirname(absolute);
+        const actualBase = import_node_fs5.default.existsSync(dir) ? import_node_fs5.default.readdirSync(dir).find((entry) => entry.toLowerCase() === targetBase.toLowerCase()) : void 0;
         if (actualBase && actualBase !== targetBase) {
           findings.push(finding({
             ruleId: "link-case-mismatch",
@@ -34713,7 +34836,7 @@ function lintOrphans(model, scope, profile = "materialized") {
   const relationCounts = inboundRelationCounts(model);
   const contract = contractForType(scope.type);
   const severity = contract?.allowsRootArtifact ? "info" : "warning";
-  const hasIndex = model.files.some((file2) => file2.kind === "index" && normalizeDir(import_node_path5.default.posix.dirname(file2.path)) === scope.directory);
+  const hasIndex = model.files.some((file2) => file2.kind === "index" && normalizeDir(import_node_path6.default.posix.dirname(file2.path)) === scope.directory);
   for (const document3 of scope.documents) {
     if (document3.parseError) continue;
     if (profile !== "artifact" && hasIndex && document3.indexMembership.length === 0) {
@@ -34775,7 +34898,7 @@ function lintIndexConsistency(model, scope, index2) {
   }
   const seen = /* @__PURE__ */ new Set();
   const layout = parseManagedIndexLayout(index2.body);
-  const indexDir = normalizeDir(import_node_path5.default.posix.dirname(index2.path));
+  const indexDir = normalizeDir(import_node_path6.default.posix.dirname(index2.path));
   const residentTypes = residentTypesForDir(indexDir);
   const indexPrimaryType = primaryIndexTypeForDir(
     indexDir,
@@ -34783,7 +34906,7 @@ function lintIndexConsistency(model, scope, index2) {
   );
   let lineOffset = 0;
   try {
-    lineOffset = frontMatterEndLine(import_node_fs4.default.readFileSync(import_node_path5.default.join(model.root, index2.path), "utf8"));
+    lineOffset = frontMatterEndLine(import_node_fs5.default.readFileSync(import_node_path6.default.join(model.root, index2.path), "utf8"));
   } catch {
     lineOffset = 0;
   }
@@ -34868,8 +34991,8 @@ function lintIndexConsistency(model, scope, index2) {
     seen.add(resolved.path);
     const member = model.byPath.get(resolved.path);
     const settled = member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false;
-    rowFiles.push({ file: import_node_path5.default.posix.basename(resolved.path), settled });
-    if (placed.tier !== "unknown") tierFiles[placed.tier].push(import_node_path5.default.posix.basename(resolved.path));
+    rowFiles.push({ file: import_node_path6.default.posix.basename(resolved.path), settled });
+    if (placed.tier !== "unknown") tierFiles[placed.tier].push(import_node_path6.default.posix.basename(resolved.path));
     if (member && member.kind === "canonical") {
       const expected = [
         ["id", member.id],
@@ -34944,8 +35067,8 @@ function lintIndexConsistency(model, scope, index2) {
 }
 function lintStructure(model, scope, profile = "materialized") {
   const dir = scope.directory;
-  const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path5.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path5.default.posix.basename(file2.path)));
-  const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path5.default.posix.basename(file2.path))) ?? indexCandidates[0];
+  const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path6.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path6.default.posix.basename(file2.path)));
+  const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path6.default.posix.basename(file2.path))) ?? indexCandidates[0];
   const findings = [
     ...lintDocumentLinks(model, scope),
     ...lintOrphans(model, scope, profile)
@@ -34961,13 +35084,13 @@ function isUnderDir2(child, parent) {
   return c === p || c.startsWith(`${p}/`);
 }
 function relativeToDir(directory, repoPath) {
-  const relative = import_node_path6.default.posix.relative(normalizeDir(directory), repoPath);
-  return relative === "" ? import_node_path6.default.posix.basename(repoPath) : relative;
+  const relative = import_node_path7.default.posix.relative(normalizeDir(directory), repoPath);
+  return relative === "" ? import_node_path7.default.posix.basename(repoPath) : relative;
 }
 function scopeFor(model, type, directory) {
   const dir = normalizeDir(directory);
   const files = model.files.filter(
-    (file2) => isUnderDir2(file2.path, dir) && !isIndexFileName(import_node_path6.default.posix.basename(file2.path))
+    (file2) => isUnderDir2(file2.path, dir) && !isIndexFileName(import_node_path7.default.posix.basename(file2.path))
   );
   const documents = files.filter(
     (file2) => !isForeignDocType(file2.type, type, dir)
@@ -35286,8 +35409,8 @@ function lintDirectory(model, scope, profile) {
     }
   }
   if (profile === "artifact") return findings;
-  const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path6.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path6.default.posix.basename(file2.path)));
-  const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path6.default.posix.basename(file2.path))) ?? indexCandidates[0];
+  const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path7.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path7.default.posix.basename(file2.path)));
+  const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path7.default.posix.basename(file2.path))) ?? indexCandidates[0];
   if (!index2) {
     findings.push(finding({
       ruleId: "missing-index",
@@ -35342,12 +35465,12 @@ function legacyIdPrefixes() {
   return prefixes;
 }
 function experimentNumbers(root) {
-  const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
-  if (!import_node_fs5.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
+  const expDir = import_node_path7.default.join(root, IMPL_EXP_DIR);
+  if (!import_node_fs6.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
   if (!isInsideRealpath(root, expDir)) return /* @__PURE__ */ new Map();
   const counts = /* @__PURE__ */ new Map();
-  for (const name of import_node_fs5.default.readdirSync(expDir)) {
-    if (isSymlinkPath(import_node_path6.default.join(expDir, name))) continue;
+  for (const name of import_node_fs6.default.readdirSync(expDir)) {
+    if (isSymlinkPath(import_node_path7.default.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
     if (match) counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
   }
@@ -35355,7 +35478,7 @@ function experimentNumbers(root) {
 }
 function isSymlinkPath(p) {
   try {
-    return import_node_fs5.default.lstatSync(p).isSymbolicLink();
+    return import_node_fs6.default.lstatSync(p).isSymbolicLink();
   } catch {
     return false;
   }
@@ -35463,7 +35586,7 @@ function scanRoots(relativeDirs) {
   return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
 }
 function toLegacyFinding(directory, finding2) {
-  const file2 = finding2.path ? import_node_path7.default.posix.relative(normalizeDir(directory), finding2.path) || import_node_path7.default.posix.basename(finding2.path) : null;
+  const file2 = finding2.path ? import_node_path8.default.posix.relative(normalizeDir(directory), finding2.path) || import_node_path8.default.posix.basename(finding2.path) : null;
   return {
     severity: finding2.severity,
     file: file2,
@@ -35477,8 +35600,8 @@ async function buildModel(cwd, relativeDirs) {
 }
 async function auditWithModel(model, cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const fullDir = import_node_path7.default.join(cwd, relativeDir);
-  const files = import_node_fs6.default.existsSync(fullDir) && isInsideRealpath(cwd, fullDir) ? docFiles(fullDir) : [];
+  const fullDir = import_node_path8.default.join(cwd, relativeDir);
+  const files = import_node_fs7.default.existsSync(fullDir) && isInsideRealpath(cwd, fullDir) ? docFiles(fullDir) : [];
   const profile = options2?.profile ?? "materialized";
   const findings = lintScope(model, type, relativeDir, profile);
   if (options2?.externalLinks) {
@@ -35495,115 +35618,8 @@ async function auditDocuments(cwd, type, explicitDir, options2) {
 }
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
-var import_node_fs7 = __toESM(require("node:fs"));
-var import_node_path8 = __toESM(require("node:path"));
-
-// src/skills/lib/markdown_sections.ts
-var SECTION_HEADING_ALIASES = {
-  // task-doc
-  "Work": ["\u4F5C\u696D"],
-  "Classification": ["\u5206\u985E"],
-  "Upstream Documents": ["\u4E0A\u6D41\u6587\u66F8"],
-  "Dependencies": ["\u4F9D\u5B58\u95A2\u4FC2"],
-  "Affected Files": ["\u5F71\u97FF\u30D5\u30A1\u30A4\u30EB"],
-  "Done When": ["\u5B8C\u4E86\u6761\u4EF6"],
-  "Verification": ["\u691C\u8A3C"],
-  // spec-doc
-  "What Should Be Built": ["\u4F55\u3092\u4F5C\u308B\u3079\u304D\u304B"],
-  "Why Now": ["\u306A\u305C\u4ECA\u5FC5\u8981\u304B"],
-  "Users and Value": ["\u5229\u7528\u8005\u3068\u4FA1\u5024"],
-  "Scope": ["\u7BC4\u56F2", "\u30B9\u30B3\u30FC\u30D7"],
-  "In Scope": ["\u7BC4\u56F2\u5185"],
-  "Out of Scope": ["\u7BC4\u56F2\u5916"],
-  "Requirements": ["\u8981\u4EF6"],
-  "Acceptance Criteria": ["\u53D7\u3051\u5165\u308C\u57FA\u6E96"],
-  "Sources and Relations": ["\u51FA\u5178\u3068 Relations", "\u51FA\u5178\u30FBRelations"],
-  // discovery-doc
-  "Exploration Goal": ["\u63A2\u7D22\u76EE\u7684"],
-  "Key Issues and Assumptions": ["\u8AD6\u70B9\u30FB\u524D\u63D0"],
-  "Alternatives and Comparison": ["\u4EE3\u66FF\u6848\u3068\u6BD4\u8F03"],
-  "Tentative Conclusions and Hypotheses": ["\u66AB\u5B9A\u7D50\u8AD6\u30FB\u4EEE\u8AAC"],
-  "Open Questions": ["\u672A\u89E3\u6C7A\u306E\u8AD6\u70B9", "\u672A\u89E3\u6C7A\u4E8B\u9805"],
-  "Promotion Candidates": ["\u6607\u83EF\u5148\u5019\u88DC"],
-  "Evidence": ["\u30A8\u30D3\u30C7\u30F3\u30B9"],
-  // idea-doc
-  "Summary": ["\u8981\u7D04"],
-  "Problem and Motivation": ["\u8AB2\u984C\u3068\u52D5\u6A5F"],
-  "Expected Value": ["\u60F3\u5B9A\u4FA1\u5024"],
-  "Next Action": ["\u6B21\u306E\u30A2\u30AF\u30B7\u30E7\u30F3"],
-  // plan-doc
-  "Goal": ["\u76EE\u7684"],
-  "File Map": ["\u30D5\u30A1\u30A4\u30EB\u8868"],
-  "Implementation Sequence": ["\u5B9F\u88C5\u9806\u5E8F"],
-  "Dependencies and Risks": ["\u4F9D\u5B58\u95A2\u4FC2\u3068\u30EA\u30B9\u30AF"],
-  "Task Breakdown": ["Task \u5206\u89E3"],
-  "Open Questions / Gaps": ["\u672A\u89E3\u6C7A\u4E8B\u9805 / gap"],
-  "Self-Review": ["\u81EA\u5DF1\u30EC\u30D3\u30E5\u30FC"],
-  "Implementation Handoff": ["\u5B9F\u88C5\u30CF\u30F3\u30C9\u30AA\u30D5"],
-  "Review Handoff": ["\u30EC\u30D3\u30E5\u30FC\u7528\u30CF\u30F3\u30C9\u30AA\u30D5"],
-  // adr-doc (MADR 4 templates)
-  "Context and Problem Statement": ["\u80CC\u666F\u3068\u554F\u984C"],
-  "Decision Drivers": ["\u6C7A\u5B9A\u30C9\u30E9\u30A4\u30D0\u30FC"],
-  "Considered Options": ["\u691C\u8A0E\u3057\u305F\u9078\u629E\u80A2"],
-  "Decision Outcome": ["\u6C7A\u5B9A\u5185\u5BB9"],
-  "Consequences": ["\u5F71\u97FF"],
-  "Confirmation": ["\u78BA\u8A8D\u65B9\u6CD5"],
-  "Implementation Plan": ["\u5B9F\u88C5\u8A08\u753B"],
-  "Pros and Cons of the Options": ["\u9078\u629E\u80A2\u306E\u5229\u70B9\u3068\u6B20\u70B9"],
-  "Option": ["\u9078\u629E\u80A2"],
-  "Option 1": ["\u9078\u629E\u80A2 1"],
-  "Option 2": ["\u9078\u629E\u80A2 2"],
-  "More Information": ["\u8FFD\u52A0\u60C5\u5831"],
-  // implementation-flow profile
-  "Available Skills": ["\u5229\u7528\u53EF\u80FD\u306A\u30B9\u30AD\u30EB"],
-  "Category Assignments": ["\u30AB\u30C6\u30B4\u30EA\u5272\u308A\u5F53\u3066"]
-};
-var FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
-var FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})\s*$/;
-function stripFencedBlocks(body) {
-  const kept = [];
-  let fenceChar = "";
-  let fenceLen = 0;
-  for (const line of body.split(/\r?\n/)) {
-    if (fenceChar === "") {
-      const open2 = FENCE_OPEN.exec(line);
-      if (open2) {
-        const run = open2[1];
-        const info = line.slice(line.indexOf(run) + run.length);
-        if (info.includes(run[0])) {
-          kept.push(line);
-          continue;
-        }
-        fenceChar = run[0];
-        fenceLen = run.length;
-        continue;
-      }
-      kept.push(line);
-      continue;
-    }
-    const close = FENCE_CLOSE.exec(line);
-    if (close && close[1][0] === fenceChar && close[1].length >= fenceLen) {
-      fenceChar = "";
-      fenceLen = 0;
-    }
-  }
-  return kept.join("\n");
-}
-function headingNames(canonicalHeading) {
-  return [canonicalHeading, ...SECTION_HEADING_ALIASES[canonicalHeading] ?? []];
-}
-function headingPattern(heading) {
-  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
-}
-function hasSection(body, canonicalHeading) {
-  const lines = stripFencedBlocks(body).split(/\r?\n/);
-  return headingNames(canonicalHeading).some((name) => {
-    const pattern = headingPattern(name);
-    return lines.some((line) => pattern.test(line.trimEnd()));
-  });
-}
-
-// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
+var import_node_fs8 = __toESM(require("node:fs"));
+var import_node_path9 = __toESM(require("node:path"));
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
 var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
 var implementationRecordSections = [
@@ -35649,7 +35665,7 @@ var experimentEventBaseSchema = external_exports.object({
   ts: external_exports.string().min(1)
 }).passthrough();
 function posixRelative(from, to) {
-  return import_node_path8.default.relative(from, to).replace(/\\/g, "/");
+  return import_node_path9.default.relative(from, to).replace(/\\/g, "/");
 }
 function normalizeFilePath(input2) {
   return input2.replace(/\\/g, "/");
@@ -35657,28 +35673,20 @@ function normalizeFilePath(input2) {
 function isExternalLink(value) {
   return /^(https?:|mailto:)/i.test(value);
 }
+function defaultImplDir(kind) {
+  return kind === "ir" ? "docs/impl/ir" : "docs/impl/exp";
+}
+function implDir(cwd, kind, explicitDir) {
+  const resolved = explicitDir ? resolveContainedDir(cwd, explicitDir) : defaultImplDir(kind);
+  assertTypeScope(kind === "ir" ? "impl" : "exp", resolved);
+  return resolved;
+}
 function listFiles(dir, ext) {
-  if (!import_node_fs7.default.existsSync(dir)) return [];
-  return import_node_fs7.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs7.default.lstatSync(import_node_path8.default.join(dir, file2)).isSymbolicLink()).sort();
+  if (!import_node_fs8.default.existsSync(dir)) return [];
+  return import_node_fs8.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs8.default.lstatSync(import_node_path9.default.join(dir, file2)).isSymbolicLink()).sort();
 }
 function normalizeExperimentPath(cwd, filePath) {
-  return normalizeFilePath(posixRelative(cwd, import_node_path8.default.resolve(filePath)));
-}
-function writeImplIndex(indexPath, content3, legacyTitle, force = false) {
-  let isSymlink = false;
-  try {
-    isSymlink = import_node_fs7.default.lstatSync(indexPath).isSymbolicLink();
-  } catch {
-    isSymlink = false;
-  }
-  if (isSymlink) return { written: false, reason: "hand-curated" };
-  const existing = import_node_fs7.default.existsSync(indexPath) ? import_node_fs7.default.readFileSync(indexPath, "utf8") : null;
-  if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
-    return { written: false, reason: "hand-curated" };
-  }
-  const merged = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content3) : content3;
-  import_node_fs7.default.writeFileSync(indexPath, merged, "utf8");
-  return { written: true, reason: null };
+  return normalizeFilePath(posixRelative(cwd, import_node_path9.default.resolve(filePath)));
 }
 var SETTLED_HEADING2 = `## Settled ${GENERATED_SETTLED_MARKER}`;
 var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
@@ -35801,10 +35809,10 @@ function parseImplIndexRows(content3, kind) {
 }
 function implIndexEntries(dirAbs, relativeDir, files) {
   return files.flatMap((file2) => {
-    const parsed = parseDoc(import_node_fs7.default.readFileSync(import_node_path8.default.join(dirAbs, file2), "utf8"));
+    const parsed = parseDoc(import_node_fs8.default.readFileSync(import_node_path9.default.join(dirAbs, file2), "utf8"));
     if (parsed.error) return [];
     if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
-    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path8.default.basename(file2, ".md");
+    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path9.default.basename(file2, ".md");
     const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
     const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
     return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
@@ -35843,10 +35851,10 @@ function sameStringSequence(left, right) {
   return left.length === right.length && left.every((value, index2) => value === right[index2]);
 }
 function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
-  const indexPath = import_node_path8.default.join(dirAbs, "README.md");
+  const indexPath = import_node_path9.default.join(dirAbs, "README.md");
   let stats = null;
   try {
-    stats = import_node_fs7.default.lstatSync(indexPath);
+    stats = import_node_fs8.default.lstatSync(indexPath);
   } catch {
     stats = null;
   }
@@ -35858,7 +35866,7 @@ function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
     push2("index-not-managed", "is a symbolic link or not a regular file", "warning");
     return;
   }
-  const content3 = import_node_fs7.default.readFileSync(indexPath, "utf8");
+  const content3 = import_node_fs8.default.readFileSync(indexPath, "utf8");
   const parsed = parseImplIndexRows(content3, kind);
   if (!parsed.ok) {
     const code = parsed.code === "missing-marker" || parsed.code === "ambiguous-marker" ? "index-not-managed" : parsed.code === "duplicate-row" ? "index-duplicate-entry" : parsed.code === "escaping-row" ? "index-escapes-root" : "index-unparseable";
@@ -35891,51 +35899,12 @@ function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
     push2("index-ordering", "row order differs from the deterministic index order", "info");
   }
 }
-function updateIndexForMarkdownDir(cwd, relativeDir, options2) {
-  const dir = import_node_path8.default.join(cwd, relativeDir);
-  const files = listFiles(dir, ".md");
-  const body = renderIndexBody(implIndexEntries(dir, relativeDir, files), { settledType: "impl" });
-  return writeImplIndex(
-    import_node_path8.default.join(dir, "README.md"),
-    `# Implementation Records
-
-${GENERATED_INDEX_MARKER}
-
-Directory: \`${relativeDir}\`
-
-${body}
-`,
-    "Implementation Records",
-    options2?.force === true
-  );
-}
-function updateIndexForExperimentDir(cwd, relativeDir, options2) {
-  const dir = import_node_path8.default.join(cwd, relativeDir);
-  const files = listFiles(dir, ".jsonl");
-  const header = INDEX_TABLE_HEADER_1COL;
-  const rows = files.map((file2) => `| [${indexCell(file2)}](./${indexCell(file2)}) |`);
-  const body = rows.length > 0 ? `${header}
-${rows.join("\n")}` : header;
-  return writeImplIndex(
-    import_node_path8.default.join(dir, "README.md"),
-    `# Experiment Logs
-
-${GENERATED_INDEX_MARKER}
-
-Directory: \`${relativeDir}\`
-
-${body}
-`,
-    "Experiment Logs",
-    options2?.force === true
-  );
-}
 function resolvesLocalTarget(cwd, fromFile, target) {
   const candidates = [
-    import_node_path8.default.resolve(cwd, target),
-    import_node_path8.default.resolve(import_node_path8.default.dirname(fromFile), target)
+    import_node_path9.default.resolve(cwd, target),
+    import_node_path9.default.resolve(import_node_path9.default.dirname(fromFile), target)
   ];
-  return candidates.some((candidate) => import_node_fs7.default.existsSync(candidate));
+  return candidates.some((candidate) => import_node_fs8.default.existsSync(candidate));
 }
 function relationLinks(relations) {
   return relationFields.flatMap((field) => {
@@ -35944,12 +35913,12 @@ function relationLinks(relations) {
   });
 }
 function auditImplementationRecords(cwd, relativeDir) {
-  const dir = import_node_path8.default.join(cwd, relativeDir);
+  const dir = import_node_path9.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
   const findings = [];
   for (const file2 of files) {
-    const fullPath = import_node_path8.default.join(dir, file2);
-    const content3 = import_node_fs7.default.readFileSync(fullPath, "utf8");
+    const fullPath = import_node_path9.default.join(dir, file2);
+    const content3 = import_node_fs8.default.readFileSync(fullPath, "utf8");
     const parsed = parseDoc(content3);
     if (parsed.error) {
       findings.push({
@@ -36006,10 +35975,10 @@ function auditImplementationRecords(cwd, relativeDir) {
       }
     }
   }
-  const indexPath = import_node_path8.default.join(dir, "README.md");
+  const indexPath = import_node_path9.default.join(dir, "README.md");
   let indexStats = null;
   try {
-    indexStats = import_node_fs7.default.lstatSync(indexPath);
+    indexStats = import_node_fs8.default.lstatSync(indexPath);
   } catch {
     indexStats = null;
   }
@@ -36021,12 +35990,12 @@ function auditImplementationRecords(cwd, relativeDir) {
   return { directory: relativeDir, files: files.length, findings };
 }
 function auditExperimentLogs(cwd, relativeDir) {
-  const dir = import_node_path8.default.join(cwd, relativeDir);
+  const dir = import_node_path9.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");
   const findings = [];
   for (const file2 of files) {
-    const fullPath = import_node_path8.default.join(dir, file2);
-    const content3 = import_node_fs7.default.readFileSync(fullPath, "utf8");
+    const fullPath = import_node_path9.default.join(dir, file2);
+    const content3 = import_node_fs8.default.readFileSync(fullPath, "utf8");
     const lines = content3.split(/\r?\n/).filter((line) => line.trim());
     let previousSeq = 0;
     const seen = /* @__PURE__ */ new Set();
@@ -36098,10 +36067,10 @@ function auditExperimentLogs(cwd, relativeDir) {
       previousSeq = seq;
     }
   }
-  const indexPath = import_node_path8.default.join(dir, "README.md");
+  const indexPath = import_node_path9.default.join(dir, "README.md");
   let indexStats = null;
   try {
-    indexStats = import_node_fs7.default.lstatSync(indexPath);
+    indexStats = import_node_fs8.default.lstatSync(indexPath);
   } catch {
     indexStats = null;
   }
@@ -36111,6 +36080,288 @@ function auditExperimentLogs(cwd, relativeDir) {
     auditManagedIndex("exp", dir, relativeDir, files, findings);
   }
   return { directory: relativeDir, files: files.length, findings };
+}
+
+// src/skills/impl-doc/scripts/lib/impl_index_sync.ts
+var import_node_crypto = require("node:crypto");
+var import_node_fs9 = __toESM(require("node:fs"));
+var import_node_path10 = __toESM(require("node:path"));
+var INDEX_TITLES2 = {
+  ir: "Implementation Records",
+  exp: "Experiment Logs"
+};
+function sha256Text(content3) {
+  return (0, import_node_crypto.createHash)("sha256").update(content3, "utf8").digest("hex");
+}
+function sha256File(file2) {
+  return (0, import_node_crypto.createHash)("sha256").update(import_node_fs9.default.readFileSync(file2)).digest("hex");
+}
+function cellsEqual2(left, right) {
+  return left.length === right.length && left.every((cell, index2) => cell === right[index2]);
+}
+function rowsMatch(left, right) {
+  return left.tier === right.tier && cellsEqual2(left.cells, right.cells);
+}
+function sameSequence(left, right) {
+  return left.length === right.length && left.every((value, index2) => value === right[index2]);
+}
+function sameFileSet(left, right) {
+  if (left.length !== right.length) return false;
+  const set2 = new Set(left);
+  return right.every((file2) => set2.has(file2));
+}
+function summarizeRow(row) {
+  return row.cells.join(" | ");
+}
+function collectIrState(cwd, directory, dirAbs, files) {
+  const blockersByFile = /* @__PURE__ */ new Map();
+  for (const finding2 of auditImplementationRecords(cwd, directory).findings) {
+    if (!finding2.file) continue;
+    if (finding2.code !== "unparseable-front-matter" && finding2.code !== "invalid-front-matter") continue;
+    if (!blockersByFile.has(finding2.file)) blockersByFile.set(finding2.file, finding2.message);
+  }
+  const blockers = [...blockersByFile.entries()].map(([file2, message]) => `${file2}: ${message}`);
+  const entries = implIndexEntries(dirAbs, directory, files);
+  return { entries, blockers };
+}
+function renderGeneratedDoc(kind, directory, entries, files) {
+  let body;
+  if (kind === "ir") {
+    body = renderIndexBody(entries, { settledType: "impl" });
+  } else {
+    const header = INDEX_TABLE_HEADER_1COL;
+    const rows = files.map((file2) => `| [${indexCell(file2)}](./${indexCell(file2)}) |`);
+    body = rows.length > 0 ? `${header}
+${rows.join("\n")}` : header;
+  }
+  return `# ${INDEX_TITLES2[kind]}
+
+${GENERATED_INDEX_MARKER}
+
+Directory: \`${directory}\`
+
+${body}
+`;
+}
+function computeDrift(kind, currentRows, expectedRows) {
+  const currentByFile = new Map(currentRows.map((row) => [row.file, row]));
+  const expectedByFile = new Map(expectedRows.map((row) => [row.file, row]));
+  const stable = /* @__PURE__ */ new Set();
+  for (const [file2, expected] of expectedByFile) {
+    const current = currentByFile.get(file2);
+    if (current && rowsMatch(current, expected)) stable.add(file2);
+  }
+  if (kind === "ir" && stable.size > 0) {
+    const currentStable = currentRows.map((row) => row.file).filter((file2) => stable.has(file2));
+    const expectedStable = expectedRows.map((row) => row.file).filter((file2) => stable.has(file2));
+    if (!sameSequence(currentStable, expectedStable)) {
+      return {
+        changes: [],
+        orderConflict: true,
+        reason: "non-target order conflict: stable index rows are ordered differently than the deterministic index order"
+      };
+    }
+  }
+  const changes = [];
+  for (const expected of expectedRows) {
+    const current = currentByFile.get(expected.file);
+    if (!current) {
+      changes.push({ file: expected.file, kind: "add", after: summarizeRow(expected) });
+      continue;
+    }
+    if (current.tier !== expected.tier) {
+      changes.push({ file: expected.file, kind: "move-tier", before: current.tier, after: expected.tier });
+      continue;
+    }
+    if (!cellsEqual2(current.cells, expected.cells)) {
+      changes.push({
+        file: expected.file,
+        kind: "update-status",
+        before: current.cells.join(" | "),
+        after: expected.cells.join(" | ")
+      });
+    }
+  }
+  for (const current of currentRows) {
+    if (!expectedByFile.has(current.file)) {
+      changes.push({ file: current.file, kind: "remove", before: summarizeRow(current) });
+    }
+  }
+  const changed = new Set(changes.map((change) => change.file));
+  for (const tier of ["active", "settled"]) {
+    const currentTier = currentRows.filter((row) => row.tier === tier);
+    const expectedTier = expectedRows.filter((row) => row.tier === tier);
+    if (!sameFileSet(currentTier.map((row) => row.file), expectedTier.map((row) => row.file))) continue;
+    for (const expected of expectedTier) {
+      if (changed.has(expected.file) || !stable.has(expected.file)) continue;
+      const positionCurrent = currentTier.findIndex((row) => row.file === expected.file);
+      const positionExpected = expectedTier.findIndex((row) => row.file === expected.file);
+      if (positionCurrent !== positionExpected) {
+        changes.push({
+          file: expected.file,
+          kind: "reorder",
+          before: `${tier} position ${positionCurrent + 1}`,
+          after: `${tier} position ${positionExpected + 1}`
+        });
+      }
+    }
+  }
+  changes.sort((left, right) => left.file < right.file ? -1 : left.file > right.file ? 1 : 0);
+  return { changes, orderConflict: false };
+}
+function computeImplIndexSync(cwd, kind, explicitDir) {
+  const directory = implDir(cwd, kind, explicitDir);
+  const dirAbs = import_node_path10.default.join(cwd, directory);
+  const ext = kind === "ir" ? ".md" : ".jsonl";
+  const files = listFiles(dirAbs, ext);
+  const sources = {};
+  for (const file2 of files) {
+    sources[file2] = sha256File(import_node_path10.default.join(dirAbs, file2));
+  }
+  const indexAbs = import_node_path10.default.join(dirAbs, "README.md");
+  let indexStats = null;
+  try {
+    indexStats = import_node_fs9.default.lstatSync(indexAbs);
+  } catch {
+    indexStats = null;
+  }
+  const indexPresent = indexStats !== null;
+  const indexIsSymlink = indexStats?.isSymbolicLink() === true;
+  const indexIsFile = indexStats?.isFile() === true;
+  let existing = null;
+  let indexPin = null;
+  if (indexIsFile) {
+    try {
+      existing = import_node_fs9.default.readFileSync(indexAbs, "utf8");
+      indexPin = sha256Text(existing);
+    } catch {
+      existing = null;
+    }
+  } else if (indexIsSymlink) {
+    try {
+      indexPin = sha256File(indexAbs);
+    } catch {
+      indexPin = null;
+    }
+  }
+  const { entries, blockers } = kind === "ir" ? collectIrState(cwd, directory, dirAbs, files) : { entries: [], blockers: [] };
+  const generated = renderGeneratedDoc(kind, directory, entries, files);
+  const expectedParsed = parseImplIndexRows(generated, kind);
+  const expectedRows = expectedParsed.ok ? expectedParsed.rows : [];
+  let verdict;
+  let reason;
+  let changes = [];
+  if (blockers.length > 0) {
+    verdict = "rejected";
+    reason = `index sources failed validation: ${blockers.join("; ")}`;
+  } else if (indexIsSymlink) {
+    verdict = "rejected";
+    reason = "index README.md is a symbolic link; refusing to classify or write through it";
+  } else if (indexPresent && !indexIsFile) {
+    verdict = "rejected";
+    reason = "index README.md is not a regular file";
+  } else if (indexPresent && existing === null) {
+    verdict = "rejected";
+    reason = "index README.md could not be read";
+  } else if (!indexPresent) {
+    verdict = "create";
+    changes = computeDrift(kind, [], expectedRows).changes;
+  } else {
+    const parsedIndex = parseImplIndexRows(existing ?? "", kind);
+    if (!parsedIndex.ok) {
+      verdict = "rejected";
+      reason = parsedIndex.reason;
+    } else {
+      const drift = computeDrift(kind, parsedIndex.rows, expectedRows);
+      if (drift.orderConflict) {
+        verdict = "rejected";
+        reason = drift.reason;
+      } else {
+        changes = drift.changes;
+        verdict = changes.length === 0 ? "in-sync" : "sync";
+      }
+    }
+  }
+  const plannedFiles = verdict === "sync" || verdict === "create" ? [`${directory}/README.md`] : [];
+  const planHash = sha256Text(JSON.stringify({ kind, directory, verdict, changes, plannedFiles }));
+  const plan = {
+    kind,
+    directory,
+    indexPath: `${directory}/README.md`,
+    verdict,
+    ...reason ? { reason } : {},
+    changes,
+    pins: { sources, index: indexPin, fileList: files },
+    planHash,
+    plannedFiles
+  };
+  return { plan, generated, existing };
+}
+function planImplIndexSync(cwd, kind, explicitDir) {
+  return computeImplIndexSync(cwd, kind, explicitDir).plan;
+}
+function verifyCurrentState(cwd, plan) {
+  try {
+    const dirAbs = import_node_path10.default.join(cwd, plan.directory);
+    const ext = plan.kind === "ir" ? ".md" : ".jsonl";
+    const files = listFiles(dirAbs, ext);
+    if (!sameSequence(files, plan.pins.fileList)) return false;
+    for (const file2 of files) {
+      if (sha256File(import_node_path10.default.join(dirAbs, file2)) !== plan.pins.sources[file2]) return false;
+    }
+    const indexAbs = import_node_path10.default.join(dirAbs, "README.md");
+    let indexStats = null;
+    try {
+      indexStats = import_node_fs9.default.lstatSync(indexAbs);
+    } catch {
+      indexStats = null;
+    }
+    if (!indexStats) return plan.pins.index === null;
+    if (!indexStats.isFile()) return false;
+    if (plan.pins.index === null) return false;
+    return sha256File(indexAbs) === plan.pins.index;
+  } catch {
+    return false;
+  }
+}
+function applyImplIndexSync(cwd, kind, explicitDir, options2) {
+  const { plan, generated, existing } = computeImplIndexSync(cwd, kind, explicitDir);
+  if (options2?.expectPlanHash !== void 0 && options2.expectPlanHash !== plan.planHash) {
+    const drift = `plan drift: expected planHash ${options2.expectPlanHash}, recomputed ${plan.planHash}`;
+    plan.reason = plan.reason ? `${plan.reason}; ${drift}` : drift;
+    return { plan, written: false };
+  }
+  if (plan.verdict === "in-sync" || plan.verdict === "rejected") {
+    return { plan, written: false };
+  }
+  if (!verifyCurrentState(cwd, plan)) {
+    plan.reason = plan.reason ? `${plan.reason}; index sources changed since the plan was computed` : "index sources changed since the plan was computed";
+    return { plan, written: false };
+  }
+  const indexAbs = import_node_path10.default.join(cwd, plan.directory, "README.md");
+  try {
+    if (import_node_fs9.default.lstatSync(indexAbs).isSymbolicLink()) {
+      plan.reason = "index README.md became a symbolic link; refusing to write through it";
+      return { plan, written: false };
+    }
+  } catch {
+  }
+  const merged = existing === null ? generated : mergeManagedIndex(existing, generated);
+  import_node_fs9.default.mkdirSync(import_node_path10.default.dirname(indexAbs), { recursive: true });
+  const tmpPath = import_node_path10.default.join(import_node_path10.default.dirname(indexAbs), `.README.md.tmp-${process.pid}-${Date.now()}`);
+  try {
+    import_node_fs9.default.writeFileSync(tmpPath, merged, "utf8");
+    import_node_fs9.default.renameSync(tmpPath, indexAbs);
+  } catch (error62) {
+    try {
+      import_node_fs9.default.rmSync(tmpPath, { force: true });
+    } catch {
+    }
+    const message = error62 instanceof Error ? error62.message : String(error62);
+    plan.reason = plan.reason ? `${plan.reason}; write failed: ${message}` : `write failed: ${message}`;
+    return { plan, written: false };
+  }
+  return { plan, written: true };
 }
 
 // src/skills/doc-maintenance/scripts/lib/id_migration.ts
@@ -36136,11 +36387,11 @@ function numberedTargetName(fileName) {
 }
 var SKIPPED_DIRS2 = /* @__PURE__ */ new Set([".git", "node_modules", ".pnpm-store"]);
 function walkFiles(baseDir, extensions) {
-  if (!import_node_fs8.default.existsSync(baseDir)) return [];
-  const entries = import_node_fs8.default.readdirSync(baseDir, { withFileTypes: true });
+  if (!import_node_fs10.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs10.default.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
     if (entry.isSymbolicLink()) return [];
-    const fullPath = import_node_path9.default.join(baseDir, entry.name);
+    const fullPath = import_node_path11.default.join(baseDir, entry.name);
     if (entry.isDirectory()) {
       return SKIPPED_DIRS2.has(entry.name) ? [] : walkFiles(fullPath, extensions);
     }
@@ -36153,16 +36404,16 @@ function canonicalDirs(cwd) {
   for (const type of docTypes) {
     const config2 = configFor(type);
     for (const candidate of config2.dirs) {
-      const full = import_node_path9.default.join(cwd, candidate);
-      if (!import_node_fs8.default.existsSync(full) || !isInsideRealpath(cwd, full)) continue;
+      const full = import_node_path11.default.join(cwd, candidate);
+      if (!import_node_fs10.default.existsSync(full) || !isInsideRealpath(cwd, full)) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
       dirs.push({ dir: candidate, type });
     }
   }
   for (const extra of [IMPL_IR_DIR, IMPL_EXP_DIR2]) {
-    const full = import_node_path9.default.join(cwd, extra);
-    if (import_node_fs8.default.existsSync(full) && isInsideRealpath(cwd, full)) {
+    const full = import_node_path11.default.join(cwd, extra);
+    if (import_node_fs10.default.existsSync(full) && isInsideRealpath(cwd, full)) {
       dirs.push({ dir: extra, type: extra === IMPL_IR_DIR ? "impl" : "impl-exp" });
     }
   }
@@ -36175,27 +36426,27 @@ function isUnderDir3(child, parent) {
 }
 function distributionDocRoots(cwd) {
   const candidates = [".apm"];
-  const packagesDir = import_node_path9.default.join(cwd, "packages");
-  if (import_node_fs8.default.existsSync(packagesDir) && import_node_fs8.default.statSync(packagesDir).isDirectory()) {
-    for (const entry of import_node_fs8.default.readdirSync(packagesDir, { withFileTypes: true })) {
+  const packagesDir = import_node_path11.default.join(cwd, "packages");
+  if (import_node_fs10.default.existsSync(packagesDir) && import_node_fs10.default.statSync(packagesDir).isDirectory()) {
+    for (const entry of import_node_fs10.default.readdirSync(packagesDir, { withFileTypes: true })) {
       if (entry.isDirectory()) candidates.push(`packages/${entry.name}/.apm`);
     }
   }
   return candidates.filter((candidate) => {
-    const full = import_node_path9.default.join(cwd, candidate);
-    return import_node_fs8.default.existsSync(full) && import_node_fs8.default.statSync(full).isDirectory() && isInsideRealpath(cwd, full);
+    const full = import_node_path11.default.join(cwd, candidate);
+    return import_node_fs10.default.existsSync(full) && import_node_fs10.default.statSync(full).isDirectory() && isInsideRealpath(cwd, full);
   });
 }
 function resolveExtraRoots(cwd, extraRoots, blockers) {
   const resolved = [];
   for (const extra of extraRoots) {
-    const absolute = import_node_path9.default.resolve(cwd, extra);
-    const rel = normalizeDir(import_node_path9.default.relative(cwd, absolute));
+    const absolute = import_node_path11.default.resolve(cwd, extra);
+    const rel = normalizeDir(import_node_path11.default.relative(cwd, absolute));
     if (rel === "" || rel === ".") {
       resolved.push(".");
       continue;
     }
-    if (!import_node_fs8.default.existsSync(absolute) || !import_node_fs8.default.statSync(absolute).isDirectory()) {
+    if (!import_node_fs10.default.existsSync(absolute) || !import_node_fs10.default.statSync(absolute).isDirectory()) {
       blockers.push({
         code: "invalid-extra-root",
         file: null,
@@ -36217,8 +36468,8 @@ function resolveExtraRoots(cwd, extraRoots, blockers) {
 }
 function contentRoots(cwd, dirs, extraRoots = []) {
   const roots = [];
-  const docsRoot = import_node_path9.default.join(cwd, "docs");
-  if (import_node_fs8.default.existsSync(docsRoot) && isInsideRealpath(cwd, docsRoot)) roots.push("docs");
+  const docsRoot = import_node_path11.default.join(cwd, "docs");
+  if (import_node_fs10.default.existsSync(docsRoot) && isInsideRealpath(cwd, docsRoot)) roots.push("docs");
   for (const { dir } of dirs) {
     if (!isUnderDir3(dir, "docs")) roots.push(dir);
   }
@@ -36228,14 +36479,14 @@ function contentRoots(cwd, dirs, extraRoots = []) {
   return roots;
 }
 function rootContentFiles(cwd) {
-  return import_node_fs8.default.readdirSync(cwd, { withFileTypes: true }).filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name)).map((entry) => entry.name).sort();
+  return import_node_fs10.default.readdirSync(cwd, { withFileTypes: true }).filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name)).map((entry) => entry.name).sort();
 }
 function contentFilesUnder(cwd, roots, extraFiles = []) {
   const seen = /* @__PURE__ */ new Set();
   const files = [];
   for (const root of roots) {
-    for (const fullPath of walkFiles(import_node_path9.default.join(cwd, root), [".md", ".jsonl"])) {
-      const relPath = import_node_path9.default.relative(cwd, fullPath).replace(/\\/g, "/");
+    for (const fullPath of walkFiles(import_node_path11.default.join(cwd, root), [".md", ".jsonl"])) {
+      const relPath = import_node_path11.default.relative(cwd, fullPath).replace(/\\/g, "/");
       if (seen.has(relPath)) continue;
       seen.add(relPath);
       files.push(relPath);
@@ -36260,16 +36511,16 @@ function prefixForFile(file2) {
 function discover(cwd, dirs, blockers) {
   const files = [];
   for (const { dir, type: dirType } of dirs) {
-    const fullDir = import_node_path9.default.join(cwd, dir);
-    const names = dir === IMPL_EXP_DIR2 ? import_node_fs8.default.readdirSync(fullDir).filter((name) => {
+    const fullDir = import_node_path11.default.join(cwd, dir);
+    const names = dir === IMPL_EXP_DIR2 ? import_node_fs10.default.readdirSync(fullDir).filter((name) => {
       const lower = name.toLowerCase();
       if (!(lower.endsWith(".jsonl") || lower.endsWith(".md") && !isIndexFileName(name))) return false;
-      return !import_node_fs8.default.lstatSync(import_node_path9.default.join(fullDir, name)).isSymbolicLink();
+      return !import_node_fs10.default.lstatSync(import_node_path11.default.join(fullDir, name)).isSymbolicLink();
     }).sort() : docFiles(fullDir);
     for (const name of names) {
       const relPath = `${dir}/${name}`;
-      const fullPath = import_node_path9.default.join(cwd, relPath);
-      const baseName = import_node_path9.default.basename(name);
+      const fullPath = import_node_path11.default.join(cwd, relPath);
+      const baseName = import_node_path11.default.basename(name);
       const isMarkdown = baseName.toLowerCase().endsWith(".md");
       const numbered = NUMBERED_FILE.exec(baseName)?.[1] || null;
       const base = {
@@ -36286,7 +36537,7 @@ function discover(cwd, dirs, blockers) {
         files.push(base);
         continue;
       }
-      const parsed = parseDoc(import_node_fs8.default.readFileSync(fullPath, "utf8"));
+      const parsed = parseDoc(import_node_fs10.default.readFileSync(fullPath, "utf8"));
       if (parsed.error) {
         blockers.push({
           code: "unparseable-front-matter",
@@ -36350,13 +36601,13 @@ function worktreeDirty(cwd) {
 function planRenames(cwd, files, blockers) {
   const renames = [];
   const renameSources = new Set(
-    files.filter((file2) => numberedTargetName(import_node_path9.default.basename(file2.path)) !== null).map((file2) => file2.path)
+    files.filter((file2) => numberedTargetName(import_node_path11.default.basename(file2.path)) !== null).map((file2) => file2.path)
   );
   const targetOwners = /* @__PURE__ */ new Map();
   for (const file2 of files) {
-    const targetName = numberedTargetName(import_node_path9.default.basename(file2.path));
+    const targetName = numberedTargetName(import_node_path11.default.basename(file2.path));
     if (!targetName) continue;
-    const to = `${normalizeDir(import_node_path9.default.dirname(file2.path))}/${targetName}`;
+    const to = `${normalizeDir(import_node_path11.default.dirname(file2.path))}/${targetName}`;
     const owner = targetOwners.get(to);
     if (owner && owner !== file2.path) {
       blockers.push({
@@ -36367,8 +36618,8 @@ function planRenames(cwd, files, blockers) {
       continue;
     }
     targetOwners.set(to, file2.path);
-    const targetFull = import_node_path9.default.join(cwd, to);
-    if (import_node_fs8.default.existsSync(targetFull) && !renameSources.has(to)) {
+    const targetFull = import_node_path11.default.join(cwd, to);
+    if (import_node_fs10.default.existsSync(targetFull) && !renameSources.has(to)) {
       blockers.push({
         code: "rename-collision",
         file: file2.path,
@@ -36380,7 +36631,7 @@ function planRenames(cwd, files, blockers) {
   }
   for (const rename of renames) {
     const tmpPath = `${rename.from}${MIGRATE_TMP_SUFFIX}`;
-    if (import_node_fs8.default.existsSync(import_node_path9.default.join(cwd, tmpPath))) {
+    if (import_node_fs10.default.existsSync(import_node_path11.default.join(cwd, tmpPath))) {
       blockers.push({
         code: "rename-temp-collision",
         file: rename.from,
@@ -36430,7 +36681,7 @@ function rewriteContent(content3, mappings, renames, experimentTargets) {
   }
   if (renames.length > 0) {
     const targets = new Map(
-      renames.map((rename) => [import_node_path9.default.basename(rename.from), import_node_path9.default.basename(rename.to)])
+      renames.map((rename) => [import_node_path11.default.basename(rename.from), import_node_path11.default.basename(rename.to)])
     );
     const pattern = new RegExp(
       `(?<![0-9A-Za-z-])(?:${[...targets.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})(?![0-9A-Za-z])`,
@@ -36449,7 +36700,7 @@ function injectMissingId(content3, newId) {
 }
 function isSymlinkPath2(p) {
   try {
-    return import_node_fs8.default.lstatSync(p).isSymbolicLink();
+    return import_node_fs10.default.lstatSync(p).isSymbolicLink();
   } catch {
     return false;
   }
@@ -36458,34 +36709,62 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
   const results = [];
   for (const dir of [...touchedDirs].sort()) {
     const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
-    const readmePath = import_node_path9.default.join(cwd, dir, "README.md");
+    const readmePath = import_node_path11.default.join(cwd, dir, "README.md");
     const relReadme = `${dir}/README.md`;
     if (isSymlinkPath2(readmePath)) {
-      results.push({ action: "skipped", path: relReadme });
+      results.push({ action: "skipped", index: relReadme });
       continue;
     }
-    if (dirType === "impl") {
-      const result = updateIndexForMarkdownDir(cwd, dir);
-      results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
+    if (dirType === "impl" || dirType === "impl-exp") {
+      const kind = dirType === "impl" ? "ir" : "exp";
+      const existing2 = import_node_fs10.default.existsSync(readmePath) ? import_node_fs10.default.readFileSync(readmePath, "utf8") : null;
+      if (existing2 !== null && !existing2.includes(GENERATED_INDEX_MARKER)) {
+        results.push({ action: "skipped", index: relReadme, reason: "hand-curated" });
+        continue;
+      }
+      try {
+        const plan = planImplIndexSync(cwd, kind, dir);
+        if (plan.verdict === "rejected" || plan.verdict === "in-sync") {
+          results.push({ action: "skipped", index: relReadme, reason: plan.reason ?? "in-sync" });
+          continue;
+        }
+        const applied = applyImplIndexSync(cwd, kind, dir, { expectPlanHash: plan.planHash });
+        results.push(applied.written ? { action: "regenerated", index: relReadme } : { action: "blocked", index: relReadme, reason: applied.plan.reason ?? "apply-declined" });
+      } catch (error62) {
+        results.push({
+          action: "blocked",
+          index: relReadme,
+          reason: error62 instanceof Error ? error62.message : String(error62)
+        });
+      }
       continue;
     }
-    if (dirType === "impl-exp") {
-      const result = updateIndexForExperimentDir(cwd, dir);
-      results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
+    if (dirType === "adr") {
+      try {
+        const content3 = await buildIndex2(cwd, dir);
+        const result = writeIndexFile(import_node_path11.default.join(cwd, dir), content3, false);
+        results.push(result.written ? { action: "regenerated", index: relReadme } : { action: "skipped", index: relReadme, reason: "hand-curated" });
+      } catch (error62) {
+        results.push({
+          action: "blocked",
+          index: relReadme,
+          reason: error62 instanceof Error ? error62.message : String(error62)
+        });
+      }
       continue;
     }
-    if (!import_node_fs8.default.existsSync(readmePath)) {
-      results.push({ action: "skipped", path: relReadme });
+    if (!import_node_fs10.default.existsSync(readmePath)) {
+      results.push({ action: "skipped", index: relReadme, reason: "missing-index" });
       continue;
     }
-    const existing = import_node_fs8.default.readFileSync(readmePath, "utf8");
+    const existing = import_node_fs10.default.readFileSync(readmePath, "utf8");
     if (!existing.includes(GENERATED_INDEX_MARKER)) {
-      results.push({ action: "hand-curated-rewritten", path: relReadme });
+      results.push({ action: "skipped", index: relReadme, reason: "hand-curated" });
       continue;
     }
     const seedType = dirType && docTypes.includes(dirType) ? dirType : "discovery";
     await writeGeneratedIndex(cwd, seedType, dir, { forceIndex: true });
-    results.push({ action: "regenerated", path: relReadme });
+    results.push({ action: "regenerated", index: relReadme });
   }
   return results;
 }
@@ -36493,10 +36772,10 @@ async function validate3(cwd, dirs, prefixes, extraRoots) {
   const remainingLegacyIds = /* @__PURE__ */ new Set();
   const idFiles = /* @__PURE__ */ new Map();
   for (const { dir } of dirs) {
-    const fullDir = import_node_path9.default.join(cwd, dir);
+    const fullDir = import_node_path11.default.join(cwd, dir);
     for (const name of docFiles(fullDir)) {
       const relPath = `${dir}/${name}`;
-      const parsed = parseDoc(import_node_fs8.default.readFileSync(import_node_path9.default.join(fullDir, name), "utf8"));
+      const parsed = parseDoc(import_node_fs10.default.readFileSync(import_node_path11.default.join(fullDir, name), "utf8"));
       const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
       if (!id) continue;
       if (isLegacyArtifactId(id)) remainingLegacyIds.add(id);
@@ -36507,9 +36786,9 @@ async function validate3(cwd, dirs, prefixes, extraRoots) {
   }
   const siblingKeys = /* @__PURE__ */ new Map();
   for (const { dir } of dirs) {
-    for (const name of docFiles(import_node_path9.default.join(cwd, dir))) {
-      const key = `${dir}::${stemKeyOf(import_node_path9.default.basename(name))}`;
-      const parsed = parseDoc(import_node_fs8.default.readFileSync(import_node_path9.default.join(cwd, dir, name), "utf8"));
+    for (const name of docFiles(import_node_path11.default.join(cwd, dir))) {
+      const key = `${dir}::${stemKeyOf(import_node_path11.default.basename(name))}`;
+      const parsed = parseDoc(import_node_fs10.default.readFileSync(import_node_path11.default.join(cwd, dir, name), "utf8"));
       const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
       if (!id) continue;
       const set2 = siblingKeys.get(id) || /* @__PURE__ */ new Set();
@@ -36520,7 +36799,7 @@ async function validate3(cwd, dirs, prefixes, extraRoots) {
   const duplicateIds = [...idFiles.entries()].filter(([id, files]) => files.length > 1 && (siblingKeys.get(id)?.size || 0) > 1).map(([id]) => id);
   const unresolved = /* @__PURE__ */ new Set();
   for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs, extraRoots), rootContentFiles(cwd))) {
-    const content3 = import_node_fs8.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
+    const content3 = import_node_fs10.default.readFileSync(import_node_path11.default.join(cwd, relPath), "utf8");
     for (const token of legacyTokens(content3, prefixes)) {
       unresolved.add(token);
     }
@@ -36557,7 +36836,7 @@ async function validate3(cwd, dirs, prefixes, extraRoots) {
   };
 }
 async function migrateArtifactIds(options2) {
-  const cwd = import_node_path9.default.resolve(options2.cwd);
+  const cwd = import_node_path11.default.resolve(options2.cwd);
   const blockers = [];
   const dirs = canonicalDirs(cwd);
   const files = discover(cwd, dirs, blockers);
@@ -36603,7 +36882,7 @@ async function migrateArtifactIds(options2) {
   );
   const mappedIds = new Set(mappings.keys());
   for (const relPath of contentFiles) {
-    const content3 = import_node_fs8.default.readFileSync(import_node_path9.default.join(cwd, relPath), "utf8");
+    const content3 = import_node_fs10.default.readFileSync(import_node_path11.default.join(cwd, relPath), "utf8");
     for (const token of new Set(legacyTokens(content3, prefixes))) {
       if (mappedIds.has(token) || experimentRefs.targets.has(token)) continue;
       const expNumber = token.startsWith(`${EXPERIMENT_ID_PREFIX2}-`) ? token.slice(EXPERIMENT_ID_PREFIX2.length + 1) : null;
@@ -36643,6 +36922,7 @@ async function migrateArtifactIds(options2) {
       applied: false,
       ok: false,
       blockers,
+      failureStage: "preflight",
       indexes: [],
       mappings: mappingReports,
       renames,
@@ -36658,8 +36938,8 @@ async function migrateArtifactIds(options2) {
   }
   const rewrites = [];
   for (const relPath of contentFiles) {
-    const fullPath = import_node_path9.default.join(cwd, relPath);
-    const original = import_node_fs8.default.readFileSync(fullPath, "utf8");
+    const fullPath = import_node_path11.default.join(cwd, relPath);
+    const original = import_node_fs10.default.readFileSync(fullPath, "utf8");
     let { content: content3, replacements } = rewriteContent(original, mappings, renames, experimentRefs.targets);
     const injected = injectedIds.get(relPath);
     if (injected && !original.includes(`id: "${injected}"`)) {
@@ -36669,28 +36949,30 @@ async function migrateArtifactIds(options2) {
     }
     if (replacements === 0) continue;
     rewrites.push({ file: relPath, replacements });
-    if (options2.apply) import_node_fs8.default.writeFileSync(fullPath, content3, "utf8");
+    if (options2.apply) import_node_fs10.default.writeFileSync(fullPath, content3, "utf8");
   }
   const indexes = [];
   if (options2.apply) {
     for (const rename of renames) {
-      import_node_fs8.default.renameSync(import_node_path9.default.join(cwd, rename.from), import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
+      import_node_fs10.default.renameSync(import_node_path11.default.join(cwd, rename.from), import_node_path11.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
     }
     for (const rename of renames) {
-      import_node_fs8.default.renameSync(import_node_path9.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path9.default.join(cwd, rename.to));
+      import_node_fs10.default.renameSync(import_node_path11.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path11.default.join(cwd, rename.to));
     }
     const touchedDirs = /* @__PURE__ */ new Set([
       ...files.filter((file2) => file2.synthesizedId || file2.id && isLegacyArtifactId(file2.id)).map((file2) => file2.dir),
-      ...renames.map((rename) => normalizeDir(import_node_path9.default.dirname(rename.from)))
+      ...renames.map((rename) => normalizeDir(import_node_path11.default.dirname(rename.from)))
     ]);
     indexes.push(...await regenerateIndexes(cwd, dirs, touchedDirs));
   }
   const validation = options2.apply ? await validate3(cwd, dirs, prefixes, extraRoots) : emptyValidation;
   const validationFailed = validation.remainingLegacyIds.length > 0 || validation.duplicateIds.length > 0 || validation.unresolvedLegacyRefs.length > 0 || validation.auditErrors.length > 0;
+  const indexBlocked = indexes.some((entry) => entry.action === "blocked");
   return {
     applied: Boolean(options2.apply),
-    ok: blockers.length === 0 && !validationFailed,
+    ok: blockers.length === 0 && !validationFailed && !indexBlocked,
     blockers,
+    failureStage: validationFailed || indexBlocked ? "validation" : void 0,
     indexes,
     mappings: mappingReports,
     renames,
@@ -36736,8 +37018,8 @@ function printHuman(report) {
   for (const rewrite of report.rewrites) {
     console.log(`Rewrite ${rewrite.file} (${rewrite.replacements} replacement${rewrite.replacements === 1 ? "" : "s"})`);
   }
-  for (const index2 of report.indexes) {
-    console.log(`Index ${index2.path}: ${index2.action}`);
+  for (const entry of report.indexes) {
+    console.log(`Index ${entry.index}: ${entry.action}${entry.reason ? ` \u2014 ${entry.reason}` : ""}`);
   }
   for (const blocker of report.blockers) {
     console.error(`BLOCKER ${blocker.code}${blocker.file ? ` [${blocker.file}]` : ""}: ${blocker.message}`);
@@ -36747,6 +37029,13 @@ function printHuman(report) {
     console.log(`Validation: ${remainingLegacyIds.length} remaining legacy ids, ${duplicateIds.length} duplicate ids, ${unresolvedLegacyRefs.length} unresolved legacy refs, ${auditErrors.length} audit errors`);
     for (const error62 of auditErrors) {
       console.error(`AUDIT ${error62.code}${error62.file ? ` [${error62.file}]` : ""}: ${error62.message}`);
+    }
+  }
+  if (!report.ok) {
+    if (report.failureStage === "preflight") {
+      console.log("Migration blocked before any writes");
+    } else if (report.failureStage === "validation") {
+      console.log("Migration applied; validation failed \u2014 changes are on disk (not rolled back)");
     }
   }
 }
@@ -36760,7 +37049,7 @@ async function main() {
     const report = await migrateArtifactIds({
       allowDirty: args.allowDirty,
       apply: args.apply,
-      cwd: import_node_path10.default.resolve(args.cwd),
+      cwd: import_node_path12.default.resolve(args.cwd),
       extraRoots: args.extraRoots,
       keepFilenames: args.keepFilenames
     });
@@ -36779,9 +37068,6 @@ async function main() {
 main();
 /*! Bundled license information:
 
-safe-buffer/index.js:
-  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
-
 is-extendable/index.js:
   (*!
    * is-extendable <https://github.com/jonschlinkert/is-extendable>
@@ -36797,4 +37083,7 @@ strip-bom-string/index.js:
    * Copyright (c) 2015, 2017, Jon Schlinkert.
    * Released under the MIT License.
    *)
+
+safe-buffer/index.js:
+  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 */
