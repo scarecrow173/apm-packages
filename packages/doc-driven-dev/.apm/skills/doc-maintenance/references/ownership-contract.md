@@ -93,6 +93,18 @@ and left byte-identical; there is no force path for unverified files.
   managed writer, or the impl sync engine). `impl-4col` and `exp-1col`
   indexes are still written only through the `sync_impl_index` safe sync
   API — the op delegates to that API rather than writing them itself.
+- `migrate_docs` routes by a recognized front-matter `type:` first and
+  content patterns second. A pattern-only route into an owned directory
+  (`docs/adr`, `docs/impl/ir`, `docs/impl/exp`) is skipped as
+  `unsupported-owner-route` — a content guess never mints files under
+  another owner. Typed `type: adr` sources still migrate through the
+  declared `adr-doc` mutator row; `migrate_docs` stays off the `impl-doc`
+  mutator list.
+- `migrate_ids` regenerates every touched index through the owning writer —
+  the shared managed-index writer for `shared-4col`, the ADR managed writer
+  for `docs/adr`, and the `sync_impl_index` safe sync engine for `impl-4col`
+  and `exp-1col`. It never writes an owner index directly; an index the
+  owner refuses is reported `skipped` or `blocked`, never forced.
 - `docs/impl` is an owned container with no resident types: nothing may be
   created or audited directly inside it.
 - Scope mismatches fail closed: the CLI exits non-zero with a reason, and

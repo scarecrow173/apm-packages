@@ -230,14 +230,15 @@ node .apm/skills/doc-maintenance/scripts/migrate_ids.js \
   --cwd <repo> --apply --json    # id・参照・ファイル名を書き換え
 ```
 
-実行は段階的で fail-closed です: 存在するすべての canonical docs dir
-（`specs/` や `adr/` のような root 直下の dir も含む）から artifact を
-discover し、各 legacy id を新しい id へ map し（`slug.md`/`slug.ja.md`
-のような locale sibling は同じ id を共有）、blocker を preflight した
-うえで、front matter の `id`、relation field、metadata、本文、index 表、
-experiment の `.jsonl` path を書き換え、番号付きファイルを、連鎖する
-rename 先を上書きしない 2 段階 move で rename し、generated index を
-再生成して validate します。参照の書き換えと未解決参照の検査は
+実行は段階的で、preflight では fail-closed です: 存在するすべての
+canonical docs dir（`specs/` や `adr/` のような root 直下の dir も
+含む）から artifact を discover し、各 legacy id を新しい id へ map し
+（`slug.md`/`slug.ja.md` のような locale sibling は同じ id を共有）、
+blocker を preflight したうえで、front matter の `id`、relation field、
+metadata、本文、index 表、experiment の `.jsonl` path を書き換え、
+番号付きファイルを、連鎖する rename 先を上書きしない 2 段階 move で
+rename し、触れた index をそれぞれのオーナー writer 経由で再生成して
+validate します。参照の書き換えと未解決参照の検査は
 `docs/` だけでなく、artifact 参照を持ち得る全 active 文書を対象とします:
 root-level Markdown（`AGENTS.md`、`README.md`）、`.apm/` および
 `packages/*/.apm/` 配下の配布 agent 文書、コマンドラインの
@@ -248,12 +249,19 @@ legacy id 重複、未解決の legacy 参照、曖昧な experiment 参照、re
 `.migrate-tmp` path の衝突、番号付き文書の front matter 欠落または
 parse 失敗、不明な document type、無効な `--extra-root`、dirty な Git
 worktree — が 1 つでもあれば、変更を行う前に停止します。
+`ok: false` かつ `failureStage: "preflight"` は何も書き込まれなかった
+ことを意味します。
 `--allow-dirty` は worktree チェックだけを回避し、`--keep-filenames`
 は id を書き換えつつ番号付きファイル名を保持します。`--apply` 後は残存
 legacy id、重複 id、未解決参照、doc-suite audit error を再検査し、
-いずれかがあれば report を `ok: false` として非 0 で終了します。clean な
-Git worktree が rollback 経路です: 適用結果が誤っていれば Git で戻して
-ください。適用成功後の再実行は no-op です。
+触れた各 index を `regenerated`、`skipped`、`blocked` のいずれかと
+して報告します。skipped / blocked の entry には任意の `reason` が
+付きます。validation 失敗または `blocked` index があれば、report は
+`ok: false` かつ
+`failureStage: "validation"` となり非 0 で終了します。この場合
+mutation は適用済みで disk に残り、command は rollback しません。
+clean な Git worktree が revert 経路です: 適用結果が誤っていれば Git で
+戻してください。適用成功後の再実行は no-op です。
 
 ## References
 
