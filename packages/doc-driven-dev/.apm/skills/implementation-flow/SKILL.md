@@ -410,7 +410,7 @@ These thoughts and behaviors signal failure — STOP when you notice them:
   referencing and auditing any Experiment Logs (exp) created during
   implementation.
 - Close-out regenerated the owning directory indexes in the same change
-  (`doc_maintenance.js plan|apply --type <type>`): settled rows move to the
+  (`doc_maintenance.js index plan|apply`): settled rows move to the
   `## Settled` tier; `doc_status lint` reports stale indexes until then.
 
 ## Loopback Rules

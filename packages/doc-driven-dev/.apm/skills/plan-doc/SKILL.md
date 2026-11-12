@@ -233,7 +233,8 @@ re-point its still-open tasks.
 
 ## Resources
 
-- `scripts/new_plan.js`: create a plan and update its index.
+- `scripts/new_plan.js`: create a plan (index materialization is explicit:
+  `doc_maintenance.js index plan|apply`).
 - `references/plan-conventions.md`: directory, filename, status, relations,
   required content, and index conventions for plans
   — load MANDATORY before creating or filling a plan.

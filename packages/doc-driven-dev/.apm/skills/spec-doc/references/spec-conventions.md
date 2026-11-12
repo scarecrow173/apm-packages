@@ -203,10 +203,10 @@ Index rules:
   `superseded`, `rejected`) move to a `## Settled` table below it, also
   filename-ordered. Settled rows stay linked — the tier de-emphasizes
   history without hiding it.
-- Update the index whenever a document is added or its `status` changes.
-  `doc_maintenance.js plan|apply` regenerates managed indexes; `doc_status
-  lint` reports the drift (`index-metadata-mismatch`, `index-ordering`)
-  until it does.
+- Update the index whenever a document is added or its `status` changes —
+  materialization is explicit via `doc_maintenance.js index plan|apply`
+  (creators never write indexes); `doc_status lint` reports the drift
+  (`index-metadata-mismatch`, `index-ordering`) until it does.
 - As entries grow, split the index into multiple headings, one table per
   heading, for readability. Align the split with the subdirectory grouping
   (category or feature) so each heading maps to one group.

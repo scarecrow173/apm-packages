@@ -102,8 +102,8 @@ node scripts/audit_experiment_log.js --json
 ### ディレクトリ索引の同期
 
 `docs/impl/ir/README.md` と `docs/impl/exp/README.md` は管理索引です。
-`new_*` 系クリエイターは書き込み時に索引を最新化しますが、status 変更や
-ドリフトの解消はオーナーの同期ツールで明示的に行います:
+`new_*` 系クリエイターは索引への書き込みを defer します — materialize と
+ドリフト解消はオーナーの同期ツールで明示的に行います:
 
 ```bash
 node scripts/sync_impl_index.js --kind ir            # プレビューのみ — 書き込まない

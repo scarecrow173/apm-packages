@@ -162,6 +162,7 @@ Markdown テーブルで、共有の 4 列で列挙します。
 in-flight の test spec は先頭のテーブルに、settled なステータス
 （`deprecated`、`superseded`）の test spec は下段の `## Settled` テーブルに
 ファイル名昇順で掲載します。文書の追加や `status` の変更時は索引を更新して
-ください。`doc_maintenance.js plan|apply` が管理索引を再生成します。実行する
-までの間、`doc_status lint` がドリフト（`index-metadata-mismatch`、
+ください — materialize は `doc_maintenance.js index plan|apply` で明示的に
+行います（creator は索引を書き込みません）。実行するまでの間、
+`doc_status lint` がドリフト（`index-metadata-mismatch`、
 `index-ordering`）を報告します。

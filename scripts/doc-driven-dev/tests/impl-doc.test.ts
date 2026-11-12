@@ -40,7 +40,7 @@ test("impl-doc ships skill docs, references, and templates", () => {
   assert.equal(fs.existsSync(path.join(skillRoot, "assets", "templates", "experiment-log.ja.jsonl")), true);
 });
 
-test("new_impl_record creates markdown record and index", () => {
+test("new_impl_record creates markdown record and defers the index", () => {
   const repo = tempRepo();
 
   const result = runScript(
@@ -53,7 +53,10 @@ test("new_impl_record creates markdown record and index", () => {
   const recordPath = path.join(repo, "docs/impl/ir/extract-foo-service.md");
   const indexPath = path.join(repo, "docs/impl/ir/README.md");
   assert.equal(fs.existsSync(recordPath), true);
-  assert.equal(fs.existsSync(indexPath), true);
+  // Creators defer index writes (#196); materialization is explicit via
+  // doc_maintenance.js index apply or sync_impl_index.js --apply.
+  assert.equal(fs.existsSync(indexPath), false);
+  assert.match(result.stdout, /Index deferred/);
 
   const record = fs.readFileSync(recordPath, "utf8");
   assert.match(record, /^id: "IMPL-[0-9A-Za-z]{22}"$/m);
@@ -201,6 +204,15 @@ test("experiment log creation, append, edit, and audit work together", () => {
   const logPath = path.join(repo, "docs/impl/exp/try-foo-service-extraction.jsonl");
   assert.equal(fs.existsSync(logPath), true);
   assert.equal(fs.readFileSync(logPath, "utf8"), "");
+
+  // The creator defers the index (#196); seed it explicitly so the audit's
+  // missing-index warning does not mask the assertion below.
+  const seeded = runScript(
+    "sync_impl_index.js",
+    ["--kind", "exp", "--dir", "docs/impl/exp", "--apply"],
+    { cwd: repo },
+  );
+  assert.equal(seeded.status, 0, seeded.stderr);
 
   const appended = runScript(
     "append_experiment_event.js",

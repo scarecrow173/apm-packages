@@ -131,7 +131,8 @@ The dual-track: **spec + ADR (parallel) → plan → test-spec → task**.
 
 ## Resources
 
-- `scripts/new_spec.js`: create a spec and update its index.
+- `scripts/new_spec.js`: create a spec (index materialization is explicit:
+  `doc_maintenance.js index plan|apply`).
 - `references/spec-conventions.md`: directory, filename, status, relations,
   required content, and index conventions for specs.
 - `assets/templates/spec.md`: default spec body template.

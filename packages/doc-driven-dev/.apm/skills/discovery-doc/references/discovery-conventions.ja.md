@@ -227,10 +227,10 @@ discovery 文書をファイル名順の 4 列 Markdown テーブルとして列
   同じ索引を共有する brainstorm は `routed`、`superseded`）の文書は下段の
   `## Settled` テーブルにファイル名昇順で掲載します。Settled の行もリンクは
   維持され、履歴を隠さずに強調を抑える構成です。
-- discovery 文書の追加や `status` の変更時は索引を更新してください。
-  `doc_maintenance.js plan|apply` が管理索引を再生成します。実行するまでの間、
-  `doc_status lint` がドリフト（`index-metadata-mismatch`、`index-ordering`）を
-  報告します。
+- discovery 文書の追加や `status` の変更時は索引を更新してください — materialize は
+  `doc_maintenance.js index plan|apply` で明示的に行います（creator は索引を
+  書き込みません）。実行するまでの間、`doc_status lint` がドリフト
+  （`index-metadata-mismatch`、`index-ordering`）を報告します。
 
 ## サブディレクトリ分類
 

@@ -23963,29 +23963,6 @@ function date4(params) {
 // src/skills/lib/doc_suite_utils.ts
 var import_gray_matter = __toESM(require_gray_matter());
 
-// src/skills/lib/doc_lifecycle.ts
-var SETTLED_STATUSES = {
-  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
-  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
-  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
-  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
-  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
-  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
-  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
-  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
-  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
-  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
-};
-var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
-function lifecycleBucketForType(type) {
-  const declared = type ?? "untyped";
-  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
-}
-function isSettledStatus(type, status) {
-  if (!status) return false;
-  return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
-}
-
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
@@ -24314,49 +24291,6 @@ var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
   dir,
   ...scaffoldIndexMeta[dir]
 }));
-function mergeManagedIndex(existing, generated) {
-  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
-  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
-  const lines = existing.split("\n");
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerIndex < 0) return `${section}
-`;
-  const preamble = lines.slice(0, markerIndex);
-  const rest = lines.slice(markerIndex + 1);
-  let directoryLine = -1;
-  let regionEnd = -1;
-  for (let i = 0; i < rest.length; i += 1) {
-    const trimmed = rest[i].trim();
-    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
-      directoryLine = i;
-      continue;
-    }
-    if (trimmed.startsWith("|")) {
-      regionEnd = i;
-      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-      break;
-    }
-  }
-  if (regionEnd < 0) regionEnd = directoryLine;
-  const settledMarkerIndex = rest.findIndex(
-    (line, offset) => offset > regionEnd && line.includes(GENERATED_SETTLED_MARKER)
-  );
-  if (settledMarkerIndex >= 0) {
-    regionEnd = settledMarkerIndex;
-    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim() === "") regionEnd += 1;
-    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-  }
-  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
-    const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|") && !line.includes(GENERATED_INDEX_MARKER) && !line.includes(GENERATED_SETTLED_MARKER);
-  });
-  const trailing = rest.slice(regionEnd + 1);
-  const head = preamble.join("\n").replace(/\n+$/, "");
-  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
-  const parts = [head, section, tail].filter((part) => part !== "");
-  return `${parts.join("\n\n")}
-`;
-}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -24379,55 +24313,13 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
-var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
 var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
-function parseDoc(content) {
-  try {
-    const parsed = (0, import_gray_matter.default)(content);
-    return { data: parsed.data || {}, body: parsed.content, error: null };
-  } catch (error62) {
-    return { data: {}, body: content, error: error62 instanceof Error ? error62.message : String(error62) };
-  }
-}
 function sanitizeTitle(title) {
   const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
   if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
   return cleaned;
-}
-function indexCell(value) {
-  return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
-}
-function isGeneratedIndex(content, legacyTitle) {
-  if (content.includes(GENERATED_INDEX_MARKER)) return true;
-  return Boolean(legacyTitle) && content.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content);
-}
-function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
-  const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
-}
-function renderIndexBody(entries, options2 = {}) {
-  const header = INDEX_TABLE_HEADER_4COL;
-  const compare = (left, right) => {
-    if (options2.overviewFirst) {
-      if (left.file === "overview.md") return -1;
-      if (right.file === "overview.md") return 1;
-    }
-    return left.file.localeCompare(right.file);
-  };
-  const row = (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
-  const settled = (entry) => isSettledStatus(entry.type ?? options2.settledType ?? null, entry.status);
-  const active = entries.filter((entry) => !settled(entry)).sort(compare);
-  const settledEntries = entries.filter(settled).sort(compare);
-  const body = [header, ...active.map(row)].join("\n");
-  return settledEntries.length > 0 ? `${body}
-
-## Settled ${GENERATED_SETTLED_MARKER}
-
-${[header, ...settledEntries.map(row)].join("\n")}` : body;
 }
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
@@ -24481,10 +24373,6 @@ function implDir(cwd, kind, explicitDir) {
   const resolved = explicitDir ? resolveContainedDir(cwd, explicitDir) : defaultImplDir(kind);
   assertTypeScope(kind === "ir" ? "impl" : "exp", resolved);
   return resolved;
-}
-function listFiles(dir, ext) {
-  if (!import_node_fs2.default.existsSync(dir)) return [];
-  return import_node_fs2.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs2.default.lstatSync(import_node_path2.default.join(dir, file2)).isSymbolicLink()).sort();
 }
 function renderTemplate(name, replacements) {
   const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", name);
@@ -24592,54 +24480,9 @@ function buildImplementationRecordContent(options2) {
 ${renderTemplate("implementation-record.md", { title })}
 `;
 }
-function writeImplIndex(indexPath, content, legacyTitle, force = false) {
-  let isSymlink = false;
-  try {
-    isSymlink = import_node_fs2.default.lstatSync(indexPath).isSymbolicLink();
-  } catch {
-    isSymlink = false;
-  }
-  if (isSymlink) return { written: false, reason: "hand-curated" };
-  const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
-  if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
-    return { written: false, reason: "hand-curated" };
-  }
-  const merged = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content) : content;
-  import_node_fs2.default.writeFileSync(indexPath, merged, "utf8");
-  return { written: true, reason: null };
-}
 var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
 var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
 var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
-function implIndexEntries(dirAbs, relativeDir, files) {
-  return files.flatMap((file2) => {
-    const parsed = parseDoc(import_node_fs2.default.readFileSync(import_node_path2.default.join(dirAbs, file2), "utf8"));
-    if (parsed.error) return [];
-    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
-    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path2.default.basename(file2, ".md");
-    const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
-    const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
-    return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
-  });
-}
-function updateIndexForMarkdownDir(cwd, relativeDir, options2) {
-  const dir = import_node_path2.default.join(cwd, relativeDir);
-  const files = listFiles(dir, ".md");
-  const body = renderIndexBody(implIndexEntries(dir, relativeDir, files), { settledType: "impl" });
-  return writeImplIndex(
-    import_node_path2.default.join(dir, "README.md"),
-    `# Implementation Records
-
-${GENERATED_INDEX_MARKER}
-
-Directory: \`${relativeDir}\`
-
-${body}
-`,
-    "Implementation Records",
-    options2?.force === true
-  );
-}
 function buildNewFilePath(options2) {
   const relativeDir = implDir(options2.cwd, options2.kind, options2.explicitDir);
   const fullDir = import_node_path2.default.join(options2.cwd, relativeDir);
@@ -24701,13 +24544,8 @@ async function main() {
       }
     });
     import_node_fs3.default.writeFileSync(outputPath, content, "utf8");
-    const indexResult = updateIndexForMarkdownDir(cwd, relativeDir);
     console.log(`Created ${posixRelative(cwd, outputPath)}`);
-    if (indexResult.written) {
-      console.log(`Updated ${relativeDir}/README.md`);
-    } else {
-      console.warn(`Skipped index update: ${relativeDir}/README.md appears hand-curated (no generated marker). Update it manually.`);
-    }
+    console.log(`Index deferred: ${relativeDir}/README.md \u2014 materialize explicitly via doc_maintenance.js index apply --dir ${relativeDir}`);
   } catch (error62) {
     console.error(error62 instanceof Error ? error62.message : String(error62));
     console.error(usage());

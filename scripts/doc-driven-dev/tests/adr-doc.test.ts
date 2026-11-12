@@ -48,14 +48,17 @@ function runScript(name: any, args: any, options: { cwd?: string } = {}) {
   };
 }
 
-test("new_adr creates the default MADR ADR and index in docs/adr", () => {
+test("new_adr creates the default MADR ADR in docs/adr and defers the index", () => {
   const repo = tempRepo();
 
   const result = runScript("new_adr.js", ["--title", "Adopt MADR"], { cwd: repo });
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.existsSync(path.join(repo, "docs/adr/adopt-madr.md")), true);
-  assert.equal(fs.existsSync(path.join(repo, "docs/adr/README.md")), true);
+  // Creators defer index writes (#196); materialization is explicit via
+  // doc_maintenance.js index apply.
+  assert.equal(fs.existsSync(path.join(repo, "docs/adr/README.md")), false);
+  assert.match(result.stdout, /Index deferred/);
 
   const adr = fs.readFileSync(path.join(repo, "docs/adr/adopt-madr.md"), "utf8");
   assert.match(adr, /^id: "ADR-[0-9A-Za-z]{22}"$/m);
@@ -82,8 +85,6 @@ test("new_adr creates the default MADR ADR and index in docs/adr", () => {
   for (const field of ["added", "modified", "deleted", "renamed", "moved", "generated"]) {
     assert.match(adr, new RegExp(`^    ${field}: \\[\\]$`, "m"));
   }
-  const index = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
-  assert.match(index, /\| ADR-[0-9A-Za-z]{22} \| Adopt MADR \| proposed \| \[adopt-madr\.md\]\(\.\/adopt-madr\.md\) \|/);
   assert.match(adr, /^# Adopt MADR/m);
   assert.match(adr, /## Context and Problem Statement/);
   assert.match(adr, /## Decision Drivers/);

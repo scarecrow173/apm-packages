@@ -24204,49 +24204,6 @@ var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
   dir,
   ...scaffoldIndexMeta[dir]
 }));
-function mergeManagedIndex(existing, generated) {
-  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
-  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
-  const lines = existing.split("\n");
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerIndex < 0) return `${section}
-`;
-  const preamble = lines.slice(0, markerIndex);
-  const rest = lines.slice(markerIndex + 1);
-  let directoryLine = -1;
-  let regionEnd = -1;
-  for (let i = 0; i < rest.length; i += 1) {
-    const trimmed = rest[i].trim();
-    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
-      directoryLine = i;
-      continue;
-    }
-    if (trimmed.startsWith("|")) {
-      regionEnd = i;
-      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-      break;
-    }
-  }
-  if (regionEnd < 0) regionEnd = directoryLine;
-  const settledMarkerIndex = rest.findIndex(
-    (line, offset) => offset > regionEnd && line.includes(GENERATED_SETTLED_MARKER)
-  );
-  if (settledMarkerIndex >= 0) {
-    regionEnd = settledMarkerIndex;
-    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim() === "") regionEnd += 1;
-    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-  }
-  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
-    const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|") && !line.includes(GENERATED_INDEX_MARKER) && !line.includes(GENERATED_SETTLED_MARKER);
-  });
-  const trailing = rest.slice(regionEnd + 1);
-  const head = preamble.join("\n").replace(/\n+$/, "");
-  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
-  const parts = [head, section, tail].filter((part) => part !== "");
-  return `${parts.join("\n\n")}
-`;
-}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -24269,17 +24226,9 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
-var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
 var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
-function indexCell(value) {
-  return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
-}
-function isGeneratedIndex(content, legacyTitle) {
-  if (content.includes(GENERATED_INDEX_MARKER)) return true;
-  return Boolean(legacyTitle) && content.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content);
-}
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
@@ -24334,10 +24283,6 @@ function implDir(cwd, kind, explicitDir) {
   assertTypeScope(kind === "ir" ? "impl" : "exp", resolved);
   return resolved;
 }
-function listFiles(dir, ext) {
-  if (!import_node_fs2.default.existsSync(dir)) return [];
-  return import_node_fs2.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs2.default.lstatSync(import_node_path2.default.join(dir, file2)).isSymbolicLink()).sort();
-}
 function renderTemplate(name, replacements) {
   const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", name);
   let content = import_node_fs2.default.readFileSync(templatePath, "utf8").trimEnd();
@@ -24372,46 +24317,9 @@ function buildExperimentEvent(options2) {
     ...options2.extra || {}
   };
 }
-function writeImplIndex(indexPath, content, legacyTitle, force = false) {
-  let isSymlink = false;
-  try {
-    isSymlink = import_node_fs2.default.lstatSync(indexPath).isSymbolicLink();
-  } catch {
-    isSymlink = false;
-  }
-  if (isSymlink) return { written: false, reason: "hand-curated" };
-  const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
-  if (!force && existing !== null && !isGeneratedIndex(existing, legacyTitle)) {
-    return { written: false, reason: "hand-curated" };
-  }
-  const merged = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content) : content;
-  import_node_fs2.default.writeFileSync(indexPath, merged, "utf8");
-  return { written: true, reason: null };
-}
 var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
 var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
 var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
-function updateIndexForExperimentDir(cwd, relativeDir, options2) {
-  const dir = import_node_path2.default.join(cwd, relativeDir);
-  const files = listFiles(dir, ".jsonl");
-  const header = INDEX_TABLE_HEADER_1COL;
-  const rows = files.map((file2) => `| [${indexCell(file2)}](./${indexCell(file2)}) |`);
-  const body = rows.length > 0 ? `${header}
-${rows.join("\n")}` : header;
-  return writeImplIndex(
-    import_node_path2.default.join(dir, "README.md"),
-    `# Experiment Logs
-
-${GENERATED_INDEX_MARKER}
-
-Directory: \`${relativeDir}\`
-
-${body}
-`,
-    "Experiment Logs",
-    options2?.force === true
-  );
-}
 function buildNewFilePath(options2) {
   const relativeDir = implDir(options2.cwd, options2.kind, options2.explicitDir);
   const fullDir = import_node_path2.default.join(options2.cwd, relativeDir);
@@ -24484,13 +24392,8 @@ async function main() {
       events.push(event);
     }
     writeExperimentEvents(outputPath, events);
-    const indexResult = updateIndexForExperimentDir(cwd, relativeDir);
     console.log(`Created ${posixRelative(cwd, outputPath)}`);
-    if (indexResult.written) {
-      console.log(`Updated ${relativeDir}/README.md`);
-    } else {
-      console.warn(`Skipped index update: ${relativeDir}/README.md appears hand-curated (no generated marker). Update it manually.`);
-    }
+    console.log(`Index deferred: ${relativeDir}/README.md \u2014 materialize explicitly via doc_maintenance.js index apply --dir ${relativeDir}`);
   } catch (error62) {
     console.error(error62 instanceof Error ? error62.message : String(error62));
     console.error(usage());

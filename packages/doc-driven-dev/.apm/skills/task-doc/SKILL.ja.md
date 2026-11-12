@@ -104,13 +104,14 @@ task を作成するには、以下のいずれかを満たす必要がある:
 
 すべての検証コマンドがパスするまで、task を `done` に移動できません。
 ステータス変更時 —— `done`/`wont-do` は行を索引の `## Settled` 層へ
-移します —— には、同一変更内で `doc_maintenance.js plan|apply --type task`
+移します —— には、同一変更内で `doc_maintenance.js index plan|apply --dir docs/tasks`
 により `docs/tasks/README.md` を再生成します。再生成までは
 `doc_status lint` が古い索引を報告します。
 
 ## リソース
 
-- `scripts/new_task.js`: task を作成し、索引を更新します。
+- `scripts/new_task.js`: task を作成します（索引の materialize は明示的:
+  `doc_maintenance.js index plan|apply`）。
 - `references/task-conventions.ja.md`: task のディレクトリ、ファイル名、
   ステータス、relation、必須内容、索引の規約です。
 - `assets/templates/task.md`: 既定の task 本文テンプレートです。

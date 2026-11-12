@@ -83,7 +83,7 @@ function runSkill(root: string, name: string, args: string[], cwd: string) {
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
-test("scaffolded owner indexes accept creator writes end to end", () => {
+test("scaffolded owner indexes accept explicit materialization end to end", () => {
   const repo = tempRepo();
   const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   assert.equal(scaffold.status, 0, scaffold.stderr);
@@ -95,17 +95,29 @@ test("scaffolded owner indexes accept creator writes end to end", () => {
 
   const adr = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
   assert.equal(adr.status, 0, adr.stderr);
-  assert.doesNotMatch(adr.stdout + adr.stderr, /hand-curated/);
+  assert.match(adr.stdout, /Index deferred/);
+  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8"), /adopt-madr\.md/);
+  const adrApply = runSkill(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/adr", "--cwd", repo], repo);
+  assert.equal(adrApply.status, 0, adrApply.stderr);
+  assert.doesNotMatch(adrApply.stdout + adrApply.stderr, /hand-curated/);
   assert.match(fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8"), /adopt-madr\.md/);
 
   const ir = runSkill(implRoot, "new_impl_record.js", ["--title", "Extract foo", "--cwd", repo], repo);
   assert.equal(ir.status, 0, ir.stderr);
-  assert.doesNotMatch(ir.stdout + ir.stderr, /hand-curated/);
+  assert.match(ir.stdout, /Index deferred/);
+  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), /extract-foo\.md/);
+  const irApply = runSkill(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/ir", "--cwd", repo], repo);
+  assert.equal(irApply.status, 0, irApply.stderr);
+  assert.doesNotMatch(irApply.stdout + irApply.stderr, /hand-curated/);
   assert.match(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), /extract-foo\.md/);
 
   const exp = runSkill(implRoot, "new_experiment_log.js", ["--title", "Try caches", "--cwd", repo], repo);
   assert.equal(exp.status, 0, exp.stderr);
-  assert.doesNotMatch(exp.stdout + exp.stderr, /hand-curated/);
+  assert.match(exp.stdout, /Index deferred/);
+  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8"), /try-caches\.jsonl/);
+  const expApply = runSkill(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/exp", "--cwd", repo], repo);
+  assert.equal(expApply.status, 0, expApply.stderr);
+  assert.doesNotMatch(expApply.stdout + expApply.stderr, /hand-curated/);
   const expIndex = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
   assert.match(expIndex, /try-caches\.jsonl/);
   assert.doesNotMatch(expIndex, /\| Title \|/, "EXP index stays one-column");
@@ -115,7 +127,10 @@ test("a second scaffold run leaves managed owner indexes untouched", () => {
   const repo = tempRepo();
   runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
+  const materialize = runSkill(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/adr", "--cwd", repo], repo);
+  assert.equal(materialize.status, 0, materialize.stderr);
   const before = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
+  assert.match(before, /adopt-madr\.md/);
 
   const again = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   assert.equal(again.status, 0, again.stderr);
