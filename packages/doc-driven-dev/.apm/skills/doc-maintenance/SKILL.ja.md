@@ -177,11 +177,14 @@ preview-first に従う:
 
 - `doc-status`（`list` / `lint` / `audit` / `health`）はファイルを
   一切変更しない。
-- managed index の書き換え、link パス正規化、文書 migration ができるのは
-  `doc-maintenance` のみで、明示的な apply（whitelist 修復の `apply`、
-  managed index materialization の `index apply`）経由に限られる。
-- managed index materialization は `index apply` のみを通る。各書き込みは
-  ディレクトリのオーナー writer に分派され、impl 索引へは
+- managed index の書き換え、link パス正規化、文書 migration の共有
+  エントリポイントは `doc-maintenance` で、常に明示的な apply 経由:
+  whitelist 修復の `apply`、managed index materialization の
+  `index apply`。
+- オーナー局所の明示的 writer は自前ディレクトリ向けに残る:
+  `docs/adr` には `update_index.js`（adr-doc）、`docs/impl/ir` と
+  `docs/impl/exp` には `sync_impl_index.js`（impl-doc）。`index apply`
+  はこれらを bypass せず同じオーナー writer に委譲し、impl 索引へは
   `sync_impl_index` の safe sync API 経由でのみ到達する。
 - migration も同じ preview-first contract で plan / apply されるが、
   repair コマンドが暗黙に実行することはない。

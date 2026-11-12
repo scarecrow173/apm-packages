@@ -189,8 +189,9 @@ Constraints:
 The report records schema, staleness, deterministic, and blocking validation
 results. `overall_result` is `"pass"` only when all required gates pass.
 
-On overall pass, `sdp validate` also re-stamps `validated_at` on the catalog
-and the profile; on any failure it is never refreshed (see gate-spec.md §5).
+On overall pass, `sdp validate` also re-stamps `validated_at` on the
+profile — and on the catalog when the run finds one; on any failure it is
+never refreshed (see gate-spec.md §5).
 
 ## 8. Derived Outputs
 

@@ -31,7 +31,7 @@ title-with-dashes.jsonl
 - `ir/` と `exp/` の名前はそれぞれのディレクトリ内で一意であればよいです。
 - 文書の同一性はファイル名やソート位置ではなく front matter の `id` に
   あります。既存の `NNNN-<slug>` ファイル名も有効ですが、新規ファイルは
-  常に slug-only の名前を使います。既存ファイルの移行には `doc-driven-dev-graph/scripts` の `migrate_ids.js` を使います。
+  常に slug-only の名前を使います。既存ファイルの移行には `doc-maintenance/scripts` の `migrate_ids.js` を使います。
 
 ## Implementation Record の front matter
 
@@ -76,12 +76,17 @@ Implementation Record は Markdown 文書であり、CLI は初期作成と監�
 - 実装が進む間は front matter と本文を継続的に更新する。
 - 完了後に思い出して書くのではなく、進行中の実装記録として扱う。
 
-実装中に最新化しておく本文セクション:
+実装中に最新化しておく本文セクション — audit 対象の `##` 見出しであり、
+欠けていれば `audit_impl_record.js` が `missing-section` を報告する:
 
 - Summary
-- Changes Made
-- Validation and Evidence
-- Risks or Follow-ups
+- Context
+- Implementation（進行中の記録は `### Changes` と `### Decisions
+  During Implementation` が担う）
+- Related Experiments
+- Validation
+- Risks
+- Follow-ups
 
 status の使い分け:
 

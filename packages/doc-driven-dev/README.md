@@ -10,7 +10,8 @@ Definition is the execution authority.
 
 The package provides focused document skills and graph delegates:
 
-- `idea-doc`, `deep-dive`, and `briefing-flow` capture and shape discovery.
+- `idea-doc` captures discovery documents, `deep-dive` interviews to confirm
+  intent, and `briefing-flow` orchestrates discovery.
 - `discovery-doc`, `adr-doc`, and `spec-doc` record intent and decisions.
 - `design-doc`, `plan-doc`, and `task-doc` define approved implementation work.
 - `test-spec-doc` records what tests must guarantee and why.

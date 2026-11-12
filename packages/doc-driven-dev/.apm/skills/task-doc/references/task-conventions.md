@@ -45,7 +45,7 @@ Rules:
 
 Document identity lives in the front matter `id`, not in the filename or its
 sort position. Existing `NNNN-<slug>.md` filenames remain valid, but new
-documents always use slug-only names. Run `migrate_ids.js` under `doc-driven-dev-graph/scripts` to upgrade existing files.
+documents always use slug-only names. Run `migrate_ids.js` under `doc-maintenance/scripts` to upgrade existing files.
 
 ## Required Front Matter
 
@@ -223,9 +223,11 @@ Index rules:
   materialization is explicit via `doc_maintenance.js index plan|apply`
   (creators never write indexes); `doc_status lint` reports the drift
   (`index-metadata-mismatch`, `index-ordering`) until it does.
-- As entries grow, split the index into multiple headings, one table per
-  heading, for readability. Align the split with the subdirectory grouping
-  (category or feature) so each heading maps to one group.
+- A managed index keeps exactly one in-flight table plus the optional
+  `## Settled` tier — `doc_status lint` flags a second table in a tier or
+  any table under another `##` heading as `index-unparseable`. As entries
+  grow, split documents across owned directories, each with its own
+  managed index, rather than adding headed tables inside one index.
 
 ## Subdirectory Grouping
 

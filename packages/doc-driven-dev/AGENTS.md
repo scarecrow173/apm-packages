@@ -76,11 +76,17 @@ database or mutable lifecycle store.
 
 ## Skills and ownership
 
-Document-generation skills (`idea-doc`, `deep-dive`, `briefing-flow`,
-`discovery-doc`, `adr-doc`, `spec-doc`, `design-doc`, `plan-doc`, `task-doc`,
-`test-spec-doc`, `impl-doc`, and `doc-status`) own their document contracts. The orchestration
-skills are `doc-driven-dev-graph`, `implementation-flow`, and
-`skill-discovery-protocol`.
+Document-generation skills (`idea-doc`, `discovery-doc`, `adr-doc`,
+`spec-doc`, `design-doc`, `plan-doc`, `task-doc`, `test-spec-doc`, and
+`impl-doc`) own their document contracts. `deep-dive` is an interview
+skill — its output is a confirmed intent summary, not a document.
+`doc-status` is read-only inspection (`list` / `lint` / `audit` /
+`health`), and `doc-dashboard` renders an offline HTML snapshot without
+touching canonical Markdown. `doc-maintenance` owns the explicit apply
+paths for whitelisted repairs and managed index materialization. The
+orchestration skills are `doc-driven-dev-graph`,
+`skill-discovery-protocol`, `briefing-flow` (discovery orchestration),
+`implementation-flow`, and `planning-flow`, a graph-delegated subgraph.
 
 `planning-flow` is a graph-delegated subgraph, not a concurrently active
 top-level orchestration skill. Only one orchestration skill should be active

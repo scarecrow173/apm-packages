@@ -83,7 +83,7 @@ sdp validate --adapter <adapter-yaml>
 
 - `--profile --adapter` (両方): 完全 4 ゲート検証（Schema、Staleness、Deterministic、Blocking）
 - `--profile` のみ: Schema ゲートのみ実行；Staleness、Deterministic、Blocking ゲートは **スキップ**
-- `--adapter` のみ: Adapter YAML 設定のスキーマのみ検証
+- `--adapter` のみ: Adapter YAML 設定のスキーマのみ検証（レポートは書き込まない）
 
 adapter のフラグで個別ゲートをスキップできる:
 `validation.schema: false`、`validation.staleness.enabled: false`、
@@ -91,8 +91,11 @@ adapter のフラグで個別ゲートをスキップできる:
 `validation.invocation.enabled: false` はそれぞれゲートを実行せず、
 レポートに `result: "skipped"` を記録する（gate-spec.ja.md §4〜§7）。
 
-overall pass 時、`sdp validate` は catalog と profile の `validated_at` を
-再刻印する。再刻印には `--adapter` と schema ゲートの pass、
+`--profile` を指定した実行は pass / fail を問わず、選択した profile の
+隣に `validation-report.json` を書き込む。overall pass 時、
+`sdp validate` は profile と、実行が catalog を見つけた場合は catalog の
+`validated_at` を再刻印する。フィールドを持たない artifact には刻印
+しない。再刻印には `--adapter` と schema ゲートの pass、
 deterministic ゲートの pass が
 必要 — `--profile` のみの実行では鮮度ゲートがすべてスキップされるため
 再刻印せず、スキップされた schema / deterministic ゲートも鮮度の
