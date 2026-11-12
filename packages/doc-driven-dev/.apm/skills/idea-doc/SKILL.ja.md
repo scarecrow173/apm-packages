@@ -144,7 +144,8 @@ relations:
 
 ## リソース
 
-- `scripts/new_idea.js`: idea 文書を作成し、索引を更新します。
+- `scripts/new_idea.js`: idea 文書を作成します（索引の materialize は明示的:
+  `doc_maintenance.js index plan|apply`）。
 - `references/idea-conventions.ja.md`: idea 文書のディレクトリ、ファイル名、
   ステータス、relation、必須内容、索引の規約
   — **作成操作の前に必ず読み込むこと**

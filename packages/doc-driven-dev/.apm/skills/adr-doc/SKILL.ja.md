@@ -289,7 +289,8 @@ ADR に記録する内容は次の理解です。
    field で関連 ADR を接続します。
 9. ファイルを生成する。
    推奨は `scripts/new_adr.js` です。ディレクトリ検出、命名、
-   テンプレート、メタデータ既定値、索引更新を扱います。スクリプトを実行
+   テンプレート、メタデータ既定値を扱います。索引の materialize は明示的
+   です（`doc_maintenance.js index plan|apply`）。スクリプトを実行
    できない場合は、`assets/templates/` からテンプレートをコピーして手動で
    埋めます。
 
@@ -379,8 +380,8 @@ index 保守、bootstrap パターン、カテゴリ構成については
 ### scripts
 
 - `scripts/new_adr.js`: リポジトリ規約に従い、MADR テンプレートから新しい
-  ADR を作成する。生成索引を更新する（`--no-index` で省略。手書き索引は
-  `--force-index` を付けない限り保持される）。
+  ADR を作成する（索引の materialize は明示的: `doc_maintenance.js index
+  plan|apply`）。
 - `scripts/list_adrs.js`: ADR メタデータ、ステータス、relations を一覧する。
 - `scripts/audit_adr.js`: フロントマター、必須セクション、プレースホルダー、
   ローカルリンク、relation リンク、索引を検証する。

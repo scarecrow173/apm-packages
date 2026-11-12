@@ -153,7 +153,8 @@ Set `promoted` only after creating the downstream document and linking it in
 
 ## Resources
 
-- `scripts/new_idea.js`: create an idea document and update its index.
+- `scripts/new_idea.js`: create an idea document (index materialization is
+  explicit: `doc_maintenance.js index plan|apply`).
 - `references/idea-conventions.md`: directory, filename, status, relations,
   required content, and index conventions
   — **load MANDATORY before any create operation**

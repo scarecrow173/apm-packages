@@ -23960,29 +23960,6 @@ function generateArtifactId(idPrefix) {
   return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
 }
 
-// src/skills/lib/doc_lifecycle.ts
-var SETTLED_STATUSES = {
-  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
-  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
-  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
-  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
-  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
-  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
-  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
-  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
-  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
-  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
-};
-var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
-function lifecycleBucketForType(type) {
-  const declared = type ?? "untyped";
-  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
-}
-function isSettledStatus(type, status) {
-  if (!status) return false;
-  return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
-}
-
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
@@ -24040,9 +24017,6 @@ function resolveContainedDir(cwd, dir, flag = "--dir") {
     );
   }
   return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
-}
-function isIndexFileName(file2) {
-  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
 }
 function slugify2(title, fallback) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
@@ -24319,69 +24293,6 @@ var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
   dir,
   ...scaffoldIndexMeta[dir]
 }));
-function primaryIndexTypeForDir(dir, candidates) {
-  const normalized = normalizeDir(dir);
-  const scaffoldType = scaffoldTargets.find(
-    (target) => target.type && normalizeDir(target.dir) === normalized
-  )?.type;
-  if (scaffoldType && candidates.includes(scaffoldType)) return scaffoldType;
-  return [...candidates].sort()[0] ?? "";
-}
-function residentTypesForDir(dir) {
-  const normalized = normalizeDir(dir);
-  return docTypes.filter((type) => {
-    const config2 = configFor(type);
-    return [...config2.dirs, config2.dir].map(normalizeDir).includes(normalized);
-  });
-}
-function mergeManagedIndex(existing, generated) {
-  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
-  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
-  const lines = existing.split("\n");
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerIndex < 0) return `${section}
-`;
-  const preamble = lines.slice(0, markerIndex);
-  const rest = lines.slice(markerIndex + 1);
-  let directoryLine = -1;
-  let regionEnd = -1;
-  for (let i = 0; i < rest.length; i += 1) {
-    const trimmed = rest[i].trim();
-    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
-      directoryLine = i;
-      continue;
-    }
-    if (trimmed.startsWith("|")) {
-      regionEnd = i;
-      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-      break;
-    }
-  }
-  if (regionEnd < 0) regionEnd = directoryLine;
-  const settledMarkerIndex = rest.findIndex(
-    (line, offset) => offset > regionEnd && line.includes(GENERATED_SETTLED_MARKER)
-  );
-  if (settledMarkerIndex >= 0) {
-    regionEnd = settledMarkerIndex;
-    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim() === "") regionEnd += 1;
-    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-  }
-  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
-    const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|") && !line.includes(GENERATED_INDEX_MARKER) && !line.includes(GENERATED_SETTLED_MARKER);
-  });
-  const trailing = rest.slice(regionEnd + 1);
-  const head = preamble.join("\n").replace(/\n+$/, "");
-  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
-  const parts = [head, section, tail].filter((part) => part !== "");
-  return `${parts.join("\n\n")}
-`;
-}
-async function renderManagedIndex(cwd, dir, seedType, extraTypes) {
-  const types = [.../* @__PURE__ */ new Set([seedType, ...extraTypes ?? [], ...residentTypesForDir(dir)])].sort();
-  const primary = primaryIndexTypeForDir(dir, types);
-  return buildIndex(cwd, primary, dir, { types });
-}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -24404,9 +24315,6 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
-var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
-var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
-var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
 function canonicalRootDir(cwd, type) {
   const config2 = configFor(type);
   return findDocumentDir(cwd, void 0, config2.dirs, config2.dir);
@@ -24428,30 +24336,10 @@ function docDir(cwd, type, explicitDir) {
   assertTypeScope(type, resolved);
   return resolved;
 }
-function docFiles(dir) {
-  return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
-}
-function parseDoc(content) {
-  try {
-    const parsed = (0, import_gray_matter.default)(content);
-    return { data: parsed.data || {}, body: parsed.content, error: null };
-  } catch (error62) {
-    return { data: {}, body: content, error: error62 instanceof Error ? error62.message : String(error62) };
-  }
-}
 function sanitizeTitle(title) {
   const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
   if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
   return cleaned;
-}
-function indexCell(value) {
-  return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
-}
-function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
-  const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 function completeChanges(input2) {
   return Object.fromEntries(changeFields.map((field) => [field, input2?.[field] || []]));
@@ -24864,106 +24752,6 @@ function ensureDesignOverview(fullDir, date5) {
   if (import_node_fs2.default.existsSync(overviewPath)) return;
   import_node_fs2.default.writeFileSync(overviewPath, overviewDocument(date5), "utf8");
 }
-async function titleFromDocument(content, fallback, headingToTitle) {
-  const parsed = parseDoc(content);
-  const data = parsed.data;
-  if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
-  const match = /^#\s+(.+)$/m.exec(parsed.body);
-  const heading = match?.[1]?.trim();
-  if (!heading) return fallback;
-  const normalized = headingToTitle ? headingToTitle(heading).trim() : heading;
-  return normalized || fallback;
-}
-async function docEntries(cwd, type, explicitDir) {
-  const relativeDir = docDir(cwd, type, explicitDir);
-  const dir = import_node_path2.default.join(cwd, relativeDir);
-  const indexRow = configFor(type).indexRow;
-  const entries = await Promise.all(docFiles(dir).map(async (file2) => {
-    const fullPath = import_node_path2.default.join(dir, file2);
-    const content = import_node_fs2.default.readFileSync(fullPath, "utf8");
-    const data = parseDoc(content).data;
-    const entryType = typeof data.type === "string" ? data.type : null;
-    const hooks = entryType === null || entryType === type ? indexRow : void 0;
-    return {
-      created: typeof data.created === "string" ? data.created : null,
-      file: file2,
-      id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : hooks?.idFromFile?.(import_node_path2.default.basename(file2)) ?? null,
-      path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
-      status: typeof data.status === "string" ? data.status : null,
-      title: await titleFromDocument(content, import_node_path2.default.basename(file2, ".md"), hooks?.titleFromHeading),
-      type: entryType
-    };
-  }));
-  return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
-}
-function renderIndexBody(entries, options2 = {}) {
-  const header = INDEX_TABLE_HEADER_4COL;
-  const compare = (left, right) => {
-    if (options2.overviewFirst) {
-      if (left.file === "overview.md") return -1;
-      if (right.file === "overview.md") return 1;
-    }
-    return left.file.localeCompare(right.file);
-  };
-  const row = (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
-  const settled = (entry) => isSettledStatus(entry.type ?? options2.settledType ?? null, entry.status);
-  const active = entries.filter((entry) => !settled(entry)).sort(compare);
-  const settledEntries = entries.filter(settled).sort(compare);
-  const body = [header, ...active.map(row)].join("\n");
-  return settledEntries.length > 0 ? `${body}
-
-## Settled ${GENERATED_SETTLED_MARKER}
-
-${[header, ...settledEntries.map(row)].join("\n")}` : body;
-}
-async function buildIndex(cwd, type, explicitDir, options2) {
-  const relativeDir = docDir(cwd, type, explicitDir);
-  const unionTypes = options2?.types ?? [];
-  const entries = unionTypes.length > 1 ? [...new Map(
-    (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
-  ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
-  const contractTitle = ownershipForDir(normalizeDir(relativeDir))?.indexTitle ?? ownershipForDir(normalizeDir(configFor(type).dir))?.indexTitle;
-  const title = contractTitle ?? `${configFor(type).idPrefix} Documents`;
-  const body = renderIndexBody(entries, {
-    overviewFirst: type === "design" || unionTypes.includes("design"),
-    settledType: type
-  });
-  return `# ${title}
-
-${GENERATED_INDEX_MARKER}
-
-Directory: \`${relativeDir.replace(/\\/g, "/")}\`
-
-${body}
-`;
-}
-function isMarkdownSource(file2) {
-  return file2.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(file2));
-}
-function walkMarkdownFiles(baseDir) {
-  if (!import_node_fs2.default.existsSync(baseDir)) return [];
-  const entries = import_node_fs2.default.readdirSync(baseDir, { withFileTypes: true });
-  return entries.flatMap((entry) => {
-    if (entry.isSymbolicLink()) return [];
-    const fullPath = import_node_path2.default.join(baseDir, entry.name);
-    if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
-    return isMarkdownSource(fullPath) ? [fullPath] : [];
-  }).sort();
-}
-async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
-  const indexPath = import_node_path2.default.join(cwd, relativeDir, options2.indexFile ?? "README.md");
-  const relIndex = import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/");
-  if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
-  const existing = import_node_fs2.default.existsSync(indexPath) ? import_node_fs2.default.readFileSync(indexPath, "utf8") : null;
-  const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
-  if (!isGenerated && !options2.forceIndex) {
-    return { path: relIndex, written: false, reason: "hand-curated" };
-  }
-  const generated = await renderManagedIndex(cwd, relativeDir, type, options2.types);
-  const content = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, generated) : generated;
-  import_node_fs2.default.writeFileSync(indexPath, content, "utf8");
-  return { path: relIndex, written: true, reason: null };
-}
 async function createDocument(type, options2) {
   const config2 = configFor(type);
   const cwd = import_node_path2.default.resolve(options2.cwd);
@@ -24986,18 +24774,20 @@ ${bodyFor(type, title)}
   import_node_fs2.default.writeFileSync(outputPath, content, "utf8");
   if (type === "design") ensureDesignOverview(import_node_path2.default.join(cwd, rootDir), date5);
   const indexRelativeDir = underRoot ? rootDir : relativeDir;
-  const indexResult = await writeGeneratedIndex(cwd, type, indexRelativeDir, options2);
+  const indexPath = import_node_path2.default.join(cwd, indexRelativeDir, "README.md");
   return {
     file: import_node_path2.default.relative(cwd, outputPath).replace(/\\/g, "/"),
-    index: indexResult.path,
-    indexWritten: indexResult.written,
-    indexSkippedReason: indexResult.reason,
+    index: import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/"),
+    indexWritten: false,
+    indexSkippedReason: "deferred",
     relativeDir
   };
 }
 function logIndexResult(result) {
   if (result.indexWritten) {
     console.log(`Updated ${result.index}`);
+  } else if (result.indexSkippedReason === "deferred") {
+    console.log(`Index deferred: ${result.index} \u2014 materialize explicitly via doc_maintenance.js index apply --dir ${import_node_path2.default.posix.dirname(result.index)}`);
   } else if (result.indexSkippedReason === "hand-curated") {
     console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
   } else if (result.indexSkippedReason === "disabled") {
@@ -25023,11 +24813,10 @@ function parseArgs(argv) {
     else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/new_design.js --title <title> [--from <doc>] [--dir <path>] [--name <filename>] [--status <status>]";
 }
 async function main() {
   try {
@@ -25042,8 +24831,6 @@ async function main() {
       date: args.date,
       dir: args.dir,
       name: args.name,
-      forceIndex: args.forceIndex,
-      noIndex: args.noIndex,
       relations: {
         "derives-from": args.derivesFrom
       },
@@ -25052,6 +24839,9 @@ async function main() {
     });
     console.log(`Created ${result.file}`);
     logIndexResult(result);
+    if (args.noIndex || args.forceIndex) {
+      console.log("Note: --no-index/--force-index are deprecated and have no effect; indexes are materialized via doc_maintenance.js index plan|apply");
+    }
   } catch (error62) {
     console.error(error62 instanceof Error ? error62.message : String(error62));
     console.error(usage());

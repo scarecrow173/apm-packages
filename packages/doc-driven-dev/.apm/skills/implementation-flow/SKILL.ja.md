@@ -393,7 +393,7 @@ repository の commit convention）で commit します。commit が granted aut
 - 各 Implementation Record がタスク終了前に完了・監査され、実装中に作成した
   Experiment Log（exp）を参照・監査している。
 - クローズアウトで所属ディレクトリ索引を同一変更内に再生成した
-  （`doc_maintenance.js plan|apply --type <type>`）: settled 行は
+  （`doc_maintenance.js index plan|apply`）: settled 行は
   `## Settled` 層へ移動し、再生成までは `doc_status lint` が古い索引を
   報告する。
 

@@ -104,8 +104,8 @@ node scripts/audit_experiment_log.js --json
 ### Reconciling the Directory Index
 
 `docs/impl/ir/README.md` and `docs/impl/exp/README.md` are managed indexes.
-The `new_*` creators keep them current on write, but status changes and
-drift are reconciled explicitly with the owner sync tool:
+The `new_*` creators defer index writes — materialization and drift
+reconciliation are explicit through the owner sync tool:
 
 ```bash
 node scripts/sync_impl_index.js --kind ir            # preview only — never writes

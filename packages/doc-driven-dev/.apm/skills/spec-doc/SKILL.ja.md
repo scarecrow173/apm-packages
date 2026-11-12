@@ -128,7 +128,8 @@ dual-track: **spec + ADR（並列）→ plan → test-spec → task**。
 
 ## リソース
 
-- `scripts/new_spec.js`: spec を作成し、索引を更新します。
+- `scripts/new_spec.js`: spec を作成します（索引の materialize は明示的:
+  `doc_maintenance.js index plan|apply`）。
 - `references/spec-conventions.ja.md`: spec のディレクトリ、ファイル名、
   ステータス、relation、必須内容、索引の規約です。
 - `assets/templates/spec.md`: 既定の spec 本文テンプレートです。

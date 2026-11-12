@@ -238,10 +238,10 @@ ADR 索引の既定ファイルは `README.md` とします。リポジトリが
   行もリンクは維持され、履歴を隠さずに強調を抑える構成です。
   `accepted`／`proposed` の ADR は現在の作業が依拠する規範ベースラインなので
   in-flight に留めます。
-- 文書の追加や `status` の変更時は索引を更新してください。
-  `doc_maintenance.js plan|apply` が管理索引を再生成します。実行するまでの間、
-  `doc_status lint` がドリフト（`index-metadata-mismatch`、`index-ordering`）を
-  報告します。
+- 文書の追加や `status` の変更時は索引を更新してください — materialize は
+  `doc_maintenance.js index plan|apply` で明示的に行います（creator は索引を
+  書き込みません）。実行するまでの間、`doc_status lint` がドリフト
+  （`index-metadata-mismatch`、`index-ordering`）を報告します。
 - 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに
   1 つのテーブルを配置することを推奨します。見出しの分割はサブディレクトリの
   グルーピング（カテゴリ別／機能別）と整合させ、各見出しが 1 グループに

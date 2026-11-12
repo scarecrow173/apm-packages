@@ -145,16 +145,17 @@ Index rules:
   (`superseded`, `rejected`) move to a `## Settled` table below it, also
   filename-ordered. Settled rows stay linked — the tier de-emphasizes
   history without hiding it.
-- Update the index whenever a document is added or its `status` changes.
-  `doc_maintenance.js plan|apply` regenerates managed indexes; `doc_status
-  lint` reports the drift (`index-metadata-mismatch`, `index-ordering`)
-  until it does.
+- Update the index whenever a document is added or its `status` changes —
+  materialization is explicit via `doc_maintenance.js index plan|apply`
+  (creators never write indexes); `doc_status lint` reports the drift
+  (`index-metadata-mismatch`, `index-ordering`) until it does.
 - As entries grow, split the index into multiple headings, one table per
   heading, for readability. Align the split with the subdirectory grouping
   (category or feature) so each heading maps to one group.
 - Generated indexes embed an `<!-- doc-suite:generated-index -->` marker.
-  Scripts only overwrite a `README.md` that contains this marker (or one that
-  does not yet exist). A hand-curated index (no marker) is preserved and the
-  script warns instead of clobbering it. Use `--force-index` to overwrite a
-  hand-curated index, or `--no-index` to skip index regeneration entirely.
-  `--no-index` and `--force-index` cannot be used together.
+  Index materialization only writes a `README.md` that contains this marker
+  (or one that does not yet exist). A hand-curated index (no marker) is
+  preserved — `doc_maintenance.js index apply` reports it as `rejected`
+  rather than clobbering it. The creator flags `--no-index`/`--force-index`
+  are deprecated and have no effect; `doc_maintenance.js apply
+  --force-index` remains the repair-path override for hand-curated indexes.

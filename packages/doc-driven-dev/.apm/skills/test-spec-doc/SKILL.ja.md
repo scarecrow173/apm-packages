@@ -105,7 +105,8 @@ plan に検証可能な振る舞いが無い場合は作成を skip し、plan �
 
 ## リソース
 
-- `scripts/new_test_spec.js`: test spec を作成し index を更新します。
+- `scripts/new_test_spec.js`: test spec を作成します（index の materialize は明示的:
+  `doc_maintenance.js index plan|apply`）。
 - `references/test-spec-conventions.ja.md`: test spec の directory、filename、
   status、relations、必須コンテンツ、index の規約。
 - `assets/templates/test-spec.ja.md`: デフォルトの test spec 本文 template。
