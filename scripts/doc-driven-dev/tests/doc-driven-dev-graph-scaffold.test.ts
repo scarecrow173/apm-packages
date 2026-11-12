@@ -140,6 +140,9 @@ test("a second scaffold run leaves managed owner indexes untouched", () => {
 test("migrate_docs --apply produces contract-conformant owner indexes", () => {
   const repo = tempRepo();
   fs.mkdirSync(path.join(repo, "docs"), { recursive: true });
+  // old-decision.md pattern-routes into docs/adr (a type:null owner route) —
+  // apply must skip it, never write it, and still scaffold conformant owner
+  // indexes (Issue #188).
   fs.writeFileSync(
     path.join(repo, "docs/old-decision.md"),
     "# Decision: keep JSONL logs\n\nBody of a decision record to migrate.\n",
@@ -148,10 +151,13 @@ test("migrate_docs --apply produces contract-conformant owner indexes", () => {
 
   const migrate = runSkill(maintenanceRoot, "migrate_docs.js", ["--cwd", repo, "--apply"], repo);
   assert.equal(migrate.status, 0, migrate.stderr);
+  assert.match(migrate.stdout, /Skipped docs\/old-decision\.md: unsupported-owner-route/);
 
   const adrIndex = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
   assert.match(adrIndex, /^# Architecture Decision Records/m);
   assert.ok(adrIndex.includes("doc-suite:generated-index"));
+  assert.doesNotMatch(adrIndex, /old-decision\.md/, "skipped owner-route sources never reach the index");
+  assert.deepEqual(fs.readdirSync(path.join(repo, "docs/adr")), ["README.md"]);
   const expIndex = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
   assert.match(expIndex, /\| File \|/);
 });
