@@ -3,7 +3,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { buildIndex, findAdrDir, slugify, writeIndexFile } from "./lib/adr_utils";
+import { findAdrDir, slugify } from "./lib/adr_utils";
 import { generateArtifactId } from "../../lib/artifact_id";
 import { configFor, frontMatter, sanitizeTitle } from "../../lib/doc_suite_utils";
 
@@ -48,7 +48,6 @@ function parseArgs(argv: string[]): CliArgs {
     else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 
@@ -59,9 +58,9 @@ function parseTemplate(value: string): TemplateName {
 
 function usage(): string {
   return [
-    "Usage: node scripts/new_adr.js --title <title> [--dir <path>] [--template full|minimal|bare|bare-minimal] [--status <status>] [--date <YYYY-MM-DD>] [--no-index|--force-index]",
+    "Usage: node scripts/new_adr.js --title <title> [--dir <path>] [--template full|minimal|bare|bare-minimal] [--status <status>] [--date <YYYY-MM-DD>]",
     "",
-    "Creates a new MADR ADR and refreshes the ADR index.",
+    "Creates a new MADR ADR. Index materialization is explicit: doc_maintenance.js index apply --dir <adr-dir>.",
   ].join("\n");
 }
 
@@ -74,7 +73,7 @@ function renderTemplate(templateName: TemplateName, values: TemplateValues): str
     .replaceAll("{{title}}", values.title);
 }
 
-async function main(): Promise<void> {
+function main(): void {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -112,15 +111,9 @@ async function main(): Promise<void> {
     const indexPath = path.join(adrDir, "README.md");
     const relativeIndex = path.relative(cwd, indexPath).replace(/\\/g, "/");
     console.log(`Created ${path.relative(cwd, outputPath).replace(/\\/g, "/")}`);
-    if (args.noIndex) {
-      console.log(`Skipped index update (--no-index): ${relativeIndex}`);
-    } else {
-      const indexResult = writeIndexFile(adrDir, await buildIndex(cwd, relativeDir), Boolean(args.forceIndex));
-      if (indexResult.written) {
-        console.log(`Updated ${relativeIndex}`);
-      } else {
-        console.warn(`Skipped index update: ${relativeIndex} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
-      }
+    console.log(`Index deferred: ${relativeIndex} — materialize explicitly via doc_maintenance.js index apply --dir ${relativeDir}`);
+    if (args.noIndex || args.forceIndex) {
+      console.log("Note: --no-index/--force-index are deprecated and have no effect; indexes are materialized via doc_maintenance.js index plan|apply");
     }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));

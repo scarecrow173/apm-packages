@@ -70,18 +70,28 @@ test("apply promotes only byte-verified legacy indexes to owner format", () => {
   assert.doesNotMatch(exp, /\| Title \|/, "EXP stays one-column");
 });
 
-test("creators append rows to a promoted index without warnings", () => {
+test("index apply appends rows to a promoted index without warnings", () => {
   const repo = tempRepo();
   seedLegacy(repo);
   runPromote(["--cwd", repo, "--apply"], repo);
 
   const adr = runScript(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
   assert.equal(adr.status, 0, adr.stderr);
-  assert.doesNotMatch(adr.stdout + adr.stderr, /hand-curated/);
+  assert.match(adr.stdout, /Index deferred/);
   const ir = runScript(implRoot, "new_impl_record.js", ["--title", "Extract foo", "--cwd", repo], repo);
   assert.equal(ir.status, 0, ir.stderr);
+  assert.match(ir.stdout, /Index deferred/);
+
+  const adrApply = runScript(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/adr", "--cwd", repo], repo);
+  assert.equal(adrApply.status, 0, adrApply.stderr);
+  assert.doesNotMatch(adrApply.stdout + adrApply.stderr, /hand-curated/);
   const index = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
   assert.match(index, /adopt-madr\.md/);
+
+  const irApply = runScript(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/ir", "--cwd", repo], repo);
+  assert.equal(irApply.status, 0, irApply.stderr);
+  assert.doesNotMatch(irApply.stdout + irApply.stderr, /hand-curated/);
+  assert.match(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), /extract-foo\.md/);
 });
 
 test("hand-curated or modified READMEs are rejected byte-identically", () => {

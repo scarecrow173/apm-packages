@@ -204,7 +204,7 @@ test("mergeManagedIndex preserves hand-written preamble, trailing prose, and in-
 // End-to-end: the three producers spawn as the shipped `.apm` CLIs.
 // ---------------------------------------------------------------------------
 
-test("new_adr, update_index --write, and doc_maintenance produce the same managed index", () => {
+test("update_index --write, doc_maintenance apply, and index apply produce the same managed index", () => {
   const repo = tempRepo();
   const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   assert.equal(scaffold.status, 0, scaffold.stderr);
@@ -212,11 +212,18 @@ test("new_adr, update_index --write, and doc_maintenance produce the same manage
   for (const title of ["Adopt MADR", "Use PostgreSQL"]) {
     const created = runSkill(adrRoot, "new_adr.js", ["--title", title, "--cwd", repo], repo);
     assert.equal(created.status, 0, created.stderr);
+    assert.match(created.stdout, /Index deferred/);
   }
   const indexPath = path.join(repo, "docs/adr/README.md");
+  // Creators defer the write (#196): the scaffold index still lists no ADRs.
+  assert.doesNotMatch(fs.readFileSync(indexPath, "utf8"), /adopt-madr\.md/);
+
+  // Producer A: the dedicated ADR index writer.
+  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
+  assert.equal(update.status, 0, update.stderr);
   const producerA = fs.readFileSync(indexPath, "utf8");
 
-  // Producer B: the shared maintenance writer rebuilds the missing index.
+  // Producer B: the shared maintenance repair writer rebuilds the missing index.
   fs.unlinkSync(indexPath);
   const maintenance = runSkill(
     maintenanceRoot,
@@ -227,10 +234,15 @@ test("new_adr, update_index --write, and doc_maintenance produce the same manage
   assert.equal(maintenance.status, 0, maintenance.stderr);
   const producerB = fs.readFileSync(indexPath, "utf8");
 
-  // Producer C: the dedicated ADR index writer.
+  // Producer C: the canonical materialization entrypoint.
   fs.unlinkSync(indexPath);
-  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
-  assert.equal(update.status, 0, update.stderr);
+  const materialize = runSkill(
+    maintenanceRoot,
+    "doc_maintenance.js",
+    ["index", "apply", "--dir", "docs/adr", "--cwd", repo],
+    repo,
+  );
+  assert.equal(materialize.status, 0, materialize.stderr);
   const producerC = fs.readFileSync(indexPath, "utf8");
 
   for (const content of [producerA, producerB, producerC]) {
@@ -330,7 +342,7 @@ test("update_index rejects a non-adr --dir without writing", () => {
   else assert.equal(fs.readFileSync(ideasIndex, "utf8"), before);
 });
 
-test("settled ADRs land in the ## Settled tier identically across all three producers", () => {
+test("settled ADRs land in the ## Settled tier identically across all three explicit writers", () => {
   const repo = tempRepo();
   const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   assert.equal(scaffold.status, 0, scaffold.stderr);
@@ -346,6 +358,9 @@ test("settled ADRs land in the ## Settled tier identically across all three prod
     assert.equal(created.status, 0, created.stderr);
   }
   const indexPath = path.join(repo, "docs/adr/README.md");
+  // Creator output deferred the index; materialize through each explicit writer.
+  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
+  assert.equal(update.status, 0, update.stderr);
   const producerA = fs.readFileSync(indexPath, "utf8");
 
   fs.unlinkSync(indexPath);
@@ -359,8 +374,13 @@ test("settled ADRs land in the ## Settled tier identically across all three prod
   const producerB = fs.readFileSync(indexPath, "utf8");
 
   fs.unlinkSync(indexPath);
-  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
-  assert.equal(update.status, 0, update.stderr);
+  const materialize = runSkill(
+    maintenanceRoot,
+    "doc_maintenance.js",
+    ["index", "apply", "--dir", "docs/adr", "--cwd", repo],
+    repo,
+  );
+  assert.equal(materialize.status, 0, materialize.stderr);
   const producerC = fs.readFileSync(indexPath, "utf8");
 
   // ADR settled statuses come from doc_lifecycle: rejected/deprecated/
@@ -381,7 +401,7 @@ test("settled ADRs land in the ## Settled tier identically across all three prod
   assert.equal(managedRegion(producerC), managedRegion(producerA));
 });
 
-test("a foreign-typed file in docs/adr is indexed identically by all three producers", () => {
+test("a foreign-typed file in docs/adr is indexed identically by all three explicit writers", () => {
   const repo = tempRepo();
   const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   assert.equal(scaffold.status, 0, scaffold.stderr);
@@ -399,6 +419,11 @@ test("a foreign-typed file in docs/adr is indexed identically by all three produ
   const second = runSkill(adrRoot, "new_adr.js", ["--title", "Use PostgreSQL", "--cwd", repo], repo);
   assert.equal(second.status, 0, second.stderr);
   const indexPath = path.join(repo, "docs/adr/README.md");
+
+  // Producer A: the dedicated ADR index writer materializes what the
+  // creators deferred.
+  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
+  assert.equal(update.status, 0, update.stderr);
   const producerA = fs.readFileSync(indexPath, "utf8");
 
   fs.unlinkSync(indexPath);
@@ -412,8 +437,13 @@ test("a foreign-typed file in docs/adr is indexed identically by all three produ
   const producerB = fs.readFileSync(indexPath, "utf8");
 
   fs.unlinkSync(indexPath);
-  const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
-  assert.equal(update.status, 0, update.stderr);
+  const materialize = runSkill(
+    maintenanceRoot,
+    "doc_maintenance.js",
+    ["index", "apply", "--dir", "docs/adr", "--cwd", repo],
+    repo,
+  );
+  assert.equal(materialize.status, 0, materialize.stderr);
   const producerC = fs.readFileSync(indexPath, "utf8");
 
   for (const content of [producerA, producerB, producerC]) {
@@ -424,7 +454,7 @@ test("a foreign-typed file in docs/adr is indexed identically by all three produ
   assert.equal(managedRegion(producerC), managedRegion(producerA));
 });
 
-test("new_adr --no-index leaves README bytes untouched; --force-index overwrites a hand-curated README", () => {
+test("new_adr --no-index and --force-index are inert deprecated flags; README stays untouched", () => {
   const repo = tempRepo();
   const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   assert.equal(scaffold.status, 0, scaffold.stderr);
@@ -436,18 +466,21 @@ test("new_adr --no-index leaves README bytes untouched; --force-index overwrites
 
   const noIndex = runSkill(adrRoot, "new_adr.js", ["--title", "Use PostgreSQL", "--no-index", "--cwd", repo], repo);
   assert.equal(noIndex.status, 0, noIndex.stderr);
-  assert.match(noIndex.stdout, /--no-index/);
+  assert.match(noIndex.stdout, /Index deferred/);
+  assert.match(noIndex.stdout, /--no-index\/--force-index are deprecated and have no effect/);
   assert.equal(fs.readFileSync(indexPath, "utf8"), managed);
 
   const curated = "# My Notes\n\nhand curated\n";
   fs.writeFileSync(indexPath, curated, "utf8");
   const forced = runSkill(adrRoot, "new_adr.js", ["--title", "Keep CQRS", "--force-index", "--cwd", repo], repo);
   assert.equal(forced.status, 0, forced.stderr);
-  const content = fs.readFileSync(indexPath, "utf8");
-  assert.ok(content.includes(GENERATED_INDEX_MARKER), content);
-  assert.match(content, /adopt-madr\.md/);
-  assert.match(content, /use-postgresql\.md/);
-  assert.match(content, /keep-cqrs\.md/);
+  assert.match(forced.stdout, /Index deferred/);
+  assert.match(forced.stdout, /--no-index\/--force-index are deprecated and have no effect/);
+  assert.equal(
+    fs.readFileSync(indexPath, "utf8"),
+    curated,
+    "--force-index is inert: the hand-curated README stays byte-identical",
+  );
 });
 
 test("update_index dry-run changes zero bytes", () => {
@@ -473,7 +506,7 @@ test("update_index dry-run changes zero bytes", () => {
   assert.ok(!fs.existsSync(indexPath));
 });
 
-test("second new_adr on an existing managed index preserves prior hand edits", () => {
+test("index apply on an existing managed index preserves prior hand edits", () => {
   const repo = tempRepo();
   const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   assert.equal(scaffold.status, 0, scaffold.stderr);
@@ -484,10 +517,19 @@ test("second new_adr on an existing managed index preserves prior hand edits", (
   const managed = fs.readFileSync(indexPath, "utf8");
   fs.writeFileSync(indexPath, `# Custom Intro\n\n${managed}\n\n## Team Notes\n\nhand written\n`, "utf8");
 
-  // new_adr's index refresh is a merge, not an overwrite: hand-written
-  // bookends survive and the new row lands inside the generated region.
+  // Explicit materialization is a merge, not an overwrite: hand-written
+  // bookends survive and the deferred row lands inside the generated region.
   const second = runSkill(adrRoot, "new_adr.js", ["--title", "Use PostgreSQL", "--cwd", repo], repo);
   assert.equal(second.status, 0, second.stderr);
+  assert.match(second.stdout, /Index deferred/);
+
+  const apply = runSkill(
+    maintenanceRoot,
+    "doc_maintenance.js",
+    ["index", "apply", "--dir", "docs/adr", "--cwd", repo],
+    repo,
+  );
+  assert.equal(apply.status, 0, apply.stderr);
 
   const content = fs.readFileSync(indexPath, "utf8");
   assert.ok(content.startsWith("# Custom Intro"), content);

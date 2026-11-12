@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { generateArtifactId } from "../../lib/artifact_id";
-import { buildImplementationRecordContent, buildNewFilePath, implStatuses, posixRelative, updateIndexForMarkdownDir } from "./lib/impl_doc_utils";
+import { buildImplementationRecordContent, buildNewFilePath, implStatuses, posixRelative } from "./lib/impl_doc_utils";
 
 type CliArgs = {
   cwd: string;
@@ -66,13 +66,8 @@ async function main(): Promise<void> {
       },
     });
     fs.writeFileSync(outputPath, content, "utf8");
-    const indexResult = updateIndexForMarkdownDir(cwd, relativeDir);
     console.log(`Created ${posixRelative(cwd, outputPath)}`);
-    if (indexResult.written) {
-      console.log(`Updated ${relativeDir}/README.md`);
-    } else {
-      console.warn(`Skipped index update: ${relativeDir}/README.md appears hand-curated (no generated marker). Update it manually.`);
-    }
+    console.log(`Index deferred: ${relativeDir}/README.md — materialize explicitly via doc_maintenance.js index apply --dir ${relativeDir}`);
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());
