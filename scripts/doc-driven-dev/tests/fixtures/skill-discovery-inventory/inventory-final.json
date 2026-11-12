@@ -220,7 +220,7 @@
         {
           "path": "adr-doc/references/adr-conventions.md",
           "exists": true,
-          "bytes": 9919
+          "bytes": 10063
         },
         {
           "path": "adr-doc/references/adr-maintenance.md",
@@ -290,7 +290,7 @@
       ],
       "totals": {
         "directives": 35,
-        "referencedBytes": 8832856,
+        "referencedBytes": 8833000,
         "missing": 0
       }
     },
@@ -512,12 +512,12 @@
         {
           "path": "skill-discovery-protocol/SKILL.md",
           "exists": true,
-          "bytes": 8455
+          "bytes": 8553
         }
       ],
       "totals": {
         "directives": 28,
-        "referencedBytes": 1278972,
+        "referencedBytes": 1279070,
         "missing": 0
       }
     },
@@ -597,7 +597,7 @@
         {
           "path": "design-doc/references/design-conventions.md",
           "exists": true,
-          "bytes": 5633
+          "bytes": 5777
         },
         {
           "path": "design-doc/scripts/new_design.js",
@@ -617,7 +617,7 @@
       ],
       "totals": {
         "directives": 5,
-        "referencedBytes": 973017,
+        "referencedBytes": 973161,
         "missing": 0
       }
     },
@@ -684,7 +684,7 @@
         {
           "path": "discovery-doc/references/discovery-conventions.md",
           "exists": true,
-          "bytes": 10142
+          "bytes": 10137
         },
         {
           "path": "discovery-doc/scripts/new_discovery.js",
@@ -694,7 +694,7 @@
       ],
       "totals": {
         "directives": 8,
-        "referencedBytes": 970290,
+        "referencedBytes": 970285,
         "missing": 0
       }
     },
@@ -1060,8 +1060,8 @@
     },
     {
       "flow": "doc-maintenance",
-      "skillBytes": 9582,
-      "alwaysOnChars": 9292,
+      "skillBytes": 11417,
+      "alwaysOnChars": 11121,
       "directives": [
         {
           "kind": "script",
@@ -1100,57 +1100,75 @@
           "optional": false
         },
         {
-          "kind": "script",
-          "target": "scripts/scaffold_docs.js",
-          "line": 118,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/migrate_docs.js",
-          "line": 119,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/migrate_ids.js",
-          "line": 120,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/promote_index.js",
-          "line": 121,
+          "kind": "skill-invoke",
+          "target": "impl-doc",
+          "line": 111,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/doc_maintenance.js",
-          "line": 185,
+          "line": 124,
           "optional": false
         },
         {
           "kind": "script",
-          "target": "scripts/migrate_docs.js",
-          "line": 188,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/migrate_ids.js",
-          "line": 188,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "scripts/promote_index.js",
-          "line": 189,
+          "target": "scripts/doc_maintenance.js",
+          "line": 125,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/scaffold_docs.js",
-          "line": 189,
+          "line": 152,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/migrate_docs.js",
+          "line": 153,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/migrate_ids.js",
+          "line": 154,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/promote_index.js",
+          "line": 155,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/doc_maintenance.js",
+          "line": 222,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/migrate_docs.js",
+          "line": 225,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/migrate_ids.js",
+          "line": 225,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/promote_index.js",
+          "line": 226,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "scripts/scaffold_docs.js",
+          "line": 226,
           "optional": false
         }
       ],
@@ -1179,11 +1197,16 @@
           "path": "doc-maintenance/scripts/scaffold_docs.js",
           "exists": true,
           "bytes": 930205
+        },
+        {
+          "path": "impl-doc/SKILL.md",
+          "exists": true,
+          "bytes": 8520
         }
       ],
       "totals": {
-        "directives": 15,
-        "referencedBytes": 5499739,
+        "directives": 18,
+        "referencedBytes": 5508259,
         "missing": 0
       }
     },
@@ -1448,7 +1471,7 @@
         {
           "path": "idea-doc/references/idea-conventions.md",
           "exists": true,
-          "bytes": 6488
+          "bytes": 6483
         },
         {
           "path": "idea-doc/scripts/new_idea.js",
@@ -1458,7 +1481,7 @@
       ],
       "totals": {
         "directives": 7,
-        "referencedBytes": 957429,
+        "referencedBytes": 957424,
         "missing": 0
       }
     },
@@ -1556,7 +1579,7 @@
         {
           "path": "impl-doc/references/impl-conventions.md",
           "exists": true,
-          "bytes": 5857
+          "bytes": 6056
         },
         {
           "path": "impl-doc/scripts/append_experiment_event.js",
@@ -1596,7 +1619,7 @@
       ],
       "totals": {
         "directives": 14,
-        "referencedBytes": 6550857,
+        "referencedBytes": 6551056,
         "missing": 0
       }
     },
@@ -1876,12 +1899,12 @@
         {
           "path": "skill-discovery-protocol/SKILL.md",
           "exists": true,
-          "bytes": 8455
+          "bytes": 8553
         }
       ],
       "totals": {
         "directives": 36,
-        "referencedBytes": 999720,
+        "referencedBytes": 999818,
         "missing": 0
       }
     },
@@ -1931,7 +1954,7 @@
         {
           "path": "plan-doc/references/plan-conventions.md",
           "exists": true,
-          "bytes": 12468
+          "bytes": 12612
         },
         {
           "path": "plan-doc/scripts/new_plan.js",
@@ -1941,7 +1964,7 @@
       ],
       "totals": {
         "directives": 6,
-        "referencedBytes": 958598,
+        "referencedBytes": 958742,
         "missing": 0
       }
     },
@@ -2022,8 +2045,8 @@
     },
     {
       "flow": "skill-discovery-protocol",
-      "skillBytes": 8455,
-      "alwaysOnChars": 8003,
+      "skillBytes": 8553,
+      "alwaysOnChars": 8099,
       "directives": [
         {
           "kind": "script",
@@ -2075,50 +2098,32 @@
         },
         {
           "kind": "script",
-          "target": "sdp query",
-          "line": 46,
-          "optional": false
-        },
-        {
-          "kind": "script",
           "target": "sdp validate",
           "line": 46,
           "optional": false
         },
         {
           "kind": "script",
+          "target": "sdp query",
+          "line": 48,
+          "optional": false
+        },
+        {
+          "kind": "script",
           "target": "sdp scan",
-          "line": 73,
+          "line": 74,
           "optional": false
         },
         {
           "kind": "sdp-artifact",
           "target": ".sdp/skill-scan-list.json",
-          "line": 73,
+          "line": 74,
           "optional": false
         },
         {
           "kind": "script",
           "target": "sdp infer",
-          "line": 82,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "sdp infer",
-          "line": 85,
-          "optional": false
-        },
-        {
-          "kind": "sdp-artifact",
-          "target": ".sdp/skill-reference-inferences.json",
-          "line": 85,
-          "optional": false
-        },
-        {
-          "kind": "sdp-artifact",
-          "target": ".sdp/skill-scan-list.json",
-          "line": 85,
+          "line": 83,
           "optional": false
         },
         {
@@ -2130,6 +2135,12 @@
         {
           "kind": "sdp-artifact",
           "target": ".sdp/skill-reference-inferences.json",
+          "line": 86,
+          "optional": false
+        },
+        {
+          "kind": "sdp-artifact",
+          "target": ".sdp/skill-scan-list.json",
           "line": 86,
           "optional": false
         },
@@ -2160,18 +2171,24 @@
         {
           "kind": "script",
           "target": "sdp infer",
-          "line": 93,
+          "line": 89,
           "optional": false
         },
         {
-          "kind": "script",
-          "target": "sdp scan",
-          "line": 99,
+          "kind": "sdp-artifact",
+          "target": ".sdp/skill-reference-inferences.json",
+          "line": 89,
           "optional": false
         },
         {
           "kind": "script",
           "target": "sdp infer",
+          "line": 94,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "sdp scan",
           "line": 100,
           "optional": false
         },
@@ -2195,152 +2212,158 @@
         },
         {
           "kind": "script",
-          "target": "sdp profile",
+          "target": "sdp infer",
           "line": 104,
           "optional": false
         },
         {
           "kind": "script",
-          "target": "sdp validate",
+          "target": "sdp profile",
           "line": 105,
           "optional": false
         },
         {
           "kind": "script",
-          "target": "sdp query",
+          "target": "sdp validate",
           "line": 106,
           "optional": false
         },
         {
           "kind": "script",
+          "target": "sdp query",
+          "line": 107,
+          "optional": false
+        },
+        {
+          "kind": "script",
           "target": "sdp scan",
-          "line": 108,
+          "line": 109,
           "optional": false
         },
         {
           "kind": "script",
           "target": "sdp infer",
-          "line": 109,
+          "line": 110,
           "optional": false
         },
         {
           "kind": "sdp-artifact",
           "target": ".sdp/skill-scan-list.json",
-          "line": 109,
-          "optional": false
-        },
-        {
-          "kind": "script",
-          "target": "sdp profile",
           "line": 110,
           "optional": false
         },
         {
           "kind": "script",
           "target": "sdp profile",
-          "line": 149,
+          "line": 111,
+          "optional": false
+        },
+        {
+          "kind": "script",
+          "target": "sdp profile",
+          "line": 150,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/cli-reference.md",
-          "line": 158,
+          "line": 159,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/operation-policy.md",
-          "line": 163,
+          "line": 164,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/gate-spec.md",
-          "line": 167,
+          "line": 168,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/protocol-contract.md",
-          "line": 171,
+          "line": 172,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/schema-reference.md",
-          "line": 175,
+          "line": 176,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/protocol-contract.md",
-          "line": 182,
-          "optional": false
-        },
-        {
-          "kind": "reference",
-          "target": "references/protocol-contract.ja.md",
           "line": 183,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/cli-reference.md",
+          "target": "references/protocol-contract.ja.md",
           "line": 184,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/cli-reference.ja.md",
+          "target": "references/cli-reference.md",
           "line": 185,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/operation-policy.md",
+          "target": "references/cli-reference.ja.md",
           "line": 186,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/operation-policy.ja.md",
+          "target": "references/operation-policy.md",
           "line": 187,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/gate-spec.md",
+          "target": "references/operation-policy.ja.md",
           "line": 188,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/gate-spec.ja.md",
+          "target": "references/gate-spec.md",
           "line": 189,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/schema-reference.md",
+          "target": "references/gate-spec.ja.md",
           "line": 190,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/schema-reference.ja.md",
+          "target": "references/schema-reference.md",
           "line": 191,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/progressive-loading-contract.md",
+          "target": "references/schema-reference.ja.md",
           "line": 192,
           "optional": false
         },
         {
           "kind": "reference",
-          "target": "references/progressive-loading-contract.ja.md",
+          "target": "references/progressive-loading-contract.md",
           "line": 193,
+          "optional": false
+        },
+        {
+          "kind": "reference",
+          "target": "references/progressive-loading-contract.ja.md",
+          "line": 194,
           "optional": false
         }
       ],
@@ -2358,32 +2381,32 @@
         {
           "path": "skill-discovery-protocol/references/cli-reference.ja.md",
           "exists": true,
-          "bytes": 6084
+          "bytes": 6372
         },
         {
           "path": "skill-discovery-protocol/references/cli-reference.md",
           "exists": true,
-          "bytes": 5359
+          "bytes": 5575
         },
         {
           "path": "skill-discovery-protocol/references/gate-spec.ja.md",
           "exists": true,
-          "bytes": 16434
+          "bytes": 16509
         },
         {
           "path": "skill-discovery-protocol/references/gate-spec.md",
           "exists": true,
-          "bytes": 14396
+          "bytes": 14449
         },
         {
           "path": "skill-discovery-protocol/references/operation-policy.ja.md",
           "exists": true,
-          "bytes": 6487
+          "bytes": 7359
         },
         {
           "path": "skill-discovery-protocol/references/operation-policy.md",
           "exists": true,
-          "bytes": 5855
+          "bytes": 6536
         },
         {
           "path": "skill-discovery-protocol/references/progressive-loading-contract.ja.md",
@@ -2398,12 +2421,12 @@
         {
           "path": "skill-discovery-protocol/references/protocol-contract.ja.md",
           "exists": true,
-          "bytes": 6315
+          "bytes": 6359
         },
         {
           "path": "skill-discovery-protocol/references/protocol-contract.md",
           "exists": true,
-          "bytes": 8366
+          "bytes": 8396
         },
         {
           "path": "skill-discovery-protocol/references/schema-reference.ja.md",
@@ -2423,7 +2446,7 @@
       ],
       "totals": {
         "directives": 53,
-        "referencedBytes": 105677,
+        "referencedBytes": 107936,
         "missing": 0
       }
     },
@@ -2461,7 +2484,7 @@
         {
           "path": "spec-doc/references/spec-conventions.md",
           "exists": true,
-          "bytes": 9017
+          "bytes": 9161
         },
         {
           "path": "spec-doc/scripts/new_spec.js",
@@ -2471,7 +2494,7 @@
       ],
       "totals": {
         "directives": 4,
-        "referencedBytes": 950626,
+        "referencedBytes": 950770,
         "missing": 0
       }
     },
@@ -2509,7 +2532,7 @@
         {
           "path": "task-doc/references/task-conventions.md",
           "exists": true,
-          "bytes": 9676
+          "bytes": 9820
         },
         {
           "path": "task-doc/scripts/new_task.js",
@@ -2519,7 +2542,7 @@
       ],
       "totals": {
         "directives": 4,
-        "referencedBytes": 955412,
+        "referencedBytes": 955556,
         "missing": 0
       }
     },
@@ -2557,7 +2580,7 @@
         {
           "path": "test-spec-doc/references/test-spec-conventions.md",
           "exists": true,
-          "bytes": 7076
+          "bytes": 7071
         },
         {
           "path": "test-spec-doc/scripts/new_test_spec.js",
@@ -2567,17 +2590,17 @@
       ],
       "totals": {
         "directives": 4,
-        "referencedBytes": 951648,
+        "referencedBytes": 951643,
         "missing": 0
       }
     }
   ],
   "totals": {
     "flows": 18,
-    "skillBytes": 166217,
-    "alwaysOnChars": 160251,
-    "directives": 289,
-    "referencedBytes": 42166189,
+    "skillBytes": 168150,
+    "alwaysOnChars": 162176,
+    "directives": 292,
+    "referencedBytes": 42178068,
     "missing": 0
   }
 }
