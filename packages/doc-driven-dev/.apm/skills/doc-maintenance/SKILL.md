@@ -91,6 +91,40 @@ node scripts/doc_maintenance.js index apply [--dir <path>] [--expect <planHash>]
 - Options: `--dir`, `--expect`, `--json`. There is no `--type` or
   `--force-index` on `index` — strict by contract.
 
+### `index apply` exit codes and rejected targets
+
+`index plan` exits 0 even when targets are `rejected` — the preview
+reports every verdict honestly. `index apply` still writes every
+target that plans cleanly, reports each target it cannot write in
+`blocked`, and exits 1 whenever `blocked` is non-empty. The default
+scope is every managed directory, so one `rejected` directory fails
+the whole run even when the directories you changed applied cleanly;
+pass `--dir <path>` to scope the apply to a single directory.
+
+A `rejected` target is never written and has no force path on the
+`index` op (`--force-index` is not a valid argument there). Do not work
+around it by hand — fix the cause and regenerate. The `reason` field
+identifies the cause: a hand-curated index needs the generated-index
+marker (or `promote_index` adoption where that narrow case applies),
+impl sources need schema-valid front matter, and impl READMEs need the
+generated-index marker. For `docs/impl/ir` and `docs/impl/exp` the
+owner-side rules live in [impl-doc](../impl-doc/SKILL.md) ("Reconciling
+the Directory Index"); `promote_index` covers only its legacy-scaffold
+adoption case and is not a general escape hatch.
+
+### Resolving index conflicts
+
+Managed index tables are generated — never hand-merge their rows. When
+a merge leaves an index conflicted, take either side's file to clear
+the conflict (the rows are regenerated anyway), then rebuild from
+source truth and verify:
+
+```bash
+git checkout --theirs docs/specs/README.md   # --ours works too
+node scripts/doc_maintenance.js index apply --dir docs/specs
+node scripts/doc_maintenance.js index plan --dir docs/specs   # verdict=in-sync
+```
+
 ## Idempotency
 
 The same repair applied twice is a no-op the second time: index regeneration
