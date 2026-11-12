@@ -633,6 +633,27 @@ test("index apply reports rejected targets without writing them", () => {
   assert.equal(fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8"), indexBefore);
 });
 
+test("unscoped index apply fails on any rejected dir; --dir scoping isolates it", () => {
+  const repo = tempRepo();
+  writeSpec(repo, "checkout", "SPEC-0001");
+  // A hand-curated index in another managed dir rejects fail-closed.
+  writeFile(repo, "docs/ideas/README.md", "# Hand-written\n\nCurated index — no marker.\n");
+
+  const scoped = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/specs"], repo);
+  assert.equal(scoped.status, 0, scoped.stderr);
+  assert.match(scoped.stdout, /index apply: 1 written, 0 blocked/);
+
+  // index plan exits 0 and reports the rejected verdict honestly.
+  const plan = runScript("doc_maintenance.js", ["index", "plan"], repo);
+  assert.equal(plan.status, 0, plan.stderr);
+  assert.match(plan.stdout, /docs\/ideas kind=shared .*verdict=rejected reason=hand-curated-index/);
+
+  // The same rejected dir fails an unscoped apply even though specs applied cleanly.
+  const unscoped = runScript("doc_maintenance.js", ["index", "apply"], repo);
+  assert.equal(unscoped.status, 1, "any rejected target fails the unscoped apply");
+  assert.match(unscoped.stdout, /\[blocked\] docs\/ideas\/README\.md: hand-curated-index/);
+});
+
 test("index requires a plan|apply verb", () => {
   const repo = tempRepo();
   for (const argv of [["index"], ["index", "bogus"], ["index", "--dir", "docs/specs"]]) {
