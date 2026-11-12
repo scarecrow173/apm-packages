@@ -47,7 +47,7 @@ CLI は 3 つの責務ドメインに分かれる:
 | `sdp scan` | scan artifact を作成・更新する | Write |
 | `sdp infer` | agent-authored inference artifact を初期化・スキーマチェック・更新する | Write |
 | `sdp profile` | catalog/profile artifact を作成・更新する | Write |
-| `sdp validate` | artifact の正しさを検証する | Read + Check |
+| `sdp validate` | artifact の正しさを検証する | Read + Conditional write |
 | `sdp query` | artifact から情報を取り出す | Read |
 
 ### 2.1 Generate Scripts
@@ -61,6 +61,14 @@ CLI は 3 つの責務ドメインに分かれる:
 - すべての gate が通れば `0`
 - いずれかの gate が失敗すれば `1`
 - 入力エラーは `2`
+- `sdp validate` は副作用なしではない: 実行のたびに選択した profile
+  の隣に `validation-report.json` を書き込み、鮮度が証明できた実行
+  では catalog と profile の `validated_at` を再刻印する。再刻印には
+  `--adapter` を伴う実行で schema ゲートと deterministic ゲートが
+  ともに pass し、staleness 以外の fail がないことが必要。経年のみの
+  staleness は再刻印のうえ pass と再評価され、それ以外の失敗では
+  timestamp を一切更新しない（`cli-reference.ja.md` §1.4 参照）。
+- 完全な read-only は `sdp query`（§2.3）のみ。
 
 ### 2.3 Query Scripts
 
