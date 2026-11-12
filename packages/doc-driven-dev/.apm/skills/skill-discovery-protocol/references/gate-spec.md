@@ -200,8 +200,9 @@ The flag, not the presence of a catalog, decides whether the gate runs.
 
 A completed `sdp validate` run is itself the event `validated_at`
 records. When the overall result is pass, `sdp validate` re-stamps
-`validated_at` on the Skill Reference Catalog and on the Flow Profile
-(when the field is present there).
+`validated_at` on the Flow Profile — and on the Skill Reference Catalog
+when the run found one — on each artifact only when the field is already
+present.
 
 This also covers the pure-age staleness case: when the only failing gate
 is staleness by age alone (`new_skills` and `removed_skills` both empty),

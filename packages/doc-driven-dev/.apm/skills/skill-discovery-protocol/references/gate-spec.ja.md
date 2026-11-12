@@ -198,8 +198,9 @@ validation:
 ### pass 時の `validated_at` 更新
 
 `sdp validate` の実行そのものが `validated_at` が記録するイベントである。
-overall result が pass の場合、`sdp validate` は Skill Reference Catalog と
-Flow Profile（フィールドが存在する場合）の `validated_at` を再刻印する。
+overall result が pass の場合、`sdp validate` は Flow Profile と、実行が
+catalog を見つけた場合は Skill Reference Catalog の `validated_at` を
+再刻印する。刻印はフィールドをすでに持つ artifact に限られる。
 
 経年のみの staleness ケースもこれで回復する: fail した gate が
 経過日数のみの staleness（`new_skills`・`removed_skills` がともに空）だけの場合、

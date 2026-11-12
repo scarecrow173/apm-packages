@@ -61,9 +61,12 @@ CLI は 3 つの責務ドメインに分かれる:
 - すべての gate が通れば `0`
 - いずれかの gate が失敗すれば `1`
 - 入力エラーは `2`
-- `sdp validate` は副作用なしではない: 実行のたびに選択した profile
-  の隣に `validation-report.json` を書き込み、鮮度が証明できた実行
-  では catalog と profile の `validated_at` を再刻印する。再刻印には
+- `sdp validate` は副作用なしではない: profile を指定した実行のたびに
+  選択した profile の隣に `validation-report.json` を書き込み
+  （`--adapter` 単独モードはレポートを書かない）、鮮度が証明できた
+  実行では profile と、実行が catalog を見つけた場合は catalog の
+  `validated_at` を再刻印する。フィールドを持たない artifact には
+  刻印しない。再刻印には
   `--adapter` を伴う実行で schema ゲートと deterministic ゲートが
   ともに pass し、staleness 以外の fail がないことが必要。経年のみの
   staleness は再刻印のうえ pass と再評価され、それ以外の失敗では

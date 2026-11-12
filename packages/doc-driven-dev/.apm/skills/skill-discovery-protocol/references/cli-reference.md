@@ -82,7 +82,7 @@ sdp validate --adapter <adapter-yaml>
 
 - `--profile --adapter` (both): Full 4-gate validation (Schema, Staleness, Deterministic, Blocking)
 - `--profile` only: Schema gate runs; Staleness, Deterministic, and Blocking gates are **skipped**
-- `--adapter` only: Schema-only validation of adapter YAML configuration
+- `--adapter` only: Schema-only validation of adapter YAML configuration; writes no report
 
 Adapter flags can skip individual gates: `validation.schema: false`,
 `validation.staleness.enabled: false`,
@@ -90,8 +90,11 @@ Adapter flags can skip individual gates: `validation.schema: false`,
 `validation.invocation.enabled: false` each record `result: "skipped"` in
 the report instead of running their gate (gate-spec.md §4–§7).
 
-On overall pass, `sdp validate` re-stamps `validated_at` on the catalog and
-the profile. The re-stamp requires `--adapter`, a schema-gate pass, AND a
+Every `--profile` run writes `validation-report.json` next to the selected
+profile — passing and failing runs alike. On overall pass, `sdp validate`
+re-stamps `validated_at` on the profile — and on the catalog when the run
+finds one; an artifact without the field is left untouched. The re-stamp
+requires `--adapter`, a schema-gate pass, AND a
 deterministic-gate pass — a `--profile`-only run skips every currency
 gate and never re-stamps, and a skipped schema or deterministic gate is
 not freshness evidence either. Age-only staleness (no skill drift) with

@@ -43,8 +43,10 @@ Trust boundary:
 - `sdp scan`、`sdp infer`、`sdp profile` は `.sdp` artifact を生成または更新する。
 - `--out` は編集可能な inference output の書き込み先を変える。
 - adapter が選ぶ profile path が、catalog / profile 出力の生成先を決める。
-- `sdp validate` と `sdp query` は read / verify operation であり、それ自体では
-  新しい profile content を生成しない。
+- `sdp validate` は artifact を読み検証する — `--profile` 実行は
+  `validation-report.json` を書き込み、条件付きで `validated_at` を
+  再刻印するが、新しい profile content は生成しない。完全な read-only
+  は `sdp query` のみ。
 
 ## ワークフロー
 
