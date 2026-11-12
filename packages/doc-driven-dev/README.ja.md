@@ -10,7 +10,8 @@ delegate または audit への宣言済みエッジを最大 1 つ、または�
 
 目的別の document skill と graph delegate を提供します。
 
-- `idea-doc`、`deep-dive`、`briefing-flow`: 探索の記録と整理。
+- `idea-doc` は探索を文書化し、`deep-dive` は interview で意図を確認し、
+  `briefing-flow` は探索を orchestrate します。
 - `discovery-doc`、`adr-doc`、`spec-doc`: 意図と判断の記録。
 - `design-doc`、`plan-doc`、`task-doc`: 承認済み実装作業の定義。
 - `test-spec-doc`: テストが何を保証し、なぜ存在するかの記録。

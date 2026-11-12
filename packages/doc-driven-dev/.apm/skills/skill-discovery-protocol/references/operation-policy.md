@@ -64,10 +64,12 @@ The CLI is divided into three responsibility domains:
 ### 2.2 Validate Scripts
 
 - Exit `0` if all gates pass, `1` if any gate fails, `2` on input error
-- `sdp validate` is not side-effect-free: every run writes
-  `validation-report.json` next to the selected profile, and a run that
-  proves currency re-stamps `validated_at` on the catalog and the
-  profile. The re-stamp requires an adapter-bound run whose schema and
+- `sdp validate` is not side-effect-free: every profile-bound run writes
+  `validation-report.json` next to the selected profile (the
+  `--adapter`-only mode writes no report), and a run that proves
+  currency re-stamps `validated_at` — on the profile, and on the catalog
+  when the run finds one; an artifact without the field is left
+  untouched. The re-stamp requires an adapter-bound run whose schema and
   deterministic gates both pass with no non-staleness failure; age-only
   staleness is re-stamped and re-evaluated as pass, while any other
   failure leaves timestamps untouched (see `cli-reference.md` §1.4).
