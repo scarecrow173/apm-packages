@@ -45,7 +45,7 @@ title-with-dashes.md
 
 文書の同一性はファイル名やソート位置ではなく front matter の `id` に
 あります。既存の `NNNN-<slug>.md` ファイル名も有効ですが、新規文書は常に
-slug-only の名前を使います。既存ファイルの移行には `doc-driven-dev-graph/scripts` の `migrate_ids.js` を使います。
+slug-only の名前を使います。既存ファイルの移行には `doc-maintenance/scripts` の `migrate_ids.js` を使います。
 
 ## 必須フロントマター
 
@@ -219,10 +219,12 @@ task は実行中の作業記録です。
   `doc_maintenance.js index plan|apply` で明示的に行います（creator は索引を
   書き込みません）。実行するまでの間、`doc_status lint` がドリフト
   （`index-metadata-mismatch`、`index-ordering`）を報告します。
-- 項目が増えてきたら、可読性のために索引を複数の見出しに分け、見出しごとに
-  1 つのテーブルを配置することを推奨します。見出しの分割はサブディレクトリの
-  グルーピング（カテゴリ別／機能別）と整合させ、各見出しが 1 グループに
-  対応するようにします。
+- managed index は in-flight テーブル 1 本と任意の `## Settled` 層だけ
+  です。1 層内の 2 本目のテーブル、または他の `##` 見出し配下の
+  テーブルは `doc_status lint` が `index-unparseable` として報告します。
+  項目が増えてきたら索引内に見出しテーブルを増やすのではなく、
+  owned ディレクトリ（それぞれが managed index を持つ）へ文書を分けて
+  ください。
 
 ## サブディレクトリ管理
 

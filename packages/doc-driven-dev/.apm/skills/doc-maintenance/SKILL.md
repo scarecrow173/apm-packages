@@ -170,13 +170,16 @@ preview-first:
 ## Read-Write Boundary
 
 - `doc-status` (`list` / `lint` / `audit` / `health`) never modifies files.
-- `doc-maintenance` is the only skill that may rewrite managed index content,
-  normalize link paths, or run document migrations, and only through an
-  explicit apply — `apply` for whitelisted repairs, `index apply` for
-  managed index materialization.
-- Managed index materialization goes through `index apply` only: each write
-  dispatches to the directory's owning writer, and impl indexes are reached
-  exclusively through the `sync_impl_index` safe sync API.
+- `doc-maintenance` is the shared entrypoint for rewriting managed index
+  content, normalizing link paths, and running document migrations — always
+  through an explicit apply: `apply` for whitelisted repairs, `index apply`
+  for managed index materialization.
+- Owner-local explicit writers remain for their own directories:
+  `update_index.js` (adr-doc) for `docs/adr`, `sync_impl_index.js`
+  (impl-doc) for `docs/impl/ir` and `docs/impl/exp`. `index apply`
+  delegates to the same owning writers rather than bypassing them, and
+  impl indexes are reached exclusively through the `sync_impl_index` safe
+  sync API.
 - Migration is planned and applied through the same preview-first contract
   but is never performed implicitly by a repair command.
 

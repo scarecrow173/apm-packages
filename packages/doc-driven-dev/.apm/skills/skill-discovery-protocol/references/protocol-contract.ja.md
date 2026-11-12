@@ -123,9 +123,9 @@ implementation の正確性検証 `verify` と実装後ゲート `review`）。
 schema、staleness、deterministic、blocking validation の結果を記録する。
 すべての必須 gate が pass の場合だけ `overall_result` は `"pass"` になる。
 
-overall pass 時、`sdp validate` は catalog と profile の `validated_at` も
-再刻印する。いずれかの gate が fail の場合は一切更新しない
-（gate-spec.ja.md §5 参照）。
+overall pass 時、`sdp validate` は profile と、実行が catalog を見つけた
+場合は catalog の `validated_at` も再刻印する。いずれかの gate が fail
+の場合は一切更新しない（gate-spec.ja.md §5 参照）。
 
 ## 8. Derived Outputs
 

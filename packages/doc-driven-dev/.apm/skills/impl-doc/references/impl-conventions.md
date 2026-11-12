@@ -32,7 +32,7 @@ Rules:
 - `ir/` and `exp/` names need to be unique only within their own directory.
 - Document identity lives in the front matter `id`, not in the filename or its
   sort position. Existing `NNNN-<slug>` filenames remain valid, but new files
-  always use slug-only names. Run `migrate_ids.js` under `doc-driven-dev-graph/scripts` to upgrade existing files.
+  always use slug-only names. Run `migrate_ids.js` under `doc-maintenance/scripts` to upgrade existing files.
 
 ## Implementation Record Front Matter
 
@@ -78,12 +78,18 @@ Implementation Records are Markdown documents updated during Phase 5.
 - Treat the record as the task's running implementation narrative, not a
   retrospective summary written at the end.
 
-Sections to keep current during implementation:
+Sections to keep current during implementation — the audited `##`
+headings; `audit_impl_record.js` reports `missing-section` for any
+absent one:
 
 - Summary
-- Changes Made
-- Validation and Evidence
-- Risks or Follow-ups
+- Context
+- Implementation (`### Changes` and `### Decisions During
+  Implementation` carry the running record)
+- Related Experiments
+- Validation
+- Risks
+- Follow-ups
 
 Status guidance:
 

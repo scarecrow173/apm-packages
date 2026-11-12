@@ -51,7 +51,7 @@ The CLI is divided into three responsibility domains:
 | `sdp scan` | Create and update scan artifact | Write |
 | `sdp infer` | Initialize, schema-check, and update agent-authored inference artifact | Write |
 | `sdp profile` | Create and update catalog/profile artifacts | Write |
-| `sdp validate` | Verify artifact correctness | Read + Check |
+| `sdp validate` | Verify artifact correctness | Read + Conditional write |
 | `sdp query` | Extract information from artifacts | Read |
 
 ### 2.1 Generate Scripts
@@ -64,6 +64,16 @@ The CLI is divided into three responsibility domains:
 ### 2.2 Validate Scripts
 
 - Exit `0` if all gates pass, `1` if any gate fails, `2` on input error
+- `sdp validate` is not side-effect-free: every profile-bound run writes
+  `validation-report.json` next to the selected profile (the
+  `--adapter`-only mode writes no report), and a run that proves
+  currency re-stamps `validated_at` — on the profile, and on the catalog
+  when the run finds one; an artifact without the field is left
+  untouched. The re-stamp requires an adapter-bound run whose schema and
+  deterministic gates both pass with no non-staleness failure; age-only
+  staleness is re-stamped and re-evaluated as pass, while any other
+  failure leaves timestamps untouched (see `cli-reference.md` §1.4).
+- Only `sdp query` (§2.3) is purely read-only.
 
 ### 2.3 Query Scripts
 

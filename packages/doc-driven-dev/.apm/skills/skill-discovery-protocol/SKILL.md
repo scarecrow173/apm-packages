@@ -43,8 +43,9 @@ Trust boundary:
 - `--out` changes where editable inference output is written.
 - Adapter-selected profile paths determine where generated catalog/profile
   outputs are written.
-- `sdp validate` and `sdp query` are read/verify operations and do not create
-  new profile content by themselves.
+- `sdp validate` reads and verifies artifacts — a `--profile` run writes
+  `validation-report.json` and conditionally re-stamps `validated_at`,
+  never new profile content; only `sdp query` is purely read-only.
 
 ## Workflow
 
