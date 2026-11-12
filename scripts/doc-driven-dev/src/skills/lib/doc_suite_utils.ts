@@ -10,6 +10,7 @@ import {
   CANONICAL_DOC_DIRS,
   findDocumentDir,
   isIndexFileName,
+  isInsideRealpath,
   listMarkdownFiles,
   normalizeDir,
   resolveContainedDir,
@@ -109,6 +110,13 @@ type MigrationPlan = {
   title: string;
   type: MigrationDocType;
 };
+
+// A planned migration is either a write plan or a skip entry. Pattern-routed
+// owner dirs (docs/adr, docs/impl/ir, docs/impl/exp) carry no document type,
+// so a content guess can only become a skip — never a plan (Issue #188).
+type PlannedMigration =
+  | { plan: MigrationPlan }
+  | { skipped: { file: string; reason: string } };
 
 type MigrationOptions = {
   apply?: boolean;
@@ -308,6 +316,20 @@ function isUnderDir(child: string, parent: string): boolean {
   const c = normalizeDir(child);
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
+}
+
+// Real-path containment for a write-target dir whose leaf may not exist yet:
+// the nearest existing ancestor is what a recursive mkdir or file write would
+// actually follow, so a linked component resolving outside the checkout fails
+// closed even when the target dir itself is absent (Issue #188).
+function dirContainedForWrite(cwd: string, fullDir: string): boolean {
+  let probe = fullDir;
+  while (!fs.existsSync(probe)) {
+    const parent = path.dirname(probe);
+    if (parent === probe) return false;
+    probe = parent;
+  }
+  return isInsideRealpath(cwd, probe);
 }
 
 function sanitizeFileName(name: string): string {
@@ -1096,18 +1118,28 @@ function migratedContent(input: MigrationInput, route: MigrationRoute, sourceCon
   return `---\ntitle: ${quote(input.title)}\nsource: ${quote(source)}\n---\n\n${input.body.trim()}\n`;
 }
 
-function plannedMigration(cwd: string, source: string, input: MigrationInput, sourceContent: string, date: string, allocations: Map<string, TargetAllocation>): MigrationPlan {
+function plannedMigration(cwd: string, source: string, input: MigrationInput, sourceContent: string, date: string, allocations: Map<string, TargetAllocation>): PlannedMigration {
   const sourceData = matterData(sourceContent);
   const route = routeFor(input, sourceData);
+  // Owner-dir routes (docs/adr, docs/impl/ir, docs/impl/exp) are the only
+  // type:null routes: a content guess must never mint files in a foreign
+  // owner's directory. Skipped identically in plan and apply — typed routes
+  // (`type: adr` front matter, a declared mutator with a valid schema) keep
+  // routing and writing (Issue #188).
+  if (route.type === null) {
+    return { skipped: { file: source, reason: "unsupported-owner-route" } };
+  }
   const targetDir = route.targetDir;
-  const { target } = allocateTargetPath(cwd, targetDir, input.title, route.type || "doc", allocations);
+  const { target } = allocateTargetPath(cwd, targetDir, input.title, route.type, allocations);
   return {
-    content: migratedContent(input, route, sourceContent, source, date),
-    source,
-    target,
-    targetDir,
-    title: input.title,
-    type: route.type,
+    plan: {
+      content: migratedContent(input, route, sourceContent, source, date),
+      source,
+      target,
+      targetDir,
+      title: input.title,
+      type: route.type,
+    },
   };
 }
 
@@ -1148,7 +1180,12 @@ async function migrateDocs(options: MigrationOptions): Promise<MigrationResult> 
           body: sourceParsed.body.trim(),
         }];
       for (const input of inputs) {
-        migrations.push(plannedMigration(cwd, relativeFile, input, sourceContent, date, allocations));
+        const planned = plannedMigration(cwd, relativeFile, input, sourceContent, date, allocations);
+        if ("skipped" in planned) {
+          skipped.push(planned.skipped);
+        } else {
+          migrations.push(planned.plan);
+        }
       }
     }
   }
@@ -1157,12 +1194,22 @@ async function migrateDocs(options: MigrationOptions): Promise<MigrationResult> 
   if (options.apply) {
     await scaffoldDocsTree(cwd);
     for (const migration of migrations) {
+      // A canonical target dir that resolves outside the checkout — its own
+      // link or a linked ancestor a recursive mkdir would follow — is a hard
+      // failure: nothing may be written through the link (Issue #188).
+      const targetDir = resolveContainedDir(cwd, migration.targetDir, "migrate target");
+      if (!dirContainedForWrite(cwd, path.join(cwd, targetDir))) {
+        throw new Error(`migrate target escapes the checkout through a link: ${migration.targetDir}`);
+      }
       const targetPath = path.join(cwd, migration.target);
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
       fs.writeFileSync(targetPath, migration.content, "utf8");
       created.push(migration.target);
     }
     for (const target of scaffoldTargets.filter((item) => item.type)) {
+      // Index regeneration writes into the same canonical dirs the scaffold
+      // gates — an excluded (escaping) dir is never written through a link.
+      if (!dirContainedForWrite(cwd, path.join(cwd, target.dir))) continue;
       await writeGeneratedIndex(cwd, target.type as DocType, target.dir, {});
     }
   }
@@ -1177,6 +1224,11 @@ async function scaffoldDocsTree(cwd: string): Promise<{ created: string[]; updat
 
   for (const target of scaffoldTargets) {
     const fullDir = path.join(resolvedCwd, target.dir);
+    // A scaffold dir that would resolve outside the checkout — its own link
+    // or a linked ancestor a recursive mkdir would follow — is excluded:
+    // creating or writing through it escapes the checkout. Mirrors the
+    // canonicalDirs realpath gating in id_migration (Issue #188).
+    if (!dirContainedForWrite(resolvedCwd, fullDir)) continue;
     fs.mkdirSync(fullDir, { recursive: true });
 
     const readmePath = path.join(fullDir, "README.md");
