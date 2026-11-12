@@ -77,6 +77,12 @@ test("generated index escapes pipe characters in titles", () => {
   const repo = tempRepo();
   const res = runScript("task-doc", "new_task.js", ["--title", "Use A | B"], repo);
   assert.equal(res.status, 0, res.stderr);
+  // Creators defer index writes (#196); the render path lives in explicit
+  // materialization via doc_maintenance index apply.
+  assert.equal(fs.existsSync(path.join(repo, "docs/tasks/README.md")), false);
+  const applied = runScript("doc-maintenance", "doc_maintenance.js",
+    ["index", "apply", "--dir", "docs/tasks"], repo);
+  assert.equal(applied.status, 0, applied.stderr);
   const readme = fs.readFileSync(path.join(repo, "docs/tasks/README.md"), "utf8");
   assert.ok(readme.includes("A \\| B"), readme);
 });
