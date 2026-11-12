@@ -93,6 +93,40 @@ node scripts/doc_maintenance.js index apply [--dir <path>] [--expect <planHash>]
 - オプション: `--dir`, `--expect`, `--json`。`index` に `--type` と
   `--force-index` は存在しない（contract 上 strict）。
 
+### `index apply` の終了コードと rejected target
+
+`index plan` は target が `rejected` でも exit 0 で終わる — preview は
+すべての verdict をそのまま報告する。`index apply` は plan が正常な
+target をすべて書き込んだうえで、書き込めなかった target を `blocked`
+として報告し、`blocked` が 1 件でもあれば exit 1 で終わる。既定の
+スコープは全 managed ディレクトリなので、変更したディレクトリが正常に
+apply されていても、別のディレクトリが `rejected` なら run 全体が失敗
+する。単一ディレクトリに絞るには `--dir <path>` を使う。
+
+`rejected` target は一切書き込まれず、`index` op に force 経路はない
+（`--force-index` は有効な引数ではない）。手作業で回避せず、原因を直して
+から再生成する。`reason` が原因を示す: hand-curated な index は
+generated-index marker が必要（狭いケースでは `promote_index` による
+取り込みも可）、impl source は schema に適合した front matter が必要、
+impl の README は generated-index marker が必要。`docs/impl/ir` と
+`docs/impl/exp` のオーナー側ルールは
+[impl-doc](../impl-doc/SKILL.ja.md)（「ディレクトリ索引の同期」）に
+ある。`promote_index` がカバーするのは legacy-scaffold 取り込みの
+ケースだけで、汎用的な回避策ではない。
+
+### index 競合の解消
+
+managed index のテーブルは生成物であり、行を手でマージしてはいけない。
+merge で index が競合した場合は、どちらか一方のファイルを採用して競合を
+解消し（行はどうせ再生成される）、ソースの真実から再構築して結果を
+確認する:
+
+```bash
+git checkout --theirs docs/specs/README.md   # --ours でもよい
+node scripts/doc_maintenance.js index apply --dir docs/specs
+node scripts/doc_maintenance.js index plan --dir docs/specs   # verdict=in-sync を確認
+```
+
 ## 冪等性
 
 同じ修復を二度実行すると二度目は no-op になる。index 再生成は同じ文書
