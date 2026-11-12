@@ -96,6 +96,20 @@ index 書き込みをブロックする。`promote_index`(preview、`--apply` �
   sync エンジン）に分派する。`impl-4col` / `exp-1col` の index は
   引き続き `sync_impl_index` の safe sync API のみが書き込み、この
   op は直接書き込まず同 API に委譲する。
+- `migrate_docs` は front matter で認識された `type:` を先に、content
+  pattern を次に route する。pattern のみでオーナー管理ディレクトリ
+  （`docs/adr`、`docs/impl/ir`、`docs/impl/exp`）へ到達した route は
+  `unsupported-owner-route` として skip され、content の推測が他
+  オーナー配下にファイルを生成することはない。typed な `type: adr`
+  の source は宣言済み `adr-doc` mutator 行を通じて引き続き migrate
+  する。`migrate_docs` は `impl-doc` の mutator 一覧に含まれないまま
+  である。
+- `migrate_ids` は触れた index をすべてオーナー writer 経由で再生成
+  する。`shared-4col` は共有 managed-index writer、`docs/adr` は ADR
+  managed writer、`impl-4col` と `exp-1col` は `sync_impl_index` の
+  safe sync エンジンである。オーナー index を直接書き込むことはなく、
+  オーナーが拒否した index は強制されず `skipped` または `blocked`
+  として報告される。
 - `docs/impl` は resident type を持たないオーナー管理コンテナであり、
   直下への作成・監査はできない。
 - scope 不適合は fail-closed:CLI は理由付きで非ゼロ終了し、ファイルの
