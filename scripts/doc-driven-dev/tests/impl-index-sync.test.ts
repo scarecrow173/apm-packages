@@ -874,7 +874,7 @@ test("CLI: preview and owner audits are read-only", () => {
   assert.deepEqual(treeHashes(repo), before, "preview + audits must not write");
 });
 
-test("CLI: new_impl_record preserves hand-written preamble/tail in a managed README", () => {
+test("CLI: new_impl_record defers the index; sync apply merges it preserving preamble/tail", () => {
   const repo = tempRepo();
   const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
   writeIr(repo, a);
@@ -883,18 +883,25 @@ test("CLI: new_impl_record preserves hand-written preamble/tail in a managed REA
     preamble: "# Team board\n\nCurated intro.\n\n",
     tail: "\n## Notes\n\nKeep this note.\n",
   });
+  const indexPath = path.join(repo, "docs/impl/ir/README.md");
+  const before = fs.readFileSync(indexPath, "utf8");
 
-  const result = runImplScript("new_impl_record.js", ["--title", "Gamma Work", "--cwd", repo], repo);
-  assert.equal(result.status, 0, result.stderr);
+  const created = runImplScript("new_impl_record.js", ["--title", "Gamma Work", "--cwd", repo], repo);
+  assert.equal(created.status, 0, created.stderr);
+  assert.match(created.stdout, /Index deferred/);
+  assert.equal(fs.readFileSync(indexPath, "utf8"), before, "creator never writes the index");
 
-  const content = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
+  const synced = runSync(["--cwd", repo, "--kind", "ir", "--apply"], repo);
+  assert.equal(synced.status, 0, synced.stderr);
+
+  const content = fs.readFileSync(indexPath, "utf8");
   assert.ok(content.includes("# Team board\n\nCurated intro."), "preamble preserved");
   assert.ok(content.includes("## Notes\n\nKeep this note."), "tail preserved");
   assert.ok(content.includes("gamma-work.md"), "new row added");
-  assert.equal(planImplIndexSync(repo, "ir").verdict, "in-sync", "creator output stays sync-clean");
+  assert.equal(planImplIndexSync(repo, "ir").verdict, "in-sync", "sync output stays sync-clean");
 });
 
-test("CLI: new_experiment_log preserves hand-written preamble/tail in a managed README", () => {
+test("CLI: new_experiment_log defers the index; sync apply merges it preserving preamble/tail", () => {
   const repo = tempRepo();
   writeExp(repo, "a.jsonl");
   writeExpIndex(repo, {
@@ -902,18 +909,25 @@ test("CLI: new_experiment_log preserves hand-written preamble/tail in a managed 
     preamble: "# Experiment board\n\nIntro note.\n\n",
     tail: "\nTail note.\n",
   });
+  const indexPath = path.join(repo, "docs/impl/exp/README.md");
+  const before = fs.readFileSync(indexPath, "utf8");
 
-  const result = runImplScript("new_experiment_log.js", ["--title", "Beta Probe", "--cwd", repo], repo);
-  assert.equal(result.status, 0, result.stderr);
+  const created = runImplScript("new_experiment_log.js", ["--title", "Beta Probe", "--cwd", repo], repo);
+  assert.equal(created.status, 0, created.stderr);
+  assert.match(created.stdout, /Index deferred/);
+  assert.equal(fs.readFileSync(indexPath, "utf8"), before, "creator never writes the index");
 
-  const content = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
+  const synced = runSync(["--cwd", repo, "--kind", "exp", "--apply"], repo);
+  assert.equal(synced.status, 0, synced.stderr);
+
+  const content = fs.readFileSync(indexPath, "utf8");
   assert.ok(content.includes("# Experiment board\n\nIntro note."), "preamble preserved");
   assert.ok(content.includes("Tail note."), "tail preserved");
   assert.ok(content.includes("beta-probe.jsonl"), "new row added");
-  assert.equal(planImplIndexSync(repo, "exp").verdict, "in-sync", "creator output stays sync-clean");
+  assert.equal(planImplIndexSync(repo, "exp").verdict, "in-sync", "sync output stays sync-clean");
 });
 
-test("CLI: symlinked README — creators skip with a warning, sync rejects", (t) => {
+test("CLI: symlinked README — creator defers, sync rejects", (t) => {
   const repo = tempRepo();
   const outside = tempRepo();
   const outsideFile = path.join(outside, "index.md");
@@ -928,7 +942,7 @@ test("CLI: symlinked README — creators skip with a warning, sync rejects", (t)
 
   const created = runImplScript("new_impl_record.js", ["--title", "Gamma Work", "--cwd", repo], repo);
   assert.equal(created.status, 0, created.stderr);
-  assert.match(created.stdout + created.stderr, /Skipped index update|hand-curated/i);
+  assert.match(created.stdout + created.stderr, /Index deferred/);
   assert.equal(fs.readFileSync(outsideFile, "utf8"), "# Implementation Records\n\n", "symlink target untouched");
 
   const synced = runSync(["--cwd", repo, "--kind", "ir", "--apply"], repo);

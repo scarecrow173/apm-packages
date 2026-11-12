@@ -87,22 +87,32 @@ test("generated index escapes pipe characters in titles", () => {
   assert.ok(readme.includes("A \\| B"), readme);
 });
 
-test("new_adr preserves a hand-curated README index", () => {
+test("new_adr never touches a hand-curated README index", () => {
   const repo = tempRepo();
   const dir = path.join(repo, "docs/adr");
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "README.md"), "# Hand-curated ADR index\n\nKeep this prose.\n", "utf8");
+  const curated = "# Hand-curated ADR index\n\nKeep this prose.\n";
+  fs.writeFileSync(path.join(dir, "README.md"), curated, "utf8");
   const res = runScript("adr-doc", "new_adr.js", ["--title", "Use Redis"], repo);
   assert.equal(res.status, 0, res.stderr);
-  const readme = fs.readFileSync(path.join(dir, "README.md"), "utf8");
-  assert.ok(readme.includes("Keep this prose"), "hand-curated README must not be overwritten");
-  assert.match(`${res.stdout}\n${res.stderr}`, /hand-curated/);
+  assert.match(res.stdout, /Index deferred/);
+  assert.equal(
+    fs.readFileSync(path.join(dir, "README.md"), "utf8"),
+    curated,
+    "hand-curated README stays byte-identical",
+  );
 });
 
-test("new_adr generated index carries the generated-index marker", () => {
+test("explicit index materialization carries the generated-index marker", () => {
   const repo = tempRepo();
   const res = runScript("adr-doc", "new_adr.js", ["--title", "Use Redis"], repo);
   assert.equal(res.status, 0, res.stderr);
+  // Creators defer index writes (#196); the render path lives in explicit
+  // materialization via doc_maintenance index apply.
+  assert.equal(fs.existsSync(path.join(repo, "docs/adr/README.md")), false);
+  const applied = runScript("doc-maintenance", "doc_maintenance.js",
+    ["index", "apply", "--dir", "docs/adr"], repo);
+  assert.equal(applied.status, 0, applied.stderr);
   const readme = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
   assert.ok(readme.includes("<!-- doc-suite:generated-index -->"), readme);
 });
