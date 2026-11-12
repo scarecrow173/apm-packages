@@ -104,12 +104,13 @@ but must not be the sole verification.
 A task cannot move to `done` until all verification commands pass. When
 status changes — `done`/`wont-do` move the row to the index's `## Settled`
 tier — regenerate `docs/tasks/README.md` in the same change via
-`doc_maintenance.js plan|apply --type task`; `doc_status lint` reports the
-stale index until then.
+`doc_maintenance.js index plan|apply --dir docs/tasks`; `doc_status lint`
+reports the stale index until then.
 
 ## Resources
 
-- `scripts/new_task.js`: create a task and update its index.
+- `scripts/new_task.js`: create a task (index materialization is explicit:
+  `doc_maintenance.js index plan|apply`).
 - `references/task-conventions.md`: directory, filename, status, relations,
   required content, and index conventions for tasks.
 - `assets/templates/task.md`: default task body template.

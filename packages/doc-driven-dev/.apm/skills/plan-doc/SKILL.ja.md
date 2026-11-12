@@ -216,7 +216,8 @@ task をクローズするか新しい plan へ付け替えます。
 
 ## リソース
 
-- `scripts/new_plan.js`: plan を作成し、索引を更新します。
+- `scripts/new_plan.js`: plan を作成します（索引の materialize は明示的:
+  `doc_maintenance.js index plan|apply`）。
 - `references/plan-conventions.ja.md`: plan のディレクトリ、ファイル名、
   ステータス、relation、必須内容、索引の規約です
   — plan の作成・記入の前に必ず読み込むこと。

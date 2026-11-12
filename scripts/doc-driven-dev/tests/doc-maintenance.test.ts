@@ -335,7 +335,7 @@ test("scoped rebuild keeps sibling-type rows in a shared directory", () => {
   assert.match(content, /research\.md/, "discovery rows must survive a brainstorm-scoped rebuild");
 });
 
-test("createDocument keeps sibling-type rows and manual text in a shared index", async () => {
+test("createDocument defers the shared index; index apply merges sibling rows and manual text", async () => {
   const repo = tempRepo();
   writeTypedDoc(repo, "docs/discovery/idea-note.md", "BRAINSTORM-0001", "brainstorm", "capturing", "Idea note");
   writeFile(repo, "docs/discovery/README.md", [
@@ -354,12 +354,23 @@ test("createDocument keeps sibling-type rows and manual text in a shared index",
     "Trailing operations notes.",
     "",
   ].join("\n"));
+  const readmeBefore = fs.readFileSync(path.join(repo, "docs/discovery/README.md"), "utf8");
 
+  // Creators never write the index (#196): the write is deferred to explicit
+  // materialization via doc_maintenance index apply.
   const result = await createDocument("discovery", { cwd: repo, title: "Research" });
-  assert.equal(result.indexWritten, true);
+  assert.equal(result.indexWritten, false);
+  assert.equal(result.indexSkippedReason, "deferred");
+  assert.equal(
+    fs.readFileSync(path.join(repo, "docs/discovery/README.md"), "utf8"),
+    readmeBefore,
+    "the pre-existing index stays byte-identical on document creation",
+  );
 
+  const apply = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/discovery"], repo);
+  assert.equal(apply.status, 0, apply.stderr);
   const content = fs.readFileSync(path.join(repo, "docs/discovery/README.md"), "utf8");
-  assert.match(content, /idea-note\.md/, "sibling-type rows must survive document creation");
+  assert.match(content, /idea-note\.md/, "sibling-type rows must survive index materialization");
   assert.match(content, /research\.md/);
   assert.match(content, /Curated notes about this directory\./);
   assert.match(content, /Trailing operations notes\./);

@@ -106,7 +106,8 @@ Rules of thumb:
 
 ## Resources
 
-- `scripts/new_test_spec.js`: create a test spec and update its index.
+- `scripts/new_test_spec.js`: create a test spec (index materialization is
+  explicit: `doc_maintenance.js index plan|apply`).
 - `references/test-spec-conventions.md`: directory, filename, status,
   relations, required content, and index conventions for test specs.
 - `assets/templates/test-spec.md`: default test spec body template.

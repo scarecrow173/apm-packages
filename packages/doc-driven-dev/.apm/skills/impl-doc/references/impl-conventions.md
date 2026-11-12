@@ -169,7 +169,8 @@ Index rules:
   `abandoned`, `superseded`) move to a `## Settled` table below it, also
   filename-ordered. Settled rows stay linked — the tier de-emphasizes
   history without hiding it.
-- Update the index whenever a record is added or its `status` changes.
+- Reconcile the index whenever a record is added or its `status` changes —
+  materialization is explicit (creators never write indexes).
   `sync_impl_index.js --kind ir` previews the reconcile (verdict
   `in-sync` / `sync` / `create` / `rejected`); pass `--apply` to write it.
   `audit_impl_record.js` reports the drift (`index-missing-entry`,
@@ -200,4 +201,6 @@ and relations; the README provides a directory-level overview only.
 by default, `--apply` to write, `rejected` for hand-curated or malformed
 READMEs.
 
-Whenever a new Experiment Log is added, update the index in the same change.
+A new Experiment Log leaves the index deferred — the creator never writes
+it. Materialize with the same explicit sync (`--apply`) or
+`doc_maintenance.js index apply`.

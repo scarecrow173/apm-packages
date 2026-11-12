@@ -127,7 +127,7 @@ test("public docs expose doc-driven-dev-graph and contain no retired lifecycle r
   }
 });
 
-test("new_spec creates front matter spec and index", () => {
+test("new_spec creates a spec and defers index materialization", () => {
   const repo = tempRepo();
 
   const result = runScript("spec-doc", "new_spec.js", ["--title", "Define checkout flow"], { cwd: repo });
@@ -135,7 +135,13 @@ test("new_spec creates front matter spec and index", () => {
   assert.equal(result.status, 0, result.stderr);
   const specPath = path.join(repo, "docs/specs/define-checkout-flow.md");
   assert.equal(fs.existsSync(specPath), true);
-  assert.equal(fs.existsSync(path.join(repo, "docs/specs/README.md")), true);
+  assert.match(result.stdout, /Created docs\/specs\/.*\.md/);
+  assert.match(result.stdout, /Index deferred/);
+  assert.equal(
+    fs.existsSync(path.join(repo, "docs/specs/README.md")),
+    false,
+    "creator must not write the index",
+  );
 
   const spec = fs.readFileSync(specPath, "utf8");
   assert.match(spec, /^id: "SPEC-[0-9A-Za-z]{22}"$/m);
@@ -157,6 +163,20 @@ test("new_spec creates front matter spec and index", () => {
   assert.match(spec, /^  deferred-by: \[\]$/m);
   assert.match(spec, /^# Define checkout flow/m);
   assert.match(spec, /## Deferred Design Concerns/);
+});
+
+test("new_spec leaves an existing README byte-identical", () => {
+  const repo = tempRepo();
+  const specsDir = path.join(repo, "docs/specs");
+  fs.mkdirSync(specsDir, { recursive: true });
+  const readmePath = path.join(specsDir, "README.md");
+  fs.writeFileSync(readmePath, "# my hand index\n", "utf8");
+  const before = fs.readFileSync(readmePath, "utf8");
+
+  const result = runScript("spec-doc", "new_spec.js", ["--title", "Beta"], { cwd: repo });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.readFileSync(readmePath, "utf8"), before);
 });
 
 test("doc skills ship conventions and templates", () => {
@@ -341,7 +361,7 @@ test("new_plan links to spec with implements and derives-from relations", () => 
   assert.match(plan, /^    - "docs\/designs\/design-checkout-orchestration.md"$/m);
 });
 
-test("new_design creates overview, detailed design, and index", () => {
+test("new_design creates overview and detailed design, and defers the index", () => {
   const repo = tempRepo();
 
   const result = runScript(
@@ -357,7 +377,8 @@ test("new_design creates overview, detailed design, and index", () => {
   const indexPath = path.join(repo, "docs/designs/README.md");
   assert.equal(fs.existsSync(designPath), true);
   assert.equal(fs.existsSync(overviewPath), true);
-  assert.equal(fs.existsSync(indexPath), true);
+  assert.match(result.stdout, /Index deferred/);
+  assert.equal(fs.existsSync(indexPath), false, "creator must not write the index");
 
   const design = fs.readFileSync(designPath, "utf8");
   const overview = fs.readFileSync(overviewPath, "utf8");
@@ -1108,13 +1129,12 @@ test("new_design honors --dir and --name for subdirectory placement with opaque 
   assert.equal(fs.existsSync(path.join(designs, "graph-visualization", "overview.md")), false);
   assert.equal(fs.existsSync(path.join(designs, "graph-visualization", "README.md")), false);
 
-  // ルート README は新規生成（マーカー付き）され、サブディレクトリの設計を含む
-  const index = fs.readFileSync(path.join(designs, "README.md"), "utf8");
-  assert.match(index, /<!-- doc-suite:generated-index -->/);
-  assert.match(index, /graph-visualization\/design\.md/);
+  // index materialization is deferred — the creator never writes a README
+  assert.match(result.stdout, /Index deferred/);
+  assert.equal(fs.existsSync(path.join(designs, "README.md")), false);
 });
 
-test("new_spec --no-index skips writing the README index", () => {
+test("new_spec --no-index is inert and prints a deprecation note", () => {
   const repo = tempRepo();
   const result = runScript("spec-doc", "new_spec.js",
     ["--title", "No index spec", "--no-index"], { cwd: repo });
@@ -1122,11 +1142,12 @@ test("new_spec --no-index skips writing the README index", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.existsSync(path.join(repo, "docs/specs/no-index-spec.md")), true);
   assert.equal(fs.existsSync(path.join(repo, "docs/specs/README.md")), false,
-    "index must not be created when --no-index is passed");
-  assert.match(result.stdout, /Skipped index update \(--no-index\)/);
+    "creators never write the index");
+  assert.match(result.stdout, /Index deferred/);
+  assert.match(result.stdout, /--no-index\/--force-index are deprecated and have no effect/);
 });
 
-test("new_spec --force-index overwrites a hand-curated index", () => {
+test("new_spec --force-index is inert and leaves a hand-curated index byte-identical", () => {
   const repo = tempRepo();
   const specs = path.join(repo, "docs/specs");
   fs.mkdirSync(specs, { recursive: true });
@@ -1137,11 +1158,12 @@ test("new_spec --force-index overwrites a hand-curated index", () => {
   assert.equal(skipped.status, 0, skipped.stderr);
   assert.equal(fs.readFileSync(path.join(specs, "README.md"), "utf8"), handCurated,
     "hand-curated index preserved by default");
-  assert.match(skipped.stderr, /appears hand-curated/);
 
   const forced = runScript("spec-doc", "new_spec.js",
     ["--title", "Second spec", "--force-index"], { cwd: repo });
   assert.equal(forced.status, 0, forced.stderr);
-  const index = fs.readFileSync(path.join(specs, "README.md"), "utf8");
-  assert.match(index, /<!-- doc-suite:generated-index -->/, "index regenerated under --force-index");
+  assert.match(forced.stdout, /Index deferred/);
+  assert.match(forced.stdout, /--no-index\/--force-index are deprecated and have no effect/);
+  assert.equal(fs.readFileSync(path.join(specs, "README.md"), "utf8"), handCurated,
+    "--force-index is inert: the hand-curated index stays byte-identical");
 });

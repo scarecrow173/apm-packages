@@ -3427,7 +3427,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs5 = require("fs");
+    var fs3 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify2 = require_stringify();
@@ -3511,7 +3511,7 @@ var require_gray_matter = __commonJS({
       return stringify2(file2, data, options2);
     };
     matter3.read = function(filepath, options2) {
-      const str2 = fs5.readFileSync(filepath, "utf8");
+      const str2 = fs3.readFileSync(filepath, "utf8");
       const file2 = matter3(str2, options2);
       file2.path = filepath;
       return file2;
@@ -4146,12 +4146,10 @@ var require_uuid62 = __commonJS({
 });
 
 // src/skills/adr-doc/scripts/new_adr.ts
-var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path4 = __toESM(require("node:path"));
+var import_node_fs2 = __toESM(require("node:fs"));
+var import_node_path2 = __toESM(require("node:path"));
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
-var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
 var import_gray_matter2 = __toESM(require_gray_matter());
 
 // src/skills/lib/document_utils.ts
@@ -4211,9 +4209,6 @@ function resolveContainedDir(cwd, dir, flag = "--dir") {
     );
   }
   return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
-}
-function isIndexFileName(file2) {
-  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
 }
 function slugify(title, fallback) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
@@ -4447,8 +4442,6 @@ function assertTypeScope(type, directory) {
 }
 
 // src/skills/lib/doc_suite_utils.ts
-var import_node_fs2 = __toESM(require("node:fs"));
-var import_node_path2 = __toESM(require("node:path"));
 var import_gray_matter = __toESM(require_gray_matter());
 
 // node_modules/.pnpm/zod@4.6.6/node_modules/zod/v4/classic/external.js
@@ -5268,10 +5261,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path5) {
-  if (!path5)
+function getElementAtPath(obj, path3) {
+  if (!path3)
     return obj;
-  return path5.reduce((acc, key) => acc?.[key], obj);
+  return path3.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -5611,11 +5604,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path5, issues) {
+function prefixIssues(path3, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path5);
+    iss.path.unshift(path3);
     return iss;
   });
 }
@@ -6077,16 +6070,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path5 = []) => {
+  const processError = (error63, path3 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
       } else {
-        const fullpath = [...path5, ...issue2.path];
+        const fullpath = [...path3, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -6125,17 +6118,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path5 = []) => {
+  const processError = (error63, path3 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
       } else {
-        const fullpath = [...path5, ...issue2.path];
+        const fullpath = [...path3, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -6174,8 +6167,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path5) {
+  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path3) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -23313,13 +23306,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path5 = ref.slice(1).split("/").filter(Boolean);
-  if (path5.length === 0) {
+  const path3 = ref.slice(1).split("/").filter(Boolean);
+  if (path3.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path5[0] === defsKey) {
-    const key = path5[1] === void 0 ? void 0 : decodeJSONPointerSegment(path5[1]);
+  if (path3[0] === defsKey) {
+    const key = path3[1] === void 0 ? void 0 : decodeJSONPointerSegment(path3[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -24258,29 +24251,6 @@ function generateArtifactId(idPrefix) {
   return `${idPrefix}-${import_uuid62.default.encode(v7_default())}`;
 }
 
-// src/skills/lib/doc_lifecycle.ts
-var SETTLED_STATUSES = {
-  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
-  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
-  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
-  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
-  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
-  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
-  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
-  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
-  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
-  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
-};
-var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
-function lifecycleBucketForType(type) {
-  const declared = type ?? "untyped";
-  return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
-}
-function isSettledStatus(type, status) {
-  if (!status) return false;
-  return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
-}
-
 // src/skills/lib/doc_suite_utils.ts
 var relationFields = [
   "source",
@@ -24325,49 +24295,6 @@ var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
   dir,
   ...scaffoldIndexMeta[dir]
 }));
-function mergeManagedIndex(existing, generated) {
-  const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
-  const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
-  const lines = existing.split("\n");
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerIndex < 0) return `${section}
-`;
-  const preamble = lines.slice(0, markerIndex);
-  const rest = lines.slice(markerIndex + 1);
-  let directoryLine = -1;
-  let regionEnd = -1;
-  for (let i = 0; i < rest.length; i += 1) {
-    const trimmed = rest[i].trim();
-    if (directoryLine < 0 && trimmed.startsWith("Directory:")) {
-      directoryLine = i;
-      continue;
-    }
-    if (trimmed.startsWith("|")) {
-      regionEnd = i;
-      while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-      break;
-    }
-  }
-  if (regionEnd < 0) regionEnd = directoryLine;
-  const settledMarkerIndex = rest.findIndex(
-    (line, offset) => offset > regionEnd && line.includes(GENERATED_SETTLED_MARKER)
-  );
-  if (settledMarkerIndex >= 0) {
-    regionEnd = settledMarkerIndex;
-    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim() === "") regionEnd += 1;
-    while (regionEnd + 1 < rest.length && rest[regionEnd + 1].trim().startsWith("|")) regionEnd += 1;
-  }
-  const preservedInside = rest.slice(0, regionEnd + 1).filter((line) => {
-    const trimmed = line.trim();
-    return trimmed !== "" && !trimmed.startsWith("Directory:") && !trimmed.startsWith("|") && !line.includes(GENERATED_INDEX_MARKER) && !line.includes(GENERATED_SETTLED_MARKER);
-  });
-  const trailing = rest.slice(regionEnd + 1);
-  const head = preamble.join("\n").replace(/\n+$/, "");
-  const tail = [...preservedInside, ...trailing].join("\n").replace(/^\n+|\n+$/g, "");
-  const parts = [head, section, tail].filter((part) => part !== "");
-  return `${parts.join("\n\n")}
-`;
-}
 var changeEntrySchema = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -24390,43 +24317,10 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
-var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
-var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
-var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-function docDir(cwd, type, explicitDir) {
-  const config2 = configFor(type);
-  const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
-  assertTypeScope(type, resolved);
-  return resolved;
-}
-function docFiles(dir) {
-  return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
-}
-function parseDoc(content) {
-  try {
-    const parsed = (0, import_gray_matter.default)(content);
-    return { data: parsed.data || {}, body: parsed.content, error: null };
-  } catch (error62) {
-    return { data: {}, body: content, error: error62 instanceof Error ? error62.message : String(error62) };
-  }
-}
 function sanitizeTitle(title) {
   const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
   if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
   return cleaned;
-}
-function indexCell(value) {
-  return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
-}
-function isGeneratedIndex(content, legacyTitle) {
-  if (content.includes(GENERATED_INDEX_MARKER)) return true;
-  return Boolean(legacyTitle) && content.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content);
-}
-function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
-  const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 function completeChanges(input2) {
   return Object.fromEntries(changeFields.map((field) => [field, input2?.[field] || []]));
@@ -24553,92 +24447,6 @@ function frontMatter(config2, id, title, status, date5, relations, metadata) {
     "---"
   ].join("\n");
 }
-async function titleFromDocument(content, fallback, headingToTitle) {
-  const parsed = parseDoc(content);
-  const data = parsed.data;
-  if (typeof data.title === "string" && data.title.trim()) return data.title.trim();
-  const match = /^#\s+(.+)$/m.exec(parsed.body);
-  const heading = match?.[1]?.trim();
-  if (!heading) return fallback;
-  const normalized = headingToTitle ? headingToTitle(heading).trim() : heading;
-  return normalized || fallback;
-}
-async function docEntries(cwd, type, explicitDir) {
-  const relativeDir = docDir(cwd, type, explicitDir);
-  const dir = import_node_path2.default.join(cwd, relativeDir);
-  const indexRow = configFor(type).indexRow;
-  const entries = await Promise.all(docFiles(dir).map(async (file2) => {
-    const fullPath = import_node_path2.default.join(dir, file2);
-    const content = import_node_fs2.default.readFileSync(fullPath, "utf8");
-    const data = parseDoc(content).data;
-    const entryType = typeof data.type === "string" ? data.type : null;
-    const hooks = entryType === null || entryType === type ? indexRow : void 0;
-    return {
-      created: typeof data.created === "string" ? data.created : null,
-      file: file2,
-      id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : hooks?.idFromFile?.(import_node_path2.default.basename(file2)) ?? null,
-      path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
-      status: typeof data.status === "string" ? data.status : null,
-      title: await titleFromDocument(content, import_node_path2.default.basename(file2, ".md"), hooks?.titleFromHeading),
-      type: entryType
-    };
-  }));
-  return entries.filter((entry) => !isForeignDocType(entry.type, type, relativeDir));
-}
-function renderIndexBody(entries, options2 = {}) {
-  const header = INDEX_TABLE_HEADER_4COL;
-  const compare = (left, right) => {
-    if (options2.overviewFirst) {
-      if (left.file === "overview.md") return -1;
-      if (right.file === "overview.md") return 1;
-    }
-    return left.file.localeCompare(right.file);
-  };
-  const row = (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
-  const settled = (entry) => isSettledStatus(entry.type ?? options2.settledType ?? null, entry.status);
-  const active = entries.filter((entry) => !settled(entry)).sort(compare);
-  const settledEntries = entries.filter(settled).sort(compare);
-  const body = [header, ...active.map(row)].join("\n");
-  return settledEntries.length > 0 ? `${body}
-
-## Settled ${GENERATED_SETTLED_MARKER}
-
-${[header, ...settledEntries.map(row)].join("\n")}` : body;
-}
-async function buildIndex(cwd, type, explicitDir, options2) {
-  const relativeDir = docDir(cwd, type, explicitDir);
-  const unionTypes = options2?.types ?? [];
-  const entries = unionTypes.length > 1 ? [...new Map(
-    (await Promise.all(unionTypes.map((unionType) => docEntries(cwd, unionType, explicitDir)))).flat().map((entry) => [entry.file, entry])
-  ).values()].sort((a, b) => a.file.localeCompare(b.file)) : await docEntries(cwd, type, explicitDir);
-  const contractTitle = ownershipForDir(normalizeDir(relativeDir))?.indexTitle ?? ownershipForDir(normalizeDir(configFor(type).dir))?.indexTitle;
-  const title = contractTitle ?? `${configFor(type).idPrefix} Documents`;
-  const body = renderIndexBody(entries, {
-    overviewFirst: type === "design" || unionTypes.includes("design"),
-    settledType: type
-  });
-  return `# ${title}
-
-${GENERATED_INDEX_MARKER}
-
-Directory: \`${relativeDir.replace(/\\/g, "/")}\`
-
-${body}
-`;
-}
-function isMarkdownSource(file2) {
-  return file2.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(file2));
-}
-function walkMarkdownFiles(baseDir) {
-  if (!import_node_fs2.default.existsSync(baseDir)) return [];
-  const entries = import_node_fs2.default.readdirSync(baseDir, { withFileTypes: true });
-  return entries.flatMap((entry) => {
-    if (entry.isSymbolicLink()) return [];
-    const fullPath = import_node_path2.default.join(baseDir, entry.name);
-    if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
-    return isMarkdownSource(fullPath) ? [fullPath] : [];
-  }).sort();
-}
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
 var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
@@ -24649,19 +24457,6 @@ function findAdrDir(cwd, explicitDir) {
 }
 function slugify3(title) {
   return slugify(title, "decision");
-}
-function writeIndexFile(adrDir, content, force = false) {
-  const indexPath = import_node_path3.default.join(adrDir, "README.md");
-  const existing = import_node_fs3.default.existsSync(indexPath) ? import_node_fs3.default.readFileSync(indexPath, "utf8") : null;
-  if (!force && existing !== null && !isGeneratedIndex(existing, "Architecture Decision Records")) {
-    return { written: false, reason: "hand-curated" };
-  }
-  const output2 = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content) : content;
-  import_node_fs3.default.writeFileSync(indexPath, output2, "utf8");
-  return { written: true, reason: null };
-}
-async function buildIndex2(cwd, relativeDir) {
-  return buildIndex(cwd, "adr", relativeDir);
 }
 
 // src/skills/adr-doc/scripts/new_adr.ts
@@ -24687,7 +24482,6 @@ function parseArgs(argv) {
     else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 function parseTemplate(value) {
@@ -24696,19 +24490,19 @@ function parseTemplate(value) {
 }
 function usage() {
   return [
-    "Usage: node scripts/new_adr.js --title <title> [--dir <path>] [--template full|minimal|bare|bare-minimal] [--status <status>] [--date <YYYY-MM-DD>] [--no-index|--force-index]",
+    "Usage: node scripts/new_adr.js --title <title> [--dir <path>] [--template full|minimal|bare|bare-minimal] [--status <status>] [--date <YYYY-MM-DD>]",
     "",
-    "Creates a new MADR ADR and refreshes the ADR index."
+    "Creates a new MADR ADR. Index materialization is explicit: doc_maintenance.js index apply --dir <adr-dir>."
   ].join("\n");
 }
 function renderTemplate(templateName, values) {
-  const templatePath = import_node_path4.default.join(__dirname, "../assets/templates", templates[templateName]);
-  if (!templates[templateName] || !import_node_fs4.default.existsSync(templatePath)) {
+  const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", templates[templateName]);
+  if (!templates[templateName] || !import_node_fs2.default.existsSync(templatePath)) {
     throw new Error(`Unknown template: ${templateName}`);
   }
-  return import_node_fs4.default.readFileSync(templatePath, "utf8").replaceAll("{{title}}", values.title);
+  return import_node_fs2.default.readFileSync(templatePath, "utf8").replaceAll("{{title}}", values.title);
 }
-async function main() {
+function main() {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -24716,15 +24510,15 @@ async function main() {
       return;
     }
     if (!args.title) throw new Error("Missing required --title");
-    const cwd = import_node_path4.default.resolve(args.cwd);
+    const cwd = import_node_path2.default.resolve(args.cwd);
     const relativeDir = findAdrDir(cwd, args.dir);
-    const adrDir = import_node_path4.default.join(cwd, relativeDir);
-    import_node_fs4.default.mkdirSync(adrDir, { recursive: true });
+    const adrDir = import_node_path2.default.join(cwd, relativeDir);
+    import_node_fs2.default.mkdirSync(adrDir, { recursive: true });
     const title = sanitizeTitle(args.title);
     const slug = slugify3(title);
     const filename = `${slug}.md`;
-    const outputPath = import_node_path4.default.join(adrDir, filename);
-    if (import_node_fs4.default.existsSync(outputPath)) throw new Error(`ADR already exists: ${import_node_path4.default.relative(cwd, outputPath)}`);
+    const outputPath = import_node_path2.default.join(adrDir, filename);
+    if (import_node_fs2.default.existsSync(outputPath)) throw new Error(`ADR already exists: ${import_node_path2.default.relative(cwd, outputPath)}`);
     const date5 = args.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const status = args.status;
     const adrConfig = configFor("adr");
@@ -24741,19 +24535,13 @@ async function main() {
 
 ${body}
 `;
-    import_node_fs4.default.writeFileSync(outputPath, content, "utf8");
-    const indexPath = import_node_path4.default.join(adrDir, "README.md");
-    const relativeIndex = import_node_path4.default.relative(cwd, indexPath).replace(/\\/g, "/");
-    console.log(`Created ${import_node_path4.default.relative(cwd, outputPath).replace(/\\/g, "/")}`);
-    if (args.noIndex) {
-      console.log(`Skipped index update (--no-index): ${relativeIndex}`);
-    } else {
-      const indexResult = writeIndexFile(adrDir, await buildIndex2(cwd, relativeDir), Boolean(args.forceIndex));
-      if (indexResult.written) {
-        console.log(`Updated ${relativeIndex}`);
-      } else {
-        console.warn(`Skipped index update: ${relativeIndex} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
-      }
+    import_node_fs2.default.writeFileSync(outputPath, content, "utf8");
+    const indexPath = import_node_path2.default.join(adrDir, "README.md");
+    const relativeIndex = import_node_path2.default.relative(cwd, indexPath).replace(/\\/g, "/");
+    console.log(`Created ${import_node_path2.default.relative(cwd, outputPath).replace(/\\/g, "/")}`);
+    console.log(`Index deferred: ${relativeIndex} \u2014 materialize explicitly via doc_maintenance.js index apply --dir ${relativeDir}`);
+    if (args.noIndex || args.forceIndex) {
+      console.log("Note: --no-index/--force-index are deprecated and have no effect; indexes are materialized via doc_maintenance.js index plan|apply");
     }
   } catch (error62) {
     console.error(error62 instanceof Error ? error62.message : String(error62));

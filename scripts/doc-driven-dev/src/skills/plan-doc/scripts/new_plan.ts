@@ -43,12 +43,11 @@ function parseArgs(argv: string[]): CliArgs {
     else if (!args.title) args.title = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (args.noIndex && args.forceIndex) throw new Error("--no-index and --force-index cannot be used together");
   return args;
 }
 
 function usage(): string {
-  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--verified-by <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--no-index] [--force-index]";
+  return "Usage: node scripts/new_plan.js --title <title> --design <design-doc> [--design <design-doc>] [--implements <doc>] [--verified-by <doc>] [--dir <path>] [--name <filename>] [--status <status>]";
 }
 
 function resolveFromCwd(cwd: string, target: string): string {
@@ -109,8 +108,6 @@ async function main(): Promise<void> {
       date: args.date,
       dir: args.dir,
       name: args.name,
-      forceIndex: args.forceIndex,
-      noIndex: args.noIndex,
       relations: {
         implements: linked,
         "derives-from": [...linked, ...designTargets],
@@ -121,6 +118,9 @@ async function main(): Promise<void> {
     });
     console.log(`Created ${result.file}`);
     logIndexResult(result);
+    if (args.noIndex || args.forceIndex) {
+      console.log("Note: --no-index/--force-index are deprecated and have no effect; indexes are materialized via doc_maintenance.js index plan|apply");
+    }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

@@ -175,7 +175,8 @@ discovery 文書へ逆向きに参照します。
 
 ## リソース
 
-- `scripts/new_discovery.js`: discovery 文書を作成し、索引を更新します。
+- `scripts/new_discovery.js`: discovery 文書を作成します（索引の materialize は明示的:
+  `doc_maintenance.js index plan|apply`）。
 - `references/discovery-conventions.ja.md`: discovery 文書のディレクトリ、ファイル名、
   ステータス、relation、必須内容、索引の規約
   — **作成操作の前に必ず読み込むこと**

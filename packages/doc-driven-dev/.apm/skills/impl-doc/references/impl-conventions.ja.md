@@ -166,7 +166,8 @@ finding を報告します(コード一覧は impl-doc スキルを参照)。
   テーブルに、settled なステータス（`completed`、`abandoned`、`superseded`）の
   記録は下段の `## Settled` テーブルにファイル名昇順で掲載します。Settled の
   行もリンクは維持され、履歴を隠さずに強調を抑える構成です。
-- 記録の追加や `status` の変更時は索引を更新してください。
+- 記録の追加や `status` の変更時は索引を reconcile してください —
+  materialize は明示的です（creator は索引を書き込みません）。
   `sync_impl_index.js --kind ir` が同期内容をプレビューします
   （verdict は `in-sync` / `sync` / `create` / `rejected`）。
   `--apply` で書き込みます。適用するまでの間、
@@ -196,4 +197,6 @@ finding を報告します(コード一覧は impl-doc スキルを参照)。
 プレビュー、`--apply` で書き込み、手作業キュレートや不正な README は
 `rejected` になります。
 
-新規の Experiment Log が追加されたら、同じ変更の中で必ず索引を更新します。
+新規 Experiment Log の追加では creator は索引を書き込みません（deferred）。
+同じ明示的同期（`--apply`）または `doc_maintenance.js index apply` で
+materialize します。

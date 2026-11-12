@@ -1213,7 +1213,7 @@ async function writeGeneratedIndex(cwd: string, type: DocType | string, relative
   return { path: relIndex, written: true, reason: null };
 }
 
-async function createDocument(type: DocType, options: CreateDocumentOptions): Promise<{ file: string; index: string; indexWritten: boolean; indexSkippedReason: "hand-curated" | "disabled" | null; relativeDir: string }> {
+async function createDocument(type: DocType, options: CreateDocumentOptions): Promise<{ file: string; index: string; indexWritten: boolean; indexSkippedReason: "hand-curated" | "disabled" | "deferred" | null; relativeDir: string }> {
   const config = configFor(type);
   const cwd = path.resolve(options.cwd);
   const relativeDir = docDir(cwd, type, options.dir);
@@ -1238,21 +1238,25 @@ async function createDocument(type: DocType, options: CreateDocumentOptions): Pr
 
   if (type === "design") ensureDesignOverview(path.join(cwd, rootDir), date);
 
+  // Index materialization is never implicit on document creation (#196):
+  // doc_maintenance index plan|apply is the single explicit entrypoint.
   const indexRelativeDir = underRoot ? rootDir : relativeDir;
-  const indexResult = await writeGeneratedIndex(cwd, type, indexRelativeDir, options);
+  const indexPath = path.join(cwd, indexRelativeDir, "README.md");
 
   return {
     file: path.relative(cwd, outputPath).replace(/\\/g, "/"),
-    index: indexResult.path,
-    indexWritten: indexResult.written,
-    indexSkippedReason: indexResult.reason,
+    index: path.relative(cwd, indexPath).replace(/\\/g, "/"),
+    indexWritten: false,
+    indexSkippedReason: "deferred",
     relativeDir,
   };
 }
 
-function logIndexResult(result: { index: string; indexWritten: boolean; indexSkippedReason: "hand-curated" | "disabled" | null }): void {
+function logIndexResult(result: { index: string; indexWritten: boolean; indexSkippedReason: "hand-curated" | "disabled" | "deferred" | null }): void {
   if (result.indexWritten) {
     console.log(`Updated ${result.index}`);
+  } else if (result.indexSkippedReason === "deferred") {
+    console.log(`Index deferred: ${result.index} — materialize explicitly via doc_maintenance.js index apply --dir ${path.posix.dirname(result.index)}`);
   } else if (result.indexSkippedReason === "hand-curated") {
     console.warn(`Skipped index update: ${result.index} appears hand-curated (no generated marker). Update it manually or pass --force-index.`);
   } else if (result.indexSkippedReason === "disabled") {

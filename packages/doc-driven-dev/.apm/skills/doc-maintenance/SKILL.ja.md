@@ -104,7 +104,7 @@ node scripts/doc_maintenance.js index apply [--dir <path>] [--expect <planHash>]
 status の編集は front matter の手作業であり、文書を遷移させるコマンドは
 存在しない。しかし遷移によって行は in-flight テーブルと `## Settled`
 層の間を移動し得る。`status` が変わるたびに、同じ変更の中で所属索引を
-再生成する（`--type <type>` 付きで `plan` の後 `apply`）。再生成までは
+再生成する（`index plan` の後 `index apply`）。再生成までは
 `doc_status lint` が古い索引を報告する。再生成は二層フォーマットへの
 移行でもある。
 

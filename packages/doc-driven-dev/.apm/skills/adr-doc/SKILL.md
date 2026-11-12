@@ -293,7 +293,8 @@ Do not proceed to Phase 2 until the human confirms the summary.
    described in `references/adr-conventions.md`.
 9. Generate the file.
    Preferred: run `scripts/new_adr.js`. It handles directory detection, naming,
-   templates, metadata defaults, and index updates. If you cannot run scripts,
+   templates, and metadata defaults — index materialization is explicit
+   (`doc_maintenance.js index plan|apply`). If you cannot run scripts,
    copy a template from `assets/templates/` and fill it manually.
 
 Preferred script examples:
@@ -383,8 +384,8 @@ or reviewing it through Phases 0-3. For extended operational guidance, use:
 ### scripts
 
 - `scripts/new_adr.js`: create a new ADR from a MADR template, using repository
-  conventions; refreshes the generated index (`--no-index` skips, and
-  hand-curated indexes are preserved unless `--force-index` is passed).
+  conventions (index materialization is explicit: `doc_maintenance.js index
+  plan|apply`).
 - `scripts/list_adrs.js`: list ADR metadata, statuses, and relations.
 - `scripts/audit_adr.js`: validate front matter, required sections,
   placeholders, local links, relation links, and index coverage.

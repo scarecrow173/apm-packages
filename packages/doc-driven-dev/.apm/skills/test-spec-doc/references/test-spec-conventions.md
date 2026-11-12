@@ -163,6 +163,6 @@ filename order, with the four shared columns:
 In-flight test specs fill the main table; test specs with a settled status
 (`deprecated`, `superseded`) move to a `## Settled` table below it, also
 filename-ordered. Update the index whenever a document is added or its
-`status` changes — `doc_maintenance.js plan|apply` regenerates managed
-indexes and `doc_status lint` reports drift (`index-metadata-mismatch`,
-`index-ordering`) until it does.
+`status` changes — materialization is explicit via `doc_maintenance.js
+index plan|apply` (creators never write indexes) and `doc_status lint`
+reports drift (`index-metadata-mismatch`, `index-ordering`) until it does.

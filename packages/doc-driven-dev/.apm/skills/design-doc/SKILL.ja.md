@@ -72,13 +72,15 @@ relations:
 
 - `docs/designs/overview.md`: 全体設計の入口。
 - `docs/designs/<slug>.md` 以降: 詳細設計。
-- `docs/designs/README.md`: スクリプトが更新する索引。
+- `docs/designs/README.md`: `doc_maintenance.js index plan|apply` で明示的に
+  materialize する索引。
 
 閲覧順序は `overview.md` -> 詳細設計です。
 
 ## リソース
 
-- `scripts/new_design.js`: 詳細設計文書を作成し索引を更新します。
+- `scripts/new_design.js`: 詳細設計文書を作成します（索引の materialize は明示的:
+  `doc_maintenance.js index plan|apply`）。
 - `references/design-conventions.ja.md`: 命名、ステータス、relation、索引の規約。
 - `assets/templates/design.ja.md`: 詳細設計の既定テンプレート。
 
