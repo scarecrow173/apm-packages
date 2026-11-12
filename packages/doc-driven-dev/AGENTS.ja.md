@@ -75,10 +75,18 @@ mutable lifecycle store を追加しないでください。
 
 ## Skill と ownership
 
-document 生成 skill（`idea-doc`、`deep-dive`、`briefing-flow`、`discovery-doc`、
-`adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc`、`test-spec-doc`、
-`impl-doc`、`doc-status`）が各 document contract を担当します。orchestration skill は
-`doc-driven-dev-graph`、`implementation-flow`、`skill-discovery-protocol` です。
+document 生成 skill（`idea-doc`、`discovery-doc`、`adr-doc`、`spec-doc`、
+`design-doc`、`plan-doc`、`task-doc`、`test-spec-doc`、`impl-doc`）が各
+document contract を担当します。`deep-dive` は interview skill であり、
+出力は confirmed intent summary であって文書ではありません。
+`doc-status` は read-only の inspection（`list` / `lint` / `audit` /
+`health`）で、`doc-dashboard` は canonical Markdown に触れず offline
+HTML snapshot を生成します。`doc-maintenance` は明示的 apply 経由の
+whitelist 修復と managed index materialization を担当します。
+orchestration skill は `doc-driven-dev-graph`、
+`skill-discovery-protocol`、`briefing-flow`（discovery orchestration）、
+`implementation-flow`、graph-delegated subgraph の `planning-flow`
+です。
 
 `planning-flow` は graph-delegated subgraph であり、concurrently active な top-level
 orchestration skill ではありません。1 つの user request で active orchestration skill は
