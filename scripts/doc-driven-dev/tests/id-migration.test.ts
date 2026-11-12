@@ -376,6 +376,37 @@ test("migrate_ids regenerates impl indexes through the owner sync API", async ()
   assert.ok(!readme.includes("IMPL-0001"));
 });
 
+test("a blocked impl index sync degrades the applied report to a validation failure", async (t) => {
+  const repo = tempRepo();
+  // `docs/impl/ir` as a link to `docs/impl` is contained by realpath, so it is
+  // adopted as the canonical IR dir — but the owner sync resolves the real
+  // path, sees a zero-resident impl-doc scope, and fails closed. The throw is
+  // caught into a `blocked` index entry while apply-phase mutations stay on
+  // disk. Everything validation audits through the lexical path stays clean,
+  // so only the blocked entry can turn the report red.
+  fs.mkdirSync(path.join(repo, "docs/impl"), { recursive: true });
+  try {
+    fs.symlinkSync(path.join(repo, "docs/impl"), path.join(repo, "docs/impl", "ir"), "junction");
+  } catch {
+    t.skip("directory links are not permitted on this platform");
+    return;
+  }
+  writeDoc(repo, "docs/impl/ir/0001-rec.md", legacyImpl("IMPL-0001", "rec"), implBody("rec"));
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.equal(report.applied, true);
+  assert.deepEqual(report.blockers, []);
+  const entry = report.indexes.find((item) => item.index === "docs/impl/ir/README.md");
+  assert.ok(entry);
+  assert.equal(entry.action, "blocked");
+  // The index was left unmaterialized after a successful apply — the report
+  // must not claim ok, and the stage must be validation (mutations persisted).
+  assert.equal(report.ok, false);
+  assert.equal(report.failureStage, "validation");
+  assert.ok(fs.existsSync(path.join(repo, "docs/impl/rec.md")));
+});
+
 test("migrate_ids reports a hand-curated impl index as skipped with a reason", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/impl/ir/0001-rec.md", legacyImpl("IMPL-0001", "rec"), implBody("rec"));
