@@ -790,11 +790,16 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
     || validation.unresolvedLegacyRefs.length > 0
     || validation.auditErrors.length > 0;
 
+  // A blocked index entry is a post-apply state failure: mutations persisted
+  // while an index was left unmaterialized, so it degrades the report exactly
+  // like a validation failure (Issue #188).
+  const indexBlocked = indexes.some((entry) => entry.action === "blocked");
+
   return {
     applied: Boolean(options.apply),
-    ok: blockers.length === 0 && !validationFailed,
+    ok: blockers.length === 0 && !validationFailed && !indexBlocked,
     blockers,
-    failureStage: validationFailed ? "validation" : undefined,
+    failureStage: validationFailed || indexBlocked ? "validation" : undefined,
     indexes,
     mappings: mappingReports,
     renames,
