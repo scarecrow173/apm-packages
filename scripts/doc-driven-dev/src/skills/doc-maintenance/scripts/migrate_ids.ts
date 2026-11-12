@@ -54,8 +54,8 @@ function printHuman(report: IdMigrationReport): void {
   for (const rewrite of report.rewrites) {
     console.log(`Rewrite ${rewrite.file} (${rewrite.replacements} replacement${rewrite.replacements === 1 ? "" : "s"})`);
   }
-  for (const index of report.indexes) {
-    console.log(`Index ${index.path}: ${index.action}`);
+  for (const entry of report.indexes) {
+    console.log(`Index ${entry.index}: ${entry.action}${entry.reason ? ` — ${entry.reason}` : ""}`);
   }
   for (const blocker of report.blockers) {
     console.error(`BLOCKER ${blocker.code}${blocker.file ? ` [${blocker.file}]` : ""}: ${blocker.message}`);
@@ -65,6 +65,15 @@ function printHuman(report: IdMigrationReport): void {
     console.log(`Validation: ${remainingLegacyIds.length} remaining legacy ids, ${duplicateIds.length} duplicate ids, ${unresolvedLegacyRefs.length} unresolved legacy refs, ${auditErrors.length} audit errors`);
     for (const error of auditErrors) {
       console.error(`AUDIT ${error.code}${error.file ? ` [${error.file}]` : ""}: ${error.message}`);
+    }
+  }
+  // `ok:false` means different things depending on where the run stopped —
+  // say which one happened instead of implying a rollback that never ran.
+  if (!report.ok) {
+    if (report.failureStage === "preflight") {
+      console.log("Migration blocked before any writes");
+    } else if (report.failureStage === "validation") {
+      console.log("Migration applied; validation failed — changes are on disk (not rolled back)");
     }
   }
 }

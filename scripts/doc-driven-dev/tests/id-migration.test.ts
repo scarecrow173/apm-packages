@@ -39,6 +39,20 @@ function legacySpec(id: string, title: string, relations: Record<string, unknown
   };
 }
 
+function legacyImpl(id: string, title: string) {
+  return {
+    id, type: "impl", status: "draft", title,
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+    metadata: { experiments: { adopted: [], rejected: [] } },
+  };
+}
+
+// A body carrying every `##` section `auditImplementationRecords` requires, so
+// tests assert on index/audit behavior rather than missing-section noise.
+function implBody(title: string): string {
+  return `# ${title}\n\n## Summary\n\ns\n\n## Context\n\nc\n\n## Implementation\n\ni\n\n## Related Experiments\n\nr\n\n## Validation\n\nv\n\n## Risks\n\nr\n\n## Follow-ups\n\nf\n`;
+}
+
 test("migrates legacy ids, relations, body references, filenames, and generated index", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
@@ -334,6 +348,86 @@ test("secondary canonical dir regenerates its index with the correct type", asyn
   assert.ok(!index.includes("SPEC-0001"));
 });
 
+test("migrate_ids regenerates impl indexes through the owner sync API", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/impl/ir/0001-rec.md", legacyImpl("IMPL-0001", "rec"), implBody("rec"));
+  // The managed region is missing the record's row — drift the token rewrite
+  // cannot repair, so the owner sync has real work to do (verdict "sync").
+  fs.writeFileSync(
+    path.join(repo, "docs/impl/ir/README.md"),
+    "# Implementation Records\n\nHand-written preamble.\n\n<!-- doc-suite:generated-index -->\n\nDirectory: `docs/impl/ir`\n\n| ID | Title | Status | File |\n| --- | --- | --- | --- |\n",
+    "utf8",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  assert.equal(report.ok, true);
+  const mapping = report.mappings.find((entry) => entry.legacyId === "IMPL-0001");
+  assert.ok(mapping);
+  const entry = report.indexes.find((item) => item.index === "docs/impl/ir/README.md");
+  assert.ok(entry);
+  assert.equal(entry.action, "regenerated");
+  const readme = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
+  assert.ok(readme.includes("<!-- doc-suite:generated-index -->"));
+  assert.ok(readme.includes("Hand-written preamble."));
+  assert.ok(readme.includes("[rec.md](./rec.md)"));
+  assert.ok(readme.includes(mapping.newId));
+  assert.ok(!readme.includes("IMPL-0001"));
+});
+
+test("migrate_ids reports a hand-curated impl index as skipped with a reason", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/impl/ir/0001-rec.md", legacyImpl("IMPL-0001", "rec"), implBody("rec"));
+  const handCurated = "# Hand-curated index\n\n- rec notes\n";
+  fs.writeFileSync(path.join(repo, "docs/impl/ir/README.md"), handCurated, "utf8");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  const entry = report.indexes.find((item) => item.index === "docs/impl/ir/README.md");
+  assert.ok(entry);
+  assert.equal(entry.action, "skipped");
+  assert.equal(entry.reason, "hand-curated");
+  // "skipped" is literal: a hand-curated index is never rewritten.
+  assert.equal(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), handCurated);
+});
+
+test("migrate_ids reports missing and hand-curated shared indexes with reasons", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
+  writeDoc(repo, "docs/specs/0001-checkout.md", legacySpec("SPEC-0001", "checkout"), "# checkout\n");
+  const curated = "# Curated specs index\n";
+  fs.writeFileSync(path.join(repo, "docs/specs/README.md"), curated, "utf8");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  const missing = report.indexes.find((item) => item.index === "docs/tasks/README.md");
+  const handCurated = report.indexes.find((item) => item.index === "docs/specs/README.md");
+  assert.equal(missing?.action, "skipped");
+  assert.equal(missing?.reason, "missing-index");
+  assert.equal(handCurated?.action, "skipped");
+  assert.equal(handCurated?.reason, "hand-curated");
+  assert.equal(fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8"), curated);
+});
+
+test("migrate_ids regenerates the docs/adr index through the owner writer", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/adr/0003-use-x.md", {
+    type: "adr", status: "accepted", title: "use x",
+    created: "2026-08-13", updated: "2026-08-13", owners: [], relations: {},
+  }, "# use x\n");
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.deepEqual(report.blockers, []);
+  const entry = report.indexes.find((item) => item.index === "docs/adr/README.md");
+  assert.ok(entry);
+  assert.equal(entry.action, "regenerated");
+  const readme = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
+  assert.ok(readme.includes("<!-- doc-suite:generated-index -->"));
+});
+
 test("existing migrate-temp path blocks before mutation", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/tasks/0001-schema.md", legacyTask("TASK-0001", "schema"), "# schema\n");
@@ -343,6 +437,8 @@ test("existing migrate-temp path blocks before mutation", async () => {
 
   assert.ok(report.blockers.some((blocker) => blocker.code === "rename-temp-collision"));
   assert.equal(report.ok, false);
+  assert.equal(report.applied, false);
+  assert.equal(report.failureStage, "preflight");
   assert.equal(fs.readFileSync(path.join(repo, "docs/tasks/0001-schema.md.migrate-tmp"), "utf8"), "leftover");
   assert.ok(fs.existsSync(path.join(repo, "docs/tasks/0001-schema.md")));
 });
@@ -359,6 +455,10 @@ test("post-apply audit errors mark the report as failed", async () => {
 
   assert.deepEqual(report.blockers, []);
   assert.equal(report.ok, false);
+  // The mutation landed; validation failed afterwards — the report must say so
+  // instead of letting `ok:false` read like a rollback.
+  assert.equal(report.applied, true);
+  assert.equal(report.failureStage, "validation");
   assert.ok(report.validation.auditErrors.some((error) => error.code === "missing-section"));
 });
 

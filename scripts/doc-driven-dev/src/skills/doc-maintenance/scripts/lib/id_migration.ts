@@ -3,11 +3,13 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { buildIndex as buildAdrIndex, writeIndexFile } from "../../../adr-doc/scripts/lib/adr_utils";
 import { generateArtifactId, isLegacyArtifactId, isNewArtifactId } from "../../../lib/artifact_id";
 import { auditDocuments } from "../../../lib/doc_audit";
 import { configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc, residentTypesForDir, writeGeneratedIndex } from "../../../lib/doc_suite_utils";
 import { isIndexFileName, isInsideRealpath, normalizeDir } from "../../../lib/document_utils";
-import { auditExperimentLogs, auditImplementationRecords, updateIndexForExperimentDir, updateIndexForMarkdownDir } from "../../../impl-doc/scripts/lib/impl_doc_utils";
+import { auditExperimentLogs, auditImplementationRecords } from "../../../impl-doc/scripts/lib/impl_doc_utils";
+import { applyImplIndexSync, planImplIndexSync } from "../../../impl-doc/scripts/lib/impl_index_sync";
 
 const IMPL_IR_DIR = "docs/impl/ir";
 const IMPL_EXP_DIR = "docs/impl/exp";
@@ -51,14 +53,16 @@ type RewriteEntry = {
 };
 
 type IndexEntry = {
-  action: "regenerated" | "hand-curated-rewritten" | "skipped";
-  path: string;
+  action: "regenerated" | "skipped" | "blocked";
+  index: string;
+  reason?: string;
 };
 
 type IdMigrationReport = {
   applied: boolean;
   ok: boolean;
   blockers: Blocker[];
+  failureStage?: "preflight" | "validation";
   indexes: IndexEntry[];
   mappings: IdMapping[];
   renames: PlannedRename[];
@@ -482,31 +486,70 @@ async function regenerateIndexes(
     // A symlinked index file (including a broken symlink) is never written
     // through: the helpers below resolve and write this path directly.
     if (isSymlinkPath(readmePath)) {
-      results.push({ action: "skipped", path: relReadme });
+      results.push({ action: "skipped", index: relReadme });
       continue;
     }
-    if (dirType === "impl") {
-      const result = updateIndexForMarkdownDir(cwd, dir);
-      results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
+    // Impl dirs regenerate through the impl-doc owner sync engine: plan the
+    // reconcile, then apply pinned to that plan's hash (Issue #188).
+    if (dirType === "impl" || dirType === "impl-exp") {
+      const kind = dirType === "impl" ? "ir" : "exp";
+      const existing = fs.existsSync(readmePath) ? fs.readFileSync(readmePath, "utf8") : null;
+      // A README without the generated marker is hand-curated — the same
+      // classification the shared branch applies below — and is never
+      // rewritten here (adopting one is promote_index's job).
+      if (existing !== null && !existing.includes(GENERATED_INDEX_MARKER)) {
+        results.push({ action: "skipped", index: relReadme, reason: "hand-curated" });
+        continue;
+      }
+      try {
+        const plan = planImplIndexSync(cwd, kind, dir);
+        if (plan.verdict === "rejected" || plan.verdict === "in-sync") {
+          results.push({ action: "skipped", index: relReadme, reason: plan.reason ?? "in-sync" });
+          continue;
+        }
+        const applied = applyImplIndexSync(cwd, kind, dir, { expectPlanHash: plan.planHash });
+        results.push(applied.written
+          ? { action: "regenerated", index: relReadme }
+          : { action: "blocked", index: relReadme, reason: applied.plan.reason ?? "apply-declined" });
+      } catch (error) {
+        results.push({
+          action: "blocked",
+          index: relReadme,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
       continue;
     }
-    if (dirType === "impl-exp") {
-      const result = updateIndexForExperimentDir(cwd, dir);
-      results.push({ action: result.written ? "regenerated" : "hand-curated-rewritten", path: relReadme });
+    // docs/adr regenerates through the adr-doc owner writer, which itself
+    // refuses to overwrite a hand-curated index.
+    if (dirType === "adr") {
+      try {
+        const content = await buildAdrIndex(cwd, dir);
+        const result = writeIndexFile(path.join(cwd, dir), content, false);
+        results.push(result.written
+          ? { action: "regenerated", index: relReadme }
+          : { action: "skipped", index: relReadme, reason: "hand-curated" });
+      } catch (error) {
+        results.push({
+          action: "blocked",
+          index: relReadme,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
       continue;
     }
     if (!fs.existsSync(readmePath)) {
-      results.push({ action: "skipped", path: relReadme });
+      results.push({ action: "skipped", index: relReadme, reason: "missing-index" });
       continue;
     }
     const existing = fs.readFileSync(readmePath, "utf8");
     if (!existing.includes(GENERATED_INDEX_MARKER)) {
-      results.push({ action: "hand-curated-rewritten", path: relReadme });
+      results.push({ action: "skipped", index: relReadme, reason: "hand-curated" });
       continue;
     }
     const seedType = dirType && (docTypes as readonly string[]).includes(dirType) ? dirType : "discovery";
     await writeGeneratedIndex(cwd, seedType, dir, { forceIndex: true });
-    results.push({ action: "regenerated", path: relReadme });
+    results.push({ action: "regenerated", index: relReadme });
   }
   return results;
 }
@@ -691,6 +734,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
       applied: false,
       ok: false,
       blockers,
+      failureStage: "preflight",
       indexes: [],
       mappings: mappingReports,
       renames,
@@ -750,6 +794,7 @@ async function migrateArtifactIds(options: MigrationOptions): Promise<IdMigratio
     applied: Boolean(options.apply),
     ok: blockers.length === 0 && !validationFailed,
     blockers,
+    failureStage: validationFailed ? "validation" : undefined,
     indexes,
     mappings: mappingReports,
     renames,
