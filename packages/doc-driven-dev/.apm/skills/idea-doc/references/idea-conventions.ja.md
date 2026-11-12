@@ -173,10 +173,10 @@ idea 文書をファイル名順に4列の Markdown テーブルで列挙しま�
   `superseded`）の idea は下段の `## Settled` テーブルにファイル名昇順で
   掲載します。Settled の行もリンクは維持され、履歴を隠さずに強調を抑える
   構成です。
-- idea 文書の追加や `status` の変更時は索引を更新してください。
-  `doc_maintenance.js plan|apply` が管理索引を再生成します。実行するまでの間、
-  `doc_status lint` がドリフト（`index-metadata-mismatch`、`index-ordering`）を
-  報告します。
+- idea 文書の追加や `status` の変更時は索引を更新してください — materialize は
+  `doc_maintenance.js index plan|apply` で明示的に行います（creator は索引を
+  書き込みません）。実行するまでの間、`doc_status lint` がドリフト
+  （`index-metadata-mismatch`、`index-ordering`）を報告します。
 
 ## サブディレクトリのグループ化
 

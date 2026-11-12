@@ -102,7 +102,7 @@ normalizations no longer appear as findings.
 Status edits are manual front-matter changes — no command transitions a
 document — but they can move a row between the in-flight table and the
 `## Settled` tier. On every `status` change, regenerate the owning index
-in the same change (`plan` then `apply` with `--type <type>`); `doc_status
+in the same change (`index plan` then `index apply`); `doc_status
 lint` reports the stale index until then. Regeneration is also the
 two-tier format migration.
 

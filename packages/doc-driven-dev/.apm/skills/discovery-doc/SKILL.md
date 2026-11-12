@@ -191,7 +191,8 @@ the discovery document that produced them.
 
 ## Resources
 
-- `scripts/new_discovery.js`: create a discovery document and update its index.
+- `scripts/new_discovery.js`: create a discovery document (index
+  materialization is explicit: `doc_maintenance.js index plan|apply`).
 - `references/discovery-conventions.md`: directory, filename, status, relations,
   required content, and index conventions
   — **load MANDATORY before any create operation**
