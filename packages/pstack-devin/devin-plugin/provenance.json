@@ -26,6 +26,18 @@
       {
         "path": "docs/harness/devin.md",
         "sha256": "9cd06659b6f1f3edcd33a4cc7168eae7ac4411b25c96f20ebc0d002bcdbd0d83"
+      },
+      {
+        "path": "skills/setup-pstack-devin/SKILL.md",
+        "sha256": "2cb1112c020552777e4c59378cb265e385d0bb1294be5fa74aa8861a8127656b"
+      },
+      {
+        "path": "skills/setup-pstack-devin/scripts/roles.json",
+        "sha256": "e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af"
+      },
+      {
+        "path": "skills/setup-pstack-devin/scripts/setup.mjs",
+        "sha256": "25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe"
       }
     ],
     "overwrites": [
@@ -33,6 +45,11 @@
         "path": "agents/poteto-agent.md",
         "sha256": "b00b625d699a3476e57acc375d4e6681e2202c85ea05db1f656a31082b896958",
         "upstreamSha256": "979f18abd000d185a0b4c41a2a4111c0910596a7f5c81cbb571885bc721b2bf7"
+      },
+      {
+        "path": "skills/setup-pstack/SKILL.md",
+        "sha256": "0cf2ae8da53bf55dffaa90546a50911980f2372b19889ea073078302a99c9758",
+        "upstreamSha256": "d2623ef1447401ce6bd8ed0fa6e435f4f3271c5a569e5118cadde89061d179f8"
       }
     ]
   },
