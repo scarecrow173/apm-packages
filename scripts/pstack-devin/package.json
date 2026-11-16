@@ -1,0 +1,20 @@
+{
+  "name": "pstack-devin-build",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build and contract-test environment for the pstack-devin APM package",
+  "scripts": {
+    "test": "tsx --test tests/*.test.ts",
+    "lint:md": "markdownlint-cli2 --no-globs --config ../../packages/pstack-devin/.markdownlint-cli2.jsonc \"../../packages/pstack-devin/**/*.md\""
+  },
+  "packageManager": "pnpm@11.2.2",
+  "dependencies": {
+    "js-yaml": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "markdownlint-cli2": "^0.22.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.6.3"
+  }
+}

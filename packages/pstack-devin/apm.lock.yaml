@@ -1,0 +1,18 @@
+lockfile_version: '1'
+apm_version: 0.33.0
+dependencies:
+- repo_url: cursor/plugins
+  name: pstack
+  host: github.com
+  resolved_commit: bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7
+  resolved_ref: bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7
+  version: 0.15.42
+  virtual_path: harness/pstack/claude-code
+  is_virtual: true
+  package_type: agent_plugin
+  content_hash: sha256:cedc7e3791f374b6b47f9b379670438704219baaa507845a4f680ce4f66b44ec
+  is_dev: true
+  target_subset:
+  - copilot
+  declared_license: MIT
+deployments: []
