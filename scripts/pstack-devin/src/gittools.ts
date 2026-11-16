@@ -194,3 +194,33 @@ export function catFileBlobs(
     child.stdin.end();
   });
 }
+
+/** The repo root if it is the top of a git work tree, else null. Requiring
+ *  the toplevel to equal `repoRoot` (not merely "inside some work tree")
+ *  keeps fixture tmpdirs from mutating a foreign index when the temp dir
+ *  happens to sit inside an unrelated repository. */
+export function workTreeRoot(repoRoot: string): string | null {
+  try {
+    const inside = execFileSync(
+      "git",
+      ["-C", repoRoot, "rev-parse", "--is-inside-work-tree"],
+      { encoding: "utf8" },
+    ).trim();
+    if (inside !== "true") return null;
+    const top = execFileSync(
+      "git",
+      ["-C", repoRoot, "rev-parse", "--show-toplevel"],
+      { encoding: "utf8" },
+    ).trim();
+    // Textual compare on purpose — no realpath: on win32 a subst/mapped
+    // drive would resolve to a different spelling than git's cwd-derived
+    // toplevel and silently disable the gates in the real repo.
+    const norm = (p: string): string => {
+      const n = path.resolve(p);
+      return process.platform === "win32" ? n.toLowerCase() : n;
+    };
+    return norm(top) === norm(repoRoot) ? top : null;
+  } catch {
+    return null;
+  }
+}

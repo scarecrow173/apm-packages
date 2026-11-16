@@ -4,7 +4,13 @@ import { execFileSync } from "node:child_process";
 import { load } from "js-yaml";
 import type { BuildConfig } from "./config.js";
 import { sha256File, writeFileSafe, rmrf } from "./fsx.js";
-import { fetchAtCommit, listTree, treeSha, catFileBlobs } from "./gittools.js";
+import {
+  fetchAtCommit,
+  listTree,
+  treeSha,
+  catFileBlobs,
+  workTreeRoot,
+} from "./gittools.js";
 import { scanTree } from "./inventory.js";
 import type { Inventory } from "./inventory.js";
 import { applyOverlay } from "./overlay.js";
@@ -80,23 +86,18 @@ function countFiles(dir: string): number {
 /** Best-effort git staging of the generated tree: `git add -A` the
  *  devin-plugin pathspec, then `update-index --chmod=+x` each executable so
  *  the committed tree keeps exec bits even though the repo is committed
- *  from Windows (`core.fileMode=false`). Silently no-ops when `repoRoot`
- *  is not inside a git work tree (tests build into tmpdirs). */
+ *  from Windows (`core.fileMode=false`). Silently no-ops unless `repoRoot`
+ *  is itself the top of a git work tree — the hardcoded pathspec must never
+ *  run against a foreign work tree's index (a tmpdir can sit inside an
+ *  unrelated repository). */
 export function stageOutput(repoRoot: string, executables: string[]): void {
-  try {
-    execFileSync(
-      "git",
-      ["-C", repoRoot, "rev-parse", "--is-inside-work-tree"],
-      { stdio: ["ignore", "pipe", "pipe"] },
-    );
-  } catch {
-    return;
-  }
+  const top = workTreeRoot(repoRoot);
+  if (top === null) return;
   const pluginRel = "packages/pstack-devin/devin-plugin";
   try {
     execFileSync(
       "git",
-      ["-C", repoRoot, "add", "-A", "--", pluginRel],
+      ["-C", top, "add", "-A", "--", pluginRel],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
   } catch {
@@ -106,7 +107,7 @@ export function stageOutput(repoRoot: string, executables: string[]): void {
     try {
       execFileSync(
         "git",
-        ["-C", repoRoot, "update-index", "--chmod=+x", `${pluginRel}/${rel}`],
+        ["-C", top, "update-index", "--chmod=+x", `${pluginRel}/${rel}`],
         { stdio: ["ignore", "pipe", "pipe"] },
       );
     } catch {
@@ -246,6 +247,11 @@ export async function buildPlugin(
     }
   }
 
-  stageOutput(path.resolve(pkg, "..", ".."), inv.executables);
+  // A check-out/temp rebuild must never touch the index: stageOutput's
+  // pathspec is hardcoded to the canonical devin-plugin dir, so stage only
+  // when this build actually wrote there (no outDir override).
+  if (opts.outDir === undefined) {
+    stageOutput(path.resolve(pkg, "..", ".."), inv.executables);
+  }
   return { outDir, fileCount, treeSha: sha };
 }

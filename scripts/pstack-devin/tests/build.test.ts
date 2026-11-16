@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { loadBuildConfig } from "../src/config.js";
-import { buildPlugin } from "../src/build.js";
+import { buildPlugin, stageOutput } from "../src/build.js";
 import { makeFixtureRepo, writeFixturePackage, tmpdir, git } from "./helpers.js";
 
 const UP = "harness/pstack/claude-code";
@@ -135,4 +135,41 @@ test("failed build preserves a previous output dir", async () => {
     "keep me",
   );
   assert.deepEqual(fs.readdirSync(outDir), ["SENTINEL.txt"]);
+});
+
+test("staging is skipped for temp rebuilds and non-toplevel roots", async () => {
+  const repo = makeFixtureRepo(upstreamFiles());
+  const root = writeFixturePackage(tmpdir(), {
+    commit: repo.commit,
+    upstreamRepoUrl: repo.dir,
+    overlayFiles: [DEVIN_MANIFEST],
+  });
+  // A real work-tree root so the staging gates apply (tmpdir is not inside
+  // any repository by default).
+  git(root, "init", "-q", ".");
+  const cfg = loadBuildConfig(root);
+
+  // An overridden outDir (check-out/temp rebuild) must never touch the
+  // index — the stageOutput pathspec names only the canonical dir.
+  await buildPlugin(cfg, { outDir: path.join(tmpdir(), "check-out") });
+  assert.equal(git(root, "ls-files", "-s"), "");
+
+  // Even called directly, stageOutput no-ops below the work-tree toplevel:
+  // the hardcoded pathspec is only meaningful at the root itself.
+  stageOutput(path.join(root, "packages"), []);
+  assert.equal(git(root, "ls-files", "-s"), "");
+
+  // The canonical build stages the generated tree, exec bits included.
+  await buildPlugin(cfg);
+  const staged = git(
+    root, "ls-files", "-s", "--", "packages/pstack-devin/devin-plugin",
+  );
+  assert.match(
+    staged,
+    /^100755 [0-9a-f]{40} \d\tpackages\/pstack-devin\/devin-plugin\/skills\/x\/run\.sh$/m,
+  );
+  assert.match(
+    staged,
+    /^100644 [0-9a-f]{40} \d\tpackages\/pstack-devin\/devin-plugin\/skills\/x\/SKILL\.md$/m,
+  );
 });

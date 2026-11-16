@@ -3,6 +3,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { loadBuildConfig } from "./config.js";
 import { buildPlugin } from "./build.js";
+import { workTreeRoot } from "./gittools.js";
 import { sha256File, rmrf } from "./fsx.js";
 
 /** Pathspec of the generated tree, relative to the repo root. Matches the
@@ -57,36 +58,6 @@ function diffTrees(expected: string, actual: string): string[] {
     }
   }
   return diffs.sort();
-}
-
-/** The repo root if it is the top of a git work tree, else null. Requiring
- *  the toplevel to equal `repoRoot` (not merely "inside some work tree")
- *  keeps fixture tmpdirs from mutating a foreign index when the temp dir
- *  happens to sit inside an unrelated repository. */
-function workTreeRoot(repoRoot: string): string | null {
-  try {
-    const inside = execFileSync(
-      "git",
-      ["-C", repoRoot, "rev-parse", "--is-inside-work-tree"],
-      { encoding: "utf8" },
-    ).trim();
-    if (inside !== "true") return null;
-    const top = execFileSync(
-      "git",
-      ["-C", repoRoot, "rev-parse", "--show-toplevel"],
-      { encoding: "utf8" },
-    ).trim();
-    // Textual compare on purpose — no realpath: on win32 a subst/mapped
-    // drive would resolve to a different spelling than git's cwd-derived
-    // toplevel and silently disable the gates in the real repo.
-    const norm = (p: string): string => {
-      const n = path.resolve(p);
-      return process.platform === "win32" ? n.toLowerCase() : n;
-    };
-    return norm(top) === norm(repoRoot) ? top : null;
-  } catch {
-    return null;
-  }
 }
 
 /** Verify the committed devin-plugin tree equals a fresh rebuild. Rebuilds
@@ -160,18 +131,20 @@ export async function checkGenerated(repoRoot: string): Promise<void> {
             "`pnpm --dir scripts/pstack-devin run build` and commit",
         );
       }
+      // `-z` emits NUL-terminated records with verbatim paths — no
+      // C-quoting of non-ASCII names (core.quotepath) and newline-safe.
       const ls = execFileSync(
         "git",
-        ["-C", top, "ls-files", "-s", "--", PLUGIN_REL],
+        ["-C", top, "ls-files", "-s", "-z", "--", PLUGIN_REL],
         { encoding: "utf8" },
       );
       const execInIndex = new Set<string>();
-      for (const line of ls.split("\n")) {
-        if (line === "") continue;
-        const m = /^(\d{6}) [0-9a-f]{40} \d\t(.+)$/.exec(line);
+      for (const rec of ls.split("\0")) {
+        if (rec === "") continue;
+        const m = /^(\d{6}) [0-9a-f]{40} \d\t([\s\S]+)$/.exec(rec);
         if (m === null) {
           throw new Error(
-            `malformed git ls-files -s record: ${JSON.stringify(line)}`,
+            `malformed git ls-files -s record: ${JSON.stringify(rec)}`,
           );
         }
         if (m[1] === "100755") {
