@@ -317,8 +317,9 @@ observed:
   ],
   // `apm install` materializes the pinned upstream tree under apm_modules/.
   // It is vendored bytes, not authored documentation, so it is never linted.
+  // The ignore is resolved relative to the invocation cwd, so it must be anchored with `**/`.
   "ignores": [
-    "apm_modules/**"
+    "**/apm_modules/**"
   ],
   "config": {
     "default": true,
