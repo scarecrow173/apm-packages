@@ -150,5 +150,24 @@ packages/pstack-devin/
 
 ## Install
 
-Not published yet. The APM and Devin install paths, including known
-limitations, are verified and documented in later issues of the chain.
+Two install paths serve the two artifacts — pick per goal:
+
+| Path | Command | What you get |
+| --- | --- | --- |
+| Devin plugin | `devin plugins install scarecrow173/apm-packages#packages/pstack-devin/devin-plugin` | Full pstack on Devin CLI — every `/pstack:*` skill, the `pstack:poteto-agent`/`pstack:comment-sicko` agents, and the always-on `AGENTS.md` rule |
+| APM package | `apm install pstack-devin@apm-packages` (after `apm marketplace add scarecrow173/apm-packages`) | Only this package's `.apm/` primitives — today the single `setup-pstack-devin` skill |
+
+`apm install` deploys APM primitives only; it cannot install or activate
+the Devin plugin. For a local checkout, pass the plugin directory
+directly — `--local` scopes the install to this machine:
+
+```bash
+devin plugins install /path/to/apm-packages/packages/pstack-devin/devin-plugin --local
+```
+
+Remove with `devin plugins remove pstack` (add `--local` for `--local`
+installs). Upstream `cursor/plugins` also ships a plugin named `pstack`,
+and only one can be installed at a time — `devin plugins info pstack`
+disambiguates: this distribution reports `version:` `0.1.0` and a
+`source:` under `scarecrow173/apm-packages`. Verified install evidence
+lives in `docs/distribution-verification.md`.
