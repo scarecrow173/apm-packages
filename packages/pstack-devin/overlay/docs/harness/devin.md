@@ -16,7 +16,7 @@ Do not run pstack skills, spawn pstack subagents, or apply these mappings unless
 | `Grep`, `Glob` | `grep`, `find_file_by_name`, or `exec` with `rg` |
 | `Bash`, `Shell` | `exec` |
 | `Read` | `read` |
-| Run another pstack skill (`/name` or "the **name** skill") | Invoke it with the `skill` tool when it is cataloged. Otherwise `read` `<pstack>/skills/<name>/SKILL.md` and follow it. When you tell the user to type it, write `/pstack:<name>` — the `/pstack:` prefix namespaces every pstack skill and `pstack:<agent>` profile on Devin. |
+| Run another pstack skill (`/name` or "the **name** skill") | Invoke it with the `skill` tool when it is cataloged. Otherwise `read` `<pstack>/skills/<name>/SKILL.md` and follow it. When you tell the user to type it, write `/pstack:<name>` — the `/pstack:` prefix (`pstack-prefix`) namespaces every pstack skill and `pstack:<agent>` profile on Devin. |
 | MCP server lookups | MCP availability is environment-dependent on Devin. When a step needs one and none is connected, the parent performs the lookup itself or skips the step with a line — say which (alternative). |
 
 If `run_subagent` is absent — `subagents_enabled: false` in config, or org policy sets subagents to None — pstack delegation cannot run. Say so; never emulate a subagent with a plain reply.
@@ -53,8 +53,8 @@ Cursor `Task` fields map onto `run_subagent` params or the spawned profile.
 | `gemini-*` or another non-Devin slug | Omit `model` so the subagent runs on the session model, and say so. |
 | `auto`, `inherit-parent` | Omit `model` — the subagent inherits the parent model. |
 | `fusion-*` as a subagent model slug | Drop it — Fusion is a lead + `sidekick` pair, not a subagent model. See Routing. |
-| `~/.cursor/rules/pstack-models.mdc` | `~/.devin/rules/pstack-models.md` with `trigger: always_on` frontmatter. Devin loads `~/.devin/rules/*.md` into every session, so its role lines are already in context; if they are not, `read` the file. Written by setup-pstack — `#215`. |
-| Per-role model diversity (arena runners, panels, per-arm models) | `model:`-pinned custom profiles under `~/.config/devin/agents/` (`%APPDATA%\devin\agents\` on Windows) — setup-pstack writes one `pstack-M` profile per detected slug plus a read-only `pstack-M-ro` variant. Spawn `profile: "pstack-M"` so each fan-out entry keeps its own model. |
+| `~/.cursor/rules/pstack-models.mdc` | `~/.devin/rules/pstack-models.md` with `trigger: always_on` frontmatter. Devin loads each `~/.devin/rules/*.md` rule per its `trigger` frontmatter, and `always_on` puts the role lines in every session's context; if they are not there, `read` the file. Written by setup-pstack — `#215`. |
+| Per-role model diversity (arena runners, panels, per-arm models) | `model:`-pinned custom profiles in `agents/` under your Devin config root (`~/.config/devin/` or `%APPDATA%\devin\`) — setup-pstack writes one `pstack-M` profile per detected slug plus a read-only `pstack-M-ro` variant. Spawn `profile: "pstack-M"` so each fan-out entry keeps its own model. |
 
 `agent.subagent_model` in config is the user-level lever that sets the default model for every subagent.
 
@@ -65,7 +65,7 @@ Devin loads every `.md` file in `~/.devin/rules/` per its `trigger` frontmatter,
 - Detect. `devin models list` prints the model families and slugs this session can use — that is the detected set. `inherit-parent` and `auto` are always valid aliases.
 - Defaults. Map each default slug with the rows above: write a real Devin slug for each role, or `inherit-parent`.
 - Write. Write `~/.devin/rules/pstack-models.md` with `trigger: always_on` frontmatter, then the comment lines, the `# budget` line, and one line per role. Overwrite the whole file. Never put the role lines in `~/.devin/global_rules.md` or project `AGENTS.md`.
-- Profiles. For each real slug the rule names, write a `model:`-pinned profile under `~/.config/devin/agents/` (`%APPDATA%\devin\agents\` on Windows): a `pstack-M` profile and a read-only `pstack-M-ro` variant with `allowed-tools` restricted. Fan-out steps spawn these profiles so each entry keeps its own model.
+- Profiles. For each real slug the rule names, write a `model:`-pinned profile in `agents/` under your Devin config root (`~/.config/devin/` or `%APPDATA%\devin\`): a `pstack-M` profile and a read-only `pstack-M-ro` variant with `allowed-tools` restricted. Fan-out steps spawn these profiles so each entry keeps its own model.
 
 ## Paths
 
@@ -75,7 +75,7 @@ Devin loads every `.md` file in `~/.devin/rules/` per its `trigger` frontmatter,
 | `.cursor-plugin/plugin.json` | `.devin-plugin/plugin.json`. When several manifests exist, Devin prefers `.devin-plugin/` over `.claude-plugin/` and root `plugin.json`. |
 | `.cursor/skills/` | `.devin/skills/` (project). |
 | `~/.cursor/skills/` | Global rules and skills live under the `~/.devin` home root — `~/.devin/rules/` is confirmed; a dedicated global skills dir is `[unverified]`, so prefer project `.devin/skills/`. |
-| `.cursor/rules/*.mdc`, always-applied rules | `~/.devin/rules/<name>.md` with `trigger` frontmatter (`always_on`, `manual`, `model_decision`, `agent`, `glob`), or the project's `AGENTS.md` — Devin reads `AGENTS.md` natively. |
+| `.cursor/rules/*.mdc`, always-applied rules | `~/.devin/rules/<name>.md` with `trigger` frontmatter (`always_on`, `manual`, `model_decision`, `agent`, `glob`), or the project's `AGENTS.md` (`agents-md`) — Devin reads `AGENTS.md` natively. |
 | `https://github.com/cursor/plugins/blob/main/pstack/<path>` | `<pstack>/<path>` when that file exists. The plugin ships the skills, `docs/guide/`, and `README.md`. Read the local copy and never fetch it. Give the user the URL when they need a link. |
 | Transcripts in `~/.cursor/projects/<slug>/agent-transcripts/` | Devin keeps session transcripts but has no stable documented path — say so. When a step needs the transcript, report that it cannot be located rather than globbing the home directory. |
 
@@ -86,12 +86,12 @@ Devin has no Cursor Automations, Bugbot, Cursor cloud agents, Cursor custom mode
 | Cursor | Devin |
 | --- | --- |
 | Cursor Automations: routines, `update_state` routine calls, routine wakeups | Skip with the line. |
-| `api2.cursor.sh` webhooks | Skip with the line — it is the Cursor backend, and nothing on Devin answers it. |
+| `api2.cursor.sh` webhooks | Skip with the line — it is the `cursor-api` backend, and nothing on Devin answers it. |
 | `SendToUser` secret requests | ERROR — secrets never transit the agent. Refuse; do not relay, store, or type them. |
 | Bugbot | Bugbot comments on a GitHub PR are ordinary review threads, so triage them with the forge command the step gives (alternative). Skip a step that starts, waits for, or configures Bugbot when the PR has no Bugbot check or comment. |
-| Cursor cloud agents, the cloud dashboard, a cloud VM | ERROR when the workflow requires the cloud resource itself; skip with the line when optional. For `environment: "cloud"` on a spawn, see Subagent fields — always ERROR on Devin. |
-| Cursor custom modes, `/loop` | Skip with the line. |
-| `/add-plugin`, `/plugin marketplace`, `claude plugin update` | `devin plugins install owner/repo#sub/dir` installs a Devin plugin from a repo subfolder (alternative). |
+| Cursor cloud agents (`cloud-agent`), the cloud dashboard, a cloud VM | ERROR when the workflow requires the cloud resource itself; skip with the line when optional. For `environment: "cloud"` on a spawn, see Subagent fields — always ERROR on Devin. |
+| Cursor custom modes (`custom-mode`), `/loop` | Skip with the line. |
+| Cursor `plugin-install` commands: `/add-plugin`, `/plugin marketplace`, `claude plugin update` | `devin plugins install owner/repo#sub/dir` installs a Devin plugin from a repo subfolder (alternative). |
 
 ## External skills
 
