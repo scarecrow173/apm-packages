@@ -44,11 +44,17 @@ notice instead of passing — install with `mise install`.
 | `pnpm --dir scripts/pstack-devin run verify:l3` | `tsx src/l3-dist.ts` |
 | `pnpm --dir scripts/pstack-devin run verify` | `verify:l1` + `verify:l2` + `verify:l3` + `pnpm test` |
 
-## Deferred — issue `#218`
+## Deferred — issue `#218` (delivered)
 
 | What | Why deferred |
 | --- | --- |
 | Real Devin CLI session runs — invoking a `/pstack:<skill>`, spawning `pstack:<agent>` subagents, observing model-backed behavior | requires a paid Devin environment and model calls; **no static check proves agent runtime quality** — this boundary is explicit and non-negotiable |
+
+`#218` delivered this layer as recorded, non-CI evidence: per-skill
+real-CLI probes and verdicts live in `runtime-verification.md`, and its
+`## 5. Compatibility` section is the support matrix (verified vs
+unsupported vs not-verified surfaces). These stay manual/opt-in
+artifacts — nothing model-backed joins the deterministic checks.
 
 ## CI policy
 

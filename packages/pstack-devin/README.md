@@ -132,7 +132,10 @@ mise exec -- pnpm --dir scripts/pstack-devin run verify   # L1 + L2 + L3 + unit 
 The per-check guarantee matrix lives in `docs/verification-matrix.md`.
 These are static checks: they prove the shipped tree is consistent and
 correctly shaped for install — they do **not** prove agent runtime
-quality. Live Devin session validation is deferred to `#218`.
+quality. Real Devin CLI session evidence lives in
+`docs/runtime-verification.md` (`#218`): per-skill probes and verdicts,
+plus the compatibility/support matrix in its `## 5. Compatibility`
+section.
 
 ## Layout
 
@@ -147,6 +150,35 @@ packages/pstack-devin/
   devin-plugin/      # generated Devin plugin output (committed; never edit by hand)
   .apm/              # APM primitives (skills/setup-pstack-devin/ ships; more later)
 ```
+
+## Quickstart
+
+1. Install the Devin plugin (both install paths are under
+   [Install](#install)):
+
+   ```bash
+   devin plugins install scarecrow173/apm-packages#packages/pstack-devin/devin-plugin
+   ```
+
+2. Start a **new** `devin` session — plugin skills, `pstack:*` agent
+   profiles, and generated rules load at session start. Every recorded
+   probe ran in a session begun after the install and resolved
+   `/pstack:*`; whether a running session picks up an install is not
+   verified (`docs/runtime-verification.md`, `docs/migration.md` §5).
+3. Invoke `/pstack:poteto-help`. Verified on `devin 3000.12.57`
+   (Windows): the skill resolves, its body loads, and it routes to the
+   right pstack file (`docs/runtime-verification.md` §2).
+
+Further reading:
+
+- `docs/runtime-verification.md` — per-skill real-CLI evidence and the
+  compatibility/support matrix.
+- `docs/migration.md` — switching between upstream `pstack` and this
+  distribution: name collision, backup, rollback, config locations.
+- `docs/verification-matrix.md` — what each deterministic `verify:*`
+  check proves.
+- `docs/distribution-verification.md` — install/remove evidence for
+  both plugin paths and the APM path.
 
 ## Install
 
@@ -170,4 +202,5 @@ installs). Upstream `cursor/plugins` also ships a plugin named `pstack`,
 and only one can be installed at a time — `devin plugins info pstack`
 disambiguates: this distribution reports `version:` `0.1.0` and a
 `source:` under `scarecrow173/apm-packages`. Verified install evidence
-lives in `docs/distribution-verification.md`.
+lives in `docs/distribution-verification.md`; switching between the two
+`pstack` plugins is covered by `docs/migration.md`.

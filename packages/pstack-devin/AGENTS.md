@@ -66,9 +66,28 @@ surface; `docs/` holds maintainer-facing evidence, not user docs.
 - Do not edit the root `apm.yml`, `apm.lock.yaml`, or marketplace block;
   registration is handled in the marketplace issue (`#217`).
 - `docs/` files are maintainer-facing and may stay English-only; README and
-  AGENTS must remain bilingual.
+  AGENTS must remain bilingual. `docs/migration.md` is the exception: it is
+  user-facing and bilingual — keep `migration.ja.md` in sync.
 - `apm install` may append `apm_modules/` to this directory's `.gitignore`;
   that line is expected.
+
+## Runtime behavior (session start)
+
+- Plugin skills, `pstack:*` agent profiles, and `~/.devin/rules/` rules
+  load at session start: an install or a `/pstack:setup-pstack` run
+  applies to new sessions. Every recorded probe ran in a session begun
+  after the `--local` install; whether a running session picks up an
+  install is not verified.
+- pstack is opt-in: the plugin's always-on `AGENTS.md` only maps adapter
+  docs — nothing activates until a `/pstack:<skill>` invocation. Proven
+  by the non-interference control (`docs/runtime-verification.md`
+  §3.7): a plain prompt with the plugin installed produced a plain
+  answer and zero `pstack` activity.
+- Evidence map: real-CLI probes and verdicts in
+  `docs/runtime-verification.md` (its `## 5. Compatibility` is the
+  support matrix); deterministic checks in
+  `docs/verification-matrix.md`; consumer switching guidance in
+  `docs/migration.md`.
 
 ## Validation
 

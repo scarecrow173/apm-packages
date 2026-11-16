@@ -501,3 +501,33 @@ invocation.
 10. `--export` writes only after a turn completes: the killed tdd run
     left no export file, and `sessions.model` stayed blank — both are
     expected failure shapes for a mid-run kill, not data loss bugs.
+
+## 5. Compatibility
+
+Component versions under test (full environment in §1):
+
+| Component | Version | Evidence |
+| --- | --- | --- |
+| Upstream `cursor/plugins` `harness/pstack/claude-code` | commit `bf0c7cd8`, upstream `version:` `0.15.42` | `upstream.yml` pin |
+| This distribution | `pstack` plugin `version:` `0.1.0` (`.devin-plugin/plugin.json`) | `devin plugins info pstack` — `distribution-verification.md` §3/§4 |
+| Devin CLI | `devin 3000.12.57 (96542e930752)` | §1 |
+| Platform | Windows, git-bash | §1 |
+
+Support surface — `verified` rows have recorded evidence in this log;
+anything else says so explicitly:
+
+| Surface | Status | Evidence |
+| --- | --- | --- |
+| Devin CLI local sessions | **verified** — all §2/§3 probes ran in `-p` mode on the recorded install | §2–§3 |
+| Devin Desktop local sessions | in scope per the adapter contract (plugin subagents load in local Devin agents — CLI and Desktop; `.devin-plugin/plugin.json` `platforms: ["local"]`); **not verified** | `devin-adapter-decisions.md` §6 |
+| Devin Cloud sessions | **unsupported** — plugin subagents cannot load `pstack:*` profiles in cloud runs (adapter `environment: "cloud"` → ERROR); personal-plugin installs may sync the plugin toward cloud sessions, but the profiles stay local-only. Cloud behavior itself **not verified** | `devin-adapter-decisions.md` §2/§6; `distribution-verification.md` §4 sync line |
+| Cursor custom modes, Automations, `/loop` | no Devin equivalent — adapter emits `Skipped on Devin:` lines (`skip` class); adaptation lines observed in arena/interrogate outputs | adapter doc "Cursor-only features"; §3.5/§3.6 |
+| `cursor-team-kit` skills (`deslop`, `control-cli`, `control-ui`) | `unavailable-external` — not installable as a Devin plugin; adapter prescribes a plain-words fallback | `devin-adapter-decisions.md` §3 |
+| Fusion `sidekick` routing | **not present** in the tested environment — session model `swe-2-flash-high` is not a Fusion pair; the `run_subagent` fan-out path is what was verified | §3.4–§3.6 |
+| `pstack-*` model-pinned profiles + `~/.devin/rules/pstack-models.md` | **partial** — delegation, adapter read, detection attempt, and spec fallback verified; the interactive apply that writes rule + profiles unreachable in `-p` | §3.1 |
+| Exec-gated operations | degrade honestly — non-interactive `exec` and outside-workspace `read` denials pushed skills to read-only verification, and they reported it; observed in every mutating/fan-out probe | deviations 6–7; §3.1, §3.3–§3.6 |
+| Interactive question flows in `-p` | `ask_user_question` auto-cancels in print mode — question-gated steps exercise only their fallback path there | deviation 2; §3.1 |
+
+Per-skill verdicts stay in §3: `partial` means the non-interactively
+reachable portion was verified and the interactive remainder was not —
+it does not mean failed.

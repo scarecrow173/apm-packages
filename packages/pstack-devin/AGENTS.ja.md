@@ -69,8 +69,30 @@
 - ルートの `apm.yml`、`apm.lock.yaml`、marketplace ブロックを編集しない。
   登録は Marketplace Issue(`#217`)で扱う。
 - `docs/` はメンテナー向けで英語のみ可。README と AGENTS は日英必須。
+  例外は `docs/migration.md`: 利用者向けで日英両方 —
+  `migration.ja.md` との同期を維持する。
 - `apm install` がこのディレクトリの `.gitignore` に `apm_modules/` を
   追記することがあるが、それは想定内。
+
+## 実行時の振る舞い(セッション開始時)
+
+- プラグインスキル、`pstack:*` エージェントプロファイル、
+  `~/.devin/rules/` ルールはセッション開始時にロードされる:
+  インストールや `/pstack:setup-pstack` の実行は新しいセッションに
+  適用される。記録済みの全プローブは `--local` インストール後に
+  開始したセッションで実行した。実行中のセッションが
+  インストールを取り込むかは未検証。
+- pstack は opt-in: プラグインの常時有効 `AGENTS.md` はアダプター
+  ドキュメントを指し示すだけで、`/pstack:<skill>` の呼び出しが
+  あるまで何も有効化しない。非干渉コントロール実行
+  (`docs/runtime-verification.md` §3.7)で実証済み: プラグイン
+  導入済みでも通常プロンプトは通常の回答を返し、`pstack` の
+  活動はゼロだった。
+- 証跡マップ: 実 CLI プローブと判定は
+  `docs/runtime-verification.md`(`## 5. Compatibility` が
+  サポートマトリクス)。決定的チェックは
+  `docs/verification-matrix.md`。利用者向け切り替え手順は
+  `docs/migration.md`(日本語は `docs/migration.ja.md`)。
 
 ## 検証
 
