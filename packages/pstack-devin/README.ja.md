@@ -4,9 +4,9 @@
 (`harness/pstack/claude-code`) を、固定した上流コミットにピン留めして
 Devin CLI 向けに配布するパッケージ。
 
-> 状態: 決定的ビルダーは実装済みで、生成された `devin-plugin/` ツリーは
-> コミット済み。APM `.apm/` プリミティブと Devin オーバーレイ内容は
-> 後続 Issue で追加予定。
+> 状態: 決定的ビルダーは実装済みで、Devin ランタイムアダプターの
+> オーバーレイを含む生成済み `devin-plugin/` ツリーはコミット済み。
+> APM `.apm/` プリミティブは後続 Issue で追加予定。
 > [親Issue](https://github.com/scarecrow173/apm-packages/issues/211)
 > 配下の Issue チェーンを参照。
 
@@ -33,6 +33,42 @@ Devin は別途生成・配布される `devin-plugin/` ディレクトリを利
 上流ファイルは、明示された上書き allowlist を除きバイト単位で同一。
 検証済みの根拠は `docs/upstream-source-decision.md`、再現ログは
 `docs/verification-apm-0.33.0.md` を参照。
+
+## Devin ランタイムアダプター
+
+生成されるプラグインには、Devin 上でのアダプターとして唯一の権威と
+なる `docs/harness/devin.md` が同梱される。上流スキルが使う Cursor
+のツール名や `Task` フィールド名(`Task` → `run_subagent`、
+`AskQuestion` → `ask_user_question`、`subagent_type` → `profile`
+など)を Devin ランタイムへ対応付け、上流の
+`docs/harness/claude-code.md` アダプターと矛盾する場合はこちらが
+優先される。常時有効なルート `AGENTS.md` がこれを指し示すが、
+pstack 自体は opt-in — ユーザーが pstack スキルまたは
+`/pstack:<name>` コマンドを呼び出さない限り何も有効化されない。
+
+`overlay.yml` が強制し、`provenance.json` が記録するオーバーレイ
+方針:
+
+- `agents/poteto-agent.md` は Devin ネイティブな上書き(allowlist
+  済み)。上流の `is_background` frontmatter と
+  `generalPurpose`/`~/.cursor` 参照は機械解析されるプロファイル内に
+  あり、指示レベルの適合では修正できない。
+  `agents/comment-sicko.md` はバイト同一のまま — 純粋なペルソナ
+  記述であり、そのまま Devin で有効。
+- 外部スキル依存の `deslop`、`control-cli`、`control-ui` は
+  `.cursor-plugin/` マニフェストのみを持つ `cursor-team-kit` に
+  同梱されており、Devin プラグインとしてはインストールできない。
+  アダプターはバンドルせず、平文による同等パスのフォールバックを
+  規定する。`docs/devin-adapter-decisions.md` を参照。
+
+この対応付け契約は機械検証される: `audit:compat` スクリプトが生成
+ツリーを走査し、未分類のハーネス API 参照があれば失敗する。上流に
+新しい Cursor API が登場した場合、静かな破壊ではなく監査エラー
+として表面化する。
+
+```bash
+mise exec -- pnpm --dir scripts/pstack-devin run audit:compat
+```
 
 ## `devin-plugin/` の再生成
 

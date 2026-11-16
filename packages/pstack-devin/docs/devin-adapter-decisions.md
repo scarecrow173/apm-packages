@@ -13,44 +13,53 @@ Regenerate with:
 pnpm --dir scripts/pstack-devin exec tsx src/compat-audit.ts
 ```
 
-Run 2026-11-17 against the pinned upstream tree (`upstream.commit` in
-`upstream.yml`): **546 files scanned, 547 findings, 0 unknowns.** A finding is
-one vocabulary-pattern match on one line, so labels share lines and the count
-is findings, not files.
+Run 2026-11-17 against the generated `devin-plugin/` tree at the pinned
+upstream commit (`upstream.commit` in `upstream.yml`): **547 files scanned,
+610 findings, 0 unknowns.** The scanner covers the 546 upstream files plus
+the generated `docs/harness/devin.md` itself (it skips only
+`.devin-plugin/`, `AGENTS.md`, and `provenance.json`); the adapter doc's own
+Cursor-side token mentions classify against the same vocabulary, and its
+Devin-side names are lowercase `snake_case` that the API-shaped unknowns
+pass intentionally never flags. The pre-overlay run (before `devin.md` and
+the `poteto-agent` overwrite landed) scanned 546 files with 547 findings —
+the delta is entirely the adapter doc's own classified tokens plus the
+overwrite removing upstream's `is_background`/`generalPurpose`/`~/.cursor`
+references. A finding is one vocabulary-pattern match on one line, so
+labels share lines and the count is findings, not files.
 
 | `cls` | findings | Meaning |
 | --- | --- | --- |
-| `supported` | 278 | maps to a real Devin tool/param |
-| `alternative` | 97 | mapped to a documented workaround |
-| `skip` | 66 | intentionally not performed; must be said aloud |
-| `error` | 18 | required by the workflow but impossible on Devin — stop, don't pretend |
-| `unavailable-external` | 26 | external skill not installable on Devin (`cursor-team-kit`) |
-| `devin-only` | 62 | `claude-code.md` adapter content + prose identifiers — never adapted |
-| **total** | **547** | 0 unknowns |
+| `supported` | 310 | maps to a real Devin tool/param |
+| `alternative` | 108 | mapped to a documented workaround |
+| `skip` | 73 | intentionally not performed; must be said aloud |
+| `error` | 24 | required by the workflow but impossible on Devin — stop, don't pretend |
+| `unavailable-external` | 29 | external skill not installable on Devin (`cursor-team-kit`) |
+| `devin-only` | 66 | `claude-code.md` adapter content + prose identifiers — never adapted |
+| **total** | **610** | 0 unknowns |
 
 Per-label counts (from the same run) — `supported`:
-`tool:Task` 123, `value:claude-slug` 34, `value:inherit-parent` 19,
-`field:resume` 16, `field:subagent_type` 13, `field:readonly` 11,
-`tool:Grep` 10, `value:generalPurpose` 8, `tool:Glob` 8, `tool:AskQuestion` 7,
-`tool:Bash` 7, `name:pstack-prefix` 6, `tool:Read` 4,
-`field:run_in_background` 4, `tool:Shell` 3, `field:environment:local` 2,
-`path:agents-md` 2, `tool:TodoWrite` 1.
+`tool:Task` 125, `value:claude-slug` 35, `value:inherit-parent` 23,
+`field:resume` 17, `field:subagent_type` 15, `field:readonly` 13,
+`name:pstack-prefix` 13, `tool:Grep` 11, `tool:Glob` 10, `tool:Bash` 9,
+`tool:AskQuestion` 8, `value:generalPurpose` 8, `tool:Read` 5,
+`field:run_in_background` 5, `tool:Shell` 4, `path:agents-md` 4,
+`field:environment:local` 3, `tool:TodoWrite` 2.
 
-`alternative`: `path:.cursor` 27, `feature:mcp` 24, `feature:bugbot` 23,
-`value:gemini-slug` 12, `feature:plugin-install` 5,
-`field:cloud_base_branch` 2, `path:.cursor-plugin` 2,
-`field:file_attachments` 1, `field:is_background` 1.
+`alternative`: `path:.cursor` 30, `feature:mcp` 25, `feature:bugbot` 25,
+`value:gemini-slug` 13, `feature:plugin-install` 6,
+`field:cloud_base_branch` 3, `path:.cursor-plugin` 3,
+`field:file_attachments` 2, `field:is_background` 1.
 
-`skip`: `feature:automations` 36, `feature:loop` 20, `feature:custom-mode` 8,
-`feature:cursor-api` 2.
+`skip`: `feature:automations` 39, `feature:loop` 21, `feature:custom-mode` 10,
+`feature:cursor-api` 3.
 
-`error`: `feature:cloud-agent` 12, `field:environment:cloud` 4,
-`feature:sendtouser` 2.
+`error`: `feature:cloud-agent` 15, `field:environment:cloud` 6,
+`feature:sendtouser` 3.
 
-`unavailable-external`: `extskill:deslop` 10, `extskill:control-cli` 8,
-`extskill:control-ui` 8.
+`unavailable-external`: `extskill:deslop` 11, `extskill:control-cli` 9,
+`extskill:control-ui` 9.
 
-`devin-only`: `prose:no-deadlock` 30, `devin-only:claude-adapter` 21,
+`devin-only`: `prose:no-deadlock` 30, `devin-only:claude-adapter` 25,
 `tool:Agent` 2, `value:general-purpose` 2, `prose:return-type` 2,
 `tool:Skill` 1, `value:Explore` 1, `prose:branded-ids` 1,
 `prose:derived-data` 1, `prose:pele-error` 1.
