@@ -29,6 +29,7 @@ test("required package files exist", () => {
     ".markdownlint-cli2.jsonc",
     ".apm/.gitkeep",
     "docs/verification-apm-0.33.0.md",
+    "docs/upstream-source-decision.md",
     "apm.lock.yaml",
   ]) {
     assert.ok(fs.existsSync(path.join(pkgRoot, rel)), `missing: ${rel}`);

@@ -240,8 +240,116 @@ Conclusions:
 
 ## 5. Local consumer probe
 
-(filled by plan Task 5)
+Scratch consumer at `.superpowers/poc-consumer` inside this worktree
+(`G:\repositry\apm-packages\.worktrees\pstack-devin-212\.superpowers\poc-consumer`;
+`.superpowers/` is gitignored), `targets: [claude]`,
+`dependencies.apm: [- path: ../../packages/pstack-devin]`.
+
+Probe 5a — same command run while the package's own gitignored
+`apm_modules/` cache was still present (post-probe-3/4 working-tree state):
+
+```bash
+mise exec -- apm install --only apm 2>&1 | tail -10
+```
+
+- observed (verbatim tail; wraps joined): **install fails**
+
+  ```text
+  [>] Installing dependencies from apm.yml...
+  [>] Resolving ../../packages/pstack-devin...
+  WARNING apm_cli.policy.discovery Policy repo scarecrow173/.github-private not found (or [REDACTED] private-repo read scope). If your org publishes policy in .github-private, ensure the token has Contents:read permission on that repo.
+  [i] Targets: claude  (source: apm.yml)
+    [x] 1 package failed:
+      +- ../../packages/pstack-devin -- Failed to download dependency 
+  _local/pstack-devin: [WinError 3] 指定されたパスが見つかりません。
+  [x] Installation failed with 1 error(s) in 2.4s. No install transaction changes
+  were committed.
+  ```
+
+  Root cause (bisected with synthetic local deps): APM materializes a `path:`
+  dep by copying the **entire source directory verbatim** — including the
+  gitignored `apm_modules/` cache — into a staging prefix
+  `apm_modules\.apm-resolution-staging\<hash>\replacements\<hash>\`. The
+  ~80-char staging prefix plus nested cache paths (deepest:
+  `apm_modules\cursor\plugins\harness\pstack\claude-code\skills\statechart\
+  scripts\test\corpus\<name>\<name>.tla`) exceeds the Win32 path limit.
+  Bisection surfaced the same failure verbatim as `[WinError 206]` (filename
+  too long) at staging path
+  `...\replacements\bdc71770ca1d6f5e\apm_modules\cursor\plugins\harness\
+  pstack\claude-code\skills\statechart\scripts\test\charts`; `[WinError 3]`
+  (path not found, above) is the other surface of the same overflow.
+
+Probe 5b — same consumer, package's `apm_modules/` moved aside first
+(fresh-checkout state, restored after):
+
+```bash
+mise exec -- apm install --only apm 2>&1 | tail -10
+cat apm.lock.yaml
+find . -type f -not -path './apm_modules/*' | sort
+```
+
+- observed (verbatim tail; wraps joined): **install succeeds**
+
+  ```text
+  [>] Installing dependencies from apm.yml...
+  [>] Resolving ../../packages/pstack-devin...
+  WARNING apm_cli.policy.discovery Policy repo scarecrow173/.github-private not found (or [REDACTED] private-repo read scope). If your org publishes policy in .github-private, ensure the token has Contents:read permission on that repo.
+  [i] Targets: claude  (source: apm.yml)
+    [+] ../../packages/pstack-devin (local)
+    |-- (files unchanged)
+  [i] Added apm_modules/ to .gitignore
+    [i] Skipped inactive experimental resolver for target 'copilot-cowork' during
+  lockfile reconciliation.
+    [i] Skipped inactive experimental resolver for target 'copilot-app' during 
+  lockfile reconciliation.
+  [*] Installed 1 APM dependency in 2.4s.
+  ```
+
+- consumer `apm.lock.yaml` (verbatim):
+
+  ```yaml
+  lockfile_version: '1'
+  apm_version: 0.33.0
+  dependencies:
+  - repo_url: _local/pstack-devin
+    name: pstack-devin
+    version: 0.1.0
+    package_type: apm_package
+    source: local
+    local_path: ../../packages/pstack-devin
+    declared_license: MIT
+  deployments: []
+  ```
+
+- deployed files, non-cache (verbatim `find` output):
+
+  ```text
+  ./.gitignore
+  ./apm.lock.yaml
+  ./apm.yml
+  ```
+
+  No `.claude/` deployment — the package ships no `.apm/` primitives and the
+  lockfile attests `deployments: []`.
+- consumer `apm_modules/cursor/...` present: **no** — the package's
+  `devDependencies` do not transit. The consumer cache contains only
+  `apm_modules/_local/pstack-devin/`, a verbatim copy of the package's 12
+  working-tree files (including its own `apm.yml`, `apm.lock.yaml`,
+  `upstream.yml`, `docs/`, README/AGENTS pairs).
+- caveat recorded for `#217`: `path:` consumers need a clean checkout — a
+  source package whose gitignored `apm_modules/` exists cannot be installed
+  via `path:` on Windows (staging overflow above). Git/marketplace consumers
+  are unaffected because `apm_modules/` never ships.
 
 ## 6. Constraints and acceptance
 
-(filled by plan Tasks 5–6)
+Established constraints (all verified above):
+
+1. `harness/pstack/claude-code` is an `agent_plugin`; APM installs it only for `copilot` and deploys zero files.
+2. The pin may live only in `devDependencies:` + `targets: [copilot]`; `copilot` must remain in manifest `targets:` for the package's own `apm install` to succeed.
+3. `apm pack` cannot ship upstream files; distribution is via build-side snapshot (`#213`) into git-tracked `devin-plugin/` (`#217` publishes).
+4. `upstream.yml` is the single authority; `upstream.commit` == devDep `ref` == `resolved_commit` is a hard invariant (enforced by `scripts/pstack-devin/tests/package-structure.test.ts` now, by the builder later).
+5. `apm compile --validate` is consumer-context; it is not applicable inside this package while no `.apm/` primitives exist (repo convention).
+6. Consumer installs (`path:`/marketplace) deploy only this package's `.apm/` primitives; they never see the upstream dep or `devin-plugin/` unless `includes:` says otherwise (`#217` decides). Local-dep materialization copies the package dir verbatim into the consumer cache, so `path:` sources must be clean checkouts (§5).
+7. Updating the pin = `upstream.yml` + `apm.yml` ref + `apm install` regen + rebuild; never bump only one side.
+8. `apm install` writes `.github/copilot/settings.local.json` + `apm_modules/` here — local side-effects, gitignored.
