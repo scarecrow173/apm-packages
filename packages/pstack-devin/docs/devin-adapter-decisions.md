@@ -227,3 +227,68 @@ entirely; plugin subagents load locally only, which is why
   already valid Devin as-is, and its `/why` mention resolves through the
   generic skill-invocation row in `devin.md`. Adding it to
   `allow_overwrite` would only warn as an unused entry.
+
+## 8. setup-pstack decisions — `setup-pstack-devin` (issue `#215`)
+
+Upstream `skills/setup-pstack/SKILL.md` is instruction-level: the agent does
+model detection, budget arithmetic, and file writes itself. The Devin port
+splits into a thin delegation overwrite at `skills/setup-pstack/SKILL.md`
+(upstream frontmatter preserved, body delegates to `setup-pstack-devin`) and
+a new `skills/setup-pstack-devin/` skill — orchestration prose plus a
+deterministic `scripts/setup.mjs` generator driven by
+`scripts/roles.json`. Decisions:
+
+- **Script over pure instructions.** The issue requires unit tests for
+  mapping, budget, fan-out, and re-run behavior — real logic tests, not
+  content greps. Instruction-level arithmetic cannot be unit-tested, so
+  `setup.mjs` owns every computation and file emission as exported,
+  dependency-free Node ESM; the skill's prose owns only the
+  detect → confirm → apply UX. Tests import the `.mjs` from the overlay
+  path directly.
+- **13 roles, not 12.** The plan's "12 canonical roles" undercounted:
+  upstream step 5's `# defaults: 2` block actually lists 13 role keys
+  (the 4 panel roles among them). `roles.json` mirrors that block
+  verbatim — role keys keep their literal commas — and pins its sha256
+  as `defaults_sha`, so an upstream role/schema change fails the schema
+  test loudly instead of drifting silently.
+- **Fallback family = the role default's family, per position.** When a
+  budget-moved effort rewrite lands on an undetected slug, the detected
+  substitute is the highest-effort slug at or below the target within
+  the *role default's* family — not the configured slug's family. For
+  panel roles this resolves per list position (position `i` falls back
+  within `default[i]`'s family), keeping fan-out width: one subagent
+  per entry, never collapsed.
+- **`needsChoice` covers configured roles only.** Roles absent from the
+  choices file keep their documented defaults and produce no
+  `resolved`/`needsChoice` entry. A substitution and an empty fallback
+  pool both flag for confirmation; a keep that lands on the unchanged
+  input (upstream's "gemini tops out at high" case) does not.
+- **`rulesFile` emits only configured lines.** One `role: slug[, slug…]`
+  line per configured role in `roles.json` order — upstream's exact line
+  format so consumer-skill reads through the `#214` path mapping keep
+  working — under Devin `trigger: always_on` frontmatter. Combined with
+  `assertDetected` failing closed on any choice outside the detected set
+  (aliases `inherit-parent`/`auto` excepted), a generated rule can never
+  carry an undetected slug.
+- **`# pstack-generated:` marker + diskSha stale-refusal.** Every
+  generated file ends with a marker line carrying the sha256 of its own
+  body, which `planChanges` uses to tell own prior output (unflagged
+  `diff`) from user edits (`userModified: true`). Each `diff` also
+  records `diskSha` — the on-disk sha at plan time — so `apply` refuses
+  a plan whose targets drifted after the diff was shown, even with
+  `--yes`. Re-runs over own output are byte-stable `unchanged`; obsolete
+  `pstack-*.md` profiles surface as `removeCandidates`, deleted only via
+  explicit `--remove`.
+- **ro profile = declared intent, not a guarantee.** `pstack-<slug>-ro`
+  restricts `allowed-tools` to the doc-verified read set (`read`,
+  `grep`, `glob` — the docs.devin.ai/cli/subagents.md example tokens)
+  and states the residual risk in the body; the hard read-only
+  guarantee stays `subagent_explore`. The profile never claims
+  "完全read-only"/"fully read-only" because `allowed-tools` expresses
+  intent a model could still violate.
+- **`.apm/` duplicates the overlay skill on purpose.** APM deploys
+  `.apm/` primitives independently of the generated `devin-plugin/`
+  tree, so `.apm/skills/setup-pstack-devin/` ships the same three files
+  byte-for-byte. `overlay/` is the edit authority; the `apm-sync` test
+  enforces recursive sha256 equality and names the divergent file, so
+  the copy cannot silently rot.

@@ -4,9 +4,10 @@
 (`harness/pstack/claude-code`) を、固定した上流コミットにピン留めして
 Devin CLI 向けに配布するパッケージ。
 
-> 状態: 決定的ビルダーは実装済みで、Devin ランタイムアダプターの
-> オーバーレイを含む生成済み `devin-plugin/` ツリーはコミット済み。
-> APM `.apm/` プリミティブは後続 Issue で追加予定。
+> 状態: 決定的ビルダー、Devin ランタイムアダプターのオーバーレイを
+> 含む生成済み `devin-plugin/` ツリー、および最初の `.apm/`
+> プリミティブ(`skills/setup-pstack-devin/`)はコミット済み。
+> さらなる APM プリミティブは後続 Issue で追加予定。
 > [親Issue](https://github.com/scarecrow173/apm-packages/issues/211)
 > 配下の Issue チェーンを参照。
 
@@ -16,7 +17,7 @@ Devin CLI 向けに配布するパッケージ。
 
 | 成果物 | 場所 | 利用者 | 内容 |
 | --- | --- | --- | --- |
-| APM パッケージ | `packages/pstack-devin/` | `apm install` 利用者 | `.apm/` 配下のアダプター/セットアップ用プリミティブ(後続 Issue で追加) |
+| APM パッケージ | `packages/pstack-devin/` | `apm install` 利用者 | `.apm/` 配下のアダプター/セットアップ用プリミティブ(`skills/setup-pstack-devin/` を同梱。残りは後続 Issue) |
 | Devin Plugin | `packages/pstack-devin/devin-plugin/` | `devin plugins install` | バイト固定した上流 pstack ツリーと薄い Devin オーバーレイ(`scripts/pstack-devin` が生成。コミット済み) |
 
 `apm.yml` の `targets:` は、このパッケージの APM プリミティブを受け取る
@@ -70,6 +71,39 @@ pstack 自体は opt-in — ユーザーが pstack スキルまたは
 mise exec -- pnpm --dir scripts/pstack-devin run audit:compat
 ```
 
+## モデル設定: `/pstack:setup-pstack`
+
+上流の `setup-pstack` スキルは薄い委譲オーバーライドとして同梱される。
+Devin 上で `/pstack:setup-pstack` を呼び出すと
+`skills/setup-pstack-devin/SKILL.md` を読み、それに従う。このスキルは
+`devin models list` でモデルを検出し、推論バジェットを確認した上で
+以下を生成する:
+
+- `~/.devin/rules/pstack-models.md` — 常時有効なルール
+  (`trigger: always_on`)。設定したロールごとに
+  `role: slug[, slug…]` 行を 1 行ずつ持つ。
+- `~/.config/devin/agents/pstack-<slug>.md` と `pstack-<slug>-ro.md` —
+  ルールが名指しする各スラッグ用の、モデル固定カスタムサブエージェント
+  プロファイル(書き込み用と read-only 意図宣言版)。Windows の
+  agents ディレクトリは `%APPDATA%\devin\agents\`。
+
+すべての演算とファイル出力は、スキル内に同梱される依存ゼロの Node
+ヘルパー `scripts/setup.mjs` が担う(`node scripts/setup.mjs
+parse|plan|apply`)。生成ファイルは `# pstack-generated:` sha256
+マーカーを持つため、再実行はバイト安定であり、ユーザーによる編集は
+明示的な確認が必要な diff として表示される。不要になった
+`pstack-*.md` プロファイルの削除は、候補を一覧した上での明示的な
+`--remove` のみで行われる。
+
+ルールとプロファイルはセッション開始時にロードされるため、設定は
+**新しい**セッションに適用される — 現在のセッションは現在のモデルの
+まま。クラウドセッションはプラグインプロファイルをロードできない:
+`pstack-*` プロファイルはローカル専用。
+
+同じスキルが `.apm/skills/setup-pstack-devin/` として APM
+利用者にもバイト同一で同梱される。`apm-sync` テストがこのコピーと
+オーバーレイ元ソースの同一性を保証する。
+
 ## `devin-plugin/` の再生成
 
 Plugin ツリーは Git にコミットされる生成物。リポジトリルートから
@@ -95,7 +129,7 @@ packages/pstack-devin/
   overlay/           # 上流へ適用する Devin オーバーレイのソース(編集対象)
   overlay.yml        # オーバーレイの上書き allowlist(権威)
   devin-plugin/      # 生成される Devin Plugin 出力(コミット済み。手編集禁止)
-  .apm/              # APM プリミティブ(後続 Issue で追加)
+  .apm/              # APM プリミティブ(skills/setup-pstack-devin/ を同梱。残りは後続)
 ```
 
 ## インストール
