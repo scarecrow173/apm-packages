@@ -137,7 +137,10 @@ mise exec -- pnpm --dir scripts/pstack-devin run verify   # L1 + L2 + L3 + ユ�
 チェックごとの保証一覧は `docs/verification-matrix.md` を参照。
 これらは静的チェックであり、出荷ツリーの一貫性とインストール可能な
 形状を証明するものであって、エージェントの実行時品質を証明するもの
-**ではない**。実 Devin セッションでの検証は `#218` に委譲する。
+**ではない**。実 Devin CLI セッションの証跡は
+`docs/runtime-verification.md`(`#218`)にある: スキルごとの
+プローブと判定、および `## 5. Compatibility` の
+互換性/サポートマトリクス。
 
 ## レイアウト
 
@@ -152,6 +155,37 @@ packages/pstack-devin/
   devin-plugin/      # 生成される Devin Plugin 出力(コミット済み。手編集禁止)
   .apm/              # APM プリミティブ(skills/setup-pstack-devin/ を同梱。残りは後続)
 ```
+
+## クイックスタート
+
+1. Devin Plugin をインストールする(両導入経路は後述の
+   [インストール](#インストール)を参照):
+
+   ```bash
+   devin plugins install scarecrow173/apm-packages#packages/pstack-devin/devin-plugin
+   ```
+
+2. **新しい** `devin` セッションを開始する — プラグインスキル、
+   `pstack:*` エージェントプロファイル、生成済みルールはセッション
+   開始時にロードされる。記録済みの全プローブはインストール後に
+   開始したセッションで `/pstack:*` を解決した。実行中のセッション
+   がインストールを取り込むかは未検証(`docs/runtime-verification.md`、
+   `docs/migration.ja.md` §5)。
+3. `/pstack:poteto-help` を呼び出す。`devin 3000.12.57`(Windows)
+   で検証済み: スキルが解決し、本文がロードされ、適切な pstack
+   ファイルへ誘導される(`docs/runtime-verification.md` §2)。
+
+関連ドキュメント:
+
+- `docs/runtime-verification.md` — スキルごとの実 CLI 証跡と
+  互換性/サポートマトリクス。
+- `docs/migration.ja.md` — 上流 `pstack` とこのディストリビュー
+  ション間の切り替え: 名前衝突、バックアップ、ロールバック、
+  設定ファイルの場所。
+- `docs/verification-matrix.md` — 各決定的 `verify:*` チェックが
+  証明する内容。
+- `docs/distribution-verification.md` — 両プラグイン経路と APM
+  経路のインストール/削除証跡。
 
 ## インストール
 
@@ -177,4 +211,5 @@ Plugin があり、同時に入るのは 1 つだけ —
 `devin plugins info pstack` で判別できる: このディストリビューションは
 `version:` `0.1.0` と `scarecrow173/apm-packages` 配下の `source:` を
 報告する。検証済みの導入証跡は
-`docs/distribution-verification.md` を参照。
+`docs/distribution-verification.md` を参照。2 つの `pstack`
+プラグイン間の切り替えは `docs/migration.ja.md` を参照。

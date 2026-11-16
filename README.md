@@ -92,6 +92,17 @@ packages/
       skills/
     README.md
     README.ja.md
+  pstack-devin/
+    apm.yml                              # package manifest
+    .apm/
+      skills/
+    devin-plugin/                        # generated Devin plugin (committed)
+    overlay/
+    docs/
+    README.md
+    README.ja.md
+    AGENTS.md
+    AGENTS.ja.md
   steer-enterprise-web-research/
     apm.yml                              # package manifest
     .apm/
@@ -106,6 +117,7 @@ packages/
     research/
 scripts/
   doc-driven-dev/                        # build workspace, TS sources, tests
+  pstack-devin/                          # build workspace, TS sources, tests
   steer-enterprise-web-research/         # build workspace, TS sources, tests
 
 For path references in this repository, prefer repo-root-relative paths such as

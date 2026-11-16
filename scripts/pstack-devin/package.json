@@ -11,6 +11,7 @@
     "check:safety": "tsx src/safety-scan.ts",
     "check:roles": "tsx src/role-registry.ts",
     "probe:consumer": "tsx src/l3-consumer.ts",
+    "probe:fixture": "node scripts/make-fixture.mjs",
     "check:marketplace": "tsx src/check-marketplace.ts",
     "verify:l1": "pnpm run check-generated && tsx src/safety-scan.ts",
     "verify:l2": "tsx src/compat-audit.ts && tsx src/link-check.ts && tsx src/role-registry.ts",

@@ -26,31 +26,31 @@
 
 ### Task 1: harness probe — how to run + capture
 
-- [ ] Build fixture repo `fixtures/pstack-devin-smoke/` (tiny: `apm.yml` + `AGENTS.md` + a couple of source files + git init). It must NOT live in the distributed package; scripts dir or a scratch path + gitignored.
-- [ ] `devin plugins install <devin-plugin abs path> --local -y`; confirm `devin plugins list`.
-- [ ] Probe ONE non-mutating skill end-to-end in print mode: `devin -p "/pstack:poteto-help" --respect-workspace-trust false` inside the fixture; capture stdout/stderr exit code; locate session logs/transcript and how to extract subagent spawns + model used.
-- [ ] Record the working invocation pattern (prompt quoting, output capture, log location) as the reusable harness in `docs/runtime-verification.md` §harness. If print mode can't invoke plugin skills, try `--prompt-file`, or fall back to interactive `devin` session scripted via stdin — record whichever works with evidence.
-- [ ] Commit `test(pstack-devin): establish real-CLI verification harness`.
+- [x] Build fixture repo `fixtures/pstack-devin-smoke/` (tiny: `apm.yml` + `AGENTS.md` + a couple of source files + git init). It must NOT live in the distributed package; scripts dir or a scratch path + gitignored.
+- [x] `devin plugins install <devin-plugin abs path> --local -y`; confirm `devin plugins list`.
+- [x] Probe ONE non-mutating skill end-to-end in print mode: `devin -p "/pstack:poteto-help" --respect-workspace-trust false` inside the fixture; capture stdout/stderr exit code; locate session logs/transcript and how to extract subagent spawns + model used.
+- [x] Record the working invocation pattern (prompt quoting, output capture, log location) as the reusable harness in `docs/runtime-verification.md` §harness. If print mode can't invoke plugin skills, try `--prompt-file`, or fall back to interactive `devin` session scripted via stdin — record whichever works with evidence.
+- [x] Commit `test(pstack-devin): establish real-CLI verification harness`.
 
 ### Task 2: per-skill verification runs
 
-- [ ] For each skill `poteto-help`, `setup-pstack-devin`(=`/pstack:setup-pstack` mapping), `how`, `poteto-mode`, `arena`, `interrogate`, `tdd`: run `devin -p "/pstack:<skill>"` in the fixture (fresh `-p` session each; disposable git worktree for mutating skills like `tdd`/`setup-pstack-devin`).
-- [ ] Per case record in `docs/runtime-verification.md`: exact input, key output excerpt (verbatim, small), subagent count + model(s) observed in logs, fallback/skip behavior, verdict pass/partial/fail/unverified with reason. Mutating cases also note file diff or git status.
-- [ ] Read-only profile check: run one skill that should be read-only and assert no fixture file changed (git status clean).
-- [ ] `poteto-mode`/`arena` fan-out: record actual subagent count vs doc claim; Fusion sidekick presence/absence noted, NOT silently collapsed.
-- [ ] AGENTS.md non-interference: in fixture WITHOUT invoking pstack, run a neutral `devin -p` task (e.g. "list files") and confirm the plugin's always-on rule does not derail the session (output stays on-task).
-- [ ] Commit `docs(pstack-devin): record real Devin CLI verification results`.
+- [x] For each skill `poteto-help`, `setup-pstack-devin`(=`/pstack:setup-pstack` mapping), `how`, `poteto-mode`, `arena`, `interrogate`, `tdd`: run `devin -p "/pstack:<skill>"` in the fixture (fresh `-p` session each; disposable git worktree for mutating skills like `tdd`/`setup-pstack-devin`).
+- [x] Per case record in `docs/runtime-verification.md`: exact input, key output excerpt (verbatim, small), subagent count + model(s) observed in logs, fallback/skip behavior, verdict pass/partial/fail/unverified with reason. Mutating cases also note file diff or git status.
+- [x] Read-only profile check: run one skill that should be read-only and assert no fixture file changed (git status clean).
+- [x] `poteto-mode`/`arena` fan-out: record actual subagent count vs doc claim; Fusion sidekick presence/absence noted, NOT silently collapsed.
+- [x] AGENTS.md non-interference: in fixture WITHOUT invoking pstack, run a neutral `devin -p` task (e.g. "list files") and confirm the plugin's always-on rule does not derail the session (output stays on-task).
+- [x] Commit `docs(pstack-devin): record real Devin CLI verification results`.
 
 ### Task 3: guides + migration + compatibility matrix
 
-- [ ] `docs/migration.md` (+ JA sibling): namespace collision with upstream `pstack`, backup (`devin plugins list` before), remove/migrate steps, config file locations (`~/.devin/rules/pstack-models.md`, profiles dir), new-session-required note.
-- [ ] Compatibility/support matrix doc or README section: upstream commit `bf0c7cd8`/version `0.15.42`, distribution `0.1.0`, devin `3000.12.57` tested, supported (CLI/Desktop local) vs unsupported (Cloud subagent profiles), external cursor-team-kit skill limitations.
-- [ ] Package README EN/JA + AGENTS EN/JA sync; root README package list sync. EN/JA structure identical.
-- [ ] Commit `docs(pstack-devin): guides, migration, compatibility matrix`.
+- [x] `docs/migration.md` (+ JA sibling): namespace collision with upstream `pstack`, backup (`devin plugins list` before), remove/migrate steps, config file locations (`~/.devin/rules/pstack-models.md`, profiles dir), new-session-required note.
+- [x] Compatibility/support matrix doc or README section: upstream commit `bf0c7cd8`/version `0.15.42`, distribution `0.1.0`, devin `3000.12.57` tested, supported (CLI/Desktop local) vs unsupported (Cloud subagent profiles), external cursor-team-kit skill limitations.
+- [x] Package README EN/JA + AGENTS EN/JA sync; root README package list sync. EN/JA structure identical.
+- [x] Commit `docs(pstack-devin): guides, migration, compatibility matrix`.
 
 ### Task 4: sweep + issue comment
 
-- [ ] `pnpm test` + `lint:md` + `verify:l2/l3` green; flip plan checkboxes; post `#218` comment linking runtime-verification evidence + marking any unverified items.
+- [x] `pnpm test` + `lint:md` + `verify:l2/l3` green; flip plan checkboxes; post `#218` comment linking runtime-verification evidence + marking any unverified items.
 
 ## Global Constraints
 
