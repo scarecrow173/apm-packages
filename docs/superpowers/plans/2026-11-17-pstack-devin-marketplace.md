@@ -37,24 +37,24 @@
 
 ### Task 1: registration + `check-marketplace`
 
-- [ ] Root `apm.yml` edits (2 lines) + `mise exec -- apm install` at repo root → lockfile gains `local_path: ./packages/pstack-devin` (verify: `grep local_path apm.lock.yaml | grep pstack`).
-- [ ] `check-marketplace.ts`: (a) `devDependencies.apm` contains `./packages/pstack-devin` exactly once; (b) `marketplace.packages` contains `{name: pstack-devin, category, source, subdir}` with `subdir: packages/pstack-devin` and category a non-empty string; (c) `apm.lock.yaml` has a `local_path: ./packages/pstack-devin` entry whose package name is `pstack-devin`; (d) `packages/pstack-devin` exists. Exit 1 on any failure. Script: `"check:marketplace": "tsx src/check-marketplace.ts"`; wire into `verify:l3` (`verify:l3 = tsx src/l3-dist.ts && tsx src/check-marketplace.ts`).
-- [ ] `marketplace.test.ts` fixtures: missing dep entry → fail; missing marketplace entry → fail; lockfile missing path → fail; real repo → pass.
-- [ ] Commit: `feat(pstack-devin): register package in APM marketplace`
+- [x] Root `apm.yml` edits (2 lines) + `mise exec -- apm install` at repo root → lockfile gains `local_path: ./packages/pstack-devin` (verify: `grep local_path apm.lock.yaml | grep pstack`).
+- [x] `check-marketplace.ts`: (a) `devDependencies.apm` contains `./packages/pstack-devin` exactly once; (b) `marketplace.packages` contains `{name: pstack-devin, category, source, subdir}` with `subdir: packages/pstack-devin` and category a non-empty string; (c) `apm.lock.yaml` has a `local_path: ./packages/pstack-devin` entry whose package name is `pstack-devin`; (d) `packages/pstack-devin` exists. Exit 1 on any failure. Script: `"check:marketplace": "tsx src/check-marketplace.ts"`; wire into `verify:l3` (`verify:l3 = tsx src/l3-dist.ts && tsx src/check-marketplace.ts`).
+- [x] `marketplace.test.ts` fixtures: missing dep entry → fail; missing marketplace entry → fail; lockfile missing path → fail; real repo → pass.
+- [x] Commit: `feat(pstack-devin): register package in APM marketplace`
 
 ### Task 2: distribution verification + docs
 
-- [ ] `devin plugins install --local <abs path to packages/pstack-devin/devin-plugin>` → `devin plugins list` shows `pstack`; `devin plugins info pstack` shows skills incl. `poteto-mode`, `setup-pstack-devin`, agents `poteto-agent`/`comment-sicko`. Then `devin plugins remove pstack --local`. Record verbatim output.
-- [ ] `devin plugins install scarecrow173/apm-packages#packages/pstack-devin/devin-plugin -y` → same listing checks → remove. If the #subdir form fails, record the exact error and whether the repo/subdir form is supported — hypothesis marked explicitly.
-- [ ] APM path: scratch consumer `apm install` of `path:` form (already evidenced in l3-verification) — re-affirm + note: **APM install deploys only `.apm` primitives; it cannot activate the Devin plugin — the plugin path is `devin plugins install`**.
-- [ ] Write `docs/distribution-verification.md`: both paths, commands, outputs, the APM≠Devin-plugin callout, name-collision guidance (`devin plugins info pstack` provenance check; if upstream's `pstack` is installed instead, `homepage`/`repository` fields disambiguate), release+marketplace check procedure (version bump → build → check-generated → commit → tag?).
-- [ ] README EN/JA install section: both commands + which path gives what (plugin = full pstack incl. `/pstack:*` skills + `pstack:*` agents; APM = setup skill only). `.gitignore`/`.worktreeinclude` audit: confirm `devin-plugin/` tracked (not ignored), `apm_modules/`/`build/` ignored — note in docs.
-- [ ] Commit: `docs(pstack-devin): verify Devin plugin + APM distribution paths`
+- [x] `devin plugins install --local <abs path to packages/pstack-devin/devin-plugin>` → `devin plugins list` shows `pstack`; `devin plugins info pstack` shows skills incl. `poteto-mode`, `setup-pstack-devin`, agents `poteto-agent`/`comment-sicko`. Then `devin plugins remove pstack --local`. Record verbatim output.
+- [x] `devin plugins install scarecrow173/apm-packages#packages/pstack-devin/devin-plugin -y` → same listing checks → remove. If the #subdir form fails, record the exact error and whether the repo/subdir form is supported — hypothesis marked explicitly.
+- [x] APM path: scratch consumer `apm install` of `path:` form (already evidenced in l3-verification) — re-affirm + note: **APM install deploys only `.apm` primitives; it cannot activate the Devin plugin — the plugin path is `devin plugins install`**.
+- [x] Write `docs/distribution-verification.md`: both paths, commands, outputs, the APM≠Devin-plugin callout, name-collision guidance (`devin plugins info pstack` provenance check; if upstream's `pstack` is installed instead, `homepage`/`repository` fields disambiguate), release+marketplace check procedure (version bump → build → check-generated → commit → tag?).
+- [x] README EN/JA install section: both commands + which path gives what (plugin = full pstack incl. `/pstack:*` skills + `pstack:*` agents; APM = setup skill only). `.gitignore`/`.worktreeinclude` audit: confirm `devin-plugin/` tracked (not ignored), `apm_modules/`/`build/` ignored — note in docs.
+- [x] Commit: `docs(pstack-devin): verify Devin plugin + APM distribution paths`
 
 ### Task 3: sweep + issue comment
 
-- [ ] Full green: test, lint:md, verify:l2, verify:l3 (incl. new marketplace check). Skip l1 rebuild (no tree change).
-- [ ] Post `#217` comment: registration diff summary, both install verifications w/ output excerpts, collision guidance, release procedure pointer.
+- [x] Full green: test, lint:md, verify:l2, verify:l3 (incl. new marketplace check). Skip l1 rebuild (no tree change).
+- [x] Post `#217` comment: registration diff summary, both install verifications w/ output excerpts, collision guidance, release procedure pointer.
 
 ## Self-Review
 

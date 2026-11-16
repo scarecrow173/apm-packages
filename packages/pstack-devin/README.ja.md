@@ -155,5 +155,26 @@ packages/pstack-devin/
 
 ## インストール
 
-未公開。APM と Devin の各導入経路と既知の制限は、Issue チェーンの
-後続 Issue で検証・文書化される。
+2 つの成果物に対応する 2 つの導入経路がある — 目的に応じて選ぶ:
+
+| 経路 | コマンド | 得られるもの |
+| --- | --- | --- |
+| Devin Plugin | `devin plugins install scarecrow173/apm-packages#packages/pstack-devin/devin-plugin` | Devin CLI 上の完全な pstack — 全 `/pstack:*` スキル、`pstack:poteto-agent`/`pstack:comment-sicko` エージェント、常時有効な `AGENTS.md` ルール |
+| APM パッケージ | `apm install pstack-devin@apm-packages`(`apm marketplace add scarecrow173/apm-packages` 実行後) | このパッケージの `.apm/` プリミティブのみ — 現時点では `setup-pstack-devin` スキル単体 |
+
+`apm install` がデプロイするのは APM プリミティブだけであり、Devin
+Plugin をインストール・有効化することはできない。ローカル
+チェックアウトから入れる場合は Plugin ディレクトリを直接渡す —
+`--local` はインストールをこのマシンに限定する:
+
+```bash
+devin plugins install /path/to/apm-packages/packages/pstack-devin/devin-plugin --local
+```
+
+削除は `devin plugins remove pstack`(`--local` で入れた場合は
+`--local` を付ける)。上流 `cursor/plugins` にも `pstack` という名前の
+Plugin があり、同時に入るのは 1 つだけ —
+`devin plugins info pstack` で判別できる: このディストリビューションは
+`version:` `0.1.0` と `scarecrow173/apm-packages` 配下の `source:` を
+報告する。検証済みの導入証跡は
+`docs/distribution-verification.md` を参照。
