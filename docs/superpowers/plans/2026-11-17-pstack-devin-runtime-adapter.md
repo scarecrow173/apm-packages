@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Upstream files are byte-identical to the pinned tree; the ONLY overwrite authority is `upstream.yml` `overlay.allow_overwrite`. This plan may extend it to `agents/poteto-agent.md` (and `agents/comment-sicko.md` ONLY if its body contains harness-specific references — verify first).
+- Upstream files are byte-identical to the pinned tree; the ONLY overwrite authority is `overlay.yml` `allow_overwrite`. This plan may extend it to `agents/poteto-agent.md` (and `agents/comment-sicko.md` ONLY if its body contains harness-specific references — verify first).
 - All additions live under `packages/pstack-devin/overlay/` mirroring output paths; never hand-edit `devin-plugin/` — rebuild via `build-plugin`.
 - Never claim a check passed unless it was actually run. Repository-managed tools run via `mise exec --` where a shim exists (node/pnpm come from `scripts/pstack-devin` pnpm workspace — run tests with `pnpm --dir scripts/pstack-devin test` from repo root, which already works).
 - Do not implement #215 (setup-pstack model config), #216 (L1–L3 runtime tests), #217 (distribution), #218 (real Devin validation), or #219 (update PR automation). This issue defines the adapter contract + audit that later issues build on.
@@ -26,7 +26,7 @@
 | `packages/pstack-devin/overlay/AGENTS.md` | Always-on root instructions: adapter pointer + "don't activate pstack unprompted" boundary. Extends the #213 minimal file. |
 | `packages/pstack-devin/overlay/agents/poteto-agent.md` | Devin-native overwrite: `name`/`description`/`max-nesting` frontmatter, `subagent_general`, `/pstack:` names, `~/.local/share/devin/cli/plugins/` paths, full `poteto-mode` SKILL.md read contract preserved verbatim. |
 | `packages/pstack-devin/overlay/agents/comment-sicko.md` | Conditional overwrite — only if body contains Cursor-specific refs (verify in Task 3). |
-| `packages/pstack-devin/upstream.yml` | `overlay.allow_overwrite` extended with `agents/poteto-agent.md` (+ `comment-sicko.md` iff needed). |
+| `packages/pstack-devin/overlay.yml` | `allow_overwrite` extended with `agents/poteto-agent.md` (+ `comment-sicko.md` iff needed). |
 | `packages/pstack-devin/docs/devin-adapter-decisions.md` | Decision record: per-mapping classification (supported/alternative/skip/error), external dep decision + rationale, precedence rule. |
 | `scripts/pstack-devin/src/compat-audit.ts` | Token-scan audit: classifies every harness-API reference in the upstream tree against `src/compat-vocabulary.ts`; unknown token/file → exit 1. |
 | `scripts/pstack-devin/src/compat-vocabulary.ts` | The classified vocabulary: every known Cursor/Claude API name, path, feature token → category + classification. Shared by audit and tests. |
@@ -303,10 +303,10 @@ test("devin.md exists in generated plugin with required contract rows", () => {
 
 ### Task 3: `agents/poteto-agent.md` (+ conditional `comment-sicko.md`) overwrite
 
-Machine-parsed profile files can't be adapted by instructions. Extend `upstream.yml` `overlay.allow_overwrite` and add Devin-native versions under `overlay/agents/` preserving the upstream contract verbatim.
+Machine-parsed profile files can't be adapted by instructions. Extend `overlay.yml` `allow_overwrite` and add Devin-native versions under `overlay/agents/` preserving the upstream contract verbatim.
 
 **Files:**
-- Modify: `packages/pstack-devin/upstream.yml` (`overlay.allow_overwrite`)
+- Modify: `packages/pstack-devin/overlay.yml` (`allow_overwrite`)
 - Create: `packages/pstack-devin/overlay/agents/poteto-agent.md`
 - Maybe create: `packages/pstack-devin/overlay/agents/comment-sicko.md`
 - Modify: `scripts/pstack-devin/tests/adapter-contract.test.ts`
@@ -316,7 +316,7 @@ Machine-parsed profile files can't be adapted by instructions. Extend `upstream.
 - [ ] **Step 3: Write overwrite + extend allowlist**
 
 ```yaml
-# upstream.yml — overlay.allow_overwrite becomes:
+# overlay.yml — allow_overwrite becomes:
 overlay:
   allow_overwrite:
     - skills/setup-pstack/SKILL.md   # reserved for #215
