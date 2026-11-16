@@ -8,6 +8,7 @@
     "check-generated": "tsx src/cli.ts check",
     "audit:compat": "tsx src/compat-audit.ts",
     "check:safety": "tsx src/safety-scan.ts",
+    "check:roles": "tsx src/role-registry.ts",
     "test": "tsx --test tests/*.test.ts",
     "lint:md": "markdownlint-cli2 --no-globs --config ../../packages/pstack-devin/.markdownlint-cli2.jsonc \"../../packages/pstack-devin/**/*.md\""
   },
