@@ -101,10 +101,16 @@ console.log('subagents:',db.prepare(\"SELECT agent_id FROM subagent_heads WHERE 
 "
 ```
 
-- `sessions.model` → chat model (`swe-2-flash-high`).
-- `subagent_heads` → one row per spawned subagent (`agent_id` is the
-  profile, e.g. `pstack:poteto-agent`; `chain_node_id` links into
-  `message_nodes`). Empty set = zero subagents.
+- `sessions.model` → chat model (`swe-2-flash-high`). Stays empty when a
+  run is killed before its final persistence pass.
+- `subagent_heads` → one row per spawned subagent (`agent_id` is an
+  opaque hex id, NOT the profile name; `chain_node_id` links into
+  `message_nodes`). The profile is recorded in the `run_subagent` call's
+  `arguments.profile` (`pstack:poteto-agent`, `subagent_general`,
+  `subagent_explore`). Empty set = zero subagents.
+- `--export` writes the transcript only after a completed turn — a
+  killed/hung run leaves no export file; use `sessions.db` +
+  `message_nodes` for evidence then.
 - `message_nodes.chat_message` → JSON messages incl. tool calls and tool
   results; per-message `metadata` carries token counts.
 - In an `--export` file: `agent.model_name`/`agent.version` at top level,
@@ -199,7 +205,260 @@ Verdict for `/pstack:poteto-help` in print mode: **pass** (skill
 resolves, body loads, routing + file reads + reply format all observed;
 0 subagents as expected).
 
-## 3. Deviations observed
+## 3. Per-skill results — Task 2 probes (2026-11-17)
+
+All probes ran in the fixture (`scripts/pstack-devin/fixtures/smoke-repo`,
+baseline `d86527a`) with the plugin still installed `--local`. Evidence
+was extracted per [Harness](#harness); `before-*.json`/`after-*.json`
+`devin list` diffs identified each new session. Unless noted otherwise,
+`git status`/`git diff` on tracked files stayed clean and all mutating
+probes ran on a disposable `probe/*` branch that was deleted after
+capture.
+
+| Skill | Session | Model | Subagents (profile) | Verdict |
+| --- | --- | --- | --- | --- |
+| `/pstack:poteto-help` | `just-fighter`, `foul-gauge` | `swe-2-flash-high` | 0 | pass (§2) |
+| `/pstack:setup-pstack` | `blushing-march` | `swe-2-flash-high` | 0 | partial |
+| `/pstack:how` | `noble-lamp` | `swe-2-flash-high` | 1 (`subagent_explore`) | pass |
+| `/pstack:tdd` | `synonymous-nurse` | blank — killed mid-run | 0 | partial |
+| `/pstack:poteto-mode` | `tourmaline-shape` | `swe-2-flash-high` | 1 (`pstack:poteto-agent`) | pass |
+| `/pstack:arena` | `learned-canoe` | `swe-2-flash-high` | 4 (3 `subagent_general` + 1 `subagent_explore`) | pass |
+| `/pstack:interrogate` | `harmonious-slider` | `swe-2-flash-high` | 3 (`subagent_general`) | pass |
+| non-interference control | `bronzed-ocean` | `swe-2-flash-high` | 0 | pass |
+
+### 3.1 `/pstack:setup-pstack` → `setup-pstack-devin`
+
+```bash
+devin -p "/pstack:setup-pstack" --respect-workspace-trust false --export ./probe-setup-pstack.json
+```
+
+stdout verbatim excerpt, exit 0:
+
+```text
+I'll invoke the setup-pstack-devin skill.I'll first read the Devin adapter doc as required, then follow the skill steps.Now following the skill. Step 1: detect available models via `devin models list`.warning: rejected a tool call that requires confirmation. Running in non-interactive mode. Use --permission-mode dangerous to auto-approve all tools.
+It looks like `devin models list` can't be run from this session. To continue setup, I need the model slugs you can use.
+Please paste either:
+- the output of `devin models list`, or
+- a bare list of the slugs you'd like pstack roles to use
+```
+
+Evidence:
+
+- Export `tool_calls`: `skill` → `{"skill":"setup-pstack-devin"}` (the
+  Devin delegation entry resolves through the `skill` tool), `read` of
+  the installed `docs/harness/devin.md`, `exec` `devin models list` +
+  `which devin; devin --version` — both exec calls auto-rejected in
+  non-interactive mode.
+- `subagent_heads`: 0 rows (setup runs in the main thread — correct).
+- Fallback observed: the skill's documented zero-slugs path ("ask the
+  user to paste the slugs… and feed that text through `parse`") fired
+  verbatim. In `-p` the paste cannot be answered, so the run ended there.
+- No mutation: `~/.devin/rules/` did not exist before or after;
+  `%APPDATA%\devin\agents\` and `~/.config/devin/agents/` absent before
+  and after — nothing was written without confirmation.
+
+Verdict: **partial** — delegation, adapter read, step-1 attempt, and the
+spec-compliant fallback are all verified; the interactive remainder
+(budget question, plan/apply) is unreachable in print mode.
+
+### 3.2 `/pstack:how`
+
+```bash
+devin -p "/pstack:how how does this repo's entry point work?" --respect-workspace-trust false --export ./probe-how.json
+```
+
+stdout verbatim excerpt, exit 0:
+
+```text
+I've read the Devin adapter. Per the skill, I'll spawn one read-only explore subagent to explain how the entry point works.## How this repo's entry point works
+This is a **fixture repository** — a throwaway consumer used by the parent project (`scripts/pstack-devin`) to run real-CLI probes. Its `package.json` description says so explicitly ("Throwaway consumer fixture for pstack-devin real-CLI probes")…
+```
+
+Evidence:
+
+- `subagent_heads`: 1 row (`agent_id c3e082e2`); export shows one
+  `run_subagent` call, `profile: "subagent_explore"`, `is_background` not
+  set, task = the skill's senior-engineer brief verbatim — the adapter's
+  `readonly: true` → `subagent_explore` mapping observed.
+- Parent presented the subagent's explanation as its answer (skill step
+  2), including correct findings (no `main`/`exports`, `npm test` →
+  `node src/index.js`, `src/util.js` unreferenced).
+- Read-only assertion: `git diff` empty and `git status --porcelain`
+  clean on tracked files (fixture unchanged).
+
+Verdict: **pass**.
+
+### 3.3 `/pstack:tdd`
+
+```bash
+git checkout -b probe/tdd
+devin -p "/pstack:tdd add a subtract(a,b) util to src/util.js" --respect-workspace-trust false --permission-mode accept-edits --export ./probe-tdd.json
+```
+
+stdout verbatim excerpt:
+
+```text
+This is a tiny fixture repo with no test framework — `npm test` just runs `node src/index.js`. The narrowest executable check is a direct `node` import assertion. Following the TDD flow:
+**1. Failing check first** — verify `subtract` doesn't exist yet:warning: rejected a tool call that requires confirmation. Running in non-interactive mode. Use --permission-mode dangerous to auto-approve all tools.
+The command was rejected, so I'll skip the executable check and make the edit directly.
+```
+
+Evidence (from `sessions.db`; the run was killed before the export was
+written — sessions `model` column stayed blank):
+
+- Tool calls: `exec` `ls -la && find …` (allowed — read-only classified),
+  `read` ×2, `exec` `node --input-type=module -e "import { subtract } …"`
+  → **rejected** (`Tool execution was rejected: User rejected this tool
+  call`), `edit` `src/util.js` → applied under `accept-edits`.
+- `subagent_heads`: 0 rows — TDD does not fan out (correct).
+- Mutation captured on `probe/tdd` (then deleted): `src/util.js` +4
+  lines, `subtract(a,b)` added — the production change landed even
+  though the fail-first check could not run.
+- After the edit's tool result, the print-mode driver injected a bare
+  `role:"user"` `continue` message; the next assistant reply was empty
+  (1 token) and the process made no further progress for >9 min
+  (log shows only periodic skills-discovery polls) — killed and recorded
+  as a hang. Whether the stall is a CLI print-mode edge or a model-side
+  issue is undetermined; the skill's steps before it behaved per spec.
+
+Verdict: **partial** — skill resolved, chose the spec's "closest
+executable regression check", degraded honestly on the exec rejection,
+and applied the edit; the fail-first/rerun loop and final report were
+unreachable under print-mode permissions + the observed stall.
+
+### 3.4 `/pstack:poteto-mode`
+
+```bash
+git checkout -b probe/poteto
+devin -p "/pstack:poteto-mode change greet() to say hi instead of hello and prove it" --respect-workspace-trust false --permission-mode accept-edits --export ./probe-poteto.json
+```
+
+stdout verbatim excerpt (final report), exit 0:
+
+```text
+**Verification.** I read the real file and ran `git diff -- src/index.js` plus `git diff --check`. The diff is only `- return \`hello ${name}\`;` to `+ return \`hi ${name}\`;`, and `git diff --check` exited 0. I attempted runtime proof with `mise exec -- npm test`, `mise exec -- node src/index.js`, and `node src/index.js`. Each was rejected by the session's non-interactive tool permissions, so I could not capture `hi fixture` from a live run.
+**Principles.** `principle-laziness-protocol` kept the diff to one literal … `principle-prove-it-works` made me check the actual file and diff instead of trusting the delegate, and it also blocks claiming runtime proof I did not observe.
+```
+
+Evidence:
+
+- `subagent_heads`: 1 row (`agent_id 0834bebc`); one `run_subagent`
+  call, `profile: "pstack:poteto-agent"`, `is_background: true`, task
+  brief opens with the absolute plugin path of `poteto-mode/SKILL.md`
+  and restates the user goal — exactly the skill's delegate contract.
+- Non-negotiables observed in the reply: goal restatement ("Your goal
+  was to…"), named principles with the decisions they changed, a
+  throughput checkpoint, a "Blocked" section listing the rejected
+  commands, and honest non-claiming of unobserved runtime proof.
+- Fan-out accounting: skill claims "one `run_subagent` per entry" for
+  delegates → observed 1 delegate for 1 unit of work. **No `sidekick`/
+  Fusion**: session model `swe-2-flash-high` is not a Fusion pair and
+  `run_subagent` was used, per the adapter's Routing rule.
+- Mutation captured on `probe/poteto` (then deleted): `src/index.js`
+  `hello` → `hi`, 1 line; no commit (git mutations rejected).
+
+Verdict: **pass** — delegation profile, principle citation, and verified-
+work honesty all confirmed live; only the runtime proof was
+permission-blocked and the skill said so.
+
+### 3.5 `/pstack:arena`
+
+```bash
+devin -p "/pstack:arena write a one-line README tagline for this repo" --respect-workspace-trust false --permission-mode accept-edits --export ./probe-arena.json
+```
+
+stdout verbatim excerpt, exit 0:
+
+```text
+**Arena summary**
+- **Candidates**: 3 parallel `subagent_general` runners (Cursor model slugs in `pstack-models.mdc` aren't selectable on Devin — `run_subagent` takes profiles, not models; noted as a substitution). No dropouts.
+- **Cross-judge**: one read-only `subagent_explore` judge. Vendor check couldn't run (model slugs unreadable/unsettable); parent is SWE-2 anyway, outside the claude/gemini pool.
+- **Base**: candidate 1 — verbatim `package.json` description, strongest provenance. Judge agreed (C1/C2 tied at 25, C3 at 22).
+```
+
+Evidence:
+
+- `subagent_heads`: 4 rows (`38729299`, `4087a10c`, `724cc117`,
+  `a2020cfe`); 4 `run_subagent` calls — 3 × `subagent_general`
+  `is_background: true` candidates + 1 × `subagent_explore` judge —
+  matching the claimed fan-out (N=3 runners + 1 judge). No `sidekick`/
+  Fusion present; all agents on the session model.
+- Full phase flow observed in output: Frame (artifact + 5-criterion
+  rubric + runner/output-path decisions), Fan out, Cross-judge scores,
+  Pick (C1), Graft (none needed — consensus), Verify (re-read post-edit).
+- Outside-workspace reads (`~/.cursor/rules/pstack-models.mdc`) rejected
+  → defaulted to 3 seats and reported the substitution, per the adapter.
+- Mutation: `README.md` gained the winning tagline (grafted via `edit`);
+  scratch artifacts under `.arena/candidate-{1,2,3}/` + `synthesis.md`
+  (git worktrees rejected → in-workspace dirs instead). Cleaned after
+  capture; tracked files restored.
+
+Verdict: **pass** — fan-out count, judge mapping, phase order, and
+honest substitution reporting all verified.
+
+### 3.6 `/pstack:interrogate`
+
+```bash
+devin -p "/pstack:interrogate should this repo use a queue?" --respect-workspace-trust false --permission-mode accept-edits --export ./probe-interrogate.json
+```
+
+stdout verbatim excerpt, exit 0:
+
+```text
+**Verdict on your question: no.** Every verified finding points the same way — there is nothing to queue, nothing that could verify a queue, and the one thing a queue would break is the fixture's only observable behavior.
+## Adaptations (per `docs/harness/devin.md`)
+- `interrogate reviewers` line missing → default 3 reviewers. No `pstack-M` model-pinned profiles exist on this Devin install and `run_subagent` takes no model param, so all three ran as `subagent_general` on the session model.
+- Git worktrees and file copies via `exec` were auto-denied (non-interactive approvals), so candidates shared the tree; each kept artifacts in `.interrogate/cand-N/` instead.
+```
+
+Evidence:
+
+- `subagent_heads`: 3 rows (`b75f9e59`, `cd3f0eca`, `e3af21b5` — the
+  same ids the report names per adversary); 3 `run_subagent` calls, all
+  `subagent_general` + `is_background: true` with the skill's adversary
+  brief verbatim — matches "default 3 reviewers" fan-out.
+- Verify phase observed: the parent re-ran read-only commands
+  (`git show --stat HEAD`, `git show HEAD:<file>`, `wc -l`, globs —
+  auto-approved) and kept/dropped findings accordingly; runtime probes
+  (`.interrogate/cand-*/probe-queue.mjs`) stayed unrun and were
+  explicitly labeled unverified.
+- Output contract followed: Intent / Findings / Dropped-per-adversary /
+  Adaptations naming the harness doc.
+- Scratch dir `.interrogate/cand-{1,2,3}/` left in the fixture (removed
+  after capture); no tracked file changed.
+
+Verdict: **pass**.
+
+### 3.7 Non-interference control
+
+```bash
+devin -p "list the files in this repo" --respect-workspace-trust false --export ./probe-noninterf.json
+```
+
+stdout verbatim excerpt, exit 0 (session `bronzed-ocean`):
+
+```text
+Files in this repo:
+**Root:**
+- `AGENTS.md`
+- `README.md`
+- `package.json`
+…
+**src/:**
+- `index.js`
+- `util.js`
+Plus `.git/` and `.serena/` directories. It's a tiny fixture repo.
+```
+
+Evidence: 0 `run_subagent` calls, 0 `subagent_heads` rows, 2 `exec`
+calls (read-only listing). No pstack skill was invoked, no pstack
+profiles spawned, and the plugin's always-on `AGENTS.md` did not hijack
+the session — the answer stayed on-task (plain file listing).
+
+Verdict: **pass** — plugin presence is inert without a `/pstack:*`
+invocation.
+
+## 4. Deviations observed
 
 1. `ask_user_question` accepts 2-4 options per question; poteto-help's
    menu has 5 → the first call failed validation, the model retried
@@ -215,3 +474,30 @@ resolves, body loads, routing + file reads + reply format all observed;
    requires `--format json` (or `--format csv`).
 5. Print-mode sessions create no `transcripts/<name>.json`; session
    evidence lives in `sessions.db` (+ `--export` file when requested).
+6. Non-interactive `exec` gating is per-command: `--permission-mode
+   auto` and `accept-edits` auto-approve only read-only-classified
+   commands (`ls`, `cat`, `find`, `grep`, `wc`, `git diff`, `git show`).
+   Arbitrary execution (`node`, `npm`, `devin models list`, `git add`/
+   `commit`/`worktree`, `mise exec`) is auto-denied with
+   `warning: rejected a tool call that requires confirmation … Use
+   --permission-mode dangerous`. Skills needing runtime proof degrade to
+   read-only verification and say so (all fan-out probes did this
+   correctly). `dangerous` was not exercised.
+7. `read` outside the workspace is also rejected non-interactively —
+   `~/.cursor/rules/pstack-models.mdc` and `~/.devin/rules/` could not be
+   read by arena/setup probes, so model config fell back to skill
+   defaults + reported substitutions.
+8. After a turn ends with a tool result and no final text, the
+   print-mode driver injects a bare `role:"user"` `continue` message.
+   In the tdd run the follow-up assistant reply was empty (1 token) and
+   the process made no progress for >9 min — killed as a hang. CLI-level
+   stall vs model issue undetermined; evidence was still recoverable
+   from `sessions.db`/`message_nodes`.
+9. When `git worktree`/`exec` writes are denied, fan-out skills place
+   candidate artifacts in workspace scratch dirs (`.arena/candidate-N/`,
+   `.interrogate/cand-N/`). Read-only assertions must expect untracked
+   scratch dirs for mutating/fan-out skills even when tracked files stay
+   clean; remove them after capture.
+10. `--export` writes only after a turn completes: the killed tdd run
+    left no export file, and `sessions.model` stayed blank — both are
+    expected failure shapes for a mid-run kill, not data loss bugs.
