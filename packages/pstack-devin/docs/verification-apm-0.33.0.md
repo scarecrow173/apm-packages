@@ -353,3 +353,16 @@ Established constraints (all verified above):
 6. Consumer installs (`path:`/marketplace) deploy only this package's `.apm/` primitives; they never see the upstream dep or `devin-plugin/` unless `includes:` says otherwise (`#217` decides). Local-dep materialization copies the package dir verbatim into the consumer cache, so `path:` sources must be clean checkouts (§5).
 7. Updating the pin = `upstream.yml` + `apm.yml` ref + `apm install` regen + rebuild; never bump only one side.
 8. `apm install` writes `.github/copilot/settings.local.json` + `apm_modules/` here — local side-effects, gitignored.
+
+## Acceptance (issue `#212` completion criteria)
+
+| Criterion | Evidence |
+| --- | --- |
+| Reproducible verification of pinned upstream + APM 0.33.0 | sections 1–5; commands + observed outputs recorded |
+| `packages/pstack-devin/apm.yml` matches repo conventions; `apm compile --validate` handled | manifest mirrors dep-only aggregator convention; `compile --validate` is consumer-context and not applicable here (section 6.5) |
+| Single authority for upstream git SHA + lockfile update procedure | `upstream.yml`; `apm install`-generated `apm.lock.yaml`; 3-way equality test in `scripts/pstack-devin` |
+| Install boundary and unsupported cases documented | README/AGENTS boundary section; `upstream-source-decision.md` rejected alternatives |
+
+- `apm install --frozen`: PASS
+- `pnpm --dir scripts/pstack-devin test`: PASS
+- `pnpm --dir scripts/pstack-devin run lint:md`: PASS
