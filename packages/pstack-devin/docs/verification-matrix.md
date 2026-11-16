@@ -39,7 +39,7 @@ notice instead of passing — install with `mise install`.
 
 | Command | Composition |
 | --- | --- |
-| `pnpm --dir scripts/pstack-devin run verify:l1` | `check-generated` + `check:safety` |
+| `pnpm --dir scripts/pstack-devin run verify:l1` | `check-generated` + `check:safety` (note: `check-generated` refetches the pinned upstream commit — deterministic but needs GitHub access; its ~546 sequential blob fetches can hit rate limits) |
 | `pnpm --dir scripts/pstack-devin run verify:l2` | `audit:compat` + `check:links` + `check:roles` |
 | `pnpm --dir scripts/pstack-devin run verify:l3` | `tsx src/l3-dist.ts` |
 | `pnpm --dir scripts/pstack-devin run verify` | `verify:l1` + `verify:l2` + `verify:l3` + `pnpm test` |
