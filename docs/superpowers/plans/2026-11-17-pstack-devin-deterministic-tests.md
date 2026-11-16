@@ -43,7 +43,7 @@
 
 Kinds: `](relpath)`+backticked relative paths → fs.exists under the file's dir (anchors `#...` stripped); `/<plugin>:<skill>`+`/pstack:<name>` and bare `principle-*`/`poteto-*`/`the **name** skill` mentions → `skills/<name>/SKILL.md` exists; `pstack:<agent>` → `agents/<agent>.md`; `http(s)`/`mailto:` → kind `url` (skip — external); `~/`-rooted paths → skip (runtime paths, not tree refs). Scan all `.md` in `devin-plugin/` incl. `docs/`, `agents/`, `skills/**/playbooks`, `references`.
 
-- [ ] Tests: fixture tree with good mdlink/skill/agent refs → 0 broken; broken mdlink → named; `pstack:nonexistent` → broken; unknown ref like `](weird://x)` → unresolved not pass; real tree → 0 broken 0 unresolved (iterate vocabulary of skip patterns until clean — every suppression must be a real, justified ref kind).
+- [x] Tests: fixture tree with good mdlink/skill/agent refs → 0 broken; broken mdlink → named; `pstack:nonexistent` → broken; unknown ref like `](weird://x)` → unresolved not pass; real tree → 0 broken 0 unresolved (iterate vocabulary of skip patterns until clean — every suppression must be a real, justified ref kind).
 
 ### Task 2: `role-registry` (L2)
 
@@ -51,7 +51,7 @@ Kinds: `](relpath)`+backticked relative paths → fs.exists under the file's dir
 
 Consumer scan: upstream skill `.md` files mentioning `pstack-models` — for each, extract role-label literals: known approach = match lines `Use the \`<label>\` line` / backticked quoted role names; PLUS a general check that any backticked string exactly matching `roles.json` key format is counted. Simplest robust impl: build the set of role labels REFERENCED by scanning for each `roles.json` key's literal presence in consumer files (dead-role check), and extract `\`([\w -]+)\`` tokens that appear adjacent to `pstack-models`/`line in` context then assert ⊆ keys (unknown-role check). A role a consumer names that isn't in roles.json → unknown (new upstream role = loud failure = the issue's requirement).
 
-- [ ] Tests: roles.json fixture + consumer fixture; upstream real tree → 0 unknown 0 dead; consumer naming `new-role` → unknown; roles.json extra role → dead.
+- [x] Tests: roles.json fixture + consumer fixture; upstream real tree → 0 unknown 0 dead; consumer naming `new-role` → unknown; roles.json extra role → dead.
 
 ### Task 3: `safety-scan` (L1)
 
@@ -59,7 +59,7 @@ Consumer scan: upstream skill `.md` files mentioning `pstack-models` — for eac
 
 Secret patterns (each a labeled regex): `ghp_[A-Za-z0-9]{36}`, `gho_`, `github_pat_`, `sk-[A-Za-z0-9]{20,}`, `AKIA[0-9A-Z]{16}`, `BEGIN [A-Z ]*PRIVATE KEY`, `xox[baprs]-`, `AIza[0-9A-Za-z_-]{35}`, `-----BEGIN`, `eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.` (JWT). Whitelist file `scripts/pstack-devin/src/safety-scan-allowlist.ts` with per-file justification — start EMPTY; any real-tree hit → justify loudly or fail.
 
-- [ ] Tests: fixture w/ fake `ghp_…` token → flagged; >5MiB file → flagged; exec-bit fixture vs provenance; plugin.json name/platforms assertion; real tree → clean.
+- [x] Tests: fixture w/ fake `ghp_…` token → flagged; >5MiB file → flagged; exec-bit fixture vs provenance; plugin.json name/platforms assertion; real tree → clean.
 
 ### Task 4: `l3-dist` + matrix + wiring
 
@@ -68,13 +68,13 @@ Secret patterns (each a labeled regex): `ghp_[A-Za-z0-9]{36}`, `gho_`, `github_p
 - `verification-matrix.md`: L1 (build+check-generated+inventory/overlay/safety), L2 (compat-audit+adapter/setup/apm-sync/link-check/role-registry), L3-local, L3-consumer(manual), deferred-to-#218 (real Devin session runs) table + CI policy "deterministic commands only".
 - `package.json` scripts: `"verify:l1": "pnpm run check-generated && tsx src/safety-scan.ts"`, `"verify:l2": "tsx src/compat-audit.ts && tsx src/link-check.ts && tsx src/role-registry.ts"`, `"verify:l3": "tsx src/l3-dist.ts"`, `"verify": "pnpm run verify:l1 && pnpm run verify:l2 && pnpm run verify:l3 && pnpm test"`.
 
-- [ ] Tests: `l3-dist.test.ts` manifest/layout/apm-vs-devin assertions (+ `apm pack --dry-run` run via mise exec where available, skipped with notice where not); docs.
+- [x] Tests: `l3-dist.test.ts` manifest/layout/apm-vs-devin assertions (+ `apm pack --dry-run` run via mise exec where available, skipped with notice where not); docs.
 
 ### Task 5: sweep + issue comment
 
-- [ ] All green: test + lint:md + verify:l1 + verify:l2 + verify:l3.
-- [ ] README EN/JA: verification section update (commands).
-- [ ] `#216` comment with the matrix + negative-fixture evidence list.
+- [x] All green: test + lint:md + verify:l1 + verify:l2 + verify:l3.
+- [x] README EN/JA: verification section update (commands).
+- [x] `#216` comment with the matrix + negative-fixture evidence list.
 
 ## Self-Review
 

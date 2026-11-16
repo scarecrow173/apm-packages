@@ -118,6 +118,27 @@ mise exec -- pnpm --dir scripts/pstack-devin run check-generated  # コミット
 バイト単位で比較する。差異があれば失敗する。記録済みの証跡は
 `docs/build-verification.md` を参照。
 
+## 検証
+
+出荷ツリーを守る、決定的・無料・ローカルで完結するチェック群。
+すべてリポジトリルートから実行する:
+
+```bash
+mise exec -- pnpm --dir scripts/pstack-devin run verify   # L1 + L2 + L3 + ユニットテスト
+```
+
+| コマンド | 証明する内容 |
+| --- | --- |
+| `run verify:l1` | ビルド整合性と配布安全性 — コミット済み `devin-plugin/` がピン留めした上流 + オーバーレイからバイト単位で再現できること、およびシークレット形状トークン・サイズ超過・実行ビット/マニフェストのずれがないこと |
+| `run verify:l2` | 上流互換性と参照 — 全ハーネス API トークンが登録語彙に収まること、出荷ドキュメント内の全参照が実在の対象へ解決できること、消費側ロールラベル ⊆ `roles.json` キーであること |
+| `run verify:l3` | 配布形状 — `.devin-plugin/plugin.json` スキーマ、`devin-plugin/` レイアウト、`.apm/` と `devin-plugin/` の非混同、`apm pack`/`apm compile` が記録済みの振る舞いを保つこと |
+| `run probe:consumer` | **手動のみ** — 実 `apm` でスクラッチコンシューマーへインストールする(`--ref` の git 形式はネットワークが必要)。証跡は `docs/l3-verification.md` に追記される |
+
+チェックごとの保証一覧は `docs/verification-matrix.md` を参照。
+これらは静的チェックであり、出荷ツリーの一貫性とインストール可能な
+形状を証明するものであって、エージェントの実行時品質を証明するもの
+**ではない**。実 Devin セッションでの検証は `#218` に委譲する。
+
 ## レイアウト
 
 ```text
