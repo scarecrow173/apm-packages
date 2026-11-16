@@ -144,7 +144,99 @@ Probe-to-evidence mapping (input to issues `#214` / `#216`):
 
 ## 4. Coverage and pack probes
 
-(filled by plan Task 4)
+Probe 4a — `apm pack -o build` bundle contents.
+
+```bash
+mise exec -- apm pack -o build 2>&1 | tail -12
+```
+
+- observed (verbatim tail; line wraps joined):
+
+  ```text
+  [i] Writing generated plugin manifest under .github/: G:\repositry\apm-packages\.worktrees\pstack-devin-212\packages\pstack-devin\.github\plugin\plugin.json
+  [+] Generated plugin manifest: G:\repositry\apm-packages\.worktrees\pstack-devin-212\packages\pstack-devin\.github\plugin\plugin.json
+  [+] Generated plugin manifest: G:\repositry\apm-packages\.worktrees\pstack-devin-212\packages\pstack-devin\.claude-plugin\plugin.json
+  ```
+
+```bash
+find build -type f | sort
+# -> find: 'build': No such file or directory
+```
+
+- observed files: **none — `build/` was never created.** `apm pack` reads the
+  `dependencies:` block to decide bundle contents (per `apm pack --help`:
+  "`dependencies:` block -> bundle"); this manifest carries the pin under
+  `devDependencies:` only, and the lockfile's `deployments: []` attests
+  nothing to pack, so the bundle stage emitted no output directory at all.
+  `--dry-run --verbose` prints the same plugin-manifest lines with no bundle
+  stage mentioned.
+- observed: **0** upstream files in bundle (expected: 0 — `deployments: []`
+  attests nothing to pack). Stronger than expected: not an empty bundle, but
+  no bundle artifact whatsoever.
+- side-effect: `.claude-plugin/plugin.json` generated in package dir: **yes**
+  (plus `.github/plugin/plugin.json`). Both are bare
+  `name`/`version`/`description`/`author`/`license` manifests generated from
+  the `targets:` block; both paths are already gitignored (`/.github/`,
+  `/.claude-plugin/` in the package `.gitignore`).
+
+Probe 4b — update-visibility commands on a SHA-pinned devDep.
+
+```bash
+mise exec -- apm outdated 2>&1 | tail -10
+```
+
+- observed (verbatim; trailing table border clipped by terminal width):
+
+  ```text
+                                     Dependency Status
+  ┌──────────────────────┬────────────┬────────────┬──────────────┬──────────────
+  │ Package              │ Current    │ Latest     │ Status       │ Source
+  ├──────────────────────┼────────────┼────────────┼──────────────┼──────────────
+  │ cursor/plugins/harn… │ bf0c7cd8   │ -          │ unknown      │ git tags
+  └──────────────────────┴────────────┴────────────┴──────────────┴──────────────
+  [i] Some dependencies could not be checked
+  ```
+
+```bash
+mise exec -- apm deps list 2>&1 | tail -10
+```
+
+- observed (verbatim):
+
+  ```text
+                                             APM Dependencies (Project)
+  ┌───────────────────────────────────────────┬─────────┬────────┬─────────┬──────────────┬────────┬────────┬───────┐
+  │ Package                                   │ Version │ Source │ Prompts │ Instructions │ Agents │ Skills │ Hooks │
+  ├───────────────────────────────────────────┼─────────┼────────┼─────────┼──────────────┼────────┼────────┼───────┤
+  │ cursor/plugins/harness/pstack/claude-code │ 0.15.42 │ github │    -    │      -       │   -    │   -    │   -   │
+  └───────────────────────────────────────────┴─────────┴────────┴─────────┴──────────────┴────────┴────────┴───────┘
+  [i] 1 Agent Plugin registered natively with GitHub Copilot: pstack
+  ```
+
+```bash
+mise exec -- apm deps tree 2>&1 | tail -10
+```
+
+- observed (verbatim):
+
+  ```text
+  pstack-devin (local)
+  └── cursor/plugins/harness/pstack/claude-code@0.15.42
+  ```
+
+Conclusions:
+
+- `apm pack` cannot distribute the upstream tree; the Devin plugin artifact
+  must be produced by a build-side snapshot (issue `#213`). The only outputs
+  pack produces for this manifest are generated plugin manifests under
+  `.github/plugin/` and `.claude-plugin/`.
+- Staleness detection for the pin requires comparing `upstream.yml.commit`
+  against upstream `main` directly (`gh api`/`git ls-remote`); `apm outdated`
+  **does not** surface it — it checks `git tags` only, so a full-SHA pin
+  reports `Status: unknown`, `Latest: -`, and "Some dependencies could not be
+  checked". `apm deps list`/`tree` confirm the pin resolves as version
+  `0.15.42` (from the lockfile) but expose no staleness signal either. This
+  is the update-procedure input for issue `#219`.
 
 ## 5. Local consumer probe
 
