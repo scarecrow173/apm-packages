@@ -26,6 +26,11 @@
 - `upstream.yml.upstream.commit` が上流スナップショットの唯一の権威。
   `apm.yml` の `devDependencies.apm[0].ref` と `apm.lock.yaml` の
   `resolved_commit` は常にこれと一致しなければならない。
+- ピンの更新は `pnpm --dir scripts/pstack-devin run apply:update <sha>`
+  (参照・ロックファイル・生成ツリー・verify をアトミックに1コミット)
+  か週次 upstream-watch ワークフロー経由のみ — 詳細は
+  `docs/upstream-updates.md`。ピンファイルだけを単独で書き換えては
+  ならない。
 - `apm.lock.yaml` の再生成はこのディレクトリ内での `apm install` のみ。
   手編集禁止。
 - `apm_modules/`、`.github/`、`.claude-plugin/`、`build/` はローカルの

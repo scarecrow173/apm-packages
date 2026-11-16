@@ -15,6 +15,7 @@
     "check:marketplace": "tsx src/check-marketplace.ts",
     "check:upstream": "tsx src/check-upstream.ts",
     "report:update": "tsx src/update-report.ts",
+    "apply:update": "tsx src/apply-update.ts",
     "verify:l1": "pnpm run check-generated && tsx src/safety-scan.ts",
     "verify:l2": "tsx src/compat-audit.ts && tsx src/link-check.ts && tsx src/role-registry.ts",
     "verify:l3": "tsx src/l3-dist.ts && tsx src/check-marketplace.ts",
