@@ -260,7 +260,7 @@ mise exec -- apm install --only apm 2>&1 | tail -10
   WARNING apm_cli.policy.discovery Policy repo scarecrow173/.github-private not found (or [REDACTED] private-repo read scope). If your org publishes policy in .github-private, ensure the token has Contents:read permission on that repo.
   [i] Targets: claude  (source: apm.yml)
     [x] 1 package failed:
-      +- ../../packages/pstack-devin -- Failed to download dependency 
+      +- ../../packages/pstack-devin -- Failed to download dependency
   _local/pstack-devin: [WinError 3] 指定されたパスが見つかりません。
   [x] Installation failed with 1 error(s) in 2.4s. No install transaction changes
   were committed.
@@ -300,7 +300,7 @@ find . -type f -not -path './apm_modules/*' | sort
   [i] Added apm_modules/ to .gitignore
     [i] Skipped inactive experimental resolver for target 'copilot-cowork' during
   lockfile reconciliation.
-    [i] Skipped inactive experimental resolver for target 'copilot-app' during 
+    [i] Skipped inactive experimental resolver for target 'copilot-app' during
   lockfile reconciliation.
   [*] Installed 1 APM dependency in 2.4s.
   ```
