@@ -53,7 +53,11 @@ Probe 3a — file inventory. `gh api git/trees?recursive=1` vs
 Probe 3b — non-copilot target (`targets: [claude]`, `dependencies:` object
 form, scratch consumer outside the repo).
 
-- observed (verbatim tail of `apm install --only apm`; line wraps joined):
+```bash
+apm install --only apm
+```
+
+- observed (verbatim tail; line wraps joined, elided where marked):
 
   ```text
   [i] Targets: claude  (source: apm.yml)
@@ -72,6 +76,10 @@ form, scratch consumer outside the repo).
 
 Probe 3c — shorthand `owner/repo/path#sha` canonicalization.
 
+```bash
+apm install 'cursor/plugins/harness/pstack/claude-code#bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7' --target copilot
+```
+
 - observed: install OK — `[+] Registered 1 Agent Plugin with GitHub Copilot
   via the 'apm' marketplace (pstack)`, `[*] Installed 1 APM dependency in
   10.8s.` Running `apm install <spec> --target copilot` in an empty dir
@@ -84,20 +92,27 @@ Probe 3c — shorthand `owner/repo/path#sha` canonicalization.
       - cursor/plugins/harness/pstack/claude-code#bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7
   ```
 
-  Scratch `apm.lock.yaml` confirms `resolved_commit: bf0c7cd…`,
+  Scratch `apm.lock.yaml` confirms
+  `resolved_commit: bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7`,
   `resolved_ref` identical, `version: 0.15.42`,
   `virtual_path: harness/pstack/claude-code`, `is_virtual: true`,
   `package_type: agent_plugin`, `deployments: []`.
 
 Probe 3d — `apm audit` integrity.
 
-- observed baseline: `[*] 1 file(s) scanned -- no issues found`, but preceded
-  by `[!] drift check could not run: drift replay blocked: Native Agent
-  Plugin canonical IR is missing, so deployment was blocked.`
+```bash
+mise exec -- apm audit
+```
+
+- observed baseline: `[*] 1 file(s) scanned -- no issues found`, but
+  preceded by `[!] drift check could not run: drift replay blocked: Native
+  Agent Plugin canonical IR is missing, so deployment was blocked.` The 1
+  scanned file is the copilot marketplace-registration artifact (an install
+  side-effect), not part of the pinned tree.
 - after appending `tamper-probe` to the cached `README.md`: **identical
   output — the tamper is NOT detected.** `apm audit` scans deployed files
-  only; with `deployments: []` there is no deployment surface to scan, and
-  drift replay cannot run for `agent_plugin` packages at all.
+  only; with `deployments: []` there is no upstream deployment surface to
+  scan, and drift replay cannot run for `agent_plugin` packages at all.
 - after `rm -rf apm_modules && mise exec -- apm install --only apm`:
   `[*] Installed 1 APM dependency in 7.5s.` — tree restored (546 upstream
   files + `.apm-pin`, no tamper residue); audit output returns to the same
