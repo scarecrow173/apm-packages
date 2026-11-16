@@ -5,8 +5,9 @@ Devin CLI compatible distribution of the upstream
 (`harness/pstack/claude-code`), pinned to a fixed upstream commit.
 
 > Status: the deterministic builder is implemented and the generated
-> `devin-plugin/` tree is committed. APM `.apm/` primitives and Devin
-> overlay content land in later issues; see the issue chain under
+> `devin-plugin/` tree — including the Devin runtime adapter overlay — is
+> committed. APM `.apm/` primitives land in later issues; see the issue
+> chain under
 > [the parent issue](https://github.com/scarecrow173/apm-packages/issues/211).
 
 ## Artifacts and boundaries
@@ -32,6 +33,40 @@ values must always agree. A mismatch is a hard failure, not a warning.
 Upstream files ship byte-identical except for an explicit overwrite
 allowlist. See `docs/upstream-source-decision.md` for the verified
 rationale and `docs/verification-apm-0.33.0.md` for the reproduction log.
+
+## Devin runtime adapter
+
+The generated plugin ships `docs/harness/devin.md`, the adapter of record
+on Devin: it maps the Cursor tool and `Task`-field names that upstream
+skills use (`Task` → `run_subagent`, `AskQuestion` → `ask_user_question`,
+`subagent_type` → `profile`, …) onto Devin's runtime, and it wins over the
+upstream `docs/harness/claude-code.md` adapter wherever the two disagree.
+The always-on root `AGENTS.md` points at it, but pstack stays opt-in —
+nothing activates unless the user invokes a pstack skill or `/pstack:<name>`
+command.
+
+Overlay policy, enforced by `overlay.yml` and recorded in
+`provenance.json`:
+
+- `agents/poteto-agent.md` is a Devin-native overwrite (allowlisted):
+  upstream's `is_background` frontmatter and `generalPurpose`/`~/.cursor`
+  references live in a machine-parsed profile that instruction-level
+  adaptation cannot fix. `agents/comment-sicko.md` stays byte-identical —
+  pure persona prose, already valid Devin.
+- External skill deps `deslop`, `control-cli`, and `control-ui` ship in
+  `cursor-team-kit`, which carries only a `.cursor-plugin/` manifest and
+  is not installable as a Devin plugin. The adapter documents a
+  plain-words fallback instead of bundling them; see
+  `docs/devin-adapter-decisions.md`.
+
+The mapping contract is machine-checked: the `audit:compat` script scans
+the generated tree and fails on any unclassified harness-API reference,
+so a new upstream Cursor API surfaces as an audit error instead of silent
+breakage.
+
+```bash
+mise exec -- pnpm --dir scripts/pstack-devin run audit:compat
+```
 
 ## Regenerating `devin-plugin/`
 

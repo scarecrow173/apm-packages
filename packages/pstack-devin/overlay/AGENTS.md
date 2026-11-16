@@ -6,3 +6,15 @@ This plugin is a byte-pinned Devin distribution of upstream `pstack`
 
 Upstream skills are exposed as `/pstack:<skill>`; agent profiles under
 `agents/` load as `pstack:<agent>` on local platforms only.
+
+On Devin, read `docs/harness/devin.md` once before running any pstack
+skill — it maps the Cursor tool/field names the skills use to Devin's
+`run_subagent`/`ask_user_question`/`todo_write` and explains which
+Cursor-only features are skipped or error out.
+
+`docs/harness/devin.md` is the adapter of record on Devin — where it and
+`docs/harness/claude-code.md` disagree, `devin.md` wins.
+
+Do not run pstack skills, spawn pstack subagents, or apply these
+mappings unless the user invoked a pstack skill or `/pstack:<name>`
+command — this file is always-on but pstack is opt-in.

@@ -4,3 +4,4 @@
 # content; this file is the allowlist authority.
 allow_overwrite:
   - skills/setup-pstack/SKILL.md # Devin delegation entry — content lands in #215
+  - agents/poteto-agent.md # Devin-native profile (machine-parsed; Cursor refs removed) — issue `#214`

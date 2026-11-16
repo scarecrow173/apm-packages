@@ -29,9 +29,11 @@
   手編集禁止。
 - `apm_modules/`、`.github/`、`.claude-plugin/`、`build/` はローカルの
   インストール/pack 副作用であり、ignore を維持する。
-- 上流ファイルは上書き allowlist(現時点では
-  `skills/setup-pstack/SKILL.md` のみ。`docs/upstream-source-decision.md`
-  参照)を除きバイト単位で同一。
+- 上流ファイルは上書き allowlist(`skills/setup-pstack/SKILL.md` は
+  `#215` 用に予約、`agents/poteto-agent.md` は `#214` で Devin
+  ネイティブプロファイルとして上書き済み。
+  `docs/upstream-source-decision.md` と
+  `docs/devin-adapter-decisions.md` 参照)を除きバイト単位で同一。
 
 ## 生成 `devin-plugin/` のルール
 
@@ -87,4 +89,5 @@ mise exec -- apm compile --dry-run  # 消費者コンテキストのプレビュ
 mise exec -- pnpm --dir scripts/pstack-devin test
 mise exec -- pnpm --dir scripts/pstack-devin run lint:md
 mise exec -- pnpm --dir scripts/pstack-devin run check-generated
+mise exec -- pnpm --dir scripts/pstack-devin run audit:compat
 ```

@@ -30,8 +30,10 @@ surface; `docs/` holds maintainer-facing evidence, not user docs.
 - `apm_modules/`, `.github/`, `.claude-plugin/`, and `build/` are local
   install/pack side-effects and stay gitignored.
 - Upstream files are byte-identical except the overwrite allowlist
-  (currently only `skills/setup-pstack/SKILL.md`; see
-  `docs/upstream-source-decision.md`).
+  (`skills/setup-pstack/SKILL.md` reserved for `#215`;
+  `agents/poteto-agent.md` overwritten as a Devin-native profile in
+  `#214`; see `docs/upstream-source-decision.md` and
+  `docs/devin-adapter-decisions.md`).
 
 ## Generated `devin-plugin/` rules
 
@@ -86,4 +88,5 @@ From the repository root:
 mise exec -- pnpm --dir scripts/pstack-devin test
 mise exec -- pnpm --dir scripts/pstack-devin run lint:md
 mise exec -- pnpm --dir scripts/pstack-devin run check-generated
+mise exec -- pnpm --dir scripts/pstack-devin run audit:compat
 ```
