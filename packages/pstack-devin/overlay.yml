@@ -1,0 +1,6 @@
+# Overlay policy for the generated devin-plugin/ tree (issue #213).
+# Only paths listed here may replace an upstream file; every other overlay
+# path must be an addition (a path absent upstream). #214/#215 add overlay
+# content; this file is the allowlist authority.
+allow_overwrite:
+  - skills/setup-pstack/SKILL.md # Devin delegation entry — content lands in #215

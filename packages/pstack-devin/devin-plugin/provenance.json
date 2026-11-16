@@ -1,0 +1,39 @@
+{
+  "distribution": {
+    "name": "pstack-devin",
+    "plugin_name": "pstack",
+    "version": "0.1.0"
+  },
+  "executables": [
+    "skills/poteto-mode/scripts/check-plan.mjs",
+    "skills/poteto-mode/scripts/watch-pr/watch-pr",
+    "skills/poteto-mode/scripts/worktree-audit.sh",
+    "skills/show-me-your-work/scripts/log.sh",
+    "skills/statechart/scripts/statechart",
+    "skills/statechart/scripts/test/java.ts"
+  ],
+  "generator": "scripts/pstack-devin build",
+  "overlay": {
+    "additions": [
+      {
+        "path": ".devin-plugin/plugin.json",
+        "sha256": "8a3a2946951889d3104ce701d003e9b9ab087ed1568e812fbf987d5c797d0fb1"
+      },
+      {
+        "path": "AGENTS.md",
+        "sha256": "d681f006302e0b6bbe3442984b85f07d867402601a6caeaa867809d675842169"
+      }
+    ],
+    "overwrites": []
+  },
+  "schema": "pstack-devin/provenance@1",
+  "upstream": {
+    "commit": "bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7",
+    "file_count": 546,
+    "host": "github.com",
+    "path": "harness/pstack/claude-code",
+    "repo": "cursor/plugins",
+    "tree_sha": "c1b4ae4da06c9815864bc7fe609cc5fb5324108c",
+    "version": "0.15.42"
+  }
+}
