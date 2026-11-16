@@ -38,7 +38,7 @@ A rule line whose role is not in the canonical schema is a retired role. Keep th
 
 **(c) Plan.** Run `node <skill>/scripts/setup.mjs plan --choices <file> --models <file>` and save the plan JSON — step 4 applies it. The plan resolves the budget arithmetic per role (`resolved`), marks each role needing a decision (`needsChoice`), reports `droppedRoles`, and lists every file change under `changes`.
 
-**(d) Confirm.** Show every role with its `resolved` model, marking `needsChoice` entries, and name each dropped role. For each `needsChoice` role offer the detected models plus `inherit-parent` and `auto` via `ask_user_question`, update the choices file, and re-run `plan` until no role needs a choice or the user accepts the suggestion shown.
+**(d) Confirm.** Show every role with its `resolved` model, marking `needsChoice` entries, and name each dropped role. For each `needsChoice` role offer the detected models plus `inherit-parent` and `auto` via `ask_user_question`, update the choices file, and re-run `plan` until no role needs a choice or the user accepts the suggestion shown. Before applying, write each role's accepted `resolved` value back into the choices file — the plan emits `resolved` under the chosen budget, and `apply` writes what `choices` carries.
 
 ### 4. Apply
 
