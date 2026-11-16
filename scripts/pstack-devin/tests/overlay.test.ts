@@ -104,6 +104,110 @@ test("additions are written and hashed; unused allowlist entries warn only", (t)
   );
 });
 
+test("case-folded overlay name colliding with upstream still requires the allowlist", () => {
+  const root = writeFixturePackage(tmpdir(), {
+    overlayFiles: [
+      { path: "skills/setup-pstack/skill.md", content: "overlay body" },
+    ],
+  });
+  const cfg = loadBuildConfig(root);
+  // the canonical upstream path is NOT allowlisted
+  cfg.overlay.allowOverwrite = cfg.overlay.allowOverwrite.filter(
+    (e) => e !== "skills/setup-pstack/SKILL.md",
+  );
+  const outDir = path.join(tmpdir(), "out");
+  const upstream = stageUpstream(outDir, {
+    "skills/setup-pstack/SKILL.md": "upstream body",
+  });
+  // exact-match lookup misses on a case-insensitive fs, where the write
+  // would silently replace upstream bytes — the error names both paths
+  assert.throws(
+    () => applyOverlay(cfg, outDir, upstream),
+    /not allowlisted: skills\/setup-pstack\/skill\.md.*skills\/setup-pstack\/SKILL\.md/,
+  );
+  // validation precedes any write — staged upstream file is untouched
+  assert.equal(
+    fs.readFileSync(
+      path.join(outDir, "skills/setup-pstack/SKILL.md"),
+      "utf8",
+    ),
+    "upstream body",
+  );
+});
+
+test("allowlisted case-folded overwrite lands on the canonical upstream path", (t) => {
+  const root = writeFixturePackage(tmpdir(), {
+    overlayFiles: [
+      { path: "skills/setup-pstack/skill.md", content: "patched\n" },
+    ],
+  });
+  // fixture allowlist names the canonical skills/setup-pstack/SKILL.md
+  const cfg = loadBuildConfig(root);
+  const outDir = path.join(tmpdir(), "out");
+  const upstream = stageUpstream(outDir, {
+    "skills/setup-pstack/SKILL.md": "original\n",
+  });
+  const warn = t.mock.method(console, "warn");
+  const res = applyOverlay(cfg, outDir, upstream);
+  // recorded under the canonical casing so provenance is byte-stable
+  // across case-insensitive and case-sensitive filesystems
+  assert.deepEqual(res.overwrites, [
+    {
+      path: "skills/setup-pstack/SKILL.md",
+      sha256: sha("patched\n"),
+      upstreamSha256: sha("original\n"),
+    },
+  ]);
+  assert.deepEqual(res.additions, []);
+  // bytes land on the canonical path — no differently-cased second file
+  assert.equal(
+    fs.readFileSync(
+      path.join(outDir, "skills/setup-pstack/SKILL.md"),
+      "utf8",
+    ),
+    "patched\n",
+  );
+  assert.deepEqual(
+    fs.readdirSync(path.join(outDir, "skills/setup-pstack")),
+    ["SKILL.md"],
+  );
+  // the allowlist entry counts as used
+  assert.ok(
+    !warn.mock.calls.some((c) => /unused/.test(String(c.arguments[0]))),
+    "canonical allowlist entry must not be reported unused",
+  );
+});
+
+test("overlay paths colliding under case folding are rejected", () => {
+  const root = writeFixturePackage(tmpdir(), {});
+  const cfg = loadBuildConfig(root);
+  const outDir = path.join(tmpdir(), "out");
+  // NTFS cannot host both names in one directory, so inject the pair —
+  // same pattern as the traversal test above.
+  const fake = (name: string): fs.Dirent =>
+    ({
+      name,
+      isDirectory: () => false,
+      isFile: () => true,
+      isSymbolicLink: () => false,
+    }) as fs.Dirent;
+  const realReaddir = fs.readdirSync;
+  const patched = (p: fs.PathLike, options?: unknown): unknown =>
+    String(p) === cfg.overlay.dir
+      ? [fake("a/X.md"), fake("a/x.md")]
+      : (realReaddir as (a: fs.PathLike, b?: unknown) => unknown)(p, options);
+  fs.readdirSync = patched as typeof fs.readdirSync;
+  try {
+    assert.throws(
+      () => applyOverlay(cfg, outDir, new Map()),
+      /collision.*case-insensitive.*a\/X\.md.*a\/x\.md/i,
+    );
+  } finally {
+    fs.readdirSync = realReaddir;
+  }
+  assert.equal(fs.existsSync(outDir), false, "no bytes may be written");
+});
+
 test("overlay path traversal is rejected before any write", () => {
   const root = writeFixturePackage(tmpdir(), {});
   const cfg = loadBuildConfig(root);

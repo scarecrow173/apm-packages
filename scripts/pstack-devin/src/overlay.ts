@@ -39,11 +39,20 @@ function listOverlayFiles(dir: string): string[] {
 }
 
 /** Apply `cfg.overlay.dir` over the staged upstream tree at `outDir`.
- *  Every overlay rel path is checked by `assertSafeRelPath`, and a path that
- *  exists upstream REQUIRES `overlay.yml allow_overwrite` membership — all
- *  validation completes before any byte is copied, so a rejected overlay
- *  never mutates the staged tree. Overwrites record the staged upstream
- *  sha256 for provenance; allowlist entries that end up unused only warn. */
+ *  Every overlay rel path is checked by `assertSafeRelPath`, and overlay
+ *  paths must be unique under case folding (like `scanTree` enforces for
+ *  upstream — a pair such as `a/X.md` + `a/x.md` would collide on
+ *  win32/macOS checkouts and produce platform-dependent output). A path
+ *  that exists upstream REQUIRES `overlay.yml allow_overwrite` membership —
+ *  "exists" is judged under case folding too, so a differently-cased
+ *  overlay name cannot evade the allowlist and silently replace upstream
+ *  bytes on a case-insensitive filesystem while provenance calls it an
+ *  addition. Such overwrites are authorized by, applied to, and recorded
+ *  under the CANONICAL upstream path so output casing stays byte-stable
+ *  across platforms. All validation completes before any byte is copied,
+ *  so a rejected overlay never mutates the staged tree. Overwrites record
+ *  the staged upstream sha256 for provenance; allowlist entries that end
+ *  up unused only warn. */
 export function applyOverlay(
   cfg: BuildConfig,
   outDir: string,
@@ -53,30 +62,60 @@ export function applyOverlay(
     ? listOverlayFiles(cfg.overlay.dir)
     : [];
 
-  // Pass 1 — validate every overlay rel path and overwrite authorization
-  // before copying anything.
-  for (const relPath of files) {
-    assertSafeRelPath(relPath, "overlay path");
-    if (
-      upstreamHash.has(relPath) &&
-      !cfg.overlay.allowOverwrite.includes(relPath)
-    ) {
-      throw new Error(`overlay overwrite not allowlisted: ${relPath}`);
-    }
+  // Case-folded index of upstream paths: folded rel path → canonical
+  // upstream path. `scanTree` already rejected fold-collisions inside the
+  // upstream tree, so each folded key resolves to one canonical path.
+  const upstreamFolded = new Map<string, string>();
+  for (const p of upstreamHash.keys()) {
+    upstreamFolded.set(p.toLowerCase(), p);
   }
 
-  // Pass 2 — copy bytes verbatim into the staged tree.
+  // Pass 1 — validate every overlay rel path and overwrite authorization
+  // before copying anything. `targets` maps each overwriting overlay path
+  // to the canonical upstream path it replaces.
+  const overlayFolded = new Map<string, string>();
+  const targets = new Map<string, string>();
+  for (const relPath of files) {
+    assertSafeRelPath(relPath, "overlay path");
+    const folded = relPath.toLowerCase();
+    const prev = overlayFolded.get(folded);
+    if (prev !== undefined) {
+      throw new Error(
+        `overlay path collision (case-insensitive): ${prev} vs ${relPath}`,
+      );
+    }
+    overlayFolded.set(folded, relPath);
+    const canonical = upstreamHash.has(relPath)
+      ? relPath
+      : upstreamFolded.get(folded);
+    if (canonical === undefined) continue; // addition
+    if (!cfg.overlay.allowOverwrite.includes(canonical)) {
+      throw new Error(
+        canonical === relPath
+          ? `overlay overwrite not allowlisted: ${relPath}`
+          : `overlay overwrite not allowlisted: ${relPath} ` +
+            `(overwrites upstream path ${canonical} on ` +
+            `case-insensitive filesystems)`,
+      );
+    }
+    targets.set(relPath, canonical);
+  }
+
+  // Pass 2 — copy bytes verbatim into the staged tree. Overwrites land on
+  // the canonical upstream path — never the differently-cased overlay
+  // name — so provenance records the path that actually exists in output.
   const result: OverlayResult = { additions: [], overwrites: [] };
   for (const relPath of files) {
     const bytes = fs.readFileSync(path.join(cfg.overlay.dir, relPath));
-    writeFileSafe(path.join(outDir, relPath), bytes);
+    const dest = targets.get(relPath) ?? relPath;
+    writeFileSafe(path.join(outDir, dest), bytes);
     const digest = sha256Bytes(bytes);
-    const upstreamSha = upstreamHash.get(relPath);
+    const upstreamSha = upstreamHash.get(dest);
     if (upstreamSha === undefined) {
       result.additions.push({ path: relPath, sha256: digest });
     } else {
       result.overwrites.push({
-        path: relPath,
+        path: dest,
         sha256: digest,
         upstreamSha256: upstreamSha,
       });

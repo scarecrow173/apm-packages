@@ -131,16 +131,22 @@ export async function buildPlugin(
   rmrf(staging);
   fs.mkdirSync(staging, { recursive: true });
 
+  // Remove any leftover object store first — a previous crashed run leaves
+  // an `origin` remote that would make `remote add` fail — then hold the
+  // path outside the try so the finally removes `fetch.git` even when the
+  // fetch itself throws.
+  const repoDir = path.join(buildDir, "fetch.git");
+  rmrf(repoDir);
   const { inv, sha } = await (async (): Promise<{
     inv: Inventory;
     sha: string;
   }> => {
-    const repoDir = fetchAtCommit(
-      cfg.upstream.repoUrl,
-      cfg.upstream.commit,
-      buildDir,
-    );
     try {
+      fetchAtCommit(
+        cfg.upstream.repoUrl,
+        cfg.upstream.commit,
+        buildDir,
+      );
       const inventory = scanTree(
         listTree(repoDir, cfg.upstream.commit, cfg.upstream.path),
       );
@@ -228,7 +234,16 @@ export async function buildPlugin(
     throw e;
   }
   if (!opts.keepPrev) {
-    rmrf(prev);
+    // Best-effort cleanup — on win32 a lingering file lock can fail rmrf
+    // with EPERM; that must not mask a swap that already succeeded.
+    try {
+      rmrf(prev);
+    } catch (e) {
+      console.warn(
+        `warning: could not remove previous output ${prev}: ` +
+          `${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
   stageOutput(path.resolve(pkg, "..", ".."), inv.executables);
