@@ -82,6 +82,103 @@ test("root AGENTS.md carries adapter pointer, precedence, and activation boundar
   assert.ok(flat.includes("/pstack:<skill>"), "lost the /pstack: namespacing line");
 });
 
+test("setup-pstack delegation overwrite keeps upstream frontmatter and delegates", () => {
+  const doc = readFileSync(
+    join(OVERLAY, "skills/setup-pstack/SKILL.md"),
+    "utf8",
+  ).replace(/\r\n/g, "\n");
+  // Frontmatter is byte-identical to the pinned upstream file
+  // (devin-plugin/skills/setup-pstack/SKILL.md, unchanged until Task 4's
+  // rebuild) so `/pstack:setup-pstack` keeps upstream's discovery text. If a
+  // re-pin changes upstream's frontmatter, update this expectation in the
+  // same change — the drift failure is deliberate.
+  const UPSTREAM_FRONTMATTER =
+    "---\n" +
+    "name: setup-pstack\n" +
+    'description: Configure which models pstack uses per role and at what reasoning budget. Detects your available models and writes an always-applied rule that overrides the skill defaults. Use for /setup-pstack, "configure pstack models", "pstack budget", or changing pstack\'s model choices.\n' +
+    "---\n";
+  assert.ok(
+    doc.startsWith(UPSTREAM_FRONTMATTER),
+    "delegation frontmatter diverged from the pinned upstream frontmatter",
+  );
+  const body = doc.slice(UPSTREAM_FRONTMATTER.length);
+  assert.match(body, /setup-pstack-devin\/SKILL\.md/, "body must delegate");
+  assert.match(body, /provenance/i, "body must point at provenance tracking");
+});
+
+test("setup-pstack skill files never reference Cursor/Claude write paths", () => {
+  // The global constraint bans `~/.cursor`/`~/.claude` writes anywhere in
+  // the shipped skill + generator. Scan the path-shaped literals; the
+  // delegation file may mention provenance only.
+  for (const rel of [
+    "skills/setup-pstack/SKILL.md",
+    "skills/setup-pstack-devin/SKILL.md",
+    "skills/setup-pstack-devin/scripts/setup.mjs",
+    "skills/setup-pstack-devin/scripts/roles.json",
+  ]) {
+    const doc = readFileSync(join(OVERLAY, rel), "utf8");
+    for (const banned of [
+      "~/.cursor",
+      "~/.claude",
+      ".cursor-plugin",
+      ".claude-plugin",
+      "pstack-models.mdc",
+      "alwaysApply",
+    ]) {
+      assert.ok(!doc.includes(banned), `${rel} carries banned path: ${banned}`);
+    }
+  }
+});
+
+test("setup-pstack-devin SKILL.md carries the Devin orchestration contract", () => {
+  const doc = readFileSync(
+    join(OVERLAY, "skills/setup-pstack-devin/SKILL.md"),
+    "utf8",
+  );
+  assert.match(doc, /^name: setup-pstack-devin$/m);
+  assert.match(doc, /^description: .*\/pstack:setup-pstack/m);
+  for (const row of [
+    // Detect: real CLI plus the deterministic parser and paste fallback.
+    "devin models list",
+    "setup.mjs parse",
+    // Current state: the Devin rule path + agents dirs, retired-role reporting.
+    "~/.devin/rules/pstack-models.md",
+    "%APPDATA%\\devin\\agents\\",
+    "droppedRoles",
+    // Budget + confirm: ask_user_question and the four exact upstream labels.
+    "ask_user_question",
+    "unlimited — max reasoning",
+    "large — xhigh reasoning",
+    "medium — high reasoning",
+    "small — medium reasoning",
+    "needsChoice",
+    // Apply: plan/diff/apply CLI surface and the removal-candidate gate.
+    "setup.mjs plan",
+    "setup.mjs apply",
+    "--plan",
+    "--yes",
+    "--remove",
+    // Model semantics: aliases, panel fan-out, profile naming.
+    "inherit-parent",
+    "auto",
+    "run_subagent",
+    "pstack-",
+    "allowed-tools",
+    "subagent_explore",
+    // fusion-* exclusion rationale and the verification-skill offers.
+    "fusion-",
+    "sidekick",
+    "/pstack:create-verification-skill",
+    "/pstack:create-formal-verification-skill",
+  ]) assert.ok(doc.includes(row), `missing row: ${row}`);
+  // Session-start load caveat and the local-only (no cloud) caveat.
+  assert.match(doc, /session start/i, "missing session-start load caveat");
+  assert.match(doc, /new sessions/i, "missing applies-to-new-sessions caveat");
+  assert.match(doc, /cloud/i, "missing cloud-session caveat");
+  // Read-only honesty: never claim a hard guarantee the profile can't keep.
+  assert.doesNotMatch(doc, /完全read-only|fully read-only/i);
+});
+
 test("every classified vocabulary label has a row in devin.md", () => {
   const doc = readFileSync(join(OVERLAY, "docs/harness/devin.md"), "utf8")
     .toLowerCase();
