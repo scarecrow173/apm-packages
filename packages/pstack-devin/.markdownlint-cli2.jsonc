@@ -1,0 +1,20 @@
+{
+  "globs": [
+    "**/*.md",
+    "!node_modules/**"
+  ],
+  // `apm install` materializes the pinned upstream tree under apm_modules/.
+  // It is vendored bytes, not authored documentation, so it is never linted.
+  "ignores": [
+    "apm_modules/**"
+  ],
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD024": {
+      "siblings_only": true
+    },
+    "MD025": false,
+    "MD033": false
+  }
+}

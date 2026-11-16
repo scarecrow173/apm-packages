@@ -1,0 +1,10 @@
+# Local side-effects of `apm install` / `apm pack` inside this directory.
+# Deployment outputs are never package source. `**/apm_modules/` is already
+# covered by the repository root .gitignore.
+/.github/
+/.claude-plugin/
+/build/
+
+
+# APM dependencies
+apm_modules/
