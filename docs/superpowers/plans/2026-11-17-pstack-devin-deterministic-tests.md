@@ -43,7 +43,7 @@
 
 Kinds: `](relpath)`+backticked relative paths → fs.exists under the file's dir (anchors `#...` stripped); `/<plugin>:<skill>`+`/pstack:<name>` and bare `principle-*`/`poteto-*`/`the **name** skill` mentions → `skills/<name>/SKILL.md` exists; `pstack:<agent>` → `agents/<agent>.md`; `http(s)`/`mailto:` → kind `url` (skip — external); `~/`-rooted paths → skip (runtime paths, not tree refs). Scan all `.md` in `devin-plugin/` incl. `docs/`, `agents/`, `skills/**/playbooks`, `references`.
 
-- [ ] Tests: fixture tree with good mdlink/skill/agent refs → 0 broken; broken mdlink → named; `pstack:nonexistent` → broken; unknown ref like `](weird://x)` → unresolved not pass; real tree → 0 broken 0 unresolved (iterate vocabulary of skip patterns until clean — every suppression must be a real, justified ref kind).
+- [x] Tests: fixture tree with good mdlink/skill/agent refs → 0 broken; broken mdlink → named; `pstack:nonexistent` → broken; unknown ref like `](weird://x)` → unresolved not pass; real tree → 0 broken 0 unresolved (iterate vocabulary of skip patterns until clean — every suppression must be a real, justified ref kind).
 
 ### Task 2: `role-registry` (L2)
 
