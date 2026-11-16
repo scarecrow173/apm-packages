@@ -68,7 +68,7 @@ Secret patterns (each a labeled regex): `ghp_[A-Za-z0-9]{36}`, `gho_`, `github_p
 - `verification-matrix.md`: L1 (build+check-generated+inventory/overlay/safety), L2 (compat-audit+adapter/setup/apm-sync/link-check/role-registry), L3-local, L3-consumer(manual), deferred-to-#218 (real Devin session runs) table + CI policy "deterministic commands only".
 - `package.json` scripts: `"verify:l1": "pnpm run check-generated && tsx src/safety-scan.ts"`, `"verify:l2": "tsx src/compat-audit.ts && tsx src/link-check.ts && tsx src/role-registry.ts"`, `"verify:l3": "tsx src/l3-dist.ts"`, `"verify": "pnpm run verify:l1 && pnpm run verify:l2 && pnpm run verify:l3 && pnpm test"`.
 
-- [ ] Tests: `l3-dist.test.ts` manifest/layout/apm-vs-devin assertions (+ `apm pack --dry-run` run via mise exec where available, skipped with notice where not); docs.
+- [x] Tests: `l3-dist.test.ts` manifest/layout/apm-vs-devin assertions (+ `apm pack --dry-run` run via mise exec where available, skipped with notice where not); docs.
 
 ### Task 5: sweep + issue comment
 
