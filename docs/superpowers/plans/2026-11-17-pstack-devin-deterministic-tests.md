@@ -59,7 +59,7 @@ Consumer scan: upstream skill `.md` files mentioning `pstack-models` — for eac
 
 Secret patterns (each a labeled regex): `ghp_[A-Za-z0-9]{36}`, `gho_`, `github_pat_`, `sk-[A-Za-z0-9]{20,}`, `AKIA[0-9A-Z]{16}`, `BEGIN [A-Z ]*PRIVATE KEY`, `xox[baprs]-`, `AIza[0-9A-Za-z_-]{35}`, `-----BEGIN`, `eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.` (JWT). Whitelist file `scripts/pstack-devin/src/safety-scan-allowlist.ts` with per-file justification — start EMPTY; any real-tree hit → justify loudly or fail.
 
-- [ ] Tests: fixture w/ fake `ghp_…` token → flagged; >5MiB file → flagged; exec-bit fixture vs provenance; plugin.json name/platforms assertion; real tree → clean.
+- [x] Tests: fixture w/ fake `ghp_…` token → flagged; >5MiB file → flagged; exec-bit fixture vs provenance; plugin.json name/platforms assertion; real tree → clean.
 
 ### Task 4: `l3-dist` + matrix + wiring
 
