@@ -32,7 +32,7 @@
 ## Tasks
 
 ### Task 1: check-upstream + update-report + tests
-- [ ] Both tools + `upstream.test.ts` fixtures (two synthetic trees: identical→exit0; changed→exit42; each blocking class detected; non-blocking changes classified non-blocking). Scripts `check:upstream`, `report:update`. Network call (ls-remote/fetch) injectable/mocked in tests.
+- [x] Both tools + `upstream.test.ts` fixtures (two synthetic trees: identical→exit0; changed→exit42; each blocking class detected; non-blocking changes classified non-blocking). Scripts `check:upstream`, `report:update`. Network call (ls-remote/fetch) injectable/mocked in tests.
 
 ### Task 2: apply-update + workflow + docs
 - [ ] `apply-update.ts` + workflow yaml (weekly + dispatch, minimal perms, dup-PR guard via SHA search, no auto-merge) + `docs/upstream-updates.md` procedure. Validate workflow syntax (`actionlint` if available else careful review). Commit.
