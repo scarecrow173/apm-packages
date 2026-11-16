@@ -307,13 +307,18 @@ observed:
 /build/
 ```
 
-`.markdownlint-cli2.jsonc` (verbatim copy of `packages/github-issue-handoff/.markdownlint-cli2.jsonc`):
+`.markdownlint-cli2.jsonc` (sibling `packages/github-issue-handoff/.markdownlint-cli2.jsonc` plus the `ignores` block — required: `apm install` materializes ~144 vendored upstream `.md` files under `apm_modules/` that the `lint:md` glob otherwise sweeps in; vendored bytes are not authored documentation and cannot be lint-fixed):
 
 ```jsonc
 {
   "globs": [
     "**/*.md",
     "!node_modules/**"
+  ],
+  // `apm install` materializes the pinned upstream tree under apm_modules/.
+  // It is vendored bytes, not authored documentation, so it is never linted.
+  "ignores": [
+    "apm_modules/**"
   ],
   "config": {
     "default": true,
