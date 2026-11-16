@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-16T21:19:39.638698+00:00'
+generated_at: '2026-11-16T21:20:18.073706+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: _local/agent-intelligence
@@ -882,6 +882,30 @@ dependencies:
     .claude/skills/github-issue-handoff/references/responder-guide.md: sha256:fe07b07b24b7087403e8d86b1b8f83792f5b41427f8ac4cb6f150ef16f24eab4
   source: local
   local_path: ./packages/github-issue-handoff
+  is_dev: true
+  declared_license: MIT
+- repo_url: _local/pstack-devin
+  name: pstack-devin
+  version: 0.1.0
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/setup-pstack-devin
+  - .agents/skills/setup-pstack-devin/SKILL.md
+  - .agents/skills/setup-pstack-devin/scripts/roles.json
+  - .agents/skills/setup-pstack-devin/scripts/setup.mjs
+  - .claude/skills/setup-pstack-devin
+  - .claude/skills/setup-pstack-devin/SKILL.md
+  - .claude/skills/setup-pstack-devin/scripts/roles.json
+  - .claude/skills/setup-pstack-devin/scripts/setup.mjs
+  deployed_file_hashes:
+    .agents/skills/setup-pstack-devin/SKILL.md: sha256:382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b
+    .agents/skills/setup-pstack-devin/scripts/roles.json: sha256:e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af
+    .agents/skills/setup-pstack-devin/scripts/setup.mjs: sha256:25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe
+    .claude/skills/setup-pstack-devin/SKILL.md: sha256:382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b
+    .claude/skills/setup-pstack-devin/scripts/roles.json: sha256:e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af
+    .claude/skills/setup-pstack-devin/scripts/setup.mjs: sha256:25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe
+  source: local
+  local_path: ./packages/pstack-devin
   is_dev: true
   declared_license: MIT
 - repo_url: _local/recommended-dev-suite
@@ -4789,6 +4813,42 @@ deployments:
   content_hash: sha256:8693a6a258bad18a8a1d0925bc1eae9c744071ff37a36b8f1da83adca93608af
 - kind: project-relative
   target: agent-skills
+  value: .agents/skills/setup-pstack-devin
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/pstack-devin
+  active_owner: ./packages/pstack-devin
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/setup-pstack-devin/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/pstack-devin
+  active_owner: ./packages/pstack-devin
+  content_hash: sha256:382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/setup-pstack-devin/scripts/roles.json
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/pstack-devin
+  active_owner: ./packages/pstack-devin
+  content_hash: sha256:e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/setup-pstack-devin/scripts/setup.mjs
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/pstack-devin
+  active_owner: ./packages/pstack-devin
+  content_hash: sha256:25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe
+- kind: project-relative
+  target: agent-skills
   value: .agents/skills/skill-discovery-protocol
   runtime: null
   scope: project
@@ -8351,6 +8411,42 @@ deployments:
   - github/awesome-copilot/skills/security-review
   active_owner: github/awesome-copilot/skills/security-review
   content_hash: sha256:8693a6a258bad18a8a1d0925bc1eae9c744071ff37a36b8f1da83adca93608af
+- kind: project-relative
+  target: claude
+  value: .claude/skills/setup-pstack-devin
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/pstack-devin
+  active_owner: ./packages/pstack-devin
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/setup-pstack-devin/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/pstack-devin
+  active_owner: ./packages/pstack-devin
+  content_hash: sha256:382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/setup-pstack-devin/scripts/roles.json
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/pstack-devin
+  active_owner: ./packages/pstack-devin
+  content_hash: sha256:e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af
+- kind: project-relative
+  target: claude
+  value: .claude/skills/setup-pstack-devin/scripts/setup.mjs
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/pstack-devin
+  active_owner: ./packages/pstack-devin
+  content_hash: sha256:25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe
 - kind: project-relative
   target: claude
   value: .claude/skills/skill-discovery-protocol
