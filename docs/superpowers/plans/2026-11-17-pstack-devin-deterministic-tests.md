@@ -51,7 +51,7 @@ Kinds: `](relpath)`+backticked relative paths → fs.exists under the file's dir
 
 Consumer scan: upstream skill `.md` files mentioning `pstack-models` — for each, extract role-label literals: known approach = match lines `Use the \`<label>\` line` / backticked quoted role names; PLUS a general check that any backticked string exactly matching `roles.json` key format is counted. Simplest robust impl: build the set of role labels REFERENCED by scanning for each `roles.json` key's literal presence in consumer files (dead-role check), and extract `\`([\w -]+)\`` tokens that appear adjacent to `pstack-models`/`line in` context then assert ⊆ keys (unknown-role check). A role a consumer names that isn't in roles.json → unknown (new upstream role = loud failure = the issue's requirement).
 
-- [ ] Tests: roles.json fixture + consumer fixture; upstream real tree → 0 unknown 0 dead; consumer naming `new-role` → unknown; roles.json extra role → dead.
+- [x] Tests: roles.json fixture + consumer fixture; upstream real tree → 0 unknown 0 dead; consumer naming `new-role` → unknown; roles.json extra role → dead.
 
 ### Task 3: `safety-scan` (L1)
 
@@ -72,9 +72,9 @@ Secret patterns (each a labeled regex): `ghp_[A-Za-z0-9]{36}`, `gho_`, `github_p
 
 ### Task 5: sweep + issue comment
 
-- [ ] All green: test + lint:md + verify:l1 + verify:l2 + verify:l3.
-- [ ] README EN/JA: verification section update (commands).
-- [ ] `#216` comment with the matrix + negative-fixture evidence list.
+- [x] All green: test + lint:md + verify:l1 + verify:l2 + verify:l3.
+- [x] README EN/JA: verification section update (commands).
+- [x] `#216` comment with the matrix + negative-fixture evidence list.
 
 ## Self-Review
 

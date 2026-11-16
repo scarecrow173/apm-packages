@@ -113,6 +113,27 @@ mise exec -- pnpm --dir scripts/pstack-devin run check-generated  # committed tr
 file byte-for-byte; it fails on any drift. See
 `docs/build-verification.md` for the recorded evidence.
 
+## Verification
+
+A deterministic, free, local check suite guards the shipped tree. Run
+the whole thing from the repository root:
+
+```bash
+mise exec -- pnpm --dir scripts/pstack-devin run verify   # L1 + L2 + L3 + unit tests
+```
+
+| Command | What it proves |
+| --- | --- |
+| `run verify:l1` | Build integrity & distribution safety — the committed `devin-plugin/` is a byte-exact rebuild of the pinned upstream + overlay, and the tree carries no secret-shaped tokens, oversized files, or exec-bit/manifest drift |
+| `run verify:l2` | Upstream compatibility & references — every harness-API token is a registered vocabulary entry, every shipped doc reference resolves to a real target, and consumer role labels ⊆ `roles.json` keys |
+| `run verify:l3` | Distribution shape — `.devin-plugin/plugin.json` schema, `devin-plugin/` layout, `.apm/` and `devin-plugin/` never conflate, and `apm pack`/`apm compile` keep their recorded behavior |
+| `run probe:consumer` | **Manual only** — a scratch consumer installs the package via the real `apm` (the `--ref` git form needs network); evidence is appended to `docs/l3-verification.md` |
+
+The per-check guarantee matrix lives in `docs/verification-matrix.md`.
+These are static checks: they prove the shipped tree is consistent and
+correctly shaped for install — they do **not** prove agent runtime
+quality. Live Devin session validation is deferred to `#218`.
+
 ## Layout
 
 ```text
