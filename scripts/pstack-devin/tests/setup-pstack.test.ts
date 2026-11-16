@@ -1,7 +1,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir as osTmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -20,7 +20,7 @@ const ROLES_JSON = join(
 const FIXTURE = join(__dirname, "fixtures", "setup-pstack-upstream-step5.txt");
 
 interface Role { key: string; default: string; panel?: boolean }
-interface PlanDiff { file: string; userModified: boolean }
+interface PlanDiff { file: string; userModified: boolean; diskSha: string }
 interface SetupModule {
   parseModels(raw: string): string[];
   familyOf(slug: string): string;
@@ -319,4 +319,193 @@ test("main refuses paths outside the Devin roots", async () => {
     ]),
     /cursor|claude|devin roots/i,
   );
+});
+
+test("parseModels keeps the real `devin models list` footer out", () => {
+  // The real footer (devin 3000.12.57): `or` is slug-shaped and used to
+  // leak into the detected set. Real model rows are indented, so the
+  // unindented footer now fails the row test — as do the header line and
+  // the `aliases:` row (its first token carries a colon).
+  const raw =
+    "Available models (51 families)\n\n" +
+    "SWE-2 (swe-2)\n" +
+    "  aliases: swe\n" +
+    "  swe-2-high                                                                 SWE-2 High  [262K context, Free]\n\n" +
+    "Pass a family slug, alias, or model UID to `--model` (e.g. `--model opus`)\n" +
+    "or switch models in a session with `/model <name>`.\n";
+  assert.deepEqual(M.parseModels(raw), ["swe-2-high"]);
+});
+
+test("parseModels still accepts a pasted bare-slug list", () => {
+  // The unindented fallback: the whole trimmed line IS the slug — the
+  // "ask the user to paste the slugs" path from upstream step 2.
+  assert.deepEqual(M.parseModels("swe-2-high\nswe-2-max\n"), [
+    "swe-2-high",
+    "swe-2-max",
+  ]);
+});
+
+/** env confined to tmp dirs + a capturing stdout for main()'s io seam. */
+function ioFor(dir: string) {
+  const env = {
+    PSTACK_DEVIN_RULES_DIR: join(dir, "rules"),
+    PSTACK_DEVIN_AGENTS_DIR: join(dir, "agents"),
+  };
+  let text = "";
+  return {
+    io: { env, stdout: { write: (s: string) => { text += s; } } },
+    text: () => text,
+  };
+}
+
+interface PlanDoc {
+  resolved: Record<string, string>;
+  needsChoice: string[];
+  droppedRoles: string[];
+  targets: { rules: string; rulesDir: string; agentsDir: string };
+  files: Record<string, string>;
+}
+
+/** Run `plan` fully inside `dir`: choices/models/plan.json plus the
+ *  PSTACK_DEVIN_* roots all live under the tmp dir. */
+async function runPlan(
+  dir: string,
+  choices: Record<string, string>,
+  models: string,
+): Promise<{ plan: PlanDoc; planPath: string }> {
+  const cap = ioFor(dir);
+  const choicesPath = join(dir, "choices.json");
+  const modelsPath = join(dir, "models.txt");
+  writeFileSync(choicesPath, JSON.stringify(choices));
+  writeFileSync(modelsPath, models);
+  await M.main(
+    ["plan", "--choices", choicesPath, "--models", modelsPath],
+    cap.io,
+  );
+  const planPath = join(dir, "plan.json");
+  writeFileSync(planPath, cap.text());
+  return { plan: JSON.parse(cap.text()) as PlanDoc, planPath };
+}
+
+test("plan drops unknown role keys as droppedRoles instead of throwing", async () => {
+  // Retired-role semantics: an unknown key is ignored like a deleted
+  // rules line — even when its value is not a detected slug. Before the
+  // choices filter, assertDetected iterated raw choice keys and threw.
+  const dir = tmpdir();
+  const { plan } = await runPlan(
+    dir,
+    { "retired role": "undetected-x", "bug-fix": "swe-2-high" },
+    "  swe-2-high\n  swe-2-xhigh\n",
+  );
+  assert.deepEqual(plan.droppedRoles, ["retired role"]);
+  assert.ok(!("retired role" in plan.resolved));
+  assert.ok(
+    Object.keys(plan.files).every((f) => !f.includes("undetected-x")),
+    "a dropped role's slug must not produce profile files",
+  );
+});
+
+test("apply refuses a stale plan even with --yes", async () => {
+  // The plan records the rules file as a fresh write; a target that
+  // appears on disk afterwards is a difference the plan output never
+  // showed, so --yes — which covers only the diffs the plan displayed —
+  // cannot authorize the overwrite.
+  const dir = tmpdir();
+  const { plan, planPath } = await runPlan(
+    dir,
+    { "bug-fix": "swe-2-high" },
+    "  swe-2-high\n  swe-2-xhigh\n",
+  );
+  mkdirSync(join(dir, "rules"), { recursive: true });
+  writeFileSync(plan.targets.rules, "user content\n");
+  await assert.rejects(
+    M.main(["apply", "--plan", planPath, "--yes"], ioFor(dir).io),
+    /stale.*re-run plan/i,
+  );
+  assert.equal(readFileSync(plan.targets.rules, "utf8"), "user content\n");
+});
+
+test("apply refuses when a recorded diff's content drifts after planning", async () => {
+  // The file already differed at plan time (a `diff` the user saw); a
+  // second edit keeps the same classification, so only the recorded
+  // diskSha can catch the drift.
+  const dir = tmpdir();
+  mkdirSync(join(dir, "rules"), { recursive: true });
+  const rulesPath = join(dir, "rules", "pstack-models.md");
+  writeFileSync(rulesPath, "version A\n");
+  const { planPath } = await runPlan(
+    dir,
+    { "bug-fix": "swe-2-high" },
+    "  swe-2-high\n  swe-2-xhigh\n",
+  );
+  writeFileSync(rulesPath, "version B\n");
+  await assert.rejects(
+    M.main(["apply", "--plan", planPath, "--yes"], ioFor(dir).io),
+    /stale/i,
+  );
+  assert.equal(readFileSync(rulesPath, "utf8"), "version B\n");
+});
+
+test("apply refuses to overwrite a diff without --yes", async () => {
+  const dir = tmpdir();
+  mkdirSync(join(dir, "rules"), { recursive: true });
+  const rulesPath = join(dir, "rules", "pstack-models.md");
+  writeFileSync(rulesPath, "user content\n");
+  const { planPath } = await runPlan(
+    dir,
+    { "bug-fix": "swe-2-high" },
+    "  swe-2-high\n  swe-2-xhigh\n",
+  );
+  await assert.rejects(
+    M.main(["apply", "--plan", planPath], ioFor(dir).io),
+    /refusing to apply.*--yes/s,
+  );
+  assert.equal(readFileSync(rulesPath, "utf8"), "user content\n");
+});
+
+test("apply keeps remove candidates without --remove", async () => {
+  const dir = tmpdir();
+  mkdirSync(join(dir, "agents"), { recursive: true });
+  const staleProfile = join(dir, "agents", "pstack-old.md");
+  writeFileSync(staleProfile, "obsolete profile\n");
+  const { planPath } = await runPlan(
+    dir,
+    { "bug-fix": "swe-2-high" },
+    "  swe-2-high\n  swe-2-xhigh\n",
+  );
+  const cap = ioFor(dir);
+  await M.main(["apply", "--plan", planPath], cap.io);
+  assert.equal(readFileSync(staleProfile, "utf8"), "obsolete profile\n");
+  assert.match(cap.text(), /kept .*pstack-old\.md.*--remove/s);
+});
+
+test("apply --remove deletes the recorded remove candidates", async () => {
+  const dir = tmpdir();
+  mkdirSync(join(dir, "agents"), { recursive: true });
+  const staleProfile = join(dir, "agents", "pstack-old.md");
+  writeFileSync(staleProfile, "obsolete profile\n");
+  const { planPath } = await runPlan(
+    dir,
+    { "bug-fix": "swe-2-high" },
+    "  swe-2-high\n  swe-2-xhigh\n",
+  );
+  const cap = ioFor(dir);
+  await M.main(["apply", "--plan", planPath, "--remove"], cap.io);
+  assert.equal(existsSync(staleProfile), false);
+  assert.match(cap.text(), /removed .*pstack-old\.md/s);
+});
+
+test("apply writes every plan file when disk matches the plan", async () => {
+  // Happy path: all targets were absent at plan time (`write`), still
+  // absent at apply — the stale guard must not false-positive.
+  const dir = tmpdir();
+  const { plan, planPath } = await runPlan(
+    dir,
+    { "bug-fix": "swe-2-high" },
+    "  swe-2-high\n  swe-2-xhigh\n",
+  );
+  await M.main(["apply", "--plan", planPath], ioFor(dir).io);
+  for (const [target, content] of Object.entries(plan.files)) {
+    assert.equal(readFileSync(target, "utf8"), content, `wrong content: ${target}`);
+  }
 });

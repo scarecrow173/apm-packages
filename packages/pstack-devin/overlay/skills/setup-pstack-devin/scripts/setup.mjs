@@ -38,16 +38,28 @@ function sha256(text) {
   return crypto.createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-/** `devin models list` text → detected slug[]. First whitespace token per
- *  line must be a slug (headers like `SWE-2 (swe-2)` and `aliases:` rows
- *  fail the slug pattern); `fusion-*` slugs are a lead+sidekick pair, not
- *  subagent models, so they are dropped. Order preserved, deduplicated. */
+/** `devin models list` text → detected slug[]. A line yields a slug only
+ *  when it is an indented model row (real rows are indented) or when the
+ *  trimmed line IS the slug (the paste-bare-slugs fallback path) — so
+ *  prose like the footer `or switch models in a session with
+ *  `/model <name>`.`, whose first token is slug-shaped, stays out. The
+ *  first whitespace token must then match the slug pattern (headers like
+ *  `SWE-2 (swe-2)` and `aliases:` rows fail it); `fusion-*` slugs are a
+ *  lead+sidekick pair, not subagent models, so they are dropped. Order
+ *  preserved, deduplicated. */
 export function parseModels(raw) {
   const slugs = [];
   const seen = new Set();
   for (const line of String(raw).split("\n")) {
-    const token = (line.trim().split(/\s+/)[0]) ?? "";
-    if (!SLUG_RE.test(token) || token.startsWith("fusion-") || seen.has(token)) {
+    const trimmed = line.trim();
+    const token = trimmed.split(/\s+/)[0] ?? "";
+    const row = /^\s/.test(line) || trimmed === token;
+    if (
+      !row ||
+      !SLUG_RE.test(token) ||
+      token.startsWith("fusion-") ||
+      seen.has(token)
+    ) {
       continue;
     }
     seen.add(token);
@@ -273,8 +285,10 @@ export function profileFile(model, { ro }) {
 /** Compare on-disk `fsState` (name → content) with the `desired` output.
  *  Absent → `write`; identical → `unchanged`; different-with-valid-marker
  *  → `diff` (own prior output); different-without-marker-or-mangled →
- *  `diff` flagged `userModified`. Extra `pstack-*.md` on disk are
- *  `removeCandidates` — never deleted here. */
+ *  `diff` flagged `userModified`. Each `diff` entry also records
+ *  `diskSha`, the on-disk sha256 at plan time, so apply can tell when a
+ *  file drifted after the plan was shown. Extra `pstack-*.md` on disk
+ *  are `removeCandidates` — never deleted here. */
 export function planChanges(fsState, desired) {
   const write = [];
   const diff = [];
@@ -289,7 +303,11 @@ export function planChanges(fsState, desired) {
       unchanged.push(name);
       continue;
     }
-    diff.push({ file: name, userModified: !isOwnOutput(fsState[name]) });
+    diff.push({
+      file: name,
+      userModified: !isOwnOutput(fsState[name]),
+      diskSha: sha256(fsState[name]),
+    });
   }
   for (const name of Object.keys(fsState).sort()) {
     if (name in desired) continue;
@@ -448,6 +466,20 @@ function cmdPlan(flags, env, out) {
   const budget =
     typeof flags.budget === "string" ? flags.budget : (choicesDoc.budget ?? "large");
   const detected = parseModels(fs.readFileSync(reqFlag(flags, "models"), "utf8"));
+
+  // Retired/unknown role keys are dropped, not validated — the same
+  // retired-line semantics as deleting a rules line. Filtering here keeps
+  // assertDetected, applyBudget, rulesFile and the profile set on one
+  // role-key universe; dropped keys are reported so the caller can tell
+  // the user which lines were ignored.
+  const knownKeys = new Set(ROLES.map((r) => r.key));
+  const droppedRoles = [];
+  for (const key of Object.keys(choices)) {
+    if (!knownKeys.has(key)) {
+      delete choices[key];
+      droppedRoles.push(key);
+    }
+  }
   assertDetected(choices, detected);
 
   const budgetRun = applyBudget(ROLES, choices, detected, budget);
@@ -486,6 +518,7 @@ function cmdPlan(flags, env, out) {
         detected,
         resolved: budgetRun.resolved,
         needsChoice: budgetRun.needsChoice,
+        droppedRoles,
         targets: {
           rules: rulesPath,
           rulesDir: path.dirname(rulesPath),
@@ -510,6 +543,56 @@ function cmdApply(flags, env, out) {
   const yes = flags.yes === true;
   const allowRemove = flags.remove === true;
 
+  // Stale-plan guard (plan↔apply TOCTOU): every write target's current
+  // on-disk state must equal what the plan recorded — absent for `write`
+  // entries, the desired bytes' sha for `unchanged` (disk equaled the
+  // desired content at plan time), the recorded `diskSha` for `diff`.
+  // Any other state is a difference the user never saw in the plan
+  // output, so refuse rather than overwrite it — even under --yes, which
+  // only authorizes the diffs the plan displayed.
+  const desired = new Map(
+    Object.entries(plan.files ?? {}).map(([t, c]) => [path.resolve(t), c]),
+  );
+  const expected = new Map(); // resolved target -> sha256 hex | null (absent)
+  for (const { change, dir } of [
+    { change: plan.changes?.rules, dir: plan.targets?.rulesDir },
+    { change: plan.changes?.profiles, dir: plan.targets?.agentsDir },
+  ]) {
+    if (change == null || typeof dir !== "string" || dir === "") continue;
+    for (const name of change.write ?? []) {
+      expected.set(path.resolve(path.join(dir, name)), null);
+    }
+    for (const name of change.unchanged ?? []) {
+      const target = path.resolve(path.join(dir, name));
+      expected.set(
+        target,
+        desired.has(target) ? sha256(desired.get(target)) : undefined,
+      );
+    }
+    for (const d of change.diff ?? []) {
+      expected.set(
+        path.resolve(path.join(dir, d.file)),
+        typeof d.diskSha === "string" ? d.diskSha : undefined,
+      );
+    }
+  }
+  const stale = [];
+  for (const target of desired.keys()) {
+    let current = null;
+    try {
+      current = sha256(fs.readFileSync(target, "utf8"));
+    } catch (e) {
+      if (e?.code !== "ENOENT") current = "<unreadable>"; // dir/perm drift
+    }
+    if (expected.get(target) !== current) stale.push(target);
+  }
+  if (stale.length > 0) {
+    throw new Error(
+      `plan is stale — ${stale.length} write target(s) changed on disk ` +
+        `since the plan was made (${stale.join(", ")}) — re-run plan`,
+    );
+  }
+
   const diffs = [
     ...(plan.changes?.rules?.diff ?? []),
     ...(plan.changes?.profiles?.diff ?? []),
@@ -525,7 +608,7 @@ function cmdApply(flags, env, out) {
     );
   }
 
-  for (const [target, content] of Object.entries(plan.files ?? {})) {
+  for (const [target, content] of desired) {
     const resolved = assertWriteTarget(target, allowed);
     fs.mkdirSync(path.dirname(resolved), { recursive: true });
     fs.writeFileSync(resolved, content);
