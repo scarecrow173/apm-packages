@@ -25,6 +25,34 @@ test("devin.md exists in overlay with required contract rows", () => {
   assert.match(doc, /alternative|Fallback/i, "alternative policy present");
 });
 
+test("poteto-agent overwrite is Devin-native and preserves the read contract", () => {
+  const doc = readFileSync(join(OVERLAY, "agents/poteto-agent.md"), "utf8");
+  for (const row of [
+    "name: poteto-agent",
+    "max-nesting: 3",
+    "subagent_general",
+    ".devin-plugin/plugin.json",
+    "/pstack:poteto-mode",
+    "run_subagent",
+    "~/.config/devin/cli/plugins/",
+    "%APPDATA%\\devin\\cli\\plugins\\",
+    "~/.local/share/devin/cli/plugins/",
+    // The full-read contract and its failure modes, preserved verbatim:
+    "Reads the `poteto-mode` skill's `SKILL.md` in full",
+    "Read the `poteto-mode` skill's `SKILL.md` in full",
+    "highest `version`",
+    "stop and tell your parent",
+    "principle-*",
+  ]) assert.ok(doc.includes(row), `missing row: ${row}`);
+  for (const banned of [
+    "~/.cursor",
+    "generalPurpose",
+    "is_background",
+    ".cursor-plugin",
+    "`/poteto-mode`",
+  ]) assert.ok(!doc.includes(banned), `Cursor-ism survives: ${banned}`);
+});
+
 test("every classified vocabulary label has a row in devin.md", () => {
   const doc = readFileSync(join(OVERLAY, "docs/harness/devin.md"), "utf8")
     .toLowerCase();

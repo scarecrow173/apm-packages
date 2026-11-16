@@ -196,3 +196,25 @@ parent model); `ask_user_question` withheld from subagents;
 `subagents_enabled: false` or org "None" removes `run_subagent`/`read_subagent`
 entirely; plugin subagents load locally only, which is why
 `environment: "cloud"` is `error`.
+
+## 7. Agent-profile overwrite decisions
+
+- `agents/poteto-agent.md` — **overwritten** (`overlay/agents/poteto-agent.md`,
+  allowlisted in `overlay.yml`). The file is machine-parsed profile
+  frontmatter plus a delegate contract: upstream carries `is_background`
+  (not a Devin profile field — background is a `run_subagent` runtime param)
+  and body references to `generalPurpose`, `~/.cursor/plugins/`, and
+  `.cursor-plugin/plugin.json`. Instruction-level adaptation cannot fix a
+  parsed field, so the overwrite ships `max-nesting: 3` (the prior-art port
+  value), `subagent_general`, `/pstack:poteto-mode`, the Devin plugins
+  directory paths, and `.devin-plugin/plugin.json`, preserving the
+  full-`SKILL.md`-read contract, the highest-version multi-match rule, the
+  "stop and tell your parent" failure mode, and `principle-*` navigation
+  verbatim.
+- `agents/comment-sicko.md` — **stays byte-identical** (no overwrite, no
+  allowlist entry). A full read shows pure persona prose: zero Cursor or
+  harness references — no `~/.cursor` paths, no `Task`/`subagent_type`
+  fields, no `generalPurpose`. Its `name`/`description` frontmatter is
+  already valid Devin as-is, and its `/why` mention resolves through the
+  generic skill-invocation row in `devin.md`. Adding it to
+  `allow_overwrite` would only warn as an unused entry.
