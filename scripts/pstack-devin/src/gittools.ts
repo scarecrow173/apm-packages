@@ -195,6 +195,92 @@ export function catFileBlobs(
   });
 }
 
+/** `git cat-file blob <spec>` → blob bytes, or null when `spec` does not
+ *  resolve to a blob. Lazy-backfills through the promisor in a blobless
+ *  (`--filter=blob:none`) clone, so readers never materialize the tree. */
+export function blobBytes(repoDir: string, spec: string): Buffer | null {
+  try {
+    return execFileSync(
+      "git",
+      args(repoDir, ["cat-file", "blob", spec]),
+      // A missing path is an expected outcome (returns null) — capture
+      // stderr so git's `fatal:` line does not pollute the caller's output.
+      { maxBuffer: MAX_BUFFER, stdio: ["ignore", "pipe", "pipe"] },
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** `.version` of the plugin manifest inside `<commit>:<subpath>` — root
+ *  `plugin.json` first, then `.claude-plugin/plugin.json`, the same probe
+ *  order `build.ts` applies to the staged tree. "" when absent or
+ *  unparseable (a missing version is a report datum, not a failure). */
+export function manifestVersion(
+  repoDir: string,
+  commit: string,
+  subpath: string,
+): string {
+  const clean = subpath.replace(/^\/+|\/+$/g, "");
+  for (const rel of ["plugin.json", ".claude-plugin/plugin.json"]) {
+    const spec = clean === "" ? `${commit}:${rel}` : `${commit}:${clean}/${rel}`;
+    const buf = blobBytes(repoDir, spec);
+    if (buf === null) continue;
+    try {
+      const doc = JSON.parse(buf.toString("utf8")) as { version?: unknown };
+      if (typeof doc.version === "string" && doc.version !== "") {
+        return doc.version;
+      }
+    } catch {
+      /* try the next manifest location */
+    }
+  }
+  return "";
+}
+
+/** The network surface the upstream-watch tools depend on — injectable so
+ *  tests substitute fixture remotes (or recording stubs) instead of
+ *  touching a real host. */
+export interface UpstreamRemote {
+  /** Resolve a remote ref (e.g. `refs/heads/main`) to a 40-hex commit sha
+   *  via `git ls-remote`. Throws when the ref is not advertised. */
+  resolveRef(ref: string): string;
+  /** Blobless-fetch `commit` into a fresh object store at
+   *  `<workDir>/fetch.git`; returns the repo dir. */
+  fetchCommit(commit: string, workDir: string): string;
+}
+
+/** The production remote: `git ls-remote` for refs and the existing
+ *  blobless `fetchAtCommit` for objects. `repoUrl` may be an https URL or
+ *  a local path (test fixtures). */
+export function gitRemote(repoUrl: string): UpstreamRemote {
+  return {
+    resolveRef(ref: string): string {
+      const out = execFileSync(
+        "git",
+        ["ls-remote", repoUrl, ref],
+        { encoding: "utf8", maxBuffer: MAX_BUFFER },
+      );
+      // Match the exact ref field — ls-remote patterns can also tail-match
+      // longer ref names we did not ask for.
+      const line = out.split("\n").find((l) => l.endsWith(`\t${ref}`));
+      if (line === undefined) {
+        throw new Error(`ls-remote: ${ref} not advertised by ${repoUrl}`);
+      }
+      const sha = line.slice(0, line.indexOf("\t"));
+      if (!/^[0-9a-f]{40}$/.test(sha)) {
+        throw new Error(
+          `ls-remote: malformed record for ${ref}: ${JSON.stringify(line)}`,
+        );
+      }
+      return sha;
+    },
+    fetchCommit(commit: string, workDir: string): string {
+      return fetchAtCommit(repoUrl, commit, workDir);
+    },
+  };
+}
+
 /** The repo root if it is the top of a git work tree, else null. Requiring
  *  the toplevel to equal `repoRoot` (not merely "inside some work tree")
  *  keeps fixture tmpdirs from mutating a foreign index when the temp dir

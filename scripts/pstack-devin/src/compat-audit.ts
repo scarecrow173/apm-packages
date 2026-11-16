@@ -22,8 +22,9 @@ export interface AuditResult {
 
 /** Only text that can carry harness-API references is scanned — this also
  *  skips binary assets (images, fonts) and skill script sources whose
- *  identifiers are not API references. */
-const TEXT_EXT = new Set([".md", ".sh", ".mdc", ".json"]);
+ *  identifiers are not API references. Exported so diff-aware callers can
+ *  filter *before* materializing blobs (no point downloading a PNG). */
+export const TEXT_EXT = new Set([".md", ".sh", ".mdc", ".json"]);
 
 /** API-shaped tokens with no prose meaning in this tree (capitalized tool
  *  names) plus backticked CamelCase identifiers that may be novel harness

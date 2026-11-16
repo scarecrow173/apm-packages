@@ -24,8 +24,10 @@ export interface RoleCheckResult {
   referenced: RoleRef[];
 }
 
-/** Consumer docs are shipped Markdown files (skills, docs, README). */
-const CONSUMER_DOC = /\.mdc?$/i;
+/** Consumer docs are shipped Markdown files (skills, docs, README).
+ *  Exported so the update report can reuse the same definition of
+ *  "consumer doc" when deciding whether a role scan is needed. */
+export const CONSUMER_DOC = /\.mdc?$/i;
 
 /** A roles.json key is lowercase words joined by spaces, commas, or
  *  hyphens — "arena cross-judge pool", "feature, refactoring", "bug-fix".

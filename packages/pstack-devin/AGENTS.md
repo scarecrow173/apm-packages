@@ -26,6 +26,10 @@ surface; `docs/` holds maintainer-facing evidence, not user docs.
 - `upstream.yml.upstream.commit` is the single authority for the upstream
   snapshot. The `devDependencies.apm[0].ref` in `apm.yml` and
   `apm.lock.yaml`'s `resolved_commit` must equal it at all times.
+- Move the pin only via `pnpm --dir scripts/pstack-devin run apply:update
+  <sha>` (atomically: refs + `apm install` lockfile + rebuilt tree +
+  verify + one commit) or the weekly upstream-watch workflow — see
+  `docs/upstream-updates.md`. Never bump a pin file without the rest.
 - Regenerate `apm.lock.yaml` only by running `apm install` inside this
   directory. Never hand-edit it.
 - `apm_modules/`, `.github/`, `.claude-plugin/`, and `build/` are local

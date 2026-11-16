@@ -16,8 +16,10 @@ const byPath = (
 
 /** List overlay payload files as forward-slash rel paths, sorted. Any entry
  *  that is neither a regular file nor a directory (symlink, junction, fifo)
- *  is rejected — it could escape the overlay root or smuggle foreign bytes. */
-function listOverlayFiles(dir: string): string[] {
+ *  is rejected — it could escape the overlay root or smuggle foreign bytes.
+ *  Exported so the update report can compute which upstream paths the
+ *  overlay owns without re-walking the tree. */
+export function listOverlayFiles(dir: string): string[] {
   const out: string[] = [];
   const walk = (abs: string, rel: string): void => {
     const dirents = fs

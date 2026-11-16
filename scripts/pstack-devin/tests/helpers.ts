@@ -26,6 +26,27 @@ export function makeFixtureRepo(files: FixtureFile[]): { dir: string; commit: st
   return { dir, commit };
 }
 
+/** Commit a fresh full-tree snapshot of `files` into `repoDir` via the
+ *  same pure-plumbing path as makeFixtureRepo. `parent` chains history;
+ *  `updateMain` moves refs/heads/main — the shape a "new upstream main"
+ *  takes for check-upstream/update-report fixtures. Returns the new
+ *  commit sha. */
+export function commitFixture(
+  repoDir: string,
+  files: FixtureFile[],
+  opts: { parent?: string; updateMain?: boolean } = {},
+): string {
+  const tree = writeTree(repoDir, files);
+  const commitArgs = ["commit-tree", tree];
+  if (opts.parent !== undefined) commitArgs.push("-p", opts.parent);
+  commitArgs.push("-m", "fixture");
+  const commit = git(repoDir, ...commitArgs);
+  if (opts.updateMain === true) {
+    git(repoDir, "update-ref", "refs/heads/main", commit);
+  }
+  return commit;
+}
+
 /** Write nested trees bottom-up; returns the root tree SHA. Entries are
  *  sorted in git tree order: by name, directories as "name/". */
 function writeTree(repoDir: string, files: FixtureFile[], prefix = ""): string {

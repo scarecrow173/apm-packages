@@ -1,0 +1,153 @@
+name: pstack-devin upstream watch
+
+# Weekly check for a new upstream `cursor/plugins` commit affecting
+# `harness/pstack/claude-code`. On a real change it opens ONE review PR
+# (pin refs + regenerated lockfile + regenerated devin-plugin tree +
+# provenance, verified before commit). It never pushes to main, never
+# merges, and never retries silently — every failure is a visible red run.
+
+on:
+  schedule:
+    # Mondays 00:00 UTC.
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write       # push the pstack-devin-upstream/<sha> branch
+  pull-requests: write  # open the update PR
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# Overlapping runs would race the same update branch — serialize, and
+# never cancel mid-apply (a killed apply leaves an uncommitted worktree,
+# rolled back or not, that nothing cleans up).
+concurrency:
+  group: pstack-devin-upstream-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # mise.toml + mise.lock pin node/pnpm/apm — the same toolchain
+      # `mise exec --` resolves locally.
+      - name: Install pinned toolchain (mise)
+        uses: jdx/mise-action@v2
+
+      - name: Install script dependencies
+        run: pnpm --dir scripts/pstack-devin install
+
+      # `pnpm exec` (not `pnpm run`) keeps stdout machine-clean: exit 0 =
+      # "up to date" text, exit 42 = one JSON line with the coordinates.
+      - name: Check upstream pin
+        id: check
+        shell: bash
+        run: |
+          set +e
+          out="$(pnpm --dir scripts/pstack-devin exec tsx src/check-upstream.ts)"
+          code=$?
+          set -e
+          printf '%s\n' "$out"
+          if [ "$code" -eq 0 ]; then
+            echo "update=false" >> "$GITHUB_OUTPUT"
+            echo "pstack-devin upstream pin is up to date." \
+              >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$code" -eq 42 ]; then
+            sha="$(printf '%s\n' "$out" | grep '^{' | tail -n1 | jq -r '.candidate' || true)"
+            if ! printf '%s' "$sha" | grep -qE '^[0-9a-f]{40}$'; then
+              echo "::error::could not parse candidate sha from check:upstream output"
+              exit 1
+            fi
+            echo "update=true" >> "$GITHUB_OUTPUT"
+            echo "candidate=$sha" >> "$GITHUB_OUTPUT"
+            echo "short=${sha:0:7}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::check:upstream failed with exit code $code"
+            exit "$code"
+          fi
+
+      # Idempotent: an open PR whose title carries the candidate sha means
+      # this update was already proposed — stop before touching git.
+      - name: Guard against a duplicate PR
+        id: dup
+        if: steps.check.outputs.update == 'true'
+        shell: bash
+        env:
+          CANDIDATE: ${{ steps.check.outputs.candidate }}
+        run: |
+          n="$(gh pr list --state open --search "${CANDIDATE} in:title" \
+            --json number --jq 'length')"
+          echo "open=$n" >> "$GITHUB_OUTPUT"
+          if [ "$n" -gt 0 ]; then
+            echo "::notice::an open PR already proposes $CANDIDATE — skipping"
+            gh pr list --state open --search "${CANDIDATE} in:title" \
+              --json number,title \
+              --jq '.[] | "- #\(.number) \(.title)"' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # The report diffs pin-vs-candidate, so it must run BEFORE
+      # apply:update rewrites the pin — after adoption the diff is empty.
+      - name: Generate update report
+        id: report
+        if: steps.check.outputs.update == 'true' && steps.dup.outputs.open == '0'
+        shell: bash
+        env:
+          CANDIDATE: ${{ steps.check.outputs.candidate }}
+        run: |
+          pnpm --dir scripts/pstack-devin exec tsx src/update-report.ts \
+            "$CANDIDATE" > "$RUNNER_TEMP/report.md"
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+          if grep -q '❌' "$RUNNER_TEMP/report.md"; then
+            echo "blocking=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "blocking=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create update branch
+        if: steps.check.outputs.update == 'true' && steps.dup.outputs.open == '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c \
+            "pstack-devin-upstream/${{ steps.check.outputs.short }}"
+
+      # Pin refs → apm install → build → check-generated → verify → ONE
+      # commit. Any failure rolls the package files back to HEAD; the run
+      # then exits non-zero (visible failure, nothing half-committed).
+      - name: Apply update
+        if: steps.check.outputs.update == 'true' && steps.dup.outputs.open == '0'
+        run: |
+          pnpm --dir scripts/pstack-devin run apply:update \
+            "${{ steps.check.outputs.candidate }}"
+
+      # The title carries the FULL candidate sha — the duplicate guard
+      # above searches `<sha> in:title`, so it must stay verbatim.
+      - name: Push branch and open review PR
+        if: steps.check.outputs.update == 'true' && steps.dup.outputs.open == '0'
+        shell: bash
+        env:
+          CANDIDATE: ${{ steps.check.outputs.candidate }}
+          SHORT: ${{ steps.check.outputs.short }}
+          BLOCKING: ${{ steps.report.outputs.blocking }}
+        run: |
+          branch="pstack-devin-upstream/${SHORT}"
+          git push -u origin "$branch"
+          {
+            cat "$RUNNER_TEMP/report.md"
+            printf '\n---\n\n'
+            printf 'Manual Devin CLI re-verification: **REQUIRED** (not run — paid environment).\n'
+            if [ "$BLOCKING" = "true" ]; then
+              printf '\n> [!WARNING]\n'
+              printf '> Blocking findings (see the ❌ rows above): adapter re-review is required before merge.\n'
+            fi
+          } > "$RUNNER_TEMP/pr-body.md"
+          gh pr create \
+            --title "chore(pstack-devin): update upstream pin to ${CANDIDATE}" \
+            --body-file "$RUNNER_TEMP/pr-body.md" \
+            --base main \
+            --head "$branch"
