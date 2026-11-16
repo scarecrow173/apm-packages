@@ -34,6 +34,28 @@ test("unknown API-shaped token fails audit", () => {
   assert.match(r.unknowns[0].match, /megaReviewer/);
 });
 
+test("uppercase SUBAGENT_TYPE value is audited like lowercase", () => {
+  const { root, files } = fixture({
+    "skills/x/SKILL.md": "Spawn with SUBAGENT_TYPE: unknownType\n",
+  });
+  const r = auditTree(root, files);
+  assert.equal(r.unknowns.length, 1);
+  assert.match(r.unknowns[0].match, /unknownType/);
+});
+
+test("backticked CamelCase tool name flagged unless classified", () => {
+  const flagged = fixture({
+    "skills/x/SKILL.md": "Spawn it with `MultiEdit`\n",
+  });
+  const r1 = auditTree(flagged.root, flagged.files);
+  assert.equal(r1.unknowns.length, 1);
+  assert.equal(r1.unknowns[0].match, "MultiEdit");
+  const suppressed = fixture({
+    "skills/x/SKILL.md": "Spawn it with `Task`\n",
+  });
+  assert.equal(auditTree(suppressed.root, suppressed.files).unknowns.length, 0);
+});
+
 test("cloud environment requirement classified error", () => {
   const { root, files } = fixture({
     "skills/y/SKILL.md": 'spawn: { environment: "cloud" }\n',

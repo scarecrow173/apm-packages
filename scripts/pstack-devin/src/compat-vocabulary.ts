@@ -61,4 +61,10 @@ export const VOCABULARY: VocabEntry[] = [
   { pattern: /\bgemini-[\w*-]+/i, label: "value:gemini-slug", cls: "alternative", note: "non-model slug → omit model → session model; say so" },
   { pattern: /inherit-parent/i, label: "value:inherit-parent", cls: "supported", note: "→ omit model → parent/session model" },
   { pattern: /\bAGENTS\.md\b/i, label: "path:agents-md", cls: "supported", note: "generic instructions file — Devin reads AGENTS.md natively" },
+  // --- Backticked CamelCase prose identifiers — not harness tool names ---
+  { pattern: /\bReturnType\b/, label: "prose:return-type", cls: "devin-only", note: "TS utility type in a type-level table (skills/typescript-best-practices/SKILL.md:26, references/patterns.md:303)" },
+  { pattern: /\bNoDeadlock\b/, label: "prose:no-deadlock", cls: "devin-only", note: "TLA+ predicate name (skills/statechart/SKILL.md:27 and scripts/test/corpus/*/report.md)" },
+  { pattern: /\bPeleError\b/, label: "prose:pele-error", cls: "devin-only", note: "pele renderer error class (skills/statechart/references/render.md:3)" },
+  { pattern: /\b(?:UserId|OrderId)\b/, label: "prose:branded-ids", cls: "devin-only", note: "branded-type examples (skills/principle-type-system-discipline/SKILL.md:11)" },
+  { pattern: /\bDerivedData\b/, label: "prose:derived-data", cls: "devin-only", note: "Xcode cache directory name (skills/poteto-mode/playbooks/worktree-cleanup.md:8)" },
 ];

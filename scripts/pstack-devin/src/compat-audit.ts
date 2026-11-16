@@ -26,12 +26,25 @@ export interface AuditResult {
 const TEXT_EXT = new Set([".md", ".sh", ".mdc", ".json"]);
 
 /** API-shaped tokens with no prose meaning in this tree (capitalized tool
- *  names). `Write`/`Edit` collide with ordinary imperatives, so they count
- *  as tool references only when backtick-quoted. A match is suppressed when
- *  some vocabulary row already classifies that token. */
-const TOOL_TOKEN =
-  /\b(Grep|Glob|WebFetch|WebSearch|NotebookEdit|TodoRead|LS|Bash)\b|`(Write|Edit)`/g;
-const SUBAGENT_TYPE = /subagent_type:\s*["']?([\w-]+)/g;
+ *  names) plus backticked CamelCase identifiers that may be novel harness
+ *  tools. A match is suppressed when some vocabulary row already
+ *  classifies that token. */
+const TOOL_TOKEN = new RegExp(
+  [
+    /\b(Grep|Glob|WebFetch|WebSearch|NotebookEdit|TodoRead|LS|Bash)\b/.source,
+    // `Write`/`Edit` count only when backticked — bare uses collide with
+    // imperative prose ("Write the failing test"), unavoidable noise.
+    /`(Write|Edit)`/.source,
+    // Backticked CamelCase catches novel tool names (`MultiEdit`,
+    // `TaskCreate`, `WebFetch`) — the audit's core purpose.
+    /`([A-Z][a-z]+[A-Z][a-zA-Z]*)`/.source,
+  ].join("|"),
+  "g",
+);
+// Case-insensitive: `SUBAGENT_TYPE: <value>` must be audited like lowercase —
+// the vocabulary row already matches the field name case-insensitively, so
+// an uppercase unknown value would otherwise pass silently as "supported".
+const SUBAGENT_TYPE = /subagent_type:\s*["']?([\w-]+)/gi;
 const KNOWN_SUBAGENT_TYPES = new Set([
   "generalpurpose",   // Cursor value
   "poteto-agent",
@@ -69,9 +82,9 @@ function classified(token: string): boolean {
 /** Scan each materialized upstream file line-by-line: every line is matched
  *  against `VOCABULARY` (collecting `findings`), then API-shaped text with
  *  no vocabulary row is collected as `unknowns`: capitalized tool names
- *  (backtick-only for `Write`/`Edit`), `subagent_type:` values outside the
- *  known set, and frontmatter keys in `agents/*.md` outside the Devin
- *  profile schema. */
+ *  (backtick-only for `Write`/`Edit`), backticked CamelCase tokens that may
+ *  be novel tool names, `subagent_type:` values outside the known set, and
+ *  frontmatter keys in `agents/*.md` outside the Devin profile schema. */
 export function auditTree(root: string, upstreamFiles: string[]): AuditResult {
   const findings: AuditFinding[] = [];
   const unknowns: AuditFinding[] = [];
@@ -95,7 +108,7 @@ export function auditTree(root: string, upstreamFiles: string[]): AuditResult {
         }
       }
       for (const m of line.matchAll(TOOL_TOKEN)) {
-        const token = m[1] ?? m[2];
+        const token = m[1] ?? m[2] ?? m[3];
         if (!classified(token)) unknown(rel, i + 1, token);
       }
       for (const m of line.matchAll(SUBAGENT_TYPE)) {
