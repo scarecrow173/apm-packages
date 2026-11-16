@@ -3,5 +3,5 @@
 # path must be an addition (a path absent upstream). #214/#215 add overlay
 # content; this file is the allowlist authority.
 allow_overwrite:
-  - skills/setup-pstack/SKILL.md # Devin delegation entry — content lands in #215
+  - skills/setup-pstack/SKILL.md # Devin delegation entry — content landed in #215
   - agents/poteto-agent.md # Devin-native profile (machine-parsed; Cursor refs removed) — issue `#214`

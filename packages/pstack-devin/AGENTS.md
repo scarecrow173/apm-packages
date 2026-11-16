@@ -11,7 +11,8 @@ surface; `docs/` holds maintainer-facing evidence, not user docs.
 
 ## Artifact boundary
 
-- `.apm/` primitives (added by later issues) serve APM consumers.
+- `.apm/` primitives (currently `skills/setup-pstack-devin/`, added in
+  `#215`) serve APM consumers.
 - `devin-plugin/` is a generated, git-tracked Devin plugin produced by
   `scripts/pstack-devin`. Never edit it by hand; regenerate via the build.
 - `targets:` in `apm.yml` covers APM runtimes only. It must keep `copilot`
@@ -30,10 +31,10 @@ surface; `docs/` holds maintainer-facing evidence, not user docs.
 - `apm_modules/`, `.github/`, `.claude-plugin/`, and `build/` are local
   install/pack side-effects and stay gitignored.
 - Upstream files are byte-identical except the overwrite allowlist
-  (`skills/setup-pstack/SKILL.md` reserved for `#215`;
-  `agents/poteto-agent.md` overwritten as a Devin-native profile in
-  `#214`; see `docs/upstream-source-decision.md` and
-  `docs/devin-adapter-decisions.md`).
+  (`skills/setup-pstack/SKILL.md` overwritten as the Devin delegation
+  entry in `#215`; `agents/poteto-agent.md` overwritten as a
+  Devin-native profile in `#214`; see `docs/upstream-source-decision.md`
+  and `docs/devin-adapter-decisions.md`).
 
 ## Generated `devin-plugin/` rules
 
@@ -78,8 +79,10 @@ mise exec -- apm install --frozen   # lockfile/manifest must be in sync
 mise exec -- apm compile --dry-run  # consumer-context preview only
 ```
 
-`apm compile --validate` requires installed or local APM primitives. While
-this package ships no `.apm/` primitives, report validation as not
+`apm compile --validate` counts instruction/agent primitives only; this
+package ships a skill (`.apm/skills/setup-pstack-devin/`), so the command
+reports "No instruction files found" and exits non-zero — the same result
+the repo's other skills-only packages get. Report that outcome as not
 applicable instead of treating it as a package bug.
 
 From the repository root:

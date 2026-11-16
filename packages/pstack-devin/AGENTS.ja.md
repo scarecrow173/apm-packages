@@ -11,7 +11,8 @@
 
 ## 成果物の境界
 
-- `.apm/` プリミティブ(後続 Issue で追加)は APM 利用者向け。
+- `.apm/` プリミティブ(現在は `skills/setup-pstack-devin/`、`#215` で
+  追加)は APM 利用者向け。
 - `devin-plugin/` は `scripts/pstack-devin` が生成する Git 追跡済みの
   Devin Plugin。手編集禁止。必ずビルドで再生成する。
 - `apm.yml` の `targets:` は APM ランタイムのみを対象とする。`copilot`
@@ -30,7 +31,8 @@
 - `apm_modules/`、`.github/`、`.claude-plugin/`、`build/` はローカルの
   インストール/pack 副作用であり、ignore を維持する。
 - 上流ファイルは上書き allowlist(`skills/setup-pstack/SKILL.md` は
-  `#215` 用に予約、`agents/poteto-agent.md` は `#214` で Devin
+  `#215` で Devin 委譲エントリとして上書き済み、
+  `agents/poteto-agent.md` は `#214` で Devin
   ネイティブプロファイルとして上書き済み。
   `docs/upstream-source-decision.md` と
   `docs/devin-adapter-decisions.md` 参照)を除きバイト単位で同一。
@@ -79,8 +81,11 @@ mise exec -- apm install --frozen   # lockfile/manifest の一致必須
 mise exec -- apm compile --dry-run  # 消費者コンテキストのプレビュー
 ```
 
-`apm compile --validate` には導入済みまたはローカルの APM プリミティブ
-が必要。このパッケージが `.apm/` プリミティブを持たない間は、検証不能を
+`apm compile --validate` が対象とするのは instruction/agent
+プリミティブのみ。このパッケージはスキル
+(`.apm/skills/setup-pstack-devin/`)を同梱するため、コマンドは "No
+instruction files found" を報告して非ゼロ終了する —
+リポジトリ内の他のスキルのみのパッケージと同じ結果であり、
 パッケージの不具合ではなく「適用外」として報告する。
 
 リポジトリルートから:
