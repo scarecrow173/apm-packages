@@ -53,6 +53,35 @@ test("poteto-agent overwrite is Devin-native and preserves the read contract", (
   ]) assert.ok(!doc.includes(banned), `Cursor-ism survives: ${banned}`);
 });
 
+test("root AGENTS.md carries adapter pointer, precedence, and activation boundary", () => {
+  const doc = readFileSync(join(OVERLAY, "AGENTS.md"), "utf8");
+  // Hard-wrapped paragraphs: match on whitespace-flattened text.
+  const flat = doc.replace(/\s+/g, " ");
+  // (a) Adapter pointer — read the adapter doc once before any pstack skill.
+  assert.ok(
+    flat.includes(
+      "read `docs/harness/devin.md` once before running any pstack skill",
+    ),
+    "missing adapter pointer to docs/harness/devin.md",
+  );
+  // (c) Precedence — devin.md is the adapter of record on Devin.
+  assert.ok(
+    flat.includes("`docs/harness/devin.md` is the adapter of record on Devin"),
+    "missing adapter-of-record precedence line",
+  );
+  // (b) Activation boundary — always-on file, opt-in pstack.
+  assert.ok(
+    flat.includes(
+      "Do not run pstack skills, spawn pstack subagents, or apply these " +
+        "mappings unless the user invoked a pstack skill or `/pstack:<name>` command",
+    ),
+    "missing activation boundary",
+  );
+  // Preserved #213 contract: generated-file provenance + /pstack: namespacing.
+  assert.ok(flat.includes("provenance.json"), "lost the provenance line");
+  assert.ok(flat.includes("/pstack:<skill>"), "lost the /pstack: namespacing line");
+});
+
 test("every classified vocabulary label has a row in devin.md", () => {
   const doc = readFileSync(join(OVERLAY, "docs/harness/devin.md"), "utf8")
     .toLowerCase();
