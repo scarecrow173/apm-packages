@@ -38,7 +38,7 @@
 - [x] `apply-update.ts` + workflow yaml (weekly + dispatch, minimal perms, dup-PR guard via SHA search, no auto-merge) + `docs/upstream-updates.md` procedure. Validate workflow syntax (`actionlint` if available else careful review). Commit.
 
 ### Task 3: sweep + issue comment
-- [ ] Full `pnpm test`+`lint:md`+`verify:l2/l3`; flip checkboxes; `#219` comment.
+- [x] Full `pnpm test`+`lint:md`+`verify:l2/l3`; flip checkboxes; `#219` comment.
 
 ## Self-Review
 Criteria: idempotent ✓(tree-SHA + PR-search guard); coherent proposal PR ✓(apply-update atomic commit); compat failure blocking ✓(report ❌ rows); published unchanged till review ✓(PR-only); simple-vs-breaking distinguish ✓(blocking classification).
