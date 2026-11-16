@@ -33,6 +33,29 @@
   `skills/setup-pstack/SKILL.md` のみ。`docs/upstream-source-decision.md`
   参照)を除きバイト単位で同一。
 
+## 生成 `devin-plugin/` のルール
+
+- `devin-plugin/` の再生成はリポジトリルートからの
+  `pnpm --dir scripts/pstack-devin run build` のみ。
+  `devin-plugin/` は生成物であり、手編集禁止。
+- `overlay/` は編集対象のオーバーレイソース、`overlay.yml` は上書きの
+  唯一の権威。オーバーレイパスが上流ファイルを置き換えられるのは
+  `allow_overwrite:` に列挙された場合のみ。それ以外のパスは全て
+  追加でなければならない。allowlist の拡張はポリシー変更であり、
+  ついでに行わない。
+- `provenance.json` は意図的にタイムスタンプを持たない。同一入力は
+  バイト同一の出力を生まなければならず、時刻依存のフィールドを
+  追加しない。
+- 実行ビットは `git update-index --chmod=+x` でステージされる
+  (build と `check` が自動で行う)。Windows 上で
+  `core.fileMode=false` のままコミットされるためである。
+  インデックスのモード集合は `provenance.executables` と
+  一致しなければならない。
+- `.markdownlint-cli2.jsonc` の `ignores` が `devin-plugin/**` を
+  カバーする状態を維持する。生成バイトは作成ドキュメントではない。
+- 現在のコミット済みツリーの証跡は `docs/build-verification.md` に
+  記録済み。ピンやオーバーレイ契約を変更したら更新する。
+
 ## 編集ルール
 
 - `README.md`/`README.ja.md` と `AGENTS.md`/`AGENTS.ja.md` の構造と意味を
@@ -63,4 +86,5 @@ mise exec -- apm compile --dry-run  # 消費者コンテキストのプレビュ
 ```bash
 mise exec -- pnpm --dir scripts/pstack-devin test
 mise exec -- pnpm --dir scripts/pstack-devin run lint:md
+mise exec -- pnpm --dir scripts/pstack-devin run check-generated
 ```
