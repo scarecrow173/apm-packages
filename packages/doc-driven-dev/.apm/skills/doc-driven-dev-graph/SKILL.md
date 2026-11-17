@@ -22,15 +22,18 @@ the execution authority.
   statuses, and relations.
 - **Graph State**: a fresh projection of the Artifact Graph with focus, gates,
   signals, blockers, and evidence for the selected route.
-- **Dynamic Task Graph**: a deterministic projection of a focused plan and its
-  task dependencies; it is used by planning and implementation delegates.
+- **Dynamic Task Graph**: a deterministic, read-only projection of one
+  Execution Store run's `plan.md` and task records, keyed by
+  `(runId, taskId)`; it is used by planning and implementation delegates.
 
 ## Canonical command
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
-  [--focus <artifact>] [--task-dir <path>] [--cwd <path>] --json
+  [--focus <artifact>] [--task-dir <path>] \
+  [--run <run-id> [--state-root <path>] [--allow-external-root]] \
+  [--cwd <path>] --json
 ```
 
 The JSON result is the `GraphRoute` contract: `current`, one `next`, `edgeId`,
@@ -154,8 +157,10 @@ signal is the only bypass and is recorded in the run trace.
 ## Persistence boundary
 
 Markdown artifacts are durable history and status authority. Graph State and
-the Dynamic Task Graph are projections for the current turn. The runtime does
-not create or require a parallel database.
+the Dynamic Task Graph are projections for the current turn. Plans and tasks
+are per-run Execution Store state; the Task Graph is a read-only projection
+of one selected run. The runtime does not create or require a parallel
+database.
 
 Per-run execution state — plans, tasks, approvals, checkpoints, effect
 receipts, and run traces — lives outside Git in the **Execution Store** under
@@ -226,9 +231,9 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 
 The JSON always contains `definition`, including counts, topology reachability,
 delegates, audits, and deterministic issues. `state`, `artifactGraph`, and
-`taskGraph` are included only when an explicit `--cwd`, `--focus`, or
-`--task-dir` selector requests runtime projection. Inspection never routes,
-dispatches delegates, or writes Markdown/persistence state.
+`taskGraph` are included only when an explicit `--cwd`, `--focus`,
+`--task-dir`, or `--run` selector requests runtime projection. Inspection
+never routes, dispatches delegates, or writes Markdown/persistence state.
 `referencedConditions` contains the unique edge `when` keys; `unusedConditions`
 contains declared condition keys absent from those edge `when` keys. JSON accepts
 these selectors for runtime projection.
@@ -247,8 +252,9 @@ in Mermaid syntax, assigned by sorted original node ID; the original ID remains
 in the escaped label. Node labels include node ID and kind, with delegate,
 commitGate, terminal, and audit labels when declared; edge labels include the
 condition key and priority. Mermaid rendering is text-only and has no routing
-or persistence side effect. Mermaid is definition-only and rejects `--cwd`, `--focus`, and
-`--task-dir`. Original node, delegate, audit, and condition text is escaped;
+or persistence side effect. Mermaid is definition-only and rejects `--cwd`,
+`--focus`, `--task-dir`, `--run`, and `--state-root`. Original node, delegate,
+audit, and condition text is escaped;
 `|` cannot terminate an edge label.
 
 ### 5. Legacy artifact id migration

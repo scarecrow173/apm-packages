@@ -3,12 +3,6 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import matter from "gray-matter";
-import {
-  normalizeArtifactPath,
-  scanArtifactGraph,
-  type ArtifactRecord,
-} from "../../doc-driven-dev-graph/scripts/lib/artifact_graph";
 import { buildTaskGraph } from "../../doc-driven-dev-graph/scripts/lib/task_graph";
 import {
   evaluateParallelSafety,
@@ -27,19 +21,21 @@ type CliArgs = {
   cwd: string;
   help?: boolean;
   json: boolean;
-  plan?: string;
-  taskDir?: string;
+  run?: string;
+  stateRoot?: string;
+  allowExternalRoot: boolean;
   verifyMerge?: string;
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { cwd: process.cwd(), json: false };
+  const args: CliArgs = { cwd: process.cwd(), json: false, allowExternalRoot: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--plan") args.plan = argv[++i];
+    if (arg === "--run") args.run = argv[++i];
     else if (arg === "--verify-merge") args.verifyMerge = argv[++i];
     else if (arg === "--base-ref") args.baseRef = argv[++i];
-    else if (arg === "--task-dir") args.taskDir = argv[++i];
+    else if (arg === "--state-root") args.stateRoot = argv[++i];
+    else if (arg === "--allow-external-root") args.allowExternalRoot = true;
     else if (arg === "--cwd") args.cwd = argv[++i];
     else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -49,8 +45,8 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/check_parallel.js --plan <path-or-id> [--cwd DIR] [--task-dir DIR] [--json]\n"
-    + "       node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-ref REF] [--task-dir DIR] [--json]";
+  return "Usage: node scripts/check_parallel.js --run <run-id> [--cwd DIR] [--state-root DIR] [--allow-external-root] [--json]\n"
+    + "       node scripts/check_parallel.js --verify-merge <slices.json> --run <run-id> [--cwd DIR] [--base-ref REF] [--json]";
 }
 
 /** Raw slices.json entry before touchedPaths collection. */
@@ -58,7 +54,6 @@ type SliceInput = {
   taskId: string;
   declaredScope: string[];
   evidencePaths: string[];
-  taskDocPath: string;
   touchedPaths?: string[];
   baseRef?: string;
 };
@@ -91,9 +86,6 @@ function parseSliceInputs(raw: unknown): SliceInput[] {
     if (!isStringArray(slice.evidencePaths)) {
       throw new Error(`${label}.evidencePaths must be an array of strings`);
     }
-    if (typeof slice.taskDocPath !== "string") {
-      throw new Error(`${label}.taskDocPath must be a string`);
-    }
     if (slice.touchedPaths !== undefined && !isStringArray(slice.touchedPaths)) {
       throw new Error(`${label}.touchedPaths must be an array of strings when present`);
     }
@@ -104,7 +96,6 @@ function parseSliceInputs(raw: unknown): SliceInput[] {
       taskId: slice.taskId,
       declaredScope: slice.declaredScope,
       evidencePaths: slice.evidencePaths,
-      taskDocPath: slice.taskDocPath,
       ...(slice.touchedPaths !== undefined ? { touchedPaths: slice.touchedPaths } : {}),
       ...(slice.baseRef !== undefined ? { baseRef: slice.baseRef } : {}),
     };
@@ -112,45 +103,17 @@ function parseSliceInputs(raw: unknown): SliceInput[] {
 }
 
 /**
- * --plan accepts a repo-relative path (or any cwd-resolvable path) or an
- * artifact ID; it must resolve to exactly one plan record. An unresolved or
- * ambiguous plan fails closed — the task graph is never built on a guess.
+ * --run selects the run whose task records the parallel judgment reads —
+ * the graph, eligibility, and every task's declared write scope come from
+ * that run's records only. Never mixes runs.
  */
-function resolvePlanRecord(cwd: string, planArg: string, records: ArtifactRecord[]): ArtifactRecord {
-  const normalizedPath = normalizeArtifactPath(cwd, planArg);
-  const matches = new Map<string, ArtifactRecord>();
-  for (const record of records) {
-    if (record.type !== "plan") continue;
-    if (record.path === normalizedPath || record.id === planArg) {
-      matches.set(record.path, record);
-    }
-  }
-  if (matches.size === 0) {
-    throw new Error(`No plan artifact found for --plan ${JSON.stringify(planArg)}`);
-  }
-  if (matches.size > 1) {
-    throw new Error(`--plan ${JSON.stringify(planArg)} matches multiple plan artifacts: ${[...matches.keys()].join(", ")}`);
-  }
-  return [...matches.values()][0];
-}
-
 function runParallelCheck(cwd: string, args: CliArgs): ParallelReport {
-  if (!args.plan) throw new Error("Missing required --plan <path-or-id>");
-  const taskDir = args.taskDir ?? "docs/tasks";
-  const projection = scanArtifactGraph({ cwd, taskDir });
-  const plan = resolvePlanRecord(cwd, args.plan, projection.records);
-  const taskGraph = buildTaskGraph({ cwd, plan: plan.path, taskDir });
-  // Read every selected task doc body; the evaluator owns eligibility
-  // (resumableActive before runnable) and treats tasks absent from this list
-  // as scope-undeclared, so an unreadable doc still fails closed.
-  const tasks: Array<{ id: string; body: string }> = [];
-  for (const node of taskGraph.nodes) {
-    try {
-      tasks.push({ id: node.id, body: matter(fs.readFileSync(path.join(cwd, node.path), "utf8")).content });
-    } catch {
-      // Unreadable task doc → absent from the list → serial/scope-undeclared.
-    }
-  }
+  if (!args.run) throw new Error("Missing required --run <run-id>");
+  const store = { stateRoot: args.stateRoot, allowExternalRoot: args.allowExternalRoot };
+  const taskGraph = buildTaskGraph({ cwd, runId: args.run, ...store });
+  // The evaluator owns eligibility (resumableActive before runnable) and
+  // treats a task absent from this list as scope-undeclared — fail closed.
+  const tasks = taskGraph.nodes.map((node) => ({ id: node.id, scope: node.scope }));
   return evaluateParallelSafety(taskGraph, tasks);
 }
 
@@ -165,19 +128,21 @@ function runMergeVerification(cwd: string, args: CliArgs): MergeReport {
   }
   const inputs = parseSliceInputs(parsed);
   // Supplied fields are asserted, not trusted: verifyParallelMerge binds
-  // taskDocPath to the slice and re-checks declaredScope against the task
-  // doc's ## Affected Files. Omit touchedPaths so the verifier collects the
-  // real diff itself — baseRef must predate the slice (a slice-level baseRef
-  // wins over --base-ref; both default to HEAD).
+  // each taskId to a task record in the run and re-checks declaredScope
+  // against the record's own scope. Omit touchedPaths so the verifier
+  // collects the real diff itself — baseRef must predate the slice (a
+  // slice-level baseRef wins over --base-ref; both default to HEAD).
   const slices: SliceOutcome[] = inputs.map((input) => ({
     taskId: input.taskId,
     declaredScope: input.declaredScope,
     evidencePaths: input.evidencePaths,
-    taskDocPath: input.taskDocPath,
     touchedPaths: input.touchedPaths
       ?? collectChangedPaths(cwd, input.baseRef ?? args.baseRef ?? "HEAD"),
   }));
-  return verifyParallelMerge(cwd, slices, { taskDir: args.taskDir });
+  return verifyParallelMerge(cwd, args.run as string, slices, {
+    stateRoot: args.stateRoot,
+    allowExternalRoot: args.allowExternalRoot,
+  });
 }
 
 function main(): void {
@@ -191,8 +156,8 @@ function main(): void {
       console.log(usage());
       return;
     }
-    if (args.plan && args.verifyMerge) {
-      throw new Error("Use either --plan or --verify-merge, not both");
+    if (args.verifyMerge && !args.run) {
+      throw new Error("--verify-merge requires --run <run-id>");
     }
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;

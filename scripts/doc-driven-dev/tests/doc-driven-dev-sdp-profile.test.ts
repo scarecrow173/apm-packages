@@ -761,7 +761,11 @@ const CONTRACT_LINK_ALLOWANCE: Record<string, number> = {
 // baseline — bulk growth is the regression this guard exists for. The
 // #147 re-pin moved the anchor to the current package state, so this is
 // headroom for future SKILL.md growth, not a re-measurement of Task 3.
-const ALWAYS_ON_TASK3_TOLERANCE = 1400;
+// Raised 1400 -> 2100 for the #237/#238/#235 union: the Execution Store
+// task-record contract (checks/dependsOn/scope, digest-bound plan approval,
+// tombstone refusals) legitimately adds ~1.9k chars across the task-doc,
+// plan-doc, planning-flow, and graph SKILL.md surfaces.
+const ALWAYS_ON_TASK3_TOLERANCE = 2100;
 
 /** Multiset diff of (kind,target) pairs: directives in `live` not in `base`. */
 function addedDirectives(

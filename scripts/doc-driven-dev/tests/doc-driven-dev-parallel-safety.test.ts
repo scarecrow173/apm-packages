@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { TaskGraphResult } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
+import { evaluateParallelSafety } from "../src/skills/implementation-flow/scripts/lib/parallel_safety";
 import {
-  evaluateParallelSafety,
-  parseAffectedFiles,
-} from "../src/skills/implementation-flow/scripts/lib/parallel_safety";
+  scopeFromEntries,
+  toScopeEntry,
+} from "../src/skills/implementation-flow/scripts/lib/scope_entry";
 
 function taskGraph(overrides: Partial<TaskGraphResult> = {}): TaskGraphResult {
   return {
-    schemaVersion: 1,
-    plan: "docs/plans/0001-plan.md",
+    schemaVersion: 2,
+    runId: "run-0001",
+    plan: { path: "runs/run-0001/plan.md", digest: "a".repeat(64), approved: true },
     nodes: [],
     edges: [],
     runnable: [],
@@ -22,117 +24,98 @@ function taskGraph(overrides: Partial<TaskGraphResult> = {}): TaskGraphResult {
   };
 }
 
-function taskBody(affectedFiles: string | null): string {
-  if (affectedFiles === null) return "# Task\n\n## Verification\n\n- [ ] node --test\n";
-  return `# Task\n\n## Affected Files\n\n${affectedFiles}\n\n## Verification\n\n- [ ] node --test\n`;
-}
-
 function serialReasons(report: ReturnType<typeof evaluateParallelSafety>, id: string): string[] {
   return report.serial.find((entry) => entry.id === id)?.reasons ?? [];
 }
 
-// --- parseAffectedFiles ---------------------------------------------------
+// --- scope-entry classification (scope_entry.ts — the shared authority) ----
+//
+// Task records carry raw scope strings — the same vocabulary the v2
+// `## Affected Files` bullets did. `toScopeEntry`/`scopeFromEntries` are the
+// one place that vocabulary classifies; these tests pin the contract both
+// parallel_safety and merge_verification consume.
 
-test("parseAffectedFiles returns null when the Affected Files section is absent", () => {
-  assert.equal(parseAffectedFiles(taskBody(null)), null);
-  assert.equal(parseAffectedFiles("# Task\n"), null);
+test("toScopeEntry resolves a file entry", () => {
+  assert.deepEqual(toScopeEntry("src/foo.ts"), {
+    pattern: { kind: "file", path: "src/foo.ts" },
+  });
 });
 
-test("parseAffectedFiles parses a file entry", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("- src/foo.ts")), [
-    { pattern: { kind: "file", path: "src/foo.ts" } },
-  ]);
+test("toScopeEntry resolves trailing-slash and glob-star entries as dirs", () => {
+  assert.deepEqual(toScopeEntry("src/auth/"), {
+    pattern: { kind: "dir", path: "src/auth" },
+  });
+  assert.deepEqual(toScopeEntry("src/gen/*"), {
+    pattern: { kind: "dir", path: "src/gen" },
+  });
 });
 
-test("parseAffectedFiles parses trailing-slash and glob-star entries as dirs", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("- src/auth/")), [
-    { pattern: { kind: "dir", path: "src/auth" } },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- src/gen/*")), [
-    { pattern: { kind: "dir", path: "src/gen" } },
-  ]);
+test("toScopeEntry marks non-path text as opaque", () => {
+  assert.deepEqual(toScopeEntry("auth module"), { opaque: "auth module" });
+  assert.deepEqual(toScopeEntry("README"), { opaque: "README" });
 });
 
-test("parseAffectedFiles marks non-path text as opaque", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("- auth module")), [
-    { opaque: "auth module" },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- README")), [
-    { opaque: "README" },
-  ]);
+test("toScopeEntry normalizes ./ prefixes and backslashes", () => {
+  assert.deepEqual(toScopeEntry("./src/x.ts"), {
+    pattern: { kind: "file", path: "src/x.ts" },
+  });
+  assert.deepEqual(toScopeEntry("src\\auth\\login.ts"), {
+    pattern: { kind: "file", path: "src/auth/login.ts" },
+  });
 });
 
-test("parseAffectedFiles strips HTML comment lines and comment-only placeholders", () => {
-  const body = taskBody("<!-- section note -->\n- <!-- file, directory, module, or interface -->\n- src/real.ts");
-  assert.deepEqual(parseAffectedFiles(body), [
-    { pattern: { kind: "file", path: "src/real.ts" } },
-  ]);
+test("toScopeEntry marks absolute paths and .. escapes as opaque", () => {
+  assert.deepEqual(toScopeEntry("/etc/passwd"), { opaque: "/etc/passwd" });
+  assert.deepEqual(toScopeEntry("C:/temp/x.ts"), { opaque: "C:/temp/x.ts" });
+  assert.deepEqual(toScopeEntry("../outside.ts"), { opaque: "../outside.ts" });
+  assert.deepEqual(toScopeEntry("src/../outside.ts"), { opaque: "src/../outside.ts" });
 });
 
-test("parseAffectedFiles returns an empty list for a present-but-empty section", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("")), []);
-  assert.deepEqual(parseAffectedFiles(taskBody("\n")), []);
+test("toScopeEntry turns markup-wrapped entries opaque instead of fake patterns", () => {
+  assert.deepEqual(toScopeEntry("{{src/x.ts}}"), { opaque: "{{src/x.ts}}" });
+  assert.deepEqual(toScopeEntry("[link](src/x.ts)"), { opaque: "[link](src/x.ts)" });
+  assert.deepEqual(toScopeEntry("src/<module>.ts"), { opaque: "src/<module>.ts" });
+  assert.deepEqual(toScopeEntry("src/`gen`/x.ts"), { opaque: "src/`gen`/x.ts" });
 });
 
-test("parseAffectedFiles normalizes ./ prefixes and backslashes", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("- ./src/x.ts")), [
-    { pattern: { kind: "file", path: "src/x.ts" } },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- src\\auth\\login.ts")), [
-    { pattern: { kind: "file", path: "src/auth/login.ts" } },
-  ]);
+test("scopeFromEntries returns null for an absent scope declaration", () => {
+  assert.equal(scopeFromEntries(undefined), null);
 });
 
-test("parseAffectedFiles marks absolute paths and .. escapes as opaque", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("- /etc/passwd")), [
-    { opaque: "/etc/passwd" },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- C:/temp/x.ts")), [
-    { opaque: "C:/temp/x.ts" },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- ../outside.ts")), [
-    { opaque: "../outside.ts" },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- src/../outside.ts")), [
-    { opaque: "src/../outside.ts" },
-  ]);
+test("scopeFromEntries resolves a record scope list into patterns and opacity", () => {
+  assert.deepEqual(scopeFromEntries(["src/foo.ts", "src/auth/"]), {
+    patterns: [
+      { kind: "file", path: "src/foo.ts" },
+      { kind: "dir", path: "src/auth" },
+    ],
+    hasOpaque: false,
+  });
+  assert.deepEqual(scopeFromEntries(["src/foo.ts", "auth module"]), {
+    patterns: [{ kind: "file", path: "src/foo.ts" }],
+    hasOpaque: true,
+  });
 });
 
-test("parseAffectedFiles strips a checkbox marker left behind by comment removal", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("- <!-- c --> [ ] src/x.ts")), [
-    { pattern: { kind: "file", path: "src/x.ts" } },
-  ]);
-});
-
-test("parseAffectedFiles unwraps a code-span path", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("- `src/auth/`")), [
-    { pattern: { kind: "dir", path: "src/auth" } },
-  ]);
-});
-
-test("parseAffectedFiles turns markup-wrapped entries opaque instead of fake patterns", () => {
-  assert.deepEqual(parseAffectedFiles(taskBody("- {{src/x.ts}}")), [
-    { opaque: "{{src/x.ts}}" },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- [link](src/x.ts)")), [
-    { opaque: "[link](src/x.ts)" },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- src/<module>.ts")), [
-    { opaque: "src/<module>.ts" },
-  ]);
-  assert.deepEqual(parseAffectedFiles(taskBody("- src/`gen`/x.ts")), [
-    { opaque: "src/`gen`/x.ts" },
-  ]);
+test("scopeFromEntries skips empty entries and unwraps one code span", () => {
+  assert.deepEqual(scopeFromEntries([]), { patterns: [], hasOpaque: false });
+  assert.deepEqual(scopeFromEntries(["", "  "]), { patterns: [], hasOpaque: false });
+  assert.deepEqual(scopeFromEntries(["`src/auth/`"]), {
+    patterns: [{ kind: "dir", path: "src/auth" }],
+    hasOpaque: false,
+  });
 });
 
 // --- evaluateParallelSafety -------------------------------------------------
+//
+// The evaluator consumes the run projection's graph + each task record's
+// `scope` field (Issue #237) — never Markdown task bodies.
 
 test("two runnable tasks with disjoint scopes run in parallel", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- src/foo.ts") },
-      { id: "TASK-0002", body: taskBody("- src/bar.ts") },
+      { id: "TASK-0001", scope: ["src/foo.ts"] },
+      { id: "TASK-0002", scope: ["src/bar.ts"] },
     ],
   );
   assert.equal(report.decision, "parallel");
@@ -147,8 +130,8 @@ test("the same file declared by two tasks is a write conflict on both sides", ()
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- src/shared.ts") },
-      { id: "TASK-0002", body: taskBody("- src/shared.ts") },
+      { id: "TASK-0001", scope: ["src/shared.ts"] },
+      { id: "TASK-0002", scope: ["src/shared.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
@@ -162,8 +145,8 @@ test("a dir pattern overlapping another task's file is a write conflict", () => 
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- src/") },
-      { id: "TASK-0002", body: taskBody("- src/auth/login.ts") },
+      { id: "TASK-0001", scope: ["src/"] },
+      { id: "TASK-0002", scope: ["src/auth/login.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
@@ -173,12 +156,12 @@ test("a dir pattern overlapping another task's file is a write conflict", () => 
 });
 
 test("nested dir patterns conflict in either direction", () => {
-  for (const [first, second] of [["- src/", "- src/auth/"], ["- src/auth/", "- src/"]] as const) {
+  for (const [first, second] of [["src/", "src/auth/"], ["src/auth/", "src/"]] as const) {
     const report = evaluateParallelSafety(
       taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
       [
-        { id: "TASK-0001", body: taskBody(first) },
-        { id: "TASK-0002", body: taskBody(second) },
+        { id: "TASK-0001", scope: [first] },
+        { id: "TASK-0002", scope: [second] },
       ],
     );
     assert.equal(report.decision, "serial");
@@ -194,9 +177,9 @@ test("resumableActive takes priority over runnable for eligibility", () => {
       active: ["TASK-0002"],
     }),
     [
-      { id: "TASK-0001", body: taskBody("- src/a.ts") },
-      { id: "TASK-0002", body: taskBody("- src/b.ts") },
-      { id: "TASK-0003", body: taskBody("- src/c.ts") },
+      { id: "TASK-0001", scope: ["src/a.ts"] },
+      { id: "TASK-0002", scope: ["src/b.ts"] },
+      { id: "TASK-0003", scope: ["src/c.ts"] },
     ],
   );
   assert.deepEqual(report.eligible, ["TASK-0002"]);
@@ -211,8 +194,8 @@ test("a non-empty task graph issue list blocks the whole evaluation", () => {
       issues: [{ code: "task-cycle", message: "Task dependency cycle detected: TASK-0001 -> TASK-0002", tasks: ["TASK-0001", "TASK-0002"] }],
     }),
     [
-      { id: "TASK-0001", body: taskBody("- src/a.ts") },
-      { id: "TASK-0002", body: taskBody("- src/b.ts") },
+      { id: "TASK-0001", scope: ["src/a.ts"] },
+      { id: "TASK-0002", scope: ["src/b.ts"] },
     ],
   );
   assert.equal(report.decision, "blocked");
@@ -223,12 +206,12 @@ test("a non-empty task graph issue list blocks the whole evaluation", () => {
   assert.deepEqual(report.taskGraphIssues, ["task-cycle"]);
 });
 
-test("a task without an Affected Files section is serial scope-undeclared", () => {
+test("a task record with no scope field is serial scope-undeclared", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody(null) },
-      { id: "TASK-0002", body: taskBody("- src/b.ts") },
+      { id: "TASK-0001" },
+      { id: "TASK-0002", scope: ["src/b.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
@@ -236,12 +219,12 @@ test("a task without an Affected Files section is serial scope-undeclared", () =
   assert.deepEqual(report.parallel, ["TASK-0002"]);
 });
 
-test("an empty Affected Files section is also scope-undeclared", () => {
+test("an empty scope declaration is also scope-undeclared", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- <!-- file, directory -->") },
-      { id: "TASK-0002", body: taskBody("- src/b.ts") },
+      { id: "TASK-0001", scope: [] },
+      { id: "TASK-0002", scope: ["src/b.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
@@ -251,7 +234,7 @@ test("an empty Affected Files section is also scope-undeclared", () => {
 test("an eligible task missing from the tasks map is scope-undeclared", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
-    [{ id: "TASK-0002", body: taskBody("- src/b.ts") }],
+    [{ id: "TASK-0002", scope: ["src/b.ts"] }],
   );
   assert.equal(report.decision, "serial");
   assert.deepEqual(serialReasons(report, "TASK-0001"), ["scope-undeclared"]);
@@ -262,8 +245,8 @@ test("an opaque entry makes the task serial scope-unverifiable", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- auth module") },
-      { id: "TASK-0002", body: taskBody("- src/b.ts") },
+      { id: "TASK-0001", scope: ["auth module"] },
+      { id: "TASK-0002", scope: ["src/b.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
@@ -275,8 +258,8 @@ test("an unverifiable path escape also counts as scope-unverifiable", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- src/a.ts\n- ../escape.ts") },
-      { id: "TASK-0002", body: taskBody("- src/b.ts") },
+      { id: "TASK-0001", scope: ["src/a.ts", "../escape.ts"] },
+      { id: "TASK-0002", scope: ["src/b.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
@@ -287,9 +270,9 @@ test("with three tasks only the conflicting pair goes serial", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002", "TASK-0003"] }),
     [
-      { id: "TASK-0001", body: taskBody("- src/shared.ts") },
-      { id: "TASK-0002", body: taskBody("- src/shared.ts") },
-      { id: "TASK-0003", body: taskBody("- docs/other.md") },
+      { id: "TASK-0001", scope: ["src/shared.ts"] },
+      { id: "TASK-0002", scope: ["src/shared.ts"] },
+      { id: "TASK-0003", scope: ["docs/other.md"] },
     ],
   );
   assert.equal(report.decision, "serial");
@@ -299,48 +282,10 @@ test("with three tasks only the conflicting pair goes serial", () => {
   assert.deepEqual(serialReasons(report, "TASK-0003"), []);
 });
 
-// --- localized section headings ------------------------------------------------
-
-test("a task declaring ## 影響ファイル resolves scope and stays parallel-eligible", () => {
-  const jaTask = (affectedFiles: string) => `# タスク\n\n## 影響ファイル\n\n${affectedFiles}\n\n## 検証\n\n- [ ] node --test\n`;
-  const report = evaluateParallelSafety(
-    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
-    [
-      { id: "TASK-0001", body: jaTask("- src/a.ts") },
-      { id: "TASK-0002", body: jaTask("- src/b.ts") },
-    ],
-  );
-  assert.equal(report.decision, "parallel");
-  assert.deepEqual(report.parallel, ["TASK-0001", "TASK-0002"]);
-  assert.deepEqual(report.serial, []);
-});
-
-test("a localized heading that is not a declared alias still fails closed", () => {
-  // "## 影響するファイル" is not the template alias — scope reads as undeclared.
-  const body = "# Task\n\n## 影響するファイル\n\n- src/a.ts\n";
-  assert.equal(parseAffectedFiles(body), null);
-  const report = evaluateParallelSafety(
-    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
-    [
-      { id: "TASK-0001", body },
-      { id: "TASK-0002", body: taskBody("- src/b.ts") },
-    ],
-  );
-  assert.equal(report.decision, "serial");
-  assert.deepEqual(serialReasons(report, "TASK-0001"), ["scope-undeclared"]);
-});
-
-test("the canonical Affected Files section wins when an alias is also present", () => {
-  const body = "# Task\n\n## 影響ファイル\n\n- src/alias.ts\n\n## Affected Files\n\n- src/canonical.ts\n";
-  assert.deepEqual(parseAffectedFiles(body), [
-    { pattern: { kind: "file", path: "src/canonical.ts" } },
-  ]);
-});
-
 test("a single clean eligible task cannot run in parallel", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001"] }),
-    [{ id: "TASK-0001", body: taskBody("- src/a.ts") }],
+    [{ id: "TASK-0001", scope: ["src/a.ts"] }],
   );
   assert.equal(report.decision, "serial");
   assert.deepEqual(report.parallel, ["TASK-0001"]);
@@ -351,8 +296,8 @@ test("a markup-wrapped entry is scope-unverifiable, not a silently disjoint patt
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- {{src/x.ts}}") },
-      { id: "TASK-0002", body: taskBody("- src/x.ts") },
+      { id: "TASK-0001", scope: ["{{src/x.ts}}"] },
+      { id: "TASK-0002", scope: ["src/x.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
@@ -361,65 +306,28 @@ test("a markup-wrapped entry is scope-unverifiable, not a silently disjoint patt
   assert.deepEqual(report.conflicts, []);
 });
 
-test("a comment-then-checkbox entry still participates in conflict detection", () => {
-  const report = evaluateParallelSafety(
-    taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
-    [
-      { id: "TASK-0001", body: taskBody("- <!-- c --> [ ] src/x.ts") },
-      { id: "TASK-0002", body: taskBody("- src/x.ts") },
-    ],
-  );
-  assert.equal(report.decision, "serial");
-  assert.deepEqual(report.conflicts, [{ a: "TASK-0001", b: "TASK-0002", path: "src/x.ts" }]);
-});
-
 test("normalized paths still conflict across differing spellings", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- ./src/shared.ts") },
-      { id: "TASK-0002", body: taskBody("- src\\shared.ts") },
+      { id: "TASK-0001", scope: ["./src/shared.ts"] },
+      { id: "TASK-0002", scope: ["src\\shared.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
   assert.deepEqual(report.conflicts, [{ a: "TASK-0001", b: "TASK-0002", path: "src/shared.ts" }]);
 });
 
-// --- fenced code blocks are documentation, not declarations -------------------
-
-test("a fenced ## Affected Files section is a phantom and does not declare scope", () => {
-  const fenced = "# Task\n\n```md\n## Affected Files\n\n- src/x.ts\n```\n\n## Verification\n\n- [ ] node --test\n";
-  assert.equal(parseAffectedFiles(fenced), null);
-  const tilde = "# Task\n\n~~~\n## Affected Files\n\n- src/x.ts\n~~~\n";
-  assert.equal(parseAffectedFiles(tilde), null);
+test("a code-span-wrapped entry still verifies as a path", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: fenced },
-      { id: "TASK-0002", body: taskBody("- src/b.ts") },
+      { id: "TASK-0001", scope: ["`src/a.ts`"] },
+      { id: "TASK-0002", scope: ["src/a.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");
-  assert.deepEqual(serialReasons(report, "TASK-0001"), ["scope-undeclared"]);
-});
-
-test("bullets inside a fenced block do not enter the scope", () => {
-  const body = taskBody("- src/real.ts\n\n```\n- src/fake.ts\n```\n");
-  assert.deepEqual(parseAffectedFiles(body), [
-    { pattern: { kind: "file", path: "src/real.ts" } },
-  ]);
-});
-
-test("an unclosed fence drops the remainder of the body", () => {
-  const body = "# Task\n\n```\n## Affected Files\n\n- src/x.ts\n";
-  assert.equal(parseAffectedFiles(body), null);
-});
-
-test("bullets under a ### subsection do not enter the scope", () => {
-  const body = "# Task\n\n## Affected Files\n\n- src/real.ts\n\n### Notes\n\n- src/leak.ts\n\n#### Deep\n\n- src/deep.ts\n";
-  assert.deepEqual(parseAffectedFiles(body), [
-    { pattern: { kind: "file", path: "src/real.ts" } },
-  ]);
+  assert.deepEqual(report.conflicts, [{ a: "TASK-0001", b: "TASK-0002", path: "src/a.ts" }]);
 });
 
 // --- case-folded path comparison -----------------------------------------------
@@ -428,8 +336,8 @@ test("declared paths conflict across case differences", () => {
   const report = evaluateParallelSafety(
     taskGraph({ runnable: ["TASK-0001", "TASK-0002"] }),
     [
-      { id: "TASK-0001", body: taskBody("- SRC/SHARED.TS") },
-      { id: "TASK-0002", body: taskBody("- src/shared.ts") },
+      { id: "TASK-0001", scope: ["SRC/SHARED.TS"] },
+      { id: "TASK-0002", scope: ["src/shared.ts"] },
     ],
   );
   assert.equal(report.decision, "serial");

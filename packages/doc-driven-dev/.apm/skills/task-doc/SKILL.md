@@ -28,32 +28,34 @@ no longer describe a file this skill mints.
 ## Preconditions
 
 <HARD-GATE>
-To create a task, one of the following must be satisfied:
+To create a task record in a run, one of the following must be satisfied:
 
-1. **Normal path**: The referenced plan has `status` of `approved` or above.
-   Do not derive tasks from a `draft` plan.
-   If the plan is not yet approved, complete its review and approval first.
+1. **Normal path**: The run's `plan.md` carries a digest-bound approval —
+   the Task Graph's `plan-not-approved` gate fails closed otherwise.
+   Do not derive tasks from an unapproved plan.
+   If the plan is not yet approved, complete its review and `approve-plan`
+   first.
 2. **Emergency fix path**: When no plan exists, ALL of the following must hold:
-   - State the reason for urgency in the task body (one line).
-   - Reference an `approved` spec-doc or `accepted` adr-doc via
-     `relations.implements` or `relations.derives-from`.
+   - State the reason for urgency in the task record body (one line).
+   - Reference an `approved` spec-doc or `accepted` adr-doc in the record's
+     `checks` or the run plan — the durable artifact is the upstream anchor.
    - If no spec/ADR exists either, create one first (brief content is acceptable).
 3. **Post-implementation follow-up path**: When the task comes from the
     lifecycle Phase 4 Exit Gate, ALL of the following must hold:
    - The follow-up has a recorded classification.
-   - `bug-fix` and `doc-only` tasks reference the current approved plan, the
-     verified task, or the affected upstream document.
+   - `bug-fix` and `doc-only` tasks reference the current approved run plan,
+     the verified task record, or the affected upstream document.
    - `decision-required` and `new-feature` items are not implementation tasks
      until their upstream spec, ADR, design, or plan route is completed.
-   - Dependencies are explicit through `relations.depends-on` and
-     `relations.blocks`.
+   - Dependencies are explicit through the record's `dependsOn` — sibling
+     task ids inside the same run only.
 
 If none of these paths is satisfied, do not create the task.
 </HARD-GATE>
 
-When a plan is supplied through `--plan`, the creator must enforce
-TASK-DOC-GATE-001: the referenced plan must exist and have status
-`approved`, `in-progress`, or `completed`.
+Task identity is `(runId, taskId)`: a record exists only inside its run,
+`dependsOn` names sibling records in the same run, and `blocks` is the
+derived reverse projection — never an independent field.
 
 ## Workflow
 
@@ -68,18 +70,16 @@ TASK-DOC-GATE-001: the referenced plan must exist and have status
    `references/task-conventions.md` defines the record contract and
    `assets/templates/task.md` remains the reference body structure.
 
-3. Use meaningful relations.
-   Generated tasks point to the plan with `relations.implements` and
-   `relations.depends-on`. `--depends-on` and `--blocks` may be repeated; values are recorded in input
-   order with duplicates removed. In the Task DAG, a `depends-on` reference
-   resolving to another selected task creates `dependency -> this task`, while a
-   `blocks` reference creates `this task -> blocked task`. References to a plan,
-   spec, ADR, or design remain upstream artifact relations rather than Task DAG
-   edges. Task creation records references but does not validate the whole DAG;
-   use `build_task_graph.js` for resolution and validation.
-   `--verified-by` may be repeated to link the test specs this task satisfies;
-   each target must resolve to an existing document by path or ID
-   (TASK-DOC-GATE-002).
+3. Use meaningful dependencies.
+   A task record's `dependsOn` lists the sibling task ids in the same run
+   that must reach `done` first — each entry creates a
+   `dependency -> this task` edge in the Task DAG, and `blocks` is derived
+   as the reverse projection rather than declared separately. `dependsOn`
+   never names durable artifacts or tasks in another run: upstream anchors
+   (spec, ADR, design, the run's plan) live in `checks` text or the plan
+   body, not in the dependency field. Task creation records dependencies
+   but does not validate the whole DAG; use `build_task_graph.js --run`
+   for resolution and validation.
 4. Keep status current.
    Use `todo`, `in-progress`, `blocked`, `done`, or `wont-do`.
 5. Prefer short tasks.
@@ -90,27 +90,37 @@ TASK-DOC-GATE-001: the referenced plan must exist and have status
 
 ## Done Criteria Requirements
 
-Every task must include a `## Verification` section with at least one
-machine-checkable command. Human-only criteria are acceptable as supplements
-but must not be the sole verification.
+Every task record must declare at least one machine-checkable entry in
+`checks` — the field that carries the pre-v3 `## Verification` contract.
+Human-only criteria are acceptable as supplements but must not be the sole
+verification.
 
-**Required format:**
+**Required record shape:**
 
-```markdown
-## Verification
-
-- [ ] `npm test -- --filter=checkout-button` exits 0
-- [ ] `grep -r 'CheckoutButton' src/components/` returns matches
-- [ ] Manual: button renders in Storybook (supplement only)
+```json
+{
+  "taskId": "TASK-0001",
+  "title": "…",
+  "status": "todo",
+  "dependsOn": [],
+  "checks": [
+    "`npm test -- --filter=checkout-button` exits 0",
+    "`grep -r 'CheckoutButton' src/components/` returns matches",
+    "Manual: button renders in Storybook (supplement only)"
+  ],
+  "scope": ["src/components/checkout/"]
+}
 ```
 
 **Rules:**
 
-1. At least one entry must be a runnable command with an expected exit code or
-   output pattern.
+1. At least one `checks` entry must be a runnable command with an expected
+   exit code or output pattern.
 2. Commands must be copy-pasteable without modification (no placeholders).
-3. If no automated check is possible, document why and add a follow-up task to
-   create one.
+3. If no automated check is possible, document why and add a follow-up task
+   to create one.
+4. `scope` declares the task's write boundary — the parallel-safety judgment
+   compares against it, so keep entries verifiable repo-relative paths.
 
 A task cannot move to `done` until all verification commands pass. Task
 status transitions are Execution Store state changes — `docs/tasks` has no

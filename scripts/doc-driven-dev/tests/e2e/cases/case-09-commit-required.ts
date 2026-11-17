@@ -53,7 +53,7 @@ export const case09: E2ECase = {
     "task-graph-to-implementation": {
       delegate: "completed",
       mutate: [
-        { set: { path: "docs/tasks/0001-task.md", frontmatter: { status: "done" } } },
+        { task: { taskId: "TASK-0001", status: "done" } },
         { append: { path: "docs/impl/ir/0001-task.md", body: "\nTASK-0001 implemented and verified.\n" } },
       ],
       // commitEvidence intentionally absent: the dirty work product is what
@@ -63,7 +63,7 @@ export const case09: E2ECase = {
     // the implementation gate reports tasks-incomplete on leg 2.
     "implementation-retry": {
       delegate: "completed",
-      mutate: [{ set: { path: "docs/tasks/0002-task.md", frontmatter: { status: "done" } } }],
+      mutate: [{ task: { taskId: "TASK-0002", status: "done" } }],
       commitEvidence: true,
     },
     "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
@@ -122,8 +122,15 @@ export const case09: E2ECase = {
       { kind: "run-yield", count: 2 },
     ],
     finalFiles: {
-      "docs/tasks/0001-task.md": { frontmatter: { status: "done" } },
-      "docs/tasks/0002-task.md": { frontmatter: { status: "done" } },
+      // Corpus docs untouched — run records are the task authority.
+      "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } },
+      "docs/tasks/0002-task.md": { frontmatter: { status: "todo" } },
+    },
+    run: {
+      tasks: {
+        "TASK-0001": { status: "done" },
+        "TASK-0002": { status: "done" },
+      },
     },
   },
 };

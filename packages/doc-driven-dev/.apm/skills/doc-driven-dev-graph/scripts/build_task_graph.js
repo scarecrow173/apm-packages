@@ -30,6 +30,872 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/max.js
+var require_max = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/max.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/nil.js
+var require_nil = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/nil.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = "00000000-0000-0000-0000-000000000000";
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/regex.js
+var require_regex = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/regex.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/validate.js
+var require_validate = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/validate.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var regex_js_1 = require_regex();
+    function validate(uuid) {
+      return typeof uuid === "string" && regex_js_1.default.test(uuid);
+    }
+    exports2.default = validate;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/parse.js
+var require_parse = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/parse.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var validate_js_1 = require_validate();
+    function parse2(uuid) {
+      if (!(0, validate_js_1.default)(uuid)) {
+        throw TypeError("Invalid UUID");
+      }
+      let v;
+      return Uint8Array.of((v = parseInt(uuid.slice(0, 8), 16)) >>> 24, v >>> 16 & 255, v >>> 8 & 255, v & 255, (v = parseInt(uuid.slice(9, 13), 16)) >>> 8, v & 255, (v = parseInt(uuid.slice(14, 18), 16)) >>> 8, v & 255, (v = parseInt(uuid.slice(19, 23), 16)) >>> 8, v & 255, (v = parseInt(uuid.slice(24, 36), 16)) / 1099511627776 & 255, v / 4294967296 & 255, v >>> 24 & 255, v >>> 16 & 255, v >>> 8 & 255, v & 255);
+    }
+    exports2.default = parse2;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/stringify.js
+var require_stringify = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/stringify.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.unsafeStringify = void 0;
+    var validate_js_1 = require_validate();
+    var byteToHex = [];
+    for (let i = 0; i < 256; ++i) {
+      byteToHex.push((i + 256).toString(16).slice(1));
+    }
+    function unsafeStringify(arr, offset = 0) {
+      return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+    }
+    exports2.unsafeStringify = unsafeStringify;
+    function stringify(arr, offset = 0) {
+      const uuid = unsafeStringify(arr, offset);
+      if (!(0, validate_js_1.default)(uuid)) {
+        throw TypeError("Stringified UUID is invalid");
+      }
+      return uuid;
+    }
+    exports2.default = stringify;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/rng.js
+var require_rng = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/rng.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    var rnds8Pool = new Uint8Array(256);
+    var poolPtr = rnds8Pool.length;
+    function rng() {
+      if (poolPtr > rnds8Pool.length - 16) {
+        (0, crypto_1.randomFillSync)(rnds8Pool);
+        poolPtr = 0;
+      }
+      return rnds8Pool.slice(poolPtr, poolPtr += 16);
+    }
+    exports2.default = rng;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1.js
+var require_v1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.updateV1State = void 0;
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify();
+    var _state = {};
+    function v1(options2, buf, offset) {
+      let bytes;
+      const isV6 = options2?._v6 ?? false;
+      if (options2) {
+        const optionsKeys = Object.keys(options2);
+        if (optionsKeys.length === 1 && optionsKeys[0] === "_v6") {
+          options2 = void 0;
+        }
+      }
+      if (options2) {
+        bytes = v1Bytes(options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)(), options2.msecs, options2.nsecs, options2.clockseq, options2.node, buf, offset);
+      } else {
+        const now = Date.now();
+        const rnds = (0, rng_js_1.default)();
+        updateV1State(_state, now, rnds);
+        bytes = v1Bytes(rnds, _state.msecs, _state.nsecs, isV6 ? void 0 : _state.clockseq, isV6 ? void 0 : _state.node, buf, offset);
+      }
+      return buf ?? (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    function updateV1State(state, now, rnds) {
+      state.msecs ??= -Infinity;
+      state.nsecs ??= 0;
+      if (now === state.msecs) {
+        state.nsecs++;
+        if (state.nsecs >= 1e4) {
+          state.node = void 0;
+          state.nsecs = 0;
+        }
+      } else if (now > state.msecs) {
+        state.nsecs = 0;
+      } else if (now < state.msecs) {
+        state.node = void 0;
+      }
+      if (!state.node) {
+        state.node = rnds.slice(10, 16);
+        state.node[0] |= 1;
+        state.clockseq = (rnds[8] << 8 | rnds[9]) & 16383;
+      }
+      state.msecs = now;
+      return state;
+    }
+    exports2.updateV1State = updateV1State;
+    function v1Bytes(rnds, msecs, nsecs, clockseq, node, buf, offset = 0) {
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      if (!buf) {
+        buf = new Uint8Array(16);
+        offset = 0;
+      } else {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+      }
+      msecs ??= Date.now();
+      nsecs ??= 0;
+      clockseq ??= (rnds[8] << 8 | rnds[9]) & 16383;
+      node ??= rnds.slice(10, 16);
+      msecs += 122192928e5;
+      const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
+      buf[offset++] = tl >>> 24 & 255;
+      buf[offset++] = tl >>> 16 & 255;
+      buf[offset++] = tl >>> 8 & 255;
+      buf[offset++] = tl & 255;
+      const tmh = msecs / 4294967296 * 1e4 & 268435455;
+      buf[offset++] = tmh >>> 8 & 255;
+      buf[offset++] = tmh & 255;
+      buf[offset++] = tmh >>> 24 & 15 | 16;
+      buf[offset++] = tmh >>> 16 & 255;
+      buf[offset++] = clockseq >>> 8 | 128;
+      buf[offset++] = clockseq & 255;
+      for (let n = 0; n < 6; ++n) {
+        buf[offset++] = node[n];
+      }
+      return buf;
+    }
+    exports2.default = v1;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1ToV6.js
+var require_v1ToV6 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1ToV6.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var parse_js_1 = require_parse();
+    var stringify_js_1 = require_stringify();
+    function v1ToV6(uuid) {
+      const v1Bytes = typeof uuid === "string" ? (0, parse_js_1.default)(uuid) : uuid;
+      const v6Bytes = _v1ToV6(v1Bytes);
+      return typeof uuid === "string" ? (0, stringify_js_1.unsafeStringify)(v6Bytes) : v6Bytes;
+    }
+    exports2.default = v1ToV6;
+    function _v1ToV6(v1Bytes) {
+      return Uint8Array.of((v1Bytes[6] & 15) << 4 | v1Bytes[7] >> 4 & 15, (v1Bytes[7] & 15) << 4 | (v1Bytes[4] & 240) >> 4, (v1Bytes[4] & 15) << 4 | (v1Bytes[5] & 240) >> 4, (v1Bytes[5] & 15) << 4 | (v1Bytes[0] & 240) >> 4, (v1Bytes[0] & 15) << 4 | (v1Bytes[1] & 240) >> 4, (v1Bytes[1] & 15) << 4 | (v1Bytes[2] & 240) >> 4, 96 | v1Bytes[2] & 15, v1Bytes[3], v1Bytes[8], v1Bytes[9], v1Bytes[10], v1Bytes[11], v1Bytes[12], v1Bytes[13], v1Bytes[14], v1Bytes[15]);
+    }
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/md5.js
+var require_md5 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/md5.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    function md5(bytes) {
+      if (Array.isArray(bytes)) {
+        bytes = Buffer.from(bytes);
+      } else if (typeof bytes === "string") {
+        bytes = Buffer.from(bytes, "utf8");
+      }
+      return (0, crypto_1.createHash)("md5").update(bytes).digest();
+    }
+    exports2.default = md5;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v35.js
+var require_v35 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v35.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = exports2.stringToBytes = void 0;
+    var parse_js_1 = require_parse();
+    var stringify_js_1 = require_stringify();
+    function stringToBytes(str2) {
+      str2 = unescape(encodeURIComponent(str2));
+      const bytes = new Uint8Array(str2.length);
+      for (let i = 0; i < str2.length; ++i) {
+        bytes[i] = str2.charCodeAt(i);
+      }
+      return bytes;
+    }
+    exports2.stringToBytes = stringToBytes;
+    exports2.DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    exports2.URL = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+    function v35(version, hash, value, namespace, buf, offset) {
+      const valueBytes = typeof value === "string" ? stringToBytes(value) : value;
+      const namespaceBytes = typeof namespace === "string" ? (0, parse_js_1.default)(namespace) : namespace;
+      if (typeof namespace === "string") {
+        namespace = (0, parse_js_1.default)(namespace);
+      }
+      if (namespace?.length !== 16) {
+        throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
+      }
+      let bytes = new Uint8Array(16 + valueBytes.length);
+      bytes.set(namespaceBytes);
+      bytes.set(valueBytes, namespaceBytes.length);
+      bytes = hash(bytes);
+      bytes[6] = bytes[6] & 15 | version;
+      bytes[8] = bytes[8] & 63 | 128;
+      if (buf) {
+        offset = offset || 0;
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; ++i) {
+          buf[offset + i] = bytes[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    exports2.default = v35;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v3.js
+var require_v3 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v3.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = void 0;
+    var md5_js_1 = require_md5();
+    var v35_js_1 = require_v35();
+    var v35_js_2 = require_v35();
+    Object.defineProperty(exports2, "DNS", { enumerable: true, get: function() {
+      return v35_js_2.DNS;
+    } });
+    Object.defineProperty(exports2, "URL", { enumerable: true, get: function() {
+      return v35_js_2.URL;
+    } });
+    function v3(value, namespace, buf, offset) {
+      return (0, v35_js_1.default)(48, md5_js_1.default, value, namespace, buf, offset);
+    }
+    v3.DNS = v35_js_1.DNS;
+    v3.URL = v35_js_1.URL;
+    exports2.default = v3;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/native.js
+var require_native = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/native.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    exports2.default = { randomUUID: crypto_1.randomUUID };
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v4.js
+var require_v4 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v4.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var native_js_1 = require_native();
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify();
+    function v4(options2, buf, offset) {
+      if (native_js_1.default.randomUUID && !buf && !options2) {
+        return native_js_1.default.randomUUID();
+      }
+      options2 = options2 || {};
+      const rnds = options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)();
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      rnds[6] = rnds[6] & 15 | 64;
+      rnds[8] = rnds[8] & 63 | 128;
+      if (buf) {
+        offset = offset || 0;
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; ++i) {
+          buf[offset + i] = rnds[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(rnds);
+    }
+    exports2.default = v4;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/sha1.js
+var require_sha1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/sha1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    function sha1(bytes) {
+      if (Array.isArray(bytes)) {
+        bytes = Buffer.from(bytes);
+      } else if (typeof bytes === "string") {
+        bytes = Buffer.from(bytes, "utf8");
+      }
+      return (0, crypto_1.createHash)("sha1").update(bytes).digest();
+    }
+    exports2.default = sha1;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v5.js
+var require_v5 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v5.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = void 0;
+    var sha1_js_1 = require_sha1();
+    var v35_js_1 = require_v35();
+    var v35_js_2 = require_v35();
+    Object.defineProperty(exports2, "DNS", { enumerable: true, get: function() {
+      return v35_js_2.DNS;
+    } });
+    Object.defineProperty(exports2, "URL", { enumerable: true, get: function() {
+      return v35_js_2.URL;
+    } });
+    function v5(value, namespace, buf, offset) {
+      return (0, v35_js_1.default)(80, sha1_js_1.default, value, namespace, buf, offset);
+    }
+    v5.DNS = v35_js_1.DNS;
+    v5.URL = v35_js_1.URL;
+    exports2.default = v5;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6.js
+var require_v6 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var stringify_js_1 = require_stringify();
+    var v1_js_1 = require_v1();
+    var v1ToV6_js_1 = require_v1ToV6();
+    function v6(options2, buf, offset) {
+      options2 ??= {};
+      offset ??= 0;
+      let bytes = (0, v1_js_1.default)({ ...options2, _v6: true }, new Uint8Array(16));
+      bytes = (0, v1ToV6_js_1.default)(bytes);
+      if (buf) {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; i++) {
+          buf[offset + i] = bytes[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    exports2.default = v6;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6ToV1.js
+var require_v6ToV1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6ToV1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var parse_js_1 = require_parse();
+    var stringify_js_1 = require_stringify();
+    function v6ToV1(uuid) {
+      const v6Bytes = typeof uuid === "string" ? (0, parse_js_1.default)(uuid) : uuid;
+      const v1Bytes = _v6ToV1(v6Bytes);
+      return typeof uuid === "string" ? (0, stringify_js_1.unsafeStringify)(v1Bytes) : v1Bytes;
+    }
+    exports2.default = v6ToV1;
+    function _v6ToV1(v6Bytes) {
+      return Uint8Array.of((v6Bytes[3] & 15) << 4 | v6Bytes[4] >> 4 & 15, (v6Bytes[4] & 15) << 4 | (v6Bytes[5] & 240) >> 4, (v6Bytes[5] & 15) << 4 | v6Bytes[6] & 15, v6Bytes[7], (v6Bytes[1] & 15) << 4 | (v6Bytes[2] & 240) >> 4, (v6Bytes[2] & 15) << 4 | (v6Bytes[3] & 240) >> 4, 16 | (v6Bytes[0] & 240) >> 4, (v6Bytes[0] & 15) << 4 | (v6Bytes[1] & 240) >> 4, v6Bytes[8], v6Bytes[9], v6Bytes[10], v6Bytes[11], v6Bytes[12], v6Bytes[13], v6Bytes[14], v6Bytes[15]);
+    }
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v7.js
+var require_v7 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v7.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.updateV7State = void 0;
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify();
+    var _state = {};
+    function v7(options2, buf, offset) {
+      let bytes;
+      if (options2) {
+        bytes = v7Bytes(options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)(), options2.msecs, options2.seq, buf, offset);
+      } else {
+        const now = Date.now();
+        const rnds = (0, rng_js_1.default)();
+        updateV7State(_state, now, rnds);
+        bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
+      }
+      return buf ?? (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    function updateV7State(state, now, rnds) {
+      state.msecs ??= -Infinity;
+      state.seq ??= 0;
+      if (now > state.msecs) {
+        state.seq = rnds[6] << 23 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
+        state.msecs = now;
+      } else {
+        state.seq = state.seq + 1 | 0;
+        if (state.seq === 0) {
+          state.msecs++;
+        }
+      }
+      return state;
+    }
+    exports2.updateV7State = updateV7State;
+    function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      if (!buf) {
+        buf = new Uint8Array(16);
+        offset = 0;
+      } else {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+      }
+      msecs ??= Date.now();
+      seq ??= rnds[6] * 127 << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
+      buf[offset++] = msecs / 1099511627776 & 255;
+      buf[offset++] = msecs / 4294967296 & 255;
+      buf[offset++] = msecs / 16777216 & 255;
+      buf[offset++] = msecs / 65536 & 255;
+      buf[offset++] = msecs / 256 & 255;
+      buf[offset++] = msecs & 255;
+      buf[offset++] = 112 | seq >>> 28 & 15;
+      buf[offset++] = seq >>> 20 & 255;
+      buf[offset++] = 128 | seq >>> 14 & 63;
+      buf[offset++] = seq >>> 6 & 255;
+      buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
+      buf[offset++] = rnds[11];
+      buf[offset++] = rnds[12];
+      buf[offset++] = rnds[13];
+      buf[offset++] = rnds[14];
+      buf[offset++] = rnds[15];
+      return buf;
+    }
+    exports2.default = v7;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/version.js
+var require_version = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/version.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var validate_js_1 = require_validate();
+    function version(uuid) {
+      if (!(0, validate_js_1.default)(uuid)) {
+        throw TypeError("Invalid UUID");
+      }
+      return parseInt(uuid.slice(14, 15), 16);
+    }
+    exports2.default = version;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/index.js
+var require_cjs = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/index.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.version = exports2.validate = exports2.v7 = exports2.v6ToV1 = exports2.v6 = exports2.v5 = exports2.v4 = exports2.v3 = exports2.v1ToV6 = exports2.v1 = exports2.stringify = exports2.parse = exports2.NIL = exports2.MAX = void 0;
+    var max_js_1 = require_max();
+    Object.defineProperty(exports2, "MAX", { enumerable: true, get: function() {
+      return max_js_1.default;
+    } });
+    var nil_js_1 = require_nil();
+    Object.defineProperty(exports2, "NIL", { enumerable: true, get: function() {
+      return nil_js_1.default;
+    } });
+    var parse_js_1 = require_parse();
+    Object.defineProperty(exports2, "parse", { enumerable: true, get: function() {
+      return parse_js_1.default;
+    } });
+    var stringify_js_1 = require_stringify();
+    Object.defineProperty(exports2, "stringify", { enumerable: true, get: function() {
+      return stringify_js_1.default;
+    } });
+    var v1_js_1 = require_v1();
+    Object.defineProperty(exports2, "v1", { enumerable: true, get: function() {
+      return v1_js_1.default;
+    } });
+    var v1ToV6_js_1 = require_v1ToV6();
+    Object.defineProperty(exports2, "v1ToV6", { enumerable: true, get: function() {
+      return v1ToV6_js_1.default;
+    } });
+    var v3_js_1 = require_v3();
+    Object.defineProperty(exports2, "v3", { enumerable: true, get: function() {
+      return v3_js_1.default;
+    } });
+    var v4_js_1 = require_v4();
+    Object.defineProperty(exports2, "v4", { enumerable: true, get: function() {
+      return v4_js_1.default;
+    } });
+    var v5_js_1 = require_v5();
+    Object.defineProperty(exports2, "v5", { enumerable: true, get: function() {
+      return v5_js_1.default;
+    } });
+    var v6_js_1 = require_v6();
+    Object.defineProperty(exports2, "v6", { enumerable: true, get: function() {
+      return v6_js_1.default;
+    } });
+    var v6ToV1_js_1 = require_v6ToV1();
+    Object.defineProperty(exports2, "v6ToV1", { enumerable: true, get: function() {
+      return v6ToV1_js_1.default;
+    } });
+    var v7_js_1 = require_v7();
+    Object.defineProperty(exports2, "v7", { enumerable: true, get: function() {
+      return v7_js_1.default;
+    } });
+    var validate_js_1 = require_validate();
+    Object.defineProperty(exports2, "validate", { enumerable: true, get: function() {
+      return validate_js_1.default;
+    } });
+    var version_js_1 = require_version();
+    Object.defineProperty(exports2, "version", { enumerable: true, get: function() {
+      return version_js_1.default;
+    } });
+  }
+});
+
+// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
+var require_safe_buffer = __commonJS({
+  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
+    var buffer = require("buffer");
+    var Buffer2 = buffer.Buffer;
+    function copyProps(src, dst) {
+      for (var key in src) {
+        dst[key] = src[key];
+      }
+    }
+    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
+      module2.exports = buffer;
+    } else {
+      copyProps(buffer, exports2);
+      exports2.Buffer = SafeBuffer;
+    }
+    function SafeBuffer(arg, encodingOrOffset, length) {
+      return Buffer2(arg, encodingOrOffset, length);
+    }
+    SafeBuffer.prototype = Object.create(Buffer2.prototype);
+    copyProps(Buffer2, SafeBuffer);
+    SafeBuffer.from = function(arg, encodingOrOffset, length) {
+      if (typeof arg === "number") {
+        throw new TypeError("Argument must not be a number");
+      }
+      return Buffer2(arg, encodingOrOffset, length);
+    };
+    SafeBuffer.alloc = function(size, fill, encoding) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      var buf = Buffer2(size);
+      if (fill !== void 0) {
+        if (typeof encoding === "string") {
+          buf.fill(fill, encoding);
+        } else {
+          buf.fill(fill);
+        }
+      } else {
+        buf.fill(0);
+      }
+      return buf;
+    };
+    SafeBuffer.allocUnsafe = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return Buffer2(size);
+    };
+    SafeBuffer.allocUnsafeSlow = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return buffer.SlowBuffer(size);
+    };
+  }
+});
+
+// node_modules/.pnpm/base-x@3.0.11/node_modules/base-x/src/index.js
+var require_src = __commonJS({
+  "node_modules/.pnpm/base-x@3.0.11/node_modules/base-x/src/index.js"(exports2, module2) {
+    "use strict";
+    var _Buffer = require_safe_buffer().Buffer;
+    function base(ALPHABET) {
+      if (ALPHABET.length >= 255) {
+        throw new TypeError("Alphabet too long");
+      }
+      var BASE_MAP = new Uint8Array(256);
+      for (var j = 0; j < BASE_MAP.length; j++) {
+        BASE_MAP[j] = 255;
+      }
+      for (var i = 0; i < ALPHABET.length; i++) {
+        var x = ALPHABET.charAt(i);
+        var xc = x.charCodeAt(0);
+        if (BASE_MAP[xc] !== 255) {
+          throw new TypeError(x + " is ambiguous");
+        }
+        BASE_MAP[xc] = i;
+      }
+      var BASE = ALPHABET.length;
+      var LEADER = ALPHABET.charAt(0);
+      var FACTOR = Math.log(BASE) / Math.log(256);
+      var iFACTOR = Math.log(256) / Math.log(BASE);
+      function encode(source) {
+        if (Array.isArray(source) || source instanceof Uint8Array) {
+          source = _Buffer.from(source);
+        }
+        if (!_Buffer.isBuffer(source)) {
+          throw new TypeError("Expected Buffer");
+        }
+        if (source.length === 0) {
+          return "";
+        }
+        var zeroes = 0;
+        var length = 0;
+        var pbegin = 0;
+        var pend = source.length;
+        while (pbegin !== pend && source[pbegin] === 0) {
+          pbegin++;
+          zeroes++;
+        }
+        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
+        var b58 = new Uint8Array(size);
+        while (pbegin !== pend) {
+          var carry = source[pbegin];
+          var i2 = 0;
+          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
+            carry += 256 * b58[it1] >>> 0;
+            b58[it1] = carry % BASE >>> 0;
+            carry = carry / BASE >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          pbegin++;
+        }
+        var it2 = size - length;
+        while (it2 !== size && b58[it2] === 0) {
+          it2++;
+        }
+        var str2 = LEADER.repeat(zeroes);
+        for (; it2 < size; ++it2) {
+          str2 += ALPHABET.charAt(b58[it2]);
+        }
+        return str2;
+      }
+      function decodeUnsafe(source) {
+        if (typeof source !== "string") {
+          throw new TypeError("Expected String");
+        }
+        if (source.length === 0) {
+          return _Buffer.alloc(0);
+        }
+        var psz = 0;
+        var zeroes = 0;
+        var length = 0;
+        while (source[psz] === LEADER) {
+          zeroes++;
+          psz++;
+        }
+        var size = (source.length - psz) * FACTOR + 1 >>> 0;
+        var b256 = new Uint8Array(size);
+        while (psz < source.length) {
+          var charCode = source.charCodeAt(psz);
+          if (charCode > 255) {
+            return;
+          }
+          var carry = BASE_MAP[charCode];
+          if (carry === 255) {
+            return;
+          }
+          var i2 = 0;
+          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
+            carry += BASE * b256[it3] >>> 0;
+            b256[it3] = carry % 256 >>> 0;
+            carry = carry / 256 >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          psz++;
+        }
+        var it4 = size - length;
+        while (it4 !== size && b256[it4] === 0) {
+          it4++;
+        }
+        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
+        vch.fill(0, 0, zeroes);
+        var j2 = zeroes;
+        while (it4 !== size) {
+          vch[j2++] = b256[it4++];
+        }
+        return vch;
+      }
+      function decode(string) {
+        var buffer = decodeUnsafe(string);
+        if (buffer) {
+          return buffer;
+        }
+        throw new Error("Non-base" + BASE + " character");
+      }
+      return {
+        encode,
+        decodeUnsafe,
+        decode
+      };
+    }
+    module2.exports = base;
+  }
+});
+
+// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
+var require_uuid62 = __commonJS({
+  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
+    "use strict";
+    var uuid = require_cjs();
+    var uuidv1 = uuid.v1;
+    var uuidv4 = uuid.v4;
+    var uuidv5 = uuid.v5;
+    var baseX = require_src();
+    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    var OUTPUT_LENGTH = 22;
+    var UUID_LENGTH = 32;
+    var Buffer2 = global ? global.Buffer : void 0;
+    if (typeof Buffer2 === "undefined") {
+      Buffer2 = require("buffer").Buffer;
+    }
+    var UUID62 = class {
+      constructor() {
+        this.base = base62;
+        this.uuid = uuid;
+        this.baseX = baseX;
+        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
+        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
+      }
+      get customBase() {
+        return this.base;
+      }
+      set customBase(base) {
+        this.base = base;
+      }
+      get length() {
+        return OUTPUT_LENGTH;
+      }
+      get uuidLength() {
+        return UUID_LENGTH;
+      }
+      v4() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv4.apply(this, args);
+        return this.encode(id);
+      }
+      v5() {
+        const args = Array.prototype.slice.call(arguments);
+        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
+          args[1] = this.decode(args[1]);
+        }
+        const id = uuidv5.apply(this, args);
+        return this.encode(id);
+      }
+      v1() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv1.apply(this, args);
+        return this.encode(id);
+      }
+      encode(input, encoding) {
+        encoding = encoding || "hex";
+        if (typeof input === "string") {
+          input = new Buffer2(input.replace(/-/g, ""), encoding);
+        }
+        return ensureLength(this.base.encode(input), OUTPUT_LENGTH);
+      }
+      decode(input, encoding) {
+        encoding = encoding || "hex";
+        const res = ensureLength(
+          new Buffer2(this.base.decode(input)).toString(encoding),
+          UUID_LENGTH
+        );
+        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
+      }
+    };
+    function ensureLength(input, targetLength) {
+      input = input.toString();
+      return `${"0".repeat(32)}${input}`.slice(-targetLength);
+    }
+    module2.exports = new UUID62();
+  }
+});
+
 // node_modules/.pnpm/kind-of@6.0.3/node_modules/kind-of/index.js
 var require_kind_of = __commonJS({
   "node_modules/.pnpm/kind-of@6.0.3/node_modules/kind-of/index.js"(exports2, module2) {
@@ -3280,7 +4146,7 @@ var require_engine = __commonJS({
 });
 
 // node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/lib/stringify.js
-var require_stringify = __commonJS({
+var require_stringify2 = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/lib/stringify.js"(exports2, module2) {
     "use strict";
     var typeOf = require_kind_of();
@@ -3314,10 +4180,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file.data, data);
       const open = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter4 = engine.stringify(data, options2).trim();
+      const matter2 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter4 !== "{}") {
-        buf = newline(open) + newline(matter4) + newline(close);
+      if (matter2 !== "{}") {
+        buf = newline(open) + newline(matter2) + newline(close);
       }
       if (typeof file.excerpt === "string" && file.excerpt !== "") {
         if (str2.indexOf(file.excerpt.trim()) === -1) {
@@ -3364,7 +4230,7 @@ var require_to_file = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/lib/to-file.js"(exports2, module2) {
     "use strict";
     var typeOf = require_kind_of();
-    var stringify = require_stringify();
+    var stringify = require_stringify2();
     var utils = require_utils();
     module2.exports = function(file) {
       if (typeOf(file) !== "object") {
@@ -3394,7 +4260,7 @@ var require_to_file = __commonJS({
 });
 
 // node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/lib/parse.js
-var require_parse = __commonJS({
+var require_parse2 = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/lib/parse.js"(exports2, module2) {
     "use strict";
     var getEngine = require_engine();
@@ -3414,28 +4280,28 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs4 = require("fs");
+    var fs5 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
-    var stringify = require_stringify();
+    var stringify = require_stringify2();
     var excerpt = require_excerpt();
     var engines2 = require_engines();
     var toFile = require_to_file();
-    var parse2 = require_parse();
+    var parse2 = require_parse2();
     var utils = require_utils();
-    function matter4(input, options2) {
+    function matter2(input, options2) {
       if (input === "") {
         return { data: {}, content: input, excerpt: "", orig: input };
       }
       let file = toFile(input);
-      const cached = matter4.cache[file.content];
+      const cached = matter2.cache[file.content];
       if (!options2) {
         if (cached) {
           file = Object.assign({}, cached);
           file.orig = cached.orig;
           return file;
         }
-        matter4.cache[file.content] = file;
+        matter2.cache[file.content] = file;
       }
       return parseMatter(file, options2);
     }
@@ -3457,7 +4323,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter4.language(str2, opts);
+      const language = matter2.language(str2, opts);
       if (language.name) {
         file.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -3492,24 +4358,24 @@ var require_gray_matter = __commonJS({
       }
       return file;
     }
-    matter4.engines = engines2;
-    matter4.stringify = function(file, data, options2) {
-      if (typeof file === "string") file = matter4(file, options2);
+    matter2.engines = engines2;
+    matter2.stringify = function(file, data, options2) {
+      if (typeof file === "string") file = matter2(file, options2);
       return stringify(file, data, options2);
     };
-    matter4.read = function(filepath, options2) {
-      const str2 = fs4.readFileSync(filepath, "utf8");
-      const file = matter4(str2, options2);
+    matter2.read = function(filepath, options2) {
+      const str2 = fs5.readFileSync(filepath, "utf8");
+      const file = matter2(str2, options2);
       file.path = filepath;
       return file;
     };
-    matter4.test = function(str2, options2) {
+    matter2.test = function(str2, options2) {
       return utils.startsWith(str2, defaults(options2).delimiters[0]);
     };
-    matter4.language = function(str2, options2) {
+    matter2.language = function(str2, options2) {
       const opts = defaults(options2);
       const open = opts.delimiters[0];
-      if (matter4.test(str2)) {
+      if (matter2.test(str2)) {
         str2 = str2.slice(open.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -3518,24 +4384,76 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter4.cache = {};
-    matter4.clearCache = function() {
-      matter4.cache = {};
+    matter2.cache = {};
+    matter2.clearCache = function() {
+      matter2.cache = {};
     };
-    module2.exports = matter4;
+    module2.exports = matter2;
   }
 });
 
 // src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
-var import_node_fs2 = __toESM(require("node:fs"));
-var import_node_path2 = __toESM(require("node:path"));
-var import_gray_matter2 = __toESM(require_gray_matter());
+var import_node_path5 = __toESM(require("node:path"));
 
-// src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
-var import_gray_matter = __toESM(require_gray_matter());
+// src/skills/lib/execution_store/store.ts
+var import_node_crypto = __toESM(require("node:crypto"));
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path4 = __toESM(require("node:path"));
+
+// src/skills/lib/artifact_id.ts
+var import_uuid62 = __toESM(require_uuid62());
+
+// src/skills/lib/execution_store/atomic.ts
+var import_node_fs = __toESM(require("node:fs"));
+var StoreError = class extends Error {
+  code;
+  detail;
+  constructor(code, message, detail) {
+    super(message);
+    this.name = "StoreError";
+    this.code = code;
+    this.detail = detail;
+  }
+};
+function isStoreTmpFile(name) {
+  return /\.tmp-\d+-\d+$/.test(name);
+}
+function readJsonFile(file) {
+  let raw;
+  try {
+    raw = import_node_fs.default.readFileSync(file, "utf8");
+  } catch (error) {
+    throw new StoreError(
+      "state-unreadable",
+      `cannot read ${file}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new StoreError(
+      "corrupt-state",
+      `${file} is not valid JSON \u2014 the store never adopts a partial write: ${error instanceof Error ? error.message : String(error)}`,
+      { path: file }
+    );
+  }
+}
+function readLockRecord(lockFile) {
+  try {
+    const parsed = JSON.parse(import_node_fs.default.readFileSync(lockFile, "utf8"));
+    if (typeof parsed.pid === "number" && typeof parsed.hostname === "string") {
+      return { pid: parsed.pid, hostname: parsed.hostname, acquiredAt: String(parsed.acquiredAt ?? "") };
+    }
+  } catch {
+  }
+  return null;
+}
+
+// src/skills/lib/execution_store/boundary.ts
+var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/document_utils.ts
-var import_node_fs = __toESM(require("node:fs"));
+var import_node_fs2 = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
 
 // src/skills/lib/doc_types.ts
@@ -4034,10 +4952,6 @@ function containmentKey(value) {
   const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
   return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
-function repoPathKey(value) {
-  const normalized = value.replace(/\\/g, "/");
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
 function isInside(cwd, candidate) {
   const root = containmentKey(cwd);
   const resolved = containmentKey(candidate);
@@ -4045,7 +4959,7 @@ function isInside(cwd, candidate) {
 }
 function isInsideRealpath(cwd, candidate) {
   try {
-    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+    return isInside(import_node_fs2.default.realpathSync(cwd), import_node_fs2.default.realpathSync(candidate));
   } catch {
     return false;
   }
@@ -4053,397 +4967,16 @@ function isInsideRealpath(cwd, candidate) {
 function isInsideCheckout(cwd, candidate) {
   const resolved = import_node_path.default.resolve(cwd, candidate);
   if (!isInside(cwd, resolved)) return false;
-  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
-}
-function toRepoRelative(cwd, absolute) {
-  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
-}
-function resolveContainedDir(cwd, dir, flag = "--dir") {
-  const resolved = import_node_path.default.resolve(cwd, dir);
-  if (!isInside(cwd, resolved)) {
-    throw new Error(`${flag} escapes the checkout: ${dir}`);
-  }
-  if (import_node_fs.default.existsSync(resolved)) {
-    if (!isInsideRealpath(cwd, resolved)) {
-      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
-    }
-    return toRepoRelative(
-      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
-      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
-    );
-  }
-  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
+  return !import_node_fs2.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
 }
 function isIndexFileName(file) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file);
 }
 
-// src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
-function resolveContainedTaskDir(cwd, taskDir) {
-  return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
-}
-
-// src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
-var TASK_STATUSES = /* @__PURE__ */ new Set([
-  "todo",
-  "in-progress",
-  "blocked",
-  "done",
-  "wont-do"
-]);
-function compareStrings(left, right) {
-  return left.localeCompare(right);
-}
-function sortedUnique(values) {
-  return [...new Set(values)].sort(compareStrings);
-}
-function normalizeRepoPath(cwd, target) {
-  const absolute = import_node_path2.default.resolve(cwd, target);
-  return import_node_path2.default.relative(cwd, absolute).split(import_node_path2.default.sep).join("/");
-}
-function normalizeOwnedRepoPath(cwd, ownerFile, reference) {
-  const ownerCandidate = import_node_path2.default.resolve(cwd, import_node_path2.default.dirname(ownerFile), reference);
-  const rootCandidate = import_node_path2.default.resolve(cwd, reference);
-  const documentRelative = reference.startsWith("./") || reference.startsWith("../") || reference === "." || reference === ".." || !reference.includes("/") && !reference.includes("\\");
-  const chosen = documentRelative ? ownerCandidate : rootCandidate;
-  return normalizeRepoPath(cwd, chosen);
-}
-function markdownFiles(dir) {
-  if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) return [];
-  const result = [];
-  const visit = (current) => {
-    for (const entry of import_node_fs2.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
-      const full = import_node_path2.default.join(current, entry.name);
-      if (entry.isDirectory()) visit(full);
-      else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) result.push(full);
-    }
-  };
-  visit(dir);
-  return result.sort(compareStrings);
-}
-function relationValues(raw, key, issues, taskId, file) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    if (raw !== void 0 && raw !== null) {
-      issues.push({
-        code: "invalid-task-document",
-        tasks: [taskId || file],
-        task: taskId || void 0,
-        file,
-        message: `Task relations must be an object (${key})`
-      });
-    }
-    return [];
-  }
-  const value = raw[key];
-  if (value === void 0 || value === null) return [];
-  if (typeof value === "string") return value.trim() ? [value.trim()] : [];
-  if (Array.isArray(value)) {
-    const result = [];
-    for (const item of value) {
-      if (typeof item === "string" && item.trim()) result.push(item.trim());
-      else if (item !== null && item !== void 0) {
-        issues.push({
-          code: "invalid-task-document",
-          tasks: [taskId || file],
-          task: taskId || void 0,
-          file,
-          message: `Task relation ${key} must contain only strings`
-        });
-      }
-    }
-    return sortedUnique(result);
-  }
-  issues.push({
-    code: "invalid-task-document",
-    tasks: [taskId || file],
-    task: taskId || void 0,
-    file,
-    message: `Task relation ${key} must be an array of strings`
-  });
-  return [];
-}
-function readTaskDocuments(cwd, taskDir) {
-  const root = import_node_path2.default.resolve(cwd, taskDir);
-  const tasks = [];
-  for (const file of markdownFiles(root)) {
-    const relativeFile = normalizeRepoPath(cwd, file);
-    let data;
-    try {
-      data = (0, import_gray_matter2.default)(import_node_fs2.default.readFileSync(file, "utf8")).data;
-    } catch (error) {
-      tasks.push({
-        id: "",
-        status: "todo",
-        file: relativeFile,
-        implements: [],
-        dependsOn: [],
-        blocks: [],
-        parseIssues: [{
-          code: "invalid-task-document",
-          tasks: [relativeFile],
-          file: relativeFile,
-          message: `Unable to parse task front matter: ${error instanceof Error ? error.message : String(error)}`
-        }]
-      });
-      continue;
-    }
-    if (data.type !== "task") continue;
-    const parseIssues = [];
-    const id = typeof data.id === "string" ? data.id.trim() : "";
-    if (!id) {
-      parseIssues.push({
-        code: "invalid-task-document",
-        tasks: [id || relativeFile],
-        file: relativeFile,
-        message: "Task front matter requires a non-empty id"
-      });
-    }
-    const statusValue = typeof data.status === "string" ? data.status.trim() : "";
-    const status = TASK_STATUSES.has(statusValue) ? statusValue : "todo";
-    if (!TASK_STATUSES.has(statusValue)) {
-      parseIssues.push({
-        code: "invalid-task-status",
-        tasks: [id || relativeFile],
-        task: id || void 0,
-        file: relativeFile,
-        message: `Unknown task status: ${statusValue || "<missing>"}`
-      });
-    }
-    const rawRelations = data.relations;
-    const relationObject = rawRelations && typeof rawRelations === "object" && !Array.isArray(rawRelations) ? rawRelations : {};
-    if (rawRelations !== void 0 && (typeof rawRelations !== "object" || Array.isArray(rawRelations))) {
-      parseIssues.push({
-        code: "invalid-task-document",
-        tasks: [id || relativeFile],
-        task: id || void 0,
-        file: relativeFile,
-        message: "Task relations must be an object"
-      });
-    }
-    const implementsValues = relationValues(relationObject, "implements", parseIssues, id, relativeFile).map((target) => normalizeOwnedRepoPath(cwd, relativeFile, target));
-    const dependsOn = relationValues(relationObject, "depends-on", parseIssues, id, relativeFile);
-    const blocks = relationValues(relationObject, "blocks", parseIssues, id, relativeFile);
-    tasks.push({
-      id,
-      status,
-      file: relativeFile,
-      implements: sortedUnique(implementsValues),
-      dependsOn: sortedUnique(dependsOn),
-      blocks: sortedUnique(blocks),
-      parseIssues
-    });
-  }
-  return tasks.sort((left, right) => compareStrings(left.id || left.file, right.id || right.file));
-}
-function indexTasks(tasks) {
-  const sortedTasks = [...tasks].sort((left, right) => compareStrings(left.id || left.file, right.id || right.file));
-  const byId = /* @__PURE__ */ new Map();
-  const byPath = /* @__PURE__ */ new Map();
-  const issues = [];
-  for (const task of sortedTasks) {
-    issues.push(...task.parseIssues);
-    if (!task.id) continue;
-    const previous = byId.get(task.id);
-    if (previous) {
-      issues.push({
-        code: "duplicate-task-id",
-        tasks: [task.id],
-        task: task.id,
-        file: task.file,
-        message: `Duplicate task id ${task.id} (also found in ${previous.file})`
-      });
-      continue;
-    }
-    byId.set(task.id, task);
-    byPath.set(repoPathKey(task.file), task);
-  }
-  return { tasks: sortedTasks, byId, byPath, issues };
-}
-function resolveReference(cwd, owner, reference, index) {
-  const byId = index.byId.get(reference);
-  if (byId) return byId;
-  const normalized = normalizeOwnedRepoPath(cwd, owner.file, reference);
-  return index.byPath.get(repoPathKey(normalized));
-}
-function isExistingArtifactReference(cwd, taskDir, owner, reference) {
-  const candidate = import_node_path2.default.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
-  if (!isInsideCheckout(cwd, candidate)) return false;
-  if (!import_node_fs2.default.existsSync(candidate) || !import_node_fs2.default.statSync(candidate).isFile()) return false;
-  if (isInside(import_node_path2.default.resolve(cwd, taskDir), candidate)) return false;
-  try {
-    const type = (0, import_gray_matter2.default)(import_node_fs2.default.readFileSync(candidate, "utf8")).data?.type;
-    return ["plan", "spec", "adr", "design"].includes(type);
-  } catch {
-    return false;
-  }
-}
-function readArtifactIds(cwd, taskDir) {
-  const taskRoot = import_node_path2.default.resolve(cwd, taskDir);
-  const ids = /* @__PURE__ */ new Set();
-  for (const file of markdownFiles(cwd)) {
-    const absolute = import_node_path2.default.resolve(file);
-    if (isInside(taskRoot, absolute)) continue;
-    try {
-      const data = (0, import_gray_matter2.default)(import_node_fs2.default.readFileSync(file, "utf8")).data;
-      if (["plan", "spec", "adr", "design"].includes(data.type) && typeof data.id === "string" && data.id.trim()) {
-        ids.add(data.id.trim());
-      }
-    } catch {
-    }
-  }
-  return ids;
-}
-function resolveTaskEdges(cwd, taskDir, index) {
-  const edges = /* @__PURE__ */ new Map();
-  const issues = [];
-  const artifactIds = readArtifactIds(cwd, taskDir);
-  const addReference = (task, reference, direction) => {
-    const target = resolveReference(cwd, task, reference, index);
-    if (!target || !target.id) {
-      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, task, reference)) return;
-      issues.push({
-        code: "missing-task-reference",
-        tasks: task.id ? [task.id] : [],
-        task: task.id || void 0,
-        reference,
-        file: task.file,
-        message: `Task ${task.id || task.file} references unresolved task ${reference}`
-      });
-      return;
-    }
-    const edge = direction === "depends-on" ? { from: target.id, to: task.id } : { from: task.id, to: target.id };
-    edges.set(`${edge.from}\0${edge.to}`, edge);
-  };
-  for (const task of index.tasks) {
-    if (!task.id || !index.byId.has(task.id)) continue;
-    for (const reference of task.dependsOn) addReference(task, reference, "depends-on");
-    for (const reference of task.blocks) addReference(task, reference, "blocks");
-  }
-  return {
-    edges: [...edges.values()].sort((left, right) => compareStrings(left.from, right.from) || compareStrings(left.to, right.to)),
-    issues: issues.sort(issueCompare)
-  };
-}
-function issueCompare(left, right) {
-  return compareStrings(left.code, right.code) || compareStrings((left.tasks || []).join(","), (right.tasks || []).join(",")) || compareStrings(left.task || "", right.task || "") || compareStrings(left.reference || "", right.reference || "") || compareStrings(left.file || "", right.file || "") || compareStrings(left.message, right.message);
-}
-function findCycles(tasks, edges) {
-  const ids = sortedUnique(tasks.map((task) => task.id).filter(Boolean));
-  const adjacency = /* @__PURE__ */ new Map();
-  for (const id of ids) adjacency.set(id, []);
-  for (const edge of edges) {
-    const successors = adjacency.get(edge.from);
-    if (successors) successors.push(edge.to);
-  }
-  for (const successors of adjacency.values()) successors.sort(compareStrings);
-  const visiting = /* @__PURE__ */ new Set();
-  const visited = /* @__PURE__ */ new Set();
-  const cycles = /* @__PURE__ */ new Set();
-  const walk = (id, stack) => {
-    visiting.add(id);
-    stack.push(id);
-    for (const next of adjacency.get(id) || []) {
-      if (visiting.has(next)) {
-        const start = stack.indexOf(next);
-        const cycle = stack.slice(start).sort(compareStrings);
-        cycles.add(cycle.join(" -> "));
-      } else if (!visited.has(next)) {
-        walk(next, stack);
-      }
-    }
-    stack.pop();
-    visiting.delete(id);
-    visited.add(id);
-  };
-  for (const id of ids) if (!visited.has(id)) walk(id, []);
-  return [...cycles].sort(compareStrings).map((cycle) => ({
-    code: "task-cycle",
-    tasks: cycle.split(" -> "),
-    message: `Task dependency cycle detected: ${cycle}`
-  }));
-}
-function summarizeTaskGraph(plan, tasks, edges, issues) {
-  const sortedTasks = tasks.filter((task) => Boolean(task.id)).map(({ parseIssues: _parseIssues, ...task }) => ({
-    ...task,
-    implements: [...task.implements].sort(compareStrings),
-    dependsOn: [...task.dependsOn].sort(compareStrings),
-    blocks: [...task.blocks].sort(compareStrings)
-  })).sort((left, right) => compareStrings(left.id, right.id));
-  const sortedEdges = [...edges].sort((left, right) => compareStrings(left.from, right.from) || compareStrings(left.to, right.to));
-  const normalizedIssues = issues.map((issue) => {
-    const allowed = /* @__PURE__ */ new Set([
-      "duplicate-task-id",
-      "missing-task-reference",
-      "task-cycle",
-      "plan-has-no-tasks"
-    ]);
-    const code = allowed.has(issue.code) ? issue.code : "missing-task-reference";
-    const isMalformed = !allowed.has(issue.code);
-    return {
-      code,
-      message: isMalformed ? `Malformed task document: ${issue.message}` : issue.message,
-      tasks: sortedUnique(issue.tasks || (issue.task ? [issue.task] : []))
-    };
-  });
-  const uniqueIssues = [...new Map(normalizedIssues.map((issue) => [
-    `${issue.code}\0${issue.tasks.join(",")}\0${issue.message}`,
-    issue
-  ])).values()].sort(issueCompare);
-  const runnable = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "todo").filter((task) => sortedEdges.filter((edge) => edge.to === task.id).every((edge) => {
-    const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
-    return predecessor?.status === "done";
-  })).map((task) => task.id);
-  const active = sortedTasks.filter((task) => task.status === "in-progress").map((task) => task.id);
-  const resumableActive = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "in-progress").filter((task) => sortedEdges.filter((edge) => edge.to === task.id).every((edge) => {
-    const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
-    return predecessor?.status === "done";
-  })).map((task) => task.id);
-  const completed = sortedTasks.filter((task) => task.status === "done").map((task) => task.id);
-  const blocked = sortedTasks.filter((task) => task.status === "blocked" || task.status === "wont-do" || task.status === "todo" && !runnable.includes(task.id)).map((task) => ({
-    id: task.id,
-    reasons: task.status === "blocked" ? ["status:blocked"] : task.status === "wont-do" ? ["status:wont-do"] : sortedEdges.filter((edge) => edge.to === task.id).filter((edge) => sortedTasks.find((candidate) => candidate.id === edge.from)?.status !== "done").map((edge) => `depends-on:${edge.from}`)
-  })).filter((entry) => entry.reasons.length > 0);
-  return {
-    schemaVersion: 1,
-    plan,
-    nodes: sortedTasks.map((task) => ({
-      id: task.id,
-      path: task.file,
-      status: task.status,
-      dependsOn: task.dependsOn,
-      blocks: task.blocks
-    })),
-    edges: sortedEdges,
-    runnable: runnable.sort(compareStrings),
-    active: active.sort(compareStrings),
-    resumableActive: resumableActive.sort(compareStrings),
-    completed: completed.sort(compareStrings),
-    blocked,
-    issues: uniqueIssues
-  };
-}
-function buildTaskGraph(options2) {
-  const cwd = import_node_path2.default.resolve(options2.cwd);
-  const plan = normalizeRepoPath(cwd, options2.plan);
-  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
-  const parsed = readTaskDocuments(cwd, taskDir).filter((task) => task.implements.includes(plan));
-  const indexed = indexTasks(parsed);
-  const resolved = resolveTaskEdges(cwd, taskDir, indexed);
-  const issues = [...indexed.issues, ...resolved.issues, ...findCycles(parsed, resolved.edges)];
-  if (parsed.length === 0) {
-    issues.push({
-      code: "plan-has-no-tasks",
-      tasks: [],
-      message: `Plan ${plan} has no task documents`
-    });
-  }
-  return summarizeTaskGraph(plan, parsed, resolved.edges, issues);
-}
-
 // src/skills/lib/schema_preflight.ts
 var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
-var import_gray_matter3 = __toESM(require_gray_matter());
+var import_node_path2 = __toESM(require("node:path"));
+var import_gray_matter = __toESM(require_gray_matter());
 
 // node_modules/.pnpm/js-yaml@5.5.0/node_modules/js-yaml/dist/js-yaml.mjs
 var NOT_RESOLVED = /* @__PURE__ */ Symbol("NOT_RESOLVED");
@@ -6962,8 +7495,8 @@ var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
   "schema.json",
   "migration.journal.json"
 ]);
-function toRepoRelative2(cwd, absolute) {
-  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), absolute).split(import_node_path3.default.sep).join("/");
+function toRepoRelative(cwd, absolute) {
+  return import_node_path2.default.relative(import_node_path2.default.resolve(cwd), absolute).split(import_node_path2.default.sep).join("/");
 }
 function isUnderDir(relPath, dir) {
   return relPath === dir || relPath.startsWith(`${dir}/`);
@@ -6975,7 +7508,7 @@ function managedRootAliases() {
   return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit, onEscape) {
-  const absRoot = import_node_path3.default.resolve(cwd, relRoot);
+  const absRoot = import_node_path2.default.resolve(cwd, relRoot);
   if (!import_node_fs3.default.existsSync(absRoot) || !import_node_fs3.default.statSync(absRoot).isDirectory()) return false;
   if (!isInsideCheckout(cwd, absRoot)) return false;
   const stack = [absRoot];
@@ -6988,8 +7521,8 @@ function walkTree(cwd, relRoot, visit, onEscape) {
       continue;
     }
     for (const entry of entries) {
-      const abs = import_node_path3.default.join(dir, entry.name);
-      const rel = toRepoRelative2(cwd, abs);
+      const abs = import_node_path2.default.join(dir, entry.name);
+      const rel = toRepoRelative(cwd, abs);
       if (entry.isDirectory()) {
         if (!isInsideCheckout(cwd, abs)) {
           onEscape?.(rel, "dir");
@@ -7051,7 +7584,7 @@ function scanDocuments(cwd) {
     unmanagedDocs: 0
   };
   const visitMarkdown = (rel) => {
-    const abs = import_node_path3.default.resolve(cwd, rel);
+    const abs = import_node_path2.default.resolve(cwd, rel);
     let raw;
     try {
       raw = import_node_fs3.default.readFileSync(abs, "utf8");
@@ -7061,7 +7594,7 @@ function scanDocuments(cwd) {
     let data = {};
     let parsed = true;
     try {
-      const result = (0, import_gray_matter3.default)(raw, {});
+      const result = (0, import_gray_matter.default)(raw, {});
       data = isPlainObject2(result.data) ? result.data : {};
     } catch {
       parsed = false;
@@ -7086,7 +7619,7 @@ function scanDocuments(cwd) {
   };
   const visitDocsTree = (rel) => {
     if (isUnderDir(rel, DOC_DRIVEN_DEV_DIR)) return;
-    if (rel.endsWith(".md") && !isIndexFileName(import_node_path3.default.basename(rel))) {
+    if (rel.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(rel))) {
       visitMarkdown(rel);
       return;
     }
@@ -7101,7 +7634,7 @@ function scanDocuments(cwd) {
   const roots = ["docs", ...managedRootAliases()];
   const walked = /* @__PURE__ */ new Set();
   for (const root of roots) {
-    const abs = import_node_path3.default.resolve(cwd, root);
+    const abs = import_node_path2.default.resolve(cwd, root);
     let key = abs;
     try {
       key = import_node_fs3.default.realpathSync(abs);
@@ -7118,10 +7651,10 @@ function scanDocuments(cwd) {
   return scan;
 }
 function scanManifestDir(cwd, issues) {
-  const abs = import_node_path3.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
+  const abs = import_node_path2.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
   if (!import_node_fs3.default.existsSync(abs)) return;
   const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
-    const name = import_node_path3.default.basename(rel);
+    const name = import_node_path2.default.basename(rel);
     if (isDir) {
       if (rel !== DOC_DRIVEN_DEV_DIR) {
         issues.push({
@@ -7136,7 +7669,7 @@ function scanManifestDir(cwd, issues) {
     if (/\.ya?ml$/i.test(name)) {
       let legacy = false;
       try {
-        const parsed = load(import_node_fs3.default.readFileSync(import_node_path3.default.resolve(cwd, rel), "utf8"));
+        const parsed = load(import_node_fs3.default.readFileSync(import_node_path2.default.resolve(cwd, rel), "utf8"));
         if (isPlainObject2(parsed)) {
           const version = parsed.schemaVersion;
           legacy = typeof version === "number" && version < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
@@ -7176,7 +7709,7 @@ function scanManifestDir(cwd, issues) {
   }
 }
 function scanExecutionState(cwd, issues) {
-  const abs = import_node_path3.default.resolve(cwd, EXECUTION_STATE_ROOT);
+  const abs = import_node_path2.default.resolve(cwd, EXECUTION_STATE_ROOT);
   if (!import_node_fs3.default.existsSync(abs)) return;
   const marker = (rel, detail) => {
     issues.push({ reason: "legacy-execution-state", path: rel, detail });
@@ -7199,7 +7732,7 @@ function scanExecutionState(cwd, issues) {
     if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
       let version;
       try {
-        version = JSON.parse(import_node_fs3.default.readFileSync(import_node_path3.default.resolve(cwd, rel), "utf8")).schemaVersion;
+        version = JSON.parse(import_node_fs3.default.readFileSync(import_node_path2.default.resolve(cwd, rel), "utf8")).schemaVersion;
       } catch {
         version = null;
       }
@@ -7225,7 +7758,7 @@ function scanExecutionState(cwd, issues) {
 }
 function readManifest(cwd) {
   const rel = SCHEMA_MANIFEST_PATH;
-  const abs = import_node_path3.default.resolve(cwd, rel);
+  const abs = import_node_path2.default.resolve(cwd, rel);
   if (!import_node_fs3.default.existsSync(abs)) return { state: "missing" };
   if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
   let raw;
@@ -7293,7 +7826,7 @@ function readManifest(cwd) {
   return { state: "read", declared, migrationInProgress, versionIssues };
 }
 function journalPresent(cwd) {
-  return import_node_fs3.default.existsSync(import_node_path3.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+  return import_node_fs3.default.existsSync(import_node_path2.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
 }
 function recommendedCommand(status, docCount) {
   const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
@@ -7329,7 +7862,7 @@ function statusSummary(report) {
   }
 }
 function evaluateSchemaPreflight(cwd) {
-  const root = import_node_path3.default.resolve(cwd);
+  const root = import_node_path2.default.resolve(cwd);
   const scan = scanDocuments(root);
   scanManifestDir(root, scan.issues);
   scanExecutionState(root, scan.issues);
@@ -7425,16 +7958,421 @@ function schemaEntrypointGuard(cwd) {
   return false;
 }
 
+// src/skills/lib/execution_store/types.ts
+var RUN_MANIFEST_SCHEMA_VERSION = EXECUTION_RUN_SCHEMA_VERSION;
+var TASK_RECORD_SCHEMA_VERSION = 1;
+var CHECKPOINT_RECORD_SCHEMA_VERSION = 1;
+var RECEIPT_RECORD_SCHEMA_VERSION = 1;
+var RUN_STATUSES = /* @__PURE__ */ new Set(["active", "completed", "aborted"]);
+var TASK_STATUSES = /* @__PURE__ */ new Set([
+  "todo",
+  "in-progress",
+  "blocked",
+  "done",
+  "wont-do"
+]);
+var RECEIPT_STATUSES = /* @__PURE__ */ new Set(["success", "failure", "waived"]);
+var ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+var WINDOWS_RESERVED_NAMES = /* @__PURE__ */ new Set([
+  "con",
+  "prn",
+  "aux",
+  "nul",
+  "com1",
+  "com2",
+  "com3",
+  "com4",
+  "com5",
+  "com6",
+  "com7",
+  "com8",
+  "com9",
+  "lpt1",
+  "lpt2",
+  "lpt3",
+  "lpt4",
+  "lpt5",
+  "lpt6",
+  "lpt7",
+  "lpt8",
+  "lpt9"
+]);
+function isValidId(value) {
+  if (typeof value !== "string" || !ID_PATTERN.test(value)) return false;
+  if (value.endsWith(".") || value.includes("..")) return false;
+  const stem = value.split(".")[0].toLowerCase();
+  return !WINDOWS_RESERVED_NAMES.has(stem);
+}
+function isPlainObject3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isIsoTimestamp(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+function isSha256(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+}
+function optionalString(value) {
+  return value === null || value === void 0 || typeof value === "string";
+}
+function stringArray(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+function validateApproval(value) {
+  return isPlainObject3(value) && isSha256(value.planDigest) && typeof value.actor === "string" && value.actor.length > 0 && isIsoTimestamp(value.approvedAt);
+}
+function validateManifest(value) {
+  if (!isPlainObject3(value)) return false;
+  return value.schemaVersion === RUN_MANIFEST_SCHEMA_VERSION && isValidId(value.runId) && Number.isInteger(value.revision) && value.revision >= 1 && RUN_STATUSES.has(value.status) && typeof value.graphId === "string" && value.graphId.length > 0 && (value.baseCommit === null || typeof value.baseCommit === "string") && (value.planDigest === null || isSha256(value.planDigest)) && (value.approval === null || validateApproval(value.approval)) && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt) && (value.finalizedAt === null || isIsoTimestamp(value.finalizedAt));
+}
+function validateTask(value) {
+  if (!isPlainObject3(value)) return false;
+  return value.schemaVersion === TASK_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.taskId) && typeof value.title === "string" && TASK_STATUSES.has(value.status) && stringArray(value.dependsOn) && stringArray(value.checks) && (value.scope === void 0 || stringArray(value.scope)) && Number.isInteger(value.version) && value.version >= 1 && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt);
+}
+function validateCheckpoint(value) {
+  if (!isPlainObject3(value)) return false;
+  return value.schemaVersion === CHECKPOINT_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.checkpointId) && optionalString(value.nodeId) && optionalString(value.edgeId) && optionalString(value.taskId) && isIsoTimestamp(value.at);
+}
+function validateReceipt(value) {
+  if (!isPlainObject3(value)) return false;
+  return value.schemaVersion === RECEIPT_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.receiptId) && typeof value.effect === "string" && value.effect.length > 0 && optionalString(value.taskId) && optionalString(value.idempotencyKey) && optionalString(value.actor) && RECEIPT_STATUSES.has(value.status) && isIsoTimestamp(value.at);
+}
+
+// src/skills/lib/execution_store/boundary.ts
+function toRepoRelative2(cwd, absolute) {
+  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), absolute).split(import_node_path3.default.sep).join("/");
+}
+function resolveStateRoot(cwd, options2 = {}) {
+  const checkout = import_node_path3.default.resolve(cwd);
+  if (options2.stateRoot === void 0) {
+    return {
+      root: import_node_path3.default.join(checkout, EXECUTION_STATE_ROOT),
+      external: false,
+      repoRelative: EXECUTION_STATE_ROOT
+    };
+  }
+  const root = import_node_path3.default.resolve(checkout, options2.stateRoot);
+  if (isInside(checkout, root)) {
+    return { root, external: false, repoRelative: toRepoRelative2(checkout, root) };
+  }
+  if (options2.allowExternalRoot !== true) {
+    throw new StoreError(
+      "external-root-not-authorized",
+      `state root ${options2.stateRoot} resolves outside the checkout \u2014 a shared/external store requires explicit allowExternalRoot`,
+      { stateRoot: options2.stateRoot }
+    );
+  }
+  return { root, external: true, repoRelative: null };
+}
+function runDirFor(resolved, runId) {
+  if (!isValidId(runId)) {
+    throw new StoreError(
+      "invalid-argument",
+      `invalid run id ${JSON.stringify(runId)} \u2014 ids match [A-Za-z0-9][A-Za-z0-9._-]{0,127} with dots inner and single, and never contain path separators`
+    );
+  }
+  return import_node_path3.default.join(resolved.root, "runs", runId);
+}
+
+// src/skills/lib/execution_store/store.ts
+var STATE_FILE = "manifest.json";
+var PLAN_FILE = "plan.md";
+function sha256(content) {
+  return import_node_crypto.default.createHash("sha256").update(content, "utf8").digest("hex");
+}
+function insideResolvedRoot(resolved, candidate) {
+  let real;
+  let realRoot;
+  try {
+    real = import_node_fs4.default.realpathSync(candidate);
+    realRoot = import_node_fs4.default.realpathSync(resolved.root);
+  } catch {
+    return false;
+  }
+  const root = import_node_path4.default.resolve(realRoot);
+  const target = import_node_path4.default.resolve(real);
+  return target === root || target.startsWith(`${root}${import_node_path4.default.sep}`);
+}
+function runDirContained(resolved, runId) {
+  const runDir = runDirFor(resolved, runId);
+  if (!import_node_fs4.default.existsSync(runDir)) {
+    throw new StoreError("run-not-found", `run ${runId} does not exist under ${resolved.repoRelative ?? resolved.root}`);
+  }
+  if (!import_node_fs4.default.statSync(runDir).isDirectory()) {
+    throw new StoreError("corrupt-state", `${runDir} is not a directory`);
+  }
+  if (!insideResolvedRoot(resolved, runDir)) {
+    throw new StoreError("boundary-escape", `run ${runId} resolves outside the state root through a link`);
+  }
+  return runDir;
+}
+function readManifest2(runDir, runId) {
+  const file = import_node_path4.default.join(runDir, STATE_FILE);
+  if (!import_node_fs4.default.existsSync(file)) {
+    throw new StoreError(
+      "corrupt-state",
+      `run ${runId} has no manifest.json \u2014 the run is incomplete or foreign`,
+      { runId }
+    );
+  }
+  const parsed = readJsonFile(file);
+  if (isPlainObject3(parsed) && parsed.schemaVersion !== RUN_MANIFEST_SCHEMA_VERSION) {
+    throw new StoreError(
+      "unsupported-version",
+      `run ${runId} manifest schemaVersion is ${JSON.stringify(parsed.schemaVersion)}, expected ${RUN_MANIFEST_SCHEMA_VERSION} \u2014 upgrade the toolchain`
+    );
+  }
+  if (!validateManifest(parsed)) {
+    throw new StoreError("corrupt-state", `run ${runId} manifest failed schema validation`, { runId });
+  }
+  if (parsed.runId !== runId) {
+    throw new StoreError(
+      "corrupt-state",
+      `manifest runId ${parsed.runId} does not match its directory ${runId}`
+    );
+  }
+  return parsed;
+}
+function listRecordFiles(runDir, kind) {
+  const dir = import_node_path4.default.join(runDir, kind);
+  if (!import_node_fs4.default.existsSync(dir)) return [];
+  return import_node_fs4.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path4.default.join(runDir, kind, entry.name)).sort();
+}
+function readRecord(file, validate, kind) {
+  const parsed = readJsonFile(file);
+  if (!validate(parsed)) {
+    throw new StoreError("corrupt-state", `${file} failed ${kind} record validation`, { path: file });
+  }
+  const record = parsed;
+  const dirRun = import_node_path4.default.basename(import_node_path4.default.dirname(import_node_path4.default.dirname(file)));
+  if (record.runId !== dirRun) {
+    throw new StoreError(
+      "corrupt-state",
+      `${kind} record in ${file} binds run ${record.runId}, expected ${dirRun} \u2014 records never cross runs`
+    );
+  }
+  return parsed;
+}
+function scanIncompleteWrites(dir, rel = "") {
+  const found = [];
+  if (!import_node_fs4.default.existsSync(dir)) return found;
+  for (const entry of import_node_fs4.default.readdirSync(dir, { withFileTypes: true })) {
+    const abs = import_node_path4.default.join(dir, entry.name);
+    const relPath = rel === "" ? entry.name : `${rel}/${entry.name}`;
+    if (entry.isDirectory()) {
+      found.push(...scanIncompleteWrites(abs, relPath));
+    } else if (entry.isFile() && isStoreTmpFile(entry.name)) {
+      found.push(relPath);
+    }
+  }
+  return found;
+}
+function loadSnapshot(resolved, runId) {
+  const runDir = runDirContained(resolved, runId);
+  const manifest = readManifest2(runDir, runId);
+  const planFile = import_node_path4.default.join(runDir, PLAN_FILE);
+  let plan = null;
+  if (import_node_fs4.default.existsSync(planFile)) {
+    const content = import_node_fs4.default.readFileSync(planFile, "utf8");
+    plan = { content, digest: sha256(content) };
+  }
+  const tasks = listRecordFiles(runDir, "tasks").map((file) => readRecord(file, validateTask, "task")).map((task) => task.scope === void 0 ? { ...task, scope: [] } : task);
+  const checkpoints = listRecordFiles(runDir, "checkpoints").map((file) => readRecord(file, validateCheckpoint, "checkpoint"));
+  const receipts = listRecordFiles(runDir, "receipts").map((file) => readRecord(file, validateReceipt, "receipt"));
+  const lock = import_node_fs4.default.existsSync(import_node_path4.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path4.default.join(runDir, "writer.lock")) : null;
+  return {
+    runId,
+    status: manifest.status,
+    manifest,
+    plan,
+    planApproved: manifest.approval !== null && plan !== null && manifest.approval.planDigest === plan.digest,
+    planDigestDrift: manifest.planDigest !== null && (plan === null || plan.digest !== manifest.planDigest),
+    tasks,
+    checkpoints,
+    receipts,
+    recovery: {
+      incompleteWrites: scanIncompleteWrites(runDir),
+      writerLock: lock
+    }
+  };
+}
+function loadRun(cwd, runId, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  return loadSnapshot(resolved, runId);
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
+function compareStrings(left, right) {
+  return left.localeCompare(right);
+}
+function sortedUnique(values) {
+  return [...new Set(values)].sort(compareStrings);
+}
+function taskRecordPath(runId, taskId) {
+  return `runs/${runId}/tasks/${taskId}.json`;
+}
+function runPlanPath(runId) {
+  return `runs/${runId}/plan.md`;
+}
+function findCycles(ids, edges) {
+  const adjacency = /* @__PURE__ */ new Map();
+  for (const id of ids) adjacency.set(id, []);
+  for (const edge of edges) {
+    const successors = adjacency.get(edge.from);
+    if (successors) successors.push(edge.to);
+  }
+  for (const successors of adjacency.values()) successors.sort(compareStrings);
+  const visiting = /* @__PURE__ */ new Set();
+  const visited = /* @__PURE__ */ new Set();
+  const cycles = /* @__PURE__ */ new Set();
+  const walk = (id, stack) => {
+    visiting.add(id);
+    stack.push(id);
+    for (const next of adjacency.get(id) || []) {
+      if (visiting.has(next)) {
+        const start = stack.indexOf(next);
+        const cycle = stack.slice(start).sort(compareStrings);
+        cycles.add(cycle.join(" -> "));
+      } else if (!visited.has(next)) {
+        walk(next, stack);
+      }
+    }
+    stack.pop();
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const id of ids) if (!visited.has(id)) walk(id, []);
+  return [...cycles].sort(compareStrings).map((cycle) => ({
+    code: "task-cycle",
+    tasks: cycle.split(" -> "),
+    message: `Task dependency cycle detected: ${cycle}`
+  }));
+}
+function issueCompare(left, right) {
+  return compareStrings(left.code, right.code) || compareStrings(left.tasks.join(","), right.tasks.join(",")) || compareStrings(left.message, right.message);
+}
+function projectRunTasks(snapshot) {
+  const { runId } = snapshot;
+  const issues = [];
+  let plan = null;
+  if (snapshot.plan === null) {
+    issues.push({
+      code: "plan-missing",
+      tasks: [],
+      message: `run ${runId} has no plan.md \u2014 the plan must exist inside the run before task execution`
+    });
+  } else {
+    plan = { path: runPlanPath(runId), digest: snapshot.plan.digest, approved: snapshot.planApproved };
+    if (!snapshot.planApproved) {
+      issues.push({
+        code: "plan-not-approved",
+        tasks: [],
+        message: `run ${runId} plan.md is not approved (or approval predates the current digest) \u2014 task execution requires a digest-bound approval`
+      });
+    }
+  }
+  if (snapshot.planDigestDrift) {
+    issues.push({
+      code: "plan-digest-drift",
+      tasks: [],
+      message: `run ${runId} plan.md diverges from the digest recorded in manifest.json \u2014 a write outside the Execution Store API was detected`
+    });
+  }
+  const byId = /* @__PURE__ */ new Map();
+  for (const task of [...snapshot.tasks].sort((left, right) => compareStrings(left.taskId, right.taskId))) {
+    if (byId.has(task.taskId)) {
+      issues.push({
+        code: "duplicate-task-id",
+        tasks: [task.taskId],
+        message: `Duplicate task id ${task.taskId} in run ${runId}`
+      });
+      continue;
+    }
+    byId.set(task.taskId, task);
+  }
+  const tasks = [...byId.values()];
+  const edges = /* @__PURE__ */ new Map();
+  const blocksById = new Map(tasks.map((task) => [task.taskId, /* @__PURE__ */ new Set()]));
+  for (const task of tasks) {
+    for (const dep of task.dependsOn) {
+      if (!byId.has(dep)) {
+        issues.push({
+          code: "missing-task-reference",
+          tasks: [task.taskId],
+          message: `Task ${task.taskId} depends on ${dep}, which does not exist in run ${runId} \u2014 dependencies resolve inside the same run only`
+        });
+        continue;
+      }
+      edges.set(`${dep}${task.taskId}`, { from: dep, to: task.taskId });
+      blocksById.get(dep)?.add(task.taskId);
+    }
+  }
+  const sortedEdges = [...edges.values()].sort((left, right) => compareStrings(left.from, right.from) || compareStrings(left.to, right.to));
+  issues.push(...findCycles(tasks.map((task) => task.taskId), sortedEdges));
+  if (tasks.length === 0) {
+    issues.push({
+      code: "plan-has-no-tasks",
+      tasks: [],
+      message: `run ${runId} has no task records \u2014 the plan must materialize at least one task`
+    });
+  }
+  const uniqueIssues = [...new Map(issues.map((issue) => [
+    `${issue.code}${issue.tasks.join(",")}${issue.message}`,
+    issue
+  ])).values()].sort(issueCompare);
+  const statusById = new Map(tasks.map((task) => [task.taskId, task.status]));
+  const predecessorsDone = (taskId) => sortedEdges.filter((edge) => edge.to === taskId).every((edge) => statusById.get(edge.from) === "done");
+  const runnable = uniqueIssues.length > 0 ? [] : tasks.filter((task) => task.status === "todo" && predecessorsDone(task.taskId)).map((task) => task.taskId);
+  const active = tasks.filter((task) => task.status === "in-progress").map((task) => task.taskId);
+  const resumableActive = uniqueIssues.length > 0 ? [] : tasks.filter((task) => task.status === "in-progress" && predecessorsDone(task.taskId)).map((task) => task.taskId);
+  const completed = tasks.filter((task) => task.status === "done").map((task) => task.taskId);
+  const blocked = tasks.filter((task) => task.status === "blocked" || task.status === "wont-do" || task.status === "todo" && !runnable.includes(task.taskId)).map((task) => ({
+    id: task.taskId,
+    reasons: task.status === "blocked" ? ["status:blocked"] : task.status === "wont-do" ? ["status:wont-do"] : sortedEdges.filter((edge) => edge.to === task.taskId && statusById.get(edge.from) !== "done").map((edge) => `depends-on:${edge.from}`)
+  })).filter((entry) => entry.reasons.length > 0);
+  return {
+    schemaVersion: 2,
+    runId,
+    plan,
+    nodes: tasks.map((task) => ({
+      id: task.taskId,
+      path: taskRecordPath(runId, task.taskId),
+      title: task.title,
+      status: task.status,
+      dependsOn: sortedUnique(task.dependsOn),
+      blocks: sortedUnique(blocksById.get(task.taskId) ?? []),
+      scope: [...task.scope].sort(compareStrings),
+      version: task.version
+    })),
+    edges: sortedEdges,
+    runnable: runnable.sort(compareStrings),
+    active: active.sort(compareStrings),
+    resumableActive: resumableActive.sort(compareStrings),
+    completed: completed.sort(compareStrings),
+    blocked,
+    issues: uniqueIssues
+  };
+}
+function buildTaskGraph(options2) {
+  const cwd = import_node_path5.default.resolve(options2.cwd);
+  const snapshot = loadRun(cwd, options2.runId, {
+    stateRoot: options2.stateRoot,
+    allowExternalRoot: options2.allowExternalRoot
+  });
+  return projectRunTasks(snapshot);
+}
+
 // src/skills/doc-driven-dev-graph/scripts/build_task_graph.ts
 function usage() {
-  return "Usage: node scripts/build_task_graph.js --plan <path> [--task-dir <path>] [--cwd <path>] [--json]";
+  return "Usage: node scripts/build_task_graph.js --run <run-id> [--state-root <path>] [--allow-external-root] [--cwd <path>] [--json]";
 }
 function parseArgs(argv) {
-  const args = { cwd: process.cwd(), json: false, help: false };
+  const args = { cwd: process.cwd(), allowExternalRoot: false, json: false, help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--plan") args.plan = argv[++index];
-    else if (arg === "--task-dir") args.taskDir = argv[++index];
+    if (arg === "--run") args.run = argv[++index];
+    else if (arg === "--state-root") args.stateRoot = argv[++index];
+    else if (arg === "--allow-external-root") args.allowExternalRoot = true;
     else if (arg === "--cwd") args.cwd = argv[++index] || args.cwd;
     else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -7449,14 +8387,15 @@ function main() {
       console.log(usage());
       return;
     }
-    if (!args.plan) throw new Error("Missing required --plan");
+    if (!args.run) throw new Error("Missing required --run <run-id>");
     if (!schemaEntrypointGuard(args.cwd)) return;
     const result = buildTaskGraph({
       cwd: args.cwd,
-      plan: args.plan,
-      taskDir: args.taskDir
+      runId: args.run,
+      stateRoot: args.stateRoot,
+      allowExternalRoot: args.allowExternalRoot
     });
-    console.log(JSON.stringify(result, null, args.json ? 2 : 2));
+    console.log(JSON.stringify(result, null, 2));
     if (result.issues.length > 0) process.exitCode = 1;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
@@ -7466,6 +8405,9 @@ function main() {
 }
 main();
 /*! Bundled license information:
+
+safe-buffer/index.js:
+  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 
 is-extendable/index.js:
   (*!

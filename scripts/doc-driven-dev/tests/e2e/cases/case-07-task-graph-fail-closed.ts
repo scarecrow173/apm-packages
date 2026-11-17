@@ -3,24 +3,25 @@ import type { E2ECase } from "../harness/case_types";
 /**
  * e2e-07 — fail-closed task graph, three siblings.
  *
- * 07a/07b surface distinct `taskGraph.issues` (task-cycle vs duplicate-task-id).
- * Both make the `task-graph-invalid` condition true at `task-graph`, so the
- * run takes the priority-10 repair edge `task-graph-to-planning` — a REAL edge
- * (destination `planning`: audits [design] + delegate planning-flow), not a
- * blocked route. The scripted delegate completes but does not repair the
- * underlying issue, so the planning gate stays `blocked`
- * (`task-graph:<code>` reasons) and `planning-retry` is selected. That route
- * completes once; its byte-identical re-selection trips the runner's
- * route-fingerprint guard → `budget-exhausted`. The repair is deterministic
- * and non-progressing: the case asserts the full bounded trajectory, not just
- * the first edge.
+ * 07a/07b surface distinct `taskGraph.issues` (task-cycle vs duplicate-task-id)
+ * inside the selected run's task RECORDS (Issue #237 — the store is the
+ * authority). Both make the `task-graph-invalid` condition true at
+ * `task-graph`, so the run takes the priority-10 repair edge
+ * `task-graph-to-planning` — a REAL edge (destination `planning`: audits
+ * [design] + delegate planning-flow), not a blocked route. The scripted
+ * delegate completes but does not repair the underlying issue, so the
+ * planning gate stays `blocked` (`task-graph:<code>` reasons) and
+ * `planning-retry` is selected. That route completes once; its
+ * byte-identical re-selection trips the runner's route-fingerprint guard →
+ * `budget-exhausted`. The repair is deterministic and non-progressing: the
+ * case asserts the full bounded trajectory, not just the first edge.
  *
- * 07b detail: a second docs/tasks/*.md with `id: TASK-0001` would surface as
- * the ARTIFACT-graph `duplicate-id` (docs/tasks is inside the artifact scan)
- * and hard-block at entry before the task-graph projection is consulted — see
- * 07c. `docs/tasks/README.md` is skipped by the artifact scan's
- * readme|index.md filter but still parsed by the task scan (type: task), so
- * the duplicate reaches `duplicate-task-id` at the layer that owns it.
+ * 07b detail: under the store, duplicate task ids can never be written via
+ * the API (updateTask keys records by id), so the fixture materializes the
+ * corruption directly — a second record FILE under tasks/ claiming
+ * `taskId: "TASK-0001"`. Record files are keyed by filename but bound by
+ * the `taskId` field, so the projection sees two records for one task and
+ * reports `duplicate-task-id` — fail closed, never a silent dedup.
  *
  * 07c is the artifact-graph sibling: two spec docs sharing `id: SPEC-0001`
  * yield a `duplicate-id` issue, which `deriveHardBlockers` promotes to a hard
@@ -69,17 +70,22 @@ export const case07b: E2ECase = {
   current: "task-graph",
   fixture: {
     taskStatuses: ["todo"],
-    files: {
-      // Artifact scan skips readme|index.md; the task scan does not → the
-      // duplicate surfaces as taskGraph.issues (duplicate-task-id) at the
-      // layer that owns it instead of the artifact-graph duplicate-id.
-      "docs/tasks/README.md": {
-        frontmatter: {
-          id: "TASK-0001", type: "task", status: "todo", title: "TASK-0001 duplicate",
-          relations: { implements: ["docs/plans/0001-graph.md"] },
-        },
-        body: "# Task\n\n## Verification\n\n- [ ] node --test\n",
-      },
+    runFiles: {
+      // A second record file claiming the same taskId — written raw because
+      // the store API can never produce it (records key by taskId).
+      "tasks/TASK-0001-dup.json": JSON.stringify({
+        schemaVersion: 1,
+        runId: "e2e-run",
+        taskId: "TASK-0001",
+        title: "TASK-0001 duplicate",
+        status: "todo",
+        dependsOn: [],
+        checks: [],
+        scope: [],
+        version: 1,
+        createdAt: "2026-08-24T00:00:00.000Z",
+        updatedAt: "2026-08-24T00:00:00.000Z",
+      }, null, 2),
     },
   },
   focus: ["PLAN-0001"],

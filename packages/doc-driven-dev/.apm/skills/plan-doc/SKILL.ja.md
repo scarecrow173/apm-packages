@@ -84,12 +84,11 @@ plan は分割します。1 つの plan にまとめるのは、同じクリテ�
    Execution Store に作成されます。`assets/templates/plan.ja.md` は
    レコードの参照となる本文構造です。
 
-8. relation を記録する。
-   生成された plan は上流 spec を `relations.implements` に、
-   関連 design と ADR を `relations.derives-from` に記録します。
-   test-spec が既に存在する場合（再計画時など）は `--verified-by` で
-   リンクします。各対象はパスまたは ID で既存ドキュメントに解決できる
-   必要があります（PLAN-DOC-GATE-002）。
+8. バインディングを記録する。
+   run plan は上流チェーンを front matter の relation ではなく run
+   manifest の `focus` リスト — focused な spec/ADR/design チェーン内の
+   artifact パス — でバインドします。v3 以前の `relations.*` 語彙は
+   移行された `docs/plans` コーパスだけの規約です。
 9. plan を実装可能な粒度にする。
    影響ファイル、挙動、テスト、移行手順、検証コマンドを具体化します。
    1 ステップは 1 つのアクションにしてください。
@@ -108,9 +107,13 @@ plan は分割します。1 つの plan にまとめるのは、同じクリテ�
     plan には環境固有の skill ID を hardcode しないでください。必要な能力を、
     委譲型実装、独立 task 実行、review checkpoint、完了前検証として記述します。
 
-design gate を満たさない場合、スクリプトは次の固定文言で失敗します。
-
-`PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
+design gate は planning の契約のままです: `docs/designs/overview.md` が
+存在し、overview 以外の design が `status: "approved"` を持つまでは
+run plan を書くべきではありません。スクリプトはまず registry ゲートで
+拒否するため、このゲートは caller が適用する規約です — Task Graph の
+ゲートこそが拘束します: `plan.md` が欠落している、または digest-bound
+な承認を持たない run は `plan-not-approved` を投影し、どの task も
+実行へルーティングしません。
 
 ## 実装準備マトリクス
 

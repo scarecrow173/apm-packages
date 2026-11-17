@@ -9,6 +9,38 @@ import matter from "gray-matter";
 import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 import { projectGraphState, sectionBody } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
 import { routeGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
+import {
+  approvePlan,
+  createRun,
+  initStateRoot,
+} from "../src/skills/lib/execution_store";
+import type { TaskStatus } from "../src/skills/lib/execution_store";
+
+const RUN_ID = "RUN-0001";
+
+/**
+ * Bind an Execution Store run to the fixture's spec/adr/design chain
+ * (Issue #237): `state.taskGraph` projects this run's plan.md + records —
+ * never the durable plan/task docs. The manifest focus is a chain member so
+ * implicit selection finds the run whenever the chain resolves.
+ */
+function withRun(
+  repo: string,
+  tasks: Array<{ taskId: string; status?: TaskStatus; dependsOn?: string[] }> = [
+    { taskId: "TASK-0001", status: "todo", dependsOn: ["TASK-0002"] },
+    { taskId: "TASK-0002", status: "done" },
+  ],
+): void {
+  initStateRoot(repo);
+  createRun(repo, {
+    runId: RUN_ID,
+    graphId: "doc-driven-dev",
+    focus: ["docs/designs/0001-graph.md"],
+    plan: "# Plan\n\nStore-managed run plan.\n",
+    tasks: tasks.map((task) => ({ title: task.taskId, ...task })),
+  });
+  approvePlan(repo, RUN_ID, { actor: "graph-state" });
+}
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): void {
   const file = path.join(repo, relativePath);
@@ -195,6 +227,7 @@ test("pairs a new spec with an ADR already claimed by an existing design chain",
 
 test("a spec reusing a design-claimed ADR leaves existing chains selectable", () => {
   const repo = fixtureRepo();
+  withRun(repo);
   writeArtifact(repo, "docs/specs/0002-followup.md", {
     id: "SPEC-0002", type: "spec", status: "approved", title: "Follow-up",
     relations: { "derives-from": ["ADR-0001"] },
@@ -203,7 +236,8 @@ test("a spec reusing a design-claimed ADR leaves existing chains selectable", ()
   for (const focus of [["SPEC-0001"], ["DESIGN-0001"], ["PLAN-0001"], ["SPEC-0001", "ADR-0001"], ["ADR-0001", "DESIGN-0001"]]) {
     const state = projectGraphState({ cwd: repo, focus });
     assert.equal(state.blockers.includes("focus-required"), false, focus.join(","));
-    assert.equal(state.taskGraph?.plan, "docs/plans/0001-graph.md", focus.join(","));
+    assert.equal(state.run?.runId, RUN_ID, focus.join(","));
+    assert.equal(state.taskGraph?.plan?.path, `runs/${RUN_ID}/plan.md`, focus.join(","));
   }
   // The shared ADR alone no longer names a unique chain: it belongs to the
   // design chain and the new briefing pair, so focus fails closed.
@@ -249,6 +283,7 @@ test("an ADR claimed through design implements stays in the chain and is diagnos
 test("a spec already claimed by a design does not re-pair with a new ADR", () => {
   const repo = fixtureRepo();
   removeArtifacts(repo, ["docs/tasks/0001-route.md", "docs/tasks/0002-prepare.md"]);
+  withRun(repo);
   writeArtifact(repo, "docs/adr/0002-amend.md", {
     id: "ADR-0002", type: "adr", status: "proposed", title: "Amending ADR",
     relations: { "derives-from": ["SPEC-0001"] },
@@ -257,7 +292,7 @@ test("a spec already claimed by a design does not re-pair with a new ADR", () =>
   // second briefing chain, so the spec's chain keeps resolving uniquely.
   const focused = projectGraphState({ cwd: repo, focus: ["SPEC-0001"] });
   assert.equal(focused.blockers.includes("focus-required"), false);
-  assert.equal(focused.taskGraph?.plan, "docs/plans/0001-graph.md");
+  assert.equal(focused.taskGraph?.plan?.path, `runs/${RUN_ID}/plan.md`);
   // The unpaired new ADR reports its missing spec rather than a fake pair.
   const lonely = projectGraphState({ cwd: repo, focus: ["ADR-0002"] });
   assert.equal(lonely.blockers.includes("focus-required"), false);
@@ -396,6 +431,7 @@ test("plans competing for the same design never auto-pick", () => {
 
 test("keeps an existing focused design chain and selects its plan only through lineage", () => {
   const repo = fixtureRepo();
+  withRun(repo);
   const state: GraphState = projectGraphState({
     cwd: repo,
     focus: ["DESIGN-0001"],
@@ -406,7 +442,7 @@ test("keeps an existing focused design chain and selects its plan only through l
     "lineage", "lineage", "lineage", "lineage", "lineage", "task-dependency", "contextual", "evidence",
   ]);
   assert.equal(state.focus.length, 1);
-  assert.equal(state.taskGraph?.plan, "docs/plans/0001-graph.md");
+  assert.equal(state.taskGraph?.plan?.path, `runs/${RUN_ID}/plan.md`);
   assert.equal(state.artifactGraph.edges.find((edge) => edge.relation === "relates-to")?.to, null);
   assert.equal(state.artifactGraph.edges.find((edge) => edge.relation === "references")?.external, true);
   assert.equal(state.artifactGraph.issues.some((issue) => issue.code === "broken-relation"), true);
@@ -449,12 +485,16 @@ test("custom task directories remain authoritative during gate evaluation", () =
     id: "TASK-CUSTOM", type: "task", status: "todo", title: "Custom Route",
     relations: { implements: ["docs/plans/0001-graph.md"] },
   }, "# Custom Route\n");
+  // The task doc joins the chain through the custom scan root, but the graph
+  // projects the run's record — task ids live in the store, not the doc.
+  withRun(repo, [{ taskId: "TASK-CUSTOM", status: "todo" }]);
   const state = projectGraphState({
     cwd: repo,
     taskDir: "docs/work-items",
     focus: ["PLAN-0001"],
   });
   assert.equal(state.taskDir, "docs/work-items");
+  assert.ok(state.artifactGraph.nodes.some((node) => node.path === "docs/work-items/0001-route.md"));
   assert.equal(state.taskGraph?.nodes.map((node: { id: string }) => node.id).join(","), "TASK-CUSTOM");
   assert.equal(state.gates.planning.status, "pass");
 });

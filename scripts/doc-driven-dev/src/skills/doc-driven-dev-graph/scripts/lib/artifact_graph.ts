@@ -467,7 +467,7 @@ function chainKey(chain: ArtifactChain): string {
   return [chain.spec, chain.adr, chain.design, chain.plan].map((value) => value ?? "").join("\u0000");
 }
 
-function chainMembers(chain: ArtifactChain): Set<string> {
+export function chainMembers(chain: ArtifactChain): Set<string> {
   return new Set([chain.spec, chain.adr, chain.design, chain.plan, ...chain.tasks, ...(chain.anchors ?? [])]
     .filter((value): value is string => Boolean(value)));
 }

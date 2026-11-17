@@ -4,8 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import matter from "gray-matter";
-import { commitAll, createFixtureRepo } from "./e2e/harness/fixture_manager";
+import { commitAll, createFixtureRepo, E2E_RUN_ID } from "./e2e/harness/fixture_manager";
 import type { TaskStatus } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 
 const CHECK_PARALLEL = path.resolve(
@@ -13,9 +12,10 @@ const CHECK_PARALLEL = path.resolve(
   "../../../packages/doc-driven-dev/.apm/skills/implementation-flow/scripts/check_parallel.js",
 );
 
-const PLAN = "PLAN-0001";
-const TASK_DOC = (index: number) => `docs/tasks/${String(index).padStart(4, "0")}-task.md`;
+const RUN = E2E_RUN_ID;
 const TASK_ID = (index: number) => `TASK-${String(index).padStart(4, "0")}`;
+const STORE_TASK_RECORD = (index: number) =>
+  `.apm/state/doc-driven-dev/runs/${RUN}/tasks/${TASK_ID(index)}.json`;
 
 type CliRun = { status: number | null; report: Record<string, unknown>; stderr: string };
 
@@ -35,26 +35,14 @@ function runCli(repo: string, args: string[]): CliRun {
 }
 
 function checkParallel(repo: string): CliRun {
-  return runCli(repo, ["--plan", PLAN]);
+  return runCli(repo, ["--run", RUN]);
 }
 
 function verifyMerge(repo: string, slices: unknown[], extraArgs: string[] = []): CliRun {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-parallel-slices-"));
   const file = path.join(dir, "slices.json");
   fs.writeFileSync(file, JSON.stringify(slices), "utf8");
-  return runCli(repo, ["--verify-merge", file, ...extraArgs]);
-}
-
-/** Rewrite a task doc body while preserving the fixture's front matter. */
-function setTaskBody(repo: string, index: number, body: string): void {
-  const file = path.join(repo, TASK_DOC(index));
-  const parsed = matter(fs.readFileSync(file, "utf8"));
-  fs.writeFileSync(file, matter.stringify(body, parsed.data), "utf8");
-}
-
-function scopedBody(entries: string[]): string {
-  const items = entries.map((entry) => `- ${entry}`).join("\n");
-  return `# Task\n\n## Affected Files\n\n${items}\n\n## Verification\n\n- [ ] node --test\n`;
+  return runCli(repo, ["--verify-merge", file, "--run", RUN, ...extraArgs]);
 }
 
 function writeFile(repo: string, rel: string, content: string): void {
@@ -81,9 +69,9 @@ function scopeFixture(scopes: Record<number, string[]>, options: {
   const repo = createFixtureRepo({
     taskStatuses: options.taskStatuses ?? Array.from({ length: count }, () => "todo" as TaskStatus),
     ...(options.dependsOn ? { dependsOn: options.dependsOn } : {}),
+    taskScopes: Array.from({ length: count }, (_unused, index) => scopes[index + 1] ?? []),
   });
-  for (const [index, entries] of Object.entries(scopes)) {
-    setTaskBody(repo, Number(index), scopedBody(entries));
+  for (const entries of Object.values(scopes)) {
     // Create the declared target files so scopes point at real paths.
     for (const entry of entries) {
       if (entry.endsWith("/") || entry.endsWith("/*") || !entry.includes(".")) continue;
@@ -151,7 +139,7 @@ test("an opaque scope entry is serial scope-unverifiable", () => {
   assert.deepEqual(report.parallel, ["TASK-0002"]);
 });
 
-test("a task without an Affected Files section is serial scope-undeclared", () => {
+test("a task without a scope declaration is serial scope-undeclared", () => {
   const repo = scopeFixture({ 2: ["src/beta.ts"] });
   const { status, report } = checkParallel(repo);
   assert.equal(status, 1);
@@ -200,9 +188,10 @@ test("a task-graph issue (dependency cycle) fails closed to blocked", () => {
 // --- --verify-merge mode ------------------------------------------------------
 
 test("two clean slices verify to merge and exit 0", () => {
-  const repo = createFixtureRepo({ taskStatuses: ["todo", "todo"] });
-  setTaskBody(repo, 1, scopedBody(["src/a.ts"]));
-  setTaskBody(repo, 2, scopedBody(["src/auth/"]));
+  const repo = createFixtureRepo({
+    taskStatuses: ["todo", "todo"],
+    taskScopes: [["src/a.ts"], ["src/auth/"]],
+  });
   writeFile(repo, "src/a.ts", "export const a = 1;\n");
   writeFile(repo, "src/auth/login.ts", "export const login = 1;\n");
   writeFile(repo, "docs/impl/0001-evidence.md", "# Evidence\n\nTASK-0001 done.\n");
@@ -213,14 +202,12 @@ test("two clean slices verify to merge and exit 0", () => {
       declaredScope: ["src/a.ts"],
       touchedPaths: ["src/a.ts"],
       evidencePaths: ["docs/impl/0001-evidence.md"],
-      taskDocPath: TASK_DOC(1),
     },
     {
       taskId: "TASK-0002",
       declaredScope: ["src/auth/"],
       touchedPaths: ["src/auth/login.ts"],
       evidencePaths: ["docs/impl/0002-evidence.md"],
-      taskDocPath: TASK_DOC(2),
     },
   ]);
   assert.equal(status, 0, stderr);
@@ -229,8 +216,7 @@ test("two clean slices verify to merge and exit 0", () => {
 });
 
 test("a slice without touchedPaths collects the real git diff", () => {
-  const repo = createFixtureRepo();
-  setTaskBody(repo, 1, scopedBody(["src/a.ts"]));
+  const repo = createFixtureRepo({ taskScopes: [["src/a.ts"]] });
   writeFile(repo, "docs/impl/0001-evidence.md", "# Evidence\n\nTASK-0001 done.\n");
   commitAll(repo);
   writeFile(repo, "src/a.ts", "export const a = 1;\n");
@@ -239,50 +225,47 @@ test("a slice without touchedPaths collects the real git diff", () => {
       taskId: "TASK-0001",
       declaredScope: ["src/a.ts"],
       evidencePaths: ["docs/impl/0001-evidence.md"],
-      taskDocPath: TASK_DOC(1),
     },
   ]);
   assert.equal(status, 0, stderr);
   assert.equal(report.verdict, "merge");
 });
 
-test("touching an undeclared task doc is blocked, exit 1", () => {
-  const repo = createFixtureRepo();
-  setTaskBody(repo, 1, scopedBody(["src/a.ts"]));
+test("touching a path inside the run's state root is blocked, exit 1", () => {
+  const repo = createFixtureRepo({ taskScopes: [["src/a.ts"]] });
+  const storeRecord = STORE_TASK_RECORD(1);
   const { status, report } = verifyMerge(repo, [
     {
       taskId: "TASK-0001",
       declaredScope: ["src/a.ts"],
-      touchedPaths: ["src/a.ts", "docs/tasks/0003-task.md"],
+      touchedPaths: ["src/a.ts", storeRecord],
       evidencePaths: [],
-      taskDocPath: TASK_DOC(1),
     },
   ]);
   assert.equal(status, 1);
   assert.equal(report.verdict, "blocked");
   const finding = (report.findings as Array<{ code: string; path?: string }>)[0];
   assert.equal(finding.code, "scope-violation");
-  assert.equal(finding.path, "docs/tasks/0003-task.md");
+  assert.equal(finding.path, storeRecord);
 });
 
 test("two slices touching the same path yield merge-review, exit 1", () => {
-  const repo = createFixtureRepo({ taskStatuses: ["todo", "todo"] });
-  setTaskBody(repo, 1, scopedBody(["src/x.ts"]));
-  setTaskBody(repo, 2, scopedBody(["src/x.ts"]));
+  const repo = createFixtureRepo({
+    taskStatuses: ["todo", "todo"],
+    taskScopes: [["src/x.ts"], ["src/x.ts"]],
+  });
   const { status, report } = verifyMerge(repo, [
     {
       taskId: "TASK-0001",
       declaredScope: ["src/x.ts"],
       touchedPaths: ["src/x.ts"],
       evidencePaths: [],
-      taskDocPath: TASK_DOC(1),
     },
     {
       taskId: "TASK-0002",
       declaredScope: ["src/x.ts"],
       touchedPaths: ["src/x.ts"],
       evidencePaths: [],
-      taskDocPath: TASK_DOC(2),
     },
   ]);
   assert.equal(status, 1);
@@ -295,8 +278,7 @@ test("two slices touching the same path yield merge-review, exit 1", () => {
 });
 
 test("evidence bound to another task's ID is a blocked evidence-mismatch", () => {
-  const repo = createFixtureRepo();
-  setTaskBody(repo, 1, scopedBody(["src/a.ts"]));
+  const repo = createFixtureRepo({ taskScopes: [["src/a.ts"]] });
   writeFile(repo, "docs/impl/0001-evidence.md", "# Evidence\n\nTASK-0002 done.\n");
   const { status, report } = verifyMerge(repo, [
     {
@@ -304,7 +286,6 @@ test("evidence bound to another task's ID is a blocked evidence-mismatch", () =>
       declaredScope: ["src/a.ts"],
       touchedPaths: ["src/a.ts"],
       evidencePaths: ["docs/impl/0001-evidence.md"],
-      taskDocPath: TASK_DOC(1),
     },
   ]);
   assert.equal(status, 1);
@@ -314,16 +295,14 @@ test("evidence bound to another task's ID is a blocked evidence-mismatch", () =>
   assert.equal(finding.taskId, "TASK-0001");
 });
 
-test("a supplied scope wider than the task doc declaration is blocked, exit 1", () => {
-  const repo = createFixtureRepo();
-  setTaskBody(repo, 1, scopedBody(["src/a.ts"]));
+test("a supplied scope wider than the task record declaration is blocked, exit 1", () => {
+  const repo = createFixtureRepo({ taskScopes: [["src/a.ts"]] });
   const { status, report } = verifyMerge(repo, [
     {
       taskId: "TASK-0001",
       declaredScope: ["src/"],
       touchedPaths: ["src/a.ts"],
       evidencePaths: [],
-      taskDocPath: TASK_DOC(1),
     },
   ]);
   assert.equal(status, 1);
@@ -333,17 +312,15 @@ test("a supplied scope wider than the task doc declaration is blocked, exit 1", 
   assert.equal(finding.path, "src/");
 });
 
-test("the own task doc and docs/impl/ evidence merge without scope declaration", () => {
-  const repo = createFixtureRepo();
-  setTaskBody(repo, 1, scopedBody(["src/a.ts"]));
+test("docs/impl/ evidence merges without scope declaration", () => {
+  const repo = createFixtureRepo({ taskScopes: [["src/a.ts"]] });
   writeFile(repo, "docs/impl/0001-record.md", "# Record\n\nTASK-0001 done.\n");
   const { status, report, stderr } = verifyMerge(repo, [
     {
       taskId: "TASK-0001",
       declaredScope: ["src/a.ts"],
-      touchedPaths: ["src/a.ts", TASK_DOC(1), "docs/impl/0001-record.md"],
+      touchedPaths: ["src/a.ts", "docs/impl/0001-record.md"],
       evidencePaths: ["docs/impl/0001-record.md"],
-      taskDocPath: TASK_DOC(1),
     },
   ]);
   assert.equal(status, 0, stderr);

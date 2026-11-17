@@ -57,13 +57,13 @@ export const case08: E2ECase = {
     "planning-to-task-graph": {
       audits: { plan: "completed", task: "completed", "test-spec": "completed" },
       delegate: "completed",
-      // The constraint repair reopens the task for re-implementation: the
-      // next task-graph projection sees it runnable → task-graph-to-implementation.
-      mutate: [{ set: { path: "docs/tasks/0001-task.md", frontmatter: { status: "todo" } } }],
+      // The constraint repair reopens the task record for re-implementation:
+      // the next task-graph projection sees it runnable → task-graph-to-implementation.
+      mutate: [{ task: { taskId: "TASK-0001", status: "todo" } }],
     },
     "task-graph-to-implementation": {
       delegate: "completed",
-      mutate: [{ set: { path: "docs/tasks/0001-task.md", frontmatter: { status: "done" } } }],
+      mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
     "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
@@ -116,6 +116,8 @@ export const case08: E2ECase = {
       { kind: "route-selected", count: 9 }, // 5 (leg 1) + 4 (leg 2)
       { kind: "run-yield", count: 2 },
     ],
+    // Corpus doc untouched — the run record is the task authority.
     finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "done" } } },
+    run: { tasks: { "TASK-0001": { status: "done" } } },
   },
 };

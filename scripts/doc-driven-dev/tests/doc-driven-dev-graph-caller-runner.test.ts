@@ -15,7 +15,9 @@ import {
   type EffectReference, type ReferenceSpec,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import {
-  createRun, loadRun, recordCheckpoint, recordReceipt, StoreError,
+  approvePlan,
+  createRun, initStateRoot, loadRun, recordCheckpoint, recordReceipt, StoreError,
+  updateTask,
   type RunSnapshot, type TaskStatus,
 } from "../src/skills/lib/execution_store";
 import type { GraphRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
@@ -27,6 +29,12 @@ import {
 import { readTraceFile, type EffectDispatchedEvent } from "../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 
 const PROOF = "docs/tasks/0001-task.md";
+const RUN_ID = "RUN-0001";
+
+/** The task record's current CAS version — store writes pin it. */
+function taskVersion(repo: string, taskId: string): number | undefined {
+  return loadRun(repo, RUN_ID).tasks.find((task) => task.taskId === taskId)?.version;
+}
 
 function repo(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "caller-runner-unit-"));
@@ -78,7 +86,6 @@ function storeView(dir: string, runId = "unit-run") {
   return { runId: snapshot.runId, tasks: snapshot.tasks, receipts: snapshot.receipts };
 }
 
-const RUN_ID = "fixture-run";
 /**
  * Seed the run's Execution Store task records from the fixture's task docs:
  * under Registry 3, `execution-task` input specs resolve against task
@@ -250,11 +257,13 @@ const canonicalDirs = [
 // itself is legacy migration-only; verification intent is durable.
 const VERIFICATION_DOC = "docs/verification/0001-graph.md";
 const PROOF_TASK_ID = "TASK-0001";
+// Durable corpus for `audit:all` / migrate / doc-status inputs — plan and
+// task Markdown are corpus/history under Registry 3, so the run's plan.md
+// and task records carry their own authority and never join this list.
 const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
-  "docs/plans/0001-graph.md",
   "docs/test-specs/0001-graph.md",
   PROOF,
   "docs/impl/ir/0001-task.md",
@@ -337,7 +346,19 @@ function happyRepo(): string {
     id: "TASK-0001", type: "task", status: "todo", title: "TASK-0001",
     relations: { implements: ["docs/plans/0001-graph.md"] },
   }, "# Task\n\n## Verification\n\n- [ ] node --test\n");
+  // .apm/state/ ignore coverage joins the baseline commit; the run's plan,
+  // task records, and digest-bound approval are written afterwards — the
+  // task graph the caller routes on projects this run (Issue #237).
+  initStateRoot(dir);
   gitInit(dir);
+  createRun(dir, {
+    runId: RUN_ID,
+    graphId: "doc-driven-dev",
+    focus: ["docs/plans/0001-graph.md"],
+    plan: "# Plan\n\nStore-managed run plan.\n",
+    tasks: [{ taskId: "TASK-0001", title: "TASK-0001", status: "todo" }],
+  });
+  approvePlan(dir, RUN_ID, { actor: "caller-runner" });
   return dir;
 }
 
@@ -462,12 +483,15 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
     resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
     // The evidence phase performs the edge's canonical mutations first (the
     // oracle's evidence(edgeId, mutate) pattern): implementation work completes
-    // TASK-0001, then the receipt is recorded on the post-mutation doc.
+    // TASK-0001 — the run's task RECORD is the authority (Issue #237) and the
+    // corpus doc mirrors it — then the checkpoint evidence is declared on the
+    // post-mutation doc.
     applyCheckpointEvidence: (repoDir, _signals, edgeId) => {
       if (edgeId === "task-graph-to-implementation") {
         // The delegate commits its canonical mutation (the committedEvidence
         // pattern): store writes are Git-ignored, so the gated edge's
         // porcelain diff is exactly the delegate's own committed work.
+        updateTask(repoDir, RUN_ID, "TASK-0001", { status: "done" }, { expectedVersion: taskVersion(repoDir, "TASK-0001") });
         updateArtifact(repoDir, PROOF, { status: "done" });
         commitAll(repoDir);
       }
@@ -538,6 +562,7 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
         // The delegate commits its canonical mutation (the committedEvidence
         // pattern): store writes are Git-ignored, so the gated edge's
         // porcelain diff is exactly the delegate's own committed work.
+        updateTask(repoDir, RUN_ID, "TASK-0001", { status: "done" }, { expectedVersion: taskVersion(repoDir, "TASK-0001") });
         updateArtifact(repoDir, PROOF, { status: "done" });
         commitAll(repoDir);
       }
@@ -585,6 +610,7 @@ function runnerArgs(dir: string, dispatcher: EffectDispatcher, trace: string) {
     resolveOutputPath: testResolveEvidence,
     applyCheckpointEvidence: (repoDir: string, _signals: ReadonlySet<string>, edgeId: string) => {
       if (edgeId === "task-graph-to-implementation") {
+        updateTask(repoDir, RUN_ID, "TASK-0001", { status: "done" }, { expectedVersion: taskVersion(repoDir, "TASK-0001") });
         updateArtifact(repoDir, PROOF, { status: "done" });
         commitAll(repoDir);
       }

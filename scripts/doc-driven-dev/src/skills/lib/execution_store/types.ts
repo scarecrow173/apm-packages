@@ -64,6 +64,10 @@ type RunManifest = {
 };
 
 // Task record — per-task CAS object. `version` bumps on every write.
+// `dependsOn` lists sibling task ids inside the same run; `checks` carries
+// opaque VerificationCheck references (#239); `scope` declares the write
+// scope (file / dir-prefix entries, or opaque prose) the task may touch —
+// the authority the parallel-scope judgment compares against (#237).
 type TaskRecord = {
   schemaVersion: typeof TASK_RECORD_SCHEMA_VERSION;
   runId: string;
@@ -72,6 +76,7 @@ type TaskRecord = {
   status: TaskStatus;
   dependsOn: string[];
   checks: string[];
+  scope: string[];
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -182,6 +187,10 @@ function validateTask(value: unknown): value is TaskRecord {
     && TASK_STATUSES.has(value.status as TaskStatus)
     && stringArray(value.dependsOn)
     && stringArray(value.checks)
+    // `scope` accepts absent: records written before the field existed —
+    // or by a writer unaware of it — normalize to the empty declaration at
+    // load. Every record this store writes carries the field.
+    && (value.scope === undefined || stringArray(value.scope))
     && Number.isInteger(value.version) && (value.version as number) >= 1
     && isIsoTimestamp(value.createdAt)
     && isIsoTimestamp(value.updatedAt);

@@ -8,7 +8,8 @@ license: MIT
 
 人が確認するための、手動生成するオフラインHTML snapshotを一つ生成します。
 これは報告 capability であり、orchestration の entrypoint ではありません。
-canonical Markdown と Graph YAML が authority です。CLI、対象範囲、集計定義は
+canonical Markdown、Graph YAML、Execution Store の run record が authority
+です。CLI、対象範囲、集計定義は
 [dashboard contract](references/dashboard-contract.ja.md) を参照してください。
 
 ## Workflow
@@ -37,9 +38,9 @@ canonical Markdown と Graph YAML が authority です。CLI、対象範囲、�
 
 タスクボードを主画面とします。常設レーンは `todo`、`in-progress`、`blocked`、
 `done`、`wont-do` で、不正 status または parse error の task には `unknown` レーンを
-追加します。カードには title、opaque ID、canonical path、依存関係、所属 plan、
+追加します。カードには title、opaque ID、record path、依存関係、所属 run、
 coverage、runnable / resumable の別の投影結果を表示します。依存待ちの todo は
-todo レーンに残ります。Graph topology、route preview、plan 別 task 詳細、文書、
+todo レーンに残ります。Graph topology、route preview、run 別 task 詳細、文書、
 relation、diagnostic は補助ビューとして残ります。
 
 ## Boundaries

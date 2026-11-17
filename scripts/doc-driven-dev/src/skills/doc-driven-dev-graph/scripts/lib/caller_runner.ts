@@ -49,6 +49,7 @@ import { CANONICAL_DOC_DIRS, isInside } from "./artifact_graph";
 import { loadGraphDefinition } from "./graph_definition";
 import { resolveGraphPath } from "./graph_cli";
 import type { GraphRoute } from "./graph_router";
+import { EXECUTION_STATE_ROOT } from "../../../lib/schema_preflight";
 import {
   appendTraceEvent,
   DISPATCH_METHODS,
@@ -185,12 +186,42 @@ export function canonicalReference(repo: string, relativePath: string): DurableD
     };
   }
   const file = path.join(repo, relativePath);
-  const parsed = matter(fs.readFileSync(file, "utf8"));
+  const raw = fs.readFileSync(file, "utf8");
+  // Execution Store records (runs/<run-id>/tasks/<id>.json et al.) are JSON,
+  // not front-matter Markdown — their canonical identity is the record's own
+  // id field and their canonical content is the file bytes the store wrote.
+  if (relativePath.endsWith(".json")) {
+    try {
+      const record = JSON.parse(raw) as Record<string, unknown>;
+      const id = ["taskId", "checkpointId", "receiptId", "runId"]
+        .map((key) => record[key])
+        .find((value) => typeof value === "string" && value.length > 0);
+      if (id !== undefined) {
+        return {
+          kind: "durable-document",
+          path: relativePath,
+          id: id as string,
+          revision: fingerprint(raw),
+        };
+      }
+    } catch {
+      // Not a JSON record — fall through to the front-matter path.
+    }
+  }
+  const parsed = matter(raw);
+  // Caller bookkeeping appended to a doc's front matter must not perturb the
+  // artifact's own fingerprint — evidence references to the doc stay live.
+  const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
+  // Store-managed run files (plan.md, run_trace.jsonl) carry no front-matter
+  // id — like a record's own id field for JSON records, the path inside the
+  // run tree is their canonical identity. Durable docs still require `id`.
+  const posixPath = relativePath.split(path.sep).join("/");
+  const storeId = posixPath.startsWith(`${EXECUTION_STATE_ROOT}/`) ? posixPath : undefined;
   return {
     kind: "durable-document",
     path: relativePath,
-    id: parsed.data.id as string,
-    revision: fingerprint(matter.stringify(parsed.content, parsed.data)),
+    id: (data.id ?? storeId) as string,
+    revision: fingerprint(matter.stringify(parsed.content, data)),
   };
 }
 
@@ -1296,7 +1327,12 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       break;
     }
 
-    const routeFingerprint = JSON.stringify(route);
+    // The identical-reroute bound compares routing semantics, not CAS
+    // metadata: a task record's `version` bumps on every store write, so an
+    // honest repair loop that restores the same task statuses would never
+    // produce a byte-identical route. Stripping it keeps the bound a true
+    // "no progress" detector (Issue #237).
+    const routeFingerprint = JSON.stringify(route, (key, value) => (key === "version" ? undefined : value));
     if (seenRouteFingerprints.has(routeFingerprint)) {
       yieldReason = "budget-exhausted";
       break;

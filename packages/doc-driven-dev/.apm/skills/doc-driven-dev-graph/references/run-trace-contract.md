@@ -69,7 +69,7 @@ One per invocation, emitted after `artifact-scan`.
 | `delegate`, `requiredAudits`, `commitGate` | copied from `GraphRoute` |
 | `blockers` | `GraphRoute` blockers; free-text entries are normalized to `<kind>:sha256:<12hex>` tokens (see below) |
 | `focus` | resolved repo-relative focus paths |
-| `tasks` | selected Task Graph nodes; `{ id, status }` copies task front-matter identifiers verbatim — they are the correlation keys |
+| `tasks` | selected Task Graph nodes; `{ id, status }` copies the run's task-record identifiers verbatim — they are the correlation keys |
 | `routeHash` | sha256 of the key-sorted JSON of the complete `GraphRoute` |
 | `durationMs` | optional wall-clock diagnostic; never asserted exactly |
 

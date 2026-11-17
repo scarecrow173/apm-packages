@@ -6,6 +6,14 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 import matter from "gray-matter";
 import { resolveGraphPath } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_cli";
+import {
+  approvePlan,
+  createRun,
+  initStateRoot,
+} from "../src/skills/lib/execution_store";
+import type { TaskStatus } from "../src/skills/lib/execution_store";
+
+const RUN_ID = "RUN-0001";
 
 const sourceCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
 const inspectCli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/inspect_graph.ts");
@@ -97,6 +105,23 @@ function completeRepo(taskStatuses: Array<"todo" | "in-progress" | "blocked" | "
       },
     }, "# Task\n\n## Verification\n\n- [ ] node --test\n");
   });
+  // Task docs are corpus/history only (Issue #237): the task graph the CLI
+  // routes on projects this Execution Store run, whose manifest focus joins
+  // the fixture's spec/adr/design/plan chain.
+  initStateRoot(repo);
+  createRun(repo, {
+    runId: RUN_ID,
+    graphId: "doc-driven-dev",
+    focus: ["docs/plans/0001-graph.md"],
+    plan: "# Plan\n\nStore-managed run plan.\n",
+    tasks: taskStatuses.map((status, index) => ({
+      taskId: `TASK-${String(index + 1).padStart(4, "0")}`,
+      title: `TASK-${String(index + 1).padStart(4, "0")}`,
+      status,
+      dependsOn: dependsOn[index] ?? [],
+    })),
+  });
+  approvePlan(repo, RUN_ID, { actor: "cli-fixture" });
   return repo;
 }
 
@@ -667,6 +692,9 @@ test("inspection CLI emits runtime state only for an explicit selector", () => {
 
   const withState = runInspect(repo, [
     "--graph", graph, "--format", "json", "--cwd", repo, "--focus", "PLAN-0001",
+    // The fixture graph id (cli-fixture) never matches the run's manifest
+    // graphId, so the task graph only appears through the explicit selector.
+    "--run", RUN_ID,
   ]);
   assert.equal(withState.status, 0, withState.stderr);
   const selected = JSON.parse(withState.stdout);
@@ -681,12 +709,16 @@ test("inspection CLI emits runtime state only for an explicit selector", () => {
   assert.equal(selected.artifactGraph.edges.some((edge: { relation: string; kind: string }) => (
     edge.relation === "derives-from" && edge.kind === "lineage"
   )), true);
+  assert.equal(selected.taskGraph.runId, RUN_ID);
   assert.deepEqual(selected.taskGraph.nodes[0], {
     id: "TASK-0001",
-    path: "docs/tasks/0001-task.md",
+    path: `runs/${RUN_ID}/tasks/TASK-0001.json`,
+    title: "TASK-0001",
     status: "done",
     dependsOn: [],
     blocks: [],
+    scope: [],
+    version: 1,
   });
   assert.deepEqual(selected.taskGraph.completed, ["TASK-0001"]);
 });
@@ -811,7 +843,9 @@ test("canonical generated graph scripts contain no trailing whitespace", () => {
   }
 });
 test("generated graph CLIs resolve owner-relative tasks and existing local files", () => {
-  const repo = completeRepo(["done", "todo"]);
+  const repo = completeRepo(["done", "todo"], [[], ["TASK-0001"]]);
+  // Corpus docs still exercise owner-relative relation resolution on the
+  // artifact graph; the task graph itself projects the run's records.
   writeArtifact(repo, "docs/tasks/0001-task.md", {
     id: "TASK-0001", type: "task", status: "done", title: "TASK-0001",
     relations: { implements: ["../plans/0001-graph.md"] },
@@ -831,7 +865,7 @@ test("generated graph CLIs resolve owner-relative tasks and existing local files
   }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
 
   const taskResult = runCli(generatedTaskGraphCli, repo, [
-    "--plan", "docs/plans/0001-graph.md", "--cwd", repo, "--json",
+    "--run", RUN_ID, "--cwd", repo, "--json",
   ]);
   assert.equal(taskResult.status, 0, taskResult.stderr);
   const taskGraph = JSON.parse(taskResult.stdout);

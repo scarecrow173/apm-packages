@@ -6,8 +6,9 @@ import { loadGraphDefinition } from "./graph_definition";
 import { inspectGraphDefinition } from "./graph_inspector";
 import { evaluateRouteDecision } from "./graph_router";
 import { projectGraphState } from "./graph_state";
-import { buildTaskGraph } from "./task_graph";
-import type { DashboardSnapshot, InventoryItem } from "./dashboard_model";
+import { projectRunTasks } from "./task_graph";
+import { listRuns, loadRun } from "../../../lib/execution_store";
+import type { DashboardSnapshot, InventoryItem, RunView } from "./dashboard_model";
 
 export type CollectDashboardOptions = {
   cwd: string;
@@ -84,13 +85,21 @@ export async function collectDashboard(options: CollectDashboardOptions): Promis
 
   const inventory = [...inventoryByPath.values()].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0);
-  const plans = artifacts.records
-    .filter((record) => record.type === "plan")
-    .map((record) => ({
-      path: record.path,
-      status: record.status,
-      graph: buildTaskGraph({ cwd: options.cwd, plan: record.path }),
-    }));
+  // Runs replace the v2 per-plan views: each loadable Execution Store run
+  // projects its own task graph (Issue #237). A corrupt run listing cannot
+  // project — it stays visible through `state.blockers` instead.
+  const runs: RunView[] = [];
+  for (const run of listRuns(options.cwd)) {
+    try {
+      runs.push({
+        runId: run.runId,
+        status: run.status,
+        graph: projectRunTasks(loadRun(options.cwd, run.runId)),
+      });
+    } catch {
+      // corrupt run — skipped; the state projection surfaces it as a blocker.
+    }
+  }
 
   return {
     schemaVersion: 1,
@@ -106,7 +115,7 @@ export async function collectDashboard(options: CollectDashboardOptions): Promis
     state,
     decision,
     inventory,
-    plans,
+    runs,
     findings: collected.findings,
     health: summarizeHealth(collected, collected.findings),
     coverageNotes: [

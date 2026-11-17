@@ -8251,7 +8251,7 @@ function validateManifest(value) {
 }
 function validateTask(value) {
   if (!isPlainObject3(value)) return false;
-  return value.schemaVersion === TASK_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.taskId) && typeof value.title === "string" && TASK_STATUSES.has(value.status) && stringArray(value.dependsOn) && stringArray(value.checks) && Number.isInteger(value.version) && value.version >= 1 && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt);
+  return value.schemaVersion === TASK_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.taskId) && typeof value.title === "string" && TASK_STATUSES.has(value.status) && stringArray(value.dependsOn) && stringArray(value.checks) && (value.scope === void 0 || stringArray(value.scope)) && Number.isInteger(value.version) && value.version >= 1 && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt);
 }
 function validateCheckpoint(value) {
   if (!isPlainObject3(value)) return false;
@@ -8707,7 +8707,7 @@ function loadSnapshot(resolved, runId) {
     const content = import_node_fs5.default.readFileSync(planFile, "utf8");
     plan = { content, digest: sha256(content) };
   }
-  const tasks = listRecordFiles(runDir, "tasks").map((file) => readRecord(file, validateTask, "task"));
+  const tasks = listRecordFiles(runDir, "tasks").map((file) => readRecord(file, validateTask, "task")).map((task) => task.scope === void 0 ? { ...task, scope: [] } : task);
   const checkpoints = listRecordFiles(runDir, "checkpoints").map((file) => readRecord(file, validateCheckpoint, "checkpoint"));
   const receipts = listRecordFiles(runDir, "receipts").map((file) => readRecord(file, validateReceipt, "receipt"));
   const lock = import_node_fs5.default.existsSync(import_node_path5.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path5.default.join(runDir, "writer.lock")) : null;
@@ -8781,6 +8781,9 @@ function validateTaskInputs(inputs, existingIds, batchIds) {
     if (input.checks !== void 0 && !input.checks.every((check) => typeof check === "string")) {
       throw new StoreError("invalid-argument", `task ${input.taskId} checks must be strings`);
     }
+    if (input.scope !== void 0 && !input.scope.every((entry) => typeof entry === "string")) {
+      throw new StoreError("invalid-argument", `task ${input.taskId} scope entries must be strings`);
+    }
   }
 }
 function requireRunsContainer(resolved) {
@@ -8827,6 +8830,7 @@ function createRun(cwd, input = {}, options2 = {}) {
         status: task.status ?? "todo",
         dependsOn: [...task.dependsOn ?? []].sort(),
         checks: [...task.checks ?? []].sort(),
+        scope: [...task.scope ?? []].sort(),
         version: 1,
         createdAt: stamp,
         updatedAt: stamp
@@ -8933,7 +8937,8 @@ function updateTask(cwd, runId, taskId, patch, options2 = {}) {
         title: patch.title ?? taskId,
         status: patch.status ?? "todo",
         dependsOn: patch.dependsOn ?? [],
-        checks: patch.checks ?? []
+        checks: patch.checks ?? [],
+        scope: patch.scope ?? []
       }];
       validateTaskInputs([candidate2], existingIds, /* @__PURE__ */ new Set());
       const record2 = {
@@ -8944,6 +8949,7 @@ function updateTask(cwd, runId, taskId, patch, options2 = {}) {
         status: candidate2.status,
         dependsOn: [...candidate2.dependsOn].sort(),
         checks: [...candidate2.checks].sort(),
+        scope: [...candidate2.scope].sort(),
         version: 1,
         createdAt: stamp,
         updatedAt: stamp
@@ -8970,7 +8976,8 @@ function updateTask(cwd, runId, taskId, patch, options2 = {}) {
       title: patch.title ?? current.title,
       status: patch.status ?? current.status,
       dependsOn: patch.dependsOn ?? current.dependsOn,
-      checks: patch.checks ?? current.checks
+      checks: patch.checks ?? current.checks,
+      scope: patch.scope ?? current.scope
     };
     const others = new Set(existingIds);
     others.delete(taskId);
@@ -8981,6 +8988,7 @@ function updateTask(cwd, runId, taskId, patch, options2 = {}) {
       status: candidate.status,
       dependsOn: [...candidate.dependsOn].sort(),
       checks: [...candidate.checks].sort(),
+      scope: [...candidate.scope].sort(),
       version: current.version + 1,
       updatedAt: stamp
     };

@@ -20,7 +20,8 @@ authority です。
 - **Artifact Graph**: 正規 Markdown 文書と、その ID、type、status、relation。
 - **Graph State**: Artifact Graph を毎回投影した focus、gate、signal、blocker、
   route evidence を含む状態。
-- **Dynamic Task Graph**: focus された plan と task dependency の決定的な
+- **Dynamic Task Graph**: `(runId, taskId)` を基準に、1 つの Execution Store
+  run の `plan.md` と task record を投影する deterministic かつ read-only の
   投影。planning と implementation delegate が利用します。
 
 ## Canonical command
@@ -28,7 +29,9 @@ authority です。
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
-  [--focus <artifact>] [--task-dir <path>] [--cwd <path>] --json
+  [--focus <artifact>] [--task-dir <path>] \
+  [--run <run-id> [--state-root <path>] [--allow-external-root]] \
+  [--cwd <path>] --json
 ```
 
 JSON 結果は `GraphRoute` contract です。`current`、1 つの `next`、`edgeId`、
@@ -147,8 +150,9 @@ runtime signal が唯一の bypass であり、run trace に記録されます�
 ## Persistence boundary
 
 Markdown artifact が durable history と status の authority です。Graph State
-と Dynamic Task Graph は turn ごとの projection であり、runtime は並行する
-database を作成・要求しません。
+と Dynamic Task Graph は turn ごとの projection です。plan と task は run ごとの
+Execution Store の状態であり、Task Graph は選択した 1 つの run の read-only
+projection です。runtime は並行する database を作成・要求しません。
 
 plan・task・承認・checkpoint・effect receipt・run trace といった run ごとの
 実行状態は、Git 管理外の **Execution Store**
@@ -222,8 +226,8 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 
 JSON は counts、topology reachability、delegate、audit、決定的な issue を含む
 `definition` を常に返します。`state`、`artifactGraph`、`taskGraph` は明示的な
-`--cwd`、`--focus`、または `--task-dir` selector が runtime projection を要求
-した場合だけ含まれます。Inspection は route、delegate dispatch、Markdown/
+`--cwd`、`--focus`、`--task-dir`、または `--run` selector が runtime projection
+を要求した場合だけ含まれます。Inspection は route、delegate dispatch、Markdown/
 persistence state の書き込みを行いません。
 `referencedConditions` は edge の `when` key の重複を除いた集合であり、
 `unusedConditions` はその edge の `when` key にない宣言済み condition key です。
@@ -244,7 +248,8 @@ node と edge は安定した順序で sort されます。すべての node は
 commitGate、terminal、audit label が含まれ、edge label には
 condition key と priority が含まれます。
 Mermaid rendering は text-only で、routing や persistence への副作用はありません。
-Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir` を拒否します。
+Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir`、
+`--run`、`--state-root` を拒否します。
 元の node、delegate、audit、condition text は escape され、`|` が edge label を終了
 させることはありません。
 

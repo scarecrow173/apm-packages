@@ -47,13 +47,17 @@ doc-driven-dev/` 配下への唯一の書き込み元であり、永続的知識
 
 ### `tasks/<task-id>.json`（schemaVersion 1）
 
-`{ runId, taskId, title, status, dependsOn, checks, version, createdAt,
-updatedAt }`。`status` は v2 の語彙（`todo`・`in-progress`・`blocked`・
-`done`・`wont-do`）を継承します。`version` が task ごとの CAS トークンです。
-`dependsOn` は同一 run 内の兄弟 task id のみを列挙します —— `:`/`/`/`\`
-を含むエントリは cross-run 参照として拒否され、未知の id と自己依存は
-fail-closed します。`checks` は不透明な VerificationCheck 参照（`#239`）
-を保持します。
+`{ runId, taskId, title, status, dependsOn, checks, scope, version,
+createdAt, updatedAt }`。`status` は v2 の語彙（`todo`・`in-progress`・
+`blocked`・`done`・`wont-do`）を継承します。`version` が task ごとの
+CAS トークンです。`dependsOn` は同一 run 内の兄弟 task id のみを
+列挙します —— `:`/`/`/`\` を含むエントリは cross-run 参照として拒否
+され、未知の id と自己依存は fail-closed します。`checks` は不透明な
+VerificationCheck 参照（`#239`）を保持します。`scope` は task の
+書き込み境界を repo 相対パスまたはディレクトリ接頭辞（`/`・`/*` で
+終わるエントリ）で宣言します —— 並列安全性判定が読む権威であり、
+未設定・空の scope は `scope-undeclared`、パスとして解釈できない
+エントリは `scope-unverifiable` です。
 
 ### `checkpoints/<id>.json` と `receipts/<id>.json`（schemaVersion 1）
 

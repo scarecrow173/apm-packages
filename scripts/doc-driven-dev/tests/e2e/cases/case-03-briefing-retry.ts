@@ -45,7 +45,7 @@ export const case03: E2ECase = {
     },
     "task-graph-to-implementation": {
       delegate: "completed",
-      mutate: [{ set: { path: "docs/tasks/0001-task.md", frontmatter: { status: "done" } } }],
+      mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
     "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
@@ -67,7 +67,9 @@ export const case03: E2ECase = {
     events: [{ kind: "route-selected", count: 9 }],
     finalFiles: {
       "docs/specs/0001-graph.md": { frontmatter: { status: "approved" } },
-      "docs/tasks/0001-task.md": { frontmatter: { status: "done" } },
+      // Corpus doc untouched — the run record is the task authority.
+      "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } },
     },
+    run: { tasks: { "TASK-0001": { status: "done" } } },
   },
 };

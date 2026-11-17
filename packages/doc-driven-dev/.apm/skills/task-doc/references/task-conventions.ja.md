@@ -14,6 +14,23 @@ task は、plan、spec、ADR、または他の task にリンクされた、小�
 実装単位です。1 人の agent がプロジェクト全体の文脈を再発見せずに完了・検証
 できる粒度にします。
 
+## Execution Store レコード
+
+稼働中の task は
+`.apm/state/doc-driven-dev/runs/<run-id>/tasks/<taskId>.json` の JSON
+レコードであり、`execution_store.js put-task` の CAS 経由でのみ書き込まれます
+— Git 管理のファイルとしては作られません。
+
+| フィールド | 契約 |
+| --- | --- |
+| `taskId` | run 内の同一性 — task は `(runId, taskId)` であり、グローバルな文書 ID ではありません。 |
+| `title` | 人間が読む slice 名。 |
+| `status` | `todo` / `in-progress` / `blocked` / `done` / `wont-do` — 後述のステータス値の軸と同じです。 |
+| `dependsOn` | 先に `done` になる必要のある同一 run 内の兄弟 task id。`blocks` は派生した逆向き projection であり、保存しません。 |
+| `checks` | 機械検証可能な完了条件 — 後述の `## 検証` 契約に相当します。 |
+| `scope` | 宣言する書き込み境界 — 後述の `## Affected Files` 契約に相当し、並列安全性判定が読みます。 |
+| `version` | CAS カウンタ — すべての `put-task` 更新が現在値を伴います。 |
+
 ## ディレクトリ
 
 リポジトリに既存の task または work-item ディレクトリがある場合はそれを
@@ -172,12 +189,11 @@ task は次を含めます。
 6. 検証 command、test、manual review。
 7. この task の明示的な範囲外。
 
-task を並列 delegation の対象にするには、`## Affected Files` の項目が
-パス検証可能な file / directory path である必要があります。自由形式の
-module 名や feature 名は検証できず、serial 実行を強制します。scope 判定は
-canonical な `Affected Files` 見出しか宣言済みのローカライズ別名
-（`影響ファイル`）に case-insensitive でマッチします。固定語彙以外の
-見出しは依然 scope 未宣言として扱われ、serial を強制します。
+task を並列 delegation の対象にするには、書き込み scope の項目が
+パス検証可能な file / directory path である必要があります — Execution
+Store レコードの `scope` フィールド（v3 以前コーパス文書の
+`## Affected Files` セクションに相当）です。自由形式の module 名や
+feature 名は検証できず、serial 実行を強制します。
 
 完了条件は検証可能である必要があります。検証経路を書けない task は、実装開始前に
 plan または spec に戻します。

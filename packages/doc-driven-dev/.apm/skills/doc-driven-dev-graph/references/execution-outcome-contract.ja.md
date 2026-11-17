@@ -198,11 +198,12 @@ graph から dispatch される文書型 audit は
 document の整合性だけを評価するため、missing または stale な index が graph execution を
 gate することはありません。`briefing-flow` は spec と ADR を読み、`design-doc`
 は spec と ADR を読み design evidence を記録し、`planning-flow` は selected approved design を
-読み、selected plan とすべての produced plan-linked test spec および task document を記録します。
-`implementation-flow` は選択 task と design/plan と linked test spec を読み Implementation Record を記録し、
+読み、選択された run の `plan.md` と生成されたすべての task record を記録します。
+`implementation-flow` は選択された run の task record と design/plan と linked test spec を読み Implementation Record を記録し、
 `doc-status` は declared document set を読みます。script-adapter input は
 `migrate_docs`（declared document set）、`scaffold_docs`
-（workspace-root bootstrap input）、`build_task_graph`（focused plan と選択 task document）です。すべての typed
+（workspace-root bootstrap input）、`build_task_graph`（選択された run の `plan.md` とその task record）です。store path は run tree 内で state root 相対であり、repo 相対形式の
+`.apm/state/doc-driven-dev/runs/<run-id>/...` が canonical reference に記録される形です。すべての typed
 reference は使用前に current state と照合して resolve しなければなりません。
 
 ## 既存 delegate の意味
@@ -213,7 +214,7 @@ reference は使用前に current state と照合して resolve しなければ�
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate が通過する | recoverable document gap | unresolved user-only requirement の `input-required` |
 | `design-doc` | design が approved になる | — | designated reviewer を待つ `approval-required`、upstream user decision がない `input-required` |
-| `planning-flow` | approved/active plan と linked test-spec/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） | changed plan/test-spec/task repair evidence（Document Registry 3 ではこれらは execution-bound であり、canonical durable document ではありません） | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
+| `planning-flow` | digest 承認済みの run plan と materialize された task record | changed run plan/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | granted authority の範囲で commit できない変更を slice が生成した場合の `commit-required`、permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `doc-status` | documents が Completable になる | declared repair evidence を伴う Returned | safe repair のない Returned の `unrecoverable-blocker` |
 
@@ -238,7 +239,7 @@ route は topology、terminal/blocked、budget evaluation に使います。rece
 
 ## Resume と duplicate effect
 
-saved receipt と比較する前に state — canonical Markdown と run の Execution Store
+saved receipt と比較する前に state — canonical Markdown と選択された run の Execution Store
 record — を再 projection します。pending の
 `completed` stage が reuse されるのは、run の Execution Store に記録された Effect
 Receipt が同じ `edgeId`、stage、effect、input binding、output/proof result を証明し、
@@ -247,6 +248,6 @@ bind されたすべての output と proof がまだ current state を resolve 
 proof や receipt がなければ、irreversible effect を replay せず `authority-required` を
 yield します。
 
-たとえば Task Graph A に scope された `implementation-flow` receipt は、canonical
-Markdown が Task Graph B を project した後に delegate を skip できません。fresh graph と
+たとえば Task Graph A に scope された `implementation-flow` receipt は、run が
+Task Graph B を project した後に delegate を skip できません。fresh graph と
 authoritative-input scope がまだ match するときだけ eligible になります。

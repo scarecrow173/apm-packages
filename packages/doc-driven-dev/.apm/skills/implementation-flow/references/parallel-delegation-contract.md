@@ -20,34 +20,29 @@ reimplements or weakens `buildTaskGraph`:
 
 - Non-empty `taskGraph.issues` → `blocked`. No slice dispatches — the
   judgment fails closed before any scope is read.
-- When `GraphRoute.condition` is `tasks-active`, the candidates are exactly
-  `taskGraph.resumableActive`.
+- When `taskGraph.resumableActive` is non-empty, the candidates are exactly
+  `taskGraph.resumableActive` — resuming active work precedes starting new
+  work.
 - Otherwise the candidates are `taskGraph.runnable`.
 - A task absent from the candidate list is ineligible: it is never evaluated
   for a parallel OR a serial start by this judgment.
 
 ## Write Scope Declaration
 
-Each task's `## Affected Files` section is the sole source of its declared
-write scope:
+Each task record's `scope` field in the selected Execution Store run is the
+sole source of its declared write scope — the same authority the Task Graph
+projects as `node.scope`:
 
 - An entry ending in `/` or `/*` is a directory prefix; any other entry is an
   exact file path. Paths normalize to forward-slash repo-relative form.
 - Absolute paths, `..` escapes, embedded `*`/`?` segments, and non-path prose
   (for example `auth module`) are unverifiable.
-- A missing or empty `## Affected Files` section → `scope-undeclared` →
-  serial.
+- A missing or empty `scope` → `scope-undeclared` → serial.
 - Any unverifiable entry → `scope-unverifiable` → serial. The judgment never
   infers scope from prose or guesses a likely path.
-- The scope check matches the canonical `Affected Files` heading plus its
-  declared localized aliases (the ja task template's `影響ファイル`),
-  case-insensitive. A heading outside that fixed vocabulary still reads as
-  a missing section → `scope-undeclared` → serial, and the canonical
-  heading wins when both spellings appear in one document.
-- Headings and bullets inside fenced code blocks (```` ``` ```` / `~~~`) are
-  documentation, not declarations — a fenced `## Affected Files` never
-  creates a section. Bullets under `###`+ subsections inside the section do
-  not enter the scope either.
+- Scope entries are strings on the record; the write API accepts any string
+  and the readers classify them — an opaque entry fails closed at judgment
+  time, never at write time.
 - Paths compare case-insensitively (Windows dev environment); a case-only
   spelling drift never bypasses a scope or collision check.
 
@@ -63,8 +58,9 @@ serial:
 - Shared generated files — indexes such as `docs/*/README.md`, lockfiles,
   shared configuration — declared by two or more tasks. Prefer not declaring
   them at all: assign generated-index updates to the serial merge phase.
-- Task document status or front-matter writes: a slice may update only its
-  own task doc; scopes that overlap on task documents conflict.
+- Task record status writes: task state lives in the Execution Store and is
+  updated through `put-task` CAS only — it is never a writable repo path,
+  so it can never appear in a slice's declared scope.
 
 Any task involved in at least one conflict pair is serial (the safe side);
 clean tasks may still run concurrently with each other. `decision` is
@@ -80,13 +76,15 @@ completes, collect its actual diff — `git diff --name-only` plus
 - Renames report both source and destination paths, so a rename out of a
   protected path cannot masquerade as a pure addition.
 - A touched path outside the declared scope → `scope-violation`.
-- Two writes need no scope declaration because the contract already requires
-  them: the slice's own task doc (its status/front-matter update) and the
-  slice's declared evidence artifacts under `docs/impl/` (the implementation
-  record listed in `evidencePaths`). An undeclared `docs/impl/` write goes
-  through normal scope verification like any other path.
-- Another task's document is never writable — no scope declaration can
-  grant it; touching any task doc other than the slice's own → `blocked`.
+- The slice's declared evidence artifacts under `docs/impl/` (the
+  implementation record listed in `evidencePaths`) need no scope declaration
+  because the contract already requires them. An undeclared `docs/impl/`
+  write goes through normal scope verification like any other path.
+- The Execution Store is never writable via a repo diff: a touched path
+  inside the resolved state root (`.apm/state/doc-driven-dev/` by default)
+  would bypass the record CAS that guards task status and scope —
+  `scope-violation` at `blocked` severity, checked before any other scope
+  rule.
 - The same path touched by two slices → `write-collision` → `merge-review`.
   Last-writer-win is never accepted silently.
 
@@ -94,13 +92,13 @@ completes, collect its actual diff — `git diff --name-only` plus
 
 Every parallel slice receives a `DelegateHandoff` as defined in
 [delegate-execution-policy](../../doc-driven-dev-graph/references/delegate-execution-policy.md),
-bound to its own task:
+bound to its own task record in the selected run:
 
 | Field | Parallel binding |
 | --- | --- |
-| `focus` | The slice's own task document |
-| `permissions.write` | Exactly the declared `## Affected Files` scope — nothing else |
-| `acceptanceCriteria` | The task's `## Verification` checklist |
+| `focus` | The slice's own task identity — `(runId, taskId)` |
+| `permissions.write` | Exactly the task record's declared `scope` — nothing else |
+| `acceptanceCriteria` | The task record's `checks` |
 | `completion` | A completed `EffectOutcome` plus evidence that references the slice's own task ID |
 
 ## Merge Verification
@@ -109,31 +107,30 @@ Before slice results are accepted, verify each one
 (`verifyParallelMerge`):
 
 - **Scope** — actual touched paths stay within the declared scope. The task
-  doc's `## Affected Files` is the authority for that scope, and the claimed
-  `taskDocPath` is verified before it grants anything: it must normalize
-  inside the task-doc subtree, exist and parse inside the checkout, and carry
-  the slice's own task ID (front matter `id`, else the ID literally in the
-  body). An unverified claim is `blocked` and grants neither the own-doc
-  exemption nor scope authority. Every supplied `declaredScope` entry must
-  then be covered by the bound doc's declaration — an entry absent from or
-  wider than the doc's declaration is an inflated claim and blocks (a file
-  entry in the doc never covers a directory claim). A violation targeting
-  another task's document is `blocked`-severity; other out-of-scope paths are
+  record's `scope` in the selected run is the authority, and the claimed
+  `taskId` binds to a run record before it grants anything: a slice naming a
+  task absent from the run is `blocked` — tasks from another run (or
+  invented ids) never bind scope. Every supplied `declaredScope` entry must
+  then be covered by the bound record's declaration — an entry absent from
+  or wider than the record's declaration is an inflated claim and blocks (a
+  file entry in the record never covers a directory claim). A touched path
+  inside the state root is `blocked`-severity; other out-of-scope paths are
   `merge-review`-severity.
 - **Collision** — no two slices touched the same path.
-- **Evidence binding** — every evidence path lives under `docs/impl/` or is
-  the slice's own task doc, and its file content literally contains the
-  slice's own task ID (`verifyEvidenceBinding`). `evidence-mismatch` is
-  `blocked`-severity: one task's evidence can never be applied to another.
+- **Evidence binding** — every evidence path lives under `docs/impl/`, and
+  its file content literally contains the slice's own task ID
+  (`verifyEvidenceBinding`). `evidence-mismatch` is `blocked`-severity: one
+  task's evidence can never be applied to another.
 
 The merge verdict ladder is `merge` (clean) → `merge-review` (collisions or
-non-task-doc scope violations) → `blocked` (evidence mismatch, task-doc scope
-violation, malformed input).
+non-store scope violations) → `blocked` (evidence mismatch, store-path
+violation, unbound task ID, malformed input).
 
 After a clean merge, re-project the graph and re-evaluate gates:
 `doc-status`, tests, and `requiredAudits` run as usual — a merge never skips
-them, and an unverified task never becomes `done`. Canonical artifact
-identity (ID, relations, status) must be intact.
+them, and an unverified task never becomes `done`. Task status advances only
+through `put-task` CAS on the run record; canonical artifact identity
+(ID, relations, status) must be intact.
 
 ## Fallback Ladder
 
@@ -153,17 +150,22 @@ each slice still satisfies the effect-outcome contract independently.
 ## CLI Contract
 
 ```text
-node scripts/check_parallel.js --plan <path-or-id> [--cwd DIR] [--task-dir DIR] [--json]
-node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-ref REF] [--task-dir DIR] [--json]
+node scripts/check_parallel.js --run <run-id> [--cwd DIR] [--state-root DIR] [--allow-external-root] [--json]
+node scripts/check_parallel.js --verify-merge <slices.json> --run <run-id> [--cwd DIR] [--base-ref REF] [--json]
 ```
 
-- `--plan` mode builds the Task Graph from the resolved plan artifact and
-  prints a `ParallelReport`. Exit `0` when `decision` is `parallel`; `1` on
+- `--run` is required in both modes and selects the Execution Store run whose
+  task records supply eligibility and declared scopes. `--state-root`
+  overrides store root resolution and `--allow-external-root` authorizes a
+  root outside the checkout — the same store selectors as
+  `route_graph.js` and `build_task_graph.js`.
+- Default mode builds the Task Graph from the run and prints a
+  `ParallelReport`. Exit `0` when `decision` is `parallel`; `1` on
   `serial` or `blocked`.
 - `--verify-merge` mode reads slice outcomes and prints a `MergeReport`.
   Exit `0` when `verdict` is `merge`; `1` otherwise.
 - The two modes are mutually exclusive. `--cwd` defaults to the process
-  working directory; `--task-dir` defaults to `docs/tasks`. `--help` (`-h`)
+  working directory. `--help` (`-h`)
   prints usage to stdout and exits `0`. With `--json`, errors print as
   `{"error": "..."}` on stdout; otherwise they print to stderr with usage —
   argument and runtime errors always exit `1`.
@@ -187,13 +189,14 @@ node scripts/check_parallel.js --verify-merge <slices.json> [--cwd DIR] [--base-
 | `findings` | `[{ code, taskId?, path?, message }]` — codes are `scope-violation`, `write-collision`, `evidence-mismatch` |
 
 A slices file is
-`[{ taskId, declaredScope, evidencePaths, taskDocPath, touchedPaths?, baseRef? }]`.
-Supplied fields are **asserted, not trusted**: `taskDocPath` must bind to the
-slice's own task document before it acts as authority, `declaredScope` is
-re-verified against that doc's `## Affected Files`, `touchedPaths` against
-the declared scope plus the contract-implied writes, and `evidencePaths`
-against the evidence subtree and task-ID binding — including a realpath
-check so a `docs/impl/` symlink cannot bind evidence outside the checkout. Prefer
+`[{ taskId, declaredScope, evidencePaths, touchedPaths?, baseRef? }]`.
+Supplied fields are **asserted, not trusted**: `taskId` must bind to a task
+record in the run before it acts as authority, `declaredScope` is
+re-verified against that record's `scope`, `touchedPaths` against the
+declared scope plus the contract-implied evidence writes, and
+`evidencePaths` against the evidence subtree and task-ID binding —
+including a realpath check so a `docs/impl/` symlink cannot bind evidence
+outside the checkout. Prefer
 omitting `touchedPaths` so the verifier collects the real diff with
 `collectChangedPaths`; a slice-level `baseRef` wins over `--base-ref`
 (default `HEAD`) and must predate the slice — a base at or after the slice's

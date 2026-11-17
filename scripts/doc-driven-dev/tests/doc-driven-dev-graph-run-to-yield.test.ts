@@ -24,8 +24,11 @@ import type {
   RetryEffectOutcome,
   YieldEffectOutcome,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
+import { EXECUTION_STATE_ROOT } from "../src/skills/lib/schema_preflight";
 import {
+  approvePlan,
   createRun,
+  initStateRoot,
   loadRun,
   recordCheckpoint,
   recordReceipt,
@@ -184,22 +187,46 @@ function updateArtifact(repo: string, relativePath: string, data: Record<string,
 
 // The fixture's primary task doc: the task-graph fallback input and the doc
 // each edge checkpoint binds — canonical content, never run bookkeeping
-// (receipts/checkpoints live in the Execution Store).
+// (receipts/checkpoints live in the Execution Store). Task state moved to
+// Execution Store records (Issue #237; the task corpus doc is history only —
+// the run's records carry the authority the graph projects).
 const primaryTaskDoc = "docs/tasks/0001-task.md";
 // The `test-spec` audit's Document Registry 3 successor scope — `test-spec`
 // itself is legacy migration-only; verification intent is durable.
 const VERIFICATION_DOC = "docs/verification/0001-graph.md";
 const PRIMARY_TASK_ID = "TASK-0001";
+const RUN_ID = "RUN-0001";
 const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
-  "docs/plans/0001-graph.md",
   "docs/test-specs/0001-graph.md",
   primaryTaskDoc,
   "docs/impl/ir/0001-task.md",
   VERIFICATION_DOC,
 ];
+
+/**
+ * Task/plan paths in a route's taskGraph are state-root-relative
+ * (`runs/<run>/...`) — canonicalReference needs the repo-relative spelling
+ * under the default in-checkout state root.
+ */
+function storePath(stateRootRelative: string): string {
+  return `${EXECUTION_STATE_ROOT}/${stateRootRelative}`;
+}
+
+function taskVersion(repo: string, taskId: string): number | undefined {
+  return loadRun(repo, RUN_ID).tasks.find((task) => task.taskId === taskId)?.version;
+}
+
+/** CAS-patched task-record mutation — the store write replaces what used to
+ * be a front-matter `status:` edit on the task corpus doc. */
+function setTaskStatus(repo: string, index: number, status: TaskStatus, dependsOn?: string[]): void {
+  const taskId = `TASK-${String(index).padStart(4, "0")}`;
+  updateTask(repo, RUN_ID, taskId, { status, ...(dependsOn === undefined ? {} : { dependsOn }) }, {
+    expectedVersion: taskVersion(repo, taskId),
+  });
+}
 const footerDelegates = new Set([
   "briefing-flow",
   "design-doc",
@@ -239,12 +266,39 @@ function canonicalReference(repo: string, relativePath: string): DurableDocument
     };
   }
   const file = path.join(repo, relativePath);
-  const parsed = matter(fs.readFileSync(file, "utf8"));
+  const raw = fs.readFileSync(file, "utf8");
+  // Execution Store records (runs/<run-id>/tasks/<id>.json et al.) are JSON,
+  // not front-matter Markdown — their canonical identity is the record's own
+  // id field and their canonical content is the file bytes the store wrote.
+  if (relativePath.endsWith(".json")) {
+    try {
+      const record = JSON.parse(raw) as Record<string, unknown>;
+      const id = ["taskId", "checkpointId", "receiptId", "runId"]
+        .map((key) => record[key])
+        .find((value) => typeof value === "string" && value.length > 0);
+      if (id !== undefined) {
+        return {
+          kind: "durable-document",
+          path: relativePath,
+          id: id as string,
+          revision: fingerprint(raw),
+        };
+      }
+    } catch {
+      // Not a JSON record — fall through to the front-matter path.
+    }
+  }
+  const parsed = matter(raw);
+  const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
+  // Store-managed run files (plan.md, run_trace.jsonl) carry no front-matter
+  // id — the path inside the run tree is their canonical identity.
+  const posixPath = relativePath.split(path.sep).join("/");
+  const storeId = posixPath.startsWith(`${EXECUTION_STATE_ROOT}/`) ? posixPath : undefined;
   return {
     kind: "durable-document",
     path: relativePath,
-    id: parsed.data.id as string,
-    revision: fingerprint(matter.stringify(parsed.content, parsed.data)),
+    id: (data.id ?? storeId) as string,
+    revision: fingerprint(matter.stringify(parsed.content, data)),
   };
 }
 
@@ -745,6 +799,10 @@ function fixtureRepo(options: {
   taskStatuses?: TaskStatus[];
   dependsOn?: string[][];
   secondPlan?: boolean;
+  /** Manifest focus — artifact paths inside the chain the run binds to. */
+  runFocus?: string[];
+  /** Run task records when they should not derive from taskStatuses. */
+  runTasks?: Array<{ taskId: string; status?: TaskStatus; dependsOn?: string[]; scope?: string[] }>;
 } = {}): string {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-graph-run-to-yield-"));
   for (const directory of canonicalTargets) {
@@ -797,16 +855,47 @@ function fixtureRepo(options: {
       relations: { "derives-from": ["DESIGN-0001"] },
     }, "# Other\n");
   }
+  // .apm/state/ ignore coverage joins the baseline commit; the run's plan,
+  // task records, and digest-bound approval are written afterwards — the
+  // task graph every projection routes on is this run, never the corpus
+  // task docs (Issue #237).
+  initStateRoot(repo);
   gitInit(repo);
+  const tasks = options.runTasks
+    ?? (options.taskStatuses ?? ["todo"]).map((status, index) => ({
+      taskId: `TASK-${String(index + 1).padStart(4, "0")}`,
+      title: `TASK-${String(index + 1).padStart(4, "0")}`,
+      status,
+      dependsOn: options.dependsOn?.[index],
+    }));
+  createRun(repo, {
+    runId: RUN_ID,
+    graphId: "doc-driven-dev",
+    focus: options.runFocus ?? ["docs/plans/0001-graph.md"],
+    plan: "# Plan\n\nStore-managed run plan.\n",
+    tasks,
+  });
+  approvePlan(repo, RUN_ID, { actor: "run-to-yield" });
   return repo;
 }
 
 function addTask(repo: string, index: number, status: TaskStatus = "todo"): void {
   const id = `TASK-${String(index).padStart(4, "0")}`;
+  // Corpus doc for inventory (never consulted) + authoritative record.
   writeArtifact(repo, `docs/tasks/${String(index).padStart(4, "0")}-task.md`, {
     id, type: "task", status, title: id,
     relations: { implements: ["docs/plans/0001-graph.md"] },
   }, "# Task\n\n## Verification\n\n- [ ] node --test\n");
+  updateTask(repo, RUN_ID, id, { title: id, status }, { expectedVersion: taskVersion(repo, id) });
+}
+
+/**
+ * The identical-reroute bound compares routing semantics, not CAS metadata:
+ * a task record's `version` bumps on every store write, so an honest repair
+ * loop restoring the same task statuses would never reroute byte-identical.
+ */
+function routeFingerprint(route: GraphRoute): string {
+  return JSON.stringify(route, (key, value) => (key === "version" ? undefined : value));
 }
 
 /**
@@ -1057,8 +1146,8 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       break;
     }
 
-    const routeFingerprint = JSON.stringify(route);
-    if (seenRouteFingerprints.has(routeFingerprint)) {
+    const seenFingerprint = routeFingerprint(route);
+    if (seenRouteFingerprints.has(seenFingerprint)) {
       yieldReason = "budget-exhausted";
       expectYield(step, yieldReason);
       break;
@@ -1242,7 +1331,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       checkpointComplete: true,
       commitWaived: route.commitGate === true && signals.has("commit-waived"),
     });
-    seenRouteFingerprints.add(routeFingerprint);
+    seenRouteFingerprints.add(seenFingerprint);
     hops += 1;
     current = route.next;
 
@@ -1389,13 +1478,13 @@ test("observes terminal after the migration path reaches the derived task budget
       {
         expectEdge: "task-graph-to-implementation",
         applyCheckpointEvidence: committedEvidence("task-graph-to-implementation", (fixture) => {
-          updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+          setTaskStatus(fixture, 1, "done");
         }),
       },
       {
         expectEdge: "implementation-retry",
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
-          updateArtifact(fixture, "docs/tasks/0002-task.md", { status: "done" });
+          setTaskStatus(fixture, 2, "done");
           signals.add("implementation-verified");
         }),
       },
@@ -1726,7 +1815,7 @@ test("continues implementation retry only after re-projection", () => {
       {
         expectEdge: "implementation-retry",
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
-          updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+          setTaskStatus(fixture, 1, "done");
           signals.add("implementation-verified");
           signals.add("followup-terminal");
         }),
@@ -1754,13 +1843,13 @@ test("continues implementation retry when the Task Graph advances to the next ru
       {
         expectEdge: "implementation-retry",
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture) => {
-          updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+          setTaskStatus(fixture, 1, "done");
         }),
       },
       {
         expectEdge: "implementation-retry",
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
-          updateArtifact(fixture, "docs/tasks/0002-task.md", { status: "done" });
+          setTaskStatus(fixture, 2, "done");
           signals.add("implementation-verified");
           signals.add("followup-terminal");
         }),
@@ -1862,10 +1951,7 @@ test("repairs an invalid task graph before returning to task-graph", () => {
     steps: [
       {
         expectEdge: "task-graph-to-planning",
-        applyCheckpointEvidence: evidence("task-graph-to-planning", (fixture) => updateArtifact(fixture, "docs/tasks/0002-task.md", {
-          status: "todo",
-          relations: { implements: ["docs/plans/0001-graph.md"] },
-        })),
+        applyCheckpointEvidence: evidence("task-graph-to-planning", (fixture) => setTaskStatus(fixture, 2, "todo", [])),
       },
       { expectEdge: "planning-to-task-graph", applyCheckpointEvidence: evidence("planning-to-task-graph") },
     ],
@@ -1906,7 +1992,7 @@ test("stops an unchanged self-loop on its repeated complete-route fingerprint", 
   });
   assert.equal(result.checkpoints.length, 1);
   assert.equal(result.handoff.seenRouteFingerprints.length, 1);
-  assert.equal(JSON.stringify(result.routes[1]), result.handoff.seenRouteFingerprints[0]);
+  assert.equal(routeFingerprint(result.routes[1]), result.handoff.seenRouteFingerprints[0]);
   assert.equal(result.yieldReason, "budget-exhausted");
 });
 
@@ -2075,7 +2161,7 @@ test("preserves deterministic evidence ordering and full-route fingerprints", ()
     "route:edge-a", "audit:spec", "delegate:briefing-flow", "checkpoint:edge-a",
     "project", "route:edge-b",
   ]);
-  assert.equal(first.handoff.seenRouteFingerprints[0], JSON.stringify(first.routes[0]));
+  assert.equal(first.handoff.seenRouteFingerprints[0], routeFingerprint(first.routes[0]));
 
   const secondRepo = fixtureRepo();
   const second = runScenario({
@@ -2379,7 +2465,7 @@ test("continues a typed retry only after its canonical evidence changes", () => 
       {
         expectEdge: "implementation-retry",
         delegate: (fixture, signals, route, store) => {
-          updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+          setTaskStatus(fixture, 1, "done");
           signals.add("implementation-verified");
           signals.add("followup-terminal");
           return retryOutcome(
@@ -2388,7 +2474,7 @@ test("continues a typed retry only after its canonical evidence changes", () => 
             route,
             "delegate",
             { kind: "delegate", id: route.delegate as string },
-            [canonicalReference(fixture, "docs/tasks/0001-task.md")],
+            [canonicalReference(fixture, storePath(`runs/${RUN_ID}/tasks/TASK-0001.json`))],
           );
         },
       },
@@ -2607,16 +2693,26 @@ edges:
   });
   assert.equal(resumed.yieldReason, "authority-required");
 
-  const focusedRepo = fixtureRepo({ secondPlan: true });
+  // A run bound to the SECOND plan's chain — the store focus is the run's
+  // chain binding, and build_task_graph's inputs are its records (Issue #237).
+  const focusedRepo = fixtureRepo({
+    secondPlan: true,
+    runFocus: ["docs/plans/0002-other.md"],
+    runTasks: [{ taskId: "TASK-0002", status: "todo" }],
+  });
   writeArtifact(focusedRepo, "docs/tasks/0002-focused.md", {
     id: "TASK-0002", type: "task", status: "todo", title: "Focused",
     relations: { implements: ["docs/plans/0002-other.md"] },
   }, "# Focused task\n");
+  // Focus by artifact ID like every other scenario: the scenario's
+  // bookkeeping run stays unbound (an unresolved token never sits inside a
+  // chain), so the run fixture created for plan 0002 remains the single
+  // selected run the projection binds.
   const taskGraph = runScenario({
     repo: focusedRepo,
     current: "planning",
     mode: "run-until-yield",
-    focus: ["docs/plans/0002-other.md"],
+    focus: ["PLAN-0002"],
     steps: [{ expectEdge: "planning-to-task-graph", yield: "authority-required" }],
   });
   // build_task_graph binds the run's task records — the focused selection
@@ -2682,7 +2778,7 @@ test("commit-waived signal skips the gate and completes the checkpoint", () => {
     steps: [{
       expectEdge: "task-graph-to-implementation",
       applyCheckpointEvidence: evidence("task-graph-to-implementation", (fixture) => {
-        updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
+        setTaskStatus(fixture, 1, "done");
       }),
     }],
   });

@@ -10,6 +10,12 @@ normalized `focus`, an `artifactGraph`, gate results, caller signals, sorted
 `blockers`, and the selected `taskGraph` (or `null`). Artifact nodes retain
 their canonical paths, IDs, types, statuses, and semantic relations.
 
+`taskGraph` is not projected from Markdown: it is the Dynamic Task Graph of
+one Execution Store run (see `task-graph-contract.md`), selected by `--run`
+or by the single-active-run rule. When a run is selected the state carries
+its `runId`, and run-selection or approval blockers surface here the same
+way artifact blockers do.
+
 ## Focus
 
 Pass one or more `--focus` paths or artifact IDs when the repository contains

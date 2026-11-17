@@ -28171,12 +28171,31 @@ function canonicalReference(repo, relativePath) {
     };
   }
   const file2 = import_node_path4.default.join(repo, relativePath);
-  const parsed = (0, import_gray_matter3.default)(import_node_fs4.default.readFileSync(file2, "utf8"));
+  const raw = import_node_fs4.default.readFileSync(file2, "utf8");
+  if (relativePath.endsWith(".json")) {
+    try {
+      const record2 = JSON.parse(raw);
+      const id = ["taskId", "checkpointId", "receiptId", "runId"].map((key) => record2[key]).find((value) => typeof value === "string" && value.length > 0);
+      if (id !== void 0) {
+        return {
+          kind: "durable-document",
+          path: relativePath,
+          id,
+          revision: fingerprint(raw)
+        };
+      }
+    } catch {
+    }
+  }
+  const parsed = (0, import_gray_matter3.default)(raw);
+  const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
+  const posixPath = relativePath.split(import_node_path4.default.sep).join("/");
+  const storeId = posixPath.startsWith(`${EXECUTION_STATE_ROOT}/`) ? posixPath : void 0;
   return {
     kind: "durable-document",
     path: relativePath,
-    id: parsed.data.id,
-    revision: fingerprint(import_gray_matter3.default.stringify(parsed.content, parsed.data))
+    id: data.id ?? storeId,
+    revision: fingerprint(import_gray_matter3.default.stringify(parsed.content, data))
   };
 }
 

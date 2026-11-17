@@ -1,9 +1,9 @@
-import type { InventoryItem, PlanView } from "./dashboard_model";
+import type { InventoryItem, RunView } from "./dashboard_model";
 
 export type TaskLaneStatus = "todo" | "in-progress" | "blocked" | "done" | "wont-do" | "unknown";
 
-export type TaskPlanMembership = {
-  plan: string;
+export type TaskRunMembership = {
+  run: string;
   taskId: string;
   dependencies: string[];
   runnable: boolean;
@@ -18,8 +18,8 @@ export type TaskCard = {
   status: string | null;
   lane: TaskLaneStatus;
   parseError: string | null;
-  coverage: "covered" | "no-plan" | "graph-uncovered";
-  memberships: TaskPlanMembership[];
+  coverage: "covered" | "no-run" | "graph-uncovered";
+  memberships: TaskRunMembership[];
 };
 
 export type TaskLane = {
@@ -44,28 +44,41 @@ function laneFor(item: InventoryItem): TaskLaneStatus {
   return item.status as Exclude<TaskLaneStatus, "unknown">;
 }
 
-export function buildTaskBoard(inventory: readonly InventoryItem[], plans: readonly PlanView[]): { lanes: TaskLane[] } {
-  const memberships = new Map<string, TaskPlanMembership[]>();
-  for (const plan of plans) {
-    const blockedById = new Map(plan.graph.blocked.map((entry) => [entry.id, entry.reasons]));
-    for (const node of plan.graph.nodes) {
-      const entries = memberships.get(node.path) ?? [];
-      entries.push({
-        plan: plan.path,
-        taskId: node.id,
-        dependencies: [...node.dependsOn],
-        runnable: plan.graph.runnable.includes(node.id),
-        resumable: plan.graph.resumableActive.includes(node.id),
-        blockReasons: [...(blockedById.get(node.id) ?? [])],
+/**
+ * Task cards now come from run-scoped graph nodes (store records, Issue
+ * #237): each node is a card keyed by its state-root-relative record path.
+ * A legacy task-typed Markdown still in inventory renders as a `no-run`
+ * card — it exists on disk but no run claims it.
+ */
+export function buildTaskBoard(inventory: readonly InventoryItem[], runs: readonly RunView[]): { lanes: TaskLane[] } {
+  const cardsByPath = new Map<string, TaskCard>();
+  for (const run of runs) {
+    const blockedById = new Map(run.graph.blocked.map((entry) => [entry.id, entry.reasons]));
+    for (const node of run.graph.nodes) {
+      cardsByPath.set(node.path, {
+        path: node.path,
+        id: node.id,
+        title: node.title,
+        status: node.status,
+        lane: validStatuses.has(node.status as Exclude<TaskLaneStatus, "unknown">)
+          ? node.status as Exclude<TaskLaneStatus, "unknown">
+          : "unknown",
+        parseError: null,
+        coverage: "covered",
+        memberships: [{
+          run: run.runId,
+          taskId: node.id,
+          dependencies: [...node.dependsOn],
+          runnable: run.graph.runnable.includes(node.id),
+          resumable: run.graph.resumableActive.includes(node.id),
+          blockReasons: [...(blockedById.get(node.id) ?? [])],
+        }],
       });
-      memberships.set(node.path, entries);
     }
   }
 
-  const cardsByPath = new Map<string, TaskCard>();
   for (const item of inventory) {
-    if (item.kind !== "canonical" || item.type !== "task") continue;
-    const entries = [...(memberships.get(item.path) ?? [])].sort((left, right) => compare(left.plan, right.plan));
+    if (item.kind !== "canonical" || item.type !== "task" || cardsByPath.has(item.path)) continue;
     cardsByPath.set(item.path, {
       path: item.path,
       id: item.id,
@@ -73,8 +86,8 @@ export function buildTaskBoard(inventory: readonly InventoryItem[], plans: reado
       status: item.status,
       lane: laneFor(item),
       parseError: item.parseError,
-      coverage: !item.graphCovered ? "graph-uncovered" : entries.length === 0 ? "no-plan" : "covered",
-      memberships: entries,
+      coverage: !item.graphCovered ? "graph-uncovered" : "no-run",
+      memberships: [],
     });
   }
 

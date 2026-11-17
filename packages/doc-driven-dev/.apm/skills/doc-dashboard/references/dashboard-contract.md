@@ -4,23 +4,28 @@
 
 The command emits one UTF-8, self-contained HTML file. It has no external CSS,
 JavaScript, JSON, font, image, network, server, or watch dependency. Canonical
-Markdown and Graph YAML are the only authorities. The report is a regenerable,
+Markdown, Graph YAML, and the Git-untracked Execution Store are the only
+authorities. The report is a regenerable,
 read-only snapshot and records collection and generation times.
 
 The primary task surface is `#task-board`. Permanent lanes use
 `data-kanban-lane="todo"`, `"in-progress"`, `"blocked"`, `"done"`, and
 `"wont-do"`; an `unknown` lane appears for invalid status or parse-error tasks.
-Cards use `data-task-card` and canonical `data-task-path` identity. They show
-status, title, opaque ID, dependencies, plan membership, coverage, and separate
+Cards use `data-task-card` and canonical `data-task-path` identity — for
+run-scoped tasks the path is the state-root-relative record path
+`runs/<run-id>/tasks/<task-id>.json`. They show
+status, title, opaque ID, dependencies, run membership, coverage, and separate
 runnable/resumable projections. Duplicate opaque IDs are not merged. A waiting
-todo remains in its canonical lane. Graph, route preview, plan task details,
-document/relation rows, and diagnostics remain available.
+todo remains in its canonical lane. Legacy task-typed Markdown still in
+inventory renders as a `no-run`/`graph-uncovered` coverage card — the run
+records, not the corpus file, carry live status. Graph, route preview, run task
+details, document/relation rows, and diagnostics remain available.
 
 The `#attention` section sits before diagnostics and groups hard blockers,
 blocked-route reasons from the route preview, blocking findings, and task
 graph issues into per-category panels with count badges; it reports that
 nothing blocks progress when empty. Card readiness badges
-aggregate runnable/resumable/blocked across plan memberships, and per-plan
+aggregate runnable/resumable/blocked across run memberships, and per-run
 membership details stay collapsed. The document list's free-text filter
 matches only ID, title, and canonical path via `data-search-text`; type and
 status stay on their dedicated selects.
@@ -56,9 +61,9 @@ and the `gates` panel renders each gate as a status-dot pill in graph flow
 order (pass/fail/blocked colors, failure reasons in the tooltip) with an
 `N/M pass` score. Graph topology issues surface as danger chips inside the
 signals panel only when present; node/edge/gate inspection tables are omitted
-because the canvas and panels already carry that information. Per-plan
-`<summary>` rows carry the plan status
-pill. `#documents` places its filters on a toolbar-like strip
+because the canvas and panels already carry that information. Per-run
+`<summary>` rows carry the run status pill — one Execution Store run per row,
+each projecting its own task graph. `#documents` places its filters on a toolbar-like strip
 with a monospace result count. Record lists render as `.row-list`
 items and `.doc-row` cards with accent-tinted hover and a `:target`
 highlight; there are no `<table>` elements. `#attention` panels take a
@@ -105,8 +110,9 @@ classless conventions: `nav > ul` section links, `details` inspection groups, an
   satisfies a dependency.
 - Completion is `done / validTaskTotal`; zero is shown as no applicable tasks.
   Invalid or unparseable tasks are counted separately.
-- Repository task totals deduplicate by canonical path. Plan views can show a
-  task for each plan membership. Orphan and graph-uncovered tasks remain visible.
+- Repository task totals deduplicate by canonical path. Run views can show a
+  task for each run membership. Orphan, no-run, and graph-uncovered tasks
+  remain visible.
 - `draft`, `proposed`, and `capturing` are separate canonical document groups.
   Unmanaged Markdown does not receive an inferred status.
 - Focus changes focused metrics but does not hide repository-wide inventory or

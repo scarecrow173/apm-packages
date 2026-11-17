@@ -83,12 +83,11 @@ share the same critical path and the same release intent.
    `assets/templates/plan.md` remains the reference body structure for the
    record.
 
-8. Record relations.
-   The generated plan uses `relations.implements` for the upstream spec and
-   `relations.derives-from` for linked design docs and ADRs. When test specs
-   already exist (for example during re-planning), link them with
-   `--verified-by`; each target must resolve to an existing document by path
-   or ID (PLAN-DOC-GATE-002).
+8. Record the binding.
+   A run plan binds its upstream chain through the run manifest's `focus`
+   list — artifact paths inside the focused spec/ADR/design chain — not
+   front-matter relations. Pre-v3 `relations.*` vocabulary applies to
+   migrated `docs/plans` corpora only.
 9. Keep the plan implementation-ready.
    Include concrete files, behavior, tests, migration steps, and verification
    commands when they are known.
@@ -110,9 +109,12 @@ share the same critical path and the same release intent.
     required capability instead: delegated implementation, independent task
     execution, review checkpoints, and verification before completion.
 
-If the design gate fails, the script returns:
-
-`PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
+The design gate remains the planning contract: a run plan should not be
+written before `docs/designs/overview.md` exists and a non-overview design
+carries `status: "approved"`. The script refuses at the registry gate
+first, so the gate is a caller-enforced convention — the Task Graph gate
+is what binds: a run whose `plan.md` is missing or lacks a digest-bound
+approval projects `plan-not-approved` and routes no task to execution.
 
 ## Implementation Readiness Matrix
 

@@ -20,6 +20,9 @@ type CliArgs = {
   focus: string[];
   taskDir?: string;
   cwd: string;
+  run?: string;
+  stateRoot?: string;
+  allowExternalRoot: boolean;
   traceFile?: string;
   runId?: string;
   json: boolean;
@@ -28,7 +31,7 @@ type CliArgs = {
 };
 
 function usage(): string {
-  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--cwd <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
+  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--run <run-id> [--state-root <path>] [--allow-external-root]] [--cwd <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
 }
 
 function requiredValue(argv: string[], index: number, option: string): string {
@@ -42,6 +45,7 @@ function parseArgs(argv: string[]): CliArgs {
     cwd: process.cwd(),
     signals: [],
     focus: [],
+    allowExternalRoot: false,
     json: false,
     explain: false,
     help: false,
@@ -63,6 +67,14 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (arg === "--task-dir") {
       args.taskDir = requiredValue(argv, index, arg);
       index += 1;
+    } else if (arg === "--run") {
+      args.run = requiredValue(argv, index, arg);
+      index += 1;
+    } else if (arg === "--state-root") {
+      args.stateRoot = requiredValue(argv, index, arg);
+      index += 1;
+    } else if (arg === "--allow-external-root") {
+      args.allowExternalRoot = true;
     } else if (arg === "--cwd") {
       args.cwd = path.resolve(requiredValue(argv, index, arg));
       index += 1;
@@ -113,7 +125,8 @@ function run(args: CliArgs): void {
     throw new Error(`Unknown graph node: ${current}`);
   }
 
-  // Project the current Markdown state once, then route exactly one declared edge.
+  // Project fresh Graph State once — durable artifacts plus the selected
+  // run's store state (Issue #237) — then route exactly one declared edge.
   // The public skill loop re-enters this command after delegates record evidence.
   const collector = args.traceFile ? createArtifactScanCollector() : undefined;
   const state = projectGraphState({
@@ -122,6 +135,9 @@ function run(args: CliArgs): void {
     taskDir: args.taskDir,
     focus: args.focus,
     signals: args.signals,
+    runId: args.run,
+    stateRoot: args.stateRoot,
+    allowExternalRoot: args.allowExternalRoot,
   }, collector);
   const decision = evaluateRouteDecision({ current, definition, state });
   if (args.traceFile && args.runId && collector) {
