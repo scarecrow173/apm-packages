@@ -884,6 +884,22 @@ dependencies:
   local_path: ./packages/github-issue-handoff
   is_dev: true
   declared_license: MIT
+- repo_url: _local/japanese-tech-writing
+  name: japanese-tech-writing
+  version: 0.1.0
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/japanese-tech-writing
+  - .agents/skills/japanese-tech-writing/SKILL.md
+  - .claude/skills/japanese-tech-writing
+  - .claude/skills/japanese-tech-writing/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/japanese-tech-writing/SKILL.md: sha256:f109edb5e30c408e0a12752a2643166848c4c90a0e0c86e2682b2fd50cedc4be
+    .claude/skills/japanese-tech-writing/SKILL.md: sha256:f109edb5e30c408e0a12752a2643166848c4c90a0e0c86e2682b2fd50cedc4be
+  source: local
+  local_path: ./packages/japanese-tech-writing
+  is_dev: true
+  declared_license: Unlicense
 - repo_url: _local/pstack-devin
   name: pstack-devin
   version: 0.1.0
@@ -4460,6 +4476,24 @@ deployments:
   - addyosmani/agent-skills/skills/interview-me
   active_owner: addyosmani/agent-skills/skills/interview-me
   content_hash: sha256:1d94741d10d2c826cd0c191aea3981ee94c8abb27ef2a166f6a372117d06448f
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/japanese-tech-writing
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/japanese-tech-writing
+  active_owner: ./packages/japanese-tech-writing
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/japanese-tech-writing/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/japanese-tech-writing
+  active_owner: ./packages/japanese-tech-writing
+  content_hash: sha256:f109edb5e30c408e0a12752a2643166848c4c90a0e0c86e2682b2fd50cedc4be
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/plan-doc
@@ -8060,6 +8094,24 @@ deployments:
   - addyosmani/agent-skills/skills/interview-me
   active_owner: addyosmani/agent-skills/skills/interview-me
   content_hash: sha256:1d94741d10d2c826cd0c191aea3981ee94c8abb27ef2a166f6a372117d06448f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/japanese-tech-writing
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/japanese-tech-writing
+  active_owner: ./packages/japanese-tech-writing
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/japanese-tech-writing/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - ./packages/japanese-tech-writing
+  active_owner: ./packages/japanese-tech-writing
+  content_hash: sha256:f109edb5e30c408e0a12752a2643166848c4c90a0e0c86e2682b2fd50cedc4be
 - kind: project-relative
   target: claude
   value: .claude/skills/plan-doc
