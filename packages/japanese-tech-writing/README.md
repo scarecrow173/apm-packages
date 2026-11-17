@@ -21,7 +21,7 @@ dependencies:
     - scarecrow173/apm-packages/packages/japanese-tech-writing#main
 ```
 
-Then run `apm install`. APM deploys the Gist Skill into the target's native skills directory (e.g., `.agents/skills/japanese-tech-writing/`).
+Then run `apm install`. APM deploys the Gist Skill into the target's native skills directory (with APM 0.33.0 and the `agent-skills` target, `.agents/skills/fd287c3133457c4fd8f5601d34aa817d/`).
 
 ## Upstream dependency and updates
 
