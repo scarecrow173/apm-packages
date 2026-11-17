@@ -352,7 +352,7 @@ var require_common = __commonJS({
 var require_exception = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/exception.js"(exports2, module2) {
     "use strict";
-    function YAMLException(reason, mark) {
+    function YAMLException3(reason, mark) {
       Error.call(this);
       this.name = "YAMLException";
       this.reason = reason;
@@ -364,9 +364,9 @@ var require_exception = __commonJS({
         this.stack = new Error().stack || "";
       }
     }
-    YAMLException.prototype = Object.create(Error.prototype);
-    YAMLException.prototype.constructor = YAMLException;
-    YAMLException.prototype.toString = function toString(compact) {
+    YAMLException3.prototype = Object.create(Error.prototype);
+    YAMLException3.prototype.constructor = YAMLException3;
+    YAMLException3.prototype.toString = function toString(compact) {
       var result = this.name + ": ";
       result += this.reason || "(unknown reason)";
       if (!compact && this.mark) {
@@ -374,7 +374,7 @@ var require_exception = __commonJS({
       }
       return result;
     };
-    module2.exports = YAMLException;
+    module2.exports = YAMLException3;
   }
 });
 
@@ -440,7 +440,7 @@ var require_mark = __commonJS({
 var require_type = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/type.js"(exports2, module2) {
     "use strict";
-    var YAMLException = require_exception();
+    var YAMLException3 = require_exception();
     var TYPE_CONSTRUCTOR_OPTIONS = [
       "kind",
       "resolve",
@@ -471,7 +471,7 @@ var require_type = __commonJS({
       options2 = options2 || {};
       Object.keys(options2).forEach(function(name) {
         if (TYPE_CONSTRUCTOR_OPTIONS.indexOf(name) === -1) {
-          throw new YAMLException('Unknown option "' + name + '" is met in definition of "' + tag + '" YAML type.');
+          throw new YAMLException3('Unknown option "' + name + '" is met in definition of "' + tag + '" YAML type.');
         }
       });
       this.tag = tag;
@@ -488,7 +488,7 @@ var require_type = __commonJS({
       this.defaultStyle = options2["defaultStyle"] || null;
       this.styleAliases = compileStyleAliases(options2["styleAliases"] || null);
       if (YAML_NODE_KINDS.indexOf(this.kind) === -1) {
-        throw new YAMLException('Unknown kind "' + this.kind + '" is specified for "' + tag + '" YAML type.');
+        throw new YAMLException3('Unknown kind "' + this.kind + '" is specified for "' + tag + '" YAML type.');
       }
     }
     module2.exports = Type;
@@ -500,7 +500,7 @@ var require_schema = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/schema.js"(exports2, module2) {
     "use strict";
     var common = require_common();
-    var YAMLException = require_exception();
+    var YAMLException3 = require_exception();
     var Type = require_type();
     function compileList(schema, name, result) {
       var exclude = [];
@@ -540,7 +540,7 @@ var require_schema = __commonJS({
       this.explicit = definition.explicit || [];
       this.implicit.forEach(function(type) {
         if (type.loadKind && type.loadKind !== "scalar") {
-          throw new YAMLException("There is a non-scalar type in the implicit list of a schema. Implicit resolving of such types is not supported.");
+          throw new YAMLException3("There is a non-scalar type in the implicit list of a schema. Implicit resolving of such types is not supported.");
         }
       });
       this.compiledImplicit = compileList(this, "implicit", []);
@@ -560,19 +560,19 @@ var require_schema = __commonJS({
           types = arguments[1];
           break;
         default:
-          throw new YAMLException("Wrong number of arguments for Schema.create function");
+          throw new YAMLException3("Wrong number of arguments for Schema.create function");
       }
       schemas = common.toArray(schemas);
       types = common.toArray(types);
       if (!schemas.every(function(schema) {
         return schema instanceof Schema3;
       })) {
-        throw new YAMLException("Specified list of super schemas (or a single Schema object) contains a non-Schema object.");
+        throw new YAMLException3("Specified list of super schemas (or a single Schema object) contains a non-Schema object.");
       }
       if (!types.every(function(type) {
         return type instanceof Type;
       })) {
-        throw new YAMLException("Specified list of YAML types (or a single Type object) contains a non-Type object.");
+        throw new YAMLException3("Specified list of YAML types (or a single Type object) contains a non-Type object.");
       }
       return new Schema3({
         include: schemas,
@@ -1420,22 +1420,22 @@ var require_loader = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/loader.js"(exports2, module2) {
     "use strict";
     var common = require_common();
-    var YAMLException = require_exception();
+    var YAMLException3 = require_exception();
     var Mark = require_mark();
     var DEFAULT_SAFE_SCHEMA = require_default_safe();
     var DEFAULT_FULL_SCHEMA = require_default_full();
     var _hasOwnProperty = Object.prototype.hasOwnProperty;
-    var CONTEXT_FLOW_IN = 1;
-    var CONTEXT_FLOW_OUT = 2;
-    var CONTEXT_BLOCK_IN = 3;
-    var CONTEXT_BLOCK_OUT = 4;
+    var CONTEXT_FLOW_IN2 = 1;
+    var CONTEXT_FLOW_OUT2 = 2;
+    var CONTEXT_BLOCK_IN2 = 3;
+    var CONTEXT_BLOCK_OUT2 = 4;
     var CHOMPING_CLIP2 = 1;
     var CHOMPING_STRIP2 = 2;
     var CHOMPING_KEEP2 = 3;
-    var PATTERN_NON_PRINTABLE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/;
+    var PATTERN_NON_PRINTABLE2 = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/;
     var PATTERN_NON_ASCII_LINE_BREAKS = /[\x85\u2028\u2029]/;
-    var PATTERN_FLOW_INDICATORS = /[,\[\]\{\}]/;
-    var PATTERN_TAG_HANDLE = /^(?:!|!!|![a-z\-]+!)$/i;
+    var PATTERN_FLOW_INDICATORS2 = /[,\[\]\{\}]/;
+    var PATTERN_TAG_HANDLE2 = /^(?:!|!!|![a-z\-]+!)$/i;
     var PATTERN_TAG_URI2 = /^(?:!|[^,\[\]\{\}])(?:%[0-9a-f]{2}|[0-9a-z\-#;\/\?:@&=\+\$,_\.!~\*'\(\)\[\]])*$/i;
     function _class(obj) {
       return Object.prototype.toString.call(obj);
@@ -1452,7 +1452,7 @@ var require_loader = __commonJS({
     function is_FLOW_INDICATOR(c) {
       return c === 44 || c === 91 || c === 93 || c === 123 || c === 125;
     }
-    function fromHexCode(c) {
+    function fromHexCode2(c) {
       var lc;
       if (48 <= c && c <= 57) {
         return c - 48;
@@ -1463,7 +1463,7 @@ var require_loader = __commonJS({
       }
       return -1;
     }
-    function escapedHexLen(c) {
+    function escapedHexLen2(c) {
       if (c === 120) {
         return 2;
       }
@@ -1475,7 +1475,7 @@ var require_loader = __commonJS({
       }
       return 0;
     }
-    function fromDecimalCode(c) {
+    function fromDecimalCode2(c) {
       if (48 <= c && c <= 57) {
         return c - 48;
       }
@@ -1484,7 +1484,7 @@ var require_loader = __commonJS({
     function simpleEscapeSequence2(c) {
       return c === 48 ? "\0" : c === 97 ? "\x07" : c === 98 ? "\b" : c === 116 ? "	" : c === 9 ? "	" : c === 110 ? "\n" : c === 118 ? "\v" : c === 102 ? "\f" : c === 114 ? "\r" : c === 101 ? "\x1B" : c === 32 ? " " : c === 34 ? '"' : c === 47 ? "/" : c === 92 ? "\\" : c === 78 ? "\x85" : c === 95 ? "\xA0" : c === 76 ? "\u2028" : c === 80 ? "\u2029" : "";
     }
-    function charFromCodepoint(c) {
+    function charFromCodepoint2(c) {
       if (c <= 65535) {
         return String.fromCharCode(c);
       }
@@ -1532,12 +1532,12 @@ var require_loader = __commonJS({
       this.documents = [];
     }
     function generateError(state, message) {
-      return new YAMLException(
+      return new YAMLException3(
         message,
         new Mark(state.filename, state.input, state.position, state.line, state.position - state.lineStart)
       );
     }
-    function throwError(state, message) {
+    function throwError2(state, message) {
       throw generateError(state, message);
     }
     function throwWarning(state, message) {
@@ -1549,19 +1549,19 @@ var require_loader = __commonJS({
       YAML: function handleYamlDirective(state, name, args) {
         var match, major, minor;
         if (state.version !== null) {
-          throwError(state, "duplication of %YAML directive");
+          throwError2(state, "duplication of %YAML directive");
         }
         if (args.length !== 1) {
-          throwError(state, "YAML directive accepts exactly one argument");
+          throwError2(state, "YAML directive accepts exactly one argument");
         }
         match = /^([0-9]+)\.([0-9]+)$/.exec(args[0]);
         if (match === null) {
-          throwError(state, "ill-formed argument of the YAML directive");
+          throwError2(state, "ill-formed argument of the YAML directive");
         }
         major = parseInt(match[1], 10);
         minor = parseInt(match[2], 10);
         if (major !== 1) {
-          throwError(state, "unacceptable YAML version of the document");
+          throwError2(state, "unacceptable YAML version of the document");
         }
         state.version = args[0];
         state.checkLineBreaks = minor < 2;
@@ -1572,18 +1572,18 @@ var require_loader = __commonJS({
       TAG: function handleTagDirective(state, name, args) {
         var handle, prefix;
         if (args.length !== 2) {
-          throwError(state, "TAG directive accepts exactly two arguments");
+          throwError2(state, "TAG directive accepts exactly two arguments");
         }
         handle = args[0];
         prefix = args[1];
-        if (!PATTERN_TAG_HANDLE.test(handle)) {
-          throwError(state, "ill-formed tag handle (first argument) of the TAG directive");
+        if (!PATTERN_TAG_HANDLE2.test(handle)) {
+          throwError2(state, "ill-formed tag handle (first argument) of the TAG directive");
         }
         if (_hasOwnProperty.call(state.tagMap, handle)) {
-          throwError(state, 'there is a previously declared suffix for "' + handle + '" tag handle');
+          throwError2(state, 'there is a previously declared suffix for "' + handle + '" tag handle');
         }
         if (!PATTERN_TAG_URI2.test(prefix)) {
-          throwError(state, "ill-formed tag prefix (second argument) of the TAG directive");
+          throwError2(state, "ill-formed tag prefix (second argument) of the TAG directive");
         }
         state.tagMap[handle] = prefix;
       }
@@ -1596,31 +1596,31 @@ var require_loader = __commonJS({
           for (_position = 0, _length2 = _result.length; _position < _length2; _position += 1) {
             _character = _result.charCodeAt(_position);
             if (!(_character === 9 || 32 <= _character && _character <= 1114111)) {
-              throwError(state, "expected valid JSON character");
+              throwError2(state, "expected valid JSON character");
             }
           }
-        } else if (PATTERN_NON_PRINTABLE.test(_result)) {
-          throwError(state, "the stream contains non-printable characters");
+        } else if (PATTERN_NON_PRINTABLE2.test(_result)) {
+          throwError2(state, "the stream contains non-printable characters");
         }
         state.result += _result;
       }
     }
-    function chargeMergeWork(state) {
+    function chargeMergeWork2(state) {
       state.totalMergeKeys += 1;
       if (state.maxTotalMergeKeys !== -1 && state.totalMergeKeys > state.maxTotalMergeKeys) {
-        throwError(state, "merge keys exceeded maxTotalMergeKeys (" + state.maxTotalMergeKeys + ")");
+        throwError2(state, "merge keys exceeded maxTotalMergeKeys (" + state.maxTotalMergeKeys + ")");
       }
     }
     function mergeMappings(state, destination, source, overridableKeys) {
       var sourceKeys, key, index, quantity;
       if (!common.isObject(source)) {
-        throwError(state, "cannot merge mappings; the provided source object is unacceptable");
+        throwError2(state, "cannot merge mappings; the provided source object is unacceptable");
       }
-      chargeMergeWork(state);
+      chargeMergeWork2(state);
       sourceKeys = Object.keys(source);
       for (index = 0, quantity = sourceKeys.length; index < quantity; index += 1) {
         key = sourceKeys[index];
-        chargeMergeWork(state);
+        chargeMergeWork2(state);
         if (!_hasOwnProperty.call(destination, key)) {
           setProperty(destination, key, source[key]);
           overridableKeys[key] = true;
@@ -1633,7 +1633,7 @@ var require_loader = __commonJS({
         keyNode = Array.prototype.slice.call(keyNode);
         for (index = 0, quantity = keyNode.length; index < quantity; index += 1) {
           if (Array.isArray(keyNode[index])) {
-            throwError(state, "nested arrays are not supported inside keys");
+            throwError2(state, "nested arrays are not supported inside keys");
           }
           if (typeof keyNode === "object" && _class(keyNode[index]) === "[object Object]") {
             keyNode[index] = "[object Object]";
@@ -1650,7 +1650,7 @@ var require_loader = __commonJS({
       if (keyTag === "tag:yaml.org,2002:merge") {
         if (Array.isArray(valueNode)) {
           if (valueNode.length > 100) {
-            throwError(state, "abnormal merge sequence size");
+            throwError2(state, "abnormal merge sequence size");
           }
           for (index = 0, quantity = valueNode.length; index < quantity; index += 1) {
             mergeMappings(state, _result, valueNode[index], overridableKeys);
@@ -1662,7 +1662,7 @@ var require_loader = __commonJS({
         if (!state.json && !_hasOwnProperty.call(overridableKeys, keyNode) && _hasOwnProperty.call(_result, keyNode)) {
           state.line = startLine || state.line;
           state.position = startPos || state.position;
-          throwError(state, "duplicated mapping key");
+          throwError2(state, "duplicated mapping key");
         }
         setProperty(_result, keyNode, valueNode);
         delete overridableKeys[keyNode];
@@ -1680,12 +1680,12 @@ var require_loader = __commonJS({
           state.position++;
         }
       } else {
-        throwError(state, "a line break is expected");
+        throwError2(state, "a line break is expected");
       }
       state.line += 1;
       state.lineStart = state.position;
     }
-    function skipSeparationSpace(state, allowComments, checkIndent) {
+    function skipSeparationSpace2(state, allowComments, checkIndent) {
       var lineBreaks = 0, ch = state.input.charCodeAt(state.position);
       while (ch !== 0) {
         while (is_WHITE_SPACE(ch)) {
@@ -1714,7 +1714,7 @@ var require_loader = __commonJS({
       }
       return lineBreaks;
     }
-    function testDocumentSeparator(state) {
+    function testDocumentSeparator2(state) {
       var _position = state.position, ch;
       ch = state.input.charCodeAt(_position);
       if ((ch === 45 || ch === 46) && ch === state.input.charCodeAt(_position + 1) && ch === state.input.charCodeAt(_position + 2)) {
@@ -1733,7 +1733,7 @@ var require_loader = __commonJS({
         state.result += common.repeat("\n", count - 1);
       }
     }
-    function readPlainScalar(state, nodeIndent, withinFlowCollection) {
+    function readPlainScalar2(state, nodeIndent, withinFlowCollection) {
       var preceding, following, captureStart, captureEnd, hasPendingContent, _line, _lineStart, _lineIndent, _kind = state.kind, _result = state.result, ch;
       ch = state.input.charCodeAt(state.position);
       if (is_WS_OR_EOL(ch) || is_FLOW_INDICATOR(ch) || ch === 35 || ch === 38 || ch === 42 || ch === 33 || ch === 124 || ch === 62 || ch === 39 || ch === 34 || ch === 37 || ch === 64 || ch === 96) {
@@ -1760,13 +1760,13 @@ var require_loader = __commonJS({
           if (is_WS_OR_EOL(preceding)) {
             break;
           }
-        } else if (state.position === state.lineStart && testDocumentSeparator(state) || withinFlowCollection && is_FLOW_INDICATOR(ch)) {
+        } else if (state.position === state.lineStart && testDocumentSeparator2(state) || withinFlowCollection && is_FLOW_INDICATOR(ch)) {
           break;
         } else if (is_EOL(ch)) {
           _line = state.line;
           _lineStart = state.lineStart;
           _lineIndent = state.lineIndent;
-          skipSeparationSpace(state, false, -1);
+          skipSeparationSpace2(state, false, -1);
           if (state.lineIndent >= nodeIndent) {
             hasPendingContent = true;
             ch = state.input.charCodeAt(state.position);
@@ -1798,7 +1798,7 @@ var require_loader = __commonJS({
       state.result = _result;
       return false;
     }
-    function readSingleQuotedScalar(state, nodeIndent) {
+    function readSingleQuotedScalar2(state, nodeIndent) {
       var ch, captureStart, captureEnd;
       ch = state.input.charCodeAt(state.position);
       if (ch !== 39) {
@@ -1821,18 +1821,18 @@ var require_loader = __commonJS({
           }
         } else if (is_EOL(ch)) {
           captureSegment(state, captureStart, captureEnd, true);
-          writeFoldedLines(state, skipSeparationSpace(state, false, nodeIndent));
+          writeFoldedLines(state, skipSeparationSpace2(state, false, nodeIndent));
           captureStart = captureEnd = state.position;
-        } else if (state.position === state.lineStart && testDocumentSeparator(state)) {
-          throwError(state, "unexpected end of the document within a single quoted scalar");
+        } else if (state.position === state.lineStart && testDocumentSeparator2(state)) {
+          throwError2(state, "unexpected end of the document within a single quoted scalar");
         } else {
           state.position++;
           captureEnd = state.position;
         }
       }
-      throwError(state, "unexpected end of the stream within a single quoted scalar");
+      throwError2(state, "unexpected end of the stream within a single quoted scalar");
     }
-    function readDoubleQuotedScalar(state, nodeIndent) {
+    function readDoubleQuotedScalar2(state, nodeIndent) {
       var captureStart, captureEnd, hexLength, hexResult, tmp, ch;
       ch = state.input.charCodeAt(state.position);
       if (ch !== 34) {
@@ -1851,41 +1851,41 @@ var require_loader = __commonJS({
           captureSegment(state, captureStart, state.position, true);
           ch = state.input.charCodeAt(++state.position);
           if (is_EOL(ch)) {
-            skipSeparationSpace(state, false, nodeIndent);
+            skipSeparationSpace2(state, false, nodeIndent);
           } else if (ch < 256 && simpleEscapeCheck2[ch]) {
             state.result += simpleEscapeMap2[ch];
             state.position++;
-          } else if ((tmp = escapedHexLen(ch)) > 0) {
+          } else if ((tmp = escapedHexLen2(ch)) > 0) {
             hexLength = tmp;
             hexResult = 0;
             for (; hexLength > 0; hexLength--) {
               ch = state.input.charCodeAt(++state.position);
-              if ((tmp = fromHexCode(ch)) >= 0) {
+              if ((tmp = fromHexCode2(ch)) >= 0) {
                 hexResult = (hexResult << 4) + tmp;
               } else {
-                throwError(state, "expected hexadecimal character");
+                throwError2(state, "expected hexadecimal character");
               }
             }
-            state.result += charFromCodepoint(hexResult);
+            state.result += charFromCodepoint2(hexResult);
             state.position++;
           } else {
-            throwError(state, "unknown escape sequence");
+            throwError2(state, "unknown escape sequence");
           }
           captureStart = captureEnd = state.position;
         } else if (is_EOL(ch)) {
           captureSegment(state, captureStart, captureEnd, true);
-          writeFoldedLines(state, skipSeparationSpace(state, false, nodeIndent));
+          writeFoldedLines(state, skipSeparationSpace2(state, false, nodeIndent));
           captureStart = captureEnd = state.position;
-        } else if (state.position === state.lineStart && testDocumentSeparator(state)) {
-          throwError(state, "unexpected end of the document within a double quoted scalar");
+        } else if (state.position === state.lineStart && testDocumentSeparator2(state)) {
+          throwError2(state, "unexpected end of the document within a double quoted scalar");
         } else {
           state.position++;
           captureEnd = state.position;
         }
       }
-      throwError(state, "unexpected end of the stream within a double quoted scalar");
+      throwError2(state, "unexpected end of the stream within a double quoted scalar");
     }
-    function readFlowCollection(state, nodeIndent) {
+    function readFlowCollection2(state, nodeIndent) {
       var readNext = true, _line, _tag = state.tag, _result, _anchor = state.anchor, following, terminator, isPair, isExplicitPair, isMapping, overridableKeys = {}, keyNode, keyTag, valueNode, ch;
       ch = state.input.charCodeAt(state.position);
       if (ch === 91) {
@@ -1904,7 +1904,7 @@ var require_loader = __commonJS({
       }
       ch = state.input.charCodeAt(++state.position);
       while (ch !== 0) {
-        skipSeparationSpace(state, true, nodeIndent);
+        skipSeparationSpace2(state, true, nodeIndent);
         ch = state.input.charCodeAt(state.position);
         if (ch === terminator) {
           state.position++;
@@ -1914,7 +1914,7 @@ var require_loader = __commonJS({
           state.result = _result;
           return true;
         } else if (!readNext) {
-          throwError(state, "missed comma between flow collection entries");
+          throwError2(state, "missed comma between flow collection entries");
         }
         keyTag = keyNode = valueNode = null;
         isPair = isExplicitPair = false;
@@ -1923,20 +1923,20 @@ var require_loader = __commonJS({
           if (is_WS_OR_EOL(following)) {
             isPair = isExplicitPair = true;
             state.position++;
-            skipSeparationSpace(state, true, nodeIndent);
+            skipSeparationSpace2(state, true, nodeIndent);
           }
         }
         _line = state.line;
-        composeNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true);
+        composeNode(state, nodeIndent, CONTEXT_FLOW_IN2, false, true);
         keyTag = state.tag;
         keyNode = state.result;
-        skipSeparationSpace(state, true, nodeIndent);
+        skipSeparationSpace2(state, true, nodeIndent);
         ch = state.input.charCodeAt(state.position);
         if ((isExplicitPair || state.line === _line) && ch === 58) {
           isPair = true;
           ch = state.input.charCodeAt(++state.position);
-          skipSeparationSpace(state, true, nodeIndent);
-          composeNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true);
+          skipSeparationSpace2(state, true, nodeIndent);
+          composeNode(state, nodeIndent, CONTEXT_FLOW_IN2, false, true);
           valueNode = state.result;
         }
         if (isMapping) {
@@ -1946,7 +1946,7 @@ var require_loader = __commonJS({
         } else {
           _result.push(keyNode);
         }
-        skipSeparationSpace(state, true, nodeIndent);
+        skipSeparationSpace2(state, true, nodeIndent);
         ch = state.input.charCodeAt(state.position);
         if (ch === 44) {
           readNext = true;
@@ -1955,9 +1955,9 @@ var require_loader = __commonJS({
           readNext = false;
         }
       }
-      throwError(state, "unexpected end of the stream within a flow collection");
+      throwError2(state, "unexpected end of the stream within a flow collection");
     }
-    function readBlockScalar(state, nodeIndent) {
+    function readBlockScalar2(state, nodeIndent) {
       var captureStart, folding, chomping = CHOMPING_CLIP2, didReadContent = false, detectedIndent = false, textIndent = nodeIndent, emptyLines = 0, atMoreIndented = false, tmp, ch;
       ch = state.input.charCodeAt(state.position);
       if (ch === 124) {
@@ -1975,16 +1975,16 @@ var require_loader = __commonJS({
           if (CHOMPING_CLIP2 === chomping) {
             chomping = ch === 43 ? CHOMPING_KEEP2 : CHOMPING_STRIP2;
           } else {
-            throwError(state, "repeat of a chomping mode identifier");
+            throwError2(state, "repeat of a chomping mode identifier");
           }
-        } else if ((tmp = fromDecimalCode(ch)) >= 0) {
+        } else if ((tmp = fromDecimalCode2(ch)) >= 0) {
           if (tmp === 0) {
-            throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
+            throwError2(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
           } else if (!detectedIndent) {
             textIndent = nodeIndent + tmp - 1;
             detectedIndent = true;
           } else {
-            throwError(state, "repeat of an indentation width identifier");
+            throwError2(state, "repeat of an indentation width identifier");
           }
         } else {
           break;
@@ -2053,7 +2053,7 @@ var require_loader = __commonJS({
       }
       return true;
     }
-    function readBlockSequence(state, nodeIndent) {
+    function readBlockSequence2(state, nodeIndent) {
       var _line, _tag = state.tag, _anchor = state.anchor, _result = [], following, detected = false, ch;
       if (state.anchor !== null) {
         state.anchorMap[state.anchor] = _result;
@@ -2069,7 +2069,7 @@ var require_loader = __commonJS({
         }
         detected = true;
         state.position++;
-        if (skipSeparationSpace(state, true, -1)) {
+        if (skipSeparationSpace2(state, true, -1)) {
           if (state.lineIndent <= nodeIndent) {
             _result.push(null);
             ch = state.input.charCodeAt(state.position);
@@ -2077,12 +2077,12 @@ var require_loader = __commonJS({
           }
         }
         _line = state.line;
-        composeNode(state, nodeIndent, CONTEXT_BLOCK_IN, false, true);
+        composeNode(state, nodeIndent, CONTEXT_BLOCK_IN2, false, true);
         _result.push(state.result);
-        skipSeparationSpace(state, true, -1);
+        skipSeparationSpace2(state, true, -1);
         ch = state.input.charCodeAt(state.position);
         if ((state.line === _line || state.lineIndent > nodeIndent) && ch !== 0) {
-          throwError(state, "bad indentation of a sequence entry");
+          throwError2(state, "bad indentation of a sequence entry");
         } else if (state.lineIndent < nodeIndent) {
           break;
         }
@@ -2096,7 +2096,7 @@ var require_loader = __commonJS({
       }
       return false;
     }
-    function readBlockMapping(state, nodeIndent, flowIndent) {
+    function readBlockMapping2(state, nodeIndent, flowIndent) {
       var following, allowCompact, _line, _pos, _tag = state.tag, _anchor = state.anchor, _result = {}, overridableKeys = {}, keyTag = null, keyNode = null, valueNode = null, atExplicitKey = false, detected = false, ch;
       if (state.anchor !== null) {
         state.anchorMap[state.anchor] = _result;
@@ -2119,11 +2119,11 @@ var require_loader = __commonJS({
             atExplicitKey = false;
             allowCompact = true;
           } else {
-            throwError(state, "incomplete explicit mapping pair; a key node is missed; or followed by a non-tabulated empty line");
+            throwError2(state, "incomplete explicit mapping pair; a key node is missed; or followed by a non-tabulated empty line");
           }
           state.position += 1;
           ch = following;
-        } else if (composeNode(state, flowIndent, CONTEXT_FLOW_OUT, false, true)) {
+        } else if (composeNode(state, flowIndent, CONTEXT_FLOW_OUT2, false, true)) {
           if (state.line === _line) {
             ch = state.input.charCodeAt(state.position);
             while (is_WHITE_SPACE(ch)) {
@@ -2132,7 +2132,7 @@ var require_loader = __commonJS({
             if (ch === 58) {
               ch = state.input.charCodeAt(++state.position);
               if (!is_WS_OR_EOL(ch)) {
-                throwError(state, "a whitespace character is expected after the key-value separator within a block mapping");
+                throwError2(state, "a whitespace character is expected after the key-value separator within a block mapping");
               }
               if (atExplicitKey) {
                 storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, null);
@@ -2144,14 +2144,14 @@ var require_loader = __commonJS({
               keyTag = state.tag;
               keyNode = state.result;
             } else if (detected) {
-              throwError(state, "can not read an implicit mapping pair; a colon is missed");
+              throwError2(state, "can not read an implicit mapping pair; a colon is missed");
             } else {
               state.tag = _tag;
               state.anchor = _anchor;
               return true;
             }
           } else if (detected) {
-            throwError(state, "can not read a block mapping entry; a multiline key may not be an implicit key");
+            throwError2(state, "can not read a block mapping entry; a multiline key may not be an implicit key");
           } else {
             state.tag = _tag;
             state.anchor = _anchor;
@@ -2161,7 +2161,7 @@ var require_loader = __commonJS({
           break;
         }
         if (state.line === _line || state.lineIndent > nodeIndent) {
-          if (composeNode(state, nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact)) {
+          if (composeNode(state, nodeIndent, CONTEXT_BLOCK_OUT2, true, allowCompact)) {
             if (atExplicitKey) {
               keyNode = state.result;
             } else {
@@ -2172,11 +2172,11 @@ var require_loader = __commonJS({
             storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valueNode, _line, _pos);
             keyTag = keyNode = valueNode = null;
           }
-          skipSeparationSpace(state, true, -1);
+          skipSeparationSpace2(state, true, -1);
           ch = state.input.charCodeAt(state.position);
         }
         if (state.lineIndent > nodeIndent && ch !== 0) {
-          throwError(state, "bad indentation of a mapping entry");
+          throwError2(state, "bad indentation of a mapping entry");
         } else if (state.lineIndent < nodeIndent) {
           break;
         }
@@ -2192,12 +2192,12 @@ var require_loader = __commonJS({
       }
       return detected;
     }
-    function readTagProperty(state) {
+    function readTagProperty2(state) {
       var _position, isVerbatim = false, isNamed = false, tagHandle, tagName, ch;
       ch = state.input.charCodeAt(state.position);
       if (ch !== 33) return false;
       if (state.tag !== null) {
-        throwError(state, "duplication of a tag property");
+        throwError2(state, "duplication of a tag property");
       }
       ch = state.input.charCodeAt(++state.position);
       if (ch === 60) {
@@ -2219,31 +2219,31 @@ var require_loader = __commonJS({
           tagName = state.input.slice(_position, state.position);
           ch = state.input.charCodeAt(++state.position);
         } else {
-          throwError(state, "unexpected end of the stream within a verbatim tag");
+          throwError2(state, "unexpected end of the stream within a verbatim tag");
         }
       } else {
         while (ch !== 0 && !is_WS_OR_EOL(ch)) {
           if (ch === 33) {
             if (!isNamed) {
               tagHandle = state.input.slice(_position - 1, state.position + 1);
-              if (!PATTERN_TAG_HANDLE.test(tagHandle)) {
-                throwError(state, "named tag handle cannot contain such characters");
+              if (!PATTERN_TAG_HANDLE2.test(tagHandle)) {
+                throwError2(state, "named tag handle cannot contain such characters");
               }
               isNamed = true;
               _position = state.position + 1;
             } else {
-              throwError(state, "tag suffix cannot contain exclamation marks");
+              throwError2(state, "tag suffix cannot contain exclamation marks");
             }
           }
           ch = state.input.charCodeAt(++state.position);
         }
         tagName = state.input.slice(_position, state.position);
-        if (PATTERN_FLOW_INDICATORS.test(tagName)) {
-          throwError(state, "tag suffix cannot contain flow indicator characters");
+        if (PATTERN_FLOW_INDICATORS2.test(tagName)) {
+          throwError2(state, "tag suffix cannot contain flow indicator characters");
         }
       }
       if (tagName && !PATTERN_TAG_URI2.test(tagName)) {
-        throwError(state, "tag name cannot contain such characters: " + tagName);
+        throwError2(state, "tag name cannot contain such characters: " + tagName);
       }
       if (isVerbatim) {
         state.tag = tagName;
@@ -2254,16 +2254,16 @@ var require_loader = __commonJS({
       } else if (tagHandle === "!!") {
         state.tag = "tag:yaml.org,2002:" + tagName;
       } else {
-        throwError(state, 'undeclared tag handle "' + tagHandle + '"');
+        throwError2(state, 'undeclared tag handle "' + tagHandle + '"');
       }
       return true;
     }
-    function readAnchorProperty(state) {
+    function readAnchorProperty2(state) {
       var _position, ch;
       ch = state.input.charCodeAt(state.position);
       if (ch !== 38) return false;
       if (state.anchor !== null) {
-        throwError(state, "duplication of an anchor property");
+        throwError2(state, "duplication of an anchor property");
       }
       ch = state.input.charCodeAt(++state.position);
       _position = state.position;
@@ -2271,12 +2271,12 @@ var require_loader = __commonJS({
         ch = state.input.charCodeAt(++state.position);
       }
       if (state.position === _position) {
-        throwError(state, "name of an anchor node must contain at least one character");
+        throwError2(state, "name of an anchor node must contain at least one character");
       }
       state.anchor = state.input.slice(_position, state.position);
       return true;
     }
-    function readAlias(state) {
+    function readAlias2(state) {
       var _position, alias, ch;
       ch = state.input.charCodeAt(state.position);
       if (ch !== 42) return false;
@@ -2286,14 +2286,14 @@ var require_loader = __commonJS({
         ch = state.input.charCodeAt(++state.position);
       }
       if (state.position === _position) {
-        throwError(state, "name of an alias node must contain at least one character");
+        throwError2(state, "name of an alias node must contain at least one character");
       }
       alias = state.input.slice(_position, state.position);
       if (!_hasOwnProperty.call(state.anchorMap, alias)) {
-        throwError(state, 'unidentified alias "' + alias + '"');
+        throwError2(state, 'unidentified alias "' + alias + '"');
       }
       state.result = state.anchorMap[alias];
-      skipSeparationSpace(state, true, -1);
+      skipSeparationSpace2(state, true, -1);
       return true;
     }
     function composeNode(state, parentIndent, nodeContext, allowToSeek, allowCompact) {
@@ -2305,9 +2305,9 @@ var require_loader = __commonJS({
       state.anchor = null;
       state.kind = null;
       state.result = null;
-      allowBlockStyles = allowBlockScalars = allowBlockCollections = CONTEXT_BLOCK_OUT === nodeContext || CONTEXT_BLOCK_IN === nodeContext;
+      allowBlockStyles = allowBlockScalars = allowBlockCollections = CONTEXT_BLOCK_OUT2 === nodeContext || CONTEXT_BLOCK_IN2 === nodeContext;
       if (allowToSeek) {
-        if (skipSeparationSpace(state, true, -1)) {
+        if (skipSeparationSpace2(state, true, -1)) {
           atNewLine = true;
           if (state.lineIndent > parentIndent) {
             indentStatus = 1;
@@ -2319,8 +2319,8 @@ var require_loader = __commonJS({
         }
       }
       if (indentStatus === 1) {
-        while (readTagProperty(state) || readAnchorProperty(state)) {
-          if (skipSeparationSpace(state, true, -1)) {
+        while (readTagProperty2(state) || readAnchorProperty2(state)) {
+          if (skipSeparationSpace2(state, true, -1)) {
             atNewLine = true;
             allowBlockCollections = allowBlockStyles;
             if (state.lineIndent > parentIndent) {
@@ -2338,25 +2338,25 @@ var require_loader = __commonJS({
       if (allowBlockCollections) {
         allowBlockCollections = atNewLine || allowCompact;
       }
-      if (indentStatus === 1 || CONTEXT_BLOCK_OUT === nodeContext) {
-        if (CONTEXT_FLOW_IN === nodeContext || CONTEXT_FLOW_OUT === nodeContext) {
+      if (indentStatus === 1 || CONTEXT_BLOCK_OUT2 === nodeContext) {
+        if (CONTEXT_FLOW_IN2 === nodeContext || CONTEXT_FLOW_OUT2 === nodeContext) {
           flowIndent = parentIndent;
         } else {
           flowIndent = parentIndent + 1;
         }
         blockIndent = state.position - state.lineStart;
         if (indentStatus === 1) {
-          if (allowBlockCollections && (readBlockSequence(state, blockIndent) || readBlockMapping(state, blockIndent, flowIndent)) || readFlowCollection(state, flowIndent)) {
+          if (allowBlockCollections && (readBlockSequence2(state, blockIndent) || readBlockMapping2(state, blockIndent, flowIndent)) || readFlowCollection2(state, flowIndent)) {
             hasContent = true;
           } else {
-            if (allowBlockScalars && readBlockScalar(state, flowIndent) || readSingleQuotedScalar(state, flowIndent) || readDoubleQuotedScalar(state, flowIndent)) {
+            if (allowBlockScalars && readBlockScalar2(state, flowIndent) || readSingleQuotedScalar2(state, flowIndent) || readDoubleQuotedScalar2(state, flowIndent)) {
               hasContent = true;
-            } else if (readAlias(state)) {
+            } else if (readAlias2(state)) {
               hasContent = true;
               if (state.tag !== null || state.anchor !== null) {
-                throwError(state, "alias node should not have any properties");
+                throwError2(state, "alias node should not have any properties");
               }
-            } else if (readPlainScalar(state, flowIndent, CONTEXT_FLOW_IN === nodeContext)) {
+            } else if (readPlainScalar2(state, flowIndent, CONTEXT_FLOW_IN2 === nodeContext)) {
               hasContent = true;
               if (state.tag === null) {
                 state.tag = "?";
@@ -2367,13 +2367,13 @@ var require_loader = __commonJS({
             }
           }
         } else if (indentStatus === 0) {
-          hasContent = allowBlockCollections && readBlockSequence(state, blockIndent);
+          hasContent = allowBlockCollections && readBlockSequence2(state, blockIndent);
         }
       }
       if (state.tag !== null && state.tag !== "!") {
         if (state.tag === "?") {
           if (state.result !== null && state.kind !== "scalar") {
-            throwError(state, 'unacceptable node kind for !<?> tag; it should be "scalar", not "' + state.kind + '"');
+            throwError2(state, 'unacceptable node kind for !<?> tag; it should be "scalar", not "' + state.kind + '"');
           }
           for (typeIndex = 0, typeQuantity = state.implicitTypes.length; typeIndex < typeQuantity; typeIndex += 1) {
             type = state.implicitTypes[typeIndex];
@@ -2389,10 +2389,10 @@ var require_loader = __commonJS({
         } else if (_hasOwnProperty.call(state.typeMap[state.kind || "fallback"], state.tag)) {
           type = state.typeMap[state.kind || "fallback"][state.tag];
           if (state.result !== null && type.kind !== state.kind) {
-            throwError(state, "unacceptable node kind for !<" + state.tag + '> tag; it should be "' + type.kind + '", not "' + state.kind + '"');
+            throwError2(state, "unacceptable node kind for !<" + state.tag + '> tag; it should be "' + type.kind + '", not "' + state.kind + '"');
           }
           if (!type.resolve(state.result)) {
-            throwError(state, "cannot resolve a node with !<" + state.tag + "> explicit tag");
+            throwError2(state, "cannot resolve a node with !<" + state.tag + "> explicit tag");
           } else {
             state.result = type.construct(state.result);
             if (state.anchor !== null) {
@@ -2400,7 +2400,7 @@ var require_loader = __commonJS({
             }
           }
         } else {
-          throwError(state, "unknown tag !<" + state.tag + ">");
+          throwError2(state, "unknown tag !<" + state.tag + ">");
         }
       }
       if (state.listener !== null) {
@@ -2408,14 +2408,14 @@ var require_loader = __commonJS({
       }
       return state.tag !== null || state.anchor !== null || hasContent;
     }
-    function readDocument(state) {
+    function readDocument2(state) {
       var documentStart = state.position, _position, directiveName, directiveArgs, hasDirectives = false, ch;
       state.version = null;
       state.checkLineBreaks = state.legacy;
       state.tagMap = {};
       state.anchorMap = {};
       while ((ch = state.input.charCodeAt(state.position)) !== 0) {
-        skipSeparationSpace(state, true, -1);
+        skipSeparationSpace2(state, true, -1);
         ch = state.input.charCodeAt(state.position);
         if (state.lineIndent > 0 || ch !== 37) {
           break;
@@ -2429,7 +2429,7 @@ var require_loader = __commonJS({
         directiveName = state.input.slice(_position, state.position);
         directiveArgs = [];
         if (directiveName.length < 1) {
-          throwError(state, "directive name must not be less than one character in length");
+          throwError2(state, "directive name must not be less than one character in length");
         }
         while (ch !== 0) {
           while (is_WHITE_SPACE(ch)) {
@@ -2455,33 +2455,33 @@ var require_loader = __commonJS({
           throwWarning(state, 'unknown document directive "' + directiveName + '"');
         }
       }
-      skipSeparationSpace(state, true, -1);
+      skipSeparationSpace2(state, true, -1);
       if (state.lineIndent === 0 && state.input.charCodeAt(state.position) === 45 && state.input.charCodeAt(state.position + 1) === 45 && state.input.charCodeAt(state.position + 2) === 45) {
         state.position += 3;
-        skipSeparationSpace(state, true, -1);
+        skipSeparationSpace2(state, true, -1);
       } else if (hasDirectives) {
-        throwError(state, "directives end mark is expected");
+        throwError2(state, "directives end mark is expected");
       }
-      composeNode(state, state.lineIndent - 1, CONTEXT_BLOCK_OUT, false, true);
-      skipSeparationSpace(state, true, -1);
+      composeNode(state, state.lineIndent - 1, CONTEXT_BLOCK_OUT2, false, true);
+      skipSeparationSpace2(state, true, -1);
       if (state.checkLineBreaks && PATTERN_NON_ASCII_LINE_BREAKS.test(state.input.slice(documentStart, state.position))) {
         throwWarning(state, "non-ASCII line breaks are interpreted as content");
       }
       state.documents.push(state.result);
-      if (state.position === state.lineStart && testDocumentSeparator(state)) {
+      if (state.position === state.lineStart && testDocumentSeparator2(state)) {
         if (state.input.charCodeAt(state.position) === 46) {
           state.position += 3;
-          skipSeparationSpace(state, true, -1);
+          skipSeparationSpace2(state, true, -1);
         }
         return;
       }
       if (state.position < state.length - 1) {
-        throwError(state, "end of the stream or a document separator is expected");
+        throwError2(state, "end of the stream or a document separator is expected");
       } else {
         return;
       }
     }
-    function loadDocuments(input2, options2) {
+    function loadDocuments2(input2, options2) {
       input2 = String(input2);
       options2 = options2 || {};
       if (input2.length !== 0) {
@@ -2496,7 +2496,7 @@ var require_loader = __commonJS({
       var nullpos = input2.indexOf("\0");
       if (nullpos !== -1) {
         state.position = nullpos;
-        throwError(state, "null byte is not allowed in input");
+        throwError2(state, "null byte is not allowed in input");
       }
       state.input += "\0";
       while (state.input.charCodeAt(state.position) === 32) {
@@ -2504,7 +2504,7 @@ var require_loader = __commonJS({
         state.position += 1;
       }
       while (state.position < state.length - 1) {
-        readDocument(state);
+        readDocument2(state);
       }
       return state.documents;
     }
@@ -2513,7 +2513,7 @@ var require_loader = __commonJS({
         options2 = iterator;
         iterator = null;
       }
-      var documents = loadDocuments(input2, options2);
+      var documents = loadDocuments2(input2, options2);
       if (typeof iterator !== "function") {
         return documents;
       }
@@ -2522,13 +2522,13 @@ var require_loader = __commonJS({
       }
     }
     function load2(input2, options2) {
-      var documents = loadDocuments(input2, options2);
+      var documents = loadDocuments2(input2, options2);
       if (documents.length === 0) {
         return void 0;
       } else if (documents.length === 1) {
         return documents[0];
       }
-      throw new YAMLException("expected a single document in the stream, but found more");
+      throw new YAMLException3("expected a single document in the stream, but found more");
     }
     function safeLoadAll(input2, iterator, options2) {
       if (typeof iterator === "object" && iterator !== null && typeof options2 === "undefined") {
@@ -2552,7 +2552,7 @@ var require_dumper = __commonJS({
   "node_modules/.pnpm/js-yaml@3.15.2/node_modules/js-yaml/lib/js-yaml/dumper.js"(exports2, module2) {
     "use strict";
     var common = require_common();
-    var YAMLException = require_exception();
+    var YAMLException3 = require_exception();
     var DEFAULT_FULL_SCHEMA = require_default_full();
     var DEFAULT_SAFE_SCHEMA = require_default_safe();
     var _toString = Object.prototype.toString;
@@ -2647,7 +2647,7 @@ var require_dumper = __commonJS({
         handle = "U";
         length = 8;
       } else {
-        throw new YAMLException("code point within a string may not be greater than 0xFFFFFFFF");
+        throw new YAMLException3("code point within a string may not be greater than 0xFFFFFFFF");
       }
       return "\\" + handle + common.repeat("0", length - string4.length) + string4;
     }
@@ -2792,7 +2792,7 @@ var require_dumper = __commonJS({
           case STYLE_DOUBLE:
             return '"' + escapeString(string4, lineWidth) + '"';
           default:
-            throw new YAMLException("impossible error: invalid scalar style");
+            throw new YAMLException3("impossible error: invalid scalar style");
         }
       })();
     }
@@ -2925,7 +2925,7 @@ var require_dumper = __commonJS({
       } else if (typeof state.sortKeys === "function") {
         objectKeyList.sort(state.sortKeys);
       } else if (state.sortKeys) {
-        throw new YAMLException("sortKeys must be a boolean or a function");
+        throw new YAMLException3("sortKeys must be a boolean or a function");
       }
       for (index = 0, length = objectKeyList.length; index < length; index += 1) {
         pairBuffer = "";
@@ -2977,7 +2977,7 @@ var require_dumper = __commonJS({
             } else if (_hasOwnProperty.call(type.represent, style)) {
               _result = type.represent[style](object2, style);
             } else {
-              throw new YAMLException("!<" + type.tag + '> tag resolver accepts not "' + style + '" style');
+              throw new YAMLException3("!<" + type.tag + '> tag resolver accepts not "' + style + '" style');
             }
             state.dump = _result;
           }
@@ -3041,7 +3041,7 @@ var require_dumper = __commonJS({
           }
         } else {
           if (state.skipInvalid) return false;
-          throw new YAMLException("unacceptable kind of an object to dump " + type);
+          throw new YAMLException3("unacceptable kind of an object to dump " + type);
         }
         if (state.tag !== null && state.tag !== "?") {
           state.dump = "!<" + state.tag + "> " + state.dump;
@@ -3318,10 +3318,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file2.data, data);
       const open2 = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter4 = engine.stringify(data, options2).trim();
+      const matter6 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter4 !== "{}") {
-        buf = newline(open2) + newline(matter4) + newline(close);
+      if (matter6 !== "{}") {
+        buf = newline(open2) + newline(matter6) + newline(close);
       }
       if (typeof file2.excerpt === "string" && file2.excerpt !== "") {
         if (str2.indexOf(file2.excerpt.trim()) === -1) {
@@ -3418,7 +3418,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs5 = require("fs");
+    var fs6 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3427,19 +3427,19 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse4 = require_parse();
     var utils = require_utils();
-    function matter4(input2, options2) {
+    function matter6(input2, options2) {
       if (input2 === "") {
         return { data: {}, content: input2, excerpt: "", orig: input2 };
       }
       let file2 = toFile(input2);
-      const cached2 = matter4.cache[file2.content];
+      const cached2 = matter6.cache[file2.content];
       if (!options2) {
         if (cached2) {
           file2 = Object.assign({}, cached2);
           file2.orig = cached2.orig;
           return file2;
         }
-        matter4.cache[file2.content] = file2;
+        matter6.cache[file2.content] = file2;
       }
       return parseMatter(file2, options2);
     }
@@ -3461,7 +3461,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter4.language(str2, opts);
+      const language = matter6.language(str2, opts);
       if (language.name) {
         file2.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -3496,24 +3496,24 @@ var require_gray_matter = __commonJS({
       }
       return file2;
     }
-    matter4.engines = engines2;
-    matter4.stringify = function(file2, data, options2) {
-      if (typeof file2 === "string") file2 = matter4(file2, options2);
+    matter6.engines = engines2;
+    matter6.stringify = function(file2, data, options2) {
+      if (typeof file2 === "string") file2 = matter6(file2, options2);
       return stringify(file2, data, options2);
     };
-    matter4.read = function(filepath, options2) {
-      const str2 = fs5.readFileSync(filepath, "utf8");
-      const file2 = matter4(str2, options2);
+    matter6.read = function(filepath, options2) {
+      const str2 = fs6.readFileSync(filepath, "utf8");
+      const file2 = matter6(str2, options2);
       file2.path = filepath;
       return file2;
     };
-    matter4.test = function(str2, options2) {
+    matter6.test = function(str2, options2) {
       return utils.startsWith(str2, defaults(options2).delimiters[0]);
     };
-    matter4.language = function(str2, options2) {
+    matter6.language = function(str2, options2) {
       const opts = defaults(options2);
       const open2 = opts.delimiters[0];
-      if (matter4.test(str2)) {
+      if (matter6.test(str2)) {
         str2 = str2.slice(open2.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -3522,16 +3522,882 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter4.cache = {};
-    matter4.clearCache = function() {
-      matter4.cache = {};
+    matter6.cache = {};
+    matter6.clearCache = function() {
+      matter6.cache = {};
     };
-    module2.exports = matter4;
+    module2.exports = matter6;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/max.js
+var require_max = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/max.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/nil.js
+var require_nil = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/nil.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = "00000000-0000-0000-0000-000000000000";
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/regex.js
+var require_regex = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/regex.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/validate.js
+var require_validate = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/validate.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var regex_js_1 = require_regex();
+    function validate2(uuid3) {
+      return typeof uuid3 === "string" && regex_js_1.default.test(uuid3);
+    }
+    exports2.default = validate2;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/parse.js
+var require_parse2 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/parse.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var validate_js_1 = require_validate();
+    function parse4(uuid3) {
+      if (!(0, validate_js_1.default)(uuid3)) {
+        throw TypeError("Invalid UUID");
+      }
+      let v;
+      return Uint8Array.of((v = parseInt(uuid3.slice(0, 8), 16)) >>> 24, v >>> 16 & 255, v >>> 8 & 255, v & 255, (v = parseInt(uuid3.slice(9, 13), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(14, 18), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(19, 23), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(24, 36), 16)) / 1099511627776 & 255, v / 4294967296 & 255, v >>> 24 & 255, v >>> 16 & 255, v >>> 8 & 255, v & 255);
+    }
+    exports2.default = parse4;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/stringify.js
+var require_stringify2 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/stringify.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.unsafeStringify = void 0;
+    var validate_js_1 = require_validate();
+    var byteToHex = [];
+    for (let i = 0; i < 256; ++i) {
+      byteToHex.push((i + 256).toString(16).slice(1));
+    }
+    function unsafeStringify(arr, offset = 0) {
+      return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+    }
+    exports2.unsafeStringify = unsafeStringify;
+    function stringify(arr, offset = 0) {
+      const uuid3 = unsafeStringify(arr, offset);
+      if (!(0, validate_js_1.default)(uuid3)) {
+        throw TypeError("Stringified UUID is invalid");
+      }
+      return uuid3;
+    }
+    exports2.default = stringify;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/rng.js
+var require_rng = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/rng.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    var rnds8Pool = new Uint8Array(256);
+    var poolPtr = rnds8Pool.length;
+    function rng() {
+      if (poolPtr > rnds8Pool.length - 16) {
+        (0, crypto_1.randomFillSync)(rnds8Pool);
+        poolPtr = 0;
+      }
+      return rnds8Pool.slice(poolPtr, poolPtr += 16);
+    }
+    exports2.default = rng;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1.js
+var require_v1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.updateV1State = void 0;
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify2();
+    var _state = {};
+    function v1(options2, buf, offset) {
+      let bytes;
+      const isV6 = options2?._v6 ?? false;
+      if (options2) {
+        const optionsKeys = Object.keys(options2);
+        if (optionsKeys.length === 1 && optionsKeys[0] === "_v6") {
+          options2 = void 0;
+        }
+      }
+      if (options2) {
+        bytes = v1Bytes(options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)(), options2.msecs, options2.nsecs, options2.clockseq, options2.node, buf, offset);
+      } else {
+        const now = Date.now();
+        const rnds = (0, rng_js_1.default)();
+        updateV1State(_state, now, rnds);
+        bytes = v1Bytes(rnds, _state.msecs, _state.nsecs, isV6 ? void 0 : _state.clockseq, isV6 ? void 0 : _state.node, buf, offset);
+      }
+      return buf ?? (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    function updateV1State(state, now, rnds) {
+      state.msecs ??= -Infinity;
+      state.nsecs ??= 0;
+      if (now === state.msecs) {
+        state.nsecs++;
+        if (state.nsecs >= 1e4) {
+          state.node = void 0;
+          state.nsecs = 0;
+        }
+      } else if (now > state.msecs) {
+        state.nsecs = 0;
+      } else if (now < state.msecs) {
+        state.node = void 0;
+      }
+      if (!state.node) {
+        state.node = rnds.slice(10, 16);
+        state.node[0] |= 1;
+        state.clockseq = (rnds[8] << 8 | rnds[9]) & 16383;
+      }
+      state.msecs = now;
+      return state;
+    }
+    exports2.updateV1State = updateV1State;
+    function v1Bytes(rnds, msecs, nsecs, clockseq, node2, buf, offset = 0) {
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      if (!buf) {
+        buf = new Uint8Array(16);
+        offset = 0;
+      } else {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+      }
+      msecs ??= Date.now();
+      nsecs ??= 0;
+      clockseq ??= (rnds[8] << 8 | rnds[9]) & 16383;
+      node2 ??= rnds.slice(10, 16);
+      msecs += 122192928e5;
+      const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
+      buf[offset++] = tl >>> 24 & 255;
+      buf[offset++] = tl >>> 16 & 255;
+      buf[offset++] = tl >>> 8 & 255;
+      buf[offset++] = tl & 255;
+      const tmh = msecs / 4294967296 * 1e4 & 268435455;
+      buf[offset++] = tmh >>> 8 & 255;
+      buf[offset++] = tmh & 255;
+      buf[offset++] = tmh >>> 24 & 15 | 16;
+      buf[offset++] = tmh >>> 16 & 255;
+      buf[offset++] = clockseq >>> 8 | 128;
+      buf[offset++] = clockseq & 255;
+      for (let n = 0; n < 6; ++n) {
+        buf[offset++] = node2[n];
+      }
+      return buf;
+    }
+    exports2.default = v1;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1ToV6.js
+var require_v1ToV6 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1ToV6.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var parse_js_1 = require_parse2();
+    var stringify_js_1 = require_stringify2();
+    function v1ToV6(uuid3) {
+      const v1Bytes = typeof uuid3 === "string" ? (0, parse_js_1.default)(uuid3) : uuid3;
+      const v6Bytes = _v1ToV6(v1Bytes);
+      return typeof uuid3 === "string" ? (0, stringify_js_1.unsafeStringify)(v6Bytes) : v6Bytes;
+    }
+    exports2.default = v1ToV6;
+    function _v1ToV6(v1Bytes) {
+      return Uint8Array.of((v1Bytes[6] & 15) << 4 | v1Bytes[7] >> 4 & 15, (v1Bytes[7] & 15) << 4 | (v1Bytes[4] & 240) >> 4, (v1Bytes[4] & 15) << 4 | (v1Bytes[5] & 240) >> 4, (v1Bytes[5] & 15) << 4 | (v1Bytes[0] & 240) >> 4, (v1Bytes[0] & 15) << 4 | (v1Bytes[1] & 240) >> 4, (v1Bytes[1] & 15) << 4 | (v1Bytes[2] & 240) >> 4, 96 | v1Bytes[2] & 15, v1Bytes[3], v1Bytes[8], v1Bytes[9], v1Bytes[10], v1Bytes[11], v1Bytes[12], v1Bytes[13], v1Bytes[14], v1Bytes[15]);
+    }
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/md5.js
+var require_md5 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/md5.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    function md5(bytes) {
+      if (Array.isArray(bytes)) {
+        bytes = Buffer.from(bytes);
+      } else if (typeof bytes === "string") {
+        bytes = Buffer.from(bytes, "utf8");
+      }
+      return (0, crypto_1.createHash)("md5").update(bytes).digest();
+    }
+    exports2.default = md5;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v35.js
+var require_v35 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v35.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = exports2.stringToBytes = void 0;
+    var parse_js_1 = require_parse2();
+    var stringify_js_1 = require_stringify2();
+    function stringToBytes(str2) {
+      str2 = unescape(encodeURIComponent(str2));
+      const bytes = new Uint8Array(str2.length);
+      for (let i = 0; i < str2.length; ++i) {
+        bytes[i] = str2.charCodeAt(i);
+      }
+      return bytes;
+    }
+    exports2.stringToBytes = stringToBytes;
+    exports2.DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    exports2.URL = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+    function v35(version2, hash2, value, namespace, buf, offset) {
+      const valueBytes = typeof value === "string" ? stringToBytes(value) : value;
+      const namespaceBytes = typeof namespace === "string" ? (0, parse_js_1.default)(namespace) : namespace;
+      if (typeof namespace === "string") {
+        namespace = (0, parse_js_1.default)(namespace);
+      }
+      if (namespace?.length !== 16) {
+        throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
+      }
+      let bytes = new Uint8Array(16 + valueBytes.length);
+      bytes.set(namespaceBytes);
+      bytes.set(valueBytes, namespaceBytes.length);
+      bytes = hash2(bytes);
+      bytes[6] = bytes[6] & 15 | version2;
+      bytes[8] = bytes[8] & 63 | 128;
+      if (buf) {
+        offset = offset || 0;
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; ++i) {
+          buf[offset + i] = bytes[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    exports2.default = v35;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v3.js
+var require_v3 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v3.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = void 0;
+    var md5_js_1 = require_md5();
+    var v35_js_1 = require_v35();
+    var v35_js_2 = require_v35();
+    Object.defineProperty(exports2, "DNS", { enumerable: true, get: function() {
+      return v35_js_2.DNS;
+    } });
+    Object.defineProperty(exports2, "URL", { enumerable: true, get: function() {
+      return v35_js_2.URL;
+    } });
+    function v3(value, namespace, buf, offset) {
+      return (0, v35_js_1.default)(48, md5_js_1.default, value, namespace, buf, offset);
+    }
+    v3.DNS = v35_js_1.DNS;
+    v3.URL = v35_js_1.URL;
+    exports2.default = v3;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/native.js
+var require_native = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/native.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    exports2.default = { randomUUID: crypto_1.randomUUID };
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v4.js
+var require_v4 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v4.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var native_js_1 = require_native();
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify2();
+    function v4(options2, buf, offset) {
+      if (native_js_1.default.randomUUID && !buf && !options2) {
+        return native_js_1.default.randomUUID();
+      }
+      options2 = options2 || {};
+      const rnds = options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)();
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      rnds[6] = rnds[6] & 15 | 64;
+      rnds[8] = rnds[8] & 63 | 128;
+      if (buf) {
+        offset = offset || 0;
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; ++i) {
+          buf[offset + i] = rnds[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(rnds);
+    }
+    exports2.default = v4;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/sha1.js
+var require_sha1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/sha1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    function sha1(bytes) {
+      if (Array.isArray(bytes)) {
+        bytes = Buffer.from(bytes);
+      } else if (typeof bytes === "string") {
+        bytes = Buffer.from(bytes, "utf8");
+      }
+      return (0, crypto_1.createHash)("sha1").update(bytes).digest();
+    }
+    exports2.default = sha1;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v5.js
+var require_v5 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v5.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = void 0;
+    var sha1_js_1 = require_sha1();
+    var v35_js_1 = require_v35();
+    var v35_js_2 = require_v35();
+    Object.defineProperty(exports2, "DNS", { enumerable: true, get: function() {
+      return v35_js_2.DNS;
+    } });
+    Object.defineProperty(exports2, "URL", { enumerable: true, get: function() {
+      return v35_js_2.URL;
+    } });
+    function v5(value, namespace, buf, offset) {
+      return (0, v35_js_1.default)(80, sha1_js_1.default, value, namespace, buf, offset);
+    }
+    v5.DNS = v35_js_1.DNS;
+    v5.URL = v35_js_1.URL;
+    exports2.default = v5;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6.js
+var require_v6 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var stringify_js_1 = require_stringify2();
+    var v1_js_1 = require_v1();
+    var v1ToV6_js_1 = require_v1ToV6();
+    function v6(options2, buf, offset) {
+      options2 ??= {};
+      offset ??= 0;
+      let bytes = (0, v1_js_1.default)({ ...options2, _v6: true }, new Uint8Array(16));
+      bytes = (0, v1ToV6_js_1.default)(bytes);
+      if (buf) {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; i++) {
+          buf[offset + i] = bytes[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    exports2.default = v6;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6ToV1.js
+var require_v6ToV1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6ToV1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var parse_js_1 = require_parse2();
+    var stringify_js_1 = require_stringify2();
+    function v6ToV1(uuid3) {
+      const v6Bytes = typeof uuid3 === "string" ? (0, parse_js_1.default)(uuid3) : uuid3;
+      const v1Bytes = _v6ToV1(v6Bytes);
+      return typeof uuid3 === "string" ? (0, stringify_js_1.unsafeStringify)(v1Bytes) : v1Bytes;
+    }
+    exports2.default = v6ToV1;
+    function _v6ToV1(v6Bytes) {
+      return Uint8Array.of((v6Bytes[3] & 15) << 4 | v6Bytes[4] >> 4 & 15, (v6Bytes[4] & 15) << 4 | (v6Bytes[5] & 240) >> 4, (v6Bytes[5] & 15) << 4 | v6Bytes[6] & 15, v6Bytes[7], (v6Bytes[1] & 15) << 4 | (v6Bytes[2] & 240) >> 4, (v6Bytes[2] & 15) << 4 | (v6Bytes[3] & 240) >> 4, 16 | (v6Bytes[0] & 240) >> 4, (v6Bytes[0] & 15) << 4 | (v6Bytes[1] & 240) >> 4, v6Bytes[8], v6Bytes[9], v6Bytes[10], v6Bytes[11], v6Bytes[12], v6Bytes[13], v6Bytes[14], v6Bytes[15]);
+    }
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v7.js
+var require_v7 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v7.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.updateV7State = void 0;
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify2();
+    var _state = {};
+    function v7(options2, buf, offset) {
+      let bytes;
+      if (options2) {
+        bytes = v7Bytes(options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)(), options2.msecs, options2.seq, buf, offset);
+      } else {
+        const now = Date.now();
+        const rnds = (0, rng_js_1.default)();
+        updateV7State(_state, now, rnds);
+        bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
+      }
+      return buf ?? (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    function updateV7State(state, now, rnds) {
+      state.msecs ??= -Infinity;
+      state.seq ??= 0;
+      if (now > state.msecs) {
+        state.seq = rnds[6] << 23 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
+        state.msecs = now;
+      } else {
+        state.seq = state.seq + 1 | 0;
+        if (state.seq === 0) {
+          state.msecs++;
+        }
+      }
+      return state;
+    }
+    exports2.updateV7State = updateV7State;
+    function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      if (!buf) {
+        buf = new Uint8Array(16);
+        offset = 0;
+      } else {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+      }
+      msecs ??= Date.now();
+      seq ??= rnds[6] * 127 << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
+      buf[offset++] = msecs / 1099511627776 & 255;
+      buf[offset++] = msecs / 4294967296 & 255;
+      buf[offset++] = msecs / 16777216 & 255;
+      buf[offset++] = msecs / 65536 & 255;
+      buf[offset++] = msecs / 256 & 255;
+      buf[offset++] = msecs & 255;
+      buf[offset++] = 112 | seq >>> 28 & 15;
+      buf[offset++] = seq >>> 20 & 255;
+      buf[offset++] = 128 | seq >>> 14 & 63;
+      buf[offset++] = seq >>> 6 & 255;
+      buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
+      buf[offset++] = rnds[11];
+      buf[offset++] = rnds[12];
+      buf[offset++] = rnds[13];
+      buf[offset++] = rnds[14];
+      buf[offset++] = rnds[15];
+      return buf;
+    }
+    exports2.default = v7;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/version.js
+var require_version = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/version.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var validate_js_1 = require_validate();
+    function version2(uuid3) {
+      if (!(0, validate_js_1.default)(uuid3)) {
+        throw TypeError("Invalid UUID");
+      }
+      return parseInt(uuid3.slice(14, 15), 16);
+    }
+    exports2.default = version2;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/index.js
+var require_cjs = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/index.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.version = exports2.validate = exports2.v7 = exports2.v6ToV1 = exports2.v6 = exports2.v5 = exports2.v4 = exports2.v3 = exports2.v1ToV6 = exports2.v1 = exports2.stringify = exports2.parse = exports2.NIL = exports2.MAX = void 0;
+    var max_js_1 = require_max();
+    Object.defineProperty(exports2, "MAX", { enumerable: true, get: function() {
+      return max_js_1.default;
+    } });
+    var nil_js_1 = require_nil();
+    Object.defineProperty(exports2, "NIL", { enumerable: true, get: function() {
+      return nil_js_1.default;
+    } });
+    var parse_js_1 = require_parse2();
+    Object.defineProperty(exports2, "parse", { enumerable: true, get: function() {
+      return parse_js_1.default;
+    } });
+    var stringify_js_1 = require_stringify2();
+    Object.defineProperty(exports2, "stringify", { enumerable: true, get: function() {
+      return stringify_js_1.default;
+    } });
+    var v1_js_1 = require_v1();
+    Object.defineProperty(exports2, "v1", { enumerable: true, get: function() {
+      return v1_js_1.default;
+    } });
+    var v1ToV6_js_1 = require_v1ToV6();
+    Object.defineProperty(exports2, "v1ToV6", { enumerable: true, get: function() {
+      return v1ToV6_js_1.default;
+    } });
+    var v3_js_1 = require_v3();
+    Object.defineProperty(exports2, "v3", { enumerable: true, get: function() {
+      return v3_js_1.default;
+    } });
+    var v4_js_1 = require_v4();
+    Object.defineProperty(exports2, "v4", { enumerable: true, get: function() {
+      return v4_js_1.default;
+    } });
+    var v5_js_1 = require_v5();
+    Object.defineProperty(exports2, "v5", { enumerable: true, get: function() {
+      return v5_js_1.default;
+    } });
+    var v6_js_1 = require_v6();
+    Object.defineProperty(exports2, "v6", { enumerable: true, get: function() {
+      return v6_js_1.default;
+    } });
+    var v6ToV1_js_1 = require_v6ToV1();
+    Object.defineProperty(exports2, "v6ToV1", { enumerable: true, get: function() {
+      return v6ToV1_js_1.default;
+    } });
+    var v7_js_1 = require_v7();
+    Object.defineProperty(exports2, "v7", { enumerable: true, get: function() {
+      return v7_js_1.default;
+    } });
+    var validate_js_1 = require_validate();
+    Object.defineProperty(exports2, "validate", { enumerable: true, get: function() {
+      return validate_js_1.default;
+    } });
+    var version_js_1 = require_version();
+    Object.defineProperty(exports2, "version", { enumerable: true, get: function() {
+      return version_js_1.default;
+    } });
+  }
+});
+
+// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
+var require_safe_buffer = __commonJS({
+  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
+    var buffer = require("buffer");
+    var Buffer2 = buffer.Buffer;
+    function copyProps(src, dst) {
+      for (var key in src) {
+        dst[key] = src[key];
+      }
+    }
+    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
+      module2.exports = buffer;
+    } else {
+      copyProps(buffer, exports2);
+      exports2.Buffer = SafeBuffer;
+    }
+    function SafeBuffer(arg, encodingOrOffset, length) {
+      return Buffer2(arg, encodingOrOffset, length);
+    }
+    SafeBuffer.prototype = Object.create(Buffer2.prototype);
+    copyProps(Buffer2, SafeBuffer);
+    SafeBuffer.from = function(arg, encodingOrOffset, length) {
+      if (typeof arg === "number") {
+        throw new TypeError("Argument must not be a number");
+      }
+      return Buffer2(arg, encodingOrOffset, length);
+    };
+    SafeBuffer.alloc = function(size, fill, encoding) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      var buf = Buffer2(size);
+      if (fill !== void 0) {
+        if (typeof encoding === "string") {
+          buf.fill(fill, encoding);
+        } else {
+          buf.fill(fill);
+        }
+      } else {
+        buf.fill(0);
+      }
+      return buf;
+    };
+    SafeBuffer.allocUnsafe = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return Buffer2(size);
+    };
+    SafeBuffer.allocUnsafeSlow = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return buffer.SlowBuffer(size);
+    };
+  }
+});
+
+// node_modules/.pnpm/base-x@3.0.11/node_modules/base-x/src/index.js
+var require_src = __commonJS({
+  "node_modules/.pnpm/base-x@3.0.11/node_modules/base-x/src/index.js"(exports2, module2) {
+    "use strict";
+    var _Buffer = require_safe_buffer().Buffer;
+    function base(ALPHABET) {
+      if (ALPHABET.length >= 255) {
+        throw new TypeError("Alphabet too long");
+      }
+      var BASE_MAP = new Uint8Array(256);
+      for (var j = 0; j < BASE_MAP.length; j++) {
+        BASE_MAP[j] = 255;
+      }
+      for (var i = 0; i < ALPHABET.length; i++) {
+        var x = ALPHABET.charAt(i);
+        var xc = x.charCodeAt(0);
+        if (BASE_MAP[xc] !== 255) {
+          throw new TypeError(x + " is ambiguous");
+        }
+        BASE_MAP[xc] = i;
+      }
+      var BASE = ALPHABET.length;
+      var LEADER = ALPHABET.charAt(0);
+      var FACTOR = Math.log(BASE) / Math.log(256);
+      var iFACTOR = Math.log(256) / Math.log(BASE);
+      function encode3(source) {
+        if (Array.isArray(source) || source instanceof Uint8Array) {
+          source = _Buffer.from(source);
+        }
+        if (!_Buffer.isBuffer(source)) {
+          throw new TypeError("Expected Buffer");
+        }
+        if (source.length === 0) {
+          return "";
+        }
+        var zeroes = 0;
+        var length = 0;
+        var pbegin = 0;
+        var pend = source.length;
+        while (pbegin !== pend && source[pbegin] === 0) {
+          pbegin++;
+          zeroes++;
+        }
+        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
+        var b58 = new Uint8Array(size);
+        while (pbegin !== pend) {
+          var carry = source[pbegin];
+          var i2 = 0;
+          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
+            carry += 256 * b58[it1] >>> 0;
+            b58[it1] = carry % BASE >>> 0;
+            carry = carry / BASE >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          pbegin++;
+        }
+        var it2 = size - length;
+        while (it2 !== size && b58[it2] === 0) {
+          it2++;
+        }
+        var str2 = LEADER.repeat(zeroes);
+        for (; it2 < size; ++it2) {
+          str2 += ALPHABET.charAt(b58[it2]);
+        }
+        return str2;
+      }
+      function decodeUnsafe(source) {
+        if (typeof source !== "string") {
+          throw new TypeError("Expected String");
+        }
+        if (source.length === 0) {
+          return _Buffer.alloc(0);
+        }
+        var psz = 0;
+        var zeroes = 0;
+        var length = 0;
+        while (source[psz] === LEADER) {
+          zeroes++;
+          psz++;
+        }
+        var size = (source.length - psz) * FACTOR + 1 >>> 0;
+        var b256 = new Uint8Array(size);
+        while (psz < source.length) {
+          var charCode = source.charCodeAt(psz);
+          if (charCode > 255) {
+            return;
+          }
+          var carry = BASE_MAP[charCode];
+          if (carry === 255) {
+            return;
+          }
+          var i2 = 0;
+          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
+            carry += BASE * b256[it3] >>> 0;
+            b256[it3] = carry % 256 >>> 0;
+            carry = carry / 256 >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          psz++;
+        }
+        var it4 = size - length;
+        while (it4 !== size && b256[it4] === 0) {
+          it4++;
+        }
+        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
+        vch.fill(0, 0, zeroes);
+        var j2 = zeroes;
+        while (it4 !== size) {
+          vch[j2++] = b256[it4++];
+        }
+        return vch;
+      }
+      function decode3(string4) {
+        var buffer = decodeUnsafe(string4);
+        if (buffer) {
+          return buffer;
+        }
+        throw new Error("Non-base" + BASE + " character");
+      }
+      return {
+        encode: encode3,
+        decodeUnsafe,
+        decode: decode3
+      };
+    }
+    module2.exports = base;
+  }
+});
+
+// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
+var require_uuid62 = __commonJS({
+  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
+    "use strict";
+    var uuid3 = require_cjs();
+    var uuidv1 = uuid3.v1;
+    var uuidv42 = uuid3.v4;
+    var uuidv5 = uuid3.v5;
+    var baseX = require_src();
+    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    var OUTPUT_LENGTH = 22;
+    var UUID_LENGTH = 32;
+    var Buffer2 = global ? global.Buffer : void 0;
+    if (typeof Buffer2 === "undefined") {
+      Buffer2 = require("buffer").Buffer;
+    }
+    var UUID62 = class {
+      constructor() {
+        this.base = base62;
+        this.uuid = uuid3;
+        this.baseX = baseX;
+        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
+        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
+      }
+      get customBase() {
+        return this.base;
+      }
+      set customBase(base) {
+        this.base = base;
+      }
+      get length() {
+        return OUTPUT_LENGTH;
+      }
+      get uuidLength() {
+        return UUID_LENGTH;
+      }
+      v4() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv42.apply(this, args);
+        return this.encode(id);
+      }
+      v5() {
+        const args = Array.prototype.slice.call(arguments);
+        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
+          args[1] = this.decode(args[1]);
+        }
+        const id = uuidv5.apply(this, args);
+        return this.encode(id);
+      }
+      v1() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv1.apply(this, args);
+        return this.encode(id);
+      }
+      encode(input2, encoding) {
+        encoding = encoding || "hex";
+        if (typeof input2 === "string") {
+          input2 = new Buffer2(input2.replace(/-/g, ""), encoding);
+        }
+        return ensureLength(this.base.encode(input2), OUTPUT_LENGTH);
+      }
+      decode(input2, encoding) {
+        encoding = encoding || "hex";
+        const res = ensureLength(
+          new Buffer2(this.base.decode(input2)).toString(encoding),
+          UUID_LENGTH
+        );
+        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
+      }
+    };
+    function ensureLength(input2, targetLength) {
+      input2 = input2.toString();
+      return `${"0".repeat(32)}${input2}`.slice(-targetLength);
+    }
+    module2.exports = new UUID62();
   }
 });
 
 // src/skills/doc-driven-dev-graph/scripts/fetch_context.ts
-var import_node_path5 = __toESM(require("node:path"));
+var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_context.ts
 var import_node_fs4 = __toESM(require("node:fs"));
@@ -3562,6 +4428,9 @@ var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
   "changes",
   "test-spec-skip"
 ]);
+function normalizeDir(input2) {
+  return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -3618,6 +4487,9 @@ function scanRootKey(cwd, directory) {
   } catch {
     return containmentKey(absolute);
   }
+}
+function isIndexFileName(file2) {
+  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
@@ -4500,6 +5372,11 @@ function isPlainObject(data) {
   const prototype = Object.getPrototypeOf(data);
   return prototype === null || prototype === Object.prototype;
 }
+function pick(object2, keys) {
+  const result = {};
+  for (const key of keys) if (object2[key] !== void 0) result[key] = object2[key];
+  return result;
+}
 var omapTag = defineSequenceTag("tag:yaml.org,2002:omap", {
   create: () => ({
     list: [],
@@ -4850,6 +5727,131 @@ var legacyMapTag = defineMappingTag("tag:yaml.org,2002:map", {
     return container[normalizedKey];
   }
 });
+var DEFAULT_SNIPPET_OPTIONS = {
+  maxLength: 79,
+  indent: 1,
+  linesBefore: 3,
+  linesAfter: 2
+};
+function getLine(buffer, lineStart, lineEnd, position, maxLineLength) {
+  let head = "";
+  let tail = "";
+  const maxHalfLength = Math.floor(maxLineLength / 2) - 1;
+  if (position - lineStart > maxHalfLength) {
+    head = " ... ";
+    lineStart = position - maxHalfLength + head.length;
+  }
+  if (lineEnd - position > maxHalfLength) {
+    tail = " ...";
+    lineEnd = position + maxHalfLength - tail.length;
+  }
+  return {
+    str: head + buffer.slice(lineStart, lineEnd).replace(/\t/g, "\u2192") + tail,
+    pos: position - lineStart + head.length
+  };
+}
+function padStart(string4, max) {
+  return " ".repeat(Math.max(max - string4.length, 0)) + string4;
+}
+function makeSnippet(mark, options2) {
+  if (!mark.buffer) return null;
+  const opts = {
+    ...DEFAULT_SNIPPET_OPTIONS,
+    ...options2
+  };
+  const re = /\r?\n|\r|\0/g;
+  const lineStarts = [0];
+  const lineEnds = [];
+  let match;
+  let foundLineNo = -1;
+  while (match = re.exec(mark.buffer)) {
+    lineEnds.push(match.index);
+    lineStarts.push(match.index + match[0].length);
+    if (mark.position <= match.index && foundLineNo < 0) foundLineNo = lineStarts.length - 2;
+  }
+  if (foundLineNo < 0) foundLineNo = lineStarts.length - 1;
+  let result = "";
+  const lineNoLength = Math.min(mark.line + opts.linesAfter, lineEnds.length).toString().length;
+  const maxLineLength = opts.maxLength - (opts.indent + lineNoLength + 3);
+  for (let i = 1; i <= opts.linesBefore; i++) {
+    if (foundLineNo - i < 0) break;
+    const line2 = getLine(mark.buffer, lineStarts[foundLineNo - i], lineEnds[foundLineNo - i], mark.position - (lineStarts[foundLineNo] - lineStarts[foundLineNo - i]), maxLineLength);
+    result = `${" ".repeat(opts.indent)}${padStart((mark.line - i + 1).toString(), lineNoLength)} | ${line2.str}
+${result}`;
+  }
+  const line = getLine(mark.buffer, lineStarts[foundLineNo], lineEnds[foundLineNo], mark.position, maxLineLength);
+  result += `${" ".repeat(opts.indent)}${padStart((mark.line + 1).toString(), lineNoLength)} | ${line.str}
+`;
+  result += `${"-".repeat(opts.indent + lineNoLength + 3 + line.pos)}^
+`;
+  for (let i = 1; i <= opts.linesAfter; i++) {
+    if (foundLineNo + i >= lineEnds.length) break;
+    const line2 = getLine(mark.buffer, lineStarts[foundLineNo + i], lineEnds[foundLineNo + i], mark.position - (lineStarts[foundLineNo] - lineStarts[foundLineNo + i]), maxLineLength);
+    result += `${" ".repeat(opts.indent)}${padStart((mark.line + i + 1).toString(), lineNoLength)} | ${line2.str}
+`;
+  }
+  return result.replace(/\n$/, "");
+}
+function formatError(exception, compact) {
+  let where = "";
+  if (!exception.mark) return exception.reason;
+  if (exception.mark.name) where += `in "${exception.mark.name}" `;
+  where += `(${exception.mark.line + 1}:${exception.mark.column + 1})`;
+  if (!compact && exception.mark.snippet) where += `
+
+${exception.mark.snippet}`;
+  return `${exception.reason} ${where}`;
+}
+var YAMLException = class YAMLException2 extends Error {
+  reason;
+  mark;
+  /**
+  * Optional `mark` contains source snippet data. Usually, use
+  * {@link YAMLException.throwAt} instead of passing it directly.
+  */
+  constructor(reason, mark) {
+    super();
+    this.name = "YAMLException";
+    this.reason = reason;
+    this.mark = mark;
+    this.message = formatError(this, false);
+    if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
+  }
+  /**
+  * Returns the formatted error, omitting the source snippet in compact mode.
+  */
+  toString(compact) {
+    return `${this.name}: ${formatError(this, compact)}`;
+  }
+  /**
+  * Builds a YAMLException with a source snippet and throws it. `source` is
+  * the raw input text; `position` is an offset into it.
+  */
+  static throwAt(source, position, message, filename = "") {
+    let line = 0;
+    let lineStart = 0;
+    for (let index = 0; index < position; index++) {
+      const ch = source.charCodeAt(index);
+      if (ch === 10) {
+        line++;
+        lineStart = index + 1;
+      } else if (ch === 13) {
+        line++;
+        if (source.charCodeAt(index + 1) === 10) index++;
+        lineStart = index + 1;
+      }
+    }
+    const mark = {
+      name: filename,
+      buffer: source,
+      position,
+      line,
+      column: position - lineStart
+    };
+    mark.snippet = makeSnippet(mark);
+    throw new YAMLException2(message, mark);
+  }
+};
 var EVENT_ID = {
   DOCUMENT: 1,
   SEQUENCE: 2,
@@ -4874,6 +5876,7 @@ var CHOMPING_MODE = {
   STRIP: 2,
   KEEP: 3
 };
+var NO_RANGE$3 = -1;
 function simpleEscapeSequence(c) {
   switch (c) {
     case 48:
@@ -4922,12 +5925,218 @@ for (let i = 0; i < 256; i++) {
   simpleEscapeCheck[i] = simpleEscapeSequence(i) ? 1 : 0;
   simpleEscapeMap[i] = simpleEscapeSequence(i);
 }
+function charFromCodepoint(c) {
+  if (c <= 65535) return String.fromCharCode(c);
+  return String.fromCharCode((c - 65536 >> 10) + 55296, (c - 65536 & 1023) + 56320);
+}
+function fromHexCode$1(c) {
+  if (c >= 48 && c <= 57) return c - 48;
+  return (c | 32) - 97 + 10;
+}
+function escapedHexLen$1(c) {
+  if (c === 120) return 2;
+  if (c === 117) return 4;
+  return 8;
+}
+function skipFoldedBreaks(input2, position, end) {
+  let breaks = 0;
+  while (position < end) {
+    const ch = input2.charCodeAt(position);
+    if (ch === 10) {
+      breaks++;
+      position++;
+    } else if (ch === 13) {
+      breaks++;
+      position++;
+      if (input2.charCodeAt(position) === 10) position++;
+    } else if (ch === 32 || ch === 9) position++;
+    else break;
+  }
+  return {
+    position,
+    breaks
+  };
+}
+function foldedBreaks(count) {
+  if (count === 1) return " ";
+  return "\n".repeat(count - 1);
+}
+function getPlainValue(input2, start, end) {
+  let result = "";
+  let position = start;
+  let captureStart = start;
+  let captureEnd = start;
+  while (position < end) {
+    const ch = input2.charCodeAt(position);
+    if (ch === 10 || ch === 13) {
+      result += input2.slice(captureStart, captureEnd);
+      const fold = skipFoldedBreaks(input2, position, end);
+      result += foldedBreaks(fold.breaks);
+      position = captureStart = captureEnd = fold.position;
+    } else {
+      position++;
+      if (ch !== 32 && ch !== 9) captureEnd = position;
+    }
+  }
+  return result + input2.slice(captureStart, captureEnd);
+}
+function getSingleQuotedValue(input2, start, end) {
+  let result = "";
+  let position = start;
+  let captureStart = start;
+  let captureEnd = start;
+  while (position < end) {
+    const ch = input2.charCodeAt(position);
+    if (ch === 39) {
+      result += input2.slice(captureStart, position) + "'";
+      position += 2;
+      captureStart = captureEnd = position;
+    } else if (ch === 10 || ch === 13) {
+      result += input2.slice(captureStart, captureEnd);
+      const fold = skipFoldedBreaks(input2, position, end);
+      result += foldedBreaks(fold.breaks);
+      position = captureStart = captureEnd = fold.position;
+    } else {
+      position++;
+      if (ch !== 32 && ch !== 9) captureEnd = position;
+    }
+  }
+  return result + input2.slice(captureStart, end);
+}
+function getDoubleQuotedValue(input2, start, end) {
+  let result = "";
+  let position = start;
+  let captureStart = start;
+  let captureEnd = start;
+  while (position < end) {
+    const ch = input2.charCodeAt(position);
+    if (ch === 92) {
+      result += input2.slice(captureStart, position);
+      position++;
+      const escaped = input2.charCodeAt(position);
+      if (escaped === 10 || escaped === 13) position = skipFoldedBreaks(input2, position, end).position;
+      else if (escaped < 256 && simpleEscapeCheck[escaped]) {
+        result += simpleEscapeMap[escaped];
+        position++;
+      } else {
+        let hexLength = escapedHexLen$1(escaped);
+        let hexResult = 0;
+        for (; hexLength > 0; hexLength--) {
+          position++;
+          const digit = fromHexCode$1(input2.charCodeAt(position));
+          hexResult = (hexResult << 4) + digit;
+        }
+        result += charFromCodepoint(hexResult);
+        position++;
+      }
+      captureStart = captureEnd = position;
+    } else if (ch === 10 || ch === 13) {
+      result += input2.slice(captureStart, captureEnd);
+      const fold = skipFoldedBreaks(input2, position, end);
+      result += foldedBreaks(fold.breaks);
+      position = captureStart = captureEnd = fold.position;
+    } else {
+      position++;
+      if (ch !== 32 && ch !== 9) captureEnd = position;
+    }
+  }
+  return result + input2.slice(captureStart, end);
+}
+function getBlockValue(input2, start, end, indent, chomping, folded) {
+  const textIndent = indent < 0 ? 0 : indent;
+  const region = input2.slice(start, end).replace(/\r\n?/g, "\n");
+  const lines = region === "" ? [] : (region.endsWith("\n") ? region.slice(0, -1) : region).split("\n");
+  let result = "";
+  let didReadContent = false;
+  let emptyLines = 0;
+  let atMoreIndented = false;
+  for (const line of lines) {
+    let column = 0;
+    while (column < textIndent && line.charCodeAt(column) === 32) column++;
+    if (indent < 0 || column >= line.length) {
+      emptyLines++;
+      continue;
+    }
+    const content = line.slice(textIndent);
+    const first = content.charCodeAt(0);
+    if (folded) {
+      if (first === 32 || first === 9) {
+        atMoreIndented = true;
+        result += "\n".repeat(didReadContent ? 1 + emptyLines : emptyLines);
+      } else if (atMoreIndented) {
+        atMoreIndented = false;
+        result += "\n".repeat(emptyLines + 1);
+      } else if (emptyLines === 0) {
+        if (didReadContent) result += " ";
+      } else result += "\n".repeat(emptyLines);
+    } else result += "\n".repeat(didReadContent ? 1 + emptyLines : emptyLines);
+    result += content;
+    didReadContent = true;
+    emptyLines = 0;
+  }
+  if (chomping === CHOMPING_MODE.KEEP) result += "\n".repeat(didReadContent ? 1 + emptyLines : emptyLines);
+  else if (chomping !== CHOMPING_MODE.STRIP) {
+    if (didReadContent) result += "\n";
+  }
+  return result;
+}
+function getScalarValue(input2, scalar) {
+  if (scalar.valueStart === NO_RANGE$3) return "";
+  const { valueStart, valueEnd } = scalar;
+  if (scalar.fast) return input2.slice(valueStart, valueEnd);
+  switch (scalar.style) {
+    case SCALAR_STYLE.SINGLE_QUOTED:
+      return getSingleQuotedValue(input2, valueStart, valueEnd);
+    case SCALAR_STYLE.DOUBLE_QUOTED:
+      return getDoubleQuotedValue(input2, valueStart, valueEnd);
+    case SCALAR_STYLE.LITERAL_BLOCK:
+      return getBlockValue(input2, valueStart, valueEnd, scalar.indent, scalar.chomping, false);
+    case SCALAR_STYLE.FOLDED_BLOCK:
+      return getBlockValue(input2, valueStart, valueEnd, scalar.indent, scalar.chomping, true);
+    default:
+      return getPlainValue(input2, valueStart, valueEnd);
+  }
+}
 var DEFAULT_TAG_HANDLERS = Object.assign(/* @__PURE__ */ Object.create(null), {
   "!": "!",
   "!!": "tag:yaml.org,2002:"
 });
 var TAG_SUFFIX_CHARS = "-#;/?:@&=+$_.~*'()";
 var TAG_URI_CHARS = TAG_SUFFIX_CHARS + "!,[]";
+function tagPercentDecode(source) {
+  let result = "";
+  let index = 0;
+  while (index < source.length) {
+    if (source.charCodeAt(index) !== 37) {
+      result += source[index++];
+      continue;
+    }
+    let ch = parseInt(source.slice(index + 1, index + 3), 16);
+    index += 3;
+    if (ch >= 192) {
+      let remaining = ch < 224 ? 1 : ch < 240 ? 2 : 3;
+      ch &= (1 << 6 - remaining) - 1;
+      while (remaining-- > 0) {
+        ch = ch << 6 | parseInt(source.slice(index + 1, index + 3), 16) & 63;
+        index += 3;
+      }
+    }
+    if (ch < 65536) result += String.fromCharCode(ch);
+    else {
+      ch -= 65536;
+      result += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
+    }
+  }
+  return result;
+}
+function tagNameFull(rawTag, tagHandlers) {
+  if (rawTag.startsWith("!<") && rawTag.endsWith(">")) return tagPercentDecode(rawTag.slice(2, -1));
+  const handleEnd = rawTag.indexOf("!", 1);
+  const handle = handleEnd === -1 ? "!" : rawTag.slice(0, handleEnd + 1);
+  return tagPercentDecode(tagHandlers?.[handle] ?? DEFAULT_TAG_HANDLERS[handle] ?? handle) + tagPercentDecode(rawTag.slice(handle.length));
+}
+var NO_RANGE$2 = -1;
+var MERGE_TAG_NAME = "tag:yaml.org,2002:merge";
 var DEFAULT_CONSTRUCTOR_OPTIONS = {
   filename: "",
   schema: CORE_SCHEMA,
@@ -4935,6 +6144,251 @@ var DEFAULT_CONSTRUCTOR_OPTIONS = {
   maxTotalMergeKeys: 1e4,
   maxAliases: -1
 };
+function eventPosition$1(event) {
+  if ("tagStart" in event && event.tagStart !== NO_RANGE$2) return event.tagStart;
+  if ("anchorStart" in event && event.anchorStart !== NO_RANGE$2) return event.anchorStart;
+  if ("valueStart" in event && event.valueStart !== NO_RANGE$2) return event.valueStart;
+  if ("start" in event) return event.start;
+  return 0;
+}
+function throwError$1(state, message) {
+  YAMLException.throwAt(state.source, state.position, message, state.filename);
+}
+function finalizeCollection(state, position, tag, carrier) {
+  try {
+    return tag.finalize(carrier);
+  } catch (error62) {
+    if (error62 instanceof YAMLException) throw error62;
+    YAMLException.throwAt(state.source, position, error62 instanceof Error ? error62.message : String(error62), state.filename);
+  }
+}
+function constructScalar(state, event) {
+  const source = getScalarValue(state.source, event);
+  const rawTag = event.tagStart === NO_RANGE$2 ? "" : state.source.slice(event.tagStart, event.tagEnd);
+  const strTag2 = state.schema.defaultScalarTag;
+  if (rawTag !== "") {
+    if (rawTag === "!") return {
+      value: source,
+      tag: strTag2
+    };
+    const tagName = tagNameFull(rawTag, state.tagHandlers);
+    const scalarTag = state.schema.lookupScalarTag(tagName);
+    if (scalarTag) {
+      const result = scalarTag.resolve(source, true, tagName);
+      if (result === NOT_RESOLVED) throwError$1(state, `cannot resolve a node with !<${tagName}> explicit tag`);
+      return {
+        value: result,
+        tag: scalarTag
+      };
+    }
+    const collectionTagDef = state.schema.lookupMappingTag(tagName) ?? state.schema.lookupSequenceTag(tagName);
+    if (collectionTagDef) {
+      if (source !== "") throwError$1(state, `cannot resolve a node with !<${tagName}> explicit tag`);
+      const carrier = collectionTagDef.create(tagName);
+      return {
+        value: collectionTagDef.carrierIsResult ? carrier : finalizeCollection(state, state.position, collectionTagDef, carrier),
+        tag: collectionTagDef
+      };
+    }
+    throwError$1(state, `unknown scalar tag !<${tagName}>`);
+  }
+  if (event.style === SCALAR_STYLE.PLAIN) return state.schema.resolveImplicitScalarTag(source);
+  return {
+    value: strTag2.resolve(source, false, strTag2.tagName),
+    tag: strTag2
+  };
+}
+function collectionTagName(state, event, defaultTagName) {
+  const rawTag = event.tagStart === NO_RANGE$2 ? "" : state.source.slice(event.tagStart, event.tagEnd);
+  return rawTag === "" || rawTag === "!" ? defaultTagName : tagNameFull(rawTag, state.tagHandlers);
+}
+function isMappingTag(tag) {
+  return tag.nodeKind === "mapping";
+}
+function chargeMergeWork(state) {
+  state.totalMergeKeys++;
+  if (state.maxTotalMergeKeys !== -1 && state.totalMergeKeys > state.maxTotalMergeKeys) throwError$1(state, `merge keys exceeded maxTotalMergeKeys (${state.maxTotalMergeKeys})`);
+}
+function mergeKeys(state, frame, source, sourceTag) {
+  chargeMergeWork(state);
+  for (const sourceKey of sourceTag.keys(source)) {
+    chargeMergeWork(state);
+    if (frame.tag.has(frame.value, sourceKey)) continue;
+    const err = frame.tag.addPair(frame.value, sourceKey, sourceTag.get(source, sourceKey));
+    if (err) throwError$1(state, err);
+    frame.overridable ??= /* @__PURE__ */ new Set();
+    frame.overridable.add(sourceKey);
+  }
+}
+function mergeSource(state, frame, source, sourceTag) {
+  state.position = frame.keyPosition;
+  if (isMappingTag(sourceTag)) mergeKeys(state, frame, source, sourceTag);
+  else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) {
+    if (source.length > 100) throwError$1(state, "abnormal merge sequence size");
+    for (const element of source) {
+      const elementTag = state.nodeTags.get(element);
+      if (!elementTag) throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
+      mergeKeys(state, frame, element, elementTag);
+    }
+  } else throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
+}
+function addMappingValue(state, frame, key, value, tag) {
+  state.position = frame.keyPosition;
+  if (frame.keyIsMerge) {
+    mergeSource(state, frame, value, tag);
+    return;
+  }
+  if (!state.json && frame.tag.has(frame.value, key) && !frame.overridable?.has(key)) throwError$1(state, "duplicated mapping key");
+  const err = frame.tag.addPair(frame.value, key, value);
+  if (err) throwError$1(state, err);
+  frame.overridable?.delete(key);
+}
+function addValue(state, value, tag) {
+  const frame = state.frames[state.frames.length - 1];
+  if (frame.kind === "document") {
+    frame.value = value;
+    frame.hasValue = true;
+  } else if (frame.kind === "sequence") {
+    if (isMappingTag(tag)) state.nodeTags.set(value, tag);
+    const err = frame.tag.addItem(frame.value, value, frame.index++);
+    if (err) throwError$1(state, err);
+  } else if (frame.hasKey) {
+    const key = frame.key;
+    frame.key = void 0;
+    frame.hasKey = false;
+    addMappingValue(state, frame, key, value, tag);
+  } else {
+    frame.key = value;
+    frame.keyPosition = state.position;
+    frame.hasKey = true;
+    frame.keyIsMerge = tag.tagName === MERGE_TAG_NAME;
+  }
+}
+function storeAnchor(state, event, value, tag, isValueFinal) {
+  if (event.anchorStart !== NO_RANGE$2) {
+    const anchor2 = {
+      value,
+      tag,
+      isValueFinal
+    };
+    state.anchors.set(state.source.slice(event.anchorStart, event.anchorEnd), anchor2);
+    return anchor2;
+  }
+  return null;
+}
+function constructFromEvents(events, options2) {
+  const state = {
+    ...DEFAULT_CONSTRUCTOR_OPTIONS,
+    ...options2,
+    events,
+    documents: [],
+    eventIndex: 0,
+    position: 0,
+    frames: [],
+    anchors: /* @__PURE__ */ new Map(),
+    nodeTags: /* @__PURE__ */ new Map(),
+    tagHandlers: /* @__PURE__ */ Object.create(null),
+    totalMergeKeys: 0,
+    aliasCount: 0
+  };
+  while (state.eventIndex < state.events.length) {
+    const event = state.events[state.eventIndex++];
+    state.position = eventPosition$1(event);
+    switch (event.type) {
+      case EVENT_ID.DOCUMENT:
+        state.anchors = /* @__PURE__ */ new Map();
+        state.nodeTags = /* @__PURE__ */ new Map();
+        state.aliasCount = 0;
+        state.tagHandlers = /* @__PURE__ */ Object.create(null);
+        for (const directive of event.directives) if (directive.kind === "tag") state.tagHandlers[directive.handle] = directive.prefix;
+        state.frames.push({
+          kind: "document",
+          position: state.position,
+          value: void 0,
+          hasValue: false
+        });
+        break;
+      case EVENT_ID.SCALAR: {
+        const { value, tag } = constructScalar(state, event);
+        storeAnchor(state, event, value, tag, true);
+        addValue(state, value, tag);
+        break;
+      }
+      case EVENT_ID.SEQUENCE: {
+        const tagName = collectionTagName(state, event, "tag:yaml.org,2002:seq");
+        const tag = state.schema.lookupSequenceTag(tagName);
+        if (!tag) throwError$1(state, `unknown sequence tag !<${tagName}>`);
+        const value = tag.create(tagName);
+        const anchor2 = storeAnchor(state, event, value, tag, tag.carrierIsResult);
+        state.frames.push({
+          kind: "sequence",
+          position: state.position,
+          value,
+          tag,
+          anchor: anchor2,
+          index: 0
+        });
+        break;
+      }
+      case EVENT_ID.MAPPING: {
+        const tagName = collectionTagName(state, event, "tag:yaml.org,2002:map");
+        const tag = state.schema.lookupMappingTag(tagName);
+        if (!tag) throwError$1(state, `unknown mapping tag !<${tagName}>`);
+        const value = tag.create(tagName);
+        const anchor2 = storeAnchor(state, event, value, tag, tag.carrierIsResult);
+        state.frames.push({
+          kind: "mapping",
+          position: state.position,
+          value,
+          tag,
+          anchor: anchor2,
+          key: void 0,
+          keyPosition: state.position,
+          hasKey: false,
+          keyIsMerge: false,
+          overridable: null
+        });
+        break;
+      }
+      case EVENT_ID.ALIAS: {
+        if (state.maxAliases !== -1 && ++state.aliasCount > state.maxAliases) throwError$1(state, `aliases exceeded maxAliases (${state.maxAliases})`);
+        const name = state.source.slice(event.anchorStart, event.anchorEnd);
+        const anchor2 = state.anchors.get(name);
+        if (!anchor2) throwError$1(state, `unidentified alias "${name}"`);
+        if (!anchor2.isValueFinal) throwError$1(state, `recursive alias "${name}" is not supported for tag ${anchor2.tag.tagName} because it uses finalize()`);
+        addValue(state, anchor2.value, anchor2.tag);
+        break;
+      }
+      case EVENT_ID.POP: {
+        const frame = state.frames.pop();
+        if (frame.kind === "mapping" && frame.hasKey) {
+          state.position = frame.keyPosition;
+          throwError$1(state, "incomplete mapping pair in event stream");
+        }
+        if (frame.kind === "document") state.documents.push(frame.value);
+        else {
+          const value = frame.tag.carrierIsResult ? frame.value : finalizeCollection(state, frame.position, frame.tag, frame.value);
+          if (frame.anchor) {
+            frame.anchor.value = value;
+            frame.anchor.isValueFinal = true;
+          }
+          addValue(state, value, frame.tag);
+        }
+        break;
+      }
+    }
+  }
+  return state.documents;
+}
+var NO_RANGE$1 = -1;
+var HAS_OWN = Object.prototype.hasOwnProperty;
+var CONTEXT_FLOW_IN = 1;
+var CONTEXT_FLOW_OUT = 2;
+var CONTEXT_BLOCK_IN = 3;
+var CONTEXT_BLOCK_OUT = 4;
+var PATTERN_NON_PRINTABLE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/;
+var PATTERN_FLOW_INDICATORS = /[,\[\]{}]/;
+var PATTERN_TAG_HANDLE = /^(?:!|!!|![0-9A-Za-z-]+!)$/;
 var NS_URI_CHAR = String.raw`(?:%[0-9A-Fa-f]{2}|[0-9A-Za-z\-#;/?:@&=+$,_.!~*'()\[\]])`;
 var NS_TAG_CHAR = String.raw`(?:%[0-9A-Fa-f]{2}|[0-9A-Za-z\-#;/?:@&=+$.~*'()_])`;
 var PATTERN_TAG_URI = new RegExp(`^(?:${NS_URI_CHAR})*$`);
@@ -4944,10 +6398,857 @@ var DEFAULT_PARSER_OPTIONS = {
   filename: "",
   maxDepth: 100
 };
+function addDocumentEvent(state, explicitStart, explicitEnd) {
+  state.events.push({
+    type: EVENT_ID.DOCUMENT,
+    explicitStart,
+    explicitEnd,
+    directives: state.directives
+  });
+}
+function addSequenceEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd, style) {
+  state.events.push({
+    type: EVENT_ID.SEQUENCE,
+    start,
+    anchorStart,
+    anchorEnd,
+    tagStart,
+    tagEnd,
+    style
+  });
+}
+function addMappingEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd, style) {
+  state.events.push({
+    type: EVENT_ID.MAPPING,
+    start,
+    anchorStart,
+    anchorEnd,
+    tagStart,
+    tagEnd,
+    style
+  });
+}
+function insertFlowPairMappingEvent(state, snapshot) {
+  state.events.splice(snapshot.eventsLength, 0, {
+    type: EVENT_ID.MAPPING,
+    start: snapshot.position,
+    anchorStart: NO_RANGE$1,
+    anchorEnd: NO_RANGE$1,
+    tagStart: NO_RANGE$1,
+    tagEnd: NO_RANGE$1,
+    style: COLLECTION_STYLE.FLOW
+  });
+}
+function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tagStart, tagEnd, style, chomping = CHOMPING_MODE.CLIP, indent = -1, fast = false) {
+  state.events.push({
+    type: EVENT_ID.SCALAR,
+    valueStart,
+    valueEnd,
+    anchorStart,
+    anchorEnd,
+    tagStart,
+    tagEnd,
+    style,
+    chomping,
+    indent,
+    fast
+  });
+}
+function addAliasEvent(state, anchorStart, anchorEnd) {
+  state.events.push({
+    type: EVENT_ID.ALIAS,
+    anchorStart,
+    anchorEnd
+  });
+}
+function addPopEvent(state) {
+  state.events.push({ type: EVENT_ID.POP });
+}
+function addEmptyScalarEvent(state) {
+  addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, SCALAR_STYLE.PLAIN);
+}
+function emptyProperties() {
+  return {
+    anchorStart: NO_RANGE$1,
+    anchorEnd: NO_RANGE$1,
+    tagStart: NO_RANGE$1,
+    tagEnd: NO_RANGE$1
+  };
+}
+function snapshotState(state) {
+  return {
+    position: state.position,
+    line: state.line,
+    lineStart: state.lineStart,
+    lineIndent: state.lineIndent,
+    firstTabInLine: state.firstTabInLine,
+    eventsLength: state.events.length
+  };
+}
+function restoreState(state, snapshot) {
+  state.position = snapshot.position;
+  state.line = snapshot.line;
+  state.lineStart = snapshot.lineStart;
+  state.lineIndent = snapshot.lineIndent;
+  state.firstTabInLine = snapshot.firstTabInLine;
+  state.events.length = snapshot.eventsLength;
+}
+function throwError(state, message) {
+  YAMLException.throwAt(state.input.slice(0, state.length), state.position, message, state.filename);
+}
+function isEol(c) {
+  return c === 10 || c === 13;
+}
+function isWhiteSpace(c) {
+  return c === 9 || c === 32;
+}
+function isWsOrEol(c) {
+  return isWhiteSpace(c) || isEol(c);
+}
+function isWsOrEolOrEnd(c) {
+  return c === 0 || isWsOrEol(c);
+}
+function isFlowIndicator(c) {
+  return c === 44 || c === 91 || c === 93 || c === 123 || c === 125;
+}
+function fromDecimalCode(c) {
+  return c >= 48 && c <= 57 ? c - 48 : -1;
+}
+function fromHexCode(c) {
+  if (c >= 48 && c <= 57) return c - 48;
+  const lc = c | 32;
+  if (lc >= 97 && lc <= 102) return lc - 97 + 10;
+  return -1;
+}
+function escapedHexLen(c) {
+  if (c === 120) return 2;
+  if (c === 117) return 4;
+  if (c === 85) return 8;
+  return 0;
+}
+function isSimpleEscape(c) {
+  return c === 48 || c === 97 || c === 98 || c === 116 || c === 9 || c === 110 || c === 118 || c === 102 || c === 114 || c === 101 || c === 32 || c === 34 || c === 47 || c === 92 || c === 78 || c === 95 || c === 76 || c === 80;
+}
+function consumeLineBreak(state) {
+  if (state.input.charCodeAt(state.position) === 10) state.position++;
+  else {
+    state.position++;
+    if (state.input.charCodeAt(state.position) === 10) state.position++;
+  }
+  state.line++;
+  state.lineStart = state.position;
+  state.lineIndent = 0;
+  state.firstTabInLine = -1;
+}
+function skipSeparationSpace(state, allowComments) {
+  let lineBreaks = 0;
+  let ch = state.input.charCodeAt(state.position);
+  let hasSeparation = state.position === state.lineStart || isWsOrEol(state.input.charCodeAt(state.position - 1));
+  while (ch !== 0) {
+    while (isWhiteSpace(ch)) {
+      hasSeparation = true;
+      if (ch === 9 && state.firstTabInLine === -1) state.firstTabInLine = state.position;
+      ch = state.input.charCodeAt(++state.position);
+    }
+    if (allowComments && hasSeparation && ch === 35) do
+      ch = state.input.charCodeAt(++state.position);
+    while (!isEol(ch) && ch !== 0);
+    if (!isEol(ch)) break;
+    consumeLineBreak(state);
+    lineBreaks++;
+    hasSeparation = true;
+    ch = state.input.charCodeAt(state.position);
+    while (ch === 32) {
+      state.lineIndent++;
+      ch = state.input.charCodeAt(++state.position);
+    }
+  }
+  return lineBreaks;
+}
+function testDocumentSeparator(state, position = state.position) {
+  const ch = state.input.charCodeAt(position);
+  if ((ch === 45 || ch === 46) && ch === state.input.charCodeAt(position + 1) && ch === state.input.charCodeAt(position + 2)) {
+    const following = state.input.charCodeAt(position + 3);
+    return following === 0 || isWsOrEol(following);
+  }
+  return false;
+}
+function skipByteOrderMark(state) {
+  if (state.position === state.lineStart && state.input.charCodeAt(state.position) === 65279) {
+    state.position++;
+    state.lineStart = state.position;
+  }
+}
+function testDocumentBoundary(state) {
+  if (state.position !== state.lineStart) return false;
+  if (testDocumentSeparator(state)) return true;
+  if (state.input.charCodeAt(state.position) !== 65279) return false;
+  const snapshot = snapshotState(state);
+  skipByteOrderMark(state);
+  skipSeparationSpace(state, true);
+  const ch = state.input.charCodeAt(state.position);
+  const result = state.position === state.lineStart && (ch === 37 || ch === 45 && testDocumentSeparator(state));
+  restoreState(state, snapshot);
+  return result;
+}
+function skipUntilLineEnd(state) {
+  let ch = state.input.charCodeAt(state.position);
+  while (ch !== 0 && !isEol(ch)) ch = state.input.charCodeAt(++state.position);
+}
+function checkPrintable(state, start, end) {
+  const match = PATTERN_NON_PRINTABLE.exec(state.input.slice(start, end));
+  if (match !== null) {
+    state.position = start + match.index + match[0].length - 1;
+    throwError(state, "the stream contains non-printable characters");
+  }
+}
+function readTagProperty(state, props, inFlow) {
+  if (state.input.charCodeAt(state.position) !== 33) return false;
+  if (props.tagStart !== NO_RANGE$1) throwError(state, "duplication of a tag property");
+  const start = state.position;
+  let isVerbatim = false;
+  let isNamed = false;
+  let tagHandle = "!";
+  let ch = state.input.charCodeAt(++state.position);
+  if (ch === 60) {
+    isVerbatim = true;
+    ch = state.input.charCodeAt(++state.position);
+  } else if (ch === 33) {
+    isNamed = true;
+    tagHandle = "!!";
+    ch = state.input.charCodeAt(++state.position);
+  }
+  let suffixStart = state.position;
+  let tagName;
+  if (isVerbatim) {
+    while (ch !== 0 && ch !== 62) ch = state.input.charCodeAt(++state.position);
+    if (ch !== 62) throwError(state, "unexpected end of the stream within a verbatim tag");
+    tagName = state.input.slice(suffixStart, state.position);
+    state.position++;
+  } else {
+    while (ch !== 0 && !isWsOrEol(ch) && !(inFlow && isFlowIndicator(ch))) {
+      if (ch === 33) {
+        if (!isNamed) {
+          tagHandle = state.input.slice(suffixStart - 1, state.position + 1);
+          if (!PATTERN_TAG_HANDLE.test(tagHandle)) throwError(state, "named tag handle cannot contain such characters");
+          isNamed = true;
+          suffixStart = state.position + 1;
+        } else throwError(state, "tag suffix cannot contain exclamation marks");
+      }
+      ch = state.input.charCodeAt(++state.position);
+    }
+    tagName = state.input.slice(suffixStart, state.position);
+    if (PATTERN_FLOW_INDICATORS.test(tagName)) throwError(state, "tag suffix cannot contain flow indicator characters");
+  }
+  if (tagName && !(isVerbatim ? PATTERN_TAG_URI.test(tagName) : PATTERN_TAG_SUFFIX.test(tagName))) throwError(state, `tag name cannot contain such characters: ${tagName}`);
+  if (!isVerbatim && tagHandle !== "!" && tagHandle !== "!!" && !HAS_OWN.call(state.tagHandlers, tagHandle)) throwError(state, `undeclared tag handle "${tagHandle}"`);
+  props.tagStart = start;
+  props.tagEnd = state.position;
+  return true;
+}
+function readAnchorProperty(state, props) {
+  if (state.input.charCodeAt(state.position) !== 38) return false;
+  if (props.anchorStart !== NO_RANGE$1) throwError(state, "duplication of an anchor property");
+  state.position++;
+  const start = state.position;
+  while (state.input.charCodeAt(state.position) !== 0 && !isWsOrEol(state.input.charCodeAt(state.position)) && !isFlowIndicator(state.input.charCodeAt(state.position))) state.position++;
+  if (state.position === start) throwError(state, "name of an anchor node must contain at least one character");
+  props.anchorStart = start;
+  props.anchorEnd = state.position;
+  return true;
+}
+function readAlias(state, props) {
+  if (state.input.charCodeAt(state.position) !== 42) return false;
+  if (props.anchorStart !== NO_RANGE$1 || props.tagStart !== NO_RANGE$1) throwError(state, "alias node should not have any properties");
+  state.position++;
+  const start = state.position;
+  while (state.input.charCodeAt(state.position) !== 0 && !isWsOrEol(state.input.charCodeAt(state.position)) && !isFlowIndicator(state.input.charCodeAt(state.position))) state.position++;
+  if (state.position === start) throwError(state, "name of an alias node must contain at least one character");
+  addAliasEvent(state, start, state.position);
+  return true;
+}
+function readFlowScalarBreak(state, nodeIndent) {
+  skipSeparationSpace(state, false);
+  if (state.lineIndent < nodeIndent) throwError(state, "deficient indentation");
+}
+function readSingleQuotedScalar(state, nodeIndent, props) {
+  if (state.input.charCodeAt(state.position) !== 39) return false;
+  state.position++;
+  const start = state.position;
+  let simple = true;
+  while (state.input.charCodeAt(state.position) !== 0) {
+    const ch = state.input.charCodeAt(state.position);
+    if (ch === 39) {
+      if (state.input.charCodeAt(state.position + 1) === 39) {
+        simple = false;
+        state.position += 2;
+        continue;
+      }
+      const end = state.position;
+      state.position++;
+      addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.SINGLE_QUOTED, CHOMPING_MODE.CLIP, -1, simple);
+      return true;
+    }
+    if (isEol(ch)) {
+      simple = false;
+      readFlowScalarBreak(state, nodeIndent);
+    } else if (state.position === state.lineStart && testDocumentSeparator(state)) throwError(state, "unexpected end of the document within a single quoted scalar");
+    else if (ch !== 9 && ch < 32) throwError(state, "expected valid JSON character");
+    else state.position++;
+  }
+  throwError(state, "unexpected end of the stream within a single quoted scalar");
+}
+function readDoubleQuotedScalar(state, nodeIndent, props) {
+  if (state.input.charCodeAt(state.position) !== 34) return false;
+  state.position++;
+  const start = state.position;
+  let simple = true;
+  while (state.input.charCodeAt(state.position) !== 0) {
+    const ch = state.input.charCodeAt(state.position);
+    if (ch === 34) {
+      const end = state.position;
+      state.position++;
+      addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.DOUBLE_QUOTED, CHOMPING_MODE.CLIP, -1, simple);
+      return true;
+    }
+    if (ch === 92) {
+      simple = false;
+      const escaped = state.input.charCodeAt(++state.position);
+      if (isEol(escaped)) readFlowScalarBreak(state, nodeIndent);
+      else if (isSimpleEscape(escaped)) state.position++;
+      else {
+        let hexLength = escapedHexLen(escaped);
+        if (hexLength === 0) throwError(state, "unknown escape sequence");
+        while (hexLength-- > 0) {
+          state.position++;
+          if (fromHexCode(state.input.charCodeAt(state.position)) < 0) throwError(state, "expected hexadecimal character");
+        }
+        state.position++;
+      }
+    } else if (isEol(ch)) {
+      simple = false;
+      readFlowScalarBreak(state, nodeIndent);
+    } else if (state.position === state.lineStart && testDocumentSeparator(state)) throwError(state, "unexpected end of the document within a double quoted scalar");
+    else if (ch !== 9 && ch < 32) throwError(state, "expected valid JSON character");
+    else state.position++;
+  }
+  throwError(state, "unexpected end of the stream within a double quoted scalar");
+}
+function readBlockScalar(state, parentIndent, props) {
+  const ch = state.input.charCodeAt(state.position);
+  let chomping = CHOMPING_MODE.CLIP;
+  let indent = -1;
+  let detectedIndent = false;
+  if (ch !== 124 && ch !== 62) return false;
+  const style = ch === 124 ? SCALAR_STYLE.LITERAL_BLOCK : SCALAR_STYLE.FOLDED_BLOCK;
+  state.position++;
+  while (state.input.charCodeAt(state.position) !== 0) {
+    const current = state.input.charCodeAt(state.position);
+    const digit = fromDecimalCode(current);
+    if (current === 43 || current === 45) {
+      if (chomping !== CHOMPING_MODE.CLIP) throwError(state, "repeat of a chomping mode identifier");
+      chomping = current === 43 ? CHOMPING_MODE.KEEP : CHOMPING_MODE.STRIP;
+      state.position++;
+    } else if (digit >= 0) {
+      if (digit === 0) throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
+      if (detectedIndent) throwError(state, "repeat of an indentation width identifier");
+      indent = parentIndent + digit - 1;
+      detectedIndent = true;
+      state.position++;
+    } else break;
+  }
+  let hadWhitespace = false;
+  while (isWhiteSpace(state.input.charCodeAt(state.position))) {
+    hadWhitespace = true;
+    state.position++;
+  }
+  if (hadWhitespace && state.input.charCodeAt(state.position) === 35) skipUntilLineEnd(state);
+  if (isEol(state.input.charCodeAt(state.position))) consumeLineBreak(state);
+  else if (state.input.charCodeAt(state.position) !== 0) throwError(state, "a line break is expected");
+  let contentIndent = detectedIndent ? indent : -1;
+  let maxLeadingIndent = 0;
+  const valueStart = state.position;
+  let valueEnd = state.position;
+  while (state.input.charCodeAt(state.position) !== 0) {
+    const linePosition = state.position;
+    let column = 0;
+    while (state.input.charCodeAt(linePosition + column) === 32) column++;
+    const first = state.input.charCodeAt(linePosition + column);
+    if (first === 0) {
+      if (contentIndent >= 0) {
+        if (column > contentIndent) valueEnd = linePosition + column;
+      } else if (column > 0) valueEnd = linePosition + column;
+      break;
+    }
+    if (testDocumentBoundary(state)) break;
+    if (!detectedIndent && contentIndent === -1 && isEol(first)) maxLeadingIndent = Math.max(maxLeadingIndent, column);
+    if (!detectedIndent && contentIndent === -1 && !isEol(first)) {
+      if (first === 9 && column < parentIndent) {
+        state.position = linePosition + column;
+        throwError(state, "tab characters must not be used in indentation");
+      }
+      if (column >= parentIndent && column < maxLeadingIndent) {
+        state.position = linePosition + column;
+        throwError(state, "bad indentation of a mapping entry");
+      }
+    }
+    if (contentIndent === -1 && first !== 0 && !isEol(first) && column < parentIndent) {
+      state.lineIndent = column;
+      state.position = linePosition + column;
+      break;
+    }
+    if (!detectedIndent && first !== 0 && !isEol(first) && contentIndent === -1) contentIndent = column;
+    const requiredIndent = contentIndent === -1 ? parentIndent + 1 : contentIndent;
+    if (first !== 0 && !isEol(first) && column < requiredIndent) {
+      state.lineIndent = column;
+      state.position = linePosition + column;
+      break;
+    }
+    skipUntilLineEnd(state);
+    valueEnd = state.position;
+    if (isEol(state.input.charCodeAt(state.position))) {
+      consumeLineBreak(state);
+      valueEnd = state.position;
+    }
+  }
+  checkPrintable(state, valueStart, valueEnd);
+  addScalarEvent(state, valueStart, valueEnd, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, style, chomping, contentIndent);
+  return true;
+}
+function canStartPlainScalar(state, nodeContext) {
+  const ch = state.input.charCodeAt(state.position);
+  const inFlow = nodeContext === CONTEXT_FLOW_IN;
+  if (ch === 0 || isWsOrEol(ch) || ch === 35 || ch === 38 || ch === 42 || ch === 33 || ch === 124 || ch === 62 || ch === 39 || ch === 34 || ch === 37 || ch === 64 || ch === 96 || isFlowIndicator(ch)) return false;
+  if (ch === 63 || ch === 45) {
+    const following = state.input.charCodeAt(state.position + 1);
+    if (isWsOrEolOrEnd(following) || inFlow && isFlowIndicator(following)) return false;
+  }
+  return true;
+}
+function readPlainScalar(state, nodeIndent, nodeContext, props) {
+  if (!canStartPlainScalar(state, nodeContext)) return false;
+  const start = state.position;
+  let end = state.position;
+  let ch = state.input.charCodeAt(state.position);
+  const inFlow = nodeContext === CONTEXT_FLOW_IN;
+  let multiline = false;
+  while (ch !== 0) {
+    if (testDocumentBoundary(state)) break;
+    if (ch === 58) {
+      const following = state.input.charCodeAt(state.position + 1);
+      if (isWsOrEolOrEnd(following) || inFlow && isFlowIndicator(following)) break;
+    } else if (ch === 35) {
+      if (isWsOrEol(state.input.charCodeAt(state.position - 1))) break;
+    } else if (inFlow && isFlowIndicator(ch)) break;
+    else if (isEol(ch)) {
+      const savedPosition = state.position;
+      const savedLine = state.line;
+      const savedLineStart = state.lineStart;
+      const savedLineIndent = state.lineIndent;
+      skipSeparationSpace(state, false);
+      if (state.lineIndent >= nodeIndent) {
+        multiline = true;
+        ch = state.input.charCodeAt(state.position);
+        continue;
+      }
+      state.position = savedPosition;
+      state.line = savedLine;
+      state.lineStart = savedLineStart;
+      state.lineIndent = savedLineIndent;
+      break;
+    }
+    if (!isWhiteSpace(ch)) end = state.position + 1;
+    ch = state.input.charCodeAt(++state.position);
+  }
+  if (end === start) return false;
+  checkPrintable(state, start, end);
+  addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.PLAIN, CHOMPING_MODE.CLIP, -1, !multiline);
+  return true;
+}
+function skipFlowSeparationSpace(state, nodeIndent) {
+  const startLine = state.line;
+  skipSeparationSpace(state, true);
+  if (state.line > startLine && state.lineIndent < nodeIndent || state.firstTabInLine !== -1 && state.lineIndent < nodeIndent) throwError(state, "deficient indentation");
+}
+function readFlowCollection(state, nodeIndent, props) {
+  const ch = state.input.charCodeAt(state.position);
+  const isMapping = ch === 123;
+  const start = state.position;
+  let readNext = true;
+  if (ch !== 91 && ch !== 123) return false;
+  const terminator = isMapping ? 125 : 93;
+  if (isMapping) addMappingEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.FLOW);
+  else addSequenceEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.FLOW);
+  state.position++;
+  while (state.input.charCodeAt(state.position) !== 0) {
+    skipFlowSeparationSpace(state, nodeIndent);
+    let ch2 = state.input.charCodeAt(state.position);
+    if (ch2 === terminator) {
+      state.position++;
+      addPopEvent(state);
+      return true;
+    } else if (!readNext) throwError(state, "missed comma between flow collection entries");
+    else if (ch2 === 44) throwError(state, "expected the node content, but found ','");
+    let isPair = false;
+    let isExplicitPair = false;
+    if (ch2 === 63 && isWsOrEol(state.input.charCodeAt(state.position + 1))) {
+      isPair = isExplicitPair = true;
+      state.position += 1;
+      skipFlowSeparationSpace(state, nodeIndent);
+    }
+    const entryLine = state.line;
+    const entryStart = snapshotState(state);
+    const keyWasRead = parseNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true);
+    skipFlowSeparationSpace(state, nodeIndent);
+    ch2 = state.input.charCodeAt(state.position);
+    if ((isMapping || isExplicitPair || state.line === entryLine) && ch2 === 58) {
+      isPair = true;
+      state.position++;
+      skipFlowSeparationSpace(state, nodeIndent);
+      if (!isMapping) {
+        insertFlowPairMappingEvent(state, entryStart);
+        if (!keyWasRead) addEmptyScalarEvent(state);
+      } else if (!keyWasRead) addEmptyScalarEvent(state);
+      if (!parseNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true)) addEmptyScalarEvent(state);
+      skipFlowSeparationSpace(state, nodeIndent);
+      if (!isMapping) addPopEvent(state);
+    } else if (isMapping && isPair) {
+      if (!keyWasRead) addEmptyScalarEvent(state);
+      addEmptyScalarEvent(state);
+    } else if (isMapping) addEmptyScalarEvent(state);
+    else if (isPair) {
+      insertFlowPairMappingEvent(state, entryStart);
+      if (!keyWasRead) addEmptyScalarEvent(state);
+      addEmptyScalarEvent(state);
+      addPopEvent(state);
+    }
+    ch2 = state.input.charCodeAt(state.position);
+    if (ch2 === 44) {
+      readNext = true;
+      state.position++;
+    } else readNext = false;
+  }
+  throwError(state, "unexpected end of the stream within a flow collection");
+}
+function readBlockSequence(state, nodeIndent, props) {
+  if (state.firstTabInLine !== -1 || state.input.charCodeAt(state.position) !== 45 || !isWsOrEolOrEnd(state.input.charCodeAt(state.position + 1))) return false;
+  addSequenceEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.BLOCK);
+  while (state.input.charCodeAt(state.position) === 45 && isWsOrEolOrEnd(state.input.charCodeAt(state.position + 1))) {
+    if (state.firstTabInLine !== -1) {
+      state.position = state.firstTabInLine;
+      throwError(state, "tab characters must not be used in indentation");
+    }
+    const entryLine = state.line;
+    state.position++;
+    const hadBreak = skipSeparationSpace(state, true) > 0;
+    if (state.firstTabInLine !== -1 && state.input.charCodeAt(state.position) === 45 && isWsOrEolOrEnd(state.input.charCodeAt(state.position + 1))) throwError(state, "bad indentation of a sequence entry");
+    if (hadBreak && state.lineIndent <= nodeIndent) addEmptyScalarEvent(state);
+    else parseNode(state, nodeIndent, CONTEXT_BLOCK_IN, false, true);
+    skipSeparationSpace(state, true);
+    if (state.lineIndent < nodeIndent || state.position >= state.length) break;
+    if (state.lineIndent > nodeIndent) throwError(state, "bad indentation of a sequence entry");
+    if (state.line === entryLine && state.input.charCodeAt(state.position) === 45 && isWsOrEolOrEnd(state.input.charCodeAt(state.position + 1))) throwError(state, "bad indentation of a sequence entry");
+  }
+  addPopEvent(state);
+  return true;
+}
+function readBlockMapping(state, nodeIndent, flowIndent, props) {
+  let atExplicitKey = false;
+  let detected = false;
+  let mappingOpened = false;
+  let pendingExplicitKey = false;
+  if (state.firstTabInLine !== -1) return false;
+  let ch = state.input.charCodeAt(state.position);
+  while (ch !== 0) {
+    if (!atExplicitKey && state.firstTabInLine !== -1) {
+      state.position = state.firstTabInLine;
+      throwError(state, "tab characters must not be used in indentation");
+    }
+    const following = state.input.charCodeAt(state.position + 1);
+    const entryLine = state.line;
+    if ((ch === 63 || ch === 58) && isWsOrEolOrEnd(following)) {
+      if (!mappingOpened) {
+        addMappingEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.BLOCK);
+        mappingOpened = true;
+      }
+      if (ch === 63) {
+        if (atExplicitKey) addEmptyScalarEvent(state);
+        detected = true;
+        atExplicitKey = true;
+      } else if (atExplicitKey) atExplicitKey = false;
+      else {
+        addEmptyScalarEvent(state);
+        detected = true;
+        atExplicitKey = false;
+      }
+      state.position += 1;
+      pendingExplicitKey = true;
+    } else {
+      if (atExplicitKey) {
+        addEmptyScalarEvent(state);
+        atExplicitKey = false;
+      }
+      const beforeKey = snapshotState(state);
+      if (!parseNode(state, flowIndent, CONTEXT_FLOW_OUT, false, true)) break;
+      if (state.line === entryLine) {
+        ch = state.input.charCodeAt(state.position);
+        while (isWhiteSpace(ch)) ch = state.input.charCodeAt(++state.position);
+        if (ch === 58) {
+          ch = state.input.charCodeAt(++state.position);
+          if (!isWsOrEolOrEnd(ch)) throwError(state, "a whitespace character is expected after the key-value separator within a block mapping");
+          if (!mappingOpened) {
+            state.events.splice(beforeKey.eventsLength, 0, {
+              type: EVENT_ID.MAPPING,
+              start: beforeKey.position,
+              anchorStart: props.anchorStart,
+              anchorEnd: props.anchorEnd,
+              tagStart: props.tagStart,
+              tagEnd: props.tagEnd,
+              style: COLLECTION_STYLE.BLOCK
+            });
+            mappingOpened = true;
+          }
+          detected = true;
+          atExplicitKey = false;
+          pendingExplicitKey = false;
+        } else if (detected) throwError(state, "expected ':' after a mapping key");
+        else {
+          if (props.anchorStart !== NO_RANGE$1 || props.tagStart !== NO_RANGE$1) {
+            restoreState(state, beforeKey);
+            return false;
+          }
+          return true;
+        }
+      } else if (detected) throwError(state, "can not read a block mapping entry; a multiline key may not be an implicit key");
+      else {
+        if (props.anchorStart !== NO_RANGE$1 || props.tagStart !== NO_RANGE$1) {
+          restoreState(state, beforeKey);
+          return false;
+        }
+        return true;
+      }
+    }
+    if (parseNode(state, nodeIndent, CONTEXT_BLOCK_OUT, true, pendingExplicitKey)) pendingExplicitKey = false;
+    if (!atExplicitKey) {
+      if (pendingExplicitKey) {
+        addEmptyScalarEvent(state);
+        pendingExplicitKey = false;
+      }
+    }
+    skipSeparationSpace(state, true);
+    ch = state.input.charCodeAt(state.position);
+    if ((state.line === entryLine || state.lineIndent > nodeIndent) && ch !== 0) throwError(state, "bad indentation of a mapping entry");
+    else if (state.lineIndent < nodeIndent) break;
+  }
+  if (!detected) return false;
+  if (atExplicitKey) addEmptyScalarEvent(state);
+  if (mappingOpened) addPopEvent(state);
+  return true;
+}
+function parseNode(state, parentIndent, nodeContext, allowToSeek, allowCompact, allowPropertyMapping = true) {
+  if (state.depth >= state.maxDepth) throwError(state, `nesting exceeded maxDepth (${state.maxDepth})`);
+  state.depth++;
+  let indentStatus = 1;
+  let atNewLine = false;
+  let hasContent = false;
+  let propertyStart = null;
+  const props = emptyProperties();
+  let allowBlockScalars = nodeContext === CONTEXT_BLOCK_OUT || nodeContext === CONTEXT_BLOCK_IN;
+  let allowBlockCollections = allowBlockScalars;
+  const allowBlockStyles = allowBlockScalars;
+  if (allowToSeek && skipSeparationSpace(state, true)) {
+    atNewLine = true;
+    if (state.lineIndent > parentIndent) indentStatus = 1;
+    else if (state.lineIndent === parentIndent) indentStatus = 0;
+    else indentStatus = -1;
+  }
+  if (indentStatus === 1) while (true) {
+    const ch = state.input.charCodeAt(state.position);
+    const propertyState = snapshotState(state);
+    if (atNewLine && indentStatus !== 1 && (ch === 33 || ch === 38)) break;
+    if (atNewLine && allowBlockStyles && (props.tagStart !== NO_RANGE$1 || props.anchorStart !== NO_RANGE$1) && (ch === 33 || ch === 38)) {
+      const fallbackState = snapshotState(state);
+      const flowIndent = parentIndent + 1;
+      if (readBlockMapping(state, state.position - state.lineStart, flowIndent, props) && state.events[fallbackState.eventsLength]?.type === EVENT_ID.MAPPING) {
+        state.depth--;
+        return true;
+      }
+      restoreState(state, fallbackState);
+    }
+    if (atNewLine && (ch === 33 && props.tagStart !== NO_RANGE$1 || ch === 38 && props.anchorStart !== NO_RANGE$1)) break;
+    if (!readTagProperty(state, props, nodeContext === CONTEXT_FLOW_IN) && !readAnchorProperty(state, props)) break;
+    if (propertyStart === null) propertyStart = propertyState;
+    if (skipSeparationSpace(state, true)) {
+      atNewLine = true;
+      allowBlockCollections = allowBlockStyles;
+      if (state.lineIndent > parentIndent) indentStatus = 1;
+      else if (state.lineIndent === parentIndent) indentStatus = 0;
+      else indentStatus = -1;
+    } else allowBlockCollections = false;
+  }
+  if (allowBlockCollections) allowBlockCollections = atNewLine || allowCompact;
+  if (indentStatus === 1 || nodeContext === CONTEXT_BLOCK_OUT) {
+    const flowIndent = nodeContext === CONTEXT_FLOW_IN || nodeContext === CONTEXT_FLOW_OUT ? parentIndent : parentIndent + 1;
+    const blockIndent = state.position - state.lineStart;
+    if (indentStatus === 1) {
+      if (allowBlockCollections && (readBlockSequence(state, blockIndent, props) || readBlockMapping(state, blockIndent, flowIndent, props)) || readFlowCollection(state, flowIndent, props)) hasContent = true;
+      else {
+        const ch = state.input.charCodeAt(state.position);
+        if (propertyStart !== null && allowPropertyMapping && allowBlockStyles && !allowBlockCollections && ch !== 124 && ch !== 62) {
+          const fallbackState = snapshotState(state);
+          const propertyIndent = propertyStart.position - propertyStart.lineStart;
+          restoreState(state, propertyStart);
+          if (readBlockMapping(state, propertyIndent, flowIndent, emptyProperties()) && state.events[fallbackState.eventsLength]?.type === EVENT_ID.MAPPING) hasContent = true;
+          else restoreState(state, fallbackState);
+        }
+        if (!hasContent && (allowBlockScalars && readBlockScalar(state, flowIndent, props) || readSingleQuotedScalar(state, flowIndent, props) || readDoubleQuotedScalar(state, flowIndent, props) || readAlias(state, props) || readPlainScalar(state, flowIndent, nodeContext, props))) hasContent = true;
+      }
+    } else if (indentStatus === 0) hasContent = allowBlockCollections && readBlockSequence(state, blockIndent, props);
+  }
+  allowBlockScalars = allowBlockScalars && !hasContent;
+  if (!hasContent && (props.anchorStart !== NO_RANGE$1 || props.tagStart !== NO_RANGE$1 || allowBlockScalars)) {
+    addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.PLAIN);
+    hasContent = true;
+  }
+  state.depth--;
+  return hasContent || props.anchorStart !== NO_RANGE$1 || props.tagStart !== NO_RANGE$1;
+}
+function readDirective(state) {
+  if (state.lineIndent > 0 || state.input.charCodeAt(state.position) !== 37) return false;
+  state.position++;
+  const nameStart = state.position;
+  while (state.input.charCodeAt(state.position) !== 0 && !isWsOrEol(state.input.charCodeAt(state.position))) state.position++;
+  const name = state.input.slice(nameStart, state.position);
+  const args = [];
+  if (name.length === 0) throwError(state, "directive name must not be less than one character in length");
+  while (state.input.charCodeAt(state.position) !== 0 && !isEol(state.input.charCodeAt(state.position))) {
+    while (isWhiteSpace(state.input.charCodeAt(state.position))) state.position++;
+    if (state.input.charCodeAt(state.position) === 35 || isEol(state.input.charCodeAt(state.position)) || state.input.charCodeAt(state.position) === 0) break;
+    const start = state.position;
+    while (state.input.charCodeAt(state.position) !== 0 && !isWsOrEol(state.input.charCodeAt(state.position))) state.position++;
+    args.push(state.input.slice(start, state.position));
+  }
+  if (isEol(state.input.charCodeAt(state.position))) consumeLineBreak(state);
+  if (name === "YAML") {
+    if (state.directives.some((directive) => directive.kind === "yaml")) throwError(state, "duplication of %YAML directive");
+    if (args.length !== 1) throwError(state, "YAML directive accepts exactly one argument");
+    const match = /^([0-9]+)\.([0-9]+)$/.exec(args[0]);
+    if (match === null) throwError(state, "ill-formed argument of the YAML directive");
+    if (parseInt(match[1], 10) !== 1) throwError(state, "unacceptable YAML version of the document");
+    state.directives.push({
+      kind: "yaml",
+      version: args[0]
+    });
+  } else if (name === "TAG") {
+    if (args.length !== 2) throwError(state, "TAG directive accepts exactly two arguments");
+    const [handle, prefix] = args;
+    if (!PATTERN_TAG_HANDLE.test(handle)) throwError(state, "ill-formed tag handle (first argument) of the TAG directive");
+    if (HAS_OWN.call(state.tagHandlers, handle)) throwError(state, `there is a previously declared suffix for "${handle}" tag handle`);
+    if (!PATTERN_TAG_PREFIX.test(prefix)) throwError(state, "ill-formed tag prefix (second argument) of the TAG directive");
+    state.tagHandlers[handle] = prefix;
+    state.directives.push({
+      kind: "tag",
+      handle,
+      prefix
+    });
+  }
+  return true;
+}
+function readDocument(state) {
+  state.directives = [];
+  state.tagHandlers = /* @__PURE__ */ Object.create(null);
+  let hasDirectives = false;
+  skipSeparationSpace(state, true);
+  while (readDirective(state)) {
+    hasDirectives = true;
+    skipSeparationSpace(state, true);
+  }
+  let explicitStart = false;
+  let explicitEnd = false;
+  let allowCompact = true;
+  if (state.lineIndent === 0 && state.input.charCodeAt(state.position) === 45 && state.input.charCodeAt(state.position + 1) === 45 && state.input.charCodeAt(state.position + 2) === 45 && isWsOrEolOrEnd(state.input.charCodeAt(state.position + 3))) {
+    explicitStart = true;
+    const markerLine = state.line;
+    state.position += 3;
+    skipSeparationSpace(state, true);
+    allowCompact = state.line > markerLine;
+  } else if (hasDirectives) throwError(state, "directives end mark is expected");
+  const documentEventIndex = state.events.length;
+  if (!explicitStart && state.position === state.lineStart && state.input.charCodeAt(state.position) === 46 && testDocumentSeparator(state)) {
+    state.position += 3;
+    skipSeparationSpace(state, true);
+    return;
+  }
+  addDocumentEvent(state, explicitStart, false);
+  if (!parseNode(state, state.lineIndent - 1, CONTEXT_BLOCK_OUT, false, allowCompact, allowCompact)) addEmptyScalarEvent(state);
+  skipSeparationSpace(state, true);
+  if (state.position === state.lineStart && testDocumentSeparator(state)) {
+    explicitEnd = state.input.charCodeAt(state.position) === 46;
+    if (explicitEnd) {
+      const markerLine = state.line;
+      state.position += 3;
+      skipSeparationSpace(state, true);
+      if (state.line === markerLine && state.position < state.length) throwError(state, "end of the stream or a document separator is expected");
+    }
+  }
+  const documentEvent = state.events[documentEventIndex];
+  if (documentEvent?.type === EVENT_ID.DOCUMENT) documentEvent.explicitEnd = explicitEnd;
+  addPopEvent(state);
+  if (!explicitEnd && state.position < state.length && !testDocumentBoundary(state)) throwError(state, "end of the stream or a document separator is expected");
+}
+function parseEvents(input2, options2) {
+  const length = input2.length;
+  const state = {
+    ...DEFAULT_PARSER_OPTIONS,
+    ...options2,
+    input: `${input2}\0`,
+    length,
+    position: 0,
+    line: 0,
+    lineStart: 0,
+    lineIndent: 0,
+    firstTabInLine: -1,
+    depth: 0,
+    directives: [],
+    tagHandlers: /* @__PURE__ */ Object.create(null),
+    events: []
+  };
+  const nullpos = input2.indexOf("\0");
+  if (nullpos !== -1) YAMLException.throwAt(input2, nullpos, "null byte is not allowed in input", state.filename);
+  while (state.position < state.length) {
+    skipByteOrderMark(state);
+    skipSeparationSpace(state, true);
+    if (state.position >= state.length) break;
+    const documentStart = state.position;
+    readDocument(state);
+    if (state.position === documentStart)
+      throwError(state, "can not read a document");
+  }
+  return state.events;
+}
 var DEFAULT_LOAD_OPTIONS = {
   ...DEFAULT_PARSER_OPTIONS,
   ...DEFAULT_CONSTRUCTOR_OPTIONS
 };
+function loadDocuments(input2, options2 = {}) {
+  const opts = {
+    ...DEFAULT_LOAD_OPTIONS,
+    ...options2
+  };
+  const source = String(input2);
+  const PARSER_OPT_KEYS = Object.keys(DEFAULT_PARSER_OPTIONS);
+  const CONSTRUCTOR_OPT_KEYS = Object.keys(DEFAULT_CONSTRUCTOR_OPTIONS);
+  return constructFromEvents(parseEvents(source, pick(opts, PARSER_OPT_KEYS)), {
+    ...pick(opts, CONSTRUCTOR_OPT_KEYS),
+    source
+  });
+}
+function load(input2, options2) {
+  const documents = loadDocuments(input2, options2);
+  if (documents.length === 0) throw new YAMLException("expected a document, but the input is empty");
+  if (documents.length === 1) return documents[0];
+  throw new YAMLException("expected a single document in the stream, but found more");
+}
 function hasBit(mask, bit) {
   return (mask & 1 << bit) !== 0;
 }
@@ -5221,7 +7522,7 @@ __export(external_exports, {
   flattenError: () => flattenError,
   float32: () => float32,
   float64: () => float64,
-  formatError: () => formatError,
+  formatError: () => formatError2,
   fromJSONSchema: () => fromJSONSchema,
   function: () => _function,
   getDiscriminatedOption: () => getDiscriminatedOption,
@@ -5619,7 +7920,7 @@ __export(core_exports2, {
   extractDefs: () => extractDefs,
   finalize: () => finalize,
   flattenError: () => flattenError,
-  formatError: () => formatError,
+  formatError: () => formatError2,
   getDiscriminatedOption: () => getDiscriminatedOption,
   globalConfig: () => globalConfig,
   globalRegistry: () => globalRegistry,
@@ -5729,7 +8030,7 @@ __export(util_exports, {
   own: () => own,
   parsedType: () => parsedType,
   partial: () => partial,
-  pick: () => pick,
+  pick: () => pick2,
   prefixIssues: () => prefixIssues,
   primitiveTypes: () => primitiveTypes,
   promiseAllObject: () => promiseAllObject,
@@ -5905,10 +8206,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path7) {
+  if (!path7)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path7.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -6125,7 +8426,7 @@ var BIGINT_FORMAT_RANGES = {
   int64: [/* @__PURE__ */ BigInt("-9223372036854775808"), /* @__PURE__ */ BigInt("9223372036854775807")],
   uint64: [/* @__PURE__ */ BigInt(0), /* @__PURE__ */ BigInt("18446744073709551615")]
 };
-function pick(schema, mask) {
+function pick2(schema, mask) {
   const currDef = schema._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
@@ -6248,11 +8549,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path7, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path7);
     return iss;
   });
 }
@@ -6712,18 +9013,18 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
   }
   return { formErrors, fieldErrors };
 }
-function formatError(error62, mapper = (issue2) => issue2.message) {
+function formatError2(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path6 = []) => {
+  const processError = (error63, path7 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -6762,17 +9063,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path6 = []) => {
+  const processError = (error63, path7 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -6811,8 +9112,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path6) {
+  const path7 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path7) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -22297,7 +24598,7 @@ var initializer2 = (inst, issues) => {
   if (_installedErrorProtos.has(proto))
     return;
   _installedErrorProtos.add(proto);
-  _lazyMethod(proto, "format", (self) => (mapper) => formatError(self, mapper));
+  _lazyMethod(proto, "format", (self) => (mapper) => formatError2(self, mapper));
   _lazyMethod(proto, "flatten", (self) => (mapper) => flattenError(self, mapper));
   _lazyMethod(proto, "addIssue", (self) => (issue2) => {
     self.issues.push(issue2);
@@ -23950,13 +26251,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path6 = ref.slice(1).split("/").filter(Boolean);
-  if (path6.length === 0) {
+  const path7 = ref.slice(1).split("/").filter(Boolean);
+  if (path7.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path6[0] === defsKey) {
-    const key = path6[1] === void 0 ? void 0 : decodeJSONPointerSegment(path6[1]);
+  if (path7[0] === defsKey) {
+    const key = path7[1] === void 0 ? void 0 : decodeJSONPointerSegment(path7[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -25100,6 +27401,856 @@ function expandArtifactContext(cwd, fromPath, options2) {
   };
 }
 
+// src/skills/lib/schema_preflight.ts
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path5 = __toESM(require("node:path"));
+var import_gray_matter5 = __toESM(require_gray_matter());
+
+// src/skills/lib/doc_suite_utils.ts
+var import_gray_matter4 = __toESM(require_gray_matter());
+
+// src/skills/lib/artifact_id.ts
+var import_uuid62 = __toESM(require_uuid62());
+
+// src/skills/lib/doc_types.ts
+var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
+var configs = {
+  idea: {
+    defaultStatus: "draft",
+    dir: "docs/ideas",
+    dirs: ["docs/ideas"],
+    idPrefix: "IDEA",
+    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
+    type: "idea"
+  },
+  brainstorm: {
+    defaultStatus: "capturing",
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    idPrefix: "BRAINSTORM",
+    statusValues: ["capturing", "confirmed", "routed", "superseded"],
+    type: "brainstorm"
+  },
+  discovery: {
+    defaultStatus: "draft",
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    idPrefix: "DISC",
+    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
+    type: "discovery"
+  },
+  spec: {
+    defaultStatus: "draft",
+    dir: "docs/specs",
+    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
+    idPrefix: "SPEC",
+    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
+    type: "spec"
+  },
+  plan: {
+    defaultStatus: "draft",
+    dir: "docs/plans",
+    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
+    idPrefix: "PLAN",
+    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
+    type: "plan"
+  },
+  task: {
+    defaultStatus: "todo",
+    dir: "docs/tasks",
+    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
+    idPrefix: "TASK",
+    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
+    type: "task"
+  },
+  "test-spec": {
+    defaultStatus: "draft",
+    dir: "docs/test-specs",
+    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    idPrefix: "TSPEC",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    type: "test-spec"
+  },
+  design: {
+    defaultStatus: "draft",
+    dir: "docs/designs",
+    dirs: ["docs/designs", "docs/design", "designs", "design"],
+    idPrefix: "DESIGN",
+    statusValues: ["draft", "approved", "superseded", "rejected"],
+    type: "design"
+  },
+  adr: {
+    defaultStatus: "proposed",
+    dir: "docs/adr",
+    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+    idPrefix: "ADR",
+    indexRow: {
+      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
+      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
+      // every producer derives identical rows (Issue #185).
+      idFromFile: (file2) => {
+        const match = /^(\d+)-/.exec(file2);
+        return match ? `ADR-${match[1]}` : null;
+      },
+      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
+    },
+    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+    type: "adr"
+  }
+};
+function configFor(type) {
+  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
+  return configs[type];
+}
+
+// src/skills/lib/doc_ownership.ts
+var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
+var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
+var ADR_MUTATORS = ["update_index", "relate_adr"];
+var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
+var INDEX_TITLES = {
+  "docs/adr": "Architecture Decision Records",
+  "docs/impl/ir": "Implementation Records",
+  "docs/impl/exp": "Experiment Logs"
+};
+var PROMOTE_INDEX_MUTATOR = "promote_index";
+var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
+var SHARED_CREATORS = {
+  idea: "new_idea",
+  discovery: "new_discovery",
+  spec: "new_spec",
+  plan: "new_plan",
+  task: "new_task",
+  design: "new_design",
+  adr: "new_adr",
+  "test-spec": "new_test_spec"
+};
+function buildContracts() {
+  const rows = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const adr = type === "adr";
+    for (const dir of config2.dirs) {
+      const normalized = normalizeDir(dir);
+      let row = rows.get(normalized);
+      if (!row) {
+        row = {
+          canonical: false,
+          owner: adr ? "adr-doc" : "doc-suite",
+          residents: [],
+          mutators: /* @__PURE__ */ new Set(),
+          auditors: /* @__PURE__ */ new Set()
+        };
+        rows.set(normalized, row);
+      }
+      row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
+      if (INDEX_TITLES[normalized]) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      if (!row.residents.includes(type)) row.residents.push(type);
+      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      if (adr) {
+        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
+        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
+      }
+    }
+  }
+  const shared = [...rows.entries()].map(([dir, row]) => ({
+    dir,
+    canonical: row.canonical,
+    owner: row.owner,
+    residentTypes: row.residents,
+    indexFormat: "shared-4col",
+    indexTitle: INDEX_TITLES[dir],
+    mutators: [...row.mutators].sort(),
+    auditors: [...row.auditors].sort()
+  }));
+  const implRows = [
+    {
+      dir: "docs/impl",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: [],
+      indexFormat: "none",
+      mutators: [],
+      auditors: []
+    },
+    {
+      dir: "docs/impl/ir",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["impl"],
+      indexFormat: "impl-4col",
+      indexTitle: INDEX_TITLES["docs/impl/ir"],
+      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
+      auditors: ["audit_impl_record"]
+    },
+    {
+      dir: "docs/impl/exp",
+      canonical: true,
+      owner: "impl-doc",
+      residentTypes: ["exp"],
+      indexFormat: "exp-1col",
+      indexTitle: INDEX_TITLES["docs/impl/exp"],
+      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
+      auditors: ["audit_experiment_log"]
+    }
+  ];
+  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
+}
+var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
+
+// src/skills/lib/doc_suite_utils.ts
+var relationFields = [
+  "source",
+  "implements",
+  "implemented-by",
+  "depends-on",
+  "blocks",
+  "supersedes",
+  "superseded-by",
+  "related",
+  "refines",
+  "refined-by",
+  "derives-from",
+  "derived-by",
+  "verifies",
+  "verified-by",
+  "references",
+  "defers",
+  "deferred-by"
+];
+var changeFields = [
+  "added",
+  "modified",
+  "deleted",
+  "renamed",
+  "moved",
+  "generated"
+];
+var scaffoldIndexMeta = {
+  "docs/ideas": { title: "IDEA Documents", type: "idea" },
+  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
+  "docs/specs": { title: "SPEC Documents", type: "spec" },
+  "docs/designs": { title: "DESIGN Documents", type: "design" },
+  "docs/plans": { title: "PLAN Documents", type: "plan" },
+  "docs/tasks": { title: "TASK Documents", type: "task" },
+  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
+  "docs/adr": { title: "Architecture Decision Records" },
+  "docs/impl/ir": { title: "Implementation Records" },
+  "docs/impl/exp": { title: "Experiment Logs" }
+};
+var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
+  dir,
+  ...scaffoldIndexMeta[dir]
+}));
+var changeEntrySchema = external_exports.object({
+  type: external_exports.string().min(1)
+}).passthrough();
+var changesSchema = external_exports.object(Object.fromEntries(
+  changeFields.map((field) => [field, external_exports.array(changeEntrySchema).default([])])
+)).prefault({});
+var relationSchema = external_exports.object({
+  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
+  changes: changesSchema,
+  // A non-empty reason string, not a relation target (Issue #165).
+  "test-spec-skip": external_exports.string().min(1).optional()
+}).prefault({});
+var frontMatterSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  type: external_exports.enum(docTypes),
+  status: external_exports.string().min(1),
+  title: external_exports.string().min(1),
+  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  owners: external_exports.array(external_exports.string()),
+  relations: relationSchema
+}).passthrough();
+
+// src/skills/lib/doc_repository.ts
+var REQUIRED_FRONT_MATTER_FIELDS = [
+  "id",
+  "type",
+  "status",
+  "title",
+  "created",
+  "updated",
+  "owners",
+  "relations"
+];
+var ROOT_ARTIFACT_TYPES = /* @__PURE__ */ new Set(["idea", "brainstorm", "discovery"]);
+var TRACEABILITY_TERMINAL_STATUSES = ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"];
+var UPSTREAM_FIELDS = /* @__PURE__ */ new Set(["implements", "derives-from", "refines"]);
+function contractForDocType(type) {
+  const config2 = configFor(type);
+  const contract = {
+    type,
+    idPrefix: config2.idPrefix,
+    idPattern: new RegExp(`^${config2.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
+    idExceptions: [],
+    canonicalDir: config2.dir,
+    dirs: [...config2.dirs],
+    defaultStatus: config2.defaultStatus,
+    statusValues: [...config2.statusValues],
+    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS],
+    requiredRelations: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    allowsRootArtifact: ROOT_ARTIFACT_TYPES.has(type),
+    requiresSourceEvidence: false,
+    expectedUpstream: []
+  };
+  if (type === "discovery") {
+    contract.requiresSourceEvidence = true;
+  }
+  if (type === "spec" || type === "plan" || type === "task" || type === "design") {
+    contract.expectedUpstream = [
+      { fields: [...UPSTREAM_FIELDS], skipStatuses: TRACEABILITY_TERMINAL_STATUSES }
+    ];
+  }
+  if (type === "design") {
+    contract.idExceptions = ["DESIGN-OVERVIEW"];
+    contract.requiredDirectoryFiles = ["overview.md"];
+    contract.reservedFiles = ["overview.md"];
+  }
+  if (type === "test-spec") {
+    contract.requiredRelations = [
+      { field: "verifies", targetTypes: ["spec", "design", "adr"], gateCode: "TEST-SPEC-DOC-GATE-001" }
+    ];
+  }
+  if (type === "plan") {
+    contract.requiredRelations = [
+      {
+        field: "verified-by",
+        targetTypes: ["test-spec"],
+        appliesToStatuses: ["approved", "in-progress", "completed"],
+        skipField: "test-spec-skip"
+      }
+    ];
+  }
+  return contract;
+}
+var contracts = {
+  ...Object.fromEntries(docTypes.map((type) => [type, contractForDocType(type)])),
+  impl: {
+    type: "impl",
+    idPrefix: "IMPL",
+    idPattern: /^IMPL-(?:\d+|[0-9A-Za-z]{22})$/,
+    idExceptions: [],
+    canonicalDir: "docs/impl",
+    dirs: ["docs/impl/ir", "docs/impl/exp"],
+    defaultStatus: "draft",
+    statusValues: ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"],
+    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, "metadata"],
+    requiredRelations: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    expectedUpstream: []
+  }
+};
+function documentContracts() {
+  return contracts;
+}
+
+// src/skills/lib/schema_preflight.ts
+var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
+var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
+var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
+var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
+var MANIFEST_SCHEMA_VERSION = 1;
+var EXPECTED_COMPONENT_VERSIONS = {
+  documentRegistry: 3,
+  knowledgeRelations: 1,
+  verificationDesign: 1,
+  evidenceRecord: 1,
+  graphDefinition: 3
+};
+var EXECUTION_RUN_SCHEMA_VERSION = 1;
+var SCHEMA_PREFLIGHT_EXIT_CODE = 2;
+var EXECUTION_BOUND_TYPES = /* @__PURE__ */ new Set([
+  "plan",
+  "task",
+  "test-spec",
+  "impl",
+  "implementation-record",
+  "ir",
+  "exp",
+  "experiment-log",
+  "impl-record"
+]);
+var KNOWLEDGE_RELATIONS_V1 = /* @__PURE__ */ new Set([
+  "motivates",
+  "decides-for",
+  "realizes",
+  "informs",
+  "explains",
+  "supersedes"
+]);
+var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
+  "schema.json",
+  "migration.journal.json"
+]);
+function toRepoRelative2(cwd, absolute) {
+  return import_node_path5.default.relative(import_node_path5.default.resolve(cwd), absolute).split(import_node_path5.default.sep).join("/");
+}
+function isUnderDir(relPath, dir) {
+  return relPath === dir || relPath.startsWith(`${dir}/`);
+}
+function isPlainObject3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function managedRootAliases() {
+  const dirs = /* @__PURE__ */ new Set();
+  for (const contract of Object.values(documentContracts())) {
+    for (const dir of [...contract.dirs, contract.canonicalDir]) {
+      if (!dir.startsWith("docs/")) dirs.add(dir);
+    }
+  }
+  return [...dirs].sort();
+}
+function walkTree(cwd, relRoot, visit2, onEscape) {
+  const absRoot = import_node_path5.default.resolve(cwd, relRoot);
+  if (!import_node_fs5.default.existsSync(absRoot) || !import_node_fs5.default.statSync(absRoot).isDirectory()) return false;
+  if (!isInsideCheckout(cwd, absRoot)) return false;
+  const stack = [absRoot];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    let entries;
+    try {
+      entries = import_node_fs5.default.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const abs = import_node_path5.default.join(dir, entry.name);
+      const rel = toRepoRelative2(cwd, abs);
+      if (entry.isDirectory()) {
+        if (!isInsideCheckout(cwd, abs)) {
+          onEscape?.(rel, "dir");
+          continue;
+        }
+        visit2(rel, true);
+        stack.push(abs);
+      } else if (entry.isFile() || entry.isSymbolicLink()) {
+        if (!isInsideCheckout(cwd, abs)) {
+          onEscape?.(rel, "entry");
+          continue;
+        }
+        visit2(rel, false);
+      }
+    }
+  }
+  return true;
+}
+function relationIssues(relPath, relations) {
+  const scoped = [];
+  if (relations === void 0) return scoped;
+  if (!isPlainObject3(relations)) {
+    scoped.push({
+      reason: "legacy-relations",
+      path: relPath,
+      detail: "relations: is not a map of relation keys to target lists"
+    });
+    return scoped;
+  }
+  for (const [key, value] of Object.entries(relations)) {
+    if (nonReferenceRelationKeys.has(key)) continue;
+    const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
+    const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
+    if (!wellFormed) {
+      scoped.push({
+        reason: "legacy-relations",
+        path: relPath,
+        detail: `relations.${key} is not a string or list of strings`
+      });
+      continue;
+    }
+    if (!populated) continue;
+    if (!KNOWLEDGE_RELATIONS_V1.has(key)) {
+      scoped.push({
+        reason: "legacy-relations",
+        path: relPath,
+        detail: `relations.${key} is outside the Knowledge Relations v1 vocabulary (stored forward set: ${[...KNOWLEDGE_RELATIONS_V1].join(", ")})`
+      });
+    }
+  }
+  return scoped;
+}
+function scanDocuments(cwd) {
+  const scan = {
+    issues: [],
+    manifestScopedIssues: [],
+    canonicalDocs: 0,
+    executionDocs: 0,
+    unmanagedDocs: 0
+  };
+  const visitMarkdown = (rel) => {
+    const abs = import_node_path5.default.resolve(cwd, rel);
+    let raw;
+    try {
+      raw = import_node_fs5.default.readFileSync(abs, "utf8");
+    } catch {
+      return;
+    }
+    let data = {};
+    let parsed = true;
+    try {
+      const result = (0, import_gray_matter5.default)(raw);
+      data = isPlainObject3(result.data) ? result.data : {};
+    } catch {
+      parsed = false;
+    }
+    const type = parsed && typeof data.type === "string" ? data.type : null;
+    if (type === null) {
+      scan.unmanagedDocs += 1;
+      return;
+    }
+    scan.canonicalDocs += 1;
+    if (EXECUTION_BOUND_TYPES.has(type)) {
+      scan.executionDocs += 1;
+      scan.manifestScopedIssues.push({
+        reason: "legacy-execution-doc",
+        path: rel,
+        detail: `type: ${type} has no durable Git form under Document Registry 3 (execution/verification artifacts live outside Git)`
+      });
+    }
+    if (parsed) {
+      scan.manifestScopedIssues.push(...relationIssues(rel, data.relations));
+    }
+  };
+  const visitDocsTree = (rel) => {
+    if (isUnderDir(rel, DOC_DRIVEN_DEV_DIR)) return;
+    if (rel.endsWith(".md") && !isIndexFileName(import_node_path5.default.basename(rel))) {
+      visitMarkdown(rel);
+      return;
+    }
+    if (isUnderDir(rel, "docs/impl")) {
+      scan.manifestScopedIssues.push({
+        reason: "legacy-execution-doc",
+        path: rel,
+        detail: `execution artifact under docs/impl has no durable Git form under Document Registry 3`
+      });
+    }
+  };
+  const roots = ["docs", ...managedRootAliases()];
+  const walked = /* @__PURE__ */ new Set();
+  for (const root of roots) {
+    const abs = import_node_path5.default.resolve(cwd, root);
+    let key = abs;
+    try {
+      key = import_node_fs5.default.realpathSync(abs);
+    } catch {
+    }
+    if (walked.has(key)) continue;
+    walked.add(key);
+    walkTree(cwd, root, (rel, isDir) => {
+      if (isDir) return;
+      if (root === "docs") visitDocsTree(rel);
+      else visitMarkdown(rel);
+    });
+  }
+  return scan;
+}
+function scanManifestDir(cwd, issues) {
+  const abs = import_node_path5.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
+  if (!import_node_fs5.default.existsSync(abs)) return;
+  const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
+    const name = import_node_path5.default.basename(rel);
+    if (isDir) {
+      if (rel !== DOC_DRIVEN_DEV_DIR) {
+        issues.push({
+          reason: "legacy-state-file",
+          path: rel,
+          detail: `unaccounted-for directory inside ${DOC_DRIVEN_DEV_DIR}`
+        });
+      }
+      return;
+    }
+    if (MANIFEST_DIR_ALLOWED_FILES.has(name)) return;
+    if (/\.ya?ml$/i.test(name)) {
+      let legacy = false;
+      try {
+        const parsed = load(import_node_fs5.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8"));
+        if (isPlainObject3(parsed)) {
+          const version2 = parsed.schemaVersion;
+          legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
+        }
+      } catch {
+      }
+      issues.push({
+        reason: legacy ? "legacy-graph-state" : "legacy-state-file",
+        path: rel,
+        detail: legacy ? `graph/state YAML inside ${DOC_DRIVEN_DEV_DIR} predates Graph Definition ${EXPECTED_COMPONENT_VERSIONS.graphDefinition}` : `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
+      });
+      return;
+    }
+    issues.push({
+      reason: "legacy-state-file",
+      path: rel,
+      detail: `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
+    });
+  }, (rel) => {
+    issues.push({
+      reason: "legacy-state-file",
+      path: rel,
+      detail: `entry inside ${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link`
+    });
+  });
+  if (!walked) {
+    issues.push({
+      reason: "scope-escape",
+      path: DOC_DRIVEN_DEV_DIR,
+      detail: `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted`
+    });
+  }
+}
+function scanExecutionState(cwd, issues) {
+  const abs = import_node_path5.default.resolve(cwd, EXECUTION_STATE_ROOT);
+  if (!import_node_fs5.default.existsSync(abs)) return;
+  const marker = (rel, detail) => {
+    issues.push({ reason: "legacy-execution-state", path: rel, detail });
+  };
+  const walked = walkTree(cwd, EXECUTION_STATE_ROOT, (rel, isDir) => {
+    const relUnderRoot = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "");
+    const segments = relUnderRoot.split("/").filter(Boolean);
+    if (isDir) {
+      if (segments.length === 0) return;
+      if (segments.length > 2 || segments[0] !== "runs") {
+        marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      }
+      return;
+    }
+    if (segments[0] !== "runs" || segments.length !== 2) {
+      marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
+      return;
+    }
+    const name = segments[1];
+    if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
+      let version2;
+      try {
+        version2 = JSON.parse(import_node_fs5.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8")).schemaVersion;
+      } catch {
+        version2 = null;
+      }
+      if (version2 !== EXECUTION_RUN_SCHEMA_VERSION) {
+        marker(rel, `run manifest schemaVersion is ${JSON.stringify(version2)}, expected ${EXECUTION_RUN_SCHEMA_VERSION}`);
+      }
+    }
+  }, (rel) => {
+    marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
+  });
+  if (!walked) {
+    issues.push({
+      reason: "scope-escape",
+      path: EXECUTION_STATE_ROOT,
+      detail: `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed`
+    });
+  }
+}
+function readManifest(cwd) {
+  const rel = SCHEMA_MANIFEST_PATH;
+  const abs = import_node_path5.default.resolve(cwd, rel);
+  if (!import_node_fs5.default.existsSync(abs)) return { state: "missing" };
+  if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
+  let raw;
+  try {
+    raw = import_node_fs5.default.readFileSync(abs, "utf8");
+  } catch (error62) {
+    return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error62) {
+    return { state: "malformed", detail: `schema.json is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
+  }
+  if (!isPlainObject3(parsed)) {
+    return { state: "malformed", detail: "schema.json must be a JSON object" };
+  }
+  const versionIssues = [];
+  const schemaVersion = parsed.schemaVersion;
+  if (!Number.isInteger(schemaVersion) || schemaVersion <= 0) {
+    return { state: "malformed", detail: `schemaVersion must be a positive integer, got ${JSON.stringify(schemaVersion)}` };
+  }
+  if (schemaVersion > MANIFEST_SCHEMA_VERSION) {
+    versionIssues.push({
+      reason: "schema-version-unsupported",
+      path: rel,
+      detail: `manifest schemaVersion ${schemaVersion} is newer than supported ${MANIFEST_SCHEMA_VERSION} \u2014 upgrade the doc-driven-dev toolchain`
+    });
+  }
+  const declared = { schemaVersion };
+  for (const [key, expected] of Object.entries(EXPECTED_COMPONENT_VERSIONS)) {
+    const value = parsed[key];
+    if (value === void 0) {
+      return { state: "malformed", detail: `missing component version: ${key}` };
+    }
+    if (!Number.isInteger(value) || value <= 0) {
+      return { state: "malformed", detail: `${key} must be a positive integer, got ${JSON.stringify(value)}` };
+    }
+    declared[key] = value;
+    if (value > expected) {
+      versionIssues.push({
+        reason: "component-version-unsupported",
+        path: rel,
+        detail: `${key} ${value} is newer than supported ${expected} \u2014 upgrade the doc-driven-dev toolchain`
+      });
+    } else if (value < expected) {
+      versionIssues.push({
+        reason: "component-version-behind",
+        path: rel,
+        detail: `${key} ${value} is behind supported ${expected} \u2014 migration is required`
+      });
+    }
+  }
+  let migrationInProgress = false;
+  if (parsed.migration !== void 0) {
+    if (!isPlainObject3(parsed.migration)) {
+      return { state: "malformed", detail: "migration must be an object when present" };
+    }
+    const status = parsed.migration.status;
+    if (status !== void 0 && status !== "in-progress") {
+      return { state: "malformed", detail: `migration.status must be "in-progress" when present, got ${JSON.stringify(status)}` };
+    }
+    migrationInProgress = status === "in-progress";
+  }
+  return { state: "read", declared, migrationInProgress, versionIssues };
+}
+function journalPresent(cwd) {
+  return import_node_fs5.default.existsSync(import_node_path5.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+}
+function recommendedCommand(status, docCount) {
+  const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
+  switch (status) {
+    case "current":
+      return null;
+    case "uninitialized":
+      return docCount === 0 ? { command: "node .apm/skills/doc-maintenance/scripts/scaffold_docs.js", note: "no manifest and no managed content \u2014 scaffold the doc tree, or declare the current schema via doc_maintenance.js migrate plan/apply" } : { command: `${maintenance} migrate plan --json`, note: "no schema manifest \u2014 run migrate plan to evaluate whether migration is needed, then migrate apply to declare the schema" };
+    case "migration-required":
+      return { command: `${maintenance} migrate plan --json`, note: "legacy artifacts or older declared versions \u2014 plan the migration, then run migrate apply --expect <planHash>" };
+    case "migration-incomplete":
+      return { command: `${maintenance} migrate recovery --json`, note: "a migration journal or in-progress marker is present \u2014 inspect and recover before normal execution resumes" };
+    case "unsupported-version":
+      return { command: null, note: "the manifest declares a newer schema generation than this toolchain supports \u2014 upgrade doc-driven-dev, do not downgrade by hand" };
+    case "invalid":
+      return { command: `${maintenance} migrate plan --json`, note: "manifest or repository state cannot be verified \u2014 run migrate plan for the full diagnostic" };
+  }
+}
+function statusSummary(report) {
+  switch (report.status) {
+    case "current":
+      return "schema manifest and repository content are consistent with the declared versions";
+    case "uninitialized":
+      return "no schema manifest; nothing provably pre-contract found";
+    case "migration-required":
+      return "legacy artifacts or older declared schema versions require migration";
+    case "migration-incomplete":
+      return "a migration journal or in-progress marker indicates a half-applied migration";
+    case "unsupported-version":
+      return "the manifest declares a schema generation newer than this toolchain";
+    case "invalid":
+      return "the manifest or repository state failed boundary validation";
+  }
+}
+function evaluateSchemaPreflight(cwd) {
+  const root = import_node_path5.default.resolve(cwd);
+  const scan = scanDocuments(root);
+  scanManifestDir(root, scan.issues);
+  scanExecutionState(root, scan.issues);
+  const manifest = readManifest(root);
+  const journal = journalPresent(root);
+  const escapes = scan.issues.filter((issue2) => issue2.reason === "scope-escape");
+  const finish = (status, issues, manifestInfo2) => {
+    const legacyMarkers = new Set(
+      [...issues, ...scan.manifestScopedIssues].filter((issue2) => issue2.reason.startsWith("legacy-")).map((issue2) => `${issue2.reason}:${issue2.path}`)
+    ).size;
+    const managedDocs = scan.canonicalDocs + scan.unmanagedDocs;
+    const generation = escapes.length > 0 ? "unknown" : legacyMarkers > 0 ? scan.canonicalDocs > scan.executionDocs ? "mixed" : "legacy" : managedDocs === 0 ? "empty" : "current";
+    const report = {
+      status,
+      issues,
+      manifest: manifestInfo2,
+      detected: {
+        generation,
+        canonicalDocs: scan.canonicalDocs,
+        executionDocs: scan.executionDocs,
+        unmanagedDocs: scan.unmanagedDocs,
+        legacyMarkers,
+        manifestMarkers: scan.manifestScopedIssues
+      },
+      recommended: recommendedCommand(status, managedDocs)
+    };
+    return report;
+  };
+  const readManifestInfo = manifest.state === "read" ? { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared } : { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null };
+  if (escapes.length > 0) {
+    return finish("invalid", escapes, readManifestInfo);
+  }
+  if (manifest.state === "escaped") {
+    return finish("invalid", [{ reason: "manifest-escaped", path: SCHEMA_MANIFEST_PATH, detail: "schema.json resolves outside the checkout" }], { path: SCHEMA_MANIFEST_PATH, state: "escaped", declared: null });
+  }
+  if (manifest.state === "unreadable") {
+    return finish("invalid", [{ reason: "manifest-unreadable", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "unreadable", declared: null });
+  }
+  if (manifest.state === "malformed") {
+    return finish("invalid", [{ reason: "manifest-malformed", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "malformed", declared: null });
+  }
+  if (manifest.state === "missing") {
+    if (journal) {
+      return finish("migration-incomplete", [{ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal exists without a finalized manifest \u2014 the apply did not complete" }], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+    }
+    const relevant = scan.issues.filter((issue2) => issue2.reason.startsWith("legacy-"));
+    if (relevant.length > 0) {
+      return finish("migration-required", relevant, { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+    }
+    return finish("uninitialized", [], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+  }
+  const manifestIssues = manifest.versionIssues;
+  const unsupported = manifestIssues.filter((issue2) => issue2.reason === "schema-version-unsupported" || issue2.reason === "component-version-unsupported");
+  const manifestInfo = { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared };
+  if (unsupported.length > 0) {
+    return finish("unsupported-version", unsupported, { ...manifestInfo, state: "unsupported" });
+  }
+  const inProgress = [];
+  if (manifest.migrationInProgress) {
+    inProgress.push({ reason: "manifest-migration-in-progress", path: SCHEMA_MANIFEST_PATH, detail: "manifest declares migration.status: in-progress" });
+  }
+  if (journal) {
+    inProgress.push({ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal is present \u2014 the apply did not complete" });
+  }
+  if (inProgress.length > 0) {
+    return finish("migration-incomplete", inProgress, manifestInfo);
+  }
+  const behind = manifestIssues.filter((issue2) => issue2.reason === "component-version-behind");
+  const allIssues = [...scan.issues, ...scan.manifestScopedIssues, ...behind];
+  if (allIssues.length > 0) {
+    return finish("migration-required", allIssues, manifestInfo);
+  }
+  return finish("current", [], manifestInfo);
+}
+function normalExecutionAllowed(status) {
+  return status === "current" || status === "uninitialized";
+}
+function entrypointRefusal(report) {
+  return {
+    error: "schema-preflight-blocked",
+    exitCode: SCHEMA_PREFLIGHT_EXIT_CODE,
+    readOnly: true,
+    preflight: report
+  };
+}
+function schemaEntrypointGuard(cwd) {
+  const report = evaluateSchemaPreflight(cwd);
+  if (normalExecutionAllowed(report.status)) return true;
+  console.log(JSON.stringify(entrypointRefusal(report), null, 2));
+  const recommended = report.recommended?.command ?? "inspect docs/.doc-driven-dev/schema.json";
+  console.error(`schema preflight blocked (${report.status}): ${statusSummary(report)} \u2014 run ${recommended}`);
+  process.exitCode = SCHEMA_PREFLIGHT_EXIT_CODE;
+  return false;
+}
+
 // src/skills/doc-driven-dev-graph/scripts/fetch_context.ts
 function usage() {
   return "Usage: node fetch_context.js [--cwd <dir>] <mode> [options] [--json]\n  L1 metadata: --metadata --focus <id-or-path> [--focus <x> ...] [--task-dir <dir>]\n  L2 fetch:    --fetch <path> [--fetch <path> ...] [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] [--task-dir <dir>]\n  L3 expand:   --expand <id-or-path> [--relations <a,b,c>] [--depth <n>] [--reason <text>] [--task-dir <dir>]\nExactly one mode is required per invocation.";
@@ -25171,7 +28322,7 @@ function parseArgs(argv) {
       args.reason = requiredValue(argv, index, arg);
       index += 1;
     } else if (arg === "--cwd") {
-      args.cwd = import_node_path5.default.resolve(requiredValue(argv, index, arg));
+      args.cwd = import_node_path6.default.resolve(requiredValue(argv, index, arg));
       index += 1;
     } else if (arg === "--json") {
       args.json = true;
@@ -25249,7 +28400,8 @@ function emitReport(report, findings) {
 }
 function run(args) {
   const mode = resolveMode(args);
-  const cwd = import_node_path5.default.resolve(args.cwd);
+  const cwd = import_node_path6.default.resolve(args.cwd);
+  if (!schemaEntrypointGuard(cwd)) return;
   if (mode === "metadata") {
     const { metadata, findings } = listArtifactMetadata(cwd, args.focus, args.taskDir);
     emitReport({ metadata, findings }, findings);
@@ -25300,6 +28452,9 @@ strip-bom-string/index.js:
    * Copyright (c) 2015, 2017, Jon Schlinkert.
    * Released under the MIT License.
    *)
+
+safe-buffer/index.js:
+  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 5.5.0 https://github.com/nodeca/js-yaml @license MIT *)
