@@ -6,6 +6,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import { applyImplIndexSync } from "../src/skills/impl-doc/scripts/lib/impl_index_sync";
+
 const maintenanceRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-maintenance");
 const adrRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/adr-doc");
 const implRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/impl-doc");
@@ -78,9 +80,34 @@ test("index apply appends rows to a promoted index without warnings", () => {
   const adr = runScript(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
   assert.equal(adr.status, 0, adr.stderr);
   assert.match(adr.stdout, /Index deferred/);
+  // Registry 3: impl creators refuse at the registry gate — a promoted IR
+  // index is migration-owned, so a new row is seeded directly and synced
+  // through the owner engine (the API migration tooling calls).
   const ir = runScript(implRoot, "new_impl_record.js", ["--title", "Extract foo", "--cwd", repo], repo);
-  assert.equal(ir.status, 0, ir.stderr);
-  assert.match(ir.stdout, /Index deferred/);
+  assert.equal(ir.status, 1, "new_impl_record must refuse under Registry 3");
+  assert.match(ir.stderr, /legacy format|migration-only|migration tooling/);
+  fs.writeFileSync(
+    path.join(repo, "docs/impl/ir/extract-foo.md"),
+    [
+      "---",
+      'id: "IMPL-0001"',
+      'type: "impl"',
+      'status: "draft"',
+      'title: "Extract foo"',
+      'created: "2026-01-01"',
+      'updated: "2026-01-01"',
+      "owners: []",
+      "metadata:",
+      "  experiments:",
+      "    adopted: []",
+      "    rejected: []",
+      "---",
+      "",
+      "# Extract foo",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
 
   const adrApply = runScript(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/adr", "--cwd", repo], repo);
   assert.equal(adrApply.status, 0, adrApply.stderr);
@@ -88,9 +115,13 @@ test("index apply appends rows to a promoted index without warnings", () => {
   const index = fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8");
   assert.match(index, /adopt-madr\.md/);
 
+  // The normal index surface refuses the migration-owned dir; the owner
+  // engine appends the row without warnings (same path migrate_ids takes).
   const irApply = runScript(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/ir", "--cwd", repo], repo);
-  assert.equal(irApply.status, 0, irApply.stderr);
-  assert.doesNotMatch(irApply.stdout + irApply.stderr, /hand-curated/);
+  assert.equal(irApply.status, 1, "migration-owned target must fail closed");
+  const synced = applyImplIndexSync(repo, "ir");
+  assert.equal(synced.plan.verdict, "sync");
+  assert.equal(synced.written, true);
   assert.match(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), /extract-foo\.md/);
 });
 

@@ -297,32 +297,23 @@ test("doc creation detects existing alternate directories", () => {
     ).status,
     0,
   );
-  assert.equal(
-    runScript(
-      "plan-doc",
-      "new_plan.js",
-      [
-        "--title",
-        "Alternate plan dir",
-        "--implements",
-        "specs/alternate-spec-dir.md",
-        "--design",
-        "docs/designs/alternate-design-dir.md",
-      ],
-      { cwd: repo },
-    ).status,
-    0,
-  );
-  assert.equal(runScript("task-doc", "new_task.js", ["--title", "Alternate task dir"], { cwd: repo }).status, 0);
 
   assert.equal(fs.existsSync(path.join(repo, "specs/alternate-spec-dir.md")), true);
   assert.equal(fs.existsSync(path.join(repo, "docs/designs/alternate-design-dir.md")), true);
   assert.equal(fs.existsSync(path.join(repo, "docs/designs/overview.md")), true);
-  assert.equal(fs.existsSync(path.join(repo, "plans/alternate-plan-dir.md")), true);
-  assert.equal(fs.existsSync(path.join(repo, "tasks/alternate-task-dir.md")), true);
+
+  // Registry 3: plan/task are execution-bound — the creators refuse at the
+  // registry gate before any alternate-dir detection or write (Issue #234).
+  for (const [skill, name] of [["plan-doc", "new_plan.js"], ["task-doc", "new_task.js"]] as const) {
+    const refused = runScript(skill, name, ["--title", "Alternate dir"], { cwd: repo });
+    assert.notEqual(refused.status, 0, `${name} must refuse`);
+    assert.match(refused.stderr, /execution-bound|ephemeral|Execution Store/);
+  }
+  assert.equal(fs.existsSync(path.join(repo, "plans/alternate-dir.md")), false);
+  assert.equal(fs.existsSync(path.join(repo, "tasks/alternate-dir.md")), false);
 });
 
-test("new_plan links to spec with implements and derives-from relations", () => {
+test("new_plan refuses at the registry gate — execution-bound, no artifact minted", () => {
   const repo = tempRepo();
   const spec = runScript("spec-doc", "new_spec.js", ["--title", "Define checkout flow"], { cwd: repo });
   assert.equal(spec.status, 0, spec.stderr);
@@ -348,17 +339,9 @@ test("new_plan links to spec with implements and derives-from relations", () => 
     { cwd: repo },
   );
 
-  assert.equal(result.status, 0, result.stderr);
-  const plan = fs.readFileSync(path.join(repo, "docs/plans/implement-checkout-flow.md"), "utf8");
-  assert.match(plan, /^id: "PLAN-[0-9A-Za-z]{22}"$/m);
-  assert.match(plan, /^type: "plan"$/m);
-  assert.match(plan, /^  implements:$/m);
-  assert.match(plan, /^    - "docs\/specs\/define-checkout-flow.md"$/m);
-  assert.match(plan, /^  changes:$/m);
-  assert.match(plan, /^    added: \[\]$/m);
-  assert.match(plan, /^  derives-from:$/m);
-  assert.match(plan, /^    - "docs\/specs\/define-checkout-flow.md"$/m);
-  assert.match(plan, /^    - "docs\/designs\/design-checkout-orchestration.md"$/m);
+  assert.notEqual(result.status, 0, "new_plan must refuse under Registry 3 (Issue #234)");
+  assert.match(result.stderr, /execution-bound|ephemeral|Execution Store/);
+  assert.equal(fs.existsSync(path.join(repo, "docs/plans/implement-checkout-flow.md")), false, "no plan artifact is minted");
 });
 
 test("new_design creates overview and detailed design, and defers the index", () => {
@@ -395,11 +378,14 @@ test("new_design creates overview and detailed design, and defers the index", ()
   assert.match(overview, /^# System Design Overview/m);
 });
 
-test("new_plan enforces approved design gate with fixed error code", () => {
+test("new_plan refuses before the design gate — registry gate wins", () => {
   const repo = tempRepo();
   const spec = runScript("spec-doc", "new_spec.js", ["--title", "Define checkout flow"], { cwd: repo });
   assert.equal(spec.status, 0, spec.stderr);
 
+  // Registry 3: the execution-bound refusal precedes every former gate —
+  // even invocations that used to fail PLAN-DOC-GATE-001 now stop at the
+  // registry (Issue #234).
   const missingDesign = runScript(
     "plan-doc",
     "new_plan.js",
@@ -407,51 +393,11 @@ test("new_plan enforces approved design gate with fixed error code", () => {
     { cwd: repo },
   );
   assert.notEqual(missingDesign.status, 0);
-  assert.match(missingDesign.stderr, /PLAN-DOC-GATE-001/);
-
-  const draftDesign = runScript(
-    "design-doc",
-    "new_design.js",
-    ["--title", "Draft checkout design", "--status", "draft"],
-    { cwd: repo },
-  );
-  assert.equal(draftDesign.status, 0, draftDesign.stderr);
-
-  fs.writeFileSync(
-    path.join(repo, "docs/designs/0002-case-sensitive-design.md"),
-    matter.stringify("# Case-sensitive design\n", {
-      id: "DESIGN-0002",
-      type: "design",
-      status: "Approved",
-      title: "Case-sensitive design",
-      created: "2026-08-13",
-      updated: "2026-08-13",
-      owners: [],
-      relations: {},
-    }),
-    "utf8",
-  );
-
-  const invalidApproval = runScript(
-    "plan-doc",
-    "new_plan.js",
-    [
-      "--title",
-      "Implement checkout flow",
-      "--implements",
-      "docs/specs/define-checkout-flow.md",
-      "--design",
-      "docs/designs/draft-checkout-design.md",
-      "--design",
-      "docs/designs/0002-case-sensitive-design.md",
-    ],
-    { cwd: repo },
-  );
-  assert.notEqual(invalidApproval.status, 0);
-  assert.match(invalidApproval.stderr, /PLAN-DOC-GATE-001/);
+  assert.match(missingDesign.stderr, /execution-bound|ephemeral|Execution Store/);
+  assert.doesNotMatch(missingDesign.stderr, /PLAN-DOC-GATE-001/);
 });
 
-test("new_task requires an approved or active plan and links it", () => {
+test("new_task refuses at the registry gate; task reads are not a durable scope", () => {
   const repo = tempRepo();
   const planDir = path.join(repo, "docs/plans");
   fs.mkdirSync(planDir, { recursive: true });
@@ -467,56 +413,31 @@ test("new_task requires an approved or active plan and links it", () => {
     ["--title", "Wire checkout button", "--plan", "docs/plans/0001-plan.md", "--status", "in-progress"],
     { cwd: repo },
   );
-  assert.equal(created.status, 0, created.stderr);
-
-  const task = fs.readFileSync(path.join(repo, "docs/tasks/wire-checkout-button.md"), "utf8");
-  assert.match(task, /^id: "TASK-[0-9A-Za-z]{22}"$/m);
-  assert.match(task, /^status: "in-progress"$/m);
-  assert.match(task, /^  implements:$/m);
-  assert.match(task, /^    - "docs\/plans\/0001-plan.md"$/m);
-  assert.match(task, /^  changes:$/m);
-  assert.match(task, /^    added: \[\]$/m);
+  assert.notEqual(created.status, 0, "new_task must refuse under Registry 3 (Issue #234)");
+  assert.match(created.stderr, /execution-bound|ephemeral|Execution Store/);
+  assert.equal(fs.existsSync(path.join(repo, "docs/tasks/wire-checkout-button.md")), false, "no task artifact is minted");
 
   const listed = runScript("doc-status", "list_docs.js", ["--type", "task", "--status", "in-progress", "--json"], { cwd: repo });
-  assert.equal(listed.status, 0, listed.stderr);
-  const report = JSON.parse(listed.stdout);
-  assert.equal(report.entries.length, 1);
-  assert.equal(report.entries[0].status, "in-progress");
+  assert.notEqual(listed.status, 0, "task is not a durable list scope");
+  assert.match(listed.stderr, /execution-bound|ephemeral|Execution Store/);
 });
 
-test("new_task records repeatable task dependencies and blocks relations", () => {
+test("new_task refuses regardless of plan validity or dependency flags", () => {
   const repo = repoWithApprovedPlanAndTasks();
-  const created = runScript("task-doc", "new_task.js", [
-    "--title", "Implement API",
-    "--plan", "docs/plans/0001-plan.md",
-    "--depends-on", "docs/tasks/0001-schema.md",
-    "--depends-on", "TASK-0002",
-    "--blocks", "docs/tasks/0004-ui.md",
-  ], { cwd: repo });
-  assert.equal(created.status, 0, created.stderr);
-  const task = fs.readFileSync(path.join(repo, "docs/tasks/implement-api.md"), "utf8");
-  assert.match(task, /^    - "docs\/tasks\/0001-schema.md"$/m);
-  assert.match(task, /^    - "TASK-0002"$/m);
-  assert.match(task, /^  blocks:\n    - "docs\/tasks\/0004-ui.md"$/m);
-});
-
-test("new_task rejects a draft or superseded plan", () => {
-  const repo = tempRepo();
-  const planDir = path.join(repo, "docs/plans");
-  fs.mkdirSync(planDir, { recursive: true });
-  for (const [name, status] of [["draft", "draft"], ["superseded", "superseded"]]) {
-    fs.writeFileSync(
-      path.join(planDir, `0001-${name}.md`),
-      ["---", `id: "PLAN-${name === "draft" ? "0001" : "0002"}"`, 'type: "plan"', `status: "${status}"`, `title: "${name}"`, 'created: "2026-07-30"', 'updated: "2026-07-30"', "owners: []", "relations:", "  implements: []", "---", "# Plan", ""].join("\n"),
-      "utf8",
-    );
-    const result = runScript("task-doc", "new_task.js", ["--title", `Task for ${name}`, "--plan", `docs/plans/0001-${name}.md`], { cwd: repo });
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /TASK-DOC-GATE-001/);
+  for (const args of [
+    ["--title", "Implement API", "--plan", "docs/plans/0001-plan.md",
+      "--depends-on", "docs/tasks/0001-schema.md", "--depends-on", "TASK-0002", "--blocks", "docs/tasks/0004-ui.md"],
+    ["--title", "Any task", "--plan", "docs/plans/0001-plan.md"],
+  ]) {
+    const created = runScript("task-doc", "new_task.js", args, { cwd: repo });
+    assert.notEqual(created.status, 0, `new_task ${args[1]} must refuse (Issue #234)`);
+    assert.match(created.stderr, /execution-bound|ephemeral|Execution Store/);
+    assert.doesNotMatch(created.stderr, /TASK-DOC-GATE-001/);
   }
+  assert.equal(fs.existsSync(path.join(repo, "docs/tasks/implement-api.md")), false);
 });
 
-test("new_test_spec requires verifies targets and records relations", () => {
+test("new_test_spec refuses at the registry gate — legacy migration-only type", () => {
   const repo = tempRepo();
   fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
   fs.writeFileSync(
@@ -528,41 +449,23 @@ test("new_test_spec requires verifies targets and records relations", () => {
     "utf8",
   );
 
-  const missing = runScript("test-spec-doc", "new_test_spec.js", ["--title", "Checkout total"], { cwd: repo });
-  assert.notEqual(missing.status, 0);
-  assert.match(missing.stderr, /TEST-SPEC-DOC-GATE-001/);
-
-  const broken = runScript("test-spec-doc", "new_test_spec.js", [
-    "--title", "Checkout total",
-    "--verifies", "docs/specs/missing.md",
-  ], { cwd: repo });
-  assert.notEqual(broken.status, 0);
-  assert.match(broken.stderr, /TEST-SPEC-DOC-GATE-001/);
-
-  const created = runScript("test-spec-doc", "new_test_spec.js", [
-    "--title", "Checkout total calculation",
-    "--verifies", "docs/specs/0001-checkout.md",
-    "--derives-from", "docs/specs/0001-checkout.md",
-  ], { cwd: repo });
-  assert.equal(created.status, 0, created.stderr);
-
-  const specPath = path.join(repo, "docs/test-specs/checkout-total-calculation.md");
-  assert.equal(fs.existsSync(specPath), true);
-  const doc = fs.readFileSync(specPath, "utf8");
-  assert.match(doc, /^id: "TSPEC-[0-9A-Za-z]{22}"$/m);
-  assert.match(doc, /^type: "test-spec"$/m);
-  assert.match(doc, /^status: "draft"$/m);
-  assert.match(doc, /^  verifies:\n    - "docs\/specs\/0001-checkout\.md"$/m);
-  assert.match(doc, /^  derives-from:\n    - "docs\/specs\/0001-checkout\.md"$/m);
-  assert.match(doc, /## Purpose/);
-  assert.match(doc, /## Guarantees/);
-  assert.match(doc, /## Non-goals/);
-  assert.match(doc, /## Risk/);
+  // Registry 3: test-spec is a legacy, migration-only type — the creator
+  // refuses before verifies validation or any write; durable verification
+  // intent lives in `verification` (Issue #234 / #239).
+  for (const args of [
+    ["--title", "Checkout total"],
+    ["--title", "Checkout total", "--verifies", "docs/specs/missing.md"],
+    ["--title", "Checkout total calculation", "--verifies", "docs/specs/0001-checkout.md", "--derives-from", "docs/specs/0001-checkout.md"],
+  ]) {
+    const refused = runScript("test-spec-doc", "new_test_spec.js", args, { cwd: repo });
+    assert.notEqual(refused.status, 0, `new_test_spec must refuse: ${args.join(" ")}`);
+    assert.match(refused.stderr, /legacy format|migration-only|migration tooling/);
+  }
+  assert.equal(fs.existsSync(path.join(repo, "docs/test-specs")), false, "no test-spec dir is minted");
 
   const audited = runScript("doc-status", "audit_docs.js", ["--type", "test-spec", "--json"], { cwd: repo });
-  assert.equal(audited.status, 0, audited.stderr);
-  const report = JSON.parse(audited.stdout);
-  assert.equal(report.files, 1);
+  assert.notEqual(audited.status, 0, "test-spec is not a durable audit scope");
+  assert.match(audited.stderr, /legacy format|migration-only|migration tooling/);
 });
 
 test("doc-status flags test-specs without verifies and plans without test-spec evidence", () => {
@@ -631,34 +534,26 @@ test("doc-status flags test-specs without verifies and plans without test-spec e
     relations: { "verified-by": ["docs/specs/0001-checkout.md"] },
   });
 
+  // Registry 3: test-spec is legacy and plan execution-bound — neither is a
+  // durable audit scope; both refuse at the registry gate (Issue #234).
   const specAudit = runScript("doc-status", "audit_docs.js", ["--type", "test-spec", "--json"], { cwd: repo });
-  assert.equal(specAudit.status, 0, specAudit.stderr);
-  const specReport = JSON.parse(specAudit.stdout);
-  assert.equal(
-    specReport.findings.some((finding: any) => finding.code === "test-spec-missing-verifies" && finding.file === "0001-empty.md"),
-    true,
-  );
-  const invalidTargets = specReport.findings
-    .filter((finding: any) => finding.code === "test-spec-invalid-verifies-target")
-    .map((finding: any) => finding.file);
-  assert.deepEqual(invalidTargets, ["0004-task-verifies.md"]);
+  assert.notEqual(specAudit.status, 0, "test-spec audit must refuse");
+  assert.match(specAudit.stderr, /legacy format|migration-only|migration tooling/);
 
   const planAudit = runScript("doc-status", "audit_docs.js", ["--type", "plan", "--json"], { cwd: repo });
-  assert.equal(planAudit.status, 0, planAudit.stderr);
-  const planReport = JSON.parse(planAudit.stdout);
-  const flagged = planReport.findings
-    .filter((finding: any) => finding.code === "plan-missing-test-spec-evidence")
-    .map((finding: any) => finding.file);
-  assert.deepEqual(flagged, ["0001-bare.md", "0007-linked-spec.md"]);
+  assert.notEqual(planAudit.status, 0, "plan audit must refuse");
+  assert.match(planAudit.stderr, /execution-bound|ephemeral|Execution Store/);
 
+  // --type all audits durable types only; the planted legacy/execution docs
+  // stay scannable evidence but produce no legacy-scope findings.
   const allAudit = runScript("doc-status", "audit_docs.js", ["--type", "all", "--json"], { cwd: repo });
   assert.equal(allAudit.status, 0, allAudit.stderr);
   const allReport = JSON.parse(allAudit.stdout);
+  const retiredCodes = ["test-spec-missing-verifies", "test-spec-invalid-verifies-target", "plan-missing-test-spec-evidence"];
   assert.equal(
-    allReport.findings.some(
-      (finding: any) => finding.code === "test-spec-missing-verifies" && finding.file === "docs/test-specs/0001-empty.md",
-    ),
-    true,
+    allReport.findings.some((finding: any) => retiredCodes.includes(finding.code)),
+    false,
+    "no retired plan/test-spec rule ids under Registry 3",
   );
 });
 

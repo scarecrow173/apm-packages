@@ -3,6 +3,13 @@
 この規約は、`plan-doc` が実装 plan を作成・監査・索引化・ルーティングするときの
 基準を定めます。
 
+Document Registry 3 では `plan` は execution-bound（`persistence: ephemeral`）
+で、durable な Git 上の形を持たず、`new_plan.js` は design gate・スコープ
+検証・書き込みの前に registry gate で拒否します。以下の `docs/plans/` などの
+候補ディレクトリは former ディレクトリ — v3 以前のコーパスをマイグレーション
+が読み取るための owned scope です。この規約はそのレガシーな文書形状と、
+Execution Store の計画レコードが従う契約を記述します。
+
 `plan-doc` は作成前に `design-doc` の承認ゲートを要求します。
 
 plan は、承認済みの spec または受け入れ済み ADR を、実装順序、リスク、
@@ -93,7 +100,7 @@ relations:
 | --- | --- | --- |
 | `id` | Yes | 安定した document identifier。`PLAN-<22文字Base62>` 形式（UUIDv7由来。従来の `PLAN-NNNN` も有効）。 |
 | `type` | Yes | `plan` であること。 |
-| `status` | Yes | 現在の lifecycle state。 |
+| `status` | Yes | 型固有のワークフロー状態（後述のステータス値を参照）。plan は ephemeral で `lifecycle` フィールドを持たない。 |
 | `title` | Yes | 人が読める実装 plan の題名。 |
 | `created` | Yes | 作成日。`YYYY-MM-DD` 形式。 |
 | `updated` | Yes | 最終更新日。`YYYY-MM-DD` 形式。 |
@@ -102,7 +109,8 @@ relations:
 
 ## Status Values
 
-使用する lifecycle status:
+使用する型固有ワークフローステータス（plan は ephemeral で `lifecycle`
+フィールドはこの軸に存在しない）:
 
 | Status | Meaning |
 | --- | --- |

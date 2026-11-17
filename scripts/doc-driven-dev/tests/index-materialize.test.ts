@@ -18,12 +18,13 @@ import type {
  * Issue #197 — index-only materialization op for doc-maintenance.
  *
  * Covers the normalized per-target plan (`verdict`, `changes`, `pins`,
- * `planHash`, merged `content`) for shared-4col dirs, the ADR dir, and the
- * impl-doc IR/EXP dirs (Task 2: delegated to the owner sync API — pins and
- * planHash pass through from `SyncPlan`, `content` stays absent), plus
+ * `planHash`, merged `content`) for shared-4col dirs and the ADR dir, plus
  * `applyIndexMaterialization`: `--expect` global-hash gating, pin
- * revalidation, atomic shared writes, the ADR owner-writer path, and the
- * impl `applyImplIndexSync` delegation with per-target `expectPlanHash`.
+ * revalidation, atomic shared writes, and the ADR owner-writer path.
+ *
+ * Registry 3 (Issue #234): legacy impl/exp dirs plan/apply as rejected
+ * targets — their indexes are migration-owned and only regenerated inside
+ * migration tooling, never through this normal materialization path.
  */
 
 const MARKER = "<!-- doc-suite:generated-index -->";
@@ -346,19 +347,20 @@ test("plan reports the ADR dir via the adr kind and adr-doc owner", async () => 
   assert.ok(target.content?.includes("0001-use-pgsql.md"));
 });
 
-// --- plan: impl-doc IR/EXP via the owner sync API ----------------------------
+// --- plan: impl-doc IR/EXP — legacy dirs are migration-owned (Issue #234) ----
+//
+// Under Registry 3 the impl index sync engine only runs inside migration
+// tooling (id_migration's applyImplIndexSync). The normal materializer never
+// plans or writes legacy indexes: an explicit --dir on a legacy leaf dir
+// plans a rejected target with the migration-owned reason.
 
-test("plan dispatches docs/impl/ir as an ir target through the owner sync plan", async () => {
+test("plan rejects docs/impl/ir as a migration-owned ir scope", async () => {
   const repo = tempRepo();
   const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
   const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
   const c: IrSpec = { file: "c.md", id: "IMPL-C", title: "Gamma", status: "completed" };
-  const d: IrSpec = { file: "d.md", id: "IMPL-D", title: "Delta", status: "draft" };
   for (const spec of [a, b, c]) writeIr(repo, spec);
   writeIrIndex(repo, { active: [a, b], settled: [c] });
-  // b flips to a settled status; d is a brand-new source with no row.
-  writeIr(repo, { ...b, status: "completed" });
-  writeIr(repo, d);
 
   const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
   assert.equal(plan.targets.length, 1);
@@ -367,51 +369,34 @@ test("plan dispatches docs/impl/ir as an ir target through the owner sync plan",
   assert.equal(target.owner, "impl-doc");
   assert.equal(target.directory, "docs/impl/ir");
   assert.equal(target.indexPath, "docs/impl/ir/README.md");
-  assert.equal(target.verdict, "sync");
-  assert.deepEqual(target.plannedFiles, ["docs/impl/ir/README.md"]);
-  const kinds = new Map(target.changes.map((change) => [change.file, change.kind]));
-  assert.equal(kinds.get("d.md"), "add");
-  assert.ok(!kinds.has("a.md") && !kinds.has("c.md"), "stable rows report no change");
-  const move = target.changes.find((change) => change.file === "b.md");
-  assert.equal(move?.kind, "move-tier");
-  assert.equal(move?.before, "active");
-  assert.equal(move?.after, "settled");
-  // Owner pins pass through verbatim: fileList is the sorted source listing
-  // and sources the per-file sha256 map — not the shared digest strings.
-  assert.deepEqual(target.pins.fileList, ["a.md", "b.md", "c.md", "d.md"]);
-  const sources = target.pins.sources as Record<string, string>;
-  assert.match(sources["a.md"] ?? "", /^[0-9a-f]{64}$/);
-  assert.ok(target.pins.index);
-  assert.equal(target.sourceCount, 4);
-  assert.match(target.planHash, /^[0-9a-f]{64}$/);
-  assert.equal("content" in target, false, "impl write payload lives inside the owner apply");
-});
-
-test("plan reports create for an impl dir with no README", async () => {
-  const repo = tempRepo();
-  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
-
-  const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
-  const target = plan.targets[0];
-  assert.equal(target.verdict, "create");
-  assert.equal(target.pins.index, null);
-  assert.deepEqual(target.plannedFiles, ["docs/impl/ir/README.md"]);
-  assert.ok(target.changes.every((change) => change.kind === "add"));
+  assert.equal(target.verdict, "rejected");
+  assert.equal(target.reason, "legacy directory: index is migration-owned");
+  assert.deepEqual(target.changes, []);
+  assert.deepEqual(target.plannedFiles, []);
   assert.equal("content" in target, false);
 });
 
-test("plan rejects a malformed impl index with the owner reason", async () => {
+test("plan rejects an impl dir with no README — migration owns the create", async () => {
   const repo = tempRepo();
   writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
-  // Marker present but the row is short a cell — the owner's strict parser
-  // rejects, and the reason is ITS vocabulary, not the shared classifier's.
-  writeFile(repo, "docs/impl/ir/README.md",
-    `# Implementation Records\n\n${MARKER}\n\nDirectory: \`docs/impl/ir\`\n\n${HEADER4}\n| IMPL-A | Alpha | draft |\n`);
 
   const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
   const target = plan.targets[0];
   assert.equal(target.verdict, "rejected");
-  assert.match(target.reason ?? "", /index row|unparseable/i);
+  assert.equal(target.reason, "legacy directory: index is migration-owned");
+  assert.deepEqual(target.plannedFiles, []);
+  assert.equal("content" in target, false);
+});
+
+test("plan rejects an impl index with the migration-owned reason", async () => {
+  const repo = tempRepo();
+  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
+  writeIrIndex(repo, { active: [{ file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" }] });
+
+  const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
+  const target = plan.targets[0];
+  assert.equal(target.verdict, "rejected");
+  assert.match(target.reason ?? "", /legacy directory: index is migration-owned/i);
   assert.deepEqual(target.changes, []);
   assert.deepEqual(target.plannedFiles, []);
 
@@ -439,7 +424,7 @@ test("plan rejects the docs/impl container — no managed index contract", async
   assert.equal(applied.blocked[0].target.reason, "impl container has no managed index");
 });
 
-test("plan dispatches docs/impl/exp as an exp target; a missing row syncs as add", async () => {
+test("plan rejects docs/impl/exp as a migration-owned exp scope", async () => {
   const repo = tempRepo();
   writeExp(repo, "0001-one.jsonl");
   writeExp(repo, "0002-two.jsonl");
@@ -450,35 +435,31 @@ test("plan dispatches docs/impl/exp as an exp target; a missing row syncs as add
   const target = plan.targets[0];
   assert.equal(target.kind, "exp");
   assert.equal(target.owner, "impl-doc");
-  assert.equal(target.verdict, "sync");
-  assert.deepEqual(target.plannedFiles, ["docs/impl/exp/README.md"]);
-  assert.deepEqual(
-    target.changes.map((change) => [change.file, change.kind]),
-    [["0002-two.jsonl", "add"]],
-  );
-  assert.deepEqual(target.pins.fileList, ["0001-one.jsonl", "0002-two.jsonl"]);
-  assert.equal(target.sourceCount, 2);
+  assert.equal(target.verdict, "rejected");
+  assert.equal(target.reason, "legacy directory: index is migration-owned");
+  assert.deepEqual(target.changes, []);
+  assert.deepEqual(target.plannedFiles, []);
   assert.equal("content" in target, false);
 });
 
-test("plan reports create for an exp dir with no README", async () => {
+test("plan rejects an exp dir with no README — migration owns the create", async () => {
   const repo = tempRepo();
   writeExp(repo, "0001-one.jsonl");
 
   const plan = await planIndexMaterialization(repo, { dir: "docs/impl/exp" });
   const target = plan.targets[0];
-  assert.equal(target.verdict, "create");
-  assert.equal(target.pins.index, null);
-  assert.deepEqual(target.plannedFiles, ["docs/impl/exp/README.md"]);
-  assert.ok(target.changes.every((change) => change.kind === "add"));
+  assert.equal(target.verdict, "rejected");
+  assert.equal(target.reason, "legacy directory: index is migration-owned");
+  assert.deepEqual(target.plannedFiles, []);
 });
 
 // --- enumeration / scoping ---------------------------------------------------
 
-test("plan enumerates managed dirs without --dir and scopes with --dir", async () => {
+test("plan enumerates durable managed dirs without --dir and scopes with --dir", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/specs/checkout.md", specDoc("checkout", "Spec checkout"));
-  // impl leaf dirs join enumeration when they exist on disk.
+  // Registry 3: legacy impl leaf dirs on disk are never enumerated — their
+  // indexes are migration-owned (Issue #234).
   writeIr(repo, { file: "alpha.md", id: "IMPL-A", title: "Alpha", status: "draft" });
   writeExp(repo, "0001-exp.jsonl");
 
@@ -489,22 +470,17 @@ test("plan enumerates managed dirs without --dir and scopes with --dir", async (
     "docs/designs",
     "docs/discovery",
     "docs/ideas",
-    "docs/impl/exp",
-    "docs/impl/ir",
-    "docs/plans",
+    "docs/knowledge",
     "docs/specs",
-    "docs/tasks",
-    "docs/test-specs",
+    "docs/verification",
   ]);
   const byDir = new Map(plan.targets.map((target) => [target.directory, target]));
   assert.equal(byDir.get("docs/adr")?.kind, "adr");
   assert.equal(byDir.get("docs/adr")?.owner, "adr-doc");
   assert.equal(byDir.get("docs/specs")?.kind, "shared");
   assert.equal(byDir.get("docs/specs")?.owner, "doc-suite");
-  assert.equal(byDir.get("docs/impl/ir")?.kind, "ir");
-  assert.equal(byDir.get("docs/impl/ir")?.owner, "impl-doc");
-  assert.equal(byDir.get("docs/impl/exp")?.kind, "exp");
-  assert.equal(byDir.get("docs/impl/exp")?.owner, "impl-doc");
+  assert.equal(byDir.get("docs/knowledge")?.kind, "shared");
+  assert.equal(byDir.get("docs/verification")?.kind, "shared");
 
   // impl leaf dirs absent on disk are NOT enumerated — no phantom create.
   const bare = tempRepo();
@@ -516,10 +492,17 @@ test("plan enumerates managed dirs without --dir and scopes with --dir", async (
   assert.equal(scoped.targets[0].directory, "docs/specs");
   assert.equal(scoped.targets[0].kind, "shared");
 
-  // impl dirs are managed index dirs: --dir selects them by kind.
+  // An impl --dir still resolves one target — rejected as migration-owned.
   const implScoped = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
   assert.equal(implScoped.targets.length, 1);
   assert.equal(implScoped.targets[0].kind, "ir");
+  assert.equal(implScoped.targets[0].verdict, "rejected");
+
+  // An execution-bound --dir resolves the same migration-owned rejection.
+  const planScoped = await planIndexMaterialization(repo, { dir: "docs/plans" });
+  assert.equal(planScoped.targets.length, 1);
+  assert.equal(planScoped.targets[0].verdict, "rejected");
+  assert.match(planScoped.targets[0].reason ?? "", /migration-owned/);
 
   // A --dir that lands on a file hosts no managed index.
   const fileScoped = await planIndexMaterialization(repo, { dir: "docs/specs/checkout.md" });
@@ -562,7 +545,7 @@ test("plan rejects a symlinked canonical dir escaping the checkout", async (t) =
   assert.deepEqual(fs.readdirSync(outside).sort(), ["evil.md"], "apply wrote nothing outside");
 });
 
-test("plan rejects an enumerated impl dir that escapes the checkout", async (t) => {
+test("plan refuses an escaping impl --dir at the containment boundary", async (t) => {
   const repo = tempRepo();
   const outside = tempRepo();
   writeFile(outside, "a.md", "# outside content that must never be read\n");
@@ -574,11 +557,13 @@ test("plan rejects an enumerated impl dir that escapes the checkout", async (t) 
     return;
   }
 
-  const plan = await planIndexMaterialization(repo);
-  const target = targetFor(plan, "docs/impl/ir");
-  assert.equal(target.verdict, "rejected");
-  assert.equal(target.reason, "directory-not-contained");
-  assert.equal(target.sourceCount, 0);
+  // Registry 3: legacy dirs are never enumerated, so the escape can only be
+  // reached through an explicit --dir — which throws at the containment
+  // boundary before any legacy reasoning runs (Issue #234).
+  await assert.rejects(
+    planIndexMaterialization(repo, { dir: "docs/impl/ir" }),
+    /escapes the checkout/,
+  );
 
   const applied = await applyIndexMaterialization(repo);
   assert.ok(!applied.written.some((file) => file.startsWith("docs/impl")));
@@ -776,40 +761,39 @@ test("apply syncs the ADR index through the owner writer", async () => {
   assert.equal(targetFor(again, "docs/adr").verdict, "in-sync");
 });
 
-// --- apply: impl-doc IR/EXP via the owner sync API ---------------------------
+// --- apply: impl-doc IR/EXP — migration-owned refusals (Issue #234) ----------
+//
+// The impl index sync engine is still covered through impl-index-sync and
+// id-migration tests. Here the normal apply must prove it never reaches a
+// legacy write: every impl/exp --dir lands in blocked with the
+// migration-owned reason and touches nothing.
 
-test("apply writes a stale IR index through the owner sync API", async () => {
+test("apply blocks a stale IR index — migration owns the sync", async () => {
   const repo = tempRepo();
   const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
   const b: IrSpec = { file: "b.md", id: "IMPL-B", title: "Beta", status: "draft" };
   for (const spec of [a, b]) writeIr(repo, spec);
   writeIrIndex(repo, { active: [a, b], tail: "\nHand notes.\n" });
-  writeIr(repo, { ...b, status: "completed" });
+  const indexBefore = shaFile(path.join(repo, "docs/impl/ir/README.md"));
 
   const result = await applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
-  assert.deepEqual(result.written, ["docs/impl/ir/README.md"]);
-  assert.deepEqual(result.blocked, []);
-
-  const content = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
-  const settledAt = content.indexOf("## Settled");
-  assert.ok(settledAt > 0, "settled tier exists after sync");
-  assert.ok(content.indexOf("[a.md](./a.md)") > -1 && content.indexOf("[a.md](./a.md)") < settledAt, "a stays active");
-  assert.ok(content.indexOf("[b.md](./b.md)") > settledAt, "b moved to settled");
-  assert.match(content, /Hand notes\./, "hand-written tail survives the owner merge");
-
-  const again = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
-  assert.equal(targetFor(again, "docs/impl/ir").verdict, "in-sync");
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.equal(result.blocked[0].target.kind, "ir");
+  assert.equal(result.blocked[0].reason, "legacy directory: index is migration-owned");
+  assert.equal(shaFile(path.join(repo, "docs/impl/ir/README.md")), indexBefore, "legacy index untouched");
 });
 
-test("apply creates a missing impl index through the owner sync API", async () => {
+test("apply never creates a missing impl index — migration owns the create", async () => {
   const repo = tempRepo();
   writeExp(repo, "0001-one.jsonl");
 
   const result = await applyIndexMaterialization(repo, { dir: "docs/impl/exp" });
-  assert.deepEqual(result.written, ["docs/impl/exp/README.md"]);
-  const content = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
-  assert.ok(content.startsWith(`# Experiment Logs\n\n${MARKER}\n\nDirectory: \`docs/impl/exp\`\n\n`));
-  assert.ok(content.includes(expRow("0001-one.jsonl")));
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked.length, 1);
+  assert.equal(result.blocked[0].target.kind, "exp");
+  assert.equal(result.blocked[0].reason, "legacy directory: index is migration-owned");
+  assert.ok(!fs.existsSync(path.join(repo, "docs/impl/exp/README.md")), "no legacy index minted");
 });
 
 test("apply --expect blocks impl targets on plan drift with zero writes", async () => {
@@ -825,11 +809,14 @@ test("apply --expect blocks impl targets on plan drift with zero writes", async 
   assert.equal(result.blocked.length, 1);
   assert.equal(result.blocked[0].target.kind, "ir");
   assert.match(result.blocked[0].reason, /plan drift/);
+  assert.match(result.blocked[0].reason, /migration-owned/);
   assert.deepEqual(treeHashes(repo), before, "a rejected --expect writes nothing");
 
+  // Even with a matching --expect the legacy target stays blocked.
   const plan = await planIndexMaterialization(repo, { dir: "docs/impl/ir" });
   const applied = await applyIndexMaterialization(repo, { dir: "docs/impl/ir", expectPlanHash: plan.planHash });
-  assert.deepEqual(applied.written, ["docs/impl/ir/README.md"]);
+  assert.deepEqual(applied.written, []);
+  assert.equal(applied.blocked[0]?.reason, "legacy directory: index is migration-owned");
 });
 
 // --- apply: --expect over a multi-target plan -------------------------------
@@ -1063,7 +1050,7 @@ test("apply blocks an ADR index swapped for a symlink mid-apply", async (t) => {
   assert.equal(fs.readFileSync(copy, "utf8"), original, "link target untouched");
 });
 
-test("apply blocks an impl index swapped for a symlink mid-apply", async (t) => {
+test("apply refuses an impl index regardless of mid-apply mutation", async (t) => {
   const repo = tempRepo();
   const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
   writeIr(repo, a);
@@ -1084,8 +1071,9 @@ test("apply blocks an impl index swapped for a symlink mid-apply", async (t) => 
   const original = fs.readFileSync(indexAbs, "utf8");
   fs.writeFileSync(copy, original, "utf8");
 
-  // The impl plan phase is fully synchronous; the swap lands between the outer
-  // plan snapshot and the owner apply's internal re-plan — which must refuse.
+  // Registry 3: the target is rejected as migration-owned before any pin or
+  // symlink revalidation runs — the swap is irrelevant to the verdict but
+  // must still leave the filesystem untouched (Issue #234).
   const pending = applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
   fs.rmSync(indexAbs);
   fs.symlinkSync(copy, indexAbs);
@@ -1093,14 +1081,14 @@ test("apply blocks an impl index swapped for a symlink mid-apply", async (t) => 
 
   assert.deepEqual(result.written, []);
   assert.equal(result.blocked.length, 1);
-  assert.match(result.blocked[0].reason, /symbolic link/);
+  assert.equal(result.blocked[0].reason, "legacy directory: index is migration-owned");
   assert.ok(fs.lstatSync(indexAbs).isSymbolicLink(), "apply must not replace the symlink");
   assert.equal(fs.readFileSync(copy, "utf8"), original, "link target untouched");
 });
 
 // --- apply: mid-apply drift on impl targets (owner gate) ----------------------
 
-test("apply blocks impl targets on mid-apply source and index drift", async () => {
+test("apply refuses impl targets on mid-apply source and index drift", async () => {
   const repo = tempRepo();
   const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
   writeIr(repo, a);
@@ -1108,30 +1096,23 @@ test("apply blocks impl targets on mid-apply source and index drift", async () =
   const indexAbs = path.join(repo, "docs/impl/ir/README.md");
   const indexBefore = shaFile(indexAbs);
 
-  // Front-matter drift between the outer plan and the owner apply's re-plan
-  // fails the per-target expectPlanHash gate: the owner reports plan drift.
+  // Registry 3: source drift on a legacy dir is never even observed — the
+  // migration-owned refusal fires first and the index stays untouched.
   let pending = applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
   writeIr(repo, { ...a, status: "completed" });
   let result = await pending;
   assert.deepEqual(result.written, []);
   assert.equal(result.blocked.length, 1);
-  assert.match(result.blocked[0].reason, /plan drift/);
+  assert.equal(result.blocked[0].reason, "legacy directory: index is migration-owned");
   assert.equal(shaFile(indexAbs), indexBefore, "index untouched");
 
-  // Index-byte drift that keeps the index well-formed produces the same owner
-  // re-plan (identical verdict/changes → identical planHash), so the owner
-  // apply absorbs it: it merges the LIVE index — never the stale snapshot —
-  // and the concurrent edit survives as preserved prose. This is the
-  // documented delegation boundary: the owner engine's own pins cover its
-  // re-plan→write window.
+  // Same for index-byte drift: the refusal is unconditional, no merge runs.
   pending = applyIndexMaterialization(repo, { dir: "docs/impl/ir" });
   fs.appendFileSync(indexAbs, "\nconcurrent edit\n", "utf8");
   result = await pending;
-  assert.deepEqual(result.written, ["docs/impl/ir/README.md"]);
-  assert.deepEqual(result.blocked, []);
-  const merged = fs.readFileSync(indexAbs, "utf8");
-  assert.ok(merged.includes("concurrent edit"), "owner merge preserves the mid-apply edit");
-  assert.ok(merged.includes("[a.md](./a.md)"), "generated rows present");
+  assert.deepEqual(result.written, []);
+  assert.equal(result.blocked[0].reason, "legacy directory: index is migration-owned");
+  assert.ok(fs.readFileSync(indexAbs, "utf8").endsWith("concurrent edit\n"), "legacy index untouched");
 });
 
 // --- apply: idempotence across kinds -----------------------------------------

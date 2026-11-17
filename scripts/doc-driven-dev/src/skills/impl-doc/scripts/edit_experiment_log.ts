@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { parseSetArguments, readExperimentEvents, writeExperimentEvents } from "./lib/impl_doc_utils";
+import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
@@ -43,6 +44,10 @@ async function main(): Promise<void> {
     if (args.setArgs.length === 0) throw new Error("At least one --set is required");
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
+    // Registry 3: `exp` is a legacy, migration-only type — experiment logs
+    // have no durable Git form, so no normal-path mutation either. The
+    // registry gate is the one authoritative refusal (Issue #234).
+    configFor("exp");
     const filePath = path.resolve(cwd, args.file);
     const events = readExperimentEvents(filePath);
     const corrupt = events.filter((item) => item.value === null);

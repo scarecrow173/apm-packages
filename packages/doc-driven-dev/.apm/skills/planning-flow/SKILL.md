@@ -10,6 +10,14 @@ license: MIT
 design and its plan/task evidence. Direct user requests still use `plan-doc`
 or `task-doc`.
 
+Under Document Registry 3 `plan` and `task` are execution-bound
+(`persistence: ephemeral`) — `new_plan.js` and `new_task.js` refuse durable
+Git writes at the registry gate, and plan/task state lives in the Execution
+Store. `test-spec` is a legacy migration-only format; durable verification
+evidence is recorded by `verification-doc` under `docs/verification`. The
+steps below describe the Execution Store record contract and the pre-v3
+document shape migration tooling reads.
+
 ## Workflow
 
 1. Accept the invocation only when the returned `GraphRoute.delegate` is

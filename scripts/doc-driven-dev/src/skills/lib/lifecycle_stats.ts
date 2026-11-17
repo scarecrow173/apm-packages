@@ -74,6 +74,7 @@ type CorpusLifecycleStats = {
     scannedMarkdown: number;
     documents: number;
     canonicalDocuments: number;
+    legacyDocuments: number;
     unmanagedDocuments: number;
     indexes: number;
     bodyBytes: number;
@@ -189,6 +190,7 @@ async function analyzeCorpus(cwd: string, options: { label?: string } = {}): Pro
     scannedMarkdown: model.files.length,
     documents: 0,
     canonicalDocuments: 0,
+    legacyDocuments: 0,
     unmanagedDocuments: 0,
     indexes: 0,
     bodyBytes: 0,
@@ -214,6 +216,7 @@ async function analyzeCorpus(cwd: string, options: { label?: string } = {}): Pro
 
     corpus.documents += 1;
     if (document.kind === "canonical") corpus.canonicalDocuments += 1;
+    if (document.kind === "legacy") corpus.legacyDocuments += 1;
     if (document.kind === "unmanaged") corpus.unmanagedDocuments += 1;
 
     const bodyBytes = Buffer.byteLength(document.body, "utf8");

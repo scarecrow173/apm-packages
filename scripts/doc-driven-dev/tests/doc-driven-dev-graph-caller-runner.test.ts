@@ -132,6 +132,8 @@ const canonicalDirs = [
   "docs/adr",
   "docs/impl/ir",
   "docs/impl/exp",
+  "docs/knowledge",
+  "docs/verification",
 ];
 const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",

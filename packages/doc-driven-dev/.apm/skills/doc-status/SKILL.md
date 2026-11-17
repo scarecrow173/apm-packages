@@ -7,10 +7,15 @@ license: MIT
 # Document Status Skill
 
 Use this skill to inspect document lifecycle state and relation health across
-specs, designs, plans, tasks, test specs, and the other canonical document
-types. It is report-and-judge only by default and
-should not modify project files unless a separate creation or index command is
-used.
+the durable Registry 3 types — `idea`, `brainstorm`, `discovery`, `spec`,
+`design`, `adr`, `knowledge`, and `verification`. It is report-and-judge only
+by default and should not modify project files unless a separate creation or
+index command is used.
+
+`--type plan`, `--type task`, and `--type test-spec` are refused scopes under
+Registry 3: `plan`/`task` are execution-bound (their state lives in the
+Execution Store) and `test-spec` is a legacy, migration-only format — none of
+them are durable documents the linter can check.
 
 ## Audit Role
 
@@ -52,14 +57,14 @@ The unified `doc_status.js` entry point exposes four read-only commands.
 
    ```bash
    node scripts/doc_status.js list --type spec
-   node scripts/list_docs.js --type task --status in-progress
+   node scripts/list_docs.js --type spec --status draft
    ```
 
 2. Enumerate findings (`lint`) or evaluate the gate summary (`audit`).
 
    ```bash
    node scripts/doc_status.js lint --type spec --rule broken-link
-   node scripts/doc_status.js audit --type plan --json
+   node scripts/doc_status.js audit --type spec --json
    node scripts/audit_docs.js --type spec
    ```
 
@@ -80,11 +85,12 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    Findings print in deterministic order; exit status is `0` unless the
    invocation itself is invalid.
 
-   `audit_docs.js --type all` audits the shared suite only — `idea`,
-   `brainstorm`, `discovery`, `spec`, `plan`, `task`, `design`, `adr`, and
-   `test-spec`. impl-doc's owned directories (`docs/impl/ir`,
-   `docs/impl/exp`) are never inside a `--type` scope; their integrity is
-   owned by `audit_impl_record.js` and `audit_experiment_log.js`.
+   `audit_docs.js --type all` audits the shared durable suite only —
+   `idea`, `brainstorm`, `discovery`, `spec`, `design`, `adr`,
+   `knowledge`, and `verification`. impl-doc's owned directories
+   (`docs/impl/ir`, `docs/impl/exp`) are never inside a `--type` scope;
+   their integrity is owned by `audit_impl_record.js` and
+   `audit_experiment_log.js`.
    `audit_docs.js --type all --owners` is the package-wide audit: the
    shared report plus `ownerAudits` entries for `impl-record` and
    `experiment-log`. `--owners` requires `--type all` and cannot be
@@ -92,9 +98,11 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    regardless of `--profile`.
 
    Named audits from `doc-driven-dev-graph` map to commands as follows:
-   document types (`spec`, `adr`, `design`, `plan`, `task`, `test-spec`,
-   `idea`, `brainstorm`, `discovery`) run as
-   `audit_docs.js --type <name> --profile artifact`; `all` runs as
+   durable document types (`spec`, `adr`, `design`, `idea`, `brainstorm`,
+   `discovery`, `knowledge`, `verification`) run as
+   `audit_docs.js --type <name> --profile artifact`. The `plan`, `task`,
+   and `test-spec` names resolve to refused Registry 3 scopes (see
+   above); `all` runs as
    `audit_docs.js --type all --profile artifact`
    covering every canonical document type plus a legacy-reference sweep over
    root-level unmanaged Markdown and distributed `.apm` skill documents;
@@ -128,6 +136,11 @@ check groups ran or were skipped. Covered checks include:
 
 - `unparseable-front-matter`, `invalid-front-matter`, `invalid-type`,
   `invalid-status` — front matter and document contract violations.
+- `missing-lifecycle`, `invalid-lifecycle` — the Registry 3 lifecycle axis
+  (`draft`, `current`, `superseded`, `retired`) is its own contract, never
+  read off `status`. Absent is `missing-lifecycle` (migration debt,
+  repairable by the docs migration); a populated non-axis value is
+  `invalid-lifecycle`.
 - `invalid-id-format`, `invalid-id-prefix`, `duplicate-id` — artifact identity
   violations.
 - `broken-relation-link`, `ambiguous-relation-target`,
@@ -143,26 +156,26 @@ check groups ran or were skipped. Covered checks include:
 - `ambiguous-experiment-reference` — body text `EXP-NNNN` references whose
   number matches multiple numbered `.jsonl` experiment logs, so no unique
   canonical path exists; rewrite the token to a `.jsonl` path manually.
-- `test-spec-missing-verifies`, `test-spec-invalid-verifies-target`,
-  `plan-missing-test-spec-evidence`, `missing-required-relation`,
-  `invalid-relation-target-type` — traceability category rules for
-  contract-required upstream and verification evidence.
+- `missing-required-relation`, `invalid-relation-target-type` — generic
+  relation-contract rules: a type-declared required relation is absent, or
+  a populated relation points at a type its contract does not allow.
+  (The Registry 2 type-specific `test-spec-*` and
+  `plan-missing-test-spec-evidence` rules are retired with their types.)
 - `provenance-missing-source`, `provenance-invalid-source`,
   `provenance-unresolved-local-source` — `relations.source` provenance.
   Local source paths must resolve inside the repository; external URLs are
   classified as external evidence and only probed with `--external-links`.
 - `traceability-missing-upstream` — type-aware upstream expectation.
-  Types whose contract expects upstream artifacts (`spec`, `plan`, `task`,
-  `design`) warn when no `implements`, `derives-from`, or `refines`
-  relation is declared. Root-eligible types and terminal statuses
-  (`superseded`, `rejected`, `archived`, `deprecated`, `abandoned`,
-  `wont-do`) are exempt.
+  Under Knowledge Relations v1 the durable type with an expected upstream
+  is `design` (via `realizes`); a non-settled design that declares no
+  `realizes` relation is flagged. Settled statuses (`superseded`,
+  `rejected`, `archived`, `deprecated`, `abandoned`, `wont-do`) are
+  exempt.
 - `stale-upstream` — in-flight documents riding on a dead upstream. An
-  `implements`, `derives-from`, or `refines` target that resolves to a
-  document in a dead status (`superseded`, `rejected`, `deprecated`,
-  `archived`, `abandoned`, `wont-do`, `completed`, `done`) warns once per
-  dead target. `completed`/`done` count as dead — an in-flight task on a
-  finished plan is the forgotten-leftover case — while
+  `implements`, `derives-from`, `refines`, `motivates`, `decides-for`,
+  or `realizes` target that resolves to a document in a dead status
+  (`superseded`, `rejected`, `deprecated`, `archived`, `abandoned`,
+  `wont-do`, `completed`, `done`) warns once per dead target.
   `approved`/`accepted`/`implemented`/`resolved` upstreams and settled
   source documents never flag. Non-blocking warning: stale lineage is a
   signal to re-point or close, not a contract violation.

@@ -83,12 +83,38 @@ test("scanRepository projects a healthy fixture deterministically", async () => 
     indexMembership: file.indexMembership,
   }));
   assert.deepEqual(summarize(first), summarize(second));
+  // Registry 3: only durable types are canonical; plan/test-spec artifacts
+  // stay scannable as legacy, migration-owned documents (Issue #234).
   assert.deepEqual(first.canonicalDocuments.map((doc) => doc.path), [
-    "docs/plans/implement-checkout.md",
     "docs/specs/checkout.md",
+  ]);
+  assert.deepEqual(first.legacyDocuments.map((doc) => doc.path), [
+    "docs/plans/implement-checkout.md",
     "docs/test-specs/checkout-total.md",
   ]);
   assert.deepEqual(first.indexes.map((doc) => doc.path), ["docs/specs/README.md"]);
+});
+
+test("scanRepository walks root-level former dirs and classifies their docs as legacy", async () => {
+  // Registry 2 root-level spellings (plans/, tasks/, test-specs/, …) were
+  // scanned roots. When the contract set went durable-only the default
+  // roots dropped them — a repo whose only content was `plans/old-plan.md`
+  // scanned as files: [] (Issue #234 regression).
+  const repo = tempRepo();
+  writeDoc(repo, "plans/old-plan.md", canonicalFrontMatter({
+    id: "PLAN-0001",
+    type: "plan",
+    title: "Old plan",
+  }));
+
+  const model = await scanRepository({ cwd: repo });
+
+  const plan = model.byPath.get("plans/old-plan.md");
+  assert.ok(plan);
+  assert.equal(plan.kind, "legacy");
+  assert.equal(plan.type, "plan");
+  assert.deepEqual(model.legacyDocuments.map((doc) => doc.path), ["plans/old-plan.md"]);
+  assert.equal(model.lookupById("PLAN-0001").status, "unique");
 });
 
 test("scanner separates canonical documents, indexes, and unmanaged markdown", async () => {
@@ -262,29 +288,33 @@ test("document contract registry exposes per-type metadata", () => {
   assert.ok(spec.statusValues.includes("approved"));
   assert.ok(spec.requiredFields.includes("relations"));
 
-  const testSpec = contractForType("test-spec");
-  assert.ok(testSpec);
-  assert.deepEqual(testSpec.requiredRelations.map((rule) => rule.field), ["verifies"]);
-  assert.deepEqual(testSpec.requiredRelations[0].targetTypes, ["spec", "design", "adr"]);
+  const knowledge = contractForType("knowledge");
+  assert.ok(knowledge);
+  assert.equal(knowledge.idPrefix, "KNOW");
+  assert.deepEqual(knowledge.dirs, ["docs/knowledge"]);
 
-  const plan = contractForType("plan");
-  assert.ok(plan);
-  assert.equal(plan.requiredRelations[0].field, "verified-by");
-  assert.deepEqual(plan.requiredRelations[0].appliesToStatuses, ["approved", "in-progress", "completed"]);
-  assert.equal(plan.requiredRelations[0].skipField, "test-spec-skip");
+  const verification = contractForType("verification");
+  assert.ok(verification);
+  assert.equal(verification.idPrefix, "VD");
+  assert.deepEqual(verification.dirs, ["docs/verification"]);
 
   const design = contractForType("design");
   assert.ok(design);
   assert.deepEqual(design.requiredDirectoryFiles, ["overview.md"]);
   assert.ok(design.idExceptions.includes("DESIGN-OVERVIEW"));
 
-  const impl = contractForType("impl");
-  assert.ok(impl);
-  assert.deepEqual(impl.dirs, ["docs/impl/ir", "docs/impl/exp"]);
+  // Registry 3: execution-bound and legacy types are not durable contracts —
+  // only migration tooling interprets their historical shape (Issue #234).
+  assert.equal(contractForType("test-spec"), null);
+  assert.equal(contractForType("plan"), null);
+  assert.equal(contractForType("task"), null);
+  assert.equal(contractForType("impl"), null);
 
-  assert.ok(canonicalDocRoots().includes("docs/impl/ir"));
+  assert.ok(canonicalDocRoots().includes("docs/specs"));
+  assert.ok(canonicalDocRoots().includes("docs/knowledge"));
+  assert.ok(!canonicalDocRoots().includes("docs/impl/ir"));
   assert.equal(contractForType("unknown"), null);
-  assert.ok(Object.keys(contracts).length >= 10);
+  assert.equal(Object.keys(contracts).length, 8);
 });
 
 test("finding contract defaults and deterministic ordering", () => {
@@ -330,10 +360,10 @@ test("id format contract accepts legacy numeric and 22-char base62 ids only", ()
   assert.ok(!spec.idPattern.test("SPEC-"));
   assert.ok(!spec.idPattern.test("spec_0001"));
 
-  const impl = contractForType("impl");
-  assert.ok(impl);
-  assert.ok(impl.idPattern.test("IMPL-0001"));
-  assert.ok(!impl.idPattern.test("IMPL-ABC"));
+  const knowledge = contractForType("knowledge");
+  assert.ok(knowledge);
+  assert.ok(knowledge.idPattern.test("KNOW-0001"));
+  assert.ok(!knowledge.idPattern.test("KNOW-ABC"));
 });
 
 test("localized siblings share one logical artifact identity", async () => {

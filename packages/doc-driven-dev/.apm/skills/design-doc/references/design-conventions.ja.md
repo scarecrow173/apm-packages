@@ -93,8 +93,16 @@ docs/designs/
 ## 必須フロントマター
 
 詳細設計文書は共通 YAML front matter を使い、`type: "design"` とします。
+必須フィールド: `id`、`type`、`status`、`lifecycle`、`title`、`created`、
+`updated`、`owners`、`relations`。
+
+`status` は後述の型固有ワークフロー状態です。`lifecycle` は Registry 3 の
+存続軸（`draft` / `current` / `superseded` / `retired`）で、`status` と独立して
+アクティブ／セットル索引区分を駆動します。
 
 ## ステータス値
+
+次の型固有ワークフローステータスを使います（`lifecycle` とは別軸）。
 
 | Status | Meaning |
 | --- | --- |
@@ -105,7 +113,9 @@ docs/designs/
 
 ## plan-doc の gate ルール
 
-`plan-doc` 作成には次が必須です。
+Document Registry 3 では `plan` は execution-bound で、`new_plan.js` はこの
+gate を評価する前に registry gate で拒否します。この gate は Execution
+Store の計画フローにおける契約として残り、次が必須です。
 
 - `docs/designs/overview.md` が存在する。
 - overview 以外の設計文書で front matter `status: "approved"` が
@@ -117,10 +127,17 @@ docs/designs/
 
 ## Relations
 
-- 上流 spec/ADR/discovery は `relations.derives-from` を使う。
-- 設計同士の関連は `relations.related` を使う。
-- 補助資料は `relations.references` を使う。
-- この設計から意図的に据え置いた将来作業（draft の spec/design）は `relations.defers` で指す。据え置かれた側は `relations.deferred-by` で指し返す。
+Knowledge Relations v1 では design は次の source→target relation を記録します。
+
+- この設計が実現する spec には `relations.realizes` を使う。
+- 置き換える旧設計には `relations.supersedes` を使う。
+- 出典（外部リンク・issue・会話）は `relations.source` を使う。
+
+`derives-from`、`related`、`references`、`defers`、`deferred-by` など
+その他の宣言キーはレガシー語彙で、マイグレーションは v3 以前のコーパス
+から読み取ります。creator は空のプレースホルダーとしてのみ出力しますが、
+`new_design --from` は `derives-from` を、`relate_adr` は ADR 上のこれらの
+キーを #235 で格納語彙が絞り込まれるまで設定できます。
 
 ## 索引
 
@@ -138,8 +155,8 @@ docs/designs/
   `タイトル`・`Status` は front matter から取り、`ファイル` 列は索引と同じ
   ディレクトリへの相対リンクにします。値が無い場合は `—` を入れます。
 - in-flight テーブルの先頭に `overview.md` を置き、続けて詳細設計を
-  ファイル名の昇順で並べます。settled なステータス（`superseded`、
-  `rejected`）の design は下段の `## Settled` テーブルにファイル名昇順で
+  ファイル名の昇順で並べます。`lifecycle` が settled（`superseded` または
+  `retired`）の design は下段の `## Settled` テーブルにファイル名昇順で
   掲載します。Settled の行もリンクは維持され、履歴を隠さずに強調を抑える
   構成です。
 - 文書の追加や `status` の変更時は索引を更新してください — materialize は

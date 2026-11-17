@@ -95,8 +95,16 @@ Use this pattern when the designs are best read together as a set.
 ## Required Front Matter
 
 Detailed design docs use shared YAML front matter with `type: "design"`.
+Required fields: `id`, `type`, `status`, `lifecycle`, `title`, `created`,
+`updated`, `owners`, `relations`.
+
+`status` is the type-specific workflow state below. `lifecycle` is the
+Registry 3 durability axis (`draft` / `current` / `superseded` / `retired`),
+independent of `status`; it drives the active/settled index tiers.
 
 ## Status Values
+
+Use these type-specific workflow statuses (distinct from `lifecycle`):
 
 | Status | Meaning |
 | --- | --- |
@@ -107,7 +115,9 @@ Detailed design docs use shared YAML front matter with `type: "design"`.
 
 ## Gate Rule for plan-doc
 
-`plan-doc` creation requires:
+Under Document Registry 3 `plan` is execution-bound and `new_plan.js`
+refuses at the registry gate before this gate is evaluated; the gate
+remains the contract for Execution Store planning flows. It requires:
 
 - `docs/designs/overview.md` exists.
 - At least one non-overview design document has exact front matter
@@ -119,10 +129,17 @@ If either condition fails, `plan-doc` must fail with:
 
 ## Relations
 
-- Use `relations.derives-from` for upstream spec/ADR/discovery docs.
-- Use `relations.related` for sibling designs.
-- Use `relations.references` for supplementary materials.
-- Use `relations.defers` for future work intentionally deferred from this design (a draft spec/design); the deferred doc points back with `relations.deferred-by`.
+Under Knowledge Relations v1 a design stores these source→target relations:
+
+- `relations.realizes` for the spec this design realizes.
+- `relations.supersedes` for an older design it replaces.
+- `relations.source` for provenance (external links, issues, conversations).
+
+`derives-from`, `related`, `references`, `defers`, `deferred-by`, and the
+other declared keys are legacy vocabulary: migration tooling reads them in
+pre-v3 corpora; creators emit them only as empty placeholders, though
+`new_design --from` still populates `derives-from` and `relate_adr` can
+populate them on ADRs until the stored vocabulary narrows under #235.
 
 ## Index
 
@@ -141,10 +158,10 @@ Index rules:
   `Title`, and `Status` from the document front matter; the `File` column is a
   relative link within the index directory. Write `—` when a value is missing.
 - List `overview.md` first in the in-flight table, then detailed design docs
-  sorted by filename in ascending order. Designs with a settled status
-  (`superseded`, `rejected`) move to a `## Settled` table below it, also
-  filename-ordered. Settled rows stay linked — the tier de-emphasizes
-  history without hiding it.
+  sorted by filename in ascending order. Designs whose `lifecycle` is
+  settled (`superseded` or `retired`) move to a `## Settled` table below
+  it, also filename-ordered. Settled rows stay linked — the tier
+  de-emphasizes history without hiding it.
 - Update the index whenever a document is added or its `status` changes —
   materialization is explicit via `doc_maintenance.js index plan|apply`
   (creators never write indexes); `doc_status lint` reports the drift

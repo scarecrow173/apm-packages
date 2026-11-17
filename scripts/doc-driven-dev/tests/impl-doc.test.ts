@@ -40,39 +40,21 @@ test("impl-doc ships skill docs, references, and templates", () => {
   assert.equal(fs.existsSync(path.join(skillRoot, "assets", "templates", "experiment-log.ja.jsonl")), true);
 });
 
-test("new_impl_record creates markdown record and defers the index", () => {
+test("new_impl_record refuses at the registry gate — legacy migration-only type", () => {
   const repo = tempRepo();
 
+  // Registry 3: `impl` is a legacy, migration-only type — the creator refuses
+  // before minting anything (Issue #234). Durable execution evidence is not a
+  // Git document anymore.
   const result = runScript(
     "new_impl_record.js",
     ["--title", "Extract foo service", "--task", "docs/tasks/0003-implement-foo-service.md", "--status", "completed"],
     { cwd: repo },
   );
 
-  assert.equal(result.status, 0, result.stderr);
-  const recordPath = path.join(repo, "docs/impl/ir/extract-foo-service.md");
-  const indexPath = path.join(repo, "docs/impl/ir/README.md");
-  assert.equal(fs.existsSync(recordPath), true);
-  // Creators defer index writes (#196); materialization is explicit via
-  // doc_maintenance.js index apply or sync_impl_index.js --apply.
-  assert.equal(fs.existsSync(indexPath), false);
-  assert.match(result.stdout, /Index deferred/);
-
-  const record = fs.readFileSync(recordPath, "utf8");
-  assert.match(record, /^id: "IMPL-[0-9A-Za-z]{22}"$/m);
-  assert.match(record, /^type: "impl"$/m);
-  assert.match(record, /^status: "completed"$/m);
-  assert.match(record, /^title: "Extract foo service"$/m);
-  assert.match(record, /^  changes:$/m);
-  assert.match(record, /^    added: \[\]$/m);
-  assert.match(record, /^  implements:$/m);
-  assert.match(record, /^    - "docs\/tasks\/0003-implement-foo-service.md"$/m);
-  assert.match(record, /^metadata:$/m);
-  assert.match(record, /^  experiments:$/m);
-  assert.match(record, /^    adopted: \[\]$/m);
-  assert.match(record, /^    rejected: \[\]$/m);
-  assert.doesNotMatch(record, /record-type/);
-  assert.doesNotMatch(record, /validation:/);
+  assert.equal(result.status, 1, "new_impl_record must refuse under Registry 3");
+  assert.match(result.stderr, /legacy format|migration-only|migration tooling/);
+  assert.equal(fs.existsSync(path.join(repo, "docs/impl")), false, "no impl record is minted");
 });
 
 test("audit_impl_record reports front matter, shape, relation, and section issues", () => {
@@ -191,78 +173,32 @@ test("audit_impl_record reports front matter, shape, relation, and section issue
   assert.equal(secondReport.findings.some((finding: any) => finding.code === "missing-section"), true);
 });
 
-test("experiment log creation, append, edit, and audit work together", () => {
+test("experiment log creation, append, and edit refuse at the registry gate; audit stays read-only", () => {
   const repo = tempRepo();
 
-  const created = runScript(
-    "new_experiment_log.js",
-    ["--title", "Try foo service extraction", "--task", "docs/tasks/0003-implement-foo-service.md"],
-    { cwd: repo },
+  // Registry 3: `exp` is a legacy, migration-only type — the creator and both
+  // mutators refuse before touching the filesystem (Issue #234).
+  for (const [script, args] of [
+    ["new_experiment_log.js", ["--title", "Try foo service extraction", "--task", "docs/tasks/0003-implement-foo-service.md"]],
+    ["append_experiment_event.js", ["--file", "docs/impl/exp/x.jsonl", "--type", "hypothesis", "--summary", "s"]],
+    ["edit_experiment_log.js", ["--file", "docs/impl/exp/x.jsonl", "--seq", "1", "--set", "reason=y"]],
+    ["sync_impl_index.js", ["--kind", "exp", "--dir", "docs/impl/exp", "--apply"]],
+  ] as const) {
+    const refused = runScript(script, [...args], { cwd: repo });
+    assert.equal(refused.status, 1, `${script} must refuse under Registry 3`);
+    assert.match(refused.stderr, /legacy format|migration-only|migration tooling/);
+  }
+  assert.equal(fs.existsSync(path.join(repo, "docs/impl")), false, "nothing is minted or synced");
+
+  // Read-only inspection of existing logs is still available to migration.
+  fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/impl/exp/x.jsonl"),
+    '{"schema":"experiment_event.v1","experiment":"docs/impl/exp/x.jsonl","seq":1,"type":"hypothesis","ts":"2026-06-08T10:03:00+09:00"}\n',
+    "utf8",
   );
-  assert.equal(created.status, 0, created.stderr);
-
-  const logPath = path.join(repo, "docs/impl/exp/try-foo-service-extraction.jsonl");
-  assert.equal(fs.existsSync(logPath), true);
-  assert.equal(fs.readFileSync(logPath, "utf8"), "");
-
-  // The creator defers the index (#196); seed it explicitly so the audit's
-  // missing-index warning does not mask the assertion below.
-  const seeded = runScript(
-    "sync_impl_index.js",
-    ["--kind", "exp", "--dir", "docs/impl/exp", "--apply"],
-    { cwd: repo },
-  );
-  assert.equal(seeded.status, 0, seeded.stderr);
-
-  const appended = runScript(
-    "append_experiment_event.js",
-    [
-      "--file",
-      "docs/impl/exp/try-foo-service-extraction.jsonl",
-      "--type",
-      "hypothesis",
-      "--summary",
-      "FooService may simplify BarService",
-      "--set",
-      "implementation=docs/impl/ir/0001-extract-foo-service.md",
-    ],
-    { cwd: repo },
-  );
-  assert.equal(appended.status, 0, appended.stderr);
-
-  const linesAfterAppend = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/);
-  assert.equal(linesAfterAppend.length, 1);
-  const firstEvent = JSON.parse(linesAfterAppend[0]);
-  assert.equal(firstEvent.seq, 1);
-  assert.equal(firstEvent.type, "hypothesis");
-  assert.equal(firstEvent.summary, "FooService may simplify BarService");
-  assert.equal(firstEvent.implementation, "docs/impl/ir/0001-extract-foo-service.md");
-  assert.equal(firstEvent.schema, "experiment_event.v1");
-  assert.equal(firstEvent.experiment, "docs/impl/exp/try-foo-service-extraction.jsonl");
-  assert.equal(typeof firstEvent.ts, "string");
-
-  const edited = runScript(
-    "edit_experiment_log.js",
-    [
-      "--file",
-      "docs/impl/exp/try-foo-service-extraction.jsonl",
-      "--seq",
-      "1",
-      "--set",
-      "reason=adopted into implementation record",
-    ],
-    { cwd: repo },
-  );
-  assert.equal(edited.status, 0, edited.stderr);
-
-  const editedEvent = JSON.parse(fs.readFileSync(logPath, "utf8").trim());
-  assert.equal(editedEvent.seq, 1);
-  assert.equal(editedEvent.reason, "adopted into implementation record");
-
   const audit = runScript("audit_experiment_log.js", ["--json"], { cwd: repo });
   assert.equal(audit.status, 0, audit.stderr);
-  const report = JSON.parse(audit.stdout);
-  assert.equal(report.findings.length, 0);
 });
 
 test("audit_experiment_log reports invalid JSON, shape, seq, and type errors", () => {

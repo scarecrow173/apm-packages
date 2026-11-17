@@ -36,14 +36,15 @@ test("emptyIndexForDir renders each owner format and null elsewhere", () => {
   assert.equal(emptyIndexForDir("custom/dir"), null);
 });
 
-test("scaffoldDocsTree writes marker-bearing owner indexes for ADR/IR/EXP", async () => {
+test("scaffoldDocsTree writes a marker-bearing owner index for ADR; legacy dirs stay migration-owned", async () => {
   const repo = tempRepo();
   await scaffoldDocsTree(repo);
-  for (const dir of ["docs/adr", "docs/impl/ir", "docs/impl/exp"]) {
-    const content = fs.readFileSync(path.join(repo, dir, "README.md"), "utf8");
-    assert.ok(content.includes(GENERATED_INDEX_MARKER), `${dir} index must carry the managed marker`);
-    assert.equal(content, emptyIndexForDir(dir), `${dir} index must equal the contract empty index`);
-  }
+  const content = fs.readFileSync(path.join(repo, "docs/adr", "README.md"), "utf8");
+  assert.ok(content.includes(GENERATED_INDEX_MARKER), "docs/adr index must carry the managed marker");
+  assert.equal(content, emptyIndexForDir("docs/adr"), "docs/adr index must equal the contract empty index");
+  // Registry 3: docs/impl/** is legacy migration-owned territory — normal
+  // scaffolding must not create it (Issue #234).
+  assert.ok(!fs.existsSync(path.join(repo, "docs/impl")), "docs/impl must not be scaffolded");
   // shared typed dirs still use the typed managed index
   const specIndex = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
   assert.match(specIndex, /^# SPEC Documents/m);

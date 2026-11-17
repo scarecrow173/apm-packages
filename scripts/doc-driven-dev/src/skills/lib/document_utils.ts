@@ -3,26 +3,17 @@
 import fs from "node:fs";
 import path from "node:path";
 
-/**
- * Canonical doc-bearing directories — the single authority for the doc-suite
- * layout, shared by the artifact scan, graph-state bootstrap reasons, the
- * caller-runner workspace "." fingerprint, the L2 canonical-doc check, and
- * the scaffold/index targets (Issues #141, #156). A custom `--task-dir`
- * extends, never replaces, this set.
- */
-const CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp",
-] as const;
+import { CANONICAL_DOC_DIRS, DURABLE_DOC_DIRS } from "./doc_types";
 
+/**
+ * Canonical doc-bearing directories — every dir the doc-suite has ever
+ * managed (durable canonical dirs plus the former dirs of execution-bound
+ * and legacy types), derived from the Document Registry in `doc_types.ts`
+ * so the artifact scan, graph-state bootstrap reasons, the caller-runner
+ * workspace "." fingerprint, the L2 canonical-doc check, and the
+ * scaffold/index targets share one authority (Issues #141, #156, #234).
+ * A custom `--task-dir` extends, never replaces, this set.
+ */
 type CanonicalDocDir = typeof CANONICAL_DOC_DIRS[number];
 
 /**
@@ -197,6 +188,7 @@ function findDocumentDir(cwd: string, explicitDir: string | undefined, candidate
 
 export {
   CANONICAL_DOC_DIRS,
+  DURABLE_DOC_DIRS,
   findDocumentDir,
   isIndexFileName,
   isInside,

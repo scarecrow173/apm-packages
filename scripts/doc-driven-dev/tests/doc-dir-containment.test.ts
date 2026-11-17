@@ -53,13 +53,19 @@ const writerClis: Array<[skill: string, script: string, extraArgs: string[]]> = 
   ["design-doc", "new_design.js", ["--title", "X"]],
   ["discovery-doc", "new_discovery.js", ["--title", "X"]],
   ["idea-doc", "new_idea.js", ["--title", "X"]],
-  // new_plan/new_test_spec run a doc-gate before --dir resolution, so the
-  // fixture below seeds an approved design and a spec to verify; the gate
-  // passes and the containment boundary still sees the escaping --dir.
-  ["plan-doc", "new_plan.js", ["--title", "X", "--design", "docs/designs/0001-design.md"]],
+  ["knowledge-doc", "new_knowledge.js", ["--title", "X", "--kind", "lesson"]],
+  ["verification-doc", "new_verification.js", ["--title", "X"]],
   ["spec-doc", "new_spec.js", ["--title", "X"]],
+];
+
+// Registry 3 (Issue #234): plan/task are execution-bound and impl/exp/
+// test-spec are legacy migration-only types — their creator CLIs refuse at
+// the registry gate before --dir resolution ever runs, so the containment
+// contract is vacuous for them (they can never write, inside or outside).
+const refusingClis: Array<[skill: string, script: string, extraArgs: string[]]> = [
+  ["plan-doc", "new_plan.js", ["--title", "X"]],
   ["task-doc", "new_task.js", ["--title", "X"]],
-  ["test-spec-doc", "new_test_spec.js", ["--title", "X", "--verifies", "docs/specs/0001-spec.md"]],
+  ["test-spec-doc", "new_test_spec.js", ["--title", "X"]],
   ["impl-doc", "new_impl_record.js", ["--title", "X"]],
   ["impl-doc", "new_experiment_log.js", ["--title", "X"]],
 ];
@@ -105,6 +111,15 @@ test("write-target CLIs reject a --dir that escapes the checkout", () => {
       `${result.stdout}\n${result.stderr}`,
       /--dir escapes the checkout/,
       `${script} --dir ../outside must report the containment error`,
+    );
+  }
+  for (const [skill, script, extraArgs] of refusingClis) {
+    const result = runScript(skill, script, [...extraArgs, "--dir", "../outside"], { cwd: repo });
+    assert.notEqual(result.status, 0, `${script} --dir ../outside must refuse`);
+    assert.match(
+      `${result.stdout}\n${result.stderr}`,
+      /execution-bound|ephemeral|legacy format|migration-only|migration tooling/,
+      `${script} --dir ../outside refuses at the registry gate`,
     );
   }
   assert.equal(fs.existsSync(escapedTarget), false, "no CLI may write outside the checkout");

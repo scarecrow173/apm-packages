@@ -21,6 +21,15 @@ This is a **meta skill**: it produces no code directly. Instead it governs
 skill discovery, configuration, sequencing, and the verification loop that
 connects implementation back to upstream documents.
 
+Under Document Registry 3 `task` is execution-bound (`persistence:
+ephemeral`) — `task-doc` creation steps below describe Execution Store
+records, not durable Git documents. The `impl-doc` Implementation Record
+and Experiment Log formats are legacy migration-only types:
+`new_impl_record.js` / `new_experiment_log.js` refuse at the registry gate,
+and the phases that mention them describe the pre-v3 evidence contract that
+migration tooling reads. Durable verification evidence is recorded by
+`verification-doc` under `docs/verification`.
+
 ## When to Use
 
 - Executing approved `task-doc` entries that require code changes.
@@ -193,7 +202,9 @@ For detailed category definitions, see the adapter's `classification.taxonomy` i
 ## Phase C0: Open Implementation Documentation
 
 Before the first code change for each task, open implementation documentation
-through `impl-doc`.
+through `impl-doc`. (Legacy contract: `new_impl_record.js` /
+`new_experiment_log.js` refuse under Document Registry 3 — see the Registry 3
+note above; this phase describes the migration-readable evidence shape.)
 
 1. Create or reuse an in-progress Implementation Record for the task unit.
 2. Use `impl-doc` conventions and title/task linkage so downstream audits can

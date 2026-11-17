@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
+import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 const PLAN_DOC_GATE_ERROR = "PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: \"approved\".";
@@ -98,6 +99,9 @@ async function main(): Promise<void> {
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(resolvedCwd)) return;
+    // Registry 3: `plan` is execution-bound — the registry gate is the one
+    // authoritative refusal, raised here before any gate check or write.
+    configFor("plan");
     const designTargets = validateDesignGate(resolvedCwd, args.designTargets);
     for (const target of args.verifiedByTargets) {
       if (!resolveDocumentReference(resolvedCwd, target)) {

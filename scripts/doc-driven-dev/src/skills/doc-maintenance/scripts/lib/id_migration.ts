@@ -6,7 +6,8 @@ import path from "node:path";
 import { buildIndex as buildAdrIndex, writeIndexFile } from "../../../adr-doc/scripts/lib/adr_utils";
 import { generateArtifactId, isLegacyArtifactId, isNewArtifactId } from "../../../lib/artifact_id";
 import { auditDocuments } from "../../../lib/doc_audit";
-import { configFor, docFiles, docTypes, GENERATED_INDEX_MARKER, parseDoc, residentTypesForDir, writeGeneratedIndex } from "../../../lib/doc_suite_utils";
+import { docFiles, GENERATED_INDEX_MARKER, mergeManagedIndex, parseDoc, renderIndexBody, residentTypesForDir, writeGeneratedIndex } from "../../../lib/doc_suite_utils";
+import { allIdPrefixes, gitEraDocTypes, resolveDocType } from "../../../lib/doc_types";
 import { isIndexFileName, isInsideRealpath, normalizeDir } from "../../../lib/document_utils";
 import { auditExperimentLogs, auditImplementationRecords } from "../../../impl-doc/scripts/lib/impl_doc_utils";
 import { applyImplIndexSync, planImplIndexSync } from "../../../impl-doc/scripts/lib/impl_index_sync";
@@ -117,12 +118,16 @@ function walkFiles(baseDir: string, extensions: string[]): string[] {
   }).sort();
 }
 
+// The migration sweep covers every dir that ever held Git-Markdown docs:
+// durable `dirs` plus the former dirs of execution-bound and legacy types —
+// the registry's `gitEraDocTypes` view (Issue #234). The `exp` entry keeps
+// its historical dirType spelling ("impl-exp") for the impl/exp dispatch
+// branches below.
 function canonicalDirs(cwd: string): { dir: string; type: string | null }[] {
   const seen = new Set<string>();
   const dirs: { dir: string; type: string | null }[] = [];
-  for (const type of docTypes) {
-    const config = configFor(type);
-    for (const candidate of config.dirs) {
+  for (const era of gitEraDocTypes()) {
+    for (const candidate of era.dirs) {
       const full = path.join(cwd, candidate);
       // A symlinked canonical dir pointing outside the repository must not
       // be adopted: discover/planRenames would treat outside files as
@@ -130,13 +135,7 @@ function canonicalDirs(cwd: string): { dir: string; type: string | null }[] {
       if (!fs.existsSync(full) || !isInsideRealpath(cwd, full)) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
-      dirs.push({ dir: candidate, type });
-    }
-  }
-  for (const extra of [IMPL_IR_DIR, IMPL_EXP_DIR]) {
-    const full = path.join(cwd, extra);
-    if (fs.existsSync(full) && isInsideRealpath(cwd, full)) {
-      dirs.push({ dir: extra, type: extra === IMPL_IR_DIR ? "impl" : "impl-exp" });
+      dirs.push({ dir: candidate, type: era.type === "exp" ? "impl-exp" : era.type });
     }
   }
   return dirs;
@@ -241,12 +240,15 @@ function contentFilesUnder(cwd: string, roots: string[], extraFiles: string[] = 
   return files.sort();
 }
 
+// The id prefix a discovered file's synthesized id takes: its declared
+// `type:` wins, then the dir's era type. Every registry class — durable,
+// ephemeral (plan/task), legacy (test-spec/impl/exp) — carries an idPrefix;
+// "impl-exp" is the dirType spelling for the `exp` legacy type.
 function prefixForFile(file: DiscoveredFile): string {
-  if (file.type && (docTypes as readonly string[]).includes(file.type)) {
-    return configFor(file.type).idPrefix;
-  }
-  if (file.dirType && (docTypes as readonly string[]).includes(file.dirType)) {
-    return configFor(file.dirType).idPrefix;
+  for (const candidate of [file.type, file.dirType === "impl-exp" ? "exp" : file.dirType]) {
+    if (!candidate) continue;
+    const resolved = resolveDocType(candidate);
+    if (resolved.entry) return resolved.entry.idPrefix;
   }
   return "IMPL";
 }
@@ -307,7 +309,9 @@ function discover(cwd: string, dirs: { dir: string; type: string | null }[], blo
         continue;
       }
       const typeValue = typeof data.type === "string" ? data.type : null;
-      if (typeValue && !(docTypes as readonly string[]).includes(typeValue) && typeValue !== "impl") {
+      // The registry knows every type name or alias the git era produced;
+      // anything else is unrecognizable to the migrator (Issue #234).
+      if (typeValue && resolveDocType(typeValue).kind === "unknown") {
         blockers.push({
           code: "unknown-type",
           file: relPath,
@@ -327,9 +331,9 @@ function discover(cwd: string, dirs: { dir: string; type: string | null }[], blo
 }
 
 function knownPrefixes(mappings: Map<string, string>): Set<string> {
-  const prefixes = new Set<string>(docTypes.map((type) => configFor(type).idPrefix));
-  prefixes.add("IMPL");
-  prefixes.add(EXPERIMENT_ID_PREFIX);
+  // Every prefix the registry ever issued (durable + ephemeral + legacy),
+  // plus any prefix the discovered legacy ids introduce.
+  const prefixes = new Set<string>(allIdPrefixes());
   for (const legacyId of mappings.keys()) {
     prefixes.add(legacyId.slice(0, legacyId.lastIndexOf("-")));
   }
@@ -547,11 +551,52 @@ async function regenerateIndexes(
       results.push({ action: "skipped", index: relReadme, reason: "hand-curated" });
       continue;
     }
-    const seedType = dirType && (docTypes as readonly string[]).includes(dirType) ? dirType : "discovery";
-    await writeGeneratedIndex(cwd, seedType, dir, { forceIndex: true });
+    const resolved = dirType ? resolveDocType(dirType) : { kind: "unknown" as const, entry: null };
+    if (resolved.kind === "durable") {
+      await writeGeneratedIndex(cwd, dirType as string, dir, { forceIndex: true });
+    } else {
+      // A shared-format index in a non-durable dir (plan/task/test-spec) is
+      // migration-owned: the durable writers cannot seed a legacy or
+      // execution-bound type, so the migrator renders the rows itself
+      // (Issue #234).
+      regenerateLegacySharedIndex(cwd, dir, dirType);
+    }
     results.push({ action: "regenerated", index: relReadme });
   }
   return results;
+}
+
+// Migration-local render of a shared-4col index for a non-durable dir. The
+// durable index pipeline resolves its seed type through the registry's
+// durable configs, which deliberately reject these type names — so this
+// reads the resident files' front matter directly and reuses only the row
+// renderer. Legacy interpretation lives here, never in the normal path.
+function regenerateLegacySharedIndex(cwd: string, dir: string, dirType: string | null): void {
+  const fullDir = path.join(cwd, dir);
+  const rows = docFiles(fullDir).map((file) => {
+    const content = fs.readFileSync(path.join(fullDir, file), "utf8");
+    const parsed = parseDoc(content);
+    const data = parsed.data;
+    const heading = /^#\s+(.+)$/m.exec(parsed.body)?.[1]?.trim();
+    return {
+      file,
+      id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : null,
+      lifecycle: typeof data.lifecycle === "string" ? data.lifecycle : null,
+      status: typeof data.status === "string" ? data.status : null,
+      title: (typeof data.title === "string" && data.title.trim()) || heading || path.basename(file, ".md"),
+      type: typeof data.type === "string" ? data.type : null,
+    };
+  });
+  const resolved = dirType ? resolveDocType(dirType) : { kind: "unknown" as const, entry: null };
+  const title = `${resolved.entry?.idPrefix ?? "DOC"} Documents`;
+  const normalized = normalizeDir(dir);
+  const generated = `# ${title}\n\n${GENERATED_INDEX_MARKER}\n\nDirectory: \`${normalized}\`\n\n${renderIndexBody(rows, { settledType: dirType ?? undefined })}\n`;
+  const readmePath = path.join(cwd, dir, "README.md");
+  const existing = fs.existsSync(readmePath) ? fs.readFileSync(readmePath, "utf8") : null;
+  const content = existing !== null && existing.includes(GENERATED_INDEX_MARKER)
+    ? mergeManagedIndex(existing, generated)
+    : generated;
+  fs.writeFileSync(readmePath, content, "utf8");
 }
 
 async function validate(
@@ -614,9 +659,12 @@ async function validate(
     // A shared directory hosts multiple document types (for example
     // `brainstorm` and `discovery` both live in `docs/discovery`), so audit
     // every resident type rather than only the canonical one that claimed
-    // the directory.
+    // the directory. Non-durable dirs (execution-bound or legacy) carry no
+    // durable contract — they are not linted as canonical documents.
     const resident = residentTypesForDir(dir);
-    const targets = resident.length > 0 ? resident : type ? [type] : [];
+    const targets = resident.length > 0
+      ? resident
+      : type && resolveDocType(type === "impl-exp" ? "exp" : type).kind === "durable" ? [type] : [];
     for (const scopeType of targets) {
       const scopeKey = `${scopeType}::${normalizeDir(dir)}`;
       if (auditedScopes.has(scopeKey)) continue;
@@ -624,6 +672,11 @@ async function validate(
       const { findings } = await auditDocuments(cwd, scopeType, dir);
       for (const finding of findings) {
         if (!finding.blocking) continue;
+        // `missing-lifecycle` is expected debt on exactly the pre-Registry-3
+        // corpora this tool migrates; backfilling it is the lifecycle/docs
+        // migration's job, not id rewriting. Failing post-apply validation on
+        // it would make this tool unusable on every legacy repo it targets.
+        if (finding.code === "missing-lifecycle") continue;
         auditErrors.push({ code: finding.code, file: finding.file, message: finding.message });
       }
     }

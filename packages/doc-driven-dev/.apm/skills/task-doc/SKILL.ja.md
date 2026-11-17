@@ -10,6 +10,23 @@ license: MIT
 task は、それが実装する plan、spec、ADR にリンクし、完了条件を具体的に
 書く必要があります。
 
+## Document Registry v3 の位置づけ
+
+Document Registry 3 では `task` は **execution-bound**
+(`persistence: ephemeral`)です。task の状態は durable な Git 文書ではなく
+Execution Store にあり、`docs/tasks` / `docs/work-items` は durable な
+書き込みを受け付けない *former* ディレクトリです。`new_task.js` は
+registry ゲートで拒否されます — TASK-DOC-GATE チェック、scope チェック、
+あらゆる書き込みより先に:
+
+`Document type "task" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store`
+
+以下の前提条件、relation、完了条件の契約は引き続き Execution Store
+レコードの task モデル契約であり、Registry 2 以前の `docs/tasks` corpus
+の移行(doc-maintenance の `migrate_docs` / `migrate_ids`)にも適用され
+ます。この skill が Git 文書を mint する話ではなくなった点に注意して
+ください。
+
 ## 前提条件
 
 <HARD-GATE>
@@ -46,17 +63,14 @@ task を作成するには、以下のいずれかを満たす必要がある:
 1. task を作成する前に、上記前提条件の通常パス、緊急修正パス、
    または実装後フォローアップ path のいずれかを満たしていることを
    確認する。
-2. ひとまとまりの実装単位として task を作成する。
+2. ひとまとまりの実装単位として task レコードを作成する。
 
-   ```bash
-   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/implement-checkout-flow.md \
-     --depends-on docs/tasks/schema.md --depends-on TASK-0H5nCkR2mW9xVbYqZeLp3s \
-     --blocks docs/tasks/ui.md
-   ```
-
-   作成スクリプトは `references/task-conventions.ja.md` に従い、
-   `assets/templates/task.md` を使います。スクリプトを実行できない場合は、
-   このテンプレートをコピーして手動で埋めます。
+   Document Registry 3 では `new_task.js` が registry ゲートで拒否
+   されます(上記 *Document Registry v3 の位置づけ* 参照)。`task` は
+   execution-bound なので、レコードは `docs/tasks` のファイルではなく
+   Execution Store に作成されます。
+   `references/task-conventions.ja.md` がレコード契約を定義し、
+   `assets/templates/task.ja.md` が本文の参照構造です。
 
 3. 意味付き relation を使う。
    生成された task は plan を `relations.implements` と
@@ -103,16 +117,15 @@ task を作成するには、以下のいずれかを満たす必要がある:
    フォローアップ task を追加する。
 
 すべての検証コマンドがパスするまで、task を `done` に移動できません。
-ステータス変更時 —— `done`/`wont-do` は行を索引の `## Settled` 層へ
-移します —— には、同一変更内で `doc_maintenance.js index plan|apply --dir docs/tasks`
-により `docs/tasks/README.md` を再生成します。再生成までは
-`doc_status lint` が古い索引を報告します。
+task のステータス遷移は Execution Store の状態変更であり、Registry 3 で
+再生成すべき `docs/tasks` の索引は存在しません。
 
 ## リソース
 
-- `scripts/new_task.js`: task を作成します（索引の materialize は明示的:
-  `doc_maintenance.js index plan|apply`）。
-- `references/task-conventions.ja.md`: task のディレクトリ、ファイル名、
-  ステータス、relation、必須内容、索引の規約です。
-- `assets/templates/task.md`: 既定の task 本文テンプレートです。
-- `assets/templates/task.ja.md`: 日本語で手動作成するときの task 本文テンプレートです。
+- `scripts/new_task.js`: Registry 3 では registry ゲートで拒否されます。
+  `task` は execution-bound であり、durable な作成経路はありません。
+- `references/task-conventions.ja.md`: task レコードのステータス、
+  relation、必須内容、規約です。
+- `assets/templates/task.ja.md`: task 本文テンプレートです。
+  スクリプトが埋めるファイルではなく、Execution Store レコードの参照
+  構造です。

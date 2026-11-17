@@ -1,10 +1,11 @@
 "use strict";
 
-import { configFor, docTypes } from "./doc_types";
+import { configFor, configs, docTypes, ephemeralConfigs, executionTypes, legacyDocTypes } from "./doc_types";
+import type { DocOwner, IndexFormat } from "./doc_types";
 import { normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
-// Directory ownership contract (Issue #182)
+// Directory ownership contract (Issues #182, #234)
 // ---------------------------------------------------------------------------
 // One authoritative table mapping each owned doc directory to the skill that
 // owns it: which document kinds may live there, which index format it
@@ -13,15 +14,11 @@ import { normalizeDir } from "./document_utils";
 // a document type can never be created in — or audited as — a foreign
 // owner's directory.
 //
-// The shared-suite rows are DERIVED from `configs` (doc_types.ts): alias
-// lists already live there, so this module unions per-type rows into
-// per-directory rows (docs/discovery -> brainstorm + discovery) instead of
-// restating paths. impl-doc territory is declared literally because no
-// shared config describes it.
-
-type DocOwner = "doc-suite" | "adr-doc" | "impl-doc";
-
-type IndexFormat = "shared-4col" | "impl-4col" | "exp-1col" | "none";
+// Every row is DERIVED from the Document Registry (doc_types.ts): durable
+// types contribute their `dirs`, execution-bound types their `formerDirs`,
+// and legacy types their `formerDirs`/`scopeDirs` — plus declared owners,
+// index formats/titles, mutators, and auditors. Nothing here restates a
+// path or type list the registry already owns.
 
 // `exp` is a directory-level resident kind only: experiment logs are JSONL
 // without front matter and never appear in `docTypes`.
@@ -49,114 +46,99 @@ type ScopeCheck = {
 
 const DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"] as const;
 const DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"] as const;
-const ADR_MUTATORS = ["update_index", "relate_adr"] as const;
-const ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"] as const;
-
-// Canonical index titles for owner-format dirs. Only canonical dirs need
-// one: aliases share the owner writer at write time, and scaffold never
-// targets them.
-const INDEX_TITLES: Record<string, string> = {
-  "docs/adr": "Architecture Decision Records",
-  "docs/impl/ir": "Implementation Records",
-  "docs/impl/exp": "Experiment Logs",
-};
 const PROMOTE_INDEX_MUTATOR = "promote_index";
-const SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
-
-// `brainstorm` has no creator script: the brainstorming skill authors those
-// documents directly, so it is absent here.
-const SHARED_CREATORS: Record<string, string> = {
-  idea: "new_idea",
-  discovery: "new_discovery",
-  spec: "new_spec",
-  plan: "new_plan",
-  task: "new_task",
-  design: "new_design",
-  adr: "new_adr",
-  "test-spec": "new_test_spec",
-};
 
 function buildContracts(): DirectoryContract[] {
-  const rows = new Map<string, {
-    canonical: boolean;
-    owner: DocOwner;
+  type ContractRow = Omit<DirectoryContract, "residentTypes" | "mutators" | "auditors"> & {
     residents: string[];
     mutators: Set<string>;
     auditors: Set<string>;
-  }>();
+  };
+  const rows = new Map<string, ContractRow>();
+  const rowFor = (dir: string, owner: DocOwner, indexFormat: IndexFormat, indexTitle?: string): ContractRow => {
+    const normalized = normalizeDir(dir);
+    let row = rows.get(normalized);
+    if (!row) {
+      row = {
+        dir: normalized,
+        canonical: false,
+        owner,
+        residents: [],
+        indexFormat,
+        indexTitle,
+        mutators: new Set<string>(),
+        auditors: new Set<string>(),
+      };
+      rows.set(normalized, row);
+    }
+    return row;
+  };
+
+  // Durable types: every declared dir is an owned shared/owner scope. Only
+  // the canonical dir carries the indexTitle — alias rows share the owner
+  // writer at write time but never become a scaffold/empty-index target.
   for (const type of docTypes) {
     const config = configFor(type);
-    const adr = type === "adr";
     for (const dir of config.dirs) {
-      const normalized = normalizeDir(dir);
-      let row = rows.get(normalized);
-      if (!row) {
-        row = {
-          canonical: false,
-          owner: adr ? "adr-doc" : "doc-suite",
-          residents: [],
-          mutators: new Set(),
-          auditors: new Set(),
-        };
-        rows.set(normalized, row);
-      }
-      row.canonical = row.canonical || normalized === normalizeDir(config.dir);
-      if (INDEX_TITLES[normalized]) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      const canonical = normalizeDir(dir) === normalizeDir(config.dir);
+      const row = rowFor(dir, config.owner, config.indexFormat, canonical ? config.indexTitle : undefined);
+      row.canonical = row.canonical || canonical;
       if (!row.residents.includes(type)) row.residents.push(type);
-      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
+      if (canonical && config.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      if (config.creator) row.mutators.add(config.creator);
       for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
       for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
-      if (adr) {
-        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
-        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
-      }
+      for (const mutator of config.mutators) row.mutators.add(mutator);
+      for (const auditor of config.auditors) row.auditors.add(auditor);
     }
   }
-  const shared: DirectoryContract[] = [...rows.entries()].map(([dir, row]) => ({
-    dir,
+
+  // Execution-bound types: their former dirs stay owned scopes (canonical
+  // = first formerDir). Residents are the ephemeral kind itself — they are
+  // never shared-suite residents, so shared queries reject these dirs while
+  // the scope check still recognizes the dir's own kind.
+  for (const type of executionTypes) {
+    const entry = ephemeralConfigs[type];
+    for (const dir of entry.formerDirs) {
+      const row = rowFor(dir, entry.owner, entry.indexFormat);
+      row.canonical = row.canonical || dir === entry.formerDirs[0];
+      if (!row.residents.includes(type)) row.residents.push(type);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+
+  // Legacy types: formerDirs plus scopeDirs (zero-resident containers such
+  // as docs/impl, which is itself an owned scope so `--dir docs/impl`
+  // cannot smuggle a shared-suite operation in).
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.scopeDirs) {
+      const row = rowFor(dir, entry.owner, "none");
+      row.canonical = true;
+    }
+    for (const dir of entry.formerDirs) {
+      const canonical = dir === entry.formerDirs[0];
+      const row = rowFor(dir, entry.owner, entry.indexFormat, canonical ? entry.indexTitle : undefined);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(entry.type)) row.residents.push(entry.type);
+      if (canonical && entry.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+
+  return [...rows.values()].map((row) => ({
+    dir: row.dir,
     canonical: row.canonical,
     owner: row.owner,
     residentTypes: row.residents,
-    indexFormat: "shared-4col",
-    indexTitle: INDEX_TITLES[dir],
+    indexFormat: row.indexFormat,
+    indexTitle: row.indexTitle,
     mutators: [...row.mutators].sort(),
     auditors: [...row.auditors].sort(),
-  }));
-  // impl-doc territory: dedicated IR/EXP dirs plus their `docs/impl`
-  // container, which is itself an owned (zero-resident) scope so
-  // `--dir docs/impl` cannot smuggle a shared-suite operation in.
-  const implRows: DirectoryContract[] = [
-    {
-      dir: "docs/impl",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: [],
-      indexFormat: "none",
-      mutators: [],
-      auditors: [],
-    },
-    {
-      dir: "docs/impl/ir",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: ["impl"],
-      indexFormat: "impl-4col",
-      indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
-      auditors: ["audit_impl_record"],
-    },
-    {
-      dir: "docs/impl/exp",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: ["exp"],
-      indexFormat: "exp-1col",
-      indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
-      auditors: ["audit_experiment_log"],
-    },
-  ];
-  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
+  })).sort((a, b) => a.dir.localeCompare(b.dir));
 }
 
 const DIRECTORY_CONTRACTS: readonly DirectoryContract[] = Object.freeze(buildContracts());
@@ -207,8 +189,9 @@ function assertTypeScope(type: string, directory: string): void {
 }
 
 // Shared-suite types resident in `directory`: owned residents intersected
-// with `docTypes`, or every shared type when the dir is unclaimed. impl/exp
-// kinds never leak into shared-suite query scopes.
+// with `docTypes`, or every shared type when the dir is unclaimed.
+// Execution-bound and legacy kinds never leak into shared-suite query
+// scopes.
 function sharedTypesResidentIn(directory: string): string[] {
   const ownership = ownershipForDir(directory);
   if (!ownership) return [...docTypes];
@@ -229,7 +212,8 @@ function sharedRepairAllowed(directory: string): boolean {
 // explicit non-resident type is a caller error: it fails loudly rather
 // than linting foreign documents as the wrong type or reporting an empty
 // scan as a clean one (Issue #183). Unknown type names keep the existing
-// `Unknown document type` error.
+// `Unknown document type` error; execution-bound and legacy names raise the
+// registry's dedicated error.
 function scopeTypesForQuery(directory: string | null, requestedType: string | undefined): string[] {
   if (requestedType && requestedType !== "all") {
     configFor(requestedType);

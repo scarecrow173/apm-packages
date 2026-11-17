@@ -13,9 +13,14 @@ delegate または audit への宣言済みエッジを最大 1 つ、または�
 - `idea-doc` は探索を文書化し、`deep-dive` は interview で意図を確認し、
   `briefing-flow` は探索を orchestrate します。
 - `discovery-doc`、`adr-doc`、`spec-doc`: 意図と判断の記録。
-- `design-doc`、`plan-doc`、`task-doc`: 承認済み実装作業の定義。
-- `test-spec-doc`: テストが何を保証し、なぜ存在するかの記録。
-- `impl-doc`: 実装と実験の証跡。
+- `design-doc` は durable な設計ベースラインを定義し、`plan-doc` と
+  `task-doc` は Document Registry 3 の execution-bound レコードを扱います
+  （`persistence: ephemeral` — creator は durable な Git 書き込みを拒否）。
+- `verification-doc` は `docs/verification` に durable な検証証跡を記録し、
+  `test-spec-doc` はレガシーの migration-only 形式です。
+- `knowledge-doc` は `docs/knowledge` に durable な知識を記録します。
+- `impl-doc` は、マイグレーションが読み取り reconcile するレガシーな
+  Implementation Record / Experiment Log 形式を記述します。
 - `doc-status`: document contract とリンクの audit（read-only）。
 - [`doc-dashboard`](.apm/skills/doc-dashboard/SKILL.ja.md): ステータス別タスクカード、
   残存作業、draft 文書を表示するオフラインレポート。
@@ -129,16 +134,26 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
 
 ## 共通 relation
 
-front matter relation で document graph を保持します。
+front matter relation で document graph を保持します。Knowledge Relations
+v1 では durable 文書は次の source→target relation を記録します。
 
-- `source`: discovery / research の証跡。
-- `implements`: design、plan、task から上流 contract へのリンク。
-- `derives-from`: design と planning の導出元。
-- `references`: 補足 document。
-- `verifies` / `verified-by`: spec、design、task を、それらを検証する
-  `test-spec` 文書へリンクします。
-- `defers` / `deferred-by`: 保留した scope。
-- `changes`: added、modified、deleted、renamed、moved、generated path。
+- `source`: discovery / research の証跡（provenance。全 durable 種別で可）。
+- `motivates`: idea、brainstorm、discovery が動機付ける spec または ADR。
+- `informs` / `explains`: discovery・knowledge 文書が情報提供・説明する
+  durable 文書。
+- `decides-for`: ADR が決定する spec または design。
+- `realizes`: design が実現する spec。
+- `supersedes`: 同種の旧文書を置き換える。
+
+逆方向ビュー（`superseded-by`、`implemented-by` など）は通常は導出される
+もので保存しません。ただし `relate_adr` は #235 で語彙が絞り込まれる
+まで宣言済みペアの双方向を書き込みます。`implements`、`derives-from`、
+`references`、`verifies`、`defers` などその他の宣言 relation キーは
+レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取ります。
+creator は空のプレースホルダーとしてのみ出力しますが、`relate_adr` と
+`new_design --from` は同じ絞り込みが完了するまで設定できます。
+（`relations.changes` と `relations.test-spec-skip` はリンクではなく
+メタデータペイロードです。）
 
 file 名や directory の近さから ownership を推測しないでください。canonical ID
 と relation を使い、事実が衝突したら focus 解決を fail closed にします。

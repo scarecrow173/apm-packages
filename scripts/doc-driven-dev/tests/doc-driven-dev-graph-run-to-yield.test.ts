@@ -182,6 +182,8 @@ const canonicalTargets = [
   "docs/adr",
   "docs/impl/ir",
   "docs/impl/exp",
+  "docs/knowledge",
+  "docs/verification",
 ];
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): void {

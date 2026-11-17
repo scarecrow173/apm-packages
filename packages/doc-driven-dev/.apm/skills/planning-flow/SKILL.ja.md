@@ -10,6 +10,14 @@ license: MIT
 composition boundary です。ユーザーからの直接要求には引き続き `plan-doc` または
 `task-doc` を使います。
 
+Document Registry 3 では `plan` と `task` は execution-bound
+（`persistence: ephemeral`）— `new_plan.js` と `new_task.js` は durable な
+Git 書き込みを registry gate で拒否し、plan/task の状態は Execution Store
+に保持されます。`test-spec` はレガシーの migration-only 形式で、durable な
+検証証跡は `verification-doc` が `docs/verification` に記録します。以下の
+手順は Execution Store のレコード契約と、マイグレーションが読み取る
+v3 以前の文書形状を記述します。
+
 ## ワークフロー
 
 1. 返された `GraphRoute.delegate` が `planning-flow` の場合にだけ invocation を受け付けます。

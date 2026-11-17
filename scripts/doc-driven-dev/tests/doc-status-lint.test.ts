@@ -31,6 +31,7 @@ function specFrontMatter(overrides: Record<string, unknown> = {}) {
     id: "SPEC-0001",
     type: "spec",
     status: "draft",
+    lifecycle: "draft",
     title: "Spec",
     created: "2026-09-19",
     updated: "2026-09-19",
@@ -63,6 +64,24 @@ test("audit_docs reports duplicate artifact ids with a stable rule id", () => {
   assert.equal(duplicates[0].severity, "error");
 });
 
+test("audit_docs reports a populated wrong-typed lifecycle as invalid-lifecycle", () => {
+  // `lifecycle: 5` is populated but off-axis-typed: it must surface as
+  // `invalid-lifecycle`, not collapse into `missing-lifecycle`'s
+  // absent-field migration debt (Issue #234).
+  const repo = tempRepo();
+  const dir = path.join(repo, "docs/specs");
+  writeDoc(dir, "0001-a.md", specFrontMatter({ lifecycle: 5 }));
+  writeDoc(dir, "0002-b.md", specFrontMatter({ title: "Clean" }));
+
+  const report = auditJson(repo, "spec");
+  const invalid = report.findings.filter((finding: any) => finding.code === "invalid-lifecycle");
+  assert.equal(invalid.length, 1);
+  assert.equal(invalid[0].file, "0001-a.md");
+  assert.equal(invalid[0].severity, "error");
+  assert.ok(invalid[0].message.includes("5"));
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-lifecycle"), false);
+});
+
 test("audit_docs flags id format and prefix violations", () => {
   const repo = tempRepo();
   const dir = path.join(repo, "docs/specs");
@@ -81,14 +100,14 @@ test("audit_docs flags id format and prefix violations", () => {
 test("audit_docs resolves relation targets by artifact id", () => {
   const repo = tempRepo();
   writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter());
-  writeDoc(path.join(repo, "docs/plans"), "0001-p.md", specFrontMatter({
-    id: "PLAN-0001",
-    type: "plan",
-    title: "Plan",
-    relations: { implements: ["SPEC-0001"] },
+  writeDoc(path.join(repo, "docs/designs"), "0001-d.md", specFrontMatter({
+    id: "DESIGN-0001",
+    type: "design",
+    title: "Design",
+    relations: { realizes: ["SPEC-0001"] },
   }));
 
-  const report = auditJson(repo, "plan");
+  const report = auditJson(repo, "design");
   assert.equal(report.findings.some((finding: any) => finding.code === "broken-relation-link"), false);
 });
 
@@ -96,18 +115,18 @@ test("audit_docs flags self-referencing, ambiguous, and root-escaping relations"
   const repo = tempRepo();
   writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter());
   writeDoc(path.join(repo, "docs/specs"), "0002-b.md", specFrontMatter());
-  writeDoc(path.join(repo, "docs/plans"), "0001-p.md", specFrontMatter({
-    id: "PLAN-0001",
-    type: "plan",
-    title: "Plan",
+  writeDoc(path.join(repo, "docs/designs"), "0001-d.md", specFrontMatter({
+    id: "DESIGN-0001",
+    type: "design",
+    title: "Design",
     relations: {
-      implements: ["docs/plans/0001-p.md"],
+      realizes: ["docs/designs/0001-d.md"],
       related: ["SPEC-0001"],
       references: ["../../outside.md"],
     },
   }));
 
-  const report = auditJson(repo, "plan");
+  const report = auditJson(repo, "design");
   assert.equal(report.findings.some((finding: any) => finding.code === "self-relation"), true);
   assert.equal(report.findings.some((finding: any) => finding.code === "ambiguous-relation-target"), true);
   assert.equal(report.findings.some((finding: any) => finding.code === "relation-escapes-root"), true);
@@ -118,19 +137,25 @@ test("audit_docs flags declared reciprocal relations that do not link back", () 
   writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter({
     relations: { "implemented-by": ["docs/plans/other.md"] },
   }));
-  writeDoc(path.join(repo, "docs/plans"), "0001-p.md", specFrontMatter({
-    id: "PLAN-0001",
-    type: "plan",
-    title: "Plan",
-    relations: { implements: ["docs/specs/0001-a.md"] },
+  writeDoc(path.join(repo, "docs/specs"), "0002-b.md", specFrontMatter({
+    id: "SPEC-0002",
+    title: "Other spec",
   }));
   writeDoc(path.join(repo, "docs/plans"), "other.md", specFrontMatter({
     id: "PLAN-0002",
     type: "plan",
     title: "Other",
+    // The target declares the inverse field but points it at a different
+    // spec — the reciprocal check fires only when the inverse is declared
+    // yet does not link back.
+    relations: { implements: ["docs/specs/0002-b.md"] },
   }));
 
-  const report = auditJson(repo, "plan");
+  // Registry 3: plans are execution-bound (never linted) but still resolve as
+  // legacy relation targets — the reciprocal check now fires on the durable
+  // spec whose `implemented-by` target's `implements` points elsewhere
+  // (Issue #234).
+  const report = auditJson(repo, "spec");
   assert.equal(
     report.findings.some((finding: any) => finding.code === "inconsistent-reciprocal-relation"),
     true,
@@ -156,11 +181,12 @@ test("audit_docs treats related as a one-directional context link", () => {
     title: "Design",
     relations: { related: ["ADR-0001"] },
   }));
-  writeDoc(path.join(repo, "docs/tasks"), "0001-t.md", specFrontMatter({
-    id: "TASK-0001",
-    type: "task",
-    status: "todo",
-    title: "Task",
+  writeDoc(path.join(repo, "docs/knowledge"), "0001-k.md", specFrontMatter({
+    id: "KNOW-0001",
+    type: "knowledge",
+    status: "draft",
+    title: "Knowledge",
+    knowledge_kind: "lesson",
     relations: {
       related: ["DESIGN-0001"],
       "depends-on": ["SPEC-0001"],
@@ -231,7 +257,12 @@ test("audit_docs treats plan/task verified-by to a test-spec as evidence, not re
   );
 });
 
-test("audit_docs treats relations.test-spec-skip as a reason string, not a target", () => {
+// Registry 3 (Issue #234): `plan` and `test-spec` are execution-bound /
+// legacy — `audit_docs --type` on either refuses at the registry gate
+// instead of linting them as durable documents. The `test-spec-skip`
+// reason-string exemption is still covered at the scan layer by
+// doc-repository.test.ts's non-reference relations test (Issue #165).
+test("audit_docs refuses execution-bound and legacy type scopes", () => {
   const repo = tempRepo();
   writeDoc(path.join(repo, "docs/plans"), "0001-skip.md", specFrontMatter({
     id: "PLAN-0001",
@@ -240,67 +271,38 @@ test("audit_docs treats relations.test-spec-skip as a reason string, not a targe
     title: "Skip",
     relations: { "test-spec-skip": "docs-only change, no verifiable behavior" },
   }));
-  writeDoc(path.join(repo, "docs/plans"), "0002-broken.md", specFrontMatter({
-    id: "PLAN-0002",
-    type: "plan",
-    status: "approved",
-    title: "Broken",
-    relations: { "test-spec-skip": "docs-only change", "derives-from": ["DESIGN-9999"] },
-  }));
 
-  const report = auditJson(repo, "plan");
-  // The reason string is exempt from resolution — the only broken relation
-  // is the genuinely missing DESIGN-9999 target (Issue #165).
-  const brokenLinks = report.findings.filter((finding: any) => finding.code === "broken-relation-link");
-  assert.equal(brokenLinks.length, 1);
-  assert.ok(brokenLinks[0].message.includes("DESIGN-9999"));
-  assert.equal(brokenLinks[0].file, "0002-broken.md");
-  // The recorded skip reason satisfies the verified-by evidence gate.
-  assert.equal(
-    report.findings.some((finding: any) => finding.code === "plan-missing-test-spec-evidence"),
-    false,
-  );
+  for (const [type, expected] of [
+    ["plan", /execution-bound|ephemeral|Execution Store/],
+    ["task", /execution-bound|ephemeral|Execution Store/],
+    ["test-spec", /legacy format|migration-only|migration tooling/],
+  ] as const) {
+    const res = runScript("doc-status", "audit_docs.js", ["--type", type, "--json"], repo);
+    assert.notEqual(res.status, 0, `--type ${type} must refuse`);
+    assert.match(res.stderr, expected, `--type ${type} refusal reason`);
+  }
 });
 
-test("audit_docs flags a non-string test-spec-skip and still requires evidence", () => {
+test("audit_docs reports invalid supersedes target types via the shared contract", () => {
   const repo = tempRepo();
-  writeDoc(path.join(repo, "docs/plans"), "0001-malformed.md", specFrontMatter({
-    id: "PLAN-0001",
-    type: "plan",
-    status: "approved",
-    title: "Malformed",
-    relations: { "test-spec-skip": ["not-a-scalar"] },
+  writeDoc(path.join(repo, "docs/specs"), "0001-s.md", specFrontMatter({
+    id: "SPEC-0001",
+    type: "spec",
+    title: "Spec",
+    status: "draft",
+  }));
+  // A verification design may only supersede another verification doc;
+  // targeting a spec trips the generic typed-relation check.
+  writeDoc(path.join(repo, "docs/verification"), "0001-v.md", specFrontMatter({
+    id: "VD-0001",
+    type: "verification",
+    title: "Verification",
+    relations: { supersedes: ["SPEC-0001"] },
   }));
 
-  const report = auditJson(repo, "plan");
+  const report = auditJson(repo, "verification");
   assert.equal(
-    report.findings.some((finding: any) => finding.code === "invalid-front-matter"),
-    true,
-  );
-  assert.equal(
-    report.findings.some((finding: any) => finding.code === "plan-missing-test-spec-evidence"),
-    true,
-  );
-});
-
-test("audit_docs reports invalid verifies target types via the shared contract", () => {
-  const repo = tempRepo();
-  writeDoc(path.join(repo, "docs/tasks"), "0001-t.md", specFrontMatter({
-    id: "TASK-0001",
-    type: "task",
-    title: "Task",
-    status: "todo",
-  }));
-  writeDoc(path.join(repo, "docs/test-specs"), "0001-ts.md", specFrontMatter({
-    id: "TSPEC-0001",
-    type: "test-spec",
-    title: "TS",
-    relations: { verifies: ["TASK-0001"] },
-  }));
-
-  const report = auditJson(repo, "test-spec");
-  assert.equal(
-    report.findings.some((finding: any) => finding.code === "test-spec-invalid-verifies-target"),
+    report.findings.some((finding: any) => finding.code === "invalid-relation-target-type"),
     true,
   );
 });

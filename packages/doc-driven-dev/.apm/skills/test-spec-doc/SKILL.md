@@ -12,6 +12,22 @@ retired. The document lets humans and coding agents judge what must be
 preserved when the spec or design changes, and whether a test is still
 necessary at all.
 
+## Document Registry v3 status
+
+`test-spec` is a **legacy format** under Document Registry 3: it is
+interpreted only by migration tooling (`migrate_docs` / `migrate_ids` in
+doc-maintenance) and cannot be created or linted as a durable document.
+`docs/test-spec` and `docs/test-specs` are migration-owned scopes.
+`new_test_spec.js` refuses at the registry gate — before the TEST-SPEC-DOC
+gate checks, scope checks, or any write — with:
+
+`Document type "test-spec" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+
+Durable verification intent is now recorded as `verification` documents in
+`docs/verification` via the **verification-doc** skill (`new_verification.js`).
+The conventions below remain the contract for reading and migrating a pre-v3
+`docs/test-specs` corpus; they no longer describe a file this skill mints.
+
 A test spec is not executable Gherkin and not a test result log. It uses the
 shared front matter contract plus fixed sections: Purpose, Feature, Rules,
 Examples, Guarantees, Non-goals, and Risk. Runnable verification commands
@@ -32,19 +48,21 @@ without a verifiable upstream contract loses its purpose: do not create one.
    Check `docs/specs/`, `docs/designs/`, `docs/test-specs/`, and related
    acceptance criteria so the new test spec does not duplicate an existing
    guarantee.
-2. Create the test spec.
+2. Record the verification intent as a `verification` document.
+
+   Under Document Registry 3 `new_test_spec.js` refuses at the registry gate
+   (see *Document Registry v3 status* above). Durable verification intent
+   lives in `docs/verification` and is created by
+   **verification-doc**:
 
    ```bash
-   node scripts/new_test_spec.js --title "Checkout total calculation" \
-     --verifies docs/specs/define-checkout-flow.md \
-     --derives-from docs/designs/checkout-design.md
+   node ../verification-doc/scripts/new_verification.js --title "Checkout total calculation" \
+     --from docs/specs/define-checkout-flow.md
    ```
 
-   `--verifies` may be repeated and each target must resolve to an existing
-   document by path or ID (TEST-SPEC-DOC-GATE-001). Use `--derives-from` when the test spec
-   elaborates a specific spec or design. The creation script uses
-   `assets/templates/test-spec.md`; if you cannot run it, copy the template
-   and fill it manually.
+   `references/test-spec-conventions.md` remains the contract for reading and
+   migrating a pre-v3 corpus; `assets/templates/test-spec.md` stays the
+   reference structure for the legacy body.
 3. Fill every fixed section.
    See `references/test-spec-conventions.md` for what each section must
    answer. Rules and Examples follow the Gherkin `Rule`/`Example` keywords
@@ -106,8 +124,11 @@ Rules of thumb:
 
 ## Resources
 
-- `scripts/new_test_spec.js`: create a test spec (index materialization is
-  explicit: `doc_maintenance.js index plan|apply`).
-- `references/test-spec-conventions.md`: directory, filename, status,
-  relations, required content, and index conventions for test specs.
-- `assets/templates/test-spec.md`: default test spec body template.
+- `scripts/new_test_spec.js`: refuses at the registry gate under Registry 3 —
+  `test-spec` is a legacy, migration-only format. Create verification intent
+  via **verification-doc** (`new_verification.js`) instead.
+- `references/test-spec-conventions.md`: the legacy corpus contract —
+  directory, filename, status, relations, and required content, used by
+  migration tooling and for reading pre-v3 files.
+- `assets/templates/test-spec.md`: legacy test spec body template — reference
+  structure only; no Registry 3 creation path fills it.

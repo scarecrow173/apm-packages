@@ -10,6 +10,23 @@ license: MIT
 plan は、何をどの順序で実装するか、どの文書を実装または派生元にするか、
 どの検証で実装完了とみなすかを明確にします。
 
+## Document Registry v3 の位置づけ
+
+Document Registry 3 では `plan` は **execution-bound**
+(`persistence: ephemeral`)です。plan の状態は durable な Git 文書ではなく
+Execution Store にあり、`docs/plans` / `docs/implementation-plans` は
+durable な書き込みを受け付けない *former* ディレクトリです。
+そのため `new_plan.js` は registry ゲートで拒否されます — design gate、
+scope チェック、あらゆる書き込みより先に:
+
+`Document type "plan" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store`
+
+以下の思考フレームワーク、readiness マトリクス、規約は引き続き planning
+の契約であり、Execution Store の plan レコードや Registry 2 以前の
+`docs/plans` corpus の移行(doc-maintenance の `migrate_docs` /
+`migrate_ids`)を形づくります。この skill が Git 文書を mint する話では
+なくなった点に注意してください。
+
 ## 思考フレームワーク
 
 plan を作成する前に、次の問いに答えてください。以降のすべての判断を形づくります。
@@ -53,23 +70,19 @@ plan は分割します。1 つの plan にまとめるのは、同じクリテ�
    ADR が実装アプローチを制約または情報提供する場合は参照します。
    plan に ADR は必須ではありませんが、spec と並列で作成された関連 ADR は
    認識し、取り込む必要があります。
-7. plan を作成する。
+7. plan レコードを作成する。
 
    **作成前に必須**:
    [`references/plan-conventions.ja.md`](references/plan-conventions.ja.md) を
-   全文読み込み、ディレクトリ検出、ファイル名パターン、front matter スキーマ、
-   status 値、relation の意味、design gate を確認します。plan 本文はこれらの
-   規約が正しいことに依存しています。
+   全文読み込み、front matter スキーマ、status 値、relation の意味、
+   design gate を確認します。plan 本文はこれらの規約が正しいことに依存
+   しています。
 
-   **手動で読み込まないもの**: `assets/templates/plan.md`。`new_plan.js` が
-   自動で読み込みます。スクリプトを実行できない場合のみ直接開きます。
-
-   ```bash
-   node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
-   ```
-
-   スクリプトを実行できない場合は、`assets/templates/plan.ja.md` をコピーし、
-   今読んだ規約に従って手動で埋めます。
+   Document Registry 3 では `new_plan.js` が registry ゲートで拒否
+   されます(上記 *Document Registry v3 の位置づけ* 参照)。`plan` は
+   execution-bound なので、レコードは `docs/plans` のファイルではなく
+   Execution Store に作成されます。`assets/templates/plan.ja.md` は
+   レコードの参照となる本文構造です。
 
 8. relation を記録する。
    生成された plan は上流 spec を `relations.implements` に、
@@ -216,10 +229,11 @@ task をクローズするか新しい plan へ付け替えます。
 
 ## リソース
 
-- `scripts/new_plan.js`: plan を作成します（索引の materialize は明示的:
-  `doc_maintenance.js index plan|apply`）。
-- `references/plan-conventions.ja.md`: plan のディレクトリ、ファイル名、
-  ステータス、relation、必須内容、索引の規約です
-  — plan の作成・記入の前に必ず読み込むこと。
-- `assets/templates/plan.md`: 既定の plan 本文テンプレートです
-  — `new_plan.js` が自動的に使用する。手動で読み込まないこと。
+- `scripts/new_plan.js`: Registry 3 では registry ゲートで拒否されます。
+  `plan` は execution-bound であり、durable な作成経路はありません。
+- `references/plan-conventions.ja.md`: plan レコードのステータス、
+  relation、必須内容、規約です
+  — plan 内容を記述する前に必ず読み込むこと。
+- `assets/templates/plan.ja.md`: plan 本文テンプレートです。
+  スクリプトが埋めるファイルではなく、Execution Store レコードの参照
+  構造です。

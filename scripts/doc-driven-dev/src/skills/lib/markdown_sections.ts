@@ -61,8 +61,8 @@ const SECTION_HEADING_ALIASES: Readonly<Record<string, readonly string[]>> = {
   "Open Questions": ["未解決の論点", "未解決事項"],
   "Promotion Candidates": ["昇華先候補"],
   "Evidence": ["エビデンス"],
-  // idea-doc
-  "Summary": ["要約"],
+  // idea-doc / knowledge-doc
+  "Summary": ["要約", "概要"],
   "Problem and Motivation": ["課題と動機"],
   "Expected Value": ["想定価値"],
   "Next Action": ["次のアクション"],
@@ -89,6 +89,14 @@ const SECTION_HEADING_ALIASES: Readonly<Record<string, readonly string[]>> = {
   "Option 1": ["選択肢 1"],
   "Option 2": ["選択肢 2"],
   "More Information": ["追加情報"],
+  // knowledge-doc
+  "Details": ["詳細"],
+  "Applies To": ["適用対象"],
+  "Source": ["出処"],
+  // verification-doc
+  "Purpose": ["目的"],
+  "Checks": ["検証項目"],
+  "Non-goals": ["対象外"],
   // implementation-flow profile
   "Available Skills": ["利用可能なスキル"],
   "Category Assignments": ["カテゴリ割り当て"],

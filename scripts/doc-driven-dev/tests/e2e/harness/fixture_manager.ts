@@ -13,9 +13,10 @@ import type { TaskStatus } from "../../../src/skills/doc-driven-dev-graph/script
 
 /**
  * Canonical doc-bearing directories (front-matter artifacts live here).
- * NOTE: the full scaffold (`SCAFFOLD_DIRS` below) is wider — the bootstrap
- * gate and the "." workspace fingerprint also require docs/ideas,
- * docs/discovery, and docs/impl/exp, so scaffolding always creates all ten.
+ * Registry 3: the durable tree is idea/discovery/spec/design/adr/knowledge/
+ * verification; plan/task/test-spec/impl artifacts remain on disk as
+ * execution-bound and legacy migration-owned content until the Execution
+ * Store lands (Issue #234).
  */
 export const CANONICAL_DIRS = [
   "docs/specs",
@@ -25,9 +26,15 @@ export const CANONICAL_DIRS = [
   "docs/test-specs",
   "docs/tasks",
   "docs/impl/ir",
+  "docs/knowledge",
+  "docs/verification",
 ];
 
-/** Directories the bootstrap gate fingerprints (artifact CANONICAL_DOC_DIRS). */
+/**
+ * Directories the bootstrap gate requires (durable CANONICAL_DOC_DIRS) plus
+ * the legacy dirs the default artifact set writes into. The "." workspace
+ * fingerprint scans the full historical CANONICAL_DOC_DIRS union.
+ */
 const SCAFFOLD_DIRS = [
   "docs/ideas",
   "docs/discovery",
@@ -39,6 +46,8 @@ const SCAFFOLD_DIRS = [
   "docs/adr",
   "docs/impl/ir",
   "docs/impl/exp",
+  "docs/knowledge",
+  "docs/verification",
 ];
 
 export type DocSpec = { frontmatter: Record<string, unknown>; body: string };

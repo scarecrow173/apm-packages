@@ -19,6 +19,14 @@ active profile が現在の環境で applicable と示したスキルを動的�
 これは**メタスキル**であり、コードを直接生成しない。代わりにスキルの発見、
 構成、順序付け、そして実装を上流文書に接続する検証ループを管理する。
 
+Document Registry 3 では `task` は execution-bound（`persistence: ephemeral`）
+で、以下の `task-doc` の作成手順は durable な Git 文書ではなく Execution
+Store のレコードを指します。`impl-doc` の Implementation Record と
+Experiment Log はレガシーの migration-only 種別で、`new_impl_record.js` /
+`new_experiment_log.js` は registry gate で拒否します。それらに言及する
+フェーズは、マイグレーションが読み取る v3 以前の証跡契約を記述します。
+durable な検証証跡は `verification-doc` が `docs/verification` に記録します。
+
 ## 利用タイミング
 
 - 承認済み `task-doc` エントリのコード変更を実行するとき。
@@ -189,6 +197,9 @@ skill の `SKILL.md` 本文だけを読み、references と scripts は active s
 ## Phase C0: Implementation Documentation を開く
 
 各 task の最初のコード変更前に、`impl-doc` を通じて実装記録を開く。
+（レガシー契約: `new_impl_record.js` / `new_experiment_log.js` は Document
+Registry 3 では拒否されます。上記の Registry 3 注記を参照。このフェーズは
+マイグレーション可読な証跡形状を記述します。）
 
 1. タスク単位ごとに `in-progress` の Implementation Record を作成または再利用する。
 2. `impl-doc` の規約に従い、task との対応関係と追跡可能性を維持する。

@@ -8,9 +8,10 @@ import { profileGates } from "./doc_report";
 import type { AuditProfile, ProfileGates } from "./doc_report";
 import { lintExternalLinks } from "./doc_structure_lint";
 import { scopeTypesForQuery } from "./doc_ownership";
-import { canonicalDocRoots, compareFindings, scanRepository } from "./doc_repository";
+import { compareFindings, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
 import { docDir, docFiles } from "./doc_suite_utils";
+import { managedDocDirs } from "./doc_types";
 import { isInsideRealpath, normalizeDir, resolveContainedDir } from "./document_utils";
 
 type AuditFinding = {
@@ -43,8 +44,12 @@ type AuditOptions = {
   profile?: AuditProfile;
 };
 
+// The audit model scans every managed dir spelling — durable contract dirs
+// plus the migration-owned former dirs of execution-bound and legacy types
+// (root-level spellings included) — so legacy content stays visible to the
+// `--type all` legacy-token sweep (Issue #234).
 function scanRoots(relativeDirs: string[]): string[] {
-  return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
+  return [...new Set(["docs", ...relativeDirs, ...managedDocDirs()].map((dir) => normalizeDir(dir)))];
 }
 
 function toLegacyFinding(directory: string, finding: Finding): AuditFinding {

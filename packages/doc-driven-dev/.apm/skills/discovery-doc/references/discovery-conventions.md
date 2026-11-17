@@ -54,6 +54,7 @@ Discovery documents use the shared document front matter:
 id: "DISC-3QwErTyUiOpAsDfGhJkLzX"
 type: "discovery"
 status: "draft"
+lifecycle: "draft"
 title: "Explore auth strategy options"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -85,7 +86,8 @@ Required fields:
 | --- | --- | --- |
 | `id` | Yes | Stable document identifier in `DISC-<22-char Base62>` form (UUIDv7-derived; legacy `DISC-NNNN` remains valid). |
 | `type` | Yes | Must be `discovery`. |
-| `status` | Yes | Current lifecycle state. |
+| `status` | Yes | Type-specific workflow state (see Status Values). |
+| `lifecycle` | Yes | Registry 3 lifecycle: `draft`, `current`, `superseded`, or `retired`. Independent of `status`; drives active/settled index tiers. |
 | `title` | Yes | Human-readable title matching the exploration topic. |
 | `created` | Yes | Creation date in `YYYY-MM-DD` format. |
 | `updated` | Yes | Last substantive update date in `YYYY-MM-DD` format. |
@@ -94,7 +96,8 @@ Required fields:
 
 ## Status Values
 
-Use these lifecycle statuses:
+Use these type-specific workflow statuses (distinct from the `lifecycle`
+field, which the Document Registry owns):
 
 | Status | Meaning |
 | --- | --- |
@@ -105,7 +108,12 @@ Use these lifecycle statuses:
 | `superseded` | Replaced by a newer discovery document. |
 
 Discovery documents are not approved or implemented. Set `resolved` only
-after all promotion candidates are addressed and linked in `relations.derived-by`.
+after all promotion candidates are addressed. Under Knowledge Relations v1
+the discovery stores `relations.motivates` (→ spec) or `relations.informs`
+(→ durable targets) source→target; `derived-by` and other declared keys are
+legacy vocabulary that migration tooling reads in pre-v3 corpora — creators
+emit them only as empty placeholders, and `relate_adr`/`new_design --from`
+can still populate them until the stored vocabulary narrows under #235.
 
 ## Relations
 

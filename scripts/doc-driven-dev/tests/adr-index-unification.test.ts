@@ -357,6 +357,17 @@ test("settled ADRs land in the ## Settled tier identically across all three expl
     const created = runSkill(adrRoot, "new_adr.js", ["--title", title, "--status", status, "--cwd", repo], repo);
     assert.equal(created.status, 0, created.stderr);
   }
+  // Registry 3: the settled tier is lifecycle-driven — `status` alone no
+  // longer archives a row (Issue #234). Retire/supersede the three
+  // settled-status ADRs on the lifecycle axis so they move below the fold.
+  const retiredFiles = new Set(["drop-soap.md", "retire-xml.md", "move-to-grpc.md"]);
+  for (const file of fs.readdirSync(path.join(repo, "docs/adr"))) {
+    if (!retiredFiles.has(file)) continue;
+    const filePath = path.join(repo, "docs/adr", file);
+    const content = fs.readFileSync(filePath, "utf8");
+    const lifecycle = file === "move-to-grpc.md" ? "superseded" : "retired";
+    fs.writeFileSync(filePath, content.replace('lifecycle: "draft"', `lifecycle: "${lifecycle}"`), "utf8");
+  }
   const indexPath = path.join(repo, "docs/adr/README.md");
   // Creator output deferred the index; materialize through each explicit writer.
   const update = runSkill(adrRoot, "update_index.js", ["--dir", "docs/adr", "--write", "--cwd", repo], repo);
@@ -383,8 +394,9 @@ test("settled ADRs land in the ## Settled tier identically across all three expl
   assert.equal(materialize.status, 0, materialize.stderr);
   const producerC = fs.readFileSync(indexPath, "utf8");
 
-  // ADR settled statuses come from doc_lifecycle: rejected/deprecated/
-  // superseded drop below `## Settled`; accepted stays in the active table.
+  // ADR settled lifecycle values come from doc_lifecycle: lifecycle
+  // superseded/retired drop below `## Settled`; the still-draft accepted ADR
+  // stays in the active table regardless of its status axis.
   for (const content of [producerA, producerB, producerC]) {
     const settledAt = content.indexOf("## Settled");
     assert.ok(settledAt > 0, content);

@@ -1,5 +1,12 @@
 # impl-doc 規約
 
+Document Registry 3 では `impl`（Implementation Record）と `exp`
+（Experiment Log）はレガシーの migration-only 種別です。durable 文書として
+作成・lint できず、`new_impl_record.js` / `new_experiment_log.js` /
+`sync_impl_index.js` は registry gate で拒否します。以下のディレクトリは
+migration-owned scope です。この規約は、マイグレーションが読み取る v3 以前
+の文書形状と、`migrate_ids.js` が reconcile する索引契約を記述します。
+
 ## ディレクトリ
 
 Implementation Record は次に配置します。

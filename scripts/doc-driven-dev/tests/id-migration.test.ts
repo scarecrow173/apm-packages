@@ -527,11 +527,13 @@ test("generated migrate_ids.js CLI applies migration end to end", () => {
 
 test("post-apply validation fails on warning-severity blocking findings", async () => {
   const repo = tempRepo();
+  // Registry 3: only durable scopes are linted post-apply — a spec carrying a
+  // broken supersedes link exercises the warning-severity blocking path.
   writeDoc(
     repo,
-    "docs/tasks/0001-schema.md",
-    legacyTask("TASK-0001", "schema", { "depends-on": ["missing.md"] }),
-    "# schema\n",
+    "docs/specs/0001-checkout.md",
+    legacySpec("SPEC-0001", "checkout", { supersedes: ["missing.md"] }),
+    "# checkout\n",
   );
 
   const report = await migrateArtifactIds({ cwd: repo, apply: true });
@@ -541,6 +543,23 @@ test("post-apply validation fails on warning-severity blocking findings", async 
     report.validation.auditErrors.some((error) => error.code === "broken-relation-link"),
     `expected broken-relation-link in ${JSON.stringify(report.validation.auditErrors)}`,
   );
+});
+
+test("post-apply validation treats missing lifecycle as debt, not a blocker", async () => {
+  const repo = tempRepo();
+  // Registry 3: pre-Registry-3 docs lack `lifecycle` by definition — the ids
+  // migration must not fail on debt the lifecycle/docs migration owns.
+  writeDoc(repo, "docs/specs/0001-checkout.md", legacySpec("SPEC-0001", "checkout"), "# checkout\n");
+  fs.writeFileSync(
+    path.join(repo, "docs/specs/README.md"),
+    "# Index\n\n<!-- doc-suite:generated-index -->\n\nDirectory: `docs/specs`\n\n| ID | Title | Status | File |\n| --- | --- | --- | --- |\n",
+    "utf8",
+  );
+
+  const report = await migrateArtifactIds({ cwd: repo, apply: true });
+
+  assert.equal(report.ok, true, JSON.stringify(report.validation.auditErrors));
+  assert.equal(report.validation.auditErrors.some((error) => error.code === "missing-lifecycle"), false);
 });
 
 test("post-apply validation audits every resident type in a shared directory", async () => {

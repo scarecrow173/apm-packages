@@ -5,10 +5,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { buildIndex as buildAdrIndex, writeIndexFile } from "../../../adr-doc/scripts/lib/adr_utils";
-import { applyImplIndexSync, planImplIndexSync } from "../../../impl-doc/scripts/lib/impl_index_sync";
 import { parseManagedIndexLayout } from "../../../lib/doc_index_tiers";
 import type { ManagedIndexLayout } from "../../../lib/doc_index_tiers";
-import { DIRECTORY_CONTRACTS, ownershipForDir, sharedTypesResidentIn } from "../../../lib/doc_ownership";
+import { ownershipForDir, sharedTypesResidentIn } from "../../../lib/doc_ownership";
 import type { DocOwner } from "../../../lib/doc_ownership";
 import {
   docDir,
@@ -31,16 +30,15 @@ import {
 // Index materialization planner (Issue #197)
 //
 // Enumerates the managed index dirs — the shared-4col dirs resolved from the
-// nine shared doc types, the ADR dir, and the impl-doc leaf dirs — and
-// produces a normalized per-target plan: verdict, change summary, SHA-256
-// pins, planHash, and the merged content. Apply re-plans, re-validates pins
-// against the live filesystem (TOCTOU), and writes atomically.
+// durable doc types plus the ADR dir — and produces a normalized per-target
+// plan: verdict, change summary, SHA-256 pins, planHash, and the merged
+// content. Apply re-plans, re-validates pins against the live filesystem
+// (TOCTOU), and writes atomically.
 //
-// impl-dir kinds (ir/exp, Task 2) delegate entirely to the impl-doc owner
-// sync engine: plan fields pass through from `SyncPlan` (whose `SyncChange`
-// union is identical) and apply calls `applyImplIndexSync` — the SAFE owner
-// API that re-plans and re-verifies pins itself — never the unconditional
-// `updateIndexFor*Dir` writers.
+// Registry 3 (Issue #234): legacy impl/exp dirs are migration-owned scopes —
+// their indexes are regenerated only inside migration tooling
+// (id_migration's applyImplIndexSync calls), never on the normal durable
+// index path. An explicit --dir on one plans a rejected target.
 // ---------------------------------------------------------------------------
 
 type IndexTargetKind = "shared" | "adr" | "ir" | "exp" | "none";
@@ -152,10 +150,11 @@ function kindForDir(directory: string): Exclude<IndexTargetKind, "none"> | null 
   return contract.owner === "adr-doc" ? "adr" : "shared";
 }
 
-// Every managed index dir CANDIDATE in scope, as spelled by the doc-type
-// configs — each shared type's resolved dir (canonical or first existing
-// alias — brainstorm and discovery share docs/discovery) plus the impl leaf
-// dirs. Spellings are only candidates: planning collapses every one through
+// Every managed index dir CANDIDATE in scope, as spelled by the durable
+// doc-type configs — each type's resolved dir (canonical or first existing
+// alias — brainstorm and discovery share docs/discovery). Legacy impl/exp
+// dirs are excluded: their indexes are migration-owned (Issue #234).
+// Spellings are only candidates: planning collapses every one through
 // resolveContainedDir (realpath + containment) and dedupes by real path
 // before a dir becomes a target.
 function managedDirs(cwd: string, explicitDir?: string): string[] {
@@ -168,15 +167,6 @@ function managedDirs(cwd: string, explicitDir?: string): string[] {
     dirs.set(repoPathKey(normalized), normalized);
   };
   for (const type of docTypes) push(docDir(cwd, type));
-  for (const contract of DIRECTORY_CONTRACTS) {
-    if (contract.indexFormat === "impl-4col" || contract.indexFormat === "exp-1col") {
-      // impl leaf dirs join enumeration only when they exist on disk —
-      // unlike the nine shared dirs, an absent impl dir must not mint a
-      // create target whose apply would mkdir an index into repos that have
-      // no impl docs at all.
-      if (fs.existsSync(path.join(cwd, contract.dir))) push(contract.dir);
-    }
-  }
   return [...dirs.values()].sort((a, b) => a.localeCompare(b));
 }
 
@@ -474,30 +464,8 @@ async function planManagedTarget(
   return { target, internals: { generated } };
 }
 
-// An impl-doc target is a verbatim projection of the owner SyncPlan: the
-// fail-closed verdict/reason, the change summary (SyncChange is the same
-// union), the owner's pins, and the owner's planHash all pass through so
-// applyImplIndexSync's expectPlanHash gate sees exactly the hash its own
-// re-plan would recompute. `content` stays absent — the owner apply renders
-// and merges the write payload itself.
-function implTarget(cwd: string, kind: "ir" | "exp", directory: string): IndexMaterializeTarget {
-  const plan = planImplIndexSync(cwd, kind, directory);
-  return {
-    kind,
-    owner: ownershipForDir(directory)?.owner ?? null,
-    directory: plan.directory,
-    indexPath: plan.indexPath,
-    verdict: plan.verdict,
-    ...(plan.reason ? { reason: plan.reason } : {}),
-    changes: plan.changes,
-    pins: plan.pins,
-    sourceCount: plan.pins.fileList.length,
-    planHash: plan.planHash,
-    plannedFiles: plan.plannedFiles,
-  };
-}
-
-// Kind dispatch — impl-doc kinds delegate to the owner sync planner.
+// Kind dispatch — ir/exp never reach here: legacy dirs plan rejected
+// targets before this point (their indexes are migration-owned, Issue #234).
 async function planTarget(
   cwd: string,
   kind: Exclude<IndexTargetKind, "none">,
@@ -509,8 +477,7 @@ async function planTarget(
       return planManagedTarget(cwd, kind, directory);
     case "ir":
     case "exp":
-      // No generated payload to carry: applyImplIndexSync renders it.
-      return { target: implTarget(cwd, kind, directory), internals: { generated: "" } };
+      throw new Error(`unreachable: legacy directory ${directory} plans a rejected target before dispatch`);
   }
 }
 
@@ -554,6 +521,22 @@ async function computeIndexMaterialization(
     // all — an explicit --dir on it is a rejected scope, not a target.
     if (kind === null) {
       targets.push(rejectedTarget(cwd, directory, `${directory}/README.md`, "impl container has no managed index", true));
+      continue;
+    }
+    // Legacy impl/exp leaf dirs are migration-owned scopes under Registry 3:
+    // the normal materializer never syncs their indexes — id_migration owns
+    // that through applyImplIndexSync (Issue #234).
+    if (kind === "ir" || kind === "exp") {
+      targets.push(rejectedTarget(cwd, directory, `${directory}/README.md`, "legacy directory: index is migration-owned", true));
+      continue;
+    }
+    // An owned dir whose residents are all non-durable (execution-bound or
+    // legacy types: docs/plans, docs/tasks, docs/test-specs) carries a
+    // migration-owned index — the durable writers have no resident type to
+    // seed and must never mint one here (Issue #234).
+    const contract = ownershipForDir(directory);
+    if (kind === "shared" && contract && sharedTypesResidentIn(directory).length === 0) {
+      targets.push(rejectedTarget(cwd, directory, `${directory}/README.md`, "non-durable directory: index is migration-owned", true));
       continue;
     }
     // Only unclaimed dirs *with* resident docs materialize a shared index
@@ -650,24 +633,8 @@ async function applyIndexMaterialization(
       blocked.push({ target, reason: target.reason ?? "rejected" });
       continue;
     }
-    if (target.kind === "ir" || target.kind === "exp") {
-      // Delegate to the owner sync engine: it re-plans, re-verifies its own
-      // pins against the live filesystem, merges, and writes atomically —
-      // never the unconditional updateIndexFor*Dir writers. The per-target
-      // planHash IS the SyncPlan hash, so expectPlanHash gates the write on
-      // any drift since the outer re-plan (TOCTOU). A rejected re-plan or
-      // any other written:false lands in blocked with the owner reason.
-      const result = applyImplIndexSync(resolvedCwd, target.kind, target.directory, { expectPlanHash: target.planHash });
-      if (result.written) {
-        written.push(target.indexPath);
-      } else {
-        blocked.push({
-          target,
-          reason: result.plan.reason ?? `impl index sync produced no write (re-plan verdict ${result.plan.verdict})`,
-        });
-      }
-      continue;
-    }
+    // ir/exp targets are always "rejected" — handled above — so only
+    // shared/adr kinds ever reach a write (Issue #234).
     const drift = verifyTargetPins(resolvedCwd, target);
     if (drift) {
       blocked.push({ target, reason: drift });

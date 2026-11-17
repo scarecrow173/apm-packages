@@ -11,6 +11,23 @@ license: MIT
 spec や design が変更されたときに「何を守るべきか」「そのテストはまだ必要か」を
 人と coding agent が判断できるようにします。
 
+## Document Registry v3 の位置づけ
+
+Document Registry 3 では `test-spec` は **legacy 形式**です。migration
+ツーリング(doc-maintenance の `migrate_docs` / `migrate_ids`)のみが解釈
+し、durable 文書としての作成・lint はできません。`docs/test-spec` と
+`docs/test-specs` は migration-owned scope です。`new_test_spec.js` は
+registry ゲートで拒否されます — TEST-SPEC-DOC ゲート、scope チェック、
+あらゆる書き込みより先に:
+
+`Document type "test-spec" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+
+durable な検証意図は現在、**verification-doc** skill
+(`new_verification.js`)が `docs/verification` に `verification` 文書として
+記録します。以下の規約は Registry 2 以前の `docs/test-specs` corpus を
+読み取り・移行するための契約であり、この skill が Git 文書を mint する
+話ではなくなりました。
+
 test spec は実行可能な Gherkin でもテスト結果ログでもありません。共通 front
 matter 契約と固定セクション（Purpose、Feature、Rules、Examples、Guarantees、
 Non-goals、Risk）で構成します。実行可能な検証コマンドは task の
@@ -30,20 +47,21 @@ test spec を作成するには、少なくとも 1 つの upstream document を
 1. 書く前に既存 doc を確認します。
    `docs/specs/`、`docs/designs/`、`docs/test-specs/` と関連する acceptance
    criteria を確認し、新しい test spec が既存の保証と重複しないようにします。
-2. test spec を作成します。
+2. 検証意図を `verification` 文書として記録します。
+
+   Document Registry 3 では `new_test_spec.js` が registry ゲートで拒否
+   されます(上記 *Document Registry v3 の位置づけ* 参照)。durable な
+   検証意図は `docs/verification` にあり、**verification-doc** が作成
+   します:
 
    ```bash
-   node scripts/new_test_spec.js --title "Checkout total calculation" \
-     --verifies docs/specs/define-checkout-flow.md \
-     --derives-from docs/designs/checkout-design.md
+   node ../verification-doc/scripts/new_verification.js --title "Checkout total calculation" \
+     --from docs/specs/define-checkout-flow.md
    ```
 
-   `--verifies` は繰り返し指定でき、各 target はパスまたは ID で
-   既存ドキュメントに解決できる必要があります（TEST-SPEC-DOC-GATE-001）。
-   test spec が特定の spec や design を詳細化する
-   場合は `--derives-from` を使います。作成スクリプトは
-   `assets/templates/test-spec.md` を使います。実行できない場合は template を
-   コピーして手動で記入してください。
+   `references/test-spec-conventions.ja.md` は Registry 2 以前の corpus を
+   読み取り・移行するための契約であり、`assets/templates/test-spec.ja.md`
+   は legacy 本文の参照構造です。
 3. 固定セクションをすべて記入します。
    各セクションが答えるべき内容は `references/test-spec-conventions.ja.md` を
    参照してください。Rules と Examples は Gherkin の `Rule`/`Example` keyword に
@@ -105,8 +123,11 @@ plan に検証可能な振る舞いが無い場合は作成を skip し、plan �
 
 ## リソース
 
-- `scripts/new_test_spec.js`: test spec を作成します（index の materialize は明示的:
-  `doc_maintenance.js index plan|apply`）。
-- `references/test-spec-conventions.ja.md`: test spec の directory、filename、
-  status、relations、必須コンテンツ、index の規約。
-- `assets/templates/test-spec.ja.md`: デフォルトの test spec 本文 template。
+- `scripts/new_test_spec.js`: Registry 3 では registry ゲートで拒否されます。
+  `test-spec` は legacy・migration 専用形式です。検証意図は代わりに
+  **verification-doc**(`new_verification.js`)で作成します。
+- `references/test-spec-conventions.ja.md`: legacy corpus の契約です。
+  directory、filename、status、relations、必須コンテンツ —— migration
+  ツーリングと Registry 2 以前ファイルの読み取りに使います。
+- `assets/templates/test-spec.ja.md`: legacy test spec 本文 template。
+  参照構造のみであり、Registry 3 の作成経路で埋めるものではありません。

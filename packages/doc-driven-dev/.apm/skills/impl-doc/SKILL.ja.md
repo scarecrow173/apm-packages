@@ -8,10 +8,41 @@ license: MIT
 
 # 実装記録スキル
 
-このスキルは、実際に何を実装したか、実装中に何を試したかを記録するために使います。
+このスキルは、Registry 2 以前の corpus に残る「実際に何を実装したか、
+実装中に何を試したか」を監査するために使います。
 
 `impl-doc` は `adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc` と
 同列の文書生成スキルです。実装フェーズのワークフロースキルではありません。
+
+## Document Registry v3 の位置づけ
+
+Document Registry 3 では `impl`(Implementation Record)と `exp`(Experiment
+Log)は **legacy 形式**です。migration ツーリングのみが解釈し、durable
+文書としての作成・lint はできません。`docs/impl/ir`、`docs/impl/exp`、
+および `docs/impl` コンテナは migration-owned scope です。
+
+すべての書き込みエントリポイントが registry ゲートで拒否されます —
+あらゆるゲートチェック、scope チェック、書き込みより先に:
+
+`Document type "impl" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+
+- **拒否される mutator**: `new_impl_record.js`、`new_experiment_log.js`、
+  `append_experiment_event.js`、`edit_experiment_log.js`、
+  `sync_impl_index.js`。
+- **読み取り専用の監査は引き続き利用可能**: `audit_impl_record.js` と
+  `audit_experiment_log.js` は既存 corpus を検査します(索引ドリフト
+  finding を含む)。
+- **migration 専用の同期**: `impl-4col` / `exp-1col` の index エンジンは
+  `migrate_ids` の内部(同期ライブラリの直接呼び出し)でのみ動作します。
+  `doc_maintenance index` はこれらのディレクトリを拒否対象(`... index is
+  migration-owned`)として報告し、一切書き込みません。
+- Evidence relation(Check → Claim → Evidence)は stored front matter
+  relation ではなく Evidence Store に属します。durable な検証意図は
+  `verification` 文書(`docs/verification`、verification-doc)です。
+
+以下の規約とワークフローは Registry 2 以前の `docs/impl` corpus を読み取り
+・移行するための契約であり、この skill が Git 文書を mint する話では
+なくなりました。
 
 ## いつ何を作るか
 
@@ -39,97 +70,52 @@ license: MIT
 
 ## 責務
 
-1. `docs/impl/ir/` に Implementation Record を作成する
-2. Phase 5 の進行中に in-progress の Implementation Record 本文を更新する
-3. Implementation Record の front matter、relation、本文セクションを監査する
-4. `docs/impl/exp/` に Experiment Log を作成する
-5. 通常運用では CLI 経由で Experiment Log にイベントを追記する
-6. 例外時のみ CLI 経由で既存イベントを編集する
-7. Experiment Log の最低限の JSONL 整合性を監査する
+1. Implementation Record の front matter、relation、本文セクションを監査
+   する(Registry 2 以前の corpus に対する読み取り専用)
+2. Experiment Log の最低限の JSONL 整合性を監査する(読み取り専用)
+3. migration ツーリングのために `docs/impl/ir` と `docs/impl/exp` の索引を
+   解釈する — 同期エンジンは `migrate_ids` の内部でのみ動作する
 
 ## ワークフロー
 
-### Implementation Record の作成
+### 拒否される書き込み経路(Registry 3)
 
-**必須**: このステップの前に `references/impl-conventions.md` を読み込むこと -
-必須 front matter フィールドと監査ルールが定義されています。
-**読み込まないもの**: `assets/templates/experiment-log.jsonl`。
+`new_impl_record.js`、`new_experiment_log.js`、
+`append_experiment_event.js`、`edit_experiment_log.js` はすべて registry
+ゲートで拒否されます。`impl` と `exp` は legacy 形式であり、durable な
+作成・変更経路はありません。durable な検証意図は `verification-doc` を、
+evidence relation は Evidence Store を使います。
 
-Phase 5 では task 開始時に in-progress の Implementation Record を作成または
-再利用し、最初のコード変更前 に開いておきます。実装が進むにつれて record 本文を
-更新してください。Implementation Record は Markdown 文書であり、CLI は初期作成と監査を担当する。
-Experiment Log の JSONL は `append_experiment_event` または `edit_experiment_log` だけで更新する。
-
-```bash
-node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/implement-foo-service.md --status "in-progress"
-```
-
-### Experiment Log の作成
-
-**必須**: このステップの前に `references/impl-conventions.md` を読み込むこと -
-許可されたイベント種別と JSONL 整合性ルールが定義されています。
-**読み込まないもの**: `assets/templates/implementation-record.md`。
-
-```bash
-node scripts/new_experiment_log.js --title "Try foo service extraction" --task docs/tasks/implement-foo-service.md
-```
-
-### イベントの追記
-
-```bash
-node scripts/append_experiment_event.js \
-  --file docs/impl/exp/try-foo-service-extraction.jsonl \
-  --type hypothesis \
-  --summary "FooService に分離すると BarService の責務を単純化できる可能性がある"
-```
-
-### 既存イベントの編集（例外時のみ）
-
-```bash
-node scripts/edit_experiment_log.js \
-  --file docs/impl/exp/try-foo-service-extraction.jsonl \
-  --seq 4 \
-  --set implementation=docs/impl/ir/extract-foo-service.md
-```
-
-### 完了前の監査
+### Registry 2 以前 corpus の監査
 
 ```bash
 node scripts/audit_impl_record.js --json
 node scripts/audit_experiment_log.js --json
 ```
 
-### ディレクトリ索引の同期
+### migration-owned なディレクトリ索引
 
-`docs/impl/ir/README.md` と `docs/impl/exp/README.md` は管理索引です。
-`new_*` 系クリエイターは索引への書き込みを defer します — materialize と
-ドリフト解消はオーナーの同期ツールで明示的に行います:
+`docs/impl/ir/README.md` と `docs/impl/exp/README.md` は管理索引であり、
+Registry 3 ではその再同期は **migration-owned** です。
+`sync_impl_index.js` は他の impl writer と同様に registry ゲートで拒否
+されます。safe sync エンジン(`planImplIndexSync` /
+`applyImplIndexSync`)は `migrate_ids` の内部(ライブラリ直接呼び出し)
+でのみ動作します。
 
-```bash
-node scripts/sync_impl_index.js --kind ir            # プレビューのみ — 書き込まない
-node scripts/sync_impl_index.js --kind exp --apply   # 同期を書き込む
-node scripts/sync_impl_index.js --kind ir --apply --expect <planHash>
-```
-
-- デフォルトはプレビューで、`--apply` のときだけ書き込みます。`--json` は
-  計画を JSON で出力します。`--expect` は事前にプレビューした `planHash`
-  に apply をピン留めし、再計算結果が異なれば中断します。
-- verdict は `in-sync`(no-op)、`sync`(ドリフト解消)、`create`(README
-  欠落)、`rejected`(fail-closed)です。手作業でキュレートされた索引、
-  曖昧・不正・競合した索引、シンボリックリンクの README やディレクトリ
-  外へ出るリンクなど安全でない索引は `rejected` となり、絶対に書き込み
-  ません。先に README またはソースを修復してください。
+- エンジンが報告する verdict: `in-sync`(no-op)、`sync`(ドリフト解消)、
+  `create`(README 欠落)、`rejected`(fail-closed)。手作業でキュレート
+  された索引、曖昧・不正・競合した索引、シンボリックリンクの README や
+  ディレクトリ外へ出るリンクなど安全でない索引は `rejected` となり、
+  絶対に書き込みません。
 - apply は再計画し、全ソースファイル・ファイル一覧・README の SHA-256
   ピンを検証してから、temp ファイル + rename でアトミックに書き込みます。
   生成領域の前後にある手書きの preamble / tail はバイト単位で保持され
-  ます。`--dir` は checkout 内の別 impl ディレクトリを選択します。外部
-  パスは拒否されます。
-- `doc_status` と `doc_maintenance` の修復 verb は impl 索引を修復しません。
-  `docs/impl/ir` と `docs/impl/exp` の索引を変更できるのは
-  `sync_impl_index` だけです。`doc_maintenance index` op はこれらの索引を
-  materialize できますが、書き込みは同じ safe sync API への分派に
-  限られます — 第二の書き込み経路ではなく、オーナー横断のエントリ
-  ポイントです。
+  ます。
+- `doc_status` と `doc_maintenance` の修復 verb は impl 索引を修復
+  しません。`doc_maintenance index` はこれらのディレクトリを拒否
+  (`... index is migration-owned`)として報告し、同期エンジンへ分派
+  しません — migration-owned scope では通常の index 操作が fail-closed
+  します。
 
 両監査は読み取り専用で、索引ドリフトを finding として報告します:
 
@@ -163,25 +149,21 @@ node scripts/sync_impl_index.js --kind ir --apply --expect <planHash>
 
 ## 規約
 
-- Implementation Record は既存 doc-suite の front matter 規約に従います。
+- Implementation Record は legacy doc-suite の front matter 規約に従います。
 - `relations.changes` は全ドキュメント共通の relation 契約です。
 - v1 では `metadata.record-type` を使いません。
 - v1 では `metadata.validation` を使いません。
-- Phase 5 では task 開始時に Implementation Record を開くか再利用し、実装中に
-  内容を継続更新します。
-- Experiment Log の JSONL は `append_experiment_event` または
-  `edit_experiment_log` だけで更新する。
-- Experiment Log の `start` イベントは作成時必須ではありません。
-- 正規経路は CLI による作成・更新であり、自由な手編集を前提にしません。
-- Trust boundary: `new_*`、`append_*`、`edit_*` コマンドは state-changing
-  operation であり、`--task`、`--file`、または既定の出力規約で決まる
-  path に即時書き込みます。
+- Experiment Log の `start` イベントは(legacy corpus において)作成時必須
+  ではありません。
+- Registry 3 では `new_*`、`append_*`、`edit_*`、`sync_impl_index` の
+  すべてが registry ゲートで拒否されます。これらの形式に触れる
+  エントリポイントは監査と migration ツーリングだけです。
 
 ## リソース
 
-- `references/impl-conventions.md`: ディレクトリ、ファイル名、status、監査ルール
-  - 作成・監査操作の前に必ず読み込むこと
-- `assets/templates/implementation-record.md`: 既定の本文テンプレート
-  - `new_impl_record.js` が自動的に使用する。手動で読み込まないこと
-- `assets/templates/experiment-log.jsonl`: 既定の JSONL イベントテンプレート
-  - `new_experiment_log.js` が自動的に使用する。手動で読み込まないこと
+- `references/impl-conventions.md`: ディレクトリ、ファイル名、status、監査
+  ルール — 監査または migration 操作の前に必ず読み込むこと
+- `assets/templates/implementation-record.md`: legacy 本文テンプレート —
+  参照構造のみ。Registry 3 の作成経路で埋めるものではありません
+- `assets/templates/experiment-log.jsonl`: legacy JSONL イベントテンプレート —
+  参照構造のみ

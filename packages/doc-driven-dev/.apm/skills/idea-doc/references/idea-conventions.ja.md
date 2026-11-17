@@ -47,6 +47,7 @@ idea 文書は共有文書フロントマターを使います。
 id: "IDEA-4MnBvCxZaSdFgHjKlPoIuY"
 type: "idea"
 status: "draft"
+lifecycle: "draft"
 title: "Support offline mode for mobile"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -78,7 +79,8 @@ relations:
 | --- | --- | --- |
 | `id` | 必須 | 安定した文書識別子。`IDEA-<22文字Base62>` 形式（UUIDv7由来。従来の `IDEA-NNNN` も有効）。 |
 | `type` | 必須 | `idea` 固定。 |
-| `status` | 必須 | 現在のライフサイクル状態。 |
+| `status` | 必須 | 型固有のワークフロー状態（後述のステータス値を参照）。 |
+| `lifecycle` | 必須 | Registry 3 ライフサイクル。`draft` / `current` / `superseded` / `retired`。`status` と独立で、アクティブ／セットル索引区分を駆動する。 |
 | `title` | 必須 | アイデアのテーマに対応した人間が読めるタイトル。 |
 | `created` | 必須 | `YYYY-MM-DD` 形式の作成日。 |
 | `updated` | 必須 | 実質的な最終更新日を `YYYY-MM-DD` 形式で。 |
@@ -87,7 +89,8 @@ relations:
 
 ## ステータス値
 
-以下のライフサイクルステータスを使います。
+以下の型固有ワークフローステータスを使います（Document Registry が所有する
+`lifecycle` フィールドとは別軸）。
 
 | ステータス | 意味 |
 | --- | --- |
@@ -98,8 +101,13 @@ relations:
 | `archived` | 評価して追わないことにした。参考資料として保持。 |
 | `superseded` | より新しい idea 文書に置き換え済み。 |
 
-下流文書を作成して `relations.derived-by` でリンクした後に `promoted` を
-設定してください。
+下流文書を作成した後に `promoted` を設定してください。Knowledge Relations
+v1 では idea は `relations.motivates` に source→target で動機付けた spec を
+記録します。下流側は逆リンクを保存しません。`derived-by` などその他の宣言キーは
+レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取ります。
+creator は空のプレースホルダーとしてのみ出力しますが、`relate_adr` と
+`new_design --from` は #235 で格納語彙が絞り込まれるまでこれらを設定
+できます。
 
 ## リレーション
 

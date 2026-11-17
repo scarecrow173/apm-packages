@@ -324,10 +324,11 @@ test("inventoryFlow normalizes CRLF so front matter never leaks into alwaysOnCha
 
 // ─── Real package tests ───
 
-test("inventoryAll covers all 18 packaged skills", () => {
+test("inventoryAll covers all 20 packaged skills", () => {
   const result = inventoryAll(skillsRoot);
-  assert.equal(result.totals.flows, 18);
-  assert.equal(result.flows.length, 18);
+  // Registry 3 added knowledge-doc and verification-doc (Issue #234).
+  assert.equal(result.totals.flows, 20);
+  assert.equal(result.flows.length, 20);
   assert.ok(result.totals.skillBytes > 0);
   assert.ok(result.totals.alwaysOnChars > 0);
 });

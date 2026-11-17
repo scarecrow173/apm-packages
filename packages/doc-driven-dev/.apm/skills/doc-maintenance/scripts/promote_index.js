@@ -4404,77 +4404,216 @@ var import_node_fs5 = __toESM(require("node:fs"));
 var import_node_path5 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_types.ts
-var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
+var LIFECYCLE_VALUES = ["draft", "current", "superseded", "retired"];
+var DEFAULT_LIFECYCLE = "draft";
+var DURABLE_TARGETS = [
+  "idea",
+  "brainstorm",
+  "discovery",
+  "spec",
+  "design",
+  "adr",
+  "knowledge",
+  "verification"
+];
+var docTypes = [...DURABLE_TARGETS];
 var configs = {
   idea: {
-    defaultStatus: "draft",
+    type: "idea",
+    persistence: "durable",
+    aliases: [],
     dir: "docs/ideas",
     dirs: ["docs/ideas"],
+    formerDirs: [],
+    scopeDirs: [],
     idPrefix: "IDEA",
+    defaultStatus: "draft",
     statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
-    type: "idea"
+    settledStatuses: ["promoted", "parked", "archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_idea",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec"] },
+      { field: "supersedes", targetTypes: ["idea"] }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable capture type: raw unformalized ideas feeding discovery/spec."
   },
   brainstorm: {
-    defaultStatus: "capturing",
+    type: "brainstorm",
+    persistence: "durable",
+    aliases: [],
     dir: "docs/discovery",
     dirs: ["docs/discovery"],
+    formerDirs: [],
+    scopeDirs: [],
     idPrefix: "BRAINSTORM",
+    defaultStatus: "capturing",
     statusValues: ["capturing", "confirmed", "routed", "superseded"],
-    type: "brainstorm"
+    settledStatuses: ["routed", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    // `brainstorm` has no creator script: the brainstorming skill authors
+    // those documents directly.
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec", "adr"] },
+      { field: "supersedes", targetTypes: ["brainstorm"] }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable capture type co-resident with discovery in docs/discovery."
   },
   discovery: {
-    defaultStatus: "draft",
+    type: "discovery",
+    persistence: "durable",
+    aliases: [],
     dir: "docs/discovery",
     dirs: ["docs/discovery"],
+    formerDirs: [],
+    scopeDirs: [],
     idPrefix: "DISC",
+    defaultStatus: "draft",
     statusValues: ["draft", "active", "resolved", "archived", "superseded"],
-    type: "discovery"
+    settledStatuses: ["resolved", "archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_discovery",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec"] },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
+      { field: "supersedes", targetTypes: ["discovery"] }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: true,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    indexPrimary: true,
+    note: "Durable capture type: bounded exploration with source evidence."
   },
   spec: {
-    defaultStatus: "draft",
+    type: "spec",
+    persistence: "durable",
+    aliases: [],
     dir: "docs/specs",
     dirs: ["docs/specs", "docs/spec", "specs", "spec"],
+    formerDirs: [],
+    scopeDirs: [],
     idPrefix: "SPEC",
+    defaultStatus: "draft",
     statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
-    type: "spec"
-  },
-  plan: {
-    defaultStatus: "draft",
-    dir: "docs/plans",
-    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
-    idPrefix: "PLAN",
-    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
-    type: "plan"
-  },
-  task: {
-    defaultStatus: "todo",
-    dir: "docs/tasks",
-    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
-    idPrefix: "TASK",
-    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
-    type: "task"
-  },
-  "test-spec": {
-    defaultStatus: "draft",
-    dir: "docs/test-specs",
-    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
-    idPrefix: "TSPEC",
-    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
-    type: "test-spec"
+    settledStatuses: ["implemented", "superseded", "rejected"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_spec",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    // Under Knowledge Relations v1 a spec declares no forward upstream
+    // (it is the target of motivates/realizes/decides-for, not the source).
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "supersedes", targetTypes: ["spec"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable normative requirements document."
   },
   design: {
-    defaultStatus: "draft",
+    type: "design",
+    persistence: "durable",
+    aliases: [],
     dir: "docs/designs",
     dirs: ["docs/designs", "docs/design", "designs", "design"],
+    formerDirs: [],
+    scopeDirs: [],
     idPrefix: "DESIGN",
+    defaultStatus: "draft",
     statusValues: ["draft", "approved", "superseded", "rejected"],
-    type: "design"
+    settledStatuses: ["superseded", "rejected"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_design",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    // A design realizes a spec: `realizes` is its declared upstream under
+    // Knowledge Relations v1 (skip the check once the design is settled).
+    expectedUpstream: [
+      { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
+    ],
+    allowedRelations: [
+      { field: "realizes", targetTypes: ["spec"] },
+      { field: "supersedes", targetTypes: ["design"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: ["DESIGN-OVERVIEW"],
+    requiredDirectoryFiles: ["overview.md"],
+    reservedFiles: ["overview.md"],
+    scaffoldIndexTitle: "DESIGN Documents",
+    note: "Durable design document; docs/designs requires overview.md."
   },
   adr: {
-    defaultStatus: "proposed",
+    type: "adr",
+    persistence: "durable",
+    aliases: [],
     dir: "docs/adr",
     dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+    formerDirs: [],
+    scopeDirs: [],
     idPrefix: "ADR",
+    defaultStatus: "proposed",
+    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+    settledStatuses: ["rejected", "deprecated", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "adr-doc",
+    indexFormat: "shared-4col",
+    indexTitle: "Architecture Decision Records",
     indexRow: {
       // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
       // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
@@ -4485,30 +4624,285 @@ var configs = {
       },
       titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
     },
-    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
-    type: "adr"
+    creator: "new_adr",
+    mutators: ["update_index", "relate_adr"],
+    auditors: ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "decides-for", targetTypes: ["spec", "design"] },
+      { field: "supersedes", targetTypes: ["adr"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Architecture Decision Records",
+    note: "Durable decision record owned by adr-doc (MADR conventions)."
+  },
+  knowledge: {
+    type: "knowledge",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/knowledge",
+    dirs: ["docs/knowledge"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "KNOW",
+    defaultStatus: "draft",
+    statusValues: ["draft", "confirmed", "archived", "superseded"],
+    settledStatuses: ["archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_knowledge",
+    mutators: [],
+    auditors: [],
+    // `knowledge_kind` classifies the durable knowledge record
+    // (codebase|architecture|operation|lesson — the Registry's fixed
+    // vocabulary per #242).
+    requiredFields: ["knowledge_kind"],
+    fieldVocabularies: {
+      knowledge_kind: ["codebase", "architecture", "operation", "lesson"]
+    },
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
+      { field: "supersedes", targetTypes: ["knowledge"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Knowledge Documents",
+    note: "Durable knowledge record (#242 refines the skill flow)."
+  },
+  verification: {
+    type: "verification",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/verification",
+    dirs: ["docs/verification"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "VD",
+    defaultStatus: "draft",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    settledStatuses: ["deprecated", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_verification",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    // Check→Claim relations are derived from `checks[].target` (#239) and
+    // Evidence `supported-by` comes from the Evidence Store (#240); neither
+    // is a stored relation field here.
+    allowedRelations: [
+      { field: "supersedes", targetTypes: ["verification"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Verification Design Documents",
+    note: "Durable verification-intent document (#239 defines the Check contract)."
   }
 };
-function configFor(type) {
-  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
-  return configs[type];
+var executionTypes = ["plan", "task"];
+var ephemeralConfigs = {
+  plan: {
+    type: "plan",
+    persistence: "ephemeral",
+    aliases: [],
+    dir: null,
+    dirs: [],
+    formerDirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
+    scopeDirs: [],
+    idPrefix: "PLAN",
+    defaultStatus: "draft",
+    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
+    settledStatuses: ["completed", "superseded"],
+    lifecycleValues: [],
+    defaultLifecycle: null,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Execution-bound: plan state lives in the Execution Store (#236); docs/plans is a former dir only."
+  },
+  task: {
+    type: "task",
+    persistence: "ephemeral",
+    aliases: [],
+    dir: null,
+    dirs: [],
+    formerDirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
+    scopeDirs: [],
+    idPrefix: "TASK",
+    defaultStatus: "todo",
+    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
+    settledStatuses: ["done", "wont-do"],
+    lifecycleValues: [],
+    defaultLifecycle: null,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Execution-bound: task state lives in the Execution Store (#236); docs/tasks is a former dir only."
+  }
+};
+var legacyDocTypes = {
+  "test-spec": {
+    type: "test-spec",
+    aliases: ["test_spec", "testspec"],
+    formerDirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    scopeDirs: [],
+    idPrefix: "TSPEC",
+    defaultStatus: "draft",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    settledStatuses: ["deprecated", "superseded"],
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: ["new_test_spec", "doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"],
+    auditors: ["doc_status", "audit_docs", "list_docs"],
+    requiredFields: [],
+    note: "Legacy verification-intent type, superseded by `verification` (#239); migration-only."
+  },
+  impl: {
+    type: "impl",
+    aliases: ["implementation-record", "impl-record", "ir"],
+    formerDirs: ["docs/impl/ir"],
+    scopeDirs: ["docs/impl"],
+    idPrefix: "IMPL",
+    defaultStatus: "draft",
+    statusValues: ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"],
+    settledStatuses: ["completed", "abandoned", "superseded"],
+    owner: "impl-doc",
+    indexFormat: "impl-4col",
+    indexTitle: "Implementation Records",
+    mutators: ["new_impl_record", "migrate_ids", "promote_index", "sync_impl_index"],
+    auditors: ["audit_impl_record"],
+    requiredFields: ["metadata"],
+    note: "Legacy implementation record; interpretation is migration-only (#240 extracts durable knowledge)."
+  },
+  exp: {
+    type: "exp",
+    aliases: ["experiment-log"],
+    formerDirs: ["docs/impl/exp"],
+    scopeDirs: [],
+    idPrefix: "EXP",
+    // Experiment logs are JSONL event logs without front matter.
+    defaultStatus: null,
+    statusValues: [],
+    settledStatuses: [],
+    owner: "impl-doc",
+    indexFormat: "exp-1col",
+    indexTitle: "Experiment Logs",
+    mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", "promote_index", "sync_impl_index"],
+    auditors: ["audit_experiment_log"],
+    requiredFields: [],
+    note: "Legacy experiment log (JSONL, no front matter); interpretation is migration-only."
+  }
+};
+var registry = {
+  ...configs,
+  ...ephemeralConfigs
+};
+var legacyAliases = /* @__PURE__ */ new Map();
+for (const entry of Object.values(legacyDocTypes)) {
+  for (const alias of [entry.type, ...entry.aliases]) legacyAliases.set(alias, entry.type);
 }
+function configFor(type) {
+  const entry = registry[type];
+  if (entry?.persistence === "durable") return entry;
+  if (entry?.persistence === "ephemeral") {
+    throw new Error(
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+    );
+  }
+  if (legacyAliases.has(type)) {
+    throw new Error(
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+    );
+  }
+  throw new Error(`Unknown document type: ${type}`);
+}
+function executionBoundTypeNames() {
+  return [
+    ...executionTypes,
+    ...[...legacyAliases.keys()].sort()
+  ];
+}
+var DURABLE_DOC_DIRS = Object.freeze(
+  [...new Set(docTypes.map((type) => configs[type].dir))]
+);
+var LEGACY_DOC_DIRS = Object.freeze(
+  [
+    ...executionTypes.flatMap((type) => [...ephemeralConfigs[type].formerDirs]),
+    ...Object.values(legacyDocTypes).flatMap((entry) => [...entry.formerDirs, ...entry.scopeDirs])
+  ].filter((dir) => !DURABLE_DOC_DIRS.includes(dir)).sort()
+);
+var LEGACY_CANONICAL_DIRS = Object.freeze([
+  ...executionTypes.map((type) => ephemeralConfigs[type].formerDirs[0]),
+  ...Object.values(legacyDocTypes).map((entry) => entry.formerDirs[0])
+]);
+var CANONICAL_DOC_DIRS = Object.freeze(
+  [...DURABLE_DOC_DIRS, ...LEGACY_CANONICAL_DIRS]
+);
+function managedDocDirs() {
+  const dirs = new Set(CANONICAL_DOC_DIRS);
+  for (const type of docTypes) {
+    for (const dir of configs[type].dirs) dirs.add(dir);
+  }
+  for (const dir of LEGACY_DOC_DIRS) dirs.add(dir);
+  return [...dirs].sort();
+}
+function knowledgeRelationFields() {
+  const fields = /* @__PURE__ */ new Set();
+  for (const type of docTypes) {
+    for (const relation of configs[type].allowedRelations) fields.add(relation.field);
+  }
+  return [...fields].sort();
+}
+var PROVENANCE_RELATION_KEYS = ["source"];
 
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
-var CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp"
-];
 var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
   "changes",
   "test-spec-skip"
@@ -4573,97 +4967,79 @@ function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
 // src/skills/lib/doc_ownership.ts
 var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
 var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
-var ADR_MUTATORS = ["update_index", "relate_adr"];
-var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
-var INDEX_TITLES = {
-  "docs/adr": "Architecture Decision Records",
-  "docs/impl/ir": "Implementation Records",
-  "docs/impl/exp": "Experiment Logs"
-};
 var PROMOTE_INDEX_MUTATOR = "promote_index";
-var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
-var SHARED_CREATORS = {
-  idea: "new_idea",
-  discovery: "new_discovery",
-  spec: "new_spec",
-  plan: "new_plan",
-  task: "new_task",
-  design: "new_design",
-  adr: "new_adr",
-  "test-spec": "new_test_spec"
-};
 function buildContracts() {
   const rows = /* @__PURE__ */ new Map();
+  const rowFor = (dir, owner, indexFormat, indexTitle) => {
+    const normalized = normalizeDir(dir);
+    let row = rows.get(normalized);
+    if (!row) {
+      row = {
+        dir: normalized,
+        canonical: false,
+        owner,
+        residents: [],
+        indexFormat,
+        indexTitle,
+        mutators: /* @__PURE__ */ new Set(),
+        auditors: /* @__PURE__ */ new Set()
+      };
+      rows.set(normalized, row);
+    }
+    return row;
+  };
   for (const type of docTypes) {
     const config2 = configFor(type);
-    const adr = type === "adr";
     for (const dir of config2.dirs) {
-      const normalized = normalizeDir(dir);
-      let row = rows.get(normalized);
-      if (!row) {
-        row = {
-          canonical: false,
-          owner: adr ? "adr-doc" : "doc-suite",
-          residents: [],
-          mutators: /* @__PURE__ */ new Set(),
-          auditors: /* @__PURE__ */ new Set()
-        };
-        rows.set(normalized, row);
-      }
-      row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
-      if (INDEX_TITLES[normalized]) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      const canonical = normalizeDir(dir) === normalizeDir(config2.dir);
+      const row = rowFor(dir, config2.owner, config2.indexFormat, canonical ? config2.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
       if (!row.residents.includes(type)) row.residents.push(type);
-      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
+      if (canonical && config2.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      if (config2.creator) row.mutators.add(config2.creator);
       for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
       for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
-      if (adr) {
-        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
-        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
-      }
+      for (const mutator of config2.mutators) row.mutators.add(mutator);
+      for (const auditor of config2.auditors) row.auditors.add(auditor);
     }
   }
-  const shared = [...rows.entries()].map(([dir, row]) => ({
-    dir,
+  for (const type of executionTypes) {
+    const entry = ephemeralConfigs[type];
+    for (const dir of entry.formerDirs) {
+      const row = rowFor(dir, entry.owner, entry.indexFormat);
+      row.canonical = row.canonical || dir === entry.formerDirs[0];
+      if (!row.residents.includes(type)) row.residents.push(type);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.scopeDirs) {
+      const row = rowFor(dir, entry.owner, "none");
+      row.canonical = true;
+    }
+    for (const dir of entry.formerDirs) {
+      const canonical = dir === entry.formerDirs[0];
+      const row = rowFor(dir, entry.owner, entry.indexFormat, canonical ? entry.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(entry.type)) row.residents.push(entry.type);
+      if (canonical && entry.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  return [...rows.values()].map((row) => ({
+    dir: row.dir,
     canonical: row.canonical,
     owner: row.owner,
     residentTypes: row.residents,
-    indexFormat: "shared-4col",
-    indexTitle: INDEX_TITLES[dir],
+    indexFormat: row.indexFormat,
+    indexTitle: row.indexTitle,
     mutators: [...row.mutators].sort(),
     auditors: [...row.auditors].sort()
-  }));
-  const implRows = [
-    {
-      dir: "docs/impl",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: [],
-      indexFormat: "none",
-      mutators: [],
-      auditors: []
-    },
-    {
-      dir: "docs/impl/ir",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: ["impl"],
-      indexFormat: "impl-4col",
-      indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
-      auditors: ["audit_impl_record"]
-    },
-    {
-      dir: "docs/impl/exp",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: ["exp"],
-      indexFormat: "exp-1col",
-      indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
-      auditors: ["audit_experiment_log"]
-    }
-  ];
-  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
+  })).sort((a, b) => a.dir.localeCompare(b.dir));
 }
 var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
 function ownershipForDir(directory) {
@@ -4920,7 +5296,7 @@ __export(external_exports, {
   refine: () => refine,
   regex: () => _regex,
   regexes: () => regexes_exports,
-  registry: () => registry,
+  registry: () => registry2,
   safeDecode: () => safeDecode2,
   safeDecodeAsync: () => safeDecodeAsync2,
   safeEncode: () => safeEncode2,
@@ -5263,7 +5639,7 @@ __export(core_exports2, {
   process: () => processSchema,
   processSchema: () => processSchema,
   regexes: () => regexes_exports,
-  registry: () => registry,
+  registry: () => registry2,
   safeDecode: () => safeDecode,
   safeDecodeAsync: () => safeDecodeAsync,
   safeEncode: () => safeEncode,
@@ -17642,10 +18018,10 @@ var $ZodRegistry = class {
     return this._map.has(schema);
   }
 };
-function registry() {
+function registry2() {
   return new $ZodRegistry();
 }
-(_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
+(_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry2());
 var globalRegistry = globalThis.__zod_globalRegistry;
 
 // node_modules/.pnpm/zod@4.6.6/node_modules/zod/v4/core/compile.js
@@ -21562,21 +21938,21 @@ var allProcessors = {
 };
 function toJSONSchema(input2, params) {
   if ("_idmap" in input2) {
-    const registry2 = input2;
+    const registry3 = input2;
     const ctx2 = initializeContext({ ...params, processors: allProcessors });
     const defs = {};
-    for (const entry of registry2._idmap.entries()) {
+    for (const entry of registry3._idmap.entries()) {
       const [_, schema] = entry;
       processSchema(schema, ctx2);
     }
     const schemas = {};
     const external = {
-      registry: registry2,
+      registry: registry3,
       uri: params?.uri,
       defs
     };
     ctx2.external = external;
-    for (const entry of registry2._idmap.entries()) {
+    for (const entry of registry3._idmap.entries()) {
       const [key, schema] = entry;
       extractDefs(ctx2, schema);
       assignProp(schemas, key, finalize(ctx2, schema));
@@ -24428,18 +24804,13 @@ var import_uuid62 = __toESM(require_uuid62());
 
 // src/skills/lib/doc_lifecycle.ts
 var SETTLED_STATUSES = {
-  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
-  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
-  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
-  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
-  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
-  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
-  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
-  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
-  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
-  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
+  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
+  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
+  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
 };
-var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
+var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
+  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
+);
 function lifecycleBucketForType(type) {
   const declared = type ?? "untyped";
   return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
@@ -24448,16 +24819,37 @@ function isSettledStatus(type, status) {
   if (!status) return false;
   return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
 }
+function parseLifecycle(value) {
+  if (value === void 0 || value === null) return null;
+  if (typeof value !== "string") return "invalid";
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return LIFECYCLE_VALUES.includes(trimmed) ? trimmed : "invalid";
+}
+function isSettledLifecycle(lifecycle) {
+  if (lifecycle === null || lifecycle === "invalid") return null;
+  return lifecycle === "superseded" || lifecycle === "retired";
+}
+function isSettledEntry(type, status, lifecycle) {
+  const byLifecycle = isSettledLifecycle(parseLifecycle(lifecycle));
+  if (byLifecycle !== null) return byLifecycle;
+  return isSettledStatus(type, status);
+}
 
 // src/skills/lib/doc_suite_utils.ts
 var relationFields = [
   "source",
+  "motivates",
+  "decides-for",
+  "realizes",
+  "informs",
+  "explains",
+  "supersedes",
+  "superseded-by",
   "implements",
   "implemented-by",
   "depends-on",
   "blocks",
-  "supersedes",
-  "superseded-by",
   "related",
   "refines",
   "refined-by",
@@ -24477,22 +24869,20 @@ var changeFields = [
   "moved",
   "generated"
 ];
-var scaffoldIndexMeta = {
-  "docs/ideas": { title: "IDEA Documents", type: "idea" },
-  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
-  "docs/specs": { title: "SPEC Documents", type: "spec" },
-  "docs/designs": { title: "DESIGN Documents", type: "design" },
-  "docs/plans": { title: "PLAN Documents", type: "plan" },
-  "docs/tasks": { title: "TASK Documents", type: "task" },
-  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
-  "docs/adr": { title: "Architecture Decision Records" },
-  "docs/impl/ir": { title: "Implementation Records" },
-  "docs/impl/exp": { title: "Experiment Logs" }
-};
-var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
-  dir,
-  ...scaffoldIndexMeta[dir]
-}));
+var scaffoldTargets = (() => {
+  const byDir = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const existing = byDir.get(config2.dir);
+    const target = {
+      dir: config2.dir,
+      title: config2.scaffoldIndexTitle ?? `${config2.idPrefix} Documents`,
+      type
+    };
+    if (!existing || config2.indexPrimary) byDir.set(config2.dir, target);
+  }
+  return [...byDir.values()];
+})();
 function mergeManagedIndex(existing, generated) {
   const sectionStart = generated.indexOf(GENERATED_INDEX_MARKER);
   const section = (sectionStart >= 0 ? generated.slice(sectionStart) : generated).replace(/\s+$/, "");
@@ -24552,6 +24942,11 @@ var frontMatterSchema = external_exports.object({
   id: external_exports.string().min(1),
   type: external_exports.enum(docTypes),
   status: external_exports.string().min(1),
+  // `lifecycle` stays optional at the schema boundary so pre-Registry-3
+  // documents still parse — lint flags the missing field as
+  // `missing-lifecycle`; a populated non-axis value is invalid here
+  // (unknown lifecycle is never coerced to `current`).
+  lifecycle: external_exports.enum(LIFECYCLE_VALUES).optional(),
   title: external_exports.string().min(1),
   created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -24616,6 +25011,7 @@ async function docEntries(cwd, type, explicitDir) {
       created: typeof data.created === "string" ? data.created : null,
       file: file2,
       id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : hooks?.idFromFile?.(import_node_path2.default.basename(file2)) ?? null,
+      lifecycle: typeof data.lifecycle === "string" ? data.lifecycle : null,
       path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
       title: await titleFromDocument(content, import_node_path2.default.basename(file2, ".md"), hooks?.titleFromHeading),
@@ -24634,7 +25030,7 @@ function renderIndexBody(entries, options2 = {}) {
     return left.file.localeCompare(right.file);
   };
   const row = (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
-  const settled = (entry) => isSettledStatus(entry.type ?? options2.settledType ?? null, entry.status);
+  const settled = (entry) => isSettledEntry(entry.type ?? options2.settledType ?? null, entry.status, entry.lifecycle);
   const active = entries.filter((entry) => !settled(entry)).sort(compare);
   const settledEntries = entries.filter(settled).sort(compare);
   const body = [header, ...active.map(row)].join("\n");
@@ -27393,93 +27789,6 @@ var CHOMPING_CLIP = CHOMPING_MODE.CLIP;
 var CHOMPING_STRIP = CHOMPING_MODE.STRIP;
 var CHOMPING_KEEP = CHOMPING_MODE.KEEP;
 
-// src/skills/lib/doc_repository.ts
-var REQUIRED_FRONT_MATTER_FIELDS = [
-  "id",
-  "type",
-  "status",
-  "title",
-  "created",
-  "updated",
-  "owners",
-  "relations"
-];
-var ROOT_ARTIFACT_TYPES = /* @__PURE__ */ new Set(["idea", "brainstorm", "discovery"]);
-var TRACEABILITY_TERMINAL_STATUSES = ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"];
-var UPSTREAM_FIELDS = /* @__PURE__ */ new Set(["implements", "derives-from", "refines"]);
-function contractForDocType(type) {
-  const config2 = configFor(type);
-  const contract = {
-    type,
-    idPrefix: config2.idPrefix,
-    idPattern: new RegExp(`^${config2.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
-    idExceptions: [],
-    canonicalDir: config2.dir,
-    dirs: [...config2.dirs],
-    defaultStatus: config2.defaultStatus,
-    statusValues: [...config2.statusValues],
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS],
-    requiredRelations: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    allowsRootArtifact: ROOT_ARTIFACT_TYPES.has(type),
-    requiresSourceEvidence: false,
-    expectedUpstream: []
-  };
-  if (type === "discovery") {
-    contract.requiresSourceEvidence = true;
-  }
-  if (type === "spec" || type === "plan" || type === "task" || type === "design") {
-    contract.expectedUpstream = [
-      { fields: [...UPSTREAM_FIELDS], skipStatuses: TRACEABILITY_TERMINAL_STATUSES }
-    ];
-  }
-  if (type === "design") {
-    contract.idExceptions = ["DESIGN-OVERVIEW"];
-    contract.requiredDirectoryFiles = ["overview.md"];
-    contract.reservedFiles = ["overview.md"];
-  }
-  if (type === "test-spec") {
-    contract.requiredRelations = [
-      { field: "verifies", targetTypes: ["spec", "design", "adr"], gateCode: "TEST-SPEC-DOC-GATE-001" }
-    ];
-  }
-  if (type === "plan") {
-    contract.requiredRelations = [
-      {
-        field: "verified-by",
-        targetTypes: ["test-spec"],
-        appliesToStatuses: ["approved", "in-progress", "completed"],
-        skipField: "test-spec-skip"
-      }
-    ];
-  }
-  return contract;
-}
-var contracts = {
-  ...Object.fromEntries(docTypes.map((type) => [type, contractForDocType(type)])),
-  impl: {
-    type: "impl",
-    idPrefix: "IMPL",
-    idPattern: /^IMPL-(?:\d+|[0-9A-Za-z]{22})$/,
-    idExceptions: [],
-    canonicalDir: "docs/impl",
-    dirs: ["docs/impl/ir", "docs/impl/exp"],
-    defaultStatus: "draft",
-    statusValues: ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"],
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, "metadata"],
-    requiredRelations: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    expectedUpstream: []
-  }
-};
-function documentContracts() {
-  return contracts;
-}
-
 // src/skills/lib/schema_preflight.ts
 var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
 var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
@@ -27495,25 +27804,8 @@ var EXPECTED_COMPONENT_VERSIONS = {
 };
 var EXECUTION_RUN_SCHEMA_VERSION = 1;
 var SCHEMA_PREFLIGHT_EXIT_CODE = 2;
-var EXECUTION_BOUND_TYPES = /* @__PURE__ */ new Set([
-  "plan",
-  "task",
-  "test-spec",
-  "impl",
-  "implementation-record",
-  "ir",
-  "exp",
-  "experiment-log",
-  "impl-record"
-]);
-var KNOWLEDGE_RELATIONS_V1 = /* @__PURE__ */ new Set([
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes"
-]);
+var EXECUTION_BOUND_TYPES = new Set(executionBoundTypeNames());
+var KNOWLEDGE_RELATIONS_V1 = new Set(knowledgeRelationFields());
 var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
   "schema.json",
   "migration.journal.json"
@@ -27528,13 +27820,7 @@ function isPlainObject3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function managedRootAliases() {
-  const dirs = /* @__PURE__ */ new Set();
-  for (const contract of Object.values(documentContracts())) {
-    for (const dir of [...contract.dirs, contract.canonicalDir]) {
-      if (!dir.startsWith("docs/")) dirs.add(dir);
-    }
-  }
-  return [...dirs].sort();
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit2, onEscape) {
   const absRoot = import_node_path6.default.resolve(cwd, relRoot);
@@ -27582,7 +27868,7 @@ function relationIssues(relPath, relations) {
     return scoped;
   }
   for (const [key, value] of Object.entries(relations)) {
-    if (nonReferenceRelationKeys.has(key)) continue;
+    if (nonReferenceRelationKeys.has(key) || PROVENANCE_RELATION_KEYS.includes(key)) continue;
     const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
     const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
     if (!wellFormed) {

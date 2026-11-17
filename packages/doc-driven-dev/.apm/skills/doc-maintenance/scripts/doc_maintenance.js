@@ -3426,7 +3426,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs14 = require("fs");
+    var fs12 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3510,7 +3510,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter4.read = function(filepath, options2) {
-      const str2 = fs14.readFileSync(filepath, "utf8");
+      const str2 = fs12.readFileSync(filepath, "utf8");
       const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
@@ -4858,8 +4858,8 @@ function assertNonEmpty(part, name) {
     throw new Error("`" + name + "` cannot be empty");
   }
 }
-function assertPath(path14, name) {
-  if (!path14) {
+function assertPath(path12, name) {
+  if (!path12) {
     throw new Error("Setting `" + name + "` requires `path` to be set too");
   }
 }
@@ -5044,13 +5044,13 @@ var init_lib4 = __esm({
        * @returns {undefined}
        *   Nothing.
        */
-      set path(path14) {
-        if (isUrl(path14)) {
-          path14 = (0, import_node_url.fileURLToPath)(path14);
+      set path(path12) {
+        if (isUrl(path12)) {
+          path12 = (0, import_node_url.fileURLToPath)(path12);
         }
-        assertNonEmpty(path14, "path");
-        if (this.path !== path14) {
-          this.history.push(path14);
+        assertNonEmpty(path12, "path");
+        if (this.path !== path12) {
+          this.history.push(path12);
         }
       }
       /**
@@ -13585,8 +13585,8 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-maintenance/scripts/doc_maintenance.ts
-var import_node_fs13 = __toESM(require("node:fs"));
-var import_node_path14 = __toESM(require("node:path"));
+var import_node_fs11 = __toESM(require("node:fs"));
+var import_node_path12 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_maintenance.ts
 var import_node_fs6 = __toESM(require("node:fs"));
@@ -14422,10 +14422,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path14) {
-  if (!path14)
+function getElementAtPath(obj, path12) {
+  if (!path12)
     return obj;
-  return path14.reduce((acc, key) => acc?.[key], obj);
+  return path12.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -14765,11 +14765,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path14, issues) {
+function prefixIssues(path12, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path14);
+    iss.path.unshift(path12);
     return iss;
   });
 }
@@ -15231,16 +15231,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path14 = []) => {
+  const processError = (error63, path12 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path14, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else {
-        const fullpath = [...path14, ...issue2.path];
+        const fullpath = [...path12, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -15279,17 +15279,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path14 = []) => {
+  const processError = (error63, path12 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path14, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path14, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else {
-        const fullpath = [...path14, ...issue2.path];
+        const fullpath = [...path12, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -15328,8 +15328,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path14 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path14) {
+  const path12 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path12) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -30461,21 +30461,21 @@ var allProcessors = {
 };
 function toJSONSchema(input2, params) {
   if ("_idmap" in input2) {
-    const registry2 = input2;
+    const registry3 = input2;
     const ctx2 = initializeContext({ ...params, processors: allProcessors });
     const defs = {};
-    for (const entry of registry2._idmap.entries()) {
+    for (const entry of registry3._idmap.entries()) {
       const [_, schema] = entry;
       processSchema(schema, ctx2);
     }
     const schemas = {};
     const external = {
-      registry: registry2,
+      registry: registry3,
       uri: params?.uri,
       defs
     };
     ctx2.external = external;
-    for (const entry of registry2._idmap.entries()) {
+    for (const entry of registry3._idmap.entries()) {
       const [key, schema] = entry;
       extractDefs(ctx2, schema);
       assignProp(schemas, key, finalize(ctx2, schema));
@@ -32467,13 +32467,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path14 = ref.slice(1).split("/").filter(Boolean);
-  if (path14.length === 0) {
+  const path12 = ref.slice(1).split("/").filter(Boolean);
+  if (path12.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path14[0] === defsKey) {
-    const key = path14[1] === void 0 ? void 0 : decodeJSONPointerSegment(path14[1]);
+  if (path12[0] === defsKey) {
+    const key = path12[1] === void 0 ? void 0 : decodeJSONPointerSegment(path12[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -33325,20 +33325,518 @@ function date4(params) {
 // src/skills/lib/artifact_id.ts
 var import_uuid62 = __toESM(require_uuid62());
 
+// src/skills/lib/doc_types.ts
+var LIFECYCLE_VALUES = ["draft", "current", "superseded", "retired"];
+var DEFAULT_LIFECYCLE = "draft";
+var DURABLE_TARGETS = [
+  "idea",
+  "brainstorm",
+  "discovery",
+  "spec",
+  "design",
+  "adr",
+  "knowledge",
+  "verification"
+];
+var docTypes = [...DURABLE_TARGETS];
+var configs = {
+  idea: {
+    type: "idea",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/ideas",
+    dirs: ["docs/ideas"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "IDEA",
+    defaultStatus: "draft",
+    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
+    settledStatuses: ["promoted", "parked", "archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_idea",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec"] },
+      { field: "supersedes", targetTypes: ["idea"] }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable capture type: raw unformalized ideas feeding discovery/spec."
+  },
+  brainstorm: {
+    type: "brainstorm",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "BRAINSTORM",
+    defaultStatus: "capturing",
+    statusValues: ["capturing", "confirmed", "routed", "superseded"],
+    settledStatuses: ["routed", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    // `brainstorm` has no creator script: the brainstorming skill authors
+    // those documents directly.
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec", "adr"] },
+      { field: "supersedes", targetTypes: ["brainstorm"] }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable capture type co-resident with discovery in docs/discovery."
+  },
+  discovery: {
+    type: "discovery",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "DISC",
+    defaultStatus: "draft",
+    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
+    settledStatuses: ["resolved", "archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_discovery",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec"] },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
+      { field: "supersedes", targetTypes: ["discovery"] }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: true,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    indexPrimary: true,
+    note: "Durable capture type: bounded exploration with source evidence."
+  },
+  spec: {
+    type: "spec",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/specs",
+    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "SPEC",
+    defaultStatus: "draft",
+    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
+    settledStatuses: ["implemented", "superseded", "rejected"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_spec",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    // Under Knowledge Relations v1 a spec declares no forward upstream
+    // (it is the target of motivates/realizes/decides-for, not the source).
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "supersedes", targetTypes: ["spec"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable normative requirements document."
+  },
+  design: {
+    type: "design",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/designs",
+    dirs: ["docs/designs", "docs/design", "designs", "design"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "DESIGN",
+    defaultStatus: "draft",
+    statusValues: ["draft", "approved", "superseded", "rejected"],
+    settledStatuses: ["superseded", "rejected"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_design",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    // A design realizes a spec: `realizes` is its declared upstream under
+    // Knowledge Relations v1 (skip the check once the design is settled).
+    expectedUpstream: [
+      { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
+    ],
+    allowedRelations: [
+      { field: "realizes", targetTypes: ["spec"] },
+      { field: "supersedes", targetTypes: ["design"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: ["DESIGN-OVERVIEW"],
+    requiredDirectoryFiles: ["overview.md"],
+    reservedFiles: ["overview.md"],
+    scaffoldIndexTitle: "DESIGN Documents",
+    note: "Durable design document; docs/designs requires overview.md."
+  },
+  adr: {
+    type: "adr",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/adr",
+    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "ADR",
+    defaultStatus: "proposed",
+    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+    settledStatuses: ["rejected", "deprecated", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "adr-doc",
+    indexFormat: "shared-4col",
+    indexTitle: "Architecture Decision Records",
+    indexRow: {
+      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
+      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
+      // every producer derives identical rows (Issue #185).
+      idFromFile: (file2) => {
+        const match = /^(\d+)-/.exec(file2);
+        return match ? `ADR-${match[1]}` : null;
+      },
+      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
+    },
+    creator: "new_adr",
+    mutators: ["update_index", "relate_adr"],
+    auditors: ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "decides-for", targetTypes: ["spec", "design"] },
+      { field: "supersedes", targetTypes: ["adr"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Architecture Decision Records",
+    note: "Durable decision record owned by adr-doc (MADR conventions)."
+  },
+  knowledge: {
+    type: "knowledge",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/knowledge",
+    dirs: ["docs/knowledge"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "KNOW",
+    defaultStatus: "draft",
+    statusValues: ["draft", "confirmed", "archived", "superseded"],
+    settledStatuses: ["archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_knowledge",
+    mutators: [],
+    auditors: [],
+    // `knowledge_kind` classifies the durable knowledge record
+    // (codebase|architecture|operation|lesson — the Registry's fixed
+    // vocabulary per #242).
+    requiredFields: ["knowledge_kind"],
+    fieldVocabularies: {
+      knowledge_kind: ["codebase", "architecture", "operation", "lesson"]
+    },
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
+      { field: "supersedes", targetTypes: ["knowledge"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Knowledge Documents",
+    note: "Durable knowledge record (#242 refines the skill flow)."
+  },
+  verification: {
+    type: "verification",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/verification",
+    dirs: ["docs/verification"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "VD",
+    defaultStatus: "draft",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    settledStatuses: ["deprecated", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_verification",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    // Check→Claim relations are derived from `checks[].target` (#239) and
+    // Evidence `supported-by` comes from the Evidence Store (#240); neither
+    // is a stored relation field here.
+    allowedRelations: [
+      { field: "supersedes", targetTypes: ["verification"] }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Verification Design Documents",
+    note: "Durable verification-intent document (#239 defines the Check contract)."
+  }
+};
+var executionTypes = ["plan", "task"];
+var ephemeralConfigs = {
+  plan: {
+    type: "plan",
+    persistence: "ephemeral",
+    aliases: [],
+    dir: null,
+    dirs: [],
+    formerDirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
+    scopeDirs: [],
+    idPrefix: "PLAN",
+    defaultStatus: "draft",
+    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
+    settledStatuses: ["completed", "superseded"],
+    lifecycleValues: [],
+    defaultLifecycle: null,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Execution-bound: plan state lives in the Execution Store (#236); docs/plans is a former dir only."
+  },
+  task: {
+    type: "task",
+    persistence: "ephemeral",
+    aliases: [],
+    dir: null,
+    dirs: [],
+    formerDirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
+    scopeDirs: [],
+    idPrefix: "TASK",
+    defaultStatus: "todo",
+    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
+    settledStatuses: ["done", "wont-do"],
+    lifecycleValues: [],
+    defaultLifecycle: null,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Execution-bound: task state lives in the Execution Store (#236); docs/tasks is a former dir only."
+  }
+};
+var legacyDocTypes = {
+  "test-spec": {
+    type: "test-spec",
+    aliases: ["test_spec", "testspec"],
+    formerDirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    scopeDirs: [],
+    idPrefix: "TSPEC",
+    defaultStatus: "draft",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    settledStatuses: ["deprecated", "superseded"],
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: ["new_test_spec", "doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"],
+    auditors: ["doc_status", "audit_docs", "list_docs"],
+    requiredFields: [],
+    note: "Legacy verification-intent type, superseded by `verification` (#239); migration-only."
+  },
+  impl: {
+    type: "impl",
+    aliases: ["implementation-record", "impl-record", "ir"],
+    formerDirs: ["docs/impl/ir"],
+    scopeDirs: ["docs/impl"],
+    idPrefix: "IMPL",
+    defaultStatus: "draft",
+    statusValues: ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"],
+    settledStatuses: ["completed", "abandoned", "superseded"],
+    owner: "impl-doc",
+    indexFormat: "impl-4col",
+    indexTitle: "Implementation Records",
+    mutators: ["new_impl_record", "migrate_ids", "promote_index", "sync_impl_index"],
+    auditors: ["audit_impl_record"],
+    requiredFields: ["metadata"],
+    note: "Legacy implementation record; interpretation is migration-only (#240 extracts durable knowledge)."
+  },
+  exp: {
+    type: "exp",
+    aliases: ["experiment-log"],
+    formerDirs: ["docs/impl/exp"],
+    scopeDirs: [],
+    idPrefix: "EXP",
+    // Experiment logs are JSONL event logs without front matter.
+    defaultStatus: null,
+    statusValues: [],
+    settledStatuses: [],
+    owner: "impl-doc",
+    indexFormat: "exp-1col",
+    indexTitle: "Experiment Logs",
+    mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", "promote_index", "sync_impl_index"],
+    auditors: ["audit_experiment_log"],
+    requiredFields: [],
+    note: "Legacy experiment log (JSONL, no front matter); interpretation is migration-only."
+  }
+};
+var registry2 = {
+  ...configs,
+  ...ephemeralConfigs
+};
+var legacyAliases = /* @__PURE__ */ new Map();
+for (const entry of Object.values(legacyDocTypes)) {
+  for (const alias of [entry.type, ...entry.aliases]) legacyAliases.set(alias, entry.type);
+}
+function configFor(type) {
+  const entry = registry2[type];
+  if (entry?.persistence === "durable") return entry;
+  if (entry?.persistence === "ephemeral") {
+    throw new Error(
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+    );
+  }
+  if (legacyAliases.has(type)) {
+    throw new Error(
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+    );
+  }
+  throw new Error(`Unknown document type: ${type}`);
+}
+function executionBoundTypeNames() {
+  return [
+    ...executionTypes,
+    ...[...legacyAliases.keys()].sort()
+  ];
+}
+function allIdPrefixes() {
+  const prefixes = /* @__PURE__ */ new Set();
+  for (const entry of Object.values(registry2)) prefixes.add(entry.idPrefix);
+  for (const entry of Object.values(legacyDocTypes)) prefixes.add(entry.idPrefix);
+  return [...prefixes].sort();
+}
+var DURABLE_DOC_DIRS = Object.freeze(
+  [...new Set(docTypes.map((type) => configs[type].dir))]
+);
+var LEGACY_DOC_DIRS = Object.freeze(
+  [
+    ...executionTypes.flatMap((type) => [...ephemeralConfigs[type].formerDirs]),
+    ...Object.values(legacyDocTypes).flatMap((entry) => [...entry.formerDirs, ...entry.scopeDirs])
+  ].filter((dir) => !DURABLE_DOC_DIRS.includes(dir)).sort()
+);
+var LEGACY_CANONICAL_DIRS = Object.freeze([
+  ...executionTypes.map((type) => ephemeralConfigs[type].formerDirs[0]),
+  ...Object.values(legacyDocTypes).map((entry) => entry.formerDirs[0])
+]);
+var CANONICAL_DOC_DIRS = Object.freeze(
+  [...DURABLE_DOC_DIRS, ...LEGACY_CANONICAL_DIRS]
+);
+function managedDocDirs() {
+  const dirs = new Set(CANONICAL_DOC_DIRS);
+  for (const type of docTypes) {
+    for (const dir of configs[type].dirs) dirs.add(dir);
+  }
+  for (const dir of LEGACY_DOC_DIRS) dirs.add(dir);
+  return [...dirs].sort();
+}
+function knowledgeRelationFields() {
+  const fields = /* @__PURE__ */ new Set();
+  for (const type of docTypes) {
+    for (const relation of configs[type].allowedRelations) fields.add(relation.field);
+  }
+  return [...fields].sort();
+}
+var PROVENANCE_RELATION_KEYS = ["source"];
+
 // src/skills/lib/doc_lifecycle.ts
 var SETTLED_STATUSES = {
-  idea: /* @__PURE__ */ new Set(["promoted", "parked", "archived", "superseded"]),
-  brainstorm: /* @__PURE__ */ new Set(["routed", "superseded"]),
-  discovery: /* @__PURE__ */ new Set(["resolved", "archived", "superseded"]),
-  spec: /* @__PURE__ */ new Set(["implemented", "superseded", "rejected"]),
-  plan: /* @__PURE__ */ new Set(["completed", "superseded"]),
-  task: /* @__PURE__ */ new Set(["done", "wont-do"]),
-  design: /* @__PURE__ */ new Set(["superseded", "rejected"]),
-  adr: /* @__PURE__ */ new Set(["rejected", "deprecated", "superseded"]),
-  "test-spec": /* @__PURE__ */ new Set(["deprecated", "superseded"]),
-  impl: /* @__PURE__ */ new Set(["completed", "abandoned", "superseded"])
+  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
+  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
+  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
 };
-var LIFECYCLE_TYPE_ALIASES = { "implementation-record": "impl" };
+var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
+  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
+);
 function lifecycleBucketForType(type) {
   const declared = type ?? "untyped";
   return LIFECYCLE_TYPE_ALIASES[declared] ?? declared;
@@ -33347,22 +33845,26 @@ function isSettledStatus(type, status) {
   if (!status) return false;
   return SETTLED_STATUSES[lifecycleBucketForType(type)]?.has(status) ?? false;
 }
+function parseLifecycle(value) {
+  if (value === void 0 || value === null) return null;
+  if (typeof value !== "string") return "invalid";
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return LIFECYCLE_VALUES.includes(trimmed) ? trimmed : "invalid";
+}
+function isSettledLifecycle(lifecycle) {
+  if (lifecycle === null || lifecycle === "invalid") return null;
+  return lifecycle === "superseded" || lifecycle === "retired";
+}
+function isSettledEntry(type, status, lifecycle) {
+  const byLifecycle = isSettledLifecycle(parseLifecycle(lifecycle));
+  if (byLifecycle !== null) return byLifecycle;
+  return isSettledStatus(type, status);
+}
 
 // src/skills/lib/document_utils.ts
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
-var CANONICAL_DOC_DIRS = [
-  "docs/ideas",
-  "docs/discovery",
-  "docs/specs",
-  "docs/designs",
-  "docs/plans",
-  "docs/tasks",
-  "docs/test-specs",
-  "docs/adr",
-  "docs/impl/ir",
-  "docs/impl/exp"
-];
 var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
   "changes",
   "test-spec-skip"
@@ -33428,191 +33930,82 @@ function findDocumentDir(cwd, explicitDir, candidateDirs, defaultDir) {
   return existing.length === 0 ? defaultDir : existing[0];
 }
 
-// src/skills/lib/doc_types.ts
-var docTypes = ["idea", "brainstorm", "discovery", "spec", "plan", "task", "design", "adr", "test-spec"];
-var configs = {
-  idea: {
-    defaultStatus: "draft",
-    dir: "docs/ideas",
-    dirs: ["docs/ideas"],
-    idPrefix: "IDEA",
-    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
-    type: "idea"
-  },
-  brainstorm: {
-    defaultStatus: "capturing",
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    idPrefix: "BRAINSTORM",
-    statusValues: ["capturing", "confirmed", "routed", "superseded"],
-    type: "brainstorm"
-  },
-  discovery: {
-    defaultStatus: "draft",
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    idPrefix: "DISC",
-    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
-    type: "discovery"
-  },
-  spec: {
-    defaultStatus: "draft",
-    dir: "docs/specs",
-    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
-    idPrefix: "SPEC",
-    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
-    type: "spec"
-  },
-  plan: {
-    defaultStatus: "draft",
-    dir: "docs/plans",
-    dirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
-    idPrefix: "PLAN",
-    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
-    type: "plan"
-  },
-  task: {
-    defaultStatus: "todo",
-    dir: "docs/tasks",
-    dirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
-    idPrefix: "TASK",
-    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
-    type: "task"
-  },
-  "test-spec": {
-    defaultStatus: "draft",
-    dir: "docs/test-specs",
-    dirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
-    idPrefix: "TSPEC",
-    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
-    type: "test-spec"
-  },
-  design: {
-    defaultStatus: "draft",
-    dir: "docs/designs",
-    dirs: ["docs/designs", "docs/design", "designs", "design"],
-    idPrefix: "DESIGN",
-    statusValues: ["draft", "approved", "superseded", "rejected"],
-    type: "design"
-  },
-  adr: {
-    defaultStatus: "proposed",
-    dir: "docs/adr",
-    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
-    idPrefix: "ADR",
-    indexRow: {
-      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
-      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
-      // every producer derives identical rows (Issue #185).
-      idFromFile: (file2) => {
-        const match = /^(\d+)-/.exec(file2);
-        return match ? `ADR-${match[1]}` : null;
-      },
-      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
-    },
-    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
-    type: "adr"
-  }
-};
-function configFor(type) {
-  if (!docTypes.includes(type)) throw new Error(`Unknown document type: ${type}`);
-  return configs[type];
-}
-
 // src/skills/lib/doc_ownership.ts
 var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
 var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
-var ADR_MUTATORS = ["update_index", "relate_adr"];
-var ADR_AUDITORS = ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"];
-var INDEX_TITLES = {
-  "docs/adr": "Architecture Decision Records",
-  "docs/impl/ir": "Implementation Records",
-  "docs/impl/exp": "Experiment Logs"
-};
 var PROMOTE_INDEX_MUTATOR = "promote_index";
-var SYNC_IMPL_INDEX_MUTATOR = "sync_impl_index";
-var SHARED_CREATORS = {
-  idea: "new_idea",
-  discovery: "new_discovery",
-  spec: "new_spec",
-  plan: "new_plan",
-  task: "new_task",
-  design: "new_design",
-  adr: "new_adr",
-  "test-spec": "new_test_spec"
-};
 function buildContracts() {
   const rows = /* @__PURE__ */ new Map();
+  const rowFor = (dir, owner, indexFormat, indexTitle) => {
+    const normalized = normalizeDir(dir);
+    let row = rows.get(normalized);
+    if (!row) {
+      row = {
+        dir: normalized,
+        canonical: false,
+        owner,
+        residents: [],
+        indexFormat,
+        indexTitle,
+        mutators: /* @__PURE__ */ new Set(),
+        auditors: /* @__PURE__ */ new Set()
+      };
+      rows.set(normalized, row);
+    }
+    return row;
+  };
   for (const type of docTypes) {
     const config2 = configFor(type);
-    const adr = type === "adr";
     for (const dir of config2.dirs) {
-      const normalized = normalizeDir(dir);
-      let row = rows.get(normalized);
-      if (!row) {
-        row = {
-          canonical: false,
-          owner: adr ? "adr-doc" : "doc-suite",
-          residents: [],
-          mutators: /* @__PURE__ */ new Set(),
-          auditors: /* @__PURE__ */ new Set()
-        };
-        rows.set(normalized, row);
-      }
-      row.canonical = row.canonical || normalized === normalizeDir(config2.dir);
-      if (INDEX_TITLES[normalized]) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      const canonical = normalizeDir(dir) === normalizeDir(config2.dir);
+      const row = rowFor(dir, config2.owner, config2.indexFormat, canonical ? config2.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
       if (!row.residents.includes(type)) row.residents.push(type);
-      if (SHARED_CREATORS[type]) row.mutators.add(SHARED_CREATORS[type]);
+      if (canonical && config2.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      if (config2.creator) row.mutators.add(config2.creator);
       for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
       for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
-      if (adr) {
-        for (const mutator of ADR_MUTATORS) row.mutators.add(mutator);
-        for (const auditor of ADR_AUDITORS) row.auditors.add(auditor);
-      }
+      for (const mutator of config2.mutators) row.mutators.add(mutator);
+      for (const auditor of config2.auditors) row.auditors.add(auditor);
     }
   }
-  const shared = [...rows.entries()].map(([dir, row]) => ({
-    dir,
+  for (const type of executionTypes) {
+    const entry = ephemeralConfigs[type];
+    for (const dir of entry.formerDirs) {
+      const row = rowFor(dir, entry.owner, entry.indexFormat);
+      row.canonical = row.canonical || dir === entry.formerDirs[0];
+      if (!row.residents.includes(type)) row.residents.push(type);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.scopeDirs) {
+      const row = rowFor(dir, entry.owner, "none");
+      row.canonical = true;
+    }
+    for (const dir of entry.formerDirs) {
+      const canonical = dir === entry.formerDirs[0];
+      const row = rowFor(dir, entry.owner, entry.indexFormat, canonical ? entry.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(entry.type)) row.residents.push(entry.type);
+      if (canonical && entry.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  return [...rows.values()].map((row) => ({
+    dir: row.dir,
     canonical: row.canonical,
     owner: row.owner,
     residentTypes: row.residents,
-    indexFormat: "shared-4col",
-    indexTitle: INDEX_TITLES[dir],
+    indexFormat: row.indexFormat,
+    indexTitle: row.indexTitle,
     mutators: [...row.mutators].sort(),
     auditors: [...row.auditors].sort()
-  }));
-  const implRows = [
-    {
-      dir: "docs/impl",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: [],
-      indexFormat: "none",
-      mutators: [],
-      auditors: []
-    },
-    {
-      dir: "docs/impl/ir",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: ["impl"],
-      indexFormat: "impl-4col",
-      indexTitle: INDEX_TITLES["docs/impl/ir"],
-      mutators: ["new_impl_record", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
-      auditors: ["audit_impl_record"]
-    },
-    {
-      dir: "docs/impl/exp",
-      canonical: true,
-      owner: "impl-doc",
-      residentTypes: ["exp"],
-      indexFormat: "exp-1col",
-      indexTitle: INDEX_TITLES["docs/impl/exp"],
-      mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", PROMOTE_INDEX_MUTATOR, SYNC_IMPL_INDEX_MUTATOR],
-      auditors: ["audit_experiment_log"]
-    }
-  ];
-  return [...shared, ...implRows].sort((a, b) => a.dir.localeCompare(b.dir));
+  })).sort((a, b) => a.dir.localeCompare(b.dir));
 }
 var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
 function ownershipForDir(directory) {
@@ -33673,12 +34066,17 @@ function scopeTypesForQuery(directory, requestedType) {
 // src/skills/lib/doc_suite_utils.ts
 var relationFields = [
   "source",
+  "motivates",
+  "decides-for",
+  "realizes",
+  "informs",
+  "explains",
+  "supersedes",
+  "superseded-by",
   "implements",
   "implemented-by",
   "depends-on",
   "blocks",
-  "supersedes",
-  "superseded-by",
   "related",
   "refines",
   "refined-by",
@@ -33698,22 +34096,20 @@ var changeFields = [
   "moved",
   "generated"
 ];
-var scaffoldIndexMeta = {
-  "docs/ideas": { title: "IDEA Documents", type: "idea" },
-  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
-  "docs/specs": { title: "SPEC Documents", type: "spec" },
-  "docs/designs": { title: "DESIGN Documents", type: "design" },
-  "docs/plans": { title: "PLAN Documents", type: "plan" },
-  "docs/tasks": { title: "TASK Documents", type: "task" },
-  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
-  "docs/adr": { title: "Architecture Decision Records" },
-  "docs/impl/ir": { title: "Implementation Records" },
-  "docs/impl/exp": { title: "Experiment Logs" }
-};
-var scaffoldTargets = CANONICAL_DOC_DIRS.map((dir) => ({
-  dir,
-  ...scaffoldIndexMeta[dir]
-}));
+var scaffoldTargets = (() => {
+  const byDir = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const existing = byDir.get(config2.dir);
+    const target = {
+      dir: config2.dir,
+      title: config2.scaffoldIndexTitle ?? `${config2.idPrefix} Documents`,
+      type
+    };
+    if (!existing || config2.indexPrimary) byDir.set(config2.dir, target);
+  }
+  return [...byDir.values()];
+})();
 function primaryIndexTypeForDir(dir, candidates) {
   const normalized = normalizeDir(dir);
   const scaffoldType = scaffoldTargets.find(
@@ -33793,6 +34189,11 @@ var frontMatterSchema = external_exports.object({
   id: external_exports.string().min(1),
   type: external_exports.enum(docTypes),
   status: external_exports.string().min(1),
+  // `lifecycle` stays optional at the schema boundary so pre-Registry-3
+  // documents still parse — lint flags the missing field as
+  // `missing-lifecycle`; a populated non-axis value is invalid here
+  // (unknown lifecycle is never coerced to `current`).
+  lifecycle: external_exports.enum(LIFECYCLE_VALUES).optional(),
   title: external_exports.string().min(1),
   created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -33802,7 +34203,6 @@ var frontMatterSchema = external_exports.object({
 var GENERATED_INDEX_MARKER = "<!-- doc-suite:generated-index -->";
 var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
 var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
 function docDir(cwd, type, explicitDir) {
   const config2 = configFor(type);
   const resolved = findDocumentDir(cwd, explicitDir, config2.dirs, config2.dir);
@@ -33857,6 +34257,7 @@ async function docEntries(cwd, type, explicitDir) {
       created: typeof data.created === "string" ? data.created : null,
       file: file2,
       id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : hooks?.idFromFile?.(import_node_path2.default.basename(file2)) ?? null,
+      lifecycle: typeof data.lifecycle === "string" ? data.lifecycle : null,
       path: `${relativeDir}/${file2}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
       title: await titleFromDocument(content3, import_node_path2.default.basename(file2, ".md"), hooks?.titleFromHeading),
@@ -33875,7 +34276,7 @@ function renderIndexBody(entries, options2 = {}) {
     return left.file.localeCompare(right.file);
   };
   const row = (entry) => `| ${indexCell(entry.id || "\u2014")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "\u2014")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
-  const settled = (entry) => isSettledStatus(entry.type ?? options2.settledType ?? null, entry.status);
+  const settled = (entry) => isSettledEntry(entry.type ?? options2.settledType ?? null, entry.status, entry.lifecycle);
   const active = entries.filter((entry) => !settled(entry)).sort(compare);
   const settledEntries = entries.filter(settled).sort(compare);
   const body = [header, ...active.map(row)].join("\n");
@@ -33963,14 +34364,13 @@ var REQUIRED_FRONT_MATTER_FIELDS = [
   "id",
   "type",
   "status",
+  "lifecycle",
   "title",
   "created",
   "updated",
   "owners",
   "relations"
 ];
-var ROOT_ARTIFACT_TYPES = /* @__PURE__ */ new Set(["idea", "brainstorm", "discovery"]);
-var TRACEABILITY_TERMINAL_STATUSES = ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"];
 var DEAD_UPSTREAM_STATUSES = /* @__PURE__ */ new Set([
   "superseded",
   "rejected",
@@ -33981,13 +34381,31 @@ var DEAD_UPSTREAM_STATUSES = /* @__PURE__ */ new Set([
   "completed",
   "done"
 ]);
-var UPSTREAM_FIELDS = /* @__PURE__ */ new Set(["implements", "derives-from", "refines"]);
+var UPSTREAM_FIELDS = /* @__PURE__ */ new Set([
+  "implements",
+  "derives-from",
+  "refines",
+  "motivates",
+  "decides-for",
+  "realizes"
+]);
 function lifecycleBucketOf(document3) {
   if (document3.kind === "unmanaged") return "unmanaged";
   return lifecycleBucketForType(document3.type);
 }
+function migrationOwnedDirs() {
+  const dirs = /* @__PURE__ */ new Set();
+  for (const type of executionTypes) {
+    for (const dir of ephemeralConfigs[type].formerDirs) dirs.add(normalizeDir(dir));
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.formerDirs) dirs.add(normalizeDir(dir));
+    for (const dir of entry.scopeDirs) dirs.add(normalizeDir(dir));
+  }
+  return [...dirs].sort(compareStrings);
+}
 function isSettled(document3) {
-  return isSettledStatus(lifecycleBucketOf(document3), document3.status);
+  return isSettledEntry(lifecycleBucketOf(document3), document3.status, document3.lifecycle);
 }
 function staleUpstreamTargets(model, document3) {
   if (isSettled(document3)) return [];
@@ -34003,87 +34421,39 @@ function staleUpstreamTargets(model, document3) {
   }
   return stale;
 }
-function contractForDocType(type) {
-  const config2 = configFor(type);
-  const contract = {
-    type,
-    idPrefix: config2.idPrefix,
-    idPattern: new RegExp(`^${config2.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
-    idExceptions: [],
-    canonicalDir: config2.dir,
-    dirs: [...config2.dirs],
-    defaultStatus: config2.defaultStatus,
-    statusValues: [...config2.statusValues],
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS],
-    requiredRelations: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    allowsRootArtifact: ROOT_ARTIFACT_TYPES.has(type),
-    requiresSourceEvidence: false,
-    expectedUpstream: []
+function contractForDocType(entry) {
+  return {
+    type: entry.type,
+    persistence: entry.persistence,
+    idPrefix: entry.idPrefix,
+    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
+    idExceptions: [...entry.idExceptions],
+    canonicalDir: entry.dir ?? "",
+    dirs: [...entry.dirs],
+    defaultStatus: entry.defaultStatus,
+    statusValues: [...entry.statusValues],
+    lifecycleValues: [...entry.lifecycleValues],
+    defaultLifecycle: entry.defaultLifecycle,
+    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
+    fieldVocabularies: Object.fromEntries(
+      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
+    ),
+    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
+    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
+    reservedFiles: [...entry.reservedFiles],
+    allowsRootArtifact: entry.allowsRootArtifact,
+    requiresSourceEvidence: entry.requiresSourceEvidence,
+    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
+    allowedRelations: Object.fromEntries(
+      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
+    )
   };
-  if (type === "discovery") {
-    contract.requiresSourceEvidence = true;
-  }
-  if (type === "spec" || type === "plan" || type === "task" || type === "design") {
-    contract.expectedUpstream = [
-      { fields: [...UPSTREAM_FIELDS], skipStatuses: TRACEABILITY_TERMINAL_STATUSES }
-    ];
-  }
-  if (type === "design") {
-    contract.idExceptions = ["DESIGN-OVERVIEW"];
-    contract.requiredDirectoryFiles = ["overview.md"];
-    contract.reservedFiles = ["overview.md"];
-  }
-  if (type === "test-spec") {
-    contract.requiredRelations = [
-      { field: "verifies", targetTypes: ["spec", "design", "adr"], gateCode: "TEST-SPEC-DOC-GATE-001" }
-    ];
-  }
-  if (type === "plan") {
-    contract.requiredRelations = [
-      {
-        field: "verified-by",
-        targetTypes: ["test-spec"],
-        appliesToStatuses: ["approved", "in-progress", "completed"],
-        skipField: "test-spec-skip"
-      }
-    ];
-  }
-  return contract;
 }
-var contracts = {
-  ...Object.fromEntries(docTypes.map((type) => [type, contractForDocType(type)])),
-  impl: {
-    type: "impl",
-    idPrefix: "IMPL",
-    idPattern: /^IMPL-(?:\d+|[0-9A-Za-z]{22})$/,
-    idExceptions: [],
-    canonicalDir: "docs/impl",
-    dirs: ["docs/impl/ir", "docs/impl/exp"],
-    defaultStatus: "draft",
-    statusValues: ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"],
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, "metadata"],
-    requiredRelations: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    expectedUpstream: []
-  }
-};
-function documentContracts() {
-  return contracts;
-}
+var contracts = Object.fromEntries(
+  docTypes.map((type) => [type, contractForDocType(configFor(type))])
+);
 function contractForType(type) {
   return contracts[type] ?? null;
-}
-function canonicalDocRoots() {
-  const roots = /* @__PURE__ */ new Set();
-  for (const contract of Object.values(contracts)) {
-    for (const dir of contract.dirs) roots.add(normalizeDir(dir));
-  }
-  return [...roots].sort(compareStrings);
 }
 var markdownModules = null;
 async function loadMarkdownModules() {
@@ -34263,7 +34633,7 @@ function localeSiblingsFor(repoPath, siblingsByDir) {
 function defaultScanRoots(cwd) {
   const roots = /* @__PURE__ */ new Set();
   if (import_node_fs3.default.existsSync(import_node_path4.default.join(cwd, "docs"))) roots.add("docs");
-  for (const dir of canonicalDocRoots()) {
+  for (const dir of managedDocDirs()) {
     if (import_node_fs3.default.existsSync(import_node_path4.default.join(cwd, dir))) roots.add(dir);
   }
   return [...roots].sort(compareStrings);
@@ -34295,12 +34665,15 @@ async function scanRepository(options2) {
     peers.add(import_node_path4.default.posix.basename(repoPath));
     siblingsByDir.set(dir, peers);
   }
+  const migrationDirs = migrationOwnedDirs();
   const files = [];
   for (const absolute of [...absoluteFiles].sort(compareStrings)) {
     const repoPath = toRepoPath(cwd, absolute);
     const expectedTypes = expectedTypesFor(repoPath, typeMap);
     const canonical = expectedTypes.length > 0;
-    const kind = !canonical ? "unmanaged" : isIndexFileName(import_node_path4.default.posix.basename(repoPath)) ? "index" : "canonical";
+    const docDirName = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
+    const indexNamed = isIndexFileName(import_node_path4.default.posix.basename(repoPath));
+    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
@@ -34321,6 +34694,7 @@ async function scanRepository(options2) {
       type: stringField(data, "type"),
       id: stringField(data, "id"),
       status: stringField(data, "status"),
+      lifecycle: stringField(data, "lifecycle"),
       title: stringField(data, "title"),
       owners,
       created: stringField(data, "created"),
@@ -34437,6 +34811,7 @@ async function scanRepository(options2) {
     files,
     documents: files.filter((file2) => file2.kind !== "index"),
     canonicalDocuments: files.filter((file2) => file2.kind === "canonical"),
+    legacyDocuments: files.filter((file2) => file2.kind === "legacy"),
     unmanagedDocuments: files.filter((file2) => file2.kind === "unmanaged"),
     indexes: files.filter((file2) => file2.kind === "index"),
     byPath,
@@ -35205,6 +35580,7 @@ function lintFrontMatter(document3, scopeType) {
   const schemaResult = frontMatterSchema.safeParse(document3.frontMatter);
   if (!schemaResult.success) {
     for (const issue2 of schemaResult.error.issues) {
+      if (issue2.path.length === 1 && issue2.path[0] === "lifecycle") continue;
       findings.push(finding({
         ruleId: "invalid-front-matter",
         category: "front-matter",
@@ -35241,6 +35617,64 @@ function lintFrontMatter(document3, scopeType) {
       target: document3.status,
       repair: "manual"
     }));
+  }
+  const rawLifecycle = document3.frontMatter.lifecycle;
+  const lifecyclePopulated = rawLifecycle !== void 0 && rawLifecycle !== null && !(typeof rawLifecycle === "string" && rawLifecycle.trim() === "");
+  if (!lifecyclePopulated) {
+    findings.push(finding({
+      ruleId: "missing-lifecycle",
+      category: "front-matter",
+      severity: "warning",
+      blocking: true,
+      path: document3.path,
+      artifactId: document3.id,
+      message: `Missing required front matter field: lifecycle (expected one of: ${(contract?.lifecycleValues ?? []).join(", ") || "draft, current, superseded, retired"})`,
+      target: "lifecycle",
+      repair: "migration"
+    }));
+  } else if (document3.lifecycle === null || contract && !contract.lifecycleValues.includes(document3.lifecycle)) {
+    const shown = typeof rawLifecycle === "string" ? rawLifecycle : JSON.stringify(rawLifecycle);
+    findings.push(finding({
+      ruleId: "invalid-lifecycle",
+      category: "front-matter",
+      severity: "error",
+      path: document3.path,
+      artifactId: document3.id,
+      message: `Invalid ${scopeType} lifecycle: ${shown} (expected one of: ${(contract?.lifecycleValues ?? []).join(", ") || "draft, current, superseded, retired"})`,
+      target: document3.lifecycle ?? "lifecycle",
+      repair: "manual"
+    }));
+  }
+  const baseFields = new Set(REQUIRED_FRONT_MATTER_FIELDS);
+  for (const field of contract?.requiredFields ?? []) {
+    if (baseFields.has(field)) continue;
+    const value = document3.frontMatter[field];
+    if (value === void 0 || value === null || typeof value === "string" && value.trim() === "") {
+      findings.push(finding({
+        ruleId: "missing-required-field",
+        category: "front-matter",
+        severity: "error",
+        path: document3.path,
+        artifactId: document3.id,
+        message: `Missing required ${scopeType} front matter field: ${field}`,
+        target: field,
+        repair: "manual"
+      }));
+      continue;
+    }
+    const vocabulary = contract?.fieldVocabularies[field];
+    if (vocabulary && typeof value === "string" && !vocabulary.includes(value)) {
+      findings.push(finding({
+        ruleId: "invalid-field-value",
+        category: "front-matter",
+        severity: "error",
+        path: document3.path,
+        artifactId: document3.id,
+        message: `Invalid ${scopeType} ${field}: ${value} (expected one of: ${vocabulary.join(", ")})`,
+        target: field,
+        repair: "manual"
+      }));
+    }
   }
   if (contract && document3.id && !contract.idExceptions.includes(document3.id)) {
     if (!contract.idPattern.test(document3.id)) {
@@ -35285,6 +35719,9 @@ function lintRelations(model, document3, scopeType) {
   const typedFields = /* @__PURE__ */ new Map();
   for (const required2 of contract?.requiredRelations ?? []) {
     typedFields.set(required2.field, required2.targetTypes);
+  }
+  for (const [field, targetTypes] of Object.entries(contract?.allowedRelations ?? {})) {
+    if (!typedFields.has(field)) typedFields.set(field, [...targetTypes]);
   }
   for (const [field, targets] of Object.entries(document3.relations)) {
     if (field === "source") continue;
@@ -35351,15 +35788,14 @@ function lintRelations(model, document3, scopeType) {
       }
       const expectedTypes = typedFields.get(field);
       if (expectedTypes && targetDocument.type && !expectedTypes.includes(targetDocument.type)) {
-        const ruleId = scopeType === "test-spec" && field === "verifies" ? "test-spec-invalid-verifies-target" : "invalid-relation-target-type";
         findings.push(finding({
-          ruleId,
+          ruleId: "invalid-relation-target-type",
           category: "traceability",
           severity: "warning",
           blocking: true,
           path: document3.path,
           artifactId: document3.id,
-          message: scopeType === "test-spec" && field === "verifies" ? `Test spec verifies target resolves to type "${targetDocument.type}", expected ${expectedTypes.join(", ").replace(/, ([^,]*)$/, ", or $1")}: ${target}` : `Relation ${field} target resolves to type "${targetDocument.type}", expected one of: ${expectedTypes.join(", ")}: ${target}`,
+          message: `Relation ${field} target resolves to type "${targetDocument.type}", expected one of: ${expectedTypes.join(", ")}: ${target}`,
           target,
           repair: "manual"
         }));
@@ -35414,43 +35850,17 @@ function lintRequiredRelations(model, document3, scopeType) {
     });
     const skip = required2.skipField !== void 0 && skipReasonRecorded(document3, required2.skipField);
     if (linked || skip) continue;
-    if (scopeType === "test-spec" && required2.field === "verifies") {
-      findings.push(finding({
-        ruleId: "test-spec-missing-verifies",
-        category: "traceability",
-        severity: "warning",
-        blocking: true,
-        path: document3.path,
-        artifactId: document3.id,
-        message: `Test spec has no relations.verifies target (${required2.gateCode ?? "TEST-SPEC-DOC-GATE-001"})`,
-        target: required2.field,
-        repair: "manual"
-      }));
-    } else if (scopeType === "plan" && required2.field === "verified-by") {
-      findings.push(finding({
-        ruleId: "plan-missing-test-spec-evidence",
-        category: "traceability",
-        severity: "warning",
-        blocking: true,
-        path: document3.path,
-        artifactId: document3.id,
-        message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason",
-        target: required2.field,
-        repair: "manual"
-      }));
-    } else {
-      findings.push(finding({
-        ruleId: "missing-required-relation",
-        category: "traceability",
-        severity: "warning",
-        blocking: true,
-        path: document3.path,
-        artifactId: document3.id,
-        message: `Document requires a resolvable relations.${required2.field} target of type ${required2.targetTypes.join(" or ")}`,
-        target: required2.field,
-        repair: "manual"
-      }));
-    }
+    findings.push(finding({
+      ruleId: "missing-required-relation",
+      category: "traceability",
+      severity: "warning",
+      blocking: true,
+      path: document3.path,
+      artifactId: document3.id,
+      message: `Document requires a resolvable relations.${required2.field} target of type ${required2.targetTypes.join(" or ")}`,
+      target: required2.field,
+      repair: "manual"
+    }));
   }
   return findings;
 }
@@ -35523,10 +35933,7 @@ var EXPERIMENT_ID_PREFIX = "EXP";
 var IMPL_EXP_DIR = "docs/impl/exp";
 var NUMBERED_EXPERIMENT_FILE = /^(\d{4,})-.*\.jsonl$/i;
 function legacyIdPrefixes() {
-  const prefixes = new Set(docTypes.map((type) => configFor(type).idPrefix));
-  prefixes.add("IMPL");
-  prefixes.add(EXPERIMENT_ID_PREFIX);
-  return prefixes;
+  return new Set(allIdPrefixes());
 }
 function experimentNumbers(root) {
   const expDir = import_node_path6.default.join(root, IMPL_EXP_DIR);
@@ -35645,7 +36052,7 @@ function profileGates(profile) {
   return profile === "artifact" ? { ran: [...ARTIFACT_GATES], skipped: [...MATERIALIZED_ONLY_GATES] } : { ran: [...ARTIFACT_GATES, ...MATERIALIZED_ONLY_GATES], skipped: [] };
 }
 function scanRoots(relativeDirs) {
-  return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
+  return [...new Set(["docs", ...relativeDirs, ...managedDocDirs()].map((dir) => normalizeDir(dir)))];
 }
 function resolveQueryScope(cwd, query) {
   const explicitDir = query.dir ? resolveContainedDir(cwd, query.dir) : null;
@@ -38383,25 +38790,8 @@ function schemaManifestText() {
   return `${JSON.stringify({ schemaVersion: MANIFEST_SCHEMA_VERSION, ...EXPECTED_COMPONENT_VERSIONS }, null, 2)}
 `;
 }
-var EXECUTION_BOUND_TYPES = /* @__PURE__ */ new Set([
-  "plan",
-  "task",
-  "test-spec",
-  "impl",
-  "implementation-record",
-  "ir",
-  "exp",
-  "experiment-log",
-  "impl-record"
-]);
-var KNOWLEDGE_RELATIONS_V1 = /* @__PURE__ */ new Set([
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes"
-]);
+var EXECUTION_BOUND_TYPES = new Set(executionBoundTypeNames());
+var KNOWLEDGE_RELATIONS_V1 = new Set(knowledgeRelationFields());
 var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
   "schema.json",
   "migration.journal.json"
@@ -38416,13 +38806,7 @@ function isPlainObject4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function managedRootAliases() {
-  const dirs = /* @__PURE__ */ new Set();
-  for (const contract of Object.values(documentContracts())) {
-    for (const dir of [...contract.dirs, contract.canonicalDir]) {
-      if (!dir.startsWith("docs/")) dirs.add(dir);
-    }
-  }
-  return [...dirs].sort();
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit3, onEscape) {
   const absRoot = import_node_path8.default.resolve(cwd, relRoot);
@@ -38470,7 +38854,7 @@ function relationIssues(relPath, relations) {
     return scoped;
   }
   for (const [key, value] of Object.entries(relations)) {
-    if (nonReferenceRelationKeys.has(key)) continue;
+    if (nonReferenceRelationKeys.has(key) || PROVENANCE_RELATION_KEYS.includes(key)) continue;
     const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
     const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
     if (!wellFormed) {
@@ -38876,121 +39260,14 @@ function schemaEntrypointGuard(cwd) {
 }
 
 // src/skills/doc-maintenance/scripts/lib/index_materialize.ts
-var import_node_crypto2 = require("node:crypto");
-var import_node_fs11 = __toESM(require("node:fs"));
-var import_node_path12 = __toESM(require("node:path"));
+var import_node_crypto = require("node:crypto");
+var import_node_fs9 = __toESM(require("node:fs"));
+var import_node_path10 = __toESM(require("node:path"));
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
 var import_node_fs8 = __toESM(require("node:fs"));
 var import_node_path9 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
-
-// src/skills/lib/markdown_sections.ts
-var SECTION_HEADING_ALIASES = {
-  // task-doc
-  "Work": ["\u4F5C\u696D"],
-  "Classification": ["\u5206\u985E"],
-  "Upstream Documents": ["\u4E0A\u6D41\u6587\u66F8"],
-  "Dependencies": ["\u4F9D\u5B58\u95A2\u4FC2"],
-  "Affected Files": ["\u5F71\u97FF\u30D5\u30A1\u30A4\u30EB"],
-  "Done When": ["\u5B8C\u4E86\u6761\u4EF6"],
-  "Verification": ["\u691C\u8A3C"],
-  // spec-doc
-  "What Should Be Built": ["\u4F55\u3092\u4F5C\u308B\u3079\u304D\u304B"],
-  "Why Now": ["\u306A\u305C\u4ECA\u5FC5\u8981\u304B"],
-  "Users and Value": ["\u5229\u7528\u8005\u3068\u4FA1\u5024"],
-  "Scope": ["\u7BC4\u56F2", "\u30B9\u30B3\u30FC\u30D7"],
-  "In Scope": ["\u7BC4\u56F2\u5185"],
-  "Out of Scope": ["\u7BC4\u56F2\u5916"],
-  "Requirements": ["\u8981\u4EF6"],
-  "Acceptance Criteria": ["\u53D7\u3051\u5165\u308C\u57FA\u6E96"],
-  "Sources and Relations": ["\u51FA\u5178\u3068 Relations", "\u51FA\u5178\u30FBRelations"],
-  // discovery-doc
-  "Exploration Goal": ["\u63A2\u7D22\u76EE\u7684"],
-  "Key Issues and Assumptions": ["\u8AD6\u70B9\u30FB\u524D\u63D0"],
-  "Alternatives and Comparison": ["\u4EE3\u66FF\u6848\u3068\u6BD4\u8F03"],
-  "Tentative Conclusions and Hypotheses": ["\u66AB\u5B9A\u7D50\u8AD6\u30FB\u4EEE\u8AAC"],
-  "Open Questions": ["\u672A\u89E3\u6C7A\u306E\u8AD6\u70B9", "\u672A\u89E3\u6C7A\u4E8B\u9805"],
-  "Promotion Candidates": ["\u6607\u83EF\u5148\u5019\u88DC"],
-  "Evidence": ["\u30A8\u30D3\u30C7\u30F3\u30B9"],
-  // idea-doc
-  "Summary": ["\u8981\u7D04"],
-  "Problem and Motivation": ["\u8AB2\u984C\u3068\u52D5\u6A5F"],
-  "Expected Value": ["\u60F3\u5B9A\u4FA1\u5024"],
-  "Next Action": ["\u6B21\u306E\u30A2\u30AF\u30B7\u30E7\u30F3"],
-  // plan-doc
-  "Goal": ["\u76EE\u7684"],
-  "File Map": ["\u30D5\u30A1\u30A4\u30EB\u8868"],
-  "Implementation Sequence": ["\u5B9F\u88C5\u9806\u5E8F"],
-  "Dependencies and Risks": ["\u4F9D\u5B58\u95A2\u4FC2\u3068\u30EA\u30B9\u30AF"],
-  "Task Breakdown": ["Task \u5206\u89E3"],
-  "Open Questions / Gaps": ["\u672A\u89E3\u6C7A\u4E8B\u9805 / gap"],
-  "Self-Review": ["\u81EA\u5DF1\u30EC\u30D3\u30E5\u30FC"],
-  "Implementation Handoff": ["\u5B9F\u88C5\u30CF\u30F3\u30C9\u30AA\u30D5"],
-  "Review Handoff": ["\u30EC\u30D3\u30E5\u30FC\u7528\u30CF\u30F3\u30C9\u30AA\u30D5"],
-  // adr-doc (MADR 4 templates)
-  "Context and Problem Statement": ["\u80CC\u666F\u3068\u554F\u984C"],
-  "Decision Drivers": ["\u6C7A\u5B9A\u30C9\u30E9\u30A4\u30D0\u30FC"],
-  "Considered Options": ["\u691C\u8A0E\u3057\u305F\u9078\u629E\u80A2"],
-  "Decision Outcome": ["\u6C7A\u5B9A\u5185\u5BB9"],
-  "Consequences": ["\u5F71\u97FF"],
-  "Confirmation": ["\u78BA\u8A8D\u65B9\u6CD5"],
-  "Implementation Plan": ["\u5B9F\u88C5\u8A08\u753B"],
-  "Pros and Cons of the Options": ["\u9078\u629E\u80A2\u306E\u5229\u70B9\u3068\u6B20\u70B9"],
-  "Option": ["\u9078\u629E\u80A2"],
-  "Option 1": ["\u9078\u629E\u80A2 1"],
-  "Option 2": ["\u9078\u629E\u80A2 2"],
-  "More Information": ["\u8FFD\u52A0\u60C5\u5831"],
-  // implementation-flow profile
-  "Available Skills": ["\u5229\u7528\u53EF\u80FD\u306A\u30B9\u30AD\u30EB"],
-  "Category Assignments": ["\u30AB\u30C6\u30B4\u30EA\u5272\u308A\u5F53\u3066"]
-};
-var FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
-var FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})\s*$/;
-function stripFencedBlocks(body) {
-  const kept = [];
-  let fenceChar = "";
-  let fenceLen = 0;
-  for (const line of body.split(/\r?\n/)) {
-    if (fenceChar === "") {
-      const open2 = FENCE_OPEN.exec(line);
-      if (open2) {
-        const run = open2[1];
-        const info = line.slice(line.indexOf(run) + run.length);
-        if (info.includes(run[0])) {
-          kept.push(line);
-          continue;
-        }
-        fenceChar = run[0];
-        fenceLen = run.length;
-        continue;
-      }
-      kept.push(line);
-      continue;
-    }
-    const close = FENCE_CLOSE.exec(line);
-    if (close && close[1][0] === fenceChar && close[1].length >= fenceLen) {
-      fenceChar = "";
-      fenceLen = 0;
-    }
-  }
-  return kept.join("\n");
-}
-function headingNames(canonicalHeading) {
-  return [canonicalHeading, ...SECTION_HEADING_ALIASES[canonicalHeading] ?? []];
-}
-function headingPattern(heading) {
-  return new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
-}
-function hasSection(body, canonicalHeading) {
-  const lines = stripFencedBlocks(body).split(/\r?\n/);
-  return headingNames(canonicalHeading).some((name) => {
-    const pattern = headingPattern(name);
-    return lines.some((line) => pattern.test(line.trimEnd()));
-  });
-}
-
-// src/skills/adr-doc/scripts/lib/adr_utils.ts
 function writeIndexFile(adrDir, content3, force = false) {
   const indexPath = import_node_path9.default.join(adrDir, "README.md");
   const existing = import_node_fs8.default.existsSync(indexPath) ? import_node_fs8.default.readFileSync(indexPath, "utf8") : null;
@@ -39005,449 +39282,111 @@ async function buildIndex2(cwd, relativeDir) {
   return buildIndex(cwd, "adr", relativeDir);
 }
 
-// src/skills/impl-doc/scripts/lib/impl_index_sync.ts
-var import_node_crypto = require("node:crypto");
-var import_node_fs10 = __toESM(require("node:fs"));
-var import_node_path11 = __toESM(require("node:path"));
-
-// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
-var import_node_fs9 = __toESM(require("node:fs"));
-var import_node_path10 = __toESM(require("node:path"));
-var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
-var implementationRecordSections = [
-  "Summary",
-  "Context",
-  "Implementation",
-  "Related Experiments",
-  "Validation",
-  "Risks",
-  "Follow-ups"
-];
-var changeEntrySchema2 = external_exports.object({
-  type: external_exports.string().min(1)
-}).passthrough();
-var changesSchema2 = external_exports.object(Object.fromEntries(
-  changeFields.map((field) => [field, external_exports.array(changeEntrySchema2).default([])])
-)).default({});
-var relationsSchema = external_exports.object({
-  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
-  changes: changesSchema2
-}).prefault({});
-var implementationRecordSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  type: external_exports.literal("impl"),
-  status: external_exports.enum(implStatuses),
-  title: external_exports.string().min(1),
-  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  owners: external_exports.array(external_exports.string()),
-  relations: relationsSchema,
-  metadata: external_exports.object({
-    experiments: external_exports.object({
-      adopted: external_exports.array(external_exports.string()).default([]),
-      rejected: external_exports.array(external_exports.string()).default([])
-    })
-  })
-}).passthrough();
-var experimentEventBaseSchema = external_exports.object({
-  schema: external_exports.string().min(1),
-  experiment: external_exports.string().min(1),
-  seq: external_exports.number().int().positive(),
-  type: external_exports.string().min(1),
-  ts: external_exports.string().min(1)
-}).passthrough();
-function isExternalLink(value) {
-  return /^(https?:|mailto:)/i.test(value);
-}
-function defaultImplDir(kind) {
-  return kind === "ir" ? "docs/impl/ir" : "docs/impl/exp";
-}
-function implDir(cwd, kind, explicitDir) {
-  const resolved = explicitDir ? resolveContainedDir(cwd, explicitDir) : defaultImplDir(kind);
-  assertTypeScope(kind === "ir" ? "impl" : "exp", resolved);
-  return resolved;
-}
-function listFiles(dir, ext) {
-  if (!import_node_fs9.default.existsSync(dir)) return [];
-  return import_node_fs9.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs9.default.lstatSync(import_node_path10.default.join(dir, file2)).isSymbolicLink()).sort();
-}
-var SETTLED_HEADING2 = `## Settled ${GENERATED_SETTLED_MARKER}`;
-var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
-var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
-function splitRowCells(line) {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("|")) return null;
-  if (!trimmed.endsWith("|") || trimmed.endsWith("\\|")) return null;
-  const body = trimmed.slice(1, -1);
-  const cells = [];
-  let current = "";
-  for (let i = 0; i < body.length; i += 1) {
-    const ch = body[i];
-    if (ch === "\\" && i + 1 < body.length) {
-      current += ch + body[i + 1];
-      i += 1;
-      continue;
-    }
-    if (ch === "|") {
-      cells.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += ch;
-  }
-  cells.push(current.trim());
-  return cells;
-}
-function extractRowFile(cell) {
-  const match = /^\[(.*)\]\((.*)\)$/.exec(cell.trim());
-  if (!match) return { code: "bad-row" };
-  const target = match[2].trim();
-  if (target.startsWith("./")) {
-    const file2 = target.slice(2);
-    if (file2 !== "" && file2 !== "." && file2 !== ".." && !/[/\\:]/.test(file2)) return { file: file2 };
-    return { code: "escaping-row" };
-  }
-  if (/^\.{1,2}\//.test(target) || target.startsWith("/") || /^[a-zA-Z]:/.test(target)) {
-    return { code: "escaping-row" };
-  }
-  return { code: "bad-row" };
-}
-function parseImplIndexRows(content3, kind) {
-  const fail = (reason, code) => ({ ok: false, reason, code });
-  const lines = content3.split("\n");
-  const markerLines = lines.filter((line) => line.includes(GENERATED_INDEX_MARKER));
-  if (markerLines.length === 0) {
-    return fail("hand-curated or ambiguous index: missing generated-index marker", "missing-marker");
-  }
-  if (markerLines.length > 1) {
-    return fail("ambiguous index: multiple generated-index markers", "ambiguous-marker");
-  }
-  const markerIndex = lines.findIndex((line) => line.includes(GENERATED_INDEX_MARKER));
-  const expectedCells = kind === "ir" ? 4 : 1;
-  const fileCellIndex = kind === "ir" ? 3 : 0;
-  const headerLine = kind === "ir" ? IR_HEADER_LINE : EXP_HEADER_LINE;
-  const separatorLine = kind === "ir" ? IR_SEPARATOR_LINE : EXP_SEPARATOR_LINE;
-  let cursor = markerIndex + 1;
-  const skipBlank = () => {
-    while (cursor < lines.length && lines[cursor].trim() === "") cursor += 1;
-  };
-  const parseRow = (line, tier) => {
-    const cells = splitRowCells(line);
-    if (!cells || cells.length !== expectedCells) {
-      return { error: `unparseable ${tier} index row: ${line.trim()}`, code: "bad-row" };
-    }
-    const fileCell = extractRowFile(cells[fileCellIndex]);
-    if ("code" in fileCell) {
-      return { error: `unparseable ${tier} index row: ${line.trim()}`, code: fileCell.code };
-    }
-    return { file: fileCell.file, cells, tier };
-  };
-  const parseTable = (tier) => {
-    if (cursor + 1 >= lines.length || lines[cursor].trim() !== headerLine || lines[cursor + 1].trim() !== separatorLine) {
-      return { error: `malformed ${tier} index table header`, code: "bad-table-header" };
-    }
-    cursor += 2;
-    const rows2 = [];
-    while (cursor < lines.length && lines[cursor].trim().startsWith("|")) {
-      const row = parseRow(lines[cursor], tier);
-      if ("error" in row) return row;
-      rows2.push(row);
-      cursor += 1;
-    }
-    return { rows: rows2 };
-  };
-  skipBlank();
-  if (cursor >= lines.length || !lines[cursor].trim().startsWith("Directory:")) {
-    return fail("missing Directory line after the generated-index marker", "missing-directory");
-  }
-  cursor += 1;
-  skipBlank();
-  const active = parseTable("active");
-  if ("error" in active) return fail(active.error, active.code);
-  skipBlank();
-  const rows = [...active.rows];
-  if (cursor < lines.length && lines[cursor].trim() === SETTLED_HEADING2) {
-    cursor += 1;
-    skipBlank();
-    const settled = parseTable("settled");
-    if ("error" in settled) return fail(settled.error, settled.code);
-    rows.push(...settled.rows);
-    skipBlank();
-  }
-  for (; cursor < lines.length; cursor += 1) {
-    const trimmed = lines[cursor].trim();
-    if (trimmed.includes(GENERATED_SETTLED_MARKER)) {
-      return fail("settled-index marker outside the managed index region", "stray-settled-marker");
-    }
-    if (trimmed.startsWith("|")) {
-      return fail("table row outside the managed index region", "stray-table-row");
-    }
-  }
-  const seen = /* @__PURE__ */ new Set();
-  for (const row of rows) {
-    if (seen.has(row.file)) return fail(`duplicate index row for ${row.file}`, "duplicate-row");
-    seen.add(row.file);
-  }
-  return { ok: true, rows };
-}
-function implIndexEntries(dirAbs, relativeDir, files) {
-  return files.flatMap((file2) => {
-    const parsed = parseDoc(import_node_fs9.default.readFileSync(import_node_path10.default.join(dirAbs, file2), "utf8"));
-    if (parsed.error) return [];
-    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
-    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path10.default.basename(file2, ".md");
-    const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
-    const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
-    return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
-  });
-}
-function expectedIndexRows(kind, dirAbs, relativeDir, files) {
-  const expected = /* @__PURE__ */ new Map();
-  if (kind === "exp") {
-    for (const file2 of files) {
-      expected.set(file2, { cells: [`[${indexCell(file2)}](./${indexCell(file2)})`], tier: "active" });
-    }
-    return expected;
-  }
-  for (const entry of implIndexEntries(dirAbs, relativeDir, files)) {
-    expected.set(entry.file, {
-      cells: [
-        indexCell(entry.id || "\u2014"),
-        indexCell(entry.title),
-        indexCell(entry.status || "\u2014"),
-        `[${indexCell(entry.file)}](./${indexCell(entry.file)})`
-      ],
-      tier: isSettledStatus(entry.type ?? "impl", entry.status) ? "settled" : "active"
-    });
-  }
-  return expected;
-}
-function expectedIndexSequence(kind, expected) {
-  if (kind === "exp") return [...expected.keys()];
-  const tierFiles = (tier) => [...expected.entries()].filter(([, want]) => want.tier === tier).map(([file2]) => file2).sort((left, right) => left.localeCompare(right));
-  return [...tierFiles("active"), ...tierFiles("settled")];
-}
-function cellsEqual(left, right) {
-  return left.length === right.length && left.every((cell, index2) => cell === right[index2]);
-}
-function sameStringSequence(left, right) {
-  return left.length === right.length && left.every((value, index2) => value === right[index2]);
-}
-function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
-  const indexPath = import_node_path10.default.join(dirAbs, "README.md");
-  let stats = null;
-  try {
-    stats = import_node_fs9.default.lstatSync(indexPath);
-  } catch {
-    stats = null;
-  }
-  if (!stats) return;
-  const push2 = (code, message, severity) => {
-    findings.push({ code, file: "README.md", message: `${relativeDir}/README.md ${message}`, severity });
-  };
-  if (!stats.isFile()) {
-    push2("index-not-managed", "is a symbolic link or not a regular file", "warning");
-    return;
-  }
-  const content3 = import_node_fs9.default.readFileSync(indexPath, "utf8");
-  const parsed = parseImplIndexRows(content3, kind);
-  if (!parsed.ok) {
-    const code = parsed.code === "missing-marker" || parsed.code === "ambiguous-marker" ? "index-not-managed" : parsed.code === "duplicate-row" ? "index-duplicate-entry" : parsed.code === "escaping-row" ? "index-escapes-root" : "index-unparseable";
-    const severity = code === "index-escapes-root" || code === "index-unparseable" ? "error" : "warning";
-    push2(code, `is not a manageable generated index: ${parsed.reason}`, severity);
-    return;
-  }
-  const expected = expectedIndexRows(kind, dirAbs, relativeDir, files);
-  const rowsByFile = new Map(parsed.rows.map((row) => [row.file, row]));
-  for (const [file2, want] of expected) {
-    const row = rowsByFile.get(file2);
-    if (!row) {
-      push2("index-missing-entry", `has no row for ${file2}`, "warning");
-      continue;
-    }
-    if (!cellsEqual(row.cells, want.cells)) {
-      push2("index-metadata-mismatch", `row for ${file2} does not match the document front matter`, "warning");
-    }
-    if (row.tier !== want.tier) {
-      push2("index-tier-mismatch", `row for ${file2} sits in the ${row.tier} tier but the document expects ${want.tier}`, "warning");
-    }
-  }
-  for (const row of parsed.rows) {
-    if (!expected.has(row.file)) {
-      push2("index-stale-entry", `row links ${row.file}, which is not an indexable document in this directory`, "warning");
-    }
-  }
-  const currentSequence = parsed.rows.filter((row) => expected.has(row.file)).map((row) => row.file);
-  if (!sameStringSequence(currentSequence, expectedIndexSequence(kind, expected))) {
-    push2("index-ordering", "row order differs from the deterministic index order", "info");
-  }
-}
-function resolvesLocalTarget(cwd, fromFile, target) {
-  const candidates = [
-    import_node_path10.default.resolve(cwd, target),
-    import_node_path10.default.resolve(import_node_path10.default.dirname(fromFile), target)
-  ];
-  return candidates.some((candidate) => import_node_fs9.default.existsSync(candidate));
-}
-function relationLinks(relations) {
-  return relationFields.flatMap((field) => {
-    const targets = relations[field];
-    return Array.isArray(targets) ? targets.map((target) => ({ field, target: String(target) })) : [];
-  });
-}
-function auditImplementationRecords(cwd, relativeDir) {
-  const dir = import_node_path10.default.join(cwd, relativeDir);
-  const files = listFiles(dir, ".md");
-  const findings = [];
-  for (const file2 of files) {
-    const fullPath = import_node_path10.default.join(dir, file2);
-    const content3 = import_node_fs9.default.readFileSync(fullPath, "utf8");
-    const parsed = parseDoc(content3);
-    if (parsed.error) {
-      findings.push({
-        code: "unparseable-front-matter",
-        file: file2,
-        message: `Front matter is not valid YAML: ${parsed.error}`,
-        severity: "error"
-      });
-      continue;
-    }
-    if (isForeignDocType(parsed.data.type, "impl", relativeDir)) continue;
-    const schemaResult = implementationRecordSchema.safeParse(parsed.data);
-    if (!schemaResult.success) {
-      for (const issue2 of schemaResult.error.issues) {
-        findings.push({
-          code: "invalid-front-matter",
-          file: file2,
-          message: `Invalid front matter ${issue2.path.join(".") || "$"}: ${issue2.message}`,
-          severity: "error"
-        });
-      }
-      continue;
-    }
-    const data = schemaResult.data;
-    for (const relation of relationLinks(data.relations)) {
-      if (isExternalLink(relation.target)) continue;
-      if (!resolvesLocalTarget(cwd, fullPath, relation.target)) {
-        findings.push({
-          code: "broken-relation-link",
-          file: file2,
-          message: `Relation ${relation.field} points to missing target: ${relation.target}`,
-          severity: "warning"
-        });
-      }
-    }
-    for (const experimentPath of [...data.metadata.experiments.adopted, ...data.metadata.experiments.rejected]) {
-      if (!resolvesLocalTarget(cwd, fullPath, experimentPath)) {
-        findings.push({
-          code: "missing-experiment-link",
-          file: file2,
-          message: `Experiment reference points to missing target: ${experimentPath}`,
-          severity: "warning"
-        });
-      }
-    }
-    for (const section of implementationRecordSections) {
-      if (!hasSection(parsed.body, section)) {
-        findings.push({
-          code: "missing-section",
-          file: file2,
-          message: `Missing required section: ${section}`,
-          severity: "error"
-        });
-      }
-    }
-  }
-  const indexPath = import_node_path10.default.join(dir, "README.md");
-  let indexStats = null;
-  try {
-    indexStats = import_node_fs9.default.lstatSync(indexPath);
-  } catch {
-    indexStats = null;
-  }
-  if (!indexStats) {
-    findings.push({ code: "missing-index", file: null, message: "Missing README.md index", severity: "warning" });
-  } else {
-    auditManagedIndex("ir", dir, relativeDir, files, findings);
-  }
-  return { directory: relativeDir, files: files.length, findings };
-}
-
-// src/skills/impl-doc/scripts/lib/impl_index_sync.ts
-var INDEX_TITLES2 = {
-  ir: "Implementation Records",
-  exp: "Experiment Logs"
-};
+// src/skills/doc-maintenance/scripts/lib/index_materialize.ts
 function sha256Text(content3) {
   return (0, import_node_crypto.createHash)("sha256").update(content3, "utf8").digest("hex");
 }
 function sha256File(file2) {
-  return (0, import_node_crypto.createHash)("sha256").update(import_node_fs10.default.readFileSync(file2)).digest("hex");
+  return (0, import_node_crypto.createHash)("sha256").update(import_node_fs9.default.readFileSync(file2)).digest("hex");
 }
-function cellsEqual2(left, right) {
+function cellsEqual(left, right) {
   return left.length === right.length && left.every((cell, index2) => cell === right[index2]);
-}
-function rowsMatch(left, right) {
-  return left.tier === right.tier && cellsEqual2(left.cells, right.cells);
-}
-function sameSequence(left, right) {
-  return left.length === right.length && left.every((value, index2) => value === right[index2]);
 }
 function sameFileSet(left, right) {
   if (left.length !== right.length) return false;
   const set2 = new Set(left);
   return right.every((file2) => set2.has(file2));
 }
+function kindForDir(directory) {
+  const contract = ownershipForDir(directory);
+  if (!contract) return "shared";
+  if (contract.indexFormat === "impl-4col") return "ir";
+  if (contract.indexFormat === "exp-1col") return "exp";
+  if (contract.indexFormat === "none") return null;
+  return contract.owner === "adr-doc" ? "adr" : "shared";
+}
+function managedDirs(cwd, explicitDir) {
+  if (explicitDir !== void 0) {
+    return [normalizeDir(resolveContainedDir(cwd, explicitDir))];
+  }
+  const dirs = /* @__PURE__ */ new Map();
+  const push2 = (dir) => {
+    const normalized = normalizeDir(dir);
+    dirs.set(repoPathKey(normalized), normalized);
+  };
+  for (const type of docTypes) push2(docDir(cwd, type));
+  return [...dirs.values()].sort((a, b) => a.localeCompare(b));
+}
+function sourcePaths(cwd, directory) {
+  return docFiles(import_node_path10.default.join(cwd, directory)).sort();
+}
+function computeSourcePins(dirAbs, files) {
+  const hashes = files.map((file2) => sha256File(import_node_path10.default.join(dirAbs, file2)));
+  return {
+    sources: sha256Text([...files, ...hashes].join("\n")),
+    fileList: sha256Text(files.map((file2) => import_node_path10.default.basename(file2)).sort().join("\n"))
+  };
+}
+function indexFileNameForDir(dirAbs) {
+  if (!import_node_fs9.default.existsSync(dirAbs)) return "README.md";
+  const candidates = import_node_fs9.default.readdirSync(dirAbs).filter((file2) => isIndexFileName(file2));
+  const readme = candidates.find((file2) => /^readme\.md$/i.test(file2));
+  return readme ?? candidates.sort()[0] ?? "README.md";
+}
+function detectedDocTypes(dirAbs, files) {
+  const found = /* @__PURE__ */ new Set();
+  for (const file2 of files) {
+    try {
+      const typeValue = parseDoc(import_node_fs9.default.readFileSync(import_node_path10.default.join(dirAbs, file2), "utf8")).data.type;
+      if (typeof typeValue === "string" && docTypes.includes(typeValue)) {
+        found.add(typeValue);
+      }
+    } catch {
+    }
+  }
+  return [...found].sort();
+}
+function inspectIndex(indexAbs) {
+  let stats;
+  try {
+    stats = import_node_fs9.default.lstatSync(indexAbs);
+  } catch {
+    return { status: "missing", existing: null, pin: null };
+  }
+  if (stats.isSymbolicLink()) {
+    let pin = null;
+    try {
+      pin = sha256File(indexAbs);
+    } catch {
+      pin = null;
+    }
+    return { status: "symlink", existing: null, pin };
+  }
+  if (!stats.isFile()) return { status: "not-file", existing: null, pin: null };
+  try {
+    const existing = import_node_fs9.default.readFileSync(indexAbs, "utf8");
+    return { status: "file", existing, pin: sha256Text(existing) };
+  } catch {
+    return { status: "unreadable", existing: null, pin: null };
+  }
+}
+function layoutRows(layout) {
+  return layout.rows.map((entry) => {
+    const file2 = entry.row.file.replace(/^\.\//, "");
+    return { file: file2, tier: entry.tier, cells: [entry.row.id, entry.row.title, entry.row.status, entry.row.file] };
+  });
+}
 function summarizeRow(row) {
   return row.cells.join(" | ");
 }
-function collectIrState(cwd, directory, dirAbs, files) {
-  const blockersByFile = /* @__PURE__ */ new Map();
-  for (const finding2 of auditImplementationRecords(cwd, directory).findings) {
-    if (!finding2.file) continue;
-    if (finding2.code !== "unparseable-front-matter" && finding2.code !== "invalid-front-matter") continue;
-    if (!blockersByFile.has(finding2.file)) blockersByFile.set(finding2.file, finding2.message);
-  }
-  const blockers = [...blockersByFile.entries()].map(([file2, message]) => `${file2}: ${message}`);
-  const entries = implIndexEntries(dirAbs, directory, files);
-  return { entries, blockers };
-}
-function renderGeneratedDoc(kind, directory, entries, files) {
-  let body;
-  if (kind === "ir") {
-    body = renderIndexBody(entries, { settledType: "impl" });
-  } else {
-    const header = INDEX_TABLE_HEADER_1COL;
-    const rows = files.map((file2) => `| [${indexCell(file2)}](./${indexCell(file2)}) |`);
-    body = rows.length > 0 ? `${header}
-${rows.join("\n")}` : header;
-  }
-  return `# ${INDEX_TITLES2[kind]}
-
-${GENERATED_INDEX_MARKER}
-
-Directory: \`${directory}\`
-
-${body}
-`;
-}
-function computeDrift(kind, currentRows, expectedRows) {
+function computeChanges(currentRows, expectedRows) {
   const currentByFile = new Map(currentRows.map((row) => [row.file, row]));
   const expectedByFile = new Map(expectedRows.map((row) => [row.file, row]));
   const stable = /* @__PURE__ */ new Set();
   for (const [file2, expected] of expectedByFile) {
     const current = currentByFile.get(file2);
-    if (current && rowsMatch(current, expected)) stable.add(file2);
-  }
-  if (kind === "ir" && stable.size > 0) {
-    const currentStable = currentRows.map((row) => row.file).filter((file2) => stable.has(file2));
-    const expectedStable = expectedRows.map((row) => row.file).filter((file2) => stable.has(file2));
-    if (!sameSequence(currentStable, expectedStable)) {
-      return {
-        changes: [],
-        orderConflict: true,
-        reason: "non-target order conflict: stable index rows are ordered differently than the deterministic index order"
-      };
+    if (current && current.tier === expected.tier && cellsEqual(current.cells, expected.cells)) {
+      stable.add(file2);
     }
   }
   const changes = [];
@@ -39461,13 +39400,8 @@ function computeDrift(kind, currentRows, expectedRows) {
       changes.push({ file: expected.file, kind: "move-tier", before: current.tier, after: expected.tier });
       continue;
     }
-    if (!cellsEqual2(current.cells, expected.cells)) {
-      changes.push({
-        file: expected.file,
-        kind: "update-status",
-        before: current.cells.join(" | "),
-        after: expected.cells.join(" | ")
-      });
+    if (!cellsEqual(current.cells, expected.cells)) {
+      changes.push({ file: expected.file, kind: "update-status", before: summarizeRow(current), after: summarizeRow(expected) });
     }
   }
   for (const current of currentRows) {
@@ -39494,315 +39428,6 @@ function computeDrift(kind, currentRows, expectedRows) {
       }
     }
   }
-  changes.sort((left, right) => left.file < right.file ? -1 : left.file > right.file ? 1 : 0);
-  return { changes, orderConflict: false };
-}
-function computeImplIndexSync(cwd, kind, explicitDir) {
-  const directory = implDir(cwd, kind, explicitDir);
-  const dirAbs = import_node_path11.default.join(cwd, directory);
-  const ext = kind === "ir" ? ".md" : ".jsonl";
-  const files = listFiles(dirAbs, ext);
-  const sources = {};
-  for (const file2 of files) {
-    sources[file2] = sha256File(import_node_path11.default.join(dirAbs, file2));
-  }
-  const indexAbs = import_node_path11.default.join(dirAbs, "README.md");
-  let indexStats = null;
-  try {
-    indexStats = import_node_fs10.default.lstatSync(indexAbs);
-  } catch {
-    indexStats = null;
-  }
-  const indexPresent = indexStats !== null;
-  const indexIsSymlink = indexStats?.isSymbolicLink() === true;
-  const indexIsFile = indexStats?.isFile() === true;
-  let existing = null;
-  let indexPin = null;
-  if (indexIsFile) {
-    try {
-      existing = import_node_fs10.default.readFileSync(indexAbs, "utf8");
-      indexPin = sha256Text(existing);
-    } catch {
-      existing = null;
-    }
-  } else if (indexIsSymlink) {
-    try {
-      indexPin = sha256File(indexAbs);
-    } catch {
-      indexPin = null;
-    }
-  }
-  const { entries, blockers } = kind === "ir" ? collectIrState(cwd, directory, dirAbs, files) : { entries: [], blockers: [] };
-  const generated = renderGeneratedDoc(kind, directory, entries, files);
-  const expectedParsed = parseImplIndexRows(generated, kind);
-  const expectedRows = expectedParsed.ok ? expectedParsed.rows : [];
-  let verdict;
-  let reason;
-  let changes = [];
-  if (blockers.length > 0) {
-    verdict = "rejected";
-    reason = `index sources failed validation: ${blockers.join("; ")}`;
-  } else if (indexIsSymlink) {
-    verdict = "rejected";
-    reason = "index README.md is a symbolic link; refusing to classify or write through it";
-  } else if (indexPresent && !indexIsFile) {
-    verdict = "rejected";
-    reason = "index README.md is not a regular file";
-  } else if (indexPresent && existing === null) {
-    verdict = "rejected";
-    reason = "index README.md could not be read";
-  } else if (!indexPresent) {
-    verdict = "create";
-    changes = computeDrift(kind, [], expectedRows).changes;
-  } else {
-    const parsedIndex = parseImplIndexRows(existing ?? "", kind);
-    if (!parsedIndex.ok) {
-      verdict = "rejected";
-      reason = parsedIndex.reason;
-    } else {
-      const drift = computeDrift(kind, parsedIndex.rows, expectedRows);
-      if (drift.orderConflict) {
-        verdict = "rejected";
-        reason = drift.reason;
-      } else {
-        changes = drift.changes;
-        verdict = changes.length === 0 ? "in-sync" : "sync";
-      }
-    }
-  }
-  const plannedFiles = verdict === "sync" || verdict === "create" ? [`${directory}/README.md`] : [];
-  const planHash = sha256Text(JSON.stringify({ kind, directory, verdict, changes, plannedFiles }));
-  const plan = {
-    kind,
-    directory,
-    indexPath: `${directory}/README.md`,
-    verdict,
-    ...reason ? { reason } : {},
-    changes,
-    pins: { sources, index: indexPin, fileList: files },
-    planHash,
-    plannedFiles
-  };
-  return { plan, generated, existing };
-}
-function planImplIndexSync(cwd, kind, explicitDir) {
-  return computeImplIndexSync(cwd, kind, explicitDir).plan;
-}
-function verifyCurrentState(cwd, plan) {
-  try {
-    const dirAbs = import_node_path11.default.join(cwd, plan.directory);
-    const ext = plan.kind === "ir" ? ".md" : ".jsonl";
-    const files = listFiles(dirAbs, ext);
-    if (!sameSequence(files, plan.pins.fileList)) return false;
-    for (const file2 of files) {
-      if (sha256File(import_node_path11.default.join(dirAbs, file2)) !== plan.pins.sources[file2]) return false;
-    }
-    const indexAbs = import_node_path11.default.join(dirAbs, "README.md");
-    let indexStats = null;
-    try {
-      indexStats = import_node_fs10.default.lstatSync(indexAbs);
-    } catch {
-      indexStats = null;
-    }
-    if (!indexStats) return plan.pins.index === null;
-    if (!indexStats.isFile()) return false;
-    if (plan.pins.index === null) return false;
-    return sha256File(indexAbs) === plan.pins.index;
-  } catch {
-    return false;
-  }
-}
-function applyImplIndexSync(cwd, kind, explicitDir, options2) {
-  const { plan, generated, existing } = computeImplIndexSync(cwd, kind, explicitDir);
-  if (options2?.expectPlanHash !== void 0 && options2.expectPlanHash !== plan.planHash) {
-    const drift = `plan drift: expected planHash ${options2.expectPlanHash}, recomputed ${plan.planHash}`;
-    plan.reason = plan.reason ? `${plan.reason}; ${drift}` : drift;
-    return { plan, written: false };
-  }
-  if (plan.verdict === "in-sync" || plan.verdict === "rejected") {
-    return { plan, written: false };
-  }
-  if (!verifyCurrentState(cwd, plan)) {
-    plan.reason = plan.reason ? `${plan.reason}; index sources changed since the plan was computed` : "index sources changed since the plan was computed";
-    return { plan, written: false };
-  }
-  const indexAbs = import_node_path11.default.join(cwd, plan.directory, "README.md");
-  try {
-    if (import_node_fs10.default.lstatSync(indexAbs).isSymbolicLink()) {
-      plan.reason = "index README.md became a symbolic link; refusing to write through it";
-      return { plan, written: false };
-    }
-  } catch {
-  }
-  const merged = existing === null ? generated : mergeManagedIndex(existing, generated);
-  import_node_fs10.default.mkdirSync(import_node_path11.default.dirname(indexAbs), { recursive: true });
-  const tmpPath = import_node_path11.default.join(import_node_path11.default.dirname(indexAbs), `.README.md.tmp-${process.pid}-${Date.now()}`);
-  try {
-    import_node_fs10.default.writeFileSync(tmpPath, merged, "utf8");
-    import_node_fs10.default.renameSync(tmpPath, indexAbs);
-  } catch (error62) {
-    try {
-      import_node_fs10.default.rmSync(tmpPath, { force: true });
-    } catch {
-    }
-    const message = error62 instanceof Error ? error62.message : String(error62);
-    plan.reason = plan.reason ? `${plan.reason}; write failed: ${message}` : `write failed: ${message}`;
-    return { plan, written: false };
-  }
-  return { plan, written: true };
-}
-
-// src/skills/doc-maintenance/scripts/lib/index_materialize.ts
-function sha256Text2(content3) {
-  return (0, import_node_crypto2.createHash)("sha256").update(content3, "utf8").digest("hex");
-}
-function sha256File2(file2) {
-  return (0, import_node_crypto2.createHash)("sha256").update(import_node_fs11.default.readFileSync(file2)).digest("hex");
-}
-function cellsEqual3(left, right) {
-  return left.length === right.length && left.every((cell, index2) => cell === right[index2]);
-}
-function sameFileSet2(left, right) {
-  if (left.length !== right.length) return false;
-  const set2 = new Set(left);
-  return right.every((file2) => set2.has(file2));
-}
-function kindForDir(directory) {
-  const contract = ownershipForDir(directory);
-  if (!contract) return "shared";
-  if (contract.indexFormat === "impl-4col") return "ir";
-  if (contract.indexFormat === "exp-1col") return "exp";
-  if (contract.indexFormat === "none") return null;
-  return contract.owner === "adr-doc" ? "adr" : "shared";
-}
-function managedDirs(cwd, explicitDir) {
-  if (explicitDir !== void 0) {
-    return [normalizeDir(resolveContainedDir(cwd, explicitDir))];
-  }
-  const dirs = /* @__PURE__ */ new Map();
-  const push2 = (dir) => {
-    const normalized = normalizeDir(dir);
-    dirs.set(repoPathKey(normalized), normalized);
-  };
-  for (const type of docTypes) push2(docDir(cwd, type));
-  for (const contract of DIRECTORY_CONTRACTS) {
-    if (contract.indexFormat === "impl-4col" || contract.indexFormat === "exp-1col") {
-      if (import_node_fs11.default.existsSync(import_node_path12.default.join(cwd, contract.dir))) push2(contract.dir);
-    }
-  }
-  return [...dirs.values()].sort((a, b) => a.localeCompare(b));
-}
-function sourcePaths(cwd, directory) {
-  return docFiles(import_node_path12.default.join(cwd, directory)).sort();
-}
-function computeSourcePins(dirAbs, files) {
-  const hashes = files.map((file2) => sha256File2(import_node_path12.default.join(dirAbs, file2)));
-  return {
-    sources: sha256Text2([...files, ...hashes].join("\n")),
-    fileList: sha256Text2(files.map((file2) => import_node_path12.default.basename(file2)).sort().join("\n"))
-  };
-}
-function indexFileNameForDir(dirAbs) {
-  if (!import_node_fs11.default.existsSync(dirAbs)) return "README.md";
-  const candidates = import_node_fs11.default.readdirSync(dirAbs).filter((file2) => isIndexFileName(file2));
-  const readme = candidates.find((file2) => /^readme\.md$/i.test(file2));
-  return readme ?? candidates.sort()[0] ?? "README.md";
-}
-function detectedDocTypes(dirAbs, files) {
-  const found = /* @__PURE__ */ new Set();
-  for (const file2 of files) {
-    try {
-      const typeValue = parseDoc(import_node_fs11.default.readFileSync(import_node_path12.default.join(dirAbs, file2), "utf8")).data.type;
-      if (typeof typeValue === "string" && docTypes.includes(typeValue)) {
-        found.add(typeValue);
-      }
-    } catch {
-    }
-  }
-  return [...found].sort();
-}
-function inspectIndex(indexAbs) {
-  let stats;
-  try {
-    stats = import_node_fs11.default.lstatSync(indexAbs);
-  } catch {
-    return { status: "missing", existing: null, pin: null };
-  }
-  if (stats.isSymbolicLink()) {
-    let pin = null;
-    try {
-      pin = sha256File2(indexAbs);
-    } catch {
-      pin = null;
-    }
-    return { status: "symlink", existing: null, pin };
-  }
-  if (!stats.isFile()) return { status: "not-file", existing: null, pin: null };
-  try {
-    const existing = import_node_fs11.default.readFileSync(indexAbs, "utf8");
-    return { status: "file", existing, pin: sha256Text2(existing) };
-  } catch {
-    return { status: "unreadable", existing: null, pin: null };
-  }
-}
-function layoutRows(layout) {
-  return layout.rows.map((entry) => {
-    const file2 = entry.row.file.replace(/^\.\//, "");
-    return { file: file2, tier: entry.tier, cells: [entry.row.id, entry.row.title, entry.row.status, entry.row.file] };
-  });
-}
-function summarizeRow2(row) {
-  return row.cells.join(" | ");
-}
-function computeChanges(currentRows, expectedRows) {
-  const currentByFile = new Map(currentRows.map((row) => [row.file, row]));
-  const expectedByFile = new Map(expectedRows.map((row) => [row.file, row]));
-  const stable = /* @__PURE__ */ new Set();
-  for (const [file2, expected] of expectedByFile) {
-    const current = currentByFile.get(file2);
-    if (current && current.tier === expected.tier && cellsEqual3(current.cells, expected.cells)) {
-      stable.add(file2);
-    }
-  }
-  const changes = [];
-  for (const expected of expectedRows) {
-    const current = currentByFile.get(expected.file);
-    if (!current) {
-      changes.push({ file: expected.file, kind: "add", after: summarizeRow2(expected) });
-      continue;
-    }
-    if (current.tier !== expected.tier) {
-      changes.push({ file: expected.file, kind: "move-tier", before: current.tier, after: expected.tier });
-      continue;
-    }
-    if (!cellsEqual3(current.cells, expected.cells)) {
-      changes.push({ file: expected.file, kind: "update-status", before: summarizeRow2(current), after: summarizeRow2(expected) });
-    }
-  }
-  for (const current of currentRows) {
-    if (!expectedByFile.has(current.file)) {
-      changes.push({ file: current.file, kind: "remove", before: summarizeRow2(current) });
-    }
-  }
-  const changed = new Set(changes.map((change) => change.file));
-  for (const tier of ["active", "settled"]) {
-    const currentTier = currentRows.filter((row) => row.tier === tier);
-    const expectedTier = expectedRows.filter((row) => row.tier === tier);
-    if (!sameFileSet2(currentTier.map((row) => row.file), expectedTier.map((row) => row.file))) continue;
-    for (const expected of expectedTier) {
-      if (changed.has(expected.file) || !stable.has(expected.file)) continue;
-      const positionCurrent = currentTier.findIndex((row) => row.file === expected.file);
-      const positionExpected = expectedTier.findIndex((row) => row.file === expected.file);
-      if (positionCurrent !== positionExpected) {
-        changes.push({
-          file: expected.file,
-          kind: "reorder",
-          before: `${tier} position ${positionCurrent + 1}`,
-          after: `${tier} position ${positionExpected + 1}`
-        });
-      }
-    }
-  }
   changes.sort((left, right) => left.file.localeCompare(right.file));
   return changes;
 }
@@ -39811,7 +39436,7 @@ async function renderExpected(cwd, kind, directory, files) {
   const scopeTypes = sharedTypesResidentIn(directory);
   let seedPool = scopeTypes;
   if (!ownershipForDir(directory)) {
-    const detected = detectedDocTypes(import_node_path12.default.join(cwd, directory), files);
+    const detected = detectedDocTypes(import_node_path10.default.join(cwd, directory), files);
     if (detected.length > 0) seedPool = detected;
   }
   return renderManagedIndex(cwd, directory, primaryIndexTypeForDir(directory, seedPool), scopeTypes);
@@ -39820,11 +39445,11 @@ function sameDocument(left, right) {
   return left.replace(/\s+$/, "") === right.replace(/\s+$/, "");
 }
 function rejectedTarget(cwd, directory, indexPath, reason, pinIndex) {
-  const empty2 = sha256Text2("");
+  const empty2 = sha256Text("");
   const pins = {
     sources: empty2,
     fileList: empty2,
-    index: pinIndex ? inspectIndex(import_node_path12.default.join(cwd, indexPath)).pin : null
+    index: pinIndex ? inspectIndex(import_node_path10.default.join(cwd, indexPath)).pin : null
   };
   const changes = [];
   return {
@@ -39837,17 +39462,17 @@ function rejectedTarget(cwd, directory, indexPath, reason, pinIndex) {
     changes,
     pins,
     sourceCount: 0,
-    planHash: sha256Text2(JSON.stringify({ changes, directory, pins, verdict: "rejected" })),
+    planHash: sha256Text(JSON.stringify({ changes, directory, pins, verdict: "rejected" })),
     plannedFiles: []
   };
 }
 async function planManagedTarget(cwd, kind, directory) {
-  const dirAbs = import_node_path12.default.join(cwd, directory);
+  const dirAbs = import_node_path10.default.join(cwd, directory);
   const files = sourcePaths(cwd, directory);
   const contract = ownershipForDir(directory);
   const indexFile = kind === "adr" ? "README.md" : indexFileNameForDir(dirAbs);
   const indexPath = `${directory}/${indexFile}`;
-  const state = inspectIndex(import_node_path12.default.join(cwd, indexPath));
+  const state = inspectIndex(import_node_path10.default.join(cwd, indexPath));
   const pins = { ...computeSourcePins(dirAbs, files), index: state.pin };
   let verdict;
   let reason;
@@ -39882,7 +39507,7 @@ async function planManagedTarget(cwd, kind, directory) {
     }
   }
   const plannedFiles = verdict === "sync" || verdict === "create" ? [indexPath] : [];
-  const planHash = sha256Text2(JSON.stringify({ changes, directory, pins, verdict }));
+  const planHash = sha256Text(JSON.stringify({ changes, directory, pins, verdict }));
   const target = {
     kind,
     owner: contract?.owner ?? null,
@@ -39899,22 +39524,6 @@ async function planManagedTarget(cwd, kind, directory) {
   };
   return { target, internals: { generated } };
 }
-function implTarget(cwd, kind, directory) {
-  const plan = planImplIndexSync(cwd, kind, directory);
-  return {
-    kind,
-    owner: ownershipForDir(directory)?.owner ?? null,
-    directory: plan.directory,
-    indexPath: plan.indexPath,
-    verdict: plan.verdict,
-    ...plan.reason ? { reason: plan.reason } : {},
-    changes: plan.changes,
-    pins: plan.pins,
-    sourceCount: plan.pins.fileList.length,
-    planHash: plan.planHash,
-    plannedFiles: plan.plannedFiles
-  };
-}
 async function planTarget(cwd, kind, directory) {
   switch (kind) {
     case "shared":
@@ -39922,7 +39531,7 @@ async function planTarget(cwd, kind, directory) {
       return planManagedTarget(cwd, kind, directory);
     case "ir":
     case "exp":
-      return { target: implTarget(cwd, kind, directory), internals: { generated: "" } };
+      throw new Error(`unreachable: legacy directory ${directory} plans a rejected target before dispatch`);
   }
 }
 async function computeIndexMaterialization(cwd, explicitDir) {
@@ -39949,10 +39558,19 @@ async function computeIndexMaterialization(cwd, explicitDir) {
       continue;
     }
     const kind = kindForDir(directory);
-    const dirAbs = import_node_path12.default.join(cwd, directory);
-    if (import_node_fs11.default.existsSync(dirAbs) && !import_node_fs11.default.statSync(dirAbs).isDirectory()) continue;
+    const dirAbs = import_node_path10.default.join(cwd, directory);
+    if (import_node_fs9.default.existsSync(dirAbs) && !import_node_fs9.default.statSync(dirAbs).isDirectory()) continue;
     if (kind === null) {
       targets.push(rejectedTarget(cwd, directory, `${directory}/README.md`, "impl container has no managed index", true));
+      continue;
+    }
+    if (kind === "ir" || kind === "exp") {
+      targets.push(rejectedTarget(cwd, directory, `${directory}/README.md`, "legacy directory: index is migration-owned", true));
+      continue;
+    }
+    const contract = ownershipForDir(directory);
+    if (kind === "shared" && contract && sharedTypesResidentIn(directory).length === 0) {
+      targets.push(rejectedTarget(cwd, directory, `${directory}/README.md`, "non-durable directory: index is migration-owned", true));
       continue;
     }
     if (!ownershipForDir(directory) && sourcePaths(cwd, directory).length === 0) {
@@ -39964,23 +39582,23 @@ async function computeIndexMaterialization(cwd, explicitDir) {
     internals.set(planned.target.indexPath, planned.internals);
   }
   targets.sort((a, b) => a.directory.localeCompare(b.directory));
-  const planHash = sha256Text2(targets.map((target) => target.planHash).sort().join("\n"));
+  const planHash = sha256Text(targets.map((target) => target.planHash).sort().join("\n"));
   return { plan: { targets, planHash }, internals };
 }
 async function planIndexMaterialization(cwd, options2) {
-  const resolvedCwd = import_node_path12.default.resolve(cwd);
+  const resolvedCwd = import_node_path10.default.resolve(cwd);
   const { plan } = await computeIndexMaterialization(resolvedCwd, options2?.dir);
   return plan;
 }
 function verifyTargetPins(cwd, target) {
   try {
-    const dirAbs = import_node_path12.default.join(cwd, target.directory);
+    const dirAbs = import_node_path10.default.join(cwd, target.directory);
     const files = sourcePaths(cwd, target.directory);
     const live = computeSourcePins(dirAbs, files);
     if (live.sources !== target.pins.sources || live.fileList !== target.pins.fileList) {
       return "source drift: index sources changed since the plan was computed";
     }
-    if (inspectIndex(import_node_path12.default.join(cwd, target.indexPath)).pin !== target.pins.index) {
+    if (inspectIndex(import_node_path10.default.join(cwd, target.indexPath)).pin !== target.pins.index) {
       return "index drift: the index file changed since the plan was computed";
     }
     return null;
@@ -39990,29 +39608,29 @@ function verifyTargetPins(cwd, target) {
 }
 function isSymlink(indexAbs) {
   try {
-    return import_node_fs11.default.lstatSync(indexAbs).isSymbolicLink();
+    return import_node_fs9.default.lstatSync(indexAbs).isSymbolicLink();
   } catch {
     return false;
   }
 }
 function writeSharedIndex(cwd, target) {
-  const indexAbs = import_node_path12.default.join(cwd, target.indexPath);
-  import_node_fs11.default.mkdirSync(import_node_path12.default.dirname(indexAbs), { recursive: true });
-  const tmpPath = import_node_path12.default.join(import_node_path12.default.dirname(indexAbs), `.${import_node_path12.default.basename(indexAbs)}.tmp-${process.pid}-${Date.now()}`);
+  const indexAbs = import_node_path10.default.join(cwd, target.indexPath);
+  import_node_fs9.default.mkdirSync(import_node_path10.default.dirname(indexAbs), { recursive: true });
+  const tmpPath = import_node_path10.default.join(import_node_path10.default.dirname(indexAbs), `.${import_node_path10.default.basename(indexAbs)}.tmp-${process.pid}-${Date.now()}`);
   try {
-    import_node_fs11.default.writeFileSync(tmpPath, target.content ?? "", "utf8");
-    import_node_fs11.default.renameSync(tmpPath, indexAbs);
+    import_node_fs9.default.writeFileSync(tmpPath, target.content ?? "", "utf8");
+    import_node_fs9.default.renameSync(tmpPath, indexAbs);
     return null;
   } catch (error62) {
     try {
-      import_node_fs11.default.rmSync(tmpPath, { force: true });
+      import_node_fs9.default.rmSync(tmpPath, { force: true });
     } catch {
     }
     return error62 instanceof Error ? error62.message : String(error62);
   }
 }
 async function applyIndexMaterialization(cwd, options2) {
-  const resolvedCwd = import_node_path12.default.resolve(cwd);
+  const resolvedCwd = import_node_path10.default.resolve(cwd);
   const { plan, internals } = await computeIndexMaterialization(resolvedCwd, options2?.dir);
   const written = [];
   const blocked = [];
@@ -40030,32 +39648,20 @@ async function applyIndexMaterialization(cwd, options2) {
       blocked.push({ target, reason: target.reason ?? "rejected" });
       continue;
     }
-    if (target.kind === "ir" || target.kind === "exp") {
-      const result = applyImplIndexSync(resolvedCwd, target.kind, target.directory, { expectPlanHash: target.planHash });
-      if (result.written) {
-        written.push(target.indexPath);
-      } else {
-        blocked.push({
-          target,
-          reason: result.plan.reason ?? `impl index sync produced no write (re-plan verdict ${result.plan.verdict})`
-        });
-      }
-      continue;
-    }
     const drift = verifyTargetPins(resolvedCwd, target);
     if (drift) {
       blocked.push({ target, reason: drift });
       continue;
     }
-    const indexAbs = import_node_path12.default.join(resolvedCwd, target.indexPath);
+    const indexAbs = import_node_path10.default.join(resolvedCwd, target.indexPath);
     if (isSymlink(indexAbs)) {
       blocked.push({ target, reason: "index became a symbolic link; refusing to write through it" });
       continue;
     }
     const internal = internals.get(target.indexPath);
     if (target.kind === "adr") {
-      import_node_fs11.default.mkdirSync(import_node_path12.default.dirname(indexAbs), { recursive: true });
-      const result = writeIndexFile(import_node_path12.default.dirname(indexAbs), internal?.generated ?? target.content ?? "");
+      import_node_fs9.default.mkdirSync(import_node_path10.default.dirname(indexAbs), { recursive: true });
+      const result = writeIndexFile(import_node_path10.default.dirname(indexAbs), internal?.generated ?? target.content ?? "");
       if (result.written) {
         written.push(target.indexPath);
       } else {
@@ -40074,16 +39680,16 @@ async function applyIndexMaterialization(cwd, options2) {
 }
 
 // src/skills/doc-maintenance/scripts/lib/schema_migrate.ts
-var import_node_crypto3 = __toESM(require("node:crypto"));
-var import_node_fs12 = __toESM(require("node:fs"));
-var import_node_path13 = __toESM(require("node:path"));
+var import_node_crypto2 = __toESM(require("node:crypto"));
+var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_path11 = __toESM(require("node:path"));
 function planHashOf(preflight) {
   const payload = {
     status: preflight.status,
     issues: preflight.issues.map((issue2) => ({ reason: issue2.reason, path: issue2.path, detail: issue2.detail })).sort((a, b) => `${a.path}:${a.reason}:${a.detail}`.localeCompare(`${b.path}:${b.reason}:${b.detail}`)),
     detected: preflight.detected
   };
-  return import_node_crypto3.default.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  return import_node_crypto2.default.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 function applyBlockers(preflight) {
   const seen = /* @__PURE__ */ new Set();
@@ -40103,21 +39709,21 @@ function migratePlan(cwd) {
   return { command: "migrate plan", readOnly: true, preflight, plan: { applyEligible, blockers, planHash, next } };
 }
 function writeManifest(cwd) {
-  const abs = import_node_path13.default.resolve(cwd, SCHEMA_MANIFEST_PATH);
-  const dir = import_node_path13.default.dirname(abs);
+  const abs = import_node_path11.default.resolve(cwd, SCHEMA_MANIFEST_PATH);
+  const dir = import_node_path11.default.dirname(abs);
   const escaped = `${DOC_DRIVEN_DEV_DIR} resolves outside the checkout \u2014 refusing to write the manifest`;
   let probe = dir;
-  while (!import_node_fs12.default.existsSync(probe)) {
-    const parent = import_node_path13.default.dirname(probe);
+  while (!import_node_fs10.default.existsSync(probe)) {
+    const parent = import_node_path11.default.dirname(probe);
     if (parent === probe) return `cannot verify ${DOC_DRIVEN_DEV_DIR} stays inside the checkout`;
     probe = parent;
   }
   if (!isInsideCheckout(cwd, probe)) return escaped;
-  import_node_fs12.default.mkdirSync(dir, { recursive: true });
+  import_node_fs10.default.mkdirSync(dir, { recursive: true });
   if (!isInsideCheckout(cwd, dir)) return escaped;
   const tmp = `${abs}.tmp-${process.pid}`;
-  import_node_fs12.default.writeFileSync(tmp, schemaManifestText(), "utf8");
-  import_node_fs12.default.renameSync(tmp, abs);
+  import_node_fs10.default.writeFileSync(tmp, schemaManifestText(), "utf8");
+  import_node_fs10.default.renameSync(tmp, abs);
   return null;
 }
 function migrateApply(cwd, expect) {
@@ -40373,10 +39979,10 @@ async function main() {
       return;
     }
     if (!COMMANDS.includes(args.command)) throw new Error(`Unknown command: ${args.command}`);
-    const cwd = import_node_path14.default.resolve(args.cwd);
+    const cwd = import_node_path12.default.resolve(args.cwd);
     if (args.command === "migrate") {
       validateMigrateArgs(args);
-      if (!import_node_fs13.default.existsSync(cwd) || !import_node_fs13.default.statSync(cwd).isDirectory()) {
+      if (!import_node_fs11.default.existsSync(cwd) || !import_node_fs11.default.statSync(cwd).isDirectory()) {
         throw new Error(`--cwd does not exist or is not a directory: ${args.cwd}`);
       }
       runMigrate(args, cwd);

@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+"use strict";
+
+import path from "node:path";
+import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
+
+type CliArgs = {
+  cwd: string;
+  date?: string;
+  dir?: string;
+  from: string[];
+  lifecycle?: string;
+  name?: string;
+  forceIndex?: boolean;
+  noIndex?: boolean;
+  help?: boolean;
+  status?: string;
+  supersedes: string[];
+  title?: string;
+};
+
+function parseArgs(argv: string[]): CliArgs {
+  const args: CliArgs = { cwd: process.cwd(), from: [], supersedes: [] };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === "--title") args.title = argv[++i];
+    else if (arg === "--from") args.from.push(argv[++i]);
+    else if (arg === "--supersedes") args.supersedes.push(argv[++i]);
+    else if (arg === "--dir") args.dir = argv[++i];
+    else if (arg === "--name") args.name = argv[++i];
+    else if (arg === "--no-index") args.noIndex = true;
+    else if (arg === "--force-index") args.forceIndex = true;
+    else if (arg === "--status") args.status = argv[++i];
+    else if (arg === "--lifecycle") args.lifecycle = argv[++i];
+    else if (arg === "--date") args.date = argv[++i];
+    else if (arg === "--cwd") args.cwd = argv[++i];
+    else if (arg === "--help" || arg === "-h") args.help = true;
+    else if (!args.title) args.title = arg;
+    else throw new Error(`Unknown argument: ${arg}`);
+  }
+  return args;
+}
+
+function usage(): string {
+  return "Usage: node scripts/new_verification.js --title <title> [--from <source>] [--supersedes <verification-doc>] [--dir <path>] [--name <filename>] [--status <status>] [--lifecycle <lifecycle>]";
+}
+
+async function main(): Promise<void> {
+  try {
+    const args = parseArgs(process.argv.slice(2));
+    if (args.help) {
+      console.log(usage());
+      return;
+    }
+    if (!args.title) throw new Error("Missing required --title");
+    const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
+    const result = await createDocument("verification", {
+      cwd,
+      date: args.date,
+      dir: args.dir,
+      lifecycle: args.lifecycle,
+      name: args.name,
+      relations: {
+        source: args.from,
+        supersedes: args.supersedes,
+      },
+      status: args.status,
+      title: args.title,
+    });
+    console.log(`Created ${result.file}`);
+    logIndexResult(result);
+    if (args.noIndex || args.forceIndex) {
+      console.log("Note: --no-index/--force-index are deprecated and have no effect; indexes are materialized via doc_maintenance.js index plan|apply");
+    }
+  } catch (error: unknown) {
+    console.error(error instanceof Error ? error.message : String(error));
+    console.error(usage());
+    process.exitCode = 1;
+  }
+}
+
+main();

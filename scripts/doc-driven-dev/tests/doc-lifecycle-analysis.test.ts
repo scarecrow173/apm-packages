@@ -64,7 +64,7 @@ test("shape contract — sorted buckets, consistent counts", async () => {
 
   const fileSum = Object.values(stats.types).reduce((sum, type) => sum + type.files, 0);
   assert.equal(fileSum, stats.corpus.documents);
-  assert.equal(stats.corpus.documents, stats.corpus.canonicalDocuments + stats.corpus.unmanagedDocuments);
+  assert.equal(stats.corpus.documents, stats.corpus.canonicalDocuments + stats.corpus.legacyDocuments + stats.corpus.unmanagedDocuments);
 
   for (const [name, type] of Object.entries(stats.types)) {
     const statusSum = Object.values(type.statusCounts).reduce((sum, count) => sum + count, 0);
@@ -91,8 +91,11 @@ test("small corpus is the standard chain — minimal, mostly in-flight", async (
 
 test("benchmark corpus keeps #124 scale and records its pre-contract debt", async () => {
   const stats = await analyzeCorpus(benchmarkRepo(), { label: "benchmark" });
-  // ~70 canonical records: standard chain + second plan + ~60 bulk docs.
-  assert.ok(stats.corpus.canonicalDocuments >= 60, `canonical docs ${stats.corpus.canonicalDocuments}`);
+  // ~70 records total: standard chain + second plan + ~60 bulk docs. Registry 3
+  // splits them: canonical (durable) + legacy (migration-owned leftovers).
+  assert.ok(stats.corpus.documents >= 60, `documents ${stats.corpus.documents}`);
+  assert.ok(stats.corpus.canonicalDocuments + stats.corpus.legacyDocuments >= 60,
+    `canonical+legacy ${stats.corpus.canonicalDocuments}+${stats.corpus.legacyDocuments}`);
   assert.ok(stats.types.discovery.files >= 20);
   assert.ok(stats.types.spec.files >= 15);
   assert.ok(stats.types.task.files >= 10);
@@ -101,7 +104,9 @@ test("benchmark corpus keeps #124 scale and records its pre-contract debt", asyn
   // (`CAPS-<alnum>` ids are reported as invalid-id-prefix by doc_lint.)
   const invalidIds = (stats.findings.byRuleId["invalid-id-prefix"] ?? 0)
     + (stats.findings.byRuleId["invalid-id-format"] ?? 0);
-  assert.ok(invalidIds >= 30, `invalid ids ${invalidIds}`);
+  // Registry 3: only durable (canonical) documents are linted; legacy
+  // migration-owned docs report corpus debt through stats, not findings.
+  assert.ok(invalidIds >= 29, `invalid ids ${invalidIds}`);
   assert.ok((stats.findings.byRuleId["invalid-status"] ?? 0) >= 10);
   assert.ok((stats.findings.byRuleId["provenance-missing-source"] ?? 0) >= 19);
   // A derives-from cycle and a broken relation are measured, not hidden.
@@ -113,7 +118,9 @@ test("long-running corpus is mostly settled evidence with layered debt", async (
 
   assert.ok(stats.corpus.documents >= 80, `documents ${stats.corpus.documents}`);
   assert.equal(stats.corpus.duplicateIdGroups, 0);
-  assert.deepEqual(stats.corpus.missingTypes, []);
+  // Durable types with no docs in the corpus — knowledge/verification arrived
+  // with Registry 3 and the corpus predates them (Issue #234).
+  assert.deepEqual(stats.corpus.missingTypes, ["knowledge", "verification"]);
 
   // Majority historical: completed chains 01–05 alone contribute ~40 settled.
   assert.ok(stats.corpus.settledDocuments >= 40, `settled ${stats.corpus.settledDocuments}`);
@@ -125,9 +132,11 @@ test("long-running corpus is mostly settled evidence with layered debt", async (
   assert.ok(stats.types.task.staleUpstream >= 2);
   assert.ok(stats.types.design.staleUpstream >= 1);
   // Issue #166: the promoted doc-status rule surfaces the same edges as
-  // findings — one `stale-upstream` finding per dead upstream target
-  // (DESIGN-0501 has two: SPEC-0501 + ADR-0501; TASK-0503/0504 one each).
-  assert.ok((stats.findings.byRuleId["stale-upstream"] ?? 0) >= 4,
+  // findings — one `stale-upstream` finding per dead upstream target.
+  // Registry 3: findings run on durable documents only, so DESIGN-0501's two
+  // edges (SPEC-0501 + ADR-0501) report while the ephemeral TASK-0503/0504
+  // edges stay measured in stats.types.task.staleUpstream (Issue #234).
+  assert.ok((stats.findings.byRuleId["stale-upstream"] ?? 0) >= 2,
     `stale-upstream findings ${stats.findings.byRuleId["stale-upstream"]}`);
 
   // Status distributions show lifecycle stages, not a single state.
@@ -141,7 +150,10 @@ test("long-running corpus is mostly settled evidence with layered debt", async (
   // provenance gaps, one unmanaged doc, one localized sibling.
   assert.ok(stats.types.idea.orphanRelation >= 8, `idea orphans ${stats.types.idea.orphanRelation}`);
   assert.ok((stats.findings.byRuleId["index-stale-entry"] ?? 0) >= 1);
-  assert.ok((stats.findings.byRuleId["index-metadata-mismatch"] ?? 0) >= 1);
+  // `index-metadata-mismatch` requires a canonical member; this corpus's row
+  // drift sits in legacy migration-owned indexes, which normal linting no
+  // longer audits (Registry 3, Issue #234).
+  assert.equal(stats.findings.byRuleId["index-metadata-mismatch"] ?? 0, 0);
   assert.ok((stats.findings.byRuleId["index-missing-entry"] ?? 0) >= 3);
   assert.ok((stats.findings.byRuleId["orphan-index"] ?? 0) >= 3);
   assert.ok((stats.findings.byRuleId["broken-relation-link"] ?? 0) >= 1);

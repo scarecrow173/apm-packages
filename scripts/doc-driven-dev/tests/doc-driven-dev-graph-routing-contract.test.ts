@@ -35,6 +35,7 @@ function fixtureRepo(statuses: TaskStatus[] = ["todo"], dependsOn: string[][] = 
   for (const directory of [
     "docs/ideas", "docs/discovery", "docs/specs", "docs/designs", "docs/plans",
     "docs/tasks", "docs/test-specs", "docs/adr", "docs/impl/ir", "docs/impl/exp",
+    "docs/knowledge", "docs/verification",
   ]) {
     fs.mkdirSync(path.join(repo, directory), { recursive: true });
     fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");

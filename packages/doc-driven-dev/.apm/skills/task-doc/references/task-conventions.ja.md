@@ -3,6 +3,13 @@
 この規約は、`task-doc` が実装 task を作成、監査、索引化、ルーティングする方法を
 定義します。
 
+Document Registry 3 では `task` は execution-bound（`persistence: ephemeral`）
+で、durable な Git 上の形を持たず、`new_task.js` は task の前提条件・スコープ
+検証・書き込みの前に registry gate で拒否します。以下の `docs/tasks/` などの
+候補ディレクトリは former ディレクトリ — v3 以前のコーパスをマイグレーション
+が読み取るための owned scope です。この規約はそのレガシーな文書形状と、
+Execution Store の task レコードが従う契約を記述します。
+
 task は、plan、spec、ADR、または他の task にリンクされた、小さくレビュー可能な
 実装単位です。1 人の agent がプロジェクト全体の文脈を再発見せずに完了・検証
 できる粒度にします。
@@ -87,7 +94,7 @@ relations:
 | --- | --- | --- |
 | `id` | Yes | 安定した文書 ID。`TASK-<22文字Base62>` 形式（UUIDv7由来。従来の `TASK-NNNN` も有効）。 |
 | `type` | Yes | `task` 固定。 |
-| `status` | Yes | 現在の実行状態。 |
+| `status` | Yes | 型固有のワークフロー状態（後述のステータス値を参照）。task は ephemeral で `lifecycle` フィールドを持たない。 |
 | `title` | Yes | 人間向けの task title。 |
 | `created` | Yes | 作成日。`YYYY-MM-DD` 形式。 |
 | `updated` | Yes | 最後に実質更新した日。`YYYY-MM-DD` 形式。 |
@@ -96,7 +103,8 @@ relations:
 
 ## ステータス値
 
-次のライフサイクル状態を使います。
+次の型固有ワークフローステータスを使います（task は ephemeral で
+`lifecycle` フィールドはこの軸に存在しない）。
 
 | Status | Meaning |
 | --- | --- |

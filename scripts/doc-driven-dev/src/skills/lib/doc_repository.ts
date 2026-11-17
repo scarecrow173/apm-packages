@@ -4,8 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { configFor, docTypes, parseDoc, relationFields } from "./doc_suite_utils";
-import { isSettledStatus, lifecycleBucketForType, SETTLED_STATUSES } from "./doc_lifecycle";
+import { isSettledEntry, lifecycleBucketForType, SETTLED_STATUSES } from "./doc_lifecycle";
 import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, nonReferenceRelationKeys, normalizeDir } from "./document_utils";
+import { ephemeralConfigs, executionTypes, legacyDocTypes, managedDocDirs } from "./doc_types";
+import type { DocRegistryEntry, RequiredRelation, UpstreamExpectation } from "./doc_types";
 
 // ---------------------------------------------------------------------------
 // Finding contract
@@ -69,16 +71,13 @@ function sortFindings(findings: Finding[]): Finding[] {
 // Document contract registry
 // ---------------------------------------------------------------------------
 
-type RequiredRelation = {
-  field: string;
-  targetTypes: string[];
-  appliesToStatuses?: string[];
-  skipField?: string;
-  gateCode?: string;
-};
-
+// The per-type audit contract — a projection of the Document Registry
+// (doc_types.ts) into the shape the scanner, lint rules, and stats
+// consumers read. Durable types only: execution-bound and legacy types
+// carry no contract because nothing lints them as canonical documents.
 type DocumentContract = {
   type: string;
+  persistence: string;
   idPrefix: string;
   idPattern: RegExp;
   idExceptions: string[];
@@ -86,32 +85,33 @@ type DocumentContract = {
   dirs: string[];
   defaultStatus: string;
   statusValues: string[];
+  lifecycleValues: string[];
+  defaultLifecycle: string | null;
   requiredFields: string[];
+  fieldVocabularies: Record<string, string[]>;
   requiredRelations: RequiredRelation[];
   requiredDirectoryFiles: string[];
   reservedFiles: string[];
   allowsRootArtifact: boolean;
   requiresSourceEvidence: boolean;
   expectedUpstream: UpstreamExpectation[];
+  allowedRelations: Record<string, string[]>;
 };
 
-type UpstreamExpectation = {
-  fields: string[];
-  skipStatuses?: string[];
-};
-
+// Base required fields for every durable document. `lifecycle` joined the
+// base set under Document Registry 3: it is the archival axis kept
+// separate from the type-specific `status` vocabulary.
 const REQUIRED_FRONT_MATTER_FIELDS = [
   "id",
   "type",
   "status",
+  "lifecycle",
   "title",
   "created",
   "updated",
   "owners",
   "relations",
 ] as const;
-
-const ROOT_ARTIFACT_TYPES: ReadonlySet<string> = new Set(["idea", "brainstorm", "discovery"]);
 
 const TRACEABILITY_TERMINAL_STATUSES = ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"];
 
@@ -146,16 +146,43 @@ const DEAD_UPSTREAM_STATUSES: ReadonlySet<string> = new Set([
   "done",
 ]);
 
-/** Upstream relation fields — the lineage contract's expected-upstream set. */
-const UPSTREAM_FIELDS: ReadonlySet<string> = new Set(["implements", "derives-from", "refines"]);
+/** Upstream relation fields — the lineage contract's expected-upstream set.
+ *  Union of the v2 lineage fields (`implements`/`derives-from`/`refines`,
+ *  still meaningful for pre-migration repositories) and the Knowledge
+ *  Relations v1 fields that express derivation (`motivates`,
+ *  `decides-for`, `realizes`). */
+const UPSTREAM_FIELDS: ReadonlySet<string> = new Set([
+  "implements",
+  "derives-from",
+  "refines",
+  "motivates",
+  "decides-for",
+  "realizes",
+]);
 
 function lifecycleBucketOf(document: RepositoryDocument): string {
   if (document.kind === "unmanaged") return "unmanaged";
   return lifecycleBucketForType(document.type);
 }
 
+// Directories the migration surface owns — the former Git homes of
+// execution-bound (plan/task) and legacy (test-spec/impl/exp) types,
+// including zero-resident scope containers such as docs/impl. Derived from
+// the registry; a durable type can never declare one of these.
+function migrationOwnedDirs(): readonly string[] {
+  const dirs = new Set<string>();
+  for (const type of executionTypes) {
+    for (const dir of ephemeralConfigs[type].formerDirs) dirs.add(normalizeDir(dir));
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.formerDirs) dirs.add(normalizeDir(dir));
+    for (const dir of entry.scopeDirs) dirs.add(normalizeDir(dir));
+  }
+  return [...dirs].sort(compareStrings);
+}
+
 function isSettled(document: RepositoryDocument): boolean {
-  return isSettledStatus(lifecycleBucketOf(document), document.status);
+  return isSettledEntry(lifecycleBucketOf(document), document.status, document.lifecycle);
 }
 
 type StaleUpstreamTarget = {
@@ -188,76 +215,42 @@ function staleUpstreamTargets(model: DocumentRepository, document: RepositoryDoc
   return stale;
 }
 
-function contractForDocType(type: string): DocumentContract {
-  const config = configFor(type);
-  const contract: DocumentContract = {
-    type,
-    idPrefix: config.idPrefix,
-    idPattern: new RegExp(`^${config.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
-    idExceptions: [],
-    canonicalDir: config.dir,
-    dirs: [...config.dirs],
-    defaultStatus: config.defaultStatus,
-    statusValues: [...config.statusValues],
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS],
-    requiredRelations: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    allowsRootArtifact: ROOT_ARTIFACT_TYPES.has(type),
-    requiresSourceEvidence: false,
-    expectedUpstream: [],
+// Project one durable registry entry into the audit contract shape. Every
+// per-type declaration (dirs, prefixes, statuses, lifecycle, required
+// fields/relations, allowed relations, index expectations) comes from the
+// registry — no per-type conditionals live here.
+function contractForDocType(entry: DocRegistryEntry): DocumentContract {
+  return {
+    type: entry.type,
+    persistence: entry.persistence,
+    idPrefix: entry.idPrefix,
+    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
+    idExceptions: [...entry.idExceptions],
+    canonicalDir: entry.dir ?? "",
+    dirs: [...entry.dirs],
+    defaultStatus: entry.defaultStatus,
+    statusValues: [...entry.statusValues],
+    lifecycleValues: [...entry.lifecycleValues],
+    defaultLifecycle: entry.defaultLifecycle,
+    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
+    fieldVocabularies: Object.fromEntries(
+      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]]),
+    ),
+    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
+    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
+    reservedFiles: [...entry.reservedFiles],
+    allowsRootArtifact: entry.allowsRootArtifact,
+    requiresSourceEvidence: entry.requiresSourceEvidence,
+    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
+    allowedRelations: Object.fromEntries(
+      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]]),
+    ),
   };
-  if (type === "discovery") {
-    contract.requiresSourceEvidence = true;
-  }
-  if (type === "spec" || type === "plan" || type === "task" || type === "design") {
-    contract.expectedUpstream = [
-      { fields: [...UPSTREAM_FIELDS], skipStatuses: TRACEABILITY_TERMINAL_STATUSES },
-    ];
-  }
-  if (type === "design") {
-    contract.idExceptions = ["DESIGN-OVERVIEW"];
-    contract.requiredDirectoryFiles = ["overview.md"];
-    contract.reservedFiles = ["overview.md"];
-  }
-  if (type === "test-spec") {
-    contract.requiredRelations = [
-      { field: "verifies", targetTypes: ["spec", "design", "adr"], gateCode: "TEST-SPEC-DOC-GATE-001" },
-    ];
-  }
-  if (type === "plan") {
-    contract.requiredRelations = [
-      {
-        field: "verified-by",
-        targetTypes: ["test-spec"],
-        appliesToStatuses: ["approved", "in-progress", "completed"],
-        skipField: "test-spec-skip",
-      },
-    ];
-  }
-  return contract;
 }
 
-const contracts: Record<string, DocumentContract> = {
-  ...Object.fromEntries(docTypes.map((type) => [type, contractForDocType(type)])),
-  impl: {
-    type: "impl",
-    idPrefix: "IMPL",
-    idPattern: /^IMPL-(?:\d+|[0-9A-Za-z]{22})$/,
-    idExceptions: [],
-    canonicalDir: "docs/impl",
-    dirs: ["docs/impl/ir", "docs/impl/exp"],
-    defaultStatus: "draft",
-    statusValues: ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"],
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, "metadata"],
-    requiredRelations: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    expectedUpstream: [],
-  },
-};
+const contracts: Record<string, DocumentContract> = Object.fromEntries(
+  docTypes.map((type) => [type, contractForDocType(configFor(type))]),
+);
 
 function documentContracts(): Record<string, DocumentContract> {
   return contracts;
@@ -279,7 +272,13 @@ function canonicalDocRoots(): string[] {
 // Repository document model
 // ---------------------------------------------------------------------------
 
-type DocumentKind = "canonical" | "index" | "unmanaged";
+// `legacy` marks the Git-era leftovers of non-durable types — execution-bound
+// (plan/task) and legacy (test-spec/impl/exp) documents living in
+// migration-owned dirs. They are not canonical durable documents, but they
+// are not unmanaged markdown either: the repository model keeps them typed
+// and resolvable so relations into them, lifecycle stats over them, and the
+// migration sweep's view of them keep working (Issue #234).
+type DocumentKind = "canonical" | "index" | "unmanaged" | "legacy";
 
 type DocumentLink = {
   target: string;
@@ -303,6 +302,7 @@ type RepositoryDocument = {
   type: string | null;
   id: string | null;
   status: string | null;
+  lifecycle: string | null;
   title: string | null;
   owners: string[];
   created: string | null;
@@ -343,6 +343,7 @@ type DocumentRepository = {
   files: RepositoryDocument[];
   documents: RepositoryDocument[];
   canonicalDocuments: RepositoryDocument[];
+  legacyDocuments: RepositoryDocument[];
   unmanagedDocuments: RepositoryDocument[];
   indexes: RepositoryDocument[];
   byPath: Map<string, RepositoryDocument>;
@@ -597,7 +598,12 @@ function localeSiblingsFor(repoPath: string, siblingsByDir: Map<string, Set<stri
 function defaultScanRoots(cwd: string): string[] {
   const roots = new Set<string>();
   if (fs.existsSync(path.join(cwd, "docs"))) roots.add("docs");
-  for (const dir of canonicalDocRoots()) {
+  // Every managed dir spelling — the registry's full dir vocabulary
+  // (durable canonical dirs and aliases plus the former dirs of
+  // execution-bound and legacy types), not just durable contract dirs:
+  // root-level Git-era homes such as `plans/`, `tasks/`, and `test-specs/`
+  // still hold content the scan must classify as `legacy` (Issue #234).
+  for (const dir of managedDocDirs()) {
     if (fs.existsSync(path.join(cwd, dir))) roots.add(dir);
   }
   return [...roots].sort(compareStrings);
@@ -643,12 +649,19 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     siblingsByDir.set(dir, peers);
   }
 
+  const migrationDirs = migrationOwnedDirs();
   const files: RepositoryDocument[] = [];
   for (const absolute of [...absoluteFiles].sort(compareStrings)) {
     const repoPath = toRepoPath(cwd, absolute);
     const expectedTypes = expectedTypesFor(repoPath, typeMap);
     const canonical = expectedTypes.length > 0;
-    const kind: DocumentKind = !canonical ? "unmanaged" : isIndexFileName(path.posix.basename(repoPath)) ? "index" : "canonical";
+    const docDirName = normalizeDir(path.posix.dirname(repoPath));
+    const indexNamed = isIndexFileName(path.posix.basename(repoPath));
+    const kind: DocumentKind = canonical
+      ? indexNamed ? "index" : "canonical"
+      : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir))
+        ? indexNamed ? "index" : "legacy"
+        : "unmanaged";
 
     let content = "";
     let readError: string | null = null;
@@ -673,6 +686,7 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
       type: stringField(data, "type"),
       id: stringField(data, "id"),
       status: stringField(data, "status"),
+      lifecycle: stringField(data, "lifecycle"),
       title: stringField(data, "title"),
       owners,
       created: stringField(data, "created"),
@@ -808,6 +822,7 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     files,
     documents: files.filter((file) => file.kind !== "index"),
     canonicalDocuments: files.filter((file) => file.kind === "canonical"),
+    legacyDocuments: files.filter((file) => file.kind === "legacy"),
     unmanagedDocuments: files.filter((file) => file.kind === "unmanaged"),
     indexes: files.filter((file) => file.kind === "index"),
     byPath,
@@ -849,6 +864,7 @@ export {
   isExternalReference,
   isSettled,
   lifecycleBucketOf,
+  REQUIRED_FRONT_MATTER_FIELDS,
   scanRepository,
   SETTLED_STATUSES,
   slugifyAnchor,

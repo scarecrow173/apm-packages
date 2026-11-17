@@ -158,6 +158,12 @@ changing Graph Definition YAML, scripts, or generated JavaScript:
 | `spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, `all` | caller adapter for named audits |
 | `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `doc-status` | invoked skill |
 
+The `plan`, `task`, and `test-spec` audit effects in this row are declared
+names only: under Document Registry 3 those scopes refuse at the registry
+gate (see the canonical-input section below), so the adapter never
+normalizes a completed outcome for them until the graph definition is
+rewired under #243.
+
 The adapter records effect-specific canonical inputs and evidence before it
 returns `completed` or `retry`. Missing or malformed adapter evidence fails
 closed with `authority-required`; it never creates a checkpoint or completion
@@ -166,12 +172,17 @@ receipt.
 ## Effect-specific canonical inputs
 
 The receipt scope uses the effect, not a generic Task Graph fallback. In the
-standard document graph, `spec`, `adr`, `design`, and `plan` audits read their
-matching canonical document; `task` reads selected Task Graph task documents;
-`test-spec` reads its matching test specification documents; `impl-record`
+standard document graph, `spec`, `adr`, and `design` audits read their
+matching canonical document; `impl-record`
 reads its Implementation Record; `experiment-log` reads the Experiment Logs
 in `docs/impl/exp` (`.jsonl`); and `all` reads the declared
-canonical document set. Graph-dispatched doc-type audits run as
+canonical document set. The `plan`, `task`, and `test-spec` names still
+declared in the graph `audits` lists are refused scopes under Document
+Registry 3 — `audit_docs.js --type <name>` fails at the registry gate
+(`plan`/`task` are execution-bound; `test-spec` is a legacy migration-only
+format) — so they carry no canonical input; the declared lists are
+superseded pending the Graph Definition v3 rewire (#243).
+Graph-dispatched doc-type audits run as
 `audit_docs.js --type <name> --profile artifact` and `all` runs as
 `audit_docs.js --type all --profile artifact`; `impl-record` runs as
 `impl-doc/scripts/audit_impl_record.js` and `experiment-log` runs as

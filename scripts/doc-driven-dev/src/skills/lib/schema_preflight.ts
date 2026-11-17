@@ -45,7 +45,12 @@ import path from "node:path";
 import matter from "gray-matter";
 import * as yaml from "js-yaml";
 
-import { documentContracts } from "./doc_repository";
+import {
+  executionBoundTypeNames,
+  knowledgeRelationFields,
+  managedDocDirs,
+  PROVENANCE_RELATION_KEYS,
+} from "./doc_types";
 import {
   isIndexFileName,
   isInsideCheckout,
@@ -155,31 +160,19 @@ type SchemaPreflightReport = {
 
 // Types whose durable Git-Markdown form is removed by Document Registry 3 —
 // they migrate to the Execution Store / Verification Design / Evidence
-// (#234–#240). Aliases that have appeared in the wild are included.
-const EXECUTION_BOUND_TYPES: ReadonlySet<string> = new Set([
-  "plan",
-  "task",
-  "test-spec",
-  "impl",
-  "implementation-record",
-  "ir",
-  "exp",
-  "experiment-log",
-  "impl-record",
-]);
+// (#234–#240). Derived from the registry's non-durable declarations:
+// every execution-bound (ephemeral) type name plus every legacy type name
+// and alias (#234).
+const EXECUTION_BOUND_TYPES: ReadonlySet<string> = new Set(executionBoundTypeNames());
 
 // Knowledge Relations v1: typed, unidirectional, stored source→target only
-// (#235). `checks`/`supported-by` are derived, never stored; every populated
-// relation key outside this set (and outside the non-reference metadata keys
-// in document_utils) is legacy vocabulary under a declared manifest.
-const KNOWLEDGE_RELATIONS_V1: ReadonlySet<string> = new Set([
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-]);
+// (#235) — the union of the durable registry's `allowedRelations` fields.
+// `checks`/`supported-by` are derived, never stored; `source` is the
+// provenance contract, exempted via PROVENANCE_RELATION_KEYS. Every other
+// populated relation key outside this set (and outside the non-reference
+// metadata keys in document_utils) is legacy vocabulary under a declared
+// manifest.
+const KNOWLEDGE_RELATIONS_V1: ReadonlySet<string> = new Set(knowledgeRelationFields());
 
 // Files the migration machinery may place inside docs/.doc-driven-dev/
 // alongside schema.json. Anything else in that namespace is unaccounted-for
@@ -215,16 +208,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// Managed scan roots: every contract dir, split into the `docs/` subtree
-// (walked once, recursively) and root-level alias dirs (walked each).
+// Managed scan roots: every managed dir spelling, split into the `docs/`
+// subtree (walked once, recursively) and root-level spellings (walked
+// each). `managedDocDirs` is the registry's full dir vocabulary — durable
+// canonical dirs and aliases plus the former dirs of execution-bound and
+// legacy types — so root-level Git-era homes such as `plans/`, `tasks/`,
+// and `test-specs/` stay scanned for markers even though those types have
+// no durable contract (Issue #234).
 function managedRootAliases(): string[] {
-  const dirs = new Set<string>();
-  for (const contract of Object.values(documentContracts())) {
-    for (const dir of [...contract.dirs, contract.canonicalDir]) {
-      if (!dir.startsWith("docs/")) dirs.add(dir);
-    }
-  }
-  return [...dirs].sort();
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 
 // Recursive read-only walk. The scan never follows out-of-checkout links:
@@ -293,8 +285,10 @@ function relationIssues(relPath: string, relations: unknown): PreflightIssue[] {
   for (const [key, value] of Object.entries(relations)) {
     // Metadata keys (changes / test-spec-skip) carry change sets and human
     // reasons, not document references — their shape is the lifecycle
-    // contract's business, not this preflight's.
-    if (nonReferenceRelationKeys.has(key)) continue;
+    // contract's business, not this preflight's. `source` is the
+    // provenance relation the registry declares outside the v1 vocabulary
+    // (discovery's required source evidence).
+    if (nonReferenceRelationKeys.has(key) || (PROVENANCE_RELATION_KEYS as readonly string[]).includes(key)) continue;
     const populated = typeof value === "string"
       ? value.trim() !== ""
       : Array.isArray(value) && value.length > 0;

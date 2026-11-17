@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { buildExperimentEvent, buildNewFilePath, experimentEventTypes, posixRelative, renderExperimentTemplate, writeExperimentEvents } from "./lib/impl_doc_utils";
+import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
@@ -50,6 +51,10 @@ async function main(): Promise<void> {
     if (args.type && !(experimentEventTypes as readonly string[]).includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
+    // Registry 3: `exp` is a legacy, migration-only type — experiment logs
+    // have no durable Git form. The registry gate is the one authoritative
+    // refusal, raised before any path resolution or write.
+    configFor("exp");
     const { outputPath, relativeDir } = buildNewFilePath({
       cwd,
       kind: "exp",
