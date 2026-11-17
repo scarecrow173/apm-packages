@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
+import fs from "node:fs";
 import path from "node:path";
 import { applyMaintenance, planMaintenance } from "../../lib/doc_maintenance";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
@@ -237,6 +238,9 @@ async function main(): Promise<void> {
     const cwd = path.resolve(args.cwd);
     if (args.command === "migrate") {
       validateMigrateArgs(args);
+      if (!fs.existsSync(cwd) || !fs.statSync(cwd).isDirectory()) {
+        throw new Error(`--cwd does not exist or is not a directory: ${args.cwd}`);
+      }
       runMigrate(args, cwd);
       return;
     }

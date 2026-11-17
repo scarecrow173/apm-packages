@@ -28,7 +28,10 @@
 //   machinery owns is unmistakably foreign: files inside
 //   `docs/.doc-driven-dev/` beyond the manifest/journal pair, legacy graph
 //   YAML there, and content under `.apm/state/doc-driven-dev/` outside
-//   `runs/<run-id>/`. Malformed docs stay the lint layer's business.
+//   `runs/<run-id>/` — the declared per-run layout (#236): files inside a
+//   run directory are current state, while loose files directly under
+//   `runs/` or anywhere else are foreign. Malformed docs stay the lint
+//   layer's business.
 //   Under a present manifest the repo has declared the v3 components, so
 //   doc-tree inconsistency with that declaration flags too: execution-bound
 //   canonical docs (plan/task/test-spec/impl no longer live in Git under
@@ -96,7 +99,6 @@ type PreflightReason =
   | "manifest-escaped"
   | "manifest-unreadable"
   | "manifest-malformed"
-  | "manifest-missing-component"
   | "schema-version-unsupported"
   | "component-version-unsupported"
   | "component-version-behind"
@@ -337,7 +339,11 @@ function scanDocuments(cwd: string): DocScan {
     let data: Record<string, unknown> = {};
     let parsed = true;
     try {
-      const result = matter(raw);
+      // An options object keeps this probe out of gray-matter's process-global
+      // cache: bare matter(raw) writes matter.cache[raw] BEFORE parsing, so a
+      // throwing parse would leave a poisoned entry every later bare call —
+      // parseDoc in the audit/lint pipeline — reads as error-free.
+      const result = matter(raw, {});
       data = isPlainObject(result.data) ? result.data : {};
     } catch {
       parsed = false;
@@ -452,10 +458,18 @@ function scanManifestDir(cwd: string, issues: PreflightIssue[]): void {
     });
   });
   if (!walked) {
+    // walkTree refused the root: either it resolves outside the checkout
+    // through a link, or it is not a directory at all.
+    let directory = false;
+    try {
+      directory = fs.statSync(abs).isDirectory();
+    } catch { /* stat failure reports the same boundary failure */ }
     issues.push({
       reason: "scope-escape",
       path: DOC_DRIVEN_DEV_DIR,
-      detail: `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted`,
+      detail: directory
+        ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted`
+        : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`,
     });
   }
 }
@@ -470,17 +484,23 @@ function scanExecutionState(cwd: string, issues: PreflightIssue[]): void {
     const relUnderRoot = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "");
     const segments = relUnderRoot.split("/").filter(Boolean);
     if (isDir) {
+      // `runs/` and the per-run directories beneath it (at whatever depth a
+      // run keeps its own structure) are the declared layout; any other
+      // directory under the state root is foreign.
       if (segments.length === 0) return;
-      if (segments.length > 2 || segments[0] !== "runs") {
+      if (segments[0] !== "runs") {
         marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
       }
       return;
     }
-    if (segments[0] !== "runs" || segments.length !== 2) {
+    // The declared layout puts run files inside `runs/<run-id>/` (depth 3+):
+    // a loose file directly under `runs/` or outside `runs/` entirely is
+    // unaccounted-for state.
+    if (segments[0] !== "runs" || segments.length < 3) {
       marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
       return;
     }
-    const name = segments[1];
+    const name = segments[segments.length - 1];
     if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
       let version: unknown;
       try {
@@ -496,10 +516,16 @@ function scanExecutionState(cwd: string, issues: PreflightIssue[]): void {
     marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
   });
   if (!walked) {
+    let directory = false;
+    try {
+      directory = fs.statSync(abs).isDirectory();
+    } catch { /* stat failure reports the same boundary failure */ }
     issues.push({
       reason: "scope-escape",
       path: EXECUTION_STATE_ROOT,
-      detail: `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed`,
+      detail: directory
+        ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed`
+        : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`,
     });
   }
 }

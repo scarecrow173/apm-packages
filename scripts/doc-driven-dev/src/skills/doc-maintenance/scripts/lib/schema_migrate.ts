@@ -21,11 +21,13 @@ import path from "node:path";
 import {
   evaluateSchemaPreflight,
   journalPresent,
+  DOC_DRIVEN_DEV_DIR,
   MIGRATION_JOURNAL_PATH,
   SCHEMA_MANIFEST_PATH,
   schemaManifestText,
   statusSummary,
 } from "../../../lib/schema_preflight";
+import { isInsideCheckout } from "../../../lib/document_utils";
 import type {
   PreflightIssue,
   SchemaPreflightReport,
@@ -111,12 +113,31 @@ function migratePlan(cwd: string): MigratePlan {
   return { command: "migrate plan", readOnly: true, preflight, plan: { applyEligible, blockers, planHash, next } };
 }
 
-function writeManifest(cwd: string): void {
+// Returns null once the manifest is in place, else the refusal reason. The
+// boundary is verified BEFORE anything is created: `mkdirSync(recursive)` on
+// a path that resolves through a link (e.g. a junctioned `docs/`) would
+// already have created state outside the checkout by the time a post-write
+// check could see it. Probing the nearest existing ancestor up front fails
+// closed — a link must exist to be traversed, so once every existing
+// ancestor stays inside, nothing below it can escape; the post-mkdir check
+// then covers anything that changed in between.
+function writeManifest(cwd: string): string | null {
   const abs = path.resolve(cwd, SCHEMA_MANIFEST_PATH);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  const dir = path.dirname(abs);
+  const escaped = `${DOC_DRIVEN_DEV_DIR} resolves outside the checkout — refusing to write the manifest`;
+  let probe = dir;
+  while (!fs.existsSync(probe)) {
+    const parent = path.dirname(probe);
+    if (parent === probe) return `cannot verify ${DOC_DRIVEN_DEV_DIR} stays inside the checkout`;
+    probe = parent;
+  }
+  if (!isInsideCheckout(cwd, probe)) return escaped;
+  fs.mkdirSync(dir, { recursive: true });
+  if (!isInsideCheckout(cwd, dir)) return escaped;
   const tmp = `${abs}.tmp-${process.pid}`;
   fs.writeFileSync(tmp, schemaManifestText(), "utf8");
   fs.renameSync(tmp, abs);
+  return null;
 }
 
 function migrateApply(cwd: string, expect?: string): MigrateApplyResult {
@@ -150,7 +171,10 @@ function migrateApply(cwd: string, expect?: string): MigrateApplyResult {
     return refuse("legacy artifacts or unsafe state require the full migration (#245/#247); this apply only installs the manifest on already-consistent content", blockers);
   }
 
-  writeManifest(cwd);
+  const writeRefusal = writeManifest(cwd);
+  if (writeRefusal !== null) {
+    return refuse(writeRefusal);
+  }
   const after = evaluateSchemaPreflight(cwd);
   return {
     command: "migrate apply",

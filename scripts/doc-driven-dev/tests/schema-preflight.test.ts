@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import matter from "gray-matter";
 import test from "node:test";
+import { evaluateSchemaPreflight } from "../src/skills/lib/schema_preflight";
 
 // Schema Manifest v1 + shared Migration Preflight (Issue #233).
 //
@@ -430,4 +431,90 @@ test("migrate recovery reports journal state without mutating it", () => {
   assert.equal(payload.status, "migration-incomplete");
   assert.equal(payload.recovered, false);
   assert.equal(snapshotTree(repo), before);
+});
+
+// --- scan side effects ------------------------------------------------------
+//
+// The shared preflight runs ahead of every guarded entrypoint in the same
+// process, so its read-only scan must not leave state behind that changes
+// what later consumers observe.
+
+test("preflight: scanning unparseable front matter leaves gray-matter's cache clean for later consumers", () => {
+  const repo = tempRepo();
+  const raw = '---\ntitle: "unclosed\n---\n# bad\n';
+  writeFile(repo, "docs/tasks/0002-bad.md", raw);
+  const report = evaluateSchemaPreflight(repo);
+  assert.equal(report.detected.unmanagedDocs, 1);
+  // gray-matter 4.0.3 writes matter.cache[content] BEFORE parsing, so a bare
+  // matter() probe that throws would leave a poisoned entry behind — every
+  // later bare call for the same content (audit_docs' parseDoc →
+  // lintParseErrors, and every `if (document.parseError) continue` guard)
+  // then reads an error-free { data: {} } instead of the parse failure.
+  const cache = (matter as unknown as { cache: Record<string, unknown> }).cache;
+  assert.equal(cache[raw], undefined, "preflight's scan must not populate matter.cache");
+  assert.throws(() => matter(raw), "a later consumer must still see the parse error");
+});
+
+// --- execution-state layout (#236 shape) -------------------------------------
+
+test("preflight: the declared runs/<run-id>/ layout is not foreign", () => {
+  const repo = tempRepo();
+  writeFile(repo, ".apm/state/doc-driven-dev/runs/RUN-1/run.manifest.json", `${JSON.stringify({ schemaVersion: 1 })}\n`);
+  writeFile(repo, ".apm/state/doc-driven-dev/runs/RUN-1/events.jsonl", "{}\n");
+  writeFile(repo, ".apm/state/doc-driven-dev/runs/RUN-1/checkpoints/0001.json", "{}\n");
+  const plan = migratePlan(repo);
+  assert.equal(plan.preflight.status, "uninitialized");
+  assert.equal(
+    plan.preflight.issues.filter((i: any) => i.reason === "legacy-execution-state").length,
+    0,
+    "files inside a run directory are current state, not legacy markers",
+  );
+});
+
+test("preflight: loose files directly under runs/ are foreign", () => {
+  const repo = tempRepo();
+  writeFile(repo, ".apm/state/doc-driven-dev/runs/loose-file.txt", "x\n");
+  const plan = migratePlan(repo);
+  assert.equal(plan.preflight.status, "migration-required");
+  assert.ok(plan.preflight.issues.some(
+    (i: any) => i.reason === "legacy-execution-state" && i.path === ".apm/state/doc-driven-dev/runs/loose-file.txt",
+  ));
+});
+
+test("preflight: a run manifest at the wrong schemaVersion inside runs/<run-id>/ is flagged", () => {
+  const repo = tempRepo();
+  writeFile(repo, ".apm/state/doc-driven-dev/runs/RUN-1/run.manifest.json", `${JSON.stringify({ schemaVersion: 99 })}\n`);
+  const plan = migratePlan(repo);
+  assert.equal(plan.preflight.status, "migration-required");
+  assert.ok(plan.preflight.issues.some(
+    (i: any) => i.reason === "legacy-execution-state" && i.path === ".apm/state/doc-driven-dev/runs/RUN-1/run.manifest.json",
+  ));
+});
+
+// --- write boundary ----------------------------------------------------------
+
+test("migrate apply refuses before writing when docs resolves outside the checkout", (t) => {
+  const repo = tempRepo();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "migrate-outside-"));
+  try {
+    fs.symlinkSync(outside, path.join(repo, "docs"), "junction");
+  } catch (error: unknown) {
+    t.skip(`symlink unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  const result = runNode(maintenanceScript, ["migrate", "apply", "--cwd", repo], repo);
+  assert.equal(result.status, 1, result.stdout);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.applied, false);
+  assert.match(payload.reason, /outside the checkout/);
+  assert.equal(fs.existsSync(path.join(outside, ".doc-driven-dev")), false, "no state may be created outside the checkout");
+  assert.equal(fs.existsSync(path.join(outside, "schema.json")), false);
+});
+
+test("migrate apply refuses a nonexistent --cwd without creating it", () => {
+  const missing = path.join(os.tmpdir(), `ddd-migrate-no-such-${process.pid}-${Date.now()}`);
+  const result = runNode(maintenanceScript, ["migrate", "apply", "--cwd", missing], os.tmpdir());
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /does not exist/);
+  assert.equal(fs.existsSync(missing), false, "apply must not create the target tree");
 });
