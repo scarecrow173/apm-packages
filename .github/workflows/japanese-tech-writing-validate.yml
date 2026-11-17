@@ -24,6 +24,17 @@ jobs:
         run: python3 -m unittest discover -s scripts/japanese-tech-writing -p "test_*.py" -v
       - name: Install pinned APM toolchain
         uses: jdx/mise-action@v2
-      - name: Compile package
-        working-directory: packages/japanese-tech-writing
-        run: mise exec -- apm compile --validate
+      - name: Validate APM Skill installation in isolated consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          temp="$(mktemp -d)"
+          trap 'rm -rf "$temp"' EXIT
+          # mise captures the pinned toolchain before entering the consumer.
+          mise exec -- bash -c '
+            set -euo pipefail
+            cd "$1"
+            apm install "$2" --target agent-skills
+            cmp -s .agents/skills/japanese-tech-writing/SKILL.md \
+              "$2/.apm/skills/japanese-tech-writing/SKILL.md"
+          ' bash "$temp" "$GITHUB_WORKSPACE/packages/japanese-tech-writing"
