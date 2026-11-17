@@ -3080,7 +3080,7 @@ var require_dumper = __commonJS({
         }
       }
     }
-    function dump2(input2, options2) {
+    function dump(input2, options2) {
       options2 = options2 || {};
       var state = new State(options2);
       if (!state.noRefs) getDuplicateReferences(input2, state);
@@ -3088,9 +3088,9 @@ var require_dumper = __commonJS({
       return "";
     }
     function safeDump(input2, options2) {
-      return dump2(input2, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
+      return dump(input2, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
     }
-    module2.exports.dump = dump2;
+    module2.exports.dump = dump;
     module2.exports.safeDump = safeDump;
   }
 });
@@ -24124,6 +24124,880 @@ function date4(params) {
 // src/skills/lib/doc_suite_utils.ts
 var import_gray_matter = __toESM(require_gray_matter());
 
+// src/skills/lib/artifact_id.ts
+var import_uuid62 = __toESM(require_uuid62());
+
+// src/skills/lib/doc_types.ts
+var LIFECYCLE_VALUES = ["draft", "current", "superseded", "retired"];
+var DEFAULT_LIFECYCLE = "draft";
+var DURABLE_TARGETS = [
+  "idea",
+  "brainstorm",
+  "discovery",
+  "spec",
+  "design",
+  "adr",
+  "knowledge",
+  "verification"
+];
+var docTypes = [...DURABLE_TARGETS];
+var configs = {
+  idea: {
+    type: "idea",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/ideas",
+    dirs: ["docs/ideas"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "IDEA",
+    defaultStatus: "draft",
+    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
+    settledStatuses: ["promoted", "parked", "archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_idea",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable capture type: raw unformalized ideas feeding discovery/spec."
+  },
+  brainstorm: {
+    type: "brainstorm",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "BRAINSTORM",
+    defaultStatus: "capturing",
+    statusValues: ["capturing", "confirmed", "routed", "superseded"],
+    settledStatuses: ["routed", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    // `brainstorm` has no creator script: the brainstorming skill authors
+    // those documents directly.
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable capture type co-resident with discovery in docs/discovery."
+  },
+  discovery: {
+    type: "discovery",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/discovery",
+    dirs: ["docs/discovery"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "DISC",
+    defaultStatus: "draft",
+    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
+    settledStatuses: ["resolved", "archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_discovery",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
+    ],
+    allowsRootArtifact: true,
+    requiresSourceEvidence: true,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    indexPrimary: true,
+    note: "Durable capture type: bounded exploration with source evidence."
+  },
+  spec: {
+    type: "spec",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/specs",
+    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "SPEC",
+    defaultStatus: "draft",
+    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
+    settledStatuses: ["implemented", "superseded", "rejected"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_spec",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    // Under Knowledge Relations v1 a spec declares no forward upstream
+    // (it is the target of motivates/realizes/decides-for, not the source).
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Durable normative requirements document."
+  },
+  design: {
+    type: "design",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/designs",
+    dirs: ["docs/designs", "docs/design", "designs", "design"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "DESIGN",
+    defaultStatus: "draft",
+    statusValues: ["draft", "approved", "superseded", "rejected"],
+    settledStatuses: ["superseded", "rejected"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_design",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    // A design realizes a spec: `realizes` is its declared upstream under
+    // Knowledge Relations v1 (skip the check once the design is settled).
+    expectedUpstream: [
+      { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
+    ],
+    allowedRelations: [
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: ["DESIGN-OVERVIEW"],
+    requiredDirectoryFiles: ["overview.md"],
+    reservedFiles: ["overview.md"],
+    scaffoldIndexTitle: "DESIGN Documents",
+    note: "Durable design document; docs/designs requires overview.md."
+  },
+  adr: {
+    type: "adr",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/adr",
+    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "ADR",
+    defaultStatus: "proposed",
+    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
+    settledStatuses: ["rejected", "deprecated", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "adr-doc",
+    indexFormat: "shared-4col",
+    indexTitle: "Architecture Decision Records",
+    indexRow: {
+      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
+      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
+      // every producer derives identical rows (Issue #185).
+      idFromFile: (file2) => {
+        const match = /^(\d+)-/.exec(file2);
+        return match ? `ADR-${match[1]}` : null;
+      },
+      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
+    },
+    creator: "new_adr",
+    mutators: ["update_index", "relate_adr"],
+    auditors: ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Architecture Decision Records",
+    note: "Durable decision record owned by adr-doc (MADR conventions)."
+  },
+  knowledge: {
+    type: "knowledge",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/knowledge",
+    dirs: ["docs/knowledge"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "KNOW",
+    defaultStatus: "draft",
+    statusValues: ["draft", "confirmed", "archived", "superseded"],
+    settledStatuses: ["archived", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_knowledge",
+    // `consolidate_knowledge` is the #242 consolidation mutator: it updates
+    // existing records (integrate) and mints reviewed ones (create) under
+    // the conflict-acknowledgment contract.
+    mutators: ["consolidate_knowledge"],
+    auditors: [],
+    // `knowledge_kind` classifies the durable knowledge record
+    // (codebase|architecture|operation|lesson — the Registry's fixed
+    // vocabulary per #242).
+    requiredFields: ["knowledge_kind"],
+    fieldVocabularies: {
+      knowledge_kind: ["codebase", "architecture", "operation", "lesson"]
+    },
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Knowledge Documents",
+    note: "Durable knowledge record (#242 refines the skill flow)."
+  },
+  verification: {
+    type: "verification",
+    persistence: "durable",
+    aliases: [],
+    dir: "docs/verification",
+    dirs: ["docs/verification"],
+    formerDirs: [],
+    scopeDirs: [],
+    idPrefix: "VD",
+    defaultStatus: "draft",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    settledStatuses: ["deprecated", "superseded"],
+    lifecycleValues: [...LIFECYCLE_VALUES],
+    defaultLifecycle: DEFAULT_LIFECYCLE,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    creator: "new_verification",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    // Check→Claim relations are derived from `checks[].target` (#239) and
+    // Evidence `supported-by` comes from the Evidence Store (#240); neither
+    // is a stored relation field here.
+    allowedRelations: [
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
+    ],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    scaffoldIndexTitle: "Verification Design Documents",
+    note: "Durable verification-intent document (#239 defines the Check contract)."
+  }
+};
+var executionTypes = ["plan", "task"];
+var ephemeralConfigs = {
+  plan: {
+    type: "plan",
+    persistence: "ephemeral",
+    aliases: [],
+    dir: null,
+    dirs: [],
+    formerDirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
+    scopeDirs: [],
+    idPrefix: "PLAN",
+    defaultStatus: "draft",
+    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
+    settledStatuses: ["completed", "superseded"],
+    lifecycleValues: [],
+    defaultLifecycle: null,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Execution-bound: plan state lives in the Execution Store (#236); docs/plans is a former dir only."
+  },
+  task: {
+    type: "task",
+    persistence: "ephemeral",
+    aliases: [],
+    dir: null,
+    dirs: [],
+    formerDirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
+    scopeDirs: [],
+    idPrefix: "TASK",
+    defaultStatus: "todo",
+    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
+    settledStatuses: ["done", "wont-do"],
+    lifecycleValues: [],
+    defaultLifecycle: null,
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: [],
+    auditors: [],
+    requiredFields: [],
+    fieldVocabularies: {},
+    requiredRelations: [],
+    expectedUpstream: [],
+    allowedRelations: [],
+    allowsRootArtifact: false,
+    requiresSourceEvidence: false,
+    idExceptions: [],
+    requiredDirectoryFiles: [],
+    reservedFiles: [],
+    note: "Execution-bound: task state lives in the Execution Store (#236); docs/tasks is a former dir only."
+  }
+};
+var legacyDocTypes = {
+  "test-spec": {
+    type: "test-spec",
+    aliases: ["test_spec", "testspec"],
+    formerDirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
+    scopeDirs: [],
+    idPrefix: "TSPEC",
+    defaultStatus: "draft",
+    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
+    settledStatuses: ["deprecated", "superseded"],
+    owner: "doc-suite",
+    indexFormat: "shared-4col",
+    mutators: ["new_test_spec", "doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"],
+    auditors: ["doc_status", "audit_docs", "list_docs"],
+    requiredFields: [],
+    note: "Legacy verification-intent type, superseded by `verification` (#239); migration-only."
+  },
+  impl: {
+    type: "impl",
+    aliases: ["implementation-record", "impl-record", "ir"],
+    formerDirs: ["docs/impl/ir"],
+    scopeDirs: ["docs/impl"],
+    idPrefix: "IMPL",
+    defaultStatus: "draft",
+    statusValues: ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"],
+    settledStatuses: ["completed", "abandoned", "superseded"],
+    owner: "impl-doc",
+    indexFormat: "impl-4col",
+    indexTitle: "Implementation Records",
+    mutators: ["new_impl_record", "migrate_ids", "promote_index", "sync_impl_index"],
+    auditors: ["audit_impl_record"],
+    requiredFields: ["metadata"],
+    note: "Legacy implementation record; interpretation is migration-only (#240 extracts durable knowledge)."
+  },
+  exp: {
+    type: "exp",
+    aliases: ["experiment-log"],
+    formerDirs: ["docs/impl/exp"],
+    scopeDirs: [],
+    idPrefix: "EXP",
+    // Experiment logs are JSONL event logs without front matter.
+    defaultStatus: null,
+    statusValues: [],
+    settledStatuses: [],
+    owner: "impl-doc",
+    indexFormat: "exp-1col",
+    indexTitle: "Experiment Logs",
+    mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", "promote_index", "sync_impl_index"],
+    auditors: ["audit_experiment_log"],
+    requiredFields: [],
+    note: "Legacy experiment log (JSONL, no front matter); interpretation is migration-only."
+  }
+};
+var registry2 = {
+  ...configs,
+  ...ephemeralConfigs
+};
+var legacyAliases = /* @__PURE__ */ new Map();
+for (const entry of Object.values(legacyDocTypes)) {
+  for (const alias of [entry.type, ...entry.aliases]) legacyAliases.set(alias, entry.type);
+}
+function configFor(type) {
+  const entry = registry2[type];
+  if (entry?.persistence === "durable") return entry;
+  if (entry?.persistence === "ephemeral") {
+    throw new Error(
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+    );
+  }
+  if (legacyAliases.has(type)) {
+    throw new Error(
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+    );
+  }
+  throw new Error(`Unknown document type: ${type}`);
+}
+function executionBoundTypeNames() {
+  return [
+    ...executionTypes,
+    ...[...legacyAliases.keys()].sort()
+  ];
+}
+var DURABLE_DOC_DIRS = Object.freeze(
+  [...new Set(docTypes.map((type) => configs[type].dir))]
+);
+var LEGACY_DOC_DIRS = Object.freeze(
+  [
+    ...executionTypes.flatMap((type) => [...ephemeralConfigs[type].formerDirs]),
+    ...Object.values(legacyDocTypes).flatMap((entry) => [...entry.formerDirs, ...entry.scopeDirs])
+  ].filter((dir) => !DURABLE_DOC_DIRS.includes(dir)).sort()
+);
+var LEGACY_CANONICAL_DIRS = Object.freeze([
+  ...executionTypes.map((type) => ephemeralConfigs[type].formerDirs[0]),
+  ...Object.values(legacyDocTypes).map((entry) => entry.formerDirs[0])
+]);
+var CANONICAL_DOC_DIRS = Object.freeze(
+  [...DURABLE_DOC_DIRS, ...LEGACY_CANONICAL_DIRS]
+);
+function managedDocDirs() {
+  const dirs = new Set(CANONICAL_DOC_DIRS);
+  for (const type of docTypes) {
+    for (const dir of configs[type].dirs) dirs.add(dir);
+  }
+  for (const dir of LEGACY_DOC_DIRS) dirs.add(dir);
+  return [...dirs].sort();
+}
+function knowledgeRelationFields() {
+  const fields = /* @__PURE__ */ new Set();
+  for (const type of docTypes) {
+    for (const relation of configs[type].allowedRelations) fields.add(relation.field);
+  }
+  return [...fields].sort();
+}
+var PROVENANCE_RELATION_KEYS = ["source"];
+
+// src/skills/lib/doc_lifecycle.ts
+var SETTLED_STATUSES = {
+  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
+  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
+  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
+};
+var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
+  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
+);
+
+// src/skills/lib/document_utils.ts
+var import_node_fs = __toESM(require("node:fs"));
+var import_node_path = __toESM(require("node:path"));
+var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
+  "changes",
+  "test-spec-skip"
+]);
+function normalizeDir(input2) {
+  return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
+function stripExtendedLengthPrefix(value) {
+  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
+  if (value.startsWith("\\\\?\\")) return value.slice(4);
+  return value;
+}
+function containmentKey(value) {
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+function isInside(cwd, candidate) {
+  const root = containmentKey(cwd);
+  const resolved = containmentKey(candidate);
+  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
+}
+function isInsideRealpath(cwd, candidate) {
+  try {
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
+  } catch {
+    return false;
+  }
+}
+function isInsideCheckout(cwd, candidate) {
+  const resolved = import_node_path.default.resolve(cwd, candidate);
+  if (!isInside(cwd, resolved)) return false;
+  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
+}
+function toRepoRelative(cwd, absolute) {
+  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
+}
+function resolveContainedDir(cwd, dir, flag = "--dir") {
+  const resolved = import_node_path.default.resolve(cwd, dir);
+  if (!isInside(cwd, resolved)) {
+    throw new Error(`${flag} escapes the checkout: ${dir}`);
+  }
+  if (import_node_fs.default.existsSync(resolved)) {
+    if (!isInsideRealpath(cwd, resolved)) {
+      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
+    }
+    return toRepoRelative(
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
+      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
+    );
+  }
+  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
+}
+function isIndexFileName(file2) {
+  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
+}
+function slugify2(title, fallback) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
+}
+
+// src/skills/lib/doc_ownership.ts
+var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
+var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
+var PROMOTE_INDEX_MUTATOR = "promote_index";
+function buildContracts() {
+  const rows = /* @__PURE__ */ new Map();
+  const rowFor = (dir, owner, indexFormat, indexTitle) => {
+    const normalized = normalizeDir(dir);
+    let row = rows.get(normalized);
+    if (!row) {
+      row = {
+        dir: normalized,
+        canonical: false,
+        owner,
+        residents: [],
+        indexFormat,
+        indexTitle,
+        mutators: /* @__PURE__ */ new Set(),
+        auditors: /* @__PURE__ */ new Set()
+      };
+      rows.set(normalized, row);
+    }
+    return row;
+  };
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    for (const dir of config2.dirs) {
+      const canonical = normalizeDir(dir) === normalizeDir(config2.dir);
+      const row = rowFor(dir, config2.owner, config2.indexFormat, canonical ? config2.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(type)) row.residents.push(type);
+      if (canonical && config2.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      if (config2.creator) row.mutators.add(config2.creator);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of config2.mutators) row.mutators.add(mutator);
+      for (const auditor of config2.auditors) row.auditors.add(auditor);
+    }
+  }
+  for (const type of executionTypes) {
+    const entry = ephemeralConfigs[type];
+    for (const dir of entry.formerDirs) {
+      const row = rowFor(dir, entry.owner, entry.indexFormat);
+      row.canonical = row.canonical || dir === entry.formerDirs[0];
+      if (!row.residents.includes(type)) row.residents.push(type);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.scopeDirs) {
+      const row = rowFor(dir, entry.owner, "none");
+      row.canonical = true;
+    }
+    for (const dir of entry.formerDirs) {
+      const canonical = dir === entry.formerDirs[0];
+      const row = rowFor(dir, entry.owner, entry.indexFormat, canonical ? entry.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(entry.type)) row.residents.push(entry.type);
+      if (canonical && entry.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  return [...rows.values()].map((row) => ({
+    dir: row.dir,
+    canonical: row.canonical,
+    owner: row.owner,
+    residentTypes: row.residents,
+    indexFormat: row.indexFormat,
+    indexTitle: row.indexTitle,
+    mutators: [...row.mutators].sort(),
+    auditors: [...row.auditors].sort()
+  })).sort((a, b) => a.dir.localeCompare(b.dir));
+}
+var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
+function ownershipForDir(directory) {
+  const normalized = normalizeDir(directory);
+  let best = null;
+  for (const contract of DIRECTORY_CONTRACTS) {
+    if (normalized === contract.dir || normalized.startsWith(`${contract.dir}/`)) {
+      if (!best || contract.dir.length > best.dir.length) best = contract;
+    }
+  }
+  return best;
+}
+function describeOwnership(directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership) return `custom directory "${normalized}" (no declared owner)`;
+  const residents = ownership.residentTypes.length > 0 ? ownership.residentTypes.join(", ") : "none";
+  return `"${ownership.dir}" (owned by ${ownership.owner}; resident types: ${residents})`;
+}
+function checkTypeScope(type, directory) {
+  const normalized = normalizeDir(directory);
+  const ownership = ownershipForDir(normalized);
+  if (!ownership || ownership.residentTypes.includes(type)) {
+    return { ok: true, directory: normalized, ownership, reason: null };
+  }
+  return {
+    ok: false,
+    directory: normalized,
+    ownership,
+    reason: `Scope mismatch: type "${type}" is not resident in ${describeOwnership(normalized)}`
+  };
+}
+function assertTypeScope(type, directory) {
+  const check2 = checkTypeScope(type, directory);
+  if (!check2.ok) throw new Error(check2.reason ?? "Scope mismatch");
+}
+
+// src/skills/lib/doc_suite_utils.ts
+var relationFields = ["source", ...knowledgeRelationFields()];
+var changeFields = [
+  "added",
+  "modified",
+  "deleted",
+  "renamed",
+  "moved",
+  "generated"
+];
+var scaffoldTargets = (() => {
+  const byDir = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const existing = byDir.get(config2.dir);
+    const target = {
+      dir: config2.dir,
+      title: config2.scaffoldIndexTitle ?? `${config2.idPrefix} Documents`,
+      type
+    };
+    if (!existing || config2.indexPrimary) byDir.set(config2.dir, target);
+  }
+  return [...byDir.values()];
+})();
+var changeEntrySchema = external_exports.object({
+  type: external_exports.string().min(1)
+}).passthrough();
+var changesSchema = external_exports.object(Object.fromEntries(
+  changeFields.map((field) => [field, external_exports.array(changeEntrySchema).default([])])
+)).prefault({});
+var relationSchema = external_exports.object({
+  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
+  changes: changesSchema,
+  // A non-empty reason string, not a relation target (Issue #165).
+  "test-spec-skip": external_exports.string().min(1).optional()
+}).prefault({});
+var frontMatterSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  type: external_exports.enum(docTypes),
+  status: external_exports.string().min(1),
+  // `lifecycle` stays optional at the schema boundary so pre-Registry-3
+  // documents still parse — lint flags the missing field as
+  // `missing-lifecycle`; a populated non-axis value is invalid here
+  // (unknown lifecycle is never coerced to `current`).
+  lifecycle: external_exports.enum(LIFECYCLE_VALUES).optional(),
+  title: external_exports.string().min(1),
+  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  owners: external_exports.array(external_exports.string()),
+  relations: relationSchema
+}).passthrough();
+var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
+var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
+var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
+
+// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
+var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
+var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
+var relationFields2 = [
+  "source",
+  "motivates",
+  "decides-for",
+  "realizes",
+  "informs",
+  "explains",
+  "supersedes",
+  "superseded-by",
+  "implements",
+  "implemented-by",
+  "depends-on",
+  "blocks",
+  "related",
+  "refines",
+  "refined-by",
+  "derives-from",
+  "derived-by",
+  "verifies",
+  "verified-by",
+  "references",
+  "defers",
+  "deferred-by"
+];
+var changeEntrySchema2 = external_exports.object({
+  type: external_exports.string().min(1)
+}).passthrough();
+var changesSchema2 = external_exports.object(Object.fromEntries(
+  changeFields.map((field) => [field, external_exports.array(changeEntrySchema2).default([])])
+)).default({});
+var relationsSchema = external_exports.object({
+  ...Object.fromEntries(relationFields2.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
+  changes: changesSchema2
+}).prefault({});
+var implementationRecordSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  type: external_exports.literal("impl"),
+  status: external_exports.enum(implStatuses),
+  title: external_exports.string().min(1),
+  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  owners: external_exports.array(external_exports.string()),
+  relations: relationsSchema,
+  metadata: external_exports.object({
+    experiments: external_exports.object({
+      adopted: external_exports.array(external_exports.string()).default([]),
+      rejected: external_exports.array(external_exports.string()).default([])
+    })
+  })
+}).passthrough();
+var experimentEventBaseSchema = external_exports.object({
+  schema: external_exports.string().min(1),
+  experiment: external_exports.string().min(1),
+  seq: external_exports.number().int().positive(),
+  type: external_exports.string().min(1),
+  ts: external_exports.string().min(1)
+}).passthrough();
+function posixRelative(from, to) {
+  return import_node_path2.default.relative(from, to).replace(/\\/g, "/");
+}
+function ensureDir(dir) {
+  import_node_fs2.default.mkdirSync(dir, { recursive: true });
+}
+function normalizeFilePath(input2) {
+  return input2.replace(/\\/g, "/");
+}
+function defaultImplDir(kind) {
+  return kind === "ir" ? "docs/impl/ir" : "docs/impl/exp";
+}
+function implDir(cwd, kind, explicitDir) {
+  const resolved = explicitDir ? resolveContainedDir(cwd, explicitDir) : defaultImplDir(kind);
+  assertTypeScope(kind === "ir" ? "impl" : "exp", resolved);
+  return resolved;
+}
+function renderTemplate(name, replacements) {
+  const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", name);
+  let content = import_node_fs2.default.readFileSync(templatePath, "utf8").trimEnd();
+  for (const [key, value] of Object.entries(replacements)) {
+    content = content.replaceAll(`{{${key}}}`, value);
+  }
+  return content;
+}
+function renderExperimentTemplate(replacements) {
+  const escaped = Object.fromEntries(
+    Object.entries(replacements).map(([key, value]) => [key, JSON.stringify(value).slice(1, -1)])
+  );
+  const content = renderTemplate("experiment-log.jsonl", escaped);
+  return JSON.parse(content);
+}
+function normalizeExperimentPath(cwd, filePath) {
+  return normalizeFilePath(posixRelative(cwd, import_node_path2.default.resolve(filePath)));
+}
+function writeExperimentEvents(filePath, events) {
+  const content = events.length === 0 ? "" : `${events.map((event) => JSON.stringify(event)).join("\n")}
+`;
+  import_node_fs2.default.writeFileSync(filePath, content, "utf8");
+}
+function buildExperimentEvent(options2) {
+  return {
+    schema: "experiment_event.v1",
+    experiment: normalizeExperimentPath(options2.cwd, options2.filePath),
+    seq: options2.seq,
+    type: options2.type,
+    ts: options2.ts || (/* @__PURE__ */ new Date()).toISOString(),
+    ...options2.summary ? { summary: options2.summary } : {},
+    ...options2.extra || {}
+  };
+}
+var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
+var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
+var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
+function buildNewFilePath(options2) {
+  const relativeDir = implDir(options2.cwd, options2.kind, options2.explicitDir);
+  const fullDir = import_node_path2.default.join(options2.cwd, relativeDir);
+  ensureDir(fullDir);
+  const ext = options2.kind === "ir" ? ".md" : ".jsonl";
+  const filename = `${slugify2(options2.title, options2.kind)}${ext}`;
+  return {
+    outputPath: import_node_path2.default.join(fullDir, filename),
+    relativeDir
+  };
+}
+
+// src/skills/lib/schema_preflight.ts
+var import_node_fs3 = __toESM(require("node:fs"));
+var import_node_path3 = __toESM(require("node:path"));
+var import_gray_matter2 = __toESM(require_gray_matter());
+
 // node_modules/.pnpm/js-yaml@5.5.0/node_modules/js-yaml/dist/js-yaml.mjs
 var NOT_RESOLVED = /* @__PURE__ */ Symbol("NOT_RESOLVED");
 function defineScalarTag(tagName, options2) {
@@ -26620,876 +27494,7 @@ var CHOMPING_CLIP = CHOMPING_MODE.CLIP;
 var CHOMPING_STRIP = CHOMPING_MODE.STRIP;
 var CHOMPING_KEEP = CHOMPING_MODE.KEEP;
 
-// src/skills/lib/artifact_id.ts
-var import_uuid62 = __toESM(require_uuid62());
-
-// src/skills/lib/doc_types.ts
-var LIFECYCLE_VALUES = ["draft", "current", "superseded", "retired"];
-var DEFAULT_LIFECYCLE = "draft";
-var DURABLE_TARGETS = [
-  "idea",
-  "brainstorm",
-  "discovery",
-  "spec",
-  "design",
-  "adr",
-  "knowledge",
-  "verification"
-];
-var docTypes = [...DURABLE_TARGETS];
-var configs = {
-  idea: {
-    type: "idea",
-    persistence: "durable",
-    aliases: [],
-    dir: "docs/ideas",
-    dirs: ["docs/ideas"],
-    formerDirs: [],
-    scopeDirs: [],
-    idPrefix: "IDEA",
-    defaultStatus: "draft",
-    statusValues: ["draft", "exploring", "promoted", "parked", "archived", "superseded"],
-    settledStatuses: ["promoted", "parked", "archived", "superseded"],
-    lifecycleValues: [...LIFECYCLE_VALUES],
-    defaultLifecycle: DEFAULT_LIFECYCLE,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    creator: "new_idea",
-    mutators: [],
-    auditors: [],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    expectedUpstream: [],
-    allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
-      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
-    ],
-    allowsRootArtifact: true,
-    requiresSourceEvidence: false,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    note: "Durable capture type: raw unformalized ideas feeding discovery/spec."
-  },
-  brainstorm: {
-    type: "brainstorm",
-    persistence: "durable",
-    aliases: [],
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    formerDirs: [],
-    scopeDirs: [],
-    idPrefix: "BRAINSTORM",
-    defaultStatus: "capturing",
-    statusValues: ["capturing", "confirmed", "routed", "superseded"],
-    settledStatuses: ["routed", "superseded"],
-    lifecycleValues: [...LIFECYCLE_VALUES],
-    defaultLifecycle: DEFAULT_LIFECYCLE,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    // `brainstorm` has no creator script: the brainstorming skill authors
-    // those documents directly.
-    mutators: [],
-    auditors: [],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    expectedUpstream: [],
-    allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
-      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
-    ],
-    allowsRootArtifact: true,
-    requiresSourceEvidence: false,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    note: "Durable capture type co-resident with discovery in docs/discovery."
-  },
-  discovery: {
-    type: "discovery",
-    persistence: "durable",
-    aliases: [],
-    dir: "docs/discovery",
-    dirs: ["docs/discovery"],
-    formerDirs: [],
-    scopeDirs: [],
-    idPrefix: "DISC",
-    defaultStatus: "draft",
-    statusValues: ["draft", "active", "resolved", "archived", "superseded"],
-    settledStatuses: ["resolved", "archived", "superseded"],
-    lifecycleValues: [...LIFECYCLE_VALUES],
-    defaultLifecycle: DEFAULT_LIFECYCLE,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    creator: "new_discovery",
-    mutators: [],
-    auditors: [],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    expectedUpstream: [],
-    allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
-      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
-    ],
-    allowsRootArtifact: true,
-    requiresSourceEvidence: true,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    indexPrimary: true,
-    note: "Durable capture type: bounded exploration with source evidence."
-  },
-  spec: {
-    type: "spec",
-    persistence: "durable",
-    aliases: [],
-    dir: "docs/specs",
-    dirs: ["docs/specs", "docs/spec", "specs", "spec"],
-    formerDirs: [],
-    scopeDirs: [],
-    idPrefix: "SPEC",
-    defaultStatus: "draft",
-    statusValues: ["draft", "proposed", "approved", "implemented", "superseded", "rejected"],
-    settledStatuses: ["implemented", "superseded", "rejected"],
-    lifecycleValues: [...LIFECYCLE_VALUES],
-    defaultLifecycle: DEFAULT_LIFECYCLE,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    creator: "new_spec",
-    mutators: [],
-    auditors: [],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    // Under Knowledge Relations v1 a spec declares no forward upstream
-    // (it is the target of motivates/realizes/decides-for, not the source).
-    expectedUpstream: [],
-    allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
-    ],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    note: "Durable normative requirements document."
-  },
-  design: {
-    type: "design",
-    persistence: "durable",
-    aliases: [],
-    dir: "docs/designs",
-    dirs: ["docs/designs", "docs/design", "designs", "design"],
-    formerDirs: [],
-    scopeDirs: [],
-    idPrefix: "DESIGN",
-    defaultStatus: "draft",
-    statusValues: ["draft", "approved", "superseded", "rejected"],
-    settledStatuses: ["superseded", "rejected"],
-    lifecycleValues: [...LIFECYCLE_VALUES],
-    defaultLifecycle: DEFAULT_LIFECYCLE,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    creator: "new_design",
-    mutators: [],
-    auditors: [],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    // A design realizes a spec: `realizes` is its declared upstream under
-    // Knowledge Relations v1 (skip the check once the design is settled).
-    expectedUpstream: [
-      { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
-    ],
-    allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
-      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
-    ],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    idExceptions: ["DESIGN-OVERVIEW"],
-    requiredDirectoryFiles: ["overview.md"],
-    reservedFiles: ["overview.md"],
-    scaffoldIndexTitle: "DESIGN Documents",
-    note: "Durable design document; docs/designs requires overview.md."
-  },
-  adr: {
-    type: "adr",
-    persistence: "durable",
-    aliases: [],
-    dir: "docs/adr",
-    dirs: ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"],
-    formerDirs: [],
-    scopeDirs: [],
-    idPrefix: "ADR",
-    defaultStatus: "proposed",
-    statusValues: ["proposed", "accepted", "rejected", "deprecated", "superseded", "draft"],
-    settledStatuses: ["rejected", "deprecated", "superseded"],
-    lifecycleValues: [...LIFECYCLE_VALUES],
-    defaultLifecycle: DEFAULT_LIFECYCLE,
-    owner: "adr-doc",
-    indexFormat: "shared-4col",
-    indexTitle: "Architecture Decision Records",
-    indexRow: {
-      // MADR filenames carry the decision number (`0007-use-pgsql.md`) and
-      // H1s keep it (`# 7. Use PostgreSQL`); mirror adr_utils' fallbacks so
-      // every producer derives identical rows (Issue #185).
-      idFromFile: (file2) => {
-        const match = /^(\d+)-/.exec(file2);
-        return match ? `ADR-${match[1]}` : null;
-      },
-      titleFromHeading: (heading) => heading.replace(/^\d+\.\s*/, "").trim()
-    },
-    creator: "new_adr",
-    mutators: ["update_index", "relate_adr"],
-    auditors: ["audit_adr", "review_adr", "list_adrs", "migrate_report", "check_code_links"],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    expectedUpstream: [],
-    allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
-      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
-    ],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    scaffoldIndexTitle: "Architecture Decision Records",
-    note: "Durable decision record owned by adr-doc (MADR conventions)."
-  },
-  knowledge: {
-    type: "knowledge",
-    persistence: "durable",
-    aliases: [],
-    dir: "docs/knowledge",
-    dirs: ["docs/knowledge"],
-    formerDirs: [],
-    scopeDirs: [],
-    idPrefix: "KNOW",
-    defaultStatus: "draft",
-    statusValues: ["draft", "confirmed", "archived", "superseded"],
-    settledStatuses: ["archived", "superseded"],
-    lifecycleValues: [...LIFECYCLE_VALUES],
-    defaultLifecycle: DEFAULT_LIFECYCLE,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    creator: "new_knowledge",
-    mutators: [],
-    auditors: [],
-    // `knowledge_kind` classifies the durable knowledge record
-    // (codebase|architecture|operation|lesson — the Registry's fixed
-    // vocabulary per #242).
-    requiredFields: ["knowledge_kind"],
-    fieldVocabularies: {
-      knowledge_kind: ["codebase", "architecture", "operation", "lesson"]
-    },
-    requiredRelations: [],
-    expectedUpstream: [],
-    allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
-      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
-    ],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    scaffoldIndexTitle: "Knowledge Documents",
-    note: "Durable knowledge record (#242 refines the skill flow)."
-  },
-  verification: {
-    type: "verification",
-    persistence: "durable",
-    aliases: [],
-    dir: "docs/verification",
-    dirs: ["docs/verification"],
-    formerDirs: [],
-    scopeDirs: [],
-    idPrefix: "VD",
-    defaultStatus: "draft",
-    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
-    settledStatuses: ["deprecated", "superseded"],
-    lifecycleValues: [...LIFECYCLE_VALUES],
-    defaultLifecycle: DEFAULT_LIFECYCLE,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    creator: "new_verification",
-    mutators: ["update_verification"],
-    auditors: ["resolve_verification"],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    expectedUpstream: [],
-    // Check→Claim relations are derived from `checks[].target` (#239) and
-    // Evidence `supported-by` comes from the Evidence Store (#240); neither
-    // is a stored relation field here.
-    allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
-    ],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    scaffoldIndexTitle: "Verification Design Documents",
-    note: "Durable verification-intent document; Verification Design v1 defines the Check contract (#239)."
-  }
-};
-var executionTypes = ["plan", "task"];
-var ephemeralConfigs = {
-  plan: {
-    type: "plan",
-    persistence: "ephemeral",
-    aliases: [],
-    dir: null,
-    dirs: [],
-    formerDirs: ["docs/plans", "docs/implementation-plans", "plans", "implementation-plans"],
-    scopeDirs: [],
-    idPrefix: "PLAN",
-    defaultStatus: "draft",
-    statusValues: ["draft", "approved", "in-progress", "blocked", "completed", "superseded"],
-    settledStatuses: ["completed", "superseded"],
-    lifecycleValues: [],
-    defaultLifecycle: null,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    mutators: [],
-    auditors: [],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    expectedUpstream: [],
-    allowedRelations: [],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    note: "Execution-bound: plan state lives in the Execution Store (#236); docs/plans is a former dir only."
-  },
-  task: {
-    type: "task",
-    persistence: "ephemeral",
-    aliases: [],
-    dir: null,
-    dirs: [],
-    formerDirs: ["docs/tasks", "docs/work-items", "tasks", "work-items"],
-    scopeDirs: [],
-    idPrefix: "TASK",
-    defaultStatus: "todo",
-    statusValues: ["todo", "in-progress", "blocked", "done", "wont-do"],
-    settledStatuses: ["done", "wont-do"],
-    lifecycleValues: [],
-    defaultLifecycle: null,
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    mutators: [],
-    auditors: [],
-    requiredFields: [],
-    fieldVocabularies: {},
-    requiredRelations: [],
-    expectedUpstream: [],
-    allowedRelations: [],
-    allowsRootArtifact: false,
-    requiresSourceEvidence: false,
-    idExceptions: [],
-    requiredDirectoryFiles: [],
-    reservedFiles: [],
-    note: "Execution-bound: task state lives in the Execution Store (#236); docs/tasks is a former dir only."
-  }
-};
-var legacyDocTypes = {
-  "test-spec": {
-    type: "test-spec",
-    aliases: ["test_spec", "testspec"],
-    formerDirs: ["docs/test-specs", "docs/test-spec", "test-specs", "test-spec"],
-    scopeDirs: [],
-    idPrefix: "TSPEC",
-    defaultStatus: "draft",
-    statusValues: ["draft", "proposed", "approved", "deprecated", "superseded"],
-    settledStatuses: ["deprecated", "superseded"],
-    owner: "doc-suite",
-    indexFormat: "shared-4col",
-    mutators: ["new_test_spec", "doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"],
-    auditors: ["doc_status", "audit_docs", "list_docs"],
-    requiredFields: [],
-    note: "Legacy verification-intent type, superseded by `verification` (#239); migration-only."
-  },
-  impl: {
-    type: "impl",
-    aliases: ["implementation-record", "impl-record", "ir"],
-    formerDirs: ["docs/impl/ir"],
-    scopeDirs: ["docs/impl"],
-    idPrefix: "IMPL",
-    defaultStatus: "draft",
-    statusValues: ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"],
-    settledStatuses: ["completed", "abandoned", "superseded"],
-    owner: "impl-doc",
-    indexFormat: "impl-4col",
-    indexTitle: "Implementation Records",
-    mutators: ["new_impl_record", "migrate_ids", "promote_index", "sync_impl_index"],
-    auditors: ["audit_impl_record"],
-    requiredFields: ["metadata"],
-    note: "Legacy implementation record; interpretation is migration-only (#240 extracts durable knowledge)."
-  },
-  exp: {
-    type: "exp",
-    aliases: ["experiment-log"],
-    formerDirs: ["docs/impl/exp"],
-    scopeDirs: [],
-    idPrefix: "EXP",
-    // Experiment logs are JSONL event logs without front matter.
-    defaultStatus: null,
-    statusValues: [],
-    settledStatuses: [],
-    owner: "impl-doc",
-    indexFormat: "exp-1col",
-    indexTitle: "Experiment Logs",
-    mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", "promote_index", "sync_impl_index"],
-    auditors: ["audit_experiment_log"],
-    requiredFields: [],
-    note: "Legacy experiment log (JSONL, no front matter); interpretation is migration-only."
-  }
-};
-var registry2 = {
-  ...configs,
-  ...ephemeralConfigs
-};
-var legacyAliases = /* @__PURE__ */ new Map();
-for (const entry of Object.values(legacyDocTypes)) {
-  for (const alias of [entry.type, ...entry.aliases]) legacyAliases.set(alias, entry.type);
-}
-function configFor(type) {
-  const entry = registry2[type];
-  if (entry?.persistence === "durable") return entry;
-  if (entry?.persistence === "ephemeral") {
-    throw new Error(
-      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
-    );
-  }
-  if (legacyAliases.has(type)) {
-    throw new Error(
-      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
-    );
-  }
-  throw new Error(`Unknown document type: ${type}`);
-}
-function executionBoundTypeNames() {
-  return [
-    ...executionTypes,
-    ...[...legacyAliases.keys()].sort()
-  ];
-}
-var DURABLE_DOC_DIRS = Object.freeze(
-  [...new Set(docTypes.map((type) => configs[type].dir))]
-);
-var LEGACY_DOC_DIRS = Object.freeze(
-  [
-    ...executionTypes.flatMap((type) => [...ephemeralConfigs[type].formerDirs]),
-    ...Object.values(legacyDocTypes).flatMap((entry) => [...entry.formerDirs, ...entry.scopeDirs])
-  ].filter((dir) => !DURABLE_DOC_DIRS.includes(dir)).sort()
-);
-var LEGACY_CANONICAL_DIRS = Object.freeze([
-  ...executionTypes.map((type) => ephemeralConfigs[type].formerDirs[0]),
-  ...Object.values(legacyDocTypes).map((entry) => entry.formerDirs[0])
-]);
-var CANONICAL_DOC_DIRS = Object.freeze(
-  [...DURABLE_DOC_DIRS, ...LEGACY_CANONICAL_DIRS]
-);
-function managedDocDirs() {
-  const dirs = new Set(CANONICAL_DOC_DIRS);
-  for (const type of docTypes) {
-    for (const dir of configs[type].dirs) dirs.add(dir);
-  }
-  for (const dir of LEGACY_DOC_DIRS) dirs.add(dir);
-  return [...dirs].sort();
-}
-function knowledgeRelationFields() {
-  const fields = /* @__PURE__ */ new Set();
-  for (const type of docTypes) {
-    for (const relation of configs[type].allowedRelations) fields.add(relation.field);
-  }
-  return [...fields].sort();
-}
-var PROVENANCE_RELATION_KEYS = ["source"];
-
-// src/skills/lib/doc_lifecycle.ts
-var SETTLED_STATUSES = {
-  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
-  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
-  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
-};
-var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
-  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
-);
-
-// src/skills/lib/document_utils.ts
-var import_node_fs = __toESM(require("node:fs"));
-var import_node_path = __toESM(require("node:path"));
-var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
-  "changes",
-  "test-spec-skip"
-]);
-function normalizeDir(input2) {
-  return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
-}
-function stripExtendedLengthPrefix(value) {
-  if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
-  if (value.startsWith("\\\\?\\")) return value.slice(4);
-  return value;
-}
-function containmentKey(value) {
-  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
-function isInside(cwd, candidate) {
-  const root = containmentKey(cwd);
-  const resolved = containmentKey(candidate);
-  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
-}
-function isInsideRealpath(cwd, candidate) {
-  try {
-    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
-  } catch {
-    return false;
-  }
-}
-function isInsideCheckout(cwd, candidate) {
-  const resolved = import_node_path.default.resolve(cwd, candidate);
-  if (!isInside(cwd, resolved)) return false;
-  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
-}
-function toRepoRelative(cwd, absolute) {
-  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
-}
-function resolveContainedDir(cwd, dir, flag = "--dir") {
-  const resolved = import_node_path.default.resolve(cwd, dir);
-  if (!isInside(cwd, resolved)) {
-    throw new Error(`${flag} escapes the checkout: ${dir}`);
-  }
-  if (import_node_fs.default.existsSync(resolved)) {
-    if (!isInsideRealpath(cwd, resolved)) {
-      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
-    }
-    return toRepoRelative(
-      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
-      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
-    );
-  }
-  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
-}
-function isIndexFileName(file2) {
-  return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
-}
-function slugify2(title, fallback) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || fallback;
-}
-
-// src/skills/lib/doc_ownership.ts
-var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
-var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
-var PROMOTE_INDEX_MUTATOR = "promote_index";
-function buildContracts() {
-  const rows = /* @__PURE__ */ new Map();
-  const rowFor = (dir, owner, indexFormat, indexTitle) => {
-    const normalized = normalizeDir(dir);
-    let row = rows.get(normalized);
-    if (!row) {
-      row = {
-        dir: normalized,
-        canonical: false,
-        owner,
-        residents: [],
-        indexFormat,
-        indexTitle,
-        mutators: /* @__PURE__ */ new Set(),
-        auditors: /* @__PURE__ */ new Set()
-      };
-      rows.set(normalized, row);
-    }
-    return row;
-  };
-  for (const type of docTypes) {
-    const config2 = configFor(type);
-    for (const dir of config2.dirs) {
-      const canonical = normalizeDir(dir) === normalizeDir(config2.dir);
-      const row = rowFor(dir, config2.owner, config2.indexFormat, canonical ? config2.indexTitle : void 0);
-      row.canonical = row.canonical || canonical;
-      if (!row.residents.includes(type)) row.residents.push(type);
-      if (canonical && config2.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
-      if (config2.creator) row.mutators.add(config2.creator);
-      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
-      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
-      for (const mutator of config2.mutators) row.mutators.add(mutator);
-      for (const auditor of config2.auditors) row.auditors.add(auditor);
-    }
-  }
-  for (const type of executionTypes) {
-    const entry = ephemeralConfigs[type];
-    for (const dir of entry.formerDirs) {
-      const row = rowFor(dir, entry.owner, entry.indexFormat);
-      row.canonical = row.canonical || dir === entry.formerDirs[0];
-      if (!row.residents.includes(type)) row.residents.push(type);
-      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
-      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
-      for (const mutator of entry.mutators) row.mutators.add(mutator);
-      for (const auditor of entry.auditors) row.auditors.add(auditor);
-    }
-  }
-  for (const entry of Object.values(legacyDocTypes)) {
-    for (const dir of entry.scopeDirs) {
-      const row = rowFor(dir, entry.owner, "none");
-      row.canonical = true;
-    }
-    for (const dir of entry.formerDirs) {
-      const canonical = dir === entry.formerDirs[0];
-      const row = rowFor(dir, entry.owner, entry.indexFormat, canonical ? entry.indexTitle : void 0);
-      row.canonical = row.canonical || canonical;
-      if (!row.residents.includes(entry.type)) row.residents.push(entry.type);
-      if (canonical && entry.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
-      for (const mutator of entry.mutators) row.mutators.add(mutator);
-      for (const auditor of entry.auditors) row.auditors.add(auditor);
-    }
-  }
-  return [...rows.values()].map((row) => ({
-    dir: row.dir,
-    canonical: row.canonical,
-    owner: row.owner,
-    residentTypes: row.residents,
-    indexFormat: row.indexFormat,
-    indexTitle: row.indexTitle,
-    mutators: [...row.mutators].sort(),
-    auditors: [...row.auditors].sort()
-  })).sort((a, b) => a.dir.localeCompare(b.dir));
-}
-var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
-function ownershipForDir(directory) {
-  const normalized = normalizeDir(directory);
-  let best = null;
-  for (const contract of DIRECTORY_CONTRACTS) {
-    if (normalized === contract.dir || normalized.startsWith(`${contract.dir}/`)) {
-      if (!best || contract.dir.length > best.dir.length) best = contract;
-    }
-  }
-  return best;
-}
-function describeOwnership(directory) {
-  const normalized = normalizeDir(directory);
-  const ownership = ownershipForDir(normalized);
-  if (!ownership) return `custom directory "${normalized}" (no declared owner)`;
-  const residents = ownership.residentTypes.length > 0 ? ownership.residentTypes.join(", ") : "none";
-  return `"${ownership.dir}" (owned by ${ownership.owner}; resident types: ${residents})`;
-}
-function checkTypeScope(type, directory) {
-  const normalized = normalizeDir(directory);
-  const ownership = ownershipForDir(normalized);
-  if (!ownership || ownership.residentTypes.includes(type)) {
-    return { ok: true, directory: normalized, ownership, reason: null };
-  }
-  return {
-    ok: false,
-    directory: normalized,
-    ownership,
-    reason: `Scope mismatch: type "${type}" is not resident in ${describeOwnership(normalized)}`
-  };
-}
-function assertTypeScope(type, directory) {
-  const check2 = checkTypeScope(type, directory);
-  if (!check2.ok) throw new Error(check2.reason ?? "Scope mismatch");
-}
-
-// src/skills/lib/doc_suite_utils.ts
-var relationFields = ["source", ...knowledgeRelationFields()];
-var changeFields = [
-  "added",
-  "modified",
-  "deleted",
-  "renamed",
-  "moved",
-  "generated"
-];
-var scaffoldTargets = (() => {
-  const byDir = /* @__PURE__ */ new Map();
-  for (const type of docTypes) {
-    const config2 = configFor(type);
-    const existing = byDir.get(config2.dir);
-    const target = {
-      dir: config2.dir,
-      title: config2.scaffoldIndexTitle ?? `${config2.idPrefix} Documents`,
-      type
-    };
-    if (!existing || config2.indexPrimary) byDir.set(config2.dir, target);
-  }
-  return [...byDir.values()];
-})();
-var changeEntrySchema = external_exports.object({
-  type: external_exports.string().min(1)
-}).passthrough();
-var changesSchema = external_exports.object(Object.fromEntries(
-  changeFields.map((field) => [field, external_exports.array(changeEntrySchema).default([])])
-)).prefault({});
-var relationSchema = external_exports.object({
-  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
-  changes: changesSchema,
-  // A non-empty reason string, not a relation target (Issue #165).
-  "test-spec-skip": external_exports.string().min(1).optional()
-}).prefault({});
-var frontMatterSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  type: external_exports.enum(docTypes),
-  status: external_exports.string().min(1),
-  // `lifecycle` stays optional at the schema boundary so pre-Registry-3
-  // documents still parse — lint flags the missing field as
-  // `missing-lifecycle`; a populated non-axis value is invalid here
-  // (unknown lifecycle is never coerced to `current`).
-  lifecycle: external_exports.enum(LIFECYCLE_VALUES).optional(),
-  title: external_exports.string().min(1),
-  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  owners: external_exports.array(external_exports.string()),
-  relations: relationSchema
-}).passthrough();
-var GENERATED_SETTLED_MARKER = "<!-- doc-suite:settled-index -->";
-var INDEX_TABLE_HEADER_4COL = "| ID | Title | Status | File |\n| --- | --- | --- | --- |";
-var INDEX_TABLE_HEADER_1COL = "| File |\n| --- |";
-
-// src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
-var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
-var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
-var relationFields2 = [
-  "source",
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-  "superseded-by",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by"
-];
-var changeEntrySchema2 = external_exports.object({
-  type: external_exports.string().min(1)
-}).passthrough();
-var changesSchema2 = external_exports.object(Object.fromEntries(
-  changeFields.map((field) => [field, external_exports.array(changeEntrySchema2).default([])])
-)).default({});
-var relationsSchema = external_exports.object({
-  ...Object.fromEntries(relationFields2.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
-  changes: changesSchema2
-}).prefault({});
-var implementationRecordSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  type: external_exports.literal("impl"),
-  status: external_exports.enum(implStatuses),
-  title: external_exports.string().min(1),
-  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  owners: external_exports.array(external_exports.string()),
-  relations: relationsSchema,
-  metadata: external_exports.object({
-    experiments: external_exports.object({
-      adopted: external_exports.array(external_exports.string()).default([]),
-      rejected: external_exports.array(external_exports.string()).default([])
-    })
-  })
-}).passthrough();
-var experimentEventBaseSchema = external_exports.object({
-  schema: external_exports.string().min(1),
-  experiment: external_exports.string().min(1),
-  seq: external_exports.number().int().positive(),
-  type: external_exports.string().min(1),
-  ts: external_exports.string().min(1)
-}).passthrough();
-function posixRelative(from, to) {
-  return import_node_path2.default.relative(from, to).replace(/\\/g, "/");
-}
-function ensureDir(dir) {
-  import_node_fs2.default.mkdirSync(dir, { recursive: true });
-}
-function normalizeFilePath(input2) {
-  return input2.replace(/\\/g, "/");
-}
-function defaultImplDir(kind) {
-  return kind === "ir" ? "docs/impl/ir" : "docs/impl/exp";
-}
-function implDir(cwd, kind, explicitDir) {
-  const resolved = explicitDir ? resolveContainedDir(cwd, explicitDir) : defaultImplDir(kind);
-  assertTypeScope(kind === "ir" ? "impl" : "exp", resolved);
-  return resolved;
-}
-function renderTemplate(name, replacements) {
-  const templatePath = import_node_path2.default.join(__dirname, "../assets/templates", name);
-  let content = import_node_fs2.default.readFileSync(templatePath, "utf8").trimEnd();
-  for (const [key, value] of Object.entries(replacements)) {
-    content = content.replaceAll(`{{${key}}}`, value);
-  }
-  return content;
-}
-function renderExperimentTemplate(replacements) {
-  const escaped = Object.fromEntries(
-    Object.entries(replacements).map(([key, value]) => [key, JSON.stringify(value).slice(1, -1)])
-  );
-  const content = renderTemplate("experiment-log.jsonl", escaped);
-  return JSON.parse(content);
-}
-function normalizeExperimentPath(cwd, filePath) {
-  return normalizeFilePath(posixRelative(cwd, import_node_path2.default.resolve(filePath)));
-}
-function writeExperimentEvents(filePath, events) {
-  const content = events.length === 0 ? "" : `${events.map((event) => JSON.stringify(event)).join("\n")}
-`;
-  import_node_fs2.default.writeFileSync(filePath, content, "utf8");
-}
-function buildExperimentEvent(options2) {
-  return {
-    schema: "experiment_event.v1",
-    experiment: normalizeExperimentPath(options2.cwd, options2.filePath),
-    seq: options2.seq,
-    type: options2.type,
-    ts: options2.ts || (/* @__PURE__ */ new Date()).toISOString(),
-    ...options2.summary ? { summary: options2.summary } : {},
-    ...options2.extra || {}
-  };
-}
-var SETTLED_HEADING = `## Settled ${GENERATED_SETTLED_MARKER}`;
-var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
-var [EXP_HEADER_LINE, EXP_SEPARATOR_LINE] = INDEX_TABLE_HEADER_1COL.split("\n");
-function buildNewFilePath(options2) {
-  const relativeDir = implDir(options2.cwd, options2.kind, options2.explicitDir);
-  const fullDir = import_node_path2.default.join(options2.cwd, relativeDir);
-  ensureDir(fullDir);
-  const ext = options2.kind === "ir" ? ".md" : ".jsonl";
-  const filename = `${slugify2(options2.title, options2.kind)}${ext}`;
-  return {
-    outputPath: import_node_path2.default.join(fullDir, filename),
-    relativeDir
-  };
-}
-
 // src/skills/lib/schema_preflight.ts
-var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
-var import_gray_matter2 = __toESM(require_gray_matter());
 var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
 var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
 var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;

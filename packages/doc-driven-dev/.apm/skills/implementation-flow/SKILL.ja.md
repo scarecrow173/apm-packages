@@ -25,7 +25,8 @@ Store のレコードを指します。`impl-doc` の Implementation Record と
 Experiment Log はレガシーの migration-only 種別で、`new_impl_record.js` /
 `new_experiment_log.js` は registry gate で拒否します。それらに言及する
 フェーズは、マイグレーションが読み取る v3 以前の証跡契約を記述します。
-durable な検証証跡は `verification-doc` が `docs/verification` に記録します。
+durable な検証証跡は `verification-doc` が `docs/verification` に記録し、
+durable な知見は `knowledge-doc` で条件付きに統合します。
 
 ## 利用タイミング
 
@@ -48,14 +49,14 @@ routing decision には 1 行の理由を記録する。
 ## フローフェーズ
 
 ```text
-Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentation を開く  →  Phase C: 実行  →  Phase D: 検証  →  Phase E: レビュー
+Phase A: 評価  →  Phase B: 構成  →  Phase C0: Implementation Documentation（条件付き）  →  Phase C: 実行  →  Phase D: 検証  →  Phase E: レビュー
 ```
 
 | フェーズ | 目的 | 出力 |
 | -------- | ---- | ---- |
 | A. 評価 | タスクを理解し、`.sdp/implementation-flow-default/implementation-flow-profile.json` を確認 | タスク特性の特定 |
 | B. 構成 | スキルを発見し、タスク用のスキルスタックを構築/読込 | アクティブスキルスタックの宣言 |
-| C0. Implementation Documentation を開く | コード変更前に Implementation Record を開く | `in-progress` の実装ドキュメント |
+| C0. Implementation Documentation | 条件付きドキュメント経路 — Registry 3 では変更前記録の強制なし | ドキュメント決定の記録 |
 | C. 実行 | 優先度順にスキルを適用 | コード変更の実装 |
 | D. 検証 | タスクが検証条件を通過することを確認 | 正しさのエビデンス |
 | E. レビュー | レビューに提出し、フィードバックに対応 | レビュー完了 |
@@ -194,30 +195,29 @@ skill の `SKILL.md` 本文だけを読み、references と scripts は active s
 
 ---
 
-## Phase C0: Implementation Documentation を開く
+## Phase C0: Implementation Documentation（条件付き）
 
-各 task の最初のコード変更前に、`impl-doc` を通じて実装記録を開く。
-（レガシー契約: `new_impl_record.js` / `new_experiment_log.js` は Document
-Registry 3 では拒否されます。上記の Registry 3 注記を参照。このフェーズは
-マイグレーション可読な証跡形状を記述します。）
+Registry 3 では常時生成契約が廃止されました: **コード変更前に
+Implementation Record や Experiment Log は開きません** ——
+`new_impl_record.js` / `new_experiment_log.js` は registry gate で拒否
+し、通常の実装修正は IR も EXP も強制されるナレッジドキュメントもなく
+完了します。
 
-1. タスク単位ごとに `in-progress` の Implementation Record を作成または再利用する。
-2. `impl-doc` の規約に従い、task との対応関係と追跡可能性を維持する。
-3. Phase A で探索的と判定された場合は、該当する試行を始める前に
-   Experiment Log も開く。
-4. Implementation Record のパスを、コード編集に入る前の進捗メモや
-   ステータス更新に残す。
+1. 既定ではドキュメントステップを実行しません —— 実行メモは durable な
+   Git 文書ではなく、ランの Execution Store レコードと診断トレースに
+   残ります。
+2. task が durable な知見（設計・修正の根拠、再発防止、確定した制約、
+   調査で確定した性質）を生んだ場合、クローズアウト前に
+   `knowledge-doc` で統合します —— assess→決定→適用の契約は後述の
+   **実装ドキュメント** セクション; `none` 決定も有効な結果です。
+3. 未整理のまま残った重要な知見 —— 未レビューの競合や、特定したのに
+   永続化しなかったナレッジ —— は静かに捨てず、ランの終了ゲートへ
+   報告します。
 
-例:
-
-```bash
-node ../impl-doc/scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
-```
-
-相対 script path は caller の作業ディレクトリではなく、インストール済み
-skill directory 基準です。実行前に絶対パスへ解決します。
-
-明確な既知解の task でも `in-progress` の Implementation Record は必須であり、任意なのは Experiment Log だけである。
+このフェーズがかつて記述していた v3 以前の証跡契約（task ごとに
+in-progress の ir を1件、最初のコード変更前に開く）は、`impl-doc` が
+文書化する migration 可読な corpus の形です。通常実行への作成指示では
+ありません。
 
 ---
 
@@ -259,11 +259,9 @@ slice 自身の task レコードと宣言済みの `docs/impl/` evidence は sc
 
    生成済みプロファイルを `skill-discovery-protocol` で参照し、対象スキルの `execution-policy` と `runtime_guidance` を確認する。
 3. スキルはレイヤーとして重なる — 排他的ではない。複数スキルが同時に適用される。
-4. 実装中は `in-progress` の Implementation Record を最新に保つ。主要な判断、
-   スコープ調整、Experiment Log への参照、検証メモを後追いではなく進行中に
-   反映する。
-5. **アプローチが探索的な場合**、仮説・観察・却下した試行を、発生したその場で
-   `impl-doc` 経由で Experiment Log に記録する（後述の **実装ドキュメント** セクションを参照）。
+4. 実行中のメモはランの Execution Store レコードに残り、durable 文書として
+   記録しません。durable な知見が生まれたときだけ、後述の統合経路で
+   `knowledge-doc` に渡します。
 
 ---
 
@@ -273,7 +271,9 @@ slice 自身の task レコードと宣言済みの `docs/impl/` evidence は sc
 
 1. タスクが定義された検証条件を通過することを確認する。
 2. Hard Gate #1（EVIDENCE要件）を満たすエビデンスを記録してから次へ進む。
-3. タスクを閉じる前に、検証エビデンスと最終状態を Implementation Record に追記する。
+3. エビデンスをランの Execution Store トレースに記録し、durable な知見が
+   あれば `knowledge-doc` の統合でクローズアウトする（後述の
+   **実装ドキュメント** セクションを参照）。
 4. 検証失敗 → Process カテゴリスキルで診断し、修正し、再検証する。
 
 ---
@@ -290,23 +290,40 @@ slice 自身の task レコードと宣言済みの `docs/impl/` evidence は sc
 
 ## 実装ドキュメント
 
-実装フェーズは `impl-doc` スキルを通じて 2 つのダウンストリーム文書を生成する。
-これらの記録はフローの一部であり、任意の追加作業ではない。このフローが
-`doc-driven-dev-graph` の下で実行される場合、`docs/impl/ir/` と
-`docs/impl/exp/` は既に存在する（bootstrap contract）。これらの記録を確保する
-ことは完了義務である。
+Registry 3 では実装フェーズはダウンストリーム文書の生成を要求しません。
+IR/EXP の作成はフローの一部ではなくなりました —— v3 以前の `docs/impl/`
+corpus は migration の入力にすぎません（`impl-doc` 参照）。ランが産んだ
+ものは Execution Store の診断トレースであり、通常の修正は新規 durable
+文書ゼロで完了します。
 
-- **Experiment Log（`docs/impl/exp/`）** — Phase A でアプローチが不確実または
-  探索的と判定された場合に作成する。仮説・観察・却下した試行を、Phase C で
-  発生したその場で記録する。解決策が既知の機械的なタスクでは作成しない。
-- **Implementation Record（`docs/impl/ir/`）** — 各 task の最初のコード変更前に、
-  Phase C0 で 1 件作成または再利用する。Phase C では `in-progress` として更新を
-  続け、Phase D/E で完了・監査する。実装内容、実装中の意思決定、検証エビデンス、
-  採用／却下した実験を記録する。Experiment Log が存在する場合、記録はそれを
-  参照しなければならない。
+durable な知見は `knowledge-doc` で条件付きに抽出します ——
+ナレッジを代替 impl-log としては使いません。統合するのはランが永続的な
+知識を産んだ場合のみです: 設計・修正の根拠、再発防止、確定した制約、
+調査で確定した性質。時系列、コマンドログ、チャット的作業記録は絶対に
+抽出しません。
 
-作成コマンド、規約、完了報告前に実行する監査手順は
-[`impl-doc` SKILL](../impl-doc/SKILL.ja.md) を参照。
+知見が条件を満たす場合:
+
+```bash
+node ../knowledge-doc/scripts/consolidate_knowledge.js assess --title "<finding>" --kind codebase
+```
+
+1. `assess` が既存ナレッジと Spec/Design/ADR を走査し、候補と競合を
+   報告します（相対 script path はインストール済み skill directory
+   基準です）。
+2. ちょうど1つの決定を適用します —— 既存ナレッジドキュメントへの
+   `integrate`（優先）、所有スキルへの `route`、明示的な競合承認後の
+   `create`、または `none`。
+3. すべての永続化経路は抽出元（`--from`）と根拠（`--basis`）を記録し、
+   未検証の推測は `confirmed` ではなく `draft` のままです。
+
+未整理の重要な知見 —— 特定したのに永続化しなかったナレッジ、未レビューの
+競合 —— は静かに捨てず、ランの終了ゲートへ報告します。
+
+完全な決定契約は [`knowledge-doc` SKILL](../knowledge-doc/SKILL.ja.md) と
+その[抽出契約](../knowledge-doc/references/knowledge-extraction.ja.md)
+を、migration ツーリングが読む
+legacy corpus 契約は [`impl-doc` SKILL](../impl-doc/SKILL.ja.md) を参照。
 
 ---
 
@@ -339,11 +356,16 @@ slice 自身の task レコードと宣言済みの `docs/impl/` evidence は sc
 </HARD-GATE>
 
 <HARD-GATE>
-Phase C0 で実装ドキュメントを開くまで、コード変更を開始してはならない。
-- `impl-doc` で Implementation Record を作成または再利用する。
-- 実装中は `--status "in-progress"` のまま維持する。
-- タスクを閉じる前に完了・監査する。
-明確な既知解の task でも `in-progress` の Implementation Record は必須であり、任意なのは Experiment Log だけである。
+このフローがドキュメントを強制することはありません —— ただし統合の
+決定は沈黙ではなく明示的に行います。
+- Implementation Record や Experiment Log は開きません; `impl`/`exp` の
+  mutator は registry gate で拒否します。
+- durable な知見がある場合、クローズアウト前に
+  `node ../knowledge-doc/scripts/consolidate_knowledge.js assess` を実行し、
+  ちょうど1つの決定を適用します; `none` が有効なのは条件を満たすものが
+  ない場合のみです。
+- 未整理のまま残った重要な知見（未レビューの競合、特定したのに永続化
+  しなかったナレッジ）は終了ゲートへ報告します。
 </HARD-GATE>
 
 <HARD-GATE>
@@ -399,10 +421,12 @@ repository の commit convention）で commit します。commit が granted aut
 - 各タスクが定義された検証条件を通過している。
 - 実装中に発見された新制約が上流文書に反映されている。
 - Review カテゴリスキルが適用されている（コードレビュー完了）。
-- 各 task 単位で、Implementation Record（`impl-doc` の ir）がコード変更開始前に
-  開かれている。
-- 各 Implementation Record がタスク終了前に完了・監査され、実装中に作成した
-  Experiment Log（exp）を参照・監査している。
+- 実装知見の統合決定が明示的である: durable なナレッジは記録済みの
+  抽出元と根拠付きで統合/作成されるか、所有ドキュメントスキルへ
+  振られるか、意識的に `none` とされる; 未整理の重要な知見は終了
+  ゲートへ報告される。
+- `impl`/`exp` ドキュメントは作成されない —— Registry 3 では legacy
+  migration-only 形式である。
 - クローズアウトで所属ディレクトリ索引を同一変更内に再生成した
   （`doc_maintenance.js index plan|apply`）: settled 行は
   `## Settled` 層へ移動し、再生成までは `doc_status lint` が古い索引を
@@ -433,10 +457,11 @@ repository の commit convention）で commit します。commit が granted aut
 ごとに正確な [`EffectOutcome footer`](../doc-driven-dev-graph/references/execution-outcome-contract.ja.md)
 を返します。local partial variant を作成しません。
 
-`completed` は logical change が commit 済みで Implementation Record が完成した
-verified task slice にのみ使い、declared spec/design/constraint repair には
-`retry`、slice が granted authority 内で commit できない変更を生んだ場合は
-`commit-required` を理由とする `yield`、permission のない irreversible effect には
-`authority-required` を理由とする `yield`、declared safe repair がない場合は
-`unrecoverable-blocker` を理由とする `yield` を使います。必須の `edgeId`、stage、effect
-identity、authoritative input scope、proof field はその footer が定義します。
+`completed` は logical change が commit 済みで統合決定が明示的（永続化、
+route、または `none`）な verified task slice にのみ使い、declared
+spec/design/constraint repair には `retry`、slice が granted authority 内で
+commit できない変更を生んだ場合は `commit-required` を理由とする `yield`、
+permission のない irreversible effect には `authority-required` を理由とする
+`yield`、declared safe repair がない場合は `unrecoverable-blocker` を理由とする
+`yield` を使います。必須の `edgeId`、stage、effect identity、authoritative input
+scope、proof field はその footer が定義します。

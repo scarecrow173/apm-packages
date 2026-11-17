@@ -36093,7 +36093,10 @@ var configs = {
     owner: "doc-suite",
     indexFormat: "shared-4col",
     creator: "new_knowledge",
-    mutators: [],
+    // `consolidate_knowledge` is the #242 consolidation mutator: it updates
+    // existing records (integrate) and mints reviewed ones (create) under
+    // the conflict-acknowledgment contract.
+    mutators: ["consolidate_knowledge"],
     auditors: [],
     // `knowledge_kind` classifies the durable knowledge record
     // (codebase|architecture|operation|lesson — the Registry's fixed

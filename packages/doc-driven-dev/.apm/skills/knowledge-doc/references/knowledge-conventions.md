@@ -7,6 +7,10 @@ A knowledge document is a durable record of understanding: a codebase fact,
 an architecture note, an operational runbook, or a lesson learned. It is
 canonical Git-Markdown — not an execution artifact and not derived output.
 
+The *extraction* half of the contract — when implementation findings become
+knowledge at all, and the assess → decide → apply consolidation flow — is
+`references/knowledge-extraction.md`; this file is the format contract.
+
 ## Directory
 
 Canonical directory: `docs/knowledge/`. Unlike older suites, knowledge
@@ -44,6 +48,7 @@ relations:
 - `id` — `KNOW-` prefix plus the shared 22-character Base62 artifact id.
 - `type` — always `knowledge`.
 - `knowledge_kind` — top-level field classifying the record:
+
   | Value | Meaning |
   | --- | --- |
   | `codebase` | How the code is structured or behaves today. |
@@ -61,7 +66,7 @@ are never coerced to `current`.
 | Status | Meaning |
 | --- | --- |
 | `draft` | Recorded but unverified. |
-| `confirmed` | Reviewed and accepted as accurate. |
+| `confirmed` | Reviewed and accepted as accurate — requires recorded provenance (`--from` at creation; an unverified guess is never saved as certain). |
 | `archived` | No longer maintained; kept for reference (settled). |
 | `superseded` | Replaced by a newer knowledge document (settled). |
 
@@ -71,7 +76,34 @@ are never coerced to `current`.
   conversations); provenance, not Knowledge Relations vocabulary.
 - `relations.informs` — durable documents this knowledge affects.
 - `relations.explains` — durable documents this knowledge clarifies.
-- `relations.supersedes` — the knowledge document this one replaces.
+- `relations.supersedes` — the knowledge document this one replaces
+  (`new_knowledge.js --supersedes` and `consolidate_knowledge.js` validate
+  the target resolves to a knowledge document).
+
+## Consolidation CLI
+
+`scripts/consolidate_knowledge.js` is the consolidation entrypoint — the
+decision contract of `knowledge-extraction.md` enforced deterministically:
+
+```bash
+# Read-only screening: candidates, conflicts, and the gate.
+node scripts/consolidate_knowledge.js assess --title "…" [--kind codebase] [--keyword …]
+
+# Explicit decision — exactly one of:
+node scripts/consolidate_knowledge.js apply --decision none
+node scripts/consolidate_knowledge.js apply --decision route --to spec|design|adr|verification|discovery|idea|brainstorm
+node scripts/consolidate_knowledge.js apply --decision integrate --into <knowledge-doc> --from <src>… --basis <evidence> [--status …] [--informs <doc>]… [--explains <doc>]…
+node scripts/consolidate_knowledge.js apply --decision create --title "…" --kind <kind> --from <src>… --basis <evidence> [--acknowledge <id|path>]…
+```
+
+- `assess` never writes; `route` and `none` never write.
+- `integrate` mutates knowledge documents only — a spec/design/ADR target
+  is refused and routed to its owning skill instead.
+- `create` refuses while `assess` reports unacknowledged conflicts; each
+  conflict must be passed via `--acknowledge` after review.
+- `--from` and `--basis` are required on `integrate` and `create`: the
+  origin (原典) and evidence basis (根拠) of an extraction are always
+  recorded.
 
 ## Index
 

@@ -24,7 +24,7 @@ soft ranking metadata that is read after `execution_policy` checks.
 | <!-- e.g., test-driven-development --> | Build | .apm/skills/ | conditional | rigid | Repository or environment provides test-led workflow |
 | <!-- e.g., subagent-driven-development --> | Build | .apm/skills/ | conditional | flexible | Independent subtasks can be delegated to isolated subagents |
 | <!-- e.g., cheap-action --> | Tooling | .apm/skills/ | conditional | flexible | Simple low-risk work can use a lower-cost execution path with required tools preserved |
-| <!-- e.g., impl-doc --> | Documentation | .apm/skills/ | always | rigid | Open implementation documentation before code changes |
+| <!-- e.g., knowledge-doc --> | Documentation | .apm/skills/ | conditional | rigid | Run yields durable findings worth consolidating |
 | <!-- e.g., systematic-debugging --> | Process | .apm/skills/ | conditional | rigid | Bug fix or test failure |
 | <!-- e.g., source-driven-development --> | Verify | .apm/skills/ | conditional | flexible | Framework/library usage |
 | <!-- e.g., requesting-code-review --> | Review | .apm/skills/ | conditional | flexible | Review gate available |
@@ -49,9 +49,9 @@ Skills that structure and execute implementation.
 
 ### Documentation
 
-Skills that open and maintain implementation documentation during execution.
+Skills that consolidate durable findings when the run produces lasting knowledge.
 
-- <!-- e.g., impl-doc - Open the Implementation Record before code changes and keep it current -->
+- <!-- e.g., knowledge-doc — Consolidate durable findings via assess/apply; none is a valid outcome -->
 
 ### Verify
 
@@ -92,7 +92,7 @@ that slot empty until provider lookup or overrides resolve a skill.
 | Priority | Category | Skill | Rationale |
 | -------- | -------- | ----- | --------- |
 | 1 | Build | <!-- repository default --> | Defines the default build structure when available |
-| 2 | Documentation | <!-- repository default --> | Opens implementation documentation before code changes |
+| 2 | Documentation | <!-- repository default --> | Consolidates durable findings when the run yields lasting knowledge |
 | 3 | Build | <!-- repository default --> | Fans out independent subtasks when acceptance checks are clear |
 | 4 | Verify | <!-- repository default --> | Adds correctness validation when available |
 | 5 | Tooling | <!-- repository default --> | Routes low-risk mechanical work to lower-cost execution when supported |

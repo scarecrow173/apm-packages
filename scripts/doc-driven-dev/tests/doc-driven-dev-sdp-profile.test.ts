@@ -741,8 +741,11 @@ function kindCounts(flows: { directives: { kind: string }[] }[]): Record<string,
 // single live `inventoryAll` run under the current extraction rules
 // (regenerate via tests/fixtures/skill-discovery-inventory/write_inventory.ts),
 // so the baseline↔final equality checks are a tripwire for one-sided
-// fixture edits. The original Task-2 audit snapshots (pre/post-fix, older
-// rules) live in `.superpowers/sdd/2026-10-29-skill-discovery/`.
+// fixture edits. #242 re-pinned again after the reviewed knowledge-doc
+// consolidation contract intentionally grew the always-on surface
+// (extraction decision workflow, consolidation script/reference directives).
+// The original Task-2 audit snapshots (pre/post-fix, older rules) live in
+// `.superpowers/sdd/2026-10-29-skill-discovery/`.
 const ALWAYS_ON_TOLERANCE = 100;
 
 // Per-flow count of new `reference` directives Task 3 added: one contract

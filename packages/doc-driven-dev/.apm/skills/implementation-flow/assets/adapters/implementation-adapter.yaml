@@ -21,10 +21,10 @@ flow_stack:
       activation: "conditional"
     - slot_id: "implementation_documentation"
       slot_type: "layerable"
-      activation: "always"
+      activation: "conditional"
       default:
-        - skill: "impl-doc"
-          reason: "Open implementation documentation before code changes begin"
+        - skill: "knowledge-doc"
+          reason: "Consolidate durable findings via assess/apply when the run yields lasting knowledge; none is a valid outcome"
     - slot_id: "verification"
       slot_type: "layerable"
       activation: "conditional"
@@ -53,11 +53,11 @@ classification:
         description_patterns: ["implement", "incremental", "parallel", "subagent", "delegat", "test-driven"]
     - id: "documentation"
       label: "Documentation"
-      description: "Skills that record implementation progress and evidence"
+      description: "Skills that consolidate durable findings and evidence"
       match:
         capabilities: ["implementation_documentation"]
-        tags: ["documentation", "impl-doc"]
-        description_patterns: ["impl-doc", "implementation record", "experiment log", "docs/impl"]
+        tags: ["documentation", "knowledge-doc"]
+        description_patterns: ["knowledge-doc", "consolidat", "durable knowledge", "docs/knowledge"]
     # Lane boundary (#146): verify and review are distinct lanes.
     # verify = correctness validation, including adversarial review.
     # review = post-implementation judgment gates (code review, security

@@ -28,7 +28,8 @@ and Experiment Log formats are legacy migration-only types:
 `new_impl_record.js` / `new_experiment_log.js` refuse at the registry gate,
 and the phases that mention them describe the pre-v3 evidence contract that
 migration tooling reads. Durable verification evidence is recorded by
-`verification-doc` under `docs/verification`.
+`verification-doc` under `docs/verification`; durable findings consolidate
+conditionally through `knowledge-doc`.
 
 ## When to Use
 
@@ -51,14 +52,14 @@ overrides, and record a one-line reason for any non-default routing decision.
 ## Flow Phases
 
 ```text
-Phase A: Assess  →  Phase B: Configure  →  Phase C0: Open Implementation Documentation  →  Phase C: Execute  →  Phase D: Verify  →  Phase E: Review
+Phase A: Assess  →  Phase B: Configure  →  Phase C0: Implementation Documentation (conditional)  →  Phase C: Execute  →  Phase D: Verify  →  Phase E: Review
 ```
 
 | Phase | Purpose | Output |
 | ----- | ------- | ------ |
 | A. Assess | Understand task, check for `.sdp/implementation-flow-default/implementation-flow-profile.json` | Task characteristics identified |
 | B. Configure | Discover skills, build/load skill stack for this task | Active skill stack declared |
-| C0. Open Implementation Documentation | Open the Implementation Record before code changes begin | In-progress implementation documentation |
+| C0. Implementation Documentation | Conditional documentation path — no forced pre-change record under Registry 3 | Documentation decision recorded |
 | C. Execute | Apply skills in priority order | Code changes implemented |
 | D. Verify | Confirm task passes verification conditions | Evidence of correctness |
 | E. Review | Submit for review, address feedback | Review complete |
@@ -199,34 +200,29 @@ For detailed category definitions, see the adapter's `classification.taxonomy` i
 
 ---
 
-## Phase C0: Open Implementation Documentation
+## Phase C0: Implementation Documentation (conditional)
 
-Before the first code change for each task, open implementation documentation
-through `impl-doc`. (Legacy contract: `new_impl_record.js` /
-`new_experiment_log.js` refuse under Document Registry 3 — see the Registry 3
-note above; this phase describes the migration-readable evidence shape.)
+Under Registry 3 the always-on generation contract is abolished: **no
+Implementation Record or Experiment Log is opened before code changes** —
+`new_impl_record.js` / `new_experiment_log.js` refuse at the registry gate,
+and a normal implementation change completes with no IR, no EXP, and no
+forced Knowledge document.
 
-1. Create or reuse an in-progress Implementation Record for the task unit.
-2. Use `impl-doc` conventions and title/task linkage so downstream audits can
-   trace the work.
-3. If Phase A marked the approach as exploratory, also create an Experiment Log
-   before the relevant experiment starts.
-4. Record the Implementation Record path in your working notes or status stream
-   before editing code.
+1. Run no documentation step by default — execution notes live in the run's
+   Execution Store records and diagnostic trace, not in durable Git docs.
+2. When the task surfaces durable findings (why-designed-so, recurrence
+   prevention, confirmed constraints, confirmed properties), consolidate
+   them through `knowledge-doc` before close-out — the assess→decision→apply
+   contract is in the **Implementation Documentation** section below;
+   `none` is a valid outcome.
+3. Unorganized important findings — conflicts unreviewed, or durable
+   knowledge identified but not persisted — are reported to the run's exit
+   gate, not silently dropped.
 
-Example command:
-
-```bash
-node ../impl-doc/scripts/new_impl_record.js --title "Wire checkout button" --task docs/tasks/wire-checkout-button.md --status "in-progress"
-```
-
-The relative script path resolves against the installed skill directory, not
-the caller's working directory. Resolve it to an absolute path before
-execution.
-
-Known-solution work does not skip this phase. The Implementation Record is
-opened before code changes begin; only the Experiment Log remains optional when
-the task is mechanical.
+The pre-v3 evidence contract this phase used to describe (one in-progress
+ir per task, opened before the first code change) is the migration-readable
+corpus shape documented in `impl-doc`; it is not a creation instruction for
+normal runs.
 
 ---
 
@@ -269,13 +265,9 @@ Apply each skill in the active stack according to its priority:
 
    Use `skill-discovery-protocol` to inspect `execution-policy` for the skill in the generated profile.
 3. Skills layer — they are not exclusive. Multiple skills apply simultaneously.
-4. Keep the in-progress Implementation Record current while implementation is
-   underway. Capture key decisions, scope adjustments, and links to any
-   experiment evidence as the task evolves instead of reconstructing them after
-   the fact.
-5. **If the approach is exploratory**, capture hypotheses, observations, and
-   rejected attempts in an Experiment Log *as they happen* via `impl-doc` (see the
-   **Implementation Documentation** section).
+4. Working notes live in the run's Execution Store records — not in a durable
+   document. Only when durable findings emerge do they pass to `knowledge-doc`
+   through the consolidation path described below.
 
 ---
 
@@ -285,8 +277,9 @@ A task is NOT complete until verification passes:
 
 1. Confirm the task passes its defined verification conditions.
 2. Satisfy Hard Gate #1 (EVIDENCE requirement) — record evidence before proceeding.
-3. Add verification evidence and final status notes to the Implementation
-   Record before closing the task.
+3. Record evidence in the run's Execution Store trace and close out any
+   durable findings through `knowledge-doc` consolidation (see
+   **Implementation Documentation** below).
 4. If verification fails → diagnose using Process-category skills, fix, re-verify.
 
 ---
@@ -303,24 +296,43 @@ A task is NOT complete until verification passes:
 
 ## Implementation Documentation
 
-The implementation phase produces two downstream documents through the `impl-doc`
-skill. Recording them is part of the flow, not an optional add-on. When this flow
-runs under `doc-driven-dev-graph`, `docs/impl/ir/` and `docs/impl/exp/` already
-exist (bootstrap contract); securing these records is a completion duty.
+Under Registry 3 the implementation phase is not required to produce any
+downstream document. IR/EXP creation is no longer part of the flow — the
+pre-v3 `docs/impl/` corpus is a migration input only (see `impl-doc`).
+What a run produced is a diagnostic trace in the Execution Store, and a
+normal fix completes with zero new durable documents.
 
-- **Experiment Log (`docs/impl/exp/`)** — create when Phase A flagged the approach
-  as uncertain or exploratory. Capture hypotheses, observations, and rejected
-  attempts *as they happen* during Phase C. Skip it for mechanical tasks with a
-  known solution.
-- **Implementation Record (`docs/impl/ir/`)** — create or reuse one per task
-  unit in Phase C0 before the first code change. Keep it in `in-progress`
-  status during Phase C, then complete and audit it during Phase D/E. Record
-  what was implemented, decisions made during implementation, verification
-  evidence, and which experiments were adopted or rejected. When an Experiment
-  Log exists, the record MUST reference it.
+Durable findings are extracted conditionally through `knowledge-doc` —
+Knowledge is not used as a replacement impl-log. Consolidate only when the
+run yielded lasting knowledge: why something was designed or fixed a certain
+way, recurrence prevention, confirmed constraints, or confirmed properties
+from investigation. Timelines, command logs, and chat-like work records are
+never extracted.
 
-See the [`impl-doc` SKILL](../impl-doc/SKILL.md) for creation commands, conventions,
-and the audit steps to run before reporting completion.
+When findings qualify:
+
+```bash
+node ../knowledge-doc/scripts/consolidate_knowledge.js assess --title "<finding>" --kind codebase
+```
+
+1. `assess` screens existing Knowledge plus Spec/Design/ADR and reports
+   candidates and conflicts (the relative script path resolves against the
+   installed skill directory).
+2. Exactly one decision applies — `integrate` into an existing Knowledge
+   document (preferred), `route` to the owning spec/design/ADR skill,
+   `create` after explicit conflict acknowledgement, or `none`.
+3. Every persist path records extraction source (`--from`) and evidence
+   basis (`--basis`); unverified guesses stay `draft`, never `confirmed`.
+
+Unorganized important findings — durable knowledge identified but not
+persisted, or unreviewed conflicts — are surfaced to the run's exit gate
+rather than silently dropped.
+
+See the [`knowledge-doc` SKILL](../knowledge-doc/SKILL.md) and its
+[extraction contract](../knowledge-doc/references/knowledge-extraction.md)
+for the full decision contract, and the
+[`impl-doc` SKILL](../impl-doc/SKILL.md) for the legacy corpus contract that
+migration tooling reads.
 
 ---
 
@@ -354,13 +366,16 @@ failure patterns. They defeat systematic skill routing.
 </HARD-GATE>
 
 <HARD-GATE>
-Code changes cannot start until Phase C0 opens implementation documentation.
-Implementation Record is opened before code changes begin.
-- Create or reuse the Implementation Record through `impl-doc`.
-- Keep it `in-progress` while implementing.
-- Complete and audit it before task closure.
-Even when the solution is already known, the Implementation Record is required;
-only the Experiment Log may be skipped.
+Documentation is never forced by this flow — but consolidation decisions are
+explicit, not silent.
+- No Implementation Record or Experiment Log is opened; `impl`/`exp` mutators
+  refuse at the registry gate.
+- When durable findings exist, run
+  `node ../knowledge-doc/scripts/consolidate_knowledge.js assess` and apply
+  exactly one decision before close-out; `none` is valid only when nothing
+  qualifies.
+- Important findings left unorganized (unreviewed conflicts, knowledge
+  identified but not persisted) are reported to the exit gate.
 </HARD-GATE>
 
 <HARD-GATE>
@@ -415,11 +430,12 @@ These thoughts and behaviors signal failure — STOP when you notice them:
 - Each task passes its defined verification conditions.
 - New constraints discovered during implementation are reflected in upstream documents.
 - Review-category skills have been applied (code review complete).
-- An Implementation Record (`impl-doc` ir) is opened before code changes begin
-  for each task unit.
-- Each Implementation Record is completed and audited before task closure,
-  referencing and auditing any Experiment Logs (exp) created during
-  implementation.
+- The consolidation decision for implementation findings is explicit:
+  durable knowledge is integrated/created with recorded source and evidence,
+  routed to the owning document skill, or consciously `none`; important
+  unorganized findings are surfaced to the exit gate.
+- No `impl`/`exp` documents are created — they are legacy migration-only
+  formats under Registry 3.
 - Close-out regenerated the owning directory indexes in the same change
   (`doc_maintenance.js index plan|apply`): settled rows move to the
   `## Settled` tier; `doc_status lint` reports stale indexes until then.
@@ -451,10 +467,11 @@ When `doc-driven-dev-graph` invokes this skill, return exactly the
 after each audit or delegate effect; do not create a local partial variant.
 
 Use `completed` only for a verified task slice whose logical changes are
-committed and whose Implementation Record is complete, `retry` for declared
-spec/design/constraint repair, `yield` with `commit-required` when the slice
-produced changes that cannot be committed within granted authority, `yield`
-with `authority-required` for an irreversible effect without permission, and
-`yield` with `unrecoverable-blocker` when no declared safe repair exists. The
-required `edgeId`, stage, effect identity, authoritative input scope, and proof
+committed and whose consolidation decision was explicit (persist, route, or
+`none`), `retry` for declared spec/design/constraint repair, `yield` with
+`commit-required` when the slice produced changes that cannot be committed
+within granted authority, `yield` with `authority-required` for an
+irreversible effect without permission, and `yield` with
+`unrecoverable-blocker` when no declared safe repair exists. The required
+`edgeId`, stage, effect identity, authoritative input scope, and proof
 fields are defined by that footer.

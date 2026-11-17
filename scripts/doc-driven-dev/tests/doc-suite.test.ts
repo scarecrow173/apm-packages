@@ -725,13 +725,13 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   }
   assert.match(effects[0], /Use `completed` after the briefing gate passes, `retry` for a recoverable\n?document gap, and `yield` with `input-required` for an unresolved user-only\n?requirement\./);
   assert.match(effects[1], /Use `completed` for an approved design, `yield` with `approval-required` while\n?waiting for the designated reviewer, and `yield` with `input-required` for a\n?missing upstream user decision\./);
-  assert.match(effects[2], /Use `completed` only for a verified task slice whose logical changes are\n?committed and whose Implementation Record is complete, `retry` for declared\n?spec\/design\/constraint repair, `yield` with `commit-required` when the slice\n?produced changes that cannot be committed within granted authority, `yield`\n?with `authority-required` for an irreversible effect without permission, and\n?`yield` with `unrecoverable-blocker` when no declared safe repair exists\./);
+  assert.match(effects[2], /Use `completed` only for a verified task slice whose logical changes are\n?committed and whose consolidation decision was explicit \(persist, route, or\n?`none`\), `retry` for declared spec\/design\/constraint repair, `yield` with\n?`commit-required` when the slice produced changes that cannot be committed\n?within granted authority, `yield` with `authority-required` for an\n?irreversible effect without permission, and `yield` with\n?`unrecoverable-blocker` when no declared safe repair exists\./);
   assert.match(effects[3], /Use `completed` for a Completable result, `retry` for Returned with declared\n?repair evidence, and `yield` with `unrecoverable-blocker` for Returned without\n?a safe repair\./);
   assert.match(effects[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.md\)/);
   assert.match(effects[4], /Use `completed` for a digest-approved run plan with materialized task records,\n?`retry` for changed plan\/task repair evidence, `yield` with\n?`approval-required` while plan review is pending, `yield` with `input-required` when a\n?user-owned planning choice is missing, and `yield` with `unrecoverable-blocker` when no\n?declared safe repair exists\./);
   assert.match(effectsJa[0], /briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の\n?user-only requirement には `input-required` を理由とする `yield` を使います。/);
   assert.match(effectsJa[1], /approved design には `completed`、designated reviewer を待つ場合は `approval-required`\n?を理由とする `yield`、upstream user decision がない場合は `input-required` を理由とする\n?`yield` を使います。/);
-  assert.match(effectsJa[2], /`completed` は logical change が commit 済みで Implementation Record が完成した\n?verified task slice にのみ使い、declared spec\/design\/constraint repair には\n?`retry`、slice が granted authority 内で commit できない変更を生んだ場合は\n?`commit-required` を理由とする `yield`、permission のない irreversible effect には\n?`authority-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
+  assert.match(effectsJa[2], /`completed` は logical change が commit 済みで統合決定が明示的（永続化、\n?route、または `none`）な verified task slice にのみ使い、declared\n?spec\/design\/constraint repair には `retry`、slice が granted authority 内で\n?commit できない変更を生んだ場合は `commit-required` を理由とする `yield`、\n?permission のない irreversible effect には `authority-required` を理由とする\n?`yield`、declared safe repair がない場合は `unrecoverable-blocker` を理由とする\n?`yield` を使います。/);
   assert.match(effectsJa[3], /Completable result には `completed`、declared repair evidence を伴う Returned には\n?`retry`、safe repair のない Returned には `unrecoverable-blocker` を理由とする `yield`\n?を使います。/);
   assert.match(effectsJa[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.ja\.md\)/);
   assert.match(effectsJa[4], /digest 承認済みの run plan と materialize された task record には `completed`、changed\n?plan\/task repair evidence には `retry`、plan review が pending の場合は\n?`approval-required` を理由とする `yield`、user-owned planning choice が missing の場合は\n?`input-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
@@ -852,7 +852,7 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
   assert.match(skillJa, /task-graph node は `plan`、`task`、`test-spec` を audit して `build_task_graph` を dispatch し、\s+`build_task_graph\.js` が実行/);
 });
 
-test("implementation-flow opens impl-doc before task execution", () => {
+test("implementation-flow consolidates durable findings via knowledge-doc; impl-doc is migration-only", () => {
   const implementationRoot = path.join(skillRoot, "implementation-flow");
   const graphRoot = path.join(skillRoot, "doc-driven-dev-graph");
   const implDocRoot = path.join(skillRoot, "impl-doc");
@@ -868,30 +868,41 @@ test("implementation-flow opens impl-doc before task execution", () => {
   const contract = fs.readFileSync(path.join(graphRoot, "references", "execution-contract.md"), "utf8");
   const implDoc = fs.readFileSync(path.join(implDocRoot, "SKILL.md"), "utf8");
 
-  assert.match(flow, /Phase C0: Open Implementation Documentation/);
-  assert.match(flow, /new_impl_record\.js --title/);
-  assert.match(flow, /--status "in-progress"/);
-  assert.match(flow, /Implementation Record is opened before code changes begin/);
-  assert.match(flowJa, /実装フェーズ/);
-  assert.match(flowJa, /`impl-doc`/);
-  assert.match(flowJa, /Experiment Log/);
-  assert.match(flowJa, /--status "in-progress"/);
+  // Issue #242: the old always-on impl-doc default-generation contract is
+  // abolished — Phase C0 is a conditional consolidation decision, and a
+  // normal run completes with no IR/EXP/forced Knowledge.
+  assert.match(flow, /Phase C0: Implementation Documentation \(conditional\)/);
+  assert.match(flow, /consolidate_knowledge\.js/);
+  assert.match(flow, /`none` is a valid outcome|consciously `none`/);
+  assert.match(flow, /no forced|no IR, no EXP|never forced/i);
+  assert.doesNotMatch(flow, /new_impl_record\.js --title/);
+  assert.doesNotMatch(flow, /--status "in-progress"/);
+  assert.doesNotMatch(flow, /Implementation Record is opened before code changes begin/);
+  assert.match(flowJa, /実装フェーズ|実装ドキュメント/);
+  assert.match(flowJa, /`knowledge-doc`/);
+  assert.match(flowJa, /consolidate_knowledge\.js/);
+  assert.doesNotMatch(flowJa, /--status "in-progress"/);
 
+  // The documentation slot is conditional and resolves to knowledge-doc —
+  // impl-doc is never the normal-run default anymore.
   assert.match(adapter, /slot_id: "implementation_documentation"/);
-  assert.match(adapter, /skill: "impl-doc"/);
+  assert.match(adapter, /activation: "conditional"/);
+  assert.match(adapter, /skill: "knowledge-doc"/);
+  assert.doesNotMatch(adapter, /skill: "impl-doc"/);
   assert.match(adapter, /description_patterns:/);
-  assert.match(adapter, /impl-doc/);
-  assert.match(adapter, /implementation record/);
-  assert.match(adapter, /experiment log/);
-  assert.match(adapter, /docs\/impl/);
+  assert.match(adapter, /knowledge-doc/);
+  assert.match(adapter, /docs\/knowledge/);
 
   assert.match(graphSkill, /implementation delegates to `implementation-flow`/i);
   assert.match(graphSkill, /Execution Store checkpoint/);
   assert.match(graphSkillJa, /implementation-flow/);
   assert.match(contract, /Record completion, gate, and follow-up evidence/);
 
-  assert.match(implDoc, /Task implementation is starting/);
-  assert.match(implDoc, /Create or reuse an in-progress Implementation Record/);
+  // impl-doc documents the legacy corpus contract for migration, not a
+  // normal-run creation path.
+  assert.match(implDoc, /migration tooling|migration-only|migration-owned/);
+  assert.match(implDoc, /abolished/);
+  assert.match(implDoc, /Legacy corpus shape/);
 });
 
 test("doc-driven-dev-graph documents post-implementation follow-up triage", () => {

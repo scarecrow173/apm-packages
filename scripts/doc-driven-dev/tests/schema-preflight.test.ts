@@ -342,6 +342,8 @@ const GUARDED_ENTRYPOINTS: Array<{ skill: string; script: string; args: string[]
   { skill: "impl-doc", script: "new_impl_record.js", args: ["--title", "IR"] },
   { skill: "impl-doc", script: "sync_impl_index.js", args: ["--kind", "ir"] },
   { skill: "implementation-flow", script: "check_parallel.js", args: [] },
+  { skill: "knowledge-doc", script: "new_knowledge.js", args: ["--title", "K", "--kind", "lesson"] },
+  { skill: "knowledge-doc", script: "consolidate_knowledge.js", args: ["assess", "--title", "K"] },
   { skill: "plan-doc", script: "new_plan.js", args: ["--title", "P"] },
   { skill: "spec-doc", script: "new_spec.js", args: ["--title", "S"] },
   { skill: "task-doc", script: "new_task.js", args: ["--title", "T"] },
