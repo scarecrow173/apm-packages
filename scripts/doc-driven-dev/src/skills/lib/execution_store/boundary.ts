@@ -12,11 +12,12 @@
 //                   only with `allowExternalRoot`; the store never picks an
 //                   outside location on its own.
 //   gitignore       inside a work tree, `git check-ignore` must cover the
-//                   root; outside Git, `.gitignore` files are evaluated
-//                   directly. Unconfigured coverage refuses the write —
-//                   execution state must never become committable by
-//                   accident. `initStateRoot` is the explicit safe init: it
-//                   writes the coverage line itself.
+//                   root directory itself; outside Git, `.gitignore` files
+//                   are evaluated directly. Coverage is probed at the
+//                   root's real path, and unconfigured coverage refuses the
+//                   write — execution state must never become committable
+//                   by accident. `initStateRoot` is the explicit safe init:
+//                   it writes the coverage line itself.
 //   tracked         `git ls-files` must report nothing under the root —
 //                   already-tracked state files refuse, since new writes
 //                   would keep landing in Git.
@@ -246,16 +247,53 @@ function ignoreDecision(cwd: string, relPath: string, isDir: boolean): boolean {
 // Boundary enforcement
 // ---------------------------------------------------------------------------
 
-// A single probe path inside the root stands in for every state file: if the
-// deepest path we would write is ignored, the whole store is covered.
-function coverageProbe(resolved: ResolvedRoot): string {
-  return `${resolved.repoRelative}/runs/.probe/manifest.json`;
+// Where state bytes actually land: the lexical repo-relative root evaluated
+// at the real path of its nearest existing ancestor. A symlinked ancestor —
+// a symlinked root included — relocates the real write target inside the
+// checkout, and the coverage/tracked gates must scope to THAT path, not to
+// the alias they were declared against.
+function realRootRelative(cwd: string, resolved: ResolvedRoot): string {
+  let probe = resolved.root;
+  const suffix: string[] = [];
+  while (!fs.existsSync(probe)) {
+    const parent = path.dirname(probe);
+    if (parent === probe) return resolved.repoRelative ?? resolved.root;
+    suffix.unshift(path.basename(probe));
+    probe = parent;
+  }
+  let realAncestor: string;
+  let realCwd: string;
+  try {
+    realAncestor = fs.realpathSync(probe);
+    realCwd = fs.realpathSync(cwd);
+  } catch {
+    return resolved.repoRelative ?? resolved.root;
+  }
+  const realRoot = suffix.length === 0 ? realAncestor : path.join(realAncestor, ...suffix);
+  const rel = path.relative(realCwd, realRoot);
+  // requireContainedTarget already proved the nearest existing ancestor
+  // realpaths inside the checkout, so a `..` result is unreachable — the
+  // lexical form is the safe fallback for anything unresolved.
+  if (rel === "" || rel === ".." || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
+    return resolved.repoRelative ?? resolved.root;
+  }
+  return rel.split(path.sep).join("/");
+}
+
+// The probe is the state-root directory itself, at its real location: a
+// directory-level match covers every file kind the store writes — present
+// and future. Probing a single file kind let `*.json` coverage slip
+// plan.md, run_trace.jsonl, and writer.lock past the gate as committable.
+function coverageProbe(cwd: string, resolved: ResolvedRoot): string {
+  return realRootRelative(cwd, resolved);
 }
 
 function requireGitignoreCoverage(cwd: string, resolved: ResolvedRoot, context: GitContext): void {
-  const probe = coverageProbe(resolved);
+  const probe = coverageProbe(cwd, resolved);
   if (context.kind === "worktree") {
-    const result = git(["check-ignore", "-q", "--", probe], cwd);
+    // The trailing slash marks the probe as a directory so dir-only
+    // patterns (`foo/`) are evaluated against it exactly.
+    const result = git(["check-ignore", "-q", "--", `${probe}/`], cwd);
     if (result.status === 0) return;
     if (result.status === 1) {
       throw new StoreError(
@@ -269,7 +307,7 @@ function requireGitignoreCoverage(cwd: string, resolved: ResolvedRoot, context: 
       `git check-ignore failed (${result.stderr || `exit ${result.status}`}) — execution-state coverage cannot be verified`,
     );
   }
-  if (!ignoreDecision(cwd, probe, false)) {
+  if (!ignoreDecision(cwd, probe, true)) {
     throw new StoreError(
       "boundary-gitignore",
       `${resolved.repoRelative} is not covered by .gitignore — refusing to write execution state that could become tracked; run \`execution_store.js init\` or add an ignore entry for ${resolved.repoRelative}/`,
@@ -282,10 +320,12 @@ function requireNoTrackedState(cwd: string, resolved: ResolvedRoot, context: Git
   if (context.kind !== "worktree") return;
   // The `.apm/state/` namespace must be untracked as a whole — a tracked
   // file anywhere under it means the repo committed state it promised to
-  // ignore. Custom roots check their own path.
-  const trackedRoot = resolved.repoRelative !== null && resolved.repoRelative.startsWith(".apm/state")
+  // ignore. Custom roots check their own path — at its real location, for
+  // the same reason the coverage probe resolves links.
+  const realRoot = realRootRelative(cwd, resolved);
+  const trackedRoot = realRoot.startsWith(".apm/state")
     ? ".apm/state"
-    : resolved.repoRelative;
+    : realRoot;
   const result = git(["ls-files", "-z", "--", `${trackedRoot}`], cwd);
   if (result.status !== 0) {
     throw new StoreError(
@@ -404,7 +444,7 @@ function runDirFor(resolved: ResolvedRoot, runId: string): string {
   if (!isValidId(runId)) {
     throw new StoreError(
       "invalid-argument",
-      `invalid run id ${JSON.stringify(runId)} — ids match [A-Za-z0-9][A-Za-z0-9._-]{0,127} and never contain path separators`,
+      `invalid run id ${JSON.stringify(runId)} — ids match [A-Za-z0-9][A-Za-z0-9._-]{0,127} with dots inner and single, and never contain path separators`,
     );
   }
   return path.join(resolved.root, "runs", runId);

@@ -130,6 +130,22 @@ function appendLine(file: string, line: string): void {
   }
 }
 
+// The create/import run claim — O_EXCL on the run directory itself. A
+// recursive mkdir can never arbitrate (it succeeds whether or not the dir
+// already existed), so a non-recursive mkdir is the claim: exactly one
+// racing claimant wins, and a loser gets EEXIST instead of two writers
+// interleaving into one run dir. Returns false when the name is taken.
+function claimRunDir(runsDir: string, runDir: string): boolean {
+  fs.mkdirSync(runsDir, { recursive: true });
+  try {
+    fs.mkdirSync(runDir);
+    return true;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw error;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Per-run writer lock
 // ---------------------------------------------------------------------------
@@ -224,6 +240,7 @@ export {
   acquireWriterLock,
   appendLine,
   atomicWriteFile,
+  claimRunDir,
   fsyncDirectory,
   isStoreTmpFile,
   pidAlive,

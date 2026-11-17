@@ -113,7 +113,10 @@ type ReceiptRecord = {
 // ---------------------------------------------------------------------------
 
 // Filesystem-safe ids, portable across Windows/macOS/Linux: no separators,
-// no leading dot, bounded length. `..`/`.` are impossible under it.
+// no leading dot, bounded length. `.`/`..` alone are impossible under it,
+// and dots may appear only singly between non-dot characters — NTFS strips
+// a trailing dot and folds `a..b`, so those spellings would alias distinct
+// ids onto one on-disk name.
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const WINDOWS_RESERVED_NAMES: ReadonlySet<string> = new Set([
   "con", "prn", "aux", "nul",
@@ -123,6 +126,7 @@ const WINDOWS_RESERVED_NAMES: ReadonlySet<string> = new Set([
 
 function isValidId(value: unknown): value is string {
   if (typeof value !== "string" || !ID_PATTERN.test(value)) return false;
+  if (value.endsWith(".") || value.includes("..")) return false;
   const stem = value.split(".")[0].toLowerCase();
   return !WINDOWS_RESERVED_NAMES.has(stem);
 }

@@ -69,8 +69,10 @@ outcome (`#240`).
 ## Consistency model
 
 - **Single writer per run.** `writer.lock` (O_EXCL create, `{pid, hostname,
-  acquiredAt}`) serializes every mutation. A live same-host holder, or any
-  lock whose holder's host cannot be assessed, refuses with
+  acquiredAt}`) serializes every mutation; `create`/`import` first claim
+  the run directory itself with an O_EXCL `mkdir`, so two racing creators
+  or importers can never interleave writes into one run. A live same-host
+  holder, or any lock whose holder's host cannot be assessed, refuses with
   `writer-conflict`. A lock left by a dead local pid is recovered by the
   next writer.
 - **CAS, not atomic rename alone.** Under the lock an operation re-reads
@@ -98,17 +100,24 @@ edited outside the API.
 ## Boundaries — refuse before writing
 
 - **Ignore coverage**: inside a work tree, `git check-ignore` must cover
-  the root; outside Git, `.gitignore` files are evaluated directly
-  (`.git/info/exclude`, root `.gitignore`, nested `.gitignore`s along the
-  path, last match wins, ancestor-exclusion honored). `init` writes
-  `/.apm/state/` itself and re-verifies.
+  the state-root *directory itself* — a file-kind pattern such as `*.json`
+  is not coverage, because `plan.md`, `run_trace.jsonl`, and `writer.lock`
+  would stay committable. Outside Git, `.gitignore` files are evaluated
+  directly (`.git/info/exclude`, root `.gitignore`, nested `.gitignore`s
+  along the path, last match wins, ancestor-exclusion honored). Coverage
+  and the tracked-state probe are evaluated at the root's *real* path, so
+  a symlinked ancestor or a symlinked root cannot relocate writes beyond
+  the checked rules. `init` writes `/.apm/state/` itself and re-verifies.
 - **Tracked state**: `git ls-files` must report nothing under `.apm/state/`
   — tracked execution state refuses.
 - **Containment**: the root and run dirs must stay inside the checkout
-  lexically and by real path; symlinked ancestors or run dirs that escape
-  refuse. Run/task/record ids match `[A-Za-z0-9][A-Za-z0-9._-]{0,127}` plus
-  Windows reserved-name rejection, so an id can never become a path escape.
-- **Finalized runs** are read-only (`run-finalized`).
+  lexically and by real path — and an existing `runs/` container or run
+  dir must realpath inside the *state root* itself, so a link landing
+  elsewhere inside the checkout (e.g. under `docs/`) is still an escape.
+  Run/task/record ids match `[A-Za-z0-9][A-Za-z0-9._-]{0,127}` with dots
+  inner and single, plus Windows reserved-name rejection, so an id can
+  never become a path escape or alias another id on disk.
+- **Finalized runs** are read-only (`run-finalized`) — the trace included.
 
 ## Disposal and transfer
 
@@ -119,12 +128,16 @@ edited outside the API.
   `force`.
 - **Handoff is explicit.** `export` emits a single JSON document
   (`execution-run-export`, schemaVersion 1): runId, per-file SHA-256 +
-  content, and a `payloadDigest` over the file list. `import` verifies the
-  envelope digests, then the internal consistency (manifest validity,
-  every record bound to the same runId, file names matching record ids,
-  the approval → manifest → plan.md digest chain) before any write.
-  Existing runs refuse (`import-conflict`) unless `onConflict: "replace"`;
-  replacing an ACTIVE target additionally requires `force`.
+  content, and a `payloadDigest` over the file list. `export --out` writes
+  to whatever explicit path the caller gives — that is the deliberate
+  handoff artifact; the boundary gates protect the state root, not the
+  operator's chosen destination. `import` verifies the envelope digests,
+  then the internal consistency (manifest validity, every record bound to
+  the same runId, file names matching record ids, the approval → manifest
+  → plan.md digest chain) before any write. Existing runs refuse
+  (`import-conflict`) unless `onConflict: "replace"`; replacing an ACTIVE
+  target additionally requires `force`. A corrupt existing run cannot be
+  inspected for replacement — `dispose --force` it first, then import.
 - A run in another worktree fails closed as `run-not-found` — absence is
   the expected answer, never an error to paper over. Local state is not
   shared by copying; undeclared copies are not handoffs.

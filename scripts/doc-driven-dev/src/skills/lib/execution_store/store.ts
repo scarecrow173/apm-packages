@@ -13,6 +13,9 @@
 //
 // Consistency model:
 //   - per-run single writer: `writer.lock` serializes every mutation;
+//     `createRun`/`importRun` claim the run directory itself with an
+//     O_EXCL mkdir first — exactly one racing claimant wins, so two
+//     creators can never interleave writes into one run;
 //   - CAS: run-level `manifest.revision` and per-task `version` — a stale
 //     expected value refuses the update instead of losing one;
 //   - atomic replace + fsync on every committed file; `*.tmp-*` leftovers
@@ -31,12 +34,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { generateArtifactId } from "../artifact_id";
-import { isInsideCheckout } from "../document_utils";
 import {
   StoreError,
   acquireWriterLock,
   appendLine,
   atomicWriteFile,
+  claimRunDir,
   isStoreTmpFile,
   readJsonFile,
   readLockRecord,
@@ -138,7 +141,26 @@ function nowOf(options: StoreOptions): string {
   return (options.now ?? systemClock)();
 }
 
-function runDirContained(cwd: string, resolved: ResolvedRoot, runId: string): string {
+// Realpath containment against the resolved state root — the ONE rule for
+// inside-checkout and declared-external roots alike. The ignore-coverage
+// and tracked-state gates were evaluated for the root; a `runs/` or
+// `runs/<id>` link landing elsewhere inside the checkout would write state
+// into committable space those gates never covered.
+function insideResolvedRoot(resolved: ResolvedRoot, candidate: string): boolean {
+  let real: string;
+  let realRoot: string;
+  try {
+    real = fs.realpathSync(candidate);
+    realRoot = fs.realpathSync(resolved.root);
+  } catch {
+    return false;
+  }
+  const root = path.resolve(realRoot);
+  const target = path.resolve(real);
+  return target === root || target.startsWith(`${root}${path.sep}`);
+}
+
+function runDirContained(resolved: ResolvedRoot, runId: string): string {
   const runDir = runDirFor(resolved, runId);
   if (!fs.existsSync(runDir)) {
     throw new StoreError("run-not-found", `run ${runId} does not exist under ${resolved.repoRelative ?? resolved.root}`);
@@ -146,25 +168,8 @@ function runDirContained(cwd: string, resolved: ResolvedRoot, runId: string): st
   if (!fs.statSync(runDir).isDirectory()) {
     throw new StoreError("corrupt-state", `${runDir} is not a directory`);
   }
-  if (resolved.external) {
-    // A linked run dir must stay inside the shared root — the same
-    // containment rule as inside the checkout, evaluated against the root.
-    let real: string;
-    try {
-      real = fs.realpathSync(runDir);
-    } catch {
-      throw new StoreError("boundary-escape", `run dir for ${runId} cannot be resolved`);
-    }
-    const realRoot = fs.realpathSync(resolved.root);
-    const root = path.resolve(realRoot);
-    const candidate = path.resolve(real);
-    if (candidate !== root && !candidate.startsWith(`${root}${path.sep}`)) {
-      throw new StoreError("boundary-escape", `run ${runId} escapes the shared state root through a link`);
-    }
-    return runDir;
-  }
-  if (!isInsideCheckout(cwd, runDir)) {
-    throw new StoreError("boundary-escape", `run ${runId} resolves outside the checkout through a link`);
+  if (!insideResolvedRoot(resolved, runDir)) {
+    throw new StoreError("boundary-escape", `run ${runId} resolves outside the state root through a link`);
   }
   return runDir;
 }
@@ -271,8 +276,8 @@ function scanIncompleteWrites(dir: string, rel = ""): string[] {
   return found;
 }
 
-function loadSnapshot(cwd: string, resolved: ResolvedRoot, runId: string): RunSnapshot {
-  const runDir = runDirContained(cwd, resolved, runId);
+function loadSnapshot(resolved: ResolvedRoot, runId: string): RunSnapshot {
+  const runDir = runDirContained(resolved, runId);
   const manifest = readManifest(runDir, runId);
   const planFile = path.join(runDir, PLAN_FILE);
   let plan: RunSnapshot["plan"] = null;
@@ -317,10 +322,10 @@ function mutateRun<T>(
 ): T {
   const resolved = resolveStateRoot(cwd, options);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
-    const snapshot = loadSnapshot(cwd, resolved, runId);
+    const snapshot = loadSnapshot(resolved, runId);
     requireMutableManifest(snapshot.manifest);
     requireRevision(snapshot.manifest, expectedRevision);
     return mutate({ runDir, manifest: snapshot.manifest, snapshot });
@@ -405,37 +410,22 @@ function validateTaskInputs(
 // dir — if it exists it must already satisfy containment, and the created
 // run dir is re-verified after mkdir (the writeManifest TOCTOU pattern: a
 // linked container must not smuggle the run outside its root).
-function requireRunsContainer(cwd: string, resolved: ResolvedRoot): string {
+function requireRunsContainer(resolved: ResolvedRoot): string {
   const runsDir = path.join(resolved.root, RUN_DIR);
   if (fs.existsSync(runsDir)) {
     if (!fs.statSync(runsDir).isDirectory()) {
       throw new StoreError("boundary-escape", `${runsDir} is not a directory`);
     }
-    if (!resolved.external && !isInsideCheckout(cwd, runsDir)) {
-      throw new StoreError("boundary-escape", `${resolved.repoRelative}/runs resolves outside the checkout through a link`);
-    }
-    if (resolved.external) {
-      const real = fs.realpathSync(runsDir);
-      const realRoot = fs.realpathSync(resolved.root);
-      if (real !== realRoot && !real.startsWith(`${path.resolve(realRoot)}${path.sep}`)) {
-        throw new StoreError("boundary-escape", "the runs container escapes the shared state root through a link");
-      }
+    if (!insideResolvedRoot(resolved, runsDir)) {
+      throw new StoreError("boundary-escape", `the runs container under ${resolved.repoRelative ?? resolved.root} escapes the state root through a link`);
     }
   }
   return runsDir;
 }
 
-function verifyRunDirContained(cwd: string, resolved: ResolvedRoot, runDir: string, runId: string): void {
-  if (resolved.external) {
-    const real = fs.realpathSync(runDir);
-    const realRoot = fs.realpathSync(resolved.root);
-    if (real !== realRoot && !real.startsWith(`${path.resolve(realRoot)}${path.sep}`)) {
-      throw new StoreError("boundary-escape", `run ${runId} resolved outside the shared state root`);
-    }
-    return;
-  }
-  if (!isInsideCheckout(cwd, runDir)) {
-    throw new StoreError("boundary-escape", `run ${runId} resolved outside the checkout — refusing to write`);
+function verifyRunDirContained(resolved: ResolvedRoot, runDir: string, runId: string): void {
+  if (!insideResolvedRoot(resolved, runDir)) {
+    throw new StoreError("boundary-escape", `run ${runId} resolves outside the state root — refusing to write`);
   }
 }
 
@@ -444,62 +434,70 @@ function createRun(cwd: string, input: CreateRunInput = {}, options: StoreOption
   ensureStateRootBoundary(cwd, resolved);
   const runId = input.runId ?? generateArtifactId("RUN");
   const runDir = runDirFor(resolved, runId);
-  requireRunsContainer(cwd, resolved);
-  if (fs.existsSync(runDir)) {
-    throw new StoreError("run-exists", `run ${runId} already exists under ${resolved.repoRelative ?? resolved.root}`, { runId });
-  }
+  const runsDir = requireRunsContainer(resolved);
   const taskInputs = input.tasks ?? [];
   validateTaskInputs(taskInputs, new Set(), new Set(taskInputs.map((task) => task.taskId)));
 
-  // Commit order: run dir + record files first, manifest LAST — a run
-  // without a manifest is never a valid run, so a crash anywhere earlier
-  // leaves a detectable incomplete dir, not half a run.
-  fs.mkdirSync(path.join(runDir, "tasks"), { recursive: true });
-  fs.mkdirSync(path.join(runDir, "checkpoints"), { recursive: true });
-  fs.mkdirSync(path.join(runDir, "receipts"), { recursive: true });
-  verifyRunDirContained(cwd, resolved, runDir, runId);
-  const stamp = nowOf(options);
-  for (const task of taskInputs) {
-    const record: TaskRecord = {
-      schemaVersion: TASK_RECORD_SCHEMA_VERSION,
+  // The run dir claim is the create-time analogue of the writer lock: an
+  // O_EXCL mkdir picks exactly one winner among racing creators — a second
+  // claimant loses cleanly as run-exists instead of interleaving writes.
+  if (!claimRunDir(runsDir, runDir)) {
+    throw new StoreError("run-exists", `run ${runId} already exists under ${resolved.repoRelative ?? resolved.root}`, { runId });
+  }
+  const release = acquireWriterLock(runDir);
+  try {
+    // Commit order: run dir + record files first, manifest LAST — a run
+    // without a manifest is never a valid run, so a crash anywhere earlier
+    // leaves a detectable incomplete dir, not half a run.
+    fs.mkdirSync(path.join(runDir, "tasks"));
+    fs.mkdirSync(path.join(runDir, "checkpoints"));
+    fs.mkdirSync(path.join(runDir, "receipts"));
+    verifyRunDirContained(resolved, runDir, runId);
+    const stamp = nowOf(options);
+    for (const task of taskInputs) {
+      const record: TaskRecord = {
+        schemaVersion: TASK_RECORD_SCHEMA_VERSION,
+        runId,
+        taskId: task.taskId,
+        title: task.title ?? task.taskId,
+        status: task.status ?? "todo",
+        dependsOn: [...(task.dependsOn ?? [])].sort(),
+        checks: [...(task.checks ?? [])].sort(),
+        version: 1,
+        createdAt: stamp,
+        updatedAt: stamp,
+      };
+      atomicWriteFile(path.join(runDir, recordFileName("tasks", task.taskId)), `${JSON.stringify(record, null, 2)}\n`);
+    }
+    let planDigest: string | null = null;
+    if (input.plan !== undefined) {
+      atomicWriteFile(path.join(runDir, PLAN_FILE), input.plan);
+      planDigest = sha256(input.plan);
+    }
+    const manifest: RunManifest = {
+      schemaVersion: RUN_MANIFEST_SCHEMA_VERSION,
       runId,
-      taskId: task.taskId,
-      title: task.title ?? task.taskId,
-      status: task.status ?? "todo",
-      dependsOn: [...(task.dependsOn ?? [])].sort(),
-      checks: [...(task.checks ?? [])].sort(),
-      version: 1,
+      revision: 1,
+      status: "active",
+      graphId: input.graphId ?? "doc-driven-dev",
+      focus: input.focus ?? null,
+      baseCommit: input.baseCommit !== undefined ? input.baseCommit : detectBaseCommit(cwd),
+      planDigest,
+      approval: null,
       createdAt: stamp,
       updatedAt: stamp,
+      finalizedAt: null,
     };
-    atomicWriteFile(path.join(runDir, recordFileName("tasks", task.taskId)), `${JSON.stringify(record, null, 2)}\n`);
+    writeManifest(runDir, manifest);
+  } finally {
+    release();
   }
-  let planDigest: string | null = null;
-  if (input.plan !== undefined) {
-    atomicWriteFile(path.join(runDir, PLAN_FILE), input.plan);
-    planDigest = sha256(input.plan);
-  }
-  const manifest: RunManifest = {
-    schemaVersion: RUN_MANIFEST_SCHEMA_VERSION,
-    runId,
-    revision: 1,
-    status: "active",
-    graphId: input.graphId ?? "doc-driven-dev",
-    focus: input.focus ?? null,
-    baseCommit: input.baseCommit !== undefined ? input.baseCommit : detectBaseCommit(cwd),
-    planDigest,
-    approval: null,
-    createdAt: stamp,
-    updatedAt: stamp,
-    finalizedAt: null,
-  };
-  writeManifest(runDir, manifest);
-  return loadSnapshot(cwd, resolved, runId);
+  return loadSnapshot(resolved, runId);
 }
 
 function loadRun(cwd: string, runId: string, options: StoreOptions = {}): RunSnapshot {
   const resolved = resolveStateRoot(cwd, options);
-  return loadSnapshot(cwd, resolved, runId);
+  return loadSnapshot(resolved, runId);
 }
 
 function listRuns(cwd: string, options: StoreOptions = {}): Array<{ runId: string; status: RunStatus | "corrupt"; revision: number | null }> {
@@ -705,6 +703,11 @@ function recordCheckpoint(
       at: input.at ?? nowOf(options),
       data: input.data ?? null,
     };
+    // Never commit a record the next load would reject — a malformed `at`
+    // is an argument error now, not `corrupt-state` on every later read.
+    if (!validateCheckpoint(record)) {
+      throw new StoreError("invalid-argument", `checkpoint ${input.checkpointId} failed record validation — 'at' must be an ISO-8601 timestamp`);
+    }
     if (input.taskId != null && !snapshot.tasks.some((task) => task.taskId === input.taskId)) {
       throw new StoreError("task-not-found", `checkpoint ${input.checkpointId} references task ${input.taskId}, which is not in run ${runId}`);
     }
@@ -761,6 +764,11 @@ function recordReceipt(
       input: input.input ?? null,
       output: input.output ?? null,
     };
+    // Never commit a record the next load would reject — a malformed `at`
+    // or `status` is an argument error now, not `corrupt-state` on read.
+    if (!validateReceipt(record)) {
+      throw new StoreError("invalid-argument", `receipt ${input.receiptId} failed record validation — 'at' must be an ISO-8601 timestamp and 'status' a declared receipt status`);
+    }
     if (input.taskId != null && !snapshot.tasks.some((task) => task.taskId === input.taskId)) {
       throw new StoreError("task-not-found", `receipt ${input.receiptId} references task ${input.taskId}, which is not in run ${runId}`);
     }
@@ -787,12 +795,13 @@ function recordReceipt(
 function appendTrace(cwd: string, runId: string, event: Record<string, unknown>, options: StoreOptions = {}): void {
   const resolved = resolveStateRoot(cwd, options);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
-  // A valid manifest is the minimum run shape — trace lines never outlive
-  // the run they diagnose.
-  readManifest(runDir, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
+    // A valid manifest is the minimum run shape — trace lines never outlive
+    // the run they diagnose — and a finalized run is read-only for the
+    // trace too: "every mutation refuses" admits no silent exception.
+    requireMutableManifest(readManifest(runDir, runId));
     appendLine(path.join(runDir, TRACE_FILE), JSON.stringify({ at: nowOf(options), ...event }));
   } finally {
     release();
@@ -814,7 +823,7 @@ function finalizeRun(
   }
   const resolved = resolveStateRoot(cwd, options);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
     const manifest = readManifest(runDir, runId);
@@ -862,12 +871,12 @@ function disposeRun(
 ): { disposed: boolean; forced: boolean; reason: string | null; inspection: DisposalInspection } {
   const resolved = resolveStateRoot(cwd, options);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
     let snapshot: RunSnapshot;
     try {
-      snapshot = loadSnapshot(cwd, resolved, runId);
+      snapshot = loadSnapshot(resolved, runId);
     } catch (error: unknown) {
       // A corrupt run cannot produce an inspection — force is still the
       // authorized way out, reported with what could be determined.
@@ -931,7 +940,7 @@ function recoverRun(
 ): { runId: string; removedTmpFiles: string[]; corruptFiles: string[]; recovered: boolean } {
   const resolved = resolveStateRoot(cwd, options);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
     const removed: string[] = [];
@@ -942,7 +951,7 @@ function recoverRun(
     }
     const corruptFiles: string[] = [];
     try {
-      loadSnapshot(cwd, resolved, runId);
+      loadSnapshot(resolved, runId);
     } catch (error: unknown) {
       if (error instanceof StoreError && error.code === "corrupt-state") {
         corruptFiles.push(String((error.detail as { path?: string } | undefined)?.path ?? STATE_FILE));
@@ -1002,9 +1011,9 @@ function exportRun(
   options: StoreOptions & { out?: string } = {},
 ): RunExport {
   const resolved = resolveStateRoot(cwd, options);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   // A snapshot read validates every committed record before it ships.
-  const snapshot = loadSnapshot(cwd, resolved, runId);
+  const snapshot = loadSnapshot(resolved, runId);
   const files = collectExportFiles(runDir);
   const payloadDigest = sha256(canonicalJson({
     runId,
@@ -1137,6 +1146,7 @@ function importRun(
   ensureStateRootBoundary(cwd, resolved);
   const runDir = runDirFor(resolved, runId);
   const conflict = options.onConflict ?? "refuse";
+  const runsDir = requireRunsContainer(resolved);
   const existed = fs.existsSync(runDir);
   if (existed) {
     if (conflict !== "replace") {
@@ -1146,30 +1156,53 @@ function importRun(
         { runId },
       );
     }
-    const existing = loadSnapshot(cwd, resolved, runId);
-    requireRevision(existing.manifest, options.expectedRevision);
-    if (!FINAL_RUN_STATUSES.has(existing.manifest.status) && options.force !== true) {
-      throw new StoreError(
-        "run-active",
-        `existing run ${runId} is ${existing.manifest.status} — replacing an active run requires explicit force`,
-        { inspection: disposalInspection(existing) },
-      );
+    // Replacement runs the same critical section as every mutation:
+    // containment first (a linked run dir is refused before writer.lock is
+    // written inside it), then the lock — so the delete below can never
+    // tear down a live writer's lock or race its writes.
+    runDirContained(resolved, runId);
+    const releaseExisting = acquireWriterLock(runDir);
+    try {
+      const existing = loadSnapshot(resolved, runId);
+      requireRevision(existing.manifest, options.expectedRevision);
+      if (!FINAL_RUN_STATUSES.has(existing.manifest.status) && options.force !== true) {
+        throw new StoreError(
+          "run-active",
+          `existing run ${runId} is ${existing.manifest.status} — replacing an active run requires explicit force`,
+          { inspection: disposalInspection(existing) },
+        );
+      }
+      fs.rmSync(runDir, { recursive: true, force: true });
+    } finally {
+      releaseExisting();
     }
-    fs.rmSync(runDir, { recursive: true, force: true });
   }
-  requireRunsContainer(cwd, resolved);
-  fs.mkdirSync(runDir, { recursive: true });
-  verifyRunDirContained(cwd, resolved, runDir, runId);
-  // Same commit order as createRun: every imported file first, manifest
-  // last — a crash mid-import leaves an incomplete dir, never a false run.
-  const ordered = [...doc.files].sort((a, b) => (a.path === STATE_FILE ? 1 : 0) - (b.path === STATE_FILE ? 1 : 0));
-  for (const file of ordered) {
-    const target = path.join(runDir, file.path);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    atomicWriteFile(target, file.content);
+  // The same claim discipline as createRun: O_EXCL mkdir picks exactly one
+  // importer — a run materializing after the conflict check (including a
+  // racing import) loses cleanly as import-conflict, never a merged run.
+  if (!claimRunDir(runsDir, runDir)) {
+    throw new StoreError(
+      "import-conflict",
+      `run ${runId} already exists — pass onConflict: "replace" to overwrite it explicitly`,
+      { runId },
+    );
   }
-  // Post-write verification: the run must load clean under this toolchain.
-  loadSnapshot(cwd, resolved, runId);
+  const release = acquireWriterLock(runDir);
+  try {
+    verifyRunDirContained(resolved, runDir, runId);
+    // Same commit order as createRun: every imported file first, manifest
+    // last — a crash mid-import leaves an incomplete dir, never a false run.
+    const ordered = [...doc.files].sort((a, b) => (a.path === STATE_FILE ? 1 : 0) - (b.path === STATE_FILE ? 1 : 0));
+    for (const file of ordered) {
+      const target = path.join(runDir, file.path);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      atomicWriteFile(target, file.content);
+    }
+    // Post-write verification: the run must load clean under this toolchain.
+    loadSnapshot(resolved, runId);
+  } finally {
+    release();
+  }
   return { imported: true, runId, replaced: existed, files: doc.files.length };
 }
 

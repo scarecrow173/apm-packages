@@ -26,6 +26,7 @@ import {
   updateTask,
 } from "../src/skills/lib/execution_store";
 import type { RunExport } from "../src/skills/lib/execution_store";
+import { canonicalJson } from "../src/skills/lib/execution_store/types";
 
 // Execution Store v1 (Issue #236): per-run state under
 // `.apm/state/doc-driven-dev/runs/<run-id>/`, CAS on run revision and task
@@ -169,10 +170,13 @@ test("boundary: a linked runs/ container escaping the checkout refuses", (t) => 
 
 test("boundary: run ids are validated before becoming a path", () => {
   const repo = fileRepo();
-  for (const bad of ["../escape", "a/b", "a\\b", "..", "", "CON"]) {
+  // `RUN.` and `a..b` look valid yet NTFS folds them onto other ids' names.
+  for (const bad of ["../escape", "a/b", "a\\b", "..", "", "CON", "RUN.", "a..b"]) {
     expectStoreError(() => createRun(repo, { runId: bad }), "invalid-argument");
   }
   assert.equal(fs.existsSync(path.join(repo, ".apm")), false);
+  // Single inner dots stay legal.
+  createRun(repo, { runId: "RUN-1.x" });
 });
 
 test("boundary: an external shared root requires explicit authorization", () => {
@@ -220,6 +224,69 @@ test("boundary: manual .gitignore evaluation honors negation order", () => {
   // Covering the subtree itself flips the decision.
   writeFile(repo, ".gitignore", ".apm/*\n!.gitkeep\n.apm/state/\n");
   createRun(repo, { runId: "RUN-B10" });
+});
+
+test("boundary: file-kind coverage is not directory coverage — *.json refuses (git work tree)", () => {
+  const repo = tempDir();
+  git(repo, ["init", "-q"]);
+  git(repo, ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init", "--allow-empty"]);
+  // `*.json` covers manifest.json yet leaves plan.md, run_trace.jsonl, and
+  // writer.lock committable — coverage must match the root DIRECTORY.
+  writeFile(repo, ".gitignore", "*.json\n");
+  expectStoreError(() => createRun(repo, { runId: "RUN-B11" }), "boundary-gitignore");
+  assert.equal(fs.existsSync(path.join(repo, ".apm")), false, "no state may be created on refusal");
+});
+
+test("boundary: file-kind coverage is not directory coverage — *.json refuses (no git)", () => {
+  const repo = tempDir();
+  writeFile(repo, ".gitignore", "*.json\n");
+  expectStoreError(() => createRun(repo, { runId: "RUN-B12" }), "boundary-gitignore");
+  assert.equal(fs.existsSync(path.join(repo, ".apm")), false);
+});
+
+test("boundary: a runs/ link landing inside the checkout still escapes the state root", (t) => {
+  const repo = gitRepo();
+  const target = path.join(repo, "docs", "runs-alias");
+  fs.mkdirSync(target, { recursive: true });
+  fs.mkdirSync(path.join(repo, ".apm/state/doc-driven-dev"), { recursive: true });
+  try {
+    fs.symlinkSync(target, path.join(repo, ".apm/state/doc-driven-dev/runs"), "junction");
+  } catch (error: unknown) {
+    t.skip(`symlink unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  // The link resolves INSIDE the checkout — containment anchored at the
+  // checkout would pass it while writes land in committable docs/.
+  expectStoreError(() => createRun(repo, { runId: "RUN-B13" }), "boundary-escape");
+  assert.equal(fs.readdirSync(target).length, 0, "nothing may be written through the link");
+});
+
+test("boundary: a planted runs/<id> link refuses on load and on import-replace", (t) => {
+  const repo = gitRepo();
+  const source = gitRepo();
+  createRun(source, { runId: "RUN-B14" });
+  const document = exportRun(source, "RUN-B14");
+  const target = path.join(repo, "docs", "run-alias");
+  fs.mkdirSync(target, { recursive: true });
+  fs.mkdirSync(path.join(repo, ".apm/state/doc-driven-dev/runs"), { recursive: true });
+  try {
+    fs.symlinkSync(target, path.join(repo, ".apm/state/doc-driven-dev/runs/RUN-B14"), "junction");
+  } catch (error: unknown) {
+    t.skip(`symlink unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  expectStoreError(() => loadRun(repo, "RUN-B14"), "boundary-escape");
+  // Replace-import must refuse through the link too — before writer.lock
+  // or rmSync ever touches the link target.
+  expectStoreError(
+    () => importRun(repo, { document }, { onConflict: "replace", force: true }),
+    "boundary-escape",
+  );
+  // The link target was never written to and the link survives.
+  assert.equal(fs.readdirSync(target).length, 0);
+  assert.ok(fs.lstatSync(path.join(repo, ".apm/state/doc-driven-dev/runs/RUN-B14")).isSymbolicLink());
+  // A create over the planted name also refuses rather than writing through.
+  expectStoreError(() => createRun(repo, { runId: "RUN-B14" }), "run-exists");
 });
 
 // ---------------------------------------------------------------------------
@@ -410,6 +477,27 @@ test("records: checkpoint and receipt files land per run with idempotent re-reco
   assert.deepEqual(snapshot.receipts.map((r) => r.receiptId), ["RC-1"]);
 });
 
+test("records: a malformed `at` refuses at write instead of corrupting the run", () => {
+  const repo = fileRepo();
+  createRun(repo, { runId: "RUN-R9" });
+  expectStoreError(
+    () => recordCheckpoint(repo, "RUN-R9", { checkpointId: "CP-1", at: "not-a-date" }),
+    "invalid-argument",
+  );
+  expectStoreError(
+    () => recordReceipt(repo, "RUN-R9", { receiptId: "RC-1", effect: "e", at: "garbage" }),
+    "invalid-argument",
+  );
+  expectStoreError(
+    () => recordReceipt(repo, "RUN-R9", { receiptId: "RC-1", effect: "e", status: "bogus" as never }),
+    "invalid-argument",
+  );
+  // The run is untouched — nothing half-invalid was committed.
+  const snapshot = loadRun(repo, "RUN-R9");
+  assert.equal(snapshot.checkpoints.length, 0);
+  assert.equal(snapshot.receipts.length, 0);
+});
+
 test("records: trace appends JSONL and stays non-authoritative", () => {
   const repo = fileRepo();
   createRun(repo, { runId: "RUN-R2" }, { now: fixedClock });
@@ -432,10 +520,11 @@ test("finalize: terminal status freezes the run; re-finalize is idempotent", () 
   assert.equal(done.finalized, true);
   assert.equal(done.revision, 2);
   assert.equal(loadRun(repo, "RUN-F1").manifest.finalizedAt, FIXED_NOW);
-  // Every mutation now refuses.
+  // Every mutation now refuses — the trace included.
   expectStoreError(() => savePlan(repo, "RUN-F1", "# x\n"), "run-finalized");
   expectStoreError(() => updateTask(repo, "RUN-F1", "TASK-1", {}), "run-finalized");
   expectStoreError(() => recordReceipt(repo, "RUN-F1", { receiptId: "RC-9", effect: "e" }), "run-finalized");
+  expectStoreError(() => appendTrace(repo, "RUN-F1", { kind: "post-mortem" }), "run-finalized");
   const again = finalizeRun(repo, "RUN-F1", { status: "completed" });
   assert.equal(again.finalized, false);
   expectStoreError(() => finalizeRun(repo, "RUN-F1", { status: "aborted" }), "run-finalized");
@@ -562,6 +651,40 @@ test("concurrency: CAS refuses a lost update between racing writers", async () =
   assert.equal(loadRun(repo, "RUN-W4").tasks[0].version, 2, "exactly one update was applied");
 });
 
+test("concurrency: racing creates for the same run id have exactly one winner", async () => {
+  const repo = fileRepo();
+  writeFile(repo, "plan-a.md", "# Plan A\n");
+  writeFile(repo, "plan-b.md", "# Plan B\n");
+  const create = (plan: string) => runCliAsync(["create", "RUN-W5", "--plan-file", plan, "--cwd", repo], repo);
+  const results = await Promise.all([create("plan-a.md"), create("plan-b.md"), create("plan-a.md"), create("plan-b.md")]);
+  const winners = results.filter((r) => r.status === 0);
+  const refused = results.filter((r) => r.status !== 0).map((r) => JSON.parse(r.stdout).error as string);
+  assert.equal(winners.length, 1, `expected exactly one creator: ${results.map((r) => r.stdout).join(" | ")}`);
+  assert.ok(refused.every((code) => code === "run-exists"), `losers must fail run-exists: ${refused}`);
+  // The surviving run is one coherent create — never interleaved halves.
+  const snapshot = loadRun(repo, "RUN-W5");
+  assert.equal(snapshot.manifest.revision, 1);
+  assert.ok(snapshot.plan !== null && ["# Plan A\n", "# Plan B\n"].includes(snapshot.plan.content));
+  assert.equal(fs.existsSync(path.join(repo, ".apm/state/doc-driven-dev/runs/RUN-W5/writer.lock")), false, "the winner released its lock");
+});
+
+test("concurrency: racing imports for the same run id have exactly one winner", async () => {
+  const source = gitRepo();
+  createRun(source, { runId: "RUN-W6", tasks: [{ taskId: "TASK-1" }] });
+  const exportPath = path.join(tempDir("exec-store-export-"), "run.export.json");
+  exportRun(source, "RUN-W6", { out: exportPath });
+  const repo = fileRepo();
+  const importOnce = () => runCliAsync(["import", "--file", exportPath, "--cwd", repo], repo);
+  const results = await Promise.all([importOnce(), importOnce(), importOnce(), importOnce()]);
+  const winners = results.filter((r) => r.status === 0);
+  const refused = results.filter((r) => r.status !== 0).map((r) => JSON.parse(r.stdout).error as string);
+  assert.equal(winners.length, 1, `expected exactly one importer: ${results.map((r) => r.stdout).join(" | ")}`);
+  assert.ok(refused.every((code) => code === "import-conflict"), `losers must fail import-conflict: ${refused}`);
+  const snapshot = loadRun(repo, "RUN-W6");
+  assert.equal(snapshot.manifest.status, "active");
+  assert.deepEqual(snapshot.tasks.map((task) => task.taskId), ["TASK-1"]);
+});
+
 // ---------------------------------------------------------------------------
 // Crash recovery: partial writes are evidence, never adopted
 // ---------------------------------------------------------------------------
@@ -670,6 +793,28 @@ test("transfer: import conflicts refuse by default; replace needs a finalized ta
   assert.equal(loadRun(repoB, "RUN-X1").manifest.status, "active");
 });
 
+test("transfer: replace-import refuses while the target holds a live writer lock", async () => {
+  const { repoA, repoB } = populatedSource();
+  const document = exportRun(repoA, "RUN-X1");
+  importRun(repoB, { document });
+  finalizeRun(repoB, "RUN-X1", { status: "aborted" });
+  // A live foreign pid holds the lock — replace must refuse, and it must
+  // never delete the lock or the live writer's run dir out from under it.
+  const holder = spawn(process.execPath, ["-e", "setInterval(() => {}, 5000)"], { windowsHide: true });
+  try {
+    assert.ok(holder.pid !== undefined);
+    writeFile(repoB, ".apm/state/doc-driven-dev/runs/RUN-X1/writer.lock", `${JSON.stringify({ pid: holder.pid, hostname: os.hostname(), acquiredAt: FIXED_NOW })}\n`);
+    expectStoreError(
+      () => importRun(repoB, { document }, { onConflict: "replace" }),
+      "writer-conflict",
+    );
+  } finally {
+    holder.kill("SIGKILL");
+  }
+  // The finalized run is intact — the refused replace deleted nothing.
+  assert.equal(loadRun(repoB, "RUN-X1").manifest.status, "aborted");
+});
+
 test("transfer: a tampered export fails integrity before any write", () => {
   const { repoA, repoB } = populatedSource();
   const document = exportRun(repoA, "RUN-X1");
@@ -695,18 +840,47 @@ test("transfer: a tampered export fails integrity before any write", () => {
 test("transfer: manifest/record consistency is verified beyond file digests", () => {
   const { repoA, repoB } = populatedSource();
   const document = exportRun(repoA, "RUN-X1");
-  // Forge a coherent-envelope export whose task binds a different run id.
-  const forged: RunExport = JSON.parse(JSON.stringify(document));
-  const task = forged.files.find((f) => f.path === "tasks/TASK-1.json")!;
-  const parsed = JSON.parse(task.content);
-  parsed.runId = "RUN-OTHER";
-  task.content = JSON.stringify(parsed, null, 2);
-  task.sha256 = sha256(task.content);
-  forged.payloadDigest = sha256(JSON.stringify({
-    runId: forged.runId,
-    files: forged.files.map((f) => ({ path: f.path, sha256: f.sha256 })),
-  }));
-  expectStoreError(() => importRun(repoB, { document: forged }), "import-integrity");
+  // Forge correctly-enveloped exports — per-file sha256 AND payloadDigest
+  // recomputed with the same canonicalJson the store uses — so the envelope
+  // layer passes and ONLY the record-consistency layer can refuse.
+  const tamper = (mutate: (doc: RunExport) => void): RunExport => {
+    const doc: RunExport = JSON.parse(JSON.stringify(document));
+    mutate(doc);
+    for (const file of doc.files) file.sha256 = sha256(file.content);
+    doc.payloadDigest = sha256(canonicalJson({
+      runId: doc.runId,
+      files: doc.files.map((f) => ({ path: f.path, sha256: f.sha256 })),
+    }));
+    return doc;
+  };
+  // A record binding a different run id is refused at the record layer —
+  // the message proves the envelope digest verified first.
+  const wrongRun = tamper((doc) => {
+    const task = doc.files.find((f) => f.path === "tasks/TASK-1.json")!;
+    const parsed = JSON.parse(task.content);
+    parsed.runId = "RUN-OTHER";
+    task.content = JSON.stringify(parsed, null, 2);
+  });
+  const bindError = expectStoreError(() => importRun(repoB, { document: wrongRun }), "import-integrity");
+  assert.match(bindError.message, /binds run/, "the record-level runId check fired, not the envelope");
+  // A record whose id disagrees with its file name is refused.
+  const wrongId = tamper((doc) => {
+    const task = doc.files.find((f) => f.path === "tasks/TASK-1.json")!;
+    const parsed = JSON.parse(task.content);
+    parsed.taskId = "TASK-9";
+    task.content = JSON.stringify(parsed, null, 2);
+  });
+  const idError = expectStoreError(() => importRun(repoB, { document: wrongId }), "import-integrity");
+  assert.match(idError.message, /carries taskId/, "the file-name↔record-id check fired");
+  // A record that fails schema validation is refused.
+  const schemaBad = tamper((doc) => {
+    const task = doc.files.find((f) => f.path === "tasks/TASK-1.json")!;
+    const parsed = JSON.parse(task.content);
+    delete parsed.version;
+    task.content = JSON.stringify(parsed, null, 2);
+  });
+  const schemaError = expectStoreError(() => importRun(repoB, { document: schemaBad }), "import-integrity");
+  assert.match(schemaError.message, /failed tasks schema validation/, "the record schema check fired");
 });
 
 test("transfer: a declared shared root serves several worktrees", () => {

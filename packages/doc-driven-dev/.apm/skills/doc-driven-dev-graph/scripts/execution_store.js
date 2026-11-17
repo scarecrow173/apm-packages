@@ -27715,6 +27715,16 @@ function appendLine(file2, line) {
     import_node_fs3.default.closeSync(fd);
   }
 }
+function claimRunDir(runsDir, runDir) {
+  import_node_fs3.default.mkdirSync(runsDir, { recursive: true });
+  try {
+    import_node_fs3.default.mkdirSync(runDir);
+    return true;
+  } catch (error62) {
+    if (error62.code === "EEXIST") return false;
+    throw error62;
+  }
+}
 var WRITER_LOCK_NAME = "writer.lock";
 function readLockRecord(lockFile) {
   try {
@@ -27835,6 +27845,7 @@ var WINDOWS_RESERVED_NAMES = /* @__PURE__ */ new Set([
 ]);
 function isValidId(value) {
   if (typeof value !== "string" || !ID_PATTERN.test(value)) return false;
+  if (value.endsWith(".") || value.includes("..")) return false;
   const stem = value.split(".")[0].toLowerCase();
   return !WINDOWS_RESERVED_NAMES.has(stem);
 }
@@ -28022,13 +28033,37 @@ function ignoreDecision(cwd, relPath, isDir) {
   }
   return isIgnored(relPath, isDir);
 }
-function coverageProbe(resolved) {
-  return `${resolved.repoRelative}/runs/.probe/manifest.json`;
+function realRootRelative(cwd, resolved) {
+  let probe = resolved.root;
+  const suffix = [];
+  while (!import_node_fs4.default.existsSync(probe)) {
+    const parent = import_node_path4.default.dirname(probe);
+    if (parent === probe) return resolved.repoRelative ?? resolved.root;
+    suffix.unshift(import_node_path4.default.basename(probe));
+    probe = parent;
+  }
+  let realAncestor;
+  let realCwd;
+  try {
+    realAncestor = import_node_fs4.default.realpathSync(probe);
+    realCwd = import_node_fs4.default.realpathSync(cwd);
+  } catch {
+    return resolved.repoRelative ?? resolved.root;
+  }
+  const realRoot = suffix.length === 0 ? realAncestor : import_node_path4.default.join(realAncestor, ...suffix);
+  const rel = import_node_path4.default.relative(realCwd, realRoot);
+  if (rel === "" || rel === ".." || rel.startsWith(`..${import_node_path4.default.sep}`) || import_node_path4.default.isAbsolute(rel)) {
+    return resolved.repoRelative ?? resolved.root;
+  }
+  return rel.split(import_node_path4.default.sep).join("/");
+}
+function coverageProbe(cwd, resolved) {
+  return realRootRelative(cwd, resolved);
 }
 function requireGitignoreCoverage(cwd, resolved, context) {
-  const probe = coverageProbe(resolved);
+  const probe = coverageProbe(cwd, resolved);
   if (context.kind === "worktree") {
-    const result = git(["check-ignore", "-q", "--", probe], cwd);
+    const result = git(["check-ignore", "-q", "--", `${probe}/`], cwd);
     if (result.status === 0) return;
     if (result.status === 1) {
       throw new StoreError(
@@ -28042,7 +28077,7 @@ function requireGitignoreCoverage(cwd, resolved, context) {
       `git check-ignore failed (${result.stderr || `exit ${result.status}`}) \u2014 execution-state coverage cannot be verified`
     );
   }
-  if (!ignoreDecision(cwd, probe, false)) {
+  if (!ignoreDecision(cwd, probe, true)) {
     throw new StoreError(
       "boundary-gitignore",
       `${resolved.repoRelative} is not covered by .gitignore \u2014 refusing to write execution state that could become tracked; run \`execution_store.js init\` or add an ignore entry for ${resolved.repoRelative}/`,
@@ -28052,7 +28087,8 @@ function requireGitignoreCoverage(cwd, resolved, context) {
 }
 function requireNoTrackedState(cwd, resolved, context) {
   if (context.kind !== "worktree") return;
-  const trackedRoot = resolved.repoRelative !== null && resolved.repoRelative.startsWith(".apm/state") ? ".apm/state" : resolved.repoRelative;
+  const realRoot = realRootRelative(cwd, resolved);
+  const trackedRoot = realRoot.startsWith(".apm/state") ? ".apm/state" : realRoot;
   const result = git(["ls-files", "-z", "--", `${trackedRoot}`], cwd);
   if (result.status !== 0) {
     throw new StoreError(
@@ -28150,7 +28186,7 @@ function runDirFor(resolved, runId) {
   if (!isValidId(runId)) {
     throw new StoreError(
       "invalid-argument",
-      `invalid run id ${JSON.stringify(runId)} \u2014 ids match [A-Za-z0-9][A-Za-z0-9._-]{0,127} and never contain path separators`
+      `invalid run id ${JSON.stringify(runId)} \u2014 ids match [A-Za-z0-9][A-Za-z0-9._-]{0,127} with dots inner and single, and never contain path separators`
     );
   }
   return import_node_path4.default.join(resolved.root, "runs", runId);
@@ -28168,7 +28204,20 @@ function sha256(content) {
 function nowOf(options2) {
   return (options2.now ?? systemClock)();
 }
-function runDirContained(cwd, resolved, runId) {
+function insideResolvedRoot(resolved, candidate) {
+  let real;
+  let realRoot;
+  try {
+    real = import_node_fs5.default.realpathSync(candidate);
+    realRoot = import_node_fs5.default.realpathSync(resolved.root);
+  } catch {
+    return false;
+  }
+  const root = import_node_path5.default.resolve(realRoot);
+  const target = import_node_path5.default.resolve(real);
+  return target === root || target.startsWith(`${root}${import_node_path5.default.sep}`);
+}
+function runDirContained(resolved, runId) {
   const runDir = runDirFor(resolved, runId);
   if (!import_node_fs5.default.existsSync(runDir)) {
     throw new StoreError("run-not-found", `run ${runId} does not exist under ${resolved.repoRelative ?? resolved.root}`);
@@ -28176,23 +28225,8 @@ function runDirContained(cwd, resolved, runId) {
   if (!import_node_fs5.default.statSync(runDir).isDirectory()) {
     throw new StoreError("corrupt-state", `${runDir} is not a directory`);
   }
-  if (resolved.external) {
-    let real;
-    try {
-      real = import_node_fs5.default.realpathSync(runDir);
-    } catch {
-      throw new StoreError("boundary-escape", `run dir for ${runId} cannot be resolved`);
-    }
-    const realRoot = import_node_fs5.default.realpathSync(resolved.root);
-    const root = import_node_path5.default.resolve(realRoot);
-    const candidate = import_node_path5.default.resolve(real);
-    if (candidate !== root && !candidate.startsWith(`${root}${import_node_path5.default.sep}`)) {
-      throw new StoreError("boundary-escape", `run ${runId} escapes the shared state root through a link`);
-    }
-    return runDir;
-  }
-  if (!isInsideCheckout(cwd, runDir)) {
-    throw new StoreError("boundary-escape", `run ${runId} resolves outside the checkout through a link`);
+  if (!insideResolvedRoot(resolved, runDir)) {
+    throw new StoreError("boundary-escape", `run ${runId} resolves outside the state root through a link`);
   }
   return runDir;
 }
@@ -28286,8 +28320,8 @@ function scanIncompleteWrites(dir, rel = "") {
   }
   return found;
 }
-function loadSnapshot(cwd, resolved, runId) {
-  const runDir = runDirContained(cwd, resolved, runId);
+function loadSnapshot(resolved, runId) {
+  const runDir = runDirContained(resolved, runId);
   const manifest = readManifest2(runDir, runId);
   const planFile = import_node_path5.default.join(runDir, PLAN_FILE);
   let plan = null;
@@ -28318,10 +28352,10 @@ function loadSnapshot(cwd, resolved, runId) {
 function mutateRun(cwd, runId, options2, expectedRevision, mutate) {
   const resolved = resolveStateRoot(cwd, options2);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
-    const snapshot = loadSnapshot(cwd, resolved, runId);
+    const snapshot = loadSnapshot(resolved, runId);
     requireMutableManifest(snapshot.manifest);
     requireRevision(snapshot.manifest, expectedRevision);
     return mutate({ runDir, manifest: snapshot.manifest, snapshot });
@@ -28371,36 +28405,21 @@ function validateTaskInputs(inputs, existingIds, batchIds) {
     }
   }
 }
-function requireRunsContainer(cwd, resolved) {
+function requireRunsContainer(resolved) {
   const runsDir = import_node_path5.default.join(resolved.root, RUN_DIR);
   if (import_node_fs5.default.existsSync(runsDir)) {
     if (!import_node_fs5.default.statSync(runsDir).isDirectory()) {
       throw new StoreError("boundary-escape", `${runsDir} is not a directory`);
     }
-    if (!resolved.external && !isInsideCheckout(cwd, runsDir)) {
-      throw new StoreError("boundary-escape", `${resolved.repoRelative}/runs resolves outside the checkout through a link`);
-    }
-    if (resolved.external) {
-      const real = import_node_fs5.default.realpathSync(runsDir);
-      const realRoot = import_node_fs5.default.realpathSync(resolved.root);
-      if (real !== realRoot && !real.startsWith(`${import_node_path5.default.resolve(realRoot)}${import_node_path5.default.sep}`)) {
-        throw new StoreError("boundary-escape", "the runs container escapes the shared state root through a link");
-      }
+    if (!insideResolvedRoot(resolved, runsDir)) {
+      throw new StoreError("boundary-escape", `the runs container under ${resolved.repoRelative ?? resolved.root} escapes the state root through a link`);
     }
   }
   return runsDir;
 }
-function verifyRunDirContained(cwd, resolved, runDir, runId) {
-  if (resolved.external) {
-    const real = import_node_fs5.default.realpathSync(runDir);
-    const realRoot = import_node_fs5.default.realpathSync(resolved.root);
-    if (real !== realRoot && !real.startsWith(`${import_node_path5.default.resolve(realRoot)}${import_node_path5.default.sep}`)) {
-      throw new StoreError("boundary-escape", `run ${runId} resolved outside the shared state root`);
-    }
-    return;
-  }
-  if (!isInsideCheckout(cwd, runDir)) {
-    throw new StoreError("boundary-escape", `run ${runId} resolved outside the checkout \u2014 refusing to write`);
+function verifyRunDirContained(resolved, runDir, runId) {
+  if (!insideResolvedRoot(resolved, runDir)) {
+    throw new StoreError("boundary-escape", `run ${runId} resolves outside the state root \u2014 refusing to write`);
   }
 }
 function createRun(cwd, input2 = {}, options2 = {}) {
@@ -28408,58 +28427,63 @@ function createRun(cwd, input2 = {}, options2 = {}) {
   ensureStateRootBoundary(cwd, resolved);
   const runId = input2.runId ?? generateArtifactId("RUN");
   const runDir = runDirFor(resolved, runId);
-  requireRunsContainer(cwd, resolved);
-  if (import_node_fs5.default.existsSync(runDir)) {
-    throw new StoreError("run-exists", `run ${runId} already exists under ${resolved.repoRelative ?? resolved.root}`, { runId });
-  }
+  const runsDir = requireRunsContainer(resolved);
   const taskInputs = input2.tasks ?? [];
   validateTaskInputs(taskInputs, /* @__PURE__ */ new Set(), new Set(taskInputs.map((task) => task.taskId)));
-  import_node_fs5.default.mkdirSync(import_node_path5.default.join(runDir, "tasks"), { recursive: true });
-  import_node_fs5.default.mkdirSync(import_node_path5.default.join(runDir, "checkpoints"), { recursive: true });
-  import_node_fs5.default.mkdirSync(import_node_path5.default.join(runDir, "receipts"), { recursive: true });
-  verifyRunDirContained(cwd, resolved, runDir, runId);
-  const stamp = nowOf(options2);
-  for (const task of taskInputs) {
-    const record2 = {
-      schemaVersion: TASK_RECORD_SCHEMA_VERSION,
-      runId,
-      taskId: task.taskId,
-      title: task.title ?? task.taskId,
-      status: task.status ?? "todo",
-      dependsOn: [...task.dependsOn ?? []].sort(),
-      checks: [...task.checks ?? []].sort(),
-      version: 1,
-      createdAt: stamp,
-      updatedAt: stamp
-    };
-    atomicWriteFile(import_node_path5.default.join(runDir, recordFileName("tasks", task.taskId)), `${JSON.stringify(record2, null, 2)}
+  if (!claimRunDir(runsDir, runDir)) {
+    throw new StoreError("run-exists", `run ${runId} already exists under ${resolved.repoRelative ?? resolved.root}`, { runId });
+  }
+  const release = acquireWriterLock(runDir);
+  try {
+    import_node_fs5.default.mkdirSync(import_node_path5.default.join(runDir, "tasks"));
+    import_node_fs5.default.mkdirSync(import_node_path5.default.join(runDir, "checkpoints"));
+    import_node_fs5.default.mkdirSync(import_node_path5.default.join(runDir, "receipts"));
+    verifyRunDirContained(resolved, runDir, runId);
+    const stamp = nowOf(options2);
+    for (const task of taskInputs) {
+      const record2 = {
+        schemaVersion: TASK_RECORD_SCHEMA_VERSION,
+        runId,
+        taskId: task.taskId,
+        title: task.title ?? task.taskId,
+        status: task.status ?? "todo",
+        dependsOn: [...task.dependsOn ?? []].sort(),
+        checks: [...task.checks ?? []].sort(),
+        version: 1,
+        createdAt: stamp,
+        updatedAt: stamp
+      };
+      atomicWriteFile(import_node_path5.default.join(runDir, recordFileName("tasks", task.taskId)), `${JSON.stringify(record2, null, 2)}
 `);
+    }
+    let planDigest = null;
+    if (input2.plan !== void 0) {
+      atomicWriteFile(import_node_path5.default.join(runDir, PLAN_FILE), input2.plan);
+      planDigest = sha256(input2.plan);
+    }
+    const manifest = {
+      schemaVersion: RUN_MANIFEST_SCHEMA_VERSION,
+      runId,
+      revision: 1,
+      status: "active",
+      graphId: input2.graphId ?? "doc-driven-dev",
+      focus: input2.focus ?? null,
+      baseCommit: input2.baseCommit !== void 0 ? input2.baseCommit : detectBaseCommit(cwd),
+      planDigest,
+      approval: null,
+      createdAt: stamp,
+      updatedAt: stamp,
+      finalizedAt: null
+    };
+    writeManifest(runDir, manifest);
+  } finally {
+    release();
   }
-  let planDigest = null;
-  if (input2.plan !== void 0) {
-    atomicWriteFile(import_node_path5.default.join(runDir, PLAN_FILE), input2.plan);
-    planDigest = sha256(input2.plan);
-  }
-  const manifest = {
-    schemaVersion: RUN_MANIFEST_SCHEMA_VERSION,
-    runId,
-    revision: 1,
-    status: "active",
-    graphId: input2.graphId ?? "doc-driven-dev",
-    focus: input2.focus ?? null,
-    baseCommit: input2.baseCommit !== void 0 ? input2.baseCommit : detectBaseCommit(cwd),
-    planDigest,
-    approval: null,
-    createdAt: stamp,
-    updatedAt: stamp,
-    finalizedAt: null
-  };
-  writeManifest(runDir, manifest);
-  return loadSnapshot(cwd, resolved, runId);
+  return loadSnapshot(resolved, runId);
 }
 function loadRun(cwd, runId, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
-  return loadSnapshot(cwd, resolved, runId);
+  return loadSnapshot(resolved, runId);
 }
 function listRuns(cwd, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
@@ -28611,6 +28635,9 @@ function recordCheckpoint(cwd, runId, input2, options2 = {}) {
       at: input2.at ?? nowOf(options2),
       data: input2.data ?? null
     };
+    if (!validateCheckpoint(record2)) {
+      throw new StoreError("invalid-argument", `checkpoint ${input2.checkpointId} failed record validation \u2014 'at' must be an ISO-8601 timestamp`);
+    }
     if (input2.taskId != null && !snapshot.tasks.some((task) => task.taskId === input2.taskId)) {
       throw new StoreError("task-not-found", `checkpoint ${input2.checkpointId} references task ${input2.taskId}, which is not in run ${runId}`);
     }
@@ -28652,6 +28679,9 @@ function recordReceipt(cwd, runId, input2, options2 = {}) {
       input: input2.input ?? null,
       output: input2.output ?? null
     };
+    if (!validateReceipt(record2)) {
+      throw new StoreError("invalid-argument", `receipt ${input2.receiptId} failed record validation \u2014 'at' must be an ISO-8601 timestamp and 'status' a declared receipt status`);
+    }
     if (input2.taskId != null && !snapshot.tasks.some((task) => task.taskId === input2.taskId)) {
       throw new StoreError("task-not-found", `receipt ${input2.receiptId} references task ${input2.taskId}, which is not in run ${runId}`);
     }
@@ -28674,10 +28704,10 @@ function recordReceipt(cwd, runId, input2, options2 = {}) {
 function appendTrace(cwd, runId, event, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
-  readManifest2(runDir, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
+    requireMutableManifest(readManifest2(runDir, runId));
     appendLine(import_node_path5.default.join(runDir, TRACE_FILE), JSON.stringify({ at: nowOf(options2), ...event }));
   } finally {
     release();
@@ -28689,7 +28719,7 @@ function finalizeRun(cwd, runId, input2, options2 = {}) {
   }
   const resolved = resolveStateRoot(cwd, options2);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
     const manifest = readManifest2(runDir, runId);
@@ -28730,12 +28760,12 @@ function disposalInspection(snapshot) {
 function disposeRun(cwd, runId, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
     let snapshot;
     try {
-      snapshot = loadSnapshot(cwd, resolved, runId);
+      snapshot = loadSnapshot(resolved, runId);
     } catch (error62) {
       if (error62 instanceof StoreError && error62.code === "corrupt-state" && options2.force === true) {
         import_node_fs5.default.rmSync(runDir, { recursive: true, force: true });
@@ -28785,7 +28815,7 @@ function disposeRun(cwd, runId, options2 = {}) {
 function recoverRun(cwd, runId, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
   ensureStateRootBoundary(cwd, resolved);
-  const runDir = runDirContained(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
   const release = acquireWriterLock(runDir);
   try {
     const removed = [];
@@ -28796,7 +28826,7 @@ function recoverRun(cwd, runId, options2 = {}) {
     }
     const corruptFiles = [];
     try {
-      loadSnapshot(cwd, resolved, runId);
+      loadSnapshot(resolved, runId);
     } catch (error62) {
       if (error62 instanceof StoreError && error62.code === "corrupt-state") {
         corruptFiles.push(String(error62.detail?.path ?? STATE_FILE));
@@ -28832,8 +28862,8 @@ function collectExportFiles(runDir) {
 }
 function exportRun(cwd, runId, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
-  const runDir = runDirContained(cwd, resolved, runId);
-  const snapshot = loadSnapshot(cwd, resolved, runId);
+  const runDir = runDirContained(resolved, runId);
+  const snapshot = loadSnapshot(resolved, runId);
   const files = collectExportFiles(runDir);
   const payloadDigest = sha256(canonicalJson({
     runId,
@@ -28957,6 +28987,7 @@ function importRun(cwd, source, options2 = {}) {
   ensureStateRootBoundary(cwd, resolved);
   const runDir = runDirFor(resolved, runId);
   const conflict = options2.onConflict ?? "refuse";
+  const runsDir = requireRunsContainer(resolved);
   const existed = import_node_fs5.default.existsSync(runDir);
   if (existed) {
     if (conflict !== "replace") {
@@ -28966,27 +28997,43 @@ function importRun(cwd, source, options2 = {}) {
         { runId }
       );
     }
-    const existing = loadSnapshot(cwd, resolved, runId);
-    requireRevision(existing.manifest, options2.expectedRevision);
-    if (!FINAL_RUN_STATUSES.has(existing.manifest.status) && options2.force !== true) {
-      throw new StoreError(
-        "run-active",
-        `existing run ${runId} is ${existing.manifest.status} \u2014 replacing an active run requires explicit force`,
-        { inspection: disposalInspection(existing) }
-      );
+    runDirContained(resolved, runId);
+    const releaseExisting = acquireWriterLock(runDir);
+    try {
+      const existing = loadSnapshot(resolved, runId);
+      requireRevision(existing.manifest, options2.expectedRevision);
+      if (!FINAL_RUN_STATUSES.has(existing.manifest.status) && options2.force !== true) {
+        throw new StoreError(
+          "run-active",
+          `existing run ${runId} is ${existing.manifest.status} \u2014 replacing an active run requires explicit force`,
+          { inspection: disposalInspection(existing) }
+        );
+      }
+      import_node_fs5.default.rmSync(runDir, { recursive: true, force: true });
+    } finally {
+      releaseExisting();
     }
-    import_node_fs5.default.rmSync(runDir, { recursive: true, force: true });
   }
-  requireRunsContainer(cwd, resolved);
-  import_node_fs5.default.mkdirSync(runDir, { recursive: true });
-  verifyRunDirContained(cwd, resolved, runDir, runId);
-  const ordered = [...doc.files].sort((a, b) => (a.path === STATE_FILE ? 1 : 0) - (b.path === STATE_FILE ? 1 : 0));
-  for (const file2 of ordered) {
-    const target = import_node_path5.default.join(runDir, file2.path);
-    import_node_fs5.default.mkdirSync(import_node_path5.default.dirname(target), { recursive: true });
-    atomicWriteFile(target, file2.content);
+  if (!claimRunDir(runsDir, runDir)) {
+    throw new StoreError(
+      "import-conflict",
+      `run ${runId} already exists \u2014 pass onConflict: "replace" to overwrite it explicitly`,
+      { runId }
+    );
   }
-  loadSnapshot(cwd, resolved, runId);
+  const release = acquireWriterLock(runDir);
+  try {
+    verifyRunDirContained(resolved, runDir, runId);
+    const ordered = [...doc.files].sort((a, b) => (a.path === STATE_FILE ? 1 : 0) - (b.path === STATE_FILE ? 1 : 0));
+    for (const file2 of ordered) {
+      const target = import_node_path5.default.join(runDir, file2.path);
+      import_node_fs5.default.mkdirSync(import_node_path5.default.dirname(target), { recursive: true });
+      atomicWriteFile(target, file2.content);
+    }
+    loadSnapshot(resolved, runId);
+  } finally {
+    release();
+  }
   return { imported: true, runId, replaced: existed, files: doc.files.length };
 }
 

@@ -67,10 +67,12 @@ idempotencyKey, actor, status: success|failure|waived, at, input, output }`。
 ## 整合性モデル
 
 - **run ごとの single writer。** `writer.lock`（O_EXCL 作成、`{pid,
-  hostname, acquiredAt}`）が全ての変更を直列化します。同一ホストの生存
-  holder、または holder のホストを判定できないロックは
-  `writer-conflict` で拒否します。死んだローカル pid が残したロックは次
-  の writer が回収します。
+  hostname, acquiredAt}`）が全ての変更を直列化します。`create`/`import`
+  はまず O_EXCL `mkdir` で run ディレクトリ自体をクレームするため、競合
+  する作成者・インポーターが 1 つの run に書き込みを混在させることは
+  ありません。同一ホストの生存 holder、または holder のホストを判定で
+  きないロックは `writer-conflict` で拒否します。死んだローカル pid が
+  残したロックは次の writer が回収します。
 - **CAS —— atomic rename だけではない。** ロックの下で操作はレコードを
   再読し、`expectedRevision`（manifest）または `expectedVersion`（task）
   を検証してから書き込みます。古い期待値は `cas-conflict` で拒否します
@@ -95,18 +97,29 @@ idempotencyKey, actor, status: success|failure|waived, at, input, output }`。
 
 ## 境界 —— 書き込み前に拒否
 
-- **ignore カバレッジ**: work tree 内では `git check-ignore` が root をカ
-  バーしている必要があります。Git 外では `.gitignore` ファイルを直接評
-  価します（`.git/info/exclude`、root `.gitignore`、パス上の入れ子
-  `.gitignore`、最終一致優先、祖先除外を尊重）。`init` は `/.apm/state/`
-  を自ら書き込み、再検証します。
+- **ignore カバレッジ**: work tree 内では `git check-ignore` が state
+  root の *ディレクトリ自体* をカバーしている必要があります ——
+  `*.json` のようなファイル種別パターンではカバーになりません。
+  `plan.md`、`run_trace.jsonl`、`writer.lock` が committable のままに
+  なるからです。Git 外では `.gitignore` ファイルを直接評価します
+  （`.git/info/exclude`、root `.gitignore`、パス上の入れ子
+  `.gitignore`、最終一致優先、祖先除外を尊重）。カバレッジと tracked
+  state のプローブは root の *real path* で評価されるため、symlink 化
+  された祖先や root 自体がチェック済みルールの外へ書き込みを逃がす
+  ことはありません。`init` は `/.apm/state/` を自ら書き込み、再検証し
+  ます。
 - **tracked state**: `git ls-files` が `.apm/state/` 配下に何も報告しな
   いこと —— tracked な実行状態は拒否します。
 - **containment**: root と run dir は checkout 内に留まること（字句的・
-  real path の両方）。外部に逃げる symlink 祖先や run dir は拒否します。
-  run/task/record id は `[A-Za-z0-9][A-Za-z0-9._-]{0,127}` と Windows 予
-  約名の拒否に適合するため、id が path escape になることはありません。
-- **finalize 済み run** は読み取り専用（`run-finalized`）です。
+  real path の両方）。さらに既存の `runs/` コンテナや run dir は
+  *state root 自体* の内部に realpath 解決されなければならず、checkout
+  内の別場所（例: `docs/` 配下）に落ちるリンクも escape として拒否し
+  ます。run/task/record id は `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`（ドッ
+  トは単一・内部のみ）と Windows 予約名の拒否に適合するため、id が
+  path escape になったり、ディスク上で別の id に化けたりすることはあ
+  りません。
+- **finalize 済み run** は読み取り専用（`run-finalized`）です ——
+  trace も例外ではありません。
 
 ## 破棄と移転
 
@@ -117,12 +130,16 @@ idempotencyKey, actor, status: success|failure|waived, at, input, output }`。
 - **引き継ぎは明示的です。** `export` は単一の JSON ドキュメント
   （`execution-run-export`、schemaVersion 1）を出力します: runId、ファイ
   ルごとの SHA-256 + content、ファイルリスト全体の `payloadDigest`。
-  `import` はエンベロープの digest を検証し、さらに内部整合性（manifest
-  の妥当性、全レコードが同一 runId に束縛、ファイル名と record id の一致、
-  approval → manifest → plan.md の digest チェーン）を書き込み前に検証し
-  ます。既存の run は拒否（`import-conflict`）され、`onConflict:
+  `export --out` は呼び出し側が指定した任意のパスに書き込みます ——
+  これは意図的な引き継ぎ成果物であり、境界ゲートが守るのは state
+  root であって、operator が選んだ出力先ではありません。`import` は
+  エンベロープの digest を検証し、さらに内部整合性（manifest の妥当
+  性、全レコードが同一 runId に束縛、ファイル名と record id の一致、
+  approval → manifest → plan.md の digest チェーン）を書き込み前に検証
+  します。既存の run は拒否（`import-conflict`）され、`onConflict:
   "replace"` でのみ上書きします。ACTIVE な対象の置き換えにはさらに
-  `force` が必要です。
+  `force` が必要です。corrupt した既存 run は置き換え前に検査できま
+  せん —— 先に `dispose --force` してから import してください。
 - 他 worktree の run は `run-not-found` で fail closed します —— 不在が
   期待される応答であり、誤魔化すべきエラーではありません。ローカル状態
   はコピーしても共有されません。宣言のないコピーは引き継ぎではありませ
