@@ -102,7 +102,12 @@ exec bits in the index, and requires `git diff --cached --exit-code` to be
 clean — so PASS additionally proves the committed output is in sync with
 what the pipeline produces. Because that gate compares the staged tree
 against HEAD, `check-generated` only passes once the rebuilt tree has been
-committed; run it after committing regenerated output.
+committed; run it after committing regenerated output. The one exception
+is the apply-update pipeline itself, which runs `check` in pre-commit
+mode (`check --pre-commit` / `PSTACK_DEVIN_CHECK_PRECOMMIT=1`): the
+regenerated tree legitimately differs from HEAD until the run's single
+atomic commit lands, so the vs-HEAD gate is skipped while the byte
+compare and exec-bit gate still apply.
 
 ## 6. Executable bits
 

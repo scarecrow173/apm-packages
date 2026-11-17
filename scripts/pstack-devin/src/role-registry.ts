@@ -41,11 +41,14 @@ const ROLE_SHAPE = /^[a-z]+(?:[ ,-]+[a-z]+)*$/;
 /** Phrasings that make a backticked token a role reference — each exists
  *  in the shipped tree today:
  *    "the `arena runners` line", "the `swarm workers` model",
- *    "in place of `arena runners`", "changes read `hardest tasks`",
+ *    "in place of `arena runners`", "judgment read `judgment and prose`",
  *    "Setup also configures `swarm workers`", and role/default table rows
  *    "| Judgment | `reflect tooling` | `claude-opus-5-5-high-fast` | …".
- *  A new phrasing upstream simply fails to extract — the dead-role side
- *  still guards every key, and extending this list is additive. */
+ *  (Schema 3 deleted upstream's only role table, so the row pattern has
+ *  no live instance — it stays: it is still the shape an upstream
+ *  role/default table would take.) A new phrasing upstream simply fails
+ *  to extract — the dead-role side still guards every key, and extending
+ *  this list is additive. */
 const CONTEXTS: ReadonlyArray<{ context: string; re: RegExp }> = [
   { context: "`<role>` line", re: /`([^`]+)` lines?\b/gi },
   { context: "`<role>` model", re: /`([^`]+)` model\b/gi },

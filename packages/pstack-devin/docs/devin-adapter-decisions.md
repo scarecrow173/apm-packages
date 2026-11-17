@@ -220,6 +220,15 @@ entirely; plugin subagents load locally only, which is why
   full-`SKILL.md`-read contract, the highest-version multi-match rule, the
   "stop and tell your parent" failure mode, and `principle-*` navigation
   verbatim.
+  - Re-reviewed at the `b4a4f61` re-pin (`#219` first run): upstream added
+    `model: claude-opus-5-5-xhigh-fast` to the frontmatter — poteto-mode's
+    Subagents section now reads "spawn `generalPurpose`, because
+    `poteto-agent` defaults to Opus 5.5". `model:` is a real Devin
+    profile field and the slug is a `value:claude-slug` vocabulary row,
+    so the overwrite carries the pin verbatim. Without it a
+    `pstack:poteto-agent` spawn would inherit the parent model — the
+    `subagent_general` behavior upstream reserves for alias roles —
+    silently diverging from upstream's delegate default.
 - `agents/comment-sicko.md` — **stays byte-identical** (no overwrite, no
   allowlist entry). A full read shows pure persona prose: zero Cursor or
   harness references — no `~/.cursor` paths, no `Task`/`subagent_type`
@@ -245,12 +254,19 @@ deterministic `scripts/setup.mjs` generator driven by
   dependency-free Node ESM; the skill's prose owns only the
   detect → confirm → apply UX. Tests import the `.mjs` from the overlay
   path directly.
-- **13 roles, not 12.** The plan's "12 canonical roles" undercounted:
-  upstream step 5's `# defaults: 2` block actually lists 13 role keys
-  (the 4 panel roles among them). `roles.json` mirrors that block
-  verbatim — role keys keep their literal commas — and pins its sha256
-  as `defaults_sha`, so an upstream role/schema change fails the schema
-  test loudly instead of drifting silently.
+- **9 roles at schema 3** (was 13 at schema 2). `roles.json` mirrors
+  upstream step 5's `# defaults:` block verbatim — role keys keep their
+  literal commas — and pins its sha256 as `defaults_sha`, so an upstream
+  role/schema change fails the schema test loudly instead of drifting
+  silently. The `b4a4f61` re-pin moved upstream to `# defaults: 3`:
+  four roles retired (`hardest tasks`, `reflect tooling`,
+  `reflect judgment, divergent, synthesizer`, `architect runners`),
+  Opus defaults moved to their `-fast` slugs, and `arena cross-judge
+  pool` shrank to two entries (upstream dropped the Fable seat — Fable
+  and Opus are one vendor). Three of the retired keys stayed backticked
+  only inside upstream's own `setup-pstack/SKILL.md` (its retired-role
+  examples), which the delegation stub replaces — so in the generated
+  tree all four are dead registry entries and all four were dropped.
 - **Fallback family = the role default's family, per position.** When a
   budget-moved effort rewrite lands on an undetected slug, the detected
   substitute is the highest-effort slug at or below the target within
@@ -263,6 +279,16 @@ deterministic `scripts/setup.mjs` generator driven by
   `resolved`/`needsChoice` entry. A substitution and an empty fallback
   pool both flag for confirmation; a keep that lands on the unchanged
   input (upstream's "gemini tops out at high" case) does not.
+- **Schema-3 arithmetic (`b4a4f61` re-pin).** Upstream dropped the
+  `unlimited` budget tier (`+1`) — the three labels are now
+  `large`/`medium`/`small`, and a stored `# budget: unlimited` is read
+  as `large` at load time (the skill's step 2 says so; the script only
+  accepts the three labels). `max` stays in the effort ladder so a
+  stored `*-max` slug still ranks and gets rewritten down, but no
+  budget targets it. The choices gate (`assertWritable`, née
+  `assertDetected`) also enforces upstream's new write rule — every
+  real slug must be in the detected set AND at `xhigh` or below — so
+  the generator can never emit a rule upstream calls invalid.
 - **`rulesFile` emits only configured lines.** One `role: slug[, slug…]`
   line per configured role in `roles.json` order — upstream's exact line
   format so consumer-skill reads through the `#214` path mapping keep

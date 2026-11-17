@@ -29,6 +29,7 @@ test("poteto-agent overwrite is Devin-native and preserves the read contract", (
   const doc = readFileSync(join(OVERLAY, "agents/poteto-agent.md"), "utf8");
   for (const row of [
     "name: poteto-agent",
+    "model: claude-opus-5-5-xhigh-fast",
     "max-nesting: 3",
     "subagent_general",
     ".devin-plugin/plugin.json",
@@ -145,9 +146,9 @@ test("setup-pstack-devin SKILL.md carries the Devin orchestration contract", () 
     "~/.devin/rules/pstack-models.md",
     "%APPDATA%\\devin\\agents\\",
     "droppedRoles",
-    // Budget + confirm: ask_user_question and the four exact upstream labels.
+    // Budget + confirm: ask_user_question and the three exact upstream
+    // labels (schema 3 dropped `unlimited — max reasoning`).
     "ask_user_question",
-    "unlimited — max reasoning",
     "large — xhigh reasoning",
     "medium — high reasoning",
     "small — medium reasoning",

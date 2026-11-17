@@ -75,10 +75,21 @@ never leaves a half-applied pin.
    `apm.lock.yaml`. The lockfile is never hand-edited.
 4. `pnpm run build` — fetches the candidate subtree, re-materializes
    `devin-plugin/`, writes `provenance.json`, stages exec bits.
-5. `pnpm run check-generated` — byte-compare a fresh rebuild against the
-   committed tree plus the index/exec-bit gates.
-6. `pnpm run verify` — full L1+L2+L3+test suite against the new pin.
-7. Commit — one commit
+5. `observed` refresh — rewrites the informational `observed:` audit
+   block in `upstream.yml` (`upstream_version`/`upstream_file_count`
+   from `provenance.json`, `apm_content_hash`/`apm_package_type` from
+   the regenerated lockfile). The pipeline is the only pin mover, so it
+   is the only place these fields can be re-observed; missing sources or
+   keys warn and are left untouched.
+6. `pnpm run check-generated` — byte-compare a fresh rebuild against the
+   regenerated tree plus the exec-bit gate. The run exports
+   `PSTACK_DEVIN_CHECK_PRECOMMIT=1` for the whole apply, so this step and
+   the `check-generated` nested inside `verify:l1` skip only the
+   index-vs-HEAD clean gate — the tree legitimately differs from HEAD
+   until the single commit lands (see `check --pre-commit` in
+   `src/cli.ts`).
+7. `pnpm run verify` — full L1+L2+L3+test suite against the new pin.
+8. Commit — one commit
    `chore(pstack-devin): update upstream pin to <short-sha>` carrying
    refs + lockfile + generated tree + provenance together.
 

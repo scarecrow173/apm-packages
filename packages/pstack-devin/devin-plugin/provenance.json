@@ -5,7 +5,6 @@
     "version": "0.1.0"
   },
   "executables": [
-    "skills/poteto-mode/scripts/check-plan.mjs",
     "skills/poteto-mode/scripts/watch-pr/watch-pr",
     "skills/poteto-mode/scripts/worktree-audit.sh",
     "skills/show-me-your-work/scripts/log.sh",
@@ -29,38 +28,38 @@
       },
       {
         "path": "skills/setup-pstack-devin/SKILL.md",
-        "sha256": "382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b"
+        "sha256": "89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f"
       },
       {
         "path": "skills/setup-pstack-devin/scripts/roles.json",
-        "sha256": "e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af"
+        "sha256": "b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8"
       },
       {
         "path": "skills/setup-pstack-devin/scripts/setup.mjs",
-        "sha256": "25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe"
+        "sha256": "611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521"
       }
     ],
     "overwrites": [
       {
         "path": "agents/poteto-agent.md",
-        "sha256": "b00b625d699a3476e57acc375d4e6681e2202c85ea05db1f656a31082b896958",
-        "upstreamSha256": "979f18abd000d185a0b4c41a2a4111c0910596a7f5c81cbb571885bc721b2bf7"
+        "sha256": "97fd2d2d47493ab9459ada9006bba74af6d759e7055b1b17740ee8d03e5d6753",
+        "upstreamSha256": "369065b46c217a5898cb1a400652c3399449252f4d5dbf8937eb8d4922d3cf6b"
       },
       {
         "path": "skills/setup-pstack/SKILL.md",
         "sha256": "0cf2ae8da53bf55dffaa90546a50911980f2372b19889ea073078302a99c9758",
-        "upstreamSha256": "d2623ef1447401ce6bd8ed0fa6e435f4f3271c5a569e5118cadde89061d179f8"
+        "upstreamSha256": "e34fdd6724899eeaee8d52f936235f6086cedd4f2e980691abaac9eb6c8e95fc"
       }
     ]
   },
   "schema": "pstack-devin/provenance@1",
   "upstream": {
-    "commit": "bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7",
-    "file_count": 546,
+    "commit": "b4a4f6151b8e77f8d71045f09f553a733cf0ed37",
+    "file_count": 537,
     "host": "github.com",
     "path": "harness/pstack/claude-code",
     "repo": "cursor/plugins",
-    "tree_sha": "c1b4ae4da06c9815864bc7fe609cc5fb5324108c",
-    "version": "0.15.42"
+    "tree_sha": "9f63e68efd0e0de310d8164d7d43b00c549a839f",
+    "version": "0.15.43"
   }
 }

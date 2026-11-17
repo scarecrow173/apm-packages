@@ -75,9 +75,27 @@ Output (verbatim):
   primitives only. This package ships a skill
   (`.apm/skills/setup-pstack-devin/`), so the documented result is N/A —
   the same outcome the repo's other skills-only packages get
-  (`packages/pstack-devin/AGENTS.md` "Validation"). `l3-dist.ts` passes
-  only on non-zero exit plus the `No instruction files found` phrase;
-  any other result is `compile: unexpected` and means APM changed.
+  (`packages/pstack-devin/AGENTS.md` "Validation").
+
+Post-install variant (recorded 2026-11-17, first `apply:update` run):
+once `apm install` has created `apm_modules/`, apm 0.33.0 treats the
+directory as a valid APM context and the same command exits `0`:
+
+```text
+[*] Validating APM context...
+[*] All primitives validated successfully!
+[i] Validated 0 primitives:
+[i]   * 0 chatmodes
+[i]   * 0 instructions
+[i]   * 0 contexts
+```
+
+Zero primitives of every instruction-shaped kind is the same N/A, not a
+pass of real instruction content. `l3-dist.ts` passes on either shape —
+non-zero exit plus the `No instruction files found` phrase, or exit 0
+with `Validated 0 primitives` and `0 instructions`; any other result is
+`compile: unexpected` and means APM or the package's primitive set
+changed.
 
 ## 4. Consumer probes
 

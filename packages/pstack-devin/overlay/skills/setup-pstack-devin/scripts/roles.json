@@ -1,15 +1,12 @@
 {
-  "schema": 2,
-  "defaults_sha": "sha256:8fc9dcc5c5dc2384e60e3b9d2d78bc73214d361b863f8e33163b458df61b5d84",
+  "schema": 3,
+  "defaults_sha": "sha256:6f6236ec1e431610910c308c7aad5ad28dd2aed77d9fc3e2ec0373e805726c5e",
   "roles": [
-    { "key": "feature, refactoring", "default": "claude-opus-5-5-xhigh" },
-    { "key": "bug-fix", "default": "claude-opus-5-5-xhigh" },
-    { "key": "perf-issue", "default": "claude-opus-5-5-xhigh" },
-    { "key": "hillclimb", "default": "claude-opus-5-5-xhigh" },
-    { "key": "judgment and prose", "default": "claude-opus-5-5-xhigh" },
-    { "key": "hardest tasks", "default": "claude-fable-5-2-max" },
-    { "key": "reflect tooling", "default": "claude-opus-5-5-high-fast" },
-    { "key": "reflect judgment, divergent, synthesizer", "default": "claude-opus-5-5-xhigh" },
+    { "key": "feature, refactoring", "default": "claude-opus-5-5-xhigh-fast" },
+    { "key": "bug-fix", "default": "claude-opus-5-5-xhigh-fast" },
+    { "key": "perf-issue", "default": "claude-opus-5-5-xhigh-fast" },
+    { "key": "hillclimb", "default": "claude-opus-5-5-xhigh-fast" },
+    { "key": "judgment and prose", "default": "claude-opus-5-5-xhigh-fast" },
     {
       "key": "arena runners",
       "default": "claude-fable-5-2-high, claude-opus-5-5-high-fast, gemini-4-carbon-high",
@@ -17,15 +14,10 @@
     },
     {
       "key": "arena cross-judge pool",
-      "default": "claude-fable-5-2-high, claude-opus-5-5-high-fast, gemini-4-carbon-high",
+      "default": "claude-opus-5-5-high-fast, gemini-4-carbon-high",
       "panel": true
     },
     { "key": "swarm workers", "default": "claude-opus-5-5-high-fast" },
-    {
-      "key": "architect runners",
-      "default": "claude-fable-5-2-high, claude-opus-5-5-high-fast, gemini-4-carbon-high",
-      "panel": true
-    },
     {
       "key": "interrogate reviewers",
       "default": "claude-fable-5-2-high, claude-opus-5-5-high-fast, gemini-4-carbon-high",

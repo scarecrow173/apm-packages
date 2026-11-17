@@ -24,10 +24,15 @@ const ROLES = ROLES_DOC.roles;
 
 // Upstream-verified arithmetic (skills/setup-pstack/SKILL.md step 3b):
 // budget moves the role default's effort on this ladder, clamped at ends.
+// `max` stays a rung so a stored `*-max` slug still effort-ranks — schema 3
+// simply never targets it: upstream dropped `unlimited` (+1), so every
+// delta is <= 0 and every role target sits at `xhigh` or below.
 const LADDER = ["low", "medium", "high", "xhigh", "max"];
-const BUDGET_DELTA = { unlimited: 1, large: 0, medium: -1, small: -2 };
-// The effort each budget label names (most defaults sit at xhigh).
-const BUDGET_EFFORT = { unlimited: "max", large: "xhigh", medium: "high", small: "medium" };
+const BUDGET_DELTA = { large: 0, medium: -1, small: -2 };
+// The effort each budget label names (most defaults sit at xhigh). A stored
+// `# budget: unlimited` from a schema-2 rule is read as `large` — see the
+// skill's step 2; this map only accepts upstream's current three labels.
+const BUDGET_EFFORT = { large: "xhigh", medium: "high", small: "medium" };
 // Aliases are valid values though never detected slugs.
 const ALIASES = new Set(["inherit-parent", "auto"]);
 // A slug token: lowercase alphanumerics joined by single `-`/`.` separators.
@@ -431,20 +436,39 @@ function readDirMap(dir, filter) {
   return map;
 }
 
-/** Every slug in every choice value must be a detected slug or an alias —
- *  fail closed before anything is generated. */
-function assertDetected(choices, detected) {
+/** Every slug in every choice value must be a detected slug or an alias,
+ *  and every real slug must sit at `xhigh` or below — upstream's schema-3
+ *  write rule is "detected set AND at `xhigh` or below" (no role runs
+ *  above xhigh). Effort-less slugs (`adaptive`, `*-lightning`,
+ *  `*-priority`) carry no effort token to cap, so they pass like aliases.
+ *  Fail closed before anything is generated. */
+function assertWritable(choices, detected) {
   const valid = new Set([...detected, ...ALIASES]);
   const bad = [];
+  const aboveCeiling = [];
   for (const [key, value] of Object.entries(choices)) {
     for (const entry of String(value).split(",").map((s) => s.trim())) {
-      if (entry.length > 0 && !valid.has(entry)) bad.push(`${key}: ${entry}`);
+      if (entry.length === 0) continue;
+      if (!valid.has(entry)) {
+        bad.push(`${key}: ${entry}`);
+      } else if (
+        !ALIASES.has(entry) &&
+        rank(effortOf(entry).effort) > rank("xhigh")
+      ) {
+        aboveCeiling.push(`${key}: ${entry}`);
+      }
     }
   }
   if (bad.length > 0) {
     throw new Error(
       "choices reference slugs outside the detected set — refusing " +
         `to write undetected models:\n  ${bad.join("\n  ")}`,
+    );
+  }
+  if (aboveCeiling.length > 0) {
+    throw new Error(
+      "choices reference slugs above the xhigh ceiling — upstream " +
+        `writes no role above xhigh:\n  ${aboveCeiling.join("\n  ")}`,
     );
   }
 }
@@ -469,7 +493,7 @@ function cmdPlan(flags, env, out) {
 
   // Retired/unknown role keys are dropped, not validated — the same
   // retired-line semantics as deleting a rules line. Filtering here keeps
-  // assertDetected, applyBudget, rulesFile and the profile set on one
+  // assertWritable, applyBudget, rulesFile and the profile set on one
   // role-key universe; dropped keys are reported so the caller can tell
   // the user which lines were ignored.
   const knownKeys = new Set(ROLES.map((r) => r.key));
@@ -480,7 +504,7 @@ function cmdPlan(flags, env, out) {
       droppedRoles.push(key);
     }
   }
-  assertDetected(choices, detected);
+  assertWritable(choices, detected);
 
   const budgetRun = applyBudget(ROLES, choices, detected, budget);
   const desiredRules = rulesFile(choices, budget);

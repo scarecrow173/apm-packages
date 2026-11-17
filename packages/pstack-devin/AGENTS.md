@@ -105,7 +105,9 @@ mise exec -- apm compile --dry-run  # consumer-context preview only
 `apm compile --validate` counts instruction/agent primitives only; this
 package ships a skill (`.apm/skills/setup-pstack-devin/`), so the command
 reports "No instruction files found" and exits non-zero — the same result
-the repo's other skills-only packages get. Report that outcome as not
+the repo's other skills-only packages get. With `apm_modules/` installed
+the exit-0 form of the same N/A appears instead: "Validated 0 primitives"
+with zero of every instruction-shaped kind. Report either outcome as not
 applicable instead of treating it as a package bug.
 
 From the repository root:

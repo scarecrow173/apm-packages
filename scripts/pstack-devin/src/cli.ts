@@ -18,10 +18,18 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
   if (cmd === "check") {
-    await checkGenerated(repoRoot);
+    // `--pre-commit` skips the index-vs-HEAD clean gate — the mode
+    // apply-update needs while its regenerated tree is still uncommitted
+    // (see checkGenerated). Everything else still applies.
+    // `undefined` when the flag is absent — the env var
+    // (PSTACK_DEVIN_CHECK_PRECOMMIT) is the pipeline's path into nested
+    // invocations and must not be masked by an explicit false here.
+    await checkGenerated(repoRoot, {
+      preCommit: argv.includes("--pre-commit") ? true : undefined,
+    });
     return;
   }
-  throw new Error(`usage: tsx src/cli.ts <build|check>`);
+  throw new Error(`usage: tsx src/cli.ts <build|check [--pre-commit]>`);
 }
 
 main(process.argv).catch((e: unknown) => {

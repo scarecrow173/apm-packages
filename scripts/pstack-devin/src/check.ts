@@ -68,8 +68,29 @@ function diffTrees(expected: string, actual: string): string[] {
  *  regenerated-but-uncommitted output is caught. The mode set of
  *  `100755` index entries must equal provenance `executables`.
  *  Non-work-tree roots skip the git gates with a warning; the content
- *  compare always applies. The temp rebuild is removed on every path. */
-export async function checkGenerated(repoRoot: string): Promise<void> {
+ *  compare always applies. The temp rebuild is removed on every path.
+ *
+ *  `opts.preCommit` (or env `PSTACK_DEVIN_CHECK_PRECOMMIT=1`) runs the
+ *  pipeline's pre-commit mode: the index-vs-HEAD clean gate asserts that
+ *  COMMITTED output equals a fresh rebuild, which is unsatisfiable while
+ *  an update's regenerated tree is legitimately uncommitted — the atomic
+ *  apply-update commit has not happened yet, and differing from HEAD is
+ *  the update's purpose. Everything else still applies: the rebuild
+ *  byte-compare, the staging pass, and the exec-bit set equality. The
+ *  env spelling exists so the nested `check-generated` inside
+ *  `pnpm run verify`'s `verify:l1` can inherit it from the apply-update
+ *  process (no CLI flag can reach a package.json script composition);
+ *  `tsx src/cli.ts check --pre-commit` is the explicit surface. */
+export async function checkGenerated(
+  repoRoot: string,
+  opts: { preCommit?: boolean } = {},
+): Promise<void> {
+  // An explicit option wins over the env var: apply-update's env reaches
+  // every spawned child (verify's tests included), so a caller that means
+  // the default post-commit semantics must be able to force them off.
+  const preCommit =
+    opts.preCommit ??
+    process.env.PSTACK_DEVIN_CHECK_PRECOMMIT === "1";
   const cfg = loadBuildConfig(repoRoot);
   const pkg = cfg.packageDir;
   const committedDir = path.join(pkg, "devin-plugin");
@@ -119,17 +140,22 @@ export async function checkGenerated(repoRoot: string): Promise<void> {
       }
       // The staged tree IS the verified rebuild, so a non-empty cached
       // diff means the committed output is out of sync with the pin.
-      try {
-        execFileSync(
-          "git",
-          ["-C", top, "diff", "--cached", "--exit-code", "--", PLUGIN_REL],
-          { stdio: ["ignore", "pipe", "pipe"] },
-        );
-      } catch {
-        throw new Error(
-          "generated output out of sync — run " +
-            "`pnpm --dir scripts/pstack-devin run build` and commit",
-        );
+      // Pre-commit mode (apply-update): the staged tree legitimately
+      // differs from HEAD — the single atomic commit comes later — so
+      // this gate is skipped while its siblings still run.
+      if (!preCommit) {
+        try {
+          execFileSync(
+            "git",
+            ["-C", top, "diff", "--cached", "--exit-code", "--", PLUGIN_REL],
+            { stdio: ["ignore", "pipe", "pipe"] },
+          );
+        } catch {
+          throw new Error(
+            "generated output out of sync — run " +
+              "`pnpm --dir scripts/pstack-devin run build` and commit",
+          );
+        }
       }
       // `-z` emits NUL-terminated records with verbatim paths — no
       // C-quoting of non-ASCII names (core.quotepath) and newline-safe.

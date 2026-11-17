@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { load } from "js-yaml";
 import type { BuildConfig } from "./config.js";
 import { loadBuildConfig } from "./config.js";
 import { workTreeRoot } from "./gittools.js";
@@ -128,6 +129,41 @@ export function setDevDepRef(yaml: string, sha: string): string {
   throw new Error("apm.yml: no \"ref:\" line under \"devDependencies.apm\"");
 }
 
+/** Rewrite values under the top-level `observed:` block of upstream.yml,
+ *  preserving every other byte (comments, key order, unrelated keys).
+ *  Only keys listed in `fields` are rewritten; a `fields` key with no
+ *  matching line is reported via `warn` — keys are never invented, so a
+ *  deliberately trimmed block stays trimmed. An absent `observed:` block
+ *  also just warns: these are informational audit fields, not the pin
+ *  authority. */
+export function setObservedFields(
+  yaml: string,
+  fields: Record<string, string>,
+  warn: (s: string) => void,
+): string {
+  const lines = yaml.split("\n");
+  const obsIdx = lines.findIndex((l) => /^observed:\s*$/.test(l));
+  if (obsIdx < 0) {
+    warn("upstream.yml: no \"observed:\" block — audit fields not refreshed");
+    return yaml;
+  }
+  const seen = new Set<string>();
+  for (let i = obsIdx + 1; i < lines.length; i++) {
+    const l = lines[i];
+    if (/^[^\s#][^\n]*:/.test(l)) break; // next top-level key
+    const m = /^(\s+)([A-Za-z_]+):(\s*)\S+(.*)$/.exec(l);
+    if (m === null || !(m[2] in fields)) continue;
+    seen.add(m[2]);
+    lines[i] = `${m[1]}${m[2]}:${m[3]}${fields[m[2]]}${m[4]}`;
+  }
+  for (const k of Object.keys(fields)) {
+    if (!seen.has(k)) {
+      warn(`upstream.yml: observed.${k} line not found — left unset`);
+    }
+  }
+  return lines.join("\n");
+}
+
 /** Undo every pipeline change under TOUCHED: unstage, restore tracked
  *  files to HEAD, and `git clean` the generated tree (the only place a
  *  partial build can leave untracked files — the pre-flight guaranteed
@@ -210,10 +246,12 @@ function commitAll(top: string, candidateSha: string): string {
 
 /** Atomic upstream-pin adoption: (a) upstream.yml commit, (b) apm.yml
  *  devDep ref, (c) `mise exec -- apm install` (lockfile regenerated, never
- *  hand-edited), (d) `pnpm run build`, (e) `check-generated`, (f) full
- *  `verify` — then ONE commit carrying refs + lockfile + generated tree +
- *  provenance. Any step failure restores every TOUCHED path to HEAD and
- *  reports the failing step: all-or-nothing, never half-committed. */
+ *  hand-edited), (d) `pnpm run build`, (e) refresh the `observed:` audit
+ *  block from the new lockfile/provenance, (f) `check-generated`,
+ *  (g) full `verify` — then ONE commit carrying refs + lockfile +
+ *  generated tree + provenance. Any step failure restores every TOUCHED
+ *  path to HEAD and reports the failing step: all-or-nothing, never
+ *  half-committed. */
 export function applyUpdate(
   cfg: BuildConfig,
   candidateSha: string,
@@ -248,9 +286,69 @@ export function applyUpdate(
   const scriptsDir = path.join(opts.repoRoot, "scripts", "pstack-devin");
   const pkg = cfg.packageDir;
 
+  // Every check-generated invocation inside this run is pre-commit: the
+  // regenerated tree legitimately differs from HEAD until the single
+  // commit at the end, so the index-vs-HEAD clean gate cannot apply yet
+  // (the rebuild compare and exec-bit gate still do). The env var reaches
+  // both the standalone step and the `check-generated` nested inside
+  // `pnpm run verify`'s `verify:l1`, which no CLI flag can pass through.
+  process.env.PSTACK_DEVIN_CHECK_PRECOMMIT = "1";
+
   const editFile = (rel: string, edit: (yaml: string) => string): void => {
     const p = path.join(pkg, rel);
     fs.writeFileSync(p, edit(fs.readFileSync(p, "utf8")));
+  };
+
+  /** Refresh the informational `observed:` audit block in upstream.yml
+   *  after `apm install` + build produced the new lockfile and generated
+   *  tree — the pipeline is the only pin mover, so it is also the only
+   *  place these fields can be re-observed. Values come from the same
+   *  artifacts the commit carries: `upstream_version`/`file_count` from
+   *  `devin-plugin/provenance.json`, `apm_content_hash`/`package_type`
+   *  from the regenerated lockfile. Missing sources or keys warn and are
+   *  left untouched — observed fields are audit metadata, never the
+   *  pin authority (build.ts warns on drift rather than failing). */
+  const refreshObserved = (): void => {
+    const provPath = path.join(
+      pkg,
+      "devin-plugin",
+      "provenance.json",
+    );
+    const prov = JSON.parse(fs.readFileSync(provPath, "utf8")) as {
+      upstream?: { version?: unknown; file_count?: unknown };
+    };
+    const lock = load(
+      fs.readFileSync(path.join(pkg, "apm.lock.yaml"), "utf8"),
+    ) as {
+      dependencies?: {
+        resolved_commit?: unknown;
+        content_hash?: unknown;
+        package_type?: unknown;
+      }[];
+    } | null;
+    const deps = lock?.dependencies ?? [];
+    const dep =
+      deps.find((d) => d.resolved_commit === candidateSha) ?? deps[0];
+    const fields: Record<string, string> = {};
+    const v = prov.upstream?.version;
+    if (typeof v === "string" && v !== "") {
+      fields.upstream_version = JSON.stringify(v);
+    }
+    const fc = prov.upstream?.file_count;
+    if (typeof fc === "number") {
+      fields.upstream_file_count = String(fc);
+    }
+    if (typeof dep?.content_hash === "string" && dep.content_hash !== "") {
+      fields.apm_content_hash = dep.content_hash;
+    }
+    if (typeof dep?.package_type === "string" && dep.package_type !== "") {
+      fields.apm_package_type = dep.package_type;
+    }
+    if (Object.keys(fields).length === 0) {
+      log("  observed: no fields could be re-observed — block left as-is");
+      return;
+    }
+    editFile("upstream.yml", (y) => setObservedFields(y, fields, log));
   };
 
   const steps: { name: string; run: () => void }[] = [
@@ -269,6 +367,10 @@ export function applyUpdate(
     {
       name: "build",
       run: () => runner("pnpm", ["run", "build"], scriptsDir),
+    },
+    {
+      name: "observed refresh",
+      run: refreshObserved,
     },
     {
       name: "check-generated",

@@ -59,7 +59,7 @@ test("roles.json key no consumer references → dead", () => {
 test("non-role-shaped tokens in role-line contexts are not roles", () => {
   const { root, rolesJson } = fixture(["alpha role"], {
     "skills/x/SKILL.md":
-      "The `# budget` line and the `# defaults: 2` line are rule lines. " +
+      "The `# budget` line and the `# defaults: 3` line are rule lines. " +
       "Read `docs/harness/devin.md` first. The `SomeFlag` line too. " +
       "Use the `alpha role` line.\n",
   });

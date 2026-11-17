@@ -4,15 +4,103 @@ dependencies:
 - repo_url: cursor/plugins
   name: pstack
   host: github.com
-  resolved_commit: bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7
-  resolved_ref: bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7
-  version: 0.15.42
+  resolved_commit: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
+  resolved_ref: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
+  version: 0.15.43
   virtual_path: harness/pstack/claude-code
   is_virtual: true
   package_type: agent_plugin
-  content_hash: sha256:cedc7e3791f374b6b47f9b379670438704219baaa507845a4f680ce4f66b44ec
+  content_hash: sha256:18b1deefbf57342ae5f679b4102caea5201b86d6da3e4e8e900a2cc23bfefd57
   is_dev: true
   target_subset:
   - copilot
   declared_license: MIT
-deployments: []
+deployments:
+- kind: project-relative
+  target: claude
+  value: .claude/skills/setup-pstack-devin
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/setup-pstack-devin/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/setup-pstack-devin/scripts/roles.json
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/setup-pstack-devin/scripts/setup.mjs
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/setup-pstack-devin
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/setup-pstack-devin/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/setup-pstack-devin/scripts/roles.json
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/setup-pstack-devin/scripts/setup.mjs
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
+local_deployed_files:
+- .agents/skills/setup-pstack-devin
+- .agents/skills/setup-pstack-devin/SKILL.md
+- .agents/skills/setup-pstack-devin/scripts/roles.json
+- .agents/skills/setup-pstack-devin/scripts/setup.mjs
+- .claude/skills/setup-pstack-devin
+- .claude/skills/setup-pstack-devin/SKILL.md
+- .claude/skills/setup-pstack-devin/scripts/roles.json
+- .claude/skills/setup-pstack-devin/scripts/setup.mjs
+local_deployed_file_hashes:
+  .agents/skills/setup-pstack-devin/SKILL.md: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+  .agents/skills/setup-pstack-devin/scripts/roles.json: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
+  .agents/skills/setup-pstack-devin/scripts/setup.mjs: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
+  .claude/skills/setup-pstack-devin/SKILL.md: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+  .claude/skills/setup-pstack-devin/scripts/roles.json: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
+  .claude/skills/setup-pstack-devin/scripts/setup.mjs: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521

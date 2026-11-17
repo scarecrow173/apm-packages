@@ -222,7 +222,7 @@ test("pack drift: writes outside the package or a non-zero exit", () => {
   assert.match(failed.note, /exited 2/);
 });
 
-test("compile: only the skill-only N/A shape is expected", () => {
+test("compile: only the skill-only N/A shapes are expected", () => {
   const root = fixture();
   const clean = probeCompile(
     root,
@@ -232,7 +232,7 @@ test("compile: only the skill-only N/A shape is expected", () => {
     }),
   );
   assert.equal(clean.status, "unexpected");
-  assert.match(clean.note, /non-zero/);
+  assert.match(clean.note, /skill-only N\/A/);
 
   const other = probeCompile(
     root,
@@ -243,6 +243,45 @@ test("compile: only the skill-only N/A shape is expected", () => {
   );
   assert.equal(other.status, "unexpected");
   assert.match(other.note, /No instruction files found/);
+});
+
+test("compile: installed-context zero-primitive exit is the same N/A", () => {
+  const root = fixture();
+  // apm 0.33.0's post-`apm install` outcome for this package (observed
+  // 2026-11-17: apm_modules/ present → context validates, zero of every
+  // instruction-shaped kind, exit 0).
+  const installed = probeCompile(
+    root,
+    fakeRunner({
+      "apm --version": { code: 0, output: "apm\n" },
+      "apm compile --validate": {
+        code: 0,
+        output:
+          "[*] Validating APM context...\n" +
+          "[*] All primitives validated successfully!\n" +
+          "[i] Validated 0 primitives:\n" +
+          "[i]   * 0 chatmodes\n" +
+          "[i]   * 0 instructions\n" +
+          "[i]   * 0 contexts\n",
+      },
+    }),
+  );
+  assert.equal(installed.status, "expected-na");
+
+  // A non-zero primitive count is real content — still unexpected.
+  const realPrimitives = probeCompile(
+    root,
+    fakeRunner({
+      "apm --version": { code: 0, output: "apm\n" },
+      "apm compile --validate": {
+        code: 0,
+        output:
+          "[i] Validated 1 primitives:\n" +
+          "[i]   * 1 instructions\n",
+      },
+    }),
+  );
+  assert.equal(realPrimitives.status, "unexpected");
 });
 
 test("apm/mise absence skips both probes with an explicit notice", () => {
