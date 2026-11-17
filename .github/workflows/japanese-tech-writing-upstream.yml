@@ -1,0 +1,74 @@
+name: japanese-tech-writing upstream sync
+
+# Publish reviewed-by-contract changes to main automatically. This is an
+# explicit opt-in to upstream-authored agent instructions. No downloaded code
+# is executed, and changed metadata or an invalid lockfile fail closed.
+on:
+  schedule:
+    # Daily at 03:17 UTC. GitHub's schedule may be delayed.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: japanese-tech-writing-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Test sync logic
+        run: python3 -m unittest discover -s scripts/japanese-tech-writing -p "test_*.py" -v
+
+      - name: Fetch exact upstream snapshot and regenerate checked-in files
+        shell: bash
+        run: |
+          set -euo pipefail
+          temp="$(mktemp -d)"
+          trap 'rm -rf "$temp"' EXIT
+          git clone --quiet --depth=1 \
+            https://gist.github.com/fd287c3133457c4fd8f5601d34aa817d.git \
+            "$temp/upstream"
+          revision="$(git -C "$temp/upstream" rev-parse HEAD)"
+          python3 scripts/japanese-tech-writing/sync.py \
+            --source "$temp/upstream/SKILL.md" \
+            --revision "$revision"
+
+      # Full APM compilation verifies that the normalized skill remains
+      # installable; no Gist-supplied scripts are run.
+      - name: Install pinned APM toolchain
+        uses: jdx/mise-action@v2
+
+      - name: Validate APM package
+        working-directory: packages/japanese-tech-writing
+        run: mise exec -- apm compile --validate
+
+      - name: Validate diff and commit updated package
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git add -- \
+            packages/japanese-tech-writing/.apm/skills/japanese-tech-writing/SKILL.md \
+            packages/japanese-tech-writing/upstream.json \
+            apm.lock.yaml
+          if git diff --cached --quiet; then
+            echo "Gist content and pinned revision are already current." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          revision="$(python3 -c 'import json; print(json.load(open("packages/japanese-tech-writing/upstream.json"))["revision"])')"
+          git commit -m "chore(japanese-tech-writing): sync upstream Gist ${revision:0:12}"
+          # Non-fast-forward pushes fail instead of overwriting concurrent edits.
+          git push origin HEAD:main
+          echo "Applied upstream revision: $revision" >> "$GITHUB_STEP_SUMMARY"
