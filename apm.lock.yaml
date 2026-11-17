@@ -894,8 +894,8 @@ dependencies:
   - .claude/skills/japanese-tech-writing
   - .claude/skills/japanese-tech-writing/SKILL.md
   deployed_file_hashes:
-    .agents/skills/japanese-tech-writing/SKILL.md: sha256:f109edb5e30c408e0a12752a2643166848c4c90a0e0c86e2682b2fd50cedc4be
-    .claude/skills/japanese-tech-writing/SKILL.md: sha256:f109edb5e30c408e0a12752a2643166848c4c90a0e0c86e2682b2fd50cedc4be
+    .agents/skills/japanese-tech-writing/SKILL.md: sha256:30e9923d925394411675b29e24d077efb3618acb1ead255570faef62469dce26
+    .claude/skills/japanese-tech-writing/SKILL.md: sha256:30e9923d925394411675b29e24d077efb3618acb1ead255570faef62469dce26
   source: local
   local_path: ./packages/japanese-tech-writing
   is_dev: true
@@ -4493,7 +4493,7 @@ deployments:
   owners:
   - ./packages/japanese-tech-writing
   active_owner: ./packages/japanese-tech-writing
-  content_hash: sha256:f109edb5e30c408e0a12752a2643166848c4c90a0e0c86e2682b2fd50cedc4be
+  content_hash: sha256:30e9923d925394411675b29e24d077efb3618acb1ead255570faef62469dce26
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/plan-doc
@@ -8111,7 +8111,7 @@ deployments:
   owners:
   - ./packages/japanese-tech-writing
   active_owner: ./packages/japanese-tech-writing
-  content_hash: sha256:f109edb5e30c408e0a12752a2643166848c4c90a0e0c86e2682b2fd50cedc4be
+  content_hash: sha256:30e9923d925394411675b29e24d077efb3618acb1ead255570faef62469dce26
 - kind: project-relative
   target: claude
   value: .claude/skills/plan-doc
