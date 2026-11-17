@@ -21,7 +21,7 @@ dependencies:
     - scarecrow173/apm-packages/packages/japanese-tech-writing#main
 ```
 
-Then run `apm install`. APM deploys the Gist Skill into the target's native skills directory (with APM 0.33.0 and the `agent-skills` target, `.agents/skills/fd287c3133457c4fd8f5601d34aa817d/`).
+Then run `apm install`. APM deploys the Gist Skill into the target's native skills directory (with APM 0.33.0 and the `agent-skills` target, `.agents/skills/japanese-tech-writing/`).
 
 ## Upstream dependency and updates
 
@@ -31,6 +31,7 @@ The package's `apm.yml` declares the original Gist as a Git dependency:
 dependencies:
   apm:
     - git: https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d.git
+      alias: japanese-tech-writing
 ```
 
 APM pins a resolved Git commit in its lockfile. **A plain reinstall does not necessarily refresh the upstream commit.** To fetch current refs, run this in the consuming project:
