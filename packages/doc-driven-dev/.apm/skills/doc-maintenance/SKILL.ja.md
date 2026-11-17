@@ -142,6 +142,52 @@ status の編集は front matter の手作業であり、文書を遷移させ�
 `doc_status lint` が古い索引を報告する。再生成は二層フォーマットへの
 移行でもある。
 
+## Schema Preflight と Migration Gate
+
+routing、inspection、context fetch、task-graph / dashboard 構築、status
+audit、creator、maintenance を含む全通常エントリポイントは、リポジトリへ
+触れる前に共有の schema preflight を実行する。preflight は消費者側
+manifest `docs/.doc-driven-dev/schema.json` を読み、実際の文書 tree・
+relation・実行状態と照合する。通常実行が進められるのはリポジトリが
+`current` または `uninitialized` のときのみであり、
+`migration-required`、`migration-incomplete`、`unsupported-version`、
+`invalid` では機械判読可能な拒否(reason code、検出 version、path、
+推奨コマンド)を stdout に出力して終了コード 2 で止まる。read-only と
+preview コマンドはバイト / Git 状態を変えない契約を維持し、preflight
+自身も一切書き込まない。
+
+manifest が宣言する schema contract:
+
+```json
+{
+  "schemaVersion": 1,
+  "documentRegistry": 3,
+  "knowledgeRelations": 1,
+  "verificationDesign": 1,
+  "evidenceRecord": 1,
+  "graphDefinition": 3
+}
+```
+
+`migrate` は唯一の認可された migration 面であり、非 current 状態を
+通過する唯一の経路である — 汎用の guard bypass は存在しない:
+
+```bash
+node scripts/doc_maintenance.js migrate plan [--cwd <repo>] [--json]
+node scripts/doc_maintenance.js migrate apply [--cwd <repo>] [--expect <planHash>] [--json]
+node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
+```
+
+- `migrate plan` — 完全 read-only。preflight 診断、apply 適格性、決定論的
+  `planHash` を報告する。
+- `migrate apply` — 走査した内容が manifest と既に整合する場合に限り
+  manifest を install / repair し、再度 preflight を実行して事後状態を
+  報告する。`--expect <planHash>` は apply を事前 preview の plan に
+  pin し、drift があれば全書き込みを拒否する。文書内容の migration は
+  行わない — 旧 artifact の移行はこのコマンドではなく full migration
+  flow の責務である。
+- `migrate recovery` — migration journal の状態を変更せずに報告する。
+
 ## Migration コマンド
 
 `doc-maintenance` はリポジトリ migration のエントリポイントも担当する。
@@ -228,6 +274,8 @@ preview-first に従う:
 - `scripts/doc_maintenance.js`: safe repair と managed index 再生成の
   plan / apply エントリポイント。`index plan|apply` は全オーナー横断の
   managed index materialization エントリポイント。
+  `migrate plan|apply|recovery` は共有 preflight gate の背後にある
+  schema-manifest migration 面。
 - `scripts/migrate_docs.js`、`scripts/migrate_ids.js`、
   `scripts/scaffold_docs.js`、`scripts/promote_index.js`: この skill が
   所有する migration / bootstrap エントリポイント（先の 3 つは

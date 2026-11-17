@@ -145,6 +145,16 @@ Markdown artifacts are durable history and status authority. Graph State and
 the Dynamic Task Graph are projections for the current turn. The runtime does
 not create or require a parallel database.
 
+## Schema preflight gate
+
+Every normal entrypoint — routing, inspection, context fetch, task-graph and
+dashboard builds — first runs the shared schema preflight: the consumer
+manifest at `docs/.doc-driven-dev/schema.json` plus the real document tree.
+Repositories that are `current` or `uninitialized` proceed; any other status
+prints a machine-readable refusal and exits 2. Migration runs only through
+`doc-maintenance`'s `migrate plan|apply|recovery` — see
+[doc-maintenance](../doc-maintenance/SKILL.md#schema-preflight--migration-gate).
+
 ## Public commands
 
 Use the four routing commands below for distinct purposes. `route_graph.js`

@@ -138,6 +138,18 @@ Markdown artifact が durable history と status の authority です。Graph St
 と Dynamic Task Graph は turn ごとの projection であり、runtime は並行する
 database を作成・要求しません。
 
+## Schema preflight gate
+
+routing、inspection、context fetch、task-graph / dashboard 構築を含む全通常
+エントリポイントは、まず共有の schema preflight を実行します。これは
+消費者側 manifest `docs/.doc-driven-dev/schema.json` と実際の文書 tree
+を照合します。リポジトリが `current` または `uninitialized` の場合のみ
+実行が進み、その他の status では機械判読可能な拒否を出力して終了コード
+2 で止まります。migration は `doc-maintenance` の
+`migrate plan|apply|recovery` 経由のみです —
+[doc-maintenance](../doc-maintenance/SKILL.ja.md#schema-preflight-と-migration-gate)
+を参照してください。
+
 ## 公開 command
 
 次の 4 つの routing command は目的が異なります。`route_graph.js` は 1 回の
