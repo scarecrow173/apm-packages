@@ -184,7 +184,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     try:
-        changed = sync(args.root.resolve(), args.source.resolve(), args.revision)
+        changed = sync(args.root.resolve(), args.source, args.revision)
     except (SyncError, OSError) as error:
         parser.exit(1, f"japanese-tech-writing sync failed: {error}\n")
     if changed:
