@@ -26,6 +26,9 @@ packages/**/build/
 
 .pnpm-store/
 
+# doc-driven-dev execution state — per-worktree, never committed
+/.apm/state/
+
 **/.sdp/
 
 

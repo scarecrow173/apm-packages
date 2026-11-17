@@ -73,6 +73,13 @@ Markdown が durable な project history と status の authority です。Graph
 Dynamic Task Graph は turn ごとの projection です。並行する runtime database や
 mutable lifecycle store を追加しないでください。
 
+plan・task・承認・checkpoint・effect receipt・run trace といった run ごとの
+実行状態は、Git 管理外の Execution Store
+（`.apm/state/doc-driven-dev/runs/<run-id>/`）に保持します —
+`.apm/skills/doc-driven-dev-graph/references/execution-store-contract.ja.md`
+を参照してください。store は既定で worktree ごとであり、`.apm/state/` が
+Git で ignore されていない限り書き込みを拒否し、durable な知識を持ちません。
+
 ## Skill と ownership
 
 document 生成 skill（`idea-doc`、`discovery-doc`、`adr-doc`、`spec-doc`、

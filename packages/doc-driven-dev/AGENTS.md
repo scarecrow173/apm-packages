@@ -74,6 +74,13 @@ Markdown is durable project history and status authority. Graph State and the
 Dynamic Task Graph are per-turn projections. Do not add a parallel runtime
 database or mutable lifecycle store.
 
+Per-run execution state (plans, tasks, approvals, checkpoints, effect
+receipts, run traces) belongs to the Git-untracked Execution Store under
+`.apm/state/doc-driven-dev/runs/<run-id>/` — see
+`.apm/skills/doc-driven-dev-graph/references/execution-store-contract.md`.
+The store is per-worktree by default, refuses writes unless `.apm/state/` is
+Git-ignored, and never carries durable knowledge.
+
 ## Skills and ownership
 
 Document-generation skills (`idea-doc`, `discovery-doc`, `adr-doc`,
