@@ -135,6 +135,21 @@ class SyncTests(unittest.TestCase):
         with self.assertRaisesRegex(SyncError, "ordinary file"):
             sync(self.root, link, SHA_B)
 
+    def test_repository_lockfile_schema_and_hashes(self) -> None:
+        # Exercise the real lockfile layout, not just a synthetic fixture.
+        root = Path(__file__).resolve().parents[2]
+        committed = (root / SKILL).read_bytes()
+        lock = (root / LOCK).read_text(encoding="utf-8")
+        digest = hashlib.sha256(committed).hexdigest()
+        from sync import update_lock
+
+        replacement = "f" * 64
+        if replacement == digest:
+            replacement = "e" * 64
+        rewritten = update_lock(lock, digest, replacement)
+        self.assertEqual(rewritten.count(replacement), 4)
+        self.assertEqual(update_lock(rewritten, replacement, digest), lock)
+
     def test_empty_and_binary_inputs_rejected(self) -> None:
         self.source.write_bytes(b"")
         with self.assertRaisesRegex(SyncError, "size"):
