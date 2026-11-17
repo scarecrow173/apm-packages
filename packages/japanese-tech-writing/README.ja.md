@@ -50,6 +50,3 @@ CI など非対話環境では `apm update --yes` を使えます。定期的に
 
 上流 Skill はインストール時に直接取得されます。更新履歴と内容は Gist 側を参照してください。
 
-## 検証
-
-[PR 検証ワークフロー](../../.github/workflows/japanese-tech-writing-validate.yml) は、隔離したコンシューマーからローカル aggregator を APM 0.33.0 でインストールし、Gist の Skill が展開されることを確認します。
