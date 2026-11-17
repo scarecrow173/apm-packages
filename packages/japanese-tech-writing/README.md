@@ -1,8 +1,8 @@
 # japanese-tech-writing
 
-An APM package for k16shikano's `japanese-tech-writing` Agent Skill, providing style and argumentation rules for Japanese technical writing and editing.
+An APM aggregator package that installs [k16shikano's Japanese Tech Writing Skill](https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d) directly from the original Gist as a Git dependency. The Skill covers writing and editing Japanese technical documentation, articles, and manuscripts.
 
-It covers paragraph structure, rigorous reasoning, reader cognitive load, narrative perspective, rhetorical restraint, AI-generated filler, literal translations, and redundancy. The package is standalone and does not depend on `doc-driven-dev`.
+The upstream `SKILL.md` is not vendored into this repository. The package does not depend on `doc-driven-dev`.
 
 ## Installation
 
@@ -13,7 +13,7 @@ apm marketplace add scarecrow173/apm-packages
 apm install japanese-tech-writing@apm-packages
 ```
 
-Or reference the monorepo subdirectory in your project's `apm.yml`:
+Or declare the monorepo package in your project's `apm.yml`:
 
 ```yaml
 dependencies:
@@ -21,38 +21,35 @@ dependencies:
     - scarecrow173/apm-packages/packages/japanese-tech-writing#main
 ```
 
-Then run `apm install`. The skill is located at `.apm/skills/japanese-tech-writing/SKILL.md` in this package.
+Then run `apm install`. APM deploys the Gist Skill into the target's native skills directory (e.g., `.agents/skills/japanese-tech-writing/`).
 
-## Provenance and license
+## Upstream dependency and updates
 
-- Original author: [k16shikano](https://gist.github.com/k16shikano)
-- Upstream source: [japanese-tech-writing / SKILL.md](https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d)
-- Imported Gist revision: recorded in [`upstream.json`](./upstream.json)
-- Upstream license: [Unlicense](https://gist.github.com/k16shikano/67625f2a7d96e3bbdfae8d571a936063)
+The package's `apm.yml` declares the original Gist as a Git dependency:
 
-## Automatic Gist synchronization
+```yaml
+dependencies:
+  apm:
+    - git: https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d.git
+```
 
-The [GitHub Actions workflow](../../.github/workflows/japanese-tech-writing-upstream.yml) checks the latest Gist commit daily at 03:17 UTC (and supports manual `workflow_dispatch`). When the Gist changes, it runs offline sync tests and APM validation, then commits the updated Skill and lockfile directly to `main` without requiring a PR. No commit is created if all files match.
-
-Only the upstream `SKILL.md` is imported. Its body is preserved and the frontmatter `license` is normalized to `Unlicense`. `upstream.json` records the Gist commit. If the upstream name, license or frontmatter format changes unexpectedly, or validation fails, the workflow fails without publishing changes.
-
-This intentionally trusts upstream-authored agent instructions for automatic publication. Consumers can fetch updates with `apm update japanese-tech-writing` (or `apm update`). A plain `apm install` may replay the pinned commit, and existing local installations are not overwritten immediately.
-
-## Local sync tests
-
-From the repository root:
+APM pins a resolved Git commit in its lockfile. **A plain reinstall does not necessarily refresh the upstream commit.** To fetch current refs, run this in the consuming project:
 
 ```bash
-python3 -m unittest discover -s scripts/japanese-tech-writing -p "test_*.py" -v
+apm update
 ```
+
+Use `apm update --yes` in unattended automation. Projects requiring periodic upgrades can schedule that command in their own CI. This aggregator does not maintain a vendored copy or a custom Gist synchronization job.
+
+## Provenance and licensing
+
+- Upstream author: [k16shikano](https://gist.github.com/k16shikano)
+- Canonical source: [Gist / japanese-tech-writing](https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d)
+- Upstream Skill license: [Unlicense](https://gist.github.com/k16shikano/67625f2a7d96e3bbdfae8d571a936063)
+- This aggregator's manifest license: MIT
+
+The upstream Skill is fetched directly on installation. For current content and history, refer to the Gist.
 
 ## Validation
 
-From the package directory:
-
-```bash
-# Install the package in an isolated consumer and verify its deployed Skill.
-mise exec -- apm install ./packages/japanese-tech-writing --target agent-skills
-```
-
-`apm compile` is for instructions, not skill-only packages. CI uses an isolated consumer, runs `apm install`, and checks the deployed `SKILL.md` matches the package source.
+The [PR validation workflow](../../.github/workflows/japanese-tech-writing-validate.yml) installs this local aggregator into an isolated APM consumer (APM 0.33.0) and checks the Gist Skill is deployed.
