@@ -21,7 +21,7 @@ dependencies:
     - scarecrow173/apm-packages/packages/japanese-tech-writing#main
 ```
 
-登録後は `apm install` を実行します。APM は Gist に含まれる Skill を対象ランタイムの Skill ディレクトリ（APM 0.33.0 の `agent-skills` ターゲットでは `.agents/skills/fd287c3133457c4fd8f5601d34aa817d/`）に展開します。
+登録後は `apm install` を実行します。APM は Gist に含まれる Skill を対象ランタイムの Skill ディレクトリ（APM 0.33.0 の `agent-skills` ターゲットでは `.agents/skills/japanese-tech-writing/`）に展開します。
 
 ## 依存関係と更新
 
@@ -31,6 +31,7 @@ dependencies:
 dependencies:
   apm:
     - git: https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d.git
+      alias: japanese-tech-writing
 ```
 
 APM のロックファイルは解決したコミットを固定します。**Gist の変更は再インストールだけでは必ずしも取り込まれません。** 最新の参照を取り込む際は、利用側プロジェクトで次を実行します。
