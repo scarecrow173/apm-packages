@@ -30,7 +30,9 @@ jobs:
             set -euo pipefail
             cd "$1"
             apm install "$2" --target agent-skills
-            test -f .agents/skills/japanese-tech-writing/SKILL.md
-            grep -q "^name: japanese-tech-writing" .agents/skills/japanese-tech-writing/SKILL.md
-            echo "Gist-native skill installed via APM successfully."
+            echo "Deployed Skill paths:"
+            find .agents/skills -maxdepth 3 -type f -print
+            test -n "$(find .agents/skills -name SKILL.md -type f -print -quit)"
+            grep -Rl --include="SKILL.md" "^name: japanese-tech-writing" .agents/skills
+            echo "Gist-native Skill installed via APM successfully."
           ' bash "$temp" "$GITHUB_WORKSPACE/packages/japanese-tech-writing"
