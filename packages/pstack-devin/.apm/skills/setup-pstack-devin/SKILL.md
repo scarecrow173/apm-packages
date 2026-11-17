@@ -23,22 +23,23 @@ Run `devin models list`, save its raw output to a models file in a scratch dir (
 
 If `~/.devin/rules/pstack-models.md` exists, read it: its `# budget` line and `role: slug[, slug…]` lines are the current choices. List `pstack-*.md` under the agents dir so step 4 can show what changes. With no rule, start from the defaults in `scripts/roles.json` beside `setup.mjs`.
 
-A rule line whose role is not in the canonical schema is a retired role. Keep the line in the choices file you build in step 3 — the plan reports unknown keys as `droppedRoles`. Report each dropped role to the user; never silently keep one.
+A stored `# budget: unlimited` line comes from a schema-2 rule: it becomes `large`, because no role runs above `xhigh`. Write `large` as the budget in the choices file you build in step 3.
+
+A rule line whose role is not in the canonical schema is a retired role (for example `hardest tasks`, `architect runners`, `reflect tooling`, or `why investigators`). Keep the line in the choices file you build in step 3 — the plan reports unknown keys as `droppedRoles`. Report each dropped role to the user; never silently keep one.
 
 ### 3. Budget, map, and confirm
 
-**(a) Ask for a budget.** Prefer `ask_user_question` over free text. Offer these four options with these exact labels, and name the current budget when the rule records one. With no rule, say that `large` matches the skill defaults.
+**(a) Ask for a budget.** Prefer `ask_user_question` over free text. Offer these three options with these exact labels, and name the current budget when the rule records one. With no rule, say that `large` matches the skill defaults.
 
-- `unlimited — max reasoning`
 - `large — xhigh reasoning`
 - `medium — high reasoning`
 - `small — medium reasoning`
 
-**(b) Build the inputs.** Write a choices file of shape `{"budget": "<label>", "choices": {"<role>": "<slug-or-alias>[, <slug>…]"}}` — every schema role set to its current rule value, or its `roles.json` default when there is no rule; keep any value the user already changed, `inherit-parent` and `auto` included. For panel roles (`arena runners`, `arena cross-judge pool`, `architect runners`, `interrogate reviewers`) the value is a comma-separated list and one subagent runs per entry, so keep the list length. `arena cross-judge pool` is ordered by preference, and an `inherit-parent` or `auto` entry never judges. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
+**(b) Build the inputs.** Write a choices file of shape `{"budget": "<label>", "choices": {"<role>": "<slug-or-alias>[, <slug>…]"}}` — every schema role set to its current rule value, or its `roles.json` default when there is no rule; keep any value the user already changed, `inherit-parent` and `auto` included. For panel roles (`arena runners`, `arena cross-judge pool`, `interrogate reviewers`) the value is a comma-separated list and one subagent runs per entry, so keep the list length. `arena cross-judge pool` is ordered by preference, and an `inherit-parent` or `auto` entry never judges. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
 
 **(c) Plan.** Run `node <skill>/scripts/setup.mjs plan --choices <file> --models <file>` and save the plan JSON — step 4 applies it. The plan resolves the budget arithmetic per role (`resolved`), marks each role needing a decision (`needsChoice`), reports `droppedRoles`, and lists every file change under `changes`.
 
-**(d) Confirm.** Show every role with its `resolved` model, marking `needsChoice` entries, and name each dropped role. For each `needsChoice` role offer the detected models plus `inherit-parent` and `auto` via `ask_user_question`, update the choices file, and re-run `plan` until no role needs a choice or the user accepts the suggestion shown. Before applying, write each role's accepted `resolved` value back into the choices file — the plan emits `resolved` under the chosen budget, and `apply` writes what `choices` carries.
+**(d) Confirm.** Show every role with its `resolved` model, marking `needsChoice` entries, and name each dropped role. For each `needsChoice` role offer the detected models at `xhigh` or below plus `inherit-parent` and `auto` via `ask_user_question`, update the choices file, and re-run `plan` until no role needs a choice or the user accepts the suggestion shown. `plan` refuses a choice above `xhigh` — no role runs there. Before applying, write each role's accepted `resolved` value back into the choices file — the plan emits `resolved` under the chosen budget, and `apply` writes what `choices` carries.
 
 ### 4. Apply
 

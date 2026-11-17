@@ -114,14 +114,29 @@ test("effortOf reads last token, or the one before a trailing fast", () => {
   });
 });
 
-test("applyBudget moves effort on the ladder and clamps at the top", () => {
+test("applyBudget moves effort one rung down under medium", () => {
   const r = M.applyBudget(
     roles,
     { "bug-fix": "swe-2-xhigh" },
     ["swe-2-max", "swe-2-xhigh", "swe-2-high"],
-    "unlimited",
+    "medium",
   );
-  assert.equal(r.resolved["bug-fix"], "swe-2-max"); // +1 clamped at top
+  assert.equal(r.resolved["bug-fix"], "swe-2-high"); // -1
+});
+
+test("applyBudget rejects the retired unlimited tier", () => {
+  // Upstream schema 3 dropped `unlimited` — a stored `# budget: unlimited`
+  // is read as `large` by the skill, so the arithmetic never sees it.
+  assert.throws(
+    () =>
+      M.applyBudget(
+        roles,
+        { "bug-fix": "swe-2-xhigh" },
+        ["swe-2-max", "swe-2-xhigh", "swe-2-high"],
+        "unlimited",
+      ),
+    /unknown budget.*large, medium, small/,
+  );
 });
 
 test("applyBudget small drops effort two rungs incl. fast suffix", () => {
@@ -166,11 +181,11 @@ test("a choice already at the best at-or-below effort stays, unflagged", () => {
     roles,
     { "bug-fix": "claude-9-high" },
     ["claude-9-high", "swe-2-high"],
-    "unlimited",
+    "large",
   );
-  // claude-9-max undetected; claude-9-high is the best <= max in the
-  // default's family and equals the current value — a silent keep, like
-  // upstream's gemini-tops-out-at-high example.
+  // claude-9-xhigh(-fast) undetected; claude-9-high is the best <= xhigh
+  // in the default's family and equals the current value — a silent keep,
+  // like upstream's gemini-tops-out-at-high example.
   assert.equal(r.resolved["bug-fix"], "claude-9-high");
   assert.ok(!r.needsChoice.includes("bug-fix"));
 });
@@ -190,7 +205,7 @@ test("inherit-parent and auto pass through unchanged", () => {
     roles,
     { "bug-fix": "auto", "swarm workers": "inherit-parent" },
     ["swe-2-high"],
-    "unlimited",
+    "large",
   );
   assert.equal(r.resolved["bug-fix"], "auto");
   assert.equal(r.resolved["swarm workers"], "inherit-parent");
@@ -222,7 +237,7 @@ test("rulesFile is byte-stable and uses upstream's exact line format", () => {
   const a = M.rulesFile(choices, "large");
   assert.equal(a, M.rulesFile(choices, "large"));
   assert.match(a, /trigger: always_on/);
-  assert.match(a, /# defaults: 2/);
+  assert.match(a, /# defaults: 3/);
   assert.match(a, /# budget: large \(xhigh\)/);
   assert.match(a, /^feature, refactoring: swe-2-xhigh$/m);
   assert.match(a, /run_subagent/);
@@ -280,7 +295,7 @@ test("obsolete pstack-*.md files are removeCandidates only", () => {
 
 test("detectRolesSchema parses upstream's step-5 block", () => {
   const parsed = M.detectRolesSchema(fixture);
-  assert.equal(parsed.schemaN, 2);
+  assert.equal(parsed.schemaN, 3);
   assert.deepEqual(parsed.roleKeys, roles.map((r) => r.key));
 });
 
@@ -387,10 +402,21 @@ async function runPlan(
   return { plan: JSON.parse(cap.text()) as PlanDoc, planPath };
 }
 
+test("plan refuses a detected slug above the xhigh ceiling", async () => {
+  // Upstream schema 3: "every real slug written must be in the detected
+  // set and at `xhigh` or below" — a detected `*-max` slug is detected but
+  // not writable, so the gate fails closed with its own error.
+  const dir = tmpdir();
+  await assert.rejects(
+    runPlan(dir, { "bug-fix": "swe-2-max" }, "  swe-2-max\n  swe-2-high\n"),
+    /above the xhigh ceiling/,
+  );
+});
+
 test("plan drops unknown role keys as droppedRoles instead of throwing", async () => {
   // Retired-role semantics: an unknown key is ignored like a deleted
   // rules line — even when its value is not a detected slug. Before the
-  // choices filter, assertDetected iterated raw choice keys and threw.
+  // choices filter, assertWritable iterated raw choice keys and threw.
   const dir = tmpdir();
   const { plan } = await runPlan(
     dir,
