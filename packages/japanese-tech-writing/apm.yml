@@ -1,0 +1,18 @@
+name: japanese-tech-writing
+version: 0.1.0
+description: Japanese technical writing and editing standards from k16shikano's japanese-tech-writing Agent Skill.
+author: k16shikano
+license: Unlicense
+targets:
+  - codex
+  - copilot
+  - cursor
+  - claude
+  - windsurf
+  - agent-skills
+type: skill
+includes:
+  - .apm/
+scripts:
+  validate: "apm compile --validate"
+  preview: "apm compile --dry-run"
