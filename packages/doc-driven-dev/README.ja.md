@@ -145,10 +145,13 @@ v1 では durable 文書は次の source→target relation を記録します。
 - `realizes`: design が実現する spec。
 - `supersedes`: 同種の旧文書を置き換える。
 
-逆方向ビュー（`superseded-by`、`implemented-by` など）は導出され、保存
-されません。`implements`、`derives-from`、`references`、`verifies`、
-`defers` などその他の宣言 relation キーはレガシー語彙で、マイグレーション
-は v3 以前のコーパスから読み取りますが通常実行では書き込みません。
+逆方向ビュー（`superseded-by`、`implemented-by` など）は通常は導出される
+もので保存しません。ただし `relate_adr` は #235 で語彙が絞り込まれる
+まで宣言済みペアの双方向を書き込みます。`implements`、`derives-from`、
+`references`、`verifies`、`defers` などその他の宣言 relation キーは
+レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取ります。
+creator は空のプレースホルダーとしてのみ出力しますが、`relate_adr` と
+`new_design --from` は同じ絞り込みが完了するまで設定できます。
 （`relations.changes` と `relations.test-spec-skip` はリンクではなく
 メタデータペイロードです。）
 

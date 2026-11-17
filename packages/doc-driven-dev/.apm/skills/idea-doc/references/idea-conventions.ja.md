@@ -104,7 +104,10 @@ relations:
 下流文書を作成した後に `promoted` を設定してください。Knowledge Relations
 v1 では idea は `relations.motivates` に source→target で動機付けた spec を
 記録します。下流側は逆リンクを保存しません。`derived-by` などその他の宣言キーは
-レガシー語彙で、マイグレーションは読み取りますが通常実行では書き込みません。
+レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取ります。
+creator は空のプレースホルダーとしてのみ出力しますが、`relate_adr` と
+`new_design --from` は #235 で格納語彙が絞り込まれるまでこれらを設定
+できます。
 
 ## リレーション
 

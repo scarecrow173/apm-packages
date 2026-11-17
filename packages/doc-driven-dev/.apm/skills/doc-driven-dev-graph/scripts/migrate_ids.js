@@ -14113,6 +14113,14 @@ var LEGACY_CANONICAL_DIRS = Object.freeze([
 var CANONICAL_DOC_DIRS = Object.freeze(
   [...DURABLE_DOC_DIRS, ...LEGACY_CANONICAL_DIRS]
 );
+function managedDocDirs() {
+  const dirs = new Set(CANONICAL_DOC_DIRS);
+  for (const type of docTypes) {
+    for (const dir of configs[type].dirs) dirs.add(dir);
+  }
+  for (const dir of LEGACY_DOC_DIRS) dirs.add(dir);
+  return [...dirs].sort();
+}
 function knowledgeRelationFields() {
   const fields = /* @__PURE__ */ new Set();
   for (const type of docTypes) {
@@ -34679,18 +34687,8 @@ function contractForDocType(entry) {
 var contracts = Object.fromEntries(
   docTypes.map((type) => [type, contractForDocType(configFor(type))])
 );
-function documentContracts() {
-  return contracts;
-}
 function contractForType(type) {
   return contracts[type] ?? null;
-}
-function canonicalDocRoots() {
-  const roots = /* @__PURE__ */ new Set();
-  for (const contract of Object.values(contracts)) {
-    for (const dir of contract.dirs) roots.add(normalizeDir(dir));
-  }
-  return [...roots].sort(compareStrings);
 }
 var markdownModules = null;
 async function loadMarkdownModules() {
@@ -34870,7 +34868,7 @@ function localeSiblingsFor(repoPath, siblingsByDir) {
 function defaultScanRoots(cwd) {
   const roots = /* @__PURE__ */ new Set();
   if (import_node_fs4.default.existsSync(import_node_path5.default.join(cwd, "docs"))) roots.add("docs");
-  for (const dir of canonicalDocRoots()) {
+  for (const dir of managedDocDirs()) {
     if (import_node_fs4.default.existsSync(import_node_path5.default.join(cwd, dir))) roots.add(dir);
   }
   return [...roots].sort(compareStrings);
@@ -35855,7 +35853,9 @@ function lintFrontMatter(document3, scopeType) {
       repair: "manual"
     }));
   }
-  if (document3.lifecycle === null) {
+  const rawLifecycle = document3.frontMatter.lifecycle;
+  const lifecyclePopulated = rawLifecycle !== void 0 && rawLifecycle !== null && !(typeof rawLifecycle === "string" && rawLifecycle.trim() === "");
+  if (!lifecyclePopulated) {
     findings.push(finding({
       ruleId: "missing-lifecycle",
       category: "front-matter",
@@ -35867,15 +35867,16 @@ function lintFrontMatter(document3, scopeType) {
       target: "lifecycle",
       repair: "migration"
     }));
-  } else if (contract && !contract.lifecycleValues.includes(document3.lifecycle)) {
+  } else if (document3.lifecycle === null || contract && !contract.lifecycleValues.includes(document3.lifecycle)) {
+    const shown = typeof rawLifecycle === "string" ? rawLifecycle : JSON.stringify(rawLifecycle);
     findings.push(finding({
       ruleId: "invalid-lifecycle",
       category: "front-matter",
       severity: "error",
       path: document3.path,
       artifactId: document3.id,
-      message: `Invalid ${scopeType} lifecycle: ${document3.lifecycle} (expected one of: ${contract.lifecycleValues.join(", ")})`,
-      target: document3.lifecycle,
+      message: `Invalid ${scopeType} lifecycle: ${shown} (expected one of: ${(contract?.lifecycleValues ?? []).join(", ") || "draft, current, superseded, retired"})`,
+      target: document3.lifecycle ?? "lifecycle",
       repair: "manual"
     }));
   }
@@ -36288,7 +36289,7 @@ function profileGates(profile) {
 
 // src/skills/lib/doc_audit.ts
 function scanRoots(relativeDirs) {
-  return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
+  return [...new Set(["docs", ...relativeDirs, ...managedDocDirs()].map((dir) => normalizeDir(dir)))];
 }
 function toLegacyFinding(directory, finding2) {
   const file2 = finding2.path ? import_node_path8.default.posix.relative(normalizeDir(directory), finding2.path) || import_node_path8.default.posix.basename(finding2.path) : null;
@@ -40244,13 +40245,7 @@ function isPlainObject4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function managedRootAliases() {
-  const dirs = /* @__PURE__ */ new Set();
-  for (const contract of Object.values(documentContracts())) {
-    for (const dir of [...contract.dirs, contract.canonicalDir]) {
-      if (!dir.startsWith("docs/")) dirs.add(dir);
-    }
-  }
-  return [...dirs].sort();
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit3, onEscape) {
   const absRoot = import_node_path12.default.resolve(cwd, relRoot);

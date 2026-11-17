@@ -114,7 +114,9 @@ Keep `status` focused on spec workflow state; record `lifecycle` separately
 (`superseded` when the spec is replaced). Under Knowledge Relations v1 only
 `relations.supersedes` is stored source→target for a replacing spec;
 `superseded-by` and other declared keys are legacy vocabulary that migration
-tooling reads but normal execution does not write.
+tooling reads in pre-v3 corpora — creators emit them only as empty
+placeholders, and `relate_adr`/`new_design --from` can still populate
+them until the stored vocabulary narrows under #235.
 
 ## Relations
 

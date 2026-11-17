@@ -122,9 +122,11 @@ index tiers. Use these statuses:
 Keep `status` focused on workflow state; record `lifecycle` separately
 (`superseded` when the ADR is replaced). Under Knowledge Relations v1 the
 *replacing* ADR stores `relations.supersedes` source→target at the ADR it
-replaces; the replaced ADR does not store an inverse — `superseded-by` and
-the other declared keys below are legacy vocabulary that migration tooling
-reads but normal execution does not write.
+replaces; the replaced ADR does not store an inverse by convention —
+`superseded-by` and the other declared keys below are legacy vocabulary
+that migration tooling reads in pre-v3 corpora, though `relate_adr` still
+writes both directions of a declared pair until its vocabulary narrows
+under #235.
 
 ## Relations Extension
 
@@ -137,8 +139,9 @@ the meaning of the link, not by the target document type.
 Under Knowledge Relations v1 an ADR stores `relations.decides-for` (→ spec or
 design) and `relations.supersedes` (→ an older ADR) source→target, plus
 `relations.source` for provenance. Every other key in the table below is
-legacy vocabulary: migration tooling reads it in pre-v3 corpora but normal
-execution does not write it.
+legacy vocabulary: migration tooling reads it in pre-v3 corpora, and
+`relate_adr` can still write it until the stored vocabulary narrows
+under #235.
 
 | Field | Meaning |
 | --- | --- |

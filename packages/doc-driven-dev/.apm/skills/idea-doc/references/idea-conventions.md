@@ -106,7 +106,9 @@ Set `promoted` only after creating the downstream document. Under Knowledge
 Relations v1 the idea stores `relations.motivates` pointing source→target at
 the spec it motivates; the downstream document does not store an inverse.
 `derived-by` and other declared keys are legacy vocabulary that migration
-tooling reads but normal execution does not write.
+tooling reads in pre-v3 corpora — creators emit them only as empty
+placeholders, and `relate_adr`/`new_design --from` can still populate
+them until the stored vocabulary narrows under #235.
 
 ## Relations
 

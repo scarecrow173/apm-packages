@@ -4,9 +4,10 @@ import { lintScope, scopeFor } from "./doc_lint";
 import type { AuditProfile } from "./doc_lint";
 import { lintExternalLinks } from "./doc_structure_lint";
 import { scopeTypesForQuery } from "./doc_ownership";
-import { canonicalDocRoots, compareFindings, lifecycleBucketOf, scanRepository } from "./doc_repository";
+import { compareFindings, lifecycleBucketOf, scanRepository } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
 import { docDir, docEntries } from "./doc_suite_utils";
+import { managedDocDirs } from "./doc_types";
 import { normalizeDir, resolveContainedDir } from "./document_utils";
 
 type DocStatusQuery = {
@@ -98,8 +99,12 @@ function profileGates(profile: AuditProfile): ProfileGates {
     : { ran: [...ARTIFACT_GATES, ...MATERIALIZED_ONLY_GATES], skipped: [] };
 }
 
+// As in doc_audit: the model scans every managed dir spelling — durable
+// contract dirs plus migration-owned former dirs (root-level spellings
+// included) — so relation targets and legacy docs stay resolvable
+// (Issue #234).
 function scanRoots(relativeDirs: string[]): string[] {
-  return [...new Set(["docs", ...relativeDirs, ...canonicalDocRoots()].map((dir) => normalizeDir(dir)))];
+  return [...new Set(["docs", ...relativeDirs, ...managedDocDirs()].map((dir) => normalizeDir(dir)))];
 }
 
 function resolveQueryScope(cwd: string, query: { type?: string; dir?: string }): { types: string[]; explicitDir: string | null } {

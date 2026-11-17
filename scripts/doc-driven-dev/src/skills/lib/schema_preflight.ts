@@ -45,10 +45,10 @@ import path from "node:path";
 import matter from "gray-matter";
 import * as yaml from "js-yaml";
 
-import { documentContracts } from "./doc_repository";
 import {
   executionBoundTypeNames,
   knowledgeRelationFields,
+  managedDocDirs,
   PROVENANCE_RELATION_KEYS,
 } from "./doc_types";
 import {
@@ -208,16 +208,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// Managed scan roots: every contract dir, split into the `docs/` subtree
-// (walked once, recursively) and root-level alias dirs (walked each).
+// Managed scan roots: every managed dir spelling, split into the `docs/`
+// subtree (walked once, recursively) and root-level spellings (walked
+// each). `managedDocDirs` is the registry's full dir vocabulary — durable
+// canonical dirs and aliases plus the former dirs of execution-bound and
+// legacy types — so root-level Git-era homes such as `plans/`, `tasks/`,
+// and `test-specs/` stay scanned for markers even though those types have
+// no durable contract (Issue #234).
 function managedRootAliases(): string[] {
-  const dirs = new Set<string>();
-  for (const contract of Object.values(documentContracts())) {
-    for (const dir of [...contract.dirs, contract.canonicalDir]) {
-      if (!dir.startsWith("docs/")) dirs.add(dir);
-    }
-  }
-  return [...dirs].sort();
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 
 // Recursive read-only walk. The scan never follows out-of-checkout links:

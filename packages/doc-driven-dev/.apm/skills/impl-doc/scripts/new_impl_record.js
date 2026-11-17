@@ -24694,6 +24694,14 @@ var LEGACY_CANONICAL_DIRS = Object.freeze([
 var CANONICAL_DOC_DIRS = Object.freeze(
   [...DURABLE_DOC_DIRS, ...LEGACY_CANONICAL_DIRS]
 );
+function managedDocDirs() {
+  const dirs = new Set(CANONICAL_DOC_DIRS);
+  for (const type of docTypes) {
+    for (const dir of configs[type].dirs) dirs.add(dir);
+  }
+  for (const dir of LEGACY_DOC_DIRS) dirs.add(dir);
+  return [...dirs].sort();
+}
 function knowledgeRelationFields() {
   const fields = /* @__PURE__ */ new Set();
   for (const type of docTypes) {
@@ -27645,53 +27653,6 @@ var CHOMPING_CLIP = CHOMPING_MODE.CLIP;
 var CHOMPING_STRIP = CHOMPING_MODE.STRIP;
 var CHOMPING_KEEP = CHOMPING_MODE.KEEP;
 
-// src/skills/lib/doc_repository.ts
-var REQUIRED_FRONT_MATTER_FIELDS = [
-  "id",
-  "type",
-  "status",
-  "lifecycle",
-  "title",
-  "created",
-  "updated",
-  "owners",
-  "relations"
-];
-function contractForDocType(entry) {
-  return {
-    type: entry.type,
-    persistence: entry.persistence,
-    idPrefix: entry.idPrefix,
-    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
-    idExceptions: [...entry.idExceptions],
-    canonicalDir: entry.dir ?? "",
-    dirs: [...entry.dirs],
-    defaultStatus: entry.defaultStatus,
-    statusValues: [...entry.statusValues],
-    lifecycleValues: [...entry.lifecycleValues],
-    defaultLifecycle: entry.defaultLifecycle,
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
-    fieldVocabularies: Object.fromEntries(
-      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
-    ),
-    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
-    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
-    reservedFiles: [...entry.reservedFiles],
-    allowsRootArtifact: entry.allowsRootArtifact,
-    requiresSourceEvidence: entry.requiresSourceEvidence,
-    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
-    allowedRelations: Object.fromEntries(
-      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
-    )
-  };
-}
-var contracts = Object.fromEntries(
-  docTypes.map((type) => [type, contractForDocType(configFor(type))])
-);
-function documentContracts() {
-  return contracts;
-}
-
 // src/skills/lib/schema_preflight.ts
 var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
 var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
@@ -27723,13 +27684,7 @@ function isPlainObject3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function managedRootAliases() {
-  const dirs = /* @__PURE__ */ new Set();
-  for (const contract of Object.values(documentContracts())) {
-    for (const dir of [...contract.dirs, contract.canonicalDir]) {
-      if (!dir.startsWith("docs/")) dirs.add(dir);
-    }
-  }
-  return [...dirs].sort();
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit2, onEscape) {
   const absRoot = import_node_path3.default.resolve(cwd, relRoot);

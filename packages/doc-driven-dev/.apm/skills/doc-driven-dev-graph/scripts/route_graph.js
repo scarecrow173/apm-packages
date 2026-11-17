@@ -3318,10 +3318,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file2.data, data);
       const open2 = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter5 = engine.stringify(data, options2).trim();
+      const matter4 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter5 !== "{}") {
-        buf = newline(open2) + newline(matter5) + newline(close);
+      if (matter4 !== "{}") {
+        buf = newline(open2) + newline(matter4) + newline(close);
       }
       if (typeof file2.excerpt === "string" && file2.excerpt !== "") {
         if (str2.indexOf(file2.excerpt.trim()) === -1) {
@@ -3427,19 +3427,19 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse4 = require_parse();
     var utils = require_utils();
-    function matter5(input2, options2) {
+    function matter4(input2, options2) {
       if (input2 === "") {
         return { data: {}, content: input2, excerpt: "", orig: input2 };
       }
       let file2 = toFile(input2);
-      const cached2 = matter5.cache[file2.content];
+      const cached2 = matter4.cache[file2.content];
       if (!options2) {
         if (cached2) {
           file2 = Object.assign({}, cached2);
           file2.orig = cached2.orig;
           return file2;
         }
-        matter5.cache[file2.content] = file2;
+        matter4.cache[file2.content] = file2;
       }
       return parseMatter(file2, options2);
     }
@@ -3461,7 +3461,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter5.language(str2, opts);
+      const language = matter4.language(str2, opts);
       if (language.name) {
         file2.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -3496,24 +3496,24 @@ var require_gray_matter = __commonJS({
       }
       return file2;
     }
-    matter5.engines = engines2;
-    matter5.stringify = function(file2, data, options2) {
-      if (typeof file2 === "string") file2 = matter5(file2, options2);
+    matter4.engines = engines2;
+    matter4.stringify = function(file2, data, options2) {
+      if (typeof file2 === "string") file2 = matter4(file2, options2);
       return stringify(file2, data, options2);
     };
-    matter5.read = function(filepath, options2) {
+    matter4.read = function(filepath, options2) {
       const str2 = fs9.readFileSync(filepath, "utf8");
-      const file2 = matter5(str2, options2);
+      const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
     };
-    matter5.test = function(str2, options2) {
+    matter4.test = function(str2, options2) {
       return utils.startsWith(str2, defaults(options2).delimiters[0]);
     };
-    matter5.language = function(str2, options2) {
+    matter4.language = function(str2, options2) {
       const opts = defaults(options2);
       const open2 = opts.delimiters[0];
-      if (matter5.test(str2)) {
+      if (matter4.test(str2)) {
         str2 = str2.slice(open2.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -3522,877 +3522,11 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter5.cache = {};
-    matter5.clearCache = function() {
-      matter5.cache = {};
+    matter4.cache = {};
+    matter4.clearCache = function() {
+      matter4.cache = {};
     };
-    module2.exports = matter5;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/max.js
-var require_max = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/max.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/nil.js
-var require_nil = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/nil.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.default = "00000000-0000-0000-0000-000000000000";
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/regex.js
-var require_regex = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/regex.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/validate.js
-var require_validate = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/validate.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var regex_js_1 = require_regex();
-    function validate2(uuid3) {
-      return typeof uuid3 === "string" && regex_js_1.default.test(uuid3);
-    }
-    exports2.default = validate2;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/parse.js
-var require_parse2 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/parse.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var validate_js_1 = require_validate();
-    function parse4(uuid3) {
-      if (!(0, validate_js_1.default)(uuid3)) {
-        throw TypeError("Invalid UUID");
-      }
-      let v;
-      return Uint8Array.of((v = parseInt(uuid3.slice(0, 8), 16)) >>> 24, v >>> 16 & 255, v >>> 8 & 255, v & 255, (v = parseInt(uuid3.slice(9, 13), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(14, 18), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(19, 23), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(24, 36), 16)) / 1099511627776 & 255, v / 4294967296 & 255, v >>> 24 & 255, v >>> 16 & 255, v >>> 8 & 255, v & 255);
-    }
-    exports2.default = parse4;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/stringify.js
-var require_stringify2 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/stringify.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.unsafeStringify = void 0;
-    var validate_js_1 = require_validate();
-    var byteToHex = [];
-    for (let i = 0; i < 256; ++i) {
-      byteToHex.push((i + 256).toString(16).slice(1));
-    }
-    function unsafeStringify(arr, offset = 0) {
-      return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
-    }
-    exports2.unsafeStringify = unsafeStringify;
-    function stringify(arr, offset = 0) {
-      const uuid3 = unsafeStringify(arr, offset);
-      if (!(0, validate_js_1.default)(uuid3)) {
-        throw TypeError("Stringified UUID is invalid");
-      }
-      return uuid3;
-    }
-    exports2.default = stringify;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/rng.js
-var require_rng = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/rng.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var crypto_1 = require("crypto");
-    var rnds8Pool = new Uint8Array(256);
-    var poolPtr = rnds8Pool.length;
-    function rng() {
-      if (poolPtr > rnds8Pool.length - 16) {
-        (0, crypto_1.randomFillSync)(rnds8Pool);
-        poolPtr = 0;
-      }
-      return rnds8Pool.slice(poolPtr, poolPtr += 16);
-    }
-    exports2.default = rng;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1.js
-var require_v1 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.updateV1State = void 0;
-    var rng_js_1 = require_rng();
-    var stringify_js_1 = require_stringify2();
-    var _state = {};
-    function v1(options2, buf, offset) {
-      let bytes;
-      const isV6 = options2?._v6 ?? false;
-      if (options2) {
-        const optionsKeys = Object.keys(options2);
-        if (optionsKeys.length === 1 && optionsKeys[0] === "_v6") {
-          options2 = void 0;
-        }
-      }
-      if (options2) {
-        bytes = v1Bytes(options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)(), options2.msecs, options2.nsecs, options2.clockseq, options2.node, buf, offset);
-      } else {
-        const now = Date.now();
-        const rnds = (0, rng_js_1.default)();
-        updateV1State(_state, now, rnds);
-        bytes = v1Bytes(rnds, _state.msecs, _state.nsecs, isV6 ? void 0 : _state.clockseq, isV6 ? void 0 : _state.node, buf, offset);
-      }
-      return buf ?? (0, stringify_js_1.unsafeStringify)(bytes);
-    }
-    function updateV1State(state, now, rnds) {
-      state.msecs ??= -Infinity;
-      state.nsecs ??= 0;
-      if (now === state.msecs) {
-        state.nsecs++;
-        if (state.nsecs >= 1e4) {
-          state.node = void 0;
-          state.nsecs = 0;
-        }
-      } else if (now > state.msecs) {
-        state.nsecs = 0;
-      } else if (now < state.msecs) {
-        state.node = void 0;
-      }
-      if (!state.node) {
-        state.node = rnds.slice(10, 16);
-        state.node[0] |= 1;
-        state.clockseq = (rnds[8] << 8 | rnds[9]) & 16383;
-      }
-      state.msecs = now;
-      return state;
-    }
-    exports2.updateV1State = updateV1State;
-    function v1Bytes(rnds, msecs, nsecs, clockseq, node2, buf, offset = 0) {
-      if (rnds.length < 16) {
-        throw new Error("Random bytes length must be >= 16");
-      }
-      if (!buf) {
-        buf = new Uint8Array(16);
-        offset = 0;
-      } else {
-        if (offset < 0 || offset + 16 > buf.length) {
-          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-        }
-      }
-      msecs ??= Date.now();
-      nsecs ??= 0;
-      clockseq ??= (rnds[8] << 8 | rnds[9]) & 16383;
-      node2 ??= rnds.slice(10, 16);
-      msecs += 122192928e5;
-      const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
-      buf[offset++] = tl >>> 24 & 255;
-      buf[offset++] = tl >>> 16 & 255;
-      buf[offset++] = tl >>> 8 & 255;
-      buf[offset++] = tl & 255;
-      const tmh = msecs / 4294967296 * 1e4 & 268435455;
-      buf[offset++] = tmh >>> 8 & 255;
-      buf[offset++] = tmh & 255;
-      buf[offset++] = tmh >>> 24 & 15 | 16;
-      buf[offset++] = tmh >>> 16 & 255;
-      buf[offset++] = clockseq >>> 8 | 128;
-      buf[offset++] = clockseq & 255;
-      for (let n = 0; n < 6; ++n) {
-        buf[offset++] = node2[n];
-      }
-      return buf;
-    }
-    exports2.default = v1;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1ToV6.js
-var require_v1ToV6 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1ToV6.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var parse_js_1 = require_parse2();
-    var stringify_js_1 = require_stringify2();
-    function v1ToV6(uuid3) {
-      const v1Bytes = typeof uuid3 === "string" ? (0, parse_js_1.default)(uuid3) : uuid3;
-      const v6Bytes = _v1ToV6(v1Bytes);
-      return typeof uuid3 === "string" ? (0, stringify_js_1.unsafeStringify)(v6Bytes) : v6Bytes;
-    }
-    exports2.default = v1ToV6;
-    function _v1ToV6(v1Bytes) {
-      return Uint8Array.of((v1Bytes[6] & 15) << 4 | v1Bytes[7] >> 4 & 15, (v1Bytes[7] & 15) << 4 | (v1Bytes[4] & 240) >> 4, (v1Bytes[4] & 15) << 4 | (v1Bytes[5] & 240) >> 4, (v1Bytes[5] & 15) << 4 | (v1Bytes[0] & 240) >> 4, (v1Bytes[0] & 15) << 4 | (v1Bytes[1] & 240) >> 4, (v1Bytes[1] & 15) << 4 | (v1Bytes[2] & 240) >> 4, 96 | v1Bytes[2] & 15, v1Bytes[3], v1Bytes[8], v1Bytes[9], v1Bytes[10], v1Bytes[11], v1Bytes[12], v1Bytes[13], v1Bytes[14], v1Bytes[15]);
-    }
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/md5.js
-var require_md5 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/md5.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var crypto_1 = require("crypto");
-    function md5(bytes) {
-      if (Array.isArray(bytes)) {
-        bytes = Buffer.from(bytes);
-      } else if (typeof bytes === "string") {
-        bytes = Buffer.from(bytes, "utf8");
-      }
-      return (0, crypto_1.createHash)("md5").update(bytes).digest();
-    }
-    exports2.default = md5;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v35.js
-var require_v35 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v35.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.URL = exports2.DNS = exports2.stringToBytes = void 0;
-    var parse_js_1 = require_parse2();
-    var stringify_js_1 = require_stringify2();
-    function stringToBytes(str2) {
-      str2 = unescape(encodeURIComponent(str2));
-      const bytes = new Uint8Array(str2.length);
-      for (let i = 0; i < str2.length; ++i) {
-        bytes[i] = str2.charCodeAt(i);
-      }
-      return bytes;
-    }
-    exports2.stringToBytes = stringToBytes;
-    exports2.DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
-    exports2.URL = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
-    function v35(version2, hash2, value, namespace, buf, offset) {
-      const valueBytes = typeof value === "string" ? stringToBytes(value) : value;
-      const namespaceBytes = typeof namespace === "string" ? (0, parse_js_1.default)(namespace) : namespace;
-      if (typeof namespace === "string") {
-        namespace = (0, parse_js_1.default)(namespace);
-      }
-      if (namespace?.length !== 16) {
-        throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
-      }
-      let bytes = new Uint8Array(16 + valueBytes.length);
-      bytes.set(namespaceBytes);
-      bytes.set(valueBytes, namespaceBytes.length);
-      bytes = hash2(bytes);
-      bytes[6] = bytes[6] & 15 | version2;
-      bytes[8] = bytes[8] & 63 | 128;
-      if (buf) {
-        offset = offset || 0;
-        if (offset < 0 || offset + 16 > buf.length) {
-          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-        }
-        for (let i = 0; i < 16; ++i) {
-          buf[offset + i] = bytes[i];
-        }
-        return buf;
-      }
-      return (0, stringify_js_1.unsafeStringify)(bytes);
-    }
-    exports2.default = v35;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v3.js
-var require_v3 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v3.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.URL = exports2.DNS = void 0;
-    var md5_js_1 = require_md5();
-    var v35_js_1 = require_v35();
-    var v35_js_2 = require_v35();
-    Object.defineProperty(exports2, "DNS", { enumerable: true, get: function() {
-      return v35_js_2.DNS;
-    } });
-    Object.defineProperty(exports2, "URL", { enumerable: true, get: function() {
-      return v35_js_2.URL;
-    } });
-    function v3(value, namespace, buf, offset) {
-      return (0, v35_js_1.default)(48, md5_js_1.default, value, namespace, buf, offset);
-    }
-    v3.DNS = v35_js_1.DNS;
-    v3.URL = v35_js_1.URL;
-    exports2.default = v3;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/native.js
-var require_native = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/native.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var crypto_1 = require("crypto");
-    exports2.default = { randomUUID: crypto_1.randomUUID };
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v4.js
-var require_v4 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v4.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var native_js_1 = require_native();
-    var rng_js_1 = require_rng();
-    var stringify_js_1 = require_stringify2();
-    function v4(options2, buf, offset) {
-      if (native_js_1.default.randomUUID && !buf && !options2) {
-        return native_js_1.default.randomUUID();
-      }
-      options2 = options2 || {};
-      const rnds = options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)();
-      if (rnds.length < 16) {
-        throw new Error("Random bytes length must be >= 16");
-      }
-      rnds[6] = rnds[6] & 15 | 64;
-      rnds[8] = rnds[8] & 63 | 128;
-      if (buf) {
-        offset = offset || 0;
-        if (offset < 0 || offset + 16 > buf.length) {
-          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-        }
-        for (let i = 0; i < 16; ++i) {
-          buf[offset + i] = rnds[i];
-        }
-        return buf;
-      }
-      return (0, stringify_js_1.unsafeStringify)(rnds);
-    }
-    exports2.default = v4;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/sha1.js
-var require_sha1 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/sha1.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var crypto_1 = require("crypto");
-    function sha1(bytes) {
-      if (Array.isArray(bytes)) {
-        bytes = Buffer.from(bytes);
-      } else if (typeof bytes === "string") {
-        bytes = Buffer.from(bytes, "utf8");
-      }
-      return (0, crypto_1.createHash)("sha1").update(bytes).digest();
-    }
-    exports2.default = sha1;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v5.js
-var require_v5 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v5.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.URL = exports2.DNS = void 0;
-    var sha1_js_1 = require_sha1();
-    var v35_js_1 = require_v35();
-    var v35_js_2 = require_v35();
-    Object.defineProperty(exports2, "DNS", { enumerable: true, get: function() {
-      return v35_js_2.DNS;
-    } });
-    Object.defineProperty(exports2, "URL", { enumerable: true, get: function() {
-      return v35_js_2.URL;
-    } });
-    function v5(value, namespace, buf, offset) {
-      return (0, v35_js_1.default)(80, sha1_js_1.default, value, namespace, buf, offset);
-    }
-    v5.DNS = v35_js_1.DNS;
-    v5.URL = v35_js_1.URL;
-    exports2.default = v5;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6.js
-var require_v6 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var stringify_js_1 = require_stringify2();
-    var v1_js_1 = require_v1();
-    var v1ToV6_js_1 = require_v1ToV6();
-    function v6(options2, buf, offset) {
-      options2 ??= {};
-      offset ??= 0;
-      let bytes = (0, v1_js_1.default)({ ...options2, _v6: true }, new Uint8Array(16));
-      bytes = (0, v1ToV6_js_1.default)(bytes);
-      if (buf) {
-        if (offset < 0 || offset + 16 > buf.length) {
-          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-        }
-        for (let i = 0; i < 16; i++) {
-          buf[offset + i] = bytes[i];
-        }
-        return buf;
-      }
-      return (0, stringify_js_1.unsafeStringify)(bytes);
-    }
-    exports2.default = v6;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6ToV1.js
-var require_v6ToV1 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6ToV1.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var parse_js_1 = require_parse2();
-    var stringify_js_1 = require_stringify2();
-    function v6ToV1(uuid3) {
-      const v6Bytes = typeof uuid3 === "string" ? (0, parse_js_1.default)(uuid3) : uuid3;
-      const v1Bytes = _v6ToV1(v6Bytes);
-      return typeof uuid3 === "string" ? (0, stringify_js_1.unsafeStringify)(v1Bytes) : v1Bytes;
-    }
-    exports2.default = v6ToV1;
-    function _v6ToV1(v6Bytes) {
-      return Uint8Array.of((v6Bytes[3] & 15) << 4 | v6Bytes[4] >> 4 & 15, (v6Bytes[4] & 15) << 4 | (v6Bytes[5] & 240) >> 4, (v6Bytes[5] & 15) << 4 | v6Bytes[6] & 15, v6Bytes[7], (v6Bytes[1] & 15) << 4 | (v6Bytes[2] & 240) >> 4, (v6Bytes[2] & 15) << 4 | (v6Bytes[3] & 240) >> 4, 16 | (v6Bytes[0] & 240) >> 4, (v6Bytes[0] & 15) << 4 | (v6Bytes[1] & 240) >> 4, v6Bytes[8], v6Bytes[9], v6Bytes[10], v6Bytes[11], v6Bytes[12], v6Bytes[13], v6Bytes[14], v6Bytes[15]);
-    }
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v7.js
-var require_v7 = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v7.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.updateV7State = void 0;
-    var rng_js_1 = require_rng();
-    var stringify_js_1 = require_stringify2();
-    var _state = {};
-    function v7(options2, buf, offset) {
-      let bytes;
-      if (options2) {
-        bytes = v7Bytes(options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)(), options2.msecs, options2.seq, buf, offset);
-      } else {
-        const now = Date.now();
-        const rnds = (0, rng_js_1.default)();
-        updateV7State(_state, now, rnds);
-        bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
-      }
-      return buf ?? (0, stringify_js_1.unsafeStringify)(bytes);
-    }
-    function updateV7State(state, now, rnds) {
-      state.msecs ??= -Infinity;
-      state.seq ??= 0;
-      if (now > state.msecs) {
-        state.seq = rnds[6] << 23 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
-        state.msecs = now;
-      } else {
-        state.seq = state.seq + 1 | 0;
-        if (state.seq === 0) {
-          state.msecs++;
-        }
-      }
-      return state;
-    }
-    exports2.updateV7State = updateV7State;
-    function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
-      if (rnds.length < 16) {
-        throw new Error("Random bytes length must be >= 16");
-      }
-      if (!buf) {
-        buf = new Uint8Array(16);
-        offset = 0;
-      } else {
-        if (offset < 0 || offset + 16 > buf.length) {
-          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-        }
-      }
-      msecs ??= Date.now();
-      seq ??= rnds[6] * 127 << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
-      buf[offset++] = msecs / 1099511627776 & 255;
-      buf[offset++] = msecs / 4294967296 & 255;
-      buf[offset++] = msecs / 16777216 & 255;
-      buf[offset++] = msecs / 65536 & 255;
-      buf[offset++] = msecs / 256 & 255;
-      buf[offset++] = msecs & 255;
-      buf[offset++] = 112 | seq >>> 28 & 15;
-      buf[offset++] = seq >>> 20 & 255;
-      buf[offset++] = 128 | seq >>> 14 & 63;
-      buf[offset++] = seq >>> 6 & 255;
-      buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
-      buf[offset++] = rnds[11];
-      buf[offset++] = rnds[12];
-      buf[offset++] = rnds[13];
-      buf[offset++] = rnds[14];
-      buf[offset++] = rnds[15];
-      return buf;
-    }
-    exports2.default = v7;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/version.js
-var require_version = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/version.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    var validate_js_1 = require_validate();
-    function version2(uuid3) {
-      if (!(0, validate_js_1.default)(uuid3)) {
-        throw TypeError("Invalid UUID");
-      }
-      return parseInt(uuid3.slice(14, 15), 16);
-    }
-    exports2.default = version2;
-  }
-});
-
-// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/index.js
-var require_cjs = __commonJS({
-  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/index.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.version = exports2.validate = exports2.v7 = exports2.v6ToV1 = exports2.v6 = exports2.v5 = exports2.v4 = exports2.v3 = exports2.v1ToV6 = exports2.v1 = exports2.stringify = exports2.parse = exports2.NIL = exports2.MAX = void 0;
-    var max_js_1 = require_max();
-    Object.defineProperty(exports2, "MAX", { enumerable: true, get: function() {
-      return max_js_1.default;
-    } });
-    var nil_js_1 = require_nil();
-    Object.defineProperty(exports2, "NIL", { enumerable: true, get: function() {
-      return nil_js_1.default;
-    } });
-    var parse_js_1 = require_parse2();
-    Object.defineProperty(exports2, "parse", { enumerable: true, get: function() {
-      return parse_js_1.default;
-    } });
-    var stringify_js_1 = require_stringify2();
-    Object.defineProperty(exports2, "stringify", { enumerable: true, get: function() {
-      return stringify_js_1.default;
-    } });
-    var v1_js_1 = require_v1();
-    Object.defineProperty(exports2, "v1", { enumerable: true, get: function() {
-      return v1_js_1.default;
-    } });
-    var v1ToV6_js_1 = require_v1ToV6();
-    Object.defineProperty(exports2, "v1ToV6", { enumerable: true, get: function() {
-      return v1ToV6_js_1.default;
-    } });
-    var v3_js_1 = require_v3();
-    Object.defineProperty(exports2, "v3", { enumerable: true, get: function() {
-      return v3_js_1.default;
-    } });
-    var v4_js_1 = require_v4();
-    Object.defineProperty(exports2, "v4", { enumerable: true, get: function() {
-      return v4_js_1.default;
-    } });
-    var v5_js_1 = require_v5();
-    Object.defineProperty(exports2, "v5", { enumerable: true, get: function() {
-      return v5_js_1.default;
-    } });
-    var v6_js_1 = require_v6();
-    Object.defineProperty(exports2, "v6", { enumerable: true, get: function() {
-      return v6_js_1.default;
-    } });
-    var v6ToV1_js_1 = require_v6ToV1();
-    Object.defineProperty(exports2, "v6ToV1", { enumerable: true, get: function() {
-      return v6ToV1_js_1.default;
-    } });
-    var v7_js_1 = require_v7();
-    Object.defineProperty(exports2, "v7", { enumerable: true, get: function() {
-      return v7_js_1.default;
-    } });
-    var validate_js_1 = require_validate();
-    Object.defineProperty(exports2, "validate", { enumerable: true, get: function() {
-      return validate_js_1.default;
-    } });
-    var version_js_1 = require_version();
-    Object.defineProperty(exports2, "version", { enumerable: true, get: function() {
-      return version_js_1.default;
-    } });
-  }
-});
-
-// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
-var require_safe_buffer = __commonJS({
-  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
-    var buffer = require("buffer");
-    var Buffer2 = buffer.Buffer;
-    function copyProps(src, dst) {
-      for (var key in src) {
-        dst[key] = src[key];
-      }
-    }
-    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
-      module2.exports = buffer;
-    } else {
-      copyProps(buffer, exports2);
-      exports2.Buffer = SafeBuffer;
-    }
-    function SafeBuffer(arg, encodingOrOffset, length) {
-      return Buffer2(arg, encodingOrOffset, length);
-    }
-    SafeBuffer.prototype = Object.create(Buffer2.prototype);
-    copyProps(Buffer2, SafeBuffer);
-    SafeBuffer.from = function(arg, encodingOrOffset, length) {
-      if (typeof arg === "number") {
-        throw new TypeError("Argument must not be a number");
-      }
-      return Buffer2(arg, encodingOrOffset, length);
-    };
-    SafeBuffer.alloc = function(size, fill, encoding) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      var buf = Buffer2(size);
-      if (fill !== void 0) {
-        if (typeof encoding === "string") {
-          buf.fill(fill, encoding);
-        } else {
-          buf.fill(fill);
-        }
-      } else {
-        buf.fill(0);
-      }
-      return buf;
-    };
-    SafeBuffer.allocUnsafe = function(size) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      return Buffer2(size);
-    };
-    SafeBuffer.allocUnsafeSlow = function(size) {
-      if (typeof size !== "number") {
-        throw new TypeError("Argument must be a number");
-      }
-      return buffer.SlowBuffer(size);
-    };
-  }
-});
-
-// node_modules/.pnpm/base-x@3.0.11/node_modules/base-x/src/index.js
-var require_src = __commonJS({
-  "node_modules/.pnpm/base-x@3.0.11/node_modules/base-x/src/index.js"(exports2, module2) {
-    "use strict";
-    var _Buffer = require_safe_buffer().Buffer;
-    function base(ALPHABET) {
-      if (ALPHABET.length >= 255) {
-        throw new TypeError("Alphabet too long");
-      }
-      var BASE_MAP = new Uint8Array(256);
-      for (var j = 0; j < BASE_MAP.length; j++) {
-        BASE_MAP[j] = 255;
-      }
-      for (var i = 0; i < ALPHABET.length; i++) {
-        var x = ALPHABET.charAt(i);
-        var xc = x.charCodeAt(0);
-        if (BASE_MAP[xc] !== 255) {
-          throw new TypeError(x + " is ambiguous");
-        }
-        BASE_MAP[xc] = i;
-      }
-      var BASE = ALPHABET.length;
-      var LEADER = ALPHABET.charAt(0);
-      var FACTOR = Math.log(BASE) / Math.log(256);
-      var iFACTOR = Math.log(256) / Math.log(BASE);
-      function encode3(source) {
-        if (Array.isArray(source) || source instanceof Uint8Array) {
-          source = _Buffer.from(source);
-        }
-        if (!_Buffer.isBuffer(source)) {
-          throw new TypeError("Expected Buffer");
-        }
-        if (source.length === 0) {
-          return "";
-        }
-        var zeroes = 0;
-        var length = 0;
-        var pbegin = 0;
-        var pend = source.length;
-        while (pbegin !== pend && source[pbegin] === 0) {
-          pbegin++;
-          zeroes++;
-        }
-        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
-        var b58 = new Uint8Array(size);
-        while (pbegin !== pend) {
-          var carry = source[pbegin];
-          var i2 = 0;
-          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
-            carry += 256 * b58[it1] >>> 0;
-            b58[it1] = carry % BASE >>> 0;
-            carry = carry / BASE >>> 0;
-          }
-          if (carry !== 0) {
-            throw new Error("Non-zero carry");
-          }
-          length = i2;
-          pbegin++;
-        }
-        var it2 = size - length;
-        while (it2 !== size && b58[it2] === 0) {
-          it2++;
-        }
-        var str2 = LEADER.repeat(zeroes);
-        for (; it2 < size; ++it2) {
-          str2 += ALPHABET.charAt(b58[it2]);
-        }
-        return str2;
-      }
-      function decodeUnsafe(source) {
-        if (typeof source !== "string") {
-          throw new TypeError("Expected String");
-        }
-        if (source.length === 0) {
-          return _Buffer.alloc(0);
-        }
-        var psz = 0;
-        var zeroes = 0;
-        var length = 0;
-        while (source[psz] === LEADER) {
-          zeroes++;
-          psz++;
-        }
-        var size = (source.length - psz) * FACTOR + 1 >>> 0;
-        var b256 = new Uint8Array(size);
-        while (psz < source.length) {
-          var charCode = source.charCodeAt(psz);
-          if (charCode > 255) {
-            return;
-          }
-          var carry = BASE_MAP[charCode];
-          if (carry === 255) {
-            return;
-          }
-          var i2 = 0;
-          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
-            carry += BASE * b256[it3] >>> 0;
-            b256[it3] = carry % 256 >>> 0;
-            carry = carry / 256 >>> 0;
-          }
-          if (carry !== 0) {
-            throw new Error("Non-zero carry");
-          }
-          length = i2;
-          psz++;
-        }
-        var it4 = size - length;
-        while (it4 !== size && b256[it4] === 0) {
-          it4++;
-        }
-        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
-        vch.fill(0, 0, zeroes);
-        var j2 = zeroes;
-        while (it4 !== size) {
-          vch[j2++] = b256[it4++];
-        }
-        return vch;
-      }
-      function decode3(string4) {
-        var buffer = decodeUnsafe(string4);
-        if (buffer) {
-          return buffer;
-        }
-        throw new Error("Non-base" + BASE + " character");
-      }
-      return {
-        encode: encode3,
-        decodeUnsafe,
-        decode: decode3
-      };
-    }
-    module2.exports = base;
-  }
-});
-
-// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
-var require_uuid62 = __commonJS({
-  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
-    "use strict";
-    var uuid3 = require_cjs();
-    var uuidv1 = uuid3.v1;
-    var uuidv42 = uuid3.v4;
-    var uuidv5 = uuid3.v5;
-    var baseX = require_src();
-    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    var OUTPUT_LENGTH = 22;
-    var UUID_LENGTH = 32;
-    var Buffer2 = global ? global.Buffer : void 0;
-    if (typeof Buffer2 === "undefined") {
-      Buffer2 = require("buffer").Buffer;
-    }
-    var UUID62 = class {
-      constructor() {
-        this.base = base62;
-        this.uuid = uuid3;
-        this.baseX = baseX;
-        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
-        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
-      }
-      get customBase() {
-        return this.base;
-      }
-      set customBase(base) {
-        this.base = base;
-      }
-      get length() {
-        return OUTPUT_LENGTH;
-      }
-      get uuidLength() {
-        return UUID_LENGTH;
-      }
-      v4() {
-        const args = Array.prototype.slice.call(arguments);
-        if (!args[1]) {
-          args[1] = new Buffer2(16);
-        }
-        const id = uuidv42.apply(this, args);
-        return this.encode(id);
-      }
-      v5() {
-        const args = Array.prototype.slice.call(arguments);
-        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
-          args[1] = this.decode(args[1]);
-        }
-        const id = uuidv5.apply(this, args);
-        return this.encode(id);
-      }
-      v1() {
-        const args = Array.prototype.slice.call(arguments);
-        if (!args[1]) {
-          args[1] = new Buffer2(16);
-        }
-        const id = uuidv1.apply(this, args);
-        return this.encode(id);
-      }
-      encode(input2, encoding) {
-        encoding = encoding || "hex";
-        if (typeof input2 === "string") {
-          input2 = new Buffer2(input2.replace(/-/g, ""), encoding);
-        }
-        return ensureLength(this.base.encode(input2), OUTPUT_LENGTH);
-      }
-      decode(input2, encoding) {
-        encoding = encoding || "hex";
-        const res = ensureLength(
-          new Buffer2(this.base.decode(input2)).toString(encoding),
-          UUID_LENGTH
-        );
-        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
-      }
-    };
-    function ensureLength(input2, targetLength) {
-      input2 = input2.toString();
-      return `${"0".repeat(32)}${input2}`.slice(-targetLength);
-    }
-    module2.exports = new UUID62();
+    module2.exports = matter4;
   }
 });
 
@@ -27234,21 +26368,6 @@ var legacyAliases = /* @__PURE__ */ new Map();
 for (const entry of Object.values(legacyDocTypes)) {
   for (const alias of [entry.type, ...entry.aliases]) legacyAliases.set(alias, entry.type);
 }
-function configFor(type) {
-  const entry = registry2[type];
-  if (entry?.persistence === "durable") return entry;
-  if (entry?.persistence === "ephemeral") {
-    throw new Error(
-      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
-    );
-  }
-  if (legacyAliases.has(type)) {
-    throw new Error(
-      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
-    );
-  }
-  throw new Error(`Unknown document type: ${type}`);
-}
 function executionBoundTypeNames() {
   return [
     ...executionTypes,
@@ -27271,6 +26390,14 @@ var LEGACY_CANONICAL_DIRS = Object.freeze([
 var CANONICAL_DOC_DIRS = Object.freeze(
   [...DURABLE_DOC_DIRS, ...LEGACY_CANONICAL_DIRS]
 );
+function managedDocDirs() {
+  const dirs = new Set(CANONICAL_DOC_DIRS);
+  for (const type of docTypes) {
+    for (const dir of configs[type].dirs) dirs.add(dir);
+  }
+  for (const dir of LEGACY_DOC_DIRS) dirs.add(dir);
+  return [...dirs].sort();
+}
 function knowledgeRelationFields() {
   const fields = /* @__PURE__ */ new Set();
   for (const type of docTypes) {
@@ -27285,9 +26412,6 @@ var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
   "changes",
   "test-spec-skip"
 ]);
-function normalizeDir(input2) {
-  return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
-}
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -28887,226 +28011,7 @@ function stableRouteHash(route) {
 // src/skills/lib/schema_preflight.ts
 var import_node_fs8 = __toESM(require("node:fs"));
 var import_node_path7 = __toESM(require("node:path"));
-var import_gray_matter4 = __toESM(require_gray_matter());
-
-// src/skills/lib/doc_suite_utils.ts
 var import_gray_matter3 = __toESM(require_gray_matter());
-
-// src/skills/lib/artifact_id.ts
-var import_uuid62 = __toESM(require_uuid62());
-
-// src/skills/lib/doc_lifecycle.ts
-var SETTLED_STATUSES = {
-  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
-  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
-  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
-};
-var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
-  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
-);
-
-// src/skills/lib/doc_ownership.ts
-var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
-var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
-var PROMOTE_INDEX_MUTATOR = "promote_index";
-function buildContracts() {
-  const rows = /* @__PURE__ */ new Map();
-  const rowFor = (dir, owner, indexFormat, indexTitle) => {
-    const normalized = normalizeDir(dir);
-    let row = rows.get(normalized);
-    if (!row) {
-      row = {
-        dir: normalized,
-        canonical: false,
-        owner,
-        residents: [],
-        indexFormat,
-        indexTitle,
-        mutators: /* @__PURE__ */ new Set(),
-        auditors: /* @__PURE__ */ new Set()
-      };
-      rows.set(normalized, row);
-    }
-    return row;
-  };
-  for (const type of docTypes) {
-    const config2 = configFor(type);
-    for (const dir of config2.dirs) {
-      const canonical = normalizeDir(dir) === normalizeDir(config2.dir);
-      const row = rowFor(dir, config2.owner, config2.indexFormat, canonical ? config2.indexTitle : void 0);
-      row.canonical = row.canonical || canonical;
-      if (!row.residents.includes(type)) row.residents.push(type);
-      if (canonical && config2.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
-      if (config2.creator) row.mutators.add(config2.creator);
-      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
-      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
-      for (const mutator of config2.mutators) row.mutators.add(mutator);
-      for (const auditor of config2.auditors) row.auditors.add(auditor);
-    }
-  }
-  for (const type of executionTypes) {
-    const entry = ephemeralConfigs[type];
-    for (const dir of entry.formerDirs) {
-      const row = rowFor(dir, entry.owner, entry.indexFormat);
-      row.canonical = row.canonical || dir === entry.formerDirs[0];
-      if (!row.residents.includes(type)) row.residents.push(type);
-      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
-      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
-      for (const mutator of entry.mutators) row.mutators.add(mutator);
-      for (const auditor of entry.auditors) row.auditors.add(auditor);
-    }
-  }
-  for (const entry of Object.values(legacyDocTypes)) {
-    for (const dir of entry.scopeDirs) {
-      const row = rowFor(dir, entry.owner, "none");
-      row.canonical = true;
-    }
-    for (const dir of entry.formerDirs) {
-      const canonical = dir === entry.formerDirs[0];
-      const row = rowFor(dir, entry.owner, entry.indexFormat, canonical ? entry.indexTitle : void 0);
-      row.canonical = row.canonical || canonical;
-      if (!row.residents.includes(entry.type)) row.residents.push(entry.type);
-      if (canonical && entry.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
-      for (const mutator of entry.mutators) row.mutators.add(mutator);
-      for (const auditor of entry.auditors) row.auditors.add(auditor);
-    }
-  }
-  return [...rows.values()].map((row) => ({
-    dir: row.dir,
-    canonical: row.canonical,
-    owner: row.owner,
-    residentTypes: row.residents,
-    indexFormat: row.indexFormat,
-    indexTitle: row.indexTitle,
-    mutators: [...row.mutators].sort(),
-    auditors: [...row.auditors].sort()
-  })).sort((a, b) => a.dir.localeCompare(b.dir));
-}
-var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
-
-// src/skills/lib/doc_suite_utils.ts
-var relationFields = [
-  "source",
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-  "superseded-by",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by"
-];
-var changeFields = [
-  "added",
-  "modified",
-  "deleted",
-  "renamed",
-  "moved",
-  "generated"
-];
-var scaffoldTargets = (() => {
-  const byDir = /* @__PURE__ */ new Map();
-  for (const type of docTypes) {
-    const config2 = configFor(type);
-    const existing = byDir.get(config2.dir);
-    const target = {
-      dir: config2.dir,
-      title: config2.scaffoldIndexTitle ?? `${config2.idPrefix} Documents`,
-      type
-    };
-    if (!existing || config2.indexPrimary) byDir.set(config2.dir, target);
-  }
-  return [...byDir.values()];
-})();
-var changeEntrySchema = external_exports.object({
-  type: external_exports.string().min(1)
-}).passthrough();
-var changesSchema = external_exports.object(Object.fromEntries(
-  changeFields.map((field) => [field, external_exports.array(changeEntrySchema).default([])])
-)).prefault({});
-var relationSchema = external_exports.object({
-  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
-  changes: changesSchema,
-  // A non-empty reason string, not a relation target (Issue #165).
-  "test-spec-skip": external_exports.string().min(1).optional()
-}).prefault({});
-var frontMatterSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  type: external_exports.enum(docTypes),
-  status: external_exports.string().min(1),
-  // `lifecycle` stays optional at the schema boundary so pre-Registry-3
-  // documents still parse — lint flags the missing field as
-  // `missing-lifecycle`; a populated non-axis value is invalid here
-  // (unknown lifecycle is never coerced to `current`).
-  lifecycle: external_exports.enum(LIFECYCLE_VALUES).optional(),
-  title: external_exports.string().min(1),
-  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  owners: external_exports.array(external_exports.string()),
-  relations: relationSchema
-}).passthrough();
-
-// src/skills/lib/doc_repository.ts
-var REQUIRED_FRONT_MATTER_FIELDS = [
-  "id",
-  "type",
-  "status",
-  "lifecycle",
-  "title",
-  "created",
-  "updated",
-  "owners",
-  "relations"
-];
-function contractForDocType(entry) {
-  return {
-    type: entry.type,
-    persistence: entry.persistence,
-    idPrefix: entry.idPrefix,
-    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
-    idExceptions: [...entry.idExceptions],
-    canonicalDir: entry.dir ?? "",
-    dirs: [...entry.dirs],
-    defaultStatus: entry.defaultStatus,
-    statusValues: [...entry.statusValues],
-    lifecycleValues: [...entry.lifecycleValues],
-    defaultLifecycle: entry.defaultLifecycle,
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
-    fieldVocabularies: Object.fromEntries(
-      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
-    ),
-    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
-    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
-    reservedFiles: [...entry.reservedFiles],
-    allowsRootArtifact: entry.allowsRootArtifact,
-    requiresSourceEvidence: entry.requiresSourceEvidence,
-    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
-    allowedRelations: Object.fromEntries(
-      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
-    )
-  };
-}
-var contracts = Object.fromEntries(
-  docTypes.map((type) => [type, contractForDocType(configFor(type))])
-);
-function documentContracts() {
-  return contracts;
-}
-
-// src/skills/lib/schema_preflight.ts
 var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
 var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
 var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
@@ -29137,13 +28042,7 @@ function isPlainObject3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function managedRootAliases() {
-  const dirs = /* @__PURE__ */ new Set();
-  for (const contract of Object.values(documentContracts())) {
-    for (const dir of [...contract.dirs, contract.canonicalDir]) {
-      if (!dir.startsWith("docs/")) dirs.add(dir);
-    }
-  }
-  return [...dirs].sort();
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit2, onEscape) {
   const absRoot = import_node_path7.default.resolve(cwd, relRoot);
@@ -29232,7 +28131,7 @@ function scanDocuments(cwd) {
     let data = {};
     let parsed = true;
     try {
-      const result = (0, import_gray_matter4.default)(raw, {});
+      const result = (0, import_gray_matter3.default)(raw, {});
       data = isPlainObject3(result.data) ? result.data : {};
     } catch {
       parsed = false;
@@ -29751,9 +28650,6 @@ strip-bom-string/index.js:
    * Copyright (c) 2015, 2017, Jon Schlinkert.
    * Released under the MIT License.
    *)
-
-safe-buffer/index.js:
-  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 5.5.0 https://github.com/nodeca/js-yaml @license MIT *)

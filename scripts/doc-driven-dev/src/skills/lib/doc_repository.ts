@@ -6,7 +6,7 @@ import path from "node:path";
 import { configFor, docTypes, parseDoc, relationFields } from "./doc_suite_utils";
 import { isSettledEntry, lifecycleBucketForType, SETTLED_STATUSES } from "./doc_lifecycle";
 import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, nonReferenceRelationKeys, normalizeDir } from "./document_utils";
-import { ephemeralConfigs, executionTypes, legacyDocTypes } from "./doc_types";
+import { ephemeralConfigs, executionTypes, legacyDocTypes, managedDocDirs } from "./doc_types";
 import type { DocRegistryEntry, RequiredRelation, UpstreamExpectation } from "./doc_types";
 
 // ---------------------------------------------------------------------------
@@ -598,7 +598,12 @@ function localeSiblingsFor(repoPath: string, siblingsByDir: Map<string, Set<stri
 function defaultScanRoots(cwd: string): string[] {
   const roots = new Set<string>();
   if (fs.existsSync(path.join(cwd, "docs"))) roots.add("docs");
-  for (const dir of canonicalDocRoots()) {
+  // Every managed dir spelling — the registry's full dir vocabulary
+  // (durable canonical dirs and aliases plus the former dirs of
+  // execution-bound and legacy types), not just durable contract dirs:
+  // root-level Git-era homes such as `plans/`, `tasks/`, and `test-specs/`
+  // still hold content the scan must classify as `legacy` (Issue #234).
+  for (const dir of managedDocDirs()) {
     if (fs.existsSync(path.join(cwd, dir))) roots.add(dir);
   }
   return [...roots].sort(compareStrings);

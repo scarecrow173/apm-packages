@@ -64,6 +64,24 @@ test("audit_docs reports duplicate artifact ids with a stable rule id", () => {
   assert.equal(duplicates[0].severity, "error");
 });
 
+test("audit_docs reports a populated wrong-typed lifecycle as invalid-lifecycle", () => {
+  // `lifecycle: 5` is populated but off-axis-typed: it must surface as
+  // `invalid-lifecycle`, not collapse into `missing-lifecycle`'s
+  // absent-field migration debt (Issue #234).
+  const repo = tempRepo();
+  const dir = path.join(repo, "docs/specs");
+  writeDoc(dir, "0001-a.md", specFrontMatter({ lifecycle: 5 }));
+  writeDoc(dir, "0002-b.md", specFrontMatter({ title: "Clean" }));
+
+  const report = auditJson(repo, "spec");
+  const invalid = report.findings.filter((finding: any) => finding.code === "invalid-lifecycle");
+  assert.equal(invalid.length, 1);
+  assert.equal(invalid[0].file, "0001-a.md");
+  assert.equal(invalid[0].severity, "error");
+  assert.ok(invalid[0].message.includes("5"));
+  assert.equal(report.findings.some((finding: any) => finding.code === "missing-lifecycle"), false);
+});
+
 test("audit_docs flags id format and prefix violations", () => {
   const repo = tempRepo();
   const dir = path.join(repo, "docs/specs");

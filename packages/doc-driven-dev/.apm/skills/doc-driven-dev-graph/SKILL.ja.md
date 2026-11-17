@@ -80,12 +80,17 @@ delegate は briefing / planning / implementation subgraph と証跡を担当し
 caller は返された audit を先に実行し、返された delegate だけを dispatch します。
 `focus-required` blocker は明示的 focus が渡されるまで hard stop です。
 
-Document Registry 3 でも上記の audit は `plan`、`task`、`test-spec` の
-artifact を読み続けます。`plan`/`task` は execution-bound レコードで状態は
-Execution Store に保持され（creator は durable な Git 書き込みを拒否）、
-`test-spec` は migration tooling が読み取るレガシーの migration-only 形式
-です。durable な graph artifact は `idea`、`brainstorm`、`discovery`、
-`spec`、`design`、`adr`、`knowledge`、`verification` です。
+Document Registry 3 では、上記の `plan`、`task`、`test-spec` audit 名は
+読み取る scope ではなく*拒否される* scope です。`plan`/`task` は
+execution-bound（状態は Execution Store にあり、creator は durable な
+Git 書き込みを拒否）であり、`test-spec` は migration 専用のレガシー
+形式のため、`audit_docs.js --type <name>` は registry ゲートで失敗
+します。これらの名前が残る `audits:` リスト（`task-graph`、
+`followup-triage`）は Registry 2 定義の名残であり、Graph Definition
+v3 の rewire（#243）まで superseded とします。現在 `plan`/`task`/
+`test-spec` audit を dispatch しても拒否に解決されます。durable な
+graph artifact は `idea`、`brainstorm`、`discovery`、`spec`、`design`、
+`adr`、`knowledge`、`verification` です。
 
 ## Graph runtime の 10 ステップ
 

@@ -84,12 +84,17 @@ Delegates own their briefing, planning, and implementation subgraphs. The
 caller runs returned audits before dispatching exactly the returned delegate.
 `focus-required` is a hard stop until explicit focus is supplied.
 
-Under Document Registry 3 the audits named above still read `plan`, `task`,
-and `test-spec` artifacts: `plan`/`task` are execution-bound records whose
-state lives in the Execution Store (their creators refuse durable Git
-writes), and `test-spec` is a legacy migration-only format read by
-migration tooling. Durable graph artifacts are `idea`, `brainstorm`,
-`discovery`, `spec`, `design`, `adr`, `knowledge`, and `verification`.
+Under Document Registry 3 the `plan`, `task`, and `test-spec` audit names
+above are *refused* scopes, not readers: `audit_docs.js --type <name>`
+fails at the registry gate because `plan`/`task` are execution-bound
+(their state lives in the Execution Store, their creators refuse durable
+Git writes) and `test-spec` is a legacy migration-only format. The
+`audits:` lists those names appear in (`task-graph`, `followup-triage`)
+still carry them from the Registry 2 definition — they are superseded
+pending the Graph Definition v3 rewire (#243), so a dispatched
+`plan`/`task`/`test-spec` audit resolves to a refusal today. Durable
+graph artifacts are `idea`, `brainstorm`, `discovery`, `spec`, `design`,
+`adr`, `knowledge`, and `verification`.
 
 ## Runtime loop
 

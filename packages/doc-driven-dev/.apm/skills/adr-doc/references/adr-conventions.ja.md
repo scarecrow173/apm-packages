@@ -123,9 +123,10 @@ consulted は双方向の入力、informed は一方向の通知です。
 `status` はワークフロー状態に集中させ、ライフサイクルは `lifecycle` に
 記録します（置き換え時は `superseded`）。Knowledge Relations v1 では
 置き換える側の ADR が `relations.supersedes` を source→target で記録し、
-置き換えられた側は逆リンクを保存しません。`superseded-by` など下表の
-その他の宣言キーはレガシー語彙で、マイグレーションは読み取りますが
-通常実行では書き込みません。
+置き換えられた側は規約上逆リンクを保存しません。`superseded-by` など
+下表のその他の宣言キーはレガシー語彙で、マイグレーションは v3 以前の
+コーパスから読み取ります。ただし `relate_adr` は #235 で語彙が絞り
+込まれるまで宣言済みペアの双方向を書き込みます。
 
 ## Relations 拡張
 
@@ -139,8 +140,9 @@ relation field は他の document skill と共通です。リンク先の文書�
 Knowledge Relations v1 では ADR は `relations.decides-for`（→ spec または
 design）と `relations.supersedes`（→ 古い ADR）を source→target に記録し、
 出典には `relations.source` を使います。下表のその他のキーはすべて
-レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取りますが
-通常実行では書き込みません。
+レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取り
+ますが、`relate_adr` は #235 で格納語彙が絞り込まれるまでこれらを
+書き込めます。
 
 | Field | Meaning |
 | --- | --- |

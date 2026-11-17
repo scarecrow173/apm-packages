@@ -151,12 +151,14 @@ Relations v1 a durable document stores these source→target relations:
 - `realizes` links a design to the spec it realizes.
 - `supersedes` links a document to the same-type document it replaces.
 
-Inverse views (`superseded-by`, `implemented-by`, …) are derived — they are
-never stored. Other declared relation keys such as `implements`,
-`derives-from`, `references`, `verifies`, and `defers` are legacy vocabulary
-that migration tooling reads in pre-v3 corpora but normal execution does not
-write. (`relations.changes` and `relations.test-spec-skip` are metadata
-payloads, not links.)
+Inverse views (`superseded-by`, `implemented-by`, …) are normally derived,
+not stored — `relate_adr` still writes both directions of a declared pair
+until its vocabulary narrows under #235. Other declared relation keys such
+as `implements`, `derives-from`, `references`, `verifies`, and `defers` are
+legacy vocabulary that migration tooling reads in pre-v3 corpora; creators
+emit them only as empty placeholders, and `relate_adr`/`new_design --from`
+can still populate them pending the same narrowing. (`relations.changes`
+and `relations.test-spec-skip` are metadata payloads, not links.)
 
 Do not infer ownership from file names or directory proximity. Use canonical
 IDs and relations so focus resolution can fail closed when facts conflict.

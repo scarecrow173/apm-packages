@@ -118,6 +118,37 @@ test("preflight: raw fm-less markdown in doc dirs stays uninitialized", () => {
   assert.equal(plan.preflight.detected.unmanagedDocs, 2);
 });
 
+test("preflight: root-level former dirs are still scanned for markers", () => {
+  // Registry 2 root-level spellings (plans/, tasks/, test-specs/, …) were
+  // managed scan roots. When the contract set went durable-only they
+  // dropped out — a repo whose only content was `plans/old-plan.md` read
+  // as generation "empty" with zero markers instead of surfacing the
+  // legacy evidence (Issue #234 regression).
+  const repo = tempRepo();
+  writeDoc(repo, "plans/old-plan.md", { id: "PLAN-0001", type: "plan", status: "approved", title: "P" });
+  const report = evaluateSchemaPreflight(repo);
+  // Same undeclared-repo contract as docs/plans content: no refusal without
+  // a manifest, but the marker must surface — never an invisible read.
+  assert.equal(report.status, "uninitialized");
+  assert.equal(report.detected.executionDocs, 1);
+  assert.equal(report.detected.generation, "legacy");
+  assert.equal(report.detected.legacyMarkers, 1);
+  assert.ok(report.detected.manifestMarkers.some(
+    (issue) => issue.reason === "legacy-execution-doc" && issue.path === "plans/old-plan.md",
+  ));
+});
+
+test("preflight: root-level former-dir doc under a declared manifest is migration-required", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "plans/old-plan.md", { id: "PLAN-0001", type: "plan", status: "approved", title: "P" });
+  writeManifest(repo);
+  const report = evaluateSchemaPreflight(repo);
+  assert.equal(report.status, "migration-required");
+  assert.ok(report.issues.some(
+    (issue) => issue.reason === "legacy-execution-doc" && issue.path === "plans/old-plan.md",
+  ));
+});
+
 test("preflight: foreign file inside docs/.doc-driven-dev is migration-required", () => {
   const repo = tempRepo();
   writeFile(repo, "docs/.doc-driven-dev/graph-state.json", "{}");

@@ -95,6 +95,28 @@ test("scanRepository projects a healthy fixture deterministically", async () => 
   assert.deepEqual(first.indexes.map((doc) => doc.path), ["docs/specs/README.md"]);
 });
 
+test("scanRepository walks root-level former dirs and classifies their docs as legacy", async () => {
+  // Registry 2 root-level spellings (plans/, tasks/, test-specs/, …) were
+  // scanned roots. When the contract set went durable-only the default
+  // roots dropped them — a repo whose only content was `plans/old-plan.md`
+  // scanned as files: [] (Issue #234 regression).
+  const repo = tempRepo();
+  writeDoc(repo, "plans/old-plan.md", canonicalFrontMatter({
+    id: "PLAN-0001",
+    type: "plan",
+    title: "Old plan",
+  }));
+
+  const model = await scanRepository({ cwd: repo });
+
+  const plan = model.byPath.get("plans/old-plan.md");
+  assert.ok(plan);
+  assert.equal(plan.kind, "legacy");
+  assert.equal(plan.type, "plan");
+  assert.deepEqual(model.legacyDocuments.map((doc) => doc.path), ["plans/old-plan.md"]);
+  assert.equal(model.lookupById("PLAN-0001").status, "unique");
+});
+
 test("scanner separates canonical documents, indexes, and unmanaged markdown", async () => {
   const repo = healthyRepo();
   fs.writeFileSync(path.join(repo, "NOTES.md"), "# Notes\n", "utf8");

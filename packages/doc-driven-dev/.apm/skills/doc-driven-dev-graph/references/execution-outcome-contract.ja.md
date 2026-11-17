@@ -154,6 +154,11 @@ generated JavaScript を変更せず、次の declared effect を同じ `EffectO
 | `spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, `all` | named audit 用の caller adapter |
 | `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `doc-status` | 呼び出された skill |
 
+この行の `plan`、`task`、`test-spec` audit effect は宣言上の名前のみです。
+Document Registry 3 ではこれらの scope は registry ゲートで拒否されるため
+（後述の canonical input セクション参照）、#243 で graph definition が
+rewire されるまで adapter が completed outcome を正規化することはありません。
+
 adapter は `completed` または `retry` を返す前に effect 固有の canonical input と evidence を
 記録します。adapter evidence が missing または malformed なら
 `authority-required` で fail closed し、checkpoint や completion receipt を作成しません。
@@ -161,11 +166,16 @@ adapter は `completed` または `retry` を返す前に effect 固有の canon
 ## effect 固有の canonical input
 
 receipt scope は generic な Task Graph fallback ではなく effect を使います。standard document
-graph では、`spec`、`adr`、`design`、`plan` audit は対応する canonical document を読み、`task`
-は選択された Task Graph task document、`test-spec` は対応する test specification document、
+graph では、`spec`、`adr`、`design` audit は対応する canonical document を読み、
 `impl-record` はその Implementation Record、`experiment-log` は `docs/impl/exp` の
 Experiment Log（`.jsonl`）、`all` は
-declared canonical document set を読みます。graph から dispatch される文書型 audit は
+declared canonical document set を読みます。graph の `audits` リストに残る
+`plan`、`task`、`test-spec` の名前は Document Registry 3 では拒否される
+scope であり（`plan`/`task` は execution-bound、`test-spec` は
+migration 専用レガシー形式のため `audit_docs.js --type <name>` は
+registry ゲートで失敗します）、canonical input を持ちません。宣言済みの
+リストは Graph Definition v3 の rewire（#243）まで superseded とします。
+graph から dispatch される文書型 audit は
 `audit_docs.js --type <name> --profile artifact`、`all` は
 `audit_docs.js --type all --profile artifact` として実行され、`impl-record` は
 `impl-doc/scripts/audit_impl_record.js`、`experiment-log` は

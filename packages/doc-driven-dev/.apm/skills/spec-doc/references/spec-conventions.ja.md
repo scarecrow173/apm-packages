@@ -113,7 +113,9 @@ relations:
 `lifecycle` に記録します（置き換え時は `superseded`）。Knowledge Relations
 v1 では置き換え側が `relations.supersedes` のみを source→target に記録
 します。`superseded-by` などその他の宣言キーはレガシー語彙で、マイグレー
-ションは読み取りますが通常実行では書き込みません。
+ションは v3 以前のコーパスから読み取ります。creator は空のプレース
+ホルダーとしてのみ出力しますが、`relate_adr` と `new_design --from` は
+#235 で格納語彙が絞り込まれるまでこれらを設定できます。
 
 ## Relations
 

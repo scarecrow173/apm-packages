@@ -111,8 +111,9 @@ Discovery documents are not approved or implemented. Set `resolved` only
 after all promotion candidates are addressed. Under Knowledge Relations v1
 the discovery stores `relations.motivates` (→ spec) or `relations.informs`
 (→ durable targets) source→target; `derived-by` and other declared keys are
-legacy vocabulary that migration tooling reads but normal execution does
-not write.
+legacy vocabulary that migration tooling reads in pre-v3 corpora — creators
+emit them only as empty placeholders, and `relate_adr`/`new_design --from`
+can still populate them until the stored vocabulary narrows under #235.
 
 ## Relations
 

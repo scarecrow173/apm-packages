@@ -69,10 +69,13 @@ Registry 3 は上記の行を 3 つの persistence クラスに分ける:
 
 - `doc-suite`: `new_idea`、`new_discovery`、`new_spec`、`new_design`、
   `new_knowledge`、`new_verification`、`doc_maintenance`、
-  `scaffold_docs`、`migrate_docs`、`migrate_ids`。`new_plan`、
-  `new_task`、`new_test_spec` は former ディレクトリ上で宣言済みの
-  ままだが、registry ゲートで拒否される。execution-bound または
-  migration-only の型に durable な作成経路はない。
+  `scaffold_docs`、`migrate_docs`、`migrate_ids`。廃止された
+  creator のうち宣言が残るのは `new_test_spec` のみ(レガシー
+  test-spec ディレクトリ上)で、registry ゲートで拒否される。
+  `new_plan` と `new_task` のスクリプトも残置され同様に拒否するが、
+  execution-bound または migration-only の型に durable な作成経路は
+  ないため、registry はこれらの mutator を宣言していない
+  (`mutators: []`)。
 - `adr-doc`: `new_adr`、`update_index`、`relate_adr`、`promote_index`、
   `doc_maintenance`、`scaffold_docs`、`migrate_docs`、`migrate_ids`
 - `impl-doc`: `migrate_ids`、`promote_index`。`new_impl_record`、

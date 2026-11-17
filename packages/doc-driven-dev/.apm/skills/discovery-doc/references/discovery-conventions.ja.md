@@ -108,8 +108,10 @@ discovery 文書は「承認」または「実装」されません。`resolved`
 昇華候補を全て対処した後にしてください。Knowledge Relations v1 では
 discovery は `relations.motivates`（→ spec）または `relations.informs`
 （→ durable な対象）を source→target に記録します。`derived-by` などその他の
-宣言キーはレガシー語彙で、マイグレーションは読み取りますが通常実行では
-書き込みません。
+宣言キーはレガシー語彙で、マイグレーションは v3 以前のコーパスから読み
+取ります。creator は空のプレースホルダーとしてのみ出力しますが、
+`relate_adr` と `new_design --from` は #235 で格納語彙が絞り込まれるまで
+これらを設定できます。
 
 ## Relations
 

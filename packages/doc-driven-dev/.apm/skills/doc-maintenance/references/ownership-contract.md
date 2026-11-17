@@ -68,10 +68,13 @@ Registry 3 splits the rows above into three persistence classes:
 
 - `doc-suite`: `new_idea`, `new_discovery`, `new_spec`, `new_design`,
   `new_knowledge`, `new_verification`, `doc_maintenance`,
-  `scaffold_docs`, `migrate_docs`, `migrate_ids`. `new_plan`,
-  `new_task`, and `new_test_spec` remain declared on their former dirs
-  but refuse at the registry gate — execution-bound or migration-only
-  types have no durable creation path.
+  `scaffold_docs`, `migrate_docs`, `migrate_ids`. Of the retired
+  creators, only `new_test_spec` remains declared — on the legacy
+  test-spec dirs — and it refuses at the registry gate; the `new_plan`
+  and `new_task` scripts still exist and refuse the same way, but the
+  registry declares no mutator for them (`mutators: []`) since
+  execution-bound or migration-only types have no durable creation
+  path.
 - `adr-doc`: `new_adr`, `update_index`, `relate_adr`, `promote_index`,
   `doc_maintenance`, `scaffold_docs`, `migrate_docs`, `migrate_ids`
 - `impl-doc`: `migrate_ids`, `promote_index`. `new_impl_record`,

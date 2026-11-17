@@ -689,11 +689,6 @@ function executionBoundTypeNames(): string[] {
   ];
 }
 
-function statusValuesFor(name: string): readonly string[] {
-  const resolved = resolveDocType(name);
-  return resolved.entry?.statusValues ?? [];
-}
-
 function settledStatusesFor(name: string): readonly string[] {
   const resolved = resolveDocType(name);
   return resolved.entry?.settledStatuses ?? [];
@@ -815,7 +810,6 @@ export {
   isDurableType,
   knowledgeRelationFields,
   legacyDocTypes,
-  LEGACY_DOC_DIRS,
   LIFECYCLE_VALUES,
   managedDocDirs,
   PERSISTENCE_VALUES,
@@ -823,7 +817,6 @@ export {
   registry,
   resolveDocType,
   settledStatusesFor,
-  statusValuesFor,
 };
 
 export type {

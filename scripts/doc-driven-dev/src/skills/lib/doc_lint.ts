@@ -184,10 +184,16 @@ function lintFrontMatter(document: RepositoryDocument, scopeType: string): Findi
     }));
   }
   // The lifecycle axis is its own contract — never read off `status`.
-  // Absent is migration debt (`missing-lifecycle`, repairable by the docs
-  // migration); a populated non-axis value is `invalid-lifecycle` and is
-  // never coerced to `current` (Issue #234).
-  if (document.lifecycle === null) {
+  // Absent (or blank) is migration debt (`missing-lifecycle`, repairable
+  // by the docs migration); a populated value — off-axis string *or*
+  // wrong-typed (`lifecycle: 5`) — is `invalid-lifecycle` and is never
+  // coerced to `current` (Issue #234). The repository model only exposes
+  // string values, so the populated check reads the raw front matter.
+  const rawLifecycle = document.frontMatter.lifecycle;
+  const lifecyclePopulated = rawLifecycle !== undefined
+    && rawLifecycle !== null
+    && !(typeof rawLifecycle === "string" && rawLifecycle.trim() === "");
+  if (!lifecyclePopulated) {
     findings.push(finding({
       ruleId: "missing-lifecycle",
       category: "front-matter",
@@ -199,15 +205,16 @@ function lintFrontMatter(document: RepositoryDocument, scopeType: string): Findi
       target: "lifecycle",
       repair: "migration",
     }));
-  } else if (contract && !contract.lifecycleValues.includes(document.lifecycle)) {
+  } else if (document.lifecycle === null || (contract && !contract.lifecycleValues.includes(document.lifecycle))) {
+    const shown = typeof rawLifecycle === "string" ? rawLifecycle : JSON.stringify(rawLifecycle);
     findings.push(finding({
       ruleId: "invalid-lifecycle",
       category: "front-matter",
       severity: "error",
       path: document.path,
       artifactId: document.id,
-      message: `Invalid ${scopeType} lifecycle: ${document.lifecycle} (expected one of: ${contract.lifecycleValues.join(", ")})`,
-      target: document.lifecycle,
+      message: `Invalid ${scopeType} lifecycle: ${shown} (expected one of: ${(contract?.lifecycleValues ?? []).join(", ") || "draft, current, superseded, retired"})`,
+      target: document.lifecycle ?? "lifecycle",
       repair: "manual",
     }));
   }

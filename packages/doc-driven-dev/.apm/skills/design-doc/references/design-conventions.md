@@ -137,7 +137,9 @@ Under Knowledge Relations v1 a design stores these source→target relations:
 
 `derives-from`, `related`, `references`, `defers`, `deferred-by`, and the
 other declared keys are legacy vocabulary: migration tooling reads them in
-pre-v3 corpora but normal execution does not write them.
+pre-v3 corpora; creators emit them only as empty placeholders, though
+`new_design --from` still populates `derives-from` and `relate_adr` can
+populate them on ADRs until the stored vocabulary narrows under #235.
 
 ## Index
 

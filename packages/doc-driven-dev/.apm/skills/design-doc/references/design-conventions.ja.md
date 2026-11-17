@@ -135,7 +135,9 @@ Knowledge Relations v1 では design は次の source→target relation を記�
 
 `derives-from`、`related`、`references`、`defers`、`deferred-by` など
 その他の宣言キーはレガシー語彙で、マイグレーションは v3 以前のコーパス
-から読み取りますが通常実行では書き込みません。
+から読み取ります。creator は空のプレースホルダーとしてのみ出力しますが、
+`new_design --from` は `derives-from` を、`relate_adr` は ADR 上のこれらの
+キーを #235 で格納語彙が絞り込まれるまで設定できます。
 
 ## 索引
 
