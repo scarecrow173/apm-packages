@@ -60,20 +60,15 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  decides-for: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
 metadata:
   adr:
     decision-makers: []
@@ -122,70 +117,52 @@ index tiers. Use these statuses:
 Keep `status` focused on workflow state; record `lifecycle` separately
 (`superseded` when the ADR is replaced). Under Knowledge Relations v1 the
 *replacing* ADR stores `relations.supersedes` source→target at the ADR it
-replaces; the replaced ADR does not store an inverse by convention —
-`superseded-by` and the other declared keys below are legacy vocabulary
-that migration tooling reads in pre-v3 corpora, though `relate_adr` still
-writes both directions of a declared pair until its vocabulary narrows
-under #235.
+replaces; the replaced ADR stores nothing — `superseded-by` is the derived
+inverse projection, never written by `relate_adr` or by hand.
 
 ## Relations Extension
 
 `relations` is a package extension, not an upstream MADR 4.0.0 field. It exists
 so tooling can build ADR graphs and validate links.
 
-Relation fields are shared with the other document skills. Choose the field by
-the meaning of the link, not by the target document type.
+Under Knowledge Relations v1 an ADR stores only its declared forward fields
+plus `relations.source` provenance — there is no shared free-form vocabulary:
 
-Under Knowledge Relations v1 an ADR stores `relations.decides-for` (→ spec or
-design) and `relations.supersedes` (→ an older ADR) source→target, plus
-`relations.source` for provenance. Every other key in the table below is
-legacy vocabulary: migration tooling reads it in pre-v3 corpora, and
-`relate_adr` can still write it until the stored vocabulary narrows
-under #235.
+| Field | Targets | Meaning |
+| --- | --- | --- |
+| `decides-for` | spec, design | The spec or design this decision is made for — the canonical spec↔ADR pair and the design-gate edge. |
+| `supersedes` | adr | The older ADR this one replaces. |
 
-| Field | Meaning |
-| --- | --- |
-| `source` | External primary evidence, requirements, issue links, or source material for the decision. |
-| `references` | Supplementary context that informed the ADR but is not the source of truth. |
-| `implements` | Specs, plans, or other docs this ADR implements, when the ADR operationalizes a prior document. |
-| `implemented-by` | Plans, tasks, or code-focused docs that implement this ADR. |
-| `depends-on` | Documents or decisions that must remain valid for this ADR to hold. |
-| `blocks` | Documents, plans, or tasks blocked until this ADR is accepted. |
-| `supersedes` | Older ADRs replaced by this ADR. |
-| `superseded-by` | Newer ADRs that replace this ADR. |
-| `related` | ADRs with relevant context but no directional dependency. |
-| `refines` | ADRs clarified or narrowed by this ADR. |
-| `refined-by` | ADRs or specs that clarify or narrow this ADR. |
-| `derives-from` | Brainstorming notes, specs, ADRs, or upstream docs that produced this ADR. |
-| `derived-by` | Specs, plans, tasks, or ADRs derived from this ADR. |
-| `verifies` | Documents, checks, or criteria this ADR verifies, when applicable. |
-| `verified-by` | Test specs, review notes, or tasks that verify this ADR. |
+Inverse names (`decided-by`, `superseded-by`) are derived projections —
+consistent by construction, never stored. `relations.source` carries external
+provenance (URLs, issue links, source material); `relations.changes` is the
+provenance change-set, not a document link.
 
-Use file-relative links for internal documents. Use URLs for external sources.
+Pre-v3 keys (`implements`, `implemented-by`, `depends-on`, `blocks`,
+`superseded-by`, `related`, `refines`, `refined-by`, `derives-from`,
+`derived-by`, `verifies`, `verified-by`, `references`, `defers`,
+`deferred-by`) are migration-domain input only: `doc-status` reports them as
+`legacy-relation-field` findings, migration tooling owns their conversion,
+and they are never resolved or walked as current graph edges.
+
+Use file-relative links or document IDs for internal documents. Use URLs for
+external sources.
 
 ```yaml
 relations:
   source:
     - "https://example.com/source"
-  implemented-by:
-    - "../plans/implement-event-driven-architecture.md"
+  decides-for:
+    - "SPEC-0001"
   supersedes:
     - "use-rest-api.md"
-  superseded-by: []
-  related:
-    - "adopt-event-driven-architecture.md"
-  refines:
-    - "service-boundaries.md"
-  references:
-    - "https://example.com/background"
 ```
 
-For replacement decisions, link both ways when possible:
+For replacement decisions, store the forward edge only:
 
-- New ADR: `relations.supersedes` points to the old ADR.
-- Old ADR: `relations.superseded-by` points to the new ADR.
-- Also re-point or close in-flight dependents (specs, plans, tasks) that
-  still cite the replaced ADR.
+- New ADR: `relations.supersedes` points to the old ADR — the `superseded-by`
+  view on the old ADR is derived, never written.
+- Re-point or close in-flight dependents that still cite the replaced ADR.
 
 ## Minimal MADR Content
 

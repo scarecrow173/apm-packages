@@ -63,22 +63,14 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -113,44 +105,38 @@ field, which the Document Registry owns):
 Keep `status` focused on spec workflow state; record `lifecycle` separately
 (`superseded` when the spec is replaced). Under Knowledge Relations v1 only
 `relations.supersedes` is stored source→target for a replacing spec;
-`superseded-by` and other declared keys are legacy vocabulary that migration
-tooling reads in pre-v3 corpora — creators emit them only as empty
-placeholders, and `relate_adr`/`new_design --from` can still populate
-them until the stored vocabulary narrows under #235.
+`superseded-by` is the derived inverse projection — never written.
 
 ## Relations
 
-Use relation fields for meaning, not document type.
+Under Knowledge Relations v1 a spec stores only its declared forward field
+plus `relations.source` provenance — the spec is the *target* of capture-layer
+(`motivates`), decision (`decides-for`), and design (`realizes`) edges, never
+their source:
 
-| Field | Meaning |
-| --- | --- |
-| `source` | External primary evidence, requirements, issue links, or user-provided source material. |
-| `references` | Supplementary context that informed the spec but is not a source of truth. |
-| `defers` | Future work intentionally deferred from this document, pointing to a draft spec/design. |
-| `deferred-by` | Documents that deferred this draft future work to a later phase. |
-| `derives-from` | Brainstorming, idea-refine notes, ADRs, or upstream docs that produced the spec. |
-| `derived-by` | Plans, tasks, or narrower specs derived from this spec. |
-| `refines` | Broader specs or ADRs narrowed by this spec. |
-| `refined-by` | Follow-up specs that narrow this spec. |
-| `depends-on` | Documents that must remain valid for this spec to hold. |
-| `blocks` | Documents or tasks blocked until this spec is approved. |
-| `supersedes` | Older specs replaced by this spec. |
-| `superseded-by` | Newer specs that replace this spec. |
-| `related` | Contextual docs without directional dependency. |
-| `implemented-by` | Plans or tasks that implement this spec. |
-| `verifies` | Documents or checks this spec verifies, when applicable. |
-| `verified-by` | Test specs, review notes, or tasks that verify this spec. |
+| Field | Targets | Meaning |
+| --- | --- | --- |
+| `supersedes` | spec | The older spec this one replaces. |
 
-Internal documents use relative paths. External sources use URLs. For
-replacement decisions, link both ways when possible:
+Inverse names (`superseded-by`, plus the inbound `motivated-by`,
+`decided-by`, `realized-by` views other documents project onto this spec)
+are derived projections — consistent by construction, never stored.
+`relations.source` carries external provenance (URLs, issue links, source
+material); `relations.changes` is the provenance change-set, not a document
+link.
 
-- New spec: `relations.supersedes` points to the old spec.
-- Old spec: `relations.superseded-by` points to the new spec.
+Pre-v3 keys (`implements`, `implemented-by`, `depends-on`, `blocks`,
+`superseded-by`, `related`, `refines`, `refined-by`, `derives-from`,
+`derived-by`, `verifies`, `verified-by`, `references`, `defers`,
+`deferred-by`) are migration-domain input only: `doc-status` reports them as
+`legacy-relation-field` findings, migration tooling owns their conversion,
+and they are never resolved or walked as current graph edges.
 
-`related` is a one-directional context pointer: linking to a document does
-not oblige it to link back, and `doc-status` does not flag missing `related`
-back-links. Typed pairs (`implements`/`implemented-by`, `depends-on`/`blocks`,
-and so on) still expect reciprocal declarations.
+Internal documents use relative paths or document IDs. External sources use
+URLs. For replacement decisions, store the forward edge only:
+
+- New spec: `relations.supersedes` points to the old spec — the `superseded-by`
+  view on the old spec is derived, never written.
 
 ## Required Content
 
@@ -167,11 +153,11 @@ Every spec should answer:
 Acceptance criteria must be checkable. Avoid criteria such as "works well" or
 "is intuitive" unless they are backed by observable behavior.
 
-Keep criteria in the spec. When a criterion's intent must survive later
-redesigns, elaborate it into Feature/Rule/Example guarantees in a `test-spec`
-document (`docs/test-specs/`): link `relations.verified-by` on the spec and
-`relations.verifies` on the test spec. Do not duplicate criteria verbatim
-across both.
+Keep criteria in the spec. A criterion that must be addressed individually
+can carry a stable Claim ID — an HTML comment marker such as
+`<!-- claim:R-01 -->` beside the claim text — so verification design and
+evidence can reference it as `SPEC-<id>::R-01` across edits and rewrites
+(#239/#240). Markers are declared in the spec body, never in front matter.
 
 ## Mutability
 
@@ -181,8 +167,9 @@ Specs are planning inputs, not immutable decision records.
 - `approved` specs may receive clarifications that do not change scope.
 - Substantive scope, behavior, or acceptance changes after approval should
   create a new spec or explicitly supersede the old one. On supersession,
-  link `supersedes`/`superseded-by` both ways and re-point or close in-flight
-  dependents (plans, designs, tasks) that still target the replaced spec.
+  the new spec stores `supersedes` at the old one (the inverse is derived),
+  and in-flight dependents that still target the replaced spec are
+  re-pointed or closed.
 - `implemented` specs should be treated as historical evidence. Prefer dated
   notes or superseding specs over rewriting implemented intent.
 - Status, owner, and relation updates are acceptable in-place edits.

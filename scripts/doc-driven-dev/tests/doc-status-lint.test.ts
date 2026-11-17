@@ -119,10 +119,11 @@ test("audit_docs flags self-referencing, ambiguous, and root-escaping relations"
     id: "DESIGN-0001",
     type: "design",
     title: "Design",
+    // Knowledge Relations v1: `realizes` is design's canonical field, so the
+    // pathologies ride on it — self-path, duplicated SPEC-0001 id (ambiguous),
+    // and a path that escapes the root.
     relations: {
-      realizes: ["docs/designs/0001-d.md"],
-      related: ["SPEC-0001"],
-      references: ["../../outside.md"],
+      realizes: ["docs/designs/0001-d.md", "SPEC-0001", "../../outside.md"],
     },
   }));
 
@@ -132,9 +133,12 @@ test("audit_docs flags self-referencing, ambiguous, and root-escaping relations"
   assert.equal(report.findings.some((finding: any) => finding.code === "relation-escapes-root"), true);
 });
 
-test("audit_docs flags declared reciprocal relations that do not link back", () => {
+test("audit_docs flags stored inverse-name fields as legacy migration input", () => {
   const repo = tempRepo();
   writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter({
+    // `implemented-by` is the derived inverse of the legacy `implements` —
+    // Knowledge Relations v1 stores forward fields only, so a populated
+    // inverse name is migration-domain input, never graph data (Issue #235).
     relations: { "implemented-by": ["docs/plans/other.md"] },
   }));
   writeDoc(path.join(repo, "docs/specs"), "0002-b.md", specFrontMatter({
@@ -145,24 +149,24 @@ test("audit_docs flags declared reciprocal relations that do not link back", () 
     id: "PLAN-0002",
     type: "plan",
     title: "Other",
-    // The target declares the inverse field but points it at a different
-    // spec — the reciprocal check fires only when the inverse is declared
-    // yet does not link back.
     relations: { implements: ["docs/specs/0002-b.md"] },
   }));
 
-  // Registry 3: plans are execution-bound (never linted) but still resolve as
-  // legacy relation targets — the reciprocal check now fires on the durable
-  // spec whose `implemented-by` target's `implements` points elsewhere
-  // (Issue #234).
   const report = auditJson(repo, "spec");
+  const legacy = report.findings.filter((finding: any) => finding.code === "legacy-relation-field");
+  assert.ok(
+    legacy.some((finding: any) => finding.message.includes("implemented-by")),
+    "stored inverse-name field surfaces as legacy-relation-field",
+  );
+  // The reciprocal-link check is gone: inverse links are projection-derived,
+  // so there is no stored pair whose consistency could be checked.
   assert.equal(
     report.findings.some((finding: any) => finding.code === "inconsistent-reciprocal-relation"),
-    true,
+    false,
   );
 });
 
-test("audit_docs treats related as a one-directional context link", () => {
+test("audit_docs flags pre-v3 context keys as legacy-relation-field without graph reads", () => {
   const repo = tempRepo();
   writeDoc(path.join(repo, "docs/specs"), "0001-s.md", specFrontMatter({
     status: "approved",
@@ -193,15 +197,24 @@ test("audit_docs treats related as a one-directional context link", () => {
     },
   }));
 
+  // Knowledge Relations v1: `blocks`, `related`, and `depends-on` are all
+  // outside the stored forward vocabulary — each is a migration-input
+  // finding, none is resolved or walked as graph data (Issue #235).
   const report = auditJson(repo, "all");
-  const flagged = report.findings
-    .filter((finding: any) => finding.code === "inconsistent-reciprocal-relation")
-    .map((finding: any) => finding.message);
-  assert.equal(flagged.length, 1);
-  assert.ok(flagged[0].includes("depends-on"), "typed pairs still require a back-link");
+  const legacy = report.findings
+    .filter((finding: any) => finding.code === "legacy-relation-field")
+    .map((finding: any) => `${finding.file}:${finding.message}`);
+  assert.equal(legacy.length, 4);
+  assert.ok(legacy.some((entry) => entry.includes("blocks")));
+  assert.ok(legacy.some((entry) => entry.includes("depends-on")));
+  assert.equal(legacy.filter((entry) => entry.includes("related")).length, 2);
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "inconsistent-reciprocal-relation"),
+    false,
+  );
 });
 
-test("audit_docs treats plan/task verified-by to a test-spec as evidence, not reciprocal", () => {
+test("audit_docs reports legacy verification keys as migration input only", () => {
   const repo = tempRepo();
   for (const dir of ["docs/specs", "docs/plans", "docs/tasks", "docs/test-specs"]) {
     fs.mkdirSync(path.join(repo, dir), { recursive: true });
@@ -211,6 +224,9 @@ test("audit_docs treats plan/task verified-by to a test-spec as evidence, not re
   writeDoc(path.join(repo, "docs/specs"), "0002-b.md", specFrontMatter({
     id: "SPEC-0002",
     status: "approved",
+    // Knowledge Relations v1: `verified-by` is not a stored forward field —
+    // verification evidence derives from the Evidence Store (#240), so the
+    // key is migration-domain input, not graph data.
     relations: { "verified-by": ["TSPEC-0002"] },
   }));
   writeDoc(path.join(repo, "docs/test-specs"), "0001-ts.md", specFrontMatter({
@@ -243,10 +259,17 @@ test("audit_docs treats plan/task verified-by to a test-spec as evidence, not re
   }));
 
   const report = auditJson(repo, "all");
-  const flagged = report.findings
-    .filter((finding: any) => finding.code === "inconsistent-reciprocal-relation")
-    .map((finding: any) => finding.file);
-  assert.deepEqual(flagged, ["docs/specs/0002-b.md"]);
+  // The durable spec's populated legacy key is a migration-input finding on
+  // that file; no reciprocal or evidence-pairing check runs against it.
+  const specLegacy = report.findings
+    .filter((finding: any) => finding.code === "legacy-relation-field"
+      && finding.file === "docs/specs/0002-b.md");
+  assert.equal(specLegacy.length, 1);
+  assert.ok(specLegacy[0].message.includes("verified-by"));
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "inconsistent-reciprocal-relation"),
+    false,
+  );
   assert.equal(
     report.findings.some((finding: any) => finding.code === "plan-missing-test-spec-evidence"),
     false,
@@ -341,16 +364,23 @@ test("audit_docs --type all reports findings from every canonical type once per 
   assert.equal(invalidStatus.file, "docs/specs/0001-a.md");
 });
 
-test("legacy audit findings carry the blocking flag", () => {
+test("legacy relation findings carry the blocking flag", () => {
   const repo = tempRepo();
   writeDoc(path.join(repo, "docs/specs"), "0001-a.md", specFrontMatter({
+    // `implements` is outside the v1 stored vocabulary — the key itself is a
+    // blocking migration-input finding, so the target is never resolved.
     relations: { implements: ["SPEC-9999"] },
   }));
 
   const report = auditJson(repo, "spec");
-  const broken = report.findings.find((finding: any) => finding.code === "broken-relation-link");
-  assert.ok(broken);
-  assert.equal(broken.blocking, true);
+  const legacy = report.findings.find((finding: any) => finding.code === "legacy-relation-field");
+  assert.ok(legacy);
+  assert.equal(legacy.blocking, true);
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "broken-relation-link"),
+    false,
+    "legacy keys are not walked as graph edges — no broken-link resolution",
+  );
   assert.ok(report.findings.every((finding: any) => typeof finding.blocking === "boolean"));
 });
 

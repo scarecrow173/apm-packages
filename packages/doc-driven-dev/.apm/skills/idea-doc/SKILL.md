@@ -67,7 +67,8 @@ to `spec-doc` when requirements are already clear.
    Fill in the `Next Action` section of the template.
 5. Promote when ready.
    When the idea is worth exploring, create a `discovery-doc` or `spec-doc`
-   and link it via `relations.derived-by` in this document.
+   and link it via `relations.motivates` in this document (spec targets
+   only; a discovery carries its own forward relations).
    Update status to `promoted`.
 
 ## Required Content
@@ -98,22 +99,15 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -132,7 +126,7 @@ Status values: `draft`, `exploring`, `promoted`, `parked`, `archived`,
 | `superseded` | Replaced by a newer idea document. |
 
 Set `promoted` only after creating the downstream document and linking it in
-`relations.derived-by`.
+`relations.motivates` (or in the downstream document's own forward relations).
 
 ## NEVER
 
@@ -142,8 +136,9 @@ Set `promoted` only after creating the downstream document and linking it in
 - NEVER merge multiple ideas into one file — one idea per file is the
   traceability unit; merging makes lifecycle management ambiguous
 - NEVER set status to `promoted` before creating and linking the downstream
-  document — `promoted` signals that `relations.derived-by` is populated;
-  setting it before that link exists creates a broken reference
+  document — `promoted` signals that a forward link (`relations.motivates`
+  or the downstream document's own edge) is populated; setting it before
+  that link exists creates a broken reference
 - NEVER include architecture or implementation decisions in an idea — if you
   find yourself writing "we should use X because Y trade-off," that content
   belongs in `discovery-doc`

@@ -29,11 +29,20 @@
     "unresolved": 0,
     "escaped": 0,
     "external": 0,
-    "inboundTargets": 5,
+    "inboundTargets": 4,
     "byField": {
+      "decides-for": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
       "derives-from": {
-        "declared": 3,
-        "resolved": 3,
+        "declared": 1,
+        "resolved": 1,
         "resolvedFile": 0,
         "ambiguous": 0,
         "unresolved": 0,
@@ -41,6 +50,15 @@
         "external": 0
       },
       "implements": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "realizes": {
         "declared": 1,
         "resolved": 1,
         "resolvedFile": 0,
@@ -79,11 +97,11 @@
     "inboundTargets": 0
   },
   "findings": {
-    "total": 15,
-    "blocking": 9,
+    "total": 14,
+    "blocking": 8,
     "warnings": 6,
     "infos": 0,
-    "onDocuments": 13,
+    "onDocuments": 12,
     "onIndexes": 0,
     "unattributed": 2,
     "byRuleId": {
@@ -92,32 +110,23 @@
       "missing-lifecycle": 3,
       "missing-overview": 1,
       "orphan-index": 3,
-      "orphan-navigation": 3,
-      "traceability-missing-upstream": 1
+      "orphan-navigation": 3
     },
     "byCategory": {
       "front-matter": 3,
       "index": 4,
       "orphan": 6,
-      "structure": 1,
-      "traceability": 1
+      "structure": 1
     },
     "health": {
       "documents": 3,
-      "blocking": 9,
+      "blocking": 8,
       "warnings": 6,
       "infos": 0,
       "categories": [
         {
           "category": "front-matter",
           "blocking": 3,
-          "warnings": 0,
-          "infos": 0,
-          "clean": false
-        },
-        {
-          "category": "traceability",
-          "blocking": 1,
           "warnings": 0,
           "infos": 0,
           "clean": false
@@ -171,10 +180,10 @@
       "inFlight": 1,
       "staleUpstream": 0,
       "inboundLinkTargets": 0,
-      "inboundRelationTargets": 1,
+      "inboundRelationTargets": 0,
       "relations": {
-        "declared": 0,
-        "resolved": 0,
+        "declared": 1,
+        "resolved": 1,
         "resolvedFile": 0,
         "ambiguous": 0,
         "unresolved": 0,
@@ -209,8 +218,8 @@
       "inboundLinkTargets": 0,
       "inboundRelationTargets": 1,
       "relations": {
-        "declared": 2,
-        "resolved": 2,
+        "declared": 1,
+        "resolved": 1,
         "resolvedFile": 0,
         "ambiguous": 0,
         "unresolved": 0,
@@ -228,8 +237,8 @@
       "orphanIndex": 1,
       "orphanNavigation": 1,
       "orphanRelation": 0,
-      "findings": 5,
-      "blockingFindings": 3
+      "findings": 4,
+      "blockingFindings": 2
     },
     "impl": {
       "files": 1,

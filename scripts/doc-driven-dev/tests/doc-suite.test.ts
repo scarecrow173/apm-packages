@@ -157,10 +157,11 @@ test("new_spec creates a spec and defers index materialization", () => {
   assert.match(spec, /^    renamed: \[\]$/m);
   assert.match(spec, /^    moved: \[\]$/m);
   assert.match(spec, /^    generated: \[\]$/m);
-  assert.match(spec, /^  implements: \[\]$/m);
-  assert.match(spec, /^  references: \[\]$/m);
-  assert.match(spec, /^  defers: \[\]$/m);
-  assert.match(spec, /^  deferred-by: \[\]$/m);
+  // Knowledge Relations v1 (Issue #235): a spec stores only its declared
+  // forward fields — `supersedes` is the spec type's sole canonical field;
+  // the pre-v3 keys are never emitted.
+  assert.match(spec, /^  supersedes: \[\]$/m);
+  assert.doesNotMatch(spec, /^  (implements|references|defers|deferred-by|derives-from):/m);
   assert.match(spec, /^# Define checkout flow/m);
   assert.match(spec, /## Deferred Design Concerns/);
 });
@@ -370,10 +371,12 @@ test("new_design creates overview and detailed design, and defers the index", ()
   assert.match(design, /^status: "draft"$/m);
   assert.match(design, /^  changes:$/m);
   assert.match(design, /^    added: \[\]$/m);
-  assert.match(design, /^  derives-from:$/m);
+  // Knowledge Relations v1: --from seeds the canonical `realizes` edge, not
+  // the legacy `derives-from` key (Issue #235).
+  assert.match(design, /^  realizes:$/m);
   assert.match(design, /^    - "docs\/specs\/define-checkout-flow.md"$/m);
-  assert.match(design, /^  defers: \[\]$/m);
-  assert.match(design, /^  deferred-by: \[\]$/m);
+  assert.match(design, /^  supersedes: \[\]$/m);
+  assert.doesNotMatch(design, /^  (derives-from|defers|deferred-by):/m);
   assert.match(design, /## Deferred Design Concerns/);
   assert.match(overview, /^# System Design Overview/m);
 });
@@ -573,9 +576,8 @@ test("doc-status audits required front matter, status, indexes, relations, and s
       "owners: []",
       "relations:",
       '  source: ["https://example.com/source"]',
+      '  supersedes: ["docs/missing-predecessor.md"]',
       '  references: ["docs/missing-reference.md"]',
-      '  implements: ["docs/missing-implementation.md"]',
-      '  defers: ["docs/missing-deferred.md"]',
       "---",
       "",
       "# Invalid",
@@ -592,9 +594,19 @@ test("doc-status audits required front matter, status, indexes, relations, and s
   const report = JSON.parse(result.stdout);
   assert.equal(report.findings.some((finding: any) => finding.code === "invalid-status"), true);
   assert.equal(report.findings.some((finding: any) => finding.code === "missing-index"), true);
-  assert.equal(report.findings.some((finding: any) => finding.message.includes("docs/missing-implementation.md")), true);
-  assert.equal(report.findings.some((finding: any) => finding.message.includes("docs/missing-reference.md")), true);
-  assert.equal(report.findings.some((finding: any) => finding.message.includes("docs/missing-deferred.md")), true);
+  // A missing `supersedes` target resolves through the v1 graph as a broken
+  // link; the pre-v3 `references` key is a migration-input finding on the
+  // field name itself, never a resolved edge (Issue #235).
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "broken-relation-link"
+      && finding.message.includes("docs/missing-predecessor.md")),
+    true,
+  );
+  assert.equal(
+    report.findings.some((finding: any) => finding.code === "legacy-relation-field"
+      && finding.message.includes("references")),
+    true,
+  );
   assert.equal(report.findings.some((finding: any) => finding.message.includes("https://example.com/source")), false);
 });
 
@@ -613,7 +625,7 @@ test("doc-status audits specs inside subdirectories", () => {
       'updated: "2026-06-17"',
       "owners: []",
       "relations:",
-      '  references: ["docs/missing-in-subdir.md"]',
+      '  supersedes: ["docs/missing-in-subdir.md"]',
       "---",
       "",
       "# Define checkout flow",
@@ -628,7 +640,12 @@ test("doc-status audits specs inside subdirectories", () => {
   const report = JSON.parse(result.stdout);
   assert.equal(report.files, 1, "subdirectory file should be counted");
   assert.equal(report.findings.some((f: any) => f.code === "invalid-status"), true, "invalid-status from subdir file");
-  assert.equal(report.findings.some((f: any) => f.message.includes("docs/missing-in-subdir.md")), true, "broken link in subdir file");
+  assert.equal(
+    report.findings.some((f: any) => f.code === "broken-relation-link"
+      && f.message.includes("docs/missing-in-subdir.md")),
+    true,
+    "broken supersedes link in subdir file",
+  );
 });
 
 test("graph entrypoint publishes one-edge runtime contract", () => {

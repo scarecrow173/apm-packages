@@ -54,22 +54,15 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -103,24 +96,33 @@ relations:
 
 下流文書を作成した後に `promoted` を設定してください。Knowledge Relations
 v1 では idea は `relations.motivates` に source→target で動機付けた spec を
-記録します。下流側は逆リンクを保存しません。`derived-by` などその他の宣言キーは
-レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取ります。
-creator は空のプレースホルダーとしてのみ出力しますが、`relate_adr` と
-`new_design --from` は #235 で格納語彙が絞り込まれるまでこれらを設定
-できます。
+記録します。下流側は逆リンクを保存しません — spec 側の `motivated-by` は
+派生投影です。
 
 ## リレーション
 
-| フィールド | 意味 |
-| --- | --- |
-| `source` | このアイデアのきっかけになった外部リンク・issue・会話・観察。 |
-| `derived-by` | このアイデアから生まれた下流の discovery-doc または spec-doc。 |
-| `supersedes` | この文書が置き換える古い idea 文書。 |
-| `superseded-by` | この文書を置き換えた新しい idea 文書。 |
-| `related` | 方向依存のない文脈的な関連文書。 |
+Knowledge Relations v1 では idea は宣言済みの順方向 field と出典用の
+`relations.source` だけを格納します。
+
+| フィールド | 対象 | 意味 |
+| --- | --- | --- |
+| `motivates` | spec | このアイデアが動機づける spec — idea 側に source→target で記録。 |
+| `supersedes` | idea | この文書が置き換える古い idea 文書。 |
+
+逆名（`motivated-by`、`superseded-by`）は派生投影であり、構造上一貫して
+導かれるため保存しません。`relations.source` は外部出典（リンク・issue・
+会話・観察）を保持し、`relations.changes` は文書リンクではなく出典の
+変更セットです。
+
+v3 以前のキー（`implements`、`implemented-by`、`depends-on`、`blocks`、
+`superseded-by`、`related`、`refines`、`refined-by`、`derives-from`、
+`derived-by`、`verifies`、`verified-by`、`references`、`defers`、
+`deferred-by`）はマイグレーション領域の入力にすぎません。`doc-status`
+はこれらを `legacy-relation-field` 指摘として報告し、現行グラフの辺として
+解決・走査されることはありません。
 
 リレーションは最小限に保ちます。idea 文書はリレーション全項目を埋める
-必要はありません。`source` と `derived-by` が主要な使用箇所です。
+必要はありません。`source` と `motivates` が主要な使用箇所です。
 
 何かがきっかけで生まれた idea では、作成時に `source` を記録します —
 供給先の上流 spec・plan・問い、またはきっかけとなったリンク・issue・
@@ -154,7 +156,9 @@ creator は空のプレースホルダーとしてのみ出力しますが、`re
 アイデアが深掘りや正式化の準備が整ったら:
 
 1. 下流文書（`discovery-doc` または `spec-doc`）を作成する。
-2. `relations.derived-by` でリンクする。
+2. 下流文書が spec の場合は `relations.motivates` でリンクする
+   （供給先の discovery についてはその discovery 自身の relations
+   がリンクを持つ）。
 3. ステータスを `promoted` に更新する。
 4. idea 文書を上流の監査証跡として保持する。
 

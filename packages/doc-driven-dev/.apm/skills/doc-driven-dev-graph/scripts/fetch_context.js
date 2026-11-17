@@ -4452,8 +4452,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["idea"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -4487,8 +4487,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"] },
-      { field: "supersedes", targetTypes: ["brainstorm"] }
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -4521,9 +4521,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["discovery"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: true,
@@ -4559,7 +4559,7 @@ var configs = {
     // (it is the target of motivates/realizes/decides-for, not the source).
     expectedUpstream: [],
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"] }
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4596,8 +4596,8 @@ var configs = {
       { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
     ],
     allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["design"] }
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4642,8 +4642,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"] },
-      { field: "supersedes", targetTypes: ["adr"] }
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4682,9 +4682,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["knowledge"] }
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4721,7 +4721,7 @@ var configs = {
     // Evidence `supported-by` comes from the Evidence Store (#240); neither
     // is a stored relation field here.
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"] }
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4961,8 +4961,20 @@ function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
 }
 
+// src/skills/lib/claim_ids.ts
+var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
+function parseClaimReference(value) {
+  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
+  if (!match) return null;
+  return { docId: match[1], key: match[2] };
+}
+
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
 var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
+  "motivates",
+  "decides-for",
+  "realizes",
+  "supersedes",
   "implements",
   "implemented-by",
   "derives-from",
@@ -4990,7 +5002,9 @@ function normalizeArtifactPath(cwd, target) {
   return import_node_path2.default.relative(import_node_path2.default.resolve(cwd), import_node_path2.default.resolve(cwd, target)).split(import_node_path2.default.sep).join("/");
 }
 function isExternalArtifactReference(value) {
-  return EXTERNAL_REFERENCE.test(value.trim());
+  const trimmed = value.trim();
+  if (parseClaimReference(trimmed)) return false;
+  return EXTERNAL_REFERENCE.test(trimmed);
 }
 function resolveContainedTaskDir(cwd, taskDir) {
   return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
@@ -5114,9 +5128,12 @@ function localTarget(cwd, owner, value) {
 function resolveArtifactRelation(cwd, source, rawValue, records) {
   const value = rawValue.trim();
   if (isExternalArtifactReference(value)) return void 0;
-  const byId = records.filter((record2) => record2.id === value);
+  const claimRef = parseClaimReference(value);
+  const lookup = claimRef?.docId ?? value;
+  const byId = records.filter((record2) => record2.id === lookup);
   if (byId.length === 1) return byId[0];
   if (byId.length > 1) return void 0;
+  if (claimRef) return void 0;
   const target = localTarget(cwd, source, value);
   return records.find((record2) => repoPathKey(record2.path) === repoPathKey(target.path));
 }
@@ -5234,9 +5251,15 @@ function chainMembers(chain) {
   return new Set([chain.spec, chain.adr, chain.design, chain.plan, ...chain.tasks, ...chain.anchors ?? []].filter((value) => Boolean(value)));
 }
 function preDesignAnchors(graph, records, spec, adr) {
-  const direct = graph.edges.some((edge) => edge.kind === "lineage" && ["derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation) && (edge.from === spec.path && edge.to === adr.path || edge.from === adr.path && edge.to === spec.path));
-  const discoveries = records.filter((record2) => record2.type === "discovery" && [spec, adr].every((artifact) => graph.edges.some((edge) => edge.from === artifact.path && edge.to === record2.path && edge.relation === "derives-from" || edge.from === record2.path && edge.to === artifact.path && edge.relation === "derived-by")));
+  const direct = graph.edges.some((edge) => edge.kind === "lineage" && ["decides-for", "derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation) && (edge.from === spec.path && edge.to === adr.path || edge.from === adr.path && edge.to === spec.path));
+  const discoveries = records.filter((record2) => (record2.type === "discovery" || record2.type === "brainstorm") && [spec, adr].every((artifact) => graph.edges.some((edge) => edge.from === record2.path && edge.to === artifact.path && (edge.relation === "motivates" || edge.relation === "informs") || edge.from === artifact.path && edge.to === record2.path && edge.relation === "derives-from" || edge.from === record2.path && edge.to === artifact.path && edge.relation === "derived-by")));
   return direct || discoveries.length > 0 ? discoveries.map((record2) => record2.path) : void 0;
+}
+function designClaimsSpec(graph, designPath, specPath) {
+  return Boolean(specPath) && (artifactHasRelation(graph, designPath, ["realizes"], specPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], specPath));
+}
+function designClaimsAdr(graph, designPath, adrPath) {
+  return Boolean(adrPath) && (artifactHasRelation(graph, adrPath, ["decides-for"], designPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], adrPath));
 }
 function artifactChainCandidates(graph, records) {
   const specs = records.filter((record2) => record2.type === "spec" && isValidChainRecord(record2));
@@ -5250,8 +5273,8 @@ function artifactChainCandidates(graph, records) {
   };
   const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
   for (const design of designs) {
-    const relatedSpecs = specs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
-    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
+    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
+    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
     const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
     for (const spec of cartesian(relatedSpecs, [void 0])) {
       for (const adr of cartesian(relatedAdrs, [void 0])) {
@@ -5271,7 +5294,7 @@ function artifactChainCandidates(graph, records) {
     if (designs.some((design) => artifactHasRelation(graph, plan.path, ["derives-from", "design"], design.path))) continue;
     add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
   }
-  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], spec.path)));
+  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
   const paired = /* @__PURE__ */ new Set();
   for (const spec of unassignedSpecs) {
     for (const adr of adrs) {
@@ -5283,7 +5306,7 @@ function artifactChainCandidates(graph, records) {
     }
   }
   for (const artifact of [...specs, ...adrs]) {
-    if (!paired.has(artifact.path) && !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], artifact.path))) {
+    if (!paired.has(artifact.path) && !designs.some((design) => artifact.type === "adr" ? designClaimsAdr(graph, design.path, artifact.path) : designClaimsSpec(graph, design.path, artifact.path))) {
       add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
     }
   }

@@ -63,7 +63,9 @@ idea 文書は意図的に最小限の構成です。1ファイル1アイデア�
    テンプレートの `次のアクション` セクションを埋めます。
 5. 準備が整ったら昇華する。
    探索が必要なら `discovery-doc` を、要件が明確なら `spec-doc` を作成し、
-   この文書の `relations.derived-by` でリンクします。ステータスを `promoted` に更新します。
+   この文書の `relations.motivates` でリンクします（対象は spec のみ。
+   discovery 側は自身の順方向 relation を持ちます）。ステータスを
+   `promoted` に更新します。
 
 ## 必須内容
 
@@ -93,22 +95,15 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -126,7 +121,8 @@ relations:
 | `archived` | 評価して追わないことにした。参考資料として保持。 |
 | `superseded` | より新しい idea 文書に置き換え済み。 |
 
-`promoted` にするのは、下流文書を作成して `relations.derived-by` でリンクした後にしてください。
+`promoted` にするのは、下流文書を作成して `relations.motivates`（または
+下流文書自身の順方向 relation）でリンクした後にしてください。
 
 ## NEVER
 
@@ -135,8 +131,8 @@ relations:
 - NEVER 複数の着想を 1 ファイルにまとめる — 1 ファイル 1 アイデアが追跡可能性の単位。
   まとめるとライフサイクル管理（park、promote、supersede）が曖昧になる
 - NEVER 下流文書を作成・リンクする前に status を `promoted` にする — `promoted` は
-  `relations.derived-by` が設定済みであることを示すシグナル。リンク前に設定すると
-  下流ツールが復旧できない壊れた参照を生む
+  順方向リンク（`relations.motivates` または下流文書自身の辺）が設定済みである
+  ことを示すシグナル。リンク前に設定すると下流ツールが復旧できない壊れた参照を生む
 - NEVER アーキテクチャや実装の判断を idea に含める — 「X を使うべき、なぜなら Y」と
   書こうとしているなら、その内容は `discovery-doc` に属する
 - NEVER idea-doc をスキップして新しい信号をいきなり discovery-doc にする — idea-doc は

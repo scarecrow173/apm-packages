@@ -24,7 +24,8 @@ license: MIT
    ```
 
 4. relation を記録する。
-   上流 spec/ADR/discovery は `relations.derives-from` に記録します。
+   `new_design --from` が上流 spec への `relations.realizes` を設定します。
+   この設計が置き換える設計には `relations.supersedes` を使います。
 5. 少なくとも 1 つの詳細設計を承認する。
    plan 作成前に、overview 以外の設計文書で front matter
    `status: "approved"` を満たします（PLAN-DOC-GATE-001）。
@@ -47,22 +48,15 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  realizes: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 

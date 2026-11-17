@@ -109,8 +109,10 @@ test("benchmark corpus keeps #124 scale and records its pre-contract debt", asyn
   assert.ok(invalidIds >= 29, `invalid ids ${invalidIds}`);
   assert.ok((stats.findings.byRuleId["invalid-status"] ?? 0) >= 10);
   assert.ok((stats.findings.byRuleId["provenance-missing-source"] ?? 0) >= 19);
-  // A derives-from cycle and a broken relation are measured, not hidden.
-  assert.ok(stats.relations.byField["derives-from"].declared >= 4);
+  // A supersedes cycle (v1) and the migration-owned derives-from spellings
+  // on plan records are measured, not hidden.
+  assert.ok(stats.relations.byField["supersedes"].declared >= 2);
+  assert.ok(stats.relations.byField["derives-from"].declared >= 2);
 });
 
 test("long-running corpus is mostly settled evidence with layered debt", async () => {
@@ -126,16 +128,18 @@ test("long-running corpus is mostly settled evidence with layered debt", async (
   assert.ok(stats.corpus.settledDocuments >= 40, `settled ${stats.corpus.settledDocuments}`);
   assert.ok(stats.corpus.settledDocuments > stats.corpus.inFlightDocuments);
 
-  // Stale upstreams: 2 todo tasks on completed PLAN-0501 + DESIGN-0501 on
-  // superseded SPEC-0501/deprecated ADR-0501.
+  // Stale upstreams: DESIGN-0501 still realizes superseded SPEC-0501, and
+  // two durable capture docs (BRAINSTORM-9102, DISC-9104) still motivate it.
+  // Knowledge Relations v1: only stored forward upstream edges
+  // (motivates/decides-for/realizes) count — the ephemeral TASK-0503/0504
+  // `implements` edges are execution state, not Knowledge Graph upstreams,
+  // so types.task.staleUpstream is deliberately 0 (Issue #235).
   assert.ok(stats.corpus.staleUpstreamDocuments >= 3, `staleUpstream ${stats.corpus.staleUpstreamDocuments}`);
-  assert.ok(stats.types.task.staleUpstream >= 2);
+  assert.equal(stats.types.task.staleUpstream, 0);
   assert.ok(stats.types.design.staleUpstream >= 1);
   // Issue #166: the promoted doc-status rule surfaces the same edges as
-  // findings — one `stale-upstream` finding per dead upstream target.
-  // Registry 3: findings run on durable documents only, so DESIGN-0501's two
-  // edges (SPEC-0501 + ADR-0501) report while the ephemeral TASK-0503/0504
-  // edges stay measured in stats.types.task.staleUpstream (Issue #234).
+  // findings — one `stale-upstream` finding per dead upstream target
+  // (DESIGN-0501's realizes + the two capture-layer motivates edges).
   assert.ok((stats.findings.byRuleId["stale-upstream"] ?? 0) >= 2,
     `stale-upstream findings ${stats.findings.byRuleId["stale-upstream"]}`);
 
@@ -165,8 +169,10 @@ test("long-running corpus is mostly settled evidence with layered debt", async (
   assert.ok((stats.types.impl.statusCounts.completed ?? 0) >= 10);
   assert.ok((stats.types.impl.statusCounts.superseded ?? 0) >= 1);
 
-  // Relation traffic concentrates on lineage fields — the graph spine.
-  const lineage = ["implements", "derives-from", "refines"];
+  // Relation traffic concentrates on lineage fields — the graph spine: the
+  // v1 stored vocabulary plus the migration-owned execution spellings the
+  // corpus still carries on plan/task/impl records.
+  const lineage = ["implements", "derives-from", "motivates", "decides-for", "realizes", "supersedes"];
   const lineageDeclared = lineage.reduce(
     (sum, field) => sum + (stats.relations.byField[field]?.declared ?? 0), 0);
   assert.ok(lineageDeclared >= stats.relations.declared * 0.5);

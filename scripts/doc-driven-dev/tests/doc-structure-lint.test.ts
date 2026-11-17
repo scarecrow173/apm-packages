@@ -170,14 +170,33 @@ test("suppresses orphan navigation when the doc is indexed", async () => {
 
 test("suppresses orphan relation when relations exist", async () => {
   const root = fixture();
-  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n", "relations:\n  implements: [IDEA-0001]\n");
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n");
   writeFile(
     root,
     "docs/ideas/spark.md",
-    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\n---\n# Spark\n",
+    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations:\n  motivates: [SPEC-0001]\n---\n# Spark\n",
   );
   writeSpecIndex(root, [indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft")]);
 
+  const report = await auditDocuments(root, "spec");
+  assert.ok(!codes(report).includes("orphan-relation"));
+});
+
+test("a claim-qualified relation satisfies the orphan check (Issue #235)", async () => {
+  const root = fixture();
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n", "relations:\n  supersedes: [SPEC-0000::R-01]\n");
+  writeFile(
+    root,
+    "docs/specs/old.md",
+    "---\nid: SPEC-0000\ntype: spec\nstatus: superseded\ntitle: Spec old\ncreated: 2026-01-01\nowners: [team]\n---\n# Old\n\n- <!-- claim:R-01 --> superseded requirement\n",
+  );
+  writeSpecIndex(root, [
+    indexItem("SPEC-0000", "old.md", "Spec old", "superseded"),
+    indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft"),
+  ]);
+
+  // The only relation is claim-qualified — it resolves to the owning
+  // document, so neither doc counts as relation-orphaned.
   const report = await auditDocuments(root, "spec");
   assert.ok(!codes(report).includes("orphan-relation"));
 });
@@ -208,24 +227,24 @@ test("detects case-only mismatches on case-insensitive filesystems", async () =>
   }
 });
 
-test("localized siblings share artifact identity for self and reciprocal checks", async () => {
+test("localized siblings share artifact identity for self-relation checks", async () => {
   const root = fixture();
   writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n");
   writeFile(
     root,
     "docs/specs/checkout.ja.md",
-    "---\nid: SPEC-0001\ntype: spec\nstatus: draft\ntitle: Checkout JA\ncreated: 2026-01-01\nowners: [team]\nrelations:\n  implements: [IDEA-0001]\n  related: [SPEC-0001]\n---\n# Checkout JA\n",
+    "---\nid: SPEC-0001\ntype: spec\nstatus: draft\ntitle: Checkout JA\ncreated: 2026-01-01\nowners: [team]\nrelations:\n  supersedes: [SPEC-0001]\n---\n# Checkout JA\n",
   );
   writeFile(
     root,
     "docs/ideas/spark.md",
-    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations:\n  implemented-by: [../specs/checkout.md]\n---\n# Spark\n",
+    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Spark\ncreated: 2026-01-01\nrelations:\n  motivates: [SPEC-0001]\n---\n# Spark\n",
   );
 
   const collected = await collectFindings(root, { type: "spec" });
   const codes = collected.findings.map((finding) => finding.ruleId);
   assert.ok(codes.includes("self-relation"), "a relation to the shared artifact id is a self-relation");
-  assert.ok(!codes.includes("inconsistent-reciprocal-relation"), "a back-link naming the sibling file still resolves to the same artifact");
+  assert.ok(!codes.includes("inconsistent-reciprocal-relation"), "v1 has no reciprocal-link check — inverses are derived, never stored");
   assert.ok(!codes.includes("duplicate-id"));
   assert.ok(!codes.includes("ambiguous-relation-target"));
 });
@@ -237,7 +256,7 @@ test("documented blocking rules flag findings and gate health", async () => {
     "checkout",
     "SPEC-0001",
     "# Checkout\n\nSee [flow](missing.md).\n",
-    "relations:\n  implements: [SPEC-GONE]\n",
+    "relations:\n  supersedes: [SPEC-GONE]\n",
   );
   writeSpecIndex(root, []);
 

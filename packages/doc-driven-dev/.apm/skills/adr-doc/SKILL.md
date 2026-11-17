@@ -289,8 +289,9 @@ Do not proceed to Phase 2 until the human confirms the summary.
    `type`, `status`, `title`, `created`, `updated`, `owners`, and `relations`
    belong at the top level. ADR-specific governance belongs under
    `metadata.adr`, not top-level `decision-makers`, `consulted`, or `informed`.
-8. Connect related ADRs with the shared meaning-based `relations` fields
-   described in `references/adr-conventions.md`.
+8. Connect related ADRs with the Knowledge Relations v1 forward fields
+   described in `references/adr-conventions.md` (`decides-for` → spec/design,
+   `supersedes` → the ADR this one replaces).
 9. Generate the file.
    Preferred: run `scripts/new_adr.js`. It handles directory detection, naming,
    templates, and metadata defaults — index materialization is explicit

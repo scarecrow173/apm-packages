@@ -3577,8 +3577,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["idea"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -3612,8 +3612,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"] },
-      { field: "supersedes", targetTypes: ["brainstorm"] }
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -3646,9 +3646,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["discovery"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: true,
@@ -3684,7 +3684,7 @@ var configs = {
     // (it is the target of motivates/realizes/decides-for, not the source).
     expectedUpstream: [],
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"] }
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -3721,8 +3721,8 @@ var configs = {
       { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
     ],
     allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["design"] }
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -3767,8 +3767,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"] },
-      { field: "supersedes", targetTypes: ["adr"] }
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -3807,9 +3807,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["knowledge"] }
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -3846,7 +3846,7 @@ var configs = {
     // Evidence `supported-by` comes from the Evidence Store (#240); neither
     // is a stored relation field here.
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"] }
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,

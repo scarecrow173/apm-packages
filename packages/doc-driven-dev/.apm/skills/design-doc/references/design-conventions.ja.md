@@ -127,17 +127,20 @@ Store の計画フローにおける契約として残り、次が必須です�
 
 ## Relations
 
-Knowledge Relations v1 では design は次の source→target relation を記録します。
+Knowledge Relations v1 では design は宣言済みの順方向 field と出典用の
+`relations.source` だけを格納します。
 
-- この設計が実現する spec には `relations.realizes` を使う。
-- 置き換える旧設計には `relations.supersedes` を使う。
-- 出典（外部リンク・issue・会話）は `relations.source` を使う。
+- `relations.realizes`（→ spec）— この設計が実現する spec。
+  `new_design --from` が設定する辺です。
+- `relations.supersedes`（→ design）— 置き換える旧設計。
+- `relations.source` — 出典（外部リンク・issue・会話）。
+- `relations.changes` — 文書リンクではなく出典の変更セット。
 
+逆名（`realized-by`、`superseded-by`）は派生投影であり、保存しません。
 `derives-from`、`related`、`references`、`defers`、`deferred-by` など
-その他の宣言キーはレガシー語彙で、マイグレーションは v3 以前のコーパス
-から読み取ります。creator は空のプレースホルダーとしてのみ出力しますが、
-`new_design --from` は `derives-from` を、`relate_adr` は ADR 上のこれらの
-キーを #235 で格納語彙が絞り込まれるまで設定できます。
+v3 以前のキーはマイグレーション領域の入力にすぎません。`doc-status` は
+これらを `legacy-relation-field` 指摘として報告し、現行グラフの辺として
+走査されることはありません。
 
 ## 索引
 

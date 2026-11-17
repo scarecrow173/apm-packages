@@ -22,7 +22,7 @@ const pad = (value: number): string => String(value).padStart(4, "0");
 /**
  * The #124 Task-5 large corpus: the standard chain plus ~60 extra canonical
  * docs — 20 discovery (one ≥50KB body so scan bytes dominate), 15 specs
- * (11 bulk + an en/ja sibling pair + an a↔b derives-from cycle), 10 ADRs,
+ * (11 bulk + an en/ja sibling pair + an a↔b supersedes cycle), 10 ADRs,
  * 10 tasks bound to PLAN-0002 (a second chain), 5 idea docs.
  *
  * Its ids/statuses intentionally keep the benchmark's pre-contract spellings
@@ -71,12 +71,12 @@ export function benchmarkCorpusFiles(pathologies: { dupId?: boolean; brokenRelat
   );
   files["docs/specs/0300-cyc-a.md"] = doc(
     { id: "CYC-A", type: "spec", status: "approved", title: "Cycle A",
-      relations: { "derives-from": ["CYC-B"] } },
+      relations: { supersedes: ["CYC-B"] } },
     "# Cycle A\n",
   );
   files["docs/specs/0301-cyc-b.md"] = doc(
     { id: "CYC-B", type: "spec", status: "approved", title: "Cycle B",
-      relations: { "derives-from": ["CYC-A"] } },
+      relations: { supersedes: ["CYC-A"] } },
     "# Cycle B\n",
   );
 
@@ -126,7 +126,7 @@ export function benchmarkCorpusFiles(pathologies: { dupId?: boolean; brokenRelat
   if (pathologies.brokenRelation) {
     files["docs/specs/0400-broken.md"] = doc(
       { id: "SPEC-BROKEN", type: "spec", status: "approved", title: "Broken",
-        relations: { "derives-from": ["GHOST-9999"] } },
+        relations: { supersedes: ["GHOST-9999"] } },
       "# Broken\n",
     );
   }
@@ -192,16 +192,24 @@ function indexReadme(dir: string, title: string, rows: IndexRow[], extra = ""): 
  *   → accepted ADR → approved design → completed plan → approved test-spec →
  *   done tasks → completed Implementation Records).
  * - Chain 05 is the supersession chain: SPEC-0501 was replaced by SPEC-0502
- *   but DESIGN-0501 still derives from the superseded spec and two tasks are
+ *   but DESIGN-0501 still realizes the superseded spec and two tasks are
  *   still `todo` on the completed plan (stale-upstream signals).
  * - Chain 06 is mid-flight (plan in-progress, mixed task statuses, one
  *   in-progress IR). Chain 07 stalled early (design still draft, no plan).
- * - Debt: 8 un-promoted ideas, 2 brainstorms, 3 orphan discoveries (one
- *   missing `relations.source`, one unresolved local source), a spec with a
- *   broken `derives-from`, a blocked + a superseded plan, index drift (stale
+ * - Debt: 8 un-promoted ideas, 2 brainstorms (one motivating a superseded
+ *   spec), 3 orphan discoveries (one missing `relations.source`, one with an
+ *   unresolved local source still motivating SPEC-0501), a spec with a
+ *   broken `supersedes`, a blocked + a superseded plan, index drift (stale
  *   entry, metadata mismatch, uncovered orphan discoveries), an unmanaged
  *   doc, a ja locale sibling, and 2 experiment `.jsonl` logs (not Markdown —
  *   outside the document scan entirely).
+ *
+ * Durable documents carry Knowledge Relations v1 fields only (Issue #235):
+ * `motivates`/`informs` on captures, `decides-for` on ADRs, `realizes` on
+ * designs, `supersedes` between same-type docs. Plan/task/test-spec/impl
+ * records are execution-bound or legacy migration-owned — they keep their
+ * pre-v3 spellings (`derives-from`, `verified-by`, `implements`, `verifies`)
+ * because migration, not lint, owns their rewrite.
  */
 export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
   const doc = (frontmatter: Record<string, unknown>, body: string): DocSpec => ({ frontmatter, body });
@@ -226,26 +234,29 @@ export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
   // ── Chains 01–04: completed end to end ───────────────────────────────────
   for (let chain = 1; chain <= 4; chain += 1) {
     const chainId = `0${chain}01`;
+    // Knowledge Relations v1 (Issue #235): forward edges live on the
+    // source — the discovery motivates/informs, the ADR decides-for, the
+    // design realizes. Specs carry no upstream field at all.
     put("docs/discovery", `0${chain}01-discovery.md`,
       { id: `DISC-${chainId}`, type: "discovery", status: "resolved", title: `Discovery ${chainId}`,
         relations: {
           source: [`https://example.com/research/${chainId}`],
-          "derived-by": [`SPEC-${chainId}`, `ADR-${chainId}`],
+          motivates: [`SPEC-${chainId}`],
+          informs: [`ADR-${chainId}`],
         } },
       chain === 1
         ? `# Discovery ${chainId}\n\n${"evidence row\n".repeat(3000)}` // ≈36 KB — the fat tail
         : `# Discovery ${chainId}\n`);
     put("docs/specs", `0${chain}01-spec.md`,
-      { id: `SPEC-${chainId}`, type: "spec", status: "implemented", title: `Spec ${chainId}`,
-        relations: { "derives-from": [`DISC-${chainId}`] } },
+      { id: `SPEC-${chainId}`, type: "spec", status: "implemented", title: `Spec ${chainId}` },
       specBody(`Spec ${chainId}`));
     put("docs/adr", `0${chain}01-adr.md`,
       { id: `ADR-${chainId}`, type: "adr", status: "accepted", title: `ADR ${chainId}`,
-        relations: { "derives-from": [`DISC-${chainId}`] } },
+        relations: { "decides-for": [`DESIGN-${chainId}`] } },
       adrBody(`ADR ${chainId}`));
     put("docs/designs", `0${chain}01-design.md`,
       { id: `DESIGN-${chainId}`, type: "design", status: "approved", title: `Design ${chainId}`,
-        relations: { "derives-from": [`SPEC-${chainId}`, `ADR-${chainId}`] } },
+        relations: { realizes: [`SPEC-${chainId}`] } },
       `# Design ${chainId}\n`);
     put("docs/plans", `0${chain}01-plan.md`,
       { id: `PLAN-${chainId}`, type: "plan", status: "completed", title: `Plan ${chainId}`,
@@ -281,31 +292,35 @@ export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
   // ja locale sibling of the implemented chain-02 spec — shares the logical
   // artifact identity (same stem, same id), scanned as a second file.
   put("docs/specs", "0201-spec.ja.md",
-    { id: "SPEC-0201", type: "spec", status: "implemented", title: "Spec 0201 (ja)",
-      relations: { "derives-from": ["DISC-0201"] } },
+    { id: "SPEC-0201", type: "spec", status: "implemented", title: "Spec 0201 (ja)" },
     "# Spec 0201 (ja)\n");
 
   // ── Chain 05: supersession + stale tasks on a completed plan ─────────────
   put("docs/discovery", "0501-discovery.md",
     { id: "DISC-0501", type: "discovery", status: "resolved", title: "Discovery 0501",
-      relations: { source: ["https://example.com/research/0501"], "derived-by": ["SPEC-0501", "ADR-0501"] } },
+      relations: {
+        source: ["https://example.com/research/0501"],
+        motivates: ["SPEC-0501", "SPEC-0502"],
+        informs: ["ADR-0501"],
+      } },
     "# Discovery 0501\n");
+  // SPEC-0501 stores no `superseded-by` — the derived inverse of SPEC-0502's
+  // stored forward `supersedes` edge covers it (v1 stores forward only).
   put("docs/specs", "0501-spec.md",
-    { id: "SPEC-0501", type: "spec", status: "superseded", title: "Spec 0501",
-      relations: { "derives-from": ["DISC-0501"], "superseded-by": ["SPEC-0502"] } },
+    { id: "SPEC-0501", type: "spec", status: "superseded", title: "Spec 0501" },
     specBody("Spec 0501"));
   put("docs/specs", "0502-spec.md",
     { id: "SPEC-0502", type: "spec", status: "implemented", title: "Spec 0502",
-      relations: { "derives-from": ["DISC-0501"], supersedes: ["SPEC-0501"] } },
+      relations: { supersedes: ["SPEC-0501"] } },
     specBody("Spec 0502"));
   put("docs/adr", "0501-adr.md",
     { id: "ADR-0501", type: "adr", status: "deprecated", title: "ADR 0501",
-      relations: { "derives-from": ["DISC-0501"] } },
+      relations: { "decides-for": ["DESIGN-0501"] } },
     adrBody("ADR 0501"));
   // The design was never re-pointed at SPEC-0502 — a stale upstream edge.
   put("docs/designs", "0501-design.md",
     { id: "DESIGN-0501", type: "design", status: "approved", title: "Design 0501",
-      relations: { "derives-from": ["SPEC-0501", "ADR-0501"] } },
+      relations: { realizes: ["SPEC-0501"] } },
     "# Design 0501\n");
   put("docs/plans", "0501-plan.md",
     { id: "PLAN-0501", type: "plan", status: "completed", title: "Plan 0501",
@@ -336,19 +351,22 @@ export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
   // ── Chain 06: mid-flight ─────────────────────────────────────────────────
   put("docs/discovery", "0601-discovery.md",
     { id: "DISC-0601", type: "discovery", status: "active", title: "Discovery 0601",
-      relations: { source: ["https://example.com/research/0601"], "derived-by": ["SPEC-0601", "ADR-0601"] } },
+      relations: {
+        source: ["https://example.com/research/0601"],
+        motivates: ["SPEC-0601"],
+        informs: ["ADR-0601"],
+      } },
     "# Discovery 0601\n");
   put("docs/specs", "0601-spec.md",
-    { id: "SPEC-0601", type: "spec", status: "approved", title: "Spec 0601",
-      relations: { "derives-from": ["DISC-0601"] } },
+    { id: "SPEC-0601", type: "spec", status: "approved", title: "Spec 0601" },
     specBody("Spec 0601"));
   put("docs/adr", "0601-adr.md",
     { id: "ADR-0601", type: "adr", status: "proposed", title: "ADR 0601",
-      relations: { "derives-from": ["DISC-0601"] } },
+      relations: { "decides-for": ["DESIGN-0601"] } },
     adrBody("ADR 0601"));
   put("docs/designs", "0601-design.md",
     { id: "DESIGN-0601", type: "design", status: "approved", title: "Design 0601",
-      relations: { "derives-from": ["SPEC-0601", "ADR-0601"] } },
+      relations: { realizes: ["SPEC-0601"] } },
       "# Design 0601\n");
   put("docs/plans", "0601-plan.md",
     { id: "PLAN-0601", type: "plan", status: "in-progress", title: "Plan 0601",
@@ -379,19 +397,22 @@ export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
   // ── Chain 07: stalled early (design never approved, no plan) ─────────────
   put("docs/discovery", "0701-discovery.md",
     { id: "DISC-0701", type: "discovery", status: "resolved", title: "Discovery 0701",
-      relations: { source: ["docs/misc/legacy-notes.md"], "derived-by": ["SPEC-0701", "ADR-0701"] } },
+      relations: {
+        source: ["docs/misc/legacy-notes.md"],
+        motivates: ["SPEC-0701"],
+        informs: ["ADR-0701"],
+      } },
     "# Discovery 0701\n");
   put("docs/specs", "0701-spec.md",
-    { id: "SPEC-0701", type: "spec", status: "approved", title: "Spec 0701",
-      relations: { "derives-from": ["DISC-0701"] } },
+    { id: "SPEC-0701", type: "spec", status: "approved", title: "Spec 0701" },
     specBody("Spec 0701"));
   put("docs/adr", "0701-adr.md",
     { id: "ADR-0701", type: "adr", status: "accepted", title: "ADR 0701",
-      relations: { "derives-from": ["DISC-0701"] } },
+      relations: { "decides-for": ["DESIGN-0701"] } },
     adrBody("ADR 0701"));
   put("docs/designs", "0701-design.md",
     { id: "DESIGN-0701", type: "design", status: "draft", title: "Design 0701",
-      relations: { "derives-from": ["SPEC-0701", "ADR-0701"] } },
+      relations: { realizes: ["SPEC-0701"] } },
     "# Design 0701\n");
 
   // ── Orphaned captures: never promoted, never related ─────────────────────
@@ -404,19 +425,23 @@ export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
   put("docs/discovery", "9101-brainstorm.md",
     { id: "BRAINSTORM-9101", type: "brainstorm", status: "capturing", title: "Brainstorm 9101" },
     "# Brainstorm 9101\n");
+  // Confirmed brainstorm still motivating a superseded spec — a left-behind
+  // capture edge (v1 stale-upstream debt on a durable source).
   put("docs/discovery", "9102-brainstorm.md",
-    { id: "BRAINSTORM-9102", type: "brainstorm", status: "confirmed", title: "Brainstorm 9102" },
+    { id: "BRAINSTORM-9102", type: "brainstorm", status: "confirmed", title: "Brainstorm 9102",
+      relations: { motivates: ["SPEC-0501"] } },
     "# Brainstorm 9102\n");
 
   // Orphan discoveries — 9103 deliberately has no source evidence, 9104's
-  // local source path does not resolve (accumulated provenance debt).
+  // local source path does not resolve (accumulated provenance debt) and its
+  // motivates edge still rides the superseded SPEC-0501.
   files["docs/discovery/9103-no-source.md"] = doc(
     { id: "DISC-9103", type: "discovery", status: "draft", title: "Discovery 9103" },
     "# Discovery 9103\n",
   );
   files["docs/discovery/9104-bad-source.md"] = doc(
     { id: "DISC-9104", type: "discovery", status: "draft", title: "Discovery 9104",
-      relations: { source: ["docs/misc/missing-source.md"] } },
+      relations: { source: ["docs/misc/missing-source.md"], motivates: ["SPEC-0501"] } },
     "# Discovery 9104\n",
   );
   files["docs/discovery/9105-lone.md"] = doc(
@@ -428,7 +453,7 @@ export function longRunningCorpusFiles(): Record<string, DocSpec | string> {
   // ── Isolated debt ────────────────────────────────────────────────────────
   put("docs/specs", "9201-broken.md",
     { id: "SPEC-9201", type: "spec", status: "proposed", title: "Spec 9201",
-      relations: { "derives-from": ["DISC-9999"] } },
+      relations: { supersedes: ["SPEC-9999"] } },
     specBody("Spec 9201"));
   put("docs/plans", "9301-blocked.md",
     { id: "PLAN-9301", type: "plan", status: "blocked", title: "Plan 9301",

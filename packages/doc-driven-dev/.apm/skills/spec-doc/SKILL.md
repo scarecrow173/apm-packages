@@ -33,11 +33,12 @@ verified before code is written.
    script, copy that template and fill it manually.
 
 4. Record meaningful relations in YAML front matter.
-   Use `relations.source` for external evidence and primary sources,
-   `relations.references` for supplementary material, `relations.refines` for
-   upstream docs being narrowed, and `relations.related` for contextual docs.
-   If a brainstorming discovery artifact exists in `docs/discovery/`, record it
-   in `relations.derives-from`.
+   Under Knowledge Relations v1 a spec is the *target* of `motivates`
+   (idea/discovery), `decides-for` (ADR), and `realizes` (design) — those
+   edges live on the source documents, not here. The spec stores only
+   `relations.source` provenance and `relations.supersedes` for a spec it
+   replaces. Pre-v3 keys such as `derives-from`, `references`, `refines`,
+   and `related` are migration-domain input only.
 5. Review the spec before implementation planning.
    A plan should not be created from a draft with unclear requirements or
    unverifiable acceptance criteria.
@@ -75,22 +76,14 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -120,10 +113,10 @@ In this package's lifecycle, spec and ADR are created in parallel from the same
 discovery output. All decisions are recorded as ADRs.
 
 - **Spec reveals an architecture decision:** Write the ADR in parallel with
-  the spec. Link with `relations.related` in both directions.
+  the spec. The ADR stores `relations.decides-for` pointing at this spec.
 - **ADR already exists:** If an accepted ADR constrains this spec (e.g., "we
-  use PostgreSQL"), reference it in `relations.derives-from` or
-  `relations.related`.
+  use PostgreSQL"), that ADR's `relations.decides-for` points at this spec;
+  the spec stores nothing.
 - **No architecture decision needed:** Proceed directly from approved spec to
   `plan-doc`. ADR is not required for purely product-only work.
 

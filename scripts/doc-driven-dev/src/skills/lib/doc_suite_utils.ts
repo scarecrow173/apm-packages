@@ -5,6 +5,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
 import { generateArtifactId } from "./artifact_id";
+import { parseClaimReference } from "./claim_ids";
 import { isSettledEntry } from "./doc_lifecycle";
 import {
   CANONICAL_DOC_DIRS,
@@ -17,40 +18,18 @@ import {
   slugify,
 } from "./document_utils";
 import { assertTypeScope, ownershipForDir } from "./doc_ownership";
-import { configFor, configs, DEFAULT_LIFECYCLE, docTypes, LIFECYCLE_VALUES, resolveDocType } from "./doc_types";
+import { configFor, configs, DEFAULT_LIFECYCLE, docTypes, knowledgeRelationFields, LIFECYCLE_VALUES, resolveDocType } from "./doc_types";
 import type { DocConfig, DocType, LifecycleValue } from "./doc_types";
 
-// The stored relation vocabulary the front-matter writer knows: the
-// Knowledge Relations v1 forward fields (the registry's declared
-// `allowedRelations` set — motivates/decides-for/realizes/informs/explains/
-// supersedes) plus the pre-v3 lineage fields still stored on Registry-2
-// documents (`implements`, `depends-on`, `verifies`, … — valid on
-// pre-migration repos, flagged as legacy markers by schema preflight under
-// a declared v3 manifest).
-const relationFields = [
-  "source",
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-  "superseded-by",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by",
-] as const;
+// The stored relation vocabulary the front-matter writer knows (Knowledge
+// Relations v1, Issue #235): the provenance `source` field plus the
+// registry's union forward set (`knowledgeRelationFields` — motivates /
+// decides-for / realizes / informs / explains / supersedes). Each durable
+// document emits `source`, `changes`, and only its own declared
+// `allowedRelations` fields; inverse and legacy keys are never written —
+// they are migration-domain input, flagged by schema preflight under a
+// declared manifest and by lint's `legacy-relation-field` rule.
+const relationFields = ["source", ...knowledgeRelationFields()] as const;
 
 const changeFields = [
   "added",
@@ -71,9 +50,18 @@ type ChangeEntry = {
 
 type ChangeSet = Record<ChangeField, ChangeEntry[]>;
 
-type RelationInput = Partial<Record<RelationField, string[]>> & {
-  changes?: Partial<ChangeSet>;
-};
+// Caller-supplied relations are intentionally loosely keyed: legacy and
+// execution-bound creator scripts still pass pre-v3 field names, which
+// `configFor` rejects before `frontMatter` runs — and `frontMatter` itself
+// throws on any key outside the durable type's declared v1 vocabulary, so
+// no writer silently drops or emits non-canonical fields.
+type RelationInput = { changes?: Partial<ChangeSet> } & Record<string, unknown>;
+
+function relationTargets(input: RelationInput | undefined, field: string): string[] {
+  const value = input?.[field];
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && Boolean(item.trim()));
+}
 
 type MetadataInput = Record<string, unknown>;
 
@@ -581,8 +569,29 @@ function formatExtraFieldsBlock(fields?: MetadataInput): string[] {
       : []);
 }
 
-function completeRelations(input?: RelationInput): Record<RelationField, string[]> {
-  return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []])) as Record<RelationField, string[]>;
+// The relation fields a durable type stores: `source` (provenance, shared)
+// plus the type's own declared `allowedRelations` fields — the per-type
+// projection of the Knowledge Relations v1 stored vocabulary.
+function storedRelationFields(config: DocConfig): string[] {
+  return config.allowedRelations.map((relation) => relation.field);
+}
+
+// Reject caller-supplied relation keys outside the durable type's declared
+// vocabulary — silently dropping a populated relation would lose caller
+// intent, and emitting a non-declared field would write non-canonical data.
+function assertRelationInput(config: DocConfig, input?: RelationInput): void {
+  const allowed = new Set(["source", "changes", ...storedRelationFields(config)]);
+  for (const key of Object.keys(input ?? {})) {
+    if (!allowed.has(key)) {
+      throw new Error(
+        `Invalid ${config.type} relation field: ${key} (stored fields for ${config.type}: ${[...allowed].sort().join(", ")})`,
+      );
+    }
+  }
+}
+
+function completeRelations(config: DocConfig, input?: RelationInput): Record<string, string[]> {
+  return Object.fromEntries(storedRelationFields(config).map((field) => [field, relationTargets(input, field)]));
 }
 
 function frontMatter(config: DocConfig, id: string, title: string, status: string, date: string, relations?: RelationInput, metadata?: MetadataInput, lifecycle: LifecycleValue = DEFAULT_LIFECYCLE, extraFields?: MetadataInput): string {
@@ -595,7 +604,8 @@ function frontMatter(config: DocConfig, id: string, title: string, status: strin
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error(`Invalid date: ${date} (expected YYYY-MM-DD)`);
   }
-  const complete = completeRelations(relations);
+  assertRelationInput(config, relations);
+  const complete = completeRelations(config, relations);
   const changes = completeChanges(relations?.changes);
   return [
     "---",
@@ -609,9 +619,9 @@ function frontMatter(config: DocConfig, id: string, title: string, status: strin
     ...formatExtraFieldsBlock(extraFields),
     "owners: []",
     "relations:",
-    formatRelationBlock("source", complete.source),
+    formatRelationBlock("source", relationTargets(relations, "source")),
     ...formatChangesBlock(changes),
-    ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
+    ...storedRelationFields(config).map((field) => formatRelationBlock(field, complete[field])),
     ...formatMetadataBlock(metadata),
     "---",
   ].join("\n");
@@ -755,7 +765,7 @@ function bodyFor(type: DocType, title: string): string {
       "",
       "## Deferred Design Concerns",
       "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+      "<!-- Intentionally deferred future work. Link the deferred draft doc in prose — Knowledge Relations v1 has no defers field. -->",
       "",
       "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
     ].join("\n");
@@ -835,7 +845,7 @@ function bodyFor(type: DocType, title: string): string {
       "",
       "## Deferred Design Concerns",
       "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+      "<!-- Intentionally deferred future work. Link the deferred draft doc in prose — Knowledge Relations v1 has no defers field. -->",
       "",
       "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
       "",
@@ -865,6 +875,7 @@ function isReservedDocFile(type: DocType, file: string): boolean {
 }
 
 function overviewDocument(date: string): string {
+  const design = configFor("design");
   return [
     "---",
     'id: "DESIGN-OVERVIEW"',
@@ -876,7 +887,9 @@ function overviewDocument(date: string): string {
     `updated: "${date}"`,
     "owners: []",
     "relations:",
-    ...relationFields.map((field) => formatRelationBlock(field, [])),
+    formatRelationBlock("source", []),
+    ...formatChangesBlock(completeChanges()),
+    ...storedRelationFields(design).map((field) => formatRelationBlock(field, [])),
     "---",
     "",
     "# System Design Overview",
@@ -1395,9 +1408,16 @@ function relationValues(value: unknown): string[] {
 }
 
 function resolveDocumentReference(cwd: string, target: string, fromDir?: string): string | null {
-  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
-    const candidate = path.resolve(base, target);
-    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+  const trimmed = target.trim();
+  // Claim-qualified references (`DOC-ID::KEY`) address documents by id only —
+  // never by path — the same contract the repository/graph boundary uses.
+  const claimRef = parseClaimReference(trimmed);
+  const idLookup = claimRef?.docId ?? trimmed;
+  if (!claimRef) {
+    for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+      const candidate = path.resolve(base, trimmed);
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+    }
   }
   for (const type of docTypes) {
     for (const dirName of configs[type].dirs) {
@@ -1406,7 +1426,7 @@ function resolveDocumentReference(cwd: string, target: string, fromDir?: string)
       for (const file of docFiles(dir)) {
         const fullPath = path.join(dir, file);
         const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
-        if (!parsed.error && parsed.data.id === target) return fullPath;
+        if (!parsed.error && parsed.data.id === idLookup) return fullPath;
       }
     }
   }

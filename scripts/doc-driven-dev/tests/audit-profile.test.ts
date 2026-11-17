@@ -29,8 +29,6 @@ function writeFile(root: string, relPath: string, content: string) {
   fs.writeFileSync(full, content, "utf8");
 }
 
-const IMPLEMENTS_IDEA = "relations:\n  implements: [IDEA-0001]\n";
-
 function writeSpec(
   root: string,
   name: string,
@@ -48,22 +46,24 @@ function writeSpec(
   );
 }
 
-function writeIdea(root: string) {
+// Under Knowledge Relations v1 the spec is the *target* of `motivates` — the
+// forward edge lives on the idea, so specs carry no relation field at all.
+function writeIdea(root: string, motivates: string[] = ["SPEC-0001", "SPEC-0002"]) {
   writeFile(
     root,
     "docs/ideas/idea-a.md",
-    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\nlifecycle: draft\ntitle: Idea\ncreated: \"2026-01-01\"\nupdated: \"2026-01-01\"\nowners: [team]\n---\n# Idea\n",
+    `---\nid: IDEA-0001\ntype: idea\nstatus: draft\nlifecycle: draft\ntitle: Idea\ncreated: "2026-01-01"\nupdated: "2026-01-01"\nowners: [team]\nrelations:\n  motivates: [${motivates.join(", ")}]\n---\n# Idea\n`,
   );
 }
 
-// Two specs that implement the same idea and link to each other: every
-// artifact-surface invariant holds (valid front matter, declared upstream,
-// inbound canonical links, a resolved outbound relation), so the only way to
-// get a finding out of this fixture is index state.
+// Two specs motivated by the same idea and linked to each other: every
+// artifact-surface invariant holds (valid front matter, inbound canonical
+// links, a resolved inbound relation), so the only way to get a finding out
+// of this fixture is index state.
 function writeLinkedSpecPair(root: string) {
   writeIdea(root);
-  writeSpec(root, "a", "SPEC-0001", "Spec A", "# Spec A\n\nSee [Spec B](b.md).\n", IMPLEMENTS_IDEA);
-  writeSpec(root, "b", "SPEC-0002", "Spec B", "# Spec B\n\nSee [Spec A](a.md).\n", IMPLEMENTS_IDEA);
+  writeSpec(root, "a", "SPEC-0001", "Spec A", "# Spec A\n\nSee [Spec B](b.md).\n");
+  writeSpec(root, "b", "SPEC-0002", "Spec B", "# Spec B\n\nSee [Spec A](a.md).\n");
 }
 
 const indexRow = (id: string, title: string, status: string, file: string) =>
@@ -167,7 +167,7 @@ test("inconsistent index emits lintIndexConsistency findings only under material
 test("status and tier drift between front matter and index rows is materialized-only", async () => {
   const root = fixture();
   writeLinkedSpecPair(root);
-  writeSpec(root, "old", "SPEC-0003", "Old Spec", "# Old\n\nSee [a](a.md).\n", IMPLEMENTS_IDEA, "superseded", "superseded");
+  writeSpec(root, "old", "SPEC-0003", "Old Spec", "# Old\n\nSee [a](a.md).\n", "", "superseded", "superseded");
   // Two drift forms: a.md's status cell disagrees with its front matter, and
   // the settled SPEC-0003 is ordered ahead of the in-flight rows (it belongs
   // under `## Settled`, so expected order puts it last).
@@ -189,17 +189,18 @@ test("status and tier drift between front matter and index rows is materialized-
 test("artifact profile still catches canonical-document defects", async () => {
   const root = fixture();
   writeIdea(root);
-  // duplicate-id: two artifacts share SPEC-0001.
-  writeSpec(root, "dup-a", "SPEC-0001", "Dup A", "# Dup A\n\nSee [dup-b](dup-b.md).\n", IMPLEMENTS_IDEA);
-  writeSpec(root, "dup-b", "SPEC-0001", "Dup B", "# Dup B\n\nSee [dup-a](dup-a.md).\n", IMPLEMENTS_IDEA);
-  // invalid-status + broken-relation-link.
+  // duplicate-id: two artifacts share SPEC-0001 (the idea's motivates edge
+  // resolves ambiguously — an idea-scope finding, filtered by the spec lint).
+  writeSpec(root, "dup-a", "SPEC-0001", "Dup A", "# Dup A\n\nSee [dup-b](dup-b.md).\n");
+  writeSpec(root, "dup-b", "SPEC-0001", "Dup B", "# Dup B\n\nSee [dup-a](dup-a.md).\n");
+  // invalid-status + broken-relation-link (supersedes is the spec's v1 field).
   writeSpec(
     root,
     "bad",
     "SPEC-0002",
     "Bad",
     "# Bad\n\nSee [dup-a](dup-a.md).\n",
-    "relations:\n  implements: [SPEC-9999]\n",
+    "relations:\n  supersedes: [SPEC-9999]\n",
     "bogus-status",
   );
 

@@ -52,12 +52,16 @@ axes — both now single-sourced in `lib/doc_repository.ts`:
   `abandoned` — per-type sets in `SETTLED_STATUSES`). `approved`/`accepted`
   normative baselines stay in-flight: in-flight work legitimately derives
   from them.
-- *Stale upstream* = an in-flight document with ≥1 resolved
-  `implements`/`derives-from`/`refines` target in a dead status
+- *Stale upstream* = an in-flight document with ≥1 resolved upstream
+  target in a dead status
   (`superseded`/`rejected`/`deprecated`/`archived`/`abandoned`/`wont-do`/
-  `completed`/`done`). **Promoted in #166:** the heuristic became the
-  `stale-upstream` doc-status rule — the stats consume the shared
-  `staleUpstreamTargets` predicate, so the counts below are the same edges
+  `completed`/`done`). The measured corpus used the pre-v3 lineage keys
+  `implements`/`derives-from`/`refines`; the shared
+  `staleUpstreamTargets` predicate now reads the Knowledge Relations v1
+  fields `motivates`/`decides-for`/`realizes`. **Promoted in #166:** the
+  heuristic became the `stale-upstream` doc-status rule — the stats
+  consume the shared `staleUpstreamTargets` predicate, so the counts
+  below are the same edges
   `doc_status lint` reports as non-blocking warnings. Resolved/active
   upstreams and normative baselines never flag.
 - Legacy fixture spelling `type: "implementation-record"` merges into the

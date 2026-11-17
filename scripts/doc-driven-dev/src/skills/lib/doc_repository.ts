@@ -3,7 +3,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { configFor, docTypes, parseDoc, relationFields } from "./doc_suite_utils";
+import { parseClaimReference } from "./claim_ids";
+import { configFor, docTypes, parseDoc } from "./doc_suite_utils";
 import { isSettledEntry, lifecycleBucketForType, SETTLED_STATUSES } from "./doc_lifecycle";
 import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, nonReferenceRelationKeys, normalizeDir } from "./document_utils";
 import { ephemeralConfigs, executionTypes, legacyDocTypes, managedDocDirs } from "./doc_types";
@@ -146,15 +147,13 @@ const DEAD_UPSTREAM_STATUSES: ReadonlySet<string> = new Set([
   "done",
 ]);
 
-/** Upstream relation fields — the lineage contract's expected-upstream set.
- *  Union of the v2 lineage fields (`implements`/`derives-from`/`refines`,
- *  still meaningful for pre-migration repositories) and the Knowledge
- *  Relations v1 fields that express derivation (`motivates`,
- *  `decides-for`, `realizes`). */
+/** Upstream relation fields — the stored forward fields that express
+ *  derivation under Knowledge Relations v1 (`motivates`, `decides-for`,
+ *  `realizes`; Issue #235). Legacy lineage keys (`implements`,
+ *  `derives-from`, `refines`) are migration-domain input — never graph
+ *  data — so a stale-upstream check that followed them would silently
+ *  interpret pre-v3 vocabulary during normal execution. */
 const UPSTREAM_FIELDS: ReadonlySet<string> = new Set([
-  "implements",
-  "derives-from",
-  "refines",
   "motivates",
   "decides-for",
   "realizes",
@@ -193,7 +192,7 @@ type StaleUpstreamTarget = {
 
 /**
  * Stale upstream: an in-flight document riding on a dead upstream. Returns the
- * resolved `implements`/`derives-from`/`refines` targets whose upstream
+ * resolved `motivates`/`decides-for`/`realizes` targets whose upstream
  * document carries a dead status — one entry per dead target so callers can
  * report or count each edge. Unresolved, `resolved-file` (non-document), and
  * status-less targets never qualify; neither do settled sources.
@@ -469,6 +468,9 @@ function isWindowsAbsolutePath(value: string): boolean {
 function isExternalReference(value: string): boolean {
   const trimmed = value.trim();
   if (isWindowsAbsolutePath(trimmed)) return false;
+  // Claim-qualified document references (`DOC-ID::KEY`) are local addresses:
+  // the `DOC-ID:` prefix must not parse as a URI scheme.
+  if (parseClaimReference(trimmed)) return false;
   return EXTERNAL_REFERENCE.test(trimmed);
 }
 
@@ -781,6 +783,17 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
 
   const resolveRelationTarget = (from: RepositoryDocument, rawTarget: string): RelationResolution => {
     const value = rawTarget.trim();
+    // Claim-qualified references (`DOC-ID::KEY`) resolve through the claim
+    // boundary first — the `DOC-ID:` prefix must not be mistaken for a URI
+    // scheme — so this check precedes external, by-id, and path matching.
+    const claimRef = parseClaimReference(value);
+    if (claimRef) {
+      const claimMatch = byId.get(claimRef.docId);
+      if (!claimMatch) return { status: "unresolved" };
+      const claimPrimaries = artifactPrimaries(claimMatch);
+      if (claimPrimaries.length === 1) return { status: "resolved", document: claimPrimaries[0] };
+      return { status: "ambiguous", candidates: claimPrimaries };
+    }
     if (isExternalReference(value)) return { status: "external" };
     const byIdMatch = byId.get(value);
     if (byIdMatch) {
@@ -854,8 +867,11 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
 
 export {
   artifactKeyOf,
+  artifactPrimaries,
   canonicalDocRoots,
+  groupByArtifact,
   compareFindings,
+  compareStrings,
   contractForType,
   DEAD_UPSTREAM_STATUSES,
   documentContracts,

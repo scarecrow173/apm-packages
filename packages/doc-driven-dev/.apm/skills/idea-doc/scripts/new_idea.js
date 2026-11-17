@@ -24250,8 +24250,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["idea"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -24285,8 +24285,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"] },
-      { field: "supersedes", targetTypes: ["brainstorm"] }
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -24319,9 +24319,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["discovery"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: true,
@@ -24357,7 +24357,7 @@ var configs = {
     // (it is the target of motivates/realizes/decides-for, not the source).
     expectedUpstream: [],
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"] }
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24394,8 +24394,8 @@ var configs = {
       { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
     ],
     allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["design"] }
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24440,8 +24440,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"] },
-      { field: "supersedes", targetTypes: ["adr"] }
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24480,9 +24480,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["knowledge"] }
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24519,7 +24519,7 @@ var configs = {
     // Evidence `supported-by` comes from the Evidence Store (#240); neither
     // is a stored relation field here.
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"] }
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24899,30 +24899,7 @@ function assertTypeScope(type, directory) {
 }
 
 // src/skills/lib/doc_suite_utils.ts
-var relationFields = [
-  "source",
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-  "superseded-by",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by"
-];
+var relationFields = ["source", ...knowledgeRelationFields()];
 var changeFields = [
   "added",
   "modified",
@@ -24931,6 +24908,11 @@ var changeFields = [
   "moved",
   "generated"
 ];
+function relationTargets(input2, field) {
+  const value = input2?.[field];
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => typeof item === "string" && Boolean(item.trim()));
+}
 var scaffoldTargets = (() => {
   const byDir = /* @__PURE__ */ new Map();
   for (const type of docTypes) {
@@ -25103,8 +25085,21 @@ function formatExtraFieldsBlock(fields) {
   if (!fields) return [];
   return Object.entries(fields).flatMap(([key, value]) => typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? [`${key}: ${formatMetadataScalar(value)}`] : []);
 }
-function completeRelations(input2) {
-  return Object.fromEntries(relationFields.map((field) => [field, input2?.[field] || []]));
+function storedRelationFields(config2) {
+  return config2.allowedRelations.map((relation) => relation.field);
+}
+function assertRelationInput(config2, input2) {
+  const allowed = /* @__PURE__ */ new Set(["source", "changes", ...storedRelationFields(config2)]);
+  for (const key of Object.keys(input2 ?? {})) {
+    if (!allowed.has(key)) {
+      throw new Error(
+        `Invalid ${config2.type} relation field: ${key} (stored fields for ${config2.type}: ${[...allowed].sort().join(", ")})`
+      );
+    }
+  }
+}
+function completeRelations(config2, input2) {
+  return Object.fromEntries(storedRelationFields(config2).map((field) => [field, relationTargets(input2, field)]));
 }
 function frontMatter(config2, id, title, status, date5, relations, metadata, lifecycle = DEFAULT_LIFECYCLE, extraFields) {
   if (!config2.statusValues.includes(status)) {
@@ -25116,7 +25111,8 @@ function frontMatter(config2, id, title, status, date5, relations, metadata, lif
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date5)) {
     throw new Error(`Invalid date: ${date5} (expected YYYY-MM-DD)`);
   }
-  const complete = completeRelations(relations);
+  assertRelationInput(config2, relations);
+  const complete = completeRelations(config2, relations);
   const changes = completeChanges(relations?.changes);
   return [
     "---",
@@ -25130,9 +25126,9 @@ function frontMatter(config2, id, title, status, date5, relations, metadata, lif
     ...formatExtraFieldsBlock(extraFields),
     "owners: []",
     "relations:",
-    formatRelationBlock("source", complete.source),
+    formatRelationBlock("source", relationTargets(relations, "source")),
     ...formatChangesBlock(changes),
-    ...relationFields.filter((field) => field !== "source").map((field) => formatRelationBlock(field, complete[field])),
+    ...storedRelationFields(config2).map((field) => formatRelationBlock(field, complete[field])),
     ...formatMetadataBlock(metadata),
     "---"
   ].join("\n");
@@ -25271,7 +25267,7 @@ function bodyFor(type, title) {
       "",
       "## Deferred Design Concerns",
       "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+      "<!-- Intentionally deferred future work. Link the deferred draft doc in prose \u2014 Knowledge Relations v1 has no defers field. -->",
       "",
       "- <!-- concern | reason | re-engagement trigger | risk if ignored -->"
     ].join("\n");
@@ -25351,7 +25347,7 @@ function bodyFor(type, title) {
       "",
       "## Deferred Design Concerns",
       "",
-      "<!-- Intentionally deferred future work. Link the deferred draft doc via relations.defers. -->",
+      "<!-- Intentionally deferred future work. Link the deferred draft doc in prose \u2014 Knowledge Relations v1 has no defers field. -->",
       "",
       "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
       "",
@@ -25379,6 +25375,7 @@ function isReservedDocFile(type, file2) {
   return false;
 }
 function overviewDocument(date5) {
+  const design = configFor("design");
   return [
     "---",
     'id: "DESIGN-OVERVIEW"',
@@ -25390,7 +25387,9 @@ function overviewDocument(date5) {
     `updated: "${date5}"`,
     "owners: []",
     "relations:",
-    ...relationFields.map((field) => formatRelationBlock(field, [])),
+    formatRelationBlock("source", []),
+    ...formatChangesBlock(completeChanges()),
+    ...storedRelationFields(design).map((field) => formatRelationBlock(field, [])),
     "---",
     "",
     "# System Design Overview",

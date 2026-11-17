@@ -31,11 +31,12 @@ spec は、何を作るべきか、なぜ必要か、誰のためか、何を範
    実行できない場合は、このテンプレートをコピーして手動で埋めます。
 
 4. YAML フロントマターに意味付き relation を記録する。
-   外部出典や一次情報は `relations.source`、補助資料は
-   `relations.references`、上流文書の詳細化は `relations.refines`、
-   文脈上の関連は `relations.related` に記録します。
-   brainstorming の discovery artifact (`docs/discovery/`) が存在する場合は
-   `relations.derives-from` に記録します。
+   Knowledge Relations v1 では spec は `motivates`（idea/discovery）、
+   `decides-for`（ADR）、`realizes`（design）の *対象側* であり、これらの辺は
+   ソース文書側に置かれます。spec 自身は `relations.source` の出典と、
+   置き換える spec への `relations.supersedes` だけを格納します。
+   `derives-from`、`references`、`refines`、`related` などの v3 以前のキーは
+   マイグレーション領域の入力にすぎません。
 5. 実装計画に進む前に spec をレビューする。
    要件や受け入れ基準が曖昧な `draft` から plan を作らないでください。
    plan 作成の前提として、spec は `proposed` 以上のステータスが必要です。
@@ -72,22 +73,14 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -117,10 +110,10 @@ spec を `draft` から `proposed` または `approved` に進める前に、以
 並列で作成します。すべての意思決定は ADR として記録します。
 
 - **spec が architecture 判断を明らかにする場合:** spec と並列で ADR を
-  書きます。両方向で `relations.related` をリンクします。
+  書きます。ADR 側が `relations.decides-for` でこの spec を指します。
 - **ADR が既に存在する場合:** 承認済み ADR がこの spec を制約するなら
-  （例: 「PostgreSQL を使う」）、`relations.derives-from` または
-  `relations.related` で参照します。
+  （例: 「PostgreSQL を使う」）、その ADR の `relations.decides-for` が
+  この spec を指します。spec 側は何も保存しません。
 - **architecture 判断が不要な場合:** 承認済み spec から直接 `plan-doc` に
   進みます。純粋なプロダクト作業では ADR は不要です。
 

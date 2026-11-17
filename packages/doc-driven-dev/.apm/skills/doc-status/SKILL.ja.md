@@ -117,8 +117,10 @@ scope です。`plan`/`task` は execution-bound(状態は Execution Store に�
 4. `relations.source` は外部出典として扱う。
    HTTP、HTTPS、mail link は許可し、存在しないローカルファイルとして
    報告しません。
-5. `relations.references` は補助資料として扱う。
-   ローカルパスの場合は存在確認し、外部資料の場合は URL を許可します。
+5. v3 以前の relation キーは migration 領域の入力として扱う。
+   値が記録された legacy キー（`implements`、`derives-from`、`references`、
+   `related`、逆名など）は `legacy-relation-field` として報告され、
+   現行グラフの辺として解決・走査されることはありません。
 6. 壊れた内部 relation、不正ステータス、必須フロントマター欠落、
    索引欠落を報告する。
 
@@ -141,9 +143,17 @@ profile と、実行・スキップされたチェック群を報告する。対
 - `invalid-id-format`, `invalid-id-prefix`, `duplicate-id` — artifact
   identity の違反。
 - `broken-relation-link`, `ambiguous-relation-target`,
-  `relation-escapes-root`, `self-relation`, `inconsistent-reciprocal-relation`
-  — 意味 relation の違反。reciprocal check は typed directional pair のみを
-  対象とし、`related` は逆リンクを必要としない一方向の context link です。
+  `relation-escapes-root`, `self-relation`, `invalid-relation-field`,
+  `invalid-relation-target-type`, `relation-cycle` — Knowledge Graph が
+  投影する意味 relation の違反。格納される relation は正規の順方向
+  field（`motivates`、`decides-for`、`realizes`、`informs`、`explains`、
+  `supersedes`）のみであり、逆名は派生投影のため reciprocal-link
+  チェックは存在しない — 一貫性は構造上保証される。
+- `invalid-claim-id`, `claim-without-doc-id`, `duplicate-claim`,
+  `claim-doc-mismatch`, `unresolved-claim-target` — Claim マーカーと
+  安定 Claim ID（`<DOC-ID>::<CLAIM-ID>`）の違反。
+- `legacy-relation-field` — 値が記録された v3 以前の relation キー。
+  migration 領域の指摘であり、グラフ入力にはならない。
 - `unresolved-legacy-reference` — 本文中の旧 `TYPE-NNNN` artifact id 参照で、
   対応する artifact が存在しないもの。番号付き `.jsonl` log を持たない
   `EXP-NNNN` experiment 参照も含む。既存 artifact や experiment file に
@@ -167,8 +177,7 @@ profile と、実行・スキップされたチェック群を報告する。対
   宣言していない場合に指摘する。settled status(`superseded`、`rejected`、
   `archived`、`deprecated`、`abandoned`、`wont-do`)は対象外。
 - `stale-upstream` — 死んだ上流に乗っている in-flight 文書。
-  `implements` / `derives-from` / `refines` / `motivates` /
-  `decides-for` / `realizes` のターゲットが、dead status
+  `motivates` / `decides-for` / `realizes` のターゲットが、dead status
   （`superseded`, `rejected`, `deprecated`, `archived`, `abandoned`,
   `wont-do`, `completed`, `done`）の文書に解決した場合、dead ターゲット
   ごとに warning を出す。`approved`/`accepted`/`implemented`/`resolved`

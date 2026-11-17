@@ -6,24 +6,14 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/adr-doc");
+// Knowledge Relations v1 (Issue #235): creators emit `source` provenance
+// plus only the adr type's declared forward fields — `decides-for` and
+// `supersedes`. Inverse names are derived projections, never stored; the
+// pre-v3 keys are migration-domain input, not emitted vocabulary.
 const commonRelationFields = [
   "source",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
+  "decides-for",
   "supersedes",
-  "superseded-by",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by",
 ];
 
 function tempRepo() {
@@ -356,7 +346,7 @@ test("review_adr checks agent-readiness without writing", () => {
   assert.equal(fs.readFileSync(adrPath, "utf8"), before);
 });
 
-test("relate_adr is dry-run by default and writes bidirectional relations", () => {
+test("relate_adr is dry-run by default and writes only the stored forward relation", () => {
   const repo = tempRepo();
   const first = runScript("new_adr.js", ["--title", "Old Decision"], { cwd: repo });
   const second = runScript("new_adr.js", ["--title", "New Decision"], { cwd: repo });
@@ -378,7 +368,59 @@ test("relate_adr is dry-run by default and writes bidirectional relations", () =
   );
   assert.equal(write.status, 0, write.stderr);
   assert.match(fs.readFileSync(path.join(repo, "docs/adr/new-decision.md"), "utf8"), /old-decision\.md/);
-  assert.match(fs.readFileSync(path.join(repo, "docs/adr/old-decision.md"), "utf8"), /new-decision\.md/);
+  // Knowledge Relations v1: the inverse (`superseded-by`) is a derived
+  // projection — the target document is never written (Issue #235).
+  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/adr/old-decision.md"), "utf8"), /new-decision\.md/);
+});
+
+test("relate_adr validates typed-relation targets before writing (Issue #235)", () => {
+  const repo = tempRepo();
+  runScript("new_adr.js", ["--title", "Deciding ADR"], { cwd: repo });
+  runScript("new_adr.js", ["--title", "Other ADR"], { cwd: repo });
+  fs.mkdirSync(path.join(repo, "docs/specs"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, "docs/specs/0001-s.md"),
+    '---\nid: "SPEC-0001"\ntype: "spec"\nstatus: "approved"\ntitle: "S"\ncreated: "2026-01-01"\nupdated: "2026-01-01"\nowners: []\nrelations: {}\n---\n\n# S\n',
+    "utf8",
+  );
+
+  // decides-for targets spec|design — an ADR target is refused, not written.
+  const wrongType = runScript(
+    "relate_adr.js",
+    ["--dir", "docs/adr", "--from", "deciding-adr.md", "--to", "other-adr.md", "--relation", "decides-for"],
+    { cwd: repo },
+  );
+  assert.equal(wrongType.status, 1);
+  assert.match(wrongType.stderr, /expected one of: spec, design/);
+  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/adr/deciding-adr.md"), "utf8"), /other-adr\.md/);
+
+  // An unresolvable target is refused the same way.
+  const missing = runScript(
+    "relate_adr.js",
+    ["--dir", "docs/adr", "--from", "deciding-adr.md", "--to", "SPEC-9999", "--relation", "decides-for"],
+    { cwd: repo },
+  );
+  assert.equal(missing.status, 1);
+  assert.match(missing.stderr, /does not resolve/);
+
+  // A spec path target resolves and validates; the written edge resolves
+  // through the same boundary.
+  const ok = runScript(
+    "relate_adr.js",
+    ["--dir", "docs/adr", "--from", "deciding-adr.md", "--to", "docs/specs/0001-s.md", "--relation", "decides-for", "--write"],
+    { cwd: repo },
+  );
+  assert.equal(ok.status, 0, ok.stderr);
+  assert.match(fs.readFileSync(path.join(repo, "docs/adr/deciding-adr.md"), "utf8"), /docs\/specs\/0001-s\.md/);
+
+  // A claim-qualified id target resolves by document id, same as the graph.
+  const claimRef = runScript(
+    "relate_adr.js",
+    ["--dir", "docs/adr", "--from", "deciding-adr.md", "--to", "SPEC-0001::R-01", "--relation", "decides-for", "--write"],
+    { cwd: repo },
+  );
+  assert.equal(claimRef.status, 0, claimRef.stderr);
+  assert.match(fs.readFileSync(path.join(repo, "docs/adr/deciding-adr.md"), "utf8"), /SPEC-0001::R-01/);
 });
 
 test("check_code_links reports missing Implementation Plan paths", () => {

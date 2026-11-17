@@ -48,7 +48,7 @@ const scannerClis: Array<[skill: string, script: string, extraArgs: string[]]> =
 const writerClis: Array<[skill: string, script: string, extraArgs: string[]]> = [
   ["adr-doc", "new_adr.js", ["--title", "X"]],
   ["adr-doc", "update_index.js", []],
-  ["adr-doc", "relate_adr.js", ["--from", "a", "--to", "b", "--relation", "related"]],
+  ["adr-doc", "relate_adr.js", ["--from", "a", "--to", "b", "--relation", "supersedes"]],
   ["doc-maintenance", "doc_maintenance.js", ["plan", "--type", "spec"]],
   ["design-doc", "new_design.js", ["--title", "X"]],
   ["discovery-doc", "new_discovery.js", ["--title", "X"]],

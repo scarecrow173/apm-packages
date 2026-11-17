@@ -571,7 +571,7 @@ test("post-apply validation audits every resident type in a shared directory", a
   writeDoc(repo, "docs/discovery/0002-research.md", {
     id: "DISC-0002", type: "discovery", status: "draft", title: "research",
     created: "2026-08-13", updated: "2026-08-13", owners: [],
-    relations: { "depends-on": ["missing.md"], source: ["https://example.com/evidence"] },
+    relations: { informs: ["missing.md"], source: ["https://example.com/evidence"] },
   }, "# research\n");
 
   const report = await migrateArtifactIds({ cwd: repo, apply: true });

@@ -2,11 +2,8 @@
 "use strict";
 
 import path from "node:path";
-import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
 import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
-
-const TEST_SPEC_DOC_GATE_ERROR = "TEST-SPEC-DOC-GATE-001: at least one --verifies target resolving to an existing document is required before creating a test spec.";
 
 type CliArgs = {
   cwd: string;
@@ -47,16 +44,7 @@ function usage(): string {
   return "Usage: node scripts/new_test_spec.js --title <title> --verifies <doc> [--verifies <doc>...] [--derives-from <doc>...] [--dir <path>] [--name <filename>] [--status <status>]";
 }
 
-function validateVerifiesGate(cwd: string, verifies: string[]): void {
-  if (verifies.length === 0) throw new Error(TEST_SPEC_DOC_GATE_ERROR);
-  for (const target of verifies) {
-    if (!resolveDocumentReference(cwd, target)) {
-      throw new Error(TEST_SPEC_DOC_GATE_ERROR);
-    }
-  }
-}
-
-async function main(): Promise<void> {
+function main(): void {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -68,27 +56,10 @@ async function main(): Promise<void> {
     if (!schemaEntrypointGuard(resolvedCwd)) return;
     // Registry 3: `test-spec` is a legacy, migration-only type — durable
     // verification intent lives in `verification` docs (#239). The registry
-    // gate is the one authoritative refusal, raised before any gate check
-    // or write.
+    // gate is the one authoritative refusal, raised before any write; the
+    // script is a tombstone and the historical gate check has no reachable
+    // caller.
     configFor("test-spec");
-    validateVerifiesGate(resolvedCwd, args.verifies);
-    const result = await createDocument("test-spec", {
-      cwd: resolvedCwd,
-      date: args.date,
-      dir: args.dir,
-      name: args.name,
-      relations: {
-        verifies: [...new Set(args.verifies)],
-        "derives-from": [...new Set(args.derivesFrom)],
-      },
-      status: args.status,
-      title: args.title,
-    });
-    console.log(`Created ${result.file}`);
-    logIndexResult(result);
-    if (args.noIndex || args.forceIndex) {
-      console.log("Note: --no-index/--force-index are deprecated and have no effect; indexes are materialized via doc_maintenance.js index plan|apply");
-    }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

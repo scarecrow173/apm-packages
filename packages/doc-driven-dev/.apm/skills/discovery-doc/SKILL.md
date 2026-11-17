@@ -52,12 +52,14 @@ to persist exploration outputs as a canonical artifact.
    reports, or issue links that prompted the exploration — record it at
    creation, for brainstorm records too, so no capture doc is left without a
    traceable origin.
-   Use `relations.derived-by` to point forward to specs or ADRs that were
-   written from this discovery.
-   Use `relations.related` for contextual docs without directional dependency.
+   Use `relations.motivates` to point forward at the spec this exploration
+   motivates, and `relations.informs` for durable documents it feeds
+   (ADRs, designs, other captures).
 5. Promote conclusions to downstream documents.
    When the exploration reaches a tentative conclusion, create `spec-doc` or
-   `adr-doc` entries and link them via `relations.derived-by` in this document.
+   `adr-doc` entries and link them via `relations.motivates` /
+   `relations.informs` in this document — the downstream document stores no
+   inverse (`motivated-by` / `informed-by` are derived projections).
    Update status to `resolved` once all promotion candidates are addressed.
 
 ## Required Content
@@ -96,22 +98,16 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
+  informs: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -129,7 +125,8 @@ Status values: `draft`, `active`, `resolved`, `archived`, `superseded`.
 
 Discovery documents are not approved or implemented. `resolved` signals that
 the useful output has been captured in downstream documents. Link those
-documents in `relations.derived-by` before setting `resolved`.
+documents via `relations.motivates` or `relations.informs` before setting
+`resolved`.
 
 ## Review Checklist
 
@@ -157,17 +154,17 @@ when the requirements are already clear. Use discovery when the problem space
 is ambiguous, alternatives exist, or significant research was done.
 
 - **Discovery produces a spec**: when the exploration clarifies product intent,
-  create a `spec-doc` and link it via `relations.derived-by` in the discovery
+  create a `spec-doc` and link it via `relations.motivates` in the discovery
   document.
 - **Discovery produces an ADR**: when the exploration resolves an architecture
-  decision, create an `adr-doc` and link it in `relations.derived-by`.
+  decision, create an `adr-doc` and link it via `relations.informs`.
 - **Discovery produces both**: when briefing reveals both product requirements
   and technical decisions, create spec and ADR in parallel and link both.
 - **No promotion needed**: when exploration ends without actionable output,
   set status to `archived`.
 
-The upstream link: spec and ADR use `relations.derives-from` to point back to
-the discovery document that produced them.
+The inbound view — spec and ADR referencing this discovery (`motivated-by` /
+`informed-by`) — is a Knowledge Graph derived projection, never stored.
 
 ## NEVER
 
@@ -175,9 +172,10 @@ the discovery document that produced them.
   belong in `adr-doc`; requirements belong in `spec-doc`; discovery records the
   reasoning path, not the resolution; a "we will use X" statement here is a
   Review Checklist gate violation
-- NEVER set status to `resolved` before populating `relations.derived-by` —
-  `resolved` signals that downstream documents exist and are linked; setting it
-  first breaks the traceability chain that spec-doc and adr-doc depend on
+- NEVER set status to `resolved` before populating `relations.motivates` /
+  `relations.informs` — `resolved` signals that downstream documents exist and
+  are linked; setting it first breaks the traceability chain that spec-doc and
+  adr-doc depend on
 - NEVER create a discovery document without running `briefing-flow` first —
   briefing-flow is the orchestrator that structures the exploration; discovery-doc
   persists its output; creating discovery-doc directly skips the structured

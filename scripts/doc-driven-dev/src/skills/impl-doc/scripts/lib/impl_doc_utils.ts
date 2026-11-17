@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { generateArtifactId } from "../../../lib/artifact_id";
-import { changeFields, GENERATED_INDEX_MARKER, GENERATED_SETTLED_MARKER, INDEX_TABLE_HEADER_1COL, INDEX_TABLE_HEADER_4COL, indexCell, isForeignDocType, isGeneratedIndex, mergeManagedIndex, parseDoc, relationFields, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
+import { changeFields, GENERATED_INDEX_MARKER, GENERATED_SETTLED_MARKER, INDEX_TABLE_HEADER_1COL, INDEX_TABLE_HEADER_4COL, indexCell, isForeignDocType, isGeneratedIndex, mergeManagedIndex, parseDoc, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
 import type { IndexRowEntry } from "../../../lib/doc_suite_utils";
 import { resolveContainedDir, slugify } from "../../../lib/document_utils";
 import { assertTypeScope } from "../../../lib/doc_ownership";
@@ -13,6 +13,37 @@ import { hasSection } from "../../../lib/markdown_sections";
 
 const implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"] as const;
 const experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"] as const;
+
+// Implementation records keep the pre-v3 legacy relation shape: `impl` is a
+// migration-only registry type with no durable Git form, so its files carry
+// the old vocabulary verbatim until the migration path consumes them. This
+// local copy is intentionally NOT the Knowledge Relations v1 set — the
+// shared writer's `relationFields` now stores only canonical forward
+// relations (Issue #235).
+const relationFields = [
+  "source",
+  "motivates",
+  "decides-for",
+  "realizes",
+  "informs",
+  "explains",
+  "supersedes",
+  "superseded-by",
+  "implements",
+  "implemented-by",
+  "depends-on",
+  "blocks",
+  "related",
+  "refines",
+  "refined-by",
+  "derives-from",
+  "derived-by",
+  "verifies",
+  "verified-by",
+  "references",
+  "defers",
+  "deferred-by",
+] as const;
 const implementationRecordSections = [
   "Summary",
   "Context",

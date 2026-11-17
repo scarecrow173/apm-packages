@@ -54,14 +54,16 @@ doc-status パイプライン上の射影**である。
   正当だからである。
 - *Stale upstream* = in-flight のドキュメントが、死んだステータス
   (`superseded`/`rejected`/`deprecated`/`archived`/`abandoned`/
-  `wont-do`/`completed`/`done`)の上流ターゲットに
-  `implements`/`derives-from`/`refines` で解決済みリレーションを
-  1つ以上持つ状態。**#166 で昇格:** ヒューリスティックは
-  `stale-upstream` doc-status ルールとなった —— 統計は共有の
-  `staleUpstreamTargets` 述語を消費するため、以下の件数は
-  `doc_status lint` が non-blocking warning として報告するのと同じ
-  エッジである。resolved/active な上流や規範的ベースラインは決して
-  フラグされない。
+  `wont-do`/`completed`/`done`)の上流ターゲットに解決済み
+  リレーションを 1つ以上持つ状態。計測コーパスは v3 以前の系譜キー
+  `implements`/`derives-from`/`refines` を使っていたが、共有の
+  `staleUpstreamTargets` 述語は現在 Knowledge Relations v1 の
+  `motivates`/`decides-for`/`realizes` を読む。**#166 で昇格:**
+  ヒューリスティックは `stale-upstream` doc-status ルールとなった
+  —— 統計は共有の `staleUpstreamTargets` 述語を消費するため、
+  以下の件数は `doc_status lint` が non-blocking warning として
+  報告するのと同じエッジである。resolved/active な上流や規範的
+  ベースラインは決してフラグされない。
 - 旧フィクスチャ表記 `type: "implementation-record"` は `impl`
   バケットにマージする(`LIFECYCLE_TYPE_ALIASES`)—— 同じ
   アーティファクト種の契約以前の綴り。

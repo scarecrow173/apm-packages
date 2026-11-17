@@ -119,11 +119,15 @@ neighbor（到達に使った relation field 名が記録される）です。no
 echo されます。
 
 traversal は `resolveArtifactRelation` による typed relation 上の決定的な
-breadth-first です。デフォルトの relation 集合は lineage 集合 —
-`implements`、`implemented-by`、`derives-from`、`derived-by`、`refines`、
-`refined-by` — で、`--relations` は relation 名の comma 区切りリストを受け付け、
-少なくとも 1 つを指名する必要があります。`--depth` は非負整数で walk を制限し、
-デフォルトは `2` です。expansion root は一意の artifact ID で先に解決し、次に
+breadth-first です。デフォルトの relation 集合は lineage 集合 — Knowledge
+Relations v1 の `motivates`、`decides-for`、`realizes`、`supersedes` に加え、
+v3 以前のキー `implements`、`implemented-by`、`derives-from`、`derived-by`、
+`refines`、`refined-by` で構成されます。これらの旧キーは migration 管理下の
+plan/task/test-spec/impl 文書のために投影がそのまま読み取ります（現行 durable
+文書の正規検証は graph ではなく lint 層の契約です）。`--relations` は
+relation 名の comma 区切りリストを受け付け、少なくとも 1 つを指名する必要が
+あります。`--depth` は非負整数で walk を制限し、デフォルトは `2` です。
+expansion root は一意の artifact ID で先に解決し、次に
 checkout 相対 path で解決します。external reference（URI scheme または `//`
 target）は非 local として skip されます。visited set が cycle 安全性を保証し、
 重複する到達は抑制されます。

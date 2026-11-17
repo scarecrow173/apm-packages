@@ -3418,7 +3418,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs4 = require("fs");
+    var fs5 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3502,7 +3502,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter5.read = function(filepath, options2) {
-      const str2 = fs4.readFileSync(filepath, "utf8");
+      const str2 = fs5.readFileSync(filepath, "utf8");
       const file2 = matter5(str2, options2);
       file2.path = filepath;
       return file2;
@@ -4397,8 +4397,8 @@ var require_uuid62 = __commonJS({
 });
 
 // src/skills/adr-doc/scripts/relate_adr.ts
-var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path4 = __toESM(require("node:path"));
 var import_gray_matter4 = __toESM(require_gray_matter());
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
@@ -4447,8 +4447,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["idea"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -4482,8 +4482,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"] },
-      { field: "supersedes", targetTypes: ["brainstorm"] }
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -4516,9 +4516,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["discovery"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: true,
@@ -4554,7 +4554,7 @@ var configs = {
     // (it is the target of motivates/realizes/decides-for, not the source).
     expectedUpstream: [],
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"] }
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4591,8 +4591,8 @@ var configs = {
       { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
     ],
     allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["design"] }
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4637,8 +4637,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"] },
-      { field: "supersedes", targetTypes: ["adr"] }
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4677,9 +4677,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["knowledge"] }
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4716,7 +4716,7 @@ var configs = {
     // Evidence `supported-by` comes from the Evidence Store (#240); neither
     // is a stored relation field here.
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"] }
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4866,6 +4866,15 @@ function configFor(type) {
   }
   throw new Error(`Unknown document type: ${type}`);
 }
+function resolveDocType(name) {
+  const entry = registry[name];
+  if (entry) {
+    return entry.persistence === "durable" ? { kind: "durable", entry } : { kind: "ephemeral", entry };
+  }
+  const legacy = legacyAliases.get(name);
+  if (legacy) return { kind: "legacy", entry: legacyDocTypes[legacy] };
+  return { kind: "unknown", entry: null };
+}
 function executionBoundTypeNames() {
   return [
     ...executionTypes,
@@ -4902,6 +4911,11 @@ function knowledgeRelationFields() {
     for (const relation of configs[type].allowedRelations) fields.add(relation.field);
   }
   return [...fields].sort();
+}
+function allowedRelationsFor(type) {
+  const resolved = resolveDocType(type);
+  if (resolved.kind !== "durable") return [];
+  return [...resolved.entry.allowedRelations];
 }
 var PROVENANCE_RELATION_KEYS = ["source"];
 
@@ -5081,6 +5095,8 @@ function assertTypeScope(type, directory) {
 }
 
 // src/skills/lib/doc_suite_utils.ts
+var import_node_fs2 = __toESM(require("node:fs"));
+var import_node_path2 = __toESM(require("node:path"));
 var import_gray_matter = __toESM(require_gray_matter());
 
 // node_modules/.pnpm/zod@4.6.6/node_modules/zod/v4/classic/external.js
@@ -5900,10 +5916,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -6243,11 +6259,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -6709,16 +6725,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path4 = []) => {
+  const processError = (error63, path5 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -6757,17 +6773,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path4 = []) => {
+  const processError = (error63, path5 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -6806,8 +6822,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path4) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -23945,13 +23961,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path4 = ref.slice(1).split("/").filter(Boolean);
-  if (path4.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path4[0] === defsKey) {
-    const key = path4[1] === void 0 ? void 0 : decodeJSONPointerSegment(path4[1]);
+  if (path5[0] === defsKey) {
+    const key = path5[1] === void 0 ? void 0 : decodeJSONPointerSegment(path5[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -24803,6 +24819,14 @@ function date4(params) {
 // src/skills/lib/artifact_id.ts
 var import_uuid62 = __toESM(require_uuid62());
 
+// src/skills/lib/claim_ids.ts
+var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
+function parseClaimReference(value) {
+  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
+  if (!match) return null;
+  return { docId: match[1], key: match[2] };
+}
+
 // src/skills/lib/doc_lifecycle.ts
 var SETTLED_STATUSES = {
   ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
@@ -24814,30 +24838,7 @@ var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
 );
 
 // src/skills/lib/doc_suite_utils.ts
-var relationFields = [
-  "source",
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-  "superseded-by",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by"
-];
+var relationFields = ["source", ...knowledgeRelationFields()];
 var changeFields = [
   "added",
   "modified",
@@ -24887,25 +24888,59 @@ var frontMatterSchema = external_exports.object({
   owners: external_exports.array(external_exports.string()),
   relations: relationSchema
 }).passthrough();
+function docFiles(dir) {
+  return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
+}
+function parseDoc(content) {
+  try {
+    const parsed = (0, import_gray_matter.default)(content);
+    return { data: parsed.data || {}, body: parsed.content, error: null };
+  } catch (error62) {
+    return { data: {}, body: content, error: error62 instanceof Error ? error62.message : String(error62) };
+  }
+}
+function isMarkdownSource(file2) {
+  return file2.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(file2));
+}
+function walkMarkdownFiles(baseDir) {
+  if (!import_node_fs2.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs2.default.readdirSync(baseDir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    if (entry.isSymbolicLink()) return [];
+    const fullPath = import_node_path2.default.join(baseDir, entry.name);
+    if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
+    return isMarkdownSource(fullPath) ? [fullPath] : [];
+  }).sort();
+}
+function resolveDocumentReference(cwd, target, fromDir) {
+  const trimmed = target.trim();
+  const claimRef = parseClaimReference(trimmed);
+  const idLookup = claimRef?.docId ?? trimmed;
+  if (!claimRef) {
+    for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+      const candidate = import_node_path2.default.resolve(base, trimmed);
+      if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return candidate;
+    }
+  }
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = import_node_path2.default.join(cwd, dirName);
+      if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) continue;
+      for (const file2 of docFiles(dir)) {
+        const fullPath = import_node_path2.default.join(dir, file2);
+        const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === idLookup) return fullPath;
+      }
+    }
+  }
+  return null;
+}
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
 var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
 var relationFields2 = [
   "source",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "supersedes",
-  "superseded-by",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references"
+  ...allowedRelationsFor("adr").map((relation) => relation.field)
 ];
 function findAdrDir(cwd, explicitDir) {
   const resolved = findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
@@ -24914,8 +24949,8 @@ function findAdrDir(cwd, explicitDir) {
 }
 
 // src/skills/lib/schema_preflight.ts
-var import_node_fs2 = __toESM(require("node:fs"));
-var import_node_path2 = __toESM(require("node:path"));
+var import_node_fs3 = __toESM(require("node:fs"));
+var import_node_path3 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
 
 // node_modules/.pnpm/js-yaml@5.5.0/node_modules/js-yaml/dist/js-yaml.mjs
@@ -27436,7 +27471,7 @@ var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
   "migration.journal.json"
 ]);
 function toRepoRelative2(cwd, absolute) {
-  return import_node_path2.default.relative(import_node_path2.default.resolve(cwd), absolute).split(import_node_path2.default.sep).join("/");
+  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), absolute).split(import_node_path3.default.sep).join("/");
 }
 function isUnderDir(relPath, dir) {
   return relPath === dir || relPath.startsWith(`${dir}/`);
@@ -27448,20 +27483,20 @@ function managedRootAliases() {
   return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit2, onEscape) {
-  const absRoot = import_node_path2.default.resolve(cwd, relRoot);
-  if (!import_node_fs2.default.existsSync(absRoot) || !import_node_fs2.default.statSync(absRoot).isDirectory()) return false;
+  const absRoot = import_node_path3.default.resolve(cwd, relRoot);
+  if (!import_node_fs3.default.existsSync(absRoot) || !import_node_fs3.default.statSync(absRoot).isDirectory()) return false;
   if (!isInsideCheckout(cwd, absRoot)) return false;
   const stack = [absRoot];
   while (stack.length > 0) {
     const dir = stack.pop();
     let entries;
     try {
-      entries = import_node_fs2.default.readdirSync(dir, { withFileTypes: true });
+      entries = import_node_fs3.default.readdirSync(dir, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const abs = import_node_path2.default.join(dir, entry.name);
+      const abs = import_node_path3.default.join(dir, entry.name);
       const rel = toRepoRelative2(cwd, abs);
       if (entry.isDirectory()) {
         if (!isInsideCheckout(cwd, abs)) {
@@ -27524,10 +27559,10 @@ function scanDocuments(cwd) {
     unmanagedDocs: 0
   };
   const visitMarkdown = (rel) => {
-    const abs = import_node_path2.default.resolve(cwd, rel);
+    const abs = import_node_path3.default.resolve(cwd, rel);
     let raw;
     try {
-      raw = import_node_fs2.default.readFileSync(abs, "utf8");
+      raw = import_node_fs3.default.readFileSync(abs, "utf8");
     } catch {
       return;
     }
@@ -27559,7 +27594,7 @@ function scanDocuments(cwd) {
   };
   const visitDocsTree = (rel) => {
     if (isUnderDir(rel, DOC_DRIVEN_DEV_DIR)) return;
-    if (rel.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(rel))) {
+    if (rel.endsWith(".md") && !isIndexFileName(import_node_path3.default.basename(rel))) {
       visitMarkdown(rel);
       return;
     }
@@ -27574,10 +27609,10 @@ function scanDocuments(cwd) {
   const roots = ["docs", ...managedRootAliases()];
   const walked = /* @__PURE__ */ new Set();
   for (const root of roots) {
-    const abs = import_node_path2.default.resolve(cwd, root);
+    const abs = import_node_path3.default.resolve(cwd, root);
     let key = abs;
     try {
-      key = import_node_fs2.default.realpathSync(abs);
+      key = import_node_fs3.default.realpathSync(abs);
     } catch {
     }
     if (walked.has(key)) continue;
@@ -27591,10 +27626,10 @@ function scanDocuments(cwd) {
   return scan;
 }
 function scanManifestDir(cwd, issues) {
-  const abs = import_node_path2.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
-  if (!import_node_fs2.default.existsSync(abs)) return;
+  const abs = import_node_path3.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
+  if (!import_node_fs3.default.existsSync(abs)) return;
   const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
-    const name = import_node_path2.default.basename(rel);
+    const name = import_node_path3.default.basename(rel);
     if (isDir) {
       if (rel !== DOC_DRIVEN_DEV_DIR) {
         issues.push({
@@ -27609,7 +27644,7 @@ function scanManifestDir(cwd, issues) {
     if (/\.ya?ml$/i.test(name)) {
       let legacy = false;
       try {
-        const parsed = load(import_node_fs2.default.readFileSync(import_node_path2.default.resolve(cwd, rel), "utf8"));
+        const parsed = load(import_node_fs3.default.readFileSync(import_node_path3.default.resolve(cwd, rel), "utf8"));
         if (isPlainObject3(parsed)) {
           const version2 = parsed.schemaVersion;
           legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
@@ -27638,7 +27673,7 @@ function scanManifestDir(cwd, issues) {
   if (!walked) {
     let directory = false;
     try {
-      directory = import_node_fs2.default.statSync(abs).isDirectory();
+      directory = import_node_fs3.default.statSync(abs).isDirectory();
     } catch {
     }
     issues.push({
@@ -27649,8 +27684,8 @@ function scanManifestDir(cwd, issues) {
   }
 }
 function scanExecutionState(cwd, issues) {
-  const abs = import_node_path2.default.resolve(cwd, EXECUTION_STATE_ROOT);
-  if (!import_node_fs2.default.existsSync(abs)) return;
+  const abs = import_node_path3.default.resolve(cwd, EXECUTION_STATE_ROOT);
+  if (!import_node_fs3.default.existsSync(abs)) return;
   const marker = (rel, detail) => {
     issues.push({ reason: "legacy-execution-state", path: rel, detail });
   };
@@ -27672,7 +27707,7 @@ function scanExecutionState(cwd, issues) {
     if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
       let version2;
       try {
-        version2 = JSON.parse(import_node_fs2.default.readFileSync(import_node_path2.default.resolve(cwd, rel), "utf8")).schemaVersion;
+        version2 = JSON.parse(import_node_fs3.default.readFileSync(import_node_path3.default.resolve(cwd, rel), "utf8")).schemaVersion;
       } catch {
         version2 = null;
       }
@@ -27686,7 +27721,7 @@ function scanExecutionState(cwd, issues) {
   if (!walked) {
     let directory = false;
     try {
-      directory = import_node_fs2.default.statSync(abs).isDirectory();
+      directory = import_node_fs3.default.statSync(abs).isDirectory();
     } catch {
     }
     issues.push({
@@ -27698,12 +27733,12 @@ function scanExecutionState(cwd, issues) {
 }
 function readManifest(cwd) {
   const rel = SCHEMA_MANIFEST_PATH;
-  const abs = import_node_path2.default.resolve(cwd, rel);
-  if (!import_node_fs2.default.existsSync(abs)) return { state: "missing" };
+  const abs = import_node_path3.default.resolve(cwd, rel);
+  if (!import_node_fs3.default.existsSync(abs)) return { state: "missing" };
   if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
   let raw;
   try {
-    raw = import_node_fs2.default.readFileSync(abs, "utf8");
+    raw = import_node_fs3.default.readFileSync(abs, "utf8");
   } catch (error62) {
     return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
   }
@@ -27766,7 +27801,7 @@ function readManifest(cwd) {
   return { state: "read", declared, migrationInProgress, versionIssues };
 }
 function journalPresent(cwd) {
-  return import_node_fs2.default.existsSync(import_node_path2.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+  return import_node_fs3.default.existsSync(import_node_path3.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
 }
 function recommendedCommand(status, docCount) {
   const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
@@ -27802,7 +27837,7 @@ function statusSummary(report) {
   }
 }
 function evaluateSchemaPreflight(cwd) {
-  const root = import_node_path2.default.resolve(cwd);
+  const root = import_node_path3.default.resolve(cwd);
   const scan = scanDocuments(root);
   scanManifestDir(root, scan.issues);
   scanExecutionState(root, scan.issues);
@@ -27899,23 +27934,6 @@ function schemaEntrypointGuard(cwd) {
 }
 
 // src/skills/adr-doc/scripts/relate_adr.ts
-var inverseRelations = {
-  implements: "implemented-by",
-  "implemented-by": "implements",
-  "depends-on": "blocks",
-  blocks: "depends-on",
-  supersedes: "superseded-by",
-  "superseded-by": "supersedes",
-  related: "related",
-  refines: "refined-by",
-  "refined-by": "refines",
-  "derives-from": "derived-by",
-  "derived-by": "derives-from",
-  verifies: "verified-by",
-  "verified-by": "verifies",
-  source: null,
-  references: null
-};
 function parseArgs(argv) {
   const args = { cwd: process.cwd(), write: false };
   for (let i = 0; i < argv.length; i += 1) {
@@ -27932,7 +27950,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return `Usage: node scripts/relate_adr.js --from <adr.md> --to <adr.md> --relation ${relationFields2.join("|")} [--dir <path>] [--write]`;
+  return `Usage: node scripts/relate_adr.js --from <adr.md> --to <target> --relation ${relationFields2.join("|")} [--dir <path>] [--write]`;
 }
 function ensureRelation(content, relation, target) {
   const parsed = (0, import_gray_matter4.default)(content);
@@ -27947,9 +27965,9 @@ function ensureRelation(content, relation, target) {
   return import_gray_matter4.default.stringify(parsed.content, data);
 }
 function prepareUpdate(cwd, relativeDir, file2, relation, target) {
-  const fullPath = import_node_path3.default.join(cwd, relativeDir, file2);
-  if (!import_node_fs3.default.existsSync(fullPath)) throw new Error(`ADR not found: ${relativeDir}/${file2}`);
-  const next = ensureRelation(import_node_fs3.default.readFileSync(fullPath, "utf8"), relation, target);
+  const fullPath = import_node_path4.default.join(cwd, relativeDir, file2);
+  if (!import_node_fs4.default.existsSync(fullPath)) throw new Error(`ADR not found: ${relativeDir}/${file2}`);
+  const next = ensureRelation(import_node_fs4.default.readFileSync(fullPath, "utf8"), relation, target);
   return { fullPath, label: `${relativeDir}/${file2}: ${relation} -> ${target}`, next };
 }
 function main() {
@@ -27960,17 +27978,31 @@ function main() {
       return;
     }
     if (!args.from || !args.to || !args.relation) throw new Error("Missing --from, --to, or --relation");
-    if (!relationFields2.includes(args.relation)) throw new Error(`Unknown relation: ${args.relation}`);
-    const cwd = import_node_path3.default.resolve(args.cwd);
+    if (!relationFields2.includes(args.relation)) {
+      throw new Error(`Unknown relation: ${args.relation} (stored forward fields: ${relationFields2.join(", ")})`);
+    }
+    const cwd = import_node_path4.default.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
-    const from = import_node_path3.default.basename(args.from);
-    const to = import_node_path3.default.basename(args.to);
-    const updates = [prepareUpdate(cwd, relativeDir, from, args.relation, to)];
-    const inverse = inverseRelations[args.relation];
-    if (inverse) updates.push(prepareUpdate(cwd, relativeDir, to, inverse, from));
+    const from = import_node_path4.default.basename(args.from);
+    const declared = allowedRelationsFor("adr").find((relation) => relation.field === args.relation);
+    if (declared) {
+      const resolved = resolveDocumentReference(cwd, args.to, import_node_path4.default.join(cwd, relativeDir));
+      if (!resolved) {
+        throw new Error(`Relation ${args.relation} --to target does not resolve to a document: ${args.to}`);
+      }
+      if (!isInsideCheckout(cwd, resolved)) {
+        throw new Error(`Relation ${args.relation} --to target escapes the checkout: ${args.to}`);
+      }
+      const parsed = parseDoc(import_node_fs4.default.readFileSync(resolved, "utf8"));
+      const targetType = !parsed.error && typeof parsed.data.type === "string" ? parsed.data.type : null;
+      if (!targetType || !declared.targetTypes.includes(targetType)) {
+        throw new Error(`Relation ${args.relation} target resolves to type "${targetType ?? "unknown"}", expected one of: ${declared.targetTypes.join(", ")}: ${args.to}`);
+      }
+    }
+    const updates = [prepareUpdate(cwd, relativeDir, from, args.relation, args.to)];
     if (args.write) {
-      for (const update of updates) import_node_fs3.default.writeFileSync(update.fullPath, update.next, "utf8");
+      for (const update of updates) import_node_fs4.default.writeFileSync(update.fullPath, update.next, "utf8");
     }
     console.log(args.write ? "Updated ADR relations:" : "DRY RUN: would update ADR relations:");
     for (const update of updates) console.log(`- ${update.label}`);

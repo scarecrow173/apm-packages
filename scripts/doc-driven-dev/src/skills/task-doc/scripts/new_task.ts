@@ -2,15 +2,8 @@
 "use strict";
 
 import path from "node:path";
-import fs from "node:fs";
-import matter from "gray-matter";
-import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
 import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
-
-const TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
-const TASK_DOC_VERIFIED_BY_ERROR = "TASK-DOC-GATE-002: each --verified-by target must resolve to an existing document.";
-const TASKABLE_PLAN_STATUSES = new Set(["approved", "in-progress", "completed"]);
 
 type CliArgs = {
   blocks: string[];
@@ -55,30 +48,7 @@ function usage(): string {
   return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--depends-on <task>] [--blocks <task>] [--verified-by <test-spec>] [--dir <path>] [--name <filename>] [--status <status>]";
 }
 
-function validateVerifiedBy(cwd: string, targets: string[]): void {
-  for (const target of targets) {
-    if (!resolveDocumentReference(cwd, target)) {
-      throw new Error(TASK_DOC_VERIFIED_BY_ERROR);
-    }
-  }
-}
-
-function validatePlanGate(cwd: string, planTarget?: string): void {
-  if (!planTarget) return;
-  const planPath = path.resolve(cwd, planTarget);
-  if (!fs.existsSync(planPath) || !fs.statSync(planPath).isFile()) throw new Error(TASK_DOC_GATE_ERROR);
-  let status: unknown;
-  try {
-    status = matter(fs.readFileSync(planPath, "utf8")).data.status;
-  } catch {
-    throw new Error(TASK_DOC_GATE_ERROR);
-  }
-  if (typeof status !== "string" || !TASKABLE_PLAN_STATUSES.has(status)) {
-    throw new Error(TASK_DOC_GATE_ERROR);
-  }
-}
-
-async function main(): Promise<void> {
+function main(): void {
   try {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -89,30 +59,10 @@ async function main(): Promise<void> {
     const resolvedCwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(resolvedCwd)) return;
     // Registry 3: `task` is execution-bound — the registry gate is the one
-    // authoritative refusal, raised here before any gate check or write.
+    // authoritative refusal, raised here before any write. The script is a
+    // tombstone: task state lives in the Execution Store, so it performs no
+    // creation and the historical gate checks have no reachable caller.
     configFor("task");
-    validatePlanGate(resolvedCwd, args.plan);
-    validateVerifiedBy(resolvedCwd, args.verifiedBy);
-    const linked = args.plan ? [args.plan] : [];
-    const result = await createDocument("task", {
-      cwd: resolvedCwd,
-      date: args.date,
-      dir: args.dir,
-      name: args.name,
-      relations: {
-        implements: linked,
-        "depends-on": [...new Set([...linked, ...args.dependsOn])],
-        blocks: [...new Set(args.blocks)],
-        "verified-by": [...new Set(args.verifiedBy)],
-      },
-      status: args.status,
-      title: args.title,
-    });
-    console.log(`Created ${result.file}`);
-    logIndexResult(result);
-    if (args.noIndex || args.forceIndex) {
-      console.log("Note: --no-index/--force-index are deprecated and have no effect; indexes are materialized via doc_maintenance.js index plan|apply");
-    }
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(usage());

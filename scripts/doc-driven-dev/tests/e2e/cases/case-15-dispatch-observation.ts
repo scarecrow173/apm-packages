@@ -36,11 +36,17 @@ const discovery = "docs/discovery/0001-graph.md";
 const fixture = { files: {
   [spec]: { frontmatter: { id: "SPEC-0001", type: "spec", status: "draft", title: "Graph" }, body: "# Graph\n" },
   [adr]: { frontmatter: { id: "ADR-0001", type: "adr", status: "draft", title: "Graph" }, body: "# Graph\n" },
-  [discovery]: { frontmatter: { id: "DISC-0001", type: "discovery", status: "accepted", title: "Graph" }, body: "# Discovery\n" },
+  // Knowledge Relations v1 (Issue #235): the discovery owns the capture-layer
+  // provenance edges — `motivates` → spec and `informs` → ADR — where the
+  // pre-v3 fixture stored `derives-from` on the artifacts themselves.
+  [discovery]: { frontmatter: { id: "DISC-0001", type: "discovery", status: "accepted", title: "Graph", relations: { motivates: ["SPEC-0001"], informs: ["ADR-0001"] } }, body: "# Discovery\n" },
 } };
 
-const specWrite = { write: { path: spec, frontmatter: { status: "proposed", relations: { "derives-from": ["DISC-0001"] } }, body: "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n" } };
-const adrWrite = { write: { path: adr, frontmatter: { status: "accepted", relations: { "derives-from": ["DISC-0001"] } }, body: "# Graph\n\n## Considered Options\n\n### A\n\n### B\n" } };
+const specWrite = { write: { path: spec, frontmatter: { status: "proposed" }, body: "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n" } };
+// The ADR's stored `decides-for` edge is the canonical spec pair plus the
+// pre-existing claim on the design — the write must carry both, since a
+// scripted front-matter write replaces the relations map wholesale.
+const adrWrite = { write: { path: adr, frontmatter: { status: "accepted", relations: { "decides-for": ["SPEC-0001", "DESIGN-0001"] } }, body: "# Graph\n\n## Considered Options\n\n### A\n\n### B\n" } };
 const researchFindings = { append: { path: discovery, body: "\n## Research Findings\n\n- independent evidence gathered\n" } };
 
 const ALL_MODES = new Set<DelegateMode>(["same-context", "subagent-as-tool", "isolated-subagent"]);

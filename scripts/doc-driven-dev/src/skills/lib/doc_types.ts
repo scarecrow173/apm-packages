@@ -53,11 +53,15 @@ type DocOwner = "doc-suite" | "adr-doc" | "impl-doc";
 type IndexFormat = "shared-4col" | "impl-4col" | "exp-1col" | "none";
 
 // A declared forward-relation rule on a durable type (Knowledge Relations
-// v1 seed): `field` names a stored source→target relation the type may
-// populate, `targetTypes` the durable types it may point at.
+// v1, Issue #235): `field` names a stored source→target relation the type
+// may populate, `targetTypes` the durable types it may point at, and
+// `inverse` the derived inverse name the graph projection exposes on the
+// target — inverse links are never stored, so the schema declares the
+// derivation name next to the canonical direction.
 type AllowedRelation = {
   field: string;
   targetTypes: readonly string[];
+  inverse: string;
 };
 
 // A required forward relation: the document must carry a resolvable target
@@ -191,8 +195,8 @@ const configs: Record<DocType, DocConfig> = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["idea"] },
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" },
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -226,8 +230,8 @@ const configs: Record<DocType, DocConfig> = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"] },
-      { field: "supersedes", targetTypes: ["brainstorm"] },
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" },
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -260,9 +264,9 @@ const configs: Record<DocType, DocConfig> = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["discovery"] },
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" },
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: true,
@@ -298,7 +302,7 @@ const configs: Record<DocType, DocConfig> = {
     // (it is the target of motivates/realizes/decides-for, not the source).
     expectedUpstream: [],
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"] },
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" },
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -335,8 +339,8 @@ const configs: Record<DocType, DocConfig> = {
       { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] },
     ],
     allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["design"] },
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" },
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -382,8 +386,8 @@ const configs: Record<DocType, DocConfig> = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"] },
-      { field: "supersedes", targetTypes: ["adr"] },
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" },
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -422,9 +426,9 @@ const configs: Record<DocType, DocConfig> = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["knowledge"] },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" },
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -461,7 +465,7 @@ const configs: Record<DocType, DocConfig> = {
     // Evidence `supported-by` comes from the Evidence Store (#240); neither
     // is a stored relation field here.
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"] },
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" },
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -783,6 +787,34 @@ function knowledgeRelationFields(): string[] {
   return [...fields].sort();
 }
 
+// Knowledge Relations v1: forward field → derived inverse name, projected
+// from each entry's declared `inverse`. The inverse is a projection name
+// only — it is never a stored field, and a populated `relations.<inverse>`
+// key is legacy vocabulary. The map must be consistent: the same field
+// always derives the same inverse regardless of source type.
+function knowledgeRelationInverses(): Record<string, string> {
+  const inverses: Record<string, string> = {};
+  for (const type of docTypes) {
+    for (const relation of configs[type].allowedRelations) {
+      const existing = inverses[relation.field];
+      if (existing && existing !== relation.inverse) {
+        throw new Error(`Registry inconsistency: relation ${relation.field} declares two inverse names (${existing}, ${relation.inverse})`);
+      }
+      inverses[relation.field] = relation.inverse;
+    }
+  }
+  return inverses;
+}
+
+// The declared forward relations of one durable type (empty for
+// non-durable names) — the per-source-type half of the v1
+// source→target matrix.
+function allowedRelationsFor(type: string): AllowedRelation[] {
+  const resolved = resolveDocType(type);
+  if (resolved.kind !== "durable") return [];
+  return [...resolved.entry.allowedRelations];
+}
+
 // `relations.source` stays a legal populated field under Registry 3 — it is
 // the provenance contract (discovery's required source evidence), not
 // Knowledge Relations vocabulary, so the legacy-relation marker exempts it.
@@ -797,6 +829,7 @@ function allowedRelationFieldsFor(type: string): string[] {
 export {
   allIdPrefixes,
   allowedRelationFieldsFor,
+  allowedRelationsFor,
   CANONICAL_DOC_DIRS,
   configFor,
   configs,
@@ -809,6 +842,7 @@ export {
   gitEraDocTypes,
   isDurableType,
   knowledgeRelationFields,
+  knowledgeRelationInverses,
   legacyDocTypes,
   LIFECYCLE_VALUES,
   managedDocDirs,

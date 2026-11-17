@@ -285,8 +285,9 @@ ADR に記録する内容は次の理解です。
    フィールドはトップレベルに置きます。ADR 固有のガバナンス情報は
    `metadata.adr` 配下に置き、トップレベルの `decision-makers`、
    `consulted`、`informed` にはしません。
-8. `references/adr-conventions.ja.md` に従い、意味で選ぶ共通 `relations`
-   field で関連 ADR を接続します。
+8. `references/adr-conventions.ja.md` に従い、Knowledge Relations v1 の
+   順方向 field で関連 ADR を接続します（`decides-for` → spec/design、
+   `supersedes` → この ADR が置き換える ADR）。
 9. ファイルを生成する。
    推奨は `scripts/new_adr.js` です。ディレクトリ検出、命名、
    テンプレート、メタデータ既定値を扱います。索引の materialize は明示的

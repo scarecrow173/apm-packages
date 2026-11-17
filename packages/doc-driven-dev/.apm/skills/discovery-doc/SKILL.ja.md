@@ -44,12 +44,13 @@ license: MIT
    上流文書・外部証拠・調査レポート・探索のきっかけとなった issue リンクは
    `relations.source` に記録します — brainstorm 記録も含め作成時に記録し、
    出所を追跡できないキャプチャ文書を残さないようにします。
-   この discovery から作成した spec や ADR を `relations.derived-by` で前向きに指します。
-   方向性のない文脈的な関連は `relations.related` に記録します。
+   この探索が動機づける spec は `relations.motivates` で、供給する durable
+   文書（ADR・design・他の capture）は `relations.informs` で前向きに指します。
 5. 結論を下流文書へ昇華する。
    探索が暫定結論に達したら `spec-doc` または `adr-doc` を作成し、この文書の
-   `relations.derived-by` でリンクします。昇華候補を全て対処したらステータスを
-   `resolved` に更新します。
+   `relations.motivates` / `relations.informs` でリンクします — 下流文書側は
+   逆リンクを保存しません（`motivated-by` / `informed-by` は派生投影です）。
+   昇華候補を全て対処したらステータスを `resolved` に更新します。
 
 ## 必須内容
 
@@ -86,22 +87,16 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
+  informs: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -118,8 +113,8 @@ relations:
 | `superseded` | より新しい discovery 文書に置き換え済み。 |
 
 discovery 文書は「承認」または「実装」されません。`resolved` は、有用な出力が
-下流文書に取り込まれたことを示します。`resolved` にする前に `relations.derived-by`
-で下流文書をリンクしてください。
+下流文書に取り込まれたことを示します。`resolved` にする前に `relations.motivates`
+または `relations.informs` で下流文書をリンクしてください。
 
 ## レビューチェックリスト
 
@@ -146,25 +141,26 @@ discovery 文書を `draft` から `active` または `resolved` に進める前
 問題空間が曖昧、複数の代替案がある、または重大な調査を行った場合に discovery を使います。
 
 - **discovery から spec を作成する場合**: 探索でプロダクト意図が明確になったら
-  `spec-doc` を作成し、discovery 文書の `relations.derived-by` でリンクします。
+  `spec-doc` を作成し、discovery 文書の `relations.motivates` でリンクします。
 - **discovery から ADR を作成する場合**: 探索でアーキテクチャ判断が解決したら
-  `adr-doc` を作成し、`relations.derived-by` でリンクします。
+  `adr-doc` を作成し、`relations.informs` でリンクします。
 - **両方作成する場合**: briefing でプロダクト要件と技術判断の両方が明らかになったら、
   spec と ADR を並列で作成し、両方をリンクします。
 - **昇華不要の場合**: 探索が実行可能な出力なしに終わったら、ステータスを
   `archived` に設定します。
 
-上流方向のリンク: spec と ADR は `relations.derives-from` で、自身を生成した
-discovery 文書へ逆向きに参照します。
+内向きビュー: spec と ADR がこの discovery を参照する形（`motivated-by` /
+`informed-by`）は Knowledge Graph が派生する投影であり、文書には保存しません。
 
 ## NEVER
 
 - NEVER discovery 文書に最終判断を含める — アーキテクチャ判断は `adr-doc` に、
   要件は `spec-doc` に属する。discovery は推論プロセスを記録するものであり、結論ではない。
   「X を使う」という断言はレビューチェックリストのゲート違反
-- NEVER `relations.derived-by` を設定する前に status を `resolved` にする —
-  `resolved` は下流文書が存在しリンク済みであることを示すシグナル。リンク前に設定すると
-  spec-doc と adr-doc が依存する追跡可能性の連鎖が壊れる
+- NEVER `relations.motivates` / `relations.informs` を設定する前に status を
+  `resolved` にする — `resolved` は下流文書が存在しリンク済みであることを示す
+  シグナル。リンク前に設定すると spec-doc と adr-doc が依存する追跡可能性の
+  連鎖が壊れる
 - NEVER `briefing-flow` を実行せずに discovery 文書を作成する — `briefing-flow` は
   探索を構造化するオーケストレーター。discovery-doc はその出力を永続化する担当。
   直接作成すると構造化された調査フェーズをスキップすることになる
