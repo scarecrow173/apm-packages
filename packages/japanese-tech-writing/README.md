@@ -36,7 +36,7 @@ The [GitHub Actions workflow](../../.github/workflows/japanese-tech-writing-upst
 
 Only the upstream `SKILL.md` is imported. Its body is preserved and the frontmatter `license` is normalized to `Unlicense`. `upstream.json` records the Gist commit. If the upstream name, license or frontmatter format changes unexpectedly, or validation fails, the workflow fails without publishing changes.
 
-This intentionally trusts upstream-authored agent instructions for automatic publication. Consumers receive updates on their next `apm install` / explicit upgrade; existing local installations are not overwritten immediately.
+This intentionally trusts upstream-authored agent instructions for automatic publication. Consumers can fetch updates with `apm update japanese-tech-writing` (or `apm update`). A plain `apm install` may replay the pinned commit, and existing local installations are not overwritten immediately.
 
 ## Local sync tests
 
