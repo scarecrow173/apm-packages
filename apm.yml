@@ -16,6 +16,7 @@ devDependencies:
   - ./packages/recommended-dev-suite
   - ./packages/steer-enterprise-web-research
   - ./packages/doc-driven-dev
+  - ./packages/japanese-tech-writing
   - ./packages/github-issue-handoff
   - ./packages/github-automation
   - ./packages/security-governance
@@ -78,6 +79,11 @@ marketplace:
     category: documentation
     source: scarecrow173/apm-packages
     subdir: packages/doc-driven-dev
+
+  - name: japanese-tech-writing
+    category: documentation
+    source: scarecrow173/apm-packages
+    subdir: packages/japanese-tech-writing
 
   - name: github-issue-handoff
     category: automation
