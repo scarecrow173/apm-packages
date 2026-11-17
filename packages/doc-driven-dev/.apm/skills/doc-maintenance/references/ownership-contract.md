@@ -67,8 +67,13 @@ Registry 3 splits the rows above into three persistence classes:
 ## Allowed mutators per owner
 
 - `doc-suite`: `new_idea`, `new_discovery`, `new_spec`, `new_design`,
-  `new_knowledge`, `new_verification`, `doc_maintenance`,
-  `scaffold_docs`, `migrate_docs`, `migrate_ids`. Of the retired
+  `new_knowledge`, `new_verification`, `update_verification`,
+  `doc_maintenance`,
+  `scaffold_docs`, `migrate_docs`, `migrate_ids`. `update_verification`
+  is the verification type's in-place design updater (check upserts and
+  removals); `resolve_verification` is its read-only Claim/Check
+  resolver, declared as an auditor alongside the shared inspectors. Of
+  the retired
   creators, only `new_test_spec` remains declared — on the legacy
   test-spec dirs — and it refuses at the registry gate; the `new_plan`
   and `new_task` scripts still exist and refuse the same way, but the

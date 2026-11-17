@@ -68,8 +68,13 @@ Registry 3 は上記の行を 3 つの persistence クラスに分ける:
 ## Allowed mutators per owner
 
 - `doc-suite`: `new_idea`、`new_discovery`、`new_spec`、`new_design`、
-  `new_knowledge`、`new_verification`、`doc_maintenance`、
-  `scaffold_docs`、`migrate_docs`、`migrate_ids`。廃止された
+  `new_knowledge`、`new_verification`、`update_verification`、
+  `doc_maintenance`、
+  `scaffold_docs`、`migrate_docs`、`migrate_ids`。
+  `update_verification` は verification 型のインプレース設計更新
+  ツール(チェックの upsert と削除)であり、`resolve_verification`
+  は読み取り専用の Claim/Check リゾルバとして、共有インスペクタと
+  並ぶ auditor に宣言されている。廃止された
   creator のうち宣言が残るのは `new_test_spec` のみ(レガシー
   test-spec ディレクトリ上)で、registry ゲートで拒否される。
   `new_plan` と `new_task` のスクリプトも残置され同様に拒否するが、

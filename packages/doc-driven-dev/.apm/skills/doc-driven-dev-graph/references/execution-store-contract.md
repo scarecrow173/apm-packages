@@ -53,12 +53,16 @@ createdAt, updatedAt }`. `status` keeps the v2 vocabulary (`todo`,
 `in-progress`, `blocked`, `done`, `wont-do`). `version` is the per-task
 CAS token. `dependsOn` lists sibling task ids in the SAME run — entries
 containing `:`/`/`/`\` are rejected as cross-run references, unknown ids
-and self-dependencies fail closed. `checks` holds opaque
-VerificationCheck references (`#239`). `scope` declares the task's write
-boundary as repo-relative paths or directory prefixes (entries ending in
-`/` or `/*`); it is the authority the parallel-safety judgment reads —
-missing/empty scope is `scope-undeclared` and non-path entries are
-`scope-unverifiable`.
+and self-dependencies fail closed. `checks` holds qualified Verification
+Check references (`VD-<id>::CHK-NN`): `create --tasks-file` and
+`put-task --file` resolve each entry against the live Knowledge Graph
+before writing — anything that is not a check a live Verification
+Design declares fails closed (`#239`). The stored field stays
+`string[]`; imported runs keep the exporting checkout's references
+verbatim. `scope` declares the task's write boundary as repo-relative
+paths or directory prefixes (entries ending in `/` or `/*`); it is the
+authority the parallel-safety judgment reads — missing/empty scope is
+`scope-undeclared` and non-path entries are `scope-unverifiable`.
 
 ### `checkpoints/<id>.json` and `receipts/<id>.json` (schemaVersion 1)
 

@@ -35,6 +35,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
+import { assertTaskCheckRefs } from "../../lib/execution_store/check_resolution";
 import {
   StoreError,
   approvePlan,
@@ -165,7 +166,21 @@ function emit(args: CliArgs, payload: Record<string, unknown>): void {
   console.log(JSON.stringify({ command: args.command, ...payload }));
 }
 
-function main(): void {
+// Task `checks` entries are qualified Verification Check references —
+// resolved against the live Claim/Check contract at the write boundary,
+// never stored as unchecked strings (Issue #239). Resolution needs the
+// Knowledge Graph, so it runs before the synchronous store call.
+async function assertInputTaskChecks(cwd: string, input: unknown, owner: string): Promise<void> {
+  if (typeof input !== "object" || input === null) return;
+  const checks = (input as { checks?: unknown }).checks;
+  if (checks === undefined) return;
+  if (!Array.isArray(checks) || !checks.every((check) => typeof check === "string")) {
+    throw new Error(`${owner} checks must be a string array`);
+  }
+  await assertTaskCheckRefs(cwd, checks as string[], owner);
+}
+
+async function main(): Promise<void> {
   let args: CliArgs = { positional: [], cwd: process.cwd(), allowExternalRoot: false, json: false, force: false };
   try {
     args = parseArgs(process.argv.slice(2));
@@ -197,6 +212,10 @@ function main(): void {
       if (args.tasksFile !== undefined) {
         const tasks = JSON.parse(readFileArg(cwd, args.tasksFile, "--tasks-file"));
         if (!Array.isArray(tasks)) throw new Error("--tasks-file must be a JSON array");
+        for (const task of tasks) {
+          const owner = `task ${typeof task === "object" && task !== null && typeof (task as { taskId?: unknown }).taskId === "string" ? (task as { taskId: string }).taskId : "<unknown>"}`;
+          await assertInputTaskChecks(cwd, task, owner);
+        }
         input.tasks = tasks;
       }
       const snapshot = createRun(cwd, input, options);
@@ -228,6 +247,7 @@ function main(): void {
     if (command === "put-task") {
       const task = JSON.parse(readFileArg(cwd, args.file, "--file"));
       if (typeof task.taskId !== "string") throw new Error("task file requires a taskId string");
+      await assertInputTaskChecks(cwd, task, `task ${task.taskId}`);
       emit(args, updateTask(cwd, requireRunId(args), task.taskId, task, { ...options, expectedVersion: args.expectVersion }) as unknown as Record<string, unknown>);
       return;
     }

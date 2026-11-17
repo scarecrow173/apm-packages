@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import * as yaml from "js-yaml";
 import { z } from "zod";
 import { generateArtifactId } from "./artifact_id";
 import { parseClaimReference } from "./claim_ids";
@@ -558,15 +559,21 @@ function formatMetadataBlock(metadata?: MetadataInput): string[] {
 }
 
 // Type-specific top-level front-matter fields the registry declares beyond
-// the shared base set (e.g. `knowledge_kind` on knowledge docs). Scalars
-// only — the writer emits them next to the axis block; lint validates them
-// through `requiredFields`/`fieldVocabularies` on the contract.
+// the shared base set (e.g. `knowledge_kind` on knowledge docs, `checks` on
+// verification docs). Scalars emit inline; arrays and objects serialize as
+// an indented YAML block — the writer emits them next to the axis block;
+// lint validates them through `requiredFields`/`fieldVocabularies` on the
+// contract or the owning type's parser (Verification Design checks).
 function formatExtraFieldsBlock(fields?: MetadataInput): string[] {
   if (!fields) return [];
-  return Object.entries(fields).flatMap(([key, value]) =>
-    (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
-      ? [`${key}: ${formatMetadataScalar(value)}`]
-      : []);
+  return Object.entries(fields).flatMap(([key, value]) => {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      return [`${key}: ${formatMetadataScalar(value)}`];
+    }
+    if (value === undefined || value === null) return [];
+    const dumped = yaml.dump(value, { lineWidth: -1, noRefs: true }).trimEnd();
+    return [`${key}:`, ...dumped.split("\n").map((line) => `  ${line}`)];
+  });
 }
 
 // The relation fields a durable type stores: `source` (provenance, shared)
@@ -801,21 +808,19 @@ function bodyFor(type: DocType, title: string): string {
       "",
       "## Purpose",
       "",
-      "<!-- The verification intent this design preserves: which claims it checks and when it may be retired. -->",
+      "<!-- The verification intent this design preserves: which claims it checks and when the design may be retired. -->",
       "",
       "## Scope",
       "",
-      "- <!-- behavior, contract, or claim under verification -->",
+      "<!-- The claims, contracts, or behaviors this design verifies — and the boundaries it stays inside. -->",
       "",
       "## Checks",
       "",
-      "<!-- One check per entry; each targets a Claim ID (<TYPE>-<id>::R-NN). The Check contract (method, criteria, required) is defined by Verification Design v1. -->",
+      "<!-- The authoritative check list is the front-matter `checks:` array — the sole Check→Claim authority. Each entry is a VerificationCheckV1 { id, target, method, implementation, preconditions, passCriteria, limitations, required }. Describe each check's intent in prose here and bind it to its front-matter id with a body anchor of the form check:CHK-NN inside an HTML comment. -->",
       "",
-      "- [ ] <!-- check: claim target + verification method + pass criteria -->",
+      "## Non-goals",
       "",
-      "## Non-Goals",
-      "",
-      "- <!-- what this design deliberately does not verify -->",
+      "<!-- What this design deliberately does not verify. -->",
     ].join("\n");
   }
   if (type === "design") {

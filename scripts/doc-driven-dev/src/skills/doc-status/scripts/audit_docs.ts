@@ -42,7 +42,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all [--dir <path>] [--json] [--external-links] [--profile artifact|materialized] [--owners]\n" +
+  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|knowledge|verification|test-spec|all [--dir <path>] [--json] [--external-links] [--profile artifact|materialized] [--owners]\n" +
     "  --owners requires --type all and cannot be combined with --dir";
 }
 

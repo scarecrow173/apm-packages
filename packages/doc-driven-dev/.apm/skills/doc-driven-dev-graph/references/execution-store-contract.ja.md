@@ -52,8 +52,13 @@ createdAt, updatedAt }`。`status` は v2 の語彙（`todo`・`in-progress`・
 `blocked`・`done`・`wont-do`）を継承します。`version` が task ごとの
 CAS トークンです。`dependsOn` は同一 run 内の兄弟 task id のみを
 列挙します —— `:`/`/`/`\` を含むエントリは cross-run 参照として拒否
-され、未知の id と自己依存は fail-closed します。`checks` は不透明な
-VerificationCheck 参照（`#239`）を保持します。`scope` は task の
+され、未知の id と自己依存は fail-closed します。`checks` は修飾
+Verification Check 参照（`VD-<id>::CHK-NN`）を保持します:
+`create --tasks-file` と `put-task --file` は書き込み前に各エントリを
+ライブな Knowledge Graph に対して解決し、生きた Verification
+Design が宣言するチェックでないものは fail-closed します（`#239`）。
+格納フィールドは `string[]` のままで、import された run は export 元
+チェックアウトの参照をそのまま保持します。`scope` は task の
 書き込み境界を repo 相対パスまたはディレクトリ接頭辞（`/`・`/*` で
 終わるエントリ）で宣言します —— 並列安全性判定が読む権威であり、
 未設定・空の scope は `scope-undeclared`、パスとして解釈できない
