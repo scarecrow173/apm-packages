@@ -27831,7 +27831,7 @@ function scanDocuments(cwd) {
     let data = {};
     let parsed = true;
     try {
-      const result = (0, import_gray_matter2.default)(raw);
+      const result = (0, import_gray_matter2.default)(raw, {});
       data = isPlainObject4(result.data) ? result.data : {};
     } catch {
       parsed = false;
@@ -27933,10 +27933,15 @@ function scanManifestDir(cwd, issues) {
     });
   });
   if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs3.default.statSync(abs).isDirectory();
+    } catch {
+    }
     issues.push({
       reason: "scope-escape",
       path: DOC_DRIVEN_DEV_DIR,
-      detail: `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted`
+      detail: directory ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted` : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`
     });
   }
 }
@@ -27951,16 +27956,16 @@ function scanExecutionState(cwd, issues) {
     const segments = relUnderRoot.split("/").filter(Boolean);
     if (isDir) {
       if (segments.length === 0) return;
-      if (segments.length > 2 || segments[0] !== "runs") {
+      if (segments[0] !== "runs") {
         marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
       }
       return;
     }
-    if (segments[0] !== "runs" || segments.length !== 2) {
+    if (segments[0] !== "runs" || segments.length < 3) {
       marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
       return;
     }
-    const name = segments[1];
+    const name = segments[segments.length - 1];
     if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
       let version2;
       try {
@@ -27976,10 +27981,15 @@ function scanExecutionState(cwd, issues) {
     marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
   });
   if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs3.default.statSync(abs).isDirectory();
+    } catch {
+    }
     issues.push({
       reason: "scope-escape",
       path: EXECUTION_STATE_ROOT,
-      detail: `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed`
+      detail: directory ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed` : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`
     });
   }
 }

@@ -3426,7 +3426,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs13 = require("fs");
+    var fs14 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3510,7 +3510,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter4.read = function(filepath, options2) {
-      const str2 = fs13.readFileSync(filepath, "utf8");
+      const str2 = fs14.readFileSync(filepath, "utf8");
       const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
@@ -13585,6 +13585,7 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-maintenance/scripts/doc_maintenance.ts
+var import_node_fs13 = __toESM(require("node:fs"));
 var import_node_path14 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_maintenance.ts
@@ -38510,7 +38511,7 @@ function scanDocuments(cwd) {
     let data = {};
     let parsed = true;
     try {
-      const result = (0, import_gray_matter2.default)(raw);
+      const result = (0, import_gray_matter2.default)(raw, {});
       data = isPlainObject4(result.data) ? result.data : {};
     } catch {
       parsed = false;
@@ -38612,10 +38613,15 @@ function scanManifestDir(cwd, issues) {
     });
   });
   if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs7.default.statSync(abs).isDirectory();
+    } catch {
+    }
     issues.push({
       reason: "scope-escape",
       path: DOC_DRIVEN_DEV_DIR,
-      detail: `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted`
+      detail: directory ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted` : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`
     });
   }
 }
@@ -38630,16 +38636,16 @@ function scanExecutionState(cwd, issues) {
     const segments = relUnderRoot.split("/").filter(Boolean);
     if (isDir) {
       if (segments.length === 0) return;
-      if (segments.length > 2 || segments[0] !== "runs") {
+      if (segments[0] !== "runs") {
         marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
       }
       return;
     }
-    if (segments[0] !== "runs" || segments.length !== 2) {
+    if (segments[0] !== "runs" || segments.length < 3) {
       marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
       return;
     }
-    const name = segments[1];
+    const name = segments[segments.length - 1];
     if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
       let version2;
       try {
@@ -38655,10 +38661,15 @@ function scanExecutionState(cwd, issues) {
     marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
   });
   if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs7.default.statSync(abs).isDirectory();
+    } catch {
+    }
     issues.push({
       reason: "scope-escape",
       path: EXECUTION_STATE_ROOT,
-      detail: `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed`
+      detail: directory ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed` : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`
     });
   }
 }
@@ -40093,10 +40104,21 @@ function migratePlan(cwd) {
 }
 function writeManifest(cwd) {
   const abs = import_node_path13.default.resolve(cwd, SCHEMA_MANIFEST_PATH);
-  import_node_fs12.default.mkdirSync(import_node_path13.default.dirname(abs), { recursive: true });
+  const dir = import_node_path13.default.dirname(abs);
+  const escaped = `${DOC_DRIVEN_DEV_DIR} resolves outside the checkout \u2014 refusing to write the manifest`;
+  let probe = dir;
+  while (!import_node_fs12.default.existsSync(probe)) {
+    const parent = import_node_path13.default.dirname(probe);
+    if (parent === probe) return `cannot verify ${DOC_DRIVEN_DEV_DIR} stays inside the checkout`;
+    probe = parent;
+  }
+  if (!isInsideCheckout(cwd, probe)) return escaped;
+  import_node_fs12.default.mkdirSync(dir, { recursive: true });
+  if (!isInsideCheckout(cwd, dir)) return escaped;
   const tmp = `${abs}.tmp-${process.pid}`;
   import_node_fs12.default.writeFileSync(tmp, schemaManifestText(), "utf8");
   import_node_fs12.default.renameSync(tmp, abs);
+  return null;
 }
 function migrateApply(cwd, expect) {
   const before = evaluateSchemaPreflight(cwd);
@@ -40127,7 +40149,10 @@ function migrateApply(cwd, expect) {
   if (blockers.length > 0) {
     return refuse("legacy artifacts or unsafe state require the full migration (#245/#247); this apply only installs the manifest on already-consistent content", blockers);
   }
-  writeManifest(cwd);
+  const writeRefusal = writeManifest(cwd);
+  if (writeRefusal !== null) {
+    return refuse(writeRefusal);
+  }
   const after = evaluateSchemaPreflight(cwd);
   return {
     command: "migrate apply",
@@ -40351,6 +40376,9 @@ async function main() {
     const cwd = import_node_path14.default.resolve(args.cwd);
     if (args.command === "migrate") {
       validateMigrateArgs(args);
+      if (!import_node_fs13.default.existsSync(cwd) || !import_node_fs13.default.statSync(cwd).isDirectory()) {
+        throw new Error(`--cwd does not exist or is not a directory: ${args.cwd}`);
+      }
       runMigrate(args, cwd);
       return;
     }
