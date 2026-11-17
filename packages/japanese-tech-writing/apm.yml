@@ -13,6 +13,3 @@ targets:
 type: skill
 includes:
   - .apm/
-scripts:
-  validate: "apm compile --validate"
-  preview: "apm compile --dry-run"
