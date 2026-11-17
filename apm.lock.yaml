@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-16T21:20:18.073706+00:00'
+generated_at: '2026-11-17T08:24:20.275771+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: _local/agent-intelligence
@@ -898,12 +898,12 @@ dependencies:
   - .claude/skills/setup-pstack-devin/scripts/roles.json
   - .claude/skills/setup-pstack-devin/scripts/setup.mjs
   deployed_file_hashes:
-    .agents/skills/setup-pstack-devin/SKILL.md: sha256:382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b
-    .agents/skills/setup-pstack-devin/scripts/roles.json: sha256:e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af
-    .agents/skills/setup-pstack-devin/scripts/setup.mjs: sha256:25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe
-    .claude/skills/setup-pstack-devin/SKILL.md: sha256:382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b
-    .claude/skills/setup-pstack-devin/scripts/roles.json: sha256:e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af
-    .claude/skills/setup-pstack-devin/scripts/setup.mjs: sha256:25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe
+    .agents/skills/setup-pstack-devin/SKILL.md: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+    .agents/skills/setup-pstack-devin/scripts/roles.json: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
+    .agents/skills/setup-pstack-devin/scripts/setup.mjs: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
+    .claude/skills/setup-pstack-devin/SKILL.md: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+    .claude/skills/setup-pstack-devin/scripts/roles.json: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
+    .claude/skills/setup-pstack-devin/scripts/setup.mjs: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
   source: local
   local_path: ./packages/pstack-devin
   is_dev: true
@@ -4828,7 +4828,7 @@ deployments:
   owners:
   - ./packages/pstack-devin
   active_owner: ./packages/pstack-devin
-  content_hash: sha256:382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b
+  content_hash: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/setup-pstack-devin/scripts/roles.json
@@ -4837,7 +4837,7 @@ deployments:
   owners:
   - ./packages/pstack-devin
   active_owner: ./packages/pstack-devin
-  content_hash: sha256:e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af
+  content_hash: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/setup-pstack-devin/scripts/setup.mjs
@@ -4846,7 +4846,7 @@ deployments:
   owners:
   - ./packages/pstack-devin
   active_owner: ./packages/pstack-devin
-  content_hash: sha256:25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe
+  content_hash: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/skill-discovery-protocol
@@ -8428,7 +8428,7 @@ deployments:
   owners:
   - ./packages/pstack-devin
   active_owner: ./packages/pstack-devin
-  content_hash: sha256:382406e05c5e891297d67b1f33a91555207a6b5d5f9c179a8b8993395277444b
+  content_hash: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
 - kind: project-relative
   target: claude
   value: .claude/skills/setup-pstack-devin/scripts/roles.json
@@ -8437,7 +8437,7 @@ deployments:
   owners:
   - ./packages/pstack-devin
   active_owner: ./packages/pstack-devin
-  content_hash: sha256:e48d2775027504e83ac33f5194c3ab1e607ab8455d0e757b42493d1cead010af
+  content_hash: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
 - kind: project-relative
   target: claude
   value: .claude/skills/setup-pstack-devin/scripts/setup.mjs
@@ -8446,7 +8446,7 @@ deployments:
   owners:
   - ./packages/pstack-devin
   active_owner: ./packages/pstack-devin
-  content_hash: sha256:25a87dab35d50a59e97df39fc149b67affc6075548650b34f63e37da95e538fe
+  content_hash: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
 - kind: project-relative
   target: claude
   value: .claude/skills/skill-discovery-protocol
