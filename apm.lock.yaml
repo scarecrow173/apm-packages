@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-17T08:24:20.275771+00:00'
+generated_at: '2026-11-17T14:54:36.159328+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: _local/agent-intelligence
@@ -888,18 +888,10 @@ dependencies:
   name: japanese-tech-writing
   version: 0.1.0
   package_type: apm_package
-  deployed_files:
-  - .agents/skills/japanese-tech-writing
-  - .agents/skills/japanese-tech-writing/SKILL.md
-  - .claude/skills/japanese-tech-writing
-  - .claude/skills/japanese-tech-writing/SKILL.md
-  deployed_file_hashes:
-    .agents/skills/japanese-tech-writing/SKILL.md: sha256:30e9923d925394411675b29e24d077efb3618acb1ead255570faef62469dce26
-    .claude/skills/japanese-tech-writing/SKILL.md: sha256:30e9923d925394411675b29e24d077efb3618acb1ead255570faef62469dce26
   source: local
   local_path: ./packages/japanese-tech-writing
   is_dev: true
-  declared_license: Unlicense
+  declared_license: MIT
 - repo_url: _local/pstack-devin
   name: pstack-devin
   version: 0.1.0
@@ -1761,6 +1753,24 @@ dependencies:
     .claude/skills/security-review/references/vuln-categories.md: sha256:d06159479bd92b9dcf3a2842e09f7712f1fd297c0bc9792fe20bc3cb69188df5
     .claude/skills/security-review/references/vulnerable-packages.md: sha256:8693a6a258bad18a8a1d0925bc1eae9c744071ff37a36b8f1da83adca93608af
   content_hash: sha256:a0fc25587c016178c9cf6238ac8702695fa761694965192472487f92093db571
+  is_dev: true
+- repo_url: k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  name: japanese-tech-writing
+  host: gist.github.com
+  resolved_commit: 8f2d57610a73efc97d743c9b0b0ecb1002e09fa4
+  version: unknown
+  depth: 2
+  resolved_by: _local/japanese-tech-writing
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/fd287c3133457c4fd8f5601d34aa817d
+  - .agents/skills/fd287c3133457c4fd8f5601d34aa817d/SKILL.md
+  - .claude/skills/fd287c3133457c4fd8f5601d34aa817d
+  - .claude/skills/fd287c3133457c4fd8f5601d34aa817d/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/fd287c3133457c4fd8f5601d34aa817d/SKILL.md: sha256:ad350e0e6f5630fd94d8ab98a6aee194053b0096fdc944c23e271d6dfa09ee68
+    .claude/skills/fd287c3133457c4fd8f5601d34aa817d/SKILL.md: sha256:ad350e0e6f5630fd94d8ab98a6aee194053b0096fdc944c23e271d6dfa09ee68
+  content_hash: sha256:9ddea7db32f38a243da9ff3c08f19fa1f4eb39f9cc27f3a966842cfb323376f3
   is_dev: true
 - repo_url: microsoft/apm
   name: apm-guide
@@ -3884,6 +3894,24 @@ deployments:
   content_hash: sha256:f8968d1e11837f312eddeaa49bb1d95508f0b7c709ff52198aceaf201758eacc
 - kind: project-relative
   target: agent-skills
+  value: .agents/skills/fd287c3133457c4fd8f5601d34aa817d
+  runtime: null
+  scope: project
+  owners:
+  - gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  active_owner: gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/fd287c3133457c4fd8f5601d34aa817d/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  active_owner: gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  content_hash: sha256:ad350e0e6f5630fd94d8ab98a6aee194053b0096fdc944c23e271d6dfa09ee68
+- kind: project-relative
+  target: agent-skills
   value: .agents/skills/finishing-a-development-branch
   runtime: null
   scope: project
@@ -4476,24 +4504,6 @@ deployments:
   - addyosmani/agent-skills/skills/interview-me
   active_owner: addyosmani/agent-skills/skills/interview-me
   content_hash: sha256:1d94741d10d2c826cd0c191aea3981ee94c8abb27ef2a166f6a372117d06448f
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/japanese-tech-writing
-  runtime: null
-  scope: project
-  owners:
-  - ./packages/japanese-tech-writing
-  active_owner: ./packages/japanese-tech-writing
-  content_hash: null
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/japanese-tech-writing/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - ./packages/japanese-tech-writing
-  active_owner: ./packages/japanese-tech-writing
-  content_hash: sha256:30e9923d925394411675b29e24d077efb3618acb1ead255570faef62469dce26
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/plan-doc
@@ -7502,6 +7512,24 @@ deployments:
   content_hash: sha256:f8968d1e11837f312eddeaa49bb1d95508f0b7c709ff52198aceaf201758eacc
 - kind: project-relative
   target: claude
+  value: .claude/skills/fd287c3133457c4fd8f5601d34aa817d
+  runtime: null
+  scope: project
+  owners:
+  - gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  active_owner: gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/fd287c3133457c4fd8f5601d34aa817d/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  active_owner: gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d
+  content_hash: sha256:ad350e0e6f5630fd94d8ab98a6aee194053b0096fdc944c23e271d6dfa09ee68
+- kind: project-relative
+  target: claude
   value: .claude/skills/finishing-a-development-branch
   runtime: null
   scope: project
@@ -8094,24 +8122,6 @@ deployments:
   - addyosmani/agent-skills/skills/interview-me
   active_owner: addyosmani/agent-skills/skills/interview-me
   content_hash: sha256:1d94741d10d2c826cd0c191aea3981ee94c8abb27ef2a166f6a372117d06448f
-- kind: project-relative
-  target: claude
-  value: .claude/skills/japanese-tech-writing
-  runtime: null
-  scope: project
-  owners:
-  - ./packages/japanese-tech-writing
-  active_owner: ./packages/japanese-tech-writing
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/japanese-tech-writing/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - ./packages/japanese-tech-writing
-  active_owner: ./packages/japanese-tech-writing
-  content_hash: sha256:30e9923d925394411675b29e24d077efb3618acb1ead255570faef62469dce26
 - kind: project-relative
   target: claude
   value: .claude/skills/plan-doc
