@@ -17,24 +17,6 @@ type CliArgs = {
   write: boolean;
 };
 
-const inverseRelations: Record<string, string | null> = {
-  implements: "implemented-by",
-  "implemented-by": "implements",
-  "depends-on": "blocks",
-  blocks: "depends-on",
-  supersedes: "superseded-by",
-  "superseded-by": "supersedes",
-  related: "related",
-  refines: "refined-by",
-  "refined-by": "refines",
-  "derives-from": "derived-by",
-  "derived-by": "derives-from",
-  verifies: "verified-by",
-  "verified-by": "verifies",
-  source: null,
-  references: null,
-};
-
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = { cwd: process.cwd(), write: false };
   for (let i = 0; i < argv.length; i += 1) {
@@ -85,15 +67,19 @@ function main(): void {
       return;
     }
     if (!args.from || !args.to || !args.relation) throw new Error("Missing --from, --to, or --relation");
-    if (!relationFields.includes(args.relation as never)) throw new Error(`Unknown relation: ${args.relation}`);
+    // Knowledge Relations v1 (Issue #235): only canonical forward fields are
+    // stored — `source` provenance plus the adr type's declared relations
+    // (`decides-for`, `supersedes`). Inverse links are derived projections,
+    // never written; legacy keys are refused, not rewritten.
+    if (!relationFields.includes(args.relation as never)) {
+      throw new Error(`Unknown relation: ${args.relation} (stored forward fields: ${relationFields.join(", ")})`);
+    }
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const from = path.basename(args.from);
     const to = path.basename(args.to);
     const updates = [prepareUpdate(cwd, relativeDir, from, args.relation, to)];
-    const inverse = inverseRelations[args.relation];
-    if (inverse) updates.push(prepareUpdate(cwd, relativeDir, to, inverse, from));
     if (args.write) {
       for (const update of updates) fs.writeFileSync(update.fullPath, update.next, "utf8");
     }

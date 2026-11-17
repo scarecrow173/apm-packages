@@ -58,22 +58,16 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
+  informs: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -107,40 +101,47 @@ relations:
 discovery 文書は「承認」または「実装」されません。`resolved` にするのは、
 昇華候補を全て対処した後にしてください。Knowledge Relations v1 では
 discovery は `relations.motivates`（→ spec）または `relations.informs`
-（→ durable な対象）を source→target に記録します。`derived-by` などその他の
-宣言キーはレガシー語彙で、マイグレーションは v3 以前のコーパスから読み
-取ります。creator は空のプレースホルダーとしてのみ出力しますが、
-`relate_adr` と `new_design --from` は #235 で格納語彙が絞り込まれるまで
-これらを設定できます。
+（→ durable な対象）を source→target に記録します。昇華先文書側の内向き
+ビュー（`motivated-by`、`informed-by`）は派生投影であり、保存しません。
 
 ## Relations
 
-relation フィールドは文書の型ではなく意味を表します。
+Knowledge Relations v1 では discovery は宣言済みの順方向 field と出典用の
+`relations.source` だけを格納します。
 
-| フィールド | 意味 |
-| --- | --- |
-| `source` | 外部の一次証拠: 調査レポート・issue リンク・ユーザーインタビュー・ベンチマーク。 |
-| `derives-from` | この探索のきっかけとなった広義の文脈または上流成果物。 |
-| `derived-by` | この discovery の結論から作成された下流の spec または ADR。 |
-| `supersedes` | この文書に置き換えられた古い discovery 文書。 |
-| `superseded-by` | この文書を置き換えた新しい discovery 文書。 |
-| `related` | 方向性のない文脈的な関連。 |
-| `references` | 参考にしたが一次情報ではない補助資料。 |
-| `defers` | この文書から意図的に据え置いた将来の探索。 |
-| `deferred-by` | この探索を後のフェーズに据え置いた文書。 |
+| フィールド | 対象 | 意味 |
+| --- | --- | --- |
+| `motivates` | spec | この探索が動機づける spec — spec↔ADR ペアの capture-layer アンカー。 |
+| `informs` | 任意の durable 文書 | この discovery が情報提供する durable 文書（ADR、design、他の capture）。 |
+| `supersedes` | discovery | この文書が置き換える古い discovery 文書。 |
 
-内部文書は相対パス、外部情報は URL を使います。
+逆名（`motivated-by`、`informed-by`、`superseded-by`）は派生投影であり、
+構造上一貫して導かれるため保存しません。`relations.source` は外部出典
+（調査レポート・issue リンク・インタビュー・ベンチマーク）を保持し、
+`relations.changes` は文書リンクではなく出典の変更セットです。
+
+v3 以前のキー（`implements`、`implemented-by`、`depends-on`、`blocks`、
+`superseded-by`、`related`、`refines`、`refined-by`、`derives-from`、
+`derived-by`、`verifies`、`verified-by`、`references`、`defers`、
+`deferred-by`）はマイグレーション領域の入力にすぎません。`doc-status`
+はこれらを `legacy-relation-field` 指摘として報告し、変換は
+マイグレーションツールが担い、現行グラフの辺として解決・走査される
+ことはありません。
+
+内部文書には相対パスまたは文書 ID、外部情報には URL を使います。
 
 `relations.source` は作成時に記録します — 探索のきっかけとなった上流文書、
 調査リンク、issue、または会話です。このディレクトリに置く brainstorm 記録も
 同じルールに従い、出所を追跡できないキャプチャ文書を残しません。
 
-可能な限り双方向にリンクします。
+relation は capture 文書側に source→target で保存します。
 
-- discovery から spec を生成した場合: discovery の `relations.derived-by` を spec に向ける；
-  spec の `relations.derives-from` をこの discovery に向ける。
-- discovery を別の discovery で置き換えた場合: 古い文書の `relations.superseded-by` と
-  新しい文書の `relations.supersedes` を両方設定する。
+- discovery から spec を動機づける場合: discovery の `relations.motivates`
+  を spec に向けます（供給する ADR には `relations.informs`）— spec 側は
+  何も保存しません。
+- discovery を別の discovery で置き換えた場合: 新しい文書の
+  `relations.supersedes` のみを設定します。古い文書側の `superseded-by`
+  は派生されます。
 
 ## 必須内容
 

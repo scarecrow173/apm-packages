@@ -24,6 +24,7 @@ export {
   repoPathKey,
 } from "../../../lib/document_utils";
 import { CANONICAL_DOC_DIRS, nonReferenceRelationKeys } from "../../../lib/document_utils";
+import { parseClaimReference } from "../../../lib/knowledge_graph";
 
 export type ArtifactEdgeKind = "lineage" | "task-dependency" | "contextual" | "evidence";
 export type ArtifactNode = { path: string; id: string | null; type: string | null };
@@ -71,8 +72,24 @@ export function createArtifactScanCollector(): ArtifactScanCollector {
   return { scans: 0, filesRead: 0, bytesRead: 0, filePaths: new Set() };
 }
 
-/** Relations that connect documents in a lifecycle chain. */
+/** Relations that connect documents in a lifecycle chain.
+ *
+ *  The Knowledge Relations v1 derivation fields (`motivates`, `decides-for`,
+ *  `realizes`, `supersedes`; Issue #235) are the canonical lineage set —
+ *  inverse names are derived projections, never stored, so they need no
+ *  entry here (traversal already follows stored edges in both directions).
+ *  `informs`/`explains` are knowledge edges, not lifecycle lineage, and
+ *  classify as contextual.
+ *
+ *  The pre-v3 lineage keys stay in the set for one reason only: migration-
+ *  owned documents (plan/task/test-spec/impl) still carry them, and this
+ *  projection reads stored data verbatim — canonical validation is the
+ *  preflight/lint layer's contract, not the graph's. */
 export const LINEAGE_RELATIONS: ReadonlySet<string> = new Set([
+  "motivates",
+  "decides-for",
+  "realizes",
+  "supersedes",
   "implements",
   "implemented-by",
   "derives-from",
@@ -266,7 +283,11 @@ export function localTarget(cwd: string, owner: ArtifactRecord, value: string): 
   };
 }
 
-/** Resolve a raw relation by unique exact ID first, then local path. */
+/** Resolve a raw relation by unique exact ID first, then local path.
+ *  A claim-qualified target (`<doc-id>::<key>`, Issue #235) resolves to the
+ *  document that owns the claim — claim-level addressing is the Knowledge
+ *  Graph's contract; this doc-level projection keeps the edge on the owning
+ *  document node. */
 export function resolveArtifactRelation(
   cwd: string,
   source: ArtifactRecord,
@@ -275,9 +296,13 @@ export function resolveArtifactRelation(
 ): ArtifactRecord | undefined {
   const value = rawValue.trim();
   if (isExternalArtifactReference(value)) return undefined;
-  const byId = records.filter((record) => record.id === value);
+  const claimRef = parseClaimReference(value);
+  const lookup = claimRef?.docId ?? value;
+  const byId = records.filter((record) => record.id === lookup);
   if (byId.length === 1) return byId[0];
   if (byId.length > 1) return undefined;
+  // Claim references address documents by ID only — never by path.
+  if (claimRef) return undefined;
   const target = localTarget(cwd, source, value);
   // Path identity is case-folded on Windows — a `DOCS/TASKS/x.md` reference
   // resolves the same record as `docs/tasks/x.md` there (Issue #156).
@@ -440,15 +465,54 @@ function chainMembers(chain: ArtifactChain): Set<string> {
     .filter((value): value is string => Boolean(value)));
 }
 
-/** Return discovery anchors, an empty array for a direct pair, or undefined when unrelated. */
+/** Return discovery anchors, an empty array for a direct pair, or undefined when unrelated.
+ *
+ *  Under Knowledge Relations v1 (Issue #235) the spec↔ADR pairing is the
+ *  stored forward edge `adr.decides-for → spec`; capture-layer anchors are
+ *  discovery/brainstorm documents that `motivates`/`informs` the artifact
+ *  (the stored direction is anchor → artifact). The pre-v3 spellings
+ *  (`derives-from`/`derived-by`/`refines`/`refined-by`) still match because
+ *  migration-owned corpora carry them until migration rewrites the links —
+ *  this projection reads stored data, never rewrites it. */
 export function preDesignAnchors(graph: ArtifactGraph, records: ArtifactRecord[], spec: ArtifactRecord, adr: ArtifactRecord): string[] | undefined {
   const direct = graph.edges.some((edge) => edge.kind === "lineage"
-    && ["derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation)
+    && ["decides-for", "derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation)
     && ((edge.from === spec.path && edge.to === adr.path) || (edge.from === adr.path && edge.to === spec.path)));
-  const discoveries = records.filter((record) => record.type === "discovery" && [spec, adr].every((artifact) => graph.edges.some((edge) =>
-    (edge.from === artifact.path && edge.to === record.path && edge.relation === "derives-from")
+  const discoveries = records.filter((record) => (record.type === "discovery" || record.type === "brainstorm") && [spec, adr].every((artifact) => graph.edges.some((edge) =>
+    (edge.from === record.path && edge.to === artifact.path && (edge.relation === "motivates" || edge.relation === "informs"))
+    || (edge.from === artifact.path && edge.to === record.path && edge.relation === "derives-from")
     || (edge.from === record.path && edge.to === artifact.path && edge.relation === "derived-by"))));
   return direct || discoveries.length > 0 ? discoveries.map((record) => record.path) : undefined;
+}
+
+// A design claims a spec when its stored forward edge realizes it (v1) or
+// it carries a pre-v3 derives-from/implements edge (legacy stored data on
+// migration-owned corpora — read verbatim, validated elsewhere). Exported so
+// gate evaluation shares the one chain-predicate authority.
+export function designClaimsSpec(graph: ArtifactGraph, designPath: string, specPath: string | undefined): boolean {
+  return Boolean(specPath)
+    && (artifactHasRelation(graph, designPath, ["realizes"], specPath)
+      || artifactHasRelation(graph, designPath, ["derives-from", "implements"], specPath));
+}
+
+// A design claims an ADR when the ADR's stored forward edge decides for it
+// (v1 direction is adr → design) or the design carries a pre-v3
+// derives-from/implements edge to it.
+export function designClaimsAdr(graph: ArtifactGraph, designPath: string, adrPath: string | undefined): boolean {
+  return Boolean(adrPath)
+    && (artifactHasRelation(graph, adrPath as string, ["decides-for"], designPath)
+      || artifactHasRelation(graph, designPath, ["derives-from", "implements"], adrPath));
+}
+
+// The design gate's ADR leg is stricter than the claim: the stored v1 edge
+// is `adr decides-for design`, and the pre-v3 gate spelling `design
+// derives-from adr` satisfies it on migration-owned corpora. `implements`
+// is claim-only — it keeps the ADR inside the chain so the artifact is
+// diagnosed rather than dropped, but it never satisfies the relation gate.
+export function designAdrDecision(graph: ArtifactGraph, designPath: string, adrPath: string | undefined): boolean {
+  return Boolean(adrPath)
+    && (artifactHasRelation(graph, adrPath as string, ["decides-for"], designPath)
+      || artifactHasRelation(graph, designPath, ["derives-from"], adrPath));
 }
 
 /** Enumerate valid spec/ADR/design/plan/task chains from typed lineage edges. */
@@ -463,11 +527,11 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
   const cartesian = <T>(values: T[], fallback: Array<T | undefined>): Array<T | undefined> => values.length > 0 ? values : fallback;
 
   for (const design of designs) {
-    const relatedSpecs = specs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
+    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
     // Keep the ADR claim set identical to the exclusion/singleton checks
-    // below: a design `implements` edge claims the ADR, so the chain must own
-    // it too or the artifact would vanish from every chain.
-    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
+    // below: a design-claimed ADR belongs to the chain or the artifact would
+    // vanish from every chain.
+    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
     const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
     for (const spec of cartesian(relatedSpecs, [undefined])) {
       for (const adr of cartesian(relatedAdrs, [undefined])) {
@@ -489,7 +553,7 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
     if (designs.some((design) => artifactHasRelation(graph, plan.path, ["derives-from", "design"], design.path))) continue;
     add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
   }
-  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], spec.path)));
+  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
   const paired = new Set<string>();
   for (const spec of unassignedSpecs) {
     // An ADR already claimed by a design chain can still pair with a new spec:
@@ -506,7 +570,9 @@ export function artifactChainCandidates(graph: ArtifactGraph, records: ArtifactR
   }
   for (const artifact of [...specs, ...adrs]) {
     if (!paired.has(artifact.path)
-      && !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], artifact.path))) {
+      && !designs.some((design) => artifact.type === "adr"
+        ? designClaimsAdr(graph, design.path, artifact.path)
+        : designClaimsSpec(graph, design.path, artifact.path))) {
       add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
     }
   }

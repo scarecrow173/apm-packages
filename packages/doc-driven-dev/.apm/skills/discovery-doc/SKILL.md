@@ -52,12 +52,14 @@ to persist exploration outputs as a canonical artifact.
    reports, or issue links that prompted the exploration — record it at
    creation, for brainstorm records too, so no capture doc is left without a
    traceable origin.
-   Use `relations.derived-by` to point forward to specs or ADRs that were
-   written from this discovery.
-   Use `relations.related` for contextual docs without directional dependency.
+   Use `relations.motivates` to point forward at the spec this exploration
+   motivates, and `relations.informs` for durable documents it feeds
+   (ADRs, designs, other captures).
 5. Promote conclusions to downstream documents.
    When the exploration reaches a tentative conclusion, create `spec-doc` or
-   `adr-doc` entries and link them via `relations.derived-by` in this document.
+   `adr-doc` entries and link them via `relations.motivates` /
+   `relations.informs` in this document — the downstream document stores no
+   inverse (`motivated-by` / `informed-by` are derived projections).
    Update status to `resolved` once all promotion candidates are addressed.
 
 ## Required Content
@@ -96,22 +98,16 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
+  informs: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 

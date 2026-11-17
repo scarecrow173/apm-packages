@@ -6,25 +6,20 @@ import matter from "gray-matter";
 import { findDocumentDir, listMarkdownFiles, slugify as sharedSlugify } from "../../../lib/document_utils";
 import { assertTypeScope } from "../../../lib/doc_ownership";
 import { buildIndex as buildManagedIndex, GENERATED_INDEX_MARKER, isForeignDocType, isGeneratedIndex, mergeManagedIndex, parseDoc, validateFrontMatter as validateDocSuiteFrontMatter } from "../../../lib/doc_suite_utils";
+import { allowedRelationsFor } from "../../../lib/doc_types";
 import { headingNames } from "../../../lib/markdown_sections";
 
 const candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"] as const;
+
+// The stored relation vocabulary for ADRs (Knowledge Relations v1, Issue
+// #235): the provenance `source` field plus the `adr` type's declared
+// forward relations from the Document Registry (`decides-for`,
+// `supersedes`). Inverse names are derived projections, never stored;
+// pre-v3 keys (`implements`, `depends-on`, `related`, …) are legacy
+// migration-domain input, flagged by lint/preflight — not read here.
 const relationFields = [
   "source",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "supersedes",
-  "superseded-by",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
+  ...allowedRelationsFor("adr").map((relation) => relation.field),
 ] as const;
 
 type RelationField = typeof relationFields[number];

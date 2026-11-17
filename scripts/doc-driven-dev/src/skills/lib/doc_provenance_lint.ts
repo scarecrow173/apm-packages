@@ -132,8 +132,8 @@ function lintTraceability(model: DocumentRepository, scope: LintScope): Finding[
  * `stale-upstream` covers declared upstreams that went dead underneath an
  * in-flight document — the "left behind" symptom the Issue #127 lifecycle
  * analysis measured and promoted here. The semantics live in
- * `staleUpstreamTargets` (`doc_repository.ts`): `implements`/`derives-from`/
- * `refines` targets resolving to a document whose status is dead
+ * `staleUpstreamTargets` (`doc_repository.ts`): `motivates`/`decides-for`/
+ * `realizes` targets resolving to a document whose status is dead
  * (`superseded`/`rejected`/`deprecated`/`archived`/`abandoned`/`wont-do`/
  * `completed`/`done`). A `completed`/`done` upstream does flag — an in-flight
  * task on a finished plan is the forgotten-leftover case — while

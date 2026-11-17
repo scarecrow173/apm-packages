@@ -3,6 +3,9 @@ import path from "node:path";
 
 import {
   artifactHasRelation,
+  designAdrDecision,
+  designClaimsAdr,
+  designClaimsSpec,
   DURABLE_DOC_DIRS,
   projectArtifactGraph,
   resolveArtifactFocus,
@@ -172,8 +175,14 @@ export function evaluateGraphGates(state: GraphState, collector?: ArtifactScanCo
 
     const designReasons: string[] = [];
     if (!design || design.status !== "approved") designReasons.push("design-status");
-    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from", "implements"], spec?.path)) designReasons.push("design-spec-relation");
-    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from"], adr?.path)) designReasons.push("design-adr-relation");
+    // Knowledge Relations v1 (Issue #235): design realizes spec; the ADR
+    // decides for the design — the stored direction for the ADR leg is
+    // adr → design. The gate accepts the v1 `decides-for` edge and the
+    // pre-v3 `derives-from` spelling still stored on migration-owned
+    // corpora; `implements` is claim-only — it keeps the ADR inside the
+    // chain for diagnosis but never satisfies this gate.
+    if (!design || !designClaimsSpec(state.artifactGraph, design.path, spec?.path)) designReasons.push("design-spec-relation");
+    if (!design || !designAdrDecision(state.artifactGraph, design.path, adr?.path)) designReasons.push("design-adr-relation");
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
 
     const planningReasons: string[] = [];

@@ -121,13 +121,17 @@ function defaultDocs(options: {
       body: "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n",
     },
     "docs/adr/0001-graph.md": {
-      frontmatter: { id: "ADR-0001", type: "adr", status: "accepted", title: "Graph" },
+      frontmatter: {
+        id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+        // Knowledge Relations v1: the stored ADR edge is adr → design.
+        relations: { "decides-for": ["DESIGN-0001"] },
+      },
       body: "# Graph\n\n## Considered Options\n\n### A\n\n### B\n",
     },
     "docs/designs/0001-graph.md": {
       frontmatter: {
         id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
-        relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+        relations: { realizes: ["SPEC-0001"] },
       },
       body: "# Graph\n",
     },

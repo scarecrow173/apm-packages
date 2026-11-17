@@ -129,17 +129,20 @@ If either condition fails, `plan-doc` must fail with:
 
 ## Relations
 
-Under Knowledge Relations v1 a design stores these source→target relations:
+Under Knowledge Relations v1 a design stores only its declared forward
+fields plus `relations.source` provenance:
 
-- `relations.realizes` for the spec this design realizes.
-- `relations.supersedes` for an older design it replaces.
-- `relations.source` for provenance (external links, issues, conversations).
+- `relations.realizes` (→ spec) — the spec this design realizes; what
+  `new_design --from` seeds.
+- `relations.supersedes` (→ design) — the older design it replaces.
+- `relations.source` — provenance (external links, issues, conversations).
+- `relations.changes` — the provenance change-set, not a document link.
 
-`derives-from`, `related`, `references`, `defers`, `deferred-by`, and the
-other declared keys are legacy vocabulary: migration tooling reads them in
-pre-v3 corpora; creators emit them only as empty placeholders, though
-`new_design --from` still populates `derives-from` and `relate_adr` can
-populate them on ADRs until the stored vocabulary narrows under #235.
+Inverse names (`realized-by`, `superseded-by`) are derived projections —
+never stored. `derives-from`, `related`, `references`, `defers`,
+`deferred-by`, and the other pre-v3 keys are migration-domain input only:
+`doc-status` reports them as `legacy-relation-field` findings and they are
+never walked as current graph edges.
 
 ## Index
 

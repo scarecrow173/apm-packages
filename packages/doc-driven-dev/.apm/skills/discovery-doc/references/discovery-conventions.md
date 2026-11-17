@@ -61,22 +61,16 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
+  informs: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -110,40 +104,47 @@ field, which the Document Registry owns):
 Discovery documents are not approved or implemented. Set `resolved` only
 after all promotion candidates are addressed. Under Knowledge Relations v1
 the discovery stores `relations.motivates` (→ spec) or `relations.informs`
-(→ durable targets) source→target; `derived-by` and other declared keys are
-legacy vocabulary that migration tooling reads in pre-v3 corpora — creators
-emit them only as empty placeholders, and `relate_adr`/`new_design --from`
-can still populate them until the stored vocabulary narrows under #235.
+(→ durable targets) source→target; the inbound view on the promoted document
+(`motivated-by`, `informed-by`) is a derived projection, never stored.
 
 ## Relations
 
-Use relation fields for meaning, not document type.
+Under Knowledge Relations v1 a discovery stores only its declared forward
+fields plus `relations.source` provenance:
 
-| Field | Meaning |
-| --- | --- |
-| `source` | External primary evidence: research reports, issue links, user interviews, benchmarks. |
-| `derives-from` | Broader context or upstream artifacts that prompted this exploration. |
-| `derived-by` | Downstream specs or ADRs written from the conclusions of this discovery. |
-| `supersedes` | Older discovery documents replaced by this one. |
-| `superseded-by` | Newer discovery document that replaces this one. |
-| `related` | Contextual docs without directional dependency. |
-| `references` | Supplementary material consulted but not a primary source. |
-| `defers` | Future explorations intentionally deferred from this document. |
-| `deferred-by` | Documents that deferred this exploration to a later phase. |
+| Field | Targets | Meaning |
+| --- | --- | --- |
+| `motivates` | spec | The spec this exploration motivates — the capture-layer anchor for the spec↔ADR pair. |
+| `informs` | any durable document | Durable documents this discovery informs (ADRs, designs, other captures). |
+| `supersedes` | discovery | The older discovery document this one replaces. |
 
-Internal documents use relative paths. External sources use URLs.
+Inverse names (`motivated-by`, `informed-by`, `superseded-by`) are derived
+projections — consistent by construction, never stored. `relations.source`
+carries external provenance (research reports, issue links, interviews,
+benchmarks); `relations.changes` is the provenance change-set, not a document
+link.
+
+Pre-v3 keys (`implements`, `implemented-by`, `depends-on`, `blocks`,
+`superseded-by`, `related`, `refines`, `refined-by`, `derives-from`,
+`derived-by`, `verifies`, `verified-by`, `references`, `defers`,
+`deferred-by`) are migration-domain input only: `doc-status` reports them as
+`legacy-relation-field` findings, migration tooling owns their conversion,
+and they are never resolved or walked as current graph edges.
+
+Internal documents use relative paths or document IDs. External sources use
+URLs.
 
 Record `relations.source` at creation — the upstream doc, research link,
 issue, or conversation that prompted the exploration. Brainstorm records
 kept in this directory follow the same rule: no capture document should be
 left without a traceable origin.
 
-Always link both ways when possible:
+Relations are stored on the capture document, source→target:
 
-- Discovery that generates a spec: set `relations.derived-by` to the spec;
-  set `relations.derives-from` in the spec to point back here.
-- Discovery superseded by another: set `relations.superseded-by` in the old
-  document and `relations.supersedes` in the new one.
+- Discovery that motivates a spec: set `relations.motivates` to the spec
+  (and `relations.informs` for an ADR it feeds) — the spec stores nothing.
+- Discovery superseded by another: set `relations.supersedes` in the new
+  document only; `superseded-by` on the old one is derived.
 
 ## Required Content
 

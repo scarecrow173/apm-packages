@@ -33362,8 +33362,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["idea"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -33397,8 +33397,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"] },
-      { field: "supersedes", targetTypes: ["brainstorm"] }
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -33431,9 +33431,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["discovery"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: true,
@@ -33469,7 +33469,7 @@ var configs = {
     // (it is the target of motivates/realizes/decides-for, not the source).
     expectedUpstream: [],
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"] }
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -33506,8 +33506,8 @@ var configs = {
       { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
     ],
     allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["design"] }
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -33552,8 +33552,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"] },
-      { field: "supersedes", targetTypes: ["adr"] }
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -33592,9 +33592,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["knowledge"] }
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -33631,7 +33631,7 @@ var configs = {
     // Evidence `supported-by` comes from the Evidence Store (#240); neither
     // is a stored relation field here.
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"] }
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -33781,6 +33781,15 @@ function configFor(type) {
   }
   throw new Error(`Unknown document type: ${type}`);
 }
+function resolveDocType(name) {
+  const entry = registry2[name];
+  if (entry) {
+    return entry.persistence === "durable" ? { kind: "durable", entry } : { kind: "ephemeral", entry };
+  }
+  const legacy = legacyAliases.get(name);
+  if (legacy) return { kind: "legacy", entry: legacyDocTypes[legacy] };
+  return { kind: "unknown", entry: null };
+}
 function executionBoundTypeNames() {
   return [
     ...executionTypes,
@@ -33823,6 +33832,24 @@ function knowledgeRelationFields() {
     for (const relation of configs[type].allowedRelations) fields.add(relation.field);
   }
   return [...fields].sort();
+}
+function knowledgeRelationInverses() {
+  const inverses = {};
+  for (const type of docTypes) {
+    for (const relation of configs[type].allowedRelations) {
+      const existing = inverses[relation.field];
+      if (existing && existing !== relation.inverse) {
+        throw new Error(`Registry inconsistency: relation ${relation.field} declares two inverse names (${existing}, ${relation.inverse})`);
+      }
+      inverses[relation.field] = relation.inverse;
+    }
+  }
+  return inverses;
+}
+function allowedRelationsFor(type) {
+  const resolved = resolveDocType(type);
+  if (resolved.kind !== "durable") return [];
+  return [...resolved.entry.allowedRelations];
 }
 var PROVENANCE_RELATION_KEYS = ["source"];
 
@@ -34070,30 +34097,7 @@ function scopeTypesForQuery(directory, requestedType) {
 }
 
 // src/skills/lib/doc_suite_utils.ts
-var relationFields = [
-  "source",
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-  "superseded-by",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by"
-];
+var relationFields = ["source", ...knowledgeRelationFields()];
 var changeFields = [
   "added",
   "modified",
@@ -34228,9 +34232,6 @@ var DEAD_UPSTREAM_STATUSES = /* @__PURE__ */ new Set([
   "done"
 ]);
 var UPSTREAM_FIELDS = /* @__PURE__ */ new Set([
-  "implements",
-  "derives-from",
-  "refines",
   "motivates",
   "decides-for",
   "realizes"
@@ -35362,6 +35363,519 @@ function lintStructure(model, scope, profile = "materialized") {
   return findings;
 }
 
+// src/skills/lib/knowledge_graph.ts
+var CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
+var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
+var CLAIM_MARKER_PATTERN = /<!--\s*claim\s*:(.*?)-->/g;
+var FENCE_PATTERN = /^(`{3,}|~{3,})/;
+function isClaimKey(value) {
+  return CLAIM_KEY_PATTERN.test(value);
+}
+function parseClaimReference(value) {
+  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
+  if (!match) return null;
+  return { docId: match[1], key: match[2] };
+}
+function claimId(docId, key) {
+  return `${docId}::${key}`;
+}
+function unfencedBody(body) {
+  const lines = body.split("\n");
+  let fenceChar = null;
+  return lines.map((line) => {
+    const fence = FENCE_PATTERN.exec(line.trimStart());
+    if (fenceChar === null) {
+      if (fence) {
+        fenceChar = fence[1][0];
+        return "";
+      }
+      return line;
+    }
+    if (fence && fence[1][0] === fenceChar) {
+      fenceChar = null;
+    }
+    return "";
+  }).join("\n");
+}
+function extractClaimDeclarations(document3) {
+  const declarations = [];
+  const body = unfencedBody(document3.body);
+  const lines = body.split("\n");
+  for (let index2 = 0; index2 < lines.length; index2 += 1) {
+    const line = lines[index2];
+    const lineNo = document3.bodyStartLine + index2 + 1;
+    for (const match of line.matchAll(CLAIM_MARKER_PATTERN)) {
+      const raw = match[1].trim();
+      const qualified = parseClaimReference(raw);
+      const bare = !qualified && isClaimKey(raw) ? raw : null;
+      declarations.push({
+        key: qualified?.key ?? bare,
+        declaredDocId: qualified?.docId ?? null,
+        invalid: qualified === null && bare === null ? raw : null,
+        path: document3.path,
+        line: lineNo,
+        text: line.slice((match.index ?? 0) + match[0].length).trim()
+      });
+    }
+  }
+  return declarations;
+}
+var V1_FIELDS = new Set(knowledgeRelationFields());
+var INVERSES = knowledgeRelationInverses();
+function declaredRelationFields(type) {
+  const declared = /* @__PURE__ */ new Map();
+  for (const relation of allowedRelationsFor(type)) {
+    declared.set(relation.field, relation.targetTypes);
+  }
+  return declared;
+}
+function unionRelations(documents) {
+  const merged = {};
+  for (const document3 of documents) {
+    for (const [field, targets] of Object.entries(document3.relations)) {
+      const bucket = merged[field] ?? /* @__PURE__ */ new Set();
+      for (const target of targets) bucket.add(target);
+      merged[field] = bucket;
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(merged).map(([field, values]) => [field, [...values].sort(compareStrings)])
+  );
+}
+function issueCompare(left, right) {
+  return compareStrings(left.path, right.path) || (left.line ?? 0) - (right.line ?? 0) || compareStrings(left.code, right.code) || compareStrings(left.target ?? "", right.target ?? "") || compareStrings(left.message, right.message);
+}
+function edgeCompare(left, right) {
+  return compareStrings(left.from.path, right.from.path) || compareStrings(left.relation, right.relation) || compareStrings(left.target, right.target);
+}
+function derivedEdgeCompare(left, right) {
+  return compareStrings(left.from.path, right.from.path) || compareStrings(left.relation, right.relation) || compareStrings(left.target, right.target);
+}
+function relationCycles(nodes, edges) {
+  const nodePaths = new Set(nodes.map((node3) => node3.path));
+  const adjacency = /* @__PURE__ */ new Map();
+  for (const edge of edges) {
+    if (edge.resolution !== "resolved" || !edge.to || !nodePaths.has(edge.to.path)) continue;
+    if (edge.to.path === edge.from.path) continue;
+    const bucket = adjacency.get(edge.from.path) ?? [];
+    bucket.push(edge.to.path);
+    adjacency.set(edge.from.path, bucket);
+  }
+  const indexOf = /* @__PURE__ */ new Map();
+  const lowLink = /* @__PURE__ */ new Map();
+  const onStack = /* @__PURE__ */ new Set();
+  const stack = [];
+  const components = [];
+  let counter = 0;
+  const strongConnect = (root) => {
+    indexOf.set(root, counter);
+    lowLink.set(root, counter);
+    counter += 1;
+    stack.push(root);
+    onStack.add(root);
+    const callStack = [
+      { node: root, successors: [...adjacency.get(root) ?? []].sort(compareStrings), next: 0 }
+    ];
+    while (callStack.length > 0) {
+      const frame = callStack[callStack.length - 1];
+      if (frame.next < frame.successors.length) {
+        const w = frame.successors[frame.next];
+        frame.next += 1;
+        if (!indexOf.has(w)) {
+          indexOf.set(w, counter);
+          lowLink.set(w, counter);
+          counter += 1;
+          stack.push(w);
+          onStack.add(w);
+          callStack.push({ node: w, successors: [...adjacency.get(w) ?? []].sort(compareStrings), next: 0 });
+        } else if (onStack.has(w)) {
+          lowLink.set(frame.node, Math.min(lowLink.get(frame.node), indexOf.get(w)));
+        }
+        continue;
+      }
+      callStack.pop();
+      if (callStack.length > 0) {
+        const parent = callStack[callStack.length - 1];
+        lowLink.set(parent.node, Math.min(lowLink.get(parent.node), lowLink.get(frame.node)));
+      }
+      if (lowLink.get(frame.node) === indexOf.get(frame.node)) {
+        const component = [];
+        let member;
+        do {
+          member = stack.pop();
+          if (member === void 0) break;
+          onStack.delete(member);
+          component.push(member);
+        } while (member !== frame.node);
+        if (component.length > 1) components.push(component.sort(compareStrings));
+      }
+    }
+  };
+  for (const nodePath of [...nodePaths].sort(compareStrings)) {
+    if (!indexOf.has(nodePath)) strongConnect(nodePath);
+  }
+  return components.sort((a, b) => compareStrings(a[0], b[0]));
+}
+function projectKnowledgeGraph(model) {
+  const issues = [];
+  const groups = groupByArtifact(model.canonicalDocuments);
+  const nodes = [];
+  const nodeByKey = /* @__PURE__ */ new Map();
+  const claimsByKey = /* @__PURE__ */ new Map();
+  for (const [key, group] of [...groups.entries()].sort((a, b) => compareStrings(a[0], b[0]))) {
+    const primary = artifactPrimaries(group)[0];
+    const nodeClaims = [];
+    const claimKeys = /* @__PURE__ */ new Map();
+    const seenKeys = /* @__PURE__ */ new Map();
+    for (const document3 of group) {
+      for (const declaration of extractClaimDeclarations(document3)) {
+        if (declaration.invalid !== null) {
+          issues.push({
+            code: "invalid-claim-id",
+            path: document3.path,
+            line: declaration.line,
+            target: declaration.invalid,
+            message: `Claim marker does not declare a claim key or DOC::KEY id: <!-- claim:${declaration.invalid} -->`
+          });
+          continue;
+        }
+        const claimKey = declaration.key;
+        if (primary.id !== null && declaration.declaredDocId !== null && declaration.declaredDocId !== primary.id) {
+          issues.push({
+            code: "claim-doc-mismatch",
+            path: document3.path,
+            line: declaration.line,
+            target: `${declaration.declaredDocId}::${claimKey}`,
+            message: `Claim ${declaration.declaredDocId}::${claimKey} is declared inside ${primary.id} \u2014 a moved claim must be re-keyed to its owning document`
+          });
+          continue;
+        }
+        const first = seenKeys.get(claimKey);
+        if (first && first.path === document3.path) {
+          issues.push({
+            code: "duplicate-claim",
+            path: document3.path,
+            line: declaration.line,
+            target: claimKey,
+            message: `Claim key ${claimKey} is declared more than once in ${document3.path} (first at line ${first.line})`
+          });
+          continue;
+        }
+        if (!first) seenKeys.set(claimKey, declaration);
+        const claim2 = {
+          key: claimKey,
+          id: primary.id ? claimId(primary.id, claimKey) : null,
+          path: document3.path,
+          line: declaration.line,
+          text: declaration.text
+        };
+        if (!claimKeys.has(claimKey)) claimKeys.set(claimKey, claim2);
+        nodeClaims.push(claim2);
+      }
+    }
+    if (primary.id === null && nodeClaims.length > 0) {
+      issues.push({
+        code: "claim-without-doc-id",
+        path: primary.path,
+        line: null,
+        target: null,
+        message: `${primary.path} declares ${nodeClaims.length} claim(s) but has no front-matter id \u2014 claims cannot be referenced as <id>::<key>`
+      });
+    }
+    claimsByKey.set(key, claimKeys);
+    const node3 = {
+      key,
+      path: primary.path,
+      id: primary.id,
+      type: primary.type ?? "",
+      paths: group.map((document3) => document3.path).sort(compareStrings),
+      claims: nodeClaims.sort((a, b) => compareStrings(a.key, b.key) || a.line - b.line)
+    };
+    nodes.push(node3);
+    nodeByKey.set(key, node3);
+  }
+  nodes.sort((a, b) => compareStrings(a.path, b.path));
+  for (const document3 of model.legacyDocuments) {
+    for (const field of Object.keys(document3.relations).sort(compareStrings)) {
+      if (PROVENANCE_RELATION_KEYS.includes(field)) continue;
+      if (nonReferenceRelationKeys.has(field)) continue;
+      issues.push({
+        code: "legacy-relation-field",
+        path: document3.path,
+        line: null,
+        target: field,
+        message: `relations.${field} is outside the Knowledge Relations v1 stored vocabulary (legacy keys are migration input, not graph data)`
+      });
+    }
+  }
+  const edges = [];
+  for (const [key, group] of [...groups.entries()].sort((a, b) => compareStrings(a[0], b[0]))) {
+    const node3 = nodeByKey.get(key);
+    const primary = artifactPrimaries(group)[0];
+    const declared = declaredRelationFields(node3.type);
+    const relations = unionRelations(group);
+    for (const [field, targets] of Object.entries(relations).sort((a, b) => compareStrings(a[0], b[0]))) {
+      if (PROVENANCE_RELATION_KEYS.includes(field)) continue;
+      if (nonReferenceRelationKeys.has(field)) continue;
+      if (!V1_FIELDS.has(field)) {
+        issues.push({
+          code: "legacy-relation-field",
+          path: node3.path,
+          line: null,
+          target: field,
+          message: `relations.${field} is outside the Knowledge Relations v1 stored vocabulary (stored forward set: ${[...V1_FIELDS].sort(compareStrings).join(", ")})`
+        });
+        continue;
+      }
+      const targetTypes = declared.get(field);
+      if (!targetTypes) {
+        issues.push({
+          code: "invalid-relation-field",
+          path: node3.path,
+          line: null,
+          target: field,
+          message: `relations.${field} is a Knowledge Relations v1 field but is not declared for type ${node3.type || "unknown"} (declared: ${[...declared.keys()].sort(compareStrings).join(", ") || "none"})`
+        });
+        continue;
+      }
+      for (const target of targets) {
+        const claimRef = parseClaimReference(target);
+        if (claimRef) {
+          const lookup = model.lookupById(claimRef.docId);
+          if (lookup.status === "ambiguous") {
+            edges.push({
+              from: { path: node3.path, id: node3.id },
+              relation: field,
+              target,
+              to: null,
+              claim: target,
+              resolution: "ambiguous",
+              derived: false
+            });
+            issues.push({
+              code: "ambiguous-relation-target",
+              path: node3.path,
+              line: null,
+              target,
+              message: `Relation ${field} claim target ${target} matches multiple documents: ${lookup.candidates.map((doc) => doc.path).join(", ")}`
+            });
+          } else if (lookup.status === "none") {
+            edges.push({
+              from: { path: node3.path, id: node3.id },
+              relation: field,
+              target,
+              to: null,
+              claim: target,
+              resolution: "unresolved",
+              derived: false
+            });
+            issues.push({
+              code: "unresolved-relation-target",
+              path: node3.path,
+              line: null,
+              target,
+              message: `Relation ${field} points to missing document: ${claimRef.docId}`
+            });
+          } else {
+            const targetDoc2 = lookup.document;
+            const targetNode2 = nodeByKey.get(artifactKeyOf(targetDoc2.path));
+            edges.push({
+              from: { path: node3.path, id: node3.id },
+              relation: field,
+              target,
+              to: targetNode2 ? { path: targetNode2.path, id: targetNode2.id } : { path: targetDoc2.path, id: targetDoc2.id },
+              claim: target,
+              resolution: "resolved",
+              derived: false
+            });
+            const targetClaims = claimsByKey.get(artifactKeyOf(targetDoc2.path));
+            if (!targetClaims || !targetClaims.has(claimRef.key)) {
+              issues.push({
+                code: "unresolved-claim-target",
+                path: node3.path,
+                line: null,
+                target,
+                message: `Relation ${field} targets claim ${target}, but ${targetDoc2.path} declares no claim ${claimRef.key}`
+              });
+            }
+            if (targetNode2 && targetNode2.key === node3.key) {
+              issues.push({
+                code: "self-relation",
+                path: node3.path,
+                line: null,
+                target,
+                message: `Relation ${field} references the document itself: ${target}`
+              });
+            }
+            if (targetDoc2.type && !targetTypes.includes(targetDoc2.type)) {
+              issues.push({
+                code: "invalid-relation-target-type",
+                path: node3.path,
+                line: null,
+                target,
+                message: `Relation ${field} target resolves to type "${targetDoc2.type}", expected one of: ${targetTypes.join(", ")}: ${target}`
+              });
+            }
+          }
+          continue;
+        }
+        const resolved = model.resolveRelationTarget(primary, target);
+        if (resolved.status === "external") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: null,
+            claim: null,
+            resolution: "external",
+            derived: false
+          });
+          continue;
+        }
+        if (resolved.status === "escaped") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: null,
+            claim: null,
+            resolution: "escaped",
+            derived: false
+          });
+          issues.push({
+            code: "relation-escapes-root",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} points outside the repository root: ${target}`
+          });
+          continue;
+        }
+        if (resolved.status === "ambiguous") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: null,
+            claim: null,
+            resolution: "ambiguous",
+            derived: false
+          });
+          issues.push({
+            code: "ambiguous-relation-target",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} target ${target} matches multiple documents: ${resolved.candidates.map((doc) => doc.path).join(", ")}`
+          });
+          continue;
+        }
+        if (resolved.status === "resolved-file") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: { path: resolved.path, id: null },
+            claim: null,
+            resolution: "non-document",
+            derived: false
+          });
+          issues.push({
+            code: "invalid-relation-target-type",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} target resolves to a non-document file, expected a durable document of type: ${targetTypes.join(", ")}: ${target}`
+          });
+          continue;
+        }
+        if (resolved.status === "unresolved") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: null,
+            claim: null,
+            resolution: "unresolved",
+            derived: false
+          });
+          issues.push({
+            code: "unresolved-relation-target",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} points to missing target: ${target}`
+          });
+          continue;
+        }
+        const targetDoc = resolved.document;
+        const targetNode = nodeByKey.get(artifactKeyOf(targetDoc.path));
+        edges.push({
+          from: { path: node3.path, id: node3.id },
+          relation: field,
+          target,
+          to: targetNode ? { path: targetNode.path, id: targetNode.id } : { path: targetDoc.path, id: targetDoc.id },
+          claim: null,
+          resolution: "resolved",
+          derived: false
+        });
+        if (targetNode && targetNode.key === node3.key) {
+          issues.push({
+            code: "self-relation",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} references the document itself: ${target}`
+          });
+        }
+        if (!targetDoc.type || !targetTypes.includes(targetDoc.type)) {
+          issues.push({
+            code: "invalid-relation-target-type",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} target resolves to type "${targetDoc.type ?? "unknown"}", expected one of: ${targetTypes.join(", ")}: ${target}`
+          });
+        }
+      }
+    }
+  }
+  const derivedEdges = [];
+  for (const edge of edges) {
+    if (edge.resolution !== "resolved" || !edge.to) continue;
+    const targetNode = nodeByKey.get(artifactKeyOf(edge.to.path));
+    const inverse = INVERSES[edge.relation];
+    if (!inverse || !targetNode) continue;
+    derivedEdges.push({
+      from: { path: targetNode.path, id: targetNode.id },
+      relation: inverse,
+      target: edge.from.id ?? edge.from.path,
+      to: { path: edge.from.path, id: edge.from.id },
+      claim: edge.claim,
+      via: edge.relation,
+      derived: true
+    });
+  }
+  for (const component of relationCycles(nodes, edges)) {
+    const label = component.join(" -> ");
+    for (const member of component) {
+      const memberNode = nodeByKey.get(artifactKeyOf(member));
+      if (!memberNode) continue;
+      issues.push({
+        code: "relation-cycle",
+        path: memberNode.path,
+        line: null,
+        target: null,
+        message: `Stored forward relations form a cycle: ${label}`
+      });
+    }
+  }
+  edges.sort(edgeCompare);
+  derivedEdges.sort(derivedEdgeCompare);
+  issues.sort(issueCompare);
+  return { nodes, edges, derivedEdges, issues };
+}
+
 // src/skills/lib/doc_lint.ts
 function isUnderDir2(child, parent) {
   const c = normalizeDir(child);
@@ -35382,29 +35896,108 @@ function scopeFor(model, type, directory) {
   );
   return { type, directory: dir, documents, files };
 }
-var RECIPROCAL_RELATIONS = {
-  "implements": "implemented-by",
-  "implemented-by": "implements",
-  "derives-from": "derived-by",
-  "derived-by": "derives-from",
-  "refines": "refined-by",
-  "refined-by": "refines",
-  "verifies": "verified-by",
-  "verified-by": "verifies",
-  "supersedes": "superseded-by",
-  "superseded-by": "supersedes",
-  "defers": "deferred-by",
-  "deferred-by": "defers",
-  "depends-on": "blocks",
-  "blocks": "depends-on"
+var GRAPH_ISSUE_RULES = {
+  "invalid-claim-id": { ruleId: "invalid-claim-id", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "claim-without-doc-id": { ruleId: "claim-without-doc-id", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "duplicate-claim": { ruleId: "duplicate-claim", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "claim-doc-mismatch": { ruleId: "claim-doc-mismatch", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "unresolved-claim-target": { ruleId: "unresolved-claim-target", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "legacy-relation-field": { ruleId: "legacy-relation-field", category: "relation", severity: "warning", blocking: true, repair: "migration" },
+  "invalid-relation-field": { ruleId: "invalid-relation-field", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "unresolved-relation-target": { ruleId: "broken-relation-link", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "ambiguous-relation-target": { ruleId: "ambiguous-relation-target", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "relation-escapes-root": { ruleId: "relation-escapes-root", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "self-relation": { ruleId: "self-relation", category: "relation", severity: "warning", blocking: false, repair: "manual" },
+  "invalid-relation-target-type": { ruleId: "invalid-relation-target-type", category: "traceability", severity: "warning", blocking: true, repair: "manual" },
+  "relation-cycle": { ruleId: "relation-cycle", category: "relation", severity: "warning", blocking: true, repair: "manual" }
 };
-function relationSourcePaths(document3) {
-  return [document3.path, ...document3.id ? [document3.id] : [], ...document3.localeSiblings];
+function lintKnowledgeGraph(model, scope) {
+  const graph = projectKnowledgeGraph(model);
+  const findings = [];
+  for (const issue2 of graph.issues) {
+    if (!isUnderDir2(issue2.path, scope.directory)) continue;
+    const rule = GRAPH_ISSUE_RULES[issue2.code];
+    findings.push(finding({
+      ruleId: rule.ruleId,
+      category: rule.category,
+      severity: rule.severity,
+      blocking: rule.blocking,
+      path: issue2.path,
+      line: issue2.line,
+      artifactId: model.byPath.get(issue2.path)?.id ?? null,
+      message: issue2.message,
+      target: issue2.target,
+      repair: rule.repair
+    }));
+  }
+  return findings;
 }
-function reciprocalApplies(document3, inverseField, targetDocument) {
-  const inverseRule = contractForType(targetDocument.type ?? "")?.requiredRelations.find((rule) => rule.field === inverseField);
-  if (!inverseRule) return true;
-  return document3.type !== null && inverseRule.targetTypes.includes(document3.type);
+function lintUnmanagedRelations(model, document3) {
+  const findings = [];
+  for (const [field, targets] of Object.entries(document3.relations)) {
+    if (field === "source") continue;
+    for (const target of targets) {
+      if (isExternalReference(target) || parseClaimReference(target)) continue;
+      const resolved = model.resolveRelationTarget(document3, target);
+      if (resolved.status === "external") continue;
+      if (resolved.status === "ambiguous") {
+        findings.push(finding({
+          ruleId: "ambiguous-relation-target",
+          category: "relation",
+          severity: "warning",
+          blocking: true,
+          path: document3.path,
+          artifactId: document3.id,
+          message: `Relation ${field} target ${target} matches multiple artifacts: ${resolved.candidates.map((doc) => doc.path).join(", ")}`,
+          target,
+          repair: "manual"
+        }));
+        continue;
+      }
+      if (resolved.status === "escaped") {
+        findings.push(finding({
+          ruleId: "relation-escapes-root",
+          category: "relation",
+          severity: "warning",
+          blocking: true,
+          path: document3.path,
+          artifactId: document3.id,
+          message: `Relation ${field} points outside the repository root: ${target}`,
+          target,
+          repair: "manual"
+        }));
+        continue;
+      }
+      if (resolved.status === "unresolved") {
+        findings.push(finding({
+          ruleId: "broken-relation-link",
+          category: "relation",
+          severity: "warning",
+          blocking: true,
+          path: document3.path,
+          artifactId: document3.id,
+          message: `Relation ${field} points to missing target: ${target}`,
+          target,
+          repair: "manual"
+        }));
+        continue;
+      }
+      const targetDocument = resolved.status === "resolved" ? resolved.document : null;
+      if (targetDocument && model.sameLogicalArtifact(targetDocument.path, document3.path)) {
+        findings.push(finding({
+          ruleId: "self-relation",
+          category: "relation",
+          severity: "warning",
+          path: document3.path,
+          artifactId: document3.id,
+          message: `Relation ${field} references the document itself: ${target}`,
+          target,
+          repair: "manual"
+        }));
+      }
+    }
+  }
+  return findings;
 }
 function lintParseErrors(document3) {
   if (!document3.parseError) return [];
@@ -35555,120 +36148,6 @@ function lintDuplicateIds(model, scope) {
         target: duplicate.id,
         repair: "migration"
       }));
-    }
-  }
-  return findings;
-}
-function lintRelations(model, document3, scopeType) {
-  const findings = [];
-  const contract = contractForType(scopeType);
-  const typedFields = /* @__PURE__ */ new Map();
-  for (const required2 of contract?.requiredRelations ?? []) {
-    typedFields.set(required2.field, required2.targetTypes);
-  }
-  for (const [field, targetTypes] of Object.entries(contract?.allowedRelations ?? {})) {
-    if (!typedFields.has(field)) typedFields.set(field, [...targetTypes]);
-  }
-  for (const [field, targets] of Object.entries(document3.relations)) {
-    if (field === "source") continue;
-    for (const target of targets) {
-      if (isExternalReference(target)) continue;
-      const resolved = model.resolveRelationTarget(document3, target);
-      if (resolved.status === "external") continue;
-      if (resolved.status === "ambiguous") {
-        findings.push(finding({
-          ruleId: "ambiguous-relation-target",
-          category: "relation",
-          severity: "warning",
-          blocking: true,
-          path: document3.path,
-          artifactId: document3.id,
-          message: `Relation ${field} target ${target} matches multiple artifacts: ${resolved.candidates.map((doc) => doc.path).join(", ")}`,
-          target,
-          repair: "manual"
-        }));
-        continue;
-      }
-      if (resolved.status === "escaped") {
-        findings.push(finding({
-          ruleId: "relation-escapes-root",
-          category: "relation",
-          severity: "warning",
-          blocking: true,
-          path: document3.path,
-          artifactId: document3.id,
-          message: `Relation ${field} points outside the repository root: ${target}`,
-          target,
-          repair: "manual"
-        }));
-        continue;
-      }
-      if (resolved.status === "unresolved") {
-        findings.push(finding({
-          ruleId: "broken-relation-link",
-          category: "relation",
-          severity: "warning",
-          blocking: true,
-          path: document3.path,
-          artifactId: document3.id,
-          message: `Relation ${field} points to missing target: ${target}`,
-          target,
-          repair: "manual"
-        }));
-        continue;
-      }
-      const targetDocument = resolved.status === "resolved" ? resolved.document : null;
-      if (!targetDocument) continue;
-      if (model.sameLogicalArtifact(targetDocument.path, document3.path)) {
-        findings.push(finding({
-          ruleId: "self-relation",
-          category: "relation",
-          severity: "warning",
-          path: document3.path,
-          artifactId: document3.id,
-          message: `Relation ${field} references the document itself: ${target}`,
-          target,
-          repair: "manual"
-        }));
-        continue;
-      }
-      const expectedTypes = typedFields.get(field);
-      if (expectedTypes && targetDocument.type && !expectedTypes.includes(targetDocument.type)) {
-        findings.push(finding({
-          ruleId: "invalid-relation-target-type",
-          category: "traceability",
-          severity: "warning",
-          blocking: true,
-          path: document3.path,
-          artifactId: document3.id,
-          message: `Relation ${field} target resolves to type "${targetDocument.type}", expected one of: ${expectedTypes.join(", ")}: ${target}`,
-          target,
-          repair: "manual"
-        }));
-      }
-      const reciprocal = RECIPROCAL_RELATIONS[field];
-      if (reciprocal && reciprocalApplies(document3, reciprocal, targetDocument)) {
-        const inverse = targetDocument.relations[reciprocal] ?? [];
-        const sources = relationSourcePaths(document3);
-        if (inverse.length > 0 && !inverse.some((value) => sources.includes(value))) {
-          const resolvedInverse = inverse.some((value) => {
-            const back = model.resolveRelationTarget(targetDocument, value);
-            return back.status === "resolved" && back.document !== null && model.sameLogicalArtifact(back.document.path, document3.path);
-          });
-          if (!resolvedInverse) {
-            findings.push(finding({
-              ruleId: "inconsistent-reciprocal-relation",
-              category: "relation",
-              severity: "warning",
-              path: document3.path,
-              artifactId: document3.id,
-              message: `Relation ${field} targets ${targetDocument.path}, which declares ${reciprocal} without a link back`,
-              target,
-              repair: "manual"
-            }));
-          }
-        }
-      }
     }
   }
   return findings;
@@ -35863,10 +36342,13 @@ function lintScope(model, type, directory, profile = "materialized") {
     }
     findings.push(
       ...lintFrontMatter(document3, type),
-      ...lintRelations(model, document3, type),
       ...lintRequiredRelations(model, document3, type)
     );
+    if (document3.kind !== "canonical") {
+      findings.push(...lintUnmanagedRelations(model, document3));
+    }
   }
+  findings.push(...lintKnowledgeGraph(model, scope));
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
   findings.push(...lintDirectory(model, scope, profile));
@@ -35989,6 +36471,10 @@ var import_node_fs5 = __toESM(require("node:fs"));
 var import_node_path6 = __toESM(require("node:path"));
 var import_gray_matter2 = __toESM(require_gray_matter());
 var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
+  "motivates",
+  "decides-for",
+  "realizes",
+  "supersedes",
   "implements",
   "implemented-by",
   "derives-from",
@@ -36140,16 +36626,19 @@ function localTarget(cwd, owner, value) {
 function resolveArtifactRelation(cwd, source, rawValue, records) {
   const value = rawValue.trim();
   if (isExternalArtifactReference(value)) return void 0;
-  const byId = records.filter((record2) => record2.id === value);
+  const claimRef = parseClaimReference(value);
+  const lookup = claimRef?.docId ?? value;
+  const byId = records.filter((record2) => record2.id === lookup);
   if (byId.length === 1) return byId[0];
   if (byId.length > 1) return void 0;
+  if (claimRef) return void 0;
   const target = localTarget(cwd, source, value);
   return records.find((record2) => repoPathKey(record2.path) === repoPathKey(target.path));
 }
-function issueCompare(left, right) {
+function issueCompare2(left, right) {
   return compareStrings2(left.code, right.code) || compareStrings2(left.message, right.message);
 }
-function edgeCompare(left, right) {
+function edgeCompare2(left, right) {
   const kindOrder = {
     lineage: 0,
     "task-dependency": 1,
@@ -36214,8 +36703,8 @@ function scanArtifactGraph(options2, collector) {
     records,
     graph: {
       nodes: [...nodes].sort((left, right) => compareStrings2(left.path, right.path)),
-      edges: edges.sort(edgeCompare),
-      issues: [...new Map(issues.map((issue2) => [`${issue2.code}\0${issue2.message}`, issue2])).values()].sort(issueCompare)
+      edges: edges.sort(edgeCompare2),
+      issues: [...new Map(issues.map((issue2) => [`${issue2.code}\0${issue2.message}`, issue2])).values()].sort(issueCompare2)
     }
   };
 }
@@ -36260,9 +36749,18 @@ function chainMembers(chain) {
   return new Set([chain.spec, chain.adr, chain.design, chain.plan, ...chain.tasks, ...chain.anchors ?? []].filter((value) => Boolean(value)));
 }
 function preDesignAnchors(graph, records, spec, adr) {
-  const direct = graph.edges.some((edge) => edge.kind === "lineage" && ["derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation) && (edge.from === spec.path && edge.to === adr.path || edge.from === adr.path && edge.to === spec.path));
-  const discoveries = records.filter((record2) => record2.type === "discovery" && [spec, adr].every((artifact) => graph.edges.some((edge) => edge.from === artifact.path && edge.to === record2.path && edge.relation === "derives-from" || edge.from === record2.path && edge.to === artifact.path && edge.relation === "derived-by")));
+  const direct = graph.edges.some((edge) => edge.kind === "lineage" && ["decides-for", "derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation) && (edge.from === spec.path && edge.to === adr.path || edge.from === adr.path && edge.to === spec.path));
+  const discoveries = records.filter((record2) => (record2.type === "discovery" || record2.type === "brainstorm") && [spec, adr].every((artifact) => graph.edges.some((edge) => edge.from === record2.path && edge.to === artifact.path && (edge.relation === "motivates" || edge.relation === "informs") || edge.from === artifact.path && edge.to === record2.path && edge.relation === "derives-from" || edge.from === record2.path && edge.to === artifact.path && edge.relation === "derived-by")));
   return direct || discoveries.length > 0 ? discoveries.map((record2) => record2.path) : void 0;
+}
+function designClaimsSpec(graph, designPath, specPath) {
+  return Boolean(specPath) && (artifactHasRelation(graph, designPath, ["realizes"], specPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], specPath));
+}
+function designClaimsAdr(graph, designPath, adrPath) {
+  return Boolean(adrPath) && (artifactHasRelation(graph, adrPath, ["decides-for"], designPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], adrPath));
+}
+function designAdrDecision(graph, designPath, adrPath) {
+  return Boolean(adrPath) && (artifactHasRelation(graph, adrPath, ["decides-for"], designPath) || artifactHasRelation(graph, designPath, ["derives-from"], adrPath));
 }
 function artifactChainCandidates(graph, records) {
   const specs = records.filter((record2) => record2.type === "spec" && isValidChainRecord(record2));
@@ -36276,8 +36774,8 @@ function artifactChainCandidates(graph, records) {
   };
   const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
   for (const design of designs) {
-    const relatedSpecs = specs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
-    const relatedAdrs = adrs.filter((candidate) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], candidate.path));
+    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
+    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
     const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
     for (const spec of cartesian(relatedSpecs, [void 0])) {
       for (const adr of cartesian(relatedAdrs, [void 0])) {
@@ -36297,7 +36795,7 @@ function artifactChainCandidates(graph, records) {
     if (designs.some((design) => artifactHasRelation(graph, plan.path, ["derives-from", "design"], design.path))) continue;
     add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
   }
-  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], spec.path)));
+  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
   const paired = /* @__PURE__ */ new Set();
   for (const spec of unassignedSpecs) {
     for (const adr of adrs) {
@@ -36309,7 +36807,7 @@ function artifactChainCandidates(graph, records) {
     }
   }
   for (const artifact of [...specs, ...adrs]) {
-    if (!paired.has(artifact.path) && !designs.some((design) => artifactHasRelation(graph, design.path, ["derives-from", "implements"], artifact.path))) {
+    if (!paired.has(artifact.path) && !designs.some((design) => artifact.type === "adr" ? designClaimsAdr(graph, design.path, artifact.path) : designClaimsSpec(graph, design.path, artifact.path))) {
       add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
     }
   }
@@ -39594,10 +40092,10 @@ function resolveTaskEdges(cwd, taskDir, index2) {
   }
   return {
     edges: [...edges.values()].sort((left, right) => compareStrings4(left.from, right.from) || compareStrings4(left.to, right.to)),
-    issues: issues.sort(issueCompare2)
+    issues: issues.sort(issueCompare3)
   };
 }
-function issueCompare2(left, right) {
+function issueCompare3(left, right) {
   return compareStrings4(left.code, right.code) || compareStrings4((left.tasks || []).join(","), (right.tasks || []).join(",")) || compareStrings4(left.task || "", right.task || "") || compareStrings4(left.reference || "", right.reference || "") || compareStrings4(left.file || "", right.file || "") || compareStrings4(left.message, right.message);
 }
 function findCycles(tasks, edges) {
@@ -39661,7 +40159,7 @@ function summarizeTaskGraph(plan, tasks, edges, issues) {
   const uniqueIssues = [...new Map(normalizedIssues.map((issue2) => [
     `${issue2.code}\0${issue2.tasks.join(",")}\0${issue2.message}`,
     issue2
-  ])).values()].sort(issueCompare2);
+  ])).values()].sort(issueCompare3);
   const runnable = uniqueIssues.length > 0 ? [] : sortedTasks.filter((task) => task.status === "todo").filter((task) => sortedEdges2.filter((edge) => edge.to === task.id).every((edge) => {
     const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
     return predecessor?.status === "done";
@@ -39937,8 +40435,8 @@ function evaluateGraphGates(state, collector) {
     gates.briefing = gate(briefingReasons.length === 0 ? "pass" : "fail", briefingReasons);
     const designReasons = [];
     if (!design || design.status !== "approved") designReasons.push("design-status");
-    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from", "implements"], spec?.path)) designReasons.push("design-spec-relation");
-    if (!design || !artifactHasRelation(state.artifactGraph, design.path, ["derives-from"], adr?.path)) designReasons.push("design-adr-relation");
+    if (!design || !designClaimsSpec(state.artifactGraph, design.path, spec?.path)) designReasons.push("design-spec-relation");
+    if (!design || !designAdrDecision(state.artifactGraph, design.path, adr?.path)) designReasons.push("design-adr-relation");
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
     const planningReasons = [];
     if (!plan || !["approved", "in-progress", "completed"].includes(plan.status ?? "")) planningReasons.push("plan-status");

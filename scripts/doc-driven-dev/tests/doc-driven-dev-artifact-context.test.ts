@@ -204,11 +204,14 @@ test("L3 traverses lineage relations in BFS order with depth and via", () => {
   const repo = createFixtureRepo();
   const { nodes, findings } = expandArtifactContext(repo, "docs/plans/0001-graph.md", {});
   assert.deepEqual(findings, []);
+  // Knowledge Relations v1: expansion follows stored forward edges —
+  // plan→design is the execution-bound `derives-from`, design→spec is the
+  // canonical `realizes`. The ADR's stored edge is adr→design
+  // (`decides-for`), so traversal from the plan never reaches it.
   assert.deepEqual(nodes, [
     { path: "docs/plans/0001-graph.md", id: "PLAN-0001", depth: 0, via: null },
     { path: "docs/designs/0001-graph.md", id: "DESIGN-0001", depth: 1, via: "derives-from" },
-    { path: "docs/adr/0001-graph.md", id: "ADR-0001", depth: 2, via: "derives-from" },
-    { path: "docs/specs/0001-graph.md", id: "SPEC-0001", depth: 2, via: "derives-from" },
+    { path: "docs/specs/0001-graph.md", id: "SPEC-0001", depth: 2, via: "realizes" },
   ]);
   // Non-lineage relations (verified-by) and undeclared inverses (a task's
   // implements edge pointing at the plan) are not traversed by default.

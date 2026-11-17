@@ -24253,8 +24253,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["idea"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -24288,8 +24288,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"] },
-      { field: "supersedes", targetTypes: ["brainstorm"] }
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -24322,9 +24322,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["discovery"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: true,
@@ -24360,7 +24360,7 @@ var configs = {
     // (it is the target of motivates/realizes/decides-for, not the source).
     expectedUpstream: [],
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"] }
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24397,8 +24397,8 @@ var configs = {
       { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
     ],
     allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["design"] }
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24443,8 +24443,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"] },
-      { field: "supersedes", targetTypes: ["adr"] }
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24483,9 +24483,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["knowledge"] }
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24522,7 +24522,7 @@ var configs = {
     // Evidence `supported-by` comes from the Evidence Store (#240); neither
     // is a stored relation field here.
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"] }
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -24897,30 +24897,7 @@ function assertTypeScope(type, directory) {
 }
 
 // src/skills/lib/doc_suite_utils.ts
-var relationFields = [
-  "source",
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-  "superseded-by",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by"
-];
+var relationFields = ["source", ...knowledgeRelationFields()];
 var changeFields = [
   "added",
   "modified",
@@ -24981,6 +24958,30 @@ function sanitizeTitle(title) {
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
+var relationFields2 = [
+  "source",
+  "motivates",
+  "decides-for",
+  "realizes",
+  "informs",
+  "explains",
+  "supersedes",
+  "superseded-by",
+  "implements",
+  "implemented-by",
+  "depends-on",
+  "blocks",
+  "related",
+  "refines",
+  "refined-by",
+  "derives-from",
+  "derived-by",
+  "verifies",
+  "verified-by",
+  "references",
+  "defers",
+  "deferred-by"
+];
 var changeEntrySchema2 = external_exports.object({
   type: external_exports.string().min(1)
 }).passthrough();
@@ -24988,7 +24989,7 @@ var changesSchema2 = external_exports.object(Object.fromEntries(
   changeFields.map((field) => [field, external_exports.array(changeEntrySchema2).default([])])
 )).default({});
 var relationsSchema = external_exports.object({
-  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
+  ...Object.fromEntries(relationFields2.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
   changes: changesSchema2
 }).prefault({});
 var implementationRecordSchema = external_exports.object({
@@ -25043,11 +25044,11 @@ function emptyChanges() {
   return Object.fromEntries(changeFields.map((field) => [field, []]));
 }
 function emptyRelations() {
-  return Object.fromEntries(relationFields.map((field) => [field, []]));
+  return Object.fromEntries(relationFields2.map((field) => [field, []]));
 }
 function completeRelations(input2) {
   const relations = emptyRelations();
-  for (const field of relationFields) {
+  for (const field of relationFields2) {
     relations[field] = input2?.[field] || [];
   }
   return relations;
@@ -25122,7 +25123,7 @@ function implementationRecordFrontMatter(options2) {
     "relations:",
     ...formatRelationBlock("source", relations.source),
     ...formatChanges(changes),
-    ...relationFields.filter((field) => field !== "source").flatMap((field) => formatRelationBlock(field, relations[field])),
+    ...relationFields2.filter((field) => field !== "source").flatMap((field) => formatRelationBlock(field, relations[field])),
     "metadata:",
     "  experiments:",
     ...options2.adopted && options2.adopted.length > 0 ? ["    adopted:", ...options2.adopted.map((item) => `      - ${quote(item)}`)] : ["    adopted: []"],

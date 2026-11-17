@@ -4448,8 +4448,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["idea"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["idea"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -4483,8 +4483,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec", "adr"] },
-      { field: "supersedes", targetTypes: ["brainstorm"] }
+      { field: "motivates", targetTypes: ["spec", "adr"], inverse: "motivated-by" },
+      { field: "supersedes", targetTypes: ["brainstorm"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: false,
@@ -4517,9 +4517,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "motivates", targetTypes: ["spec"] },
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["discovery"] }
+      { field: "motivates", targetTypes: ["spec"], inverse: "motivated-by" },
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "supersedes", targetTypes: ["discovery"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: true,
     requiresSourceEvidence: true,
@@ -4555,7 +4555,7 @@ var configs = {
     // (it is the target of motivates/realizes/decides-for, not the source).
     expectedUpstream: [],
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["spec"] }
+      { field: "supersedes", targetTypes: ["spec"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4592,8 +4592,8 @@ var configs = {
       { fields: ["realizes"], skipStatuses: ["superseded", "rejected", "archived", "deprecated", "abandoned", "wont-do"] }
     ],
     allowedRelations: [
-      { field: "realizes", targetTypes: ["spec"] },
-      { field: "supersedes", targetTypes: ["design"] }
+      { field: "realizes", targetTypes: ["spec"], inverse: "realized-by" },
+      { field: "supersedes", targetTypes: ["design"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4638,8 +4638,8 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "decides-for", targetTypes: ["spec", "design"] },
-      { field: "supersedes", targetTypes: ["adr"] }
+      { field: "decides-for", targetTypes: ["spec", "design"], inverse: "decided-by" },
+      { field: "supersedes", targetTypes: ["adr"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4678,9 +4678,9 @@ var configs = {
     requiredRelations: [],
     expectedUpstream: [],
     allowedRelations: [
-      { field: "informs", targetTypes: [...DURABLE_TARGETS] },
-      { field: "explains", targetTypes: [...DURABLE_TARGETS] },
-      { field: "supersedes", targetTypes: ["knowledge"] }
+      { field: "informs", targetTypes: [...DURABLE_TARGETS], inverse: "informed-by" },
+      { field: "explains", targetTypes: [...DURABLE_TARGETS], inverse: "explained-by" },
+      { field: "supersedes", targetTypes: ["knowledge"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4717,7 +4717,7 @@ var configs = {
     // Evidence `supported-by` comes from the Evidence Store (#240); neither
     // is a stored relation field here.
     allowedRelations: [
-      { field: "supersedes", targetTypes: ["verification"] }
+      { field: "supersedes", targetTypes: ["verification"], inverse: "superseded-by" }
     ],
     allowsRootArtifact: false,
     requiresSourceEvidence: false,
@@ -4867,6 +4867,15 @@ function configFor(type) {
   }
   throw new Error(`Unknown document type: ${type}`);
 }
+function resolveDocType(name) {
+  const entry = registry[name];
+  if (entry) {
+    return entry.persistence === "durable" ? { kind: "durable", entry } : { kind: "ephemeral", entry };
+  }
+  const legacy = legacyAliases.get(name);
+  if (legacy) return { kind: "legacy", entry: legacyDocTypes[legacy] };
+  return { kind: "unknown", entry: null };
+}
 function executionBoundTypeNames() {
   return [
     ...executionTypes,
@@ -4903,6 +4912,11 @@ function knowledgeRelationFields() {
     for (const relation of configs[type].allowedRelations) fields.add(relation.field);
   }
   return [...fields].sort();
+}
+function allowedRelationsFor(type) {
+  const resolved = resolveDocType(type);
+  if (resolved.kind !== "durable") return [];
+  return [...resolved.entry.allowedRelations];
 }
 var PROVENANCE_RELATION_KEYS = ["source"];
 
@@ -24841,30 +24855,7 @@ function isSettledEntry(type, status, lifecycle) {
 }
 
 // src/skills/lib/doc_suite_utils.ts
-var relationFields = [
-  "source",
-  "motivates",
-  "decides-for",
-  "realizes",
-  "informs",
-  "explains",
-  "supersedes",
-  "superseded-by",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by"
-];
+var relationFields = ["source", ...knowledgeRelationFields()];
 var changeFields = [
   "added",
   "modified",
@@ -25080,6 +25071,10 @@ function walkMarkdownFiles(baseDir) {
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
 var candidateDirs = ["docs/adr", "docs/decisions", "adr", "docs/adrs", "decisions"];
+var relationFields2 = [
+  "source",
+  ...allowedRelationsFor("adr").map((relation) => relation.field)
+];
 function findAdrDir(cwd, explicitDir) {
   const resolved = findDocumentDir(cwd, explicitDir, candidateDirs, "docs/adr");
   assertTypeScope("adr", resolved);

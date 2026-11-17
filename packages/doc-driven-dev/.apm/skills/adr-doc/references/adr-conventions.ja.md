@@ -62,20 +62,15 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  decides-for: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
 metadata:
   adr:
     decision-makers: []
@@ -123,10 +118,8 @@ consulted は双方向の入力、informed は一方向の通知です。
 `status` はワークフロー状態に集中させ、ライフサイクルは `lifecycle` に
 記録します（置き換え時は `superseded`）。Knowledge Relations v1 では
 置き換える側の ADR が `relations.supersedes` を source→target で記録し、
-置き換えられた側は規約上逆リンクを保存しません。`superseded-by` など
-下表のその他の宣言キーはレガシー語彙で、マイグレーションは v3 以前の
-コーパスから読み取ります。ただし `relate_adr` は #235 で語彙が絞り
-込まれるまで宣言済みペアの双方向を書き込みます。
+置き換えられた側は何も保存しません — `superseded-by` は派生される逆
+投影であり、`relate_adr` も手編集も書き込みません。
 
 ## Relations 拡張
 
@@ -134,59 +127,46 @@ consulted は双方向の入力、informed は一方向の通知です。
 フィールドではありません。ADR グラフ生成やリンク検証を可能にするための
 構造化フィールドです。
 
-relation field は他の document skill と共通です。リンク先の文書種別ではなく、
-リンクの意味で field を選びます。
+Knowledge Relations v1 では ADR は宣言済みの順方向 field と出典用の
+`relations.source` だけを格納します — 共有の自由語彙はありません。
 
-Knowledge Relations v1 では ADR は `relations.decides-for`（→ spec または
-design）と `relations.supersedes`（→ 古い ADR）を source→target に記録し、
-出典には `relations.source` を使います。下表のその他のキーはすべて
-レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取り
-ますが、`relate_adr` は #235 で格納語彙が絞り込まれるまでこれらを
-書き込めます。
+| Field | Targets | Meaning |
+| --- | --- | --- |
+| `decides-for` | spec, design | この決定の対象となる spec または design — 正準の spec↔ADR ペアであり、design ゲートの辺。 |
+| `supersedes` | adr | この ADR が置き換える古い ADR。 |
 
-| Field | Meaning |
-| --- | --- |
-| `source` | 判断の根拠になる外部一次情報、要求、issue、出典資料。 |
-| `references` | ADR の根拠ではない補助的な参考文脈。 |
-| `implements` | この ADR が実装または運用化する spec、plan、その他文書。 |
-| `implemented-by` | この ADR を実装する plan、task、code-focused docs。 |
-| `depends-on` | この ADR が成立するために有効である必要がある文書や判断。 |
-| `blocks` | この ADR が accepted になるまで進められない文書、plan、task。 |
-| `supersedes` | この ADR が置き換える古い ADR。 |
-| `superseded-by` | この ADR を置き換える新しい ADR。 |
-| `related` | 方向付き依存はないが関連する ADR。 |
-| `refines` | この ADR が明確化または範囲縮小する ADR。 |
-| `refined-by` | この ADR を明確化または範囲縮小する ADR または spec。 |
-| `derives-from` | この ADR を生んだ brainstorming note、spec、ADR、上流文書。 |
-| `derived-by` | この ADR から派生した spec、plan、task、ADR。 |
-| `verifies` | 必要に応じて、この ADR が検証する文書、check、criteria。 |
-| `verified-by` | この ADR を検証する test spec、review note、task。 |
+逆名（`decided-by`、`superseded-by`）は派生投影であり、構造上一貫して
+導かれるため保存しません。`relations.source` は外部出典（URL、issue、
+出典資料）を保持し、`relations.changes` は文書リンクではなく出典の
+変更セットです。
 
-内部文書には相対パスを使います。外部出典には URL を使います。
+v3 以前のキー（`implements`、`implemented-by`、`depends-on`、`blocks`、
+`superseded-by`、`related`、`refines`、`refined-by`、`derives-from`、
+`derived-by`、`verifies`、`verified-by`、`references`、`defers`、
+`deferred-by`）はマイグレーション領域の入力にすぎません。`doc-status`
+はこれらを `legacy-relation-field` 指摘として報告し、変換は
+マイグレーションツールが担い、現行グラフの辺として解決・走査される
+ことはありません。
+
+内部文書には相対パスまたは文書 ID を使います。外部出典には URL を
+使います。
 
 ```yaml
 relations:
   source:
     - "https://example.com/source"
-  implemented-by:
-    - "../plans/implement-event-driven-architecture.md"
+  decides-for:
+    - "SPEC-0001"
   supersedes:
     - "use-rest-api.md"
-  superseded-by: []
-  related:
-    - "adopt-event-driven-architecture.md"
-  refines:
-    - "service-boundaries.md"
-  references:
-    - "https://example.com/background"
 ```
 
-置き換え関係では、可能であれば双方向にリンクします。
+置き換え関係では順方向の辺だけを保存します。
 
-- 新しい ADR: `relations.supersedes` で古い ADR を指す。
-- 古い ADR: `relations.superseded-by` で新しい ADR を指す。
-- 置き換えた ADR を引用し続ける進行中の依存文書（spec、plan、task）も
-  付け替えるかクローズします。
+- 新しい ADR: `relations.supersedes` で古い ADR を指す — 古い ADR 側の
+  `superseded-by` ビューは派生されるもので、書き込みません。
+- 置き換えた ADR を引用し続ける進行中の依存文書も付け替えるか
+  クローズします。
 
 ## 最小 MADR 内容
 

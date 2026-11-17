@@ -51,8 +51,11 @@ Prefer narrow edits:
 
 - Accept or reject: update status and add final context when needed.
 - Deprecate: set status to `deprecated` and explain the replacement path.
-- Supersede: create a new ADR and link both ways with `relations`.
-- Refine: create or update a related ADR and use `relations.refines`.
+- Supersede: create a new ADR and set `relations.supersedes` on it to the
+  old ADR — `superseded-by` on the old one is a derived projection.
+- Refine: update the ADR in place, or supersede it when the decision
+  itself changes; an ADR may also record `relations.decides-for` naming
+  the spec/design it constrains.
 - Add learnings: append to `## More Information` with a date stamp.
 
 Validate after edits:

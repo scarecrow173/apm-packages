@@ -6,24 +6,14 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/adr-doc");
+// Knowledge Relations v1 (Issue #235): creators emit `source` provenance
+// plus only the adr type's declared forward fields — `decides-for` and
+// `supersedes`. Inverse names are derived projections, never stored; the
+// pre-v3 keys are migration-domain input, not emitted vocabulary.
 const commonRelationFields = [
   "source",
-  "implements",
-  "implemented-by",
-  "depends-on",
-  "blocks",
+  "decides-for",
   "supersedes",
-  "superseded-by",
-  "related",
-  "refines",
-  "refined-by",
-  "derives-from",
-  "derived-by",
-  "verifies",
-  "verified-by",
-  "references",
-  "defers",
-  "deferred-by",
 ];
 
 function tempRepo() {
@@ -356,7 +346,7 @@ test("review_adr checks agent-readiness without writing", () => {
   assert.equal(fs.readFileSync(adrPath, "utf8"), before);
 });
 
-test("relate_adr is dry-run by default and writes bidirectional relations", () => {
+test("relate_adr is dry-run by default and writes only the stored forward relation", () => {
   const repo = tempRepo();
   const first = runScript("new_adr.js", ["--title", "Old Decision"], { cwd: repo });
   const second = runScript("new_adr.js", ["--title", "New Decision"], { cwd: repo });
@@ -378,7 +368,9 @@ test("relate_adr is dry-run by default and writes bidirectional relations", () =
   );
   assert.equal(write.status, 0, write.stderr);
   assert.match(fs.readFileSync(path.join(repo, "docs/adr/new-decision.md"), "utf8"), /old-decision\.md/);
-  assert.match(fs.readFileSync(path.join(repo, "docs/adr/old-decision.md"), "utf8"), /new-decision\.md/);
+  // Knowledge Relations v1: the inverse (`superseded-by`) is a derived
+  // projection — the target document is never written (Issue #235).
+  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/adr/old-decision.md"), "utf8"), /new-decision\.md/);
 });
 
 test("check_code_links reports missing Implementation Plan paths", () => {

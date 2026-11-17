@@ -27,11 +27,20 @@
     "unresolved": 0,
     "escaped": 0,
     "external": 0,
-    "inboundTargets": 9,
+    "inboundTargets": 8,
     "byField": {
+      "decides-for": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
       "derives-from": {
-        "declared": 6,
-        "resolved": 6,
+        "declared": 2,
+        "resolved": 2,
         "resolvedFile": 0,
         "ambiguous": 0,
         "unresolved": 0,
@@ -47,7 +56,25 @@
         "escaped": 0,
         "external": 0
       },
+      "realizes": {
+        "declared": 1,
+        "resolved": 1,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
       "references": {
+        "declared": 2,
+        "resolved": 2,
+        "resolvedFile": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+        "escaped": 0,
+        "external": 0
+      },
+      "supersedes": {
         "declared": 2,
         "resolved": 2,
         "resolvedFile": 0,
@@ -86,11 +113,11 @@
     "inboundTargets": 0
   },
   "findings": {
-    "total": 335,
-    "blocking": 163,
+    "total": 336,
+    "blocking": 164,
     "warnings": 97,
     "infos": 75,
-    "onDocuments": 333,
+    "onDocuments": 334,
     "onIndexes": 0,
     "unattributed": 2,
     "byRuleId": {
@@ -105,19 +132,19 @@
       "orphan-navigation": 53,
       "orphan-relation": 46,
       "provenance-missing-source": 20,
-      "traceability-missing-upstream": 1
+      "relation-cycle": 2
     },
     "byCategory": {
       "front-matter": 107,
       "index": 54,
       "orphan": 152,
       "provenance": 20,
-      "structure": 1,
-      "traceability": 1
+      "relation": 2,
+      "structure": 1
     },
     "health": {
       "documents": 53,
-      "blocking": 163,
+      "blocking": 164,
       "warnings": 97,
       "infos": 75,
       "categories": [
@@ -129,8 +156,8 @@
           "clean": false
         },
         {
-          "category": "traceability",
-          "blocking": 1,
+          "category": "relation",
+          "blocking": 2,
           "warnings": 0,
           "infos": 0,
           "clean": false
@@ -194,10 +221,10 @@
       "inFlight": 11,
       "staleUpstream": 0,
       "inboundLinkTargets": 0,
-      "inboundRelationTargets": 1,
+      "inboundRelationTargets": 0,
       "relations": {
-        "declared": 0,
-        "resolved": 0,
+        "declared": 1,
+        "resolved": 1,
         "resolvedFile": 0,
         "ambiguous": 0,
         "unresolved": 0,
@@ -232,8 +259,8 @@
       "inboundLinkTargets": 0,
       "inboundRelationTargets": 1,
       "relations": {
-        "declared": 2,
-        "resolved": 2,
+        "declared": 1,
+        "resolved": 1,
         "resolvedFile": 0,
         "ambiguous": 0,
         "unresolved": 0,
@@ -251,8 +278,8 @@
       "orphanIndex": 1,
       "orphanNavigation": 1,
       "orphanRelation": 0,
-      "findings": 5,
-      "blockingFindings": 3
+      "findings": 4,
+      "blockingFindings": 2
     },
     "discovery": {
       "files": 20,
@@ -431,8 +458,8 @@
       "orphanIndex": 16,
       "orphanNavigation": 16,
       "orphanRelation": 11,
-      "findings": 89,
-      "blockingFindings": 46
+      "findings": 91,
+      "blockingFindings": 48
     },
     "task": {
       "files": 11,

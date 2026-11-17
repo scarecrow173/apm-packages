@@ -120,8 +120,10 @@ The unified `doc_status.js` entry point exposes four read-only commands.
 4. Treat `relations.source` as external evidence.
    HTTP, HTTPS, and mail links are allowed and should not be reported as missing
    local files.
-5. Treat `relations.references` as supplementary material.
-   Local reference paths should resolve; external references may be URLs.
+5. Treat pre-v3 relation keys as migration-domain input.
+   Populated legacy keys (`implements`, `derives-from`, `references`,
+   `related`, inverse names, and friends) report `legacy-relation-field`
+   and are never resolved or walked as current graph edges.
 6. Report broken internal relations, invalid statuses, missing required front
    matter, and missing index entries.
 
@@ -144,10 +146,18 @@ check groups ran or were skipped. Covered checks include:
 - `invalid-id-format`, `invalid-id-prefix`, `duplicate-id` — artifact identity
   violations.
 - `broken-relation-link`, `ambiguous-relation-target`,
-  `relation-escapes-root`, `self-relation`, `inconsistent-reciprocal-relation`
-  — semantic relation violations. The reciprocal check covers typed
-  directional pairs only; `related` is a one-directional context link and
-  does not require a back-link.
+  `relation-escapes-root`, `self-relation`, `invalid-relation-field`,
+  `invalid-relation-target-type`, `relation-cycle` — semantic relation
+  violations projected by the Knowledge Graph. Stored relations are
+  canonical forward fields (`motivates`, `decides-for`, `realizes`,
+  `informs`, `explains`, `supersedes`); inverse names are derived
+  projections, so there is no reciprocal-link check — consistency is
+  structural.
+- `invalid-claim-id`, `claim-without-doc-id`, `duplicate-claim`,
+  `claim-doc-mismatch`, `unresolved-claim-target` — Claim marker and
+  stable Claim-ID (`<DOC-ID>::<CLAIM-ID>`) violations.
+- `legacy-relation-field` — populated pre-v3 relation keys. They are
+  migration-domain findings, never graph input.
 - `unresolved-legacy-reference` — body text references to legacy `TYPE-NNNN`
   artifact ids that no artifact provides, including `EXP-NNNN` experiment
   references without a matching numbered `.jsonl` log. Tokens that still
@@ -171,9 +181,9 @@ check groups ran or were skipped. Covered checks include:
   `realizes` relation is flagged. Settled statuses (`superseded`,
   `rejected`, `archived`, `deprecated`, `abandoned`, `wont-do`) are
   exempt.
-- `stale-upstream` — in-flight documents riding on a dead upstream. An
-  `implements`, `derives-from`, `refines`, `motivates`, `decides-for`,
-  or `realizes` target that resolves to a document in a dead status
+- `stale-upstream` — in-flight documents riding on a dead upstream. A
+  `motivates`, `decides-for`, or `realizes` target that resolves to a
+  document in a dead status
   (`superseded`, `rejected`, `deprecated`, `archived`, `abandoned`,
   `wont-do`, `completed`, `done`) warns once per dead target.
   `approved`/`accepted`/`implemented`/`resolved` upstreams and settled

@@ -123,13 +123,17 @@ through. Nodes sort deterministically by depth, then `path`. The supplied
 
 Traversal is deterministic breadth-first over typed relations via
 `resolveArtifactRelation`. The default relation set is the lineage set —
-`implements`, `implemented-by`, `derives-from`, `derived-by`, `refines`,
-`refined-by`; `--relations` accepts a comma-separated list of relation names
-and must name at least one. `--depth` bounds the walk at a non-negative
-integer, default `2`. The expansion root resolves by unique artifact ID
-first, then by checkout-relative path. External references (URI-scheme or
-`//` targets) are skipped as non-local. A visited set guarantees cycle
-safety, and duplicate arrivals are suppressed.
+the Knowledge Relations v1 fields `motivates`, `decides-for`, `realizes`,
+`supersedes`, plus the pre-v3 keys `implements`, `implemented-by`,
+`derives-from`, `derived-by`, `refines`, `refined-by`, which the projection
+still reads verbatim for migration-owned plan/task/test-spec/impl documents
+(canonical validation of current durable documents is the lint layer's
+contract, not the graph's). `--relations` accepts a comma-separated list of
+relation names and must name at least one. `--depth` bounds the walk at a
+non-negative integer, default `2`. The expansion root resolves by unique
+artifact ID first, then by checkout-relative path. External references
+(URI-scheme or `//` targets) are skipped as non-local. A visited set
+guarantees cycle safety, and duplicate arrivals are suppressed.
 
 L3 is allowed only when judgment needs more context than L0–L2 provide —
 record the reason and the scope (`--relations`, `--depth`) with the call. Do

@@ -62,22 +62,14 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -112,44 +104,38 @@ relations:
 `status` は spec のワークフロー状態に集中させ、ライフサイクルは
 `lifecycle` に記録します（置き換え時は `superseded`）。Knowledge Relations
 v1 では置き換え側が `relations.supersedes` のみを source→target に記録
-します。`superseded-by` などその他の宣言キーはレガシー語彙で、マイグレー
-ションは v3 以前のコーパスから読み取ります。creator は空のプレース
-ホルダーとしてのみ出力しますが、`relate_adr` と `new_design --from` は
-#235 で格納語彙が絞り込まれるまでこれらを設定できます。
+します。`superseded-by` は派生される逆投影であり、書き込みません。
 
 ## Relations
 
-relation は文書種別ではなく意味で選びます。
+Knowledge Relations v1 では spec は宣言済みの順方向 field と出典用の
+`relations.source` だけを格納します。spec は capture-layer
+（`motivates`）、decision（`decides-for`）、design（`realizes`）の辺の
+*target* であり、source ではありません。
 
-| Field | Meaning |
-| --- | --- |
-| `source` | 外部の一次情報、要求、issue、ユーザー提供資料。 |
-| `references` | spec の根拠ではない補助的な参考文脈。 |
-| `defers` | この文書から意図的に据え置いた将来作業（draft の spec/design を指す）。 |
-| `deferred-by` | この draft 将来作業を後続フェーズへ据え置いた文書。 |
-| `derives-from` | spec を生んだ brainstorming、idea-refine note、ADR、上流文書。 |
-| `derived-by` | この spec から派生した plan、task、より狭い spec。 |
-| `refines` | この spec が狭める、または詳細化する広い spec や ADR。 |
-| `refined-by` | この spec を狭める後続 spec。 |
-| `depends-on` | この spec が成立するために必要な文書。 |
-| `blocks` | この spec の承認まで進められない文書や task。 |
-| `supersedes` | この spec が置き換える古い spec。 |
-| `superseded-by` | この spec を置き換える新しい spec。 |
-| `related` | 方向性のない関連文書。 |
-| `implemented-by` | この spec を実装する plan や task。 |
-| `verifies` | 必要に応じて、この spec が検証する文書や check。 |
-| `verified-by` | この spec を検証する test spec、review note、task。 |
+| Field | Targets | Meaning |
+| --- | --- | --- |
+| `supersedes` | spec | この spec が置き換える古い spec。 |
 
-内部文書は相対パスを使います。外部出典は URL を使います。置き換えでは可能な
-限り双方向にリンクします。
+逆名（`superseded-by`、および他文書がこの spec に投影する `motivated-by`、
+`decided-by`、`realized-by` の内向きビュー）は派生投影であり、構造上
+一貫して導かれるため保存しません。`relations.source` は外部出典（URL、
+issue、出典資料）を保持し、`relations.changes` は文書リンクではなく
+出典の変更セットです。
 
-- 新 spec: `relations.supersedes` が古い spec を指す。
-- 旧 spec: `relations.superseded-by` が新 spec を指す。
+v3 以前のキー（`implements`、`implemented-by`、`depends-on`、`blocks`、
+`superseded-by`、`related`、`refines`、`refined-by`、`derives-from`、
+`derived-by`、`verifies`、`verified-by`、`references`、`defers`、
+`deferred-by`）はマイグレーション領域の入力にすぎません。`doc-status`
+はこれらを `legacy-relation-field` 指摘として報告し、変換は
+マイグレーションツールが担い、現行グラフの辺として解決・走査される
+ことはありません。
 
-`related` は一方向の context pointer です。文書への link に対して link 先が
-逆リンクを張る義務はなく、`doc-status` も `related` の逆リンク欠落を検出
-しません。`implements`/`implemented-by` や `depends-on`/`blocks` などの
-typed pair は引き続き相互宣言を求められます。
+内部文書には相対パスまたは文書 ID を使います。外部出典には URL を
+使います。置き換え関係では順方向の辺だけを保存します。
+
+- 新 spec: `relations.supersedes` が古い spec を指す — 旧 spec 側の
+  `superseded-by` ビューは派生されるもので、書き込みません。
 
 ## 必須内容
 
@@ -166,10 +152,11 @@ spec は次に答えます。
 受け入れ基準は検証可能である必要があります。`うまく動く` や `直感的である`
 のような基準は、観測可能な挙動で裏付けられない限り避けます。
 
-基準は spec に保持します。基準の意図が後続の redesign を生き残る必要がある
-場合は、`test-spec` 文書（`docs/test-specs/`）で Feature/Rule/Example の保証へ
-詳細化します。spec 側は `relations.verified-by`、test spec 側は
-`relations.verifies` でリンクします。両方へ基準をそのまま複写しません。
+基準は spec に保持します。個別に参照する必要がある基準には、安定した
+Claim ID — クレーム本文の横に置く `<!-- claim:R-01 -->` のような HTML
+コメントマーカー — を付けられます。これにより verification design と
+evidence が編集や書き換えを越えて `SPEC-<id>::R-01` として参照できます
+（#239/#240）。マーカーは front matter ではなく spec 本文に宣言します。
 
 ## 可変性
 
@@ -178,10 +165,9 @@ spec は計画入力であり、ADR のような不変の決定記録ではあ�
 - `draft` と `proposed` の spec は自由に編集できます。
 - `approved` の spec は、範囲を変えない明確化であれば追記できます。
 - 承認後に範囲、挙動、受け入れ基準を大きく変える場合は、新しい spec を作るか
-  古い spec を明示的に supersede します。supersede するときは
-  `supersedes`/`superseded-by` を双方向にリンクし、置き換えた spec を
-  参照し続ける進行中の依存文書（plan、design、task）を付け替えるか
-  クローズします。
+  古い spec を明示的に supersede します。supersede するときは新しい spec が
+  `supersedes` で古い spec を指し（逆方向は派生）、置き換えた spec を
+  参照し続ける進行中の依存文書を付け替えるかクローズします。
 - `implemented` の spec は履歴証拠として扱います。実装済みの意図を書き換える
   より、日付付き note または superseding spec を優先します。
 - status、owner、relation の更新は同一ファイル内で許容します。

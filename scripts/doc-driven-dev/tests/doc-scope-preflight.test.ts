@@ -208,7 +208,7 @@ test("adr creators reject foreign-owned dirs; impl creators refuse at the regist
   for (const [skill, script, args] of [
     ["adr-doc", "new_adr.js", ["--title", "X"]],
     ["adr-doc", "update_index.js", ["--write"]],
-    ["adr-doc", "relate_adr.js", ["--from", "a.md", "--to", "b.md", "--relation", "related", "--write"]],
+    ["adr-doc", "relate_adr.js", ["--from", "a.md", "--to", "b.md", "--relation", "supersedes", "--write"]],
   ] as Array<[string, string, string[]]>) {
     const result = runScript(skill, script, [...args, "--dir", "docs/impl/ir"], repo);
     assert.notEqual(result.status, 0, `${script} --dir docs/impl/ir must fail`);

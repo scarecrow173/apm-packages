@@ -24,7 +24,8 @@ implementation plans.
    ```
 
 4. Record relations.
-   Use `relations.derives-from` for upstream specs/ADRs/discovery docs.
+   `new_design --from` seeds `relations.realizes` for the upstream spec.
+   Use `relations.supersedes` for a design this one replaces.
 5. Approve at least one detailed design.
    Set front matter `status: "approved"` on at least one non-overview design
    file before creating a plan (PLAN-DOC-GATE-001).
@@ -47,22 +48,15 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  realizes: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 

@@ -50,8 +50,11 @@ ADR の方針と規約は `adr-conventions.ja.md` に従います。このファ
 
 - Accept / reject: status を更新し、必要なら最終文脈を追加する。
 - Deprecate: status を `deprecated` にし、置き換え先を説明する。
-- Supersede: 新しい ADR を作り、`relations` で双方向にリンクする。
-- Refine: 関連 ADR を作成または更新し、`relations.refines` を使う。
+- Supersede: 新しい ADR を作り、その `relations.supersedes` に旧 ADR を
+  設定する — 旧 ADR 側の `superseded-by` は派生投影。
+- Refine: ADR をその場で更新する。判断自体が変わる場合は supersede
+  する。また ADR は制約対象の spec/design を `relations.decides-for`
+  に記録できる。
 - Add learnings: `## More Information` に日付付きで追記する。
 
 編集後は検証する。

@@ -10,6 +10,8 @@ import { lintStructure } from "./doc_structure_lint";
 import { configFor, docTypes, frontMatterSchema, isForeignDocType } from "./doc_suite_utils";
 import { allIdPrefixes } from "./doc_types";
 import { isIndexFileName, isInsideRealpath, normalizeDir } from "./document_utils";
+import { parseClaimReference, projectKnowledgeGraph } from "./knowledge_graph";
+import type { KnowledgeGraphIssueCode } from "./knowledge_graph";
 
 // ---------------------------------------------------------------------------
 // Audit profiles
@@ -73,48 +75,139 @@ function scopeFor(model: DocumentRepository, type: string, directory: string): L
 }
 
 // ---------------------------------------------------------------------------
-// Relation helpers
+// Knowledge Relations v1 (Issue #235)
 // ---------------------------------------------------------------------------
+//
+// Stored relations are canonical forward fields only — inverse links are
+// derived projections, never stored input, so there is no reciprocal-link
+// check to run: consistency is structural (the inverse view is computed
+// from the same forward collation). The Knowledge Graph projection is the
+// read authority for relation health; each projected issue maps to one
+// rule here. `legacy-relation-field` is the migration-domain marker for
+// populated pre-v3 keys — they are findings, never graph input.
 
-// Typed directional pairs whose inverse declaration is expected on the
-// target. `related` is intentionally absent: it is a one-directional
-// context pointer (hub documents cannot maintain back-link lists), so no
-// `related` back-link is required.
-const RECIPROCAL_RELATIONS: Record<string, string> = {
-  "implements": "implemented-by",
-  "implemented-by": "implements",
-  "derives-from": "derived-by",
-  "derived-by": "derives-from",
-  "refines": "refined-by",
-  "refined-by": "refines",
-  "verifies": "verified-by",
-  "verified-by": "verifies",
-  "supersedes": "superseded-by",
-  "superseded-by": "supersedes",
-  "defers": "deferred-by",
-  "deferred-by": "defers",
-  "depends-on": "blocks",
-  "blocks": "depends-on",
+const GRAPH_ISSUE_RULES: Record<KnowledgeGraphIssueCode, {
+  ruleId: string;
+  category: string;
+  severity: "error" | "warning" | "info";
+  blocking: boolean;
+  repair: "safe" | "manual" | "migration";
+}> = {
+  "invalid-claim-id": { ruleId: "invalid-claim-id", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "claim-without-doc-id": { ruleId: "claim-without-doc-id", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "duplicate-claim": { ruleId: "duplicate-claim", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "claim-doc-mismatch": { ruleId: "claim-doc-mismatch", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "unresolved-claim-target": { ruleId: "unresolved-claim-target", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "legacy-relation-field": { ruleId: "legacy-relation-field", category: "relation", severity: "warning", blocking: true, repair: "migration" },
+  "invalid-relation-field": { ruleId: "invalid-relation-field", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "unresolved-relation-target": { ruleId: "broken-relation-link", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "ambiguous-relation-target": { ruleId: "ambiguous-relation-target", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "relation-escapes-root": { ruleId: "relation-escapes-root", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "self-relation": { ruleId: "self-relation", category: "relation", severity: "warning", blocking: false, repair: "manual" },
+  "invalid-relation-target-type": { ruleId: "invalid-relation-target-type", category: "traceability", severity: "warning", blocking: true, repair: "manual" },
+  "relation-cycle": { ruleId: "relation-cycle", category: "relation", severity: "warning", blocking: true, repair: "manual" },
 };
 
-function relationSourcePaths(document: RepositoryDocument): string[] {
-  return [document.path, ...(document.id ? [document.id] : []), ...document.localeSiblings];
+// Project the Knowledge Graph once per scope and attribute its issues to
+// the files under this scope's directory. Shared dirs (docs/discovery hosts
+// brainstorm and discovery) may surface the same issue under two scopes —
+// report-level dedup collapses the repeats; the projection itself is the
+// single authority.
+function lintKnowledgeGraph(model: DocumentRepository, scope: LintScope): Finding[] {
+  const graph = projectKnowledgeGraph(model);
+  const findings: Finding[] = [];
+  for (const issue of graph.issues) {
+    if (!isUnderDir(issue.path, scope.directory)) continue;
+    const rule = GRAPH_ISSUE_RULES[issue.code];
+    findings.push(finding({
+      ruleId: rule.ruleId,
+      category: rule.category,
+      severity: rule.severity,
+      blocking: rule.blocking,
+      path: issue.path,
+      line: issue.line,
+      artifactId: model.byPath.get(issue.path)?.id ?? null,
+      message: issue.message,
+      target: issue.target,
+      repair: rule.repair,
+    }));
+  }
+  return findings;
 }
 
-// Typed reciprocal semantics: an inverse link is only expected when the
-// target type's contract could legally express it back to the source type.
-// `plan`/`task` -> `verified-by` -> `test-spec` is a verification-evidence
-// link; `test-spec.verifies` may only target spec/design/adr, so it can
-// never reciprocate a plan or task source.
-function reciprocalApplies(
-  document: RepositoryDocument,
-  inverseField: string,
-  targetDocument: RepositoryDocument,
-): boolean {
-  const inverseRule = contractForType(targetDocument.type ?? "")
-    ?.requiredRelations.find((rule) => rule.field === inverseField);
-  if (!inverseRule) return true;
-  return document.type !== null && inverseRule.targetTypes.includes(document.type);
+// Unmanaged files inside a managed dir are not Knowledge Graph nodes —
+// their populated relation keys still resolve as references so dangling
+// targets stay visible, but no stored-vocabulary or matrix rule applies.
+// Claim-qualified values (`DOC::KEY`) are skipped rather than misread as
+// paths: outside a canonical document they are unvalidated input, not
+// broken links.
+function lintUnmanagedRelations(model: DocumentRepository, document: RepositoryDocument): Finding[] {
+  const findings: Finding[] = [];
+  for (const [field, targets] of Object.entries(document.relations)) {
+    // `source` provenance has its own rule family (lintProvenance).
+    if (field === "source") continue;
+    for (const target of targets) {
+      if (isExternalReference(target) || parseClaimReference(target)) continue;
+      const resolved = model.resolveRelationTarget(document, target);
+      if (resolved.status === "external") continue;
+      if (resolved.status === "ambiguous") {
+        findings.push(finding({
+          ruleId: "ambiguous-relation-target",
+          category: "relation",
+          severity: "warning",
+          blocking: true,
+          path: document.path,
+          artifactId: document.id,
+          message: `Relation ${field} target ${target} matches multiple artifacts: ${resolved.candidates.map((doc) => doc.path).join(", ")}`,
+          target,
+          repair: "manual",
+        }));
+        continue;
+      }
+      if (resolved.status === "escaped") {
+        findings.push(finding({
+          ruleId: "relation-escapes-root",
+          category: "relation",
+          severity: "warning",
+          blocking: true,
+          path: document.path,
+          artifactId: document.id,
+          message: `Relation ${field} points outside the repository root: ${target}`,
+          target,
+          repair: "manual",
+        }));
+        continue;
+      }
+      if (resolved.status === "unresolved") {
+        findings.push(finding({
+          ruleId: "broken-relation-link",
+          category: "relation",
+          severity: "warning",
+          blocking: true,
+          path: document.path,
+          artifactId: document.id,
+          message: `Relation ${field} points to missing target: ${target}`,
+          target,
+          repair: "manual",
+        }));
+        continue;
+      }
+      const targetDocument = resolved.status === "resolved" ? resolved.document : null;
+      if (targetDocument && model.sameLogicalArtifact(targetDocument.path, document.path)) {
+        findings.push(finding({
+          ruleId: "self-relation",
+          category: "relation",
+          severity: "warning",
+          path: document.path,
+          artifactId: document.id,
+          message: `Relation ${field} references the document itself: ${target}`,
+          target,
+          repair: "manual",
+        }));
+      }
+    }
+  }
+  return findings;
 }
 
 // ---------------------------------------------------------------------------
@@ -288,132 +381,6 @@ function lintDuplicateIds(model: DocumentRepository, scope: LintScope): Finding[
         target: duplicate.id,
         repair: "migration",
       }));
-    }
-  }
-  return findings;
-}
-
-function lintRelations(model: DocumentRepository, document: RepositoryDocument, scopeType: string): Finding[] {
-  const findings: Finding[] = [];
-  const contract = contractForType(scopeType);
-  // Typed relation targets are enforced for every field the registry
-  // declares — required relations and the allowed-relations vocabulary alike
-  // (Registry 3 centralizes relation policy in the contract, Issue #234).
-  // Fields the registry does not declare (legacy lineage fields, `related`,
-  // `references`) keep resolving but carry no target-type contract.
-  const typedFields = new Map<string, string[]>();
-  for (const required of contract?.requiredRelations ?? []) {
-    typedFields.set(required.field, required.targetTypes);
-  }
-  for (const [field, targetTypes] of Object.entries(contract?.allowedRelations ?? {})) {
-    if (!typedFields.has(field)) typedFields.set(field, [...targetTypes]);
-  }
-
-  for (const [field, targets] of Object.entries(document.relations)) {
-    if (field === "source") continue;
-    for (const target of targets) {
-      if (isExternalReference(target)) continue;
-      const resolved = model.resolveRelationTarget(document, target);
-      if (resolved.status === "external") continue;
-      if (resolved.status === "ambiguous") {
-        findings.push(finding({
-          ruleId: "ambiguous-relation-target",
-          category: "relation",
-          severity: "warning",
-          blocking: true,
-          path: document.path,
-          artifactId: document.id,
-          message: `Relation ${field} target ${target} matches multiple artifacts: ${resolved.candidates.map((doc) => doc.path).join(", ")}`,
-          target,
-          repair: "manual",
-        }));
-        continue;
-      }
-      if (resolved.status === "escaped") {
-        findings.push(finding({
-          ruleId: "relation-escapes-root",
-          category: "relation",
-          severity: "warning",
-          blocking: true,
-          path: document.path,
-          artifactId: document.id,
-          message: `Relation ${field} points outside the repository root: ${target}`,
-          target,
-          repair: "manual",
-        }));
-        continue;
-      }
-      if (resolved.status === "unresolved") {
-        findings.push(finding({
-          ruleId: "broken-relation-link",
-          category: "relation",
-          severity: "warning",
-          blocking: true,
-          path: document.path,
-          artifactId: document.id,
-          message: `Relation ${field} points to missing target: ${target}`,
-          target,
-          repair: "manual",
-        }));
-        continue;
-      }
-      const targetDocument = resolved.status === "resolved" ? resolved.document : null;
-      if (!targetDocument) continue;
-
-      if (model.sameLogicalArtifact(targetDocument.path, document.path)) {
-        findings.push(finding({
-          ruleId: "self-relation",
-          category: "relation",
-          severity: "warning",
-          path: document.path,
-          artifactId: document.id,
-          message: `Relation ${field} references the document itself: ${target}`,
-          target,
-          repair: "manual",
-        }));
-        continue;
-      }
-
-      const expectedTypes = typedFields.get(field);
-      if (expectedTypes && targetDocument.type && !expectedTypes.includes(targetDocument.type)) {
-        findings.push(finding({
-          ruleId: "invalid-relation-target-type",
-          category: "traceability",
-          severity: "warning",
-          blocking: true,
-          path: document.path,
-          artifactId: document.id,
-          message: `Relation ${field} target resolves to type "${targetDocument.type}", expected one of: ${expectedTypes.join(", ")}: ${target}`,
-          target,
-          repair: "manual",
-        }));
-      }
-
-      const reciprocal = RECIPROCAL_RELATIONS[field];
-      if (reciprocal && reciprocalApplies(document, reciprocal, targetDocument)) {
-        const inverse = targetDocument.relations[reciprocal] ?? [];
-        const sources = relationSourcePaths(document);
-        if (inverse.length > 0 && !inverse.some((value) => sources.includes(value))) {
-          const resolvedInverse = inverse.some((value) => {
-            const back = model.resolveRelationTarget(targetDocument, value);
-            return back.status === "resolved"
-              && back.document !== null
-              && model.sameLogicalArtifact(back.document.path, document.path);
-          });
-          if (!resolvedInverse) {
-            findings.push(finding({
-              ruleId: "inconsistent-reciprocal-relation",
-              category: "relation",
-              severity: "warning",
-              path: document.path,
-              artifactId: document.id,
-              message: `Relation ${field} targets ${targetDocument.path}, which declares ${reciprocal} without a link back`,
-              target,
-              repair: "manual",
-            }));
-          }
-        }
-      }
     }
   }
   return findings;
@@ -661,10 +628,16 @@ function lintScope(
     }
     findings.push(
       ...lintFrontMatter(document, type),
-      ...lintRelations(model, document, type),
       ...lintRequiredRelations(model, document, type),
     );
+    // Canonical durable documents are Knowledge Graph nodes — their relation
+    // findings come from the projection (vocabulary, matrix, claims, cycles).
+    // Unmanaged files inside a managed dir get resolution checks only.
+    if (document.kind !== "canonical") {
+      findings.push(...lintUnmanagedRelations(model, document));
+    }
   }
+  findings.push(...lintKnowledgeGraph(model, scope));
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
   findings.push(...lintDirectory(model, scope, profile));

@@ -25,10 +25,12 @@ ADR が未使用であることに依存しません。既存の design chain �
 新しい spec の briefing pair に加わり、その ADR は両方の chain に属するため、
 共有 ADR だけを focus しても曖昧なままです。該当する pair
 が複数なら曖昧なまま `focus-required` となり、basename、path の近さ、より広い
-lineage component の所属から artifact を結合しません。design は上流の spec と
-ADR を `derives-from` または `implements` で参照し、参照された artifact は
-他で pair せずその design chain に属します。design gate は design と ADR の
-relation に `derives-from` を要求します。
+lineage component の所属から artifact を結合しません。Knowledge Relations v1
+では design は上流の spec を `realizes` で、上流の ADR を `decides-for` で参照し、
+参照された artifact は他で pair せずその design chain に属します。design gate は
+design と spec の relation に `realizes` を、design と ADR の relation に
+`decides-for` を要求します（`derives-from` が design→ADR 側を満たすのは
+migration 管理下の v3 以前コーパス内のみです）。
 
 ## Gate と signal
 

@@ -363,9 +363,10 @@ test("large corpus --expand stays scoped: lineage-only traversal, cycle deduped 
   // traversal reports no findings and exits cleanly.
   const cycle = runCli(repo, ["--expand", "CYC-A", "--depth", "5"]);
   assert.equal(cycle.status, 0, cycle.stderr);
+  // The corpus's spec↔spec cycle uses the canonical v1 `supersedes` field.
   assert.deepEqual(cycle.report.nodes as ExpandNode[], [
     { path: "docs/specs/0300-cyc-a.md", id: "CYC-A", depth: 0, via: null },
-    { path: "docs/specs/0301-cyc-b.md", id: "CYC-B", depth: 1, via: "derives-from" },
+    { path: "docs/specs/0301-cyc-b.md", id: "CYC-B", depth: 1, via: "supersedes" },
   ]);
   assert.deepEqual(findings(cycle.report), []);
 });

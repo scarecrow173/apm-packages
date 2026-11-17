@@ -10,7 +10,7 @@ type CliArgs = {
   date?: string;
   dir?: string;
   name?: string;
-  derivesFrom: string[];
+  realizes: string[];
   forceIndex?: boolean;
   noIndex?: boolean;
   help?: boolean;
@@ -19,11 +19,11 @@ type CliArgs = {
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { cwd: process.cwd(), derivesFrom: [] };
+  const args: CliArgs = { cwd: process.cwd(), realizes: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
-    else if (arg === "--from") args.derivesFrom.push(argv[++i]);
+    else if (arg === "--from") args.realizes.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--status") args.status = argv[++i];
@@ -57,8 +57,11 @@ async function main(): Promise<void> {
       date: args.date,
       dir: args.dir,
       name: args.name,
+      // Knowledge Relations v1 (Issue #235): --from records the canonical
+      // forward relation — a design realizes the spec/ADR/discovery it
+      // implements — never the legacy `derives-from` vocabulary.
       relations: {
-        "derives-from": args.derivesFrom,
+        realizes: args.realizes,
       },
       status: args.status,
       title: args.title,

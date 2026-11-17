@@ -55,22 +55,15 @@ updated: "YYYY-MM-DD"
 owners: []
 relations:
   source: []
-  implements: []
-  implemented-by: []
-  depends-on: []
-  blocks: []
+  changes:
+    added: []
+    modified: []
+    deleted: []
+    renamed: []
+    moved: []
+    generated: []
+  motivates: []
   supersedes: []
-  superseded-by: []
-  related: []
-  refines: []
-  refined-by: []
-  derives-from: []
-  derived-by: []
-  verifies: []
-  verified-by: []
-  references: []
-  defers: []
-  deferred-by: []
 ---
 ```
 
@@ -104,24 +97,33 @@ field, which the Document Registry owns):
 
 Set `promoted` only after creating the downstream document. Under Knowledge
 Relations v1 the idea stores `relations.motivates` pointing source→target at
-the spec it motivates; the downstream document does not store an inverse.
-`derived-by` and other declared keys are legacy vocabulary that migration
-tooling reads in pre-v3 corpora — creators emit them only as empty
-placeholders, and `relate_adr`/`new_design --from` can still populate
-them until the stored vocabulary narrows under #235.
+the spec it motivates; the downstream document does not store an inverse —
+`motivated-by` on the spec is a derived projection.
 
 ## Relations
 
-| Field | Meaning |
-| --- | --- |
-| `source` | External link, issue, conversation, or observation that prompted the idea. |
-| `derived-by` | Downstream discovery-doc or spec-doc created from this idea. |
-| `supersedes` | Older idea replaced by this one. |
-| `superseded-by` | Newer idea that replaces this one. |
-| `related` | Contextual docs without directional dependency. |
+Under Knowledge Relations v1 an idea stores only its declared forward fields
+plus `relations.source` provenance:
+
+| Field | Targets | Meaning |
+| --- | --- | --- |
+| `motivates` | spec | The spec this idea motivates — recorded source→target on the idea. |
+| `supersedes` | idea | The older idea replaced by this one. |
+
+Inverse names (`motivated-by`, `superseded-by`) are derived projections —
+consistent by construction, never stored. `relations.source` carries external
+provenance (links, issues, conversations, observations); `relations.changes`
+is the provenance change-set, not a document link.
+
+Pre-v3 keys (`implements`, `implemented-by`, `depends-on`, `blocks`,
+`superseded-by`, `related`, `refines`, `refined-by`, `derives-from`,
+`derived-by`, `verifies`, `verified-by`, `references`, `defers`,
+`deferred-by`) are migration-domain input only: `doc-status` reports them as
+`legacy-relation-field` findings and they are never resolved or walked as
+current graph edges.
 
 Keep relations minimal. Idea documents do not need full relation coverage;
-use `source` and `derived-by` when applicable.
+use `source` and `motivates` when applicable.
 
 Record `source` at creation whenever something prompted the idea — the
 upstream spec, plan, or question it feeds, or the link, issue, or
@@ -156,7 +158,8 @@ earns its keep only for a genuinely different idea.
 When an idea is ready for deeper exploration or formalization:
 
 1. Create the downstream document (`discovery-doc` or `spec-doc`).
-2. Link it in `relations.derived-by`.
+2. Link it in `relations.motivates` when the downstream document is a spec
+   (a discovery it feeds is linked from the discovery's own relations).
 3. Set status to `promoted`.
 4. Preserve the idea document as the upstream audit trail.
 
