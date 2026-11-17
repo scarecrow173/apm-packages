@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { adrFiles, findAdrDir, hasSection, markdownLinks, relationLinks, validateFrontMatter } from "./lib/adr_utils";
 import { isForeignDocType, parseDoc } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 const requiredSections = [
   "Context and Problem Statement",
@@ -130,6 +131,7 @@ async function main(): Promise<void> {
     }
 
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const files = adrFiles(path.join(cwd, relativeDir));
     const scopedFiles = files.filter((file) => {

@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { migrateArtifactIds } from "./lib/id_migration";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import type { IdMigrationReport } from "./lib/id_migration";
 
 type CliArgs = {
@@ -86,10 +87,12 @@ async function main(): Promise<void> {
       return;
     }
 
+    const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const report = await migrateArtifactIds({
       allowDirty: args.allowDirty,
       apply: args.apply,
-      cwd: path.resolve(args.cwd),
+      cwd,
       extraRoots: args.extraRoots,
       keepFilenames: args.keepFilenames,
     });

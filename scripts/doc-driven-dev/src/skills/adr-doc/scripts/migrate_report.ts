@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { adrFiles, findAdrDir, hasSection } from "./lib/adr_utils";
 import { parseDoc } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 // MADR 4.0.0 template section headings. Status is intentionally absent:
 // MADR 4 carries it in front matter (checked by the metadata scan below),
 // and no shipped template emits a `## Status` heading, so listing it here
@@ -85,6 +86,7 @@ async function main(): Promise<void> {
     }
 
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const files = adrFiles(path.join(cwd, relativeDir));
     const migrations = await Promise.all(files.map((file) => migrationFor(cwd, relativeDir, file)));

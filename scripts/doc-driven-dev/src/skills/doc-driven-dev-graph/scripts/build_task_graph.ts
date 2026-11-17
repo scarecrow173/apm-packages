@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { buildTaskGraph } from "./lib/task_graph";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -36,6 +37,7 @@ function main(): void {
       return;
     }
     if (!args.plan) throw new Error("Missing required --plan");
+    if (!schemaEntrypointGuard(args.cwd)) return;
     const result = buildTaskGraph({
       cwd: args.cwd,
       plan: args.plan,

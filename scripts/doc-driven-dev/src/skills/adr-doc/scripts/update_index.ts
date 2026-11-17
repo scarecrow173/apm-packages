@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { buildIndex, findAdrDir, writeIndexFile } from "./lib/adr_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -40,6 +41,7 @@ async function main(): Promise<void> {
     }
 
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const adrDir = path.join(cwd, relativeDir);
     if (!fs.existsSync(adrDir)) throw new Error(`ADR directory not found: ${relativeDir}`);

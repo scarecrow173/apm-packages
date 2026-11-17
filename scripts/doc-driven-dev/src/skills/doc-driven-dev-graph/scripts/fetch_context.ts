@@ -30,6 +30,7 @@ import {
   listArtifactMetadata,
 } from "./lib/artifact_context";
 import { normalizeArtifactPath } from "./lib/artifact_graph";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type PathValue = { path: string; value: string };
 
@@ -229,6 +230,7 @@ function emitReport(report: unknown, findings: unknown[]): void {
 function run(args: CliArgs): void {
   const mode = resolveMode(args);
   const cwd = path.resolve(args.cwd);
+  if (!schemaEntrypointGuard(cwd)) return;
   if (mode === "metadata") {
     const { metadata, findings } = listArtifactMetadata(cwd, args.focus, args.taskDir);
     emitReport({ metadata, findings }, findings);

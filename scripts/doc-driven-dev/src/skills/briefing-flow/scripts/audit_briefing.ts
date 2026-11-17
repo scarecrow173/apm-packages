@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { auditBriefingPair } from "./lib/briefing_audit";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   adr?: string;
@@ -40,6 +41,7 @@ async function main(): Promise<void> {
     if (!args.spec || !args.adr) throw new Error("Both --spec and --adr are required");
 
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const report = await auditBriefingPair(cwd, args.spec, args.adr);
 
     if (args.json) {

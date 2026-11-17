@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { scaffoldDocsTree } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -32,8 +33,10 @@ async function main(): Promise<void> {
       return;
     }
 
-    const result = await scaffoldDocsTree(path.resolve(args.cwd));
-    console.log(`Created docs tree scaffold in ${path.resolve(args.cwd)}`);
+    const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
+    const result = await scaffoldDocsTree(cwd);
+    console.log(`Created docs tree scaffold in ${cwd}`);
     for (const file of result.created) {
       console.log(`Created ${file}`);
     }

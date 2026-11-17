@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -47,8 +48,10 @@ async function main(): Promise<void> {
       return;
     }
     if (!args.title) throw new Error("Missing required --title");
+    const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const result = await createDocument("spec", {
-      cwd: path.resolve(args.cwd),
+      cwd,
       date: args.date,
       dir: args.dir,
       name: args.name,

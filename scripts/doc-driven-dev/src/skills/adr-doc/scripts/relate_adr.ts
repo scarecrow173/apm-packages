@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { findAdrDir, relationFields } from "./lib/adr_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -86,6 +87,7 @@ function main(): void {
     if (!args.from || !args.to || !args.relation) throw new Error("Missing --from, --to, or --relation");
     if (!relationFields.includes(args.relation as never)) throw new Error(`Unknown relation: ${args.relation}`);
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const from = path.basename(args.from);
     const to = path.basename(args.to);

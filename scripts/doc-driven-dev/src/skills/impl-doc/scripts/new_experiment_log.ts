@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { buildExperimentEvent, buildNewFilePath, experimentEventTypes, posixRelative, renderExperimentTemplate, writeExperimentEvents } from "./lib/impl_doc_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
     if (!args.title) throw new Error("Missing required --title");
     if (args.type && !(experimentEventTypes as readonly string[]).includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const { outputPath, relativeDir } = buildNewFilePath({
       cwd,
       kind: "exp",

@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { collectFindings, filterFindings, listDocuments, summarizeHealth } from "../../lib/doc_report";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import type { AuditProfile } from "../../lib/doc_report";
 import type { Finding } from "../../lib/doc_repository";
 
@@ -184,6 +185,7 @@ async function main(): Promise<void> {
     }
     if (!COMMANDS.includes(args.command)) throw new Error(`Unknown command: ${args.command}`);
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     if (args.command === "list") await runList(args, cwd);
     else if (args.command === "lint") await runLint(args, cwd, false);
     else if (args.command === "audit") await runLint(args, cwd, true);

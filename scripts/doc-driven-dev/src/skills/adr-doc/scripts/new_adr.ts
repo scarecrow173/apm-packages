@@ -6,6 +6,7 @@ import path from "node:path";
 import { findAdrDir, slugify } from "./lib/adr_utils";
 import { generateArtifactId } from "../../lib/artifact_id";
 import { configFor, frontMatter, sanitizeTitle } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 const templates = {
   full: "madr-4-full.md",
@@ -83,6 +84,7 @@ function main(): void {
     if (!args.title) throw new Error("Missing required --title");
 
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const adrDir = path.join(cwd, relativeDir);
     fs.mkdirSync(adrDir, { recursive: true });

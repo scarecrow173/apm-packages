@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { docEntries } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -40,7 +41,9 @@ async function main(): Promise<void> {
       return;
     }
     if (!args.type) throw new Error("Missing required --type");
-    const entries = (await docEntries(path.resolve(args.cwd), args.type, args.dir))
+    const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
+    const entries = (await docEntries(cwd, args.type, args.dir))
       .filter((entry: { status: string | null }) => !args.status || entry.status === args.status);
     if (args.json) {
       console.log(JSON.stringify({ type: args.type, entries }, null, 2));

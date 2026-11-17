@@ -6,6 +6,7 @@ import { collectDashboard } from "./dashboard_collect";
 import { renderDashboard } from "./dashboard_render";
 import { resolveGraphPath } from "./graph_cli";
 import { isInside } from "../../../lib/document_utils";
+import { schemaEntrypointGuard } from "../../../lib/schema_preflight";
 
 export type DashboardArgs = {
   cwd: string;
@@ -205,6 +206,7 @@ export async function runDashboard(argv: string[]): Promise<void> {
     throw new Error(`Dashboard cwd does not exist: ${args.cwd}`);
   }
   if (!cwdStat.isDirectory()) throw new Error(`Dashboard cwd is not a directory: ${args.cwd}`);
+  if (!schemaEntrypointGuard(args.cwd)) return;
   const graphPath = resolveGraphPath(args.graph, args.cwd);
   const snapshot = await collectDashboard({
     cwd: args.cwd,

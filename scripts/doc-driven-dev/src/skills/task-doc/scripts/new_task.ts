@@ -5,6 +5,7 @@ import path from "node:path";
 import fs from "node:fs";
 import matter from "gray-matter";
 import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 const TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
 const TASK_DOC_VERIFIED_BY_ERROR = "TASK-DOC-GATE-002: each --verified-by target must resolve to an existing document.";
@@ -85,6 +86,7 @@ async function main(): Promise<void> {
     }
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(resolvedCwd)) return;
     validatePlanGate(resolvedCwd, args.plan);
     validateVerifiedBy(resolvedCwd, args.verifiedBy);
     const linked = args.plan ? [args.plan] : [];

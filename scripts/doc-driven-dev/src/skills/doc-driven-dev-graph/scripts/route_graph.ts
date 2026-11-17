@@ -11,6 +11,7 @@ import { projectGraphState } from "./lib/graph_state";
 import { evaluateRouteDecision } from "./lib/graph_router";
 import { createArtifactScanCollector } from "./lib/artifact_graph";
 import { appendTraceEvent, stableRouteHash } from "./lib/run_trace";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   graph?: string;
@@ -100,6 +101,7 @@ function validateSignals(definition: GraphDefinition, signals: string[]): void {
 }
 
 function run(args: CliArgs): void {
+  if (!schemaEntrypointGuard(args.cwd)) return;
   if (args.explain && !args.json) throw new Error("--explain requires --json");
   if ((args.traceFile === undefined) !== (args.runId === undefined)) {
     throw new Error("--trace-file and --run-id must be provided together");

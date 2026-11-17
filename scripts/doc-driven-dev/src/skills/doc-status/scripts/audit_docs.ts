@@ -4,6 +4,7 @@
 import path from "node:path";
 import { auditAllDocuments, auditDocuments } from "../../lib/doc_audit";
 import type { AuditOptions } from "../../lib/doc_audit";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import { collectOwnerAudits } from "./lib/owner_audits";
 
 type CliArgs = {
@@ -60,6 +61,7 @@ async function main(): Promise<void> {
     if (args.owners && args.type !== "all") throw new Error("--owners requires --type all");
     if (args.owners && args.dir) throw new Error("--owners cannot be combined with --dir");
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const options: AuditOptions = { externalLinks: Boolean(args.externalLinks), profile: args.profile };
     const report = args.type === "all" ? await auditAll(cwd, args.dir, options) : await auditDocuments(cwd, args.type, args.dir, options);
     if (args.owners) report.ownerAudits = collectOwnerAudits(cwd);

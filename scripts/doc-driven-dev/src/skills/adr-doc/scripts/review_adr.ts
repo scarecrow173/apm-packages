@@ -6,6 +6,7 @@ import path from "node:path";
 import { adrFiles, findAdrDir, hasSection, relationLinks, sectionBody, validateFrontMatter } from "./lib/adr_utils";
 import { parseDoc } from "../../lib/doc_suite_utils";
 import { bodyLabelPattern } from "../../lib/markdown_sections";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -95,6 +96,7 @@ async function main(): Promise<void> {
       return;
     }
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const files = args.file ? [path.basename(args.file)] : adrFiles(path.join(cwd, relativeDir));
     const findings = (await Promise.all(files.map((file) => reviewFile(cwd, relativeDir, file)))).flat();

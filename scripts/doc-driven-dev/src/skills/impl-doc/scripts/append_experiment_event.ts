@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { appendExperimentEvent, buildExperimentEvent, experimentEventTypes, nextExperimentSeq, parseSetArguments, readExperimentEvents } from "./lib/impl_doc_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
     if (!args.type) throw new Error("Missing required --type");
     if (!(experimentEventTypes as readonly string[]).includes(args.type)) throw new Error(`Invalid event type: ${args.type}`);
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const filePath = path.resolve(cwd, args.file);
     const events = readExperimentEvents(filePath);
     const event = buildExperimentEvent({

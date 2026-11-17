@@ -140,6 +140,52 @@ in the same change (`index plan` then `index apply`); `doc_status
 lint` reports the stale index until then. Regeneration is also the
 two-tier format migration.
 
+## Schema Preflight & Migration Gate
+
+Every normal entrypoint in the package — routing, inspection, context fetch,
+task-graph and dashboard builds, status audits, creators, and maintenance —
+runs a shared schema preflight before it touches the repository. The
+preflight reads the consumer manifest at `docs/.doc-driven-dev/schema.json`
+and cross-checks the real document tree, relations, and execution state
+against it. Normal execution proceeds only while the repository is `current`
+or `uninitialized`; `migration-required`, `migration-incomplete`,
+`unsupported-version`, and `invalid` print a machine-readable refusal to
+stdout (reason code, detected version, path, recommended command) and exit 2.
+Read-only and preview commands keep their byte- and Git-state-preserving
+contract; the preflight itself never writes.
+
+The manifest declares the schema contract:
+
+```json
+{
+  "schemaVersion": 1,
+  "documentRegistry": 3,
+  "knowledgeRelations": 1,
+  "verificationDesign": 1,
+  "evidenceRecord": 1,
+  "graphDefinition": 3
+}
+```
+
+`migrate` is the only authorized migration surface and the only way through a
+non-current state — there is no general guard bypass:
+
+```bash
+node scripts/doc_maintenance.js migrate plan [--cwd <repo>] [--json]
+node scripts/doc_maintenance.js migrate apply [--cwd <repo>] [--expect <planHash>] [--json]
+node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
+```
+
+- `migrate plan` — fully read-only; reports the preflight diagnosis, apply
+  eligibility, and a deterministic `planHash`.
+- `migrate apply` — installs or repairs the manifest only when the scanned
+  content is already consistent with it, then re-runs the preflight and
+  reports the post state. `--expect <planHash>` pins the apply to a
+  previously previewed plan and refuses all writes on drift. It never
+  migrates document content — moving legacy artifacts is the job of the
+  full migration flow, not this command.
+- `migrate recovery` — reports migration journal state without mutating it.
+
 ## Migration Commands
 
 `doc-maintenance` also owns the repository migration entry points. The graph
@@ -221,7 +267,8 @@ preview-first:
 
 - `scripts/doc_maintenance.js`: plan/apply entry point for safe repairs and
   managed index regeneration; `index plan|apply` is the explicit managed
-  index materialization entrypoint across owners.
+  index materialization entrypoint across owners; `migrate plan|apply|recovery`
+  is the schema-manifest migration surface behind the shared preflight gate.
 - `scripts/migrate_docs.js`, `scripts/migrate_ids.js`,
   `scripts/scaffold_docs.js`, `scripts/promote_index.js`: migration and
   bootstrap entry points owned by this skill (the first three are also
