@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { adrEntries, findAdrDir } from "./lib/adr_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
       return;
     }
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const entries = (await adrEntries(cwd, relativeDir))
       .filter((entry) => !args.status || entry.status === args.status);

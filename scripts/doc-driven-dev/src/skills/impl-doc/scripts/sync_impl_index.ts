@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { applyImplIndexSync, planImplIndexSync } from "./lib/impl_index_sync";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import type { ImplIndexKind, SyncChange, SyncPlan } from "./lib/impl_index_sync";
 
 type CliArgs = {
@@ -97,6 +98,7 @@ async function main(): Promise<void> {
       throw new Error("--expect requires --apply");
     }
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const { plan, written } = args.apply
       ? applyImplIndexSync(cwd, kind, args.dir, args.expect !== undefined ? { expectPlanHash: args.expect } : undefined)
       : { plan: planImplIndexSync(cwd, kind, args.dir), written: false };

@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { migrateDocs } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   apply: boolean;
@@ -64,9 +65,11 @@ async function main(): Promise<void> {
       return;
     }
 
+    const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const report = await migrateDocs({
       apply: args.apply,
-      cwd: path.resolve(args.cwd),
+      cwd,
       from: args.from,
       includeCanonical: args.includeCanonical,
       splitH1: args.splitH1,

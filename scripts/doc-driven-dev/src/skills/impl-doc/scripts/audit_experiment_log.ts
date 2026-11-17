@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { auditExperimentLogs, implDir } from "./lib/impl_doc_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
       return;
     }
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = implDir(cwd, "exp", args.dir);
     const report = auditExperimentLogs(cwd, relativeDir);
     if (args.json) {

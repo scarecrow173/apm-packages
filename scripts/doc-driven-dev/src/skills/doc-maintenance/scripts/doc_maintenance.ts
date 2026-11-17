@@ -3,11 +3,13 @@
 
 import path from "node:path";
 import { applyMaintenance, planMaintenance } from "../../lib/doc_maintenance";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import {
   applyIndexMaterialization,
   planIndexMaterialization,
 } from "./lib/index_materialize";
 import type { IndexMaterializeTarget } from "./lib/index_materialize";
+import { migrateApply, migratePlan, migrateRecovery } from "./lib/schema_migrate";
 
 type CliArgs = {
   command?: string;
@@ -21,8 +23,9 @@ type CliArgs = {
   verb?: string;
 };
 
-const COMMANDS = ["plan", "apply", "index"];
+const COMMANDS = ["plan", "apply", "index", "migrate"];
 const INDEX_VERBS = ["plan", "apply"];
+const MIGRATE_VERBS = ["plan", "apply", "recovery"];
 
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = { cwd: process.cwd(), json: false };
@@ -40,7 +43,7 @@ function parseArgs(argv: string[]): CliArgs {
     else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (!arg.startsWith("-") && !args.command) args.command = arg;
-    else if (!arg.startsWith("-") && args.command === "index" && !args.verb) args.verb = arg;
+    else if (!arg.startsWith("-") && (args.command === "index" || args.command === "migrate") && !args.verb) args.verb = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   return args;
@@ -55,6 +58,9 @@ function usage(): string {
     "  apply        Apply whitelisted repairs, then rescan and validate",
     "  index plan   Preview managed index materialization without writing",
     "  index apply  Materialize managed indexes, revalidating drift pins first",
+    "  migrate plan      Read-only schema-preflight diagnostic + planHash (#233)",
+    "  migrate apply     Install/repair the schema manifest on consistent content",
+    "  migrate recovery  Report migration journal state without mutating it",
     "",
     "Options:",
     "  [--type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all]",
@@ -162,6 +168,42 @@ async function runIndexApply(args: CliArgs, cwd: string): Promise<void> {
   if (report.blocked.length > 0) process.exitCode = 1;
 }
 
+// `migrate` is the only authorized migration surface (Issue #233): plan is
+// fully read-only, apply installs/repairs the manifest only on already-
+// consistent content, recovery reports journal state untouched. These verbs
+// bypass the normal-execution guard by design — they are the way through a
+// non-current state — while every other command here is guarded.
+function validateMigrateArgs(args: CliArgs): void {
+  if (args.verb === undefined) {
+    throw new Error("migrate requires a verb: migrate plan|apply|recovery");
+  }
+  if (!MIGRATE_VERBS.includes(args.verb)) {
+    throw new Error(`Unknown migrate verb: ${args.verb} (expected plan|apply|recovery)`);
+  }
+  if (args.type !== undefined) throw new Error("--type is not supported on the migrate op");
+  if (args.dir !== undefined) throw new Error("--dir is not supported on the migrate op");
+  if (args.forceIndex) throw new Error("--force-index is not supported on the migrate op");
+  if (args.expect !== undefined && args.verb !== "apply") {
+    throw new Error("--expect requires migrate apply");
+  }
+}
+
+function runMigrate(args: CliArgs, cwd: string): void {
+  if (args.verb === "plan") {
+    console.log(JSON.stringify(migratePlan(cwd), null, 2));
+    return;
+  }
+  if (args.verb === "apply") {
+    const result = migrateApply(cwd, args.expect);
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.ok) process.exitCode = 1;
+    return;
+  }
+  const result = migrateRecovery(cwd);
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.ok) process.exitCode = 1;
+}
+
 // `index` requires its own plan|apply verb; the repair surface keeps its
 // single-positional contract (a second positional is an unknown argument).
 function validateIndexArgs(args: CliArgs): void {
@@ -193,6 +235,12 @@ async function main(): Promise<void> {
     }
     if (!COMMANDS.includes(args.command)) throw new Error(`Unknown command: ${args.command}`);
     const cwd = path.resolve(args.cwd);
+    if (args.command === "migrate") {
+      validateMigrateArgs(args);
+      runMigrate(args, cwd);
+      return;
+    }
+    if (!schemaEntrypointGuard(cwd)) return;
     if (args.command === "index") {
       validateIndexArgs(args);
       if (args.verb === "plan") await runIndexPlan(args, cwd);

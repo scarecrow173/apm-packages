@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { generateArtifactId } from "../../lib/artifact_id";
 import { buildImplementationRecordContent, buildNewFilePath, implStatuses, posixRelative } from "./lib/impl_doc_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
     const status = args.status || "draft";
     if (!(implStatuses as readonly string[]).includes(status)) throw new Error(`Invalid impl status: ${status}`);
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const { outputPath, relativeDir } = buildNewFilePath({
       cwd,
       kind: "ir",

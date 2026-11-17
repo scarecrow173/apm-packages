@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { applyIndexPromotions, planIndexPromotions } from "./lib/index_promotion";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import type { IndexPromotion } from "./lib/index_promotion";
 
 type CliArgs = {
@@ -47,6 +48,7 @@ async function main(): Promise<void> {
       return;
     }
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const results = args.apply
       ? await applyIndexPromotions(cwd, args.dir)
       : await planIndexPromotions(cwd, args.dir);

@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { parseSetArguments, readExperimentEvents, writeExperimentEvents } from "./lib/impl_doc_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
     if (!args.seq || !Number.isInteger(args.seq) || args.seq <= 0) throw new Error("Missing or invalid --seq");
     if (args.setArgs.length === 0) throw new Error("At least one --set is required");
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const filePath = path.resolve(cwd, args.file);
     const events = readExperimentEvents(filePath);
     const corrupt = events.filter((item) => item.value === null);

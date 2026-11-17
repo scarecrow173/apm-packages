@@ -20,6 +20,7 @@ import {
   type MergeReport,
   type SliceOutcome,
 } from "./lib/merge_verification";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   baseRef?: string;
@@ -194,6 +195,7 @@ function main(): void {
       throw new Error("Use either --plan or --verify-merge, not both");
     }
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     if (args.verifyMerge) {
       const report = runMergeVerification(cwd, args);
       console.log(JSON.stringify(report, null, 2));

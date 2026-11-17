@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 const TEST_SPEC_DOC_GATE_ERROR = "TEST-SPEC-DOC-GATE-001: at least one --verifies target resolving to an existing document is required before creating a test spec.";
 
@@ -63,6 +64,7 @@ async function main(): Promise<void> {
     }
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(resolvedCwd)) return;
     validateVerifiesGate(resolvedCwd, args.verifies);
     const result = await createDocument("test-spec", {
       cwd: resolvedCwd,

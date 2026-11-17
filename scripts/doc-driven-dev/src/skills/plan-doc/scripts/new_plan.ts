@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 const PLAN_DOC_GATE_ERROR = "PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: \"approved\".";
 const PLAN_DOC_GATE_002_PREFIX = "PLAN-DOC-GATE-002: --verified-by target does not resolve to an existing document";
@@ -96,6 +97,7 @@ async function main(): Promise<void> {
     }
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(resolvedCwd)) return;
     const designTargets = validateDesignGate(resolvedCwd, args.designTargets);
     for (const target of args.verifiedByTargets) {
       if (!resolveDocumentReference(resolvedCwd, target)) {

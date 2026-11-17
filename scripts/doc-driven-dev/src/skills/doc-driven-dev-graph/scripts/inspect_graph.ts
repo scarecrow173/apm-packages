@@ -6,6 +6,7 @@ import { resolveGraphPath } from "./lib/graph_cli";
 import { loadGraphDefinition } from "./lib/graph_definition";
 import { inspectGraphDefinition, renderGraphMermaid } from "./lib/graph_inspector";
 import { projectGraphState } from "./lib/graph_state";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type OutputFormat = "json" | "mermaid";
 
@@ -70,6 +71,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function run(args: CliArgs): void {
+  if (!schemaEntrypointGuard(args.cwd)) return;
   const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
   const inspection = inspectGraphDefinition(definition);
   if (args.format === "mermaid") {

@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { adrFiles, findAdrDir, referencedPaths, sectionBody } from "./lib/adr_utils";
 import { parseDoc } from "../../lib/doc_suite_utils";
+import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
   cwd: string;
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
       return;
     }
     const cwd = path.resolve(args.cwd);
+    if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const adrDir = path.join(cwd, relativeDir);
     const findings: Finding[] = [];
