@@ -10,7 +10,7 @@ normative な実行 authority であり、phase label は概念上の mapping �
 runtime contract は次の通りです。
 
 `Graph Definition -> fresh Graph State -> 宣言済み route 1つ -> audit/delegate ->
-canonical Markdown checkpoint -> 再投影 -> caller が yield を評価 -> repeat または yield`
+Execution Store checkpoint -> 再投影 -> caller が yield を評価 -> repeat または yield`
 
 `run-until-yield` が通常の caller mode です。debugging、inspection、deterministic
 testing、または 1 checkpoint の実行には `single-step` を利用できます。router は
@@ -33,8 +33,8 @@ active work を再開します。未知の signal や壊れた definition は fa
 eligible な outgoing edge は昇順の `priority`、次に安定した edge ID で並べます。
 各 invocation は、宣言済み edge の遷移、edge なしの同一 node blocked 結果、または
 edge なしの terminal 結果のいずれか 1 つを返します。caller は返された audit を
-すべて実行し、delegate だけを dispatch して Markdown 証跡を記録し、`next` から
-再入力します。
+すべて実行し、delegate だけを dispatch して Effect Receipt と edge checkpoint を
+run の Execution Store に記録し、`next` から再入力します。
 
 `focus-required` は明示的 focus が渡されるまで dispatch を停止します。terminal
 route は idempotent です。blocked route は file 名、path の近さ、隣接 node から

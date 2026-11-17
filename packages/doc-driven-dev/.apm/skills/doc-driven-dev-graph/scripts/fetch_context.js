@@ -3530,13 +3530,879 @@ var require_gray_matter = __commonJS({
   }
 });
 
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/max.js
+var require_max = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/max.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/nil.js
+var require_nil = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/nil.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = "00000000-0000-0000-0000-000000000000";
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/regex.js
+var require_regex = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/regex.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/validate.js
+var require_validate = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/validate.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var regex_js_1 = require_regex();
+    function validate2(uuid3) {
+      return typeof uuid3 === "string" && regex_js_1.default.test(uuid3);
+    }
+    exports2.default = validate2;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/parse.js
+var require_parse2 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/parse.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var validate_js_1 = require_validate();
+    function parse4(uuid3) {
+      if (!(0, validate_js_1.default)(uuid3)) {
+        throw TypeError("Invalid UUID");
+      }
+      let v;
+      return Uint8Array.of((v = parseInt(uuid3.slice(0, 8), 16)) >>> 24, v >>> 16 & 255, v >>> 8 & 255, v & 255, (v = parseInt(uuid3.slice(9, 13), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(14, 18), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(19, 23), 16)) >>> 8, v & 255, (v = parseInt(uuid3.slice(24, 36), 16)) / 1099511627776 & 255, v / 4294967296 & 255, v >>> 24 & 255, v >>> 16 & 255, v >>> 8 & 255, v & 255);
+    }
+    exports2.default = parse4;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/stringify.js
+var require_stringify2 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/stringify.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.unsafeStringify = void 0;
+    var validate_js_1 = require_validate();
+    var byteToHex = [];
+    for (let i = 0; i < 256; ++i) {
+      byteToHex.push((i + 256).toString(16).slice(1));
+    }
+    function unsafeStringify(arr, offset = 0) {
+      return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+    }
+    exports2.unsafeStringify = unsafeStringify;
+    function stringify(arr, offset = 0) {
+      const uuid3 = unsafeStringify(arr, offset);
+      if (!(0, validate_js_1.default)(uuid3)) {
+        throw TypeError("Stringified UUID is invalid");
+      }
+      return uuid3;
+    }
+    exports2.default = stringify;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/rng.js
+var require_rng = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/rng.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    var rnds8Pool = new Uint8Array(256);
+    var poolPtr = rnds8Pool.length;
+    function rng() {
+      if (poolPtr > rnds8Pool.length - 16) {
+        (0, crypto_1.randomFillSync)(rnds8Pool);
+        poolPtr = 0;
+      }
+      return rnds8Pool.slice(poolPtr, poolPtr += 16);
+    }
+    exports2.default = rng;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1.js
+var require_v1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.updateV1State = void 0;
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify2();
+    var _state = {};
+    function v1(options2, buf, offset) {
+      let bytes;
+      const isV6 = options2?._v6 ?? false;
+      if (options2) {
+        const optionsKeys = Object.keys(options2);
+        if (optionsKeys.length === 1 && optionsKeys[0] === "_v6") {
+          options2 = void 0;
+        }
+      }
+      if (options2) {
+        bytes = v1Bytes(options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)(), options2.msecs, options2.nsecs, options2.clockseq, options2.node, buf, offset);
+      } else {
+        const now = Date.now();
+        const rnds = (0, rng_js_1.default)();
+        updateV1State(_state, now, rnds);
+        bytes = v1Bytes(rnds, _state.msecs, _state.nsecs, isV6 ? void 0 : _state.clockseq, isV6 ? void 0 : _state.node, buf, offset);
+      }
+      return buf ?? (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    function updateV1State(state, now, rnds) {
+      state.msecs ??= -Infinity;
+      state.nsecs ??= 0;
+      if (now === state.msecs) {
+        state.nsecs++;
+        if (state.nsecs >= 1e4) {
+          state.node = void 0;
+          state.nsecs = 0;
+        }
+      } else if (now > state.msecs) {
+        state.nsecs = 0;
+      } else if (now < state.msecs) {
+        state.node = void 0;
+      }
+      if (!state.node) {
+        state.node = rnds.slice(10, 16);
+        state.node[0] |= 1;
+        state.clockseq = (rnds[8] << 8 | rnds[9]) & 16383;
+      }
+      state.msecs = now;
+      return state;
+    }
+    exports2.updateV1State = updateV1State;
+    function v1Bytes(rnds, msecs, nsecs, clockseq, node2, buf, offset = 0) {
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      if (!buf) {
+        buf = new Uint8Array(16);
+        offset = 0;
+      } else {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+      }
+      msecs ??= Date.now();
+      nsecs ??= 0;
+      clockseq ??= (rnds[8] << 8 | rnds[9]) & 16383;
+      node2 ??= rnds.slice(10, 16);
+      msecs += 122192928e5;
+      const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
+      buf[offset++] = tl >>> 24 & 255;
+      buf[offset++] = tl >>> 16 & 255;
+      buf[offset++] = tl >>> 8 & 255;
+      buf[offset++] = tl & 255;
+      const tmh = msecs / 4294967296 * 1e4 & 268435455;
+      buf[offset++] = tmh >>> 8 & 255;
+      buf[offset++] = tmh & 255;
+      buf[offset++] = tmh >>> 24 & 15 | 16;
+      buf[offset++] = tmh >>> 16 & 255;
+      buf[offset++] = clockseq >>> 8 | 128;
+      buf[offset++] = clockseq & 255;
+      for (let n = 0; n < 6; ++n) {
+        buf[offset++] = node2[n];
+      }
+      return buf;
+    }
+    exports2.default = v1;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1ToV6.js
+var require_v1ToV6 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v1ToV6.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var parse_js_1 = require_parse2();
+    var stringify_js_1 = require_stringify2();
+    function v1ToV6(uuid3) {
+      const v1Bytes = typeof uuid3 === "string" ? (0, parse_js_1.default)(uuid3) : uuid3;
+      const v6Bytes = _v1ToV6(v1Bytes);
+      return typeof uuid3 === "string" ? (0, stringify_js_1.unsafeStringify)(v6Bytes) : v6Bytes;
+    }
+    exports2.default = v1ToV6;
+    function _v1ToV6(v1Bytes) {
+      return Uint8Array.of((v1Bytes[6] & 15) << 4 | v1Bytes[7] >> 4 & 15, (v1Bytes[7] & 15) << 4 | (v1Bytes[4] & 240) >> 4, (v1Bytes[4] & 15) << 4 | (v1Bytes[5] & 240) >> 4, (v1Bytes[5] & 15) << 4 | (v1Bytes[0] & 240) >> 4, (v1Bytes[0] & 15) << 4 | (v1Bytes[1] & 240) >> 4, (v1Bytes[1] & 15) << 4 | (v1Bytes[2] & 240) >> 4, 96 | v1Bytes[2] & 15, v1Bytes[3], v1Bytes[8], v1Bytes[9], v1Bytes[10], v1Bytes[11], v1Bytes[12], v1Bytes[13], v1Bytes[14], v1Bytes[15]);
+    }
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/md5.js
+var require_md5 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/md5.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    function md5(bytes) {
+      if (Array.isArray(bytes)) {
+        bytes = Buffer.from(bytes);
+      } else if (typeof bytes === "string") {
+        bytes = Buffer.from(bytes, "utf8");
+      }
+      return (0, crypto_1.createHash)("md5").update(bytes).digest();
+    }
+    exports2.default = md5;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v35.js
+var require_v35 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v35.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = exports2.stringToBytes = void 0;
+    var parse_js_1 = require_parse2();
+    var stringify_js_1 = require_stringify2();
+    function stringToBytes(str2) {
+      str2 = unescape(encodeURIComponent(str2));
+      const bytes = new Uint8Array(str2.length);
+      for (let i = 0; i < str2.length; ++i) {
+        bytes[i] = str2.charCodeAt(i);
+      }
+      return bytes;
+    }
+    exports2.stringToBytes = stringToBytes;
+    exports2.DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    exports2.URL = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+    function v35(version2, hash2, value, namespace, buf, offset) {
+      const valueBytes = typeof value === "string" ? stringToBytes(value) : value;
+      const namespaceBytes = typeof namespace === "string" ? (0, parse_js_1.default)(namespace) : namespace;
+      if (typeof namespace === "string") {
+        namespace = (0, parse_js_1.default)(namespace);
+      }
+      if (namespace?.length !== 16) {
+        throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
+      }
+      let bytes = new Uint8Array(16 + valueBytes.length);
+      bytes.set(namespaceBytes);
+      bytes.set(valueBytes, namespaceBytes.length);
+      bytes = hash2(bytes);
+      bytes[6] = bytes[6] & 15 | version2;
+      bytes[8] = bytes[8] & 63 | 128;
+      if (buf) {
+        offset = offset || 0;
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; ++i) {
+          buf[offset + i] = bytes[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    exports2.default = v35;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v3.js
+var require_v3 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v3.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = void 0;
+    var md5_js_1 = require_md5();
+    var v35_js_1 = require_v35();
+    var v35_js_2 = require_v35();
+    Object.defineProperty(exports2, "DNS", { enumerable: true, get: function() {
+      return v35_js_2.DNS;
+    } });
+    Object.defineProperty(exports2, "URL", { enumerable: true, get: function() {
+      return v35_js_2.URL;
+    } });
+    function v3(value, namespace, buf, offset) {
+      return (0, v35_js_1.default)(48, md5_js_1.default, value, namespace, buf, offset);
+    }
+    v3.DNS = v35_js_1.DNS;
+    v3.URL = v35_js_1.URL;
+    exports2.default = v3;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/native.js
+var require_native = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/native.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    exports2.default = { randomUUID: crypto_1.randomUUID };
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v4.js
+var require_v4 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v4.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var native_js_1 = require_native();
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify2();
+    function v4(options2, buf, offset) {
+      if (native_js_1.default.randomUUID && !buf && !options2) {
+        return native_js_1.default.randomUUID();
+      }
+      options2 = options2 || {};
+      const rnds = options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)();
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      rnds[6] = rnds[6] & 15 | 64;
+      rnds[8] = rnds[8] & 63 | 128;
+      if (buf) {
+        offset = offset || 0;
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; ++i) {
+          buf[offset + i] = rnds[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(rnds);
+    }
+    exports2.default = v4;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/sha1.js
+var require_sha1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/sha1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var crypto_1 = require("crypto");
+    function sha1(bytes) {
+      if (Array.isArray(bytes)) {
+        bytes = Buffer.from(bytes);
+      } else if (typeof bytes === "string") {
+        bytes = Buffer.from(bytes, "utf8");
+      }
+      return (0, crypto_1.createHash)("sha1").update(bytes).digest();
+    }
+    exports2.default = sha1;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v5.js
+var require_v5 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v5.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.URL = exports2.DNS = void 0;
+    var sha1_js_1 = require_sha1();
+    var v35_js_1 = require_v35();
+    var v35_js_2 = require_v35();
+    Object.defineProperty(exports2, "DNS", { enumerable: true, get: function() {
+      return v35_js_2.DNS;
+    } });
+    Object.defineProperty(exports2, "URL", { enumerable: true, get: function() {
+      return v35_js_2.URL;
+    } });
+    function v5(value, namespace, buf, offset) {
+      return (0, v35_js_1.default)(80, sha1_js_1.default, value, namespace, buf, offset);
+    }
+    v5.DNS = v35_js_1.DNS;
+    v5.URL = v35_js_1.URL;
+    exports2.default = v5;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6.js
+var require_v6 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var stringify_js_1 = require_stringify2();
+    var v1_js_1 = require_v1();
+    var v1ToV6_js_1 = require_v1ToV6();
+    function v6(options2, buf, offset) {
+      options2 ??= {};
+      offset ??= 0;
+      let bytes = (0, v1_js_1.default)({ ...options2, _v6: true }, new Uint8Array(16));
+      bytes = (0, v1ToV6_js_1.default)(bytes);
+      if (buf) {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+        for (let i = 0; i < 16; i++) {
+          buf[offset + i] = bytes[i];
+        }
+        return buf;
+      }
+      return (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    exports2.default = v6;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6ToV1.js
+var require_v6ToV1 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v6ToV1.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var parse_js_1 = require_parse2();
+    var stringify_js_1 = require_stringify2();
+    function v6ToV1(uuid3) {
+      const v6Bytes = typeof uuid3 === "string" ? (0, parse_js_1.default)(uuid3) : uuid3;
+      const v1Bytes = _v6ToV1(v6Bytes);
+      return typeof uuid3 === "string" ? (0, stringify_js_1.unsafeStringify)(v1Bytes) : v1Bytes;
+    }
+    exports2.default = v6ToV1;
+    function _v6ToV1(v6Bytes) {
+      return Uint8Array.of((v6Bytes[3] & 15) << 4 | v6Bytes[4] >> 4 & 15, (v6Bytes[4] & 15) << 4 | (v6Bytes[5] & 240) >> 4, (v6Bytes[5] & 15) << 4 | v6Bytes[6] & 15, v6Bytes[7], (v6Bytes[1] & 15) << 4 | (v6Bytes[2] & 240) >> 4, (v6Bytes[2] & 15) << 4 | (v6Bytes[3] & 240) >> 4, 16 | (v6Bytes[0] & 240) >> 4, (v6Bytes[0] & 15) << 4 | (v6Bytes[1] & 240) >> 4, v6Bytes[8], v6Bytes[9], v6Bytes[10], v6Bytes[11], v6Bytes[12], v6Bytes[13], v6Bytes[14], v6Bytes[15]);
+    }
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v7.js
+var require_v7 = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/v7.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.updateV7State = void 0;
+    var rng_js_1 = require_rng();
+    var stringify_js_1 = require_stringify2();
+    var _state = {};
+    function v7(options2, buf, offset) {
+      let bytes;
+      if (options2) {
+        bytes = v7Bytes(options2.random ?? options2.rng?.() ?? (0, rng_js_1.default)(), options2.msecs, options2.seq, buf, offset);
+      } else {
+        const now = Date.now();
+        const rnds = (0, rng_js_1.default)();
+        updateV7State(_state, now, rnds);
+        bytes = v7Bytes(rnds, _state.msecs, _state.seq, buf, offset);
+      }
+      return buf ?? (0, stringify_js_1.unsafeStringify)(bytes);
+    }
+    function updateV7State(state, now, rnds) {
+      state.msecs ??= -Infinity;
+      state.seq ??= 0;
+      if (now > state.msecs) {
+        state.seq = rnds[6] << 23 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
+        state.msecs = now;
+      } else {
+        state.seq = state.seq + 1 | 0;
+        if (state.seq === 0) {
+          state.msecs++;
+        }
+      }
+      return state;
+    }
+    exports2.updateV7State = updateV7State;
+    function v7Bytes(rnds, msecs, seq, buf, offset = 0) {
+      if (rnds.length < 16) {
+        throw new Error("Random bytes length must be >= 16");
+      }
+      if (!buf) {
+        buf = new Uint8Array(16);
+        offset = 0;
+      } else {
+        if (offset < 0 || offset + 16 > buf.length) {
+          throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+        }
+      }
+      msecs ??= Date.now();
+      seq ??= rnds[6] * 127 << 24 | rnds[7] << 16 | rnds[8] << 8 | rnds[9];
+      buf[offset++] = msecs / 1099511627776 & 255;
+      buf[offset++] = msecs / 4294967296 & 255;
+      buf[offset++] = msecs / 16777216 & 255;
+      buf[offset++] = msecs / 65536 & 255;
+      buf[offset++] = msecs / 256 & 255;
+      buf[offset++] = msecs & 255;
+      buf[offset++] = 112 | seq >>> 28 & 15;
+      buf[offset++] = seq >>> 20 & 255;
+      buf[offset++] = 128 | seq >>> 14 & 63;
+      buf[offset++] = seq >>> 6 & 255;
+      buf[offset++] = seq << 2 & 255 | rnds[10] & 3;
+      buf[offset++] = rnds[11];
+      buf[offset++] = rnds[12];
+      buf[offset++] = rnds[13];
+      buf[offset++] = rnds[14];
+      buf[offset++] = rnds[15];
+      return buf;
+    }
+    exports2.default = v7;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/version.js
+var require_version = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/version.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var validate_js_1 = require_validate();
+    function version2(uuid3) {
+      if (!(0, validate_js_1.default)(uuid3)) {
+        throw TypeError("Invalid UUID");
+      }
+      return parseInt(uuid3.slice(14, 15), 16);
+    }
+    exports2.default = version2;
+  }
+});
+
+// node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/index.js
+var require_cjs = __commonJS({
+  "node_modules/.pnpm/uuid@11.1.1/node_modules/uuid/dist/cjs/index.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.version = exports2.validate = exports2.v7 = exports2.v6ToV1 = exports2.v6 = exports2.v5 = exports2.v4 = exports2.v3 = exports2.v1ToV6 = exports2.v1 = exports2.stringify = exports2.parse = exports2.NIL = exports2.MAX = void 0;
+    var max_js_1 = require_max();
+    Object.defineProperty(exports2, "MAX", { enumerable: true, get: function() {
+      return max_js_1.default;
+    } });
+    var nil_js_1 = require_nil();
+    Object.defineProperty(exports2, "NIL", { enumerable: true, get: function() {
+      return nil_js_1.default;
+    } });
+    var parse_js_1 = require_parse2();
+    Object.defineProperty(exports2, "parse", { enumerable: true, get: function() {
+      return parse_js_1.default;
+    } });
+    var stringify_js_1 = require_stringify2();
+    Object.defineProperty(exports2, "stringify", { enumerable: true, get: function() {
+      return stringify_js_1.default;
+    } });
+    var v1_js_1 = require_v1();
+    Object.defineProperty(exports2, "v1", { enumerable: true, get: function() {
+      return v1_js_1.default;
+    } });
+    var v1ToV6_js_1 = require_v1ToV6();
+    Object.defineProperty(exports2, "v1ToV6", { enumerable: true, get: function() {
+      return v1ToV6_js_1.default;
+    } });
+    var v3_js_1 = require_v3();
+    Object.defineProperty(exports2, "v3", { enumerable: true, get: function() {
+      return v3_js_1.default;
+    } });
+    var v4_js_1 = require_v4();
+    Object.defineProperty(exports2, "v4", { enumerable: true, get: function() {
+      return v4_js_1.default;
+    } });
+    var v5_js_1 = require_v5();
+    Object.defineProperty(exports2, "v5", { enumerable: true, get: function() {
+      return v5_js_1.default;
+    } });
+    var v6_js_1 = require_v6();
+    Object.defineProperty(exports2, "v6", { enumerable: true, get: function() {
+      return v6_js_1.default;
+    } });
+    var v6ToV1_js_1 = require_v6ToV1();
+    Object.defineProperty(exports2, "v6ToV1", { enumerable: true, get: function() {
+      return v6ToV1_js_1.default;
+    } });
+    var v7_js_1 = require_v7();
+    Object.defineProperty(exports2, "v7", { enumerable: true, get: function() {
+      return v7_js_1.default;
+    } });
+    var validate_js_1 = require_validate();
+    Object.defineProperty(exports2, "validate", { enumerable: true, get: function() {
+      return validate_js_1.default;
+    } });
+    var version_js_1 = require_version();
+    Object.defineProperty(exports2, "version", { enumerable: true, get: function() {
+      return version_js_1.default;
+    } });
+  }
+});
+
+// node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js
+var require_safe_buffer = __commonJS({
+  "node_modules/.pnpm/safe-buffer@5.2.1/node_modules/safe-buffer/index.js"(exports2, module2) {
+    var buffer = require("buffer");
+    var Buffer2 = buffer.Buffer;
+    function copyProps(src, dst) {
+      for (var key in src) {
+        dst[key] = src[key];
+      }
+    }
+    if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
+      module2.exports = buffer;
+    } else {
+      copyProps(buffer, exports2);
+      exports2.Buffer = SafeBuffer;
+    }
+    function SafeBuffer(arg, encodingOrOffset, length) {
+      return Buffer2(arg, encodingOrOffset, length);
+    }
+    SafeBuffer.prototype = Object.create(Buffer2.prototype);
+    copyProps(Buffer2, SafeBuffer);
+    SafeBuffer.from = function(arg, encodingOrOffset, length) {
+      if (typeof arg === "number") {
+        throw new TypeError("Argument must not be a number");
+      }
+      return Buffer2(arg, encodingOrOffset, length);
+    };
+    SafeBuffer.alloc = function(size, fill, encoding) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      var buf = Buffer2(size);
+      if (fill !== void 0) {
+        if (typeof encoding === "string") {
+          buf.fill(fill, encoding);
+        } else {
+          buf.fill(fill);
+        }
+      } else {
+        buf.fill(0);
+      }
+      return buf;
+    };
+    SafeBuffer.allocUnsafe = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return Buffer2(size);
+    };
+    SafeBuffer.allocUnsafeSlow = function(size) {
+      if (typeof size !== "number") {
+        throw new TypeError("Argument must be a number");
+      }
+      return buffer.SlowBuffer(size);
+    };
+  }
+});
+
+// node_modules/.pnpm/base-x@3.0.11/node_modules/base-x/src/index.js
+var require_src = __commonJS({
+  "node_modules/.pnpm/base-x@3.0.11/node_modules/base-x/src/index.js"(exports2, module2) {
+    "use strict";
+    var _Buffer = require_safe_buffer().Buffer;
+    function base(ALPHABET) {
+      if (ALPHABET.length >= 255) {
+        throw new TypeError("Alphabet too long");
+      }
+      var BASE_MAP = new Uint8Array(256);
+      for (var j = 0; j < BASE_MAP.length; j++) {
+        BASE_MAP[j] = 255;
+      }
+      for (var i = 0; i < ALPHABET.length; i++) {
+        var x = ALPHABET.charAt(i);
+        var xc = x.charCodeAt(0);
+        if (BASE_MAP[xc] !== 255) {
+          throw new TypeError(x + " is ambiguous");
+        }
+        BASE_MAP[xc] = i;
+      }
+      var BASE = ALPHABET.length;
+      var LEADER = ALPHABET.charAt(0);
+      var FACTOR = Math.log(BASE) / Math.log(256);
+      var iFACTOR = Math.log(256) / Math.log(BASE);
+      function encode3(source) {
+        if (Array.isArray(source) || source instanceof Uint8Array) {
+          source = _Buffer.from(source);
+        }
+        if (!_Buffer.isBuffer(source)) {
+          throw new TypeError("Expected Buffer");
+        }
+        if (source.length === 0) {
+          return "";
+        }
+        var zeroes = 0;
+        var length = 0;
+        var pbegin = 0;
+        var pend = source.length;
+        while (pbegin !== pend && source[pbegin] === 0) {
+          pbegin++;
+          zeroes++;
+        }
+        var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
+        var b58 = new Uint8Array(size);
+        while (pbegin !== pend) {
+          var carry = source[pbegin];
+          var i2 = 0;
+          for (var it1 = size - 1; (carry !== 0 || i2 < length) && it1 !== -1; it1--, i2++) {
+            carry += 256 * b58[it1] >>> 0;
+            b58[it1] = carry % BASE >>> 0;
+            carry = carry / BASE >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          pbegin++;
+        }
+        var it2 = size - length;
+        while (it2 !== size && b58[it2] === 0) {
+          it2++;
+        }
+        var str2 = LEADER.repeat(zeroes);
+        for (; it2 < size; ++it2) {
+          str2 += ALPHABET.charAt(b58[it2]);
+        }
+        return str2;
+      }
+      function decodeUnsafe(source) {
+        if (typeof source !== "string") {
+          throw new TypeError("Expected String");
+        }
+        if (source.length === 0) {
+          return _Buffer.alloc(0);
+        }
+        var psz = 0;
+        var zeroes = 0;
+        var length = 0;
+        while (source[psz] === LEADER) {
+          zeroes++;
+          psz++;
+        }
+        var size = (source.length - psz) * FACTOR + 1 >>> 0;
+        var b256 = new Uint8Array(size);
+        while (psz < source.length) {
+          var charCode = source.charCodeAt(psz);
+          if (charCode > 255) {
+            return;
+          }
+          var carry = BASE_MAP[charCode];
+          if (carry === 255) {
+            return;
+          }
+          var i2 = 0;
+          for (var it3 = size - 1; (carry !== 0 || i2 < length) && it3 !== -1; it3--, i2++) {
+            carry += BASE * b256[it3] >>> 0;
+            b256[it3] = carry % 256 >>> 0;
+            carry = carry / 256 >>> 0;
+          }
+          if (carry !== 0) {
+            throw new Error("Non-zero carry");
+          }
+          length = i2;
+          psz++;
+        }
+        var it4 = size - length;
+        while (it4 !== size && b256[it4] === 0) {
+          it4++;
+        }
+        var vch = _Buffer.allocUnsafe(zeroes + (size - it4));
+        vch.fill(0, 0, zeroes);
+        var j2 = zeroes;
+        while (it4 !== size) {
+          vch[j2++] = b256[it4++];
+        }
+        return vch;
+      }
+      function decode3(string4) {
+        var buffer = decodeUnsafe(string4);
+        if (buffer) {
+          return buffer;
+        }
+        throw new Error("Non-base" + BASE + " character");
+      }
+      return {
+        encode: encode3,
+        decodeUnsafe,
+        decode: decode3
+      };
+    }
+    module2.exports = base;
+  }
+});
+
+// node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js
+var require_uuid62 = __commonJS({
+  "node_modules/.pnpm/uuid62@1.0.2/node_modules/uuid62/uuid62.js"(exports2, module2) {
+    "use strict";
+    var uuid3 = require_cjs();
+    var uuidv1 = uuid3.v1;
+    var uuidv42 = uuid3.v4;
+    var uuidv5 = uuid3.v5;
+    var baseX = require_src();
+    var base62 = baseX("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    var OUTPUT_LENGTH = 22;
+    var UUID_LENGTH = 32;
+    var Buffer2 = global ? global.Buffer : void 0;
+    if (typeof Buffer2 === "undefined") {
+      Buffer2 = require("buffer").Buffer;
+    }
+    var UUID62 = class {
+      constructor() {
+        this.base = base62;
+        this.uuid = uuid3;
+        this.baseX = baseX;
+        this.URL = "3h8Pgc0Wb7WH6HsyG77m40";
+        this.DNS = "3h8PgalTIPNcNhUD4ZbIKY";
+      }
+      get customBase() {
+        return this.base;
+      }
+      set customBase(base) {
+        this.base = base;
+      }
+      get length() {
+        return OUTPUT_LENGTH;
+      }
+      get uuidLength() {
+        return UUID_LENGTH;
+      }
+      v4() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv42.apply(this, args);
+        return this.encode(id);
+      }
+      v5() {
+        const args = Array.prototype.slice.call(arguments);
+        if (typeof args[1] === "string" && /^[0-9A-Za-z]{22}$/.test(args[1])) {
+          args[1] = this.decode(args[1]);
+        }
+        const id = uuidv5.apply(this, args);
+        return this.encode(id);
+      }
+      v1() {
+        const args = Array.prototype.slice.call(arguments);
+        if (!args[1]) {
+          args[1] = new Buffer2(16);
+        }
+        const id = uuidv1.apply(this, args);
+        return this.encode(id);
+      }
+      encode(input2, encoding) {
+        encoding = encoding || "hex";
+        if (typeof input2 === "string") {
+          input2 = new Buffer2(input2.replace(/-/g, ""), encoding);
+        }
+        return ensureLength(this.base.encode(input2), OUTPUT_LENGTH);
+      }
+      decode(input2, encoding) {
+        encoding = encoding || "hex";
+        const res = ensureLength(
+          new Buffer2(this.base.decode(input2)).toString(encoding),
+          UUID_LENGTH
+        );
+        return `${res.slice(0, 8)}-${res.slice(8, 12)}-${res.slice(12, 16)}-${res.slice(16, 20)}-${res.slice(20)}`;
+      }
+    };
+    function ensureLength(input2, targetLength) {
+      input2 = input2.toString();
+      return `${"0".repeat(32)}${input2}`.slice(-targetLength);
+    }
+    module2.exports = new UUID62();
+  }
+});
+
 // src/skills/doc-driven-dev-graph/scripts/fetch_context.ts
 var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_context.ts
-var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path4 = __toESM(require("node:path"));
-var import_gray_matter3 = __toESM(require_gray_matter());
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path5 = __toESM(require("node:path"));
+var import_gray_matter4 = __toESM(require_gray_matter());
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
 var import_node_fs2 = __toESM(require("node:fs"));
@@ -4492,6 +5358,14 @@ var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
 
 // src/skills/doc-driven-dev-graph/scripts/lib/caller_runner.ts
 var import_node_crypto = __toESM(require("node:crypto"));
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path4 = __toESM(require("node:path"));
+var import_gray_matter3 = __toESM(require_gray_matter());
+
+// src/skills/lib/artifact_id.ts
+var import_uuid62 = __toESM(require_uuid62());
+
+// src/skills/lib/schema_preflight.ts
 var import_node_fs3 = __toESM(require("node:fs"));
 var import_node_path3 = __toESM(require("node:path"));
 var import_gray_matter2 = __toESM(require_gray_matter());
@@ -6992,6 +7866,490 @@ var CHOMPING_CLIP = CHOMPING_MODE.CLIP;
 var CHOMPING_STRIP = CHOMPING_MODE.STRIP;
 var CHOMPING_KEEP = CHOMPING_MODE.KEEP;
 
+// src/skills/lib/schema_preflight.ts
+var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
+var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
+var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
+var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
+var MANIFEST_SCHEMA_VERSION = 1;
+var EXPECTED_COMPONENT_VERSIONS = {
+  documentRegistry: 3,
+  knowledgeRelations: 1,
+  verificationDesign: 1,
+  evidenceRecord: 1,
+  graphDefinition: 3
+};
+var EXECUTION_RUN_SCHEMA_VERSION = 1;
+var SCHEMA_PREFLIGHT_EXIT_CODE = 2;
+var EXECUTION_BOUND_TYPES = new Set(executionBoundTypeNames());
+var KNOWLEDGE_RELATIONS_V1 = new Set(knowledgeRelationFields());
+var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
+  "schema.json",
+  "migration.journal.json"
+]);
+function toRepoRelative2(cwd, absolute) {
+  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), absolute).split(import_node_path3.default.sep).join("/");
+}
+function isUnderDir(relPath, dir) {
+  return relPath === dir || relPath.startsWith(`${dir}/`);
+}
+function isPlainObject2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function managedRootAliases() {
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
+}
+function walkTree(cwd, relRoot, visit2, onEscape) {
+  const absRoot = import_node_path3.default.resolve(cwd, relRoot);
+  if (!import_node_fs3.default.existsSync(absRoot) || !import_node_fs3.default.statSync(absRoot).isDirectory()) return false;
+  if (!isInsideCheckout(cwd, absRoot)) return false;
+  const stack = [absRoot];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    let entries;
+    try {
+      entries = import_node_fs3.default.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const abs = import_node_path3.default.join(dir, entry.name);
+      const rel = toRepoRelative2(cwd, abs);
+      if (entry.isDirectory()) {
+        if (!isInsideCheckout(cwd, abs)) {
+          onEscape?.(rel, "dir");
+          continue;
+        }
+        visit2(rel, true);
+        stack.push(abs);
+      } else if (entry.isFile() || entry.isSymbolicLink()) {
+        if (!isInsideCheckout(cwd, abs)) {
+          onEscape?.(rel, "entry");
+          continue;
+        }
+        visit2(rel, false);
+      }
+    }
+  }
+  return true;
+}
+function relationIssues(relPath, relations) {
+  const scoped = [];
+  if (relations === void 0) return scoped;
+  if (!isPlainObject2(relations)) {
+    scoped.push({
+      reason: "legacy-relations",
+      path: relPath,
+      detail: "relations: is not a map of relation keys to target lists"
+    });
+    return scoped;
+  }
+  for (const [key, value] of Object.entries(relations)) {
+    if (nonReferenceRelationKeys.has(key) || PROVENANCE_RELATION_KEYS.includes(key)) continue;
+    const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
+    const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
+    if (!wellFormed) {
+      scoped.push({
+        reason: "legacy-relations",
+        path: relPath,
+        detail: `relations.${key} is not a string or list of strings`
+      });
+      continue;
+    }
+    if (!populated) continue;
+    if (!KNOWLEDGE_RELATIONS_V1.has(key)) {
+      scoped.push({
+        reason: "legacy-relations",
+        path: relPath,
+        detail: `relations.${key} is outside the Knowledge Relations v1 vocabulary (stored forward set: ${[...KNOWLEDGE_RELATIONS_V1].join(", ")})`
+      });
+    }
+  }
+  return scoped;
+}
+function scanDocuments(cwd) {
+  const scan = {
+    issues: [],
+    manifestScopedIssues: [],
+    canonicalDocs: 0,
+    executionDocs: 0,
+    unmanagedDocs: 0
+  };
+  const visitMarkdown = (rel) => {
+    const abs = import_node_path3.default.resolve(cwd, rel);
+    let raw;
+    try {
+      raw = import_node_fs3.default.readFileSync(abs, "utf8");
+    } catch {
+      return;
+    }
+    let data = {};
+    let parsed = true;
+    try {
+      const result = (0, import_gray_matter2.default)(raw, {});
+      data = isPlainObject2(result.data) ? result.data : {};
+    } catch {
+      parsed = false;
+    }
+    const type = parsed && typeof data.type === "string" ? data.type : null;
+    if (type === null) {
+      scan.unmanagedDocs += 1;
+      return;
+    }
+    scan.canonicalDocs += 1;
+    if (EXECUTION_BOUND_TYPES.has(type)) {
+      scan.executionDocs += 1;
+      scan.manifestScopedIssues.push({
+        reason: "legacy-execution-doc",
+        path: rel,
+        detail: `type: ${type} has no durable Git form under Document Registry 3 (execution/verification artifacts live outside Git)`
+      });
+    }
+    if (parsed) {
+      scan.manifestScopedIssues.push(...relationIssues(rel, data.relations));
+    }
+  };
+  const visitDocsTree = (rel) => {
+    if (isUnderDir(rel, DOC_DRIVEN_DEV_DIR)) return;
+    if (rel.endsWith(".md") && !isIndexFileName(import_node_path3.default.basename(rel))) {
+      visitMarkdown(rel);
+      return;
+    }
+    if (isUnderDir(rel, "docs/impl")) {
+      scan.manifestScopedIssues.push({
+        reason: "legacy-execution-doc",
+        path: rel,
+        detail: `execution artifact under docs/impl has no durable Git form under Document Registry 3`
+      });
+    }
+  };
+  const roots = ["docs", ...managedRootAliases()];
+  const walked = /* @__PURE__ */ new Set();
+  for (const root of roots) {
+    const abs = import_node_path3.default.resolve(cwd, root);
+    let key = abs;
+    try {
+      key = import_node_fs3.default.realpathSync(abs);
+    } catch {
+    }
+    if (walked.has(key)) continue;
+    walked.add(key);
+    walkTree(cwd, root, (rel, isDir) => {
+      if (isDir) return;
+      if (root === "docs") visitDocsTree(rel);
+      else visitMarkdown(rel);
+    });
+  }
+  return scan;
+}
+function scanManifestDir(cwd, issues) {
+  const abs = import_node_path3.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
+  if (!import_node_fs3.default.existsSync(abs)) return;
+  const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
+    const name = import_node_path3.default.basename(rel);
+    if (isDir) {
+      if (rel !== DOC_DRIVEN_DEV_DIR) {
+        issues.push({
+          reason: "legacy-state-file",
+          path: rel,
+          detail: `unaccounted-for directory inside ${DOC_DRIVEN_DEV_DIR}`
+        });
+      }
+      return;
+    }
+    if (MANIFEST_DIR_ALLOWED_FILES.has(name)) return;
+    if (/\.ya?ml$/i.test(name)) {
+      let legacy = false;
+      try {
+        const parsed = load(import_node_fs3.default.readFileSync(import_node_path3.default.resolve(cwd, rel), "utf8"));
+        if (isPlainObject2(parsed)) {
+          const version2 = parsed.schemaVersion;
+          legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
+        }
+      } catch {
+      }
+      issues.push({
+        reason: legacy ? "legacy-graph-state" : "legacy-state-file",
+        path: rel,
+        detail: legacy ? `graph/state YAML inside ${DOC_DRIVEN_DEV_DIR} predates Graph Definition ${EXPECTED_COMPONENT_VERSIONS.graphDefinition}` : `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
+      });
+      return;
+    }
+    issues.push({
+      reason: "legacy-state-file",
+      path: rel,
+      detail: `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
+    });
+  }, (rel) => {
+    issues.push({
+      reason: "legacy-state-file",
+      path: rel,
+      detail: `entry inside ${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link`
+    });
+  });
+  if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs3.default.statSync(abs).isDirectory();
+    } catch {
+    }
+    issues.push({
+      reason: "scope-escape",
+      path: DOC_DRIVEN_DEV_DIR,
+      detail: directory ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted` : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`
+    });
+  }
+}
+function scanExecutionState(cwd, issues) {
+  const abs = import_node_path3.default.resolve(cwd, EXECUTION_STATE_ROOT);
+  if (!import_node_fs3.default.existsSync(abs)) return;
+  const marker = (rel, detail) => {
+    issues.push({ reason: "legacy-execution-state", path: rel, detail });
+  };
+  const walked = walkTree(cwd, EXECUTION_STATE_ROOT, (rel, isDir) => {
+    const relUnderRoot = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "");
+    const segments = relUnderRoot.split("/").filter(Boolean);
+    if (isDir) {
+      if (segments.length === 0) return;
+      if (segments[0] !== "runs") {
+        marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      }
+      return;
+    }
+    if (segments[0] !== "runs" || segments.length < 3) {
+      marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
+      return;
+    }
+    const name = segments[segments.length - 1];
+    if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
+      let version2;
+      try {
+        version2 = JSON.parse(import_node_fs3.default.readFileSync(import_node_path3.default.resolve(cwd, rel), "utf8")).schemaVersion;
+      } catch {
+        version2 = null;
+      }
+      if (version2 !== EXECUTION_RUN_SCHEMA_VERSION) {
+        marker(rel, `run manifest schemaVersion is ${JSON.stringify(version2)}, expected ${EXECUTION_RUN_SCHEMA_VERSION}`);
+      }
+    }
+  }, (rel) => {
+    marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
+  });
+  if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs3.default.statSync(abs).isDirectory();
+    } catch {
+    }
+    issues.push({
+      reason: "scope-escape",
+      path: EXECUTION_STATE_ROOT,
+      detail: directory ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed` : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`
+    });
+  }
+}
+function readManifest(cwd) {
+  const rel = SCHEMA_MANIFEST_PATH;
+  const abs = import_node_path3.default.resolve(cwd, rel);
+  if (!import_node_fs3.default.existsSync(abs)) return { state: "missing" };
+  if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
+  let raw;
+  try {
+    raw = import_node_fs3.default.readFileSync(abs, "utf8");
+  } catch (error62) {
+    return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error62) {
+    return { state: "malformed", detail: `schema.json is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
+  }
+  if (!isPlainObject2(parsed)) {
+    return { state: "malformed", detail: "schema.json must be a JSON object" };
+  }
+  const versionIssues = [];
+  const schemaVersion = parsed.schemaVersion;
+  if (!Number.isInteger(schemaVersion) || schemaVersion <= 0) {
+    return { state: "malformed", detail: `schemaVersion must be a positive integer, got ${JSON.stringify(schemaVersion)}` };
+  }
+  if (schemaVersion > MANIFEST_SCHEMA_VERSION) {
+    versionIssues.push({
+      reason: "schema-version-unsupported",
+      path: rel,
+      detail: `manifest schemaVersion ${schemaVersion} is newer than supported ${MANIFEST_SCHEMA_VERSION} \u2014 upgrade the doc-driven-dev toolchain`
+    });
+  }
+  const declared = { schemaVersion };
+  for (const [key, expected] of Object.entries(EXPECTED_COMPONENT_VERSIONS)) {
+    const value = parsed[key];
+    if (value === void 0) {
+      return { state: "malformed", detail: `missing component version: ${key}` };
+    }
+    if (!Number.isInteger(value) || value <= 0) {
+      return { state: "malformed", detail: `${key} must be a positive integer, got ${JSON.stringify(value)}` };
+    }
+    declared[key] = value;
+    if (value > expected) {
+      versionIssues.push({
+        reason: "component-version-unsupported",
+        path: rel,
+        detail: `${key} ${value} is newer than supported ${expected} \u2014 upgrade the doc-driven-dev toolchain`
+      });
+    } else if (value < expected) {
+      versionIssues.push({
+        reason: "component-version-behind",
+        path: rel,
+        detail: `${key} ${value} is behind supported ${expected} \u2014 migration is required`
+      });
+    }
+  }
+  let migrationInProgress = false;
+  if (parsed.migration !== void 0) {
+    if (!isPlainObject2(parsed.migration)) {
+      return { state: "malformed", detail: "migration must be an object when present" };
+    }
+    const status = parsed.migration.status;
+    if (status !== void 0 && status !== "in-progress") {
+      return { state: "malformed", detail: `migration.status must be "in-progress" when present, got ${JSON.stringify(status)}` };
+    }
+    migrationInProgress = status === "in-progress";
+  }
+  return { state: "read", declared, migrationInProgress, versionIssues };
+}
+function journalPresent(cwd) {
+  return import_node_fs3.default.existsSync(import_node_path3.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+}
+function recommendedCommand(status, docCount) {
+  const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
+  switch (status) {
+    case "current":
+      return null;
+    case "uninitialized":
+      return docCount === 0 ? { command: "node .apm/skills/doc-maintenance/scripts/scaffold_docs.js", note: "no manifest and no managed content \u2014 scaffold the doc tree, or declare the current schema via doc_maintenance.js migrate plan/apply" } : { command: `${maintenance} migrate plan --json`, note: "no schema manifest \u2014 run migrate plan to evaluate whether migration is needed, then migrate apply to declare the schema" };
+    case "migration-required":
+      return { command: `${maintenance} migrate plan --json`, note: "legacy artifacts or older declared versions \u2014 plan the migration, then run migrate apply --expect <planHash>" };
+    case "migration-incomplete":
+      return { command: `${maintenance} migrate recovery --json`, note: "a migration journal or in-progress marker is present \u2014 inspect and recover before normal execution resumes" };
+    case "unsupported-version":
+      return { command: null, note: "the manifest declares a newer schema generation than this toolchain supports \u2014 upgrade doc-driven-dev, do not downgrade by hand" };
+    case "invalid":
+      return { command: `${maintenance} migrate plan --json`, note: "manifest or repository state cannot be verified \u2014 run migrate plan for the full diagnostic" };
+  }
+}
+function statusSummary(report) {
+  switch (report.status) {
+    case "current":
+      return "schema manifest and repository content are consistent with the declared versions";
+    case "uninitialized":
+      return "no schema manifest; nothing provably pre-contract found";
+    case "migration-required":
+      return "legacy artifacts or older declared schema versions require migration";
+    case "migration-incomplete":
+      return "a migration journal or in-progress marker indicates a half-applied migration";
+    case "unsupported-version":
+      return "the manifest declares a schema generation newer than this toolchain";
+    case "invalid":
+      return "the manifest or repository state failed boundary validation";
+  }
+}
+function evaluateSchemaPreflight(cwd) {
+  const root = import_node_path3.default.resolve(cwd);
+  const scan = scanDocuments(root);
+  scanManifestDir(root, scan.issues);
+  scanExecutionState(root, scan.issues);
+  const manifest = readManifest(root);
+  const journal = journalPresent(root);
+  const escapes = scan.issues.filter((issue2) => issue2.reason === "scope-escape");
+  const finish = (status, issues, manifestInfo2) => {
+    const legacyMarkers = new Set(
+      [...issues, ...scan.manifestScopedIssues].filter((issue2) => issue2.reason.startsWith("legacy-")).map((issue2) => `${issue2.reason}:${issue2.path}`)
+    ).size;
+    const managedDocs = scan.canonicalDocs + scan.unmanagedDocs;
+    const generation = escapes.length > 0 ? "unknown" : legacyMarkers > 0 ? scan.canonicalDocs > scan.executionDocs ? "mixed" : "legacy" : managedDocs === 0 ? "empty" : "current";
+    const report = {
+      status,
+      issues,
+      manifest: manifestInfo2,
+      detected: {
+        generation,
+        canonicalDocs: scan.canonicalDocs,
+        executionDocs: scan.executionDocs,
+        unmanagedDocs: scan.unmanagedDocs,
+        legacyMarkers,
+        manifestMarkers: scan.manifestScopedIssues
+      },
+      recommended: recommendedCommand(status, managedDocs)
+    };
+    return report;
+  };
+  const readManifestInfo = manifest.state === "read" ? { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared } : { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null };
+  if (escapes.length > 0) {
+    return finish("invalid", escapes, readManifestInfo);
+  }
+  if (manifest.state === "escaped") {
+    return finish("invalid", [{ reason: "manifest-escaped", path: SCHEMA_MANIFEST_PATH, detail: "schema.json resolves outside the checkout" }], { path: SCHEMA_MANIFEST_PATH, state: "escaped", declared: null });
+  }
+  if (manifest.state === "unreadable") {
+    return finish("invalid", [{ reason: "manifest-unreadable", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "unreadable", declared: null });
+  }
+  if (manifest.state === "malformed") {
+    return finish("invalid", [{ reason: "manifest-malformed", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "malformed", declared: null });
+  }
+  if (manifest.state === "missing") {
+    if (journal) {
+      return finish("migration-incomplete", [{ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal exists without a finalized manifest \u2014 the apply did not complete" }], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+    }
+    const relevant = scan.issues.filter((issue2) => issue2.reason.startsWith("legacy-"));
+    if (relevant.length > 0) {
+      return finish("migration-required", relevant, { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+    }
+    return finish("uninitialized", [], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+  }
+  const manifestIssues = manifest.versionIssues;
+  const unsupported = manifestIssues.filter((issue2) => issue2.reason === "schema-version-unsupported" || issue2.reason === "component-version-unsupported");
+  const manifestInfo = { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared };
+  if (unsupported.length > 0) {
+    return finish("unsupported-version", unsupported, { ...manifestInfo, state: "unsupported" });
+  }
+  const inProgress = [];
+  if (manifest.migrationInProgress) {
+    inProgress.push({ reason: "manifest-migration-in-progress", path: SCHEMA_MANIFEST_PATH, detail: "manifest declares migration.status: in-progress" });
+  }
+  if (journal) {
+    inProgress.push({ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal is present \u2014 the apply did not complete" });
+  }
+  if (inProgress.length > 0) {
+    return finish("migration-incomplete", inProgress, manifestInfo);
+  }
+  const behind = manifestIssues.filter((issue2) => issue2.reason === "component-version-behind");
+  const allIssues = [...scan.issues, ...scan.manifestScopedIssues, ...behind];
+  if (allIssues.length > 0) {
+    return finish("migration-required", allIssues, manifestInfo);
+  }
+  return finish("current", [], manifestInfo);
+}
+function normalExecutionAllowed(status) {
+  return status === "current" || status === "uninitialized";
+}
+function entrypointRefusal(report) {
+  return {
+    error: "schema-preflight-blocked",
+    exitCode: SCHEMA_PREFLIGHT_EXIT_CODE,
+    readOnly: true,
+    preflight: report
+  };
+}
+function schemaEntrypointGuard(cwd) {
+  const report = evaluateSchemaPreflight(cwd);
+  if (normalExecutionAllowed(report.status)) return true;
+  console.log(JSON.stringify(entrypointRefusal(report), null, 2));
+  const recommended = report.recommended?.command ?? "inspect docs/.doc-driven-dev/schema.json";
+  console.error(`schema preflight blocked (${report.status}): ${statusSummary(report)} \u2014 run ${recommended}`);
+  process.exitCode = SCHEMA_PREFLIGHT_EXIT_CODE;
+  return false;
+}
+
 // node_modules/.pnpm/zod@4.6.6/node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -7617,7 +8975,7 @@ __export(util_exports, {
   hide: () => hide,
   installLazyProp: () => installLazyProp,
   isObject: () => isObject,
-  isPlainObject: () => isPlainObject2,
+  isPlainObject: () => isPlainObject4,
   issue: () => issue,
   joinValues: () => joinValues,
   jsonStringifyReplacer: () => jsonStringifyReplacer,
@@ -7859,7 +9217,7 @@ var allowsEval = /* @__PURE__ */ cached(() => {
     return false;
   }
 });
-function isPlainObject2(o) {
+function isPlainObject4(o) {
   if (isObject(o) === false)
     return false;
   const ctor = o.constructor;
@@ -7876,7 +9234,7 @@ function isPlainObject2(o) {
   return true;
 }
 function shallowClone(o) {
-  if (isPlainObject2(o))
+  if (isPlainObject4(o))
     return { ...o };
   if (Array.isArray(o))
     return [...o];
@@ -8065,7 +9423,7 @@ function omit(schema, mask) {
   return clone(schema, mergeDefs(currDef, { shape: newShape, checks: [] }));
 }
 function extend(schema, shape) {
-  if (!isPlainObject2(shape)) {
+  if (!isPlainObject4(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
   const checks = schema._zod.def.checks;
@@ -8087,7 +9445,7 @@ function extended(schema, shape) {
   return newShape;
 }
 function safeExtend(schema, shape) {
-  if (!isPlainObject2(shape)) {
+  if (!isPlainObject4(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
   return clone(schema, mergeDefs(schema._zod.def, { shape: extended(schema, shape) }));
@@ -10967,7 +12325,7 @@ function mergeValues(a, b) {
   if (a instanceof Date && b instanceof Date && +a === +b) {
     return { valid: true, data: a };
   }
-  if (isPlainObject2(a) && isPlainObject2(b)) {
+  if (isPlainObject4(a) && isPlainObject4(b)) {
     const bKeys = Object.keys(b);
     const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
@@ -11188,7 +12546,7 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
   memo2?.attach(inst);
   inst._zod.parse = (payload, ctx) => {
     const input2 = payload.value;
-    if (!isPlainObject2(input2)) {
+    if (!isPlainObject4(input2)) {
       payload.issues.push({
         expected: "record",
         code: "invalid_type",
@@ -21277,7 +22635,7 @@ function generateIntersectionCheck(doc, ctx, schema, accessor) {
 }
 function generateRecordCheck(doc, ctx, schema, accessor) {
   const def = schema._zod.def;
-  const isPlainObjectConst = addConstant(ctx, isPlainObject2);
+  const isPlainObjectConst = addConstant(ctx, isPlainObject4);
   doc.write(`if (!${isPlainObjectConst}(${accessor})) return INVALID;`);
   const outputVar = newVar(ctx);
   const kVar = newVar(ctx);
@@ -26283,7 +27641,7 @@ function convertBaseSchema(schema, ctx) {
           const patterns = patternKeys.map((p) => new RegExp(p));
           const basePatternSchema = zodSchema;
           zodSchema = zodSchema.check((payload) => {
-            if (!isPlainObject2(payload.value))
+            if (!isPlainObject4(payload.value))
               return;
             const unrecognized = [];
             for (const key of Object.keys(payload.value)) {
@@ -26767,8 +28125,8 @@ function fingerprint(value) {
   return import_node_crypto.default.createHash("sha256").update(value).digest("hex");
 }
 function filesystemEntryKind(target) {
-  if (!import_node_fs3.default.existsSync(target)) return "missing";
-  const entry = import_node_fs3.default.statSync(target);
+  if (!import_node_fs4.default.existsSync(target)) return "missing";
+  const entry = import_node_fs4.default.statSync(target);
   if (entry.isDirectory()) return "directory";
   if (entry.isFile()) return "file";
   return "other";
@@ -26776,25 +28134,26 @@ function filesystemEntryKind(target) {
 function canonicalReference(repo, relativePath) {
   if (relativePath === ".") {
     const entries = CANONICAL_DOC_DIRS.flatMap((directory) => {
-      const target = import_node_path3.default.join(repo, directory);
+      const target = import_node_path4.default.join(repo, directory);
       return [
         `${directory}:${filesystemEntryKind(target)}`,
-        `${directory}/README.md:${filesystemEntryKind(import_node_path3.default.join(target, "README.md"))}`
+        `${directory}/README.md:${filesystemEntryKind(import_node_path4.default.join(target, "README.md"))}`
       ];
     });
     return {
+      kind: "durable-document",
       path: relativePath,
       id: "WORKSPACE_ROOT",
-      fingerprint: fingerprint(entries.join("\n"))
+      revision: fingerprint(entries.join("\n"))
     };
   }
-  const file2 = import_node_path3.default.join(repo, relativePath);
-  const parsed = (0, import_gray_matter2.default)(import_node_fs3.default.readFileSync(file2, "utf8"));
-  const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
+  const file2 = import_node_path4.default.join(repo, relativePath);
+  const parsed = (0, import_gray_matter3.default)(import_node_fs4.default.readFileSync(file2, "utf8"));
   return {
+    kind: "durable-document",
     path: relativePath,
-    id: data.id,
-    fingerprint: fingerprint(import_gray_matter2.default.stringify(parsed.content, data))
+    id: parsed.data.id,
+    revision: fingerprint(import_gray_matter3.default.stringify(parsed.content, parsed.data))
   };
 }
 
@@ -26819,7 +28178,7 @@ function idCollisionCount(records, value) {
   return records.filter((record2) => record2.id === value.trim()).length;
 }
 function listArtifactMetadata(cwd, focus, taskDir) {
-  const repo = import_node_path4.default.resolve(cwd);
+  const repo = import_node_path5.default.resolve(cwd);
   const { graph, records } = scanArtifactGraph({ cwd: repo, taskDir });
   const findings = graph.issues.map((issue2) => ({
     code: issue2.code,
@@ -26880,7 +28239,7 @@ function isCanonicalDocPath(normalizedPath, canonicalDirs) {
   return canonicalDirs.some((directory) => directory === "" || key.startsWith(`${repoPathKey(directory)}/`));
 }
 function fetchArtifactBodies(cwd, refs, taskDir) {
-  const repo = import_node_path4.default.resolve(cwd);
+  const repo = import_node_path5.default.resolve(cwd);
   const canonicalDirs = [...CANONICAL_DOC_DIRS, resolveContainedTaskDir(repo, taskDir)];
   const documents = [];
   const findings = [];
@@ -26888,11 +28247,11 @@ function fetchArtifactBodies(cwd, refs, taskDir) {
     const fail = (code, message) => {
       findings.push({ code, path: ref.path, message });
     };
-    if (import_node_path4.default.isAbsolute(ref.path)) {
+    if (import_node_path5.default.isAbsolute(ref.path)) {
       fail("path-escape", `Ref path must be checkout-relative: ${ref.path}`);
       continue;
     }
-    const resolved = import_node_path4.default.resolve(repo, ref.path);
+    const resolved = import_node_path5.default.resolve(repo, ref.path);
     if (!isInsideCheckout(repo, resolved)) {
       fail("path-escape", `Ref path escapes the checkout: ${ref.path}`);
       continue;
@@ -26902,14 +28261,14 @@ function fetchArtifactBodies(cwd, refs, taskDir) {
       fail("not-canonical", `Ref path is not a canonical artifact doc: ${ref.path}`);
       continue;
     }
-    if (!import_node_fs4.default.existsSync(resolved) || !import_node_fs4.default.statSync(resolved).isFile()) {
+    if (!import_node_fs5.default.existsSync(resolved) || !import_node_fs5.default.statSync(resolved).isFile()) {
       fail("not-found", `Ref path does not exist: ${ref.path}`);
       continue;
     }
     let body;
     let reference;
     try {
-      body = (0, import_gray_matter3.default)(import_node_fs4.default.readFileSync(resolved, "utf8")).content;
+      body = (0, import_gray_matter4.default)(import_node_fs5.default.readFileSync(resolved, "utf8")).content;
       reference = canonicalReference(repo, normalized);
     } catch {
       fail("unreadable", `Ref path does not parse as an artifact doc: ${ref.path}`);
@@ -26920,7 +28279,7 @@ function fetchArtifactBodies(cwd, refs, taskDir) {
       fail("id-mismatch", `Ref id ${ref.id} does not match resolved id ${recordId ?? "none"}: ${ref.path}`);
       continue;
     }
-    if (ref.fingerprint !== void 0 && ref.fingerprint !== reference.fingerprint) {
+    if (ref.fingerprint !== void 0 && ref.fingerprint !== reference.revision) {
       fail("stale-fingerprint", `Ref fingerprint is stale for ${ref.path} \u2014 re-fetch after re-projection`);
       continue;
     }
@@ -26930,7 +28289,7 @@ function fetchArtifactBodies(cwd, refs, taskDir) {
   return { level: "L2", documents, findings: finalizeFindings(findings) };
 }
 function expandArtifactContext(cwd, fromPath, options2) {
-  const repo = import_node_path4.default.resolve(cwd);
+  const repo = import_node_path5.default.resolve(cwd);
   const { records } = scanArtifactGraph({ cwd: repo, taskDir: options2.taskDir });
   const findings = [];
   const byPath = new Map(records.map((record2) => [record2.path, record2]));
@@ -27002,493 +28361,6 @@ function expandArtifactContext(cwd, fromPath, options2) {
     findings: finalizeFindings(findings),
     ...options2.reason !== void 0 ? { reason: options2.reason } : {}
   };
-}
-
-// src/skills/lib/schema_preflight.ts
-var import_node_fs5 = __toESM(require("node:fs"));
-var import_node_path5 = __toESM(require("node:path"));
-var import_gray_matter4 = __toESM(require_gray_matter());
-var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
-var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
-var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
-var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
-var MANIFEST_SCHEMA_VERSION = 1;
-var EXPECTED_COMPONENT_VERSIONS = {
-  documentRegistry: 3,
-  knowledgeRelations: 1,
-  verificationDesign: 1,
-  evidenceRecord: 1,
-  graphDefinition: 3
-};
-var EXECUTION_RUN_SCHEMA_VERSION = 1;
-var SCHEMA_PREFLIGHT_EXIT_CODE = 2;
-var EXECUTION_BOUND_TYPES = new Set(executionBoundTypeNames());
-var KNOWLEDGE_RELATIONS_V1 = new Set(knowledgeRelationFields());
-var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
-  "schema.json",
-  "migration.journal.json"
-]);
-function toRepoRelative2(cwd, absolute) {
-  return import_node_path5.default.relative(import_node_path5.default.resolve(cwd), absolute).split(import_node_path5.default.sep).join("/");
-}
-function isUnderDir(relPath, dir) {
-  return relPath === dir || relPath.startsWith(`${dir}/`);
-}
-function isPlainObject3(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function managedRootAliases() {
-  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
-}
-function walkTree(cwd, relRoot, visit2, onEscape) {
-  const absRoot = import_node_path5.default.resolve(cwd, relRoot);
-  if (!import_node_fs5.default.existsSync(absRoot) || !import_node_fs5.default.statSync(absRoot).isDirectory()) return false;
-  if (!isInsideCheckout(cwd, absRoot)) return false;
-  const stack = [absRoot];
-  while (stack.length > 0) {
-    const dir = stack.pop();
-    let entries;
-    try {
-      entries = import_node_fs5.default.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      const abs = import_node_path5.default.join(dir, entry.name);
-      const rel = toRepoRelative2(cwd, abs);
-      if (entry.isDirectory()) {
-        if (!isInsideCheckout(cwd, abs)) {
-          onEscape?.(rel, "dir");
-          continue;
-        }
-        visit2(rel, true);
-        stack.push(abs);
-      } else if (entry.isFile() || entry.isSymbolicLink()) {
-        if (!isInsideCheckout(cwd, abs)) {
-          onEscape?.(rel, "entry");
-          continue;
-        }
-        visit2(rel, false);
-      }
-    }
-  }
-  return true;
-}
-function relationIssues(relPath, relations) {
-  const scoped = [];
-  if (relations === void 0) return scoped;
-  if (!isPlainObject3(relations)) {
-    scoped.push({
-      reason: "legacy-relations",
-      path: relPath,
-      detail: "relations: is not a map of relation keys to target lists"
-    });
-    return scoped;
-  }
-  for (const [key, value] of Object.entries(relations)) {
-    if (nonReferenceRelationKeys.has(key) || PROVENANCE_RELATION_KEYS.includes(key)) continue;
-    const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
-    const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
-    if (!wellFormed) {
-      scoped.push({
-        reason: "legacy-relations",
-        path: relPath,
-        detail: `relations.${key} is not a string or list of strings`
-      });
-      continue;
-    }
-    if (!populated) continue;
-    if (!KNOWLEDGE_RELATIONS_V1.has(key)) {
-      scoped.push({
-        reason: "legacy-relations",
-        path: relPath,
-        detail: `relations.${key} is outside the Knowledge Relations v1 vocabulary (stored forward set: ${[...KNOWLEDGE_RELATIONS_V1].join(", ")})`
-      });
-    }
-  }
-  return scoped;
-}
-function scanDocuments(cwd) {
-  const scan = {
-    issues: [],
-    manifestScopedIssues: [],
-    canonicalDocs: 0,
-    executionDocs: 0,
-    unmanagedDocs: 0
-  };
-  const visitMarkdown = (rel) => {
-    const abs = import_node_path5.default.resolve(cwd, rel);
-    let raw;
-    try {
-      raw = import_node_fs5.default.readFileSync(abs, "utf8");
-    } catch {
-      return;
-    }
-    let data = {};
-    let parsed = true;
-    try {
-      const result = (0, import_gray_matter4.default)(raw, {});
-      data = isPlainObject3(result.data) ? result.data : {};
-    } catch {
-      parsed = false;
-    }
-    const type = parsed && typeof data.type === "string" ? data.type : null;
-    if (type === null) {
-      scan.unmanagedDocs += 1;
-      return;
-    }
-    scan.canonicalDocs += 1;
-    if (EXECUTION_BOUND_TYPES.has(type)) {
-      scan.executionDocs += 1;
-      scan.manifestScopedIssues.push({
-        reason: "legacy-execution-doc",
-        path: rel,
-        detail: `type: ${type} has no durable Git form under Document Registry 3 (execution/verification artifacts live outside Git)`
-      });
-    }
-    if (parsed) {
-      scan.manifestScopedIssues.push(...relationIssues(rel, data.relations));
-    }
-  };
-  const visitDocsTree = (rel) => {
-    if (isUnderDir(rel, DOC_DRIVEN_DEV_DIR)) return;
-    if (rel.endsWith(".md") && !isIndexFileName(import_node_path5.default.basename(rel))) {
-      visitMarkdown(rel);
-      return;
-    }
-    if (isUnderDir(rel, "docs/impl")) {
-      scan.manifestScopedIssues.push({
-        reason: "legacy-execution-doc",
-        path: rel,
-        detail: `execution artifact under docs/impl has no durable Git form under Document Registry 3`
-      });
-    }
-  };
-  const roots = ["docs", ...managedRootAliases()];
-  const walked = /* @__PURE__ */ new Set();
-  for (const root of roots) {
-    const abs = import_node_path5.default.resolve(cwd, root);
-    let key = abs;
-    try {
-      key = import_node_fs5.default.realpathSync(abs);
-    } catch {
-    }
-    if (walked.has(key)) continue;
-    walked.add(key);
-    walkTree(cwd, root, (rel, isDir) => {
-      if (isDir) return;
-      if (root === "docs") visitDocsTree(rel);
-      else visitMarkdown(rel);
-    });
-  }
-  return scan;
-}
-function scanManifestDir(cwd, issues) {
-  const abs = import_node_path5.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
-  if (!import_node_fs5.default.existsSync(abs)) return;
-  const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
-    const name = import_node_path5.default.basename(rel);
-    if (isDir) {
-      if (rel !== DOC_DRIVEN_DEV_DIR) {
-        issues.push({
-          reason: "legacy-state-file",
-          path: rel,
-          detail: `unaccounted-for directory inside ${DOC_DRIVEN_DEV_DIR}`
-        });
-      }
-      return;
-    }
-    if (MANIFEST_DIR_ALLOWED_FILES.has(name)) return;
-    if (/\.ya?ml$/i.test(name)) {
-      let legacy = false;
-      try {
-        const parsed = load(import_node_fs5.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8"));
-        if (isPlainObject3(parsed)) {
-          const version2 = parsed.schemaVersion;
-          legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
-        }
-      } catch {
-      }
-      issues.push({
-        reason: legacy ? "legacy-graph-state" : "legacy-state-file",
-        path: rel,
-        detail: legacy ? `graph/state YAML inside ${DOC_DRIVEN_DEV_DIR} predates Graph Definition ${EXPECTED_COMPONENT_VERSIONS.graphDefinition}` : `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
-      });
-      return;
-    }
-    issues.push({
-      reason: "legacy-state-file",
-      path: rel,
-      detail: `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
-    });
-  }, (rel) => {
-    issues.push({
-      reason: "legacy-state-file",
-      path: rel,
-      detail: `entry inside ${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link`
-    });
-  });
-  if (!walked) {
-    let directory = false;
-    try {
-      directory = import_node_fs5.default.statSync(abs).isDirectory();
-    } catch {
-    }
-    issues.push({
-      reason: "scope-escape",
-      path: DOC_DRIVEN_DEV_DIR,
-      detail: directory ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted` : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`
-    });
-  }
-}
-function scanExecutionState(cwd, issues) {
-  const abs = import_node_path5.default.resolve(cwd, EXECUTION_STATE_ROOT);
-  if (!import_node_fs5.default.existsSync(abs)) return;
-  const marker = (rel, detail) => {
-    issues.push({ reason: "legacy-execution-state", path: rel, detail });
-  };
-  const walked = walkTree(cwd, EXECUTION_STATE_ROOT, (rel, isDir) => {
-    const relUnderRoot = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "");
-    const segments = relUnderRoot.split("/").filter(Boolean);
-    if (isDir) {
-      if (segments.length === 0) return;
-      if (segments[0] !== "runs") {
-        marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
-      }
-      return;
-    }
-    if (segments[0] !== "runs" || segments.length < 3) {
-      marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
-      return;
-    }
-    const name = segments[segments.length - 1];
-    if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
-      let version2;
-      try {
-        version2 = JSON.parse(import_node_fs5.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8")).schemaVersion;
-      } catch {
-        version2 = null;
-      }
-      if (version2 !== EXECUTION_RUN_SCHEMA_VERSION) {
-        marker(rel, `run manifest schemaVersion is ${JSON.stringify(version2)}, expected ${EXECUTION_RUN_SCHEMA_VERSION}`);
-      }
-    }
-  }, (rel) => {
-    marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
-  });
-  if (!walked) {
-    let directory = false;
-    try {
-      directory = import_node_fs5.default.statSync(abs).isDirectory();
-    } catch {
-    }
-    issues.push({
-      reason: "scope-escape",
-      path: EXECUTION_STATE_ROOT,
-      detail: directory ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed` : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`
-    });
-  }
-}
-function readManifest(cwd) {
-  const rel = SCHEMA_MANIFEST_PATH;
-  const abs = import_node_path5.default.resolve(cwd, rel);
-  if (!import_node_fs5.default.existsSync(abs)) return { state: "missing" };
-  if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
-  let raw;
-  try {
-    raw = import_node_fs5.default.readFileSync(abs, "utf8");
-  } catch (error62) {
-    return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error62) {
-    return { state: "malformed", detail: `schema.json is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
-  }
-  if (!isPlainObject3(parsed)) {
-    return { state: "malformed", detail: "schema.json must be a JSON object" };
-  }
-  const versionIssues = [];
-  const schemaVersion = parsed.schemaVersion;
-  if (!Number.isInteger(schemaVersion) || schemaVersion <= 0) {
-    return { state: "malformed", detail: `schemaVersion must be a positive integer, got ${JSON.stringify(schemaVersion)}` };
-  }
-  if (schemaVersion > MANIFEST_SCHEMA_VERSION) {
-    versionIssues.push({
-      reason: "schema-version-unsupported",
-      path: rel,
-      detail: `manifest schemaVersion ${schemaVersion} is newer than supported ${MANIFEST_SCHEMA_VERSION} \u2014 upgrade the doc-driven-dev toolchain`
-    });
-  }
-  const declared = { schemaVersion };
-  for (const [key, expected] of Object.entries(EXPECTED_COMPONENT_VERSIONS)) {
-    const value = parsed[key];
-    if (value === void 0) {
-      return { state: "malformed", detail: `missing component version: ${key}` };
-    }
-    if (!Number.isInteger(value) || value <= 0) {
-      return { state: "malformed", detail: `${key} must be a positive integer, got ${JSON.stringify(value)}` };
-    }
-    declared[key] = value;
-    if (value > expected) {
-      versionIssues.push({
-        reason: "component-version-unsupported",
-        path: rel,
-        detail: `${key} ${value} is newer than supported ${expected} \u2014 upgrade the doc-driven-dev toolchain`
-      });
-    } else if (value < expected) {
-      versionIssues.push({
-        reason: "component-version-behind",
-        path: rel,
-        detail: `${key} ${value} is behind supported ${expected} \u2014 migration is required`
-      });
-    }
-  }
-  let migrationInProgress = false;
-  if (parsed.migration !== void 0) {
-    if (!isPlainObject3(parsed.migration)) {
-      return { state: "malformed", detail: "migration must be an object when present" };
-    }
-    const status = parsed.migration.status;
-    if (status !== void 0 && status !== "in-progress") {
-      return { state: "malformed", detail: `migration.status must be "in-progress" when present, got ${JSON.stringify(status)}` };
-    }
-    migrationInProgress = status === "in-progress";
-  }
-  return { state: "read", declared, migrationInProgress, versionIssues };
-}
-function journalPresent(cwd) {
-  return import_node_fs5.default.existsSync(import_node_path5.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
-}
-function recommendedCommand(status, docCount) {
-  const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
-  switch (status) {
-    case "current":
-      return null;
-    case "uninitialized":
-      return docCount === 0 ? { command: "node .apm/skills/doc-maintenance/scripts/scaffold_docs.js", note: "no manifest and no managed content \u2014 scaffold the doc tree, or declare the current schema via doc_maintenance.js migrate plan/apply" } : { command: `${maintenance} migrate plan --json`, note: "no schema manifest \u2014 run migrate plan to evaluate whether migration is needed, then migrate apply to declare the schema" };
-    case "migration-required":
-      return { command: `${maintenance} migrate plan --json`, note: "legacy artifacts or older declared versions \u2014 plan the migration, then run migrate apply --expect <planHash>" };
-    case "migration-incomplete":
-      return { command: `${maintenance} migrate recovery --json`, note: "a migration journal or in-progress marker is present \u2014 inspect and recover before normal execution resumes" };
-    case "unsupported-version":
-      return { command: null, note: "the manifest declares a newer schema generation than this toolchain supports \u2014 upgrade doc-driven-dev, do not downgrade by hand" };
-    case "invalid":
-      return { command: `${maintenance} migrate plan --json`, note: "manifest or repository state cannot be verified \u2014 run migrate plan for the full diagnostic" };
-  }
-}
-function statusSummary(report) {
-  switch (report.status) {
-    case "current":
-      return "schema manifest and repository content are consistent with the declared versions";
-    case "uninitialized":
-      return "no schema manifest; nothing provably pre-contract found";
-    case "migration-required":
-      return "legacy artifacts or older declared schema versions require migration";
-    case "migration-incomplete":
-      return "a migration journal or in-progress marker indicates a half-applied migration";
-    case "unsupported-version":
-      return "the manifest declares a schema generation newer than this toolchain";
-    case "invalid":
-      return "the manifest or repository state failed boundary validation";
-  }
-}
-function evaluateSchemaPreflight(cwd) {
-  const root = import_node_path5.default.resolve(cwd);
-  const scan = scanDocuments(root);
-  scanManifestDir(root, scan.issues);
-  scanExecutionState(root, scan.issues);
-  const manifest = readManifest(root);
-  const journal = journalPresent(root);
-  const escapes = scan.issues.filter((issue2) => issue2.reason === "scope-escape");
-  const finish = (status, issues, manifestInfo2) => {
-    const legacyMarkers = new Set(
-      [...issues, ...scan.manifestScopedIssues].filter((issue2) => issue2.reason.startsWith("legacy-")).map((issue2) => `${issue2.reason}:${issue2.path}`)
-    ).size;
-    const managedDocs = scan.canonicalDocs + scan.unmanagedDocs;
-    const generation = escapes.length > 0 ? "unknown" : legacyMarkers > 0 ? scan.canonicalDocs > scan.executionDocs ? "mixed" : "legacy" : managedDocs === 0 ? "empty" : "current";
-    const report = {
-      status,
-      issues,
-      manifest: manifestInfo2,
-      detected: {
-        generation,
-        canonicalDocs: scan.canonicalDocs,
-        executionDocs: scan.executionDocs,
-        unmanagedDocs: scan.unmanagedDocs,
-        legacyMarkers,
-        manifestMarkers: scan.manifestScopedIssues
-      },
-      recommended: recommendedCommand(status, managedDocs)
-    };
-    return report;
-  };
-  const readManifestInfo = manifest.state === "read" ? { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared } : { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null };
-  if (escapes.length > 0) {
-    return finish("invalid", escapes, readManifestInfo);
-  }
-  if (manifest.state === "escaped") {
-    return finish("invalid", [{ reason: "manifest-escaped", path: SCHEMA_MANIFEST_PATH, detail: "schema.json resolves outside the checkout" }], { path: SCHEMA_MANIFEST_PATH, state: "escaped", declared: null });
-  }
-  if (manifest.state === "unreadable") {
-    return finish("invalid", [{ reason: "manifest-unreadable", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "unreadable", declared: null });
-  }
-  if (manifest.state === "malformed") {
-    return finish("invalid", [{ reason: "manifest-malformed", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "malformed", declared: null });
-  }
-  if (manifest.state === "missing") {
-    if (journal) {
-      return finish("migration-incomplete", [{ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal exists without a finalized manifest \u2014 the apply did not complete" }], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-    }
-    const relevant = scan.issues.filter((issue2) => issue2.reason.startsWith("legacy-"));
-    if (relevant.length > 0) {
-      return finish("migration-required", relevant, { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-    }
-    return finish("uninitialized", [], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-  }
-  const manifestIssues = manifest.versionIssues;
-  const unsupported = manifestIssues.filter((issue2) => issue2.reason === "schema-version-unsupported" || issue2.reason === "component-version-unsupported");
-  const manifestInfo = { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared };
-  if (unsupported.length > 0) {
-    return finish("unsupported-version", unsupported, { ...manifestInfo, state: "unsupported" });
-  }
-  const inProgress = [];
-  if (manifest.migrationInProgress) {
-    inProgress.push({ reason: "manifest-migration-in-progress", path: SCHEMA_MANIFEST_PATH, detail: "manifest declares migration.status: in-progress" });
-  }
-  if (journal) {
-    inProgress.push({ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal is present \u2014 the apply did not complete" });
-  }
-  if (inProgress.length > 0) {
-    return finish("migration-incomplete", inProgress, manifestInfo);
-  }
-  const behind = manifestIssues.filter((issue2) => issue2.reason === "component-version-behind");
-  const allIssues = [...scan.issues, ...scan.manifestScopedIssues, ...behind];
-  if (allIssues.length > 0) {
-    return finish("migration-required", allIssues, manifestInfo);
-  }
-  return finish("current", [], manifestInfo);
-}
-function normalExecutionAllowed(status) {
-  return status === "current" || status === "uninitialized";
-}
-function entrypointRefusal(report) {
-  return {
-    error: "schema-preflight-blocked",
-    exitCode: SCHEMA_PREFLIGHT_EXIT_CODE,
-    readOnly: true,
-    preflight: report
-  };
-}
-function schemaEntrypointGuard(cwd) {
-  const report = evaluateSchemaPreflight(cwd);
-  if (normalExecutionAllowed(report.status)) return true;
-  console.log(JSON.stringify(entrypointRefusal(report), null, 2));
-  const recommended = report.recommended?.command ?? "inspect docs/.doc-driven-dev/schema.json";
-  console.error(`schema preflight blocked (${report.status}): ${statusSummary(report)} \u2014 run ${recommended}`);
-  process.exitCode = SCHEMA_PREFLIGHT_EXIT_CODE;
-  return false;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/fetch_context.ts
@@ -27692,6 +28564,9 @@ strip-bom-string/index.js:
    * Copyright (c) 2015, 2017, Jon Schlinkert.
    * Released under the MIT License.
    *)
+
+safe-buffer/index.js:
+  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
 
 js-yaml/dist/js-yaml.mjs:
   (*! js-yaml 5.5.0 https://github.com/nodeca/js-yaml @license MIT *)

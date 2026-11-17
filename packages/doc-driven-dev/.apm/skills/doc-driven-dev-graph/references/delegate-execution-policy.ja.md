@@ -74,15 +74,18 @@ JSON-serializable な `DelegateHandoff` を受け取ります。
 | --- | --- |
 | `executionMode` | dispatch が要求された trace `ExecutionMode`（`tool`/`subagent`）— handoff がこれを固定するため、delegate は runner が記録した mode と異なる mode で実行できない |
 | `focus` | delegate が集中する repo 相対 path |
-| `authoritativeInputs` | outcome がそのまま echo しなければならない live canonical reference |
+| `authoritativeInputs` | outcome の `inputs` がそのまま echo しなければならない live な型付き reference |
 | `sourceRefs` | context として渡す追加の live canonical reference |
 | `acceptanceCriteria` | delegate の完了条件 |
 | `permissions` | delegate が触れてよい `{ read, write }` の repo 相対 scope |
 | `toolLimits` | delegate が使ってよい tool 識別子 |
 | `budget` | `{ maxHops }` の hop 上限 — デフォルト `1`。multi-hop delegate flow では明示的に拡張する |
-| `completion` | 必須の完了文 — canonical evidence を伴う completed `EffectOutcome` |
+| `completion` | 必須の完了文 — canonical outputs と proof を伴う completed `EffectOutcome` |
 
-canonical reference は `path`、`id`、`fingerprint` で artifact を識別します。
+型付き reference は `kind` とその kind の binding field で artifact を識別
+します — `durable-document` reference は `path`、`id`、内容を示す
+`revision` を、`provider` reference は `provider` と `idempotencyKey` を
+持ちます。
 verification に関係する情報を lossy な要約で代用してはいけません — handoff は
 live reference を保持し、delegate がその時点の内容を解決します。`completion`
 field は `EffectOutcome` footer を完了形状として宣言します — delegate はその
@@ -127,12 +130,12 @@ caller はすべての observation を `dispatch-observed` trace event として
 compact な戻り値は
 [execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) が定義する
 `EffectOutcome` に正規化されます。`completed`、`retry`、`yield` のいずれかで、
-それぞれ canonical な `authoritativeInputs` と `evidence` を持ちます。
+それぞれ型付きの `inputs` と `outputs` を持ちます。
 
 execution mode に関わらず、同じ `assertEffectOutcome` validation が適用されます。
 `edgeId`、`stage`、effect identity の不一致、解決済み入力集合からずれた
-`authoritativeInputs`、fingerprint が現在の canonical content を解決しなくなった
-evidence（stale evidence）、status ごとの必須 field の欠落や禁止 field の存在は、
+`inputs`、revision が現在の canonical content を解決しなくなった
+outputs（stale outputs）、status ごとの必須 field の欠落や禁止 field の存在は、
 effect が in-context、tool、isolated subagent のどれで実行されても同じように
 拒否されます。mode が contract を緩めることはありません — `permissions.write` の
 外への書き込みは handoff 違反のままであり、宣言されていない edge や間違った

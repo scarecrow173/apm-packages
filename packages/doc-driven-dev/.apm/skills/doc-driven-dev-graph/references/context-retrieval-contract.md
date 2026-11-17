@@ -80,8 +80,8 @@ Output: `{ "level": "L2", "documents": [...], "findings": [...] }`, where each
 document is `{ path, id, body }` — `body` is the Markdown body without front
 matter. Documents are emitted only for refs that pass validation, sorted by
 `path`. L2 is required for a delegate's authoritative inputs: a handoff
-canonical reference (`path`, `id`, `fingerprint`) maps to `--fetch <path>`
-plus its `--id` and `--fingerprint` pins.
+canonical reference (`kind`, `path`, `id`, `revision`) maps to `--fetch <path>`
+plus its `--id` pin and a `--fingerprint` pin carrying `revision`.
 
 Pin semantics:
 

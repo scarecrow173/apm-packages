@@ -10,8 +10,8 @@ import type { E2ECase } from "../harness/case_types";
  * `commit-waived` is absent, so the runner captures a git baseline before
  * dispatch. The scripted delegate completes and its `mutate` writes the
  * honest work product — TASK-0001 → `done` plus the implementation record —
- * and `commitEvidence` is deliberately NOT set, so applyEvidence records the
- * checkpoint receipt but never commits. `after.dirty` then has new porcelain
+ * and `commitEvidence` is deliberately NOT set, so applyCheckpointEvidence
+ * declares the task doc but never commits. `after.dirty` then has new porcelain
  * entries outside the baseline → the commit gate fails → `commit-required`
  * yield with `pending.commitBaseline` + `evidenceRecorded: true` retained in
  * the handoff.

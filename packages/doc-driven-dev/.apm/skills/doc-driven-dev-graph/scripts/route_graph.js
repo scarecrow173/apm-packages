@@ -27936,7 +27936,7 @@ function normalizeTraceEvent(raw) {
         stage: requireStage(record2.stage),
         effectId: requireString(record2.effectId, "effectId"),
         outcome,
-        evidencePaths: requireRelativePaths(record2.evidencePaths, "evidencePaths")
+        outputPaths: requireRelativePaths(record2.outputPaths, "outputPaths")
       };
       if (record2.reason !== void 0) event.reason = record2.reason;
       return event;

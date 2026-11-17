@@ -101,8 +101,9 @@ The evaluation order is deterministic:
    `blockers` and `blockedReasons`.
 
 The command does not recursively evaluate the selected destination. It records
-the evidence for one decision and leaves the caller to persist Markdown evidence,
-run required audits, and invoke the next turn.
+the evidence for one decision and leaves the caller to run required audits,
+persist Effect Receipts and the edge checkpoint in the run's Execution Store,
+and invoke the next turn.
 
 ## Runtime projection inclusion
 

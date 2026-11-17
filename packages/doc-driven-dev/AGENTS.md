@@ -10,7 +10,7 @@ normative execution authority; phase labels are conceptual mapping only.
 The runtime contract is:
 
 `Graph Definition -> fresh Graph State -> one declared route -> audit/delegate ->
-canonical Markdown checkpoint -> re-project -> caller evaluates yield -> repeat or yield`.
+Execution Store checkpoint -> re-project -> caller evaluates yield -> repeat or yield`.
 
 `run-until-yield` is the normal caller mode; `single-step` remains available for
 debugging, inspection, deterministic testing, or one-checkpoint execution. The
@@ -35,7 +35,8 @@ Eligible outgoing edges are ordered by ascending `priority`, then stable edge
 ID. Each invocation returns exactly one of a declared edge transition, a
 same-node blocked result with no edge, or a terminal result with no edge. The
 caller runs all returned audits, dispatches only the returned delegate, records
-Markdown evidence, and re-enters at `next`.
+Effect Receipts and the edge checkpoint in the run's Execution Store, and
+re-enters at `next`.
 
 `focus-required` blocks dispatch until explicit focus is supplied. A terminal
 route is idempotent. A blocked route never guesses from filenames, path

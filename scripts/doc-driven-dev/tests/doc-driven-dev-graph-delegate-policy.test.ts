@@ -84,8 +84,8 @@ test("handoff carries mode, canonical refs, permissions, budget, completion — 
   const handoff = buildDelegateHandoff({
     mode: "subagent",
     focus: ["docs/specs/0001-graph.md"],
-    inputs: [{ path: "docs/specs/0001-graph.md", id: "SPEC-0001", fingerprint: "sha256:abc" }],
-    sourceRefs: [{ path: "docs/discovery/0001-graph.md", id: "DISC-0001", fingerprint: "sha256:def" }],
+    inputs: [{ kind: "durable-document", path: "docs/specs/0001-graph.md", id: "SPEC-0001", revision: "sha256:abc" }],
+    sourceRefs: [{ kind: "durable-document", path: "docs/discovery/0001-graph.md", id: "DISC-0001", revision: "sha256:def" }],
     criteria: ["briefing gate passes"],
     permissions: { read: ["docs/**"], write: ["docs/specs/**", "docs/adr/**"] },
     toolLimits: ["read", "write", "exec:test"],
@@ -94,7 +94,7 @@ test("handoff carries mode, canonical refs, permissions, budget, completion — 
   });
   assert.equal(handoff.executionMode, "subagent");
   assert.deepEqual(handoff.focus, ["docs/specs/0001-graph.md"]);
-  assert.equal(handoff.authoritativeInputs[0].id, "SPEC-0001");
+  assert.equal(handoff.authoritativeInputs[0].kind === "durable-document" && handoff.authoritativeInputs[0].id, "SPEC-0001");
   assert.equal(handoff.budget.maxHops, 4);
   assert.equal(handoff.completion.includes("EffectOutcome"), true);
   assert.doesNotThrow(() => JSON.stringify(handoff));

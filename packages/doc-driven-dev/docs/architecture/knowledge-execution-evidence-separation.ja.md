@@ -97,10 +97,10 @@ Callerは bounded **run-to-yield** ループを所有する(`execution-contract.
 
 1. `route_graph.js` が `current` に対して1つの `GraphRoute` を返す。
 2. 宣言されたauditを安定順で実行し、返却されたdelegateのみをdispatchする。
-3. 完了 / gate / follow-up の証拠を **canonical Markdown** に永続化する —
-   task front matterが `effectOutcomes` / `checkpointEvidence` を持ち、
-   callerは `--task-dir docs/tasks` を自身の帳簿アンカーとしてピン留めする
-   (`DEFAULT_PROOF_PATH = docs/tasks/0001-task.md`)。
+3. 完了 / gate / follow-up の証拠を run の **Execution Store** に永続化する —
+   受理されたoutcomeはEffect Receipt(`receipts/`)となり、edgeは
+   checkpoint(`checkpoints/`)となる。callerは `--task-dir docs/tasks` を
+   task-budgetアンカーとしてピン留めする。
 4. 再投影して継続(`run-until-yield`)するか停止(`single-step`)する。
 
 このループを取り巻く仕組み:
@@ -254,7 +254,8 @@ root: worktreeごとの `.apm/state/doc-driven-dev/runs/<run-id>/`
   (`active` / `runnable` / `resumableActive` / `blocked` / `idle`、
   cycle/duplicate/未解決/空でfail-closed、`wont-do` は依存を充足しない)。
   異なるrunやworktree由来のtaskを混線させない。
-- **Caller Effect Receipt / Checkpoint / Commit Gate**: `docs/tasks` の
+- **Caller Effect Receipt / Checkpoint / Commit Gate**(`#238` でlanded):
+  `docs/tasks` の
   proof pathとfront matter `effectOutcomes` / `checkpointEvidence` は廃止。
   `EffectOutcome` のinput/outputは型付きReference(durable文書+revision /
   execution task+version / provider冪等性)になる。effect scope照合、

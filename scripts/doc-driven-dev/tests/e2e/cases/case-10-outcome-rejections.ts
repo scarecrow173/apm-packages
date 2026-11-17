@@ -9,12 +9,12 @@ import type { EdgeScript } from "../harness/scripted_dispatcher";
  * order + delegate briefing-flow):
  *
  *  10a `{malformed:"missing-proof"}` — completed outcome with `proof:{}`:
- *     assertEffectOutcome requires exactly one of canonicalEvidence or
- *     providerIdempotency.
- *  10b `{malformed:"stale-fingerprint"}` — evidence fingerprint zeroed:
- *     `canonicalEvidenceMatches` fails against live content.
- *  10c `{malformed:"scope-mismatch"}` — `authoritativeInputs: []`: violates
- *     the non-empty canonical-reference contract.
+ *     assertEffectOutcome requires a typed durable-document or provider
+ *     proof reference.
+ *  10b `{malformed:"stale-revision"}` — output revision zeroed:
+ *     `referenceIsLive` fails against live content.
+ *  10c `{malformed:"scope-mismatch"}` — `inputs: []`: violates the non-empty
+ *     typed-reference contract.
  *
  * In every sibling the dispatch DOES happen — `effect-dispatched` for `spec`
  * is emitted — then `assertEffectOutcome` throws `OutcomeRejection`, the
@@ -25,7 +25,7 @@ import type { EdgeScript } from "../harness/scripted_dispatcher";
  * delegate is never reached.
  */
 const script = (
-  malformed: "missing-proof" | "stale-fingerprint" | "scope-mismatch",
+  malformed: "missing-proof" | "stale-revision" | "scope-mismatch",
 ): Record<string, EdgeScript> => ({
   "probe-to-briefing": {
     audits: { adr: "completed" as const, spec: { malformed } },
@@ -63,13 +63,13 @@ export const case10b: E2ECase = {
   description: "stale evidence fingerprint on spec audit outcome → authority-required",
   fixture: { taskStatuses: ["todo"] },
   focus: ["PLAN-0001"],
-  script: script("stale-fingerprint"),
+  script: script("stale-revision"),
   expect: expectContract,
 };
 
 export const case10c: E2ECase = {
   id: "e2e-10c",
-  description: "scope-mismatched authoritativeInputs on spec audit outcome → authority-required",
+  description: "scope-mismatched inputs on spec audit outcome → authority-required",
   fixture: { taskStatuses: ["todo"] },
   focus: ["PLAN-0001"],
   script: script("scope-mismatch"),

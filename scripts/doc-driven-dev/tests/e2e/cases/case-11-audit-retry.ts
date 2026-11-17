@@ -18,9 +18,9 @@ import type { E2ECase } from "../harness/case_types";
  * the audit (the scripted queue pins the order retry→completed — the DSL
  * tallies event kinds, not outcome payloads), the edge appears in
  * `completedEdges`, and the run-yield's own `completedEdges` + the universal
- * checkpointEvidence invariant prove the receipt was recorded exactly once
- * (the evidence phase runs once per edge completion — the retry pass never
- * reached it).
+ * Execution-Store checkpoint invariant prove the checkpoint was recorded
+ * exactly once (the evidence phase runs once per edge completion — the
+ * retry pass never reached it).
  */
 export const case11: E2ECase = {
   id: "e2e-11",

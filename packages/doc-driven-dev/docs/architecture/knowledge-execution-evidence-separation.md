@@ -103,10 +103,10 @@ The caller owns a bounded **run-to-yield** loop (`execution-contract.md`):
 
 1. `route_graph.js` returns one `GraphRoute` for `current`.
 2. Run declared audits in stable order; dispatch only the returned delegate.
-3. Persist completion / gate / follow-up evidence in **canonical Markdown**
-   — task front matter carries `effectOutcomes` / `checkpointEvidence`, and
-   the caller pins `--task-dir docs/tasks` as its bookkeeping anchor
-   (`DEFAULT_PROOF_PATH = docs/tasks/0001-task.md`).
+3. Persist completion / gate / follow-up evidence in the run's
+   **Execution Store** — accepted outcomes become Effect Receipts
+   (`receipts/`) and the edge becomes a checkpoint (`checkpoints/`); the
+   caller pins `--task-dir docs/tasks` as its task-budget anchor.
 4. Re-project and continue (`run-until-yield`) or stop (`single-step`).
 
 Around that loop:
@@ -271,8 +271,8 @@ Into this store move (`#237`, `#238`):
   `resumableActive` / `blocked` / `idle`, fail-closed on cycle/duplicate/
   unresolved/empty, `wont-do` never satisfies a dependency). Tasks from
   different runs or worktrees never mix.
-- **Caller Effect Receipts / Checkpoints / Commit Gate**: the
-  `docs/tasks` proof path and front-matter `effectOutcomes` /
+- **Caller Effect Receipts / Checkpoints / Commit Gate** (landed in
+  `#238`): the `docs/tasks` proof path and front-matter `effectOutcomes` /
   `checkpointEvidence` are retired. `EffectOutcome` input/output becomes a
   typed reference (durable doc + revision / execution task + version /
   provider idempotency). Effect scope checks, dispatch attribution, stored-

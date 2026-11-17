@@ -64,6 +64,25 @@ idempotencyKey, actor, status: success|failure|waived, at, input, output }`。
 `record-conflict` です。receipt は effect が「実行された」ことを証明する
 ものであり、check の結果である Evidence Record（`#240`）ではありません。
 
+## Graph caller の利用（Issue `#238`）
+
+graph caller はこの store の最初の consumer です。受理した `completed`
+`EffectOutcome` ごとに、`input` が dispatch scope —
+`{ edgeId, stage, effect, inputs }` — を、`output` が結果 —
+`{ outputs, proof }` — を bind する receipt を書き込みます。これらはすべて
+outcome contract の型付き reference で、`actor` は adapter が報告した
+dispatch mode/method を記録し、provider proof では `idempotencyKey` を
+設定します。edge の evidence phase が成功すると、`data` が
+`{ edgeId, receipts, outputs, routeHash }` となる checkpoint を 1 件
+書き込みます。それぞれ内容から導出された receipt id、bind された全
+output reference、完了 route の診断ハッシュです。caller handoff は
+`runId` と pending edge の `evidenceCheckpointId` を保持します。resume
+が stage を skip するのは、記録された receipt が同一 scope を証明し、
+bind された output と proof がまだ current state を resolve するときだけ
+です — 失われた、または偽造された outcome は記録済み evidence に成り
+済ませられません。receipt と checkpoint が権威ある per-run 実行状態で
+あり、`run_trace.jsonl` は診断用途に限られます。
+
 ## 整合性モデル
 
 - **run ごとの single writer。** `writer.lock`（O_EXCL 作成、`{pid,

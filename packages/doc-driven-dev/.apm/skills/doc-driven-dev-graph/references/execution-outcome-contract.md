@@ -7,20 +7,24 @@ one `GraphRunResult` when it yields.
 
 ## EffectOutcome footer
 
-Every footer has this scope. Record canonical paths, IDs, and fingerprints, not
-prose claims that work was completed.
+Every footer has this scope. References are typed and bound to live state:
+`kind` names the reference class — a `durable-document` is canonical Markdown
+located by `path` + front-matter `id` and pinned by `revision` (its canonical
+content fingerprint); an `execution-task` is a task record inside the run's
+Execution Store, pinned by `runId` + `taskId` + CAS `version`; a `provider`
+reference carries its `idempotencyKey`. Record references, not prose claims
+that work was completed.
 
 ```yaml
 status: completed
 edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
-authoritativeInputs:
-  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:input }
-evidence:
-  - { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:evidence }
-proof:
-  canonicalEvidence: { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:evidence }
+inputs:
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
+outputs:
+  - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
+proof: { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
 ```
 
 ```yaml
@@ -28,13 +32,13 @@ status: retry
 edgeId: implementation-to-design
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
-authoritativeInputs:
-  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:before }
-evidence:
-  - { path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, fingerprint: sha256:changed }
+inputs:
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
+outputs:
+  - { kind: durable-document, path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, revision: sha256:changed }
 retry:
-  changedEvidence:
-    - { path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, fingerprint: sha256:changed }
+  changedOutputs:
+    - { kind: durable-document, path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, revision: sha256:changed }
 ```
 
 ```yaml
@@ -42,10 +46,10 @@ status: yield
 edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
-authoritativeInputs:
-  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:input }
-evidence:
-  - { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:checkpoint }
+inputs:
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
+outputs:
+  - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:checkpoint }
 reason: authority-required
 ```
 
@@ -53,14 +57,21 @@ The status variant adds these required and forbidden fields:
 
 | Status | Required | Forbidden |
 | --- | --- | --- |
-| `completed` | exactly one `proof.canonicalEvidence` (`path`, `id` when present, `fingerprint`) or `proof.providerIdempotency` (`provider`, `key`) | `reason`, `retry` |
-| `retry` | `retry.changedEvidence` with the changed canonical path/ID/fingerprint | `proof`, `reason` |
+| `completed` | `proof` as a `durable-document` reference (`kind`, `path`, `id`, `revision`) or a `provider` reference (`kind: provider`, `provider`, `idempotencyKey`) | `reason`, `retry` |
+| `retry` | `retry.changedOutputs` with the changed canonical references | `proof`, `reason` |
 | `yield` | `reason`: `approval-required`, `input-required`, `authority-required`, `unrecoverable-blocker`, or `commit-required` | `proof`, `retry` |
 
-`evidence` records the canonical checkpoint for every outcome. A `completed`
-outcome additionally proves this particular effect: either canonical evidence
-proves it or the external provider idempotency key proves it. Do not use a
-route fingerprint as the proof.
+`outputs` records the canonical outputs for every outcome. A `completed`
+outcome additionally proves this particular effect: either a durable-document
+proof binds its produced canonical content or a provider reference proves an
+irreversible external effect by its idempotency key. Do not use a route
+fingerprint as the proof.
+
+Accepted `completed` outcomes are persisted as Effect Receipts in the run's
+Execution Store (`.apm/state/doc-driven-dev/runs/<runId>/receipts/`); the edge
+checkpoint follows in `checkpoints/`. These receipts are execution-side proof
+that effects completed — they are not Verification Evidence, which belongs to
+the verification-side store.
 
 ## GraphRunResult at yield
 
@@ -99,6 +110,7 @@ type GraphRunTrace = {
 }
 
 type GraphRunHandoff = {
+  runId: string;
   current: string;
   mode: "single-step" | "run-until-yield";
   maxHops: number;
@@ -122,6 +134,7 @@ type GraphRunHandoff = {
     completedAudits: string[];
     delegateComplete: boolean;
     evidenceRecorded: boolean;
+    evidenceCheckpointId: string | null;
     commitBaseline: { head: string | null; dirty: string[] } | null;
     dispatches: number;
   } | null;
@@ -136,7 +149,8 @@ evidence/checkpoint flags. `commitWaived` is `true` when the edge's
 destination declares `commitGate` and the caller applied the declared
 `commit-waived` signal for that edge, and `false` otherwise; this is how a
 waived gate is recorded in the run trace. `GraphRunHandoff` retains the
-resume fields:
+resume fields: `runId` binds the Execution Store run every receipt and
+checkpoint was recorded under,
 `current`, mode, `maxHops`, the per-edge dispatch budget `maxDispatchesPerEdge`,
 the run-level dispatch bound `maxTotalDispatches`,
 focus, signals, graph path, completed edge IDs,
@@ -144,7 +158,9 @@ seen route fingerprints, the frozen task-budget basis, audit/delegate counters,
 the accumulated `totalDispatches` count,
 completed routes, trace, outcomes, pending edge, and hop count. `null` means
 the caller supplied an explicit `maxHops`; a non-negative number is the
-immutable dynamic-default basis.
+immutable dynamic-default basis. The pending edge's `evidenceCheckpointId`
+names the Execution Store checkpoint its evidence phase recorded, so a resume
+verifies the checkpoint record rather than trusting the flag alone.
 
 ## Caller-normalized effects
 
@@ -164,10 +180,10 @@ gate (see the canonical-input section below), so the adapter never
 normalizes a completed outcome for them until the graph definition is
 rewired under #243.
 
-The adapter records effect-specific canonical inputs and evidence before it
-returns `completed` or `retry`. Missing or malformed adapter evidence fails
-closed with `authority-required`; it never creates a checkpoint or completion
-receipt.
+The adapter records effect-specific canonical inputs and outputs before it
+returns `completed` or `retry`. Missing or malformed adapter outputs fail
+closed with `authority-required`; the caller never records a receipt or edge
+checkpoint for them.
 
 ## Effect-specific canonical inputs
 
@@ -195,8 +211,8 @@ plan-linked test spec and task documents, `implementation-flow` reads selected t
 design/plan and linked test specs, and records its Implementation Record, and
 `doc-status` reads the declared document set. Script-adapter inputs are
 `migrate_docs` (declared document set), `scaffold_docs` (workspace-root bootstrap input), and
-`build_task_graph` (focused plan plus selected task documents). Every referenced path/ID and
-fingerprint must resolve against current canonical content before use.
+`build_task_graph` (focused plan plus selected task documents). Every referenced
+typed reference must resolve against current state before use.
 
 ## Existing delegate meanings
 
@@ -206,7 +222,7 @@ This contract renders existing semantics; it does not add workflow states.
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate passes | recoverable document gap | `input-required` for an unresolved user-only requirement |
 | `design-doc` | design is approved | — | `approval-required` for its designated reviewer; `input-required` for an upstream user decision |
-| `planning-flow` | approved/active plan plus linked test-spec/task evidence (or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior) | changed canonical plan/test-spec/task repair evidence | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
+| `planning-flow` | approved/active plan plus linked test-spec/task evidence (or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior) | changed plan/test-spec/task repair evidence — under Document Registry 3 these are execution-bound, not canonical durable documents | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
 | `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `commit-required` when its slice produced changes it cannot commit within granted authority; `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
 | `doc-status` | documents are Completable | Returned with declared repair evidence | `unrecoverable-blocker` when Returned has no safe repair |
 
@@ -218,8 +234,8 @@ It then matches `EffectOutcome.status` and, for `yield`, `reason` exactly; it
 does not infer a result from free-form delegate prose.
 
 - `completed` may skip only this scoped audit or delegate stage after its input
-  scope and proof validate.
-- `retry` is auto-continuable only after its canonical changed evidence is
+  scope, recorded receipt, outputs, and proof validate.
+- `retry` is auto-continuable only after its declared changed outputs are
   re-projected and a fresh route selects a declared edge.
 - `yield` stops with its exact reason.
 
@@ -227,15 +243,18 @@ At yield, the caller records a `GraphRunResult` handoff containing the complete
 `GraphRoute`, ordered `EffectOutcome` footers, bounded counters/trace, and the
 final yield reason. The retained route supports topology, terminal/blocked,
 and budget evaluation. Receipt validity binds only `edgeId`, stage, effect,
-authoritative inputs, evidence, and proof; it never requires byte-equivalent
+input scope, outputs, and proof; it never requires byte-equivalent
 complete `GraphRoute` objects.
 
 ## Resume and duplicate effects
 
-Re-project canonical Markdown before comparing a saved receipt. Skip a saved
-`completed` stage only when its `edgeId`, stage, effect identity, every
-authoritative input path/ID/fingerprint, and its canonical-evidence or
-provider-idempotency proof match the fresh scope. Missing proof yields
+Re-project state — canonical Markdown and the run's Execution Store
+records — before comparing a saved receipt. A pending
+`completed` stage is reused only when a recorded Effect Receipt in the run's
+Execution Store attests the same `edgeId`, stage, effect, input binding, and
+output/proof result, the fresh route resolves the same input scope (the same
+multiset of typed references), and every bound output plus the proof still
+resolves current state. Missing proof or a missing receipt yields
 `authority-required` rather than replaying an irreversible effect.
 
 For example, an `implementation-flow` receipt scoped to Task Graph A cannot

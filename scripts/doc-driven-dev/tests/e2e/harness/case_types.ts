@@ -26,8 +26,6 @@ export type E2ECase = {
   graph?: string;
   maxHops?: number;
   mode?: "run-until-yield" | "single-step";
-  /** Default "docs/tasks/0001-task.md". */
-  proofPath?: string;
   /** Dispatcher script (keyed by edgeId). */
   script?: Record<string, EdgeScript>;
   /**

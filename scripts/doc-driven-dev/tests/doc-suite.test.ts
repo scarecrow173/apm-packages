@@ -730,13 +730,13 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
     assert.ok(["audit", "delegate"].includes(outcome.stage));
     assert.ok(["audit", "delegate"].includes(outcome.effect.kind));
     assert.equal(typeof outcome.effect.id, "string");
-    assert.ok(Array.isArray(outcome.authoritativeInputs));
-    assert.ok(Array.isArray(outcome.evidence));
+    assert.ok(Array.isArray(outcome.inputs));
+    assert.ok(Array.isArray(outcome.outputs));
   }
-  assert.ok(footerVariants[0].proof.canonicalEvidence || footerVariants[0].proof.providerIdempotency);
-  assert.match(outcomeContract, /proof\.providerIdempotency/);
+  assert.ok(footerVariants[0].proof.kind === "durable-document" || footerVariants[0].proof.kind === "provider");
+  assert.match(outcomeContract, /kind: provider/);
   assert.equal("reason" in footerVariants[0], false);
-  assert.ok(Array.isArray(footerVariants[1].retry.changedEvidence));
+  assert.ok(Array.isArray(footerVariants[1].retry.changedOutputs));
   assert.equal("proof" in footerVariants[1], false);
   assert.equal(footerVariants[2].reason, "authority-required");
   assert.equal("proof" in footerVariants[2], false);
@@ -762,8 +762,8 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(outcomeContractJa, /`build_task_graph`（focused plan と選択 task document）/);
   assert.match(outcomeContractJa, /`planning-flow` は selected approved design を/);
   assert.match(outcomeContractJa, /selected plan とすべての produced plan-linked test spec および task document を記録/);
-  assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked test-spec\/task evidence \(or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior\) \| changed canonical plan\/test-spec\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
-  assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked test-spec\/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） \| changed canonical plan\/test-spec\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
+  assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked test-spec\/task evidence \(or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior\) \| changed plan\/test-spec\/task repair evidence — under Document Registry 3 these are execution-bound, not canonical durable documents \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
+  assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked test-spec\/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） \| changed plan\/test-spec\/task repair evidence（Document Registry 3 ではこれらは execution-bound であり、canonical durable document ではありません） \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
   assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*experiment-log.*all/s);
   assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
   assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));
@@ -869,7 +869,7 @@ test("implementation-flow opens impl-doc before task execution", () => {
   assert.match(adapter, /docs\/impl/);
 
   assert.match(graphSkill, /implementation delegates to `implementation-flow`/i);
-  assert.match(graphSkill, /Markdown evidence/);
+  assert.match(graphSkill, /Execution Store checkpoint/);
   assert.match(graphSkillJa, /implementation-flow/);
   assert.match(contract, /Record completion, gate, and follow-up evidence/);
 

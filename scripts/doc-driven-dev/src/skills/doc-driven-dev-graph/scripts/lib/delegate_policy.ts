@@ -8,12 +8,13 @@
  * fallbackFrom + a "host-unsupported:<mode>" reason, never silently.
  * toExecutionMode() projects the finer policy taxonomy onto the trace
  * ExecutionMode enum. buildDelegateHandoff() assembles the minimum
- * JSON-serializable dispatch contract — canonical references by
- * path/ID/fingerprint, permissions, tool limits, hop budget, and the
- * completion sentence; never lossy summaries in place of canonical refs.
+ * JSON-serializable dispatch contract — typed effect references (durable
+ * document + revision, execution task + version, provider idempotency),
+ * permissions, tool limits, hop budget, and the completion sentence; never
+ * lossy summaries in place of resolved refs.
  */
 
-import type { CanonicalReference } from "./caller_runner";
+import type { EffectReference } from "./caller_runner";
 import type { ExecutionMode } from "./run_trace";
 
 export type DelegateMode = "same-context" | "subagent-as-tool" | "isolated-subagent";
@@ -88,7 +89,7 @@ export function selectDelegateMode(facts: PolicyFacts): PolicyDecision {
 
 /**
  * Minimum JSON-serializable contract a dispatched delegate effect receives.
- * `authoritativeInputs`/`sourceRefs` carry live canonical references —
+ * `authoritativeInputs`/`sourceRefs` carry live resolved typed references —
  * verification-relevant information is never substituted with summaries.
  * `executionMode` records the trace-taxonomy mode the dispatch was requested
  * under, so the receiving adapter and the `dispatch-observed` report name the
@@ -97,8 +98,8 @@ export function selectDelegateMode(facts: PolicyFacts): PolicyDecision {
 export type DelegateHandoff = {
   executionMode: ExecutionMode;
   focus: string[];
-  authoritativeInputs: CanonicalReference[];
-  sourceRefs: CanonicalReference[];
+  authoritativeInputs: EffectReference[];
+  sourceRefs: EffectReference[];
   acceptanceCriteria: string[];
   permissions: { read: string[]; write: string[] };
   toolLimits: string[];
@@ -108,15 +109,15 @@ export type DelegateHandoff = {
 
 /** Default single-hop bound — expand explicitly for multi-hop delegate flows. */
 const DEFAULT_MAX_HOPS = 1;
-const DEFAULT_COMPLETION = "completed EffectOutcome with canonical evidence";
+const DEFAULT_COMPLETION = "completed EffectOutcome with typed proof";
 
 /** Assemble a DelegateHandoff; absent fields fall back to the empty/default contract. */
 export function buildDelegateHandoff(options: {
   /** The requested execution mode the handoff is dispatched under. */
   mode: ExecutionMode;
   focus: string[];
-  inputs: CanonicalReference[];
-  sourceRefs?: CanonicalReference[];
+  inputs: EffectReference[];
+  sourceRefs?: EffectReference[];
   criteria?: string[];
   permissions?: { read: string[]; write: string[] };
   toolLimits?: string[];

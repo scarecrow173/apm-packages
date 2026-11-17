@@ -113,15 +113,15 @@ test("normalizeTraceEvent rejects malformed and unsafe events", () => {
   assert.throws(() => normalizeTraceEvent({ v: 1, kind: "run-yield", reason: "terminal", hops: 0, completedEdges: [], seq: 1 }), /runId/);
   assert.throws(() => normalizeTraceEvent({
     ...base, kind: "effect-outcome", edgeId: "e", stage: "audit", effectId: "spec",
-    outcome: "completed", reason: "commit-required", evidencePaths: ["docs/specs/a.md"],
+    outcome: "completed", reason: "commit-required", outputPaths: ["docs/specs/a.md"],
   }), /only valid for yield/);
   assert.throws(() => normalizeTraceEvent({
     ...base, kind: "effect-outcome", edgeId: "e", stage: "audit", effectId: "spec",
-    outcome: "completed", evidencePaths: ["/abs/secret.md"],
+    outcome: "completed", outputPaths: ["/abs/secret.md"],
   }), /relative paths/);
   assert.throws(() => normalizeTraceEvent({
     ...base, kind: "effect-outcome", edgeId: "e", stage: "audit", effectId: "spec",
-    outcome: "completed", evidencePaths: ["C:\\abs\\secret.md"],
+    outcome: "completed", outputPaths: ["C:\\abs\\secret.md"],
   }), /relative paths/);
   assert.throws(() => normalizeTraceEvent({
     ...base, kind: "route-selected", current: "a", next: "b", edgeId: null,
@@ -241,9 +241,9 @@ test("summarizeTrace aggregates routes, dispatches, outcomes, and scans", () => 
     normalizeTraceEvent({ v: 1, runId: "r", seq: 1, kind: "artifact-scan", scans: 2, filesRead: 14, uniqueFiles: 7, bytesRead: 4096 }),
     normalizeTraceEvent({ v: 1, runId: "r", seq: 2, kind: "route-selected", current: "task-graph", next: "implementation", edgeId: "task-graph-to-implementation", status: "edge", condition: "tasks-runnable", delegate: "implementation-flow", requiredAudits: ["task"], commitGate: true, blockers: [], focus: ["docs/plans/0001-graph.md"], tasks: [{ id: "TASK-1", status: "todo" }], routeHash: "abc" }),
     normalizeTraceEvent({ v: 1, runId: "r", seq: 3, kind: "effect-dispatched", edgeId: "task-graph-to-implementation", stage: "audit", effectId: "task", executionMode: "tool", focusPaths: ["docs/tasks/0001-task.md"] }),
-    normalizeTraceEvent({ v: 1, runId: "r", seq: 4, kind: "effect-outcome", edgeId: "task-graph-to-implementation", stage: "audit", effectId: "task", outcome: "retry", evidencePaths: ["docs/tasks/0001-task.md"] }),
+    normalizeTraceEvent({ v: 1, runId: "r", seq: 4, kind: "effect-outcome", edgeId: "task-graph-to-implementation", stage: "audit", effectId: "task", outcome: "retry", outputPaths: ["docs/tasks/0001-task.md"] }),
     normalizeTraceEvent({ v: 1, runId: "r", seq: 5, kind: "effect-dispatched", edgeId: "task-graph-to-implementation", stage: "delegate", effectId: "implementation-flow", executionMode: "subagent", focusPaths: ["docs/tasks/0001-task.md"] }),
-    normalizeTraceEvent({ v: 1, runId: "r", seq: 6, kind: "effect-outcome", edgeId: "task-graph-to-implementation", stage: "delegate", effectId: "implementation-flow", outcome: "yield", reason: "commit-required", evidencePaths: ["docs/impl/ir/0001-task.md"] }),
+    normalizeTraceEvent({ v: 1, runId: "r", seq: 6, kind: "effect-outcome", edgeId: "task-graph-to-implementation", stage: "delegate", effectId: "implementation-flow", outcome: "yield", reason: "commit-required", outputPaths: ["docs/impl/ir/0001-task.md"] }),
     normalizeTraceEvent({ v: 1, runId: "r", seq: 7, kind: "run-yield", reason: "commit-required", hops: 1, completedEdges: [] }),
   ];
   const summary = summarizeTrace(events);

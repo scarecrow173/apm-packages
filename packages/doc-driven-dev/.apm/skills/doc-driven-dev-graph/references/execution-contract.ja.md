@@ -39,13 +39,18 @@ one-edge command のままであり、継続を所有するのは router では�
 7. 返された delegate だけを dispatch する。
 8. audit または delegate が input、approval、authority を明示的に要求するなら、
    edge checkpoint を完了したと主張せず yield する。
-9. completion、gate、follow-up evidence を canonical Markdown に保存する。
+9. completion、gate、follow-up evidence を run record として保存する:
+   受け入れられた `completed` outcome ごとにまず run の Execution Store に
+   Effect Receipt を記録し、続いて edge checkpoint record が完了した
+   receipt、更新された outcome output、evidence phase で宣言された
+   reference を bind する。
 10. commit gate: `commitBaseline` を取得した場合、同じ 2 つの git command を
     再実行する。現在の `dirty` entry がすべて baseline に存在する場合に限り
     gate は通過する。新しい dirty entry を解消せずに `head` だけが進んでも
     gate は通過しない。それ以外は
     `commit-required` を yield する: pending edge に `evidenceRecorded` を
-    completed-so-far として `commitBaseline` とともに記録し、checkpoint を
+    completed-so-far、記録した `evidenceCheckpointId`、
+    `commitBaseline` とともに記録し、checkpoint を
     完了と記録せず停止する。git が利用できないか `cwd` が repository でない
     場合、gate を評価できないため `authority-required` を yield する。宣言済み
     `commit-waived` signal を受け取った caller はこの gate を skip し、run
@@ -56,19 +61,22 @@ one-edge command のままであり、継続を所有するのは router では�
 
 route invocation の flag は caller が所有します。`runCaller` は adapter の
 `prefixArgs` の後に pinned な `--task-dir docs/tasks` を付けます。
-caller 自身の task bookkeeping (proof document と task-aware hop budget) が
+caller 自身の bookkeeping (task-aware hop budget) が
 `docs/tasks` に anchor されるためで、後ろの flag が意図的に優先され、
 adapter が渡す `--task-dir` は採用されません。
 
-completion、gate、follow-up evidence を canonical Markdown に保存して記録します。
+completion、gate、follow-up evidence は run の Execution Store に記録します:
+受け入れられた completed outcome ごとに `recordReceipt` を、続いて edge に対し
+`recordCheckpoint` を実行します。receipt は execution-side の effect が完了した
+ことの証明であり、Verification Evidence ではありません。
 
 checkpoint は audit、delegate、evidence が記録された後にだけ完了します。run の
 trace summary には mode、bounded counter、順序付き completed edge ID、route
 fingerprint、最終 yield reason を記録します。その trace の機械可読 event
 schema、JSONL export、run ごとの counter は
 [run-trace-contract.ja.md](run-trace-contract.ja.md) で定義します。trace は
-非権威の診断データであり、canonical Markdown や Graph State を置き換えま
-せん。
+非権威の診断データであり、canonical Markdown、Graph State、Execution Store
+record を置き換えません。
 
 ## Git commit boundary
 
@@ -117,8 +125,9 @@ graph から呼び出された audit と delegate はすべて
 なく、`EffectOutcome.status` と `reason` を exact match します。terminal または blocked
 `GraphRoute` と hop/retry/repetition budget は effect outcome より先に別途評価します。
 yield 時には complete route と順序付き outcome を持つ 1 つの `GraphRunResult` handoff を
-記録します。completed effect を再利用できるのは、receipt scope と canonical-evidence
-または provider-idempotency proof が fresh projection に対して validate した場合だけです。
+記録します。completed effect を再利用できるのは、input scope と記録された
+Execution-Store receipt — outputs と durable-document または provider proof — が
+fresh projection に対して validate した場合だけです。
 delegate の execution mode は
 [`delegate-execution-policy.ja.md`](delegate-execution-policy.ja.md) に従って選択され、
 mode と選択理由は trace の `effect-dispatched` event に記録されます。
@@ -128,14 +137,21 @@ delegate に渡す document body は
 progressive retrieval contract に従います — 選択には L1 metadata、authoritative
 input には L2 の検証済み body fetch、記録済みの理由がある場合に限り L3 bounded
 traversal を使います。required evidence と gate 必須の document は常に取得され、
-stale fingerprint は再利用ではなく再投影と再取得を引き起こします。
+stale fingerprint は再利用ではなく再投影と再取得を引き起こします。（fetch 側の
+`fingerprint` field は解決された reference の `revision` と比較します。）
 
 caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
 `build_task_graph`。migration script は `doc-maintenance` が所有）と
 named audit（`spec`、`adr`、`design`、`plan`、`task`、
-`test-spec`、`impl-record`、`experiment-log`、`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
-adapter evidence が missing または malformed なら `authority-required` を yield し、checkpoint
-を進めません。effect 固有の canonical input/evidence mapping は
+`test-spec`、`impl-record`、`experiment-log`、`all`）を `EffectOutcome` に正規化します。
+Document Registry 3 では `plan`、`task`、`test-spec` の名前は拒否される scope であり、
+`audit_docs.js --type <name>` は registry ゲートで失敗します（`plan`/`task` は
+execution-bound、`test-spec` は migration 専用レガシー形式）。そのため
+Graph Definition v3 の rewire（#243）が superseded な `audits:` リストを置き換えるまで、
+adapter はこれらの completed outcome を正規化しません。
+footer を emit できる skill は直接返します。
+adapter output が missing または malformed なら `authority-required` を yield し、checkpoint
+を進めません。effect 固有の canonical input/output mapping は
 [execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) に定義します。
 
 ## Phase 1 yield table
@@ -150,7 +166,7 @@ adapter evidence が missing または malformed なら `authority-required` を
 | hop/retry/repetition/dispatch budget に到達 | `budget-exhausted` | Never |
 | commit-gated edge checkpoint が新しい uncommitted change で終了し、`commit-waived` signal がない | `commit-required` | Never |
 | selected edge が完了し、fresh state が別の declared edge を公開 | none | Yes in `run-until-yield` |
-| audit/delegate/evidence が成功 | none | Yes in `run-until-yield` |
+| audit/delegate/checkpoint が成功 | none | Yes in `run-until-yield` |
 
 ## Bounded autonomy
 
@@ -212,22 +228,32 @@ resume しても、完了した loop と誤分類しません。
 ## Checkpoint、resume、重複 effect
 
 - completed checkpoint は route、completed audits、completed delegate、
-  `evidenceRecorded=true` を caller handoff に記録する。
+  `evidenceRecorded=true` を caller handoff に記録する。pending edge はまた、
+  evidence phase が書き込んだ Execution Store checkpoint を指す
+  `evidenceCheckpointId` を保持する。
 - resume の前には必ず canonical Markdown を再投影してから再 routing する。
 - resume は最後に完了した `route.next` から開始する。未完了 edge は未完了の
   audit/delegate/evidence stage だけを再開する。
-- stage を skip できるのは、canonical evidence または side-effect provider の
-  idempotency key が完了を証明するときだけである。
-- どちらの proof もなければ、不可逆な effect を再実行せず
-  `authority-required` を yield する。
+- stage を skip できるのは、記録された Effect Receipt が完了を証明するときだけ
+  である。receipt の scope は `edgeId`、stage、effect、input binding を bind し、
+  outputs と durable-document または provider proof がまだ current state を
+  resolve し、provider proof は receipt の idempotency key を要求する。記録された
+  checkpoint claim は、指名された checkpoint record が存在し、この edge を
+  bind し、bind されたすべての output がまだ current state を resolve する間
+  だけ有効である。
+- 有効な receipt がなければ、不可逆な effect を再実行せず
+  `authority-required` を yield する。external effect が成功したが receipt を
+  persist できなかった場合は不確実であり、provider idempotency が安全な完了を
+  確立できない限り `authority-required` を yield する。
 - run counter と trace は task/thread handoff metadata に保持してよいが、Graph
   State または project authority ではない。
 - `commit-required` yield は pending edge とその `commitBaseline`
   （`{ head, dirty }`）を保持する。resume は同じ baseline に対して gate を
   再評価し、caller または user が新しい変更を commit して（HEAD が進んで）
-  いるか、新しい dirty entry が解消された時点で通過する。gate は evidence
-  persistence の後に評価されるため、checkpoint evidence Markdown も commit
-  対象の logical change の一部となる。
+  いるか、新しい dirty entry が解消された時点で通過する。gate は checkpoint
+  record の書き込み後に評価される。Execution-Store record は Git-ignore
+  されるため、gate が測定する worktree diff は commit 対象の logical
+  change そのものとなる。
 - resume では保持した `commitBaseline` を再利用し、再取得はしない。これにより
   以前の mid-edge yield より前に生じた変更も同じ baseline に対して測定される。
   `commitBaseline` を持たない pending edge（gate が適用外、または
@@ -238,17 +264,21 @@ resume しても、完了した loop と誤分類しません。
   porcelain entry のまま残る delegate edit はこの gate では検出されない。
   これは Phase 1 で受容済みの制限であり、暗黙に弱めてはいけない。
 
-これは same-task crash recovery を提供します。caller handoff と task/thread
-history の両方を失った cross-host recovery は Phase 1 の対象外です。canonical
-Markdown だけでは、最後の runtime node やすべての external side-effect receipt
-を現在は符号化していません。
+これは same-task crash recovery を提供します。caller handoff と run の
+Execution Store が最後の runtime node、記録済み receipt、edge checkpoint を
+保持します。handoff と store の両方を失った cross-host recovery は Phase 1 の
+対象外です。
 
 ## Evidence と persistence
 
-delegate は担当領域の作業と evidence format を所有します。graph が所有するのは
+delegate は担当領域の作業と output format を所有します。graph が所有するのは
 宣言済み topology と汎用 state predicate だけです。upstream gap、invalid Task
 Graph、focus 欠落、矛盾した signal、audit failure は明示的な blocker または
 loopback signal のままにし、caller は成功として再解釈してはいけません。
 
-Markdown が durable history と status authority です。route を完了したように見せる
+Markdown が durable history と status authority です。per-run execution state —
+Effect Receipt と edge checkpoint — は Git-untracked Execution Store
+（[execution-store-contract.ja.md](execution-store-contract.ja.md) 参照）に
+置かれ、per-worktree で、`.apm/state/` が Git-ignore されない限り書き込みを
+拒否し、durable knowledge を保持しません。route を完了したように見せる
 ために、別の mutable state store を作成しないでください。

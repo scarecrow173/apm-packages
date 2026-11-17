@@ -99,7 +99,7 @@ export type EffectOutcomeEvent = TraceEventBase & {
   effectId: string;
   outcome: "completed" | "retry" | "yield";
   reason?: EffectYieldReason;
-  evidencePaths: string[];
+  outputPaths: string[];
 };
 
 export type RunYieldEvent = TraceEventBase & {
@@ -319,7 +319,7 @@ export function normalizeTraceEvent(raw: unknown): TraceEvent {
         stage: requireStage(record.stage),
         effectId: requireString(record.effectId, "effectId"),
         outcome,
-        evidencePaths: requireRelativePaths(record.evidencePaths, "evidencePaths"),
+        outputPaths: requireRelativePaths(record.outputPaths, "outputPaths"),
       };
       if (record.reason !== undefined) event.reason = record.reason as EffectYieldReason;
       return event;
