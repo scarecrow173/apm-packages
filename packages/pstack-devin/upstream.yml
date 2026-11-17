@@ -7,8 +7,9 @@ upstream:
   host: github.com
   path: harness/pstack/claude-code
   commit: bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7
-# Observed during APM 0.33.0 verification (issue #212). Informational audit
-# fields only -- upstream.commit is the sole authority.
+# Observed during APM 0.33.0 verification (issue #212); refreshed by
+# apply-update from the regenerated lockfile/provenance. Informational
+# audit fields only -- upstream.commit is the sole authority.
 observed:
   upstream_version: "0.15.42"
   apm_package_type: agent_plugin

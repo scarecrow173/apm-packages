@@ -6,6 +6,7 @@ import { loadBuildConfig } from "../src/config.js";
 import {
   applyUpdate,
   setDevDepRef,
+  setObservedFields,
   setUpstreamCommit,
 } from "../src/apply-update.js";
 import type { Runner } from "../src/apply-update.js";
@@ -89,6 +90,58 @@ test("setDevDepRef throws when the apm devDep has no ref", () => {
     /ref/,
   );
   assert.throws(() => setDevDepRef("name: x\n", SHA_B), /devDependencies/);
+});
+
+// --- setObservedFields ---------------------------------------------------
+
+test("setObservedFields rewrites listed values, comments and order intact", () => {
+  const yaml = [
+    "upstream:",
+    "  commit: " + SHA_B,
+    "# audit comment",
+    "observed:",
+    '  upstream_version: "0.15.42"',
+    "  apm_package_type: agent_plugin",
+    "  apm_content_hash: sha256:old",
+    "  upstream_file_count: 546",
+    "",
+  ].join("\n");
+  const out = setObservedFields(
+    yaml,
+    {
+      upstream_version: '"0.15.43"',
+      apm_content_hash: "sha256:new",
+      upstream_file_count: "537",
+    },
+    () => {},
+  );
+  assert.ok(out.includes('  upstream_version: "0.15.43"'));
+  assert.ok(out.includes("  apm_content_hash: sha256:new"));
+  assert.ok(out.includes("  upstream_file_count: 537"));
+  assert.ok(out.includes("  apm_package_type: agent_plugin"), "untouched");
+  assert.ok(out.includes("# audit comment"), "comment preserved");
+});
+
+test("setObservedFields warns on a missing key and on a missing block", () => {
+  const warns: string[] = [];
+  const warn = (s: string): void => {
+    warns.push(s);
+  };
+  // Block present, one field key absent → only that key warns.
+  const out = setObservedFields(
+    "observed:\n  upstream_version: \"1\"\n",
+    { upstream_version: '"2"', upstream_file_count: "3" },
+    warn,
+  );
+  assert.ok(out.includes('  upstream_version: "2"'));
+  assert.deepEqual(warns, [
+    "upstream.yml: observed.upstream_file_count line not found — left unset",
+  ]);
+  // No observed block at all → one warning, yaml untouched.
+  warns.length = 0;
+  const yaml2 = "upstream:\n  repo: x\n";
+  assert.equal(setObservedFields(yaml2, { a: "1" }, warn), yaml2);
+  assert.match(warns[0] ?? "", /no "observed:" block/);
 });
 
 // --- applyUpdate (fixture git repo) --------------------------------------

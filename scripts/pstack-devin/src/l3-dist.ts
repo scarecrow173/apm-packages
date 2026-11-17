@@ -29,9 +29,12 @@ export interface PackProbe {
 }
 
 export interface CompileProbe {
-  /** expected-na: non-zero exit + "No instruction files found" — the
-   *  documented skill-only result (same as the repo's other skills-only
-   *  packages). unexpected: anything else — APM changed, investigate. */
+  /** expected-na: either documented skill-only result — non-zero exit +
+   *  "No instruction files found" (no installed deps), or exit 0 +
+   *  "Validated 0 primitives" (an installed `apm_modules/` makes apm
+   *  validate the context instead and find zero instruction-shaped
+   *  primitives — the same N/A). unexpected: anything else — APM or the
+   *  package's primitive set changed, investigate. */
   status: "expected-na" | "unexpected" | "skipped";
   exitCode: number | null;
   note: string;
@@ -79,6 +82,14 @@ export const EXPECTED_PACK_MANIFESTS = [
  *  non-zero exit (packages/pstack-devin/AGENTS.md records the same
  *  outcome for the repo's other skills-only packages). */
 export const COMPILE_NA_PHRASE = "No instruction files found";
+
+/** The post-install form of the same N/A: once `apm install` has created
+ *  `apm_modules/`, apm 0.33.0 treats the directory as a valid APM context
+ *  and `apm compile --validate` exits 0 reporting zero primitives of
+ *  every instruction-shaped kind — still "not applicable", not a pass of
+ *  real instruction content. Requiring the literal "0" counts keeps any
+ *  genuinely-present instruction primitive an unexpected finding. */
+export const COMPILE_NA_PHRASE_INSTALLED = "Validated 0 primitives";
 
 /** apm hard-wraps long lines mid-token at a fixed width (CRLF, observed
  *  2026-11-17 piping stdout on Windows) — a `Would write` path arrives
@@ -349,8 +360,11 @@ export function probePack(
 }
 
 /** `apm compile --validate` — recorded N/A for a skill-only package.
- *  Passes only on non-zero exit plus the documented phrase; a zero exit
- *  or a different message means APM changed and the N/A record is stale. */
+ *  Passes on either documented skill-only outcome (non-zero exit plus
+ *  the no-files phrase, or exit 0 reporting literally zero primitives —
+ *  the post-`apm install` shape); any other exit/message combination
+ *  means APM or the package's primitive set changed and the N/A record
+ *  is stale. */
 export function probeCompile(
   pkgRoot: string,
   run: CmdRunner = runViaMise,
@@ -378,12 +392,26 @@ export function probeCompile(
       note: `skill-only package — "${COMPILE_NA_PHRASE}", exit ${out.code}`,
     };
   }
+  if (
+    out.code === 0 &&
+    flat.includes(COMPILE_NA_PHRASE_INSTALLED) &&
+    flat.includes("0 instructions")
+  ) {
+    return {
+      status: "expected-na",
+      exitCode: out.code,
+      note:
+        `skill-only package (installed context) — ` +
+        `"${COMPILE_NA_PHRASE_INSTALLED}", exit 0`,
+    };
+  }
   return {
     status: "unexpected",
     exitCode: out.code,
     note:
       out.code === 0
-        ? "expected non-zero for a skill-only package, got exit 0"
+        ? "expected a skill-only N/A result, got exit 0 with:\n" +
+          out.output.trim()
         : `expected "${COMPILE_NA_PHRASE}" in output, got:\n` +
           out.output.trim(),
   };
