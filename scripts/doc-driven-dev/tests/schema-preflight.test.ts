@@ -275,6 +275,7 @@ const GUARDED_ENTRYPOINTS: Array<{ skill: string; script: string; args: string[]
   { skill: "doc-driven-dev-graph", script: "fetch_context.js", args: ["--metadata"] },
   { skill: "doc-driven-dev-graph", script: "build_task_graph.js", args: ["--plan", "docs/plans/0001-plan.md"] },
   { skill: "doc-driven-dev-graph", script: "build_dashboard.js", args: [] },
+  { skill: "doc-driven-dev-graph", script: "execution_store.js", args: ["list"] },
   { skill: "doc-driven-dev-graph", script: "migrate_docs.js", args: [] },
   { skill: "doc-driven-dev-graph", script: "migrate_ids.js", args: [] },
   { skill: "doc-driven-dev-graph", script: "scaffold_docs.js", args: [] },

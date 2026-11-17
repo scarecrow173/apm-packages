@@ -145,6 +145,16 @@ Markdown artifacts are durable history and status authority. Graph State and
 the Dynamic Task Graph are projections for the current turn. The runtime does
 not create or require a parallel database.
 
+Per-run execution state — plans, tasks, approvals, checkpoints, effect
+receipts, and run traces — lives outside Git in the **Execution Store** under
+`.apm/state/doc-driven-dev/runs/<run-id>/` (Issue `#236`). The store is
+per-worktree by default: run state never travels through Git, and moving a
+run between worktrees or machines requires explicit export/import or a
+declared shared root. It is a consistency-checked execution-state store only
+— durable knowledge stays in Markdown. The layout, record schemas, CAS and
+single-writer rules, crash recovery, and transfer semantics are defined in
+[`references/execution-store-contract.md`](references/execution-store-contract.md).
+
 ## Schema preflight gate
 
 Every normal entrypoint — routing, inspection, context fetch, task-graph and
@@ -278,6 +288,33 @@ and stay on disk; the command does not roll them back. A clean Git worktree
 is the revert path: revert with Git if the applied result is wrong.
 Re-running after a successful apply is a no-op.
 
+### 6. Execution store
+
+`execution_store.js` operates the Git-untracked per-run store used for run
+manifests, editable plans, task records, approvals, checkpoints, effect
+receipts, and the run trace. Writes refuse before creating anything when
+`.apm/state/` ignore coverage is unconfigured (`execution_store.js init`
+writes it), state files are Git-tracked, the root escapes the checkout
+through a link, or an undeclared external root is used. Run-level CAS uses
+`manifest.revision`; task-level CAS uses per-record `version`; a per-run
+`writer.lock` serializes mutations. Disposing an active run requires a
+disposal inspection plus explicit `--force --reason`; worktree/machine
+handoff goes through `export`/`import` digest-verified snapshots only.
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/execution_store.js init --cwd <repo>
+node .apm/skills/doc-driven-dev-graph/scripts/execution_store.js \
+  create RUN-<id> --cwd <repo> --json
+node .apm/skills/doc-driven-dev-graph/scripts/execution_store.js \
+  show RUN-<id> --cwd <repo> --json
+```
+
+Subcommands: `init`, `create`, `show`, `list`, `save-plan`, `approve-plan`,
+`update`, `put-task`, `record-checkpoint`, `record-receipt`, `trace`,
+`finalize`, `dispose`, `recover`, `export`, `import`. See
+[`references/execution-store-contract.md`](references/execution-store-contract.md)
+for the full command, schema, and error-code contract.
+
 ## References
 
 - [`graphs/doc-driven-dev.yaml`](graphs/doc-driven-dev.yaml) — concrete
@@ -296,6 +333,9 @@ Re-running after a successful apply is a no-op.
   progressive L0–L3 artifact context retrieval, validation, and finding codes.
 - [`references/run-trace-contract.md`](references/run-trace-contract.md) —
   structured run-trace events, JSONL export, and deterministic run counters.
+- [`references/execution-store-contract.md`](references/execution-store-contract.md) —
+  per-run Execution Store layout, record schemas, CAS/single-writer rules,
+  crash recovery, and export/import transfer semantics.
 - [`references/task-graph-contract.md`](references/task-graph-contract.md) —
   Task Graph composition and fail-closed dependency rules.
 - [`references/graph-inspection.md`](references/graph-inspection.md) — inspection

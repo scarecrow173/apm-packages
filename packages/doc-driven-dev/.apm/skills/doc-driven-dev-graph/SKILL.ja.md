@@ -138,6 +138,17 @@ Markdown artifact が durable history と status の authority です。Graph St
 と Dynamic Task Graph は turn ごとの projection であり、runtime は並行する
 database を作成・要求しません。
 
+plan・task・承認・checkpoint・effect receipt・run trace といった run ごとの
+実行状態は、Git 管理外の **Execution Store**
+（`.apm/state/doc-driven-dev/runs/<run-id>/`、Issue `#236`）に保持します。
+store は既定で worktree ごとです。run 状態が Git 経由で移動することはなく、
+worktree やマシン間の移転には明示的な export/import または宣言済みの共有
+root が必要です。整合性を検査する実行状態 store であり、永続的知識は
+Markdown に残ります。レイアウト、レコードスキーマ、CAS・single-writer
+規則、クラッシュ復旧、移転セマンティクスは
+[`references/execution-store-contract.ja.md`](references/execution-store-contract.ja.md)
+で定義します。
+
 ## Schema preflight gate
 
 routing、inspection、context fetch、task-graph / dashboard 構築を含む全通常
@@ -275,6 +286,34 @@ mutation は適用済みで disk に残り、command は rollback しません�
 clean な Git worktree が revert 経路です: 適用結果が誤っていれば Git で
 戻してください。適用成功後の再実行は no-op です。
 
+### 6. Execution store
+
+`execution_store.js` は run manifest・編集可能な plan・task record・承認・
+checkpoint・effect receipt・run trace を保持する Git 管理外の run ごとの
+store を操作します。`.apm/state/` の ignore カバレッジが未設定（
+`execution_store.js init` が書き込みます）、state ファイルが Git に
+tracked、root がリンク経由で checkout を脱出、未許可の外部 root の使用、
+のいずれかの場合、書き込みは作成前に拒否します。run 全体の CAS は
+`manifest.revision`、task ごとの CAS はレコードの `version`、run ごとの
+`writer.lock` が変更を直列化します。active な run の破棄には disposal
+inspection と明示的な `--force --reason` が必要です。worktree/マシン間の
+引き継ぎは digest 検証済みの `export`/`import` スナップショットのみです。
+
+```bash
+node .apm/skills/doc-driven-dev-graph/scripts/execution_store.js init --cwd <repo>
+node .apm/skills/doc-driven-dev-graph/scripts/execution_store.js \
+  create RUN-<id> --cwd <repo> --json
+node .apm/skills/doc-driven-dev-graph/scripts/execution_store.js \
+  show RUN-<id> --cwd <repo> --json
+```
+
+サブコマンド: `init`、`create`、`show`、`list`、`save-plan`、
+`approve-plan`、`update`、`put-task`、`record-checkpoint`、
+`record-receipt`、`trace`、`finalize`、`dispose`、`recover`、`export`、
+`import`。完全なコマンド・スキーマ・エラーコードの契約は
+[`references/execution-store-contract.ja.md`](references/execution-store-contract.ja.md)
+を参照してください。
+
 ## References
 
 - [`graphs/doc-driven-dev.yaml`](graphs/doc-driven-dev.yaml) — topology と
@@ -293,6 +332,9 @@ clean な Git worktree が revert 経路です: 適用結果が誤っていれ�
   progressive な L0–L3 artifact context retrieval、validation、finding code。
 - [`references/run-trace-contract.ja.md`](references/run-trace-contract.ja.md) —
   構造化 run-trace event、JSONL export、決定的 run counter。
+- [`references/execution-store-contract.ja.md`](references/execution-store-contract.ja.md) —
+  run ごとの Execution Store レイアウト、レコードスキーマ、CAS・single-writer
+  規則、クラッシュ復旧、export/import の移転セマンティクス。
 - [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) —
   Task Graph 合成と fail-closed dependency 規則。
 - [`references/graph-inspection.ja.md`](references/graph-inspection.ja.md) — inspection
