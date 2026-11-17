@@ -7,20 +7,21 @@ effect はそれぞれ 1 つの `EffectOutcome` footer を返し、caller は yi
 
 ## EffectOutcome footer
 
-すべての footer は次の scope を持ちます。完了を prose で主張せず、canonical path、ID、
-fingerprint を記録します。
+すべての footer は次の scope を持ちます。reference は型付きで live state に bind されます。
+`kind` は reference の種別を、`path`/`id` は document を特定し、`revision` はその
+canonical content fingerprint を示します。`provider` reference は `idempotencyKey` を
+持ちます。完了を prose で主張せず、reference を記録します。
 
 ```yaml
 status: completed
 edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
-authoritativeInputs:
-  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:input }
-evidence:
-  - { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:evidence }
-proof:
-  canonicalEvidence: { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:evidence }
+inputs:
+  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:input }
+outputs:
+  - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
+proof: { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
 ```
 
 ```yaml
@@ -28,13 +29,13 @@ status: retry
 edgeId: implementation-to-design
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
-authoritativeInputs:
-  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:before }
-evidence:
-  - { path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, fingerprint: sha256:changed }
+inputs:
+  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:before }
+outputs:
+  - { kind: durable-document, path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, revision: sha256:changed }
 retry:
-  changedEvidence:
-    - { path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, fingerprint: sha256:changed }
+  changedOutputs:
+    - { kind: durable-document, path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, revision: sha256:changed }
 ```
 
 ```yaml
@@ -42,10 +43,10 @@ status: yield
 edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
-authoritativeInputs:
-  - { path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, fingerprint: sha256:input }
-evidence:
-  - { path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, fingerprint: sha256:checkpoint }
+inputs:
+  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:input }
+outputs:
+  - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:checkpoint }
 reason: authority-required
 ```
 
@@ -53,13 +54,20 @@ status variant ごとの required / forbidden field は次のとおりです。
 
 | Status | Required | Forbidden |
 | --- | --- | --- |
-| `completed` | `proof.canonicalEvidence`（`path`、存在する場合は `id`、`fingerprint`）または `proof.providerIdempotency`（`provider`、`key`）のどちらか 1 つ | `reason`、`retry` |
-| `retry` | 変更された canonical path/ID/fingerprint を持つ `retry.changedEvidence` | `proof`、`reason` |
+| `completed` | `proof` が `durable-document` reference（`kind`、`path`、`id`、`revision`）または `provider` reference（`kind: provider`、`provider`、`idempotencyKey`）のどちらか | `reason`、`retry` |
+| `retry` | 変更された canonical reference を持つ `retry.changedOutputs` | `proof`、`reason` |
 | `yield` | `reason`: `approval-required`、`input-required`、`authority-required`、`unrecoverable-blocker`、`commit-required` のいずれか | `proof`、`retry` |
 
-`evidence` はすべての outcome の canonical checkpoint を記録します。`completed`
-outcome は加えて、この effect 自体を証明します。canonical evidence または external
-provider の idempotency key のどちらかで証明し、route fingerprint を proof に使いません。
+`outputs` はすべての outcome の canonical output を記録します。`completed`
+outcome は加えて、この effect 自体を証明します。durable-document proof が生成した
+canonical content を bind するか、provider reference が irreversible な外部 effect を
+idempotency key で証明します。route fingerprint を proof に使いません。
+
+受け入れられた `completed` outcome は run の Execution Store
+（`.apm/state/doc-driven-dev/runs/<runId>/receipts/`）に Effect Receipt として永続化され、
+edge checkpoint が `checkpoints/` に続きます。これらの receipt は effect が完了したことの
+execution-side の証明であり、verification-side store に属する Verification Evidence とは
+別物です。
 
 ## yield 時の GraphRunResult
 
@@ -97,6 +105,7 @@ type GraphRunTrace = {
 }
 
 type GraphRunHandoff = {
+  runId: string;
   current: string;
   mode: "single-step" | "run-until-yield";
   maxHops: number;
@@ -120,6 +129,7 @@ type GraphRunHandoff = {
     completedAudits: string[];
     delegateComplete: boolean;
     evidenceRecorded: boolean;
+    evidenceCheckpointId: string | null;
     commitBaseline: { head: string | null; dirty: string[] } | null;
     dispatches: number;
   } | null;
@@ -133,14 +143,17 @@ type GraphRunHandoff = {
 `commitWaived` は、edge の destination が `commitGate` を宣言し、caller がその edge に
 対して宣言済み `commit-waived` signal を適用した場合に `true`、それ以外は `false`
 です。これが run trace に waiver を記録する仕組みです。
-`GraphRunHandoff` は resume field を保持します。すなわち `current`、mode、`maxHops`、
+`GraphRunHandoff` は resume field を保持します。`runId` はすべての receipt と
+checkpoint が記録された Execution Store run を bind します。すなわち `current`、mode、`maxHops`、
 per-edge dispatch budget の `maxDispatchesPerEdge`、run-level dispatch bound の
 `maxTotalDispatches`、focus、
 signals、graph path、completed edge ID、seen route fingerprint、freeze した task-budget basis、
 audit/delegate counter、累積 `totalDispatches` count、
 completed route、trace、outcome、pending edge、hop count です。`null` は
 caller が explicit `maxHops` を supplied したことを表し、non-negative number は immutable な
-dynamic-default basis です。
+dynamic-default basis です。pending edge の `evidenceCheckpointId` はその evidence
+phase が記録した Execution Store checkpoint を指し、resume は flag を鵜呑みにせず
+checkpoint record を検証します。
 
 ## caller が正規化する effect
 
@@ -159,9 +172,9 @@ Document Registry 3 ではこれらの scope は registry ゲートで拒否さ�
 （後述の canonical input セクション参照）、#243 で graph definition が
 rewire されるまで adapter が completed outcome を正規化することはありません。
 
-adapter は `completed` または `retry` を返す前に effect 固有の canonical input と evidence を
-記録します。adapter evidence が missing または malformed なら
-`authority-required` で fail closed し、checkpoint や completion receipt を作成しません。
+adapter は `completed` または `retry` を返す前に effect 固有の canonical input と output を
+記録します。adapter output が missing または malformed なら
+`authority-required` で fail closed し、caller は receipt も edge checkpoint も記録しません。
 
 ## effect 固有の canonical input
 
@@ -187,8 +200,8 @@ gate することはありません。`briefing-flow` は spec と ADR を読み
 `implementation-flow` は選択 task と design/plan と linked test spec を読み Implementation Record を記録し、
 `doc-status` は declared document set を読みます。script-adapter input は
 `migrate_docs`（declared document set）、`scaffold_docs`
-（workspace-root bootstrap input）、`build_task_graph`（focused plan と選択 task document）です。すべての referenced path/ID と
-fingerprint は使用前に current canonical content と照合して resolve しなければなりません。
+（workspace-root bootstrap input）、`build_task_graph`（focused plan と選択 task document）です。すべての typed
+reference は使用前に current state と照合して resolve しなければなりません。
 
 ## 既存 delegate の意味
 
@@ -209,25 +222,27 @@ caller は最初に terminal または blocked `GraphRoute` と hop/repetition b
 `EffectOutcome.status`、`yield` の場合は `reason` を正確に match し、free-form な
 delegate prose から result を推測しません。
 
-- `completed` は input scope と proof が validate した場合に限り、この scoped audit
-  または delegate stage を skip できます。
-- `retry` は canonical changed evidence を re-project し、fresh route が declared edge
+- `completed` は input scope、記録済み receipt、outputs、proof が validate した場合に
+  限り、この scoped audit または delegate stage を skip できます。
+- `retry` は宣言された changed outputs を re-project し、fresh route が declared edge
   を選んだ後にだけ auto-continuable です。
 - `yield` はその exact reason で停止します。
 
 yield 時、caller は complete `GraphRoute`、順序付き `EffectOutcome` footer、bounded
 counter/trace、最終 yield reason を含む `GraphRunResult` handoff を記録します。保持した
 route は topology、terminal/blocked、budget evaluation に使います。receipt validity は
-`edgeId`、stage、effect、authoritative input、evidence、proof だけを bind し、complete
+`edgeId`、stage、effect、input scope、outputs、proof だけを bind し、complete
 `GraphRoute` object の byte-equivalent を要求しません。
 
 ## Resume と duplicate effect
 
-saved receipt と比較する前に canonical Markdown を再 projection します。saved
-`completed` stage を skip できるのは、`edgeId`、stage、effect identity、すべての
-authoritative input path/ID/fingerprint、canonical-evidence または
-provider-idempotency proof が fresh scope と match するときだけです。proof がなければ、
-irreversible effect を replay せず `authority-required` を yield します。
+saved receipt と比較する前に canonical Markdown を再 projection します。pending の
+`completed` stage が reuse されるのは、run の Execution Store に記録された Effect
+Receipt が同じ `edgeId`、stage、effect、input binding、output/proof result を証明し、
+fresh route が同じ input scope（同じ typed reference の multiset）を resolve し、
+bind されたすべての output と proof がまだ current state を resolve するときだけです。
+proof や receipt がなければ、irreversible effect を replay せず `authority-required` を
+yield します。
 
 たとえば Task Graph A に scope された `implementation-flow` receipt は、canonical
 Markdown が Task Graph B を project した後に delegate を skip できません。fresh graph と

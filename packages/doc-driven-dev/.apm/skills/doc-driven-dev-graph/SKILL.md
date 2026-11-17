@@ -118,7 +118,7 @@ budgets, trace summary, and resume rules are in
 9. Dispatch only the declared delegate, including its briefing, planning, or
    implementation subgraph; yield when input, approval, or authority is
    explicitly required.
-10. Record the Markdown evidence checkpoint and ordered trace, re-project, and re-enter
+10. Record the Execution Store checkpoint and ordered trace, re-project, and re-enter
     at the returned `next` node; yield in `single-step` mode or repeat in
     `run-until-yield` mode.
 

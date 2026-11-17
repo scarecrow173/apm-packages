@@ -5,7 +5,11 @@
 行ったこと — 選択された route、artifact の読み取り、dispatch された effect、
 outcome、yield — を記録し、run を決定的に計測・比較できるようにします。
 これは非権威の診断データであり、Graph State でも lifecycle store でもなく、
-routing・gate・status の根拠にもなりません。
+routing・gate・status の根拠にもなりません。権威ある per-run の実行状態 —
+Effect Receipt と edge checkpoint — は run の Execution Store
+（[execution-store-contract.ja.md](execution-store-contract.ja.md) 参照）に
+置かれます。trace event は effect が実行されたこと、checkpoint が完了した
+ことの証明には決してなりません。
 
 ## Authority の分担
 
@@ -117,7 +121,7 @@ spawn が実行されたことを attest する手段です。adapter はこの�
 ### `effect-outcome`
 
 `edgeId`、`stage`、`effectId`、`outcome`（`completed`/`retry`/`yield`）、
-`evidencePaths`（repo 相対）、`reason`。`outcome` が `yield` のとき必須、
+`outputPaths`（outcome が宣言した outputs の repo 相対 path）、`reason`。`outcome` が `yield` のとき必須、
 `completed`/`retry` では拒否されます（validator が両方を強制します）。
 値は `approval-required`、`input-required`、`authority-required`、
 `unrecoverable-blocker`、`commit-required` のいずれかです。
@@ -142,7 +146,7 @@ resume された run は同じ `runId` で追記を続けます。`seq` は増�
 
 - タイムスタンプ、PID、絶対パス、乱数 ID、環境依存パスは記録しません。
   fixture の run は固定 `runId` を使います。
-- `focusPaths`/`evidencePaths`/`focus` は repo 相対パスのみです。正規化は
+- `focusPaths`/`outputPaths`/`focus` は repo 相対パスのみです。正規化は
   絶対パス（POSIX、Windows drive、UNC、`~`）を拒否します。
 - `route-selected.blockers` は bounded なトークンのみを記録します。
   `<kind>:` プレフィックスの後に自由文を持つ blocker（relation target を
@@ -172,6 +176,6 @@ trace は LLM token、cost、provider・model 名、prompt、文書本文、secr
 field は読み取り時に落とされます）または `v` の increment のみで
 行われます。
 
-trace が無効（`--trace-file` なし）でも routing、evidence、gate は変わり
+trace が無効（`--trace-file` なし）でも routing、receipt、gate は変わり
 ません。trace 追記が失敗しても stderr に警告するだけで、route は失敗
 させません。

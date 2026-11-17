@@ -114,7 +114,7 @@ test("L2 returns validated document bodies at level L2", () => {
   const result = fetchArtifactBodies(repo, [{
     path: "docs/plans/0001-graph.md",
     id: "PLAN-0001",
-    fingerprint: reference.fingerprint,
+    fingerprint: reference.revision,
   }]);
   assert.equal(result.level, "L2");
   assert.deepEqual(result.findings, []);
@@ -146,7 +146,7 @@ test("L2 rejects a stale fingerprint after the document changed", () => {
   fs.appendFileSync(path.join(repo, "docs/plans/0001-graph.md"), "\nMore context.\n", "utf8");
   const result = fetchArtifactBodies(repo, [{
     path: "docs/plans/0001-graph.md",
-    fingerprint: reference.fingerprint,
+    fingerprint: reference.revision,
   }]);
   assert.deepEqual(result.documents, []);
   assert.ok(result.findings.some((finding) => finding.code === "stale-fingerprint"));

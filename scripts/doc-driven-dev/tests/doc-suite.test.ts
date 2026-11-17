@@ -730,13 +730,13 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
     assert.ok(["audit", "delegate"].includes(outcome.stage));
     assert.ok(["audit", "delegate"].includes(outcome.effect.kind));
     assert.equal(typeof outcome.effect.id, "string");
-    assert.ok(Array.isArray(outcome.authoritativeInputs));
-    assert.ok(Array.isArray(outcome.evidence));
+    assert.ok(Array.isArray(outcome.inputs));
+    assert.ok(Array.isArray(outcome.outputs));
   }
-  assert.ok(footerVariants[0].proof.canonicalEvidence || footerVariants[0].proof.providerIdempotency);
-  assert.match(outcomeContract, /proof\.providerIdempotency/);
+  assert.ok(footerVariants[0].proof.kind === "durable-document" || footerVariants[0].proof.kind === "provider");
+  assert.match(outcomeContract, /kind: provider/);
   assert.equal("reason" in footerVariants[0], false);
-  assert.ok(Array.isArray(footerVariants[1].retry.changedEvidence));
+  assert.ok(Array.isArray(footerVariants[1].retry.changedOutputs));
   assert.equal("proof" in footerVariants[1], false);
   assert.equal(footerVariants[2].reason, "authority-required");
   assert.equal("proof" in footerVariants[2], false);
@@ -869,7 +869,7 @@ test("implementation-flow opens impl-doc before task execution", () => {
   assert.match(adapter, /docs\/impl/);
 
   assert.match(graphSkill, /implementation delegates to `implementation-flow`/i);
-  assert.match(graphSkill, /Markdown evidence/);
+  assert.match(graphSkill, /Execution Store checkpoint/);
   assert.match(graphSkillJa, /implementation-flow/);
   assert.match(contract, /Record completion, gate, and follow-up evidence/);
 

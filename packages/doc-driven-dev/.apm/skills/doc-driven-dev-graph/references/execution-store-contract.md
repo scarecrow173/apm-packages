@@ -66,6 +66,24 @@ from the comparison); same-id different-content is a `record-conflict`.
 A receipt proves an effect *ran* — it is not an Evidence Record of a check
 outcome (`#240`).
 
+## Graph caller usage (Issue `#238`)
+
+The graph caller is the store's first consumer. For each accepted
+`completed` `EffectOutcome` it writes a receipt whose `input` binds the
+dispatch scope — `{ edgeId, stage, effect, inputs }` — and whose `output`
+binds the result — `{ outputs, proof }`, all as the typed references of the
+outcome contract; `actor` attributes the dispatch mode/method the adapter
+reported, and `idempotencyKey` is set on provider proofs. Once an edge's
+evidence phase succeeds it writes one checkpoint whose `data` is
+`{ edgeId, receipts, outputs, routeHash }`: the content-keyed receipt ids,
+every bound output reference, and a diagnostic hash of the completed route.
+The caller handoff carries `runId` and the pending edge's
+`evidenceCheckpointId`; resume skips a stage only when a recorded receipt
+proves the same scope and its bound outputs and proof still resolve current
+state, so a lost or forged outcome can never masquerade as recorded
+evidence. Receipts and checkpoints are the authoritative per-run execution
+state; `run_trace.jsonl` stays diagnostic only.
+
 ## Consistency model
 
 - **Single writer per run.** `writer.lock` (O_EXCL create, `{pid, hostname,

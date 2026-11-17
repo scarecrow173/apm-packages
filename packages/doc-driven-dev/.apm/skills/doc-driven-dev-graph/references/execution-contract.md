@@ -36,12 +36,17 @@ For each selected edge:
 7. Dispatch only the returned delegate.
 8. If an audit or delegate explicitly requires input, approval, or authority,
    yield without claiming the edge checkpoint complete.
-9. Persist completion, gate, and follow-up evidence in canonical Markdown.
+9. Persist completion, gate, and follow-up evidence as run records: each
+   accepted `completed` outcome is recorded first as an Effect Receipt in the
+   run's Execution Store, then the edge checkpoint record binds the completed
+   receipts, the refreshed outcome outputs, and the evidence-phase declared
+   references.
 10. Commit gate: when `commitBaseline` was captured, re-run the same two git
     commands. The gate passes only when every current `dirty` entry was already
     present in the baseline; `head` advancing without resolving the new dirty
     entries does not pass the gate. Otherwise yield `commit-required`: record
-    the pending edge with `evidenceRecorded` as completed-so-far and
+    the pending edge with `evidenceRecorded` as completed-so-far, its recorded
+    `evidenceCheckpointId`, and
     `commitBaseline`, and stop without marking the checkpoint complete. If git is unavailable or `cwd` is not a repository,
     the gate cannot be evaluated; yield `authority-required` instead. A caller
     that received the declared `commit-waived` signal skips this gate and
@@ -52,20 +57,22 @@ For each selected edge:
 
 The caller owns the route invocation: `runCaller` appends a pinned
 `--task-dir docs/tasks` after any adapter `prefixArgs`, because the caller's
-own task bookkeeping — the proof document and the task-aware hop budget —
-is anchored at `docs/tasks`. Last flag wins deliberately; an adapter-supplied
-`--task-dir` is never honored.
+own bookkeeping — the task-aware hop budget — is anchored at `docs/tasks`.
+Last flag wins deliberately; an adapter-supplied `--task-dir` is never
+honored.
 
-Record completion, gate, and follow-up evidence by persisting those values in
-canonical Markdown.
+Record completion, gate, and follow-up evidence in the run's Execution Store:
+`recordReceipt` for each accepted completed outcome, then `recordCheckpoint`
+for the edge. Receipts prove execution-side effects completed; they are not
+Verification Evidence.
 
 The checkpoint is complete only after its audits, delegate, and evidence are
 recorded. A run trace summary records the mode, bounded counters, completed
 edge IDs in order, route fingerprints, and the final yield reason. The
 machine-readable event schema, JSONL export, and per-run counters for that
 trace are defined in [run-trace-contract.md](run-trace-contract.md); the trace
-is non-authoritative diagnostic data and never replaces canonical Markdown or
-Graph State.
+is non-authoritative diagnostic data and never replaces canonical Markdown,
+Graph State, or the Execution Store records.
 
 ## Git commit boundary
 
@@ -118,9 +125,9 @@ caller performs an exact `EffectOutcome.status` and `reason` match, never a
 free-form semantic inference. It evaluates terminal or blocked `GraphRoute`
 results and hop/retry/repetition budgets separately before effect outcomes.
 At yield, it records one `GraphRunResult` handoff with the complete route and
-ordered outcomes. A completed effect is reusable only when the receipt scope
-and canonical-evidence or provider-idempotency proof validate against the
-fresh projection. Delegate execution mode is selected per
+ordered outcomes. A completed effect is reusable only when the input scope and
+its recorded Execution-Store receipt — outputs and durable-document or
+provider proof — validate against the fresh projection. Delegate execution mode is selected per
 [`delegate-execution-policy.md`](delegate-execution-policy.md); the mode and
 selection reason are recorded on the trace `effect-dispatched` event.
 
@@ -129,7 +136,8 @@ in [`context-retrieval-contract.md`](context-retrieval-contract.md): L1
 metadata for selection, L2 validated body fetch for authoritative inputs, and
 L3 bounded traversal only with a recorded reason. Required evidence and
 gate-required documents are always fetched; a stale fingerprint triggers
-re-projection and re-fetch, never reuse.
+re-projection and re-fetch, never reuse. (The fetch-facing `fingerprint`
+field compares against the resolved reference `revision`.)
 
 The caller adapter normalizes the declared script delegates (`migrate_docs`,
 `scaffold_docs`, and `build_task_graph` — the migration scripts are owned by
@@ -137,8 +145,8 @@ The caller adapter normalizes the declared script delegates (`migrate_docs`,
 `design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, and
 `all`) into `EffectOutcome`.
 Skills that can emit the footer return it directly. Missing or malformed adapter
-evidence yields `authority-required`; it never advances a checkpoint. The
-effect-specific canonical input/evidence mapping is defined in
+outputs yield `authority-required`; it never advances a checkpoint. The
+effect-specific canonical input/output mapping is defined in
 [execution-outcome-contract.md](execution-outcome-contract.md).
 
 ## Phase 1 yield table
@@ -153,7 +161,7 @@ effect-specific canonical input/evidence mapping is defined in
 | hop/retry/repetition/dispatch budget reached | `budget-exhausted` | Never |
 | commit-gated edge checkpoint ends with new uncommitted changes and no `commit-waived` signal | `commit-required` | Never |
 | selected edge completed and fresh state exposes another declared edge | none | Yes in `run-until-yield` |
-| audit/delegate/evidence success | none | Yes in `run-until-yield` |
+| audit/delegate/checkpoint success | none | Yes in `run-until-yield` |
 
 ## Bounded autonomy
 
@@ -220,22 +228,32 @@ completed loop.
 ## Checkpoint, resume, and duplicate effects
 
 - A completed checkpoint records route, completed audits, completed delegate,
-  and `evidenceRecorded=true` in the caller handoff.
+  and `evidenceRecorded=true` in the caller handoff; the pending edge also
+  carries `evidenceCheckpointId`, the Execution Store checkpoint its evidence
+  phase wrote.
 - Resume always re-projects canonical Markdown before routing again.
 - Resume starts at the last completed `route.next`; an incomplete edge resumes
   only its uncompleted audit/delegate/evidence stages.
-- A stage is skipped only when canonical evidence or the side-effect provider's
-  idempotency key proves completion.
-- If neither proof exists, yield `authority-required` rather than replaying a
-  potentially irreversible effect.
+- A stage is skipped only when a recorded Effect Receipt proves completion:
+  its scope binds `edgeId`, stage, effect, and the input binding; its outputs
+  and durable-document or provider proof still resolve current state; and a
+  provider proof requires the receipt's idempotency key. A recorded checkpoint
+  claim is honored only while the named checkpoint record exists, binds this
+  edge, and every bound output still resolves current state.
+- If no valid receipt exists, yield `authority-required` rather than replaying
+  a potentially irreversible effect. An external effect that succeeded but
+  whose receipt could not be persisted is uncertain — yield
+  `authority-required` unless provider idempotency can establish safe
+  completion.
 - Run counters and trace may be retained in task/thread handoff metadata; they
   are not Graph State or project authority.
 - A `commit-required` yield retains the pending edge with its
   `commitBaseline` (`{ head, dirty }`). Resume re-evaluates the gate against
   the same baseline; it passes once the caller or user has committed the new
   changes (HEAD advanced) or the new dirty entries were resolved. The gate is
-  evaluated after evidence persistence, so the checkpoint evidence Markdown is
-  part of the logical change being committed.
+  evaluated after the checkpoint record is written; Execution-Store records
+  are Git-ignored, so the worktree diff the gate measures is exactly the
+  logical change being committed.
 - On resume the retained `commitBaseline` is reused, never recaptured, so
   changes made before an earlier mid-edge yield are still measured against it.
   A pending edge without a `commitBaseline` — the gate was not applicable or
@@ -246,17 +264,22 @@ completed loop.
   edit that leaves the same porcelain entry is not detected by this gate. This
   is an accepted Phase 1 limitation; do not weaken it silently.
 
-This provides same-task crash recovery. Cross-host recovery when both the
-caller handoff and task/thread history are lost remains outside Phase 1;
-canonical Markdown alone currently does not encode the last runtime node or
-every external side-effect receipt.
+This provides same-task crash recovery. The caller handoff and the run's
+Execution Store carry the last runtime node, recorded receipts, and edge
+checkpoints; cross-host recovery when both the handoff and the store are lost
+remains outside Phase 1.
 
 ## Evidence and persistence
 
-Delegates own their domain work and evidence format. The graph owns only
+Delegates own their domain work and output format. The graph owns only
 declared topology and generic state predicates. Upstream gaps, invalid Task
 Graphs, missing focus, conflicting signals, and failed audits remain explicit
 blockers or loopback signals; the caller must not reinterpret them as success.
 
-Markdown remains the durable history and status authority. Do not create a
-parallel mutable state store to make a route appear complete.
+Markdown remains the durable history and status authority. Per-run execution
+state — Effect Receipts and edge checkpoints — lives in the Git-untracked
+Execution Store (see
+[execution-store-contract.md](execution-store-contract.md)); it is
+per-worktree, refuses writes unless `.apm/state/` is Git-ignored, and never
+carries durable knowledge. Do not create a parallel mutable state store to
+make a route appear complete.

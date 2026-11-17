@@ -1,7 +1,7 @@
 /**
  * Independent case validator. Hard gates — every violation is a failure
  * line, no soft warnings. The validator never trusts run state for the
- * universal invariants: it re-reads the proof doc for evidence receipts,
+ * universal invariants: it re-reads the run's Execution Store checkpoints,
  * re-checks git state inside the fixture repo, and validates emitted edge
  * ids against a graph definition the runner re-loaded from YAML.
  */
@@ -10,11 +10,9 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { isDeepStrictEqual } from "node:util";
 import matter from "gray-matter";
-import {
-  evidenceReceipts,
-  type CallerRunResult,
-  type EvidenceReceipt,
-  type YieldReason,
+import type {
+  CallerRunResult,
+  YieldReason,
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import type { ContextBaseline } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/context_metrics";
 import type { GraphDefinition } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
@@ -28,8 +26,8 @@ import type {
   RunYieldEvent,
   TraceEvent,
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
-
-const DEFAULT_PROOF_PATH = "docs/tasks/0001-task.md";
+import { loadRun } from "../../../src/skills/lib/execution_store";
+import type { CheckpointRecord } from "../../../src/skills/lib/execution_store";
 const TSX_CLI = path.resolve(__dirname, "../../../node_modules/tsx/dist/cli.mjs");
 const BRIEFING_AUDIT = path.resolve(__dirname, "../../../src/skills/briefing-flow/scripts/audit_briefing.ts");
 
@@ -102,7 +100,7 @@ export type CaseExpect = {
   finalFiles?: Record<string, { frontmatter?: Record<string, unknown>; bodyIncludes?: string[] }>;
   /** Pair audit via the real CLI; step expectations run immediately after that leg. */
   briefingAudit?: { spec: string; adr: string; consistent: boolean };
-  /** Counts of persisted checkpoint receipts; step expectations run after that leg. */
+  /** Counts of persisted edge checkpoints in the run's Execution Store. */
   checkpointReceipts?: { edgeId: string; count: number }[];
 };
 
@@ -111,11 +109,15 @@ export type CaseRun = {
   traceEvents: TraceEvent[];
   repo: string;
   definition: GraphDefinition;
-  /** Canonical doc carrying checkpointEvidence; default docs/tasks/0001-task.md. */
-  proofPath?: string;
+  /**
+   * Execution Store run ids the legs ran under — resumed legs share the
+   * handoff's runId, fresh legs bind their own. Checkpoint validation reads
+   * every listed run's store.
+   */
+  runIds: string[];
   /**
    * Issue #124 baseline: runtime artifact-scan reads vs the document bodies
-   * actually supplied to dispatched effects (unique authoritativeInputs
+   * actually supplied to dispatched effects (unique resolved input
    * paths). Optional — only runCase computes it; ad-hoc CaseRun literals in
    * unit tests may omit it.
    */
@@ -134,12 +136,17 @@ function commitCount(repo: string): number {
   return Number.parseInt(result.stdout.trim(), 10) || 0;
 }
 
-function readReceipts(repo: string, proofPath: string): EvidenceReceipt[] {
-  try {
-    return evidenceReceipts(repo, proofPath);
-  } catch {
-    return [];
+function readCheckpoints(repo: string, runIds: readonly string[]): CheckpointRecord[] {
+  const records: CheckpointRecord[] = [];
+  for (const runId of new Set(runIds)) {
+    try {
+      records.push(...loadRun(repo, runId).checkpoints);
+    } catch {
+      // A leg that never wrote a checkpoint still leaves a readable run;
+      // an unreadable one contributes nothing (invariant checks stay honest).
+    }
   }
+  return records;
 }
 
 /**
@@ -294,13 +301,13 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
   }
   if (expect.checkpointReceipts) {
     try {
-      const receipts = evidenceReceipts(run.repo, run.proofPath ?? DEFAULT_PROOF_PATH);
+      const checkpoints = readCheckpoints(run.repo, run.runIds);
       for (const { edgeId, count } of expect.checkpointReceipts) {
-        const actual = receipts.filter((receipt) => receipt.edgeId === edgeId).length;
+        const actual = checkpoints.filter((checkpoint) => checkpoint.edgeId === edgeId).length;
         if (actual !== count) failures.push(`checkpointReceipts ${edgeId}: expected ${count}, got ${actual}`);
       }
     } catch (error) {
-      failures.push(`checkpointReceipts: failed to read proof: ${String(error)}`);
+      failures.push(`checkpointReceipts: failed to read the Execution Store: ${String(error)}`);
     }
   }
   return failures;
@@ -310,7 +317,6 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
 function validateUniversalInvariants(run: CaseRun): string[] {
   const failures: string[] = [];
   const events = run.traceEvents;
-  const proofPath = run.proofPath ?? DEFAULT_PROOF_PATH;
   const routeEvents = events.filter((event): event is RouteSelectedEvent => event.kind === "route-selected");
   const yieldEvents = events.filter((event): event is RunYieldEvent => event.kind === "run-yield");
 
@@ -356,17 +362,21 @@ function validateUniversalInvariants(run: CaseRun): string[] {
     retryBetween = false;
   }
 
-  // 3. Every edgeId in run-yield.completedEdges has a checkpointEvidence
-  //    receipt in the proof doc (re-read from disk — not run state).
+  // 3. Every edgeId in run-yield.completedEdges has a CheckpointRecord in
+  //    the run's Execution Store (re-read from disk — not run state).
   const completedEdgeIds = [...new Set(yieldEvents.flatMap((event) => event.completedEdges))];
-  const receiptEdges = new Set(readReceipts(run.repo, proofPath).map((receipt) => receipt.edgeId));
+  const checkpointEdges = new Set(
+    readCheckpoints(run.repo, run.runIds)
+      .map((checkpoint) => checkpoint.edgeId)
+      .filter((edgeId): edgeId is string => edgeId !== null),
+  );
   for (const edgeId of completedEdgeIds) {
-    if (!receiptEdges.has(edgeId)) {
-      failures.push(`completed edge "${edgeId}" has no checkpointEvidence receipt in ${proofPath}`);
+    if (!checkpointEdges.has(edgeId)) {
+      failures.push(`completed edge "${edgeId}" has no checkpoint record in the Execution Store`);
     }
   }
 
-  // 4. Commit gate: a completed commitGate edge must show evidence work plus
+  // 4. Commit gate: a completed commitGate edge must show checkpoint work plus
   //    proof its output was committed — a prior "commit-required" yield (the
   //    gate fired on a failing leg), the declared "commit-waived" signal, a
   //    clean final tree, or a post-baseline commit in the fixture's history.
@@ -380,8 +390,8 @@ function validateUniversalInvariants(run: CaseRun): string[] {
   const hasPostBaselineCommit = commitCount(run.repo) > 1;
   for (const edgeId of completedEdgeIds) {
     if (commitGateByEdge.get(edgeId) !== true) continue;
-    if (!run.result.events.includes(`evidence:${edgeId}`)) {
-      failures.push(`commitGate edge "${edgeId}" completed without an evidence:${edgeId} runner event`);
+    if (!run.result.events.includes(`checkpoint:${edgeId}`)) {
+      failures.push(`commitGate edge "${edgeId}" completed without a checkpoint:${edgeId} runner event`);
     }
     if (!(sawCommitRequired || commitWaived || cleanTree || hasPostBaselineCommit)) {
       failures.push(

@@ -159,7 +159,7 @@ test("L2 --fetch rejects a stale --fingerprint after the doc is re-projected", (
 
   const stale = runCli(repo, [
     "--fetch", "docs/plans/0001-graph.md",
-    "--fingerprint", `docs/plans/0001-graph.md:${before.fingerprint}`,
+    "--fingerprint", `docs/plans/0001-graph.md:${before.revision}`,
   ]);
   assert.equal(stale.status, 1);
   assert.deepEqual(stale.report.documents, []);
@@ -168,10 +168,10 @@ test("L2 --fetch rejects a stale --fingerprint after the doc is re-projected", (
 
   // Refresh rule: re-project, then re-fetch with the new fingerprint.
   const after = canonicalReference(repo, "docs/plans/0001-graph.md");
-  assert.notEqual(after.fingerprint, before.fingerprint);
+  assert.notEqual(after.revision, before.revision);
   const retry = runCli(repo, [
     "--fetch", "docs/plans/0001-graph.md",
-    "--fingerprint", `docs/plans/0001-graph.md:${after.fingerprint}`,
+    "--fingerprint", `docs/plans/0001-graph.md:${after.revision}`,
   ]);
   assert.equal(retry.status, 0, retry.stderr);
   assert.equal((retry.report.documents as FetchDocument[]).length, 1);
@@ -377,24 +377,24 @@ test("large corpus re-projection after mutation is deterministic — stale refus
   });
   const target = "docs/discovery/0020-big.md";
   const before = canonicalReference(repo, target);
-  const first = runCli(repo, ["--fetch", target, "--fingerprint", `${target}:${before.fingerprint}`]);
+  const first = runCli(repo, ["--fetch", target, "--fingerprint", `${target}:${before.revision}`]);
   assert.equal(first.status, 0, first.stderr);
   // Same corpus + same ref → byte-identical output (deterministic retrieval).
-  const repeat = runCli(repo, ["--fetch", target, "--fingerprint", `${target}:${before.fingerprint}`]);
+  const repeat = runCli(repo, ["--fetch", target, "--fingerprint", `${target}:${before.revision}`]);
   assert.equal(repeat.status, 0, repeat.stderr);
   assert.equal(repeat.stdout, first.stdout);
 
   updateArtifact(repo, target, { title: "Oversized discovery v2" });
   const after = canonicalReference(repo, target);
-  assert.notEqual(after.fingerprint, before.fingerprint,
+  assert.notEqual(after.revision, before.revision,
     "mutation must change the canonical fingerprint deterministically");
 
-  const stale = runCli(repo, ["--fetch", target, "--fingerprint", `${target}:${before.fingerprint}`]);
+  const stale = runCli(repo, ["--fetch", target, "--fingerprint", `${target}:${before.revision}`]);
   assert.equal(stale.status, 1);
   assert.ok(findings(stale.report).some((finding) => finding.code === "stale-fingerprint"
     && finding.path === target));
 
-  const fresh = runCli(repo, ["--fetch", target, "--fingerprint", `${target}:${after.fingerprint}`]);
+  const fresh = runCli(repo, ["--fetch", target, "--fingerprint", `${target}:${after.revision}`]);
   assert.equal(fresh.status, 0, fresh.stderr);
   assert.equal((fresh.report.documents as FetchDocument[])[0].id, "DISC-0020");
 });

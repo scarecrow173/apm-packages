@@ -101,8 +101,8 @@ issue は code、node ID、condition の順で sort され、同じ definition �
    `blockedReasons` に記録され blocked になります。
 
 command は選択 destination を再帰的に評価しません。1 回の判断に使った evidence を
-記録し、caller が Markdown evidence を保存し、required audit を実行してから次の turn
-を呼び出します。
+記録し、caller が required audit を実行し、Effect Receipt と edge checkpoint を run の
+Execution Store に保存してから次の turn を呼び出します。
 
 ## Runtime projection の包含
 

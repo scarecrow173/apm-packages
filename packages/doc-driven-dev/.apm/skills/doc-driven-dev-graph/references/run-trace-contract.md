@@ -5,7 +5,11 @@ the [execution contract](execution-contract.md) loop. The trace records what a
 run did — selected routes, artifact reads, dispatched effects, outcomes, and
 yields — so runs can be measured and compared deterministically. It is
 non-authoritative diagnostic data: never Graph State, never a lifecycle store,
-never evidence for routing, gates, or status.
+never evidence for routing, gates, or status. Authoritative per-run execution
+state — Effect Receipts and edge checkpoints — lives in the run's
+Execution Store (see
+[execution-store-contract.md](execution-store-contract.md)); a trace event is
+never proof that an effect ran or that a checkpoint completed.
 
 ## Authority split
 
@@ -117,7 +121,8 @@ honestly. They never represent new graph effects.
 ### `effect-outcome`
 
 `edgeId`, `stage`, `effectId`, `outcome` (`completed`/`retry`/`yield`),
-`evidencePaths` (repo-relative), and `reason` — required when `outcome` is
+`outputPaths` (repo-relative paths of the outcome's declared outputs), and
+`reason` — required when `outcome` is
 `yield` and rejected on `completed`/`retry` outcomes (the validator enforces
 both); one of `approval-required`, `input-required`, `authority-required`,
 `unrecoverable-blocker`, `commit-required`.
@@ -143,7 +148,7 @@ expressed by the per-`runId` sequence, and completed-edge ids accumulate in
 
 - No timestamps, PIDs, absolute paths, random IDs, or environment paths are
   recorded. Fixture runs use fixed `runId` values.
-- `focusPaths`/`evidencePaths`/`focus` hold repo-relative paths only;
+- `focusPaths`/`outputPaths`/`focus` hold repo-relative paths only;
   normalization rejects absolute paths (POSIX, Windows drive, UNC, `~`).
 - `route-selected.blockers` records only bounded tokens. A blocker carrying
   free text after a `<kind>:` prefix — such as a `broken-relation:` message

@@ -25,8 +25,9 @@ import type { E2ECase } from "../harness/case_types";
  *     status "done" — the honest document state an implementation-flow
  *     completion asserts (the implementation gate requires every selected
  *     task done/wont-do). `finalFiles` therefore expects "done", not "todo".
- *     `commitEvidence: true` then makes runCase wire applyEvidence to
- *     persistEvidence + commitAll so the checkpoint completes on a clean tree.
+ *     `commitEvidence: true` then makes runCase's applyCheckpointEvidence
+ *     commitAll after declaring the task doc, so the edge checkpoint
+ *     completes on a clean tree.
  */
 export const case01: E2ECase = {
   id: "e2e-01",

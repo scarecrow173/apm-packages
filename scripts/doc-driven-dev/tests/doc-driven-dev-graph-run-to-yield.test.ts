@@ -13,6 +13,28 @@ import matter from "gray-matter";
 import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 import { projectGraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
 import { routeGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
+import type {
+  CallerEffect,
+  CompletedEffectOutcome,
+  DurableDocumentReference,
+  EffectOutcome,
+  EffectProof,
+  EffectReference,
+  ReferenceSpec,
+  RetryEffectOutcome,
+  YieldEffectOutcome,
+} from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
+import {
+  createRun,
+  loadRun,
+  recordCheckpoint,
+  recordReceipt,
+  StoreError,
+  type CheckpointRecord,
+  type ReceiptRecord,
+  type RunSnapshot,
+} from "../src/skills/lib/execution_store";
+import { canonicalJson, isPlainObject } from "../src/skills/lib/execution_store/types";
 
 type YieldReason =
   | "approval-required"
@@ -29,61 +51,11 @@ type ScenarioMode = "single-step" | "run-until-yield";
 type EffectYieldReason = Extract<YieldReason,
   "approval-required" | "input-required" | "authority-required" | "unrecoverable-blocker" | "commit-required">;
 
-type CanonicalReference = {
-  path: string;
-  id: string;
-  fingerprint: string;
-};
-
-type EffectIdentity = {
-  kind: "audit" | "delegate";
-  id: string;
-};
-
-type CompletedEffectOutcome = {
-  status: "completed";
-  edgeId: string;
-  stage: "audit" | "delegate";
-  effect: EffectIdentity;
-  authoritativeInputs: CanonicalReference[];
-  evidence: CanonicalReference[];
-  proof: {
-    canonicalEvidence?: CanonicalReference;
-    providerIdempotency?: { provider: string; key: string };
-  };
-  reason?: never;
-  retry?: never;
-};
-
-type RetryEffectOutcome = {
-  status: "retry";
-  edgeId: string;
-  stage: "audit" | "delegate";
-  effect: EffectIdentity;
-  authoritativeInputs: CanonicalReference[];
-  evidence: CanonicalReference[];
-  retry: { changedEvidence: CanonicalReference[] };
-  proof?: never;
-  reason?: never;
-};
-
-type YieldEffectOutcome = {
-  status: "yield";
-  edgeId: string;
-  stage: "audit" | "delegate";
-  effect: EffectIdentity;
-  authoritativeInputs: CanonicalReference[];
-  evidence: CanonicalReference[];
-  reason: EffectYieldReason;
-  proof?: never;
-  retry?: never;
-};
-
-type EffectOutcome = CompletedEffectOutcome | RetryEffectOutcome | YieldEffectOutcome;
+type EffectIdentity = CallerEffect;
 
 type ScenarioStep = {
   expectEdge: string | null;
-  applyEvidence?: (repo: string, signals: Set<string>) => void;
+  applyCheckpointEvidence?: (repo: string, signals: Set<string>) => ReferenceSpec[] | void;
   audit?: (repo: string, signals: Set<string>, route: GraphRoute, audit: string) => EffectOutcome;
   delegate?: (repo: string, signals: Set<string>, route: GraphRoute) => EffectOutcome;
   yield?: YieldReason;
@@ -98,6 +70,7 @@ type PendingEdge = {
   completedAudits: string[];
   delegateComplete: boolean;
   evidenceRecorded: boolean;
+  evidenceCheckpointId: string | null;
   commitBaseline: CommitBaseline | null;
 };
 
@@ -113,6 +86,7 @@ type EdgeTrace = {
 };
 
 type ScenarioHandoff = {
+  runId: string;
   current: string;
   mode: ScenarioMode;
   maxHops: number;
@@ -150,6 +124,7 @@ type ScenarioOptions = {
   focus?: string[];
   signals?: string[];
   graphPath?: string;
+  runId?: string;
   resume?: ScenarioHandoff;
 };
 
@@ -204,14 +179,17 @@ function updateArtifact(repo: string, relativePath: string, data: Record<string,
   fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, ...data }), "utf8");
 }
 
-const proofRelativePath = "docs/tasks/0001-task.md";
+// The fixture's primary task doc: the task-graph fallback input and the doc
+// each edge checkpoint binds — canonical content, never run bookkeeping
+// (receipts/checkpoints live in the Execution Store).
+const primaryTaskDoc = "docs/tasks/0001-task.md";
 const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
   "docs/plans/0001-graph.md",
   "docs/test-specs/0001-graph.md",
-  proofRelativePath,
+  primaryTaskDoc,
   "docs/impl/ir/0001-task.md",
 ];
 const footerDelegates = new Set([
@@ -223,10 +201,6 @@ const footerDelegates = new Set([
 ]);
 const callerNormalizedDelegates = new Set(["migrate_docs", "scaffold_docs", "build_task_graph"]);
 const callerNormalizedAudits = new Set(["spec", "adr", "design", "plan", "task", "test-spec", "impl-record", "experiment-log", "all"]);
-
-function proofFile(repo: string): string {
-  return path.join(repo, proofRelativePath);
-}
 
 function fingerprint(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -240,7 +214,7 @@ function filesystemEntryKind(target: string): string {
   return "other";
 }
 
-function canonicalReference(repo: string, relativePath: string): CanonicalReference {
+function canonicalReference(repo: string, relativePath: string): DurableDocumentReference {
   if (relativePath === ".") {
     const entries = canonicalTargets.flatMap((directory) => {
       const target = path.join(repo, directory);
@@ -250,18 +224,19 @@ function canonicalReference(repo: string, relativePath: string): CanonicalRefere
       ];
     });
     return {
+      kind: "durable-document",
       path: relativePath,
       id: "WORKSPACE_ROOT",
-      fingerprint: fingerprint(entries.join("\n")),
+      revision: fingerprint(entries.join("\n")),
     };
   }
   const file = path.join(repo, relativePath);
   const parsed = matter(fs.readFileSync(file, "utf8"));
-  const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
   return {
+    kind: "durable-document",
     path: relativePath,
-    id: data.id as string,
-    fingerprint: fingerprint(matter.stringify(parsed.content, data)),
+    id: parsed.data.id as string,
+    revision: fingerprint(matter.stringify(parsed.content, parsed.data)),
   };
 }
 
@@ -270,7 +245,7 @@ function isCallerNormalizedEffect(stage: EffectOutcome["stage"], effectId: strin
 }
 
 function taskGraphPaths(route: GraphRoute): string[] {
-  return route.taskGraph?.nodes.map((node) => node.path) ?? [proofRelativePath];
+  return route.taskGraph?.nodes.map((node) => node.path) ?? [primaryTaskDoc];
 }
 
 function selectedTaskGraphPlanPath(route: GraphRoute): string {
@@ -308,7 +283,7 @@ function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
   }
 }
 
-function effectEvidencePath(route: GraphRoute, effect: EffectIdentity): string {
+function effectOutputPath(route: GraphRoute, effect: EffectIdentity): string {
   if (effect.kind === "audit") return effectInputPaths(route, effect)[0];
   switch (effect.id) {
     case "design-doc": return "docs/designs/0001-graph.md";
@@ -319,13 +294,12 @@ function effectEvidencePath(route: GraphRoute, effect: EffectIdentity): string {
   }
 }
 
-function authoritativeInputs(repo: string, route: GraphRoute, effect: EffectIdentity): CanonicalReference[] {
-  const paths = effectInputPaths(route, effect);
-  return [...new Set(paths)].sort().map((relativePath) => canonicalReference(repo, relativePath));
+function resolvedInputs(repo: string, route: GraphRoute, effect: EffectIdentity): EffectReference[] {
+  return resolveReferenceSpecs(repo, undefined, effectInputPaths(route, effect));
 }
 
-function evidenceReference(repo: string, route: GraphRoute, effect: EffectIdentity): CanonicalReference {
-  return canonicalReference(repo, effectEvidencePath(route, effect));
+function outputReference(repo: string, route: GraphRoute, effect: EffectIdentity): DurableDocumentReference {
+  return canonicalReference(repo, effectOutputPath(route, effect));
 }
 
 function completedOutcome(
@@ -333,24 +307,27 @@ function completedOutcome(
   route: GraphRoute,
   stage: EffectOutcome["stage"],
   effect: EffectIdentity,
-  providerIdempotency?: { provider: string; key: string },
+  provider?: { provider: string; idempotencyKey: string },
 ): CompletedEffectOutcome {
-  const evidence = evidenceReference(repo, route, effect);
-  const evidenceReferences = effect.id === "planning-flow"
+  const output = outputReference(repo, route, effect);
+  const outputs = effect.id === "planning-flow"
     ? [
-        evidence,
+        output,
         canonicalReference(repo, "docs/test-specs/0001-graph.md"),
         ...taskGraphPaths(route).map((relativePath) => canonicalReference(repo, relativePath)),
       ]
-    : [evidence];
+    : [output];
+  const proof: EffectProof = provider
+    ? { kind: "provider", provider: provider.provider, idempotencyKey: provider.idempotencyKey }
+    : output;
   return {
     status: "completed",
     edgeId: route.edgeId as string,
     stage,
     effect,
-    authoritativeInputs: authoritativeInputs(repo, route, effect),
-    evidence: evidenceReferences,
-    proof: providerIdempotency ? { providerIdempotency } : { canonicalEvidence: evidence },
+    inputs: resolvedInputs(repo, route, effect),
+    outputs,
+    proof,
   };
 }
 
@@ -366,8 +343,8 @@ function yieldOutcome(
     edgeId: route.edgeId as string,
     stage,
     effect,
-    authoritativeInputs: authoritativeInputs(repo, route, effect),
-    evidence: [evidenceReference(repo, route, effect)],
+    inputs: resolvedInputs(repo, route, effect),
+    outputs: [outputReference(repo, route, effect)],
     reason,
   };
 }
@@ -377,26 +354,47 @@ function retryOutcome(
   route: GraphRoute,
   stage: EffectOutcome["stage"],
   effect: EffectIdentity,
-  changedEvidence: CanonicalReference[],
+  changedOutputs: EffectReference[],
 ): RetryEffectOutcome {
   return {
     status: "retry",
     edgeId: route.edgeId as string,
     stage,
     effect,
-    authoritativeInputs: authoritativeInputs(repo, route, effect),
-    evidence: [evidenceReference(repo, route, effect)],
-    retry: { changedEvidence },
+    inputs: resolvedInputs(repo, route, effect),
+    outputs: [outputReference(repo, route, effect)],
+    retry: { changedOutputs },
   };
 }
 
-function isCanonicalReference(value: unknown): value is CanonicalReference {
+function isDurableDocumentReference(value: unknown): value is DurableDocumentReference {
   return Boolean(value)
     && typeof value === "object"
-    && typeof (value as CanonicalReference).path === "string"
-    && typeof (value as CanonicalReference).id === "string"
-    && typeof (value as CanonicalReference).fingerprint === "string";
+    && (value as DurableDocumentReference).kind === "durable-document"
+    && typeof (value as DurableDocumentReference).path === "string"
+    && typeof (value as DurableDocumentReference).id === "string"
+    && typeof (value as DurableDocumentReference).revision === "string";
 }
+
+function isEffectReference(value: unknown): value is EffectReference {
+  if (!value || typeof value !== "object") return false;
+  const kind = (value as EffectReference).kind;
+  if (kind === "durable-document") return isDurableDocumentReference(value);
+  if (kind === "execution-task") {
+    const ref = value as { runId?: unknown; taskId?: unknown; version?: unknown };
+    return typeof ref.runId === "string" && ref.runId.length > 0
+      && typeof ref.taskId === "string" && ref.taskId.length > 0
+      && Number.isInteger(ref.version) && (ref.version as number) >= 1;
+  }
+  if (kind === "provider") {
+    const ref = value as { provider?: unknown; idempotencyKey?: unknown };
+    return typeof ref.provider === "string" && ref.provider.length > 0
+      && typeof ref.idempotencyKey === "string" && ref.idempotencyKey.length > 0;
+  }
+  return false;
+}
+
+type StoreView = { runId: string; tasks: ReadonlyArray<RunSnapshot["tasks"][number]> };
 
 function validateEffectOutcome(
   repo: string,
@@ -404,33 +402,36 @@ function validateEffectOutcome(
   outcome: EffectOutcome,
   stage: EffectOutcome["stage"],
   effect: EffectIdentity,
+  expectedInputs: EffectReference[],
+  store?: StoreView,
 ): void {
   assert.ok(["completed", "retry", "yield"].includes(outcome.status), "unknown EffectOutcome status");
   assert.equal(outcome.edgeId, route.edgeId);
   assert.equal(outcome.stage, stage);
   assert.deepEqual(outcome.effect, effect);
-  assert.ok(outcome.authoritativeInputs.length > 0 && outcome.authoritativeInputs.every(isCanonicalReference));
-  assert.deepEqual(outcome.authoritativeInputs, authoritativeInputs(repo, route, effect));
-  assert.ok(outcome.evidence.length > 0 && outcome.evidence.every(isCanonicalReference));
-  assert.ok(outcome.evidence.every((evidence) => canonicalEvidenceMatches(repo, evidence)), "outcome evidence must resolve current canonical content");
+  assert.ok(outcome.inputs.length > 0 && outcome.inputs.every(isEffectReference));
+  assert.deepEqual(outcome.inputs, expectedInputs);
+  assert.ok(outcome.outputs.length > 0 && outcome.outputs.every(isEffectReference));
+  assert.ok(outcome.outputs.every((reference) => referenceIsLive(repo, store, reference)), "outcome outputs must resolve current canonical state");
   if (outcome.status === "completed") {
     assert.equal("reason" in outcome, false, "completed outcome must not include reason");
     assert.equal("retry" in outcome, false, "completed outcome must not include retry");
-    const proof = outcome.proof ?? {};
-    const hasCanonicalEvidence = isCanonicalReference(proof.canonicalEvidence);
-    const hasProviderIdempotency = typeof proof.providerIdempotency?.provider === "string"
-      && proof.providerIdempotency.provider.length > 0
-      && typeof proof.providerIdempotency.key === "string"
-      && proof.providerIdempotency.key.length > 0;
-    assert.equal(hasCanonicalEvidence !== hasProviderIdempotency, true);
-    if (isCanonicalReference(proof.canonicalEvidence)) {
-      assert.ok(canonicalEvidenceMatches(repo, proof.canonicalEvidence), "completed proof must resolve current canonical content");
+    const proof: unknown = outcome.proof;
+    assert.ok(isEffectReference(proof), "completed outcome requires a typed proof reference");
+    assert.notEqual(proof.kind, "execution-task", "completed proof must be a durable-document or provider reference");
+    if (proof.kind === "durable-document") {
+      assert.ok(durableDocumentMatches(repo, proof), "completed proof must resolve current canonical content");
     }
   } else if (outcome.status === "retry") {
     assert.equal("proof" in outcome, false, "retry outcome must not include proof");
     assert.equal("reason" in outcome, false, "retry outcome must not include reason");
-    assert.ok(outcome.retry.changedEvidence.length > 0 && outcome.retry.changedEvidence.every(isCanonicalReference));
-    assert.ok(outcome.retry.changedEvidence.every((evidence) => canonicalEvidenceMatches(repo, evidence)), "retry evidence must resolve current canonical content");
+    assert.ok(outcome.retry.changedOutputs.length > 0 && outcome.retry.changedOutputs.every(isEffectReference));
+    assert.ok(
+      outcome.retry.changedOutputs.every((reference) => (
+        reference.kind !== "provider" && referenceIsLive(repo, store, reference)
+      )),
+      "retry changedOutputs must resolve current canonical state",
+    );
   } else {
     assert.equal("proof" in outcome, false, "yield outcome must not include proof");
     assert.equal("retry" in outcome, false, "yield outcome must not include retry");
@@ -438,59 +439,157 @@ function validateEffectOutcome(
   }
 }
 
-function storedOutcomes(repo: string): EffectOutcome[] {
-  const parsed = matter(fs.readFileSync(proofFile(repo), "utf8"));
-  return Array.isArray(parsed.data.effectOutcomes) ? parsed.data.effectOutcomes as EffectOutcome[] : [];
-}
-
-function persistOutcome(repo: string, outcome: EffectOutcome): void {
-  const file = proofFile(repo);
-  const parsed = matter(fs.readFileSync(file, "utf8"));
-  const outcomes = storedOutcomes(repo);
-  if (!outcomes.some((stored) => JSON.stringify(stored) === JSON.stringify(outcome))) outcomes.push(outcome);
-  fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, effectOutcomes: outcomes }), "utf8");
-}
-
-function hasStoredOutcome(repo: string, outcome: EffectOutcome): boolean {
-  return storedOutcomes(repo).some((stored) => JSON.stringify(stored) === JSON.stringify(outcome));
-}
-
-function canonicalEvidenceMatches(repo: string, evidence: CanonicalReference): boolean {
-  if (path.isAbsolute(evidence.path)) return false;
-  const resolved = path.resolve(repo, evidence.path);
+function durableDocumentMatches(repo: string, reference: DurableDocumentReference): boolean {
+  if (path.isAbsolute(reference.path)) return false;
+  const resolved = path.resolve(repo, reference.path);
   const relative = path.relative(repo, resolved);
   if (relative.startsWith("..") || path.isAbsolute(relative) || !fs.existsSync(resolved)) return false;
   try {
-    const current = canonicalReference(repo, evidence.path);
-    return current.id === evidence.id && current.fingerprint === evidence.fingerprint;
+    const current = canonicalReference(repo, reference.path);
+    return current.id === reference.id && current.revision === reference.revision;
   } catch {
     return false;
   }
 }
 
-type EvidenceReceipt = { edgeId: string; evidence: CanonicalReference };
-
-function evidenceReceipts(repo: string): EvidenceReceipt[] {
-  const parsed = matter(fs.readFileSync(proofFile(repo), "utf8"));
-  return Array.isArray(parsed.data.checkpointEvidence)
-    ? parsed.data.checkpointEvidence as EvidenceReceipt[]
-    : [];
+function referenceIsLive(repo: string, store: StoreView | undefined, reference: EffectReference): boolean {
+  if (reference.kind === "durable-document") return durableDocumentMatches(repo, reference);
+  if (reference.kind === "execution-task") {
+    if (!store || reference.runId !== store.runId) return false;
+    const task = store.tasks.find((entry) => entry.taskId === reference.taskId);
+    return task !== undefined && task.version === reference.version;
+  }
+  return reference.provider.length > 0 && reference.idempotencyKey.length > 0;
 }
 
-function persistEvidence(repo: string, edgeId: string): void {
-  const file = proofFile(repo);
-  const parsed = matter(fs.readFileSync(file, "utf8"));
-  const receipts = evidenceReceipts(repo);
-  receipts.push({ edgeId, evidence: canonicalReference(repo, proofRelativePath) });
-  fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, checkpointEvidence: receipts }), "utf8");
+function resolveReference(repo: string, store: StoreView | undefined, spec: ReferenceSpec): EffectReference | null {
+  try {
+    if (typeof spec === "string") return canonicalReference(repo, spec);
+    if (!spec || typeof spec !== "object") return null;
+    if (spec.kind === "durable-document") return canonicalReference(repo, spec.path);
+    if (spec.kind === "execution-task") {
+      if (!store || typeof spec.taskId !== "string" || spec.taskId.length === 0) return null;
+      const task = store.tasks.find((entry) => entry.taskId === spec.taskId);
+      if (!task) return null;
+      if (spec.version !== undefined && spec.version !== task.version) return null;
+      return { kind: "execution-task", runId: task.runId, taskId: task.taskId, version: task.version };
+    }
+    if (spec.kind === "provider") return isEffectReference(spec) ? spec : null;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
-function hasEvidence(repo: string, edgeId: string): boolean {
-  return evidenceReceipts(repo).some((receipt) => (
-    receipt.edgeId === edgeId
-    && isCanonicalReference(receipt.evidence)
-    && canonicalEvidenceMatches(repo, receipt.evidence)
-  ));
+function resolveReferenceSpecs(
+  repo: string,
+  store: StoreView | undefined,
+  specs: readonly ReferenceSpec[],
+): EffectReference[] {
+  const resolved = specs.map((spec) => {
+    const reference = resolveReference(repo, store, spec);
+    assert.ok(reference !== null, `reference spec does not resolve: ${JSON.stringify(spec)}`);
+    return reference;
+  });
+  const unique = new Map<string, EffectReference>();
+  for (const reference of resolved) unique.set(canonicalJson(reference), reference);
+  return [...unique.values()].sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)));
+}
+
+function referenceIdentity(reference: EffectReference): string {
+  switch (reference.kind) {
+    case "durable-document": return `doc:${reference.path}:${reference.id}`;
+    case "execution-task": return `task:${reference.taskId}`;
+    case "provider": return `provider:${reference.provider}:${reference.idempotencyKey}`;
+  }
+}
+
+function sameInputScope(declared: EffectReference[], resolved: EffectReference[]): boolean {
+  if (declared.length !== resolved.length) return false;
+  const left = declared.map(referenceIdentity).sort();
+  const right = resolved.map(referenceIdentity).sort();
+  return left.every((identity, index) => identity === right[index]);
+}
+
+function sanitizeRecordIdPart(value: string): string {
+  const cleaned = value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return cleaned.length > 0 ? cleaned.slice(0, 40) : "effect";
+}
+
+function outcomeReceiptId(outcome: CompletedEffectOutcome): string {
+  const payload = canonicalJson({
+    edgeId: outcome.edgeId,
+    stage: outcome.stage,
+    effect: outcome.effect,
+    inputs: outcome.inputs,
+    outputs: outcome.outputs,
+    proof: outcome.proof,
+  });
+  return `receipt-${outcome.stage}-${sanitizeRecordIdPart(outcome.effect.id)}-${fingerprint(payload).slice(0, 12)}`;
+}
+
+function parseReceiptScope(value: unknown): { edgeId: string; stage: "audit" | "delegate"; effect: EffectIdentity; inputs: EffectReference[] } | null {
+  if (!isPlainObject(value)) return null;
+  if (typeof value.edgeId !== "string" || value.edgeId.length === 0) return null;
+  if (value.stage !== "audit" && value.stage !== "delegate") return null;
+  const effect = value.effect;
+  if (!isPlainObject(effect)) return null;
+  if ((effect.kind !== "audit" && effect.kind !== "delegate") || typeof effect.id !== "string") return null;
+  if (!Array.isArray(value.inputs) || !value.inputs.every(isEffectReference)) return null;
+  return { edgeId: value.edgeId, stage: value.stage, effect: { kind: effect.kind, id: effect.id }, inputs: value.inputs };
+}
+
+function parseReceiptResult(value: unknown): { outputs: EffectReference[]; proof: EffectProof } | null {
+  if (!isPlainObject(value)) return null;
+  if (!Array.isArray(value.outputs) || !value.outputs.every(isEffectReference)) return null;
+  const proof = value.proof;
+  if (!isEffectReference(proof) || proof.kind === "execution-task") return null;
+  return { outputs: value.outputs, proof };
+}
+
+function findOutcomeReceipt(receipts: ReadonlyArray<ReceiptRecord>, outcome: CompletedEffectOutcome): ReceiptRecord | null {
+  const scope = { edgeId: outcome.edgeId, stage: outcome.stage, effect: outcome.effect, inputs: outcome.inputs };
+  const result = { outputs: outcome.outputs, proof: outcome.proof };
+  for (const record of receipts) {
+    if (record.status !== "success") continue;
+    const parsedScope = parseReceiptScope(record.input);
+    const parsedResult = parseReceiptResult(record.output);
+    if (!parsedScope || !parsedResult) continue;
+    if (JSON.stringify(parsedScope) === JSON.stringify(scope) && JSON.stringify(parsedResult) === JSON.stringify(result)) return record;
+  }
+  return null;
+}
+
+function receiptSummaries(repo: string, runId: string): unknown[] {
+  try {
+    return loadRun(repo, runId).receipts.map((receipt) => ({ input: receipt.input, output: receipt.output }));
+  } catch {
+    return [];
+  }
+}
+
+type EdgeCheckpointData = {
+  edgeId: string;
+  receipts: string[];
+  outputs: EffectReference[];
+  routeHash: string;
+};
+
+function edgeCheckpointId(edgeId: string, data: EdgeCheckpointData): string {
+  return `checkpoint-${sanitizeRecordIdPart(edgeId)}-${fingerprint(canonicalJson(data)).slice(0, 12)}`;
+}
+
+function parseCheckpointData(value: unknown): EdgeCheckpointData | null {
+  if (!isPlainObject(value)) return null;
+  if (typeof value.edgeId !== "string" || value.edgeId.length === 0) return null;
+  if (!Array.isArray(value.receipts) || !value.receipts.every((entry) => typeof entry === "string")) return null;
+  if (!Array.isArray(value.outputs) || !value.outputs.every(isEffectReference)) return null;
+  return {
+    edgeId: value.edgeId,
+    receipts: value.receipts,
+    outputs: value.outputs,
+    routeHash: typeof value.routeHash === "string" ? value.routeHash : "",
+  };
 }
 
 function defaultEffectOutcome(
@@ -507,22 +606,32 @@ function defaultEffectOutcome(
   return completedOutcome(repo, route, stage, effect);
 }
 
-function isReusableCompletedOutcome(repo: string, route: GraphRoute, outcome: EffectOutcome): boolean {
+function isReusableCompletedOutcome(
+  repo: string,
+  route: GraphRoute,
+  outcome: EffectOutcome,
+  snapshot: RunSnapshot,
+): boolean {
   if (outcome.status !== "completed") return false;
   const validEffect = outcome.stage === "audit"
     ? outcome.effect.kind === "audit" && route.requiredAudits.includes(outcome.effect.id)
     : outcome.effect.kind === "delegate" && outcome.effect.id === route.delegate;
   if (!validEffect) return false;
+  const view: StoreView = { runId: snapshot.runId, tasks: snapshot.tasks };
+  if (!sameInputScope(outcome.inputs, resolvedInputs(repo, route, outcome.effect))) return false;
   try {
-    validateEffectOutcome(repo, route, outcome, outcome.stage, outcome.effect);
+    // Scope identity was just proven; the attestation binds itself — the
+    // delegate's own committed work legitimately advanced the docs the
+    // edge's earlier effects read (the commit-resume flow).
+    validateEffectOutcome(repo, route, outcome, outcome.stage, outcome.effect, outcome.inputs, view);
   } catch {
     return false;
   }
-  if (!hasStoredOutcome(repo, outcome)) return false;
-  const proof = outcome.proof;
-  return proof?.providerIdempotency !== undefined
-    || (isCanonicalReference(proof?.canonicalEvidence)
-      && canonicalEvidenceMatches(repo, proof.canonicalEvidence));
+  const receipt = findOutcomeReceipt(snapshot.receipts, outcome);
+  if (receipt === null) return false;
+  return outcome.proof.kind === "provider"
+    ? receipt.idempotencyKey === outcome.proof.idempotencyKey
+    : durableDocumentMatches(repo, outcome.proof);
 }
 
 function evaluateEffectOutcome(outcome: EffectOutcome): EffectYieldReason | "retry" | null {
@@ -532,23 +641,23 @@ function evaluateEffectOutcome(outcome: EffectOutcome): EffectYieldReason | "ret
 }
 
 function evidence(
-  edgeId: string,
+  _edgeId: string,
   mutate?: (repo: string, signals: Set<string>) => void,
-): (repo: string, signals: Set<string>) => void {
+): (repo: string, signals: Set<string>) => ReferenceSpec[] {
   return (repo, signals) => {
     mutate?.(repo, signals);
-    persistEvidence(repo, edgeId);
+    return [primaryTaskDoc];
   };
 }
 
 function committedEvidence(
-  edgeId: string,
+  _edgeId: string,
   mutate?: (repo: string, signals: Set<string>) => void,
-): (repo: string, signals: Set<string>) => void {
+): (repo: string, signals: Set<string>) => ReferenceSpec[] {
   return (repo, signals) => {
     mutate?.(repo, signals);
-    persistEvidence(repo, edgeId);
     commitAll(repo);
+    return [primaryTaskDoc];
   };
 }
 
@@ -559,6 +668,13 @@ function git(repo: string, args: string[]): string {
 }
 
 function gitInit(repo: string): void {
+  // The Execution Store boundary refuses state writes unless the root is
+  // ignore-covered — the fixture declares the same entry `init` writes.
+  fs.writeFileSync(
+    path.join(repo, ".gitignore"),
+    "# doc-driven-dev execution state — per-worktree, never committed\n/.apm/state/\n",
+    "utf8",
+  );
   git(repo, ["init", "-q"]);
   git(repo, ["add", "-A"]);
   git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "baseline"]);
@@ -566,7 +682,9 @@ function gitInit(repo: string): void {
 
 function commitAll(repo: string): void {
   git(repo, ["add", "-A"]);
-  git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "checkpoint"]);
+  // Store records are Git-ignored, so a commit boundary can legitimately be
+  // empty — still advance HEAD so the commit gate observes the commit.
+  git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "checkpoint", "--allow-empty"]);
 }
 
 function captureBaseline(repo: string): CommitBaseline {
@@ -598,7 +716,7 @@ function fixtureRepo(options: {
     fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
   }
   // The experiment-log audit's canonical input anchor is the managed exp
-  // index; it needs a front-matter id to resolve as a CanonicalReference.
+  // index; it needs a front-matter id to resolve as a DurableDocumentReference.
   writeArtifact(repo, "docs/impl/exp/README.md", {
     id: "EXP-INDEX", title: "Experiment Logs",
   }, "# Experiment Logs\n");
@@ -668,6 +786,7 @@ function recordTrace(traces: EdgeTrace[], trace: EdgeTrace): void {
   else traces[index] = trace;
 }
 
+let scenarioRunCounter = 0;
 function runScenario(options: ScenarioOptions): ScenarioResult {
   const mode = options.resume?.mode ?? options.mode;
   const topologyBaseHops = 10;
@@ -699,9 +818,86 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     completedAudits: [...options.resume.pending.completedAudits],
     delegateComplete: options.resume.pending.delegateComplete,
     evidenceRecorded: options.resume.pending.evidenceRecorded,
+    evidenceCheckpointId: options.resume.pending.evidenceCheckpointId ?? null,
     commitBaseline: options.resume.pending.commitBaseline ?? null,
   } : null;
   let projectCalls = 0;
+
+  // Execution Store binding: the run carries receipts + edge checkpoints.
+  // A resumed leg reuses the handoff's runId; a fresh leg binds a fresh id.
+  const runId = options.resume?.runId ?? options.runId ?? `scenario-${scenarioRunCounter += 1}`;
+  let snapshot: RunSnapshot;
+  try {
+    snapshot = loadRun(options.repo, runId);
+  } catch (error: unknown) {
+    if (error instanceof StoreError && error.code === "run-not-found") {
+      snapshot = createRun(options.repo, { runId, graphId: definition.id, focus: [...focus] });
+    } else {
+      throw error;
+    }
+  }
+  const reloadStore = (): void => { snapshot = loadRun(options.repo, runId); };
+  const storeView = (): StoreView => ({ runId, tasks: snapshot.tasks });
+  const recordOutcomeReceipt = (outcome: CompletedEffectOutcome): void => {
+    recordReceipt(options.repo, runId, {
+      receiptId: outcomeReceiptId(outcome),
+      effect: `${outcome.effect.kind}:${outcome.effect.id}`,
+      taskId: null,
+      idempotencyKey: outcome.proof.kind === "provider" ? outcome.proof.idempotencyKey : null,
+      actor: "oracle/default",
+      status: "success",
+      input: {
+        edgeId: outcome.edgeId,
+        stage: outcome.stage,
+        effect: outcome.effect,
+        inputs: outcome.inputs,
+      },
+      output: { outputs: outcome.outputs, proof: outcome.proof },
+    });
+    reloadStore();
+  };
+  const checkpointIsVerified = (checkpointId: string | null, edgeId: string): boolean => {
+    if (checkpointId === null) return false;
+    const record = snapshot.checkpoints.find((entry) => entry.checkpointId === checkpointId);
+    if (!record || record.edgeId !== edgeId) return false;
+    const data = parseCheckpointData(record.data);
+    return data !== null
+      && data.edgeId === edgeId
+      && data.outputs.every((reference) => referenceIsLive(options.repo, storeView(), reference));
+  };
+  const adoptStoredReceipt = (
+    route: GraphRoute,
+    stage: "audit" | "delegate",
+    effect: EffectIdentity,
+    expectedInputs: EffectReference[],
+  ): CompletedEffectOutcome | null => {
+    if (options.resume === undefined) return null;
+    for (const record of snapshot.receipts) {
+      if (record.status !== "success") continue;
+      const scope = parseReceiptScope(record.input);
+      const result = parseReceiptResult(record.output);
+      if (!scope || !result) continue;
+      if (scope.edgeId !== route.edgeId || scope.stage !== stage) continue;
+      if (JSON.stringify(scope.effect) !== JSON.stringify(effect)) continue;
+      if (!sameInputScope(scope.inputs, expectedInputs)) continue;
+      if (!result.outputs.every((reference) => referenceIsLive(options.repo, storeView(), reference))) continue;
+      if (result.proof.kind === "provider") {
+        if (record.idempotencyKey !== result.proof.idempotencyKey) continue;
+      } else if (!durableDocumentMatches(options.repo, result.proof)) {
+        continue;
+      }
+      return {
+        status: "completed",
+        edgeId: route.edgeId as string,
+        stage,
+        effect,
+        inputs: expectedInputs,
+        outputs: result.outputs,
+        proof: result.proof,
+      };
+    }
+    return null;
+  };
 
   const project = () => {
     projectCalls += 1;
@@ -719,6 +915,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     route: GraphRoute,
     edgeOutcomes: EffectOutcome[],
     evidenceRecorded: boolean,
+    evidenceCheckpointId: string | null,
     commitBaseline: CommitBaseline | null = null,
   ) => {
     const completedAudits = edgeOutcomes
@@ -734,6 +931,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       completedAudits,
       delegateComplete,
       evidenceRecorded,
+      evidenceCheckpointId,
       commitBaseline,
     };
     recordTrace(edgeTrace, {
@@ -755,6 +953,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     const route = routeGraph({ current, definition, state });
     routes.push(route);
     events.push(`route:${route.edgeId ?? route.status}`);
+    reloadStore();
     assert.equal(route.edgeId, step.expectEdge);
 
     if (!taskBudgetFrozen && route.delegate === "implementation-flow") {
@@ -783,14 +982,14 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       break;
     }
 
-    const fingerprint = JSON.stringify(route);
-    if (seenRouteFingerprints.has(fingerprint)) {
+    const routeFingerprint = JSON.stringify(route);
+    if (seenRouteFingerprints.has(routeFingerprint)) {
       yieldReason = "budget-exhausted";
       expectYield(step, yieldReason);
       break;
     }
     if (step.observeOnly) {
-      savePending(route, [], false);
+      savePending(route, [], false, null);
       break;
     }
 
@@ -800,9 +999,10 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     if (resumingPending) {
       const invalidReceipt = resumingPending.outcomes
         .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
-        .some((outcome) => !isReusableCompletedOutcome(options.repo, route, outcome));
-      const unverifiedEvidence = resumingPending.evidenceRecorded && !hasEvidence(options.repo, route.edgeId as string);
-      if (invalidReceipt || unverifiedEvidence) {
+        .some((outcome) => !isReusableCompletedOutcome(options.repo, route, outcome, snapshot));
+      const unverifiedCheckpoint = resumingPending.evidenceRecorded
+        && !checkpointIsVerified(resumingPending.evidenceCheckpointId, route.edgeId as string);
+      if (invalidReceipt || unverifiedCheckpoint) {
         yieldReason = "authority-required";
         expectYield(step, yieldReason);
         break;
@@ -818,17 +1018,25 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       .map((outcome) => outcome.effect.id));
     for (const audit of route.requiredAudits) {
       if (completedAudits.has(audit)) continue;
-      events.push(`audit:${audit}`);
       const effect: EffectIdentity = { kind: "audit", id: audit };
+      const expectedInputs = resolvedInputs(options.repo, route, effect);
+      const adopted = adoptStoredReceipt(route, "audit", effect, expectedInputs);
+      if (adopted) {
+        edgeOutcomes.push(adopted);
+        outcomes.push(adopted);
+        completedAudits.add(audit);
+        continue;
+      }
+      events.push(`audit:${audit}`);
       const outcome = step.audit?.(options.repo, signals, route, audit)
         ?? defaultEffectOutcome(options.repo, route, "audit", effect);
-      validateEffectOutcome(options.repo, route, outcome, "audit", effect);
+      validateEffectOutcome(options.repo, route, outcome, "audit", effect, resolvedInputs(options.repo, route, effect), storeView());
       edgeOutcomes.push(outcome);
       outcomes.push(outcome);
-      persistOutcome(options.repo, outcome);
+      if (outcome.status === "completed") recordOutcomeReceipt(outcome);
       const evaluation = evaluateEffectOutcome(outcome);
       if (evaluation === "retry") {
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, commitBaseline);
         if (index + 1 < options.steps.length) {
           events.push("project");
           state = project();
@@ -838,7 +1046,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       }
       if (evaluation) {
         yieldReason = evaluation;
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, commitBaseline);
         expectYield(step, yieldReason);
         break stepLoop;
       }
@@ -850,17 +1058,27 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       outcome.status === "completed" && outcome.stage === "delegate" && outcome.effect.id === route.delegate
     ));
     if (route.delegate && !delegateComplete) {
+      const effect: EffectIdentity = { kind: "delegate", id: route.delegate };
+      const expectedInputs = resolvedInputs(options.repo, route, effect);
+      const adopted = adoptStoredReceipt(route, "delegate", effect, expectedInputs);
+      if (adopted) {
+        edgeOutcomes.push(adopted);
+        outcomes.push(adopted);
+        delegateComplete = true;
+      }
+    }
+    if (route.delegate && !delegateComplete) {
       events.push(`delegate:${route.delegate}`);
       const effect: EffectIdentity = { kind: "delegate", id: route.delegate };
       const outcome = step.delegate?.(options.repo, signals, route)
         ?? defaultEffectOutcome(options.repo, route, "delegate", effect);
-      validateEffectOutcome(options.repo, route, outcome, "delegate", effect);
+      validateEffectOutcome(options.repo, route, outcome, "delegate", effect, resolvedInputs(options.repo, route, effect), storeView());
       edgeOutcomes.push(outcome);
       outcomes.push(outcome);
-      persistOutcome(options.repo, outcome);
+      if (outcome.status === "completed") recordOutcomeReceipt(outcome);
       const evaluation = evaluateEffectOutcome(outcome);
       if (evaluation === "retry") {
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, commitBaseline);
         if (index + 1 < options.steps.length) {
           events.push("project");
           state = project();
@@ -870,7 +1088,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       }
       if (evaluation) {
         yieldReason = evaluation;
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, commitBaseline);
         expectYield(step, yieldReason);
         break stepLoop;
       }
@@ -878,31 +1096,60 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       delegateComplete = true;
     }
 
-    let evidenceRecorded = resumingPending?.evidenceRecorded === true && hasEvidence(options.repo, route.edgeId as string);
+    let evidenceRecorded = resumingPending?.evidenceRecorded === true
+      && checkpointIsVerified(resumingPending.evidenceCheckpointId, route.edgeId as string);
+    let evidenceCheckpointId = evidenceRecorded ? resumingPending?.evidenceCheckpointId ?? null : null;
     if (!evidenceRecorded) {
-      if (!step.applyEvidence) {
+      if (!step.applyCheckpointEvidence) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, commitBaseline);
         expectYield(step, yieldReason);
         break;
       }
-      const evidenceBefore = evidenceReceipts(options.repo).filter((receipt) => receipt.edgeId === route.edgeId).length;
-      step.applyEvidence(options.repo, signals);
-      evidenceRecorded = hasEvidence(options.repo, route.edgeId as string)
-        && evidenceReceipts(options.repo).filter((receipt) => receipt.edgeId === route.edgeId).length > evidenceBefore;
-      if (!evidenceRecorded) {
+      const declared = step.applyCheckpointEvidence(options.repo, signals) ?? [];
+      const declaredRefs = declared.map((spec) => resolveReference(options.repo, storeView(), spec));
+      const refreshed: Array<EffectReference | null> = edgeOutcomes
+        .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
+        .flatMap((outcome) => outcome.outputs)
+        .map((reference) => resolveReference(options.repo, storeView(), reference));
+      const invalidDeclaration = declaredRefs.some((reference) => reference === null)
+        || refreshed.some((reference) => reference === null);
+      const bound = [...declaredRefs, ...refreshed]
+        .filter((reference): reference is EffectReference => reference !== null);
+      const unique = new Map<string, EffectReference>();
+      for (const reference of bound) unique.set(canonicalJson(reference), reference);
+      const boundOutputs = [...unique.values()].sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)));
+      if (invalidDeclaration || !boundOutputs.every((reference) => referenceIsLive(options.repo, storeView(), reference))) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, commitBaseline);
         expectYield(step, yieldReason);
         break;
       }
+      const data: EdgeCheckpointData = {
+        edgeId: route.edgeId as string,
+        receipts: edgeOutcomes
+          .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
+          .map((outcome) => outcomeReceiptId(outcome)),
+        outputs: boundOutputs,
+        routeHash: fingerprint(JSON.stringify(route)),
+      };
+      const recorded = recordCheckpoint(options.repo, runId, {
+        checkpointId: edgeCheckpointId(route.edgeId as string, data),
+        nodeId: route.next,
+        edgeId: route.edgeId as string,
+        taskId: null,
+        data,
+      });
+      evidenceRecorded = true;
+      evidenceCheckpointId = recorded.checkpoint.checkpointId;
+      reloadStore();
     }
-    events.push(`evidence:${route.edgeId}`);
+    events.push(`checkpoint:${route.edgeId}`);
     if (commitBaseline && !signals.has("commit-waived")) {
       const after = captureBaseline(options.repo);
       if (!commitGatePasses(commitBaseline, after)) {
         yieldReason = "commit-required";
-        savePending(route, edgeOutcomes, true, commitBaseline);
+        savePending(route, edgeOutcomes, true, evidenceCheckpointId, commitBaseline);
         expectYield(step, yieldReason);
         break;
       }
@@ -920,7 +1167,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       checkpointComplete: true,
       commitWaived: route.commitGate === true && signals.has("commit-waived"),
     });
-    seenRouteFingerprints.add(fingerprint);
+    seenRouteFingerprints.add(routeFingerprint);
     hops += 1;
     current = route.next;
 
@@ -936,6 +1183,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
   }
 
   const handoff: ScenarioHandoff = {
+    runId,
     current,
     mode,
     maxHops,
@@ -1026,10 +1274,10 @@ test("runs a bounded partial canonical path with fresh projection between checkp
     current: "probe",
     mode: "run-until-yield",
     steps: [
-      { expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing", (fixture) => addTask(fixture, 2)) },
-      { expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design", (fixture) => addTask(fixture, 3)) },
-      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning", (fixture) => addTask(fixture, 4)) },
-      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph", (fixture) => addTask(fixture, 5)) },
+      { expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing", (fixture) => addTask(fixture, 2)) },
+      { expectEdge: "briefing-to-design", applyCheckpointEvidence: evidence("briefing-to-design", (fixture) => addTask(fixture, 3)) },
+      { expectEdge: "design-to-planning", applyCheckpointEvidence: evidence("design-to-planning", (fixture) => addTask(fixture, 4)) },
+      { expectEdge: "planning-to-task-graph", applyCheckpointEvidence: evidence("planning-to-task-graph", (fixture) => addTask(fixture, 5)) },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -1057,38 +1305,38 @@ test("observes terminal after the migration path reaches the derived task budget
     mode: "run-until-yield",
     signals: ["migration-requested", "migration-complete"],
     steps: [
-      { expectEdge: "probe-to-migration", applyEvidence: evidence("probe-to-migration") },
-      { expectEdge: "migration-to-bootstrap", applyEvidence: evidence("migration-to-bootstrap") },
-      { expectEdge: "bootstrap-to-briefing", applyEvidence: evidence("bootstrap-to-briefing") },
-      { expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") },
-      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning") },
-      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
+      { expectEdge: "probe-to-migration", applyCheckpointEvidence: evidence("probe-to-migration") },
+      { expectEdge: "migration-to-bootstrap", applyCheckpointEvidence: evidence("migration-to-bootstrap") },
+      { expectEdge: "bootstrap-to-briefing", applyCheckpointEvidence: evidence("bootstrap-to-briefing") },
+      { expectEdge: "briefing-to-design", applyCheckpointEvidence: evidence("briefing-to-design") },
+      { expectEdge: "design-to-planning", applyCheckpointEvidence: evidence("design-to-planning") },
+      { expectEdge: "planning-to-task-graph", applyCheckpointEvidence: evidence("planning-to-task-graph") },
       {
         expectEdge: "task-graph-to-implementation",
-        applyEvidence: committedEvidence("task-graph-to-implementation", (fixture) => {
+        applyCheckpointEvidence: committedEvidence("task-graph-to-implementation", (fixture) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
         }),
       },
       {
         expectEdge: "implementation-retry",
-        applyEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
+        applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           updateArtifact(fixture, "docs/tasks/0002-task.md", { status: "done" });
           signals.add("implementation-verified");
         }),
       },
       {
         expectEdge: "implementation-to-followup-triage",
-        applyEvidence: evidence("implementation-to-followup-triage", (_fixture, signals) => {
+        applyCheckpointEvidence: evidence("implementation-to-followup-triage", (_fixture, signals) => {
           signals.add("followup-terminal");
         }),
       },
       {
         expectEdge: "followup-triage-terminal",
-        applyEvidence: evidence("followup-triage-terminal", (_fixture, signals) => {
+        applyCheckpointEvidence: evidence("followup-triage-terminal", (_fixture, signals) => {
           signals.add("exit-audit-pass");
         }),
       },
-      { expectEdge: "exit-audit-to-complete", applyEvidence: evidence("exit-audit-to-complete") },
+      { expectEdge: "exit-audit-to-complete", applyCheckpointEvidence: evidence("exit-audit-to-complete") },
       { expectEdge: null, yield: "terminal" },
     ],
   });
@@ -1117,7 +1365,7 @@ test("yields approval exactly once before design evidence is written", () => {
         { kind: "delegate", id: route.delegate as string },
         "approval-required",
       ),
-      applyEvidence: () => { evidenceCalls += 1; },
+      applyCheckpointEvidence: () => { evidenceCalls += 1; },
     }],
   });
   assert.equal(blocked.yieldReason, "approval-required");
@@ -1134,7 +1382,7 @@ test("yields approval exactly once before design evidence is written", () => {
     resume: blocked.handoff,
     steps: [{
       expectEdge: "briefing-to-design",
-      applyEvidence: evidence("briefing-to-design", () => { evidenceCalls += 1; }),
+      applyCheckpointEvidence: evidence("briefing-to-design", () => { evidenceCalls += 1; }),
     }],
   });
   assert.equal(resumed.yieldReason, null);
@@ -1142,7 +1390,7 @@ test("yields approval exactly once before design evidence is written", () => {
   assert.equal(resumed.current, "design");
   assert.equal(blocked.auditCounts.design, 1);
   assert.equal(resumed.auditCounts.design, 1);
-  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, outcomes: storedOutcomes(repo) }));
+  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, outcomes: receiptSummaries(repo, resumed.handoff.runId) }));
 });
 
 test("focus input yield leaves the next route and effects untouched", () => {
@@ -1156,7 +1404,7 @@ test("focus input yield leaves the next route and effects untouched", () => {
     steps: [{
       expectEdge: null,
       yield: "input-required",
-      applyEvidence: () => { effects += 1; },
+      applyCheckpointEvidence: () => { effects += 1; },
     }],
   });
   assert.equal(result.yieldReason, "input-required");
@@ -1171,14 +1419,14 @@ test("resume after a completed edge starts at its recorded next node", () => {
     repo,
     current: "probe",
     mode: "run-until-yield",
-    steps: [{ expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") }],
+    steps: [{ expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing") }],
   });
   const resumed = runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
     resume: first.handoff,
-    steps: [{ expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") }],
+    steps: [{ expectEdge: "briefing-to-design", applyCheckpointEvidence: evidence("briefing-to-design") }],
   });
   assert.equal(first.current, "briefing");
   assert.equal(resumed.routes[0].current, "briefing");
@@ -1211,11 +1459,11 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
     current: "briefing",
     mode: "run-until-yield",
     resume: first.handoff,
-    steps: [{ expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") }],
+    steps: [{ expectEdge: "briefing-to-design", applyCheckpointEvidence: evidence("briefing-to-design") }],
   });
   assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.auditCounts.design, 1);
-  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, outcomes: storedOutcomes(repo) }));
+  assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, outcomes: receiptSummaries(repo, resumed.handoff.runId) }));
   assert.equal(resumed.checkpoints.length, 1);
 });
 
@@ -1235,7 +1483,7 @@ test("resume skips scope-valid pending audit and delegate receipts", () => {
     current: "briefing",
     mode: "run-until-yield",
     resume: interrupted.handoff,
-    steps: [{ expectEdge: "briefing-to-design", applyEvidence: evidence("briefing-to-design") }],
+    steps: [{ expectEdge: "briefing-to-design", applyCheckpointEvidence: evidence("briefing-to-design") }],
   });
   assert.deepEqual(resumed.routes[0].taskGraph, interrupted.handoff.pending?.route.taskGraph);
   assert.equal(resumed.yieldReason, null);
@@ -1262,7 +1510,7 @@ test("does not skip an implementation receipt after its authoritative Task Graph
     resume: interrupted.handoff,
     steps: [{
       expectEdge: "implementation-retry",
-      applyEvidence: evidence("implementation-retry"),
+      applyCheckpointEvidence: evidence("implementation-retry"),
     }],
   });
   assert.notDeepEqual(resumed.routes[0].taskGraph, interrupted.handoff.pending?.route.taskGraph);
@@ -1280,7 +1528,7 @@ test("freezes focused task budget across resume and refreshes it only for a new 
     mode: "single-step",
     steps: [{
       expectEdge: "task-graph-to-active-implementation",
-      applyEvidence: committedEvidence("task-graph-to-active-implementation"),
+      applyCheckpointEvidence: committedEvidence("task-graph-to-active-implementation"),
     }],
   });
   assert.equal(first.handoff.taskBudgetCount, 3);
@@ -1294,7 +1542,7 @@ test("freezes focused task budget across resume and refreshes it only for a new 
     resume: first.handoff,
     steps: [{
       expectEdge: "implementation-retry",
-      applyEvidence: committedEvidence("implementation-retry"),
+      applyCheckpointEvidence: committedEvidence("implementation-retry"),
     }],
   });
   assert.equal(resumed.handoff.taskBudgetCount, 3);
@@ -1306,7 +1554,7 @@ test("freezes focused task budget across resume and refreshes it only for a new 
     mode: "single-step",
     steps: [{
       expectEdge: "implementation-retry",
-      applyEvidence: committedEvidence("implementation-retry"),
+      applyCheckpointEvidence: committedEvidence("implementation-retry"),
     }],
   });
   assert.equal(nextRun.handoff.taskBudgetCount, 4);
@@ -1322,12 +1570,12 @@ test("preserves a frozen zero task budget across same-run additions and resume",
     steps: [
       {
         expectEdge: "implementation-retry",
-        applyEvidence: committedEvidence("implementation-retry", (fixture) => {
+        applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture) => {
           addTask(fixture, 2);
           addTask(fixture, 3);
         }),
       },
-      { expectEdge: "implementation-retry", applyEvidence: committedEvidence("implementation-retry") },
+      { expectEdge: "implementation-retry", applyCheckpointEvidence: committedEvidence("implementation-retry") },
     ],
   });
   assert.equal(result.handoff.taskBudgetCount, 0);
@@ -1339,7 +1587,7 @@ test("preserves a frozen zero task budget across same-run additions and resume",
     current: "implementation",
     mode: "run-until-yield",
     resume: result.handoff,
-    steps: [{ expectEdge: "implementation-retry", applyEvidence: committedEvidence("implementation-retry") }],
+    steps: [{ expectEdge: "implementation-retry", applyCheckpointEvidence: committedEvidence("implementation-retry") }],
   });
   assert.equal(resumed.handoff.taskBudgetCount, 0);
   assert.equal(resumed.handoff.maxHops, 10);
@@ -1354,13 +1602,13 @@ test("continues implementation retry only after re-projection", () => {
     steps: [
       {
         expectEdge: "implementation-retry",
-        applyEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
+        applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
           signals.add("implementation-verified");
           signals.add("followup-terminal");
         }),
       },
-      { expectEdge: "implementation-to-followup-triage", applyEvidence: evidence("implementation-to-followup-triage") },
+      { expectEdge: "implementation-to-followup-triage", applyCheckpointEvidence: evidence("implementation-to-followup-triage") },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -1382,13 +1630,13 @@ test("continues implementation retry when the Task Graph advances to the next ru
     steps: [
       {
         expectEdge: "implementation-retry",
-        applyEvidence: committedEvidence("implementation-retry", (fixture) => {
+        applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
         }),
       },
       {
         expectEdge: "implementation-retry",
-        applyEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
+        applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           updateArtifact(fixture, "docs/tasks/0002-task.md", { status: "done" });
           signals.add("implementation-verified");
           signals.add("followup-terminal");
@@ -1396,7 +1644,7 @@ test("continues implementation retry when the Task Graph advances to the next ru
       },
       {
         expectEdge: "implementation-to-followup-triage",
-        applyEvidence: evidence("implementation-to-followup-triage"),
+        applyCheckpointEvidence: evidence("implementation-to-followup-triage"),
       },
     ],
   });
@@ -1424,8 +1672,8 @@ test("continues implementation-to-design and then design-to-planning", () => {
     mode: "run-until-yield",
     signals: ["implementation-verified", "design-gap"],
     steps: [
-      { expectEdge: "implementation-to-design", applyEvidence: evidence("implementation-to-design", (_repo, signals) => signals.delete("design-gap")) },
-      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning") },
+      { expectEdge: "implementation-to-design", applyCheckpointEvidence: evidence("implementation-to-design", (_repo, signals) => signals.delete("design-gap")) },
+      { expectEdge: "design-to-planning", applyCheckpointEvidence: evidence("design-to-planning") },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -1442,8 +1690,8 @@ test("runs planning-flow before downstream plan and task audits", () => {
     current: "design",
     mode: "run-until-yield",
     steps: [
-      { expectEdge: "design-to-planning", applyEvidence: evidence("design-to-planning") },
-      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
+      { expectEdge: "design-to-planning", applyCheckpointEvidence: evidence("design-to-planning") },
+      { expectEdge: "planning-to-task-graph", applyCheckpointEvidence: evidence("planning-to-task-graph") },
     ],
   });
 
@@ -1451,14 +1699,14 @@ test("runs planning-flow before downstream plan and task audits", () => {
     "route:design-to-planning",
     "audit:design",
     "delegate:planning-flow",
-    "evidence:design-to-planning",
+    "checkpoint:design-to-planning",
     "project",
     "route:planning-to-task-graph",
     "audit:plan",
     "audit:task",
     "audit:test-spec",
     "delegate:build_task_graph",
-    "evidence:planning-to-task-graph",
+    "checkpoint:planning-to-task-graph",
   ]);
   assert.equal(result.delegateCounts["planning-flow"], 1);
   assert.equal(result.delegateCounts.build_task_graph, 1);
@@ -1469,15 +1717,13 @@ test("runs planning-flow before downstream plan and task audits", () => {
   const planningOutcome = result.outcomes.find((outcome) => (
     outcome.stage === "delegate" && outcome.effect.id === "planning-flow"
   ));
-  assert.deepEqual(planningOutcome?.evidence, [
+  assert.deepEqual(planningOutcome?.outputs, [
     canonicalReference(repo, "docs/plans/0001-graph.md"),
     canonicalReference(repo, "docs/test-specs/0001-graph.md"),
     canonicalReference(repo, "docs/tasks/0001-task.md"),
     canonicalReference(repo, "docs/tasks/0002-task.md"),
   ]);
-  assert.deepEqual(planningOutcome?.proof, {
-    canonicalEvidence: canonicalReference(repo, "docs/plans/0001-graph.md"),
-  });
+  assert.deepEqual(planningOutcome?.status === "completed" ? planningOutcome.proof : null, canonicalReference(repo, "docs/plans/0001-graph.md"));
 });
 
 test("repairs an invalid task graph before returning to task-graph", () => {
@@ -1492,12 +1738,12 @@ test("repairs an invalid task graph before returning to task-graph", () => {
     steps: [
       {
         expectEdge: "task-graph-to-planning",
-        applyEvidence: evidence("task-graph-to-planning", (fixture) => updateArtifact(fixture, "docs/tasks/0002-task.md", {
+        applyCheckpointEvidence: evidence("task-graph-to-planning", (fixture) => updateArtifact(fixture, "docs/tasks/0002-task.md", {
           status: "todo",
           relations: { implements: ["docs/plans/0001-graph.md"] },
         })),
       },
-      { expectEdge: "planning-to-task-graph", applyEvidence: evidence("planning-to-task-graph") },
+      { expectEdge: "planning-to-task-graph", applyCheckpointEvidence: evidence("planning-to-task-graph") },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
@@ -1514,7 +1760,7 @@ test("routes completed implementation work to follow-up triage", () => {
     current: "implementation",
     mode: "run-until-yield",
     signals: ["implementation-verified", "followup-terminal"],
-    steps: [{ expectEdge: "implementation-to-followup-triage", applyEvidence: evidence("implementation-to-followup-triage") }],
+    steps: [{ expectEdge: "implementation-to-followup-triage", applyCheckpointEvidence: evidence("implementation-to-followup-triage") }],
   });
   assert.equal(result.routes[0].edgeId, "implementation-to-followup-triage");
   assert.deepEqual(result.routes[0].requiredAudits, ["impl-record", "task"]);
@@ -1530,7 +1776,7 @@ test("stops an unchanged self-loop on its repeated complete-route fingerprint", 
     current: "implementation",
     mode: "run-until-yield",
     steps: [
-      { expectEdge: "implementation-retry", applyEvidence: committedEvidence("implementation-retry") },
+      { expectEdge: "implementation-retry", applyCheckpointEvidence: committedEvidence("implementation-retry") },
       { expectEdge: "implementation-retry", yield: "budget-exhausted" },
     ],
   });
@@ -1544,7 +1790,7 @@ test("bounds a changing multi-node repair cycle at the default maxHops", () => {
   const repo = fixtureRepo();
   const steps: ScenarioStep[] = Array.from({ length: 12 }, (_, index) => ({
     expectEdge: index % 2 === 0 ? "design-to-briefing" : "briefing-to-design",
-    applyEvidence: evidence(index % 2 === 0 ? "design-to-briefing" : "briefing-to-design", (fixture) => addTask(fixture, index + 2)),
+    applyCheckpointEvidence: evidence(index % 2 === 0 ? "design-to-briefing" : "briefing-to-design", (fixture) => addTask(fixture, index + 2)),
   }));
   const result = runScenario({
     repo,
@@ -1568,7 +1814,7 @@ test("bounds a changing multi-node repair cycle at the default maxHops", () => {
     signals: ["spec-gap"],
     steps: [{
       expectEdge: "design-to-briefing",
-      applyEvidence: evidence("design-to-briefing", (fixture) => addTask(fixture, 20)),
+      applyCheckpointEvidence: evidence("design-to-briefing", (fixture) => addTask(fixture, 20)),
     }],
   });
   assert.equal(nextRun.handoff.hops, 1);
@@ -1585,8 +1831,8 @@ test("stops on a repeated complete GraphRoute fingerprint", () => {
     mode: "run-until-yield",
     signals: ["advance"],
     steps: [
-      { expectEdge: "cycle-a", applyEvidence: evidence("cycle-a") },
-      { expectEdge: "cycle-b", applyEvidence: evidence("cycle-b") },
+      { expectEdge: "cycle-a", applyCheckpointEvidence: evidence("cycle-a") },
+      { expectEdge: "cycle-b", applyCheckpointEvidence: evidence("cycle-b") },
       { expectEdge: "cycle-a", yield: "budget-exhausted" },
     ],
   });
@@ -1678,7 +1924,7 @@ test("single-step completes exactly one checkpoint", () => {
     current: "probe",
     mode: "single-step",
     steps: [
-      { expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") },
+      { expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing") },
       { expectEdge: "briefing-to-design" },
     ],
   });
@@ -1697,12 +1943,12 @@ test("preserves deterministic evidence ordering and full-route fingerprints", ()
     mode: "run-until-yield",
     signals: ["advance"],
     steps: [
-      { expectEdge: "edge-a", applyEvidence: evidence("edge-a") },
+      { expectEdge: "edge-a", applyCheckpointEvidence: evidence("edge-a") },
       { expectEdge: "edge-b", observeOnly: true },
     ],
   });
   assert.deepEqual(first.events, [
-    "route:edge-a", "audit:spec", "delegate:briefing-flow", "evidence:edge-a",
+    "route:edge-a", "audit:spec", "delegate:briefing-flow", "checkpoint:edge-a",
     "project", "route:edge-b",
   ]);
   assert.equal(first.handoff.seenRouteFingerprints[0], JSON.stringify(first.routes[0]));
@@ -1715,7 +1961,7 @@ test("preserves deterministic evidence ordering and full-route fingerprints", ()
     mode: "run-until-yield",
     signals: ["advance"],
     steps: [
-      { expectEdge: "edge-a", applyEvidence: evidence("edge-a") },
+      { expectEdge: "edge-a", applyCheckpointEvidence: evidence("edge-a") },
       { expectEdge: "edge-b", observeOnly: true },
     ],
   });
@@ -1787,7 +2033,7 @@ test("does not trust an audit receipt absent from canonical evidence", () => {
     steps: [{
       expectEdge: "probe-to-briefing",
       yield: "authority-required",
-      applyEvidence: evidence("probe-to-briefing"),
+      applyCheckpointEvidence: evidence("probe-to-briefing"),
     }],
   });
   assert.equal(resumed.yieldReason, "authority-required");
@@ -1804,7 +2050,7 @@ test("does not reuse persisted canonical evidence after its content changes", ()
       expectEdge: "briefing-to-design",
       yield: "authority-required",
       delegate: (fixture, _signals, route) => {
-        const canonicalEvidence = canonicalReference(fixture, "docs/designs/0001-graph.md");
+        const staleProof = canonicalReference(fixture, "docs/designs/0001-graph.md");
         return {
           ...completedOutcome(
             fixture,
@@ -1812,8 +2058,8 @@ test("does not reuse persisted canonical evidence after its content changes", ()
             "delegate",
             { kind: "delegate", id: route.delegate as string },
           ),
-          evidence: [canonicalEvidence],
-          proof: { canonicalEvidence },
+          outputs: [staleProof],
+          proof: staleProof,
         };
       },
     }],
@@ -1828,7 +2074,7 @@ test("does not reuse persisted canonical evidence after its content changes", ()
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "authority-required",
-      applyEvidence: evidence("briefing-to-design"),
+      applyCheckpointEvidence: evidence("briefing-to-design"),
     }],
   });
   assert.equal(resumed.yieldReason, "authority-required");
@@ -1857,7 +2103,7 @@ test("does not trust an evidence claim proved only for another run state", () =>
   assert.equal(resumed.checkpoints.length, 0);
 });
 
-test("does not complete an edge when its evidence callback leaves no canonical proof", () => {
+test("does not complete an edge when its evidence declarations cannot resolve", () => {
   const repo = fixtureRepo();
   const result = runScenario({
     repo,
@@ -1866,7 +2112,10 @@ test("does not complete an edge when its evidence callback leaves no canonical p
     steps: [{
       expectEdge: "probe-to-briefing",
       yield: "authority-required",
-      applyEvidence: (fixture) => updateArtifact(fixture, "docs/tasks/0001-task.md", { title: "changed-without-proof" }),
+      applyCheckpointEvidence: (fixture) => {
+        updateArtifact(fixture, "docs/tasks/0001-task.md", { title: "changed-without-proof" });
+        return ["docs/tasks/9999-missing.md"];
+      },
     }],
   });
   assert.equal(result.yieldReason, "authority-required");
@@ -1902,7 +2151,7 @@ test("audit effects can yield and resume without repeating completed audits", ()
     current: "probe",
     mode: "run-until-yield",
     resume: interrupted.handoff,
-    steps: [{ expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") }],
+    steps: [{ expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing") }],
   });
   assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.auditCounts.adr, 1);
@@ -1917,7 +2166,7 @@ test("handoff records caller mode, hop bound, and per-edge completion trace", ()
     current: "probe",
     mode: "single-step",
     maxHops: 4,
-    steps: [{ expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") }],
+    steps: [{ expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing") }],
   });
   assert.equal(result.handoff.mode, "single-step");
   assert.equal(result.handoff.maxHops, 4);
@@ -1970,21 +2219,21 @@ test("resumes a completed irreversible effect only with a provider idempotency r
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },
-        { provider: "deploy", key: "run-1" },
+        { provider: "deploy", idempotencyKey: "run-1" },
       ),
     }],
   });
   assert.equal(first.yieldReason, "authority-required");
   const delegateOutcome = (first.handoff as unknown as { outcomes: Array<Record<string, unknown>> }).outcomes
     .find((outcome) => outcome.stage === "delegate");
-  assert.deepEqual(delegateOutcome?.proof, { providerIdempotency: { provider: "deploy", key: "run-1" } });
+  assert.deepEqual(delegateOutcome?.proof, { kind: "provider", provider: "deploy", idempotencyKey: "run-1" });
 
   const resumed = runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
     resume: first.handoff,
-    steps: [{ expectEdge: "implementation-retry", applyEvidence: committedEvidence("implementation-retry") }],
+    steps: [{ expectEdge: "implementation-retry", applyCheckpointEvidence: committedEvidence("implementation-retry") }],
   });
   assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.delegateCounts["implementation-flow"], 1);
@@ -2014,7 +2263,7 @@ test("continues a typed retry only after its canonical evidence changes", () => 
       },
       {
         expectEdge: "implementation-to-followup-triage",
-        applyEvidence: evidence("implementation-to-followup-triage"),
+        applyCheckpointEvidence: evidence("implementation-to-followup-triage"),
       },
     ],
   });
@@ -2114,17 +2363,18 @@ test("normalizes every declared script delegate and named audit into typed outco
     current: "probe",
     mode: "run-until-yield",
     signals: ["migration-requested"],
-    steps: [{ expectEdge: "probe-to-migration", applyEvidence: evidence("probe-to-migration") }],
+    steps: [{ expectEdge: "probe-to-migration", applyCheckpointEvidence: evidence("probe-to-migration") }],
   });
   assert.deepEqual(result.outcomes.map((outcome) => outcome.status), ["completed"]);
   assert.deepEqual(result.outcomes[0].effect, { kind: "delegate", id: "migrate_docs" });
 });
 
 test("rejects initial completed and retry receipts without current canonical evidence", () => {
-  const missing: CanonicalReference = {
+  const missing: DurableDocumentReference = {
+    kind: "durable-document",
     path: "docs/impl/ir/missing.md",
     id: "IMPL-MISSING",
-    fingerprint: "sha256:missing",
+    revision: "sha256:missing",
   };
   const repo = fixtureRepo();
   assert.throws(() => runScenario({
@@ -2135,8 +2385,8 @@ test("rejects initial completed and retry receipts without current canonical evi
       expectEdge: "probe-to-briefing",
       audit: (fixture, _signals, route, audit) => ({
         ...completedOutcome(fixture, route, "audit", { kind: "audit", id: audit }),
-        evidence: [missing],
-        proof: { canonicalEvidence: missing },
+        outputs: [missing],
+        proof: missing,
       }),
     }],
   }), /canonical/i);
@@ -2175,7 +2425,7 @@ test("does not reuse a non-implementation audit after its authoritative input ch
     steps: [{
       expectEdge: "probe-to-briefing",
       yield: "authority-required",
-      applyEvidence: evidence("probe-to-briefing"),
+      applyCheckpointEvidence: evidence("probe-to-briefing"),
     }],
   });
   assert.equal(resumed.yieldReason, "authority-required");
@@ -2218,7 +2468,7 @@ edges:
     steps: [{
       expectEdge: "start-to-bootstrap",
       yield: "authority-required",
-      applyEvidence: evidence("start-to-bootstrap"),
+      applyCheckpointEvidence: evidence("start-to-bootstrap"),
     }],
   });
   assert.equal(resumed.yieldReason, "authority-required");
@@ -2257,9 +2507,9 @@ test("yields commit-required when a gated checkpoint leaves new uncommitted chan
     steps: [{
       expectEdge: "task-graph-to-implementation",
       yield: "commit-required",
-      applyEvidence: evidence("task-graph-to-implementation", (fixture) => {
-        // A new untracked file plus the persisted receipt leave uncommitted
-        // changes without invalidating the stored delegate outcome.
+      applyCheckpointEvidence: evidence("task-graph-to-implementation", (fixture) => {
+        // A new untracked file leaves uncommitted changes without
+        // invalidating the stored delegate outcome or its receipt.
         fs.writeFileSync(path.join(fixture, "slice-output.txt"), "implemented slice\n", "utf8");
       }),
     }],
@@ -2295,7 +2545,7 @@ test("commit-waived signal skips the gate and completes the checkpoint", () => {
     signals: ["commit-waived"],
     steps: [{
       expectEdge: "task-graph-to-implementation",
-      applyEvidence: evidence("task-graph-to-implementation", (fixture) => {
+      applyCheckpointEvidence: evidence("task-graph-to-implementation", (fixture) => {
         updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
       }),
     }],
@@ -2311,7 +2561,7 @@ test("non-gated destinations ignore worktree state", () => {
     repo,
     current: "probe",
     mode: "run-until-yield",
-    steps: [{ expectEdge: "probe-to-briefing", applyEvidence: evidence("probe-to-briefing") }],
+    steps: [{ expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing") }],
   });
   assert.equal(result.yieldReason, null);
   assert.equal(result.checkpoints.length, 1);
@@ -2319,8 +2569,9 @@ test("non-gated destinations ignore worktree state", () => {
 
 test("commit gate passes without a commit when dirty entries were already in the baseline", () => {
   const repo = fixtureRepo();
-  // Dirty the receipt file before the edge starts so the baseline captured at
-  // edge start already contains its porcelain entry.
+  // Dirty the task doc before the edge starts so the baseline captured at
+  // edge start already contains its porcelain entry. Store writes are
+  // Git-ignored, so the evidence phase adds no new dirty entries.
   updateArtifact(repo, "docs/tasks/0001-task.md", { title: "pre-existing dirty" });
   const result = runScenario({
     repo,
@@ -2328,13 +2579,14 @@ test("commit gate passes without a commit when dirty entries were already in the
     mode: "run-until-yield",
     steps: [{
       expectEdge: "task-graph-to-implementation",
-      applyEvidence: evidence("task-graph-to-implementation"),
+      applyCheckpointEvidence: evidence("task-graph-to-implementation"),
     }],
   });
-  // No commit happened: the receipt write lands in the already-dirty file, so
-  // every current porcelain entry was present in the baseline and the strict
-  // dirty-subset rule passes. This pins the accepted baseline-dirty
-  // limitation: edits inside an already-dirty file are not detected.
+  // No commit happened: the checkpoint record lands in the Git-ignored
+  // Execution Store, so every current porcelain entry was present in the
+  // baseline and the strict dirty-subset rule passes. This pins the accepted
+  // baseline-dirty limitation: edits inside an already-dirty file are not
+  // detected.
   assert.equal(result.yieldReason, null);
   assert.equal(result.checkpoints.length, 1);
 });
@@ -2367,7 +2619,7 @@ test("resume reuses the retained baseline instead of recapturing it", () => {
   // Resume without committing. Under retained-baseline semantics
   // slice-output.txt is not in the baseline, so the gate must yield
   // commit-required again; a recaptured baseline would wrongly include it
-  // (and the receipt write) and let the gate pass.
+  // and let the gate pass.
   const resumed = runScenario({
     repo,
     current: "task-graph",
@@ -2376,7 +2628,7 @@ test("resume reuses the retained baseline instead of recapturing it", () => {
     steps: [{
       expectEdge: "task-graph-to-implementation",
       yield: "commit-required",
-      applyEvidence: evidence("task-graph-to-implementation"),
+      applyCheckpointEvidence: evidence("task-graph-to-implementation"),
     }],
   });
   assert.equal(resumed.yieldReason, "commit-required");

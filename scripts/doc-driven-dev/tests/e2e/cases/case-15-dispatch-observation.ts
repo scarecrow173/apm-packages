@@ -413,7 +413,7 @@ export const case15g: E2ECase = {
   script: {
     "probe-to-briefing": {
       audits: { spec: "completed", adr: "completed" },
-      delegate: { malformed: "stale-fingerprint" },
+      delegate: { malformed: "stale-revision" },
     },
   },
   expect: {
@@ -545,7 +545,7 @@ export const case15i: E2ECase = {
   }),
   buildHandoff: ({ decision, inputs }) => buildDelegateHandoff({
     mode: toExecutionMode(decision.mode),
-    focus: inputs.map((input) => input.path),
+    focus: inputs.filter((input) => input.kind === "durable-document").map((input) => input.path),
     inputs,
     permissions: { read: ["docs/"], write: ["docs/specs/", "docs/adr/"] },
   }),

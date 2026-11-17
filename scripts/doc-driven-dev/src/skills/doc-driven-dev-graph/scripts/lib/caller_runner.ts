@@ -3,15 +3,25 @@
  *
  * runCaller() drives the public contract:
  *   Graph Definition -> fresh Graph State (one route_graph CLI call per hop)
- *   -> one declared route -> audits -> delegate -> canonical Markdown evidence
- *   -> commit gate -> re-enter at next -> repeat or yield.
+ *   -> one declared route -> audits -> delegate -> edge checkpoint in the
+ *   Execution Store -> commit gate -> re-enter at next -> repeat or yield.
  *
  * Effect dispatch is injected: callers supply an EffectDispatcher (LLM, tool,
- * or scripted adapter). This module owns outcome validation, canonical
- * evidence receipts, outcome persistence, the commit baseline/gate, pending
- * edge resume, bounded hops and per-edge dispatch budgets, and run-level
- * trace events — never effect work.
- * The trace it appends is diagnostic only (see run-trace-contract.md).
+ * or scripted adapter). This module owns outcome validation, Effect Receipt
+ * and edge-checkpoint persistence in the Execution Store, the commit
+ * baseline/gate, pending edge resume, bounded hops and per-edge dispatch
+ * budgets, and run-level trace events — never effect work.
+ *
+ * Execution state lives in the per-run Execution Store under
+ * .apm/state/doc-driven-dev/runs/<runId>/ (#236): every accepted `completed`
+ * outcome is recorded as an Effect Receipt (`receipts/`), every edge
+ * checkpoint as a CheckpointRecord (`checkpoints/`), and run-level events are
+ * mirrored into `run_trace.jsonl` — the trace is diagnostic only and never
+ * authoritative (see run-trace-contract.md). An Effect Receipt proves an
+ * execution-side effect completed; it is deliberately distinct from a
+ * verification-side Evidence Record (#240), which lives in a separate store.
+ * No Git-managed Markdown under docs/tasks or elsewhere carries this
+ * bookkeeping anymore (Issue #238).
  */
 
 import crypto from "node:crypto";
@@ -20,6 +30,21 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { isDeepStrictEqual } from "node:util";
 import matter from "gray-matter";
+import { generateArtifactId } from "../../../lib/artifact_id";
+import {
+  appendTrace as appendStoreTrace,
+  createRun,
+  loadRun,
+  recordCheckpoint,
+  recordReceipt,
+  StoreError,
+  type CheckpointRecord,
+  type ReceiptRecord,
+  type RunSnapshot,
+  type StoreRootOptions,
+  type TaskRecord,
+} from "../../../lib/execution_store";
+import { canonicalJson, isPlainObject } from "../../../lib/execution_store/types";
 import { CANONICAL_DOC_DIRS, isInside } from "./artifact_graph";
 import { loadGraphDefinition } from "./graph_definition";
 import { resolveGraphPath } from "./graph_cli";
@@ -50,38 +75,76 @@ export type EffectYieldReason = Extract<YieldReason,
   "approval-required" | "input-required" | "authority-required" | "unrecoverable-blocker" | "commit-required">;
 
 export type CallerEffect = { kind: "audit" | "delegate"; id: string };
-export type CanonicalReference = { path: string; id: string; fingerprint: string };
+
+/**
+ * The typed input/output reference vocabulary for EffectOutcome (#238).
+ * Every reference names one kind of authoritative target plus the version
+ * bound at dispatch time:
+ * - `durable-document`: canonical Markdown, pinned by path + front-matter id
+ *   + `revision` (the sha256 fingerprint of its canonical content);
+ * - `execution-task`: a task record inside THIS run's Execution Store,
+ *   pinned by taskId + CAS `version` — the run id always appears with it;
+ * - `provider`: an external side-effect handle, identified by provider +
+ *   `idempotencyKey` — the key is the proof the provider itself dedupes on.
+ */
+export type DurableDocumentReference = {
+  kind: "durable-document"; path: string; id: string; revision: string;
+};
+export type ExecutionTaskReference = {
+  kind: "execution-task"; runId: string; taskId: string; version: number;
+};
+export type ProviderReference = {
+  kind: "provider"; provider: string; idempotencyKey: string;
+};
+export type EffectReference = DurableDocumentReference | ExecutionTaskReference | ProviderReference;
+
+/** The proof slot of a completed outcome: canonical content or a provider key. */
+export type EffectProof = DurableDocumentReference | ProviderReference;
+
+/**
+ * What adapters may hand the runner where a reference is expected: a plain
+ * path (shorthand for a durable document), a partial typed ref (the runner
+ * binds the missing id/revision/version against current state), or a fully
+ * resolved EffectReference.
+ */
+export type ReferenceSpec =
+  | string
+  | { kind: "durable-document"; path: string; id?: string; revision?: string }
+  | { kind: "execution-task"; taskId: string; version?: number }
+  | EffectReference;
 
 export type CompletedEffectOutcome = {
   status: "completed"; edgeId: string; stage: "audit" | "delegate";
   effect: CallerEffect;
-  authoritativeInputs: CanonicalReference[]; evidence: CanonicalReference[];
-  proof: { canonicalEvidence?: CanonicalReference; providerIdempotency?: { provider: string; key: string } };
+  inputs: EffectReference[]; outputs: EffectReference[];
+  proof: EffectProof;
 };
 export type RetryEffectOutcome = {
   status: "retry"; edgeId: string; stage: "audit" | "delegate"; effect: CallerEffect;
-  authoritativeInputs: CanonicalReference[]; evidence: CanonicalReference[];
-  retry: { changedEvidence: CanonicalReference[] };
+  inputs: EffectReference[]; outputs: EffectReference[];
+  retry: { changedOutputs: EffectReference[] };
 };
 export type YieldEffectOutcome = {
   status: "yield"; edgeId: string; stage: "audit" | "delegate"; effect: CallerEffect;
-  authoritativeInputs: CanonicalReference[]; evidence: CanonicalReference[];
+  inputs: EffectReference[]; outputs: EffectReference[];
   reason: EffectYieldReason;
 };
 export type EffectOutcome = CompletedEffectOutcome | RetryEffectOutcome | YieldEffectOutcome;
 
-export type EvidenceReceipt = { edgeId: string; evidence: CanonicalReference };
 export type CommitBaseline = { head: string | null; dirty: string[] };
 
 /** Thrown for every EffectOutcome contract violation — callers catch it. */
 export class OutcomeRejection extends Error {}
 
 /**
- * Default canonical doc carrying caller bookkeeping (`effectOutcomes` and
- * `checkpointEvidence` front matter). Callers may override it per run; see
- * CallerRunnerOptions.proofPath.
+ * The store-side view reference checks run against: the bound run id, its
+ * task records (execution-task liveness) and, where required, the recorded
+ * receipts/checkpoints (reuse verification).
  */
-const DEFAULT_PROOF_PATH = "docs/tasks/0001-task.md";
+export type EffectStoreView = {
+  runId: string;
+  tasks: ReadonlyArray<TaskRecord>;
+};
 
 /**
  * Default per-edge dispatch budget — the same order as the topology hop
@@ -103,7 +166,7 @@ function filesystemEntryKind(target: string): string {
   return "other";
 }
 
-export function canonicalReference(repo: string, relativePath: string): CanonicalReference {
+export function canonicalReference(repo: string, relativePath: string): DurableDocumentReference {
   if (relativePath === ".") {
     // The "." workspace fingerprint covers the canonical doc directories in
     // their declared order — CANONICAL_DOC_DIRS is the single authority.
@@ -115,81 +178,254 @@ export function canonicalReference(repo: string, relativePath: string): Canonica
       ];
     });
     return {
+      kind: "durable-document",
       path: relativePath,
       id: "WORKSPACE_ROOT",
-      fingerprint: fingerprint(entries.join("\n")),
+      revision: fingerprint(entries.join("\n")),
     };
   }
   const file = path.join(repo, relativePath);
   const parsed = matter(fs.readFileSync(file, "utf8"));
-  // Caller bookkeeping appended to a doc's front matter must not perturb the
-  // artifact's own fingerprint — evidence references to the doc stay live.
-  const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
   return {
+    kind: "durable-document",
     path: relativePath,
-    id: data.id as string,
-    fingerprint: fingerprint(matter.stringify(parsed.content, data)),
+    id: parsed.data.id as string,
+    revision: fingerprint(matter.stringify(parsed.content, parsed.data)),
   };
 }
 
-export function isCanonicalReference(value: unknown): value is CanonicalReference {
+export function isDurableDocumentReference(value: unknown): value is DurableDocumentReference {
   return Boolean(value)
     && typeof value === "object"
-    && typeof (value as CanonicalReference).path === "string"
-    && typeof (value as CanonicalReference).id === "string"
-    && typeof (value as CanonicalReference).fingerprint === "string";
+    && (value as DurableDocumentReference).kind === "durable-document"
+    && typeof (value as DurableDocumentReference).path === "string"
+    && typeof (value as DurableDocumentReference).id === "string"
+    && typeof (value as DurableDocumentReference).revision === "string";
 }
 
-export function canonicalEvidenceMatches(repo: string, evidence: CanonicalReference): boolean {
-  if (path.isAbsolute(evidence.path)) return false;
-  const resolved = path.resolve(repo, evidence.path);
+export function isEffectReference(value: unknown): value is EffectReference {
+  if (!value || typeof value !== "object") return false;
+  const kind = (value as EffectReference).kind;
+  if (kind === "durable-document") return isDurableDocumentReference(value);
+  if (kind === "execution-task") {
+    const ref = value as ExecutionTaskReference;
+    return typeof ref.runId === "string" && ref.runId.length > 0
+      && typeof ref.taskId === "string" && ref.taskId.length > 0
+      && Number.isInteger(ref.version) && ref.version >= 1;
+  }
+  if (kind === "provider") {
+    const ref = value as ProviderReference;
+    return typeof ref.provider === "string" && ref.provider.length > 0
+      && typeof ref.idempotencyKey === "string" && ref.idempotencyKey.length > 0;
+  }
+  return false;
+}
+
+export function durableDocumentMatches(repo: string, reference: DurableDocumentReference): boolean {
+  if (path.isAbsolute(reference.path)) return false;
+  const resolved = path.resolve(repo, reference.path);
   if (!isInside(repo, resolved) || !fs.existsSync(resolved)) return false;
   try {
-    const current = canonicalReference(repo, evidence.path);
-    return current.id === evidence.id && current.fingerprint === evidence.fingerprint;
+    const current = canonicalReference(repo, reference.path);
+    return current.id === reference.id && current.revision === reference.revision;
   } catch {
     return false;
   }
 }
 
-export function storedOutcomes(repo: string, proofPath: string): EffectOutcome[] {
-  const parsed = matter(fs.readFileSync(path.resolve(repo, proofPath), "utf8"));
-  return Array.isArray(parsed.data.effectOutcomes) ? parsed.data.effectOutcomes as EffectOutcome[] : [];
+/**
+ * Is the declared reference still bound to current state? A durable document
+ * must resolve to the same id+revision; an execution task must exist inside
+ * the bound run at the declared CAS version; a provider reference is "live"
+ * by construction — its idempotency key is the proof, and only the run's
+ * receipts can carry it.
+ */
+export function referenceIsLive(repo: string, store: EffectStoreView | undefined, reference: EffectReference): boolean {
+  if (reference.kind === "durable-document") return durableDocumentMatches(repo, reference);
+  if (reference.kind === "execution-task") {
+    if (!store || reference.runId !== store.runId) return false;
+    const task = store.tasks.find((entry) => entry.taskId === reference.taskId);
+    return task !== undefined && task.version === reference.version;
+  }
+  return reference.provider.length > 0 && reference.idempotencyKey.length > 0;
 }
 
-export function persistOutcome(repo: string, proofPath: string, outcome: EffectOutcome): void {
-  const file = path.resolve(repo, proofPath);
-  const parsed = matter(fs.readFileSync(file, "utf8"));
-  const outcomes = storedOutcomes(repo, proofPath);
-  if (!outcomes.some((stored) => JSON.stringify(stored) === JSON.stringify(outcome))) outcomes.push(outcome);
-  fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, effectOutcomes: outcomes }), "utf8");
+/**
+ * Resolve one ReferenceSpec against current state — a durable document gains
+ * its current id/revision, an execution task its current version inside the
+ * bound run. Returns null when the spec cannot resolve (missing doc, unknown
+ * task, malformed shape): callers turn that into a fail-closed decision,
+ * never a crash on untrusted declarations.
+ */
+export function resolveReference(
+  repo: string,
+  store: EffectStoreView | undefined,
+  spec: ReferenceSpec,
+): EffectReference | null {
+  try {
+    if (typeof spec === "string") {
+      return canonicalReference(repo, spec);
+    }
+    if (!spec || typeof spec !== "object") return null;
+    if (spec.kind === "durable-document") {
+      return canonicalReference(repo, spec.path);
+    }
+    if (spec.kind === "execution-task") {
+      if (!store) return null;
+      const taskId = (spec as { taskId?: unknown }).taskId;
+      if (typeof taskId !== "string" || taskId.length === 0) return null;
+      const task = store.tasks.find((entry) => entry.taskId === taskId);
+      if (!task) return null;
+      const declaredVersion = (spec as { version?: unknown }).version;
+      // A partial task spec binds the current record; a fully declared
+      // version must name the current one — pinning an older version as
+      // present state would silently accept a lost update.
+      if (declaredVersion !== undefined && declaredVersion !== task.version) return null;
+      return { kind: "execution-task", runId: task.runId, taskId: task.taskId, version: task.version };
+    }
+    if (spec.kind === "provider") {
+      return isEffectReference(spec) ? spec : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
-function hasStoredOutcome(repo: string, proofPath: string, outcome: EffectOutcome): boolean {
-  return storedOutcomes(repo, proofPath).some((stored) => JSON.stringify(stored) === JSON.stringify(outcome));
+/**
+ * Resolve a resolver-supplied spec list into the run's input binding: fully
+ * resolved, deduplicated by canonical content, and stably ordered so both
+ * sides of the outcome contract derive the identical array. Unresolvable
+ * specs throw — an adapter contract bug, not a recoverable outcome.
+ */
+export function resolveReferenceSpecs(
+  repo: string,
+  store: EffectStoreView | undefined,
+  specs: readonly ReferenceSpec[],
+): EffectReference[] {
+  const resolved = specs.map((spec) => {
+    const reference = resolveReference(repo, store, spec);
+    if (reference === null) {
+      throw new Error(`reference spec does not resolve against current state: ${JSON.stringify(spec)}`);
+    }
+    return reference;
+  });
+  const unique = new Map<string, EffectReference>();
+  for (const reference of resolved) unique.set(canonicalJson(reference), reference);
+  return [...unique.values()].sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)));
 }
 
-export function evidenceReceipts(repo: string, proofPath: string): EvidenceReceipt[] {
-  const parsed = matter(fs.readFileSync(path.resolve(repo, proofPath), "utf8"));
-  return Array.isArray(parsed.data.checkpointEvidence)
-    ? parsed.data.checkpointEvidence as EvidenceReceipt[]
-    : [];
+/**
+ * Input-scope identity, ignoring bound revisions: two bindings name the same
+ * authoritative scope when they carry the same multiset of (kind + locator).
+ * The revision is deliberately NOT part of the identity — a completed
+ * effect's own work legitimately advances the docs it read (the pending-edge
+ * commit-resume flow depends on this), while a scope change such as a
+ * re-projected Task Graph adding a task document refuses reuse.
+ */
+function referenceIdentity(reference: EffectReference): string {
+  switch (reference.kind) {
+    case "durable-document": return `doc:${reference.path}:${reference.id}`;
+    case "execution-task": return `task:${reference.taskId}`;
+    case "provider": return `provider:${reference.provider}:${reference.idempotencyKey}`;
+  }
 }
 
-export function persistEvidence(repo: string, proofPath: string, edgeId: string): void {
-  const file = path.resolve(repo, proofPath);
-  const parsed = matter(fs.readFileSync(file, "utf8"));
-  const receipts = evidenceReceipts(repo, proofPath);
-  receipts.push({ edgeId, evidence: canonicalReference(repo, proofPath) });
-  fs.writeFileSync(file, matter.stringify(parsed.content, { ...parsed.data, checkpointEvidence: receipts }), "utf8");
+function sameInputScope(declared: EffectReference[], resolved: EffectReference[]): boolean {
+  if (declared.length !== resolved.length) return false;
+  const left = declared.map(referenceIdentity).sort();
+  const right = resolved.map(referenceIdentity).sort();
+  return left.every((identity, index) => identity === right[index]);
 }
 
-export function hasEvidence(repo: string, proofPath: string, edgeId: string): boolean {
-  return evidenceReceipts(repo, proofPath).some((receipt) => (
-    receipt.edgeId === edgeId
-    && isCanonicalReference(receipt.evidence)
-    && canonicalEvidenceMatches(repo, receipt.evidence)
-  ));
+// ---------------------------------------------------------------------------
+// Effect Receipt records — the stored proof an effect completed
+// ---------------------------------------------------------------------------
+
+/**
+ * The receipt's `input` payload: the dispatch scope it proves — the selected
+ * edge, the stage, the effect identity, and the inputs bound at dispatch.
+ */
+export type EffectReceiptScope = {
+  edgeId: string;
+  stage: "audit" | "delegate";
+  effect: CallerEffect;
+  inputs: EffectReference[];
+};
+
+/** The receipt's `output` payload: the produced outputs plus the completion proof. */
+export type EffectReceiptResult = {
+  outputs: EffectReference[];
+  proof: EffectProof;
+};
+
+function sanitizeRecordIdPart(value: string): string {
+  const cleaned = value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return cleaned.length > 0 ? cleaned.slice(0, 40) : "effect";
+}
+
+/** Content-derived receipt id — identical outcomes re-record as a no-op. */
+export function outcomeReceiptId(outcome: CompletedEffectOutcome): string {
+  const payload = canonicalJson({
+    edgeId: outcome.edgeId,
+    stage: outcome.stage,
+    effect: outcome.effect,
+    inputs: outcome.inputs,
+    outputs: outcome.outputs,
+    proof: outcome.proof,
+  });
+  return `receipt-${outcome.stage}-${sanitizeRecordIdPart(outcome.effect.id)}-${fingerprint(payload).slice(0, 12)}`;
+}
+
+function parseReceiptScope(value: unknown): EffectReceiptScope | null {
+  if (!isPlainObject(value)) return null;
+  if (typeof value.edgeId !== "string" || value.edgeId.length === 0) return null;
+  if (value.stage !== "audit" && value.stage !== "delegate") return null;
+  const effect = value.effect;
+  if (!isPlainObject(effect)) return null;
+  if ((effect.kind !== "audit" && effect.kind !== "delegate") || typeof effect.id !== "string") return null;
+  if (!Array.isArray(value.inputs) || !value.inputs.every(isEffectReference)) return null;
+  return {
+    edgeId: value.edgeId,
+    stage: value.stage,
+    effect: { kind: effect.kind, id: effect.id },
+    inputs: value.inputs as EffectReference[],
+  };
+}
+
+function parseReceiptResult(value: unknown): EffectReceiptResult | null {
+  if (!isPlainObject(value)) return null;
+  if (!Array.isArray(value.outputs) || !value.outputs.every(isEffectReference)) return null;
+  const proof = value.proof;
+  if (!isEffectReference(proof) || proof.kind === "execution-task") return null;
+  return { outputs: value.outputs as EffectReference[], proof };
+}
+
+/**
+ * The stored receipt that proves exactly this outcome: matching dispatch
+ * scope (edgeId/stage/effect/inputs) AND matching result payload
+ * (outputs/proof). A claimed completion without its record — a caller-side
+ * handoff edit, a lost write, a forged outcome — simply finds nothing.
+ */
+export function findOutcomeReceipt(
+  receipts: ReadonlyArray<ReceiptRecord>,
+  outcome: CompletedEffectOutcome,
+): ReceiptRecord | null {
+  const scope = {
+    edgeId: outcome.edgeId,
+    stage: outcome.stage,
+    effect: outcome.effect,
+    inputs: outcome.inputs,
+  };
+  const result = { outputs: outcome.outputs, proof: outcome.proof };
+  for (const record of receipts) {
+    if (record.status !== "success") continue;
+    const parsedScope = parseReceiptScope(record.input);
+    const parsedResult = parseReceiptResult(record.output);
+    if (!parsedScope || !parsedResult) continue;
+    if (isDeepStrictEqual(parsedScope, scope) && isDeepStrictEqual(parsedResult, result)) return record;
+  }
+  return null;
 }
 
 export function assertEffectOutcome(
@@ -198,7 +434,8 @@ export function assertEffectOutcome(
   outcome: EffectOutcome,
   stage: "audit" | "delegate",
   effect: CallerEffect,
-  expectedInputs: CanonicalReference[],
+  expectedInputs: EffectReference[],
+  store?: EffectStoreView,
 ): void {
   if (typeof outcome !== "object" || outcome === null) {
     throw new OutcomeRejection("EffectOutcome must be an object");
@@ -215,21 +452,23 @@ export function assertEffectOutcome(
   if (!isDeepStrictEqual(outcome.effect, effect)) {
     throw new OutcomeRejection("EffectOutcome effect does not match the dispatched effect");
   }
-  if (!Array.isArray(outcome.authoritativeInputs)
-      || outcome.authoritativeInputs.length === 0
-      || !outcome.authoritativeInputs.every(isCanonicalReference)) {
-    throw new OutcomeRejection("authoritativeInputs must be a non-empty list of canonical references");
+  if (!Array.isArray(outcome.inputs)
+      || outcome.inputs.length === 0
+      || !outcome.inputs.every(isEffectReference)) {
+    throw new OutcomeRejection("inputs must be a non-empty list of typed effect references");
   }
-  if (!isDeepStrictEqual(outcome.authoritativeInputs, expectedInputs)) {
-    throw new OutcomeRejection("authoritativeInputs do not match the resolved authoritative inputs");
+  // Dispatch-time binding is exact: the outcome attests the same resolved
+  // refs the runner bound — revision included. A stale attestation rejects.
+  if (!isDeepStrictEqual(outcome.inputs, expectedInputs)) {
+    throw new OutcomeRejection("inputs do not match the resolved authoritative inputs");
   }
-  if (!Array.isArray(outcome.evidence)
-      || outcome.evidence.length === 0
-      || !outcome.evidence.every(isCanonicalReference)) {
-    throw new OutcomeRejection("evidence must be a non-empty list of canonical references");
+  if (!Array.isArray(outcome.outputs)
+      || outcome.outputs.length === 0
+      || !outcome.outputs.every(isEffectReference)) {
+    throw new OutcomeRejection("outputs must be a non-empty list of typed effect references");
   }
-  if (!outcome.evidence.every((evidence) => canonicalEvidenceMatches(repo, evidence))) {
-    throw new OutcomeRejection("outcome evidence must resolve current canonical content");
+  if (!outcome.outputs.every((reference) => referenceIsLive(repo, store, reference))) {
+    throw new OutcomeRejection("outcome outputs must resolve current canonical state");
   }
   if (outcome.status === "completed") {
     if ("reason" in outcome) {
@@ -238,19 +477,16 @@ export function assertEffectOutcome(
     if ("retry" in outcome) {
       throw new OutcomeRejection("completed outcome must not include retry");
     }
-    const proof = outcome.proof ?? {};
-    const hasCanonicalEvidence = isCanonicalReference(proof.canonicalEvidence);
-    const hasProviderIdempotency = typeof proof.providerIdempotency?.provider === "string"
-      && proof.providerIdempotency.provider.length > 0
-      && typeof proof.providerIdempotency.key === "string"
-      && proof.providerIdempotency.key.length > 0;
-    if (hasCanonicalEvidence === hasProviderIdempotency) {
-      throw new OutcomeRejection(
-        "completed outcome requires exactly one of proof.canonicalEvidence or proof.providerIdempotency",
-      );
+    // `unknown`: the outcome is untrusted adapter output — an execution-task
+    // ref reaching this slot is a contract violation, not a type guarantee.
+    const proof: unknown = outcome.proof;
+    if (!isEffectReference(proof)) {
+      throw new OutcomeRejection("completed outcome requires a typed proof reference");
     }
-    if (isCanonicalReference(proof.canonicalEvidence)
-        && !canonicalEvidenceMatches(repo, proof.canonicalEvidence)) {
+    if (proof.kind === "execution-task") {
+      throw new OutcomeRejection("completed proof must be a durable-document or provider reference");
+    }
+    if (proof.kind === "durable-document" && !referenceIsLive(repo, store, proof)) {
       throw new OutcomeRejection("completed proof must resolve current canonical content");
     }
   } else if (outcome.status === "retry") {
@@ -260,14 +496,18 @@ export function assertEffectOutcome(
     if ("reason" in outcome) {
       throw new OutcomeRejection("retry outcome must not include reason");
     }
-    const changedEvidence = outcome.retry?.changedEvidence;
-    if (!Array.isArray(changedEvidence)
-        || changedEvidence.length === 0
-        || !changedEvidence.every(isCanonicalReference)) {
-      throw new OutcomeRejection("retry outcome must include non-empty canonical changedEvidence");
+    const changedOutputs = outcome.retry?.changedOutputs;
+    if (!Array.isArray(changedOutputs)
+        || changedOutputs.length === 0
+        || !changedOutputs.every(isEffectReference)) {
+      throw new OutcomeRejection("retry outcome must include non-empty typed changedOutputs");
     }
-    if (!changedEvidence.every((evidence) => canonicalEvidenceMatches(repo, evidence))) {
-      throw new OutcomeRejection("retry evidence must resolve current canonical content");
+    // A retry must name verifiable changed state — a provider handle cannot
+    // prove "the document changed"; only locally resolvable refs can.
+    if (!changedOutputs.every((reference) => (
+      reference.kind !== "provider" && referenceIsLive(repo, store, reference)
+    ))) {
+      throw new OutcomeRejection("retry changedOutputs must resolve current canonical state");
     }
   } else {
     if ("proof" in outcome) {
@@ -283,11 +523,22 @@ export function assertEffectOutcome(
   }
 }
 
+/**
+ * Reuse determination for a pending-edge completed outcome (the "stored
+ * receipt 再利用判定"). Reuse refuses — the caller yields authority-required —
+ * unless every gate passes: the outcome still validates against the fresh
+ * scope, its declared input scope matches the freshly resolved one
+ * (fingerprint/input-version drift on the effect's own outputs does not
+ * count, a changed input set does), a stored receipt proves exactly this
+ * outcome, and its proof still holds — a provider proof additionally
+ * requires the recorded idempotency key (missing provider proof refuses).
+ */
 export function isReusableCompletedOutcome(
   repo: string,
   route: GraphRoute,
   outcome: EffectOutcome,
-  proofPath: string = DEFAULT_PROOF_PATH,
+  expectedInputs: EffectReference[],
+  store: EffectStoreView & { receipts: ReadonlyArray<ReceiptRecord> },
 ): boolean {
   if (outcome.status !== "completed") return false;
   // A real GraphRoute always declares `requiredAudits`; a route missing the
@@ -298,20 +549,24 @@ export function isReusableCompletedOutcome(
       && (!Array.isArray(route.requiredAudits) || route.requiredAudits.includes(outcome.effect.id))
     : outcome.effect.kind === "delegate" && outcome.effect.id === route.delegate;
   if (!validEffect) return false;
+  if (!sameInputScope(outcome.inputs, expectedInputs)) return false;
   try {
-    // The authoritative-input mapping belongs to the injected dispatcher, so
-    // reuse validation re-checks the outcome's own declared inputs — shape,
-    // edge/stage/effect identity, and live evidence fingerprints.
-    assertEffectOutcome(repo, route, outcome, outcome.stage, outcome.effect, outcome.authoritativeInputs);
+    // The outcome's own inputs stand as its scope attestation — scope
+    // compatibility was just proven by sameInputScope, so the dispatch-time
+    // exact-binding check binds against the attestation itself. Requiring
+    // current revisions here would wrongly reject the pending-edge
+    // commit-resume flow, where the delegate's own committed work
+    // legitimately advanced the docs the edge's earlier effects read.
+    assertEffectOutcome(repo, route, outcome, outcome.stage, outcome.effect, outcome.inputs, store);
   } catch {
     return false;
   }
-  if (!hasStoredOutcome(repo, proofPath, outcome)) return false;
-  const proof = outcome.proof;
-  if (proof?.providerIdempotency !== undefined) return true;
-  const canonicalEvidence = proof?.canonicalEvidence;
-  return isCanonicalReference(canonicalEvidence)
-    && canonicalEvidenceMatches(repo, canonicalEvidence);
+  const receipt = findOutcomeReceipt(store.receipts, outcome);
+  if (receipt === null) return false;
+  if (outcome.proof.kind === "provider") {
+    return receipt.idempotencyKey === outcome.proof.idempotencyKey;
+  }
+  return durableDocumentMatches(repo, outcome.proof);
 }
 
 export function evaluateEffectOutcome(outcome: EffectOutcome): EffectYieldReason | "retry" | null {
@@ -346,6 +601,8 @@ export function commitGatePasses(baseline: CommitBaseline, after: CommitBaseline
 
 export type EffectDispatchContext = {
   repo: string;
+  /** The bound run — dispatchers producing execution-task refs use this id. */
+  runId: string;
   route: GraphRoute;
   effect: CallerEffect;
   signals: ReadonlySet<string>;
@@ -452,17 +709,27 @@ export type CallerRunnerOptions = {
    */
   maxTotalDispatches?: number;
   dispatcher: EffectDispatcher;
-  /** Adapter-owned authoritative input mapping, resolved to live canonical refs. */
-  resolveInputs: (route: GraphRoute, effect: CallerEffect) => string[];
-  /** Adapter-owned canonical evidence path mapping (consumed by dispatchers). */
-  resolveEvidence: (route: GraphRoute, effect: CallerEffect) => string;
   /**
-   * Evidence-phase hook; default persistEvidence(repo, proofPath, edgeId).
-   * Receives the run's live signal set (the oracle's mutable-signal channel).
+   * Execution Store binding. `runId` identifies the run under
+   * `.apm/state/doc-driven-dev/runs/` (or the declared `stateRoot`); it is
+   * created on first use when absent and is threaded through resume via
+   * `CallerHandoff.runId`. `stateRoot`/`allowExternalRoot` pass through to
+   * the store boundary unchanged.
    */
-  applyEvidence?: (repo: string, signals: ReadonlySet<string>, edgeId: string) => void;
-  /** Canonical doc holding outcome+evidence front matter. */
-  proofPath?: string;
+  store?: StoreRootOptions & { runId?: string };
+  /** Adapter-owned authoritative input mapping, resolved to live typed refs. */
+  resolveInputs: (route: GraphRoute, effect: CallerEffect) => ReferenceSpec[];
+  /** Adapter-owned canonical output path mapping (consumed by dispatchers). */
+  resolveOutputPath: (route: GraphRoute, effect: CallerEffect) => string;
+  /**
+   * Evidence-phase hook: applies the caller's canonical mutations for the
+   * edge checkpoint and returns the produced references (paths or typed
+   * refs) to bind alongside the edge's refreshed outcome outputs. A
+   * declared ref that does not resolve current state fails the checkpoint
+   * (`authority-required`), and absent hook declarations default to the
+   * completed outcomes' outputs alone.
+   */
+  applyCheckpointEvidence?: (repo: string, signals: ReadonlySet<string>, edgeId: string) => ReferenceSpec[] | void;
   /** The dispatcher's nature, caller-declared; recorded on effect-dispatched. */
   executionMode?: ExecutionMode;
   /**
@@ -485,7 +752,7 @@ export type CallerRunnerOptions = {
     route: GraphRoute;
     effect: CallerEffect;
     decision: PolicyDecision;
-    inputs: CanonicalReference[];
+    inputs: EffectReference[];
   }) => DelegateHandoff;
   trace?: { file: string; runId: string };
   resume?: CallerHandoff;
@@ -497,6 +764,8 @@ export type PendingEdge = {
   completedAudits: string[];
   delegateComplete: boolean;
   evidenceRecorded: boolean;
+  /** CheckpointRecord id the evidence phase wrote for this pending edge. */
+  evidenceCheckpointId: string | null;
   commitBaseline: CommitBaseline | null;
   /**
    * Effect dispatches this pending edge has consumed so far (#131). Counts
@@ -508,6 +777,8 @@ export type PendingEdge = {
 
 /** JSON-serializable — callers may persist it across sessions. */
 export type CallerHandoff = {
+  /** The Execution Store run this handoff continues. */
+  runId: string;
   current: string;
   mode: "run-until-yield" | "single-step";
   maxHops: number;
@@ -537,21 +808,48 @@ export type CallerRunResult = {
   hops: number;
   outcomes: EffectOutcome[];
   completedEdges: string[];
-  /** "route:<id>", "audit:<id>", "delegate:<id>", "evidence:<id>", "project". */
+  /** "route:<id>", "audit:<id>", "delegate:<id>", "checkpoint:<id>", "project". */
   events: string[];
   handoff: CallerHandoff;
 };
 
+/** The edge-checkpoint `data` payload recorded per completed evidence phase. */
+export type EdgeCheckpointData = {
+  edgeId: string;
+  /** Receipt ids proving the edge's completed effects. */
+  receipts: string[];
+  /** The bound outputs: refreshed outcome outputs plus hook-declared refs. */
+  outputs: EffectReference[];
+  /** stableRouteHash(route) — diagnostic, never a reuse gate. */
+  routeHash: string;
+};
+
+function edgeCheckpointId(edgeId: string, data: EdgeCheckpointData): string {
+  return `checkpoint-${sanitizeRecordIdPart(edgeId)}-${fingerprint(canonicalJson(data)).slice(0, 12)}`;
+}
+
+function parseCheckpointData(value: unknown): EdgeCheckpointData | null {
+  if (!isPlainObject(value)) return null;
+  if (typeof value.edgeId !== "string" || value.edgeId.length === 0) return null;
+  if (!Array.isArray(value.receipts) || !value.receipts.every((entry) => typeof entry === "string")) return null;
+  if (!Array.isArray(value.outputs) || !value.outputs.every(isEffectReference)) return null;
+  return {
+    edgeId: value.edgeId,
+    receipts: value.receipts as string[],
+    outputs: value.outputs as EffectReference[],
+    routeHash: typeof value.routeHash === "string" ? value.routeHash : "",
+  };
+}
+
 /**
  * Drive the caller loop: spawn the route_graph CLI once per hop (a fresh
  * projection per process), run the declared audits then the delegate, record
- * canonical evidence, enforce the commit gate, and re-enter at next until the
- * graph yields. All oracle `runScenario` semantics are preserved; effect work
- * is delegated to the injected dispatcher.
+ * the edge checkpoint in the Execution Store, enforce the commit gate, and
+ * re-enter at next until the graph yields. All oracle `runScenario` semantics
+ * are preserved; effect work is delegated to the injected dispatcher.
  */
 export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   const repo = options.repo;
-  const proofPath = options.proofPath ?? DEFAULT_PROOF_PATH;
   const graphPath = options.graphPath ?? options.resume?.graphPath ?? resolveGraphPath(undefined, repo);
   const definition = loadGraphDefinition(graphPath);
   const mode = options.resume?.mode ?? options.mode ?? "run-until-yield";
@@ -596,6 +894,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     completedAudits: [...options.resume.pending.completedAudits],
     delegateComplete: options.resume.pending.delegateComplete,
     evidenceRecorded: options.resume.pending.evidenceRecorded,
+    evidenceCheckpointId: options.resume.pending.evidenceCheckpointId ?? null,
     commitBaseline: options.resume.pending.commitBaseline ?? null,
     // Handoffs written before the field existed keep their recorded
     // outcomes as the dispatch count — every stored outcome was a dispatch.
@@ -604,13 +903,61 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   const trace = options.trace;
   const executionMode = options.executionMode ?? "unknown";
 
+  // Execution Store binding (#238): the run carries receipts, checkpoints,
+  // and the mirrored diagnostic trace. A declared run that does not exist
+  // yet is materialized — binding a run id is declaring the run.
+  const storeOptions: StoreRootOptions = {
+    stateRoot: options.store?.stateRoot,
+    allowExternalRoot: options.store?.allowExternalRoot,
+  };
+  if (options.resume?.runId !== undefined
+      && options.store?.runId !== undefined
+      && options.store.runId !== options.resume.runId) {
+    throw new Error(`resume handoff runId ${options.resume.runId} does not match store.runId ${options.store.runId}`);
+  }
+  const runId = options.resume?.runId ?? options.store?.runId ?? generateArtifactId("RUN");
+  let storeSnapshot: RunSnapshot;
+  try {
+    storeSnapshot = loadRun(repo, runId, storeOptions);
+  } catch (error: unknown) {
+    if (error instanceof StoreError && error.code === "run-not-found") {
+      storeSnapshot = createRun(repo, { runId, graphId: definition.id, focus: [...focus] }, storeOptions);
+    } else {
+      throw error;
+    }
+  }
+  const reloadStore = (): void => {
+    storeSnapshot = loadRun(repo, runId, storeOptions);
+  };
+  const storeView = (): EffectStoreView & { receipts: ReadonlyArray<ReceiptRecord> } => ({
+    runId,
+    tasks: storeSnapshot.tasks,
+    receipts: storeSnapshot.receipts,
+  });
+  // A resume handoff is the only continuation receipt reuse may honor: a
+  // fresh leg on the same run id never adopts stored receipts — it is a new
+  // execution, not the in-flight pending edge.
+  const resumedRun = options.resume !== undefined;
+
+  const traceRunId = trace?.runId ?? runId;
+  let mirrorSeq = 0;
   const emitTrace = (input: TraceEventInput): void => {
-    if (!trace) return;
+    const event = { ...input, runId: traceRunId };
+    let seq = ++mirrorSeq;
+    if (trace) {
+      try {
+        seq = appendTraceEvent(trace.file, event).seq;
+      } catch (error: unknown) {
+        // Diagnostics never fail a run.
+        console.error(`run trace append failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     try {
-      appendTraceEvent(trace.file, input);
+      // run_trace.jsonl mirrors the same diagnostic event — non-authoritative
+      // by contract; the run's receipts/checkpoints are the only proof.
+      appendStoreTrace(repo, runId, { ...event, seq }, storeOptions);
     } catch (error: unknown) {
-      // Diagnostics never fail a run.
-      console.error(`run trace append failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`store trace append failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -622,12 +969,11 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       "--current", current,
       ...focus.flatMap((entry) => ["--focus", entry]),
       ...[...signals].flatMap((signal) => ["--signal", signal]),
-      // The caller owns the task-doc scan root: its own bookkeeping — the
-      // proof doc (DEFAULT_PROOF_PATH) and the task-aware hop budget — is
-      // anchored at docs/tasks, so the pinned flag is appended after
-      // prefixArgs and deliberately wins over any adapter-supplied
-      // --task-dir (Issue #156; see execution-contract "Selected-edge
-      // protocol").
+      // The caller owns the task-doc scan root: the Task Graph projection
+      // and the task-aware hop budget are anchored at docs/tasks, so the
+      // pinned flag is appended after prefixArgs and deliberately wins over
+      // any adapter-supplied --task-dir (Issue #156; see execution-contract
+      // "Selected-edge protocol").
       "--task-dir", "docs/tasks",
       "--json",
       ...(trace ? ["--trace-file", trace.file, "--run-id", trace.runId] : []),
@@ -643,9 +989,80 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     }
   };
 
-  const resolveEffectInputs = (route: GraphRoute, effect: CallerEffect): CanonicalReference[] => {
-    const paths = options.resolveInputs(route, effect);
-    return [...new Set(paths)].sort().map((relativePath) => canonicalReference(repo, relativePath));
+  const resolveEffectInputs = (route: GraphRoute, effect: CallerEffect): EffectReference[] => {
+    return resolveReferenceSpecs(repo, storeView(), options.resolveInputs(route, effect));
+  };
+
+  /**
+   * Record one accepted completed outcome as an Effect Receipt — the only
+   * channel by which an effect's completion becomes authoritative (#238).
+   * The record is content-keyed, so a re-record of the identical outcome is
+   * an idempotent no-op. `actor` attributes the dispatch mode/method the
+   * adapter reported.
+   */
+  const recordOutcomeReceipt = (outcome: CompletedEffectOutcome, actor: string | null): void => {
+    recordReceipt(repo, runId, {
+      receiptId: outcomeReceiptId(outcome),
+      effect: `${outcome.effect.kind}:${outcome.effect.id}`,
+      taskId: null,
+      idempotencyKey: outcome.proof.kind === "provider" ? outcome.proof.idempotencyKey : null,
+      actor,
+      status: "success",
+      input: {
+        edgeId: outcome.edgeId,
+        stage: outcome.stage,
+        effect: outcome.effect,
+        inputs: outcome.inputs,
+      } satisfies EffectReceiptScope,
+      output: {
+        outputs: outcome.outputs,
+        proof: outcome.proof,
+      } satisfies EffectReceiptResult,
+    }, storeOptions);
+    reloadStore();
+  };
+
+  /**
+   * Stored-receipt adoption for a resumed run whose pending edge was lost
+   * mid-edge (the crash window): a receipt recorded before the crash proves
+   * the effect ran under this exact scope, so the stage may be skipped
+   * without re-dispatch. Adoption is strict: scope identity must match the
+   * freshly resolved inputs, every recorded output must still resolve
+   * current state, and a provider proof requires its idempotency key —
+   * anything less and the stage simply re-dispatches.
+   */
+  const adoptStoredReceipt = (
+    route: GraphRoute,
+    stage: "audit" | "delegate",
+    effect: CallerEffect,
+    expectedInputs: EffectReference[],
+  ): CompletedEffectOutcome | null => {
+    if (!resumedRun) return null;
+    for (const record of storeSnapshot.receipts) {
+      if (record.status !== "success") continue;
+      const scope = parseReceiptScope(record.input);
+      const result = parseReceiptResult(record.output);
+      if (!scope || !result) continue;
+      if (scope.edgeId !== route.edgeId || scope.stage !== stage) continue;
+      if (!isDeepStrictEqual(scope.effect, effect)) continue;
+      if (!sameInputScope(scope.inputs, expectedInputs)) continue;
+      if (!result.outputs.every((reference) => referenceIsLive(repo, storeView(), reference))) continue;
+      if (result.proof.kind === "provider") {
+        if (record.idempotencyKey !== result.proof.idempotencyKey) continue;
+      } else if (!durableDocumentMatches(repo, result.proof)) {
+        continue;
+      }
+      return {
+        status: "completed",
+        edgeId: route.edgeId as string,
+        stage,
+        effect,
+        inputs: expectedInputs,
+        outputs: result.outputs,
+        proof: result.proof,
+      };
+    }
+    return null;
   };
 
   /**
@@ -653,27 +1070,30 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
    * dispatcher the requested mode (and a #122 handoff when the policy
    * delegated), then record what the adapter reports as dispatch-observed
    * events before validation. assertEffectOutcome remains the sole
-   * input-binding enforcer and runs before any persist; the observation
-   * contract is enforced first — a dispatch that misreports its own mode is
-   * a contract breach identical to a malformed outcome. Accepted outcomes
-   * emit effect-outcome; rejected ones leave the dispatch and observation
-   * events as the forensic record (no outcome event, no persisted outcome).
+   * input-binding enforcer and runs before any receipt is recorded; the
+   * observation contract is enforced first — a dispatch that misreports its
+   * own mode is a contract breach identical to a malformed outcome.
+   * Accepted outcomes emit effect-outcome; rejected ones leave the dispatch
+   * and observation events as the forensic record (no outcome event, no
+   * recorded receipt).
    */
   const dispatchEffect = (
     route: GraphRoute,
     stage: "audit" | "delegate",
     effect: CallerEffect,
-  ): { outcome: EffectOutcome } | { rejection: OutcomeRejection } => {
+  ): { outcome: EffectOutcome; actor: string | null } | { rejection: OutcomeRejection } => {
     const expectedInputs = resolveEffectInputs(route, effect);
     const decision = options.policy
       ? selectDelegateMode(options.policy(route, effect))
       : undefined;
     const requestedMode: ExecutionMode = decision ? toExecutionMode(decision.mode) : executionMode;
     emitTrace({
-      v: 1, runId: trace?.runId ?? "", kind: "effect-dispatched",
+      v: 1, runId: traceRunId, kind: "effect-dispatched",
       edgeId: route.edgeId as string, stage, effectId: effect.id,
       executionMode: requestedMode,
-      focusPaths: expectedInputs.map((entry) => entry.path),
+      focusPaths: expectedInputs
+        .filter((entry): entry is DurableDocumentReference => entry.kind === "durable-document")
+        .map((entry) => entry.path),
       ...(decision ? { modeReason: decision.reasons.join(";") } : {}),
     });
     // A handoff exists only when the policy decision delegated the dispatch.
@@ -685,7 +1105,9 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
         ? options.buildHandoff({ route, effect, decision, inputs: expectedInputs })
         : buildDelegateHandoff({
             mode: requestedMode,
-            focus: expectedInputs.map((entry) => entry.path),
+            focus: expectedInputs
+              .filter((entry): entry is DurableDocumentReference => entry.kind === "durable-document")
+              .map((entry) => entry.path),
             inputs: expectedInputs,
           });
     }
@@ -704,7 +1126,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
           `delegate handoff executionMode ${handoff.executionMode} does not match requested mode ${requestedMode}`,
         );
       }
-      const result = options.dispatcher({ repo, route, effect, signals, requestedMode, handoff });
+      const result = options.dispatcher({ repo, runId, route, effect, signals, requestedMode, handoff });
       // Observation entries are adapter output — untrusted input at this
       // boundary. Every entry is structurally validated BEFORE any event is
       // emitted: a malformed observation rejects like a malformed outcome
@@ -728,7 +1150,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       });
       for (const observation of observations) {
         emitTrace({
-          v: 1, runId: trace?.runId ?? "", kind: "dispatch-observed",
+          v: 1, runId: traceRunId, kind: "dispatch-observed",
           edgeId: route.edgeId as string, stage, effectId: effect.id,
           target: observation.target,
           requested: observation.requested,
@@ -762,15 +1184,21 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
           `dispatch executed in mode ${self[0].actual}, not the requested ${requestedMode} — mode switches are never silent`,
         );
       }
-      assertEffectOutcome(repo, route, result.outcome, stage, effect, expectedInputs);
+      // Refresh the store view post-dispatch: a dispatched effect may
+      // legitimately have written task records (execution-task refs bind
+      // the versions present now).
+      reloadStore();
+      assertEffectOutcome(repo, route, result.outcome, stage, effect, expectedInputs, storeView());
       emitTrace({
-        v: 1, runId: trace?.runId ?? "", kind: "effect-outcome",
+        v: 1, runId: traceRunId, kind: "effect-outcome",
         edgeId: route.edgeId as string, stage, effectId: effect.id,
         outcome: result.outcome.status,
         ...(result.outcome.status === "yield" ? { reason: result.outcome.reason } : {}),
-        evidencePaths: result.outcome.evidence.map((entry) => entry.path),
+        outputPaths: result.outcome.outputs
+          .filter((entry): entry is DurableDocumentReference => entry.kind === "durable-document")
+          .map((entry) => entry.path),
       });
-      return { outcome: result.outcome };
+      return { outcome: result.outcome, actor: `${self[0].actual}/${self[0].method}` };
     } catch (error: unknown) {
       if (error instanceof OutcomeRejection) return { rejection: error };
       throw error;
@@ -781,6 +1209,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     route: GraphRoute,
     edgeOutcomes: EffectOutcome[],
     evidenceRecorded: boolean,
+    evidenceCheckpointId: string | null,
     dispatches: number,
     commitBaseline: CommitBaseline | null = null,
   ): void => {
@@ -797,9 +1226,25 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       completedAudits,
       delegateComplete,
       evidenceRecorded,
+      evidenceCheckpointId,
       commitBaseline,
       dispatches,
     };
+  };
+
+  /**
+   * The stored checkpoint the pending edge's evidence phase recorded —
+   * verified fresh: the record must exist, bind this edge, and every bound
+   * output must still resolve current state.
+   */
+  const checkpointIsVerified = (checkpointId: string | null, edgeId: string): boolean => {
+    if (checkpointId === null) return false;
+    const record = storeSnapshot.checkpoints.find((entry) => entry.checkpointId === checkpointId);
+    if (!record || record.edgeId !== edgeId) return false;
+    const data = parseCheckpointData(record.data);
+    return data !== null
+      && data.edgeId === edgeId
+      && data.outputs.every((reference) => referenceIsLive(repo, storeView(), reference));
   };
 
   let yieldReason: YieldReason | null = null;
@@ -810,6 +1255,9 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     const route = routeOnce();
     routes.push(route);
     events.push(`route:${route.edgeId ?? route.status}`);
+    // The store view is reloaded per hop: resume checks and adoption read
+    // post-crash/leg state, never a stale in-memory snapshot.
+    reloadStore();
 
     if (!taskBudgetFrozen && route.delegate === "implementation-flow") {
       if (!route.taskGraph || route.taskGraph.issues.length !== 0) {
@@ -854,9 +1302,16 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     if (resumingPending) {
       const invalidReceipt = resumingPending.outcomes
         .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
-        .some((outcome) => !isReusableCompletedOutcome(repo, route, outcome, proofPath));
-      const unverifiedEvidence = resumingPending.evidenceRecorded && !hasEvidence(repo, proofPath, route.edgeId as string);
-      if (invalidReceipt || unverifiedEvidence) {
+        .some((outcome) => !isReusableCompletedOutcome(
+          repo,
+          route,
+          outcome,
+          resolveEffectInputs(route, outcome.effect),
+          storeView(),
+        ));
+      const unverifiedCheckpoint = resumingPending.evidenceRecorded
+        && !checkpointIsVerified(resumingPending.evidenceCheckpointId, route.edgeId as string);
+      if (invalidReceipt || unverifiedCheckpoint) {
         yieldReason = "authority-required";
         break;
       }
@@ -871,38 +1326,46 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       .map((outcome) => outcome.effect.id));
     for (const audit of route.requiredAudits) {
       if (completedAudits.has(audit)) continue;
+      const effect: CallerEffect = { kind: "audit", id: audit };
+      const expectedInputs = resolveEffectInputs(route, effect);
+      const adopted = adoptStoredReceipt(route, "audit", effect, expectedInputs);
+      if (adopted) {
+        edgeOutcomes.push(adopted);
+        outcomes.push(adopted);
+        completedAudits.add(audit);
+        continue;
+      }
       // Two dispatch bounds guard every effect: the pending edge's own
       // budget and the run total — the latter catches retries rotated
       // across different edges, which reset the per-edge count.
       if (edgeDispatches >= maxDispatchesPerEdge
           || totalDispatches >= totalDispatchBound()) {
         yieldReason = "budget-exhausted";
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       events.push(`audit:${audit}`);
-      const effect: CallerEffect = { kind: "audit", id: audit };
       edgeDispatches += 1;
       totalDispatches += 1;
       const dispatched = dispatchEffect(route, "audit", effect);
       if ("rejection" in dispatched) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       const outcome = dispatched.outcome;
       edgeOutcomes.push(outcome);
       outcomes.push(outcome);
-      persistOutcome(repo, proofPath, outcome);
+      if (outcome.status === "completed") recordOutcomeReceipt(outcome, dispatched.actor);
       const evaluation = evaluateEffectOutcome(outcome);
       if (evaluation === "retry") {
-        // A retry promises changed evidence; an identical retry outcome on an
+        // A retry promises changed outputs; an identical retry outcome on an
         // identical re-route can never progress, so the run stops instead of
         // looping forever (the oracle bounded this with its finite step list).
         // Distinct payloads fall through to the per-edge dispatch budget.
         const repeatedRetry = edgeOutcomes.slice(0, -1)
           .some((prior) => JSON.stringify(prior) === JSON.stringify(outcome));
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         if (repeatedRetry) {
           yieldReason = "budget-exhausted";
           break hopLoop;
@@ -911,7 +1374,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       }
       if (evaluation) {
         yieldReason = evaluation;
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       completedAudits.add(audit);
@@ -922,10 +1385,20 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       outcome.status === "completed" && outcome.stage === "delegate" && outcome.effect.id === route.delegate
     ));
     if (route.delegate && !delegateComplete) {
+      const effect: CallerEffect = { kind: "delegate", id: route.delegate };
+      const expectedInputs = resolveEffectInputs(route, effect);
+      const adopted = adoptStoredReceipt(route, "delegate", effect, expectedInputs);
+      if (adopted) {
+        edgeOutcomes.push(adopted);
+        outcomes.push(adopted);
+        delegateComplete = true;
+      }
+    }
+    if (route.delegate && !delegateComplete) {
       if (edgeDispatches >= maxDispatchesPerEdge
           || totalDispatches >= totalDispatchBound()) {
         yieldReason = "budget-exhausted";
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       events.push(`delegate:${route.delegate}`);
@@ -935,18 +1408,18 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       const dispatched = dispatchEffect(route, "delegate", effect);
       if ("rejection" in dispatched) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       const outcome = dispatched.outcome;
       edgeOutcomes.push(outcome);
       outcomes.push(outcome);
-      persistOutcome(repo, proofPath, outcome);
+      if (outcome.status === "completed") recordOutcomeReceipt(outcome, dispatched.actor);
       const evaluation = evaluateEffectOutcome(outcome);
       if (evaluation === "retry") {
         const repeatedRetry = edgeOutcomes.slice(0, -1)
           .some((prior) => JSON.stringify(prior) === JSON.stringify(outcome));
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         if (repeatedRetry) {
           yieldReason = "budget-exhausted";
           break hopLoop;
@@ -955,35 +1428,69 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       }
       if (evaluation) {
         yieldReason = evaluation;
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         break hopLoop;
       }
       delegateCounts[route.delegate] = (delegateCounts[route.delegate] ?? 0) + 1;
       delegateComplete = true;
     }
 
-    let evidenceRecorded = resumingPending?.evidenceRecorded === true && hasEvidence(repo, proofPath, route.edgeId as string);
+    let evidenceRecorded = false;
+    let evidenceCheckpointId: string | null = null;
+    if (resumingPending?.evidenceRecorded === true
+        && checkpointIsVerified(resumingPending.evidenceCheckpointId, route.edgeId as string)) {
+      evidenceRecorded = true;
+      evidenceCheckpointId = resumingPending.evidenceCheckpointId;
+    }
     if (!evidenceRecorded) {
-      const evidenceBefore = evidenceReceipts(repo, proofPath).filter((receipt) => receipt.edgeId === route.edgeId).length;
-      if (options.applyEvidence) {
-        options.applyEvidence(repo, signals, route.edgeId as string);
-      } else {
-        persistEvidence(repo, proofPath, route.edgeId as string);
-      }
-      evidenceRecorded = hasEvidence(repo, proofPath, route.edgeId as string)
-        && evidenceReceipts(repo, proofPath).filter((receipt) => receipt.edgeId === route.edgeId).length > evidenceBefore;
-      if (!evidenceRecorded) {
+      // Evidence phase: the caller hook applies its canonical mutations and
+      // declares produced refs; the checkpoint then binds the edge's
+      // refreshed outcome outputs plus the hook's declarations. A declared
+      // ref that fails to resolve refuses the checkpoint — the runner never
+      // asserts unverifiable evidence.
+      const declared = options.applyCheckpointEvidence?.(repo, signals, route.edgeId as string) ?? [];
+      const declaredRefs = declared.map((spec) => resolveReference(repo, storeView(), spec));
+      const refreshed: Array<EffectReference | null> = edgeOutcomes
+        .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
+        .flatMap((outcome) => outcome.outputs)
+        .map((reference) => resolveReference(repo, storeView(), reference));
+      const invalidDeclaration = declaredRefs.some((reference) => reference === null)
+        || refreshed.some((reference) => reference === null);
+      const boundOutputs = [...declaredRefs, ...refreshed]
+        .filter((reference): reference is EffectReference => reference !== null);
+      const unique = new Map<string, EffectReference>();
+      for (const reference of boundOutputs) unique.set(canonicalJson(reference), reference);
+      const outputs = [...unique.values()].sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)));
+      if (invalidDeclaration || !outputs.every((reference) => referenceIsLive(repo, storeView(), reference))) {
         yieldReason = "authority-required";
-        savePending(route, edgeOutcomes, false, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, false, null, edgeDispatches, commitBaseline);
         break;
       }
+      const data: EdgeCheckpointData = {
+        edgeId: route.edgeId as string,
+        receipts: edgeOutcomes
+          .filter((outcome): outcome is CompletedEffectOutcome => outcome.status === "completed")
+          .map((outcome) => outcomeReceiptId(outcome)),
+        outputs,
+        routeHash: fingerprint(JSON.stringify(route)),
+      };
+      const recorded = recordCheckpoint(repo, runId, {
+        checkpointId: edgeCheckpointId(route.edgeId as string, data),
+        nodeId: route.next,
+        edgeId: route.edgeId as string,
+        taskId: null,
+        data,
+      }, storeOptions);
+      evidenceRecorded = true;
+      evidenceCheckpointId = recorded.checkpoint.checkpointId;
+      reloadStore();
     }
-    events.push(`evidence:${route.edgeId}`);
+    events.push(`checkpoint:${route.edgeId}`);
     if (commitBaseline && !signals.has("commit-waived")) {
       const after = captureBaseline(repo);
       if (!commitGatePasses(commitBaseline, after)) {
         yieldReason = "commit-required";
-        savePending(route, edgeOutcomes, true, edgeDispatches, commitBaseline);
+        savePending(route, edgeOutcomes, true, evidenceCheckpointId, edgeDispatches, commitBaseline);
         break;
       }
     }
@@ -1001,6 +1508,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   }
 
   const handoff: CallerHandoff = {
+    runId,
     current,
     mode,
     maxHops,
@@ -1022,7 +1530,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   };
   if (yieldReason !== null) {
     emitTrace({
-      v: 1, runId: trace?.runId ?? "", kind: "run-yield",
+      v: 1, runId: traceRunId, kind: "run-yield",
       reason: yieldReason, hops, completedEdges: [...completedEdges],
     });
   }

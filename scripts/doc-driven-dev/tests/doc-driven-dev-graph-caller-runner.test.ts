@@ -7,13 +7,16 @@ import { spawnSync } from "node:child_process";
 import matter from "gray-matter";
 import test from "node:test";
 import {
-  canonicalEvidenceMatches, canonicalReference, captureBaseline,
-  commitGatePasses, evidenceReceipts, hasEvidence, isReusableCompletedOutcome,
-  OutcomeRejection, persistEvidence, persistOutcome, storedOutcomes,
-  assertEffectOutcome, runCaller,
-  type CallerEffect, type CanonicalReference, type CompletedEffectOutcome,
-  type EffectDispatcher,
+  assertEffectOutcome, canonicalReference, captureBaseline,
+  commitGatePasses, isReusableCompletedOutcome, outcomeReceiptId,
+  OutcomeRejection, runCaller,
+  type CallerEffect, type CompletedEffectOutcome,
+  type DurableDocumentReference, type EffectDispatcher, type EffectReference,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
+import {
+  createRun, loadRun, recordCheckpoint, recordReceipt, StoreError,
+  type RunSnapshot,
+} from "../src/skills/lib/execution_store";
 import type { GraphRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 import {
   buildDelegateHandoff,
@@ -29,6 +32,7 @@ function repo(): string {
   fs.mkdirSync(path.join(dir, "docs/tasks"), { recursive: true });
   fs.writeFileSync(path.join(dir, PROOF),
     "---\nid: TASK-0001\ntype: task\nstatus: todo\n---\n# Task\n", "utf8");
+  fs.writeFileSync(path.join(dir, ".gitignore"), "/.apm/state/\n", "utf8");
   spawnSync("git", ["init", "-q"], { cwd: dir });
   return dir;
 }
@@ -36,34 +40,107 @@ function writeDoc(dir: string, rel: string, data: Record<string, unknown>, body:
   fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
   fs.writeFileSync(path.join(dir, rel), matter.stringify(body, data), "utf8");
 }
-function ref(dir: string, rel: string): CanonicalReference { return canonicalReference(dir, rel); }
+function ref(dir: string, rel: string): DurableDocumentReference { return canonicalReference(dir, rel); }
 
-test("persistOutcome/storedOutcomes round-trips through canonical front matter", () => {
+function run(dir: string, runId = "unit-run"): RunSnapshot {
+  try {
+    return loadRun(dir, runId);
+  } catch (error: unknown) {
+    if (error instanceof StoreError && error.code === "run-not-found") {
+      return createRun(dir, { runId, graphId: "unit" });
+    }
+    throw error;
+  }
+}
+
+/** The canonical receipt record shape runCaller writes for a completed outcome. */
+function recordOutcomeReceipt(dir: string, runId: string, outcome: CompletedEffectOutcome): void {
+  recordReceipt(dir, runId, {
+    receiptId: outcomeReceiptId(outcome),
+    effect: `${outcome.effect.kind}:${outcome.effect.id}`,
+    taskId: null,
+    idempotencyKey: outcome.proof.kind === "provider" ? outcome.proof.idempotencyKey : null,
+    actor: "test/scripted",
+    status: "success",
+    input: {
+      edgeId: outcome.edgeId,
+      stage: outcome.stage,
+      effect: outcome.effect,
+      inputs: outcome.inputs,
+    },
+    output: { outputs: outcome.outputs, proof: outcome.proof },
+  });
+}
+
+function storeView(dir: string, runId = "unit-run") {
+  const snapshot = loadRun(dir, runId);
+  return { runId: snapshot.runId, tasks: snapshot.tasks, receipts: snapshot.receipts };
+}
+
+test("recordReceipt persists an accepted outcome; identical re-record is a no-op, same-id conflicts", () => {
   const dir = repo();
+  run(dir);
   const outcome: CompletedEffectOutcome = {
     status: "completed", edgeId: "a-to-b", stage: "audit",
     effect: { kind: "audit", id: "spec" },
-    authoritativeInputs: [ref(dir, PROOF)], evidence: [ref(dir, PROOF)],
-    proof: { canonicalEvidence: ref(dir, PROOF) },
+    inputs: [ref(dir, PROOF)], outputs: [ref(dir, PROOF)],
+    proof: ref(dir, PROOF),
   };
-  persistOutcome(dir, PROOF, outcome);
-  assert.deepEqual(storedOutcomes(dir, PROOF), [outcome]);
-  // outcome bookkeeping must not perturb the artifact's own fingerprint:
-  // `effectOutcomes`/`checkpointEvidence` are stripped from the fingerprinted
-  // front matter, so the hash equals the pre-bookkeeping canonical content.
-  assert.equal(canonicalReference(dir, PROOF).fingerprint,
+  recordOutcomeReceipt(dir, "unit-run", outcome);
+  const snapshot = loadRun(dir, "unit-run");
+  assert.equal(snapshot.receipts.length, 1);
+  assert.equal(snapshot.receipts[0].receiptId, outcomeReceiptId(outcome));
+  // Identical content under the same id is the idempotent crash-retry case.
+  recordOutcomeReceipt(dir, "unit-run", outcome);
+  assert.equal(loadRun(dir, "unit-run").receipts.length, 1);
+  // Same id, different content is a record-conflict, never a silent overwrite.
+  const divergent = { ...outcome, outputs: [ref(dir, "docs/tasks/0001-task.md"), ref(dir, PROOF)] };
+  assert.throws(
+    () => recordReceipt(dir, "unit-run", {
+      receiptId: outcomeReceiptId(outcome),
+      effect: "audit:spec", taskId: null, idempotencyKey: null,
+      actor: "test/scripted", status: "success",
+      input: { edgeId: "a-to-b", stage: "audit", effect: outcome.effect, inputs: outcome.inputs },
+      output: { outputs: divergent.outputs, proof: outcome.proof },
+    }),
+    (error: unknown) => error instanceof StoreError && error.code === "record-conflict",
+  );
+  // Receipts are execution-side records: the task doc's canonical content is
+  // untouched by bookkeeping — its revision equals the pre-receipt content.
+  assert.equal(canonicalReference(dir, PROOF).revision,
     crypto.createHash("sha256").update(matter.stringify("# Task\n", {
       id: "TASK-0001", type: "task", status: "todo",
     })).digest("hex"));
 });
 
-test("evidence receipts persist per-edge and hasEvidence detects them", () => {
+test("recordCheckpoint persists the edge checkpoint; re-record no-ops, different data conflicts", () => {
   const dir = repo();
-  assert.equal(hasEvidence(dir, PROOF, "a-to-b"), false);
-  persistEvidence(dir, PROOF, "a-to-b");
-  assert.equal(hasEvidence(dir, PROOF, "a-to-b"), true);
-  assert.equal(hasEvidence(dir, PROOF, "other"), false);
-  assert.equal(evidenceReceipts(dir, PROOF).length, 1);
+  run(dir);
+  const data = {
+    edgeId: "a-to-b",
+    receipts: ["receipt-1"],
+    outputs: [ref(dir, PROOF)],
+    routeHash: "0".repeat(64),
+  };
+  const input = {
+    checkpointId: "checkpoint-a-to-b-1",
+    nodeId: "b", edgeId: "a-to-b", taskId: null, data,
+  };
+  recordCheckpoint(dir, "unit-run", input);
+  let snapshot = loadRun(dir, "unit-run");
+  assert.equal(snapshot.checkpoints.length, 1);
+  assert.equal(snapshot.checkpoints[0].checkpointId, "checkpoint-a-to-b-1");
+  // Idempotent re-record: identical payload under the same id is a no-op.
+  recordCheckpoint(dir, "unit-run", input);
+  snapshot = loadRun(dir, "unit-run");
+  assert.equal(snapshot.checkpoints.length, 1);
+  // A different edge's checkpoint records alongside, never overwrites.
+  recordCheckpoint(dir, "unit-run", { ...input, checkpointId: "checkpoint-other-1", edgeId: "other", data: { ...data, edgeId: "other" } });
+  assert.equal(loadRun(dir, "unit-run").checkpoints.length, 2);
+  assert.throws(
+    () => recordCheckpoint(dir, "unit-run", { ...input, data: { ...data, receipts: ["receipt-2"] } }),
+    (error: unknown) => error instanceof StoreError && error.code === "record-conflict",
+  );
 });
 
 test("commit gate requires dirty entries ⊆ baseline — head advance alone fails", () => {
@@ -84,35 +161,44 @@ test("assertEffectOutcome rejects malformed outcomes with OutcomeRejection", () 
   const good: CompletedEffectOutcome = {
     status: "completed", edgeId: "a-to-b", stage: "audit",
     effect: { kind: "audit", id: "spec" },
-    authoritativeInputs: [ref(dir, PROOF)], evidence: [ref(dir, PROOF)],
-    proof: { canonicalEvidence: ref(dir, PROOF) },
+    inputs: [ref(dir, PROOF)], outputs: [ref(dir, PROOF)],
+    proof: ref(dir, PROOF),
   };
-  const inputs = good.authoritativeInputs;
+  const inputs = good.inputs;
   assert.doesNotThrow(() => assertEffectOutcome(dir, route, good, "audit", good.effect, inputs));
   assert.throws(() => assertEffectOutcome(dir, route,
     { ...good, edgeId: "wrong" }, "audit", good.effect, inputs), OutcomeRejection);
   assert.throws(() => assertEffectOutcome(dir, route,
-    { ...good, proof: {} }, "audit", good.effect, inputs), OutcomeRejection);          // missing proof
+    { ...good, proof: {} } as CompletedEffectOutcome, "audit", good.effect, inputs), OutcomeRejection); // missing proof
   assert.throws(() => assertEffectOutcome(dir, route,
-    { ...good, authoritativeInputs: [] }, "audit", good.effect, inputs), OutcomeRejection); // scope mismatch
-  const stale = { ...good, evidence: [{ path: PROOF, id: "TASK-0001", fingerprint: "0".repeat(64) }] };
-  assert.throws(() => assertEffectOutcome(dir, route, stale, "audit", good.effect, inputs), OutcomeRejection); // stale fingerprint
+    { ...good, inputs: [] }, "audit", good.effect, inputs), OutcomeRejection);        // scope mismatch
+  const stale: CompletedEffectOutcome = { ...good, outputs: [{ kind: "durable-document", path: PROOF, id: "TASK-0001", revision: "0".repeat(64) }] };
+  assert.throws(() => assertEffectOutcome(dir, route, stale, "audit", good.effect, inputs), OutcomeRejection); // stale revision
 });
 
-test("isReusableCompletedOutcome requires stored outcome with live fingerprint", () => {
+test("isReusableCompletedOutcome requires a stored receipt with live outputs and proof", () => {
   const dir = repo();
+  run(dir);
   const outcome: CompletedEffectOutcome = {
     status: "completed", edgeId: "a-to-b", stage: "audit",
     effect: { kind: "audit", id: "spec" },
-    authoritativeInputs: [ref(dir, PROOF)], evidence: [ref(dir, PROOF)],
-    proof: { canonicalEvidence: ref(dir, PROOF) },
+    inputs: [ref(dir, PROOF)], outputs: [ref(dir, PROOF)],
+    proof: ref(dir, PROOF),
   };
-  const route = { edgeId: "a-to-b", taskGraph: null } as any;
-  assert.equal(isReusableCompletedOutcome(dir, route, outcome), false); // not persisted
-  persistOutcome(dir, PROOF, outcome);
-  assert.equal(isReusableCompletedOutcome(dir, route, outcome), true);
+  const route = { edgeId: "a-to-b", taskGraph: null, requiredAudits: ["spec"] } as any;
+  // No receipt yet — a pending outcome alone never proves the effect ran.
+  assert.equal(isReusableCompletedOutcome(dir, route, outcome, outcome.inputs, storeView(dir)), false);
+  recordOutcomeReceipt(dir, "unit-run", outcome);
+  assert.equal(isReusableCompletedOutcome(dir, route, outcome, outcome.inputs, storeView(dir)), true);
   writeDoc(dir, PROOF, { id: "TASK-0001", type: "task", status: "todo" }, "# Changed\n");
-  assert.equal(isReusableCompletedOutcome(dir, route, outcome), false); // stale
+  assert.equal(isReusableCompletedOutcome(dir, route, outcome, outcome.inputs, storeView(dir)), false); // stale outputs+proof
+  // A receipt recorded under a different edge scope is not this outcome's
+  // proof — scope matching binds edge/stage/effect/inputs, not just content.
+  const fresh = repo();
+  run(fresh);
+  const otherEdge: CompletedEffectOutcome = { ...outcome, edgeId: "x-to-y" };
+  recordOutcomeReceipt(fresh, "unit-run", otherEdge);
+  assert.equal(isReusableCompletedOutcome(fresh, route, outcome, outcome.inputs, storeView(fresh)), false);
 });
 
 // ---------------------------------------------------------------------------
@@ -170,9 +256,15 @@ function git(dir: string, args: string[]): string {
 }
 
 function gitInit(dir: string): void {
+  fs.writeFileSync(path.join(dir, ".gitignore"), "/.apm/state/\n", "utf8");
   git(dir, ["init", "-q"]);
   git(dir, ["add", "-A"]);
   git(dir, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "baseline"]);
+}
+
+function commitAll(dir: string): void {
+  git(dir, ["add", "-A"]);
+  git(dir, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "checkpoint", "--allow-empty"]);
 }
 
 function happyRepo(): string {
@@ -182,7 +274,7 @@ function happyRepo(): string {
     fs.writeFileSync(path.join(dir, directory, "README.md"), `# ${directory}\n`, "utf8");
   }
   // The experiment-log audit's canonical input anchor is the managed exp
-  // index; it needs a front-matter id to resolve as a CanonicalReference.
+  // index; it needs a front-matter id to resolve as a DurableDocumentReference.
   writeArtifact(dir, "docs/impl/exp/README.md", {
     id: "EXP-INDEX", title: "Experiment Logs",
   }, "# Experiment Logs\n");
@@ -265,28 +357,28 @@ function testResolveEvidence(route: GraphRoute, effect: CallerEffect): string {
   }
 }
 
-function testInputs(dir: string, route: GraphRoute, effect: CallerEffect): CanonicalReference[] {
+function testInputs(dir: string, route: GraphRoute, effect: CallerEffect): EffectReference[] {
   const paths = testResolveInputs(route, effect);
-  return [...new Set(paths)].sort().map((relativePath) => canonicalReference(dir, relativePath));
+  return [...new Set(paths)].sort().map((relativePath) => canonicalReference(dir, relativePath) as EffectReference);
 }
 
 function completed(dir: string, route: GraphRoute, stage: "audit" | "delegate", effect: CallerEffect): CompletedEffectOutcome {
-  const evidence = canonicalReference(dir, testResolveEvidence(route, effect));
-  const evidenceReferences = effect.id === "planning-flow"
+  const output = canonicalReference(dir, testResolveEvidence(route, effect));
+  const outputs: EffectReference[] = effect.id === "planning-flow"
     ? [
-        evidence,
+        output,
         canonicalReference(dir, "docs/test-specs/0001-graph.md"),
         ...taskGraphPaths(route).map((relativePath) => canonicalReference(dir, relativePath)),
       ]
-    : [evidence];
+    : [output];
   return {
     status: "completed",
     edgeId: route.edgeId as string,
     stage,
     effect,
-    authoritativeInputs: testInputs(dir, route, effect),
-    evidence: evidenceReferences,
-    proof: { canonicalEvidence: evidence },
+    inputs: testInputs(dir, route, effect),
+    outputs,
+    proof: output,
   };
 }
 
@@ -306,13 +398,19 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
     // mutable signal callbacks; the runner contract declares them up front.
     signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
     dispatcher,
-    resolveInputs: testResolveInputs, resolveEvidence: testResolveEvidence,
+    resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
     // The evidence phase performs the edge's canonical mutations first (the
     // oracle's evidence(edgeId, mutate) pattern): implementation work completes
     // TASK-0001, then the receipt is recorded on the post-mutation doc.
-    applyEvidence: (repoDir, _signals, edgeId) => {
-      if (edgeId === "task-graph-to-implementation") updateArtifact(repoDir, PROOF, { status: "done" });
-      persistEvidence(repoDir, PROOF, edgeId);
+    applyCheckpointEvidence: (repoDir, _signals, edgeId) => {
+      if (edgeId === "task-graph-to-implementation") {
+        // The delegate commits its canonical mutation (the committedEvidence
+        // pattern): store writes are Git-ignored, so the gated edge's
+        // porcelain diff is exactly the delegate's own committed work.
+        updateArtifact(repoDir, PROOF, { status: "done" });
+        commitAll(repoDir);
+      }
+      return [PROOF];
     },
     trace: { file: trace, runId: "e2e-happy" },
   });
@@ -371,10 +469,16 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
     focus: ["PLAN-0001"],
     signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
     dispatcher,
-    resolveInputs: testResolveInputs, resolveEvidence: testResolveEvidence,
-    applyEvidence: (repoDir, _signals, edgeId) => {
-      if (edgeId === "task-graph-to-implementation") updateArtifact(repoDir, PROOF, { status: "done" });
-      persistEvidence(repoDir, PROOF, edgeId);
+    resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
+    applyCheckpointEvidence: (repoDir, _signals, edgeId) => {
+      if (edgeId === "task-graph-to-implementation") {
+        // The delegate commits its canonical mutation (the committedEvidence
+        // pattern): store writes are Git-ignored, so the gated edge's
+        // porcelain diff is exactly the delegate's own committed work.
+        updateArtifact(repoDir, PROOF, { status: "done" });
+        commitAll(repoDir);
+      }
+      return [PROOF];
     },
     policy,
     trace: { file: trace, runId: "e2e-policy" },
@@ -413,10 +517,13 @@ function runnerArgs(dir: string, dispatcher: EffectDispatcher, trace: string) {
     signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
     dispatcher,
     resolveInputs: testResolveInputs,
-    resolveEvidence: testResolveEvidence,
-    applyEvidence: (repoDir: string, _signals: ReadonlySet<string>, edgeId: string) => {
-      if (edgeId === "task-graph-to-implementation") updateArtifact(repoDir, PROOF, { status: "done" });
-      persistEvidence(repoDir, PROOF, edgeId);
+    resolveOutputPath: testResolveEvidence,
+    applyCheckpointEvidence: (repoDir: string, _signals: ReadonlySet<string>, edgeId: string) => {
+      if (edgeId === "task-graph-to-implementation") {
+        updateArtifact(repoDir, PROOF, { status: "done" });
+        commitAll(repoDir);
+      }
+      return [PROOF];
     },
     trace: { file: trace, runId: "obs-boundary" },
   };
@@ -455,8 +562,8 @@ test("a declined dispatch yields honestly; an executing dispatch may not claim n
           edgeId: ctx.route.edgeId as string,
           stage: "audit",
           effect: ctx.effect,
-          authoritativeInputs: testInputs(dir, ctx.route, ctx.effect),
-          evidence: [ref(dir, "docs/specs/0001-graph.md")],
+          inputs: testInputs(dir, ctx.route, ctx.effect),
+          outputs: [ref(dir, "docs/specs/0001-graph.md")],
           reason: "authority-required",
         },
         observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: "unknown", method: "not-executed" }],
@@ -649,16 +756,16 @@ function distinctRetryDispatcher(dir: string): EffectDispatcher {
       const inputs = testInputs(dir, ctx.route, ctx.effect);
       attempt += 1;
       updateArtifact(dir, "docs/designs/0001-graph.md", { title: `Graph retry ${attempt}` });
-      const evidence = ref(dir, "docs/designs/0001-graph.md");
+      const output = ref(dir, "docs/designs/0001-graph.md");
       return {
         outcome: {
           status: "retry",
           edgeId: ctx.route.edgeId as string,
           stage: "audit",
           effect: ctx.effect,
-          authoritativeInputs: inputs,
-          evidence: [evidence],
-          retry: { changedEvidence: [evidence] },
+          inputs,
+          outputs: [output],
+          retry: { changedOutputs: [output] },
         },
         observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
       };
@@ -729,16 +836,16 @@ function alternatingEdgeRetryDispatcher(dir: string): EffectDispatcher {
         title: `Alternating retry ${attempt}`,
         status: attempt % 2 === 1 ? "draft" : "approved",
       });
-      const evidence = ref(dir, "docs/designs/0001-graph.md");
+      const output = ref(dir, "docs/designs/0001-graph.md");
       return {
         outcome: {
           status: "retry",
           edgeId: ctx.route.edgeId as string,
           stage: "audit",
           effect: ctx.effect,
-          authoritativeInputs: inputs,
-          evidence: [evidence],
-          retry: { changedEvidence: [evidence] },
+          inputs,
+          outputs: [output],
+          retry: { changedOutputs: [output] },
         },
         observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
       };
@@ -795,8 +902,8 @@ test("the pending-edge dispatch count survives a mid-edge yield and resume", () 
           edgeId: ctx.route.edgeId as string,
           stage: "audit",
           effect: ctx.effect,
-          authoritativeInputs: inputs,
-          evidence: [ref(dir, "docs/designs/0001-graph.md")],
+          inputs,
+          outputs: [ref(dir, "docs/designs/0001-graph.md")],
           reason: "input-required",
         },
         observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
@@ -835,8 +942,8 @@ test("a handoff written before the run-level bound seeds totalDispatches from ou
           edgeId: ctx.route.edgeId as string,
           stage: "audit",
           effect: ctx.effect,
-          authoritativeInputs: inputs,
-          evidence: [ref(dir, "docs/designs/0001-graph.md")],
+          inputs,
+          outputs: [ref(dir, "docs/designs/0001-graph.md")],
           reason: "input-required",
         },
         observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],

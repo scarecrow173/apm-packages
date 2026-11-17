@@ -72,15 +72,18 @@ JSON-serializable:
 | --- | --- |
 | `executionMode` | the trace `ExecutionMode` the dispatch was requested under (`tool`/`subagent`) — the handoff pins it, so a delegate cannot run under a different mode than the one the runner recorded |
 | `focus` | repo-relative paths the delegate concentrates on |
-| `authoritativeInputs` | live canonical references the outcome must echo verbatim |
+| `authoritativeInputs` | live typed references the outcome's `inputs` must echo verbatim |
 | `sourceRefs` | additional live canonical references supplied for context |
 | `acceptanceCriteria` | the delegate's completion conditions |
 | `permissions` | `{ read, write }` repo-relative scopes the delegate may touch |
 | `toolLimits` | tool identifiers the delegate may use |
 | `budget` | `{ maxHops }` hop bound — default `1`; expand explicitly for multi-hop delegate flows |
-| `completion` | the required completion sentence — a completed `EffectOutcome` with canonical evidence |
+| `completion` | the required completion sentence — a completed `EffectOutcome` with canonical outputs and proof |
 
-Canonical references identify artifacts by `path`, `id`, and `fingerprint`.
+Typed references identify artifacts by `kind` plus the binding fields of
+that kind — a `durable-document` reference carries `path`, `id`, and the
+content `revision`; a `provider` reference carries `provider` and
+`idempotencyKey`.
 Never substitute verification-relevant information with lossy summaries: the
 handoff carries live references and the delegate resolves their current
 content. The `completion` field declares the `EffectOutcome` footer as the
@@ -123,13 +126,12 @@ boundary before the outcome is accepted:
 
 The compact return is normalized to the `EffectOutcome` defined in
 [execution-outcome-contract.md](execution-outcome-contract.md): `completed`,
-`retry`, or `yield`, each carrying canonical `authoritativeInputs` and
-`evidence`.
+`retry`, or `yield`, each carrying typed `inputs` and `outputs`.
 
 The same `assertEffectOutcome` validation applies regardless of execution
-mode. A mismatched `edgeId`, `stage`, or effect identity; `authoritativeInputs`
-that drift from the resolved input set; evidence whose fingerprints no longer
-resolve current canonical content (stale evidence); and missing or forbidden
+mode. A mismatched `edgeId`, `stage`, or effect identity; `inputs`
+that drift from the resolved input set; outputs whose revisions no longer
+resolve current canonical content (stale outputs); and missing or forbidden
 per-status fields are rejected identically whether the effect ran in-context,
 as a tool, or as an isolated subagent. Mode never relaxes the contract: a
 write outside `permissions.write` remains a handoff violation, and an

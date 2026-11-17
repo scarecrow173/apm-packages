@@ -113,7 +113,7 @@ trace summary、resume rule の詳細は
    audit を安定した順序ですべて実行する。
 9. 宣言された delegate と、その briefing / planning / implementation subgraph だけを
    dispatch する。input、approval、authority が明示的に必要なら yield する。
-10. Markdown 証跡 checkpoint と ordered trace を記録し、再投影して返された `next`
+10. Execution Store checkpoint と ordered trace を記録し、再投影して返された `next`
     node から再入力する。`single-step` では yield し、`run-until-yield` では
     繰り返す。
 

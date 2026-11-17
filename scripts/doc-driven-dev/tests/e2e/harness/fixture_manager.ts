@@ -78,6 +78,13 @@ export function updateArtifact(repo: string, rel: string, data: Record<string, u
 }
 
 export function gitInit(repo: string): void {
+  // The Execution Store boundary refuses state writes unless the root is
+  // ignore-covered — the fixture declares the same entry `init` writes.
+  fs.writeFileSync(
+    path.join(repo, ".gitignore"),
+    "# doc-driven-dev execution state — per-worktree, never committed\n/.apm/state/\n",
+    "utf8",
+  );
   git(repo, ["init", "-q"]);
   git(repo, ["add", "-A"]);
   git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "baseline"]);
@@ -85,7 +92,9 @@ export function gitInit(repo: string): void {
 
 export function commitAll(repo: string): void {
   git(repo, ["add", "-A"]);
-  git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "checkpoint"]);
+  // Store records are Git-ignored, so an evidence commit can legitimately be
+  // empty — still advance HEAD so the commit gate observes the commit.
+  git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "checkpoint", "--allow-empty"]);
 }
 
 /** Add one task document to an existing fixture (oracle addTask, verbatim). */
@@ -189,7 +198,7 @@ export function createFixtureRepo(options: {
       fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
     }
     // The experiment-log audit's canonical input anchor is the managed exp
-    // index; it needs a front-matter id to resolve as a CanonicalReference.
+    // index; it needs a front-matter id to resolve as a DurableDocumentReference.
     writeArtifact(repo, "docs/impl/exp/README.md", {
       id: "EXP-INDEX", title: "Experiment Logs",
     }, "# Experiment Logs\n");

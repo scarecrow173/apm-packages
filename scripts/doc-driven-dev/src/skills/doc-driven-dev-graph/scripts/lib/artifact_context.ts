@@ -230,7 +230,7 @@ export function fetchArtifactBodies(
     }
 
     let body: string;
-    let reference: { path: string; id: string; fingerprint: string };
+    let reference: { path: string; id: string; revision: string };
     try {
       body = matter(fs.readFileSync(resolved, "utf8")).content;
       reference = canonicalReference(repo, normalized);
@@ -244,7 +244,7 @@ export function fetchArtifactBodies(
       fail("id-mismatch", `Ref id ${ref.id} does not match resolved id ${recordId ?? "none"}: ${ref.path}`);
       continue;
     }
-    if (ref.fingerprint !== undefined && ref.fingerprint !== reference.fingerprint) {
+    if (ref.fingerprint !== undefined && ref.fingerprint !== reference.revision) {
       fail("stale-fingerprint", `Ref fingerprint is stale for ${ref.path} — re-fetch after re-projection`);
       continue;
     }

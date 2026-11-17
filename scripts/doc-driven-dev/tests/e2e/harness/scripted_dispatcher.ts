@@ -15,13 +15,15 @@ import path from "node:path";
 import matter from "gray-matter";
 import {
   canonicalReference,
+  resolveReferenceSpecs,
   type CallerEffect,
-  type CanonicalReference,
   type CompletedEffectOutcome,
   type DispatchObservation,
   type DispatchResult,
+  type DurableDocumentReference,
   type EffectDispatcher,
   type EffectOutcome,
+  type EffectReference,
   type EffectYieldReason,
   type RetryEffectOutcome,
   type YieldEffectOutcome,
@@ -30,20 +32,22 @@ import type { GraphRoute } from "../../../src/skills/doc-driven-dev-graph/script
 import type { DispatchMethod, ExecutionMode } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 import { commitAll, updateArtifact, writeArtifact } from "./fixture_manager";
 
-export const DEFAULT_PROOF_PATH = "docs/tasks/0001-task.md";
+// The primary task doc is the task-graph fallback input — canonical content,
+// not per-run bookkeeping (receipts/checkpoints live in the Execution Store).
+export const DEFAULT_TASK_DOC = "docs/tasks/0001-task.md";
 
-const canonicalDocumentPaths = (proofPath: string): string[] => [
+const canonicalDocumentPaths = (taskDoc: string): string[] => [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
   "docs/plans/0001-graph.md",
   "docs/test-specs/0001-graph.md",
-  proofPath,
+  taskDoc,
   "docs/impl/ir/0001-task.md",
 ];
 
-function taskGraphPaths(route: GraphRoute, proofPath: string): string[] {
-  return route.taskGraph?.nodes.map((node) => node.path) ?? [proofPath];
+function taskGraphPaths(route: GraphRoute, taskDoc: string): string[] {
+  return route.taskGraph?.nodes.map((node) => node.path) ?? [taskDoc];
 }
 
 function selectedTaskGraphPlanPath(route: GraphRoute): string {
@@ -58,7 +62,7 @@ function selectedTaskGraphPlanPath(route: GraphRoute): string {
 export function standardResolveInputs(
   route: GraphRoute,
   effect: CallerEffect,
-  proofPath: string = DEFAULT_PROOF_PATH,
+  taskDoc: string = DEFAULT_TASK_DOC,
 ): string[] {
   if (effect.kind === "audit") {
     switch (effect.id) {
@@ -66,45 +70,45 @@ export function standardResolveInputs(
       case "adr": return ["docs/adr/0001-graph.md"];
       case "design": return ["docs/designs/0001-graph.md"];
       case "plan": return ["docs/plans/0001-graph.md"];
-      case "task": return taskGraphPaths(route, proofPath);
+      case "task": return taskGraphPaths(route, taskDoc);
       case "test-spec": return ["docs/test-specs/0001-graph.md"];
       case "impl-record": return ["docs/impl/ir/0001-task.md"];
       case "experiment-log": return ["docs/impl/exp/README.md"];
-      case "all": return canonicalDocumentPaths(proofPath);
+      case "all": return canonicalDocumentPaths(taskDoc);
     }
   }
   switch (effect.id) {
-    case "migrate_docs": return canonicalDocumentPaths(proofPath);
+    case "migrate_docs": return canonicalDocumentPaths(taskDoc);
     case "scaffold_docs": return ["."];
-    case "build_task_graph": return [selectedTaskGraphPlanPath(route), ...taskGraphPaths(route, proofPath)];
+    case "build_task_graph": return [selectedTaskGraphPlanPath(route), ...taskGraphPaths(route, taskDoc)];
     case "briefing-flow": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "planning-flow": return ["docs/designs/0001-graph.md"];
-    case "implementation-flow": return [...taskGraphPaths(route, proofPath), "docs/designs/0001-graph.md", "docs/plans/0001-graph.md"];
-    case "doc-status": return canonicalDocumentPaths(proofPath);
+    case "implementation-flow": return [...taskGraphPaths(route, taskDoc), "docs/designs/0001-graph.md", "docs/plans/0001-graph.md"];
+    case "doc-status": return canonicalDocumentPaths(taskDoc);
     default: throw new Error(`No authoritative-input mapping for ${effect.kind}:${effect.id}`);
   }
 }
 
-/** Canonical evidence-path mapping (oracle `effectEvidencePath`, verbatim). */
-export function standardResolveEvidence(
+/** Canonical output-path mapping (oracle `effectEvidencePath`, verbatim). */
+export function standardResolveOutputPath(
   route: GraphRoute,
   effect: CallerEffect,
-  proofPath: string = DEFAULT_PROOF_PATH,
+  taskDoc: string = DEFAULT_TASK_DOC,
 ): string {
-  if (effect.kind === "audit") return standardResolveInputs(route, effect, proofPath)[0];
+  if (effect.kind === "audit") return standardResolveInputs(route, effect, taskDoc)[0];
   switch (effect.id) {
     case "design-doc": return "docs/designs/0001-graph.md";
     case "planning-flow": return "docs/plans/0001-graph.md";
     case "implementation-flow": return "docs/impl/ir/0001-task.md";
     case "doc-status": return "docs/impl/ir/0001-task.md";
-    default: return standardResolveInputs(route, effect, proofPath)[0];
+    default: return standardResolveInputs(route, effect, taskDoc)[0];
   }
 }
 
 export type OutcomeSpec =
   | "completed" | "retry" | { yield: EffectYieldReason }
-  | { malformed: "missing-proof" | "scope-mismatch" | "stale-fingerprint" | "wrong-edge" };
+  | { malformed: "missing-proof" | "scope-mismatch" | "stale-revision" | "wrong-edge" };
 
 export type Mutator =
   | { write: { path: string; frontmatter?: Record<string, unknown>; body?: string } }
@@ -147,9 +151,9 @@ export type SubDispatchSpec = {
   /** Adapter declines outright — e.g. the host cannot execute the mode. */
   refuse?: boolean;
   /**
-   * The sub-dispatch executes but its returned evidence does not resolve
+   * The sub-dispatch executes but its returned reference does not resolve
    * current canonical content — the simulated host rejects the return and
-   * the delegate fails instead of completing on stale evidence.
+   * the delegate fails instead of completing on a stale output.
    */
   staleReturn?: boolean;
   /** Report an actual mode different from the request — dishonest adapter. */
@@ -176,7 +180,7 @@ export type EdgeScript = {
    * attribution check must reject the dispatch.
    */
   reportActual?: ExecutionMode;
-  /** runCase wires applyEvidence = persistEvidence + commitAll (commitGate edges). */
+  /** runCase's evidence phase: declare the task doc + commitAll for the edge. */
   commitEvidence?: boolean;
 };
 
@@ -202,11 +206,11 @@ function inputReferences(
   repo: string,
   route: GraphRoute,
   effect: CallerEffect,
-  proofPath: string,
-): CanonicalReference[] {
-  return [...new Set(standardResolveInputs(route, effect, proofPath))]
-    .sort()
-    .map((relativePath) => canonicalReference(repo, relativePath));
+  taskDoc: string,
+): EffectReference[] {
+  // The same resolution the runner applies to resolveInputs specs — the
+  // outcome's `inputs` attestation must deep-equal the runner's binding.
+  return resolveReferenceSpecs(repo, undefined, standardResolveInputs(route, effect, taskDoc));
 }
 
 function completedOutcome(
@@ -214,25 +218,25 @@ function completedOutcome(
   route: GraphRoute,
   stage: "audit" | "delegate",
   effect: CallerEffect,
-  inputs: CanonicalReference[],
-  evidence: CanonicalReference,
-  proofPath: string,
+  inputs: EffectReference[],
+  output: DurableDocumentReference,
+  taskDoc: string,
 ): CompletedEffectOutcome {
-  const evidenceReferences = effect.id === "planning-flow"
+  const outputs = effect.id === "planning-flow"
     ? [
-        evidence,
+        output,
         canonicalReference(repo, "docs/test-specs/0001-graph.md"),
-        ...taskGraphPaths(route, proofPath).map((relativePath) => canonicalReference(repo, relativePath)),
+        ...taskGraphPaths(route, taskDoc).map((relativePath) => canonicalReference(repo, relativePath)),
       ]
-    : [evidence];
+    : [output];
   return {
     status: "completed",
     edgeId: route.edgeId as string,
     stage,
     effect,
-    authoritativeInputs: inputs,
-    evidence: evidenceReferences,
-    proof: { canonicalEvidence: evidence },
+    inputs,
+    outputs,
+    proof: output,
   };
 }
 
@@ -240,12 +244,12 @@ function buildOutcome(
   spec: OutcomeSpec,
   ctx: {
     repo: string; route: GraphRoute; stage: "audit" | "delegate"; effect: CallerEffect;
-    inputs: CanonicalReference[]; evidence: CanonicalReference; proofPath: string;
+    inputs: EffectReference[]; output: DurableDocumentReference; taskDoc: string;
   },
 ): EffectOutcome {
-  const { repo, route, stage, effect, inputs, evidence, proofPath } = ctx;
+  const { repo, route, stage, effect, inputs, output, taskDoc } = ctx;
   if (spec === "completed") {
-    return completedOutcome(repo, route, stage, effect, inputs, evidence, proofPath);
+    return completedOutcome(repo, route, stage, effect, inputs, output, taskDoc);
   }
   if (spec === "retry") {
     const outcome: RetryEffectOutcome = {
@@ -253,9 +257,9 @@ function buildOutcome(
       edgeId: route.edgeId as string,
       stage,
       effect,
-      authoritativeInputs: inputs,
-      evidence: [evidence],
-      retry: { changedEvidence: [evidence] },
+      inputs,
+      outputs: [output],
+      retry: { changedOutputs: [output] },
     };
     return outcome;
   }
@@ -265,21 +269,21 @@ function buildOutcome(
       edgeId: route.edgeId as string,
       stage,
       effect,
-      authoritativeInputs: inputs,
-      evidence: [evidence],
+      inputs,
+      outputs: [output],
       reason: spec.yield,
     };
     return outcome;
   }
   if (typeof spec === "object" && "malformed" in spec) {
-    const completed = completedOutcome(repo, route, stage, effect, inputs, evidence, proofPath);
+    const completed = completedOutcome(repo, route, stage, effect, inputs, output, taskDoc);
     switch (spec.malformed) {
       case "missing-proof":
-        return { ...completed, proof: {} };
+        return { ...completed, proof: {} } as EffectOutcome;
       case "scope-mismatch":
-        return { ...completed, authoritativeInputs: [] };
-      case "stale-fingerprint":
-        return { ...completed, evidence: [{ ...evidence, fingerprint: "0".repeat(64) }] };
+        return { ...completed, inputs: [] };
+      case "stale-revision":
+        return { ...completed, outputs: [{ ...output, revision: "0".repeat(64) }] };
       case "wrong-edge":
         return { ...completed, edgeId: `${route.edgeId as string}-wrong` };
     }
@@ -327,13 +331,13 @@ export function pathInScope(relativePath: string, scopes: readonly string[]): bo
  */
 export function scriptedDispatcher(options: {
   repo: string;
-  proofPath?: string;
+  taskDoc?: string;
   script: Record<string, EdgeScript>;
   onUnhandled?: "throw" | "completed";
   /** Modes the simulated host cannot execute — dispatching one is refused. */
   unsupportedModes?: readonly ExecutionMode[];
 }): EffectDispatcher {
-  const proofPath = options.proofPath ?? DEFAULT_PROOF_PATH;
+  const taskDoc = options.taskDoc ?? DEFAULT_TASK_DOC;
   const onUnhandled = options.onUnhandled ?? "throw";
   const unsupported = new Set<ExecutionMode>(options.unsupportedModes ?? []);
   const queues = new Map<string, OutcomeSpec[]>();
@@ -429,7 +433,7 @@ export function scriptedDispatcher(options: {
         actual: sub.reportActual ?? requested,
         method: sub.method ?? (delegated(requested) ? "subagent-spawn" : "inline-skill"),
       });
-      // The sub-dispatch executed but returned evidence that no longer
+      // The sub-dispatch executed but returned a reference that no longer
       // resolves current content — the host rejects it and the delegate fails.
       if (sub.staleReturn === true) return { observations, failed: true };
     }
@@ -444,11 +448,11 @@ export function scriptedDispatcher(options: {
       { target: effect.id, requested: requestedMode, actual, method }
     );
     const refused = (): DispatchResult => {
-      const inputs = inputReferences(repo, route, effect, proofPath);
-      const evidence = canonicalReference(repo, standardResolveEvidence(route, effect, proofPath));
+      const inputs = inputReferences(repo, route, effect, taskDoc);
+      const output = canonicalReference(repo, standardResolveOutputPath(route, effect, taskDoc));
       const outcome = buildOutcome(
         { yield: "authority-required" },
-        { repo, route, stage, effect, inputs, evidence, proofPath },
+        { repo, route, stage, effect, inputs, output, taskDoc },
       );
       return { outcome, observations: [self("unknown", "not-executed")] };
     };
@@ -465,9 +469,9 @@ export function scriptedDispatcher(options: {
     // Authoritative inputs are what the effect READ — resolved before any
     // mutator runs so they match the runner's pre-dispatch expectedInputs
     // binding (a mutator that touches an input doc must not break it).
-    const inputs = inputReferences(repo, route, effect, proofPath);
+    const inputs = inputReferences(repo, route, effect, taskDoc);
     // Mutators are the completed delegate's work product: they run before
-    // evidence is computed so evidence reflects post-mutation content. A
+    // the output ref is bound so it reflects post-mutation content. A
     // delegated top-level dispatch confines them to the handoff write scope
     // — a write outside it is refused as an unauthorized change.
     const mutators = effect.kind === "delegate" && spec === "completed"
@@ -492,13 +496,13 @@ export function scriptedDispatcher(options: {
       subObservations.push(...subs.observations);
       subFailed = subs.failed;
     }
-    const evidence = canonicalReference(repo, standardResolveEvidence(route, effect, proofPath));
+    const output = canonicalReference(repo, standardResolveOutputPath(route, effect, taskDoc));
     const outcome = subFailed
       ? buildOutcome(
           { yield: "authority-required" },
-          { repo, route, stage, effect, inputs, evidence, proofPath },
+          { repo, route, stage, effect, inputs, output, taskDoc },
         )
-      : buildOutcome(spec, { repo, route, stage, effect, inputs, evidence, proofPath });
+      : buildOutcome(spec, { repo, route, stage, effect, inputs, output, taskDoc });
     return {
       outcome,
       observations: [
