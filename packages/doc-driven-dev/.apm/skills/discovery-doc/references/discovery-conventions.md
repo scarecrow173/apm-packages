@@ -217,7 +217,8 @@ decision axis, but the split should map to distinct spec or ADR candidates.
 
 Once the conclusions of a discovery document are captured in a spec or ADR:
 
-1. Link the downstream document in `relations.derived-by`.
+1. Link the downstream document via `relations.motivates` (a spec) or
+   `relations.informs` (an ADR or other durable document).
 2. Set status to `resolved`.
 3. Preserve the discovery document as the audit trail.
 

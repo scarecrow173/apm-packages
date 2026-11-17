@@ -5,6 +5,9 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { findAdrDir, relationFields } from "./lib/adr_utils";
+import { parseDoc, resolveDocumentReference } from "../../lib/doc_suite_utils";
+import { allowedRelationsFor } from "../../lib/doc_types";
+import { isInsideCheckout } from "../../lib/document_utils";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
@@ -34,7 +37,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return `Usage: node scripts/relate_adr.js --from <adr.md> --to <adr.md> --relation ${relationFields.join("|")} [--dir <path>] [--write]`;
+  return `Usage: node scripts/relate_adr.js --from <adr.md> --to <target> --relation ${relationFields.join("|")} [--dir <path>] [--write]`;
 }
 
 function ensureRelation(content: string, relation: string, target: string): string {
@@ -78,8 +81,31 @@ function main(): void {
     if (!schemaEntrypointGuard(cwd)) return;
     const relativeDir = findAdrDir(cwd, args.dir);
     const from = path.basename(args.from);
-    const to = path.basename(args.to);
-    const updates = [prepareUpdate(cwd, relativeDir, from, args.relation, to)];
+    // Typed relations (`decides-for`, `supersedes`) name durable targets —
+    // resolve the `--to` reference the same way the graph does (ADR-dir
+    // relative, checkout relative, then front-matter id) and refuse a value
+    // that does not resolve or resolves to a type outside the relation's
+    // declared target set, rather than writing an edge the audit then flags
+    // `invalid-relation-target-type`. `source` stays free-form provenance.
+    const declared = allowedRelationsFor("adr").find((relation) => relation.field === args.relation);
+    if (declared) {
+      const resolved = resolveDocumentReference(cwd, args.to, path.join(cwd, relativeDir));
+      if (!resolved) {
+        throw new Error(`Relation ${args.relation} --to target does not resolve to a document: ${args.to}`);
+      }
+      if (!isInsideCheckout(cwd, resolved)) {
+        throw new Error(`Relation ${args.relation} --to target escapes the checkout: ${args.to}`);
+      }
+      const parsed = parseDoc(fs.readFileSync(resolved, "utf8"));
+      const targetType = !parsed.error && typeof parsed.data.type === "string" ? parsed.data.type : null;
+      if (!targetType || !declared.targetTypes.includes(targetType)) {
+        throw new Error(`Relation ${args.relation} target resolves to type "${targetType ?? "unknown"}", expected one of: ${declared.targetTypes.join(", ")}: ${args.to}`);
+      }
+    }
+    // The stored target is the value as written — a same-directory basename,
+    // a checkout-relative path, or a front-matter id all resolve through the
+    // same boundary the validation above used, so the stored edge resolves.
+    const updates = [prepareUpdate(cwd, relativeDir, from, args.relation, args.to)];
     if (args.write) {
       for (const update of updates) fs.writeFileSync(update.fullPath, update.next, "utf8");
     }

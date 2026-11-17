@@ -5,6 +5,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
 import { generateArtifactId } from "./artifact_id";
+import { parseClaimReference } from "./claim_ids";
 import { isSettledEntry } from "./doc_lifecycle";
 import {
   CANONICAL_DOC_DIRS,
@@ -1407,9 +1408,16 @@ function relationValues(value: unknown): string[] {
 }
 
 function resolveDocumentReference(cwd: string, target: string, fromDir?: string): string | null {
-  for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
-    const candidate = path.resolve(base, target);
-    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+  const trimmed = target.trim();
+  // Claim-qualified references (`DOC-ID::KEY`) address documents by id only —
+  // never by path — the same contract the repository/graph boundary uses.
+  const claimRef = parseClaimReference(trimmed);
+  const idLookup = claimRef?.docId ?? trimmed;
+  if (!claimRef) {
+    for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+      const candidate = path.resolve(base, trimmed);
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+    }
   }
   for (const type of docTypes) {
     for (const dirName of configs[type].dirs) {
@@ -1418,7 +1426,7 @@ function resolveDocumentReference(cwd: string, target: string, fromDir?: string)
       for (const file of docFiles(dir)) {
         const fullPath = path.join(dir, file);
         const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
-        if (!parsed.error && parsed.data.id === target) return fullPath;
+        if (!parsed.error && parsed.data.id === idLookup) return fullPath;
       }
     }
   }

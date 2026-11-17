@@ -219,6 +219,95 @@ test("L3 traverses lineage relations in BFS order with depth and via", () => {
   assert.equal(nodes.some((node) => node.path === "docs/tasks/0001-task.md"), false);
 });
 
+// Claim-qualified relation targets (`<doc-id>::<key>`, Issue #235) are local
+// addresses — never external — at every boundary: the shared external
+// predicate, relation resolution, metadata neighbor expansion, and graph
+// edge emission all resolve them through the claim path.
+
+function claimRelationRepo(): string {
+  return createFixtureRepo({
+    files: {
+      "docs/specs/0001-graph.md": {
+        frontmatter: { id: "SPEC-0001", type: "spec", status: "approved", title: "Graph" },
+        body: "# Graph\n\n- <!-- claim:R-01 --> graph requirement\n- <!-- claim:R-02 --> another requirement\n",
+      },
+      "docs/designs/0001-graph.md": {
+        frontmatter: {
+          id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
+          relations: { realizes: ["SPEC-0001::R-01"] },
+        },
+        body: "# Graph\n",
+      },
+      "docs/adr/0001-graph.md": {
+        frontmatter: {
+          id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+          relations: { "decides-for": ["DESIGN-0001", "SPEC-0001::R-02"] },
+        },
+        body: "# Graph\n\n## Considered Options\n\n### A\n\n### B\n",
+      },
+    },
+  });
+}
+
+test("L3 resolves claim-qualified decides-for/realizes targets (Issue #235)", () => {
+  const repo = claimRelationRepo();
+  const { nodes, findings } = expandArtifactContext(repo, "docs/adr/0001-graph.md", {});
+  assert.deepEqual(findings, []);
+  // The ADR's decides-for edges reach the design and the claim-owning spec;
+  // the design's claim-qualified realizes then lands on the visited spec.
+  assert.deepEqual(nodes, [
+    { path: "docs/adr/0001-graph.md", id: "ADR-0001", depth: 0, via: null },
+    { path: "docs/designs/0001-graph.md", id: "DESIGN-0001", depth: 1, via: "decides-for" },
+    { path: "docs/specs/0001-graph.md", id: "SPEC-0001", depth: 1, via: "decides-for" },
+  ]);
+});
+
+test("the artifact graph emits claim-qualified edges resolved, not external (Issue #235)", () => {
+  const repo = claimRelationRepo();
+  const { graph } = scanArtifactGraph({ cwd: repo });
+  const realizes = graph.edges.find((edge) =>
+    edge.relation === "realizes" && edge.from === "docs/designs/0001-graph.md");
+  assert.equal(realizes?.external, false);
+  assert.equal(realizes?.to, "docs/specs/0001-graph.md");
+  const decidesFor = graph.edges.find((edge) =>
+    edge.relation === "decides-for" && edge.to === "docs/specs/0001-graph.md");
+  assert.equal(decidesFor?.external, false);
+});
+
+test("L1 metadata includes claim-qualified relation neighbors (Issue #235)", () => {
+  const repo = createFixtureRepo({
+    files: {
+      "docs/designs/0001-graph.md": {
+        frontmatter: {
+          id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
+          relations: { realizes: ["SPEC-0001::R-01", "SPEC-9999::R-99"] },
+        },
+        body: "# Graph\n",
+      },
+      "docs/adr/0001-graph.md": {
+        frontmatter: {
+          id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+          relations: { "decides-for": ["DESIGN-0001", "SPEC-0002::R-01"] },
+        },
+        body: "# Graph\n\n## Considered Options\n\n### A\n\n### B\n",
+      },
+      "docs/specs/0002-extra.md": {
+        frontmatter: { id: "SPEC-0002", type: "spec", status: "approved", title: "Extra" },
+        body: "# Extra\n\n- <!-- claim:R-01 --> extra requirement\n",
+      },
+    },
+  });
+  const { metadata, findings } = listArtifactMetadata(repo, ["PLAN-0001"]);
+  // SPEC-0002 is outside the focus chain — only the claim-qualified
+  // decides-for edge on the ADR pulls it into the metadata neighbor set.
+  assert.ok(metadata.some((entry) => entry.path === "docs/specs/0002-extra.md" && entry.id === "SPEC-0002"));
+  // An unresolvable claim-qualified target is still diagnosed, not silently
+  // dropped as external.
+  assert.ok(findings.some((finding) => finding.code === "broken-relation"
+    && finding.path === "docs/designs/0001-graph.md"
+    && finding.message.includes("SPEC-9999::R-99")));
+});
+
 function cycleRepo(): string {
   return createFixtureRepo({
     files: {

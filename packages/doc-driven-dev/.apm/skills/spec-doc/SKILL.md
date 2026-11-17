@@ -113,10 +113,10 @@ In this package's lifecycle, spec and ADR are created in parallel from the same
 discovery output. All decisions are recorded as ADRs.
 
 - **Spec reveals an architecture decision:** Write the ADR in parallel with
-  the spec. Link with `relations.related` in both directions.
+  the spec. The ADR stores `relations.decides-for` pointing at this spec.
 - **ADR already exists:** If an accepted ADR constrains this spec (e.g., "we
-  use PostgreSQL"), reference it in `relations.derives-from` or
-  `relations.related`.
+  use PostgreSQL"), that ADR's `relations.decides-for` points at this spec;
+  the spec stores nothing.
 - **No architecture decision needed:** Proceed directly from approved spec to
   `plan-doc`. ADR is not required for purely product-only work.
 

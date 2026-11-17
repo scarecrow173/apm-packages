@@ -238,6 +238,28 @@ test("flags stale-upstream for in-flight work on dead upstreams (Issue #166)", a
   assert.ok(adrStale[0].message.includes("rejected") && adrStale[0].message.includes("DESIGN-0002"));
 });
 
+test("flags stale-upstream for a claim-qualified upstream on a dead document (Issue #235)", async () => {
+  const root = fixture();
+  // A claim-qualified upstream reference resolves to the owning document —
+  // its dead status must surface stale-upstream, not slip past as external.
+  writeDoc(root, "docs/specs", "old-spec", 'id: SPEC-0001\ntype: spec\nstatus: superseded\ntitle: Old spec\ncreated: 2026-01-01\nrelations: {}\n',
+    "# Old spec\n\n- <!-- claim:R-01 --> superseded requirement\n");
+  writeDoc(root, "docs/designs", "stale-design", [
+    'id: DESIGN-0001',
+    'type: design',
+    'status: approved',
+    'title: Stale design',
+    'created: 2026-01-01',
+    'relations:',
+    '  realizes: [SPEC-0001::R-01]',
+  ].join("\n") + "\n");
+
+  const report = await auditDocuments(root, "design");
+  const stale = report.findings.filter((item) => item.code === "stale-upstream");
+  assert.equal(stale.length, 1);
+  assert.ok(stale[0].message.includes("superseded") && stale[0].message.includes("SPEC-0001::R-01"));
+});
+
 test("stale-upstream does not fire on live upstreams or settled documents", async () => {
   const root = fixture();
   // Live upstreams: approved spec + accepted ADR are normative baselines,

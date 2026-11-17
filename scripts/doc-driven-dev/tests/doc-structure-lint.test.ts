@@ -182,6 +182,25 @@ test("suppresses orphan relation when relations exist", async () => {
   assert.ok(!codes(report).includes("orphan-relation"));
 });
 
+test("a claim-qualified relation satisfies the orphan check (Issue #235)", async () => {
+  const root = fixture();
+  writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n", "relations:\n  supersedes: [SPEC-0000::R-01]\n");
+  writeFile(
+    root,
+    "docs/specs/old.md",
+    "---\nid: SPEC-0000\ntype: spec\nstatus: superseded\ntitle: Spec old\ncreated: 2026-01-01\nowners: [team]\n---\n# Old\n\n- <!-- claim:R-01 --> superseded requirement\n",
+  );
+  writeSpecIndex(root, [
+    indexItem("SPEC-0000", "old.md", "Spec old", "superseded"),
+    indexItem("SPEC-0001", "checkout.md", "Spec checkout", "draft"),
+  ]);
+
+  // The only relation is claim-qualified — it resolves to the owning
+  // document, so neither doc counts as relation-orphaned.
+  const report = await auditDocuments(root, "spec");
+  assert.ok(!codes(report).includes("orphan-relation"));
+});
+
 test("does not check external links by default", async () => {
   const root = fixture();
   writeSpec(root, "checkout", "SPEC-0001", "# Checkout\n\nSee [docs](https://example.com/x).\n");

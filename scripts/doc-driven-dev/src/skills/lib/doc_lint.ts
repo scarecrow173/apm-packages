@@ -10,7 +10,8 @@ import { lintStructure } from "./doc_structure_lint";
 import { configFor, docTypes, frontMatterSchema, isForeignDocType } from "./doc_suite_utils";
 import { allIdPrefixes } from "./doc_types";
 import { isIndexFileName, isInsideRealpath, normalizeDir } from "./document_utils";
-import { parseClaimReference, projectKnowledgeGraph } from "./knowledge_graph";
+import { parseClaimReference } from "./claim_ids";
+import { projectKnowledgeGraph } from "./knowledge_graph";
 import type { KnowledgeGraphIssueCode } from "./knowledge_graph";
 
 // ---------------------------------------------------------------------------

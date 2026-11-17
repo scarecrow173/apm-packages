@@ -451,3 +451,90 @@ test("locale siblings share one node and may mirror a claim key once", async () 
   assert.equal(spec.claims.length, 2, "both sibling declarations are collated");
   assert.ok(spec.claims.every((claim) => claim.id === "SPEC-0001::R-01"));
 });
+
+// --- Shared-boundary claim resolution -----------------------------------------
+//
+// `SPEC-0001::R-01` matched the URI-scheme regex (`SPEC-0001:`) before claim
+// grammar ran, so repository/graph boundaries classified valid claim
+// references as external — silently dropping them from relation resolution,
+// orphan accounting, and stale-upstream detection. The shared predicate and
+// `resolveRelationTarget` parse claim grammar first (Issue #235).
+
+test("resolveRelationTarget treats a claim reference as local, never external", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/0001-s.md", fm({ status: "approved" }), [
+    "# Spec",
+    "",
+    "- <!-- claim:R-01 --> the requirement",
+    "",
+  ].join("\n"));
+  writeDoc(repo, "docs/designs/0001-g.md", fm({
+    id: "DESIGN-0001", type: "design", title: "Design",
+    relations: { realizes: ["SPEC-0001::R-01", "SPEC-9999::R-99"] },
+  }));
+
+  const model = await scanRepository({ cwd: repo });
+  const design = model.files.find((doc) => doc.id === "DESIGN-0001");
+  assert.ok(design);
+
+  const hit = model.resolveRelationTarget(design, "SPEC-0001::R-01");
+  assert.equal(hit.status, "resolved");
+  assert.equal(hit.status === "resolved" ? hit.document.path : null, "docs/specs/0001-s.md");
+
+  const miss = model.resolveRelationTarget(design, "SPEC-9999::R-99");
+  assert.equal(miss.status, "unresolved", "a missing claim document stays diagnosed, not silently external");
+
+  // True external references still classify as external.
+  assert.equal(model.resolveRelationTarget(design, "https://example.com/x").status, "external");
+});
+
+test("claim markers inside indented code blocks are not adopted", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/0001-s.md", fm(), [
+    "# Spec",
+    "",
+    "    <!-- claim:R-02 --> an indented code example, not a claim",
+    "",
+    "- <!-- claim:R-01 --> a real claim",
+    "",
+    "intro text",
+    "    <!-- claim:R-03 --> a lazy paragraph continuation is still a claim",
+    "",
+    "- item",
+    "    <!-- claim:R-04 --> paragraph content inside the list item",
+    "",
+    "      <!-- claim:R-05 --> indented code inside the list item",
+    "",
+  ].join("\n"));
+
+  const graph = await scanKnowledgeGraph({ cwd: repo });
+  assert.deepEqual(issueCodes(graph), []);
+  const spec = graph.nodes.find((node) => node.id === "SPEC-0001");
+  assert.deepEqual(
+    spec?.claims.map((claim) => claim.key),
+    ["R-01", "R-03", "R-04"],
+    "4+ spaces of code indentation hides a marker; list-item and lazy-paragraph content does not",
+  );
+});
+
+test("a claim-qualified target with no type hits invalid-relation-target-type like a path target", async () => {
+  const repo = tempRepo();
+  const typeLess = fm({ status: "approved" });
+  delete (typeLess as Record<string, unknown>).type;
+  writeDoc(repo, "docs/specs/0001-s.md", typeLess, [
+    "# Spec",
+    "",
+    "- <!-- claim:R-01 --> requirement",
+    "",
+  ].join("\n"));
+  writeDoc(repo, "docs/designs/0001-g.md", fm({
+    id: "DESIGN-0001", type: "design", title: "Design", status: "approved",
+    relations: { realizes: ["SPEC-0001::R-01"] },
+  }));
+
+  const graph = await scanKnowledgeGraph({ cwd: repo });
+  const badType = graph.issues.filter((issue) => issue.code === "invalid-relation-target-type");
+  assert.equal(badType.length, 1);
+  assert.equal(badType[0].target, "SPEC-0001::R-01");
+  assert.ok(badType[0].message.includes("unknown"));
+});

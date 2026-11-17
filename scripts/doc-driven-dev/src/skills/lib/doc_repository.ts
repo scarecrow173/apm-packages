@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { parseClaimReference } from "./claim_ids";
 import { configFor, docTypes, parseDoc } from "./doc_suite_utils";
 import { isSettledEntry, lifecycleBucketForType, SETTLED_STATUSES } from "./doc_lifecycle";
 import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, nonReferenceRelationKeys, normalizeDir } from "./document_utils";
@@ -467,6 +468,9 @@ function isWindowsAbsolutePath(value: string): boolean {
 function isExternalReference(value: string): boolean {
   const trimmed = value.trim();
   if (isWindowsAbsolutePath(trimmed)) return false;
+  // Claim-qualified document references (`DOC-ID::KEY`) are local addresses:
+  // the `DOC-ID:` prefix must not parse as a URI scheme.
+  if (parseClaimReference(trimmed)) return false;
   return EXTERNAL_REFERENCE.test(trimmed);
 }
 
@@ -779,6 +783,17 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
 
   const resolveRelationTarget = (from: RepositoryDocument, rawTarget: string): RelationResolution => {
     const value = rawTarget.trim();
+    // Claim-qualified references (`DOC-ID::KEY`) resolve through the claim
+    // boundary first — the `DOC-ID:` prefix must not be mistaken for a URI
+    // scheme — so this check precedes external, by-id, and path matching.
+    const claimRef = parseClaimReference(value);
+    if (claimRef) {
+      const claimMatch = byId.get(claimRef.docId);
+      if (!claimMatch) return { status: "unresolved" };
+      const claimPrimaries = artifactPrimaries(claimMatch);
+      if (claimPrimaries.length === 1) return { status: "resolved", document: claimPrimaries[0] };
+      return { status: "ambiguous", candidates: claimPrimaries };
+    }
     if (isExternalReference(value)) return { status: "external" };
     const byIdMatch = byId.get(value);
     if (byIdMatch) {

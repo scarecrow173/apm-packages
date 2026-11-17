@@ -33314,6 +33314,14 @@ function date4(params) {
 // src/skills/lib/artifact_id.ts
 var import_uuid62 = __toESM(require_uuid62());
 
+// src/skills/lib/claim_ids.ts
+var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
+function parseClaimReference(value) {
+  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
+  if (!match) return null;
+  return { docId: match[1], key: match[2] };
+}
+
 // src/skills/lib/doc_types.ts
 var LIFECYCLE_VALUES = ["draft", "current", "superseded", "retired"];
 var DEFAULT_LIFECYCLE = "draft";
@@ -33818,19 +33826,6 @@ function knowledgeRelationFields() {
   }
   return [...fields].sort();
 }
-function knowledgeRelationInverses() {
-  const inverses = {};
-  for (const type of docTypes) {
-    for (const relation of configs[type].allowedRelations) {
-      const existing = inverses[relation.field];
-      if (existing && existing !== relation.inverse) {
-        throw new Error(`Registry inconsistency: relation ${relation.field} declares two inverse names (${existing}, ${relation.inverse})`);
-      }
-      inverses[relation.field] = relation.inverse;
-    }
-  }
-  return inverses;
-}
 function allowedRelationsFor(type) {
   const resolved = resolveDocType(type);
   if (resolved.kind !== "durable") return [];
@@ -34235,62 +34230,6 @@ async function markdownDestinations(content3) {
 var import_node_fs2 = __toESM(require("node:fs"));
 var import_node_path3 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
-
-// src/skills/lib/doc_repository.ts
-var REQUIRED_FRONT_MATTER_FIELDS = [
-  "id",
-  "type",
-  "status",
-  "lifecycle",
-  "title",
-  "created",
-  "updated",
-  "owners",
-  "relations"
-];
-function contractForDocType(entry) {
-  return {
-    type: entry.type,
-    persistence: entry.persistence,
-    idPrefix: entry.idPrefix,
-    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
-    idExceptions: [...entry.idExceptions],
-    canonicalDir: entry.dir ?? "",
-    dirs: [...entry.dirs],
-    defaultStatus: entry.defaultStatus,
-    statusValues: [...entry.statusValues],
-    lifecycleValues: [...entry.lifecycleValues],
-    defaultLifecycle: entry.defaultLifecycle,
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
-    fieldVocabularies: Object.fromEntries(
-      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
-    ),
-    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
-    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
-    reservedFiles: [...entry.reservedFiles],
-    allowsRootArtifact: entry.allowsRootArtifact,
-    requiresSourceEvidence: entry.requiresSourceEvidence,
-    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
-    allowedRelations: Object.fromEntries(
-      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
-    )
-  };
-}
-var contracts = Object.fromEntries(
-  docTypes.map((type) => [type, contractForDocType(configFor(type))])
-);
-
-// src/skills/lib/knowledge_graph.ts
-var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
-function parseClaimReference(value) {
-  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
-  if (!match) return null;
-  return { docId: match[1], key: match[2] };
-}
-var V1_FIELDS = new Set(knowledgeRelationFields());
-var INVERSES = knowledgeRelationInverses();
-
-// src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
 var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
   "motivates",
   "decides-for",
@@ -34313,17 +34252,19 @@ var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
   "evidenceRefs"
 ]);
 var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
-function compareStrings2(left, right) {
+function compareStrings(left, right) {
   return left.localeCompare(right);
 }
 function sortedUnique(values) {
-  return [...new Set(values)].sort(compareStrings2);
+  return [...new Set(values)].sort(compareStrings);
 }
 function normalizeArtifactPath(cwd, target) {
   return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), import_node_path3.default.resolve(cwd, target)).split(import_node_path3.default.sep).join("/");
 }
 function isExternalArtifactReference(value) {
-  return EXTERNAL_REFERENCE.test(value.trim());
+  const trimmed = value.trim();
+  if (parseClaimReference(trimmed)) return false;
+  return EXTERNAL_REFERENCE.test(trimmed);
 }
 function resolveContainedTaskDir(cwd, taskDir) {
   return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
@@ -34332,14 +34273,14 @@ function markdownFiles(dir) {
   if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) return [];
   const files = [];
   const visit3 = (current) => {
-    for (const entry of import_node_fs2.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings2(a.name, b.name))) {
+    for (const entry of import_node_fs2.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
       const full = import_node_path3.default.join(current, entry.name);
       if (entry.isDirectory()) visit3(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md") && !/^(?:readme|index)\.md$/i.test(entry.name)) files.push(full);
     }
   };
   visit3(dir);
-  return files.sort(compareStrings2);
+  return files.sort(compareStrings);
 }
 function relationValues(raw, ownerPath) {
   if (raw === void 0 || raw === null) return { relations: {}, issues: [] };
@@ -34348,7 +34289,7 @@ function relationValues(raw, ownerPath) {
   }
   const result = {};
   const issues = [];
-  for (const key of Object.keys(raw).sort(compareStrings2)) {
+  for (const key of Object.keys(raw).sort(compareStrings)) {
     const value = raw[key];
     if (nonReferenceRelationKeys.has(key)) continue;
     if (typeof value !== "string" && !Array.isArray(value)) {
@@ -34422,7 +34363,7 @@ function readRecords(options2, collector) {
       });
     }
   }
-  return records.sort((left, right) => compareStrings2(left.path, right.path));
+  return records.sort((left, right) => compareStrings(left.path, right.path));
 }
 function classifyArtifactRelation(relation) {
   if (LINEAGE_RELATIONS.has(relation)) return "lineage";
@@ -34457,7 +34398,7 @@ function resolveArtifactRelation(cwd, source, rawValue, records) {
   return records.find((record2) => repoPathKey(record2.path) === repoPathKey(target.path));
 }
 function issueCompare(left, right) {
-  return compareStrings2(left.code, right.code) || compareStrings2(left.message, right.message);
+  return compareStrings(left.code, right.code) || compareStrings(left.message, right.message);
 }
 function edgeCompare(left, right) {
   const kindOrder = {
@@ -34466,7 +34407,7 @@ function edgeCompare(left, right) {
     contextual: 2,
     evidence: 3
   };
-  return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings2(left.from, right.from) || compareStrings2(left.relation, right.relation) || compareStrings2(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
+  return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings(left.from, right.from) || compareStrings(left.relation, right.relation) || compareStrings(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
 }
 function scanArtifactGraph(options2, collector) {
   const cwd = import_node_path3.default.resolve(options2.cwd);
@@ -34494,7 +34435,7 @@ function scanArtifactGraph(options2, collector) {
     if (values.length > 1) {
       issues.push({
         code: "duplicate-id",
-        message: `Duplicate artifact ID ${id}: ${values.map((record2) => record2.path).sort(compareStrings2).join(", ")}`
+        message: `Duplicate artifact ID ${id}: ${values.map((record2) => record2.path).sort(compareStrings).join(", ")}`
       });
     }
   }
@@ -34523,7 +34464,7 @@ function scanArtifactGraph(options2, collector) {
   return {
     records,
     graph: {
-      nodes: [...nodes].sort((left, right) => compareStrings2(left.path, right.path)),
+      nodes: [...nodes].sort((left, right) => compareStrings(left.path, right.path)),
       edges: edges.sort(edgeCompare),
       issues: [...new Map(issues.map((issue2) => [`${issue2.code}\0${issue2.message}`, issue2])).values()].sort(issueCompare)
     }
@@ -34531,7 +34472,7 @@ function scanArtifactGraph(options2, collector) {
 }
 function artifactRelationTargets(graph, sourcePath, relationNames) {
   const names = new Set(relationNames);
-  return graph.edges.filter((edge) => edge.kind === "lineage" && edge.from === sourcePath && edge.to !== null && names.has(edge.relation)).map((edge) => edge.to).sort(compareStrings2);
+  return graph.edges.filter((edge) => edge.kind === "lineage" && edge.from === sourcePath && edge.to !== null && names.has(edge.relation)).map((edge) => edge.to).sort(compareStrings);
 }
 function artifactHasRelation(graph, sourcePath, relationNames, targetPath) {
   return Boolean(sourcePath && targetPath && artifactRelationTargets(graph, sourcePath, relationNames).includes(targetPath));
@@ -34608,7 +34549,7 @@ function artifactChainCandidates(graph, records) {
       add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
     }
   }
-  return [...chains.values()].sort((left, right) => compareStrings2(chainKey(left), chainKey(right)));
+  return [...chains.values()].sort((left, right) => compareStrings(chainKey(left), chainKey(right)));
 }
 
 // src/skills/briefing-flow/scripts/lib/briefing_audit.ts

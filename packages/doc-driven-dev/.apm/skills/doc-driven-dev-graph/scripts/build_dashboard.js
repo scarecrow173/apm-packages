@@ -13600,6 +13600,22 @@ var import_node_path5 = __toESM(require("node:path"));
 var import_node_fs2 = __toESM(require("node:fs"));
 var import_node_path3 = __toESM(require("node:path"));
 
+// src/skills/lib/claim_ids.ts
+var CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
+var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
+var CLAIM_MARKER_PATTERN = /<!--\s*claim\s*:(.*?)-->/g;
+function isClaimKey(value) {
+  return CLAIM_KEY_PATTERN.test(value);
+}
+function parseClaimReference(value) {
+  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
+  if (!match) return null;
+  return { docId: match[1], key: match[2] };
+}
+function claimId(docId, key) {
+  return `${docId}::${key}`;
+}
+
 // src/skills/lib/doc_suite_utils.ts
 var import_gray_matter = __toESM(require_gray_matter());
 
@@ -34378,6 +34394,7 @@ function isWindowsAbsolutePath(value) {
 function isExternalReference(value) {
   const trimmed = value.trim();
   if (isWindowsAbsolutePath(trimmed)) return false;
+  if (parseClaimReference(trimmed)) return false;
   return EXTERNAL_REFERENCE.test(trimmed);
 }
 function walkMarkdownFiles(root) {
@@ -34621,6 +34638,14 @@ async function scanRepository(options2) {
   };
   const resolveRelationTarget = (from, rawTarget) => {
     const value = rawTarget.trim();
+    const claimRef = parseClaimReference(value);
+    if (claimRef) {
+      const claimMatch = byId.get(claimRef.docId);
+      if (!claimMatch) return { status: "unresolved" };
+      const claimPrimaries = artifactPrimaries(claimMatch);
+      if (claimPrimaries.length === 1) return { status: "resolved", document: claimPrimaries[0] };
+      return { status: "ambiguous", candidates: claimPrimaries };
+    }
     if (isExternalReference(value)) return { status: "external" };
     const byIdMatch = byId.get(value);
     if (byIdMatch) {
@@ -35364,37 +35389,47 @@ function lintStructure(model, scope, profile = "materialized") {
 }
 
 // src/skills/lib/knowledge_graph.ts
-var CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
-var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
-var CLAIM_MARKER_PATTERN = /<!--\s*claim\s*:(.*?)-->/g;
 var FENCE_PATTERN = /^(`{3,}|~{3,})/;
-function isClaimKey(value) {
-  return CLAIM_KEY_PATTERN.test(value);
-}
-function parseClaimReference(value) {
-  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
-  if (!match) return null;
-  return { docId: match[1], key: match[2] };
-}
-function claimId(docId, key) {
-  return `${docId}::${key}`;
-}
+var LIST_ITEM_PATTERN = /^[ \t]*(?:[-+*]|\d+[.)])[ \t]+/;
+var BLOCK_OPENER_PATTERN = /^(?:#{1,6}(?:[ \t]|$)|>|(?:\*[ \t]*){3,}$|(?:-[ \t]*){3,}$|(?:_[ \t]*){3,}$|\|)/;
 function unfencedBody(body) {
   const lines = body.split("\n");
   let fenceChar = null;
+  const listContentIndents = [];
+  let paragraphOpen = false;
   return lines.map((line) => {
     const fence = FENCE_PATTERN.exec(line.trimStart());
-    if (fenceChar === null) {
-      if (fence) {
-        fenceChar = fence[1][0];
-        return "";
-      }
+    if (fenceChar !== null) {
+      if (fence && fence[1][0] === fenceChar) fenceChar = null;
+      return "";
+    }
+    if (fence) {
+      fenceChar = fence[1][0];
+      paragraphOpen = false;
+      return "";
+    }
+    if (!line.trim()) {
+      paragraphOpen = false;
       return line;
     }
-    if (fence && fence[1][0] === fenceChar) {
-      fenceChar = null;
+    const indent = /^[ \t]*/.exec(line)[0].replace(/\t/g, "    ").length;
+    const item = LIST_ITEM_PATTERN.exec(line);
+    if (!paragraphOpen || item) {
+      while (listContentIndents.length > 0 && listContentIndents[listContentIndents.length - 1] > indent) {
+        listContentIndents.pop();
+      }
     }
-    return "";
+    const codeIndent = (listContentIndents[listContentIndents.length - 1] ?? 0) + 4;
+    if (indent >= codeIndent) {
+      return paragraphOpen ? line : "";
+    }
+    if (item) {
+      const marker = item[0].replace(/^[ \t]+/, "").replace(/[ \t]+$/, "");
+      const gap = item[0].length - indent - marker.length;
+      listContentIndents.push(gap > 4 ? indent + marker.length + 1 : item[0].length);
+    }
+    paragraphOpen = !BLOCK_OPENER_PATTERN.test(line.trimStart());
+    return line;
   }).join("\n");
 }
 function extractClaimDeclarations(document3) {
@@ -35707,13 +35742,13 @@ function projectKnowledgeGraph(model) {
                 message: `Relation ${field} references the document itself: ${target}`
               });
             }
-            if (targetDoc2.type && !targetTypes.includes(targetDoc2.type)) {
+            if (!targetDoc2.type || !targetTypes.includes(targetDoc2.type)) {
               issues.push({
                 code: "invalid-relation-target-type",
                 path: node3.path,
                 line: null,
                 target,
-                message: `Relation ${field} target resolves to type "${targetDoc2.type}", expected one of: ${targetTypes.join(", ")}: ${target}`
+                message: `Relation ${field} target resolves to type "${targetDoc2.type ?? "unknown"}", expected one of: ${targetTypes.join(", ")}: ${target}`
               });
             }
           }
@@ -36502,7 +36537,9 @@ function normalizeArtifactPath(cwd, target) {
   return import_node_path6.default.relative(import_node_path6.default.resolve(cwd), import_node_path6.default.resolve(cwd, target)).split(import_node_path6.default.sep).join("/");
 }
 function isExternalArtifactReference(value) {
-  return EXTERNAL_REFERENCE2.test(value.trim());
+  const trimmed = value.trim();
+  if (parseClaimReference(trimmed)) return false;
+  return EXTERNAL_REFERENCE2.test(trimmed);
 }
 function resolveContainedTaskDir(cwd, taskDir) {
   return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");

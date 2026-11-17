@@ -46,46 +46,27 @@ import { artifactKeyOf, artifactPrimaries, compareStrings, groupByArtifact, scan
 import type { DocumentRepository, RepositoryDocument, ScanOptions } from "./doc_repository";
 import { allowedRelationsFor, knowledgeRelationFields, knowledgeRelationInverses, PROVENANCE_RELATION_KEYS } from "./doc_types";
 import { nonReferenceRelationKeys } from "./document_utils";
+import { CLAIM_KEY_PATTERN, CLAIM_MARKER_PATTERN, CLAIM_REFERENCE_PATTERN, claimId, isClaimKey, parseClaimReference } from "./claim_ids";
+import type { ClaimReference } from "./claim_ids";
 
 // ---------------------------------------------------------------------------
-// Claim ID grammar
+// Claim declarations
 // ---------------------------------------------------------------------------
 
-// Local claim key inside a document — `R-01`, `AC-2`, `NFR-12`.
-const CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
-
-// A claim reference is `<document-id>::<key>` — the owning document id and
-// the document-local key, joined by `::` (e.g. `SPEC-<id>::R-01`).
-const CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
-
-// Claim declaration marker anywhere in a document body:
-// `<!-- claim:R-01 -->` or `<!-- claim:DOC-ID::R-01 -->`. The marker binds
-// the claim identity to its position, so rewording the claim text or moving
-// it across headings keeps the ID stable.
-const CLAIM_MARKER_PATTERN = /<!--\s*claim\s*:(.*?)-->/g;
-
-// Fenced code regions (``` / ~~~) are stripped before marker scanning so a
-// marker shown as an example inside a fence is not adopted as a real claim.
+// Fenced code regions (``` / ~~~) and indented code regions (4+ spaces past
+// the innermost list item's content) are stripped before marker scanning so
+// a marker shown as an example inside a code block is not adopted as a real
+// claim.
 const FENCE_PATTERN = /^(`{3,}|~{3,})/;
 
-type ClaimReference = {
-  docId: string;
-  key: string;
-};
+// A Markdown list marker — bullet or ordered — opening a new item.
+const LIST_ITEM_PATTERN = /^[ \t]*(?:[-+*]|\d+[.)])[ \t]+/;
 
-function isClaimKey(value: string): boolean {
-  return CLAIM_KEY_PATTERN.test(value);
-}
-
-function parseClaimReference(value: string): ClaimReference | null {
-  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
-  if (!match) return null;
-  return { docId: match[1], key: match[2] };
-}
-
-function claimId(docId: string, key: string): string {
-  return `${docId}::${key}`;
-}
+// A non-paragraph block opener (heading, blockquote, thematic break, table
+// row): a line starting such a block ends the running paragraph, so the next
+// indented line cannot be a lazy paragraph continuation and may be code.
+// Tested against the trimmed line — indentation was already classified.
+const BLOCK_OPENER_PATTERN = /^(?:#{1,6}(?:[ \t]|$)|>|(?:\*[ \t]*){3,}$|(?:-[ \t]*){3,}$|(?:_[ \t]*){3,}$|\|)/;
 
 type ClaimDeclaration = {
   // The local claim key (`R-01`). Present only when the marker parsed.
@@ -113,23 +94,57 @@ type KnowledgeClaim = {
   text: string;
 };
 
-// Strip fenced code blocks, preserving line count/positions.
+// Strip fenced and indented code blocks, preserving line count/positions, so
+// a marker shown as an example inside a code block is not adopted as a real
+// claim. Indented-code detection follows the two CommonMark rules that matter
+// here: a code line needs 4+ spaces of indentation beyond the innermost
+// enclosing list item's content column (not 4 from the margin), and an
+// indented line can never interrupt a running paragraph — it stays lazy
+// paragraph text, so `para\n    <!-- claim:X -->` still declares the claim.
 function unfencedBody(body: string): string {
   const lines = body.split("\n");
   let fenceChar: string | null = null;
+  // Content column of each open list item.
+  const listContentIndents: number[] = [];
+  let paragraphOpen = false;
   return lines.map((line) => {
     const fence = FENCE_PATTERN.exec(line.trimStart());
-    if (fenceChar === null) {
-      if (fence) {
-        fenceChar = fence[1][0];
-        return "";
-      }
+    if (fenceChar !== null) {
+      if (fence && fence[1][0] === fenceChar) fenceChar = null;
+      return "";
+    }
+    if (fence) {
+      fenceChar = fence[1][0];
+      paragraphOpen = false;
+      return "";
+    }
+    if (!line.trim()) {
+      paragraphOpen = false;
       return line;
     }
-    if (fence && fence[1][0] === fenceChar) {
-      fenceChar = null;
+    const indent = (/^[ \t]*/.exec(line) as RegExpExecArray)[0].replace(/\t/g, "    ").length;
+    const item = LIST_ITEM_PATTERN.exec(line);
+    // A dedenting line closes list levels it falls out of; a lazy paragraph
+    // continuation (running paragraph, non-marker line) stays inside its
+    // list item regardless of indent.
+    if (!paragraphOpen || item) {
+      while (listContentIndents.length > 0 && listContentIndents[listContentIndents.length - 1] > indent) {
+        listContentIndents.pop();
+      }
     }
-    return "";
+    const codeIndent = (listContentIndents[listContentIndents.length - 1] ?? 0) + 4;
+    if (indent >= codeIndent) {
+      return paragraphOpen ? line : "";
+    }
+    if (item) {
+      // Content column = indent + marker width + following gap; CommonMark
+      // caps a >4-space gap at a single space.
+      const marker = item[0].replace(/^[ \t]+/, "").replace(/[ \t]+$/, "");
+      const gap = item[0].length - indent - marker.length;
+      listContentIndents.push(gap > 4 ? indent + marker.length + 1 : item[0].length);
+    }
+    paragraphOpen = !BLOCK_OPENER_PATTERN.test(line.trimStart());
+    return line;
   }).join("\n");
 }
 
@@ -590,13 +605,13 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
                 message: `Relation ${field} references the document itself: ${target}`,
               });
             }
-            if (targetDoc.type && !targetTypes.includes(targetDoc.type)) {
+            if (!targetDoc.type || !targetTypes.includes(targetDoc.type)) {
               issues.push({
                 code: "invalid-relation-target-type",
                 path: node.path,
                 line: null,
                 target,
-                message: `Relation ${field} target resolves to type "${targetDoc.type}", expected one of: ${targetTypes.join(", ")}: ${target}`,
+                message: `Relation ${field} target resolves to type "${targetDoc.type ?? "unknown"}", expected one of: ${targetTypes.join(", ")}: ${target}`,
               });
             }
           }

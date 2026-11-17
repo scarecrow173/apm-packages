@@ -24,7 +24,7 @@ export {
   repoPathKey,
 } from "../../../lib/document_utils";
 import { CANONICAL_DOC_DIRS, nonReferenceRelationKeys } from "../../../lib/document_utils";
-import { parseClaimReference } from "../../../lib/knowledge_graph";
+import { parseClaimReference } from "../../../lib/claim_ids";
 
 export type ArtifactEdgeKind = "lineage" | "task-dependency" | "contextual" | "evidence";
 export type ArtifactNode = { path: string; id: string | null; type: string | null };
@@ -122,7 +122,14 @@ export function normalizeArtifactPath(cwd: string, target: string): string {
 }
 
 export function isExternalArtifactReference(value: string): boolean {
-  return EXTERNAL_REFERENCE.test(value.trim());
+  const trimmed = value.trim();
+  // Claim-qualified document references (`DOC-ID::KEY`) are local addresses:
+  // the `DOC-ID:` prefix must not parse as a URI scheme, so claim grammar is
+  // checked before the URI pattern here at the shared boundary — relation
+  // resolution, context expansion, and briefing audit all classify through
+  // this one predicate.
+  if (parseClaimReference(trimmed)) return false;
+  return EXTERNAL_REFERENCE.test(trimmed);
 }
 
 /**

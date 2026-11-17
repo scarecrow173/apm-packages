@@ -208,7 +208,8 @@ discovery 文書は昇華されるまでの作業メモです。
 
 discovery 文書の結論が spec または ADR に取り込まれたら:
 
-1. `relations.derived-by` で下流文書をリンクする。
+1. `relations.motivates`（spec）または `relations.informs`（ADR などの
+   durable 文書）で下流文書をリンクする。
 2. ステータスを `resolved` に設定する。
 3. 監査証跡として discovery 文書を保持する。
 
