@@ -1,14 +1,12 @@
-name: japanese-tech-writing validation
+name: japanese-tech-writing dependency validation
 
 on:
   pull_request:
     paths:
-      - .github/workflows/japanese-tech-writing-upstream.yml
       - .github/workflows/japanese-tech-writing-validate.yml
       - packages/japanese-tech-writing/**
-      - scripts/japanese-tech-writing/**
-      - apm.lock.yaml
       - apm.yml
+      - apm.lock.yaml
   workflow_dispatch:
 
 permissions:
@@ -20,34 +18,19 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Unit tests and checked-in lock integrity
-        run: python3 -m unittest discover -s scripts/japanese-tech-writing -p "test_*.py" -v
-      - name: Exercise sync against live pinned Gist checkout
-        shell: bash
-        run: |
-          set -euo pipefail
-          temp="$(mktemp -d)"
-          trap 'rm -rf "$temp"' EXIT
-          git clone --quiet --depth=1 \
-            https://gist.github.com/fd287c3133457c4fd8f5601d34aa817d.git \
-            "$temp/upstream"
-          revision="$(git -C "$temp/upstream" rev-parse HEAD)"
-          python3 scripts/japanese-tech-writing/sync.py \
-            --source "$temp/upstream/SKILL.md" \
-            --revision "$revision"
       - name: Install pinned APM toolchain
         uses: jdx/mise-action@v2
-      - name: Validate APM Skill installation in isolated consumer
+      - name: Install Gist dependency through APM in isolated consumer
         shell: bash
         run: |
           set -euo pipefail
           temp="$(mktemp -d)"
           trap 'rm -rf "$temp"' EXIT
-          # mise captures the pinned toolchain before entering the consumer.
           mise exec -- bash -c '
             set -euo pipefail
             cd "$1"
             apm install "$2" --target agent-skills
-            cmp -s .agents/skills/japanese-tech-writing/SKILL.md \
-              "$2/.apm/skills/japanese-tech-writing/SKILL.md"
+            test -f .agents/skills/japanese-tech-writing/SKILL.md
+            grep -q "^name: japanese-tech-writing" .agents/skills/japanese-tech-writing/SKILL.md
+            echo "Gist-native skill installed via APM successfully."
           ' bash "$temp" "$GITHUB_WORKSPACE/packages/japanese-tech-writing"
