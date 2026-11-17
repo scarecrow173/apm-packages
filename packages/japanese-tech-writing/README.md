@@ -50,6 +50,3 @@ Use `apm update --yes` in unattended automation. Projects requiring periodic upg
 
 The upstream Skill is fetched directly on installation. For current content and history, refer to the Gist.
 
-## Validation
-
-The [PR validation workflow](../../.github/workflows/japanese-tech-writing-validate.yml) installs this local aggregator into an isolated APM consumer (APM 0.33.0) and checks the Gist Skill is deployed.
