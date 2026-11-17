@@ -6,12 +6,12 @@ upstream:
   repo: cursor/plugins
   host: github.com
   path: harness/pstack/claude-code
-  commit: bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7
+  commit: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
 # Observed during APM 0.33.0 verification (issue #212); refreshed by
 # apply-update from the regenerated lockfile/provenance. Informational
 # audit fields only -- upstream.commit is the sole authority.
 observed:
-  upstream_version: "0.15.42"
+  upstream_version: "0.15.43"
   apm_package_type: agent_plugin
-  apm_content_hash: sha256:cedc7e3791f374b6b47f9b379670438704219baaa507845a4f680ce4f66b44ec
-  upstream_file_count: 546
+  apm_content_hash: sha256:18b1deefbf57342ae5f679b4102caea5201b86d6da3e4e8e900a2cc23bfefd57
+  upstream_file_count: 537
