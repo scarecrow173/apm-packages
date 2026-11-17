@@ -21,7 +21,7 @@
     "verify:l3": "tsx src/l3-dist.ts && tsx src/check-marketplace.ts",
     "verify": "pnpm run verify:l1 && pnpm run verify:l2 && pnpm run verify:l3 && pnpm test",
     "test": "tsx --test tests/*.test.ts",
-    "lint:md": "markdownlint-cli2 --no-globs --config ../../packages/pstack-devin/.markdownlint-cli2.jsonc \"../../packages/pstack-devin/**/*.md\""
+    "lint:md": "markdownlint-cli2 --no-globs --config ../../packages/pstack-devin/.markdownlint-cli2.jsonc \"../../packages/pstack-devin/**/*.md\" \"../../.devin/skills/**/*.md\""
   },
   "packageManager": "pnpm@11.2.2",
   "dependencies": {
