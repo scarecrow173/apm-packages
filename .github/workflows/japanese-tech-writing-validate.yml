@@ -20,6 +20,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install pinned APM toolchain
         uses: jdx/mise-action@v2
+      - name: Verify root lockfile is installable without re-resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          mise exec -- apm install --frozen
+          git diff --exit-code -- apm.yml apm.lock.yaml
+
       - name: Install Gist dependency through APM in isolated consumer
         shell: bash
         run: |
