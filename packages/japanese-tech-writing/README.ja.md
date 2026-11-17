@@ -60,6 +60,8 @@ python3 scripts/japanese-tech-writing/sync.py \
 パッケージのディレクトリで:
 
 ```bash
-mise exec -- apm compile --dry-run
-mise exec -- apm compile --validate
+# 任意の一時ディレクトリを利用して Skill の配布先を確認
+mise exec -- apm install ./packages/japanese-tech-writing --target agent-skills
 ```
+
+`apm compile` は instruction 用であり、Skills 専用パッケージの検証には使いません。PR では一時コンシューマーへの `apm install` と配布済み `SKILL.md` の原本一致を確認します。
