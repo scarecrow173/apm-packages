@@ -2,3 +2,5 @@ packages:
   - "."
 allowBuilds:
   esbuild: true
+overrides:
+  katex: "^0.18.2"
