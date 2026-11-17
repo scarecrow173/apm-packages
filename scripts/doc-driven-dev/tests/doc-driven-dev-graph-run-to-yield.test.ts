@@ -30,6 +30,7 @@ import {
   recordCheckpoint,
   recordReceipt,
   StoreError,
+  updateTask,
   type CheckpointRecord,
   type ReceiptRecord,
   type RunSnapshot,
@@ -53,11 +54,13 @@ type EffectYieldReason = Extract<YieldReason,
 
 type EffectIdentity = CallerEffect;
 
+type StoreView = { runId: string; tasks: ReadonlyArray<RunSnapshot["tasks"][number]> };
+
 type ScenarioStep = {
   expectEdge: string | null;
   applyCheckpointEvidence?: (repo: string, signals: Set<string>) => ReferenceSpec[] | void;
-  audit?: (repo: string, signals: Set<string>, route: GraphRoute, audit: string) => EffectOutcome;
-  delegate?: (repo: string, signals: Set<string>, route: GraphRoute) => EffectOutcome;
+  audit?: (repo: string, signals: Set<string>, route: GraphRoute, audit: string, store: StoreView) => EffectOutcome;
+  delegate?: (repo: string, signals: Set<string>, route: GraphRoute, store: StoreView) => EffectOutcome;
   yield?: YieldReason;
   observeOnly?: boolean;
 };
@@ -183,6 +186,10 @@ function updateArtifact(repo: string, relativePath: string, data: Record<string,
 // each edge checkpoint binds — canonical content, never run bookkeeping
 // (receipts/checkpoints live in the Execution Store).
 const primaryTaskDoc = "docs/tasks/0001-task.md";
+// The `test-spec` audit's Document Registry 3 successor scope — `test-spec`
+// itself is legacy migration-only; verification intent is durable.
+const VERIFICATION_DOC = "docs/verification/0001-graph.md";
+const PRIMARY_TASK_ID = "TASK-0001";
 const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
@@ -191,6 +198,7 @@ const canonicalDocumentPaths = [
   "docs/test-specs/0001-graph.md",
   primaryTaskDoc,
   "docs/impl/ir/0001-task.md",
+  VERIFICATION_DOC,
 ];
 const footerDelegates = new Set([
   "briefing-flow",
@@ -244,27 +252,30 @@ function isCallerNormalizedEffect(stage: EffectOutcome["stage"], effectId: strin
   return stage === "audit" ? callerNormalizedAudits.has(effectId) : callerNormalizedDelegates.has(effectId);
 }
 
-function taskGraphPaths(route: GraphRoute): string[] {
-  return route.taskGraph?.nodes.map((node) => node.path) ?? [primaryTaskDoc];
+/**
+ * Execution-bound task scope: the run's task records keyed by the projected
+ * Task Graph node ids. `plan` and `task` audit names refuse at the Registry 3
+ * gate (`audit_docs.js --type <name>`), but the declared graph still lists
+ * them — the oracle binds the task records as `execution-task` refs, never
+ * `docs/tasks` durable documents. The projected plan likewise has no durable
+ * form; its realized scope is the same task record set. Falls back to the
+ * primary task id when the route carries no Task Graph projection.
+ */
+function taskRefSpecs(route: GraphRoute): ReferenceSpec[] {
+  const nodes = route.taskGraph?.nodes;
+  if (!nodes || nodes.length === 0) return [{ kind: "execution-task", taskId: PRIMARY_TASK_ID }];
+  return nodes.map((node): ReferenceSpec => ({ kind: "execution-task", taskId: node.id }));
 }
 
-function selectedTaskGraphPlanPath(route: GraphRoute): string {
-  const plan = route.taskGraph?.plan;
-  if (typeof plan !== "string" || plan.length === 0) {
-    throw new Error("Missing selected Task Graph plan for build_task_graph");
-  }
-  return plan;
-}
-
-function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
+function effectInputSpecs(route: GraphRoute, effect: EffectIdentity): ReferenceSpec[] {
   if (effect.kind === "audit") {
     switch (effect.id) {
       case "spec": return ["docs/specs/0001-graph.md"];
       case "adr": return ["docs/adr/0001-graph.md"];
       case "design": return ["docs/designs/0001-graph.md"];
-      case "plan": return ["docs/plans/0001-graph.md"];
-      case "task": return taskGraphPaths(route);
-      case "test-spec": return ["docs/test-specs/0001-graph.md"];
+      case "plan": return taskRefSpecs(route);
+      case "task": return taskRefSpecs(route);
+      case "test-spec": return [VERIFICATION_DOC];
       case "impl-record": return ["docs/impl/ir/0001-task.md"];
       case "experiment-log": return ["docs/impl/exp/README.md"];
       case "all": return canonicalDocumentPaths;
@@ -273,59 +284,77 @@ function effectInputPaths(route: GraphRoute, effect: EffectIdentity): string[] {
   switch (effect.id) {
     case "migrate_docs": return canonicalDocumentPaths;
     case "scaffold_docs": return ["."];
-    case "build_task_graph": return [selectedTaskGraphPlanPath(route), ...taskGraphPaths(route)];
+    case "build_task_graph": {
+      // The delegate projects the selected Task Graph — its inputs are the
+      // run's task records, and a route without a projection cannot supply
+      // them. The pre-v3 plan path is intentionally not bound: the plan is
+      // run state (manifest planDigest), not a durable document.
+      if (!route.taskGraph || route.taskGraph.nodes.length === 0) {
+        throw new Error("Missing selected Task Graph for build_task_graph");
+      }
+      return taskRefSpecs(route);
+    }
     case "briefing-flow": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "planning-flow": return ["docs/designs/0001-graph.md"];
-    case "implementation-flow": return [...taskGraphPaths(route), "docs/designs/0001-graph.md", "docs/plans/0001-graph.md"];
+    case "implementation-flow": return [...taskRefSpecs(route), "docs/designs/0001-graph.md"];
     case "doc-status": return canonicalDocumentPaths;
     default: throw new Error(`No authoritative-input mapping for ${effect.kind}:${effect.id}`);
   }
 }
 
-function effectOutputPath(route: GraphRoute, effect: EffectIdentity): string {
-  if (effect.kind === "audit") return effectInputPaths(route, effect)[0];
+function effectOutputSpec(route: GraphRoute, effect: EffectIdentity): ReferenceSpec {
+  if (effect.kind === "audit") return effectInputSpecs(route, effect)[0];
   switch (effect.id) {
     case "design-doc": return "docs/designs/0001-graph.md";
-    case "planning-flow": return "docs/plans/0001-graph.md";
+    // Registry 3 durable work product: the verification-intent document —
+    // the pre-v3 plan/test-spec outputs are execution-bound, never proof.
+    case "planning-flow": return VERIFICATION_DOC;
     case "implementation-flow": return "docs/impl/ir/0001-task.md";
     case "doc-status": return "docs/impl/ir/0001-task.md";
-    default: return effectInputPaths(route, effect)[0];
+    default: return effectInputSpecs(route, effect)[0];
   }
 }
 
-function resolvedInputs(repo: string, route: GraphRoute, effect: EffectIdentity): EffectReference[] {
-  return resolveReferenceSpecs(repo, undefined, effectInputPaths(route, effect));
+function resolvedInputs(repo: string, store: StoreView | undefined, route: GraphRoute, effect: EffectIdentity): EffectReference[] {
+  return resolveReferenceSpecs(repo, store, effectInputSpecs(route, effect));
 }
 
-function outputReference(repo: string, route: GraphRoute, effect: EffectIdentity): DurableDocumentReference {
-  return canonicalReference(repo, effectOutputPath(route, effect));
+function outputReference(repo: string, store: StoreView | undefined, route: GraphRoute, effect: EffectIdentity): EffectReference {
+  const reference = resolveReference(repo, store, effectOutputSpec(route, effect));
+  if (reference === null) {
+    throw new Error(`output spec does not resolve current state: ${effect.kind}:${effect.id}`);
+  }
+  return reference;
 }
 
 function completedOutcome(
   repo: string,
+  store: StoreView | undefined,
   route: GraphRoute,
   stage: EffectOutcome["stage"],
   effect: EffectIdentity,
   provider?: { provider: string; idempotencyKey: string },
 ): CompletedEffectOutcome {
-  const output = outputReference(repo, route, effect);
+  const output = outputReference(repo, store, route, effect);
   const outputs = effect.id === "planning-flow"
-    ? [
-        output,
-        canonicalReference(repo, "docs/test-specs/0001-graph.md"),
-        ...taskGraphPaths(route).map((relativePath) => canonicalReference(repo, relativePath)),
-      ]
+    // Registry 3 work product: the durable verification-intent document plus
+    // the run's task records — never the pre-v3 plan/test-spec durable docs.
+    ? resolveReferenceSpecs(repo, store, [VERIFICATION_DOC, ...taskRefSpecs(route)])
     : [output];
   const proof: EffectProof = provider
     ? { kind: "provider", provider: provider.provider, idempotencyKey: provider.idempotencyKey }
-    : output;
+    : output.kind === "execution-task"
+      // An execution-task ref can never be a proof; the store attests the
+      // task-bound work through a provider-scoped idempotency key instead.
+      ? { kind: "provider", provider: "execution-store", idempotencyKey: `${output.runId}:${output.taskId}@${output.version}` }
+      : output;
   return {
     status: "completed",
     edgeId: route.edgeId as string,
     stage,
     effect,
-    inputs: resolvedInputs(repo, route, effect),
+    inputs: resolvedInputs(repo, store, route, effect),
     outputs,
     proof,
   };
@@ -333,6 +362,7 @@ function completedOutcome(
 
 function yieldOutcome(
   repo: string,
+  store: StoreView | undefined,
   route: GraphRoute,
   stage: EffectOutcome["stage"],
   effect: EffectIdentity,
@@ -343,14 +373,15 @@ function yieldOutcome(
     edgeId: route.edgeId as string,
     stage,
     effect,
-    inputs: resolvedInputs(repo, route, effect),
-    outputs: [outputReference(repo, route, effect)],
+    inputs: resolvedInputs(repo, store, route, effect),
+    outputs: [outputReference(repo, store, route, effect)],
     reason,
   };
 }
 
 function retryOutcome(
   repo: string,
+  store: StoreView | undefined,
   route: GraphRoute,
   stage: EffectOutcome["stage"],
   effect: EffectIdentity,
@@ -361,8 +392,8 @@ function retryOutcome(
     edgeId: route.edgeId as string,
     stage,
     effect,
-    inputs: resolvedInputs(repo, route, effect),
-    outputs: [outputReference(repo, route, effect)],
+    inputs: resolvedInputs(repo, store, route, effect),
+    outputs: [outputReference(repo, store, route, effect)],
     retry: { changedOutputs },
   };
 }
@@ -393,8 +424,6 @@ function isEffectReference(value: unknown): value is EffectReference {
   }
   return false;
 }
-
-type StoreView = { runId: string; tasks: ReadonlyArray<RunSnapshot["tasks"][number]> };
 
 function validateEffectOutcome(
   repo: string,
@@ -479,6 +508,12 @@ function resolveReference(repo: string, store: StoreView | undefined, spec: Refe
   } catch {
     return null;
   }
+}
+
+/** A StoreView over an existing run — for outcome builders outside a step hook. */
+function runView(repo: string, runId: string): StoreView {
+  const snapshot = loadRun(repo, runId);
+  return { runId: snapshot.runId, tasks: snapshot.tasks };
 }
 
 function resolveReferenceSpecs(
@@ -594,6 +629,7 @@ function parseCheckpointData(value: unknown): EdgeCheckpointData | null {
 
 function defaultEffectOutcome(
   repo: string,
+  store: StoreView | undefined,
   route: GraphRoute,
   stage: EffectOutcome["stage"],
   effect: EffectIdentity,
@@ -603,7 +639,7 @@ function defaultEffectOutcome(
       || (stage === "delegate" && footerDelegates.has(effect.id)),
     `No EffectOutcome producer for ${stage}:${effect.id}`,
   );
-  return completedOutcome(repo, route, stage, effect);
+  return completedOutcome(repo, store, route, stage, effect);
 }
 
 function isReusableCompletedOutcome(
@@ -618,7 +654,7 @@ function isReusableCompletedOutcome(
     : outcome.effect.kind === "delegate" && outcome.effect.id === route.delegate;
   if (!validEffect) return false;
   const view: StoreView = { runId: snapshot.runId, tasks: snapshot.tasks };
-  if (!sameInputScope(outcome.inputs, resolvedInputs(repo, route, outcome.effect))) return false;
+  if (!sameInputScope(outcome.inputs, resolvedInputs(repo, view, route, outcome.effect))) return false;
   try {
     // Scope identity was just proven; the attestation binds itself — the
     // delegate's own committed work legitimately advanced the docs the
@@ -738,6 +774,10 @@ function fixtureRepo(options: {
     id: "TSPEC-0001", type: "test-spec", status: "approved", title: "Graph",
     relations: { verifies: ["SPEC-0001"] },
   }, "# Graph\n");
+  writeArtifact(repo, VERIFICATION_DOC, {
+    id: "VD-0001", type: "verification", status: "approved", title: "Graph",
+    relations: { verifies: ["SPEC-0001"] },
+  }, "# Graph\n");
   writeArtifact(repo, "docs/impl/ir/0001-task.md", {
     id: "IMPL-0001", type: "implementation-record", status: "complete", title: "Graph implementation",
   }, "# Implementation Record\n");
@@ -767,6 +807,26 @@ function addTask(repo: string, index: number, status: TaskStatus = "todo"): void
     id, type: "task", status, title: id,
     relations: { implements: ["docs/plans/0001-graph.md"] },
   }, "# Task\n\n## Verification\n\n- [ ] node --test\n");
+}
+
+/**
+ * Task-record seeds projected from the fixture's `docs/tasks` corpus: under
+ * Registry 3, `execution-task` input specs resolve against task records
+ * inside the bound run — never `docs/tasks` durable paths. createRun seeds
+ * the initial set; runScenario syncs records for task docs added
+ * mid-scenario (a task record is store state — a doc edit alone never
+ * bumps its CAS version).
+ */
+function fixtureTaskSeeds(repo: string): Array<{ taskId: string; status: TaskStatus }> {
+  const taskDir = path.join(repo, "docs/tasks");
+  if (!fs.existsSync(taskDir)) return [];
+  return fs.readdirSync(taskDir)
+    .filter((file) => file.endsWith(".md") && file !== "README.md")
+    .sort()
+    .map((file) => {
+      const data = matter(fs.readFileSync(path.join(taskDir, file), "utf8")).data;
+      return { taskId: data.id as string, status: (data.status ?? "todo") as TaskStatus };
+    });
 }
 
 function graphRun(result: ScenarioResult): GraphRunResult {
@@ -831,12 +891,27 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     snapshot = loadRun(options.repo, runId);
   } catch (error: unknown) {
     if (error instanceof StoreError && error.code === "run-not-found") {
-      snapshot = createRun(options.repo, { runId, graphId: definition.id, focus: [...focus] });
+      snapshot = createRun(options.repo, {
+        runId,
+        graphId: definition.id,
+        focus: [...focus],
+        tasks: fixtureTaskSeeds(options.repo),
+      });
     } else {
       throw error;
     }
   }
-  const reloadStore = (): void => { snapshot = loadRun(options.repo, runId); };
+  const reloadStore = (): void => {
+    // Task docs added mid-scenario (addTask inside a step hook) project new
+    // Task Graph nodes — create the matching task records so execution-task
+    // specs resolve. Existing records are never re-derived from docs: a
+    // record's CAS version is store state, not a document mirror.
+    const existing = new Set(snapshot.tasks.map((task) => task.taskId));
+    for (const seed of fixtureTaskSeeds(options.repo)) {
+      if (!existing.has(seed.taskId)) updateTask(options.repo, runId, seed.taskId, { status: seed.status });
+    }
+    snapshot = loadRun(options.repo, runId);
+  };
   const storeView = (): StoreView => ({ runId, tasks: snapshot.tasks });
   const recordOutcomeReceipt = (outcome: CompletedEffectOutcome): void => {
     recordReceipt(options.repo, runId, {
@@ -1019,7 +1094,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     for (const audit of route.requiredAudits) {
       if (completedAudits.has(audit)) continue;
       const effect: EffectIdentity = { kind: "audit", id: audit };
-      const expectedInputs = resolvedInputs(options.repo, route, effect);
+      const expectedInputs = resolvedInputs(options.repo, storeView(), route, effect);
       const adopted = adoptStoredReceipt(route, "audit", effect, expectedInputs);
       if (adopted) {
         edgeOutcomes.push(adopted);
@@ -1028,9 +1103,9 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
         continue;
       }
       events.push(`audit:${audit}`);
-      const outcome = step.audit?.(options.repo, signals, route, audit)
-        ?? defaultEffectOutcome(options.repo, route, "audit", effect);
-      validateEffectOutcome(options.repo, route, outcome, "audit", effect, resolvedInputs(options.repo, route, effect), storeView());
+      const outcome = step.audit?.(options.repo, signals, route, audit, storeView())
+        ?? defaultEffectOutcome(options.repo, storeView(), route, "audit", effect);
+      validateEffectOutcome(options.repo, route, outcome, "audit", effect, resolvedInputs(options.repo, storeView(), route, effect), storeView());
       edgeOutcomes.push(outcome);
       outcomes.push(outcome);
       if (outcome.status === "completed") recordOutcomeReceipt(outcome);
@@ -1059,7 +1134,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     ));
     if (route.delegate && !delegateComplete) {
       const effect: EffectIdentity = { kind: "delegate", id: route.delegate };
-      const expectedInputs = resolvedInputs(options.repo, route, effect);
+      const expectedInputs = resolvedInputs(options.repo, storeView(), route, effect);
       const adopted = adoptStoredReceipt(route, "delegate", effect, expectedInputs);
       if (adopted) {
         edgeOutcomes.push(adopted);
@@ -1070,9 +1145,9 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     if (route.delegate && !delegateComplete) {
       events.push(`delegate:${route.delegate}`);
       const effect: EffectIdentity = { kind: "delegate", id: route.delegate };
-      const outcome = step.delegate?.(options.repo, signals, route)
-        ?? defaultEffectOutcome(options.repo, route, "delegate", effect);
-      validateEffectOutcome(options.repo, route, outcome, "delegate", effect, resolvedInputs(options.repo, route, effect), storeView());
+      const outcome = step.delegate?.(options.repo, signals, route, storeView())
+        ?? defaultEffectOutcome(options.repo, storeView(), route, "delegate", effect);
+      validateEffectOutcome(options.repo, route, outcome, "delegate", effect, resolvedInputs(options.repo, storeView(), route, effect), storeView());
       edgeOutcomes.push(outcome);
       outcomes.push(outcome);
       if (outcome.status === "completed") recordOutcomeReceipt(outcome);
@@ -1358,8 +1433,9 @@ test("yields approval exactly once before design evidence is written", () => {
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "approval-required",
-      delegate: (fixture, _signals, route) => yieldOutcome(
+      delegate: (fixture, _signals, route, store) => yieldOutcome(
         fixture,
+        store,
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },
@@ -1443,8 +1519,9 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "authority-required",
-      delegate: (fixture, _signals, route) => yieldOutcome(
+      delegate: (fixture, _signals, route, store) => yieldOutcome(
         fixture,
+        store,
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },
@@ -1489,6 +1566,52 @@ test("resume skips scope-valid pending audit and delegate receipts", () => {
   assert.equal(resumed.yieldReason, null);
   assert.equal(resumed.auditCounts.design, 1);
   assert.equal(resumed.delegateCounts["design-doc"], 1);
+  assert.equal(resumed.checkpoints.length, 1);
+});
+
+test("a third leg reuses the first leg's stored audit and delegate receipts without re-dispatch", () => {
+  const repo = fixtureRepo();
+  // Leg 1 — the design audit and design-doc delegate complete, then the
+  // missing evidence phase yields: both receipts land in the store and the
+  // pending edge carries the pair forward.
+  const interrupted = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    steps: [{ expectEdge: "briefing-to-design", yield: "authority-required" }],
+  });
+  assert.deepEqual(interrupted.handoff.pending?.completedAudits, ["design"]);
+  assert.equal(interrupted.handoff.pending?.delegateComplete, true);
+
+  // Leg 2 — resume and yield again before evidence: the resuming-pending
+  // validation re-proves both leg-1 receipts against the store and carries
+  // them; neither effect re-dispatches (no audit:/delegate: trace events).
+  const interruptedAgain = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    resume: interrupted.handoff,
+    steps: [{ expectEdge: "briefing-to-design", yield: "authority-required" }],
+  });
+  assert.deepEqual(interruptedAgain.handoff.pending?.completedAudits, ["design"]);
+  assert.equal(interruptedAgain.handoff.pending?.delegateComplete, true);
+  assert.equal(interruptedAgain.auditCounts.design, 1);
+  assert.equal(interruptedAgain.delegateCounts["design-doc"], 1);
+  assert.equal(interruptedAgain.events.some((event) => event === "audit:design" || event === "delegate:design-doc"), false);
+
+  // Leg 3 — resume and supply the evidence phase: the same leg-1 receipts
+  // are carried a second time and the edge finally checkpoints.
+  const resumed = runScenario({
+    repo,
+    current: "briefing",
+    mode: "run-until-yield",
+    resume: interruptedAgain.handoff,
+    steps: [{ expectEdge: "briefing-to-design", applyCheckpointEvidence: evidence("briefing-to-design") }],
+  });
+  assert.equal(resumed.yieldReason, null);
+  assert.equal(resumed.auditCounts.design, 1);
+  assert.equal(resumed.delegateCounts["design-doc"], 1);
+  assert.equal(resumed.events.some((event) => event === "audit:design" || event === "delegate:design-doc"), false);
   assert.equal(resumed.checkpoints.length, 1);
 });
 
@@ -1717,13 +1840,14 @@ test("runs planning-flow before downstream plan and task audits", () => {
   const planningOutcome = result.outcomes.find((outcome) => (
     outcome.stage === "delegate" && outcome.effect.id === "planning-flow"
   ));
+  // Registry 3 work product: the durable verification-intent document plus
+  // the run's task records — never the pre-v3 plan/test-spec durable docs.
   assert.deepEqual(planningOutcome?.outputs, [
-    canonicalReference(repo, "docs/plans/0001-graph.md"),
-    canonicalReference(repo, "docs/test-specs/0001-graph.md"),
-    canonicalReference(repo, "docs/tasks/0001-task.md"),
-    canonicalReference(repo, "docs/tasks/0002-task.md"),
+    canonicalReference(repo, VERIFICATION_DOC),
+    { kind: "execution-task", runId: result.handoff.runId, taskId: "TASK-0001", version: 1 },
+    { kind: "execution-task", runId: result.handoff.runId, taskId: "TASK-0002", version: 1 },
   ]);
-  assert.deepEqual(planningOutcome?.status === "completed" ? planningOutcome.proof : null, canonicalReference(repo, "docs/plans/0001-graph.md"));
+  assert.deepEqual(planningOutcome?.status === "completed" ? planningOutcome.proof : null, canonicalReference(repo, VERIFICATION_DOC));
 });
 
 test("repairs an invalid task graph before returning to task-graph", () => {
@@ -1977,8 +2101,9 @@ test("does not trust an unverified delegate-complete resume claim", () => {
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "authority-required",
-      delegate: (fixture, _signals, route) => yieldOutcome(
+      delegate: (fixture, _signals, route, store) => yieldOutcome(
         fixture,
+        store,
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },
@@ -2008,8 +2133,9 @@ test("does not trust an audit receipt absent from canonical evidence", () => {
     steps: [{
       expectEdge: "probe-to-briefing",
       yield: "authority-required",
-      audit: (fixture, _signals, route, audit) => yieldOutcome(
+      audit: (fixture, _signals, route, audit, store) => yieldOutcome(
         fixture,
+        store,
         route,
         "audit",
         { kind: "audit", id: audit },
@@ -2020,6 +2146,7 @@ test("does not trust an audit receipt absent from canonical evidence", () => {
   const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
   forged.pending!.outcomes = [completedOutcome(
     repo,
+    runView(repo, interrupted.handoff.runId),
     interrupted.handoff.pending!.route,
     "audit",
     { kind: "audit", id: "adr" },
@@ -2049,11 +2176,12 @@ test("does not reuse persisted canonical evidence after its content changes", ()
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "authority-required",
-      delegate: (fixture, _signals, route) => {
+      delegate: (fixture, _signals, route, store) => {
         const staleProof = canonicalReference(fixture, "docs/designs/0001-graph.md");
         return {
           ...completedOutcome(
             fixture,
+            store,
             route,
             "delegate",
             { kind: "delegate", id: route.delegate as string },
@@ -2133,11 +2261,11 @@ test("audit effects can yield and resume without repeating completed audits", ()
     steps: [{
       expectEdge: "probe-to-briefing",
       yield: "approval-required",
-      audit: (fixture, _signals, route, audit) => {
+      audit: (fixture, _signals, route, audit, store) => {
         auditCalls += 1;
         return auditCalls === 2
-          ? yieldOutcome(fixture, route, "audit", { kind: "audit", id: audit }, "approval-required")
-          : completedOutcome(fixture, route, "audit", { kind: "audit", id: audit });
+          ? yieldOutcome(fixture, store, route, "audit", { kind: "audit", id: audit }, "approval-required")
+          : completedOutcome(fixture, store, route, "audit", { kind: "audit", id: audit });
       },
     }],
   });
@@ -2189,8 +2317,9 @@ test("records ordered typed outcomes and yields an irreversible effect without p
     steps: [{
       expectEdge: "design-to-planning",
       yield: "authority-required",
-      delegate: (fixture, _signals, route) => yieldOutcome(
+      delegate: (fixture, _signals, route, store) => yieldOutcome(
         fixture,
+        store,
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },
@@ -2214,8 +2343,9 @@ test("resumes a completed irreversible effect only with a provider idempotency r
     steps: [{
       expectEdge: "implementation-retry",
       yield: "authority-required",
-      delegate: (fixture, _signals, route) => completedOutcome(
+      delegate: (fixture, _signals, route, store) => completedOutcome(
         fixture,
+        store,
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },
@@ -2248,12 +2378,13 @@ test("continues a typed retry only after its canonical evidence changes", () => 
     steps: [
       {
         expectEdge: "implementation-retry",
-        delegate: (fixture, signals, route) => {
+        delegate: (fixture, signals, route, store) => {
           updateArtifact(fixture, "docs/tasks/0001-task.md", { status: "done" });
           signals.add("implementation-verified");
           signals.add("followup-terminal");
           return retryOutcome(
             fixture,
+            store,
             route,
             "delegate",
             { kind: "delegate", id: route.delegate as string },
@@ -2281,9 +2412,10 @@ test("rejects a completed outcome with a forbidden yield reason", () => {
     mode: "run-until-yield",
     steps: [{
       expectEdge: "implementation-retry",
-      delegate: (fixture, _signals, route) => ({
+      delegate: (fixture, _signals, route, store) => ({
         ...completedOutcome(
           fixture,
+          store,
           route,
           "delegate",
           { kind: "delegate", id: route.delegate as string },
@@ -2303,8 +2435,9 @@ test("returns a typed GraphRunResult with the final yielded route and resume dat
     steps: [{
       expectEdge: "briefing-to-design",
       yield: "authority-required",
-      delegate: (fixture, _signals, route) => yieldOutcome(
+      delegate: (fixture, _signals, route, store) => yieldOutcome(
         fixture,
+        store,
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },
@@ -2383,8 +2516,8 @@ test("rejects initial completed and retry receipts without current canonical evi
     mode: "run-until-yield",
     steps: [{
       expectEdge: "probe-to-briefing",
-      audit: (fixture, _signals, route, audit) => ({
-        ...completedOutcome(fixture, route, "audit", { kind: "audit", id: audit }),
+      audit: (fixture, _signals, route, audit, store) => ({
+        ...completedOutcome(fixture, store, route, "audit", { kind: "audit", id: audit }),
         outputs: [missing],
         proof: missing,
       }),
@@ -2396,8 +2529,9 @@ test("rejects initial completed and retry receipts without current canonical evi
     mode: "run-until-yield",
     steps: [{
       expectEdge: "implementation-retry",
-      delegate: (fixture, _signals, route) => retryOutcome(
+      delegate: (fixture, _signals, route, store) => retryOutcome(
         fixture,
+        store,
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },
@@ -2456,7 +2590,7 @@ edges:
     signals: ["bootstrap"],
     steps: [{ expectEdge: "start-to-bootstrap", yield: "authority-required" }],
   });
-  assert.deepEqual(effectInputPaths(interrupted.routes[0], { kind: "delegate", id: "scaffold_docs" }), ["."]);
+  assert.deepEqual(effectInputSpecs(interrupted.routes[0], { kind: "delegate", id: "scaffold_docs" }), ["."]);
   fs.unlinkSync(path.join(repo, "docs/specs/README.md"));
   const resumed = runScenario({
     repo,
@@ -2485,16 +2619,18 @@ edges:
     focus: ["docs/plans/0002-other.md"],
     steps: [{ expectEdge: "planning-to-task-graph", yield: "authority-required" }],
   });
-  assert.deepEqual(effectInputPaths(taskGraph.routes[0], { kind: "delegate", id: "build_task_graph" }), [
-    "docs/plans/0002-other.md",
-    "docs/tasks/0002-focused.md",
+  // build_task_graph binds the run's task records — the focused selection
+  // projects TASK-0002's node, so its input scope is that execution-task
+  // spec, never the pre-v3 plan/task durable paths.
+  assert.deepEqual(effectInputSpecs(taskGraph.routes[0], { kind: "delegate", id: "build_task_graph" }), [
+    { kind: "execution-task", taskId: "TASK-0002" },
   ]);
 });
 
-test("fails closed when build_task_graph has no selected Task Graph plan", () => {
+test("fails closed when build_task_graph has no selected Task Graph", () => {
   assert.throws(
-    () => effectInputPaths({ taskGraph: null } as unknown as GraphRoute, { kind: "delegate", id: "build_task_graph" }),
-    /Missing selected Task Graph plan/,
+    () => effectInputSpecs({ taskGraph: null } as unknown as GraphRoute, { kind: "delegate", id: "build_task_graph" }),
+    /Missing selected Task Graph for build_task_graph/,
   );
 });
 
@@ -2600,10 +2736,11 @@ test("resume reuses the retained baseline instead of recapturing it", () => {
     steps: [{
       expectEdge: "task-graph-to-implementation",
       yield: "authority-required",
-      delegate: (fixture, _signals, route) => {
+      delegate: (fixture, _signals, route, store) => {
         fs.writeFileSync(path.join(fixture, "slice-output.txt"), "x", "utf8");
         return yieldOutcome(
           fixture,
+          store,
           route,
           "delegate",
           { kind: "delegate", id: route.delegate as string },
@@ -2648,8 +2785,9 @@ test("a delegate-emitted commit-required yields without completing the checkpoin
     steps: [{
       expectEdge: "task-graph-to-implementation",
       yield: "commit-required",
-      delegate: (fixture, _signals, route) => yieldOutcome(
+      delegate: (fixture, _signals, route, store) => yieldOutcome(
         fixture,
+        store,
         route,
         "delegate",
         { kind: "delegate", id: route.delegate as string },

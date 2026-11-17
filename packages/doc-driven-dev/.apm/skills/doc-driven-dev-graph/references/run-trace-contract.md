@@ -176,5 +176,5 @@ them. Callers that need raw payloads keep them outside the trace under their
 own controls; contract revisions add fields only as additive-optional
 extensions (unknown fields drop on read) or by bumping `v`.
 
-Disabled tracing (no `--trace-file`) leaves routing, evidence, and gates
+Disabled tracing (no `--trace-file`) leaves routing, receipts, and gates
 unchanged. A failed trace append warns on stderr and never fails a route.

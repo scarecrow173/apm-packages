@@ -41,8 +41,8 @@ models, no wall-clock gates.
   `run_case.test.ts` is its unit test and runs as part of `test:e2e`.
 - `harness/case_validator.ts` — independent hard gates (below) plus the
   expectation DSL. It never trusts run state: store records are re-read
-  from the proof doc, git state is re-queried, edge ids are validated
-  against a freshly re-loaded definition.
+  from `.apm/state/…/checkpoints/`, git state is re-queried, edge ids are
+  validated against a freshly re-loaded definition.
 - `harness/reporter.ts` — `CaseReport` records, `formatReport` (aligned
   text table emitted via test diagnostics), `writeReportJson` (JSONL), and
   `compareNormalizedTraces` (deep-equal over `normalizeForCompare`'d traces

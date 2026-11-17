@@ -8,9 +8,12 @@ one `GraphRunResult` when it yields.
 ## EffectOutcome footer
 
 Every footer has this scope. References are typed and bound to live state:
-`kind` names the reference class, `path`/`id` locate the document, `revision`
-is its canonical content fingerprint, and a `provider` reference carries its
-`idempotencyKey`. Record references, not prose claims that work was completed.
+`kind` names the reference class — a `durable-document` is canonical Markdown
+located by `path` + front-matter `id` and pinned by `revision` (its canonical
+content fingerprint); an `execution-task` is a task record inside the run's
+Execution Store, pinned by `runId` + `taskId` + CAS `version`; a `provider`
+reference carries its `idempotencyKey`. Record references, not prose claims
+that work was completed.
 
 ```yaml
 status: completed
@@ -18,7 +21,7 @@ edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 inputs:
-  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:input }
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
   - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
 proof: { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
@@ -30,7 +33,7 @@ edgeId: implementation-to-design
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 inputs:
-  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:before }
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
   - { kind: durable-document, path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, revision: sha256:changed }
 retry:
@@ -44,7 +47,7 @@ edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 inputs:
-  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:input }
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
   - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:checkpoint }
 reason: authority-required
@@ -219,7 +222,7 @@ This contract renders existing semantics; it does not add workflow states.
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate passes | recoverable document gap | `input-required` for an unresolved user-only requirement |
 | `design-doc` | design is approved | — | `approval-required` for its designated reviewer; `input-required` for an upstream user decision |
-| `planning-flow` | approved/active plan plus linked test-spec/task evidence (or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior) | changed canonical plan/test-spec/task repair evidence | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
+| `planning-flow` | approved/active plan plus linked test-spec/task evidence (or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior) | changed plan/test-spec/task repair evidence — under Document Registry 3 these are execution-bound, not canonical durable documents | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
 | `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `commit-required` when its slice produced changes it cannot commit within granted authority; `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
 | `doc-status` | documents are Completable | Returned with declared repair evidence | `unrecoverable-blocker` when Returned has no safe repair |
 
@@ -245,7 +248,8 @@ complete `GraphRoute` objects.
 
 ## Resume and duplicate effects
 
-Re-project canonical Markdown before comparing a saved receipt. A pending
+Re-project state — canonical Markdown and the run's Execution Store
+records — before comparing a saved receipt. A pending
 `completed` stage is reused only when a recorded Effect Receipt in the run's
 Execution Store attests the same `edgeId`, stage, effect, input binding, and
 output/proof result, the fresh route resolves the same input scope (the same

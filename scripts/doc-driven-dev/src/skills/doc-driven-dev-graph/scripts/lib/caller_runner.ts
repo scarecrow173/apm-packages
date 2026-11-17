@@ -719,8 +719,8 @@ export type CallerRunnerOptions = {
   store?: StoreRootOptions & { runId?: string };
   /** Adapter-owned authoritative input mapping, resolved to live typed refs. */
   resolveInputs: (route: GraphRoute, effect: CallerEffect) => ReferenceSpec[];
-  /** Adapter-owned canonical output path mapping (consumed by dispatchers). */
-  resolveOutputPath: (route: GraphRoute, effect: CallerEffect) => string;
+  /** Adapter-owned canonical output spec mapping (consumed by dispatchers). */
+  resolveOutputPath: (route: GraphRoute, effect: CallerEffect) => ReferenceSpec;
   /**
    * Evidence-phase hook: applies the caller's canonical mutations for the
    * edge checkpoint and returns the produced references (paths or typed
@@ -820,7 +820,7 @@ export type EdgeCheckpointData = {
   receipts: string[];
   /** The bound outputs: refreshed outcome outputs plus hook-declared refs. */
   outputs: EffectReference[];
-  /** stableRouteHash(route) — diagnostic, never a reuse gate. */
+  /** fingerprint(JSON.stringify(route)) — diagnostic, never a reuse gate. */
   routeHash: string;
 };
 
@@ -1057,7 +1057,14 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
         edgeId: route.edgeId as string,
         stage,
         effect,
-        inputs: expectedInputs,
+        // The receipt's recorded scope is replayed verbatim — byte-identity
+        // with the stored record is the whole point of adoption. Binding the
+        // freshly resolved `expectedInputs` instead would synthesize an
+        // outcome whose content-keyed receipt id does not exist in
+        // `receipts/` (checkpoint `data.receipts` would dangle) and whose
+        // input revisions a later resume cannot match in
+        // `findOutcomeReceipt` — a false `authority-required`.
+        inputs: scope.inputs,
         outputs: result.outputs,
         proof: result.proof,
       };
@@ -1242,8 +1249,12 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     const record = storeSnapshot.checkpoints.find((entry) => entry.checkpointId === checkpointId);
     if (!record || record.edgeId !== edgeId) return false;
     const data = parseCheckpointData(record.data);
-    return data !== null
-      && data.edgeId === edgeId
+    if (data === null || data.edgeId !== edgeId) return false;
+    // Every receipt id the checkpoint names must be a recorded receipt in
+    // this run — a dangling id means the checkpoint claims proof that was
+    // never persisted.
+    const receiptIds = new Set(storeSnapshot.receipts.map((entry) => entry.receiptId));
+    return data.receipts.every((receiptId) => receiptIds.has(receiptId))
       && data.outputs.every((reference) => referenceIsLive(repo, storeView(), reference));
   };
 

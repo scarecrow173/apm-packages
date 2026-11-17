@@ -143,7 +143,13 @@ stale fingerprint は再利用ではなく再投影と再取得を引き起こ�
 caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
 `build_task_graph`。migration script は `doc-maintenance` が所有）と
 named audit（`spec`、`adr`、`design`、`plan`、`task`、
-`test-spec`、`impl-record`、`experiment-log`、`all`）を `EffectOutcome` に正規化します。footer を emit できる skill は直接返します。
+`test-spec`、`impl-record`、`experiment-log`、`all`）を `EffectOutcome` に正規化します。
+Document Registry 3 では `plan`、`task`、`test-spec` の名前は拒否される scope であり、
+`audit_docs.js --type <name>` は registry ゲートで失敗します（`plan`/`task` は
+execution-bound、`test-spec` は migration 専用レガシー形式）。そのため
+Graph Definition v3 の rewire（#243）が superseded な `audits:` リストを置き換えるまで、
+adapter はこれらの completed outcome を正規化しません。
+footer を emit できる skill は直接返します。
 adapter output が missing または malformed なら `authority-required` を yield し、checkpoint
 を進めません。effect 固有の canonical input/output mapping は
 [execution-outcome-contract.ja.md](execution-outcome-contract.ja.md) に定義します。

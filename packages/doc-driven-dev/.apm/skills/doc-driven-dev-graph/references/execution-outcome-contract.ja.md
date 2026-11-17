@@ -8,9 +8,11 @@ effect はそれぞれ 1 つの `EffectOutcome` footer を返し、caller は yi
 ## EffectOutcome footer
 
 すべての footer は次の scope を持ちます。reference は型付きで live state に bind されます。
-`kind` は reference の種別を、`path`/`id` は document を特定し、`revision` はその
-canonical content fingerprint を示します。`provider` reference は `idempotencyKey` を
-持ちます。完了を prose で主張せず、reference を記録します。
+`kind` は reference の種別を示します。`durable-document` は canonical Markdown であり、
+`path` + front-matter `id` で特定し、`revision`（canonical content fingerprint）で pin
+します。`execution-task` は run の Execution Store 内の task record であり、
+`runId` + `taskId` + CAS `version` で pin します。`provider` reference は
+`idempotencyKey` を持ちます。完了を prose で主張せず、reference を記録します。
 
 ```yaml
 status: completed
@@ -18,7 +20,7 @@ edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 inputs:
-  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:input }
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
   - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
 proof: { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
@@ -30,7 +32,7 @@ edgeId: implementation-to-design
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 inputs:
-  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:before }
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
   - { kind: durable-document, path: docs/designs/graph.md, id: DESIGN-2XyZaBcDeFgHiJkLmNoPqR, revision: sha256:changed }
 retry:
@@ -44,7 +46,7 @@ edgeId: implementation-retry
 stage: delegate
 effect: { kind: delegate, id: implementation-flow }
 inputs:
-  - { kind: durable-document, path: docs/tasks/example-task.md, id: TASK-0H5nCkR2mW9xVbYqZeLp3s, revision: sha256:input }
+  - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
   - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:checkpoint }
 reason: authority-required
@@ -211,7 +213,7 @@ reference は使用前に current state と照合して resolve しなければ�
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate が通過する | recoverable document gap | unresolved user-only requirement の `input-required` |
 | `design-doc` | design が approved になる | — | designated reviewer を待つ `approval-required`、upstream user decision がない `input-required` |
-| `planning-flow` | approved/active plan と linked test-spec/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） | changed canonical plan/test-spec/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
+| `planning-flow` | approved/active plan と linked test-spec/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） | changed plan/test-spec/task repair evidence（Document Registry 3 ではこれらは execution-bound であり、canonical durable document ではありません） | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | granted authority の範囲で commit できない変更を slice が生成した場合の `commit-required`、permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `doc-status` | documents が Completable になる | declared repair evidence を伴う Returned | safe repair のない Returned の `unrecoverable-blocker` |
 
@@ -236,7 +238,8 @@ route は topology、terminal/blocked、budget evaluation に使います。rece
 
 ## Resume と duplicate effect
 
-saved receipt と比較する前に canonical Markdown を再 projection します。pending の
+saved receipt と比較する前に state — canonical Markdown と run の Execution Store
+record — を再 projection します。pending の
 `completed` stage が reuse されるのは、run の Execution Store に記録された Effect
 Receipt が同じ `edgeId`、stage、effect、input binding、output/proof result を証明し、
 fresh route が同じ input scope（同じ typed reference の multiset）を resolve し、

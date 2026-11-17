@@ -77,8 +77,9 @@ node .apm/skills/doc-driven-dev-graph/scripts/fetch_context.js \
 出力は `{ "level": "L2", "documents": [...], "findings": [...] }` で、各 document は
 `{ path, id, body }` — `body` は front matter を除く Markdown 本文です。document は
 validation を通過した ref だけについて `path` 順で出力されます。L2 は delegate の
-authoritative input に必須です — handoff の canonical reference（`path`、`id`、
-`fingerprint`）は `--fetch <path>` とその `--id`・`--fingerprint` pin に対応します。
+authoritative input に必須です — handoff の canonical reference（`kind`、`path`、
+`id`、`revision`）は `--fetch <path>` とその `--id` pin、および `revision` を
+運ぶ `--fingerprint` pin に対応します。
 
 Pin の意味論:
 

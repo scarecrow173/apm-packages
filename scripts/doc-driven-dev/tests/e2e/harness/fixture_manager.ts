@@ -177,6 +177,35 @@ function defaultDocs(options: {
   return docs;
 }
 
+/**
+ * Seed the run's Execution Store task records from the fixture's task docs.
+ * Under Registry 3 the transitional Task Graph still projects `docs/tasks`
+ * Markdown, while `execution-task` input bindings resolve against task
+ * records inside the bound run — a fresh leg seeds one v1 record per doc id.
+ */
+export function fixtureTaskSeeds(repo: string): Array<{ taskId: string; status: TaskStatus }> {
+  const dir = path.join(repo, "docs/tasks");
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .filter((file) => file.endsWith(".md") && file !== "README.md")
+    .sort()
+    .map((file) => {
+      const data = matter(fs.readFileSync(path.join(dir, file), "utf8")).data;
+      return { taskId: data.id as string, status: (data.status ?? "todo") as TaskStatus };
+    });
+}
+
+export const VERIFICATION_DOC = "docs/verification/0001-graph.md";
+export const VERIFICATION_DOC_SPEC: DocSpec = {
+  // Registry 3 durable successor to legacy test-spec verification intent —
+  // the `test-spec` audit's refused scope binds this document instead.
+  frontmatter: {
+    id: "VD-0001", type: "verification", status: "approved", title: "Graph",
+    relations: { verifies: ["SPEC-0001"] },
+  },
+  body: "# Graph\n",
+};
+
 export function createFixtureRepo(options: {
   /**
    * Applied over the default doc set: `DocSpec` writes an artifact with
@@ -188,6 +217,12 @@ export function createFixtureRepo(options: {
   taskStatuses?: TaskStatus[];
   dependsOn?: string[][];
   secondPlan?: boolean;
+  /**
+   * Write the Registry 3 verification document the `test-spec` audit's
+   * refused scope binds. Off by default: corpus consumers (lifecycle stats)
+   * pin fixtures that predate the verification type.
+   */
+  verificationDoc?: boolean;
   /** Default true: canonical dirs + README indexes. */
   scaffoldDirs?: boolean;
 } = {}): string {
@@ -204,6 +239,7 @@ export function createFixtureRepo(options: {
     }, "# Experiment Logs\n");
   }
   const docs: Record<string, DocSpec | string> = defaultDocs(options);
+  if (options.verificationDoc) docs[VERIFICATION_DOC] = VERIFICATION_DOC_SPEC;
   for (const [rel, spec] of Object.entries(options.files ?? {})) {
     if (spec === null) delete docs[rel];
     else docs[rel] = spec;

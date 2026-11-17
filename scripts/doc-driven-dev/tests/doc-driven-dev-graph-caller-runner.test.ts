@@ -9,13 +9,14 @@ import test from "node:test";
 import {
   assertEffectOutcome, canonicalReference, captureBaseline,
   commitGatePasses, isReusableCompletedOutcome, outcomeReceiptId,
-  OutcomeRejection, runCaller,
+  OutcomeRejection, resolveReference, resolveReferenceSpecs, runCaller,
   type CallerEffect, type CompletedEffectOutcome,
-  type DurableDocumentReference, type EffectDispatcher, type EffectReference,
+  type DurableDocumentReference, type EffectDispatcher, type EffectProof,
+  type EffectReference, type ReferenceSpec,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import {
   createRun, loadRun, recordCheckpoint, recordReceipt, StoreError,
-  type RunSnapshot,
+  type RunSnapshot, type TaskStatus,
 } from "../src/skills/lib/execution_store";
 import type { GraphRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 import {
@@ -75,6 +76,30 @@ function recordOutcomeReceipt(dir: string, runId: string, outcome: CompletedEffe
 function storeView(dir: string, runId = "unit-run") {
   const snapshot = loadRun(dir, runId);
   return { runId: snapshot.runId, tasks: snapshot.tasks, receipts: snapshot.receipts };
+}
+
+const RUN_ID = "fixture-run";
+/**
+ * Seed the run's Execution Store task records from the fixture's task docs:
+ * under Registry 3, `execution-task` input specs resolve against task
+ * records inside the bound run — never `docs/tasks` durable paths.
+ */
+function seedRun(dir: string, runId = RUN_ID): void {
+  const taskDir = path.join(dir, "docs/tasks");
+  const tasks = fs.existsSync(taskDir)
+    ? fs.readdirSync(taskDir)
+        .filter((file) => file.endsWith(".md") && file !== "README.md")
+        .sort()
+        .map((file) => {
+          const data = matter(fs.readFileSync(path.join(taskDir, file), "utf8")).data;
+          return { taskId: data.id as string, status: (data.status ?? "todo") as TaskStatus };
+        })
+    : [];
+  try {
+    createRun(dir, { runId, tasks });
+  } catch (error) {
+    if (!(error instanceof StoreError && error.code === "run-exists")) throw error;
+  }
 }
 
 test("recordReceipt persists an accepted outcome; identical re-record is a no-op, same-id conflicts", () => {
@@ -221,6 +246,10 @@ const canonicalDirs = [
   "docs/knowledge",
   "docs/verification",
 ];
+// The `test-spec` audit's Document Registry 3 successor scope — `test-spec`
+// itself is legacy migration-only; verification intent is durable.
+const VERIFICATION_DOC = "docs/verification/0001-graph.md";
+const PROOF_TASK_ID = "TASK-0001";
 const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
@@ -229,6 +258,7 @@ const canonicalDocumentPaths = [
   "docs/test-specs/0001-graph.md",
   PROOF,
   "docs/impl/ir/0001-task.md",
+  VERIFICATION_DOC,
 ];
 
 function writeArtifact(dir: string, relativePath: string, data: Record<string, unknown>, body: string): void {
@@ -299,6 +329,10 @@ function happyRepo(): string {
   writeArtifact(dir, "docs/impl/ir/0001-task.md", {
     id: "IMPL-0001", type: "implementation-record", status: "complete", title: "Graph implementation",
   }, "# Implementation Record\n");
+  writeArtifact(dir, VERIFICATION_DOC, {
+    id: "VD-0001", type: "verification", status: "approved", title: "Graph",
+    relations: { verifies: ["SPEC-0001"] },
+  }, "# Graph\n");
   writeArtifact(dir, PROOF, {
     id: "TASK-0001", type: "task", status: "todo", title: "TASK-0001",
     relations: { implements: ["docs/plans/0001-graph.md"] },
@@ -307,27 +341,31 @@ function happyRepo(): string {
   return dir;
 }
 
-function taskGraphPaths(route: GraphRoute): string[] {
-  return route.taskGraph?.nodes.map((node) => node.path) ?? [PROOF];
+/**
+ * Execution-bound task scope: the run's task records keyed by the projected
+ * Task Graph node ids. `plan` and `task` audit names refuse at the Registry 3
+ * gate (`audit_docs.js --type <name>`), but the declared graph still lists
+ * them — the scripted adapter audits the state directly and binds the task
+ * records as `execution-task` refs, never `docs/tasks` durable documents.
+ * The projected plan likewise has no durable form; its realized scope is the
+ * same task record set. Falls back to the primary task id when the route
+ * carries no Task Graph projection.
+ */
+function taskRefSpecs(route: GraphRoute): ReferenceSpec[] {
+  const nodes = route.taskGraph?.nodes;
+  if (!nodes || nodes.length === 0) return [{ kind: "execution-task", taskId: PROOF_TASK_ID }];
+  return nodes.map((node): ReferenceSpec => ({ kind: "execution-task", taskId: node.id }));
 }
 
-function selectedTaskGraphPlanPath(route: GraphRoute): string {
-  const plan = route.taskGraph?.plan;
-  if (typeof plan !== "string" || plan.length === 0) {
-    throw new Error("Missing selected Task Graph plan for build_task_graph");
-  }
-  return plan;
-}
-
-function testResolveInputs(route: GraphRoute, effect: CallerEffect): string[] {
+function testResolveInputs(route: GraphRoute, effect: CallerEffect): ReferenceSpec[] {
   if (effect.kind === "audit") {
     switch (effect.id) {
       case "spec": return ["docs/specs/0001-graph.md"];
       case "adr": return ["docs/adr/0001-graph.md"];
       case "design": return ["docs/designs/0001-graph.md"];
-      case "plan": return ["docs/plans/0001-graph.md"];
-      case "task": return taskGraphPaths(route);
-      case "test-spec": return ["docs/test-specs/0001-graph.md"];
+      case "plan": return taskRefSpecs(route);
+      case "task": return taskRefSpecs(route);
+      case "test-spec": return [VERIFICATION_DOC];
       case "impl-record": return ["docs/impl/ir/0001-task.md"];
       case "experiment-log": return ["docs/impl/exp/README.md"];
       case "all": return canonicalDocumentPaths;
@@ -336,49 +374,70 @@ function testResolveInputs(route: GraphRoute, effect: CallerEffect): string[] {
   switch (effect.id) {
     case "migrate_docs": return canonicalDocumentPaths;
     case "scaffold_docs": return ["."];
-    case "build_task_graph": return [selectedTaskGraphPlanPath(route), ...taskGraphPaths(route)];
+    case "build_task_graph": {
+      // The delegate projects the selected Task Graph — its inputs are the
+      // run's task records, and a route without a projection cannot supply
+      // them. The pre-v3 plan path is intentionally not bound: the plan is
+      // run state (manifest planDigest), not a durable document.
+      if (!route.taskGraph || route.taskGraph.nodes.length === 0) {
+        throw new Error("Missing selected Task Graph for build_task_graph");
+      }
+      return taskRefSpecs(route);
+    }
     case "briefing-flow": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "planning-flow": return ["docs/designs/0001-graph.md"];
-    case "implementation-flow": return [...taskGraphPaths(route), "docs/designs/0001-graph.md", "docs/plans/0001-graph.md"];
+    case "implementation-flow": return [...taskRefSpecs(route), "docs/designs/0001-graph.md"];
     case "doc-status": return canonicalDocumentPaths;
     default: throw new Error(`No authoritative-input mapping for ${effect.kind}:${effect.id}`);
   }
 }
 
-function testResolveEvidence(route: GraphRoute, effect: CallerEffect): string {
+function testResolveEvidence(route: GraphRoute, effect: CallerEffect): ReferenceSpec {
   if (effect.kind === "audit") return testResolveInputs(route, effect)[0];
   switch (effect.id) {
     case "design-doc": return "docs/designs/0001-graph.md";
-    case "planning-flow": return "docs/plans/0001-graph.md";
+    // Registry 3 durable work product: the verification-intent document —
+    // the pre-v3 plan/test-spec outputs are execution-bound, never proof.
+    case "planning-flow": return VERIFICATION_DOC;
     case "implementation-flow": return "docs/impl/ir/0001-task.md";
     case "doc-status": return "docs/impl/ir/0001-task.md";
     default: return testResolveInputs(route, effect)[0];
   }
 }
 
-function testInputs(dir: string, route: GraphRoute, effect: CallerEffect): EffectReference[] {
-  const paths = testResolveInputs(route, effect);
-  return [...new Set(paths)].sort().map((relativePath) => canonicalReference(dir, relativePath) as EffectReference);
+function testInputs(dir: string, runId: string, route: GraphRoute, effect: CallerEffect): EffectReference[] {
+  return resolveReferenceSpecs(dir, storeView(dir, runId), testResolveInputs(route, effect));
 }
 
-function completed(dir: string, route: GraphRoute, stage: "audit" | "delegate", effect: CallerEffect): CompletedEffectOutcome {
-  const output = canonicalReference(dir, testResolveEvidence(route, effect));
+function testOutput(dir: string, runId: string, route: GraphRoute, effect: CallerEffect): EffectReference {
+  const reference = resolveReference(dir, storeView(dir, runId), testResolveEvidence(route, effect));
+  if (reference === null) {
+    throw new Error(`output spec does not resolve current state: ${effect.kind}:${effect.id}`);
+  }
+  return reference;
+}
+
+function completed(dir: string, runId: string, route: GraphRoute, stage: "audit" | "delegate", effect: CallerEffect): CompletedEffectOutcome {
+  const output = testOutput(dir, runId, route, effect);
   const outputs: EffectReference[] = effect.id === "planning-flow"
-    ? [
-        output,
-        canonicalReference(dir, "docs/test-specs/0001-graph.md"),
-        ...taskGraphPaths(route).map((relativePath) => canonicalReference(dir, relativePath)),
-      ]
+    // Registry 3 work product: the durable verification-intent document plus
+    // the run's task records — never the pre-v3 plan/test-spec durable docs.
+    ? resolveReferenceSpecs(dir, storeView(dir, runId), [VERIFICATION_DOC, ...taskRefSpecs(route)])
     : [output];
+  const proof: EffectProof = output.kind === "execution-task"
+    // An execution-task ref can never be a proof; the store attests the
+    // task-bound work through a provider-scoped idempotency key instead.
+    ? { kind: "provider", provider: "execution-store", idempotencyKey: `${output.runId}:${output.taskId}@${output.version}` }
+    : output;
   return {
     status: "completed",
     edgeId: route.edgeId as string,
     stage,
     effect,
-    inputs: testInputs(dir, route, effect),
+    inputs: testInputs(dir, runId, route, effect),
     outputs,
-    proof: output,
+    proof,
   };
 }
 
@@ -388,9 +447,10 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
   const cli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
   const trace = path.join(dir, "trace.jsonl");
   const dispatcher: EffectDispatcher = (ctx) => ({
-    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
   });
+  seedRun(dir);
   const result = runCaller({
     repo: dir, router: { executable: process.execPath, prefixArgs: [tsx, cli] },
     focus: ["PLAN-0001"],
@@ -398,6 +458,7 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
     // mutable signal callbacks; the runner contract declares them up front.
     signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
     dispatcher,
+    store: { runId: RUN_ID },
     resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
     // The evidence phase performs the edge's canonical mutations first (the
     // oracle's evidence(edgeId, mutate) pattern): implementation work completes
@@ -443,7 +504,7 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
   const cli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
   const trace = path.join(dir, "trace.jsonl");
   const dispatcher: EffectDispatcher = (ctx) => ({
-    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
   });
   const hostCapabilities: ReadonlySet<DelegateMode> = new Set<DelegateMode>([
@@ -464,11 +525,13 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
       ? { override: { mode: "isolated-subagent" as const, reason: "eval-fixture" } }
       : {}),
   });
+  seedRun(dir);
   const result = runCaller({
     repo: dir, router: { executable: process.execPath, prefixArgs: [tsx, cli] },
     focus: ["PLAN-0001"],
     signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
     dispatcher,
+    store: { runId: RUN_ID },
     resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
     applyCheckpointEvidence: (repoDir, _signals, edgeId) => {
       if (edgeId === "task-graph-to-implementation") {
@@ -511,11 +574,13 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
 function runnerArgs(dir: string, dispatcher: EffectDispatcher, trace: string) {
   const tsx = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
   const cli = path.resolve(__dirname, "../src/skills/doc-driven-dev-graph/scripts/route_graph.ts");
+  seedRun(dir);
   return {
     repo: dir,
     router: { executable: process.execPath, prefixArgs: [tsx, cli] },
     signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
     dispatcher,
+    store: { runId: RUN_ID },
     resolveInputs: testResolveInputs,
     resolveOutputPath: testResolveEvidence,
     applyCheckpointEvidence: (repoDir: string, _signals: ReadonlySet<string>, edgeId: string) => {
@@ -535,7 +600,7 @@ test("a self-observation reporting a different actual mode rejects the dispatch"
   // The first spec audit reports it ran same-context while the declared
   // requested mode is "tool" — a silent switch, rejected like any violation.
   const dispatcher: EffectDispatcher = (ctx) => ({
-    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: "same-context", method: "inline-skill" }],
   });
   const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "tool", focus: ["PLAN-0001"] });
@@ -562,7 +627,7 @@ test("a declined dispatch yields honestly; an executing dispatch may not claim n
           edgeId: ctx.route.edgeId as string,
           stage: "audit",
           effect: ctx.effect,
-          inputs: testInputs(dir, ctx.route, ctx.effect),
+          inputs: testInputs(dir, ctx.runId, ctx.route, ctx.effect),
           outputs: [ref(dir, "docs/specs/0001-graph.md")],
           reason: "authority-required",
         },
@@ -570,7 +635,7 @@ test("a declined dispatch yields honestly; an executing dispatch may not claim n
       };
     }
     return {
-      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
       observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
     };
   };
@@ -600,7 +665,7 @@ test("a dispatcher reporting no self-observation is rejected", () => {
   const dir = happyRepo();
   const trace = path.join(dir, "trace.jsonl");
   const dispatcher: EffectDispatcher = (ctx) => ({
-    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: "some-other-dispatch", requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
   });
   const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), focus: ["PLAN-0001"] });
@@ -614,7 +679,7 @@ test("a delegated policy decision attaches a handoff carrying the requested mode
   const dispatcher: EffectDispatcher = (ctx) => {
     seen.push(ctx.handoff?.executionMode);
     return {
-      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
       observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
     };
   };
@@ -646,7 +711,7 @@ test("a self-observation echoing a different requested mode rejects the dispatch
   // the wrong request in `requested` — a self-report that misattributes the
   // request is rejected exactly like a mismatched actual.
   const dispatcher: EffectDispatcher = (ctx) => ({
-    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: ctx.effect.id, requested: "same-context", actual: "tool", method: "scripted" }],
   });
   const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "tool", focus: ["PLAN-0001"] });
@@ -661,7 +726,7 @@ test("a handoff whose executionMode mismatches the request rejects the dispatch"
   const dir = happyRepo();
   const trace = path.join(dir, "trace.jsonl");
   const dispatcher: EffectDispatcher = (ctx) => ({
-    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
   });
   const policy = (_route: GraphRoute, effect: CallerEffect): PolicyFacts => ({
@@ -689,7 +754,7 @@ test("a delegated decision producing no handoff rejects the dispatch", () => {
   const dir = happyRepo();
   const trace = path.join(dir, "trace.jsonl");
   const dispatcher: EffectDispatcher = (ctx) => ({
-    outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+    outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
   });
   const policy = (_route: GraphRoute, effect: CallerEffect): PolicyFacts => ({
@@ -717,7 +782,7 @@ test("malformed observation entries reject like a malformed outcome — no trace
     const dir = happyRepo();
     const trace = path.join(dir, "trace.jsonl");
     const dispatcher: EffectDispatcher = (ctx) => ({
-      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
       observations: [
         { target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" },
         bad,
@@ -753,7 +818,7 @@ function distinctRetryDispatcher(dir: string): EffectDispatcher {
     if (ctx.effect.kind === "audit" && ctx.effect.id === "design") {
       // Snapshot authoritative inputs before mutating — the runner resolved
       // the same live refs when it dispatched.
-      const inputs = testInputs(dir, ctx.route, ctx.effect);
+      const inputs = testInputs(dir, ctx.runId, ctx.route, ctx.effect);
       attempt += 1;
       updateArtifact(dir, "docs/designs/0001-graph.md", { title: `Graph retry ${attempt}` });
       const output = ref(dir, "docs/designs/0001-graph.md");
@@ -771,7 +836,7 @@ function distinctRetryDispatcher(dir: string): EffectDispatcher {
       };
     }
     return {
-      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
       observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
     };
   };
@@ -828,7 +893,7 @@ function alternatingEdgeRetryDispatcher(dir: string): EffectDispatcher {
   let attempt = 0;
   return (ctx) => {
     if (ctx.effect.kind === "audit" && ctx.effect.id === "design") {
-      const inputs = testInputs(dir, ctx.route, ctx.effect);
+      const inputs = testInputs(dir, ctx.runId, ctx.route, ctx.effect);
       attempt += 1;
       // Flip the design gate pass/fail so routing alternates edges, and
       // change the title so every retry payload is byte-distinct.
@@ -851,7 +916,7 @@ function alternatingEdgeRetryDispatcher(dir: string): EffectDispatcher {
       };
     }
     return {
-      outcome: completed(dir, ctx.route, ctx.effect.kind, ctx.effect),
+      outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
       observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
     };
   };
@@ -895,7 +960,7 @@ test("the pending-edge dispatch count survives a mid-edge yield and resume", () 
   const yieldAfter: EffectDispatcher = (ctx) => {
     calls += 1;
     if (calls === 2) {
-      const inputs = testInputs(dir, ctx.route, ctx.effect);
+      const inputs = testInputs(dir, ctx.runId, ctx.route, ctx.effect);
       return {
         outcome: {
           status: "yield",
@@ -935,7 +1000,7 @@ test("a handoff written before the run-level bound seeds totalDispatches from ou
   const yieldAfter: EffectDispatcher = (ctx) => {
     calls += 1;
     if (calls === 2) {
-      const inputs = testInputs(dir, ctx.route, ctx.effect);
+      const inputs = testInputs(dir, ctx.runId, ctx.route, ctx.effect);
       return {
         outcome: {
           status: "yield",

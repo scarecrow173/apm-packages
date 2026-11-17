@@ -17,7 +17,8 @@ import { summarizeBaseline } from "../../../src/skills/doc-driven-dev-graph/scri
 import { readTraceFile, summarizeTrace } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 import type { E2ECase } from "./case_types";
 import { checkExpectations, partitionByLegs, validateCase, type CaseRun } from "./case_validator";
-import { commitAll, createFixtureRepo } from "./fixture_manager";
+import { commitAll, createFixtureRepo, fixtureTaskSeeds } from "./fixture_manager";
+import { createRun, StoreError } from "../../../src/skills/lib/execution_store";
 import { reportCase, type CaseReport } from "./reporter";
 import {
   applyMutator,
@@ -31,7 +32,9 @@ const ROUTER_CLI = path.resolve(__dirname, "../../../src/skills/doc-driven-dev-g
 
 export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } {
   const started = Date.now();
-  const repo = createFixtureRepo(e2eCase.fixture ?? {});
+  // Graph-run fixtures always carry the Registry 3 verification document —
+  // the `test-spec` audit's refused scope binds it on every task-graph edge.
+  const repo = createFixtureRepo({ verificationDoc: true, ...(e2eCase.fixture ?? {}) });
   const graphPath = e2eCase.graph
     ? path.resolve(repo, e2eCase.graph)
     : resolveGraphPath(undefined, repo);
@@ -74,6 +77,16 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
     // leg binds a fresh run id so store state never crosses runs.
     const fresh = index === 0 || options.resume === false;
     const store = fresh ? { runId: index === 0 ? runId : `${runId}-leg${index + 1}` } : undefined;
+    // A fresh leg binds a fresh run — seed its task records from the fixture's
+    // task docs so the execution-task input specs resolve (Registry 3 binds
+    // task state in the run, not docs/tasks durable paths).
+    if (store) {
+      try {
+        createRun(repo, { runId: store.runId, tasks: fixtureTaskSeeds(repo) });
+      } catch (error) {
+        if (!(error instanceof StoreError && error.code === "run-exists")) throw error;
+      }
+    }
     const result = runCaller({
       repo,
       router: { executable: process.execPath, prefixArgs: [TSX_CLI, ROUTER_CLI] },
