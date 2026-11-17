@@ -27,10 +27,24 @@ Then run `apm install`. The skill is located at `.apm/skills/japanese-tech-writi
 
 - Original author: [k16shikano](https://gist.github.com/k16shikano)
 - Upstream source: [japanese-tech-writing / SKILL.md](https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d)
-- Imported Gist revision: `8f2d57610a73efc97d743c9b0b0ecb1002e09fa4`
+- Imported Gist revision: recorded in [`upstream.json`](./upstream.json)
 - Upstream license: [Unlicense](https://gist.github.com/k16shikano/67625f2a7d96e3bbdfae8d571a936063)
 
-The upstream skill is bundled for offline use after installation. The source rules are retained, while frontmatter and Markdown formatting are adapted for APM. Updates to the Gist are not automatically synchronized; verify a revision and review its diff before updating this copy.
+## Automatic Gist synchronization
+
+The [GitHub Actions workflow](../../.github/workflows/japanese-tech-writing-upstream.yml) checks the latest Gist commit daily at 03:17 UTC (and supports manual `workflow_dispatch`). When the Gist changes, it runs offline sync tests and APM validation, then commits the updated Skill and lockfile directly to `main` without requiring a PR. No commit is created if all files match.
+
+Only the upstream `SKILL.md` is imported. Its body is preserved and the frontmatter `license` is normalized to `Unlicense`. `upstream.json` records the Gist commit. If the upstream name, license or frontmatter format changes unexpectedly, or validation fails, the workflow fails without publishing changes.
+
+This intentionally trusts upstream-authored agent instructions for automatic publication. Consumers receive updates on their next `apm install` / explicit upgrade; existing local installations are not overwritten immediately.
+
+## Local sync tests
+
+From the repository root:
+
+```bash
+python3 -m unittest discover -s scripts/japanese-tech-writing -p "test_*.py" -v
+```
 
 ## Validation
 
