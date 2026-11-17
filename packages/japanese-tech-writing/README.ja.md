@@ -1,8 +1,8 @@
 # japanese-tech-writing
 
-日本語の技術書、技術記事、解説文などの執筆・推敲に利用する Agent Skill `japanese-tech-writing` を配布する APM パッケージです。
+日本語の技術書・記事・解説文の執筆や推敲に使う [k16shikano 氏の Japanese Tech Writing Skill](https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d) を、APM の Git 依存として導入する aggregator パッケージです。
 
-段落と論証の構成、論理の厳密さ、読み手の負荷、視点と語り、演出の抑制、LLM 特有の空疎な表現、翻訳調の比喩、冗長さを点検する文章規範を含みます。独立した Skill であり、`doc-driven-dev` への依存はありません。
+Skill 本体はこのリポジトリにコピーしません。正本は Gist の `SKILL.md` です。`doc-driven-dev` への依存はありません。
 
 ## インストール
 
@@ -13,7 +13,7 @@ apm marketplace add scarecrow173/apm-packages
 apm install japanese-tech-writing@apm-packages
 ```
 
-または、利用するプロジェクトの `apm.yml` で直接指定:
+または、利用するプロジェクトの `apm.yml` に直接指定:
 
 ```yaml
 dependencies:
@@ -21,47 +21,35 @@ dependencies:
     - scarecrow173/apm-packages/packages/japanese-tech-writing#main
 ```
 
-登録後は `apm install` を実行してください。Skill は `.apm/skills/japanese-tech-writing/SKILL.md` に収録しています。
+登録後は `apm install` を実行します。APM は Gist に含まれる Skill を対象ランタイムの Skill ディレクトリ（例: `.agents/skills/japanese-tech-writing/`）に展開します。
 
-## 出典・ライセンス
+## 依存関係と更新
+
+このパッケージの `apm.yml` には、次の Git URL 依存を宣言しています。
+
+```yaml
+dependencies:
+  apm:
+    - git: https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d.git
+```
+
+APM のロックファイルは解決したコミットを固定します。**Gist の変更は再インストールだけでは必ずしも取り込まれません。** 最新の参照を取り込む際は、利用側プロジェクトで次を実行します。
+
+```bash
+apm update
+```
+
+CI など非対話環境では `apm update --yes` を使えます。定期的に更新したいプロジェクトは自身の CI で実行してください。このパッケージ独自の Gist 複製・同期ジョブはありません。
+
+## 出典とライセンス
 
 - 原著者: [k16shikano](https://gist.github.com/k16shikano)
-- 原本: [japanese-tech-writing / SKILL.md](https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d)
-- 取り込み済み Gist revision: [`upstream.json`](./upstream.json) に記録
-- 原本のライセンス: [Unlicense](https://gist.github.com/k16shikano/67625f2a7d96e3bbdfae8d571a936063)
+- 正本: [Gist / japanese-tech-writing](https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d)
+- 上流 Skill のライセンス: [Unlicense](https://gist.github.com/k16shikano/67625f2a7d96e3bbdfae8d571a936063)
+- この aggregator のマニフェスト: MIT
 
-## Gist の自動同期
-
-原本の Skill を配布リポジトリに同梱しています。GitHub Actions の [自動同期ワークフロー](../../.github/workflows/japanese-tech-writing-upstream.yml) が毎日 03:17 UTC に Gist の最新コミットを確認し、更新があればテストと APM 検証を通して `main` に直接コミットします。Actions の `workflow_dispatch` から手動実行も可能です。変更がなければコミットは作成しません。
-
-同期対象は Gist の `SKILL.md` のみです。本文は維持し、frontmatter の `license` を `Unlicense` に正規化します。`upstream.json` に取り込んだ Gist のコミット ID を記録し、ルートの `apm.lock.yaml` のハッシュも更新します。名前・ライセンス・frontmatter の構造が予期せず変わった場合、または検証に失敗した場合は自動反映せず Actions を失敗させます。
-
-これは上流の文章規範を信頼して自動配布する設定です。更新した内容は利用側で `apm update japanese-tech-writing`（または `apm update`）を実行すると取得できます。通常の `apm install` はロック済みのコミットを再利用する場合があるため、既存のインストール先が即時に書き換わるわけではありません。
-
-## ローカル検証
-
-リポジトリルートで:
-
-```bash
-python3 -m unittest discover -s scripts/japanese-tech-writing -p "test_*.py" -v
-```
-
-同期待ちの Gist を手動取得する場合:
-
-```bash
-git clone --depth=1 https://gist.github.com/fd287c3133457c4fd8f5601d34aa817d.git /tmp/japanese-tech-writing-gist
-python3 scripts/japanese-tech-writing/sync.py \
-  --source /tmp/japanese-tech-writing-gist/SKILL.md \
-  --revision "$(git -C /tmp/japanese-tech-writing-gist rev-parse HEAD)"
-```
+上流 Skill はインストール時に直接取得されます。更新履歴と内容は Gist 側を参照してください。
 
 ## 検証
 
-パッケージのディレクトリで:
-
-```bash
-# 任意の一時ディレクトリを利用して Skill の配布先を確認
-mise exec -- apm install ./packages/japanese-tech-writing --target agent-skills
-```
-
-`apm compile` は instruction 用であり、Skills 専用パッケージの検証には使いません。PR では一時コンシューマーへの `apm install` と配布済み `SKILL.md` の原本一致を確認します。
+[PR 検証ワークフロー](../../.github/workflows/japanese-tech-writing-validate.yml) は、隔離したコンシューマーからローカル aggregator を APM 0.33.0 でインストールし、Gist の Skill が展開されることを確認します。
