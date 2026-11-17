@@ -85,8 +85,11 @@ export async function checkGenerated(
   repoRoot: string,
   opts: { preCommit?: boolean } = {},
 ): Promise<void> {
+  // An explicit option wins over the env var: apply-update's env reaches
+  // every spawned child (verify's tests included), so a caller that means
+  // the default post-commit semantics must be able to force them off.
   const preCommit =
-    opts.preCommit === true ||
+    opts.preCommit ??
     process.env.PSTACK_DEVIN_CHECK_PRECOMMIT === "1";
   const cfg = loadBuildConfig(repoRoot);
   const pkg = cfg.packageDir;

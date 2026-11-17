@@ -105,8 +105,15 @@ async function preCommitFixture(): Promise<{ root: string; pkg: string }> {
 
 test("checkGenerated preCommit mode skips only the vs-HEAD gate", async () => {
   const { root, pkg } = await preCommitFixture();
-  // Default mode: the staged tree differs from HEAD — out of sync.
-  await assert.rejects(checkGenerated(root), /out of sync/);
+  // Default mode: the staged tree differs from HEAD — out of sync. The
+  // explicit `false` forces post-commit semantics even when the ambient
+  // env carries the pipeline's PSTACK_DEVIN_CHECK_PRECOMMIT (this test
+  // process inherits it when run inside `pnpm run verify` under
+  // apply-update).
+  await assert.rejects(
+    checkGenerated(root, { preCommit: false }),
+    /out of sync/,
+  );
   // Pre-commit mode: same staged tree passes — the vs-HEAD gate is the
   // only part skipped.
   await checkGenerated(root, { preCommit: true });

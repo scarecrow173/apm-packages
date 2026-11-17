@@ -81,9 +81,24 @@ test("lockfile attests the same commit as upstream.yml", () => {
       entry.content_hash.startsWith("sha256:"),
     "lockfile must attest content_hash",
   );
+  // `apm install` records deployments of this package's own `.apm`
+  // primitive into `.claude/` and `.agents/` (gitignored side-effects) —
+  // legitimate local bookkeeping. What the contract forbids is a
+  // deployment of the UPSTREAM tree: any path outside the local skill's
+  // deployment roots means upstream content shipped as installed files
+  // rather than the built devin-plugin tree.
+  const deployments = (lock.deployments ?? []) as Array<{
+    value?: unknown;
+  }>;
+  const foreign = deployments.filter(
+    (d) =>
+      typeof d.value !== "string" ||
+      !/^\.(claude|agents)\/skills\/setup-pstack-devin(?:\/|$)/.test(d.value),
+  );
   assert.deepEqual(
-    lock.deployments ?? [],
+    foreign,
     [],
-    "APM attests no per-file deployments; the tree must be built, not installed",
+    "lockfile deployments must cover only the local .apm skill — " +
+      "the upstream tree is built, not installed",
   );
 });
