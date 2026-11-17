@@ -1,8 +1,8 @@
 name: japanese-tech-writing
 version: 0.1.0
-description: Japanese technical writing and editing standards from k16shikano's japanese-tech-writing Agent Skill.
-author: k16shikano
-license: Unlicense
+description: Japanese technical writing standards provided by k16shikano's Gist.
+author: Akiyoshi Koyama
+license: MIT
 targets:
   - codex
   - copilot
@@ -10,6 +10,6 @@ targets:
   - claude
   - windsurf
   - agent-skills
-type: skill
-includes:
-  - .apm/
+dependencies:
+  apm:
+    - git: https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d.git
