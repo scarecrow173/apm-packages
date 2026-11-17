@@ -449,6 +449,53 @@ test("keeps an existing focused design chain and selects its plan only through l
   assert.equal(state.signals.includes("followups-unclassified"), true);
 });
 
+test("two active runs bound to the focused chain block implicit selection as ambiguous", () => {
+  const repo = fixtureRepo();
+  // The stock task docs carry a deliberately broken relates-to that
+  // hard-blocks routing on its own; removing them keeps the ambiguous-run
+  // blocker the only thing stopping the task-graph node's dispatch.
+  removeArtifacts(repo, ["docs/tasks/0001-route.md", "docs/tasks/0002-prepare.md"]);
+  withRun(repo);
+  createRun(repo, {
+    runId: "RUN-0002",
+    graphId: "doc-driven-dev",
+    focus: ["docs/designs/0001-graph.md"],
+    plan: "# Plan\n\nA second run competing for the same chain.\n",
+    tasks: [{ taskId: "TASK-0001", status: "todo" }],
+  });
+  approvePlan(repo, "RUN-0002", { actor: "graph-state" });
+  const state = projectGraphState({ cwd: repo, focus: ["DESIGN-0001"] });
+  assert.ok(state.blockers.includes("task-graph-run-ambiguous"));
+  assert.equal(state.taskGraph, null);
+  assert.equal(state.run, null);
+  // A null taskGraph satisfies no task-graph predicate, so the router
+  // stays blocked at the task-graph node — no delegate is dispatched.
+  const route = routeGraph({
+    current: "task-graph",
+    definition: loadGraphDefinition(path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml")),
+    state,
+  });
+  assert.equal(route.status, "blocked");
+  assert.equal(route.delegate, null);
+  assert.ok(route.blockers.includes("task-graph-run-ambiguous"));
+});
+
+test("a corrupt run dir blocks implicit selection as unreadable", () => {
+  const repo = fixtureRepo();
+  withRun(repo);
+  // A torn manifest leaves the listing `corrupt` — an unknown candidate
+  // the selection can never silently skip.
+  fs.writeFileSync(
+    path.join(repo, ".apm/state/doc-driven-dev/runs", RUN_ID, "manifest.json"),
+    '{"runId":',
+    "utf8",
+  );
+  const state = projectGraphState({ cwd: repo, focus: ["DESIGN-0001"] });
+  assert.ok(state.blockers.includes("task-graph-run-unreadable"));
+  assert.equal(state.taskGraph, null);
+  assert.equal(state.run, null);
+});
+
 test("contextual lineage-looking aliases cannot supply a plan or chain", () => {
   const repo = fixtureRepo();
   writeArtifact(repo, "docs/designs/0001-graph.md", {

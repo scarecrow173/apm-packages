@@ -26,8 +26,10 @@ run が見つからない、または壊れている場合は store の fail-clo
 `route_graph.js`、`inspect_graph.js`、`check_parallel.js` にも適用され、
 すべての store アクセスは各 CLI ではなく共有 boundary で root を一度だけ
 validate します。`--run` がない場合、Graph State は graph に bind された
-active run がちょうど 1 つのときだけ暗黙に選択します — 候補が 0 または
-複数の場合は fail closed します。
+active run がちょうど 1 つのときだけ暗黙に選択します — 候補が 0 なら
+`taskGraph` は null のままです（planning がまだ run を materialize して
+いない状態で、blocker は出ません）。複数なら ambiguous として
+fail closed します（`task-graph-run-ambiguous`）。
 
 projection は `schemaVersion: 2`、`runId`、`plan`、`nodes`、`edges`、
 および後述の status list を持ちます。`plan` は

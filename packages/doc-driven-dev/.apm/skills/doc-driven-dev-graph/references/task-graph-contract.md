@@ -26,7 +26,9 @@ checkout. The same selectors (`--run`, `--state-root`,
 and `check_parallel.js`; every store access validates the root once at
 the shared boundary rather than in each CLI. Without `--run`, Graph State
 selects implicitly only when exactly one active run is bound to the
-graph — zero or multiple candidates fail closed.
+graph — zero candidates leave `taskGraph` null without a blocker
+(planning has not materialized a run yet), while multiple fail closed as
+ambiguous (`task-graph-run-ambiguous`).
 
 The projection carries `schemaVersion: 2`, `runId`, `plan`, `nodes`,
 `edges`, and the status lists below. `plan` is

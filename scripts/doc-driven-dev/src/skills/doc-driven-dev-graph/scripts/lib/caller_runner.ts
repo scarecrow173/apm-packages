@@ -1000,10 +1000,11 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       "--current", current,
       ...focus.flatMap((entry) => ["--focus", entry]),
       ...[...signals].flatMap((signal) => ["--signal", signal]),
-      // The caller owns the task-doc scan root: the Task Graph projection
-      // and the task-aware hop budget are anchored at docs/tasks, so the
-      // pinned flag is appended after prefixArgs and deliberately wins over
-      // any adapter-supplied --task-dir (Issue #156; see execution-contract
+      // The caller owns the corpus-scan root: pinning --task-dir docs/tasks
+      // keeps every re-projection scanning one deterministic directory for
+      // artifact-graph and focus bookkeeping, no matter what the adapter
+      // asked for. Appended after prefixArgs, it deliberately wins over any
+      // adapter-supplied --task-dir (Issue #156; see execution-contract
       // "Selected-edge protocol").
       "--task-dir", "docs/tasks",
       "--json",
