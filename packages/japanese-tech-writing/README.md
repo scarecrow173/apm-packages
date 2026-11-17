@@ -51,6 +51,8 @@ python3 -m unittest discover -s scripts/japanese-tech-writing -p "test_*.py" -v
 From the package directory:
 
 ```bash
-mise exec -- apm compile --dry-run
-mise exec -- apm compile --validate
+# Install the package in an isolated consumer and verify its deployed Skill.
+mise exec -- apm install ./packages/japanese-tech-writing --target agent-skills
 ```
+
+`apm compile` is for instructions, not skill-only packages. CI uses an isolated consumer, runs `apm install`, and checks the deployed `SKILL.md` matches the package source.
