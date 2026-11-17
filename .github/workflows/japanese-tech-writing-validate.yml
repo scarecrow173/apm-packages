@@ -1,0 +1,29 @@
+name: japanese-tech-writing validation
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/japanese-tech-writing-upstream.yml
+      - .github/workflows/japanese-tech-writing-validate.yml
+      - packages/japanese-tech-writing/**
+      - scripts/japanese-tech-writing/**
+      - apm.lock.yaml
+      - apm.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests and checked-in lock integrity
+        run: python3 -m unittest discover -s scripts/japanese-tech-writing -p "test_*.py" -v
+      - name: Install pinned APM toolchain
+        uses: jdx/mise-action@v2
+      - name: Compile package
+        working-directory: packages/japanese-tech-writing
+        run: mise exec -- apm compile --validate
