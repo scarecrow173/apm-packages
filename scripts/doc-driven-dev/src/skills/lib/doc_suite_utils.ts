@@ -5,7 +5,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
 import { generateArtifactId } from "./artifact_id";
-import { isSettledStatus } from "./doc_lifecycle";
+import { isSettledEntry } from "./doc_lifecycle";
 import {
   CANONICAL_DOC_DIRS,
   findDocumentDir,
@@ -15,20 +15,31 @@ import {
   normalizeDir,
   resolveContainedDir,
   slugify,
-  type CanonicalDocDir,
 } from "./document_utils";
 import { assertTypeScope, ownershipForDir } from "./doc_ownership";
-import { configFor, configs, docTypes } from "./doc_types";
-import type { DocConfig, DocType } from "./doc_types";
+import { configFor, configs, DEFAULT_LIFECYCLE, docTypes, LIFECYCLE_VALUES, resolveDocType } from "./doc_types";
+import type { DocConfig, DocType, LifecycleValue } from "./doc_types";
 
+// The stored relation vocabulary the front-matter writer knows: the
+// Knowledge Relations v1 forward fields (the registry's declared
+// `allowedRelations` set — motivates/decides-for/realizes/informs/explains/
+// supersedes) plus the pre-v3 lineage fields still stored on Registry-2
+// documents (`implements`, `depends-on`, `verifies`, … — valid on
+// pre-migration repos, flagged as legacy markers by schema preflight under
+// a declared v3 manifest).
 const relationFields = [
   "source",
+  "motivates",
+  "decides-for",
+  "realizes",
+  "informs",
+  "explains",
+  "supersedes",
+  "superseded-by",
   "implements",
   "implemented-by",
   "depends-on",
   "blocks",
-  "supersedes",
-  "superseded-by",
   "related",
   "refines",
   "refined-by",
@@ -70,7 +81,12 @@ type CreateDocumentOptions = {
   cwd: string;
   date?: string;
   dir?: string;
+  // Type-specific top-level front-matter fields (registry `requiredFields`
+  // such as `knowledge_kind`); scalars only.
+  fields?: MetadataInput;
   forceIndex?: boolean;
+  lifecycle?: string;
+  metadata?: MetadataInput;
   name?: string;
   noIndex?: boolean;
   relations?: RelationInput;
@@ -82,6 +98,7 @@ type DocEntry = {
   created: string | null;
   file: string;
   id: string | null;
+  lifecycle: string | null;
   path: string;
   status: string | null;
   title: string;
@@ -143,30 +160,25 @@ type TargetAllocation = {
   existing: Set<string>;
 };
 
-// Per-directory index metadata for the scaffold. The Record key is the
-// canonical directory itself, so a CANONICAL_DOC_DIRS entry without
-// scaffold metadata fails to compile — the directory list is never
-// restated here (Issue #156).
-const scaffoldIndexMeta: Record<CanonicalDocDir, { title: string; type?: DocType }> = {
-  "docs/ideas": { title: "IDEA Documents", type: "idea" },
-  "docs/discovery": { title: "DISCOVERY Documents", type: "discovery" },
-  "docs/specs": { title: "SPEC Documents", type: "spec" },
-  "docs/designs": { title: "DESIGN Documents", type: "design" },
-  "docs/plans": { title: "PLAN Documents", type: "plan" },
-  "docs/tasks": { title: "TASK Documents", type: "task" },
-  "docs/test-specs": { title: "TEST-SPEC Documents", type: "test-spec" },
-  "docs/adr": { title: "Architecture Decision Records" },
-  "docs/impl/ir": { title: "Implementation Records" },
-  "docs/impl/exp": { title: "Experiment Logs" },
-};
-
-// Scaffold targets are CANONICAL_DOC_DIRS — the single authority — paired
-// with their index metadata. The scaffold walks the same set the artifact
-// scan reads, so a canonical dir can never silently lose its index.
-const scaffoldTargets: ScaffoldTarget[] = CANONICAL_DOC_DIRS.map((dir) => ({
-  dir,
-  ...scaffoldIndexMeta[dir],
-}));
+// Scaffold targets are the durable registry's canonical dirs — the v3
+// managed doc tree only (execution-bound and legacy dirs are never
+// scaffolded). `indexPrimary` picks which resident type seeds a shared
+// dir's index (discovery owns docs/discovery's index even though
+// brainstorm is co-resident there).
+const scaffoldTargets: ScaffoldTarget[] = (() => {
+  const byDir = new Map<string, ScaffoldTarget>();
+  for (const type of docTypes) {
+    const config = configFor(type);
+    const existing = byDir.get(config.dir);
+    const target: ScaffoldTarget = {
+      dir: config.dir,
+      title: config.scaffoldIndexTitle ?? `${config.idPrefix} Documents`,
+      type,
+    };
+    if (!existing || config.indexPrimary) byDir.set(config.dir, target);
+  }
+  return [...byDir.values()];
+})();
 
 // When several document types share one canonical directory, the scaffold
 // target's type owns the index title; otherwise the first candidate is used.
@@ -257,14 +269,18 @@ async function renderManagedIndex(cwd: string, dir: string, seedType: string, ex
   return buildIndex(cwd, primary, dir, { types });
 }
 
+// Content-guess routes into the durable doc tree. Execution-bound
+// (plan/task) and legacy (test-spec/impl/exp) types have no durable route:
+// their old dirs are migration-owned, so a content guess never mints files
+// there — and a declared non-durable `type:` is skipped outright in
+// `plannedMigration` (Issue #234).
 const migrationRoutes: MigrationRoute[] = [
   { targetDir: "docs/ideas", type: "idea", patterns: [/idea/i, /proposal/i] },
   { targetDir: "docs/discovery", type: "discovery", patterns: [/discovery/i, /brainstorm/i, /research/i, /brief/i] },
-  { targetDir: "docs/test-specs", type: "test-spec", patterns: [/test[-\s]?spec/i, /testspec/i] },
+  { targetDir: "docs/knowledge", type: "knowledge", patterns: [/knowledge/i, /lesson/i, /runbook/i] },
+  { targetDir: "docs/verification", type: "verification", patterns: [/verification/i, /verifies/i, /test[-\s]?spec/i, /testspec/i] },
   { targetDir: "docs/specs", type: "spec", patterns: [/spec/i, /requirement/i, /acceptance/i] },
   { targetDir: "docs/designs", type: "design", patterns: [/design/i, /architecture/i] },
-  { targetDir: "docs/plans", type: "plan", patterns: [/plan/i, /roadmap/i] },
-  { targetDir: "docs/tasks", type: "task", patterns: [/task/i, /todo/i, /work item/i] },
   { targetDir: "docs/adr", type: null, patterns: [/adr/i, /decision/i, /architecture decision/i] },
   { targetDir: "docs/impl/ir", type: null, patterns: [/implementation record/i, /impl record/i, /\bir\b/i] },
   { targetDir: "docs/impl/exp", type: null, patterns: [/experiment/i, /\bexp\b/i, /spike/i] },
@@ -289,6 +305,11 @@ const frontMatterSchema = z.object({
   id: z.string().min(1),
   type: z.enum(docTypes),
   status: z.string().min(1),
+  // `lifecycle` stays optional at the schema boundary so pre-Registry-3
+  // documents still parse — lint flags the missing field as
+  // `missing-lifecycle`; a populated non-axis value is invalid here
+  // (unknown lifecycle is never coerced to `current`).
+  lifecycle: z.enum(LIFECYCLE_VALUES).optional(),
   title: z.string().min(1),
   created: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   updated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -375,6 +396,16 @@ function sanitizeTitle(title: string): string {
   const cleaned = String(title).replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
   if (!cleaned) throw new Error("Invalid title: empty after removing control characters");
   return cleaned;
+}
+
+// New documents must declare a lifecycle on the Registry-3 axis. The CLI
+// accepts the flag as an arbitrary string; only the four declared values pass
+// — anything else fails here rather than being coerced or silently defaulting
+// (Issue #234).
+function parseLifecycleOption(raw: string | undefined): LifecycleValue {
+  if (raw === undefined || raw === "") return DEFAULT_LIFECYCLE;
+  if ((LIFECYCLE_VALUES as readonly string[]).includes(raw)) return raw as LifecycleValue;
+  throw new Error(`Invalid lifecycle: ${raw} (expected one of: ${LIFECYCLE_VALUES.join(", ")})`);
 }
 
 function indexCell(value: string): string {
@@ -538,13 +569,28 @@ function formatMetadataBlock(metadata?: MetadataInput): string[] {
   return entries.length > 0 ? ["metadata:", ...entries] : ["metadata: {}"];
 }
 
+// Type-specific top-level front-matter fields the registry declares beyond
+// the shared base set (e.g. `knowledge_kind` on knowledge docs). Scalars
+// only — the writer emits them next to the axis block; lint validates them
+// through `requiredFields`/`fieldVocabularies` on the contract.
+function formatExtraFieldsBlock(fields?: MetadataInput): string[] {
+  if (!fields) return [];
+  return Object.entries(fields).flatMap(([key, value]) =>
+    (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+      ? [`${key}: ${formatMetadataScalar(value)}`]
+      : []);
+}
+
 function completeRelations(input?: RelationInput): Record<RelationField, string[]> {
   return Object.fromEntries(relationFields.map((field) => [field, input?.[field] || []])) as Record<RelationField, string[]>;
 }
 
-function frontMatter(config: DocConfig, id: string, title: string, status: string, date: string, relations?: RelationInput, metadata?: MetadataInput): string {
+function frontMatter(config: DocConfig, id: string, title: string, status: string, date: string, relations?: RelationInput, metadata?: MetadataInput, lifecycle: LifecycleValue = DEFAULT_LIFECYCLE, extraFields?: MetadataInput): string {
   if (!config.statusValues.includes(status)) {
     throw new Error(`Invalid ${config.type} status: ${status} (expected one of: ${config.statusValues.join(", ")})`);
+  }
+  if (!LIFECYCLE_VALUES.includes(lifecycle)) {
+    throw new Error(`Invalid ${config.type} lifecycle: ${lifecycle} (expected one of: ${LIFECYCLE_VALUES.join(", ")})`);
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error(`Invalid date: ${date} (expected YYYY-MM-DD)`);
@@ -556,9 +602,11 @@ function frontMatter(config: DocConfig, id: string, title: string, status: strin
     `id: ${quote(id)}`,
     `type: ${quote(config.type)}`,
     `status: ${quote(status)}`,
+    `lifecycle: ${quote(lifecycle)}`,
     `title: ${quote(sanitizeTitle(title))}`,
     `created: ${quote(date)}`,
     `updated: ${quote(date)}`,
+    ...formatExtraFieldsBlock(extraFields),
     "owners: []",
     "relations:",
     formatRelationBlock("source", complete.source),
@@ -712,21 +760,52 @@ function bodyFor(type: DocType, title: string): string {
       "- <!-- concern | reason | re-engagement trigger | risk if ignored -->",
     ].join("\n");
   }
-  if (type === "plan") {
+  if (type === "knowledge") {
     return [
       `# ${title}`,
       "",
-      "## Goal",
+      "## Summary",
       "",
-      "<!-- Describe the implementation goal. -->",
+      "<!-- One or two sentences: the durable knowledge this record carries. -->",
       "",
-      "## Tasks",
+      "## Details",
       "",
-      "- [ ] <!-- implementation slice -->",
+      "<!-- The confirmed knowledge: what holds, where it applies, and why. -->",
       "",
-      "## Verification",
+      "## Scope and Applicability",
       "",
-      "- [ ] <!-- command, test, or review step -->",
+      "- <!-- where this knowledge applies — and where it does not -->",
+      "",
+      "## Provenance",
+      "",
+      "- <!-- where this was learned: implementation, discovery, incident, or review -->",
+      "",
+      "## Related Documents",
+      "",
+      "- <!-- link informed or explained documents via relations.informs / relations.explains -->",
+    ].join("\n");
+  }
+  if (type === "verification") {
+    return [
+      `# ${title}`,
+      "",
+      "## Purpose",
+      "",
+      "<!-- The verification intent this design preserves: which claims it checks and when it may be retired. -->",
+      "",
+      "## Scope",
+      "",
+      "- <!-- behavior, contract, or claim under verification -->",
+      "",
+      "## Checks",
+      "",
+      "<!-- One check per entry; each targets a Claim ID (<TYPE>-<id>::R-NN). The Check contract (method, criteria, required) is defined by Verification Design v1. -->",
+      "",
+      "- [ ] <!-- check: claim target + verification method + pass criteria -->",
+      "",
+      "## Non-Goals",
+      "",
+      "- <!-- what this design deliberately does not verify -->",
     ].join("\n");
   }
   if (type === "design") {
@@ -765,39 +844,6 @@ function bodyFor(type: DocType, title: string): string {
       "- <!-- linked spec, ADR, and related docs -->",
     ].join("\n");
   }
-  if (type === "test-spec") {
-    return [
-      `# ${title}`,
-      "",
-      "## Purpose",
-      "",
-      "<!-- Why this test spec exists: the intent it preserves and when it may be retired. -->",
-      "",
-      "## Feature",
-      "",
-      "<!-- The behavior under specification, named like a Gherkin Feature. -->",
-      "",
-      "## Rules",
-      "",
-      "- <!-- Rule: an invariant or contract the feature must satisfy -->",
-      "",
-      "## Examples",
-      "",
-      "- <!-- Example: a concrete scenario that pins a rule down, optionally in Given/When/Then form -->",
-      "",
-      "## Guarantees",
-      "",
-      "- <!-- What a correct implementation must guarantee -->",
-      "",
-      "## Non-goals",
-      "",
-      "- <!-- Behavior or coverage this spec deliberately does not verify -->",
-      "",
-      "## Risk",
-      "",
-      "- <!-- What is lost or breaks if these guarantees are dropped -->",
-    ].join("\n");
-  }
   return [
     `# ${title}`,
     "",
@@ -824,6 +870,7 @@ function overviewDocument(date: string): string {
     'id: "DESIGN-OVERVIEW"',
     'type: "design"',
     'status: "draft"',
+    'lifecycle: "draft"',
     'title: "System Design Overview"',
     `created: "${date}"`,
     `updated: "${date}"`,
@@ -897,6 +944,7 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
       id: (typeof data.id === "string" && data.id.trim())
         ? data.id.trim()
         : hooks?.idFromFile?.(path.basename(file)) ?? null,
+      lifecycle: typeof data.lifecycle === "string" ? data.lifecycle : null,
       path: `${relativeDir}/${file}`.replace(/\\/g, "/"),
       status: typeof data.status === "string" ? data.status : null,
       title: await titleFromDocument(content, path.basename(file, ".md"), hooks?.titleFromHeading),
@@ -909,6 +957,7 @@ async function docEntries(cwd: string, type: string, explicitDir?: string): Prom
 type IndexRowEntry = {
   file: string;
   id: string | null;
+  lifecycle?: string | null;
   status: string | null;
   title: string;
   type?: string | null;
@@ -918,10 +967,11 @@ type IndexRowEntry = {
  * Status-aware index body (Issue #162/#163): in-flight rows keep the original
  * table; settled rows move to a `## Settled` tier below it so historical
  * evidence stays one link away but visually de-emphasized. The settled axis
- * comes from `doc_lifecycle` (`isSettledStatus`) — the same authority lint
- * and lifecycle-stats use — not a new front-matter flag. Ordering is
- * deterministic: `overview.md` first within its tier (design indexes), then
- * file-lexical inside each tier.
+ * comes from `doc_lifecycle` (`isSettledEntry`) — a declared `lifecycle`
+ * value wins over the status axis, absent/unknown values fall back to the
+ * per-type settled-status set — the same authority lint and lifecycle-stats
+ * use. Ordering is deterministic: `overview.md` first within its tier
+ * (design indexes), then file-lexical inside each tier.
  *
  * `settledType` is the fallback lifecycle bucket for rows whose front matter
  * lacks `type:` — pass the index's primary resident type.
@@ -938,7 +988,7 @@ function renderIndexBody(entries: IndexRowEntry[], options: { overviewFirst?: bo
   const row = (entry: IndexRowEntry): string =>
     `| ${indexCell(entry.id || "—")} | ${indexCell(entry.title)} | ${indexCell(entry.status || "—")} | [${indexCell(entry.file)}](./${indexCell(entry.file)}) |`;
   const settled = (entry: IndexRowEntry): boolean =>
-    isSettledStatus(entry.type ?? options.settledType ?? null, entry.status);
+    isSettledEntry(entry.type ?? options.settledType ?? null, entry.status, entry.lifecycle);
   const active = entries.filter((entry) => !settled(entry)).sort(compare);
   const settledEntries = entries.filter(settled).sort(compare);
   const body = [header, ...active.map(row)].join("\n");
@@ -1059,10 +1109,18 @@ function splitByH1(source: string, content: string): MigrationInput[] {
   });
 }
 
+// Sentinel route for source documents whose declared `type:` has no durable
+// form under Registry 3 (plan/task/test-spec/impl/exp): they are migration
+// artifacts, never re-routed into the durable tree.
+const LEGACY_DOC_ROUTE: MigrationRoute = { targetDir: "", type: null, patterns: [] };
+
 function routeFor(input: MigrationInput, sourceData: Record<string, unknown>): MigrationRoute {
-  if (typeof sourceData.type === "string" && docTypes.includes(sourceData.type as DocType)) {
-    const config = configFor(sourceData.type);
-    return { targetDir: config.dir, type: config.type, patterns: [] };
+  if (typeof sourceData.type === "string") {
+    const resolved = resolveDocType(sourceData.type);
+    if (resolved.kind === "durable") {
+      return { targetDir: resolved.entry.dir, type: resolved.entry.type as DocType, patterns: [] };
+    }
+    if (resolved.kind !== "unknown") return LEGACY_DOC_ROUTE;
   }
 
   const haystack = `${input.source}\n${input.title}\n${input.body.slice(0, 2000)}`;
@@ -1121,6 +1179,13 @@ function migratedContent(input: MigrationInput, route: MigrationRoute, sourceCon
 function plannedMigration(cwd: string, source: string, input: MigrationInput, sourceContent: string, date: string, allocations: Map<string, TargetAllocation>): PlannedMigration {
   const sourceData = matterData(sourceContent);
   const route = routeFor(input, sourceData);
+  // A declared non-durable `type:` (plan/task/test-spec/impl/exp) marks the
+  // file as a Registry-2 artifact: migration tooling owns its
+  // interpretation — the docs migrator never rewrites it into a durable
+  // document of another type.
+  if (route === LEGACY_DOC_ROUTE) {
+    return { skipped: { file: source, reason: "legacy-doc-type" } };
+  }
   // Owner-dir routes (docs/adr, docs/impl/ir, docs/impl/exp) are the only
   // type:null routes: a content guess must never mint files in a foreign
   // owner's directory. Skipped identically in plan and apply — typed routes
@@ -1265,8 +1330,13 @@ async function writeGeneratedIndex(cwd: string, type: DocType | string, relative
   return { path: relIndex, written: true, reason: null };
 }
 
-async function createDocument(type: DocType, options: CreateDocumentOptions): Promise<{ file: string; index: string; indexWritten: boolean; indexSkippedReason: "hand-curated" | "disabled" | "deferred" | null; relativeDir: string }> {
+async function createDocument(type: DocType | string, options: CreateDocumentOptions): Promise<{ file: string; index: string; indexWritten: boolean; indexSkippedReason: "hand-curated" | "disabled" | "deferred" | null; relativeDir: string }> {
+  // `configFor` is the registry gate: durable types get their entry;
+  // execution-bound (plan/task) and legacy (test-spec/impl/exp) names fail
+  // here with the dedicated message — nothing can be minted as a durable
+  // document of a non-durable type (Issue #234).
   const config = configFor(type);
+  const lifecycle = parseLifecycleOption(options.lifecycle);
   const cwd = path.resolve(options.cwd);
   const relativeDir = docDir(cwd, type, options.dir);
   const fullDir = path.join(cwd, relativeDir);
@@ -1279,13 +1349,13 @@ async function createDocument(type: DocType, options: CreateDocumentOptions): Pr
   const filename = options.name
     ? sanitizeFileName(options.name)
     : `${slugify(title, type)}.md`;
-  if (isReservedDocFile(type, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
+  if (isReservedDocFile(config.type as DocType, filename)) throw new Error(`Cannot create document with reserved filename: ${filename}`);
   const outputPath = path.join(fullDir, filename);
   if (fs.existsSync(outputPath)) throw new Error(`Document already exists: ${path.relative(cwd, outputPath)}`);
 
   const date = options.date || new Date().toISOString().slice(0, 10);
   const status = options.status || config.defaultStatus;
-  const content = `${frontMatter(config, generateArtifactId(config.idPrefix), title, status, date, options.relations)}\n\n${bodyFor(type, title)}\n`;
+  const content = `${frontMatter(config, generateArtifactId(config.idPrefix), title, status, date, options.relations, options.metadata, lifecycle, options.fields)}\n\n${bodyFor(config.type as DocType, title)}\n`;
   fs.writeFileSync(outputPath, content, "utf8");
 
   if (type === "design") ensureDesignOverview(path.join(cwd, rootDir), date);
@@ -1383,4 +1453,4 @@ export {
   writeGeneratedIndex,
 };
 
-export type { DocType, IndexRowEntry };
+export type { DocType, IndexRowEntry, MetadataInput };

@@ -3,6 +3,13 @@
 この規約は、`test-spec-doc` が test specification 文書を作成、audit、index、
 リンクする方法を定義します。
 
+Document Registry 3 では `test-spec` はレガシーの migration-only 種別です。
+durable な Registry v3 の形を持たず、`new_test_spec.js` は前提条件・スコープ
+検証・書き込みの前に registry gate で拒否します。以下のディレクトリは
+migration-owned scope です。この規約はマイグレーションが読み取る v3 以前の
+文書形状を記述します。durable な検証記録は `verification-doc` により
+`docs/verification` に置きます。
+
 test spec は検証の意図を記録します。テストが何を保証するか、なぜ存在するか、
 いつ廃止してよいかを記録する文書です。実行可能な Gherkin でもテスト結果ログ
 でもありません。spec や design の大きな変更の際に「どの振る舞いを守るべきか」

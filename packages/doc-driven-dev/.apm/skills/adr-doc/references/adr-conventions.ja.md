@@ -55,6 +55,7 @@ slug-only の名前を使います。既存ファイルの移行には `doc-main
 id: "ADR-1AbCdEfGhIjKlMnOpQrStU"
 type: "adr"
 status: "proposed"
+lifecycle: "draft"
 title: "判断タイトル"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -89,7 +90,8 @@ metadata:
 | --- | --- | --- |
 | `id` | Yes | 安定した文書識別子。`ADR-<22文字Base62>` 形式（UUIDv7由来。従来の `ADR-NNNN` も有効）。 |
 | `type` | Yes | 共有文書種別。ADR では `adr` を使います。 |
-| `status` | Yes | 現在のライフサイクル状態。 |
+| `status` | Yes | 型固有のワークフロー状態（後述の Status 値を参照）。 |
+| `lifecycle` | Yes | Registry 3 の存続軸。`draft` / `current` / `superseded` / `retired`。新規文書は `draft`。不明な値は無効であり、`status` から推定しない。 |
 | `title` | Yes | 判断に対応する人間向け ADR タイトル。 |
 | `created` | Yes | 作成日。形式は `YYYY-MM-DD`。 |
 | `updated` | Yes | 最後の実質更新日。形式は `YYYY-MM-DD`。 |
@@ -106,7 +108,9 @@ consulted は双方向の入力、informed は一方向の通知です。
 
 ## Status 値
 
-以下のライフサイクル状態を使います。
+`status` と `lifecycle` は別軸です。`status` は次の型固有ワークフロー状態、
+`lifecycle`（`draft` → `current` → `superseded`/`retired`）は索引区分を
+駆動する Registry 3 の存続軸です。次のステータスを使います。
 
 | Status | Meaning |
 | --- | --- |
@@ -116,8 +120,12 @@ consulted は双方向の入力、informed は一方向の通知です。
 | `deprecated` | 過去に採用したが、現在は推奨しない。 |
 | `superseded` | より新しい ADR に置き換えられた。 |
 
-`status` はライフサイクル状態に集中させます。置き換え先 ADR は
-`relations.superseded-by` で示します。
+`status` はワークフロー状態に集中させ、ライフサイクルは `lifecycle` に
+記録します（置き換え時は `superseded`）。Knowledge Relations v1 では
+置き換える側の ADR が `relations.supersedes` を source→target で記録し、
+置き換えられた側は逆リンクを保存しません。`superseded-by` など下表の
+その他の宣言キーはレガシー語彙で、マイグレーションは読み取りますが
+通常実行では書き込みません。
 
 ## Relations 拡張
 
@@ -127,6 +135,12 @@ consulted は双方向の入力、informed は一方向の通知です。
 
 relation field は他の document skill と共通です。リンク先の文書種別ではなく、
 リンクの意味で field を選びます。
+
+Knowledge Relations v1 では ADR は `relations.decides-for`（→ spec または
+design）と `relations.supersedes`（→ 古い ADR）を source→target に記録し、
+出典には `relations.source` を使います。下表のその他のキーはすべて
+レガシー語彙で、マイグレーションは v3 以前のコーパスから読み取りますが
+通常実行では書き込みません。
 
 | Field | Meaning |
 | --- | --- |
@@ -233,7 +247,7 @@ ADR 索引の既定ファイルは `README.md` とします。リポジトリが
   `ファイル` 列は索引と同じディレクトリへの相対リンクにします。
   値が無い場合は `—` を入れます。
 - 行は各層ごとにファイル名の昇順で並べます。in-flight の ADR は先頭の
-  テーブルに、settled なステータス（`rejected`、`deprecated`、`superseded`）の
+  テーブルに、`lifecycle` が settled（`superseded` または `retired`）の
   ADR は下段の `## Settled` テーブルにファイル名昇順で掲載します。Settled の
   行もリンクは維持され、履歴を隠さずに強調を抑える構成です。
   `accepted`／`proposed` の ADR は現在の作業が依拠する規範ベースラインなので

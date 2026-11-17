@@ -7,7 +7,7 @@ import test from "node:test";
 
 import { createDocument, migrateDocs, scaffoldDocsTree } from "../src/skills/lib/doc_suite_utils";
 import { planMaintenance } from "../src/skills/lib/doc_maintenance";
-import { CANONICAL_DOC_DIRS } from "../src/skills/lib/document_utils";
+import { DURABLE_DOC_DIRS } from "../src/skills/lib/document_utils";
 
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
@@ -562,7 +562,7 @@ test("index apply --expect binds to a prior planHash and refuses drift", () => {
   }
 });
 
-test("index apply --dir docs/impl/ir repairs the IR index through the owner sync API", () => {
+test("index apply --dir docs/impl/ir refuses — legacy index is migration-owned", () => {
   const repo = tempRepo();
   writeImplRecord(repo, "a.md", "IMPL-A", "draft");
   writeImplRecord(repo, "b.md", "IMPL-B", "draft");
@@ -570,22 +570,22 @@ test("index apply --dir docs/impl/ir repairs the IR index through the owner sync
     "| IMPL-A | IMPL-A | draft | [a.md](./a.md) |",
     "| IMPL-B | IMPL-B | draft | [b.md](./b.md) |",
   ]);
-  // Status drift: b is now settled — the IR owner sync must move the row.
   writeImplRecord(repo, "b.md", "IMPL-B", "completed");
+  const indexBefore = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
 
+  // Registry 3: the impl index sync engine only runs inside migration
+  // tooling — the normal index apply blocks the target and exits non-zero
+  // without touching the legacy index (Issue #234).
   const apply = runScript("doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/ir"], repo);
-  assert.equal(apply.status, 0, apply.stderr);
-  assert.match(apply.stdout, /\[written\] docs\/impl\/ir\/README\.md/);
-  const content = fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8");
-  const settledAt = content.indexOf("## Settled");
-  assert.ok(settledAt > 0, "owner sync produced a settled tier");
-  assert.ok(content.indexOf("[b.md](./b.md)") > settledAt, "b.md moved to the settled tier");
+  assert.equal(apply.status, 1, "migration-owned target must fail closed");
+  assert.match(`${apply.stdout}\n${apply.stderr}`, /migration-owned|legacy directory/);
+  assert.equal(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), indexBefore, "legacy index untouched");
 
   // The repair surface still refuses impl dirs outright (preflight pin).
   for (const verb of ["plan", "apply"]) {
     const repair = runScript("doc_maintenance.js", [verb, "--dir", "docs/impl/ir"], repo);
     assert.notEqual(repair.status, 0, `repair ${verb} must fail closed on impl dirs`);
-    assert.match(`${repair.stdout}\n${repair.stderr}`, /Scope mismatch/);
+    assert.match(`${repair.stdout}\n${repair.stderr}`, /Scope mismatch|migration-owned|legacy/);
   }
 });
 
@@ -663,15 +663,18 @@ test("index requires a plan|apply verb", () => {
   }
 });
 
-test("scaffold targets are sourced from CANONICAL_DOC_DIRS, not a parallel list", async () => {
+test("scaffold targets are sourced from DURABLE_DOC_DIRS, not a parallel list", async () => {
   const repo = tempRepo();
   const result = await scaffoldDocsTree(repo);
-  // The scaffolded tree is exactly the canonical directory set — a drifted
-  // second list (the pre-consolidation scaffoldTargets) could not produce
-  // this equality (Issue #156).
-  assert.deepEqual(result.created.sort(), CANONICAL_DOC_DIRS.map((dir) => `${dir}/README.md`).sort());
-  for (const dir of CANONICAL_DOC_DIRS) {
+  // The scaffolded tree is exactly the durable directory set — a drifted
+  // second list could not produce this equality (Issue #156). Registry 3:
+  // execution-bound and legacy dirs are never scaffolded (Issue #234).
+  assert.deepEqual(result.created.sort(), DURABLE_DOC_DIRS.map((dir) => `${dir}/README.md`).sort());
+  for (const dir of DURABLE_DOC_DIRS) {
     assert.equal(fs.existsSync(path.join(repo, dir, "README.md")), true, `${dir}/README.md missing`);
+  }
+  for (const dir of ["docs/plans", "docs/tasks", "docs/test-specs", "docs/impl/ir", "docs/impl/exp"]) {
+    assert.equal(fs.existsSync(path.join(repo, dir)), false, `${dir} must not be scaffolded`);
   }
 });
 

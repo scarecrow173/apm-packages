@@ -3,11 +3,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { contractForType, finding, isExternalReference, sortFindings } from "./doc_repository";
+import { contractForType, finding, isExternalReference, REQUIRED_FRONT_MATTER_FIELDS, sortFindings } from "./doc_repository";
 import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repository";
 import { lintProvenance, lintStaleUpstreams, lintTraceability } from "./doc_provenance_lint";
 import { lintStructure } from "./doc_structure_lint";
 import { configFor, docTypes, frontMatterSchema, isForeignDocType } from "./doc_suite_utils";
+import { allIdPrefixes } from "./doc_types";
 import { isIndexFileName, isInsideRealpath, normalizeDir } from "./document_utils";
 
 // ---------------------------------------------------------------------------
@@ -142,6 +143,9 @@ function lintFrontMatter(document: RepositoryDocument, scopeType: string): Findi
   const schemaResult = frontMatterSchema.safeParse(document.frontMatter);
   if (!schemaResult.success) {
     for (const issue of schemaResult.error.issues) {
+      // The lifecycle axis carries dedicated rule ids below — the schema's
+      // generic enum complaint on that path would double-report.
+      if (issue.path.length === 1 && issue.path[0] === "lifecycle") continue;
       findings.push(finding({
         ruleId: "invalid-front-matter",
         category: "front-matter",
@@ -178,6 +182,68 @@ function lintFrontMatter(document: RepositoryDocument, scopeType: string): Findi
       target: document.status,
       repair: "manual",
     }));
+  }
+  // The lifecycle axis is its own contract — never read off `status`.
+  // Absent is migration debt (`missing-lifecycle`, repairable by the docs
+  // migration); a populated non-axis value is `invalid-lifecycle` and is
+  // never coerced to `current` (Issue #234).
+  if (document.lifecycle === null) {
+    findings.push(finding({
+      ruleId: "missing-lifecycle",
+      category: "front-matter",
+      severity: "warning",
+      blocking: true,
+      path: document.path,
+      artifactId: document.id,
+      message: `Missing required front matter field: lifecycle (expected one of: ${(contract?.lifecycleValues ?? []).join(", ") || "draft, current, superseded, retired"})`,
+      target: "lifecycle",
+      repair: "migration",
+    }));
+  } else if (contract && !contract.lifecycleValues.includes(document.lifecycle)) {
+    findings.push(finding({
+      ruleId: "invalid-lifecycle",
+      category: "front-matter",
+      severity: "error",
+      path: document.path,
+      artifactId: document.id,
+      message: `Invalid ${scopeType} lifecycle: ${document.lifecycle} (expected one of: ${contract.lifecycleValues.join(", ")})`,
+      target: document.lifecycle,
+      repair: "manual",
+    }));
+  }
+  // Type-specific required fields beyond the base set the schema already
+  // enforces (e.g. `knowledge_kind` on knowledge docs), plus their declared
+  // vocabularies — both come from the registry contract.
+  const baseFields = new Set<string>(REQUIRED_FRONT_MATTER_FIELDS);
+  for (const field of contract?.requiredFields ?? []) {
+    if (baseFields.has(field)) continue;
+    const value = document.frontMatter[field];
+    if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+      findings.push(finding({
+        ruleId: "missing-required-field",
+        category: "front-matter",
+        severity: "error",
+        path: document.path,
+        artifactId: document.id,
+        message: `Missing required ${scopeType} front matter field: ${field}`,
+        target: field,
+        repair: "manual",
+      }));
+      continue;
+    }
+    const vocabulary = contract?.fieldVocabularies[field];
+    if (vocabulary && typeof value === "string" && !vocabulary.includes(value)) {
+      findings.push(finding({
+        ruleId: "invalid-field-value",
+        category: "front-matter",
+        severity: "error",
+        path: document.path,
+        artifactId: document.id,
+        message: `Invalid ${scopeType} ${field}: ${value} (expected one of: ${vocabulary.join(", ")})`,
+        target: field,
+        repair: "manual",
+      }));
+    }
   }
   if (contract && document.id && !contract.idExceptions.includes(document.id)) {
     if (!contract.idPattern.test(document.id)) {
@@ -223,9 +289,17 @@ function lintDuplicateIds(model: DocumentRepository, scope: LintScope): Finding[
 function lintRelations(model: DocumentRepository, document: RepositoryDocument, scopeType: string): Finding[] {
   const findings: Finding[] = [];
   const contract = contractForType(scopeType);
+  // Typed relation targets are enforced for every field the registry
+  // declares — required relations and the allowed-relations vocabulary alike
+  // (Registry 3 centralizes relation policy in the contract, Issue #234).
+  // Fields the registry does not declare (legacy lineage fields, `related`,
+  // `references`) keep resolving but carry no target-type contract.
   const typedFields = new Map<string, string[]>();
   for (const required of contract?.requiredRelations ?? []) {
     typedFields.set(required.field, required.targetTypes);
+  }
+  for (const [field, targetTypes] of Object.entries(contract?.allowedRelations ?? {})) {
+    if (!typedFields.has(field)) typedFields.set(field, [...targetTypes]);
   }
 
   for (const [field, targets] of Object.entries(document.relations)) {
@@ -295,19 +369,14 @@ function lintRelations(model: DocumentRepository, document: RepositoryDocument, 
 
       const expectedTypes = typedFields.get(field);
       if (expectedTypes && targetDocument.type && !expectedTypes.includes(targetDocument.type)) {
-        const ruleId = scopeType === "test-spec" && field === "verifies"
-          ? "test-spec-invalid-verifies-target"
-          : "invalid-relation-target-type";
         findings.push(finding({
-          ruleId,
+          ruleId: "invalid-relation-target-type",
           category: "traceability",
           severity: "warning",
           blocking: true,
           path: document.path,
           artifactId: document.id,
-          message: scopeType === "test-spec" && field === "verifies"
-            ? `Test spec verifies target resolves to type "${targetDocument.type}", expected ${expectedTypes.join(", ").replace(/, ([^,]*)$/, ", or $1")}: ${target}`
-            : `Relation ${field} target resolves to type "${targetDocument.type}", expected one of: ${expectedTypes.join(", ")}: ${target}`,
+          message: `Relation ${field} target resolves to type "${targetDocument.type}", expected one of: ${expectedTypes.join(", ")}: ${target}`,
           target,
           repair: "manual",
         }));
@@ -374,43 +443,17 @@ function lintRequiredRelations(model: DocumentRepository, document: RepositoryDo
     const skip = required.skipField !== undefined && skipReasonRecorded(document, required.skipField);
     if (linked || skip) continue;
 
-    if (scopeType === "test-spec" && required.field === "verifies") {
-      findings.push(finding({
-        ruleId: "test-spec-missing-verifies",
-        category: "traceability",
-        severity: "warning",
-        blocking: true,
-        path: document.path,
-        artifactId: document.id,
-        message: `Test spec has no relations.verifies target (${required.gateCode ?? "TEST-SPEC-DOC-GATE-001"})`,
-        target: required.field,
-        repair: "manual",
-      }));
-    } else if (scopeType === "plan" && required.field === "verified-by") {
-      findings.push(finding({
-        ruleId: "plan-missing-test-spec-evidence",
-        category: "traceability",
-        severity: "warning",
-        blocking: true,
-        path: document.path,
-        artifactId: document.id,
-        message: "Plan links no test-spec via relations.verified-by and records no test-spec-skip reason",
-        target: required.field,
-        repair: "manual",
-      }));
-    } else {
-      findings.push(finding({
-        ruleId: "missing-required-relation",
-        category: "traceability",
-        severity: "warning",
-        blocking: true,
-        path: document.path,
-        artifactId: document.id,
-        message: `Document requires a resolvable relations.${required.field} target of type ${required.targetTypes.join(" or ")}`,
-        target: required.field,
-        repair: "manual",
-      }));
-    }
+    findings.push(finding({
+      ruleId: "missing-required-relation",
+      category: "traceability",
+      severity: "warning",
+      blocking: true,
+      path: document.path,
+      artifactId: document.id,
+      message: `Document requires a resolvable relations.${required.field} target of type ${required.targetTypes.join(" or ")}`,
+      target: required.field,
+      repair: "manual",
+    }));
   }
   return findings;
 }
@@ -500,11 +543,11 @@ const EXPERIMENT_ID_PREFIX = "EXP";
 const IMPL_EXP_DIR = "docs/impl/exp";
 const NUMBERED_EXPERIMENT_FILE = /^(\d{4,})-.*\.jsonl$/i;
 
+// Every ID prefix the toolchain has ever issued — durable, execution-bound,
+// and legacy — is a legacy-reference vocabulary member: the registry's
+// `allIdPrefixes` is the single declaration (Issue #234).
 function legacyIdPrefixes(): Set<string> {
-  const prefixes = new Set<string>(docTypes.map((type) => configFor(type).idPrefix));
-  prefixes.add("IMPL");
-  prefixes.add(EXPERIMENT_ID_PREFIX);
-  return prefixes;
+  return new Set<string>(allIdPrefixes());
 }
 
 // Experiment logs carry no artifact id; `EXP-NNNN` resolves only while

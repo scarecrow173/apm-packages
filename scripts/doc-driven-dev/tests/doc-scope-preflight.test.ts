@@ -153,14 +153,16 @@ test("shared-type creators reject foreign-owned dirs before writing anything", (
     "owners: []", "relations: {}", "---", "", "# Design", "",
   ].join("\n"));
 
+  // Registry 3: only durable shared types reach the scope-preflight boundary;
+  // plan/task/test-spec creators refuse at the registry gate first (checked
+  // separately below).
   const creators: Array<[string, string, string[]]> = [
     ["idea-doc", "new_idea.js", ["--title", "X"]],
     ["discovery-doc", "new_discovery.js", ["--title", "X"]],
     ["design-doc", "new_design.js", ["--title", "X"]],
-    ["plan-doc", "new_plan.js", ["--title", "X", "--design", "docs/designs/0001-design.md"]],
     ["spec-doc", "new_spec.js", ["--title", "X"]],
-    ["task-doc", "new_task.js", ["--title", "X"]],
-    ["test-spec-doc", "new_test_spec.js", ["--title", "X", "--verifies", "docs/specs/0001-spec.md"]],
+    ["knowledge-doc", "new_knowledge.js", ["--title", "X", "--kind", "lesson"]],
+    ["verification-doc", "new_verification.js", ["--title", "X"]],
   ];
   for (const [skill, script, args] of creators) {
     for (const dir of ["docs/impl/ir", "docs/impl/exp", "docs/decisions", "docs/tasks"]) {
@@ -174,7 +176,30 @@ test("shared-type creators reject foreign-owned dirs before writing anything", (
   }
 });
 
-test("adr and impl creators reject foreign-owned dirs, accept own and custom dirs", () => {
+test("refusing creators gate at the registry before any scope check", () => {
+  const repo = tempRepo();
+  writeImplTree(repo);
+  writeSpecTree(repo);
+
+  // Registry 3 (Issue #234): plan/task/test-spec creators refuse as
+  // execution-bound / legacy before scope resolution — an escaping or
+  // foreign-owned --dir is never even evaluated.
+  for (const [skill, script, args, reason] of [
+    ["plan-doc", "new_plan.js", ["--title", "X"], /execution-bound|ephemeral|Execution Store/],
+    ["task-doc", "new_task.js", ["--title", "X"], /execution-bound|ephemeral|Execution Store/],
+    ["test-spec-doc", "new_test_spec.js", ["--title", "X"], /legacy format|migration-only|migration tooling/],
+    ["impl-doc", "new_impl_record.js", ["--title", "X"], /legacy format|migration-only|migration tooling/],
+    ["impl-doc", "new_experiment_log.js", ["--title", "X"], /legacy format|migration-only|migration tooling/],
+  ] as Array<[string, string, string[], RegExp]>) {
+    const before = snapshotTree(repo);
+    const result = runScript(skill, script, [...args, "--dir", "docs/impl/ir"], repo);
+    assert.notEqual(result.status, 0, `${script} must refuse`);
+    assert.match(`${result.stdout}\n${result.stderr}`, reason, `${script} refusal reason`);
+    assert.deepEqual(snapshotTree(repo), before, `${script} must not create files or indexes`);
+  }
+});
+
+test("adr creators reject foreign-owned dirs; impl creators refuse at the registry gate", () => {
   const repo = tempRepo();
   writeImplTree(repo);
   writeSpecTree(repo);
@@ -184,13 +209,23 @@ test("adr and impl creators reject foreign-owned dirs, accept own and custom dir
     ["adr-doc", "new_adr.js", ["--title", "X"]],
     ["adr-doc", "update_index.js", ["--write"]],
     ["adr-doc", "relate_adr.js", ["--from", "a.md", "--to", "b.md", "--relation", "related", "--write"]],
+  ] as Array<[string, string, string[]]>) {
+    const result = runScript(skill, script, [...args, "--dir", "docs/impl/ir"], repo);
+    assert.notEqual(result.status, 0, `${script} --dir docs/impl/ir must fail`);
+    assert.match(`${result.stdout}\n${result.stderr}`, /Scope mismatch/, script);
+  }
+  // Registry 3: impl/exp are legacy migration-only types — their creators
+  // refuse at the registry gate on every dir, including their own former
+  // home, a foreign dir, and a custom dir (Issue #234).
+  for (const [skill, script, args] of [
     ["impl-doc", "new_impl_record.js", ["--title", "X"]],
     ["impl-doc", "new_experiment_log.js", ["--title", "X"]],
   ] as Array<[string, string, string[]]>) {
-    const dir = script.startsWith("new_impl") || script.startsWith("new_experiment") ? "docs/specs" : "docs/impl/ir";
-    const result = runScript(skill, script, [...args, "--dir", dir], repo);
-    assert.notEqual(result.status, 0, `${script} --dir ${dir} must fail`);
-    assert.match(`${result.stdout}\n${result.stderr}`, /Scope mismatch/, script);
+    for (const dir of ["docs/impl/ir", "docs/impl/exp", "docs/specs", "custom/ir"]) {
+      const result = runScript(skill, script, [...args, "--dir", dir], repo);
+      assert.notEqual(result.status, 0, `${script} --dir ${dir} must refuse`);
+      assert.match(`${result.stdout}\n${result.stderr}`, /legacy format|migration-only|migration tooling/, script);
+    }
   }
   assert.deepEqual(snapshotTree(repo), before);
 
@@ -199,19 +234,13 @@ test("adr and impl creators reject foreign-owned dirs, accept own and custom dir
   assert.notEqual(list.status, 0);
   assert.match(`${list.stdout}\n${list.stderr}`, /Scope mismatch/);
 
-  // own canonical / alias dirs still work
+  // own canonical / alias dirs still work for the surviving durable creators
   const adr = runScript("adr-doc", "new_adr.js", ["--title", "Good"], repo);
   assert.equal(adr.status, 0, adr.stderr);
-  const ir = runScript("impl-doc", "new_impl_record.js", ["--title", "Good"], repo);
-  assert.equal(ir.status, 0, ir.stderr);
-  const exp = runScript("impl-doc", "new_experiment_log.js", ["--title", "Good"], repo);
-  assert.equal(exp.status, 0, exp.stderr);
 
   // custom dirs stay open (existing --dir contract)
   const custom = runScript("spec-doc", "new_spec.js", ["--title", "Custom", "--dir", "custom/specs"], repo);
   assert.equal(custom.status, 0, custom.stderr);
-  const customIr = runScript("impl-doc", "new_impl_record.js", ["--title", "Custom IR", "--dir", "custom/ir"], repo);
-  assert.equal(customIr.status, 0, customIr.stderr);
 });
 
 test("nested dirs inside foreign ownership also reject", () => {

@@ -10,6 +10,21 @@ Use this skill to track implementation slices that are small enough to execute
 and review. Tasks should link back to the plan, spec, or ADR they implement and
 should state concrete completion criteria.
 
+## Document Registry v3 status
+
+`task` is **execution-bound** (`persistence: ephemeral`) under Document
+Registry 3: task state lives in the Execution Store, not in a durable Git
+document, and `docs/tasks` / `docs/work-items` are *former* directories that
+accept no durable writes. `new_task.js` refuses at the registry gate — before
+the TASK-DOC-GATE checks, scope checks, or any write — with:
+
+`Document type "task" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store`
+
+The preconditions, relations, and done-criteria contract below remain the
+task-model contract for Execution Store records and for migrating a pre-v3
+`docs/tasks` corpus (`migrate_docs` / `migrate_ids` in doc-maintenance). They
+no longer describe a file this skill mints.
+
 ## Preconditions
 
 <HARD-GATE>
@@ -45,17 +60,13 @@ TASK-DOC-GATE-001: the referenced plan must exist and have status
 1. Confirm that the normal path, emergency fix path, or
    post-implementation follow-up path preconditions above are met before
    creating the task.
-2. Create a task for one coherent implementation slice.
+2. Create a task record for one coherent implementation slice.
 
-   ```bash
-   node scripts/new_task.js --title "Wire checkout button" --plan docs/plans/implement-checkout-flow.md \
-     --depends-on docs/tasks/schema.md --depends-on TASK-0H5nCkR2mW9xVbYqZeLp3s \
-     --blocks docs/tasks/ui.md
-   ```
-
-   The creation script follows `references/task-conventions.md` and uses
-   `assets/templates/task.md`. If you cannot run the script, copy that template
-   and fill it manually.
+   Under Document Registry 3 `new_task.js` refuses at the registry gate (see
+   *Document Registry v3 status* above) — `task` is execution-bound, so the
+   record is created in the Execution Store, not as a `docs/tasks` file.
+   `references/task-conventions.md` defines the record contract and
+   `assets/templates/task.md` remains the reference body structure.
 
 3. Use meaningful relations.
    Generated tasks point to the plan with `relations.implements` and
@@ -101,16 +112,15 @@ but must not be the sole verification.
 3. If no automated check is possible, document why and add a follow-up task to
    create one.
 
-A task cannot move to `done` until all verification commands pass. When
-status changes — `done`/`wont-do` move the row to the index's `## Settled`
-tier — regenerate `docs/tasks/README.md` in the same change via
-`doc_maintenance.js index plan|apply --dir docs/tasks`; `doc_status lint`
-reports the stale index until then.
+A task cannot move to `done` until all verification commands pass. Task
+status transitions are Execution Store state changes — `docs/tasks` has no
+Registry 3 index to regenerate.
 
 ## Resources
 
-- `scripts/new_task.js`: create a task (index materialization is explicit:
-  `doc_maintenance.js index plan|apply`).
-- `references/task-conventions.md`: directory, filename, status, relations,
-  required content, and index conventions for tasks.
-- `assets/templates/task.md`: default task body template.
+- `scripts/new_task.js`: refuses at the registry gate under Registry 3 —
+  `task` is execution-bound and has no durable creation path.
+- `references/task-conventions.md`: status values, relations, required
+  content, and conventions for task records.
+- `assets/templates/task.md`: task body template — the reference structure
+  for the Execution Store record, not a file template a script fills.

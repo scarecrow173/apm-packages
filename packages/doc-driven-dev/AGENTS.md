@@ -70,9 +70,15 @@ or an empty selection produce blockers and no runnable tasks.
 
 ## Persistence boundary
 
-Markdown is durable project history and status authority. Graph State and the
-Dynamic Task Graph are per-turn projections. Do not add a parallel runtime
-database or mutable lifecycle store.
+Under Document Registry 3 (`documentRegistry: 3`), durable Markdown is
+project history and status authority: `idea`, `brainstorm`, `discovery`,
+`spec`, `design`, `adr`, `knowledge`, and `verification` documents carry
+`status` (type-specific workflow state) and `lifecycle`
+(`draft`/`current`/`superseded`/`retired`) as separate axes. `plan` and
+`task` are execution-bound (`persistence: ephemeral`) with no durable Git
+form; `test-spec`, `impl`, and `exp` are legacy migration-only formats.
+Graph State and the Dynamic Task Graph are per-turn projections. Do not add
+a parallel runtime database or mutable lifecycle store.
 
 Per-run execution state (plans, tasks, approvals, checkpoints, effect
 receipts, run traces) belongs to the Git-untracked Execution Store under
@@ -83,9 +89,14 @@ Git-ignored, and never carries durable knowledge.
 
 ## Skills and ownership
 
-Document-generation skills (`idea-doc`, `discovery-doc`, `adr-doc`,
-`spec-doc`, `design-doc`, `plan-doc`, `task-doc`, `test-spec-doc`, and
-`impl-doc`) own their document contracts. `deep-dive` is an interview
+Durable document-generation skills (`idea-doc`, `discovery-doc`, `adr-doc`,
+`spec-doc`, `design-doc`, `knowledge-doc`, `verification-doc`) own their
+document contracts. `plan-doc` and `task-doc` are execution-bound — their
+creators refuse at the registry gate and their conventions govern
+Execution Store records and migration of pre-v3 corpora.
+`test-spec-doc` and `impl-doc` are legacy migration-only skills whose
+scripts refuse normal creation and whose formats only migration tooling
+reads. `deep-dive` is an interview
 skill — its output is a confirmed intent summary, not a document.
 `doc-status` is read-only inspection (`list` / `lint` / `audit` /
 `health`), and `doc-dashboard` renders an offline HTML snapshot without

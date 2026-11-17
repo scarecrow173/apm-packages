@@ -69,7 +69,14 @@ Task document と canonical relation が authority です。全 predecessor が 
 
 ## Persistence boundary
 
-Markdown が durable な project history と status の authority です。Graph State と
+Document Registry 3（`documentRegistry: 3`）では、durable な Markdown が
+project history と status の authority です。`idea`、`brainstorm`、
+`discovery`、`spec`、`design`、`adr`、`knowledge`、`verification` の各文書は
+`status`（型固有のワークフロー状態）と `lifecycle`
+（`draft`/`current`/`superseded`/`retired`）を別軸で保持します。`plan` と
+`task` は execution-bound（`persistence: ephemeral`）で durable な Git の
+形を持たず、`test-spec`、`impl`、`exp` はレガシーの migration-only 形式です。
+Graph State と
 Dynamic Task Graph は turn ごとの projection です。並行する runtime database や
 mutable lifecycle store を追加しないでください。
 
@@ -82,9 +89,14 @@ Git で ignore されていない限り書き込みを拒否し、durable な知
 
 ## Skill と ownership
 
-document 生成 skill（`idea-doc`、`discovery-doc`、`adr-doc`、`spec-doc`、
-`design-doc`、`plan-doc`、`task-doc`、`test-spec-doc`、`impl-doc`）が各
-document contract を担当します。`deep-dive` は interview skill であり、
+durable 文書生成 skill（`idea-doc`、`discovery-doc`、`adr-doc`、
+`spec-doc`、`design-doc`、`knowledge-doc`、`verification-doc`）が各
+document contract を担当します。`plan-doc` と `task-doc` は
+execution-bound — creator は registry gate で拒否し、その規約は
+Execution Store レコードと v3 以前コーパスのマイグレーションを対象に
+します。`test-spec-doc` と `impl-doc` はレガシーの migration-only skill
+で、通常の作成はスクリプトが拒否し、その形式は migration tooling のみ
+が読み取ります。`deep-dive` は interview skill であり、
 出力は confirmed intent summary であって文書ではありません。
 `doc-status` は read-only の inspection（`list` / `lint` / `audit` /
 `health`）で、`doc-dashboard` は canonical Markdown に触れず offline

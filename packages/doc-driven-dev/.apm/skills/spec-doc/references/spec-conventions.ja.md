@@ -55,6 +55,7 @@ spec は共通 document front matter を使います。
 id: "SPEC-034qPUpBj0VYOqxmFLijD5"
 type: "spec"
 status: "draft"
+lifecycle: "draft"
 title: "Define checkout flow"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -86,7 +87,8 @@ relations:
 | --- | --- | --- |
 | `id` | Yes | 安定した文書 ID。`SPEC-<22文字Base62>` 形式（UUIDv7由来。従来の `SPEC-NNNN` も有効）。 |
 | `type` | Yes | `spec` 固定。 |
-| `status` | Yes | 現在のライフサイクル状態。 |
+| `status` | Yes | 型固有のワークフロー状態（後述）。 |
+| `lifecycle` | Yes | Registry 3 ライフサイクル。`draft` / `current` / `superseded` / `retired`。`status` と独立で、アクティブ／セットル索引区分を駆動する。 |
 | `title` | Yes | 文書の意図に合う人間向けタイトル。 |
 | `created` | Yes | 作成日。`YYYY-MM-DD` 形式。 |
 | `updated` | Yes | 最後に実質更新した日。`YYYY-MM-DD` 形式。 |
@@ -95,7 +97,8 @@ relations:
 
 ## ステータス値
 
-次のライフサイクル状態を使います。
+次の型固有ワークフローステータスを使います（Document Registry が所有する
+`lifecycle` フィールドとは別軸）。
 
 | Status | Meaning |
 | --- | --- |
@@ -106,9 +109,11 @@ relations:
 | `superseded` | 新しい spec に置き換え済み。 |
 | `rejected` | 明示的に追わない。 |
 
-`status` はライフサイクル状態に集中させます。置き換え先は
-`relations.superseded-by`、実装 plan や task は `relations.implemented-by`
-で表します。
+`status` は spec のワークフロー状態に集中させ、ライフサイクルは
+`lifecycle` に記録します（置き換え時は `superseded`）。Knowledge Relations
+v1 では置き換え側が `relations.supersedes` のみを source→target に記録
+します。`superseded-by` などその他の宣言キーはレガシー語彙で、マイグレー
+ションは読み取りますが通常実行では書き込みません。
 
 ## Relations
 

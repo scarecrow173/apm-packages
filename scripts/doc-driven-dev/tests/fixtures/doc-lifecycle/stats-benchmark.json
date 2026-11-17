@@ -2,18 +2,21 @@
   "tool": "doc-lifecycle-stats/1",
   "label": "benchmark",
   "corpus": {
-    "scannedMarkdown": 78,
+    "scannedMarkdown": 80,
     "documents": 68,
-    "canonicalDocuments": 68,
+    "canonicalDocuments": 53,
+    "legacyDocuments": 15,
     "unmanagedDocuments": 0,
-    "indexes": 10,
+    "indexes": 12,
     "bodyBytes": 57451,
     "settledDocuments": 0,
     "inFlightDocuments": 68,
     "staleUpstreamDocuments": 0,
     "duplicateIdGroups": 0,
     "missingTypes": [
-      "brainstorm"
+      "brainstorm",
+      "knowledge",
+      "verification"
     ]
   },
   "relations": {
@@ -83,51 +86,51 @@
     "inboundTargets": 0
   },
   "findings": {
-    "total": 348,
-    "blocking": 148,
-    "warnings": 125,
+    "total": 335,
+    "blocking": 163,
+    "warnings": 97,
     "infos": 75,
-    "onDocuments": 346,
+    "onDocuments": 333,
     "onIndexes": 0,
     "unattributed": 2,
     "byRuleId": {
-      "index-missing-entry": 67,
+      "index-missing-entry": 53,
       "index-missing-overview": 1,
       "invalid-id-format": 1,
-      "invalid-id-prefix": 38,
+      "invalid-id-prefix": 28,
       "invalid-status": 25,
+      "missing-lifecycle": 53,
       "missing-overview": 1,
-      "orphan-index": 67,
-      "orphan-navigation": 67,
+      "orphan-index": 53,
+      "orphan-navigation": 53,
       "orphan-relation": 46,
-      "plan-missing-test-spec-evidence": 1,
       "provenance-missing-source": 20,
-      "traceability-missing-upstream": 14
+      "traceability-missing-upstream": 1
     },
     "byCategory": {
-      "front-matter": 64,
-      "index": 68,
-      "orphan": 180,
+      "front-matter": 107,
+      "index": 54,
+      "orphan": 152,
       "provenance": 20,
       "structure": 1,
-      "traceability": 15
+      "traceability": 1
     },
     "health": {
-      "documents": 67,
-      "blocking": 148,
-      "warnings": 125,
+      "documents": 53,
+      "blocking": 163,
+      "warnings": 97,
       "infos": 75,
       "categories": [
         {
           "category": "front-matter",
-          "blocking": 64,
+          "blocking": 107,
           "warnings": 0,
           "infos": 0,
           "clean": false
         },
         {
           "category": "traceability",
-          "blocking": 15,
+          "blocking": 1,
           "warnings": 0,
           "infos": 0,
           "clean": false
@@ -141,7 +144,7 @@
         },
         {
           "category": "index",
-          "blocking": 68,
+          "blocking": 54,
           "warnings": 0,
           "infos": 0,
           "clean": false
@@ -149,7 +152,7 @@
         {
           "category": "orphan",
           "blocking": 0,
-          "warnings": 105,
+          "warnings": 77,
           "infos": 75,
           "clean": false
         },
@@ -162,10 +165,10 @@
         }
       ],
       "orphans": {
-        "total": 180,
+        "total": 152,
         "byRule": {
-          "orphan-index": 67,
-          "orphan-navigation": 67,
+          "orphan-index": 53,
+          "orphan-navigation": 53,
           "orphan-relation": 46
         },
         "byType": {
@@ -173,10 +176,7 @@
           "design": 2,
           "discovery": 60,
           "idea": 15,
-          "plan": 4,
-          "spec": 43,
-          "task": 22,
-          "test-spec": 2
+          "spec": 43
         }
       }
     }
@@ -215,8 +215,8 @@
       "orphanIndex": 11,
       "orphanNavigation": 11,
       "orphanRelation": 10,
-      "findings": 53,
-      "blockingFindings": 21
+      "findings": 64,
+      "blockingFindings": 32
     },
     "design": {
       "files": 1,
@@ -251,8 +251,8 @@
       "orphanIndex": 1,
       "orphanNavigation": 1,
       "orphanRelation": 0,
-      "findings": 3,
-      "blockingFindings": 1
+      "findings": 5,
+      "blockingFindings": 3
     },
     "discovery": {
       "files": 20,
@@ -287,8 +287,8 @@
       "orphanIndex": 20,
       "orphanNavigation": 20,
       "orphanRelation": 20,
-      "findings": 120,
-      "blockingFindings": 40
+      "findings": 140,
+      "blockingFindings": 60
     },
     "idea": {
       "files": 5,
@@ -323,8 +323,8 @@
       "orphanIndex": 5,
       "orphanNavigation": 5,
       "orphanRelation": 5,
-      "findings": 30,
-      "blockingFindings": 15
+      "findings": 35,
+      "blockingFindings": 20
     },
     "impl": {
       "files": 1,
@@ -392,11 +392,11 @@
         "unresolved": 0,
         "escaped": 0
       },
-      "orphanIndex": 2,
-      "orphanNavigation": 2,
+      "orphanIndex": 0,
+      "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 7,
-      "blockingFindings": 3
+      "findings": 0,
+      "blockingFindings": 0
     },
     "spec": {
       "files": 16,
@@ -431,8 +431,8 @@
       "orphanIndex": 16,
       "orphanNavigation": 16,
       "orphanRelation": 11,
-      "findings": 87,
-      "blockingFindings": 44
+      "findings": 89,
+      "blockingFindings": 46
     },
     "task": {
       "files": 11,
@@ -464,11 +464,11 @@
         "unresolved": 0,
         "escaped": 0
       },
-      "orphanIndex": 11,
-      "orphanNavigation": 11,
+      "orphanIndex": 0,
+      "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 43,
-      "blockingFindings": 21
+      "findings": 0,
+      "blockingFindings": 0
     },
     "test-spec": {
       "files": 1,
@@ -500,11 +500,11 @@
         "unresolved": 0,
         "escaped": 0
       },
-      "orphanIndex": 1,
-      "orphanNavigation": 1,
+      "orphanIndex": 0,
+      "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 3,
-      "blockingFindings": 1
+      "findings": 0,
+      "blockingFindings": 0
     }
   }
 }

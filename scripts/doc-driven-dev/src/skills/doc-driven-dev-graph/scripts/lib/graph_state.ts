@@ -3,7 +3,7 @@ import path from "node:path";
 
 import {
   artifactHasRelation,
-  CANONICAL_DOC_DIRS,
+  DURABLE_DOC_DIRS,
   projectArtifactGraph,
   resolveArtifactFocus,
   resolveContainedTaskDir,
@@ -75,12 +75,15 @@ function consideredOptionCount(body: string): number {
 
 // Indexes are derived (materialized) views, so a missing or stale README is
 // never a bootstrap reason — only a genuinely absent canonical tree gates
-// graph execution (Issue #195). scaffold_docs still creates indexes when it
-// runs; audit_docs --profile artifact keeps them out of graph-dispatched
-// audits the same way.
+// graph execution (Issue #195). Under Registry 3 the canonical tree is the
+// durable doc set: execution-bound (plan/task) and legacy (impl/exp,
+// test-spec) dirs are migration-owned — their absence is normal in a
+// v3-native workspace, never a bootstrap reason (Issue #234).
+// scaffold_docs still creates indexes when it runs; audit_docs --profile
+// artifact keeps them out of graph-dispatched audits the same way.
 function bootstrapReasons(cwd: string): string[] {
   const reasons: string[] = [];
-  for (const directory of CANONICAL_DOC_DIRS) {
+  for (const directory of DURABLE_DOC_DIRS) {
     const full = path.join(cwd, directory);
     if (!fs.existsSync(full) || !fs.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
   }

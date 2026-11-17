@@ -23,6 +23,7 @@ import {
 const CANONICAL_TARGETS = [
   "docs/ideas", "docs/discovery", "docs/specs", "docs/designs", "docs/plans",
   "docs/tasks", "docs/test-specs", "docs/adr", "docs/impl/ir", "docs/impl/exp",
+  "docs/knowledge", "docs/verification",
 ];
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): number {

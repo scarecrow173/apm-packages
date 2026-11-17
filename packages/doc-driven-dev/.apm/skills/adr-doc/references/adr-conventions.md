@@ -53,6 +53,7 @@ Every new ADR created by this package includes YAML front matter:
 id: "ADR-1AbCdEfGhIjKlMnOpQrStU"
 type: "adr"
 status: "proposed"
+lifecycle: "draft"
 title: "Decision title"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -87,7 +88,8 @@ Required fields:
 | --- | --- | --- |
 | `id` | Yes | Stable document identifier in `ADR-<22-char Base62>` form (UUIDv7-derived; legacy `ADR-NNNN` remains valid). |
 | `type` | Yes | Shared document type. Use `adr` for ADRs. |
-| `status` | Yes | Current lifecycle state. |
+| `status` | Yes | Type-specific workflow state (see Status Values). |
+| `lifecycle` | Yes | Registry 3 durability axis: `draft`, `current`, `superseded`, or `retired`. New documents default to `draft`; unknown values are invalid and are never inferred from `status`. |
 | `title` | Yes | Human-readable ADR title matching the decision. |
 | `created` | Yes | Creation date in `YYYY-MM-DD` format. |
 | `updated` | Yes | Last substantive update date in `YYYY-MM-DD` format. |
@@ -104,7 +106,10 @@ is one-way notification.
 
 ## Status Values
 
-Use these lifecycle statuses:
+`status` and `lifecycle` are separate axes: `status` is the type-specific
+workflow state below; `lifecycle` (`draft` → `current` →
+`superseded`/`retired`) is the Registry 3 durability axis that drives
+index tiers. Use these statuses:
 
 | Status | Meaning |
 | --- | --- |
@@ -114,8 +119,12 @@ Use these lifecycle statuses:
 | `deprecated` | Accepted in the past but no longer recommended. |
 | `superseded` | Replaced by a newer ADR. |
 
-Keep `status` focused on lifecycle state. Use `relations.superseded-by` to point
-to the replacing ADR.
+Keep `status` focused on workflow state; record `lifecycle` separately
+(`superseded` when the ADR is replaced). Under Knowledge Relations v1 the
+*replacing* ADR stores `relations.supersedes` source→target at the ADR it
+replaces; the replaced ADR does not store an inverse — `superseded-by` and
+the other declared keys below are legacy vocabulary that migration tooling
+reads but normal execution does not write.
 
 ## Relations Extension
 
@@ -124,6 +133,12 @@ so tooling can build ADR graphs and validate links.
 
 Relation fields are shared with the other document skills. Choose the field by
 the meaning of the link, not by the target document type.
+
+Under Knowledge Relations v1 an ADR stores `relations.decides-for` (→ spec or
+design) and `relations.supersedes` (→ an older ADR) source→target, plus
+`relations.source` for provenance. Every other key in the table below is
+legacy vocabulary: migration tooling reads it in pre-v3 corpora but normal
+execution does not write it.
 
 | Field | Meaning |
 | --- | --- |
@@ -230,8 +245,8 @@ Index rules:
   `Title` from the H1 heading. The `File` column is a relative link within the
   index directory. Write `—` when a value is missing.
 - Sort rows by filename in ascending order within each tier. In-flight ADRs
-  fill the main table; ADRs with a settled status (`rejected`, `deprecated`,
-  `superseded`) move to a `## Settled` table below it, also
+  fill the main table; ADRs whose `lifecycle` is settled (`superseded` or
+  `retired`) move to a `## Settled` table below it, also
   filename-ordered. Settled rows stay linked — the tier de-emphasizes
   history without hiding it. `accepted`/`proposed` ADRs stay in-flight: they
   are the normative baseline current work derives from.

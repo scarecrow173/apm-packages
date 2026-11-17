@@ -1,5 +1,13 @@
 # impl-doc Conventions
 
+Under Document Registry 3 `impl` (Implementation Records) and `exp`
+(Experiment Logs) are legacy migration-only types: they cannot be created or
+linted as durable documents, `new_impl_record.js` / `new_experiment_log.js` /
+`sync_impl_index.js` refuse at the registry gate, and the directories below
+are migration-owned scopes. These conventions describe the pre-v3 document
+shape that migration tooling reads and the index contract that
+`migrate_ids.js` reconciles.
+
 ## Directory
 
 Implementation Records live under:

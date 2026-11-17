@@ -18,6 +18,7 @@ import {
 // here so graph-side callers keep a single boundary import (Issue #156).
 export {
   CANONICAL_DOC_DIRS,
+  DURABLE_DOC_DIRS,
   isInside,
   isInsideCheckout,
   repoPathKey,

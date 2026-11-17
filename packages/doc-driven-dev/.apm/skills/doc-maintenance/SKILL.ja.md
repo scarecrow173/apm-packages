@@ -66,13 +66,17 @@ node scripts/doc_maintenance.js apply --force-index --json
 - オプション: `--type`, `--dir`, `--force-index`, `--json`。
 
 `index` は managed index を明示的に materialize するエントリポイント —
-INDEX のみを対象とし、全オーナーを横断する。`plan`/`apply` と異なり
-managed index コンテンツ以外には一切触れず（link 正規化やソース修復は
-行わない）、各書き込みをオーナー writer に分派する。shared-4col
-ディレクトリは共有 renderer/merge、`docs/adr` は ADR managed writer、
-`docs/impl/ir`/`docs/impl/exp` は impl-doc の safe sync エンジン
-（`sync_impl_index` と同じ API — 無条件 writer は使わない）経由で
-書き込む。
+INDEX のみを対象とし、全 durable オーナーを横断する。`plan`/`apply`
+と異なり managed index コンテンツ以外には一切触れず（link 正規化や
+ソース修復は行わない）、各書き込みをオーナー writer に分派する。
+shared-4col ディレクトリは共有 renderer/merge、`docs/adr` は ADR
+managed writer 経由で書き込む。resident が execution-bound
+（`docs/plans`、`docs/tasks`、`docs/implementation-plans`、
+`docs/work-items`）または legacy（`docs/test-spec`、`docs/test-specs`、
+`docs/impl`、`docs/impl/ir`、`docs/impl/exp`）のディレクトリは
+migration-owned scope であり、`index` は拒否対象(`... index is
+migration-owned`)として報告し一切書き込まない。impl の index
+エンジンは `migrate_ids` の内部でのみ動作する。
 
 ```bash
 node scripts/doc_maintenance.js index plan [--dir <path>] [--json]
@@ -107,11 +111,11 @@ apply されていても、別のディレクトリが `rejected` なら run 全
 （`--force-index` は有効な引数ではない）。手作業で回避せず、原因を直して
 から再生成する。`reason` が原因を示す: hand-curated な index は
 generated-index marker が必要（狭いケースでは `promote_index` による
-取り込みも可）、impl source は schema に適合した front matter が必要、
-impl の README は generated-index marker が必要。`docs/impl/ir` と
-`docs/impl/exp` のオーナー側ルールは
-[impl-doc](../impl-doc/SKILL.ja.md)（「ディレクトリ索引の同期」）に
-ある。`promote_index` がカバーするのは legacy-scaffold 取り込みの
+取り込みも可）、migration-owned なディレクトリ(`... index is
+migration-owned`)は migration ツーリングの内部でしか再同期できない。
+`docs/impl/ir` と `docs/impl/exp` のオーナー側ルールは
+[impl-doc](../impl-doc/SKILL.ja.md)（「migration-owned なディレクトリ
+索引」)にある。`promote_index` がカバーするのは legacy-scaffold 取り込みの
 ケースだけで、汎用的な回避策ではない。
 
 ### index 競合の解消
@@ -206,33 +210,37 @@ node scripts/promote_index.js --cwd <repo> [--dir <path>] [--apply] [--json]
 `scaffold_docs` のみ即時作成のエントリポイントであり、他はすべて
 preview-first に従う:
 
-- `scaffold_docs` は既存ファイルを上書きせず canonical docs tree を作り、
-  初回実行時に各ディレクトリの contract index(`docs/adr`・
-  `docs/impl/ir`・`docs/impl/exp` ではオーナー形式)を書き込む。この
-  書き込みは repair ではなく bootstrap の副作用であるため preview
-  フェーズはない。
+- `scaffold_docs` は既存ファイルを上書きせず canonical *durable* docs
+  tree を作り、初回実行時に各ディレクトリの contract index
+  (shared-suite ディレクトリは共有 managed 形式、`docs/adr` はオーナー
+  形式)を書き込む。execution-bound および migration-owned の
+  ディレクトリは scaffold しない。この書き込みは repair ではなく
+  bootstrap の副作用であるため preview フェーズはない。
 - `migrate_docs` は canonical docs への import を plan し、`--apply` で
   書き込む。front matter で認識された `type:` は typed route であり、
   `type: adr` は宣言済み `adr-doc` mutator 行のもとで引き続き
-  `docs/adr` へ migrate する。content pattern のみで到達した route は
-  オーナー dir へ一切書き込まない。本文から `docs/adr`・
-  `docs/impl/ir`・`docs/impl/exp` へ推測された source は plan / apply
-  ともに `unsupported-owner-route` として skip される。apply は全
-  canonical target dir の containment を再検査し、checkout を逸脱
-  する、または link 経由で解決される target は hard failure であり、
-  link 越しの書き込みは行わない。apply が起動する scaffold bootstrap
-  も、各ディレクトリ作成と index 書き込みを同じ realpath check で
-  gate する。オーナー index（`docs/adr`、`docs/impl/*`）の
-  materialize は `index` エントリポイントとオーナー writer に委ね
-  られ、apply が再生成するのは shared-suite の managed index のみ
-  である。
+  `docs/adr` へ migrate する。一方、宣言された非 durable `type:`
+  (`plan`、`task`、`test-spec`、`impl`、`exp`)は migration debt であり、
+  source はそのまま skip される — durable tree へ再 route されることは
+  ない。content pattern のみで到達した route はオーナー dir へ一切
+  書き込まない。本文から `docs/adr`・`docs/impl/ir`・`docs/impl/exp`
+  へ推測された source は plan / apply ともに `unsupported-owner-route`
+  として skip される。apply は全 canonical target dir の containment
+  を再検査し、checkout を逸脱する、または link 経由で解決される
+  target は hard failure であり、link 越しの書き込みは行わない。
+  apply が起動する scaffold bootstrap も、各ディレクトリ作成と index
+  書き込みを同じ realpath check で gate する。オーナー index
+  （`docs/adr`、`docs/impl/*`）の materialize は migration ツーリング
+  内のオーナー writer に委ねられ、apply が再生成するのは
+  shared-suite の managed index のみである。
 - `migrate_ids` は legacy `TYPE-NNNN` id と numbered filename を書き換える
   前に discover / mapping / preflight を行う。preflight blocker があれば
   mutation 前に停止し、`ok: false` かつ `failureStage: "preflight"` は
   書き込みゼロを意味する。`apply` は参照を書き換え、ファイルを
   rename し、触れた index をすべてオーナー writer 経由で再生成
   （shared 領域は managed-index writer、`docs/adr` は ADR writer、
-  `docs/impl/ir` / `docs/impl/exp` は impl-doc safe sync エンジン）
+  `docs/impl/ir` / `docs/impl/exp` は impl safe sync ライブラリ ——
+  `sync_impl_index` は拒否されるため直接呼び出し）
   してから、`doc-status` audit（duplicate id、未解決 relation、
   壊れた link、index 整合性）でリポジトリを再検証する。各 index は
   `regenerated`、`skipped`、`blocked` のいずれかを報告し、
@@ -261,11 +269,11 @@ preview-first に従う:
   エントリポイントは `doc-maintenance` で、常に明示的な apply 経由:
   whitelist 修復の `apply`、managed index materialization の
   `index apply`。
-- オーナー局所の明示的 writer は自前ディレクトリ向けに残る:
-  `docs/adr` には `update_index.js`（adr-doc）、`docs/impl/ir` と
-  `docs/impl/exp` には `sync_impl_index.js`（impl-doc）。`index apply`
-  はこれらを bypass せず同じオーナー writer に委譲し、impl 索引へは
-  `sync_impl_index` の safe sync API 経由でのみ到達する。
+- オーナー局所の明示的 writer は自前の durable ディレクトリ向けに残る:
+  `docs/adr` には `update_index.js`（adr-doc）。`sync_impl_index.js`
+  （impl-doc）は Registry 3 では registry ゲートで拒否される —— impl
+  索引は migration-owned であり、`migrate_ids` の内部でのみ再同期
+  される。
 - migration も同じ preview-first contract で plan / apply されるが、
   repair コマンドが暗黙に実行することはない。
 

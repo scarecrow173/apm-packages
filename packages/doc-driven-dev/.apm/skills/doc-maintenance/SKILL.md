@@ -66,12 +66,16 @@ node scripts/doc_maintenance.js apply --force-index --json
 - Options: `--type`, `--dir`, `--force-index`, `--json`.
 
 `index` is the explicit managed-index materialization entrypoint — INDEX
-only, across every owner. Unlike `plan`/`apply` it touches nothing outside
-managed index content (no link normalization, no source repairs), and it
-dispatches each write to the owning writer: shared-4col directories through
-the shared renderer/merge, `docs/adr` through the ADR managed writer, and
-`docs/impl/ir`/`docs/impl/exp` through the impl-doc safe sync engine (the
-same API `sync_impl_index` uses — never the unconditional writers).
+only, across every durable owner. Unlike `plan`/`apply` it touches nothing
+outside managed index content (no link normalization, no source repairs),
+and it dispatches each write to the owning writer: shared-4col directories
+through the shared renderer/merge and `docs/adr` through the ADR managed
+writer. Directories whose residents are execution-bound (`docs/plans`,
+`docs/tasks`, `docs/implementation-plans`, `docs/work-items`) or legacy
+(`docs/test-spec`, `docs/test-specs`, `docs/impl`, `docs/impl/ir`,
+`docs/impl/exp`) are migration-owned scopes — `index` reports them as
+rejected targets (`... index is migration-owned`) and never writes; the
+impl index engine runs only inside `migrate_ids`.
 
 ```bash
 node scripts/doc_maintenance.js index plan [--dir <path>] [--json]
@@ -105,12 +109,13 @@ A `rejected` target is never written and has no force path on the
 `index` op (`--force-index` is not a valid argument there). Do not work
 around it by hand — fix the cause and regenerate. The `reason` field
 identifies the cause: a hand-curated index needs the generated-index
-marker (or `promote_index` adoption where that narrow case applies),
-impl sources need schema-valid front matter, and impl READMEs need the
-generated-index marker. For `docs/impl/ir` and `docs/impl/exp` the
-owner-side rules live in [impl-doc](../impl-doc/SKILL.md) ("Reconciling
-the Directory Index"); `promote_index` covers only its legacy-scaffold
-adoption case and is not a general escape hatch.
+marker (or `promote_index` adoption where that narrow case applies), and
+a migration-owned directory (`... index is migration-owned`) can only be
+reconciled inside migration tooling. For `docs/impl/ir` and
+`docs/impl/exp` the owner-side rules live in
+[impl-doc](../impl-doc/SKILL.md) ("The migration-owned directory
+indexes"); `promote_index` covers only its legacy-scaffold adoption case
+and is not a general escape hatch.
 
 ### Resolving index conflicts
 
@@ -204,29 +209,36 @@ node scripts/promote_index.js --cwd <repo> [--dir <path>] [--apply] [--json]
 `scaffold_docs` is the one immediate-create entry point; the rest are
 preview-first:
 
-- `scaffold_docs` creates the canonical docs tree without overwriting existing
-  files, writing each directory's contract index — the owner format for
-  `docs/adr`, `docs/impl/ir`, `docs/impl/exp` — on first run. Its write side
-  effects are bootstrap, not repair, so it has no preview phase.
+- `scaffold_docs` creates the canonical *durable* docs tree without
+  overwriting existing files, writing each directory's contract index —
+  the shared managed format for shared-suite dirs, the owner format for
+  `docs/adr` — on first run. Execution-bound and migration-owned
+  directories are never scaffolded. Its write side effects are bootstrap,
+  not repair, so it has no preview phase.
 - `migrate_docs` plans imports into canonical docs; `--apply` writes. A
   recognized `type:` in front matter is a typed route — `type: adr` still
-  migrates into `docs/adr` under the declared `adr-doc` mutator row. A route
-  reached only by content patterns never writes into an owner dir: sources
-  whose text guesses `docs/adr`, `docs/impl/ir`, or `docs/impl/exp` are
-  skipped as `unsupported-owner-route` in plan and apply alike. Apply
-  re-checks every canonical target dir for containment — a target that
-  escapes the checkout or resolves through a link is a hard failure, never
-  a write through the link — and the scaffold bootstrap it triggers gates
-  each directory creation and index write on the same realpath check.
+  migrates into `docs/adr` under the declared `adr-doc` mutator row — while
+  a declared non-durable `type:` (`plan`, `task`, `test-spec`, `impl`,
+  `exp`) is migration debt: the source is skipped outright, never
+  re-routed into the durable tree. A route reached only by content
+  patterns never writes into an owner dir: sources whose text guesses
+  `docs/adr`,
+  `docs/impl/ir`, or `docs/impl/exp` are skipped as
+  `unsupported-owner-route` in plan and apply alike. Apply re-checks every
+  canonical target dir for containment — a target that escapes the
+  checkout or resolves through a link is a hard failure, never a write
+  through the link — and the scaffold bootstrap it triggers gates each
+  directory creation and index write on the same realpath check.
   Materializing owner indexes (`docs/adr`, `docs/impl/*`) stays with the
-  `index` entrypoint and owner writers; apply regenerates shared-suite
+  owner writers inside migration tooling; apply regenerates shared-suite
   managed indexes only.
 - `migrate_ids` discovers, maps, and preflights before rewriting legacy
   `TYPE-NNNN` ids and numbered filenames. Any preflight blocker stops the
   run before mutation — `ok: false` with `failureStage: "preflight"` means
   zero writes. `apply` rewrites references, renames files, regenerates each
   touched index through its owning writer (the shared managed-index writer,
-  the ADR writer for `docs/adr`, the impl-doc safe sync engine for
+  the ADR writer for `docs/adr`, the impl safe sync library — called
+  directly, since `sync_impl_index` refuses — for
   `docs/impl/ir`/`docs/impl/exp`), then revalidates the repository with
   `doc-status` audits (duplicate ids, unresolved relations, broken links,
   index consistency). Each index reports `regenerated`, `skipped`, or
@@ -254,12 +266,10 @@ preview-first:
   content, normalizing link paths, and running document migrations — always
   through an explicit apply: `apply` for whitelisted repairs, `index apply`
   for managed index materialization.
-- Owner-local explicit writers remain for their own directories:
-  `update_index.js` (adr-doc) for `docs/adr`, `sync_impl_index.js`
-  (impl-doc) for `docs/impl/ir` and `docs/impl/exp`. `index apply`
-  delegates to the same owning writers rather than bypassing them, and
-  impl indexes are reached exclusively through the `sync_impl_index` safe
-  sync API.
+- Owner-local explicit writers remain for their own durable directories:
+  `update_index.js` (adr-doc) for `docs/adr`. `sync_impl_index.js`
+  (impl-doc) refuses at the registry gate under Registry 3 — impl indexes
+  are migration-owned and reconcile only inside `migrate_ids`.
 - Migration is planned and applied through the same preview-first contract
   but is never performed implicitly by a repair command.
 

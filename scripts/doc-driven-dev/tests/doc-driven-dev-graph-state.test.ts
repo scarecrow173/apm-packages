@@ -27,6 +27,7 @@ function fixtureRepo(): string {
   for (const directory of [
     "docs/ideas", "docs/discovery", "docs/specs", "docs/designs", "docs/plans",
     "docs/tasks", "docs/test-specs", "docs/adr", "docs/impl/ir", "docs/impl/exp",
+    "docs/knowledge", "docs/verification",
   ]) {
     fs.mkdirSync(path.join(repo, directory), { recursive: true });
     fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
@@ -573,6 +574,7 @@ test("bootstrap gate ignores missing README indexes but still requires canonical
   for (const directory of [
     "docs/ideas", "docs/discovery", "docs/specs", "docs/designs", "docs/plans",
     "docs/tasks", "docs/test-specs", "docs/adr", "docs/impl/ir", "docs/impl/exp",
+    "docs/knowledge", "docs/verification",
   ]) {
     fs.mkdirSync(path.join(repo, directory), { recursive: true });
   }

@@ -6,10 +6,16 @@ license: MIT
 
 # Document Status Skill
 
-この skill は、spec、design、plan、task、test spec、その他の canonical document
-type のライフサイクル状態と relation の健全性を確認するために使います。標準では
+この skill は、Registry 3 の durable 文書型 —— `idea`、`brainstorm`、
+`discovery`、`spec`、`design`、`adr`、`knowledge`、`verification` —— の
+ライフサイクル状態と relation の健全性を確認するために使います。標準では
 報告・判定専用であり、作成系または索引更新系のコマンドを使わない限り
 プロジェクトファイルを変更しません。
+
+`--type plan`、`--type task`、`--type test-spec` は Registry 3 で拒否される
+scope です。`plan`/`task` は execution-bound(状態は Execution Store にある)、
+`test-spec` は legacy・migration 専用形式であり、いずれも linter が検査
+できる durable 文書ではありません。
 
 ## 監査の役割
 
@@ -49,14 +55,14 @@ type のライフサイクル状態と relation の健全性を確認するた�
 
    ```bash
    node scripts/doc_status.js list --type spec
-   node scripts/list_docs.js --type task --status in-progress
+   node scripts/list_docs.js --type spec --status draft
    ```
 
 2. finding を列挙（`lint`）またはゲート要約を評価（`audit`）する。
 
    ```bash
    node scripts/doc_status.js lint --type spec --rule broken-link
-   node scripts/doc_status.js audit --type plan --json
+   node scripts/doc_status.js audit --type spec --json
    node scripts/audit_docs.js --type spec
    ```
 
@@ -76,11 +82,12 @@ type のライフサイクル状態と relation の健全性を確認するた�
    `--profile`（lint, audit, health）。finding は決定的順序で
    出力され、exit status は呼び出し自体が不正な場合のみ `0` 以外になる。
 
-   `audit_docs.js --type all` が監査するのは shared suite のみ ——
-   `idea`、`brainstorm`、`discovery`、`spec`、`plan`、`task`、`design`、
-   `adr`、`test-spec` です。impl-doc の所有 directory（`docs/impl/ir`、
-   `docs/impl/exp`）は `--type` scope に含まれません。その整合性は
-   `audit_impl_record.js` と `audit_experiment_log.js` が所有します。
+   `audit_docs.js --type all` が監査するのは shared durable suite のみ ——
+   `idea`、`brainstorm`、`discovery`、`spec`、`design`、`adr`、
+   `knowledge`、`verification` です。impl-doc の所有 directory
+   （`docs/impl/ir`、`docs/impl/exp`）は `--type` scope に含まれません。
+   その整合性は `audit_impl_record.js` と `audit_experiment_log.js` が
+   所有します。
    `audit_docs.js --type all --owners` は package-wide audit です:
    shared report に `impl-record` と `experiment-log` の `ownerAudits`
    entry を追加します。`--owners` は `--type all` を必須とし、`--dir`
@@ -88,9 +95,12 @@ type のライフサイクル状態と relation の健全性を確認するた�
    full check を実行します。
 
    `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
-   文書型（`spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `idea`,
-   `brainstorm`, `discovery`）は `audit_docs.js --type <name> --profile artifact`、
-   `all` は全 canonical 文書型に加えて、root-level の unmanaged Markdown と
+   durable 文書型（`spec`, `adr`, `design`, `idea`, `brainstorm`,
+   `discovery`, `knowledge`, `verification`）は
+   `audit_docs.js --type <name> --profile artifact`。`plan`、`task`、
+   `test-spec` の名前は拒否される Registry 3 scope に解決されます(上記
+   参照)。`all` は全 canonical 文書型に加えて、root-level の unmanaged
+   Markdown と
    配布 `.apm` skill 文書への legacy-reference sweep も対象とする
    `audit_docs.js --type all --profile artifact`、
    `impl-record` は `impl-doc/scripts/audit_impl_record.js`、`experiment-log` は
@@ -123,6 +133,11 @@ profile と、実行・スキップされたチェック群を報告する。対
 
 - `unparseable-front-matter`, `invalid-front-matter`, `invalid-type`,
   `invalid-status` — フロントマターと文書 contract の違反。
+- `missing-lifecycle`, `invalid-lifecycle` — Registry 3 の lifecycle 軸
+  (`draft`、`current`、`superseded`、`retired`)は独立した contract で
+  あり、`status` からは読み取らない。欠落は `missing-lifecycle`
+  (migration debt、docs migration で修復可能)、軸外の値が記録されている
+  場合は `invalid-lifecycle`。
 - `invalid-id-format`, `invalid-id-prefix`, `duplicate-id` — artifact
   identity の違反。
 - `broken-relation-link`, `ambiguous-relation-target`,
@@ -137,29 +152,29 @@ profile と、実行・スキップされたチェック群を報告する。対
 - `ambiguous-experiment-reference` — 同一番号の numbered `.jsonl` experiment
   log が複数存在し、一意の canonical path を決められない `EXP-NNNN` 参照。
   `.jsonl` path へ手動で書き換える必要がある。
-- `test-spec-missing-verifies`, `test-spec-invalid-verifies-target`,
-  `plan-missing-test-spec-evidence`, `missing-required-relation`,
-  `invalid-relation-target-type` — contract が要求する upstream / 検証
-  evidence の traceability category rule。
+- `missing-required-relation`, `invalid-relation-target-type` — 汎用の
+  relation 契約 rule: 型で宣言された必須 relation が欠落しているか、
+  記録された relation が contract の許可しない型を指している。
+  (Registry 2 の型別 `test-spec-*` / `plan-missing-test-spec-evidence`
+  rule はその型とともに廃止。)
 - `provenance-missing-source`, `provenance-invalid-source`,
   `provenance-unresolved-local-source` — `relations.source` の provenance。
   ローカル source path はリポジトリ内で解決必須。外部 URL は外部
   evidence として分類し、`--external-links` 指定時のみ疎通確認する。
 - `traceability-missing-upstream` — type-aware な upstream の期待。
-  contract が upstream artifact を期待する type（`spec`, `plan`, `task`,
-  `design`）で `implements` / `derives-from` / `refines` relation の宣言が
-  ない場合に warning を出す。root 適格 type と終端 status
-  （`superseded`, `rejected`, `archived`, `deprecated`, `abandoned`,
-  `wont-do`）は対象外。
+  Knowledge Relations v1 で上流を期待する durable 型は `design`
+  (`realizes` 経由)のみ。settled でない design が `realizes` relation を
+  宣言していない場合に指摘する。settled status(`superseded`、`rejected`、
+  `archived`、`deprecated`、`abandoned`、`wont-do`)は対象外。
 - `stale-upstream` — 死んだ上流に乗っている in-flight 文書。
-  `implements` / `derives-from` / `refines` のターゲットが、dead status
+  `implements` / `derives-from` / `refines` / `motivates` /
+  `decides-for` / `realizes` のターゲットが、dead status
   （`superseded`, `rejected`, `deprecated`, `archived`, `abandoned`,
   `wont-do`, `completed`, `done`）の文書に解決した場合、dead ターゲット
-  ごとに warning を出す。`completed`/`done` も dead とみなす —— 完了済み
-  plan 上の in-flight task は「残し忘れ」そのもの —— 一方で
-  `approved`/`accepted`/`implemented`/`resolved` の上流や settled な
-  文書はフラグされない。non-blocking な warning: stale 系譜は契約違反
-  ではなく、向き先変更またはクローズを促すシグナル。
+  ごとに warning を出す。`approved`/`accepted`/`implemented`/`resolved`
+  の上流や settled な文書はフラグされない。non-blocking な warning:
+  stale 系譜は契約違反ではなく、向き先変更またはクローズを促す
+  シグナル。
 - `missing-overview` — 必須 canonical ディレクトリ文書。両 profile で実行。
 - `missing-index`, `index-missing-entry`, `index-missing-overview` —
   索引の存在とカバレッジの欠落。materialized profile のみ。

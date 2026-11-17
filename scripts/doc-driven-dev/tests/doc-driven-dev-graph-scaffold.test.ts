@@ -30,7 +30,7 @@ function runScaffold(cwd: any) {
   };
 }
 
-test("scaffold_docs creates the canonical docs tree without overview.md", () => {
+test("scaffold_docs creates the durable docs tree without overview.md", () => {
   const repo = tempRepo();
 
   const result = runScaffold(repo);
@@ -38,21 +38,30 @@ test("scaffold_docs creates the canonical docs tree without overview.md", () => 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Created docs tree scaffold/);
 
+  // Registry 3: the managed tree is the durable doc set only — execution-bound
+  // (plan/task) and legacy (impl/exp, test-spec) dirs are never scaffolded.
   const expectedPaths = [
     "docs/ideas/README.md",
     "docs/discovery/README.md",
     "docs/specs/README.md",
     "docs/designs/README.md",
-    "docs/plans/README.md",
-    "docs/tasks/README.md",
-    "docs/test-specs/README.md",
     "docs/adr/README.md",
-    "docs/impl/ir/README.md",
-    "docs/impl/exp/README.md",
+    "docs/knowledge/README.md",
+    "docs/verification/README.md",
   ];
 
   for (const relPath of expectedPaths) {
     assert.equal(fs.existsSync(path.join(repo, relPath)), true, relPath);
+  }
+
+  for (const relPath of [
+    "docs/plans/README.md",
+    "docs/tasks/README.md",
+    "docs/test-specs/README.md",
+    "docs/impl/ir/README.md",
+    "docs/impl/exp/README.md",
+  ]) {
+    assert.equal(fs.existsSync(path.join(repo, relPath)), false, relPath);
   }
 
   assert.equal(fs.existsSync(path.join(repo, "docs/designs/overview.md")), false);
@@ -88,10 +97,14 @@ test("scaffolded owner indexes accept explicit materialization end to end", () =
   const scaffold = runSkill(maintenanceRoot, "scaffold_docs.js", ["--cwd", repo], repo);
   assert.equal(scaffold.status, 0, scaffold.stderr);
 
-  for (const dir of ["docs/adr", "docs/impl/ir", "docs/impl/exp"]) {
+  // Registry 3: docs/adr stays an owner scope; docs/knowledge and
+  // docs/verification are new durable shared dirs. Legacy impl dirs are not
+  // scaffolded at all.
+  for (const dir of ["docs/adr", "docs/knowledge", "docs/verification"]) {
     const content = fs.readFileSync(path.join(repo, dir, "README.md"), "utf8");
     assert.ok(content.includes("doc-suite:generated-index"), `${dir} scaffold index is managed`);
   }
+  assert.equal(fs.existsSync(path.join(repo, "docs/impl")), false, "legacy impl dirs are never scaffolded");
 
   const adr = runSkill(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
   assert.equal(adr.status, 0, adr.stderr);
@@ -102,25 +115,18 @@ test("scaffolded owner indexes accept explicit materialization end to end", () =
   assert.doesNotMatch(adrApply.stdout + adrApply.stderr, /hand-curated/);
   assert.match(fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8"), /adopt-madr\.md/);
 
+  // Legacy creator entrypoints refuse at the registry gate (Issue #234).
   const ir = runSkill(implRoot, "new_impl_record.js", ["--title", "Extract foo", "--cwd", repo], repo);
-  assert.equal(ir.status, 0, ir.stderr);
-  assert.match(ir.stdout, /Index deferred/);
-  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), /extract-foo\.md/);
-  const irApply = runSkill(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/ir", "--cwd", repo], repo);
-  assert.equal(irApply.status, 0, irApply.stderr);
-  assert.doesNotMatch(irApply.stdout + irApply.stderr, /hand-curated/);
-  assert.match(fs.readFileSync(path.join(repo, "docs/impl/ir/README.md"), "utf8"), /extract-foo\.md/);
+  assert.notEqual(ir.status, 0);
+  assert.match(ir.stderr, /legacy format|migration/);
+  assert.equal(fs.existsSync(path.join(repo, "docs/impl/ir")), false, "no impl artifact is minted");
 
-  const exp = runSkill(implRoot, "new_experiment_log.js", ["--title", "Try caches", "--cwd", repo], repo);
-  assert.equal(exp.status, 0, exp.stderr);
-  assert.match(exp.stdout, /Index deferred/);
-  assert.doesNotMatch(fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8"), /try-caches\.jsonl/);
-  const expApply = runSkill(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/exp", "--cwd", repo], repo);
-  assert.equal(expApply.status, 0, expApply.stderr);
-  assert.doesNotMatch(expApply.stdout + expApply.stderr, /hand-curated/);
-  const expIndex = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
-  assert.match(expIndex, /try-caches\.jsonl/);
-  assert.doesNotMatch(expIndex, /\| Title \|/, "EXP index stays one-column");
+  // A legacy dir that exists on disk stays migration-owned: the normal
+  // materializer plans a rejected target instead of syncing its index.
+  fs.mkdirSync(path.join(repo, "docs/impl/ir"), { recursive: true });
+  fs.writeFileSync(path.join(repo, "docs/impl/ir/README.md"), "# ir\n", "utf8");
+  const irApply = runSkill(maintenanceRoot, "doc_maintenance.js", ["index", "apply", "--dir", "docs/impl/ir", "--cwd", repo], repo);
+  assert.match(irApply.stdout + irApply.stderr, /migration-owned|rejected/i);
 });
 
 test("a second scaffold run leaves managed owner indexes untouched", () => {
@@ -158,6 +164,9 @@ test("migrate_docs --apply produces contract-conformant owner indexes", () => {
   assert.ok(adrIndex.includes("doc-suite:generated-index"));
   assert.doesNotMatch(adrIndex, /old-decision\.md/, "skipped owner-route sources never reach the index");
   assert.deepEqual(fs.readdirSync(path.join(repo, "docs/adr")), ["README.md"]);
-  const expIndex = fs.readFileSync(path.join(repo, "docs/impl/exp/README.md"), "utf8");
-  assert.match(expIndex, /\| File \|/);
+  // Registry 3: migration scaffolds the durable tree only — legacy impl/exp
+  // dirs are never minted (Issue #234).
+  assert.equal(fs.existsSync(path.join(repo, "docs/impl")), false, "migration never mints legacy dirs");
+  assert.ok(fs.existsSync(path.join(repo, "docs/knowledge/README.md")), "durable scaffold includes docs/knowledge");
+  assert.ok(fs.existsSync(path.join(repo, "docs/verification/README.md")), "durable scaffold includes docs/verification");
 });

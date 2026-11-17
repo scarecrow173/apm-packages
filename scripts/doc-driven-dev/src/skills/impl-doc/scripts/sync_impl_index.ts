@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { applyImplIndexSync, planImplIndexSync } from "./lib/impl_index_sync";
+import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import type { ImplIndexKind, SyncChange, SyncPlan } from "./lib/impl_index_sync";
 
@@ -99,6 +100,10 @@ async function main(): Promise<void> {
     }
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
+    // Registry 3: impl/exp dirs are legacy, migration-owned scopes — their
+    // indexes regenerate only inside migration tooling (id_migration calls
+    // the library directly). This normal entrypoint refuses (Issue #234).
+    configFor(kind === "ir" ? "impl" : "exp");
     const { plan, written } = args.apply
       ? applyImplIndexSync(cwd, kind, args.dir, args.expect !== undefined ? { expectPlanHash: args.expect } : undefined)
       : { plan: planImplIndexSync(cwd, kind, args.dir), written: false };

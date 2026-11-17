@@ -56,6 +56,7 @@ Specs use the shared document front matter:
 id: "SPEC-034qPUpBj0VYOqxmFLijD5"
 type: "spec"
 status: "draft"
+lifecycle: "draft"
 title: "Define checkout flow"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -87,7 +88,8 @@ Required fields:
 | --- | --- | --- |
 | `id` | Yes | Stable document identifier in `SPEC-<22-char Base62>` form (UUIDv7-derived; legacy `SPEC-NNNN` remains valid). |
 | `type` | Yes | Must be `spec`. |
-| `status` | Yes | Current lifecycle state. |
+| `status` | Yes | Type-specific workflow state (see Status Values). |
+| `lifecycle` | Yes | Registry 3 lifecycle: `draft`, `current`, `superseded`, or `retired`. Independent of `status`; drives active/settled index tiers. |
 | `title` | Yes | Human-readable title matching the document intent. |
 | `created` | Yes | Creation date in `YYYY-MM-DD` format. |
 | `updated` | Yes | Last substantive update date in `YYYY-MM-DD` format. |
@@ -96,7 +98,8 @@ Required fields:
 
 ## Status Values
 
-Use these lifecycle statuses:
+Use these type-specific workflow statuses (distinct from the `lifecycle`
+field, which the Document Registry owns):
 
 | Status | Meaning |
 | --- | --- |
@@ -107,9 +110,11 @@ Use these lifecycle statuses:
 | `superseded` | Replaced by a newer spec. |
 | `rejected` | Explicitly not pursued. |
 
-Keep `status` focused on lifecycle state. Use `relations.superseded-by` to
-point to a replacing spec and `relations.implemented-by` to point to plans or
-tasks that implement it.
+Keep `status` focused on spec workflow state; record `lifecycle` separately
+(`superseded` when the spec is replaced). Under Knowledge Relations v1 only
+`relations.supersedes` is stored source→target for a replacing spec;
+`superseded-by` and other declared keys are legacy vocabulary that migration
+tooling reads but normal execution does not write.
 
 ## Relations
 

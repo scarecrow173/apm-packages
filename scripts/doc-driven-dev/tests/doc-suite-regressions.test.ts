@@ -5,6 +5,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import { appendExperimentEvent, buildExperimentEvent } from "../src/skills/impl-doc/scripts/lib/impl_doc_utils";
+
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
 function tempRepo() {
@@ -30,29 +32,31 @@ function writeDoc(dir: string, file: string, frontMatter: Record<string, unknown
 
 test("audit_docs reports unparseable front matter instead of crashing", () => {
   const repo = tempRepo();
-  const dir = path.join(repo, "docs/tasks");
+  const dir = path.join(repo, "docs/specs");
   writeDoc(dir, "0001-good.md", {
-    id: "TASK-0001", type: "task", status: "todo", title: "Good",
+    id: "SPEC-0001", type: "spec", status: "draft", lifecycle: "draft", title: "Good",
     created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
   });
   fs.writeFileSync(path.join(dir, "0002-bad.md"), '---\ntitle: "unclosed\n---\n# bad\n', "utf8");
 
-  const audit = runScript("doc-status", "audit_docs.js", ["--type", "task"], repo);
+  const audit = runScript("doc-status", "audit_docs.js", ["--type", "spec"], repo);
   assert.equal(audit.status, 0, audit.stderr);
   assert.match(audit.stdout, /unparseable-front-matter|not valid YAML/);
 
-  const list = runScript("doc-status", "list_docs.js", ["--type", "task"], repo);
+  const list = runScript("doc-status", "list_docs.js", ["--type", "spec"], repo);
   assert.equal(list.status, 0, list.stderr);
   assert.match(list.stdout, /0001-good\.md/);
   // Issue #162 B3 — the compatibility wrapper exposes capture-layer age too.
   assert.match(list.stdout, /created 2026-09-15/);
 });
 
-test("new_task rejects an unknown status before writing any file", () => {
+test("new_task refuses at the registry gate before status validation", () => {
   const repo = tempRepo();
+  // Registry 3: task is execution-bound — the refusal fires before any
+  // status vocabulary check, and nothing is written either way (Issue #234).
   const res = runScript("task-doc", "new_task.js", ["--title", "Sample", "--status", "bogus"], repo);
   assert.equal(res.status, 1);
-  assert.match(res.stderr, /Invalid task status/);
+  assert.match(res.stderr, /execution-bound|ephemeral|Execution Store/);
   const dir = path.join(repo, "docs/tasks");
   const docs = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith(".md")) : [];
   assert.deepEqual(docs, []);
@@ -75,15 +79,15 @@ test("new_spec rejects a malformed --date before writing", () => {
 
 test("generated index escapes pipe characters in titles", () => {
   const repo = tempRepo();
-  const res = runScript("task-doc", "new_task.js", ["--title", "Use A | B"], repo);
+  const res = runScript("spec-doc", "new_spec.js", ["--title", "Use A | B"], repo);
   assert.equal(res.status, 0, res.stderr);
   // Creators defer index writes (#196); the render path lives in explicit
   // materialization via doc_maintenance index apply.
-  assert.equal(fs.existsSync(path.join(repo, "docs/tasks/README.md")), false);
+  assert.equal(fs.existsSync(path.join(repo, "docs/specs/README.md")), false);
   const applied = runScript("doc-maintenance", "doc_maintenance.js",
-    ["index", "apply", "--dir", "docs/tasks"], repo);
+    ["index", "apply", "--dir", "docs/specs"], repo);
   assert.equal(applied.status, 0, applied.stderr);
-  const readme = fs.readFileSync(path.join(repo, "docs/tasks/README.md"), "utf8");
+  const readme = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
   assert.ok(readme.includes("A \\| B"), readme);
 });
 
@@ -151,13 +155,13 @@ test("new_adr assigns opaque ADR ids alongside legacy ids", () => {
 
 test("localized index files are not audited as documents", () => {
   const repo = tempRepo();
-  const dir = path.join(repo, "docs/tasks");
-  writeDoc(dir, "0001-task.md", {
-    id: "TASK-0001", type: "task", status: "todo", title: "Task",
+  const dir = path.join(repo, "docs/specs");
+  writeDoc(dir, "0001-spec.md", {
+    id: "SPEC-0001", type: "spec", status: "draft", lifecycle: "draft", title: "Spec",
     created: "2026-09-15", updated: "2026-09-15", owners: [], relations: {},
   });
-  fs.writeFileSync(path.join(dir, "README.ja.md"), "# タスク一覧\n", "utf8");
-  const res = runScript("doc-status", "audit_docs.js", ["--type", "task"], repo);
+  fs.writeFileSync(path.join(dir, "README.ja.md"), "# 仕様一覧\n", "utf8");
+  const res = runScript("doc-status", "audit_docs.js", ["--type", "spec"], repo);
   assert.equal(res.status, 0, res.stderr);
   assert.ok(!res.stdout.includes("README.ja.md"), res.stdout);
 });
@@ -175,13 +179,21 @@ test("relate_adr writes nothing when the inverse target is missing", () => {
 
 test("experiment log summary containing quotes produces valid JSONL", () => {
   const repo = tempRepo();
+  // Registry 3: the CLI refuses (legacy migration-only type); the escaping
+  // contract lives in the library the migration surface reuses (Issue #234).
   const res = runScript("impl-doc", "new_experiment_log.js", ["--title", "exp", "--type", "start", "--summary", 'say "hi"'], repo);
-  assert.equal(res.status, 0, res.stderr);
-  const dir = path.join(repo, "docs/impl/exp");
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl"));
-  assert.equal(files.length, 1);
-  const events = fs.readFileSync(path.join(dir, files[0]), "utf8").trim().split("\n").map((l) => JSON.parse(l));
-  assert.equal(events[0].summary, 'say "hi"');
+  assert.equal(res.status, 1, "new_experiment_log must refuse under Registry 3");
+  assert.match(res.stderr, /legacy format|migration-only|migration tooling/);
+
+  const event = buildExperimentEvent({
+    cwd: repo,
+    filePath: path.join(repo, "docs/impl/exp/exp.jsonl"),
+    seq: 1,
+    type: "start",
+    ts: "2026-09-15T00:00:00Z",
+    summary: 'say "hi"',
+  });
+  assert.equal(JSON.parse(JSON.stringify(event)).summary, 'say "hi"');
 });
 
 test("append_experiment_event preserves unparseable existing lines", () => {
@@ -194,8 +206,21 @@ test("append_experiment_event preserves unparseable existing lines", () => {
     '{"schema":"experiment_event.v1","experiment":"docs/impl/exp/exp.jsonl","seq":1,"type":"start","ts":"2026-09-15T00:00:00Z"}\n{corrupt line\n',
     "utf8",
   );
+  // Registry 3: the CLI refuses; the corrupt-line-preserving write path is
+  // the library used inside migration tooling.
   const res = runScript("impl-doc", "append_experiment_event.js", ["--file", "docs/impl/exp/exp.jsonl", "--type", "observation"], repo);
-  assert.equal(res.status, 0, res.stderr);
+  assert.equal(res.status, 1, "append_experiment_event must refuse under Registry 3");
+  assert.match(res.stderr, /legacy format|migration-only|migration tooling/);
+
+  const event = buildExperimentEvent({
+    cwd: repo,
+    filePath: file,
+    seq: 2,
+    type: "observation",
+    ts: "2026-09-15T00:00:01Z",
+    summary: "observed",
+  });
+  appendExperimentEvent(file, event);
   const lines = fs.readFileSync(file, "utf8").trim().split("\n");
   assert.equal(lines.length, 3);
   assert.equal(lines[1], "{corrupt line");

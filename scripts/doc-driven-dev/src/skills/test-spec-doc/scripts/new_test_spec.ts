@@ -3,6 +3,7 @@
 
 import path from "node:path";
 import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
+import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 const TEST_SPEC_DOC_GATE_ERROR = "TEST-SPEC-DOC-GATE-001: at least one --verifies target resolving to an existing document is required before creating a test spec.";
@@ -65,6 +66,11 @@ async function main(): Promise<void> {
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(resolvedCwd)) return;
+    // Registry 3: `test-spec` is a legacy, migration-only type — durable
+    // verification intent lives in `verification` docs (#239). The registry
+    // gate is the one authoritative refusal, raised before any gate check
+    // or write.
+    configFor("test-spec");
     validateVerifiesGate(resolvedCwd, args.verifies);
     const result = await createDocument("test-spec", {
       cwd: resolvedCwd,

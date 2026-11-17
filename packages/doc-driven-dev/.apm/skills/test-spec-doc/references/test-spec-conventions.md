@@ -3,6 +3,13 @@
 These conventions define how `test-spec-doc` creates, audits, indexes, and
 links test specification documents.
 
+Under Document Registry 3 `test-spec` is a legacy migration-only type: it has
+no durable Registry v3 form, `new_test_spec.js` refuses at the registry gate
+before preconditions, scope validation, or any write, and the directories
+below are migration-owned scopes. These conventions describe the pre-v3
+document shape migration tooling reads; durable verification records now
+live under `docs/verification` via `verification-doc`.
+
 A test spec records the intent of verification: what a test guarantees, why
 it exists, and when it may be retired. It is not executable Gherkin and not
 a test result log — it is the durable contract a coding agent consults when

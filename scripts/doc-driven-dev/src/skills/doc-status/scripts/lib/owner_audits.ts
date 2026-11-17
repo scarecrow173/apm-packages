@@ -1,7 +1,7 @@
 "use strict";
 
 import { auditExperimentLogs, auditImplementationRecords, implDir } from "../../../impl-doc/scripts/lib/impl_doc_utils";
-import type { OwnerAuditSummary } from "../../lib/doc_audit";
+import type { OwnerAuditSummary } from "../../../lib/doc_audit";
 
 // Package-wide audit aggregation (Issue #189): invoke the owner-authoritative
 // audits for impl-doc's owned directories instead of duplicating their

@@ -3,6 +3,13 @@
 These conventions define how `task-doc` creates, audits, indexes, and routes
 implementation tasks.
 
+Under Document Registry 3 `task` is execution-bound (`persistence: ephemeral`):
+it has no durable Git form and `new_task.js` refuses at the registry gate
+before task preconditions, scope checks, or any write. `docs/tasks/` and the
+candidate directories below are former directories — owned scopes kept for
+migration reading of pre-v3 corpora. These conventions describe that legacy
+document shape plus the contract Execution Store task records follow.
+
 A task is a small, reviewable implementation slice linked to a plan, spec, ADR,
 or another task. A task should be narrow enough that one agent can complete and
 verify it without rediscovering the whole project context.
@@ -87,7 +94,7 @@ Required fields:
 | --- | --- | --- |
 | `id` | Yes | Stable document identifier in `TASK-<22-char Base62>` form (UUIDv7-derived; legacy `TASK-NNNN` remains valid). |
 | `type` | Yes | Must be `task`. |
-| `status` | Yes | Current execution state. |
+| `status` | Yes | Type-specific workflow state (see Status Values). Tasks are ephemeral — they carry no `lifecycle` field. |
 | `title` | Yes | Human-readable task title. |
 | `created` | Yes | Creation date in `YYYY-MM-DD` format. |
 | `updated` | Yes | Last substantive update date in `YYYY-MM-DD` format. |
@@ -96,7 +103,8 @@ Required fields:
 
 ## Status Values
 
-Use these lifecycle statuses:
+Use these type-specific workflow statuses (tasks are ephemeral — no
+`lifecycle` field exists on this axis):
 
 | Status | Meaning |
 | --- | --- |

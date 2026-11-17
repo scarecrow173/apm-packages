@@ -24,6 +24,8 @@ test("every canonical doc dir resolves to a contract owned by the expected skill
     "docs/adr": "adr-doc",
     "docs/impl/ir": "impl-doc",
     "docs/impl/exp": "impl-doc",
+    "docs/knowledge": "doc-suite",
+    "docs/verification": "doc-suite",
   };
   for (const dir of CANONICAL_DOC_DIRS) {
     assert.equal(ownershipForDir(dir)?.owner, expected[dir], dir);
@@ -77,7 +79,7 @@ test("sharedTypesResidentIn narrows owned dirs and keeps custom dirs open", () =
   assert.deepEqual(sharedTypesResidentIn("docs/discovery").sort(), ["brainstorm", "discovery"]);
   assert.deepEqual(sharedTypesResidentIn("docs/impl/ir"), []);
   assert.deepEqual(sharedTypesResidentIn("docs/impl"), []);
-  assert.equal(sharedTypesResidentIn("custom/dir").length, 9);
+  assert.equal(sharedTypesResidentIn("custom/dir").length, 8);
 });
 
 test("sharedRepairAllowed only permits shared-4col territory", () => {
@@ -90,10 +92,12 @@ test("sharedRepairAllowed only permits shared-4col territory", () => {
 });
 
 test("scopeTypesForQuery narrows, validates, and rejects", () => {
-  // canonical resolution (no dir): all types or the requested one
-  assert.equal(scopeTypesForQuery(null, undefined).length, 9);
+  // canonical resolution (no dir): all durable types or the requested one
+  assert.equal(scopeTypesForQuery(null, undefined).length, 8);
   assert.deepEqual(scopeTypesForQuery(null, "spec"), ["spec"]);
-  assert.throws(() => scopeTypesForQuery(null, "impl"), /Unknown document type/);
+  // Registry 3: `impl` is a legacy, migration-only type — the registry's
+  // dedicated refusal, not the generic unknown-type error (Issue #234).
+  assert.throws(() => scopeTypesForQuery(null, "impl"), /legacy format|migration-only/);
 
   // explicit dir + no type: narrow to residents; empty => reject
   assert.deepEqual(scopeTypesForQuery("docs/discovery", undefined)!.sort(), ["brainstorm", "discovery"]);

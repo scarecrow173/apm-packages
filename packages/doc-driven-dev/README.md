@@ -13,9 +13,14 @@ The package provides focused document skills and graph delegates:
 - `idea-doc` captures discovery documents, `deep-dive` interviews to confirm
   intent, and `briefing-flow` orchestrates discovery.
 - `discovery-doc`, `adr-doc`, and `spec-doc` record intent and decisions.
-- `design-doc`, `plan-doc`, and `task-doc` define approved implementation work.
-- `test-spec-doc` records what tests must guarantee and why.
-- `impl-doc` records implementation and experiment evidence.
+- `design-doc` defines the durable design baseline; `plan-doc` and `task-doc`
+  model execution-bound records under Document Registry 3 (`persistence:
+  ephemeral` — their creators refuse durable Git writes).
+- `verification-doc` records durable verification evidence under
+  `docs/verification`; `test-spec-doc` is the legacy migration-only form.
+- `knowledge-doc` records durable knowledge under `docs/knowledge`.
+- `impl-doc` describes the legacy Implementation Record / Experiment Log
+  formats that migration tooling reads and reconciles.
 - `doc-status` audits document contracts and links (read-only).
 - [`doc-dashboard`](.apm/skills/doc-dashboard/SKILL.md) renders a manually generated offline board of graph facts,
   status-lane task cards, remaining work, and draft documents.
@@ -133,17 +138,25 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
 
 ## Shared relations
 
-Use front matter relations to preserve the document graph:
+Use front matter relations to preserve the document graph. Under Knowledge
+Relations v1 a durable document stores these source→target relations:
 
-- `source` links discovery and research evidence.
-- `implements` links a design, plan, or task to its upstream contract.
-- `derives-from` records design and planning derivation.
-- `references` records supporting documents.
-- `verifies` and `verified-by` link specs, designs, and tasks to the
-  `test-spec` documents that verify them.
-- `defers` and `deferred-by` make deferred scope explicit.
-- `changes` records added, modified, deleted, renamed, moved, and generated
-  paths.
+- `source` links discovery and research evidence (provenance, legal on all
+  durable types).
+- `motivates` links an idea, brainstorm, or discovery to the spec or ADR it
+  motivates.
+- `informs` / `explains` link discovery and knowledge documents to the
+  durable documents they inform or explain.
+- `decides-for` links an ADR to the spec or design it decides.
+- `realizes` links a design to the spec it realizes.
+- `supersedes` links a document to the same-type document it replaces.
+
+Inverse views (`superseded-by`, `implemented-by`, …) are derived — they are
+never stored. Other declared relation keys such as `implements`,
+`derives-from`, `references`, `verifies`, and `defers` are legacy vocabulary
+that migration tooling reads in pre-v3 corpora but normal execution does not
+write. (`relations.changes` and `relations.test-spec-skip` are metadata
+payloads, not links.)
 
 Do not infer ownership from file names or directory proximity. Use canonical
 IDs and relations so focus resolution can fail closed when facts conflict.

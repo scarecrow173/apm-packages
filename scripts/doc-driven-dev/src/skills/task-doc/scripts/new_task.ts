@@ -5,6 +5,7 @@ import path from "node:path";
 import fs from "node:fs";
 import matter from "gray-matter";
 import { createDocument, logIndexResult, resolveDocumentReference } from "../../lib/doc_suite_utils";
+import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 const TASK_DOC_GATE_ERROR = "TASK-DOC-GATE-001: a plan with status approved, in-progress, or completed is required before creating a task from a plan.";
@@ -87,6 +88,9 @@ async function main(): Promise<void> {
     if (!args.title) throw new Error("Missing required --title");
     const resolvedCwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(resolvedCwd)) return;
+    // Registry 3: `task` is execution-bound — the registry gate is the one
+    // authoritative refusal, raised here before any gate check or write.
+    configFor("task");
     validatePlanGate(resolvedCwd, args.plan);
     validateVerifiedBy(resolvedCwd, args.verifiedBy);
     const linked = args.plan ? [args.plan] : [];

@@ -68,22 +68,22 @@ async function indexFindings(repo: string, type?: string) {
 
 test("generated index partitions settled documents under a marked Settled tier", async () => {
   const repo = tempRepo();
-  writeDoc(repo, "docs/tasks/0001-old.md", {
-    id: "TASK-0001", type: "task", status: "done", title: "Old task", created: "2026-01-01",
+  writeDoc(repo, "docs/specs/0001-old.md", {
+    id: "SPEC-0001", type: "spec", status: "implemented", title: "Old spec", created: "2026-01-01",
   });
-  writeDoc(repo, "docs/tasks/0002-new.md", {
-    id: "TASK-0002", type: "task", status: "in-progress", title: "New task", created: "2026-01-02",
+  writeDoc(repo, "docs/specs/0002-new.md", {
+    id: "SPEC-0002", type: "spec", status: "approved", title: "New spec", created: "2026-01-02",
   });
-  writeDoc(repo, "docs/tasks/0003-plan.md", {
-    id: "TASK-0003", type: "task", status: "todo", title: "Planned task", created: "2026-01-03",
+  writeDoc(repo, "docs/specs/0003-plan.md", {
+    id: "SPEC-0003", type: "spec", status: "draft", title: "Planned spec", created: "2026-01-03",
   });
-  writeDoc(repo, "docs/tasks/0004-dead.md", {
-    id: "TASK-0004", type: "task", status: "wont-do", title: "Dead task", created: "2026-01-04",
+  writeDoc(repo, "docs/specs/0004-dead.md", {
+    id: "SPEC-0004", type: "spec", status: "rejected", title: "Dead spec", created: "2026-01-04",
   });
 
-  const result = await writeGeneratedIndex(repo, "task", "docs/tasks", {});
+  const result = await writeGeneratedIndex(repo, "spec", "docs/specs", {});
   assert.ok(result.written);
-  const content = fs.readFileSync(path.join(repo, "docs/tasks/README.md"), "utf8");
+  const content = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
 
   assert.match(content, /<!-- doc-suite:generated-index -->/);
   assert.match(content, /## Settled <!-- doc-suite:settled-index -->/);
@@ -159,37 +159,37 @@ test("locale sibling files index as rows and partition with their own status", a
 
 test("a status transition is reported as drift and repaired by regeneration", () => {
   const repo = tempRepo();
-  writeDoc(repo, "docs/tasks/0001-old.md", {
-    id: "TASK-0001", type: "task", status: "done", title: "Old task", created: "2026-01-01",
+  writeDoc(repo, "docs/specs/0001-old.md", {
+    id: "SPEC-0001", type: "spec", status: "implemented", title: "Old spec", created: "2026-01-01",
   });
-  writeDoc(repo, "docs/tasks/0002-new.md", {
-    id: "TASK-0002", type: "task", status: "todo", title: "New task", created: "2026-01-02",
+  writeDoc(repo, "docs/specs/0002-new.md", {
+    id: "SPEC-0002", type: "spec", status: "draft", title: "New spec", created: "2026-01-02",
   });
-  // Legacy single-tier index still listing TASK-0001 as todo — exactly the
+  // Legacy single-tier index still listing SPEC-0001 as draft — exactly the
   // state a settled status transition leaves behind.
-  writeDoc(repo, "docs/tasks/README.md", {}, [
-    "# TASK Documents",
+  writeDoc(repo, "docs/specs/README.md", {}, [
+    "# SPEC Documents",
     "",
     "<!-- doc-suite:generated-index -->",
     "",
-    "Directory: `docs/tasks`",
+    "Directory: `docs/specs`",
     "",
     "| ID | Title | Status | File |",
     "| --- | --- | --- | --- |",
-    "| TASK-0001 | Old task | todo | [0001-old.md](./0001-old.md) |",
-    "| TASK-0002 | New task | todo | [0002-new.md](./0002-new.md) |",
+    "| SPEC-0001 | Old spec | draft | [0001-old.md](./0001-old.md) |",
+    "| SPEC-0002 | New spec | draft | [0002-new.md](./0002-new.md) |",
     "",
   ].join("\n"));
 
   // doc-status reports the drift before doc-maintenance repairs it — the
   // close-out convention relies on exactly this visibility (B2).
-  const lint = runScript("doc-status", "doc_status.js", ["lint", "--type", "task"], repo);
+  const lint = runScript("doc-status", "doc_status.js", ["lint", "--type", "spec"], repo);
   assert.equal(lint.status, 0, lint.stderr);
   assert.match(lint.stdout, /index-metadata-mismatch/);
 
-  const maintenance = runScript("doc-maintenance", "doc_maintenance.js", ["apply", "--type", "task"], repo);
+  const maintenance = runScript("doc-maintenance", "doc_maintenance.js", ["apply", "--type", "spec"], repo);
   assert.equal(maintenance.status, 0, maintenance.stderr);
-  const content = fs.readFileSync(path.join(repo, "docs/tasks/README.md"), "utf8");
+  const content = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
   assert.deepEqual(activeFiles(content), ["0002-new.md"]);
   assert.deepEqual(settledFiles(content), ["0001-old.md"]);
 });
@@ -242,28 +242,28 @@ test("lint flags a settled row stranded in the active table", async () => {
     `expected index-ordering finding: ${JSON.stringify(findings)}`);
 });
 
-test("a single settled task in the active table is detected end to end", async () => {
+test("a single settled document in the active table is detected end to end", async () => {
   const repo = tempRepo();
-  writeDoc(repo, "docs/tasks/one.md", {
-    id: "TASK-0001", type: "task", status: "done", title: "One", created: "2026-01-01",
+  writeDoc(repo, "docs/specs/one.md", {
+    id: "SPEC-0001", type: "spec", status: "implemented", title: "One", created: "2026-01-01",
   });
   // The Issue #189 case: a lone completed row in the only table of a managed
-  // task index — no ## Settled heading exists for it to hide under, but its
+  // index — no ## Settled heading exists for it to hide under, but its
   // physical placement is still the active tier.
-  writeDoc(repo, "docs/tasks/README.md", {}, [
-    "# TASK Documents",
+  writeDoc(repo, "docs/specs/README.md", {}, [
+    "# SPEC Documents",
     "",
     "<!-- doc-suite:generated-index -->",
     "",
-    "Directory: `docs/tasks`",
+    "Directory: `docs/specs`",
     "",
     "| ID | Title | Status | File |",
     "| --- | --- | --- | --- |",
-    "| TASK-0001 | One | done | [one.md](./one.md) |",
+    "| SPEC-0001 | One | implemented | [one.md](./one.md) |",
     "",
   ].join("\n"));
 
-  const findings = await indexFindings(repo, "task");
+  const findings = await indexFindings(repo, "spec");
   const tier = findings.filter((item) => item.ruleId === "index-tier-mismatch");
   assert.equal(tier.length, 1, `expected one tier-mismatch: ${JSON.stringify(findings)}`);
   assert.equal(tier[0].severity, "warning");
@@ -272,59 +272,59 @@ test("a single settled task in the active table is detected end to end", async (
 
 test("regenerating a legacy index keeps hand-written preamble and tail", async () => {
   const repo = tempRepo();
-  writeDoc(repo, "docs/tasks/0001-old.md", {
-    id: "TASK-0001", type: "task", status: "done", title: "Old task", created: "2026-01-01",
+  writeDoc(repo, "docs/specs/0001-old.md", {
+    id: "SPEC-0001", type: "spec", status: "implemented", title: "Old spec", created: "2026-01-01",
   });
-  writeDoc(repo, "docs/tasks/0002-new.md", {
-    id: "TASK-0002", type: "task", status: "todo", title: "New task", created: "2026-01-02",
+  writeDoc(repo, "docs/specs/0002-new.md", {
+    id: "SPEC-0002", type: "spec", status: "draft", title: "New spec", created: "2026-01-02",
   });
-  writeDoc(repo, "docs/tasks/README.md", {}, [
-    "# Team task board",
+  writeDoc(repo, "docs/specs/README.md", {}, [
+    "# Team spec board",
     "",
     "Intro prose stays.",
     "",
     "<!-- doc-suite:generated-index -->",
     "",
-    "Directory: `docs/tasks`",
+    "Directory: `docs/specs`",
     "",
     "| ID | Title | Status | File |",
     "| --- | --- | --- | --- |",
-    "| TASK-0001 | Old task | todo | [0001-old.md](./0001-old.md) |",
-    "| TASK-0002 | New task | todo | [0002-new.md](./0002-new.md) |",
+    "| SPEC-0001 | Old spec | draft | [0001-old.md](./0001-old.md) |",
+    "| SPEC-0002 | New spec | draft | [0002-new.md](./0002-new.md) |",
     "",
     "Trailing hand-written notes stay too.",
     "",
   ].join("\n"));
 
-  await writeGeneratedIndex(repo, "task", "docs/tasks", {});
-  const content = fs.readFileSync(path.join(repo, "docs/tasks/README.md"), "utf8");
-  assert.match(content, /# Team task board/);
+  await writeGeneratedIndex(repo, "spec", "docs/specs", {});
+  const content = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
+  assert.match(content, /# Team spec board/);
   assert.match(content, /Intro prose stays\./);
   assert.match(content, /Trailing hand-written notes stay too\./);
   assert.match(content, /## Settled <!-- doc-suite:settled-index -->/);
   // Preamble remains before the marker; tail after the generated region.
-  assert.ok(content.indexOf("# Team task board") < content.indexOf("doc-suite:generated-index"));
+  assert.ok(content.indexOf("# Team spec board") < content.indexOf("doc-suite:generated-index"));
   assert.ok(content.indexOf("Trailing hand-written") > content.indexOf("doc-suite:settled-index"));
 });
 
 test("the Settled tier is consumed when every document is in-flight again", async () => {
   const repo = tempRepo();
-  writeDoc(repo, "docs/tasks/0001-old.md", {
-    id: "TASK-0001", type: "task", status: "done", title: "Old task", created: "2026-01-01",
+  writeDoc(repo, "docs/specs/0001-old.md", {
+    id: "SPEC-0001", type: "spec", status: "implemented", title: "Old spec", created: "2026-01-01",
   });
-  writeDoc(repo, "docs/tasks/0002-new.md", {
-    id: "TASK-0002", type: "task", status: "todo", title: "New task", created: "2026-01-02",
+  writeDoc(repo, "docs/specs/0002-new.md", {
+    id: "SPEC-0002", type: "spec", status: "draft", title: "New spec", created: "2026-01-02",
   });
-  await writeGeneratedIndex(repo, "task", "docs/tasks", {});
-  assert.match(fs.readFileSync(path.join(repo, "docs/tasks/README.md"), "utf8"), /## Settled/);
+  await writeGeneratedIndex(repo, "spec", "docs/specs", {});
+  assert.match(fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8"), /## Settled/);
 
   // Reopen both documents — regeneration must remove the tier wholesale,
   // not leave a stale table behind.
-  writeDoc(repo, "docs/tasks/0001-old.md", {
-    id: "TASK-0001", type: "task", status: "todo", title: "Old task", created: "2026-01-01",
+  writeDoc(repo, "docs/specs/0001-old.md", {
+    id: "SPEC-0001", type: "spec", status: "draft", title: "Old spec", created: "2026-01-01",
   });
-  await writeGeneratedIndex(repo, "task", "docs/tasks", {});
-  const content = fs.readFileSync(path.join(repo, "docs/tasks/README.md"), "utf8");
+  await writeGeneratedIndex(repo, "spec", "docs/specs", {});
+  const content = fs.readFileSync(path.join(repo, "docs/specs/README.md"), "utf8");
   assert.doesNotMatch(content, /## Settled|doc-suite:settled-index/);
   assert.deepEqual(activeFiles(content), ["0001-old.md", "0002-new.md"]);
 });
@@ -372,8 +372,8 @@ test("impl record index partitions completed/abandoned records into the Settled 
 test("health reports the capture-layer orphan roll-up", async () => {
   const repo = tempRepo();
   // Orphans: reachable from no index, no links, no relations.
-  writeDoc(repo, "docs/tasks/0001-lone.md", {
-    id: "TASK-0001", type: "task", status: "todo", title: "Lone task", created: "2026-01-01",
+  writeDoc(repo, "docs/specs/0001-lone.md", {
+    id: "SPEC-0001", type: "spec", status: "draft", title: "Lone spec", created: "2026-01-01",
     relations: "{}",
   });
   writeDoc(repo, "docs/ideas/0001-spark.md", {
@@ -388,6 +388,6 @@ test("health reports the capture-layer orphan roll-up", async () => {
   const typeTotal = Object.values(health.orphans.byType).reduce((sum, count) => sum + count, 0);
   assert.equal(ruleTotal, health.orphans.total);
   assert.equal(typeTotal, health.orphans.total);
-  assert.ok((health.orphans.byType.task ?? 0) >= 1);
+  assert.ok((health.orphans.byType.spec ?? 0) >= 1);
   assert.ok((health.orphans.byType.idea ?? 0) >= 1);
 });

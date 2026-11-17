@@ -9,12 +9,42 @@ license: MIT
 
 # Implementation Documentation Skill
 
-Use this skill to record what was actually implemented and what was tried during
-implementation.
+Use this skill to audit what was actually implemented and what was tried
+during implementation in a pre-v3 corpus.
 
 `impl-doc` is a document-generation sibling of `adr-doc`, `spec-doc`,
 `design-doc`, `plan-doc`, and `task-doc`. It is not an implementation workflow
 skill.
+
+## Document Registry v3 status
+
+`impl` (Implementation Records) and `exp` (Experiment Logs) are **legacy
+formats** under Document Registry 3: they are interpreted only by migration
+tooling and cannot be created or linted as durable documents. `docs/impl/ir`,
+`docs/impl/exp`, and the `docs/impl` container are migration-owned scopes.
+
+Every write entrypoint refuses at the registry gate — before any gate check,
+scope check, or write:
+
+`Document type "impl" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+
+- **Refusing mutators**: `new_impl_record.js`, `new_experiment_log.js`,
+  `append_experiment_event.js`, `edit_experiment_log.js`,
+  `sync_impl_index.js`.
+- **Read-only audits stay available**: `audit_impl_record.js` and
+  `audit_experiment_log.js` still inspect existing corpora, including index
+  drift findings.
+- **Migration-only sync**: the `impl-4col` / `exp-1col` index engines run
+  only inside `migrate_ids`, which calls the sync library directly.
+  `doc_maintenance index` reports these dirs as rejected targets
+  (`... index is migration-owned`) and writes nothing.
+- Evidence relations (Check → Claim → Evidence) belong to the Evidence
+  Store, not to stored front matter relations; durable verification intent
+  is a `verification` document (`docs/verification`, verification-doc).
+
+The conventions and workflows below remain the contract for reading and
+migrating a pre-v3 `docs/impl` corpus; they no longer describe files this
+skill mints.
 
 ## When to Create What
 
@@ -42,95 +72,49 @@ Before running any commands, decide which artifact you need:
 
 ## Responsibilities
 
-1. Create an Implementation Record under `docs/impl/ir/`
-2. Reuse and update the in-progress Implementation Record body during Phase 5
-3. Audit Implementation Records for front matter, relation, and section shape
-4. Create an Experiment Log under `docs/impl/exp/`
-5. Append experiment events through CLI as the normal operating path
-6. Edit existing experiment events through CLI for exceptional fixes
-7. Audit Experiment Logs for minimum JSONL integrity
+1. Audit Implementation Records for front matter, relation, and section shape
+   (read-only, on a pre-v3 corpus)
+2. Audit Experiment Logs for minimum JSONL integrity (read-only)
+3. Interpret `docs/impl/ir` and `docs/impl/exp` indexes for migration
+   tooling — the sync engine runs inside `migrate_ids` only
 
 ## Workflow
 
-### Creating an Implementation Record
+### Refused write paths (Registry 3)
 
-**MANDATORY**: Load `references/impl-conventions.md` before this step - it
-defines required front matter fields and audit rules.
-**Do NOT load** `assets/templates/experiment-log.jsonl` for this task.
+`new_impl_record.js`, `new_experiment_log.js`,
+`append_experiment_event.js`, and `edit_experiment_log.js` all refuse at
+the registry gate: `impl` and `exp` are legacy formats with no durable
+creation or mutation path. Use `verification-doc` for durable verification
+intent and the Evidence Store for evidence relations.
 
-Phase 5 creates or reuses an in-progress Implementation Record at task start,
-before the first code change. Update the record body as implementation
-proceeds. Experiment Log JSONL remains CLI-updated only.
-
-```bash
-node scripts/new_impl_record.js --title "Extract foo service" --task docs/tasks/implement-foo-service.md --status "in-progress"
-```
-
-### Creating an Experiment Log
-
-**MANDATORY**: Load `references/impl-conventions.md` before this step - it
-defines allowed event types and JSONL integrity rules.
-**Do NOT load** `assets/templates/implementation-record.md` for this task.
-
-```bash
-node scripts/new_experiment_log.js --title "Try foo service extraction" --task docs/tasks/implement-foo-service.md
-```
-
-### Appending Events
-
-```bash
-node scripts/append_experiment_event.js \
-  --file docs/impl/exp/try-foo-service-extraction.jsonl \
-  --type hypothesis \
-  --summary "Splitting FooService may simplify BarService responsibilities"
-```
-
-### Editing an Existing Event (exceptional only)
-
-```bash
-node scripts/edit_experiment_log.js \
-  --file docs/impl/exp/try-foo-service-extraction.jsonl \
-  --seq 4 \
-  --set implementation=docs/impl/ir/extract-foo-service.md
-```
-
-### Auditing Before Completion
+### Auditing a pre-v3 corpus
 
 ```bash
 node scripts/audit_impl_record.js --json
 node scripts/audit_experiment_log.js --json
 ```
 
-### Reconciling the Directory Index
+### The migration-owned directory indexes
 
-`docs/impl/ir/README.md` and `docs/impl/exp/README.md` are managed indexes.
-The `new_*` creators defer index writes — materialization and drift
-reconciliation are explicit through the owner sync tool:
+`docs/impl/ir/README.md` and `docs/impl/exp/README.md` are managed indexes
+whose reconciliation is **migration-owned** under Registry 3.
+`sync_impl_index.js` refuses at the registry gate like every other impl
+writer; the safe sync engine (`planImplIndexSync` / `applyImplIndexSync`)
+runs only inside `migrate_ids`, which calls the library directly.
 
-```bash
-node scripts/sync_impl_index.js --kind ir            # preview only — never writes
-node scripts/sync_impl_index.js --kind exp --apply   # write the reconcile
-node scripts/sync_impl_index.js --kind ir --apply --expect <planHash>
-```
-
-- Preview is the default; only `--apply` writes. `--json` emits the plan
-  as JSON. `--expect` pins the apply to a previously previewed `planHash`
-  and aborts when the recomputed plan differs.
-- Verdicts: `in-sync` (no-op), `sync` (reconcile drift), `create` (missing
-  README), `rejected` (fail-closed). Rejected indexes — hand-curated,
-  ambiguous, malformed, conflicting, or unsafe such as a symlinked README
-  or links escaping the directory — are never written; repair the README
-  or the sources first.
-- Apply re-plans, verifies SHA-256 pins of every source file, the file
+- Verdicts the engine reports: `in-sync` (no-op), `sync` (reconcile drift),
+  `create` (missing README), `rejected` (fail-closed). Rejected indexes —
+  hand-curated, ambiguous, malformed, conflicting, or unsafe such as a
+  symlinked README or links escaping the directory — are never written.
+- An apply re-plans, verifies SHA-256 pins of every source file, the file
   list, and the README, then writes atomically via temp file + rename.
   Hand-written preamble and tail content around the generated region is
-  preserved byte-for-byte. `--dir` selects an alternative impl directory
-  inside the checkout; paths outside it are rejected.
+  preserved byte-for-byte.
 - `doc_status` and the `doc_maintenance` repair verbs do not repair impl
-  indexes — `sync_impl_index` is the only mutator for `docs/impl/ir` and
-  `docs/impl/exp` indexes. The `doc_maintenance index` op can materialize
-  them, but only by dispatching to this same safe sync API: it is a
-  cross-owner entrypoint, not a second write path.
+  indexes; `doc_maintenance index` reports the dirs as rejected
+  (`... index is migration-owned`) rather than dispatching to the sync
+  engine — normal index operations fail closed on migration-owned scope.
 
 Both audits are read-only and report index drift as findings:
 
@@ -165,25 +149,21 @@ Both audits are read-only and report index drift as findings:
 
 ## Conventions
 
-- Implementation Records use existing doc-suite front matter conventions.
+- Implementation Records use the legacy doc-suite front matter conventions.
 - `relations.changes` is part of the shared relation contract.
 - `metadata.record-type` is not used in v1.
 - `metadata.validation` is not used in v1.
-- Phase 5 opens or reuses the Implementation Record at task start and keeps it
-  current during implementation.
-- Experiment Log JSONL remains CLI-updated only through
-  `append_experiment_event` or `edit_experiment_log`.
-- Experiment Log `start` events are optional at creation time.
-- The normal path is CLI-based creation and updates, not free-form manual edits.
-- Trust boundary: `new_*`, `append_*`, and `edit_*` commands are state-changing
-  and write immediately to the paths selected by `--task`, `--file`, or
-  default output conventions.
+- Experiment Log `start` events are optional at creation time (in the legacy
+  corpus).
+- All `new_*`, `append_*`, `edit_*`, and `sync_impl_index` commands refuse at
+  the registry gate under Registry 3 — audits and migration tooling are the
+  only entrypoints that touch these formats.
 
 ## Resources
 
-- `references/impl-conventions.md`: directory, filename, status, and audit rules
-  - load MANDATORY before any create or audit operation
-- `assets/templates/implementation-record.md`: default body template
-  - loaded automatically by `new_impl_record.js`, do not load manually
-- `assets/templates/experiment-log.jsonl`: default JSONL event template
-  - loaded automatically by `new_experiment_log.js`, do not load manually
+- `references/impl-conventions.md`: directory, filename, status, and audit
+  rules — load MANDATORY before any audit or migration operation
+- `assets/templates/implementation-record.md`: legacy body template —
+  reference structure only; no Registry 3 creation path fills it
+- `assets/templates/experiment-log.jsonl`: legacy JSONL event template —
+  reference structure only

@@ -3,6 +3,13 @@
 These conventions define how `plan-doc` creates, audits, indexes, and routes
 implementation plans.
 
+Under Document Registry 3 `plan` is execution-bound (`persistence: ephemeral`):
+it has no durable Git form and `new_plan.js` refuses at the registry gate
+before the design gate, scope validation, or any write. `docs/plans/` and the
+candidate directories below are former directories — owned scopes kept for
+migration reading of pre-v3 corpora. These conventions describe that legacy
+document shape plus the contract Execution Store planning records follow.
+
 `plan-doc` requires a `design-doc` approval gate before creation.
 
 A plan translates an approved spec or accepted ADR into implementation order,
@@ -93,7 +100,7 @@ Required fields:
 | --- | --- | --- |
 | `id` | Yes | Stable document identifier in `PLAN-<22-char Base62>` form (UUIDv7-derived; legacy `PLAN-NNNN` remains valid). |
 | `type` | Yes | Must be `plan`. |
-| `status` | Yes | Current lifecycle state. |
+| `status` | Yes | Type-specific workflow state (see Status Values). Plans are ephemeral — they carry no `lifecycle` field. |
 | `title` | Yes | Human-readable implementation plan title. |
 | `created` | Yes | Creation date in `YYYY-MM-DD` format. |
 | `updated` | Yes | Last substantive update date in `YYYY-MM-DD` format. |
@@ -102,7 +109,8 @@ Required fields:
 
 ## Status Values
 
-Use these lifecycle statuses:
+Use these type-specific workflow statuses (plans are ephemeral — no
+`lifecycle` field exists on this axis):
 
 | Status | Meaning |
 | --- | --- |

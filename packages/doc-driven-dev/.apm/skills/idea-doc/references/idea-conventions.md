@@ -48,6 +48,7 @@ Idea documents use the shared document front matter:
 id: "IDEA-4MnBvCxZaSdFgHjKlPoIuY"
 type: "idea"
 status: "draft"
+lifecycle: "draft"
 title: "Support offline mode for mobile"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -79,7 +80,8 @@ Required fields:
 | --- | --- | --- |
 | `id` | Yes | Stable document identifier in `IDEA-<22-char Base62>` form (UUIDv7-derived; legacy `IDEA-NNNN` remains valid). |
 | `type` | Yes | Must be `idea`. |
-| `status` | Yes | Current lifecycle state. |
+| `status` | Yes | Type-specific workflow state (see Status Values). |
+| `lifecycle` | Yes | Registry 3 lifecycle: `draft`, `current`, `superseded`, or `retired`. Independent of `status`; drives active/settled index tiers. |
 | `title` | Yes | Human-readable title matching the idea topic. |
 | `created` | Yes | Creation date in `YYYY-MM-DD` format. |
 | `updated` | Yes | Last substantive update date in `YYYY-MM-DD` format. |
@@ -88,7 +90,8 @@ Required fields:
 
 ## Status Values
 
-Use these lifecycle statuses:
+Use these type-specific workflow statuses (distinct from the `lifecycle`
+field, which the Document Registry owns):
 
 | Status | Meaning |
 | --- | --- |
@@ -99,8 +102,11 @@ Use these lifecycle statuses:
 | `archived` | Evaluated and not pursued; kept for reference. |
 | `superseded` | Replaced by a newer idea document. |
 
-Set `promoted` only after creating the downstream document and linking it
-in `relations.derived-by`.
+Set `promoted` only after creating the downstream document. Under Knowledge
+Relations v1 the idea stores `relations.motivates` pointing source→target at
+the spec it motivates; the downstream document does not store an inverse.
+`derived-by` and other declared keys are legacy vocabulary that migration
+tooling reads but normal execution does not write.
 
 ## Relations
 

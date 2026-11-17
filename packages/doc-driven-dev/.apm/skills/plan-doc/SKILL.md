@@ -11,6 +11,22 @@ explains how the work will be built, which documents it implements or derives
 from, and which verification steps prove the implementation follows the source
 document.
 
+## Document Registry v3 status
+
+`plan` is **execution-bound** (`persistence: ephemeral`) under Document
+Registry 3: plan state lives in the Execution Store, not in a durable Git
+document, and `docs/plans` / `docs/implementation-plans` are *former*
+directories that accept no durable writes. `new_plan.js` therefore refuses
+at the registry gate — before the design gate, scope checks, or any write —
+with:
+
+`Document type "plan" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store`
+
+The thinking framework, readiness matrix, and conventions below remain the
+planning contract — they shape Execution Store plan records and any migration
+of a pre-v3 `docs/plans` corpus (`migrate_docs` / `migrate_ids` in
+doc-maintenance). They no longer describe a file this skill mints.
+
 ## Thinking Framework
 
 Before creating a plan, answer these questions. They shape every later decision.
@@ -54,23 +70,18 @@ share the same critical path and the same release intent.
    If ADRs constrain or inform the implementation approach, reference them.
    A plan does not require an ADR to proceed, but must acknowledge and
    incorporate relevant ones created in parallel with the spec.
-7. Create the plan.
+7. Create the plan record.
 
    **MANDATORY before writing**: Read
    [`references/plan-conventions.md`](references/plan-conventions.md) in full to
-   confirm directory detection, filename pattern, front matter schema, status
-   values, relation semantics, and the design gate. The plan body depends on
-   these conventions being correct.
+   confirm the front matter schema, status values, relation semantics, and the
+   design gate. The plan body depends on these conventions being correct.
 
-   **Do NOT load** `assets/templates/plan.md` manually — `new_plan.js` loads it
-   for you. Only open it directly when the script cannot run.
-
-   ```bash
-   node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
-   ```
-
-   If you cannot run the script, copy `assets/templates/plan.md` and fill it
-   manually using the conventions you just read.
+   Under Document Registry 3 `new_plan.js` refuses at the registry gate (see
+   *Document Registry v3 status* above) — `plan` is execution-bound, so the
+   record is created in the Execution Store, not as a `docs/plans` file.
+   `assets/templates/plan.md` remains the reference body structure for the
+   record.
 
 8. Record relations.
    The generated plan uses `relations.implements` for the upstream spec and
@@ -233,10 +244,10 @@ re-point its still-open tasks.
 
 ## Resources
 
-- `scripts/new_plan.js`: create a plan (index materialization is explicit:
-  `doc_maintenance.js index plan|apply`).
-- `references/plan-conventions.md`: directory, filename, status, relations,
-  required content, and index conventions for plans
-  — load MANDATORY before creating or filling a plan.
-- `assets/templates/plan.md`: default plan body template
-  — loaded automatically by `new_plan.js`, do not load manually.
+- `scripts/new_plan.js`: refuses at the registry gate under Registry 3 —
+  `plan` is execution-bound and has no durable creation path.
+- `references/plan-conventions.md`: status values, relations, required
+  content, and conventions for plan records
+  — load MANDATORY before authoring plan content.
+- `assets/templates/plan.md`: plan body template — the reference structure
+  for the Execution Store record, not a file template a script fills.

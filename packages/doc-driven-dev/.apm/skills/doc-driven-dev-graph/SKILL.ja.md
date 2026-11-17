@@ -80,6 +80,13 @@ delegate は briefing / planning / implementation subgraph と証跡を担当し
 caller は返された audit を先に実行し、返された delegate だけを dispatch します。
 `focus-required` blocker は明示的 focus が渡されるまで hard stop です。
 
+Document Registry 3 でも上記の audit は `plan`、`task`、`test-spec` の
+artifact を読み続けます。`plan`/`task` は execution-bound レコードで状態は
+Execution Store に保持され（creator は durable な Git 書き込みを拒否）、
+`test-spec` は migration tooling が読み取るレガシーの migration-only 形式
+です。durable な graph artifact は `idea`、`brainstorm`、`discovery`、
+`spec`、`design`、`adr`、`knowledge`、`verification` です。
+
 ## Graph runtime の 10 ステップ
 
 `run-until-yield` が通常の caller mode です。user が debugging、inspection、

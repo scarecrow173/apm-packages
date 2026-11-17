@@ -39,11 +39,12 @@ function writeSpec(
   body: string,
   extraFrontMatter = "",
   status = "draft",
+  lifecycle = "draft",
 ) {
   writeFile(
     root,
     `docs/specs/${name}.md`,
-    `---\nid: ${id}\ntype: spec\nstatus: ${status}\ntitle: ${title}\ncreated: "2026-01-01"\nupdated: "2026-01-01"\nowners: [team]\n${extraFrontMatter}---\n${body}`,
+    `---\nid: ${id}\ntype: spec\nstatus: ${status}\nlifecycle: ${lifecycle}\ntitle: ${title}\ncreated: "2026-01-01"\nupdated: "2026-01-01"\nowners: [team]\n${extraFrontMatter}---\n${body}`,
   );
 }
 
@@ -51,7 +52,7 @@ function writeIdea(root: string) {
   writeFile(
     root,
     "docs/ideas/idea-a.md",
-    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\ntitle: Idea\ncreated: \"2026-01-01\"\nupdated: \"2026-01-01\"\nowners: [team]\n---\n# Idea\n",
+    "---\nid: IDEA-0001\ntype: idea\nstatus: draft\nlifecycle: draft\ntitle: Idea\ncreated: \"2026-01-01\"\nupdated: \"2026-01-01\"\nowners: [team]\n---\n# Idea\n",
   );
 }
 
@@ -166,7 +167,7 @@ test("inconsistent index emits lintIndexConsistency findings only under material
 test("status and tier drift between front matter and index rows is materialized-only", async () => {
   const root = fixture();
   writeLinkedSpecPair(root);
-  writeSpec(root, "old", "SPEC-0003", "Old Spec", "# Old\n\nSee [a](a.md).\n", IMPLEMENTS_IDEA, "superseded");
+  writeSpec(root, "old", "SPEC-0003", "Old Spec", "# Old\n\nSee [a](a.md).\n", IMPLEMENTS_IDEA, "superseded", "superseded");
   // Two drift forms: a.md's status cell disagrees with its front matter, and
   // the settled SPEC-0003 is ordered ahead of the in-flight rows (it belongs
   // under `## Settled`, so expected order puts it last).
@@ -213,7 +214,7 @@ test("artifact profile still catches canonical-document defects", async () => {
   writeFile(
     root,
     "docs/designs/widget.md",
-    "---\nid: DESIGN-0001\ntype: design\nstatus: draft\ntitle: Widget\ncreated: \"2026-01-01\"\nupdated: \"2026-01-01\"\nowners: [team]\n---\n# Widget\n",
+    "---\nid: DESIGN-0001\ntype: design\nstatus: draft\nlifecycle: draft\ntitle: Widget\ncreated: \"2026-01-01\"\nupdated: \"2026-01-01\"\nowners: [team]\n---\n# Widget\n",
   );
   const artifactDesign = await lint(root, "artifact", "design", "docs/designs");
   assert.ok(

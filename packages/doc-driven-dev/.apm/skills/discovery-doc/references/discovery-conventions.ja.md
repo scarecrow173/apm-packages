@@ -51,6 +51,7 @@ discovery 文書は共有フロントマターを使います。
 id: "DISC-3QwErTyUiOpAsDfGhJkLzX"
 type: "discovery"
 status: "draft"
+lifecycle: "draft"
 title: "Explore auth strategy options"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -82,7 +83,8 @@ relations:
 | --- | --- | --- |
 | `id` | Yes | 安定した文書識別子。`DISC-<22文字Base62>` 形式（UUIDv7由来。従来の `DISC-NNNN` も有効）。 |
 | `type` | Yes | `discovery` 固定。 |
-| `status` | Yes | 現在のライフサイクル状態。 |
+| `status` | Yes | 型固有のワークフロー状態（後述のステータス値を参照）。 |
+| `lifecycle` | Yes | Registry 3 ライフサイクル。`draft` / `current` / `superseded` / `retired`。`status` と独立で、アクティブ／セットル索引区分を駆動する。 |
 | `title` | Yes | 探索トピックに対応した人間向けタイトル。 |
 | `created` | Yes | `YYYY-MM-DD` 形式の作成日。 |
 | `updated` | Yes | `YYYY-MM-DD` 形式の最終実質的更新日。 |
@@ -91,7 +93,8 @@ relations:
 
 ## ステータス値
 
-次のライフサイクルステータスを使います。
+次の型固有ワークフローステータスを使います（Document Registry が所有する
+`lifecycle` フィールドとは別軸）。
 
 | ステータス | 意味 |
 | --- | --- |
@@ -102,7 +105,11 @@ relations:
 | `superseded` | より新しい discovery 文書に置き換え済み。 |
 
 discovery 文書は「承認」または「実装」されません。`resolved` にするのは、
-昇華候補を全て対処して `relations.derived-by` でリンクした後にしてください。
+昇華候補を全て対処した後にしてください。Knowledge Relations v1 では
+discovery は `relations.motivates`（→ spec）または `relations.informs`
+（→ durable な対象）を source→target に記録します。`derived-by` などその他の
+宣言キーはレガシー語彙で、マイグレーションは読み取りますが通常実行では
+書き込みません。
 
 ## Relations
 

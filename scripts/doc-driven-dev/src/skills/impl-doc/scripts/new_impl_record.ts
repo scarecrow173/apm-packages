@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { generateArtifactId } from "../../lib/artifact_id";
 import { buildImplementationRecordContent, buildNewFilePath, implStatuses, posixRelative } from "./lib/impl_doc_utils";
+import { configFor } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 
 type CliArgs = {
@@ -50,6 +51,10 @@ async function main(): Promise<void> {
     if (!(implStatuses as readonly string[]).includes(status)) throw new Error(`Invalid impl status: ${status}`);
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
+    // Registry 3: `impl` is a legacy, migration-only type — implementation
+    // records have no durable Git form. The registry gate is the one
+    // authoritative refusal, raised before any path resolution or write.
+    configFor("impl");
     const { outputPath, relativeDir } = buildNewFilePath({
       cwd,
       kind: "ir",
