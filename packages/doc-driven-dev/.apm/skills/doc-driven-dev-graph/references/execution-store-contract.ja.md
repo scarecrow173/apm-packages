@@ -3,8 +3,9 @@
 Execution Store（Issue `#236`）は、実行単位の状態 —— Plan・Task・承認・
 Checkpoint・Effect Receipt・run trace —— を Git 管理外に保持し、永続的
 な知識だけが Markdown に残るようにするものです。`.apm/state/
-doc-driven-dev/` 配下への唯一の書き込み元であり、永続的知識の第二の
-正本ではありません。
+doc-driven-dev/` ルートを Evidence Store（`#240`、不変の検証結果を
+`evidence/` に保持 —— `evidence-store-contract.ja.md` 参照）と共有し、
+永続的知識の第二の正本ではありません。
 
 ランタイム: `scripts/execution_store.js`（正本ソースは
 `src/skills/lib/execution_store/`）。全サブコマンドは他の通常エントリ

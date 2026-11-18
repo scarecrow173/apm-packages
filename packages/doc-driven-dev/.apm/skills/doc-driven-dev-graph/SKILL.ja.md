@@ -165,6 +165,17 @@ Markdown に残ります。レイアウト、レコードスキーマ、CAS・si
 [`references/execution-store-contract.ja.md`](references/execution-store-contract.ja.md)
 で定義します。
 
+Verification Check の結果である検証結果は、**Evidence Store**
+（`.apm/state/doc-driven-dev/evidence/`、Issue `#240`）に保持します。
+claim ドキュメント revision・check designRevision・subject（commit
+または workspace snapshot）・provider・artifact 参照をピン留めした
+不変の Evidence Record で、追記一度限りであり更新も削除もされませ
+ん。workspace の結果は内容同一性の証明がある場合のみ commit の
+エビデンスへ昇格します。レコードスキーマ、artifact/retention 規則、
+一貫性モデルは
+[`references/evidence-store-contract.ja.md`](references/evidence-store-contract.ja.md)
+で定義します。
+
 ## Schema preflight gate
 
 routing、inspection、context fetch、task-graph / dashboard 構築を含む全通常
@@ -352,6 +363,9 @@ node .apm/skills/doc-driven-dev-graph/scripts/execution_store.js \
 - [`references/execution-store-contract.ja.md`](references/execution-store-contract.ja.md) —
   run ごとの Execution Store レイアウト、レコードスキーマ、CAS・single-writer
   規則、クラッシュ復旧、export/import の移転セマンティクス。
+- [`references/evidence-store-contract.ja.md`](references/evidence-store-contract.ja.md) —
+  不変 Evidence Record スキーマ、subject/artifact/retention 規則、
+  追記一度限りの書き込み、派生インデックス、workspace→commit 昇格。
 - [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) —
   Task Graph 合成と fail-closed dependency 規則。
 - [`references/graph-inspection.ja.md`](references/graph-inspection.ja.md) — inspection

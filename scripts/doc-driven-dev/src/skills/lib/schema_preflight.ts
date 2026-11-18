@@ -28,10 +28,11 @@
 //   machinery owns is unmistakably foreign: files inside
 //   `docs/.doc-driven-dev/` beyond the manifest/journal pair, legacy graph
 //   YAML there, and content under `.apm/state/doc-driven-dev/` outside
-//   `runs/<run-id>/` — the declared per-run layout (#236): files inside a
-//   run directory are current state, while loose files directly under
-//   `runs/` or anywhere else are foreign. Malformed docs stay the lint
-//   layer's business.
+//   `runs/<run-id>/` — the declared per-run layout (#236) — or outside
+//   `evidence/` — the declared Evidence Store layout (#240): files inside a
+//   run directory or the evidence records dir are current state, while
+//   loose files directly under `runs/` or anywhere else are foreign.
+//   Malformed docs stay the lint layer's business.
 //   Under a present manifest the repo has declared the v3 components, so
 //   doc-tree inconsistency with that declaration flags too: execution-bound
 //   canonical docs (plan/task/test-spec/impl no longer live in Git under
@@ -479,11 +480,43 @@ function scanExecutionState(cwd: string, issues: PreflightIssue[]): void {
     const segments = relUnderRoot.split("/").filter(Boolean);
     if (isDir) {
       // `runs/` and the per-run directories beneath it (at whatever depth a
-      // run keeps its own structure) are the declared layout; any other
-      // directory under the state root is foreign.
+      // run keeps its own structure) are the declared layout; `evidence/`
+      // and its `records/` subdirectory are the Evidence Store (#240). Any
+      // other directory under the state root is foreign.
       if (segments.length === 0) return;
-      if (segments[0] !== "runs") {
+      if (segments[0] !== "runs" && segments[0] !== "evidence") {
         marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      }
+      return;
+    }
+    if (segments[0] === "evidence") {
+      // The declared Evidence Store layout: `evidence/manifest.json` and
+      // the derived `evidence/index.json` at depth 2, immutable records at
+      // `evidence/records/<id>.json` (depth 3+). Any other file shape is
+      // unaccounted-for.
+      if (segments.length < 2) {
+        marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+        return;
+      }
+      if (segments.length === 2) {
+        if (segments[1] !== "manifest.json" && segments[1] !== "index.json") {
+          marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+          return;
+        }
+      } else if (segments[1] !== "records") {
+        marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+        return;
+      }
+      if (segments[1] === "manifest.json") {
+        let version: unknown;
+        try {
+          version = (JSON.parse(fs.readFileSync(path.resolve(cwd, rel), "utf8")) as Record<string, unknown>).schemaVersion;
+        } catch {
+          version = null;
+        }
+        if (version !== 1) {
+          marker(rel, `evidence manifest schemaVersion is ${JSON.stringify(version)}, expected 1`);
+        }
       }
       return;
     }

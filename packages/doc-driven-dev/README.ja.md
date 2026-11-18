@@ -108,9 +108,10 @@ runnable 集合になります。corpus の `docs/tasks/` Markdown は履歴で�
 durable な Markdown が project history と status の authority であり、
 `plan` と `task` は durable な Git の形を持たない execution-bound です。
 run ごとの実行状態は Git 管理外の Execution Store
-（`.apm/state/doc-driven-dev/runs/`）に保持します。Graph State と Dynamic
-Task Graph は現在の turn の projection であり、runtime は並行する
-lifecycle database を作成せず、要求もしません。
+（`.apm/state/doc-driven-dev/runs/`）に保持し、検証結果は不変の
+Evidence Store（`.apm/state/doc-driven-dev/evidence/`）に保持します。
+Graph State と Dynamic Task Graph は現在の turn の projection であり、
+runtime は並行する lifecycle database を作成せず、要求もしません。
 
 ## インストール
 

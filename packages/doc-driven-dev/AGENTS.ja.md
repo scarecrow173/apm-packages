@@ -90,6 +90,10 @@ plan・task・承認・checkpoint・effect receipt・run trace といった run 
 `.apm/skills/doc-driven-dev-graph/references/execution-store-contract.ja.md`
 を参照してください。store は既定で worktree ごとであり、`.apm/state/` が
 Git で ignore されていない限り書き込みを拒否し、durable な知識を持ちません。
+検証結果は別コントラクトであり、
+`.apm/state/doc-driven-dev/evidence/` 配下の不変 Evidence Record です —
+`.apm/skills/doc-driven-dev-graph/references/evidence-store-contract.ja.md`
+を参照してください。
 
 ## Skill と ownership
 

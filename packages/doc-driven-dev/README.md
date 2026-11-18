@@ -110,9 +110,11 @@ an empty task set produce issues and an empty runnable set. Corpus
 
 Durable Markdown is project history and status authority; `plan` and `task`
 are execution-bound with no durable Git form. Per-run execution state lives in
-the Git-untracked Execution Store under `.apm/state/doc-driven-dev/runs/`.
-Graph State and the Dynamic Task Graph are projections for the current turn.
-The runtime creates no parallel lifecycle database and does not require one.
+the Git-untracked Execution Store under `.apm/state/doc-driven-dev/runs/`;
+verification results live in the immutable Evidence Store under
+`.apm/state/doc-driven-dev/evidence/`. Graph State and the Dynamic Task Graph
+are projections for the current turn. The runtime creates no parallel
+lifecycle database and does not require one.
 
 ## Install
 

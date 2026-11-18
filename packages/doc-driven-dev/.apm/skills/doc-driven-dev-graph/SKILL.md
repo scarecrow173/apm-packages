@@ -172,6 +172,16 @@ declared shared root. It is a consistency-checked execution-state store only
 single-writer rules, crash recovery, and transfer semantics are defined in
 [`references/execution-store-contract.md`](references/execution-store-contract.md).
 
+Verification results — the outcomes of Verification Checks — live in the
+**Evidence Store** under `.apm/state/doc-driven-dev/evidence/` (Issue
+`#240`): immutable Evidence Records pinning the claim document revision,
+check design revision, subject (commit or workspace snapshot), provider,
+and artifact references. Records are append-once, never updated or
+deleted; a workspace result promotes to commit evidence only with
+content-identity proof. The record schema, artifact/retention rules, and
+consistency model are defined in
+[`references/evidence-store-contract.md`](references/evidence-store-contract.md).
+
 ## Schema preflight gate
 
 Every normal entrypoint — routing, inspection, context fetch, task-graph and
@@ -354,6 +364,9 @@ for the full command, schema, and error-code contract.
 - [`references/execution-store-contract.md`](references/execution-store-contract.md) —
   per-run Execution Store layout, record schemas, CAS/single-writer rules,
   crash recovery, and export/import transfer semantics.
+- [`references/evidence-store-contract.md`](references/evidence-store-contract.md) —
+  immutable Evidence Record schema, subject/artifact/retention rules,
+  append-once writes, derived index, and workspace→commit promotion.
 - [`references/task-graph-contract.md`](references/task-graph-contract.md) —
   Task Graph composition and fail-closed dependency rules.
 - [`references/graph-inspection.md`](references/graph-inspection.md) — inspection

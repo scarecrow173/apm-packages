@@ -36986,8 +36986,35 @@ function scanExecutionState(cwd, issues) {
     const segments = relUnderRoot.split("/").filter(Boolean);
     if (isDir) {
       if (segments.length === 0) return;
-      if (segments[0] !== "runs") {
+      if (segments[0] !== "runs" && segments[0] !== "evidence") {
         marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      }
+      return;
+    }
+    if (segments[0] === "evidence") {
+      if (segments.length < 2) {
+        marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+        return;
+      }
+      if (segments.length === 2) {
+        if (segments[1] !== "manifest.json" && segments[1] !== "index.json") {
+          marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+          return;
+        }
+      } else if (segments[1] !== "records") {
+        marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+        return;
+      }
+      if (segments[1] === "manifest.json") {
+        let version2;
+        try {
+          version2 = JSON.parse(import_node_fs2.default.readFileSync(import_node_path3.default.resolve(cwd, rel), "utf8")).schemaVersion;
+        } catch {
+          version2 = null;
+        }
+        if (version2 !== 1) {
+          marker(rel, `evidence manifest schemaVersion is ${JSON.stringify(version2)}, expected 1`);
+        }
       }
       return;
     }

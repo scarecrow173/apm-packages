@@ -3,8 +3,10 @@
 The Execution Store (Issue `#236`) holds per-run execution state — plans,
 tasks, approvals, checkpoints, effect receipts, and run traces — outside
 Git, so durable knowledge stays the only thing Markdown ever persists. It
-is the only writer under `.apm/state/doc-driven-dev/` and is **not** a
-second source of truth for durable knowledge.
+shares the `.apm/state/doc-driven-dev/` root with the Evidence Store
+(`#240`, immutable verification results in `evidence/` — see
+`evidence-store-contract.md`) and is **not** a second source of truth for
+durable knowledge.
 
 Runtime: `scripts/execution_store.js` (source of truth:
 `src/skills/lib/execution_store/`). Every subcommand runs the shared schema
