@@ -1141,7 +1141,7 @@
         {
           "path": "doc-driven-dev-graph/scripts/execution_store.js",
           "exists": true,
-          "bytes": 1471628
+          "bytes": 1471758
         },
         {
           "path": "doc-driven-dev-graph/scripts/inspect_graph.js",
@@ -1166,7 +1166,7 @@
         {
           "path": "doc-maintenance/SKILL.md",
           "exists": true,
-          "bytes": 17626
+          "bytes": 17894
         },
         {
           "path": "doc-status/SKILL.md",
@@ -1191,14 +1191,14 @@
       ],
       "totals": {
         "directives": 51,
-        "referencedBytes": 8082492,
+        "referencedBytes": 8082890,
         "missing": 0
       }
     },
     {
       "flow": "doc-maintenance",
-      "skillBytes": 17626,
-      "alwaysOnChars": 17288,
+      "skillBytes": 17894,
+      "alwaysOnChars": 17554,
       "directives": [
         {
           "kind": "script",
@@ -1275,55 +1275,55 @@
         {
           "kind": "script",
           "target": "scripts/scaffold_docs.js",
-          "line": 251,
+          "line": 255,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_docs.js",
-          "line": 252,
+          "line": 256,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_ids.js",
-          "line": 253,
+          "line": 257,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/promote_index.js",
-          "line": 254,
+          "line": 258,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/doc_maintenance.js",
-          "line": 326,
+          "line": 330,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_docs.js",
-          "line": 333,
+          "line": 337,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_ids.js",
-          "line": 333,
+          "line": 337,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/promote_index.js",
-          "line": 334,
+          "line": 338,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/scaffold_docs.js",
-          "line": 334,
+          "line": 338,
           "optional": false
         }
       ],
@@ -1331,7 +1331,7 @@
         {
           "path": "doc-maintenance/scripts/doc_maintenance.js",
           "exists": true,
-          "bytes": 1789384
+          "bytes": 1801617
         },
         {
           "path": "doc-maintenance/scripts/migrate_docs.js",
@@ -1361,7 +1361,7 @@
       ],
       "totals": {
         "directives": 21,
-        "referencedBytes": 6630952,
+        "referencedBytes": 6643185,
         "missing": 0
       }
     },
@@ -2990,10 +2990,10 @@
   ],
   "totals": {
     "flows": 20,
-    "skillBytes": 208981,
-    "alwaysOnChars": 201857,
+    "skillBytes": 209249,
+    "alwaysOnChars": 202123,
     "directives": 337,
-    "referencedBytes": 56778852,
+    "referencedBytes": 56791483,
     "missing": 0
   }
 }

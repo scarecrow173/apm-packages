@@ -54,6 +54,33 @@ function normalizeContainedRelPath(input: string): string | null {
 }
 
 /**
+ * VCS-internal directory names — the write-side complement of the read-side
+ * `SKIPPED_DIRS` sets (doc_repository.ts, id_migration.ts) that keep
+ * `.git`/`node_modules`/`.pnpm-store` out of every scan. Of those, the VCS
+ * internals are the ones a write must never touch: a contained
+ * `.git/config` target IS inside the checkout, so containment alone passes
+ * it, yet writing there corrupts the worktree itself and a backup-less
+ * rollback would delete it outright.
+ */
+const VCS_INTERNAL_DIRS: ReadonlySet<string> = new Set([".git", ".hg", ".svn"]);
+
+/**
+ * Whether a checkout-relative path names VCS internals — `.git`/`.hg`/`.svn`
+ * at any depth, so a nested checkout's internals refuse the same. Slashes
+ * are unified before the segment compare, so an unnormalized input works;
+ * `..`-folded spellings (`docs/../.git/config`) are the caller's job —
+ * `normalizeContainedRelPath` folds them first, then this answers the
+ * namespace question. Segments compare lowercase so a `.GIT` spelling on a
+ * case-insensitive filesystem refuses the same target. Plain repo files
+ * such as `.gitignore` are segments of their own, not VCS internals.
+ */
+function isVcsInternalPath(rel: string): boolean {
+  return normalizeDir(rel)
+    .split("/")
+    .some((segment) => VCS_INTERNAL_DIRS.has(segment.toLowerCase()));
+}
+
+/**
  * Strip the Windows extended-length prefix (`\\?\`, or `\\?\UNC\` → `\\`).
  * `fs.realpathSync` emits it and verbatim absolute inputs may carry it; it is
  * plumbing, not path identity.
@@ -214,6 +241,7 @@ export {
   isInside,
   isInsideCheckout,
   isInsideRealpath,
+  isVcsInternalPath,
   listMarkdownFiles,
   nonReferenceRelationKeys,
   normalizeContainedRelPath,

@@ -570,7 +570,7 @@ test("a keep handoff leaves the existing run untouched", async () => {
   assert.ok(!fs.existsSync(path.join(repo, "migration-exports")));
 });
 
-test("export targets that escape the checkout, hit managed namespaces, or collide with a pinned input are refused", async () => {
+test("export targets that escape the checkout, hit protected namespaces, or collide with a pinned input are refused", async () => {
   const repo = planTaskRepo();
   const existing = createRun(repo, { tasks: [{ taskId: "TASK-EXIST" }] });
   const plan = buildMigrationPlan(repo);
@@ -582,6 +582,9 @@ test("export targets that escape the checkout, hit managed namespaces, or collid
     "C:/evil.json",
     ".apm/state/doc-driven-dev/x.json",
     "docs/.doc-driven-dev/x.json",
+    ".git/config", // VCS internals — contained but never writable
+    ".git/hooks/pre-commit",
+    "docs/../.git/config", // a folded `..` collapses into `.git/` the same
     "docs/plans/0001-plan.md", // a pinned migration input
   ];
   for (const out of refusedTargets) {
@@ -665,4 +668,41 @@ test("a journal naming an escaping step target is refused at readJournal", async
   const rolled = await recoverMigration(repo, { action: "rollback" });
   assert.equal(rolled.status, "migration-incomplete");
   assert.equal(rolled.recovered, false, "a foreign journal is never trusted for rollback either");
+});
+
+test("a journal step target inside VCS internals is refused at readJournal", async () => {
+  const repo = planTaskRepo();
+  const plan = buildMigrationPlan(repo);
+  await applyMigration(repo, { expect: plan.plan.planHash, resolutions: resolutionsFor(plan), allowDirty: true, failAt: "publish:1", now: fixedNow });
+  const journalPath = path.join(repo, "docs/.doc-driven-dev/migration.journal.json");
+  const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as { steps: { target: string; state: string }[] };
+  const pending = journal.steps.find((step) => step.state === "pending");
+  assert.ok(pending, "expected a pending step to tamper with");
+  pending.target = ".git/config"; // contained, yet never a journal path
+  fs.writeFileSync(journalPath, `${JSON.stringify(journal, null, 2)}\n`);
+  const resumed = await recoverMigration(repo, { action: "resume" });
+  assert.equal(resumed.status, "migration-incomplete");
+  assert.equal(resumed.recovered, false);
+  assert.match(resumed.note, /VCS internals|refusing to trust/);
+});
+
+test("a staging-gone journal with only cleanup pending refuses resume and points at rollback", async () => {
+  const repo = planTaskRepo();
+  const plan = buildMigrationPlan(repo);
+  const res = resolutionsFor(plan);
+  await applyMigration(repo, { expect: plan.plan.planHash, resolutions: res, allowDirty: true, failAt: "publish:1", now: fixedNow });
+  const journalPath = path.join(repo, "docs/.doc-driven-dev/migration.journal.json");
+  const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as { steps: { stage: string }[] };
+  const finalizeCount = journal.steps.filter((step) => step.stage === "finalize").length;
+  // Resume, crashing after the last real finalize step — every step has
+  // genuinely run and only cleanup remains pending, then deleting the
+  // staging area lands the exact state a crash between cleanup's two
+  // deletes leaves behind.
+  const crashed = await recoverMigration(repo, { action: "resume", failAt: `finalize:${finalizeCount - 1}` });
+  assert.equal(crashed.status, "migration-incomplete", crashed.note);
+  fs.rmSync(path.join(repo, ".apm/state/doc-driven-dev/migration"), { recursive: true, force: true });
+  const resumed = await recoverMigration(repo, { action: "resume" });
+  assert.equal(resumed.status, "resume-refused");
+  assert.match(resumed.note, /staging artifact .* is missing/);
+  assert.match(resumed.note, /migrate recovery --rollback/);
 });

@@ -14331,6 +14331,10 @@ function normalizeContainedRelPath(input2) {
   }
   return rel;
 }
+var VCS_INTERNAL_DIRS = /* @__PURE__ */ new Set([".git", ".hg", ".svn"]);
+function isVcsInternalPath(rel) {
+  return normalizeDir(rel).split("/").some((segment) => VCS_INTERNAL_DIRS.has(segment.toLowerCase()));
+}
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -44283,8 +44287,9 @@ function readJournal(cwd) {
   for (const dir of createdDirs) pathFields.push(dir);
   for (const field of pathFields) {
     if (field === null || field === void 0) continue;
-    if (typeof field !== "string" || normalizeContainedRelPath(field) === null) {
-      return { journal: null, error: `migration journal names a path ${JSON.stringify(field)} that escapes the checkout \u2014 refusing to trust it` };
+    const normalizedField = typeof field === "string" ? normalizeContainedRelPath(field) : null;
+    if (normalizedField === null || isVcsInternalPath(normalizedField)) {
+      return { journal: null, error: `migration journal names a path ${JSON.stringify(field)} that escapes the checkout or touches VCS internals \u2014 refusing to trust it` };
     }
   }
   const journal = parsed;
@@ -44372,8 +44377,8 @@ function finishParam(stem, arg, params, decision) {
     case "target-collision": {
       if (stem !== "write") return { error: `${decision.decisionId}: unexpected parameterized candidate ${stem}` };
       const target = normalizeContainedRelPath(arg);
-      if (target === null) {
-        return { error: `${decision.decisionId}: write target ${JSON.stringify(arg)} escapes the checkout` };
+      if (target === null || isProtectedWriteTarget(target)) {
+        return { error: `${decision.decisionId}: write target ${JSON.stringify(arg)} escapes the checkout or lands in a protected namespace (state, manifest, or VCS internals)` };
       }
       return { value: { action: "write", target } };
     }
@@ -44575,8 +44580,8 @@ function normalizeRunHandoff(runId, raw) {
   if (method === "export") {
     const out = stringParam(parsed.params, "out", "file", "path") ?? `migration-exports/${runId}.export.json`;
     const normalized = normalizeContainedRelPath(out);
-    if (normalized === null || isUnderDir6(normalized, DOC_DRIVEN_DEV_DIR) || isUnderDir6(normalized, EXECUTION_STATE_ROOT)) {
-      return { error: `run handoff export target ${JSON.stringify(out)} must be a checkout-relative path inside the checkout and outside the state/manifest namespaces` };
+    if (normalized === null || isProtectedWriteTarget(normalized)) {
+      return { error: `run handoff export target ${JSON.stringify(out)} must be a checkout-relative path inside the checkout and outside the state/manifest namespaces and VCS internals` };
     }
     return { method, out: normalized, status: null };
   }
@@ -44591,6 +44596,9 @@ function normalizeRunHandoff(runId, raw) {
 }
 function isUnderDir6(rel, dir) {
   return rel === dir || rel.startsWith(`${dir}/`);
+}
+function isProtectedWriteTarget(rel) {
+  return isVcsInternalPath(rel) || isUnderDir6(rel, DOC_DRIVEN_DEV_DIR) || isUnderDir6(rel, EXECUTION_STATE_ROOT);
 }
 function normalizeResolutions(plan, input2) {
   const out = {
@@ -46083,7 +46091,8 @@ function validateStaged(staging, journal, cwd) {
     const target = normalizeContainedRelPath(step.target);
     const inState = target !== null && isUnderDir6(target, EXECUTION_STATE_ROOT);
     const inManifest = target !== null && isUnderDir6(target, DOC_DRIVEN_DEV_DIR);
-    const bad = target === null || (step.op === "doc-create" || step.op === "doc-edit" || step.op === "index") && (inState || inManifest) || step.op === "remove" && inState || step.op === "export" && (inState || inManifest) || step.op === "run-import" && !isValidId(step.target) || (step.op === "run-record" || step.op === "handoff-finalize") && !inState || step.op === "manifest" && target !== SCHEMA_MANIFEST_PATH;
+    const inVcs = target !== null && isVcsInternalPath(target);
+    const bad = target === null || inVcs || (step.op === "doc-create" || step.op === "doc-edit" || step.op === "index") && (inState || inManifest) || step.op === "remove" && inState || step.op === "export" && (inState || inManifest) || step.op === "run-import" && !isValidId(step.target) || (step.op === "run-record" || step.op === "handoff-finalize") && !inState || step.op === "manifest" && target !== SCHEMA_MANIFEST_PATH;
     if (bad) {
       errors.push(`step ${step.id}: target ${JSON.stringify(step.target)} is outside the ${step.op} op's allowed namespace`);
     }
@@ -46111,8 +46120,8 @@ function validateStaged(staging, journal, cwd) {
       continue;
     }
     const target = normalizeContainedRelPath(step.target);
-    if (target === null || isUnderDir6(target, DOC_DRIVEN_DEV_DIR) || isUnderDir6(target, EXECUTION_STATE_ROOT)) {
-      errors.push(`${step.target}: write target escapes the checkout or lands in a managed state namespace`);
+    if (target === null || isProtectedWriteTarget(target)) {
+      errors.push(`${step.target}: write target escapes the checkout or lands in a protected namespace (state, manifest, or VCS internals)`);
       continue;
     }
     if (step.op === "doc-create" && import_node_fs16.default.existsSync(import_node_path17.default.join(cwd, target))) {
@@ -47057,8 +47066,9 @@ function rebuildWorldForResume(cwd, journal, now) {
   ];
   for (const field of planPaths) {
     if (field === null || field === void 0) continue;
-    if (typeof field !== "string" || normalizeContainedRelPath(field) === null) {
-      return { error: `the journal's embedded plan names a path ${JSON.stringify(field)} that escapes the checkout \u2014 refusing to trust it` };
+    const normalizedField = typeof field === "string" ? normalizeContainedRelPath(field) : null;
+    if (normalizedField === null || isVcsInternalPath(normalizedField)) {
+      return { error: `the journal's embedded plan names a path ${JSON.stringify(field)} that escapes the checkout or touches VCS internals \u2014 refusing to trust it` };
     }
   }
   for (const runId of [
@@ -47079,8 +47089,11 @@ function rebuildWorldForResume(cwd, journal, now) {
     if (!isPlainObject3(value)) {
       return { error: `the journal's resolution ${id} is not an object \u2014 the journal cannot steer a rebuild.` };
     }
-    if (value.action === "write" && (typeof value.target !== "string" || normalizeContainedRelPath(value.target) === null)) {
-      return { error: `the journal's resolution ${id} names a write target ${JSON.stringify(value.target)} outside the checkout \u2014 refusing to trust it.` };
+    if (value.action === "write") {
+      const writeTarget = typeof value.target === "string" ? normalizeContainedRelPath(value.target) : null;
+      if (writeTarget === null || isProtectedWriteTarget(writeTarget)) {
+        return { error: `the journal's resolution ${id} names a write target ${JSON.stringify(value.target)} outside the checkout or in a protected namespace \u2014 refusing to trust it.` };
+      }
     }
     resolved.set(id, value);
   }
@@ -47207,7 +47220,7 @@ async function recoverMigration(cwd, options2 = {}) {
   if (stageProblems.length > 0) {
     base.ok = false;
     base.status = "resume-refused";
-    base.note = `cannot resume \u2014 ${stageProblems.join("; ")}`;
+    base.note = `cannot resume \u2014 ${stageProblems.join("; ")}. Run \`migrate recovery --rollback\` to undo.`;
     return base;
   }
   const applyReport = emptyApplyReport(cwd, journal.planHash);

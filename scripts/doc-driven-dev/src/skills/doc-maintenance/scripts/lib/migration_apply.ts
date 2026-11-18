@@ -69,6 +69,7 @@ import {
 import {
   isIndexFileName,
   isInsideCheckout,
+  isVcsInternalPath,
   nonReferenceRelationKeys,
   normalizeContainedRelPath,
   normalizeDir,
@@ -452,7 +453,11 @@ function readJournal(cwd: string): { journal: MigrationJournal | null; error: st
   // publish, rollback) then trusts the journal without re-walking it. A
   // journal that names an escaping target, staging area, staged artifact,
   // backup, or input is not this engine's journal; trusting it would let a
-  // tampered file steer reads and writes outside the checkout.
+  // tampered file steer reads and writes outside the checkout. VCS
+  // internals refuse too: no legitimate journal path is ever under `.git`
+  // (staging paths legitimately live under the state root, so the managed
+  // namespaces stay allowed here — per-op namespace rules land in
+  // validateStaged instead).
   const staging = typeof parsed.staging === "string" ? normalizeContainedRelPath(parsed.staging) : null;
   if (staging === null || !isUnderDir(staging, EXECUTION_STATE_ROOT)) {
     return { journal: null, error: `migration journal names a staging area ${JSON.stringify(parsed.staging)} outside the execution-state namespace — refusing to trust it` };
@@ -479,8 +484,9 @@ function readJournal(cwd: string): { journal: MigrationJournal | null; error: st
   for (const dir of createdDirs) pathFields.push(dir);
   for (const field of pathFields) {
     if (field === null || field === undefined) continue;
-    if (typeof field !== "string" || normalizeContainedRelPath(field) === null) {
-      return { journal: null, error: `migration journal names a path ${JSON.stringify(field)} that escapes the checkout — refusing to trust it` };
+    const normalizedField = typeof field === "string" ? normalizeContainedRelPath(field) : null;
+    if (normalizedField === null || isVcsInternalPath(normalizedField)) {
+      return { journal: null, error: `migration journal names a path ${JSON.stringify(field)} that escapes the checkout or touches VCS internals — refusing to trust it` };
     }
   }
   const journal = parsed as unknown as MigrationJournal;
@@ -607,8 +613,8 @@ function finishParam(
     case "target-collision": {
       if (stem !== "write") return { error: `${decision.decisionId}: unexpected parameterized candidate ${stem}` };
       const target = normalizeContainedRelPath(arg);
-      if (target === null) {
-        return { error: `${decision.decisionId}: write target ${JSON.stringify(arg)} escapes the checkout` };
+      if (target === null || isProtectedWriteTarget(target)) {
+        return { error: `${decision.decisionId}: write target ${JSON.stringify(arg)} escapes the checkout or lands in a protected namespace (state, manifest, or VCS internals)` };
       }
       return { value: { action: "write", target } };
     }
@@ -838,8 +844,8 @@ function normalizeRunHandoff(
   if (method === "export") {
     const out = stringParam(parsed.params, "out", "file", "path") ?? `migration-exports/${runId}.export.json`;
     const normalized = normalizeContainedRelPath(out);
-    if (normalized === null || isUnderDir(normalized, DOC_DRIVEN_DEV_DIR) || isUnderDir(normalized, EXECUTION_STATE_ROOT)) {
-      return { error: `run handoff export target ${JSON.stringify(out)} must be a checkout-relative path inside the checkout and outside the state/manifest namespaces` };
+    if (normalized === null || isProtectedWriteTarget(normalized)) {
+      return { error: `run handoff export target ${JSON.stringify(out)} must be a checkout-relative path inside the checkout and outside the state/manifest namespaces and VCS internals` };
     }
     return { method, out: normalized, status: null };
   }
@@ -855,6 +861,21 @@ function normalizeRunHandoff(
 
 function isUnderDir(rel: string, dir: string): boolean {
   return rel === dir || rel.startsWith(`${dir}/`);
+}
+
+// The namespaces no migration write target may ever name: the manifest +
+// journal dir, the execution-state root, and VCS internals. Containment
+// alone was never the whole rule — `.git/config` (or the folded
+// `docs/../.git/config`) IS inside the checkout, yet an export landing
+// there corrupts the worktree and carries `backup: null`, so rollback
+// would delete it outright. Every path-bearing input surface the engine
+// writes through applies this same set: resolution write:/export targets
+// at normalize time, the journal sweep and embedded-plan revalidation at
+// the trust boundary, and the staged-target recheck before publish.
+function isProtectedWriteTarget(rel: string): boolean {
+  return isVcsInternalPath(rel)
+    || isUnderDir(rel, DOC_DRIVEN_DEV_DIR)
+    || isUnderDir(rel, EXECUTION_STATE_ROOT);
 }
 
 function normalizeResolutions(
@@ -2545,13 +2566,16 @@ function validateStaged(staging: string, journal: MigrationJournal, cwd: string)
   // namespace — readJournal proves containment; here the per-op rule lands:
   // doc/index/export writes stay out of the managed state + manifest dirs,
   // removals never touch the store, store ops never leave it, the manifest
-  // step writes exactly the manifest.
+  // step writes exactly the manifest — and no op ever touches VCS
+  // internals, whatever its own namespace allows.
   for (const step of journal.steps) {
     if (step.op === "cleanup") continue;
     const target = normalizeContainedRelPath(step.target);
     const inState = target !== null && isUnderDir(target, EXECUTION_STATE_ROOT);
     const inManifest = target !== null && isUnderDir(target, DOC_DRIVEN_DEV_DIR);
+    const inVcs = target !== null && isVcsInternalPath(target);
     const bad = target === null
+      || inVcs
       || ((step.op === "doc-create" || step.op === "doc-edit" || step.op === "index") && (inState || inManifest))
       || (step.op === "remove" && inState)
       || (step.op === "export" && (inState || inManifest))
@@ -2583,8 +2607,8 @@ function validateStaged(staging: string, journal: MigrationJournal, cwd: string)
     const abs = path.join(staging, rel);
     if (!fs.existsSync(abs)) { errors.push(`${step.target}: staged artifact ${rel} is missing`); continue; }
     const target = normalizeContainedRelPath(step.target);
-    if (target === null || isUnderDir(target, DOC_DRIVEN_DEV_DIR) || isUnderDir(target, EXECUTION_STATE_ROOT)) {
-      errors.push(`${step.target}: write target escapes the checkout or lands in a managed state namespace`);
+    if (target === null || isProtectedWriteTarget(target)) {
+      errors.push(`${step.target}: write target escapes the checkout or lands in a protected namespace (state, manifest, or VCS internals)`);
       continue;
     }
     if (step.op === "doc-create" && fs.existsSync(path.join(cwd, target))) {
@@ -2898,10 +2922,14 @@ async function executeFinalizeStep(cwd: string, staging: string, step: JournalSt
       return;
     }
     case "cleanup": {
-      // Staging first, journal last: a crash between them leaves a journal
-      // that still points at (now-absent) staging — resume sees only the
-      // cleanup step pending and re-runs it. The other order orphans an
-      // invisible staging directory.
+      // Staging first, journal last — the other order orphans an invisible
+      // staging directory. A crash between them leaves a journal whose only
+      // pending step is cleanup, still pinning staging artifacts that no
+      // longer exist on disk. Resume refuses that state rather than
+      // re-running cleanup: verifyStaging cannot distinguish "cleanup
+      // already deleted the staging area" from a staging area tampered with
+      // mid-finalize, so it reports the pins missing and recovery directs
+      // to `migrate recovery --rollback`.
       fs.rmSync(stagingAbs(cwd), { recursive: true, force: true });
       fs.rmSync(journalAbs(cwd), { force: true });
       return;
@@ -3680,8 +3708,9 @@ function rebuildWorldForResume(
   ];
   for (const field of planPaths) {
     if (field === null || field === undefined) continue;
-    if (typeof field !== "string" || normalizeContainedRelPath(field) === null) {
-      return { error: `the journal's embedded plan names a path ${JSON.stringify(field)} that escapes the checkout — refusing to trust it` };
+    const normalizedField = typeof field === "string" ? normalizeContainedRelPath(field) : null;
+    if (normalizedField === null || isVcsInternalPath(normalizedField)) {
+      return { error: `the journal's embedded plan names a path ${JSON.stringify(field)} that escapes the checkout or touches VCS internals — refusing to trust it` };
     }
   }
   for (const runId of [
@@ -3702,8 +3731,11 @@ function rebuildWorldForResume(
     if (!isPlainObject(value)) {
       return { error: `the journal's resolution ${id} is not an object — the journal cannot steer a rebuild.` };
     }
-    if (value.action === "write" && (typeof value.target !== "string" || normalizeContainedRelPath(value.target) === null)) {
-      return { error: `the journal's resolution ${id} names a write target ${JSON.stringify(value.target)} outside the checkout — refusing to trust it.` };
+    if (value.action === "write") {
+      const writeTarget = typeof value.target === "string" ? normalizeContainedRelPath(value.target) : null;
+      if (writeTarget === null || isProtectedWriteTarget(writeTarget)) {
+        return { error: `the journal's resolution ${id} names a write target ${JSON.stringify(value.target)} outside the checkout or in a protected namespace — refusing to trust it.` };
+      }
     }
     resolved.set(id, value as Record<string, unknown>);
   }
@@ -3842,7 +3874,7 @@ async function recoverMigration(cwd: string, options: RecoveryOptions = {}): Pro
   if (stageProblems.length > 0) {
     base.ok = false;
     base.status = "resume-refused";
-    base.note = `cannot resume — ${stageProblems.join("; ")}`;
+    base.note = `cannot resume — ${stageProblems.join("; ")}. Run \`migrate recovery --rollback\` to undo.`;
     return base;
   }
 
