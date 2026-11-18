@@ -4,7 +4,10 @@
 それをどう保存するかを定義します。レガシーの常時生成型 `impl-doc` 契約を
 置き換えるものです: 通常の実装修正は、Implementation Record・Experiment
 Log・ナレッジドキュメントを**強制作成せず**に完了します。保存は既定ではなく
-判断です。
+判断です。IR/EXP が担っていた実行証跡は、ランの
+[Execution Store](../../doc-driven-dev-graph/references/execution-store-contract.ja.md)
+レコードと [run trace](../../doc-driven-dev-graph/references/run-trace-contract.ja.md)
+に属します。
 
 実装ランからの知見を統合する前にこのリファレンスを読み込んでください。
 `references/knowledge-conventions.md` がドキュメント形式を定義し、このファイルが
@@ -25,10 +28,10 @@ Log・ナレッジドキュメントを**強制作成せず**に完了します�
 
 | 抽出しないもの | 代わりの置き場所 |
 | --- | --- |
-| 成功/失敗の時系列、試行履歴 | Run trace / Execution Store —— 診断情報でありナレッジではない |
-| コマンド実行ログとその出力 | Run trace —— 一時的な証跡 |
+| 成功/失敗の時系列、試行履歴 | [Run trace](../../doc-driven-dev-graph/references/run-trace-contract.ja.md) / [Execution Store](../../doc-driven-dev-graph/references/execution-store-contract.ja.md) —— 診断情報でありナレッジではない |
+| コマンド実行ログとその出力 | [Run trace](../../doc-driven-dev-graph/references/run-trace-contract.ja.md) —— 一時的な証跡 |
 | チャット的な作業記録・叙述 | どこにも永続化しない —— 会話の残滓 |
-| タスク状態・進捗・割り当て | Execution Store レコード |
+| タスク状態・進捗・割り当て | [Execution Store](../../doc-driven-dev-graph/references/execution-store-contract.ja.md) レコード |
 | 検証結果 | Evidence Store / Verification Design |
 | 未検証の推測・仮説・憶測 | どこにも —— 検証されるまで `status: draft` を維持 |
 
@@ -82,8 +85,9 @@ assess はすべての durable ディレクトリ (`docs/knowledge`、`docs/spec
 レコードを比較したことを意味します: 統合するか、置き換えるか、あるいは理由を
 `--note` に添えて作成します。
 
-確定済み (`archived` / `superseded` / `retired` ライフサイクル) ドキュメント
-の競合はブロックしません —— コンテキストのための候補としてのみ報告されます。
+確定済み (settled `status` —— knowledge では `archived` / `superseded` ——
+または `superseded` / `retired` `lifecycle`) ドキュメントの競合は
+ブロックしません —— コンテキストのための候補としてのみ報告されます。
 
 ## ランの終了ゲート
 

@@ -251,8 +251,8 @@ fields on their Execution Store task records are verifiably disjoint — see
 [references/parallel-delegation-contract.md](references/parallel-delegation-contract.md)
 for eligibility, isolation, merge-verification, and fallback rules. Serial
 execution is always the default fallback; never guess a scope. The slice's
-own task record and its declared `docs/impl/` evidence need no scope
-declaration; another task's record is never writable.
+own task record and its declared evidence in the run's Execution Store need
+no scope declaration; another task's record is never writable.
 
 Apply each skill in the active stack according to its priority:
 

@@ -41,14 +41,18 @@ import {
   integrateKnowledge,
   provenanceEntry,
   resolveKnowledgeTarget,
+  ROUTE_SKILLS,
 } from "./lib/consolidation";
 
 const KNOWLEDGE_KINDS: readonly string[] = configFor("knowledge").fieldVocabularies.knowledge_kind ?? [];
 const KNOWLEDGE_STATUSES: readonly string[] = configFor("knowledge").statusValues;
 const DECISIONS = ["none", "route", "integrate", "create"] as const;
-// The non-knowledge durable types a `route` decision may name — the owning
-// skill is looked up on the candidate, never written through.
-const ROUTE_TARGET_TYPES = ["spec", "design", "adr", "verification", "discovery", "idea", "brainstorm"] as const;
+// The durable types a `route` decision may name — every type whose route
+// is an owning skill rather than `integrate` (knowledge). Derived from
+// ROUTE_SKILLS so the route table stays the single authority for both the
+// routes `assess` reports and the owners `apply` names.
+const ROUTE_TARGET_TYPES: readonly string[] = Object.keys(ROUTE_SKILLS)
+  .filter((type) => ROUTE_SKILLS[type] !== "integrate");
 
 type CliArgs = {
   cwd: string;
@@ -202,10 +206,17 @@ async function runApply(args: CliArgs): Promise<void> {
     if (args.to === "knowledge") {
       throw new Error("--to knowledge is not a route: use --decision integrate or create");
     }
-    if (!(ROUTE_TARGET_TYPES as readonly string[]).includes(args.to)) {
+    if (!ROUTE_TARGET_TYPES.includes(args.to)) {
       throw new Error(`Invalid route target: ${args.to} (expected one of: ${ROUTE_TARGET_TYPES.join(", ")})`);
     }
-    const skill = `${args.to}-doc`;
+    // The owner comes from the same ROUTE_SKILLS table `assess` reports —
+    // apply never derives an owner spelling (brainstorm routes to
+    // briefing-flow, not a non-existent `brainstorm-doc`), and a type the
+    // table does not map fails closed.
+    const skill = ROUTE_SKILLS[args.to];
+    if (!skill) {
+      throw new Error(`No owning skill is registered for route target: ${args.to}`);
+    }
     const payload = {
       decision: "route",
       targetType: args.to,

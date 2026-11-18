@@ -245,8 +245,8 @@ in-progress の ir を1件、最初のコード変更前に開く）は、`impl-
 isolation、merge verification、fallback の規則は
 [references/parallel-delegation-contract.ja.md](references/parallel-delegation-contract.ja.md)
 を参照。serial 実行は常に default fallback であり、scope を推測しない。
-slice 自身の task レコードと宣言済みの `docs/impl/` evidence は scope
-宣言を要しない; 他の task のレコードは一切書き込めない。
+slice 自身の task レコードとランの Execution Store に記録する宣言済み
+evidence は scope 宣言を要しない; 他の task のレコードは一切書き込めない。
 
 アクティブスタック内の各スキルを優先度に従って適用する:
 

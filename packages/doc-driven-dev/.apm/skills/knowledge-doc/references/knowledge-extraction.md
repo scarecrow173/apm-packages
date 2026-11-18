@@ -4,7 +4,10 @@ This contract defines when implementation work produces durable knowledge and
 how that knowledge is persisted under Document Registry 3. It replaces the
 legacy always-on `impl-doc` generation contract: a normal implementation
 change completes **without** minting an Implementation Record, Experiment
-Log, or Knowledge document. Persisting is a decision, not a default.
+Log, or Knowledge document. Persisting is a decision, not a default. The
+execution evidence the IR/EXP used to carry now belongs to the run's
+[Execution Store](../../doc-driven-dev-graph/references/execution-store-contract.md)
+records and [run trace](../../doc-driven-dev-graph/references/run-trace-contract.md).
 
 Load this reference before consolidating findings from any implementation
 run. `references/knowledge-conventions.md` defines the document format; this
@@ -26,10 +29,10 @@ it:
 
 | Never extract | Where it belongs instead |
 | --- | --- |
-| Success/failure timelines, attempt history | Run trace / Execution Store — diagnostic, not knowledge |
-| Command execution logs and their output | Run trace — transient evidence |
+| Success/failure timelines, attempt history | [Run trace](../../doc-driven-dev-graph/references/run-trace-contract.md) / [Execution Store](../../doc-driven-dev-graph/references/execution-store-contract.md) — diagnostic, not knowledge |
+| Command execution logs and their output | [Run trace](../../doc-driven-dev-graph/references/run-trace-contract.md) — transient evidence |
 | Chat-like work records and narration | Nothing durable — conversational residue |
-| Task state, progress, assignments | Execution Store records |
+| Task state, progress, assignments | [Execution Store](../../doc-driven-dev-graph/references/execution-store-contract.md) records |
 | Verification outcomes | Evidence Store / Verification Design |
 | Unverified guesses, hypotheses, speculation | Nowhere — or keep `status: draft` until verified |
 
@@ -83,8 +86,9 @@ conflicts exist the gate is `review-required`, and
 means a human (or the requesting agent) compared the records: integrate,
 supersede, or create anyway, with the reason in `--note`.
 
-Conflicts on settled (`archived` / `superseded` / `retired` lifecycle)
-documents never block — they are reported as candidates for context only.
+Conflicts on settled documents — a settled `status` (`archived` /
+`superseded` for knowledge) or a `superseded` / `retired` `lifecycle` —
+never block: they are reported as candidates for context only.
 
 ## The run exit gate
 

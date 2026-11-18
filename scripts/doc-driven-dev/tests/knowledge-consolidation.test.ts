@@ -174,6 +174,65 @@ test("assess flags overlapping non-settled knowledge as conflicts", () => {
   assert.equal(report.gate, "review-required");
 });
 
+test("assess scans a shared dir once and judges each doc by its own type", () => {
+  const repo = tempRepo();
+  // `docs/discovery` hosts two durable types — brainstorm is co-resident
+  // with discovery. A document there must surface exactly once, typed and
+  // routed by its own `type:` front matter — never duplicated under every
+  // resident type, and never settled under a foreign type's vocabulary.
+  writeDoc(repo, "docs/discovery/0001-cache-spike.md", fm({
+    id: "DISC-0001", type: "discovery", status: "draft",
+    title: "Cache eviction exploration",
+  }));
+  writeDoc(repo, "docs/discovery/0002-cache-brainstorm.md", fm({
+    id: "BRAINSTORM-0001", type: "brainstorm", status: "routed",
+    title: "Cache eviction brainstorm",
+  }));
+  // Front matter without a durable `type:` falls back to the dir's
+  // index-primary owner — discovery owns docs/discovery, not brainstorm.
+  const untyped = fm({ id: "DISC-0002", title: "Cache eviction field notes" });
+  delete (untyped as Record<string, unknown>).type;
+  writeDoc(repo, "docs/discovery/0003-cache-notes.md", untyped);
+
+  const result = runScript("consolidate_knowledge.js", ["assess", "--title", "Cache eviction", "--json", "--cwd", repo], { cwd: repo });
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  const byPath = (p: string) => report.candidates.filter((c: any) => c.path === p);
+
+  const spike = byPath("docs/discovery/0001-cache-spike.md");
+  assert.equal(spike.length, 1, "a discovery doc is reported once, not once per resident type");
+  assert.equal(spike[0].type, "discovery");
+  assert.equal(spike[0].route, "discovery-doc");
+  assert.equal(spike[0].settled, false);
+
+  const storm = byPath("docs/discovery/0002-cache-brainstorm.md");
+  assert.equal(storm.length, 1, "a brainstorm doc is reported once");
+  assert.equal(storm[0].type, "brainstorm");
+  assert.equal(storm[0].route, "briefing-flow");
+  assert.equal(storm[0].settled, true, "settled judges under the doc's own vocabulary — `routed` settles a brainstorm, not a discovery");
+
+  const notes = byPath("docs/discovery/0003-cache-notes.md");
+  assert.equal(notes.length, 1);
+  assert.equal(notes[0].type, "discovery", "untyped front matter falls back to the dir's owner");
+  assert.equal(notes[0].route, "discovery-doc");
+
+  // A self-declared type wins even outside its canonical dir: a knowledge
+  // record in a shared dir is judged as knowledge (and can conflict), not
+  // as the dir's resident types.
+  const misfiledPath = writeDoc(repo, "docs/discovery/0004-misfiled.md", fm({
+    id: "KNOW-0010", type: "knowledge", knowledge_kind: "codebase",
+    status: "draft", title: "Cache eviction rules",
+  }));
+  const second = runScript("consolidate_knowledge.js", ["assess", "--title", "Cache eviction rules", "--kind", "codebase", "--json", "--cwd", repo], { cwd: repo });
+  assert.equal(second.status, 0, second.stderr);
+  const secondReport = JSON.parse(second.stdout);
+  const misfiled = secondReport.candidates.filter((c: any) => c.path === misfiledPath);
+  assert.equal(misfiled.length, 1);
+  assert.equal(misfiled[0].type, "knowledge", "the doc's own type wins over the dir's residents");
+  assert.equal(misfiled[0].route, "integrate");
+  assert.equal(misfiled[0].conflict, true, "a knowledge doc in a foreign dir is still a conflict candidate");
+});
+
 // --- apply --decision none: the explicit no-op ------------------------------
 
 test("apply --decision none is an explicit no-op that writes nothing", () => {
@@ -194,11 +253,24 @@ test("apply --decision none is an explicit no-op that writes nothing", () => {
 test("apply --decision route names the owning skill and writes nothing", () => {
   const repo = tempRepo();
   const before = snapshotTree(repo);
-  for (const [type, skill] of [["spec", "spec-doc"], ["design", "design-doc"], ["adr", "adr-doc"]] as const) {
+  // Every non-knowledge durable type routes to the owning skill the
+  // ROUTE_SKILLS table declares — apply never derives a `<type>-doc`
+  // spelling (brainstorm's owner is briefing-flow, not a non-existent
+  // `brainstorm-doc`), so apply agrees with what assess reports.
+  for (const [type, skill] of [
+    ["spec", "spec-doc"],
+    ["design", "design-doc"],
+    ["adr", "adr-doc"],
+    ["verification", "verification-doc"],
+    ["discovery", "discovery-doc"],
+    ["idea", "idea-doc"],
+    ["brainstorm", "briefing-flow"],
+  ] as const) {
     const result = runScript("consolidate_knowledge.js", ["apply", "--decision", "route", "--to", type, "--json", "--cwd", repo], { cwd: repo });
     assert.equal(result.status, 0, result.stderr);
     const payload = JSON.parse(result.stdout);
     assert.equal(payload.decision, "route");
+    assert.equal(payload.targetType, type);
     assert.equal(payload.ownerSkill, skill);
     assert.equal(payload.recorded, false);
     assert.match(payload.guidance, new RegExp(`${skill}`));
@@ -209,6 +281,13 @@ test("apply --decision route names the owning skill and writes nothing", () => {
   // `route --to knowledge` is not a route — it would be integrate/create.
   const bad = runScript("consolidate_knowledge.js", ["apply", "--decision", "route", "--to", "knowledge", "--cwd", repo], { cwd: repo });
   assert.equal(bad.status, 1, "route --to knowledge must refuse");
+
+  // A type outside the durable registry fails closed — apply invents no
+  // owner for it.
+  const unknown = runScript("consolidate_knowledge.js", ["apply", "--decision", "route", "--to", "impl", "--cwd", repo], { cwd: repo });
+  assert.equal(unknown.status, 1, "route --to impl must refuse");
+  assert.match(unknown.stderr, /Invalid route target/);
+
   assert.equal(snapshotTree(repo), before, "a refused route must not write");
 });
 
@@ -291,6 +370,61 @@ test("apply --decision integrate refuses a settled knowledge target", () => {
   assert.match(result.stderr, /settled/);
 });
 
+test("apply --decision integrate merges --informs/--explains and validates targets", () => {
+  const repo = tempRepo();
+  const spec = writeDoc(repo, "docs/specs/0001-cache.md", fm({
+    id: "SPEC-0001", type: "spec", status: "approved", title: "Cache spec",
+  }));
+  const related = writeKnowledge(repo, "0002-related.md", { id: "KNOW-0002", title: "Related rules" });
+  const target = writeKnowledge(repo, "0001-k.md", {
+    id: "KNOW-0001", title: "Cache rules",
+    relations: { informs: [spec] },
+  });
+
+  // Existing edges merge, never duplicate; durable targets of any type are
+  // accepted for informs/explains.
+  const ok = runScript("consolidate_knowledge.js", [
+    "apply", "--decision", "integrate",
+    "--into", target,
+    "--from", "run:impl-0042",
+    "--basis", "confirmed by the eviction-order investigation",
+    "--informs", spec,
+    "--explains", related,
+    "--cwd", repo,
+  ], { cwd: repo });
+  assert.equal(ok.status, 0, ok.stderr);
+  const merged = matter(fs.readFileSync(path.join(repo, target), "utf8"));
+  assert.deepEqual(merged.data.relations.informs, [spec], "an existing informs edge is not duplicated");
+  assert.deepEqual(merged.data.relations.explains, [related]);
+
+  // An unresolvable relation target refuses — no unresolvable edge is
+  // stored.
+  const missing = runScript("consolidate_knowledge.js", [
+    "apply", "--decision", "integrate",
+    "--into", target,
+    "--from", "s", "--basis", "b",
+    "--informs", "docs/specs/9999-missing.md",
+    "--cwd", repo,
+  ], { cwd: repo });
+  assert.equal(missing.status, 1, "a missing informs target must refuse");
+  assert.match(missing.stderr, /does not resolve to a document/);
+
+  // A resolvable document outside the relation's declared target types
+  // refuses too — a `plan` is execution-bound, never a durable target.
+  const plan = writeDoc(repo, "docs/ideas/0001-planlike.md", fm({
+    id: "PLAN-0001", type: "plan", title: "Plan-like note",
+  }));
+  const wrongType = runScript("consolidate_knowledge.js", [
+    "apply", "--decision", "integrate",
+    "--into", target,
+    "--from", "s", "--basis", "b",
+    "--informs", plan,
+    "--cwd", repo,
+  ], { cwd: repo });
+  assert.equal(wrongType.status, 1, "a non-durable informs target must refuse");
+  assert.match(wrongType.stderr, /expected one of/);
+});
+
 // --- apply --decision create: conflict gating + recorded provenance ----------
 
 test("apply --decision create refuses while conflicts are unacknowledged", () => {
@@ -359,6 +493,48 @@ test("apply --decision create requires provenance and basis", () => {
   assert.equal(fs.existsSync(path.join(repo, "docs/knowledge")), false, "refused creates mint nothing");
 });
 
+test("apply --decision create accepts --acknowledge by path and refuses unknown acknowledgments", () => {
+  const repo = tempRepo();
+  const conflictPath = writeKnowledge(repo, "0001-cache-invalidation.md", {
+    id: "KNOW-0001", title: "Cache invalidation rules", status: "confirmed",
+  });
+
+  // `--acknowledge <id|path>` — the path form resolves the conflict the
+  // same way the id form does.
+  const byPath = runScript("consolidate_knowledge.js", [
+    "apply", "--decision", "create",
+    "--title", "Cache invalidation rules v2",
+    "--kind", "codebase",
+    "--keyword", "cache",
+    "--from", "run:impl-0042",
+    "--basis", "eviction-order investigation",
+    "--acknowledge", conflictPath,
+    "--cwd", repo,
+  ], { cwd: repo });
+  assert.equal(byPath.status, 0, byPath.stderr);
+
+  // An acknowledgment that names no reported conflict fails closed —
+  // typos never masquerade as a review.
+  const repo2 = tempRepo();
+  writeKnowledge(repo2, "0001-cache-invalidation.md", {
+    id: "KNOW-0001", title: "Cache invalidation rules", status: "confirmed",
+  });
+  const before = snapshotTree(repo2);
+  const invalid = runScript("consolidate_knowledge.js", [
+    "apply", "--decision", "create",
+    "--title", "Cache invalidation rules v2",
+    "--kind", "codebase",
+    "--keyword", "cache",
+    "--from", "run:impl-0042",
+    "--basis", "eviction-order investigation",
+    "--acknowledge", "KNOW-9999",
+    "--cwd", repo2,
+  ], { cwd: repo2 });
+  assert.equal(invalid.status, 1, "an unknown --acknowledge must refuse");
+  assert.match(invalid.stderr, /--acknowledge names no reported conflict/);
+  assert.equal(snapshotTree(repo2), before, "a refused create must not write");
+});
+
 // --- --supersedes: relation validation --------------------------------------
 
 test("--supersedes records the edge and validates knowledge targets only", () => {
@@ -388,6 +564,42 @@ test("--supersedes records the edge and validates knowledge targets only", () =>
   ], { cwd: repo });
   assert.equal(bad.status, 1, "supersedes must refuse a non-knowledge target");
   assert.match(bad.stderr, /not a knowledge document|does not resolve/);
+});
+
+test("consolidate create --supersedes lands the edge and --status validates", () => {
+  const repo = tempRepo();
+  // The superseded record stays non-settled (`confirmed`); a disjoint
+  // title keeps this a clean happy path — an overlapping title would hit
+  // the conflict gate and need an explicit `--acknowledge` first.
+  const old = writeKnowledge(repo, "0001-old.md", {
+    id: "KNOW-0001", title: "Old rules", status: "confirmed",
+  });
+
+  const ok = runScript("consolidate_knowledge.js", [
+    "apply", "--decision", "create",
+    "--title", "Retention policy contract", "--kind", "architecture",
+    "--from", "run:impl-0042", "--basis", "retention-path investigation",
+    "--supersedes", old,
+    "--date", "2026-09-21", "--cwd", repo,
+  ], { cwd: repo });
+  assert.equal(ok.status, 0, ok.stderr);
+  const createdFile = fs.readdirSync(path.join(repo, "docs/knowledge"))
+    .filter((f) => f !== "0001-old.md" && f.endsWith(".md"));
+  assert.equal(createdFile.length, 1, "exactly one new knowledge doc minted");
+  const created = matter(fs.readFileSync(path.join(repo, "docs/knowledge", createdFile[0]), "utf8"));
+  assert.deepEqual(created.data.relations.supersedes, [old]);
+
+  // An out-of-vocabulary --status refuses before anything is minted.
+  const repo2 = tempRepo();
+  const invalid = runScript("consolidate_knowledge.js", [
+    "apply", "--decision", "create",
+    "--title", "Another finding", "--kind", "codebase",
+    "--from", "s", "--basis", "b",
+    "--status", "bogus", "--cwd", repo2,
+  ], { cwd: repo2 });
+  assert.equal(invalid.status, 1, "an invalid --status must refuse");
+  assert.match(invalid.stderr, /Invalid knowledge status/);
+  assert.equal(fs.existsSync(path.join(repo2, "docs/knowledge")), false, "a refused create mints nothing");
 });
 
 // --- new_knowledge: confirmed requires provenance ----------------------------

@@ -88,8 +88,10 @@ relations:
 - `knowledge_kind` を省略しない —— 必須のトップレベルフィールドであり、
   欠落したドキュメントは lint で却下されます
 - 実行時の状態をナレッジドキュメントに記録しない —— プラン、タスク、実行結果、
-  コマンドログ、チャット的作業記録は durable レジストリではなく Execution
-  Store / run trace に属します
+  コマンドログ、チャット的作業記録は durable レジストリではなく
+  [Execution Store](../doc-driven-dev-graph/references/execution-store-contract.ja.md)
+  / [run trace](../doc-driven-dev-graph/references/run-trace-contract.ja.md)
+  に属します
 - `assess` が未承認の競合を報告する間は作成しない —— 各重複/矛盾候補を
   レビューして `--acknowledge` を渡します
 - このスキル経由で spec、design、ADR に書き込まない —— 統合はそれらの変更を

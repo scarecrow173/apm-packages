@@ -42,6 +42,7 @@ import matter from "gray-matter";
 import {
   configFor,
   docTypes,
+  isDurableType,
   settledStatusesFor,
 } from "../../../lib/doc_types";
 import {
@@ -135,49 +136,71 @@ function assessConsolidation(
   const candidates: ConsolidationCandidate[] = [];
   const normalizedTitle = normalizeTitle(input.title);
 
+  // Each physical dir is scanned exactly once — several durable types can
+  // share a canonical dir (brainstorm is co-resident with discovery in
+  // `docs/discovery`), so iterating per type would report one document
+  // under every resident type. A shared dir's fallback owner is its
+  // index-primary type, else the first claimant in registry order — the
+  // same ownership rule the scaffold/index contract uses.
+  const dirOwners = new Map<string, string>();
   for (const type of docTypes) {
     const config = configFor(type);
-    for (const dirName of new Set(config.dirs.map((dir) => normalizeDir(dir)))) {
-      const absDir = path.join(cwd, dirName);
-      for (const file of docFiles(absDir)) {
-        if (isIndexFileName(path.basename(file))) continue;
-        const fullPath = path.join(absDir, file);
-        const relative = `${dirName}/${file}`;
-        const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
-        const data = parsed.error ? {} : parsed.data;
-        const title = typeof data.title === "string" && data.title.trim()
-          ? data.title.trim()
-          : path.basename(file, ".md");
-        const haystack = `${title} ${path.basename(file, ".md")}`;
-        const docTokens = new Set(tokenizeQuery(haystack));
-        const matchedTokens = [...queryTokens].filter((token) => docTokens.has(token));
-        if (matchedTokens.length === 0 && normalizeTitle(title) !== normalizedTitle) continue;
-        const status = typeof data.status === "string" ? data.status : null;
-        const lifecycle = typeof data.lifecycle === "string" ? data.lifecycle : null;
-        const knowledgeKind = typeof data.knowledge_kind === "string" ? data.knowledge_kind : null;
-        const settled = isSettledDoc(type, status, lifecycle);
-        const sameKind = Boolean(input.kind) && knowledgeKind === input.kind;
-        const score = matchedTokens.length + (sameKind ? 1 : 0);
-        // A non-settled knowledge record that shares the kind plus any term,
-        // shares two or more terms, or carries the same title is a potential
-        // duplicate/contradiction: create must acknowledge it explicitly.
-        const conflict = type === "knowledge" && !settled
-          && (score >= 2 || normalizeTitle(title) === normalizedTitle);
-        candidates.push({
-          id: typeof data.id === "string" ? data.id : null,
-          type,
-          path: relative,
-          title,
-          status,
-          lifecycle,
-          knowledgeKind,
-          matchedTokens,
-          score,
-          settled,
-          route: ROUTE_SKILLS[type] ?? `${type}-owner`,
-          conflict,
-        });
-      }
+    for (const dirName of config.dirs.map((dir) => normalizeDir(dir))) {
+      const existing = dirOwners.get(dirName);
+      if (!existing || config.indexPrimary) dirOwners.set(dirName, type);
+    }
+  }
+
+  const seen = new Set<string>();
+  for (const [dirName, ownerType] of dirOwners) {
+    const absDir = path.join(cwd, dirName);
+    for (const file of docFiles(absDir)) {
+      if (isIndexFileName(path.basename(file))) continue;
+      const fullPath = path.join(absDir, file);
+      const relative = `${dirName}/${file}`;
+      if (seen.has(relative)) continue;
+      seen.add(relative);
+      const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
+      const data = parsed.error ? {} : parsed.data;
+      const title = typeof data.title === "string" && data.title.trim()
+        ? data.title.trim()
+        : path.basename(file, ".md");
+      const haystack = `${title} ${path.basename(file, ".md")}`;
+      const docTokens = new Set(tokenizeQuery(haystack));
+      const matchedTokens = [...queryTokens].filter((token) => docTokens.has(token));
+      if (matchedTokens.length === 0 && normalizeTitle(title) !== normalizedTitle) continue;
+      const status = typeof data.status === "string" ? data.status : null;
+      const lifecycle = typeof data.lifecycle === "string" ? data.lifecycle : null;
+      const knowledgeKind = typeof data.knowledge_kind === "string" ? data.knowledge_kind : null;
+      // A document is judged as what it declares itself to be — `type`,
+      // `route`, `settled`, and `conflict` all key on the document's own
+      // `data.type`, never on every type its dir happens to host. Front
+      // matter that names no durable type falls back to the dir's owner.
+      const type = typeof data.type === "string" && isDurableType(data.type)
+        ? data.type
+        : ownerType;
+      const settled = isSettledDoc(type, status, lifecycle);
+      const sameKind = Boolean(input.kind) && knowledgeKind === input.kind;
+      const score = matchedTokens.length + (sameKind ? 1 : 0);
+      // A non-settled knowledge record that shares the kind plus any term,
+      // shares two or more terms, or carries the same title is a potential
+      // duplicate/contradiction: create must acknowledge it explicitly.
+      const conflict = type === "knowledge" && !settled
+        && (score >= 2 || normalizeTitle(title) === normalizedTitle);
+      candidates.push({
+        id: typeof data.id === "string" ? data.id : null,
+        type,
+        path: relative,
+        title,
+        status,
+        lifecycle,
+        knowledgeKind,
+        matchedTokens,
+        score,
+        settled,
+        route: ROUTE_SKILLS[type] ?? `${type}-owner`,
+        conflict,
+      });
     }
   }
 

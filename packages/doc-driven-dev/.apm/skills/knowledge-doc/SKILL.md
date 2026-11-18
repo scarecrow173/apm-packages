@@ -93,7 +93,9 @@ Status values: `draft`, `confirmed`, `archived`, `superseded`.
   contract rejects documents without it
 - NEVER record volatile execution state in a knowledge document — plans,
   tasks, run outcomes, command logs, and chat-like work records belong to
-  the Execution Store / run trace, not the durable registry
+  the [Execution Store](../doc-driven-dev-graph/references/execution-store-contract.md)
+  / [run trace](../doc-driven-dev-graph/references/run-trace-contract.md),
+  not the durable registry
 - NEVER create while `assess` reports unacknowledged conflicts — review each
   duplicate/contradiction candidate and pass `--acknowledge`
 - NEVER write into a spec, design, or ADR through this skill — consolidation
