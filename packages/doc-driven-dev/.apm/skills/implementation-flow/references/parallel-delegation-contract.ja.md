@@ -73,10 +73,13 @@ task 同士は引き続き並行実行できます。`decision` が `parallel` �
 - rename は source と destination の両方の path として報告されるため、
   保護された path からの rename が純粋な追加に偽装されることはありません。
 - 宣言された scope の外の touched path → `scope-violation`。
-- `evidencePaths` に宣言された `docs/impl/` 配下の evidence 成果物
-  （implementation record）は、contract 上すでに必須なため scope 宣言を
-  要しません。未宣言の `docs/impl/` への書き込みは他の path と同様に
-  通常の scope 検証を通ります。
+- `evidencePaths` に宣言された `docs/impl/` 配下の evidence 成果物 —
+  merge verifier が受理する evidence path surface — は、contract 上
+  すでに必須なため scope 宣言を要しません。Document Registry 3 では
+  `docs/impl/` は migration 所有の container であり、束縛される
+  evidence ファイルは task ID を記した plain artifact であって
+  `impl` record ではありません。未宣言の `docs/impl/` への書き込みは
+  他の path と同様に通常の scope 検証を通ります。
 - Execution Store は repo diff 経由では一切書き込めません: 解決された
   state root（既定 `.apm/state/doc-driven-dev/`）内の touched path は、
   task status と scope を守る record CAS を迂回するため —

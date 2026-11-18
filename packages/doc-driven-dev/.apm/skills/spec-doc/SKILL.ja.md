@@ -14,8 +14,9 @@ spec は、何を作るべきか、なぜ必要か、誰のためか、何を範
 
 1. 既存ドキュメントを確認する。
    ディレクトリと命名規約は `references/spec-conventions.ja.md` に従います。
-   `docs/specs/`, `docs/adr/`, `docs/plans/`, 関連コードを読み、既存の
-   判断や仕様と矛盾しないようにします。
+   `docs/specs/`, `docs/adr/`, 関連コード、およびアクティブな
+   Execution Store run の `plan.md` と task record を読み、既存の判断や
+   進行中の作業と重複・矛盾しないようにします。
 2. 人間と意図を確認する。
    目的、きっかけ、利用者、ユーザー価値、制約、非目標、受け入れ基準、
    出典を確認します。

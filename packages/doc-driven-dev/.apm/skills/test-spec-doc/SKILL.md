@@ -1,16 +1,19 @@
 ---
 name: test-spec-doc
-description: Use when recording what a test must guarantee and why, as a canonical test specification document with Feature/Rule/Example structure linked to the specs, designs, or ADRs it verifies.
+description: "Read and migrate the legacy test-spec corpus under docs/test-specs/.
+  Migration-only under Document Registry 3 — no normal-run creation path exists;
+  durable verification intent records via verification-doc in docs/verification.
+  Keywords: test spec, test specification, verifies, docs/test-specs"
 license: MIT
 ---
 
 # Test Spec Documentation Skill
 
-Use this skill to write test specifications that record the *intent* of
-verification: what a test guarantees, why it exists, and when it may be
-retired. The document lets humans and coding agents judge what must be
-preserved when the spec or design changes, and whether a test is still
-necessary at all.
+Use this skill to read, audit, and migrate pre-v3 test specifications — as
+migration input only. The test spec records the *intent* of verification:
+what a test guarantees, why it exists, and when it may be retired. The
+document lets humans and coding agents judge what must be preserved when the
+spec or design changes, and whether a test is still necessary at all.
 
 ## Document Registry v3 status
 

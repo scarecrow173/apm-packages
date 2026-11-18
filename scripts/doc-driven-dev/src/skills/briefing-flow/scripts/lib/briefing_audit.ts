@@ -7,17 +7,26 @@ import {
   validateFrontMatter,
 } from "../../../lib/doc_suite_utils";
 import { markdownDestinations } from "../../../adr-doc/scripts/lib/adr_utils";
+import { isExternalArtifactReference } from "../../../doc-driven-dev-graph/scripts/lib/artifact_graph";
 import {
   artifactChainCandidates,
-  isExternalArtifactReference,
-  localTarget,
+  chainMembers,
   preDesignAnchors,
-  resolveArtifactRelation,
-  scanArtifactGraph,
-  type ArtifactRecord,
-} from "../../../doc-driven-dev-graph/scripts/lib/artifact_graph";
+} from "../../../doc-driven-dev-graph/scripts/lib/graph_state";
+import {
+  artifactKeyOf,
+  compareStrings,
+  groupByArtifact,
+  scanRepository,
+  type RepositoryDocument,
+} from "../../../lib/doc_repository";
+import { DURABLE_DOC_DIRS } from "../../../lib/doc_types";
+import {
+  projectKnowledgeGraph,
+  type KnowledgeGraph,
+} from "../../../lib/knowledge_graph";
 import { sectionBody, subHeadingCount } from "../../../lib/markdown_sections";
-import { isInsideCheckout } from "../../../lib/document_utils";
+import { isInsideCheckout, nonReferenceRelationKeys } from "../../../lib/document_utils";
 
 export type BriefingAuditFinding = {
   severity: "error" | "warning" | "info";
@@ -43,7 +52,7 @@ type AuditedDoc = {
   path: string;
 };
 
-// Chain-status contract shared with artifact_graph.ts CHAIN_STATUSES.
+// Chain-status contract shared with graph_state.ts CHAIN_STATUSES.
 const SPEC_STATUSES: ReadonlySet<string> = new Set(["proposed", "approved", "implemented"]);
 const ADR_STATUSES: ReadonlySet<string> = new Set(["proposed", "accepted"]);
 
@@ -189,13 +198,19 @@ export async function auditBriefingPair(cwd: string, specPath: string, adrPath: 
   if (spec) await auditDocContent(root, spec, "spec", findings);
   const adr = loadDoc(root, adrPath, "adr", findings);
   if (adr) await auditDocContent(root, adr, "adr", findings);
-  const { graph, records } = scanArtifactGraph({ cwd: root });
+  // The audit reads the same projection the Graph State gate evaluates
+  // (Issue #244): a durable-corpus scan plus the Knowledge Relations v1
+  // graph — never the migration-domain artifact graph. Legacy relation
+  // spellings surface as `invalid-relation` findings, not pair evidence.
+  const model = await scanRepository({ cwd: root, roots: [...DURABLE_DOC_DIRS], includeTopLevelMarkdown: false });
+  const knowledge = projectKnowledgeGraph(model);
+  const records = model.canonicalDocuments;
   const specRecord = records.find((record) => record.path === spec?.path && record.type === "spec");
   const adrRecord = records.find((record) => record.path === adr?.path && record.type === "adr");
   // Direct/discovery pair evidence is independent of downstream chain selection.
-  const anchors = specRecord && adrRecord ? preDesignAnchors(graph, records, specRecord, adrRecord) : undefined;
+  const anchors = specRecord && adrRecord ? preDesignAnchors(knowledge, records, specRecord, adrRecord) : undefined;
   const candidates = spec && adr && anchors === undefined
-    ? artifactChainCandidates(graph, records).filter((chain) => chain.spec === spec.path && chain.adr === adr.path)
+    ? artifactChainCandidates(knowledge, records).filter((chain) => chain.spec === spec.path && chain.adr === adr.path)
     : [];
   if (spec && adr && anchors === undefined && candidates.length === 0) {
     findings.push({
@@ -207,14 +222,30 @@ export async function auditBriefingPair(cwd: string, specPath: string, adrPath: 
   }
   // Check every supporting discovery or design, never pick an arbitrary
   // downstream chain. Plan/task validity and focus belong to the graph gate.
-  const relevant = new Set([spec?.path, adr?.path, ...(anchors ?? []), ...candidates.map((chain) => chain.design)]);
+  const relevant = new Set([
+    spec?.path,
+    adr?.path,
+    ...(anchors ?? []),
+    ...candidates.flatMap((chain) => [...chainMembers(chain)]),
+  ]);
   for (const doc of [spec, adr]) {
     if (doc && !records.some((record) => record.path === doc.path)) {
-      findings.push({ severity: "error", code: "noncanonical-artifact", file: doc.path, message: "Document is not in the artifact graph's canonical record set" });
+      findings.push({ severity: "error", code: "noncanonical-artifact", file: doc.path, message: "Document is not in the knowledge graph's canonical record set" });
     }
   }
+  const duplicateIds = model.duplicateIds();
+  const groups = groupByArtifact(records);
+  const auditedArtifacts = new Set<string>();
   for (const record of records.filter((item) => relevant.has(item.path))) {
-    auditRelations(root, record, records, findings);
+    // `relevant` holds graph node paths — artifact primaries — but the raw
+    // front-matter check must see the whole artifact group: a malformed
+    // `relations` field on a locale sibling is normalized away by
+    // `extractRelations` before the graph reads it, so each member file is
+    // audited once per artifact group.
+    const groupKey = artifactKeyOf(record.path);
+    if (auditedArtifacts.has(groupKey)) continue;
+    auditedArtifacts.add(groupKey);
+    auditRelations(record, groups.get(groupKey) ?? [record], duplicateIds, knowledge, findings);
   }
   return {
     spec: spec?.path ?? null,
@@ -224,23 +255,70 @@ export async function auditBriefingPair(cwd: string, specPath: string, adrPath: 
   };
 }
 
-function auditRelations(cwd: string, record: ArtifactRecord, records: ArtifactRecord[], findings: BriefingAuditFinding[]): void {
-  if (record.id && records.filter((other) => other.id === record.id).length > 1) {
+// Knowledge Graph issue codes that mean "the relation does not resolve to a
+// durable target" — the v3 spelling of the old broken-relation-link finding.
+const BROKEN_LINK_ISSUE_CODES: ReadonlySet<string> = new Set([
+  "unresolved-relation-target",
+  "ambiguous-relation-target",
+  "relation-escapes-root",
+  "unresolved-claim-target",
+]);
+
+// Every Knowledge Graph issue the pair audit surfaces. Claim-declaration and
+// Verification Check codes stay out of scope — the `knowledge` integrity gate
+// already hard-blocks routing on them, and the pair audit only owns relation
+// consistency inside the briefing neighborhood.
+const RELATION_ISSUE_CODES: ReadonlySet<string> = new Set([
+  ...BROKEN_LINK_ISSUE_CODES,
+  "legacy-relation-field",
+  "invalid-relation-field",
+  "self-relation",
+  "invalid-relation-target-type",
+  "relation-cycle",
+]);
+
+function auditRelations(
+  record: RepositoryDocument,
+  members: RepositoryDocument[],
+  duplicateIds: { id: string; paths: string[] }[],
+  knowledge: KnowledgeGraph,
+  findings: BriefingAuditFinding[],
+): void {
+  if (record.id && duplicateIds.some((entry) => entry.id === record.id)) {
     findings.push({ severity: "error", code: "duplicate-id", file: record.path, message: `Duplicate artifact ID: ${record.id}` });
   }
-  for (const issue of record.relationIssues) {
-    findings.push({ severity: "error", code: "invalid-relation", file: record.path, message: issue });
-  }
-  for (const [field, values] of Object.entries(record.relations)) {
-    for (const value of values) {
-      if (isExternalArtifactReference(value)) continue;
-      const matches = records.filter((other) => other.id === value);
-      const target = resolveArtifactRelation(cwd, record, value, records);
-      if (matches.length > 1 || (!target && !localTarget(cwd, record, value).exists)) {
-        findings.push({ severity: "error", code: "broken-relation-link", file: record.path, message: `Relation ${field} has an unresolved or ambiguous target: ${value}` });
-      } else if (target?.id && records.filter((other) => other.id === target.id).length > 1) {
-        findings.push({ severity: "error", code: "duplicate-id", file: record.path, message: `Relation ${field} targets duplicate artifact ID: ${target.id}` });
+  // Structural relation defects the repository parser normalizes away
+  // (non-mapping `relations`, non-string members) still fail the audit —
+  // malformed front matter is invalid, never silently empty. The raw check
+  // walks every member file of the artifact group: a malformed `relations`
+  // field on a locale sibling never reaches the primary's raw front matter
+  // or the normalized relation map the graph reads.
+  for (const member of members) {
+    const raw = member.frontMatter.relations;
+    if (raw === undefined || raw === null) continue;
+    if (typeof raw !== "object" || Array.isArray(raw)) {
+      findings.push({ severity: "error", code: "invalid-relation", file: member.path, message: "relations must be a mapping of relation names to target lists" });
+      continue;
+    }
+    for (const [field, value] of Object.entries(raw as Record<string, unknown>).sort((a, b) => compareStrings(a[0], b[0]))) {
+      if (nonReferenceRelationKeys.has(field)) continue;
+      const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : null;
+      if (items === null || items.some((item) => typeof item !== "string" || !item.trim())) {
+        findings.push({ severity: "error", code: "invalid-relation", file: member.path, message: `Relation ${field} has a malformed (non-string) target` });
       }
     }
+  }
+  // Graph issues attribute node-level findings to the artifact's primary
+  // path — match against every member path so an audit entered through a
+  // locale sibling still surfaces them.
+  const memberPaths = new Set(members.map((member) => member.path));
+  for (const issue of knowledge.issues) {
+    if (!memberPaths.has(issue.path) || !RELATION_ISSUE_CODES.has(issue.code)) continue;
+    findings.push({
+      severity: "error",
+      code: BROKEN_LINK_ISSUE_CODES.has(issue.code) ? "broken-relation-link" : "invalid-relation",
+      file: issue.path,
+      message: issue.message,
+    });
   }
 }

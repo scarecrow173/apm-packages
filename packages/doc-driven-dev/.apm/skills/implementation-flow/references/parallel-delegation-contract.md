@@ -76,10 +76,13 @@ completes, collect its actual diff — `git diff --name-only` plus
 - Renames report both source and destination paths, so a rename out of a
   protected path cannot masquerade as a pure addition.
 - A touched path outside the declared scope → `scope-violation`.
-- The slice's declared evidence artifacts under `docs/impl/` (the
-  implementation record listed in `evidencePaths`) need no scope declaration
-  because the contract already requires them. An undeclared `docs/impl/`
-  write goes through normal scope verification like any other path.
+- The slice's declared evidence artifacts under `docs/impl/` — the
+  evidence-path surface the merge verifier accepts — need no scope
+  declaration because the contract already requires them. Under Document
+  Registry 3 `docs/impl/` is a migration-owned container: the bound
+  evidence files are plain artifacts naming the task ID, not `impl`
+  records. An undeclared `docs/impl/` write goes through normal scope
+  verification like any other path.
 - The Execution Store is never writable via a repo diff: a touched path
   inside the resolved state root (`.apm/state/doc-driven-dev/` by default)
   would bypass the record CAS that guards task status and scope —

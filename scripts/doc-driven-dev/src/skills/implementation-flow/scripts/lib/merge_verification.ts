@@ -178,10 +178,13 @@ export function verifyEvidenceBinding(cwd: string, evidencePath: string, taskId:
 }
 
 /**
- * An evidence artifact may only live under docs/impl/ — the declared
- * implementation-record subtree. The v2 own-task-doc exemption is gone:
- * under Issue #237 task state lives in the Execution Store, which is not a
- * writable repo path at all.
+ * The accepted evidence-path surface: a declared evidence artifact must be
+ * a verifiable repo-relative path under docs/impl/. Under Document
+ * Registry 3 that subtree is a migration-owned container — the files bound
+ * here are plain evidence artifacts that must name the slice's task ID,
+ * never `impl` records. The v2 own-task-doc exemption is gone: under Issue
+ * #237 task state lives in the Execution Store, which is not a writable
+ * repo path at all.
  */
 function isAllowedEvidencePath(normalized: string): boolean {
   const key = scopeKey(normalized);

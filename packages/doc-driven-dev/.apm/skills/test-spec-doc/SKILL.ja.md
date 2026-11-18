@@ -1,12 +1,17 @@
 ---
 name: test-spec-doc
-description: テストが何を保証し、なぜ存在するのかを、Feature/Rule/Example 構造を持つ正規テスト仕様文書として、検証対象の spec・design・ADR にリンクして記録するときに使います。
+description: "docs/test-specs/ 配下の legacy test-spec corpus の読み取りと migration を行います。
+  Document Registry 3 では migration 専用 — 通常実行の作成経路はなく、永続的な検証意図は
+  verification-doc で docs/verification に記録します。
+  キーワード: test spec, test specification, verifies, docs/test-specs"
 license: MIT
 ---
 
 # Test Spec Documentation Skill
 
-この skill は、検証の*意図*を記録する test specification を書くために使います。
+この skill は、Registry 2 以前の test specification を読み取り・監査・
+migration するために使います — migration input としてのみ。
+test spec は検証の*意図*を記録するものです。
 テストが何を保証するのか、なぜ存在するのか、いつ廃止してよいのかを記録し、
 spec や design が変更されたときに「何を守るべきか」「そのテストはまだ必要か」を
 人と coding agent が判断できるようにします。

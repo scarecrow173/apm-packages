@@ -15,8 +15,9 @@ verified before code is written.
 
 1. Scan existing docs before asking questions.
    Use the directory and naming rules in `references/spec-conventions.md`.
-   Check `docs/specs/`, `docs/adr/`, `docs/plans/`, and related code so the new
-   spec does not duplicate or contradict existing decisions.
+   Check `docs/specs/`, `docs/adr/`, related code, and any active Execution
+   Store run's `plan.md` and task records so the new spec does not duplicate
+   or contradict existing decisions or in-flight work.
 2. Capture intent with the human.
    Confirm goal, trigger, audience, user value, constraints, non-goals,
    acceptance criteria, and source material.
