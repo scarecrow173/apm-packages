@@ -12,13 +12,20 @@ export type InventoryItem = {
   title: string;
   status: string | null;
   updated: string | null;
-  kind: "canonical" | "unmanaged";
+  // "legacy" is carried through from doc inventory so migration-era corpus
+  // (e.g. plan/task Markdown) stays visibly labeled rather than misfiled.
+  kind: "legacy" | "canonical" | "unmanaged";
   graphCovered: boolean;
   parseError: string | null;
 };
 
-export type PlanView = {
-  path: string;
+/**
+ * One Execution Store run projected for the dashboard — the v3 replacement
+ * for the Markdown plan view (Issue #237): `runId` + run status + the
+ * run-scoped task-graph projection.
+ */
+export type RunView = {
+  runId: string;
   status: string | null;
   graph: TaskGraphResult;
 };
@@ -33,7 +40,7 @@ export type DashboardSnapshot = {
   state: GraphState;
   decision: RouteDecision | null;
   inventory: InventoryItem[];
-  plans: PlanView[];
+  runs: RunView[];
   findings: Finding[];
   health: HealthReport;
   coverageNotes: string[];

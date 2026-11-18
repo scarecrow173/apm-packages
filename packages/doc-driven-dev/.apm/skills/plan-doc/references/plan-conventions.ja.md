@@ -16,6 +16,21 @@ plan は、承認済みの spec または受け入れ済み ADR を、実装順�
 依存関係、検証 checkpoint、そして上流文書を再解釈しなくても実行できる
 小さな task 分解へ変換します。
 
+## Execution Store の plan
+
+稼働中の plan は run の `plan.md`
+（`.apm/state/doc-driven-dev/runs/<run-id>/plan.md`）であり、
+`execution_store.js save-plan` 経由で書き込まれます — Git 管理のファイル
+としては作られません。承認は digest-bound です: `approve-plan` が actor と
+現在内容の digest を記録し、その後の `save-plan` は承認を無効化し、store
+API 外での書き込みは `plan-digest-drift` として表面化します。Task Graph
+は `approve-plan` が現在の digest を再度バインドするまで
+`plan-not-approved` で fail-closed します。run manifest の `focus`
+リスト — focused な spec/ADR/design チェーン内の artifact パス — が、
+v3 以前の `relations` フィールドが表していた上流バインディングを担い
+ます。task 分解はコーパス文書ではなく兄弟 task レコード（`task-doc`
+規約）として置かれます。
+
 ## 計画スコープ
 
 変更が複数の独立したサブシステムにまたがる場合は、同じクリティカルパスと

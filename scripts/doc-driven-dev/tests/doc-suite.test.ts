@@ -728,13 +728,13 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(effects[2], /Use `completed` only for a verified task slice whose logical changes are\n?committed and whose Implementation Record is complete, `retry` for declared\n?spec\/design\/constraint repair, `yield` with `commit-required` when the slice\n?produced changes that cannot be committed within granted authority, `yield`\n?with `authority-required` for an irreversible effect without permission, and\n?`yield` with `unrecoverable-blocker` when no declared safe repair exists\./);
   assert.match(effects[3], /Use `completed` for a Completable result, `retry` for Returned with declared\n?repair evidence, and `yield` with `unrecoverable-blocker` for Returned without\n?a safe repair\./);
   assert.match(effects[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.md\)/);
-  assert.match(effects[4], /Use `completed` for an approved or active plan with linked test-spec\/task evidence,\n?`retry` for changed canonical plan\/test-spec\/task repair evidence, `yield` with\n?`approval-required` while plan review is pending, `yield` with `input-required` when a\n?user-owned planning choice is missing, and `yield` with `unrecoverable-blocker` when no\n?declared safe repair exists\./);
+  assert.match(effects[4], /Use `completed` for a digest-approved run plan with materialized task records,\n?`retry` for changed plan\/task repair evidence, `yield` with\n?`approval-required` while plan review is pending, `yield` with `input-required` when a\n?user-owned planning choice is missing, and `yield` with `unrecoverable-blocker` when no\n?declared safe repair exists\./);
   assert.match(effectsJa[0], /briefing gate が通過したら `completed`、recoverable document gap には `retry`、未解決の\n?user-only requirement には `input-required` を理由とする `yield` を使います。/);
   assert.match(effectsJa[1], /approved design には `completed`、designated reviewer を待つ場合は `approval-required`\n?を理由とする `yield`、upstream user decision がない場合は `input-required` を理由とする\n?`yield` を使います。/);
   assert.match(effectsJa[2], /`completed` は logical change が commit 済みで Implementation Record が完成した\n?verified task slice にのみ使い、declared spec\/design\/constraint repair には\n?`retry`、slice が granted authority 内で commit できない変更を生んだ場合は\n?`commit-required` を理由とする `yield`、permission のない irreversible effect には\n?`authority-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
   assert.match(effectsJa[3], /Completable result には `completed`、declared repair evidence を伴う Returned には\n?`retry`、safe repair のない Returned には `unrecoverable-blocker` を理由とする `yield`\n?を使います。/);
   assert.match(effectsJa[4], /\[`EffectOutcome footer`\]\(\.\.\/doc-driven-dev-graph\/references\/execution-outcome-contract\.ja\.md\)/);
-  assert.match(effectsJa[4], /approved または active plan と linked test-spec\/task evidence には `completed`、changed\n?canonical plan\/test-spec\/task repair evidence には `retry`、plan review が pending の場合は\n?`approval-required` を理由とする `yield`、user-owned planning choice が missing の場合は\n?`input-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
+  assert.match(effectsJa[4], /digest 承認済みの run plan と materialize された task record には `completed`、changed\n?plan\/task repair evidence には `retry`、plan review が pending の場合は\n?`approval-required` を理由とする `yield`、user-owned planning choice が missing の場合は\n?`input-required` を理由とする `yield`、declared safe repair がない場合は\n?`unrecoverable-blocker` を理由とする `yield` を使います。/);
   const footerBlocks = [...outcomeContract.matchAll(/```yaml\n([\s\S]*?)```/g)].map((match) => match[1]);
   assert.equal(footerBlocks.length, 3);
   const footerVariants = footerBlocks.map((block) => require("js-yaml").load(block));
@@ -772,15 +772,15 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(outcomeContract, /Caller-normalized effects/);
   assert.match(outcomeContract, /migrate_docs.*scaffold_docs.*planning-flow.*build_task_graph/s);
   assert.match(outcomeContract, /`scaffold_docs` \(workspace-root bootstrap input\)/);
-  assert.match(outcomeContract, /`build_task_graph` \(focused plan plus selected task documents\)/);
+  assert.match(outcomeContract, /`build_task_graph` \(selected run's `plan\.md` plus its task records\)/);
   assert.match(outcomeContract, /`planning-flow` reads the\n?selected approved design/);
-  assert.match(outcomeContract, /records the selected plan and all produced\n?plan-linked test spec and task documents/);
+  assert.match(outcomeContract, /records the selected run's `plan\.md` and all\n?produced task records/);
   assert.match(outcomeContractJa, /`scaffold_docs`\s*（workspace-root bootstrap input）/);
-  assert.match(outcomeContractJa, /`build_task_graph`（focused plan と選択 task document）/);
+  assert.match(outcomeContractJa, /`build_task_graph`（選択された run の `plan\.md` とその task record）/);
   assert.match(outcomeContractJa, /`planning-flow` は selected approved design を/);
-  assert.match(outcomeContractJa, /selected plan とすべての produced plan-linked test spec および task document を記録/);
-  assert.match(outcomeContract, /\| `planning-flow` \| approved\/active plan plus linked test-spec\/task evidence \(or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior\) \| changed plan\/test-spec\/task repair evidence — under Document Registry 3 these are execution-bound, not canonical durable documents \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
-  assert.match(outcomeContractJa, /\| `planning-flow` \| approved\/active plan と linked test-spec\/task evidence（plan が検証可能な振る舞いを宣言しない場合は plan front matter の `test-spec-skip` に記録した理由） \| changed plan\/test-spec\/task repair evidence（Document Registry 3 ではこれらは execution-bound であり、canonical durable document ではありません） \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
+  assert.match(outcomeContractJa, /選択された run の `plan\.md` と生成されたすべての task record を記録/);
+  assert.match(outcomeContract, /\| `planning-flow` \| digest-approved run plan plus materialized task records \| changed run plan\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
+  assert.match(outcomeContractJa, /\| `planning-flow` \| digest 承認済みの run plan と materialize された task record \| changed run plan\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
   assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*experiment-log.*all/s);
   assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
   assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));
@@ -926,14 +926,19 @@ test("task-doc documents follow-up task routing and dependency rules", () => {
 
   assert.match(skill, /follow-up task/i);
   assert.match(skill, /approved plan/i);
-  assert.match(skill, /TASK-DOC-GATE-001/);
+  // Issue #237: plan approval is a digest-bound Execution Store gate — the
+  // pre-v3 TASK-DOC-GATE-001 creator flag is gone.
+  assert.match(skill, /plan-not-approved/);
+  assert.match(skill, /\(runId, taskId\)/);
+  assert.match(skill, /dependsOn/);
   assert.match(conventions, /Follow-up Classification/);
   assert.match(conventions, /relations\.depends-on/);
   assert.match(conventions, /relations\.blocks/);
   assert.match(template, /## Classification/);
 
-  assert.match(skillJa, /承認済み plan/);
-  assert.match(skillJa, /TASK-DOC-GATE-001/);
+  assert.match(skillJa, /承認済み run plan/);
+  assert.match(skillJa, /plan-not-approved/);
+  assert.match(skillJa, /\(runId, taskId\)/);
   assert.match(conventionsJa, /フォローアップ分類/);
   assert.match(conventionsJa, /relations\.depends-on/);
   assert.match(conventionsJa, /relations\.blocks/);

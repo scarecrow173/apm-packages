@@ -2,21 +2,15 @@
 
 import type { TaskGraphResult } from "../../../doc-driven-dev-graph/scripts/lib/task_graph";
 import {
+  scopeFromEntries,
   scopeKey,
-  toScopeEntry,
   type ScopePattern,
 } from "./scope_entry";
-import { hasSection, sectionBody } from "../../../lib/markdown_sections";
 
-// WritePattern matches the cross-task contract verbatim: the declared type
-// only guarantees `path` on dir entries, but this implementation always
-// attaches a normalized `path` (file entries need it for exact matching).
-export type WritePattern = { kind: "file" } | { kind: "dir" } & { path: string };
-export type ScopeEntry = { pattern: WritePattern } | { opaque: string };
 export type ParallelVerdict = "parallel" | "serial" | "blocked";
 export type ParallelConflict = { a: string; b: string; path: string };
 export type SerialReason =
-  | "scope-undeclared"        // no ## Affected Files section / empty
+  | "scope-undeclared"        // no scope entries on the task record / empty
   | "scope-unverifiable"      // non-path entry (e.g. "auth module")
   | "write-conflict";         // pairwise path overlap
 export type ParallelReport = {
@@ -30,74 +24,6 @@ export type ParallelReport = {
 
 /** Internal shape: every resolved pattern carries its normalized path. */
 type ScopedPattern = ScopePattern;
-
-const BULLET_ITEM = /^\s*[-*+]\s+(.*)$/;
-const HTML_COMMENT = /<!--[\s\S]*?-->/g;
-const CHECKBOX_MARKER = /^\[[ xX]?\]\s*/;
-const SUB_HEADING = /^#{3,6}\s/;
-const TOP_HEADING = /^#{1,2}\s/;
-
-/** Internal parse shape: patterns always carry their normalized path. */
-type ParsedScopeEntry = { pattern: ScopedPattern } | { opaque: string };
-
-/**
- * Parse the `## Affected Files` section of a task body into scope entries.
- * Returns null when the section is absent; an empty array when the section
- * is present but declares no usable entries (comments/placeholders only).
- * `hasSection`/`sectionBody` strip fenced code blocks — a heading or bullet
- * inside a fence is documentation, not a declaration — and bullets nested
- * under a `###`+ subsection (for example `### Notes`) never enter the scope.
- */
-function parseAffectedEntries(body: string): ParsedScopeEntry[] | null {
-  if (!hasSection(body, "Affected Files")) return null;
-  const section = sectionBody(body, "Affected Files");
-  const entries: ParsedScopeEntry[] = [];
-  let inSubSection = false;
-  for (const line of section.split(/\r?\n/)) {
-    if (SUB_HEADING.test(line)) {
-      inSubSection = true;
-      continue;
-    }
-    if (TOP_HEADING.test(line)) {
-      inSubSection = false;
-      continue;
-    }
-    if (inSubSection) continue;
-    const match = BULLET_ITEM.exec(line);
-    if (!match) continue;
-    // Strip comments first, then trim so a leading checkbox marker is anchored.
-    let text = match[1].replace(HTML_COMMENT, "").trim().replace(CHECKBOX_MARKER, "").trim();
-    // Unwrap a single code span so `src/x.ts` still verifies as a path;
-    // any leftover markup is caught by MARKUP_CHARS and turns opaque.
-    if (text.length > 2 && text.startsWith("`") && text.endsWith("`")) {
-      text = text.slice(1, -1).trim();
-    }
-    if (!text) continue;
-    entries.push(toScopeEntry(text));
-  }
-  return entries;
-}
-
-export function parseAffectedFiles(body: string): ScopeEntry[] | null {
-  return parseAffectedEntries(body);
-}
-
-/**
- * Resolved `## Affected Files` scope for authority-side comparison:
- * `null` when the section is absent (the task declares no scope at all),
- * otherwise the verifiable patterns plus whether any opaque entry exists.
- */
-export function parseAffectedScope(body: string): { patterns: ScopedPattern[]; hasOpaque: boolean } | null {
-  const entries = parseAffectedEntries(body);
-  if (entries === null) return null;
-  const patterns: ScopedPattern[] = [];
-  let hasOpaque = false;
-  for (const entry of entries) {
-    if ("opaque" in entry) hasOpaque = true;
-    else patterns.push(entry.pattern);
-  }
-  return { patterns, hasOpaque };
-}
 
 /**
  * Returns the most specific conflicting path when two write patterns overlap:
@@ -127,12 +53,15 @@ function overlapPath(left: ScopedPattern, right: ScopedPattern): string | null {
 
 /**
  * Deterministic parallel-safety judgment over the authoritative TaskGraphResult.
+ * The declared write scope now comes from each task record's `scope` field in
+ * the Execution Store (Issue #237) — the same entries the v2 `## Affected
+ * Files` bullets carried, classified by the shared scope-entry rules.
  * Fail-closed: non-empty graph issues → blocked; missing/unverifiable scope or
  * any write-scope overlap → serial. Never guesses from insufficient input.
  */
 export function evaluateParallelSafety(
   taskGraph: TaskGraphResult,
-  tasks: Array<{ id: string; body: string }>,
+  tasks: Array<{ id: string; scope?: string[] }>,
 ): ParallelReport {
   if (taskGraph.issues.length > 0) {
     return {
@@ -150,7 +79,7 @@ export function evaluateParallelSafety(
   const eligible = taskGraph.resumableActive.length > 0
     ? [...taskGraph.resumableActive]
     : [...taskGraph.runnable];
-  const bodyById = new Map(tasks.map((task) => [task.id, task.body]));
+  const scopeById = new Map(tasks.map((task) => [task.id, task.scope]));
   const reasonsById = new Map<string, Set<SerialReason>>();
   const patternsById = new Map<string, ScopedPattern[]>();
   const addReason = (id: string, reason: SerialReason): void => {
@@ -160,8 +89,7 @@ export function evaluateParallelSafety(
   };
 
   for (const id of eligible) {
-    const body = bodyById.get(id);
-    const scope = body === undefined ? null : parseAffectedScope(body);
+    const scope = scopeFromEntries(scopeById.get(id));
     if (scope === null || (scope.patterns.length === 0 && !scope.hasOpaque)) {
       addReason(id, "scope-undeclared");
       continue;

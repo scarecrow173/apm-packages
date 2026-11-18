@@ -40,7 +40,9 @@ const resumeFalseBlockedLeg: E2ECase = {
     edgeSequence: [...HAPPY_SEQUENCE, null], // last-leg scope — NOT the 10-event whole trace
     completedEdges: HAPPY_SEQUENCE,
     events: [{ kind: "route-selected", count: 10 }], // 1 blocked (leg 1) + 9 (leg 2)
-    finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "done" } } },
+    // Corpus doc untouched — the run record is the task authority (Issue #237).
+    finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } } },
+    run: { tasks: { "TASK-0001": { status: "done" } } },
   },
 };
 

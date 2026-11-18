@@ -38,8 +38,8 @@ export const case06: E2ECase = {
     "task-graph-to-active-implementation": {
       delegate: "completed",
       mutate: [
-        { set: { path: "docs/tasks/0002-task.md", frontmatter: { status: "done" } } },
-        { set: { path: "docs/tasks/0003-task.md", frontmatter: { status: "done" } } },
+        { task: { taskId: "TASK-0002", status: "done" } },
+        { task: { taskId: "TASK-0003", status: "done" } },
       ],
       commitEvidence: true,
     },
@@ -65,8 +65,15 @@ export const case06: E2ECase = {
     ],
     events: [{ kind: "route-selected", count: 9 }],
     finalFiles: {
-      "docs/tasks/0002-task.md": { frontmatter: { status: "done" } },
-      "docs/tasks/0003-task.md": { frontmatter: { status: "done" } },
+      // Corpus docs keep their initial statuses — never the authority.
+      "docs/tasks/0002-task.md": { frontmatter: { status: "in-progress" } },
+      "docs/tasks/0003-task.md": { frontmatter: { status: "todo" } },
+    },
+    run: {
+      tasks: {
+        "TASK-0002": { status: "done" },
+        "TASK-0003": { status: "done" },
+      },
     },
   },
 };

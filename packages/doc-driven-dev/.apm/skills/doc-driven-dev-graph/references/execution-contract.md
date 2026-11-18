@@ -56,10 +56,15 @@ For each selected edge:
 13. In `single-step` mode yield; in `run-until-yield` mode repeat.
 
 The caller owns the route invocation: `runCaller` appends a pinned
-`--task-dir docs/tasks` after any adapter `prefixArgs`, because the caller's
-own bookkeeping — the task-aware hop budget — is anchored at `docs/tasks`.
-Last flag wins deliberately; an adapter-supplied `--task-dir` is never
-honored.
+`--task-dir docs/tasks` after any adapter `prefixArgs` so every
+re-projection scans the same deterministic corpus root for artifact-graph
+and focus bookkeeping. Last flag wins deliberately; an adapter-supplied
+`--task-dir` is never honored. An adapter selects the Execution Store run by
+placing `--run <run-id>` (with `--state-root`/`--allow-external-root` when
+needed) in `prefixArgs`; with no `--run`, the router applies the
+single-active-run rule — zero candidates leave the Task Graph null without
+a blocker (planning has not materialized a run yet), while several fail
+closed as ambiguous (`task-graph-run-ambiguous`).
 
 Record completion, gate, and follow-up evidence in the run's Execution Store:
 `recordReceipt` for each accepted completed outcome, then `recordCheckpoint`
@@ -86,7 +91,8 @@ goal.
 Graph runtime structure does not define Git commit boundaries. In particular,
 a Graph node, edge, phase, or checkpoint is not a commit boundary. Neither an
 artifact type nor the Dynamic Task Graph (`task-graph`), which is a projection
-generated from task documents, is a commit boundary. Do not use `1 phase = 1
+generated from one Execution Store run's task records, is a commit boundary.
+Do not use `1 phase = 1
 commit`, `1 graph node = 1 commit`, `1 graph edge = 1 commit`, or `1 artifact =
 1 commit` as execution rules.
 
@@ -282,8 +288,8 @@ Graphs, missing focus, conflicting signals, and failed audits remain explicit
 blockers or loopback signals; the caller must not reinterpret them as success.
 
 Markdown remains the durable history and status authority. Per-run execution
-state — Effect Receipts and edge checkpoints — lives in the Git-untracked
-Execution Store (see
+state — plan, task, and approval records, Effect Receipts, and edge
+checkpoints — lives in the Git-untracked Execution Store (see
 [execution-store-contract.md](execution-store-contract.md)); it is
 per-worktree, refuses writes unless `.apm/state/` is Git-ignored, and never
 carries durable knowledge. Do not create a parallel mutable state store to

@@ -10,6 +10,12 @@ projection は `schemaVersion: 2`、`graphId`、絶対 `cwd`、`taskDir`、正�
 選択した `taskGraph`（または `null`）を持ちます。artifact node には canonical
 path、ID、type、status、semantic relation を保持します。
 
+`taskGraph` は Markdown から投影されません — `--run` または単一 active
+run 規則で選択された 1 つの Execution Store run の Dynamic Task Graph
+です（`task-graph-contract.ja.md` 参照）。run が選択されると state はその
+`runId` を持ち、run 選択や承認の blocker も artifact blocker と同じ形で
+ここに現れます。
+
 ## Focus
 
 repository に複数の active chain がある場合、`--focus` path または artifact ID

@@ -69,3 +69,32 @@ export function toScopeEntry(text: string): ScopeResolution {
   if (!normalized) return { opaque: text };
   return { pattern: { kind: normalized.isDir ? "dir" : "file", path: normalized.path } };
 }
+
+/**
+ * Resolve a declared-scope entry list — a task record's `scope` field in the
+ * Execution Store (Issue #237) — into verifiable patterns plus an opaque
+ * flag. The entries are raw strings carrying the same vocabulary the v2
+ * `## Affected Files` bullets did; each classifies through `toScopeEntry`.
+ * `undefined` means the task declares no scope at all — callers treat it as
+ * scope-undeclared exactly like an absent section.
+ */
+export function scopeFromEntries(
+  entries: readonly string[] | undefined,
+): { patterns: ScopePattern[]; hasOpaque: boolean } | null {
+  if (entries === undefined) return null;
+  const patterns: ScopePattern[] = [];
+  let hasOpaque = false;
+  for (const raw of entries) {
+    // A single code span still unwraps — a record entry may carry the same
+    // spelling the task-doc bullets did; leftover markup turns opaque.
+    let text = raw.trim();
+    if (text.length > 2 && text.startsWith("`") && text.endsWith("`")) {
+      text = text.slice(1, -1).trim();
+    }
+    if (!text) continue;
+    const parsed = toScopeEntry(text);
+    if ("opaque" in parsed) hasOpaque = true;
+    else patterns.push(parsed.pattern);
+  }
+  return { patterns, hasOpaque };
+}

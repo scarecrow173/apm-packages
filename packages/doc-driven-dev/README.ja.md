@@ -93,16 +93,24 @@ caller は返された audit をすべて実行してから、返された deleg
 
 ### Task Graph invariant
 
-Task document が authority です。`depends-on` と `blocks` を安定した ID の有向
-edge に変換します。全 predecessor が `done` のときだけ runnable であり、
-`wont-do` は dependency を満たしません。重複 ID、未解決参照、cycle、壊れた
-relation、空の選択は issue と空の runnable 集合になります。
+選択された Execution Store run の plan と task record が authority です —
+graph は `(runId, taskId)` を基準に、ちょうど 1 つの run の read-only
+projection です。record の `dependsOn` が同一 run 内の兄弟 task 間の有向
+edge になります。run の `plan.md` が digest-bound な承認を持ち、全
+predecessor が `done` のときだけ task は runnable であり、`wont-do` は
+dependency を満たしません。ID の重複、未解決参照、cycle、壊れた record、
+plan の欠落・未承認、plan digest のずれ、空の task 集合は issue と空の
+runnable 集合になります。corpus の `docs/tasks/` Markdown は履歴であり、
+参照されません。
 
 ### Persistence boundary
 
-Markdown が durable history と status の authority です。Graph State と Dynamic
-Task Graph は現在の turn の projection であり、runtime は並行する lifecycle
-database を作成せず、要求もしません。
+durable な Markdown が project history と status の authority であり、
+`plan` と `task` は durable な Git の形を持たない execution-bound です。
+run ごとの実行状態は Git 管理外の Execution Store
+（`.apm/state/doc-driven-dev/runs/`）に保持します。Graph State と Dynamic
+Task Graph は現在の turn の projection であり、runtime は並行する
+lifecycle database を作成せず、要求もしません。
 
 ## インストール
 

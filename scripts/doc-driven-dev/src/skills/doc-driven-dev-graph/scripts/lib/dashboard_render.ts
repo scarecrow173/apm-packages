@@ -72,7 +72,7 @@ function renderMetrics(snapshot: DashboardSnapshot): string {
 function renderCharts(snapshot: DashboardSnapshot): string {
   const canonicalTasks = snapshot.inventory.filter((row) => row.kind === "canonical" && row.type === "task");
   const summary = summarizeTasks(canonicalTasks);
-  const board = buildTaskBoard(snapshot.inventory, snapshot.plans);
+  const board = buildTaskBoard(snapshot.inventory, snapshot.runs);
   const laneVar: Record<string, string> = { todo: "--todo", "in-progress": "--progress", blocked: "--blocked", done: "--done", "wont-do": "--wontdo", unknown: "--unknown" };
   const laneColor = (status: string): string => `seg-${status.replace(/-/g, "")}`;
   const donut = donutChart(
@@ -112,7 +112,10 @@ function renderCharts(snapshot: DashboardSnapshot): string {
   if (selected) {
     const selectedSummary = summarizeTasks(selected.nodes);
     const selectedRatio = selectedSummary.doneRatio === null ? "対象タスクなし" : `${Math.round(selectedSummary.doneRatio * 100)}%`;
-    focused = `<p><strong>plan:</strong> <code>${e(selected.plan)}</code></p><dl class="facts">${[
+    const planBadge = selected.plan === null
+      ? ""
+      : ` <span class="badge ${selected.plan.approved ? "badge-runnable" : "badge-blocked"}">${selected.plan.approved ? "approved" : "unapproved"}</span>`;
+    focused = `<p><strong>run:</strong> <code>${e(selected.runId)}</code> <strong>plan:</strong> <code>${e(selected.plan?.path ?? null)}</code>${planBadge}</p><dl class="facts">${[
       ["残存", selectedSummary.remaining], ["完了", selectedSummary.done], ["対応しない", selectedSummary.wontDo],
       ["不明", selectedSummary.unknown], ["完了率 (done)", selectedRatio],
     ].map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl>`;
@@ -122,7 +125,7 @@ function renderCharts(snapshot: DashboardSnapshot): string {
     focused = "<p>選択対象なし。focus は未指定です。</p>";
   }
 
-  return `<section id="charts" aria-labelledby="charts-heading"><h2 id="charts-heading">チャート</h2><div class="chart-grid"><div class="panel"><h3>タスク status 分布</h3>${donut}</div><div class="panel"><h3>文書の区分</h3>${docBars}</div><div class="panel"><h3>graph coverage（canonical 文書）</h3>${coverage}</div><div class="panel"><h3>findings severity</h3>${findingsBar}</div><div class="panel"><h3>選択中の plan・focus</h3>${focused}</div></div></section>`;
+  return `<section id="charts" aria-labelledby="charts-heading"><h2 id="charts-heading">チャート</h2><div class="chart-grid"><div class="panel"><h3>タスク status 分布</h3>${donut}</div><div class="panel"><h3>文書の区分</h3>${docBars}</div><div class="panel"><h3>graph coverage（canonical 文書）</h3>${coverage}</div><div class="panel"><h3>findings severity</h3>${findingsBar}</div><div class="panel"><h3>選択中の run・focus</h3>${focused}</div></div></section>`;
 }
 
 function renderBacklogStrip(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, string>): string {
@@ -179,7 +182,7 @@ function renderAttention(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, s
   };
 
   const blockingFindings = snapshot.findings.filter((finding) => finding.blocking);
-  const taskIssues = snapshot.plans.flatMap((plan) => plan.graph.issues.map((issue) => ({ plan: plan.path, issue })));
+  const taskIssues = snapshot.runs.flatMap((run) => run.graph.issues.map((issue) => ({ run: run.runId, issue })));
   const routeBlockedReasons = snapshot.decision?.route.status === "blocked"
     ? (snapshot.decision.explanation?.blockedReasons ?? [])
     : [];
@@ -189,9 +192,9 @@ function renderAttention(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, s
     finding.target === null ? "" : `<span class="issue-sub">→ ${e(finding.target)}</span>`,
     `<span class="issue-repair repair-${e(finding.repair)}">${e(repairLabels[finding.repair] ?? finding.repair)}</span>`,
   ].filter((part) => part !== "").join("")));
-  const taskIssueRows = taskIssues.map(({ plan, issue }) => issueRow(e(issue.message), [
+  const taskIssueRows = taskIssues.map(({ run, issue }) => issueRow(e(issue.message), [
     `<span class="issue-tag">${e(issue.code)}</span>`,
-    location(plan, null),
+    `<span class="issue-sub">${e(run)}</span>`,
     `<span class="issue-sub">tasks: ${list(issue.tasks)}</span>`,
   ].join("")));
   const groups: Array<{ label: string; items: readonly string[] }> = [
@@ -254,11 +257,11 @@ function renderGraph(snapshot: DashboardSnapshot): string {
 }
 
 function renderTaskBoard(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, string>): string {
-  const board = buildTaskBoard(snapshot.inventory, snapshot.plans);
-  const coverageLabel = (coverage: string): string => coverage === "covered" ? "Graph 対象" : coverage === "no-plan" ? "plan 未所属" : "graph 未対応";
+  const board = buildTaskBoard(snapshot.inventory, snapshot.runs);
+  const coverageLabel = (coverage: string): string => coverage === "covered" ? "Graph 対象" : coverage === "no-run" ? "run 未所属" : "graph 未対応";
   const lanes = board.lanes.map((lane) => {
     const cards = lane.cards.map((card) => {
-      const memberships = card.memberships.map((membership) => `<li><strong>plan:</strong> <code>${e(membership.plan)}</code><br><strong>dependencies:</strong> ${list(membership.dependencies)}<br><span class="badge">runnable: ${e(bool(membership.runnable))}</span> <span class="badge">resumable: ${e(bool(membership.resumable))}</span><br><strong>停止理由:</strong> ${list(membership.blockReasons)}</li>`).join("");
+      const memberships = card.memberships.map((membership) => `<li><strong>run:</strong> <code>${e(membership.run)}</code><br><strong>dependencies:</strong> ${list(membership.dependencies)}<br><span class="badge">runnable: ${e(bool(membership.runnable))}</span> <span class="badge">resumable: ${e(bool(membership.resumable))}</span><br><strong>停止理由:</strong> ${list(membership.blockReasons)}</li>`).join("");
       const flags = card.memberships.length === 0 ? [] : [
         card.memberships.some((membership) => membership.runnable) ? "runnable" : "",
         card.memberships.some((membership) => membership.resumable) ? "resumable" : "",
@@ -266,7 +269,7 @@ function renderTaskBoard(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, s
       ].filter(Boolean);
       const readiness = flags.map((flag) => `<span class="badge badge-${flag}">${flag}</span>`).join(" ");
       const title = ids.has(card.path) ? `<a href="#${ids.get(card.path)}">${e(card.title)}</a>` : e(card.title);
-      return `<article class="task-card" data-task-card data-task-path="${escapeHtml(card.path)}" data-readiness="${flags.join(" ")}"><h4>${title}</h4><p class="task-id"><code>${e(card.id)}</code></p><p><span class="status-badge status-${card.lane}">${e(card.status)}</span> <span class="coverage-badge">${e(coverageLabel(card.coverage))}</span>${readiness ? ` ${readiness}` : ""}</p><p class="task-path"><code>${e(card.path)}</code></p>${card.parseError ? `<p class="warning"><strong>parse error:</strong> ${e(card.parseError)}</p>` : ""}${memberships ? `<details class="membership-details"><summary>plan / 依存 (${card.memberships.length})</summary><ul class="membership-list">${memberships}</ul></details>` : `<p class="empty">plan membership なし。依存判定は不明です。</p>`}</article>`;
+      return `<article class="task-card" data-task-card data-task-path="${escapeHtml(card.path)}" data-readiness="${flags.join(" ")}"><h4>${title}</h4><p class="task-id"><code>${e(card.id)}</code></p><p><span class="status-badge status-${card.lane}">${e(card.status)}</span> <span class="coverage-badge">${e(coverageLabel(card.coverage))}</span>${readiness ? ` ${readiness}` : ""}</p><p class="task-path"><code>${e(card.path)}</code></p>${card.parseError ? `<p class="warning"><strong>parse error:</strong> ${e(card.parseError)}</p>` : ""}${memberships ? `<details class="membership-details"><summary>run / 依存 (${card.memberships.length})</summary><ul class="membership-list">${memberships}</ul></details>` : `<p class="empty">run membership なし。依存判定は不明です。</p>`}</article>`;
     }).join("");
     const label = `${e(lane.label)} <span class="lane-count" aria-label="${lane.cards.length} 件">${lane.cards.length}</span>`;
     const body = `<div class="lane-cards">${cards || `<p class="empty lane-empty">この lane にタスクはありません</p>`}</div>`;
@@ -275,13 +278,13 @@ function renderTaskBoard(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, s
     }
     return `<section class="kanban-lane lane-${lane.status}" data-kanban-lane="${lane.status}" aria-labelledby="lane-${lane.status}-heading"><h3 id="lane-${lane.status}-heading">${label}</h3>${body}</section>`;
   }).join("");
-  return `<section id="task-board" aria-labelledby="task-board-heading"><h2 id="task-board-heading">タスクボード</h2><p>タスクは文書のステータスごとに表示します。依存関係による実行可否はカード内で確認できます。done / wont-do レーンは折り畳まれています。</p><form data-board-filters><label>readiness <select name="readiness"><option value="">すべて</option><option value="runnable">runnable のみ</option><option value="resumable">resumable のみ</option><option value="blocked">blocked のみ</option></select></label></form>${renderBacklogStrip(snapshot, ids)}<div class="kanban-scroll" tabindex="0" role="region" aria-label="タスク Kanban ボード"><div class="kanban-board">${lanes}</div></div></section>`;
+  return `<section id="task-board" aria-labelledby="task-board-heading"><h2 id="task-board-heading">タスクボード</h2><p>タスクは status ごとに表示します。依存関係による実行可否はカード内で確認できます。done / wont-do レーンは折り畳まれています。</p><form data-board-filters><label>readiness <select name="readiness"><option value="">すべて</option><option value="runnable">runnable のみ</option><option value="resumable">resumable のみ</option><option value="blocked">blocked のみ</option></select></label></form>${renderBacklogStrip(snapshot, ids)}<div class="kanban-scroll" tabindex="0" role="region" aria-label="タスク Kanban ボード"><div class="kanban-board">${lanes}</div></div></section>`;
 }
 
-function renderPlans(snapshot: DashboardSnapshot): string {
-  const plans = [...snapshot.plans].sort((left, right) => compare(left.path, right.path));
-  const body = plans.map((plan) => {
-    const graph = plan.graph;
+function renderRuns(snapshot: DashboardSnapshot): string {
+  const runs = [...snapshot.runs].sort((left, right) => compare(left.runId, right.runId));
+  const body = runs.map((run) => {
+    const graph = run.graph;
     const blocked = new Map(graph.blocked.map((entry) => [entry.id, entry.reasons]));
     const nodes = [...graph.nodes].sort((left, right) => compare(left.path, right.path)).map((node) => {
       const flags = [
@@ -296,10 +299,10 @@ function renderPlans(snapshot: DashboardSnapshot): string {
     });
     const edges = graph.edges.map((edge) => `<span class="chip">${e(edge.from)} → ${e(edge.to)}</span>`);
     const issues = graph.issues.map((issue) => `<li class="row-item row-danger"><code>${e(issue.code)}</code> <span class="row-title">${e(issue.message)}</span> <span class="row-meta">${list(issue.tasks)}</span></li>`);
-    const statusPill = plan.status === null ? e(plan.status) : `<span class="status-pill status-${e(plan.status)}">${e(plan.status)}</span>`;
-    return `<details><summary><code>${e(plan.path)}</code> — ${statusPill} done ${graph.completed.length}; 残存 ${graph.nodes.filter((node) => ["todo", "in-progress", "blocked"].includes(node.status)).length}; wont-do ${graph.nodes.filter((node) => node.status === "wont-do").length}</summary><h4>タスク</h4>${nodes.length === 0 ? `<p class="empty">なし</p>` : `<ul class="row-list">${nodes.join("")}</ul>`}<h4>dependency edges</h4>${edges.length === 0 ? `<p class="empty">なし</p>` : `<div class="chip-line">${edges.join(" ")}</div>`}<h4>task issues</h4>${issues.length === 0 ? `<p class="empty">なし</p>` : `<ul class="row-list">${issues.join("")}</ul>`}</details>`;
+    const statusPill = run.status === null ? e(run.status) : `<span class="status-pill status-${e(run.status)}">${e(run.status)}</span>`;
+    return `<details><summary><code>${e(run.runId)}</code> — ${statusPill} done ${graph.completed.length}; 残存 ${graph.nodes.filter((node) => ["todo", "in-progress", "blocked"].includes(node.status)).length}; wont-do ${graph.nodes.filter((node) => node.status === "wont-do").length}</summary><h4>タスク</h4>${nodes.length === 0 ? `<p class="empty">なし</p>` : `<ul class="row-list">${nodes.join("")}</ul>`}<h4>dependency edges</h4>${edges.length === 0 ? `<p class="empty">なし</p>` : `<div class="chip-line">${edges.join(" ")}</div>`}<h4>task issues</h4>${issues.length === 0 ? `<p class="empty">なし</p>` : `<ul class="row-list">${issues.join("")}</ul>`}</details>`;
   }).join("");
-  return `<section id="tasks" aria-labelledby="tasks-heading"><h2 id="tasks-heading">plan ごとのタスク</h2><p class="detail-toggle"><button type="button" data-open-all="#tasks">すべて開く</button> <button type="button" data-close-all="#tasks">すべて畳む</button></p>${body || "<p class=\"empty\">plan 0 件</p>"}</section>`;
+  return `<section id="tasks" aria-labelledby="tasks-heading"><h2 id="tasks-heading">run ごとのタスク</h2><p class="detail-toggle"><button type="button" data-open-all="#tasks">すべて開く</button> <button type="button" data-close-all="#tasks">すべて畳む</button></p>${body || "<p class=\"empty\">run 0 件</p>"}</section>`;
 }
 
 function renderDocuments(snapshot: DashboardSnapshot): string {
@@ -682,7 +685,7 @@ export function renderDashboard(snapshot: DashboardSnapshot): string {
   const ids = documentAnchors(snapshot.inventory);
   const hasBlocking = snapshot.state.hardBlockers.length > 0
     || snapshot.findings.some((finding) => finding.blocking)
-    || snapshot.plans.some((plan) => plan.graph.issues.length > 0)
+    || snapshot.runs.some((run) => run.graph.issues.length > 0)
     || (snapshot.decision?.route.status === "blocked" && (snapshot.decision.explanation?.blockedReasons?.length ?? 0) > 0);
   const canonicalTasks = snapshot.inventory.filter((row) => row.kind === "canonical" && row.type === "task");
   const summary = summarizeTasks(canonicalTasks);
@@ -690,5 +693,5 @@ export function renderDashboard(snapshot: DashboardSnapshot): string {
   const heroBlockers = snapshot.state.hardBlockers.length + snapshot.findings.filter((finding) => finding.blocking).length;
   const canonicalDocs = snapshot.inventory.filter((row) => row.kind === "canonical").length;
   const hero = `<div class="hero"><div class="hero-metric"><span class="hero-value">${heroPct === null ? "—" : `${heroPct}%`}</span><span class="hero-label">全体完了率</span></div><div class="hero-mid"><div class="hero-track" role="img" aria-label="完了率 ${heroPct === null ? "なし" : `${heroPct}%`}"><span class="hero-fill" style="width:${heroPct ?? 0}%"></span></div><p class="hero-note">${heroPct === null ? "対象タスクなし" : `${summary.total} タスク中 ${summary.done} 件完了`}</p></div><dl class="hero-facts"><div><dt>残存</dt><dd>${summary.remaining}</dd></div><div><dt>blocking</dt><dd${heroBlockers > 0 ? ` class="hero-bad"` : ""}>${heroBlockers}</dd></div><div><dt>文書</dt><dd>${canonicalDocs}</dd></div></dl></div>`;
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; connect-src 'none'"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E"><title>文書駆動開発の進行状況</title><script>${themeScript}</script><style>${picoClasslessCss}${styles}</style></head><body><a class="skip-link" href="#main">本文へ移動</a><header><div class="eyebrow"><span class="pulse-dot${hasBlocking ? " pulse-bad" : ""}" aria-hidden="true" title="${hasBlocking ? "要対応あり" : "ブロッカーなし"}"></span><span>DOC-DRIVEN DEVELOPMENT · PROGRESS SNAPSHOT</span><span class="eyebrow-state${hasBlocking ? " state-bad" : ""}">${hasBlocking ? "要対応あり" : "ブロッカーなし"}</span></div><div class="header-row"><h1>文書駆動開発の進行状況</h1></div><p class="subtitle"><span class="meta"><strong>repository</strong><span>${e(snapshot.repositoryName)}</span></span><span class="meta"><strong>対象</strong><span>${list(snapshot.requested.focus)}</span></span><span class="meta"><strong>開始</strong><span>${e(snapshot.startedAt)}</span></span><span class="meta"><strong>生成時点</strong><time datetime="${escapeHtml(snapshot.generatedAt)}" data-relative>${e(snapshot.generatedAt)}</time></span></p>${hero}</header><nav aria-label="セクション"><ul><li><a href="#overview">概要</a></li><li><a href="#charts">チャート</a></li><li><a href="#task-board">タスクボード</a></li><li><a href="#backlog">候補</a></li><li><a href="#graph">Graph</a></li><li><a href="#tasks">タスク詳細</a></li><li><a href="#documents">文書</a></li><li><a href="#attention">要対応</a></li><li><a href="#diagnostics">診断</a></li><li><button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" title="テーマ切替 (T)">テーマ</button></li></ul></nav><main id="main">${renderMetrics(snapshot)}${renderCharts(snapshot)}${renderTaskBoard(snapshot, ids)}<div class="graph-scroll">${renderGraph(snapshot)}</div>${renderPlans(snapshot)}${renderDocuments(snapshot)}${renderAttention(snapshot, ids)}${renderDiagnostics(snapshot)}</main><footer><small>この画面は生成時点の状態です。更新するにはコマンドを再実行してください。</small></footer><noscript>全情報を表示しています。絞り込みには JavaScript が必要です。</noscript><script>${filterScript}</script></body></html>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; connect-src 'none'"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E"><title>文書駆動開発の進行状況</title><script>${themeScript}</script><style>${picoClasslessCss}${styles}</style></head><body><a class="skip-link" href="#main">本文へ移動</a><header><div class="eyebrow"><span class="pulse-dot${hasBlocking ? " pulse-bad" : ""}" aria-hidden="true" title="${hasBlocking ? "要対応あり" : "ブロッカーなし"}"></span><span>DOC-DRIVEN DEVELOPMENT · PROGRESS SNAPSHOT</span><span class="eyebrow-state${hasBlocking ? " state-bad" : ""}">${hasBlocking ? "要対応あり" : "ブロッカーなし"}</span></div><div class="header-row"><h1>文書駆動開発の進行状況</h1></div><p class="subtitle"><span class="meta"><strong>repository</strong><span>${e(snapshot.repositoryName)}</span></span><span class="meta"><strong>対象</strong><span>${list(snapshot.requested.focus)}</span></span><span class="meta"><strong>開始</strong><span>${e(snapshot.startedAt)}</span></span><span class="meta"><strong>生成時点</strong><time datetime="${escapeHtml(snapshot.generatedAt)}" data-relative>${e(snapshot.generatedAt)}</time></span></p>${hero}</header><nav aria-label="セクション"><ul><li><a href="#overview">概要</a></li><li><a href="#charts">チャート</a></li><li><a href="#task-board">タスクボード</a></li><li><a href="#backlog">候補</a></li><li><a href="#graph">Graph</a></li><li><a href="#tasks">タスク詳細</a></li><li><a href="#documents">文書</a></li><li><a href="#attention">要対応</a></li><li><a href="#diagnostics">診断</a></li><li><button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" title="テーマ切替 (T)">テーマ</button></li></ul></nav><main id="main">${renderMetrics(snapshot)}${renderCharts(snapshot)}${renderTaskBoard(snapshot, ids)}<div class="graph-scroll">${renderGraph(snapshot)}</div>${renderRuns(snapshot)}${renderDocuments(snapshot)}${renderAttention(snapshot, ids)}${renderDiagnostics(snapshot)}</main><footer><small>この画面は生成時点の状態です。更新するにはコマンドを再実行してください。</small></footer><noscript>全情報を表示しています。絞り込みには JavaScript が必要です。</noscript><script>${filterScript}</script></body></html>`;
 }

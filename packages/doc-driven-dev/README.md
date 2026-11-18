@@ -96,17 +96,23 @@ delegate.
 
 ### Task Graph invariant
 
-Task documents remain authoritative. `depends-on` and `blocks` relations become
-directed edges with stable IDs. A task is runnable only when all predecessors
-are `done`; `wont-do` never satisfies a dependency. Duplicate IDs, unresolved
-references, cycles, malformed relations, or an empty selection produce issues
-and an empty runnable set.
+The selected Execution Store run's plan and task records are authoritative —
+the graph is a read-only projection of exactly one run, keyed by
+`(runId, taskId)`. A record's `dependsOn` becomes directed edges between
+sibling tasks in the same run. A task is runnable only when the run's
+`plan.md` carries a digest-bound approval and all predecessors are `done`;
+`wont-do` never satisfies a dependency. Duplicate IDs, unresolved references,
+cycles, malformed records, a missing or unapproved plan, plan-digest drift, or
+an empty task set produce issues and an empty runnable set. Corpus
+`docs/tasks/` Markdown is history and is never consulted.
 
 ### Persistence boundary
 
-Markdown is durable history and status authority. Graph State and the Dynamic
-Task Graph are projections for the current turn. The runtime creates no
-parallel lifecycle database and does not require one.
+Durable Markdown is project history and status authority; `plan` and `task`
+are execution-bound with no durable Git form. Per-run execution state lives in
+the Git-untracked Execution Store under `.apm/state/doc-driven-dev/runs/`.
+Graph State and the Dynamic Task Graph are projections for the current turn.
+The runtime creates no parallel lifecycle database and does not require one.
 
 ## Install
 

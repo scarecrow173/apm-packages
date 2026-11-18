@@ -21,13 +21,14 @@ import type { E2ECase } from "../harness/case_types";
  *     before its gate's node consults them, so upfront declaration is safe
  *     (per-edge injection via the live signals set stays available for
  *     repair-loop cases).
- *  2. `task-graph-to-implementation`'s completed delegate mutates TASK-0001 to
- *     status "done" — the honest document state an implementation-flow
- *     completion asserts (the implementation gate requires every selected
- *     task done/wont-do). `finalFiles` therefore expects "done", not "todo".
- *     `commitEvidence: true` then makes runCase's applyCheckpointEvidence
- *     commitAll after declaring the task doc, so the edge checkpoint
- *     completes on a clean tree.
+ *  2. `task-graph-to-implementation`'s completed delegate mutates TASK-0001's
+ *     task RECORD to status "done" — the honest store state an
+ *     implementation-flow completion asserts (the implementation gate
+ *     requires every selected task done/wont-do). The legacy task doc keeps
+ *     "todo" — finalFiles proves the run record, not the corpus Markdown,
+ *     is the authority (Issue #237). `commitEvidence: true` then makes
+ *     runCase's applyCheckpointEvidence commitAll after declaring the task
+ *     doc, so the edge checkpoint completes on a clean tree.
  */
 export const case01: E2ECase = {
   id: "e2e-01",
@@ -45,7 +46,7 @@ export const case01: E2ECase = {
     },
     "task-graph-to-implementation": {
       delegate: "completed",
-      mutate: [{ set: { path: "docs/tasks/0001-task.md", frontmatter: { status: "done" } } }],
+      mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
     "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
@@ -64,6 +65,10 @@ export const case01: E2ECase = {
       "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
       "followup-triage-terminal", "exit-audit-to-complete",
     ],
-    finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "done" } } },
+    finalFiles: {
+      // The corpus doc is untouched — never the authority the graph read.
+      "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } },
+    },
+    run: { tasks: { "TASK-0001": { status: "done" } } },
   },
 };

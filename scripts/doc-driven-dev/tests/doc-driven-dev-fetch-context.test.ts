@@ -427,7 +427,9 @@ test("runCase baseline: 60-doc corpus scan dwarfs the dispatched delegate inputs
       yield: "terminal",
       edgeSequence: [...HAPPY_SEQUENCE, null],
       completedEdges: HAPPY_SEQUENCE,
-      finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "done" } } },
+      // Corpus doc untouched — the run record is the task authority (Issue #237).
+      finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } } },
+      run: { tasks: { "TASK-0001": { status: "done" } } },
     },
   };
   const { run, report } = runCase(e2eCase);
@@ -449,12 +451,14 @@ test("runCase baseline: 60-doc corpus scan dwarfs the dispatched delegate inputs
   assert.ok(baseline.ratio < 0.5, `expected ratio < 0.5, got ${baseline.ratio}`);
 
   // Whole-repo audits keep their scope (issue acceptance #5): the exit
-  // audit's `all` audit still receives every canonical doc path.
+  // audit's `all` audit still receives every canonical doc path. Issue #237:
+  // plan/task are Execution Store records, not canonical Markdown, so the
+  // declared durable set is 5 (spec, adr, design, test-spec, impl-record).
   const allAudit = run.traceEvents.find((event) =>
     event.kind === "effect-dispatched" && event.effectId === "all");
   assert.ok(allAudit && allAudit.kind === "effect-dispatched", "the `all` audit must still dispatch");
-  assert.ok(allAudit.focusPaths.length >= 7,
-    `expected the \`all\` audit to carry ≥7 canonical inputs, got ${allAudit.focusPaths.length}`);
+  assert.ok(allAudit.focusPaths.length >= 5,
+    `expected the \`all\` audit to carry ≥5 canonical inputs, got ${allAudit.focusPaths.length}`);
 });
 
 test("runCase fail-closed at scale: an unresolved reference blocks the run before any dispatch", { timeout: 120_000 }, () => {

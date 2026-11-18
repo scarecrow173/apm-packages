@@ -60,10 +60,16 @@ one-edge command のままであり、継続を所有するのは router では�
 13. `single-step` mode では yield し、`run-until-yield` mode では繰り返す。
 
 route invocation の flag は caller が所有します。`runCaller` は adapter の
-`prefixArgs` の後に pinned な `--task-dir docs/tasks` を付けます。
-caller 自身の bookkeeping (task-aware hop budget) が
-`docs/tasks` に anchor されるためで、後ろの flag が意図的に優先され、
-adapter が渡す `--task-dir` は採用されません。
+`prefixArgs` の後に pinned な `--task-dir docs/tasks` を付け、すべての
+re-projection が artifact-graph と focus bookkeeping のために同じ
+deterministic corpus root を scan するようにします。後ろの flag が意図的に
+優先され、adapter が渡す `--task-dir` は採用されません。adapter は
+`prefixArgs` に `--run <run-id>`（必要に応じて `--state-root` /
+`--allow-external-root` も）を置いて Execution Store run を選択します。
+`--run` がない場合、router は単一 active run 規則を適用します —
+candidate が 0 のときは Task Graph を null のままにし（planning がまだ
+run を materialize していない通常状態で、blocker は出ません）、複数なら
+ambiguous として fail-closed します（`task-graph-run-ambiguous`）。
 
 completion、gate、follow-up evidence は run の Execution Store に記録します:
 受け入れられた completed outcome ごとに `recordReceipt` を、続いて edge に対し
@@ -87,8 +93,9 @@ review 可能な logical change ごとに 1 commit とします。logical change
 unrelated change を含まないものとします。commit 数の最小化・最大化は目的にしません。
 
 Graph runtime の構造は Git commit boundary を定義しません。Graph node、edge、phase、
-checkpoint は commit boundary ではありません。artifact type も、task document から
-生成される projection である Dynamic Task Graph（`task-graph`）も commit boundary
+checkpoint は commit boundary ではありません。artifact type も、1 つの
+Execution Store run の task レコードから生成される projection である
+Dynamic Task Graph（`task-graph`）も commit boundary
 ではありません。実行規則を `1 phase = 1 commit`、`1 graph node = 1 commit`、
 `1 graph edge = 1 commit`、`1 artifact = 1 commit` と解釈してはいけません。
 
@@ -277,7 +284,8 @@ Graph、focus 欠落、矛盾した signal、audit failure は明示的な block
 loopback signal のままにし、caller は成功として再解釈してはいけません。
 
 Markdown が durable history と status authority です。per-run execution state —
-Effect Receipt と edge checkpoint — は Git-untracked Execution Store
+plan・task・承認 record、Effect Receipt、edge checkpoint — は
+Git-untracked Execution Store
 （[execution-store-contract.ja.md](execution-store-contract.ja.md) 参照）に
 置かれ、per-worktree で、`.apm/state/` が Git-ignore されない限り書き込みを
 拒否し、durable knowledge を保持しません。route を完了したように見せる

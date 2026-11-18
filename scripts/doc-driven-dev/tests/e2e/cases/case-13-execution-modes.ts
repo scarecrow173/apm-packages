@@ -85,7 +85,8 @@ export const case13a: E2ECase = {
       { kind: "effect-dispatched", executionMode: "subagent", count: 0 },
       { kind: "effect-dispatched", executionMode: "unknown", count: 0 },
     ],
-    finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "done" } } },
+    finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } } },
+    run: { tasks: { "TASK-0001": { status: "done" } } },
   },
 };
 
@@ -126,7 +127,8 @@ export const case13b: E2ECase = {
       // build_task_graph via the inert row → same-context on the "default" rule.
       { kind: "effect-dispatched", edgeId: "planning-to-task-graph", stage: "delegate", executionMode: "same-context", modeReason: "default", count: 1 },
     ],
-    finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "done" } } },
+    finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } } },
+    run: { tasks: { "TASK-0001": { status: "done" } } },
   },
 };
 

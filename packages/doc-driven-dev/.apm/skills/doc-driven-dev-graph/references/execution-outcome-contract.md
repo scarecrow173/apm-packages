@@ -206,13 +206,17 @@ Graph-dispatched doc-type audits run as
 canonical-document integrity only, so a missing or stale index never gates
 graph execution. `briefing-flow` reads the spec and ADR, `design-doc`
 reads the spec and ADR and records design evidence, `planning-flow` reads the
-selected approved design and records the selected plan and all produced
-plan-linked test spec and task documents, `implementation-flow` reads selected tasks plus
-design/plan and linked test specs, and records its Implementation Record, and
+selected approved design and records the selected run's `plan.md` and all
+produced task records, `implementation-flow` reads the selected run's task
+records plus design/plan and linked test specs, and records its
+Implementation Record, and
 `doc-status` reads the declared document set. Script-adapter inputs are
 `migrate_docs` (declared document set), `scaffold_docs` (workspace-root bootstrap input), and
-`build_task_graph` (focused plan plus selected task documents). Every referenced
-typed reference must resolve against current state before use.
+`build_task_graph` (selected run's `plan.md` plus its task records). Store
+paths are state-root-relative inside the run tree — the repo-relative form
+`.apm/state/doc-driven-dev/runs/<run-id>/...` is what a canonical reference
+records. Every referenced typed reference must resolve against current
+state before use.
 
 ## Existing delegate meanings
 
@@ -222,7 +226,7 @@ This contract renders existing semantics; it does not add workflow states.
 | --- | --- | --- | --- |
 | `briefing-flow` | briefing gate passes | recoverable document gap | `input-required` for an unresolved user-only requirement |
 | `design-doc` | design is approved | — | `approval-required` for its designated reviewer; `input-required` for an upstream user decision |
-| `planning-flow` | approved/active plan plus linked test-spec/task evidence (or a plan `test-spec-skip` rationale when the plan declares no verifiable behavior) | changed plan/test-spec/task repair evidence — under Document Registry 3 these are execution-bound, not canonical durable documents | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
+| `planning-flow` | digest-approved run plan plus materialized task records | changed run plan/task repair evidence | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
 | `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `commit-required` when its slice produced changes it cannot commit within granted authority; `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
 | `doc-status` | documents are Completable | Returned with declared repair evidence | `unrecoverable-blocker` when Returned has no safe repair |
 
@@ -248,7 +252,7 @@ complete `GraphRoute` objects.
 
 ## Resume and duplicate effects
 
-Re-project state — canonical Markdown and the run's Execution Store
+Re-project state — canonical Markdown and the selected run's Execution Store
 records — before comparing a saved receipt. A pending
 `completed` stage is reused only when a recorded Effect Receipt in the run's
 Execution Store attests the same `edgeId`, stage, effect, input binding, and
@@ -258,5 +262,5 @@ resolves current state. Missing proof or a missing receipt yields
 `authority-required` rather than replaying an irreversible effect.
 
 For example, an `implementation-flow` receipt scoped to Task Graph A cannot
-skip that delegate after canonical Markdown projects Task Graph B. It becomes
+skip that delegate after the run projects Task Graph B. It becomes
 eligible only if its authoritative-input scope still matches the fresh graph.

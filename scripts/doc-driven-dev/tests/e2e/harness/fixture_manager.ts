@@ -10,6 +10,25 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import matter from "gray-matter";
 import type { TaskStatus } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
+import {
+  approvePlan,
+  createRun,
+  initStateRoot,
+  loadRun,
+  updateTask,
+} from "../../../src/skills/lib/execution_store";
+
+/**
+ * The deterministic Execution Store run every fixture carries (Issue #237):
+ * the run's plan.md + task records are the graph's authority; the legacy
+ * docs/plans + docs/tasks files remain on disk as a pre-v3 corpus —
+ * inventory the projection must never consult. `E2E_RUN_FOCUS` binds the
+ * run to the default spec/adr/design chain (a manifest focus is a list of
+ * artifact paths inside the focused chain).
+ */
+export const E2E_RUN_ID = "e2e-run";
+export const E2E_PLAN_CONTENT = "# Plan\n\n- implement the graph\n";
+export const E2E_RUN_FOCUS = ["docs/designs/0001-graph.md"];
 
 /**
  * Canonical doc-bearing directories (front-matter artifacts live here).
@@ -97,13 +116,18 @@ export function commitAll(repo: string): void {
   git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "checkpoint", "--allow-empty"]);
 }
 
-/** Add one task document to an existing fixture (oracle addTask, verbatim). */
-export function addTask(repo: string, index: number, status: TaskStatus = "todo"): void {
+/**
+ * Add one task to an existing fixture: the legacy corpus doc (inventory,
+ * never consulted) plus the authoritative task record in the run.
+ */
+export function addTask(repo: string, index: number, status: TaskStatus = "todo", runId: string = E2E_RUN_ID): void {
   const id = `TASK-${String(index).padStart(4, "0")}`;
   writeArtifact(repo, `docs/tasks/${String(index).padStart(4, "0")}-task.md`, {
     id, type: "task", status, title: id,
     relations: { implements: ["docs/plans/0001-graph.md"] },
   }, "# Task\n\n## Verification\n\n- [ ] node --test\n");
+  const current = loadRun(repo, runId).tasks.find((task) => task.taskId === id);
+  updateTask(repo, runId, id, { title: id, status }, { expectedVersion: current?.version });
 }
 
 /**
@@ -220,6 +244,7 @@ export function createFixtureRepo(options: {
   files?: Record<string, DocSpec | string | null>;
   taskStatuses?: TaskStatus[];
   dependsOn?: string[][];
+  taskScopes?: string[][];
   secondPlan?: boolean;
   /**
    * Write the Registry 3 verification document the `test-spec` audit's
@@ -229,6 +254,26 @@ export function createFixtureRepo(options: {
   verificationDoc?: boolean;
   /** Default true: canonical dirs + README indexes. */
   scaffoldDirs?: boolean;
+  /**
+   * Execution Store run (Issue #237): default true — the fixture materializes
+   * `runId` with `plan.md`, the task records parameterized by
+   * taskStatuses/dependsOn/taskScopes, and a digest-bound approval unless
+   * `planApproved` is false. Set false for a repo with no run at all.
+   */
+  run?: boolean;
+  runId?: string;
+  /** Manifest focus — artifact paths inside the focused chain. */
+  runFocus?: string[];
+  /** plan.md content for the run. */
+  planContent?: string;
+  /** Default true: approvePlan binds the current digest. */
+  planApproved?: boolean;
+  /**
+   * Raw files written inside `runs/<runId>/` AFTER createRun — the only way
+   * to materialize corrupt state the write API would refuse (e.g. two
+   * records claiming one taskId for `duplicate-task-id`).
+   */
+  runFiles?: Record<string, string>;
 } = {}): string {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-e2e-"));
   if (options.scaffoldDirs !== false) {
@@ -257,6 +302,39 @@ export function createFixtureRepo(options: {
       writeArtifact(repo, rel, spec.frontmatter, spec.body);
     }
   }
+  if (options.run !== false) {
+    // .apm/state/ ignore coverage must exist before the baseline commit so
+    // the fixture's tree stays clean; the run itself is written afterwards.
+    initStateRoot(repo);
+  }
   gitInit(repo);
+  if (options.run !== false) {
+    const runId = options.runId ?? E2E_RUN_ID;
+    const statuses = options.taskStatuses ?? ["todo"];
+    createRun(repo, {
+      runId,
+      graphId: "doc-driven-dev",
+      focus: options.runFocus ?? E2E_RUN_FOCUS,
+      plan: options.planContent ?? E2E_PLAN_CONTENT,
+      tasks: statuses.map((status, index) => {
+        const taskId = `TASK-${String(index + 1).padStart(4, "0")}`;
+        return {
+          taskId,
+          title: taskId,
+          status,
+          dependsOn: options.dependsOn?.[index],
+          scope: options.taskScopes?.[index],
+        };
+      }),
+    });
+    if (options.planApproved !== false) {
+      approvePlan(repo, runId, { actor: "e2e" });
+    }
+    for (const [rel, content] of Object.entries(options.runFiles ?? {})) {
+      const file = path.join(repo, ".apm", "state", "doc-driven-dev", "runs", runId, rel);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, content, "utf8");
+    }
+  }
   return repo;
 }

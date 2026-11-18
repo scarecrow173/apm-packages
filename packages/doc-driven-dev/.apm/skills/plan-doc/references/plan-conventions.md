@@ -16,6 +16,20 @@ A plan translates an approved spec or accepted ADR into implementation order,
 risks, dependencies, verification checkpoints, and a task breakdown that is
 small enough to execute without reinterpreting the upstream document.
 
+## Execution Store Plan
+
+A live plan is the run's `plan.md` at
+`.apm/state/doc-driven-dev/runs/<run-id>/plan.md`, written through
+`execution_store.js save-plan` — never as a Git-tracked file. Approval is
+digest-bound: `approve-plan` records the actor and the digest of the current
+content, a `save-plan` afterwards invalidates the approval, and a write
+outside the store API surfaces as `plan-digest-drift`. The Task Graph fails
+closed with `plan-not-approved` until `approve-plan` binds the current
+digest again. The run manifest's `focus` list — artifact paths inside the
+focused spec/ADR/design chain — carries the upstream binding the pre-v3
+`relations` fields expressed; the task breakdown lands as sibling task
+records (`task-doc` conventions), not corpus documents.
+
 ## Planning Scope
 
 If a change spans multiple independent subsystems, split it into separate plans

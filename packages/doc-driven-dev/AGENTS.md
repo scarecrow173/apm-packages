@@ -64,10 +64,14 @@ duplicate a delegate's work in the router or invent an unlisted transition.
 
 ## Task Graph invariant
 
-Task documents and their canonical relations remain authoritative. A task is
-runnable only when every predecessor is `done`; `wont-do` never satisfies a
-dependency. Duplicate IDs, unresolved references, cycles, malformed relations,
-or an empty selection produce blockers and no runnable tasks.
+The selected Execution Store run's plan and task records are authoritative —
+the graph is a read-only projection of exactly one run, keyed by
+`(runId, taskId)`. A task is runnable only when the run's `plan.md` carries a
+digest-bound approval and every predecessor is `done`; `wont-do` never
+satisfies a dependency. Duplicate task IDs, unresolved references, cycles,
+malformed records, a missing or unapproved plan, plan-digest drift, or an
+empty task set produce blockers and no runnable tasks. Corpus `docs/tasks/`
+Markdown is history and is never consulted by the projection.
 
 ## Persistence boundary
 

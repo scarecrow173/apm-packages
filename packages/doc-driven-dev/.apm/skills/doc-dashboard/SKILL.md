@@ -7,8 +7,8 @@ license: MIT
 # Document Progress Dashboard
 
 Generate one manually created, offline HTML snapshot for inspection. This is a
-reporting capability, not an orchestration entrypoint. Canonical Markdown and
-Graph YAML remain authoritative. Read [the dashboard contract](references/dashboard-contract.md)
+reporting capability, not an orchestration entrypoint. Canonical Markdown,
+Graph YAML, and Execution Store run records remain authoritative. Read [the dashboard contract](references/dashboard-contract.md)
 for the complete CLI, coverage, and metric definitions.
 
 ## Workflow
@@ -40,10 +40,10 @@ for the complete CLI, coverage, and metric definitions.
 
 The task board is the primary surface. It has permanent `todo`, `in-progress`,
 `blocked`, `done`, and `wont-do` lanes, plus an `unknown` lane for invalid
-status or parse-error tasks. Cards show title, opaque ID, canonical path,
-dependencies, plan membership, coverage, and separate runnable/resumable
+status or parse-error tasks. Cards show title, opaque ID, record path,
+dependencies, run membership, coverage, and separate runnable/resumable
 readiness projections. A dependency-waiting todo remains in the todo lane.
-Graph topology, route preview, plan task details, documents, relations, and
+Graph topology, route preview, per-run task details, documents, relations, and
 diagnostics remain available as supporting views.
 
 ## Boundaries

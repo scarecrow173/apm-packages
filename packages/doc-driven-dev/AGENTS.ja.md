@@ -62,10 +62,14 @@ router で delegate の処理を重複させたり、未宣言の遷移を追加
 
 ## Task Graph invariant
 
-Task document と canonical relation が authority です。全 predecessor が `done`
-のときだけ runnable であり、`wont-do` は dependency を満たしません。重複 ID、
-未解決参照、cycle、壊れた relation、空の選択は blocker と空の runnable task
-になります。
+選択された Execution Store run の plan と task record が authority です —
+graph は `(runId, taskId)` を基準に、ちょうど 1 つの run の read-only
+projection です。run の `plan.md` が digest-bound な承認を持ち、全
+predecessor が `done` のときだけ task は runnable であり、`wont-do` は
+dependency を満たしません。task ID の重複、未解決参照、cycle、壊れた
+record、plan の欠落・未承認、plan digest のずれ、空の task 集合は
+blocker と空の runnable task になります。corpus の `docs/tasks/`
+Markdown は履歴であり、projection から参照されません。
 
 ## Persistence boundary
 

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   artifactHasRelation,
+  chainMembers,
   designAdrDecision,
   designClaimsAdr,
   designClaimsSpec,
@@ -12,14 +13,20 @@ import {
   resolveContainedTaskDir,
   scanArtifactGraph,
   selectArtifactChain,
+  type ArtifactChain,
   type ArtifactGraph,
   type ArtifactRecord,
   type ArtifactScanCollector,
 } from "./artifact_graph";
 import {
-  buildTaskGraph,
+  projectRunTasks,
   type TaskGraphResult,
 } from "./task_graph";
+import {
+  listRuns,
+  loadRun,
+  type RunSnapshot,
+} from "../../../lib/execution_store";
 import { sectionBody, subHeadingCount } from "../../../lib/markdown_sections";
 
 export type GraphGateResult = { status: "pass" | "fail" | "blocked"; reasons: string[] };
@@ -37,6 +44,17 @@ export type GraphState = {
   blockers: string[];
   hardBlockers: string[];
   taskGraph: TaskGraphResult | null;
+  /**
+   * The Execution Store run backing `taskGraph` (Issue #237): identity,
+   * lifecycle status, and the artifact paths the run declared as its focus.
+   * `focus` is null when the manifest's focus is absent, empty, or not a
+   * string array — an unbound run can never satisfy `plan-design-relation`.
+   */
+  run: {
+    runId: string;
+    status: string;
+    focus: string[] | null;
+  } | null;
 };
 
 export type ProjectGraphStateOptions = {
@@ -45,6 +63,15 @@ export type ProjectGraphStateOptions = {
   taskDir?: string;
   focus?: string[];
   signals?: GraphSignal[];
+  /**
+   * Execution Store run selector (Issue #237): the run whose plan/tasks the
+   * Dynamic Task Graph projects. When absent, the projection resolves the
+   * store implicitly — exactly one active run bound to this graph — and
+   * stays null (fail closed) when zero or several candidates exist.
+   */
+  runId?: string;
+  stateRoot?: string;
+  allowExternalRoot?: boolean;
 };
 
 const FOLLOWUP_SIGNALS = new Set([
@@ -97,8 +124,75 @@ function findRecord(records: ArtifactRecord[], pathValue: string | undefined): A
   return pathValue ? records.find((record) => record.path === pathValue) : undefined;
 }
 
-function graphTask(cwd: string, plan: ArtifactRecord | undefined, taskDir: string): TaskGraphResult | null {
-  return plan ? buildTaskGraph({ cwd, plan: plan.path, taskDir }) : null;
+/**
+ * A run declares the artifact paths it executes against in `manifest.focus`
+ * — a JSON array of repo-relative artifact paths, the same vocabulary the
+ * resolved `state.focus` carries. Anything else (absent, empty, non-array)
+ * means the run is unbound: it cannot implicitly match a chain and cannot
+ * satisfy the planning gate's focus relation.
+ */
+function runFocusPaths(focus: unknown): string[] | null {
+  if (!Array.isArray(focus) || focus.length === 0) return null;
+  return focus.every((entry) => typeof entry === "string") ? focus : null;
+}
+
+// A run is a candidate for implicit selection only while `active` —
+// finalized runs are read-only history, never the live execution. The
+// run's own `graphId` must match the projected graph: a run created for
+// another graph is not this graph's execution state. Its declared focus
+// must sit inside the focused chain: a run bound to a different chain's
+// artifacts never becomes this projection's execution state.
+function runMatchesGraph(
+  snapshot: RunSnapshot,
+  graphId: string,
+  members: ReadonlySet<string> | null,
+): boolean {
+  if (snapshot.status !== "active" || snapshot.manifest.graphId !== graphId) return false;
+  const focus = runFocusPaths(snapshot.manifest.focus);
+  return focus !== null && members !== null && focus.every((entry) => members.has(entry));
+}
+
+/**
+ * Resolve the run whose plan/tasks back the Dynamic Task Graph. Explicit
+ * `--run` wins outright (its store errors propagate — a named run that
+ * cannot load is a hard failure, not an empty graph). Implicit selection
+ * requires exactly one active run bound to this graph; zero candidates
+ * return null (planning has not materialized a run yet — normal), while
+ * several or unreadable candidates fail closed as ambiguous so records
+ * from different runs can never be mixed.
+ */
+function resolveRunSnapshot(
+  cwd: string,
+  graphId: string,
+  chain: ArtifactChain | undefined,
+  options: Pick<ProjectGraphStateOptions, "runId" | "stateRoot" | "allowExternalRoot">,
+): { snapshot: RunSnapshot | null; blocker: string | null } {
+  const store = { stateRoot: options.stateRoot, allowExternalRoot: options.allowExternalRoot };
+  if (options.runId !== undefined) {
+    return { snapshot: loadRun(cwd, options.runId, store), blocker: null };
+  }
+  const members = chain === undefined ? null : chainMembers(chain);
+  const listed = listRuns(cwd, store);
+  // A `corrupt` listing cannot prove which graph it belongs to, so it can
+  // never be silently skipped — it is an unknown candidate. Alone it makes
+  // the selection unreadable; alongside matching runs it makes it ambiguous.
+  const corrupt = listed.filter((run) => run.status === "corrupt");
+  const matched: RunSnapshot[] = [];
+  try {
+    for (const run of listed) {
+      if (run.status !== "active") continue;
+      const snapshot = loadRun(cwd, run.runId, store);
+      if (runMatchesGraph(snapshot, graphId, members)) matched.push(snapshot);
+    }
+  } catch {
+    return { snapshot: null, blocker: "task-graph-run-unreadable" };
+  }
+  if (corrupt.length > 0) {
+    return { snapshot: null, blocker: matched.length === 0 ? "task-graph-run-unreadable" : "task-graph-run-ambiguous" };
+  }
+  if (matched.length === 1) return { snapshot: matched[0], blocker: null };
+  if (matched.length > 1) return { snapshot: null, blocker: "task-graph-run-ambiguous" };
+  return { snapshot: null, blocker: null };
 }
 
 function deriveSignals(input: GraphSignal[], blockers: string[], gates: GraphGateResults, taskGraph: TaskGraphResult | null): GraphSignal[] {
@@ -164,7 +258,6 @@ export function evaluateGraphGates(state: GraphState, collector?: ArtifactScanCo
     const spec = findRecord(records, chain?.spec);
     const adr = findRecord(records, chain?.adr);
     const design = findRecord(records, chain?.design);
-    const plan = findRecord(records, chain?.plan);
 
     const briefingReasons: string[] = [];
     if (!spec || !["proposed", "approved", "implemented"].includes(spec.status ?? "")) briefingReasons.push("spec-status");
@@ -186,8 +279,18 @@ export function evaluateGraphGates(state: GraphState, collector?: ArtifactScanCo
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
 
     const planningReasons: string[] = [];
-    if (!plan || !["approved", "in-progress", "completed"].includes(plan.status ?? "")) planningReasons.push("plan-status");
-    if (!plan || !artifactHasRelation(state.artifactGraph, plan.path, ["derives-from", "design"], design?.path)) planningReasons.push("plan-design-relation");
+    // Issue #237: the plan is the selected run's plan.md — `plan-status`
+    // holds only when it exists AND its approval binds the current digest
+    // (unapproved/stale plans surface as `task-graph:plan-not-approved`
+    // through the issue reasons below). `plan-design-relation` holds when
+    // the run declared a focus that sits inside this chain — the run's
+    // manifest binding replaces the durable plan's derives-from edge.
+    if (state.taskGraph?.plan?.approved !== true) planningReasons.push("plan-status");
+    const members = chain === undefined ? null : chainMembers(chain);
+    const runFocus = state.run?.focus ?? null;
+    if (runFocus === null || members === null || !runFocus.every((entry) => members.has(entry))) {
+      planningReasons.push("plan-design-relation");
+    }
     if (!taskGraph || taskGraph.nodes.length === 0) planningReasons.push("no-selected-tasks");
     if (taskGraph && taskGraph.issues.length > 0) planningReasons.push(...taskGraph.issues.map((issue) => `task-graph:${issue.code}`));
     gates.planning = gate(
@@ -227,9 +330,17 @@ export function projectGraphState(options: ProjectGraphStateOptions, collector?:
     && !projection.graph.issues.some((issue) => issue.code === "duplicate-id")
     ? selectArtifactChain(projection.graph, projection.records, resolution.focus)
     : undefined;
-  const plan = findRecord(projection.records, chain?.plan);
-  const taskGraph = graphTask(cwd, plan, taskDir);
+  // The Dynamic Task Graph is a projection of the selected Execution Store
+  // run — never the durable plan/task Markdown (Issue #237).
+  const { snapshot: run, blocker: runBlocker } = resolveRunSnapshot(
+    cwd,
+    options.graphId ?? "doc-driven-dev",
+    chain,
+    options,
+  );
+  const taskGraph = run ? projectRunTasks(run) : null;
   if (taskGraph?.issues.length) blockers.push("task-graph-invalid");
+  if (runBlocker !== null) blockers.push(runBlocker);
   const state: GraphState = {
     schemaVersion: 2,
     graphId: options.graphId ?? "doc-driven-dev",
@@ -242,6 +353,11 @@ export function projectGraphState(options: ProjectGraphStateOptions, collector?:
     blockers: sortedUnique(blockers),
     hardBlockers: [],
     taskGraph,
+    run: run === null ? null : {
+      runId: run.runId,
+      status: run.status,
+      focus: runFocusPaths(run.manifest.focus),
+    },
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
   state.gates = evaluateGraphGates(state, collector);

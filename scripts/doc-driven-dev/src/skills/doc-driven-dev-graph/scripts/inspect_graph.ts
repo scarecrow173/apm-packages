@@ -17,11 +17,14 @@ type CliArgs = {
   cwdExplicit: boolean;
   focus: string[];
   taskDir?: string;
+  run?: string;
+  stateRoot?: string;
+  allowExternalRoot: boolean;
   help: boolean;
 };
 
 function usage(): string {
-  return "Usage: node inspect_graph.js [--graph <path>] [--format json|mermaid] [--cwd <path>] [--focus <artifact>] [--task-dir <path>]";
+  return "Usage: node inspect_graph.js [--graph <path>] [--format json|mermaid] [--cwd <path>] [--focus <artifact>] [--task-dir <path>] [--run <run-id> [--state-root <path>] [--allow-external-root]]";
 }
 
 function requiredValue(argv: string[], index: number, option: string): string {
@@ -41,6 +44,7 @@ function parseArgs(argv: string[]): CliArgs {
     cwd: process.cwd(),
     cwdExplicit: false,
     focus: [],
+    allowExternalRoot: false,
     help: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -61,6 +65,14 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (arg === "--task-dir") {
       args.taskDir = requiredValue(argv, index, arg);
       index += 1;
+    } else if (arg === "--run") {
+      args.run = requiredValue(argv, index, arg);
+      index += 1;
+    } else if (arg === "--state-root") {
+      args.stateRoot = requiredValue(argv, index, arg);
+      index += 1;
+    } else if (arg === "--allow-external-root") {
+      args.allowExternalRoot = true;
     } else if (arg === "--help" || arg === "-h") {
       args.help = true;
     } else {
@@ -75,21 +87,24 @@ function run(args: CliArgs): void {
   const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
   const inspection = inspectGraphDefinition(definition);
   if (args.format === "mermaid") {
-    if (args.cwdExplicit || args.focus.length > 0 || args.taskDir !== undefined) {
-      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --task-dir");
+    if (args.cwdExplicit || args.focus.length > 0 || args.taskDir !== undefined || args.run !== undefined || args.stateRoot !== undefined) {
+      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --task-dir, --run, --state-root");
     }
     console.log(renderGraphMermaid(inspection));
     return;
   }
 
   const output: Record<string, unknown> = { definition: inspection };
-  const hasRuntimeSelector = args.cwdExplicit || args.focus.length > 0 || args.taskDir !== undefined;
+  const hasRuntimeSelector = args.cwdExplicit || args.focus.length > 0 || args.taskDir !== undefined || args.run !== undefined;
   if (hasRuntimeSelector) {
     const state = projectGraphState({
       cwd: args.cwd,
       graphId: definition.id,
       taskDir: args.taskDir,
       focus: args.focus,
+      runId: args.run,
+      stateRoot: args.stateRoot,
+      allowExternalRoot: args.allowExternalRoot,
     });
     if (args.focus.length > 0 && state.blockers.some((blocker) => blocker === "focus-invalid" || blocker === "focus-required")) {
       throw new Error(`Invalid focus: ${args.focus.join(", ")}`);

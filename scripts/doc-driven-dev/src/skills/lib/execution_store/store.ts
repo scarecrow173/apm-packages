@@ -286,7 +286,10 @@ function loadSnapshot(resolved: ResolvedRoot, runId: string): RunSnapshot {
     plan = { content, digest: sha256(content) };
   }
   const tasks = listRecordFiles(runDir, "tasks")
-    .map((file) => readRecord<TaskRecord>(file, validateTask, "task"));
+    .map((file) => readRecord<TaskRecord>(file, validateTask, "task"))
+    // `scope` validates as optional so foreign/older records still load;
+    // consumers always see the normalized empty declaration, never a hole.
+    .map((task) => task.scope === undefined ? { ...task, scope: [] } : task);
   const checkpoints = listRecordFiles(runDir, "checkpoints")
     .map((file) => readRecord<CheckpointRecord>(file, validateCheckpoint, "checkpoint"));
   const receipts = listRecordFiles(runDir, "receipts")
@@ -356,6 +359,7 @@ type CreateRunInput = {
     status?: TaskStatus;
     dependsOn?: string[];
     checks?: string[];
+    scope?: string[];
   }>;
 };
 
@@ -402,6 +406,9 @@ function validateTaskInputs(
     }
     if (input.checks !== undefined && !input.checks.every((check) => typeof check === "string")) {
       throw new StoreError("invalid-argument", `task ${input.taskId} checks must be strings`);
+    }
+    if (input.scope !== undefined && !input.scope.every((entry) => typeof entry === "string")) {
+      throw new StoreError("invalid-argument", `task ${input.taskId} scope entries must be strings`);
     }
   }
 }
@@ -463,6 +470,7 @@ function createRun(cwd: string, input: CreateRunInput = {}, options: StoreOption
         status: task.status ?? "todo",
         dependsOn: [...(task.dependsOn ?? [])].sort(),
         checks: [...(task.checks ?? [])].sort(),
+        scope: [...(task.scope ?? [])].sort(),
         version: 1,
         createdAt: stamp,
         updatedAt: stamp,
@@ -583,7 +591,7 @@ function updateTask(
   cwd: string,
   runId: string,
   taskId: string,
-  patch: { title?: string; status?: TaskStatus; dependsOn?: string[]; checks?: string[] },
+  patch: { title?: string; status?: TaskStatus; dependsOn?: string[]; checks?: string[]; scope?: string[] },
   options: StoreOptions & { expectedVersion?: number } = {},
 ): { task: TaskRecord; created: boolean } {
   if (!isValidId(taskId)) {
@@ -604,6 +612,7 @@ function updateTask(
         status: patch.status ?? ("todo" as TaskStatus),
         dependsOn: patch.dependsOn ?? [],
         checks: patch.checks ?? [],
+        scope: patch.scope ?? [],
       }];
       validateTaskInputs([candidate], existingIds, new Set());
       const record: TaskRecord = {
@@ -614,6 +623,7 @@ function updateTask(
         status: candidate.status,
         dependsOn: [...candidate.dependsOn].sort(),
         checks: [...candidate.checks].sort(),
+        scope: [...candidate.scope].sort(),
         version: 1,
         createdAt: stamp,
         updatedAt: stamp,
@@ -640,6 +650,7 @@ function updateTask(
       status: patch.status ?? current.status,
       dependsOn: patch.dependsOn ?? current.dependsOn,
       checks: patch.checks ?? current.checks,
+      scope: patch.scope ?? current.scope,
     };
     // Deps validate against the sibling set MINUS the task itself — a task
     // that depended on nothing else still cannot self-loop through a patch.
@@ -652,6 +663,7 @@ function updateTask(
       status: candidate.status,
       dependsOn: [...candidate.dependsOn].sort(),
       checks: [...candidate.checks].sort(),
+      scope: [...candidate.scope].sort(),
       version: current.version + 1,
       updatedAt: stamp,
     };

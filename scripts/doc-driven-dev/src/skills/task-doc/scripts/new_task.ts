@@ -45,7 +45,10 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--depends-on <task>] [--blocks <task>] [--verified-by <test-spec>] [--dir <path>] [--name <filename>] [--status <status>]";
+  // Registry 3: `task` is execution-bound, so the script refuses at the
+  // registry gate before any creation flag matters — the relation/dir
+  // options of the pre-v3 contract are not advertised here.
+  return "Usage: node scripts/new_task.js --title <title> [--name <filename>] [--status <status>]";
 }
 
 function main(): void {

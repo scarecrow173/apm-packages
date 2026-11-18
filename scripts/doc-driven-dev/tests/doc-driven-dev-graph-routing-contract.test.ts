@@ -17,6 +17,13 @@ import matter from "gray-matter";
 import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 import { projectGraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
 import { evaluateRouteDecision, routeGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
+import {
+  approvePlan,
+  createRun,
+  initStateRoot,
+} from "../src/skills/lib/execution_store";
+
+const RUN_ID = "RUN-0001";
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): void {
   const file = path.join(repo, relativePath);
@@ -64,6 +71,24 @@ function fixtureRepo(statuses: TaskStatus[] = ["todo"], dependsOn: string[][] = 
       },
     }, "# Task\n\n## Verification\n\n- [ ] node --test\n");
   });
+  // The task graph projects exactly one Execution Store run (Issue #237):
+  // the corpus docs above stay as migration-era inventory while the run's
+  // plan.md + task records carry execution truth. The manifest focus sits
+  // inside the spec/adr/design chain so implicit selection finds it.
+  initStateRoot(repo);
+  createRun(repo, {
+    runId: RUN_ID,
+    graphId: "doc-driven-dev",
+    focus: ["docs/designs/0001-graph.md"],
+    plan: "# Plan\n\nStore-managed run plan.\n",
+    tasks: statuses.map((status, index) => ({
+      taskId: `TASK-${String(index + 1).padStart(4, "0")}`,
+      title: `TASK-${String(index + 1).padStart(4, "0")}`,
+      status,
+      dependsOn: dependsOn[index],
+    })),
+  });
+  approvePlan(repo, RUN_ID, { actor: "routing-contract" });
   return repo;
 }
 
@@ -82,9 +107,11 @@ function stateFor(repo: string, signals: string[] = []): GraphState {
   });
 }
 
-test("projects the selected plan and its task graph", () => {
+test("projects the selected run and its task graph", () => {
   const state = stateFor(fixtureRepo(["todo", "done"], [[], []]));
-  assert.equal(state.taskGraph?.plan, "docs/plans/0001-graph.md");
+  assert.equal(state.taskGraph?.plan?.path, `runs/${RUN_ID}/plan.md`);
+  assert.equal(state.taskGraph?.plan?.approved, true);
+  assert.equal(state.run?.runId, RUN_ID);
   assert.deepEqual(state.taskGraph?.runnable, ["TASK-0001"]);
   assert.equal(state.gates.planning.status, "pass");
 });

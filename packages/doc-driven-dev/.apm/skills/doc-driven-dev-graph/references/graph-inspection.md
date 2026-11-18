@@ -11,7 +11,8 @@ Inspect the selected definition as JSON or Mermaid:
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
   [--graph <path>] [--format json|mermaid] [--cwd <path>] \
-  [--focus <artifact>] [--task-dir <path>]
+  [--focus <artifact>] [--task-dir <path>] \
+  [--run <run-id> [--state-root <path>] [--allow-external-root]]
 ```
 
 Explain one route decision with the ordinary route preserved in an envelope:
@@ -108,7 +109,7 @@ and invoke the next turn.
 ## Runtime projection inclusion
 
 The JSON inspection includes only `definition` by default. Supplying any
-runtime selector (`--cwd`, `--focus`, or `--task-dir`) adds `state`,
+runtime selector (`--cwd`, `--focus`, `--task-dir`, or `--run`) adds `state`,
 `artifactGraph`, and `taskGraph` from a fresh projection. The projection is
 read-only; it does not route, dispatch a delegate, or create a parallel state
 store. An explicit focus that resolves to an invalid or required focus fails
@@ -119,7 +120,17 @@ symlinked directory cannot point outside. `--task-dir` is a recursive scan
 root: `.` scans the entire checkout including `node_modules`/`.git`, so keep
 it a focused directory.
 
-Mermaid is definition-only and rejects `--cwd`, `--focus`, and `--task-dir`.
+`--run` selects the Execution Store run the `taskGraph` projection reads; it
+is explicit, never guessed. `--state-root` overrides the store root and
+`--allow-external-root` authorizes a root outside the checkout — both are
+validated once at the shared store boundary. Without `--run` the projection
+selects implicitly only when exactly one active run is bound to the graph;
+zero candidates leave `taskGraph` null and several fail closed as ambiguous
+(`task-graph-run-ambiguous`). A corrupt store blocks selection outright
+(`task-graph-run-unreadable`).
+
+Mermaid is definition-only and rejects `--cwd`, `--focus`, `--task-dir`,
+`--run`, and `--state-root`.
 JSON accepts these selectors for runtime projection.
 
 ## Mermaid output

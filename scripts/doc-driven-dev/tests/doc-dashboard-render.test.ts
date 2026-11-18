@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
 
-import type { DashboardSnapshot, InventoryItem } from "../src/skills/doc-driven-dev-graph/scripts/lib/dashboard_model";
+import type { DashboardSnapshot, InventoryItem, RunView } from "../src/skills/doc-driven-dev-graph/scripts/lib/dashboard_model";
+import type { TaskGraphNode, TaskGraphResult } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 import { renderDashboard, escapeHtml } from "../src/skills/doc-driven-dev-graph/scripts/lib/dashboard_render";
 import { renderExecutionSvg } from "../src/skills/doc-driven-dev-graph/scripts/lib/dashboard_svg";
 import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
@@ -18,6 +19,28 @@ function item(pathValue: string, status: string | null, extra: Partial<Inventory
   };
 }
 
+/** A run-scoped graph fixture node — record fields the v3 projection carries. */
+function node(id: string, status: TaskGraphNode["status"], extra: Partial<TaskGraphNode> = {}): TaskGraphNode {
+  return {
+    id, path: `runs/run-0001/tasks/${id}.json`, title: id, status,
+    dependsOn: [], blocks: [], scope: [], version: 1, ...extra,
+  };
+}
+
+function runView(runId: string, nodes: TaskGraphNode[], extra: Partial<TaskGraphResult> = {}): RunView {
+  return {
+    runId,
+    status: "active",
+    graph: {
+      schemaVersion: 2, runId,
+      plan: { path: `runs/${runId}/plan.md`, digest: "a".repeat(64), approved: true },
+      nodes, edges: [], runnable: [], active: [], resumableActive: [],
+      completed: [], blocked: [], issues: [],
+      ...extra,
+    },
+  };
+}
+
 function snapshot(inventory: InventoryItem[] = []): DashboardSnapshot {
   return {
     schemaVersion: 1,
@@ -29,11 +52,11 @@ function snapshot(inventory: InventoryItem[] = []): DashboardSnapshot {
     state: {
       schemaVersion: 2, graphId: definition.graphId, cwd: "C:/secret/repository", taskDir: "docs/tasks",
       focus: [], artifactGraph: { nodes: [], edges: [], issues: [] }, gates: {}, signals: [],
-      blockers: [], hardBlockers: [], taskGraph: null,
+      blockers: [], hardBlockers: [], taskGraph: null, run: null,
     },
     decision: null,
     inventory,
-    plans: [], findings: [],
+    runs: [], findings: [],
     health: {
       documents: inventory.length, blocking: 0, warnings: 0, infos: 0, categories: [],
       orphans: { total: 0, byRule: {}, byType: {} },
@@ -136,21 +159,15 @@ test("attention section aggregates hard blockers, blocking findings, and task gr
     ruleId: "broken-relation-link", category: "relation", severity: "error", blocking: true,
     path: "docs/specs/a.md", line: 12, artifactId: null, message: "missing target", target: null, repair: "manual",
   }];
-  value.plans = [{
-    path: "docs/plans/p.md", status: "in-progress",
-    graph: {
-      schemaVersion: 1, plan: "docs/plans/p.md",
-      nodes: [{ id: "A", path: "docs/tasks/a.md", status: "todo", dependsOn: [], blocks: [] }],
-      edges: [], runnable: [], active: [], resumableActive: [], completed: [], blocked: [],
-      issues: [{ code: "task-cycle", message: "cycle detected", tasks: ["A"] }],
-    },
-  }];
+  value.runs = [runView("run-0001", [node("A", "todo")], {
+    issues: [{ code: "task-cycle", message: "cycle detected", tasks: ["A"] }],
+  })];
   const html = renderDashboard(value);
   assert.match(html, /class="attention attention-active"/);
   assert.match(html, /進行を止めている項目を種別ごとに集約します（3 件）/);
   assert.match(html, /<h3>hard blockers <span class="lane-count"[^>]*>1<\/span><\/h3><ul class="issue-list"><li class="issue-row"><span class="issue-main"><span class="issue-dot"[^>]*><\/span><span class="issue-msg">進行対象（focus）の指定が必要です<\/span><\/span><span class="issue-meta"><span class="issue-tag">focus-required<\/span><\/span><\/li>/);
   assert.match(html, /<h3>blocking findings <span class="lane-count"[^>]*>1<\/span><\/h3><ul class="issue-list"><li class="issue-row"><span class="issue-main"><span class="issue-dot"[^>]*><\/span><span class="issue-msg">missing target<\/span><\/span><span class="issue-meta"><span class="issue-tag">relation · broken-relation-link<\/span><code class="issue-loc">docs\/specs\/a\.md:12<\/code><span class="issue-repair repair-manual">手動<\/span><\/span><\/li>/);
-  assert.match(html, /<h3>task graph issues <span class="lane-count"[^>]*>1<\/span><\/h3><ul class="issue-list"><li class="issue-row"><span class="issue-main"><span class="issue-dot"[^>]*><\/span><span class="issue-msg">cycle detected<\/span><\/span><span class="issue-meta"><span class="issue-tag">task-cycle<\/span><code class="issue-loc">docs\/plans\/p\.md<\/code><span class="issue-sub">tasks: A<\/span><\/span><\/li>/);
+  assert.match(html, /<h3>task graph issues <span class="lane-count"[^>]*>1<\/span><\/h3><ul class="issue-list"><li class="issue-row"><span class="issue-main"><span class="issue-dot"[^>]*><\/span><span class="issue-msg">cycle detected<\/span><\/span><span class="issue-meta"><span class="issue-tag">task-cycle<\/span><span class="issue-sub">run-0001<\/span><span class="issue-sub">tasks: A<\/span><\/span><\/li>/);
   assert.match(html, /<h3>route blocked <span class="lane-count"[^>]*>0<\/span><\/h3><p class="empty">なし<\/p>/);
   assert.match(html, /<details open><summary>findings \(1 \/ blocking 1\)<\/summary>/);
 });
@@ -190,25 +207,20 @@ test("document free-text search is limited to id, title, and path", () => {
   assert.match(html, /dataset\.searchText\|\|''\)\.toLocaleLowerCase\(\)\.includes\(query\)/);
 });
 
-test("task cards surface readiness badges and fold plan membership details", () => {
+test("task cards surface readiness badges and fold run membership details", () => {
   const value = snapshot([item("docs/tasks/a.md", "todo"), item("docs/tasks/b.md", "blocked")]);
-  value.plans = [{
-    path: "docs/plans/p.md", status: "in-progress",
-    graph: {
-      schemaVersion: 1, plan: "docs/plans/p.md",
-      nodes: [
-        { id: "A", path: "docs/tasks/a.md", status: "todo", dependsOn: [], blocks: ["B"] },
-        { id: "B", path: "docs/tasks/b.md", status: "blocked", dependsOn: ["A"], blocks: [] },
-      ],
-      edges: [{ from: "A", to: "B" }], runnable: ["A"], active: [], resumableActive: ["A"],
-      completed: [], blocked: [{ id: "B", reasons: ["dependency:A"] }], issues: [],
-    },
-  }];
+  value.runs = [runView("run-0001", [
+    node("A", "todo", { blocks: ["B"] }),
+    node("B", "blocked", { dependsOn: ["A"] }),
+  ], {
+    edges: [{ from: "A", to: "B" }], runnable: ["A"], resumableActive: ["A"],
+    blocked: [{ id: "B", reasons: ["dependency:A"] }],
+  })];
   const html = renderDashboard(value);
   assert.match(html, /badge-runnable">runnable</);
   assert.match(html, /badge-resumable">resumable</);
   assert.match(html, /badge-blocked">blocked</);
-  assert.match(html, /<details class="membership-details"><summary>plan \/ 依存 \(1\)<\/summary><ul class="membership-list">/);
+  assert.match(html, /<details class="membership-details"><summary>run \/ 依存 \(1\)<\/summary><ul class="membership-list">/);
 });
 
 test("standalone HTML escapes content and stays offline", () => {
@@ -285,30 +297,27 @@ test("repository-wide and selected focus task summaries are explicitly distinct"
     item("docs/tasks/b2.md", "todo"),
     item("docs/tasks/b3.md", "wont-do"),
   ]);
-  value.requested.focus = ["docs/plans/a.md"];
-  value.state.focus = ["docs/plans/a.md"];
+  value.requested.focus = ["docs/designs/a.md"];
+  value.state.focus = ["docs/designs/a.md"];
   value.state.taskGraph = {
-    schemaVersion: 1, plan: "docs/plans/a.md",
+    schemaVersion: 2, runId: "run-a",
+    plan: { path: "runs/run-a/plan.md", digest: "a".repeat(64), approved: true },
     nodes: [
-      { id: "A1", path: "docs/tasks/a1.md", status: "done", dependsOn: [], blocks: [] },
-      { id: "A2", path: "docs/tasks/a2.md", status: "todo", dependsOn: [], blocks: [] },
+      node("A1", "done"),
+      node("A2", "todo"),
     ],
     edges: [], runnable: ["A2"], active: [], resumableActive: [], completed: ["A1"], blocked: [], issues: [],
   };
-  value.plans = [
-    { path: "docs/plans/a.md", status: "in-progress", graph: value.state.taskGraph },
-    { path: "docs/plans/b.md", status: "in-progress", graph: {
-      ...value.state.taskGraph, plan: "docs/plans/b.md",
-      nodes: [
-        { id: "B1", path: "docs/tasks/b1.md", status: "todo", dependsOn: [], blocks: [] },
-        { id: "B2", path: "docs/tasks/b2.md", status: "todo", dependsOn: [], blocks: [] },
-        { id: "B3", path: "docs/tasks/b3.md", status: "wont-do", dependsOn: [], blocks: [] },
-      ], completed: [], runnable: ["B1", "B2"],
-    } },
+  value.runs = [
+    runView("run-a", [
+      node("B1", "todo"),
+      node("B2", "todo"),
+      node("B3", "wont-do"),
+    ], { runnable: ["B1", "B2"] }),
   ];
   const html = renderDashboard(value);
   assert.match(html, /リポジトリ全体[\s\S]*<dt>残存<\/dt><dd>3<\/dd>[\s\S]*<dt>対応しない<\/dt><dd>1<\/dd>/);
-  assert.match(html, /選択中の plan・focus[\s\S]*docs\/plans\/a\.md[\s\S]*<dt>残存<\/dt><dd>1<\/dd>[\s\S]*<dt>完了<\/dt><dd>1<\/dd>/);
+  assert.match(html, /選択中の run・focus[\s\S]*run-a[\s\S]*<dt>残存<\/dt><dd>1<\/dd>[\s\S]*<dt>完了<\/dt><dd>1<\/dd>/);
 });
 
 test("focus summary reports unselected or unresolved state without inference", () => {
@@ -342,22 +351,17 @@ test("blocked route preview is shown as supplied evidence", () => {
   assert.match(html, /explicit-signal/);
 });
 
-test("plans render declared status separately from DAG eligibility and every dependency edge", () => {
+test("runs render status separately from DAG eligibility and every dependency edge", () => {
   const value = snapshot();
-  value.plans = [{
-    path: "docs/plans/p.md", status: "draft",
-    graph: {
-      schemaVersion: 1, plan: "docs/plans/p.md",
-      nodes: [
-        { id: "TASK-A", path: "docs/tasks/a.md", status: "todo", dependsOn: [], blocks: ["TASK-B"] },
-        { id: "TASK-B", path: "docs/tasks/b.md", status: "blocked", dependsOn: ["TASK-A"], blocks: [] },
-      ],
-      edges: [{ from: "TASK-A", to: "TASK-B" }], runnable: ["TASK-A"], active: [], resumableActive: [],
-      completed: [], blocked: [{ id: "TASK-B", reasons: ["dependency:TASK-A"] }], issues: [],
-    },
-  }];
+  value.runs = [runView("run-0001", [
+    node("TASK-A", "todo", { blocks: ["TASK-B"] }),
+    node("TASK-B", "blocked", { dependsOn: ["TASK-A"] }),
+  ], {
+    edges: [{ from: "TASK-A", to: "TASK-B" }], runnable: ["TASK-A"],
+    blocked: [{ id: "TASK-B", reasons: ["dependency:TASK-A"] }],
+  })];
   const html = renderDashboard(value);
-  assert.match(html, /<code>docs\/plans\/p\.md<\/code> — <span class="status-pill status-draft">draft<\/span>/);
+  assert.match(html, /<code>run-0001<\/code> — <span class="status-pill status-active">active<\/span>/);
   assert.match(html, /<span class="status-pill status-todo">todo<\/span> <code>TASK-A<\/code>[\s\S]*<span class="badge badge-runnable">runnable<\/span>/);
   assert.match(html, /<span class="status-pill status-blocked">blocked<\/span> <code>TASK-B<\/code>[\s\S]*<span class="chip chip-danger">dependency:TASK-A<\/span>/);
   assert.match(html, /<span class="chip">TASK-A → TASK-B<\/span>/);
@@ -369,15 +373,11 @@ test("task board renders before graph with shared document links, empty lanes, a
       id: "<TASK-X>", title: "</article><script>alert(1)</script>", graphCovered: false,
     }),
   ]);
-  value.plans = [{
-    path: "docs/plans/<p>.md", status: "in-progress",
-    graph: {
-      schemaVersion: 1, plan: "docs/plans/<p>.md", nodes: [
-        { id: "OTHER-ID", path: "docs/tasks/hostile.md", status: "todo", dependsOn: ["<PRE>"], blocks: [] },
-      ], edges: [], runnable: [], active: [], resumableActive: [], completed: [],
-      blocked: [{ id: "OTHER-ID", reasons: ["dependency:<PRE>"] }], issues: [],
-    },
-  }];
+  value.runs = [runView("<run-1>", [
+    node("OTHER-ID", "todo", { dependsOn: ["<PRE>"] }),
+  ], {
+    blocked: [{ id: "OTHER-ID", reasons: ["dependency:<PRE>"] }],
+  })];
 
   const html = renderDashboard(value);
   assert.ok(html.indexOf('id="task-board"') < html.indexOf('id="graph"'));
@@ -435,14 +435,7 @@ test("done and wont-do lanes fold while active lanes stay expanded sections", ()
 
 test("cards expose readiness flags for filtering and lanes scroll internally", () => {
   const value = snapshot([item("docs/tasks/a.md", "todo")]);
-  value.plans = [{
-    path: "docs/plans/p.md", status: "in-progress",
-    graph: {
-      schemaVersion: 1, plan: "docs/plans/p.md",
-      nodes: [{ id: "A", path: "docs/tasks/a.md", status: "todo", dependsOn: [], blocks: [] }],
-      edges: [], runnable: ["A"], active: [], resumableActive: [], completed: [], blocked: [], issues: [],
-    },
-  }];
+  value.runs = [runView("run-0001", [node("A", "todo")], { runnable: ["A"] })];
   const html = renderDashboard(value);
   assert.match(html, /data-task-card[^>]*data-readiness="runnable"/);
   assert.match(html, /\.lane-cards\{min-height:0;overflow-y:auto/);
@@ -527,7 +520,7 @@ test("charts visualize task status, document buckets, coverage, and findings", (
   assert.match(html, /hbar-fill fill-draft/);
   assert.match(html, /class="gauge"/);
   assert.match(html, /gauge-fill/);
-  assert.match(html, /選択中の plan・focus/);
+  assert.match(html, /選択中の run・focus/);
 });
 
 test("backlog strip lists draft documents above the lanes inside the task board", () => {

@@ -3,10 +3,6 @@ import type { E2ECase } from "../harness/case_types";
 /**
  * approval-required yield on a delegate → pending edge → resume reuses audits.
  *
- * The fixture plan starts `status: "in-progress"` — a status that is both a
- * valid chain record and planning-gate-passing, so leg 1 reaches the yield
- * point (a non-chain status like "proposed" would leave the chain
- * unselectable, failing the briefing gate before the yield — verified live).
  * Leg 1 completes probe→briefing→design, then on `design-to-planning`
  * (destination `planning`: audits [design] + delegate planning-flow — the
  * only edge that both dispatches planning-flow and can carry a completed
@@ -14,28 +10,18 @@ import type { E2ECase } from "../harness/case_types";
  * pending edge saves the completed design audit.
  *
  * Leg 2 resumes by handoff (no `resume: false` — pending state threads
- * through): `mutateBefore` approves the plan — a REAL status change, but not
- * an input of the design audit, so the stored outcome's fingerprints stay
- * live — and the runner re-routes design-to-planning, skips the completed
- * audit (zero audit dispatches on the resumed edge — asserted edge-scoped,
- * since later edges legitimately dispatch their own audits), re-dispatches
- * only the delegate, and continues to terminal.
+ * through): `mutateBefore` re-approves the run's plan — a REAL store write
+ * (manifest revision bump), but not an input of the design audit, so the
+ * stored outcome's fingerprints stay live — and the runner re-routes
+ * design-to-planning, skips the completed audit (zero audit dispatches on
+ * the resumed edge — asserted edge-scoped, since later edges legitimately
+ * dispatch their own audits), re-dispatches only the delegate, and
+ * continues to terminal.
  */
 export const case04: E2ECase = {
   id: "e2e-04",
   description: "approval-required yield → pending edge resume → terminal",
-  fixture: {
-    taskStatuses: ["todo"],
-    files: {
-      "docs/plans/0001-graph.md": {
-        frontmatter: {
-          id: "PLAN-0001", type: "plan", status: "in-progress", title: "Graph",
-          relations: { "derives-from": ["DESIGN-0001"], "verified-by": ["docs/test-specs/0001-graph.md"] },
-        },
-        body: "# Graph\n",
-      },
-    },
-  },
+  fixture: { taskStatuses: ["todo"] },
   focus: ["PLAN-0001"],
   signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
   script: {
@@ -52,7 +38,7 @@ export const case04: E2ECase = {
     },
     "task-graph-to-implementation": {
       delegate: "completed",
-      mutate: [{ set: { path: "docs/tasks/0001-task.md", frontmatter: { status: "done" } } }],
+      mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
     "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
@@ -69,8 +55,9 @@ export const case04: E2ECase = {
       },
     },
     {
-      // The approval the yield was waiting for — applied between runs.
-      mutateBefore: [{ set: { path: "docs/plans/0001-graph.md", frontmatter: { status: "approved" } } }],
+      // The approval the yield was waiting for — applied between runs as a
+      // store write on the run's manifest (Issue #237), not a doc edit.
+      mutateBefore: [{ approve: {} }],
       expect: {
         yield: "terminal",
         edgeSequence: [
@@ -102,8 +89,12 @@ export const case04: E2ECase = {
       { kind: "run-yield", count: 2 },
     ],
     finalFiles: {
-      "docs/plans/0001-graph.md": { frontmatter: { status: "approved" } },
-      "docs/tasks/0001-task.md": { frontmatter: { status: "done" } },
+      // Corpus docs untouched — the run record is the task authority.
+      "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } },
+    },
+    run: {
+      planApproved: true,
+      tasks: { "TASK-0001": { status: "done" } },
     },
   },
 };

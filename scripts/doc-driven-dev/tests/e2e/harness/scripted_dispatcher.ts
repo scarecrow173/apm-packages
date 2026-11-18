@@ -32,8 +32,15 @@ import {
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/caller_runner";
 import type { GraphRoute } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 import type { DispatchMethod, ExecutionMode } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
-import { loadRun } from "../../../src/skills/lib/execution_store";
-import { commitAll, updateArtifact, VERIFICATION_DOC, writeArtifact } from "./fixture_manager";
+import type { TaskStatus } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
+import {
+  approvePlan,
+  loadRun,
+  savePlan,
+  updateRun,
+  updateTask,
+} from "../../../src/skills/lib/execution_store";
+import { commitAll, E2E_RUN_ID, updateArtifact, VERIFICATION_DOC, writeArtifact } from "./fixture_manager";
 
 // The primary task doc is the task-graph fallback input — canonical content,
 // not per-run bookkeeping (receipts/checkpoints live in the Execution Store).
@@ -47,7 +54,6 @@ const canonicalDocumentPaths = (taskDoc: string): string[] => [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
-  "docs/plans/0001-graph.md",
   "docs/test-specs/0001-graph.md",
   taskDoc,
   "docs/impl/ir/0001-task.md",
@@ -141,7 +147,16 @@ export type Mutator =
   | { write: { path: string; frontmatter?: Record<string, unknown>; body?: string } }
   | { set: { path: string; frontmatter: Record<string, unknown> } }
   | { append: { path: string; body: string } }
-  | { commit: true }; // commitAll(repo) — git inside the fixture repo only
+  | { commit: true } // commitAll(repo) — git inside the fixture repo only
+  // Execution Store mutators (Issue #237): the run's records are the task
+  // authority — a `task` mutator patches the record via updateTask (create
+  // or CAS-less write), `plan` re-saves plan.md (invalidating approvals
+  // bound to the old digest), `approve` binds the current digest, and
+  // `runFocus` rewrites the manifest's chain binding.
+  | { task: { taskId: string; title?: string; status?: TaskStatus; dependsOn?: string[]; checks?: string[]; scope?: string[] } }
+  | { plan: { content: string } }
+  | { approve: { actor?: string } }
+  | { runFocus: { focus: string[] } };
 
 /**
  * One adapter-internal sub-dispatch a composite delegate performs. This is
@@ -211,8 +226,8 @@ export type EdgeScript = {
   commitEvidence?: boolean;
 };
 
-/** Apply one document mutator inside the fixture repo. */
-export function applyMutator(repo: string, mutator: Mutator): void {
+/** Apply one mutator inside the fixture repo — document or store record. */
+export function applyMutator(repo: string, mutator: Mutator, runId: string = E2E_RUN_ID): void {
   if ("write" in mutator) {
     const { path: rel, frontmatter, body } = mutator.write;
     const file = path.join(repo, rel);
@@ -224,6 +239,18 @@ export function applyMutator(repo: string, mutator: Mutator): void {
     const file = path.join(repo, mutator.append.path);
     const parsed = matter(fs.readFileSync(file, "utf8"));
     fs.writeFileSync(file, matter.stringify(parsed.content + mutator.append.body, parsed.data), "utf8");
+  } else if ("task" in mutator) {
+    const { taskId, ...patch } = mutator.task;
+    // CAS read-modify-write: updates pin the record's current version,
+    // creates pass no expectation (the store refuses either misuse).
+    const current = loadRun(repo, runId).tasks.find((task) => task.taskId === taskId);
+    updateTask(repo, runId, taskId, patch, { expectedVersion: current?.version });
+  } else if ("plan" in mutator) {
+    savePlan(repo, runId, mutator.plan.content);
+  } else if ("approve" in mutator) {
+    approvePlan(repo, runId, { actor: mutator.approve.actor ?? "e2e" });
+  } else if ("runFocus" in mutator) {
+    updateRun(repo, runId, { focus: mutator.runFocus.focus });
   } else {
     commitAll(repo);
   }
@@ -353,9 +380,9 @@ function buildOutcome(
 }
 
 /**
- * The repo-relative path a mutator writes; `{commit:true}` touches no path.
- * Path-less mutators are unauthorized under any delegated scope — a commit
- * is caller-phase work no write scope can express.
+ * The repo-relative path a mutator writes; `{commit:true}` and the store
+ * mutators touch no repo path — store records are never writable repo
+ * scope, so a delegated sub-dispatch carrying one is refused outright.
  */
 function mutatorPath(mutator: Mutator): string | null {
   if ("write" in mutator) return mutator.write.path;

@@ -70,7 +70,7 @@ invocation ごとに 1 件、`artifact-scan` の後に出力されます。
 | `delegate`, `requiredAudits`, `commitGate` | `GraphRoute` から転記 |
 | `blockers` | `GraphRoute` の blocker。自由文を含む項目は `<kind>:sha256:<12hex>` トークンに正規化されます（後述） |
 | `focus` | 解決済みの repo 相対 focus path |
-| `tasks` | 選択された Task Graph node。`{ id, status }` は task front matter の識別子をそのまま転記する相関キーです |
+| `tasks` | 選択された Task Graph node。`{ id, status }` は run の task record の識別子をそのまま転記する相関キーです |
 | `routeHash` | 完全な `GraphRoute` を key ソートした JSON の sha256 |
 | `durationMs` | 任意の壁時計診断値。厳密一致で assert してはいけません |
 

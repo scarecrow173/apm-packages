@@ -3,22 +3,27 @@
 ## レポートの表示面
 
 コマンドはUTF-8の自己完結HTMLを一つ出力します。外部CSS、JavaScript、JSON、font、
-image、network、server、watchへの依存はありません。authorityはcanonical Markdown
-とGraph YAMLだけです。レポートは再生成可能なread-only snapshotで、収集時刻と生成時刻を記録します。
+image、network、server、watchへの依存はありません。authorityはcanonical Markdown、
+Graph YAML、Git管理外のExecution Storeだけです。レポートは再生成可能なread-only snapshotで、収集時刻と生成時刻を記録します。
 
 タスクの主画面は `#task-board` です。常設レーンは
 `data-kanban-lane="todo"`、`"in-progress"`、`"blocked"`、`"done"`、
 `"wont-do"` で、不正statusまたはparse errorのtaskには `unknown` レーンを表示します。
-カードは `data-task-card` とcanonical `data-task-path` で識別します。status、title、
-opaque ID、依存関係、所属plan、coverage、runnable / resumable の別の投影結果を示します。
+カードは `data-task-card` とcanonical `data-task-path` で識別します — run所属の
+task では、その path は state root 相対の record path
+`runs/<run-id>/tasks/<task-id>.json` です。status、title、
+opaque ID、依存関係、所属run、coverage、runnable / resumable の別の投影結果を示します。
 opaque IDの重複カードは統合しません。依存待ちtaskはcanonical statusのレーンに残ります。
-Graph、route preview、plan別task詳細、文書・relationリスト、diagnosticも残します。
+inventoryに残るレガシーのtask型Markdownは `no-run` / `graph-uncovered` の
+coverageカードとして表示します — 稼働中のstatusはコーパスファイルではなく
+run recordが持ちます。
+Graph、route preview、run別task詳細、文書・relationリスト、diagnosticも残します。
 
 diagnosticの手前に置く `#attention` セクションはhard blocker、route previewの
 blocked reason、blocking finding、task graph issueを種別ごとのパネルに分け、
 件数バッジ付きで集約します。空なら「進行を止める項目はありません」と表示します。
-カードのreadinessバッジはplan所属を
-またいだrunnable / resumable / blockedの集約で、plan別のmembership詳細は折り畳みます。
+カードのreadinessバッジはrun所属を
+またいだrunnable / resumable / blockedの集約で、run別のmembership詳細は折り畳みます。
 文書リストの自由検索は `data-search-text` のID・title・canonical pathだけに一致し、
 種別とstatusは専用selectに残ります。
 
@@ -48,8 +53,9 @@ required audit / blockerのラベル付き `.chip` 群（blockerは `chip-danger
 `gates` パネルは各gateをフロー順のstatusドット付きピル（pass / fail / blocked色、
 理由はtooltip）と `N/M pass` スコアで示します。Graph topology issueは存在する
 ときだけsignalsパネルにdanger chipとして表示し、node / edge / gateの検査表は
-キャンバスとパネルが同じ情報を持つため省略します。plan別 `<summary>` 行は
-plan status pillを持ちます。`#documents` のフィルタは
+キャンバスとパネルが同じ情報を持つため省略します。run別 `<summary>` 行は
+run status pillを持ちます — 1行が1つのExecution Store runで、それぞれが
+独自のtask graphを投影します。`#documents` のフィルタは
 ツールバー風の帯に置き、結果件数は等幅で示します。明細は `.row-list` の行アイテムと
 `.doc-row` カードで構成し、アクセント色のhoverと `:target` ハイライトを使います。
 `<table>` 要素は使いません。
@@ -60,7 +66,7 @@ plan status pillを持ちます。`#documents` のフィルタは
 レポートは監視dashboard風のチャート中心構成です。`#overview` はアクセントカラー付きの
 statパネル（tabular numeralsの大数字）を並べ、`#charts` はinlineパネルとして
 kanbanレーン色と一致したタスクstatusドーナツ、文書区分の横棒グラフ、graph coverageゲージ、
-findings severityの積み棒、選択中plan / focusのfactsを表示します。
+findings severityの積み棒、選択中run / focusのfactsを表示します。
 チャートはinline SVGまたはCSSのみで、`role="img"`、`<title>`、凡例リストで色以外でも読み取れます。
 
 `#task-board` はタスクの主画面として従来どおりです。その内部のkanbanレーン上段に
@@ -90,8 +96,8 @@ laneやstatusのセマンティックカラーだけ独自のlight / darkパレ�
 - 残存は有効な `todo`、`in-progress`、`blocked`。完了は `done` のみです。`wont-do` は
   別集計で有効taskの分母に含め、dependencyを満たしません。
 - 完了率は `done / validTaskTotal`。分母0は対象なしと表示し、不正またはparse不能なtaskは別に数えます。
-- repository全体のtaskはcanonical pathで重複排除します。plan viewでは所属planごとに表示できます。
-  orphanとgraph-uncovered taskも残します。
+- repository全体のtaskはcanonical pathで重複排除します。run viewでは所属runごとに表示できます。
+  orphan、no-run、graph-uncovered taskも残します。
 - `draft`、`proposed`、`capturing` は別のcanonical文書グループです。unmanaged Markdownのstatusは推測しません。
 - focusはfocus集計を変えますが、repository全体のinventoryやdraft件数を隠しません。曖昧なfocusは
   `focus-required` blockerとして残ります。

@@ -14,6 +14,22 @@ A task is a small, reviewable implementation slice linked to a plan, spec, ADR,
 or another task. A task should be narrow enough that one agent can complete and
 verify it without rediscovering the whole project context.
 
+## Execution Store Record
+
+A live task is a JSON record at
+`.apm/state/doc-driven-dev/runs/<run-id>/tasks/<taskId>.json`, written only
+through `execution_store.js put-task` CAS — never as a Git-tracked file:
+
+| Field | Contract |
+| --- | --- |
+| `taskId` | Run-scoped identity — the task is `(runId, taskId)`, never a global document id. |
+| `title` | Human-readable slice name. |
+| `status` | `todo` / `in-progress` / `blocked` / `done` / `wont-do` — the workflow axis in Status Values below. |
+| `dependsOn` | Sibling task ids in the same run that must reach `done` first; `blocks` is the derived reverse projection, never stored. |
+| `checks` | Machine-checkable done criteria — the `## Verification` contract below. |
+| `scope` | Declared write boundary — the `## Affected Files` contract below, read by the parallel-safety judgment. |
+| `version` | CAS counter — every `put-task` update carries the record's current value. |
+
 ## Directory
 
 If a repository already has a task or work-item directory, keep it. Do not move
@@ -174,13 +190,11 @@ Tasks should include:
 6. Verification command, test, or manual review.
 7. Notes about what is explicitly out of scope for this task.
 
-For a task to be eligible for parallel delegation, its `## Affected Files`
-entries must be path-verifiable file or directory paths. Free-form module or
-feature names are not verifiable and force serial execution. The scope check
-matches the canonical `Affected Files` heading or a declared localized alias
-(case-insensitive) — the ja template's `影響ファイル` is accepted — while a
-heading outside that fixed vocabulary still reads as undeclared scope and
-forces serial.
+For a task to be eligible for parallel delegation, its write-scope entries
+must be path-verifiable file or directory paths — the `scope` field on the
+Execution Store record (the `## Affected Files` section on pre-v3 corpus
+docs). Free-form module or feature names are not verifiable and force serial
+execution.
 
 Done criteria must be checkable. If a task cannot state its verification path,
 return to the plan or spec before starting implementation.

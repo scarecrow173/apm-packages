@@ -11,6 +11,15 @@ import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/
 import { evaluateRouteDecision } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 import { projectGraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
 import { buildTaskGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
+import {
+  approvePlan,
+  createRun,
+  initStateRoot,
+} from "../src/skills/lib/execution_store";
+import type { TaskStatus } from "../src/skills/lib/execution_store";
+
+const RUN_ID = "RUN-0001";
+const STATE_ROOT = ".apm/state/doc-driven-dev";
 
 test("draft inventory survives missing focus and incomplete bootstrap", async (t) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-collect-"));
@@ -66,8 +75,12 @@ for (const scenario of [
       }));
     };
     const planPath = "docs/plans/example.md";
+    // Durable plan/task Markdown stays in the corpus as history; the run's
+    // store records — never these documents — drive the task graph (#237).
     if (scenario !== "empty") {
-      write(planPath, { id: "PLAN-0001", type: "plan", status: "draft" });
+      // `in-progress` keeps the durable plan a valid chain member so the
+      // run's manifest focus can match this chain implicitly.
+      write(planPath, { id: "PLAN-0001", type: "plan", status: "in-progress" });
       write("docs/tasks/a.md", {
         id: "TASK-0001",
         type: "task",
@@ -113,18 +126,78 @@ for (const scenario of [
 
     const graphPath = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml");
     const definition = loadGraphDefinition(graphPath);
+
+    if (scenario !== "empty") {
+      // The Dynamic Task Graph reads ONE Execution Store run: records under
+      // the state root, approved plan.md, same-run task ids.
+      initStateRoot(cwd);
+      const taskStatus = (value: TaskStatus | undefined): TaskStatus | undefined => value;
+      const tasks = scenario === "cycle"
+        ? [
+          { taskId: "TASK-0001", dependsOn: ["TASK-0002"] },
+          { taskId: "TASK-0002", dependsOn: ["TASK-0001"] },
+        ]
+        : [
+          {
+            taskId: "TASK-0001",
+            status: taskStatus(scenario.startsWith("active") ? "in-progress" : "todo"),
+            dependsOn: ["TASK-0002"],
+          },
+          {
+            taskId: "TASK-0002",
+            status: taskStatus(scenario === "wont-do"
+              ? "wont-do"
+              : scenario === "active-waiting" ? "todo" : "done"),
+          },
+        ];
+      createRun(cwd, {
+        runId: RUN_ID,
+        graphId: definition.id,
+        focus: [planPath],
+        plan: "# Plan\n\nStore-managed plan for the run.\n",
+        tasks,
+      });
+      approvePlan(cwd, RUN_ID, { actor: "collector-test" });
+      if (scenario === "duplicate") {
+        // A second record file claiming TASK-0001 — the API refuses this
+        // write, so corrupt state is modeled as a raw record file.
+        const stamp = new Date().toISOString();
+        const recordFile = path.join(cwd, STATE_ROOT, "runs", RUN_ID, "tasks", "ZZZ-0001.json");
+        fs.writeFileSync(recordFile, `${JSON.stringify({
+          schemaVersion: 1,
+          runId: RUN_ID,
+          taskId: "TASK-0001",
+          title: "duplicate claim",
+          status: "todo",
+          dependsOn: [],
+          checks: [],
+          scope: [],
+          version: 1,
+          createdAt: stamp,
+          updatedAt: stamp,
+        }, null, 2)}\n`);
+      }
+    }
+
     const focus = scenario === "empty" ? [] : [planPath];
     const report = await collectDashboard({ cwd, graphPath, focus, signals: [], current: "task-graph" });
 
     assert.deepEqual(report.state, projectGraphState({ cwd, graphId: definition.id, focus, signals: [] }));
     assert.deepEqual(report.decision, evaluateRouteDecision({ current: "task-graph", definition, state: report.state }));
+    if (scenario !== "empty" && scenario !== "duplicate") {
+      // Exactly one active run bound to this graph's chain → implicit
+      // selection projects it without a --run selector. The duplicate
+      // scenario's corpus duplicate-id blocks chain selection instead.
+      assert.ok(report.state.taskGraph, `${scenario} run should be implicitly selected`);
+      assert.equal(report.state.run?.runId, RUN_ID);
+    }
     if (scenario !== "empty") {
-      const graph = report.plans.find((plan) => plan.path === planPath)?.graph;
+      const graph = report.runs.find((run) => run.runId === RUN_ID)?.graph;
       assert.ok(graph);
-      assert.ok(graph.nodes.length > 0, `${scenario} should exercise real task nodes`);
+      assert.ok(graph.nodes.length > 0, `${scenario} should exercise real task records`);
       assert.deepEqual(
         graph,
-        buildTaskGraph({ cwd, plan: planPath }),
+        buildTaskGraph({ cwd, runId: RUN_ID }),
       );
       if (scenario === "done") assert.deepEqual(graph.runnable, ["TASK-0001"]);
       if (scenario === "wont-do") assert.deepEqual(graph.runnable, []);
@@ -132,6 +205,8 @@ for (const scenario of [
       if (scenario === "active-waiting") assert.deepEqual(graph.resumableActive, []);
       if (scenario === "cycle") assert.ok(graph.issues.some((issue) => issue.code === "task-cycle"));
       if (scenario === "duplicate") assert.ok(graph.issues.some((issue) => issue.code === "duplicate-task-id"));
+    } else {
+      assert.equal(report.runs.length, 0);
     }
     if (scenario === "unmanaged") {
       assert.equal(report.inventory.find((row) => row.path.endsWith("raw.md"))?.kind, "unmanaged");

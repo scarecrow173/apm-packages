@@ -7072,7 +7072,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/new_task.js --title <title> [--plan <plan>] [--depends-on <task>] [--blocks <task>] [--verified-by <test-spec>] [--dir <path>] [--name <filename>] [--status <status>]";
+  return "Usage: node scripts/new_task.js --title <title> [--name <filename>] [--status <status>]";
 }
 function main() {
   try {

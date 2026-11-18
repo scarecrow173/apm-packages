@@ -28,6 +28,7 @@ import type {
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 import { loadRun } from "../../../src/skills/lib/execution_store";
 import type { CheckpointRecord } from "../../../src/skills/lib/execution_store";
+import { E2E_RUN_ID } from "./fixture_manager";
 const TSX_CLI = path.resolve(__dirname, "../../../node_modules/tsx/dist/cli.mjs");
 const BRIEFING_AUDIT = path.resolve(__dirname, "../../../src/skills/briefing-flow/scripts/audit_briefing.ts");
 
@@ -98,6 +99,17 @@ export type CaseExpect = {
   tasksContain?: { edgeId: string; id: string; status: string }[];
   /** End-of-run repo state — re-read from disk at validation time. */
   finalFiles?: Record<string, { frontmatter?: Record<string, unknown>; bodyIncludes?: string[] }>;
+  /**
+   * End-of-run Execution Store assertions (Issue #237): task-record fields
+   * and the digest-bound approval are re-loaded from the run — the same
+   * authority the graph projects from.
+   */
+  run?: {
+    runId?: string;
+    tasks?: Record<string, { status?: string; title?: string }>;
+    planApproved?: boolean;
+    planDigest?: string;
+  };
   /** Pair audit via the real CLI; step expectations run immediately after that leg. */
   briefingAudit?: { spec: string; adr: string; consistent: boolean };
   /** Counts of persisted edge checkpoints in the run's Execution Store. */
@@ -283,6 +295,33 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
       if (!parsed.content.includes(needle)) {
         failures.push(`finalFiles ${rel}: body missing substring ${JSON.stringify(needle)}`);
       }
+    }
+  }
+  if (expect.run !== undefined) {
+    const runId = expect.run.runId ?? E2E_RUN_ID;
+    try {
+      const snapshot = loadRun(run.repo, runId);
+      for (const [taskId, spec] of Object.entries(expect.run.tasks ?? {})) {
+        const record = snapshot.tasks.find((task) => task.taskId === taskId);
+        if (!record) {
+          failures.push(`run ${runId}: task ${taskId} missing`);
+          continue;
+        }
+        if (spec.status !== undefined && record.status !== spec.status) {
+          failures.push(`run ${runId} task ${taskId}: status expected ${spec.status}, got ${record.status}`);
+        }
+        if (spec.title !== undefined && record.title !== spec.title) {
+          failures.push(`run ${runId} task ${taskId}: title expected ${JSON.stringify(spec.title)}, got ${JSON.stringify(record.title)}`);
+        }
+      }
+      if (expect.run.planApproved !== undefined && snapshot.planApproved !== expect.run.planApproved) {
+        failures.push(`run ${runId}: planApproved expected ${expect.run.planApproved}, got ${snapshot.planApproved}`);
+      }
+      if (expect.run.planDigest !== undefined && snapshot.plan?.digest !== expect.run.planDigest) {
+        failures.push(`run ${runId}: planDigest expected ${expect.run.planDigest}, got ${snapshot.plan?.digest ?? "null"}`);
+      }
+    } catch (error) {
+      failures.push(`run ${runId}: failed to load run — ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   if (expect.briefingAudit) {

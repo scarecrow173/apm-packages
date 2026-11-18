@@ -29,7 +29,7 @@ export const case02: E2ECase = {
     },
     "task-graph-to-implementation": {
       delegate: "completed",
-      mutate: [{ set: { path: "docs/tasks/0001-task.md", frontmatter: { status: "done" } } }],
+      mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
     "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
@@ -49,7 +49,7 @@ export const case02: E2ECase = {
     {
       // Fresh run on the same trace — NOT a resume (blocked runs carry no
       // pending state). All runner options apply again; only focus changes.
-      options: { resume: false, focus: ["PLAN-0001"] },
+      options: { resume: false, focus: ["DESIGN-0001"] },
       expect: {
         yield: "terminal",
         edgeSequence: [
@@ -76,6 +76,10 @@ export const case02: E2ECase = {
       { kind: "route-selected", count: 10 }, // whole-run: 1 blocked (leg 1) + 8 edges + 1 terminal (leg 2)
       { kind: "run-yield", count: 2 },
     ],
-    finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "done" } } },
+    finalFiles: {
+      // Corpus doc untouched — the run record is the task authority.
+      "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } },
+    },
+    run: { tasks: { "TASK-0001": { status: "done" } } },
   },
 };

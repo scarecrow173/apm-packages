@@ -1,45 +1,47 @@
 ---
 name: planning-flow
-description: Use when doc-driven-dev-graph returns a GraphRoute with delegate planning-flow after a focused approved design needs an implementation-ready plan and concrete task documents.
+description: Use when doc-driven-dev-graph returns a GraphRoute with delegate planning-flow after a focused approved design needs an implementation-ready run plan and concrete task records.
 license: MIT
 ---
 
 # Planning Flow
 
 `planning-flow` is the graph-only composition boundary between an approved
-design and its plan/task evidence. Direct user requests still use `plan-doc`
-or `task-doc`.
+design and its plan/task evidence.
 
 Under Document Registry 3 `plan` and `task` are execution-bound
-(`persistence: ephemeral`) — `new_plan.js` and `new_task.js` refuse durable
-Git writes at the registry gate, and plan/task state lives in the Execution
-Store. `test-spec` is a legacy migration-only format; durable verification
-evidence is recorded by `verification-doc` under `docs/verification`. The
-steps below describe the Execution Store record contract and the pre-v3
-document shape migration tooling reads.
+(`persistence: ephemeral`): `new_plan.js`/`new_task.js` refuse at the
+registry gate and plan/task state lives in the Execution Store run the
+graph selected; the `plan-doc`/`task-doc` conventions govern the record
+contract and pre-v3 corpus migration. `test-spec` is a legacy
+migration-only format — durable verification evidence is recorded by
+`verification-doc` under `docs/verification`.
 
 ## Workflow
 
 1. Accept the invocation only when the returned `GraphRoute.delegate` is
    `planning-flow`.
 2. Consume the selected approved design and its exact focused lineage.
-3. Invoke `plan-doc` to create or repair one implementation-ready plan.
-4. If the plan awaits review, return `EffectOutcome` `yield` with
-   `approval-required` and create no test specs or tasks.
-5. After the plan status is `approved`, `in-progress`, or `completed`, invoke
-   `test-spec-doc` once per verifiable behavior declared by the approved
-   spec/design, before task breakdown, and link each test spec from the plan's
-   `relations.verified-by`. Skip this step only when the plan declares no
-   verifiable behavior change, and record the reason as `test-spec-skip`
-   under `relations:` in the plan front matter (a reason string, not a
-   relation target).
-6. Invoke `task-doc` once per concrete plan slice, preserving declared
-   dependencies, and link each task to the test specs it satisfies via
-   `relations.verified-by`.
-7. Return one exact `EffectOutcome` for `planning-flow` with the current design
-   input and plan/test-spec/task evidence.
-8. Let the graph re-project; do not call `build_task_graph` or choose the next
-   edge inside `planning-flow`.
+3. Open or create the Execution Store run bound to the focused chain with
+   `execution_store.js` (`create` / `show`) — one run owns this planning
+   unit's `plan.md` and task records, and `manifest.focus` carries the
+   artifact paths inside the focused chain.
+4. Write or repair the implementation-ready plan into the run's `plan.md`
+   with `save-plan`. If the plan awaits review, return `EffectOutcome`
+   `yield` with `approval-required` and create no task records.
+5. After `approve-plan` binds the current plan digest, materialize one task
+   record per concrete plan slice with `put-task`: `taskId`, `title`,
+   `status`, same-run `dependsOn` ids, the verifiable `checks` the slice
+   must pass, and the `scope` entries declaring its write boundary. New
+   records create with `expectedVersion: 0` (or omitted); updates carry the
+   record's current CAS `version`.
+6. Return one exact `EffectOutcome` for `planning-flow` with the current
+   design input and the run's plan/task evidence (the store paths
+   `runs/<run-id>/plan.md` and `runs/<run-id>/tasks/<task-id>.json`).
+7. Let the graph re-project; do not call `build_task_graph` or choose the
+   next edge inside `planning-flow`. A plan edited after approval makes the
+   recorded digest diverge — the task graph fails closed until
+   `approve-plan` binds the new digest.
 
 **Staged loading:** this subgraph consumes no `.sdp` profile — apply the same
 discipline by loading each invoked document skill's body at its dispatch step
@@ -53,8 +55,8 @@ When `doc-driven-dev-graph` invokes this skill, return exactly the
 The footer defines the required `edgeId`, stage, effect identity, authoritative
 input scope, evidence, proof, and yield fields.
 
-Use `completed` for an approved or active plan with linked test-spec/task evidence,
-`retry` for changed canonical plan/test-spec/task repair evidence, `yield` with
+Use `completed` for a digest-approved run plan with materialized task records,
+`retry` for changed plan/task repair evidence, `yield` with
 `approval-required` while plan review is pending, `yield` with `input-required` when a
 user-owned planning choice is missing, and `yield` with `unrecoverable-blocker` when no
 declared safe repair exists.

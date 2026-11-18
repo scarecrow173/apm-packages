@@ -11,7 +11,8 @@ authority は Graph Definition です。
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
   [--graph <path>] [--format json|mermaid] [--cwd <path>] \
-  [--focus <artifact>] [--task-dir <path>]
+  [--focus <artifact>] [--task-dir <path>] \
+  [--run <run-id> [--state-root <path>] [--allow-external-root]]
 ```
 
 通常 route を envelope に保持したまま 1 回の route 判断を説明します:
@@ -107,7 +108,7 @@ Execution Store に保存してから次の turn を呼び出します。
 ## Runtime projection の包含
 
 JSON inspection は既定では `definition` だけを含みます。runtime selector（`--cwd`、
-`--focus`、`--task-dir` のいずれか）を渡すと、新しい projection の `state`、
+`--focus`、`--task-dir`、`--run` のいずれか）を渡すと、新しい projection の `state`、
 `artifactGraph`、`taskGraph` が追加されます。projection は read-only で、route、delegate
 dispatch、並行 state store の作成を行いません。明示的 focus が invalid または required
 に解決される場合は推測せず fail-closed になります。checkout 外に解決される
@@ -117,7 +118,17 @@ dispatch、並行 state store の作成を行いません。明示的 focus が 
 `--task-dir` は再帰的な scan root です — `.` は `node_modules`/`.git` を
 含む checkout 全体を走査するため、focused な directory に保ってください。
 
-Mermaid format は definition-only であり、`--cwd`、`--focus`、`--task-dir` を拒否します。
+`--run` は `taskGraph` projection が読み取る Execution Store run を選択します —
+明示的で、推測されません。`--state-root` は store root を上書きし、
+`--allow-external-root` は checkout 外に解決される root を許可します —
+どちらも共有 store boundary で一度だけ validate されます。`--run` がない場合、
+graph に bind された active run がちょうど 1 つのときだけ暗黙に選択します。
+候補が 0 なら `taskGraph` は null のまま、複数なら ambiguous として
+fail closed します（`task-graph-run-ambiguous`）。store が壊れている場合は
+selection 自体が block されます（`task-graph-run-unreadable`）。
+
+Mermaid format は definition-only であり、`--cwd`、`--focus`、`--task-dir`、
+`--run`、`--state-root` を拒否します。
 JSON はこれらの selector を runtime projection 用に受け付けます。
 
 ## Mermaid output

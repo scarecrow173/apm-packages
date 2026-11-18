@@ -1,18 +1,48 @@
-#!/usr/bin/env node
+"use strict";
 
-import fs from "node:fs";
+// Dynamic Task Graph (Issue #237) — a deterministic, read-only projection
+// of one Execution Store run (`#236`). The v2 input (a plan Markdown path
+// plus a `--task-dir` scan of task documents) is retired: `plan` and `task`
+// are execution-bound under Document Registry 3, so the projection reads
+// the run's `plan.md` approval and `tasks/<id>.json` records — never
+// durable Markdown, never another run's records.
+//
+// Task identity is (runId, taskId): `dependsOn` entries are sibling task
+// ids inside the same run (the write boundary already rejects cross-run
+// spellings), and the projection never mixes runs — a caller selects the
+// run, the graph follows only that run's records.
+//
+// Graph-gate semantics preserved from v2:
+//   - runnable: `todo` tasks whose predecessors are all `done`;
+//   - active: every `in-progress` task;
+//   - resumableActive: `in-progress` tasks whose predecessors are all `done`;
+//   - `wont-do` never satisfies a dependency;
+//   - fail closed: ANY issue (plan gate, duplicates, dangling refs, cycles,
+//     empty selection) empties runnable and resumableActive.
+//
+// New for v3 — the approval gate is part of the projection: a run whose
+// `plan.md` is absent or whose approval does not bind the CURRENT digest
+// (plan changed after approval → digest drift → re-approval required, or
+// plan.md edited outside the store API → drift flagged outright) reports
+// `plan-not-approved` and fails closed, so no route can reach task
+// execution before approval.
+
 import path from "node:path";
-import matter from "gray-matter";
 
-import { isInside, isInsideCheckout, repoPathKey, resolveContainedTaskDir } from "./artifact_graph";
+import {
+  loadRun,
+  type RunSnapshot,
+  type TaskRecord,
+  type TaskStatus,
+} from "../../../lib/execution_store";
 
-/** Lifecycle statuses accepted by task-doc. */
-export type TaskStatus = "todo" | "in-progress" | "blocked" | "done" | "wont-do";
+export type { TaskStatus };
 
 export type BuildTaskGraphOptions = {
   cwd: string;
-  plan: string;
-  taskDir?: string;
+  runId: string;
+  stateRoot?: string;
+  allowExternalRoot?: boolean;
 };
 
 export type TaskGraphEdge = {
@@ -21,10 +51,13 @@ export type TaskGraphEdge = {
 };
 
 export type TaskGraphIssueCode =
+  | "plan-missing"
+  | "plan-not-approved"
+  | "plan-digest-drift"
+  | "plan-has-no-tasks"
   | "duplicate-task-id"
   | "missing-task-reference"
-  | "task-cycle"
-  | "plan-has-no-tasks";
+  | "task-cycle";
 
 export type TaskGraphIssue = {
   code: TaskGraphIssueCode;
@@ -32,35 +65,36 @@ export type TaskGraphIssue = {
   tasks: string[];
 };
 
-type InternalIssue = {
-  code: string;
-  message: string;
-  tasks?: string[];
-  task?: string;
-  reference?: string;
-  file?: string;
-};
-
-export type TaskNode = {
-  id: string;
-  status: TaskStatus;
-  file: string;
-  implements: string[];
-  dependsOn: string[];
-  blocks: string[];
-};
-
 export type TaskGraphNode = {
   id: string;
+  // State-root-relative record path (`runs/<run-id>/tasks/<id>.json`) — the
+  // task's store identity, never a Git-tracked document path.
   path: string;
+  title: string;
   status: TaskStatus;
   dependsOn: string[];
+  // Derived — every sibling whose dependsOn includes this task. v2 carried
+  // an explicit `blocks` relation; the record DAG declares the same
+  // information once, so blocks is the reverse projection of dependsOn.
   blocks: string[];
+  // Declared write-scope entries — the authority the parallel-scope
+  // judgment compares against.
+  scope: string[];
+  // The record's CAS version at projection time — evidence refs pin it.
+  version: number;
+};
+
+export type TaskGraphPlan = {
+  // State-root-relative `plan.md` path.
+  path: string;
+  digest: string;
+  approved: boolean;
 };
 
 export type TaskGraphResult = {
-  schemaVersion: 1;
-  plan: string;
+  schemaVersion: 2;
+  runId: string;
+  plan: TaskGraphPlan | null;
   nodes: TaskGraphNode[];
   edges: TaskGraphEdge[];
   runnable: string[];
@@ -71,30 +105,6 @@ export type TaskGraphResult = {
   issues: TaskGraphIssue[];
 };
 
-type ParsedTask = TaskNode & {
-  parseIssues: InternalIssue[];
-};
-
-type IndexedTasks = {
-  tasks: ParsedTask[];
-  byId: Map<string, ParsedTask>;
-  byPath: Map<string, ParsedTask>;
-  issues: InternalIssue[];
-};
-
-type ResolvedEdges = {
-  edges: TaskGraphEdge[];
-  issues: InternalIssue[];
-};
-
-const TASK_STATUSES = new Set<TaskStatus>([
-  "todo",
-  "in-progress",
-  "blocked",
-  "done",
-  "wont-do",
-]);
-
 function compareStrings(left: string, right: string): number {
   return left.localeCompare(right);
 }
@@ -103,295 +113,17 @@ function sortedUnique(values: Iterable<string>): string[] {
   return [...new Set(values)].sort(compareStrings);
 }
 
-/** Normalize a repository-relative path to stable POSIX notation. */
-export function normalizeRepoPath(cwd: string, target: string): string {
-  const absolute = path.resolve(cwd, target);
-  return path.relative(cwd, absolute).split(path.sep).join("/");
+/** State-root-relative record path for a task in `runId`. */
+export function taskRecordPath(runId: string, taskId: string): string {
+  return `runs/${runId}/tasks/${taskId}.json`;
 }
 
-function normalizeOwnedRepoPath(cwd: string, ownerFile: string, reference: string): string {
-  const ownerCandidate = path.resolve(cwd, path.dirname(ownerFile), reference);
-  const rootCandidate = path.resolve(cwd, reference);
-  const documentRelative = reference.startsWith("./")
-    || reference.startsWith("../")
-    || reference === "."
-    || reference === ".."
-    || (!reference.includes("/") && !reference.includes("\\"));
-  const chosen = documentRelative ? ownerCandidate : rootCandidate;
-  return normalizeRepoPath(cwd, chosen);
+/** State-root-relative plan path for `runId`. */
+export function runPlanPath(runId: string): string {
+  return `runs/${runId}/plan.md`;
 }
 
-function markdownFiles(dir: string): string[] {
-  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return [];
-  const result: string[] = [];
-  const visit = (current: string): void => {
-    for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) visit(full);
-      else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) result.push(full);
-    }
-  };
-  visit(dir);
-  return result.sort(compareStrings);
-}
-
-function relationValues(raw: unknown, key: string, issues: InternalIssue[], taskId: string, file: string): string[] {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    if (raw !== undefined && raw !== null) {
-      issues.push({
-        code: "invalid-task-document",
-        tasks: [taskId || file],
-        task: taskId || undefined,
-        file,
-        message: `Task relations must be an object (${key})`,
-      });
-    }
-    return [];
-  }
-  const value = (raw as Record<string, unknown>)[key];
-  if (value === undefined || value === null) return [];
-  if (typeof value === "string") return value.trim() ? [value.trim()] : [];
-  if (Array.isArray(value)) {
-    const result: string[] = [];
-    for (const item of value) {
-      if (typeof item === "string" && item.trim()) result.push(item.trim());
-      else if (item !== null && item !== undefined) {
-        issues.push({
-          code: "invalid-task-document",
-          tasks: [taskId || file],
-          task: taskId || undefined,
-          file,
-          message: `Task relation ${key} must contain only strings`,
-        });
-      }
-    }
-    return sortedUnique(result);
-  }
-  issues.push({
-    code: "invalid-task-document",
-    tasks: [taskId || file],
-    task: taskId || undefined,
-    file,
-    message: `Task relation ${key} must be an array of strings`,
-  });
-  return [];
-}
-
-/** Read task front matter without mutating any source documents. */
-export function readTaskDocuments(cwd: string, taskDir: string): ParsedTask[] {
-  const root = path.resolve(cwd, taskDir);
-  const tasks: ParsedTask[] = [];
-  for (const file of markdownFiles(root)) {
-    const relativeFile = normalizeRepoPath(cwd, file);
-    let data: Record<string, unknown>;
-    try {
-      data = matter(fs.readFileSync(file, "utf8")).data as Record<string, unknown>;
-    } catch (error: unknown) {
-      tasks.push({
-        id: "",
-        status: "todo",
-        file: relativeFile,
-        implements: [],
-        dependsOn: [],
-        blocks: [],
-        parseIssues: [{
-          code: "invalid-task-document",
-          tasks: [relativeFile],
-          file: relativeFile,
-          message: `Unable to parse task front matter: ${error instanceof Error ? error.message : String(error)}`,
-        }],
-      });
-      continue;
-    }
-
-    // A task directory can contain indexes or other markdown files. Only task
-    // documents participate in the graph.
-    if (data.type !== "task") continue;
-
-    const parseIssues: InternalIssue[] = [];
-    const id = typeof data.id === "string" ? data.id.trim() : "";
-    if (!id) {
-      parseIssues.push({
-        code: "invalid-task-document",
-        tasks: [id || relativeFile],
-        file: relativeFile,
-        message: "Task front matter requires a non-empty id",
-      });
-    }
-    const statusValue = typeof data.status === "string" ? data.status.trim() : "";
-    const status = TASK_STATUSES.has(statusValue as TaskStatus) ? statusValue as TaskStatus : "todo";
-    if (!TASK_STATUSES.has(statusValue as TaskStatus)) {
-      parseIssues.push({
-        code: "invalid-task-status",
-        tasks: [id || relativeFile],
-        task: id || undefined,
-        file: relativeFile,
-        message: `Unknown task status: ${statusValue || "<missing>"}`,
-      });
-    }
-    const rawRelations = data.relations;
-    const relationObject = rawRelations && typeof rawRelations === "object" && !Array.isArray(rawRelations)
-      ? rawRelations
-      : {};
-    if (rawRelations !== undefined && (typeof rawRelations !== "object" || Array.isArray(rawRelations))) {
-      parseIssues.push({
-        code: "invalid-task-document",
-        tasks: [id || relativeFile],
-        task: id || undefined,
-        file: relativeFile,
-        message: "Task relations must be an object",
-      });
-    }
-    const implementsValues = relationValues(relationObject, "implements", parseIssues, id, relativeFile)
-      .map((target) => normalizeOwnedRepoPath(cwd, relativeFile, target));
-    const dependsOn = relationValues(relationObject, "depends-on", parseIssues, id, relativeFile);
-    const blocks = relationValues(relationObject, "blocks", parseIssues, id, relativeFile);
-    tasks.push({
-      id,
-      status,
-      file: relativeFile,
-      implements: sortedUnique(implementsValues),
-      dependsOn: sortedUnique(dependsOn),
-      blocks: sortedUnique(blocks),
-      parseIssues,
-    });
-  }
-  return tasks.sort((left, right) => compareStrings(left.id || left.file, right.id || right.file));
-}
-
-export function indexTasks(tasks: ParsedTask[]): IndexedTasks {
-  const sortedTasks = [...tasks].sort((left, right) => compareStrings(left.id || left.file, right.id || right.file));
-  const byId = new Map<string, ParsedTask>();
-  const byPath = new Map<string, ParsedTask>();
-  const issues: InternalIssue[] = [];
-  for (const task of sortedTasks) {
-    issues.push(...task.parseIssues);
-    if (!task.id) continue;
-    const previous = byId.get(task.id);
-    if (previous) {
-      issues.push({
-        code: "duplicate-task-id",
-        tasks: [task.id],
-        task: task.id,
-        file: task.file,
-        message: `Duplicate task id ${task.id} (also found in ${previous.file})`,
-      });
-      continue;
-    }
-    byId.set(task.id, task);
-    // The map key folds case on Windows so a `DOCS/TASKS/x.md` reference
-    // resolves the same task record as `docs/tasks/x.md` — a case-variant
-    // spelling must not mint a phantom missing reference (Issue #156).
-    byPath.set(repoPathKey(task.file), task);
-  }
-  return { tasks: sortedTasks, byId, byPath, issues };
-}
-
-function resolveReference(
-  cwd: string,
-  owner: ParsedTask,
-  reference: string,
-  index: IndexedTasks,
-): ParsedTask | undefined {
-  const byId = index.byId.get(reference);
-  if (byId) return byId;
-  const normalized = normalizeOwnedRepoPath(cwd, owner.file, reference);
-  return index.byPath.get(repoPathKey(normalized));
-}
-
-function isExistingArtifactReference(
-  cwd: string,
-  taskDir: string,
-  owner: ParsedTask,
-  reference: string,
-): boolean {
-  const candidate = path.resolve(cwd, normalizeOwnedRepoPath(cwd, owner.file, reference));
-  // A reference resolving outside the checkout can never name a task-graph
-  // artifact — refuse it without reading (the same containment, including
-  // realpath, that the scan boundary applies). The caller then records the
-  // reference as missing-task-reference, keeping the refusal fail-closed.
-  if (!isInsideCheckout(cwd, candidate)) return false;
-  if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) return false;
-  // Shared lexical containment: the candidate path must exist to read its
-  // type, and the checkout realpath rule was applied above — the remaining
-  // question is only whether it sits inside the task subtree.
-  if (isInside(path.resolve(cwd, taskDir), candidate)) return false;
-  try {
-    const type = matter(fs.readFileSync(candidate, "utf8")).data?.type;
-    return ["plan", "spec", "adr", "design"].includes(type);
-  } catch {
-    return false;
-  }
-}
-
-function readArtifactIds(cwd: string, taskDir: string): Set<string> {
-  const taskRoot = path.resolve(cwd, taskDir);
-  const ids = new Set<string>();
-  for (const file of markdownFiles(cwd)) {
-    const absolute = path.resolve(file);
-    // Folded lexical compare: on a case-insensitive filesystem the task dir
-    // may exist under a different case than the selector spelled — a
-    // case-variant must still be excluded from artifact IDs (Issue #156).
-    if (isInside(taskRoot, absolute)) continue;
-    try {
-      const data = matter(fs.readFileSync(file, "utf8")).data as Record<string, unknown>;
-      if (["plan", "spec", "adr", "design"].includes(data.type as string) && typeof data.id === "string" && data.id.trim()) {
-        ids.add(data.id.trim());
-      }
-    } catch {
-      // A malformed unrelated document cannot establish an artifact reference.
-    }
-  }
-  return ids;
-}
-
-export function resolveTaskEdges(cwd: string, taskDir: string, index: IndexedTasks): ResolvedEdges {
-  const edges = new Map<string, TaskGraphEdge>();
-  const issues: InternalIssue[] = [];
-  const artifactIds = readArtifactIds(cwd, taskDir);
-  const addReference = (task: ParsedTask, reference: string, direction: "depends-on" | "blocks"): void => {
-    const target = resolveReference(cwd, task, reference, index);
-    if (!target || !target.id) {
-      // Relations to an existing plan/spec/ADR are upstream artifact links,
-      // not task-DAG edges. Keep unresolved task-looking references fail-closed.
-      if (artifactIds.has(reference) || isExistingArtifactReference(cwd, taskDir, task, reference)) return;
-      issues.push({
-        code: "missing-task-reference",
-        tasks: task.id ? [task.id] : [],
-        task: task.id || undefined,
-        reference,
-        file: task.file,
-        message: `Task ${task.id || task.file} references unresolved task ${reference}`,
-      });
-      return;
-    }
-    const edge = direction === "depends-on"
-      ? { from: target.id, to: task.id }
-      : { from: task.id, to: target.id };
-    edges.set(`${edge.from}\u0000${edge.to}`, edge);
-  };
-  for (const task of index.tasks) {
-    if (!task.id || !index.byId.has(task.id)) continue;
-    for (const reference of task.dependsOn) addReference(task, reference, "depends-on");
-    for (const reference of task.blocks) addReference(task, reference, "blocks");
-  }
-  return {
-    edges: [...edges.values()].sort((left, right) => compareStrings(left.from, right.from) || compareStrings(left.to, right.to)),
-    issues: issues.sort(issueCompare),
-  };
-}
-
-function issueCompare(left: InternalIssue, right: InternalIssue): number {
-  return compareStrings(left.code, right.code)
-    || compareStrings((left.tasks || []).join(","), (right.tasks || []).join(","))
-    || compareStrings(left.task || "", right.task || "")
-    || compareStrings(left.reference || "", right.reference || "")
-    || compareStrings(left.file || "", right.file || "")
-    || compareStrings(left.message, right.message);
-}
-
-export function findCycles(tasks: ParsedTask[], edges: TaskGraphEdge[]): TaskGraphIssue[] {
-  const ids = sortedUnique(tasks.map((task) => task.id).filter(Boolean));
+function findCycles(ids: string[], edges: TaskGraphEdge[]): TaskGraphIssue[] {
   const adjacency = new Map<string, string[]>();
   for (const id of ids) adjacency.set(id, []);
   for (const edge of edges) {
@@ -420,91 +152,150 @@ export function findCycles(tasks: ParsedTask[], edges: TaskGraphEdge[]): TaskGra
   };
   for (const id of ids) if (!visited.has(id)) walk(id, []);
   return [...cycles].sort(compareStrings).map((cycle) => ({
-    code: "task-cycle",
+    code: "task-cycle" as const,
     tasks: cycle.split(" -> "),
     message: `Task dependency cycle detected: ${cycle}`,
   }));
 }
 
-export function summarizeTaskGraph(
-  plan: string,
-  tasks: ParsedTask[],
-  edges: TaskGraphEdge[],
-  issues: InternalIssue[],
-): TaskGraphResult {
-  const sortedTasks = tasks
-    .filter((task) => Boolean(task.id))
-    .map(({ parseIssues: _parseIssues, ...task }) => ({
-      ...task,
-      implements: [...task.implements].sort(compareStrings),
-      dependsOn: [...task.dependsOn].sort(compareStrings),
-      blocks: [...task.blocks].sort(compareStrings),
-    }))
-    .sort((left, right) => compareStrings(left.id, right.id));
-  const sortedEdges = [...edges].sort((left, right) => compareStrings(left.from, right.from) || compareStrings(left.to, right.to));
-  const normalizedIssues = issues.map((issue): TaskGraphIssue => {
-    const allowed = new Set<TaskGraphIssueCode>([
-      "duplicate-task-id",
-      "missing-task-reference",
-      "task-cycle",
-      "plan-has-no-tasks",
-    ]);
-    const code = allowed.has(issue.code as TaskGraphIssueCode)
-      ? issue.code as TaskGraphIssueCode
-      : "missing-task-reference";
-    const isMalformed = !allowed.has(issue.code as TaskGraphIssueCode);
-    return {
-      code,
-      message: isMalformed ? `Malformed task document: ${issue.message}` : issue.message,
-      tasks: sortedUnique(issue.tasks || (issue.task ? [issue.task] : [])),
-    };
-  });
-  const uniqueIssues = [...new Map(normalizedIssues.map((issue) => [
-    `${issue.code}\u0000${issue.tasks.join(",")}\u0000${issue.message}`,
+function issueCompare(left: TaskGraphIssue, right: TaskGraphIssue): number {
+  return compareStrings(left.code, right.code)
+    || compareStrings(left.tasks.join(","), right.tasks.join(","))
+    || compareStrings(left.message, right.message);
+}
+
+/**
+ * Project one loaded run snapshot into a task graph. Pure — the caller owns
+ * the load, so `graph_state` and `build_task_graph` share exactly this
+ * projection for an explicitly selected run.
+ */
+export function projectRunTasks(snapshot: RunSnapshot): TaskGraphResult {
+  const { runId } = snapshot;
+  const issues: TaskGraphIssue[] = [];
+
+  // Plan + approval gate. An approval binds the digest it approved; any
+  // later savePlan invalidates it, and drift (a write outside the store
+  // API) is surfaced as its own integrity issue on top of the gate.
+  let plan: TaskGraphPlan | null = null;
+  if (snapshot.plan === null) {
+    issues.push({
+      code: "plan-missing",
+      tasks: [],
+      message: `run ${runId} has no plan.md — the plan must exist inside the run before task execution`,
+    });
+  } else {
+    plan = { path: runPlanPath(runId), digest: snapshot.plan.digest, approved: snapshot.planApproved };
+    if (!snapshot.planApproved) {
+      issues.push({
+        code: "plan-not-approved",
+        tasks: [],
+        message: `run ${runId} plan.md is not approved (or approval predates the current digest) — task execution requires a digest-bound approval`,
+      });
+    }
+  }
+  if (snapshot.planDigestDrift) {
+    issues.push({
+      code: "plan-digest-drift",
+      tasks: [],
+      message: `run ${runId} plan.md diverges from the digest recorded in manifest.json — a write outside the Execution Store API was detected`,
+    });
+  }
+
+  // Task index. Records carry `runId` themselves — a file that does not
+  // belong to this run is corrupt-state at load, so every record here is
+  // already same-run by construction.
+  const byId = new Map<string, TaskRecord>();
+  for (const task of [...snapshot.tasks].sort((left, right) => compareStrings(left.taskId, right.taskId))) {
+    if (byId.has(task.taskId)) {
+      issues.push({
+        code: "duplicate-task-id",
+        tasks: [task.taskId],
+        message: `Duplicate task id ${task.taskId} in run ${runId}`,
+      });
+      continue;
+    }
+    byId.set(task.taskId, task);
+  }
+  const tasks = [...byId.values()];
+
+  // Same-run dependency edges; the record-level `blocks` relation is the
+  // derived reverse projection (no separate field to drift out of sync).
+  const edges = new Map<string, TaskGraphEdge>();
+  const blocksById = new Map<string, Set<string>>(tasks.map((task) => [task.taskId, new Set<string>()]));
+  for (const task of tasks) {
+    for (const dep of task.dependsOn) {
+      if (!byId.has(dep)) {
+        issues.push({
+          code: "missing-task-reference",
+          tasks: [task.taskId],
+          message: `Task ${task.taskId} depends on ${dep}, which does not exist in run ${runId} — dependencies resolve inside the same run only`,
+        });
+        continue;
+      }
+      edges.set(`${dep}${task.taskId}`, { from: dep, to: task.taskId });
+      blocksById.get(dep)?.add(task.taskId);
+    }
+  }
+  const sortedEdges = [...edges.values()]
+    .sort((left, right) => compareStrings(left.from, right.from) || compareStrings(left.to, right.to));
+  issues.push(...findCycles(tasks.map((task) => task.taskId), sortedEdges));
+  if (tasks.length === 0) {
+    issues.push({
+      code: "plan-has-no-tasks",
+      tasks: [],
+      message: `run ${runId} has no task records — the plan must materialize at least one task`,
+    });
+  }
+  const uniqueIssues = [...new Map(issues.map((issue) => [
+    `${issue.code}${issue.tasks.join(",")}${issue.message}`,
     issue,
   ])).values()].sort(issueCompare);
+
+  const statusById = new Map(tasks.map((task) => [task.taskId, task.status]));
+  const predecessorsDone = (taskId: string): boolean => sortedEdges
+    .filter((edge) => edge.to === taskId)
+    .every((edge) => statusById.get(edge.from) === "done");
+  // Fail closed: ANY issue empties runnable and resumableActive. Blocked
+  // still reports so a caller can see why each task cannot start.
   const runnable = uniqueIssues.length > 0
     ? []
-    : sortedTasks
-      .filter((task) => task.status === "todo")
-      .filter((task) => sortedEdges.filter((edge) => edge.to === task.id).every((edge) => {
-        const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
-        return predecessor?.status === "done";
-      }))
-      .map((task) => task.id);
-  const active = sortedTasks.filter((task) => task.status === "in-progress").map((task) => task.id);
+    : tasks
+      .filter((task) => task.status === "todo" && predecessorsDone(task.taskId))
+      .map((task) => task.taskId);
+  const active = tasks.filter((task) => task.status === "in-progress").map((task) => task.taskId);
   const resumableActive = uniqueIssues.length > 0
     ? []
-    : sortedTasks
-      .filter((task) => task.status === "in-progress")
-      .filter((task) => sortedEdges.filter((edge) => edge.to === task.id).every((edge) => {
-        const predecessor = sortedTasks.find((candidate) => candidate.id === edge.from);
-        return predecessor?.status === "done";
-      }))
-      .map((task) => task.id);
-  const completed = sortedTasks.filter((task) => task.status === "done").map((task) => task.id);
-  const blocked = sortedTasks
-    .filter((task) => task.status === "blocked" || task.status === "wont-do" || (task.status === "todo" && !runnable.includes(task.id)))
+    : tasks
+      .filter((task) => task.status === "in-progress" && predecessorsDone(task.taskId))
+      .map((task) => task.taskId);
+  const completed = tasks.filter((task) => task.status === "done").map((task) => task.taskId);
+  const blocked = tasks
+    .filter((task) => task.status === "blocked" || task.status === "wont-do" || (task.status === "todo" && !runnable.includes(task.taskId)))
     .map((task) => ({
-      id: task.id,
+      id: task.taskId,
       reasons: task.status === "blocked"
         ? ["status:blocked"]
         : task.status === "wont-do"
           ? ["status:wont-do"]
-          : sortedEdges.filter((edge) => edge.to === task.id)
-            .filter((edge) => sortedTasks.find((candidate) => candidate.id === edge.from)?.status !== "done")
+          : sortedEdges
+            .filter((edge) => edge.to === task.taskId && statusById.get(edge.from) !== "done")
             .map((edge) => `depends-on:${edge.from}`),
     }))
     .filter((entry) => entry.reasons.length > 0);
+
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    runId,
     plan,
-    nodes: sortedTasks.map((task) => ({
-      id: task.id,
-      path: task.file,
+    nodes: tasks.map((task) => ({
+      id: task.taskId,
+      path: taskRecordPath(runId, task.taskId),
+      title: task.title,
       status: task.status,
-      dependsOn: task.dependsOn,
-      blocks: task.blocks,
+      dependsOn: sortedUnique(task.dependsOn),
+      blocks: sortedUnique(blocksById.get(task.taskId) ?? []),
+      scope: [...task.scope].sort(compareStrings),
+      version: task.version,
     })),
     edges: sortedEdges,
     runnable: runnable.sort(compareStrings),
@@ -516,26 +307,16 @@ export function summarizeTaskGraph(
   };
 }
 
+/**
+ * Load `runId` from the Execution Store and project its task graph. The
+ * run selector is the caller's: no fallback, no cross-run mixing — a
+ * missing or corrupt run surfaces the store's fail-closed error.
+ */
 export function buildTaskGraph(options: BuildTaskGraphOptions): TaskGraphResult {
   const cwd = path.resolve(options.cwd);
-  const plan = normalizeRepoPath(cwd, options.plan);
-  // Containment is validated once here — the single authority point every
-  // task-graph build passes through — so readTaskDocuments/resolveTaskEdges
-  // and the internals they feed (readArtifactIds, isExistingArtifactReference)
-  // all resolve the normalized, contained form rather than re-checking.
-  // Same rule and error as the artifact-scan boundary (Issue #142).
-  const taskDir = resolveContainedTaskDir(cwd, options.taskDir);
-  const parsed = readTaskDocuments(cwd, taskDir)
-    .filter((task) => task.implements.includes(plan));
-  const indexed = indexTasks(parsed);
-  const resolved = resolveTaskEdges(cwd, taskDir, indexed);
-  const issues = [...indexed.issues, ...resolved.issues, ...findCycles(parsed, resolved.edges)];
-  if (parsed.length === 0) {
-    issues.push({
-      code: "plan-has-no-tasks",
-      tasks: [],
-      message: `Plan ${plan} has no task documents`,
-    });
-  }
-  return summarizeTaskGraph(plan, parsed, resolved.edges, issues);
+  const snapshot = loadRun(cwd, options.runId, {
+    stateRoot: options.stateRoot,
+    allowExternalRoot: options.allowExternalRoot,
+  });
+  return projectRunTasks(snapshot);
 }
