@@ -1331,7 +1331,7 @@
         {
           "path": "doc-maintenance/scripts/doc_maintenance.js",
           "exists": true,
-          "bytes": 1801617
+          "bytes": 1802505
         },
         {
           "path": "doc-maintenance/scripts/migrate_docs.js",
@@ -1361,7 +1361,7 @@
       ],
       "totals": {
         "directives": 21,
-        "referencedBytes": 6643185,
+        "referencedBytes": 6644073,
         "missing": 0
       }
     },
@@ -2993,7 +2993,7 @@
     "skillBytes": 209249,
     "alwaysOnChars": 202123,
     "directives": 337,
-    "referencedBytes": 56791483,
+    "referencedBytes": 56792371,
     "missing": 0
   }
 }
