@@ -51,7 +51,14 @@ edge条件ラベル付きの `.probe-link` コネクタで結び（blocked/現�
 required audit / blockerのラベル付き `.chip` 群（blockerは `chip-danger`）を示します。
 `signals` パネルはsupplied / state / hard blockerのchipをラベル付きで並べ、
 `gates` パネルは各gateをフロー順のstatusドット付きピル（pass / fail / blocked色、
-理由はtooltip）と `N/M pass` スコアで示します。Graph topology issueは存在する
+理由はtooltip）と `N/M pass` スコアで示します。その隣の
+`verification（Evidence）` パネルは導出されたVerification Summaryを表示します:
+verdictピル、HEAD bindingバッジ、satisfied / failed / openのcheck件数、claim
+カバレッジ、評価済みevidence件数、verification文書数。Evidenceとして明示的に
+ラベルされ、不変のEvidence Store recordから導出されることを明記します ——
+Effect Receiptは別の権威であり、verification Evidenceとして表示されることは
+ありません。Evidence Storeが存在しない場合は、カバレッジを捏造せずその旨を
+表示します。Graph topology issueは存在する
 ときだけsignalsパネルにdanger chipとして表示し、node / edge / gateの検査表は
 キャンバスとパネルが同じ情報を持つため省略します。run別 `<summary>` 行は
 run status pillを持ちます — 1行が1つのExecution Store runで、それぞれが
@@ -122,6 +129,9 @@ mise exec -- node <doc-dashboard-skill-dir>/../doc-driven-dev-graph/scripts/buil
 | `--focus <id-or-path>` | 繰り返し指定できるfocus selector。既存resolutionへ渡します。 |
 | `--current <node>` | route previewを有効化。不明nodeは生成前に失敗します。 |
 | `--signal <signal>` | 明示signal。未宣言signalは生成前に失敗します。 |
+| `--run <run-id>` | task graphを投影するExecution Store run。既定はrun集合を推定します。 |
+| `--state-root <path>` | Execution/Evidenceのstate root。既定は `.apm/state/doc-driven-dev`。 |
+| `--allow-external-root` | checkout外の `--state-root` を許可します。指定がなければ外部rootはfail closedします。 |
 | `--out <file.html>` | `--cwd` 相対の保存先。既定は `reports/doc-driven-dev/index.html`。 |
 | `--force` | 明示的に再生成を求めた既存レポートを、先に削除せず置換します。 |
 | `--help` | path基準を含むusageを表示し、読み取り・生成しません。 |

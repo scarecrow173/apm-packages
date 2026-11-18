@@ -149,6 +149,54 @@ test("secondary sections use chip-based signals, callout route preview, and tint
   assert.match(html, /footer\{margin-top:2\.2rem/);
 });
 
+test("verification panel renders the Evidence-derived summary, never Effect Receipts", () => {
+  const value = snapshot();
+  // No Evidence Store/projection input → honest empty state (Issue #246).
+  const emptyHtml = renderDashboard(value);
+  assert.match(emptyHtml, /<h3>verification（Evidence）<\/h3><p class="empty">Evidence Store なし — 検証サマリ未提供<\/p>/);
+
+  value.state.verification = {
+    boundToHead: true,
+    documents: ["docs/verification/vd.md"],
+    summary: {
+      schemaVersion: 1,
+      kind: "verification-summary",
+      target: { subject: { kind: "commit", commit: "a".repeat(40) }, subjectDigest: `sha256:${"b".repeat(64)}` },
+      assessedAt: "2026-09-21T00:00:00Z",
+      scope: { claims: ["SPEC-abcd::R-01"], checks: ["VD-efgh::CHK-01"] },
+      claims: [{ ref: "SPEC-abcd::R-01", status: "covered", checks: ["VD-efgh::CHK-01"], requiredChecks: ["VD-efgh::CHK-01"], reasons: [] }],
+      checks: [{
+        ref: "VD-efgh::CHK-01", claim: "SPEC-abcd::R-01", method: "unit", required: true,
+        designRevision: `sha256:${"c".repeat(64)}`, constraints: [], executed: true, status: "satisfied",
+        evidence: { sufficient: ["EVID-0001"], insufficient: [], indeterminate: [] },
+        latestConclusiveAt: "2026-09-21T00:00:00Z", waiver: null, notApplicable: null, reasons: [],
+      }],
+      evidence: [{
+        schemaVersion: 1, evidenceId: "EVID-0001", claim: "SPEC-abcd::R-01", check: "VD-efgh::CHK-01",
+        outcome: "passed", applicability: "applicable", availability: "available", integrity: "verified",
+        assessment: "sufficient", reasons: [],
+      }],
+      rejectedWaivers: [],
+      rejectedNotApplicable: [],
+      shadowedExemptions: [],
+      counts: {
+        checks: { total: 1, required: 1, advisory: 0, satisfied: 1, failed: 0, waived: 0, outOfScope: 0, undetermined: 0, unresolved: 0 },
+        claims: { total: 1, covered: 1, partial: 0, uncovered: 0, failed: 0 },
+        evidence: { total: 1, sufficient: 1, insufficient: 0, indeterminate: 0 },
+      },
+      verdict: "verified",
+      reasons: ["no-required-coverage"],
+    },
+  };
+  const html = renderDashboard(value);
+  assert.match(html, /<h3>verification（Evidence）<\/h3>/);
+  assert.match(html, /<span class="status-pill status-done">verified<\/span>/);
+  assert.match(html, /<span class="badge badge-runnable">HEAD 一致<\/span>/);
+  assert.match(html, /<dd>1 satisfied \/ 0 failed \/ 0 open（required 1）<\/dd>/);
+  assert.match(html, /<dd>1\/1 covered<\/dd>/);
+  assert.match(html, /別権威/, "the panel must separate verification Evidence from run Effect Receipts");
+});
+
 test("attention section stays neutral when nothing blocks progress", () => {
   const html = renderDashboard(snapshot());
   assert.match(html, /<section id="attention" class="attention"/);

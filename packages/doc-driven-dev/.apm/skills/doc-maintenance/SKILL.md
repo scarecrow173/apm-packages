@@ -50,6 +50,11 @@ Never auto-repaired (semantic inference is refused):
 
 Findings outside the whitelist are reported as skipped with a `manual` or
 `migration` reason so the caller can route them to a human or to migration.
+The repo-level `doc-status` findings — `tracked-execution-doc`,
+`tracked-legacy-doc`, and every Evidence Store axis — are skip-only by
+contract: tracked plan/task and legacy Markdown is migration inventory the
+`migrate` flow owns, and Evidence records are immutable — this skill never
+repairs, rewrites, or copies them into durable Markdown.
 
 ## Commands
 
@@ -63,14 +68,16 @@ node scripts/doc_maintenance.js apply --force-index --json
 - `plan` — preview actions and skipped findings; writes nothing.
 - `apply` — apply whitelisted actions, rescan, and print a validation summary
   (`findings before` / `findings after`).
-- Options: `--type`, `--dir`, `--force-index`, `--json`.
+- Options: `--type` (durable types `idea`, `brainstorm`, `discovery`,
+  `spec`, `design`, `adr`, `knowledge`, `verification`, or `all`),
+  `--dir`, `--force-index`, `--json`.
 
 `index` is the explicit managed-index materialization entrypoint — INDEX
 only, across every durable owner. Unlike `plan`/`apply` it touches nothing
 outside managed index content (no link normalization, no source repairs),
 and it dispatches each write to the owning writer: shared-4col directories
-through the shared renderer/merge and `docs/adr` through the ADR managed
-writer. Directories whose residents are execution-bound (`docs/plans`,
+(`docs/knowledge` and `docs/verification` included) through the shared
+renderer/merge and `docs/adr` through the ADR managed writer. Directories whose residents are execution-bound (`docs/plans`,
 `docs/tasks`, `docs/implementation-plans`, `docs/work-items`) or legacy
 (`docs/test-spec`, `docs/test-specs`, `docs/impl`, `docs/impl/ir`,
 `docs/impl/exp`) are migration-owned scopes — `index` reports them as

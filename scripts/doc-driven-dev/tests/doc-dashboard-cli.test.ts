@@ -75,7 +75,25 @@ test("parses defaults and resolves cwd and output from their documented bases", 
     out: path.resolve(processCwd, "target", "reports/doc-driven-dev/index.html"),
     force: false,
     help: false,
+    run: undefined,
+    stateRoot: undefined,
+    allowExternalRoot: false,
   });
+});
+
+test("parses the store selector flags the other v3 CLIs share", () => {
+  const processCwd = path.resolve("process-base");
+  const parsed = parseDashboardArgs([
+    "--cwd", "target",
+    "--run", "RUN-0042",
+    "--state-root", ".apm/state/doc-driven-dev",
+    "--allow-external-root",
+  ], processCwd);
+  assert.equal(parsed.run, "RUN-0042");
+  assert.equal(parsed.stateRoot, ".apm/state/doc-driven-dev");
+  assert.equal(parsed.allowExternalRoot, true);
+  assert.throws(() => parseDashboardArgs(["--run"], process.cwd()), /Missing value/);
+  assert.throws(() => parseDashboardArgs(["--state-root"], process.cwd()), /Missing value/);
 });
 
 test("requires values and rejects unknown or positional arguments", () => {

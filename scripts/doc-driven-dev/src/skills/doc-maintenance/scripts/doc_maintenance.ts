@@ -64,7 +64,7 @@ function usage(): string {
     "  migrate recovery  Report migration journal state without mutating it",
     "",
     "Options:",
-    "  [--type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all]",
+    "  [--type idea|brainstorm|discovery|spec|design|adr|knowledge|verification|all]",
     "  [--dir <path>] [--force-index] [--expect <planHash>] [--json]",
     "",
     "Only whitelisted repairs run: managed index regeneration and unambiguous",

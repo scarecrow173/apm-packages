@@ -17,6 +17,10 @@ import {
   initStateRoot,
 } from "../src/skills/lib/execution_store";
 import type { TaskStatus } from "../src/skills/lib/execution_store";
+import { documentRevisionOf, putImmutable } from "../src/skills/lib/evidence_store";
+import { scanKnowledgeGraph, resolveCheckReference } from "../src/skills/lib/knowledge_graph";
+import { spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 
 const RUN_ID = "RUN-0001";
 const STATE_ROOT = ".apm/state/doc-driven-dev";
@@ -186,7 +190,20 @@ for (const scenario of [
     const focus = scenario === "empty" ? [] : [designPath];
     const report = await collectDashboard({ cwd, graphPath, focus, signals: [], current: "task-graph" });
 
-    assert.deepEqual(report.state, await projectGraphState({ cwd, graphId: definition.id, focus, signals: [] }));
+    // Issue #243/#246: the collector now derives the HEAD-bound
+    // Verification Summary itself, exactly like route_graph — a missing
+    // summary can never resurface as the phantom `verification-summary`
+    // blocker. Re-projecting with the collected summary must reproduce the
+    // state verbatim (the same authority, bound the same way).
+    assert.ok(report.state.verification !== null, "dashboard always projects a Verification Summary");
+    assert.ok(!report.state.blockers.includes("verification-summary"), "no phantom missing-input blocker");
+    assert.deepEqual(
+      report.state,
+      await projectGraphState({
+        cwd, graphId: definition.id, focus, signals: [],
+        verificationSummary: report.state.verification.summary,
+      }),
+    );
     assert.deepEqual(report.decision, evaluateRouteDecision({ current: "task-graph", definition, state: report.state }));
     if (scenario !== "empty" && scenario !== "duplicate") {
       // Exactly one active run bound to this graph's chain → implicit
@@ -234,3 +251,158 @@ for (const scenario of [
     );
   });
 }
+
+// --- Issue #246: Execution/Evidence selector parity + summary plumbing ------
+//
+// The dashboard accepts the same `--run`/`--state-root`/
+// `--allow-external-root` selectors route_graph and the store CLIs take, and
+// it projects the same HEAD-bound Verification Summary the router computes —
+// never the phantom `verification-summary` blocker a missing input produced.
+
+const GRAPH_PATH = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml");
+
+function sha256Of(content: string): string {
+  return `sha256:${crypto.createHash("sha256").update(content, "utf8").digest("hex")}`;
+}
+
+function git(cwd: string, args: string[]): void {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+}
+
+function gitOut(cwd: string, args: string[]): string {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return (result.stdout ?? "").trim();
+}
+
+function writeDocFile(cwd: string, relPath: string, data: Record<string, unknown>, body = "# Doc\n"): void {
+  const file = path.join(cwd, relPath);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, matter.stringify(body, {
+    created: "2026-01-01",
+    updated: "2026-01-01",
+    owners: [],
+    relations: {},
+    ...data,
+  }), "utf8");
+}
+
+test("the run selector disambiguates several active runs on one chain", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-run-select-"));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  const designPath = "docs/designs/chain.md";
+  writeDocFile(cwd, designPath, { id: "DESIGN-0001", type: "design", status: "approved", title: "Design" });
+  const definition = loadGraphDefinition(GRAPH_PATH);
+  initStateRoot(cwd);
+  for (const runId of ["RUN-0001", "RUN-0002"]) {
+    createRun(cwd, {
+      runId,
+      graphId: definition.id,
+      focus: [designPath],
+      plan: `# Plan\n\n${runId} plan.\n`,
+      tasks: [{ taskId: "TASK-0001", status: "done" }],
+    });
+    approvePlan(cwd, runId, { actor: "collector-test" });
+  }
+
+  // Two active runs on the same chain are ambiguous without a selector.
+  const implicit = await collectDashboard({ cwd, graphPath: GRAPH_PATH, focus: [designPath], signals: [] });
+  assert.ok(implicit.state.blockers.includes("task-graph-run-ambiguous"));
+
+  const picked = await collectDashboard({ cwd, graphPath: GRAPH_PATH, focus: [designPath], signals: [], run: "RUN-0002" });
+  assert.equal(picked.state.execution.run?.runId, "RUN-0002");
+  assert.ok(!picked.state.blockers.includes("task-graph-run-ambiguous"));
+  assert.equal(picked.state.execution.taskGraph?.nodes[0]?.id, "TASK-0001");
+});
+
+test("an external state root requires allowExternalRoot and then reads runs there", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-ext-root-"));
+  const shared = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-ext-state-"));
+  t.after(() => {
+    fs.rmSync(cwd, { recursive: true, force: true });
+    fs.rmSync(shared, { recursive: true, force: true });
+  });
+  const designPath = "docs/designs/chain.md";
+  writeDocFile(cwd, designPath, { id: "DESIGN-0001", type: "design", status: "approved", title: "Design" });
+  const definition = loadGraphDefinition(GRAPH_PATH);
+  const external = { stateRoot: shared, allowExternalRoot: true };
+  createRun(cwd, {
+    runId: "RUN-EXT1",
+    graphId: definition.id,
+    focus: [designPath],
+    plan: "# Plan\n\nExternal run.\n",
+    tasks: [{ taskId: "TASK-0001", status: "done" }],
+  }, external);
+  approvePlan(cwd, "RUN-EXT1", { actor: "collector-test" }, external);
+
+  // Unauthorized — the boundary refuses before any read.
+  await assert.rejects(
+    collectDashboard({ cwd, graphPath: GRAPH_PATH, focus: [designPath], signals: [], stateRoot: shared }),
+    /external|allowExternalRoot/i,
+  );
+
+  const report = await collectDashboard({
+    cwd, graphPath: GRAPH_PATH, focus: [designPath], signals: [],
+    run: "RUN-EXT1", stateRoot: shared, allowExternalRoot: true,
+  });
+  assert.equal(report.state.execution.run?.runId, "RUN-EXT1");
+  assert.ok(report.runs.some((run) => run.runId === "RUN-EXT1"), "run inventory reads the declared external root");
+});
+
+test("measured evidence flips the preview's verification gate to pass — the #243 phantom blocker is gone", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-verified-"));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  writeDocFile(cwd, "docs/specs/spec.md", {
+    id: "SPEC-abcd", type: "spec", status: "approved", title: "Spec",
+  }, "# Spec\n\n<!-- claim:R-01 --> Requirement R-01\n");
+  writeDocFile(cwd, "docs/verification/vd.md", {
+    id: "VD-efgh", type: "verification", status: "approved", title: "Design",
+    checks: [{
+      id: "CHK-01",
+      target: "SPEC-abcd::R-01",
+      method: "unit",
+      implementation: "pnpm test",
+      preconditions: ["spec exists"],
+      passCriteria: { kind: "unit", expect: "criterion for CHK-01" },
+      limitations: [],
+      required: true,
+    }],
+  }, "# Verification Design\n\n## Checks\n");
+  const designPath = "docs/designs/chain.md";
+  writeDocFile(cwd, designPath, {
+    id: "DESIGN-0001", type: "design", status: "approved", title: "Design",
+    relations: { realizes: ["SPEC-abcd"] },
+  });
+
+  git(cwd, ["init", "-q"]);
+  initStateRoot(cwd);
+  git(cwd, ["add", "-A"]);
+  git(cwd, ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "baseline"]);
+  const head = gitOut(cwd, ["rev-parse", "HEAD"]);
+
+  // A passed record pinned to the live revisions, measured on HEAD.
+  const graph = await scanKnowledgeGraph({ cwd });
+  const checkResolution = resolveCheckReference(graph, "VD-efgh::CHK-01");
+  assert.equal(checkResolution.status, "resolved");
+  putImmutable(cwd, {
+    evidenceId: "EVID-0001",
+    claim: { ref: "SPEC-abcd::R-01", documentRevision: documentRevisionOf(fs.readFileSync(path.join(cwd, "docs/specs/spec.md"), "utf8")) },
+    check: { ref: "VD-efgh::CHK-01", designRevision: checkResolution.check.designRevision },
+    subject: { kind: "commit", commit: head },
+    method: "unit",
+    provider: { kind: "repository", name: null },
+    runId: "RUN-0001",
+    environment: { runner: "local" },
+    outcome: "passed",
+    retention: "release",
+    artifacts: [{ uri: "file:logs/unit.txt", sha256: sha256Of("unit-log"), availability: "available", retention: "release", expiresAt: null }],
+  });
+
+  const report = await collectDashboard({ cwd, graphPath: GRAPH_PATH, focus: [designPath], signals: [] });
+  assert.ok(report.state.verification !== null);
+  assert.equal(report.state.verification.boundToHead, true);
+  assert.equal(report.state.verification.summary.verdict, "verified");
+  assert.equal(report.state.gates.verification.status, "pass");
+  assert.ok(!report.state.blockers.some((blocker) => blocker.startsWith("verification")));
+});

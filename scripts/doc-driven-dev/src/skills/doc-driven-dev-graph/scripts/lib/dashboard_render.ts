@@ -250,8 +250,33 @@ function renderGraph(snapshot: DashboardSnapshot): string {
     : `<p class="probe-note probe-note-danger"><a href="#attention">hard blockers ${snapshot.state.hardBlockers.length} 件 → 要対応</a></p>`;
   const signalPanel = `<div class="probe-panel"><h3>signals</h3><div class="signal-group"><span class="signal-label">supplied</span>${chips(snapshot.requested.signals)}</div><div class="signal-group"><span class="signal-label">state</span>${chips(snapshot.state.signals)}</div>${topologyChips.length === 0 ? "" : `<div class="signal-group"><span class="signal-label">topology issues</span>${chips(topologyChips, true)}</div>`}${hardBlockerNote}</div>`;
   const gatePanel = `<div class="probe-panel"><h3>gates <span class="gate-score">${passCount}/${gateEntries.length} pass</span></h3>${gateEntries.length === 0 ? `<p class="empty">gate 評価なし</p>` : `<div class="gate-pills">${gateEntries.map(([name, gate]) => `<span class="gate-pill gate-${e(gate.status)}"${gate.reasons.length === 0 ? "" : ` title="${e(gate.reasons.join("; "))}"`}><span class="gate-dot" aria-hidden="true"></span>${e(name)}</span>`).join("")}</div>`}</div>`;
+  // Verification (Evidence) panel (Issue #246): the derived Verification
+  // Summary — measured check outcomes from the immutable Evidence Store,
+  // never Effect Receipts. Effect Receipts prove a graph effect ran and
+  // stay on the run side; they are deliberately absent here.
+  const verification = snapshot.state.verification;
+  const verificationPanel = (() => {
+    if (verification === null) {
+      return `<div class="probe-panel"><h3>verification（Evidence）</h3><p class="empty">Evidence Store なし — 検証サマリ未提供</p></div>`;
+    }
+    const summary = verification.summary;
+    const binding = verification.boundToHead === null
+      ? `<span class="badge">HEAD 解決不能</span>`
+      : verification.boundToHead
+        ? `<span class="badge badge-runnable">HEAD 一致</span>`
+        : `<span class="badge badge-blocked">HEAD と不一致</span>`;
+    const counts = summary.counts;
+    const facts: Array<[string, string | number]> = [
+      ["verdict", summary.verdict],
+      ["checks", `${counts.checks.satisfied} satisfied / ${counts.checks.failed} failed / ${counts.checks.undetermined + counts.checks.unresolved} open（required ${counts.checks.required}）`],
+      ["claims", `${counts.claims.covered}/${counts.claims.total} covered`],
+      ["evidence", `${counts.evidence.total} assessed（sufficient ${counts.evidence.sufficient} / insufficient ${counts.evidence.insufficient}）`],
+      ["VD 文書", verification.documents.length],
+    ];
+    return `<div class="probe-panel"><h3>verification（Evidence）</h3><p><span class="status-pill status-${summary.verdict === "verified" ? "done" : summary.verdict === "failed" ? "blocked" : "in-progress"}">${e(summary.verdict)}</span> ${binding}</p><dl class="facts">${facts.map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl><p class="probe-note">Evidence Store の不変記録から導出 — run の Effect Receipt とは別権威です</p></div>`;
+  })();
   const canvas = `<div class="graph-canvas"><div class="canvas-head"><span class="canvas-eyebrow">Execution Graph</span><span class="graph-meta">${e(snapshot.definition.graphId)} · ${snapshot.definition.nodes.length} nodes · ${snapshot.definition.edges.length} edges</span></div><div class="graph-stage">${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}</div><ul class="graph-legend"><li><span class="legend-swatch sw-action"></span>action</li><li><span class="legend-swatch sw-delegate"></span>delegate</li><li><span class="legend-swatch sw-audit"></span>audit</li><li><span class="legend-swatch sw-terminal"></span>terminal</li><li><span class="legend-line sw-fwd"></span>前進遷移</li><li><span class="legend-line sw-back"></span>戻り・修復</li><li><span class="legend-line sw-retry"></span>リトライ</li><li><span class="legend-swatch swatch-current"></span>指定ノード（現在）</li><li><span class="legend-swatch swatch-edge"></span>選択 edge</li><li>ノードにカーソルを合わせると接続 edge が強調されます</li></ul></div>`;
-  return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2><div class="probe-grid">${routeSummary}<div class="probe-side">${signalPanel}${gatePanel}</div></div>${canvas}</section>`;
+  return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2><div class="probe-grid">${routeSummary}<div class="probe-side">${signalPanel}${gatePanel}${verificationPanel}</div></div>${canvas}</section>`;
 }
 
 function renderTaskBoard(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, string>): string {

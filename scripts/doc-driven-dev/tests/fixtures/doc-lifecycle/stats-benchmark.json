@@ -113,11 +113,11 @@
     "inboundTargets": 0
   },
   "findings": {
-    "total": 336,
-    "blocking": 164,
+    "total": 351,
+    "blocking": 179,
     "warnings": 97,
     "infos": 75,
-    "onDocuments": 334,
+    "onDocuments": 349,
     "onIndexes": 0,
     "unattributed": 2,
     "byRuleId": {
@@ -132,11 +132,14 @@
       "orphan-navigation": 53,
       "orphan-relation": 46,
       "provenance-missing-source": 20,
-      "relation-cycle": 2
+      "relation-cycle": 2,
+      "tracked-execution-doc": 13,
+      "tracked-legacy-doc": 2
     },
     "byCategory": {
       "front-matter": 107,
       "index": 54,
+      "migration": 15,
       "orphan": 152,
       "provenance": 20,
       "relation": 2,
@@ -144,7 +147,7 @@
     },
     "health": {
       "documents": 53,
-      "blocking": 164,
+      "blocking": 179,
       "warnings": 97,
       "infos": 75,
       "categories": [
@@ -186,6 +189,13 @@
         {
           "category": "structure",
           "blocking": 1,
+          "warnings": 0,
+          "infos": 0,
+          "clean": false
+        },
+        {
+          "category": "migration",
+          "blocking": 15,
           "warnings": 0,
           "infos": 0,
           "clean": false
@@ -386,8 +396,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 1,
+      "blockingFindings": 1
     },
     "plan": {
       "files": 2,
@@ -422,8 +432,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 2,
+      "blockingFindings": 2
     },
     "spec": {
       "files": 16,
@@ -494,8 +504,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 11,
+      "blockingFindings": 11
     },
     "test-spec": {
       "files": 1,
@@ -530,8 +540,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 1,
+      "blockingFindings": 1
     }
   }
 }

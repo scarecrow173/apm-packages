@@ -285,18 +285,37 @@ const MATERIALIZED_GATE_NAMES = [
   "orphan-index-membership",
 ];
 
+// Repo-level authorities (Issue #246) fire only on un-narrowed queries — a
+// --type/--dir-scoped run reports them as skipped, never as ran.
+const REPO_LEVEL_GATE_NAMES = [
+  "evidence",
+  "execution-boundary",
+];
+
 test("profileGates reports ran/skipped check groups per profile", () => {
   assert.equal(typeof docReport.profileGates, "function", "doc_report exports profileGates");
   assert.ok(Array.isArray(docReport.ARTIFACT_GATES), "doc_report exports ARTIFACT_GATES");
   assert.ok(Array.isArray(docReport.MATERIALIZED_ONLY_GATES), "doc_report exports MATERIALIZED_ONLY_GATES");
+  assert.ok(Array.isArray(docReport.REPO_LEVEL_GATES), "doc_report exports REPO_LEVEL_GATES");
   assert.deepEqual([...docReport.MATERIALIZED_ONLY_GATES].sort(), MATERIALIZED_GATE_NAMES);
+  assert.deepEqual([...docReport.REPO_LEVEL_GATES].sort(), REPO_LEVEL_GATE_NAMES);
+  // Repo-wide (default): repo-level gates ran alongside the profile gates.
   assert.deepEqual(docReport.profileGates("artifact"), {
-    ran: [...docReport.ARTIFACT_GATES],
+    ran: [...docReport.ARTIFACT_GATES, ...docReport.REPO_LEVEL_GATES],
     skipped: [...docReport.MATERIALIZED_ONLY_GATES],
   });
   assert.deepEqual(docReport.profileGates("materialized"), {
-    ran: [...docReport.ARTIFACT_GATES, ...docReport.MATERIALIZED_ONLY_GATES],
+    ran: [...docReport.ARTIFACT_GATES, ...docReport.REPO_LEVEL_GATES, ...docReport.MATERIALIZED_ONLY_GATES],
     skipped: [],
+  });
+  // Scoped: repo-level gates move to skipped regardless of profile.
+  assert.deepEqual(docReport.profileGates("artifact", false), {
+    ran: [...docReport.ARTIFACT_GATES],
+    skipped: [...docReport.REPO_LEVEL_GATES, ...docReport.MATERIALIZED_ONLY_GATES],
+  });
+  assert.deepEqual(docReport.profileGates("materialized", false), {
+    ran: [...docReport.ARTIFACT_GATES, ...docReport.MATERIALIZED_ONLY_GATES],
+    skipped: [...docReport.REPO_LEVEL_GATES],
   });
 });
 
@@ -307,11 +326,11 @@ test("collectFindings threads the query profile and reports gates", async () => 
   const artifact = await docReport.collectFindings(root, { type: "spec", profile: "artifact" });
   assert.equal(artifact.profile, "artifact");
   assert.deepEqual(codes(artifact.findings), [], "artifact run sees no index findings without a README");
-  assert.deepEqual([...artifact.gates.skipped].sort(), MATERIALIZED_GATE_NAMES);
+  assert.deepEqual([...artifact.gates.skipped].sort(), [...MATERIALIZED_GATE_NAMES, ...REPO_LEVEL_GATE_NAMES].sort());
 
   const materialized = await docReport.collectFindings(root, { type: "spec" });
   assert.equal(materialized.profile, "materialized", "unspecified profile stays materialized");
-  assert.deepEqual(materialized.gates.skipped, []);
+  assert.deepEqual([...materialized.gates.skipped].sort(), [...REPO_LEVEL_GATE_NAMES].sort());
   assert.ok(materialized.gates.ran.includes("index-presence"));
   assert.ok(codes(materialized.findings).includes("missing-index"));
 });
@@ -322,12 +341,12 @@ test("auditDocuments reports profile and gates on the report envelope", async ()
 
   const artifact = await auditDocuments(root, "spec", undefined, { profile: "artifact" });
   assert.equal(artifact.profile, "artifact");
-  assert.deepEqual([...artifact.gates.skipped].sort(), MATERIALIZED_GATE_NAMES);
+  assert.deepEqual([...artifact.gates.skipped].sort(), [...MATERIALIZED_GATE_NAMES, ...REPO_LEVEL_GATE_NAMES].sort());
   assert.deepEqual(artifact.findings, []);
 
   const materialized = await auditDocuments(root, "spec");
   assert.equal(materialized.profile, "materialized");
-  assert.deepEqual(materialized.gates.skipped, []);
+  assert.deepEqual([...materialized.gates.skipped].sort(), [...REPO_LEVEL_GATE_NAMES].sort());
   assert.ok(materialized.findings.some((finding) => finding.code === "missing-index"));
 });
 
@@ -368,13 +387,13 @@ test("doc_status lint --profile artifact skips index gates; default stays materi
   assert.equal(artifactReport.profile, "artifact");
   assert.equal(artifactReport.blocking, 0);
   assert.deepEqual(artifactReport.findings, []);
-  assert.deepEqual([...artifactReport.gates.skipped].sort(), MATERIALIZED_GATE_NAMES);
+  assert.deepEqual([...artifactReport.gates.skipped].sort(), [...MATERIALIZED_GATE_NAMES, ...REPO_LEVEL_GATE_NAMES].sort());
 
   const materialized = runCli("doc_status.js", ["lint", "--type", "spec", "--json"], root);
   assert.equal(materialized.status, 0, materialized.stderr);
   const materializedReport = JSON.parse(materialized.stdout);
   assert.equal(materializedReport.profile, "materialized");
-  assert.deepEqual(materializedReport.gates.skipped, []);
+  assert.deepEqual([...materializedReport.gates.skipped].sort(), [...REPO_LEVEL_GATE_NAMES].sort());
   assert.ok(
     materializedReport.findings.some((finding: { ruleId: string }) => finding.ruleId === "missing-index"),
     "default lint still reports the missing README",

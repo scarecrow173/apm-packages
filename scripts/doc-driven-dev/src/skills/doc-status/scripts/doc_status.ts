@@ -8,6 +8,7 @@ import type { AuditProfile } from "../../lib/doc_report";
 import type { Finding } from "../../lib/doc_repository";
 
 type CliArgs = {
+  allowExternalRoot?: boolean;
   blocking?: boolean;
   command?: string;
   cwd: string;
@@ -18,6 +19,7 @@ type CliArgs = {
   profile?: AuditProfile;
   rule?: string;
   severity?: string;
+  stateRoot?: string;
   status?: string;
   type?: string;
 };
@@ -43,6 +45,8 @@ function parseArgs(argv: string[]): CliArgs {
     }
     else if (arg === "--blocking") args.blocking = true;
     else if (arg === "--json") args.json = true;
+    else if (arg === "--state-root") args.stateRoot = argv[++i];
+    else if (arg === "--allow-external-root") args.allowExternalRoot = true;
     else if (arg === "--external-links") args.externalLinks = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (!arg.startsWith("-") && !args.command) args.command = arg;
@@ -62,9 +66,10 @@ function usage(): string {
     "  health   Aggregate repository-wide findings by category",
     "",
     "Options:",
-    "  [--type idea|brainstorm|discovery|spec|plan|task|design|adr|knowledge|verification|test-spec|all]",
+    "  [--type idea|brainstorm|discovery|spec|design|adr|knowledge|verification|all]",
     "  [--dir <path>] [--status <status>] [--rule <ruleId>] [--severity error|warning|info]",
     "  [--profile artifact|materialized] [--blocking] [--json] [--external-links]",
+    "  [--state-root <path>] [--allow-external-root]",
   ].join("\n");
 }
 
@@ -105,6 +110,8 @@ async function runLint(args: CliArgs, cwd: string, audit: boolean): Promise<void
     dir: args.dir,
     externalLinks: args.externalLinks,
     profile: args.profile,
+    stateRoot: args.stateRoot,
+    allowExternalRoot: args.allowExternalRoot,
   });
   const findings = filterFindings(collected.findings, {
     rule: args.rule,
@@ -135,6 +142,8 @@ async function runHealth(args: CliArgs, cwd: string): Promise<void> {
     dir: args.dir,
     externalLinks: args.externalLinks,
     profile: args.profile,
+    stateRoot: args.stateRoot,
+    allowExternalRoot: args.allowExternalRoot,
   });
   const findings = filterFindings(collected.findings, {
     rule: args.rule,

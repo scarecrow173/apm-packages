@@ -8,6 +8,7 @@ import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import { collectOwnerAudits } from "./lib/owner_audits";
 
 type CliArgs = {
+  allowExternalRoot?: boolean;
   cwd: string;
   dir?: string;
   externalLinks?: boolean;
@@ -15,6 +16,7 @@ type CliArgs = {
   json: boolean;
   owners?: boolean;
   profile?: AuditOptions["profile"];
+  stateRoot?: string;
   type?: string;
 };
 
@@ -33,6 +35,8 @@ function parseArgs(argv: string[]): CliArgs {
       args.profile = value;
     }
     else if (arg === "--json") args.json = true;
+    else if (arg === "--state-root") args.stateRoot = argv[++i];
+    else if (arg === "--allow-external-root") args.allowExternalRoot = true;
     else if (arg === "--owners") args.owners = true;
     else if (arg === "--external-links") args.externalLinks = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -42,7 +46,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|knowledge|verification|test-spec|all [--dir <path>] [--json] [--external-links] [--profile artifact|materialized] [--owners]\n" +
+  return "Usage: node scripts/audit_docs.js --type idea|brainstorm|discovery|spec|design|adr|knowledge|verification|all [--dir <path>] [--json] [--external-links] [--profile artifact|materialized] [--owners] [--state-root <path>] [--allow-external-root]\n" +
     "  --owners requires --type all and cannot be combined with --dir";
 }
 
@@ -62,7 +66,12 @@ async function main(): Promise<void> {
     if (args.owners && args.dir) throw new Error("--owners cannot be combined with --dir");
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
-    const options: AuditOptions = { externalLinks: Boolean(args.externalLinks), profile: args.profile };
+    const options: AuditOptions = {
+      externalLinks: Boolean(args.externalLinks),
+      profile: args.profile,
+      stateRoot: args.stateRoot,
+      allowExternalRoot: args.allowExternalRoot,
+    };
     const report = args.type === "all" ? await auditAll(cwd, args.dir, options) : await auditDocuments(cwd, args.type, args.dir, options);
     if (args.owners) report.ownerAudits = collectOwnerAudits(cwd);
     if (args.json) {

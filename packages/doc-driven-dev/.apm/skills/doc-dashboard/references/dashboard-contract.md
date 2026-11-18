@@ -59,7 +59,14 @@ status pill, a `route` row of edge/delegate/commit-gate chips, and labeled
 `signals` panel groups supplied/state/hard-blocker chips under eyebrow labels,
 and the `gates` panel renders each gate as a status-dot pill in graph flow
 order (pass/fail/blocked colors, failure reasons in the tooltip) with an
-`N/M pass` score. Graph topology issues surface as danger chips inside the
+`N/M pass` score. Beside them a `verification（Evidence）` panel renders the
+derived Verification Summary: the verdict pill, the HEAD-binding badge,
+satisfied/failed/open check counts, claim coverage, assessed evidence
+counts, and the verification-document count. It is labeled as Evidence and
+explicitly derived from the immutable Evidence Store records — Effect
+Receipts are a separate authority and are never shown as verification
+Evidence. When no Evidence Store exists the panel says so instead of
+fabricating coverage. Graph topology issues surface as danger chips inside the
 signals panel only when present; node/edge/gate inspection tables are omitted
 because the canvas and panels already carry that information. Per-run
 `<summary>` rows carry the run status pill — one Execution Store run per row,
@@ -140,6 +147,9 @@ mise exec -- node <doc-dashboard-skill-dir>/../doc-driven-dev-graph/scripts/buil
 | `--focus <id-or-path>` | Repeatable focus selector passed to existing resolution. |
 | `--current <node>` | Enables route preview; an unknown node fails before generation. |
 | `--signal <signal>` | Repeatable explicit signal; undeclared signals fail before generation. |
+| `--run <run-id>` | Execution Store run projected for the task graph; default infers the run set. |
+| `--state-root <path>` | Execution/Evidence state root; default `.apm/state/doc-driven-dev`. |
+| `--allow-external-root` | Authorizes a `--state-root` outside the checkout; without it an external root fails closed. |
 | `--out <file.html>` | Output relative to `--cwd`; default is `reports/doc-driven-dev/index.html`. |
 | `--force` | Replaces an explicitly requested existing report without deleting it first. |
 | `--help` | Prints usage and path bases without reading or generating a report. |

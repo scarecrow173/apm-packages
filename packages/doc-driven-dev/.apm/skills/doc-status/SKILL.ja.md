@@ -79,10 +79,18 @@ scope です。`plan`/`task` は execution-bound(状態は Execution Store に�
    `health` は同じ findings の集約ビューであり、別の scanner ではない。
    数値スコアは報告しない。`Orphans` 行（`--json` では `orphans`）が
    `orphan-*` findings をルール別・文書型別に集約する。
+   repo-level の findings は独自の `migration` / `evidence` category に
+   集約される。
 
    共通フィルタ: `--type`, `--dir`, `--rule`, `--severity`, `--blocking`,
    `--status`（list）, `--json`, `--external-links`,
-   `--profile`（lint, audit, health）。finding は決定的順序で
+   `--profile`（lint, audit, health）, `--state-root`,
+   `--allow-external-root`。最後の 2 つは repo-level の `evidence` gate
+   が読み取る Evidence Store を選択する —— repository 外の
+   `--state-root` は `--allow-external-root` を指定しない限り拒否
+   される。Execution/Evidence CLI が強制するのと同じ containment
+   contract である。
+   finding は決定的順序で
    出力され、exit status は呼び出し自体が不正な場合のみ `0` 以外になる。
 
    `audit_docs.js --type all` が監査するのは shared durable suite のみ ——
@@ -96,6 +104,21 @@ scope です。`plan`/`task` は execution-bound(状態は Execution Store に�
    entry を追加します。`--owners` は `--type all` を必須とし、`--dir`
    とは併用できません。owner audit は `--profile` に関係なく常に
    full check を実行します。
+
+   絞り込みのない query —— `--type all`、または `--dir` なしで `--type`
+   を省略 —— は、追加で 2 つの repo-level gate を実行します。
+   `execution-boundary` gate は migration 所有 directory 配下の
+   Git-tracked Markdown を指摘します。旧 `plan`/`task` ホームには
+   `tracked-execution-doc`（durable な Git 形式はもう存在しない ——
+   その状態は Execution Store にある）、legacy の
+   `test-spec`/`impl`/`exp` コーパスには `tracked-legacy-doc` を
+   報告します。どちらも blocking の `migration` finding で、repair
+   class は `migration` であり、safe な修正経路ではありません。
+   `evidence` gate は全 Evidence Store record を live な Knowledge
+   Graph と checkout の `HEAD` subject に対して再評価します ——
+   失敗した軸ごとに 1 finding（rule 一覧は後述）。`--type` や
+   `--dir` で絞り込んだ query はこれらの gate を実行せず、レポートの
+   `gates` envelope では `skipped` に列挙されます。
 
    `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
    durable 文書型（`spec`, `adr`, `design`, `idea`, `brainstorm`,
@@ -215,6 +238,30 @@ profile と、実行・スキップされたチェック群を報告する。対
   `external-link-unverifiable` — `audit_docs.js --external-links` による
   opt-in の外部リンク確認。デフォルトでは無効で、監査は決定的かつ
   オフライン安全を維持する。
+- `tracked-execution-doc`, `tracked-legacy-doc` — migration 所有
+  directory（旧 `plan`/`task` ホームと legacy の
+  `test-spec`/`impl`/`exp` scope）配下の Git-tracked Markdown を対象に
+  する repo-level の migration sweep。blocking の `migration` category
+  マーカーで、修復は `doc_maintenance.js` の `migrate` 系が所有する。
+  repo-wide query のみ。
+- `unresolved-evidence-claim`, `unresolved-evidence-check`,
+  `stale-evidence-revision`, `evidence-check-target-mismatch`,
+  `evidence-method-mismatch`, `stale-evidence-subject`,
+  `evidence-artifact-unavailable`, `evidence-artifact-expired`,
+  `failed-evidence` — blocking の Evidence Store 軸: live な Knowledge
+  Graph で解決できなくなった claim/check 参照、動いた pin revision、
+  記録された claim を検証しない check、method の不一致、`HEAD` より
+  古い subject、到達不能または期限切れの artifact、記録された failed
+  outcome。
+- `unverifiable-evidence-subject`, `unverifiable-evidence-target`,
+  `unverified-evidence-artifact`, `attestation-only-evidence`,
+  `inconclusive-evidence` — non-blocking の Evidence 軸: この checkout
+  で digest 検証できない subject、一度も digest 検証されていない
+  artifact、attestation-only の record、決定的な pass/fail でない
+  outcome。linter にとって Evidence Store は read-only —— record は
+  再評価されるだけで、Markdown へコピーされることはない。
+  repo-wide query のみ。`--state-root`/`--allow-external-root` で
+  store root を選択する。
 
 relation target はまず一意な artifact ID で解決し、次にリポジトリ相対または
 文書相対パスで解決する。欠落した relation をファイル名やパス近接から
@@ -235,7 +282,8 @@ relation target はまず一意な artifact ID で解決し、次にリポジト
 - `scripts/audit_docs.js`: フロントマター、ステータス、relation、link、
   索引、orphan を検証します。`--external-links` で opt-in の外部リンク
   確認を有効化し、`--owners` は `--type all` を package-wide audit に
-  拡張します。
+  拡張し、`--state-root`/`--allow-external-root` は repo-level の
+  `evidence` gate が読み取る Evidence Store を選択します。
 
 ## Graph Effect Outcome
 
