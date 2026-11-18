@@ -14324,6 +14324,13 @@ var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
 function normalizeDir(input2) {
   return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
 }
+function normalizeContainedRelPath(input2) {
+  const rel = import_node_path2.default.posix.normalize(normalizeDir(input2));
+  if (rel === "" || rel === "." || rel === ".." || rel.startsWith("../") || import_node_path2.default.posix.isAbsolute(rel) || /^[A-Za-z]:/.test(rel)) {
+    return null;
+  }
+  return rel;
+}
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -43956,7 +43963,9 @@ function exportRun(cwd, runId, options2 = {}) {
     payloadDigest
   };
   if (options2.out !== void 0) {
-    atomicWriteFile(import_node_path16.default.resolve(cwd, options2.out), `${JSON.stringify(document3, null, 2)}
+    const target = import_node_path16.default.resolve(cwd, options2.out);
+    import_node_fs15.default.mkdirSync(import_node_path16.default.dirname(target), { recursive: true });
+    atomicWriteFile(target, `${JSON.stringify(document3, null, 2)}
 `);
   }
   return document3;
@@ -44190,7 +44199,10 @@ function crashAt(options2, stage, completedSteps = 0) {
 }
 function worktreeDirty(cwd) {
   const probe = (0, import_node_child_process3.spawnSync)("git", ["rev-parse", "--is-inside-work-tree"], { cwd, encoding: "utf8" });
-  if (probe.status !== 0) return null;
+  if (probe.status !== 0) {
+    return import_node_fs16.default.existsSync(import_node_path17.default.join(cwd, ".git")) ? null : false;
+  }
+  if (probe.stdout.trim() !== "true") return false;
   const status = (0, import_node_child_process3.spawnSync)("git", ["status", "--porcelain"], { cwd, encoding: "utf8" });
   if (status.status !== 0) return null;
   return status.stdout.trim().length > 0;
@@ -44244,10 +44256,41 @@ function readJournal(cwd) {
   } catch (error62) {
     return { journal: null, error: `migration journal is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
   }
-  if (!isPlainObject3(parsed) || parsed.kind !== "migration-journal" || parsed.schemaVersion !== 1 || !isSha256(parsed.planHash) || !Array.isArray(parsed.steps) || !Array.isArray(parsed.removals) || !isPlainObject3(parsed.resolutions)) {
+  if (!isPlainObject3(parsed) || parsed.kind !== "migration-journal" || parsed.schemaVersion !== 1 || !isSha256(parsed.planHash) || !Array.isArray(parsed.steps) || !Array.isArray(parsed.removals) || !Array.isArray(parsed.inputs) || !Array.isArray(parsed.staged) || !isPlainObject3(parsed.resolutions) || !isPlainObject3(parsed.runHandoffs)) {
     return { journal: null, error: "migration journal exists but does not match the v1 journal schema \u2014 it may be foreign or from another toolchain; remove it only after verifying no apply is in flight" };
   }
-  return { journal: parsed, error: null };
+  const staging = typeof parsed.staging === "string" ? normalizeContainedRelPath(parsed.staging) : null;
+  if (staging === null || !isUnderDir6(staging, EXECUTION_STATE_ROOT)) {
+    return { journal: null, error: `migration journal names a staging area ${JSON.stringify(parsed.staging)} outside the execution-state namespace \u2014 refusing to trust it` };
+  }
+  const pathFields = [];
+  for (const step of parsed.steps) {
+    if (!isPlainObject3(step) || typeof step.target !== "string") {
+      return { journal: null, error: "migration journal holds a step without a string target \u2014 refusing to trust it" };
+    }
+    pathFields.push(step.target, step.staged, step.backup);
+  }
+  for (const removal of parsed.removals) {
+    if (!isPlainObject3(removal) || typeof removal.path !== "string") {
+      return { journal: null, error: "migration journal holds a removal without a string path \u2014 refusing to trust it" };
+    }
+    pathFields.push(removal.path, removal.backup);
+  }
+  for (const pin of [...parsed.inputs, ...parsed.staged]) {
+    if (isPlainObject3(pin)) pathFields.push(pin.path);
+  }
+  const createdDirs = Array.isArray(parsed.createdDirs) ? parsed.createdDirs : [];
+  for (const dir of createdDirs) pathFields.push(dir);
+  for (const field of pathFields) {
+    if (field === null || field === void 0) continue;
+    if (typeof field !== "string" || normalizeContainedRelPath(field) === null) {
+      return { journal: null, error: `migration journal names a path ${JSON.stringify(field)} that escapes the checkout \u2014 refusing to trust it` };
+    }
+  }
+  const journal = parsed;
+  journal.createdDirs = createdDirs;
+  if (!isPlainObject3(journal.plan)) journal.plan = void 0;
+  return { journal, error: null };
 }
 function rawChoice(raw) {
   if (typeof raw === "string" && raw.trim() !== "") {
@@ -44328,14 +44371,15 @@ function finishParam(stem, arg, params, decision) {
     }
     case "target-collision": {
       if (stem !== "write") return { error: `${decision.decisionId}: unexpected parameterized candidate ${stem}` };
-      const target = normalizeDir(arg);
-      if (target.startsWith("../") || import_node_path17.default.posix.isAbsolute(target) || target === "") {
+      const target = normalizeContainedRelPath(arg);
+      if (target === null) {
         return { error: `${decision.decisionId}: write target ${JSON.stringify(arg)} escapes the checkout` };
       }
       return { value: { action: "write", target } };
     }
     case "bookkeeping-assignment": {
       if (stem !== "assign-to-run") return { error: `${decision.decisionId}: unexpected parameterized candidate ${stem}` };
+      if (!isValidId(arg)) return { error: `${decision.decisionId}: assigned run ${JSON.stringify(arg)} is not a valid artifact id` };
       return { value: { action: "assign", runId: arg } };
     }
     default:
@@ -44530,9 +44574,9 @@ function normalizeRunHandoff(runId, raw) {
   if (method === null) return { error: `run handoff for ${runId}: method must be keep|export|finalize` };
   if (method === "export") {
     const out = stringParam(parsed.params, "out", "file", "path") ?? `migration-exports/${runId}.export.json`;
-    const normalized = normalizeDir(out);
-    if (normalized.startsWith("../") || import_node_path17.default.posix.isAbsolute(normalized) || isUnderDir6(normalized, DOC_DRIVEN_DEV_DIR) || isUnderDir6(normalized, EXECUTION_STATE_ROOT)) {
-      return { error: `run handoff export target ${JSON.stringify(out)} must be a checkout-relative path outside the state/manifest namespaces` };
+    const normalized = normalizeContainedRelPath(out);
+    if (normalized === null || isUnderDir6(normalized, DOC_DRIVEN_DEV_DIR) || isUnderDir6(normalized, EXECUTION_STATE_ROOT)) {
+      return { error: `run handoff export target ${JSON.stringify(out)} must be a checkout-relative path inside the checkout and outside the state/manifest namespaces` };
     }
     return { method, out: normalized, status: null };
   }
@@ -45644,6 +45688,12 @@ ${rawText.trimEnd()}
       ctx.errors.push(`bookkeeping record targets finalized run ${record2.runId} \u2014 records cannot be appended`);
     }
   }
+  const pinnedInputs = new Set(plan.inventory.inputFiles.map(normalizeDir));
+  for (const item of world.exports) {
+    if (pinnedInputs.has(normalizeDir(item.out))) {
+      ctx.errors.push(`run ${item.runId}: export target ${item.out} collides with a pinned migration input`);
+    }
+  }
   world.runs = [...runById.values()].sort((a, b) => compareCodeUnits2(a.runId, b.runId));
   return world;
 }
@@ -45905,50 +45955,80 @@ function listStaged(staging) {
 function journalStepId(index2, op, target) {
   return `${String(index2).padStart(4, "0")}-${op}-${target}`.replace(/[^A-Za-z0-9._-]+/g, "-");
 }
+function createdDirsFor(cwd, fileTargets, dirTargets = []) {
+  const created = /* @__PURE__ */ new Set();
+  const visit3 = (dir) => {
+    while (dir !== "" && dir !== "." && !import_node_fs16.default.existsSync(import_node_path17.default.resolve(cwd, dir))) {
+      created.add(dir);
+      const parent = import_node_path17.default.posix.dirname(dir);
+      if (parent === dir) return;
+      dir = parent;
+    }
+  };
+  for (const rel of dirTargets) visit3(normalizeDir(rel));
+  for (const rel of fileTargets) visit3(import_node_path17.default.posix.dirname(normalizeDir(rel)));
+  return [...created].sort(compareCodeUnits2);
+}
 function runTransform(cwd, journal, world, ctx, options2) {
+  const now = options2.now ?? systemClock2;
   const staging = stagingAbs(cwd, journal);
+  const fileTargets = [
+    ...world.docWrites.map((write) => write.target),
+    ...world.indexJobs.map((job) => job.path),
+    ...world.exports.map((item) => item.out),
+    ...world.manifestPlanned ? [SCHEMA_MANIFEST_PATH] : []
+  ];
+  const dirTargets = [...world.runs.map((run) => `${EXECUTION_STATE_ROOT}/runs/${run.runId}`), journal.staging];
+  journal.createdDirs = sortStrings2(/* @__PURE__ */ new Set([...journal.createdDirs, ...createdDirsFor(cwd, fileTargets, dirTargets)]));
+  journal.stage = "transform";
+  writeJournal(cwd, journal, now);
   import_node_fs16.default.mkdirSync(staging, { recursive: true });
   const staged = /* @__PURE__ */ new Map();
+  let stagedCount = 0;
+  const pin = (entry) => {
+    staged.set(entry.path, entry.sha256);
+    stagedCount += 1;
+    crashAt(options2, "transform", stagedCount);
+  };
   for (const write of world.docWrites) {
-    const { path: rel, sha256: digest } = stageWrite(staging, stagedDocRel(write.target), renderDoc(write.data, write.body));
-    staged.set(rel, digest);
+    pin(stageWrite(staging, stagedDocRel(write.target), renderDoc(write.data, write.body)));
   }
   if (world.manifestPlanned) {
-    const { path: rel, sha256: digest } = stageWrite(staging, stagedManifestRel(), schemaManifestText());
-    staged.set(rel, digest);
+    pin(stageWrite(staging, stagedManifestRel(), schemaManifestText()));
   }
   for (const spec of world.runs) {
     const planBody = spec.planPath !== null ? readRawDoc2(cwd, spec.planPath).body : null;
     const diagnostics = spec.diagnostics ? world.diagnostics : [];
-    const { bytes } = buildRunExportDocument(cwd, spec, planBody, diagnostics, options2.now ?? systemClock2);
-    const { path: rel, sha256: digest } = stageWrite(staging, stagedRunRel(spec.runId), bytes);
-    staged.set(rel, digest);
+    const { bytes } = buildRunExportDocument(cwd, spec, planBody, diagnostics, now);
+    pin(stageWrite(staging, stagedRunRel(spec.runId), bytes));
   }
   for (const record2 of world.existingRecords) {
     const rel = stagedRecordRel(record2.runId, record2.kind, record2.kind === "receipt" ? record2.record.receiptId : record2.record.checkpointId);
-    const { path: relPath, sha256: digest } = stageWrite(staging, rel, `${JSON.stringify(record2.record, null, 2)}
-`);
-    staged.set(relPath, digest);
+    pin(stageWrite(staging, rel, `${JSON.stringify(record2.record, null, 2)}
+`));
   }
   for (const removal of world.removals) {
     const backup = copyIntoStaging(staging, removal.path, import_node_path17.default.resolve(cwd, removal.path));
     journal.removals.push({ path: removal.path, backup, dir: removal.dir, state: "pending" });
   }
-  for (const write of world.docWrites.filter((item) => item.kind === "edit")) {
-    copyIntoStaging(staging, write.target, import_node_path17.default.resolve(cwd, write.target));
+  const backupByTarget = /* @__PURE__ */ new Map();
+  for (const write of world.docWrites) {
+    if (write.kind === "edit" || import_node_fs16.default.existsSync(import_node_path17.default.resolve(cwd, write.target))) {
+      backupByTarget.set(write.target, copyIntoStaging(staging, write.target, import_node_path17.default.resolve(cwd, write.target)));
+    }
   }
   for (const job of world.indexJobs) {
-    copyIntoStaging(staging, job.path, import_node_path17.default.resolve(cwd, job.path));
+    backupByTarget.set(job.path, copyIntoStaging(staging, job.path, import_node_path17.default.resolve(cwd, job.path)));
   }
   const manifestAbs = import_node_path17.default.resolve(cwd, SCHEMA_MANIFEST_PATH);
-  if (import_node_fs16.default.existsSync(manifestAbs)) copyIntoStaging(staging, SCHEMA_MANIFEST_PATH, manifestAbs);
+  const manifestBackup = import_node_fs16.default.existsSync(manifestAbs) ? copyIntoStaging(staging, SCHEMA_MANIFEST_PATH, manifestAbs) : null;
   let index2 = 0;
   const pushStep = (stage, op, target, detail, stagedRel = null, backup = null) => {
     index2 += 1;
     journal.steps.push({ id: journalStepId(index2, op, target), stage, op, target, staged: stagedRel, backup, detail, state: "pending" });
   };
   for (const write of [...world.docWrites].sort((a, b) => compareCodeUnits2(a.target, b.target))) {
-    pushStep("publish", write.kind === "create" ? "doc-create" : "doc-edit", write.target, { source: write.source }, stagedDocRel(write.target), write.kind === "edit" ? stagedBackupRel(write.target) : null);
+    pushStep("publish", write.kind === "create" ? "doc-create" : "doc-edit", write.target, { source: write.source }, stagedDocRel(write.target), backupByTarget.get(write.target) ?? null);
   }
   for (const spec of world.runs) {
     pushStep("publish", "run-import", spec.runId, { planPath: spec.planPath }, stagedRunRel(spec.runId));
@@ -45957,7 +46037,7 @@ function runTransform(cwd, journal, world, ctx, options2) {
     pushStep("finalize", "remove", removal.path, { dir: removal.dir }, null, removal.backup);
   }
   for (const job of world.indexJobs) {
-    pushStep("finalize", "index", job.path, { dir: job.dir });
+    pushStep("finalize", "index", job.path, { dir: job.dir }, null, backupByTarget.get(job.path) ?? null);
   }
   for (const record2 of world.existingRecords) {
     const id = record2.kind === "receipt" ? record2.record.receiptId : record2.record.checkpointId;
@@ -45970,7 +46050,7 @@ function runTransform(cwd, journal, world, ctx, options2) {
     pushStep("finalize", "handoff-finalize", `${EXECUTION_STATE_ROOT}/runs/${item.runId}`, { runId: item.runId, status: item.status });
   }
   if (world.manifestPlanned) {
-    pushStep("finalize", "manifest", SCHEMA_MANIFEST_PATH, {}, stagedManifestRel(), import_node_fs16.default.existsSync(manifestAbs) ? stagedBackupRel(SCHEMA_MANIFEST_PATH) : null);
+    pushStep("finalize", "manifest", SCHEMA_MANIFEST_PATH, {}, stagedManifestRel(), manifestBackup);
   }
   pushStep("finalize", "cleanup", `${journal.staging} + ${MIGRATION_JOURNAL_PATH}`, {});
   journal.staged = listStaged(staging);
@@ -45998,6 +46078,16 @@ function planDerivedIndexes(cwd, world) {
 function validateStaged(staging, journal, cwd) {
   const errors = [];
   const stagedDocs = [];
+  for (const step of journal.steps) {
+    if (step.op === "cleanup") continue;
+    const target = normalizeContainedRelPath(step.target);
+    const inState = target !== null && isUnderDir6(target, EXECUTION_STATE_ROOT);
+    const inManifest = target !== null && isUnderDir6(target, DOC_DRIVEN_DEV_DIR);
+    const bad = target === null || (step.op === "doc-create" || step.op === "doc-edit" || step.op === "index") && (inState || inManifest) || step.op === "remove" && inState || step.op === "export" && (inState || inManifest) || step.op === "run-import" && !isValidId(step.target) || (step.op === "run-record" || step.op === "handoff-finalize") && !inState || step.op === "manifest" && target !== SCHEMA_MANIFEST_PATH;
+    if (bad) {
+      errors.push(`step ${step.id}: target ${JSON.stringify(step.target)} is outside the ${step.op} op's allowed namespace`);
+    }
+  }
   const writeSteps = journal.steps.filter((step) => step.stage === "publish" && (step.op === "doc-create" || step.op === "doc-edit"));
   const vdChecks = /* @__PURE__ */ new Map();
   const indexVd = (id, checks, source) => {
@@ -46020,8 +46110,8 @@ function validateStaged(staging, journal, cwd) {
       errors.push(`${step.target}: staged artifact ${rel} is missing`);
       continue;
     }
-    const target = normalizeDir(step.target);
-    if (target.startsWith("../") || import_node_path17.default.posix.isAbsolute(target) || isUnderDir6(target, DOC_DRIVEN_DEV_DIR) || isUnderDir6(target, EXECUTION_STATE_ROOT)) {
+    const target = normalizeContainedRelPath(step.target);
+    if (target === null || isUnderDir6(target, DOC_DRIVEN_DEV_DIR) || isUnderDir6(target, EXECUTION_STATE_ROOT)) {
       errors.push(`${step.target}: write target escapes the checkout or lands in a managed state namespace`);
       continue;
     }
@@ -46309,8 +46399,8 @@ async function executeFinalizeStep(cwd, staging, step, options2) {
       return;
     }
     case "cleanup": {
-      import_node_fs16.default.rmSync(journalAbs(cwd), { force: true });
       import_node_fs16.default.rmSync(stagingAbs(cwd), { recursive: true, force: true });
+      import_node_fs16.default.rmSync(journalAbs(cwd), { force: true });
       return;
     }
     default:
@@ -46434,6 +46524,7 @@ async function openJournal(cwd, plan, normalized, options2) {
     resolutionsHash: sha2564(canonicalJson({ resolutions, runHandoffs })),
     resolutions,
     runHandoffs,
+    plan,
     startedAt: now(),
     updatedAt: now(),
     stage: "prepare",
@@ -46447,7 +46538,11 @@ async function openJournal(cwd, plan, normalized, options2) {
     acceptedPaths: [],
     baselineFindings: baselineFindings.sort(compareCodeUnits2),
     diagnosticsRunId: null,
-    postflight: null
+    postflight: null,
+    // The journal's own directory counts as engine-created only when it was
+    // absent now — writeJournal creates it below, so this is evaluated
+    // before the first write.
+    createdDirs: createdDirsFor(cwd, [MIGRATION_JOURNAL_PATH])
   };
   writeJournal(cwd, journal, now);
   return { journal };
@@ -46456,27 +46551,50 @@ function verifyResumeDrift(cwd, journal) {
   const problems = [];
   const consumedEdit = /* @__PURE__ */ new Map();
   const consumedRemove = /* @__PURE__ */ new Set();
+  const engineOutput = /* @__PURE__ */ new Set();
+  const engineTransient = /* @__PURE__ */ new Set();
   for (const step of journal.steps) {
     if (step.state !== "done") continue;
-    if (step.op === "doc-edit") consumedEdit.set(normalizeDir(step.target), step);
-    if (step.op === "doc-create") consumedEdit.set(normalizeDir(step.target), step);
-    if (step.op === "remove") consumedRemove.add(normalizeDir(step.target));
+    const target = normalizeDir(step.target);
+    if (step.op === "doc-edit" || step.op === "doc-create") {
+      consumedEdit.set(target, step);
+    } else if (step.op === "remove") {
+      consumedRemove.add(target);
+    } else if (step.op === "index" || step.op === "manifest" || step.op === "export") {
+      engineOutput.add(target);
+    } else if (step.op === "run-import" || step.op === "handoff-finalize" || step.op === "run-record") {
+      const runId = step.op === "run-import" ? target : String(step.detail.runId ?? "");
+      if (isValidId(runId)) {
+        const runDir = `${EXECUTION_STATE_ROOT}/runs/${runId}`;
+        engineTransient.add(`${runDir}/writer.lock`);
+        if (step.op !== "run-record") engineOutput.add(`${runDir}/manifest.json`);
+        else engineOutput.add(target);
+      }
+    }
   }
   for (const removal of journal.removals) {
     if (removal.state === "done") consumedRemove.add(normalizeDir(removal.path));
   }
   for (const input2 of journal.inputs) {
+    const rel = normalizeDir(input2.path);
     const abs = import_node_path17.default.resolve(cwd, input2.path);
-    if (consumedRemove.has(input2.path)) {
+    if (engineTransient.has(rel)) continue;
+    if (consumedRemove.has(rel)) {
       if (import_node_fs16.default.existsSync(abs)) problems.push(`${input2.path}: marked removed in the journal but the file still exists`);
       continue;
     }
-    const edit = consumedEdit.get(input2.path);
+    const edit = consumedEdit.get(rel);
     if (edit !== void 0) {
       const stagedPin = journal.staged.find((item) => item.path === edit.staged);
       const current = import_node_fs16.default.existsSync(abs) ? sha2564(import_node_fs16.default.readFileSync(abs, "utf8")) : null;
       if (current !== stagedPin?.sha256) {
         problems.push(`${input2.path}: published bytes no longer match the staged artifact \u2014 drift after publish`);
+      }
+      continue;
+    }
+    if (engineOutput.has(rel)) {
+      if (!import_node_fs16.default.existsSync(abs)) {
+        problems.push(`${input2.path}: engine-written output is missing after its step completed`);
       }
       continue;
     }
@@ -46524,12 +46642,21 @@ function verifyStaging(staging, journal) {
 async function publishAndFinalize(cwd, journal, options2, report) {
   const now = options2.now ?? systemClock2;
   const staging = stagingAbs(cwd, journal);
-  const validationErrors = validateStaged(staging, journal, cwd);
-  if (validationErrors.length > 0) {
-    journal.stage = "validate";
-    writeJournal(cwd, journal, now);
-    throw new MigrationFault("staged-invalid", `staged validation failed:
+  const markDone = (step) => {
+    step.state = "done";
+    if (step.op === "remove") {
+      const removal = journal.removals.find((item) => normalizeDir(item.path) === normalizeDir(step.target));
+      if (removal !== void 0) removal.state = "done";
+    }
+  };
+  if (journal.steps.some((item) => item.state === "pending" && item.op !== "cleanup")) {
+    const validationErrors = validateStaged(staging, journal, cwd);
+    if (validationErrors.length > 0) {
+      journal.stage = "validate";
+      writeJournal(cwd, journal, now);
+      throw new MigrationFault("staged-invalid", `staged validation failed:
 - ${validationErrors.join("\n- ")}`);
+    }
   }
   if (journal.stage === "validate") {
     journal.stage = "publish";
@@ -46539,7 +46666,7 @@ async function publishAndFinalize(cwd, journal, options2, report) {
   let done = 0;
   for (const step of journal.steps.filter((item) => item.stage === "publish" && item.state === "pending")) {
     executePublishStep(cwd, staging, step, options2);
-    step.state = "done";
+    markDone(step);
     done += 1;
     writeJournal(cwd, journal, now);
     crashAt(options2, "publish", done);
@@ -46553,14 +46680,14 @@ async function publishAndFinalize(cwd, journal, options2, report) {
   const prePostflight = journal.steps.filter((item) => item.stage === "finalize" && item.op !== "handoff-finalize" && item.op !== "manifest" && item.op !== "cleanup" && item.op !== "export");
   for (const step of prePostflight.filter((item) => item.state === "pending")) {
     await executeFinalizeStep(cwd, staging, step, options2);
-    step.state = "done";
+    markDone(step);
     done += 1;
     writeJournal(cwd, journal, now);
     crashAt(options2, "finalize", done);
   }
   for (const step of journal.steps.filter((item) => item.op === "export" && item.state === "pending")) {
     await executeFinalizeStep(cwd, staging, step, options2);
-    step.state = "done";
+    markDone(step);
     done += 1;
     writeJournal(cwd, journal, now);
     crashAt(options2, "finalize", done);
@@ -46575,7 +46702,7 @@ async function publishAndFinalize(cwd, journal, options2, report) {
   }
   for (const step of journal.steps.filter((item) => item.stage === "finalize" && (item.op === "handoff-finalize" || item.op === "manifest" || item.op === "cleanup") && item.state === "pending")) {
     await executeFinalizeStep(cwd, staging, step, options2);
-    step.state = "done";
+    markDone(step);
     done += 1;
     if (step.op !== "cleanup") writeJournal(cwd, journal, now);
     crashAt(options2, "finalize", done);
@@ -46786,8 +46913,10 @@ function rollbackJournal(cwd, journal, now) {
       }
       restored.push(target);
     } else {
-      if (import_node_fs16.default.existsSync(abs)) import_node_fs16.default.rmSync(abs, { recursive: true, force: true });
-      deleted.push(target);
+      if (import_node_fs16.default.existsSync(abs)) {
+        import_node_fs16.default.rmSync(abs, { recursive: true, force: true });
+        deleted.push(target);
+      }
     }
   };
   for (const step of [...journal.steps].reverse()) {
@@ -46801,6 +46930,11 @@ function rollbackJournal(cwd, journal, now) {
             const current = import_node_fs16.default.readFileSync(abs, "utf8");
             if (staged !== null && current !== staged) {
               conflicts.push(`${step.target}: content changed after publish \u2014 refusing to remove (manual review)`);
+              break;
+            }
+            const backup = step.backup ?? null;
+            if (backup !== null) {
+              restoreBackup(step.target, backup);
               break;
             }
             import_node_fs16.default.rmSync(abs, { force: true });
@@ -46891,8 +47025,81 @@ function rollbackJournal(cwd, journal, now) {
   }
   import_node_fs16.default.rmSync(journalAbs(cwd), { force: true });
   import_node_fs16.default.rmSync(staging, { recursive: true, force: true });
+  for (const dir of [...journal.createdDirs].sort((a, b) => b.length - a.length || compareCodeUnits2(b, a))) {
+    try {
+      import_node_fs16.default.rmdirSync(import_node_path17.default.resolve(cwd, dir));
+    } catch {
+    }
+  }
   void now;
   return { restored: restored.sort(compareCodeUnits2), deleted: deleted.sort(compareCodeUnits2), irreversible, conflicts };
+}
+function rebuildWorldForResume(cwd, journal, now) {
+  const plan = journal.plan;
+  if (plan === void 0) {
+    return { error: "the journal predates embedded plans \u2014 the transform cannot be rebuilt" };
+  }
+  if (plan.plan.planHash !== journal.planHash || plan.plan.classification !== "migration") {
+    return { error: "the journal's embedded plan does not match its pinned hash or is not a migration plan \u2014 the journal is inconsistent" };
+  }
+  const planPaths = [
+    ...plan.inventory.inputFiles ?? [],
+    ...(plan.inventory.documents ?? []).flatMap((doc) => [doc.path, doc.localeSiblingOf, ...doc.localeSiblings ?? []]),
+    ...(plan.inventory.indexes ?? []).flatMap((index2) => [index2.path, index2.dir]),
+    ...(plan.inventory.experimentLogs ?? []).map((exp) => exp.path),
+    ...(plan.inventory.callerBookkeeping ?? []).map((entry) => entry.path),
+    ...(plan.inventory.legacyRelations ?? []).flatMap((entry) => [entry.path, ...entry.targets ?? []]),
+    ...(plan.inventory.foreignState ?? []).map((entry) => entry.path),
+    ...(plan.migration.plannedWrites ?? []).flatMap((write) => [write.target, write.source]),
+    ...(plan.migration.removals ?? []).map((removal) => removal.path),
+    ...(plan.migration.collisions ?? []).flatMap((collision) => [collision.target, ...collision.sources ?? []]),
+    ...(plan.migration.semanticDecisions ?? []).flatMap((decision) => [decision.path, ...decision.targets ?? []])
+  ];
+  for (const field of planPaths) {
+    if (field === null || field === void 0) continue;
+    if (typeof field !== "string" || normalizeContainedRelPath(field) === null) {
+      return { error: `the journal's embedded plan names a path ${JSON.stringify(field)} that escapes the checkout \u2014 refusing to trust it` };
+    }
+  }
+  for (const runId of [
+    ...(plan.inventory.runs ?? []).map((run) => run.runId),
+    ...(plan.migration.runHandoffs ?? []).map((handoff2) => handoff2.runId)
+  ]) {
+    if (!isValidId(runId)) {
+      return { error: `the journal's embedded plan names a run id ${JSON.stringify(runId)} that is not a valid artifact id \u2014 refusing to trust it` };
+    }
+  }
+  const byPath = new Map(plan.inventory.documents.map((doc) => [doc.path, doc]));
+  const decisionsByPath = /* @__PURE__ */ new Map();
+  for (const decision of plan.migration.semanticDecisions) {
+    decisionsByPath.set(decision.path, [...decisionsByPath.get(decision.path) ?? [], decision]);
+  }
+  const resolved = /* @__PURE__ */ new Map();
+  for (const [id, value] of Object.entries(journal.resolutions)) {
+    if (!isPlainObject3(value)) {
+      return { error: `the journal's resolution ${id} is not an object \u2014 the journal cannot steer a rebuild.` };
+    }
+    if (value.action === "write" && (typeof value.target !== "string" || normalizeContainedRelPath(value.target) === null)) {
+      return { error: `the journal's resolution ${id} names a write target ${JSON.stringify(value.target)} outside the checkout \u2014 refusing to trust it.` };
+    }
+    resolved.set(id, value);
+  }
+  const handoffs = /* @__PURE__ */ new Map();
+  for (const [runId, raw] of Object.entries(journal.runHandoffs)) {
+    const normalized = normalizeRunHandoff(runId, raw);
+    if ("error" in normalized) {
+      return { error: `the journal's run handoff for ${runId} is invalid: ${normalized.error}` };
+    }
+    handoffs.set(runId, normalized);
+  }
+  const ctx = { cwd, plan, resolved, handoffs, byPath, decisionsByPath, errors: [], now };
+  const world = buildWorld(ctx);
+  if (ctx.errors.length > 0) {
+    return { error: `the journaled resolutions no longer produce a buildable world:
+- ${ctx.errors.join("\n- ")}` };
+  }
+  planDerivedIndexes(cwd, world);
+  return { world, ctx };
 }
 async function recoverMigration(cwd, options2 = {}) {
   const now = options2.now ?? systemClock2;
@@ -46960,11 +47167,47 @@ async function recoverMigration(cwd, options2 = {}) {
   }
   const drift = verifyResumeDrift(cwd, journal);
   const staging = stagingAbs(cwd, journal);
-  const stageProblems = journal.staged.length > 0 ? verifyStaging(staging, journal) : [];
-  if (drift.length > 0 || stageProblems.length > 0) {
+  if (drift.length > 0) {
     base.ok = false;
     base.status = "resume-refused";
-    base.note = `cannot resume \u2014 ${[...drift, ...stageProblems].join("; ")}`;
+    base.note = `cannot resume \u2014 ${drift.join("; ")}`;
+    return base;
+  }
+  if (journal.steps.length === 0) {
+    if (journal.staged.length > 0 || journal.removals.length > 0) {
+      base.ok = false;
+      base.status = "resume-refused";
+      base.note = "cannot resume \u2014 the journal pins staged artifacts or removals but no steps; the transform state is inconsistent. Run `migrate recovery --rollback`, then re-apply.";
+      return base;
+    }
+    const rebuilt = rebuildWorldForResume(cwd, journal, now);
+    if ("error" in rebuilt) {
+      base.ok = false;
+      base.status = "resume-refused";
+      base.note = `cannot resume \u2014 ${rebuilt.error} Run \`migrate recovery --rollback\` to undo.`;
+      return base;
+    }
+    try {
+      import_node_fs16.default.rmSync(staging, { recursive: true, force: true });
+      runTransform(cwd, journal, rebuilt.world, rebuilt.ctx, options2);
+      journal.stage = "validate";
+      writeJournal(cwd, journal, now);
+    } catch (errorCaught) {
+      const message = errorCaught instanceof Error ? errorCaught.message : String(errorCaught);
+      const current = readJournal(cwd).journal;
+      base.ok = false;
+      base.status = "migration-incomplete";
+      base.journal = current !== null ? summarizeJournal(current) : base.journal;
+      base.note = `resume aborted while re-running the transform: ${message}`;
+      base.preflight = preflight();
+      return base;
+    }
+  }
+  const stageProblems = journal.staged.length > 0 ? verifyStaging(staging, journal) : [];
+  if (stageProblems.length > 0) {
+    base.ok = false;
+    base.status = "resume-refused";
+    base.note = `cannot resume \u2014 ${stageProblems.join("; ")}`;
     return base;
   }
   const applyReport = emptyApplyReport(cwd, journal.planHash);

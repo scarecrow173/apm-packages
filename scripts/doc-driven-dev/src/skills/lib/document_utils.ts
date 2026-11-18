@@ -34,6 +34,26 @@ function normalizeDir(input: string): string {
 }
 
 /**
+ * Fold a caller-supplied checkout-relative path to its canonical relative
+ * form and prove it stays inside the checkout — or return null. Slashes are
+ * unified and `.`/`..` segments are folded BEFORE the containment check: an
+ * interior `..` (`docs/../x`) collapses away, while a leading `..` or an
+ * absolute spelling still rejects. POSIX-absolute checks alone are not
+ * enough — after the backslash swap a Windows drive/UNC absolute (`C:\x`
+ * → `C:/x`) looks relative, so a drive-letter prefix rejects too. Anything
+ * that writes to a caller-named relative path should go through this one
+ * check rather than repeating `startsWith("../")` fragments.
+ */
+function normalizeContainedRelPath(input: string): string | null {
+  const rel = path.posix.normalize(normalizeDir(input));
+  if (rel === "" || rel === "." || rel === ".."
+    || rel.startsWith("../") || path.posix.isAbsolute(rel) || /^[A-Za-z]:/.test(rel)) {
+    return null;
+  }
+  return rel;
+}
+
+/**
  * Strip the Windows extended-length prefix (`\\?\`, or `\\?\UNC\` → `\\`).
  * `fs.realpathSync` emits it and verbatim absolute inputs may carry it; it is
  * plumbing, not path identity.
@@ -196,6 +216,7 @@ export {
   isInsideRealpath,
   listMarkdownFiles,
   nonReferenceRelationKeys,
+  normalizeContainedRelPath,
   normalizeDir,
   repoPathKey,
   resolveContainedDir,

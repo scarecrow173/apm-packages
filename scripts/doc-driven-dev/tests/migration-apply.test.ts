@@ -466,3 +466,203 @@ test("the migration journal is itself ignored-path safe: foreign docs/.doc-drive
   assert.ok(!fs.existsSync(path.join(repo, "docs/.doc-driven-dev/old-graph.yaml")));
   assert.equal(evaluateSchemaPreflight(repo).status, "current");
 });
+
+// --- mid-transform crash (the real one: partial staging, no steps) ------------
+
+test("a genuine mid-transform crash is resumable — the transform re-runs and finishes", async () => {
+  const repo = planTaskRepo();
+  const plan = buildMigrationPlan(repo);
+  const res = resolutionsFor(plan);
+  // `transform:<n>` counts committed staged artifacts — the crash lands
+  // inside runTransform with the journal committed at stage "transform"
+  // and zero steps: the shape a real crash leaves.
+  const crashed = await applyMigration(repo, { expect: plan.plan.planHash, resolutions: res, allowDirty: true, failAt: "transform:2", now: fixedNow });
+  assert.equal(crashed.applied, false);
+  assert.equal(crashed.stage, "transform");
+  const inspect = await recoverMigration(repo, { action: "inspect" });
+  assert.equal(inspect.status, "migration-incomplete");
+  assert.equal(inspect.journal?.stage, "transform");
+  assert.equal(inspect.journal?.stepsTotal, 0);
+  const resumed = await recoverMigration(repo, { action: "resume", expect: plan.plan.planHash });
+  assert.equal(resumed.recovered, true, resumed.note);
+  assert.equal(evaluateSchemaPreflight(repo).status, "current");
+  const runs = fs.readdirSync(path.join(repo, ".apm/state/doc-driven-dev/runs"));
+  assert.equal(runs.length, 1);
+  assert.equal(loadRun(repo, runs[0]).tasks.length, 2);
+});
+
+test("rollback from a mid-transform crash returns the pristine tree and prunes engine-created dirs", async () => {
+  const repo = planTaskRepo();
+  const plan = buildMigrationPlan(repo);
+  const pristine = snapshotTree(repo);
+  await applyMigration(repo, { expect: plan.plan.planHash, resolutions: resolutionsFor(plan), allowDirty: true, failAt: "transform:1", now: fixedNow });
+  const rolled = await recoverMigration(repo, { action: "rollback" });
+  assert.equal(rolled.status, "recovered-rollback", rolled.note);
+  assert.equal(snapshotTree(repo), pristine);
+  assert.ok(!fs.existsSync(path.join(repo, ".apm")), "engine-created state dirs are pruned");
+  assert.ok(!fs.existsSync(path.join(repo, "docs/.doc-driven-dev")), "the journal dir is pruned");
+});
+
+test("a mid-finalize crash reports done removals truthfully", async () => {
+  const repo = planTaskRepo();
+  const plan = buildMigrationPlan(repo);
+  await applyMigration(repo, { expect: plan.plan.planHash, resolutions: resolutionsFor(plan), allowDirty: true, failAt: "finalize:1", now: fixedNow });
+  const inspect = await recoverMigration(repo, { action: "inspect" });
+  assert.equal(inspect.status, "migration-incomplete");
+  assert.ok(inspect.journal !== null);
+  assert.equal(inspect.journal.removalsTotal, 3);
+  assert.equal(inspect.journal.removalsDone, 1, "the first finalize step is a removal and must be recorded done");
+});
+
+test("resume after an engine-regenerated index does not report false input drift", async () => {
+  const repo = planTaskRepo();
+  writeDoc(repo, "docs/specs/0001-spec.md", {
+    id: "SPEC-0001", type: "spec", status: "approved", lifecycle: "current",
+    title: "Spec", created: "2024-01-01", updated: "2024-01-01", owners: [],
+  }, "# Spec\n\nContenido.\n");
+  // A generated (managed) index in a durable dir is a pinned input the
+  // engine legitimately rewrites at finalize — drift must not flag it.
+  const indexPath = "docs/specs/README.md";
+  writeFile(repo, indexPath, "# Specs\n\n<!-- doc-suite:generated-index -->\n\nDirectory: `docs/specs`\n\n| ID | Title |\n|---|---|\n| SPEC-9999 | fila obsoleta |\n");
+  const before = fs.readFileSync(path.join(repo, indexPath), "utf8");
+  const plan = buildMigrationPlan(repo);
+  assert.ok(plan.inventory.indexes.some((entry) => entry.path === indexPath && entry.disposition === "regenerate"), "expected a regenerate disposition on the managed index");
+  // Bare "finalize" crashes after all pre-postflight finalize steps — the
+  // index step included — before the postflight gate runs.
+  await applyMigration(repo, { expect: plan.plan.planHash, resolutions: resolutionsFor(plan), allowDirty: true, failAt: "finalize", now: fixedNow });
+  const after = fs.readFileSync(path.join(repo, indexPath), "utf8");
+  assert.notEqual(after, before, "the engine must actually have regenerated the index");
+  const resumed = await recoverMigration(repo, { action: "resume" });
+  assert.equal(resumed.status, "recovered-resume", `engine-written index must not trip drift: ${resumed.note}`);
+  assert.equal(evaluateSchemaPreflight(repo).status, "current");
+});
+
+// --- run handoffs: export / keep / escaping targets -----------------------------
+
+test("an export handoff creates the target's parent dirs and lands the run export", async () => {
+  const repo = planTaskRepo();
+  const existing = createRun(repo, { tasks: [{ taskId: "TASK-EXIST" }] });
+  const plan = buildMigrationPlan(repo);
+  const result = await applyMigration(repo, {
+    expect: plan.plan.planHash,
+    resolutions: { ...resolutionsFor(plan), runHandoffs: { [existing.manifest.runId]: { method: "export", out: "migration-exports/nested/run.export.json" } } },
+    allowDirty: true, now: fixedNow,
+  });
+  assert.equal(result.applied, true, result.reason);
+  const out = path.join(repo, "migration-exports/nested/run.export.json");
+  assert.ok(fs.existsSync(out), "export must land in a nested dir the engine created");
+  const document = JSON.parse(fs.readFileSync(out, "utf8")) as { runId?: string };
+  assert.equal(document.runId, existing.manifest.runId);
+  assert.equal(loadRun(repo, existing.manifest.runId).manifest.status, "active", "export does not finalize the run");
+});
+
+test("a keep handoff leaves the existing run untouched", async () => {
+  const repo = planTaskRepo();
+  const existing = createRun(repo, { tasks: [{ taskId: "TASK-EXIST" }] });
+  const plan = buildMigrationPlan(repo);
+  const result = await applyMigration(repo, {
+    expect: plan.plan.planHash,
+    resolutions: { ...resolutionsFor(plan), runHandoffs: { [existing.manifest.runId]: "keep" } },
+    allowDirty: true, now: fixedNow,
+  });
+  assert.equal(result.applied, true, result.reason);
+  assert.equal(loadRun(repo, existing.manifest.runId).manifest.status, "active");
+  assert.ok(!fs.existsSync(path.join(repo, "migration-exports")));
+});
+
+test("export targets that escape the checkout, hit managed namespaces, or collide with a pinned input are refused", async () => {
+  const repo = planTaskRepo();
+  const existing = createRun(repo, { tasks: [{ taskId: "TASK-EXIST" }] });
+  const plan = buildMigrationPlan(repo);
+  const res = resolutionsFor(plan);
+  const refusedTargets = [
+    "../escape.json",
+    "docs/../../tmp/evil.json",
+    "/abs/evil.json",
+    "C:/evil.json",
+    ".apm/state/doc-driven-dev/x.json",
+    "docs/.doc-driven-dev/x.json",
+    "docs/plans/0001-plan.md", // a pinned migration input
+  ];
+  for (const out of refusedTargets) {
+    const result = await applyMigration(repo, {
+      expect: plan.plan.planHash,
+      resolutions: { ...res, runHandoffs: { [existing.manifest.runId]: { method: "export", out } } },
+      allowDirty: true, now: fixedNow,
+    });
+    assert.equal(result.applied, false, `export target ${JSON.stringify(out)} must be refused`);
+    assert.equal(result.ok, false);
+    assert.ok(!fs.existsSync(path.join(repo, "docs/.doc-driven-dev/migration.journal.json")), `${out} must refuse before a journal opens`);
+  }
+  // An interior `..` collapses to its canonical in-checkout path and works.
+  const ok = await applyMigration(repo, {
+    expect: plan.plan.planHash,
+    resolutions: { ...res, runHandoffs: { [existing.manifest.runId]: { method: "export", out: "docs/sub/../exports/run.export.json" } } },
+    allowDirty: true, now: fixedNow,
+  });
+  assert.equal(ok.applied, true, ok.reason);
+  assert.ok(fs.existsSync(path.join(repo, "docs/exports/run.export.json")), "the canonical collapsed target receives the export");
+});
+
+// --- impl / experiment classification conversions -------------------------------
+
+test("an impl record classifies into durable knowledge via ir-classification", async () => {
+  const repo = planTaskRepo();
+  writeDoc(repo, "docs/impl/ir/0001-record.md", {
+    id: "IR-0001", type: "impl", status: "completed", title: "Registro de implementación",
+    created: "2024-01-01", updated: "2024-01-02", owners: [], metadata: { module: "core" },
+  }, "# Registro\n\nHallazgo durable.\n");
+  const plan = buildMigrationPlan(repo);
+  const decision = plan.migration.semanticDecisions.find((d) => d.kind === "ir-classification" && d.path === "docs/impl/ir/0001-record.md");
+  assert.ok(decision, "expected an ir-classification decision");
+  const res = resolutionsFor(plan, { [decision.decisionId]: { choice: "knowledge", kind: "lesson", status: "confirmed", lifecycle: "current" } });
+  const result = await applyMigration(repo, { expect: plan.plan.planHash, resolutions: res, allowDirty: true, now: fixedNow });
+  assert.equal(result.applied, true, result.reason);
+  const target = result.docsWritten.find((p) => p === "docs/knowledge/0001-record.md");
+  assert.ok(target, `expected docs/knowledge/0001-record.md in ${result.docsWritten.join(", ")}`);
+  const doc = matter(fs.readFileSync(path.join(repo, target), "utf8"));
+  assert.equal(doc.data.type, "knowledge");
+  assert.equal(doc.data.knowledge_kind, "lesson");
+  assert.ok(String(doc.data.id).startsWith("KNOW-"));
+  assert.ok(!fs.existsSync(path.join(repo, "docs/impl/ir/0001-record.md")), "classified source is removed");
+});
+
+test("an experiment log with validation events classifies via exp-classification", async () => {
+  const repo = planTaskRepo();
+  writeFile(repo, "docs/impl/exp/results.jsonl", '{"type":"note","text":"probe"}\n{"type":"validation","summary":"regla verificada"}\n');
+  const plan = buildMigrationPlan(repo);
+  const decision = plan.migration.semanticDecisions.find((d) => d.kind === "exp-classification" && d.path === "docs/impl/exp/results.jsonl");
+  assert.ok(decision, "expected an exp-classification decision");
+  const res = resolutionsFor(plan, { [decision.decisionId]: { choice: "evidence-candidate", kind: "lesson", status: "confirmed", lifecycle: "current", title: "Resultados", created: "2024-01-01", updated: "2024-01-01" } });
+  const result = await applyMigration(repo, { expect: plan.plan.planHash, resolutions: res, allowDirty: true, now: fixedNow });
+  assert.equal(result.applied, true, result.reason);
+  const target = result.docsWritten.find((p) => p === "docs/knowledge/results.md");
+  assert.ok(target, `expected docs/knowledge/results.md in ${result.docsWritten.join(", ")}`);
+  const doc = matter(fs.readFileSync(path.join(repo, target), "utf8"));
+  assert.equal(doc.data.type, "knowledge");
+  const metadata = doc.data.metadata as { migration?: { evidenceCandidate?: boolean; source?: string } };
+  assert.equal(metadata.migration?.evidenceCandidate, true);
+  assert.equal(metadata.migration?.source, "docs/impl/exp/results.jsonl");
+  assert.ok(!fs.existsSync(path.join(repo, "docs/impl/exp/results.jsonl")), "classified source is removed");
+});
+
+// --- journal trust --------------------------------------------------------------
+
+test("a journal naming an escaping step target is refused at readJournal", async () => {
+  const repo = planTaskRepo();
+  const plan = buildMigrationPlan(repo);
+  await applyMigration(repo, { expect: plan.plan.planHash, resolutions: resolutionsFor(plan), allowDirty: true, failAt: "publish:1", now: fixedNow });
+  const journalPath = path.join(repo, "docs/.doc-driven-dev/migration.journal.json");
+  const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as { steps: { target: string; state: string }[] };
+  const pending = journal.steps.find((step) => step.state === "pending");
+  assert.ok(pending, "expected a pending step to tamper with");
+  pending.target = "../evil.md";
+  fs.writeFileSync(journalPath, `${JSON.stringify(journal, null, 2)}\n`);
+  const resumed = await recoverMigration(repo, { action: "resume" });
+  assert.equal(resumed.status, "migration-incomplete");
+  assert.equal(resumed.recovered, false);
+  assert.match(resumed.note, /escapes the checkout|refusing to trust/);
+  const rolled = await recoverMigration(repo, { action: "rollback" });
+  assert.equal(rolled.status, "migration-incomplete");
+  assert.equal(rolled.recovered, false, "a foreign journal is never trusted for rollback either");
+});

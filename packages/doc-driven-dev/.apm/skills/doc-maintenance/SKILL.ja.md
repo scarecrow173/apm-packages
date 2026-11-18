@@ -231,12 +231,15 @@ node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--resume|--roll
   場合のみ。manifest-only のリポジトリでは従来どおりの限定経路 —
   manifest 刻印のみ。
 - `migrate recovery` — 進行中の journal を変更せずに検査する。
-  `--resume` は apply が停止したちょうどその step から継続し(すべての
-  step は冪等。input/staging の drift は replan を促して拒否)、
-  `--rollback` は完了済み step を逆順に取り消す — publish 済み
-  artifact を除去し original を復元し、ツリーを migration 前の状態へ
-  バイト単位で戻す。`--expect` は recovery を特定の planHash に pin
-  する。
+  `--resume` は apply が停止したちょうどその step から継続する(すべて
+  の step は冪等。step 計画が commit される前の crash では staging
+  transform を再実行する。input/staging の drift は replan を促して
+  拒否)。`--rollback` は完了済み step を逆順に取り消す — publish
+  済み artifact を除去し original を復元し、ツリーを migration 前の
+  状態へバイト単位で戻す。唯一の不可逆 step は `finalize` handoff
+  であり、finalize 済みの run は finalize されたまま残り rollback
+  はその旨を報告する — 復元には export の import または再承認を行う。
+  `--expect` は recovery を特定の planHash に pin する。
 
 ## Migration コマンド
 

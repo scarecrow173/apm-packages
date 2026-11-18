@@ -20,7 +20,9 @@
 //   transform — every output byte is rendered into
 //               .apm/state/doc-driven-dev/migration/ and pinned in the
 //               journal; originals of every edited/removed file are
-//               captured for rollback.
+//               captured for rollback. The stage is journaled before the
+//               first artifact lands, so a mid-transform crash leaves a
+//               step-less journal that recovery rebuilds and re-runs.
 //   validate  — staged artifacts are re-verified (document contract,
 //               run-record schemas, task DAG, check references, target
 //               containment) before anything touches the repository.
@@ -68,6 +70,7 @@ import {
   isIndexFileName,
   isInsideCheckout,
   nonReferenceRelationKeys,
+  normalizeContainedRelPath,
   normalizeDir,
 } from "../../../lib/document_utils";
 import {
@@ -206,7 +209,8 @@ class MigrationFault extends Error {
 // Test-only fault injection (never a CLI surface — the library option and
 // the DOC_MAINTENANCE_MIGRATE_FAIL_AT env hook both resolve here). Format:
 // "<stage>" crashes immediately after that stage's journal entry commits;
-// "<stage>:<n>" crashes after n step completions inside the stage.
+// "<stage>:<n>" crashes after n step completions inside the stage — for
+// "transform", after n artifacts have been staged.
 function crashAt(options: ApplyOptions, stage: string, completedSteps = 0): void {
   const spec = options.failAt ?? process.env.DOC_MAINTENANCE_MIGRATE_FAIL_AT;
   if (spec === undefined) return;
@@ -220,9 +224,16 @@ function crashAt(options: ApplyOptions, stage: string, completedSteps = 0): void
   }
 }
 
+// `null` means unverifiable, which the apply gate treats as dirty — the
+// same fail-closed posture boundary.ts takes when `.git` exists but git
+// cannot answer. A checkout with no `.git` at all is a plain directory:
+// there is no worktree to be dirty, matching the boundary's `none` context.
 function worktreeDirty(cwd: string): boolean | null {
   const probe = spawnSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd, encoding: "utf8" });
-  if (probe.status !== 0) return null;
+  if (probe.status !== 0) {
+    return fs.existsSync(path.join(cwd, ".git")) ? null : false;
+  }
+  if (probe.stdout.trim() !== "true") return false; // not inside a work tree — nothing to dirty
   const status = spawnSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" });
   if (status.status !== 0) return null;
   return status.stdout.trim().length > 0;
@@ -311,6 +322,11 @@ type MigrationJournal = {
   resolutionsHash: string;
   resolutions: Record<string, unknown>;
   runHandoffs: Record<string, unknown>;
+  // The hash-pinned plan verbatim — a mid-transform crash can never
+  // rebuild it from disk (the journal and staging artifacts themselves
+  // change the scan), so the journal carries it for resume's re-transform.
+  // Absent in journals opened by earlier builds — those fail closed.
+  plan?: MigrationPlanReport;
   startedAt: string;
   updatedAt: string;
   stage: "prepare" | "transform" | "validate" | "publish" | "finalize";
@@ -329,6 +345,10 @@ type MigrationJournal = {
   baselineFindings: string[];
   diagnosticsRunId: string | null;
   postflight: PostflightReport | null;
+  // Directories the migration created that did not exist at prepare —
+  // rollback prunes exactly these (and only while they are still empty), so
+  // a rolled-back tree carries no leftover empty dirs the engine made.
+  createdDirs: string[];
 };
 
 type PostflightReport = {
@@ -371,6 +391,7 @@ type ApplyReport = {
 type RecoveryOptions = {
   action?: "inspect" | "resume" | "rollback";
   expect?: string;
+  failAt?: string;
   now?: Clock;
 };
 
@@ -423,10 +444,51 @@ function readJournal(cwd: string): { journal: MigrationJournal | null; error: st
   }
   if (!isPlainObject(parsed) || parsed.kind !== "migration-journal" || parsed.schemaVersion !== 1
     || !isSha256(parsed.planHash) || !Array.isArray(parsed.steps) || !Array.isArray(parsed.removals)
-    || !isPlainObject(parsed.resolutions)) {
+    || !Array.isArray(parsed.inputs) || !Array.isArray(parsed.staged) || !isPlainObject(parsed.resolutions)
+    || !isPlainObject(parsed.runHandoffs)) {
     return { journal: null, error: "migration journal exists but does not match the v1 journal schema — it may be foreign or from another toolchain; remove it only after verifying no apply is in flight" };
   }
-  return { journal: parsed as unknown as MigrationJournal, error: null };
+  // Path sanity is verified once here — every consumer (resume validation,
+  // publish, rollback) then trusts the journal without re-walking it. A
+  // journal that names an escaping target, staging area, staged artifact,
+  // backup, or input is not this engine's journal; trusting it would let a
+  // tampered file steer reads and writes outside the checkout.
+  const staging = typeof parsed.staging === "string" ? normalizeContainedRelPath(parsed.staging) : null;
+  if (staging === null || !isUnderDir(staging, EXECUTION_STATE_ROOT)) {
+    return { journal: null, error: `migration journal names a staging area ${JSON.stringify(parsed.staging)} outside the execution-state namespace — refusing to trust it` };
+  }
+  const pathFields: unknown[] = [];
+  for (const step of parsed.steps as { target?: unknown; staged?: unknown; backup?: unknown }[]) {
+    if (!isPlainObject(step) || typeof step.target !== "string") {
+      return { journal: null, error: "migration journal holds a step without a string target — refusing to trust it" };
+    }
+    pathFields.push(step.target, step.staged, step.backup);
+  }
+  for (const removal of parsed.removals as { path?: unknown; backup?: unknown }[]) {
+    if (!isPlainObject(removal) || typeof removal.path !== "string") {
+      return { journal: null, error: "migration journal holds a removal without a string path — refusing to trust it" };
+    }
+    pathFields.push(removal.path, removal.backup);
+  }
+  for (const pin of [...parsed.inputs, ...parsed.staged] as { path?: unknown }[]) {
+    if (isPlainObject(pin)) pathFields.push(pin.path);
+  }
+  // Journals opened by earlier builds predate this field — absent is fine
+  // (rollback then prunes nothing); present must be contained rel paths.
+  const createdDirs = Array.isArray(parsed.createdDirs) ? parsed.createdDirs : [];
+  for (const dir of createdDirs) pathFields.push(dir);
+  for (const field of pathFields) {
+    if (field === null || field === undefined) continue;
+    if (typeof field !== "string" || normalizeContainedRelPath(field) === null) {
+      return { journal: null, error: `migration journal names a path ${JSON.stringify(field)} that escapes the checkout — refusing to trust it` };
+    }
+  }
+  const journal = parsed as unknown as MigrationJournal;
+  journal.createdDirs = createdDirs as string[];
+  // An embedded plan is optional (journals opened by earlier builds lack
+  // it); anything that is not an object can never steer a rebuild.
+  if (!isPlainObject(journal.plan)) journal.plan = undefined;
+  return { journal, error: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -544,14 +606,15 @@ function finishParam(
     }
     case "target-collision": {
       if (stem !== "write") return { error: `${decision.decisionId}: unexpected parameterized candidate ${stem}` };
-      const target = normalizeDir(arg);
-      if (target.startsWith("../") || path.posix.isAbsolute(target) || target === "") {
+      const target = normalizeContainedRelPath(arg);
+      if (target === null) {
         return { error: `${decision.decisionId}: write target ${JSON.stringify(arg)} escapes the checkout` };
       }
       return { value: { action: "write", target } };
     }
     case "bookkeeping-assignment": {
       if (stem !== "assign-to-run") return { error: `${decision.decisionId}: unexpected parameterized candidate ${stem}` };
+      if (!isValidId(arg)) return { error: `${decision.decisionId}: assigned run ${JSON.stringify(arg)} is not a valid artifact id` };
       return { value: { action: "assign", runId: arg } };
     }
     default:
@@ -774,10 +837,9 @@ function normalizeRunHandoff(
   if (method === null) return { error: `run handoff for ${runId}: method must be keep|export|finalize` };
   if (method === "export") {
     const out = stringParam(parsed.params, "out", "file", "path") ?? `migration-exports/${runId}.export.json`;
-    const normalized = normalizeDir(out);
-    if (normalized.startsWith("../") || path.posix.isAbsolute(normalized)
-      || isUnderDir(normalized, DOC_DRIVEN_DEV_DIR) || isUnderDir(normalized, EXECUTION_STATE_ROOT)) {
-      return { error: `run handoff export target ${JSON.stringify(out)} must be a checkout-relative path outside the state/manifest namespaces` };
+    const normalized = normalizeContainedRelPath(out);
+    if (normalized === null || isUnderDir(normalized, DOC_DRIVEN_DEV_DIR) || isUnderDir(normalized, EXECUTION_STATE_ROOT)) {
+      return { error: `run handoff export target ${JSON.stringify(out)} must be a checkout-relative path inside the checkout and outside the state/manifest namespaces` };
     }
     return { method, out: normalized, status: null };
   }
@@ -2008,11 +2070,22 @@ function buildWorld(ctx: WorldCtx): World {
     }
   }
 
+  // An export target that names a pinned input would overwrite migration
+  // source bytes at finalize — this is the boundary that knows the pins.
+  const pinnedInputs = new Set(plan.inventory.inputFiles.map(normalizeDir));
+  for (const item of world.exports) {
+    if (pinnedInputs.has(normalizeDir(item.out))) {
+      ctx.errors.push(`run ${item.runId}: export target ${item.out} collides with a pinned migration input`);
+    }
+  }
+
   world.runs = [...runById.values()].sort((a, b) => compareCodeUnits(a.runId, b.runId));
   return world;
 }
 
-// A preserved doc's edited form — returns null when nothing changes.
+// A preserved doc's edited form — returns null only when required
+// front-matter fields cannot be resolved (the gap is recorded in
+// ctx.errors); every other doc comes back as a normalized write.
 function editableDoc(
   ctx: WorldCtx,
   doc: InventoryDocument,
@@ -2297,46 +2370,98 @@ function journalStepId(index: number, op: StepOp, target: string): string {
   return `${String(index).padStart(4, "0")}-${op}-${target}`.replace(/[^A-Za-z0-9._-]+/g, "-");
 }
 
+// Directories a write to `targets` creates that did not exist beforehand —
+// recorded in the journal so rollback can prune exactly these (and only
+// while they stay empty). `fileTargets` contribute their parent chain,
+// `dirTargets` themselves plus ancestors, each walked up to the nearest
+// pre-existing directory.
+function createdDirsFor(cwd: string, fileTargets: string[], dirTargets: string[] = []): string[] {
+  const created = new Set<string>();
+  const visit = (dir: string): void => {
+    while (dir !== "" && dir !== "." && !fs.existsSync(path.resolve(cwd, dir))) {
+      created.add(dir);
+      const parent = path.posix.dirname(dir);
+      if (parent === dir) return;
+      dir = parent;
+    }
+  };
+  for (const rel of dirTargets) visit(normalizeDir(rel));
+  for (const rel of fileTargets) visit(path.posix.dirname(normalizeDir(rel)));
+  return [...created].sort(compareCodeUnits);
+}
+
 // Transform: build every staged artifact + the journal's step/removal plan.
+// The journal records stage "transform" BEFORE any artifact lands: a real
+// crash anywhere below leaves a journal whose empty steps/staged mark the
+// transform as never-committed — resume rebuilds and re-runs it.
 function runTransform(cwd: string, journal: MigrationJournal, world: World, ctx: WorldCtx, options: ApplyOptions): void {
+  const now = options.now ?? systemClock;
   const staging = stagingAbs(cwd, journal);
+
+  // Dirs the migration will create (journal dir already recorded at open) —
+  // captured before staging exists so the staging ancestors count too.
+  const fileTargets = [
+    ...world.docWrites.map((write) => write.target),
+    ...world.indexJobs.map((job) => job.path),
+    ...world.exports.map((item) => item.out),
+    ...(world.manifestPlanned ? [SCHEMA_MANIFEST_PATH] : []),
+  ];
+  const dirTargets = [...world.runs.map((run) => `${EXECUTION_STATE_ROOT}/runs/${run.runId}`), journal.staging];
+  journal.createdDirs = sortStrings(new Set([...journal.createdDirs, ...createdDirsFor(cwd, fileTargets, dirTargets)]));
+
+  journal.stage = "transform";
+  writeJournal(cwd, journal, now);
   fs.mkdirSync(staging, { recursive: true });
   const staged = new Map<string, string>();
+  // `transform:<n>` fault injection counts committed staged artifacts —
+  // a crash here is the real mid-transform case: partial staging, no steps.
+  let stagedCount = 0;
+  const pin = (entry: { path: string; sha256: string }): void => {
+    staged.set(entry.path, entry.sha256);
+    stagedCount += 1;
+    crashAt(options, "transform", stagedCount);
+  };
 
   for (const write of world.docWrites) {
-    const { path: rel, sha256: digest } = stageWrite(staging, stagedDocRel(write.target), renderDoc(write.data, write.body));
-    staged.set(rel, digest);
+    pin(stageWrite(staging, stagedDocRel(write.target), renderDoc(write.data, write.body)));
   }
   if (world.manifestPlanned) {
-    const { path: rel, sha256: digest } = stageWrite(staging, stagedManifestRel(), schemaManifestText());
-    staged.set(rel, digest);
+    pin(stageWrite(staging, stagedManifestRel(), schemaManifestText()));
   }
   for (const spec of world.runs) {
     const planBody = spec.planPath !== null ? readRawDoc(cwd, spec.planPath).body : null;
     const diagnostics = spec.diagnostics ? world.diagnostics : [];
-    const { bytes } = buildRunExportDocument(cwd, spec, planBody, diagnostics, options.now ?? systemClock);
-    const { path: rel, sha256: digest } = stageWrite(staging, stagedRunRel(spec.runId), bytes);
-    staged.set(rel, digest);
+    const { bytes } = buildRunExportDocument(cwd, spec, planBody, diagnostics, now);
+    pin(stageWrite(staging, stagedRunRel(spec.runId), bytes));
   }
   for (const record of world.existingRecords) {
     const rel = stagedRecordRel(record.runId, record.kind, record.kind === "receipt" ? (record.record as ReceiptRecord).receiptId : (record.record as CheckpointRecord).checkpointId);
-    const { path: relPath, sha256: digest } = stageWrite(staging, rel, `${JSON.stringify(record.record, null, 2)}\n`);
-    staged.set(relPath, digest);
+    pin(stageWrite(staging, rel, `${JSON.stringify(record.record, null, 2)}\n`));
   }
   // Originals of everything that will be replaced or removed — the rollback
   // material. Captured BEFORE any publish so a crash never loses a source.
+  // A vanished source backs up as null: the honest record is "there was
+  // nothing to restore", so rollback restores the absent state instead of
+  // pointing at a backup that never existed.
   for (const removal of world.removals) {
     const backup = copyIntoStaging(staging, removal.path, path.resolve(cwd, removal.path));
     journal.removals.push({ path: removal.path, backup, dir: removal.dir, state: "pending" });
   }
-  for (const write of world.docWrites.filter((item) => item.kind === "edit")) {
-    copyIntoStaging(staging, write.target, path.resolve(cwd, write.target));
+  // Edited/regenerated paths — and doc-create targets that already exist on
+  // disk (a byte-identical foreign file the apply adopts) — get backups so
+  // rollback restores the pre-existing bytes rather than deleting a file
+  // that was never the migration's.
+  const backupByTarget = new Map<string, string | null>();
+  for (const write of world.docWrites) {
+    if (write.kind === "edit" || fs.existsSync(path.resolve(cwd, write.target))) {
+      backupByTarget.set(write.target, copyIntoStaging(staging, write.target, path.resolve(cwd, write.target)));
+    }
   }
   for (const job of world.indexJobs) {
-    copyIntoStaging(staging, job.path, path.resolve(cwd, job.path));
+    backupByTarget.set(job.path, copyIntoStaging(staging, job.path, path.resolve(cwd, job.path)));
   }
   const manifestAbs = path.resolve(cwd, SCHEMA_MANIFEST_PATH);
-  if (fs.existsSync(manifestAbs)) copyIntoStaging(staging, SCHEMA_MANIFEST_PATH, manifestAbs);
+  const manifestBackup = fs.existsSync(manifestAbs) ? copyIntoStaging(staging, SCHEMA_MANIFEST_PATH, manifestAbs) : null;
 
   // Steps — deterministic order: doc writes, then run imports (publish);
   // removals, indexes, existing-run records, exports, postflight-checked
@@ -2347,7 +2472,7 @@ function runTransform(cwd: string, journal: MigrationJournal, world: World, ctx:
     journal.steps.push({ id: journalStepId(index, op, target), stage, op, target, staged: stagedRel, backup, detail, state: "pending" });
   };
   for (const write of [...world.docWrites].sort((a, b) => compareCodeUnits(a.target, b.target))) {
-    pushStep("publish", write.kind === "create" ? "doc-create" : "doc-edit", write.target, { source: write.source }, stagedDocRel(write.target), write.kind === "edit" ? stagedBackupRel(write.target) : null);
+    pushStep("publish", write.kind === "create" ? "doc-create" : "doc-edit", write.target, { source: write.source }, stagedDocRel(write.target), backupByTarget.get(write.target) ?? null);
   }
   for (const spec of world.runs) {
     pushStep("publish", "run-import", spec.runId, { planPath: spec.planPath }, stagedRunRel(spec.runId));
@@ -2356,7 +2481,7 @@ function runTransform(cwd: string, journal: MigrationJournal, world: World, ctx:
     pushStep("finalize", "remove", removal.path, { dir: removal.dir }, null, removal.backup);
   }
   for (const job of world.indexJobs) {
-    pushStep("finalize", "index", job.path, { dir: job.dir });
+    pushStep("finalize", "index", job.path, { dir: job.dir }, null, backupByTarget.get(job.path) ?? null);
   }
   for (const record of world.existingRecords) {
     const id = record.kind === "receipt" ? (record.record as ReceiptRecord).receiptId : (record.record as CheckpointRecord).checkpointId;
@@ -2369,7 +2494,7 @@ function runTransform(cwd: string, journal: MigrationJournal, world: World, ctx:
     pushStep("finalize", "handoff-finalize", `${EXECUTION_STATE_ROOT}/runs/${item.runId}`, { runId: item.runId, status: item.status });
   }
   if (world.manifestPlanned) {
-    pushStep("finalize", "manifest", SCHEMA_MANIFEST_PATH, {}, stagedManifestRel(), fs.existsSync(manifestAbs) ? stagedBackupRel(SCHEMA_MANIFEST_PATH) : null);
+    pushStep("finalize", "manifest", SCHEMA_MANIFEST_PATH, {}, stagedManifestRel(), manifestBackup);
   }
   pushStep("finalize", "cleanup", `${journal.staging} + ${MIGRATION_JOURNAL_PATH}`, {});
 
@@ -2415,6 +2540,29 @@ type StagedDoc = {
 function validateStaged(staging: string, journal: MigrationJournal, cwd: string): string[] {
   const errors: string[] = [];
   const stagedDocs: StagedDoc[] = [];
+
+  // Every step target is foreign input until proven inside its op's
+  // namespace — readJournal proves containment; here the per-op rule lands:
+  // doc/index/export writes stay out of the managed state + manifest dirs,
+  // removals never touch the store, store ops never leave it, the manifest
+  // step writes exactly the manifest.
+  for (const step of journal.steps) {
+    if (step.op === "cleanup") continue;
+    const target = normalizeContainedRelPath(step.target);
+    const inState = target !== null && isUnderDir(target, EXECUTION_STATE_ROOT);
+    const inManifest = target !== null && isUnderDir(target, DOC_DRIVEN_DEV_DIR);
+    const bad = target === null
+      || ((step.op === "doc-create" || step.op === "doc-edit" || step.op === "index") && (inState || inManifest))
+      || (step.op === "remove" && inState)
+      || (step.op === "export" && (inState || inManifest))
+      || (step.op === "run-import" && !isValidId(step.target))
+      || ((step.op === "run-record" || step.op === "handoff-finalize") && !inState)
+      || (step.op === "manifest" && target !== SCHEMA_MANIFEST_PATH);
+    if (bad) {
+      errors.push(`step ${step.id}: target ${JSON.stringify(step.target)} is outside the ${step.op} op's allowed namespace`);
+    }
+  }
+
   const writeSteps = journal.steps.filter((step) => step.stage === "publish" && (step.op === "doc-create" || step.op === "doc-edit"));
 
   // VD check index: staged VD docs + VD docs already on disk (preserved).
@@ -2434,8 +2582,8 @@ function validateStaged(staging: string, journal: MigrationJournal, cwd: string)
     if (rel === null) { errors.push(`${step.target}: publish step carries no staged artifact`); continue; }
     const abs = path.join(staging, rel);
     if (!fs.existsSync(abs)) { errors.push(`${step.target}: staged artifact ${rel} is missing`); continue; }
-    const target = normalizeDir(step.target);
-    if (target.startsWith("../") || path.posix.isAbsolute(target) || isUnderDir(target, DOC_DRIVEN_DEV_DIR) || isUnderDir(target, EXECUTION_STATE_ROOT)) {
+    const target = normalizeContainedRelPath(step.target);
+    if (target === null || isUnderDir(target, DOC_DRIVEN_DEV_DIR) || isUnderDir(target, EXECUTION_STATE_ROOT)) {
       errors.push(`${step.target}: write target escapes the checkout or lands in a managed state namespace`);
       continue;
     }
@@ -2750,8 +2898,12 @@ async function executeFinalizeStep(cwd: string, staging: string, step: JournalSt
       return;
     }
     case "cleanup": {
-      fs.rmSync(journalAbs(cwd), { force: true });
+      // Staging first, journal last: a crash between them leaves a journal
+      // that still points at (now-absent) staging — resume sees only the
+      // cleanup step pending and re-runs it. The other order orphans an
+      // invisible staging directory.
       fs.rmSync(stagingAbs(cwd), { recursive: true, force: true });
+      fs.rmSync(journalAbs(cwd), { force: true });
       return;
     }
     default:
@@ -2906,6 +3058,7 @@ async function openJournal(
     resolutionsHash: sha256(canonicalJson({ resolutions, runHandoffs })),
     resolutions,
     runHandoffs,
+    plan,
     startedAt: now(),
     updatedAt: now(),
     stage: "prepare",
@@ -2920,40 +3073,76 @@ async function openJournal(
     baselineFindings: baselineFindings.sort(compareCodeUnits),
     diagnosticsRunId: null,
     postflight: null,
+    // The journal's own directory counts as engine-created only when it was
+    // absent now — writeJournal creates it below, so this is evaluated
+    // before the first write.
+    createdDirs: createdDirsFor(cwd, [MIGRATION_JOURNAL_PATH]),
   };
   writeJournal(cwd, journal, now);
   return { journal };
 }
 
 // Resume/publish drift verification: every input pin must still describe the
-// file, except inputs a done step already consumed (edited → staged bytes;
-// removed → absent).
+// file — but only for paths the engine itself has not written. Drift is
+// measured on PLAN INPUTS, never on engine outputs: a done doc step's bytes
+// must still equal its staged artifact, a done removal must be absent, and
+// paths a done index/manifest/export step (or a run the engine imported or
+// finalized) rewrote carry engine-derived bytes that were never re-pinned.
+// Transient store plumbing (writer.lock) is never semantically an input.
 function verifyResumeDrift(cwd: string, journal: MigrationJournal): string[] {
   const problems: string[] = [];
   const consumedEdit = new Map<string, JournalStep>();
   const consumedRemove = new Set<string>();
+  const engineOutput = new Set<string>();
+  const engineTransient = new Set<string>();
   for (const step of journal.steps) {
     if (step.state !== "done") continue;
-    if (step.op === "doc-edit") consumedEdit.set(normalizeDir(step.target), step);
-    if (step.op === "doc-create") consumedEdit.set(normalizeDir(step.target), step);
-    if (step.op === "remove") consumedRemove.add(normalizeDir(step.target));
+    const target = normalizeDir(step.target);
+    if (step.op === "doc-edit" || step.op === "doc-create") {
+      consumedEdit.set(target, step);
+    } else if (step.op === "remove") {
+      consumedRemove.add(target);
+    } else if (step.op === "index" || step.op === "manifest" || step.op === "export") {
+      engineOutput.add(target);
+    } else if (step.op === "run-import" || step.op === "handoff-finalize" || step.op === "run-record") {
+      const runId = step.op === "run-import" ? target : String(step.detail.runId ?? "");
+      if (isValidId(runId)) {
+        const runDir = `${EXECUTION_STATE_ROOT}/runs/${runId}`;
+        engineTransient.add(`${runDir}/writer.lock`);
+        // finalize rewrites the manifest; a run-record step's target is the
+        // record file itself — both are engine-derived, never pinned.
+        if (step.op !== "run-record") engineOutput.add(`${runDir}/manifest.json`);
+        else engineOutput.add(target);
+      }
+    }
   }
   for (const removal of journal.removals) {
     if (removal.state === "done") consumedRemove.add(normalizeDir(removal.path));
   }
   for (const input of journal.inputs) {
+    const rel = normalizeDir(input.path);
     const abs = path.resolve(cwd, input.path);
-    if (consumedRemove.has(input.path)) {
+    if (engineTransient.has(rel)) continue;
+    if (consumedRemove.has(rel)) {
       if (fs.existsSync(abs)) problems.push(`${input.path}: marked removed in the journal but the file still exists`);
       continue;
     }
-    const edit = consumedEdit.get(input.path);
+    const edit = consumedEdit.get(rel);
     if (edit !== undefined) {
       // The file now carries the staged bytes.
       const stagedPin = journal.staged.find((item) => item.path === edit.staged);
       const current = fs.existsSync(abs) ? sha256(fs.readFileSync(abs, "utf8")) : null;
       if (current !== stagedPin?.sha256) {
         problems.push(`${input.path}: published bytes no longer match the staged artifact — drift after publish`);
+      }
+      continue;
+    }
+    if (engineOutput.has(rel)) {
+      // Engine-derived bytes are never re-pinned — but an engine output
+      // that vanished mid-migration is real drift: a step reported done
+      // whose product no one can find.
+      if (!fs.existsSync(abs)) {
+        problems.push(`${input.path}: engine-written output is missing after its step completed`);
       }
       continue;
     }
@@ -3010,12 +3199,27 @@ async function publishAndFinalize(
   const now = options.now ?? systemClock;
   const staging = stagingAbs(cwd, journal);
 
-  // Validate stage — re-verified every resume (idempotent, cheap).
-  const validationErrors = validateStaged(staging, journal, cwd);
-  if (validationErrors.length > 0) {
-    journal.stage = "validate";
-    writeJournal(cwd, journal, now);
-    throw new MigrationFault("staged-invalid", `staged validation failed:\n- ${validationErrors.join("\n- ")}`);
+  // A done step marks its journal.removals twin done as well — the journal
+  // stays the single honest record of what is and is not yet removed.
+  const markDone = (step: JournalStep): void => {
+    step.state = "done";
+    if (step.op === "remove") {
+      const removal = journal.removals.find((item) => normalizeDir(item.path) === normalizeDir(step.target));
+      if (removal !== undefined) removal.state = "done";
+    }
+  };
+
+  // Validate stage — re-verified every resume (idempotent, cheap). It runs
+  // only while real work remains: when every step but cleanup is done the
+  // staged bytes are dead weight — cleanup may even have deleted them —
+  // and nothing needs them re-validated.
+  if (journal.steps.some((item) => item.state === "pending" && item.op !== "cleanup")) {
+    const validationErrors = validateStaged(staging, journal, cwd);
+    if (validationErrors.length > 0) {
+      journal.stage = "validate";
+      writeJournal(cwd, journal, now);
+      throw new MigrationFault("staged-invalid", `staged validation failed:\n- ${validationErrors.join("\n- ")}`);
+    }
   }
   if (journal.stage === "validate") {
     journal.stage = "publish";
@@ -3027,7 +3231,7 @@ async function publishAndFinalize(
   let done = 0;
   for (const step of journal.steps.filter((item) => item.stage === "publish" && item.state === "pending")) {
     executePublishStep(cwd, staging, step, options);
-    step.state = "done";
+    markDone(step);
     done += 1;
     writeJournal(cwd, journal, now);
     crashAt(options, "publish", done);
@@ -3044,14 +3248,14 @@ async function publishAndFinalize(
   const prePostflight = journal.steps.filter((item) => item.stage === "finalize" && item.op !== "handoff-finalize" && item.op !== "manifest" && item.op !== "cleanup" && item.op !== "export");
   for (const step of prePostflight.filter((item) => item.state === "pending")) {
     await executeFinalizeStep(cwd, staging, step, options);
-    step.state = "done";
+    markDone(step);
     done += 1;
     writeJournal(cwd, journal, now);
     crashAt(options, "finalize", done);
   }
   for (const step of journal.steps.filter((item) => item.op === "export" && item.state === "pending")) {
     await executeFinalizeStep(cwd, staging, step, options);
-    step.state = "done";
+    markDone(step);
     done += 1;
     writeJournal(cwd, journal, now);
     crashAt(options, "finalize", done);
@@ -3069,7 +3273,7 @@ async function publishAndFinalize(
 
   for (const step of journal.steps.filter((item) => item.stage === "finalize" && (item.op === "handoff-finalize" || item.op === "manifest" || item.op === "cleanup") && item.state === "pending")) {
     await executeFinalizeStep(cwd, staging, step, options);
-    step.state = "done";
+    markDone(step);
     done += 1;
     if (step.op !== "cleanup") writeJournal(cwd, journal, now);
     crashAt(options, "finalize", done);
@@ -3301,8 +3505,13 @@ function rollbackJournal(cwd: string, journal: MigrationJournal, now: Clock): { 
       }
       restored.push(target);
     } else {
-      if (fs.existsSync(abs)) fs.rmSync(abs, { recursive: true, force: true });
-      deleted.push(target);
+      // No captured original — the pre-migration state was "absent", so
+      // deleting whatever the publish put there restores exactly that.
+      // Nothing to delete means nothing to report.
+      if (fs.existsSync(abs)) {
+        fs.rmSync(abs, { recursive: true, force: true });
+        deleted.push(target);
+      }
     }
   };
   // Steps in reverse execution order — cleanup/manifest/handoffs undo last.
@@ -3317,6 +3526,14 @@ function rollbackJournal(cwd: string, journal: MigrationJournal, now: Clock): { 
             const current = fs.readFileSync(abs, "utf8");
             if (staged !== null && current !== staged) {
               conflicts.push(`${step.target}: content changed after publish — refusing to remove (manual review)`);
+              break;
+            }
+            // A create that adopted a pre-existing file carries its
+            // original as a backup — restore it rather than deleting a
+            // file that was never the migration's.
+            const backup = step.backup ?? null;
+            if (backup !== null) {
+              restoreBackup(step.target, backup);
               break;
             }
             fs.rmSync(abs, { force: true });
@@ -3410,8 +3627,101 @@ function rollbackJournal(cwd: string, journal: MigrationJournal, now: Clock): { 
   }
   fs.rmSync(journalAbs(cwd), { force: true });
   fs.rmSync(staging, { recursive: true, force: true });
+  // Prune directories the engine created — deepest first, only while still
+  // empty. A dir that pre-existed the migration is not in createdDirs, and
+  // one still holding content (foreign or user files) refuses to remove.
+  for (const dir of [...journal.createdDirs].sort((a, b) => b.length - a.length || compareCodeUnits(b, a))) {
+    try {
+      fs.rmdirSync(path.resolve(cwd, dir));
+    } catch { /* absent or non-empty — either way it stays */ }
+  }
   void now;
   return { restored: restored.sort(compareCodeUnits), deleted: deleted.sort(compareCodeUnits), irreversible, conflicts };
+}
+
+// Resume a journal whose transform never committed: re-derive the world
+// from the plan the journal pinned and the resolutions it recorded. The
+// plan rides inside the journal because a fresh plan can never rebuild to
+// the same hash once engine artifacts (journal, staging) are on disk — and
+// the pinned inputs were already proven byte-identical by the drift check.
+// Resolution values and run handoffs are journal data: the only fields
+// that steer writes are re-validated here (write targets contained,
+// handoffs through the same normalizer apply uses) so a tampered journal
+// cannot aim writes outward.
+function rebuildWorldForResume(
+  cwd: string,
+  journal: MigrationJournal,
+  now: Clock,
+): { world: World; ctx: WorldCtx } | { error: string } {
+  const plan = journal.plan;
+  if (plan === undefined) {
+    return { error: "the journal predates embedded plans — the transform cannot be rebuilt" };
+  }
+  if (plan.plan.planHash !== journal.planHash || plan.plan.classification !== "migration") {
+    return { error: "the journal's embedded plan does not match its pinned hash or is not a migration plan — the journal is inconsistent" };
+  }
+  // The embedded plan is journal data until proven contained: every path it
+  // contributes is re-validated here — an escaping entry could steer reads
+  // or writes outside the checkout. (readJournal's sweep covers the
+  // journal's own step/removal/staging fields; plan paths are only
+  // consumed by this rebuild, so this is where their check belongs.)
+  const planPaths: unknown[] = [
+    ...(plan.inventory.inputFiles ?? []),
+    ...(plan.inventory.documents ?? []).flatMap((doc) => [doc.path, doc.localeSiblingOf, ...(doc.localeSiblings ?? [])]),
+    ...(plan.inventory.indexes ?? []).flatMap((index) => [index.path, index.dir]),
+    ...(plan.inventory.experimentLogs ?? []).map((exp) => exp.path),
+    ...(plan.inventory.callerBookkeeping ?? []).map((entry) => entry.path),
+    ...(plan.inventory.legacyRelations ?? []).flatMap((entry) => [entry.path, ...(entry.targets ?? [])]),
+    ...(plan.inventory.foreignState ?? []).map((entry) => entry.path),
+    ...(plan.migration.plannedWrites ?? []).flatMap((write) => [write.target, write.source]),
+    ...(plan.migration.removals ?? []).map((removal) => removal.path),
+    ...(plan.migration.collisions ?? []).flatMap((collision) => [collision.target, ...(collision.sources ?? [])]),
+    ...(plan.migration.semanticDecisions ?? []).flatMap((decision) => [decision.path, ...(decision.targets ?? [])]),
+  ];
+  for (const field of planPaths) {
+    if (field === null || field === undefined) continue;
+    if (typeof field !== "string" || normalizeContainedRelPath(field) === null) {
+      return { error: `the journal's embedded plan names a path ${JSON.stringify(field)} that escapes the checkout — refusing to trust it` };
+    }
+  }
+  for (const runId of [
+    ...(plan.inventory.runs ?? []).map((run) => run.runId),
+    ...(plan.migration.runHandoffs ?? []).map((handoff) => handoff.runId),
+  ]) {
+    if (!isValidId(runId)) {
+      return { error: `the journal's embedded plan names a run id ${JSON.stringify(runId)} that is not a valid artifact id — refusing to trust it` };
+    }
+  }
+  const byPath = new Map(plan.inventory.documents.map((doc) => [doc.path, doc]));
+  const decisionsByPath = new Map<string, SemanticDecision[]>();
+  for (const decision of plan.migration.semanticDecisions) {
+    decisionsByPath.set(decision.path, [...(decisionsByPath.get(decision.path) ?? []), decision]);
+  }
+  const resolved = new Map<string, Record<string, unknown>>();
+  for (const [id, value] of Object.entries(journal.resolutions)) {
+    if (!isPlainObject(value)) {
+      return { error: `the journal's resolution ${id} is not an object — the journal cannot steer a rebuild.` };
+    }
+    if (value.action === "write" && (typeof value.target !== "string" || normalizeContainedRelPath(value.target) === null)) {
+      return { error: `the journal's resolution ${id} names a write target ${JSON.stringify(value.target)} outside the checkout — refusing to trust it.` };
+    }
+    resolved.set(id, value as Record<string, unknown>);
+  }
+  const handoffs = new Map<string, { method: "keep" | "export" | "finalize"; out: string | null; status: RunStatus | null }>();
+  for (const [runId, raw] of Object.entries(journal.runHandoffs)) {
+    const normalized = normalizeRunHandoff(runId, raw);
+    if ("error" in normalized) {
+      return { error: `the journal's run handoff for ${runId} is invalid: ${normalized.error}` };
+    }
+    handoffs.set(runId, normalized);
+  }
+  const ctx: WorldCtx = { cwd, plan, resolved, handoffs, byPath, decisionsByPath, errors: [], now };
+  const world = buildWorld(ctx);
+  if (ctx.errors.length > 0) {
+    return { error: `the journaled resolutions no longer produce a buildable world:\n- ${ctx.errors.join("\n- ")}` };
+  }
+  planDerivedIndexes(cwd, world);
+  return { world, ctx };
 }
 
 async function recoverMigration(cwd: string, options: RecoveryOptions = {}): Promise<RecoveryReport> {
@@ -3481,13 +3791,61 @@ async function recoverMigration(cwd: string, options: RecoveryOptions = {}): Pro
   // action === "resume"
   const drift = verifyResumeDrift(cwd, journal);
   const staging = stagingAbs(cwd, journal);
-  const stageProblems = journal.staged.length > 0 ? verifyStaging(staging, journal) : [];
-  if (drift.length > 0 || stageProblems.length > 0) {
+  if (drift.length > 0) {
     base.ok = false;
     base.status = "resume-refused";
-    base.note = `cannot resume — ${[...drift, ...stageProblems].join("; ")}`;
+    base.note = `cannot resume — ${drift.join("; ")}`;
     return base;
   }
+
+  if (journal.steps.length === 0) {
+    // The transform never committed — the journal was opened, or crashed
+    // mid-transform, before any step was journaled. Nothing is resumable
+    // step-wise, so the world is rebuilt from the pinned plan + journaled
+    // resolutions and the transform re-runs in full (bounded: one pass per
+    // resume; another crash leaves the same recoverable shape).
+    if (journal.staged.length > 0 || journal.removals.length > 0) {
+      base.ok = false;
+      base.status = "resume-refused";
+      base.note = "cannot resume — the journal pins staged artifacts or removals but no steps; the transform state is inconsistent. Run `migrate recovery --rollback`, then re-apply.";
+      return base;
+    }
+    const rebuilt = rebuildWorldForResume(cwd, journal, now);
+    if ("error" in rebuilt) {
+      base.ok = false;
+      base.status = "resume-refused";
+      base.note = `cannot resume — ${rebuilt.error} Run \`migrate recovery --rollback\` to undo.`;
+      return base;
+    }
+    try {
+      // Partial staging from the crash is unjournaled — drop it so the
+      // fresh transform pins a clean set.
+      fs.rmSync(staging, { recursive: true, force: true });
+      runTransform(cwd, journal, rebuilt.world, rebuilt.ctx, options as ApplyOptions);
+      journal.stage = "validate";
+      writeJournal(cwd, journal, now);
+    } catch (errorCaught: unknown) {
+      const message = errorCaught instanceof Error ? errorCaught.message : String(errorCaught);
+      const current = readJournal(cwd).journal;
+      base.ok = false;
+      base.status = "migration-incomplete";
+      base.journal = current !== null ? summarizeJournal(current) : base.journal;
+      base.note = `resume aborted while re-running the transform: ${message}`;
+      base.preflight = preflight();
+      return base;
+    }
+  }
+
+  // Staging pins vs disk — after any re-transform the pins are fresh; for a
+  // committed transform they prove the staged bytes survived untouched.
+  const stageProblems = journal.staged.length > 0 ? verifyStaging(staging, journal) : [];
+  if (stageProblems.length > 0) {
+    base.ok = false;
+    base.status = "resume-refused";
+    base.note = `cannot resume — ${stageProblems.join("; ")}`;
+    return base;
+  }
+
   const applyReport = emptyApplyReport(cwd, journal.planHash);
   applyReport.resumed = true;
   try {

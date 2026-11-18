@@ -233,10 +233,14 @@ node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--resume|--roll
   manifest stamp, nothing else.
 - `migrate recovery` — inspects an in-flight journal without mutating
   it. `--resume` continues from the exact step the apply stopped at
-  (every step is idempotent; input/staging drift refuses with a replan
-  instruction), `--rollback` undoes done steps in reverse — published
-  artifacts removed, originals restored — leaving the tree byte-identical
-  to the pre-migration state. `--expect` pins recovery to a specific
+  (every step is idempotent; a crash before the step plan committed
+  re-runs the staging transform; input/staging drift refuses with a
+  replan instruction), `--rollback` undoes done steps in reverse —
+  published artifacts removed, originals restored — leaving the tree
+  byte-identical to the pre-migration state. The one irreversible step
+  is a `finalize` run handoff: a finalized run stays finalized and
+  rollback reports it rather than pretending — restore it by importing
+  its export or re-approving. `--expect` pins recovery to a specific
   planHash.
 
 ## Migration Commands
