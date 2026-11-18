@@ -108,7 +108,7 @@ Execution Store に保存してから次の turn を呼び出します。
 ## Runtime projection の包含
 
 JSON inspection は既定では `definition` だけを含みます。runtime selector（`--cwd`、
-`--focus`、`--run` のいずれか）を渡すと、新しい projection の `state`、
+`--focus`、`--run`、`--state-root`、`--allow-external-root` のいずれか）を渡すと、新しい projection の `state`、
 `knowledge`、`taskGraph` が追加されます —— Graph State v3 の 3 つの
 store view（knowledge graph、execution、verification）であり、
 `artifactGraph` key も `--task-dir` も存在しません。plan/task 状態は
@@ -125,8 +125,9 @@ graph に bind された active run がちょうど 1 つのときだけ暗黙�
 fail closed します（`task-graph-run-ambiguous`）。store が壊れている場合は
 selection 自体が block されます（`task-graph-run-unreadable`）。
 
-Mermaid format は definition-only であり、`--cwd`、`--focus`、`--task-dir`、
-`--run`、`--state-root` を拒否します。
+Mermaid format は definition-only であり、すべての runtime selector —
+`--cwd`、`--focus`、`--run`、`--state-root`、`--allow-external-root` —
+を拒否します。
 JSON は `--cwd`、`--focus`、`--run`、`--state-root`、
 `--allow-external-root` を runtime projection 用に受け付けます ——
 `--task-dir` は決して受け付けません。

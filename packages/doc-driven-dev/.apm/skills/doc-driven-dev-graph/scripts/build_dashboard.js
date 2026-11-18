@@ -39753,493 +39753,19 @@ function scanArtifactGraph(options2, collector) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
-var import_node_fs6 = __toESM(require("node:fs"));
-var graphNodeId = external_exports.string().min(1);
-var graphConditionSchema = external_exports.discriminatedUnion("kind", [
-  external_exports.object({ kind: external_exports.literal("signal"), signal: external_exports.string().min(1) }).strict(),
-  external_exports.object({
-    kind: external_exports.literal("gate"),
-    gate: external_exports.string().min(1),
-    status: external_exports.enum(["pass", "not-pass"])
-  }).strict(),
-  external_exports.object({
-    kind: external_exports.literal("task-graph"),
-    state: external_exports.enum(["runnable", "active", "invalid", "idle"])
-  }).strict()
-]);
-var graphNodeSchema = external_exports.object({
-  kind: external_exports.enum(["action", "delegate", "audit", "terminal"]),
-  delegate: external_exports.string().min(1).optional(),
-  audits: external_exports.array(external_exports.string().min(1)).optional(),
-  requiresGates: external_exports.array(external_exports.string().min(1)).optional(),
-  commitGate: external_exports.boolean().optional()
-}).strict();
-var graphEdgeSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  from: graphNodeId,
-  to: graphNodeId,
-  when: external_exports.string().min(1),
-  priority: external_exports.number().int()
-}).strict();
-var graphDefinitionSchema = external_exports.object({
-  schemaVersion: external_exports.literal(3),
-  id: external_exports.string().min(1),
-  entry: graphNodeId,
-  runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
-  conditions: external_exports.record(graphNodeId, graphConditionSchema),
-  nodes: external_exports.record(graphNodeId, graphNodeSchema),
-  edges: external_exports.array(graphEdgeSchema)
-}).strict();
-function invalidGraph(message) {
-  return new Error(`Invalid graph definition: ${message}`);
-}
-function formatIssue(error62) {
-  return error62.issues.map((issue2) => `${issue2.path.join(".") || "graph"}: ${issue2.message}`).join("; ");
-}
-function hasNode(nodes, id) {
-  return Object.prototype.hasOwnProperty.call(nodes, id);
-}
-function validateGraphDefinition(value) {
-  if (!hasNode(value.nodes, value.entry)) {
-    throw invalidGraph(`entry node does not exist: ${value.entry}`);
-  }
-  const duplicateRuntimeSignal = value.runtimeSignals.find((signal, index2) => value.runtimeSignals.indexOf(signal) !== index2);
-  if (duplicateRuntimeSignal !== void 0) {
-    throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
-  }
-  const declaredGates = new Set(
-    Object.values(value.conditions).filter((condition) => condition.kind === "gate").map((condition) => condition.gate)
-  );
-  for (const [nodeId, node3] of Object.entries(value.nodes)) {
-    const requiresGates = node3.requiresGates ?? [];
-    const unknownGates = requiresGates.filter((gate2) => !declaredGates.has(gate2));
-    if (unknownGates.length > 0) {
-      throw invalidGraph(`unknown prerequisite gate: ${unknownGates.join(", ")}`);
-    }
-    if (new Set(requiresGates).size !== requiresGates.length) {
-      throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
-    }
-    const audits = node3.audits ?? [];
-    if (new Set(audits).size !== audits.length) {
-      throw invalidGraph(`duplicate audit on node ${nodeId}`);
-    }
-  }
-  const edgeIds = /* @__PURE__ */ new Set();
-  const routeSelectors = /* @__PURE__ */ new Set();
-  const priorities = /* @__PURE__ */ new Set();
-  for (const edge of value.edges) {
-    if (edgeIds.has(edge.id)) {
-      throw invalidGraph(`duplicate edge id: ${edge.id}`);
-    }
-    edgeIds.add(edge.id);
-    const selector = `${edge.from}\0${edge.when}`;
-    const priority = `${edge.from}\0${edge.priority}`;
-    if (routeSelectors.has(selector)) {
-      throw invalidGraph(`duplicate route selector: ${edge.from} + ${edge.when}`);
-    }
-    if (priorities.has(priority)) {
-      throw invalidGraph(`duplicate edge priority: ${edge.from} + ${edge.priority}`);
-    }
-    if (!Object.prototype.hasOwnProperty.call(value.conditions, edge.when)) {
-      throw invalidGraph(`unknown condition: ${edge.when}`);
-    }
-    routeSelectors.add(selector);
-    priorities.add(priority);
-    if (!hasNode(value.nodes, edge.from)) {
-      throw invalidGraph(`edge ${edge.id} references unknown from node: ${edge.from}`);
-    }
-    if (!hasNode(value.nodes, edge.to)) {
-      throw invalidGraph(`edge ${edge.id} references unknown to node: ${edge.to}`);
-    }
-  }
-  const outgoingByNode = /* @__PURE__ */ new Map();
-  for (const edge of value.edges) {
-    outgoingByNode.set(edge.from, (outgoingByNode.get(edge.from) ?? 0) + 1);
-  }
-  for (const [nodeId, node3] of Object.entries(value.nodes)) {
-    const outgoing = outgoingByNode.get(nodeId) ?? 0;
-    if (node3.kind === "terminal") {
-      if (outgoing > 0) {
-        throw invalidGraph(`terminal node must not have outgoing edges: ${nodeId}`);
-      }
-    } else if (outgoing === 0) {
-      throw invalidGraph(`non-terminal node must have an outgoing edge: ${nodeId}`);
-    }
-  }
-  return value;
-}
-var GRAPH_MIGRATION_GUIDANCE = "Graph Definition schemaVersion 2 is not supported by normal runtime. Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
-function detectLegacySchema(parsed) {
-  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
-    const version2 = parsed.schemaVersion;
-    if (version2 === 2) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
-  }
-}
-function parseGraphDefinition(source) {
-  try {
-    const parsed = load(source);
-    detectLegacySchema(parsed);
-    const result = graphDefinitionSchema.safeParse(parsed);
-    if (!result.success) throw invalidGraph(formatIssue(result.error));
-    return validateGraphDefinition(result.data);
-  } catch (error62) {
-    if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
-      throw error62;
-    }
-    throw invalidGraph(error62 instanceof Error ? error62.message : String(error62));
-  }
-}
-function loadGraphDefinition(file2) {
-  try {
-    return parseGraphDefinition(import_node_fs6.default.readFileSync(file2, "utf8"));
-  } catch (error62) {
-    if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
-      throw error62;
-    }
-    throw invalidGraph(`unable to read ${file2}: ${error62 instanceof Error ? error62.message : String(error62)}`);
-  }
-}
-
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_inspector.ts
-function compareStrings3(left, right) {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-function sortedStrings(values) {
-  return [...values].sort(compareStrings3);
-}
-function sortedEdges(edges) {
-  return [...edges].sort((left, right) => compareStrings3(left.from, right.from) || left.priority - right.priority || compareStrings3(left.id, right.id)).map(({ id, from, to, when, priority }) => ({ id, from, to, when, priority }));
-}
-function issueSort(left, right) {
-  return compareStrings3(left.code, right.code) || compareStrings3(left.nodeId ?? "", right.nodeId ?? "") || compareStrings3(left.condition ?? "", right.condition ?? "");
-}
-function inspectGraphDefinition(definition2) {
-  const nodeIds = sortedStrings(Object.keys(definition2.nodes));
-  const terminalNodes = sortedStrings(
-    nodeIds.filter((nodeId) => definition2.nodes[nodeId].kind === "terminal")
-  );
-  const outgoing = /* @__PURE__ */ new Map();
-  for (const edge of definition2.edges) {
-    const destinations = outgoing.get(edge.from) ?? [];
-    destinations.push(edge.to);
-    outgoing.set(edge.from, destinations);
-  }
-  const reachable = /* @__PURE__ */ new Set([definition2.entry]);
-  const pending = [definition2.entry];
-  while (pending.length > 0) {
-    const current = pending.pop();
-    for (const destination of outgoing.get(current) ?? []) {
-      if (!reachable.has(destination)) {
-        reachable.add(destination);
-        pending.push(destination);
-      }
-    }
-  }
-  const reachableNodes = sortedStrings(reachable);
-  const unreachableNodes = nodeIds.filter((nodeId) => !reachable.has(nodeId));
-  const reachableTerminalNodes = terminalNodes.filter((nodeId) => reachable.has(nodeId));
-  const referencedConditions = sortedStrings(new Set(definition2.edges.map((edge) => edge.when)));
-  const referencedConditionSet = new Set(referencedConditions);
-  const unusedConditions = sortedStrings(
-    Object.keys(definition2.conditions).filter((condition) => !referencedConditionSet.has(condition))
-  );
-  const nodes = nodeIds.map((nodeId) => {
-    const node3 = definition2.nodes[nodeId];
-    return {
-      nodeId,
-      kind: node3.kind,
-      ...node3.delegate === void 0 ? {} : { delegate: node3.delegate },
-      audits: sortedStrings(node3.audits ?? []),
-      ...node3.commitGate === true ? { commitGate: true } : {}
-    };
-  });
-  const delegates = nodes.filter((node3) => node3.delegate !== void 0).map(({ nodeId, delegate }) => ({ nodeId, delegate }));
-  const audits = nodes.filter((node3) => node3.audits.length > 0).map(({ nodeId, audits: nodeAudits }) => ({ nodeId, audits: nodeAudits }));
-  const commitGateNodes = nodes.filter((node3) => node3.commitGate === true).map((node3) => node3.nodeId);
-  const edges = sortedEdges(definition2.edges);
-  const issues = [];
-  for (const nodeId of unreachableNodes) {
-    if (terminalNodes.includes(nodeId)) {
-      issues.push({ severity: "warning", code: "unreachable-terminal", nodeId });
-    } else {
-      issues.push({ severity: "error", code: "unreachable-node", nodeId });
-    }
-  }
-  if (reachableTerminalNodes.length === 0) {
-    issues.push({ severity: "error", code: "no-reachable-terminal" });
-  }
-  for (const condition of unusedConditions) {
-    issues.push({ severity: "warning", code: "unused-condition", condition });
-  }
-  return {
-    schemaVersion: 1,
-    graphId: definition2.id,
-    entry: definition2.entry,
-    nodeCount: nodeIds.length,
-    edgeCount: definition2.edges.length,
-    conditionCount: Object.keys(definition2.conditions).length,
-    terminalNodes,
-    reachableNodes,
-    unreachableNodes,
-    reachableTerminalNodes,
-    unusedConditions,
-    referencedConditions,
-    delegates,
-    audits,
-    commitGateNodes,
-    issues: issues.sort(issueSort),
-    nodes,
-    edges
-  };
-}
-
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions.ts
-function evaluateCondition(condition, state) {
-  if (condition.kind === "signal") return state.signals.includes(condition.signal);
-  if (condition.kind === "gate") {
-    return condition.status === "pass" ? state.gates[condition.gate]?.status === "pass" : state.gates[condition.gate]?.status !== "pass";
-  }
-  if (condition.state === "runnable") return (state.execution.taskGraph?.runnable.length ?? 0) > 0;
-  if (condition.state === "active") {
-    return (state.execution.taskGraph?.issues.length ?? 0) === 0 && (state.execution.taskGraph?.resumableActive.length ?? 0) > 0;
-  }
-  if (condition.state === "invalid") return (state.execution.taskGraph?.issues.length ?? 0) > 0;
-  return state.execution.taskGraph !== null && state.execution.taskGraph.completed.length > 0 && state.execution.taskGraph.runnable.length === 0 && state.execution.taskGraph.active.length === 0 && state.execution.taskGraph.blocked.length === 0 && state.execution.taskGraph.issues.length === 0;
-}
-
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts
-function sortedOutgoing(definition2, current) {
-  return definition2.edges.filter((edge) => edge.from === current).sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
-}
-function sortedUnique2(values) {
-  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
-}
-function routeResult(input2, result, additionalBlockers = []) {
-  return {
-    schemaVersion: 3,
-    graphId: input2.definition.id,
-    current: input2.current,
-    next: result.next,
-    edgeId: result.edgeId,
-    condition: result.condition,
-    status: result.status,
-    delegate: result.delegate,
-    requiredAudits: sortedUnique2(result.requiredAudits),
-    blockers: sortedUnique2([...input2.state.blockers, ...additionalBlockers]),
-    taskGraph: input2.state.execution.taskGraph,
-    commitGate: result.commitGate
-  };
-}
-function prerequisiteBlockers(node3, state) {
-  const blockers = [];
-  for (const gate2 of node3.requiresGates ?? []) {
-    const result = state.gates[gate2];
-    if (!result) {
-      blockers.push(`required-gate:${gate2}`, `required-gate:${gate2}:missing`);
-      continue;
-    }
-    if (result.status === "pass") continue;
-    blockers.push(`required-gate:${gate2}`);
-    if (result.reasons.length === 0) {
-      blockers.push(`required-gate:${gate2}:status-${result.status}`);
-    } else {
-      blockers.push(...result.reasons.map((reason) => `required-gate:${gate2}:${reason}`));
-    }
-  }
-  return blockers;
-}
-function isPrerequisiteRepairEdge(edge, node3, definition2) {
-  const condition = definition2.conditions[edge.when];
-  return condition?.kind === "gate" && condition.status === "not-pass" && (node3.requiresGates ?? []).includes(condition.gate);
-}
-function prerequisiteGateExplanations(node3, state) {
-  return (node3.requiresGates ?? []).map((gate2) => {
-    const result = state.gates[gate2];
-    if (!result) return { gate: gate2, status: "missing", reasons: ["missing"] };
-    return { gate: gate2, status: result.status, reasons: sortedUnique2(result.reasons) };
-  });
-}
-function evaluateEdge(edge, definition2, state, evaluationPhase) {
-  const condition = definition2.conditions[edge.when];
-  if (!condition) return null;
-  const matched = evaluateCondition(condition, state);
-  return {
-    matched,
-    evaluated: {
-      edgeId: edge.id,
-      priority: edge.priority,
-      condition: edge.when,
-      conditionKind: condition.kind,
-      matched,
-      evaluationPhase
-    }
-  };
-}
-function selectedRoute(input2, edge) {
-  const destination = input2.definition.nodes[edge.to];
-  return routeResult(input2, {
-    next: edge.to,
-    edgeId: edge.id,
-    condition: edge.when,
-    status: "edge",
-    delegate: destination?.delegate ?? null,
-    requiredAudits: destination?.audits ?? [],
-    commitGate: destination?.commitGate === true
-  });
-}
-function evaluateRouteDecision(input2) {
-  if (!Object.prototype.hasOwnProperty.call(input2.definition.nodes, input2.current)) {
-    throw new Error(`Unknown graph node: ${input2.current}`);
-  }
-  const node3 = input2.definition.nodes[input2.current];
-  const prerequisiteGates = prerequisiteGateExplanations(node3, input2.state);
-  const evaluatedEdges = [];
-  const hardBlockers = sortedUnique2(input2.state.hardBlockers);
-  if (node3.kind === "terminal") {
-    const route2 = routeResult(input2, {
-      next: input2.current,
-      edgeId: null,
-      condition: "terminal",
-      status: "terminal",
-      delegate: node3.delegate ?? null,
-      requiredAudits: node3.audits ?? [],
-      commitGate: false
-    });
-    return {
-      route: route2,
-      explanation: {
-        currentNode: input2.current,
-        hardBlockers,
-        prerequisiteGates,
-        evaluatedEdges,
-        selectedEdgeId: null,
-        selectedDestinationAudits: [],
-        blockedReasons: []
-      }
-    };
-  }
-  if (hardBlockers.length > 0) {
-    const route2 = routeResult(input2, {
-      next: input2.current,
-      edgeId: null,
-      condition: "blocked",
-      status: "blocked",
-      delegate: null,
-      requiredAudits: [],
-      commitGate: false
-    }, hardBlockers);
-    return {
-      route: route2,
-      explanation: {
-        currentNode: input2.current,
-        hardBlockers,
-        prerequisiteGates,
-        evaluatedEdges,
-        selectedEdgeId: null,
-        selectedDestinationAudits: [],
-        blockedReasons: hardBlockers
-      }
-    };
-  }
-  const outgoing = sortedOutgoing(input2.definition, input2.current);
-  const repairEdges = outgoing.filter((edge) => isPrerequisiteRepairEdge(edge, node3, input2.definition));
-  const repairEdgeIds = new Set(repairEdges.map((edge) => edge.id));
-  for (const edge of repairEdges) {
-    const result = evaluateEdge(edge, input2.definition, input2.state, "repair");
-    if (!result) continue;
-    evaluatedEdges.push(result.evaluated);
-    if (result.matched) {
-      return {
-        route: selectedRoute(input2, edge),
-        explanation: {
-          currentNode: input2.current,
-          hardBlockers,
-          prerequisiteGates,
-          evaluatedEdges,
-          selectedEdgeId: edge.id,
-          selectedDestinationAudits: sortedUnique2(input2.definition.nodes[edge.to]?.audits ?? []),
-          blockedReasons: []
-        }
-      };
-    }
-  }
-  const prerequisiteFailures = prerequisiteBlockers(node3, input2.state);
-  if (prerequisiteFailures.length > 0) {
-    const route2 = routeResult(input2, {
-      next: input2.current,
-      edgeId: null,
-      condition: "blocked",
-      status: "blocked",
-      delegate: null,
-      requiredAudits: [],
-      commitGate: false
-    }, prerequisiteFailures);
-    return {
-      route: route2,
-      explanation: {
-        currentNode: input2.current,
-        hardBlockers,
-        prerequisiteGates,
-        evaluatedEdges,
-        selectedEdgeId: null,
-        selectedDestinationAudits: [],
-        blockedReasons: sortedUnique2(prerequisiteFailures)
-      }
-    };
-  }
-  for (const edge of outgoing.filter((candidate) => !repairEdgeIds.has(candidate.id))) {
-    const result = evaluateEdge(edge, input2.definition, input2.state, "normal");
-    if (!result) continue;
-    evaluatedEdges.push(result.evaluated);
-    if (result.matched) {
-      return {
-        route: selectedRoute(input2, edge),
-        explanation: {
-          currentNode: input2.current,
-          hardBlockers,
-          prerequisiteGates,
-          evaluatedEdges,
-          selectedEdgeId: edge.id,
-          selectedDestinationAudits: sortedUnique2(input2.definition.nodes[edge.to]?.audits ?? []),
-          blockedReasons: []
-        }
-      };
-    }
-  }
-  const route = routeResult(input2, {
-    next: input2.current,
-    edgeId: null,
-    condition: "blocked",
-    status: "blocked",
-    delegate: null,
-    requiredAudits: [],
-    commitGate: false
-  }, ["no-matching-edge"]);
-  return {
-    route,
-    explanation: {
-      currentNode: input2.current,
-      hardBlockers,
-      prerequisiteGates,
-      evaluatedEdges,
-      selectedEdgeId: null,
-      selectedDestinationAudits: [],
-      blockedReasons: ["no-matching-edge"]
-    }
-  };
-}
+var import_node_fs10 = __toESM(require("node:fs"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_fs9 = __toESM(require("node:fs"));
 var import_node_path10 = __toESM(require("node:path"));
 
 // src/skills/lib/execution_store/store.ts
 var import_node_crypto2 = __toESM(require("node:crypto"));
-var import_node_fs9 = __toESM(require("node:fs"));
+var import_node_fs8 = __toESM(require("node:fs"));
 var import_node_path9 = __toESM(require("node:path"));
 
 // src/skills/lib/execution_store/atomic.ts
-var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_fs6 = __toESM(require("node:fs"));
 var StoreError = class extends Error {
   code;
   detail;
@@ -40256,7 +39782,7 @@ function isStoreTmpFile(name) {
 function readJsonFile(file2) {
   let raw;
   try {
-    raw = import_node_fs7.default.readFileSync(file2, "utf8");
+    raw = import_node_fs6.default.readFileSync(file2, "utf8");
   } catch (error62) {
     throw new StoreError(
       "state-unreadable",
@@ -40275,7 +39801,7 @@ function readJsonFile(file2) {
 }
 function readLockRecord(lockFile) {
   try {
-    const parsed = JSON.parse(import_node_fs7.default.readFileSync(lockFile, "utf8"));
+    const parsed = JSON.parse(import_node_fs6.default.readFileSync(lockFile, "utf8"));
     if (typeof parsed.pid === "number" && typeof parsed.hostname === "string") {
       return { pid: parsed.pid, hostname: parsed.hostname, acquiredAt: String(parsed.acquiredAt ?? "") };
     }
@@ -40288,7 +39814,7 @@ function readLockRecord(lockFile) {
 var import_node_path8 = __toESM(require("node:path"));
 
 // src/skills/lib/schema_preflight.ts
-var import_node_fs8 = __toESM(require("node:fs"));
+var import_node_fs7 = __toESM(require("node:fs"));
 var import_node_path7 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
 var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
@@ -40326,14 +39852,14 @@ function managedRootAliases() {
 }
 function walkTree(cwd, relRoot, visit3, onEscape) {
   const absRoot = import_node_path7.default.resolve(cwd, relRoot);
-  if (!import_node_fs8.default.existsSync(absRoot) || !import_node_fs8.default.statSync(absRoot).isDirectory()) return false;
+  if (!import_node_fs7.default.existsSync(absRoot) || !import_node_fs7.default.statSync(absRoot).isDirectory()) return false;
   if (!isInsideCheckout(cwd, absRoot)) return false;
   const stack = [absRoot];
   while (stack.length > 0) {
     const dir = stack.pop();
     let entries;
     try {
-      entries = import_node_fs8.default.readdirSync(dir, { withFileTypes: true });
+      entries = import_node_fs7.default.readdirSync(dir, { withFileTypes: true });
     } catch {
       continue;
     }
@@ -40404,7 +39930,7 @@ function scanDocuments(cwd) {
     const abs = import_node_path7.default.resolve(cwd, rel);
     let raw;
     try {
-      raw = import_node_fs8.default.readFileSync(abs, "utf8");
+      raw = import_node_fs7.default.readFileSync(abs, "utf8");
     } catch {
       return;
     }
@@ -40454,7 +39980,7 @@ function scanDocuments(cwd) {
     const abs = import_node_path7.default.resolve(cwd, root);
     let key = abs;
     try {
-      key = import_node_fs8.default.realpathSync(abs);
+      key = import_node_fs7.default.realpathSync(abs);
     } catch {
     }
     if (walked.has(key)) continue;
@@ -40469,7 +39995,7 @@ function scanDocuments(cwd) {
 }
 function scanManifestDir(cwd, issues) {
   const abs = import_node_path7.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
-  if (!import_node_fs8.default.existsSync(abs)) return;
+  if (!import_node_fs7.default.existsSync(abs)) return;
   const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
     const name = import_node_path7.default.basename(rel);
     if (isDir) {
@@ -40486,7 +40012,7 @@ function scanManifestDir(cwd, issues) {
     if (/\.ya?ml$/i.test(name)) {
       let legacy = false;
       try {
-        const parsed = load(import_node_fs8.default.readFileSync(import_node_path7.default.resolve(cwd, rel), "utf8"));
+        const parsed = load(import_node_fs7.default.readFileSync(import_node_path7.default.resolve(cwd, rel), "utf8"));
         if (isPlainObject5(parsed)) {
           const version2 = parsed.schemaVersion;
           legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
@@ -40515,7 +40041,7 @@ function scanManifestDir(cwd, issues) {
   if (!walked) {
     let directory = false;
     try {
-      directory = import_node_fs8.default.statSync(abs).isDirectory();
+      directory = import_node_fs7.default.statSync(abs).isDirectory();
     } catch {
     }
     issues.push({
@@ -40527,7 +40053,7 @@ function scanManifestDir(cwd, issues) {
 }
 function scanExecutionState(cwd, issues) {
   const abs = import_node_path7.default.resolve(cwd, EXECUTION_STATE_ROOT);
-  if (!import_node_fs8.default.existsSync(abs)) return;
+  if (!import_node_fs7.default.existsSync(abs)) return;
   const marker = (rel, detail) => {
     issues.push({ reason: "legacy-execution-state", path: rel, detail });
   };
@@ -40555,7 +40081,7 @@ function scanExecutionState(cwd, issues) {
       if (segments.length === 2 && segments[1] === "manifest.json") {
         let version2;
         try {
-          version2 = JSON.parse(import_node_fs8.default.readFileSync(import_node_path7.default.resolve(cwd, rel), "utf8")).schemaVersion;
+          version2 = JSON.parse(import_node_fs7.default.readFileSync(import_node_path7.default.resolve(cwd, rel), "utf8")).schemaVersion;
         } catch {
           version2 = null;
         }
@@ -40573,7 +40099,7 @@ function scanExecutionState(cwd, issues) {
     if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
       let version2;
       try {
-        version2 = JSON.parse(import_node_fs8.default.readFileSync(import_node_path7.default.resolve(cwd, rel), "utf8")).schemaVersion;
+        version2 = JSON.parse(import_node_fs7.default.readFileSync(import_node_path7.default.resolve(cwd, rel), "utf8")).schemaVersion;
       } catch {
         version2 = null;
       }
@@ -40587,7 +40113,7 @@ function scanExecutionState(cwd, issues) {
   if (!walked) {
     let directory = false;
     try {
-      directory = import_node_fs8.default.statSync(abs).isDirectory();
+      directory = import_node_fs7.default.statSync(abs).isDirectory();
     } catch {
     }
     issues.push({
@@ -40600,11 +40126,11 @@ function scanExecutionState(cwd, issues) {
 function readManifest(cwd) {
   const rel = SCHEMA_MANIFEST_PATH;
   const abs = import_node_path7.default.resolve(cwd, rel);
-  if (!import_node_fs8.default.existsSync(abs)) return { state: "missing" };
+  if (!import_node_fs7.default.existsSync(abs)) return { state: "missing" };
   if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
   let raw;
   try {
-    raw = import_node_fs8.default.readFileSync(abs, "utf8");
+    raw = import_node_fs7.default.readFileSync(abs, "utf8");
   } catch (error62) {
     return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
   }
@@ -40667,7 +40193,7 @@ function readManifest(cwd) {
   return { state: "read", declared, migrationInProgress, versionIssues };
 }
 function journalPresent(cwd) {
-  return import_node_fs8.default.existsSync(import_node_path7.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+  return import_node_fs7.default.existsSync(import_node_path7.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
 }
 function recommendedCommand(status, docCount) {
   const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
@@ -40926,8 +40452,8 @@ function insideResolvedRoot(resolved, candidate) {
   let real;
   let realRoot;
   try {
-    real = import_node_fs9.default.realpathSync(candidate);
-    realRoot = import_node_fs9.default.realpathSync(resolved.root);
+    real = import_node_fs8.default.realpathSync(candidate);
+    realRoot = import_node_fs8.default.realpathSync(resolved.root);
   } catch {
     return false;
   }
@@ -40937,10 +40463,10 @@ function insideResolvedRoot(resolved, candidate) {
 }
 function runDirContained(resolved, runId) {
   const runDir = runDirFor(resolved, runId);
-  if (!import_node_fs9.default.existsSync(runDir)) {
+  if (!import_node_fs8.default.existsSync(runDir)) {
     throw new StoreError("run-not-found", `run ${runId} does not exist under ${resolved.repoRelative ?? resolved.root}`);
   }
-  if (!import_node_fs9.default.statSync(runDir).isDirectory()) {
+  if (!import_node_fs8.default.statSync(runDir).isDirectory()) {
     throw new StoreError("corrupt-state", `${runDir} is not a directory`);
   }
   if (!insideResolvedRoot(resolved, runDir)) {
@@ -40950,7 +40476,7 @@ function runDirContained(resolved, runId) {
 }
 function readManifest2(runDir, runId) {
   const file2 = import_node_path9.default.join(runDir, STATE_FILE);
-  if (!import_node_fs9.default.existsSync(file2)) {
+  if (!import_node_fs8.default.existsSync(file2)) {
     throw new StoreError(
       "corrupt-state",
       `run ${runId} has no manifest.json \u2014 the run is incomplete or foreign`,
@@ -40977,8 +40503,8 @@ function readManifest2(runDir, runId) {
 }
 function listRecordFiles(runDir, kind) {
   const dir = import_node_path9.default.join(runDir, kind);
-  if (!import_node_fs9.default.existsSync(dir)) return [];
-  return import_node_fs9.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path9.default.join(runDir, kind, entry.name)).sort();
+  if (!import_node_fs8.default.existsSync(dir)) return [];
+  return import_node_fs8.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path9.default.join(runDir, kind, entry.name)).sort();
 }
 function readRecord(file2, validate2, kind) {
   const parsed = readJsonFile(file2);
@@ -40997,8 +40523,8 @@ function readRecord(file2, validate2, kind) {
 }
 function scanIncompleteWrites(dir, rel = "") {
   const found = [];
-  if (!import_node_fs9.default.existsSync(dir)) return found;
-  for (const entry of import_node_fs9.default.readdirSync(dir, { withFileTypes: true })) {
+  if (!import_node_fs8.default.existsSync(dir)) return found;
+  for (const entry of import_node_fs8.default.readdirSync(dir, { withFileTypes: true })) {
     const abs = import_node_path9.default.join(dir, entry.name);
     const relPath = rel === "" ? entry.name : `${rel}/${entry.name}`;
     if (entry.isDirectory()) {
@@ -41014,14 +40540,14 @@ function loadSnapshot(resolved, runId) {
   const manifest = readManifest2(runDir, runId);
   const planFile = import_node_path9.default.join(runDir, PLAN_FILE);
   let plan = null;
-  if (import_node_fs9.default.existsSync(planFile)) {
-    const content3 = import_node_fs9.default.readFileSync(planFile, "utf8");
+  if (import_node_fs8.default.existsSync(planFile)) {
+    const content3 = import_node_fs8.default.readFileSync(planFile, "utf8");
     plan = { content: content3, digest: sha256(content3) };
   }
   const tasks = listRecordFiles(runDir, "tasks").map((file2) => readRecord(file2, validateTask, "task")).map((task) => task.scope === void 0 ? { ...task, scope: [] } : task);
   const checkpoints = listRecordFiles(runDir, "checkpoints").map((file2) => readRecord(file2, validateCheckpoint, "checkpoint"));
   const receipts = listRecordFiles(runDir, "receipts").map((file2) => readRecord(file2, validateReceipt, "receipt"));
-  const lock = import_node_fs9.default.existsSync(import_node_path9.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path9.default.join(runDir, "writer.lock")) : null;
+  const lock = import_node_fs8.default.existsSync(import_node_path9.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path9.default.join(runDir, "writer.lock")) : null;
   return {
     runId,
     status: manifest.status,
@@ -41045,9 +40571,9 @@ function loadRun(cwd, runId, options2 = {}) {
 function listRuns(cwd, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
   const runsDir = import_node_path9.default.join(resolved.root, RUN_DIR);
-  if (!import_node_fs9.default.existsSync(runsDir)) return [];
+  if (!import_node_fs8.default.existsSync(runsDir)) return [];
   const runs = [];
-  for (const entry of import_node_fs9.default.readdirSync(runsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const entry of import_node_fs8.default.readdirSync(runsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory() || !isValidId(entry.name)) continue;
     try {
       const manifest = readManifest2(import_node_path9.default.join(runsDir, entry.name), entry.name);
@@ -41060,11 +40586,11 @@ function listRuns(cwd, options2 = {}) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
-function compareStrings4(left, right) {
+function compareStrings3(left, right) {
   return left.localeCompare(right);
 }
-function sortedUnique3(values) {
-  return [...new Set(values)].sort(compareStrings4);
+function sortedUnique2(values) {
+  return [...new Set(values)].sort(compareStrings3);
 }
 function taskRecordPath(runId, taskId) {
   return `runs/${runId}/tasks/${taskId}.json`;
@@ -41079,7 +40605,7 @@ function findCycles(ids, edges) {
     const successors = adjacency.get(edge.from);
     if (successors) successors.push(edge.to);
   }
-  for (const successors of adjacency.values()) successors.sort(compareStrings4);
+  for (const successors of adjacency.values()) successors.sort(compareStrings3);
   const visiting = /* @__PURE__ */ new Set();
   const visited = /* @__PURE__ */ new Set();
   const cycles = /* @__PURE__ */ new Set();
@@ -41089,7 +40615,7 @@ function findCycles(ids, edges) {
     for (const next of adjacency.get(id) || []) {
       if (visiting.has(next)) {
         const start = stack.indexOf(next);
-        const cycle = stack.slice(start).sort(compareStrings4);
+        const cycle = stack.slice(start).sort(compareStrings3);
         cycles.add(cycle.join(" -> "));
       } else if (!visited.has(next)) {
         walk(next, stack);
@@ -41100,14 +40626,14 @@ function findCycles(ids, edges) {
     visited.add(id);
   };
   for (const id of ids) if (!visited.has(id)) walk(id, []);
-  return [...cycles].sort(compareStrings4).map((cycle) => ({
+  return [...cycles].sort(compareStrings3).map((cycle) => ({
     code: "task-cycle",
     tasks: cycle.split(" -> "),
     message: `Task dependency cycle detected: ${cycle}`
   }));
 }
 function issueCompare3(left, right) {
-  return compareStrings4(left.code, right.code) || compareStrings4(left.tasks.join(","), right.tasks.join(",")) || compareStrings4(left.message, right.message);
+  return compareStrings3(left.code, right.code) || compareStrings3(left.tasks.join(","), right.tasks.join(",")) || compareStrings3(left.message, right.message);
 }
 function projectRunTasks(snapshot) {
   const { runId } = snapshot;
@@ -41137,7 +40663,7 @@ function projectRunTasks(snapshot) {
     });
   }
   const byId = /* @__PURE__ */ new Map();
-  for (const task of [...snapshot.tasks].sort((left, right) => compareStrings4(left.taskId, right.taskId))) {
+  for (const task of [...snapshot.tasks].sort((left, right) => compareStrings3(left.taskId, right.taskId))) {
     if (byId.has(task.taskId)) {
       issues.push({
         code: "duplicate-task-id",
@@ -41165,7 +40691,7 @@ function projectRunTasks(snapshot) {
       blocksById.get(dep)?.add(task.taskId);
     }
   }
-  const sortedEdges2 = [...edges.values()].sort((left, right) => compareStrings4(left.from, right.from) || compareStrings4(left.to, right.to));
+  const sortedEdges2 = [...edges.values()].sort((left, right) => compareStrings3(left.from, right.from) || compareStrings3(left.to, right.to));
   issues.push(...findCycles(tasks.map((task) => task.taskId), sortedEdges2));
   if (tasks.length === 0) {
     issues.push({
@@ -41197,16 +40723,16 @@ function projectRunTasks(snapshot) {
       path: taskRecordPath(runId, task.taskId),
       title: task.title,
       status: task.status,
-      dependsOn: sortedUnique3(task.dependsOn),
-      blocks: sortedUnique3(blocksById.get(task.taskId) ?? []),
-      scope: [...task.scope].sort(compareStrings4),
+      dependsOn: sortedUnique2(task.dependsOn),
+      blocks: sortedUnique2(blocksById.get(task.taskId) ?? []),
+      scope: [...task.scope].sort(compareStrings3),
       version: task.version
     })),
     edges: sortedEdges2,
-    runnable: runnable.sort(compareStrings4),
-    active: active.sort(compareStrings4),
-    resumableActive: resumableActive.sort(compareStrings4),
-    completed: completed.sort(compareStrings4),
+    runnable: runnable.sort(compareStrings3),
+    active: active.sort(compareStrings3),
+    resumableActive: resumableActive.sort(compareStrings3),
+    completed: completed.sort(compareStrings3),
     blocked,
     issues: uniqueIssues
   };
@@ -41470,11 +40996,22 @@ function subHeadingCount(section, depth = 3) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-function sortedUnique4(values) {
+var GRAPH_GATE_NAMES = [
+  "bootstrap",
+  "knowledge",
+  "briefing",
+  "design",
+  "planning",
+  "implementation",
+  "verification",
+  "knowledge-consolidation",
+  "exit-audit"
+];
+function sortedUnique3(values) {
   return [...new Set(values)].sort(compareStrings);
 }
 function gate(status, reasons = []) {
-  return { status, reasons: sortedUnique4(reasons) };
+  return { status, reasons: sortedUnique3(reasons) };
 }
 function consideredOptionCount(body) {
   const section = sectionBody(body, "Considered Options");
@@ -41487,7 +41024,7 @@ function bootstrapReasons(cwd) {
   const reasons = [];
   for (const directory of DURABLE_DOC_DIRS) {
     const full = import_node_path10.default.join(cwd, directory);
-    if (!import_node_fs10.default.existsSync(full) || !import_node_fs10.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
+    if (!import_node_fs9.default.existsSync(full) || !import_node_fs9.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
   }
   return reasons;
 }
@@ -41654,9 +41191,9 @@ function resolveFocus(cwd, records, knowledge, options2) {
     }
     blockers.add("focus-invalid");
   }
-  const resolvedFocus = sortedUnique4(focus);
+  const resolvedFocus = sortedUnique3(focus);
   if (blockers.size > 0) {
-    return { focus: resolvedFocus, runId: null, blockers: sortedUnique4(blockers) };
+    return { focus: resolvedFocus, runId: null, blockers: sortedUnique3(blockers) };
   }
   const runId = runTokens.size === 1 ? [...runTokens][0] : null;
   if (isFocusAmbiguous(knowledge, records, resolvedFocus)) {
@@ -41716,10 +41253,10 @@ function deriveSignals(input2, blockers, gates, taskGraph) {
   if (blockers.includes("focus-required")) signals.add("focus-required");
   if (blockers.includes("bootstrap-incomplete")) signals.add("bootstrap-incomplete");
   if (blockers.length === 0 && Object.values(gates).length > 0 && Object.values(gates).every((result) => result.status === "pass") && (!taskGraph || taskGraph.issues.length === 0)) signals.add("graph-complete");
-  return sortedUnique4(signals);
+  return sortedUnique3(signals);
 }
 function deriveHardBlockers(blockers, gates) {
-  return sortedUnique4([
+  return sortedUnique3([
     ...blockers.filter((blocker) => blocker === "focus-required" || blocker === "focus-invalid" || blocker === "duplicate-id" || blocker.startsWith("knowledge:")),
     ...gates.knowledge && gates.knowledge.status !== "pass" ? ["knowledge"] : []
   ]);
@@ -41799,6 +41336,11 @@ function evaluateGraphGates(state) {
   }
   gates["knowledge-consolidation"] = state.signals.includes("knowledge-consolidated") ? gate("pass") : gate("fail", ["knowledge-consolidation-pending"]);
   gates["exit-audit"] = state.signals.includes("exit-audit-pass") ? gate("pass") : gate("blocked", ["exit-audit-pass"]);
+  const emittedGates = Object.keys(gates).sort(compareStrings);
+  const declaredGates = [...GRAPH_GATE_NAMES].sort(compareStrings);
+  if (emittedGates.join("\0") !== declaredGates.join("\0")) {
+    throw new Error(`gate vocabulary drift: expected ${declaredGates.join(", ")}; emitted ${emittedGates.join(", ")}`);
+  }
   return gates;
 }
 function focusRank(state, records) {
@@ -41815,7 +41357,7 @@ async function projectGraphState(options2, collector) {
       collector.filesRead += 1;
       collector.filePaths.add(document3.path);
       try {
-        collector.bytesRead += import_node_fs10.default.statSync(document3.absolutePath).size;
+        collector.bytesRead += import_node_fs9.default.statSync(document3.absolutePath).size;
       } catch {
       }
     }
@@ -41836,7 +41378,7 @@ async function projectGraphState(options2, collector) {
   );
   const taskGraph = run ? projectRunTasks(run) : null;
   const duplicateIds = model.duplicateIds();
-  const blockers = sortedUnique4([
+  const blockers = sortedUnique3([
     ...resolution.blockers,
     ...knowledge.issues.map((issue2) => `knowledge:${issue2.code}`),
     ...duplicateIds.length > 0 ? ["duplicate-id", "focus-required"] : [],
@@ -41868,14 +41410,14 @@ async function projectGraphState(options2, collector) {
     verification,
     focus: resolution.focus,
     gates: {},
-    signals: sortedUnique4(options2.signals ?? []),
+    signals: sortedUnique3(options2.signals ?? []),
     blockers,
     hardBlockers: []
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
   state.gates = evaluateGraphGates(state);
   if (state.gates.verification && state.gates.verification.status !== "pass") {
-    state.blockers = sortedUnique4([...state.blockers, ...state.gates.verification.reasons]);
+    state.blockers = sortedUnique3([...state.blockers, ...state.gates.verification.reasons]);
   }
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
   state.hardBlockers = deriveHardBlockers(state.blockers, state.gates);
@@ -41891,6 +41433,490 @@ var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
   "routed",
   "active"
 ]);
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
+var graphNodeId = external_exports.string().min(1);
+var graphConditionSchema = external_exports.discriminatedUnion("kind", [
+  external_exports.object({ kind: external_exports.literal("signal"), signal: external_exports.string().min(1) }).strict(),
+  external_exports.object({
+    kind: external_exports.literal("gate"),
+    gate: external_exports.string().min(1),
+    status: external_exports.enum(["pass", "not-pass"])
+  }).strict(),
+  external_exports.object({
+    kind: external_exports.literal("task-graph"),
+    state: external_exports.enum(["runnable", "active", "invalid", "idle"])
+  }).strict()
+]);
+var graphNodeSchema = external_exports.object({
+  kind: external_exports.enum(["action", "delegate", "audit", "terminal"]),
+  delegate: external_exports.string().min(1).optional(),
+  audits: external_exports.array(external_exports.string().min(1)).optional(),
+  requiresGates: external_exports.array(external_exports.string().min(1)).optional(),
+  commitGate: external_exports.boolean().optional()
+}).strict();
+var graphEdgeSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  from: graphNodeId,
+  to: graphNodeId,
+  when: external_exports.string().min(1),
+  priority: external_exports.number().int()
+}).strict();
+var graphDefinitionSchema = external_exports.object({
+  schemaVersion: external_exports.literal(3),
+  id: external_exports.string().min(1),
+  entry: graphNodeId,
+  runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
+  conditions: external_exports.record(graphNodeId, graphConditionSchema),
+  nodes: external_exports.record(graphNodeId, graphNodeSchema),
+  edges: external_exports.array(graphEdgeSchema)
+}).strict();
+function invalidGraph(message) {
+  return new Error(`Invalid graph definition: ${message}`);
+}
+function formatIssue(error62) {
+  return error62.issues.map((issue2) => `${issue2.path.join(".") || "graph"}: ${issue2.message}`).join("; ");
+}
+function hasNode(nodes, id) {
+  return Object.prototype.hasOwnProperty.call(nodes, id);
+}
+function validateGraphDefinition(value) {
+  if (!hasNode(value.nodes, value.entry)) {
+    throw invalidGraph(`entry node does not exist: ${value.entry}`);
+  }
+  const duplicateRuntimeSignal = value.runtimeSignals.find((signal, index2) => value.runtimeSignals.indexOf(signal) !== index2);
+  if (duplicateRuntimeSignal !== void 0) {
+    throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
+  }
+  const knownGates = new Set(GRAPH_GATE_NAMES);
+  for (const [conditionKey, condition] of Object.entries(value.conditions)) {
+    if (condition.kind === "gate" && !knownGates.has(condition.gate)) {
+      throw invalidGraph(
+        `unknown gate "${condition.gate}" in condition "${conditionKey}" (known gates: ${GRAPH_GATE_NAMES.join(", ")})`
+      );
+    }
+  }
+  const declaredGates = new Set(
+    Object.values(value.conditions).filter((condition) => condition.kind === "gate").map((condition) => condition.gate)
+  );
+  for (const [nodeId, node3] of Object.entries(value.nodes)) {
+    const requiresGates = node3.requiresGates ?? [];
+    const unknownGates = requiresGates.filter((gate2) => !declaredGates.has(gate2));
+    if (unknownGates.length > 0) {
+      throw invalidGraph(`unknown prerequisite gate: ${unknownGates.join(", ")}`);
+    }
+    if (new Set(requiresGates).size !== requiresGates.length) {
+      throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
+    }
+    const audits = node3.audits ?? [];
+    if (new Set(audits).size !== audits.length) {
+      throw invalidGraph(`duplicate audit on node ${nodeId}`);
+    }
+  }
+  const edgeIds = /* @__PURE__ */ new Set();
+  const routeSelectors = /* @__PURE__ */ new Set();
+  const priorities = /* @__PURE__ */ new Set();
+  for (const edge of value.edges) {
+    if (edgeIds.has(edge.id)) {
+      throw invalidGraph(`duplicate edge id: ${edge.id}`);
+    }
+    edgeIds.add(edge.id);
+    const selector = `${edge.from}\0${edge.when}`;
+    const priority = `${edge.from}\0${edge.priority}`;
+    if (routeSelectors.has(selector)) {
+      throw invalidGraph(`duplicate route selector: ${edge.from} + ${edge.when}`);
+    }
+    if (priorities.has(priority)) {
+      throw invalidGraph(`duplicate edge priority: ${edge.from} + ${edge.priority}`);
+    }
+    if (!Object.prototype.hasOwnProperty.call(value.conditions, edge.when)) {
+      throw invalidGraph(`unknown condition: ${edge.when}`);
+    }
+    routeSelectors.add(selector);
+    priorities.add(priority);
+    if (!hasNode(value.nodes, edge.from)) {
+      throw invalidGraph(`edge ${edge.id} references unknown from node: ${edge.from}`);
+    }
+    if (!hasNode(value.nodes, edge.to)) {
+      throw invalidGraph(`edge ${edge.id} references unknown to node: ${edge.to}`);
+    }
+  }
+  const outgoingByNode = /* @__PURE__ */ new Map();
+  for (const edge of value.edges) {
+    outgoingByNode.set(edge.from, (outgoingByNode.get(edge.from) ?? 0) + 1);
+  }
+  for (const [nodeId, node3] of Object.entries(value.nodes)) {
+    const outgoing = outgoingByNode.get(nodeId) ?? 0;
+    if (node3.kind === "terminal") {
+      if (outgoing > 0) {
+        throw invalidGraph(`terminal node must not have outgoing edges: ${nodeId}`);
+      }
+    } else if (outgoing === 0) {
+      throw invalidGraph(`non-terminal node must have an outgoing edge: ${nodeId}`);
+    }
+  }
+  return value;
+}
+var GRAPH_MIGRATION_GUIDANCE = "Graph Definition schemaVersion 2 is not supported by normal runtime. Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
+function detectLegacySchema(parsed) {
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const version2 = parsed.schemaVersion;
+    if (version2 !== void 0 && version2 !== 3) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
+  }
+}
+function parseGraphDefinition(source) {
+  try {
+    const parsed = load(source);
+    detectLegacySchema(parsed);
+    const result = graphDefinitionSchema.safeParse(parsed);
+    if (!result.success) throw invalidGraph(formatIssue(result.error));
+    return validateGraphDefinition(result.data);
+  } catch (error62) {
+    if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
+      throw error62;
+    }
+    throw invalidGraph(error62 instanceof Error ? error62.message : String(error62));
+  }
+}
+function loadGraphDefinition(file2) {
+  try {
+    return parseGraphDefinition(import_node_fs10.default.readFileSync(file2, "utf8"));
+  } catch (error62) {
+    if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
+      throw error62;
+    }
+    throw invalidGraph(`unable to read ${file2}: ${error62 instanceof Error ? error62.message : String(error62)}`);
+  }
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_inspector.ts
+function compareStrings4(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+function sortedStrings(values) {
+  return [...values].sort(compareStrings4);
+}
+function sortedEdges(edges) {
+  return [...edges].sort((left, right) => compareStrings4(left.from, right.from) || left.priority - right.priority || compareStrings4(left.id, right.id)).map(({ id, from, to, when, priority }) => ({ id, from, to, when, priority }));
+}
+function issueSort(left, right) {
+  return compareStrings4(left.code, right.code) || compareStrings4(left.nodeId ?? "", right.nodeId ?? "") || compareStrings4(left.condition ?? "", right.condition ?? "");
+}
+function inspectGraphDefinition(definition2) {
+  const nodeIds = sortedStrings(Object.keys(definition2.nodes));
+  const terminalNodes = sortedStrings(
+    nodeIds.filter((nodeId) => definition2.nodes[nodeId].kind === "terminal")
+  );
+  const outgoing = /* @__PURE__ */ new Map();
+  for (const edge of definition2.edges) {
+    const destinations = outgoing.get(edge.from) ?? [];
+    destinations.push(edge.to);
+    outgoing.set(edge.from, destinations);
+  }
+  const reachable = /* @__PURE__ */ new Set([definition2.entry]);
+  const pending = [definition2.entry];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    for (const destination of outgoing.get(current) ?? []) {
+      if (!reachable.has(destination)) {
+        reachable.add(destination);
+        pending.push(destination);
+      }
+    }
+  }
+  const reachableNodes = sortedStrings(reachable);
+  const unreachableNodes = nodeIds.filter((nodeId) => !reachable.has(nodeId));
+  const reachableTerminalNodes = terminalNodes.filter((nodeId) => reachable.has(nodeId));
+  const referencedConditions = sortedStrings(new Set(definition2.edges.map((edge) => edge.when)));
+  const referencedConditionSet = new Set(referencedConditions);
+  const unusedConditions = sortedStrings(
+    Object.keys(definition2.conditions).filter((condition) => !referencedConditionSet.has(condition))
+  );
+  const nodes = nodeIds.map((nodeId) => {
+    const node3 = definition2.nodes[nodeId];
+    return {
+      nodeId,
+      kind: node3.kind,
+      ...node3.delegate === void 0 ? {} : { delegate: node3.delegate },
+      audits: sortedStrings(node3.audits ?? []),
+      ...node3.commitGate === true ? { commitGate: true } : {}
+    };
+  });
+  const delegates = nodes.filter((node3) => node3.delegate !== void 0).map(({ nodeId, delegate }) => ({ nodeId, delegate }));
+  const audits = nodes.filter((node3) => node3.audits.length > 0).map(({ nodeId, audits: nodeAudits }) => ({ nodeId, audits: nodeAudits }));
+  const commitGateNodes = nodes.filter((node3) => node3.commitGate === true).map((node3) => node3.nodeId);
+  const edges = sortedEdges(definition2.edges);
+  const issues = [];
+  for (const nodeId of unreachableNodes) {
+    if (terminalNodes.includes(nodeId)) {
+      issues.push({ severity: "warning", code: "unreachable-terminal", nodeId });
+    } else {
+      issues.push({ severity: "error", code: "unreachable-node", nodeId });
+    }
+  }
+  if (reachableTerminalNodes.length === 0) {
+    issues.push({ severity: "error", code: "no-reachable-terminal" });
+  }
+  for (const condition of unusedConditions) {
+    issues.push({ severity: "warning", code: "unused-condition", condition });
+  }
+  return {
+    schemaVersion: 1,
+    graphId: definition2.id,
+    entry: definition2.entry,
+    nodeCount: nodeIds.length,
+    edgeCount: definition2.edges.length,
+    conditionCount: Object.keys(definition2.conditions).length,
+    terminalNodes,
+    reachableNodes,
+    unreachableNodes,
+    reachableTerminalNodes,
+    unusedConditions,
+    referencedConditions,
+    delegates,
+    audits,
+    commitGateNodes,
+    issues: issues.sort(issueSort),
+    nodes,
+    edges
+  };
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions.ts
+function evaluateCondition(condition, state) {
+  if (condition.kind === "signal") return state.signals.includes(condition.signal);
+  if (condition.kind === "gate") {
+    return condition.status === "pass" ? state.gates[condition.gate]?.status === "pass" : state.gates[condition.gate]?.status !== "pass";
+  }
+  if (condition.state === "runnable") return (state.execution.taskGraph?.runnable.length ?? 0) > 0;
+  if (condition.state === "active") {
+    return (state.execution.taskGraph?.issues.length ?? 0) === 0 && (state.execution.taskGraph?.resumableActive.length ?? 0) > 0;
+  }
+  if (condition.state === "invalid") return (state.execution.taskGraph?.issues.length ?? 0) > 0;
+  return state.execution.taskGraph !== null && state.execution.taskGraph.completed.length > 0 && state.execution.taskGraph.runnable.length === 0 && state.execution.taskGraph.active.length === 0 && state.execution.taskGraph.blocked.length === 0 && state.execution.taskGraph.issues.length === 0;
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts
+function sortedOutgoing(definition2, current) {
+  return definition2.edges.filter((edge) => edge.from === current).sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
+}
+function sortedUnique4(values) {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
+function routeResult(input2, result, additionalBlockers = []) {
+  return {
+    schemaVersion: 3,
+    graphId: input2.definition.id,
+    current: input2.current,
+    next: result.next,
+    edgeId: result.edgeId,
+    condition: result.condition,
+    status: result.status,
+    delegate: result.delegate,
+    requiredAudits: sortedUnique4(result.requiredAudits),
+    blockers: sortedUnique4([...input2.state.blockers, ...additionalBlockers]),
+    taskGraph: input2.state.execution.taskGraph,
+    commitGate: result.commitGate
+  };
+}
+function prerequisiteBlockers(node3, state) {
+  const blockers = [];
+  for (const gate2 of node3.requiresGates ?? []) {
+    const result = state.gates[gate2];
+    if (!result) {
+      blockers.push(`required-gate:${gate2}`, `required-gate:${gate2}:missing`);
+      continue;
+    }
+    if (result.status === "pass") continue;
+    blockers.push(`required-gate:${gate2}`);
+    if (result.reasons.length === 0) {
+      blockers.push(`required-gate:${gate2}:status-${result.status}`);
+    } else {
+      blockers.push(...result.reasons.map((reason) => `required-gate:${gate2}:${reason}`));
+    }
+  }
+  return blockers;
+}
+function isPrerequisiteRepairEdge(edge, node3, definition2) {
+  const condition = definition2.conditions[edge.when];
+  return condition?.kind === "gate" && condition.status === "not-pass" && (node3.requiresGates ?? []).includes(condition.gate);
+}
+function prerequisiteGateExplanations(node3, state) {
+  return (node3.requiresGates ?? []).map((gate2) => {
+    const result = state.gates[gate2];
+    if (!result) return { gate: gate2, status: "missing", reasons: ["missing"] };
+    return { gate: gate2, status: result.status, reasons: sortedUnique4(result.reasons) };
+  });
+}
+function evaluateEdge(edge, definition2, state, evaluationPhase) {
+  const condition = definition2.conditions[edge.when];
+  if (!condition) return null;
+  const matched = evaluateCondition(condition, state);
+  return {
+    matched,
+    evaluated: {
+      edgeId: edge.id,
+      priority: edge.priority,
+      condition: edge.when,
+      conditionKind: condition.kind,
+      matched,
+      evaluationPhase
+    }
+  };
+}
+function selectedRoute(input2, edge) {
+  const destination = input2.definition.nodes[edge.to];
+  return routeResult(input2, {
+    next: edge.to,
+    edgeId: edge.id,
+    condition: edge.when,
+    status: "edge",
+    delegate: destination?.delegate ?? null,
+    requiredAudits: destination?.audits ?? [],
+    commitGate: destination?.commitGate === true
+  });
+}
+function evaluateRouteDecision(input2) {
+  if (!Object.prototype.hasOwnProperty.call(input2.definition.nodes, input2.current)) {
+    throw new Error(`Unknown graph node: ${input2.current}`);
+  }
+  const node3 = input2.definition.nodes[input2.current];
+  const prerequisiteGates = prerequisiteGateExplanations(node3, input2.state);
+  const evaluatedEdges = [];
+  const hardBlockers = sortedUnique4(input2.state.hardBlockers);
+  if (node3.kind === "terminal") {
+    const route2 = routeResult(input2, {
+      next: input2.current,
+      edgeId: null,
+      condition: "terminal",
+      status: "terminal",
+      delegate: node3.delegate ?? null,
+      requiredAudits: node3.audits ?? [],
+      commitGate: false
+    });
+    return {
+      route: route2,
+      explanation: {
+        currentNode: input2.current,
+        hardBlockers,
+        prerequisiteGates,
+        evaluatedEdges,
+        selectedEdgeId: null,
+        selectedDestinationAudits: [],
+        blockedReasons: []
+      }
+    };
+  }
+  if (hardBlockers.length > 0) {
+    const route2 = routeResult(input2, {
+      next: input2.current,
+      edgeId: null,
+      condition: "blocked",
+      status: "blocked",
+      delegate: null,
+      requiredAudits: [],
+      commitGate: false
+    }, hardBlockers);
+    return {
+      route: route2,
+      explanation: {
+        currentNode: input2.current,
+        hardBlockers,
+        prerequisiteGates,
+        evaluatedEdges,
+        selectedEdgeId: null,
+        selectedDestinationAudits: [],
+        blockedReasons: hardBlockers
+      }
+    };
+  }
+  const outgoing = sortedOutgoing(input2.definition, input2.current);
+  const repairEdges = outgoing.filter((edge) => isPrerequisiteRepairEdge(edge, node3, input2.definition));
+  const repairEdgeIds = new Set(repairEdges.map((edge) => edge.id));
+  for (const edge of repairEdges) {
+    const result = evaluateEdge(edge, input2.definition, input2.state, "repair");
+    if (!result) continue;
+    evaluatedEdges.push(result.evaluated);
+    if (result.matched) {
+      return {
+        route: selectedRoute(input2, edge),
+        explanation: {
+          currentNode: input2.current,
+          hardBlockers,
+          prerequisiteGates,
+          evaluatedEdges,
+          selectedEdgeId: edge.id,
+          selectedDestinationAudits: sortedUnique4(input2.definition.nodes[edge.to]?.audits ?? []),
+          blockedReasons: []
+        }
+      };
+    }
+  }
+  const prerequisiteFailures = prerequisiteBlockers(node3, input2.state);
+  if (prerequisiteFailures.length > 0) {
+    const route2 = routeResult(input2, {
+      next: input2.current,
+      edgeId: null,
+      condition: "blocked",
+      status: "blocked",
+      delegate: null,
+      requiredAudits: [],
+      commitGate: false
+    }, prerequisiteFailures);
+    return {
+      route: route2,
+      explanation: {
+        currentNode: input2.current,
+        hardBlockers,
+        prerequisiteGates,
+        evaluatedEdges,
+        selectedEdgeId: null,
+        selectedDestinationAudits: [],
+        blockedReasons: sortedUnique4(prerequisiteFailures)
+      }
+    };
+  }
+  for (const edge of outgoing.filter((candidate) => !repairEdgeIds.has(candidate.id))) {
+    const result = evaluateEdge(edge, input2.definition, input2.state, "normal");
+    if (!result) continue;
+    evaluatedEdges.push(result.evaluated);
+    if (result.matched) {
+      return {
+        route: selectedRoute(input2, edge),
+        explanation: {
+          currentNode: input2.current,
+          hardBlockers,
+          prerequisiteGates,
+          evaluatedEdges,
+          selectedEdgeId: edge.id,
+          selectedDestinationAudits: sortedUnique4(input2.definition.nodes[edge.to]?.audits ?? []),
+          blockedReasons: []
+        }
+      };
+    }
+  }
+  const route = routeResult(input2, {
+    next: input2.current,
+    edgeId: null,
+    condition: "blocked",
+    status: "blocked",
+    delegate: null,
+    requiredAudits: [],
+    commitGate: false
+  }, ["no-matching-edge"]);
+  return {
+    route,
+    explanation: {
+      currentNode: input2.current,
+      hardBlockers,
+      prerequisiteGates,
+      evaluatedEdges,
+      selectedEdgeId: null,
+      selectedDestinationAudits: [],
+      blockedReasons: ["no-matching-edge"]
+    }
+  };
+}
 
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_collect.ts
 async function collectDashboard(options2) {
@@ -42521,8 +42547,6 @@ function renderAttention(snapshot, ids) {
     "focus-required": "\u9032\u884C\u5BFE\u8C61\uFF08focus\uFF09\u306E\u6307\u5B9A\u304C\u5FC5\u8981\u3067\u3059",
     "focus-invalid": "\u6307\u5B9A\u3055\u308C\u305F focus \u3092\u89E3\u6C7A\u3067\u304D\u307E\u305B\u3093",
     "duplicate-id": "\u6587\u66F8 ID \u304C\u91CD\u8907\u3057\u3066\u3044\u307E\u3059",
-    "followups-conflicting": "follow-up signal \u304C\u7AF6\u5408\u3057\u3066\u3044\u307E\u3059",
-    "artifact-graph": "artifact graph gate \u304C\u672A\u5408\u683C\u3067\u3059",
     "no-matching-edge": "\u73FE\u5728\u306E\u72B6\u614B\u306B\u5408\u3046\u9077\u79FB edge \u304C\u3042\u308A\u307E\u305B\u3093"
   };
   const reasonRow = (code) => {
@@ -42680,7 +42704,7 @@ function renderDiagnostics(snapshot) {
   const graphIssues = snapshot.state.knowledge.graph.issues.map((issue2) => `<li class="row-item"><code>${e(issue2.code)}</code> <span class="row-title">${e(issue2.message)}</span></li>`);
   const notes = snapshot.coverageNotes.map((note) => `<li class="row-item">${e(note)}</li>`);
   const rows = (items) => items.length === 0 ? `<p class="empty">\u306A\u3057</p>` : `<ul class="row-list">${items.join("")}</ul>`;
-  return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">\u8A3A\u65AD</h2><p class="detail-toggle"><button type="button" data-open-all="#diagnostics">\u3059\u3079\u3066\u958B\u304F</button> <button type="button" data-close-all="#diagnostics">\u3059\u3079\u3066\u7573\u3080</button></p><details${blockingCount > 0 ? " open" : ""}><summary>findings (${findings.length} / blocking ${blockingCount})</summary>${rows(findings)}</details><details><summary>artifact relation issues (${graphIssues.length})</summary>${rows(graphIssues)}</details><details><summary>\u5BFE\u8C61\u5916\u30FB\u4E0D\u660E\u60C5\u5831 (${notes.length})</summary>${rows(notes)}</details></section>`;
+  return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">\u8A3A\u65AD</h2><p class="detail-toggle"><button type="button" data-open-all="#diagnostics">\u3059\u3079\u3066\u958B\u304F</button> <button type="button" data-close-all="#diagnostics">\u3059\u3079\u3066\u7573\u3080</button></p><details${blockingCount > 0 ? " open" : ""}><summary>findings (${findings.length} / blocking ${blockingCount})</summary>${rows(findings)}</details><details><summary>knowledge graph issues (${graphIssues.length})</summary>${rows(graphIssues)}</details><details><summary>\u5BFE\u8C61\u5916\u30FB\u4E0D\u660E\u60C5\u5831 (${notes.length})</summary>${rows(notes)}</details></section>`;
 }
 var filterScript = String.raw`(function(){
 var form=document.querySelector('[data-filters]');

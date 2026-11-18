@@ -207,9 +207,11 @@ function defaultDocs(options: {
 
 /**
  * Seed the run's Execution Store task records from the fixture's task docs.
- * Under Registry 3 the transitional Task Graph still projects `docs/tasks`
- * Markdown, while `execution-task` input bindings resolve against task
- * records inside the bound run — a fresh leg seeds one v1 record per doc id.
+ * Under Registry 3 the Dynamic Task Graph projects only the selected run's
+ * store records — `docs/tasks` Markdown is corpus history the projection
+ * never reads (Issue #243). The fixture merely reuses each doc's id/status
+ * as the seed for one v1 record, so `execution-task` input bindings resolve
+ * against task records inside the bound run.
  */
 export function fixtureTaskSeeds(repo: string): Array<{ taskId: string; status: TaskStatus }> {
   const dir = path.join(repo, "docs/tasks");

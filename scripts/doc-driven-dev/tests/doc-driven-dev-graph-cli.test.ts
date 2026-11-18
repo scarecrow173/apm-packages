@@ -818,6 +818,11 @@ test("inspection Mermaid rejects runtime projection selectors", () => {
   const selectors = [
     [["--cwd", repo], /mermaid.*cwd|cwd.*mermaid/i],
     [["--focus", "MISSING"], /mermaid.*focus|focus.*mermaid/i],
+    [["--run", RUN_ID], /mermaid.*--run|--run.*mermaid/i],
+    [["--state-root", "state"], /mermaid.*state-root|state-root.*mermaid/i],
+    // --allow-external-root is a runtime selector too — never silently
+    // ignored when it is the only flag beside --format (Issue #243).
+    [["--allow-external-root"], /mermaid.*allow-external-root|allow-external-root.*mermaid/i],
     // --task-dir is rejected as a v3-removed selector before format checks.
     [["--task-dir", "docs/tasks"], /task-dir.*not accepted|not accepted.*task-dir/i],
   ] as const;
@@ -826,6 +831,28 @@ test("inspection Mermaid rejects runtime projection selectors", () => {
     const result = runInspect(repo, ["--graph", graph, "--format", "mermaid", ...selector]);
     assert.notEqual(result.status, 0, selector.join(" "));
     assert.match(result.stderr, message, selector.join(" "));
+  }
+});
+
+test("inspection JSON treats the store-root flags as runtime selectors", () => {
+  const repo = completeRepo();
+  const graph = path.join(repo, "graph.yaml");
+  fs.writeFileSync(graph, `schemaVersion: 3\nid: cli-fixture\nentry: start\nconditions: {}\nnodes: { start: { kind: terminal } }\nedges: []\n`, "utf8");
+
+  // --state-root / --allow-external-root alone request a runtime
+  // projection: silently ignoring them would emit definition-only output
+  // the caller never asked for (Issue #243).
+  for (const selector of [
+    ["--state-root", ".apm/state/doc-driven-dev"],
+    ["--allow-external-root"],
+  ]) {
+    const result = runInspect(repo, ["--graph", graph, "--format", "json", ...selector]);
+    assert.equal(result.status, 0, `${selector.join(" ")}: ${result.stderr}`);
+    const inspected = JSON.parse(result.stdout);
+    assert.ok(inspected.definition, selector.join(" "));
+    assert.ok(inspected.state, selector.join(" "));
+    assert.ok(inspected.knowledge, selector.join(" "));
+    assert.ok("taskGraph" in inspected, selector.join(" "));
   }
 });
 

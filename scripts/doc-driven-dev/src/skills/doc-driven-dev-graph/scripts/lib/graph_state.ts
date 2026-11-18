@@ -37,6 +37,26 @@ export type GraphGateResults = Record<string, GraphGateResult>;
 export type GraphSignal = string;
 
 /**
+ * The runtime gate vocabulary `evaluateGraphGates` emits (Issue #243) — the
+ * only names a Graph Definition `gate` condition or `requiresGates` entry
+ * may reference. The evaluator asserts it produces exactly this set on
+ * every call, so a renamed or added gate must update this list; the
+ * definition loader refuses names outside it rather than letting a
+ * `not-pass` condition match an absent gate by fail-open.
+ */
+export const GRAPH_GATE_NAMES = [
+  "bootstrap",
+  "knowledge",
+  "briefing",
+  "design",
+  "planning",
+  "implementation",
+  "verification",
+  "knowledge-consolidation",
+  "exit-audit",
+] as const;
+
+/**
  * The Verification Summary (#241) bound into this projection — the
  * verification gate's evidence authority. `summary` is the caller-supplied
  * (or route-computed) assessment; `boundToHead` records whether its target's
@@ -700,6 +720,14 @@ export function evaluateGraphGates(state: GraphState): GraphGateResults {
     ? gate("pass")
     : gate("fail", ["knowledge-consolidation-pending"]);
   gates["exit-audit"] = state.signals.includes("exit-audit-pass") ? gate("pass") : gate("blocked", ["exit-audit-pass"]);
+  // Fail closed on vocabulary drift: the projection must emit exactly the
+  // declared gate names — a dropped gate would let a `not-pass` condition
+  // match it by absence (Issue #243).
+  const emittedGates = Object.keys(gates).sort(compareStrings);
+  const declaredGates = [...GRAPH_GATE_NAMES].sort(compareStrings);
+  if (emittedGates.join("\u0000") !== declaredGates.join("\u0000")) {
+    throw new Error(`gate vocabulary drift: expected ${declaredGates.join(", ")}; emitted ${emittedGates.join(", ")}`);
+  }
   return gates;
 }
 

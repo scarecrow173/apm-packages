@@ -82,21 +82,34 @@ function parseArgs(argv: string[]): CliArgs {
   return args;
 }
 
+/**
+ * True when the caller supplied any runtime-projection selector. The
+ * Execution Store root flags count too: passing only `--state-root` or
+ * `--allow-external-root` requests a projection — silently dropping them
+ * would emit definition-only output the caller never asked for (Issue
+ * #243).
+ */
+function hasRuntimeSelector(args: CliArgs): boolean {
+  return args.cwdExplicit || args.focus.length > 0 || args.run !== undefined
+    || args.stateRoot !== undefined || args.allowExternalRoot;
+}
+
 async function run(args: CliArgs): Promise<void> {
   if (!schemaEntrypointGuard(args.cwd)) return;
   const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
   const inspection = inspectGraphDefinition(definition);
   if (args.format === "mermaid") {
-    if (args.cwdExplicit || args.focus.length > 0 || args.run !== undefined || args.stateRoot !== undefined) {
-      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --run, --state-root");
+    // Mermaid is definition-only: every runtime selector is rejected —
+    // `--allow-external-root` included — never silently ignored.
+    if (hasRuntimeSelector(args)) {
+      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --run, --state-root, --allow-external-root");
     }
     console.log(renderGraphMermaid(inspection));
     return;
   }
 
   const output: Record<string, unknown> = { definition: inspection };
-  const hasRuntimeSelector = args.cwdExplicit || args.focus.length > 0 || args.run !== undefined;
-  if (hasRuntimeSelector) {
+  if (hasRuntimeSelector(args)) {
     const state = await projectGraphState({
       cwd: args.cwd,
       graphId: definition.id,

@@ -18,9 +18,9 @@ the execution authority.
 
 - **Execution Graph**: the declared nodes, one-edge routes, conditions,
   priorities, delegates, and audits in `graphs/doc-driven-dev.yaml`.
-- **Artifact Graph**: canonical Markdown documents and their IDs, types,
+- **Knowledge Graph**: canonical Markdown documents and their IDs, types,
   statuses, and relations.
-- **Graph State**: a fresh projection of the Artifact Graph with focus, gates,
+- **Graph State**: a fresh projection of the Knowledge Graph with focus, gates,
   signals, blockers, and evidence for the selected route.
 - **Dynamic Task Graph**: a deterministic, read-only projection of one
   Execution Store run's `plan.md` and task records, keyed by
@@ -31,7 +31,7 @@ the execution authority.
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
-  [--focus <artifact>] [--task-dir <path>] \
+  [--focus <artifact>] \
   [--run <run-id> [--state-root <path>] [--allow-external-root]] \
   [--verification-summary <path>] \
   [--cwd <path>] --json
@@ -74,8 +74,9 @@ tasks and parallelize only independent work.
 
 Graph Definition bindings are explicit:
 
-- migration uses `migrate_docs`; bootstrap uses `scaffold_docs`; both are
-  dispatched by name to the `doc-maintenance` scripts that own migration;
+- bootstrap uses `scaffold_docs`, dispatched by name to the `doc-maintenance`
+  script that owns it — v3 declares no migration node, so `migrate_docs` is
+  reachable only through `doc-maintenance`, never through the graph;
 - briefing delegates to `briefing-flow`; design delegates to `design-doc`;
 - the planning node audits the approved design and dispatches `planning-flow`,
   which owns the Execution Store run's `plan.md` and task records
@@ -114,7 +115,7 @@ budgets, trace summary, and resume rules are in
 
 1. Select the Graph Definition, current node, and caller mode.
 2. Inspect canonical Markdown artifacts and their semantic relations.
-3. Project the Artifact Graph into fresh Graph State.
+3. Project the Knowledge Graph into fresh Graph State.
 4. Resolve an explicit focus when multiple chains are present.
 5. Evaluate gate results, caller signals, and deterministic blockers.
 6. Evaluate each outgoing edge with the generic condition DSL.
@@ -268,9 +269,11 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 ```
 
 The JSON always contains `definition`, including counts, topology reachability,
-delegates, audits, and deterministic issues. `state`, `artifactGraph`, and
-`taskGraph` are included only when an explicit `--cwd`, `--focus`,
-`--task-dir`, or `--run` selector requests runtime projection. Inspection
+delegates, audits, and deterministic issues. `state`, `knowledge`, and
+`taskGraph` are included only when an explicit `--cwd`, `--focus`, `--run`,
+`--state-root`, or `--allow-external-root` selector requests runtime projection
+(`--task-dir` is retired under Graph State v3 — plan/task state lives in the
+Execution Store and the flag is refused). Inspection
 never routes, dispatches delegates, or writes Markdown/persistence state.
 `referencedConditions` contains the unique edge `when` keys; `unusedConditions`
 contains declared condition keys absent from those edge `when` keys. JSON accepts
@@ -291,7 +294,8 @@ in the escaped label. Node labels include node ID and kind, with delegate,
 commitGate, terminal, and audit labels when declared; edge labels include the
 condition key and priority. Mermaid rendering is text-only and has no routing
 or persistence side effect. Mermaid is definition-only and rejects `--cwd`,
-`--focus`, `--task-dir`, `--run`, and `--state-root`. Original node, delegate,
+`--focus`, `--run`, `--state-root`, and `--allow-external-root`
+(`--task-dir` is refused outright for every format). Original node, delegate,
 audit, and condition text is escaped;
 `|` cannot terminate an edge label.
 

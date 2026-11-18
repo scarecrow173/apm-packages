@@ -109,7 +109,8 @@ and invoke the next turn.
 ## Runtime projection inclusion
 
 The JSON inspection includes only `definition` by default. Supplying any
-runtime selector (`--cwd`, `--focus`, or `--run`) adds `state`,
+runtime selector (`--cwd`, `--focus`, `--run`, `--state-root`, or
+`--allow-external-root`) adds `state`,
 `knowledge`, and `taskGraph` from a fresh projection — the three store
 views of Graph State v3 (knowledge graph, execution, verification); there
 is no `artifactGraph` key and no `--task-dir` — plan/task state lives in
@@ -127,8 +128,8 @@ focused chain; zero candidates leave `taskGraph` null and several fail
 closed as ambiguous (`task-graph-run-ambiguous`). A corrupt store blocks
 selection outright (`task-graph-run-unreadable`).
 
-Mermaid is definition-only and rejects `--cwd`, `--focus`, `--task-dir`,
-`--run`, and `--state-root`.
+Mermaid is definition-only and rejects every runtime selector — `--cwd`,
+`--focus`, `--run`, `--state-root`, and `--allow-external-root`.
 JSON accepts `--cwd`, `--focus`, `--run`, `--state-root`, and
 `--allow-external-root` for runtime projection — never `--task-dir`.
 

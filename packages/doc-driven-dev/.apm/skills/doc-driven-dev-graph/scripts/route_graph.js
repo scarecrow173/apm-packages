@@ -4809,10 +4809,10 @@ var init_vfile_message = __esm({
 });
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js
-var import_node_path3;
+var import_node_path2;
 var init_minpath = __esm({
   "node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js"() {
-    import_node_path3 = __toESM(require("node:path"), 1);
+    import_node_path2 = __toESM(require("node:path"), 1);
   }
 });
 
@@ -4847,9 +4847,9 @@ var init_minurl = __esm({
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/index.js
 function assertPart(part, name) {
-  if (part && part.includes(import_node_path3.default.sep)) {
+  if (part && part.includes(import_node_path2.default.sep)) {
     throw new Error(
-      "`" + name + "` cannot be a path: did not expect `" + import_node_path3.default.sep + "`"
+      "`" + name + "` cannot be a path: did not expect `" + import_node_path2.default.sep + "`"
     );
   }
 }
@@ -4947,7 +4947,7 @@ var init_lib4 = __esm({
        *   Basename.
        */
       get basename() {
-        return typeof this.path === "string" ? import_node_path3.default.basename(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path2.default.basename(this.path) : void 0;
       }
       /**
        * Set basename (including extname) (`'index.min.js'`).
@@ -4964,7 +4964,7 @@ var init_lib4 = __esm({
       set basename(basename) {
         assertNonEmpty(basename, "basename");
         assertPart(basename, "basename");
-        this.path = import_node_path3.default.join(this.dirname || "", basename);
+        this.path = import_node_path2.default.join(this.dirname || "", basename);
       }
       /**
        * Get the parent path (example: `'~'`).
@@ -4973,7 +4973,7 @@ var init_lib4 = __esm({
        *   Dirname.
        */
       get dirname() {
-        return typeof this.path === "string" ? import_node_path3.default.dirname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path2.default.dirname(this.path) : void 0;
       }
       /**
        * Set the parent path (example: `'~'`).
@@ -4987,7 +4987,7 @@ var init_lib4 = __esm({
        */
       set dirname(dirname) {
         assertPath(this.basename, "dirname");
-        this.path = import_node_path3.default.join(dirname || "", this.basename);
+        this.path = import_node_path2.default.join(dirname || "", this.basename);
       }
       /**
        * Get the extname (including dot) (example: `'.js'`).
@@ -4996,7 +4996,7 @@ var init_lib4 = __esm({
        *   Extname.
        */
       get extname() {
-        return typeof this.path === "string" ? import_node_path3.default.extname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path2.default.extname(this.path) : void 0;
       }
       /**
        * Set the extname (including dot) (example: `'.js'`).
@@ -5021,7 +5021,7 @@ var init_lib4 = __esm({
             throw new Error("`extname` cannot contain multiple dots");
           }
         }
-        this.path = import_node_path3.default.join(this.dirname, this.stem + (extname || ""));
+        this.path = import_node_path2.default.join(this.dirname, this.stem + (extname || ""));
       }
       /**
        * Get the full path (example: `'~/index.min.js'`).
@@ -5060,7 +5060,7 @@ var init_lib4 = __esm({
        *   Stem.
        */
       get stem() {
-        return typeof this.path === "string" ? import_node_path3.default.basename(this.path, this.extname) : void 0;
+        return typeof this.path === "string" ? import_node_path2.default.basename(this.path, this.extname) : void 0;
       }
       /**
        * Set the stem (basename w/o extname) (example: `'index.min'`).
@@ -5077,7 +5077,7 @@ var init_lib4 = __esm({
       set stem(stem) {
         assertNonEmpty(stem, "stem");
         assertPart(stem, "stem");
-        this.path = import_node_path3.default.join(this.dirname || "", stem + (this.extname || ""));
+        this.path = import_node_path2.default.join(this.dirname || "", stem + (this.extname || ""));
       }
       // Normal prototypal methods.
       /**
@@ -13589,7 +13589,7 @@ var import_node_fs12 = __toESM(require("node:fs"));
 var import_node_path12 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
-var import_node_fs = __toESM(require("node:fs"));
+var import_node_fs9 = __toESM(require("node:fs"));
 
 // node_modules/.pnpm/js-yaml@5.5.0/node_modules/js-yaml/dist/js-yaml.mjs
 var NOT_RESOLVED = /* @__PURE__ */ Symbol("NOT_RESOLVED");
@@ -35804,184 +35804,13 @@ function date4(params) {
   return _coercedDate(ZodDate, params);
 }
 
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
-var graphNodeId = external_exports.string().min(1);
-var graphConditionSchema = external_exports.discriminatedUnion("kind", [
-  external_exports.object({ kind: external_exports.literal("signal"), signal: external_exports.string().min(1) }).strict(),
-  external_exports.object({
-    kind: external_exports.literal("gate"),
-    gate: external_exports.string().min(1),
-    status: external_exports.enum(["pass", "not-pass"])
-  }).strict(),
-  external_exports.object({
-    kind: external_exports.literal("task-graph"),
-    state: external_exports.enum(["runnable", "active", "invalid", "idle"])
-  }).strict()
-]);
-var graphNodeSchema = external_exports.object({
-  kind: external_exports.enum(["action", "delegate", "audit", "terminal"]),
-  delegate: external_exports.string().min(1).optional(),
-  audits: external_exports.array(external_exports.string().min(1)).optional(),
-  requiresGates: external_exports.array(external_exports.string().min(1)).optional(),
-  commitGate: external_exports.boolean().optional()
-}).strict();
-var graphEdgeSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  from: graphNodeId,
-  to: graphNodeId,
-  when: external_exports.string().min(1),
-  priority: external_exports.number().int()
-}).strict();
-var graphDefinitionSchema = external_exports.object({
-  schemaVersion: external_exports.literal(3),
-  id: external_exports.string().min(1),
-  entry: graphNodeId,
-  runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
-  conditions: external_exports.record(graphNodeId, graphConditionSchema),
-  nodes: external_exports.record(graphNodeId, graphNodeSchema),
-  edges: external_exports.array(graphEdgeSchema)
-}).strict();
-function invalidGraph(message) {
-  return new Error(`Invalid graph definition: ${message}`);
-}
-function formatIssue(error62) {
-  return error62.issues.map((issue2) => `${issue2.path.join(".") || "graph"}: ${issue2.message}`).join("; ");
-}
-function hasNode(nodes, id) {
-  return Object.prototype.hasOwnProperty.call(nodes, id);
-}
-function validateGraphDefinition(value) {
-  if (!hasNode(value.nodes, value.entry)) {
-    throw invalidGraph(`entry node does not exist: ${value.entry}`);
-  }
-  const duplicateRuntimeSignal = value.runtimeSignals.find((signal, index2) => value.runtimeSignals.indexOf(signal) !== index2);
-  if (duplicateRuntimeSignal !== void 0) {
-    throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
-  }
-  const declaredGates = new Set(
-    Object.values(value.conditions).filter((condition) => condition.kind === "gate").map((condition) => condition.gate)
-  );
-  for (const [nodeId, node3] of Object.entries(value.nodes)) {
-    const requiresGates = node3.requiresGates ?? [];
-    const unknownGates = requiresGates.filter((gate2) => !declaredGates.has(gate2));
-    if (unknownGates.length > 0) {
-      throw invalidGraph(`unknown prerequisite gate: ${unknownGates.join(", ")}`);
-    }
-    if (new Set(requiresGates).size !== requiresGates.length) {
-      throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
-    }
-    const audits = node3.audits ?? [];
-    if (new Set(audits).size !== audits.length) {
-      throw invalidGraph(`duplicate audit on node ${nodeId}`);
-    }
-  }
-  const edgeIds = /* @__PURE__ */ new Set();
-  const routeSelectors = /* @__PURE__ */ new Set();
-  const priorities = /* @__PURE__ */ new Set();
-  for (const edge of value.edges) {
-    if (edgeIds.has(edge.id)) {
-      throw invalidGraph(`duplicate edge id: ${edge.id}`);
-    }
-    edgeIds.add(edge.id);
-    const selector = `${edge.from}\0${edge.when}`;
-    const priority = `${edge.from}\0${edge.priority}`;
-    if (routeSelectors.has(selector)) {
-      throw invalidGraph(`duplicate route selector: ${edge.from} + ${edge.when}`);
-    }
-    if (priorities.has(priority)) {
-      throw invalidGraph(`duplicate edge priority: ${edge.from} + ${edge.priority}`);
-    }
-    if (!Object.prototype.hasOwnProperty.call(value.conditions, edge.when)) {
-      throw invalidGraph(`unknown condition: ${edge.when}`);
-    }
-    routeSelectors.add(selector);
-    priorities.add(priority);
-    if (!hasNode(value.nodes, edge.from)) {
-      throw invalidGraph(`edge ${edge.id} references unknown from node: ${edge.from}`);
-    }
-    if (!hasNode(value.nodes, edge.to)) {
-      throw invalidGraph(`edge ${edge.id} references unknown to node: ${edge.to}`);
-    }
-  }
-  const outgoingByNode = /* @__PURE__ */ new Map();
-  for (const edge of value.edges) {
-    outgoingByNode.set(edge.from, (outgoingByNode.get(edge.from) ?? 0) + 1);
-  }
-  for (const [nodeId, node3] of Object.entries(value.nodes)) {
-    const outgoing = outgoingByNode.get(nodeId) ?? 0;
-    if (node3.kind === "terminal") {
-      if (outgoing > 0) {
-        throw invalidGraph(`terminal node must not have outgoing edges: ${nodeId}`);
-      }
-    } else if (outgoing === 0) {
-      throw invalidGraph(`non-terminal node must have an outgoing edge: ${nodeId}`);
-    }
-  }
-  return value;
-}
-var GRAPH_MIGRATION_GUIDANCE = "Graph Definition schemaVersion 2 is not supported by normal runtime. Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
-function detectLegacySchema(parsed) {
-  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
-    const version2 = parsed.schemaVersion;
-    if (version2 === 2) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
-  }
-}
-function parseGraphDefinition(source) {
-  try {
-    const parsed = load(source);
-    detectLegacySchema(parsed);
-    const result = graphDefinitionSchema.safeParse(parsed);
-    if (!result.success) throw invalidGraph(formatIssue(result.error));
-    return validateGraphDefinition(result.data);
-  } catch (error62) {
-    if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
-      throw error62;
-    }
-    throw invalidGraph(error62 instanceof Error ? error62.message : String(error62));
-  }
-}
-function loadGraphDefinition(file2) {
-  try {
-    return parseGraphDefinition(import_node_fs.default.readFileSync(file2, "utf8"));
-  } catch (error62) {
-    if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
-      throw error62;
-    }
-    throw invalidGraph(`unable to read ${file2}: ${error62 instanceof Error ? error62.message : String(error62)}`);
-  }
-}
-
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts
-var import_node_fs2 = __toESM(require("node:fs"));
-var import_node_path = __toESM(require("node:path"));
-function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
-  if (explicitGraph) return import_node_path.default.resolve(explicitGraph);
-  const cliDir = import_node_path.default.basename(__dirname) === "lib" ? import_node_path.default.resolve(__dirname, "..") : __dirname;
-  const candidates = [
-    // Distributed skill layout: scripts/route_graph.js next to ../graphs.
-    import_node_path.default.resolve(cliDir, "../graphs/doc-driven-dev.yaml"),
-    // Source layout when the CLI is run from the monorepo checkout.
-    import_node_path.default.resolve(
-      cliDir,
-      "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
-    ),
-    import_node_path.default.resolve(
-      cwd,
-      "packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
-    )
-  ];
-  const found = candidates.find((candidate) => import_node_fs2.default.existsSync(candidate));
-  if (!found) throw new Error(`Unable to locate the default Graph Definition (tried: ${candidates.join(", ")})`);
-  return found;
-}
-
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-var import_node_fs10 = __toESM(require("node:fs"));
-var import_node_path10 = __toESM(require("node:path"));
+var import_node_fs8 = __toESM(require("node:fs"));
+var import_node_path9 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_repository.ts
-var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path4 = __toESM(require("node:path"));
+var import_node_fs2 = __toESM(require("node:fs"));
+var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/claim_ids.ts
 var CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
@@ -36543,8 +36372,8 @@ var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
 );
 
 // src/skills/lib/document_utils.ts
-var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path2 = __toESM(require("node:path"));
+var import_node_fs = __toESM(require("node:fs"));
+var import_node_path = __toESM(require("node:path"));
 var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
   "changes",
   "test-spec-skip"
@@ -36558,25 +36387,25 @@ function stripExtendedLengthPrefix(value) {
   return value;
 }
 function containmentKey(value) {
-  const normalized = stripExtendedLengthPrefix(import_node_path2.default.resolve(value));
+  const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
   return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 function isInside(cwd, candidate) {
   const root = containmentKey(cwd);
   const resolved = containmentKey(candidate);
-  return resolved === root || resolved.startsWith(`${root}${import_node_path2.default.sep}`);
+  return resolved === root || resolved.startsWith(`${root}${import_node_path.default.sep}`);
 }
 function isInsideRealpath(cwd, candidate) {
   try {
-    return isInside(import_node_fs3.default.realpathSync(cwd), import_node_fs3.default.realpathSync(candidate));
+    return isInside(import_node_fs.default.realpathSync(cwd), import_node_fs.default.realpathSync(candidate));
   } catch {
     return false;
   }
 }
 function isInsideCheckout(cwd, candidate) {
-  const resolved = import_node_path2.default.resolve(cwd, candidate);
+  const resolved = import_node_path.default.resolve(cwd, candidate);
   if (!isInside(cwd, resolved)) return false;
-  return !import_node_fs3.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
+  return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
 }
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
@@ -36858,12 +36687,12 @@ function isExternalReference(value) {
   return EXTERNAL_REFERENCE.test(trimmed);
 }
 function walkMarkdownFiles(root) {
-  if (!import_node_fs4.default.existsSync(root) || !import_node_fs4.default.statSync(root).isDirectory()) return [];
+  if (!import_node_fs2.default.existsSync(root) || !import_node_fs2.default.statSync(root).isDirectory()) return [];
   const files = [];
   const visitDir = (dir) => {
-    const entries = import_node_fs4.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
+    const entries = import_node_fs2.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
     for (const entry of entries) {
-      const full = import_node_path4.default.join(dir, entry.name);
+      const full = import_node_path3.default.join(dir, entry.name);
       if (entry.isDirectory()) {
         if (!SKIPPED_DIRS.has(entry.name)) visitDir(full);
       } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
@@ -36875,7 +36704,7 @@ function walkMarkdownFiles(root) {
   return files.sort(compareStrings);
 }
 function toRepoPath(cwd, absolute) {
-  return import_node_path4.default.relative(cwd, absolute).split(import_node_path4.default.sep).join("/");
+  return import_node_path3.default.relative(cwd, absolute).split(import_node_path3.default.sep).join("/");
 }
 function isUnderDir(child, parent) {
   const c = normalizeDir(child);
@@ -36883,8 +36712,8 @@ function isUnderDir(child, parent) {
   return c === p || c.startsWith(`${p}/`);
 }
 function artifactKeyOf(repoPath) {
-  const dir = import_node_path4.default.posix.dirname(repoPath);
-  const base = import_node_path4.default.posix.basename(repoPath).replace(/\.md$/i, "");
+  const dir = import_node_path3.default.posix.dirname(repoPath);
+  const base = import_node_path3.default.posix.basename(repoPath).replace(/\.md$/i, "");
   const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
   return `${dir}::${locale ? locale[1] : base}`;
 }
@@ -36900,7 +36729,7 @@ function groupByArtifact(group) {
 }
 function primaryDocumentOf(group) {
   const nonLocalized = group.filter(
-    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path4.default.posix.basename(document3.path))
+    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path3.default.posix.basename(document3.path))
   );
   const pool = nonLocalized.length > 0 ? nonLocalized : group;
   return [...pool].sort((a, b) => compareStrings(a.path, b.path))[0];
@@ -36921,7 +36750,7 @@ function canonicalTypeMap() {
   return [...byDir.entries()].map(([dir, types]) => ({ dir, types: [...types].sort(compareStrings) })).sort((a, b) => b.dir.length - a.dir.length || compareStrings(a.dir, b.dir));
 }
 function expectedTypesFor(repoPath, typeMap) {
-  const dir = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
+  const dir = normalizeDir(import_node_path3.default.posix.dirname(repoPath));
   const match = typeMap.find((entry) => isUnderDir(dir, entry.dir));
   return match ? match.types : [];
 }
@@ -36942,8 +36771,8 @@ function stringField(data, field) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 function localeSiblingsFor(repoPath, siblingsByDir) {
-  const dir = import_node_path4.default.posix.dirname(repoPath);
-  const base = import_node_path4.default.posix.basename(repoPath);
+  const dir = import_node_path3.default.posix.dirname(repoPath);
+  const base = import_node_path3.default.posix.basename(repoPath);
   const peers = siblingsByDir.get(dir);
   if (!peers) return [];
   const localeMatch = LOCALE_FILE_PATTERN.exec(base);
@@ -36956,9 +36785,9 @@ function localeSiblingsFor(repoPath, siblingsByDir) {
 }
 function defaultScanRoots(cwd) {
   const roots = /* @__PURE__ */ new Set();
-  if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, "docs"))) roots.add("docs");
+  if (import_node_fs2.default.existsSync(import_node_path3.default.join(cwd, "docs"))) roots.add("docs");
   for (const dir of managedDocDirs()) {
-    if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, dir))) roots.add(dir);
+    if (import_node_fs2.default.existsSync(import_node_path3.default.join(cwd, dir))) roots.add(dir);
   }
   return [...roots].sort(compareStrings);
 }
@@ -36967,26 +36796,26 @@ function pruneNestedRoots(roots) {
   return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
 async function scanRepository(options2) {
-  const cwd = import_node_path4.default.resolve(options2.cwd);
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path4.default.join(cwd, root)));
+  const cwd = import_node_path3.default.resolve(options2.cwd);
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path3.default.join(cwd, root)));
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
-    for (const file2 of walkMarkdownFiles(import_node_path4.default.join(cwd, root))) absoluteFiles.add(file2);
+    for (const file2 of walkMarkdownFiles(import_node_path3.default.join(cwd, root))) absoluteFiles.add(file2);
   }
   if (options2.includeTopLevelMarkdown !== false) {
-    for (const entry of import_node_fs4.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
+    for (const entry of import_node_fs2.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
       if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-        absoluteFiles.add(import_node_path4.default.join(cwd, entry.name));
+        absoluteFiles.add(import_node_path3.default.join(cwd, entry.name));
       }
     }
   }
   const siblingsByDir = /* @__PURE__ */ new Map();
   for (const absolute of absoluteFiles) {
     const repoPath = toRepoPath(cwd, absolute);
-    const dir = import_node_path4.default.posix.dirname(repoPath);
+    const dir = import_node_path3.default.posix.dirname(repoPath);
     const peers = siblingsByDir.get(dir) ?? /* @__PURE__ */ new Set();
-    peers.add(import_node_path4.default.posix.basename(repoPath));
+    peers.add(import_node_path3.default.posix.basename(repoPath));
     siblingsByDir.set(dir, peers);
   }
   const migrationDirs = migrationOwnedDirs();
@@ -36995,13 +36824,13 @@ async function scanRepository(options2) {
     const repoPath = toRepoPath(cwd, absolute);
     const expectedTypes = expectedTypesFor(repoPath, typeMap);
     const canonical = expectedTypes.length > 0;
-    const docDirName = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
-    const indexNamed = isIndexFileName(import_node_path4.default.posix.basename(repoPath));
+    const docDirName = normalizeDir(import_node_path3.default.posix.dirname(repoPath));
+    const indexNamed = isIndexFileName(import_node_path3.default.posix.basename(repoPath));
     const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
-      content3 = import_node_fs4.default.readFileSync(absolute, "utf8");
+      content3 = import_node_fs2.default.readFileSync(absolute, "utf8");
     } catch (error62) {
       readError = error62 instanceof Error ? error62.message : String(error62);
     }
@@ -37045,7 +36874,7 @@ async function scanRepository(options2) {
   }
   const insideRoot = (absolute) => isInside(cwd, absolute);
   const fileExistsInsideRoot = (absolute) => {
-    return isInsideCheckout(cwd, absolute) && import_node_fs4.default.existsSync(absolute) && import_node_fs4.default.statSync(absolute).isFile();
+    return isInsideCheckout(cwd, absolute) && import_node_fs2.default.existsSync(absolute) && import_node_fs2.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -37068,10 +36897,10 @@ async function scanRepository(options2) {
       return { status: "resolved", path: self, fragment, document: self ? byPath.get(self) ?? null : null };
     }
     const docRelative = pathname.startsWith("./") || pathname.startsWith("../") || pathname === "." || pathname === "..";
-    const candidates = docRelative ? [from ? import_node_path4.default.resolve(import_node_path4.default.dirname(from.absolutePath), pathname) : null, import_node_path4.default.resolve(cwd, pathname)] : [import_node_path4.default.resolve(cwd, pathname), from ? import_node_path4.default.resolve(import_node_path4.default.dirname(from.absolutePath), pathname) : null];
-    if (import_node_path4.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
+    const candidates = docRelative ? [from ? import_node_path3.default.resolve(import_node_path3.default.dirname(from.absolutePath), pathname) : null, import_node_path3.default.resolve(cwd, pathname)] : [import_node_path3.default.resolve(cwd, pathname), from ? import_node_path3.default.resolve(import_node_path3.default.dirname(from.absolutePath), pathname) : null];
+    if (import_node_path3.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
       candidates.length = 0;
-      candidates.push(import_node_path4.default.resolve(pathname));
+      candidates.push(import_node_path3.default.resolve(pathname));
     }
     let sawEscaped = false;
     for (const candidate of candidates) {
@@ -38200,11 +38029,11 @@ async function scanKnowledgeGraph(options2) {
 
 // src/skills/lib/execution_store/store.ts
 var import_node_crypto2 = __toESM(require("node:crypto"));
-var import_node_fs7 = __toESM(require("node:fs"));
-var import_node_path7 = __toESM(require("node:path"));
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/lib/execution_store/atomic.ts
-var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_fs3 = __toESM(require("node:fs"));
 var StoreError = class extends Error {
   code;
   detail;
@@ -38221,7 +38050,7 @@ function isStoreTmpFile(name) {
 function readJsonFile(file2) {
   let raw;
   try {
-    raw = import_node_fs5.default.readFileSync(file2, "utf8");
+    raw = import_node_fs3.default.readFileSync(file2, "utf8");
   } catch (error62) {
     throw new StoreError(
       "state-unreadable",
@@ -38240,7 +38069,7 @@ function readJsonFile(file2) {
 }
 function readLockRecord(lockFile) {
   try {
-    const parsed = JSON.parse(import_node_fs5.default.readFileSync(lockFile, "utf8"));
+    const parsed = JSON.parse(import_node_fs3.default.readFileSync(lockFile, "utf8"));
     if (typeof parsed.pid === "number" && typeof parsed.hostname === "string") {
       return { pid: parsed.pid, hostname: parsed.hostname, acquiredAt: String(parsed.acquiredAt ?? "") };
     }
@@ -38250,11 +38079,11 @@ function readLockRecord(lockFile) {
 }
 
 // src/skills/lib/execution_store/boundary.ts
-var import_node_path6 = __toESM(require("node:path"));
+var import_node_path5 = __toESM(require("node:path"));
 
 // src/skills/lib/schema_preflight.ts
-var import_node_fs6 = __toESM(require("node:fs"));
-var import_node_path5 = __toESM(require("node:path"));
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path4 = __toESM(require("node:path"));
 var import_gray_matter2 = __toESM(require_gray_matter());
 var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
 var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
@@ -38278,7 +38107,7 @@ var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
   "migration.journal.json"
 ]);
 function toRepoRelative(cwd, absolute) {
-  return import_node_path5.default.relative(import_node_path5.default.resolve(cwd), absolute).split(import_node_path5.default.sep).join("/");
+  return import_node_path4.default.relative(import_node_path4.default.resolve(cwd), absolute).split(import_node_path4.default.sep).join("/");
 }
 function isUnderDir2(relPath, dir) {
   return relPath === dir || relPath.startsWith(`${dir}/`);
@@ -38290,20 +38119,20 @@ function managedRootAliases() {
   return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit3, onEscape) {
-  const absRoot = import_node_path5.default.resolve(cwd, relRoot);
-  if (!import_node_fs6.default.existsSync(absRoot) || !import_node_fs6.default.statSync(absRoot).isDirectory()) return false;
+  const absRoot = import_node_path4.default.resolve(cwd, relRoot);
+  if (!import_node_fs4.default.existsSync(absRoot) || !import_node_fs4.default.statSync(absRoot).isDirectory()) return false;
   if (!isInsideCheckout(cwd, absRoot)) return false;
   const stack = [absRoot];
   while (stack.length > 0) {
     const dir = stack.pop();
     let entries;
     try {
-      entries = import_node_fs6.default.readdirSync(dir, { withFileTypes: true });
+      entries = import_node_fs4.default.readdirSync(dir, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const abs = import_node_path5.default.join(dir, entry.name);
+      const abs = import_node_path4.default.join(dir, entry.name);
       const rel = toRepoRelative(cwd, abs);
       if (entry.isDirectory()) {
         if (!isInsideCheckout(cwd, abs)) {
@@ -38366,10 +38195,10 @@ function scanDocuments(cwd) {
     unmanagedDocs: 0
   };
   const visitMarkdown = (rel) => {
-    const abs = import_node_path5.default.resolve(cwd, rel);
+    const abs = import_node_path4.default.resolve(cwd, rel);
     let raw;
     try {
-      raw = import_node_fs6.default.readFileSync(abs, "utf8");
+      raw = import_node_fs4.default.readFileSync(abs, "utf8");
     } catch {
       return;
     }
@@ -38401,7 +38230,7 @@ function scanDocuments(cwd) {
   };
   const visitDocsTree = (rel) => {
     if (isUnderDir2(rel, DOC_DRIVEN_DEV_DIR)) return;
-    if (rel.endsWith(".md") && !isIndexFileName(import_node_path5.default.basename(rel))) {
+    if (rel.endsWith(".md") && !isIndexFileName(import_node_path4.default.basename(rel))) {
       visitMarkdown(rel);
       return;
     }
@@ -38416,10 +38245,10 @@ function scanDocuments(cwd) {
   const roots = ["docs", ...managedRootAliases()];
   const walked = /* @__PURE__ */ new Set();
   for (const root of roots) {
-    const abs = import_node_path5.default.resolve(cwd, root);
+    const abs = import_node_path4.default.resolve(cwd, root);
     let key = abs;
     try {
-      key = import_node_fs6.default.realpathSync(abs);
+      key = import_node_fs4.default.realpathSync(abs);
     } catch {
     }
     if (walked.has(key)) continue;
@@ -38433,10 +38262,10 @@ function scanDocuments(cwd) {
   return scan;
 }
 function scanManifestDir(cwd, issues) {
-  const abs = import_node_path5.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
-  if (!import_node_fs6.default.existsSync(abs)) return;
+  const abs = import_node_path4.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
+  if (!import_node_fs4.default.existsSync(abs)) return;
   const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
-    const name = import_node_path5.default.basename(rel);
+    const name = import_node_path4.default.basename(rel);
     if (isDir) {
       if (rel !== DOC_DRIVEN_DEV_DIR) {
         issues.push({
@@ -38451,7 +38280,7 @@ function scanManifestDir(cwd, issues) {
     if (/\.ya?ml$/i.test(name)) {
       let legacy = false;
       try {
-        const parsed = load(import_node_fs6.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8"));
+        const parsed = load(import_node_fs4.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8"));
         if (isPlainObject5(parsed)) {
           const version2 = parsed.schemaVersion;
           legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
@@ -38480,7 +38309,7 @@ function scanManifestDir(cwd, issues) {
   if (!walked) {
     let directory = false;
     try {
-      directory = import_node_fs6.default.statSync(abs).isDirectory();
+      directory = import_node_fs4.default.statSync(abs).isDirectory();
     } catch {
     }
     issues.push({
@@ -38491,8 +38320,8 @@ function scanManifestDir(cwd, issues) {
   }
 }
 function scanExecutionState(cwd, issues) {
-  const abs = import_node_path5.default.resolve(cwd, EXECUTION_STATE_ROOT);
-  if (!import_node_fs6.default.existsSync(abs)) return;
+  const abs = import_node_path4.default.resolve(cwd, EXECUTION_STATE_ROOT);
+  if (!import_node_fs4.default.existsSync(abs)) return;
   const marker = (rel, detail) => {
     issues.push({ reason: "legacy-execution-state", path: rel, detail });
   };
@@ -38520,7 +38349,7 @@ function scanExecutionState(cwd, issues) {
       if (segments.length === 2 && segments[1] === "manifest.json") {
         let version2;
         try {
-          version2 = JSON.parse(import_node_fs6.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8")).schemaVersion;
+          version2 = JSON.parse(import_node_fs4.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8")).schemaVersion;
         } catch {
           version2 = null;
         }
@@ -38538,7 +38367,7 @@ function scanExecutionState(cwd, issues) {
     if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
       let version2;
       try {
-        version2 = JSON.parse(import_node_fs6.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8")).schemaVersion;
+        version2 = JSON.parse(import_node_fs4.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8")).schemaVersion;
       } catch {
         version2 = null;
       }
@@ -38552,7 +38381,7 @@ function scanExecutionState(cwd, issues) {
   if (!walked) {
     let directory = false;
     try {
-      directory = import_node_fs6.default.statSync(abs).isDirectory();
+      directory = import_node_fs4.default.statSync(abs).isDirectory();
     } catch {
     }
     issues.push({
@@ -38564,12 +38393,12 @@ function scanExecutionState(cwd, issues) {
 }
 function readManifest(cwd) {
   const rel = SCHEMA_MANIFEST_PATH;
-  const abs = import_node_path5.default.resolve(cwd, rel);
-  if (!import_node_fs6.default.existsSync(abs)) return { state: "missing" };
+  const abs = import_node_path4.default.resolve(cwd, rel);
+  if (!import_node_fs4.default.existsSync(abs)) return { state: "missing" };
   if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
   let raw;
   try {
-    raw = import_node_fs6.default.readFileSync(abs, "utf8");
+    raw = import_node_fs4.default.readFileSync(abs, "utf8");
   } catch (error62) {
     return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
   }
@@ -38632,7 +38461,7 @@ function readManifest(cwd) {
   return { state: "read", declared, migrationInProgress, versionIssues };
 }
 function journalPresent(cwd) {
-  return import_node_fs6.default.existsSync(import_node_path5.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+  return import_node_fs4.default.existsSync(import_node_path4.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
 }
 function recommendedCommand(status, docCount) {
   const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
@@ -38668,7 +38497,7 @@ function statusSummary(report) {
   }
 }
 function evaluateSchemaPreflight(cwd) {
-  const root = import_node_path5.default.resolve(cwd);
+  const root = import_node_path4.default.resolve(cwd);
   const scan = scanDocuments(root);
   scanManifestDir(root, scan.issues);
   scanExecutionState(root, scan.issues);
@@ -38846,18 +38675,18 @@ function validateReceipt(value) {
 
 // src/skills/lib/execution_store/boundary.ts
 function toRepoRelative2(cwd, absolute) {
-  return import_node_path6.default.relative(import_node_path6.default.resolve(cwd), absolute).split(import_node_path6.default.sep).join("/");
+  return import_node_path5.default.relative(import_node_path5.default.resolve(cwd), absolute).split(import_node_path5.default.sep).join("/");
 }
 function resolveStateRoot(cwd, options2 = {}) {
-  const checkout = import_node_path6.default.resolve(cwd);
+  const checkout = import_node_path5.default.resolve(cwd);
   if (options2.stateRoot === void 0) {
     return {
-      root: import_node_path6.default.join(checkout, EXECUTION_STATE_ROOT),
+      root: import_node_path5.default.join(checkout, EXECUTION_STATE_ROOT),
       external: false,
       repoRelative: EXECUTION_STATE_ROOT
     };
   }
-  const root = import_node_path6.default.resolve(checkout, options2.stateRoot);
+  const root = import_node_path5.default.resolve(checkout, options2.stateRoot);
   if (isInside(checkout, root)) {
     return { root, external: false, repoRelative: toRepoRelative2(checkout, root) };
   }
@@ -38877,7 +38706,7 @@ function runDirFor(resolved, runId) {
       `invalid run id ${JSON.stringify(runId)} \u2014 ids match [A-Za-z0-9][A-Za-z0-9._-]{0,127} with dots inner and single, and never contain path separators`
     );
   }
-  return import_node_path6.default.join(resolved.root, "runs", runId);
+  return import_node_path5.default.join(resolved.root, "runs", runId);
 }
 
 // src/skills/lib/execution_store/store.ts
@@ -38891,21 +38720,21 @@ function insideResolvedRoot(resolved, candidate) {
   let real;
   let realRoot;
   try {
-    real = import_node_fs7.default.realpathSync(candidate);
-    realRoot = import_node_fs7.default.realpathSync(resolved.root);
+    real = import_node_fs5.default.realpathSync(candidate);
+    realRoot = import_node_fs5.default.realpathSync(resolved.root);
   } catch {
     return false;
   }
-  const root = import_node_path7.default.resolve(realRoot);
-  const target = import_node_path7.default.resolve(real);
-  return target === root || target.startsWith(`${root}${import_node_path7.default.sep}`);
+  const root = import_node_path6.default.resolve(realRoot);
+  const target = import_node_path6.default.resolve(real);
+  return target === root || target.startsWith(`${root}${import_node_path6.default.sep}`);
 }
 function runDirContained(resolved, runId) {
   const runDir = runDirFor(resolved, runId);
-  if (!import_node_fs7.default.existsSync(runDir)) {
+  if (!import_node_fs5.default.existsSync(runDir)) {
     throw new StoreError("run-not-found", `run ${runId} does not exist under ${resolved.repoRelative ?? resolved.root}`);
   }
-  if (!import_node_fs7.default.statSync(runDir).isDirectory()) {
+  if (!import_node_fs5.default.statSync(runDir).isDirectory()) {
     throw new StoreError("corrupt-state", `${runDir} is not a directory`);
   }
   if (!insideResolvedRoot(resolved, runDir)) {
@@ -38914,8 +38743,8 @@ function runDirContained(resolved, runId) {
   return runDir;
 }
 function readManifest2(runDir, runId) {
-  const file2 = import_node_path7.default.join(runDir, STATE_FILE);
-  if (!import_node_fs7.default.existsSync(file2)) {
+  const file2 = import_node_path6.default.join(runDir, STATE_FILE);
+  if (!import_node_fs5.default.existsSync(file2)) {
     throw new StoreError(
       "corrupt-state",
       `run ${runId} has no manifest.json \u2014 the run is incomplete or foreign`,
@@ -38941,9 +38770,9 @@ function readManifest2(runDir, runId) {
   return parsed;
 }
 function listRecordFiles(runDir, kind) {
-  const dir = import_node_path7.default.join(runDir, kind);
-  if (!import_node_fs7.default.existsSync(dir)) return [];
-  return import_node_fs7.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path7.default.join(runDir, kind, entry.name)).sort();
+  const dir = import_node_path6.default.join(runDir, kind);
+  if (!import_node_fs5.default.existsSync(dir)) return [];
+  return import_node_fs5.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path6.default.join(runDir, kind, entry.name)).sort();
 }
 function readRecord(file2, validate2, kind) {
   const parsed = readJsonFile(file2);
@@ -38951,7 +38780,7 @@ function readRecord(file2, validate2, kind) {
     throw new StoreError("corrupt-state", `${file2} failed ${kind} record validation`, { path: file2 });
   }
   const record2 = parsed;
-  const dirRun = import_node_path7.default.basename(import_node_path7.default.dirname(import_node_path7.default.dirname(file2)));
+  const dirRun = import_node_path6.default.basename(import_node_path6.default.dirname(import_node_path6.default.dirname(file2)));
   if (record2.runId !== dirRun) {
     throw new StoreError(
       "corrupt-state",
@@ -38962,9 +38791,9 @@ function readRecord(file2, validate2, kind) {
 }
 function scanIncompleteWrites(dir, rel = "") {
   const found = [];
-  if (!import_node_fs7.default.existsSync(dir)) return found;
-  for (const entry of import_node_fs7.default.readdirSync(dir, { withFileTypes: true })) {
-    const abs = import_node_path7.default.join(dir, entry.name);
+  if (!import_node_fs5.default.existsSync(dir)) return found;
+  for (const entry of import_node_fs5.default.readdirSync(dir, { withFileTypes: true })) {
+    const abs = import_node_path6.default.join(dir, entry.name);
     const relPath = rel === "" ? entry.name : `${rel}/${entry.name}`;
     if (entry.isDirectory()) {
       found.push(...scanIncompleteWrites(abs, relPath));
@@ -38977,16 +38806,16 @@ function scanIncompleteWrites(dir, rel = "") {
 function loadSnapshot(resolved, runId) {
   const runDir = runDirContained(resolved, runId);
   const manifest = readManifest2(runDir, runId);
-  const planFile = import_node_path7.default.join(runDir, PLAN_FILE);
+  const planFile = import_node_path6.default.join(runDir, PLAN_FILE);
   let plan = null;
-  if (import_node_fs7.default.existsSync(planFile)) {
-    const content3 = import_node_fs7.default.readFileSync(planFile, "utf8");
+  if (import_node_fs5.default.existsSync(planFile)) {
+    const content3 = import_node_fs5.default.readFileSync(planFile, "utf8");
     plan = { content: content3, digest: sha256(content3) };
   }
   const tasks = listRecordFiles(runDir, "tasks").map((file2) => readRecord(file2, validateTask, "task")).map((task) => task.scope === void 0 ? { ...task, scope: [] } : task);
   const checkpoints = listRecordFiles(runDir, "checkpoints").map((file2) => readRecord(file2, validateCheckpoint, "checkpoint"));
   const receipts = listRecordFiles(runDir, "receipts").map((file2) => readRecord(file2, validateReceipt, "receipt"));
-  const lock = import_node_fs7.default.existsSync(import_node_path7.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path7.default.join(runDir, "writer.lock")) : null;
+  const lock = import_node_fs5.default.existsSync(import_node_path6.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path6.default.join(runDir, "writer.lock")) : null;
   return {
     runId,
     status: manifest.status,
@@ -39009,13 +38838,13 @@ function loadRun(cwd, runId, options2 = {}) {
 }
 function listRuns(cwd, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
-  const runsDir = import_node_path7.default.join(resolved.root, RUN_DIR);
-  if (!import_node_fs7.default.existsSync(runsDir)) return [];
+  const runsDir = import_node_path6.default.join(resolved.root, RUN_DIR);
+  if (!import_node_fs5.default.existsSync(runsDir)) return [];
   const runs = [];
-  for (const entry of import_node_fs7.default.readdirSync(runsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const entry of import_node_fs5.default.readdirSync(runsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory() || !isValidId(entry.name)) continue;
     try {
-      const manifest = readManifest2(import_node_path7.default.join(runsDir, entry.name), entry.name);
+      const manifest = readManifest2(import_node_path6.default.join(runsDir, entry.name), entry.name);
       runs.push({ runId: manifest.runId, status: manifest.status, revision: manifest.revision });
     } catch {
       runs.push({ runId: entry.name, status: "corrupt", revision: null });
@@ -39180,8 +39009,8 @@ function projectRunTasks(snapshot) {
 // src/skills/lib/evidence_store/store.ts
 var import_node_child_process = require("node:child_process");
 var import_node_crypto3 = __toESM(require("node:crypto"));
-var import_node_fs8 = __toESM(require("node:fs"));
-var import_node_path8 = __toESM(require("node:path"));
+var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/evidence_store/types.ts
 var EVIDENCE_RECORD_SCHEMA_VERSION = 1;
@@ -39361,24 +39190,24 @@ function insideResolvedRoot2(resolved, candidate) {
   let real;
   let realRoot;
   try {
-    real = import_node_fs8.default.realpathSync(candidate);
-    realRoot = import_node_fs8.default.realpathSync(resolved.root);
+    real = import_node_fs6.default.realpathSync(candidate);
+    realRoot = import_node_fs6.default.realpathSync(resolved.root);
   } catch {
     return false;
   }
-  const root = import_node_path8.default.resolve(realRoot);
-  const target = import_node_path8.default.resolve(real);
-  return target === root || target.startsWith(`${root}${import_node_path8.default.sep}`);
+  const root = import_node_path7.default.resolve(realRoot);
+  const target = import_node_path7.default.resolve(real);
+  return target === root || target.startsWith(`${root}${import_node_path7.default.sep}`);
 }
 function evidenceRootFor(resolved) {
-  return import_node_path8.default.join(resolved.root, EVIDENCE_DIR);
+  return import_node_path7.default.join(resolved.root, EVIDENCE_DIR);
 }
 function recordsDirFor(resolved) {
-  return import_node_path8.default.join(evidenceRootFor(resolved), RECORDS_DIR);
+  return import_node_path7.default.join(evidenceRootFor(resolved), RECORDS_DIR);
 }
 function containedDir(resolved, dir, label) {
-  if (import_node_fs8.default.existsSync(dir)) {
-    if (!import_node_fs8.default.statSync(dir).isDirectory()) {
+  if (import_node_fs6.default.existsSync(dir)) {
+    if (!import_node_fs6.default.statSync(dir).isDirectory()) {
       throw new StoreError("corrupt-state", `${dir} is not a directory`);
     }
     if (!insideResolvedRoot2(resolved, dir)) {
@@ -39388,8 +39217,8 @@ function containedDir(resolved, dir, label) {
   return dir;
 }
 function listRecordFiles2(recordsDir) {
-  if (!import_node_fs8.default.existsSync(recordsDir)) return [];
-  return import_node_fs8.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path8.default.join(recordsDir, entry.name)).sort();
+  if (!import_node_fs6.default.existsSync(recordsDir)) return [];
+  return import_node_fs6.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path7.default.join(recordsDir, entry.name)).sort();
 }
 function readRecordFile(file2) {
   const parsed = readJsonFile(file2);
@@ -39402,7 +39231,7 @@ function readRecordFile(file2) {
   if (!validateEvidenceRecord(parsed)) {
     throw new StoreError("corrupt-state", `${file2} failed evidence record validation`, { path: file2 });
   }
-  const idFromName = import_node_path8.default.basename(file2, ".json");
+  const idFromName = import_node_path7.default.basename(file2, ".json");
   if (parsed.evidenceId !== idFromName) {
     throw new StoreError(
       "corrupt-state",
@@ -39767,8 +39596,8 @@ function recordSubjectDigest(cwd, subject) {
 }
 
 // src/skills/lib/verification_assessment/summary.ts
-var import_node_fs9 = __toESM(require("node:fs"));
-var import_node_path9 = __toESM(require("node:path"));
+var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_path8 = __toESM(require("node:path"));
 
 // src/skills/lib/verification_assessment/waivers.ts
 var WAIVER_REASONS = {
@@ -40177,14 +40006,14 @@ function normalizeTarget(cwd, input2) {
   return { subject: input2.subject, subjectDigest: input2.subject.snapshotDigest };
 }
 async function buildVerificationSummary(cwd, input2, options2 = {}) {
-  const root = import_node_path9.default.resolve(cwd);
+  const root = import_node_path8.default.resolve(cwd);
   const graph = await scanKnowledgeGraph({ cwd: root });
   const records = input2.records ?? query(root, { runId: input2.runId }, options2);
   const target = normalizeTarget(root, input2);
   return buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
     readDocument: (docPath) => {
       try {
-        return import_node_fs9.default.readFileSync(import_node_path9.default.join(root, docPath), "utf8");
+        return import_node_fs7.default.readFileSync(import_node_path8.default.join(root, docPath), "utf8");
       } catch {
         return null;
       }
@@ -40321,6 +40150,17 @@ function createArtifactScanCollector() {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
+var GRAPH_GATE_NAMES = [
+  "bootstrap",
+  "knowledge",
+  "briefing",
+  "design",
+  "planning",
+  "implementation",
+  "verification",
+  "knowledge-consolidation",
+  "exit-audit"
+];
 function sortedUnique2(values) {
   return [...new Set(values)].sort(compareStrings);
 }
@@ -40337,8 +40177,8 @@ function consideredOptionCount(body) {
 function bootstrapReasons(cwd) {
   const reasons = [];
   for (const directory of DURABLE_DOC_DIRS) {
-    const full = import_node_path10.default.join(cwd, directory);
-    if (!import_node_fs10.default.existsSync(full) || !import_node_fs10.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
+    const full = import_node_path9.default.join(cwd, directory);
+    if (!import_node_fs8.default.existsSync(full) || !import_node_fs8.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
   }
   return reasons;
 }
@@ -40428,7 +40268,7 @@ var FOCUS_RANK = { design: 0, spec: 1, adr: 2, discovery: 3, brainstorm: 4 };
 function primaryPathByArtifactKey(records) {
   const primaries = /* @__PURE__ */ new Map();
   for (const [key, group] of groupByArtifact(records)) {
-    const nonLocalized = group.filter((document3) => !/\.[a-z]{2}\.md$/i.test(import_node_path10.default.posix.basename(document3.path)));
+    const nonLocalized = group.filter((document3) => !/\.[a-z]{2}\.md$/i.test(import_node_path9.default.posix.basename(document3.path)));
     const pool = nonLocalized.length > 0 ? nonLocalized : group;
     primaries.set(key, [...pool].sort((a, b) => compareStrings(a.path, b.path))[0].path);
   }
@@ -40519,7 +40359,7 @@ function resolveFocus(cwd, records, knowledge, options2) {
   return { focus: resolvedFocus, runId, focusedPath: focused?.path, blockers: [] };
 }
 function normalizeRepoPath(cwd, target) {
-  return import_node_path10.default.relative(import_node_path10.default.resolve(cwd), import_node_path10.default.resolve(cwd, target)).split(import_node_path10.default.sep).join("/");
+  return import_node_path9.default.relative(import_node_path9.default.resolve(cwd), import_node_path9.default.resolve(cwd, target)).split(import_node_path9.default.sep).join("/");
 }
 function findRecord(records, pathValue) {
   return pathValue ? records.find((record2) => record2.path === pathValue) : void 0;
@@ -40576,7 +40416,7 @@ function deriveHardBlockers(blockers, gates) {
   ]);
 }
 function evaluateGraphGates(state) {
-  const cwd = import_node_path10.default.resolve(state.cwd);
+  const cwd = import_node_path9.default.resolve(state.cwd);
   const records = state.knowledge.documents;
   const focusBlocked = state.blockers.includes("focus-required") || state.blockers.includes("focus-invalid");
   const focused = focusBlocked ? void 0 : findRecord(records, focusRank(state, records));
@@ -40650,13 +40490,18 @@ function evaluateGraphGates(state) {
   }
   gates["knowledge-consolidation"] = state.signals.includes("knowledge-consolidated") ? gate("pass") : gate("fail", ["knowledge-consolidation-pending"]);
   gates["exit-audit"] = state.signals.includes("exit-audit-pass") ? gate("pass") : gate("blocked", ["exit-audit-pass"]);
+  const emittedGates = Object.keys(gates).sort(compareStrings);
+  const declaredGates = [...GRAPH_GATE_NAMES].sort(compareStrings);
+  if (emittedGates.join("\0") !== declaredGates.join("\0")) {
+    throw new Error(`gate vocabulary drift: expected ${declaredGates.join(", ")}; emitted ${emittedGates.join(", ")}`);
+  }
   return gates;
 }
 function focusRank(state, records) {
   return records.filter((record2) => state.focus.includes(record2.path)).sort((left, right) => (FOCUS_RANK[left.type ?? ""] ?? 9) - (FOCUS_RANK[right.type ?? ""] ?? 9) || compareStrings(left.path, right.path))[0]?.path;
 }
 async function projectGraphState(options2, collector) {
-  const cwd = import_node_path10.default.resolve(options2.cwd);
+  const cwd = import_node_path9.default.resolve(options2.cwd);
   if (collector) collector.scans += 1;
   const model = await scanRepository({ cwd, roots: [...DURABLE_DOC_DIRS], includeTopLevelMarkdown: false });
   const knowledge = projectKnowledgeGraph(model);
@@ -40666,7 +40511,7 @@ async function projectGraphState(options2, collector) {
       collector.filesRead += 1;
       collector.filePaths.add(document3.path);
       try {
-        collector.bytesRead += import_node_fs10.default.statSync(document3.absolutePath).size;
+        collector.bytesRead += import_node_fs8.default.statSync(document3.absolutePath).size;
       } catch {
       }
     }
@@ -40742,6 +40587,185 @@ var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
   "routed",
   "active"
 ]);
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
+var graphNodeId = external_exports.string().min(1);
+var graphConditionSchema = external_exports.discriminatedUnion("kind", [
+  external_exports.object({ kind: external_exports.literal("signal"), signal: external_exports.string().min(1) }).strict(),
+  external_exports.object({
+    kind: external_exports.literal("gate"),
+    gate: external_exports.string().min(1),
+    status: external_exports.enum(["pass", "not-pass"])
+  }).strict(),
+  external_exports.object({
+    kind: external_exports.literal("task-graph"),
+    state: external_exports.enum(["runnable", "active", "invalid", "idle"])
+  }).strict()
+]);
+var graphNodeSchema = external_exports.object({
+  kind: external_exports.enum(["action", "delegate", "audit", "terminal"]),
+  delegate: external_exports.string().min(1).optional(),
+  audits: external_exports.array(external_exports.string().min(1)).optional(),
+  requiresGates: external_exports.array(external_exports.string().min(1)).optional(),
+  commitGate: external_exports.boolean().optional()
+}).strict();
+var graphEdgeSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  from: graphNodeId,
+  to: graphNodeId,
+  when: external_exports.string().min(1),
+  priority: external_exports.number().int()
+}).strict();
+var graphDefinitionSchema = external_exports.object({
+  schemaVersion: external_exports.literal(3),
+  id: external_exports.string().min(1),
+  entry: graphNodeId,
+  runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
+  conditions: external_exports.record(graphNodeId, graphConditionSchema),
+  nodes: external_exports.record(graphNodeId, graphNodeSchema),
+  edges: external_exports.array(graphEdgeSchema)
+}).strict();
+function invalidGraph(message) {
+  return new Error(`Invalid graph definition: ${message}`);
+}
+function formatIssue(error62) {
+  return error62.issues.map((issue2) => `${issue2.path.join(".") || "graph"}: ${issue2.message}`).join("; ");
+}
+function hasNode(nodes, id) {
+  return Object.prototype.hasOwnProperty.call(nodes, id);
+}
+function validateGraphDefinition(value) {
+  if (!hasNode(value.nodes, value.entry)) {
+    throw invalidGraph(`entry node does not exist: ${value.entry}`);
+  }
+  const duplicateRuntimeSignal = value.runtimeSignals.find((signal, index2) => value.runtimeSignals.indexOf(signal) !== index2);
+  if (duplicateRuntimeSignal !== void 0) {
+    throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
+  }
+  const knownGates = new Set(GRAPH_GATE_NAMES);
+  for (const [conditionKey, condition] of Object.entries(value.conditions)) {
+    if (condition.kind === "gate" && !knownGates.has(condition.gate)) {
+      throw invalidGraph(
+        `unknown gate "${condition.gate}" in condition "${conditionKey}" (known gates: ${GRAPH_GATE_NAMES.join(", ")})`
+      );
+    }
+  }
+  const declaredGates = new Set(
+    Object.values(value.conditions).filter((condition) => condition.kind === "gate").map((condition) => condition.gate)
+  );
+  for (const [nodeId, node3] of Object.entries(value.nodes)) {
+    const requiresGates = node3.requiresGates ?? [];
+    const unknownGates = requiresGates.filter((gate2) => !declaredGates.has(gate2));
+    if (unknownGates.length > 0) {
+      throw invalidGraph(`unknown prerequisite gate: ${unknownGates.join(", ")}`);
+    }
+    if (new Set(requiresGates).size !== requiresGates.length) {
+      throw invalidGraph(`duplicate prerequisite gate on node ${nodeId}`);
+    }
+    const audits = node3.audits ?? [];
+    if (new Set(audits).size !== audits.length) {
+      throw invalidGraph(`duplicate audit on node ${nodeId}`);
+    }
+  }
+  const edgeIds = /* @__PURE__ */ new Set();
+  const routeSelectors = /* @__PURE__ */ new Set();
+  const priorities = /* @__PURE__ */ new Set();
+  for (const edge of value.edges) {
+    if (edgeIds.has(edge.id)) {
+      throw invalidGraph(`duplicate edge id: ${edge.id}`);
+    }
+    edgeIds.add(edge.id);
+    const selector = `${edge.from}\0${edge.when}`;
+    const priority = `${edge.from}\0${edge.priority}`;
+    if (routeSelectors.has(selector)) {
+      throw invalidGraph(`duplicate route selector: ${edge.from} + ${edge.when}`);
+    }
+    if (priorities.has(priority)) {
+      throw invalidGraph(`duplicate edge priority: ${edge.from} + ${edge.priority}`);
+    }
+    if (!Object.prototype.hasOwnProperty.call(value.conditions, edge.when)) {
+      throw invalidGraph(`unknown condition: ${edge.when}`);
+    }
+    routeSelectors.add(selector);
+    priorities.add(priority);
+    if (!hasNode(value.nodes, edge.from)) {
+      throw invalidGraph(`edge ${edge.id} references unknown from node: ${edge.from}`);
+    }
+    if (!hasNode(value.nodes, edge.to)) {
+      throw invalidGraph(`edge ${edge.id} references unknown to node: ${edge.to}`);
+    }
+  }
+  const outgoingByNode = /* @__PURE__ */ new Map();
+  for (const edge of value.edges) {
+    outgoingByNode.set(edge.from, (outgoingByNode.get(edge.from) ?? 0) + 1);
+  }
+  for (const [nodeId, node3] of Object.entries(value.nodes)) {
+    const outgoing = outgoingByNode.get(nodeId) ?? 0;
+    if (node3.kind === "terminal") {
+      if (outgoing > 0) {
+        throw invalidGraph(`terminal node must not have outgoing edges: ${nodeId}`);
+      }
+    } else if (outgoing === 0) {
+      throw invalidGraph(`non-terminal node must have an outgoing edge: ${nodeId}`);
+    }
+  }
+  return value;
+}
+var GRAPH_MIGRATION_GUIDANCE = "Graph Definition schemaVersion 2 is not supported by normal runtime. Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
+function detectLegacySchema(parsed) {
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const version2 = parsed.schemaVersion;
+    if (version2 !== void 0 && version2 !== 3) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
+  }
+}
+function parseGraphDefinition(source) {
+  try {
+    const parsed = load(source);
+    detectLegacySchema(parsed);
+    const result = graphDefinitionSchema.safeParse(parsed);
+    if (!result.success) throw invalidGraph(formatIssue(result.error));
+    return validateGraphDefinition(result.data);
+  } catch (error62) {
+    if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
+      throw error62;
+    }
+    throw invalidGraph(error62 instanceof Error ? error62.message : String(error62));
+  }
+}
+function loadGraphDefinition(file2) {
+  try {
+    return parseGraphDefinition(import_node_fs9.default.readFileSync(file2, "utf8"));
+  } catch (error62) {
+    if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
+      throw error62;
+    }
+    throw invalidGraph(`unable to read ${file2}: ${error62 instanceof Error ? error62.message : String(error62)}`);
+  }
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts
+var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_path10 = __toESM(require("node:path"));
+function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
+  if (explicitGraph) return import_node_path10.default.resolve(explicitGraph);
+  const cliDir = import_node_path10.default.basename(__dirname) === "lib" ? import_node_path10.default.resolve(__dirname, "..") : __dirname;
+  const candidates = [
+    // Distributed skill layout: scripts/route_graph.js next to ../graphs.
+    import_node_path10.default.resolve(cliDir, "../graphs/doc-driven-dev.yaml"),
+    // Source layout when the CLI is run from the monorepo checkout.
+    import_node_path10.default.resolve(
+      cliDir,
+      "../../../../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
+    ),
+    import_node_path10.default.resolve(
+      cwd,
+      "packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
+    )
+  ];
+  const found = candidates.find((candidate) => import_node_fs10.default.existsSync(candidate));
+  if (!found) throw new Error(`Unable to locate the default Graph Definition (tried: ${candidates.join(", ")})`);
+  return found;
+}
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions.ts
 function evaluateCondition(condition, state) {

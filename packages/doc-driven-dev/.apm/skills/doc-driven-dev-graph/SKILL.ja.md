@@ -17,8 +17,8 @@ authority です。
 
 - **Execution Graph**: `graphs/doc-driven-dev.yaml` にある node、1 エッジ
   route、condition、priority、delegate、audit の宣言。
-- **Artifact Graph**: 正規 Markdown 文書と、その ID、type、status、relation。
-- **Graph State**: Artifact Graph を毎回投影した focus、gate、signal、blocker、
+- **Knowledge Graph**: 正規 Markdown 文書と、その ID、type、status、relation。
+- **Graph State**: Knowledge Graph を毎回投影した focus、gate、signal、blocker、
   route evidence を含む状態。
 - **Dynamic Task Graph**: `(runId, taskId)` を基準に、1 つの Execution Store
   run の `plan.md` と task record を投影する deterministic かつ read-only の
@@ -71,8 +71,9 @@ current node の eligible edge は昇順の `priority`、次に安定した edge
 
 Graph Definition の binding は明示的です。
 
-- migration は `migrate_docs`、bootstrap は `scaffold_docs`。両方とも名前で
-  migration を所有する `doc-maintenance` のスクリプトへ dispatch される。
+- bootstrap は `scaffold_docs` —— scaffold を所有する `doc-maintenance` の
+  スクリプトへ名前で dispatch される（v3 には migration node がないため、
+  `migrate_docs` は graph からは到達不能で `doc-maintenance` 経由のみ）。
 - briefing は `briefing-flow`、design は `design-doc` に委譲。
 - planning node は approved design を audit して `planning-flow` を dispatch し、
   Execution Store run の `plan.md` と task record を所有する（`plan-doc`/
@@ -112,7 +113,7 @@ trace summary、resume rule の詳細は
 
 1. Graph Definition、current node、caller mode を選択する。
 2. 正規 Markdown artifact と semantic relation を確認する。
-3. Artifact Graph を新しい Graph State に投影する。
+3. Knowledge Graph を新しい Graph State に投影する。
 4. 複数 chain があれば明示的 focus を解決する。
 5. gate、caller signal、決定的 blocker を評価する。
 6. 汎用 condition DSL で outgoing edge を評価する。
@@ -269,7 +270,8 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 
 JSON は counts、topology reachability、delegate、audit、決定的な issue を含む
 `definition` を常に返します。`state`、`knowledge`、`taskGraph` は明示的な
-`--cwd`、`--focus`、または `--run` selector が runtime projection
+`--cwd`、`--focus`、`--run`、`--state-root`、または `--allow-external-root`
+selector が runtime projection
 を要求した場合だけ含まれます（`--task-dir` は Graph State v3 で廃止 —
 plan/task 状態は Execution Store にあり、拒否されます）。Inspection は route、delegate dispatch、Markdown/
 persistence state の書き込みを行いません。
@@ -292,8 +294,9 @@ node と edge は安定した順序で sort されます。すべての node は
 commitGate、terminal、audit label が含まれ、edge label には
 condition key と priority が含まれます。
 Mermaid rendering は text-only で、routing や persistence への副作用はありません。
-Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir`、
-`--run`、`--state-root` を拒否します（`--task-dir` は v3 では常に拒否）。
+Mermaid は definition-only であり、`--cwd`、`--focus`、`--run`、
+`--state-root`、`--allow-external-root` を拒否します（`--task-dir` は
+v3 ではすべての format で常に拒否）。
 元の node、delegate、audit、condition text は escape され、`|` が edge label を終了
 させることはありません。
 

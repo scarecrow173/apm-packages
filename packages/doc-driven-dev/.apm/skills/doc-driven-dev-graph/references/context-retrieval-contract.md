@@ -64,8 +64,11 @@ On `focus-required` or `focus-invalid` the result carries no metadata.
 | `ambiguous-target` | An included record's relation target is unresolvable because more than one record carries that ID. |
 
 `--task-dir` adds its directory to the artifact scan set alongside the
-canonical docs directories. The same selector is accepted by L2 and L3 and it
-is containment-checked — see the guards below.
+canonical docs directories. It is a corpus-scan selector only — it widens
+which Markdown documents retrieval reads and has nothing to do with task
+authority: plan/task state lives in the Execution Store and is selected with
+`route_graph.js --run`/`--state-root`, never here. The same selector is
+accepted by L2 and L3 and it is containment-checked — see the guards below.
 
 ## L2 — body fetch
 
@@ -180,15 +183,19 @@ lineage set is curated and is never reported.
   with its own mode — a foreign flag is a caller error, not something to
   drop.
 - **One `--task-dir`, one scan set.** `--task-dir` selects the same custom
-  task-doc directory at L1, L2, and L3, so a path L1 lists is never refused
-  by L2 as `not-canonical` and L3 roots resolve in the same projection. The
-  directory must resolve inside the checkout — the containment rule the
-  artifact scan enforces. An escaping or absolute-outside value is a caller
-  error raised before anything is read, identical at every level and on
-  `route_graph.js`/`inspect_graph.js`, not a finding. Containment is checked
+  corpus directory at L1, L2, and L3, so a path L1 lists is never refused
+  by L2 as `not-canonical` and L3 roots resolve in the same projection. It
+  is a corpus-scan exception to the Graph State v3 rule that normal CLIs
+  take no `--task-dir` (Issue #243): retrieval keeps it because the scan
+  root is deterministic corpus selection — it grants no task authority,
+  reads no Execution Store record, and `route_graph.js`/`inspect_graph.js`
+  still refuse the flag outright. The directory must resolve inside the
+  checkout — the containment rule the artifact scan enforces. An escaping
+  or absolute-outside value is a caller error raised before anything is
+  read, identical at every level, not a finding. Containment is checked
   by real path too: a symlinked directory inside the checkout that resolves
   outside is rejected the same way. The value is a recursive scan root —
-  `.` (or an empty value) makes the checkout itself the task-doc scan set,
+  `.` (or an empty value) makes the checkout itself the corpus scan set,
   walking everything including `node_modules`/`.git`; keep it a focused
   directory.
 

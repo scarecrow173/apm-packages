@@ -107,7 +107,7 @@ test("graph canvas is always visible and diagnostic detail sections are collapse
     assert.doesNotMatch(html, new RegExp(`<details><summary>${summary}`));
   }
   assert.match(html, /<details><summary>findings \(0 \/ blocking 0\)<\/summary>/);
-  assert.match(html, /<details><summary>artifact relation issues \(0\)<\/summary>/);
+  assert.match(html, /<details><summary>knowledge graph issues \(0\)<\/summary>/);
   assert.match(html, /<details><summary>対象外・不明情報 \(0\)<\/summary>/);
 });
 

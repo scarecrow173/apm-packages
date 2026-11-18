@@ -122,6 +122,68 @@ test("refuses a schema-v2 graph definition with migration guidance", () => {
   }
 });
 
+// The legacy-schema detector is not numeric-only: a YAML string `"2"` (or
+// any other declared non-3 version) takes the same migration-guidance
+// refusal instead of degrading to a generic schema error (Issue #243).
+test("refuses non-numeric and other non-3 schemaVersion declarations with migration guidance", () => {
+  for (const declared of ["\"2\"", "1", "4"]) {
+    const fixture = validFixture.replace("schemaVersion: 3", `schemaVersion: ${declared}`);
+    assert.throws(
+      () => parseGraphDefinition(fixture),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /Invalid graph definition:/);
+        assert.match(error.message, /schemaVersion 2 is not supported by normal runtime/);
+        assert.match(error.message, /doc_maintenance\.js migrate plan --json/);
+        return true;
+      },
+      `schemaVersion: ${declared}`,
+    );
+  }
+  // A missing schemaVersion is an ordinary schema error, not the
+  // migration-guidance path.
+  assert.throws(
+    () => parseGraphDefinition(validFixture.replace("schemaVersion: 3\n", "")),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /Invalid graph definition:/);
+      assert.doesNotMatch(error.message, /migrate plan --json/);
+      return true;
+    },
+  );
+});
+
+// Gate conditions may only name gates the runtime emits: a typo'd gate in
+// a `not-pass` condition would otherwise match by absence and become an
+// always-taken edge (Issue #243). Declared names load for both `pass` and
+// `not-pass`.
+test("refuses gate conditions that name a gate outside the runtime vocabulary", () => {
+  const typoFixture = validFixture.replace(
+    "bootstrap-pass: { kind: gate, gate: bootstrap, status: pass }",
+    "bootstrap-pass: { kind: gate, gate: boostrap, status: not-pass }",
+  );
+  assert.throws(
+    () => parseGraphDefinition(typoFixture),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /Invalid graph definition:/);
+      assert.match(error.message, /unknown gate "boostrap" in condition "bootstrap-pass"/);
+      return true;
+    },
+  );
+
+  const declared = validFixture.replace(
+    "bootstrap-pass: { kind: gate, gate: bootstrap, status: pass }",
+    [
+      "bootstrap-pass: { kind: gate, gate: bootstrap, status: pass }",
+      "verification-not-pass: { kind: gate, gate: verification, status: not-pass }",
+    ].join("\n  "),
+  );
+  const definition = parseGraphDefinition(declared);
+  assert.deepEqual(definition.conditions["bootstrap-pass"], { kind: "gate", gate: "bootstrap", status: "pass" });
+  assert.deepEqual(definition.conditions["verification-not-pass"], { kind: "gate", gate: "verification", status: "not-pass" });
+});
+
 test("parses and validates Graph Definition-owned runtime signal vocabulary", () => {
   const definition = parseGraphDefinition(runtimeSignalsFixture);
   assert.deepEqual(definition.runtimeSignals, ["review-passed", "exit-audit-pass"]);

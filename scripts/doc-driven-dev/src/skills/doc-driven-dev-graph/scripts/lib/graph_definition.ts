@@ -3,6 +3,8 @@ import fs from "node:fs";
 import * as yaml from "js-yaml";
 import { z } from "zod";
 
+import { GRAPH_GATE_NAMES } from "./graph_state";
+
 export type GraphCondition =
   | { kind: "signal"; signal: string }
   | { kind: "gate"; gate: string; status: "pass" | "not-pass" }
@@ -101,6 +103,19 @@ function validateGraphDefinition(value: z.infer<typeof graphDefinitionSchema>): 
     throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
   }
 
+  // Gate conditions may only name gates the runtime actually emits
+  // (GRAPH_GATE_NAMES in graph_state.ts). An unrecognized name would make
+  // a `pass` edge unreachable and a `not-pass` edge always taken — a
+  // typo'd gate must refuse at load, never silently route (Issue #243).
+  const knownGates = new Set<string>(GRAPH_GATE_NAMES);
+  for (const [conditionKey, condition] of Object.entries(value.conditions)) {
+    if (condition.kind === "gate" && !knownGates.has(condition.gate)) {
+      throw invalidGraph(
+        `unknown gate "${condition.gate}" in condition "${conditionKey}" `
+        + `(known gates: ${GRAPH_GATE_NAMES.join(", ")})`,
+      );
+    }
+  }
   const declaredGates = new Set(
     Object.values(value.conditions)
       .filter((condition) => condition.kind === "gate")
@@ -182,7 +197,10 @@ export const GRAPH_MIGRATION_GUIDANCE =
 function detectLegacySchema(parsed: unknown): void {
   if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
     const version = (parsed as Record<string, unknown>).schemaVersion;
-    if (version === 2) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
+    // Any declared non-3 schemaVersion — `2`, the YAML string `"2"`, or a
+    // future value — is not parseable by this runtime: the same migration
+    // guidance applies. A missing key stays an ordinary schema error.
+    if (version !== undefined && version !== 3) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
   }
 }
 

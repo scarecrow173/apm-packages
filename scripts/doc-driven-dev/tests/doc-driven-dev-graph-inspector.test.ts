@@ -55,7 +55,7 @@ id: unused-condition
 entry: start
 conditions:
   ready: { kind: signal, signal: ready }
-  never-used: { kind: gate, gate: never-used, status: pass }
+  never-used: { kind: gate, gate: bootstrap, status: pass }
 nodes:
   start: { kind: action }
   done: { kind: terminal }
@@ -69,9 +69,9 @@ id: gate-only-condition
 entry: start
 conditions:
   ready: { kind: signal, signal: ready }
-  quality-pass: { kind: gate, gate: quality, status: pass }
+  quality-pass: { kind: gate, gate: verification, status: pass }
 nodes:
-  start: { kind: action, requiresGates: [quality] }
+  start: { kind: action, requiresGates: [verification] }
   done: { kind: terminal }
 edges:
   - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
@@ -83,9 +83,9 @@ id: gate-edge-condition
 entry: start
 conditions:
   ready: { kind: signal, signal: ready }
-  quality-pass: { kind: gate, gate: quality, status: pass }
+  quality-pass: { kind: gate, gate: verification, status: pass }
 nodes:
-  start: { kind: action, requiresGates: [quality] }
+  start: { kind: action, requiresGates: [verification] }
   done: { kind: terminal }
 edges:
   - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
